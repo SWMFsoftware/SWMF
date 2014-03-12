@@ -47,20 +47,27 @@ module ModLinearSolver
   public :: gmres           ! GMRES iterative solver
   public :: bicgstab        ! BiCGSTAB iterative solver
   public :: cg              ! CG iterative solver for symmetric positive matrix
+
   public :: prehepta        ! LU preconditioner for up to hepta block-diagonal 
   public :: Uhepta          ! multiply with upper block triangular matrix
   public :: Lhepta          ! multiply with lower block triangular matrix
   public :: upper_hepta_scalar ! multiply with upper scalar triangular matrix
   public :: lower_hepta_scalar ! multiply with lower scalar triangular matrix
-  public :: multiply_dilu   ! multiply with (LU)^-1 with diagonal off-diags
+  public :: get_precond_matrix     ! get preconditioner matrix
+  public :: multiply_left_precond  ! multiply with left preconditioner
+  public :: multiply_right_precond ! multiply with right preconditioner
+  public :: multiply_initial_guess ! multiply with initial guess with U
+
+  public :: multiply_dilu         ! multiply with (LU)^-1 
+  !                                 assuming diagonal off-diag blocks
   public :: multiply_block_jacobi ! multiply with inverted diag blocks D^-1
-  public :: implicit_solver ! implicit solver in 1D with 3 point stencil
-  public :: test_linear_solver
 
-  !To accurately calculate the quadratic form p\cdot A \cdot p used in conjugated gradients
-  real,public    :: pDotADotPPe = 0.0  
-  logical,public :: UsePDotADotP = .false.
+  public :: implicit_solver       ! implicit solver in 1D with 3 point stencil
+  public :: test_linear_solver    ! unit test
 
+  ! To accurately calculate the quadratic form p.A.p in conjugate gradients
+  real,    public:: pDotADotPPe = 0.0  
+  logical, public:: UsePDotADotP = .false.
 
   ! Use an effectively 16byte real accuracy for global sums
   logical, public:: UseAccurateSum = .true.
@@ -1479,10 +1486,434 @@ contains
 
   end subroutine Lhepta
 
+  !============================================================================
+
+  subroutine upper_hepta_scalar(IsInverse, nBlock, m1, m2, x, f, f1, f2)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with the upper triagonal U or U^{-1}
+    ! which must have been constructed in subroutine prehepta.
+    !
+    ! For penta-diagonal matrix, set M2=nblock and f2 can be omitted.
+    ! For tri-diagonal matrix set M1=M2=nblock and f1,f2 can be omitted.
+
+    logical, intent(in) :: IsInverse
+    integer, intent(in) :: m1, m2, nBlock
+    real, intent(inout) :: x(nblock)
+    real, intent(in)    :: f(nblock)
+    real, intent(in), optional :: f1(nblock), f2(nblock)
+
+    integer :: j
+    !------------------------------------------------------------------------
+
+    if(IsInverse)then
+       !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
+       do j=nblock-1,1,-1
+          !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
+          if (j+M2<=nblock) then
+             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1) - f2(j)*x(j+M2)
+          else if(j+M1 <= nblock) then
+             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1)
+          else
+             x(j) = x(j) - f(j)*x(j+1)
+          end if
+       end do
+    else
+       !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
+       do j=1,nblock-1
+          if (j+M2<=nblock) then
+             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1) + f2(j)*x(j+M2)
+          else if (j+M1 <= nblock) then
+             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1)
+          else
+             x(j) = x(j) + f(j)*x(j+1)
+          end if
+       end do
+    end if
+
+  end subroutine upper_hepta_scalar
+
+  !============================================================================
+
+  subroutine lower_hepta_scalar(nBlock, M1, M2, x, d, e, e1, e2)
+
+    ! G. Toth, 2009
+    !
+    ! This routine multiplies x with the lower triangular matrix L^{-1},
+    ! which must have been constructed in subroutine prehepta.
+    !
+    ! For penta-diagonal matrix, set M2=nblock and e2 can be omitted.
+    ! For tri-diagonal matrix set M1=M2=nblock and e1,e2 can be omitted.
+
+    integer, intent(in) :: m1, m2, nBlock
+    real, intent(inout) :: x(nBlock)
+    real, intent(in), dimension(nBlock) :: d,e
+    real, intent(in), dimension(nBlock), optional :: e1,e2
+
+    real:: Work1
+
+    integer :: j
+    !--------------------------------------------------------------------------
+    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
+    do j=1, nblock
+       work1 = x(j)
+       if (j > M2) then
+          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1) - e2(j)*x(j-M2)
+       else if (j > M1) then
+          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1)
+       else if (j > 1) then
+          work1 = work1 - e(j)*x(j-1)
+       end if
+       x(j) = d(j)*work1
+    end do
+
+  end subroutine lower_hepta_scalar
+
+  !============================================================================
+
+  subroutine multiply_dilu(nBlock, n, m1, m2, x, d, e, f, e1, f1, e2, f2)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with U^{-1} L^{-1}
+    ! which must have been constructed in subroutine prehepta.
+    ! DILU makes the assumption that the off-diagonal blocks are diagonal!
+    !
+    ! For block penta-diagonal matrix, set M2=nBlock and omit e2, f2
+    ! For block tri-diagonal matrix set M1=M2=nBlock and omit e1, f1, e2, f2
+
+    integer, intent(in)                    :: nBlock, n, m1, m2
+    real, intent(inout)                    :: x(n,nBlock)
+    real, intent(in), dimension(n,n,nBlock):: d, e, f
+    real, intent(in), dimension(n,n,nBlock), optional :: e1, f1, e2, f2
+
+    real, allocatable :: x_V(:)
+    integer :: i, j
+    !------------------------------------------------------------------------
+
+    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
+    allocate(x_V(n))
+
+    do j=1, nBlock
+       x_V = x(:,j)
+       if (j > M2) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1) &
+                  - e2(i,i,j)*x(i,j-M2)
+          end do
+       else if (j > M1) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1)
+          end do
+       else if (j > 1) then
+          do i = 1, n
+             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1)
+          end do
+       end if
+       x(:,j) = matmul(d(:,:,j), x_V) 
+    end do
+
+    !  x' := U^{-1}.x = x - D^-1 [F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)]
+    do j = nBlock-1, 1, -1
+       if (j + M2 <= nBlock) then
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1) &
+                  + f2(i,i,j)*x(i,j+M2)
+          end do
+       else if(j + M1 <= nBlock) then
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1)
+          end do
+       else
+          do i = 1, n
+             x_V(i) = f(i,i,j)*x(i,j+1)
+          end do
+       end if
+       x(:,j) = x(:,j) - matmul(d(:,:,j), x_V)
+
+    end do
+    deallocate(x_V)
+
+  end subroutine multiply_dilu
+
+  !============================================================================
+
+  subroutine multiply_block_jacobi(nBlock, nVar, x_VB, d_VVB)
+
+    ! G. Toth, 2009
+
+    ! This routine multiplies x with the already inverted diagonal blocks.
+
+    integer, intent(in)   :: nBlock, nVar
+    real,    intent(inout):: x_VB(nVar, nBlock)
+    real,    intent(in)   :: d_VVB(nVar, nVar, nBlock)
+
+    integer :: iBlock
+    !------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       x_VB(:,iBlock) = matmul(d_VVB(:,:,iBlock), x_VB(:,iBlock))
+    end do
+
+  end subroutine multiply_block_jacobi
+  !============================================================================
+  subroutine get_precond_matrix(PrecondParam, nVar, nDim, nI, nJ, nK, a_II)
+
+    ! Create approximate L-U decomposition of a_II matrix that corresponds to
+    ! an nDim dimensional grid with nI*nJ*nK cells and nVar variables per cell.
+
+    real, intent(in):: PrecondParam ! see description in subroutine prehepta
+
+    integer, intent(in):: nVar   ! number of variables per cell
+    integer, intent(in):: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in):: nI     ! number of cells in dim 1
+    integer, intent(in):: nJ     ! number of cells in dim 2
+    integer, intent(in):: nK     ! number of cells in dim 3
+
+    real, intent(inout):: a_II(nVar*nVar*nI*nJ*nK,2*nDim+1) ! Precond matrix
+
+    character(len=*), parameter:: NameSub = 'get_precond_matrix'
+    !--------------------------------------------------------------------------
+
+    select case(nDim)
+    case(1)
+       ! Tridiagonal case
+       call prehepta(nI, nVar, nI, nI, PrecondParam, &
+            a_II(1,1), a_II(1,2), a_II(1,3))
+    case(2)
+       ! Pentadiagonal case
+       call prehepta(nI*nJ, nVar, nI, nI*nJ, PrecondParam, &
+            a_II(1,1), a_II(1,2), a_II(1,3), a_II(1,4), a_II(1,5))
+    case(3)
+       ! Heptadiagonal case
+       call prehepta(nI*nJ*nK, nVar, nI, nI*nJ, PrecondParam, &
+            a_II(1,1), a_II(1,2), a_II(1,3), a_II(1,4), a_II(1,5), &
+            a_II(1,6), a_II(1,7))
+    case default
+       write(*,*)'ERROR in ', NameSub, ' nDim=', nDim
+       call CON_stop(NameSub//': invalid value for nDim')
+    end select
+
+  end subroutine get_precond_matrix
+  !============================================================================
+  subroutine multiply_left_precond(TypePrecond, TypePrecondSide, &
+       nVar, nDim, nI, nJ, nK, a_II, x_I)
+
+    ! Multiply x_I with the left preconditioner matrix using the
+    ! a_II matrix which was obtained with "get_precond_matrix"
+    ! TypePrecond defines which type of preconditioner is used
+    ! TypePrecondSide defines which side the preconditioner is applied
+
+    character(len=*), intent(in):: TypePrecond     ! DILU, BILU, MBILU
+    character(len=*), intent(in):: TypePrecondSide ! left, right, symm
+
+    integer, intent(in)   :: nVar   ! number of variables per cell
+    integer, intent(in)   :: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in)   :: nI     ! number of cells in dim 1
+    integer, intent(in)   :: nJ     ! number of cells in dim 2
+    integer, intent(in)   :: nK     ! number of cells in dim 3
+    real,    intent(in)   :: a_II(nVar*nVar*nI*nJ*nK,2*nDim+1) ! Precond matrix
+    real,    intent(inout):: x_I(nVar*nI*nJ*nK)                ! Vector of vars
+
+    character(len=*), parameter:: NameSub = 'multiply_left_precond'
+    !--------------------------------------------------------------------------
+    if(TypePrecondSide == 'right') RETURN
+
+    select case(TypePrecondSide)
+    case('left', 'right', 'symm')
+    case default
+       call CON_stop(NameSub// &
+            ': unknown value for TypePrecondSide='//TypePrecondSide)
+    end select
+
+    if(nDim < 1 .or. nDim > 3)then
+       write(*,*)'ERROR in ', NameSub, ' nDim=', nDim
+       call CON_stop(NameSub//': invalid value for nDim')
+    end if
+
+    select case(TypePrecond)
+    case('DILU')
+       select case(nDim)
+       case(1)
+          ! Tridiagonal case
+          call multiply_dilu(nI, nVar, nI, nI, x_I, &
+               a_II(1,1), a_II(1,2), a_II(1,3))
+       case(2)
+          ! Pentadiagonal case
+          call multiply_dilu(nI*nJ, nVar, nI, nI*nJ, x_I, &
+               a_II(1,1), a_II(1,2), a_II(1,3), a_II(1,4), a_II(1,5))
+       case(3)
+          ! Heptadiagonal case
+          call multiply_dilu(nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+               a_II(1,1), a_II(1,2), a_II(1,3), a_II(1,4), a_II(1,5), &
+               a_II(1,6), a_II(1,7))
+       end select
+    case('BILU', 'MBILU')
+       ! Multiply with L^-1 from the LU decomposition
+       select case(nDim)
+       case(1)
+          ! Tridiagonal case
+          call Lhepta(nI, nVar, nI, nI, x_I, &
+               a_II(1,1), a_II(1,2))
+       case(2)
+          ! Pentadiagonal case
+          call Lhepta(nI*nJ, nVar, nI, nI*nJ, x_I, &
+               a_II(1,1), a_II(1,2), a_II(1,4))
+       case(3)
+          ! Heptadiagonal case
+          call Lhepta(nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+               a_II(1,1), a_II(1,2), a_II(1,4), a_II(1,6))
+       end select
+
+       if(TypePrecondSide == 'left')then
+          ! Multiply with U^-1 from the LU decomposition
+          select case(nDim)
+          case(1)
+             ! Tridiagonal case
+             call Uhepta(.true., nI, nVar, nI, nI, x_I, &
+                  a_II(1,3))
+          case(2)
+             ! Pentadiagonal case
+             call Uhepta(.true., nI*nJ, nVar, nI, nI*nJ, x_I, &
+                  a_II(1,3), a_II(1,5))
+          case(3)
+             ! Heptadiagonal case
+             call Uhepta(.true., nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+                  a_II(1,3), a_II(1,5), a_II(1,7))
+          end select
+
+       end if
+    case default
+       call CON_stop(NameSub//': unknown value for TypePrecond='//TypePrecond)
+    end select
+
+  end subroutine multiply_left_precond
+
+  !============================================================================
+  subroutine multiply_right_precond(TypePrecond, TypePrecondSide, &
+       nVar, nDim, nI, nJ, nK, a_II, x_I)
+
+    ! Multiply x_I with the right preconditioner matrix using the
+    ! a_II matrix which was obtained with "get_precond_matrix"
+    ! TypePrecond defines which type of preconditioner is used
+    ! TypePrecondSide defines which side the preconditioner is applied
+
+    character(len=*), intent(in):: TypePrecond     ! DILU, BILU, MBILU
+    character(len=*), intent(in):: TypePrecondSide ! left, right, symm
+
+    integer, intent(in)   :: nVar   ! number of variables per cell
+    integer, intent(in)   :: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in)   :: nI     ! number of cells in dim 1
+    integer, intent(in)   :: nJ     ! number of cells in dim 2
+    integer, intent(in)   :: nK     ! number of cells in dim 3
+
+    real,    intent(in)   :: a_II(nVar*nVar*nI*nJ*nK,2*nDim+1) ! Precond matrix
+    real,    intent(inout):: x_I(nVar*nI*nJ*nK)                ! Vector of vars
+
+    character(len=*), parameter:: NameSub = 'multiply_right_precond'
+    !--------------------------------------------------------------------------
+    if(TypePrecondSide == 'left') RETURN
+
+    select case(TypePrecondSide)
+    case('left', 'right', 'symm')
+    case default
+       call CON_stop(NameSub// &
+            ': unknown value for TypePrecondSide='//TypePrecondSide)
+    end select
+
+    if(nDim < 1 .or. nDim > 3)then
+       write(*,*)'ERROR in ', NameSub, ' nDim=', nDim
+       call CON_stop(NameSub//': invalid value for nDim')
+    end if
+
+    select case(TypePrecond)
+    case('DILU')
+       ! Currently DILU can only be applied from the left
+       RETURN
+    case('BILU', 'MBILU')
+       if(TypePrecondSide == 'right')then
+          ! Multiply with L^-1 from the LU decomposition
+          select case(nDim)
+          case(1)
+             ! Tridiagonal case
+             call Lhepta(nI, nVar, nI, nI, x_I, &
+                  a_II(1,1), a_II(1,2))
+          case(2)
+             ! Pentadiagonal case
+             call Lhepta(nI*nJ, nVar, nI, nI*nJ, x_I, &
+                  a_II(1,1), a_II(1,2), a_II(1,4))
+          case(3)
+             ! Heptadiagonal case
+             call Lhepta(nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+                  a_II(1,1), a_II(1,2), a_II(1,4), a_II(1,6))
+          end select
+       end if
+       ! Multiply with U^-1 from the LU decomposition
+       select case(nDim)
+       case(1)
+          ! Tridiagonal case
+          call Uhepta(.true., nI, nVar, nI, nI, x_I, &
+               a_II(1,3))
+       case(2)
+          ! Pentadiagonal case
+          call Uhepta(.true., nI*nJ, nVar, nI, nI*nJ, x_I, &
+               a_II(1,3), a_II(1,5))
+       case(3)
+          ! Heptadiagonal case
+          call Uhepta(.true., nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+               a_II(1,3), a_II(1,5), a_II(1,7))
+       end select
+    case default
+       call CON_stop(NameSub//': unknown value for TypePrecond='//TypePrecond)
+    end select
+
+  end subroutine multiply_right_precond
+
+  !============================================================================
+  subroutine multiply_initial_guess(nVar, nDim, nI, nJ, nK, a_II, x_I)
+
+    ! Multiply x_I with the upper triangular part of
+    ! a_II matrix which was obtained with "get_precond_matrix"
+    ! This is only needed if x_I is not zero initially and
+    ! a symmetric preconditioning is used. 
+
+    integer, intent(in):: nVar   ! number of variables per cell
+    integer, intent(in):: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in):: nI     ! number of cells in dim 1
+    integer, intent(in):: nJ     ! number of cells in dim 2
+    integer, intent(in):: nK     ! number of cells in dim 3
+    real,    intent(in):: a_II(nVar*nVar*nI*nJ*nK,2*nDim+1) ! Precond matrix
+    real, intent(inout):: x_I(nVar*nI*nJ*nK)                ! Vector of vars
+
+    character(len=*), parameter:: NameSub = 'multiply_initial_guess'
+    !--------------------------------------------------------------------------
+    ! Multiply with U^-1 from the LU decomposition
+    select case(nDim)
+    case(1)
+       ! Tridiagonal case
+       call Uhepta(.false., nI, nVar, nI, nI, x_I, &
+            a_II(1,3))
+    case(2)
+       ! Pentadiagonal case
+       call Uhepta(.false., nI*nJ, nVar, nI, nI*nJ, x_I, &
+            a_II(1,3), a_II(1,5))
+    case(3)
+       ! Heptadiagonal case
+       call Uhepta(.false., nI*nJ*nK, nVar, nI, nI*nJ, x_I, &
+            a_II(1,3), a_II(1,5), a_II(1,7))
+    case default
+       write(*,*)'ERROR in ', NameSub, ' nDim=', nDim
+       call CON_stop(NameSub//': invalid value for nDim')
+    end select
+
+  end subroutine multiply_initial_guess
+
   !===========================================================================
 
   subroutine implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, State_GV, &
        calc_residual, update_boundary)
+
+    ! Solve a linear system in 1D
 
     real,    intent(in) :: ImplPar, DtImpl, DtExpl
     integer, intent(in) :: nCell, nVar
@@ -1580,9 +2011,8 @@ contains
        end do
     end do
 
-    ! L-U decomposition
-    call prehepta(nCell,nVar,nCell,nCell,0.0,&
-         Matrix_VVCI(:,:,:,1), Matrix_VVCI(:,:,:,2), Matrix_VVCI(:,:,:,3))
+    ! L-U decomposition using block ILU (exact in 1D)
+    call get_precond_matrix(real(bilu_), nVar, 1, nCell, 1, 1, Matrix_VVCI)
 
     ! Put right hand side into a linear vector
     iX = 0
@@ -1592,14 +2022,12 @@ contains
           x_I(iX) = RightHand_CV(i, iVar)
        end do
     end do
-    ! x --> L^{-1}.rhs
-    call Lhepta(nCell, nVar, nCell, nCell, x_I,&
-         Matrix_VVCI(:,:,:,1), Matrix_VVCI(:,:,:,2))
 
     ! x --> U^{-1}.L^{-1}.rhs = A^{-1}.rhs
-    call Uhepta(.true.,nCell,nVar,nCell,nCell, x_I, Matrix_VVCI(:,:,:,3))
+    call multiply_left_precond('BILU', 'left', nVar, 1, nCell, 1, 1, &
+         Matrix_VVCI, x_I)
 
-    ! Update the solution (x = U^n+1 - U^n)
+    ! Update the solution: U^n+1 = U^n + x
     iX = 0
     do i = 1, nCell
        do iVar = 1, nVar
@@ -1615,52 +2043,6 @@ contains
 
   end subroutine implicit_solver
 
-  !=======================================================================
-
-  subroutine test_linear_solver
-
-    integer, parameter :: nStep=20
-    integer, parameter :: nCell=51, nVar=3
-    real, parameter :: DtExpl = 0.1, DtImpl = 1.0, ImplPar = 1.0
-
-    real    :: State_GV(-1:nCell+2, nVar), StateOld_GV(-1:nCell+2, nVar)
-    real    :: Resid_CV(nCell, nVar)
-    !---------------------------------------------------------------------
-    ! initial condition
-    State_GV(:,rho_) = 1.0; State_GV(5:10,rho_)=2
-    State_GV(:,rhou_)= 2.0*State_GV(:,rho_);
-    State_GV(:,p_)   = 3.0; State_GV(5:10,p_) = 6.0
-
-    open(UNITTMP_, file='test_linear_solver.out', status='replace')
-    Time = 0.0
-    call save_plot(0, Time, nCell, nVar, State_GV)
-    do iStep = 1, nStep
-
-       StateOld_GV = State_GV
-
-       Time  = Time + DtImpl
-
-       if(.false.)then
-          ! explicit
-          call calc_resid_test(2, DtExpl, nCell, nVar, State_GV, Resid_CV)
-          State_GV(1:nCell,:)=State_GV(1:nCell,:)+Resid_CV
-          call update_bound_test(nCell, nVar, State_GV)
-          call save_plot(iStep, Time, nCell, nVar, State_GV)
-       else
-          ! implicit
-          call implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, &
-               State_GV, calc_resid_test, update_bound_test)
-
-          ! check
-          call calc_resid_test(2, DtImpl, nCell, nVar, State_GV, Resid_CV)
-          write(*,*)'iStep, Max error=',iStep, &
-               maxval(abs(StateOld_GV(1:nCell,:)+Resid_CV-State_GV(1:nCell,:)))
-          call save_plot(iStep, Time, nCell, nVar, State_GV)
-       end if
-    end do
-    close(UNITTMP_)
-
-  end subroutine test_linear_solver
   !=======================================================================
 
   subroutine save_plot(iStep, Time, nCell, nVar, State_GV)
@@ -1728,176 +2110,51 @@ contains
     State_GV(nCell+2,:) = State_GV(nCell,:)
 
   end subroutine update_bound_test
+  !=======================================================================
 
-  !============================================================================
+  subroutine test_linear_solver
 
-  subroutine upper_hepta_scalar(IsInverse, nBlock, m1, m2, x, f, f1, f2)
+    integer, parameter :: nStep=20
+    integer, parameter :: nCell=51, nVar=3
+    real, parameter :: DtExpl = 0.1, DtImpl = 1.0, ImplPar = 1.0
 
-    ! G. Toth, 2009
+    real    :: State_GV(-1:nCell+2, nVar), StateOld_GV(-1:nCell+2, nVar)
+    real    :: Resid_CV(nCell, nVar)
+    !---------------------------------------------------------------------
+    ! initial condition
+    State_GV(:,rho_) = 1.0; State_GV(5:10,rho_)=2
+    State_GV(:,rhou_)= 2.0*State_GV(:,rho_);
+    State_GV(:,p_)   = 3.0; State_GV(5:10,p_) = 6.0
 
-    ! This routine multiplies x with the upper triagonal U or U^{-1}
-    ! which must have been constructed in subroutine prehepta.
-    !
-    ! For penta-diagonal matrix, set M2=nblock and f2 can be omitted.
-    ! For tri-diagonal matrix set M1=M2=nblock and f1,f2 can be omitted.
+    open(UNITTMP_, file='test_linear_solver.out', status='replace')
+    Time = 0.0
+    call save_plot(0, Time, nCell, nVar, State_GV)
+    do iStep = 1, nStep
 
-    logical, intent(in) :: IsInverse
-    integer, intent(in) :: m1, m2, nBlock
-    real, intent(inout) :: x(nblock)
-    real, intent(in)    :: f(nblock)
-    real, intent(in), optional :: f1(nblock), f2(nblock)
+       StateOld_GV = State_GV
 
-    integer :: j
-    !------------------------------------------------------------------------
+       Time  = Time + DtImpl
 
-    if(IsInverse)then
-       !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
-       do j=nblock-1,1,-1
-          !  x' := U^{-1}.x = x - F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)
-          if (j+M2<=nblock) then
-             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1) - f2(j)*x(j+M2)
-          else if(j+M1 <= nblock) then
-             x(j) = x(j) - f(j)*x(j+1) - f1(j)*x(j+M1)
-          else
-             x(j) = x(j) - f(j)*x(j+1)
-          end if
-       end do
-    else
-       !  x := U.x = x + F.x(j+1) + F1.x(j+M1) + F2.x(j+M2)
-       do j=1,nblock-1
-          if (j+M2<=nblock) then
-             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1) + f2(j)*x(j+M2)
-          else if (j+M1 <= nblock) then
-             x(j) = x(j) + f(j)*x(j+1) + f1(j)*x(j+M1)
-          else
-             x(j) = x(j) + f(j)*x(j+1)
-          end if
-       end do
-    end if
-
-  end subroutine upper_hepta_scalar
-
-  !============================================================================
-
-  subroutine lower_hepta_scalar(nBlock, M1, M2, x, d, e, e1, e2)
-
-    ! G. Toth, 2009
-    !
-    ! This routine multiplies x with the lower triangular matrix L^{-1},
-    ! which must have been constructed in subroutine prehepta.
-    !
-    ! For penta-diagonal matrix, set M2=nblock and e2 can be omitted.
-    ! For tri-diagonal matrix set M1=M2=nblock and e1,e2 can be omitted.
-
-    integer, intent(in) :: m1, m2, nBlock
-    real, intent(inout) :: x(nBlock)
-    real, intent(in), dimension(nBlock) :: d,e
-    real, intent(in), dimension(nBlock), optional :: e1,e2
-
-    real:: Work1
-
-    integer :: j
-    !--------------------------------------------------------------------------
-    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
-    do j=1, nblock
-       work1 = x(j)
-       if (j > M2) then
-          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1) - e2(j)*x(j-M2)
-       else if (j > M1) then
-          work1 = work1 - e(j)*x(j-1) - e1(j)*x(j-M1)
-       else if (j > 1) then
-          work1 = work1 - e(j)*x(j-1)
-       end if
-       x(j) = d(j)*work1
-    end do
-
-  end subroutine lower_hepta_scalar
-
-  !============================================================================
-
-  subroutine multiply_dilu(nBlock, n, m1, m2, x, d, e, f, e1, f1, e2, f2)
-
-    ! G. Toth, 2009
-
-    ! This routine multiplies x with the upper triagonal U^{-1} L^{-1}
-    ! which must have been constructed in subroutine prehepta.
-    ! DILU makes the assumption that the off-diagonal blocks are diagonal!
-    !
-    ! For block penta-diagonal matrix, set M2=nBlock and omit e2, f2
-    ! For block tri-diagonal matrix set M1=M2=nBlock and omit e1, f1, e2, f2
-
-    integer, intent(in)                    :: nBlock, n, m1, m2
-    real, intent(inout)                    :: x(n,nBlock)
-    real, intent(in), dimension(n,n,nBlock):: d, e, f
-    real, intent(in), dimension(n,n,nBlock), optional :: e1, f1, e2, f2
-
-    real, allocatable :: x_V(:)
-    integer :: i, j
-    !------------------------------------------------------------------------
-
-    ! x' = L^{-1}.x = D^{-1}.(x - E2.x'(j-M2) - E1.x'(j-M1) - E.x'(j-1))
-    allocate(x_V(n))
-
-    do j=1, nBlock
-       x_V = x(:,j)
-       if (j > M2) then
-          do i = 1, n
-             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1) &
-                  - e2(i,i,j)*x(i,j-M2)
-          end do
-       else if (j > M1) then
-          do i = 1, n
-             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1) - e1(i,i,j)*x(i,j-M1)
-          end do
-       else if (j > 1) then
-          do i = 1, n
-             x_V(i) = x_V(i) - e(i,i,j)*x(i,j-1)
-          end do
-       end if
-       x(:,j) = matmul(d(:,:,j), x_V) 
-    end do
-
-    !  x' := U^{-1}.x = x - D^-1 [F.x'(j+1) - F1.x'(j+M1) - F2.x'(j+M2)]
-    do j = nBlock-1, 1, -1
-       if (j + M2 <= nBlock) then
-          do i = 1, n
-             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1) &
-                  + f2(i,i,j)*x(i,j+M2)
-          end do
-       else if(j + M1 <= nBlock) then
-          do i = 1, n
-             x_V(i) = f(i,i,j)*x(i,j+1) + f1(i,i,j)*x(i,j+M1)
-          end do
+       if(.false.)then
+          ! explicit
+          call calc_resid_test(2, DtExpl, nCell, nVar, State_GV, Resid_CV)
+          State_GV(1:nCell,:)=State_GV(1:nCell,:)+Resid_CV
+          call update_bound_test(nCell, nVar, State_GV)
+          call save_plot(iStep, Time, nCell, nVar, State_GV)
        else
-          do i = 1, n
-             x_V(i) = f(i,i,j)*x(i,j+1)
-          end do
+          ! implicit
+          call implicit_solver(ImplPar, DtImpl, DtExpl, nCell, nVar, &
+               State_GV, calc_resid_test, update_bound_test)
+
+          ! check
+          call calc_resid_test(2, DtImpl, nCell, nVar, State_GV, Resid_CV)
+          write(*,*)'iStep, Max error=',iStep, &
+               maxval(abs(StateOld_GV(1:nCell,:)+Resid_CV-State_GV(1:nCell,:)))
+          call save_plot(iStep, Time, nCell, nVar, State_GV)
        end if
-       x(:,j) = x(:,j) - matmul(d(:,:,j), x_V)
-
     end do
-    deallocate(x_V)
+    close(UNITTMP_)
 
-  end subroutine multiply_dilu
-
-  !============================================================================
-
-  subroutine multiply_block_jacobi(nBlock, nVar, x_VB, d_VVB)
-
-    ! G. Toth, 2009
-
-    ! This routine multiplies x with the already inverted diagonal blocks.
-
-    integer, intent(in)   :: nBlock, nVar
-    real,    intent(inout):: x_VB(nVar, nBlock)
-    real,    intent(in)   :: d_VVB(nVar, nVar, nBlock)
-
-    integer :: iBlock
-    !------------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       x_VB(:,iBlock) = matmul(d_VVB(:,:,iBlock), x_VB(:,iBlock))
-    end do
-
-  end subroutine multiply_block_jacobi
+  end subroutine test_linear_solver
 
 end module ModLinearSolver
