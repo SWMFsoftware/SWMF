@@ -699,7 +699,8 @@ public:
 
 
    double GetRemainedBlockVolume(double *xBlockMinInit,double *xBlockMaxInit,double EPS,int *IntersectionStatus) {
-     int BlockIntersectionCode;
+     return fabs((xBlockMaxInit[0]-xBlockMinInit[0])*(xBlockMaxInit[1]-xBlockMinInit[1])*(xBlockMaxInit[2]-xBlockMinInit[2]));
+     /*     int BlockIntersectionCode;
      double res=0.0,TotalResult=0.0;
      int idim;
 
@@ -2258,8 +2259,8 @@ LevelProcessingDone:
 
 
       return connectivityLength;
-    }
-*/
+     */    }
+
 
    double GetRemainedBlockVolumeMC(double *xBlockMin,double *xBlockMax,double EPS,double RelativeError,int *IntersectionStatus,int nTotalTests,int maxIntegrationLevel,int IntegrationLevel=0) {
      int BlockIntersectionCode,ntest;
