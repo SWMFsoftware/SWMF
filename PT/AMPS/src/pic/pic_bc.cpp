@@ -86,6 +86,9 @@ void PIC::BC::InjectionBoundaryConditions() {
     case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
       ((cInternalSphere1DData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
       break;
+    case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+      ((cInternalRotationBodyData*)(descriptor->BoundaryElement))->ProcessedBCflag=false;
+      break;
     default:
       exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
     }
@@ -96,6 +99,7 @@ void PIC::BC::InjectionBoundaryConditions() {
   cInternalSphericalData *Sphere;
   cInternalCircleData *Circle;
   cInternalSphere1DData *Sphere1D;
+  cInternalRotationBodyData *RotationBody;
 
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) if ((bc=node->InternalBoundaryDescriptorList)!=NULL) {
     for (;bc!=NULL;bc=bc->nextInternalBCelement) {
@@ -149,8 +153,23 @@ void PIC::BC::InjectionBoundaryConditions() {
           node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
 #endif
         }
-
         break;
+      case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+        RotationBody=(cInternalRotationBodyData*)(bc->BoundaryElement);
+	
+        if (RotationBody->ProcessedBCflag==false) {
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          StartTime=MPI_Wtime();
+#endif
+	  
+          RotationBody->ProcessedBCflag=true;
+          if (RotationBody->InjectionBoundaryCondition!=NULL) nTotalInjectedParticles+=RotationBody->InjectionBoundaryCondition((void*)RotationBody);
+	  
+#if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+          node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
+#endif
+	}
+	break;
       default:
         exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
       }

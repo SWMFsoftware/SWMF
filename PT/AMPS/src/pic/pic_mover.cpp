@@ -273,6 +273,7 @@ if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
   //spherical internal surface
 #if DIM == 3
   cInternalSphericalData *Sphere;
+  cInternalRotationBodyData *Nucleus;
 #elif DIM == 2
   exit(__LINE__,__FILE__,"not yet");
 #else
@@ -281,6 +282,9 @@ if ((nCallCounter==1057317)&&(PIC::Mesh::mesh.ThisThread==5)) {
 
   double radiusSphere,*x0Sphere;
   double a,b,c,d,dx,dy,dz,sqrt_d,dt1;
+
+  double *x0Nucleus,*lNucleus;
+  double xmin,xmax,rSurface;
 
 #define _UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_        0
 #define _BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_       1
@@ -557,6 +561,18 @@ int iTemp,jTemp,kTemp;
           ParticleIntersectionCode=_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
         }
 
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+        Nucleus=(cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement);
+	Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
+
+        Nucleus->SurfaceCurve(rSurface,x[0]);
+        if(xmin<=x[0] && xmax>=x[0] && rSurface>sqrt(x[1]*x[1]+x[2]*x[2])) {
+	  //the particle is inside the nucleus                                                                                                                  
+	  PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+          goto MovingLoop;
+        }
         break;
       default:
         exit(__LINE__,__FILE__,"Error: undetermined internal boundary type");
@@ -1481,6 +1497,7 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
   //spherical internal surface
 #if DIM == 3
   cInternalSphericalData *Sphere;
+  cInternalRotationBodyData *Nucleus;
 #elif DIM == 2
   exit(__LINE__,__FILE__,"not yet");
 #else
@@ -1489,6 +1506,9 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   double radiusSphere,*x0Sphere;
   double a,b,c,d,dx,dy,dz,sqrt_d,dt1;
+
+  double *x0Nucleus,*lNucleus;
+  double xmin,xmax,rSurface;
 
 #define _UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_        0
 #define _BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_       1
@@ -1855,6 +1875,18 @@ MovingLoop:
           ParticleIntersectionCode=_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_,MovingTimeFinished=false;
         }
 
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+        Nucleus=(cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement);
+	Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
+
+        Nucleus->SurfaceCurve(rSurface,xInit[0]);
+	if(xmin<=xInit[0] && xmax>=xInit[0] && rSurface>sqrt(xInit[1]*xInit[1]+xInit[2]*xInit[2])) {
+	  //the particle is inside the nucleus                                                                                                                  
+	  PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+          goto MovingLoop;
+        }
         break;
       default:
         exit(__LINE__,__FILE__,"Error: undetermined internal boundary type");
@@ -2253,7 +2285,18 @@ ProcessPhotoChemistry:
         }
       }
       break;
+    case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+      Nucleus=(cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement);
+      Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
 
+      Nucleus->SurfaceCurve(rSurface,xFinal[0]);
+      if(xmin<=xFinal[0] && xmax>=xFinal[0] && rSurface>sqrt(xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2])) {
+	//the particle is inside the nucleus                                                                                                                     
+	PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+        goto MovingLoop;
+      }
+      break;
     default:
       exit(__LINE__,__FILE__,"Error: the option is not recognized");
     }

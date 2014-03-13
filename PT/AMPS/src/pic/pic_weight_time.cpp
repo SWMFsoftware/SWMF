@@ -79,6 +79,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     cInternalSphericalData *Sphere;
     cInternalCircleData *Circle;
     cInternalSphere1DData *Sphere1D;
+    cInternalRotationBodyData *RotationBody;
 
     for (descriptor=PIC::Mesh::mesh.InternalBoundaryList.begin();descriptor!=PIC::Mesh::mesh.InternalBoundaryList.end();descriptor++) {
       switch (descriptor->BondaryType) {
@@ -99,6 +100,10 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 
         Sphere1D=(cInternalSphere1DData*)descriptor->BoundaryElement;
         if (Sphere1D->InjectionRate!=NULL) ParticleInjection+=Sphere1D->InjectionRate(spec,(void*)Sphere1D)*Sphere1D->maxIntersectedNodeTimeStep[spec];
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+        RotationBody=(cInternalRotationBodyData*)descriptor->BoundaryElement;
+	if (RotationBody->InjectionRate!=NULL) ParticleInjection+=RotationBody->InjectionRate(spec,(void*)RotationBody)*RotationBody->maxIntersectedNodeTimeStep[spec];
         break;
       default:
         exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -147,6 +152,7 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
   cInternalSphericalData *Sphere;
   cInternalCircleData *Circle;
   cInternalSphere1DData *Sphere1D;
+  cInternalRotationBodyData *RotationBody;
   double blockTimeStep=0.0;
   int s;
 
@@ -198,6 +204,10 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
           Sphere1D=(cInternalSphere1DData*)descriptor->BoundaryElement;
           if (Sphere1D->maxIntersectedNodeTimeStep[s]<blockTimeStep) Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
           break;
+	case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+          RotationBody=(cInternalRotationBodyData*)descriptor->BoundaryElement;
+          if (RotationBody->maxIntersectedNodeTimeStep[s]<blockTimeStep) RotationBody->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+          break;
         default:
           exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
         }
@@ -238,6 +248,12 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
             Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
             blockTimeStep=Sphere1D->maxIntersectedNodeTimeStep[s];
             break;
+	  case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+            if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalRotationBodyData can be used ONLY for 3D simulations");
+
+            RotationBody=(cInternalRotationBodyData*)ptr->BoundaryElement;
+            blockTimeStep=RotationBody->maxIntersectedNodeTimeStep[s];
+            break;
           default:
             exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
           }
@@ -268,6 +284,10 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
 
             Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
             Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+            break;
+	  case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+            RotationBody=(cInternalRotationBodyData*)ptr->BoundaryElement;
+            RotationBody->maxIntersectedNodeTimeStep[s]=blockTimeStep;
             break;
           default:
             exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
