@@ -120,17 +120,17 @@ CouplerMode=ices !!off, ices, swmf
 !   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init   
 
 
-   Source:UserDefined=on: \\ !on,off
+  Source:UserDefined=on: \\ !on,off
   SourceProcessCode= Jet\\
   SourceRate=Comet::GetTotalProductionRateJet \\
-  GenerateParticleProperties=Comet::GenerateParticlePropertiesJet \\
+  GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn \\
   ModifySurfaceSpeciesAbundance=false !!false !!!true,false			
 !!   InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init
 
   Source:UserDefined=on: \\ !on,off
   SourceProcessCode= Waist\\
   SourceRate=Comet::GetTotalProductionRateWaist \\
-  GenerateParticleProperties=Comet::GenerateParticlePropertiesWaist \\
+  GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn \\
   ModifySurfaceSpeciesAbundance=false !!false !!!true,false			
 !!   InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init
 
@@ -138,7 +138,7 @@ CouplerMode=ices !!off, ices, swmf
   Source:UserDefined=on \\ !on,off
     SourceProcessCode=Hartley2 \\
     SourceRate= Comet::GetTotalProductionRateBjorn  \\ !!!!!Comet::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
-    GenerateParticleProperties=Comet::GenerateParticlePropertiesHartley2 \\ !!Comet::GenerateParticlePropertiesBjorn !!Comet::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
+    GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn \\ !!Comet::GenerateParticlePropertiesBjorn !!Comet::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
     ModifySurfaceSpeciesAbundance=false !!false !!!true,false 
 !   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
 
