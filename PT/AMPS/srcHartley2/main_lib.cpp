@@ -408,7 +408,7 @@ double localResolution(double *x) {
 //  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
 
 //  return rSphere*res;
-  return rSphere*res/200;
+  return rSphere*res/200; 
 }
 
 
@@ -1393,6 +1393,7 @@ void amps_init() {
       PIC::BC::InternalBoundary::RotationBody::Init(ReserveSamplingSpace,NULL);
       RotationBodyDescriptor=PIC::BC::InternalBoundary::RotationBody::RegisterInternalRotationBody();
       Nucleus=(cInternalRotationBodyData*) RotationBodyDescriptor.BoundaryElement;
+
       Nucleus->SetGeneralSurfaceMeshParameters(60,100);
       //Nucleus->SetGeometricalParameters(x0,l,-rSphere,rSphere,Radius);
       Nucleus->SetGeometricalParameters(x0,l,-1165.0,1165.0,Radius);
@@ -1423,19 +1424,19 @@ void amps_init() {
       Nucleus->PrintDataStateVector=testPrintDataStateVector; ///Comet::Sampling::OutputSurfaceDataFile::PrintDataStateVector;
 
 
-      sprintf(fname,"%s/Sphere.dat",PIC::OutputDataFileDirectory);
-      Nucleus->PrintSurfaceMesh(fname);
+      //sprintf(fname,"%s/Sphere.dat",PIC::OutputDataFileDirectory);
+      //      Nucleus->PrintSurfaceMesh(fname);
 
-      sprintf(fname,"%s/SpheraData.dat",PIC::OutputDataFileDirectory);
-      Nucleus->PrintSurfaceData(fname,0);
+      //sprintf(fname,"%s/SpheraData.dat",PIC::OutputDataFileDirectory);
+      //Nucleus->PrintSurfaceData(fname,0);
 
       Nucleus->localResolution=localSphericalSurfaceResolution;
       Nucleus->InjectionRate=Comet::SourceProcesses::totalProductionRate;
       Nucleus->faceat=0;
       Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
       //Nucleus->InjectionBoundaryCondition=Comet::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
-      Nucleus->InjectionBoundaryCondition=Comet::SourceProcesses::InjectionBoundaryModelLimited; ///sphereParticleInjection;
-
+      Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
+      //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
       //set up the planet pointer in Mercury model
 

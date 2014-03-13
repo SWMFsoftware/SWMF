@@ -14,11 +14,11 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Comet";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";
 
-
+/*
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_OFFSET_=-1;
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=-1;
-
+*/
 
 static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false,probabilityFunctionDefinedWaist=false,probabilityFunctionDefinedHartley2=false;
 //static double productionDistributionJet[360][180],cumulativeProductionDistributionJet[360][180];
@@ -86,7 +86,7 @@ void Comet::Init_AfterParser() {
     ExospehreTemsprature[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceTemeprature[spec];
   }
 
-  Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
+  /*  Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
 
 
 
@@ -107,7 +107,7 @@ void Comet::Init_AfterParser() {
   //init the model of calcualting the integrals that correspond to the Kaguya's TVIS observations
   //  Comet::Sampling::Kaguya::Init();
   //PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SubsolarLimbColumnIntegrals::EmptyFunction,Comet::Sampling::Kaguya::TVIS::OutputModelData);
-}
+  */}
 
 double SodiumStickingProbability(double& ReemissionParticleFraction,double Temp) {
   double res=-1.0;
@@ -225,7 +225,7 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
 
 //calculate the sodium column density and plot
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
-  int spec,nVariables=0;
+  /*  int spec,nVariables=0;
 
   //column density
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
@@ -245,20 +245,20 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
   }
 
   return nVariables;
-}
+  */}
 
 void Exosphere::ColumnIntegral::ProcessColumnIntegrationVector(double *res,int resLength) {
-  int spec,cnt=0;
+  /*  int spec,cnt=0;
 
   //column density
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     if (res[cnt]>0.0) res[cnt+1]/=res[cnt];
     cnt+=2;
-  }
+    }*/
 }
 
 void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
-  int i,j,k,nd,cnt=0,spec;
+  /*  int i,j,k,nd,cnt=0,spec;
   double NumberDensity;
 
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
@@ -304,12 +304,12 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
 
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
-}
+  */}
 
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
-  double res=0.0;
+  /*  double res=0.0;
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble State[6],ltlocal;
@@ -346,7 +346,7 @@ double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
 #endif
 
   return res;
-}
+  */}
 
 
 double Comet::GetTotalProductionRateBjorn(int spec,void *SphereDataPointer){
@@ -517,7 +517,7 @@ bool Comet::Radius(double &r,double x){
 }
 
 //bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Nucleus) {
-bool Comet::GenerateParticlePropertiesHartley2(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -686,7 +686,7 @@ double Comet::GetTotalProductionRateJet(int spec,void *SphereDataPointer){
 }
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesJet(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
@@ -823,7 +823,7 @@ bool Comet::GenerateParticlePropertiesJet(int spec,PIC::ParticleBuffer::byte* te
 
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesWaist(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
@@ -1275,6 +1275,148 @@ bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double
   return true;
 }
 */
+
+long int Comet::InjectionBoundaryModel_Limited(void *SphereDataPointer) {
+  int spec;
+  long int res=0;
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel_Limited(spec,SphereDataPointer);
+
+  return res;
+}
+
+long int Comet::InjectionBoundaryModel_Limited(int spec,void *SphereDataPointer) {
+  cInternalSphericalData *Sphere;
+  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
+  long int newParticle,nInjectedParticles=0;
+  PIC::ParticleBuffer::byte *newParticleData;
+  double ParticleWeightCorrection=1.0;
+  bool flag=false;
+  int SourceProcessID;
+
+  double totalProductionRate=Comet::SourceProcesses::totalProductionRate(spec,SphereDataPointer);
+
+  const int nMaxInjectedParticles=10*PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber;
+
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+#else
+  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[spec];
+#else
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+  ModelParticlesInjectionRate=totalProductionRate/ParticleWeight;
+
+  //  if (ModelParticlesInjectionRate*ParticleWeight*LocalTimeStep<1.0E-10) return 0;
+
+  if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
+    ParticleWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
+    ModelParticlesInjectionRate/=ParticleWeightCorrection;
+  }
+
+  //definition of indexes TEMPORARY!!!!!
+  //  int _EXOSPHERE__SOURCE_MAX_ID_VALUE_=0;
+  //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_=0;
+  //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_=1;
+  //int _EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_=2;
+
+  //calcualte probabilities of each source processes                                                                 
+  double TotalFlux,FluxSourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_]; //,ProbabilitySourceProcess[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];                                                                                               
+int iSource;
+
+for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) FluxSourceProcess[iSource]=0.0; //,ProbabilitySourceProcess[iSource]=0.0;                                                                                         
+
+TotalFlux=totalProductionRate;
+
+//only Used defined source here since we only want the Bjorn model so far
+//calculate the source rate due to user defined source functions                                                   
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_]=Comet::GetTotalProductionRateJet(spec,SphereDataPointer);
+
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_]=Comet::GetTotalProductionRateWaist(spec,SphereDataPointer);
+
+ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_]=Comet::GetTotalProductionRateBjorn(spec,SphereDataPointer);
+
+
+while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
+  //determine the source process to generate a particle's properties                                               
+  do {
+    SourceProcessID=(int)(rnd()*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_));
+  }
+  while (FluxSourceProcess[SourceProcessID]/TotalFlux<rnd());
+
+  double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+
+  //to satisfy the compiler and fit the while structure                                                             
+  if (false) {}
+
+  //Add the user defined particle gineration                                                                                                                                                                                                                                 
+  else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_) {
+    flag=Comet::GenerateParticlePropertiesJet(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_;
+    if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+  }
+
+  else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_) {
+    flag=Comet::GenerateParticlePropertiesWaist(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_;
+    if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+  }
+
+  else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_) {
+    flag=Comet::GenerateParticlePropertiesHartley2(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_;
+    if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+  }
+  else {
+    continue;
+  }
+
+  if (flag==false) continue;
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+  if (startNode->block->GetLocalTimeStep(spec)/LocalTimeStep<rnd()) continue;
+#endif
+
+  //determine the surface element of the particle origin                                                            
+
+  //generate a particle                                                                                             
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+
+  PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+
+  newParticle=PIC::ParticleBuffer::GetNewParticle();
+  newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+  memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+  nInjectedParticles++;
+
+  //inject the particle into the system                                                                             
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  if (startNode==NULL) exit(__LINE__,__FILE__,"Error: the node is not defined");
+  if ((startNode->Thread!=PIC::ThisThread)||(startNode->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is n\
+ot defined");
+#endif
+
+  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(0)*rnd(),startNode,true);
+ }
+
+ return nInjectedParticles;
+}
+
 
 void Comet::AntiSolarDirectionColumnMap::Print(int DataOutputFileNumber) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
