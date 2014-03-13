@@ -67,6 +67,7 @@ my %PlotDir = (
     "OH"     => "OH/IO2",
     "IM"     => "IM/plots,IM/output",
     "PW"     => "PW/plots",
+    "PC"     => "PC/plots", 
     "PS"     => "PS/Output",
     "PT"     => "PT/plots",
     "RB"     => "RB/plots",
