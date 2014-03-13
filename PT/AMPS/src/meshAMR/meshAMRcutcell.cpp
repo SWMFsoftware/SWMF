@@ -264,12 +264,11 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
   }
 
   //calculate external normals to the faces
-  bool faceIntersectionFlag;
-  double x[3],x0[3],angle,e0[3],e1[3],norm[3],SearchDirection[3],l,l0;
-  long int nface,nIntersectionsForward,nIntersectionsBackward;
-  cNASTRANface *fcptr,*fc;
+  double x0[3],e0[3],e1[3],SearchDirection[3],l,l0;
+  long int nface;
+  cNASTRANface *fcptr;
   cNASTRANnode *nd0,*nd1,*nd2;
-  double t,c,c0,c1,c00,c11,c01,xLocal[2];
+  double xLocal[2];
 
   const double angleCosMin=cos(85.0/180.0*3.141592654);
 
@@ -553,11 +552,7 @@ public:
 
 
 double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double EPS,double RelativeError, CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,CutCell::cTriangleFaceDescriptor* TriangleCutFaceDescriptorList,int maxIntegrationLevel,int IntegrationLevel) {
-  int BlockIntersectionCode;
   double VolumeL0=-1.0,VolumeL1=-1.0;
-
-
-
 
   class cCutBlock {
   public:
@@ -659,7 +654,7 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
 
 
     for (int i=0;i<2;i+=1) for (int j=0;j<2;j+=1) for (int k=0;k<2;k+=1) {
-      double r,x[3],locx[3]={0.0,0.0,0.0};
+      double x[3];
 
       x[0]=xCellMin[0]+i*(xCellMax[0]-xCellMin[0]);
       x[1]=xCellMin[1]+j*(xCellMax[1]-xCellMin[1]);
