@@ -1219,37 +1219,42 @@ test_pic2:
 	$(MAKE) test_pic2_restart_check
 
 test_pic2_compile:
-	./Config.pl -v=Empty,PC/IPIC3D
+	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
 	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -g=GM:8,8,1,1024,1024 -o=GM:u=Waves,e=MhdAnisoP
 	$(MAKE) SWMF
 	$(MAKE) PIDL
-	cd GM/BATSRUS; ./Config.pl -g=8,8,1,1024,1024 -u=Waves -e=MhdAnisoP
-	cd GM/BATSRUS; ${MAKE} BATSRUS
 	
 test_pic2_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
 	cd ${TESTDIR}; ln -s ${BINDIR}/BATSRUS.exe ./
 	cp PC/IPIC3D/input/PARAM.in.start_4step  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/IPIC.in.start_4step  ${TESTDIR}/IPIC.in
-	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
+	cp PC/IPIC3D/input/LAYOUT.in.GM_PC  ${TESTDIR}/LAYOUT.in
 
 test_pic2_run:
-	cd ${TESTDIR}; mpirun -n 2 ./BATSRUS.exe < /dev/null | tee runlog.bats &
+	cp PC/IPIC3D/input/PARAM.in.start_4step_BATSRUS  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
+	sleep 2
+	cp PC/IPIC3D/input/PARAM.in.start_4step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #./IPIC.in | tee runlog.ipic
 	sleep 5
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
+	cd ${TESTDIR}; ./PostProc.pl  RESULTS/4step
 
 test_pic2_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
 		 PC/IPIC3D/input/z=0_ipic3d_n00000004.out.ref \
 		> test_pic2_4step.diff)
+	ls -l test_pic2_4step.diff
 
 test_pic2_2step_run:
-	cp PC/IPIC3D/input/PARAM.in.start_2step  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/IPIC.in.start_2step  ${TESTDIR}/IPIC.in
-	cd ${TESTDIR}; mpirun -n 2 ./BATSRUS.exe < /dev/null | tee runlog.bats &
+	cp PC/IPIC3D/input/PARAM.in.start_2step_BATSRUS  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
+	sleep 2
+	cp PC/IPIC3D/input/PARAM.in.start_2step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #./IPIC.in | tee runlog.ipic
 	sleep 5
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2step
@@ -1259,17 +1264,20 @@ test_pic2_2step_check:
 		${TESTDIR}/RESULTS/2step/GM/z=0_ipic3d_n00000002.out \
 		${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000002.out \
 		> test_pic2_2step.diff)
+	ls -l test_pic2_2step.diff
 
 test_pic2_restart_setup:
 	cd ${TESTDIR}; ./Restart.pl -i -v RESULTS/2step/RESTART
 	mkdir -p ${TESTDIR}/RESTART
 	cp ${TESTDIR}/RESULTS/2step/GM/restart*hdf ${TESTDIR}/RESTART/
 	cp ${TESTDIR}/RESULTS/2step/GM/settings.hdf ${TESTDIR}/RESTART/
-	cp PC/IPIC3D/input/PARAM.in.restart_2step  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/IPIC.in.restart_2step  ${TESTDIR}/IPIC.in
 
 test_pic2_restart_run:
-	cd ${TESTDIR}; mpirun -n 2 ./BATSRUS.exe < /dev/null | tee runlog.bats &
+	cp PC/IPIC3D/input/PARAM.in.restart_2step_BATSRUS  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
+	sleep 2
+	cp PC/IPIC3D/input/PARAM.in.restart_2step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #restart ./IPIC.in |tee runlog.ipic 
 	sleep 5
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restartstep
@@ -1278,4 +1286,4 @@ test_pic2_restart_check:
 	-@(diff ${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
 		${TESTDIR}/RESULTS/2restartstep/GM/z=0_ipic3d_n00000004.out \
 		> test_pic2_restart.diff)
-
+	ls -l test_pic2_*.diff
