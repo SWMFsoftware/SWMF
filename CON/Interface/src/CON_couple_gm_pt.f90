@@ -16,6 +16,8 @@ module CON_couple_gm_pt
   !USES:
   use CON_coupler
 
+  use CON_couple_points
+
   implicit none
   save
 
@@ -41,6 +43,8 @@ module CON_couple_gm_pt
 
   ! Router communicator info
   integer:: iCommGmPt, nProcGmPt, iProcGmPt, iProc0Gm, iProc0Pt, nProcCommon
+
+  type(CouplePointsType) :: Coupler
   
 contains
 
@@ -61,40 +65,13 @@ contains
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
+    Coupler%iCompTarget = PT_
+    Coupler%iCompSource = GM_
+    
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    iProcWorld = i_proc()
-
-    ! Get the union communicator, the UseMe logical, 
-    ! and the root proc indexes of the two components in the union comm.
-    iProc0Gm = i_proc0(GM_)
-    iProc0Pt = i_proc0(PT_)
-    call set_router_comm(GM_, PT_, iCommGmPt, UseMe, iProc0Gm, iProc0Pt)
-
-    call MPI_comm_size(iCommGmPt, nProcGmPt, iError)
-    call MPI_comm_rank(iCommGmPt, iProcGmPt, iError)
-
-    ! create group on intersection of GM_ and PT_
-    nProcCommon = n_proc(GM_) + n_proc(PT_) - nProcGmPt
-
-    IsSameLayout = n_proc(GM_)      == n_proc(PT_) &
-         .and.     i_proc0(GM_)     == i_proc0(PT_) &
-         .and.     i_proc_last(GM_) == i_proc_last(PT_)
-
-    !! Check if nDim in GM is the same as nDimPt
-    !! nDim info could be stored in Grid_C!
-    !if(is_proc(GM_)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
-    !if(.not.IsSameLayout) call MPI_bcast(&
-    !     nDim, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
-    !if(is_proc0(PT_))then
-    !   call PT_get_grid_info(nDimPt, iGridPt, iDecompPt)
-    !   if(nDim /= nDimPt)then
-    !      write(*,*) NameSub,' ERROR: nDim, nDimPt=', nDim, nDimPt
-    !      call CON_stop(NameSub// &
-    !          ': GM and PT have different number of spatial dimensions')
-    !   endif
-    !end if
+    call couple_points_init(Coupler)
 
   end subroutine couple_gm_pt_init
 
@@ -144,7 +121,28 @@ contains
          integer, intent(out):: iProc_I(nPoint)       
 
        end subroutine GM_find_points
-    end interface
+
+
+        subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+             Data_VI)
+          logical,          intent(in):: IsNew   ! true for new point array
+          character(len=*), intent(in):: NameVar ! List of variables
+          integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+          integer,          intent(in):: nDimIn  ! Dimensionality of positions
+          integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+          real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+          real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+        end subroutine GM_get_for_pt
+
+        subroutine GM_get_grid_info(nDim, iGrid, iDecomp)
+          integer, intent(out) :: nDim, iGrid, iDecomp
+        end subroutine GM_get_grid_info
+
+        subroutine PT_get_grid_info(nDim, iGrid, iDecomp)
+          integer, intent(out) :: nDim, iGrid, iDecomp
+        end subroutine PT_get_grid_info
+     end interface
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
@@ -158,8 +156,6 @@ contains
 
     ! Stored variables for GM->PT coupler
     !------------------------------------
-    ! Number of dimensions and number of variables
-    integer, save:: nDim, nVar
 
     ! List of variables to pass
     character(len=lNameVar):: NameVar
@@ -222,32 +218,34 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! GM sends all its variables to PT. Take information from Grid_C
-    NameVar = Grid_C(GM_)%NameVar
-    nVar    = Grid_C(GM_)%nVar
+    Coupler%NameVar = Grid_C(Coupler%iCompSource)%NameVar
+    Coupler%nVar    = Grid_C(Coupler%iCompSource)%nVar
 
-    if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,' starting iProc=',Coupler%iProcWorld
+
+    write(*,*)NameSub,' starting iProc=',Coupler%iProcWorld
 
     ! After everything is initialized exclude PEs which are not involved
     if(.not.UseMe) RETURN
 
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',Coupler%iProcWorld
 
     ! Allocate arrays for router
-    if(.not.allocated(nPointGm_P) .and. IsSameLayout) then
-       allocate(nPointGm_P(nProcGmPt), nPointPt_P(nProcGmPt))
-    elseif(.not.allocated(nPointGm_P)) then
-       allocate(nPointGm_P(n_proc(PT_)), nPointPt_P(n_proc(GM_)))
+    if(.not.allocated(Coupler%nPointSource_P) .and. Coupler%IsSameLayout) then
+       allocate(Coupler%nPointSource_P(Coupler%nProcSourceTarget), Coupler%nPointTarget_P(Coupler%nProcSourceTarget))
+    elseif(.not.allocated(Coupler%nPointSource_P)) then
+       allocate(Coupler%nPointSource_P(n_proc(Coupler%iCompTarget)), Coupler%nPointTarget_P(n_proc(Coupler%iCompSource)))
     end if
 
     ! Check if there is a need to redo the mapping
-    call GM_get_grid_info(nDim, iGridGm, iDecompGm)
-    call PT_get_grid_info(nDim, iGridPt, iDecompPt)
+    call GM_get_grid_info(Coupler%nDim, iGridGm, iDecompGm)
+    call PT_get_grid_info(Coupler%nDim, iGridPt, iDecompPt)
 
-    if(.not.IsSameLayout)then
+    if(.not.Coupler%IsSameLayout)then
        call MPI_bcast(&
-            iDecompGm, 1, MPI_INTEGER, iProc0Gm, iCommGmPt, iError)
+            iDecompGm, 1, MPI_INTEGER, i_proc0(Coupler%iCompSource), Coupler%iCommSourceTarget, iError)
        call MPI_bcast(&
-            iDecompPt, 1, MPI_INTEGER, iProc0Pt, iCommGmPt, iError)
+            iDecompPt, 1, MPI_INTEGER, i_proc0(Coupler%iCompTarget), Coupler%iCommSourceTarget, iError)
     endif
 
     IsNewRoute = iDecompGm /= iDecompLastGm .or. iDecompLastPt /= iDecompPt
@@ -256,187 +254,164 @@ contains
     iDecompLastPt = iDecompPt
 
     if(IsNewRoute)then
-       nPointPt = 0
-       nPointGm = 0
-       nData    = 0
+       Coupler%nPointTarget = 0
+       Coupler%nPointSource = 0
+       Coupler%nData    = 0
        ! Get positions where info is needed from PT. PT will allocate array.
-       if(is_proc(PT_))then
-          call PT_put_from_gm(NameVar, nVar, nPointPt, PosPt_DI)
+       if(is_proc(Coupler%iCompTarget))then
+          call PT_put_from_gm(Coupler%NameVar, Coupler%nVar, Coupler%nPointTarget, Coupler%PosTarget_DI)
        else
-          nPointPt = 0
-          allocate(PosPt_DI(nDim,0))
+          Coupler%nPointTarget = 0
+          allocate(Coupler%PosTarget_DI(Coupler%nDim,0))
        end if
 
-       if(IsSameLayout)then
+       if(Coupler%IsSameLayout)then
 
           ! Find processors that own the PT positions in GM
-          allocate(iProcPt_I(nPointPt))
+          allocate(iProcPt_I(Coupler%nPointTarget))
 
-          call GM_find_points(nDim, nPointPt, PosPt_DI, iProcPt_I)
+          call GM_find_points(Coupler%nDim, Coupler%nPointTarget, Coupler%PosTarget_DI, iProcPt_I)
 
           ! Order points according to the owner processor indexes
-          if(allocated(iPointPt_I)) deallocate(iPointPt_I)
-          allocate(iPointPt_I(nPointPt))
-          call get_buffer_order(nProcGmPt, nPointPt, iProcPt_I, &
-               nPointPt_P, iPointPt_I, nData)
+          if(allocated(Coupler%iPointTarget_I)) deallocate(Coupler%iPointTarget_I)
+          allocate(Coupler%iPointTarget_I(Coupler%nPointTarget))
+          call get_buffer_order(Coupler%nProcSourceTarget, Coupler%nPointTarget, iProcPt_I, &
+               Coupler%nPointTarget_P, Coupler%iPointTarget_I, Coupler%nData)
 
           deallocate(iProcPt_I)
 
           ! Rearrange coordinate array according to processor order
-          allocate(PosSortPt_DI(nDim,nData))
-          do iPoint = 1, nPointPt
-             if(iPointPT_I(iPoint) < 0)CYCLE
-             PosSortPt_DI(:,iPointPt_I(iPoint)) = PosPt_DI(:,iPoint)
+          allocate(PosSortPt_DI(Coupler%nDim,Coupler%nData))
+          do iPoint = 1, Coupler%nPointTarget
+             if(Coupler%iPointTarget_I(iPoint) < 0)CYCLE
+             PosSortPt_DI(:,Coupler%iPointTarget_I(iPoint)) = Coupler%PosTarget_DI(:,iPoint)
           end do
-          deallocate(PosPt_DI)
+          deallocate(Coupler%PosTarget_DI)
 
           ! Set number of points to be received on the GM component
-          call set_recv_info(iCommGmPt, nProcGmPt, iProcGmPt, &
-               nPointPt_P, nPointGm, nPointGm_P)
+          call set_recv_info(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+               Coupler%nPointTarget_P, Coupler%nPointSource, Coupler%nPointSource_P)
 
           ! Transfer PT positions to the GM processors that own them
-          if(allocated(PosGm_DI)) deallocate(PosGm_DI)
-          allocate(PosGm_DI(nDim,nPointGm))
-          call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nDim, &
-               nData,    nPointPt_P, PosSortPt_DI, &
-               nPointGm, nPointGm_P, PosGm_DI)
+          if(allocated(Coupler%PosSource_DI)) deallocate(Coupler%PosSource_DI)
+          allocate(Coupler%PosSource_DI(Coupler%nDim,Coupler%nPointSource))
+          call transfer_buffer(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, Coupler%nDim, &
+               Coupler%nData,    Coupler%nPointTarget_P, PosSortPt_DI, &
+               Coupler%nPointSource, Coupler%nPointSource_P, Coupler%PosSource_DI)
 
           deallocate(PosSortPt_DI)
        else
           !\
           ! Layouts ovelap
           !/
-          if(allocated(iCoupleProcGm_I ))deallocate(iCoupleProcGm_I )
-          if(allocated(iCoupleProcPt_I ))deallocate(iCoupleProcPt_I )
-          if(allocated(nCouplePointGm_I))deallocate(nCouplePointGm_I)
-          if(allocated(nCouplePointPt_I))deallocate(nCouplePointPt_I)
-          if(allocated(iPointPt_I      ))deallocate(iPointPt_I      )
-          if(allocated(PosGm_DI        ))deallocate(PosGm_DI        )
+          if(allocated(Coupler%iCoupleProcSource_I ))deallocate(Coupler%iCoupleProcSource_I )
+          if(allocated(Coupler%iCoupleProcTarget_I ))deallocate(Coupler%iCoupleProcTarget_I )
+          if(allocated(Coupler%nCouplePointSource_I))deallocate(Coupler%nCouplePointSource_I)
+          if(allocated(Coupler%nCouplePointTarget_I))deallocate(Coupler%nCouplePointTarget_I)
+          if(allocated(Coupler%iPointTarget_I      ))deallocate(Coupler%iPointTarget_I      )
+          if(allocated(Coupler%PosSource_DI        ))deallocate(Coupler%PosSource_DI        )
 
           ! Setup communication pattern for finding points on GM
           ! This allocates and sets iCoupleProc*_I, nCouplePoint*_I arrays
-          call set_inquiry(iCommGmPt, nProcGmPt, iProcGmPt,  &
-               GM_, PT_, nProcCommon,                        &
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I, &
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
+          call set_inquiry(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget,  &
+               Coupler%iCompSource, Coupler%iCompTarget, nProcCommon,                        &
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I, &
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I)
 
-          if(is_proc(PT_))then
+          if(is_proc(Coupler%iCompTarget))then
              ! Number of points to send from PT to the selected GM processors
-             nCouplePointPt_I(1:nCouplePt-1) = nPointPt / nCouplePt 
+             Coupler%nCouplePointTarget_I(1:Coupler%nCoupleTarget-1) = Coupler%nPointTarget / Coupler%nCoupleTarget 
              ! Last processor gets the rest of points
-             nCouplePointPt_I(nCouplePt) = &
-                  nPointPt - sum(nCouplePointPt_I(1:nCouplePt-1))
+             Coupler%nCouplePointTarget_I(Coupler%nCoupleTarget) = &
+                  Coupler%nPointTarget - sum(Coupler%nCouplePointTarget_I(1:Coupler%nCoupleTarget-1))
           end if
 
           ! send number of points from PT to GM that will be sent to 
-          ! "GM_find_points." result is in nCouplePointGm_I (number of 
+          ! "GM_find_points." result is in Coupler%nCouplePointSource_I (number of 
           ! points to be recieved)
-          call get_recv_buffer_size(iCommGmPt, nProcGmPt, iProcGmPt, &
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,         &
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I)
+          call get_recv_buffer_size(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I,         &
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I)
 
           ! Allocate buffer for positions on GM (zero size on PT)
-          if(is_proc(GM_)) nPointGm = sum(nCouplePointGm_I)
-          allocate(PosGm_DI(nDim,nPointGm))
+          if(is_proc(Coupler%iCompSource)) Coupler%nPointSource = sum(Coupler%nCouplePointSource_I)
+          allocate(Coupler%PosSource_DI(Coupler%nDim,Coupler%nPointSource))
 
           ! Send positions from PT to GM, so GM can find the owners
-          call transfer_buffer_real(iCommGmPt, nProcGmPt, iProcGmPt,&
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,          &
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,          &
-               nDim,                                                  &
-               nPointPt, PosPt_DI,&
-               nPointGm, PosGm_DI)
+          call transfer_buffer_real(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget,&
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I,          &
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I,          &
+               Coupler%nDim,                                                  &
+               Coupler%nPointTarget, Coupler%PosTarget_DI,&
+               Coupler%nPointSource, Coupler%PosSource_DI)
 
           ! Find processors that own the PT positions in GM
-          allocate(iProcGm_I(nPointGm))
-          if(is_proc(GM_))&
-               call GM_find_points(nDim, nPointGm, PosGm_DI, iProcGm_I)
-          deallocate(PosGm_DI)
+          allocate(iProcGm_I(Coupler%nPointSource))
+          if(is_proc(Coupler%iCompSource))&
+               call GM_find_points(Coupler%nDim, Coupler%nPointSource, Coupler%PosSource_DI, iProcGm_I)
+          deallocate(Coupler%PosSource_DI)
 
           ! send owner processor indexes from GM to PT
-          allocate(iProcPt_I(nPointPt))
-          call transfer_buffer_int(iCommGmPt, nProcGmPt, iProcGmPt,&
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,&
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,&
+          allocate(iProcPt_I(Coupler%nPointTarget))
+          call transfer_buffer_int(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget,&
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I,&
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I,&
                1, &
-               nPointGm, iProcGm_I,&
-               nPointPt, iProcPt_I)
+               Coupler%nPointSource, iProcGm_I,&
+               Coupler%nPointTarget, iProcPt_I)
 
           ! based on owner information set up the final communication pattern
-          call  set_data_transfer(iCommGmPt,                 &
-               GM_, PT_,                                     &
-               nPointGm, iProcGm_I,                          &
-               nPointPt, iProcPt_I,                          &
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I, &
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I)
+          call  set_data_transfer(Coupler%iCommSourceTarget,                 &
+               Coupler%iCompSource, Coupler%iCompTarget,                                     &
+               Coupler%nPointSource, iProcGm_I,                          &
+               Coupler%nPointTarget, iProcPt_I,                          &
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I, &
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I)
 
 
-          if(is_proc(PT_))then
+          if(is_proc(Coupler%iCompTarget))then
              ! Order points according to the owner processor indexes
-             ! sort iProcPt_I according to order of procs in iCoupleProcPt_I
-             allocate(iPointPt_I(nPointPt))
-             call get_transfer_buffer_order(GM_, PT_,           &
-                  nPointPt, iProcPt_I,                          &
-                  nCouplePt, iCoupleProcPt_I, nCouplePointPt_I, &
-                  iPointPt_I, nData)
+             ! sort iProcPt_I according to order of procs in Coupler%iCoupleProcTarget_I
+             allocate(Coupler%iPointTarget_I(Coupler%nPointTarget))
+             call get_transfer_buffer_order(Coupler%iCompSource, Coupler%iCompTarget,           &
+                  Coupler%nPointTarget, iProcPt_I,                          &
+                  Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I, &
+                  Coupler%iPointTarget_I, Coupler%nData)
 
-             allocate(PosSortPt_DI(nDim, nData))
+             allocate(PosSortPt_DI(Coupler%nDim, Coupler%nData))
 
              ! Rearrange coordinate array according to processor order
-             do iPoint = 1, nPointPt
-                if(iPointPt_I(iPoint) < 0) CYCLE
-                PosSortPt_DI(:,iPointPt_I(iPoint)) = PosPt_DI(:,iPoint)
+             do iPoint = 1, Coupler%nPointTarget
+                if(Coupler%iPointTarget_I(iPoint) < 0) CYCLE
+                PosSortPt_DI(:,Coupler%iPointTarget_I(iPoint)) = Coupler%PosTarget_DI(:,iPoint)
              end do
           else
-             allocate(PosSortPt_DI(nDim, nData))
+             allocate(PosSortPt_DI(Coupler%nDim, Coupler%nData))
           end if
 
-          deallocate(iProcPt_I, PosPt_DI, iProcGm_I)
+          deallocate(iProcPt_I, Coupler%PosTarget_DI, iProcGm_I)
 
           ! Allocate buffer for positions on GM (zero size on PT) 
-          if(is_proc(GM_)) nPointGm = sum(nCouplePointGm_I)
-          if(allocated(PosGm_DI)) deallocate(PosGm_DI)
-          allocate(PosGm_DI(nDim, nPointGm))
+          if(is_proc(Coupler%iCompSource)) Coupler%nPointSource = sum(Coupler%nCouplePointSource_I)
+          if(allocated(Coupler%PosSource_DI)) deallocate(Coupler%PosSource_DI)
+          allocate(Coupler%PosSource_DI(Coupler%nDim, Coupler%nPointSource))
 
           ! Send PT point positions to the owner GM processors
-          call transfer_buffer_real(iCommGmPt, nProcGmPt, iProcGmPt, &
-               nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,           &
-               nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,           &
-               nDim,                                                   &
-               nData,    PosSortPt_DI,              &
-               nPointGm, PosGm_DI)
+          call transfer_buffer_real(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+               Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I,           &
+               Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I,           &
+               Coupler%nDim,                                                   &
+               Coupler%nData,    PosSortPt_DI,              &
+               Coupler%nPointSource, Coupler%PosSource_DI)
 
           deallocate(PosSortPt_DI)
 
        end if
     end if
 
-    ! Get the data from GM
-    allocate(DataGm_VI(nVar,nPointGm))
-    if(is_proc(GM_)) call GM_get_for_pt( IsNewRoute, &
-         NameVar, nVar, nDim, nPointGm, PosGm_DI, DataGm_VI)
+    call couple_points(Coupler,GM_get_for_pt, PT_put_from_gm, PT_get_grid_info, GM_get_grid_info)
 
-    ! Send data from GM to PT into DataPt_VI
-    allocate(DataPt_VI(nVar, nData))
-    if(IsSameLayout)then
-       call transfer_buffer(iCommGmPt, nProcGmPt, iProcGmPt, nVar, &
-            nPointGm, nPointGm_P, DataGm_VI, &
-            nData,    nPointPt_P, DataPt_VI) 
-    else
-       call transfer_buffer_real(iCommGmPt, nProcGmPt, iProcGmPt, &
-            nCoupleGm, iCoupleProcGm_I, nCouplePointGm_I,           &
-            nCouplePt, iCoupleProcPt_I, nCouplePointPt_I,           &
-            nVar, nPointGm, DataGm_VI, nData, DataPt_VI)
-    end if
-    deallocate(DataGm_VI)
-
-    ! Give the data to PT
-    if(is_proc(PT_)) call PT_put_from_gm( &
-         NameVar, nVar, nPointPt, PosPt_DI, DataPt_VI, iPointPt_I)
-
-    deallocate(DataPt_VI)
-
-    if(DoTest) write(*,*) NameSub,' finished, iProc=',iProcWorld
+    if(DoTest) write(*,*) NameSub,' finished, iProc=',Coupler%iProcWorld
   end subroutine couple_gm_pt
 
   !==========================================================================
@@ -550,92 +525,6 @@ contains
 
   end subroutine set_recv_info
 
-  !===========================================================================
-
-  subroutine transfer_buffer(iComm, nProc, iProc, nData, &
-       nBufferS, nBufferS_P, BufferS_I, &
-       nBufferR, nBufferR_P, BufferR_I)
-
-    use ModMpi
-
-    integer, intent(in):: iComm                    ! MPI communicator
-    integer, intent(in):: nProc                    ! number of processors
-    integer, intent(in):: iProc                    ! local proc index
-    integer, intent(in):: nData                    ! number of reals per point
-    integer:: nBufferS, nBufferR                   ! total buffer sizes
-
-    integer, intent(in):: nBufferS_P(0:nProc-1)        ! send buffer chunks 
-    integer, intent(in):: nBufferR_P(0:nProc-1)        ! recv buffer chunks
-
-    real, intent(in) :: BufferS_I(nData*nBufferS)  ! send buffer
-    real, intent(out):: BufferR_I(nData*nBufferR)  ! recv buffer
-
-    ! index of recv and send processors
-    integer:: iProcR, iProcS
-
-    integer:: iBufferS, iBufferR
-
-    ! MPI stuff
-    integer, parameter:: iTag = 77
-    integer:: iRequestR, iRequestS, iError
-    integer, allocatable:: iRequestS_I(:), iRequestR_I(:), iStatus_II(:,:)
-
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'transfer_buffer'
-    !-----------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
-         nProc, iProc, nData
-
-    allocate(iRequestS_I(nProc), iRequestR_I(nProc), &
-         iStatus_II(MPI_STATUS_SIZE,nProc))
-
-    ! Possibly optimize for local copies?
-
-    ! Send the appropriate parts of the send buffer
-    iRequestS = 0
-    iBufferS  = 1
-    do iProcR = 0, nProc - 1
-       if(nBufferS_P(iProcR) == 0) CYCLE        ! Skip empty chunks
-
-       iRequestS = iRequestS + 1                ! Count send requests
-
-       ! Post send
-       call MPI_isend(BufferS_I(iBufferS), nData*nBufferS_P(iProcR), &
-            MPI_REAL, iProcR, iTag, iComm, iRequestS_I(iRequestS), iError)
-
-       ! Jump to the starting point of the next chunk
-       iBufferS  = iBufferS + nData*nBufferS_P(iProcR) 
-    end do
-
-    ! Recv the appropriate parts from the send processors
-    iRequestR = 0
-    iBufferR  = 1
-    do iProcS = 0, nProc - 1
-       if(nBufferR_P(iProcS) == 0) CYCLE            ! Skip empty chunks
-
-       iRequestR = iRequestR + 1                    ! Count recv requests
-
-       ! Post recv
-       call MPI_irecv(BufferR_I(iBufferR), nData*nBufferR_P(iProcS), &
-            MPI_REAL, iProcS, iTag, iComm, iRequestR_I(iRequestR), iError)
-
-       ! Jump to the starting point of the next chunk
-       iBufferR  = iBufferR + nData*nBufferR_P(iProcS)  
-
-    end do
-
-    ! wait for all receives to be completed
-    if(iRequestR > 0) &
-         call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
-
-    ! wait for all sends to be completed
-    if(iRequestS > 0) &
-         call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
-
-    deallocate(iRequestS_I, iRequestR_I, iStatus_II)
-
-  end subroutine transfer_buffer
 
   !===========================================================================
 
@@ -1099,96 +988,6 @@ contains
     deallocate(iCoupleProcInv_P, iOrder_I)
 
   end subroutine get_transfer_buffer_order
-
-  !===========================================================================
-
-  subroutine transfer_buffer_real(&
-       iComm, nProc, iProc,&
-       nCoupleS, iCoupleProcS_I, nCouplePointS_I,&
-       nCoupleR, iCoupleProcR_I, nCouplePointR_I,&
-       nData, &
-       nBufferS, BufferS_I, nBufferR, BufferR_I)
-
-    ! This subroutine transfers array of reals
-    ! A processor can both send and recv
-    ! Correctness: only buffers of the same type should be present 
-
-    use ModMpi
-
-
-    integer, intent(in):: iComm  ! MPI communicator
-    integer, intent(in):: nProc  ! number of processors
-    integer, intent(in):: iProc  ! local proc index
-
-    integer, intent(in):: nCoupleS                 ! #   of procs to send to
-    integer, intent(in):: iCoupleProcS_I( nCoupleS)! ids of procs to send to
-    integer, intent(in):: nCouplePointS_I(nCoupleS)! # of points  to send
-
-    integer, intent(in):: nCoupleR                 ! #   of procs to recv from
-    integer, intent(in):: iCoupleProcR_I( nCoupleR)! ids of procs to recv from
-    integer, intent(in):: nCouplePointR_I(nCoupleR)! # of points  to recv
-
-    integer, intent(in)   :: nData                 ! number of items per point
-    integer, intent(in)   :: nBufferS                  ! send buffer size
-    real,    intent(inout):: BufferS_I(nData*nBufferS) ! send buffer
-    integer, intent(in)   :: nBufferR                  ! recv buffer size
-    real,    intent(inout):: BufferR_I(nData*nBufferR) ! recv buffer
-
-    integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
-    integer:: iCouple, iBuffer
-
-    ! MPI stuff
-    integer, parameter:: iTag = 77
-    integer:: iError
-    integer, allocatable:: iRequest_I(:), iStatus_II(:,:)
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'transfer_buffer_direct'
-    !-----------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
-         nProc, iProc, nData
-
-    if(nCoupleS + nCoupleR == 0) RETURN
-
-    allocate(iRequest_I(nCoupleS+nCoupleR))
-    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR))
-
-    !\
-    ! Send buffer
-    !/
-    if(nCoupleS > 0)then
-       !\
-       ! Send array of reals
-       !/
-       iBuffer = 1
-       do iCouple = 1, nCoupleS
-          iProcS = iCoupleProcS_I(iCouple)
-          call MPI_isend(&
-               BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
-               MPI_REAL, iProcS, iTag, iComm, iRequest_I(iCouple),iError)
-          iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
-       end do
-    end if
-    if(nCoupleR > 0)then
-       !\
-       ! Receive array of reals
-       !/
-       iBuffer = 1
-       do iCouple = 1, nCoupleR
-          iProcR = iCoupleProcR_I(iCouple)
-          call MPI_irecv(&
-               BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
-               MPI_REAL, iProcR, iTag, iComm, &
-               iRequest_I(nCoupleS+iCouple),iError)
-          iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
-       end do
-    end if
-    !\
-    ! Finalize transfer
-    !/
-    call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
-    deallocate(iRequest_I, iStatus_II)
-  end subroutine transfer_buffer_real
 
   !===========================================================================
 
