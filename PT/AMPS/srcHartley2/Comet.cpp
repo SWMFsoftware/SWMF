@@ -225,6 +225,8 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
 
 //calculate the sodium column density and plot
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
+  int nVariables=0;
+
   /*  int spec,nVariables=0;
 
   //column density
@@ -244,8 +246,9 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
     nVariables+=2;
   }
 
+*/
   return nVariables;
-  */}
+  }
 
 void Exosphere::ColumnIntegral::ProcessColumnIntegrationVector(double *res,int resLength) {
   /*  int spec,cnt=0;
@@ -309,8 +312,9 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
-  /*  double res=0.0;
+    double res=0.0;
 
+    /*
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble State[6],ltlocal;
   double EccentricityVector[3];
@@ -344,9 +348,9 @@ double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
 
   if (c<0.0) res=2.0*Pi-res;
 #endif
-
+*/
   return res;
-  */}
+  }
 
 
 double Comet::GetTotalProductionRateBjorn(int spec,void *SphereDataPointer){
