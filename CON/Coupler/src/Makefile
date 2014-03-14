@@ -18,7 +18,8 @@ MODULES = \
 	CON_integrator.o\
 	CON_buffer_grid.o\
 	CON_test_global_message_pass.o\
-	CON_coupler.o
+	CON_coupler.o\
+	CON_couple_points.o
 
 SEARCH_EXTRA = -I${LIBRARYDIR}
 
