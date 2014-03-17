@@ -75,6 +75,7 @@ OBJECTS = \
 	ModSolarwind.o \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
+	ModUserInterface.o \
 	ModUser.o \
 	ModViscosity.o \
 	ModWaves.o \
