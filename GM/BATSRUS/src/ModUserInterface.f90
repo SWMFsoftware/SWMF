@@ -13,24 +13,188 @@ module ModUserInterface
   ! this module cannot be in the same file as user_interface.f90.
 
   interface
+
+     !=====================================================================
+     subroutine user_set_boundary_cells(iBlock)
+
+       implicit none
+       integer,intent(in)::iBlock
+
+     end subroutine user_set_boundary_cells
+     !=====================================================================
+     subroutine user_set_face_boundary(VarsGhostFace_V)
+
+       use ModAdvance, ONLY: nVar
+       implicit none
+       real, intent(out):: VarsGhostFace_V(nVar)
+
+     end subroutine user_set_face_boundary
+
+     !=====================================================================
+     subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+
+       implicit none
+       integer,          intent(in)  :: iBlock, iSide
+       character(len=*), intent(in)  :: TypeBc
+       logical,          intent(out) :: IsFound
+
+     end subroutine user_set_cell_boundary
+
+     !=====================================================================
+     subroutine user_initial_perturbation
+
+       implicit none
+
+     end subroutine user_initial_perturbation
+     !=====================================================================
+     subroutine user_set_ics(iBlock)
+
+       implicit none
+       integer, intent(in) :: iBlock
+
+     end subroutine user_set_ics
+
+     !=====================================================================
+     subroutine user_init_session
+
+       implicit none
+
+     end subroutine user_init_session
+
+     !=====================================================================
+     subroutine user_action(NameAction)
+
+       implicit none
+       character(len=*), intent(in):: NameAction
+
+     end subroutine user_action
+     !=====================================================================
+     subroutine user_specify_refinement(iBlock, iArea, DoRefine)
+
+       implicit none
+       integer, intent(in) :: iBlock, iArea
+       logical,intent(out) :: DoRefine
+
+     end subroutine user_specify_refinement
+
+     !=====================================================================
+     subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
+
+       implicit none
+       integer, intent(in)          :: iBlock
+       real, intent(out)            :: UserCriteria
+       character(len=*), intent(in) :: TypeCriteria
+       logical, intent(inout)       :: IsFound
+
+     end subroutine user_amr_criteria
+
+     !=====================================================================
+     subroutine user_read_inputs
+
+       implicit none
+
+     end subroutine user_read_inputs
+
+     !=====================================================================
+     subroutine user_get_log_var(VarValue, TypeVar, Radius)
+
+       implicit none
+       real, intent(out)           :: VarValue
+       character(len=*), intent(in):: TypeVar
+       real, optional, intent(in)  :: Radius
+
+     end subroutine user_get_log_var
+
+     !====================================================================
+
+     subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+          PlotVar_G, PlotVarBody, UsePlotVarBody, &
+          NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
+       use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+       implicit none
+       integer,          intent(in)   :: iBlock
+       character(len=*), intent(in)   :: NameVar
+       logical,          intent(in)   :: IsDimensional
+       real,             intent(out)  :: &
+            PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+       real,             intent(out)  :: PlotVarBody
+       logical,          intent(out)  :: UsePlotVarBody
+       character(len=*), intent(inout):: NameTecVar
+       character(len=*), intent(inout):: NameTecUnit
+       character(len=*), intent(inout):: NameIdlUnit
+       logical,          intent(out)  :: IsFound
+
+     end subroutine user_set_plot_var
+
+     !====================================================================
+
+     subroutine user_calc_sources(iBlock)
+
+       implicit none
+       integer, intent(in) :: iBlock
+
+     end subroutine user_calc_sources
+
+     !=====================================================================
+
+     subroutine user_init_point_implicit
+
+       implicit none
+
+     end subroutine user_init_point_implicit
+
+     !=====================================================================
+
+     subroutine user_get_b0(x, y, z, B0_D)
+
+       implicit none
+       real, intent(in) :: x, y, z
+       real, intent(out):: B0_D(3)
+
+     end subroutine user_get_b0
+
+     !=====================================================================
+     subroutine user_update_states(iStage, iBlock)
+
+       implicit none
+       integer,intent(in):: iStage, iBlock
+
+     end subroutine user_update_states
+
+     !=====================================================================
+     subroutine user_normalization
+
+       implicit none
+
+     end subroutine user_normalization
+
+     !=====================================================================
+     subroutine user_io_units
+
+       implicit none
+
+     end subroutine user_io_units
+
+     !=====================================================================
+     subroutine user_set_resistivity(iBlock, Eta_G)
+
+       use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+       implicit none
+       integer, intent(in) :: iBlock
+       real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
+
+     end subroutine user_set_resistivity
+     !=====================================================================
      subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
           EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
           EinternalOut, TeOut, PressureOut, &
           CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
           OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
-       ! The State_V vector is in normalized units, all other physical
-       ! quantities are in SI.
-       !
-       ! If the electron energy is used, then EinternalIn, EinternalOut,
-       ! PressureOut, CvOut refer to the electron internal energies,
-       ! electron pressure, and electron specific heat, respectively.
-       ! Otherwise they refer to the total (electron + ion) internal energies,
-       ! total (electron + ion) pressure, and the total specific heat.
-
        use ModAdvance,    ONLY: nWave
        use ModVarIndexes, ONLY: nVar
-
+       implicit none
        real, intent(in) :: State_V(nVar)
        integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
        real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
@@ -49,13 +213,9 @@ module ModUserInterface
             OpacityPlanckOut_W(nWave)                         ! [1/m]
        real, optional, intent(out) :: &
             OpacityRosselandOut_W(nWave)                      ! [1/m]
-
-       ! Multi-group specific interface. The variables are respectively:
-       !  Group Planckian spectral energy density
        real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
      end subroutine user_material_properties
   end interface
 
 end module ModUserInterface
-
