@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 
 subroutine write_progress(inopt)
@@ -63,9 +63,8 @@ subroutine write_runtime_values()
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
   use ModParallel,  ONLY: proc_dims
-  use ModImplicit,  ONLY: UseSplitSemiImplicit, &
-       UseImplicit, UseSemiImplicit, TypeSemiImplicit
-  use ModUser, ONLY: user_action
+  use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
+       TypeSemiImplicit
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
   use CON_planet,   ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
