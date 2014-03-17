@@ -169,6 +169,7 @@ contains
          UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I,ChargeIon_I
     use ModPhysics,    ONLY: IonMassPerCharge
+    use ModUserInterface
 
     real, intent(in) :: State_V(nVar)
     real, intent(out):: IonMassPerChargeOut
@@ -177,7 +178,8 @@ contains
     !--------------------------------------------------------------------------
 
     if(.not.UseIdealEos)then
-       call user_material_z_n(State_V, zAverage, NatomicSi)
+       call user_material_properties(State_V, &
+            AverageIonChargeOut=zAverage, NatomicOut=NatomicSi)
 
        ! Avoid using small zAverage, since then we will generate magnetic
        ! field with the Biermann Battery term based numerical errors.
