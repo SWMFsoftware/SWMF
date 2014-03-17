@@ -134,7 +134,7 @@ subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
   real, intent(out)           :: VarValue
   character(len=*), intent(in):: TypeVar
-  real, intent(in)            :: Radius
+  real, optional, intent(in)  :: Radius
   !-------------------------------------------------------------------
   call user_sub(VarValue, TypeVar, Radius)
 
