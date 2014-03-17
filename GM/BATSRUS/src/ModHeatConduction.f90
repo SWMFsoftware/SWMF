@@ -272,8 +272,8 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_
-    use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
@@ -347,9 +347,9 @@ contains
     use ModNumConst,     ONLY: cTolerance
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_
-    use ModUser,         ONLY: user_material_properties
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
     use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
@@ -490,8 +490,8 @@ contains
     use ModNumConst,   ONLY: cTolerance
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_
-    use ModUser,       ONLY: user_material_properties
     use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, p_
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
     real, intent(in) :: State_V(nVar), Normal_D(3)
@@ -592,13 +592,13 @@ contains
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: get_radiative_cooling
     use ModResistivity,  ONLY: Eta_GB, set_resistivity
-    use ModUser,         ONLY: user_material_properties
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          j0_, nJp1_, k0_, nKp1_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
+    use ModUserInterface ! user_material_properties
 
     real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
     real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -780,9 +780,9 @@ contains
       use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
            UnitEnergyDens_, UnitU_, UnitX_, AverageIonCharge, UnitPoynting_
       use ModRadDiffusion, ONLY: HeatFluxLimiter
-      use ModUser,       ONLY: user_material_properties
       use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_
       use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
+      use ModUserInterface ! user_material_properties
 
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
@@ -1050,10 +1050,10 @@ contains
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
-    use ModUser,     ONLY: user_material_properties
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)

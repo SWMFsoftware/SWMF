@@ -46,8 +46,6 @@ subroutine MH_set_parameters(TypeAction)
        iVarSmooth_V, iVarSmoothIndex_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
-  use ModUser,          ONLY: user_read_inputs, user_init_session, &
-       NameUserModule, VersionUserModule
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
@@ -103,6 +101,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModViscosity, ONLY: viscosity_set_parameters, UseViscosity, &
        viscosity_init
   use ModPIC, ONLY: pic_read_param
+  use ModUser, ONLY: NameUserModule, VersionUserModule
+  use ModUserInterface ! user_read_inputs, user_init_session
 
   implicit none
 
@@ -2825,7 +2825,8 @@ contains
 
     use ModGeometry, ONLY: LogRGen_I
     use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D, IsRotatedCartesian
-    use ModUser,  ONLY : user_specify_refinement
+    use ModUserInterface ! user_specify_refinement
+
     character(len=20):: TypeGeometryBatl
 
     character(len=*), parameter:: NameSub='correct_grid_geometry'

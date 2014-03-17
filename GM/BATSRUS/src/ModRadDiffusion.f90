@@ -370,7 +370,7 @@ contains
 
       use ModAdvance,     ONLY: nWave
       use ModPhysics,     ONLY: Si2No_V, UnitX_, Clight
-      use ModUser,        ONLY: user_material_properties
+      use ModUserInterface ! user_material_properties
 
       real, intent(in) :: State_V(nVar)
       real, intent(out):: DiffCoef
@@ -410,9 +410,9 @@ contains
     use ModConst,      ONLY: cLightSpeed
     use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitT_
     use ModMain,       ONLY: nI, nJ, nK
-    use ModUser,       ONLY: user_material_properties
     use ModGeometry,   ONLY: true_cell
     use ModVarIndexes, ONLY: Energy_
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iBlock
 
@@ -474,9 +474,9 @@ contains
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
-    use ModUser,     ONLY: user_material_properties
     use ModGeometry, ONLY: TypeGeometry
     use ModParallel, ONLY: NOBLK, NeiLev
+    use ModUserInterface ! user_material_properties
 
     real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
     real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
@@ -1836,8 +1836,8 @@ contains
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, ExtraEintMin
-    use ModUser,       ONLY: user_material_properties
     use ModGeometry,   ONLY: true_cell
+    use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iBlock, iImplBlock
     real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)

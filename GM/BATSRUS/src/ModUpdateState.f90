@@ -10,7 +10,6 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModKind, ONLY: Real8_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
-  use ModUser, ONLY: user_calc_sources, user_init_point_implicit
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
        multi_ion_set_restrict, multi_ion_update, DoRestrictMultiIon
   use ModEnergy
@@ -21,6 +20,8 @@ subroutine update_states_MHD(iStage,iBlock)
        calc_resistivity_source
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
+  use ModUserInterface ! user_calc_sources, user_init_point_implicit
+
   implicit none
 
   integer, intent(in) :: iStage, iBlock
