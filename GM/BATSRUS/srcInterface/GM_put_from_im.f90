@@ -59,14 +59,9 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      ! according to the IM module we have selected.
      ! Determine version of IM:
      call get_comp_info(IM_, NameVersion=NameVersionIm)
-     if(NameVersionIm == 'RAM_HEIDI')then
+     if(NameVersionIm(1:3) == 'RAM')then
+        ! HEIDI and RAM-SCB have similar equatorial grids.
         IM_lat = Grid_C(IM_) % Coord1_I
-     elseif(NameVersionIm(1:3) == 'RAM')then
-        ! RAM-SCB has an equatorial grid, pressure is mapped to 
-        ! ionosphere by RAM using a constant, latitude based grid.
-        do i = 1, iSizeIn
-           IM_lat(i) = (iSizeIn-i)*(35.0/iSizeIn)+45.0
-        end do
      else
         ! RCM uses a CoLat based grid, information is stored in 
         ! module grid information.
