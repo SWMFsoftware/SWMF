@@ -14,8 +14,8 @@ module ModMultiIon
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY: UseUserSource, &
        iTest, jTest, kTest, VarTest, BlkTest, ProcTest
-  use ModUser, ONLY: user_calc_sources, user_init_point_implicit
   use ModSize, ONLY: nI, nJ, nK
+  use ModUserInterface ! user_calc_sources, user_init_point_implicit
 
   implicit none
 
@@ -684,6 +684,7 @@ contains
     ! ModUser::user_init_point_implicit
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    use ModUserInterface ! user_init_point_implicit
 
     logical :: IsPointImpl_V(nVar)
     integer :: iVar, iPointImplVar, nPointImplVar

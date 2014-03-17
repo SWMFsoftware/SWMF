@@ -5,11 +5,11 @@ subroutine update_states(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
-  use ModUser, ONLY: user_update_states
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use BATL_lib, ONLY: Xyz_DGB
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        update_heatflux_collisionless
+  use ModUserInterface ! user_update_states
 
   implicit none
 
@@ -110,11 +110,13 @@ subroutine update_states(iStage,iBlock)
 end subroutine update_states
 !===========================================================================
 subroutine update_te0
+
   use ModPhysics, ONLY: UnitTemperature_,Si2No_V
   use ModAdvance, ONLY: State_VGB,  nI, nJ, nK
   use ModMain,    ONLY: nBlock, Unused_B, UseERadInput
-  use ModUser,    ONLY: user_material_properties
   use ModVarIndexes, ONLY: Te0_
+  use ModUserInterface ! user_material_properties
+
   real:: Te0Si
   integer:: i, j, k, iBlock
   !-------------------------------------------------------------------------

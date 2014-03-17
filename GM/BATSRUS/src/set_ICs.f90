@@ -9,7 +9,7 @@ subroutine set_ics(iBlock)
   use ModGeometry, ONLY: true_cell, R2_BLK
   use ModIO, ONLY : restart
   use ModPhysics
-  use ModUser, ONLY: user_set_ics
+  use ModUserInterface ! user_set_ics
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux

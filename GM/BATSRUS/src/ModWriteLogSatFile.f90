@@ -387,11 +387,11 @@ contains
   subroutine set_log_var
 
     use ModMain,      ONLY: x_, y_, z_
-    use ModUser,      ONLY: user_get_log_var
     use ModUtilities, ONLY: lower_case
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
     use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
+    use ModUserInterface ! user_get_log_var
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all

@@ -365,7 +365,7 @@ subroutine set_units
   use ModPhysics
   use ModVarIndexes
   use ModMultiFluid, ONLY: MassIon_I
-  use ModUser, ONLY: user_io_units, user_normalization
+  use ModUserInterface ! user_io_units, user_normalization
   implicit none
 
   character (len=*), parameter :: NameSub="set_units"

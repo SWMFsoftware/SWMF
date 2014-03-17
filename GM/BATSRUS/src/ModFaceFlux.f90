@@ -1180,9 +1180,9 @@ contains
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
-    use ModUser,     ONLY: user_material_properties
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use BATL_lib,  ONLY: Dim1_, Dim2_, Dim3_
+    use ModUserInterface ! user_material_properties
 
     real,    intent(out):: Flux_V(nFlux)
 

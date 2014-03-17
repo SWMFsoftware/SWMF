@@ -77,11 +77,11 @@ contains
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModMessagePass,   ONLY: exchange_messages
     use ModPartSteady,    ONLY: UsePartSteady
-    use ModUser,          ONLY: user_specify_refinement
     use ModLocalTimeStep, ONLY: UseLocalTimeStep
+    use ModUserInterface ! user_specify_refinement
+
     logical, intent(in) :: DoFullMessagePass
     character(3), intent(in) :: TypeAmr
-
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'do_amr'
@@ -238,11 +238,11 @@ contains
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModPhysics,    ONLY: rCurrents
     use ModPhysics,    ONLY: UseSunEarth
-    use ModUser,       ONLY: user_amr_criteria
     use ModCurrent,    ONLY: get_current
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, masked_amr_criteria
     use ModNumConst,   ONLY: cSqrtTwo, cTiny
     use ModVarIndexes, ONLY: SignB_
+    use ModUserInterface ! user_amr_criteria
 
     real, intent(out) :: Crit_IB(nAmrCriteria,maxBlock)
     character(len=3), intent(in) :: TypeAmr

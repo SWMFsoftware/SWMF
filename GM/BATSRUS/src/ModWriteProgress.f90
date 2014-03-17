@@ -71,6 +71,7 @@ subroutine write_runtime_values()
        RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
        IonosphereHeight
   use ModMpi
+  use ModUserInterface ! user_action
 
   implicit none
 

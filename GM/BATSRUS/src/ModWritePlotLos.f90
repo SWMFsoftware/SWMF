@@ -811,9 +811,9 @@ contains
 
     use ModAdvance,     ONLY: UseElectronPressure
     use ModInterpolate, ONLY: bilinear, trilinear
-    use ModUser,        ONLY: user_set_plot_var
     use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
     use BATL_lib,       ONLY: xyz_to_coord
+    use ModUserInterface ! user_set_plot_var
 
     real, intent(in):: Ds          ! Length of line segment
     real, intent(in):: XyzLos_D(3) ! location of center of line segment

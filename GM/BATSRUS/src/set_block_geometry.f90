@@ -110,7 +110,7 @@ subroutine set_boundary_cells(iBlock)
   use ModGeometry, ONLY: R2_BLK
   use ModGeometry,ONLY:x1,x2,y1,y2,z1,z2
   use BATL_lib, ONLY: Xyz_DGB
-  use ModUser, ONLY: user_set_boundary_cells
+  use ModUserInterface ! user_set_boundary_cells
 
   implicit none
   integer, intent(in)::iBlock

@@ -236,7 +236,7 @@ contains
          set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
     use ModResistivity, ONLY: UseResistivity, set_resistivity
-    use ModUser,    ONLY : user_specify_refinement
+    use ModUserInterface ! user_specify_refinement
 
     integer:: iBlock
 

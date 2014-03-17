@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModCellBoundary
 
@@ -38,7 +38,6 @@ contains
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI
-    use ModUser, ONLY: user_set_cell_boundary
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
          iTrImplFirst, iTrImplLast
@@ -46,6 +45,7 @@ contains
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D,&
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModUserInterface ! user_set_cell_boundary
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -638,7 +638,7 @@ contains
 
       use ModAdvance,  ONLY: nWave
       use ModPhysics,  ONLY: Si2No_V, UnitX_
-      use ModUser,     ONLY: user_material_properties
+      use ModUserInterface ! user_material_properties
       use BATL_lib,    ONLY: CellSize_DB
 
       integer, intent(in) :: iVarMin, iVarMax, iSide

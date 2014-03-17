@@ -708,7 +708,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRayTrace, ONLY : ray,rayface
   use ModUtilities, ONLY: lower_case
-  use ModUser, ONLY: user_set_plot_var
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
@@ -726,6 +725,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCurrent, ONLY: get_current
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: Viscosity_factor, UseViscosity
+  use ModUserInterface ! user_set_plot_var
 
   implicit none
 

@@ -25,7 +25,6 @@ contains
     use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
-    use ModUser,          ONLY: user_calc_sources
     use ModCoordTransform
     use ModImplicit,      ONLY: UseFullImplicit
     use ModRadDiffusion,  ONLY: calc_source_rad_diffusion
@@ -48,6 +47,8 @@ contains
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_
     use ModViscosity,     ONLY: UseViscosity, viscosity_factor
+    use ModUserInterface ! user_calc_sources
+
     integer, intent(in):: iBlock
 
     integer :: i, j, k, iVar

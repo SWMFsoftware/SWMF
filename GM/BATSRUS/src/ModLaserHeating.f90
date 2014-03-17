@@ -188,7 +188,7 @@ contains
     use ModProcMH, ONLY: nProc, iComm
     use ModPhysics, ONLY:No2Si_V, UnitRho_
     use BATL_lib, ONLY: nDim, MaxDim, CellSize_DB, interpolate_grid
-    use ModUser, ONLY: user_material_properties
+    use ModUserInterface ! user_material_properties
 
     integer,intent(in)::nRay
 
@@ -1576,7 +1576,7 @@ contains
          UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
     use ModGeometry, ONLY: x1
-    use ModUser, ONLY: user_material_properties
+    use ModUserInterface ! user_material_properties
     use ModEnergy, ONLY: calc_energy_cell
     use BATL_lib, ONLY: message_pass_cell, CellVolume_GB, CoordMin_D, &
          CoordMax_D, IsRzGeometry, Xyz_DGB, x_
