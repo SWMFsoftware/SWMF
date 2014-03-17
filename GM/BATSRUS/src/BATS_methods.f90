@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! This code is a copyright protected software (c) 2002- University of Michigan
 
 ! This file contains the top level methods for BATSRUS
 
@@ -62,7 +62,7 @@ contains
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
-    use ModUser,    ONLY : user_specify_refinement
+    use ModUserInterface ! user_specify_refinement
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -140,7 +140,6 @@ contains
 
   subroutine set_initial_conditions
 
-    use ModUser,        ONLY: user_initial_perturbation, user_action
     use ModIO,          ONLY: restart
     use ModIO,          ONLY: restart_Bface
     use ModRestartFile, ONLY: read_restart_files
@@ -148,6 +147,7 @@ contains
     use ModMain,        ONLY: UseB0
     use ModB0,          ONLY: set_b0_reschange
     use ModAMR,         ONLY: do_amr
+    use ModUserInterface ! user_initial_perturbation, user_action
 
     ! Set intial conditions for solution in each block.
 
@@ -282,11 +282,10 @@ subroutine BATS_init_session
        TypeSemiImplicit, UseFullImplicit
   use ModRadDiffusion, ONLY: init_rad_diffusion
   use ModHeatConduction, ONLY: init_heat_conduction
-  use ModUser, ONLY: user_initial_perturbation
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
-  use ModUser,    ONLY : user_specify_refinement
   use BATL_lib,    ONLY: init_amr_criteria
+  use ModUserInterface ! user_initial_perturbation, user_specify_refinement
 
   implicit none
 
