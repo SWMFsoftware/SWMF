@@ -137,7 +137,7 @@ subroutine user_get_log_var(VarValue, TypeVar, Radius)
   real, intent(in)            :: Radius
   !-------------------------------------------------------------------
   call user_sub(VarValue, TypeVar, Radius)
-  
+
 end subroutine user_get_log_var
 
 !====================================================================
@@ -212,7 +212,7 @@ subroutine user_update_states(iStage, iBlock)
 
   use ModUser, ONLY: user_sub => user_update_states
   implicit none
- 
+
   integer,intent(in):: iStage, iBlock
   !-------------------------------------------------------------------
   call user_sub(iStage, iBlock)
@@ -236,7 +236,7 @@ subroutine user_io_units
   implicit none
   !-------------------------------------------------------------------
   call user_sub
-  
+
 end subroutine user_io_units
 
 !=====================================================================
@@ -252,34 +252,51 @@ subroutine user_set_resistivity(iBlock, Eta_G)
   call user_sub(iBlock, Eta_G)
 
 end subroutine user_set_resistivity
-!=====================================================================
-subroutine user_material_te(State_V, TeOut)
+!============================================================================
+subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
+     EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
+     EinternalOut, TeOut, PressureOut, &
+     CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+     OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
-  ! Return the electron temperature in SI units
+  use ModVarIndexes, ONLY: nWave, nVar
+  use ModUser, ONLY: user_sub => user_material_properties
+  implicit none
 
-  use ModVarIndexes, ONLY: nVar
-  use ModUser, ONLY: user_material_properties
+  ! The State_V vector is in normalized units, all other physical
+  ! quantities are in SI.
+  !
+  ! If the electron energy is used, then EinternalIn, EinternalOut,
+  ! PressureOut, CvOut refer to the electron internal energies,
+  ! electron pressure, and electron specific heat, respectively.
+  ! Otherwise they refer to the total (electron + ion) internal energies,
+  ! total (electron + ion) pressure, and the total specific heat.
 
   real, intent(in) :: State_V(nVar)
-  real, intent(out) :: TeOut
-  !-------------------------------------------------------------------
-  call user_material_properties(State_V, TeOut=TeOut)
+  integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
+  real, optional, intent(in)  :: EinternalIn             ! [J/m^3]
+  real, optional, intent(in)  :: TeIn                    ! [K]
+  real, optional, intent(out) :: NatomicOut              ! [1/m^3]
+  real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
+  real, optional, intent(out) :: EinternalOut            ! [J/m^3]
+  real, optional, intent(out) :: TeOut                   ! [K]
+  real, optional, intent(out) :: PressureOut             ! [Pa]
+  real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
+  real, optional, intent(out) :: GammaOut                ! dimensionless
+  real, optional, intent(out) :: HeatCondOut             ! [J/(m*K*s)]
+  real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
+  real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
+  real, optional, intent(out) :: OpacityPlanckOut_W(nWave)    ! [1/m]
+  real, optional, intent(out) :: OpacityRosselandOut_W(nWave) ! [1/m]
 
-end subroutine user_material_te
-!=====================================================================
-subroutine user_material_z_n(State_V, zAverage, NumDensSi)
+  ! Multi-group specific interface. The variables are respectively:
+  !  Group Planckian spectral energy density
+  real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+  !---------------------------------------------------------------------------
+  call user_sub(State_V, i, j, k, iBlock, iDir, &
+     EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
+     EinternalOut, TeOut, PressureOut, &
+     CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+     OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
-  ! Return the average ion charge state Z and 
-  ! the number density in SI units.
-
-  use ModVarIndexes, ONLY: nVar
-  use ModUser, ONLY: user_material_properties
-  
-  real, intent(in) :: State_V(nVar)
-  real, intent(out):: zAverage
-  real, intent(out):: NumDensSi
-  !-------------------------------------------------------------------
-  call user_material_properties(State_V, &
-       AverageIonChargeOut = zAverage, NatomicOut=NumDensSi)
-
-end subroutine user_material_z_n
+end subroutine user_material_properties
