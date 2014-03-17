@@ -46,14 +46,27 @@ module CON_couple_points
      ! number of entries received/sent by a processor during rendezvous
      integer, allocatable :: nCouplePointSource_I(:), nCouplePointTarget_I(:)
 
-     ! Point positions local on a GM processor
+     ! Point positions local on a source processor
      real, allocatable :: PosSource_DI(:,:)
 
      ! Original target point positions
      real, pointer :: PosTarget_DI(:,:)
 
-     integer, allocatable :: nPointSource_P(:), nPointTarget_I(:), nPointTarget_P(:), iPointTarget_I(:)
-     integer :: nPointSource, nPointTarget
+     ! Number of points sent to each target processor
+     integer, allocatable :: nPointSource_P(:)
+
+     ! Number of points received from each source processor
+     integer, allocatable :: nPointTarget_P(:)
+
+     ! Total number of points sent from this source processor
+     integer :: nPointSource
+
+     ! Total number of points received by this target processor
+     integer:: nPointTarget
+
+     ! Index of the i-th data point in the sorted data array received by target
+     integer, allocatable :: iPointTarget_I(:)
+
      real, allocatable :: DataSource_VI(:,:), DataTarget_VI(:,:)
 
      ! Communicator and logicals to simplify message passing and execution
@@ -61,24 +74,22 @@ module CON_couple_points
   end type CouplePointsType
 
 contains
-
+  !=================================================================================
   subroutine couple_points_init(Coupler)
 
     type(CouplePointsType), intent(inout) :: coupler
-    integer :: iProc0Source, iProc0Target
     integer:: iError, iStatus_I(MPI_STATUS_SIZE)
     character(len=*), parameter:: NameSub = 'couple_points_init'
-    
-    write(*,*)NameSub,': Initializing coupler'
+    !------------------------------------------------------------------------------
+
+    !write(*,*)NameSub,': Initializing coupler'
 
     Coupler%iProcWorld = i_proc()
 
     ! Get the union communicator, the UseMe logical, 
     ! and the root proc indexes of the two components in the union comm.
-    iProc0Source = i_proc0(Coupler%iCompSource)
-    iProc0Target = i_proc0(Coupler%iCompTarget)
     call set_router_comm(Coupler%iCompSource, Coupler%iCompTarget, Coupler%iCommSourceTarget, &
-         Coupler%UseMe, iProc0Source, iProc0Target)
+         Coupler%UseMe)
 
     call MPI_comm_size(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, iError)
     call MPI_comm_rank(Coupler%iCommSourceTarget, Coupler%iProcSourceTarget, iError)
@@ -108,55 +119,57 @@ contains
 
   end subroutine couple_points_init
 
-  subroutine couple_points(Coupler,Source_get, Target_Put, Source_get_grid_info, Target_get_grid_info)
+  !===================================================================
 
-     type(CouplePointsType), intent(inout) :: Coupler
+  subroutine couple_points(Coupler, source_get, target_put, source_get_grid_info, target_get_grid_info)
+
+    type(CouplePointsType), intent(inout) :: Coupler
 
     interface 
-        subroutine Target_put(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+       subroutine target_put(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
-          implicit none
-          ! List of variables
-          character(len=*), intent(inout):: NameVar
+         implicit none
+         ! List of variables
+         character(len=*), intent(inout):: NameVar
 
-          ! Number of variables in Data_VI
-          integer,          intent(inout):: nVar    
+         ! Number of variables in Data_VI
+         integer,          intent(inout):: nVar    
 
-          ! Number of points in Pos_DI
-          integer,          intent(inout):: nPoint  
+         ! Number of points in Pos_DI
+         integer,          intent(inout):: nPoint  
 
-          ! Position vectors
-          real, pointer:: Pos_DI(:,:)               
+         ! Position vectors
+         real, pointer:: Pos_DI(:,:)               
 
-          ! Recv data array
-          real,    intent(in), optional:: Data_VI(:,:)
+         ! Recv data array
+         real,    intent(in), optional:: Data_VI(:,:)
 
-          ! Order of data
-          integer, intent(in), optional:: iPoint_I(nPoint)
+         ! Order of data
+         integer, intent(in), optional:: iPoint_I(nPoint)
 
-        end subroutine Target_put
+       end subroutine target_put
 
-        subroutine Source_get(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
-             Data_VI)
-          logical,          intent(in):: IsNew   ! true for new point array
-          character(len=*), intent(in):: NameVar ! List of variables
-          integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
-          integer,          intent(in):: nDimIn  ! Dimensionality of positions
-          integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+       subroutine source_get(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+            Data_VI)
+         logical,          intent(in):: IsNew   ! true for new point array
+         character(len=*), intent(in):: NameVar ! List of variables
+         integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+         integer,          intent(in):: nDimIn  ! Dimensionality of positions
+         integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
 
-          real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
-          real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
-        end subroutine Source_get
+         real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+         real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+       end subroutine source_get
 
-        subroutine Source_get_grid_info(nDim, iGrid, iDecomp)
-          integer, intent(out) :: nDim, iGrid, iDecomp
-        end subroutine Source_get_grid_info
+       subroutine Source_get_grid_info(nDim, iGrid, iDecomp)
+         integer, intent(out) :: nDim, iGrid, iDecomp
+       end subroutine Source_get_grid_info
 
-        subroutine Target_get_grid_info(nDim, iGrid, iDecomp)
-          integer, intent(out) :: nDim, iGrid, iDecomp
-        end subroutine Target_get_grid_info
+       subroutine Target_get_grid_info(nDim, iGrid, iDecomp)
+         integer, intent(out) :: nDim, iGrid, iDecomp
+       end subroutine Target_get_grid_info
 
-     end interface
+    end interface
 
     ! Is there a need to recalculate the data transfer route?
     logical:: IsNewRoute
@@ -949,7 +962,7 @@ contains
     elseif(nCouple == 0)then
        dProc =  - dProc
     end if
-    
+
     nCouple      = MAX(1, nCouple)
     nCoupleOther = MAX(1, nCoupleOther)
 
@@ -1196,7 +1209,7 @@ contains
              end if
              ! iProcSource_I is the source processor index on source component
              iProcSourceLocal = iProcSourceLocal_P(iProc)
-             
+
              ! Count this point in the communication matrix
              nPoint_PP(iProcSourceLocal,iProcTargetLocal) = &
                   nPoint_PP(iProcSourceLocal,iProcTargetLocal) + 1
