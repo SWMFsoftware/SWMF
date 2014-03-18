@@ -1799,7 +1799,7 @@ The "parcond" option solves for field aligned electron heat conduction only.
 The "cond" option solves for electron heat conduction only.
 
 The "resistivity" option solves for the magnetic field with
-either dissipative or Hall Resistivity.
+dissipative and/or Hall Resistivity.
 
 The default is UseSemiImplicit false.
 </command>
@@ -2025,49 +2025,35 @@ The default value is 1.E-12 for 8 byte reals and 1.E-6 for 4 byte reals.
 	</parameter>
 	<parameter name="TypePrecond" type="string" input="select"
 							case="upper">
-		<option name="HYPRE" />
-		<option name="MBILU" default="T" />
-		<option name="BILU"  />
-		<option name="DILU"  />
-		<option name="GS" value="Gauss-Seidel"/>
-		<option name="JACOBI" value="Jacobi"/>
+		<option value="JACOBI"      name="Jacobi"/>
+		<option value="BLOCKJACOBI" name="block-Jacobi"/>
+		<option value="GS"          name="Gauss-Seidel"/>
+		<option name="BILU"                            />
+		<option name="MBILU"        default="T"        />
 	</parameter>
 	<parameter name="PrecondParam" type="real" min="-1" max="1" 
 		default="0.5" if="$TypePrecond eq 'MBILU'"/>
-	<parameter name="DnInitHypreAmg" type="integer" min="0"
-		default="1"   if="$TypePrecond eq 'HYPRE'"/>
 #PRECONDITIONER
 symmetric       TypePrecondSide (left, symmetric, right)
-MBILU           TypePrecond (MBILU, BILU, DILU, GS, or JACOBI)
+MBILU           TypePrecond (JACOBI, BLOCKJACOBI, GS, BILU, MBILU) 
 0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
-
-#PRECONDITIONER
-left		TypePrecondSide
-HYPRE		TypePrecond
-0		DnInitHypreAmg (0 or more, read for HYPRE preconditioner)
 
 TypePrecondSide can be left, right or symmetric. There seems to be little
 difference between these in terms of performance. Right preconditioning 
-does not affect the normalization of the residual. The Jacobi, DILU and HYPRE
+does not affect the normalization of the residual. The JACOBI and BLOCKJACOBI
 preconditioners are implemented to always use left preconditioning. 
 
-The TypePrecond parameter can be set to JACOBI, GS, DILU, BILU or MBILU
-or HYPRE. The HYPRE preconditioner can only be used if the HYPRE library
-has been checked out into the util/ directory and Config.pl -hypre has 
-been set. The HYPRE preconditioning only works with the semi-implicit 
-scheme solving for 1 variable at a time (split semi-implicit scheme)
-and currently it does not work with the CG scheme (see #KRYLOV command).
+The TypePrecond parameter can be set to JACOBI, GAUSS-SEIDEL, BLOCKJACOBI, BILU, MBILU.
 
-The simplest Jacobi preconditioner is mainly useful for code development 
-purposes. The Gauss-Seidel (GS) preconditioner gives better performance
-than Jacobi, however, the other choices are usually more efficient.
-The Diagonal Incomplete Lower-Upper (DILU) preconditioner assumes that the 
-off-diagonal blocks are diagonal matrices, and it gives the same result 
-but faster performance than BILU or MBILU in that case. The Block ILU (BILU)
-preconditioner does not make this assumption. The Modified BILU (MBILU)
-preconditioner allows a Gustafsson modification relative to BILU. In some
-cases the modification improves the preconditioner, but sometimes it makes
-it worse.
+The simplest Jacobi preconditioner is mainly useful for code development purposes. 
+It uses the inverse of the diagonal elements of the approximate Jacobian matrix.
+The block-Jacobi preconditioner uses the invese of the diagonal blocks of the 
+Jacobian matrix. It coincides with the Jacobi preconditioner for a scalar equation.
+The Gauss-Seidel (GS) preconditioner gives better performance
+than Jacobi, however, the BILU and MBILU preconditioners are usually more efficient.
+The Modified BILU (MBILU) preconditioner allows a Gustafsson modification 
+relative to BILU. In some cases the modification improves the preconditioner, 
+but sometimes it makes it worse.
 
 The GustafssonPar parameter is only read for the MBILU preconditioner.
 If it is 0, the standard block (BILU) preconditioning is done.
@@ -2077,17 +2063,58 @@ preconditioner. The maximum 1 corresponds to the full Gustafsson modification.
 The default 0.5 value seems to be optimal for matrices resulting from 
 hyperbolic (advection) type problems.
 
-The DnInitHypreAmg parameter is only read for the HYPRE preconditioner.
-The Algebraic Multi-Grid (AMG) solver is reinitialized every DnInitHypreAmg
-time steps. Setting it to 0 gives the minimum number of Krylov iterations,
-but the time spent on setting up the AMG may become substantial. Setting it
-to a larger value will reduce the time spent on AMG setup, but it will 
-increase the number of Krylov iterations. The optimal value depends on the
-problem as well as on the number of processors. If there is more than 
-one semi-implicit variable, then DnInitHypreAmg=0 is almost certainly the
-best choice.
-
 Default parameters are shown by the first example.
+</command>
+
+<command name="SEMIPRECONDITIONER" alias="SEMIPRECOND">
+	<parameter name="DoPrecond" type="logical" default="T"/>
+	<if expr="$DoPrecond">
+		<parameter name="TypePrecond" type="string" input="select"
+							case="upper">
+			<option name="JACOBI" />
+			<option value="BLOCKJACOBI" name="block-Jacobi"/>
+			<option value="GS"          name="Gauss-Seidel"/>
+			<option name="DILU"  />
+			<option name="BILU"  />
+			<option name="MBILU" default="T" />
+			<option name="HYPRE" />
+		</parameter>
+		<parameter name="PrecondParam" type="real" min="-1" max="1" 
+			   default="0.5" if="$TypePrecond eq 'MBILU'"/>
+	</if>
+#SEMIPRECONDITIONER
+T               DoPrecond (rest of parameters are read if true)
+MBILU           TypePrecond (MBILU, BILU, DILU, GS, BLOCKJACOBI, JACOBI, HYPRE)
+0.5             GustafssonPar (0 to 1, read for MBILU preconditioner only)
+
+#SEMIPRECOND
+T		DoPrecond
+HYPRE		TypePrecond
+
+Similar to the #PRECONDITIONER command but for the semi-implicit scheme.
+
+If DoPrecond is false, no preconditioner is used. This will result in
+slower convergence. It is almost always preferable to use a preconditioner.
+The semi-implicit scheme always uses left side preconditioning.
+
+The TypePrecond parameter can be set to the following values:
+JACOBI, BLOCKJACOBI, GS, DILU, BILU, MBILU or HYPRE. 
+Most of these options are described in some detail for the #PRECONDITIONER
+command.
+
+The Diagonal Incomplete Lower-Upper (DILU) preconditioner assumes that the 
+off-diagonal blocks are diagonal matrices, and it gives the same result 
+but faster performance than BILU in that case. This assumption
+holds if the derivative of a variable in the semi-implicit terms only 
+affects the same variable (true for heat conduction, radiative diffusion,
+dissipative resistivity, but not for Hall resistivity).
+
+The HYPRE preconditioner can only be used if the HYPRE library
+has been checked out into the util/ directory and Config.pl -hypre has 
+been set. The HYPRE preconditioning only works if the semi-implicit 
+scheme solves for 1 variable at a time (split semi-implicit scheme).
+
+Default values are shown by the first example.
 </command>
 
 <command name="KRYLOV">
@@ -2154,6 +2181,27 @@ If the Krylov solver does not succeed in achieving the desired accuracy
 within the maximum number of iterations, an error message is printed.
 </command>
 
+<command name="SEMIKRYLOV">
+	<parameter name="TypeKrylov" type="string" input="select" case="upper">
+		<option name="GMRES"	default="T"	/>
+		<option name="BICGSTAB" 		/>
+		<option name="CG" 			/>
+	</parameter>
+	<parameter name="ErrorMaxKrylov" type="real" min="0" max="0.1"
+							default="0.001" />
+	<parameter name="MaxMatvecKrylov" type="integer" min="1"
+							default="100" />
+#SEMIKRYLOV
+GMRES           TypeKrylov  (GMRES, BICGSTAB, CG)
+0.001           ErrorMaxKrylov
+100             MaxMatvecKrylov
+
+Same as the #KRYLOV command, but for the semi-implicit scheme.
+The initial guess is always zero, so there are only 3 parameters.
+
+Default values are shown. 
+</command>
+
 <command name="KRYLOVSIZE">
 	<parameter name="nKrylovVector" type="integer" min="1" 
 						default="$MaxMatvecKrylov"/>
@@ -2169,6 +2217,17 @@ On the other hand the dynamically allocated memory is also proportional
 to nKrylovVector. The default is nKrylovVector=MaxMatvecKrylov (in #KRYLOV)
 which can be overwritten by #KRYLOVSIZE after the #KRYLOV command (if any).
 </command>
+
+<command name="SEMIKRYLOVSIZE">
+	<parameter name="nKrylovVector" type="integer" min="1" 
+						default="$MaxMatvecKrylov"/>
+#SEMIKRYLOVSIZE
+10		nKrylovVector
+
+Same as #KRYLOVSIZE but for the semi-implicit scheme. This command should
+be used after the #SEMIKRYLOV command (if present).
+</command>
+
 </commandgroup>
 <commandgroup name="STOPPING CRITERIA">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
