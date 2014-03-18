@@ -74,7 +74,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   !injection of the thermal O+ ions
   ThermalOPlus_NumberDensity=35.0E6
   ThermalOPlus_Temperature=1.044E6;
-  ThermalOPlus_BulkVelocity=(90300,0,0);
+  ThermalOPlus_BulkVelocity=(-90300,0,0);
   
   !Interpolation of the BATSRUS output with ICES
   CreateNewCoordinateListForICES=off !on,off
