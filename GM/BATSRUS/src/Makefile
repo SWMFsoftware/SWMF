@@ -70,6 +70,7 @@ OBJECTS = \
 	ModRestartFile.o \
 	ModResistivity.o \
 	ModSatelliteFile.o \
+	ModSemiImplicit.o \
 	ModSingleFluid.o \
 	ModSize.o \
 	ModSolarwind.o \
