@@ -8,7 +8,7 @@ module ModImplHypre
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
        nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
        Proc_, Coord0_, Coord1_, Coord2_, Coord3_, Level_
-  use ModImplicit, ONLY: impl2iBlk, nImplBlock => nImplBlk, &
+  use ModImplicit, ONLY: iBlockFromSemi_I, nBlockSemi, &
        nStencil, Stencil1_, Stencil2_, Stencil3_, Stencil4_, Stencil5_, &
        Stencil6_, Stencil7_
 
@@ -105,7 +105,7 @@ contains
     integer:: iLevel, DiLevel, iNode, jNode
     integer:: iCoord_D(nDim), jCoord_D(nDim), iCoord0_D(nDim), jCoord0_D(nDim)
 
-    integer:: iImplBlock, iBlock, iError, iPart, jPart
+    integer:: iBlockSemi, iBlock, iError, iPart, jPart
 
     integer:: iReduce, jReduce, iSide, jSide, kSide, i, j, k
     integer:: iSideMe, jSideMe, kSideMe, iSideMax, jSideMax, kSideMax
@@ -143,8 +143,8 @@ contains
     if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done with nPart=', nPart
 
     ! Add each block as a local box in the corresponding part (level)
-    do iImplBlock = 1, nImplBlock
-       iBlock   = impl2iBlk(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock   = iBlockFromSemi_I(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
@@ -241,9 +241,9 @@ contains
 
     ! Add non-stencil entries to the graph at resolution changes
 
-    do iImplBlock = 1, nImplBlock
+    do iBlockSemi = 1, nBlockSemi
 
-       iBlock = impl2iBlk(iImplBlock)
+       iBlock = iBlockFromSemi_I(iBlockSemi)
        iNode  = iNode_B(iBlock)
        iPart  = iTree_IA(Level_,iNode)
 
@@ -620,13 +620,13 @@ contains
 
   !===========================================================================
 
-  subroutine hypre_set_matrix_block(iImplBlock, Jacobian_CI)
+  subroutine hypre_set_matrix_block(iBlockSemi, Jacobian_CI)
 
-    ! Set the maxtrix elements corresponding to iImplBlock
+    ! Set the maxtrix elements corresponding to iBlockSemi
 
     use ModMain, ONLY: TypeBc_I
 
-    integer, intent(in):: iImplBlock
+    integer, intent(in):: iBlockSemi
     real,    intent(inout):: Jacobian_CI(nI,nJ,nK,nStencil)
 
     ! Matrix element
@@ -646,7 +646,7 @@ contains
 
     logical, parameter :: DoDebug = .false.
     !------------------------------------------------------------------------
-    iBlock = impl2iblk(iImplBlock)
+    iBlock = iBlockFromSemi_I(iBlockSemi)
 
     ! DoDebug = iProc == ProcTest
 
@@ -700,7 +700,7 @@ contains
 
     if(DoDebug)write(*,*) &
          'iPart, iImplBlk, iBlock, iNode, iLower, iUpper, maxval, maxloc=',&
-         iPart, iImplBlock, iBlock, iNode, iLower_D, iUpper_D, &
+         iPart, iBlockSemi, iBlock, iNode, iLower_D, iUpper_D, &
          maxval(Value_I), maxloc(Value_I)
 
     call HYPRE_SStructMatrixSetBoxValues(i8A, iPart, iLower_D, iUpper_D, &
@@ -948,7 +948,7 @@ contains
     integer, intent(in):: n
     real, intent(inout):: y_I(n)
 
-    integer:: i, iImplBlock, iPart, iError, iBlock, iNode
+    integer:: i, iBlockSemi, iPart, iError, iBlock, iNode
     real, allocatable:: Zero_I(:)
 
     logical, parameter:: DoDebug = .false.
@@ -969,8 +969,8 @@ contains
 
     ! Set y_I as the RHS
     i = 1
-    do iImplBlock = 1, nImplBlock
-       iBlock   = impl2iblk(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock   = iBlockFromSemi_I(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
@@ -982,8 +982,8 @@ contains
        call HYPRE_SStructVectorSetBoxValues(i8X, iPart, iLower_D, iUpper_D, &
             iVar, Zero_I, iError)
 
-       if(DoDebug)write(*,*)'iImplBlock, iNode, iLower, iUpper, sum(y**2)=', &
-            iImplBlock, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
+       if(DoDebug)write(*,*)'iBlockSemi, iNode, iLower, iUpper, sum(y**2)=', &
+            iBlockSemi, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
 
        i = i + nIJK
     end do
@@ -1011,8 +1011,8 @@ contains
     call HYPRE_SStructVectorGather(i8x, iError);
 
     i = 1
-    do iImplBlock = 1, nImplBlock
-       iBlock   = impl2iblk(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock   = iBlockFromSemi_I(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
@@ -1021,8 +1021,8 @@ contains
        call HYPRE_SStructVectorGetBoxValues(i8X, iPart, &
             iLower_D, iUpper_D, iVar, y_I(i), iError)
 
-       if(DoDebug)write(*,*)'iImplBlock, iNode, iLower, iUpper, sum(y**2)=', &
-            iImplBlock, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
+       if(DoDebug)write(*,*)'iBlockSemi, iNode, iLower, iUpper, sum(y**2)=', &
+            iBlockSemi, iNode, iLower_D, iUpper_D, sum(y_I(i:i+nIJK-1)**2)
 
        i = i + nIJK
     end do

@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 subroutine impl_matvec(qx,qy,n)
 
@@ -11,7 +11,6 @@ subroutine impl_matvec(qx,qy,n)
   ! N contains the number of elements in qx and qy.
 
   use ModImplicit
-  use ModImplHypre, ONLY: hypre_preconditioner
   use ModMpi
   implicit none
 
@@ -32,21 +31,16 @@ subroutine impl_matvec(qx,qy,n)
 
   nmatvec=nmatvec+1
 
-  if(PrecondType == 'HYPRE')then
-     call get_semi_impl_matvec(qx, qy, n)
-     call hypre_preconditioner(n, qy)
-  else
-     select case(JacobianType)
-     case('free')
-        call impl_matvec_free(qx,qy,n)
-     case('with')
-        call impl_matvec_with(qx,qy,n)
-     case('prec')
-        call impl_matvec_prec(qx,qy,n)
-     case default
-        call stop_mpi('Unknown value for JacobianType')
-     end select
-  end if
+  select case(JacobianType)
+  case('free')
+     call impl_matvec_free(qx,qy,n)
+  case('with')
+     call impl_matvec_with(qx,qy,n)
+  case('prec')
+     call impl_matvec_prec(qx,qy,n)
+  case default
+     call stop_mpi('Unknown value for JacobianType')
+  end select
 
   if(oktest_me.and.nImplBLK>0)&
        write(*,*)'impl_matvec final sum(x**2),sum(y**2),y(test)=',&
@@ -103,12 +97,6 @@ subroutine impl_matvec_free(qx,qy,nn)
   call set_oktest('impl_matvec_free', oktest, oktest_me)
 
   call timing_start('matvec_free')
-
-  if(UseSemiImplicit)then
-     call get_semi_impl_matvec(qx, qy, nn)
-     call timing_stop('matvec_free')
-     RETURN
-  end if
 
   if(.not.allocated(ImplEps_VCB))allocate(ImplEps_VCB(nw,nI,nJ,nK,MaxImplBLK))
 
@@ -194,7 +182,7 @@ end subroutine impl_matvec_free
 !=============================================================================
 subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
 
-  use ModImplicit, ONLY: MAT, nVarSemi, nI, nJ, nwIJK, nIJK, &
+  use ModImplicit, ONLY: MAT, nVar, nI, nJ, nwIJK, nIJK, &
        nImplBlk, PrecondType, Stencil1_, Stencil2_, Stencil3_, Stencil4_, &
        Stencil5_, Stencil6_, Stencil7_, PrecondType
   use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
@@ -218,7 +206,7 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
   do iImplBlock=1,nImplBLK
 
      if(PrecondType == 'DILU')then
-        call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ,&
+        call multiply_dilu(nIJK, nVar, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
@@ -228,14 +216,14 @@ subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
              MAT(1,1,1,1,1,Stencil6_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil7_,iImplBlock))
      else
-        call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
+        call Lhepta(nIJK, nVar, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil4_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil6_,iImplBlock))
 
-        call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
+        call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
              PrecVec_I(nwIJK*(iImplBlock-1)+1),&
              MAT(1,1,1,1,1,Stencil3_,iImplBlock),&
              MAT(1,1,1,1,1,Stencil5_,iImplBlock),&
@@ -279,13 +267,13 @@ subroutine impl_matvec_prec(qx,qy,n)
   if(PrecondSide /= 'left' .and. PrecondType /= 'JACOBI')then
      do implBLK = 1, nImplBLK
         if(PrecondSide=='right') &
-             call Lhepta(nIJK, nVarSemi, nI, nI*nJ, &
+             call Lhepta(nIJK, nVar, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,&
              MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
              MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
              MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
              MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
-        call Uhepta(.true.,nIJK, nVarSemi, nI, nI*nJ, &
+        call Uhepta(.true.,nIJK, nVar, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1) ,  &
              MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
              MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j 
@@ -302,7 +290,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      qy = JacobiPrec_I(1:n)*qy
   elseif(PrecondType == 'DILU') then
      do implBLK = 1, nImplBLK
-        call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ, &
+        call multiply_dilu(nIJK, nVar, nI, nI*nJ, &
              qy(nwIJK*(implBLK-1)+1),&
              MAT(1,1,1,1,1,Stencil1_,implBLK),&
              MAT(1,1,1,1,1,Stencil2_,implBLK),&
@@ -314,7 +302,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      end do
   elseif(PrecondSide /= 'right')then
      do implBLK = 1, nImplBLK
-        call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
+        call Lhepta(nIJK, nVar, nI, nI*nJ,&
              qy(nwIJK*(implBLK-1)+1) ,&
              MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
              MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
@@ -323,7 +311,7 @@ subroutine impl_matvec_prec(qx,qy,n)
      end do
      if(PrecondSide == 'left') then
         do implBLK = 1, nImplBLK
-           call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
+           call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
                 qy(nwIJK*(implBLK-1)+1),   &
                 MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
                 MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
@@ -380,55 +368,55 @@ contains
 
     implicit none
 
-    real, intent(in) :: qx(nVarSemi,nIJK)
-    real, intent(inout):: qy(nVarSemi,nIJK)
-    real, intent(in) :: JAC(nVarSemi,nVarSemi,nIJK,nstencil)
+    real, intent(in) :: qx(nVar,nIJK)
+    real, intent(inout):: qy(nVar,nIJK)
+    real, intent(in) :: JAC(nVar,nVar,nIJK,nstencil)
     integer :: i,j,k
 
     do j=1,nIJK
-       do i=1,nVarSemi
-          do k=1,nVarSemi
+       do i=1,nVar
+          do k=1,nVar
              qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil1_)*qx(k,j)
           end do
        end do
        if(j>1)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil2_)*qx(k,j-1)
              end do
           end do
        end if
        if(j<nIJK)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil3_)*qx(k,j+1)
              end do
           end do
        end if
        if(j>nI)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil4_)*qx(k,j-nI)
              end do
           end do
        end if
        if(j<=nIJK-nI)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil5_)*qx(k,j+nI)
              end do
           end do
        end if
        if(j>nI*nJ)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil6_)*qx(k,j-nI*nJ)
              end do
           end do
        end if
        if(j<=nIJK-nI*nJ)then
-          do i=1,nVarSemi
-             do k=1,nVarSemi
+          do i=1,nVar
+             do k=1,nVar
                 qy(i,j)=qy(i,j)+JAC(i,k,j,Stencil7_)*qx(k,j+nI*nJ)
              end do
           end do

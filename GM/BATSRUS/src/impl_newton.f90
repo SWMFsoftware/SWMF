@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 subroutine impl_newton_init
 
@@ -25,34 +25,24 @@ subroutine impl_newton_init
   ! Calculate high and low order residuals
   ! ResExpl_VCB= dtexpl * R
 
-  if(UseSemiImplicit)then
-     call get_semi_impl_rhs(Impl_VGB, ResExpl_VCB)
+  if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
 
-     !The laser package adds the laser energy deposition in the form of
-     !numerous pointwise sources of energy, divided by the timestep, 
-     !Delta t.
+  !                not low,  dt,  subtract
+  call get_residual(.false.,.true.,.true., &
+       Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
 
-     !!! We don't really need ResImpl_VCB, but it is easier if it is set
+  if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
+
+  if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
+     ! If R_low=R then ResImpl_VCB = ResExpl_VCB
      ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
   else
-     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .true.
+     ! ResImpl_VCB = dtexpl * R_low
+     !                  low,  no dt, subtract
+     call get_residual(.true.,.false.,.true., &
+          Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB) 
+  endif
 
-     !                not low,  dt,  subtract
-     call get_residual(.false.,.true.,.true., &
-          Impl_VGB(:,1:nI,1:nJ,1:nK,:),ResExpl_VCB)
-
-     if(UseRadDiffusion) IsNewTimestepRadDiffusion = .false.
-
-     if (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) then
-        ! If R_low=R then ResImpl_VCB = ResExpl_VCB
-        ResImpl_VCB(:,:,:,:,1:nImplBLK) = ResExpl_VCB(:,:,:,:,1:nImplBLK)
-     else
-        ! ResImpl_VCB = dtexpl * R_low
-        !                  low,  no dt, subtract
-        call get_residual(.true.,.false.,.true., &
-             Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB) 
-     endif
-  end if
   if(oktest_me.and.nImplBLK>0)write(*,*)'ResExpl_VCB,ResImpl_VCB(test)=',&
        ResExpl_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest),&
        ResImpl_VCB(VARtest,Itest,Jtest,Ktest,implBLKtest)
@@ -76,60 +66,59 @@ subroutine impl_newton_init
      end do; end do; enddo; enddo; enddo
 
   else
-     do implBLK = 1, nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI
-        do iw=1,nVarSemi
+     do implBLK = 1, nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw = 1, nw
            n=n+1
            ! RHS = dt*R/wnrm for the first iteration
            rhs(n)=ResExpl_VCB(iw,i,j,k,implBLK)*dtcoeff/wnrm(iw)
 
-     end do; end do; enddo; enddo; enddo
+        end do; end do; enddo; enddo; enddo
 
-  endif
+     endif
 
-  if(UseNewton .or. UseConservativeImplicit)then
-     ! Calculate RHS0 used for RHS when NewtonIter>1
-     n=0
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
-        n=n+1
-        !RHS0 = [dt*(R - beta*R_low) + w_n]/wnrm 
-        !     = RHS + [-beta*dt*R_low + w_n]/wnrm
-        rhs0(n) = rhs(n) + (- ImplCoeff*dtcoeff*ResImpl_VCB(iw,i,j,k,implBLK) &
-             + Impl_VGB(iw,i,j,k,implBLK))/wnrm(iw)
-     end do; end do; enddo; enddo; enddo
-  endif
+     if(UseNewton .or. UseConservativeImplicit)then
+        ! Calculate RHS0 used for RHS when NewtonIter>1
+        n=0
+        do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw=1,nw
+           n=n+1
+           !RHS0 = [dt*(R - beta*R_low) + w_n]/wnrm 
+           !     = RHS + [-beta*dt*R_low + w_n]/wnrm
+           rhs0(n) = rhs(n) + (- ImplCoeff*dtcoeff*ResImpl_VCB(iw,i,j,k,implBLK) &
+                + Impl_VGB(iw,i,j,k,implBLK))/wnrm(iw)
+        end do; end do; enddo; enddo; enddo
+     endif
 
-  if(oktest)then
-     call MPI_allreduce(sum(ResImpl_VCB(:,:,:,:,1:nImplBLK)**2),q1,&
-          1,MPI_REAL,MPI_SUM,iComm,iError)
-     call MPI_allreduce(sum(ResExpl_VCB(:,:,:,:,1:nImplBLK)**2),q2,&
-          1,MPI_REAL,MPI_SUM,iComm,iError)
-     call MPI_allreduce(sum(rhs(1:nimpl)**2),q3,&
-          1,MPI_REAL,MPI_SUM,iComm,iError)
+     if(oktest)then
+        call MPI_allreduce(sum(ResImpl_VCB(:,:,:,:,1:nImplBLK)**2),q1,&
+             1,MPI_REAL,MPI_SUM,iComm,iError)
+        call MPI_allreduce(sum(ResExpl_VCB(:,:,:,:,1:nImplBLK)**2),q2,&
+             1,MPI_REAL,MPI_SUM,iComm,iError)
+        call MPI_allreduce(sum(rhs(1:nimpl)**2),q3,&
+             1,MPI_REAL,MPI_SUM,iComm,iError)
 
-     if(oktest_me)write(*,*)'Sum ResExpl_VCB**2,ResImpl_VCB**2,rhs**2:', &
-          q1, q2, q3
-  end if
+        if(oktest_me)write(*,*)'Sum ResExpl_VCB**2,ResImpl_VCB**2,rhs**2:', &
+             q1, q2, q3
+     end if
 
-  ! Initial guess for dw = w_n+1 - w_n
-  non0dw=.true.
-  select case(KrylovInitType)
-  case('explicit')
-     ! w_n+1-w_n = dt * R_n
-     dw(1:nimpl) = rhs(1:nimpl)
-  case('scaled')
-     ! Like explicit, but amplitude reduced
-     ! w_n+1-w_n = dtexpl * R_n
-     dw(1:nimpl) = rhs(1:nimpl)/dtcoeff
-  case('nul')
-     ! w_n+1-w_n = 0
-     dw(1:nimpl) = 0.0
-     non0dw = .false.
-  case('old')
-  case default
-     call stop_mpi('Unknown type for KrylovInitType='//KrylovInitType)
-  end select
+     ! Initial guess for dw = w_n+1 - w_n
+     non0dw=.true.
+     select case(KrylovInitType)
+     case('explicit')
+        ! w_n+1-w_n = dt * R_n
+        dw(1:nimpl) = rhs(1:nimpl)
+     case('scaled')
+        ! Like explicit, but amplitude reduced
+        ! w_n+1-w_n = dtexpl * R_n
+        dw(1:nimpl) = rhs(1:nimpl)/dtcoeff
+     case('nul')
+        ! w_n+1-w_n = 0
+        dw(1:nimpl) = 0.0
+        non0dw = .false.
+     case('old')
+     case default
+        call stop_mpi('Unknown type for KrylovInitType='//KrylovInitType)
+     end select
 
-end subroutine impl_newton_init
+   end subroutine impl_newton_init
 !=============================================================================
 
 subroutine impl_newton_loop
@@ -228,8 +217,7 @@ subroutine impl_newton_update(dwnrm, converged)
 
      ! w=w+dw for all true cells
      n=0
-     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI;
-        do iw = iVarSemiMin, iVarSemiMax
+     do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; do iw = 1, nw
         n=n+1
         if(true_cell(i,j,k,impl2iBLK(implBLK)))&
              Impl_VGB(iw,i,j,k,implBLK) = Impl_VGB(iw,i,j,k,implBLK) &
@@ -237,14 +225,10 @@ subroutine impl_newton_update(dwnrm, converged)
      enddo; enddo; enddo; enddo; enddo
 
      if(UseConservativeImplicit .or. .not.Converged) then
-        if(UseSemiImplicit)then
-           call get_semi_impl_rhs(Impl_VGB, ResImpl_VCB)
-        else
-           !calculate low order residual ResImpl_VCB = dtexpl*RES_low(k+1)
-           !                  low,   no dt, subtract
-           call get_residual(.true., .false., .true., &
-                Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB)
-        end if
+        !calculate low order residual ResImpl_VCB = dtexpl*RES_low(k+1)
+        !                  low,   no dt, subtract
+        call get_residual(.true., .false., .true., &
+             Impl_VGB(:,1:nI,1:nJ,1:nK,:), ResImpl_VCB)
      end if
 
      ! Do not backtrack in a time accurate calculation or
@@ -252,8 +236,7 @@ subroutine impl_newton_update(dwnrm, converged)
      if (time_accurate .or. converged) EXIT
 
      ! calculate high order residual ResExpl_VCB = dt*R(Impl_VGB(k+1))
-     if ( (nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl) &
-          .or. UseSemiImplicit) then
+     if ( nOrder==nOrder_Impl .and. FluxType==FluxTypeImpl ) then
         ResExpl_VCB(:,:,:,:,1:nImplBLK)=ResImpl_VCB(:,:,:,:,1:nImplBLK)
      else
         !                 not low, no dt, subtract

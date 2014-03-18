@@ -118,10 +118,10 @@ contains
 
   subroutine init_mod_resistivity
 
-    use ModConst,    ONLY: cLightSpeed, cElectronCharge, cElectronMass, cEps, &
-         cBoltzmann, cTwoPi
     use ModImplicit, ONLY: UseSemiImplicit, TypeSemiImplicit
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
+    use ModConst,    ONLY: cLightSpeed, cElectronCharge, &
+         cElectronMass, cEps, cBoltzmann, cTwoPi
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'init_mod_resistivity'
@@ -483,29 +483,29 @@ contains
   ! Interface for (Semi-)implicit collisional and Hall resistivity
   !============================================================================
 
-  subroutine get_impl_resistivity_state(StateImpl_VGB)
+  subroutine get_impl_resistivity_state(SemiAll_VGB)
 
-    use BATL_size,       ONLY: j0_, nJp1_, k0_, nKp1_
-    use ModAdvance,      ONLY: State_VGB
-    use ModImplicit,     ONLY: nW, nImplBLK, impl2iBlk
-    use ModMain,         ONLY: MaxImplBlk
-    use ModVarIndexes,   ONLY: Bx_, Bz_
+    use ModSize,       ONLY: j0_, nJp1_, k0_, nKp1_, MaxBlock
+    use ModAdvance,    ONLY: State_VGB
+    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_I
+    use ModVarIndexes, ONLY: Bx_, Bz_
 
-    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+    real, intent(out):: &
+         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock)
 
-    integer:: i, j, k, iBlock, iImplBlock
+    integer:: i, j, k, iBlock, iBlockSemi
 
     character(len=*), parameter :: &
          NameSub = 'ModResistivity::get_impl_resistivity_state'
     !--------------------------------------------------------------------------
 
     ! Copy magnetic field into the implicit variable
-    do iImplBlock = 1, nImplBLK
-       iBlock = impl2iBLK(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock = iBlockFromSemi_I(iBlockSemi)
 
-       ! Store the magnetic field in StateImpl_VGB
+       ! Store the magnetic field in SemiAll_VGB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateImpl_VGB(BxImpl_:BzImpl_,i,j,k,iImplBlock) = &
+          SemiAll_VGB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
 
@@ -521,9 +521,8 @@ contains
   subroutine init_impl_resistivity
 
     use BATL_lib,        ONLY: IsCartesian, message_pass_cell, &
-         CellFace_DB, FaceNormal_DDFB
+         CellFace_DB, FaceNormal_DDFB, nBlock, Unused_B
     use ModAdvance,      ONLY: State_VGB
-    use ModImplicit,     ONLY: nImplBLK, impl2iBlk
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: i_DD
     use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
@@ -531,7 +530,7 @@ contains
          set_ion_mass_per_charge, IonMassPerCharge_G
     use ModB0,           ONLY: B0_DGB
 
-    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock, iImplBlock
+    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
     real:: Eta
     real:: FaceNormal_D(nDim)
 
@@ -548,8 +547,8 @@ contains
        ! Message pass resistivity to fill in ghost cells
        call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
-       do iImplBlock = 1, nImplBLK
-          iBlock = impl2iBLK(iImplBlock)
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
 
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -574,8 +573,8 @@ contains
        if(.not.allocated(Bne_DFDB)) &
             allocate(Bne_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
-       do iImplBlock = 1, nImplBLK
-          iBlock = impl2iBLK(iImplBlock)
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
 
           call set_ion_mass_per_charge(iBlock)
 
@@ -606,7 +605,7 @@ contains
                    ! It is easier to use B0_DGB then then the 3 face arrays
                    ! The res change on the coarse side will get overwritten
                    if(UseB0) b_D = b_D + &
-                        0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
+                        0.5*(B0_DGB(:,i1,j1,k1,iBlock)+ B0_DGB(:,i,j,k,iBlock))
                 
                    ! Calculate B/ne for the face
                    Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
@@ -625,8 +624,8 @@ contains
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, CellFace_DB, FaceNormal_DDFB
     use ModFaceGradient, ONLY: get_face_curl
-    use ModImplicit,     ONLY: nVarSemi, FluxImpl_VXB, FluxImpl_VYB, &
-         FluxImpl_VZB
+    use ModImplicit,     ONLY: nVarSemi, &
+         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
     use ModGeometry,     ONLY: true_cell, true_BLK
@@ -764,20 +763,21 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_resistivity(iBlock, Jacobian_VVCI)
+  subroutine add_jacobian_resistivity(iBlock, nVarImpl, Jacobian_VVCI)
 
     ! Calculate the Jacobian for the preconditioning of 
     ! collisional and Hall resistivity.
 
-    use ModProcMH,       ONLY: iProc
-    use ModHallResist,   ONLY: UseHallResist
-    use ModImplicit,     ONLY: UseSemiImplicit, nVarSemi, nStencil
-    use BATL_lib,        ONLY: rot_to_cart
-    use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
-    use ModAdvance,      ONLY: State_VGB, Bx_, Bz_, B_
+    use ModProcMH,     ONLY: iProc
+    use ModHallResist, ONLY: UseHallResist
+    use ModImplicit,   ONLY: UseSemiImplicit, nStencil
+    use BATL_lib,      ONLY: rot_to_cart
+    use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
+    use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, B_
 
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    integer, intent(in):: iBlock
+    integer, intent(in):: nVarImpl
+    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
     integer:: iStencil, iB, i, j, k
 
@@ -812,9 +812,11 @@ contains
        end do
     end if
 
-    if(UseResistivity)call add_jacobian_eta_resist(iBlock, iB, Jacobian_VVCI)
+    if(UseResistivity) &
+         call add_jacobian_eta_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
 
-    if(UseHallResist)call add_jacobian_hall_resist(iBlock, iB, Jacobian_VVCI)
+    if(UseHallResist) &
+         call add_jacobian_hall_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
 
     if(DoTestMe)then
        write(*,*) NameSub, ' finished with:'
@@ -825,12 +827,14 @@ contains
                rot_to_cart(Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,i,j,k,iStencil))
        end do
 
-       if(UseSemiImplicit)then
+       if(.false.)then !!! UseSemiImplicit)then
           if(.not.allocated(Jac_VVI)) &
-               allocate(Jac_VVI(nVarSemi,nVarSemi,nStencil))
-          call test_semi_impl_jacobian( &
-               State_VGB(Bx_:Bz_,:,:,:,iBlock), &
-               1e-4, get_resistivity_rhs, Jac_VVI)
+               allocate(Jac_VVI(nVarImpl,nVarImpl,nStencil))
+
+          !!! Circular dependency to be resolved
+          !call test_semi_impl_jacobian( &
+          !     State_VGB(Bx_:Bz_,:,:,:,iBlock), &
+          !     1e-4, get_resistivity_rhs, Jac_VVI)
 
           do iStencil = 1, nStencil
              write(*,'(a,i1,a,10es13.5)') &
@@ -851,20 +855,21 @@ contains
 
   !========================================================================
 
-  subroutine add_jacobian_eta_resist(iBlock, iB, Jacobian_VVCI)
+  subroutine add_jacobian_eta_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
 
     ! Calculate the Jacobian for the preconditioning of 
     ! collisional resistivity.
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
+    use ModImplicit,     ONLY: UseNoOverlap, nStencil
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: true_cell
 
-    integer, intent(in):: iB
     integer, intent(in):: iBlock
-    real, intent(inout):: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    integer, intent(in):: iB
+    integer, intent(in):: nVarImpl
+    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
     integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
     integer:: iVar, jVar
@@ -979,7 +984,7 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_hall_resist(iBlock, iB, Jacobian_VVCI)
+  subroutine add_jacobian_hall_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
 
     ! Preconditioner for the induction equation in Hall MHD
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
@@ -987,13 +992,14 @@ contains
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, FaceNormal_DDFB,&
          CellVolume_GB
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: nVarSemi, nStencil, UseNoOverlap
+    use ModImplicit,     ONLY: nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
 
     integer, intent(in):: iBlock
+    integer, intent(in):: nVarImpl
     integer, intent(in):: iB
-    real, intent(inout):: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
     integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
     integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
@@ -1159,23 +1165,23 @@ contains
 
   !============================================================================
 
-  subroutine update_impl_resistivity(iBlock, iImplBlock, StateImpl_VG)
+  subroutine update_impl_resistivity(iBlock, SemiAll_VC)
 
     use ModAdvance,    ONLY: State_VGB
     use ModEnergy,     ONLY: calc_energy_cell
-    use ModImplicit,   ONLY: nw
+    use ModImplicit,   ONLY: nVarSemiAll
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry,   ONLY: true_cell
 
-    integer, intent(in) :: iBlock, iImplBlock
-    real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
+    integer, intent(in):: iBlock
+    real,    intent(in):: SemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k
     !--------------------------------------------------------------------------
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
-       State_VGB(Bx_:Bz_,i,j,k,iBlock) = StateImpl_VG(BxImpl_:BzImpl_,i,j,k)
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = SemiAll_VC(BxImpl_:BzImpl_,i,j,k)
     end do; end do; end do
 
     call calc_energy_cell(iBlock)

@@ -90,7 +90,7 @@ subroutine advance_impl
   use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
        Uhepta, Lhepta, multiply_dilu
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
-  use ModImplHypre, ONLY: hypre_preconditioner, hypre_initialize
+  use ModImplHypre, ONLY: hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
   use ModResistivity, ONLY: init_impl_resistivity
   use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB
@@ -107,7 +107,6 @@ subroutine advance_impl
   real    :: KrylovError, dwnrm, local_wnrm(nw), coef1
 
   logical:: converged
-  character (LEN=3) :: typestop
 
   real :: TimeSimulationOrig
 
@@ -123,7 +122,6 @@ subroutine advance_impl
 
   integer :: i, j, k, iBlock, iLoc_I(5)
   !----------------------------------------------------------------------------
-
   NameSub(1:2) = NameThisComp
   call set_oktest('implicit',DoTest,DoTestMe) 
   if(DoTestMe) write(*,*)NameSub,' starting at step=',n_step
@@ -139,18 +137,14 @@ subroutine advance_impl
        Impl_VGB(:,iTest,jTest,kTest,implBLKtest)
 
   call MPI_allreduce(nimpl,nimpl_total, 1,MPI_INTEGER,MPI_SUM,iComm,iError)
-  if(UseSemiImplicit)then
-     wnrm = 1.0
-  else
-     wnrm(1:nw)=-1.0
-     ! Global norm of current w_(k=0) = w_n
-     do iw=1,nw
-        local_wnrm(iw)=sum(Impl_VGB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2)
-     end do
-     call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
-     wnrm=sqrt(wnrm/(nimpl_total/nw))
-     where(wnrm < smalldouble) wnrm =1.0
-  end if
+  wnrm(1:nw)=-1.0
+  ! Global norm of current w_(k=0) = w_n
+  do iw=1,nw
+     local_wnrm(iw)=sum(Impl_VGB(iw,1:nI,1:nJ,1:nK,1:nImplBLK)**2)
+  end do
+  call MPI_allreduce(local_wnrm, wnrm, nw, MPI_REAL, MPI_SUM, iComm,iError)
+  wnrm=sqrt(wnrm/(nimpl_total/nw))
+  where(wnrm < smalldouble) wnrm =1.0
 
   if(DoTestMe)write(*,*)NameSub,': nimpltot, wnrm=',nimpl_total,wnrm
 
@@ -223,25 +217,18 @@ subroutine advance_impl
   DoFixAxisOrig      = DoFixAxis
   DoFixAxis          = .false.
 
-  if(UseSemiImplicit)then
-     ! time step is set by the explicit scheme
-     dtexpl = dt
-     dtcoeff = 1.0
-     ImplCfl = Cfl
-  else
-     ! Use implicit time step
-     if(.not.UseDtFixed)Cfl = ImplCfl
+  ! Use implicit time step
+  if(.not.UseDtFixed)Cfl = ImplCfl
 
-     if(UseDtFixed)then
-        if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
-        call getdt_courant(dtexpl)
-        dtexpl = 0.5*dtexpl
-        dtcoeff = dt/dtexpl
-     else
-        if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
-        dtcoeff = implCFL/0.5
-     endif
-  end if
+  if(UseDtFixed)then
+     if(DoTestMe)write(*,*)NameSub,': call getdt_courant'
+     call getdt_courant(dtexpl)
+     dtexpl = 0.5*dtexpl
+     dtcoeff = dt/dtexpl
+  else
+     if(DoTestMe)write(*,*)NameSub,': no call of getdt_courant'
+     dtcoeff = implCFL/0.5
+  endif
 
   if (UseBDF2.and.n_step==n_prev+1) then
      ! For 3 level BDF2 scheme set beta=ImplCoeff if previous state is known
@@ -253,19 +240,17 @@ subroutine advance_impl
   ! Advance time to level n+1 in case there is explicit time dependence:
   !   R(U^n+1,t^n+1) = R(U^n,t^n+1) + dR/dU(U^n,t^n+1).(U^n+1 - U^n)
   ! so the Jacobian should be evaliated at t^n+1
-  ! Semi-implicit scheme has already advanced time in advance_expl
-  if(.not.UseSemiImplicit) &
-       Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+
+  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   if(DoTestMe.and.time_accurate)&
        write(*,*)NameSub,': dtcoeff,dtexpl,dt=',dtcoeff,dtexpl,dt
   if(DoTestMe.and.UseBDF2)write(*,*)NameSub,': n_prev,dt_prev,ImplCoeff=',&
        n_prev,dt_prev,ImplCoeff
 
-
   if(.not.UseBDF2)then
      ! Save the current state into ImplOld_VCB so that StateOld_VCB 
-     ! can be restored. Also used in the semi-implicit scheme.
+     ! can be restored. 
      ! The implicit blocks haven't been updated, so save current state
      do implBLK=1,nImplBlk
         iBLK=impl2iBLK(implBLK)
@@ -273,112 +258,94 @@ subroutine advance_impl
      end do
   end if
 
-  if(PrecondType=='HYPRE') call hypre_initialize
+  ! Initialize right hand side and dw. Uses ImplOld_VCB for BDF2 scheme.
+  call impl_newton_init
 
-  ! For nVarSemi = 1,  loop through all semi-implicit variables one-by-one
-  ! For nVarSemi = nw, do all (semi-)implicit variables together
-  do iVarSemi = 1, nw, nVarSemi
+  ! Save previous timestep for 3 level scheme
+  if(UseBDF2)then
+     n_prev  = n_step
+     dt_prev = dt
 
-     if(UseSplitSemiImplicit)then
-        iVarSemiMin = iVarSemi
-        iVarSemiMax = iVarSemi
-        call set_semi_impl_range
-     end if
+     ! Save the current state into ImplOld_VCB so that StateOld_VCB 
+     ! can be restored. 
+     ! The implicit blocks haven't been updated, so save current state
+     do implBLK=1,nImplBlk
+        iBLK=impl2iBLK(implBLK)
+        ImplOld_VCB(:,:,:,:,iBLK) = Impl_VGB(:,1:nI,1:nJ,1:nK,implBLK)
+     end do
+  endif
 
-     ! Initialize right hand side and dw. Uses ImplOld_VCB for BDF2 scheme.
-     call impl_newton_init
-
-     ! Save previous timestep for 3 level scheme
-     if(UseBDF2)then
-        n_prev  = n_step
-        dt_prev = dt
-
-        ! Save the current state into ImplOld_VCB so that StateOld_VCB 
-        ! can be restored. Also used in the semi-implicit scheme.
-        ! The implicit blocks haven't been updated, so save current state
-        do implBLK=1,nImplBlk
-           iBLK=impl2iBLK(implBLK)
-           ImplOld_VCB(:,:,:,:,iBLK) = Impl_VGB(:,1:nI,1:nJ,1:nK,implBLK)
-        end do
+  ! Newton-Raphson iteration and iterative linear solver
+  dwnrm = bigdouble
+  NewtonIter = 0
+  do
+     NewtonIter = NewtonIter+1;
+     if(DoTestMe)write(*,*)NameSub,': NewtonIter=',NewtonIter
+     if(NewtonIter > NewtonIterMax)then
+        write(*,*)'Newton-Raphson failed to converge NewtonIter=',NewtonIter
+        if(time_accurate)call stop_mpi('Newton-Raphson failed to converge')
+        exit
      endif
+     nnewton=nnewton+1
 
-     ! Newton-Raphson iteration and iterative linear solver
-     dwnrm = bigdouble
-     NewtonIter = 0
-     do
-        NewtonIter = NewtonIter+1;
-        if(DoTestMe)write(*,*)NameSub,': NewtonIter=',NewtonIter
-        if(NewtonIter > NewtonIterMax)then
-           write(*,*)'Newton-Raphson failed to converge NewtonIter=',NewtonIter
-           if(time_accurate)call stop_mpi('Newton-Raphson failed to converge')
-           exit
-        endif
-        nnewton=nnewton+1
+     ! Calculate Jacobian matrix if required
+     if(JacobianType /= 'free' .and. (NewtonIter==1 .or. NewMatrix))then
 
-        ! Calculate Jacobian matrix if required
-        if(JacobianType /= 'free' .and. (NewtonIter==1 .or. NewMatrix))then
-
-!!! need to be changed for semi-implicit
-           if(NewtonIter>1)then
-              ! Update ghost cells for Impl_VGB, 
-              ! because it is needed by impl_jacobian
-              call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
-              call exchange_messages
-              call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
-           end if
-
-           call timing_start('impl_jacobian')
-           if(UseSemiImplicit)then
-              call get_semi_impl_jacobian
-           else
-              ! Initialize variables for preconditioner calculation
-              call init_impl_resistivity
-
-              ! Calculate approximate dR/dU matrix
-              do implBLK = 1, nImplBLK
-                 call impl_jacobian(implBLK,MAT(1,1,1,1,1,1,implBLK))
-              end do
-           end if
-           call timing_stop('impl_jacobian')
-
-           if(DoTest)then
-              call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
-                   MPI_REAL,MPI_SUM,PROCtest,iComm,iError)
-              if(DoTestMe)write(*,*)NameSub,': sum(MAT**2)=',coef1
-           end if
-
-        endif
-
-        ! Update rhs and initial dw if required
-        if (NewtonIter>1) call impl_newton_loop
-
-        if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
-             ': initial dw(test), rhs(test)=',dw(implVARtest),rhs(implVARtest)
-
-        call solve_linear_system
-
-        if(info /= 0 .and. iProc == 0 .and. time_accurate) then
-           write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
-           write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
-                info, KrylovError, KrylovErrorMax
-           if(nVarSemi < nw)write(*,*)'Semi-implicit variable index is ',iVarSemi
+        if(NewtonIter>1)then
+           ! Update ghost cells for Impl_VGB, 
+           ! because it is needed by impl_jacobian
+           call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
+           call exchange_messages
+           call explicit2implicit(0,nI+1,j0_,nJp1_,k0_,nKp1_,Impl_VGB)
         end if
 
-        ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
-        ! with coeff=1 or coeff<1 from backtracking (for steady state only) 
-        ! based on reducing the residual 
-        ! ||ResExpl_VCB(Impl_VGB+1)|| <= ||ResExpl_VCB(Impl_VGB)||. 
-        ! Also calculates ResImpl_VCB=dtexpl*R_loImpl_VGB+1 
-        ! and logical converged.
-        call impl_newton_update(dwnrm, converged)
+        call timing_start('impl_jacobian')
 
-        if(DoTestMe.and.UseNewton) &
-             write(*,*)NameSub,': dwnrm, converged=',dwnrm, converged
+        ! Initialize variables for preconditioner calculation
+        call init_impl_resistivity
 
-        if(converged) EXIT
-     enddo ! Newton iteration
+        ! Calculate approximate dR/dU matrix
+        do implBLK = 1, nImplBLK
+           call impl_jacobian(implBLK,MAT(1,1,1,1,1,1,implBLK))
+        end do
+        call timing_stop('impl_jacobian')
 
-  end do ! Splitting
+        if(DoTest)then
+           call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
+                MPI_REAL,MPI_SUM,PROCtest,iComm,iError)
+           if(DoTestMe)write(*,*)NameSub,': sum(MAT**2)=',coef1
+        end if
+
+     endif
+
+     ! Update rhs and initial dw if required
+     if (NewtonIter>1) call impl_newton_loop
+
+     if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
+          ': initial dw(test), rhs(test)=',dw(implVARtest),rhs(implVARtest)
+
+     call solve_linear_system
+
+     if(info /= 0 .and. iProc == 0 .and. time_accurate) then
+        write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
+        write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
+             info, KrylovError, KrylovErrorMax
+     end if
+
+     ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
+     ! with coeff=1 or coeff<1 from backtracking (for steady state only) 
+     ! based on reducing the residual 
+     ! ||ResExpl_VCB(Impl_VGB+1)|| <= ||ResExpl_VCB(Impl_VGB)||. 
+     ! Also calculates ResImpl_VCB=dtexpl*R_loImpl_VGB+1 
+     ! and logical converged.
+     call impl_newton_update(dwnrm, converged)
+
+     if(DoTestMe.and.UseNewton) &
+          write(*,*)NameSub,': dwnrm, converged=',dwnrm, converged
+
+     if(converged) EXIT
+  enddo ! Newton iteration
+
 
   ! Make the update conservative
   if(UseConservativeImplicit)call impl_newton_conserve
@@ -410,35 +377,33 @@ subroutine advance_impl
   if(UseNewton.and.DoTestMe)write(*,*)NameSub,': final NewtonIter, dwnrm=',&
        NewtonIter, dwnrm
 
-  if(.not.UseSemiImplicit)then
-     ! Restore StateOld and E_o_BLK in the implicit blocks
-     do implBLK=1,nImplBlk
-        iBLK=impl2iBLK(implBLK)
-        StateOld_VCB(:,:,:,:,iBLK) = ImplOld_VCB(:,:,:,:,iBLK)
+  ! Restore StateOld and EnergyOld in the implicit blocks
+  do implBLK=1,nImplBlk
+     iBLK=impl2iBLK(implBLK)
+     StateOld_VCB(:,:,:,:,iBLK) = ImplOld_VCB(:,:,:,:,iBLK)
 
-        if(UseImplicitEnergy) then
-           do iFluid = 1, nFluid
-              call select_fluid
-              EnergyOld_CBI(:,:,:,iBLK,iFluid) = ImplOld_VCB(iP,:,:,:,iBLK)
-           end do
-           call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
-        else
-           call calc_old_energy(iBlk) ! restore EnergyOld_CBI
-        end if
-     end do
-  end if
+     if(UseImplicitEnergy) then
+        do iFluid = 1, nFluid
+           call select_fluid
+           EnergyOld_CBI(:,:,:,iBLK,iFluid) = ImplOld_VCB(iP,:,:,:,iBLK)
+        end do
+        call calc_old_pressure(iBlk) ! restore StateOld_VCB(P_...)
+     else
+        call calc_old_energy(iBlk) ! restore EnergyOld_CBI
+     end if
+  end do
 
   if(UseUpdateCheckOrig .and. time_accurate .and. UseDtFixed)then
 
      ! Calculate the largest relative drop in density or pressure
      do iBLK = 1, nBlock
         if(Unused_B(iBLK)) CYCLE
-           ! Check p and rho
-           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
-                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
-                StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK), &
-                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
-                StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) )
+        ! Check p and rho
+        tmp1_BLK(1:nI,1:nJ,1:nK,iBLK)=&
+             min(State_VGB(P_,1:nI,1:nJ,1:nK,iBLK) / &
+             StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBLK), &
+             State_VGB(Rho_,1:nI,1:nJ,1:nK,iBLK) / &
+             StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBLK) )
      end do
 
      if(index(Test_String, 'updatecheck') > 0)then
@@ -489,8 +454,7 @@ subroutine advance_impl
   endif
 
   ! Advance time by Dt
-  if(.not.UseSemiImplicit) &
-       Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
+  Time_Simulation = TimeSimulationOrig + Dt*No2Si_V(UnitT_)
 
   ! Restore logicals
   UseUpdateCheck   = UseUpdateCheckOrig
@@ -502,8 +466,11 @@ contains
   !==========================================================================
   subroutine solve_linear_system
 
+    use ModImplHypre, ONLY: hypre_preconditioner
+
     integer:: n, implBLK, i, j, k, iVar, iError1 = -1
     real:: coef1, coef2
+    character(len=3):: TypeStop
     !----------------------------------------------------------------------
     ! Precondition matrix if required
     if(JacobianType=='prec'.and.(NewtonIter==1.or.NewMatrix))then
@@ -512,7 +479,7 @@ contains
        elseif(PrecondType == 'JACOBI') then
           n = 0
           do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; 
-             do iVar = 1, nVarSemi
+             do iVar = 1, nVar
                 n = n + 1
                 JacobiPrec_I(n) = 1.0 / MAT(iVar,iVar,i,j,k,1,implBlk)
              end do
@@ -523,7 +490,7 @@ contains
 
           do implBLK=1,nImplBLK
              ! Preconditioning: MAT --> LU
-             call prehepta(nIJK, nVarSemi, nI, nI*nJ, PrecondParam, &
+             call prehepta(nIJK, nVar, nI, nI*nJ, PrecondParam, &
                   MAT(1,1,1,1,1,Stencil1_,implBLK),&
                   MAT(1,1,1,1,1,Stencil2_,implBLK),&
                   MAT(1,1,1,1,1,Stencil3_,implBLK),&
@@ -537,7 +504,7 @@ contains
              ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
              ! for left, symmetric, and right preconditioning, respectively
              if(PrecondType == 'DILU')then
-                call multiply_dilu(nIJK, nVarSemi, nI, nI*nJ, &
+                call multiply_dilu(nIJK, nVar, nI, nI*nJ, &
                      rhs(nwIJK*(implBLK-1)+1),&
                      MAT(1,1,1,1,1,Stencil1_,implBLK),&
                      MAT(1,1,1,1,1,Stencil2_,implBLK),&
@@ -547,14 +514,14 @@ contains
                      MAT(1,1,1,1,1,Stencil6_,implBLK),&
                      MAT(1,1,1,1,1,Stencil7_,implBLK))
              elseif(PrecondSide /= 'right')then
-                call Lhepta(nIJK, nVarSemi, nI, nI*nJ, &
+                call Lhepta(nIJK, nVar, nI, nI*nJ, &
                      rhs(nwIJK*(implBLK-1)+1),&
                      MAT(1,1,1,1,1,Stencil1_,implBLK),&
                      MAT(1,1,1,1,1,Stencil2_,implBLK),&
                      MAT(1,1,1,1,1,Stencil4_,implBLK),&
                      MAT(1,1,1,1,1,Stencil6_,implBLK))
                 if(PrecondSide=='left') &
-                     call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
+                     call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
                      rhs(nwIJK*(implBLK-1)+1),  &
                      MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
                      MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
@@ -565,7 +532,7 @@ contains
              ! left, symmetric and right preconditioning, respectively
              ! Multiplication with LU is NOT implemented
              if(non0dw .and. PrecondSide=='symmetric') &
-                  call Uhepta(.false., nIJK, nVarSemi, nI, nI*nJ, &
+                  call Uhepta(.false., nIJK, nVar, nI, nI*nJ, &
                   dw(nwIJK*(implBLK-1)+1),   &
                   MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
                   MAT(1,1,1,1,1,5,implBLK),  &   ! +j
@@ -644,13 +611,13 @@ contains
          .and. PrecondType /= 'JACOBI' .and. KrylovType /= 'CG')then
        do implBLK=1,nImplBLK
           if(PrecondSide=='right') &
-               call Lhepta(nIJK, nVarSemi, nI, nI*nJ,&
+               call Lhepta(nIJK, nVar, nI, nI*nJ,&
                dw(nwIJK*(implBLK-1)+1) ,&
                MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
                MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
                MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
                MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
-          call Uhepta(.true., nIJK, nVarSemi, nI, nI*nJ,&
+          call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
                dw(nwIJK*(implBLK-1)+1),   &
                MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
                MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
@@ -674,5 +641,7 @@ contains
          KrylovError, iError1, .true.)
 
   end subroutine solve_linear_system
-  
+
 end subroutine advance_impl
+
+  

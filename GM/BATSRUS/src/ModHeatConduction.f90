@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 !==============================================================================
 module ModHeatConduction
@@ -583,8 +583,9 @@ contains
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
-    use ModImplicit,     ONLY: nw, nImplBLK, impl2iBlk, iTeImpl
-    use ModMain,         ONLY: nI, nJ, nK, MaxImplBlk, Dt, time_accurate, Cfl
+    use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_I, &
+         iTeImpl
+    use ModMain,         ONLY: Dt, time_accurate, Cfl
     use ModMultiFluid,   ONLY: MassIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
@@ -594,16 +595,17 @@ contains
     use ModResistivity,  ONLY: Eta_GB, set_resistivity
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
-    use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         j0_, nJp1_, k0_, nKp1_
+    use BATL_size,       ONLY: nI, nJ, nK, j0_, nJp1_, k0_, nKp1_, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
 
-    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
-    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(out):: &
+         StateImpl_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
+    real, intent(inout):: DconsDsemi_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
-    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iImplBlock, iP
+    integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
     real :: Gamma
     real :: DtLocal
     real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
@@ -622,8 +624,8 @@ contains
     if(UseElectronPressure .and. UseIdealEos .and. .not.DoUserHeatConduction) &
          call set_resistivity
 
-    do iImplBlock = 1, nImplBLK
-       iBlock = impl2iBLK(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock = iBlockFromSemi_I(iBlockSemi)
 
        IsNewBlockTe = .true.
 
@@ -647,15 +649,15 @@ contains
        ! specific heat in DconsDsemi_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI             
           if(UseIdealEos .and. .not.DoUserHeatConduction)then
-             StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = TeFraction &
+             StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
 
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                      1.0/(Gamma - 1)*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
              else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                      inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
              end if
 
@@ -665,7 +667,7 @@ contains
                      *3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
              end if
 
-             TeSi = StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) &
+             TeSi = StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) &
                   *No2Si_V(UnitTemperature_)
           else
 
@@ -681,10 +683,10 @@ contains
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
              end if
 
-             StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
+             StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = &
                   TeSi*Si2No_V(UnitTemperature_)
 
-             DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = &
+             DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           end if
 
@@ -767,7 +769,7 @@ contains
     end do
 
   contains
-
+    !=========================================================================
     subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
 
       use ModAdvance,    ONLY: UseIdealEos
@@ -877,8 +879,8 @@ contains
     use ModSize,         ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
-         FluxImpl_VZB
+    use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
+         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
 
@@ -959,19 +961,21 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_heat_cond(iBlock, Jacobian_VVCI)
+  subroutine add_jacobian_heat_cond(iBlock, nVarImpl, Jacobian_VVCI)
+
+    ! This code can only be called from the semi-implicit scheme
+    ! since this works on temperature and not energy or pressure,
 
     use ModAdvance,      ONLY: UseElectronPressure
     use ModFaceGradient, ONLY: set_block_jacobian_face, DcoordDxyz_DDFD
-    use ModImplicit,     ONLY: iTeImpl, nVarSemi, UseNoOverlap
+    use ModImplicit,     ONLY: UseNoOverlap, nStencil, iTeImpl
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
 
-    integer, parameter:: nStencil = 2*nDim + 1
-
-    integer, intent(in) :: iBlock
-    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    integer, intent(in):: iBlock
+    integer, intent(in):: nVarImpl
+    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
@@ -1037,16 +1041,18 @@ contains
 
   !============================================================================
 
-  subroutine update_impl_heat_cond(iBlock, iImplBlock, StateImpl_VG)
+  subroutine update_impl_heat_cond(iBlock, iBlockSemi, &
+       NewSemiAll_VC, OldSemiAll_VC, DconsDsemiAll_VC)
 
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler 
+
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, ExtraEint_, Ehot_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
-    use ModImplicit, ONLY: nw, iTeImpl, DconsDsemi_VCB, ImplOld_VCB
+    use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin
@@ -1055,8 +1061,10 @@ contains
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
 
-    integer, intent(in) :: iBlock, iImplBlock
-    real, intent(in) :: StateImpl_VG(nw,nI,nJ,nK)
+    integer, intent(in) :: iBlock, iBlockSemi
+    real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
+    real, intent(in) :: OldSemiAll_VC(nVarSemiAll,nI,nJ,nK)
+    real, intent(in) :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k, iP
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi
@@ -1072,8 +1080,8 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DeltaEinternal = DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-            *(StateImpl_VG(iTeImpl,i,j,k) - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+       DeltaEinternal = DconsDsemiAll_VC(iTeImpl,i,j,k) &
+            *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))
 
        if(UseIdealEos)then
           if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
@@ -1111,14 +1119,14 @@ contains
           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + DtLocal*PointCoef_CB(i,j,k,iBlock) &
-               *(StateImpl_VG(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))
+               *(NewSemiAll_VC(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))
 
           State_VGB(p_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
 
           if(UseAnisoPressure)then
              Einternal = inv_gm1*State_VGB(Ppar_,i,j,k,iBlock) &
                   + DtLocal*PointCoef_CB(i,j,k,iBlock) &
-                  *(StateImpl_VG(iTeImpl,i,j,k) &
+                  *(NewSemiAll_VC(iTeImpl,i,j,k) &
                   - PointImpl_VCB(2,i,j,k,iBlock))
 
              State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)

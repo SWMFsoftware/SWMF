@@ -337,11 +337,11 @@ subroutine impl_jacobian(implBLK, JAC)
 
   ! Add extra terms for (Hall) resistivity
   if(UseResistivity .or. UseHallResist) &
-       call add_jacobian_resistivity(iBlk, JAC)
+       call add_jacobian_resistivity(iBlk, nVar, JAC)
 
   ! Add extra terms for radiative diffusion
   if(UseRadDiffusion) &
-       call add_jacobian_rad_diff(iBLK, JAC)
+       call add_jacobian_rad_diff(iBLK, nVar, JAC)
 
   ! Multiply JAC by the implicit timestep dt, ImplCoeff, wnrm, and -1
   if(time_accurate)then

@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 !============================================================================
 module ModRadDiffusion
@@ -25,9 +25,9 @@ module ModRadDiffusion
   ! 2. In the split semi-implicit scheme all variables
   !    use the point-implicit energy exchange!
 
-  use ModImplicit,   ONLY: UseAccurateRadiation
-  use ModVarIndexes, ONLY: p_, nWave
-  use BATL_size, ONLY: nDim, MaxDim
+  use ModImplicit,    ONLY: UseAccurateRadiation
+  use ModVarIndexes,  ONLY: p_, nWave
+  use BATL_size,      ONLY: nDim, MaxDim
 
   implicit none
   save
@@ -458,7 +458,7 @@ contains
   ! Semi-implicit interface
   !============================================================================
 
-  subroutine get_impl_rad_diff_state(StateImpl_VGB,DconsDsemi_VCB)
+  subroutine get_impl_rad_diff_state(StateImpl_VGB, DconsDsemi_VCB)
 
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
@@ -467,8 +467,10 @@ contains
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
-    use ModImplicit, ONLY: nw, nImplBlk, impl2iBlk, TypeSemiImplicit, &
-         UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast, ImplCoeff
+    use ModImplicit, ONLY: &
+         nVarSemiAll, nBlockSemi, iBlockFromSemi_I, &
+         TypeSemiImplicit, SemiImplCoeff, &
+         UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, MaxImplBlk, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, &
@@ -478,10 +480,12 @@ contains
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModUserInterface ! user_material_properties
 
-    real, intent(out):: StateImpl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
-    real, intent(inout):: DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBlk)
+    real, intent(out):: &
+         StateImpl_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+    real, intent(inout):: &
+         DconsDsemi_VCB(nVarSemiAll,nI,nJ,nK,MaxImplBlk)
 
-    integer :: iImplBlock, iBlock, i, j, k
+    integer :: iBlockSemi, iBlock, i, j, k
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
     real :: OpacityPlanck_W(nWave), CvSi, Cv, TeSi, Te
     real :: HeatCondSi, HeatCond, TeTiRelaxSi
@@ -512,9 +516,9 @@ contains
        kMin = 1; kMax = nK
     end if
 
-    do iImplBlock = 1, nImplBLK
+    do iBlockSemi = 1, nBlockSemi
 
-       iBlock = impl2iBLK(iImplBlock)
+       iBlock = iBlockFromSemi_I(iBlockSemi)
 
        IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
@@ -530,11 +534,11 @@ contains
 
           if(UseTemperature)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = Te_G(i,j,k)
+                StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
              end do; end do; end do
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateImpl_VGB(iTeImpl,i,j,k,iImplBlock) = &
+                StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = &
                      cRadiationNo*Te_G(i,j,k)**4
              end do; end do; end do
           end if
@@ -542,7 +546,7 @@ contains
 
        if(iTrImplFirst > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iImplBlock) = &
+             StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           end do; end do; end do
        end if
@@ -596,7 +600,7 @@ contains
              if(nWave == 1)then
                 ! This coefficient is cR'' = cR/(1+dt*cR*dPlanck/dEint)
                 PointCoef_VCB(1,i,j,k,iBlock) = Clight*OpacityPlanck_W(1) &
-                     /(1 + ImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
+                     /(1 + SemiImplCoeff*Dt*Clight*OpacityPlanck_W(1) / Cv)
 
                 ! This is just the Planck function at time level * saved
                 PointImpl_VCB(:,i,j,k,iBlock) = Planck
@@ -606,22 +610,22 @@ contains
                 PointImpl_VCB(:,i,j,k,iBlock) = Planck_W
              else
                 ! Unsplit multigroup
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
              end if
 
           case('radcond')
              if(UseElectronPressure)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
              else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
              end if
 
              if(UseSplitSemiImplicit)then
                 if(UseElectronPressure)then
                    PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
-                        /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                        /(1.0 + SemiImplCoeff*Dt*TeTiCoef/Cvi)
                    PointImpl_VCB(1,i,j,k,iBlock) = Ti
                 end if
 
@@ -637,7 +641,7 @@ contains
                    TeTiCoefPrime = TeTiCoef/Cvi &
                         /(cRadiationNo*(Te+Ti)*(Te**2+Ti**2))
                    PointCoef_VCB(1,i,j,k,iBlock) = &
-                        TeTiCoefPrime*Cvi/(1.0 + ImplCoeff*Dt*TeTiCoefPrime)
+                        TeTiCoefPrime*Cvi/(1.0 + SemiImplCoeff*Dt*TeTiCoefPrime)
                    PointImpl_VCB(1,i,j,k,iBlock) = cRadiationNo*Ti**4
                 end if
 
@@ -648,13 +652,13 @@ contains
 
           case('cond')
              if(UseElectronPressure)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cve
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
 
                 PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
-                     /(1.0 + ImplCoeff*Dt*TeTiCoef/Cvi)
+                     /(1.0 + SemiImplCoeff*Dt*TeTiCoef/Cvi)
                 PointImpl_VCB(1,i,j,k,iBlock) = Ti
              else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) = Cv
+                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
              end if
           end select
 
@@ -704,8 +708,8 @@ contains
     if(UseAccurateRadiation)then
        call message_pass_cell(nDiff, DiffSemiCoef_VGB)
 
-       do iImplBlock = 1, nImplBLK
-          iBlock = impl2iBLK(iImplBlock)
+       do iBlockSemi = 1, nBlockSemi
+          iBlock = iBlockFromSemi_I(iBlockSemi)
 
           do iDim = 1, nDim
              Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
@@ -725,8 +729,8 @@ contains
     call message_pass_cell(nDiff, DiffSemiCoef_VGB, nWidthIn=1, &
          nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
 
-    do iImplBlock = 1, nImplBLK
-       iBlock = impl2iBLK(iImplBlock)
+    do iBlockSemi = 1, nBlockSemi
+       iBlock = iBlockFromSemi_I(iBlockSemi)
        ! Calculate face averaged values. Include geometric factors.
 
        call face_equal(1,2,nI,1,nJ,1,nK)
@@ -1018,16 +1022,16 @@ contains
 
   !============================================================================
 
-  subroutine set_rad_outflow_bc(iSide, iBlock, iImplBlock, State_VG, IsLinear)
+  subroutine set_rad_outflow_bc(iSide, iBlock, iBlockSemi, State_VG, IsLinear)
 
-    use BATL_lib,    ONLY: CellSize_DB
-    use ModImplicit, ONLY: nVarSemi
-    use ModPhysics,  ONLY: Clight
-    use ModSize,     ONLY: x_, y_, z_, &
+    use BATL_lib,       ONLY: CellSize_DB
+    use ModImplicit,    ONLY: nVarSemi
+    use ModPhysics,     ONLY: Clight
+    use ModSize,        ONLY: x_, y_, z_, &
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          j0_, nJp1_, k0_, nKp1_
 
-    integer, intent(in) :: iSide, iBlock, iImplBlock
+    integer, intent(in) :: iSide, iBlock, iBlockSemi
     real, intent(inout) :: State_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, intent(in) :: IsLinear
 
@@ -1109,8 +1113,8 @@ contains
          CellFace_DFB, CellSize_DB, CellVolume_GB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: set_block_field3
-    use ModImplicit,     ONLY: nVarSemi, iTeImpl, FluxImpl_VXB, FluxImpl_VYB, &
-         FluxImpl_VZB
+    use ModImplicit,     ONLY: nVarSemi, iTeImpl, &
+         FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModLinearSolver, ONLY: pDotADotPPe, UsePDotADotP
     use ModMain,         ONLY: nI, nJ, nK
     use ModParallel,     ONLY: NeiLev, NOBLK
@@ -1543,20 +1547,21 @@ contains
 
   !============================================================================
 
-  subroutine add_jacobian_rad_diff(iBlock, Jacobian_VVCI)
+  subroutine add_jacobian_rad_diff(iBlock, nVarImpl, Jacobian_VVCI)
 
     use BATL_lib,    ONLY: IsCartesian, DiLevelNei_IIIB, Unset_, CellSize_DB, &
          CellFace_DB, CellFace_DFB, CellVolume_B, CellVolume_GB
-    use ModImplicit, ONLY: iTeImpl, UseFullImplicit, &
-         UseSemiImplicit, nVarSemi, nStencil, Stencil1_, Stencil2_, &
-         Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap
+    use ModImplicit, ONLY: UseFullImplicit, nStencil, Stencil1_, Stencil2_, &
+         Stencil3_, Stencil4_, Stencil5_, Stencil6_, Stencil7_, UseNoOverlap,&
+         UseSemiImplicit, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, TypeBc_I
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: InvClight
     use ModGeometry, ONLY: true_cell
 
     integer, intent(in) :: iBlock
-    real, intent(inout) :: Jacobian_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+    integer, intent(in) :: nVarImpl
+    real, intent(inout) :: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
     integer :: iVar, i, j, k, iDim, Di, Dj, Dk, iDiff, iRelax
     real :: DiffLeft, DiffRight, RelaxCoef, PlanckWeight
@@ -1824,23 +1829,25 @@ contains
 
   !============================================================================
 
-  subroutine update_impl_rad_diff(iBlock, iImplBlock, StateImpl_VG)
+  subroutine update_impl_rad_diff(iBlock, iBlockSemi, &
+       NewSemiAll_VC, OldSemiAll_VC, DconsDsemiAll_VC)
 
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
     ! of the extremely advanced PGF90 12.9 compiler
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes, ONLY: Rho_, p_, ExtraEint_, Pe_, nWave, WaveFirst_
     use ModEnergy,     ONLY: calc_energy_cell
-    use ModImplicit,   ONLY: nw, iTeImpl, iTrImplFirst, &
-         DconsDsemi_VCB, ImplOld_VCB, ImplCoeff
+    use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iTrImplFirst, SemiImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
     use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, UnitRho_, UnitTemperature_, ExtraEintMin
     use ModGeometry,   ONLY: true_cell
     use ModUserInterface ! user_material_properties
 
-    integer, intent(in) :: iBlock, iImplBlock
-    real, intent(inout) :: StateImpl_VG(nw,nI,nJ,nK)
+    integer, intent(in):: iBlock, iBlockSemi
+    real, intent(inout):: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
+    real, intent(in)   :: OldSemiAll_VC(nVarSemiAll,nI,nJ,nK)
+    real, intent(in)   :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k, iVarImpl, iVar, iWave
     real :: Einternal, EinternalSi, PressureSi
@@ -1857,10 +1864,10 @@ contains
              iVarImpl = iTrImplFirst - 1 + iWave
              iVar = WaveFirst_ - 1 + iWave
 
-             StateImpl_VG(iVarImpl,i,j,k) = &
-                  max(EradMin_W(iWave), StateImpl_VG(iVarImpl,i,j,k))
+             NewSemiAll_VC(iVarImpl,i,j,k) = &
+                  max(EradMin_W(iWave), NewSemiAll_VC(iVarImpl,i,j,k))
 
-             State_VGB(iVar,i,j,k,iBlock) = StateImpl_VG(iVarImpl,i,j,k)
+             State_VGB(iVar,i,j,k,iBlock) = NewSemiAll_VC(iVarImpl,i,j,k)
           end do
        end if
 
@@ -1870,8 +1877,8 @@ contains
                + State_VGB(ExtraEint_,i,j,k,iBlock)
 
           ! electron energy update: Ee_new = Ee_old + Cv'*Delta(a*Te^4)
-          Ee = Ee + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-               *(StateImpl_VG(iTeImpl,i,j,k)-ImplOld_VCB(iTeImpl,i,j,k,iBlock))
+          Ee = Ee + DconsDsemiAll_VC(iTeImpl,i,j,k) &
+               *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))
 
           ! ion pressure -> Einternal
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
@@ -1880,23 +1887,20 @@ contains
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock)
 
-          if(iTeImpl>0)then
-             Einternal = Einternal + DconsDsemi_VCB(iTeImpl,i,j,k,iImplBlock) &
-                  *(StateImpl_VG(iTeImpl,i,j,k) &
-                  - ImplOld_VCB(iTeImpl,i,j,k,iBlock))
-          end if
+          if(iTeImpl>0) Einternal = Einternal &
+               + DconsDsemiAll_VC(iTeImpl,i,j,k) &
+               *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))
        end if
 
        ! Add up internal energy change from all point-implicit variables
        ! Multiple point-implicit variables can occur 
        ! in split semi-implicit scheme only.
        do iVar = 1, nPoint
-
           Relaxation = PointCoef_VCB(iVar,i,j,k,iBlock)*( &
-               + ImplCoeff*(StateImpl_VG(iVar,i,j,k) &
-               -            PointImpl_VCB(iVar,i,j,k,iBlock)) &
-               + (1.0 - ImplCoeff)*(ImplOld_VCB(iVar,i,j,k,iBlock) &
-               -            PointImpl_VCB(iVar,i,j,k,iBlock)) )
+               + SemiImplCoeff        *(NewSemiAll_VC(iVar,i,j,k) &
+               -                        PointImpl_VCB(iVar,i,j,k,iBlock)) &
+               + (1.0 - SemiImplCoeff)*(OldSemiAll_VC(iVar,i,j,k) &
+               -                        PointImpl_VCB(iVar,i,j,k,iBlock)) )
 
           if(UseElectronPressure .and. iVar > 1)then
              ! Add energy exchange between electrons and each radiation group
@@ -1962,9 +1966,9 @@ contains
 
   end subroutine update_impl_rad_diff
   !==========================================================================
-  subroutine set_rad_diff_range
+  subroutine set_rad_diff_range(iVarSemi)
 
-    use ModImplicit, ONLY: iVarSemi
+    integer, intent(in):: iVarSemi
 
     character(len=*), parameter:: NameSub = 'set_rad_diff_range'
     !-----------------------------------------------------------------------

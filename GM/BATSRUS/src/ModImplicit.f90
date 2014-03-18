@@ -1,6 +1,53 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
+module ModSemiImplVar
+
+  implicit none
+
+  ! Semi-implicit variables that cannot be in ModSemiImplicit
+  ! because it would create circular dependencies
+
+  logical, public:: UseSemiImplicit = .false.
+  logical, public:: UseSplitSemiImplicit = .false.
+  character(len=40), public:: TypeSemiImplicit = 'none'
+
+  ! Number of all semi-implicit variables
+  integer, public:: nVarSemiAll
+
+  ! Index range of semi-implicit variables solved together
+  integer, public:: iVarSemiMin, iVarSemiMax
+
+  ! Number of semi-implicit variables solved together
+  integer, public:: nVarSemi
+
+  ! Named indices for semi-implicit variables
+  integer, public :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
+
+  ! Number of semi-implicit grid blocks
+  integer, public:: nBlockSemi
+
+  ! Conversion from compact block index iBlockSemi to normal index iBlock
+  integer, public, allocatable:: iBlockFromSemi_I(:)
+
+  ! Arrays for flux correction at resolution changes
+  real, public, allocatable, dimension(:,:,:,:,:) :: &
+       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
+
+  ! Increase accurary of radiation solver by switching to third order
+  ! interpolation at the resolution change
+  logical, public:: UseAccurateRadiation = .false.
+
+  ! Coefficient of the implicit part: 1 - Backward Euler, 0.5 - trapezoidal
+  real, public:: SemiImplCoeff = 1.0
+
+  ! This array is indexed with normal block index and has nG ghost cells
+  real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
+
+end module ModSemiImplVar
+
+!============================================================================
 
 module ModImplicit
 
@@ -8,7 +55,11 @@ module ModImplicit
   use BATL_size,     ONLY: nDim
   use ModVarIndexes, ONLY: nVar, P_
   use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
+  use ModProcMH,     ONLY: iProc, iComm
+
+  ! for sake of fewer changes in the user modules
+  use ModSemiImplVar, StateSemi_VGB => SemiState_VGB
+
 
   implicit none
   SAVE
@@ -40,23 +91,6 @@ module ModImplicit
   ! Do a conservative update at the end of the iterative solver 
   ! This does not work well without full Newton iteration
   logical :: UseConservativeImplicit=.false.  
-
-  ! Use semi-implicit scheme
-  logical :: UseSemiImplicit = .false.
-  character(len=40) :: TypeSemiImplicit = 'none'
-
-  logical:: UseSplitSemiImplicit = .false.
-  ! Index range for split semi implicit scheme
-  integer:: iVarSemiMin, iVarSemiMax
-  ! Number and index of implicit variables per splitting
-  integer :: nVarSemi, iVarSemi
-
-  ! Named indices for semi-implicit variables
-  integer :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
-
-  ! Increase accurary of radiation solver by switching to third order
-  ! interpolation at the resolution change
-  logical, public :: UseAccurateRadiation = .false.
 
   ! Shall we zero out contribution from ghost cells
   logical :: UseNoOverlap = .true.
@@ -112,7 +146,6 @@ module ModImplicit
   real               :: PrecondParam  = -0.5
   character (len=10) :: PrecondSide   = 'symmetric'
   character (len=10) :: PrecondType   = 'MBILU'
-  integer            :: DnInitHypreAmg= 1
 
   ! Krylov scheme parameters
   character (len=10) :: KrylovType     ='GMRES'
@@ -145,14 +178,6 @@ module ModImplicit
   real, allocatable :: ResImpl_VCB(:,:,:,:,:)
   real, allocatable :: ResExpl_VCB(:,:,:,:,:)
 
-  ! semi-implicit state
-  real, allocatable :: StateSemi_VGB(:,:,:,:,:)
-
-  real, allocatable :: DconsDsemi_VCB(:,:,:,:,:)
-
-  real, allocatable, dimension(:,:,:,:,:) :: &
-       FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
-
   ! Time step when the previous state was stored
   integer :: n_prev=-100
 
@@ -181,6 +206,19 @@ module ModImplicit
        RejectStepLevel   = 0.3, RejectStepFactor   = 0.50, &
        ReduceStepLevel   = 0.6, ReduceStepFactor   = 0.95, &
        IncreaseStepLevel = 0.8, IncreaseStepFactor = 1.05
+
+  type LinearSolverParamType
+     logical          :: DoPrecond        ! Do preconditioning
+     character(len=10):: TypePrecondSide  ! Precondition left, right, symmetric
+     character(len=10):: TypePrecond      ! Preconditioner type
+     real             :: PrecondParam     ! Parameter (mostly for MBILU)
+     logical          :: UseNoOverlap     ! precondition without overlap
+     character(len=10):: TypeKrylov       ! Krylov solver type
+     real             :: KrylovErrorMax   ! Tolerance for solver
+     integer          :: MaxKrylovMatvec  ! Maximum number of iterations
+     integer          :: nKrylovVector    ! Number of vectors for GMRES
+     logical          :: UseInitialGuess  ! non-zero initial guess
+  end type LinearSolverParamType
 
 contains
   !============================================================================
@@ -232,16 +270,6 @@ contains
     case('#IMPLENERGY', '#IMPLICITENERGY')
        call read_var('UseImplicitEnergy', UseImplicitEnergy)
 
-    case('#SEMIIMPLICIT', '#SEMIIMPL')
-       call read_var('UseSemiImplicit', UseSemiImplicit)
-       if(UseSemiImplicit)then
-          call read_var('TypeSemiImplicit', TypeSemiImplicit)
-          i = index(TypeSemiImplicit,'split')
-          UseSplitSemiImplicit = i > 0
-          if(UseSplitSemiImplicit) &
-               TypeSemiImplicit = TypeSemiImplicit(1:i-1)
-       end if
-
     case('#IMPLSCHEME', '#IMPLICITSCHEME')
        call read_var('nOrderImpl', nOrder_Impl)
        call read_var('TypeFluxImpl', FluxTypeImpl, IsUpperCase=.true.)
@@ -279,7 +307,6 @@ contains
        case('HYPRE')
           PrecondSide = 'left'
           UseNoOverlap = .false.
-          call read_var('DnInitHypreAmg', DnInitHypreAmg)
        case('JACOBI')
           PrecondParam = Jacobi_
           PrecondSide  = 'left'
@@ -318,93 +345,28 @@ contains
   !============================================================================
   subroutine init_mod_implicit
 
-    use ModVarIndexes, ONLY: nWave
-    use ModLinearSolver, ONLY: Bilu_
-
     character(len=*), parameter:: NameSub = 'init_mod_implicit'
     !----------------------------------------------------------------------
     if(allocated(Impl_VGB)) return
 
-    if(UseSemiImplicit)then
-       select case(TypeSemiImplicit)
-       case('radiation')
-          if(nWave == 1 .or. UseSplitSemiImplicit)then
-             ! Waves with point implicit temperature
-             nw = nWave
-          else
-             ! (electron) temperature and waves
-             nw = 1 + nWave
-          end if
-       case('cond', 'parcond')
-          nw = 1
-       case('radcond')
-          nw = nWave + 1
-       case('resistivity')
-          nw = MaxDim
-       case default
-          call stop_mpi(NameSub//': nw unknown for'//TypeSemiImplicit)
-       end select
-
-    else
-       ! Solve for all variables implicitly. nVarSemi has to be set too.
-       nw       = nVar
-    end if
-
-    if(UseSplitSemiImplicit)then
-       ! Split semi-implicit scheme solves 1 implicit variable at a time
-       nVarSemi = 1
-    else
-       ! Unsplit (semi-)implicit scheme solves all impl. variables together
-       nVarSemi = nw
-    end if
-    ! Set range of (semi-)implicit variables for unsplit scheme.
-    ! For split scheme this will be overwritten.
-    iVarSemiMin = 1
-    iVarSemiMax = nVarSemi
-
-    if(UseSemiImplicit)then
-       if(TypeSemiImplicit == 'parcond' .or. &
-            TypeSemiImplicit == 'resistivity' .or. UseAccurateRadiation)then
-          allocate( &
-               FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
-               FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &
-               FluxImpl_VZB(nVarSemi,nI,nJ,2,MaxBlock) )
-          FluxImpl_VXB = 0.0
-          FluxImpl_VYB = 0.0
-          FluxImpl_VZB = 0.0
-       end if
-    end if
-
-    nwIJK      = nVarSemi*nIJK
+    ! Solve for all variables implicitly
+    nw         = nVar
+    nwIJK      = nVar*nIJK
     MaxImplVar = nwIJK*MaxImplBLK
 
-    ! Fix preconditioner type from DILU to BILU for a single variable
-    ! because BILU is optimized for scalar equation.
-    if(nVarSemi == 1 .and. PrecondType == 'DILU')then
-       PrecondType  = 'BILU'
-       PrecondParam = Bilu_
-    end if
-
-    if(nVarSemi > 1 .and. PrecondType == 'HYPRE' .and. iProc==0) &
-         call stop_mpi( &
-         'HYPRE preconditioner requires split semi-implicit scheme!')
-
     ! Arrays for all implicit variables
-    allocate(Impl_VGB(nw,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBLK))
-    allocate(ImplOld_VCB(nw,nI,nJ,nK,nBLK))
-    allocate(wnrm(nw))
-    if(UseSemiImplicit) allocate(DconsDsemi_VCB(nw,nI,nJ,nK,MaxImplBLK))
+    allocate(Impl_VGB(nVar,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBLK))
+    allocate(ImplOld_VCB(nVar,nI,nJ,nK,nBLK))
+    allocate(wnrm(nVar))
 
     ! Arrays for split implicit variables
-    allocate(StateSemi_VGB(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    allocate(ResExpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
-    allocate(ResImpl_VCB(nVarSemi,nI,nJ,nK,MaxImplBLK))
+    allocate(ResExpl_VCB(nVar,nI,nJ,nK,MaxImplBLK))
+    allocate(ResImpl_VCB(nVar,nI,nJ,nK,MaxImplBLK))
 
-    allocate(MAT(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxImplBLK))
+    allocate(MAT(nVar,nVar,nI,nJ,nK,nStencil,MaxImplBLK))
     allocate(rhs0(MaxImplVar))
     allocate(rhs(MaxImplVar))
     allocate(dw(MaxImplVar))
-    if(PrecondType == 'JACOBI') allocate(JacobiPrec_I(MaxImplVar))
 
     if(iProc==0)then
        call write_prefix
