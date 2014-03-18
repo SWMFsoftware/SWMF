@@ -1720,7 +1720,7 @@ contains
     if(TypePrecondSide == 'right') RETURN
 
     select case(TypePrecondSide)
-    case('left', 'right', 'symm')
+    case('left', 'right', 'symmetric')
     case default
        call CON_stop(NameSub// &
             ': unknown value for TypePrecondSide='//TypePrecondSide)
@@ -1732,6 +1732,10 @@ contains
     end if
 
     select case(TypePrecond)
+    case('BLOCKJACOBI')
+       ! Multiply with the inverted diagonal blocks of the matrix
+       call multiply_block_jacobi(nI*nJ*nK, nVar, x_I, &
+            a_II(1,1))
     case('DILU')
        select case(nDim)
        case(1)
@@ -1815,7 +1819,7 @@ contains
     if(TypePrecondSide == 'left') RETURN
 
     select case(TypePrecondSide)
-    case('left', 'right', 'symm')
+    case('left', 'right', 'symmetric')
     case default
        call CON_stop(NameSub// &
             ': unknown value for TypePrecondSide='//TypePrecondSide)
@@ -1876,6 +1880,8 @@ contains
     ! a_II matrix which was obtained with "get_precond_matrix"
     ! This is only needed if x_I is not zero initially and
     ! a symmetric preconditioning is used. 
+    ! Multiplying with L is not implemented, so non-zero initial guess 
+    ! cannot be combined with 'right' preconditioning.
 
     integer, intent(in):: nVar   ! number of variables per cell
     integer, intent(in):: nDim   ! number of dimensions 1, 2 or 3
