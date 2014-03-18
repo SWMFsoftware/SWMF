@@ -8,16 +8,14 @@ ascii                   TypeFile
 T                       UseSemiImplicit
 radcondsplit            TypeSemiImplicit
 
-#KRYLOV
-gmres                   TypeKrylov
-nul                     TypeInitKrylov
+#SEMIKRYLOV
+GMRES                   TypeKrylov
 1.0e-8                  ErrorMaxKrylov
 100                     MaxMatvecKrylov
 
-#PRECONDITIONER
-left                    TypePrecondSide
+#SEMIPRECONDITIONER
+T                       DoPrecond
 HYPRE                   TypePrecond
-0			DnInitHypreAmg
 
 #RADIATION
 T                       UseRadDiffusion

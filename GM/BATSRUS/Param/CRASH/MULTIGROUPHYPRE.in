@@ -15,16 +15,14 @@ T                       DoStateElimination
 T                       UseSemiImplicit
 radiationsplit          TypeSemiImplicit
 
-#KRYLOV
+#SEMIKRYLOV
 gmres                   TypeKrylov
-nul                     TypeInitKrylov
 1.0e-8                  ErrorMaxKrylov
 100                     MaxMatvecKrylov
 
-#PRECONDITIONER
-left                    TypePrecondSide
+#SEMIPRECONDITIONER
+T                       DoPrecond
 HYPRE                   TypePrecond
-0			DnInitHypreAmg
 
 #RADIATION
 T                       UseRadDiffusion

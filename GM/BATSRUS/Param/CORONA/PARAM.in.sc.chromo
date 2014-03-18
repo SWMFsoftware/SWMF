@@ -107,15 +107,14 @@ krylov
 T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
-#KRYLOV
+#SEMIKRYLOV
 gmres			TypeKrylov
-nul			TypeInitKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
 
-#PRECONDITIONER
-left			TypePrecondSide (left, symmetric, right)
-bilu			TypePrecond (MBILU)
+#SEMIPRECONDITIONER
+T			DoPrecond
+BILU			TypePrecond
 
 #RADIATIVECOOLING
 T			UseRadCooling
