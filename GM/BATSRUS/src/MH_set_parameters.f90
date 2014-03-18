@@ -10,12 +10,13 @@ subroutine MH_set_parameters(TypeAction)
   use ModAdvance
   use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
        read_b0_param, init_mod_b0
-  use ModGeometry, ONLY : init_mod_geometry, TypeGeometry, nMirror_D, &
+  use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
        MinBoundary,MaxBoundary,&
        read_gen_radial_grid, set_gen_radial_grid, NameGridFile
-  use ModNodes, ONLY : init_mod_nodes
+  use ModNodes, ONLY: init_mod_nodes
   use ModImplicit
+  use ModSemiImplicit, ONLY: read_semi_impl_param, init_mod_semi_impl
   use ModImplHypre, ONLY: hypre_read_param
   use ModPhysics
   use ModProject
@@ -258,12 +259,12 @@ subroutine MH_set_parameters(TypeAction)
      call init_mod_geometry
      call init_mod_boundary_cells
      call init_mod_nodes
-     if(UseB0)         call init_mod_b0
-     if(UseRaytrace)   call init_mod_raytrace
-     if(UseConstrainB) call init_mod_ct
-     if(UseImplicit.or.UseSemiImplicit) &
-          call init_mod_implicit
-     if (DoWriteIndices) call init_mod_geoindices
+     if(UseB0)           call init_mod_b0
+     if(UseRaytrace)     call init_mod_raytrace
+     if(UseConstrainB)   call init_mod_ct
+     if(UseImplicit)     call init_mod_implicit
+     if(UseSemiImplicit) call init_mod_semi_impl
+     if(DoWriteIndices)  call init_mod_geoindices
 
      ! clean dynamic storage
      call clean_block_data
@@ -509,7 +510,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#IMPLICIT", &
           "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
           "#PARTIMPL", "#PARTIMPLICIT",     &
-          "#SEMIIMPL", "#SEMIIMPLICIT",     &
           "#IMPLSCHEME", "#IMPLICITSCHEME", &
           "#IMPLSTEP", "#IMPLICITSTEP",     &
           "#IMPLCHECK", "#IMPLICITCHECK",   &
@@ -517,6 +517,11 @@ subroutine MH_set_parameters(TypeAction)
           "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
           "#KRYLOV", "#KRYLOVSIZE")
         call read_implicit_param(NameCommand)           
+
+     case("#SEMIIMPL", "#SEMIIMPLICIT", &
+          "#SEMIPRECOND", "#SEMIPRECONDITIONER",&
+          "#SEMIKRYLOV", "#SEMIKRYLOVSIZE")
+        call read_semi_impl_param(NameCommand)
 
      case("#HYPRE")
         call hypre_read_param
