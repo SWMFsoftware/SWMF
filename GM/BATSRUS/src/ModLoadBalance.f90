@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModLoadBalance
 
@@ -389,7 +389,7 @@ subroutine select_stepping(DoPartSelect)
        SkippedBlock_, ExplBlock_, ImplBlock_
   use ModGeometry, ONLY : Rmin_BLK
   use ModImplicit, ONLY : UseImplicit, UseFullImplicit, UsePartImplicit, &
-       UseSemiImplicit, ImplCritType, ExplCFL, rImplicit
+       ImplCritType, ExplCFL, rImplicit
   use ModIO,       ONLY: write_prefix, iUnitOut
   use ModB0,       ONLY: set_b0_face
   use ModMpi
@@ -426,7 +426,7 @@ subroutine select_stepping(DoPartSelect)
           minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
   end if
 
-  if(UseFullImplicit .or. UseSemiImplicit)then
+  if(UseFullImplicit)then
      nBlockExplALL = 0
      nBlockImplALL = nBlockALL
      where(iTypeAdvance_BP(1:nBlockMax,:) /= SkippedBlock_) &
