@@ -278,8 +278,7 @@ subroutine BATS_init_session
   use ModCT,   ONLY: DoInitConstrainB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, &
        UseBiermannBattery
-  use ModImplicit, ONLY: UseSemiImplicit, &
-       TypeSemiImplicit, UseFullImplicit
+  use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
   use ModRadDiffusion, ONLY: init_rad_diffusion
   use ModHeatConduction, ONLY: init_heat_conduction
   use ModRestartFile, ONLY: UseRestartOutSeries
@@ -361,7 +360,8 @@ subroutine BATS_advance(TimeSimulationLimit)
        UseElectronPressure
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
-  use ModImplicit, ONLY: UseImplicit, UseSemiImplicit, n_prev
+  use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
+  use ModSemiImplicit, ONLY: advance_semi_impl
   use ModIonoVelocity, ONLY: apply_iono_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
@@ -454,7 +454,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   call exchange_messages
 
   if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
-       call advance_impl
+       call advance_semi_impl
 
   if(UseTimeStepControl .and. time_accurate .and. Dt>0) call control_time_step
 
