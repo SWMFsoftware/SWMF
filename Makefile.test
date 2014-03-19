@@ -740,7 +740,7 @@ test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
-	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,6800,1
+	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
 
@@ -792,7 +792,7 @@ test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,4,4,1200,1200,IH:4,4,4,6800,1
+	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
 
