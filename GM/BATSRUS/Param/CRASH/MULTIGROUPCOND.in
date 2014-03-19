@@ -20,10 +20,6 @@ CG                      TypeKrylov
 1.0e-5                  ErrorMaxKrylov
 200                     MaxMatvecKrylov
 
-#SEMIPRECONDITIONER
-T                       DoPrecond
-DILU                    TypePrecond
-
 #RADIATION
 T                       UseRadDiffusion
 T                       UseRadFluxLimiter
