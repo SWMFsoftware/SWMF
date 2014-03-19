@@ -16,6 +16,7 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
        DoAnisoPressureIMCoupling
   use ModIoUnit, ONLY: UNITTMP_
   use ModProcMH, ONLY: iProc
+  use ModRaytrace, ONLY: UseAccurateTrace, DoMapEquatorRay
   implicit none
   CHARACTER (LEN=80) :: filename
   character(len=*), parameter :: NameSub='GM_put_from_im'
@@ -62,6 +63,11 @@ subroutine GM_put_from_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
      if(NameVersionIm(1:3) == 'RAM')then
         ! HEIDI and RAM-SCB have similar equatorial grids.
         IM_lat = Grid_C(IM_) % Coord1_I
+
+        ! Coupling with RAM/HEIDI grid requires accurate raytrace
+        ! that stops at the equator
+        UseAccurateTrace= .true.
+        DoMapEquatorRay = .true.
      else
         ! RCM uses a CoLat based grid, information is stored in 
         ! module grid information.
