@@ -39,9 +39,13 @@ module ModSemiImplicit
   ! How often reinitialize the HYPRE preconditioner
   integer:: DnInitHypreAmg = 0
 
-  ! Parameters for the semi-implicit linear solver. Set defaults.
+  ! Parameters for the semi-implicit linear solver. Set defaults:
+  !
+  ! DoPrecond=T, left precond with BILU, UseNoOverlap at block boundaries
+  ! GMRES with tolerance 0.001, max 100 iterations and 100 Krylov vectors
+  ! No initial guess is used.
   type(LinearSolverParamType):: SemiParam = LinearSolverParamType( &
-       .true., 'left', 'MBILU', -0.5, .true., 'GMRES', 1e-3, 100, 100, .false.)
+       .true., 'left', 'BILU', 0.0, .true., 'GMRES', 1e-3, 100, 100, .false.)
 
 contains
   !============================================================================
