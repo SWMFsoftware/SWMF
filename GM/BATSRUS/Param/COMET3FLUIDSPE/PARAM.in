@@ -224,15 +224,10 @@ T                       DoWeakFieldConduction
 0.001                   BmodifySi
 0.001                   DeltaBmodifySi
 
-KRYLOV
-gmres			TypeKrylov
-nul			TypeInitKrylov
+SEMIKRYLOV
+GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
-
-PRECONDITIONER
-left			TypePrecondSide (left, symmetric, right)
-bilu			TypePrecond (MBILU)
 
 #STOP
 60
