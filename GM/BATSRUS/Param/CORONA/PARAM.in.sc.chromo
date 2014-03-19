@@ -108,13 +108,9 @@ T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
 #SEMIKRYLOV
-gmres			TypeKrylov
+GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
-
-#SEMIPRECONDITIONER
-T			DoPrecond
-BILU			TypePrecond
 
 #RADIATIVECOOLING
 T			UseRadCooling
