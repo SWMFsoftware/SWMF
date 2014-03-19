@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 
 ! The main subroutines in this file are
@@ -510,6 +510,8 @@ contains
     end if
   end subroutine store_integral
 
+  !===========================================================================
+
   subroutine set_oktest_ray
 
     if(DoIntegrateRay)then
@@ -876,7 +878,10 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      ! Update ray length
      Length  = Length + dLength
 
-     if(DoIntegrateRay .or. DoMapEquatorRay)then
+     ! Check SM equator crossing for ray integral (GM -> RCM) 
+     ! or if we map to the equator (HEIDI/RAM-SCB -> GM)
+     ! but don't check if we map the equator to the ionosphere (GM -> HEIDI/RAM-SCB)
+     if(DoIntegrateRay .or. (DoMapEquatorRay .and. .not.DoMapRay))then
         ! Check if we crossed the z=0 plane in the SM coordinates
         ! Stop following ray if the function returns true
         if(do_stop_at_sm_equator()) EXIT FOLLOW
@@ -1845,7 +1850,7 @@ subroutine plot_ray_equator(iFile)
   real, allocatable :: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
   real    :: SmGm_DD(3,3)
 
-  character(len=100) :: NameFile, NameFileEnd=''
+  character(len=100) :: NameFile, NameFileEnd
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'plot_ray_equator'
@@ -1883,6 +1888,7 @@ subroutine plot_ray_equator(iFile)
   end if
   allocate(PlotVar_V(0:nVarPlot))
 
+  NameFileEnd = ""
   if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
   write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
