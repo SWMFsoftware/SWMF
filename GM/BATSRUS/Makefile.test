@@ -254,6 +254,38 @@ test_hallmhd_check:
 	  ${TESTDIR}/RESULT/GM/1d_*0485.out > test_hallmhd.diff)
 	ls -l test_hallmhd.diff
 
+### VISCOSITY TEST ###
+
+test_viscosity:
+	@echo "test_viscosity_compile..." > test_viscosity.diff
+	$(MAKE) test_viscosity_compile
+	@echo "test_viscosity_rundir..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_rundir 
+	@echo "test_viscosity_run..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_run
+	@echo "test_viscosity_check..." >> test_viscosity.diff
+	$(MAKE) test_viscosity_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_viscosity_compile:
+	./Config.pl -e=Hd -u=Waves -g=16,4,1,200,1 
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_viscosity_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/VISCOSITY/PARAM.in PARAM.in
+
+test_viscosity_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test_viscosity_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULTS/GM/z=0*.outs \
+		Param/VISCOSITY/TestOutput/z=0_ref.outs \
+		> test_viscosity.diff)
+	ls -l test_viscosity.diff
+
 ### TWOFLUID MHD TEST ###
 
 test_twofluidmhd:
@@ -316,7 +348,8 @@ test_multifluid_check:
 	  ${TESTDIR}/RESULT/GM/cut_*025_n*.out > test_multifluid.diff)
 	ls -l test_multifluid.diff
 
-### TEST MAGNETOMETER ###
+### MAGNETOMETER TEST ###
+
 test_magnetometer:
 	@echo "test_magnetometer_compile..." >> test_magnetometer.diff
 	$(MAKE) test_magnetometer_compile
@@ -477,38 +510,6 @@ test_eosgodunov_check:
 	  ${TESTDIR}/RESULT/GM/cut_*500.0*.out > test_eosgodunov.diff)
 	ls -l test_eosgodunov.diff
 
-### VISCOSITY TEST ###
-
-test_viscosity:
-	@echo "test_viscosity_compile..." > test_viscosity.diff
-	$(MAKE) test_viscosity_compile
-	@echo "test_viscosity_rundir..." >> test_viscosity.diff
-	$(MAKE) test_viscosity_rundir 
-	@echo "test_viscosity_run..." >> test_viscosity.diff
-	$(MAKE) test_viscosity_run
-	@echo "test_viscosity_check..." >> test_viscosity.diff
-	$(MAKE) test_viscosity_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_viscosity_compile:
-	./Config.pl -e=Hd -u=Waves -g=16,4,1,200,1 
-	$(MAKE) BATSRUS
-	make PIDL
-
-test_viscosity_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/VISCOSITY/PARAM.in PARAM.in
-
-test_viscosity_run:
-	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_viscosity_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULTS/GM/z=0*.outs \
-		Param/VISCOSITY/TestOutput/z=0_ref.outs \
-		> test_viscosity.diff)
-	ls -l test_viscosity.diff
-
 ### LEVELSET TEST ###
 
 test_levelset:
@@ -557,7 +558,7 @@ test_hyades2d:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_hyades2d_compile:
-	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1000 -nMaterial=3
+	./Config.pl -e=HdRadCrash -u=Crash -g=4,4,1,1000,1 -nMaterial=3
 	./Config.pl -hdf5
 	$(MAKE) CRASH
 	make PIDL
@@ -598,7 +599,7 @@ test_laserpackage:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_laserpackage_compile:
-	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,200 -nMaterial=5 -nWave=30
+	./Config.pl -e=Crash -u=Crash -g=8,8,1,200,1 -nMaterial=5 -nWave=30
 	./Config.pl -hypre
 	$(MAKE) CRASH
 	make PIDL
@@ -632,7 +633,7 @@ test_graydiffusion:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
+	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -769,7 +770,7 @@ test_chromo:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_chromo_compile:
-	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,4000,4000
+	./Config.pl -u=ScChromo -e=MhdWaves -g=6,4,4,4000,1
 	$(MAKE) BATSRUS
 	make PIDL
 
