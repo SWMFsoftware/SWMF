@@ -485,13 +485,13 @@ contains
 
   subroutine get_impl_resistivity_state(SemiAll_VGB)
 
-    use ModSize,       ONLY: j0_, nJp1_, k0_, nKp1_, MaxBlock
+    use ModSize,       ONLY: j0_, nJp1_, k0_, nKp1_
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_I
     use ModVarIndexes, ONLY: Bx_, Bz_
 
     real, intent(out):: &
-         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock)
+         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
 
     integer:: i, j, k, iBlock, iBlockSemi
 

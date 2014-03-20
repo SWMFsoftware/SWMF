@@ -458,7 +458,7 @@ contains
   ! Semi-implicit interface
   !============================================================================
 
-  subroutine get_impl_rad_diff_state(StateImpl_VGB, DconsDsemi_VCB)
+  subroutine get_impl_rad_diff_state(SemiAll_VGB, DconsDsemiAll_VCB)
 
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
@@ -471,7 +471,7 @@ contains
          nVarSemiAll, nBlockSemi, iBlockFromSemi_I, &
          TypeSemiImplicit, SemiImplCoeff, &
          UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast
-    use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, MaxImplBlk, Dt
+    use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
     use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
@@ -481,9 +481,9 @@ contains
     use ModUserInterface ! user_material_properties
 
     real, intent(out):: &
-         StateImpl_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxImplBlk)
+         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
     real, intent(inout):: &
-         DconsDsemi_VCB(nVarSemiAll,nI,nJ,nK,MaxImplBlk)
+         DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
@@ -534,11 +534,11 @@ contains
 
           if(UseTemperature)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+                SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
              end do; end do; end do
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateImpl_VGB(iTeImpl,i,j,k,iBlockSemi) = &
+                SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = &
                      cRadiationNo*Te_G(i,j,k)**4
              end do; end do; end do
           end if
@@ -546,7 +546,7 @@ contains
 
        if(iTrImplFirst > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StateImpl_VGB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
+             SemiAll_VGB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           end do; end do; end do
        end if
@@ -610,16 +610,16 @@ contains
                 PointImpl_VCB(:,i,j,k,iBlock) = Planck_W
              else
                 ! Unsplit multigroup
-                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
                 RelaxCoef_VCB(:,i,j,k,iBlock) = Clight*OpacityPlanck_W
                 PlanckWeight_WCB(:,i,j,k,iBlock) = Planck_W/Planck
              end if
 
           case('radcond')
              if(UseElectronPressure)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
              else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
              end if
 
              if(UseSplitSemiImplicit)then
@@ -652,13 +652,13 @@ contains
 
           case('cond')
              if(UseElectronPressure)then
-                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cve
 
                 PointCoef_VCB(1,i,j,k,iBlock) = TeTiCoef &
                      /(1.0 + SemiImplCoeff*Dt*TeTiCoef/Cvi)
                 PointImpl_VCB(1,i,j,k,iBlock) = Ti
              else
-                DconsDsemi_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Cv
              end if
           end select
 
