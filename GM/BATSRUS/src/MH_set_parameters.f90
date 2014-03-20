@@ -59,7 +59,7 @@ subroutine MH_set_parameters(TypeAction)
        zSizeBoxHall, DzSizeBoxHall, &
        UseBiermannBattery
   use ModHeatConduction, ONLY: read_heatconduction_param
-  use ModHeatFluxCollisionless, ONLY: read_heatflux_collisionless_param
+  use ModHeatFluxCollisionless, ONLY: read_heatflux_param
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param
   use ModResistivity, ONLY: UseResistivity, &
        read_resistivity_param, init_mod_resistivity
@@ -615,7 +615,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_heatconduction_param(NameCommand)
 
      case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
-        call read_heatflux_collisionless_param(NameCommand)
+        call read_heatflux_param(NameCommand)
 
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)

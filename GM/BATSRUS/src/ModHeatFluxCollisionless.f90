@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 !==============================================================================
 module ModHeatFluxCollisionless
@@ -11,7 +11,7 @@ module ModHeatFluxCollisionless
   private ! except
 
   ! Public methods
-  public :: read_heatflux_collisionless_param
+  public :: read_heatflux_param
   public :: get_gamma_collisionless
   public :: update_heatflux_collisionless
 
@@ -27,14 +27,14 @@ contains
 
   !============================================================================
 
-  subroutine read_heatflux_collisionless_param(NameCommand)
+  subroutine read_heatflux_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in) :: NameCommand
 
     character(len=*), parameter :: &
-         NameSub = 'ModHeatFluxCollision::read_heatflux_collisionless_param'
+         NameSub = 'ModHeatFluxCollision::read_heatflux_param'
     !--------------------------------------------------------------------------
 
     select case(NameCommand)
@@ -56,7 +56,7 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
-  end subroutine read_heatflux_collisionless_param
+  end subroutine read_heatflux_param
 
   !============================================================================
 
