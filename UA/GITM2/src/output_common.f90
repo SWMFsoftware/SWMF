@@ -140,8 +140,13 @@ subroutine output(dir, iBlock, iOutputType)
 
         if (iiAlt < 0) return
      end if
-
-     write(*,*) LonFind,LatFind,iBlock,iiLon,iiLat,rLon,rLat
+     
+     if(iDebugLevel > 2)then
+        write(*,*) 'For BlockLocationIndex:'
+        write(*,*) 'LonFind, LatFind = ', LonFind, LatFind 
+        write(*,*) 'Found iBlock, iiLon, iiLat, rLon, rLat =', &
+             iBlock, iiLon, iiLat, rLon, rLat
+     endif
 
      if (iiLon < 0 .or. iiLat < 0) return
   endif
