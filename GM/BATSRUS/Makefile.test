@@ -633,7 +633,7 @@ test_graydiffusion:
 	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_graydiffusion_compile:
-	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,1
+	./Config.pl -e=HdEosRad -u=GrayDiffusion -g=32,4,4,16,16
 	$(MAKE) BATSRUS
 	make PIDL
 
