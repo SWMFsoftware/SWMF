@@ -504,7 +504,7 @@ contains
        iBlock = iBlockFromSemi_I(iBlockSemi)
 
        ! Store the magnetic field in SemiAll_VGB
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           SemiAll_VGB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
@@ -771,8 +771,6 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModHallResist, ONLY: UseHallResist
     use ModImplicit,   ONLY: UseSemiImplicit, nStencil
-    use BATL_lib,      ONLY: rot_to_cart
-    use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
     use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, B_
 
     integer, intent(in):: iBlock
@@ -781,18 +779,9 @@ contains
 
     integer:: iStencil, iB, i, j, k
 
-    real, allocatable, save:: Jac_VVI(:,:,:)
-
-    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
     !--------------------------------------------------------------------------
     if(.not.(UseResistivity .or. UseHallResist)) RETURN
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
 
     ! Set the base index value for magnetic field variables
     if(UseSemiImplicit)then
@@ -801,55 +790,11 @@ contains
        iB = B_
     end if
 
-    if(DoTestMe)then
-       write(*,*) NameSub,' starting with UseResistivity, UseHallResist=', &
-            UseResistivity, UseHallResist
-       do iStencil = 1, nStencil
-          write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
-               rot_to_cart( &
-               Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,iTest,jTest,kTest,iStencil))
-       end do
-    end if
-
     if(UseResistivity) &
          call add_jacobian_eta_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
 
     if(UseHallResist) &
          call add_jacobian_hall_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
-
-    if(DoTestMe)then
-       write(*,*) NameSub, ' finished with:'
-       i = iTest; j = jTest; k = kTest
-       do iStencil = 1, nStencil
-          write(*,'(a,i1,a,10es13.5)') &
-               NameSub//': unrot JAC(:,:,TestCell,', iStencil, ')=', &
-               rot_to_cart(Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,i,j,k,iStencil))
-       end do
-
-       if(.false.)then !!! UseSemiImplicit)then
-          if(.not.allocated(Jac_VVI)) &
-               allocate(Jac_VVI(nVarImpl,nVarImpl,nStencil))
-
-          !!! Circular dependency to be resolved
-          !call test_semi_impl_jacobian( &
-          !     State_VGB(Bx_:Bz_,:,:,:,iBlock), &
-          !     1e-4, get_resistivity_rhs, Jac_VVI)
-
-          do iStencil = 1, nStencil
-             write(*,'(a,i1,a,10es13.5)') &
-                  NameSub//': numer JAC(:,:,TestCell,', iStencil, ')=', &
-                  rot_to_cart(Jac_VVI(:,:,iStencil))
-          end do
-
-          do iStencil = 1, nStencil
-             write(*,'(a,i1,a,10es13.5)') &
-                  NameSub//': error JAC(:,:,TestCell,', iStencil, ')=', &
-                  rot_to_cart(Jac_VVI(:,:,iStencil) &
-                  - Jacobian_VVCI(iB+1:iB+3,iB+1:iB+3,i,j,k,iStencil))
-          end do
-       end if
-    end if
 
   end subroutine add_jacobian_resistivity
 
