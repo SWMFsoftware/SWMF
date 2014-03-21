@@ -5,4 +5,5 @@ mpif.h
 Makefile.DEPEND
 Makefile.RULES
 ModHdf5Utils.f90
+ModSpice.f90
 *.protex
