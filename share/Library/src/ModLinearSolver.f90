@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !BOP -------------------------------------------------------------------
 !
@@ -63,6 +64,9 @@ module ModLinearSolver
   public :: multiply_block_jacobi ! multiply with inverted diag blocks D^-1
 
   public :: implicit_solver       ! implicit solver in 1D with 3 point stencil
+
+  public :: solve_linear_multiblock ! solver for multiblock grid
+
   public :: test_linear_solver    ! unit test
 
   ! To accurately calculate the quadratic form p.A.p in conjugate gradients
@@ -76,8 +80,24 @@ module ModLinearSolver
   integer, public, parameter:: &
        Jacobi_=5, BlockJacobi_=4, GaussSeidel_=3, Dilu_=2, Bilu_=1, Mbilu_=0
 
+  type LinearSolverParamType
+     logical          :: DoPrecond        ! Do preconditioning
+     character(len=10):: TypePrecondSide  ! Precondition left, right, symmetric
+     character(len=10):: TypePrecond      ! Preconditioner type
+     real             :: PrecondParam     ! Parameter (mostly for MBILU)
+     character(len=10):: TypeKrylov       ! Krylov solver type
+     character(len=3) :: TypeStop         ! Stopping criterion type (rel,abs)
+     real             :: KrylovErrorMax   ! Tolerance for solver
+     integer          :: MaxKrylovMatvec  ! Maximum number of iterations
+     integer          :: nKrylovVector    ! Number of vectors for GMRES
+     logical          :: UseInitialGuess  ! non-zero initial guess
+  end type LinearSolverParamType
+
+  public:: LinearSolverParamType
+
   !REVISION HISTORY:
   ! 05Dec06 - Gabor Toth - initial prototype/prolog/code based on BATSRUS code
+  ! 20Mar14 - Gabor Toth - lot of new code 
   !EOP ___________________________________________________________________
 
   ! Used for tests
@@ -1913,6 +1933,206 @@ contains
     end select
 
   end subroutine multiply_initial_guess
+
+  !===========================================================================
+
+  subroutine solve_linear_multiblock(Param, &
+       nVar, nDim, nI, nJ, nK, nBlock, iComm, impl_matvec, Rhs_I, &
+       x_I, iError, &
+       DoTest, Jac_VVCIB, JacobiPrec_I, cg_precond, hypre_precond)
+
+    type(LinearSolverParamType), intent(inout):: Param
+    integer, intent(in):: nVar       ! Number of impl. variables/cell
+    integer, intent(in):: nDim       ! Number of spatial dimensions
+    integer, intent(in):: nI, nJ, nK ! Number of cells in a block
+    integer, intent(in):: nBlock     ! Number of impl. grid blocks
+    integer, intent(in):: iComm      ! MPI communicator for processors
+
+    interface 
+       subroutine impl_matvec(Vec_I, MatVec_I, n)
+         ! Calculate MatVec = Matrix.Vec
+         implicit none
+         integer, intent(in) :: n
+         real,    intent(in) :: Vec_I(n)
+         real,    intent(out):: MatVec_I(n)
+       end subroutine impl_matvec
+    end interface
+
+    real, intent(inout):: Rhs_I(nVar*nI*nJ*nK*nBlock) ! RHS vector
+    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)   ! Initial guess/solution
+    integer,intent(out):: iError  ! Error code (0 for success)
+
+    logical, optional:: DoTest    ! show Krylov iterations and convergence
+
+    real, intent(inout), optional:: &  ! Jacobian matrix --> preconditioner
+         Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock)
+
+    real, intent(inout), optional:: &  ! Point Jacobi preconditioner
+         JacobiPrec_I(:)
+
+    interface
+
+       subroutine cg_precond(Vec_I, PrecVec_I, n)
+         ! Preconditioner method for PCG
+         implicit none
+         integer, intent(in) :: n
+         real,    intent(in) :: Vec_I(n)
+         real,    intent(out):: PrecVec_I(n)
+       end subroutine cg_precond
+
+       subroutine hypre_precond(n, Vec_I)
+         ! Preconditioner method for HYPRE AMG
+         implicit none
+         integer, intent(in) :: n
+         real,    intent(inout) :: Vec_I(n)
+       end subroutine hypre_precond
+
+    end interface
+    optional:: cg_precond, hypre_precond
+
+    ! Local variables
+    integer:: n, iBlock, i, j, k, iVar
+    integer:: nVarIjk, nImpl
+
+    ! Krylov solver stopping parameters
+    integer:: nKrylovMatvec
+    real::    KrylovError
+
+    character(len=*), parameter:: NameSub = 'solve_linear_multiblock'
+    !----------------------------------------------------------------------
+    ! Number of variables per block
+    nVarIjk = nVar*nI*nJ*nK
+
+    ! Number of variables per processor
+    nImpl   = nVarIjk*nBlock
+
+    ! Make sure that left preconditioning is used when necessary
+    select case(Param%TypePrecond)
+    case('DILU', 'HYPRE', 'JACOBI', 'BLOCKJACOBI')
+       Param%TypePrecondSide = 'left'
+    end select
+
+    if(Param%UseInitialGuess .and. Param%TypePrecondSide == 'right') &
+         Param%TypePrecondSide = 'symmetric'
+
+    ! Initialize solution vector if needed
+    if(.not.Param%UseInitialGuess) x_I = 0.0
+
+    ! Get preconditioning matrix if required. 
+    ! Precondition RHS and initial guess (for symmetric prec only)
+    if(Param%DoPrecond)then
+       if(Param%TypePrecond == 'HYPRE')then
+          call hypre_precond(nImpl, Rhs_I)
+       elseif(Param%TypePrecond == 'JACOBI') then
+          if(present(Jac_VVCIB))then
+             n = 0
+             do iBlock = 1, nBlock; do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                do iVar = 1, nVar
+                   n = n + 1
+                   JacobiPrec_I(n) = 1.0 / Jac_VVCIB(iVar,iVar,i,j,k,1,iBlock)
+                end do
+             end do; enddo; enddo; enddo
+          end if
+          if(Param%TypeKrylov /= 'CG') &
+               Rhs_I(1:nImpl) = JacobiPrec_I(1:nImpl)*Rhs_I(1:nImpl)
+       else
+          do iBlock = 1, nBlock
+
+             ! Preconditioning Jac_VVCIB matrix
+             call get_precond_matrix(                             &
+                  Param%PrecondParam, nVar, nDim, nI, nJ, nK, &
+                  Jac_VVCIB(1,1,1,1,1,1,iBlock))
+
+             if(Param%TypeKrylov == 'CG') CYCLE
+
+             ! Starting index in the linear arrays
+             n = nVarIjk*(iBlock-1)+1
+
+             ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
+             ! for left, symmetric, and right preconditioning, respectively
+             call multiply_left_precond(&
+                  Param%TypePrecond, Param%TypePrecondSide, &
+                  nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
+                  Rhs_I(n))
+                  
+             ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
+             ! left, symmetric and right preconditioning, respectively
+             ! Multiplication with LU is NOT implemented
+             if(  Param%UseInitialGuess .and. &
+                  Param%TypePrecondSide == 'symmetric') &
+                  call multiply_initial_guess( &
+                  nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
+                  x_I(n))
+          end do
+
+       end if
+    endif
+
+    ! Initialize stopping conditions. Solver will return actual values.
+    nKrylovMatVec = Param%MaxKrylovMatvec
+    KrylovError   = Param%KrylovErrorMax
+
+    if(DoTest)write(*,*)NameSub,': Before ', Param%TypeKrylov, &
+         ' nKrylovMatVec, KrylovError:', nKrylovMatVec, KrylovError
+
+    ! Solve linear problem
+    call timing_start('krylov solver')
+
+    select case(Param%TypeKrylov)
+    case('BICGSTAB')
+       call bicgstab(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
+            KrylovError, Param%TypeStop, nKrylovMatVec, &
+            iError, DoTest, iComm)
+    case('GMRES')
+       call gmres(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
+            Param%nKrylovVector, &
+            KrylovError, Param%TypeStop, nKrylovMatVec, &
+            iError, DoTest, iComm)
+    case('CG')
+       if(.not. Param%DoPrecond)then
+          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
+               KrylovError, Param%TypeStop, nKrylovMatVec, &
+               iError, DoTest, iComm)
+       elseif(Param%TypePrecond == 'JACOBI')then
+          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
+               KrylovError, Param%TypeStop, nKrylovMatVec, &
+               iError, DoTest, iComm, &
+               JacobiPrec_I)
+       else
+          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
+               KrylovError, Param%TypeStop, nKrylovMatVec, &
+               iError, DoTest, iComm, &
+               preconditioner = cg_precond)
+       end if
+    case default
+       call stop_mpi(NameSub//': Unknown TypeKrylov='//Param%TypeKrylov)
+    end select
+    call timing_stop('krylov solver')
+
+    ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
+    ! left, symmetric and right preconditioning, respectively
+    if(Param%DoPrecond .and. Param%TypePrecondSide /= 'left' &
+         .and. Param%TypePrecond /= 'JACOBI' &
+         .and. Param%TypeKrylov /= 'CG') then
+
+       do iBlock = 1, nBlock
+          n = nVarIjk*(iBlock-1)+1
+          call multiply_right_precond( &
+               Param%TypePrecond, Param%TypePrecondSide, &
+               nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
+               Rhs_I(n))
+       end do
+
+    end if
+
+    if(DoTest)write(*,*)NameSub,&
+         ': After nKrylovMatVec, KrylovError, iError=',&
+         nKrylovMatVec, KrylovError, iError
+
+    ! Converging without any iteration is not a real error, so set iError=0
+    if(iError==3) iError=0
+
+  end subroutine solve_linear_multiblock
 
   !===========================================================================
 
