@@ -442,7 +442,7 @@ test4:
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,600,1 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
@@ -458,14 +458,14 @@ test4_run:
 
 test4_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test4/GM_log_n000001.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log \
+		output/test4/GM_log_n000000.log \
 		> test4_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-6 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test4/IE.log \
 		> test4_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-8 -r=1e-30 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=1e-3 -r=1e-30 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
                 > test4_im_heidi.diff)
