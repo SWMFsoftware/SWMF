@@ -847,8 +847,7 @@ contains
     use ModAdvance, ONLY: time_BLK
     use ModMain,    ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModGeometry, ONLY: true_cell
-    use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
-         DoInitHypreAmg
+    use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
     use BATL_lib, ONLY: CellVolume_GB
 
     integer :: iBlockSemi, iBlock, i, j, k, iStencil, iVar
@@ -899,7 +898,7 @@ contains
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
     end do
 
-    if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix
+    if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
   end subroutine get_semi_impl_jacobian
   !===========================================================================

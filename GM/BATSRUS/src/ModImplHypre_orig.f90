@@ -26,7 +26,6 @@ module ModImplHypre
   public:: hypre_preconditioner
 
   logical, public, parameter:: IsHypreAvailable = .true. ! true here
-  logical, public:: DoInitHypreAmg = .true. ! set to false to reinitialize AMG
 
   ! local variables
 
@@ -901,9 +900,11 @@ contains
   end subroutine hypre_set_matrix_block
 
   !============================================================================
-  subroutine hypre_set_matrix
+  subroutine hypre_set_matrix(DoInitHypreAmg)
 
     use ModMain, ONLY: test_string
+
+    logical, intent(in):: DoInitHypreAmg
 
     integer:: iError
 
@@ -934,8 +935,6 @@ contains
     call timing_start('BoomerAMGSetup')
     call HYPRE_BoomerAMGSetup(i8Precond, i8ParA, i8ParB, i8ParX, iError)
     call timing_stop('BoomerAMGSetup')
-
-    DoInitHypreAmg = .false.
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 

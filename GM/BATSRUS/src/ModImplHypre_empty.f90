@@ -16,7 +16,6 @@ module ModImplHypre
   public:: hypre_preconditioner
 
   logical, public, parameter:: IsHypreAvailable = .false. ! signals empty
-  logical, public:: DoInitHypreAmg = .false.
 
 contains
 
@@ -54,8 +53,10 @@ contains
 
   !============================================================================
 
-  subroutine hypre_set_matrix
+  subroutine hypre_set_matrix(DoInitHypreAmg)
 
+    logical, intent(in): DoInitHypreAmg
+    !------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix: empty! Use Config.pl -hypre')
 
   end subroutine hypre_set_matrix
