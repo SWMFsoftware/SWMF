@@ -17,7 +17,6 @@ module ModSemiImplicit
   public:: init_mod_semi_impl    ! Initialize variables
   public:: advance_semi_impl     ! Advance semi implicit operator
 
-
   ! The index of the variable currently being solved for
   integer:: iVarSemi
 
@@ -28,16 +27,13 @@ module ModSemiImplicit
   ! and have a single ghost cell at most.
   ! The SemiAll_ variables are indexed from 1..nVarSemiAll
   real, allocatable:: DconsDsemiAll_VCB(:,:,:,:,:) ! dCons/dSemi derivatives
-  real, allocatable:: SemiAll_VGB(:,:,:,:,:)       ! Semi-implicit vars
-  real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl var.
+  real, allocatable:: SemiAll_VCB(:,:,:,:,:)       ! Semi-implicit vars
+  real, allocatable:: NewSemiAll_VCB(:,:,:,:,:)    ! Updated semi-impl vars
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
 
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
-
-  ! How often reinitialize the HYPRE preconditioner
-  integer:: DnInitHypreAmg = 0
 
   ! Parameters for the semi-implicit linear solver. Set defaults:
   !
@@ -46,6 +42,9 @@ module ModSemiImplicit
   ! No initial guess is used.
   type(LinearSolverParamType):: SemiParam = LinearSolverParamType( &
        .true., 'left', 'BILU', 0.0, .true., 'GMRES', 1e-3, 100, 100, .false.)
+
+  ! Index of the test block
+  integer:: iBlockSemiTest = 1
 
 contains
   !============================================================================
@@ -80,15 +79,15 @@ contains
        case('HYPRE')
           UseNoOverlap = .false.
        case('JACOBI')
-           SemiParam%PrecondParam = Jacobi_
+          SemiParam%PrecondParam = Jacobi_
        case('BLOCKJACOBI')
-           SemiParam%PrecondParam = BlockJacobi_
+          SemiParam%PrecondParam = BlockJacobi_
        case('GS')
-           SemiParam%PrecondParam = GaussSeidel_
+          SemiParam%PrecondParam = GaussSeidel_
        case('DILU')
-           SemiParam%PrecondParam = Dilu_
+          SemiParam%PrecondParam = Dilu_
        case('BILU')
-           SemiParam%PrecondParam = Bilu_
+          SemiParam%PrecondParam = Bilu_
        case('MBILU')
           call read_var('GustafssonPar', SemiParam%PrecondParam)
           SemiParam%PrecondParam = -SemiParam%PrecondParam
@@ -113,15 +112,15 @@ contains
   subroutine init_mod_semi_impl
 
     use ModLinearSolver, ONLY: bilu_
-    use BATL_lib, ONLY: MaxDim, nI, nJ, nK, nIJK, j0_, nJp1_, k0_, nKp1_, &
+    use BATL_lib, ONLY: MaxDim, nI, nJ, nK, nIJK, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes, ONLY: nWave
 
     character(len=*), parameter:: NameSub = 'init_mod_semi_impl'
     !------------------------------------------------------------------------
-    if(allocated(SemiAll_VGB)) RETURN
+    if(allocated(SemiAll_VCB)) RETURN
 
-    allocate(iBlockFromSemi_I(MaxBlock))
+    allocate(iBlockFromSemi_B(MaxBlock))
 
     select case(TypeSemiImplicit)
     case('radiation')
@@ -168,7 +167,7 @@ contains
          call stop_mpi( &
          'HYPRE preconditioner requires split semi-implicit scheme!')
 
-    allocate(SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock))
+    allocate(SemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
     allocate(NewSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
     allocate(DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
@@ -205,8 +204,8 @@ contains
 
     ! Deallocate all variables
 
-    deallocate(iBlockFromSemi_I)
-    deallocate(SemiAll_VGB)
+    deallocate(iBlockFromSemi_B)
+    deallocate(SemiAll_VCB)
     deallocate(NewSemiAll_VCB)
     deallocate(DconsDsemiAll_VCB)
     deallocate(SemiState_VGB)
@@ -225,7 +224,7 @@ contains
 
     ! Advance semi-implicit terms
 
-    use ModMain, ONLY: NameThisComp
+    use ModMain, ONLY: NameThisComp, BlkTest, ProcTest
     use ModAdvance, ONLY: DoFixAxis
     use ModGeometry, ONLY: true_cell
     use ModImplHypre, ONLY: hypre_initialize
@@ -254,7 +253,11 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        nBlockSemi = nBlockSemi + 1
-       iBlockFromSemi_I(nBlockSemi) = iBlock
+       iBlockFromSemi_B(nBlockSemi) = iBlock
+
+       ! Set the test block
+       if(iProc == ProcTest .and. iBlock == BlkTest) &
+            iBlockSemiTest = nBlockSemi
     end do
 
     ! Total number of semi-implicit unknowns
@@ -264,11 +267,11 @@ contains
     DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
-       call get_impl_rad_diff_state(SemiAll_VGB, DconsDsemiAll_VCB)
+       call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB)
     case('parcond')
-       call get_impl_heat_cond_state(SemiAll_VGB, DconsDsemiAll_VCB)
+       call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB)
     case('resistivity')
-       call get_impl_resistivity_state(SemiAll_VGB)
+       call get_impl_resistivity_state(SemiAll_VCB)
     case default
        call stop_mpi(NameSub//': no get_impl_state implemented for' &
             //TypeSemiImplicit)
@@ -287,8 +290,8 @@ contains
           call set_rad_diff_range(iVarSemi)
        end if
 
-       ! Initialize right hand side and dw
-       call get_semi_impl_rhs(SemiAll_VGB, Rhs_I)
+       ! Set right hand side
+       call get_semi_impl_rhs(SemiAll_VCB, Rhs_I)
 
        ! Calculate Jacobian matrix if required
        if(SemiParam%DoPrecond)then
@@ -302,17 +305,17 @@ contains
             nVarSemi, nBlockSemi, nSemi, Rhs_I, x_I, &
             JacSemi_VVCIB, JacobiPrec_I, cg_precond, iError)
 
-       ! NewSemiAll_VCB = SemiAll_VGB + x
+       ! NewSemiAll_VCB = SemiAll_VCB + Solution
        n=0
        do iBlockSemi = 1, nBlockSemi; do k=1,nK; do j=1,nJ; do i=1,nI
           do iVar = iVarSemiMin, iVarSemiMax
              n = n + 1
-             if(true_cell(i,j,k,iBlockFromSemi_I(iBlockSemi)))then
+             if(true_cell(i,j,k,iBlockFromSemi_B(iBlockSemi)))then
                 NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
-                     SemiAll_VGB(iVar,i,j,k,iBlockSemi) + x_I(n)
+                     SemiAll_VCB(iVar,i,j,k,iBlockSemi) + x_I(n)
              else
                 NewSemiAll_VCB(iVar,i,j,k,iBlockSemi) = &
-                     SemiAll_VGB(iVar,i,j,k,iBlockSemi)
+                     SemiAll_VCB(iVar,i,j,k,iBlockSemi)
              end if
           enddo
        enddo; enddo; enddo; enddo
@@ -321,17 +324,17 @@ contains
 
     ! Put back semi-implicit result into the explicit code
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        select case(TypeSemiImplicit)
        case('radiation', 'radcond', 'cond')
           call update_impl_rad_diff(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
-               SemiAll_VGB(:,1:nI,1:nJ,1:nK,iBlockSemi), &
+               SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
        case('parcond')
           call update_impl_heat_cond(iBlock, iBlockSemi, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
-               SemiAll_VGB(:,1:nI,1:nJ,1:nK,iBlockSemi), &
+               SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
        case('resistivity')
           call update_impl_resistivity(iBlock, &
@@ -350,23 +353,50 @@ contains
   end subroutine advance_semi_impl
 
   !============================================================================
-  subroutine get_semi_impl_rhs(SemiAll_VGB, RhsSemi_VCB)
+  subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
+       IsLinear)
 
-    use ModGeometry,       ONLY: far_field_BCs_BLK
+    use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
     use ModLinearSolver,   ONLY: UsePDotADotP
-    use ModSize,           ONLY: nI, nJ, nK
     use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
     use ModHeatConduction, ONLY: get_heat_conduction_rhs
     use ModResistivity,    ONLY: get_resistivity_rhs
+
+    integer, intent(in):: iBlock
+    real, intent(inout):: SemiState_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(out)  :: RhsSemi_VC(nVarSemi,nI,nJ,nK)
+    logical, intent(in):: IsLinear
+
+    character(len=*), parameter:: NameSub = 'get_semi_impl_rhs_block'
+    !------------------------------------------------------------------------
+    select case(TypeSemiImplicit)
+    case('radiation', 'radcond', 'cond')
+       if(.not.IsLinear) UsePDotADotP = .false.
+       call get_rad_diffusion_rhs(iBlock, SemiState_VG, &
+            RhsSemi_VC, IsLinear=IsLinear)
+    case('parcond')
+       call get_heat_conduction_rhs(iBlock, SemiState_VG, &
+            RhsSemi_VC, IsLinear=IsLinear)
+    case('resistivity')
+       call get_resistivity_rhs(iBlock, SemiState_VG, &
+            RhsSemi_VC, IsLinear=IsLinear)
+    case default
+       call stop_mpi(NameSub//': no get_rhs implemented for' &
+            //TypeSemiImplicit)
+    end select
+
+  end subroutine get_semi_impl_rhs_block
+  !============================================================================
+  subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
+
+    use ModGeometry,       ONLY: far_field_BCs_BLK
+    use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
     use BATL_lib,          ONLY: message_pass_cell, message_pass_face, &
          apply_flux_correction_block, CellVolume_GB
-    use BATL_size,         ONLY: j0_, nJp1_, k0_, nKp1_
 
-    real, intent(in) :: &
-         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
-    real, intent(out):: &
-         RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
+    real, intent(in) :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
 
@@ -374,10 +404,10 @@ contains
     !------------------------------------------------------------------------
     ! Fill in SemiState so it can be message passed
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiState_VGB(:,i,j,k,iBlock) = &
-               SemiAll_VGB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
+               SemiAll_VCB(iVarSemiMin:iVarSemiMax,i,j,k,iBlockSemi)
        end do; end do; end do
     end do
 
@@ -401,28 +431,15 @@ contains
     end select
 
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        ! Apply boundary conditions (1 layer of outer ghost cells)
        if(far_field_BCs_BLK(iBlock))&
             call set_cell_boundary(1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.false.)
 
-       select case(TypeSemiImplicit)
-       case('radiation', 'radcond', 'cond')
-          UsePDotADotP = .false.
-          call get_rad_diffusion_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
-       case('parcond')
-          call get_heat_conduction_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
-       case('resistivity')
-          call get_resistivity_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
-       case default
-          call stop_mpi(NameSub//': no get_rhs implemented for' &
-               //TypeSemiImplicit)
-       end select
+       call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
+            RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
 
     if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity' &
@@ -431,7 +448,7 @@ contains
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
        do iBlockSemi = 1, nBlockSemi
-          iBlock = iBlockFromSemi_I(iBlockSemi)
+          iBlock = iBlockFromSemi_B(iBlockSemi)
 
           ! there are no ghost cells for RhsSemi_VCB
           call apply_flux_correction_block(iBlock, nVarSemi, 0, 0, &
@@ -443,7 +460,7 @@ contains
 
     ! Multiply with cell volume (makes matrix symmetric)
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           RhsSemi_VCB(:,i,j,k,iBlockSemi) = RhsSemi_VCB(:,i,j,k,iBlockSemi) &
                *CellVolume_GB(i,j,k,iBlock)
@@ -460,9 +477,6 @@ contains
     use ModGeometry, ONLY: far_field_BCs_BLK
     use ModMain, ONLY: dt, time_accurate, Cfl
     use ModSize, ONLY: nI, nJ, nK
-    use ModRadDiffusion,   ONLY: get_rad_diffusion_rhs
-    use ModHeatConduction, ONLY: get_heat_conduction_rhs
-    use ModResistivity,    ONLY: get_resistivity_rhs
     use ModLinearSolver,   ONLY: UsePDotADotP, pDotADotPPe
     use ModCellBoundary,   ONLY: set_cell_boundary
     use BATL_lib, ONLY: message_pass_cell, message_pass_face, &
@@ -484,7 +498,7 @@ contains
     ! Fill in StateSemi so it can be message passed
     n = 0
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI; do iVar = 1, nVarSemi
           n = n + 1
           SemiState_VGB(iVar,i,j,k,iBlock) = x_I(n)
@@ -520,26 +534,14 @@ contains
 
     n = 0
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        if(far_field_BCs_BLK(iBlock))call set_cell_boundary( &
             1, iBlock, nVarSemi, &
             SemiState_VGB(:,:,:,:,iBlock), iBlockSemi, IsLinear=.true.)
 
-       select case(TypeSemiImplicit)
-       case('radiation', 'radcond', 'cond')
-          call get_rad_diffusion_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear = .true.)
-       case('parcond')
-          call get_heat_conduction_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear = .true.)
-       case('resistivity')
-          call get_resistivity_rhs(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
-               ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear = .true.)
-       case default
-          call stop_mpi(NameSub//': no get_rhs implemented for' &
-               //TypeSemiImplicit)
-       end select
+       call get_semi_impl_rhs_block(iBlock, SemiState_VGB(:,:,:,:,iBlock), &
+            ResSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.true.)
 
        if(UsePDotADotP)then
           DtLocal = Dt
@@ -578,7 +580,7 @@ contains
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
 
        do iBlockSemi = 1, nBlockSemi
-          iBlock = iBlockFromSemi_I(iBlockSemi)
+          iBlock = iBlockFromSemi_B(iBlockSemi)
 
           ! zero ghost cells for ResSemi_VCB
           call apply_flux_correction_block(iBlock, nVarSemi,0, 0, &
@@ -590,7 +592,7 @@ contains
 
     n=0
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        DtLocal = dt
        if(UseSplitSemiImplicit)then
@@ -676,54 +678,63 @@ contains
   end subroutine semi_precond
   !============================================================================
 
-  subroutine test_semi_impl_jacobian(StateSemi_VG, dVar, get_rhs, Jac_VVI)
+  subroutine test_semi_impl_jacobian
 
-    ! Calculate the Jacobian Jac_VVI = d(RHS)/dVar for the test cell 
-    ! using numerical derivatives of the RHS obtained with get_rhs
+    ! Calculate the Jacobian Jac_VVI = d(RHS)/d(Var) for the test cell 
+    ! using numerical derivatives of the RHS obtained with 
+    ! get_semi_impl_rhs_block
 
-    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
+    use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
+         IsRotatedCartesian, rot_to_cart
+
     use ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
-    real, intent(in):: StateSemi_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real, intent(in):: dVar ! perturbation
-
-    ! subroutine for getting the RHS
-    interface
-       subroutine get_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
-         use ModSemiImplVar, ONLY: nVarSemi
-         use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK
-         implicit none
-         integer, intent(in) :: iBlock
-         real, intent(inout) :: &
-              StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-         real, intent(out)   :: Rhs_VC(nVarSemi,nI,nJ,nK)
-         logical, intent(in) :: IsLinear
-       end subroutine get_rhs
-    end interface
-
-    real, intent(out):: Jac_VVI(nVarSemi,nVarSemi,nStencil)
-
     ! Local variables
-    real, allocatable:: StatePert_VG(:,:,:,:), &
-         Rhs_VC(:,:,:,:), RhsPert_VC(:,:,:,:)
+    real, parameter:: RelEps = 1e-6, AbsEps = 1e-8
 
-    integer:: i, j, k, iPert, jPert, kPert, iBlock, iStencil, iVar
+    real, allocatable:: SemiState_VG(:,:,:,:), SemiPert_VG(:,:,:,:), &
+         Rhs_VC(:,:,:,:), RhsPert_VC(:,:,:,:), &
+         JacAna_VVCI(:,:,:,:,:,:), JacNum_VVI(:,:,:), &
+         JacAna_VV(:,:), JacNum_VV(:,:)
+
+    real:: JacAna, JacNum
+
+    integer:: i, j, k, iPert, jPert, kPert, iBlock, iStencil, iVar, jVar
 
     character(len=*), parameter:: NameSub = 'test_semi_impl_jacobian'
     !--------------------------------------------------------------------------
 
-    ! Use shorter variable names for indexes
-    i = iTest; j = jTest; k = kTest; iBlock = BlkTest
-
     allocate( &
-         StatePert_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-         Rhs_VC(nVarSemi,nI,nJ,nK), RhsPert_VC(nVarSemi,nI,nJ,nK))
+         SemiState_VG(nVarSemi, MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         SemiPert_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+         Rhs_VC(nVarSemi,nI,nJ,nK), RhsPert_VC(nVarSemi,nI,nJ,nK), &
+         JacAna_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil), &
+         JacNum_VVI(nVarSemi,nVarSemi,nStencil), &
+         JacAna_VV(nVarSemi,nVarSemi), JacNum_VV(nVarSemi,nVarSemi))
+
+    ! For sake of simpler code
+    iBlock = BlkTest
+
+    ! Get analytic Jacobian
+    call get_semi_impl_jacobian_block(iBlock, JacAna_VVCI)
+
+    ! Set semi-implicit state with nG ghost cells. 
+    ! The ghost cells are set but not used.
+    SemiState_VG = 1.0
+    SemiState_VG(:,1:nI,1:nJ,1:nK) = &
+         SemiAll_VCB(iVarSemiMin:iVarSemiMax,:,:,:,iBlockSemiTest)
 
     ! Initialize perturbed state
-    StatePert_VG = StateSemi_VG
+    SemiPert_VG = SemiState_VG
 
-    ! Get original RHS (use StatePert to keep compiler happy)
-    call get_rhs(iBlock, StatePert_VG, Rhs_VC, IsLinear=.false.)
+    ! Get original RHS (use SemiPert to keep compiler happy)
+    call get_semi_impl_rhs_block(iBlock, SemiPert_VG, Rhs_VC, IsLinear=.false.)
+
+    ! Select test cell
+    i = iTest; j = jTest; k = kTest
+
+    ! Initialize numerical Jacobian
+    JacNum_VVI = 0.0
 
     ! Loop over stencil
     do iStencil = 1, nStencil
@@ -733,49 +744,108 @@ contains
        select case(iStencil)
        case(2)
           iPert = i - 1
+          if(iPert == 0) CYCLE
        case(3)
           iPert = i + 1
+          if(iPert > nI) CYCLE
        case(4)
           jPert = j - 1
+          if(jPert == 0) CYCLE
        case(5)
           jPert = j + 1
+          if(jPert > nJ) CYCLE
        case(6)
           kPert = k - 1
+          if(kPert == 0) CYCLE
        case(7)
           kPert = k + 1
+          if(kPert > nK) CYCLE
        end select
 
        ! Loop over variables to be perturbed
        do iVar = 1, nVarSemi
 
-          ! Perturb the variables
-          StatePert_VG(iVar,iPert,jPert,kPert) &
-               = StateSemi_VG(iVar,iPert,jPert,kPert) + dVar
+          ! Perturb the variable
+          SemiPert_VG(iVar,iPert,jPert,kPert) &
+               = SemiState_VG(iVar,iPert,jPert,kPert)*(1 + RelEps) + AbsEps
 
           ! Calculate perturbed RHS
-          call get_rhs(iBlock, StatePert_VG, RhsPert_VC, IsLinear=.false.)
+          call get_semi_impl_rhs_block(iBlock, SemiPert_VG, RhsPert_VC, &
+               IsLinear=.false.)
 
           ! Calculate Jacobian elements
-          Jac_VVI(:,iVar,iStencil) = &
-               (RhsPert_VC(:,i,j,k) - Rhs_VC(:,i,j,k))/dVar
+          JacNum_VVI(:,iVar,iStencil) = &
+               (RhsPert_VC(:,i,j,k) - Rhs_VC(:,i,j,k)) / &
+               (  SemiPert_VG(iVar,iPert,jPert,kPert)    &
+               - SemiState_VG(iVar,iPert,jPert,kPert) )
 
           ! Reset the variable to the original value
-          StatePert_VG(iVar,iPert,jPert,kPert) = &
-               StateSemi_VG(iVar,iPert,jPert,kPert)
+          SemiPert_VG(iVar,iPert,jPert,kPert) = &
+               SemiState_VG(iVar,iPert,jPert,kPert)
        end do
     end do
 
-    deallocate(StatePert_VG, Rhs_VC, RhsPert_VC)
+    do iStencil = 1, nStencil
+
+       JacAna_VV = JacAna_VVCI(:,:,i,j,k,iStencil)
+       JacNum_VV = JacNum_VVI(:,:,iStencil)
+
+       if(IsRotatedCartesian .and. TypeSemiImplicit == 'resistivity')then
+          JacAna_VV = rot_to_cart(JacAna_VV)
+          JacNum_VV = rot_to_cart(JacNum_VV)
+       end if
+
+       do jVar = 1, nVarSemi; do iVar = 1, nVarSemi
+          JacAna = JacAna_VV(iVar,jVar)
+          JacNum = JacNum_VV(iVar,jVar)
+          write(*,'(a,3i2,a,4es13.5)') &
+               NameSub//': iVar,jVar,iStencil=', iVar, jVar, iStencil, &
+               ' JacAna, JacNum, AbsDiff, RelDiff=', &
+               JacAna, JacNum, abs(JacAna - JacNum), &
+               2*abs(JacAna - JacNum)/(abs(JacAna) + abs(JacNum) + 1e-30)
+       end do; end do
+    end do
+
+    deallocate(SemiState_VG, SemiPert_VG, Rhs_VC, RhsPert_VC, &
+         JacAna_VVCI, JacNum_VVI, JacAna_VV, JacNum_VV)
 
   end subroutine test_semi_impl_jacobian
+
+  !============================================================================
+  subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
+
+    use BATL_lib,          ONLY: nI, nJ, nK
+    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
+    use ModHeatConduction, ONLY: add_jacobian_heat_cond
+    use ModResistivity,    ONLY: add_jacobian_resistivity
+
+    integer, intent(in) :: iBlock
+    real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
+
+    character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian_block'
+    !------------------------------------------------------------------------
+    ! All elements have to be set
+    JacSemi_VVCI = 0.0
+
+    select case(TypeSemiImplicit)
+    case('radiation', 'radcond', 'cond')
+       call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
+    case('parcond')
+       call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
+    case('resistivity')
+       call add_jacobian_resistivity(iBlock, nVarSemi, JacSemi_VVCI)
+    case default
+       call stop_mpi(NameSub//': no add_jacobian implemented for' &
+            //TypeSemiImplicit)
+    end select
+
+  end subroutine get_semi_impl_jacobian_block
+
   !============================================================================
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: time_BLK
-    use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
-    use ModHeatConduction, ONLY: add_jacobian_heat_cond
-    use ModResistivity,    ONLY: add_jacobian_resistivity
-    use ModMain, ONLY: nI, nJ, nK, Dt, n_step, time_accurate, Cfl
+    use ModMain,    ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModGeometry, ONLY: true_cell
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix, &
          DoInitHypreAmg
@@ -784,31 +854,19 @@ contains
     integer :: iBlockSemi, iBlock, i, j, k, iStencil, iVar
     real    :: Coeff, DtLocal
 
-    integer:: nStepLast = -1
-
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
     !--------------------------------------------------------------------------
-    do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
-       ! All elements have to be set
-       JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi) = 0.0
+    if(DoTestMe) call test_semi_impl_jacobian
+
+    do iBlockSemi = 1, nBlockSemi
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        ! Get dR/dU
-       select case(TypeSemiImplicit)
-       case('radiation', 'radcond', 'cond')
-          call add_jacobian_rad_diff(iBlock, nVarSemi, &
-               JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
-       case('parcond')
-          call add_jacobian_heat_cond(iBlock, nVarSemi, &
-               JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
-       case('resistivity')
-          call add_jacobian_resistivity(iBlock, nVarSemi, &
-               JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
-       case default
-          call stop_mpi(NameSub//': no add_jacobian implemented for' &
-               //TypeSemiImplicit)
-       end select
+       call get_semi_impl_jacobian_block(iBlock, &
+            JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
 
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU) 
        !    symmetrized for sake of CG
@@ -841,13 +899,7 @@ contains
             JacSemi_VVCIB(1,1,1,1,1,1,iBlockSemi))
     end do
 
-    if(SemiParam%TypePrecond == 'HYPRE')then
-       if(nStepLast < 0 .or. n_step - nStepLast >= DnInitHypreAmg)then
-          DoInitHypreAmg = .true.
-          nStepLast = n_step
-       end if
-       call hypre_set_matrix
-    end if
+    if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix
 
   end subroutine get_semi_impl_jacobian
   !===========================================================================
