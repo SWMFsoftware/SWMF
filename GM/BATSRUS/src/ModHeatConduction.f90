@@ -577,13 +577,13 @@ contains
   ! Operator split, semi-implicit subroutines
   !============================================================================
 
-  subroutine get_impl_heat_cond_state(SemiAll_VGB, DconsDsemiAll_VCB)
+  subroutine get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB)
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
     use ModFaceGradient, ONLY: set_block_field2, get_face_gradient
-    use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_I, &
+    use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
     use ModMain,         ONLY: Dt, time_accurate, Cfl
     use ModMultiFluid,   ONLY: MassIon_I
@@ -601,8 +601,7 @@ contains
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
 
-    real, intent(out):: &
-         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
+    real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
@@ -625,7 +624,7 @@ contains
          call set_resistivity
 
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        IsNewBlockTe = .true.
 
@@ -645,11 +644,11 @@ contains
           end if
        end if
 
-       ! Store the electron temperature in SemiAll_VGB and the
+       ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI             
           if(UseIdealEos .and. .not.DoUserHeatConduction)then
-             SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = TeFraction &
+             SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = TeFraction &
                   *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
 
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
@@ -667,7 +666,7 @@ contains
                      *3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
              end if
 
-             TeSi = SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) &
+             TeSi = SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
                   *No2Si_V(UnitTemperature_)
           else
 
@@ -683,7 +682,7 @@ contains
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
              end if
 
-             SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = &
+             SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                   TeSi*Si2No_V(UnitTemperature_)
 
              DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &

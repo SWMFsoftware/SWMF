@@ -458,17 +458,16 @@ contains
   ! Semi-implicit interface
   !============================================================================
 
-  subroutine get_impl_rad_diff_state(SemiAll_VGB, DconsDsemiAll_VCB)
+  subroutine get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB)
 
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
-    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         j0_, nJp1_, k0_, nKp1_
+    use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
          WaveLast_
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
-         nVarSemiAll, nBlockSemi, iBlockFromSemi_I, &
+         nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          TypeSemiImplicit, SemiImplCoeff, &
          UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
@@ -480,10 +479,8 @@ contains
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModUserInterface ! user_material_properties
 
-    real, intent(out):: &
-         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
-    real, intent(inout):: &
-         DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
     real :: OpacityPlanckSi_W(nWave), OpacityRosselandSi_W(nWave)
@@ -518,7 +515,7 @@ contains
 
     do iBlockSemi = 1, nBlockSemi
 
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
        IsNewBlockRadDiffusion = .true.
        IsNewBlockTe = .true.
@@ -534,11 +531,11 @@ contains
 
           if(UseTemperature)then
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+                SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
              end do; end do; end do
           else
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                SemiAll_VGB(iTeImpl,i,j,k,iBlockSemi) = &
+                SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                      cRadiationNo*Te_G(i,j,k)**4
              end do; end do; end do
           end if
@@ -546,7 +543,7 @@ contains
 
        if(iTrImplFirst > 0)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             SemiAll_VGB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
+             SemiAll_VCB(iTrImplFirst:iTrImplLast,i,j,k,iBlockSemi) = &
                   State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
           end do; end do; end do
        end if
@@ -709,7 +706,7 @@ contains
        call message_pass_cell(nDiff, DiffSemiCoef_VGB)
 
        do iBlockSemi = 1, nBlockSemi
-          iBlock = iBlockFromSemi_I(iBlockSemi)
+          iBlock = iBlockFromSemi_B(iBlockSemi)
 
           do iDim = 1, nDim
              Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
@@ -730,7 +727,7 @@ contains
          nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
 
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        ! Calculate face averaged values. Include geometric factors.
 
        call face_equal(1,2,nI,1,nJ,1,nK)

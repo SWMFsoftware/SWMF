@@ -483,15 +483,13 @@ contains
   ! Interface for (Semi-)implicit collisional and Hall resistivity
   !============================================================================
 
-  subroutine get_impl_resistivity_state(SemiAll_VGB)
+  subroutine get_impl_resistivity_state(SemiAll_VCB)
 
-    use ModSize,       ONLY: j0_, nJp1_, k0_, nKp1_
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_I
+    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
 
-    real, intent(out):: &
-         SemiAll_VGB(nVarSemiAll,0:nI+1,j0_:nJp1_,k0_:nKp1_,nBlockSemi)
+    real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
     integer:: i, j, k, iBlock, iBlockSemi
 
@@ -501,11 +499,11 @@ contains
 
     ! Copy magnetic field into the implicit variable
     do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
 
-       ! Store the magnetic field in SemiAll_VGB
-       do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          SemiAll_VGB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
+       ! Store the magnetic field in SemiAll_VCB
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
 
