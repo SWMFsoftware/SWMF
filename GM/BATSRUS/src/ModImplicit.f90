@@ -29,7 +29,7 @@ module ModSemiImplVar
   integer, public:: nBlockSemi
 
   ! Conversion from compact block index iBlockSemi to normal index iBlock
-  integer, public, allocatable:: iBlockFromSemi_I(:)
+  integer, public, allocatable:: iBlockFromSemi_B(:)
 
   ! Arrays for flux correction at resolution changes
   real, public, allocatable, dimension(:,:,:,:,:) :: &
