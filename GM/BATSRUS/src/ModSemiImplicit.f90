@@ -6,7 +6,8 @@ module ModSemiImplicit
 
   use ModSemiImplVar
   use ModProcMH,   ONLY: iProc
-  use ModImplicit, ONLY: LinearSolverParamType, nStencil
+  use ModImplicit, ONLY: nStencil
+  use ModLinearSolver, ONLY: LinearSolverParamType
 
   implicit none
   save
@@ -37,11 +38,11 @@ module ModSemiImplicit
 
   ! Parameters for the semi-implicit linear solver. Set defaults:
   !
-  ! DoPrecond=T, left precond with BILU, UseNoOverlap at block boundaries
-  ! GMRES with tolerance 0.001, max 100 iterations and 100 Krylov vectors
-  ! No initial guess is used.
+  ! DoPrecond=T, left precond with BILU, Gustafsson parameter is 0.0, 
+  ! GMRES with relative error tolerance 0.001, maximum of 100 iterations,
+  ! and 100 Krylov vectors. No initial guess is used.
   type(LinearSolverParamType):: SemiParam = LinearSolverParamType( &
-       .true., 'left', 'BILU', 0.0, .true., 'GMRES', 1e-3, 100, 100, .false.)
+       .true., 'left', 'BILU', 0.0, 'GMRES', 'rel', 1e-3, 100, 100, .false.)
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
@@ -49,8 +50,6 @@ module ModSemiImplicit
 contains
   !============================================================================
   subroutine read_semi_impl_param(NameCommand)
-
-    use ModImplicit, ONLY: UseNoOverlap
 
     use ModReadParam,     ONLY: read_var
     use ModLinearSolver,  ONLY: &
@@ -77,7 +76,6 @@ contains
        call read_var('TypePrecond', SemiParam%TypePrecond, IsUpperCase=.true.)
        select case(SemiParam%TypePrecond)
        case('HYPRE')
-          UseNoOverlap = .false.
        case('JACOBI')
           SemiParam%PrecondParam = Jacobi_
        case('BLOCKJACOBI')
@@ -224,12 +222,14 @@ contains
 
     ! Advance semi-implicit terms
 
+    use ModProcMH, ONLY: iComm
     use ModMain, ONLY: NameThisComp, BlkTest, ProcTest
     use ModAdvance, ONLY: DoFixAxis
     use ModGeometry, ONLY: true_cell
-    use ModImplHypre, ONLY: hypre_initialize
+    use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
+    use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
-    use BATL_lib, ONLY: nI, nJ, nK, nIJK, nBlock, Unused_B
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nIJK, nBlock, Unused_B
 
     use ModRadDiffusion,   ONLY: &
          get_impl_rad_diff_state, set_rad_diff_range, update_impl_rad_diff
@@ -240,11 +240,12 @@ contains
 
     integer :: iBlockSemi, iBlock, iError, i, j, k, iVar, n
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe, DoTestKrylov
 
     character(len=20) :: NameSub = 'MH_advance_semi_impl'
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
+    call set_oktest('krylov', DoTest, DoTestKrylov)
     call set_oktest(NameSub, DoTest, DoTestMe) 
     if(DoTestMe) write(*,*)NameSub,' starting'
 
@@ -301,9 +302,10 @@ contains
        endif
 
        ! solve implicit system
-       call solve_implicit(SemiParam, semi_impl_matvec, &
-            nVarSemi, nBlockSemi, nSemi, Rhs_I, x_I, &
-            JacSemi_VVCIB, JacobiPrec_I, cg_precond, iError)
+       call solve_linear_multiblock( SemiParam, &
+            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, iComm, &
+            semi_impl_matvec, Rhs_I, x_I, iError, DoTestKrylov, &
+            JacSemi_VVCIB, JacobiPrec_I, cg_precond, hypre_preconditioner)
 
        ! NewSemiAll_VCB = SemiAll_VCB + Solution
        n=0
@@ -847,6 +849,7 @@ contains
     use ModAdvance, ONLY: time_BLK
     use ModMain,    ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModGeometry, ONLY: true_cell
+    use ModImplicit, ONLY: UseNoOverlap
     use ModImplHypre, ONLY: hypre_set_matrix_block, hypre_set_matrix
     use BATL_lib, ONLY: CellVolume_GB
 
@@ -859,6 +862,10 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(DoTestMe) call test_semi_impl_jacobian
+
+    ! The HYPRE AMG preconditioner requires the overlap between blocks
+    ! For all other preconditioners it is better to avoid the overpap
+    if(SemiParam%TypePrecond=='HYPRE') UseNoOverlap = .false.
 
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -900,202 +907,9 @@ contains
 
     if(SemiParam%TypePrecond == 'HYPRE') call hypre_set_matrix(.true.)
 
+    UseNoOverlap = .true.
+
   end subroutine get_semi_impl_jacobian
-  !===========================================================================
-  subroutine solve_implicit(Param, impl_matvec, &
-       nVarImpl, nBlockImpl, nImpl, Rhs_I, x_I, &
-       Jac_VVCIB, JacobiPrec_I, cg_precond, iErrorOut)
-
-    use BATL_size,       ONLY: nDim, nI, nJ, nK, nIJK
-    use ModProcMH,       ONLY: iProc, iComm
-    use ModImplHypre,    ONLY: hypre_preconditioner
-    use ModLinearSolver, ONLY: &
-         cg, bicgstab, gmres, get_precond_matrix, &
-         multiply_left_precond, multiply_right_precond, multiply_initial_guess
-
-    type(LinearSolverParamType), intent(inout):: Param
-    interface 
-       subroutine impl_matvec(Vec_I, MatVec_I, n)
-         ! Calculate MatVec = Matrix.Vec
-         implicit none
-         integer, intent(in) :: n
-         real,    intent(in) :: Vec_I(n)
-         real,    intent(out):: MatVec_I(n)
-       end subroutine impl_matvec
-    end interface
-
-    integer, intent(in):: nVarImpl     ! Number of impl. variables/cell
-    integer, intent(in):: nBlockImpl   ! Number of impl. grid blocks
-    integer, intent(in):: nImpl        ! Number of impl. variables total
-    real, intent(inout):: Rhs_I(nImpl) ! RHS vector
-    real, intent(inout):: x_I(nImpl)   ! Initial guess --> solution
-
-    real, intent(inout), optional:: &  ! Jacobian matrix --> preconditioner
-         Jac_VVCIB(nVarImpl,nVarImpl,nI,nJ,nK,nStencil,nBlockImpl)
-
-    real, intent(out), optional:: &    ! Point Jacobi preconditioner
-         JacobiPrec_I(:)
-
-    interface
-       subroutine cg_precond(Vec_I, PrecVec_I, n)
-         ! Preconditioner method for PCG
-         implicit none
-         integer, intent(in) :: n
-         real,    intent(in) :: Vec_I(n)
-         real,    intent(out):: PrecVec_I(n)
-       end subroutine cg_precond
-    end interface
-    optional:: cg_precond
-
-    integer, optional, intent(out):: iErrorOut
-
-    integer:: n, iBlock, i, j, k, iVar, iError
-
-    ! Krylov solver stopping parameters
-    character(len=3):: TypeStop='rel'
-    integer:: nKrylovMatvec
-    real::    KrylovError
-
-    logical:: DoTest, DoTestMe, DotestKrylov, DoTestKrylovMe
-    character(len=*), parameter:: NameSub = 'solve_implicit'
-    !----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    call set_oktest('krylov', DoTestKrylov, DoTestKrylovMe)
-
-    ! Make sure that left preconditioning is used when necessary
-    select case(Param%TypePrecond)
-    case('DILU', 'HYPRE', 'JACOBI', 'BLOCKJACOBI')
-       Param%TypePrecondSide = 'left'
-    end select
-
-    if(Param%UseInitialGuess .and. Param%TypePrecondSide == 'right')then
-       if(iProc == 0) write(*,*) 'WARNING in ',NameSub, &
-            ': cannot use non-zero inital guess with right preconditioning.',&
-            ' Changing to symmetric!!!'
-       Param%TypePrecondSide = 'symmetric'
-    end if
-
-    ! Initialize solution vector if needed
-    if(.not.Param%UseInitialGuess) x_I = 0.0
-
-    ! Precondition matrix if required
-    if(Param%DoPrecond)then
-       if(Param%TypePrecond == 'HYPRE')then
-          call hypre_preconditioner(nImpl, Rhs_I)
-       elseif(Param%TypePrecond == 'JACOBI') then
-          n = 0
-          do iBlock = 1, nBlockImpl; do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             do iVar = 1, nVarImpl
-                n = n + 1
-                JacobiPrec_I(n) = 1.0 / Jac_VVCIB(iVar,iVar,i,j,k,1,iBlock)
-             end do
-          end do; enddo; enddo; enddo
-          if(Param%TypeKrylov /= 'CG') &
-               Rhs_I(1:nImpl) = JacobiPrec_I(1:nImpl)*Rhs_I(1:nImpl)
-       else
-          do iBlock = 1, nBlockImpl
-
-             ! Preconditioning Jac_VVCIB matrix
-             call get_precond_matrix(                             &
-                  Param%PrecondParam, nVarImpl, nDim, nI, nJ, nK, &
-                  Jac_VVCIB(1,1,1,1,1,1,iBlock))
-
-             if(Param%TypeKrylov == 'CG') CYCLE
-
-             ! Starting index in the linear arrays
-             n = nVarImpl*nIJK*(iBlock-1)+1
-
-             ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
-             ! for left, symmetric, and right preconditioning, respectively
-             call multiply_left_precond(&
-                  Param%TypePrecond, Param%TypePrecondSide, &
-                  nVarImpl, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
-                  Rhs_I(n))
-                  
-             ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
-             ! left, symmetric and right preconditioning, respectively
-             ! Multiplication with LU is NOT implemented
-             if(  Param%UseInitialGuess .and. &
-                  Param%TypePrecondSide == 'symmetric') &
-                  call multiply_initial_guess( &
-                  nVarImpl, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
-                  x_I(n))
-          end do
-
-       end if
-    endif
-
-    ! Initialize stopping conditions. Solver will return actual values.
-    nKrylovMatVec = Param%MaxKrylovMatvec
-    KrylovError   = Param%KrylovErrorMax
-
-    if(DoTestMe)write(*,*)NameSub,': Before ', Param%TypeKrylov, &
-         ' nKrylovMatVec, KrylovError:', nKrylovMatVec, KrylovError
-
-    ! Solve linear problem
-    call timing_start('krylov solver')
-
-    select case(Param%TypeKrylov)
-    case('BICGSTAB')
-       call bicgstab(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
-            KrylovError, TypeStop, nKrylovMatVec, &
-            iError, DoTestKrylovMe, iComm)
-    case('GMRES')
-       call gmres(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
-            Param%nKrylovVector, &
-            KrylovError, TypeStop, nKrylovMatVec, &
-            iError, DoTestKrylovMe, iComm)
-    case('CG')
-       if(.not. Param%DoPrecond)then
-          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, TypeStop, nKrylovMatVec, &
-               iError, DoTestKrylovMe, iComm)
-       elseif(Param%TypePrecond == 'JACOBI')then
-          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, TypeStop, nKrylovMatVec, &
-               iError, DoTestKrylovMe, iComm, &
-               JacobiPrec_I)
-       else
-          call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, TypeStop, nKrylovMatVec, &
-               iError, DoTestKrylovMe, iComm, &
-               preconditioner = cg_precond)
-       end if
-    case default
-       call stop_mpi(NameSub//': Unknown TypeKrylov='//Param%TypeKrylov)
-    end select
-    call timing_stop('krylov solver')
-
-    ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
-    ! left, symmetric and right preconditioning, respectively
-    if(Param%DoPrecond .and. Param%TypePrecondSide /= 'left' &
-         .and. Param%TypePrecond /= 'JACOBI' &
-         .and. Param%TypeKrylov /= 'CG') then
-
-       do iBlock = 1, nBlockImpl
-          n = nVarImpl*nIJK*(iBlock-1)+1
-          call multiply_right_precond( &
-               Param%TypePrecond, Param%TypePrecondSide, &
-               nVarImpl, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
-               Rhs_I(n))
-       end do
-
-    end if
-
-    if(DoTestMe.or.DoTestKrylovMe)write(*,*)NameSub,&
-         ': After nKrylovMatVec, KrylovError, iError=',&
-         nKrylovMatVec, KrylovError, iError
-
-    ! Converging without any iteration is not a real error, so set iError=0
-    if(iError==3) iError=0
-
-    if(DoTestMe .and. iError/=0) write(*,*) NameSub, &
-         ' warning: no convergence, iError:',iError
-
-    if(present(iErrorOut)) iErrorOut = iError
-
-  end subroutine solve_implicit
-  !==========================================================================
 
 end module ModSemiImplicit
 
