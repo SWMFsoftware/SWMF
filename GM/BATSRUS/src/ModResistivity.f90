@@ -766,16 +766,15 @@ contains
     ! Calculate the Jacobian for the preconditioning of 
     ! collisional and Hall resistivity.
 
-    use ModProcMH,     ONLY: iProc
     use ModHallResist, ONLY: UseHallResist
     use ModImplicit,   ONLY: UseSemiImplicit, nStencil
-    use ModAdvance,    ONLY: State_VGB, Bx_, Bz_, B_
+    use ModAdvance,    ONLY: B_
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
-    integer:: iStencil, iB, i, j, k
+    integer:: iB
 
     character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
     !--------------------------------------------------------------------------
