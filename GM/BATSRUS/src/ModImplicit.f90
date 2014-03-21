@@ -207,19 +207,6 @@ module ModImplicit
        ReduceStepLevel   = 0.6, ReduceStepFactor   = 0.95, &
        IncreaseStepLevel = 0.8, IncreaseStepFactor = 1.05
 
-  type LinearSolverParamType
-     logical          :: DoPrecond        ! Do preconditioning
-     character(len=10):: TypePrecondSide  ! Precondition left, right, symmetric
-     character(len=10):: TypePrecond      ! Preconditioner type
-     real             :: PrecondParam     ! Parameter (mostly for MBILU)
-     logical          :: UseNoOverlap     ! precondition without overlap
-     character(len=10):: TypeKrylov       ! Krylov solver type
-     real             :: KrylovErrorMax   ! Tolerance for solver
-     integer          :: MaxKrylovMatvec  ! Maximum number of iterations
-     integer          :: nKrylovVector    ! Number of vectors for GMRES
-     logical          :: UseInitialGuess  ! non-zero initial guess
-  end type LinearSolverParamType
-
 contains
   !============================================================================
   subroutine read_implicit_param(NameCommand)
