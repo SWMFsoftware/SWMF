@@ -71,6 +71,9 @@ contains
                TypeSemiImplicit = TypeSemiImplicit(1:i-1)
        end if
 
+    case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
+       call read_var('SemiImplCoeff', SemiImplCoeff)
+
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
        call read_var('TypePrecond', SemiParam%TypePrecond, IsUpperCase=.true.)

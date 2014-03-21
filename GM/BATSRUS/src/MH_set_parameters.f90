@@ -519,6 +519,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_implicit_param(NameCommand)           
 
      case("#SEMIIMPL", "#SEMIIMPLICIT", &
+          "#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF", &
           "#SEMIPRECOND", "#SEMIPRECONDITIONER",&
           "#SEMIKRYLOV", "#SEMIKRYLOVSIZE")
         call read_semi_impl_param(NameCommand)
