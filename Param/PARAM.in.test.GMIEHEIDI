@@ -1,7 +1,7 @@
 #ECHO
 T			DoEcho
 
-#VERBOSE
+VERBOSE
 100
 
 #TEST
@@ -15,7 +15,7 @@ F			DoTimeAccurate
 100			DnProgressLong
 
 #DESCRIPTION
-Test for GM-RIM-HEIDI
+Test for GM-IE-HEIDI
 
 #PLANET
 EARTH			NamePlanet
@@ -48,32 +48,7 @@ IE			NameComp2
 5                       DnCouple
 -1.0                    DtCouple
 
-#BEGIN_COMP GM ---------------------------------------------------------------
-
-#RAYTRACEEQUATOR
-T
-
-#RAYTRACE
-T			UseRaytrace (rest is read if true)
-T			UseAccurateTrace
-0.1			DtExchangeRay [sec]
-1			DnRaytrace
-
-USERFLAGS
-F                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
-
+#BEGIN_COMP GM ------------------------------------------------------
 
 #SAVEINITIAL
 T
@@ -136,8 +111,8 @@ shell0			NameArea
 T                       UseBody
 2.5                     rBody
 3.0                     rCurrents
-28.0                    Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+28.0                    BodyNDim
+25000.0                 BodyTDim
 
 #TVDRESCHANGE
 T			UseTvdResChange
@@ -182,9 +157,9 @@ dt rho mx my mz p bx by bz pmin pmax cpcpn cpcps dst dstdivb dstflx
 #IE
 T                       DoTraceIe
 
-#END_COMP GM -----------------------------------------------------------------
+#END_COMP GM -------------------------------------------------------
 
-#BEGIN_COMP IE ---------------------------------------------------------------
+#BEGIN_COMP IE -----------------------------------------------------
 
 #IONOSPHERE
 0			iConductanceModel
@@ -203,13 +178,13 @@ max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
 
-#END_COMP IE -----------------------------------------------------------------
+#END_COMP IE -------------------------------------------------------
 
 #STOP
 10                        MaxIteration
 -1.	       		  tSimulationMax [sec]
 
-#RUN	######################################################################
+#RUN	#############################################################
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -243,7 +218,7 @@ IM			NameComp2
 GM			NameComp
 F			DoCoupleOnTime
 
-#BEGIN_COMP GM ---------------------------------------------------------------
+#BEGIN_COMP GM -----------------------------------------------------
 
 #IMCOUPLING
 20.0			TauCoupleIm
@@ -270,9 +245,9 @@ idl z=0 FUL			StringPlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
 
-#END_COMP GM -----------------------------------------------------------------
+#END_COMP GM --------------------------------------------------------
 
-#BEGIN_COMP IM ---------------------------------------------------------------
+#BEGIN_COMP IM -----------------------------------------------------=
 
 #TIMESTEP
 20.                     TimeStep [sec] 
@@ -371,9 +346,9 @@ T			DoSaveRestart
 ascii			TypeFile
 
 
-#END_COMP IM -----------------------------------------------------------------
+#END_COMP IM ---------------------------------------------------------
 
-#BEGIN_COMP IE ---------------------------------------------------------------
+#BEGIN_COMP IE -------------------------------------------------------
 
 #SAVEPLOT
 2			nPlotFile
@@ -384,7 +359,7 @@ max tec                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 
-#END_COMP IE -----------------------------------------------------------------
+#END_COMP IE ---------------------------------------------------------
 
 #STOP
 -1			MaxIteration
