@@ -8,7 +8,7 @@ module ModImplHypre
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iComm, &
        nRoot_D, MaxCoord_I, IsPeriodic_D, iTree_IA, &
        Proc_, Coord0_, Coord1_, Coord2_, Coord3_, Level_
-  use ModImplicit, ONLY: iBlockFromSemi_I, nBlockSemi, &
+  use ModImplicit, ONLY: iBlockFromSemi_B, nBlockSemi, &
        nStencil, Stencil1_, Stencil2_, Stencil3_, Stencil4_, Stencil5_, &
        Stencil6_, Stencil7_
 
@@ -144,7 +144,7 @@ contains
 
     ! Add each block as a local box in the corresponding part (level)
     do iBlockSemi = 1, nBlockSemi
-       iBlock   = iBlockFromSemi_I(iBlockSemi)
+       iBlock   = iBlockFromSemi_B(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
@@ -243,7 +243,7 @@ contains
 
     do iBlockSemi = 1, nBlockSemi
 
-       iBlock = iBlockFromSemi_I(iBlockSemi)
+       iBlock = iBlockFromSemi_B(iBlockSemi)
        iNode  = iNode_B(iBlock)
        iPart  = iTree_IA(Level_,iNode)
 
@@ -646,7 +646,7 @@ contains
 
     logical, parameter :: DoDebug = .false.
     !------------------------------------------------------------------------
-    iBlock = iBlockFromSemi_I(iBlockSemi)
+    iBlock = iBlockFromSemi_B(iBlockSemi)
 
     ! DoDebug = iProc == ProcTest
 
@@ -970,7 +970,7 @@ contains
     ! Set y_I as the RHS
     i = 1
     do iBlockSemi = 1, nBlockSemi
-       iBlock   = iBlockFromSemi_I(iBlockSemi)
+       iBlock   = iBlockFromSemi_B(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
@@ -1012,7 +1012,7 @@ contains
 
     i = 1
     do iBlockSemi = 1, nBlockSemi
-       iBlock   = iBlockFromSemi_I(iBlockSemi)
+       iBlock   = iBlockFromSemi_B(iBlockSemi)
        iNode    = iNode_B(iBlock)
        iPart    = iTree_IA(Level_,iNode)
        iLower_D = 1 + (iTree_IA(Coord1_:CoordLast_,iNode)-1)*nCell_D
