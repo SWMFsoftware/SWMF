@@ -1912,6 +1912,21 @@ but ImplCoeff is still used in the first time step and after AMR-s, when
 the code switches back to the two-level scheme for one time step.
 </command>
 
+<command name="SEMICOEFF" alias="SEMIIMPLCOEFF,SEMIIMPLICITCOEFF">
+	<parameter name="SemiImplCoeff" type="real" min="0.5" max="1" default="1"/>
+
+#SEMICOEFF
+0.5			SemiImplCoeff
+
+The SemiImplCoeff is the coefficient in front of the implicit part of the
+semi-implicit terms. The value should be in the range 0.5 to 1. 
+The 0.5 value will make the semi-implicit term 2nd order accurate in time,
+but currently the operator splitting still renders the full scheme first 
+order in time only. Using 1.0 is the most robust option, as it makes the
+semi-implicit term to be evaluated fully implicitly, but it is first order
+accurate in time only. The default value is 1.
+</command>
+
 <command name="IMPLSCHEME" alias="IMPLICITSCHEME">
 	<parameter name="nOrderImpl" type="integer" min="1" max="2" 
 								default="1"/>
