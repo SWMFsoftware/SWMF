@@ -1152,7 +1152,6 @@ test12_compile:
 test12_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
-	cp PC/IPIC3D/input/GEM.inp  ${TESTDIR}/IPIC.in
 	cp PC/IPIC3D/input/PARAM.in.PC_only_new  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
 
