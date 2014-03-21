@@ -1093,6 +1093,46 @@ test_ramscb_check:
 
 ######## test ipic3d stand alone in SWMF  ###############
 
+test12_old:
+	@echo "test12_old_compile..." > test12_old.diff
+	$(MAKE) test12_old_compile
+	@echo "test12_old_rundir..." > test12_old.diff
+	$(MAKE) test12_old_rundir
+	@echo "test12_old_run..." > test12_old.diff
+	$(MAKE) test12_old_run
+	@echo "test12_old_check..." > test12_old.diff
+	$(MAKE) test12_old_check
+	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_old_compile:
+	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicX=true,periodicY=false,periodicZ=true,pseudrand=true
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+
+test12_old_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR}
+	cp PC/IPIC3D/input/GEM.inp  ${TESTDIR}/IPIC.in
+	cp PC/IPIC3D/input/PARAM.in.PC_only  ${TESTDIR}/PARAM.in
+	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
+
+test12_old_run:
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe > runlog; \
+	else \
+		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe > runlog; \
+	fi;
+
+test12_old_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7 \
+		${TESTDIR}/PC/plots/ConservedQuantities.txt \
+		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
+		> test12_old.diff)
+	-@(ls -l test12_old.diff)
+
+######## test ipic3d stand alone in SWMF  ###############
+
 test12:
 	@echo "test12_compile..." > test12.diff
 	$(MAKE) test12_compile
@@ -1102,7 +1142,6 @@ test12:
 	$(MAKE) test12_run
 	@echo "test12_check..." > test12.diff
 	$(MAKE) test12_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_compile:
 	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
@@ -1114,7 +1153,7 @@ test12_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 	cp PC/IPIC3D/input/GEM.inp  ${TESTDIR}/IPIC.in
-	cp PC/IPIC3D/input/PARAM.in.PC_only  ${TESTDIR}/PARAM.in
+	cp PC/IPIC3D/input/PARAM.in.PC_only_new  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
 
 test12_run:
@@ -1237,7 +1276,7 @@ test_pic2_rundir:
 test_pic2_run:
 	cp PC/IPIC3D/input/PARAM.in.start_4step_BATSRUS  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
-	sleep 2
+	sleep 5
 	cp PC/IPIC3D/input/PARAM.in.start_4step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #./IPIC.in | tee runlog.ipic
 	sleep 5
@@ -1254,14 +1293,14 @@ test_pic2_2step_run:
 	cp PC/IPIC3D/input/IPIC.in.start_2step  ${TESTDIR}/IPIC.in
 	cp PC/IPIC3D/input/PARAM.in.start_2step_BATSRUS  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
-	sleep 2
+	sleep 5
 	cp PC/IPIC3D/input/PARAM.in.start_2step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #./IPIC.in | tee runlog.ipic
 	sleep 5
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2step
 
 test_pic2_2step_check:
-	-@(diff \
+	-@(${SCRIPTDIR}/DiffNum.pl \
 		${TESTDIR}/RESULTS/2step/GM/z=0_ipic3d_n00000002.out \
 		${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000002.out \
 		> test_pic2_2step.diff)
@@ -1277,14 +1316,14 @@ test_pic2_restart_setup:
 test_pic2_restart_run:
 	cp PC/IPIC3D/input/PARAM.in.restart_2step_BATSRUS  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 2 ./SWMF.exe < /dev/null | tee runlog.bats &
-	sleep 2
+	sleep 5
 	cp PC/IPIC3D/input/PARAM.in.restart_2step_PC  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe | tee runlog.ipic #restart ./IPIC.in |tee runlog.ipic 
 	sleep 5
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restartstep
 
 test_pic2_restart_check:
-	-@(diff ${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
+	-@(${SCRIPTDIR}/DiffNum${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/RESULTS/4step/GM/z=0_ipic3d_n00000004.out \
 		${TESTDIR}/RESULTS/2restartstep/GM/z=0_ipic3d_n00000004.out \
 		> test_pic2_restart.diff)
 	ls -l test_pic2_*.diff
