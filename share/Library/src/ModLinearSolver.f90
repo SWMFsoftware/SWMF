@@ -2076,8 +2076,7 @@ contains
          ' nKrylovMatVec, KrylovError:', nKrylovMatVec, KrylovError
 
     ! Solve linear problem
-    call timing_start('krylov solver')
-
+    !call timing_start('krylov solver')
     select case(Param%TypeKrylov)
     case('BICGSTAB')
        call bicgstab(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
@@ -2105,9 +2104,9 @@ contains
                preconditioner = cg_precond)
        end if
     case default
-       call stop_mpi(NameSub//': Unknown TypeKrylov='//Param%TypeKrylov)
+       call CON_stop(NameSub//': Unknown TypeKrylov='//Param%TypeKrylov)
     end select
-    call timing_stop('krylov solver')
+    !call timing_stop('krylov solver')
 
     ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
     ! left, symmetric and right preconditioning, respectively
