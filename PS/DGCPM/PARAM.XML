@@ -41,4 +41,26 @@ Set the timestep for the simulation.  Default values are shown.
 
 </commandgroup>
 
+<commandgroup name="PHYSICAL PARAMETERS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!Physics group!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="FILLING">
+  <parameter name="EmptyPeriodClosed" type="float" min="0" deault="3.0"/>
+  <parameter name="EmptyPeriodOpen"   type="float" min="0" deault="1.0"/>
+  <parameter name="FillDays"          type="float" min="0" deault="1.5"/>
+  <parameter name="FluxMax"           type="float" min="0" deault="2.0E12"/>
+
+#FILLING
+3.0     EmptyPeriodClosed
+1.0     EmptyPeriodOpen
+1.5     FillDays
+2.0E12  FluxMax
+
+Set parameters that control flux tube refilling rate.
+
+</command>
+
+</commandgroup>
+
 </commandList>
