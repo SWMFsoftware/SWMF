@@ -55,7 +55,7 @@ contains
 
   subroutine hypre_set_matrix(DoInitHypreAmg)
 
-    logical, intent(in): DoInitHypreAmg
+    logical, intent(in):: DoInitHypreAmg
     !------------------------------------------------------------------------
     call stop_mpi('hypre_set_matrix: empty! Use Config.pl -hypre')
 
