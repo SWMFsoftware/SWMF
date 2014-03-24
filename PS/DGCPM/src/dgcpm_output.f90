@@ -1,3 +1,4 @@
+<<<<<<< dgcpm_output.f90
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! File name: dgcpm_output_010.f90
@@ -16,6 +17,7 @@
 	use ModIoDGCPM
         use ModTimeDGCPM
         use ModMainDGCPM
+        use ModIoUnit, ONLY: UNITTMP_
 
 	implicit none
 
@@ -51,16 +53,16 @@
         SELECT CASE (MagneticType)
             CASE ('DIPOLE')
                 IF (OutputType.ne.'OLD') then
-                    open(unit=12, file=filename, form='formatted')
-                    write(12,*) 'NTHETA NPHI THETA PHI X Y OC VOL'
-                    write(12,*) nthetacells, nphicells
-                    write(12,*) 90.0-vthetacells
-                    write(12,*) vphicells
-                    write(12,*) mgridx
-                    write(12,*) mgridy
-                    write(12,*) mgridoc
-                    write(12,*) mgridvol
-                    close(unit = 12)
+                    open(unit=UNITTMP_, file=filename, form='formatted')
+                    write(UNITTMP_,*) 'NTHETA NPHI THETA PHI X Y OC VOL'
+                    write(UNITTMP_,*) nthetacells, nphicells
+                    write(UNITTMP_,*) 90.0-vthetacells
+                    write(UNITTMP_,*) vphicells
+                    write(UNITTMP_,*) mgridx
+                    write(UNITTMP_,*) mgridy
+                    write(UNITTMP_,*) mgridoc
+                    write(UNITTMP_,*) mgridvol
+                    close(unit = UNITTMP_)
                 ENDIF
              CASE ('T96')
                 write(*,*) 'NOT IMPLIMENTED - NO OUTPUT'
@@ -76,86 +78,164 @@
 
 
       if(WriteDynamic)then
-        open(unit=10, file=filename, form = 'formatted')
+        open(unit=UNITTMP_, file=filename, form = 'formatted')
         
         SELECT CASE (OutputType)
             CASE ('SHORT')
-                write(10,*) 'TIME NTHETA NPHI N POT'
-                write(10,*) CurrentTime
-                write(10,*) nthetacells, nphicells
-                write(10,*) mgridden
-                write(10,*) mgridpot
+                write(UNITTMP_,*) 'TIME NTHETA NPHI N POT'
+                write(UNITTMP_,*) CurrentTime
+                write(UNITTMP_,*) nthetacells, nphicells
+                write(UNITTMP_,*) mgridden
+                write(UNITTMP_,*) mgridpot
             CASE ('VELOCITY')
-                write(10,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
-                write(10,*) CurrentTime
-                write(10,*) nthetacells, nphicells
-                write(10,*) mgridx
-                write(10,*) mgridy
-                write(10,*) mgridden
-                write(10,*) mgridpot
-                write(10,*) mgridvr
-                write(10,*) mgridvp
+                write(UNITTMP_,*) 'TIME NTHETA NPHI X Y DEN POT VR VP'
+                write(UNITTMP_,*) CurrentTime
+                write(UNITTMP_,*) nthetacells, nphicells
+                write(UNITTMP_,*) mgridx
+                write(UNITTMP_,*) mgridy
+                write(UNITTMP_,*) mgridden
+                write(UNITTMP_,*) mgridpot
+                write(UNITTMP_,*) mgridvr
+                write(UNITTMP_,*) mgridvp
             CASE ('POTENTIAL')
-                write(10,*) 'TIME NTHETA NPHI THETA PHI X Y POT CORO'
-                write(10,*) CurrentTime
-                write(10,*) nthetacells, nphicells
-                write(10,*) 90.0 - vthetacells
-                write(10,*) vphicells
-                write(10,*) mgridx
-                write(10,*) mgridy
-                write(10,*) mgridpot
-                write(10,*) mgridcoro
+                write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y POT CORO'
+                write(UNITTMP_,*) CurrentTime
+                write(UNITTMP_,*) nthetacells, nphicells
+                write(UNITTMP_,*) 90.0 - vthetacells
+                write(UNITTMP_,*) vphicells
+                write(UNITTMP_,*) mgridx
+                write(UNITTMP_,*) mgridy
+                write(UNITTMP_,*) mgridpot
+                write(UNITTMP_,*) mgridcoro
             CASE ('FLOWS')
-                write(10,*) 'TIME NTHETA NPHI THETA PHI X Y OC VOL'
-                write(10,*) CurrentTime
-                write(10,*) nthetacells, nphicells
-                write(10,*) 90.0 - vthetacells
-                write(10,*) vphicells
-                write(10,*) mgridx
-                write(10,*) mgridy
-                write(10,*) mgridfluxr
-                write(10,*) mgridfluxa
+                write(UNITTMP_,*) 'TIME NTHETA NPHI THETA PHI X Y OC VOL'
+                write(UNITTMP_,*) CurrentTime
+                write(UNITTMP_,*) nthetacells, nphicells
+                write(UNITTMP_,*) 90.0 - vthetacells
+                write(UNITTMP_,*) vphicells
+                write(UNITTMP_,*) mgridx
+                write(UNITTMP_,*) mgridy
+                write(UNITTMP_,*) mgridfluxr
+                write(UNITTMP_,*) mgridfluxa
             CASE ('OLD')
-                write(10,*) nthetacells, nphicells
-                write(10,*) 90.0-vthetacells
-                write(10,*) vphicells
-                write(10,*) mgridden
-                write(10,*) mgridx
-                write(10,*) mgridy
-                write(10,*) mgridoc
-                write(10,*) mgridpot
-                write(10,*) mgridcoro
-                write(10,*) mgridvr
-                write(10,*) mgridvp
-                write(10,*) mgridsource
-                write(10,*) mgridfluxr
-                write(10,*) mgridfluxa
-                write(10,*) mgridn
-                write(10,*) mgridvol
-                write(10,*) CurrentTime
+                write(UNITTMP_,*) nthetacells, nphicells
+                write(UNITTMP_,*) 90.0-vthetacells
+                write(UNITTMP_,*) vphicells
+                write(UNITTMP_,*) mgridden
+                write(UNITTMP_,*) mgridx
+                write(UNITTMP_,*) mgridy
+                write(UNITTMP_,*) mgridoc
+                write(UNITTMP_,*) mgridpot
+                write(UNITTMP_,*) mgridcoro
+                write(UNITTMP_,*) mgridvr
+                write(UNITTMP_,*) mgridvp
+                write(UNITTMP_,*) mgridsource
+                write(UNITTMP_,*) mgridfluxr
+                write(UNITTMP_,*) mgridfluxa
+                write(UNITTMP_,*) mgridn
+                write(UNITTMP_,*) mgridvol
+                write(UNITTMP_,*) CurrentTime
         END SELECT
     
-        close(unit = 10)
+        close(unit = UNITTMP_)
         endif
   
       if(WriteRestart)then
         filename=cOutputDir//ST1//'_restart.dat'
-        open(unit=15, file=filename, form = 'formatted')
+        open(unit=UNITTMP_, file=filename, form = 'formatted')
 
-            write(15,*) nthetacells, nphicells
-            write(10,*) vphicells
-            write(10,*) mgridden
-            write(10,*) mgridx
-            write(10,*) mgridy
-            write(10,*) mgridoc
-            write(10,*) mgridpot
-            write(10,*) mgridvr
-            write(10,*) mgridvp
-            write(10,*) mgridn
-            write(10,*) mgridvol
+            write(UNITTMP_,*) nthetacells, nphicells
+            write(UNITTMP_,*) vphicells
+            write(UNITTMP_,*) mgridden
+            write(UNITTMP_,*) mgridx
+            write(UNITTMP_,*) mgridy
+            write(UNITTMP_,*) mgridoc
+            write(UNITTMP_,*) mgridpot
+            write(UNITTMP_,*) mgridvr
+            write(UNITTMP_,*) mgridvp
+            write(UNITTMP_,*) mgridn
+            write(UNITTMP_,*) mgridvol
 
-        close(unit = 15)
+        close(unit = UNITTMP_)
       endif
   
       RETURN
       END
+
+!=============================================================================
+subroutine write_lslice
+  
+  use ModIoDGCPM,     ONLY: cOutputDir
+  use ModMainDGCPM,   ONLY: vrcells, mgridden, vmltcells
+  use ModSizeDGCPM,   ONLY: nthetacells, nphicells
+  use ModTimeDGCPM,   ONLY: CurrentTime
+  use ModIoUnit,      ONLY: io_unit_new
+  use ModTimeConvert, ONLY: TimeType, time_real_to_int
+
+  implicit none
+
+  real          :: radiusSlice = 6.6 ! Radius of slice.
+  real          :: density(nphicells) = 0
+  integer       :: i, j
+  type(TimeType):: TimeNow
+  integer, save :: iUnitSlice, iL=-1
+  logical, save :: IsFirstWrite=.true.
+  character(len=12)  :: StrFmt1
+  character(len=24)  :: StrFmt2
+  character(len=100) :: NameFile
+
+  ! Testing params:
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='write_lslice'
+  !------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  if(IsFirstWrite)then
+     ! Create file name and open.
+     i = floor(radiusSlice)
+     j = floor(100.0*radiusSlice-100.0*i)
+     write(NameFile, "(a,'/slice_',i1.1,'_',i2.2,'.txt')")trim(cOutputDir), i, j
+     iUnitSlice = io_unit_new()
+     open(iUnitSlice, FILE=NameFile, STATUS='REPLACE')
+
+     ! Write header.
+     write(StrFmt1, '(a,i3,a)') '(a, ', nphicells,  'f7.3)'
+     write(iUnitSlice, '(a,f7.4)')'Radial Slice at L=', radiusSlice
+     write(iUnitSlice, StrFmt1) 'MLT: ', vmltcells
+
+     ! Find location of grid L that is within radius of slice.
+     do i=2, nthetacells
+        if( (radiusSlice-vrcells(i)) < 0.0 ) then
+           iL=i-1
+           exit
+        end if
+     end do
+     
+     ! Stop code on invalid radii.
+     if(iL<1) call CON_stop(NameSub// &
+          ': Selected radius outside of code boundary')
+     
+     IsFirstWrite = .false.
+  end if
+
+  ! Linearly interpolate results to selected L.
+  do j=1, nphicells
+     density(j) = (mgridden(iL+1,j)-mgridden(iL,j)) / &
+          (vrcells(iL+1)-vrcells(iL)) * &
+          (radiusSlice-vrcells(iL)) + mgridden(iL,j)
+  end do
+
+  ! Use TimeType to get a well-formatted date/time string.
+  TimeNow%Time = CurrentTime
+  call time_real_to_int(TimeNow)
+
+  ! Write data to file.
+  write(StrFmt2, '(a,i3.3,a)') '(i5,5i3,1x,i3.3,', nphicells, 'f9.3)'
+  write(iUnitSlice, StrFmt2) &
+       TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+       TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+       floor(TimeNow%FracSecond*1000.0), density/100.0**3
+
+end subroutine write_lslice
+
+!=============================================================================

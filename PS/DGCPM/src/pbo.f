@@ -974,7 +974,7 @@ cccccccccccccccccccccccccc
       use ModSizeDGCPM, only: nrcells, nphicells
       use ModMainDGCPM, only: vrcells, vthetacells, vphicells,
      *    mgridn, mgridden, mgridvol, mgridoc, mgridbi, mgridsource,
-     *    EmptyPeriodOpen, EmptyPeriodClosed, FluxMax 
+     *    EmptyPeriodOpen, EmptyPeriodClosed, FluxMax, FillDays
       use ModTimeDGCPM, only: CurrentTime
       use ModFunctionsDGCPM
 
@@ -984,7 +984,7 @@ c Input: delt in seconds
       real pi, rad, re
       integer i, j
       real fmax, dsat, br, f, tden, tn 
-      real FillDays, MinVolume
+      real  MinVolume
       integer MinLocation 
 
 
@@ -1000,9 +1000,8 @@ C necessary to reach the saturation density in FillDays days
 C of constant flow, with the effect of solar zenith angle being
 C taken into account. Fmax is in particles/sec.
 
-!      WRITE(*,*) Vrcells
+      !WRITE(*,*) Vrcells
 
-      FillDays = 1.5
       MinVolume = MaxVal(mgridvol)
       do i=1, nrcells
         do j=1, nphicells

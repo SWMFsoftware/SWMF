@@ -107,7 +107,6 @@ SUBROUTINE GETKPA(i3)
   
   ELSE IF (IKP.EQ.6) THEN ! IKP=6 Use NGDC Index File
     call get_kp(CurrentTime, KP, iError)
-    write(*,*) 'DGCPM: Kp = ', KP
     if (iError /= 0) then
            write(*,*) "Can not find IMF Bz."
             kp=0.

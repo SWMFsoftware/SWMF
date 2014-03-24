@@ -1,5 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 Module ModMainDGCPM
   !\
   ! The main variable defination program for DGCPM 
@@ -24,8 +25,8 @@ Module ModMainDGCPM
   ! Define Output Variable structure
   ! Formerly ModHeidiDGCPM
   real :: vthetacells(nthetacells),vphicells(nphicells)
-  real :: vlzcells(nthetacells),vmltcells(nphicells)
-  real :: vrcells(nthetacells)
+  real :: vlzcells(nthetacells),vmltcells(nphicells)    ! __ and MLT.
+  real :: vrcells(nthetacells)                          ! L-Shell
   real :: potdgcpm(nthetacells,nphicells)
   real :: dendgcpm(nthetacells,nphicells)
   real :: mgridx(nthetacells,nphicells)
@@ -39,7 +40,7 @@ Module ModMainDGCPM
   real :: mgridfluxr(nthetacells,nphicells)
   real :: mgridn(nthetacells,nphicells)
   real :: mgridvol(nthetacells,nphicells)
-  real :: mgridden(nthetacells,nphicells)
+  real :: mgridden(nthetacells,nphicells)               ! Number density
   real :: mgridpot(nthetacells,nphicells)
   real :: mgridb(nthetacells,nphicells)
   real :: mgridbi(nthetacells,nphicells)
@@ -78,6 +79,7 @@ Module ModMainDGCPM
   ! Define Testing Variables for Filling/Emptying Tests
   real :: EmptyPeriodClosed = 3.0
   real :: EmptyPeriodOpen   = 1.0
+  real :: FillDays          = 1.5
   real :: FluxMax           = 2.0E12   
 
   ! Define Output Variable Type

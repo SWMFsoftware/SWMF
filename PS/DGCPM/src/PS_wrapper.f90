@@ -129,6 +129,7 @@ contains
        case("#FILLING")
           call read_var('EmptyPeriodClosed', EmptyPeriodClosed)
           call read_var('EmptyPeriodOpen', EmptyPeriodOpen)
+          call read_var('FillRate', FillDays) 
           call read_var('FluxMax', FluxMax)
        case("#TESTS")
           call read_var('TestFill', TestFill)
@@ -452,11 +453,13 @@ subroutine PS_run(tSimulation,tSimulationLimit)
 !  if (debug .gt. 0) write(*,*) "wresult"
   if (i3.eq.nst) call wresult(1)
 
+  ! Update timing.
   tSimulation = tSimulation+2.*dt
+  CurrentTime = StartTime + tSimulation
   
 ! Log File Writing
-  if (WriteLogFile) then
-    call LogFileDGCPM(cOutputDir, i3)
+  if (WriteLogFile .and. (mod(tSimulation, 300.0)<0.001)) then
+     call LogFileDGCPM(cOutputDir, i3)
   endif
 
 
@@ -464,6 +467,8 @@ subroutine PS_run(tSimulation,tSimulationLimit)
   if (mod(tSimulation, tint) < 1E-5) then
      call wresult(0)
   end if
+
+  if (mod(tSimulation, 300.0)<0.001) call write_lslice
 
   return
 
