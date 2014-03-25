@@ -10,10 +10,10 @@ module ModViscosity
 
   private ! except
 
-  public Viscosity_set_parameters
-  public Viscosity_init
-  public Viscosity_clean
-  public Viscosity_factor
+  public viscosity_read_param
+  public viscosity_init
+  public viscosity_clean
+  public viscosity_factor
   public get_viscosity_tensor
 
   ! Use viscosity or not
@@ -70,11 +70,12 @@ contains
 
   !=========================================================================
 
-  subroutine Viscosity_set_parameters(NameCommand)
+  subroutine viscosity_read_param(NameCommand)
+
     use ModReadParam, ONLY: read_var
     character(len=*), intent(in):: NameCommand
 
-    character(len=*), parameter :: NameSub = "Viscosity_set_parameters" 
+    character(len=*), parameter :: NameSub = "viscosity_read_param" 
     integer :: i
     !------------------------------------------------------------------------
 
@@ -119,7 +120,7 @@ contains
        end select
     end select
 
-  end subroutine Viscosity_set_parameters
+  end subroutine viscosity_read_param
 
   !=========================================================================
 
