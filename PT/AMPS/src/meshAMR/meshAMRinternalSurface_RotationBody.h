@@ -927,7 +927,7 @@ LevelProcessingDone:
 
 
 
-
+     */
    /*
    int cutBlockBinaryBlockConnectivity(FILE *nodesListFile,FILE *connectivityListFile,cBlock3d* bl,long int& nodenoCounter,long int& blocknoCounter) {
       int nedge,idim,i,j,k;
