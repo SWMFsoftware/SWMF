@@ -88,6 +88,10 @@ subroutine MH_set_parameters(TypeAction)
   use ModLocalTimeStep, ONLY: UseLocalTimeStep
   use ModSort, ONLY: sort_quick
 
+  use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
+  use ModPIC, ONLY: pic_read_param
+  use ModFaceBoundary, ONLY: read_face_boundary_param
+
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -99,9 +103,7 @@ subroutine MH_set_parameters(TypeAction)
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
-  use ModViscosity, ONLY: viscosity_set_parameters, UseViscosity, &
-       viscosity_init
-  use ModPIC, ONLY: pic_read_param
+
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
 
@@ -473,12 +475,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeBcBottom',TypeBc_I(5))
         call read_var('TypeBcTop'   ,TypeBc_I(6))    
 
-     case("#INNERBOUNDARY")
-        call read_var('TypeBcInner',TypeBc_I(body1_))
-        ! Backward compatibility 
-        if (TypeBc_I(body1_) == 'coronatoih') TypeBc_I(body1_)= 'buffergrid'
-        if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
-
      case("#TIMESTEPPING", "#RUNGEKUTTA", "#RK")
         call read_var('nStage',  nStage)
         call read_var('CflExpl', Cfl)
@@ -531,7 +527,7 @@ subroutine MH_set_parameters(TypeAction)
         call pic_read_param(NameCommand)
 
      case("#VISCOSITY", "#VISCOSITYREGION")
-        call viscosity_set_parameters(NameCommand)
+        call viscosity_read_param(NameCommand)
 
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
           "#RESISTIVITYREGION", "#RESISTIVEREGION",&
@@ -1690,22 +1686,10 @@ subroutine MH_set_parameters(TypeAction)
            end do
         end if
 
-     case("#POLARBOUNDARY")
-        do iFluid = IonFirst_, nFluid
-           call read_var('PolarNDim',  PolarNDim_I(iFluid))
-           call read_var('PolarTDim',  PolarTDim_I(iFluid))
-           call read_var('PolarUDim',  PolarUDim_I(iFluid))
-        end do
-        call read_var('PolarLatitude', PolarLatitude)
-        PolarTheta = (90-PolarLatitude)*cDegToRad
+     case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
+          "#MAGNETICINNERBOUNDARY")
+        call read_face_boundary_param(NameCommand)
 
-     case("#CPCPBOUNDARY")
-        call read_var('UseCpcpBc', UseCpcpBc)
-        if(UseCpcpBc)then
-           if(nFluid > 1)call stop_mpi("CPCBOUNDARY works for single fluid only")
-           call read_var('Rho0Cpcp',   Rho0Cpcp)
-           call read_var('RhoPerCpcp', RhoPerCpcp)
-        end if
      case("#GRAVITY")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseGravity',UseGravity)
