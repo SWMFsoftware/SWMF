@@ -1084,6 +1084,20 @@ and 'unknown' for the EE, SC, IH and OH components, so the inner boundary
 must be set for these components.
 </command>
 
+<command name="MAGNETICINNERBOUNDARY">
+	 <parameter name="DoReflectInnerB1" type="logical" default="F"/>
+
+#MAGNETICINNERBOUNDARY
+T		DoReflectInnerB1
+
+If DoReflectInnerB1 is true, the B1 part of the magnetic field is reflected
+at the ionosphere type inner boundary conditions, i.e. the radial 
+component of the total magnetic field is forced to coincide with the B0
+value.
+
+The default value is DoReflectInnerB1 false which makes B1 float.
+</command>
+
 <command name="EXTRABOUNDARY">
 	<parameter name="UseExtraBoundary" type="logical" default="F"/>
 	<if expr="$UseExtraBoundary">
