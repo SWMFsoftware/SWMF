@@ -164,7 +164,7 @@
 !=============================================================================
 subroutine write_lslice
   
-  use ModIoDGCPM,     ONLY: cOutputDir
+  use ModIoDGCPM,     ONLY: cOutputDir, iUnitSlice
   use ModMainDGCPM,   ONLY: vrcells, mgridden, vmltcells
   use ModSizeDGCPM,   ONLY: nthetacells, nphicells
   use ModTimeDGCPM,   ONLY: CurrentTime
@@ -177,7 +177,7 @@ subroutine write_lslice
   real          :: density(nphicells) = 0
   integer       :: i, j
   type(TimeType):: TimeNow
-  integer, save :: iUnitSlice, iL=-1
+  integer, save :: iL=-1
   logical, save :: IsFirstWrite=.true.
   character(len=12)  :: StrFmt1
   character(len=24)  :: StrFmt2
@@ -236,5 +236,85 @@ subroutine write_lslice
        floor(TimeNow%FracSecond*1000.0), density/100.0**3
 
 end subroutine write_lslice
+
+!=============================================================================
+subroutine write_mltslice
+
+  use ModIoDGCPM,     ONLY: cOutputDir, nMltSlice, iUnitMlt
+  use ModTimeDGCPM,   ONLY: CurrentTime
+  use ModSizeDGCPM,   ONLY: nrcells, nphicells
+  use ModMainDGCPM,   ONLY: vrcells, mgridden, vmltcells
+  use ModTimeDGCPM,   ONLY: CurrentTime, StartTime
+  use ModIoUnit,      ONLY: io_unit_new
+  use ModTimeConvert, ONLY: TimeType, time_real_to_int
+
+  implicit none
+
+  ! Saved variables: file names, MLT indexes, etc.
+  logical, save :: IsInitiated = .false.
+  integer, save :: iMltIndex(nPhiCells) ! Up to one slice per MLT.
+
+  ! Temporary vars:
+  integer :: i
+  real    :: MltNow = 0.0
+  character(len=1000) :: StringHeader
+  character(len=12)   :: StrFmt1
+  character(len=24)   :: StrFmt2
+  character(len=100)  :: NameMltFiles(nMltSlice)
+  type(TimeType)      :: TimeNow
+
+  ! Testing params:
+  logical :: DoTest, DoTestMe
+  character(len=*), parameter :: NameSub='write_mltslice'
+  !------------------------------------------------------------------------
+  call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+  ! Initiate files, write headers.
+  if(.not. IsInitiated) then
+     ! Slices should align with grid.
+     if(mod(nPhiCells, nMltSlice)>0)then
+        write(*,*)'DGCPM ERROR: nPhiCells not multiple of nMltSlice.'
+        write(*,*)'             Please change PARAM::#MLTSLICE to fix this.'
+        write(*,*)'             nPhiCells, nMltSlice = ', nPhiCells, nMltSlice
+        call CON_stop(NameSub//'Bad nMltSlice choice.')
+     end if
+
+     ! Create space for file units.
+     allocate(iUnitMlt(nMltSlice))
+
+     ! Create common header line.
+     write(StrFmt1, '(a,i3,a)') '(a, ', nrcells, 'f7.3)'
+     write(StringHeader,StrFmt1) 'L = ', vrcells
+
+     ! Find slice indices, get file names, write headers.
+     do i=1, nMltSlice
+        iMltIndex(i) = (nPhiCells/nMltSlice) * (i-1) + 1
+        MltNow = vmltcells(iMltIndex(i))
+        write(NameMltFiles(i), "(a,'/MLT_',i2.2,'_',i2.2,'_t',i10.10,'.txt')") &
+             cOutputDir, floor(MltNow), floor(100.0*(MltNow-floor(MltNow))), &
+             floor(CurrentTime-StartTime)
+        iUnitMlt(i) = io_unit_new()
+        if(DoTestMe) write(*,*)'DGCPM: Opening file ', NameMltFiles(i)
+        open(iUnitMlt(i), FILE=NameMltFiles(i), STATUS='REPLACE')
+        write(iUnitMlt(i), '(a, f5.2)') 'Density (cm-3) at MLT = ', MltNow
+        write(iUnitMlt(i), '(a)') trim(StringHeader)             
+     end do
+     IsInitiated = .true.
+  end if
+
+  ! Use TimeType to get a well-formatted date/time string.
+  TimeNow%Time = CurrentTime
+  call time_real_to_int(TimeNow)
+
+  ! Write data to file.
+  write(StrFmt2, '(a,i3.3,a)') '(i5,5i3,1x,i3.3,', nrcells, 'f9.3)'
+  do i=1, nMltSlice
+     write(iUnitMlt(i), StrFmt2) &
+          TimeNow%iYear, TimeNow%iMonth, TimeNow%iDay, &
+          TimeNow%iHour, TimeNow%iMinute, TimeNow%iSecond, &
+          floor(TimeNow%FracSecond*1000.0), mgridden(:,iMltIndex(i))/100.0**3
+  end do
+
+end subroutine write_mltslice
 
 !=============================================================================

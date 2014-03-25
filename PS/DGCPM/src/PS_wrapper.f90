@@ -122,6 +122,11 @@ contains
           call read_var('OutputInterval',TINT)
           call read_var('OutputType', OutputType)
           call read_var('MagneticType', MagneticType)
+       case("#MLTSLICE")
+          DoMltSlice=.true.
+          call read_var('nMltSlice', nMltSlice)
+          call read_var('DtMltSlice', DtMltSlice)
+          
        case("#RESTART")
           call read_var('WriteRestart', WriteRestart)
        case("#LOG")
@@ -361,16 +366,29 @@ subroutine PS_finalize(tSimulation)
 
   use ModProcPS
   use CON_physics, ONLY: get_time
+  use ModIoDGCPM,  ONLY: iUnitSlice, DoMltSlice, iUnitMlt, nMltSlice
   implicit none
 
   !INPUT PARAMETERS:
   real,     intent(in) :: tSimulation   ! seconds from start time
+
+  ! Other variables:
+  integer :: i
 
   character(len=*), parameter :: NameSub='PS_finalize'
 
   !---------------------------------------------------------------------------
 
   call wresult(0)
+
+  ! Close files:
+  close(iUnitSlice)
+  if(DoMltSlice) then
+     do i=1, nMltSlice
+        close(iUnitMlt(i))
+     end do
+     deallocate(iUnitMlt)
+  end if
 
 end subroutine PS_finalize
 
@@ -457,19 +475,20 @@ subroutine PS_run(tSimulation,tSimulationLimit)
   tSimulation = tSimulation+2.*dt
   CurrentTime = StartTime + tSimulation
   
-! Log File Writing
+  ! Log File Writing
   if (WriteLogFile .and. (mod(tSimulation, 300.0)<0.001)) then
      call LogFileDGCPM(cOutputDir, i3)
   endif
 
 
-! General Output Writing
+  ! General Output Writing
   if (mod(tSimulation, tint) < 1E-5) then
      call wresult(0)
   end if
 
+  ! Slice file writing.
   if (mod(tSimulation, 300.0)<0.001) call write_lslice
-
+  if (DoMltSlice .and. mod(tSimulation,DtMltSlice)<0.001) call write_mltslice
   return
 
 end subroutine PS_run

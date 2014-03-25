@@ -13,13 +13,6 @@ List of PS commands used in the PARAM.in file.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-</commandgroup>
-
-<commandgroup name="STAND ALONE MODE">
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 Options for configuring the model in stand-alone mode (no SWMF-interface.)
 Many of these are required if DGCPM is not called from the SWMF, redundant
 otherwise.
@@ -46,10 +39,10 @@ Set the timestep for the simulation.  Default values are shown.
 !!!!!!!!Physics group!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="FILLING">
-  <parameter name="EmptyPeriodClosed" type="float" min="0" deault="3.0"/>
-  <parameter name="EmptyPeriodOpen"   type="float" min="0" deault="1.0"/>
-  <parameter name="FillDays"          type="float" min="0" deault="1.5"/>
-  <parameter name="FluxMax"           type="float" min="0" deault="2.0E12"/>
+  <parameter name="EmptyPeriodClosed" type="float" min="0" default="3.0"/>
+  <parameter name="EmptyPeriodOpen"   type="float" min="0" default="1.0"/>
+  <parameter name="FillDays"          type="float" min="0" default="1.5"/>
+  <parameter name="FluxMax"           type="float" min="0" default="2.0E12"/>
 
 #FILLING
 3.0     EmptyPeriodClosed
@@ -58,6 +51,31 @@ Set the timestep for the simulation.  Default values are shown.
 2.0E12  FluxMax
 
 Set parameters that control flux tube refilling rate.
+
+</command>
+
+</commandgroup>
+
+<commandgroup name="OUTPUT PARAMETERS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!Output  group!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="MLTSLICE">
+  <parameter name="nMltSlice"  type="integer" min="0"   default="4"/>
+  <parameter name="DtMltSlice" type="float"   min="1.0" default="300.0"/>
+
+#MLTSLICE
+4	nMltSlice
+300.0	DtMltSlice
+
+Save output extracted at a number (\textit{nMltSlice}) of evenly spaced 
+lines of constant MLT at a cadence of \textit{DtMltSlice} seconds.  
+Each slice will have its own
+file.  For example, if \textit{nMltSlice} is set to 4, output will extracted at 
+00, 06, 12, and 18 MLT.  The current limitation is that no interpolation is made,
+therefore the total number of azimuthal cells (default is 120) must be evenly
+divisible by \textit{nMltSlice}.  Default values are shown.
 
 </command>
 

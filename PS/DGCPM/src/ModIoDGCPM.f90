@@ -29,10 +29,6 @@ Module ModIoDGCPM
   parameter (ilame=450, ippcm=5000)
   real lamgam,lambe(ilame),tlame(ilame),ppc(ippcm),tppc(ippcm)
 
-  !----------------------------------------------------------------
-  ! Stuff added by Aaron
-  !----------------------------------------------------------------
-
   integer, parameter        :: iCharLen_     = 100
 
   integer                   :: iOutputUnit_  != UnitTmp_
@@ -50,6 +46,15 @@ Module ModIoDGCPM
   integer :: iUnitOut=STDOUT_
   integer, parameter :: lStringPrefix=6
   character (len=lStringPrefix) :: StringPrefix = '' 
+
+  ! MLTSlice file parameters.
+  logical :: DoMltSlice = .false.
+  integer :: nMltSlice = 4
+  real    :: DtMltSlice = 300.0
+  integer, allocatable :: iUnitMlt(:)
+
+  ! LSlice file parameters.
+  integer :: iUnitSlice
 
 contains
 
