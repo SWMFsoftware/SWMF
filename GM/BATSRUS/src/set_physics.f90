@@ -1,11 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!\
-! set_physics_constants set normalizations, physical constants, 
-! module (EE/SC/IH/OH/GM) dependent physical parameters
-!/
+!
 subroutine set_physics_constants 
+
+  ! set normalizations, physical constants, etc.
 
   use ModProcMH
   use ModAMR
