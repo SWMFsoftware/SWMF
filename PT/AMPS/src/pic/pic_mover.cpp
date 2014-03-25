@@ -571,8 +571,9 @@ int iTemp,jTemp,kTemp;
 	  //the particle is inside the nucleus                                                                                                                  
 	  PIC::ParticleBuffer::DeleteParticle(ptr);
           return _PARTICLE_LEFT_THE_DOMAIN_;
-          goto MovingLoop;
         }
+	goto MovingLoop;
+
         break;
       default:
         exit(__LINE__,__FILE__,"Error: undetermined internal boundary type");
@@ -1885,8 +1886,9 @@ MovingLoop:
 	  //the particle is inside the nucleus                                                                                                                  
 	  PIC::ParticleBuffer::DeleteParticle(ptr);
           return _PARTICLE_LEFT_THE_DOMAIN_;
-          goto MovingLoop;
         }
+        goto MovingLoop;
+
         break;
       default:
         exit(__LINE__,__FILE__,"Error: undetermined internal boundary type");
@@ -2294,8 +2296,9 @@ ProcessPhotoChemistry:
 	//the particle is inside the nucleus                                                                                                                     
 	PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
-        goto MovingLoop;
       }
+      goto MovingLoop;
+
       break;
     default:
       exit(__LINE__,__FILE__,"Error: the option is not recognized");
