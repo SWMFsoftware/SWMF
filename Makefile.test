@@ -17,7 +17,7 @@ test_help:
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
-	@echo "    test_ps                    (run PW/DGCPM test)"
+	@echo "    test_ps                    (run PS/DGCPM test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
@@ -29,11 +29,13 @@ test_help:
 	@echo "    test5                      (run EE-SC test)"
 	@echo "    test6                      (run GM-IE-CRCM test)"
 	@echo "    test7                      (run IH-OH test)"
-	@echo "    test8		      (run multifluid GM-IM coupling test)"
-	@echo "    test9		      (run Chromo SC-IH coupling test)"
-	@echo "    test10		      (run 3T solar wind test)"
-	@echo "    test11		      (run GM-PT coupler test)"
-	@echo "    test12		      (run GM-PC test)"
+	@echo "    test8                      (run multifluid GM-IM coupling test)"
+	@echo "    test9                      (run Chromo SC-IH coupling test)"
+	@echo "    test10                     (run 3T solar wind test)"
+	@echo "    test11                     (run GM-PT coupler test)"
+	@echo "    test12                     (run PC only test)"
+	@echo "    test_pic                   (run GM-IPIC3D test)"
+	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
@@ -1170,7 +1172,7 @@ test12_check:
 		> test12.diff)
 	-@(ls -l test12.diff)
 
-######## test pic coupled with batsrus #########
+######## test IPIC3D.exe coupled with SWMF using GM/BATSRUS #########
 
 test_pic:
 	$(MAKE) test_pic_compile
@@ -1245,7 +1247,7 @@ test_pic_restart_check:
 		> test_pic_restart.diff)
 	ls -l test_pic*.diff
 
-######## test pic coupled with batsrus #########
+######## test IPIC3D coupled with BATSRUS both inside the SWMF #########
 
 test_pic2:
 	$(MAKE) test_pic2_compile
