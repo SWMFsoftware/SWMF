@@ -1,10 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModFaceBoundary
 
   use ModVarIndexes, ONLY: nVar
+  use ModNumConst, ONLY: cDegToRad
 
   implicit none
 
@@ -14,6 +15,7 @@ module ModFaceBoundary
 
   ! Public methods
   public :: set_face_boundary
+  public :: read_face_boundary_param
 
   ! True if only boundaries at resolution changes are updated
   logical, public :: DoResChangeOnly
@@ -41,8 +43,62 @@ module ModFaceBoundary
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
 
-contains
+  ! Local variables
 
+  ! Polar boundary conditions are applied above this latitude only
+  real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
+
+  ! CPCP dependent density function at the inner boundary
+  logical:: UseCpcpBc = .false.
+  real:: Rho0Cpcp = 18.0, RhoPerCpcp = 0.2
+
+  ! Shall we make B1_radial = 0 at the inner boundary?
+  logical:: DoReflectInnerB1 = .false.
+
+contains
+  !============================================================================
+  subroutine read_face_boundary_param(NameCommand)
+
+    use ModReadParam,  ONLY: read_var
+    use ModMain,       ONLY: UseBody2, TypeBc_I, body1_, body2_
+    use ModMultiFluid, ONLY: iFluid, nFluid, IonFirst_
+    use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_face_boundary_param'
+    !----------------------------------------------------------------------
+    select case(NameCommand)
+    case("#INNERBOUNDARY")
+       call read_var('TypeBcInner',TypeBc_I(body1_))
+       ! Backward compatibility 
+       if (TypeBc_I(body1_) == 'coronatoih') TypeBc_I(body1_)= 'buffergrid'
+       if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
+
+    case("#POLARBOUNDARY")
+       do iFluid = IonFirst_, nFluid
+          call read_var('PolarNDim',  PolarNDim_I(iFluid))
+          call read_var('PolarTDim',  PolarTDim_I(iFluid))
+          call read_var('PolarUDim',  PolarUDim_I(iFluid))
+       end do
+       call read_var('PolarLatitude', PolarLatitude)
+       PolarTheta = (90 - PolarLatitude)*cDegToRad
+
+    case("#CPCPBOUNDARY")
+       call read_var('UseCpcpBc', UseCpcpBc)
+       if(UseCpcpBc)then
+          if(nFluid > 1)call stop_mpi(NameSub// &
+               "CPCBOUNDARY works for single fluid only")
+          call read_var('Rho0Cpcp',   Rho0Cpcp)
+          call read_var('RhoPerCpcp', RhoPerCpcp)
+       end if
+    case("#MAGNETICINNERBOUNDARY")
+       call read_var('DoReflectInnnerB1', DoReflectInnerB1)
+    case default
+       call stop_mpi(NameSub//': unknown command = '//NameCommand)
+    end select
+
+  end subroutine read_face_boundary_param
   !============================================================================
   subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
@@ -94,7 +150,7 @@ contains
     call timing_stop(NameSub)
 
   contains
-
+    !=========================================================================
     subroutine write_face_state(String)
 
       character(len=*), intent(in):: String
@@ -136,8 +192,7 @@ contains
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
-    use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, PolarTheta, &
-         UseCpcpBc, Rho0Cpcp, RhoPerCpcp, &
+    use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
     use ModSolarwind, ONLY: get_solar_wind_point
     use CON_axes, ONLY: transform_matrix
@@ -345,7 +400,7 @@ contains
     end do !end k loop
 
   contains
-
+    !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
       use ModPhysics, ONLY : xBody2,yBody2,zBody2
@@ -392,7 +447,7 @@ contains
            (UseUserOuterBCs .and. iBoundary >= 1 ) )then
          iFace = i; jFace = j; kFace = k
          call user_set_face_boundary(VarsGhostFace_V)
-         return
+         RETURN
       end if
 
 
@@ -495,6 +550,9 @@ contains
 
       case('ionosphere', 'polarwind','ionosphereoutflow')
 
+         ! By default apply floating condition
+         VarsGhostFace_V =  VarsTrueFace_V
+
          if(TypeBc == 'polarwind')then
             CoordSm_D = matmul(GmToSmg_DD, FaceCoords_D)
             IsPolarFace = CoordSm_D(z_)**2/sum(CoordSm_D**2) > Cos2PolarTheta
@@ -509,7 +567,7 @@ contains
                call read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
                VarsGhostFace_V = FaceState_V
 
-               ! Apply floating conditions on P and B
+               ! Reapply floating conditions on P and B
                VarsGhostFace_V(iP_I)    = VarsTrueFace_V(iP_I)
                VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
             else
@@ -527,15 +585,13 @@ contains
             end if
          else
             ! Ionosphere type conditions
+
+            ! Use body densities but limit jump
             where(DefaultState_V(1:nVar) > cTiny)
-               ! Use body densities but limit jump
                VarsGhostFace_V = VarsTrueFace_V + &
                     sign(1.0, FaceState_V - VarsTrueFace_V)*   &
                     min( abs(FaceState_V - VarsTrueFace_V)     &
                     ,    DensityJumpLimit*VarsTrueFace_V   )
-            elsewhere
-               ! Apply floating
-               VarsGhostFace_V = VarsTrueFace_V
             end where
 
             ! Apply CPCP dependent density if required
@@ -553,12 +609,6 @@ contains
                     sign(1.0, FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_))*&
                     min(abs(FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_)),&
                     PressureJumpLimit*VarsTrueFace_V(Ppar_))
-            else
-               ! Use floating BC for pressure
-               ! (correct for zero radial velocity)
-               VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
-               if(UseAnisoPressure) &
-                    VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_)
             end if
 
             ! Change sign for velocities (plasma frozen into dipole field)
@@ -611,10 +661,10 @@ contains
                      bUnit_D = bFace_D / B
 
 
-                     ! get the magnetic field at 4000km 
+                     ! get the magnetic field at 4000km = 4e6m
                      call map_planet_field(TimeBc, FaceCoords_D, &
                           TypeCoordSystem//'NORM', &
-                          (4000.0+rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                          (4e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
                           XyzMap_D, iHemisphere)
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
@@ -686,10 +736,10 @@ contains
                      Cosx = sin(TheTmp)*sin(DaTmp) + &
                           cos(TheTmp)*cos(DaTmp)*cos(DtTmp)
 
-                     ! get the magnetic field at 1000km
+                     ! get the magnetic field at 1000km = 1e6m
                      call map_planet_field(TimeBc, FaceCoords_D, &
                           TypeCoordSystem//'NORM', &
-                          (1000.0+rPlanet_I(Earth_))/rPlanet_I(Earth_), &
+                          (1e6 + rPlanet_I(Earth_))/rPlanet_I(Earth_), &
                           XyzMap_d, iHemisphere)
                      call get_planet_field(TimeBc, XyzMap_D, &
                           TypeCoordSystem//'NORM', bFace_D)
@@ -764,6 +814,14 @@ contains
                end if ! polar cap region
             end if ! ionosphereoutflow type of innerboundary
 
+         end if
+
+         if(DoReflectInnerB1)then
+            ! Change B_ghost so that the radial component of Bghost + Btrue = 0
+            ! Brefl = 2*r*(B.r)/r^2
+            Brefl_D = 2*FaceCoords_D*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)&
+                 /    sum(FaceCoords_D**2)
+            VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - Brefl_D
          end if
 
       case('buffergrid')
