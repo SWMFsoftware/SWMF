@@ -572,7 +572,6 @@ int iTemp,jTemp,kTemp;
 	  PIC::ParticleBuffer::DeleteParticle(ptr);
           return _PARTICLE_LEFT_THE_DOMAIN_;
         }
-	goto MovingLoop;
 
         break;
       default:
@@ -1887,7 +1886,6 @@ MovingLoop:
 	  PIC::ParticleBuffer::DeleteParticle(ptr);
           return _PARTICLE_LEFT_THE_DOMAIN_;
         }
-        goto MovingLoop;
 
         break;
       default:
@@ -2297,7 +2295,6 @@ ProcessPhotoChemistry:
 	PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
       }
-      goto MovingLoop;
 
       break;
     default:
