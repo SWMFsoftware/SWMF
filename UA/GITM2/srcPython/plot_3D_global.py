@@ -53,6 +53,7 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import MultipleLocator
 from matplotlib.ticker import FormatStrFormatter
+from matplotlib.transforms import Bbox
 import datetime as dt
 import gitm_plot_rout as gpr
 
@@ -642,8 +643,6 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
 
     if earth:
         pf = False
-        nc = True
-        sc = False
 
     if not rl:
         nc = False
@@ -688,15 +687,18 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
     # Adjust plot sizes
     pwidth = 0.5 * (psn[2] + pss[2])
     if earth:
-        psn[0] = psn[0] + (pwidth - psn[2]) * 0.75
+        psn[0] = psn[0] + (pwidth - psn[2]) * 0.75 - .05
     else:
         psn[0] = psn[0] - (pwidth - psn[2]) * 0.25
     psn[2] = pwidth
     pss[0] = psn[0] + psn[2] + pwidth * 0.2
     pss[2] = pwidth
 
+    if earth:
+        pss[0] = pss[0] + 0.05
+
     axs.set_position(pss)
-    axn.set_position(psn)    
+    axn.set_position(psn)
 
     return(axn, mn, axs, ms)
 # End plot_nsglobal_subfigure
@@ -856,7 +858,10 @@ def plot_snapshot_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         bp[3] = pss[3] + .85
         bp[2] = bp[2] / 1.8 
 
-        pss[0] = pss[0] - .12
+        if earth is True:
+            pss[0] = pss[0] - .08
+        else:
+            pss[0] = pss[0] - .12
         pss[1] = pss[1] - .02
 
         psn[0] = psn[0] - .05
@@ -1370,7 +1375,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                                 zscale, zname, zunits)
         bp = list(cbar.ax.get_position().bounds)
         cbp = list(cax.get_position().bounds)
-        
+
         if(cloc == 't'):
             cp[1] = bp[1]
             cp[3] = cbp[3]
