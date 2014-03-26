@@ -419,7 +419,7 @@ contains
       ! indexes of the true and ghost cells on the two sides of the face
       integer, intent(in):: iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
 
-      real, parameter:: PressureJumpLimit=0.0, DensityJumpLimit=0.1
+      real, parameter:: DensityJumpLimit=0.1
       real, parameter:: LatitudeCap = 55.0
 
       real:: uRot_D(MaxDim), uIono_D(MaxDim)
@@ -587,6 +587,7 @@ contains
             ! Ionosphere type conditions
 
             ! Use body densities but limit jump
+            ! Pressure gets set too (!). It will be overwritten below
             where(DefaultState_V(1:nVar) > cTiny)
                VarsGhostFace_V = VarsTrueFace_V + &
                     sign(1.0, FaceState_V - VarsTrueFace_V)*   &
@@ -595,21 +596,11 @@ contains
             end where
 
             ! Apply CPCP dependent density if required
-            if(UseCpcpBc .and. UseIe) &
-                 VarsGhostFace_V(Rho_) = RhoCpcp
+            if(UseCpcpBc .and. UseIe) VarsGhostFace_V(Rho_) = RhoCpcp
 
-            if(PressureJumpLimit > 0.0) then
-               ! Use body pressures but limit jump
-               VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I) + &
-                    sign(1.0, FaceState_V(iP_I) - VarsTrueFace_V(iP_I))*&
-                    min(abs(FaceState_V(iP_I) - VarsTrueFace_V(iP_I)),&
-                    PressureJumpLimit*VarsTrueFace_V(iP_I))
-               if(UseAnisoPressure) &
-                    VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_) + &
-                    sign(1.0, FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_))*&
-                    min(abs(FaceState_V(Ppar_) - VarsTrueFace_V(Ppar_)),&
-                    PressureJumpLimit*VarsTrueFace_V(Ppar_))
-            end if
+            ! Set pressures now  (what about electron pressure?)
+            VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
+            if(UseAnisoPressure) VarsGhostFace_V(Ppar_) = VarsTrueFace_V(Ppar_)
 
             ! Change sign for velocities (plasma frozen into dipole field)
             VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
