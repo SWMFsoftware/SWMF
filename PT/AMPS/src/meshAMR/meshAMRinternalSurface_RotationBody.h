@@ -477,7 +477,7 @@ public:
      if (SurfaceCurve(r0Surface,x0Surface_LocalFrame)==false) return false;
      if (SurfaceCurve(r1Surface,x1Surface_LocalFrame)==false) return false;
 
-     double a,b,c,alphaCone,x0Cone,t1,t2;
+     double a,b,c,alphaCone,t1,t2;
      double l[3],d,sqrt_d,EPS;
      int idim;
 
@@ -501,7 +501,6 @@ public:
      x0LocalFrame[2]=(x0LinearSegment_GlobalFrame[0]-OriginPosition[0])*e2[0]+(x0LinearSegment_GlobalFrame[1]-OriginPosition[1])*e2[1]+(x0LinearSegment_GlobalFrame[2]-OriginPosition[2])*e2[2];
 
      if (fabs(alphaCone)>1.0E-20) {
-       x0Cone=x0Surface_LocalFrame+r0Surface/alphaCone;
 
        double t1 = alphaCone * alphaCone;
        double t2 = pow(lLocalFrame[0], 0.2e1);
