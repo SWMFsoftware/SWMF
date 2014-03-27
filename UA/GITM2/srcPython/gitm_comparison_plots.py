@@ -41,26 +41,30 @@ import datetime as dt
 import gitm_plot_rout as gpr
 import plot_3D_global as p3g
 
-def extract_data_matched_arrays(data_dict, bad_value=np.nan):
+def extract_data_matched_arrays(dkey, data_dict, bad_value=np.nan):
     '''
     Extract points from matched data arrays that do not have the specified
     bad values.
 
-    Input: data_dict = dictionary of lists or numpy arrays with the same
+    Input: dkey      = key to check for bad values
+           data_dict = dictionary of lists or numpy arrays with the same
                        number of data values
            bad_value = bad value (default=[np.nan])
 
     Output: good_dict = dictionary of lists with only good, matched values
     '''
-    # Extract the data, removing any instances where the first data key has
-    # the bad value
+    # Extract the data, removing any instances where the specified data key has
+    # the bad values
 
     data_key = data_dict.keys()
     if np.isnan(bad_value):
-        good_index = [i for i,l in enumerate(data_dict[data_key[0]])
+        good_index = [i for i,l in enumerate(data_dict[dkey])
                       if not np.isnan(l)]
+    elif type(bad_value) is bool:
+        good_index = [i for i,l in enumerate(data_dict[dkey])
+                      if not bad_value]
     else:
-        good_index = [i for i,l in enumerate(data_dict[data_key[0]])
+        good_index = [i for i,l in enumerate(data_dict[dkey])
                       if l != bad_value]
 
     # If not all keys have the same amount of data, remove trailing elements
@@ -78,8 +82,12 @@ def extract_data_matched_arrays(data_dict, bad_value=np.nan):
 	    else:
                 if np.isnan(bad_value):
                     badlist = [k for k in dkey if np.isnan(data_dict[k][igood])]
+                elif type(bad_value) is bool:
+                    badlist = [k for k in dkey if data_dict[k][igood]
+                               is bad_value]
                 else:
-                    badlist = [k for k in dkey if data_dict[k][igood] == bad_value]
+                    badlist = [k for k in dkey if data_dict[k][igood]
+                               == bad_value]
 
                 if len(badlist) > 0:
                     bad_index.append(i)
@@ -217,7 +225,7 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                        diff_coff=True, figname=None, draw=True, latlim1=90,
                        latlim2=-90, linc=6, tlon=90, meq=False, earth=False,
                        map_list=[], faspect=True, term_datetime=None,
-                       *args, **kwargs):
+                       extra_lines=False, *args, **kwargs):
     '''
     Creates three plots of a specified type, one showing the observations, one
     showing the GITM data, and one showing the difference between the two.
@@ -274,6 +282,12 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map.  Only used if earth=True.
+           extra_lines   = Plot a specified lines (good for showing regional
+                           boundaries) (default=False).  Provide a list of lists
+                           which have the format shown:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
 
     Output: f = handle to figure
     '''
@@ -379,6 +393,21 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         else:
             mn = None
             ms = None
+
+        # Check for boundary lines to plot
+        eline_north = False
+        eline_south = False
+        if type(extra_lines) is list:
+            if len(extra_lines) >= 1:
+                eline_north = extra_lines[0]
+
+                if len(extra_lines) >= 2:
+                    eline_south = extra_lines[1]
+                else:
+                    print "Only one boundary provided, plotting in north"
+            else:
+                print "No boundaries provided, better to declare as False"
+
         # Output the observations as a scatter plot
         axn1,mn,axs1,ms = p3g.plot_nsglobal_subfigure(f, 3, 0, lat_data,
                                                       lon_data, obs_data,
@@ -388,33 +417,26 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                       tlon=tlon, rl=False,
                                                       tl=False, bcolor=bcolor,
                                                       earth=earth, mn=mn, ms=ms,
-                                                      faspect=faspect,
-                                                      term_datetime=term_datetime)
+                                                      faspect=faspect, term_datetime=term_datetime,
+                                                      extra_line_n=eline_north,
+                                                      extra_line_s=eline_south)
         # Output the gitm data as a contour after ensuring that the GITM array
         # isn't padded to include unrealistic latitudes 
         (i, imin) = gpr.find_lon_lat_index(gdata, 0.0, -90.0, "degrees")
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
 
-        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gitm_name, gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, title=False, cb=True, tlon=tlon, tl=False, bcolor=bcolor, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime)
+        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gitm_name, gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, title=False, cb=True, tlon=tlon, tl=False, bcolor=bcolor, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime, extra_line_n=eline_north, extra_line_s=eline_south)
 
-        axn1_dim = list(axn1.axes.get_position().bounds)
-        axs1_dim = list(axs1.axes.get_position().bounds)
-        axn2_dim = list(axn2.axes.get_position().bounds)
-        axs2_dim = list(axs2.axes.get_position().bounds)
-        axn2_dim[0] = axn1_dim[0]
-        axs2_dim[0] = axs1_dim[0]
-        axn2_dim[2] = axn1_dim[2]
-        axs2_dim[2] = axs1_dim[2]
-        axn2.axes.set_position(axn2_dim)
-        axs2.axes.set_position(axs2_dim)
         # Output the differences as a scatter plot
         p3g.plot_nsglobal_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
                                     diff_min, diff_color, False, True,
                                     tlon=tlon, rl=False, bcolor=bcolor,
                                     earth=earth, mn=mn, ms=ms, faspect=faspect,
-                                    term_datetime=term_datetime)
+                                    term_datetime=term_datetime,
+                                    extra_line_n=eline_north,
+                                    extra_line_s=eline_south)
         map_list = list([mn, ms])
     elif plot_type.find("rect") >= 0:
         if len(map_list) == 1:
@@ -527,7 +549,8 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         f.suptitle(title, size="medium")
 
     # Adjust subplot locations
-    plt.subplots_adjust(left=.15)
+    if plot_type.find("rect") >= 0 or plot_type.find("polar") >= 0:
+        plt.subplots_adjust(left=.15)
 
     # Draw to screen if desired
     if draw:
