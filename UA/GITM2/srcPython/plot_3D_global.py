@@ -1018,7 +1018,7 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
         m.drawmeridians(np.arange(0,361,60))
 
         if type(term_datetime) is dt.datetime:
-            m.nightshade(term_datetime, alpha=.1)
+            m.nightshade(term_datetime, alpha=.2)
     elif bcolor is not None:
         # Change the background color
         ax.patch.set_facecolor(bcolor)
@@ -1248,7 +1248,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
         if type(term_datetime) is dt.datetime:
             try:
-                m.nightshade(term_datetime, alpha=.1)
+                m.nightshade(term_datetime, alpha=.2)
             except AttributeError:
                 print rout_name, "AttributeError in Terminator shading"
 
