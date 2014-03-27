@@ -413,8 +413,8 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
                                                       lon_data, obs_data,
                                                       obs_name, obs_scale,
                                                       obs_units, zmax, zmin,
-                                                      data_color, True, True,
-                                                      tlon=tlon, rl=False,
+                                                      data_color, title=True, cb=True,
+                                                      elat=latlim1, tlon=tlon, rl=False,
                                                       tl=False, bcolor=bcolor,
                                                       earth=earth, mn=mn, ms=ms,
                                                       faspect=faspect, term_datetime=term_datetime,
@@ -426,13 +426,13 @@ def plot_net_gitm_comp(plot_type, lon_data, lat_data, obs_data, obs_name,
         (i, imax) = gpr.find_lon_lat_index(gdata, 0.0, 90.0, "degrees")
         imax += 1 
 
-        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gitm_name, gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, title=False, cb=True, tlon=tlon, tl=False, bcolor=bcolor, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime, extra_line_n=eline_north, extra_line_s=eline_south)
+        axn2,mn,axs2,ms = p3g.plot_nsglobal_subfigure(f, 3, 1, np.array(gdata['dLat'][:,imin:imax,ialt]), np.array(gdata['dLon'][:,imin:imax,ialt]), np.array(gdata[gitm_key][:,imin:imax,ialt]), gitm_name, gdata[gitm_key].attrs["scale"], gdata[gitm_key].attrs["units"], zmax, zmin, data_color, title=False, cb=True, elat=latlim1, tlon=tlon, tl=False, bcolor=bcolor, earth=earth, mn=mn, ms=ms, data_type="contour", term_datetime=term_datetime, extra_line_n=eline_north, extra_line_s=eline_south)
 
         # Output the differences as a scatter plot
         p3g.plot_nsglobal_subfigure(f, 3, 2, lat_data, lon_data, diff_data,
                                     diff_name, diff_scale, diff_units, diff_max,
-                                    diff_min, diff_color, False, True,
-                                    tlon=tlon, rl=False, bcolor=bcolor,
+                                    diff_min, diff_color, title=False, cb=True,
+                                    elat=latlim1, tlon=tlon, rl=False, bcolor=bcolor,
                                     earth=earth, mn=mn, ms=ms, faspect=faspect,
                                     term_datetime=term_datetime,
                                     extra_line_n=eline_north,
