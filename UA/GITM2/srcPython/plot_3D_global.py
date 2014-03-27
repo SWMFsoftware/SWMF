@@ -1018,7 +1018,7 @@ def plot_rectangular_3D_global(ax, lat_data, lon_data, z_data, zname, zscale,
         m.drawmeridians(np.arange(0,361,60))
 
         if type(term_datetime) is dt.datetime:
-            m.nightshade(term_datetime)
+            m.nightshade(term_datetime, alpha=.1)
     elif bcolor is not None:
         # Change the background color
         ax.patch.set_facecolor(bcolor)
@@ -1248,7 +1248,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
         if type(term_datetime) is dt.datetime:
             try:
-                m.nightshade(term_datetime)
+                m.nightshade(term_datetime, alpha=.1)
             except AttributeError:
                 print rout_name, "AttributeError in Terminator shading"
 
@@ -1276,6 +1276,23 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
 
         for i, label in enumerate(lats):
             ax.text(x[i], y[i], "%.0f$^\circ$" % (label))
+ 
+        # Add magnetic equator, if desired
+        if meq is True:
+            meq_lon, meq_lat = gpr.add_geomagnetic_equator()
+            m.plot(meq_lon, meq_lat, "-k", latlon=True) 
+
+        # Add a specified line, if desired
+        if type(extra_line) is list:
+            if len(extra_line) >= 2:
+                stylestring="k:"
+                if len(extra_line) > 2:
+                    stylestring = extra_line[2]
+
+                m.plot(extra_line[0], extra_line[1], stylestring, latlon=True)
+            else:
+                print "Unable to plot extra line, missing data"
+
 
     else:
         # Change the background color
