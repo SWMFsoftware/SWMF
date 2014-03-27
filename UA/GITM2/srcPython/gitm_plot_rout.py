@@ -707,16 +707,22 @@ def match_cindi_key(in_key, out_type="CINDI"):
             return None
 # END match_cindi_key
 
-def add_geomagnetic_equator(ax, color="k", linestyle="-", markerstyle=None):
+def add_geomagnetic_equator(ax=None, color="k", linestyle="-",
+                            markerstyle=None):
     '''
     A routine to add a line along the geomagnetic equator to a plot.  Color,
     linestyle, and markerstyle can be specified using matplotlib symbols.  The
-    location of the equator was determined using IGRF-10
+    location of the equator was determined using IGRF-10.  If no axis is input,
+    nothing will be plotted, but the latitude and longitude lists will still be
+    returned.
 
     Input: ax          = axis handle
            color       = Output color for equator line (default is black)
            linestyle   = Linestyle for equator line (default is solid)
            markerstyle = Marker style (default is None)
+
+    Output: (meq_lon, meq_lat) = Lists of the longitude and latitude coordinates
+                                 of the geomagnetic equator
     '''
 
     meq_lon = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0,
@@ -735,15 +741,16 @@ def add_geomagnetic_equator(ax, color="k", linestyle="-", markerstyle=None):
                -10.5, -8.8, -6.5, -3.8, -1.0, 1.9, 4.4, 6.4, 8.0, 9.2, 9.9,
                10.4, 10.7, 10.7,]
 
-    stylestring = "{:s}".format(color)
-    if markerstyle:
-        stylestring = "{:s}{:s}".format(stylestring, markerstyle)
-    if linestyle:
-        stylestring = "{:s}{:s}".format(stylestring, linestyle)
+    if ax is not None:
+        stylestring = "{:s}".format(color)
+        if markerstyle:
+            stylestring = "{:s}{:s}".format(stylestring, markerstyle)
+        if linestyle:
+            stylestring = "{:s}{:s}".format(stylestring, linestyle)
 
-    ax.plot(meq_lon, meq_lat, stylestring)
+        ax.plot(meq_lon, meq_lat, stylestring)
 
-    return
+    return(meq_lon, meq_lat)
 # END add_geomagnetic_equator
 
 try:
