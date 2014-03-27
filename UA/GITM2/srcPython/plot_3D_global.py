@@ -53,7 +53,6 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import MultipleLocator
 from matplotlib.ticker import FormatStrFormatter
-from matplotlib.transforms import Bbox
 import datetime as dt
 import gitm_plot_rout as gpr
 
@@ -62,7 +61,8 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
                          figname=None, draw=True, nlat=90, slat=-90, linc=6,
                          tlon=90, data_type="scatter", bcolor="#D7DBE0",
                          meq=False, earth=False, m=None, faspect=True,
-                         term_datetime=False, *args, **kwargs):
+                         term_datetime=False, extra_line=False,
+                         *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -99,6 +99,10 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map. (default=False)
+           extra_line    = Plot a specified line in (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
                            
     Output: f = figure handle
             m = map handle
@@ -157,8 +161,9 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
                                         zcolor, center_lat=nlat, edge_lat=slat,
                                         linc=linc, top_lon=tlon, title=title,
                                         bcolor=bcolor, earth=earth, m=m,
-                                        data_type=data_type,
-                                        term_datetime=term_datetime)
+                                        data_type=data_type, meq=meq,
+                                        term_datetime=term_datetime,
+                                        extra_line=extra_line)
     else:
         print "ERROR: unknown input type [", plot_type, "]\n"
         return
@@ -176,7 +181,7 @@ def plot_single_3D_image(plot_type, lat_data, lon_data, z_data, zname, zscale,
     if figname is not None:
         plt.savefig(figname)
 
-    return f, m
+    return f, ax, m
 
 def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                   zunits, zmax=None, zmin=None,
@@ -184,33 +189,35 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                   draw=True, plat=90, elat=0, linc=3,
                                   tlon=90, bcolor="#D7DBE0", earth=False,
                                   mn=None, ms=None, data_type="scatter",
-                                  term_datetime=False, *args, **kwargs):
+                                  term_datetime=False, extra_line_n=False,
+                                  extra_line_s=False, *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
-    Input: lat_data  = numpy array containing the latitudes (in degrees North)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-           lon_data  = numpy array contaiing the longitudes (in degrees East)
-                       This can be 1D or 2D for scatter plots and must be 2D
-                       for contours
-           z_data    = numpy array containing the z variable data
-                       This should be 1D for scatter plots and 2D for contours
-           zname     = Descriptive name of z variable data
-           zscale    = Scaling type (linear/exponential) for z variable data
-           zunits    = Descriptive units for z variable data
-           zmax      = maximum z range (default None)
-           zmin      = mininimum z range (default None)
-           zcolor    = Color scale for plotting the z data.  If not specified,
-                       will be determined by the z range. (default=None)
-           title     = plot title
-           figname   = file name to save figure as (default is none)
-           draw      = draw to screen? (default is True)
-           plat      = polar latitude limit (degrees North, default +/-90)
-           elat      = equatorial latitude limit (degrees North, defalut 0)
-           linc      = number of latitude tick incriments (default 6)
-           tlon      = longitude to place on the polar dial top (degrees east,
-                       default 90)
+    Input: lat_data      = numpy array containing the latitudes (in degrees
+                           North) This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           lon_data      = numpy array contaiing the longitudes (in degrees
+                           East). This can be 1D or 2D for scatter plots and
+                           must be 2D for contours
+           z_data        = numpy array containing the z variable data.  This
+                           should be 1D for scatter plots and 2D for contours
+           zname         = Descriptive name of z variable data
+           zscale        = Scaling type (linear/exponential) for z variable data
+           zunits        = Descriptive units for z variable data
+           zmax          = maximum z range (default None)
+           zmin          = mininimum z range (default None)
+           zcolor        = Color scale for plotting the z data.  If not
+                           specified, will be determined by the z range.
+                           (default=None)
+           title         = plot title
+           figname       = file name to save figure as (default is none)
+           draw          = draw to screen? (default is True)
+           plat          = polar latitude limit (degrees North, default +/-90)
+           elat          = equatorial latitude limit (degrees North, defalut 0)
+           linc          = number of latitude tick incriments (default 6)
+           tlon          = longitude to place on the polar dial top (degrees
+                           east, default 90)
            bcolor        = Background color, or None (default="#D7DBE0")
            earth         = include Earth continent outlines (default False)
            mn            = Northern latitude map handle (default=None)
@@ -219,6 +226,14 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map. (defualt=False)
+           extra_line_n  = Plot a specified line in north (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
+           extra_line_s  = Plot a specified line in south (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
 
     Output: f         = figure handle
             handle[1] = Northern latitude map handle
@@ -238,7 +253,9 @@ def plot_single_nsglobal_3D_image(lat_data, lon_data, z_data, zname, zscale,
                                      linc=linc, tlon=tlon, bcolor=bcolor,
                                      earth=earth, mn=mn, ms=ms,
                                      data_type=data_type,
-                                     term_datetime=term_datetime)
+                                     term_datetime=term_datetime,
+                                     extra_line_n=extra_line_n,
+                                     extra_line_s=extra_line_s)
 
     if handle:
         # Output the plot
@@ -354,7 +371,7 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
                         zcolor=None, title=None, figname=None, draw=True,
                         nlat=90, slat=-90, linc=6, tlon=90, data_type="scatter",
                         bcolor="#D7DBE0", meq=False, earth=False, faspect=True,
-                        term_datetime=False, *args, **kwargs):
+                        term_datetime=False, extra_line=False, *args, **kwargs):
     '''
     Creates a rectangular or polar map projection plot for a specified latitude
     range.
@@ -398,6 +415,10 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map.  (default=False)
+           extra_line    = Plot a specified line in (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
     '''
 
     m = None
@@ -515,7 +536,8 @@ def plot_mult_3D_slices(plot_type, isub, subindex, lat_data, lon_data, z_data,
                                             tloc="l", tl=xl, rl=yl,
                                             bcolor=bcolor, earth=earth, m=m,
                                             data_type=data_type,
-                                            term_datetime=term_datetime)
+                                            term_datetime=term_datetime,
+                                            extra_line=extra_line)
         else:
             print "ERROR: unknown input type [", plot_type, "]\n"
             return
@@ -568,7 +590,8 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                             zcolor=None, title=True, cb=True, plat=90, elat=0,
                             linc=3, tlon=90, rl=True, tl=True, bcolor="#D7DBE0",
                             earth=False, mn=None, ms=None, data_type="scatter",
-                            term_datetime=False, *args, **kwargs):
+                            term_datetime=False, extra_line_n=False,
+                            extra_line_s=False, *args, **kwargs):
     '''
     Creates a figure with two polar map projections for the northern and 
     southern ends of a specified latitude range.
@@ -607,6 +630,14 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map.  (default=False)
+           extra_line_n  = Plot a specified line in north (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
+           extra_line_s  = Plot a specified line in south (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
     '''
     # Initialize the z variable limits
     if(zmin is None):
@@ -643,6 +674,8 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
 
     if earth:
         pf = False
+        nc = True
+        sc = False
 
     if not rl:
         nc = False
@@ -665,7 +698,8 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                                      top_lon=tlon, cb=cb, cloc="l",
                                      title=ntitle, rl=nc, tl=tl, bcolor=bcolor,
                                      earth=earth, m=mn, data_type=data_type,
-                                     term_datetime=term_datetime)
+                                     term_datetime=term_datetime,
+                                     extra_line=extra_line_n)
     psn = list(axn.get_position().bounds)
 
     # Southern Plot
@@ -681,13 +715,14 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
                                      top_lon=tlon, cb=False, title=stitle,
                                      rl=sc, tl=tl, bcolor=bcolor, earth=earth,
                                      m=ms, data_type=data_type,
-                                     term_datetime=term_datetime)
+                                     term_datetime=term_datetime,
+                                     extra_line=extra_line_s)
     pss = list(axs.get_position().bounds)
 
     # Adjust plot sizes
     pwidth = 0.5 * (psn[2] + pss[2])
     if earth:
-        psn[0] = psn[0] + (pwidth - psn[2]) * 0.75 - .05
+        psn[0] = psn[0] + (pwidth - psn[2]) * 0.75 - 0.05
     else:
         psn[0] = psn[0] - (pwidth - psn[2]) * 0.25
     psn[2] = pwidth
@@ -698,7 +733,7 @@ def plot_nsglobal_subfigure(f, nsub, isub, lat_data, lon_data, z_data, zname,
         pss[0] = pss[0] + 0.05
 
     axs.set_position(pss)
-    axn.set_position(psn)
+    axn.set_position(psn)    
 
     return(axn, mn, axs, ms)
 # End plot_nsglobal_subfigure
@@ -1101,8 +1136,8 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                          center_lat=90, edge_lat=0, linc=6, top_lon=90, cb=True,
                          cloc="r", title = None, tloc="t", tl = True, rl = True,
                          bcolor="#D7DBE0", earth=False, m=None,
-                         data_type="scatter", term_datetime=False,
-                         *args, **kwargs):
+                         data_type="scatter", meq=False, term_datetime=False,
+                         extra_line=False, *args, **kwargs):
     '''
     Creates a single polar projection, with the latitude center and range
     determined by the input.
@@ -1141,9 +1176,14 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
            earth      = include Earth continent outlines (default is False)
            m          = Earth map handle.  (default=None)
            data_type  = scatter or contour (default=scatter)
+           meq           = Include the geomagnetic equator?
            term_datetime = Include the solar terminator by shading the night
                            time regions?  If so, include a datetime object
                            with the UT for this map.  (default=False)
+           extra_line    = Plot a specified line (default=False) eg:
+                           [x np.array, y np.array, style string (eg 'k-')]
+                           where x is in degrees longitude and y is in 
+                           degrees latitude
 
     Output: con = Contour plot handle
             m   = Earth map handle (or None if earth=False and not specified)
@@ -1272,6 +1312,10 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                              c=z_data, cmap=get_cmap(zcolor), norm=norm,
                              vmin=zmin, vmax=zmax, edgecolors="none", s=15)
             cax = con.axes
+
+        # get minimum value of r for tics
+        rmin = ax.get_rmin()
+
         ax.set_theta_offset(toff)
 
         if(edge_lat < center_lat):
@@ -1279,7 +1323,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
         else:
             ledge = center_lat
 
-        rtics = [ax.get_rmin() + rwidth * (x) for x in range(linc+1)]
+        rtics = [rmin + rwidth * (x) for x in range(linc+1)]
         rlabels = map(str, (map(int, [ledge + rwidth * (x)
                                       for x in range(linc+1)])))
 
@@ -1301,19 +1345,55 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
         else:
             rtics = range(-edge_lat, -center_lat, -rwidth)
             ax.set_rgrids(rtics, labels=rlabels, angle=lon)
-             
-
-        ax.set_rmax(max(rtics))
-        ax.set_rmin(min(rtics))
-        ax.set_rticks(rtics)
+            
+        # Add magnetic equator, if desired
+        if meq is True:
+            meq_lon, meq_lat = gpr.add_geomagnetic_equator()
+            meq_theta = np.array([l * np.pi / 180.0 for l in meq_lon])
+            meq_r = np.array([l * csign for l in meq_lat])
+            meq_r = np.array(gpr.center_polar_cap(abs(center_lat),
+                                                  abs(edge_lat), meq_r))
+            ax.plot(meq_theta, meq_r, "-k") 
 
         # Add solar terminator, if desired
         if type(term_datetime) is dt.datetime:
             try:
-                gpr.add_solar_terminator(term_datetime, ax=ax)
-                gpr.add_subsolar_point(term_datetime, ax=ax, style="*")
+                # Add the solar terminator
+                (tlon, tlat) = gpr.add_solar_terminator(term_datetime)
+                tlon = np.radians(tlon)
+                tlat *= csign
+                tlat = np.array(gpr.center_polar_cap(abs(center_lat),
+                                                     abs(edge_lat), tlat))
+                ax.plot(tlon, tlat, "-k")
+                print tlat
+
+                # Add the subsolar point
+                (sslon, sslat) = gpr.add_subsolar_point(term_datetime)
+                sslon *= (np.pi / 180.0)
+                sslat = gpr.center_polar_cap(abs(center_lat), abs(edge_lat),
+                                             csign * sslat)
+                ax.plot([sslon], [sslat], marker="*", ms=5,
+                        markerfacecolor='none', markeredgecolor='k')
             except:
                 print "Unable to add solar terminator without PySolar"
+
+        if type(extra_line) is list:
+            if len(extra_line) >= 2:
+                x = np.radians(extra_line[0])
+                y = np.array(gpr.center_polar_cap(abs(center_lat),
+                                                  abs(edge_lat),
+                                                  (csign*extra_line[1])))
+                stylestring="k:"
+                if len(extra_line) > 2:
+                    stylestring = extra_line[2]
+
+                ax.plot(x, y, stylestring)
+            else:
+                print "Unable to plot extra line, missing data"
+
+        ax.set_rmax(max(rtics))
+        ax.set_rmin(min(rtics))
+        ax.set_rticks(rtics)
 
     # Configure axis.
     if tl:
@@ -1375,7 +1455,7 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                                 zscale, zname, zunits)
         bp = list(cbar.ax.get_position().bounds)
         cbp = list(cax.get_position().bounds)
-
+        
         if(cloc == 't'):
             cp[1] = bp[1]
             cp[3] = cbp[3]
