@@ -1382,7 +1382,6 @@ def plot_polar_3D_global(ax, nsub, lat_data, lon_data, z_data, zname, zscale,
                 tlat = np.array(gpr.center_polar_cap(abs(center_lat),
                                                      abs(edge_lat), tlat))
                 ax.plot(tlon, tlat, "-k")
-                print tlat
 
                 # Add the subsolar point
                 (sslon, sslat) = gpr.add_subsolar_point(term_datetime)
