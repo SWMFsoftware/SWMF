@@ -44,6 +44,9 @@ module BATL_geometry
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
   logical, public:: IsGenRadius       = .false. ! stretched radial coordinate
 
+  ! Use geometry transform desighed for 5th order accuracy FD method.
+  logical, public:: UseHighFDGeometry
+
   ! Periodicity of the domain per dimension
   logical, public:: IsPeriodic_D(MaxDim) = .false.
 
@@ -52,6 +55,9 @@ module BATL_geometry
 
   ! Index names for Cartesian components (not limited by nDim)
   integer, parameter, public:: x_=1, y_=2, z_=3
+
+  ! Index names for general coordinate.
+  integer, parameter, public:: Xi_=1, Eta_=2, Zeta_=3
 
   ! The following index names will be set in init_geometry
   integer, public:: r_=-1, Phi_=-1, Theta_=-1, Lon_=-1, Lat_=-1
@@ -67,7 +73,8 @@ contains
 
   !=========================================================================
 
-  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, RgenIn_I)
+  subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, RgenIn_I, &
+       UseFDFaceFluxIn)
 
     use ModNumConst,       ONLY: i_DD
     use ModCoordTransform, ONLY: rot_matrix_z
@@ -75,6 +82,7 @@ contains
     character(len=*), optional, intent(in):: TypeGeometryIn
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
     real,             optional, intent(in):: RgenIn_I(:)
+    logical,          optional, intent(in):: UseFDFaceFluxIn
 
     ! Initialize geometry for BATL
     !
@@ -125,6 +133,10 @@ contains
     ! Grid is Cartesian (even in RZ geometry)
     IsCartesianGrid = IsCartesian .or. IsRzGeometry
 
+    if(present(UseFDFaceFluxIn)) then
+       if(UseFDFaceFluxIn .and. .not. IsCartesian) UseHighFDGeometry = .true.
+    endif
+
     ! Set up a rotation matrix
     if(IsRotatedCartesian)then
        ! Rotate around the Z axis with atan(3/4)
@@ -150,7 +162,7 @@ contains
     if(IsGenRadius)then
        if(.not.present(RgenIn_I)) call CON_stop(NameSub// &
             ': RgenIn_I argument is missing for TypeGeometry=' //TypeGeometry)
- 
+
        ! Store general radial coordinate table
        nRgen = size(RgenIn_I)
        allocate(LogRgen_I(nRgen))

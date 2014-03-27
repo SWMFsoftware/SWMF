@@ -22,7 +22,8 @@ OBJECTS = \
         BATL_pass_node.o \
         BATL_pass_face.o \
 	BATL_size.o \
-	BATL_tree.o
+	BATL_tree.o \
+	BATL_high_order.o
 
 ALLOBJECTS = \
 	${OBJECTS} \

@@ -7,6 +7,7 @@ module BATL_grid
   use BATL_size
   use BATL_tree
   use BATL_geometry
+  use BATL_high_order
 
   implicit none
 
@@ -38,7 +39,9 @@ module BATL_grid
        CellVolume_GB(:,:,:,:),  &    ! Cell volume for general grids
        Xyz_DGB(:,:,:,:,:),      &    ! Cartesian cell centers coords
        Xyz_DNB(:,:,:,:,:),      &    ! Cartesian node coordinates
-       FaceNormal_DDFB(:,:,:,:,:,:)  ! Normal face area vector
+       FaceNormal_DDFB(:,:,:,:,:,:),&! Normal face area vector
+       CellMetrice_DDG(:,:,:,:,:), & ! Metrics at cell center. Like: dx/dXi.
+       CellCoef_DDGB(:,:,:,:,:,:)    ! Cartesian to non-Cartesian transform coef
 
   logical, public:: IsNodeBasedGrid = .true.
 
@@ -68,7 +71,7 @@ contains
     if(.not. DoInitializeGrid) RETURN
 
     DoInitializeGrid = .false.
-    
+
     UseRadius = .true.
     if(present(UseRadiusIn)) UseRadius = UseRadiusIn
 
@@ -370,74 +373,84 @@ contains
        end if
 
        if(IsNodeBasedGrid)then
+          if(UseHighFDGeometry) then
+             ! This is not actually 'node based'. 
+             ! This is a FD correction. It is high-order and can preserve 
+             ! free-stream solution. [Yan Jiang et al, Free-stream preserving
+             ! finite difference schemes on curvilinear meshes]
+             call correct_geometry_high_order
+          else 
+             ! Calculate face area vectors assuming flat faces
+             if(nDim == 2)then
+                ! Calculate face vectors as 90 degree rotations of edge vectors
+                do j = 1, nJ; do i = 1, nI+1
+                   FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
+                        Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
+                   FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
+                        Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
 
-          ! Calculate face area vectors assuming flat faces
-          if(nDim == 2)then
-             ! Calculate face vectors as 90 degree rotations of edge vectors
-             do j = 1, nJ; do i = 1, nI+1
-                FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
-                     Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
-                FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
-                     Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
+                   CellFace_DFB(1,i,j,1,iBlock) = &
+                        sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
 
-                CellFace_DFB(1,i,j,1,iBlock) = &
-                     sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
+                end do; end do
+                do j = 1, nJ+1; do i = 1, nI
+                   FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
+                        Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
+                   FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
+                        Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
 
-             end do; end do
-             do j = 1, nJ+1; do i = 1, nI
-                FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
-                     Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
-                FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
-                     Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
+                   CellFace_DFB(2,i,j,1,iBlock) = &
+                        sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
 
-                CellFace_DFB(2,i,j,1,iBlock) = &
-                     sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
+                end do; end do
+             else
 
-             end do; end do
-          else
+                ! Calculate face area vectors as cross products of diagonals
+                do k = 1, nK; do j = 1, nJ
+                   Di = 1
+                   if(present(DoFaceOnly).and.j>1.and.j<nJ.and.k>1.and.k<nK) &
+                        Di=nI
+                   do i = 1, nI+1, Di
+                      FaceNormal_DDFB(:,1,i,j,k,iBlock) = 0.5*cross_product( &
+                           Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
+                           Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
 
-             ! Calculate face area vectors as cross products of diagonals
-             do k = 1, nK; do j = 1, nJ
-                Di = 1
-                if(present(DoFaceOnly).and.j>1.and.j<nJ.and.k>1.and.k<nK) Di=nI
-                do i = 1, nI+1, Di
-                   FaceNormal_DDFB(:,1,i,j,k,iBlock) = 0.5*cross_product( &
-                        Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
-                        Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
+                      CellFace_DFB(1,i,j,k,iBlock) = &
+                           sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
 
-                   CellFace_DFB(1,i,j,k,iBlock) = &
-                        sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
+                   end do
+                end do; end do
+                do k = 1, nK; do i = 1, nI 
+                   Dj = 1
+                   if(present(DoFaceOnly).and.i>1.and.i<nI.and.k>1.and.k<nK) &
+                        Dj=nJ
+                   do j = 1, nJ+1, Dj
+                      FaceNormal_DDFB(:,2,i,j,k,iBlock) = 0.5*cross_product( &
+                           Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
+                           Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
 
+                      CellFace_DFB(2,i,j,k,iBlock) = &
+                           sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
+
+                   end do; end do
                 end do
-             end do; end do
-             do k = 1, nK; do i = 1, nI 
-                Dj = 1
-                if(present(DoFaceOnly).and.i>1.and.i<nI.and.k>1.and.k<nK) Dj=nJ
-                do j = 1, nJ+1, Dj
-                   FaceNormal_DDFB(:,2,i,j,k,iBlock) = 0.5*cross_product( &
-                        Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
-                        Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
+                do j = 1, nJ; do i = 1, nI
+                   Dk = 1
+                   if(present(DoFaceOnly).and.i>1.and.i<nI.and.j>1.and.j<nJ) &
+                        Dk=nK
+                   do k = 1, nK+1, Dk; 
+                      FaceNormal_DDFB(:,3,i,j,k,iBlock) = 0.5*cross_product( &
+                           Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
+                           Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
 
-                   CellFace_DFB(2,i,j,k,iBlock) = &
-                        sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
+                      CellFace_DFB(3,i,j,k,iBlock) = &
+                           sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
 
-                end do; end do
-             end do
-             do j = 1, nJ; do i = 1, nI
-                Dk = 1
-                if(present(DoFaceOnly).and.i>1.and.i<nI.and.j>1.and.j<nJ) Dk=nK
-                do k = 1, nK+1, Dk; 
-                   FaceNormal_DDFB(:,3,i,j,k,iBlock) = 0.5*cross_product( &
-                        Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
-                        Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
-
-                   CellFace_DFB(3,i,j,k,iBlock) = &
-                        sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
-
-                end do; end do
-             end do
-          end if
-       end if
+                   end do; end do
+                end do
+             end if ! if (iDim == 2)
+          endif ! if (UseHighFDGeometry)
+       end if ! if (IsNodeBasedGrid)
 
        ! Cell volumes for grids with no analytic formulas
        if(IsRoundCube)then
@@ -548,7 +561,6 @@ contains
        if(allocated(rCell_I))     deallocate(rCell_I, rFace_I)
        if(allocated(dCosTheta_I)) deallocate(dCosTheta_I)
        if(allocated(Xyz_DN))      deallocate(Xyz_DN)
-
     end if
 
   contains
@@ -559,7 +571,7 @@ contains
            SinPhi_I(:), CosPhi_I(:), SinPhiFace_I(:), CosPhiFace_I(:)
 
       real:: Phi, Area, d_D(MaxDim)
-           
+
       integer:: i, j, k
 
       character(len=*), parameter:: NameSub = 'calc_analytic_face'
@@ -738,9 +750,19 @@ contains
 
     end function volume4
 
+    !==========================================================================
+    subroutine correct_geometry_high_order
+
+      call calc_metrics(iBlock)
+      call coef_cart_to_noncart(iBlock)
+      call calc_face_normal(iBlock)
+
+    end subroutine correct_geometry_high_order
+
   end subroutine create_grid_block
 
-  !==========================================================================
+  !===========================================================================
+
   subroutine average_grid_node(iBlock, nVar, Var_VN)
 
     integer, intent(in)   :: iBlock
@@ -1284,6 +1306,213 @@ contains
   end subroutine interpolate_grid
 
   !===========================================================================
+
+  subroutine calc_face_normal(iBlock)
+    integer, intent(in):: iBlock
+    integer:: iFace, jFace, kFace
+    integer:: iDimCart
+    integer:: nIFace, nJFace, nKFace
+    !----------------------------------------------------------------------
+
+    nIFace = nI + 1; nJFace = nJ + 1; nKFace = nK + 1
+    do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nIFace
+       do iDimCart = 1, nDim
+          FaceNormal_DDFB(iDimCart,1,iFace,jFace,kFace,iBlock) = &
+               calc_face_value(CellCoef_DDGB(Xi_,iDimCart, &
+               iFace-3:iFace+2,jFace,kFace,iBlock))               
+       enddo
+
+       CellFace_DFB(1,iFace,jFace,kFace,iBlock) = &
+            sqrt(sum(FaceNormal_DDFB(:,1,iFace,jFace,kFace,iBlock)**2))
+    enddo; enddo; enddo
+
+    do kFace = 1, nK; do jFace = 1, nJFace; do iFace = 1, nI 
+       do iDimCart = 1, nDim
+          FaceNormal_DDFB(iDimCart,2,iFace,jFace,kFace,iBlock) = &
+               calc_face_value(CellCoef_DDGB(Eta_,iDimCart, &
+               iFace,jFace-3:jFace+2,kFace,iBlock))          
+       enddo
+
+       CellFace_DFB(2,iFace,jFace,kFace,iBlock) = &
+            sqrt(sum(FaceNormal_DDFB(:,2,iFace,jFace,kFace,iBlock)**2))
+    enddo; enddo; enddo
+
+    if(nK > 1) then
+       do kFace = 1, nKFace; do jFace = 1, nJ; do iFace = 1, nI
+          do iDimCart = 1, nDim
+             FaceNormal_DDFB(iDimCart,3,iFace,jFace,kFace,iBlock) = &
+                  calc_face_value(CellCoef_DDGB(Zeta_, iDimCart, &
+                  iFace,jFace,kFace-3:kFace+2,iBlock))
+          enddo
+
+          CellFace_DFB(3,iFace,jFace,kFace,iBlock) = &
+               sqrt(sum(FaceNormal_DDFB(:,3,iFace,jFace,kFace,iBlock)**2))
+       enddo; enddo; enddo
+    endif
+
+  end subroutine calc_face_normal
+  !===========================================================================
+  subroutine coef_cart_to_noncart(iBlock)
+
+    ! Calc dx3/dx1 at cell center, where x3=hat(Xi,Eta,Zeta), x1=x,y,z.
+
+    integer, intent(in):: iBlock
+    integer:: iDimCart, iDimNonCart, iSub1, iSub2, iCart1, iCart2, i, j, k
+    real:: CartValue1_I(1:7), CartValue2_I(1:7)
+    !----------------------------------------------------------------------
+
+    if(nK > 1) then ! nDim == 3
+
+       !  ~       ~        ~
+       ! dXi/dx, dXi/dy, dXi/dz
+       iDimNonCart = 1
+       iSub1 = mod(iDimNonCart, nDim) + 1
+       iSub2 = mod(iDimNonCart+1, nDim) + 1
+       do iDimCart = 1, nDim
+          do k = 1, nK; do j = 1, nJ; do i = MinI, MaxI
+             iCart1 = mod(iDimCart, nDim) + 1
+             iCart2 = mod(iDimCart+1, nDim) + 1
+
+             CartValue1_I = CellMetrice_DDG(iCart1,iSub1,i,j,k-3:k+3)* &
+                  Xyz_DGB(iCart2,i,j,k-3:k+3,iBlock)
+             CartValue2_I = CellMetrice_DDG(iCart1,iSub2,i,j-3:j+3,k)* &
+                  Xyz_DGB(iCart2,i,j-3:j+3,k,iBlock)
+
+             CellCoef_DDGB(iDimNonCart,iDimCart,i,j,k,iBlock) = &
+                  calc_center_first_derivate(CartValue1_I, &
+                  DxIn = CellSize_DB(iSub2,iBlock)) - &
+                  calc_center_first_derivate(CartValue2_I, &
+                  DxIn = CellSize_DB(iSub1,iBlock))
+          enddo; enddo; enddo
+       enddo
+       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
+            CellSize_DB(iSub2,iBlock)
+
+
+       !  ~         ~        ~
+       ! dEta/dx, dEta/dy, dEta/dz
+       iDimNonCart = 2
+       iSub1 = mod(iDimNonCart, nDim) + 1
+       iSub2 = mod(iDimNonCart+1, nDim) + 1
+       do iDimCart = 1, nDim
+          do k = 1, nK; do j = MinJ, MaxJ; do i = 1, nI
+             iCart1 = mod(iDimCart, nDim) + 1
+             iCart2 = mod(iDimCart+1, nDim) + 1
+
+             CartValue1_I = CellMetrice_DDG(iCart1,iSub1,i-3:i+3,j,k)* &
+                  Xyz_DGB(iCart2,i-3:i+3,j,k,iBlock)
+             CartValue2_I = CellMetrice_DDG(iCart1,iSub2,i,j,k-3:k+3)* &
+                  Xyz_DGB(iCart2,i,j,k-3:k+3,iBlock)
+
+             CellCoef_DDGB(iDimNonCart,iDimCart,i,j,k,iBlock) = &
+                  calc_center_first_derivate(CartValue1_I, &
+                  DxIn = CellSize_DB(iSub2,iBlock)) - &
+                  calc_center_first_derivate(CartValue2_I, &
+                  DxIn = CellSize_DB(iSub1,iBlock))
+          enddo; enddo; enddo
+       enddo
+       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
+            CellSize_DB(iSub2,iBlock)
+
+
+       !   ~         ~         ~
+       ! dZeta/dx, dZeta/dy, dZeta/dz
+       iDimNonCart = 3
+       iSub1 = mod(iDimNonCart, nDim) + 1
+       iSub2 = mod(iDimNonCart+1, nDim) + 1
+       do iDimCart = 1, nDim
+          do k = MinK, MaxK; do j = 1, nJ; do i = 1, nI
+             iCart1 = mod(iDimCart, nDim) + 1
+             iCart2 = mod(iDimCart+1, nDim) + 1
+
+             CartValue1_I = CellMetrice_DDG(iCart1,iSub1,i,j-3:j+3,k)* &
+                  Xyz_DGB(iCart2,i,j-3:j+3,k,iBlock)
+             CartValue2_I = CellMetrice_DDG(iCart1,iSub2,i-3:i+3,j,k)* &
+                  Xyz_DGB(iCart2,i-3:i+3,j,k,iBlock)
+
+             CellCoef_DDGB(iDimNonCart,iDimCart,i,j,k,iBlock) = &
+                  calc_center_first_derivate(CartValue1_I, &
+                  DxIn = CellSize_DB(iSub2,iBlock)) - &
+                  calc_center_first_derivate(CartValue2_I, &
+                  DxIn = CellSize_DB(iSub1,iBlock))
+          enddo; enddo; enddo
+       enddo
+       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
+            CellSize_DB(iSub2,iBlock)
+
+    elseif(nJ > 1) then ! nDim == 2       
+       CellCoef_DDGB(Xi_,x_,:,:,:,iBlock)  =   &
+            CellMetrice_DDG(y_,Eta_,:,:,:)*CellSize_DB(Eta_,iBlock)
+       CellCoef_DDGB(Xi_,y_,:,:,:,iBlock)  = &
+            - CellMetrice_DDG(x_,Eta_,:,:,:)*CellSize_DB(Eta_,iBlock)
+       CellCoef_DDGB(Eta_,x_,:,:,:,iBlock) = &
+            - CellMetrice_DDG(y_,Xi_,:,:,:)*CellSize_DB(Xi_,iBlock)
+       CellCoef_DDGB(Eta_,y_,:,:,:,iBlock) = &
+            CellMetrice_DDG(x_,Xi_,:,:,:)*CellSize_DB(Xi_,iBlock)
+    else
+       write(*,*) &
+            'Warning: high-order does not available for 1D non-cartesian case!'
+    endif
+
+  end subroutine coef_cart_to_noncart
+  !==========================================================================
+
+  subroutine calc_metrics(iBlock) 
+
+    ! Should be called from create_grid_block.
+    ! Calc dx1/dx2 at cell center, where x1=x,y,z and x2=Xi,Eta,Zeta.
+
+    integer, intent(in):: iBlock
+    integer:: i, j, k, iDimCart, iDimNonCart
+    real:: CellValue_I(7)
+    !----------------------------------------------------------------------
+    if(.not.allocated(CellMetrice_DDG)) then
+       allocate(CellMetrice_DDG(nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
+            CellCoef_DDGB(nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
+       CellMetrice_DDG = 0.0; CellCoef_DDGB = 0.0
+    endif
+    ! dx/dXi, dy/dXi, dz/dXi
+    iDimNonCart = 1
+    do iDimCart = 1, nDim
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = 1, nI
+          CellValue_I = Xyz_DGB(iDimCart,i-3:i+3,j,k,iBlock)
+
+          CellMetrice_DDG(iDimCart,iDimNonCart,i,j,k) = &
+               calc_center_first_derivate(CellValue_I,&
+               DxIn=CellSize_DB(iDimNonCart,iBlock))
+       enddo; enddo; enddo ! i, j, k
+    enddo ! iDimCart
+
+    ! dx/dEta, dy/dEta, dz/dEta
+    iDimNonCart = 2
+    do iDimCart = 1, nDim
+       do k = MinK, MaxK; do j = 1, nJ; do i = MinI, MaxI
+          CellValue_I = Xyz_DGB(iDimCart,i,j-3:j+3,k,iBlock)
+
+          CellMetrice_DDG(iDimCart,iDimNonCart,i,j,k) = &
+               calc_center_first_derivate(CellValue_I,&
+               DxIn=CellSize_DB(iDimNonCart,iBlock))
+       enddo; enddo; enddo ! i, j, k
+    enddo ! iDimCart
+
+    if(nK >1) then
+       ! dx/dZeta, dy/dZeta, dz/dZeta,
+       iDimNonCart = 3
+       do iDimCart = 1, nDim
+          do k = 1, nK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             CellValue_I = Xyz_DGB(iDimCart,i,j,k-3:k+3,iBlock)
+
+             CellMetrice_DDG(iDimCart,iDimNonCart,i,j,k) = &
+                  calc_center_first_derivate(CellValue_I,&
+                  DxIn=CellSize_DB(iDimNonCart,iBlock))
+          enddo; enddo; enddo ! i, j, k
+       enddo ! iDimCart
+    endif
+  end subroutine calc_metrics
+  !==========================================================================
 
   subroutine test_grid
 

@@ -14,7 +14,8 @@ module ModFaceFlux
   use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
   use ModGeometry,   ONLY: true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
-       Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB
+       Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
+       UseHighFDGeometry
 
   use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, B0_DGB ! input: face/cell centered B0
 
@@ -939,7 +940,7 @@ contains
     iDimFace   = iDim
 
     ! For generalized coordinates the values below are calculated cell by cell
-    if(.not.IsCartesian) RETURN    
+    if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN    
 
     ! Calculate face normal and area vectors for Cartesian grid
     Normal_D = 0.0; Normal_D(iDim) = 1.0
@@ -2848,8 +2849,7 @@ subroutine calc_simple_cell_flux(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB,FluxCenter_VGD
     use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
     use ModMain, ONLY: UseDtFixed, Cfl, Dt
-    use BATL_lib, ONLY: nDim
-
+    use BATL_lib, ONLY: nDim, Xi_, Eta_, Zeta_, CellCoef_DDGB
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iDim, iFluid
@@ -2859,10 +2859,14 @@ subroutine calc_simple_cell_flux(iBlock)
 
     ! These are calculated but not used          
     real:: Un_I(nFluid+1), En, Pe
+
+    real, allocatable:: Flux_VD(:,:)
+    integer:: iFlux
     !------------------------------------------------------------------------
 
     if(.not.allocated(FluxCenter_VGD)) allocate( &
          FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
+    if(.not.allocated(Flux_VD)) allocate(Flux_VD(nFlux,nDim))
 
     UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0         
     DoTestCell = .false.
@@ -2893,11 +2897,33 @@ subroutine calc_simple_cell_flux(iBlock)
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
                      Conservative_V, Flux_V, Un_I, En, Pe)
-                FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
+                if(.not. UseHighFDGeometry) then
+                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
+                else
+                   ! 'Area' is included in the transform coef: 
+                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V                  
+                endif
              end do
           end do
        end do
     end do
+
+    if(UseHighFDGeometry) then 
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          do iFlux = 1, nFlux
+             Flux_VD(iFlux,:) = FluxCenter_VGD(iFlux,i,j,k,:)
+          enddo
+
+          do iFlux = 1, nFlux
+             FluxCenter_VGD(iFlux,i,j,k,x_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Xi_,:,i,j,k,iBlock))
+             FluxCenter_VGD(iFlux,i,j,k,y_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Eta_,:,i,j,k,iBlock))
+             if(nK > 1) FluxCenter_VGD(iFlux,i,j,k,z_) = &
+                  sum(Flux_VD(iFlux,:)*CellCoef_DDGB(Zeta_,:,i,j,k,iBlock))
+          enddo
+       enddo; enddo; enddo
+    endif
   end subroutine calc_simple_cell_flux
   !===========================================================================
 
@@ -3419,7 +3445,7 @@ subroutine calc_simple_cell_flux(iBlock)
 
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
-    use ModHighOrder,  ONLY: correct_face_value
+    use BATL_lib,  ONLY: correct_face_value
     integer, intent(in):: iDim
 
     integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz

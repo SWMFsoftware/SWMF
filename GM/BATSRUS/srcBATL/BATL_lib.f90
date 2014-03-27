@@ -16,6 +16,7 @@ module BATL_lib
   use BATL_pass_cell
   use BATL_pass_face
   use BATL_pass_node
+  use BATL_high_order
 
   implicit none
 
@@ -28,7 +29,7 @@ module BATL_lib
   public:: regrid_batl
 
   logical, public:: IsBatlInitialized = .false.
-
+  
   ! Inherited from BATL_size
   public:: MaxDim, nDim, nDimAmr, iDimAmr_D, iDim_, jDim_, kDim_
   public:: MaxBlock, nBlock
@@ -65,6 +66,8 @@ module BATL_lib
   public:: IsLogRadius, IsGenRadius, nRgen, LogRgen_I
   public:: IsPeriodic_D, IsNodeBasedGrid
   public:: xyz_to_coord, coord_to_xyz, radius_to_gen, gen_to_radius
+  public:: Xi_, Eta_, Zeta_
+  public:: UseHighFDGeometry
 
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB
@@ -72,6 +75,7 @@ module BATL_lib
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid, average_grid_node
+  public:: CellMetrice_DDG, CellCoef_DDGB
 
   ! Inherited from BATL_amr
   public:: BetaProlong
@@ -96,11 +100,14 @@ module BATL_lib
   ! Inherited from BATL_pass_node
   public:: message_pass_node
 
+  ! Inherited from BATL_high_order
+  public:: correct_face_value, calc_center_first_derivate, calc_face_value
+
 contains
   !============================================================================
   subroutine init_batl(CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
-       rGenIn_I, UseUniformAxisIn,user_amr_geometry)
+       rGenIn_I, UseUniformAxisIn,user_amr_geometry,UseFDFaceFluxIn)
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -132,6 +139,7 @@ contains
 
     ! Logical for uniform grid in the Phi direction around the axis
     logical,          optional, intent(in):: UseUniformAxisIn
+    logical,          optional, intent(in):: UseFDFaceFluxIn
 
     ! Initialize the block-adaptive tree and the domain. 
     !
@@ -160,7 +168,7 @@ contains
     if(IsBatlInitialized) RETURN
 
     call init_tree(MaxBlockIn)
-    call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I)
+    call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I, UseFDFaceFluxIn)
     call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
     if(present(UseUniformAxisIn))then
        ! IsAnyAxis is set by init_grid.

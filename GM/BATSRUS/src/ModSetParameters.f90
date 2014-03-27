@@ -1118,7 +1118,7 @@ subroutine MH_set_parameters(TypeAction)
            enddo
            call sort_smooth_indicator
         endif
-
+        
         ! Set default values.
         if(UseFDFaceFlux) then
            if(UseCweno) then
@@ -2907,7 +2907,8 @@ contains
          TypeGeometryBatl, TypeBc_I(1:2*nDim-1:2) == 'periodic', &
          proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
-         user_amr_geometry=user_specify_refinement)
+         user_amr_geometry=user_specify_refinement, &
+         UseFDFaceFluxIn=UseFDFaceFlux)
 
     if(IsRotatedCartesian)then
        ! Fix x1, x2 .. z2 to include the full rotated domain
