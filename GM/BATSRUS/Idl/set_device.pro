@@ -1,22 +1,28 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;^CFG COPYRIGHT UM
-pro set_device, psfile, port=port, land=land, eps=eps, $
+pro set_device, psfile, port=port, land=land, square=square, eps=eps, $
                 psfont=psfont, percent=percent
 
   ; Parameter defaults and conversions
 
   if not keyword_set(psfile) then psfile = 'idl.ps'
+  common SETDEVICE, NameFile
+  NameFile = psfile
+
   orientation = 'normal'
-  if keyword_set(port) then orientation='port'
-  if keyword_set(land) then orientation='land'
+  if keyword_set(land)   then orientation='land'
+  if keyword_set(port)   then orientation='port'
+  if keyword_set(square) then orientation='square'
+
   if not keyword_set(percent) then percent = 1.0		$
   else if percent gt 1.0 then percent = float(percent)/100.0
 
   if n_elements(psfont) eq 0  then psfont = 28
 
-  common SETDEVICE, NameFile
-  NameFile = psfile
+  ; If file extension is .eps it is an EPS file for sure
+  if stregex(NameFile,'.eps$',/b) then eps = 1
 
   ; Set sizes and offsets
   case (orientation) of
@@ -39,6 +45,13 @@ pro set_device, psfile, port=port, land=land, eps=eps, $
         ys = 9.5*percent
         xoff = (8.5-xs)/2.0
         yoff = (11.0-ys)/2.0
+        land=0
+     end
+     'square': begin
+        xs = 7.5*percent
+        ys = 7.5*percent
+        xoff = (8.5-xs)/2.0
+        yoff = (8.5-xs)/2.0
         land=0
      end
   endcase
