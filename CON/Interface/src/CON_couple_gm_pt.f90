@@ -68,6 +68,10 @@ contains
     Coupler%iCompTarget = PT_
     Coupler%iCompSource = GM_
     
+    ! GM sends all its variables to PT. Take information from Grid_C
+    Coupler%NameVar = Grid_C(Coupler%iCompSource)%NameVar
+    Coupler%nVar    = Grid_C(Coupler%iCompSource)%nVar
+
     call couple_points_init(Coupler)
 
   end subroutine couple_gm_pt_init
@@ -214,13 +218,9 @@ contains
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! GM sends all its variables to PT. Take information from Grid_C
-    Coupler%NameVar = Grid_C(Coupler%iCompSource)%NameVar
-    Coupler%nVar    = Grid_C(Coupler%iCompSource)%nVar
-
     if(DoTest)write(*,*)NameSub,' starting iProc=',Coupler%iProcWorld
 
-    call couple_points(Coupler,GM_get_for_pt, PT_put_from_gm, PT_get_grid_info, GM_get_grid_info)
+    call couple_points(Coupler, GM_get_for_pt, PT_put_from_gm, PT_get_grid_info, GM_get_grid_info, GM_find_points)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',Coupler%iProcWorld
   end subroutine couple_gm_pt

@@ -101,32 +101,18 @@ contains
          .and.     i_proc0(Coupler%iCompSource)     == i_proc0(Coupler%iCompTarget) &
          .and.     i_proc_last(Coupler%iCompSource) == i_proc_last(Coupler%iCompTarget)
 
-    !! Check if nDim in GM is the same as nDimPt
-    !! nDim info could be stored in Grid_C!
-    !if(is_proc(Coupler%iCompSource)) call GM_get_grid_info(nDim, iGridGm, iDecompGm)
-    !if(.not.IsSameLayout) call MPI_bcast(&
-    !     nDim, 1, MPI_INTEGER, iProc0Pt, Coupler%iCommSourceTarget, iError)
-    !if(is_proc0(Coupler%iCompTarget))then
-    !   call PT_get_grid_info(nDimPt, iGridPt, iDecompTarget)
-    !   if(nDim /= nDimPt)then
-    !      write(*,*) NameSub,' ERROR: nDim, nDimPt=', nDim, nDimPt
-    !      call CON_stop(NameSub// &
-    !          ': Source and target have different number of spatial dimensions')
-    !   endif
-    !end if
-
     write(*,*)NameSub,': Done initializing coupler'
 
   end subroutine couple_points_init
 
   !===================================================================
 
-  subroutine couple_points(Coupler, source_get, target_put, source_get_grid_info, target_get_grid_info)
+  subroutine couple_points(Coupler, Source_get, Target_put, Source_get_grid_info, Target_get_grid_info, Source_find_points)
 
     type(CouplePointsType), intent(inout) :: Coupler
 
     interface 
-       subroutine target_put(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+       subroutine Target_put(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
          implicit none
          ! List of variables
@@ -147,9 +133,9 @@ contains
          ! Order of data
          integer, intent(in), optional:: iPoint_I(nPoint)
 
-       end subroutine target_put
+       end subroutine Target_put
 
-       subroutine source_get(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       subroutine Source_get(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
             Data_VI)
          logical,          intent(in):: IsNew   ! true for new point array
          character(len=*), intent(in):: NameVar ! List of variables
@@ -159,7 +145,7 @@ contains
 
          real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
          real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
-       end subroutine source_get
+       end subroutine Source_get
 
        subroutine Source_get_grid_info(nDim, iGrid, iDecomp)
          integer, intent(out) :: nDim, iGrid, iDecomp
@@ -168,6 +154,24 @@ contains
        subroutine Target_get_grid_info(nDim, iGrid, iDecomp)
          integer, intent(out) :: nDim, iGrid, iDecomp
        end subroutine Target_get_grid_info
+
+       subroutine Source_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+         implicit none
+
+         ! dimension of position vectors
+         integer, intent(in) :: nDimIn             
+
+         ! number of positions
+         integer, intent(in) :: nPoint                
+
+         ! positions
+         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) 
+
+         ! processor owning position
+         integer, intent(out):: iProc_I(nPoint)       
+
+       end subroutine Source_find_points
 
     end interface
 
@@ -250,7 +254,7 @@ contains
           ! Find processors that own the target positions in source
           allocate(iProcTarget_I(Coupler%nPointTarget))
 
-          call GM_find_points(Coupler%nDim, Coupler%nPointTarget, Coupler%PosTarget_DI, iProcTarget_I)
+          call Source_find_points(Coupler%nDim, Coupler%nPointTarget, Coupler%PosTarget_DI, iProcTarget_I)
 
           ! Order points according to the owner processor indexes
           if(allocated(Coupler%iPointTarget_I)) deallocate(Coupler%iPointTarget_I)
@@ -328,7 +332,7 @@ contains
           ! Find processors that own the target positions in source
           allocate(iProcSource_I(Coupler%nPointSource))
           if(is_proc(Coupler%iCompSource))&
-               call GM_find_points(Coupler%nDim, Coupler%nPointSource, Coupler%PosSource_DI, iProcSource_I)
+               call Source_find_points(Coupler%nDim, Coupler%nPointSource, Coupler%PosSource_DI, iProcSource_I)
           deallocate(Coupler%PosSource_DI)
 
           ! send owner processor indexes from source to target
