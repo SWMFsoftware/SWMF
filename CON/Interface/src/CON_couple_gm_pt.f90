@@ -32,18 +32,6 @@ module CON_couple_gm_pt
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
   !EOP
 
-  ! Communicator and logicals to simplify message passing and execution
-  logical       :: UseMe = .true.
-
-  ! Check if the GM and PT processors coincide
-  logical:: IsSameLayout
-
-  ! Proc index inside SWMF
-  integer:: iProcWorld
-
-  ! Router communicator info
-  integer:: iCommGmPt, nProcGmPt, iProcGmPt, iProc0Gm, iProc0Pt, nProcCommon
-
   type(CouplePointsType) :: Coupler
   
 contains
@@ -52,9 +40,6 @@ contains
   !IROUTINE: couple_gm_pt_init - initialize GM-PT couplings
   !INTERFACE:
   subroutine couple_gm_pt_init
-
-    integer:: iError
-    !integer:: nDimPt
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='couple_gm_pt_init'
@@ -161,60 +146,11 @@ contains
     ! List of variables to pass
     character(len=lNameVar):: NameVar
 
-    ! Grid index
-    integer:: iDecompLastGm = -1, iDecompLastPt = -1
-!    integer:: iGridGm, iDecompGm, iGridPt, iDecompPt
-
-    ! Number of local points for PT and GM cores
-!    integer:: nPointPt = 0, nPointGm = 0
-    
-    ! Number of data points found on GM component
-!    integer:: nData = 0
-
-    ! Number of points that belong to a given processor of the OTHER component
-!    integer, allocatable, save:: nPointGm_P(:), nPointPt_P(:)
-
-    ! Permutation of PT points after data is returned
-!    integer, allocatable, save:: iPointPt_I(:)
-
-    ! Point positions local on a GM processor
-!    real, allocatable, save:: PosGm_DI(:,:)
-    !---------------------------------------------------------------
-    ! Temporary variables
-
-    ! Is there a need to recalculate the data transfer route?
-!    logical:: IsNewRoute
-
-    ! Storage for original PT point positions. 
-!    real, pointer:: PosPt_DI(:,:)
-
-    ! Positions sorted according to the correspongin GM processors
-!    real, allocatable:: PosSortPt_DI(:,:)
-
-    ! GM processor index for PT points
-!    integer, allocatable:: iProcPt_I(:)
-!    integer, allocatable:: iProcGm_I(:)
-
-    ! Buffers for data on GM and PT
-!    real, allocatable:: DataGm_VI(:,:), DataPt_VI(:,:)
-
-    integer:: iPoint, i, iError
-
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pt'
 
-    ! Variables for general-case coupling
-
-    ! number of processors of the OTHER component to communicate with
-    integer, save:: nCoupleGm, nCouplePt
-
-    ! processors of the OTHER component to communicate with
-    integer, allocatable, save:: iCoupleProcGm_I(:), iCoupleProcPt_I(:)
-
-    ! number of entries received/sent by a processor during rendezvous
-    integer, allocatable, save:: nCouplePointGm_I(:), nCouplePointPt_I(:)
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
