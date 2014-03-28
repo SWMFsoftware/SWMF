@@ -6,8 +6,8 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ, UseFluxLimiter,&
-       UseFaceFlux, UseCenterFlux
+  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ, &
+       UseFluxLimiter
 
   implicit none
 
@@ -30,8 +30,6 @@ module ModFaceValue
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
-
-  real,public:: FluxLimiterCrit  ! Varivable for ECHO
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
 
@@ -746,18 +744,10 @@ contains
          allocate(Primitive_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     if(.not. allocated(FaceL_I)) then
-       if(UseFaceFlux) then
-          !Need information on the ghost cell faces.
-          allocate(FaceL_I(-1:MaxIJK+4))
-          allocate(FaceR_I(-2:MaxIJK+3))
-          allocate(WeightL_II(-2:2,-2:MaxIJK+3))
-          allocate(WeightR_II(-2:2,-2:MaxIJK+3)) 
-       else
-          allocate(FaceL_I(1:MaxIJK+2))
-          allocate(FaceR_I(0:MaxIJK+1))
-          allocate(WeightL_II(-2:2,0:MaxIJK+1))
-          allocate(WeightR_II(-2:2,0:MaxIJK+1)) 
-       endif
+       allocate(FaceL_I(1:MaxIJK+2))
+       allocate(FaceR_I(0:MaxIJK+1))
+       allocate(WeightL_II(-2:2,0:MaxIJK+1))
+       allocate(WeightR_II(-2:2,0:MaxIJK+1)) 
     endif
 
     UseTrueCell = body_BLK(iBlock)
@@ -963,7 +953,7 @@ contains
                call get_faceZ_first(1,nI,1,nJ,nKFace,nKFace)
        end if
     case default
-       
+
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
           if(nOrder==2)then
@@ -976,22 +966,12 @@ contains
                   iMinFace,iMaxFace,jMinFace,jMaxFace,1,nKFace)
           else
              ! High order scheme
-             if(UseFaceFlux) then
-                ! Need to know the face value on two ghost cell faces
-                call get_facex_high(&
-                     -1,nIFace+2,jMinFace,jMaxFace,kMinFace,kMaxFace)
-                if(nJ > 1) call get_facey_high(&
-                     iMinFace,iMaxFace,-1,nJFace+2,kMinFace,kMaxFace)
-                if(nK > 1) call get_facez_high(&
-                     iMinFace,iMaxFace,jMinFace,jMaxFace,-1,nKFace+2)
-             else
-                call get_facex_high(&
-                     1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
-                if(nJ > 1) call get_facey_high(&
-                     iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
-                if(nK > 1) call get_facez_high(&
-                     iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
-             end if
+             call get_facex_high(&
+                  1,nIFace,jMinFace2,jMaxFace2,kMinFace2,kMaxFace2)
+             if(nJ > 1) call get_facey_high(&
+                  iMinFace2,iMaxFace2,1,nJFace,kMinFace2,kMaxFace2)
+             if(nK > 1) call get_facez_high(&
+                  iMinFace2,iMaxFace2,jMinFace2,jMaxFace2,1,nKFace)
           end if
        end if
 
@@ -1159,7 +1139,7 @@ contains
       logical, optional, intent(in):: DoCalcWeightIn
       logical:: DoCalcWeight
       !------------------------------------------------------------------------
-      
+
       DoCalcWeight = .false.
       if(present(DoCalcWeightIn)) DoCalcWeight = DoCalcWeightIn
 
@@ -1400,13 +1380,9 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar, iSort
-      integer:: iMin2, iMax2, iFace
+      integer:: iFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
-      !iMin is smaller than 1 when UseFaceFlux is true, then 
-      !Cell_I(iMin-nG: iMax-1+nG) will be wrong. 
-      !So, use iMin2 instead of iMin.
-      iMin2 = max(1,iMin); iMax2 = min(iMax, nI+1)
 
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1444,8 +1420,8 @@ contains
                   endif
 
                   ! Copy points along i direction into 1D array
-                  Cell_I(iMin2-nG:iMax2-1+nG) = &
-                       Primitive_VG(iVar,iMin2-nG:iMax2-1+nG,j,k)
+                  Cell_I(iMin-nG:iMax-1+nG) = &
+                       Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1461,12 +1437,8 @@ contains
                         Weight_IVX(1,iVar,iFace,j,k) = &
                              min(1.0,Smooth_II(1,iFace-1), Smooth_II(1,iFace))
 
-                        !FluxLimiterCrit/ &
-                        !max(FluxLimiterCrit,Smooth_II(1,iFace-1),Smooth_II(1, iFace))
                         Weight_IVX(2,iVar,iFace,j,k) = &
-                             min(1.0,Smooth_II(2,iFace-1), Smooth_II(2,iFace-1))
-                        !FluxLimiterCrit/ &
-                        !max(FluxLimiterCrit,Smooth_II(2,iFace-1),Smooth_II(2, iFace))            
+                             min(1.0,Smooth_II(2,iFace-1), Smooth_II(2,iFace))
                      enddo
                   end if
 
@@ -1560,10 +1532,9 @@ contains
 
       real, allocatable, save:: State_VY(:,:,:,:)
       integer:: iVar, iSort
-      integer:: jMin2, jMax2, jFace
+      integer:: jFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
-      jMin2 = max(1,jMin); jMax2 = min(jMax, nJ+1)
 
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1604,8 +1575,8 @@ contains
                   endif
 
                   ! Copy points along j direction into 1D array
-                  Cell_I(jMin2-nG:jMax2-1+nG) = &
-                       Primitive_VG(iVar,i,jMin2-nG:jMax2-1+nG,k)
+                  Cell_I(jMin-nG:jMax-1+nG) = &
+                       Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1619,13 +1590,9 @@ contains
                   if(UseFluxLimiter) then
                      do jFace = 1, nJFace
                         Weight_IVY(1,iVar,i,jFace,k) = &
-                             min(1.0,Smooth_II(1,jFace), Smooth_II(1,jFace))
-                        !FluxLimiterCrit/ &
-                             !max(FluxLimiterCrit,Smooth_II(1,jFace-1),Smooth_II(1, jFace))
+                             min(1.0,Smooth_II(1,jFace-1), Smooth_II(1,jFace))
                         Weight_IVY(2,iVar,i,jFace,k) = &
-                             min(1.0,Smooth_II(2,jFace), Smooth_II(2,jFace))
-                             !FluxLimiterCrit/ &
-                             !max(FluxLimiterCrit,Smooth_II(2,jFace-1),Smooth_II(2, jFace))
+                             min(1.0,Smooth_II(2,jFace-1), Smooth_II(2,jFace))
                      enddo
                   end if
 
@@ -1717,10 +1684,10 @@ contains
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       integer:: iVar, iSort
-      integer:: kMin2, kMax2, kFace
+      integer:: kFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
-      kMin2 = max(kMin, 1); kMax2 = min(kMax,nK+1)
+
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
             LeftState_VZ(:,i,j,k) = &
@@ -1760,8 +1727,8 @@ contains
                   endif
 
                   ! Copy points along k direction into 1D array
-                  Cell_I(kMin2-nG:kMax2-1+nG) = &
-                       Primitive_VG(iVar,i,j,kMin2-nG:kMax2-1+nG)
+                  Cell_I(kMin-nG:kMax-1+nG) = &
+                       Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
 
                   if(UseTrueCell)then
                      ! Use 2nd order face values where high order is skipped
@@ -1774,10 +1741,10 @@ contains
 
                   if(UseFluxLimiter) then
                      do kFace = 1, nKFace
-                        Weight_IVZ(1,iVar,i,j,kFace) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(1,kFace-1),Smooth_II(1, kFace))
-                        Weight_IVZ(2,iVar,i,j,kFace) = FluxLimiterCrit/ &
-                             max(FluxLimiterCrit,Smooth_II(2,kFace-1),Smooth_II(2, kFace))
+                        Weight_IVZ(1,iVar,i,j,kFace) = &
+                             min(1.0,Smooth_II(1,kFace-1),Smooth_II(1,kFace))
+                        Weight_IVZ(2,iVar,i,j,kFace) = &
+                             min(1.0,Smooth_II(2,kFace-1),Smooth_II(2,kFace))
                      enddo
                   end if
 

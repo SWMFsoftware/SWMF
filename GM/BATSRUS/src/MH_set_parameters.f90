@@ -43,7 +43,7 @@ subroutine MH_set_parameters(TypeAction)
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-       TypeLimiter5, UseCweno, UsePerVarLimiter, FluxLimiterCrit, &
+       TypeLimiter5, UseCweno, UsePerVarLimiter,&
        iVarSmooth_V, iVarSmoothIndex_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
@@ -1119,28 +1119,9 @@ subroutine MH_set_parameters(TypeAction)
            call sort_smooth_indicator
         endif
         
-        ! Set default values.
-        if(UseFDFaceFlux) then
-           if(UseCweno) then
-              UseFluxLimiter = .true.
-              UseCenterFlux  = .true.
-              UseFaceFlux    = .not. UseCenterFlux
-              FluxLimiterCrit = 3.e-2
-           else
-              UseFluxLimiter = .false.
-              UseFaceFlux    = .true.
-              UseCenterFlux  = .not. UseFaceFlux
-           endif
-        endif
-
      case('#LIMITFLUX')
         ! Limiter for ECHO
         call read_var('UseFluxLimiter', UseFluxLimiter)
-        if(UseFluxLimiter) then
-           call read_var('UseCenterFlux', UseCenterFlux) ! Need 3 ghost cells.
-           call read_var('FluxLimiterCrit', FluxLimiterCrit)
-           UseFaceFlux = .not. UseCenterFlux
-        endif
 
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
@@ -2302,14 +2283,6 @@ contains
        end if
     end if
 
-    if(UseFaceFlux) then
-       ! For ECHO scheme with face flux interpolation, face flux on two more
-       ! ghost cells are needed. 
-       iMinFace2 = -1; iMaxFace2 = nI+3
-       jMinFace2 = 1 - 2*min(1,nJ-1); jMaxFace2 = nJ + 3*min(1,nJ-1)
-       kMinFace2 = 1 - 2*min(1,nK-1); kMaxFace2 = nK + 3*min(1,nK-1)
-    end if
-
     ! Get the number of used ghost cell layers
     select case(nOrder)
     case(1, 2)
@@ -2799,8 +2772,6 @@ contains
          call stop_mpi('FluxLimiter only works when UseFDFaceFlux is true!!')    
     if(UseCweno .and. nOrder /= 5) &
          call stop_mpi('CWENO5 is a 5th order scheme!! ')
-    if(UseFaceFlux .and. nG /= 5) &
-         call stop_mpi('If UseFaceFlux is true, need 5 ghost cells!')
 
     ! Update check does not work with Runge-Kutta schemes
     ! because the final update is a linear combination of all stages.

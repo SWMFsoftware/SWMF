@@ -123,8 +123,7 @@ module ModAdvance
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
 
   !Variables for ECHO scheme
-  logical:: UseFDFaceFlux = .false., UseFluxLimiter = .false., &
-       UseCenterFlux = .false. ,UseFaceFlux = .false.
+  logical:: UseFDFaceFlux = .false., UseFluxLimiter = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
 
   !CWENO weight used to limit flux.
@@ -208,63 +207,26 @@ contains
        allocate(Weight_IVZ(2,nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace))
     endif
 
-    if (UseFaceFlux) then
-       ! Flux through two ghost cell faces are needed for face flux interpolation.
-       allocate(LeftState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
-            jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(RightState_VX(nVar,iMinFace2:max(iMaxFace2,2),&
-            jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(Flux_VX(nVar+nFluid,iMinFace2:max(iMaxFace2,2),&
-            jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(VdtFace_X(iMinFace2:max(iMaxFace2,2),&
-            jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(uDotArea_XI(iMinFace2:max(iMaxFace2,2),jMinFace:jMaxFace,&
-            kMinFace:kMaxFace,nFluid+1))
+    ! The current implementation of the constrained transport scheme
+    ! requires fluxes between ghost cells. Should be eliminated, and then
+    ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
+    allocate(LeftState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+    allocate(RightState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
+    allocate(VdtFace_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
 
-       allocate(LeftState_VY(nVar,iMinFace:iMaxFace,&
-            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
-       allocate(RightState_VY(nVar,iMinFace:iMaxFace,&
-            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
-       allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,&
-            jMinFace2:max(jMaxFace2,2),kMinFace:kMaxFace))
-       allocate(VdtFace_Y(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
-            kMinFace:kMaxFace))
-       allocate(uDotArea_YI(iMinFace:iMaxFace,jMinFace2:max(jMaxFace2,2),&
-            kMinFace:kMaxFace,nFluid+1))
+    allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
+    allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
+    allocate(VdtFace_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+    allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
 
-       allocate(LeftState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,&
-            kMinFace2:max(kMaxFace2,2)))
-       allocate(RightState_VZ(nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,&
-            kMinFace2:max(kMaxFace2,2)))
-       allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,&
-            kMinFace2:max(kMaxFace2,2)))
-       allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,&
-            kMinFace2:max(kMaxFace2,2)))
-       allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,&
-            kMinFace2:max(kMaxFace2,2),nFluid+1))
-
-    else
-       ! The current implementation of the constrained transport scheme
-       ! requires fluxes between ghost cells. Should be eliminated, and then
-       ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
-       allocate(LeftState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
-       allocate(RightState_VX(nVar,nI+1,jMinFace2:jMaxFace2,kMinFace2:kMaxFace2))
-       allocate(VdtFace_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(Flux_VX(nVar+nFluid,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(uDotArea_XI(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,nFluid+1))
-
-       allocate(LeftState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
-       allocate(RightState_VY(nVar,iMinFace2:iMaxFace2,nJ+1,kMinFace2:kMaxFace2))
-       allocate(VdtFace_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
-       allocate(Flux_VY(nVar+nFluid,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
-       allocate(uDotArea_YI(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,nFluid+1))
-
-       allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
-       allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
-       allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
-       allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
-       allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
-    end if
+    allocate(LeftState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
+    allocate(RightState_VZ(nVar,iMinFace2:iMaxFace2,jMinFace2:jMaxFace2,nK+1))
+    allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
 
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
