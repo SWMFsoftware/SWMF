@@ -362,7 +362,6 @@ contains
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain, ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-         iMinFace2, iMaxFace2, jMinFace2, jMaxFace2,kMinFace2, kMaxFace2,&
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit
 
@@ -372,9 +371,9 @@ contains
 
     ! Variables for 6th order flux interpolation
     real, parameter:: d0=1067./960, d2=-29./480, d4=3./640
-    real, allocatable :: Weight_IVI(:,:,:), Flux_VI(:,:), FluxNew_VI(:,:), &
-         Cell_I(:), FluxCenter_VG(:,:)
-    integer:: Minl, Maxl, MaxIJK
+    real, allocatable, save :: &
+         Weight_IVI(:,:,:), Flux_VI(:,:), FluxNew_VI(:,:), FluxCenter_VI(:,:)
+    integer:: MaxIJK
 
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
@@ -388,11 +387,10 @@ contains
     if(UseFluxLimiter) then
        if(.not. allocated(Weight_IVI)) then
           MaxIJK = max(nI,nJ,nK)
-          Minl = 1; Maxl = MaxIJK+1
-          allocate(Flux_VI(nFlux, Minl:Maxl))          
-          allocate(Weight_IVI(2,nVar,1:MaxIJK+1))
-          allocate(FluxNew_VI(nFlux, 1:MaxIJK+1))
-          allocate(FluxCenter_VG(nFlux,-1:MaxIJK+3))
+          allocate(Flux_VI(nFlux,MaxIJK+1))          
+          allocate(Weight_IVI(2,nVar,MaxIJK+1))
+          allocate(FluxNew_VI(nFlux,MaxIJK+1))
+          allocate(FluxCenter_VI(nFlux,-1:MaxIJK+3))
        endif
     endif
 
@@ -615,7 +613,7 @@ contains
                Flux_VI(:,iMin:iMax) = Flux_VX(:,iMin:iMax, jFace, kFace)
                Weight_IVI(:,:,iMin:iMax) = &
                     Weight_IVX(:,:,iMin:iMax,jFace,kFace)
-               FluxCenter_VG(:,iMin-2:iMax+2) = &
+               FluxCenter_VI(:,iMin-2:iMax+2) = &
                     FluxCenter_VGD(:,iMin-2:iMax+2, jFace, kFace, 1)
                call limit_face_flux(iMin,iMax)
                Flux_VX(:,iMin:iMax, jFace, kFace) = FluxNew_VI(:,iMin:iMax)
@@ -704,7 +702,7 @@ contains
                Flux_VI(:,jMin:jMax) = Flux_VY(:,iFace,jMin:jMax, kFace)
                Weight_IVI(:,:,jMin:jMax) = &
                     Weight_IVY(:,:,iFace,jMin:jMax,kFace)
-               FluxCenter_VG(:,jMin-2:jMax+2) = &
+               FluxCenter_VI(:,jMin-2:jMax+2) = &
                     FluxCenter_VGD(:,iFace,jMin-2:jMax+2, kFace, 2)
                call limit_face_flux(jMin,jMax)
                Flux_VY(:,iFace,jMin:jMax, kFace) = FluxNew_VI(:,jMin:jMax)
@@ -787,7 +785,7 @@ contains
                Flux_VI(:,kMin:kMax) = Flux_VZ(:,iFace, jFace, kMin:kMax)
                Weight_IVI(:,:,kMin:kMax) = &
                     Weight_IVZ(:,:,iFace,jFace,kMin:kMax)
-               FluxCenter_VG(:,kMin-2:kMax+2) = &
+               FluxCenter_VI(:,kMin-2:kMax+2) = &
                     FluxCenter_VGD(:,iFace, jFace, kMin-2:kMax+2, 3)
                call limit_face_flux(kMin,kMax)
                Flux_VZ(:,iFace, jFace, kMin:kMax) = FluxNew_VI(:,kMin:kMax)
@@ -827,13 +825,13 @@ contains
                Weight4 = Weight_IVI(1,iVar,l)
                Weight6 = Weight_IVI(2,iVar,l)
             endif
-            ! FluxCenter_VG is at cell center
+            ! FluxCenter_VI is at cell center
             ! Flux_VI is the face value. 
-            FluxValuemm = FluxCenter_VG(iVar, l-2)
-            FluxValuem  = FluxCenter_VG(iVar,l-1)
+            FluxValuemm = FluxCenter_VI(iVar, l-2)
+            FluxValuem  = FluxCenter_VI(iVar,l-1)
             FluxValue   = Flux_VI(iVar,l)
-            FluxValuep  = FluxCenter_VG(iVar,l)
-            FluxValuepp = FluxCenter_VG(iVar,l+1)
+            FluxValuep  = FluxCenter_VI(iVar,l)
+            FluxValuepp = FluxCenter_VI(iVar,l+1)
 
             Der2 = c1over6*&
                  (FluxValuem - 2*FluxValue + FluxValuep)
@@ -1695,8 +1693,8 @@ contains
 
          ! Calculate energy of outer left intermediate state
          eL = Inv_Gm1*pL + PbL + 0.5*RhoL*(UnL**2 + Ut1L**2 + Ut2L**2)
-         UdotB1L  = UnL*B1n + Ut1L *B1t1L  + Ut2L *B1t2L
-         UdotB1L1 = Un *B1n + Ut1L1*B1t1L1 + Ut2L1*B1t2L1
+         uDotB1L  = UnL*B1n + Ut1L *B1t1L  + Ut2L *B1t2L
+         uDotB1L1 = Un *B1n + Ut1L1*B1t1L1 + Ut2L1*B1t2L1
          e = (DsL*eL - PtotL*UnL + Ptot12*Un + Bn*(uDotB1L - uDotB1L1))*InvSLUn
 
          ! Left going Alfven speed
@@ -1768,8 +1766,8 @@ contains
 
          ! Calculate energy of outer right intermediate state
          eR = Inv_Gm1*pR + PbR + 0.5*RhoR*(UnR**2 + Ut1R**2 + Ut2R**2)
-         UdotB1R  = UnR*B1n + Ut1R*B1t1R + Ut2R*B1t2R
-         UdotB1R1 = Un*B1n + Ut1R1*B1t1R1 + Ut2R1*B1t2R1
+         uDotB1R  = UnR*B1n + Ut1R*B1t1R + Ut2R*B1t2R
+         uDotB1R1 = Un*B1n + Ut1R1*B1t1R1 + Ut2R1*B1t2R1
          e = (DsR*eR - PtotR*UnR + Ptot12*Un + Bn*(uDotB1R - uDotB1R1))*InvSRUn
 
          ! Right going Alfven speed
@@ -2238,7 +2236,7 @@ contains
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, Ew
-      real :: B2, FullB2, pTotal, pTotal2, UDotB, DpPerB
+      real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
       !-----------------------------------------------------------------------
 
@@ -2287,11 +2285,11 @@ contains
 
       ! The full momentum contains the ExB/c^2 term:
       ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
-      UDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
+      uDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
       FullB2  = FullBx**2 + FullBy**2 + FullBz**2
-      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*UdotB)*inv_c2LIGHT
-      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*UdotB)*inv_c2LIGHT
-      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*UdotB)*inv_c2LIGHT
+      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*uDotB)*inv_c2LIGHT
+      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*uDotB)*inv_c2LIGHT
+      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*uDotB)*inv_c2LIGHT
 
       ! The full energy contains the electric field energy
       StateCons_V(Energy_) = e + E2Half
@@ -2350,7 +2348,6 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e, Ew
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
-      real :: PwExtra, DPwPerB
       real :: Gamma2
       integer :: iVar
 
@@ -2767,7 +2764,6 @@ subroutine calc_simple_cell_flux(iBlock)
 
     use ModAdvance, ONLY: nVar, State_VGB,FluxCenter_VGD
     use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
-    use ModMain, ONLY: UseDtFixed, Cfl, Dt
     use BATL_lib, ONLY: nDim, Xi_, Eta_, Zeta_, CellCoef_DDGB
     integer, intent(in):: iBlock
 
@@ -2779,7 +2775,7 @@ subroutine calc_simple_cell_flux(iBlock)
     ! These are calculated but not used          
     real:: Un_I(nFluid+1), En, Pe
 
-    real, allocatable:: Flux_VD(:,:)
+    real, allocatable, save:: Flux_VD(:,:)
     integer:: iFlux
     !------------------------------------------------------------------------
 
