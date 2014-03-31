@@ -2111,7 +2111,6 @@ contains
     ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
     ! left, symmetric and right preconditioning, respectively
     if(Param%DoPrecond .and. Param%TypePrecondSide /= 'left' &
-         .and. Param%TypePrecond /= 'JACOBI' &
          .and. Param%TypeKrylov /= 'CG') then
 
        do iBlock = 1, nBlock
@@ -2119,7 +2118,7 @@ contains
           call multiply_right_precond( &
                Param%TypePrecond, Param%TypePrecondSide, &
                nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
-               Rhs_I(n))
+               x_I(n))
        end do
 
     end if
