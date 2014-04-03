@@ -180,59 +180,6 @@ subroutine impl_matvec_free(qx,qy,nn)
 end subroutine impl_matvec_free
 
 !=============================================================================
-subroutine impl_preconditioner(Vec_I, PrecVec_I, n)
-
-  use ModImplicit, ONLY: MAT, nVar, nI, nJ, nwIJK, nIJK, &
-       nImplBlk, PrecondType, Stencil1_, Stencil2_, Stencil3_, Stencil4_, &
-       Stencil5_, Stencil6_, Stencil7_, PrecondType
-  use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
-  use ModImplHypre, ONLY: hypre_preconditioner
-
-  implicit none
-
-  integer, intent(in) :: n
-  real,    intent(in) :: Vec_I(n)
-  real,    intent(out):: PrecVec_I(n)
-
-  integer :: iImplBlock
-  !-------------------------------------------------------------------------
-  PrecVec_I = Vec_I
-
-  if(PrecondType == 'HYPRE')then
-     call hypre_preconditioner(n, PrecVec_I)
-     RETURN
-  end if
-
-  do iImplBlock=1,nImplBLK
-
-     if(PrecondType == 'DILU')then
-        call multiply_dilu(nIJK, nVar, nI, nI*nJ,&
-             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil3_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil4_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil5_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil6_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil7_,iImplBlock))
-     else
-        call Lhepta(nIJK, nVar, nI, nI*nJ,&
-             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,Stencil1_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil2_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil4_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil6_,iImplBlock))
-
-        call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
-             PrecVec_I(nwIJK*(iImplBlock-1)+1),&
-             MAT(1,1,1,1,1,Stencil3_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil5_,iImplBlock),&
-             MAT(1,1,1,1,1,Stencil7_,iImplBlock))
-     end if
-  end do
-
-end subroutine impl_preconditioner
-!=============================================================================
 subroutine impl_matvec_prec(qx,qy,n)
 
   ! Calculate qy=P_L.A.P_R.qx for the iterative solver, where 
@@ -242,7 +189,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! The multiplication by L is done in a matrix free fashion.
 
   use ModImplicit
-  use ModLinearSolver, ONLY: Lhepta, Uhepta, multiply_dilu
+  use ModLinearSolver, ONLY: multiply_left_precond, multiply_right_precond
   implicit none
 
   integer, intent(in):: n
@@ -256,68 +203,33 @@ subroutine impl_matvec_prec(qx,qy,n)
 
   call set_oktest('impl_matvec_prec',oktest,oktest_me)
 
-  qy=qx
+  qy = qx
 
   if(oktest_me)write(*,*)'impl_matvec_prec initial n,sum(x**2),sum(y**2)=',&
        nimpl,sum(qx(1:nimpl)**2),sum(qy(1:nimpl)**2)
 
-  ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
-  ! for left, symmetric and right preconditioning, respectively
-
-  if(PrecondSide /= 'left' .and. PrecondType /= 'JACOBI')then
+  if(ImplParam%TypePrecondSide /= 'left')then
+     ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
+     ! for left, symmetric and right preconditioning, respectively
      do implBLK = 1, nImplBLK
-        if(PrecondSide=='right') &
-             call Lhepta(nIJK, nVar, nI, nI*nJ, &
-             qy(nwIJK*(implBLK-1)+1) ,&
-             MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
-             MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
-             MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
-             MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
-        call Uhepta(.true.,nIJK, nVar, nI, nI*nJ, &
-             qy(nwIJK*(implBLK-1)+1) ,  &
-             MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
-             MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j 
-             MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
+        call multiply_right_precond( &
+             ImplParam%TypePrecond, ImplParam%TypePrecondSide,&
+             nVar, nDim, nI, nJ, nK, MAT(1,1,1,1,1,1,implBlk), &
+             qy(nwIJK*(implBLK-1)+1))
      end do
   end if
 
   call impl_matvec_free(qy,qy,n) ! qy = A.qy
 
-  ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
-  ! for left, symmetric, and right preconditioning, respectively
-
-  if(PrecondType == 'JACOBI') then
-     qy = JacobiPrec_I(1:n)*qy
-  elseif(PrecondType == 'DILU') then
+  if(ImplParam%TypePrecondSide /= 'right')then
+     ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
+     ! for left, symmetric, and right preconditioning, respectively
      do implBLK = 1, nImplBLK
-        call multiply_dilu(nIJK, nVar, nI, nI*nJ, &
-             qy(nwIJK*(implBLK-1)+1),&
-             MAT(1,1,1,1,1,Stencil1_,implBLK),&
-             MAT(1,1,1,1,1,Stencil2_,implBLK),&
-             MAT(1,1,1,1,1,Stencil3_,implBLK),&
-             MAT(1,1,1,1,1,Stencil4_,implBLK),&
-             MAT(1,1,1,1,1,Stencil5_,implBLK),&
-             MAT(1,1,1,1,1,Stencil6_,implBLK),&
-             MAT(1,1,1,1,1,Stencil7_,implBLK))
+        call multiply_left_precond( &
+             ImplParam%TypePrecond, ImplParam%TypePrecondSide,&
+             nVar, nDim, nI, nJ, nK, MAT(1,1,1,1,1,1,implBlk), &
+             qy(nwIJK*(implBLK-1)+1))
      end do
-  elseif(PrecondSide /= 'right')then
-     do implBLK = 1, nImplBLK
-        call Lhepta(nIJK, nVar, nI, nI*nJ,&
-             qy(nwIJK*(implBLK-1)+1) ,&
-             MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
-             MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
-             MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
-             MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
-     end do
-     if(PrecondSide == 'left') then
-        do implBLK = 1, nImplBLK
-           call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
-                qy(nwIJK*(implBLK-1)+1),   &
-                MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
-                MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
-                MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
-        end do
-     end if
   end if
 
   if(oktest_me)write(*,*)'impl_matvec_prec final n,sum(x**2),sum(y**2)=',&

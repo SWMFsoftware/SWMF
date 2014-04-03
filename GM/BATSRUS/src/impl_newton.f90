@@ -194,8 +194,8 @@ subroutine impl_newton_update(dwnrm, converged)
      dwnrm_local=sum(dw(1:nimpl)**2)
      call MPI_allreduce(dwnrm_local,dwnrm,1,MPI_REAL,MPI_SUM,iComm,&
           iError)
-     dwnrm=sqrt(dwnrm/nimpl_total)
-     converged = dwnrm<KrylovErrorMax
+     dwnrm = sqrt(dwnrm/nimpl_total)
+     converged = dwnrm < NewtonErrorMax
      if(oktest_me)write(*,*)'dwnrm:',dwnrm
   else
      converged = .true.

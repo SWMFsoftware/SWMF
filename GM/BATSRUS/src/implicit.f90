@@ -87,8 +87,7 @@ subroutine advance_impl
        SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModPointImplicit, ONLY: UsePointImplicit
-  use ModLinearSolver, ONLY: gmres, bicgstab, cg, prehepta, &
-       Uhepta, Lhepta, multiply_dilu
+  use ModLinearSolver, ONLY: solve_linear_multiblock
   use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
   use ModImplHypre, ONLY: hypre_initialize
   use ModMessagePass, ONLY: exchange_messages
@@ -103,7 +102,7 @@ subroutine advance_impl
 
   integer :: iw, implBLK, iBLK, KrylovMatVec, info
   integer :: NewtonIter
-  integer :: iError
+  integer :: iError, iError1
   real    :: KrylovError, dwnrm, local_wnrm(nw), coef1
 
   logical:: converged
@@ -116,11 +115,11 @@ subroutine advance_impl
 
   real    :: pRhoRelativeMin
 
-  character(len=15) :: NameSub = 'MH_advance_impl'
-
-  external impl_matvec, impl_matvec_free, impl_preconditioner
+  external impl_matvec
 
   integer :: i, j, k, iBlock, iLoc_I(5)
+
+  character(len=15) :: NameSub = 'MH_advance_impl'
   !----------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
   call set_oktest('implicit',DoTest,DoTestMe) 
@@ -289,7 +288,7 @@ subroutine advance_impl
      nnewton=nnewton+1
 
      ! Calculate Jacobian matrix if required
-     if(JacobianType /= 'free' .and. (NewtonIter==1 .or. NewMatrix))then
+     if(ImplParam%DoPrecond .and. (NewtonIter==1 .or. NewMatrix))then
 
         if(NewtonIter>1)then
            ! Update ghost cells for Impl_VGB, 
@@ -324,12 +323,24 @@ subroutine advance_impl
      if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
           ': initial dw(test), rhs(test)=',dw(implVARtest),rhs(implVARtest)
 
-     call solve_linear_system
+     ! solve implicit system
+
+     ! For Newton solver the outer loop has to converge, 
+     ! the inner loop only needs to reduce the error somewhat.
+     if(UseNewton) ImplParam%KrylovErrorMax = 0.1
+
+     call set_oktest('krylov', DoTestKrylov, DoTestKrylovMe)
+
+     call solve_linear_multiblock(ImplParam, &
+          nVar, nDim, nI, nJ, nK, nImplBlk, iComm, &
+          impl_matvec, Rhs, Dw, info, DoTestKrylovMe, MAT)
+
+     if(DoTestMe .and. nImplBLK>0)&
+          write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
 
      if(info /= 0 .and. iProc == 0 .and. time_accurate) then
-        write(*,*) 'ERROR in ',NameSub,': Krylov solver failed!'
-        write(*,*) 'info, KrylovEerror, KrylovErrorMax=', &
-             info, KrylovError, KrylovErrorMax
+        call error_report('Krylov solver failure, Krylov error', &
+             KrylovError, iError1, .true.)
      end if
 
      ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
@@ -345,7 +356,6 @@ subroutine advance_impl
 
      if(converged) EXIT
   enddo ! Newton iteration
-
 
   ! Make the update conservative
   if(UseConservativeImplicit)call impl_newton_conserve
@@ -460,187 +470,6 @@ subroutine advance_impl
   UseUpdateCheck   = UseUpdateCheckOrig
   UsePointImplicit = UsePointImplicitOrig
   DoFixAxis        = DoFixAxisOrig
-
-contains
-
-  !==========================================================================
-  subroutine solve_linear_system
-
-    use ModImplHypre, ONLY: hypre_preconditioner
-
-    integer:: n, implBLK, i, j, k, iVar, iError1 = -1
-    real:: coef1, coef2
-    character(len=3):: TypeStop
-    !----------------------------------------------------------------------
-    ! Precondition matrix if required
-    if(JacobianType=='prec'.and.(NewtonIter==1.or.NewMatrix))then
-       if(PrecondType == 'HYPRE')then
-          call hypre_preconditioner(nImpl, rhs)
-       elseif(PrecondType == 'JACOBI') then
-          n = 0
-          do implBLK=1,nImplBLK; do k=1,nK; do j=1,nJ; do i=1,nI; 
-             do iVar = 1, nVar
-                n = n + 1
-                JacobiPrec_I(n) = 1.0 / MAT(iVar,iVar,i,j,k,1,implBlk)
-             end do
-          end do; enddo; enddo; enddo
-          if(KrylovType /= 'CG') &
-               rhs(1:nImpl) = JacobiPrec_I(1:nImpl)*rhs(1:nImpl)
-       else
-
-          do implBLK=1,nImplBLK
-             ! Preconditioning: MAT --> LU
-             call prehepta(nIJK, nVar, nI, nI*nJ, PrecondParam, &
-                  MAT(1,1,1,1,1,Stencil1_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil2_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil3_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil4_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil5_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil6_,implBLK),&
-                  MAT(1,1,1,1,1,Stencil7_,implBLK))
-
-             if(KrylovType == 'CG') CYCLE
-
-             ! rhs --> P_L.rhs, where P_L=U^{-1}.L^{-1}, L^{-1}, or I
-             ! for left, symmetric, and right preconditioning, respectively
-             if(PrecondType == 'DILU')then
-                call multiply_dilu(nIJK, nVar, nI, nI*nJ, &
-                     rhs(nwIJK*(implBLK-1)+1),&
-                     MAT(1,1,1,1,1,Stencil1_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil2_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil3_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil4_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil5_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil6_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil7_,implBLK))
-             elseif(PrecondSide /= 'right')then
-                call Lhepta(nIJK, nVar, nI, nI*nJ, &
-                     rhs(nwIJK*(implBLK-1)+1),&
-                     MAT(1,1,1,1,1,Stencil1_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil2_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil4_,implBLK),&
-                     MAT(1,1,1,1,1,Stencil6_,implBLK))
-                if(PrecondSide=='left') &
-                     call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
-                     rhs(nwIJK*(implBLK-1)+1),  &
-                     MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
-                     MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
-                     MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
-             end if
-
-             ! Initial guess x --> P_R^{-1}.x where P_R^{-1} = I, U, LU for
-             ! left, symmetric and right preconditioning, respectively
-             ! Multiplication with LU is NOT implemented
-             if(non0dw .and. PrecondSide=='symmetric') &
-                  call Uhepta(.false., nIJK, nVar, nI, nI*nJ, &
-                  dw(nwIJK*(implBLK-1)+1),   &
-                  MAT(1,1,1,1,1,3,implBLK),  &   ! +i diagonal
-                  MAT(1,1,1,1,1,5,implBLK),  &   ! +j
-                  MAT(1,1,1,1,1,7,implBLK))      ! +k
-          end do
-
-       end if
-       if(DoTest)then
-          call MPI_reduce(sum(MAT(:,:,:,:,:,:,1:nImplBLK)**2),coef1,1,&
-               MPI_REAL,MPI_SUM,procTEST,iComm,iError)
-          call MPI_reduce(sum(rhs(1:nimpl)**2),coef2,1,MPI_REAL,&
-               MPI_SUM,procTEST,iComm,iError)
-          if(DoTestMe)then
-             write(*,*)NameSub,': preconditioned sum(MAT**2), sum(rhs**2)=',&
-                  coef1,coef2
-             if(nImplBLK>0)&
-                  write(*,*)NameSub,&
-                  ': preconditioned dw(test)   , rhs(test)  =',&
-                  dw(implVARtest),  rhs(implVARtest)
-          endif
-       end if
-    endif
-
-    ! Set tolerance and stopping conditions for iterative solver
-    typestop='rel'
-    if(UseNewton)then
-       ! For Newton solver the outer loop has to converge
-       ! The inner loop only needs to reduce the error somewhat.
-       KrylovError = 0.1
-    else
-       ! For linear implicit solver stop when residual decreased enough
-       KrylovError = KrylovErrorMax
-    endif
-
-    KrylovMatVec=KrylovMatvecMax
-
-    if(DoTestMe)write(*,*)NameSub,': Before ',KrylovType,&
-         ' KrylovMatVec,KrylovError:',KrylovMatVec,KrylovError
-
-    ! Solve linear problem
-
-    call set_oktest('krylov',DoTestKrylov,DoTestKrylovMe)
-    call timing_start('krylov solver')
-    select case(KrylovType)
-    case('BICGSTAB')
-       call bicgstab(impl_matvec,rhs,dw,non0dw,nimpl,&
-            KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
-    case('GMRES')
-       call gmres(impl_matvec,rhs,dw,non0dw,nimpl,nKrylovVector, &
-            KrylovError,typestop,KrylovMatVec,info,DoTestKrylovMe,iComm)
-    case('CG')
-       if(JacobianType == 'free')then
-          call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
-               KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe, &
-               iComm)
-       elseif(PrecondType == 'JACOBI')then
-          call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
-               KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe,&
-               iComm, JacobiPrec_I)
-       else
-          call cg(impl_matvec_free, rhs, dw, non0dw, nimpl,&
-               KrylovError, typestop, KrylovMatVec, info, DoTestKrylovMe,&
-               iComm, preconditioner = impl_preconditioner)
-       end if
-    case default
-       call stop_mpi('ERROR: Unknown TypeKrylov='//KrylovType)
-    end select
-    call timing_stop('krylov solver')
-
-    if(DoTestMe.and.nImplBLK>0)write(*,*)NameSub,&
-         ': solution dw(test)=',dw(implVARtest)
-
-    ! Postprocessing: dw = P_R.dw' where P_R = I, U^{-1}, U^{-1}L^{-1} for 
-    ! left, symmetric and right preconditioning, respectively
-    if(JacobianType=='prec' .and. PrecondSide/='left' &
-         .and. PrecondType /= 'JACOBI' .and. KrylovType /= 'CG')then
-       do implBLK=1,nImplBLK
-          if(PrecondSide=='right') &
-               call Lhepta(nIJK, nVar, nI, nI*nJ,&
-               dw(nwIJK*(implBLK-1)+1) ,&
-               MAT(1,1,1,1,1,Stencil1_,implBLK),&   ! Main diagonal
-               MAT(1,1,1,1,1,Stencil2_,implBLK),&   ! -i
-               MAT(1,1,1,1,1,Stencil4_,implBLK),&   ! -j
-               MAT(1,1,1,1,1,Stencil6_,implBLK))    ! -k
-          call Uhepta(.true., nIJK, nVar, nI, nI*nJ,&
-               dw(nwIJK*(implBLK-1)+1),   &
-               MAT(1,1,1,1,1,Stencil3_,implBLK),  &   ! +i diagonal
-               MAT(1,1,1,1,1,Stencil5_,implBLK),  &   ! +j
-               MAT(1,1,1,1,1,Stencil7_,implBLK))      ! +k
-       end do
-       if(DoTestMe.and.nImplBLK>0)&
-            write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
-    end if
-    if(DoTestMe.or.DoTestKrylovMe)write(*,*)NameSub,&
-         ': After KrylovMatVec,info,KrylovError=',&
-         KrylovMatVec,info,KrylovError
-
-    ! Converging without any iteration is not a real error, so set info=0
-    if(info==3) info=0
-
-    if(DoTestMe .and. info/=0)write(*,*) NameSub, &
-         ' warning: no convergence, info:',info
-
-    if(info /= 0 .and. iProc == 0 .and. time_accurate) &
-         call error_report('Krylov solver failure, Krylov error', &
-         KrylovError, iError1, .true.)
-
-  end subroutine solve_linear_system
 
 end subroutine advance_impl
 

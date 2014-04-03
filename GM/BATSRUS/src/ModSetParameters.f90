@@ -2615,60 +2615,8 @@ contains
        end if
     end if
 
-    if(PrecondType == "HYPRE")then
-       if(.not.IsHypreAvailable)call  stop_mpi(NameSub// &
-            ' empty HYPRE module! Use Config.pl -hypre')
-
-       if(.not.UseSemiImplicit)call stop_mpi(NameSub// &
-            ' HYPRE preconditioner only works with semi-implicit scheme')
-
-       if(KrylovType == "CG")call stop_mpi(NameSub// &
-            ' HYPRE preconditioner does not work with CG. Use GMRES in #KRYLOV command')
-
-    endif
-
-    if(nKrylovVector > KrylovMatvecMax)then
-       if(iProc==0)then
-          write(*,'(a)')'nKrylovVector>KrylovMatvecMax is useless!'
-          write(*,*)'reducing nKrylovVector to KrylovMatvecMax'
-       endif
-       nKrylovVector = KrylovMatvecMax
-    endif
-
-    if(PrecondSide /= 'left' .and. PrecondSide/='symmetric' .and. &
-         PrecondSide/='right')then
-       if(iProc==0)then
-          write(*,'(3a)')NameSub//' WARNING: PrecondSide=',PrecondSide,&
-               ' is not one of left, symmetric, or right !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting PrecondSide=symmetric'
-       end if
-       PrecondSide='symmetric'
-    end if
-
-    select case(KrylovInitType)
-    case('explicit','scaled','nul')
-    case default
-       if(iProc==0)then
-          write(*,'(2a)')NameSub//' WARNING: KrylovInitType=',&
-               KrylovInitType, &
-               ' is not one of explicit, scaled, or nul !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting KrylovInitType=nul'
-       end if
-       KrylovInitType='nul'
-    end select
-
-    if(KrylovInitType/='nul'.and.PrecondSide=='right')then
-       if(iProc==0)then
-          write(*,'(2a)')NameSub//&
-               ' WARNING: PrecondSide=right only works with',&
-               ' KrylovInitType=nul !!!'
-          if(UseStrict)call stop_mpi('Correct PARAM.in!')
-          write(*,*)NameSub//' setting KrylovInitType=nul'
-       end if
-       KrylovInitType='nul'
-    endif
+    if(ImplParam%nKrylovVector > ImplParam%MaxKrylovMatvec) &
+         ImplParam%nKrylovVector = ImplParam%MaxKrylovMatvec
 
     if(.not.time_accurate.and.UseBDF2)then
        if(iProc==0)then

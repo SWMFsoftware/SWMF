@@ -56,6 +56,7 @@ module ModImplicit
   use ModVarIndexes, ONLY: nVar, P_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, iComm
+  use ModLinearSolver, ONLY: LinearSolverParamType
 
   ! for sake of fewer changes in the user modules
   use ModSemiImplVar, StateSemi_VGB => SemiState_VGB
@@ -137,22 +138,22 @@ module ModImplicit
   logical :: UseNewton     = .false.
   logical :: NewMatrix     = .true.
   integer :: NewtonIterMax = 1
+  real    :: NewtonErrorMax = 0.001
 
   ! Jacobian parameters
   character (len=10) :: JacobianType = 'prec'
   real               :: JacobianEps  = 1.E-12
 
-  ! Preconditioner parameters
-  real               :: PrecondParam  = -0.5
-  character (len=10) :: PrecondSide   = 'symmetric'
-  character (len=10) :: PrecondType   = 'MBILU'
+  ! Parameters for the implicit linear solver. Set defaults: 
+  !
+  ! DoPrecond=T, symmetric precond with MBILU, Gustafsson parameter is -0.5,
+  ! GMRES with relative error tolerance 0.001, maximum of 100 iterations,
+  ! and 100 Krylov vectors. No initial guess is used.
+  type(LinearSolverParamType):: ImplParam = LinearSolverParamType( &
+       .true., 'symmetric', 'MBILU', -0.5, 'GMRES', 'rel', 1e-3, 100, 100, .false.)
 
-  ! Krylov scheme parameters
-  character (len=10) :: KrylovType     ='GMRES'
+  ! Additional Krylov scheme parameters
   character (len=10) :: KrylovInitType ='nul'
-  integer            :: KrylovMatvecMax=100
-  real               :: KrylovErrorMax =0.001
-  integer            :: nKrylovVector  =100
 
   ! Implicit scheme
   integer            :: nOrder_Impl  = 1
@@ -215,6 +216,8 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B
     use ModLinearSolver,  ONLY: &
          Jacobi_, BlockJacobi_, GaussSeidel_, Dilu_, Bilu_
+
+    character(len=4):: TypeJacobian
 
     character(len=*), intent(in) :: NameCommand
 
@@ -286,36 +289,48 @@ contains
        call read_var('TypeJacobian',JacobianType, IsLowerCase=.true.)
        call read_var('JacobianEps', JacobianEps)
 
+       ImplParam%DoPrecond = TypeJacobian == 'prec'
+
     case('#PRECONDITIONER')
-       call read_var('TypePrecondSide',PrecondSide, IsLowerCase=.true.)
-       call read_var('TypePrecond'    ,PrecondType, IsUpperCase=.true.)
-       select case(PrecondType)
-       case('JACOBI')
-          PrecondParam = Jacobi_
-          PrecondSide  = 'left'
-       case('BLOCKJACOBI')
-          PrecondParam = BlockJacobi_
-          PrecondSide  = 'left'
-       case('GS')
-          PrecondParam = GaussSeidel_
-       case('BILU')
-          PrecondParam = Bilu_
-       case('MBILU')
-          call read_var('GustafssonPar', PrecondParam)
-          PrecondParam = -PrecondParam
+       call read_var('TypePrecondSide',ImplParam%TypePrecondSide, IsLowerCase=.true.)
+       select case(ImplParam%TypePrecondSide)
+       case('left','right','symmetric')
        case default
-          call stop_mpi(NameSub//' invalid TypePrecond='//PrecondType)
+          ImplParam%TypePrecondSide = 'left'
+       end select
+       call read_var('TypePrecond', ImplParam%TypePrecond, IsUpperCase=.true.)
+       select case(ImplParam%TypePrecond)
+       case('BLOCKJACOBI')
+          ImplParam%PrecondParam = BlockJacobi_
+          ImplParam%TypePrecondSide  = 'left'
+       case('GS')
+          ImplParam%PrecondParam = GaussSeidel_
+       case('BILU')
+          ImplParam%PrecondParam = Bilu_
+       case('MBILU')
+          call read_var('GustafssonPar', ImplParam%PrecondParam)
+          ImplParam%PrecondParam = -ImplParam%PrecondParam
+       case default
+          call stop_mpi(NameSub//' invalid TypePrecond='//ImplParam%TypePrecond)
        end select
 
     case('#KRYLOV')
-       call read_var('TypeKrylov'     ,KrylovType, IsUpperCase=.true.)
-       call read_var('TypeInitKrylov' ,KrylovInitType, IsLowerCase=.true.)
-       call read_var('ErrorMaxKrylov' ,KrylovErrorMax)
-       call read_var('MaxMatvecKrylov',KrylovMatvecMax)
-       nKrylovVector = KrylovMatvecMax
+       call read_var('TypeKrylov',ImplParam%TypeKrylov, IsUpperCase=.true.)
+       call read_var('TypeInitKrylov', KrylovInitType, IsLowerCase=.true.)
+       select case(KrylovInitType)
+       case('explicit','scaled','nul')
+       case default
+          KrylovInitType='nul'
+       end select
+       call read_var('ErrorMaxKrylov', ImplParam%KrylovErrorMax)
+       ! Use this error for the Newton iteration in case it is used
+       NewtonErrorMax = ImplParam%KrylovErrorMax
+       call read_var('MaxMatvecKrylov', ImplParam%MaxKrylovMatvec)
+       ImplParam%nKrylovVector = ImplParam%MaxKrylovMatvec
+       ImplParam%UseInitialGuess = KrylovInitType /= 'nul'
 
     case('#KRYLOVSIZE')
-       call read_var('nKrylovVector',nKrylovVector)
+       call read_var('nKrylovVector', ImplParam%nKrylovVector)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
