@@ -658,13 +658,11 @@ contains
     ! This routine is used by the Preconditioned Conjugate Gradient method
 
     use BATL_size,       ONLY: nDim, nI, nJ, nK, nIJK
-    use ModLinearSolver, ONLY: multiply_left_precond
+    use ModLinearSolver, ONLY: precond_left_multiblock
     use ModImplHypre,    ONLY: hypre_preconditioner
 
     integer, intent(in)   :: MaxN
     real,    intent(inout):: Vec_I(MaxN)
-
-    integer :: iBlock, n
     !-------------------------------------------------------------------------
     select case(SemiParam%TypePrecond)
     case('HYPRE')
@@ -672,12 +670,8 @@ contains
     case('JACOBI')
        Vec_I = JacobiPrec_I(1:MaxN)*Vec_I
     case default
-       do iBlock = 1, nBlockSemi
-          n = nVarSemi*nIJK*(iBlock-1) + 1
-          call multiply_left_precond(SemiParam%TypePrecond, 'left',           &
-               nVarSemi, nDim, nI, nJ, nK, JacSemi_VVCIB(1,1,1,1,1,1,iBlock), &
-               Vec_I(n))
-       end do
+       call precond_left_multiblock(SemiParam,           &
+            nVarSemi, nDim, nI, nJ, nK, nBlockSemi, JacSemi_VVCIB, Vec_I)
     end select
 
   end subroutine semi_precond
