@@ -36,13 +36,19 @@ module ModSemiImplicit
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
 
-  ! Parameters for the semi-implicit linear solver. Set defaults:
-  !
-  ! DoPrecond=T, left precond with BILU, Gustafsson parameter is 0.0, 
-  ! GMRES with relative error tolerance 0.001, maximum of 100 iterations,
-  ! and 100 Krylov vectors. No initial guess is used.
+  ! Default parameters for the semi-implicit linear solver
   type(LinearSolverParamType):: SemiParam = LinearSolverParamType( &
-       .true., 'left', 'BILU', 0.0, 'GMRES', 'rel', 1e-3, 100, 100, .false.)
+       .true.,      &! DoPrecond
+       'left',      &! TypePrecondSide
+       'BILU',      &! TypePrecond
+       0.0,         &! PrecondParam (Gustafsson for MBILU)
+       'GMRES',     &! TypeKrylov
+       'rel',       &! TypeStop
+       1e-3,        &! ErrorMax
+       100,         &! MaxMatvec
+       100,         &! nKrylovVector
+       .false.,     &! UseInitialGuess
+       -1.0, -1, -1) ! Error, nMatvec, iError (return values)
 
   ! Index of the test block
   integer:: iBlockSemiTest = 1
@@ -98,9 +104,9 @@ contains
        end select
     case("#SEMIKRYLOV")
        call read_var('TypeKrylov', SemiParam%TypeKrylov, IsUpperCase=.true.)
-       call read_var('KrylovErrorMax', SemiParam%KrylovErrorMax)
-       call read_var('MaxKrylovMatvec', SemiParam%MaxKrylovMatvec)
-       SemiParam%nKrylovVector = SemiParam%MaxKrylovMatvec
+       call read_var('ErrorMax', SemiParam%ErrorMax)
+       call read_var('MaxMatvec', SemiParam%MaxMatvec)
+       SemiParam%nKrylovVector = SemiParam%MaxMatvec
 
     case('#SEMIKRYLOVSIZE')
        call read_var('nKrylovVector', SemiParam%nKrylovVector)
@@ -226,7 +232,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModProcMH, ONLY: iComm
-    use ModMain, ONLY: NameThisComp, BlkTest, ProcTest
+    use ModMain, ONLY: NameThisComp, time_accurate, BlkTest, ProcTest
     use ModAdvance, ONLY: DoFixAxis
     use ModGeometry, ONLY: true_cell
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
@@ -241,7 +247,7 @@ contains
     use ModResistivity,    ONLY: &
          get_impl_resistivity_state, update_impl_resistivity
 
-    integer :: iBlockSemi, iBlock, iError, i, j, k, iVar, n
+    integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
 
     logical :: DoTest, DoTestMe, DoTestKrylov
 
@@ -307,8 +313,12 @@ contains
        ! solve implicit system
        call solve_linear_multiblock( SemiParam, &
             nVarSemi, nDim, nI, nJ, nK, nBlockSemi, iComm, &
-            semi_impl_matvec, Rhs_I, x_I, iError, DoTestKrylov, &
+            semi_impl_matvec, Rhs_I, x_I, DoTestKrylov, &
             JacSemi_VVCIB, JacobiPrec_I, cg_precond, hypre_preconditioner)
+
+       if(SemiParam%iError /= 0 .and. iProc == 0 .and. time_accurate) &
+            call error_report(NameSub//': Krylov solver failed, Krylov error',&
+            SemiParam%Error, iError1, .true.)
 
        ! NewSemiAll_VCB = SemiAll_VCB + Solution
        n=0

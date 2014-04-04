@@ -141,16 +141,21 @@ module ModImplicit
   real    :: NewtonErrorMax = 0.001
 
   ! Jacobian parameters
-  character (len=10) :: JacobianType = 'prec'
   real               :: JacobianEps  = 1.E-12
 
-  ! Parameters for the implicit linear solver. Set defaults: 
-  !
-  ! DoPrecond=T, symmetric precond with MBILU, Gustafsson parameter is -0.5,
-  ! GMRES with relative error tolerance 0.001, maximum of 100 iterations,
-  ! and 100 Krylov vectors. No initial guess is used.
+  ! Default parameters for the implicit linear solver
   type(LinearSolverParamType):: ImplParam = LinearSolverParamType( &
-       .true., 'symmetric', 'MBILU', -0.5, 'GMRES', 'rel', 1e-3, 100, 100, .false.)
+       .true.,      &! DoPrecond
+       'symmetric', &! TypePrecondSide
+       'MBILU',     &! TypePrecond
+       -0.5,        &! PrecondParam (Gustafsson for MBILU)
+       'GMRES',     &! TypeKrylov
+       'rel',       &! TypeStop
+       1e-3,        &! ErrorMax
+       100,         &! MaxMatvec
+       100,         &! nKrylovVector
+       .false.,     &! UseInitialGuess
+       -1.0, -1, -1) ! Error, nMatvec, iError (return values)
 
   ! Additional Krylov scheme parameters
   character (len=10) :: KrylovInitType ='nul'
@@ -286,13 +291,12 @@ contains
        endif
 
     case('#JACOBIAN')
-       call read_var('TypeJacobian',JacobianType, IsLowerCase=.true.)
+       call read_var('DoPrecond', ImplParam%DoPrecond)
        call read_var('JacobianEps', JacobianEps)
 
-       ImplParam%DoPrecond = TypeJacobian == 'prec'
-
     case('#PRECONDITIONER')
-       call read_var('TypePrecondSide',ImplParam%TypePrecondSide, IsLowerCase=.true.)
+       call read_var('TypePrecondSide', ImplParam%TypePrecondSide, &
+            IsLowerCase=.true.)
        select case(ImplParam%TypePrecondSide)
        case('left','right','symmetric')
        case default
@@ -311,7 +315,8 @@ contains
           call read_var('GustafssonPar', ImplParam%PrecondParam)
           ImplParam%PrecondParam = -ImplParam%PrecondParam
        case default
-          call stop_mpi(NameSub//' invalid TypePrecond='//ImplParam%TypePrecond)
+          call stop_mpi(NameSub// &
+               ': invalid TypePrecond='//ImplParam%TypePrecond)
        end select
 
     case('#KRYLOV')
@@ -322,11 +327,11 @@ contains
        case default
           KrylovInitType='nul'
        end select
-       call read_var('ErrorMaxKrylov', ImplParam%KrylovErrorMax)
+       call read_var('ErrorMaxKrylov', ImplParam%ErrorMax)
        ! Use this error for the Newton iteration in case it is used
-       NewtonErrorMax = ImplParam%KrylovErrorMax
-       call read_var('MaxMatvecKrylov', ImplParam%MaxKrylovMatvec)
-       ImplParam%nKrylovVector = ImplParam%MaxKrylovMatvec
+       NewtonErrorMax = ImplParam%ErrorMax
+       call read_var('MaxMatvec', ImplParam%MaxMatvec)
+       ImplParam%nKrylovVector   = ImplParam%MaxMatvec
        ImplParam%UseInitialGuess = KrylovInitType /= 'nul'
 
     case('#KRYLOVSIZE')

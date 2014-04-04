@@ -89,10 +89,13 @@ module ModLinearSolver
      real             :: PrecondParam     ! Parameter (mostly for MBILU)
      character(len=10):: TypeKrylov       ! Krylov solver type
      character(len=3) :: TypeStop         ! Stopping criterion type (rel,abs)
-     real             :: KrylovErrorMax   ! Tolerance for solver
-     integer          :: MaxKrylovMatvec  ! Maximum number of iterations
+     real             :: ErrorMax         ! Tolerance for solver
+     integer          :: MaxMatvec        ! Maximum number of iterations
      integer          :: nKrylovVector    ! Number of vectors for GMRES
      logical          :: UseInitialGuess  ! non-zero initial guess
+     real             :: Error            ! Actual accuracy achieved
+     integer          :: nMatvec          ! Actual number of iterations
+     integer          :: iError           ! Error code from the solver
   end type LinearSolverParamType
 
   public:: LinearSolverParamType
@@ -2024,8 +2027,7 @@ contains
   !===========================================================================
 
   subroutine solve_linear_multiblock(Param, &
-       nVar, nDim, nI, nJ, nK, nBlock, iComm, impl_matvec, Rhs_I, &
-       x_I, iError, &
+       nVar, nDim, nI, nJ, nK, nBlock, iComm, impl_matvec, Rhs_I, x_I, &
        DoTest, Jac_VVCIB, JacobiPrec_I, cg_precond, hypre_precond)
 
     type(LinearSolverParamType), intent(inout):: Param
@@ -2047,7 +2049,6 @@ contains
 
     real, intent(inout):: Rhs_I(nVar*nI*nJ*nK*nBlock) ! RHS vector
     real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)   ! Initial guess/solution
-    integer,intent(out):: iError  ! Error code (0 for success)
 
     logical, optional:: DoTest    ! show Krylov iterations and convergence
 
@@ -2080,10 +2081,6 @@ contains
     ! Local variables
     integer:: n, iBlock, i, j, k, iVar
     integer:: nVarIjk, nImpl
-
-    ! Krylov solver stopping parameters
-    integer:: nKrylovMatvec
-    real::    KrylovError
 
     character(len=*), parameter:: NameSub = 'solve_linear_multiblock'
     !----------------------------------------------------------------------
@@ -2156,38 +2153,38 @@ contains
     endif
 
     ! Initialize stopping conditions. Solver will return actual values.
-    nKrylovMatVec = Param%MaxKrylovMatvec
-    KrylovError   = Param%KrylovErrorMax
+    Param%nMatVec = Param%MaxMatvec
+    Param%Error   = Param%ErrorMax
 
     if(DoTest)write(*,*)NameSub,': Before ', Param%TypeKrylov, &
-         ' nKrylovMatVec, KrylovError:', nKrylovMatVec, KrylovError
+         ' nMatVec, Error:', Param%nMatVec, Param%Error
 
     ! Solve linear problem
     !call timing_start('krylov solver')
     select case(Param%TypeKrylov)
     case('BICGSTAB')
        call bicgstab(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
-            KrylovError, Param%TypeStop, nKrylovMatVec, &
-            iError, DoTest, iComm)
+            Param%Error, Param%TypeStop, Param%nMatvec, &
+            Param%iError, DoTest, iComm)
     case('GMRES')
        call gmres(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl, &
             Param%nKrylovVector, &
-            KrylovError, Param%TypeStop, nKrylovMatVec, &
-            iError, DoTest, iComm)
+            Param%Error, Param%TypeStop, Param%nMatvec, &
+            Param%iError, DoTest, iComm)
     case('CG')
        if(.not. Param%DoPrecond)then
           call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, Param%TypeStop, nKrylovMatVec, &
-               iError, DoTest, iComm)
+               Param%Error, Param%TypeStop, Param%nMatvec, &
+               Param%iError, DoTest, iComm)
        elseif(Param%TypePrecond == 'JACOBI')then
           call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, Param%TypeStop, nKrylovMatVec, &
-               iError, DoTest, iComm, &
+               Param%Error, Param%TypeStop, Param%nMatvec, &
+               Param%iError, DoTest, iComm, &
                JacobiPrec_I)
        else
           call cg(impl_matvec, Rhs_I, x_I, Param%UseInitialGuess, nImpl,&
-               KrylovError, Param%TypeStop, nKrylovMatVec, &
-               iError, DoTest, iComm, &
+               Param%Error, Param%TypeStop, Param%nMatvec, &
+               Param%iError, DoTest, iComm, &
                preconditioner = cg_precond)
        end if
     case default
@@ -2201,11 +2198,11 @@ contains
          nVar, nDim, nI, nJ, nK, nBlock, Jac_VVCIB, x_I)
 
     if(DoTest)write(*,*)NameSub,&
-         ': After nKrylovMatVec, KrylovError, iError=',&
-         nKrylovMatVec, KrylovError, iError
+         ': After nMatVec, Error, iError=',&
+         Param%nMatvec, Param%Error, Param%iError
 
     ! Converging without any iteration is not a real error, so set iError=0
-    if(iError==3) iError=0
+    if(Param%iError==3) Param%iError=0
 
   end subroutine solve_linear_multiblock
 

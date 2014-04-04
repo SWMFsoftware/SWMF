@@ -100,10 +100,10 @@ subroutine advance_impl
 
   real, external :: minval_BLK, minval_loc_BLK
 
-  integer :: iw, implBLK, iBLK, KrylovMatVec, info
+  integer :: iw, implBLK, iBLK, KrylovMatVec
   integer :: NewtonIter
   integer :: iError, iError1
-  real    :: KrylovError, dwnrm, local_wnrm(nw), coef1
+  real    :: dwnrm, local_wnrm(nw), coef1
 
   logical:: converged
 
@@ -327,21 +327,20 @@ subroutine advance_impl
 
      ! For Newton solver the outer loop has to converge, 
      ! the inner loop only needs to reduce the error somewhat.
-     if(UseNewton) ImplParam%KrylovErrorMax = 0.1
+     if(UseNewton) ImplParam%ErrorMax = 0.1
 
      call set_oktest('krylov', DoTestKrylov, DoTestKrylovMe)
 
      call solve_linear_multiblock(ImplParam, &
           nVar, nDim, nI, nJ, nK, nImplBlk, iComm, &
-          impl_matvec, Rhs, Dw, info, DoTestKrylovMe, MAT)
+          impl_matvec, Rhs, Dw, DoTestKrylovMe, MAT)
 
      if(DoTestMe .and. nImplBLK>0)&
           write(*,*)NameSub,': final     dw(test)=',dw(implVARtest)
 
-     if(info /= 0 .and. iProc == 0 .and. time_accurate) then
-        call error_report('Krylov solver failure, Krylov error', &
-             KrylovError, iError1, .true.)
-     end if
+     if(ImplParam%iError /= 0 .and. iProc == 0 .and. time_accurate) &
+          call error_report(NameSub//': Krylov solver failed, Krylov error', &
+          ImplParam%Error, iError1, .true.)
 
      ! Update w: Impl_VGB(k+1) = Impl_VGB(k) + coeff*dw  
      ! with coeff=1 or coeff<1 from backtracking (for steady state only) 
@@ -429,7 +428,7 @@ subroutine advance_impl
      else
         pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
      end if
-     if(pRhoRelativeMin < RejectStepLevel .or. info/=0)then
+     if(pRhoRelativeMin < RejectStepLevel .or. ImplParam%iError /= 0)then
         ! Redo step if pressure decreased below RejectStepLevel
         ! or the Krylov iteration failed.
         Dt = 0.0
@@ -445,7 +444,8 @@ subroutine advance_impl
         ! Reduce next time step
         DtFixed = RejectStepFactor*DtFixed
         if(index(Test_String, 'updatecheck') > 0) write(*,*) NameSub, &
-             ': RejectStepLevel, info, DtFixed=', RejectStepLevel,info, DtFixed
+             ': RejectStepLevel, iError, DtFixed=', &
+             RejectStepLevel, ImplParam%iError, DtFixed
      elseif(pRhoRelativeMin < ReduceStepLevel)then
         ! Reduce next time step if pressure is reduced below ReduceStepLevel
         DtFixed = ReduceStepFactor*DtFixed

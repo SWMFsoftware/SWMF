@@ -2615,8 +2615,8 @@ contains
        end if
     end if
 
-    if(ImplParam%nKrylovVector > ImplParam%MaxKrylovMatvec) &
-         ImplParam%nKrylovVector = ImplParam%MaxKrylovMatvec
+    if(ImplParam%nKrylovVector > ImplParam%MaxMatvec) &
+         ImplParam%nKrylovVector = ImplParam%MaxMatvec
 
     if(.not.time_accurate.and.UseBDF2)then
        if(iProc==0)then
