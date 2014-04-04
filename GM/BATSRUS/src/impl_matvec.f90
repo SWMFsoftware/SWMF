@@ -189,7 +189,7 @@ subroutine impl_matvec_prec(qx,qy,n)
   ! The multiplication by L is done in a matrix free fashion.
 
   use ModImplicit
-  use ModLinearSolver, ONLY: multiply_left_precond, multiply_right_precond
+  use ModLinearSolver, ONLY: precond_left_multiblock, precond_right_multiblock
   implicit none
 
   integer, intent(in):: n
@@ -208,29 +208,17 @@ subroutine impl_matvec_prec(qx,qy,n)
   if(oktest_me)write(*,*)'impl_matvec_prec initial n,sum(x**2),sum(y**2)=',&
        nimpl,sum(qx(1:nimpl)**2),sum(qy(1:nimpl)**2)
 
-  if(ImplParam%TypePrecondSide /= 'left')then
-     ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
-     ! for left, symmetric and right preconditioning, respectively
-     do implBLK = 1, nImplBLK
-        call multiply_right_precond( &
-             ImplParam%TypePrecond, ImplParam%TypePrecondSide,&
-             nVar, nDim, nI, nJ, nK, MAT(1,1,1,1,1,1,implBlk), &
-             qy(nwIJK*(implBLK-1)+1))
-     end do
-  end if
+  ! qy = P_R.qx, where P_R = I, U^{-1}, or U^{-1}L^{-1}
+  ! for left, symmetric and right preconditioning, respectively
+  call precond_right_multiblock(ImplParam, &
+       nVar, nDim, nI, nJ, nK, nBlock, MAT, qy)
 
   call impl_matvec_free(qy,qy,n) ! qy = A.qy
 
-  if(ImplParam%TypePrecondSide /= 'right')then
-     ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
-     ! for left, symmetric, and right preconditioning, respectively
-     do implBLK = 1, nImplBLK
-        call multiply_left_precond( &
-             ImplParam%TypePrecond, ImplParam%TypePrecondSide,&
-             nVar, nDim, nI, nJ, nK, MAT(1,1,1,1,1,1,implBlk), &
-             qy(nwIJK*(implBLK-1)+1))
-     end do
-  end if
+  ! qy = P_L.qy, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
+  ! for left, symmetric, and right preconditioning, respectively
+  call precond_left_multiblock(ImplParam, &
+       nVar, nDim, nI, nJ, nK, nBlock, MAT, qy)
 
   if(oktest_me)write(*,*)'impl_matvec_prec final n,sum(x**2),sum(y**2)=',&
        n,sum(qx**2),sum(qy**2)
