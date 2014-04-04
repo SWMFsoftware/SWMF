@@ -65,7 +65,9 @@ module ModLinearSolver
 
   public :: implicit_solver       ! implicit solver in 1D with 3 point stencil
 
-  public :: solve_linear_multiblock ! solver for multiblock grid
+  public :: solve_linear_multiblock  ! solver for multiblock grid
+  public :: precond_left_multiblock  ! left precond for multiblock grid
+  public :: precond_right_multiblock ! right precond for multiblock grid
 
   public :: test_linear_solver    ! unit test
 
@@ -1894,6 +1896,91 @@ contains
   end subroutine multiply_right_precond
 
   !============================================================================
+
+  subroutine precond_left_multiblock(Param, &
+       nVar, nDim, nI, nJ, nK, nBlock, Jac_VVCIB, x_I)
+
+    ! Multiply x_I with the left preconditioner matrix
+
+    type(LinearSolverParamType), intent(in):: Param
+
+    integer, intent(in)   :: nVar   ! number of variables per cell
+    integer, intent(in)   :: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in)   :: nI     ! number of cells in dim 1
+    integer, intent(in)   :: nJ     ! number of cells in dim 2
+    integer, intent(in)   :: nK     ! number of cells in dim 3
+    integer, intent(in)   :: nBlock ! number of blocks
+
+    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock) ! Precond matrix
+    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)                     ! Vector of vars
+
+    integer:: nVarIJK, iBlock
+
+    character(len=*), parameter:: NameSub = 'precond_left_multiblock'
+    !--------------------------------------------------------------------------
+    if(.not. Param%DoPrecond) RETURN
+
+    if(Param%TypePrecondSide == 'right') RETURN
+
+    ! CG preconditioner is inside the solver
+    if(Param%TypeKrylov == 'CG') RETURN
+
+    nVarIJK = nVar*nI*nJ*nK
+
+    do iBlock = 1, nBlock
+
+       call multiply_left_precond( &
+            Param%TypePrecond, Param%TypePrecondSide,&
+            nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
+            x_I(nVarIJK*(iBlock-1) + 1))
+
+    end do
+
+  end subroutine precond_left_multiblock
+
+  !============================================================================
+
+  subroutine precond_right_multiblock(Param, &
+       nVar, nDim, nI, nJ, nK, nBlock, Jac_VVCIB, x_I)
+
+    ! Multiply x_I with the right preconditioner matrix using the
+
+    type(LinearSolverParamType), intent(in):: Param
+
+    integer, intent(in)   :: nVar   ! number of variables per cell
+    integer, intent(in)   :: nDim   ! number of dimensions 1, 2 or 3
+    integer, intent(in)   :: nI     ! number of cells in dim 1
+    integer, intent(in)   :: nJ     ! number of cells in dim 2
+    integer, intent(in)   :: nK     ! number of cells in dim 3
+    integer, intent(in)   :: nBlock ! number of blocks
+
+    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock) ! Precond matrix
+    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)                     ! Vector of vars
+
+    integer:: nVarIJK, iBlock
+
+    character(len=*), parameter:: NameSub = 'precond_right_multiblock'
+    !--------------------------------------------------------------------------
+    if(.not. Param%DoPrecond) RETURN
+
+    if(Param%TypePrecondSide == 'left') RETURN
+
+    if(Param%TypeKrylov == 'CG') RETURN
+
+    nVarIJK = nVar*nI*nJ*nK
+
+    do iBlock = 1, nBlock
+
+       call multiply_right_precond( &
+            Param%TypePrecond, Param%TypePrecondSide,&
+            nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
+            x_I(nVarIJK*(iBlock-1) + 1))
+
+    end do
+
+  end subroutine precond_right_multiblock
+
+  !============================================================================
   subroutine multiply_initial_guess(nVar, nDim, nI, nJ, nK, a_II, x_I)
 
     ! Multiply x_I with the upper triangular part of
@@ -2110,18 +2197,8 @@ contains
 
     ! Postprocessing: x = P_R.x where P_R = I, U^{-1}, U^{-1}L^{-1} for 
     ! left, symmetric and right preconditioning, respectively
-    if(Param%DoPrecond .and. Param%TypePrecondSide /= 'left' &
-         .and. Param%TypeKrylov /= 'CG') then
-
-       do iBlock = 1, nBlock
-          n = nVarIjk*(iBlock-1)+1
-          call multiply_right_precond( &
-               Param%TypePrecond, Param%TypePrecondSide, &
-               nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
-               x_I(n))
-       end do
-
-    end if
+    call precond_right_multiblock(Param, &
+         nVar, nDim, nI, nJ, nK, nBlock, Jac_VVCIB, x_I)
 
     if(DoTest)write(*,*)NameSub,&
          ': After nKrylovMatVec, KrylovError, iError=',&
