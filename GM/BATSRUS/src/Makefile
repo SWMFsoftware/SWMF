@@ -57,6 +57,7 @@ OBJECTS = \
 	ModMultiIon.o \
 	ModNodes.o \
 	ModParallel.o \
+	ModPartImplicit.o \
 	ModPartSteady.o \
 	ModPIC.o \
 	ModPhysics.o \
@@ -87,11 +88,6 @@ OBJECTS = \
 	explicit.o \
 	fix_axis_cells.o \
 	get_im_pressure.o \
-	implicit.o \
-	impl_interface.o \
-	impl_jacobian.o \
-	impl_matvec.o \
-	impl_newton.o \
 	library.o \
 	load_balance.o \
 	project_B.o \

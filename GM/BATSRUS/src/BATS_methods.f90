@@ -373,6 +373,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModMultiFluid, ONLY: UseMultiIon
   use ModPic, ONLY: UsePic, pic_save_region, pic_update_states
   use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
+  use ModPartImplicit, ONLY: advance_part_impl
 
   implicit none
 
@@ -423,7 +424,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        call select_conservative
 
   if(UseImplicit.and.nBlockImplALL>0)then
-     call advance_impl
+     call advance_part_impl
   elseif(UseLocalTimeStep) then
      call advance_localstep(TimeSimulationLimit)
   else
