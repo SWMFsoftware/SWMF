@@ -981,12 +981,14 @@ contains
 
        ! w=w+dw for all true cells
        n=0
-       do implBLK=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI; do iVar = 1, nVar
-          n=n+1
-          if(true_cell(i,j,k,impl2iBLK(implBLK)))&
-               Impl_VGB(iVar,i,j,k,implBLK) = Impl_VGB(iVar,i,j,k,implBLK) &
-               + coeff*dw(n)*Norm_V(iVar)
-       enddo; enddo; enddo; enddo; enddo
+       do implBLK=1,nBlockImpl; do k=1,nK; do j=1,nJ; do i=1,nI
+          do iVar = 1, nVar
+             n=n+1
+             if(true_cell(i,j,k,impl2iBLK(implBLK)))&
+                  Impl_VGB(iVar,i,j,k,implBLK) = Impl_VGB(iVar,i,j,k,implBLK) &
+                  + coeff*dw(n)*Norm_V(iVar)
+          enddo
+       enddo; enddo; enddo; enddo
 
        if(UseConservativeImplicit .or. .not.IsConverged) then
           !calculate low order residual ResImpl_VCB = dtexpl*RES_low(k+1)
@@ -1013,7 +1015,8 @@ contains
        do iVar = 1, nVar
           call MPI_allreduce(sum(Impl_VGB(iVar,1:nI,1:nJ,1:nK,1:nBlockImpl)**2),&
                Norm_V2,   1,MPI_REAL,MPI_SUM,iComm,iError)
-          call MPI_allreduce(sum(ResExpl_VCB(iVar,1:nI,1:nJ,1:nK,1:nBlockImpl)**2),&
+          call MPI_allreduce( &
+               sum(ResExpl_VCB(iVar,1:nI,1:nJ,1:nK,1:nBlockImpl)**2), &
                resexpl2,1,MPI_REAL,MPI_SUM,iComm,iError)
 
           if(Norm_V2 < smalldouble) Norm_V2 = 1.0
@@ -1092,7 +1095,7 @@ contains
        ! for left, symmetric and right preconditioning, respectively
        y_I = x_I
        call precond_right_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nImplBlk, MAT, y_I)
+            nVar, nDim, nI, nJ, nK, nBlockImpl, MAT, y_I)
 
        ! y = A.y
        call impl_matvec_free(y_I, y_I)
@@ -1100,7 +1103,7 @@ contains
        ! y = P_L.y, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
        ! for left, symmetric, and right preconditioning, respectively
        call precond_left_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nImplBlk, MAT, y_I)
+            nVar, nDim, nI, nJ, nK, nBlockImpl, MAT, y_I)
     else
        ! y = A.y
        call impl_matvec_free(x_I, y_I)
