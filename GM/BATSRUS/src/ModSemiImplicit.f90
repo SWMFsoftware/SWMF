@@ -16,6 +16,7 @@ module ModSemiImplicit
 
   public:: read_semi_impl_param  ! Read parameters
   public:: init_mod_semi_impl    ! Initialize variables
+  public:: clean_mod_semi_impl   ! Deallocate variables
   public:: advance_semi_impl     ! Advance semi implicit operator
 
   ! The index of the variable currently being solved for
@@ -211,19 +212,19 @@ contains
 
     ! Deallocate all variables
 
-    deallocate(iBlockFromSemi_B)
-    deallocate(SemiAll_VCB)
-    deallocate(NewSemiAll_VCB)
-    deallocate(DconsDsemiAll_VCB)
-    deallocate(SemiState_VGB)
-    deallocate(ResSemi_VCB)
-    if(allocated(JacSemi_VVCIB)) &
-         deallocate(JacSemi_VVCIB)
-    if(allocated(FluxImpl_VXB)) &
-         deallocate(FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
-    deallocate(Rhs_I)
-    deallocate(x_I)
-    deallocate(JacobiPrec_I)
+    if(allocated(iBlockFromSemi_B))  deallocate(iBlockFromSemi_B)
+    if(allocated(SemiAll_VCB))       deallocate(SemiAll_VCB)
+    if(allocated(NewSemiAll_VCB))    deallocate(NewSemiAll_VCB)
+    if(allocated(DconsDsemiAll_VCB)) deallocate(DconsDsemiAll_VCB)
+    if(allocated(SemiState_VGB))     deallocate(SemiState_VGB)
+    if(allocated(ResSemi_VCB))       deallocate(ResSemi_VCB)
+    if(allocated(JacSemi_VVCIB))     deallocate(JacSemi_VVCIB)
+    if(allocated(FluxImpl_VXB))      deallocate(FluxImpl_VXB)
+    if(allocated(FluxImpl_VYB))      deallocate(FluxImpl_VYB)
+    if(allocated(FluxImpl_VZB))      deallocate(FluxImpl_VZB)
+    if(allocated(Rhs_I))             deallocate(Rhs_I)
+    if(allocated(x_I))               deallocate(x_I)
+    if(allocated(JacobiPrec_I))      deallocate(JacobiPrec_I)
 
   end subroutine clean_mod_semi_impl
   !============================================================================

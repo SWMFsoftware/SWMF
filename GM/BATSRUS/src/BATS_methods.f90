@@ -961,7 +961,8 @@ subroutine BATSRUS_finalize
   use ModNodes,    ONLY: clean_mod_nodes
   use ModCT,       ONLY: clean_mod_ct
   use ModRaytrace, ONLY: clean_mod_raytrace
-  use ModImplicit, ONLY: clean_mod_implicit
+  use ModPartImplicit, ONLY: clean_mod_part_impl
+  use ModSemiImplicit, ONLY: clean_mod_semi_impl
   use BATL_lib,    ONLY: clean_batl
 
   implicit none
@@ -971,7 +972,8 @@ subroutine BATSRUS_finalize
   call clean_batl
   call clean_mod_advance
   call clean_mod_ct
-  call clean_mod_implicit
+  call clean_mod_part_impl
+  call clean_mod_semi_impl
   call clean_mod_geometry
   call clean_mod_nodes
   call clean_mod_raytrace

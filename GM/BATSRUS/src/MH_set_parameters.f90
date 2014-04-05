@@ -17,6 +17,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModNodes, ONLY: init_mod_nodes
   use ModImplicit
   use ModSemiImplicit, ONLY: read_semi_impl_param, init_mod_semi_impl
+  use ModPartImplicit, ONLY: read_part_impl_param, init_mod_part_impl
   use ModImplHypre, ONLY: hypre_read_param
   use ModPhysics
   use ModProject
@@ -264,7 +265,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseB0)           call init_mod_b0
      if(UseRaytrace)     call init_mod_raytrace
      if(UseConstrainB)   call init_mod_ct
-     if(UseImplicit)     call init_mod_implicit
+     if(UseImplicit)     call init_mod_part_impl
      if(UseSemiImplicit) call init_mod_semi_impl
      if(DoWriteIndices)  call init_mod_geoindices
 
@@ -512,7 +513,7 @@ subroutine MH_set_parameters(TypeAction)
           "#IMPLENERGY", "#IMPLICITENERGY", &
           "#NEWTON", "#JACOBIAN", "#PRECONDITIONER", &
           "#KRYLOV", "#KRYLOVSIZE")
-        call read_implicit_param(NameCommand)           
+        call read_part_impl_param(NameCommand)           
 
      case("#SEMIIMPL", "#SEMIIMPLICIT", &
           "#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF", &
@@ -2070,12 +2071,6 @@ contains
     UseImplicit      = .false.
     ImplCritType     = 'dt'
 
-    if(nByteReal>7)then
-       JacobianEps   = 1.E-12
-    else
-       JacobianEps   = 1.E-6
-    end if
-
     UseDivbSource   =  UseB .and. nDim > 1
     UseDivbDiffusion= .false.
     UseProjection   = .false.
@@ -2455,7 +2450,7 @@ contains
        if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
     end if
 
-    if(UseSemiImplicit .or. nStage == 1)then
+    if(nStage == 1)then
        UseBDF2 = .false.
     elseif (time_accurate .and. nStage == 2)then
        UseBDF2 = .true.
@@ -2614,9 +2609,6 @@ contains
           call stop_mpi('Correct PARAM.in')
        end if
     end if
-
-    if(ImplParam%nKrylovVector > ImplParam%MaxMatvec) &
-         ImplParam%nKrylovVector = ImplParam%MaxMatvec
 
     if(.not.time_accurate.and.UseBDF2)then
        if(iProc==0)then
