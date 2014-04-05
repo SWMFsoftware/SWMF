@@ -799,7 +799,7 @@ contains
        ! for left, symmetric and right preconditioning, respectively
        y_I = x_I
        call precond_right_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nBlock, MAT, y_I)
+            nVar, nDim, nI, nJ, nK, nImplBlk, MAT, y_I)
 
        ! y = A.y
        call impl_matvec_free(y_I, y_I)
@@ -807,7 +807,7 @@ contains
        ! y = P_L.y, where P_L==U^{-1}.L^{-1}, L^{-1}, or I
        ! for left, symmetric, and right preconditioning, respectively
        call precond_left_multiblock(ImplParam, &
-            nVar, nDim, nI, nJ, nK, nBlock, MAT, y_I)
+            nVar, nDim, nI, nJ, nK, nImplBlk, MAT, y_I)
     else
        ! y = A.y
        call impl_matvec_free(x_I, y_I)
