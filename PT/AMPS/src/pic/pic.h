@@ -137,6 +137,11 @@ namespace PIC {
 
   }
 
+  //define the test-run parameters
+  namespace ModelTestRun {
+    extern bool mode;
+    extern int nTotalIteraction;
+  }
 
   //run tame calculation of the check sums
   namespace RunTimeSystemState {

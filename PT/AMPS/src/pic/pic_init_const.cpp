@@ -31,3 +31,7 @@ char PIC::DiagnospticMessageStreamName[_MAX_STRING_LENGTH_PIC_]="stdout";
 
 //the directory for output files
 char PIC::OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
+
+//define the test-run parameters
+bool PIC::ModelTestRun::mode=false;
+int PIC::ModelTestRun::nTotalIteraction=100;
