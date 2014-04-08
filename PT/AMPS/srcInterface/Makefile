@@ -13,7 +13,8 @@ include ../Makefile.conf
 
 OBJECTS = \
 	PT_wrapper.o \
-	amps2swmf.o
+	amps2swmf.o  \
+	amps_param_interface.o
 
 #
 #	Making library
@@ -33,6 +34,8 @@ ${MY_LIB}: ${AMPS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 PT_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
+
+amps_interface.o:
 
 #
 #	cleaning

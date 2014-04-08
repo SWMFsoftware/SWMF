@@ -19,11 +19,14 @@
 #include <iostream>
 #include <fstream>
 #include <signal.h>
+#include <sstream>
 
 #include <sys/time.h>
 #include <sys/resource.h>
 
 #include "pic.h"
+#include "amps2swmf.h"
+
 
 using namespace std;
 
@@ -98,12 +101,12 @@ extern "C" {
     }
 
 
-    static int counter=0;
+    static long int counter=0;
     counter++;
 
     amps_time_step();
 
-    if (counter==100) {
+    if (PIC::ModelTestRun::mode==true) if (counter==PIC::ModelTestRun::nTotalIteraction) {
       char fname[400];
 
       sprintf(fname,"%s/amsp.dat",PIC::OutputDataFileDirectory);
@@ -113,6 +116,18 @@ extern "C" {
     }    
 
   }
+
+
+  int amps_read_param_(char *param, int *nlines, int *ncharline, int *iProc){
+    // convert character array to string stream object                                                                                                      
+    std::stringstream ss;
+
+    AMPS2SWMF::PARAMIN::char_to_stringstream(param, *nlines, *ncharline,&ss);
+    AMPS2SWMF::PARAMIN::read_paramin(&ss);
+
+    return 0;
+  }
+
 
 }
 

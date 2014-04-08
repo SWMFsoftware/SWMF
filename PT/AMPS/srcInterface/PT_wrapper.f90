@@ -1,10 +1,12 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the empty PTOM (PT) component
+!  Wrapper for the empty PTOM (PT) component
+!  $Id$
 !==========================================================================
 subroutine PT_set_param(CompInfo, TypeAction)
 
   use CON_comp_info
+  use ModReadParam
   implicit none
 
   character (len=*), parameter :: NameSub='PT_set_param'
@@ -13,9 +15,10 @@ subroutine PT_set_param(CompInfo, TypeAction)
   ! Arguments
   type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
   character (len=*), intent(in)     :: TypeAction ! What to do
+  character(len=lStringLine), allocatable :: StringLineF_I(:) ! Contains the PARAM.in segment
   !-------------------------------------------------------------------------
 
-!call AMPS_TimeStep()
+  !call AMPS_TimeStep()
 
 
   select case(TypeAction)
@@ -30,8 +33,12 @@ subroutine PT_set_param(CompInfo, TypeAction)
      call AMPS_SetMpiCommunicator(iComm, iProc, nProc)
 
   case('READ', 'CHECK')
-     ! No input parameters
-
+     ! get section of PARAM.in that contains the PT module
+     allocate(StringLineF_I(i_line_read()+1:n_line_read()))
+     call read_text(StringLineF_I)
+     if(n_line_read()-i_line_read()+1 > 0) then
+        call amps_read_param(StringLineF_I,n_line_read()-i_line_read(), lStringLine,iProc)
+     end if
   case('STDOUT')
      ! call AMPS_set_stdout
 
