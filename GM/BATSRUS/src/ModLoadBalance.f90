@@ -9,7 +9,7 @@ module ModLoadBalance
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data
-  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB, nW
+  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRaytrace, ONLY: ray
   use ModAdvance, ONLY: nVar
@@ -42,7 +42,7 @@ contains
   subroutine init_load_balance
 
     ! To be replaced with BATL_size variable !!!
-    integer, parameter :: nCellGhost=(nI+4)*(nJ+4)*(nK+4)
+    integer, parameter:: nCellGhost = (MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)
 
     !------------------------------------------------------------------------
     DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
@@ -90,7 +90,7 @@ contains
 
     if (UseConstrainB) then
 
-       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           iData = iData+1
           Buffer_I(iData) = Bxface_BLK(i,j,k,iBlock)
           iData = iData+1
@@ -104,7 +104,7 @@ contains
     if(DoMoveExtraData)then
        if(UseB0)then
           ! Cell centered B0_DGB
-          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Buffer_I(iData+1:iData+3) = B0_DGB(:,i,j,k,iBlock)
              iData = iData + 3
           end do; end do; end do
@@ -113,7 +113,7 @@ contains
     end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw; iData = iData+1
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
     end if
@@ -180,7 +180,7 @@ contains
     end if ! DoMoveExtraData
 
     if(UseBDF2 .and. n_prev > 0)then
-       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nw
+       do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           iData = iData+1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
        end do; end do; end do; end do
