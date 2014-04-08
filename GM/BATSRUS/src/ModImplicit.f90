@@ -74,7 +74,6 @@ module ModImplicit
   !\
   ! Number of variables and the index of energy (replacing pressure)
   !/
-  integer :: nw
   integer, parameter :: E_ = P_
 
   !\
