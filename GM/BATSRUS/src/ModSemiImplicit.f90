@@ -668,7 +668,7 @@ contains
     ! Multiply Vec with the preconditioner matrix. 
     ! This routine is used by the Preconditioned Conjugate Gradient method
 
-    use BATL_size,       ONLY: nDim, nI, nJ, nK, nIJK
+    use BATL_size,       ONLY: nDim, nI, nJ, nK
     use ModLinearSolver, ONLY: precond_left_multiblock
     use ModImplHypre,    ONLY: hypre_preconditioner
 
