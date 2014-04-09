@@ -1914,29 +1914,25 @@ contains
     integer, intent(in)   :: nK     ! number of cells in dim 3
     integer, intent(in)   :: nBlock ! number of blocks
 
-    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock) ! Precond matrix
-    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)                     ! Vector of vars
+    ! Preconditioner matrix
+    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock)
+
+    ! Vector of variables
+    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)
 
     integer:: nVarIJK, iBlock
 
     character(len=*), parameter:: NameSub = 'precond_left_multiblock'
     !--------------------------------------------------------------------------
     if(.not. Param%DoPrecond) RETURN
-
     if(Param%TypePrecondSide == 'right') RETURN
 
-    ! CG preconditioner is inside the solver
-    if(Param%TypeKrylov == 'CG') RETURN
-
     nVarIJK = nVar*nI*nJ*nK
-
     do iBlock = 1, nBlock
-
        call multiply_left_precond( &
             Param%TypePrecond, Param%TypePrecondSide,&
             nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
             x_I(nVarIJK*(iBlock-1) + 1))
-
     end do
 
   end subroutine precond_left_multiblock
@@ -1957,28 +1953,25 @@ contains
     integer, intent(in)   :: nK     ! number of cells in dim 3
     integer, intent(in)   :: nBlock ! number of blocks
 
-    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock) ! Precond matrix
-    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)                     ! Vector of vars
+    ! Preconditioner matrix
+    real, intent(in)   :: Jac_VVCIB(nVar,nVar,nI,nJ,nK,2*nDim+1,nBlock) 
+
+    ! Vector of variables
+    real, intent(inout):: x_I(nVar*nI*nJ*nK*nBlock)                     
 
     integer:: nVarIJK, iBlock
 
     character(len=*), parameter:: NameSub = 'precond_right_multiblock'
     !--------------------------------------------------------------------------
     if(.not. Param%DoPrecond) RETURN
-
     if(Param%TypePrecondSide == 'left') RETURN
 
-    if(Param%TypeKrylov == 'CG') RETURN
-
     nVarIJK = nVar*nI*nJ*nK
-
     do iBlock = 1, nBlock
-
        call multiply_right_precond( &
             Param%TypePrecond, Param%TypePrecondSide,&
             nVar, nDim, nI, nJ, nK, Jac_VVCIB(1,1,1,1,1,1,iBlock), &
             x_I(nVarIJK*(iBlock-1) + 1))
-
     end do
 
   end subroutine precond_right_multiblock
