@@ -620,9 +620,10 @@ class GitmBin(PbData):
 
             for ilon in range(self.attrs['nLon']):
                 for ilat in range(self.attrs['nLat']):
-                    # Integrate electron density over altitude
-                    vtec = integ.simps(self['VTEC'][ilon,ilat,:],
-                                       self['Altitude'][ilon,ilat,:], "avg")
+                    # Integrate electron density over altitude, not including
+                    # ghost cells
+                    vtec = integ.simps(self['VTEC'][ilon,ilat,2:-2],
+                                       self['Altitude'][ilon,ilat,2:-2], "avg")
                     self['VTEC'][ilon,ilat,:] = vtec
 
     def calc_2dion(self):
@@ -647,25 +648,27 @@ class GitmBin(PbData):
             self['hmF2'] = dmarray(self['Altitude'] / 1000.0,
                                    attrs={'units':'km', 'scale':'linear',
                                           'name':'h$_m$F$_2$'})
-            alt = np.linspace(min(self['hmF2'][0,0,:]),
-                              max(self['hmF2'][0,0,:]),1000)
+            alt = np.linspace(min(self['hmF2'][0,0,2:-2]),
+                              max(self['hmF2'][0,0,2:-2]),1000)
 
             for ilon in range(self.attrs['nLon']):
                 for ilat in range(self.attrs['nLat']):
                     if calc_tec is True:
                         # Integrate electron density over altitude
-                        vtec = integ.simps(self['VTEC'][ilon,ilat,:],
-                                           self['Altitude'][ilon,ilat,:], "avg")
+                        vtec = integ.simps(self['VTEC'][ilon,ilat,2:-2],
+                                           self['Altitude'][ilon,ilat,2:-2],
+                                           "avg")
                         self['VTEC'][ilon,ilat,:] = vtec
 
                     # Interpolate over the electron density altitude profile
-                    eprof = interp1d(self['hmF2'][ilon,ilat,:],
-                                     self['NmF2'][ilon,ilat,:], kind="cubic")
+                    eprof = interp1d(self['hmF2'][ilon,ilat,2:-2],
+                                     self['NmF2'][ilon,ilat,2:-2], kind="cubic")
                     try:
                         edens = eprof(alt)
                     except:
-                        alt = np.linspace(min(self['hmF2'][ilon,ilat,:]),
-                                          max(self['hmF2'][ilon,ilat,:]),1000)
+                        alt = np.linspace(min(self['hmF2'][ilon,ilat,2:-2]),
+                                          max(self['hmF2'][ilon,ilat,2:-2]),
+                                          1000)
                         edens = eprof(alt)
 
                     # Find the local maxima of the electron density profile
