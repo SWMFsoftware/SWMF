@@ -104,7 +104,7 @@ distclean:
 
 allclean:
 	@touch ${INSTALLFILES}
-	@cd src; make distclean
+	cd src; make distclean
 	cd srcInterface; make distclean
 	rm -f *~
 
