@@ -94,6 +94,42 @@ test_comp:
 
 ### SWMF tests ###
 
+#### Convection Zone model: FSAM test ####
+#
+test_cz:
+	@echo "starting..."        >  test_cz.diff
+	@echo "test_cz_compile..." >> test_cz.diff
+	${MAKE} test_cz_compile
+	@echo "test_cz_rundir..."  >> test_cz.diff
+	${MAKE} test_cz_rundir
+	@echo "test_cz_run..."     >> test_cz.diff
+	${MAKE} test_cz_run
+	@echo "test_cz_check..."   >> test_cz.diff
+	${MAKE} test_cz_check
+	if([ "${KEEP}"]); then rm -f run_$@; mv ${TESTDIR} run_$@; fi
+
+test_cz_compile:
+	./Config.pl -v=Empty,CZ/FSAM 
+	${MAKE} SWMF
+	
+test_cz_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.CZ ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.CZ ${TESTDIR}/LAYOUT.in
+	cp ${CZDIR}/input/gong.l4b.14 ${TESTDIR}/
+	cp ${CZDIR}/src/problems/test/jobscript.swmf ${TESTDIR}/jobscript
+
+test_cz_run:
+	cd ${TESTDIR}; bsub < jobscript
+
+test_cz_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/eng_1_n00000000 \
+		${CZDIR}/input/eng_1_n00000000 \
+		> test_cz.diff)
+	ls -ltr test_cz.diff
+
 #### Polarwind test ###
 #
 test_pw:

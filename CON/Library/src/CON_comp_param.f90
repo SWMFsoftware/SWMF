@@ -33,6 +33,7 @@
 !\item[SC] Solar Corona
 !\item[SP] Solar Energetic Particles
 !\item[UA] Upper Atmosphere
+!\item[CZ] Convection Zone
 !\end{itemize}
 
 !INTERFACE:	
@@ -43,18 +44,18 @@ module CON_comp_param
 
   !PUBLIC DATA MEMBERS:
 
-  integer, parameter :: MaxComp   = 14 ! maximum number of components
+  integer, parameter :: MaxComp   = 15 ! maximum number of components
   integer, parameter :: lNameComp =  2 ! length of component names
 
   ! Convert component index to component name
   character(len=lNameComp), parameter :: NameComp_I(MaxComp) = (/ & 
        "EE", "GM", "IE", "IH", "IM", "OH", "PC", "PS", "PT", "PW", &
-       "RB", "SC", "SP", "UA"/)
+       "RB", "SC", "SP", "UA", "CZ"/)
 
   ! Named indexes for the components
   integer, parameter :: &
        EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5, OH_=6, PC_=7, PS_=8, PT_=9, PW_=10, &
-       RB_=11, SC_=12 ,SP_=13, UA_=14
+       RB_=11, SC_=12 ,SP_=13, UA_=14, CZ_=15
 
   ! Length of the version name of the component
   integer, parameter :: lNameVersion=40 

@@ -76,6 +76,8 @@ LIBSP = ${LIBDIR}/libSP.a       #^CMP IF SP
 
 LIBUA = ${LIBDIR}/libUA.a	#^CMP IF UA
 
+LIBCZ = ${LIBDIR}/libCZ.a    	#^CMP IF CZ
+
 #######################
 # Interface part of   #
 # super-structure:    #
@@ -142,6 +144,9 @@ SWMFEXE:
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo
 
+#		${HYPRELIB} ${SEARCH_EXTRA}
+
+
 ###########################################################
 
 # The order of compilation:
@@ -186,6 +191,7 @@ LIB:
 	@cd ${SCDIR};                $(MAKE) LIB	#^CMP IF SC
 	@cd ${SPDIR};                $(MAKE) LIB	#^CMP IF SP
 	@cd ${UADIR};                $(MAKE) LIB	#^CMP IF UA
+	@cd ${CZDIR}; 		     $(MAKE) LIB        #^CMP IF CZ
 	@cd ${INTERFACEDIR};         $(MAKE) LIB
 	@make DEPEND
 	$(MAKE) ${MY_LIB}
@@ -234,7 +240,7 @@ TMP_DIRS: LIB
 	mkdir Tmp_LIBSC;       cd Tmp_LIBSC;     ${AR_X} ${LIBSC} #^CMP IF SC
 	mkdir Tmp_LIBSP;       cd Tmp_LIBSP;     ${AR_X} ${LIBSP} #^CMP IF SP
 	mkdir Tmp_LIBUA;       cd Tmp_LIBUA;     ${AR_X} ${LIBUA} #^CMP IF UA
-
+	mkdir Tmp_LIBCZ;       cd Tmp_LIBCZ;     ${AR_X} ${LIBCZ} #^CMP IF CZ
 #
 #	cleaning
 #
