@@ -4,10 +4,9 @@ program xfsam
   use ModControl
   use ModSundry
   use ModGetQtys
-  use ModIO
+  use ModIoFSAM
   use ModInitialization
   use ModIteration
-  !use ModImplCond
   use ModFSAM
   use ModMpi
   implicit none

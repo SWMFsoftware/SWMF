@@ -3,26 +3,26 @@ module ModRHS
   implicit none
 
   private
-  
+
   public :: p_init
-  
+
   public :: hsmoc
-  
+
   public :: diffemf
-  
+
   public :: resistive_emf
-  
+
   public :: heattran
-  
+
 contains
 
   !=====================================================================================
-  
+
   subroutine p_init
     use ModGetP,     ONLY: getp
     implicit none
     !----------------------------------------------------------------------------------
-    
+
     call stv
     call lorentz
     call advection
@@ -78,11 +78,11 @@ contains
     dels3(is:ie,js:je,ks:kep1) = 0.d0
 
     deallocate(f1, f2)
-    
+
   end subroutine stv
-  
+
   !=====================================================================================
-  
+
   subroutine lorentz
     use ModPar,     ONLY: ijkn, in, jn, kn
     use ModGrid
@@ -97,7 +97,7 @@ contains
     !----------------------------------------------------------------------------------
 
     allocate(scratch1(in,jn,kn), scratch2(in,jn,kn), scratch3(in,jn,kn))
-    
+
     ! 1-force
     ! By following the Alfven velocity in the 2-direction, evaluate
     ! "bstar" from "b1" to estimate the 2-transverse Lorentz force
@@ -175,7 +175,7 @@ contains
        dels2(i,j,k)  = dels2(i,j,k) - (scratch1(i,j,k) + scratch1(i,j,k+1) + &
             scratch2(i,j,k) + scratch2(i+1,j,k) - scratch3(i,j,k))*dx2bi(j)*g2bi(i)*0.25d0
     enddo; enddo; enddo
-    
+
     ! 3-force                                                                               
     do k=ks,kep1
        ! By following the Alfven velocity in the 1-direction, evaluate                      
@@ -216,11 +216,11 @@ contains
     enddo; enddo; enddo
 
     deallocate(scratch1, scratch2, scratch3)
-  
+
   end subroutine lorentz
-  
+
   !=======================================================================================
-  
+
   subroutine advection
     use ModPar,     ONLY: ijkn, myid1, tiny, in, jn, kn, ijkn, myid
     use ModGrid
@@ -231,7 +231,7 @@ contains
     use ModCoeff,   ONLY: ovrb
     use ModInterp,  ONLY: xtvd, xtvd_a
     implicit none
-    
+
     integer :: i, j, k, nlf
     real, dimension(1:ijkn) :: qint_v1, qint_v2g2i, qint_v3g3i, qint_s, &
          qlr_v1, qlr_v2g2i, qlr_v3g3i, qlr_s, dq_v1, dq_v2g2i, dq_v3g3i, dq_s
@@ -240,11 +240,11 @@ contains
     real :: alpha, q1, qq, rr, cmax
     real, allocatable, dimension(:,:,:) :: scratch1, scratch2, scratch3
     !---------------------------------------------------------------------------------
-    
+
     allocate(scratch1(in,jn,kn), scratch2(in,jn,kn), scratch3(in,jn,kn))
     nlf   = nlf_v
     alpha = alpha_v
-    
+
     ! advection for dels1
     do k=ks,ke; do j=js,je
        qint(ism2:iep3) = v1(ism2:iep3,j,k)
@@ -317,7 +317,7 @@ contains
     enddo; enddo; enddo
 
     ! advection for dels2
-     do k=ks,ke; do j=js,jep1
+    do k=ks,ke; do j=js,jep1
        qint(ism2:iep2) = v2(ism2:iep2,j,k)*g2bi(ism2:iep2)
        call xtvd(in, ijkn, dx1a, dx1bi, qint, dq, qlr)
        do i=is,iep1
@@ -530,13 +530,13 @@ contains
           dels(i,j,k) = dels(i,j,k) - (flux(k+1) - flux(k))*dx3ai(k)*g31bi(i)*g32bi(j)
        enddo
     enddo; enddo
-    
+
     deallocate(scratch1, scratch2, scratch3)
-    
+
   end subroutine advection
-  
+
   !=====================================================================================
-  
+
   subroutine viscous
     use ModPar,      ONLY: inmax, in, jn, kn, myid1
     use ModGrid
@@ -610,7 +610,7 @@ contains
     do k=ks,kep1; do j=js,je; do i=is,iep1
        scratch3(i,j,k) = ((g31bi(i)*v3(i,j,k) - g31bi(i-1)*v3(i-1,j,k)) &
             *dx1bi(i)*g31a(i) + g31ai(i)*g32bi(j)* &
-          (v1(i,j,k) - v1(i,j,k-1))*dx3bi(k))
+            (v1(i,j,k) - v1(i,j,k-1))*dx3bi(k))
        rdivv_flx(i,j,k) = scratch3(i,j,k)*0.5d0* &
             (d0ovrevar(i-1+myid1*(in-5)) + d0ovrevar(i+myid1*(in-5)))
     enddo; enddo; enddo
@@ -622,7 +622,7 @@ contains
        dels3(i,j,k) = dels3(i,j,k) + (g2a(i+1)*g31a(i+1) &
             *g31a(i+1)*g32b(j)*rdivv_flx(i+1,j,k) &
             - g2a(i)*g31a(i)*g31a(i)*g32b(j)*rdivv_flx(i,j,k)) &
-               *dx1ai(i)*g2bi(i)*g31bi(i)*g31bi(i)*g32bi(j)
+            *dx1ai(i)*g2bi(i)*g31bi(i)*g31bi(i)*g32bi(j)
     enddo; enddo; enddo
     do k=ks,ke; do j=js,je; do i=is,ie
        dels(i,j,k) = dels(i,j,k) + ovrevarovtemp0(i+myid1*(in-5)) &
@@ -631,7 +631,7 @@ contains
             +(0.25*(scratch3(i,j,k) + scratch3(i,j,k+1) &
             +scratch3(i+1,j,k) + scratch3(i+1,j,k+1)))**2 )
     enddo; enddo; enddo
-     ! s22                                                                                 
+    ! s22                                                                                 
     do k=ksm1,kep1; do j=jsm1,jep1; do i=ism1,iep1
        scratch2(i,j,k)=(2.d0*g2bi(i)*(v2(i,j+1,k)-v2(i,j,k))*dx2ai(j) &
             +(v1(i,j,k)+v1(i+1,j,k))*g2bi(i)*dg2ad1(i))
@@ -699,7 +699,7 @@ contains
 
   end subroutine viscous
 
- !=====================================================================================
+  !=====================================================================================
 
   subroutine radheat
     use ModPar,   ONLY: myid1, in
@@ -717,7 +717,7 @@ contains
     enddo
 
   end subroutine radheat
-  
+
   !=====================================================================================
 
   subroutine hsmoc
@@ -730,10 +730,10 @@ contains
     use ModBval,     ONLY: bvalemf1, bvalemf2, bvalemf3
     use ModInterp,   ONLY: xint1d, xzc1d
     implicit none
-    
+
     integer :: i, j, k
     real    :: absb, sgnp, sgnm, q2, srdi, srd, aave, gfact, vsnm1, bsnm1
-    
+
     real, dimension(in)   :: srd1, srd2, srd3
     real, dimension(ijkn) :: bt, vt, vfl, bint, vint, bave, &
          vave, vchp, vchm, vtmp, btmp, vpch, vmch, bpch, bmch, &
@@ -741,21 +741,21 @@ contains
     real, dimension(jn,kn) :: v3intj, b3intj, v2intk, b2intk
     real, dimension(kn,in) :: v1intk, b1intk, v3inti, b3inti
     real, dimension(in,jn) :: v2inti, b2inti, v1intj, b1intj
-    
+
     real, allocatable :: vsnp1(:,:,:), bsnp1(:,:,:)
     ! paramters for testing, write emf1-3s if DoWriteEmf
     character(len=4) :: idcpu
     logical :: DoWriteEmf = .false.
     !-----------------------------------------------------------------------------------
-    
+
     allocate(vsnp1(in,jn,kn), bsnp1(in,jn,kn))
-    
+
     do i = ism1,iep1
        srd1(i) = sqrt(0.5d0*(d0(i+myid1*(in-5)) + d0(i-1+myid1*(in-5))))
        srd2(i) = sqrt(d0(i+myid1*(in-5)))
        srd3(i) = srd2(i)
     enddo
-    
+
     ! emf1
     do i=is,ie
        ! Compute upwinded b3 and v3 in the 2-direction and use them to
@@ -863,7 +863,7 @@ contains
     enddo
     emf1s = vsnp1 - bsnp1
     call bvalemf1(emf1s)
-    
+
     ! emf2
     do j=js,je
        ! Compute upwinded b1 and v1 in the 3-direction and use them to
@@ -952,7 +952,7 @@ contains
     enddo
     emf2s = vsnp1 - bsnp1
     call bvalemf2(emf2s)
-    
+
     ! emf3
     do k=ks,ke
        ! Compute upwinded b2 and v2 in the 1-direction and use them to  
@@ -1041,7 +1041,7 @@ contains
     enddo
     emf3s = vsnp1 - bsnp1
     call bvalemf3(emf3s)
-    
+
     if (DoWriteEmf) then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='emf.cpu'//idcpu//'.hsmoc',form='unformatted', &
@@ -1052,13 +1052,13 @@ contains
        write(17) (((emf3s(i,j,k),i=ism2,iep3),j=jsm2,jep3),k=ksm2,kep2)
        close(17)
     endif
-    
+
     deallocate(vsnp1, bsnp1)
-    
+
   end subroutine hsmoc
-  
+
   !======================================================================================= 
-  
+
   subroutine diffemf
     use ModPar,     ONLY: in, jn, kn, ijkn, pi, myid1, myid
     use ModGrid
@@ -1071,17 +1071,17 @@ contains
     use ModMpi
     use ModFSAM,    ONLY: iComm
     implicit none
-    
+
     integer :: i, j, k, ierr
     real :: dr1, dr2, dr3, drmin, current, dtmdi2tmp, dtmdi2lc
     real :: bint(ijkn), dbint(ijkn)
     real, allocatable, dimension(:,:,:) :: emf1, emf2, emf3, eta, vsnp1, bsnp1
-    
+
     ! paramters for testing, write emf1-3s if DoWriteEmf
     character(len=4) :: idcpu
     logical :: DoWriteEmf = .false.
     !-----------------------------------------------------------------------------------
-    
+
     allocate(emf1(in,jn,kn), emf2(in,jn,kn), emf3(in,jn,kn))
     allocate(eta(in,jn,kn), vsnp1(in,jn,kn), bsnp1(in,jn,kn))
 
@@ -1114,7 +1114,7 @@ contains
     enddo
     emf1(is:ie,js:jep1,ks:kep1) = vsnp1(is:ie,js:jep1,ks:kep1) - &
          bsnp1(is:ie,js:jep1,ks:kep1)
-    
+
     !emf2
     do j=js,je
        ! del3(b1 h1 dx1)
@@ -1136,7 +1136,7 @@ contains
     enddo
     emf2(is:iep1,js:je,ks:kep1) = vsnp1(is:iep1,js:je,ks:kep1) - &
          bsnp1(is:iep1,js:je,ks:kep1)
-    
+
     ! emf3
     do k=ks,ke
        ! del1(b2 h2 dx2)
@@ -1158,7 +1158,7 @@ contains
     enddo
     emf3(is:iep1,js:jep1,ks:ke) = vsnp1(is:iep1,js:jep1,ks:ke) - &
          bsnp1(is:iep1,js:jep1,ks:ke)
-    
+
     ! calculate eta
     dtmdi2lc = 0.d0
     do k=ks,ke; do j=js,je; do i=is,ie
@@ -1179,7 +1179,7 @@ contains
     call bvaleta(eta)
     call MPI_ALLREDUCE(dtmdi2lc, dtmdi2, 1, MPI_DOUBLE_PRECISION, MPI_MAX, &
          iComm, ierr)
-    
+
     ! emf1
     do k=ks,kep1; do j=js,jep1; do i=is,ie
        bsnp1(i,j,k) = 0.25d0*(eta(i,j,k) + eta(i,j-1,k) + eta(i,j-1,k-1) + eta(i,j,k-1))
@@ -1213,7 +1213,7 @@ contains
     emf1 = vsnp1 - bsnp1
     call bvalemf1(emf1)
     emf1s(1:in-1,1:jn,1:kn) = emf1s(1:in-1,1:jn,1:kn) + emf1(1:in-1,1:jn,1:kn)
-    
+
     ! emf2
     do k=ks,kep1; do j=js,je; do i=is,iep1
        bsnp1(i,j,k) = 0.25d0*(eta(i,j,k) + eta(i-1,j,k) + eta(i-1,j,k-1) + eta(i,j,k-1))
@@ -1239,7 +1239,7 @@ contains
     emf2 = vsnp1 - bsnp1
     call bvalemf2(emf2)
     emf2s(1:in,1:jn-1,1:kn) = emf2s(1:in,1:jn-1,1:kn) + emf2(1:in,1:jn-1,1:kn)
-    
+
     ! emf3
     do k=ks,ke; do j=js,jep1; do i=is,iep1
        bsnp1(i,j,k) = 0.25d0*(eta(i,j,k) + eta(i-1,j,k) + eta(i-1,j-1,k) + eta(i,j-1,k))
@@ -1263,7 +1263,7 @@ contains
     emf3 = vsnp1 - bsnp1
     call bvalemf3(emf3)
     emf3s(1:in,1:jn,1:kn-1) = emf3s(1:in,1:jn,1:kn-1) + emf3(1:in,1:jn,1:kn-1)
-    
+
     if(DoWriteEmf)then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='emf.cpu'//idcpu//'.diffemf',form='unformatted', &
@@ -1274,11 +1274,11 @@ contains
        write(17) (((emf3(i,j,k),i=ism2,iep3),j=jsm2,jep3),k=ksm2,kep2)
        close(17)
     endif
-    
+
     deallocate(emf1, emf2, emf3, eta, vsnp1, bsnp1)
-    
+
   end subroutine diffemf
-  
+
   !======================================================================================= 
 
   subroutine resistive_emf
@@ -1289,21 +1289,21 @@ contains
     use ModDel
     use ModBval,   ONLY: bvalemf1, bvalemf2, bvalemf3
     implicit none
-    
+
     integer :: i, j, k
     real    :: bint(ijkn), dbint
     real, allocatable, dimension(:,:,:) :: emf1, emf2, emf3, vsnp1, bsnp1
-    
+
     ! paramters for testing, write emf1-3s if DoWriteEmf           
     ! paramters for testing, write dels1-3s and dels if DoWriteDels           
     character(len=4) :: idcpu
     logical :: DoWriteEmf = .false.
     logical :: DoWriteDels = .false.
     !----------------------------------------------------------------------------------
-    
+
     allocate(vsnp1(in,jn,kn), bsnp1(in,jn,kn))
     allocate(emf1(in,jn,kn),emf2(in,jn,kn),emf3(in,jn,kn))
-    
+
     ! emf1
     do i=is,ie
        ! calculate del2(b3 h3 dx3)
@@ -1336,7 +1336,7 @@ contains
     emf1 = vsnp1 - bsnp1
     call bvalemf1(emf1)
     emf1s(1:in-1,1:jn,1:kn) = emf1s(1:in-1,1:jn,1:kn) + emf1(1:in-1,1:jn,1:kn)
-    
+
     ! emf2
     do j=js,je
        ! calculate del3(b1 h1 dx1) 
@@ -1361,7 +1361,7 @@ contains
     emf2 = vsnp1 - bsnp1
     call bvalemf2(emf2)
     emf2s(1:in,1:jn-1,1:kn) = emf2s(1:in,1:jn-1,1:kn) + emf2(1:in,1:jn-1,1:kn)
-    
+
     ! emf3
     do k=ks,ke
        ! calculate del1(b2 h2 dx2)
@@ -1386,7 +1386,7 @@ contains
     emf3 = vsnp1 - bsnp1
     call bvalemf3(emf3)
     emf3s(1:in,1:jn,1:kn-1) = emf3s(1:in,1:jn,1:kn-1) + emf3(1:in,1:jn,1:kn-1)
-    
+
     ! compute resistive heating 
     do k=ks,ke; do j=js,je; do i=is,ie
        dels(i,j,k) = dels(i,j,k) + &
@@ -1396,7 +1396,7 @@ contains
             /16.d0/(ovrmvar(i+myid1*(in-5)) + tiny)/d0(i+myid1*(in-5)) &
             /temp0(i+myid1*(in-5))
     enddo; enddo; enddo
-    
+
     if (DoWriteEmf) then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='emf.cpu'//idcpu//'.resis',form='unformatted', &
@@ -1407,7 +1407,7 @@ contains
        write(17) (((emf3(i,j,k),i=ism2,iep3),j=jsm2,jep3),k=ksm2,kep2)
        close(17)
     endif
-    
+
     if (DoWriteDels) then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='dels.cpu'//idcpu,form='unformatted', &
@@ -1419,11 +1419,11 @@ contains
        write(17) (((dels(i,j,k),i=is,ie),j=js,je),k=ks,ke)
        close(17)
     endif
-    
+
     deallocate(vsnp1, bsnp1, emf1, emf2, emf3)
-    
+
   end subroutine resistive_emf
-  
+
   !===================================================================================
 
   subroutine heattran
@@ -1440,7 +1440,7 @@ contains
     !---------------------------------------------------------------------------------
 
     allocate(scratch2(in,jn,kn))
-    
+
     if (bquench_k > 0.d0) then
        do k=ksm1,kep1; do j=jsm1,jep1; do i=ism1,iep1
           Bmag = sqrt((0.5d0*(b1(i,j,k) + b1(i+1,j,k)))**2 + &
@@ -1452,7 +1452,7 @@ contains
           scratch2(i,j,k) = ovrth(i+myid1*(in-5))
        enddo; enddo; enddo
     endif
-    
+
     do k=ks,ke; do j=js,je
        do i=is,iep1
           flux(i) = 0.5D0*(scratch2(i-1,j,k) + scratch2(i,j,k)) &
@@ -1466,7 +1466,7 @@ contains
                *dx1ai(i)*g2bi(i)*g31bi(i))/d0(i+myid1*(in-5))/temp0(i+myid1*(in-5))
        enddo
     enddo; enddo
-    
+
     do k=ks,ke; do i=is,ie
        do j=js,jep1
           flux(j) = 0.5D0*(scratch2(i,j-1,k) + scratch2(i,j,k)) &
@@ -1486,9 +1486,9 @@ contains
           dels(i,j,k) = dels(i,j,k) + (flux(k+1) - flux(k))*dx3ai(k)*g31bi(i)*g32bi(j)
        enddo
     enddo; enddo
-    
+
     deallocate(scratch2)
-    
+
   end subroutine heattran
 
 end module ModRHS

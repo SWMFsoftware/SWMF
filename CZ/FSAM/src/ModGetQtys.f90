@@ -1,12 +1,12 @@
 module ModGetQtys
   private
-  
+
   public :: get_global
 
   public :: get_mean_entropy
 
 contains
-  
+
   !===================================================================================
 
   subroutine get_global(em, ek, ek1, ek2, ek3, eth, anglm, anglmnorm)
@@ -17,16 +17,16 @@ contains
     use ModMpi
     use ModFSAM,     ONLY: iComm
     implicit none
-    
+
     real, intent(out) :: em, ek, ek1, ek2, ek3, eth, anglm, anglmnorm
-    
+
     integer :: i, j, k, ierr
     real :: dVol, Density, energylc(1:8), energy(1:8)
     !--------------------------------------------------------------------------------
-    
+
     energy   = 0.d0
     energylc = 0.d0
-    
+
     do k=ks,ke; do j=js,je; do i=is,ie
        Density =  d0(i+myid1*(in-5))
        dVol = dx1a(i)*g2b(i)*dx2a(j)*g31b(i)*g32b(j)*dx3a(k)
@@ -44,7 +44,7 @@ contains
     energylc(2) = sum(energylc(3:5))
     call MPI_ALLREDUCE(energylc, energy, 8, MPI_DOUBLE_PRECISION, MPI_SUM, &
          iComm, ierr)
-    
+
     em  = energy(1)
     ek  = energy(2)
     ek1 = energy(3) 
@@ -53,7 +53,7 @@ contains
     eth = energy(6)
     anglm     = energy(7)
     anglmnorm = energy(8)
-    
+
   end subroutine get_global
 
   !===================================================================================
@@ -65,13 +65,13 @@ contains
     use ModMpi
     use ModFSAM,   ONLY: iComm
     implicit none
-    
+
     real, intent(out) :: smeanbot, smeantop
-    
+
     real :: smeanbotlc, smeantoplc, arealc, area
     integer :: ierr, j, k
     !--------------------------------------------------------------------------------
-    
+
     smeanbotlc = 0.d0
     smeantoplc = 0.d0
     arealc     = 0.d0
@@ -81,23 +81,23 @@ contains
           arealc     = arealc + g32b(j)*dx2a(j)*dx3a(k)
        enddo; enddo
     end if
-    
+
     if(myid1==(nproc1-1))then
        do k=ks,ke; do j=js,je
           smeantoplc = smeantoplc + s(ie,j,k)*g32b(j)*dx2a(j)*dx3a(k) 
        enddo; enddo
     end if
-    
+
     call MPI_ALLREDUCE(smeanbotlc, smeanbot, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
          iComm, ierr)
     call MPI_ALLREDUCE(smeantoplc, smeantop, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
          iComm, ierr)
     call MPI_ALLREDUCE(arealc, area, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
          iComm, ierr)
-    
+
     smeanbot = smeanbot/area
     smeantop = smeantop/area
-    
+
   end subroutine get_mean_entropy
 
 end module ModGetQtys

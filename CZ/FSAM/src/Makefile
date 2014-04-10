@@ -26,7 +26,7 @@ MODULES = \
 	ModField.o \
 	ModDel.o \
 	ModInterp.o \
-	ModIO.o \
+	ModIoFSAM.o \
 	ModGetQtys.o \
 	ModBval.o \
 	ModGetP.o \

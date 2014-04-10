@@ -9,7 +9,7 @@ module ModInitialization
   public :: atmoin
   public :: blk_init
 contains
-  
+
   !=================================================================================
 
   subroutine initialize
@@ -18,7 +18,7 @@ contains
     use ModBval,       ONLY: bvalv
     use ModRHS,        ONLY: p_init
     use ModIteration,  ONLY: nudt
-    use ModIO,         ONLY: readrst_mpi
+    use ModIoFSAM,     ONLY: readrst_mpi
     use ModUserSetup
     use ModFSAM,       ONLY: DoRestart
     use ModControl,    ONLY: itnow
@@ -27,16 +27,16 @@ contains
 
     ! input solar atmosphere and define units
     call atmoin
-    
+
     ! input run parameters
     call input_param
 
     ! define grid
     call grid
-       
+
     ! define blk matrix
     call blk_init
-    
+
     ! initialize sundry.h and initial fields
     call field_init
     if(.not. DoRestart) then
@@ -51,11 +51,11 @@ contains
     endif
     call p_init
     call nudt
-  
+
   end subroutine initialize
-  
+
   !================================================================================
-  
+
   subroutine atmoin
     ! setup solar model table and define units
     use ModPar, ONLY: gg, rgas, pi, myid
@@ -64,9 +64,9 @@ contains
     use ModBack,   ONLY: rtab, te, pe, re, gacc, bvfsq, gamaad, gradad, delta, &
          gradrad, vc, ross_kappa, nptjcd
     use ModInterp,     ONLY: lint
-    
+
     implicit none
-    
+
     character(len=80) :: cdata(4)
     integer :: nmod, iform, nn, nrdtmd, nidtmd, ndtgng, nvar, nbccf
     integer :: i, n, ip
@@ -74,19 +74,19 @@ contains
     real, allocatable :: datmod(:), datgng(:), bccoef(:), yvar(:,:)
     integer, allocatable :: idatmd(:)
     !------------------------------------------------------------------------------
-    
+
     allocate(idatmd(1:30))
     allocate(datmod(1:120), datgng(1:60), bccoef(1:48), yvar(1:30,1:nptjcd+1))
     allocate(rtab(1:nptjcd), te(1:nptjcd), pe(1:nptjcd), re(1:nptjcd), &
          gacc(1:nptjcd), bvfsq(1:nptjcd), gamaad(1:nptjcd), gradad(1:nptjcd), &
          delta(1:nptjcd), gradrad(1:nptjcd), vc(1:nptjcd), ross_kappa(1:nptjcd))
-    
+
     open(unit=17, file='gong.l4b.14', form='unformatted',status='old')
     read(17) (cdata(i),i=1,4), nmod, iform, nn, nrdtmd, nidtmd, ndtgng, nvar, &
          nbccf, (datmod(i),i=1,120), (idatmd(i),i=1,30), (datgng(i),i=1,60), &
-        (bccoef(i),i=1,48), ((yvar(i,n),i=1,30),n=1,nptjcd+1)
+         (bccoef(i),i=1,48), ((yvar(i,n),i=1,30),n=1,nptjcd+1)
     close(17)
-    
+
     ! checking
     if(myid==0) then
        write(6,*) '------------------ read from gong.14b.14 --------------------'
@@ -109,7 +109,7 @@ contains
     r_czb = r_sun - datgng(5)*r_sun
     sigma = 5.67D-05
     lsol  = datgng(4)
-    
+
     ! checking
     if(myid==0) then
        write(6,*) 'gg=',gg
@@ -120,7 +120,7 @@ contains
        write(6,*) 'sigma=',sigma
        write(6,*) 'lsol=',lsol
     endif
-    
+
     ! set up table
     if(myid==0) then
        open(unit=16, file='JCD.table')
@@ -180,7 +180,7 @@ contains
     unit_eng  = unit_d*unit_v**2*unit_l**3
 
   end subroutine atmoin
-  
+
   !================================================================================
 
   subroutine input_param
@@ -200,7 +200,7 @@ contains
     real :: tout_in, tend_in
     character (len=100) :: NameCommand, NameItNow
     !-----------------------------------------------------------------------------
-    
+
     if(IsStandAlone)then
        call read_file('PARAM.in',iComm)
        call read_init(' ', iSessionIn=1, iLineIn=0)
@@ -254,7 +254,7 @@ contains
           call read_var('engfile',engfile)
        end select
     enddo
-    
+
     write(NameItNow,'("_n",I8.8)') itnow
     engfile = trim(engfile)//trim(NameItNow)
     tout = tout_in/unit_t
@@ -263,7 +263,7 @@ contains
     ovre = nu_in/(unit_l*unit_v)
     ovrt = kdiff_in/(unit_l*unit_v)
     ovrm = eta_in/(unit_l*unit_v)
-    
+
     ! output physical parameters and units
     if(myid==0) then
        open(UnitTmp_,file='physparams.dat', form='unformatted',access='stream',&
@@ -275,21 +275,21 @@ contains
        write(UnitTmp_) omega_in, nu_in, kdiff_in, eta_in
        close(UnitTmp_)
     endif
-    
+
   end subroutine input_param
-  
+
   !===============================================================================
-  
+
   subroutine blk_init
     use ModPar,       ONLY: inmax, jnmax
     use ModGrid
     use ModBack,      ONLY: fact
     use ModBlk
     implicit none
-    
+
     integer :: i, j
     !-----------------------------------------------------------------------------
-    
+
     do i=is,inmax-3
        cr(i-is+1) = fact(i)/dxxa(i)*0.5D0*(1.D0/fact(i+1)+1.D0/fact(i)) &
             *g2xxa(i+1)*g31xxa(i+1)/dxxb(i+1)
@@ -297,14 +297,14 @@ contains
             *g2xxa(i)*g31xxa(i)/dxxb(i)
        br(i-is+1) = - ar(i-is+1) - cr(i-is+1)
     enddo
-    
+
     do j=js,jnmax-3
        cth(j-js+1) = 1.D0/(g32yyb(j)*dyya(j))*g32yya(j+1)/dyyb(j+1)
        ath(j-js+1) = 1.D0/(g32yyb(j)*dyya(j))*g32yya(j)/dyyb(j)
        bth(j-js+1) = - cth(j-js+1) - ath(j-js+1)
        bthk(j-js+1) = dx3ai(ks)*dx3ai(ks)/g32yyb(j)/g32yyb(j)
     enddo
-    
+
   end subroutine blk_init
-  
+
 end module ModInitialization

@@ -10,7 +10,7 @@ module ModBack
   real :: ovbvfq
   
   ! parameter for k quenching: bquench_k
-  real :: bquench_k=0.D0
+  real :: bquench_k = 0.d0
   
   ! model table of the solar atmosphere 
   real, allocatable :: rtab(:), te(:), pe(:), re(:), gacc(:), bvfsq(:), gamaad(:), &
