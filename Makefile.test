@@ -118,15 +118,14 @@ test_cz_rundir:
 	cp Param/PARAM.in.test.CZ ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.CZ ${TESTDIR}/LAYOUT.in
 	cp ${CZDIR}/input/gong.l4b.14 ${TESTDIR}/
-	cp ${CZDIR}/src/problems/test/jobscript.swmf ${TESTDIR}/jobscript
 
 test_cz_run:
-	cd ${TESTDIR}; bsub < jobscript
+	cd ${TESTDIR}; mpirun -n 6 ./SWMF.exe > runlog
 
 test_cz_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
 		${TESTDIR}/eng_1_n00000000 \
-		${CZDIR}/input/eng_1_n00000000 \
+		${CZDIR}/output/eng_1_n00000000 \
 		> test_cz.diff)
 	ls -ltr test_cz.diff
 
