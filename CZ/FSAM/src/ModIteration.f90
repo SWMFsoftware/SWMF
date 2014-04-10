@@ -1,21 +1,21 @@
 module ModIteration
-  
+
   implicit none
-  
+
   private
-  
+
   public :: nudt
-  
+
   public :: nudt_cond
-  
+
   public :: pred_corr_step
-  
+
   public :: conductstep
 
 contains
 
   !===================================================================================
-  
+
   subroutine nudt
     use ModPar,    ONLY: huge, tiny, myid1, in
     use ModGrid,   ONLY: dx1a, dx2a, dx3a, g2b, g32b, is, ie, js, je, ks, ke
@@ -25,12 +25,12 @@ contains
     use ModMpi
     use ModFSAM
     implicit none
-    
+
     integer :: ierr, i, j, k
     real    :: dtnewlc, dtnew
     real    :: q1, va, vv1, vv2, vv3, cmax, dr1, dr2, dr3, drmin
     !--------------------------------------------------------------------------------
-    
+
     dtnewlc = huge
     do k=ks,ke; do j=js,je; do i=is,ie
        va = sqrt((abs(b1(i,j,k)) + abs(b1(i+1,j,k)))**2 + &
@@ -51,7 +51,7 @@ contains
     call MPI_ALLREDUCE(dtnewlc, dtnew, 1, MPI_DOUBLE_PRECISION, MPI_MIN, &
          iComm, ierr)
     dt = min(courno*dtnew, ovbvfq*1.d-2)
-    
+
   end subroutine nudt
 
   !===================================================================================
@@ -86,14 +86,14 @@ contains
   end subroutine nudt_cond
 
   !===================================================================================
-  
+
   subroutine pred_corr_step
     use ModGrid,    ONLY: ism2,iep2,jsm2,jep2,ksm2,kep2
     use ModField,   ONLY: v1, v2, v3, b1, b2, b3, s, &
          v1_prev, v2_prev, v3_prev, b1_prev, b2_prev, b3_prev, s_prev
     use ModRHS,     ONLY: p_init
     implicit none
-    
+
     integer :: i, j, k
     real    :: tFactor
     !--------------------------------------------------------------------------------
@@ -114,11 +114,11 @@ contains
     call p_init
     tFactor = 1.D0
     call update_states(tFactor)
-    
+
   end subroutine pred_corr_step
 
   !===================================================================================
-  
+
   subroutine conductstep(ntcond)
     use ModPar
     use ModGrid
@@ -128,7 +128,7 @@ contains
     use ModRHS,        ONLY: p_init, heattran
     use ModBval,       ONLY: bvals
     implicit none
-    
+
     integer, intent(out) :: ntcond
     integer :: i, j, k, iflg
     real    :: delt, dtc
@@ -136,7 +136,7 @@ contains
     character(len=4) :: idcpu
     logical :: DoWriteDel = .false.
     !---------------------------------------------------------------------------------
-    
+
     ntcond = 0
     delt   = 0.D0
     iflg   = -1
@@ -170,9 +170,9 @@ contains
        delt   = delt + dtc
        ntcond = ntcond + 1
     enddo
-    
+
     call p_init
-    
+
     if (DoWriteDel) then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='emf.cpu'//idcpu//'.cond',form='unformatted', &
@@ -191,11 +191,11 @@ contains
        write(17) (((dels(i,j,k),i=is,ie),j=js,je),k=ks,ke)
        close(17)
     endif
-    
+
   end subroutine conductstep
-  
+
   !===================================================================================
-  
+
   subroutine update_states(tFactor)
     use ModPar
     use ModGrid
@@ -206,7 +206,7 @@ contains
     use ModRHS,     ONLY: hsmoc, diffemf, resistive_emf
     use ModBval,    ONLY: bvalb, bvalv, bvals
     implicit none
-    
+
     real, intent(in) :: tFactor
     integer :: i, ip1, j, jp1, k, kp1
     real    :: q1, q2
@@ -225,7 +225,7 @@ contains
             + emf2s(i,j,k)*dx2a(j)*g2a(i) ) &
             *g2ai(i)*g31ai(i)*g32bi(j)*dx2ai(j)*dx3ai(k)
     enddo; enddo; enddo
-    
+
     !-----------------------------> Update b2 <-----------------------------
     do k=ksm2,kep2; do j=jsm2,jep2; do i=ism2,iep2
        b2(i,j,k) = b2_prev(i,j,k) + tFactor*dt* &
@@ -234,7 +234,7 @@ contains
             + emf3s(i,j,k)*dx3a(k)*g31a(i)*g32a(j) ) &
             *g31bi(i)*g32ai(j)*dx1ai(i)*dx3ai(k)
     enddo; enddo; enddo
-    
+
     !-----------------------------> Update b3 <-----------------------------
     do k=ksm2,kep2; do j=jsm2,jep2; do i=ism2,iep2
        b3(i,j,k) = b3_prev(i,j,k) + tFactor*dt* &
@@ -242,9 +242,9 @@ contains
             - emf1s(i,j+1,k)*dx1a(i) + emf1s(i,j,k)*dx1a(i) ) &
             *g2bi(i)*dx1ai(i)*dx2ai(j)
     enddo; enddo; enddo
-    
+
     call bvalb
-    
+
     ! update velocity and entropy
     do k=ks,ke; do j=js,je; do i=is,ie
        q1 = 0.5D0*(1.D0/fact(myid1*(in-5)+i) + 1.D0/fact(myid1*(in-5)+i-1))
@@ -263,7 +263,7 @@ contains
     ctime = time + tFactor*dt
     call bvalv
     call bvals
-    
+
   end subroutine update_states
-  
+
 end module ModIteration
