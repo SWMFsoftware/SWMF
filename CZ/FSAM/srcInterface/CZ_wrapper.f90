@@ -81,7 +81,7 @@ subroutine CZ_init_session(iSession, TimeSimulation)
   use ModGetQtys
   use ModFSAM
   use ModPar
-  use ModIO
+  use ModIoFSAM
   use ModPhysunits
   use ModIteration
   use ModOutfile
@@ -161,7 +161,7 @@ subroutine CZ_run(TimeSimulation,TimeSimulationLimit)
   use ModGetQtys
   use ModFSAM
   use ModPar
-  use ModIO
+  use ModIoFSAM
   use ModPhysunits
   use ModIteration
   use ModOutfile
@@ -230,7 +230,7 @@ end subroutine CZ_finalize
 !===========================================================================
 
 subroutine CZ_save_restart(TimeSimulation)
-  use ModIO,  ONLY: writedata_mpi
+  use ModIoFSAM,  ONLY: writedata_mpi
   implicit none
 
   real,     intent(in) :: TimeSimulation   ! seconds from start time
