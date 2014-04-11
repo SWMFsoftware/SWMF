@@ -205,6 +205,11 @@ while ($line=<InputFile>) {
   
 }
 
+#read settings from .ampsConfig
+if (-e ".ampsConfig.Settings") {
+  ampsConfigSettings();
+}
+
 #modify the makefile for the compilation mode
 if ($CompileProcessedCodeFlag==1) {
   my @makefilelines;
@@ -1657,6 +1662,25 @@ sub ReadSpeciesBlock {
   close (SPECLIST);
 }
 
+
+
+#=============================== Process AMPS' settings from .ampsConfig
+sub ampsConfigSettings {
+  if (-e ".ampsConfig.Settings") {
+    my @Settings;
+  
+    open (AMPSSETTINGS,".ampsConfig.Settings") || die "Cannot open file\n";
+    @Settings=<AMPSSETTINGS>;
+    close (AMPSSETTINGS);
+  
+    
+    foreach (@Settings){
+      if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","main/UserDefinition.Exosphere.h"); next};
+      if (/^SPICE=(.*)$/i) {`echo "SPICE=$1" >> Makefile.local`; next};
+      
+    }    
+  }
+}
 
 =comment
 #=============================== Change a value of a variable in the code  =============================
