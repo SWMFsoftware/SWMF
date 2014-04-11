@@ -8,8 +8,18 @@
 #ifndef MERCURY_H_
 #define MERCURY_H_
 
-
+#include "SpiceUsr.h"
 #include "Exosphere.h"
+#include "constants.h"
+
+//path to the SPICE Kernels directory
+//const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; 
+
+//SPICE Kernels to be loaded
+const int nFurnishedSPICEkernels=5+12+1;
+const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"MESSENGER/kernels/spk/msgr_de405_de423s.bsp","MESSENGER/kernels/fk/msgr_dyn_v600.tf","NAIF/naif0010.tls","MESSENGER/kernels/pck/pck00009_MSGR_v10.tpc","MESSENGER/kernels/fk/msgr_v210.tf",
+   "MESSENGER/kernels/ik/msgr_epps_v100.ti","MESSENGER/kernels/ck/msgr20110413.bc","MESSENGER/kernels/ck/msgr20110414.bc","MESSENGER/kernels/ck/msgr20110415.bc","MESSENGER/kernels/ck/msgr20110416.bc","MESSENGER/kernels/ck/msgr20110417.bc","MESSENGER/kernels/ck/msgr20110418.bc","MESSENGER/kernels/ck/msgr20110419.bc","MESSENGER/kernels/ck/msgr20110420.bc","MESSENGER/kernels/ck/msgr20110421.bc",
+     "MESSENGER/kernels/sclk/messenger_1486.tsc","MESSENGER/kernels/spk/msgr_20040803_20140823_od266sc_0.bsp","OTHER/GSE.tf"};
 
 namespace Mercury {
   using namespace Exosphere;
