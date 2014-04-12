@@ -156,7 +156,8 @@ contains
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',Coupler%iProcWorld
 
-    call couple_points(Coupler, GM_get_for_pt, PT_put_from_gm, PT_get_grid_info, GM_get_grid_info, GM_find_points)
+    call couple_points(Coupler, GM_get_grid_info, GM_find_points, &
+         GM_get_for_pt, PT_get_grid_info, PT_put_from_gm)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',Coupler%iProcWorld
   end subroutine couple_gm_pt
