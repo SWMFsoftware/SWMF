@@ -151,9 +151,10 @@ TEST: foreach $test (sort @test){
 	    &report("$test: $errorfile could not be opened !\n");
 	    next ERRFILE;
 	}
-	my $error = <ERR>;
+	my $error = join(" ",<ERR>);
 	close(ERR);
-	if(length($error)>0 and $error !~ /underflow|floating invalid|RLIMIT_MEMLOCK/i){
+	if(length($error)>0 and 
+	   $error !~ /underflow|floating invalid|RLIMIT_MEMLOCK|Array temporary/i){
 	    &report("$test: $errorfile=",$error);
 	    $anyerror=1;
 	}
