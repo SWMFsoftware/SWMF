@@ -27,12 +27,10 @@ install:
 	@echo "AMPS installed"
 
 distclean:
-	rm -f Makefile.local .ampsConfig.Settings
 	./Config.pl -uninstall
 
-allclean:
+allclean: clean
 	rm -rf main srcTemp *.input* amps Makefile.local .ampsConfig.Settings
-	$(MAKE) clean
 
 rundir:
 	mkdir -p ${RUNDIR}/PT
