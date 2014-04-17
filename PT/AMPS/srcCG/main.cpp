@@ -235,7 +235,7 @@ int main(int argc,char **argv) {
   }
 
   //Computation of the gravity field for an irregular nucleus shape
-  nucleusGravity::readMesh("Lamy.nas");
+  nucleusGravity::readMesh("cg.Lamy.nas");
   nucleusGravity::setDensity(300);
   
 
