@@ -29,4 +29,12 @@
   mass=40*_AMU_
   charge=0
 
+#component=H2O
+  mass=18*_AMU_
+  charge=0	
+
+#component=CO2
+  mass=44*_AMU_
+  charge=0
+
 #endspecies
