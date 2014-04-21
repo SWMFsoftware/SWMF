@@ -46,6 +46,7 @@ contains
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D,&
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_set_cell_boundary
+    use ModFieldLineThread, ONLY: set_field_line_thread_bc
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -319,6 +320,16 @@ contains
        case('none')
        case('none_semi')
           if(IsLinear) State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+       case('fieldlinethreads')
+          call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
+               iImplBlock)
+       case('fieldlinethreads_semi')
+          if(IsLinear) then
+             State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+          else
+             call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
+                  iImplBlock)
+          end if
        case('user_semi')
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0

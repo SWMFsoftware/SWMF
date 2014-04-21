@@ -31,6 +31,7 @@ OBJECTS = \
 	ModCT.o \
 	ModCurrent.o \
 	ModFaceBoundary.o \
+	ModFieldLineThread.o \
 	ModIonoVelocity.o \
 	ModImplicit.o \
 	ModImplHypre.o \
