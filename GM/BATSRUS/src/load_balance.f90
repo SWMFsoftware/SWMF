@@ -216,7 +216,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
-  use ModGeometry,   ONLY: True_Blk, true_cell
+  use ModGeometry,   ONLY: True_Blk, true_cell, far_field_BCs_Blk
   use ModPartSteady, ONLY: UsePartSteady
   use BATL_lib,      ONLY: Unused_BP
   use ModParallel
@@ -287,9 +287,18 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      ! iTypeAdvance_B and _BP by changing the sign to negative 
      ! for body blocks
      if(DoMoveCoord)then
-        where(.not. True_BLK(1:nBlock)) &
-             iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
-
+        if(UseFieldLineThreads)then
+           !\
+           !The lowest altitude boundary blocks are load balanced 
+           !separately, the criterion based on true cells does not work:
+           !/
+           where(far_field_BCs_Blk(1:nBlock).and.&
+                NeiLev(1,1:nBlock)==NOBLK)&
+                iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
+        else
+           where(.not. True_BLK(1:nBlock)) &
+                iTypeAdvance_B(1:nBlock) = -abs(iTypeAdvance_B(1:nBlock))
+        end if
         ! Update iTypeAdvance_BP
         ! CHEATING: only indicate first index to circumvent ModMpiInterfaces
         ! Set displacement equal to MaxBlock so we get same behavior 

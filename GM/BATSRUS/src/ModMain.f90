@@ -284,5 +284,12 @@ Module ModMain
   ! Logical for a thin heliospheric current sheet method similar to that
   ! in the ENLIL code of D. Odstril
   logical :: DoThinCurrentSheet = .false.
+  
+  !\
+  ! Logical for the use of the boundary condition at the surface
+  ! well above the transition region, which in connected by the 
+  ! magnetic field line threads with the photosphere boundary.
+  !/
+  logical:: UseFieldLineThreads = .false.
 
 end module ModMain
