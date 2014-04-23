@@ -405,6 +405,7 @@ long int ElectricallyChargedDust::DustInjection__Sphere(void *SphereDataPointer)
   int GrainVelocityGroup;
 
   const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
   //============  DEBUG =========================
   static double GrainInjectedMass=0.0;
