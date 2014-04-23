@@ -15,7 +15,7 @@
 
 
 
-//#include "pic__model__electrically_charged_dust.h"
+#include "pic__model__electrically_charged_dust.h"
 
 
 //the offsets to the internal properties of the dust grains
@@ -26,7 +26,7 @@ ElectricallyChargedDust::fGrainDragCoeffiient ElectricallyChargedDust::GrainDrag
 ElectricallyChargedDust::fGrainMassDensity ElectricallyChargedDust::GrainMassDensity_UserDefinedFunction=NULL;
 
 
-int ElectricallyChargedDust::_DUST_SPEC_=-1;
+//int ElectricallyChargedDust::_DUST_SPEC_=-1;
 double ElectricallyChargedDust::minDustRadius=-1.0,ElectricallyChargedDust::maxDustRadius=-1.0;
 
 //velocity groups of the grains
@@ -135,7 +135,7 @@ void ElectricallyChargedDust::Init_AfterParser() {
     if ((DustSpeciesBegin==false)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")==0)) {
       //the first dust group
       DustSpeciesBegin=true;
-      GrainVelocityGroup::nGroups=1,_DUST_SPEC_=spec;
+      GrainVelocityGroup::nGroups=1; //,_DUST_SPEC_=spec;
     }
     else if ((DustSpeciesBegin==true)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")==0)) {
       //the list of the dust time-step groups continues
@@ -223,7 +223,7 @@ void ElectricallyChargedDust::TotalGrainAcceleration(double *accl,int spec,long 
   GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
 
 
-  char ICES_AssociatedData[PIC::ICES::TotalAssociatedDataLength];
+  char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
   PIC::Mesh::cDataCenterNode *CenterNode;
   double *E,*B;
   int i,j,k;
@@ -246,11 +246,11 @@ void ElectricallyChargedDust::TotalGrainAcceleration(double *accl,int spec,long 
 #endif
 
   CenterNode=startNode->block->GetCenterNode(nd);
-  memcpy(ICES_AssociatedData,PIC::ICES::AssociatedDataOffset+CenterNode->GetAssociatedDataBufferPointer(),PIC::ICES::TotalAssociatedDataLength);
+  memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+CenterNode->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
 
   //Lorentz force
-  E=(double*)(ICES_AssociatedData+PIC::ICES::ElectricFieldOffset);
-  B=(double*)(ICES_AssociatedData+PIC::ICES::MagneticFieldOffset);
+  E=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::ElectricFieldOffset);
+  B=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::MagneticFieldOffset);
 
   accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
   accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
@@ -267,8 +267,8 @@ void ElectricallyChargedDust::TotalGrainAcceleration(double *accl,int spec,long 
   //Drag force
   / *
   double A,cr2;
-  double *BackgroundAtmosphereBulkVelocity=(double*)(ICES_AssociatedData+PIC::ICES::NeutralBullVelocityOffset);
-  double BackgroundAtmosphereNumberDensity=*((double*)(ICES_AssociatedData+PIC::ICES::NeutralNumberDensityOffset));
+  double *BackgroundAtmosphereBulkVelocity=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralBullVelocityOffset);
+  double BackgroundAtmosphereNumberDensity=*((double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralNumberDensityOffset));
 
   cr2=(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])*(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])+
     (v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])*(v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])+
@@ -309,13 +309,13 @@ return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
   cell=initNode->block->GetCenterNode(LocalCellNumber);
 
   //ICES plasma data
-  char ICES_AssociatedData[PIC::ICES::TotalAssociatedDataLength];
+  char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
   double *swVel;
 
-  memcpy(ICES_AssociatedData,PIC::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::ICES::TotalAssociatedDataLength);
-  plasmaTemperature=*((double*)(PIC::ICES::PlasmaTemperatureOffset+ICES_AssociatedData));
-  swVel=(double*)(PIC::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
-  plasmaNumberDensity=*((double*)(PIC::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));
+  memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
+  plasmaTemperature=*((double*)(PIC::CPLR::ICES::PlasmaTemperatureOffset+ICES_AssociatedData));
+  swVel=(double*)(PIC::CPLR::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
+  plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));
 
   if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 
@@ -896,7 +896,11 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDi
 #endif
 
   for (node=SampleNodes[0],nProbe=0;nProbe<nSamplingLocations;node=SampleNodes[++nProbe]) if ((block=node->block)!=NULL) {
-    ptr=block->GetCenterNode(SampleLocalCellNumber[nProbe])->FirstCellParticle;
+    //    ptr=block->GetCenterNode(SampleLocalCellNumber[nProbe])->FirstCellParticle;
+    int i,j,k;
+
+    PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[nProbe],i,j,k);
+    ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
     while (ptr!=-1) {
       ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
