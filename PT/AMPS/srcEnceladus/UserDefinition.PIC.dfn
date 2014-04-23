@@ -1,0 +1,25 @@
+//======================================================================
+//$Id$
+//======================================================================
+//the file contains the user definitions of macroses user in the mars model
+
+
+//the criterion for removing the thermalized particles from the system
+#define _THERMALIZED_PARTICLE_REMOVE_CRITERION__ESCAPE_SPEED_                     0
+#define _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_   1
+
+//the type of collision cross section used in simulation of collisions with the background atmospehre
+#define _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__HARD_SPHERE_          0
+#define _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__FORWARD_SCATTERING_   1
+
+
+//the model for the background atmospehre 
+#define _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_    0
+#define _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_  1
+
+
+//counting particles that leaves the domain toward the total escape rate
+#define _MARS_ESCAPE_PARTICLES_COUNTING_MODE__COUNT_ALL_    0
+#define _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_ 1
+
+
