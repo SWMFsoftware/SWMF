@@ -102,7 +102,7 @@ double localSphericalSurfaceResolution(double *x) {
 
   if (x[2]>0.0) Multiplier=1.0;
 
-  return Multiplier*DebugRunMultiplier*0.5*(dxMaxSphere+dxMinSphere)*rSphere*4; //*4
+  return Multiplier*DebugRunMultiplier*0.5*(dxMaxSphere+dxMinSphere)*rSphere;
 }
 
 double localResolution(double *x) {
@@ -110,9 +110,9 @@ double localResolution(double *x) {
   double res=0.0,r=0.0;
 
 
-  if ((x[2]<0.0)&&(asin(sqrt((x[0]*x[0]+x[1]*x[1])/(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])))/Pi*180.0<45.0)) return DebugRunMultiplier*0.25*(dxMaxSphere+dxMinSphere)*rSphere*4; //*4
+  if ((x[2]<0.0)&&(asin(sqrt((x[0]*x[0]+x[1]*x[1])/(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])))/Pi*180.0<45.0)) return DebugRunMultiplier*0.25*(dxMaxSphere+dxMinSphere)*rSphere;
 
-  return DebugRunMultiplier*rSphere*dxMaxGlobal*4; //*4
+  return DebugRunMultiplier*rSphere*dxMaxGlobal;
 
 
   for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
@@ -268,7 +268,7 @@ int main(int argc,char **argv) {
 
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=100;
-  PIC::RequiredSampleLength=10; //200; //0;
+  PIC::RequiredSampleLength=200; //0;
 
 
   //register the sphere
