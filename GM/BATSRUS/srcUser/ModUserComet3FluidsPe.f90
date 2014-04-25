@@ -117,7 +117,7 @@ contains
 
   subroutine user_neutral_atmosphere(iBlock)
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
-         use_block_data
+         use_block_data, MaxBlockData
     use ModPhysics,    ONLY: cPi, rPlanetSi, cProtonMass, No2SI_V, &
          cRadToDeg, UnitX_
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
@@ -169,6 +169,9 @@ contains
 
        DoCheckTable = .false.
     end if
+
+    ! Neutral state for each neutral fluid: rho, p, ux, uy, yz
+    MaxBlockData = nNeutral*5*(MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)
 
     if (.not.use_block_data(iBlock)) then
 
