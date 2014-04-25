@@ -8,7 +8,7 @@ module ModLoadBalance
   use BATL_size, ONLY: nI, nJ, nK, nIJK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
-       n_block_data, use_block_data, set_block_data
+       n_block_data, use_block_data, set_block_data, clean_block_data
   use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRaytrace, ONLY: ray
@@ -129,6 +129,7 @@ contains
        call get_block_data(iBlock, nDynamicData, &
             Buffer_I(iData+1:iData+nDynamicData))
        iData = iData + nDynamicData
+       call clean_block_data(iBlock)
     endif
 
     if(iData > nBuffer)then
