@@ -14,7 +14,8 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
        x1, x2, y1, y2, z1, z2, XyzStart_BLK, XyzMin_D, XyzMax_D
   use ModPhysics, ONLY : No2Io_V, UnitX_
   use ModIO
-  use ModNumConst, ONLY: cPi, cTwoPi, cTiny
+  use ModNumConst, ONLY: cPi, cTwoPi
+  use ModKind, ONLY: nByteReal
   use BATL_lib, ONLY: IsRLonLat, IsCylindrical
 
   implicit none
@@ -39,7 +40,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   logical:: IsBinary
   real :: ySqueezed
 
-  real, parameter:: cHalfMinusTiny = 0.5*(1.0 - cTiny)
+  real:: cHalfMinusTiny
 
   character(len=*), parameter :: NameSub = 'write_plot_idl'
   logical :: DoTest, DoTestMe
@@ -49,6 +50,12 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      call set_oktest(NameSub, DoTest, DoTestMe)
   else
      DoTest=.false.; DoTestMe=.false.
+  end if
+
+  if(nByteReal == 8)then
+     cHalfMinusTiny = 0.5*(1.0 - 1e-9)
+  else
+     cHalfMinusTiny = 0.5*(1.0 - 1e-6)
   end if
 
   IsBinary = save_binary .and. plot_type1 /= 'cut_pic'
@@ -112,9 +119,9 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
      ! Make sure that small angles are moved to Pi degrees for y=0 cut
      if(ySqueezed < 0.25*cPi .and. &
-          abs(yMin+yMax-cTwoPi) < cTiny .and. yMax-yMin < 0.01) &
+          abs(yMin+yMax-cTwoPi) < 1e-6 .and. yMax-yMin < 0.01) &
           ySqueezed = ySqueezed + cPi
-  else                                          
+  else
      ySqueezed = xyzStart_BLK(y_,iBlock)
   end if                                         
 

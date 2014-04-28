@@ -2852,6 +2852,7 @@ contains
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nIJK_D
     use ModParallel, ONLY: proc_dims
     use BATL_lib,    ONLY: radius_to_gen
+    use ModKind,     ONLY: nByteReal
     use ModIO
 
     implicit none
@@ -2872,7 +2873,12 @@ contains
 
     ! Largest cell size and a much smaller distance for 2D cuts
     CellSizeMax_D = (XyzMax_D - XyzMin_D)/(nIJK_D*proc_dims)
-    SmallSize_D   = cTiny*CellSizeMax_D
+
+    if(nByteReal == 8)then
+       SmallSize_D   = 1e-9*CellSizeMax_D
+    else
+       SmallSize_D   = 1e-6*CellSizeMax_D
+    end if
 
     if(DoTestMe)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
 
