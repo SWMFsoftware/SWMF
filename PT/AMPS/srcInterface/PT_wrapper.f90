@@ -139,83 +139,40 @@ subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 end subroutine PT_get_grid_info
 !==============================================================================
 subroutine PT_put_from_gm( &
-     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+     NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
   use CON_coupler, ONLY: i_proc, PT_, n_proc
 
   implicit none
 
-!  logical,          intent(in)   :: UseData ! true when data is transferred
-                                            ! false if positions are asked
   character(len=*), intent(inout):: NameVar ! List of variables
   integer,          intent(inout):: nVar    ! Number of variables in Data_VI
   integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-  real, pointer:: Pos_DI(:,:)               ! Position vectors
-
   real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
   integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
-  integer:: iPoint, i, iProc, nProc
+  real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Position vectors
+
+  integer:: iPoint, i
 
   character(len=*), parameter :: NameSub='PT_put_from_gm'
-!  integer,parameter::datafile=2
-!  character(len=255)::datafilename
-!  integer,parameter::pointsfile=1
-!  character(len=255)::pointsfilename
   !--------------------------------------------------------------------------
-  iProc = i_proc(PT_)
-  nProc = n_proc(PT_)
-
-  if(.not. present(Data_VI))then
-     ! Set variable names
- !    NameVar = 'rho ux uy uz bx by bz p'
-     ! Set number of variables needed
- !    nVar = 8
-
+  if(present(Pos_DI))then
      ! set number of grid points on this processor
-     call amps_get_center_point_number(nPoint)  !kkkkjjj10
-     ! allocate array
+     call amps_get_center_point_number(nPoint)
+
+     ! allocate position array
      allocate(Pos_DI(3,nPoint))
 
-!     write(pointsfilename,*) "points",iProc,".txt"
-!     open(unit=pointsfile,file=trim(adjustl(pointsfilename)), &
-!     action="write",status="replace")
-
-     ! Fill in values
-!     write(pointsfile,*)NameSub,': iProc, iPoint, Pos'        
-!     do iPoint = 1, nPoint
-!        Pos_DI(:,iPoint) = (/ 100.0*(iProc*nPoint+iPoint)/nPoint/nProc-25, &
-!             100.0*(iProc*nPoint+iPoint)/nPoint/nProc-50,
-!             -100.0*(iProc*nPoint+iPoint)/nPoint/nProc+75/)
-!        write(pointsfile,*)NameSub, iProc, iPoint, Pos_DI(:,iPoint)
-!     end do
-
-!     close(pointsfile)
-
+     ! get point positions from AMPS
      call amps_get_center_point_coordinates(Pos_DI) 
 
-     RETURN
+  elseif(present(Data_VI))then
+     call amps_recieve_gm2amps_center_point_data(&
+          NameVar//char(0), nVar, Data_VI, iPoint_I)
+  else
+     call CON_stop(NameSub//': neither Pos_DI nor Data_VI are present!')
   end if
-
-!  write(datafilename,*) "data",iProc,".txt"
-!  open(unit=datafile,file=trim(adjustl(datafilename)),&
-!      action="write",status="replace")
-
-!  write(*,*) NameSub,': nVar=',nVar
-
-!  write(*,*) NameSub,': Data_VI=',Data_VI(2:5,1)
-
-!  write(datafile,*)NameSub,': iProc, iPoint, i, Data'
-!  do iPoint = 1, nPoint
-!     i = iPoint_I(iPoint)
-!     write(datafile,*)NameSub, iProc, iPoint, i, Data_VI(:,i)
-     ! Here should convert from SI to AMPS units and store data
-!  end do
-
-!  close(datafile)
-
-  call amps_recieve_gm2amps_center_point_data(NameVar//char(0),nVar, &
-       Data_VI,iPoint_I)
 
 end subroutine PT_put_from_gm
 

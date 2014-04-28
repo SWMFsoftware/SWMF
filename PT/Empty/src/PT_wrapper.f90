@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! Wrapper for the empty PTOM (PT) component
 !==========================================================================
@@ -107,7 +108,7 @@ subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 end subroutine PT_get_grid_info
 !==============================================================================
 subroutine PT_put_from_gm(UseData, &
-     NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+     NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
   implicit none
 
@@ -116,11 +117,9 @@ subroutine PT_put_from_gm(UseData, &
   character(len=*), intent(inout):: NameVar ! List of variables
   integer,          intent(inout):: nVar    ! Number of variables in Data_VI
   integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-
-  real, pointer:: Pos_DI(:,:)               ! Position vectors
-
   real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
   integer, intent(in):: iPoint_I(nPoint)    ! Order of data
+  real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Positions
 
   character(len=*), parameter :: NameSub='PT_put_from_gm'
   

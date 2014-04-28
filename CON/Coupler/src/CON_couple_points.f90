@@ -51,7 +51,7 @@ module CON_couple_points
      real, allocatable :: PosSource_DI(:,:)
 
      ! Original target point positions
-     real, pointer :: PosTarget_DI(:,:)
+     real, allocatable :: PosTarget_DI(:,:)
 
      ! Number of points sent to each target processor
      integer, allocatable :: nPointSource_P(:)
@@ -109,7 +109,7 @@ contains
          .and. &
          i_proc_last(Coupler%iCompSource) == i_proc_last(Coupler%iCompTarget)
 
-    write(*,*)NameSub,': Done initializing coupler'
+    !write(*,*)NameSub,': Done initializing coupler'
 
   end subroutine couple_points_init
 
@@ -121,34 +121,27 @@ contains
     type(CouplePointsType), intent(inout) :: Coupler
 
     interface 
-       subroutine target_put(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
+       subroutine target_put(NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+         ! First call: Provides point positions in Pos_DI
+         ! Afterwards: Get data for the points from Data_VI
 
          implicit none
-         ! List of variables
-         character(len=*), intent(inout):: NameVar
-
-         ! Number of variables in Data_VI
-         integer,          intent(inout):: nVar    
-
-         ! Number of points in Pos_DI
-         integer,          intent(inout):: nPoint  
-
-         ! Position vectors
-         real, pointer:: Pos_DI(:,:)               
-
-         ! Recv data array
-         real,    intent(in), optional:: Data_VI(:,:)
-
-         ! Order of data
-         integer, intent(in), optional:: iPoint_I(nPoint)
+         character(len=*), intent(inout):: NameVar ! List of variables
+         integer,          intent(inout):: nVar    ! Number of vars in Data_VI
+         integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+         real,    intent(in), optional:: Data_VI(:,:)     ! Recv data array
+         integer, intent(in), optional:: iPoint_I(nPoint) ! Order of data
+         real,   intent(out), optional, allocatable:: Pos_DI(:,:) ! Positions
 
        end subroutine target_put
 
        subroutine source_get(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
             Data_VI)
+         implicit none
          logical,          intent(in):: IsNew   ! true for new point array
          character(len=*), intent(in):: NameVar ! List of variables
-         integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+         integer,          intent(in):: nVarIn  ! Number of vars in Data_VI
          integer,          intent(in):: nDimIn  ! Dimensionality of positions
          integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
 
@@ -157,10 +150,12 @@ contains
        end subroutine source_get
 
        subroutine source_get_grid_info(nDim, iGrid, iDecomp)
+         implicit none
          integer, intent(out) :: nDim, iGrid, iDecomp
        end subroutine source_get_grid_info
 
        subroutine target_get_grid_info(nDim, iGrid, iDecomp)
+         implicit none
          integer, intent(out) :: nDim, iGrid, iDecomp
        end subroutine target_get_grid_info
 
@@ -168,17 +163,10 @@ contains
 
          implicit none
 
-         ! dimension of position vectors
-         integer, intent(in) :: nDimIn             
-
-         ! number of positions
-         integer, intent(in) :: nPoint                
-
-         ! positions
-         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) 
-
-         ! processor owning position
-         integer, intent(out):: iProc_I(nPoint)       
+         integer, intent(in) :: nDimIn    ! dimension of position vectors
+         integer, intent(in) :: nPoint    ! number of positions
+         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+         integer, intent(out):: iProc_I(nPoint)  ! processor owning position
 
        end subroutine source_find_points
 
@@ -266,7 +254,7 @@ contains
        ! Target will allocate array.
        if(is_proc(Coupler%iCompTarget)) then
           call target_put(Coupler%NameVar, Coupler%nVar, &
-               Coupler%nPointTarget, Coupler%PosTarget_DI)
+               Coupler%nPointTarget, Pos_DI = Coupler%PosTarget_DI)
        else
           Coupler%nPointTarget = 0
           allocate(Coupler%PosTarget_DI(Coupler%nDim,0))
@@ -352,7 +340,8 @@ contains
              ! Last processor gets the rest of points
              Coupler%nCouplePointTarget_I(Coupler%nCoupleTarget) = &
                   Coupler%nPointTarget &
-                  - sum(Coupler%nCouplePointTarget_I(1:Coupler%nCoupleTarget-1))
+                  - (Coupler%nCoupleTarget-1)&
+                  * (Coupler%nPointTarget/Coupler%nCoupleTarget)
           end if
 
           ! send number of points from target to source that will be sent to 
@@ -480,11 +469,13 @@ contains
     ! Give the data to target
     if(is_proc(Coupler%iCompTarget)) call target_put( &
          Coupler%NameVar, Coupler%nVar, Coupler%nPointTarget, &
-         Coupler%PosTarget_DI, Coupler%DataTarget_VI, Coupler%iPointTarget_I)
+         Coupler%DataTarget_VI, Coupler%iPointTarget_I)
 
     deallocate(Coupler%DataTarget_VI)
 
   end subroutine couple_points
+
+  !===========================================================================
 
   subroutine couple_points_finalize(Coupler)
 
