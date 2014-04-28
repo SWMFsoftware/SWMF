@@ -203,7 +203,7 @@ contains
 
     if(IsStandAlone)then
        call read_file('PARAM.in',iComm)
-       call read_init(' ', iSessionIn=1, iLineIn=0)
+       call read_init('  ', iSessionIn=1, iLineIn=0)
     endif
 
     do
