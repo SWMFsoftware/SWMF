@@ -186,6 +186,8 @@ double localResolution(double *x) {
 
 	r=sqrt(r);
 
+	if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
+
 	if (r>dxMinGlobal*rSphere) {
 		lnR=log(r);
 		res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
@@ -540,7 +542,7 @@ PIC::InitMPI();
 
 	const int InitialSampleLength=100;
 
-	PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=400;
+	PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1600;
 	PIC::RequiredSampleLength=InitialSampleLength; //0;
 
 	Europa::Init_AfterParser();
@@ -979,10 +981,10 @@ PIC::InitMPI();
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_THERMAL_SPEC_);
 
 	//copy the weight and time step from Na neutra to Na ions
-	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e2);
-//	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
+	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
+//	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
 
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E-7);
+  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
   PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
 
 	//set photolytic reactions
