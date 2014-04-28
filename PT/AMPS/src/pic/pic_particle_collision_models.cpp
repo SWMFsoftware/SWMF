@@ -261,7 +261,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
                     for (cr=0.0,idim=0;idim<3;idim++) {
                       vrel[idim]=v1[idim]-v0[idim];
-                      vcm[idim]=(m1*v1[idim]+m0*v0[idim])/(m0+m0);
+                      vcm[idim]=(m1*v1[idim]+m0*v0[idim])/(m1+m0);
                       cr+=vrel[idim]*vrel[idim];
                     }
 
