@@ -87,6 +87,7 @@ our $NewGridSize;           # New grid size to be set in caller code
 our $Hdf5;                  # True if HDF5  lib is enabled
 our $Hypre;                 # True if HYPRE lib is enabled
 our $Spice;                 # True if SPICE lib is enabled
+our $Fishpak;               # True if Fishpak lib is enabled
 
 # The name of the parallel HDF5 Fortran and C compilers
 my $H5pfc = "h5pfc";
@@ -97,6 +98,14 @@ my $HypreDefinition = "# HYPRE library definitions
 HYPRELIB     = -L\${UTILDIR}/HYPRE/lib -lHYPRE
 HYPRESEARCH  = -I\${UTILDIR}/HYPRE/include
 ";             	    
+
+# This string should be added into Makefile.conf when Fishpak is enabled
+my $FishpakDefinition = "# Fishpak library definitions                               
+FISHPAKSEARCH  = -I\${UTILDIR}/FISHPAK/lib
+FISHPAKLIB     = -L\${UTILDIR}/FISHPAK/lib -lFISHPAK           
+";
+
+
 
 # Default precision for installation
 my $DefaultPrecision = 'double';
@@ -109,6 +118,7 @@ my $NewDebug;
 my $NewMpi;
 my $NewHdf5;
 my $NewHypre;
+my $NewFishpak;
 my $NewSpice;
 my $IsCompilerSet;
 my $Debug;
@@ -150,7 +160,9 @@ foreach (@Arguments){
     if(/^-hdf5$/i)            {$NewHdf5="yes";                  next};
     if(/^-nohdf5$/i)          {$NewHdf5="no";                   next};
     if(/^-hypre$/i)           {$NewHypre="yes";                 next};
+    if(/^-fishpak$/i)         {$NewFishpak="yes";               next};
     if(/^-nohypre$/i)         {$NewHypre="no";                  next};
+    if(/^-nofishpak$/i)       {$NewFishpak="no";                next};
     if(/^-spice=(.*)$/i)      {$NewSpice=$1;                    next};
     if(/^-nospice$/i)         {$NewSpice="no";                  next};
     if(/^-O[0-5]$/i)          {$NewOptimize=$_;                 next};  
@@ -255,6 +267,9 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
 
+# Link with FISHPAK library is required 
+&set_fishpak_ if $NewFishpak and $NewFishpak ne $Fishpak;
+
 # Link with SPICE library is required
 &set_spice_ if ($Install or $NewSpice and $NewSpice ne $Spice) 
     and not $IsComponent;
@@ -299,6 +314,7 @@ sub get_settings_{
     $Mpi       = "yes";
     $Hdf5      = "no";
     $Hypre     = "no";
+    $Fishpak   = "no";
     $Spice     = "no";
   TRY:{
       # Read information from $MakefileConf
@@ -325,6 +341,7 @@ sub get_settings_{
 	  $Mpi   = "no"  if /^\s*MPILIB\s*=.*\-lNOMPI/;
 	  $Hdf5  = "yes" if /^\s*LINK\.f90\s*=.*$H5pfc/;
 	  $Hypre = "yes" if /^\s*HYPRELIB/;
+	  $Fishpak = "yes" if /^\s*FISHPAKLIB/;
 	  $Spice = "$1"  if /^\s*SPICELIB\s*=\s*(\S*)/;
           $Optimize = $1 if /^\s*OPT[0-5]\s*=\s*(-O[0-5])/;
       }
@@ -375,6 +392,7 @@ Debugging flags:   $Debug
 Linked with MPI:   $Mpi
 Linked with HDF5:  $Hdf5
 Linked with HYPRE: $Hypre
+Linked with FISHPAK: $Fishpak
 Linked with SPICE: $Spice
 ";
 
@@ -679,6 +697,47 @@ sub set_hypre_{
 }
 
 ##############################################################################
+
+sub set_fishpak_{
+
+    # Check if library is present 
+    if($NewFishpak eq "yes" and not -d "util/FISHPAK"){
+        print "Warning: util/FISHPAK is missing. Use cd util; cvs co FISHPAK\n";
+        return;
+    }
+
+    if($NewFishpak eq "yes" and not -e "util/FISHPAK/lib/libFISHPAK.a"){
+        $IsStrict = 0;
+        &shell_command("cd util/FISHPAK; make install");
+        $IsStrict = 1;
+        if($ErrorCode){
+            print "$ERROR cd util/FISHPAK; make install failed with ".
+                "error $ErrorCode\n";
+            print "!!! renaming util/FISHPAK to util/FISHPAK_FAILED !!!\n";
+            shell_command("rm -rf util/FISHPAK_FAILED; ",
+                          "mv util/FISHPAK util/FISHPAK_FAILED");
+            return;
+        }
+    }
+
+    # $Fishpak will be $NewFishpak after changes                                     
+    $Fishpak = $NewFishpak;
+
+    print "Enabling FISHPAK library in $MakefileConf\n" if $Fishpak eq "yes";
+    print "Disabling FISHPAK library in $MakefileConf\n" if $Fishpak eq "no";
+    if(not $DryRun){
+        @ARGV = ($MakefileConf);
+        while(<>){
+            # Add/remove Fishpak related definitions after MPILIB                                          
+            $_ .= $FishpakDefinition if $Fishpak eq "yes" and /-lNOMPI/;
+            $_ = "" if $Fishpak eq "no" and /FISHPAK/i;
+            print;
+        }
+    }
+
+}
+
+############################################################################## 
 
 sub set_spice_{
 
