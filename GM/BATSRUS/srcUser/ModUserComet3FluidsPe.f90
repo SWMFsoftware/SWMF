@@ -7,7 +7,7 @@
 module ModUser
 
   use ModMultiFluid
-  use ModSize,       ONLY: nI, nJ, nK, nBlk
+  use ModSize,       ONLY: nI, nJ, nK, MaxBlock
   use ModVarIndexes, ONLY: nVar
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
   use ModUserEmpty,                               &
@@ -42,19 +42,18 @@ module ModUser
   integer, parameter :: Hp_   =  2
   integer, parameter :: H2Op_ =  3
 
-  real, dimension(nNeutral,MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1) :: NnNeutral_IG, &
+  real, dimension(nNeutral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: NnNeutral_IG, &
        UnxNeutral_IG, UnyNeutral_IG, UnzNeutral_IG, TnNeutral_IG
-  real, dimension(1:nNeutral) :: NeutralMass_I(nNeutral)
-  integer :: iNeutralBlockLast = -1
-  real :: Qprod, Tmin, rHelio, vHI
-  real, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: ne20eV_GB = 0.
+  real:: NeutralMass_I(nNeutral)
+  integer:: iNeutralBlockLast = -1
+  real:: Qprod, Tmin, rHelio, vHI
+  real:: ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) = 0.
 
   !! Plotting array to be used for testing
-  ! real, dimension(4,MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: TestArray = 0.
-
+  ! real:: TestArray(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,,MaxBlock) = 0.
 
   !! To plot the cells where the heat flux is capped by the limiter
-  ! real, public, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1,nBLK) :: FluxLimited_GB = 0.
+  ! real, public:: FluxLimited_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)=0.
   !! Add the following lines to get_impl_heat_cond_state 
   ! use ModUser, ONLY: FluxLimited_GB
   !! and after "The threshold heat flux limiter model"
@@ -135,8 +134,8 @@ contains
     integer :: i, j, k, iNeutral
     ! real :: RadAccl, uH
     real :: xUp
-    real, dimension(nNeutral,nNeutral) :: DissocRate_II
-    real, dimension(nNeutral) :: DestructRate_I, uNeutr_I
+    real:: DissocRate_II(nNeutral,nNeutral)
+    real:: DestructRate_I(nNeutral), uNeutr_I(nNeutral)
 
     ! Variables for neutral tables
     logical:: DoCheckTable = .true.
@@ -196,7 +195,7 @@ contains
           do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
 
              ! Haser model for H2O
-             NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2&
+             NnNeutral_IG(H2O_,i,j,k) = Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2&
                   *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)
 
              ! ! Limits hydrogen upstream distance due to radiation pressure
@@ -204,9 +203,9 @@ contains
              ! if(Xyz_DGB(x_,i,j,k,iBlock) < -0.5*RadAccl/(uH**2)*rPlanetSI*&
              !      (Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+0.5*uH**2/RadAccl/rPlanetSI) then
              !    ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
-             !    NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+             !    NnNeutral_IG(H_,i,j,k) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
              ! else
-             !    NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = 0.
+             !    NnNeutral_IG(H_,i,j,k) = 0.
              ! end if
 
              ! Limits hydrogen upstream distance by parabola to avoid interaction with the side boundary
@@ -214,36 +213,36 @@ contains
              if(Xyz_DGB(x_,i,j,k,iBlock) < (x1-xUp)/min(abs(y1),abs(y2),abs(z1),abs(z2))**2.*&
                   (Xyz_DGB(y_,i,j,k,iBlock)**2+Xyz_DGB(z_,i,j,k,iBlock)**2)+xUp) then
                 ! H (after Combi 1996 with [cm^-3] -> [m^-3] and r[m] -> r[cm])
-                NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
+                NnNeutral_IG(H_,i,j,k) = Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*rPlanetSI)**(-1.6103)
              else
-                NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1) = 0.
+                NnNeutral_IG(H_,i,j,k) = 0.
              end if
 
              ! H from Haser Model (assuming vn_H2O = vn_H)
              !   DissocRate_II(H2O_,H_) = 1.64E-5/(rHelio**2) ! H2O + hv -> OH + H (Huebner et al. 1992)
-             !NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    = Qprod*DissocRate_II(H2O_,H_)/ &
+             !NnNeutral_IG(H_,i,j,k)    = Qprod*DissocRate_II(H2O_,H_)/ &
              !     (DestructRate_I(H2O_)-DissocRate_II(H2O_,H_))* &
              !     (exp(-DissocRate_II(H2O_,H_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI)-&
              !     exp(-DestructRate_I(H2O_)/uNeutr_I(H2O_)*R_BLK(i,j,k,iBlock)*rPlanetSI))/&
              !     (4.*cPi*(R_BLK(i,j,k,iBlock)*rPlanetSI)**2*uNeutr_I(H2O_))     
 
-             UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
+             UnxNeutral_IG(H2O_,i,j,k) = uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
                   R_BLK(i,j,k,iBlock)
-             UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
+             UnyNeutral_IG(H2O_,i,j,k) = uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
                   R_BLK(i,j,k,iBlock)
-             UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1) = uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
-                  R_BLK(i,j,k,iBlock)
-
-             UnxNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
-                  R_BLK(i,j,k,iBlock)
-             UnyNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
-                  R_BLK(i,j,k,iBlock)
-             UnzNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)   = uNeutr_I(H_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
+             UnzNeutral_IG(H2O_,i,j,k) = uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
                   R_BLK(i,j,k,iBlock)
 
+             UnxNeutral_IG(H_,i,j,k)   = uNeutr_I(H_)*Xyz_DGB(x_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnyNeutral_IG(H_,i,j,k)   = uNeutr_I(H_)*Xyz_DGB(y_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
+             UnzNeutral_IG(H_,i,j,k)   = uNeutr_I(H_)*Xyz_DGB(z_,i,j,k,iBlock)/ &
+                  R_BLK(i,j,k,iBlock)
 
-             TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)  =  100.   !! estimate
-             TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)    =  1000.  !! estimate
+
+             TnNeutral_IG(H2O_,i,j,k)  =  100.   !! estimate
+             TnNeutral_IG(H_,i,j,k)    =  1000.  !! estimate
           end do;  end do;  end do
        end if
 
@@ -269,13 +268,13 @@ contains
              call interpolate_lookup_table( &
                   iTableNeutral_I(iNeutral), r, Phi, Neutral_V)
 
-             NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Nn_)
+             NnNeutral_IG(iNeutral,i,j,k) = Neutral_V(Nn_)
 
              ! Note: AMPS uses a different orientation for the X axis!
-             UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= -Neutral_V(Uxn_)
-             UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*y/Yz
-             UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)= Neutral_V(Uyn_)*z/Yz
-             TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1) = Neutral_V(Tn_)
+             UnxNeutral_IG(iNeutral,i,j,k)= -Neutral_V(Uxn_)
+             UnyNeutral_IG(iNeutral,i,j,k)= Neutral_V(Uyn_)*y/Yz
+             UnzNeutral_IG(iNeutral,i,j,k)= Neutral_V(Uyn_)*z/Yz
+             TnNeutral_IG(iNeutral,i,j,k) = Neutral_V(Tn_)
           end do; end do; end do
        end do
 
@@ -349,9 +348,9 @@ contains
 
     !! Electron - neutral collision rates
     !! e - H2O,  Itikawa, Planet. Space Sci., 1971 and Itikawa, Phys. Fluids 1983
-    fen_I(H2O_) = 2.745E-5*NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)/1e6*Te**(-0.62)      !! rate in [1/s]
+    fen_I(H2O_) = 2.745E-5*NnNeutral_IG(H2O_,i,j,k)/1e6*Te**(-0.62)      !! rate in [1/s]
     !! e - H, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
-    fen_I(H_) = 4.5E-9*NnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1)/1e6*(1.-1.35E-4*Te)*sqrtTe !! rate in [1/s]
+    fen_I(H_) = 4.5E-9*NnNeutral_IG(H_,i,j,k)/1e6*(1.-1.35E-4*Te)*sqrtTe !! rate in [1/s]
     if (fen_I(H_) < 0.) then
        fen_I(H_) = 0.
     end if
@@ -400,7 +399,7 @@ contains
 
     real :: Tr, ueBulk2, ueTherm2, Ee, A(7), Tred, Mred
     real :: Dist, NCol, sigma, J3, uNeutr, log10Te, sqrtTe
-    real,dimension(nNeutral,nIonFluid) :: sigma_e
+    real :: sigma_e(nNeutral,nIonFluid)
     integer :: n
     real, save :: ElImpRate_I(nNeutral,61)!, ElCrossSect_I(61)
 
@@ -474,8 +473,8 @@ contains
        v_II = v_II*1e-9 ! Inside the body's shadow
     else
        ! N total number of water-type molecules in upstream column
-       uNeutr = sqrt(UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+&
-            UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2)
+       uNeutr = sqrt(UnxNeutral_IG(H2O_,i,j,k)**2+UnyNeutral_IG(H2O_,i,j,k)**2+&
+            UnzNeutral_IG(H2O_,i,j,k)**2)
        NCol = Qprod/uNeutr/Dist/4.*(-atan(Xyz_DGB(x_,i,j,k,iBlock)*rPlanetSI/Dist)/cPi+0.5)
        v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
        !if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
@@ -538,7 +537,7 @@ contains
     ! resonant H+ & O -> O+ & H  subtracts H+ and adds O+
     ! kin_IIII(Hp_,O_,Op_,H_) = 6.61E-11/1E6*sqrt(Ti_I(Hp_))*(1.0-0.047*log10(Ti_I(Hp)))**2    !! rate in [m^3/s]
     ! resonant O+ & H -> H+ & O  subtracts O+ and adds H+
-    ! kin_IIII(Op_,H_,Hp_,O_) = 4.63E-12/1E6*sqrt(TnNeutral(H_,i-MinI+1,j-MinJ+1,k-MinK+1)+TOp_/16.)  !! rate in [m^3/s]
+    ! kin_IIII(Op_,H_,Hp_,O_) = 4.63E-12/1E6*sqrt(TnNeutral(H_,i,j,k)+TOp_/16.)  !! rate in [m^3/s]
 
 
     !! H2Op & H2O -> H2Op & H2O    ! non-resonant
@@ -552,10 +551,10 @@ contains
     kin_IIII(H2Op_,H_,H2O_,Hp_) = 1E-6*1.7E-9 !! Gombosi et al., J. Geophys. Res., (1996), estimated
 
     !! Hp & H -> H & Hp  ! resonant, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    Tr=(Ti_I(Hp_)+TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1))/2.
+    Tr=(Ti_I(Hp_)+TnNeutral_IG(H_,i,j,k))/2.
     kin_IIII(Hp_,H_,H_,Hp_)  = 2.65E-10/1E6*sqrt(Tr)*(1.0-0.083*log10(Tr))**2  !! rate in [m^3/s]
     !! SWp & H -> H & Hp  ! resonant, Schunk and Nagy, Ionospheres,Cambridge University Press, 2000
-    Tr=(Ti_I(SW_)+TnNeutral_IG(H_,i-MinI+1,j-MinJ+1,k-MinK+1))/2.
+    Tr=(Ti_I(SW_)+TnNeutral_IG(H_,i,j,k))/2.
     kin_IIII(SW_,H_,H_,Hp_) = 2.65E-10/1E6*sqrt(Tr)*(1.0-0.083*log10(Tr))**2  !! rate in [m^3/s]
     !! Hp & H -> H & Hp  ! non-resonant
     !fin_II(Hp_,H_) = 0.
@@ -748,11 +747,11 @@ contains
        do iNeutral=1,nNeutral
           uIonNeu2_IIC(iIonFluid,iNeutral,1:nI,1:nJ,1:nK) = &
                (uIon_DIC(1,iIonFluid,1:nI,1:nJ,1:nK)- &
-               UnxNeutral_IG(iNeutral,2-MinI:nI+1-MinI,2-MinJ:nJ+1-MinJ,2-MinK:nK+1-MinK))**2+&
+               UnxNeutral_IG(iNeutral,1:nI,1:nJ,1:nK))**2+&
                (uIon_DIC(2,iIonFluid,1:nI,1:nJ,1:nK)- &
-               UnyNeutral_IG(iNeutral,2-MinI:nI+1-MinI,2-MinJ:nJ+1-MinJ,2-MinK:nK+1-MinK))**2+&
+               UnyNeutral_IG(iNeutral,1:nI,1:nJ,1:nK))**2+&
                (uIon_DIC(3,iIonFluid,1:nI,1:nJ,1:nK)- &
-               UnzNeutral_IG(iNeutral,2-MinI:nI+1-MinI,2-MinJ:nJ+1-MinJ,2-MinK:nK+1-MinK))**2
+               UnzNeutral_IG(iNeutral,1:nI,1:nJ,1:nK))**2
        end do
     end do
 
@@ -813,10 +812,10 @@ contains
                 do jNeutral=1,nNeutral
                    !! addition to individual fluid from charge exchange [1/(m^3*s)]
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + nIon_IC(iIonFluid,i,j,k)* &
-                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i,j,k)
                    !! subtraction to individual fluid from charge exchange [1/(m^3*s)]
                    kinSub_I(iIonFluid) = kinSub_I(iIonFluid) + nIon_IC(iIonFluid,i,j,k)* &
-                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i,j,k)
                 end do
              end do
           end do
@@ -825,7 +824,7 @@ contains
        vAdd_I = 0.
        do iNeutral=1,nNeutral
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+               NnNeutral_IG(iNeutral,i,j,k)
        end do
 
        !! Sources divideded into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
@@ -845,10 +844,10 @@ contains
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
-               (UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               (UnxNeutral_IG(iNeutral,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-               (UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(1,1:nIonFluid,i,j,k))
+               NnNeutral_IG(iNeutral,i,j,k)*&
+               (UnxNeutral_IG(iNeutral,i,j,k)-uIon_DIC(1,1:nIonFluid,i,j,k))
        end do
 
        kinAdd_I = 0.
@@ -858,8 +857,8 @@ contains
                 do jNeutral=1,nNeutral
                    !! addition to individual fluid from charge exchange [1/(m^3*s)]
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + nIon_IC(iIonFluid,i,j,k)* &
-                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-                        (UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(1,jIonFluid,i,j,k))
+                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i,j,k)*&
+                        (UnxNeutral_IG(iNeutral,i,j,k)-uIon_DIC(1,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -891,10 +890,10 @@ contains
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
-               (UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               (UnyNeutral_IG(iNeutral,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-               (UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(2,1:nIonFluid,i,j,k))
+               NnNeutral_IG(iNeutral,i,j,k)*&
+               (UnyNeutral_IG(iNeutral,i,j,k)-uIon_DIC(2,1:nIonFluid,i,j,k))
        end do
 
 
@@ -906,8 +905,8 @@ contains
                    !! addition to individual fluid from charge exchange [1/(m^3*s)]
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + nIon_IC(iIonFluid,i,j,k)* &
                         kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*&
-                        NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-                        (UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(2,jIonFluid,i,j,k))
+                        NnNeutral_IG(iNeutral,i,j,k)*&
+                        (UnyNeutral_IG(iNeutral,i,j,k)-uIon_DIC(2,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -939,10 +938,10 @@ contains
        end do                                                                                                         !! momentum transfer by ion-neutral collisions
        do iNeutral=1,nNeutral
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*&                         !! ion-neutral collisions
-               (UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               (UnzNeutral_IG(iNeutral,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-               (UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(3,1:nIonFluid,i,j,k))
+               NnNeutral_IG(iNeutral,i,j,k)*&
+               (UnzNeutral_IG(iNeutral,i,j,k)-uIon_DIC(3,1:nIonFluid,i,j,k))
        end do
 
        kinAdd_I = 0.
@@ -953,8 +952,8 @@ contains
                    !! addition to individual fluid from charge exchange [1/(m^3*s)]
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + nIon_IC(iIonFluid,i,j,k)* &
                         kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)* &
-                        NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*&
-                        (UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uIon_DIC(3,jIonFluid,i,j,k))
+                        NnNeutral_IG(iNeutral,i,j,k)*&
+                        (UnzNeutral_IG(iNeutral,i,j,k)-uIon_DIC(3,jIonFluid,i,j,k))
                 end do
              end do
           end do
@@ -979,9 +978,9 @@ contains
 
        ! (u_n-u_e)^2 difference in neutral and electron speeds qubed [m^2/s^2]
        do iNeutral=1,nNeutral
-          uNeuElec2_IC(iNeutral,i,j,k) = ((UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uElec_DC(1,i,j,k))**2 &
-               +(UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uElec_DC(2,i,j,k))**2 &
-               +(UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-uElec_DC(3,i,j,k))**2)
+          uNeuElec2_IC(iNeutral,i,j,k) = ((UnxNeutral_IG(iNeutral,i,j,k)-uElec_DC(1,i,j,k))**2 &
+               +(UnyNeutral_IG(iNeutral,i,j,k)-uElec_DC(2,i,j,k))**2 &
+               +(UnzNeutral_IG(iNeutral,i,j,k)-uElec_DC(3,i,j,k))**2)
        end do
 
        ! (u_i-u_e)^2 difference in ion and electron speeds qubed [m^2/s^2]
@@ -1000,7 +999,7 @@ contains
                 do jNeutral=1,nNeutral
                    !! subtraction to individual fluid from charge exchange [1/(m^3*s)]
                    kinSub_I(iIonFluid) = kinSub_I(iIonFluid) + &!!nIon_IC(iIonFluid,i,j,k)* &
-                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+                        kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)*NnNeutral_IG(iNeutral,i,j,k)
                 end do
              end do
           end do
@@ -1009,7 +1008,7 @@ contains
        vAdd_I = 0.
        do iNeutral=1,nNeutral
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*&
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+               NnNeutral_IG(iNeutral,i,j,k)
        end do
 
        SPTerm_IIC(1,1:nIonFluid,i,j,k) = -(kinSub_I(1:nIonFluid)/Si2No_V(UnitT_)+ &                                  !! lost ions through charge exchange and recombination
@@ -1028,7 +1027,7 @@ contains
        do iNeutral=1,nNeutral
           finTot_I(1:nIonFluid) = finTot_I(1:nIonFluid)+fin_IIC(1:nIonFluid,iNeutral,i,j,k)*nIon_IC(1:nIonFluid,i,j,k)*&  
                MassIon_I(1:nIonFluid)/(MassIon_I(1:nIonFluid)+NeutralMass_I(iNeutral)/cProtonMass)*&
-               cBoltzmann*(TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-Ti_IC(1:nIonFluid,i,j,k))
+               cBoltzmann*(TnNeutral_IG(iNeutral,i,j,k)-Ti_IC(1:nIonFluid,i,j,k))
        end do
 
        SPTerm_IIC(3,1:nIonFluid,i,j,k) = 2.*finTot_I(1:nIonFluid)/Si2No_V(UnitT_)*Si2No_V(UnitEnergyDens_)
@@ -1057,7 +1056,7 @@ contains
 
        do iNeutral=1,nNeutral
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-               NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*uIonNeu2_IIC(1:nIonFluid,iNeutral,i,j,k)
+               NnNeutral_IG(iNeutral,i,j,k)*uIonNeu2_IIC(1:nIonFluid,iNeutral,i,j,k)
        end do
        kinAdd_I = 0.
        do iIonFluid=1,nIonFluid
@@ -1067,7 +1066,7 @@ contains
                    !! addition to individual fluid from charge exchange [1/(m*s^2)]
                    kinAdd_I(jIonFluid) = kinAdd_I(jIonFluid) + nIon_IC(iIonFluid,i,j,k)*&
                         kin_IIIIC(iIonFluid,iNeutral,jNeutral,jIonFluid,i,j,k)* &
-                        NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*uIonNeu2_IIC(jIonFluid,iNeutral,i,j,k)
+                        NnNeutral_IG(iNeutral,i,j,k)*uIonNeu2_IIC(jIonFluid,iNeutral,i,j,k)
                 end do
              end do
           end do
@@ -1083,7 +1082,7 @@ contains
           vAdd_I(1:nIonFluid) = 0.
           do iNeutral=1,nNeutral
              vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)* &
-                  NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)*uNeuElec2_IC(iNeutral,i,j,k)
+                  NnNeutral_IG(iNeutral,i,j,k)*uNeuElec2_IC(iNeutral,i,j,k)
           end do
           SPeTerm_IC(2,i,j,k) = 1./3.*cElectronMass*sum(vAdd_I)*Si2No_V(UnitRho_)/Si2No_V(UnitT_)*Si2No_V(UnitU_)**2      !! new electrons through photoionized neutrals
 
@@ -1098,7 +1097,7 @@ contains
           fenTot = 0.
           do iNeutral=1,nNeutral
              fenTot = fenTot+fen_IC(iNeutral,i,j,k)/NeutralMass_I(iNeutral)*&
-                  (TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)-Te_C(i,j,k))
+                  (TnNeutral_IG(iNeutral,i,j,k)-Te_C(i,j,k))
           end do
           SPeTerm_IC(4,i,j,k) = 2.*cElectronMass*nElec_C(i,j,k)*cBoltzmann*&                                              !! electron-neutral collisional exchange (thermal motion)
                Si2No_V(UnitEnergyDens_)*fenTot/Si2No_V(UnitT_)
@@ -1156,7 +1155,7 @@ contains
              vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+((v_IIC(iNeutral,1:nIonFluid,i,j,k)-&
                   ve_IIC(iNeutral,1:nIonFluid,i,j,k))*Qexc_II(iNeutral,1:nIonFluid)- &
                   ve_IIC(iNeutral,1:nIonFluid,i,j,k)*Qion_II(iNeutral,1:nIonFluid))*ChargeIon_I(1:nIonFluid)* &          
-                  NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)
+                  NnNeutral_IG(iNeutral,i,j,k)
           end do
           SPeTerm_IC(7,i,j,k) = 2./3.*sum(vAdd_I)*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)                                ! heating of electrons due to ionization excess energy
 
@@ -1169,14 +1168,14 @@ contains
 
           logTe = log(Te_C(i,j,k))
           SPeTerm_IC(8,i,j,k) = exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)                              !! electron cooling due to collisions w/ water vapor
-          if(Te_C(i,j,k)<1.5*TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)) then
-             SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1))* &
-                  (Te_C(i,j,k)-TnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1))
+          if(Te_C(i,j,k)<1.5*TnNeutral_IG(H2O_,i,j,k)) then
+             SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TnNeutral_IG(H2O_,i,j,k))* &
+                  (Te_C(i,j,k)-TnNeutral_IG(H2O_,i,j,k))
           else
              SPeTerm_IC(8,i,j,k)=SPeTerm_IC(8,i,j,k)+4.5e-9
           end if
 
-          SPeTerm_IC(8,i,j,k) = -2./3.*NnNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*nElec_C(i,j,k)* &
+          SPeTerm_IC(8,i,j,k) = -2./3.*NnNeutral_IG(H2O_,i,j,k)*nElec_C(i,j,k)* &
                SPeTerm_IC(8,i,j,k)/1e6*1.60217733e-19*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)                           
 
        end if
@@ -1276,12 +1275,12 @@ contains
        do iNeutral=1,nNeutral
           write(*,124)'Neutral species #',iNeutral,': ', NameNeutral_I(iNeutral)," (",&
                NeutralMass_I(iNeutral)/cProtonMass," amu)"
-          write(*,123)'n_n       = ',NnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)," [m^-3]"
+          write(*,123)'n_n       = ',NnNeutral_IG(iNeutral,i,j,k)," [m^-3]"
           write(*,123)'m_n       = ',NeutralMass_I(iNeutral)," [kg]"
-          write(*,123)'unx       = ',UnxNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)," [m/s]"
-          write(*,123)'uny       = ',UnyNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)," [m/s]"
-          write(*,123)'unz       = ',UnzNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)," [m/s]"
-          write(*,123)'Tn        = ',TnNeutral_IG(iNeutral,i-MinI+1,j-MinJ+1,k-MinK+1)," [K]"
+          write(*,123)'unx       = ',UnxNeutral_IG(iNeutral,i,j,k)," [m/s]"
+          write(*,123)'uny       = ',UnyNeutral_IG(iNeutral,i,j,k)," [m/s]"
+          write(*,123)'unz       = ',UnzNeutral_IG(iNeutral,i,j,k)," [m/s]"
+          write(*,123)'Tn        = ',TnNeutral_IG(iNeutral,i,j,k)," [K]"
        end do
        write(*,*)''
        write(*,*)'Total plasma phase (e- and i+):'
@@ -1572,8 +1571,8 @@ contains
     integer,intent(in) :: iStage, iBlock
     integer :: i,j,k,iIonFluid
 
-    real, dimension(1:nI,1:nJ,1:nK) :: nElec_C
-    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) ::nIon_IC
+    real:: nElec_C(nI,nJ,nK)
+    real::nIon_IC(nIonFluid,nI,nJ,nK)
 
     !----------------------------------------------------------------------
 
@@ -1667,8 +1666,8 @@ contains
     logical, save :: FirstCall = .true.
     logical :: DoTest, DoTestMe=.true.
     real :: eeSigma!, B0_D(3)
-    real, dimension(nIonFluid) :: fei_I, eiSigma_I
-    real, dimension(nNeutral)  :: fen_I, enSigma_I
+    real :: fei_I(nIonFluid), eiSigma_I(nIonFluid)
+    real :: fen_I(nNeutral), enSigma_I(nNeutral)
     integer :: iIonFluid, iNeutral
 
     !----------------------------------------------------------------------
@@ -1750,8 +1749,7 @@ contains
     real, dimension(1:nNeutral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: enSigma_IG
     real, dimension(1:nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: eiSigma_IG, nIon_IG
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: Te_G, nElec_G
-    real, dimension(1:nNeutral) :: fen_I
-    real, dimension(1:nIonFluid) :: fei_I
+    real:: fen_I(1:nNeutral), fei_I(1:nIonFluid)
     integer :: iIonFluid, iNeutral
     real :: EtaSi
 
@@ -1840,7 +1838,7 @@ contains
 
     real, save :: KappaCoeffSI = (cBoltzmann/cElectronCharge)**2/cMu
     real :: nElec, EtaSI, TeSI
-    real, dimension(nIonFluid) :: nIon_I
+    real :: nIon_I(nIonFluid)
     integer :: iIonFluid
     logical :: DoTest, DoTestMe=.true.
 
@@ -1950,10 +1948,10 @@ contains
   !========================================================================
 
   subroutine user_init_session
-    use ModPhysics,    ONLY: ElectronPressureRatio
-
+    use ModPhysics, ONLY: ElectronPressureRatio
     !----------------------------------------------------------------------
-    if (ElectronPressureRatio.le.0.) call stop_mpi('ERROR: Electron Pressure Ratio > 0 for init!')
+    if (ElectronPressureRatio <= 0.) &
+         call stop_mpi('ERROR: Set Electron Pressure Ratio > 0 for init!')
 
   end subroutine user_init_session
 
@@ -1984,12 +1982,10 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k, iIonFluid
-    real :: nElec
-    real, dimension(3)           :: Current_I, uIonMean_I
-    real, dimension(nIonFluid)   :: nIon_I
-    real, dimension(3,nIonFluid) :: uIon_I
-
-
+    real:: nElec
+    real:: Current_D(3), uIonMean_D(3)
+    real:: nIon_I(nIonFluid)
+    real:: uIon_DI(3,nIonFluid)
     !--------------------------------------------------------------------------
 
     IsFound = .true.
@@ -2004,7 +2000,7 @@ contains
        NameTecUnit = '[1/cm^3]'
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = NnNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
+          PlotVar_G(i,j,k) = NnNeutral_IG(1,i,j,k)/1E6
        end do; end do; end do
 
     case('nn2')
@@ -2012,35 +2008,35 @@ contains
        NameTecUnit = '[1/cm^3]'
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = NnNeutral_IG(2,i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
+          PlotVar_G(i,j,k) = NnNeutral_IG(2,i,j,k)/1E6
        end do; end do; end do
 
     case('unx1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = UnxNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E3 !! x direction
+          PlotVar_G(i,j,k) = UnxNeutral_IG(1,i,j,k)/1E3 !! x direction
        end do; end do; end do
 
     case('uny1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = UnyNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E3 !! y direction
+          PlotVar_G(i,j,k) = UnyNeutral_IG(1,i,j,k)/1E3 !! y direction
        end do; end do; end do
 
     case('unz1')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = UnzNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)/1E3 !! z direction
+          PlotVar_G(i,j,k) = UnzNeutral_IG(1,i,j,k)/1E3 !! z direction
        end do; end do; end do
 
     case('tn1')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = TnNeutral_IG(1,i-MinI+1,j-MinJ+1,k-MinK+1)
+          PlotVar_G(i,j,k) = TnNeutral_IG(1,i,j,k)
        end do; end do; end do
 
     case('te')
@@ -2070,17 +2066,17 @@ contains
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
+          call get_current(i,j,k,iBlock,Current_D)
           nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
-          uIon_I(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
+          uIon_DI(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(1) = 0.
+          uIonMean_D(1) = 0.
           do iIonFluid=1,nIonFluid
-             uIonMean_I(1) = uIonMean_I(1)+nIon_I(iIonFluid)* &
-                  uIon_I(1,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
+             uIonMean_D(1) = uIonMean_D(1)+nIon_I(iIonFluid)* &
+                  uIon_DI(1,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = (uIonMean_I(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
+          PlotVar_G(i,j,k) = (uIonMean_D(1)-Current_D(1)/(nElec*Si2No_V(UnitN_)*&
                ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
@@ -2088,17 +2084,17 @@ contains
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
+          call get_current(i,j,k,iBlock,Current_D)
           nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
-          uIon_I(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
+          uIon_DI(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(2) = 0.
+          uIonMean_D(2) = 0.
           do iIonFluid=1,nIonFluid
-             uIonMean_I(2) = uIonMean_I(2)+nIon_I(iIonFluid)* &
-                  uIon_I(2,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
+             uIonMean_D(2) = uIonMean_D(2)+nIon_I(iIonFluid)* &
+                  uIon_DI(2,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = (uIonMean_I(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
+          PlotVar_G(i,j,k) = (uIonMean_D(2)-Current_D(2)/(nElec*Si2No_V(UnitN_)*&
                ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
@@ -2106,17 +2102,17 @@ contains
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
+          call get_current(i,j,k,iBlock,Current_D)
           nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
-          uIon_I(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
+          uIon_DI(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(3) = 0.
+          uIonMean_D(3) = 0.
           do iIonFluid=1,nIonFluid
-             uIonMean_I(3) = uIonMean_I(3)+nIon_I(iIonFluid)* &
-                  uIon_I(3,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
+             uIonMean_D(3) = uIonMean_D(3)+nIon_I(iIonFluid)* &
+                  uIon_DI(3,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
           end do
-          PlotVar_G(i,j,k) = (uIonMean_I(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
+          PlotVar_G(i,j,k) = (uIonMean_D(3)-Current_D(3)/(nElec*Si2No_V(UnitN_)*&
                ElectronCharge)*No2SI_V(UnitU_))/1E3
        end do; end do; end do
 
