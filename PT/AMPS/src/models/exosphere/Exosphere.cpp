@@ -1133,7 +1133,7 @@ void Exosphere::Sampling::SampleModelData() {
 
   memcpy(xform,OrbitalMotion::SO_to_IAU_TransformationMartix,36*sizeof(double));
 
-  for (iZenith_SO=0;iZenith_SO<nZenithSurfaceElements;iZenith_SO++) for (iAzimuth_SO=0;iAzimuth_SO<nAzimuthalSurfaceElements;iAzimuth_SO++)  {
+  if (Planet!=NULL) for (iZenith_SO=0;iZenith_SO<nZenithSurfaceElements;iZenith_SO++) for (iAzimuth_SO=0;iAzimuth_SO<nAzimuthalSurfaceElements;iAzimuth_SO++)  {
     //generate position on the sphere in the coordinate frame SO (x-axis is directed to the Sun)
     Planet->GetSurfaceElementMiddlePoint(rSurfaceElement_SO,iZenith_SO,iAzimuth_SO);
     el_SO=Planet->GetLocalSurfaceElementNumber(iZenith_SO,iAzimuth_SO);
@@ -2495,15 +2495,17 @@ void Exosphere::Sampling::OutputSurfaceDataFile::flushCollectingSamplingBuffer(c
 #endif
 
 
-  for (s=0;s<PIC::nTotalSpecies;s++) for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-    for (i=0;i<maxSurfaceSourceID+1;i++) Sphere->SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
+  if (Sphere!=NULL) {
+    for (s=0;s<PIC::nTotalSpecies;s++) for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
+      for (i=0;i<maxSurfaceSourceID+1;i++) Sphere->SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
 
-    Sphere->SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
-    Sphere->SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
-    Sphere->SampleReturnFluxBulkSpeed[s][el]=0.0;
+      Sphere->SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
+      Sphere->SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
+      Sphere->SampleReturnFluxBulkSpeed[s][el]=0.0;
+    }
+
+    PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(Sphere);
   }
-
-  PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(Sphere);
 }
 
 
