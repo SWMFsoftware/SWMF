@@ -553,6 +553,10 @@ namespace PIC {
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
       */
 
+/*      if (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>1.0e9) {
+        exit(__LINE__,__FILE__,"the velocity is too large");
+      }*/
+
       memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
     }
 
@@ -563,6 +567,10 @@ namespace PIC {
 
       for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
       */
+
+/*      if (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>1.0e9) {
+        exit(__LINE__,__FILE__,"the velocity is too large");
+      }*/
 
       memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
     }
