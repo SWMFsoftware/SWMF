@@ -8,7 +8,8 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${GMDIR}/srcInterface -I${PTDIR}/srcInterface
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} \
+	-I${PTDIR}/src -I${PTDIR}/srcInterface
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
