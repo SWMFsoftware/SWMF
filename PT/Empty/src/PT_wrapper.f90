@@ -3,127 +3,117 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! Wrapper for the empty PTOM (PT) component
 !==========================================================================
-subroutine PT_set_param(CompInfo, TypeAction)
-
-  use CON_comp_info
+module PT_wrapper
 
   implicit none
 
-  character (len=*), parameter :: NameSub='PT_set_param'
+contains
+  subroutine PT_set_param(CompInfo, TypeAction)
 
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
+    use CON_comp_info
 
-  case default
-     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-  end select
+    character (len=*), parameter :: NameSub='PT_set_param'
 
-end subroutine PT_set_param
+    ! Arguments
+    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)     :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-!==============================================================================
+    case default
+       call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+    end select
 
-subroutine PT_init_session(iSession, TimeSimulation)
+  end subroutine PT_set_param
 
-  implicit none
+  !==============================================================================
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  subroutine PT_init_session(iSession, TimeSimulation)
 
-  character(len=*), parameter :: NameSub='PT_init_session'
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+    character(len=*), parameter :: NameSub='PT_init_session'
 
-end subroutine PT_init_session
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-!==============================================================================
+  end subroutine PT_init_session
 
-subroutine PT_finalize(TimeSimulation)
+  !==============================================================================
 
-  implicit none
+  subroutine PT_finalize(TimeSimulation)
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  character(len=*), parameter :: NameSub='PT_finalize'
+    character(len=*), parameter :: NameSub='PT_finalize'
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-end subroutine PT_finalize
+  end subroutine PT_finalize
 
-!==============================================================================
+  !==============================================================================
 
-subroutine PT_save_restart(TimeSimulation)
+  subroutine PT_save_restart(TimeSimulation)
 
-  implicit none
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    character(len=*), parameter :: NameSub='PT_save_restart'
 
-  character(len=*), parameter :: NameSub='PT_save_restart'
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+  end subroutine PT_save_restart
 
-end subroutine PT_save_restart
+  !==============================================================================
 
-!==============================================================================
+  subroutine PT_run(TimeSimulation,TimeSimulationLimit)
 
-subroutine PT_run(TimeSimulation,TimeSimulationLimit)
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout) :: TimeSimulation   ! current time of component
 
-  implicit none
+    !INPUT ARGUMENTS:
+    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+    character(len=*), parameter :: NameSub='PT_run'
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='PT_run'
+  end subroutine PT_run
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+  !==============================================================================
+  subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
-end subroutine PT_run
+    integer, intent(out):: nDimOut    ! grid dimensionality
+    integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+    integer, intent(out):: iDecompOut ! decomposition index
 
-!==============================================================================
-subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
+    character(len=*), parameter :: NameSub = 'PT_get_grid_info'
 
-  implicit none
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-  integer, intent(out):: nDimOut    ! grid dimensionality
-  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
-  integer, intent(out):: iDecompOut ! decomposition index
-  
-  character(len=*), parameter :: NameSub = 'PT_get_grid_info'
+  end subroutine PT_get_grid_info
+  !==============================================================================
+  subroutine PT_put_from_gm( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    real,    intent(in), optional:: Data_VI(:,:)        ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+    real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Positions
 
-end subroutine PT_get_grid_info
-!==============================================================================
-subroutine PT_put_from_gm(UseData, &
-     NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+    character(len=*), parameter :: NameSub='PT_put_from_gm'
 
-  implicit none
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
-  logical,          intent(in)   :: UseData ! true when data is transferred
-                                            ! false if positions are asked
-  character(len=*), intent(inout):: NameVar ! List of variables
-  integer,          intent(inout):: nVar    ! Number of variables in Data_VI
-  integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-  real,    intent(in):: Data_VI(nVar,nPoint)! Recv data array
-  integer, intent(in):: iPoint_I(nPoint)    ! Order of data
-  real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Positions
+  end subroutine PT_put_from_gm
 
-  character(len=*), parameter :: NameSub='PT_put_from_gm'
-  
-  call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
-
-end subroutine PT_put_from_gm
-
+end module PT_wrapper
