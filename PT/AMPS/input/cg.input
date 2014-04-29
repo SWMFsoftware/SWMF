@@ -1,7 +1,6 @@
 #main
 
-SpeciesList=H2O  
-
+SpeciesList=H2O DUST
 ErrorLog=error.log
 Prefix=AMPS
 DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
@@ -60,7 +59,7 @@ CouplerMode=ices !!off, ices, swmf
 #endUserDefinitions
 
 #ParticleCollisions
-  model = HS !!off !HS ! HS, off
+  model = off !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
