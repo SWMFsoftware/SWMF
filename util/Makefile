@@ -8,7 +8,8 @@ touch_install_files:
 					  CRASH/src/Makefile.RULES; fi)
 install: touch_install_files
 	@(if [ -d HYPRE ];     then cd HYPRE;      make install; fi);
-	@(if [ -d FISHPAK ];   then cd FISHPAK;    make install; fi);
+
+###	@(if [ -d FISHPAK ];   then cd FISHPAK;    make install; fi);
 
 clean:: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make clean; fi)
