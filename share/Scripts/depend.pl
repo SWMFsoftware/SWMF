@@ -97,7 +97,7 @@ my %headerdir;  # headerfilename --> directory it is in
 my $dir;
 foreach $dir (@search){
 
-    -d $dir or die "$ERROR $dir is not a directory\n";
+    next unless -d $dir; # die "$ERROR $dir is not a directory\n";
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
     my @source; # List of Fortran files
@@ -279,6 +279,7 @@ sub process_header_files{
 
     # Loop over object directories, find header files and store dependencies
     foreach $dir (@search, keys %objectdir){
+	next unless -d $dir;
 	opendir(DIR,$dir) 
 	    or die "$ERROR: could not open object directory $dir\n";
 	my @headerfiles = grep /\.h(xx)?$/i, readdir DIR;
