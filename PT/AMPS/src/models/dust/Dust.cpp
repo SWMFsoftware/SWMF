@@ -426,7 +426,7 @@ long int ElectricallyChargedDust::DustInjection__Sphere(void *SphereDataPointer)
 
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[DustSpec+nDustGroups-1];
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups-1];
 #else
   LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[_DUST_SPEC_];
 #endif
