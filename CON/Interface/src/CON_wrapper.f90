@@ -24,6 +24,7 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
+  use PT_wrapper
 
   implicit none
 

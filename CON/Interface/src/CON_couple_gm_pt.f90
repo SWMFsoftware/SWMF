@@ -16,6 +16,8 @@ module CON_couple_gm_pt
   !USES:
   use CON_coupler
 
+  use PT_wrapper
+
   use CON_couple_points
 
   implicit none
@@ -68,30 +70,6 @@ contains
     
     interface
 
-       subroutine PT_put_from_gm( &
-            NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
-
-         implicit none
-         ! List of variables
-         character(len=*), intent(inout):: NameVar 
-
-         ! Number of variables in Data_VI
-         integer,          intent(inout):: nVar    
-
-         ! Number of points in Pos_DI
-         integer,          intent(inout):: nPoint  
-
-         ! Recv data array
-         real,    intent(in), optional:: Data_VI(:,:)
-
-         ! Order of data
-         integer, intent(in), optional:: iPoint_I(nPoint)    
-
-         ! Position vectors
-         real, intent(out), optional, allocatable:: Pos_DI(:,:)               
-
-       end subroutine PT_put_from_gm
-
        subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
          implicit none
@@ -127,9 +105,6 @@ contains
           integer, intent(out) :: nDim, iGrid, iDecomp
         end subroutine GM_get_grid_info
 
-        subroutine PT_get_grid_info(nDim, iGrid, iDecomp)
-          integer, intent(out) :: nDim, iGrid, iDecomp
-        end subroutine PT_get_grid_info
      end interface
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
