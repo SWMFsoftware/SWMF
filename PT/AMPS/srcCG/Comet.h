@@ -17,17 +17,13 @@
 namespace Comet {
   using namespace Exosphere;
 
-
-
   //init the model
+  void Init_BeforeParser();
   void Init_AfterParser();
 
   static int ndist=0;
   static double Bjorn_SourceRate[]={0.0};
   static double Jet_SourceRate[]={0.0};
-
-  //init the model
-  void Init_AfterParser();
   
   double GetTotalProductionRateBjorn(int spec,void *SphereDataPointer);
   bool GenerateParticlePropertiesBjorn(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere);
@@ -309,6 +305,23 @@ namespace Comet {
 
     nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
   
+    //Drag force                                                                                                                                                                                    
+    /*                                                                                                                                                                                           
+    double A,cr2,GrainRadius;                                                                                                                                                                      
+    double *BackgroundAtmosphereBulkVelocity=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralBullVelocityOffset);                                                                            
+    double BackgroundAtmosphereNumberDensity=*((double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralNumberDensityOffset));                                                                        
+    double GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);                                                                                                                                                                                                                                                                                                       
+    cr2=(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])*(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])+                                                                                         
+      (v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])*(v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])+                                                                                           
+      (v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2])*(v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2]);                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                              
+    A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*BackgroundAtmosphereNumberDensity*_MASS_(_H2O_);                                                                          
+                                                                                                                                                                                                   
+    accl_LOCAL[0]+=A*(BackgroundAtmosphereBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
+    accl_LOCAL[1]+=A*(BackgroundAtmosphereBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
+    accl_LOCAL[2]+=A*(BackgroundAtmosphereBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
+    */
+  /*
     //copy the local value of the acceleration to the global one
     memcpy(accl,accl_LOCAL,3*sizeof(double));}*/
     /*

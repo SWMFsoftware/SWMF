@@ -81,6 +81,23 @@ extern int maxLocalBackdroundDensityOffset;
 #define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) \
     Comet::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode);
 
+#undef _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_
+#define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode) \
+  ElectricallyChargedDust::DustChargingProcessorIndicator(xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode);
+
+#undef _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_
+#define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode) \
+  ElectricallyChargedDust::DustChargingProcessor_Implicit_SecondOrder(xinit,x,v,spec,ptr,ParticleData,dt,startNode);
+
+#define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) \
+  ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
+
+#undef _PIC_MODEL__DUST__MODE_
+#define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__DUST__MODE__ON_
+
+#undef _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_
+#define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+
 
 //particle sampling
 

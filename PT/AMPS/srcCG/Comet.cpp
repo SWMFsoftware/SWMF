@@ -77,6 +77,19 @@ double Exosphere::SurfaceInteraction::SodiumStickingProbability(double Temp) {
 }
 */
 
+void Comet::Init_BeforeParser() {
+  //init the dust model                                                                                                                                                                           
+  ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
+  ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
+  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
+  ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
+  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=1000.0;
+  ElectricallyChargedDust::TotalMassDustProductionRate=1.0;
+  ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
+  ElectricallyChargedDust::Init_BeforeParser();
+
+}
+
 void Comet::Init_AfterParser() {
 
   //set up the Chamberlen model
@@ -86,6 +99,9 @@ void Comet::Init_AfterParser() {
     ExosphereEscapeRate[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceRate[spec];
     ExospehreTemsprature[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceTemeprature[spec];
   }
+
+  //init the dust model                                                                                                                                                                           
+  ElectricallyChargedDust::Init_AfterParser();
 
   /*
   Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
@@ -748,6 +764,75 @@ TotalFlux=totalProductionRate;
 //calculate the source rate due to user defined source functions                                                   
 FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]=Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere);
 
+ if (spec==_DUST_SPEC_) {
+   static double GrainInjectedMass=0.0;
+   PIC::Mesh::cDataBlockAMR *block;
+   double GrainRadius,GrainMass,GrainWeightCorrection;
+   int GrainVelocityGroup;
+
+   GrainInjectedMass+=ElectricallyChargedDust::TotalMassDustProductionRate*LocalTimeStep;
+
+   while (GrainInjectedMass>0.0) {
+     startNode=NULL;
+
+     double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+
+     flag=Comet::GenerateParticlePropertiesBjornNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
+     GrainMass=4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity*pow(GrainRadius,3);
+     GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
+     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_;
+     if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+
+     if (flag==false) continue;
+     if ((block=startNode->block)->GetLocalTimeStep(_DUST_SPEC_)/LocalTimeStep<rnd()) continue;
+
+     //determine the velocity group of the injected grain;                                                                                                                                                                                                                     
+     //calculate additional particle weight correction because the particle will be placed in a different weight group                                                                                                                                                         
+     GrainVelocityGroup=ElectricallyChargedDust::GrainVelocityGroup::GetGroupNumber(v_SO_OBJECT);
+     GrainWeightCorrection*=block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/block->GetLocalTimeStep(_DUST_SPEC_);
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+     GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup];
+#else
+     exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+    //determine the surface element of the particle origin                                                            
+
+  //generate a particle                                                                                             
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+
+  PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+  ElectricallyChargedDust::SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
+  ElectricallyChargedDust::SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
+  ElectricallyChargedDust::SetGrainRadius(GrainRadius,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+
+  newParticle=PIC::ParticleBuffer::GetNewParticle();
+  newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+  memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+  nInjectedParticles++;
+
+  //inject the particle into the system                                                                             
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  if (startNode==NULL) exit(__LINE__,__FILE__,"Error: the node is not defined");
+  if ((startNode->Thread!=PIC::ThisThread)||(startNode->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is n\
+ot defined");
+#endif
+
+  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
+ }
+ 
+ }else{
 while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //determine the source process to generate a particle's properties                                               
   do {
@@ -774,7 +859,7 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   if (startNode->block->GetLocalTimeStep(spec)/LocalTimeStep<rnd()) continue;
 #endif
-
+ 
   //determine the surface element of the particle origin                                                            
 
   //generate a particle                                                                                             
@@ -800,14 +885,14 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
 ot defined");
 #endif
 
-  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(0)*rnd(),startNode,true);
+  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
  }
-
+   }
  return nInjectedParticles;
 }
 
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalData* Sphere){
-  return 5.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
+  return 1.0e24; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
 
@@ -918,8 +1003,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
 
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-1.0*ExternalNormal[idim];
+  else PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
   //transform the velocity vector to the coordinate frame 'MSGR_SO'

@@ -71,6 +71,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
 
   return _PARTICLE_REJECTED_ON_THE_FACE_;
+  //  return _PARTICLE_DELETED_ON_THE_FACE_;
 }
 
 
@@ -216,13 +217,10 @@ int main(int argc,char **argv) {
   //init the particle solver
   PIC::InitMPI();
   PIC::Init_BeforeParser();
-
-
+  Comet::Init_BeforeParser();
 
   double xmin[3]={0.0,-1.0,1.0};
   double xmax[3]={1.0,1.0,2.0};
-
-
 
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
@@ -273,8 +271,9 @@ int main(int argc,char **argv) {
   PIC::RequiredSampleLength=10; //00; //0; //0;
 
 
-  PIC::Init_AfterParser ();
+  PIC::Init_AfterParser();
   PIC::Mover::Init();
+  Comet::Init_AfterParser();
 
   //set up the time step
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
@@ -282,6 +281,7 @@ int main(int argc,char **argv) {
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_DUST_SPEC_);
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
@@ -290,6 +290,16 @@ int main(int argc,char **argv) {
 
   //init the particle buffer
   PIC::ParticleBuffer::Init(1000000);
+
+  const int nSamplingPoints=1;
+
+  double ProbeLocations[nSamplingPoints][DIM]={
+    {2.5E3,2.5E3,2.5E3},
+  };
+
+  ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::Init(ProbeLocations,nSamplingPoints,200);
+
+
 
   //set the model of the boundary conditinos
   PIC::Mover::ProcessTriangleCutFaceIntersection=SurfaceBoundaryCondition;
