@@ -167,7 +167,7 @@ double PIC::IDF::LB::GetCellMeanRotE(int s,PIC::Mesh::cDataCenterNode* cell) {
   else sStart=s,sStop=s+1;
 
   for (s=sStart;s<sStop;s++) {
-    wtot+=(*(s+(double*)(cell->associatedDataPointer+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_)));
+    wtot+=(*(s+(double*)(cell->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_)));
     res+=(*(s+(double*)(cell->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_)));
   }
 
@@ -183,7 +183,7 @@ double PIC::IDF::LB::GetCellMeanVibE(int nmode,int s,PIC::Mesh::cDataCenterNode*
   else sStart=s,sStop=s+1;
 
   for (s=sStart;s<sStop;s++) {
-    wtot+=(*(s+(double*)(cell->associatedDataPointer+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_)));
+    wtot+=(*(s+(double*)(cell->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_)));
 
     if (nmode==-1) nmodeStart=0,nmodeStop=PIC::IDF::nTotalVibtationalModes[s];
     else nmodeStart=nmode,nmodeStop=nmode+1;
@@ -225,7 +225,7 @@ void PIC::IDF::LB::RedistributeEnergy(PIC::ParticleBuffer::byte *ptr0,PIC::Parti
 
 //Vibrational-Translational (VT) relaxaton
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  == _PIC_MODE_ON_
-    if ((this_dsmc->idf.VT_model_flag==true)&&(mol.GetNVibModes(s[nptr])!=0)) {
+    if (PIC::IDF::nTotalVibtationalModes[s[nptr]]!=0) {
       double Evib,ThetaVib,EtaVib,VibDF;
 
       Evib=GetVibE(0,ptr[nptr]);
@@ -298,7 +298,7 @@ void PIC::IDF::LB::RedistributeEnergy(PIC::ParticleBuffer::byte *ptr0,PIC::Parti
           }
 
           Ec-=Evib;
-          if (change_flag[nptr]==true) SetVibE(Evib,0,ptr[nptr]);
+          if (ChangeParticlePropertiesFlag[nptr]==true) SetVibE(Evib,0,ptr[nptr]);
 
           RedistributionEnergyFlag=true;
           break;
@@ -379,7 +379,7 @@ int PIC::IDF::LB::RequestSamplingData(int offset) {
   return SampleDataLength;
 }
 
-void PIC::IDF::LB::Init_BeforeParser() {
+void PIC::IDF::LB::Init() {
   //request the additional particle data
   long int offset;
   int DataLength;
@@ -391,12 +391,23 @@ void PIC::IDF::LB::Init_BeforeParser() {
   _VIBRATIONAL_ENERGY_OFFSET_=offset+sizeof(double);
 
   //request sampling data
-  PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestSamplingData);
+  PIC::IndividualModelSampling::RequestSamplingData.push_back(RequestSamplingData);
 
   //print out of the otuput file
   PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+
+  //check consistency of the model setting
+  for (int s=0;s<PIC::nTotalSpecies;s++) {
+    if (nTotalVibtationalModes[s]!=0) {
+      if (CharacteristicVibrationalTemperature[s]==0.0) exit(__LINE__,__FILE__,"error: CharacteristicVibrationalTemperature must be defined");
+    }
+
+    if (nTotalRotationalModes[s]!=0) {
+      if (RotationZnumber[s]==0.0) exit(__LINE__,__FILE__,"error: RotationZnumber must be defined");
+    }
+  }
 
 }
 
@@ -429,17 +440,23 @@ void PIC::IDF::LB::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int
 
 void PIC::IDF::LB::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
   int i,s,nmode;
+  double c;
+  char *CenterNodeSampleData,*InterpolationSampleData;
 
-  for (s=0;s<PIC::nTotalSpecies;s++) for (i=0;i<nInterpolationCoeficients;i++) {
-    *(s+(double*)(CenterNode->GetAssociatedDataBufferPointer()+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=
-      *(s+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_));
 
-    *(s+(double*)(CenterNode->GetAssociatedDataBufferPointer()+_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_))+=
-      *(s+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_));
+  CenterNodeSampleData=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
 
-    for (nmode=0;nmode<nTotalVibtationalModes[s];nmode++) {
-      *(nmode+(double*)(CenterNode->GetAssociatedDataBufferPointer()+_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=
-        *(nmode+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]));
+  for (i=0;i<nInterpolationCoeficients;i++) {
+    c=InterpolationCoeficients[i];
+    InterpolationSampleData=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
+
+    for (s=0;s<PIC::nTotalSpecies;s++) {
+      *(s+(double*)(CenterNodeSampleData+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=c*(*(s+(double*)(InterpolationSampleData+_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_)));
+      *(s+(double*)(CenterNodeSampleData+_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_))+=c*(*(s+(double*)(InterpolationSampleData+_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_)));
+
+      for (nmode=0;nmode<nTotalVibtationalModes[s];nmode++) {
+        *(nmode+(double*)(CenterNodeSampleData+_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=c*(*(nmode+(double*)(InterpolationSampleData+_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s])));
+      }
     }
   }
 }

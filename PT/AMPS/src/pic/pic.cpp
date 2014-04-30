@@ -707,6 +707,22 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
                 *(s+(double*)(tempSamplingBuffer+IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=IDF::GetVibE(nmode,(PIC::ParticleBuffer::byte*)tempParticleData)*LocalParticleWeight;
               }
 
+              //save the population of the first two vibrational levels for qLB
+              #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL_ == _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__QLB_
+              {
+                int VibrationLevel=*((int*)(tempParticleData+IDF::qLB::nVibLevel));
+
+                switch (VibrationLevel) {
+                case 0:
+                  *(s+(double*)(tempSamplingBuffer+IDF::qLB::_VIBRATIONAL_GROUND_LEVEL_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
+                  break;
+                case 1:
+                  *(s+(double*)(tempSamplingBuffer+IDF::qLB::_VIBRATIONAL_FIRST_EXITED_LEVEL_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
+                  break;
+                }
+              }
+              #endif
+
 
 #else
               exit(__LINE__,__FILE__,"the option is not defined");
@@ -1317,7 +1333,7 @@ void PIC::Init_BeforeParser() {
 
   //init the model of internal degrees of freedom
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
-  PIC::IDF::LB::Init_BeforeParser();
+  PIC::IDF::Init();
 #endif
 }
 

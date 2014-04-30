@@ -1777,7 +1777,7 @@ namespace PIC {
         s=PIC::ParticleBuffer::GetI(ParticleDataStart);
         nVibModes=nTotalVibtationalModes[s];
 
-        for (n=0;n<nVibModes;n++) res+=*(nmode+(double*)(ParticleDataStart+_VIBRATIONAL_ENERGY_OFFSET_));
+        for (n=0;n<nVibModes;n++) res+=*(n+(double*)(ParticleDataStart+_VIBRATIONAL_ENERGY_OFFSET_));
         return res;
       }
 
@@ -1801,7 +1801,7 @@ namespace PIC {
       int RequestSamplingData(int offset);
 
       //init
-      void Init_BeforeParser();
+      void Init();
 
       //output the model data
       void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
@@ -1819,6 +1819,26 @@ namespace PIC {
 
     namespace qLB {
     using namespace LB;
+
+//      extern int NmaxVibModes; //the maximum number of the vibrational modes for the set of used species
+      extern int _VIBRATIONAL_GROUND_LEVEL_SAMPLE_DATA_OFFSET_,_VIBRATIONAL_FIRST_EXITED_LEVEL_SAMPLE_DATA_OFFSET_;
+
+      int RequestSamplingData(int offset);
+      void Init();
+
+      double GetVibE(int nmode_in,PIC::ParticleBuffer::byte *ParticleDataStart);
+      void InitVibTemp(double VibTemp,PIC::ParticleBuffer::byte *ParticleDataStart);
+      void SetVibLevel(double VibQuantumNumber,int nmode,PIC::ParticleBuffer::byte *ParticleDataStart);
+      int GetVibLevel(int nmode,PIC::ParticleBuffer::byte *ParticleDataStart);
+
+      //the ground and the first exited vibrational states
+      double GetGroundVibLevelPopulationFraction(int nmode,int s,PIC::Mesh::cDataCenterNode* cell);
+      double GetFirstExitedVibLevelPopulationFraction(int nmode,int s,PIC::Mesh::cDataCenterNode* cell);
+
+      double GetCellVibTemp(int s,PIC::Mesh::cDataCenterNode* cell);
+      double GetCellVibTemp(int nmode_in,int s,PIC::Mesh::cDataCenterNode* cell);
+
+      void RedistributeEnergy(PIC::ParticleBuffer::byte *ptr0,PIC::ParticleBuffer::byte *ptr1,double& vrel,bool* ChangeParticlePropertiesFlag,PIC::Mesh::cDataCenterNode* cell);
     }
 
     inline double GetRotE(PIC::ParticleBuffer::byte *ParticleDataStart) {
@@ -1835,6 +1855,14 @@ namespace PIC {
 
     inline void InitRotTemp(double RotTemp,PIC::ParticleBuffer::byte *ParticleDataStart) {
       LB::InitRotTemp(RotTemp,ParticleDataStart);
+    }
+
+    inline void InitVibTemp(double VibTemp,PIC::ParticleBuffer::byte *ParticleDataStart) {
+      LB::InitVibTemp(VibTemp,ParticleDataStart);
+    }
+
+    inline void Init() {
+      LB::Init();
     }
   }
 
