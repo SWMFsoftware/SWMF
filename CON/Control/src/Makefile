@@ -4,9 +4,7 @@
 SHELL =/bin/sh
 
 # CON needs modules from other subdirectories
-SEARCH_EXTRA = -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR} \
-	-I${PTDIR}/src -I${PTDIR}/srcInterface
-
+SEARCH_EXTRA = -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
