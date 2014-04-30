@@ -76,6 +76,23 @@ CouplerMode=ices !!off, ices, swmf
 
 #endSampling
 
+#IDF
+  Model=LB  !off,LB,qLB
+  vtRelaxation=off !on,off
+  vvRelaxation=off !on,off
+  rtRelaxation=on !on,off
+
+  nVibModes(CO2=1,H2O=2)
+  nRotModes(CO2=2,H2O=3)
+
+  RotZnum(H2O=3,CO2=2)
+  VibTemp(H2O=2000,CO2=1000)
+
+
+
+#endIDF
+
+
 #block ../hartley2.pl !process settings of the moon module
   SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
   SodiumReemissionFraction=1.0
