@@ -522,7 +522,7 @@ bool Comet::Radius(double &r,double x){
 }
 
 //bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Nucleus) {
-bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -645,6 +645,12 @@ bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,dou
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
   
+  //init the internal degrees of freedom if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+  PIC::IDF::InitRotTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+  PIC::IDF::InitVibTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
+
   /*  // only normal velocity
   v_LOCAL_IAU_OBJECT[0]=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*SurfaceTemperature))*ExternalNormal[0];
   v_LOCAL_IAU_OBJECT[1]=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*SurfaceTemperature))*ExternalNormal[1];
@@ -691,7 +697,7 @@ double Comet::GetTotalProductionRateJet(int spec,void *SphereDataPointer){
 }
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char * tempParticleData) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
@@ -792,6 +798,12 @@ bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
   
+  //init the internal degrees of freedom if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+  PIC::IDF::InitRotTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+  PIC::IDF::InitVibTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
+
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
   v_LOCAL_SO_OBJECT[0]=
     (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
@@ -828,7 +840,7 @@ bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *
 
 
 //NUCLEUS
-bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere, char *tempParticleData) {
   double ExternalNormal[3]; 
   int i,j;
   double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
@@ -929,6 +941,12 @@ bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
   
+  //init the internal degrees of freedom if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+  PIC::IDF::InitRotTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+  PIC::IDF::InitVibTemp(SurfaceTemperature,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
+
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
   v_LOCAL_SO_OBJECT[0]=
     (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
@@ -1300,6 +1318,9 @@ long int Comet::InjectionBoundaryModel_Limited(int spec,void *SphereDataPointer)
   bool flag=false;
   int SourceProcessID;
 
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+
   double totalProductionRate=Comet::SourceProcesses::totalProductionRate(spec,SphereDataPointer);
 
   const int nMaxInjectedParticles=10*PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber;
@@ -1365,19 +1386,19 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
 
   //Add the user defined particle gineration                                                                                                                                                                                                                                 
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_) {
-    flag=Comet::GenerateParticlePropertiesJet(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    flag=Comet::GenerateParticlePropertiesJet(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,tempParticleData);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_;
     if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Jet_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }
 
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_) {
-    flag=Comet::GenerateParticlePropertiesWaist(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    flag=Comet::GenerateParticlePropertiesWaist(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,tempParticleData);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_;
     if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Waist_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }
 
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_) {
-    flag=Comet::GenerateParticlePropertiesHartley2(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+    flag=Comet::GenerateParticlePropertiesHartley2(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,tempParticleData);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_;
     if (flag==true) Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Hartley2_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }
@@ -1394,8 +1415,6 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //determine the surface element of the particle origin                                                            
 
   //generate a particle                                                                                             
-  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-
   PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
   Exosphere::Sampling::SetParticleSourceID(SourceProcessID,(PIC::ParticleBuffer::byte*)tempParticleData);
 
