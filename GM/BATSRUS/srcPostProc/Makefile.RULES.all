@@ -1,2 +1,0 @@
-$OS eq "Linux" and $Compiler eq "ifort"
-	${COMPILE.f90} ${Cflag1} PostIDL.f90
