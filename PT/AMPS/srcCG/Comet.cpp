@@ -14,6 +14,8 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Comet";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";
 
+int Comet::GravityFieldOffset=-1;
+
 /*
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_OFFSET_=-1;
@@ -78,6 +80,14 @@ double Exosphere::SurfaceInteraction::SodiumStickingProbability(double Temp) {
 */
 
 void Comet::Init_BeforeParser() {
+  //request sampling buffer and particle fields
+  PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestDataBuffer);
+
+  //print out of the otuput file
+  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+  PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+
   //init the dust model                                                                                                                                                                           
   ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
   ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
@@ -103,6 +113,11 @@ void Comet::Init_AfterParser() {
   //init the dust model                                                                                                                                                                           
   ElectricallyChargedDust::Init_AfterParser();
 
+  
+  //init Gravity
+  InitGravityData();
+
+
   /*
   Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
 
@@ -127,6 +142,103 @@ void Comet::Init_AfterParser() {
   PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SubsolarLimbColumnIntegrals::EmptyFunction,Comet::Sampling::Kaguya::TVIS::OutputModelData);
   */
 }
+
+int Comet::RequestDataBuffer(int offset) {
+  int TotalDataLength;
+
+  GravityFieldOffset=offset;
+  TotalDataLength=3;
+
+  return TotalDataLength*sizeof(double);
+}
+
+void Comet::PrintVariableList(FILE* fout,int DataSetNumber) {
+  fprintf(fout,",\"Gx\",\"Gy\",\"Gz\"");
+}
+
+void Comet::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
+  int idim;
+  double t;
+
+  //Gravity Field
+  for (idim=0;idim<3;idim++) {
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)));
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
+  }
+}
+
+void Comet::InitGravityData(){
+  int thread,i,j,k,idim,offset,cnt=0;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataBlockAMR *block;
+  PIC::Mesh::cDataCenterNode *cell;
+
+  double gravityAccl[3],*position;
+
+  //get coordinated of the center points
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    block=node->block;
+
+    for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
+      for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)
+        for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
+	  cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+	  if (cell!=NULL) {  
+	    position=cell->GetX();
+	    nucleusGravity::gravity(gravityAccl,position);
+	    for (idim=0;idim<3;idim++) {
+	      *((double*)(cell->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)))=gravityAccl[idim];
+	      gravityAccl[idim]=0.0;
+	    }
+	  }
+	}
+    }
+  }
+
+  for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) for (node=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];node!=NULL;node=node->nextNodeThisThread) {
+      block=node->block;
+
+      for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
+	for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)
+	  for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
+	    cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+	    if (cell!=NULL) {
+	      position=cell->GetX();
+	      nucleusGravity::gravity(gravityAccl,position);
+	      for (idim=0;idim<3;idim++) {
+		*((double*)(cell->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)))=gravityAccl[idim];
+		gravityAccl[idim]=0.0;
+	      }
+	    }
+	  }
+      }
+    }
+
+
+  return ;
+}
+
+void Comet::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
+  double G[3]={0.0,0.0,0.0};
+  int i,idim;
+  char *SamplingBuffer;
+
+  for (i=0;i<nInterpolationCoeficients;i++) {
+
+    for (idim=0,SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+GravityFieldOffset;idim<3;idim++) G[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
+  }
+
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+GravityFieldOffset,G,3*sizeof(double));
+}
+
 
 double SodiumStickingProbability(double& ReemissionParticleFraction,double Temp) {
   double res=-1.0;
@@ -1003,7 +1115,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
 
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-1.0*ExternalNormal[idim];
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-0.001*ExternalNormal[idim];
   else PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 
   //transform the velocity vector to the coordinate frame 'MSGR_SO'

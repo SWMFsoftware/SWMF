@@ -80,11 +80,11 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double CellSize;
-  double CharacteristicSpeed=4.0E3;
-
-  CellSize=startNode->GetCharacteristicCellSize();
-  return 0.3*CellSize/CharacteristicSpeed;
+    double CellSize;
+    double CharacteristicSpeed=8.0E2;
+    
+    CellSize=startNode->GetCharacteristicCellSize();
+    return 0.3*CellSize/CharacteristicSpeed;
 }
 
 double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -289,12 +289,12 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(1000000);
+  PIC::ParticleBuffer::Init(2000000);
 
   const int nSamplingPoints=1;
 
   double ProbeLocations[nSamplingPoints][DIM]={
-    {2.5E3,2.5E3,2.5E3},
+    {2.3E3,0.0,0.0},
   };
 
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::Init(ProbeLocations,nSamplingPoints,200);

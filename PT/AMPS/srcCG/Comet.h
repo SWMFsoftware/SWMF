@@ -20,10 +20,13 @@ namespace Comet {
   //init the model
   void Init_BeforeParser();
   void Init_AfterParser();
+  void InitGravityData();
 
   static int ndist=0;
   static double Bjorn_SourceRate[]={0.0};
   static double Jet_SourceRate[]={0.0};
+
+  extern int  GravityFieldOffset;
   
   double GetTotalProductionRateBjorn(int spec,void *SphereDataPointer);
   bool GenerateParticlePropertiesBjorn(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere);
@@ -42,6 +45,11 @@ namespace Comet {
 
   long int InjectionBoundaryModel_Limited();
   long int InjectionBoundaryModel_Limited(int spec);
+
+  int RequestDataBuffer(int offset);
+  void PrintVariableList(FILE* fout,int DataSetNumber);
+  void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+  void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
   //output the column integrals in the anti-solar direction
   namespace AntiSolarDirectionColumnMap {
@@ -292,9 +300,46 @@ namespace Comet {
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
 
+    /*    if (spec==_DUST_SPEC_) {
+            //int idim=0;
+      //for (idim=0;idim<3;idim++) accl_LOCAL[idim]=0.9*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+    
+      //Test Gravity
+      memcpy(x_LOCAL,x,3*sizeof(double));
+      memcpy(v_LOCAL,v,3*sizeof(double));
+      
+      nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
+      
+      //Drag force
+      char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
+      
+      memcpy((void*)ParticleData,(void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+      
+      double GrainDragCoefficient=2.0;
+      double A,cr2;
+      double GasBulkVelocity[3];
+      double GasNumberDensity;
+      double GrainRadius=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
+      double GrainMass=ElectricallyChargedDust::GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
+      int nd,i,j,k;
 
+      nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
 
-      //Test: no acceleration:
+      startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,_H2O_SPEC_);
+      GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(_H2O_SPEC_);
+
+      cr2=(v_LOCAL[0]-GasBulkVelocity[0])*(v_LOCAL[0]-GasBulkVelocity[0])+                                                                                         
+      (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+                                                                                           
+      (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);                                                                                           
+                                                                                                                                                                                                                                                                                                                                                                                              
+      A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasNumberDensity*_MASS_(_H2O_);                                                                          
+      
+      accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
+      accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
+      accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
+      }  */
+    
+  //Test: no acceleration:
     memcpy(accl,accl_LOCAL,3*sizeof(double));
     return;}
       
@@ -304,23 +349,6 @@ namespace Comet {
     memcpy(v_LOCAL,v,3*sizeof(double));
 
     nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
-  
-    //Drag force                                                                                                                                                                                    
-    /*                                                                                                                                                                                           
-    double A,cr2,GrainRadius;                                                                                                                                                                      
-    double *BackgroundAtmosphereBulkVelocity=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralBullVelocityOffset);                                                                            
-    double BackgroundAtmosphereNumberDensity=*((double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralNumberDensityOffset));                                                                        
-    double GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);                                                                                                                                                                                                                                                                                                       
-    cr2=(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])*(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])+                                                                                         
-      (v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])*(v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])+                                                                                           
-      (v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2])*(v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2]);                                                                                           
-                                                                                                                                                                                                                                                                                                                                                                                              
-    A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*BackgroundAtmosphereNumberDensity*_MASS_(_H2O_);                                                                          
-                                                                                                                                                                                                   
-    accl_LOCAL[0]+=A*(BackgroundAtmosphereBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
-    accl_LOCAL[1]+=A*(BackgroundAtmosphereBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
-    accl_LOCAL[2]+=A*(BackgroundAtmosphereBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
-    */
   /*
     //copy the local value of the acceleration to the global one
     memcpy(accl,accl_LOCAL,3*sizeof(double));}*/
@@ -460,14 +488,14 @@ namespace Comet {
 
 
     inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
-    static const double LifeTime=3600.0*5.8/pow(0.4,2);
+      /*    static const double LifeTime=3600.0*5.8/pow(0.4,2);
 
 
     //only sodium can be ionized
     if (spec!=_NA_SPEC_) {
       PhotolyticReactionAllowedFlag=false;
       return -1.0;
-    }
+      }*/
     /*
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
     double res,r2=x[1]*x[1]+x[2]*x[2];
@@ -485,11 +513,12 @@ namespace Comet {
       res=1.0E-10*LifeTime,PhotolyticReactionAllowedFlag=true;
     }
     #else*/
-    double res=LifeTime;
+      /*    double res=LifeTime;
     PhotolyticReactionAllowedFlag=true;
     //#endif
 
-    return res;
+    return res;*/
+      return 1.0e25;
   }
 
   inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
