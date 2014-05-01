@@ -23,7 +23,7 @@ MPILIB =
 
 # This is the search path for used modules. Only the INCLDIR is needed!
 # The rest is there to show dependencies
-SEARCH = -I${INCLDIR} -I${SHAREDIR} ${SEARCH_EXTRA}
+SEARCH = -I${INCLDIR} ${INCL_EXTRA}
 
 DEBUGFLAG = -C -gline -nan
 DEBUG     = 
