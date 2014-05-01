@@ -17,7 +17,7 @@ my $WARNING = "WARNING in depend.pl:";
 # Read flags
 while($ARGV[0] =~ /-/){
     my $flag = shift(@ARGV);
-    if($flag =~ /^-o=/){$Output=$'};  # -o=Makefile.test
+    if($flag =~ /^-o=/){$Output=$POSTMATCH};  # -o=Makefile.test
     if($flag =~ /^-h/i){$Help=1};     # -h -help -H -Help
     if($flag =~ /^(-p|-I)=?/){        # -p=path -Ipath -I path
         # For "-I path" take the path from the next argument
@@ -96,15 +96,14 @@ my %headerdir;  # headerfilename --> directory it is in
 # Loop over the search directories to find F90 modules
 my $dir;
 foreach $dir (@search){
-
-    next unless -d $dir; # die "$ERROR $dir is not a directory\n";
+    next unless -d $dir;     # die "$ERROR $dir is not a directory\n";
     opendir(DIR,$dir) or die "$ERROR: could not open directory $dir\n";
 
-    my @source; # List of Fortran files
+    my @source;			# List of Fortran files
     @source = grep /\.f\d*?$/i, readdir DIR;
     closedir DIR;
 
-    my $file; # Actual Fortran file
+    my $file;			# Actual Fortran file
     foreach $file (@source){
 	open FILE,"$dir/$file" or die "$ERROR: could not open $dir/$file\n";
 
@@ -126,14 +125,15 @@ foreach $dir (@search){
     }
 }
 
+
 # Do header files for C/C++ code
 &process_header_files;
 
-my @base;    # List of base names (without extension)
-my %use;     # Base name --> space separated list of used module objects
-my %include; # Base name --> space separated list of include files
+my @base;     # List of base names (without extension)
+my %use;      # Base name --> space separated list of used module objects
+my %include;  # Base name --> space separated list of include files
 
-my $object;  # Name of object file
+my $object;   # Name of object file
 OBJECT: 
     while($object=shift(@ARGV)){
 
@@ -233,13 +233,13 @@ foreach $base (@base){
   	# Correct module names to file names
   	my @use = split(' ',$use);
   	my $mfile;
-  	map {if($mfile=$modulefile{uc($_)}){$_=$mfile}} (@use);
-  
-	# Exclude dependency on itself and compiler provided modules
-	map { $_='' if $_ eq "$base.o" or /F90_UNIX_IO/i or /ESMF_Mod.o/i
-  	      or /netcdf.o/i or /ezspline/i or /ezcdf.o/i or /^hdf5.o/i}
-  	(@use);
 
+	# Convert object names into file names containing the module
+	foreach (@use){
+	    $_ = $modulefile{uc($_)};
+	    $_ = '' if $_ eq "$base.o"; # no dependency on itself
+	}
+	    
 	# Make string out of array
   	$use = ' '.join(' ',@use);
     }
