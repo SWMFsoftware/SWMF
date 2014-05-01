@@ -105,6 +105,11 @@ module ModMagnetogram
 contains
   !=================================================================
   real function sin_latitude(iTheta)
+    !\
+    !Uniform in sin(latitude) grid enumerated by index iTheta
+    !iTheta varies from 0 to nTheta
+    !dSinTheta = 2.0/(nTheta+1)
+    !/ 
     integer,intent(in)::iTheta
     sin_latitude=(real(iTheta)+0.5)*dSinTheta-1.0
   end function sin_latitude
@@ -773,6 +778,10 @@ contains
 
   end subroutine correct_angles
   !==========================================================================
+  !\
+  ! Calculate B_R, B_Phi, B_Theta in Gauss for given
+  ! R, Phi, Theta, Theta being the colatitude.
+  !/
   subroutine interpolate_field(R_D,BMap_D)
     real,intent(in)::R_D(nDim)
     real,intent(out)::BMap_D(nDim)
