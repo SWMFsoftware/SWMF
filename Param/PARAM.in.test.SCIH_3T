@@ -87,7 +87,9 @@ T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 
 #HEATPARTITIONING
-0.17			StochasticHeating
+stochasticheating	TypeHeatPartitioning
+0.17			StochasticExponent
+0.18			StochasticAmplitude
 
 #RESISTIVITY
 T			UseResistivity
@@ -364,7 +366,9 @@ T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 
 #HEATPARTITIONING
-0.17			StochasticHeating
+stochasticheating	TypeHeatPartitioning
+0.17			StochasticExponent
+0.18			StochasticAmplitude
 
 #RESISTIVITY
 T                       UseResistivity

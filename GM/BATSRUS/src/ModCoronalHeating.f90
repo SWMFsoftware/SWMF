@@ -903,22 +903,26 @@ module ModCoronalHeating
   real :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
 
-  ! Switch whether to use uniform heat partition or the stochastic heating
-  logical :: UseUniformHeatPartition = .false.
+  character(len=lStringLine) :: TypeHeatPartitioning
 
+  ! Switch whether to use uniform heat partition
+  logical :: UseUniformHeatPartition = .true.
   ! Electron heating is a fraction of the total coronal heating
   real :: QeByQtotal = 0.4
   ! The fraction of heating for ion parallel pressure: 1/3 of Qp
-  real :: QparByQtotal = 0.2
+  real :: QparByQtotal = 0.0
 
-  ! Dimensionless parameter for stochastic heating
-  real :: StochasticHeating = 0.17
+  ! Dimensionless parameters for stochastic heating
+  logical :: UseStochasticHeating = .false.
+  real :: StochasticExponent = 0.34
+  real :: StochasticAmplitude = 0.75
 
   logical,private:: DoInit = .true. 
 contains
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
 
+    use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
@@ -974,15 +978,23 @@ contains
           call read_var('HeatChCgs', HeatChCgs)
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
-    case("#ELECTRONHEATING")
-       UseUniformHeatPartition = .true.
-       call read_var('QeByQtotal', QeByQtotal)
-    case("#ANISOIONHEATING")
-       UseUniformHeatPartition = .true.
-       call read_var('QparByQtotal', QparByQtotal)
     case("#HEATPARTITIONING")
        UseUniformHeatPartition = .false.
-       call read_var('StochasticHeating', StochasticHeating)
+       UseStochasticHeating = .false.
+       call read_var('TypeHeatPartitioning', TypeHeatPartitioning)
+       select case(TypeHeatPartitioning)
+       case('uniform')
+          UseUniformHeatPartition = .true.
+          call read_var('QeByQtotal', QeByQtotal)
+          if(UseAnisoPressure) call read_var('QparByQtotal', QparByQtotal)
+       case('stochasticheating')
+          UseStochasticHeating = .true.
+          call read_var('StochasticExponent', StochasticExponent)
+          call read_var('StochasticAmplitude', StochasticAmplitude)
+       case default
+          call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
+               // TypeHeatPartitioning)
+       end select
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -1648,7 +1660,7 @@ contains
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
     !--------------------------------------------------------------------------
 
-    if(UseTurbulentCascade .and. .not.UseUniformHeatPartition)then
+    if(UseStochasticHeating)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
@@ -1694,7 +1706,7 @@ contains
 
        DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
             /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
-            *exp(-StochasticHeating &
+            *exp(-StochasticExponent &
             *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
 
        ! The 1+ is due to the fraction of the cascade power that succeeds
@@ -1704,9 +1716,11 @@ contains
 
        QeFraction = (1.0 + DampingElectron)/DampingTotal
        QparFraction = DampingPar/Dampingtotal
-    else
+    elseif(UseUniformHeatPartition)then
        QeFraction = QeByQtotal
        QparFraction = QparByQtotal
+    else
+       call stop_mpi(NameSub//' Unknown heat partitioning')
     end if
 
   end subroutine apportion_coronal_heating
