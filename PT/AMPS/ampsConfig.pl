@@ -141,12 +141,12 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#PARTICLECOLLISIONS") {
     ParticleCollisionModel();
   }
+  elsif ($InputLine eq "#IDF") {
+    ReadIDF();
+  }
   elsif ($InputLine eq "#SAMPLING") {
     Sampling();
-  } 
-  elsif ($InputLine eq "#INTERNALDEGREESOFFREEDOM") {
-    readInternalDegreesOfFreedom();
-  } 
+  }  
   elsif ($InputLine eq "#USERDEFINITIONS") {
     UserDefinitions();
   } 
@@ -879,6 +879,7 @@ sub Sampling {
   }
 }
 
+
 #=============================== Read Particle Collision Model ==================
 sub ParticleCollisionModel {
 
@@ -1021,7 +1022,7 @@ sub ParticleCollisionModel {
 }
 
 #=============================== Read Internal Degrees of Freedom ==================
-sub readInternalDegreesOfFreedom {
+sub ReadIDF {
   
   my @nTotalVibModes=(0)x$TotalSpeciesNumber;
   my @nTotalRotModes=(0)x$TotalSpeciesNumber;
@@ -1058,6 +1059,10 @@ sub readInternalDegreesOfFreedom {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL_","_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__LB_","pic/picGlobal.dfn");
       }
+      elsif ($InputLine eq "QLB") {
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+        ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL_","_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__QLB_","pic/picGlobal.dfn");
+      }
       elsif ($InputLine eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }  
@@ -1066,7 +1071,7 @@ sub readInternalDegreesOfFreedom {
       }
     }
     
-    elsif ($InputLine eq "VV") {
+    elsif ($InputLine eq "VVRELAXATION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
@@ -1079,7 +1084,7 @@ sub readInternalDegreesOfFreedom {
         die "Cannot recognize the option\n";
       }
     }
-    elsif ($InputLine eq "VT") {
+    elsif ($InputLine eq "VTRELAXATION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
@@ -1092,7 +1097,7 @@ sub readInternalDegreesOfFreedom {
         die "Cannot recognize the option\n";
       }
     }
-    elsif ($InputLine eq "RT") {
+    elsif ($InputLine eq "RTRELAXATION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
       if ($InputLine eq "ON") {
@@ -1106,62 +1111,82 @@ sub readInternalDegreesOfFreedom {
       }
     }
     
-    elsif ($InputLine eq "TOTALVIBMODES") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    elsif ($InputLine eq "NVIBMODES") {
+      my ($s0,$s1,$nspec);
       
-      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($nspec==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      while (defined $InputComment) {      
+        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
+           
+        if ((defined $s0)&&(defined $s1)) {
+          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          if ($nspec==-1) {
+            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        
+          $nTotalVibModes[$nspec]=$s1;      
+        }
       }
-      
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $nTotalVibModes[$nspec]=$InputLine;      
     }
-    elsif ($InputLine eq "TOTALROTMODES") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    elsif ($InputLine eq "NROTMODES") {
+      my ($s0,$s1,$nspec);
       
-      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($nspec==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-      }
+      while (defined $InputComment) {      
+        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
       
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $nTotalRotModes[$nspec]=$InputLine;      
+        if ((defined $s0)&&(defined $s1)) {
+          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          if ($nspec==-1) {
+            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        
+          $nTotalRotModes[$nspec]=$s1;     
+        } 
+      }      
     }
-    elsif ($InputLine eq "CHARACTERISTICVIBTEMP") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    elsif ($InputLine eq "VIBTEMP") {
+      my ($s0,$s1,$nspec);
       
-      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($nspec==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-      }
+      while (defined $InputComment) {      
+        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
       
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $CharacteristicVibTemp[$nspec]=$InputLine;      
+        if ((defined $s0)&&(defined $s1)) {
+          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          if ($nspec==-1) {
+            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        
+          $CharacteristicVibTemp[$nspec]=$s1;     
+        } 
+      }           
     }
-    elsif ($InputLine eq "ROTATIONALZNUMBER") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    elsif ($InputLine eq "ROTZNUM") {
+      my ($s0,$s1,$nspec);
       
-      my $nspec=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($nspec==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-      }
+      while (defined $InputComment) {      
+        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
       
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $RotationalZnumber[$nspec]=$InputLine;      
+        if ((defined $s0)&&(defined $s1)) {
+          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          if ($nspec==-1) {
+            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        
+          $RotationalZnumber[$nspec]=$s1;  
+        }    
+      }           
     }    
   
     elsif ($InputLine eq "TEMPERATUREINDEX") {     
       ($InputLine,$InputComment)=split(' ',$InputComment,2);     
       $s0=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
       if ($s0==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
       
       ($InputLine,$InputComment)=split(' ',$InputComment,2);     
       $s1=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
       if ($s1==-1) {
-        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }      
       
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -1170,7 +1195,7 @@ sub readInternalDegreesOfFreedom {
     }
   
 
-    elsif ($InputLine eq "#ENDINTERNALDEGREESOFFREEDOM") {
+    elsif ($InputLine eq "#ENDIDF") {
       last;
     }
     else {      
