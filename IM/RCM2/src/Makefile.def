@@ -6,6 +6,7 @@ SCRIPTDIR = ${IMDIR}/share/Scripts
 LIBDIR    = ${IMDIR}/src
 RUNDIR    = ${IMDIR}/run
 BINDIR    = ${IMDIR}/src
+INCLDIR   = ${DIR}/share/include
 SHAREDIR  = ${IMDIR}/share/Library/src
 
 NOMPIDIR  = ${IMDIR}/util/NOMPI/src

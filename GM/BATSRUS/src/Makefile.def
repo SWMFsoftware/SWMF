@@ -7,6 +7,7 @@ SCRIPTDIR = ${GMDIR}/share/Scripts
 LIBDIR    = ${GMDIR}/src
 RUNDIR    = ${GMDIR}/run
 BINDIR    = ${GMDIR}/src
+INCLDIR   = ${DIR}/share/include
 SHAREDIR  = ${GMDIR}/share/Library/src
 UTILDIR   = ${GMDIR}/util
 
