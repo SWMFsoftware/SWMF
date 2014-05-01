@@ -430,7 +430,7 @@ void PIC::IDF::LB::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int
       pipe->recv(Tvib,CenterNodeThread);
     }
 
-    fprintf(fout,"%e  %e",Trot,Tvib);
+    fprintf(fout," %e  %e ",Trot,Tvib);
   }
   else {
     pipe->send(Trot);
