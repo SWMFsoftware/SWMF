@@ -21,10 +21,9 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = 
 #MPILIB = -L${LIBDIR} -lNOMPI
 
-# This is the search path for used modules
-# SEARCH_EXTRA should be set in the individual Makefiles
-
-SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
+# This is the search path for used modules. Only the INCLDIR is needed!
+# The rest is there to show dependencies
+SEARCH = -I${INCLDIR} -I${SHAREDIR} ${SEARCH_EXTRA}
 
 DEBUGFLAG = -C -gline -nan
 DEBUG     = 
@@ -35,7 +34,7 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -w ${DEBUG}
+CFLAG = ${SEARCH} -c -w ${DEBUG} -mdir ${INCLDIR}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
