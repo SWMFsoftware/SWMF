@@ -299,16 +299,20 @@ namespace Comet {
   //double SodiumRadiationPressureAcceleration_Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
-
-    /*    if (spec==_DUST_SPEC_) {
-            //int idim=0;
-      //for (idim=0;idim<3;idim++) accl_LOCAL[idim]=0.9*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-    
+    /*
+    if (spec==_DUST_SPEC_) {
+      int idim=0;
+      for (idim=0;idim<3;idim++) accl_LOCAL[idim]=5.0*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+      
       //Test Gravity
+      int nd,i,j,k;
+
       memcpy(x_LOCAL,x,3*sizeof(double));
       memcpy(v_LOCAL,v,3*sizeof(double));
+   
+      nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
       
-      nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
+      //nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
       
       //Drag force
       char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -321,10 +325,7 @@ namespace Comet {
       double GasNumberDensity;
       double GrainRadius=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
       double GrainMass=ElectricallyChargedDust::GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
-      int nd,i,j,k;
-
-      nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
-
+     
       startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,_H2O_SPEC_);
       GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(_H2O_SPEC_);
 
@@ -337,26 +338,13 @@ namespace Comet {
       accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
       accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
       accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
-      }  */
+      }*/  
     
   //Test: no acceleration:
     memcpy(accl,accl_LOCAL,3*sizeof(double));
     return;}
       
-
-    /*    //Test Gravity
-    memcpy(x_LOCAL,x,3*sizeof(double));
-    memcpy(v_LOCAL,v,3*sizeof(double));
-
-    nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
   /*
-    //copy the local value of the acceleration to the global one
-    memcpy(accl,accl_LOCAL,3*sizeof(double));}*/
-    /*
-    memcpy(x_LOCAL,x,3*sizeof(double));
-    memcpy(v_LOCAL,v,3*sizeof(double));
-
-
     //get the radiation pressure acceleration
     if (spec==_NA_SPEC_) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_

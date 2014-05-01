@@ -64,14 +64,14 @@ double BulletLocalResolution(double *x) {
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
-  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+  /*  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
 
   vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
   vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
   vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
 
-  return _PARTICLE_REJECTED_ON_THE_FACE_;
-  //  return _PARTICLE_DELETED_ON_THE_FACE_;
+  return _PARTICLE_REJECTED_ON_THE_FACE_;*/
+  return _PARTICLE_DELETED_ON_THE_FACE_;
 }
 
 
@@ -81,8 +81,11 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
     double CellSize;
-    double CharacteristicSpeed=8.0E2;
+    double CharacteristicSpeed;
     
+    if (spec==_DUST_SPEC_) CharacteristicSpeed=30.0;
+    else CharacteristicSpeed=8.0e2;
+
     CellSize=startNode->GetCharacteristicCellSize();
     return 0.3*CellSize/CharacteristicSpeed;
 }
@@ -281,7 +284,9 @@ int main(int argc,char **argv) {
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_DUST_SPEC_);
+#endif
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
@@ -291,6 +296,7 @@ int main(int argc,char **argv) {
   //init the particle buffer
   PIC::ParticleBuffer::Init(2000000);
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
 
   double ProbeLocations[nSamplingPoints][DIM]={
@@ -298,7 +304,7 @@ int main(int argc,char **argv) {
   };
 
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::Init(ProbeLocations,nSamplingPoints,200);
-
+#endif
 
 
   //set the model of the boundary conditinos

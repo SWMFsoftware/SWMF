@@ -9,6 +9,9 @@
 
 #include "pic.h"
 
+#undef _PIC_MODEL__3DGRAVITY__MODE_
+#define _PIC_MODEL__3DGRAVITY__MODE_ _PIC_MODEL__3DGRAVITY__MODE__OFF_
+
 //the object name and the names of the frames
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Comet";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
@@ -80,6 +83,7 @@ double Exosphere::SurfaceInteraction::SodiumStickingProbability(double Temp) {
 */
 
 void Comet::Init_BeforeParser() {
+#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
   //request sampling buffer and particle fields
   PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestDataBuffer);
 
@@ -87,7 +91,9 @@ void Comet::Init_BeforeParser() {
   PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
+#endif
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
   ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
   ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
@@ -97,6 +103,7 @@ void Comet::Init_BeforeParser() {
   ElectricallyChargedDust::TotalMassDustProductionRate=1.0;
   ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
   ElectricallyChargedDust::Init_BeforeParser();
+#endif
 
 }
 
@@ -110,13 +117,15 @@ void Comet::Init_AfterParser() {
     ExospehreTemsprature[spec]=Exosphere::SourceProcesses::ImpactVaporization::ImpactVaporization_SourceTemeprature[spec];
   }
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
   ElectricallyChargedDust::Init_AfterParser();
-
+#endif
   
   //init Gravity
+#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
   InitGravityData();
-
+#endif
 
   /*
   Exosphere::ChamberlainExosphere::Init(ExosphereEscapeRate,ExospehreTemsprature);
@@ -876,6 +885,7 @@ TotalFlux=totalProductionRate;
 //calculate the source rate due to user defined source functions                                                   
 FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]=Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere);
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
  if (spec==_DUST_SPEC_) {
    static double GrainInjectedMass=0.0;
    PIC::Mesh::cDataBlockAMR *block;
@@ -945,6 +955,7 @@ ot defined");
  }
  
  }else{
+#endif
 while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   //determine the source process to generate a particle's properties                                               
   do {
@@ -976,6 +987,8 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
 
   //generate a particle                                                                                             
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
 
   PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
@@ -999,7 +1012,11 @@ ot defined");
 
   _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
  }
-   }
+
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+}
+#endif
+
  return nInjectedParticles;
 }
 
@@ -1115,8 +1132,12 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
 
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-0.001*ExternalNormal[idim];
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-10.0*ExternalNormal[idim];
   else PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+#else
+  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+#endif
 
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
   //transform the velocity vector to the coordinate frame 'MSGR_SO'
