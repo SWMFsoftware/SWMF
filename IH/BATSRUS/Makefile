@@ -40,6 +40,7 @@ clean:
 	@(if([ -f src/Makefile ]); then \
 	   touch ${INSTALLFILES}; \
 	   cd src; make clean; cd ..; \
+	   cd srcBATL; make clean; cd ..; \
 	   cd srcInterface; make clean; \
 	fi)
 
