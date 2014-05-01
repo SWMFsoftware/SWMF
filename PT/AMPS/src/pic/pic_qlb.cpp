@@ -117,7 +117,7 @@ void PIC::IDF::qLB::InitVibTemp(double VibTemp,PIC::ParticleBuffer::byte *Partic
 } 
 
 //===================================================
-double PIC::IDF::LB::GetCellVibTemp(int s,PIC::Mesh::cDataCenterNode* cell) {
+double PIC::IDF::qLB::GetCellVibTemp(int s,PIC::Mesh::cDataCenterNode* cell) {
   return GetCellVibTemp(-1,s,cell);
 }
 
