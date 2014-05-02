@@ -129,7 +129,8 @@
 //check intersection with the block's boundaries when integrate the equation of motion (used together with the local time stepping and local weight for steady-state problems)
 #define _PIC__PARTICLE_MOVER__CHECK_BLOCK_FACE_INTERSECTION__MODE_ _PIC_MODE_OFF_
 
-
+//the model of the gravity computation
+#define _PIC_MODEL__3DGRAVITY__MODE_ _PIC_MODEL__3DGRAVITY__MODE__OFF_
 
 
 
