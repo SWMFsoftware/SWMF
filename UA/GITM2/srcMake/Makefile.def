@@ -8,6 +8,7 @@ SCRIPTDIR = ${UADIR}/share/Scripts
 LIBDIR    = ${UADIR}/src
 RUNDIR    = ${UADIR}/run
 BINDIR    = ${UADIR}/src
+INCLDIR   = ${UADIR}/share/include
 SHAREDIR  = ${UADIR}/share/Library/src
 NOMPIDIR  = ${UADIR}/util/NOMPI/src
 EMPIRICALIEDIR     = ${UADIR}/util/EMPIRICAL/srcIE
