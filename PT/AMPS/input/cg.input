@@ -59,13 +59,27 @@ CouplerMode=ices !!off, ices, swmf
 #endUserDefinitions
 
 #ParticleCollisions
-  model = off !!off !HS ! HS, off
+  model = HS !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
     const (H2O,H2O)= 2.0E-19
 
 #endParticleCollisions
+
+#IDF
+  Model=LB  !off,LB,qLB
+  vtRelaxation=off !on,off
+  vvRelaxation=off !on,off
+  rtRelaxation=on !on,off
+
+  nVibModes(H2O=2)
+  nRotModes(H2O=3)
+
+  RotZnum(H2O=5)
+  VibTemp(H2O=2000)
+#endIDF
+
 
 #block ../cg.pl !process settings of the moon module
   SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
