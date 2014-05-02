@@ -83,7 +83,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     double CellSize;
     double CharacteristicSpeed;
     
-    if (spec==_DUST_SPEC_) CharacteristicSpeed=30.0;
+    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) CharacteristicSpeed=30.0;
     else CharacteristicSpeed=8.0e2;
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -285,7 +285,7 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_DUST_SPEC_);
+  for (int s=0;s<PIC::nTotalSpecies;s++) if (_DUST_SPEC_<=s && s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 #endif
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
