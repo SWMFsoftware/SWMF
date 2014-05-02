@@ -1,12 +1,16 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.mpif90
 #
-#	Space Weather Modeling Framework (SWMF) 
-#	Assume the mpif90 compiler works fine
+#	Use the mpif90 script as the "compiler" if the actual 
+#       Fortran compiler called by mpif90 is not known. 
+#
+#       This is not recommended, as the 
+#       compiler flags vary from compiler to compiler.
 #
 
 COMPILE.f77     = ${CUSTOMPATH_F}mpif90
@@ -21,10 +25,11 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = 
 #MPILIB = -L${LIBDIR} -lNOMPI
 
-# This is the search path for used modules
-# SEARCH_EXTRA should be given in the individual Makefiles
+# It would be best to use -module ${INCLDIR} or similar option, but it depends
+# on which Fortran compiler is used by mpif90.
+MOVE_MOD = -@(if [ "`ls | grep '\.mod'`" != "" ]; then mv -f *.mod ${INCLDIR}; fi)
 
-SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
+SEARCH = -I${INCLDIR} ${INCL_EXTRA}
 
 DEBUGFLAG = -g -C
 DEBUG     = 
@@ -66,18 +71,23 @@ BLAS  = lapack.o blas.o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag2} $<
+	${MOVE_MOD}
 
 .F90.o:
 	${COMPILE.f90} -DsysLinux -Dcompmpif90 ${Cflag2} $<
+	${MOVE_MOD}
 
 .f.o:
 	${COMPILE.f77} ${Cflag2} -132 $<
+	${MOVE_MOD}
 
 .for.o:
 	${COMPILE.f77} ${Cflag2} -132 $<
+	${MOVE_MOD}
 
 .ftn.o:
 	${COMPILE.f77} ${Cflag2} -132 $<
+	${MOVE_MOD}
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* a.out *.exe *.a *.so *.protex

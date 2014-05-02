@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL=/bin/sh
@@ -21,10 +22,12 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = 
 #MPILIB = -L${LIBDIR} -lNOMPI
 
-# This is the search path for used modules
-# SEARCH_EXTRA should be set in the individual Makefiles
+# There seems to be no option for absoft to move .mod files into ${INCLDIR}
+# so we use the following command after each compilation
+MOVE_MOD = -@(if [ "`ls | grep '\.mod'`" != "" ]; then mv -f *.mod ${INCLDIR}; fi)
 
-SEARCH = -p${SHAREDIR} ${SEARCH_EXTRA}
+# Search INCLDIR for modules. INCL_EXTRA may be defined in other Makefile-s
+SEARCH = -p${INCLDIR} ${INCL_EXTRA}
 
 DEBUGFLAG = -C
 DEBUG     = 
@@ -65,18 +68,23 @@ BLAS  = lapack.o blas.o
 
 .f90.o:
 	${COMPILE.f90} ${Cflag3} $<
+	${MOVE_MOD}
 
 .F90.o:
 	${COMPILE.f90} -DsysDarwin -DcompAbsoft ${Cflag3} $<
+	${MOVE_MOD}
 
 .f.o:
 	${COMPILE.f77} ${Cflag3} -W132 $<
+	${MOVE_MOD}
 
 .for.o:
 	${COMPILE.f77} ${Cflag3} -W132 $<
+	${MOVE_MOD}
 
 .ftn.o:
 	${COMPILE.f77} ${Cflag3} -W132 $<
+	${MOVE_MOD}
 
 clean:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex

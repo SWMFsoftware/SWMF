@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan,
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #BOP
 #!ROUTINE: share/build/Makefile.Linux.pgf90 - one of the original files for Makefile.conf
@@ -76,9 +77,8 @@ MPILIB =
 #
 # This is the search path for used modules
 #
-# SEARCH_EXTRA should be given in the individual Makefiles
-
-SEARCH = -I${SHAREDIR} ${SEARCH_EXTRA}
+# INCL_EXTRA can be defined to add more search directories.
+SEARCH = -module ${INCLDIR} ${INCL_EXTRA}
 
 #
 # Flags used for debugging. 
