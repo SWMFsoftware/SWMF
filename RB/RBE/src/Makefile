@@ -32,6 +32,7 @@ DEPEND:
 
 .f90.o:
 	${COMPILE.f90} ${CFLAGS} ${PRECISION} $<
+	${MOVE_MOD}
 
 MY_LIB = libRBE.a
 

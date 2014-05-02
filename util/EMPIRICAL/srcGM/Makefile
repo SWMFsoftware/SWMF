@@ -13,6 +13,7 @@ OBJECTS = \
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
+	${MOVE_MOD}
 
 LIB:
 	make ${MY_LIB}
