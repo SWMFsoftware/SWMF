@@ -38,7 +38,7 @@ MODULES = \
 OBJ = main.o
 
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJ} ${MODULES}
+	@${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJ} ${MODULES}
 
 ${MODULES}: ${LIBSHARE}
 

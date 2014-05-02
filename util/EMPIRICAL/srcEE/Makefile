@@ -3,7 +3,7 @@
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = -I${MAGNETOGRAMDIR}
+SEARCHDIR = -I${SHAREDIR} -I${MAGNETOGRAMDIR}
 
 include ../../../Makefile.conf
 
@@ -23,7 +23,7 @@ OBJECTS = \
 	EEE_ModCms.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 LIB:	DEPEND
 	make ${MY_LIB}

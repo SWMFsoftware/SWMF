@@ -16,11 +16,11 @@ OBJECTS = \
 	ModRadioWaveRaytracing.o \
 	ModDensityAndGradient.o
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
+SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${EMPIRICALEEDIR} -I../src -I../srcBATL
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
 #	Making executables and libraries

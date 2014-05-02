@@ -8,7 +8,7 @@ default : HEIDI.exe
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR}
+SEARCHDIR = -I${SHAREDIR} -I${DATAREADINDICESDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -57,7 +57,7 @@ OBJECTS = \
 EXEOBJECTS = heidi_main.o ${OBJECTS}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${EXEOBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${EXEOBJECTS}
 
 MY_LIB = libHEIDI.a
 

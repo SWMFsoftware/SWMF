@@ -1,7 +1,7 @@
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
+SEARCHDIR = -I${SHAREDIR} -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
@@ -25,7 +25,7 @@ OBJECTS = \
 
 
 DEPEND:
-	@${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<

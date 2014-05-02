@@ -23,7 +23,7 @@ SEP77:	stdout.h
 MY_LIB = libKota.a
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} \
 		${OBJECTS}
 
 LIB:	DEPEND

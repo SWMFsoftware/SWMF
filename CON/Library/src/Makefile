@@ -15,7 +15,7 @@ MODULES = \
 	CON_physics.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 MY_LIB = ${LIBDIR}/libLIBRARY.a
 

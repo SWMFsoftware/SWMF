@@ -8,14 +8,14 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR}
+SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
 
 LINKWRAPPERMODULES:
 	rm -f ??_wrapper.mod ??_wrapper.o
 	ln -s ${PTDIR}/src*/pt_wrapper.mod . ; ln -s ${PTDIR}/src*/PT_wrapper.o .
 
 DEPEND: LINKWRAPPERMODULES
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 #^CMP IF GM BEGIN
 MOD01 = CON_couple_gm_ie.o	#^CMP IF IE

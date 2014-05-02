@@ -32,7 +32,7 @@ ALLOBJECTS = \
 	game_of_life.o
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${ALLOBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${ALLOBJECTS}
 
 BATL_size.f90: BATL_size_orig.f90
 	cp -f BATL_size_orig.f90 BATL_size.f90

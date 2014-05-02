@@ -4,7 +4,7 @@
 SHELL =/bin/sh
 
 # CON needs modules from other subdirectories
-SEARCH_EXTRA = -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
+SEARCHDIR = -I${SHAREDIR} -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
@@ -144,9 +144,6 @@ SWMFEXE:
 	@echo Program ${SWMFEXE} has been brought up to date.
 	@echo
 
-#		${HYPRELIB} ${SEARCH_EXTRA}
-
-
 ###########################################################
 
 # The order of compilation:
@@ -204,7 +201,7 @@ ${MY_LIB}: ${LIBOBJECTS}
 	${AR} ${MY_LIB} ${LIBOBJECTS}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${LIBOBJECTS} ${EXEOBJECT}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${LIBOBJECTS} ${EXEOBJECT}
 
 # For now the archive extract is defined here. Should be in Makefile.conf
 AR_X = ar -x

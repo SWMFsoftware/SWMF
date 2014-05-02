@@ -5,7 +5,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 
-SEARCH_EXTRA = \
+SEARCHDIR = -I${SHAREDIR} \
 	-I../srcBATL -I${MAGNETOGRAMDIR} -I${DEMTDIR} -I${EMPIRICALEEDIR} \
 	-I${CRASHDIR}
 
@@ -120,7 +120,7 @@ ModUser.f90:
 ############################################################################
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
 #	Making executables and libraries

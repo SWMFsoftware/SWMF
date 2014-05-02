@@ -5,7 +5,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = -I${LIBRARYDIR}
+SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR}
 
 include ../../../Makefile.conf
 

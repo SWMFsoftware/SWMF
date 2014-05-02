@@ -21,10 +21,10 @@ MODULES = \
 	CON_coupler.o\
 	CON_couple_points.o
 
-SEARCH_EXTRA = -I${LIBRARYDIR}
+SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 MY_LIB = ${LIBDIR}/libCOUPLER.a
 

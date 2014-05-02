@@ -54,7 +54,7 @@ OBJECTS_EXE= test_ionization.o test_godunov.o test_Fermi.o test_absorption.o \
 
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS} ${OBJECTS_EXE} 
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS} ${OBJECTS_EXE} 
 
 
 

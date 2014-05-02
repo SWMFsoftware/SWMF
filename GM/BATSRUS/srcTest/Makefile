@@ -3,7 +3,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 
-SEARCH_EXTRA = -I../src
+SEARCHDIR = -I${SHAREDIR} -I../src
 
 include ../Makefile.conf
 

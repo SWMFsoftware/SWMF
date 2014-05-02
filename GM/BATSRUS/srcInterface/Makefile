@@ -27,11 +27,11 @@ OBJECTS = \
 	ModRadioWaveRaytracing.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW)
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
+SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I../src -I../srcBATL -I${CRASHDIR}
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
 #	Making executables and libraries

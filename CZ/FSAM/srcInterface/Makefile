@@ -11,10 +11,10 @@ include Makefile.DEPEND
 OBJECTS = \
 	CZ_wrapper.o
 
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src 
+SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I../src 
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${OBJECTS}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${OBJECTS}
 
 #
 #	Making executables and libraries

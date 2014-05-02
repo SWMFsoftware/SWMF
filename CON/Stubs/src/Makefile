@@ -5,13 +5,13 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
+SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.conf
 include Makefile.DEPEND
 
 DEPEND:
-	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} ${MODULES}
+	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 MODULES = \
 	CON_wrapper.o \
