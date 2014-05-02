@@ -21,9 +21,9 @@ PRECISION  = ${DOUBLEPREC}
 MPILIB = 
 #MPILIB = -L${LIBDIR} -lNOMPI
 
-# This is the search path for used modules. Only the INCLDIR is needed!
-# The rest is there to show dependencies
-SEARCH = -I${INCLDIR} ${INCL_EXTRA}
+# Define where modules are stored and add it to the search path
+# INCL_EXTRA can be defined to add more search directories.
+SEARCH =  -mdir ${INCLDIR} -I${INCLDIR} ${INCL_EXTRA}
 
 DEBUGFLAG = -C -gline -nan
 DEBUG     = 
@@ -34,7 +34,7 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
-CFLAG = ${SEARCH} -c -w ${DEBUG} -mdir ${INCLDIR}
+CFLAG = ${SEARCH} -c -w ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
