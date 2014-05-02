@@ -540,7 +540,7 @@ sub set_mpi_{
     $Mpi = $NewMpi;
 
     if($Mpi eq "no" and $Install){
-	&shell_command("cp share/include/mpif.h $MpiHeaderFile");
+	&shell_command("cp share/include/nompif.h $MpiHeaderFile");
 	$MpiCompiler = '${COMPILE.f90}';
     }
 
