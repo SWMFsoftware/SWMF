@@ -826,6 +826,7 @@ subroutine MH_set_parameters(TypeAction)
            end if
 
            ! Plot file format
+           plot_dx(1,ifile) = -1.0
            if(index(plot_string,'idl') >0 )then
               plot_form(ifile)='idl'
               if ((plot_area /= 'ion')&
@@ -851,7 +852,6 @@ subroutine MH_set_parameters(TypeAction)
               plot_form(iFile)='hdf'
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
-              plot_dx(1,ifile)=0.
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)
