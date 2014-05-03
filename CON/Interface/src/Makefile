@@ -7,14 +7,9 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 include Makefile.DEPEND
 
-
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
 
-LINKWRAPPERMODULES:
-	rm -f ??_wrapper.mod ??_wrapper.o
-	ln -s ${PTDIR}/src*/pt_wrapper.mod . ; ln -s ${PTDIR}/src*/PT_wrapper.o .
-
-DEPEND: LINKWRAPPERMODULES
+DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 #^CMP IF GM BEGIN
