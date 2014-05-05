@@ -4,7 +4,7 @@ subroutine heidi_check
 
   use ModHeidiSize, ONLY: ns, s, scalc
   use ModHeidiMain, ONLY: nSpecies, nParallelSpecies
-  use ModProcIM
+  use ModProcHEIDI
 
   !---------------------------------------------------------------------------
   !\

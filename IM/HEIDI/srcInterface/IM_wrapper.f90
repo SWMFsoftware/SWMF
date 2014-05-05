@@ -4,7 +4,7 @@
 subroutine IM_set_param(CompInfo,TypeAction)
 
   use CON_comp_info
-  use ModProcIM
+  use ModProcHEIDI
   use ModHeidiMain
   use ModHeidiSize, ONLY: tMax
   use ModReadParam, ONLY: i_session_read
@@ -985,7 +985,7 @@ end subroutine IM_init_session
 !==============================================================================
 subroutine IM_finalize(TimeSimulation)
 
-  use ModProcIM
+  use ModProcHEIDI
   use ModInit, ONLY:nS
   use ModHeidiIO, ONLY :iUnitSw1,iUnitSw2,&
        iUnitMpa,iUnitSopa,iUnitPot,iUnitSal

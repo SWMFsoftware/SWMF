@@ -29,7 +29,7 @@ subroutine heidi_read
   use ModHeidiMain,  ONLY: ithermfirst, Re, DipoleFactor
   use ModIoUnit,     ONLY: UNITTMP_
   use ModHeidiInput, ONLY: set_parameters,tSimulationMax
-  use ModProcIM,     ONLY: iProc
+  use ModProcHEIDI,     ONLY: iProc
   use CON_planet,    ONLY: init_planet_const, set_planet_defaults, get_planet 
   
   implicit none
@@ -142,7 +142,7 @@ subroutine CONSTANT(NKP)
   use ModHeidiMain, ONLY: dayr, rkph, f107r, apr, rsunr, dkp, me, &
        DipoleFactor, mP, q, pi, FluxFact
   use ModIoUnit,    ONLY: UNITTMP_
-  use ModProcIM,    ONLY: iProc
+  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
@@ -196,7 +196,7 @@ subroutine BFIELD_SETUP(LossCone_I)
   use ModHeidiMain,  ONLY: Be, LZ, DipoleFactor, Z, Q, Re
   use ModHeidiWaves, ONLY: amla, bfc
   use ModHeidiIO,    ONLY: hmin
-  use ModProcIM,     ONLY: iProc
+  use ModProcHEIDI,     ONLY: iProc
   use ModNumConst,   ONLY: cPi
   implicit none
 
@@ -246,7 +246,7 @@ subroutine ARRAYS
        dl1, m1, dphi, dR, Re, LZ, Z, phi, mlt, mas, we, ebnd, de, dmu, wmu, vbnd, V
   use ModHeidiWaves, ONLY: gtaw, ataw, epp, ernh, epme, epma, ernm, zrpabn, PAbn, &
        amla
-  use ModProcIM,     ONLY: iProc
+  use ModProcHEIDI,     ONLY: iProc
   use ModPlotFile,   ONLY: save_plot_file
   use ModHeidiInput, ONLY: TypeBCalc
   use ModNumConst,   ONLY: cPi
@@ -728,7 +728,7 @@ subroutine GETKPA(i3,nst,i2,nkp)
   use ModHeidiIO,   ONLY: ilambe, lambe, tlame, ia, ap, f107, ikp, &
        kp, nStep, day, lamgam
   use ModHeidiMain, ONLY: apr, dkp, T, rkph, dayr, f107r, rsunr, A
-  use ModProcIM,    ONLY: iProc
+  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
@@ -829,7 +829,7 @@ subroutine GETSWIND
        bysw, bzsw, mdsw, usw, dpsw, nStep
   use ModHeidiMain, ONLY: LZ, phi, T, mp
   use ModIoUnit,    ONLY: io_unit_new 
-  use ModProcIM,    ONLY: iProc
+  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
@@ -916,7 +916,7 @@ subroutine THERMAL
   use ModHeidiDGCPM, ONLY: dendgcpm,  vthetacells, vphicells, gridx, gridy, gridoc, &
        vlzcells,vmltcells, potdgcpm
   use ModHeidiIO,    ONLY: NameRun, ist, iUnitStdOut, write_prefix
-  use ModProcIM,     ONLY: iComm, iError, Iproc
+  use ModProcHEIDI,     ONLY: iComm, iError, Iproc
   use ModNumConst,   ONLY: cPi
 
   implicit none

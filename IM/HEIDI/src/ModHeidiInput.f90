@@ -109,7 +109,7 @@ contains
 
   subroutine set_parameters
 
-    use ModProcIM, ONLY: iComm
+    use ModProcHEIDI, ONLY: iComm
     use ModHeidiIO, ONLY: IsFramework
 
     character (len=100) :: NameCommand

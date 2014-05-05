@@ -654,7 +654,7 @@ subroutine MAGCONV(I3,NST)
   use ModHeidiCurrents, ONLY: Jfac, Jion1, Lats, Lsh, LatFac, fpot, basepot, fpot, ilfac, irfac, &
        lonfac, iR
   use ModHeidiDGCPM,    ONLY: potdgcpm, vthetacells, vmltcells, vphicells, vlzcells
-  use ModProcIM,        ONLY: iComm, iError, iProc, nProc
+  use ModProcHEIDI,        ONLY: iComm, iError, iProc, nProc
   use ModIoUnit,        ONLY: io_unit_new
   use ModHeidiInput,    ONLY: TypeBCalc
   use ModNumConst,      ONLY: cPi

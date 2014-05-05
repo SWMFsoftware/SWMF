@@ -5,7 +5,7 @@ subroutine heidi_init
   use ModHeidiSize,   ONLY: dT
   use ModHeidiMain,   ONLY: T, f107R
   use ModHeidiDrifts, ONLY: j18,j6, P2
-  use ModProcIM,      ONLY: iProc
+  use ModProcHEIDI,      ONLY: iProc
   use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc, i3
   use ModHeidiIO,     ONLY: write_prefix, time, iUnitStdout, tinj, iKp,&
        F107, iwpi, tint, nStep, year, day, ut, IsFramework 

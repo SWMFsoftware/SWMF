@@ -243,7 +243,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   use ModIoUnit,        ONLY: io_unit_new,UnitTmp_
   use ModPlotFile,      ONLY: save_plot_file
   use ModHeidiInput,    ONLY: DtSaveRestart,TypeFile, TypeConvection
-  use ModProcIM,        ONLY: iProc
+  use ModProcHEIDI,        ONLY: iProc
 
   implicit none
 

@@ -21,7 +21,7 @@ program heidi_main
 
   use ModHeidiIO 
   use ModInit
-  use ModProcIM
+  use ModProcHEIDI
   use ModHeidiMain
   use ModHeidiDrifts, ONLY:j6, j18
   use CON_planet, ONLY: init_planet_const, set_planet_defaults, get_planet
@@ -79,7 +79,7 @@ end program heidi_main
 !==========================================================================
 subroutine CON_stop(StringError)
 
-  use ModProcIM, ONLY: iProc, iComm
+  use ModProcHEIDI, ONLY: iProc, iComm
   use ModMpi
 
   implicit none

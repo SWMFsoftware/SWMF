@@ -7,7 +7,7 @@ subroutine heidi_run
   use ModHeidiIO,   ONLY: isw, nStep,iwpi,ires,&
        write_prefix,iUnitStdOut, IsFramework
   use ModHeidiMain, ONLY: t,dt,IsBFieldNew
-  use ModProcIM,    ONLY: iProc
+  use ModProcHEIDI,    ONLY: iProc
   
   implicit none 
   !------------------------------------------------------------------------------

@@ -26,7 +26,7 @@ OBJECTS = \
 	ModInit.o\
 	ModIonoHeidi.o\
 	ModHeidiSatellites.o\
-	ModProcIM.o\
+	ModProcHEIDI.o\
 	ModHeidiInput.o\
 	ModHeidiBField.o\
 	ModHeidiNeutralH.o\
