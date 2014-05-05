@@ -13,7 +13,6 @@
 
 
 //path to the SPICE Kernels directory
-//const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels";
 
 //SPICE Kernels to be loaded
 //const int nFurnishedSPICEkernels=5+12+1;
