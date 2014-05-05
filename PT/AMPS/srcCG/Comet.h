@@ -51,6 +51,8 @@ namespace Comet {
   void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
   void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
+  void GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
   //output the column integrals in the anti-solar direction
   namespace AntiSolarDirectionColumnMap {
     const int nAzimuthPoints=150;
@@ -299,10 +301,10 @@ namespace Comet {
   //double SodiumRadiationPressureAcceleration_Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
-    /*
+    
     if (spec==_DUST_SPEC_) {
-      int idim=0;
-      for (idim=0;idim<3;idim++) accl_LOCAL[idim]=5.0*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+      //  int idim=0;
+      //for (idim=0;idim<3;idim++) accl_LOCAL[idim]=5.0*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
       
       //Test Gravity
       int nd,i,j,k;
@@ -311,8 +313,8 @@ namespace Comet {
       memcpy(v_LOCAL,v,3*sizeof(double));
    
       nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
-      
-      //nucleusGravity::gravity(accl_LOCAL,x_LOCAL);
+
+      Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
       
       //Drag force
       char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -338,7 +340,7 @@ namespace Comet {
       accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
       accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
       accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
-      }*/  
+      }  
     
   //Test: no acceleration:
     memcpy(accl,accl_LOCAL,3*sizeof(double));

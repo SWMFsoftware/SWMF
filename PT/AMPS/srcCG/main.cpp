@@ -64,14 +64,14 @@ double BulletLocalResolution(double *x) {
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
-  /*  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
 
   vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
   vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
   vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
 
-  return _PARTICLE_REJECTED_ON_THE_FACE_;*/
-  return _PARTICLE_DELETED_ON_THE_FACE_;
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
+  //  return _PARTICLE_DELETED_ON_THE_FACE_;
 }
 
 
@@ -270,7 +270,7 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.InitCellMeasure();
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=300; //0; //00; //*10;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1000; //0; //00; //*10;
   PIC::RequiredSampleLength=10; //00; //0; //0;
 
 

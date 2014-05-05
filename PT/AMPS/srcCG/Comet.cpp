@@ -9,9 +9,6 @@
 
 #include "pic.h"
 
-#undef _PIC_MODEL__3DGRAVITY__MODE_
-#define _PIC_MODEL__3DGRAVITY__MODE_ _PIC_MODEL__3DGRAVITY__MODE__OFF_
-
 //the object name and the names of the frames
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Comet";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
@@ -248,6 +245,13 @@ void Comet::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *I
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+GravityFieldOffset,G,3*sizeof(double));
 }
 
+void Comet::GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  register int idim;
+  register double *offset=(double*)(GravityFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+  for (idim=0;idim<3;idim++) x[idim]=offset[idim];
+
+}				   
 
 double SodiumStickingProbability(double& ReemissionParticleFraction,double Temp) {
   double res=-1.0;
@@ -1021,7 +1025,7 @@ ot defined");
 }
 
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalData* Sphere){
-  return 1.0e24; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
+  return 5.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
 
