@@ -28,7 +28,7 @@ subroutine impl_bicgstab(matvec,rhs,qx,n,tol,typestop,iter,info)
   ! the subroutine 'proj_matvec'. For symmetric matrix use the 
   ! more efficient proj_cg algorithm!
 
-  use ModProcIM
+  use ModProcRCM
   use ModMpiOrig
   implicit none
 

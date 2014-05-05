@@ -3,7 +3,7 @@
 subroutine IM_set_param(CompInfo, TypeAction)
 
   use CON_comp_info
-  use ModProcIM
+  use ModProcRCM
   use RCM_variables, ONLY: NameRcmDir, iUnitOut, StringPrefix, STDOUT_, &
        DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
        plot_area, plot_var, plot_format, UseEventPlotName, &
@@ -198,7 +198,7 @@ end subroutine IM_set_param
 
 !============================================================================
 subroutine IM_set_grid
-  use ModProcIM
+  use ModProcRCM
   use ModNumConst
   use CON_coupler, ONLY: set_grid_descriptor, is_proc, IM_
   use Rcm_variables, ONLY: iSize, jSize, colat, aloct, Ri

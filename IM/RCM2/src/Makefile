@@ -39,7 +39,7 @@ RCMLIBRARY = \
   IM_wrapper.o
 
 RCMOBJECTS = \
-  ModProcIM.o\
+  ModProcRCM.o\
   rcm_variables.o \
   rcm_io.o \
   rcm_routines.o \
@@ -84,7 +84,7 @@ ${MY_LIB}:	$(OBJECTS) ${MAKEFILE_COMP_SELECT}
 
 # IM_wrapper needs to be compiled with the same precision as others
 IM_wrapper.o: IM_wrapper.f90 \
-	ModProcIM.o \
+	ModProcRCM.o \
 	rcm_variables.o \
 	rcm_io.o \
 	${SHAREDIR}/ModReadParam.o \

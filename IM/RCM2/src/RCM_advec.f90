@@ -207,7 +207,7 @@ end subroutine RCM_advec0
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine RCM_advec (icontrol, itimei, itimef, idt)
-  use ModProcIM
+  use ModProcRCM
   use ModIoUnit, ONLY: io_unit_new
   USE Rcm_variables
   USE Rcm_io
