@@ -45,7 +45,6 @@ OutputDirectory=PT/plots
 DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=off ! on,off
 
-
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
@@ -61,6 +60,11 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   PIC=on ! on, off
   Mesh=on ! on, off
 #endUserDefinitions
+
+#General
+  ReferenceInjectionParticleNumber=200
+  MaxMeshRefinmentLevel=12
+#endGeneral
 
 #block ../europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
