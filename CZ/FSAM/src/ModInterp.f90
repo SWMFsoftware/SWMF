@@ -52,9 +52,7 @@ contains
     khi=n
 
     if((x.lt.xa(1)).or.(x.gt.xa(n))) then
-       write(6, *) 'lint: x out of range!'
-       write(6,'("x = ",e12.3," x(1) = ",e12.3," x(n) = ",e12.3)') x, xa(1), xa(n)
-       stop
+       call con_stop('lint: x out of range!')
     endif
 
     do while ((khi-klo).gt.1)
@@ -68,8 +66,7 @@ contains
 
     h = xa(khi) - xa(klo)
     if(h.eq.0.d0) then
-       write(6,*) 'xa not strictly increasing'
-       stop
+       call con_stop( 'xa not strictly increasing')
     endif
     a = (xa(khi)-x)/h
     b = (x-xa(klo))/h
