@@ -109,7 +109,9 @@ test_cz:
 	if([ "${KEEP}"]); then rm -f run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cz_compile:
-	./Config.pl -v=Empty,CZ/FSAM 
+	./Config.pl -v=Empty,CZ/FSAM -fishpak
+	cp CZ/FSAM/srcProblem/ModUserSetup.SWMF.f90 CZ/FSAM/src/ModUserSetup.f90
+	cp CZ/FSAM/srcProblem/ModPar.SWMF.f90 CZ/FSAM/src/ModPar.f90
 	${MAKE} SWMF
 	
 test_cz_rundir:
@@ -123,7 +125,7 @@ test_cz_run:
 	cd ${TESTDIR}; mpirun -n 6 ./SWMF.exe > runlog
 
 test_cz_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-13 -r=1e-10 \
 		${TESTDIR}/eng_1_n00000000 \
 		${CZDIR}/output/eng_1_n00000000 \
 		> test_cz.diff)
