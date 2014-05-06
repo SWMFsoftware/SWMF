@@ -36,7 +36,7 @@ LIB:	DEPEND
 
 GITM_LIB = ../src/libGITM.a 
 
-${MY_LIB}: ${GITM_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${GITM_LIB} ${OBJECTS}
 	cp -f ${GITM_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
