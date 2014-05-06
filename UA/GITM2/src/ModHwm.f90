@@ -127,6 +127,7 @@ module NEWmodel
     logical                 :: reset = .true.
     character(128)          :: defaultdata = 'UA/DataIn/hwm071308e.dat'
     
+
 end module NEWmodel
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -158,6 +159,33 @@ subroutine HWMQT(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
     real*8                 :: last(5)
     real*8                 :: input(5)
     real*8                 :: u,v
+
+
+    interface
+       subroutine HWMupdate(input,last,fs,fl,fm,vbar,wbar,ebz,ebm,zwght,lev,u,v)
+
+       use NEWmodel
+       implicit none
+           
+           real*8,intent(in)              :: input(5) ! jday,utsec,glon,glat,alt
+           real*8,intent(inout)           :: last(5)
+           real*8,intent(inout)           :: fs(0:maxs,2)
+           real*8,intent(inout)           :: fm(0:maxm,2)
+           real*8,intent(inout)           :: fl(0:maxl,2)
+           
+           real*8,intent(inout)           :: vbar(0:maxn,0:maxo)
+           real*8,intent(inout)           :: wbar(0:maxn,0:maxo)
+           real*8,intent(inout),target    :: ebz(nbf,0:p)
+           real*8,intent(inout),target    :: ebm(nbf,0:p)
+         
+           real*8,intent(inout)           :: zwght(0:p)
+           integer,intent(inout)           :: lev
+          
+           real*8,intent(out)             :: u,v
+      end subroutine HWMupdate
+   end interface
+
+
     
     input(1) = dble(mod(IYD,1000))
     input(2) = dble(sec)
