@@ -1087,5 +1087,25 @@ module ModMpiTemplate  ! These two lines are here so that
        integer, intent(out) :: ierror
      end subroutine mpi_unpack
 
+     subroutine mpi_file_read(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       <type>,  intent(out):: buf(dim1)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+     end subroutine mpi_file_read
+
+     subroutine mpi_file_write(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       <type>,  intent(in) :: buf(dim1)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+     end subroutine mpi_file_write
+
   end interface            ! These two lines are here so that 
 end module ModMpiTemplate  ! EMACS can indent the code properly

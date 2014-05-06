@@ -1,5 +1,3 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMPiInterfaces
   implicit none
   private
@@ -16,6 +14,8 @@ module ModMPiInterfaces
   public:: mpi_comm_group
   public:: mpi_comm_rank
   public:: mpi_comm_size
+  public:: mpi_file_read
+  public:: mpi_file_write
   public:: mpi_finalize
   public:: mpi_gather
   public:: mpi_gatherv
@@ -159,6 +159,22 @@ module ModMPiInterfaces
        integer, intent(out) :: size
        integer, intent(out) :: ierror
      end subroutine mpi_comm_size
+  end interface
+
+  interface mpi_file_read
+    module procedure &
+    mpi_file_read_i0, &
+    mpi_file_read_i1, &
+    mpi_file_read_r0, &
+    mpi_file_read_r1
+  end interface
+
+  interface mpi_file_write
+    module procedure &
+    mpi_file_write_i0, &
+    mpi_file_write_i1, &
+    mpi_file_write_r0, &
+    mpi_file_write_r1
   end interface
 
   interface
@@ -1110,6 +1126,118 @@ contains
 
        call mpi_bsend(buf, count, datatype, dest, tag, comm, ierror)
      end subroutine mpi_bsend_r0
+
+
+     subroutine mpi_file_read_i0(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       integer,  intent(out):: buf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_read
+
+       call mpi_file_read(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_read_i0
+
+
+     subroutine mpi_file_read_i1(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       integer,  intent(out):: buf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_read
+
+       call mpi_file_read(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_read_i1
+
+
+     subroutine mpi_file_read_r0(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       real,  intent(out):: buf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_read
+
+       call mpi_file_read(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_read_r0
+
+
+     subroutine mpi_file_read_r1(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       real,  intent(out):: buf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_read
+
+       call mpi_file_read(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_read_r1
+
+
+     subroutine mpi_file_write_i0(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       integer,  intent(in) :: buf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_write
+
+       call mpi_file_write(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_write_i0
+
+
+     subroutine mpi_file_write_i1(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       integer,  intent(in) :: buf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_write
+
+       call mpi_file_write(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_write_i1
+
+
+     subroutine mpi_file_write_r0(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       real,  intent(in) :: buf
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_write
+
+       call mpi_file_write(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_write_r0
+
+
+     subroutine mpi_file_write_r1(fh, buf, count, datatype, status, ierror)
+       use ModMpiOrig, only: mpi_status_size
+       integer, intent(in) :: fh
+       real,  intent(in) :: buf(:)
+       integer, intent(in) :: count
+       integer, intent(in) :: datatype
+       integer, intent(in) :: status(mpi_status_size)
+       integer, intent(out) :: ierror
+          external mpi_file_write
+
+       call mpi_file_write(fh, buf, count, datatype, status, ierror)
+     end subroutine mpi_file_write_r1
 
 
      subroutine mpi_gather_i0(sendbuf, sendcount, sendtype, recvbuf, &
