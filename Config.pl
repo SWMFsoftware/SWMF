@@ -229,6 +229,13 @@ sub set_versions{
 	if($Version{$comp} ne $version){
 	    $change = 1;
 	    $Version{$comp}=$version;
+
+	    # The wrapper of the new component version should be recompiled
+	    foreach my $src ("src", "srcInterface"){
+		my $wrapper = "$compversion/$src/$comp"."_wrapper.f90";
+		&shell_command("touch $wrapper") if -e $wrapper;
+	    }
+
 	}
     }
 
