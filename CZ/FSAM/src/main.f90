@@ -9,6 +9,7 @@ program xfsam
   use ModIteration
   use ModFSAM
   use ModMpi
+  use ModUtilities,  ONLY: flush_unit
   implicit none
   
   integer :: isize, ierr, ntcond, update_rate
@@ -32,7 +33,7 @@ program xfsam
     write(6, *) nproc, ' specified in par.h, ', isize, ' allocated'
     call MPI_ABORT(MPI_COMM_WORLD, 1,ierr)
   endif
-  call flush(6)
+  call flush_unit(6)
 
   ! start wall clock
   wt0 = MPI_WTIME()
@@ -44,7 +45,7 @@ program xfsam
      write(6,'(3(a,i4))') ' in = ', in, ', jn = ', jn, ', kn = ', kn
      write(6,'(a)') '--------------------------------------------------------------- '
      write(6,*) 
-     call flush(6)
+     call flush_unit(6)
   endif
   
   myid2 = myid/nproc1
@@ -59,7 +60,7 @@ program xfsam
      write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
           ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, &
           ek1,ek2,ek3,ntcond
-     call flush(16)
+     call flush_unit(16)
   endif
   
   ! output grid and initial fields and set up for future outputs
@@ -118,12 +119,12 @@ program xfsam
         if(myid==0) then
            write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
                 ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, ek1,ek2,ek3,ntcond
-           call flush(16)
+           call flush_unit(16)
            update_rate = itintv*inmax*jnmax*knmax/nproc/(wtnow - wtprev)
            write(6,'(a,I7,a,I9)') ' Grid cell updates per CPU sec = ', &
                 update_rate, ' at iteration = ', itnow
            wtprev = wtnow
-           call flush(6)
+           call flush_unit(6)
         endif
      endif
      

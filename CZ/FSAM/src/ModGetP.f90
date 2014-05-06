@@ -20,6 +20,7 @@ contains
     use ModBval,      ONLY: bvalp
     use ModFSAM,      ONLY: ErrPSolv
     use ModMpi
+    use ModUtilities, ONLY: flush_unit
 
     ! local blktri variables
     integer iflg_blk
@@ -344,7 +345,7 @@ contains
             MPI_COMM_WORLD,ierr)
        if(myid==0) then
           write(6,'(2(a,e23.15))') 'ref error=', errors(1), ', error=', errors(2)
-          call flush(6)
+          call flush_unit(6)
        endif
     endif
 
