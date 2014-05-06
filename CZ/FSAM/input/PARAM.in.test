@@ -1,0 +1,49 @@
+#GRID
+50257736505.7756195D0			rMin
+6.7599036D10				rMax
+0.52359877559830D0			thMin
+2.61799387799150D0			thMax
+0.D0					phMin
+6.28318530717960D0			phMax
+
+#ROTATION
+2.69999999069709D-6			omega
+
+#PARAMETER
+1.50000007669688D12			nu_in
+3.00000007669688D13			kdiff_in
+1.50000007669688D12			eta_in
+
+#RESTART
+F					DoRestart      ! irst
+0					ifile  
+0					itnow
+
+#HEATCONDUCTION
+F					UseImplCond
+
+#ERRPSOLV
+T					ErrPSolv
+
+#STOP
+90					MaxIteration    ! itmax
+3.15D9					tSimulationMax  ! tend_in
+3600.D0					wtLimit         
+
+#SAVEPLOT
+30					DnWriteLog    ! itintv_in
+600					DnSaveRestart ! itout_in
+1.63647074637924D6  			DtWriteData   ! tout_in
+
+#FILENAME
+./rst_					rstfile
+./b1_					b1file
+./b2_					b2file
+./b3_					b3file
+./v1_					v1file
+./v2_					v2file
+./v3_					v3file
+./s_					sfile
+./p_					pfile
+./grid					gridfile
+./eng_1					engfile
