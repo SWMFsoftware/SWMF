@@ -8,12 +8,13 @@ use warnings;
 use Switch;
 
 use ampsConfigLib;
+use constant {true => 1, false =>0};
 
 my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="moon.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
+my $InputFileNameDefault="cg.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
 my $InputFileName;
 
 
@@ -144,12 +145,18 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#IDF") {
     ReadIDF();
   }
+  elsif ($InputLine eq "#UNIMOLECULARREACTIONS") {
+    ReadUnimolecularReactions();
+  }
   elsif ($InputLine eq "#SAMPLING") {
     Sampling();
   }  
   elsif ($InputLine eq "#USERDEFINITIONS") {
     UserDefinitions();
   } 
+  elsif ($InputLine eq "#GENERAL") {
+    ReadGeneralBlock();
+  }  
   elsif ($InputLine eq "#BLOCK") {
     #call a user defined processor of a block in the input file 
     my $BlockProcessor;
@@ -457,6 +464,8 @@ sub ReadMainBlock {
     }
     
     
+    
+        
     elsif ($s0 eq "COUPLERMODE") {
       ($s0,$s1)=split(' ',$s1,2);
       
@@ -797,6 +806,54 @@ sub UserDefinitions {
       
       
     elsif ($InputLine eq "#ENDUSERDEFINITIONS") {
+      last;
+    }
+    else {      
+      $line=~s/ //g;
+      chomp($line);
+   
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    
+  }
+}
+
+
+#=============================== General Block ==================
+sub ReadGeneralBlock {
+
+  
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[=,]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    
+   
+       
+    
+    if ($InputLine eq "MAXMESHREFINMENTLEVEL") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::RedefineMacro("_MAX_REFINMENT_LEVEL_",$InputLine,"meshAMR/meshAMRdef.h");
+    }
+    elsif ($InputLine eq "REFERENCEINJECTIONPARTICLENUMBER") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber",$InputLine,"pic/pic_weight_time.cpp");
+    }
+   
+  
+      
+      
+    elsif ($InputLine eq "#ENDGENERAL") {
       last;
     }
     else {      
@@ -1568,6 +1625,253 @@ sub ReadBackgroundAtmosphereBlock {
     }
   }  
 }
+
+#=============================== Read UnomolecularReaction Block =============================
+sub ReadUnimolecularReactions {
+  
+  #parameters of individual reaction
+  my (@SourceSpecies,@ProductSpecies,@ReactionId,@LifeTime,@nProducts,$np,$id,$lt);
+  
+  #Global parameters   
+  my $ReactionDescriptorString;
+  my $UserLifetimeFunction;
+  my $ReactionFlag=true;
+  my $LifeTimeMultiplier=1;
+  my $ReactionProcessor="";
+  my $nMaxProducts=0;
+  my $nTotalReactions=0;
+  
+  my ($s0,$s1,$s2,$spec);
+    
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[(=,)]/ /g;
+    
+    #get the first word in the sequence
+    ($s0,$s1)=split(' ',$InputLine,2);
+    
+    
+    if ($s0 eq "UNIMOLECULARREACTIONS") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      if ($s0 eq "ON") {
+        $ReactionFlag=true;
+      }
+      elsif ($s0 eq "OFF") {
+        $ReactionFlag=false;
+      }
+      else {
+        die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
+      }
+    }
+    elsif ($s0 eq "REACTIONLIFETIMEMULTIPLIER") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/\s+$//;
+      $InputLine=~s/=/ /g;
+      ($s0,$s1)=split(' ',$InputLine,2);
+      ($LifeTimeMultiplier,$s1)=split(' ',$s1,2);
+    }
+    elsif ($s0 eq "PROCESSOR") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/\s+$//;
+      $InputLine=~s/=/ /g;
+      ($s0,$s1)=split(' ',$InputLine,2);
+      ($ReactionProcessor,$s1)=split(' ',$s1,2);
+    }
+    elsif ($s0 eq "LIFETIMEUSERFUNCTION") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/\s+$//;
+      $InputLine=~s/=/ /g;
+      ($s0,$s1)=split(' ',$InputLine,2);
+      ($UserLifetimeFunction,$s1)=split(' ',$s1,2);
+    }
+    
+    elsif ($s0 eq "REACTION") {
+      ($s0,$s1)=split(' ',$s1,2);
+      
+      $np=0;
+      $id=-1;
+      $nTotalReactions++;
+      
+      while (defined $s0) {
+        if ($s0 eq "SOURCE") {
+          ($s0,$s1)=split(' ',$s1,2);
+          $spec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+          push(@SourceSpecies,$spec);
+        }
+        elsif ($s0 eq "PRODUCT") {
+          ($s0,$s1)=split(' ',$s1,2);
+          $s0=~s/#/ /g;
+          
+          while (defined $s0) {
+            ($s2,$s0)=split(' ',$s0,2);
+            $spec=ampsConfigLib::GetElementNumber($s2,\@SpeciesList);
+            
+            if ($s2 eq "NONE") {
+              #do nothing
+            }
+            elsif ($spec == -1) {
+              die "Cannot recognize specie $s2 ($line) in $InputFileName.Assembled (Unimolecular Block)\n";
+            }
+            else {
+              push(@ProductSpecies,$spec);
+              $np++;
+            }
+          }
+        }
+        elsif ($s0 eq "ID") {
+          ($id,$s1)=split(' ',$s1,2);
+          push(@ReactionId,$id);
+        }
+        elsif ($s0 eq "LIFETIME") {
+          ($lt,$s1)=split(' ',$s1,2);
+          push(@LifeTime,$lt);
+        }
+        else {
+          die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }
+        
+        ($s0,$s1)=split(' ',$s1,2);
+      }
+        
+        #get the number of the reaction products
+        push(@nProducts,$np);
+        
+        if ($np>$nMaxProducts) {
+          $nMaxProducts=$np;
+        }
+        
+    }
+        
+
+        
+    elsif ($s0 eq "#ENDUNIMOLECULARREACTIONS") {
+      my $n;
+      my $cnt=0;     
+      my @nSpeciesReactionNumber=((0)x$TotalSpeciesNumber);
+      
+      
+      #output the line that describes the reactions
+      print "$nMaxProducts\n";
+      
+      for ($n=0;$n<$nTotalReactions;$n++) {
+        $nSpeciesReactionNumber[$SourceSpecies[$n]]++;
+        
+        if ($n>0) {
+          $ReactionDescriptorString=$ReactionDescriptorString.",";
+        }
+        
+        $ReactionDescriptorString=$ReactionDescriptorString."{".$ReactionId[$n].",".$LifeTime[$n].",".1.0/$LifeTime[$n].",".$SourceSpecies[$n].",".$nProducts[$n].",{";
+        
+        for ($spec=0;$spec<$nMaxProducts;$spec++) {
+          if ($spec<$nProducts[$n]) {      
+            $ReactionDescriptorString=$ReactionDescriptorString.$ProductSpecies[$cnt];
+            $cnt++;
+          }
+          else {
+            $ReactionDescriptorString=$ReactionDescriptorString."-1";
+          }
+          
+          if ($spec<$nMaxProducts-1) {
+            $ReactionDescriptorString=$ReactionDescriptorString.",";
+          }
+          else {
+            $ReactionDescriptorString=$ReactionDescriptorString."}";
+          }
+        }
+        
+        $ReactionDescriptorString=$ReactionDescriptorString."}";
+        
+        print "$ReactionDescriptorString\n";
+      }
+      
+      
+      ampsConfigLib::ChangeValueOfVariable("static const int nTotalUnimolecularReactions",$nTotalReactions,"pic/pic.h"); 
+      ampsConfigLib::ChangeValueOfVariable("static const int nMaxUnimolecularReactionProducts",$nMaxProducts,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfVariable("static const cUnimoleculecularReactionDescriptor UnimoleculecularReactionDescriptor\\[nTotalUnimolecularReactions\\]","{".$ReactionDescriptorString."}","pic/pic.h");
+      
+      #get the list of reaction each species is participating in
+      my $nMaxSpeciesReactionNumber=0;
+      my @TotalSpecieReactionRate=((0)x$TotalSpeciesNumber);
+      my $SpeciesReactionList="";
+#      my $cnt;
+      
+      for ($spec=0;$spec<$nTotalReactions;$spec++) {
+        if ($nSpeciesReactionNumber[$spec]>$nMaxSpeciesReactionNumber) {
+          $nMaxSpeciesReactionNumber=$nSpeciesReactionNumber[$spec];
+        }
+      }
+      
+      for ($spec=0;$spec<$nTotalReactions;$spec++) {
+        if ($spec!=0) {
+          $SpeciesReactionList=$SpeciesReactionList.",";
+        }
+
+        $SpeciesReactionList=$SpeciesReactionList."{";
+        $cnt=0;
+       
+        for ($n=0;$n<$nTotalReactions;$n++) {
+          if ($SourceSpecies[$n]==$spec) {
+            if ($cnt!=0) {
+              $SpeciesReactionList=$SpeciesReactionList.",";
+            }
+            
+            $SpeciesReactionList=$SpeciesReactionList.$n;
+            $TotalSpecieReactionRate[$spec]+=1.0/$LifeTime[$n];
+            $cnt++;
+          }
+        }
+        
+        for ($n=$cnt;$n<$nMaxSpeciesReactionNumber;$n++) {
+          if ($n!=0) {
+            $SpeciesReactionList=$SpeciesReactionList.",";
+          }
+            
+          $SpeciesReactionList=$SpeciesReactionList."-1";          
+        }
+      
+        $SpeciesReactionList=$SpeciesReactionList."}";      
+      }
+      
+      my $TotalReactionRateString="";
+      
+      for ($spec=0;$spec<$nTotalReactions;$spec++) {
+        if ($spec!=0) {
+          $TotalReactionRateString=$TotalReactionRateString.",";
+        }
+        
+        $TotalReactionRateString=$TotalReactionRateString.$TotalSpecieReactionRate[$spec];
+      }
+      
+      ampsConfigLib::ChangeValueOfVariable("static const int nMaxSpeciesUnimolecularReactionNumber",$nMaxSpeciesReactionNumber,"pic/pic.h");
+      ampsConfigLib::ChangeValueOfVariable("static const int SpeciesUnimolecularReactionList\\[PIC::nTotalSpecies\\]\\[nMaxSpeciesUnimolecularReactionNumber\\]","{".$SpeciesReactionList."}","pic/pic.h");
+      ampsConfigLib::ChangeValueOfVariable("static const double TotalSpecieUnimolecularReactionRate\\[PIC::nTotalSpecies\\]","{".$TotalReactionRateString."}","pic/pic.h");
+      
+      last;
+    }
+    else {      
+      $line=~s/ //g;
+      chomp($line);
+   
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+  }  
+  
+}
+
 
 #=============================== Read Species Block =============================
 sub ReadSpeciesBlock {
