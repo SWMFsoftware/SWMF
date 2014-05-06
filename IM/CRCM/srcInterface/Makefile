@@ -30,7 +30,7 @@ LIB:	DEPEND
 
 CRCM_LIB = ../src/libCRCM.a 
 
-${MY_LIB}: ${CRCM_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${CRCM_LIB} ${OBJECTS}
 	cp -f ${CRCM_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

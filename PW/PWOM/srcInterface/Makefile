@@ -30,7 +30,7 @@ LIB:	DEPEND
 
 PWOM_LIB = ../src/libPWOM.a 
 
-${MY_LIB}: ${PWOM_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${PWOM_LIB} ${OBJECTS}
 	cp -f ${PWOM_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

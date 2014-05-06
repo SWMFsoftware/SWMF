@@ -30,7 +30,7 @@ LIB:	DEPEND
 
 RBE_LIB = ../src/libRBE.a 
 
-${MY_LIB}: ${RBE_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${RBE_LIB} ${OBJECTS}
 	cp -f ${RBE_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

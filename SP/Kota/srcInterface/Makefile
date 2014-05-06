@@ -27,7 +27,7 @@ LIB:	DEPEND
 
 KOTA_LIB = ../src/libKota.a 
 
-${MY_LIB}: ${KOTA_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${KOTA_LIB} ${OBJECTS}
 	cp -f ${KOTA_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

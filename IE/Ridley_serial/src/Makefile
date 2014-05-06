@@ -69,7 +69,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}:	${MF} ${MODULES} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}:	${MF} ${MODULES} ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} ${OBJECTS}
 

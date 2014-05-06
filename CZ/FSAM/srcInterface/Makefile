@@ -29,7 +29,7 @@ LIB:	DEPEND
 
 FSAM_LIB = ../src/libFSAM.a 
 
-${MY_LIB}: ${FSAM_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${FSAM_LIB} ${OBJECTS}
 	cp -f ${FSAM_LIB} ${MY_LIB}
 	cp ../input/libfishpak.a .
 	ar -x libfishpak.a

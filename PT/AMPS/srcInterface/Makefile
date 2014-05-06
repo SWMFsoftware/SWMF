@@ -29,7 +29,7 @@ LIB:
 
 AMPS_LIB = ../srcTemp/libAMPS.a
 
-${MY_LIB}: ${AMPS_LIB} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${AMPS_LIB} ${OBJECTS}
 	cp -f ${AMPS_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 

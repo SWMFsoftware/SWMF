@@ -25,7 +25,7 @@ LIB:
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${OBJ_WRAPPER} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${OBJ_WRAPPER}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJ_WRAPPER}
 

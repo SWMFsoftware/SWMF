@@ -139,7 +139,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${LIBBATL} ${OBJECTS} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${LIBBATL} ${OBJECTS}
 	cp -f ${LIBBATL} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
