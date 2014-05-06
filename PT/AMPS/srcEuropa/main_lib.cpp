@@ -542,7 +542,7 @@ PIC::InitMPI();
 
 	const int InitialSampleLength=100;
 
-	PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1600;
+	//PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1600;
 	PIC::RequiredSampleLength=InitialSampleLength; //0;
 
 	Europa::Init_AfterParser();
