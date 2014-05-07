@@ -1,9 +1,24 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!  Wrapper for the empty PTOM (PT) component
+
 !  $Id$
 !==========================================================================
 module PT_wrapper
+
+  implicit none
+
+  private ! except
+
+  ! Coupling with CON
+  public:: PT_set_param
+  public:: PT_init_session
+  public:: PT_run
+  public:: PT_save_restart
+  public:: PT_finalize
+
+  public:: PT_get_grid_info ! Generic coupler
+  public:: PT_put_from_gm   ! Coupling with GM
 
 contains
 
@@ -11,15 +26,16 @@ contains
 
     use CON_comp_info
     use ModReadParam
-    implicit none
 
     character (len=*), parameter :: NameSub='PT_set_param'
     integer :: iComm,iProc,nProc
 
     ! Arguments
-    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp
     character (len=*), intent(in)     :: TypeAction ! What to do
-    character(len=lStringLine), allocatable :: StringLineF_I(:) ! Contains the PARAM.in segment
+
+    ! Contains the PARAM.in segment
+    character(len=lStringLine), allocatable :: StringLineF_I(:) 
     !-------------------------------------------------------------------------
 
     !call AMPS_TimeStep()
@@ -41,7 +57,8 @@ contains
        allocate(StringLineF_I(i_line_read()+1:n_line_read()))
        call read_text(StringLineF_I)
        if(n_line_read()-i_line_read()+1 > 0) then
-          call amps_read_param(StringLineF_I,n_line_read()-i_line_read(), lStringLine,iProc)
+          call amps_read_param(StringLineF_I, n_line_read()-i_line_read(), &
+               lStringLine,iProc)
        end if
     case('STDOUT')
        ! call AMPS_set_stdout
@@ -58,11 +75,9 @@ contains
 
   end subroutine PT_set_param
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_init_session(iSession, TimeSimulation)
-
-    implicit none
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -74,11 +89,9 @@ contains
 
   end subroutine PT_init_session
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_finalize(TimeSimulation)
-
-    implicit none
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -89,11 +102,9 @@ contains
 
   end subroutine PT_finalize
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_save_restart(TimeSimulation)
-
-    implicit none
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -102,17 +113,17 @@ contains
 
   end subroutine PT_save_restart
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_run(TimeSimulation,TimeSimulationLimit)
 
     implicit none
 
     !INPUT/OUTPUT ARGUMENTS:
-    real, intent(inout) :: TimeSimulation   ! current time of component
+    real, intent(inout):: TimeSimulation   ! current time of component
 
     !INPUT ARGUMENTS:
-    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     character(len=*), parameter :: NameSub='PT_run'
 
@@ -121,7 +132,8 @@ contains
 
   end subroutine PT_run
 
-  !==============================================================================
+  !============================================================================
+
   subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     ! Provide information about AMPS grid
@@ -133,7 +145,7 @@ contains
     integer, intent(out):: iDecompOut ! decomposition index
 
     character(len=*), parameter :: NameSub = 'PT_get_grid_info'
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nDimOut    = 3
     iGridOut   = 1
     iDecompOut = 1
@@ -141,7 +153,9 @@ contains
     call amps_mesh_id(iDecompOut)
 
   end subroutine PT_get_grid_info
-  !==============================================================================
+
+  !============================================================================
+
   subroutine PT_put_from_gm( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
