@@ -170,6 +170,13 @@
 #define _AMR_CONNECTIVITY_LIST_MODE_INTERNAL_BLOCK_    0
 #define _AMR_CONNECTIVITY_LIST_MODE_GLOBAL_NODE_NUMBER_ 1
 
+//enforce the required minimum cell's resulution: if the cell resulution is enforced than the mesh generator will quit if the requested mesh resolution can not be acieved with the allowed maximum refinment level
+#define _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_   1
+#define _AMR_ENFORCE_CELL_RESOLUTION_MODE_OFF_  0
+
+#define _AMR_ENFORCE_CELL_RESOLUTION_MODE_ _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_
+
+
 using namespace std;
 
 //the exist function with printing of the error message

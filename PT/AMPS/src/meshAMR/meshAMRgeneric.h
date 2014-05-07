@@ -5819,7 +5819,9 @@ if (CallsCounter==83) {
         }
         #endif
 
+        #if _AMR_ENFORCE_CELL_RESOLUTION_MODE_ == _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_
         if (c<characteristicBlockSize_min) exit(__LINE__,__FILE__,"The required resolution is smaller than the minimum resolution allowed for the mesh. Increase the value of _MAX_REFINMENT_LEVEL_");
+        #endif
       }  
 
 
