@@ -369,8 +369,9 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
 
 //calculate the sodium column density and plot
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
-  /*int spec,nVariables=0;
-
+  int nVariables=0;
+  /*
+  int spec;
   //column density
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     if (vlist!=NULL) sprintf(vlist,"%s,  \"Column Integral(%s)\",  \"Mean Speed Along the Line of Sight(%s)\"",vlist,PIC::MolecularData::GetChemSymbol(spec),PIC::MolecularData::GetChemSymbol(spec));
@@ -387,9 +388,9 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
     if (vlist!=NULL) sprintf(vlist,"%s,  \"Sodium Emission(5891_58A)\",  \"Sodium Emission(5897_56A)\"",vlist);
     nVariables+=2;
   }
-
+  */
   return nVariables;
-  */}
+  }
 
 void Exosphere::ColumnIntegral::ProcessColumnIntegrationVector(double *res,int resLength) {
   int spec,cnt=0;
@@ -837,6 +838,7 @@ long int Comet::InjectionBoundaryModel_Limited() {
 
 long int Comet::InjectionBoundaryModel_Limited(int spec) {
   cInternalSphericalData *Sphere;
+  cInternalBoundaryConditionsDescriptor SphereDescriptor;
   double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
   long int newParticle,nInjectedParticles=0;
@@ -844,6 +846,9 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
   double ParticleWeightCorrection=1.0;
   bool flag=false;
   int SourceProcessID;
+
+  SphereDescriptor=PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere();
+  Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
 
   double totalProductionRate=Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere);
 
@@ -889,6 +894,10 @@ TotalFlux=totalProductionRate;
 //calculate the source rate due to user defined source functions                                                   
 FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]=Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere);
 
+ double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+ CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]=0.0;
+
+
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
  if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
    static double GrainInjectedMass=0.0;
@@ -900,8 +909,6 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]=Comet::GetTotal
 
    while (GrainInjectedMass>0.0) {
      startNode=NULL;
-
-     double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
      //generate a particle                                                                                             
      char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -966,8 +973,6 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
     SourceProcessID=(int)(rnd()*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_));
   }
   while (FluxSourceProcess[SourceProcessID]/TotalFlux<rnd());
-
-  double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
   //generate a particle                                                                                             
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];

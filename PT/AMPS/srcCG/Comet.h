@@ -302,7 +302,7 @@ namespace Comet {
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
     
-    if (spec==_DUST_SPEC_) {
+    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       //  int idim=0;
       //for (idim=0;idim<3;idim++) accl_LOCAL[idim]=5.0*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
       

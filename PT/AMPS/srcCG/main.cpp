@@ -91,9 +91,10 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 }
 
 double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  double res=0.0;
   /*
   bool ExternalFaces[6];
-  double res=0.0,ExternalNormal[3],BlockSurfaceArea,ModelParticlesInjectionRate;
+  double ExternalNormal[3],BlockSurfaceArea,ModelParticlesInjectionRate;
   int nface;
 
   static double v[3]={000.0,2.0e3,000.0},n=5.0E6,temp=20.0;
@@ -111,8 +112,8 @@ double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
       res+=ModelParticlesInjectionRate*BlockSurfaceArea;
     }
   }
-
-  return res;*/
+  */
+  return res;
 }
 
 bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -130,18 +131,18 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
       if (ModelParticlesInjectionRate>0.0) return true;
     }
   }
-
-  return false;*/
+  */
+  return false;
 }
 
 //injection of model particles through the faces of the bounding box
 long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  long int nInjectedParticles=0;
   /*  bool ExternalFaces[6];
   double ParticleWeight,LocalTimeStep,TimeCounter,ExternalNormal[3],x[3],x0[3],e0[3],e1[3],c0,c1;
   int nface,idim;
   long int newParticle;
   PIC::ParticleBuffer::byte *newParticleData;
-  long int nInjectedParticles=0;
 
   if (spec!=_O2_SPEC_) return 0; //inject only spec=0
 
@@ -193,16 +194,16 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
     }
   }
-
-  return nInjectedParticles;*/
+  */
+  return nInjectedParticles;
 }
 
 long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  /*  long int nInjectedParticles=0;
+    long int nInjectedParticles=0;
 
-  for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
+    //for (int s=0;s<PIC::nTotalSpecies;s++) nInjectedParticles+=BoundingBoxInjection(s,startNode);
 
-  return nInjectedParticles;*/
+  return nInjectedParticles;
 }
 
 
