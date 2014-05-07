@@ -64,6 +64,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
 #General
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
+  EnforceRequestedMeshResolution=on !on,off
 #endGeneral
 
 #block ../europa.input.pl !process the settings of the Europa's model
