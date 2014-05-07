@@ -850,6 +850,19 @@ sub ReadGeneralBlock {
       ampsConfigLib::ChangeValueOfVariable("double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber",$InputLine,"pic/pic_weight_time.cpp");
     }
    
+    elsif ($InputLine eq "ENFORCEREQUESTEDMESHRESOLUTION") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_AMR_ENFORCE_CELL_RESOLUTION_MODE_","_AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_","meshAMR/meshAMRdef.h");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_AMR_ENFORCE_CELL_RESOLUTION_MODE_","_AMR_ENFORCE_CELL_RESOLUTION_MODE_OFF_","meshAMR/meshAMRdef.h");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    }
   
       
       
