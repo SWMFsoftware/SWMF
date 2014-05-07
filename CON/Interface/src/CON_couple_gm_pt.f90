@@ -15,12 +15,11 @@ module CON_couple_gm_pt
 
   !USES:
   use CON_coupler, ONLY: GM_, PT_, Grid_C, lNameVar
-
-  use PT_wrapper, ONLY: PT_get_grid_info, PT_put_from_gm
+  use CON_couple_points, ONLY: &
+       couple_points_init, couple_points, CouplePointsType
 
   use GM_wrapper, ONLY: GM_get_grid_info, GM_find_points, GM_get_for_pt
-
-  use CON_couple_points, ONLY: couple_points_init, couple_points, CouplePointsType
+  use PT_wrapper, ONLY: PT_get_grid_info, PT_put_from_gm
 
   implicit none
   save
@@ -45,14 +44,17 @@ contains
   !INTERFACE:
   subroutine couple_gm_pt_init
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_pt_init'
-
     !DESCRIPTION:
+    ! Initialize GM->PT coupler.
     ! This subroutine should be called from all PE-s
     !EOP
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'couple_gm_pt_init'
     !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe)write(*,*) NameSub,' starting'
 
     Coupler%iCompTarget = PT_
     Coupler%iCompSource = GM_
@@ -62,6 +64,8 @@ contains
     Coupler%nVar    = Grid_C(Coupler%iCompSource)%nVar
 
     call couple_points_init(Coupler)
+
+    if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine couple_gm_pt_init
 
@@ -81,26 +85,18 @@ contains
     ! Send information from GM to PT. 
     !EOP
 
-    ! Stored variables for GM->PT coupler
-    !------------------------------------
-
-    ! List of variables to pass
-    character(len=lNameVar):: NameVar
-
     logical :: DoTest, DoTestMe
-
-    ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_gm_pt'
-
+    character (len=*), parameter:: NameSub = 'couple_gm_pt'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' starting iProc=',Coupler%iProcWorld
+    if(DoTest)write(*,*) NameSub,' starting iProc=', Coupler%iProcWorld
 
     call couple_points(Coupler, GM_get_grid_info, GM_find_points, &
          GM_get_for_pt, PT_get_grid_info, PT_put_from_gm)
 
-    if(DoTest) write(*,*) NameSub,' finished, iProc=',Coupler%iProcWorld
+    if(DoTest)write(*,*) NameSub,' finished iProc=', Coupler%iProcWorld
+
   end subroutine couple_gm_pt
 
 end module CON_couple_gm_pt
