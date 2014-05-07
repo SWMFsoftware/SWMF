@@ -1,16 +1,28 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 
 module GM_couple_rb
 
+  ! Coupling with Radiation Belt component
+
   use ModMpi
-  use CON_coupler, ONLY: Grid_C, RB_, ncells_decomposition_d
+  use CON_coupler, ONLY: Grid_C, ncells_decomposition_d
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY: n_step
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
 
   implicit none
+  save
+
+  private ! except
+
+  public:: GM_get_for_rb_trace
+  public:: GM_get_for_rb
+  public:: GM_get_sat_for_rb
+
+  ! Local variables
 
   character (len=*), parameter :: NameMod='GM_couple_rb'
 
@@ -20,33 +32,27 @@ module GM_couple_rb
   ! Information about the RB grid ! 2D non-uniform regular grid only !!!
   real, allocatable, dimension(:) :: RB_lat, RB_lon
 
-  integer :: i,j,k, i0,i1,i2, j0,j1,j2, n, iBLK
+  integer :: i,j
 
-  real, save, dimension(:), allocatable :: &
-       MHD_lat_boundary
-  real, save, dimension(:,:), allocatable :: &
+  real, allocatable :: MHD_lat_boundary(:)
+  real, dimension(:,:), allocatable :: &
        MHD_SUM_vol, &
        MHD_SUM_rho, &
        MHD_SUM_p, &
        MHD_Beq, &
        MHD_Xeq, &
        MHD_Yeq
+
   real, parameter :: noValue=-99999.
-  real :: qb(3),eqB,xL,yL,zL
-  real :: colat,Ci,Cs,FCiCs,factor,Vol,Ri,s2,s6,s8,factor1,factor2
 
   integer, parameter :: maxMessages=10
-  integer :: itag, NewMsg, iError
-  integer :: nRECVrequests, RECVrequests(maxMessages), &
-       nSENDrequests, SENDrequests(maxMessages), &
-       MESGstatus(MPI_STATUS_SIZE, maxMessages)  
+  integer :: iError
 
-  logical :: dbg0=.false.
 
   integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
 
 contains
-
+  !===========================================================================
   subroutine allocate_gm_rb(iSizeIn,jSizeIn)
     use CON_comp_param, ONLY: RB_
 
@@ -130,7 +136,8 @@ contains
 
     OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown')
     write(UNITTMP_,'(a)') 'TITLE="Raytrace Values"'
-    write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
+    write(UNITTMP_,'(a)') &
+         'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
          ', "Xeq", "Yeq"', &
          ', "Volume", "Volume**(-2/3)"', &
          ', "MHD `r", "MHD p", "MHD T", "Beq"'
@@ -195,7 +202,8 @@ contains
   end subroutine write_integrated_data_idl
 
   !==========================================================================
-  subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, nPointLine)
+  subroutine GM_get_for_rb_trace(iSizeIn, jSizeIn, NameVar, nVarLine, &
+       nPointLine)
 
     ! Do ray tracing for RB. 
     ! Provide total number of points along rays 
@@ -203,7 +211,7 @@ contains
     use ModRayTrace, ONLY: DoExtractUnitSi
 
     use CON_line_extract, ONLY: line_get
-    implicit none
+
     integer, intent(in)           :: iSizeIn, jSizeIn
     character (len=*), intent(in) :: NameVar
     integer, intent(out)          :: nVarLine, nPointLine
@@ -243,8 +251,6 @@ contains
 
     use ModMain, ONLY: Time_Simulation,TypeCoordSystem
 
-    use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
-         InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_, xEnd_, CLOSEDRAY
 
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_,&
          MassFluid_I, IonFirst_, nVar
@@ -256,8 +262,6 @@ contains
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
-
-    implicit none
 
     character (len=*), parameter :: NameSub='GM_get_for_rb'
 
@@ -366,7 +370,8 @@ contains
 
     call get_solar_wind_point(Time_Simulation, (/x2, 0.0, 0.0/), SolarWind_V)
 
-    Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_)*No2Si_V(UnitN_)
+    Buffer_IIV(1,:,6) = SolarWind_V(Rho_)/MassFluid_I(IonFirst_) &
+         *No2Si_V(UnitN_)
     Buffer_IIV(2,:,6) = SolarWind_V(RhoUx_) * No2Si_V(UnitU_)
     Buffer_IIV(3,:,6) = SolarWind_V(RhoUy_) * No2Si_V(UnitU_)
     Buffer_IIV(4,:,6) = SolarWind_V(RhoUz_) * No2Si_V(UnitU_)
@@ -378,8 +383,8 @@ contains
 
   end subroutine GM_get_for_rb
 
-
   !==========================================================================
+
   subroutine GM_satinit_for_rb(nSats)
 
     !This subroutine collects the number of satellite files for use in 
@@ -388,8 +393,6 @@ contains
     !Module variables to use:
     use ModMain,   ONLY: DoRbSatTrace
     use ModSatelliteFile, ONLY: nSatellite
-
-    implicit none
 
     !Subroutine Arguments:
     integer,           intent(out) :: nSats
@@ -419,8 +422,6 @@ contains
     use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
     use ModB0,            ONLY: get_b0
     use ModMPI
-
-    implicit none
 
     !Arguments
     integer, intent(in)               :: nSats

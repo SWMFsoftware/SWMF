@@ -1,21 +1,69 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-module ModIeGrid
+!============================================================================
 
-  ! This module contains easily accessible information about the IE grid
+module GM_couple_ie
+
+  use CON_planet_field
+  use ModCoordTransform, ONLY: sph_to_xyz
+  use ModMain,    ONLY: Time_Simulation
+  use ModPhysics, ONLY: rBody
+  use ModProcMH
 
   implicit none
   save
 
-  integer           :: nThetaIono = -1, nPhiIono = -1
-  real, allocatable :: ThetaIono_I(:), PhiIono_I(:)
-  real              :: rIonosphere
+  private ! except
 
-  real, private     :: dThetaIono, dPhiIono
+  public:: GM_get_for_ie
+  public:: GM_put_from_ie
+  public:: GM_put_mag_from_ie
+  public:: print_iono_potential
+  public:: clean_mod_field_aligned_current
+  public:: get_ie_grid_index
+
+  ! Ionosphere potential
+  real, allocatable, public :: IonoPotential_II(:,:)
+  real, allocatable, public :: dIonoPotential_DII(:,:,:)
+
+  ! Ionosphere grid description
+  integer, public   :: nThetaIono = -1, nPhiIono = -1
+  real, public      :: rIonosphere
+
+  ! Local variables
+
+  ! Ionosphere grid description
+  real, allocatable :: ThetaIono_I(:), PhiIono_I(:)
+  real              :: dThetaIono, dPhiIono
+
+  ! Joule heating
+  real, allocatable :: IonoJouleHeating_II(:,:)
+
+  ! Field aligned current
+  real, allocatable :: FieldAlignedCurrent_II(:,:), &
+       bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
 
 contains
 
+  !========================================================================== 
+  subroutine print_iono_potential
+
+    use ModIoUnit, ONLY: UnitTmp_
+
+    integer:: i, j
+    
+    do j=1,nPhiIono
+       do i=1,nThetaIono
+          write(UNITTMP_,'(2i4,3G14.6)')i,j,&
+               ThetaIono_I(i),PhiIono_I(j),IonoPotential_II(i,j)
+       end do
+    end do
+
+  end subroutine print_iono_potential
+
+  !==========================================================================
   subroutine init_mod_ie_grid(iSize, jSize)
     ! The ionosphere works on two hemispheres with a node based grid
     ! iSize is the number of latitude nodes from the pole to the equator.
@@ -59,20 +107,6 @@ contains
     PhiNorm   = Phi   / dPhiIono
   end subroutine get_ie_grid_index
 
-end module ModIeGrid
-
-
-module ModFieldAlignedCurrent
-
-  use ModIeGrid
-  
-  implicit none
-  save
-  real, allocatable :: &
-       FieldAlignedCurrent_II(:,:), bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
-
-contains
-
   !============================================================================
 
   subroutine init_mod_field_aligned_current(iSize,jSize)
@@ -95,27 +129,7 @@ contains
          deallocate( bCurrent_VII, bCurrentLocal_VII, FieldAlignedCurrent_II)
   end subroutine clean_mod_field_aligned_current
 
-end module ModFieldAlignedCurrent
-
-!============================================================================
-
-module ModIonoPotential
-
-  use ModIeGrid
-  use CON_planet_field
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use ModMain,    ONLY: Time_Simulation
-  use ModPhysics, ONLY: rBody
-  use ModPhysics,       ONLY: Si2No_V, No2Si_V, UnitN_, UnitU_
-  use ModProcMH
-  implicit none
-  save
-
-  real, allocatable :: IonoPotential_II(:,:)
-  real, allocatable :: dIonoPotential_DII(:,:,:)
-  real, allocatable :: IonoJouleHeating_II(:,:)
-
-contains
+  !============================================================================
 
   subroutine init_mod_iono_potential(iSize, jSize)
 
@@ -182,7 +196,7 @@ contains
 
   end subroutine calc_grad_iono_potential
 
-  !=============================================================================
+  !============================================================================
 
   subroutine init_mod_iono_jouleheating(iSize, jSize)
 
@@ -197,7 +211,7 @@ contains
     allocate( IonoJouleHeating_II(nThetaIono, nPhiIono))
 
   end subroutine init_mod_iono_jouleheating
-  !=============================================================================
+  !============================================================================
 
   subroutine map_jouleheating_to_inner_bc
 
@@ -210,8 +224,8 @@ contains
        call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
        bIono = sqrt(sum(bIono_D**2))
 
-       ! map out to GM (caution!, not like map down to the ionosphere, there is always
-       ! a corresponding position.)
+       ! map out to GM (caution!, not like map down to the ionosphere, 
+       ! there is always a corresponding position.)
        call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
             rBody, Xyz_tmp, iHemisphere)
 
@@ -230,35 +244,20 @@ contains
     end do; end do
 
   end subroutine map_jouleheating_to_inner_bc
-end module ModIonoPotential
 
-!==============================================================================
-
-module GM_couple_ie
-
-  use ModFieldAlignedCurrent
-
-  implicit none
-
-contains
-
-  !==============================================================================
+  !============================================================================
 
   subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
 
     use CON_axes, ONLY: transform_matrix
     use ModMain, ONLY: Time_Simulation, TypeCoordSystem
-    use ModIeGrid
     use ModCurrent,            ONLY: calc_field_aligned_current
-    use ModFieldAlignedCurrent,ONLY: FieldAlignedCurrent_II, &
-         init_mod_field_aligned_current!, calc_field_aligned_current
     use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
          InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD
     use ModNumConst, ONLY: cRadToDeg
     use ModProcMH,         ONLY: iProc
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
-    implicit none
 
     character (len=*), parameter :: NameSub='GM_get_for_ie'
 
@@ -379,15 +378,12 @@ contains
     if(DoTest)write(*,*)NameSub,': finished'
   end subroutine GM_get_for_ie
 
-  !=============================================================================
+  !============================================================================
   subroutine GM_put_from_ie(Buffer_IIV,iSize,jSize)
 
-    use ModIonoPotential, ONLY: IonoPotential_II,IonoJouleHeating_II, map_jouleheating_to_inner_bc,&
-         init_mod_iono_potential, calc_grad_iono_potential, init_mod_iono_jouleheating
     use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_
     use ModProcMH
 
-    implicit none
     character(len=*), parameter :: NameSub='GM_put_from_ie'
 
     integer, intent(in) :: iSize,jSize
@@ -396,14 +392,14 @@ contains
     !  character(len=*), intent(in) :: NameVar
 
     logical :: DoTest, DoTestMe
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     !  if(DoTest)write(*,*)NameSub,': NameVar,iSize,jSize=',NameVar,iSize,jSize
 
     if(.not. allocated(IonoPotential_II)) &
          call init_mod_iono_potential(iSize,jSize)
 
-    IonoPotential_II = Buffer_IIV(:,:,1) * Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
+    IonoPotential_II = Buffer_IIV(:,:,1)*Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
     call calc_grad_iono_potential
 
     if (.not. allocated(IonoJouleHeating_II)) &
@@ -419,15 +415,15 @@ contains
 
   !==========================================================================
   subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+
     ! Get magnetometer "measurements" from IE.
     use ModGmGeoindices, ONLY: nKpMag, MagPerbIE_DI
-    implicit none
 
     integer, intent(in) :: iSize
     real, intent(in)    :: Buffer_DI(3,iSize)
 
     character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(nKpMag .ne. iSize)call CON_stop(NameSub// &
          ' Number of shared magnetometers does not match!')
     MagPerbIE_DI = Buffer_DI
@@ -437,13 +433,11 @@ contains
   !==========================================================================
   subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
-    use ModIonoPotential
     use ModMain,           ONLY: TypeCoordSystem, MaxDim
     use CON_axes,          ONLY: transform_matrix
     use ModCoordTransform, ONLY: xyz_to_dir, cross_product
     use CON_planet_field,  ONLY: map_planet_field
 
-    implicit none
     real, intent(in)    :: tSimulation
     real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
     real, intent(in)    :: B1_D(MaxDim)     ! Magnetic field perturbation
@@ -565,16 +559,13 @@ contains
     end if
 
   end subroutine calc_inner_bc_velocity1
-  !=============================================================================
+  !============================================================================
 
   subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
 
-    use ModIonoPotential
     use ModCoordTransform, ONLY: xyz_to_dir
     use ModMain,           ONLY: TypeCoordSystem, MaxDim
     use CON_axes,          ONLY: transform_matrix
-
-    implicit none
 
     !INPUT ARGUMENTS:
     real, intent(in)    :: tSimulation    ! Simulation time

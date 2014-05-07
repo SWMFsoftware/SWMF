@@ -3,7 +3,8 @@
 real function logvar_ionosphere(NameLogvar)
   use ModProcMH,  ONLY: iProc
   use ModIO,      ONLY: write_myname
-  use ModIonoPotential, ONLY: nThetaIono, IonoPotential_II
+  use GM_couple_ie, ONLY: nThetaIono, IonoPotential_II
+
   implicit none
   character (len=*), intent(in) :: NameLogvar
   integer :: nWarn = 0 ! warn multiple times to catch multiple log variables

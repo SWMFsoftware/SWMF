@@ -2,10 +2,11 @@
 !BOP
 !ROUTINE: calc_inner_bc_velocity - calculate velocity at the inner boundary
 !INTERFACE:
-		  subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
+subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
   !USES:
-  use ModIonoPotential
+  use GM_couple_ie,      ONLY: nThetaIono, nPhiIono, rIonosphere, &
+       dIonoPotential_DII, get_ie_grid_index
   use ModMain,           ONLY: TypeCoordSystem, MaxDim
   use ModCoordTransform, ONLY: xyz_to_dir, cross_product
   use CON_planet_field,  ONLY: map_planet_field

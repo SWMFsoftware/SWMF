@@ -1,27 +1,29 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !==============================================================================
 
-module ModIhBuffer
+module GM_couple_ih
+
+  ! Couple with IH component
 
   implicit none
   save
 
-  character(len=3) :: NameCoord
-  integer          :: nY, nZ
-  real             :: yMin, yMax, zMin, zMax
-  real, allocatable:: State_VII(:,:,:)
+  private ! except
 
-end module ModIhBuffer
+  public:: GM_put_from_ih         ! coupling toolkit based coupler
+  public:: GM_put_from_ih_buffer  ! buffer grid based coupler
 
-module GM_couple_ih
-
-  implicit none
+  character(len=3),  public:: NameCoord
+  integer,           public:: nY, nZ
+  real,              public:: yMin, yMax, zMin, zMax
+  real, allocatable, public:: State_VII(:,:,:)
 
 contains
-
+  !============================================================================
   !BOP
-  !ROUTINE: GM_put_from_ih - tranfrom and put the data got from IH_
+  !ROUTINE: GM_put_from_ih - transform and put the data got from IH_
   !INTERFACE:
   subroutine GM_put_from_ih(nPartial,&
        iPutStart,&
@@ -35,8 +37,6 @@ contains
     use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_,&
          B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, UnitP_, UnitB_
-
-    implicit none
 
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -68,10 +68,6 @@ contains
          BuffBy_   =6,&
          BuffBz_   =7,&
          BuffP_    =8
-
-
-    !----------------------------------------------------------
-
 
     !-----------------------------------------------------------------------
 
@@ -107,7 +103,7 @@ contains
     end if
   end subroutine GM_put_from_ih
 
-  !=============================================================================
+  !============================================================================
 
   subroutine GM_put_from_ih_buffer( &
        NameCoordIn, nYIn, nZIn, yMinIn, yMaxIn, zMinIn, zMaxIn, Buffer_VII)
@@ -115,9 +111,6 @@ contains
     use ModVarIndexes
     use ModPhysics, ONLY: Si2No_V, UnitX_,UnitRho_,UnitU_,UnitB_,UnitP_
     use ModMain, ONLY: TypeBc_I
-    use ModIhBuffer
-
-    implicit none
 
     character(len=*), intent(in) :: NameCoordIn
     integer,          intent(in) :: nYIn, nZIn
@@ -126,11 +119,13 @@ contains
 
     integer                      :: j, k
     character(len=*), parameter  :: NameSub = 'GM_put_from_ih_buffer.f90'
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(.not.allocated(State_VII)) then
        ! Check coordinate system. Only GSM and GSE make sense.
        if(NameCoordIn /= 'GSM' .and. NameCoord /= 'GSE') &
-            call CON_stop(NameSub//': cannot handle coord system='//NameCoordIn)
+            call CON_stop(NameSub//': cannot handle coord system=' &
+            //NameCoordIn)
+
        ! Store grid information
        NameCoord = NameCoordIn
        yMin = yMinIn * Si2No_V(UnitX_)
@@ -155,18 +150,12 @@ contains
 
     ! Convert units and velocity to momentum
     do k=1,nZ; do j=1,nY
-       State_VII(Rho_,j,k)          = State_VII(Rho_,j,k)    * Si2No_V(UnitRho_)
+       State_VII(Rho_,j,k)          = State_VII(Rho_,j,k)    *Si2No_V(UnitRho_)
        State_VII(RhoUx_:RhoUz_,j,k) = &
-            State_VII(Rho_,j,k)*State_VII(Rhoux_:RhoUz_,j,k) * Si2No_V(UnitU_)
-       State_VII(Bx_:Bz_,j,k)       = State_VII(Bx_:Bz_,j,k) * Si2No_V(UnitB_)
-       State_VII(P_,j,k)            = State_VII(P_,j,k)      * Si2No_V(UnitP_)
+            State_VII(Rho_,j,k)*State_VII(Rhoux_:RhoUz_,j,k) *Si2No_V(UnitU_)
+       State_VII(Bx_:Bz_,j,k)       = State_VII(Bx_:Bz_,j,k) *Si2No_V(UnitB_)
+       State_VII(P_,j,k)            = State_VII(P_,j,k)      *Si2No_V(UnitP_)
     end do; end do
-
-    !write(*,*)'GM_put_from_ih_buffer finished'
-    !write(*,*)'Rho=',State_VII(Rho_,1,1)*No2Io_V(UnitRho_)
-    !write(*,*)'U=',State_VII(RhoUx_:RhoUz_,1,1)/State_VII(Rho_,1,1)*No2Io_V(UnitU_)
-    !write(*,*)'B=',State_VII(Bx_:Bz_,1,1)*No2Io_V(UnitB_)
-    !write(*,*)'P=',State_VII(p_,1,1)*No2Io_V(UnitP_)
 
   end subroutine GM_put_from_ih_buffer
 

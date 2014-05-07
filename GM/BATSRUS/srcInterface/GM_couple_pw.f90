@@ -1,13 +1,23 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+module GM_couple_pw
 
-module ModPwGrid
+  ! Coupling with the Polar Wind component.
 
   use ModNumConst,   ONLY: cDegToRad
   use ModMultiFluid, ONLY: nIonFluid
   
   implicit none
   save
+
+  ! cannot use private as read_pw_buffer needs almost all the variables
+
+  ! This is what the SWMF couplers use
+  public:: GM_get_for_pw
+  public:: GM_put_from_pw
+
+  ! Local variables
 
   character (len=3) :: NamePwCoord = '???'
   integer, parameter :: nCoord=3
@@ -19,7 +29,7 @@ module ModPwGrid
        StateGm1_VI(:,:),StateGm2_VI(:,:)
   
   integer, allocatable :: list1_I(:),lptr1_I(:), lend1_I(:),&
-       list2_I(:),lptr2_I(:), lend2_I(:)  
+       list2_I(:), lptr2_I(:), lend2_I(:)  
 
   integer, parameter :: nOuterPoint=12
   real,    parameter :: dThetaOuter=5.0*cDegToRad
@@ -32,30 +42,22 @@ module ModPwGrid
   integer :: nPoint1=-1, nPoint2=-1,nTriangle1=-1,nTriangle2=-1
   integer :: nLinePw1 = -1, nLinePw2 = -1
 
-end module ModPwGrid
-
-module GM_couple_pw
-
-  implicit none
-
 contains 
-
+  !===========================================================================
   subroutine GM_get_for_pw(nTotalLine, Buffer_I)
 
     use ModVarIndexes, ONLY: p_
-    use ModPwGrid,     ONLY: CoordXyzPw_DI
     use ModMain,       ONLY: nBlock
     use ModProcMH,     ONLY: nProc, iComm
     use ModMpi
     use ModPhysics, ONLY: No2Si_V, UnitP_
-    implicit none
 
     integer,intent(in)  :: nTotalLine
     real,   intent(out) :: Buffer_I(nTotalLine)
     real, allocatable   :: LocalBuffer_I(:)
     real                :: WeightAndP_I(2)
     integer             :: iLine,iError
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     allocate(LocalBuffer_I(nTotalLine))
 
@@ -78,6 +80,9 @@ contains
     deallocate(LocalBuffer_I)
 
   end subroutine GM_get_for_pw
+
+  !============================================================================
+
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
     use CON_coupler, ONLY: PW_, Grid_C
@@ -86,7 +91,6 @@ contains
          SpeciesLast_, NameVar_V
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
-    use ModPwGrid
     use ModNumConst, ONLY: cTwoPi,cHalfPi
     use ModTriangulateSpherical,ONLY:trmesh, trplot
     use CON_axes, ONLY: transform_matrix
@@ -94,7 +98,6 @@ contains
     use CON_planet_field,  ONLY: map_planet_field
     use ModIoUnit, ONLY: UnitTmp_
 
-    implicit none
     character (len=*),parameter :: NameSub='GM_put_from_pw'
 
     integer, parameter :: Theta_=1, Phi_=2
@@ -112,7 +115,7 @@ contains
     integer :: Tmp_array(nFieldLine)
     logical :: DoTest, DoTestMe
     integer :: iError=0 !error counter for triangulation subroutine
-    !----------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -179,7 +182,8 @@ contains
           iUGmFirst   = iRhoGmLast + 1
           iUGmLast    = iUGmFirst
 
-          iRhoPwLast = min(iRhoPwLast, iRhoPwFirst + SpeciesLast_ - SpeciesFirst_)
+          iRhoPwLast = &
+               min(iRhoPwLast, iRhoPwFirst + SpeciesLast_ - SpeciesFirst_)
        elseif(UseMultiIon)then
           ! Fluid densities and velocities
           iRhoGmFirst = 1
@@ -238,8 +242,8 @@ contains
     end if
 
     if(nLinePw1+nLinePw2 /= nFieldLine .or. nVarPw /= nVar)then
-       write(*,*)NameSub,' ERROR: nLinePw=',nLinePw1,'/= nFieldLine=',nFieldLine,&
-            ' or nVarPw=',nVarPw,' /= nVar=',nVar
+       write(*,*)NameSub,' ERROR: nLinePw=',nLinePw1,'/= nFieldLine=', &
+            nFieldLine,' or nVarPw=',nVarPw,' /= nVar=',nVar
        call CON_stop(NameSub,' nFieldLine or nVar has changed')
     end if
 
@@ -266,23 +270,23 @@ contains
           ! Set values based on if fluid is shared by PW & GM.
           if (iCoupleFluid(i)==-1) then ! Fluid NOT in PW.
              where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
-                StateGm1_VI(i,           1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
+                StateGm1_VI(i,1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              elsewhere                           ! Southern Hemisphere
-                StateGm2_VI(i,           1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
+                StateGm2_VI(i,1:nFieldline) = 1.67E-24 * Si2No_V(UnitRho_)
                 StateGm2_VI(i+nIonFluid, 1:nFieldLine) = 0.0
              end where
           else                          ! Fluid IS in PW.
              where(Buffer_VI(Theta_,:)< cHalfPi) ! Northern Hemisphere.
                 StateGm1_VI(i,           1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i),            :) * Si2No_V(UnitRho_)
+                     Buffer_VI(iCoupleFluid(i),:) * Si2No_V(UnitRho_)
                 StateGm1_VI(i+nIonFluid, 1:nFieldLine) = &
                      Buffer_VI(iCoupleFluid(i)+nSpeciesPw, :) * Si2No_V(UnitU_)
              elsewhere                           ! Southern Hemisphere
                 StateGm2_VI(i,           1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i),            :) * Si2No_V(UnitRho_)
+                     Buffer_VI(iCoupleFluid(i),:) * Si2No_V(UnitRho_)
                 StateGm2_VI(i+nIonFluid, 1:nFieldLine) = &
-                     Buffer_VI(iCoupleFluid(i)+nSpeciesPw, :) * Si2No_V(UnitU_)
+                     Buffer_VI(iCoupleFluid(i)+nSpeciesPw,:) * Si2No_V(UnitU_)
              end where
           end if
        end do
@@ -291,12 +295,14 @@ contains
           write(*,*)'Max Hp Density:', maxval(Buffer_VI(3, :))
           write(*,*)'Max Op Density:', maxval(Buffer_VI(4, :))
           write(*,*)'Max He Density:', maxval(Buffer_VI(5, :))
-          write(*,*)'Max Sw Density:', maxval(StateGm1_VI(1, :))/Si2No_V(UnitRho_)
+          write(*,*)'Max Sw Density:', &
+               maxval(StateGm1_VI(1, :))/Si2No_V(UnitRho_)
 
           write(*,*)'Max Hp Velocity:', maxval(Buffer_VI(6, :))
           write(*,*)'Max Op Velocity:', maxval(Buffer_VI(7, :))
           write(*,*)'Max He Velocity:', maxval(Buffer_VI(8, :))
-          write(*,*)'Max Sw Velocity:', maxval(StateGm1_VI(4, :))/Si2No_V(UnitU_)
+          write(*,*)'Max Sw Velocity:', &
+               maxval(StateGm1_VI(4, :))/Si2No_V(UnitU_)
        end if
 
     else
@@ -422,8 +428,10 @@ contains
        end do
        write(*,*) NameSub,': Writing plot of triangulation'
        open ( UnitTmp_, file = 'TestTriangulation.eps' )
-       call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, CoordXyzPw1_DI(x_,1:nPoint1), &
-            CoordXyzPw1_DI(y_,1:nPoint1), CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
+       call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, &
+            CoordXyzPw1_DI(x_,1:nPoint1), &
+            CoordXyzPw1_DI(y_,1:nPoint1), &
+            CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
             lend1_I, 'test1 triangulation',.true., iError )
        close(UnitTmp_)
     end if

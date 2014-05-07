@@ -11,6 +11,52 @@ module GM_wrapper
 
   implicit none
 
+  private ! except
+
+  ! CON wrapper
+  public:: GM_set_param
+  public:: GM_init_session
+  public:: GM_run
+  public:: GM_save_restart
+  public:: GM_finalize
+
+  ! Generic coupling
+  public:: GM_get_grid_info
+  public:: GM_find_points
+
+  ! IE coupling
+  public:: GM_get_for_ie
+  public:: GM_put_from_ie
+  public:: GM_put_mag_from_ie
+
+  ! IH coupling
+  public:: GM_put_from_ih           ! coupling toolkit based coupler
+  public:: GM_put_from_ih_buffer    ! buffer grid based coupler
+
+  ! IM coupling
+  public:: GM_get_for_im_trace_crcm ! for CRCM
+  public:: GM_get_for_im_crcm       ! for CRCM
+  public:: GM_get_sat_for_im_crcm   ! for CRCM
+  public:: GM_get_for_im_trace      ! for RAM
+  public:: GM_get_for_im_line       ! for RAM
+  public:: GM_get_for_im            ! for RCM
+  public:: GM_satinit_for_im        ! initialize satellite
+  public:: GM_get_sat_for_im        ! get satellite info
+  public:: GM_get_multi_for_im      ! check if multifluid is used
+  public:: GM_put_from_im           ! from IM
+
+  ! PT coupling
+  public:: GM_get_for_pt
+
+  ! PW coupling
+  public:: GM_get_for_pw
+  public:: GM_put_from_pw
+
+  ! RB coupling
+  public:: GM_get_for_rb_trace
+  public:: GM_get_for_rb
+  public:: GM_get_sat_for_rb
+
 contains
 
   subroutine GM_set_param(CompInfo, TypeAction)
@@ -24,8 +70,6 @@ contains
     use ModB0, ONLY: DtUpdateB0, DoUpdateB0
     use CON_physics, ONLY: get_time, get_planet
     use ModTimeConvert, ONLY: time_real_to_int
-
-    implicit none
 
     character (len=*), parameter :: NameSub='GM_set_param'
 
@@ -97,7 +141,6 @@ contains
     use ModVarIndexes,ONLY: nVar
     use CON_comp_param,ONLY:GM_
 
-    implicit none
     !REVISION HISTORY:
     !23Aug03 I.Sokolov <igorsok@umich.edu> - initial prototype/prolog/code
     !03Sep03 G.Toth    <gtoth@umich.edu> - removed test_message_pass
@@ -158,8 +201,6 @@ contains
     use BATL_lib, ONLY: nDim
     use ModMain,  ONLY: iNewGrid, iNewDecomposition
 
-    implicit none
-
     integer, intent(out):: nDimOut    ! grid dimensionality
     integer, intent(out):: iGridOut   ! grid index (increases with AMR)
     integer, intent(out):: iDecompOut ! decomposition index 
@@ -181,8 +222,6 @@ contains
     use BATL_lib,   ONLY: MaxDim, find_grid_block
     use ModPhysics, ONLY: Si2No_V, UnitX_
 
-    implicit none
-
     integer, intent(in) :: nDimIn                ! dimension of position vectors
     integer, intent(in) :: nPoint                ! number of positions
     real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
@@ -202,16 +241,14 @@ contains
     end do
 
   end subroutine GM_find_points
-  !==============================================================================
+  !============================================================================
   subroutine GM_print_variables(NameSource)
 
     use ModMain, ONLY: NameThisComp
     use ModNumConst
     use ModImPressure
-    use ModIonoPotential,ONLY:IonoPotential_II
-    use ModIeGrid,       ONLY:nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I
     use ModIoUnit, ONLY: UNITTMP_
-    implicit none
+
     character(len=*), parameter :: NameSub='GM_print_variables'
 
     character(len=*),intent(in) :: NameSource
@@ -247,18 +284,13 @@ contains
           end do
        end do
     case('IE')
-       do j=1,nPhiIono
-          do i=1,nThetaIono
-             write(UNITTMP_,'(2i4,3G14.6)')i,j,&
-                  ThetaIono_I(i),PhiIono_I(j),IonoPotential_II(i,j)
-          end do
-       end do
+       call print_iono_potential
     end select
     close(UNITTMP_)
 
   end subroutine GM_print_variables
 
-  !=============================================================================
+  !============================================================================
 
   subroutine GM_init_session(iSession, TimeSimulation)
 
@@ -267,7 +299,6 @@ contains
     use ModMain,     ONLY: UseIM
     use CON_physics, ONLY: get_time
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
-    implicit none
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -309,21 +340,18 @@ contains
 
   end subroutine GM_init_session
 
-  !==============================================================================
+  !============================================================================
 
   subroutine GM_finalize(TimeSimulation)
 
     use ModMain, ONLY: UseIe, time_loop
-    use ModFieldAlignedCurrent, ONLY: &
-         clean_mod_field_aligned_current
-    implicit none
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='GM_finalize'
 
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! We are not advancing in time any longer
     time_loop = .false.
 
@@ -338,8 +366,6 @@ contains
   !==============================================================================
 
   subroutine GM_save_restart(TimeSimulation)
-
-    implicit none
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -356,8 +382,6 @@ contains
 
     use ModProcMH, ONLY: iProc
     use ModMain,   ONLY: Time_Simulation
-
-    implicit none
 
     !INPUT/OUTPUT ARGUMENTS:
     real, intent(inout) :: TimeSimulation   ! current time of component

@@ -9,7 +9,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
        SpeciesFirst_, SpeciesLast_, UseMultiSpecies, IsMhd
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
-  use ModPwGrid
+  use GM_couple_pw
   use ModTriangulateSpherical, ONLY: find_triangle_sph
   use ModPhysics,        ONLY: No2Io_V, UnitU_, UnitRho_
   use ModB0,             ONLY: get_b0
