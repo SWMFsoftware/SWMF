@@ -20,6 +20,7 @@ module GM_couple_rb
 
   public:: GM_get_for_rb_trace
   public:: GM_get_for_rb
+  public:: GM_satinit_for_rb
   public:: GM_get_sat_for_rb
 
   ! Local variables

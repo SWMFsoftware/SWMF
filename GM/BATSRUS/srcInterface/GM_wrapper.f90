@@ -19,8 +19,12 @@ module GM_wrapper
   public:: GM_run
   public:: GM_save_restart
   public:: GM_finalize
+  public:: GM_print_variables
 
-  ! Generic coupling
+  ! Coupling toolkit
+  public:: GM_synchronize_refinement
+
+  ! Point coupling
   public:: GM_get_grid_info
   public:: GM_find_points
 
@@ -55,6 +59,7 @@ module GM_wrapper
   ! RB coupling
   public:: GM_get_for_rb_trace
   public:: GM_get_for_rb
+  public:: GM_satinit_for_rb
   public:: GM_get_sat_for_rb
 
 contains
