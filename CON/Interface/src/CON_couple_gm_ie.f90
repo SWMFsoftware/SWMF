@@ -15,6 +15,12 @@ module CON_couple_gm_ie
   !USES:
   use CON_coupler
 
+  use GM_wrapper, ONLY: GM_print_variables, GM_get_for_ie, GM_put_mag_from_ie, GM_put_from_ie, &
+       GM_get_for_im, GM_get_for_im_crcm, &
+       GM_get_for_im_line, GM_get_for_im_trace, GM_get_for_im_trace_crcm, &
+       GM_get_sat_for_im, GM_get_sat_for_im_crcm, GM_put_from_im, &
+       GM_satinit_for_im
+
   implicit none
 
   private ! except

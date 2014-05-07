@@ -1,504 +1,522 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 ! Wrapper for the empty Global Magnetosphere (GM) component
 !==========================================================================
-subroutine GM_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module GM_wrapper
 
-  implicit none
-
-  character (len=*), parameter :: NameSub='GM_set_param'
-
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
-
-  case default
-     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-  end select
-
-end subroutine GM_set_param
-
-!==============================================================================
-
-subroutine GM_init_session(iSession, TimeSimulation)
+  use CON_coupler
 
   implicit none
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+contains
 
-  character(len=*), parameter :: NameSub='GM_init_session'
+  subroutine GM_set_param(CompInfo, TypeAction)
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    use CON_comp_info
 
-end subroutine GM_init_session
+    implicit none
 
-!==============================================================================
+    character (len=*), parameter :: NameSub='GM_set_param'
 
-subroutine GM_finalize(TimeSimulation)
+    ! Arguments
+    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)     :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-  implicit none
+    case default
+       call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    end select
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  end subroutine GM_set_param
 
-  character(len=*), parameter :: NameSub='GM_finalize'
+  !==============================================================================
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  subroutine GM_init_session(iSession, TimeSimulation)
 
-end subroutine GM_finalize
+    implicit none
 
-!==============================================================================
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-subroutine GM_save_restart(TimeSimulation)
+    character(len=*), parameter :: NameSub='GM_init_session'
 
-  implicit none
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  end subroutine GM_init_session
 
-  character(len=*), parameter :: NameSub='GM_save_restart'
+  !==============================================================================
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  subroutine GM_finalize(TimeSimulation)
 
-end subroutine GM_save_restart
+    implicit none
 
-!==============================================================================
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-subroutine GM_run(TimeSimulation,TimeSimulationLimit)
+    character(len=*), parameter :: NameSub='GM_finalize'
 
-  implicit none
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+  end subroutine GM_finalize
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+  !==============================================================================
 
-  character(len=*), parameter :: NameSub='GM_run'
+  subroutine GM_save_restart(TimeSimulation)
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    implicit none
 
-end subroutine GM_run
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-!==============================================================================
-subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
+    character(len=*), parameter :: NameSub='GM_save_restart'
 
-  implicit none
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  integer, intent(out):: nDimOut    ! grid dimensionality
-  integer, intent(out):: iGridOut   ! grid index (increases with AMR)
-  integer, intent(out):: iDecompOut ! decomposition index
-  
-  character(len=*), parameter :: NameSub = 'GM_get_grid_info'
+  end subroutine GM_save_restart
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  !==============================================================================
 
-end subroutine GM_get_grid_info
+  subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
-!==============================================================================
-subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+    implicit none
 
-  implicit none
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout) :: TimeSimulation   ! current time of component
 
-  integer, intent(in) :: nDimIn                ! dimension of position vectors
-  integer, intent(in) :: nPoint                ! number of positions
-  real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
-  integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+    !INPUT ARGUMENTS:
+    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
-  character(len=*), parameter:: NameSub = 'GM_find_points'
+    character(len=*), parameter :: NameSub='GM_run'
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-end subroutine GM_find_points
-!==============================================================================
-subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
-  implicit none
+  end subroutine GM_run
 
-  integer, intent(in) :: iSize,jSize,nVar
-  real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
-  character (len=*), intent(in) :: NameVar
+  !==============================================================================
+  subroutine GM_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
-  character (len=*), parameter :: NameSub='GM_get_for_im'
+    implicit none
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-end subroutine GM_get_for_im
+    integer, intent(out):: nDimOut    ! grid dimensionality
+    integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+    integer, intent(out):: iDecompOut ! decomposition index
 
-!==============================================================================
-subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
+    character(len=*), parameter :: NameSub = 'GM_get_grid_info'
 
-  ! Ray tracing for RAM type codes 
-  ! Provides total number of points along rays
-  ! and the number of variables to pass to IM
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  implicit none
-  integer, intent(in)           :: nRadius, nLon
-  integer, intent(out)          :: nVarLine, nPointLine
-  character (len=*), intent(in) :: NameVar
+  end subroutine GM_get_grid_info
 
-  character(len=*), parameter :: NameSub = 'GM_get_for_im_trace'
-  !---------------------------------------------------------------------
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  !==============================================================================
+  subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
-end subroutine GM_get_for_im_trace
-!==============================================================================
+    implicit none
 
-subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
-     nVarLine, nPointLine, BufferLine_VI)
+    integer, intent(in) :: nDimIn                ! dimension of position vectors
+    integer, intent(in) :: nPoint                ! number of positions
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+    integer, intent(out):: iProc_I(nPoint)       ! processor owning position
 
-  implicit none
+    character(len=*), parameter:: NameSub = 'GM_find_points'
 
-  integer, intent(in) :: nRadius, nLon
-  real,    intent(out):: MapOut_DSII(3,2,nRadius,nLon)
-  integer, intent(in) :: nPointLine, nVarLine
-  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  character (len=*), parameter :: NameSub = 'GM_get_for_im_line'
-  !---------------------------------------------------------------------
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_find_points
 
-end subroutine GM_get_for_im_line
+  !==============================================================================
 
-!=============================================================================
+  subroutine GM_print_variables(NameSource)
 
-subroutine GM_get_for_rb_trace(iSize,jSize,NameVar,nVarLine,nPointLine)
-  implicit none
+    implicit none
 
-  integer, intent(in) :: iSize,jSize
-  character (len=*), intent(in) :: NameVar
-  integer, intent(out):: nVarLine,nPointLine
+    character(len=*), parameter :: NameSub='GM_print_variables'
 
-  character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
+    character(len=*), intent(in) :: NameSource
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-end subroutine GM_get_for_rb_trace
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-!==============================================================================
+  end subroutine GM_print_variables
 
-subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar, &
-     BufferLine_VI, nVarLine, nPointLine)
+  !==============================================================================
 
-  implicit none
+  subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
-  integer, intent(in) :: iSize,jSize,nVar
-  real, intent(out)   :: Buffer_IIV(iSize,jSize,nVar)
-  integer, intent(in) :: nVarLine, nPointLine
-  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    implicit none
+    integer,intent(in) :: iProc0,iCommUnion
+    character(len=*), parameter :: NameSub='GM_synchronize_refinement'
 
-  character (len=*), parameter :: NameSub='GM_get_for_rb'
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-end subroutine GM_get_for_rb
+  end subroutine GM_synchronize_refinement
 
-!==============================================================================
-subroutine GM_satinit_for_rb(nSats)
-  implicit none
-  integer :: nSats
-end subroutine GM_satinit_for_rb
-!==============================================================================
-subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
-  implicit none
-  
-  integer, intent(in)               :: nSats
-  real, intent(out)                 :: Buffer_III(4,2,nSats)
-  character (len=100), intent(out)  :: Buffer_I(nSats)
-end subroutine GM_get_sat_for_rb
-!==============================================================================
-subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar,NameVar)
-  implicit none
+  !==============================================================================
+  subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
+    implicit none
 
-  integer, intent(in) :: iSize,jSize,nVar
-  real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
-  character (len=*), intent(in) :: NameVar
+    integer, intent(in) :: iSize,jSize,nVar
+    real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
+    character (len=*), intent(in) :: NameVar
 
-  character (len=*), parameter :: NameSub='GM_get_for_ie'
+    character (len=*), parameter :: NameSub='GM_get_for_im'
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-end subroutine GM_get_for_ie
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_get_for_im
 
-!==============================================================================
+  !==============================================================================
+  subroutine GM_get_for_im_trace(nRadius, nLon, nVarLine, nPointLine, NameVar)
 
-subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,NameVar)
-  implicit none
+    ! Ray tracing for RAM type codes 
+    ! Provides total number of points along rays
+    ! and the number of variables to pass to IM
 
-  integer, intent(in) :: iSizeIn,jSizeIn
-  real, intent(in) :: Buffer_II(iSizeIn,jSizeIn)
-  character(len=*), intent(in) :: NameVar
+    implicit none
+    integer, intent(in)           :: nRadius, nLon
+    integer, intent(out)          :: nVarLine, nPointLine
+    character (len=*), intent(in) :: NameVar
 
-  character(len=*), parameter :: NameSub='GM_put_from_im'
+    character(len=*), parameter :: NameSub = 'GM_get_for_im_trace'
+    !---------------------------------------------------------------------
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-end subroutine GM_put_from_im
+  end subroutine GM_get_for_im_trace
+  !==============================================================================
 
-!==============================================================================
+  subroutine GM_get_for_im_line(nRadius, nLon, MapOut_DSII, &
+       nVarLine, nPointLine, BufferLine_VI)
 
-subroutine GM_put_from_ie(Buffer_II,iSize,jSize,NameVar)
+    implicit none
 
-  implicit none
+    integer, intent(in) :: nRadius, nLon
+    real,    intent(out):: MapOut_DSII(3,2,nRadius,nLon)
+    integer, intent(in) :: nPointLine, nVarLine
+    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
 
-  character(len=*), parameter :: NameSub='GM_put_from_ie'
+    character (len=*), parameter :: NameSub = 'GM_get_for_im_line'
+    !---------------------------------------------------------------------
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  integer, intent(in) :: iSize,jSize
-  real, intent(in) :: Buffer_II(iSize,jSize)
-  character(len=*), intent(in) :: NameVar
+  end subroutine GM_get_for_im_line
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,nVar,NameVar)
+    implicit none
 
-end subroutine GM_put_from_ie
+    integer, intent(in) :: iSizeIn,jSizeIn,nVar
+    real, intent(in) :: Buffer_II(iSizeIn,jSizeIn)
+    character(len=*), intent(in) :: NameVar
 
-!=============================================================================
+    character(len=*), parameter :: NameSub='GM_put_from_im'
 
-! This function is only needed because of IH/BATSRUS/src/write_logfile
-real function logvar_ionosphere()
-  call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
-  logvar_ionosphere = -777.77
-end function logvar_ionosphere
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_put_from_im
 
-!=============================================================================
+  !==============================================================================
 
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
-subroutine calc_inner_bc_velocity
-  call CON_stop('calc_inner_bc_velocity: '// &
-       'GM_ERROR: empty version cannot be used!')
-end subroutine calc_inner_bc_velocity
 
-!==============================================================================
+  subroutine GM_satinit_for_im(nSats)
 
-subroutine map_inner_bc_jouleheating
-  call CON_stop('map_inner_bc_jouleheating: '// &
-       'GM_ERROR: empty version cannot be used!')
-end subroutine map_inner_bc_jouleheating
+    implicit none
+    character (len=*), parameter :: NameSub='read_pw_buffer'
 
-!==============================================================================
+    integer, intent(out) :: nSats
 
-subroutine GM_print_variables(NameSource)
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
-  implicit none
+  end subroutine GM_satinit_for_im
 
-  character(len=*), parameter :: NameSub='GM_print_variables'
+  !==============================================================================
 
-  character(len=*), intent(in) :: NameSource
+  subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    implicit none
 
-end subroutine GM_print_variables
+    integer, intent(in)               :: nSats
+    real, intent(out)                 :: Buffer_III(3,2,nSats)
+    character (len=100), intent(out)  :: Buffer_I(nSats)
 
-!==============================================================================
+  end subroutine GM_get_sat_for_im
 
-subroutine GM_synchronize_refinement(iProc0,iCommUnion)
+  !==============================================================================
 
-  implicit none
-  integer,intent(in) :: iProc0,iCommUnion
-  character(len=*), parameter :: NameSub='GM_synchronize_refinement'
-  
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
 
-end subroutine GM_synchronize_refinement
+    implicit none
 
-!==============================================================================
+    integer, intent(in)               :: nSats
+    real, intent(out)                 :: Buffer_III(4,2,nSats)
+    character (len=100), intent(out)  :: Buffer_I(nSats)
 
-subroutine GM_put_from_ih(nPartial,iPutStart,Put,Weight,DoAdd,StateSI_V,&
-     nVar)
+  end subroutine GM_get_sat_for_im_crcm
 
-  ! Derived type arguments, it is easier not to declare them
-  character(len=*), parameter :: NameSub='GM_put_from_ih'
+  !==============================================================================
+  subroutine GM_get_multi_for_im(DoMultiFluidIM)
+    implicit none
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    logical, intent(out) :: DoMultiFluidIM
 
-end subroutine GM_put_from_ih
+  end subroutine GM_get_multi_for_im
 
-!==============================================================================
+  !==============================================================================
+  subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
+       nPointLine)
 
-subroutine GM_put_from_ih_buffer( &
-     NameCoord, nY, nZ, yMin, yMax, zMin, zMax, Buffer_VII)
+    implicit none
 
-  character(len=*), intent(in) :: NameCoord
-  integer,          intent(in) :: nY, nZ
-  real,             intent(in) :: yMin, yMax, zMin, zMax
-  real,             intent(in) :: Buffer_VII(8, nY, nZ)
+    integer, intent(in)           :: iSizeIn, jSizeIn
+    character (len=*), intent(in) :: NameVar
+    integer, intent(out)          :: nVarLine, nPointLine
 
-  character(len=*), parameter :: NameSub='GM_put_from_ih_buffer'
-  
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    character (len=*), parameter :: NameSub='GM_get_for_im_trace_crcm'
 
-end subroutine GM_put_from_ih_buffer
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
 
-!==============================================================================
+  end subroutine GM_get_for_im_trace_crcm
 
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
-subroutine read_ih_buffer(y, z, State_V)
+  !==============================================================================
+  subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
+       BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-  real, intent(in) :: y, z
-  real, intent(out):: State_V(8)
-  character(len=*), parameter :: NameSub='read_ih_buffer'
+    implicit none
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+    character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
 
-end subroutine read_ih_buffer
+    integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+    real, intent(out)   :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
 
-!==============================================================================
+    integer, intent(in) :: nPointLine, nVarLine
+    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    character(len=*), intent(in):: NameVar
 
-subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
 
-  implicit none
-  character (len=*),parameter :: NameSub='GM_put_from_pw'
-  
-  integer, intent(in)           :: nVar, nFieldLine
-  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
-  character (len=*), intent(in) :: Name_V(nVar)
+  end subroutine GM_get_for_im_crcm
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-  
-end subroutine GM_put_from_pw
-!==============================================================================
+  !==============================================================================
 
-subroutine GM_get_for_pw(nTotalLine,p_I)
+  subroutine GM_get_for_rb_trace(iSize,jSize,NameVar,nVarLine,nPointLine)
+    implicit none
 
-  implicit none
-  character (len=*),parameter :: NameSub='GM_get_for_pw'
-  
-  integer, intent(in)           :: nTotalLine
-  real, intent(out)             :: p_I(nTotalLine)
+    integer, intent(in) :: iSize,jSize
+    character (len=*), intent(in) :: NameVar
+    integer, intent(out):: nVarLine,nPointLine
 
+    character (len=*), parameter :: NameSub='GM_get_for_rb_trace'
 
-  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-  
-end subroutine GM_get_for_pw
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_get_for_rb_trace
 
-!==============================================================================
+  !==============================================================================
 
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
-subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+  subroutine GM_get_for_rb(Buffer_IIV,iSize,jSize,nVar, &
+       BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-  implicit none
-  character (len=*),parameter :: NameSub='read_pw_buffer'
+    implicit none
 
-  real, intent(in) :: FaceCoords_D(3)
-  integer, intent(in) :: nVar
-  real, intent(inout) :: FaceState_V(nVar)
+    integer, intent(in) :: iSize,jSize,nVar
+    real, intent(out)   :: Buffer_IIV(iSize,jSize,nVar)
+    integer, intent(in) :: nVarLine, nPointLine
+    real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    character (len=*), intent(in):: NameVar
 
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+    character (len=*), parameter :: NameSub='GM_get_for_rb'
 
-end subroutine read_pw_buffer
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_get_for_rb
 
-!==============================================================================
+  !==============================================================================
+  subroutine GM_satinit_for_rb(nSats)
+    implicit none
+    integer :: nSats
+  end subroutine GM_satinit_for_rb
+  !==============================================================================
+  subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
+    implicit none
 
-subroutine GM_satinit_for_im(nSats)
+    integer, intent(in)               :: nSats
+    real, intent(out)                 :: Buffer_III(4,2,nSats)
+    character (len=100), intent(out)  :: Buffer_I(nSats)
+  end subroutine GM_get_sat_for_rb
 
-  implicit none
-  character (len=*), parameter :: NameSub='read_pw_buffer'
+  !==============================================================================
 
-  integer, intent(out) :: nSats
+  subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
+    implicit none
 
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+    integer, intent(in) :: iSize,jSize,nVar
+    real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
 
-end subroutine GM_satinit_for_im
+    character (len=*), parameter :: NameSub='GM_get_for_ie'
 
-!==============================================================================
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_get_for_ie
 
-subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
+  subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
 
-  implicit none
-  
-  integer, intent(in)               :: nSats
-  real, intent(out)                 :: Buffer_III(3,2,nSats)
-  character (len=100), intent(out)  :: Buffer_I(nSats)
-  
-end subroutine GM_get_sat_for_im
+    implicit none
 
-!==============================================================================
+    character(len=*), parameter :: NameSub='GM_put_from_ie'
 
-subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
+    integer, intent(in) :: iSize,jSize
+    real, intent(in) :: Buffer_II(iSize,jSize)
 
-  implicit none
-  
-  integer, intent(in)               :: nSats
-  real, intent(out)                 :: Buffer_III(4,2,nSats)
-  character (len=100), intent(out)  :: Buffer_I(nSats)
-  
-end subroutine GM_get_sat_for_im_crcm
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-!==============================================================================
-subroutine GM_get_multi_for_im(DoMultiFluidIM)
-  implicit none
+  end subroutine GM_put_from_ie
 
-  logical, intent(out) :: DoMultiFluidIM
+  !=============================================================================
 
-end subroutine GM_get_multi_for_im
+  ! This function is only needed because of IH/BATSRUS/src/write_logfile
+  real function logvar_ionosphere()
+    call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
+    logvar_ionosphere = -777.77
+  end function logvar_ionosphere
 
-!==============================================================================
-subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
-     nPointLine)
+  !=============================================================================
 
-  implicit none
+  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+  subroutine calc_inner_bc_velocity
+    call CON_stop('calc_inner_bc_velocity: '// &
+         'GM_ERROR: empty version cannot be used!')
+  end subroutine calc_inner_bc_velocity
 
-  integer, intent(in)           :: iSizeIn, jSizeIn
-  character (len=*), intent(in) :: NameVar
-  integer, intent(out)          :: nVarLine, nPointLine
+  !==============================================================================
 
-  character (len=*), parameter :: NameSub='GM_get_for_im_trace_crcm'
-  
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
+  subroutine map_inner_bc_jouleheating
+    call CON_stop('map_inner_bc_jouleheating: '// &
+         'GM_ERROR: empty version cannot be used!')
+  end subroutine map_inner_bc_jouleheating
 
-end subroutine GM_get_for_im_trace_crcm
+  !==============================================================================
 
-!==============================================================================
-subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
-     BufferLine_VI, nVarLine, nPointLine, NameVar)
+  subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
 
-  implicit none
+    implicit none
+    integer, intent(in) :: iSize
+    real, intent(in)    :: Buffer_DI(3,iSize)
+    character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
-  character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
+  end subroutine GM_put_mag_from_ie
 
-  integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
-  real, intent(out)   :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
+  !==============================================================================
 
-  integer, intent(in) :: nPointLine, nVarLine
-  real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
-  character(len=*), intent(in):: NameVar
-  
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  
+  subroutine GM_put_from_ih(nPartial,iPutStart,Put,Weight,DoAdd,StateSI_V,&
+       nVar)
+    integer,intent(in)::nPartial,iPutStart,nVar
+    type(IndexPtrType),intent(in)::Put
+    type(WeightPtrType),intent(in)::Weight
+    logical,intent(in)::DoAdd
+    real,dimension(nVar),intent(in)::StateSI_V
 
-end subroutine GM_get_for_im_crcm
+    ! Derived type arguments, it is easier not to declare them
+    character(len=*), parameter :: NameSub='GM_put_from_ih'
 
-!==========================================================================
-subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  implicit none
-  integer, intent(in) :: iSize
-  real, intent(in)    :: Buffer_DI(3,iSize)
-  character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+  end subroutine GM_put_from_ih
 
-end subroutine GM_put_mag_from_ie
+  !==============================================================================
 
-!==========================================================================
-subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Pos_DI, &
-     Data_VI)
+  subroutine GM_put_from_ih_buffer( &
+       NameCoord, nY, nZ, yMin, yMax, zMin, zMax, Buffer_VII)
 
-  implicit none
+    character(len=*), intent(in) :: NameCoord
+    integer,          intent(in) :: nY, nZ
+    real,             intent(in) :: yMin, yMax, zMin, zMax
+    real,             intent(in) :: Buffer_VII(8, nY, nZ)
 
-  logical,          intent(in):: IsNew   ! true for new point array
-  character(len=*), intent(in):: NameVar ! List of variables
-  integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
-  integer,          intent(in):: nDimIn  ! Dimensionality of positions
-  integer,          intent(in):: nPoint  ! Number of points in Pos_DI
+    character(len=*), parameter :: NameSub='GM_put_from_ih_buffer'
 
-  real, intent(in) :: Pos_DI(nDimIn,nPoint)  ! Position vectors
-  real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='GM_get_for_pt'
+  end subroutine GM_put_from_ih_buffer
 
-  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+  !==============================================================================
 
-end subroutine GM_get_for_pt
+  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
+  subroutine read_ih_buffer(y, z, State_V)
+
+    real, intent(in) :: y, z
+    real, intent(out):: State_V(8)
+    character(len=*), parameter :: NameSub='read_ih_buffer'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine read_ih_buffer
+
+  !==============================================================================
+
+  subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
+
+    implicit none
+    character (len=*),parameter :: NameSub='GM_put_from_pw'
+
+    integer, intent(in)           :: nVar, nFieldLine
+    real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
+    character (len=*), intent(in) :: Name_V(nVar)
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_put_from_pw
+  !==============================================================================
+
+  subroutine GM_get_for_pw(nTotalLine,p_I)
+
+    implicit none
+    character (len=*),parameter :: NameSub='GM_get_for_pw'
+
+    integer, intent(in)           :: nTotalLine
+    real, intent(out)             :: p_I(nTotalLine)
+
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_for_pw
+
+  !==============================================================================
+
+  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+  subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+
+    implicit none
+    character (len=*),parameter :: NameSub='read_pw_buffer'
+
+    real, intent(in) :: FaceCoords_D(3)
+    integer, intent(in) :: nVar
+    real, intent(inout) :: FaceState_V(nVar)
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine read_pw_buffer
+
+  !==============================================================================
+
+  subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Pos_DI, &
+       Data_VI)
+
+    implicit none
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Pos_DI
+
+    real, intent(in) :: Pos_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter :: NameSub='GM_get_for_pt'
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_for_pt
+
+end module GM_wrapper

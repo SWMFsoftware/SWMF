@@ -9,7 +9,23 @@ include Makefile.DEPEND
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
 
-DEPEND:
+SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -IModules
+
+LINKMODULES:
+	rm -rf Modules
+	mkdir -p Modules
+	cd Modules; ln -s ${GMDIR}/src*/*.mod ${PTDIR}/src*/*.mod ${UTILDIR}/*/src*/*.mod .
+
+#	-(cd Modules; ln -s ${DIR}/*/*/src*/*.mod .)
+
+#	-(cd Modules; ln -s ${DIR}/*/*/src*/*.mod ${DIR}/*/*/src*/??_wrapper.o .)
+
+#	rm -f ??_wrapper.mod ??_wrapper.o
+#	ln -s ${PTDIR}/src*/pt_wrapper.mod . ; ln -s ${PTDIR}/src*/PT_wrapper.o .
+#	ln -s ${GMDIR}/src*/gm_wrapper.mod . ; ln -s ${GMDIR}/src*/GM_wrapper.o .
+#
+
+DEPEND: #LINKMODULES
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 #^CMP IF GM BEGIN
@@ -57,4 +73,4 @@ ${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_SELECT}
 	${AR} ${MY_LIB} ${MODULES}
 
 distclean: clean
-	rm -f Makefile.DEPEND
+	rm -rf Makefile.DEPEND Modules

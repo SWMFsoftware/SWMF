@@ -14,11 +14,13 @@
 module CON_couple_gm_pt
 
   !USES:
-  use CON_coupler
+  use CON_coupler, ONLY: GM_, PT_, Grid_C, lNameVar
 
-  use PT_wrapper
+  use PT_wrapper, ONLY: PT_get_grid_info, PT_put_from_gm
 
-  use CON_couple_points
+  use GM_wrapper, ONLY: GM_get_grid_info, GM_find_points, GM_get_for_pt
+
+  use CON_couple_points, ONLY: couple_points_init, couple_points, CouplePointsType
 
   implicit none
   save
@@ -68,44 +70,6 @@ contains
   !INTERFACE:
   subroutine couple_gm_pt(tSimulation)
     
-    interface
-
-       subroutine GM_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
-
-         implicit none
-
-         ! dimension of position vectors
-         integer, intent(in) :: nDimIn             
-
-         ! number of positions
-         integer, intent(in) :: nPoint                
-
-         ! positions
-         real,    intent(in) :: Xyz_DI(nDimIn,nPoint) 
-
-         ! processor owning position
-         integer, intent(out):: iProc_I(nPoint)       
-
-       end subroutine GM_find_points
-
-
-        subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
-             Data_VI)
-          logical,          intent(in):: IsNew   ! true for new point array
-          character(len=*), intent(in):: NameVar ! List of variables
-          integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
-          integer,          intent(in):: nDimIn  ! Dimensionality of positions
-          integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
-
-          real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
-          real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
-        end subroutine GM_get_for_pt
-
-        subroutine GM_get_grid_info(nDim, iGrid, iDecomp)
-          integer, intent(out) :: nDim, iGrid, iDecomp
-        end subroutine GM_get_grid_info
-
-     end interface
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 

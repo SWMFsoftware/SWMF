@@ -9,17 +9,16 @@ include Makefile.DEPEND
 
 # Configurable objects
 
-OBJ_IH = GM_put_from_ih.o                                   #^CMP IF IH
-OBJ_IM = ModGmImCoupling.o GM_get_for_im.o GM_put_from_im.o #^CMP IF IM
-OBJ_RB = ModGmRbCoupling.o GM_get_for_rb.o                  #^CMP IF RB
-OBJ_IE = GM_get_for_ie.o GM_put_from_ie.o ModIeGrid.o       #^CMP IF IE
-OBJ_PT = GM_get_for_pt.o                                    #^CMP IF PT
-OBJ_PW = GM_get_for_pw.o GM_put_from_pw.o ModPwGrid.o       #^CMP IF PW
+OBJ_IH = GM_couple_ih.o read_ih_buffer.o                    #^CMP IF IH
+OBJ_IM = GM_couple_im.o	 				    #^CMP IF IM
+OBJ_RB = GM_couple_rb.o                                     #^CMP IF RB
+OBJ_IE = GM_couple_ie.o calc_inner_bc_velocity.o logvar_ionosphere.o    #^CMP IF IE
+OBJ_PT = GM_couple_pt.o                                     #^CMP IF PT
+OBJ_PW = GM_couple_pw.o read_pw_buffer.o                    #^CMP IF PW
 
 OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
-	GM_put_from_ih_buffer.o\
 	GM_wrapper.o\
 	update_lagrangian_grid.o\
 	ModDensityAndGradient.o\

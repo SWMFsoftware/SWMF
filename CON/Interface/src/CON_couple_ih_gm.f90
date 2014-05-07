@@ -30,6 +30,8 @@ module CON_couple_ih_gm
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
+  use GM_wrapper, ONLY: GM_synchronize_refinement, GM_put_from_ih, GM_put_from_ih_buffer
+
   implicit none
 
   save
@@ -100,23 +102,6 @@ contains
   !INTERFACE:
   subroutine couple_ih_gm(TimeCoupling)
     !INPUT ARGUMENTS:
-    interface
-       subroutine GM_put_from_ih(nPartial,&
-            iPutStart,&
-            Put,& 
-            Weight,&
-            DoAdd,&
-            StateSI_V,&
-            nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iPutStart,nVar
-         type(IndexPtrType),intent(in)::Put
-         type(WeightPtrType),intent(in)::Weight
-         logical,intent(in)::DoAdd
-         real,dimension(nVar),intent(in)::StateSI_V
-       end subroutine GM_put_from_ih
-    end interface
     real,intent(in)::TimeCoupling
     !EOP
 

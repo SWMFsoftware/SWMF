@@ -24,7 +24,8 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
-  use PT_wrapper
+  use PT_wrapper, ONLY: PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
+  use GM_wrapper, ONLY: GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
 
   implicit none
 

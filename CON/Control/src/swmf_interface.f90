@@ -180,6 +180,8 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
   use CON_world,      ONLY: i_comm
   use ModMpi
 
+  use GM_wrapper, ONLY: GM_put_from_ih_buffer
+
   implicit none
   !INPUT ARGUMENTS:
   character(len=*), intent(in) :: NameFrom   ! Provider component
