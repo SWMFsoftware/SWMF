@@ -23,6 +23,8 @@ my $InputFileLineNumber=0;
 my $InputLine;
 my $InputComment;
 my $s0;
+my $s1;
+my $s2;
 my $FileName;
 
 #Main Block Global Variables
@@ -849,7 +851,16 @@ sub ReadGeneralBlock {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber",$InputLine,"pic/pic_weight_time.cpp");
     }
-   
+
+    elsif ($InputLine eq "INITIALSAMPLELENGTH") {
+	($InputLine,$InputComment)=split('!',$line,2);
+	chomp($InputLine);
+	$InputLine=~s/[=();]/ /g;
+
+	($s0,$s1,$s2)=split(' ',$InputLine,3);
+	ampsConfigLib::ChangeValueOfVariable("const int InitialSampleLength",$s1,"main/main_lib.cpp");
+    }
+
     elsif ($InputLine eq "ENFORCEREQUESTEDMESHRESOLUTION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
