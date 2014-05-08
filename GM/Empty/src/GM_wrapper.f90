@@ -373,22 +373,6 @@ contains
 
   !=============================================================================
 
-  ! This function is only needed because of IH/BATSRUS/src/write_logfile
-  real function logvar_ionosphere()
-    call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
-    logvar_ionosphere = -777.77
-  end function logvar_ionosphere
-
-  !=============================================================================
-
-  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
-  subroutine calc_inner_bc_velocity
-    call CON_stop('calc_inner_bc_velocity: '// &
-         'GM_ERROR: empty version cannot be used!')
-  end subroutine calc_inner_bc_velocity
-
-  !==============================================================================
-
   subroutine map_inner_bc_jouleheating
     call CON_stop('map_inner_bc_jouleheating: '// &
          'GM_ERROR: empty version cannot be used!')
@@ -441,19 +425,6 @@ contains
 
   !==============================================================================
 
-  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
-  subroutine read_ih_buffer(y, z, State_V)
-
-    real, intent(in) :: y, z
-    real, intent(out):: State_V(8)
-    character(len=*), parameter :: NameSub='read_ih_buffer'
-
-    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-  end subroutine read_ih_buffer
-
-  !==============================================================================
-
   subroutine GM_put_from_pw(Buffer_VI, nVar, nFieldLine, Name_V)
 
     implicit none
@@ -483,22 +454,6 @@ contains
 
   !==============================================================================
 
-  ! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
-  subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
-
-    implicit none
-    character (len=*),parameter :: NameSub='read_pw_buffer'
-
-    real, intent(in) :: FaceCoords_D(3)
-    integer, intent(in) :: nVar
-    real, intent(inout) :: FaceState_V(nVar)
-
-    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
-
-  end subroutine read_pw_buffer
-
-  !==============================================================================
-
   subroutine GM_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Pos_DI, &
        Data_VI)
 
@@ -520,3 +475,50 @@ contains
   end subroutine GM_get_for_pt
 
 end module GM_wrapper
+
+!==============================================================================
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+subroutine calc_inner_bc_velocity
+  call CON_stop('calc_inner_bc_velocity: '// &
+       'GM_ERROR: empty version cannot be used!')
+end subroutine calc_inner_bc_velocity
+
+!==============================================================================
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
+subroutine read_ih_buffer(y, z, State_V)
+
+  real, intent(in) :: y, z
+  real, intent(out):: State_V(8)
+  character(len=*), parameter :: NameSub='read_ih_buffer'
+
+  call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+end subroutine read_ih_buffer
+
+!==============================================================================
+
+! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+
+  implicit none
+  character (len=*),parameter :: NameSub='read_pw_buffer'
+
+  real, intent(in) :: FaceCoords_D(3)
+  integer, intent(in) :: nVar
+  real, intent(inout) :: FaceState_V(nVar)
+
+  call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+end subroutine read_pw_buffer
+
+!==============================================================================
+
+! This function is only needed because of IH/BATSRUS/src/write_logfile
+real function logvar_ionosphere()
+  call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
+  logvar_ionosphere = -777.77
+end function logvar_ionosphere
+
+!=============================================================================
