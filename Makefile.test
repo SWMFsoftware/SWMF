@@ -311,7 +311,7 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE_it000321_104510_000.idl \
 		>> test1_ie.diff)
-	ls -l test1*.diff
+	ls -l test1_*.diff
 
 ### test2: SC+IH test ###
 
@@ -371,7 +371,7 @@ test2_check:
 		${TESTDIR}/RESULTS/restart/GM/log_n000001.log \
 		output/test2/GM_log_n000001.log \
 		> test2_gm.diff)
-	ls -l test2*.diff
+	ls -l test2_*.diff
 
 ### Test3: GM+IE+IM ###
 
@@ -456,7 +456,7 @@ test3_check:
 		${TESTDIR}/RESULTS/IM/t20.txt \
 		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test3_im_rcm.diff)
-	ls -l test3*.diff
+	ls -l test3_*.diff
 
 ### Test4: GM+IE+HEIDI ###############
 
@@ -508,7 +508,7 @@ test4_check:
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
                 > test4_im_heidi.diff)
-	ls -l test4*.diff
+	ls -l test4_*.diff
 
 ### test5: Eruptive Event generator coupled to the corona ###
 test5:
@@ -624,7 +624,7 @@ test6_check:
 		${TESTDIR}/RESULTS/IM/CRCM.log \
 		output/test6/IM.log \
 		> test6_im_crcm_log.diff)
-	ls -l test6*.diff
+	ls -l test6_*.diff
 
 ### test7: IH+OH test ###
 
@@ -669,7 +669,7 @@ test7_check:
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/Xyz_OH_log_n000000.log \
 		> test7_oh.diff)
-	ls -l test7*.diff
+	ls -l test7_*.diff
 
 
 ### Test8: GM+IE+RCM with multifluid GM-IM coupling ###
@@ -753,7 +753,7 @@ test8_check:
 		${TESTDIR}/RESULTS/IM/t20.txt \
 		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test8_im_rcm_multi.diff)
-	ls -l test8*.diff
+	ls -l test8_*.diff
 
 ### test9: Chromospheric SC + IH with Alfven waves test ###
 
@@ -808,7 +808,7 @@ test9_check:
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
-	ls -l test9*.diff
+	ls -l test9_*.diff
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 
