@@ -838,7 +838,6 @@ long int Comet::InjectionBoundaryModel_Limited() {
 
 long int Comet::InjectionBoundaryModel_Limited(int spec) {
   cInternalSphericalData *Sphere;
-  cInternalBoundaryConditionsDescriptor SphereDescriptor;
   double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
   long int newParticle,nInjectedParticles=0;
@@ -846,11 +845,6 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
   double ParticleWeightCorrection=1.0;
   bool flag=false;
   int SourceProcessID;
-
-  cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
-
-  SphereDescriptor=PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere();
-  Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
 
   double totalProductionRate=Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere);
 
