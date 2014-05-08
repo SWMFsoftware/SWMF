@@ -68,7 +68,7 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_SELECT}
+${MY_LIB}: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 
