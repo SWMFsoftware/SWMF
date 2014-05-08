@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !!QUOTE: \clearpage
@@ -719,4 +720,18 @@ real*8 function MPI_WTIME()
   MPI_WTIME=dble(clock)/clockrate
 end function MPI_WTIME
 
+!=============================================================================
+! MPI_FILE*
+!=============================================================================
 
+subroutine MPI_FILE_WRITE
+
+  write(*,*)'MPI_FILE_WRITE is not implemented in NOMPI library'
+
+end subroutine MPI_FILE_WRITE
+
+subroutine MPI_FILE_READ
+
+  write(*,*)'MPI_FILE_WRITE is not implemented in NOMPI library'
+
+end subroutine MPI_FILE_READ
