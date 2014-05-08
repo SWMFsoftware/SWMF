@@ -92,8 +92,8 @@ void Comet::Init_BeforeParser() {
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
-  ElectricallyChargedDust::minDustRadius=0.01*_MICROMETER_;
-  ElectricallyChargedDust::maxDustRadius=100.0*_MICROMETER_;
+  ElectricallyChargedDust::minDustRadius=0.1*_MICROMETER_;
+  ElectricallyChargedDust::maxDustRadius=1.0e4*_MICROMETER_;
   ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
   ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
   ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=1000.0;
@@ -846,6 +846,8 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
   double ParticleWeightCorrection=1.0;
   bool flag=false;
   int SourceProcessID;
+
+  cInternalSphericalData::SetGeneralSurfaceMeshParameters(60,100);
 
   SphereDescriptor=PIC::BC::InternalBoundary::Sphere::RegisterInternalSphere();
   Sphere=(cInternalSphericalData*) SphereDescriptor.BoundaryElement;
