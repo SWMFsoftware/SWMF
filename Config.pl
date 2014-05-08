@@ -235,7 +235,6 @@ sub set_versions{
 		my $wrapper = "$compversion/$src/$comp"."_wrapper.f90";
 		&shell_command("touch $wrapper") if -e $wrapper;
 	    }
-
 	}
     }
 
@@ -250,6 +249,9 @@ sub set_versions{
 	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
 
     return unless $change;
+
+    # CON/Interface needs to be recompiled (uses modules from component wrappers)
+    &shell_command("touch CON/Interface/src/*.f90");
 
     print "Modifying versions in $MakefileDef\n";
     return if $DryRun;
