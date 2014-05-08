@@ -42,6 +42,10 @@ CouplerMode=ices !!off, ices, swmf
 
 #include species.input
 
+#General
+  InitialSampleLength=1
+#endGeneral
+
 #UserDefinitions
   PIC=on ! on, off
   Mesh=on ! on, off
