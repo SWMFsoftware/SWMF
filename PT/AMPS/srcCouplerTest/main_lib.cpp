@@ -938,8 +938,9 @@ void amps_init() {
     Moon::Sampling::SetUserDefinedAdditionalOutputSampledModelDataFunctions(ExospherUserDefinedOutputVariableList,ExosphereUserDefinedOutputData);
 
 
+    const int InitialSampleLength=100;
     PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=20; //0; //00; //*10;
-    PIC::RequiredSampleLength=170; //00; //0; //0;
+    PIC::RequiredSampleLength=InitialSampleLength; //00; //0; //0;
 
     Moon::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
 
