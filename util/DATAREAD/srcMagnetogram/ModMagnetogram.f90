@@ -851,6 +851,11 @@ contains
   end subroutine interpolate_field
   !==========================================================================
   subroutine get_magnetogram_field(xInput,yInput,zInput,B0_D)
+    !\
+    ! For Cartesian xInput,yInput,zInput, all normalized per the
+    ! solar radius, calculate the magnetic field vector 
+    ! in Cartesian components, in SI units.
+    !/
     real, intent(in):: xInput,yInput,zInput
     real, intent(out), dimension(3):: B0_D
 
