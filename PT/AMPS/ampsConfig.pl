@@ -5,7 +5,6 @@
  
 use strict;
 use warnings;
-use Switch;
 
 use ampsConfigLib;
 use constant {true => 1, false =>0};
@@ -510,10 +509,12 @@ sub ReadMainBlock {
     elsif ($s0 eq "TRAJECTORYINTERSECTIONWITHBLOCKFACES") {
       ($s0,$s1)=split(' ',$s1,2);
       
-      switch ($s0) {
-        case "ON" {$TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";}
-        case "OFF" {$TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";}
-        else {die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";}      
+      if(    $s0 eq "ON") {
+	  $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_ON_";
+      }elsif($s0 eq "OFF") {
+	  $TrajectoryIntegrationCheckBlockFaceIntersection="_PIC_MODE_OFF_";
+      }else{
+	  die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }       
     
