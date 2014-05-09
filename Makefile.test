@@ -891,6 +891,8 @@ test11_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
+# Note: skip columns that depend on number of processors
+#       multiply density column by 1e20 to make it order unity
 test11_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -a=1e-27 \
 	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
@@ -900,9 +902,9 @@ test11_check:
 	       	> ${TESTDIR}/RESULTS/PT/pic.NA.ref
 	cd ${TESTDIR}/RESULTS/PT; \
 	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
-	        perl -ai -ne 'print "@F[0..3] @F[6..$$#F]\n"' \
+	        perl -ai -ne 'print "@F[0..3] @F[6..14] ",1e20*$$F[15]," @F[16..$$#F]\n"' \
 			pic.NA.ref pic.NA.dat 
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-20 -r=1e-6 -b \
 	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
 		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
