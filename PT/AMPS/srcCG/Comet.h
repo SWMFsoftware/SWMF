@@ -314,7 +314,7 @@ namespace Comet {
    
       nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
 
-      Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
+      //   Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
       
       //Drag force
       char ParticleData[PIC::ParticleBuffer::ParticleDataLength];

@@ -64,6 +64,10 @@ double BulletLocalResolution(double *x) {
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
+  int spec==PIC::ParticleBuffer::GetI(ptr);
+
+  if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  return _PARTICLE_DELETED_ON_THE_FACE_;
+  else {
   double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
 
   vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
@@ -72,6 +76,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
   return _PARTICLE_REJECTED_ON_THE_FACE_;
   //  return _PARTICLE_DELETED_ON_THE_FACE_;
+  }
 }
 
 
@@ -228,7 +233,8 @@ int main(int argc,char **argv) {
 
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
-  CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  // CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 

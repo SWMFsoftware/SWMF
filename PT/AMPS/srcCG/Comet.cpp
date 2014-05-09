@@ -96,7 +96,7 @@ void Comet::Init_BeforeParser() {
   ElectricallyChargedDust::maxDustRadius=1.0e4*_MICROMETER_;
   ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
   ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
-  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=1000.0;
+  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=100.0;
   ElectricallyChargedDust::TotalMassDustProductionRate=1.0;
   ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
   ElectricallyChargedDust::Init_BeforeParser();
@@ -1026,7 +1026,7 @@ ot defined");
 }
 
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalData* Sphere){
-  return 5.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
+  return 1.0e24; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
 }
 
 
