@@ -4,7 +4,7 @@
 use strict;
 
 our $Component       = 'PT';
-our $Code            = 'amps';
+our $Code            = 'AMPS';
 our $MakefileDefOrig = 'Makefile.def.amps';
 our @Arguments       = @ARGV;
 
