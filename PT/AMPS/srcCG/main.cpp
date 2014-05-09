@@ -64,7 +64,7 @@ double BulletLocalResolution(double *x) {
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
-  int spec==PIC::ParticleBuffer::GetI(ptr);
+  int spec=PIC::ParticleBuffer::GetI(ptr);
 
   if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  return _PARTICLE_DELETED_ON_THE_FACE_;
   else {
