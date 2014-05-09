@@ -371,13 +371,6 @@ contains
 
   end subroutine GM_put_from_ie
 
-  !=============================================================================
-
-  subroutine map_inner_bc_jouleheating
-    call CON_stop('map_inner_bc_jouleheating: '// &
-         'GM_ERROR: empty version cannot be used!')
-  end subroutine map_inner_bc_jouleheating
-
   !==============================================================================
 
   subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
@@ -522,3 +515,11 @@ real function logvar_ionosphere()
 end function logvar_ionosphere
 
 !=============================================================================
+
+subroutine map_inner_bc_jouleheating
+  call CON_stop('map_inner_bc_jouleheating: '// &
+       'GM_ERROR: empty version cannot be used!')
+end subroutine map_inner_bc_jouleheating
+
+!=============================================================================
+

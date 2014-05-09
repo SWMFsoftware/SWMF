@@ -6,10 +6,6 @@
 
 module GM_couple_ie
 
-  use CON_planet_field
-  use ModCoordTransform, ONLY: sph_to_xyz
-  use ModMain,    ONLY: Time_Simulation
-  use ModPhysics, ONLY: rBody
   use ModProcMH
 
   implicit none
@@ -24,6 +20,9 @@ module GM_couple_ie
   public:: clean_mod_field_aligned_current
   public:: get_ie_grid_index
 
+  ! Joule heating
+  real, public, allocatable :: IonoJouleHeating_II(:,:)
+
   ! Ionosphere potential
   real, allocatable, public :: IonoPotential_II(:,:)
   real, allocatable, public :: dIonoPotential_DII(:,:,:)
@@ -33,13 +32,8 @@ module GM_couple_ie
   real, public      :: rIonosphere
 
   ! Local variables
-
-  ! Ionosphere grid description
   real, allocatable :: ThetaIono_I(:), PhiIono_I(:)
   real              :: dThetaIono, dPhiIono
-
-  ! Joule heating
-  real, allocatable :: IonoJouleHeating_II(:,:)
 
   ! Field aligned current
   real, allocatable :: FieldAlignedCurrent_II(:,:), &
@@ -53,7 +47,7 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
 
     integer:: i, j
-    
+
     do j=1,nPhiIono
        do i=1,nThetaIono
           write(UNITTMP_,'(2i4,3G14.6)')i,j,&
@@ -115,7 +109,7 @@ contains
     if(allocated(FieldAlignedCurrent_II)) RETURN
 
     call init_mod_ie_grid(iSize, jSize)
-    
+
     allocate( bCurrent_VII(0:6, nThetaIono, nPhiIono), &
          bCurrentLocal_VII(0:6, nThetaIono, nPhiIono), &
          FieldAlignedCurrent_II(nThetaIono, nPhiIono))
@@ -212,38 +206,6 @@ contains
 
   end subroutine init_mod_iono_jouleheating
   !============================================================================
-
-  subroutine map_jouleheating_to_inner_bc
-
-    integer :: i, j, iHemisphere
-    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
-    real    :: bIono, b
-    !-------------------------------------------------------------------------
-    do i = 1, nThetaIono; do j =1, nPhiIono
-       call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-       call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
-       bIono = sqrt(sum(bIono_D**2))
-
-       ! map out to GM (caution!, not like map down to the ionosphere, 
-       ! there is always a corresponding position.)
-       call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
-            rBody, Xyz_tmp, iHemisphere)
-
-       if (iHemisphere == 0) then 
-          ! not a mapping in the dipole, but to the equator
-          ! assume not outflow to GM inner boundary
-          IonoJouleHeating_II(i,j) = 0
-       else
-          call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
-          b = sqrt(sum(B_D**2))
-
-          ! scale the jouleheating
-          IonoJouleHeating_II(i,j) = IonoJouleHeating_II(i,j) * b/bIono
-
-       endif
-    end do; end do
-
-  end subroutine map_jouleheating_to_inner_bc
 
   !============================================================================
 
@@ -430,6 +392,45 @@ contains
 
   end subroutine GM_put_mag_from_ie
 
+!==========================================================================
+
+  subroutine map_jouleheating_to_inner_bc
+
+    use ModMain,    ONLY: Time_Simulation
+    use ModPhysics, ONLY: rBody
+    use CON_planet_field, ONLY: get_planet_field, map_planet_field
+    use ModCoordTransform, ONLY: sph_to_xyz
+
+    integer :: i, j, iHemisphere
+    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
+    real    :: bIono, b
+    !-------------------------------------------------------------------------
+    do i = 1, nThetaIono; do j =1, nPhiIono
+       call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
+       call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
+       bIono = sqrt(sum(bIono_D**2))
+
+       ! map out to GM (caution!, not like map down to the ionosphere, 
+       ! there is always a corresponding position.)
+       call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
+            rBody, Xyz_tmp, iHemisphere)
+
+       if (iHemisphere == 0) then 
+          ! not a mapping in the dipole, but to the equator
+          ! assume not outflow to GM inner boundary
+          IonoJouleHeating_II(i,j) = 0
+       else
+          call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
+          b = sqrt(sum(B_D**2))
+
+          ! scale the jouleheating
+          IonoJouleHeating_II(i,j) = IonoJouleHeating_II(i,j) * b/bIono
+
+       endif
+    end do; end do
+
+  end subroutine map_jouleheating_to_inner_bc
+
   !==========================================================================
   subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
 
@@ -561,47 +562,51 @@ contains
   end subroutine calc_inner_bc_velocity1
   !============================================================================
 
-  subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
-
-    use ModCoordTransform, ONLY: xyz_to_dir
-    use ModMain,           ONLY: TypeCoordSystem, MaxDim
-    use CON_axes,          ONLY: transform_matrix
-
-    !INPUT ARGUMENTS:
-    real, intent(in)    :: tSimulation    ! Simulation time
-    real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
-    real, intent(out)   :: JouleHeating
-    real :: Theta, Phi           ! Mapped point colatitude, longitude
-    real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
-    integer :: iTheta, iPhi
-    character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
-    logical :: DoTest, DoTestMe
-    real :: Xyz_D_tmp(3)
-    ! -----------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
-    ! Convert Xyz_D into SMG coordinates
-    Xyz_D_tmp = matmul(transform_matrix(tSimulation, TypeCoordSystem, 'SMG'), Xyz_D)
-
-    ! Calculate angular coordinates
-    call xyz_to_dir(Xyz_D_tmp, Theta, Phi)
-
-    ! Interpolate the spherical jouleheating
-    call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
-    iTheta    = floor(ThetaNorm) + 1
-    iPhi      = floor(PhiNorm)   + 1
-    if(iTheta<1 .or. iTheta > nThetaIono .or. &
-         iPhi < 1 .or. iPhi > nPhiIono)then
-       write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
-       write(*,*)NameSub,' Phi, Theta=',Phi,Theta
-       write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
-       write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
-       call stop_mpi(NameSub//' index out of bounds')
-    end if
-
-    JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
-
-  end subroutine map_inner_bc_jouleheating
-
 end module GM_couple_ie
+
+!==========================================================================
+
+subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
+
+  use GM_couple_ie, ONLY: get_ie_grid_index, IonoJouleHeating_II
+  use ModCoordTransform, ONLY: xyz_to_dir
+  use ModMain,           ONLY: TypeCoordSystem, MaxDim
+  use CON_axes,          ONLY: transform_matrix
+
+  !INPUT ARGUMENTS:
+  real, intent(in)    :: tSimulation    ! Simulation time
+  real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
+  real, intent(out)   :: JouleHeating
+  real :: Theta, Phi           ! Mapped point colatitude, longitude
+  real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
+  integer :: iTheta, iPhi
+  character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
+  logical :: DoTest, DoTestMe
+  real :: Xyz_D_tmp(3)
+  ! -----------------------------------------------------
+
+  call set_oktest(NameSub, DoTest, DoTestMe)
+
+  ! Convert Xyz_D into SMG coordinates
+  Xyz_D_tmp = matmul(transform_matrix(tSimulation, TypeCoordSystem, 'SMG'), Xyz_D)
+
+  ! Calculate angular coordinates
+  call xyz_to_dir(Xyz_D_tmp, Theta, Phi)
+
+  ! Interpolate the spherical jouleheating
+  call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
+  iTheta    = floor(ThetaNorm) + 1
+  iPhi      = floor(PhiNorm)   + 1
+  if(iTheta<1 .or. iTheta > nThetaIono .or. &
+       iPhi < 1 .or. iPhi > nPhiIono)then
+     write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
+     write(*,*)NameSub,' Phi, Theta=',Phi,Theta
+     write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
+     write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
+     call stop_mpi(NameSub//' index out of bounds')
+  end if
+
+  JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
+
+end subroutine map_inner_bc_jouleheating
+
