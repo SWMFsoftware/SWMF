@@ -92,7 +92,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
   use ModPIC, ONLY: pic_read_param
   use ModFaceBoundary, ONLY: read_face_boundary_param
-
+  use ModFieldLineThread, ONLY: read_threads
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -1893,6 +1893,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#TRANSITIONREGION")
         call read_modified_cooling
+     
+     case("#FIELDLINETHREAD")
+        call read_threads
 
      case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
           "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION")

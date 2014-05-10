@@ -12,13 +12,31 @@ module ModFieldLineThread
 
   use ModMagnetogram, ONLY: nR, nPhi, nTheta, &
        Dr, Dphi, dSinTheta
+  use ModMain, ONLY: UseFieldLineThreads
   implicit none
   save
+  logical, public, allocatable:: DoThreads_B(:)
   ! Named indexes for local use only
   integer, parameter:: r_=1, Phi_=2, Theta_=3
 
   integer::iIteration
 contains
+  subroutine read_threads
+    use BATL_size, ONLY: MaxBlock
+    use ModReadParam, ONLY: read_var
+    !-------------
+    call read_var('UseFieldLineTraeds', UseFieldLineThreads)
+    if(UseFieldLineThreads)then
+       if(.not.allocated(DoThreads_B))&
+            allocate(DoThreads_B(MaxBlock))
+       DoThreads_B = .false.
+    else
+       if(allocated(DoThreads_B))deallocate(DoThreads_B)
+    end if
+  end subroutine read_threads
+  !=========================
+  subroutine set_threads
+  end subroutine set_threads
   ! This fucnction calculates the value of 
   ! F(i)= B(i)/|B|/(1,r*sin(colatitude),r)
   ! It is used in order to construct the line in 

@@ -145,7 +145,8 @@ contains
     use ModProcMH, ONLY: iProc
     use ModMain,   ONLY: ProcTest, BlkTest, iTest, jTest, kTest
     use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
-
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, &
+                                   DoThreads_B
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
@@ -161,7 +162,12 @@ contains
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        call get_b0(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
     end do; end do; end do
-
+    !\
+    ! If use field line threads, then in the block with newly  
+    ! calculated B0 the threads may or may not need to be calculated
+    ! depending on the block proximity to the Sun 
+    !/
+    if(UseFieldLineThreads)DoThreads_B(iBlock) = .true.
     if(DoTestMe)write(*,*)'B0*Cell_BLK=',&
          B0_DGB(:,Itest,Jtest,Ktest,BLKtest)
 

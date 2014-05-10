@@ -722,7 +722,7 @@ subroutine update_b0
   use ModIO,            ONLY: iUnitOut, write_prefix
   use ModEnergy,        ONLY: calc_energy_ghost
   use ModB0,            ONLY: B0_DGB, set_b0_cell, set_b0_reschange
-
+  use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
   implicit none
 
   character(len=*), parameter :: NameSub = 'update_b0'
@@ -777,7 +777,7 @@ subroutine update_b0
 
   ! Recalculate B0 face values at resolution changes
   call set_b0_reschange
-
+  if(UseFieldLineThreads)call set_threads
   call timing_stop(NameSub)
 
 end subroutine update_b0

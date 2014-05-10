@@ -232,6 +232,7 @@ contains
 
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: set_b0_reschange
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use BATL_lib, ONLY: nBlock, iAmrChange_B, AmrMoved_, Unused_B,&
          set_amr_geometry
     use ModEnergy, ONLY: calc_energy_ghost
@@ -260,7 +261,7 @@ contains
 
     if(UseResistivity) call set_resistivity
     if(UseB0)call set_b0_reschange
-
+    if(UseFieldLineThreads)call set_threads
   end subroutine set_batsrus_state
   !============================================================================
   subroutine calc_other_vars(iBlock)

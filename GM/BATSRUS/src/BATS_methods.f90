@@ -146,6 +146,7 @@ contains
     use ModMessagePass, ONLY: exchange_messages
     use ModMain,        ONLY: UseB0
     use ModB0,          ONLY: set_b0_reschange
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
     use ModAMR,         ONLY: do_amr
     use ModUserInterface ! user_initial_perturbation, user_action
 
@@ -223,7 +224,7 @@ contains
 
     ! Fix face centered B0 at resolution changes
     if(UseB0)call set_b0_reschange
-
+    if(UseFieldLineThreads)call set_threads
 
     ! Ensure zero divergence for the CT scheme
     if(UseConstrainB)then
