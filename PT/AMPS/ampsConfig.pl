@@ -13,7 +13,7 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="cg.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
+my $InputFileNameDefault="moon.input"; #"cg.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
 my $InputFileName;
 
 
