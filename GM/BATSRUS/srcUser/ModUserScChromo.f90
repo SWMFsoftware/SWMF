@@ -5,6 +5,7 @@
 module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
+  use ModCoronalHeating, ONLY: PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -25,7 +26,6 @@ module ModUser
   ! Input parameters for chromospheric inner BC's
   real    :: nChromoSi = 2e17, tChromoSi = 5e4
   real    :: nChromo, RhoChromo, tChromo
-  real    :: PoyntingFluxPerBSi = 1e6, PoyntingFluxPerB
   logical :: UseUparBc = .false.
 
   ! variables for Parker initial condition

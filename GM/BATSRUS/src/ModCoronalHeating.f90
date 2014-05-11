@@ -841,7 +841,7 @@ contains
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================
 module ModCoronalHeating
-
+  use ModAlfvenWaveHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModUnsignedFluxModel
   use ModNonWKBHeating
   use ModMain,      ONLY: nBLK, nI, nJ, nK
