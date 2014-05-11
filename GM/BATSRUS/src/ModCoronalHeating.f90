@@ -31,6 +31,12 @@ module ModAlfvenWaveHeating
 
   real :: cEnergyFluxPerBCgs = 5.0e4 !erg/cm2/s/Gs
 
+  !\
+  ! The same in SI unins and diminsionless:
+  !/
+  real    :: PoyntingFluxPerBSi = 1.0e6, PoyntingFluxPerB
+
+
   !If the wave energy flux, directed along the magnetic field and equal,  !
   !in neglecting the plasma speed, to VAlfven * (Wave Energy Density      !
   !is assumed to be proportional to the magnetic field intensity, then    !
