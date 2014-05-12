@@ -39,7 +39,26 @@ my $InputComment;
 my $s0;
 my $s1;
 my $s2;
+my $spec;
 
+
+#get the list of the species                                                   
+my $TotalSpeciesNumber;
+my @SpeciesList;
+
+open (SPECIES,"<$SpeciesFileName") || die "Cannot open file $SpeciesFileName\\
+n";
+$TotalSpeciesNumber=<SPECIES>;
+@SpeciesList=<SPECIES>;
+close (SPECIES);
+
+chomp($TotalSpeciesNumber);
+foreach (@SpeciesList) {
+    chomp($_);
+}
+
+
+my @BjornSourceRate=(0)x$TotalSpeciesNumber;
 
 #add the model header to the pic.h
 open (PIC_H,">>$WorkingSourceDirectory/pic/pic.h") || die "Cannot open $WorkingSourceDirectory/pic/pic.h";
@@ -88,13 +107,92 @@ while ($line=<InputFile>) {
     
     ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Comet.cpp");
   }
+  elsif ($InputLine eq "GRAVITY3D") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_PIC_MODEL__3DGRAVITY__MODE_","_PIC_MODEL__3DGRAVITY__MODE__ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_PIC_MODEL__3DGRAVITY__MODE_","_PIC_MODEL__3DGRAVITY__MODE__OFF_","pic/picGlobal.dfn");
+      }
+  }
+  elsif ($InputLine eq "HELIOCENTRICDISTANCE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double HeliocentricDistance","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "SUBSOLARPOINTAZIMUTH") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double subSolarPointAzimuth","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "NDIST") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("static int ndist","$InputLine","main/Comet.h");
+  }
+  elsif ($InputLine eq "BJORNPRODUCTIONRATE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $spec=$InputLine;
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $BjornSourceRate[getSpeciesNumber($spec)]=$InputLine;
+      ampsConfigLib::ChangeValueOfArray("static double Bjorn_SourceRate\\[\\]",\@BjornSourceRate,"main/Comet.h");
+  }
+  elsif ($InputLine eq "DUSTRMIN") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double DustSizeMin","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "DUSTRMAX") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double DustSizeMax","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "NDUSTRADIUSGROUPS") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("int DustSampleIntervals","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "DUSTTOTALMASSPRODUCTIONRATE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double DustTotalMassProductionRate","$InputLine","main/Comet.cpp");
+  }
+  elsif ($InputLine eq "POWERLAWINDEX") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double DustSizeDistribution","$InputLine","main/Comet.cpp");
+  }
   elsif ($InputLine eq "#ENDBLOCK") {
-    last;
+      last;
   }
    
   else {
     die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
   }
+}
+
+
+#=============================== Determine the species number  =============================                                                               
+sub getSpeciesNumber {
+    my $res=-1;
+    my $species=$_[0];
+
+    for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+	if ($species eq $SpeciesList[$i]) {
+	    $res=$i;
+	    last;
+	}
+    }
+
+    if ($res eq -1) {
+	die "Cannot fild species $_\n";
+    }
+
+    return $res;
 }
 
 
