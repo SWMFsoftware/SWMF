@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE IM
 
@@ -15,6 +16,11 @@ module CON_couple_ie_im
 
   !USES:
   use CON_coupler
+
+  use IE_wrapper, ONLY: IE_get_for_im, IE_put_from_im, IE_put_from_im_complete
+
+  use IE_wrapper, ONLY: IE_get_for_gm ! this is used by RAM-SCB coupler ???
+  use IE_wrapper, ONLY: IE_run        ! forces IE and IM run sequentially???
 
   implicit none
 
@@ -142,10 +148,11 @@ contains
     ! Send field-align current from IM to IE.
     !EOP
 
-    external IM_get_for_ie,IE_put_from_im
     integer, parameter :: nVarImIe=3
     real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_im_ie'
+
+    external:: IM_get_for_ie
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
@@ -177,10 +184,11 @@ contains
     ! Send electrostatic potential from IE to IM.
     !EOP
 
-    external IE_get_for_im,IM_put_from_ie
     integer, parameter :: nVarIeIm=4
     real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_ie_im'
+
+    external:: IM_put_from_ie
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 

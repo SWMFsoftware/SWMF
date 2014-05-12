@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !QUOTE: \clearpage
 !
@@ -24,8 +25,13 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
-  use PT_wrapper, ONLY: PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
-  use GM_wrapper, ONLY: GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
+
+  use GM_wrapper, ONLY: &
+       GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
+  use IE_wrapper, ONLY: &
+       IE_set_param, IE_init_session, IE_run, IE_finalize, IE_save_restart
+  use PT_wrapper, ONLY: &
+       PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
 
   implicit none
 

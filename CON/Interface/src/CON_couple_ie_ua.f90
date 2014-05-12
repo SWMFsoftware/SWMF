@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE UA
 
@@ -14,6 +15,8 @@ module CON_couple_ie_ua
 
   !USES:
   use CON_coupler
+
+  use IE_wrapper, ONLY: IE_get_for_ua, IE_put_from_ua
 
   implicit none
 
@@ -164,7 +167,7 @@ contains
 
          if(is_proc(IE_))  &
               call IE_get_for_ua(Buffer_II, iSize, jSize, &
-              NameVar_V(iVar),tSimulation)
+              NameVar_V(iVar), 'North', tSimulation)
 
          !\
          ! Transfer variables from IE to UA

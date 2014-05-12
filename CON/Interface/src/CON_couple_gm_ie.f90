@@ -18,6 +18,8 @@ module CON_couple_gm_ie
 
   use GM_wrapper, ONLY: GM_get_for_ie, GM_put_from_ie, GM_put_mag_from_ie, &
        GM_print_variables
+  use IE_wrapper, ONLY: IE_get_for_gm, IE_groundmaginit_for_gm, &
+       IE_get_mag_for_gm, IE_put_from_gm
 
   implicit none
 

@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE RB
 
@@ -14,6 +15,8 @@ module CON_couple_ie_rb
 
   !USES:
   use CON_coupler
+
+  use IE_wrapper, ONLY: IE_get_for_rb
 
   implicit none
 
