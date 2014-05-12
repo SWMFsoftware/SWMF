@@ -1,23 +1,32 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE SP
-!\
-! This coupler employs the following global arrays.
-! SP_Xyz_DI - is the array of the Lagrangian points.
-! A part of this array, as well as the mask 'SP_IsInIH' is only availbale at the
-! PE set, at which either IH or SP  run. This coordinates are expressed in terms of
-! the length units and with respect to the frame of reference defined in IH.
-! Another part of this array, as well as the mask 'SP_IsInSC' is only availbale at the
-! PE set, at which either SC or SP  run. This coordinates are expressed in terms of
-! the length units and with respect to the frame of reference defined in SC.
-! SP_XyzSP - in the array of all Lagrangian points, in units and in the frame of 
-! reference defined at SP, is available only at the PE set, at which SP runs.
-!/
-Module CON_couple_mh_sp
+
+module CON_couple_mh_sp
+
+  ! This coupler employs the following global arrays.
+  ! SP_Xyz_DI - is the array of the Lagrangian points.
+  ! A part of this array, as well as the mask 'SP_IsInIH' is only availbale
+  ! at the PE set, at which either IH or SP run. 
+  ! This coordinates are expressed in terms of
+  ! the length units and with respect to the frame of reference defined in IH.
+  ! Another part of this array, as well as the mask 'SP_IsInSC' 
+  ! is only available at the PE set, at which either SC or SP run. 
+  ! This coordinates are expressed in terms of
+  ! the length units and with respect to the frame of reference defined in SC.
+  ! SP_XyzSP - in the array of all Lagrangian points, in units and in the 
+  ! frame of reference defined at SP, is available only at the PE set, 
+  ! at which SP runs.
+
   use CON_coupler
   use CON_global_message_pass
   use CON_axes
+
+  use SP_wrapper, ONLY: SP_put_from_mh, SP_get_line_param, SP_put_input_time
+
   implicit none
+
   private !Except
   public::couple_mh_sp_init
   public::couple_ih_sp              !^CMP IF IH
@@ -122,7 +131,7 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     DoInit=.false.
     !The initialization can be done only once
-    
+
 
     call get_time(tSimulationOut=tNow)
 
@@ -157,7 +166,7 @@ contains
             nCells_D=(/1/),&
             PE_I=(/0/))              !PEs layout, throughout all the blocks
        call bcast_decomposition(SP_)
-       
+
 
        call set_standard_grid_descriptor(SP_,GridDescriptor=&
             SP_GridDescriptor)
@@ -184,15 +193,15 @@ contains
        allocate(XyzTemp_DI(3,nPointMax),stat=iError)
        call check_allocate(iError,NameSub//': XyzTemp_DI')
 
-   
+
        if(is_proc(SP_))then
           iPoint=1
           XyzTemp_DI(:,iPoint)=XyzLine_D(:)
        end if
-       
+
        if(use_comp(IH_))then       !^CMP IF IH BEGIN
           call IH_synchronize_refinement(i_proc0(IH_),i_comm())
-  
+
           call trace_line(IH_,&
                IH_GridDescriptor,RouterIhSp,rBoundIh**2,IH_get_a_line_point)
           call MPI_bcast(nPoint,1,MPI_INTEGER,&
@@ -217,7 +226,7 @@ contains
                i_proc0(SP_),i_comm(),iError)
           if(DoTest.and.is_proc0())write(*,*)'nPoint',nPoint
        end if                      !^CMP END SC
-    
+
        !\
        !Reset SP_domain_decomposition
        !/
@@ -284,8 +293,8 @@ contains
     end if
 
     call bcast_global_vector('SP_Xyz_DI',i_proc0(SP_),i_comm())
-       
-    
+
+
     !\
     !Set masks
     !/
@@ -331,12 +340,12 @@ contains
            real,dimension(nVar),intent(out)::Buff_I
          end subroutine MH_get_a_line_point
       end interface
-      
+
       integer,intent(in)::iComp
       type(GridDescriptorType),intent(out)::Gd
       type(RouterType),intent(out)::Router
       real,intent(in)::R2
-      
+
       integer::iPointStart
       real,save::SignBDotR
       !--------------------------------------------------------!
@@ -365,11 +374,11 @@ contains
                EXIT
             end if
          end if
-!         if(DoTest.and.is_proc0(SP_))write(*,*)NameSub//': done ',iPoint,&
-!              ' Line Point, Xyz=',XyzTemp_DI(:,iPoint),' at PE=',i_proc()
+         !         if(DoTest.and.is_proc0(SP_))write(*,*)NameSub//': done ',iPoint,&
+         !              ' Line Point, Xyz=',XyzTemp_DI(:,iPoint),' at PE=',i_proc()
          if(iPoint==nPointMax)call CON_stop(&
               'Insufficient number of points in couple_ih_sp =',iPoint)
-         
+
          call set_router(& 
               GridDescriptorSource=Gd,&
               GridDescriptorTarget=SP_GridDescriptor,&
@@ -439,8 +448,8 @@ contains
     real::LengthRatio
     call get_comp_info(iComp,Name=NameComp)
     MhToSp_DD=transform_matrix(tNow,&
-            Grid_C(iComp)%TypeCoord,&
-            Grid_C(SP_)%TypeCoord)
+         Grid_C(iComp)%TypeCoord,&
+         Grid_C(SP_)%TypeCoord)
     if(DoTest)write(*,*)'Transform SP coordinates from '//NameComp
     call associate_with_global_mask(Is_I,'SP_IsIn'//NameComp)
     call associate_with_global_vector(SP_LocalXyz_DI,'SP_XyzSP')
@@ -454,27 +463,12 @@ contains
     end do
     nullify(SP_LocalXyz_DI,Is_I)
   end subroutine transform_to_sp_from
-    
+
   !==================================================================
   !^CMP IF IH BEGIN
   subroutine couple_ih_sp(DataInputTime)     
+
     use CON_global_message_pass
-    interface
-       subroutine SP_put_from_mh(nPartial,&
-            iPutStart,&
-            Put,&
-            Weight,&
-            DoAdd,&
-            Buff_I,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iPutStart,nVar
-         type(IndexPtrType),intent(in)::Put
-         type(WeightPtrType),intent(in)::Weight
-         logical,intent(in)::DoAdd
-         real,dimension(nVar),intent(in)::Buff_I
-       end subroutine SP_put_from_mh
-    end interface
 
     real,intent(in)::DataInputTime
     real,dimension(3)::Xyz_D
@@ -548,21 +542,21 @@ contains
          all(Xyz_D<=xyz_max_d(IH_)).and.all(Xyz_D>=xyz_min_d(IH_))
   end function is_in_ih
   !==================================================================!        
-   subroutine IH_get_for_sp_and_transform(&
+  subroutine IH_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
-    
+
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
     integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
-       BuffX_    =9,BuffZ_=11
+         BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call IH_get_for_sp(&
          nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
-    
+
     State_V(Ux_:Uz_)=&
          transform_velocity(tNow,&
          State_V(Ux_:Uz_),&
@@ -576,24 +570,9 @@ contains
   !^CMP IF SC BEGIN
   subroutine couple_sc_sp(DataInputTime)
     use CON_global_message_pass
-    interface
-       subroutine SP_put_from_mh(nPartial,&
-            iPutStart,&
-            Put,&
-            Weight,&
-            DoAdd,&
-            Buff_I,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iPutStart,nVar
-         type(IndexPtrType),intent(in)::Put
-         type(WeightPtrType),intent(in)::Weight
-         logical,intent(in)::DoAdd
-         real,dimension(nVar),intent(in)::Buff_I
-       end subroutine SP_put_from_mh
-    end interface
+
     real,intent(in)::DataInputTime
- 
+
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
@@ -634,23 +613,23 @@ contains
        is_in_sc=R2>=rBoundSc**2.and.&
             all(Xyz_D<=xyz_max_d(SC_)).and.all(Xyz_D>=xyz_min_d(SC_))
     end if                           !^CMP IF IH
-  end function is_in_sc             
+  end function is_in_sc
   !--------------------------------------------------------------------------
-   subroutine SC_get_for_sp_and_transform(&
+  subroutine SC_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
-    
+
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
     real,dimension(nVar+3)::State3_V
     integer, parameter :: Rho_=1, Ux_=2, Uz_=4, Bx_=5, Bz_=7,&
-       BuffX_    =9,BuffZ_=11
+         BuffX_    =9,BuffZ_=11
     !------------------------------------------------------------
     call SC_get_for_sp(&
          nPartial,iGetStart,Get,w,State3_V,nVar+3)
     State_V=State3_V(1:nVar)
-    
+
     State_V(Ux_:Uz_)=&
          transform_velocity(tNow,&
          State_V(Ux_:Uz_),&

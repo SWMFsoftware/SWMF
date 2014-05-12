@@ -26,16 +26,22 @@ module CON_wrapper
   use CON_comp_param
   use CON_comp_info
 
+  use CZ_wrapper, ONLY: &
+       CZ_set_param, CZ_init_session, CZ_run, CZ_finalize, CZ_save_restart
   use GM_wrapper, ONLY: &
        GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
   use IE_wrapper, ONLY: &
        IE_set_param, IE_init_session, IE_run, IE_finalize, IE_save_restart
   use PT_wrapper, ONLY: &
        PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
+  use PS_wrapper, ONLY: &
+       PS_set_param, PS_init_session, PS_run, PS_finalize, PS_save_restart
   use PW_wrapper, ONLY: &
        PW_set_param, PW_init_session, PW_run, PW_finalize, PW_save_restart
   use RB_wrapper, ONLY: &
        RB_set_param, RB_init_session, RB_run, RB_finalize, RB_save_restart
+  use SP_wrapper, ONLY: &
+       SP_set_param, SP_init_session, SP_run, SP_finalize, SP_save_restart
 
   implicit none
 

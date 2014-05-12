@@ -18,6 +18,7 @@ module CON_couple_ie_ps
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_ps
+  use PS_wrapper, ONLY: PS_put_from_ie
 
   implicit none
 
@@ -102,7 +103,6 @@ contains
     ! Send field-align current from PS to IE.
     !EOP
 
-    external PS_get_for_ie,IE_put_from_ps
     integer, parameter :: nVarPsIe=3
     real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_ps_ie'
@@ -129,7 +129,6 @@ contains
     ! Send electrostatic potential from IE to PS.
     !EOP
 
-    external PS_put_from_ie
     integer, parameter :: nVarIePs=4
     real :: tSimulationTmp
     integer :: iProcWorld
@@ -158,7 +157,6 @@ contains
       real :: iPS(Grid_C(PS_) % nCoord_D(1))
       real :: jPS(Grid_C(PS_) % nCoord_D(2))
       real :: Buffer_II(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
-      character (len=100) :: FieldModel
 
       ! General error code
       integer :: iError
@@ -208,7 +206,7 @@ contains
 
       ! Put variables into PS
       if(is_proc0(PS_)) &
-           call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out, FieldModel)
+           call PS_put_from_ie(iPs_Size, jPs_Size, Potential_out)
 
       !\
       ! Deallocate buffer to save memory

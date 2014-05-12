@@ -1,132 +1,116 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the "empty" Plasmasphere (PS) component
-!==========================================================================
-subroutine PS_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module PS_wrapper
 
-  implicit none
-
-  character (len=*), parameter :: NameSub='PS_set_param'
-
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
-
-  case default
-     call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
-  end select
-
-end subroutine PS_set_param
-
-!==============================================================================
-
-subroutine PS_init_session(iSession, TimeSimulation)
+  ! Wrapper for the "empty" Plasmasphere (PS) component
 
   implicit none
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  private ! except
+ 
+  public:: PS_set_param
+  public:: PS_init_session
+  public:: PS_run
+  public:: PS_save_restart
+  public:: PS_finalize
 
-  character(len=*), parameter :: NameSub='PS_init_session'
+  ! coupling with IE
+  public:: PS_put_from_ie
 
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+contains
+  !==========================================================================
+  subroutine PS_set_param(CompInfo, TypeAction)
 
-end subroutine PS_init_session
+    use CON_comp_info
 
-!==============================================================================
+    character (len=*), parameter :: NameSub='PS_set_param'
 
-subroutine PS_finalize(TimeSimulation)
+    ! Arguments
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-  implicit none
+    case default
+       call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+    end select
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  end subroutine PS_set_param
 
-  character(len=*), parameter :: NameSub='PS_finalize'
+  !============================================================================
 
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+  subroutine PS_init_session(iSession, TimeSimulation)
 
-end subroutine PS_finalize
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-!==============================================================================
+    character(len=*), parameter :: NameSub='PS_init_session'
 
-subroutine PS_save_restart(TimeSimulation)
+    call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
-  implicit none
+  end subroutine PS_init_session
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  !============================================================================
 
-  character(len=*), parameter :: NameSub='PS_save_restart'
+  subroutine PS_finalize(TimeSimulation)
 
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-end subroutine PS_save_restart
+    character(len=*), parameter :: NameSub='PS_finalize'
 
-!==============================================================================
+    call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
-subroutine PS_run(TimeSimulation,TimeSimulationLimit)
+  end subroutine PS_finalize
 
-  implicit none
+  !============================================================================
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+  subroutine PS_save_restart(TimeSimulation)
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  character(len=*), parameter :: NameSub='PS_run'
+    character(len=*), parameter :: NameSub='PS_save_restart'
 
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+    call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
-end subroutine PS_run
+  end subroutine PS_save_restart
 
-!==============================================================================
+  !============================================================================
 
-subroutine PS_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
+  subroutine PS_run(TimeSimulation,TimeSimulationLimit)
 
-  implicit none
-  character (len=*),parameter :: NameSub='PS_put_from_ie'
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout) :: TimeSimulation   ! current time of component
 
-  integer, intent(in)           :: iSize, jSize, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+    !INPUT ARGUMENTS:
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+    character(len=*), parameter :: NameSub='PS_run'
 
-end subroutine PS_put_from_ie
+    call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
-!==============================================================================
+  end subroutine PS_run
 
-subroutine PS_get_grid_size(iSize,jSize)
+  !============================================================================
 
-  implicit none
-  integer, intent(out) :: iSize, jSize
+  subroutine PS_put_from_ie(iSize, jSize, Buffer_II)
 
-  character (len=*),parameter ::  NameSub='PS_get_grid_size'
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
+    integer, intent(in):: iSize, jSize
+    real, intent(out)  :: Buffer_II(iSize,jSize)
 
-end subroutine PS_get_grid_size
+    character (len=*),parameter :: NameSub='PS_put_from_ie'
 
-!==============================================================================
+    call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
 
-subroutine PS_get_grid(MLTs,Lats)
+  end subroutine PS_put_from_ie
 
-  implicit none
-  real:: MLTs(:,:), Lats(:,:)
-
-  character (len=*),parameter ::  NameSub='PS_get_grid'
-  call CON_stop(NameSub//': PS_ERROR: empty version cannot be used!')
-
-end subroutine PS_get_grid
-
-!==============================================================================
+end module PS_wrapper

@@ -6,6 +6,9 @@ include ../../../Makefile.conf
 
 include Makefile.DEPEND
 
+# Extra path for include files
+INCL_EXTRA = -I../src
+
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
 OBJECTS = SP_wrapper.o
