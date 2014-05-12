@@ -1251,6 +1251,30 @@ PIC::InitMPI();
 	//time step
 
 void amps_time_step () {
+  //  cout <<'============= EUROPA PARAMS ==================' << endl;
+  // cout << Europa::xEuropa[0] << endl;
+  //  cout << Europa::xEuropa[1] << endl;
+  //  cout << Europa::xEuropa[2] << endl;
+  //  cout << Europa::vEuropa[0] << endl;
+  //  cout << Europa::vEuropa[1] << endl;
+  //  cout << Europa::vEuropa[2] << endl;
+  //  cout << Europa::OrbitalMotion::et << endl;
+  //  cout << Europa::OrbitalMotion::TAA << endl;
+  //  cout << Europa::OrbitalMotion::CoordinateFrameRotationRate << endl;
+  //  cout << Europa::OrbitalMotion::PlanetAxisToSunRotationAngle << endl;
+  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0] << endl;
+  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[1] << endl;
+  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[2] << endl;
+  //  int iTmp,jTmp;
+  //  for(iTmp=0;iTmp<6;iTmp++)
+  //    for(jTmp=0;jTmp<6;jTmp++)
+  //      cout << Europa::OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix[iTmp][jTmp] << endl;
+  //  for(iTmp=0;iTmp<6;iTmp++)
+  //    for(jTmp=0;jTmp<6;jTmp++)
+  //      cout << Europa::OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[iTmp][jTmp] << endl;
+  //  for(iTmp=0;iTmp<6;iTmp++)
+  //    for(jTmp=0;jTmp<6;jTmp++)
+  //      cout << Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[iTmp][jTmp] << endl;
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   int idim;
 
@@ -1346,6 +1370,47 @@ void amps_time_step () {
 
 		sxform_c("IAU_EUROPA","GALL_ESOM",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix);
 
+#else
+		double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
+		std::copy(&xEuropaTest[0], &xEuropaTest[0]+3, &Europa::xEuropa[0]);
+		
+		double vEuropaTest[3] = { 0,            77.5556,       92.079};
+		std::copy(&vEuropaTest[0], &vEuropaTest[0]+3, &Europa::vEuropa[0]);
+
+		double SunDirTest[3]  = {-0.364833, 0.931007, -0.0111228};
+		std::copy(&SunDirTest[0], &SunDirTest[0]+3, &Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]);
+		
+		Europa::OrbitalMotion::et  = -9.57527e+07;
+		Europa::OrbitalMotion::TAA =  3.14159;
+		Europa::OrbitalMotion::CoordinateFrameRotationRate = 5.5426e-10;
+		Europa::OrbitalMotion::PlanetAxisToSunRotationAngle= 5.90955;
+
+		SpiceDouble TransMatrix1[6][6] = {
+		  {-0.0307892,   0.999518,    0.00388983,  0,         0,         0}, 
+		  {-0.999503,   -0.0307619,  -0.00689729,  0,         0,         0},
+		  {-0.0067743,  -0.00410026,  0.999969,    0,         0,         0},
+		  {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
+		  { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
+		  {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
+		std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix[0][0]);
+
+		SpiceDouble TransMatrix2[6][6] = {
+		  {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
+		  { 0.999518,   -0.0307619,  -0.00410026,  0,          0,         0},
+		  { 0.00388983, -0.00689729,  0.999969,    0,          0,         0},
+		  {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
+		  {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
+		  {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
+		std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][0]);
+
+		SpiceDouble TransMatrix3[6][6] = {
+		  {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},
+		  {-0.931064,  -0.364856,  -2.77556e-17, 0,         0,        0},
+		  {-0.00405822, 0.0103561,  0.999938,    0,         0,        0},
+		  { 1.90558e-05,7.46742e-06,1.08988e-09,-0.364833,  0.931007,-0.0111228},
+		  {-7.46787e-06,1.9057e-05,-1.07033e-24,-0.931064, -0.364856,-2.77556e-17},
+		  { 2.12366e-07,8.2049e-08, 1.21233e-11,-0.00405822,0.0103561,0.999938}};
+		std::copy(&TransMatrix3[0][0],&TransMatrix3[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[0][0]);
 
 #endif
 
