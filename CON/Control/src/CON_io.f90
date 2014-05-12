@@ -11,13 +11,15 @@
 module CON_io
 
   !USES:
-  use ModIoUnit
+  use ModIoUnit, ONLY: StdOut_, UnitTmp_, io_unit_new
   use CON_world
   use CON_comp_param
-  use CON_wrapper
+  use CON_wrapper, ONLY: set_param_comp, save_restart_comp
   use CON_planet, ONLY: NamePlanet, read_planet_var, check_planet_var
   use CON_time
-  use CON_axes
+  use ModNumConst, ONLY: cDegToRad, cTiny, nByteReal
+  use CON_axes, ONLY: dLongitudeHgr, dLongitudeHgrDeg, &
+       dLongitudeHgi, dLongitudeHgiDeg, init_axes
   use ModReadParam
   use CON_variables
   use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, check_dir, &
