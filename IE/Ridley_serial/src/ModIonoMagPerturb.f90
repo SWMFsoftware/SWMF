@@ -248,8 +248,7 @@ contains
     logical          :: DoTest, DoTestMe
     !---------------------------------------------------------------------  
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Read file on the root processor        
     filename = MagInputFile
@@ -258,7 +257,7 @@ contains
          " reading: ", trim(filename)
 
     open(unit=iunit, file=filename, status="old", iostat = iError)
-    if (iError /= 0) call stop_mpi(NameSub // &
+    if (iError /= 0) call CON_stop(NameSub // &
          ' ERROR: unable to open file ' // trim(filename))
 
     nStat = 0
@@ -276,7 +275,7 @@ contains
              call write_prefix;
              write(*,*) 'Magnetometer Coordinates='//MagInCoord
           case default
-             call stop_mpi(NameSub//' invalid MagInCoord='//MagInCoord)
+             call CON_stop(NameSub//' invalid MagInCoord='//MagInCoord)
           end select
        end if
 
