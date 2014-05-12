@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IE
 !^CMP FILE PS
 
@@ -15,6 +16,8 @@ module CON_couple_ie_ps
 
   !USES:
   use CON_coupler
+
+  use IE_wrapper, ONLY: IE_get_for_ps
 
   implicit none
 
@@ -126,7 +129,7 @@ contains
     ! Send electrostatic potential from IE to PS.
     !EOP
 
-    external IE_get_for_ps, PS_put_from_ie
+    external PS_put_from_ie
     integer, parameter :: nVarIePs=4
     real :: tSimulationTmp
     integer :: iProcWorld
@@ -154,7 +157,7 @@ contains
       integer :: iPS_Size, jPS_Size, iSize, jSize
       real :: iPS(Grid_C(PS_) % nCoord_D(1))
       real :: jPS(Grid_C(PS_) % nCoord_D(2))
-      real :: Buffer_IIV(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
+      real :: Buffer_II(Grid_C(IE_) % nCoord_D(1),Grid_C(IE_) % nCoord_D(2))
       character (len=100) :: FieldModel
 
       ! General error code
@@ -188,19 +191,20 @@ contains
 
       ! Get Potential from IE, then Bilinear Interpolate
       if(is_proc0(IE_)) &
-           call IE_get_for_ps(Buffer_IIV, iSize, jSize, tSimulation, FieldModel)
+           call IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
       ! Transfer variables from IE to PS
       if(iProc0Ie /= iProc0Ps)then
          if(is_proc0(IE_)) &
-              call MPI_send(Potential_out,size(Potential_out),MPI_REAL,iProc0Ps,&
-              1,iCommWorld,iError)
+              call MPI_send(Potential_out, size(Potential_out), &
+              MPI_REAL, iProc0Ps, 1, iCommWorld, iError)
          if(is_proc0(PS_)) &
-              call MPI_recv(Potential_out,size(Potential_out),MPI_REAL,iProc0Ie,&
-              1,iCommWorld,iStatus_I,iError)
+              call MPI_recv(Potential_out, size(Potential_out), &
+              MPI_REAL, iProc0Ie, 1, iCommWorld, iStatus_I, iError)
       end if
 
-      if(DoTest)write(*,*)NameSubSub,', variables transferred iProc:',iProcWorld
+      if(DoTest) write(*,* )NameSubSub,', variables transferred iProc:', &
+           iProcWorld
 
       ! Put variables into PS
       if(is_proc0(PS_)) &
