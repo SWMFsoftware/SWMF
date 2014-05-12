@@ -36,6 +36,12 @@ static cInternalRotationBodyData* Nucleus;
 
 double subSolarPointAzimuth=0.0; //53.0*Pi/180; //0.0;
 
+double DustSizeMin=1.0e-7;
+double DustSizeMax=1.0e-2;
+double DustTotalMassProductionRate=0.0;
+int DustSampleIntervals=10;
+double DustSizeDistribution=0.0;
+
 //char Exosphere::SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_]="2008-12-20T00:00:00"; //"2011-04-13T00:00:00" ;//"2009-00-00T00:00:00";
 
 //parameters of the soruce processes
@@ -92,13 +98,13 @@ void Comet::Init_BeforeParser() {
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model                                                                                                                                                                           
-  ElectricallyChargedDust::minDustRadius=0.1*_MICROMETER_;
-  ElectricallyChargedDust::maxDustRadius=1.0e4*_MICROMETER_;
-  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(10);
+  ElectricallyChargedDust::minDustRadius=DustSizeMin; //0.1*_MICROMETER_;
+  ElectricallyChargedDust::maxDustRadius=DustSizeMax; //1.0e4*_MICROMETER_;
+  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(DustSampleIntervals);
   ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
   ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=100.0;
-  ElectricallyChargedDust::TotalMassDustProductionRate=1.0;
-  ElectricallyChargedDust::SizeDistribution::PowerIndex=4.0;
+  ElectricallyChargedDust::TotalMassDustProductionRate=DustTotalMassProductionRate;
+  ElectricallyChargedDust::SizeDistribution::PowerIndex=DustSizeDistribution;
   ElectricallyChargedDust::Init_BeforeParser();
 #endif
 
