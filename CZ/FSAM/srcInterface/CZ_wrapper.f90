@@ -6,6 +6,9 @@ module CZ_wrapper
 
   ! Wrapper for the FSAM Convection Zone (CZ) component
 
+  use ModUtilities, ONLY: flush_unit
+  use ModIoUnit, ONLY: io_unit_new
+
   implicit none
 
   private ! except
@@ -15,6 +18,10 @@ module CZ_wrapper
   public:: CZ_run
   public:: CZ_save_restart
   public:: CZ_finalize
+
+  ! local variables
+
+  integer:: iUnit  ! unit number for saving "logfile"
 
 contains
   !===========================================================================
@@ -129,7 +136,7 @@ contains
     else
        call readrst_mpi
        ctime = time
-       if(myid==0) write(6,*) 'Restart from restart files at time t = ', time
+       if(myid==0) write(*,*) 'Restart from restart files at time t = ', time
        call bvalv
     endif
     call p_init
@@ -140,11 +147,12 @@ contains
     call get_global(em,ek,ek1,ek2,ek3,eth,anglm,anglmnorm)
     call get_mean_entropy(smeanbot,smeantop)
     if(myid==0) then
-       open(unit=16,file=engfile,status='replace')
-       write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
+       iUnit = io_unit_new()
+       open(iUnit,file=engfile,status='replace')
+       write(iUnit,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
             ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, &
             ek1,ek2,ek3,ntcond
-       call flush(16)
+       call flush_unit(iUnit)
     endif
 
     ! output grid and initial fields and set up for future outputs 
@@ -211,9 +219,9 @@ contains
        call get_global(em,ek,ek1,ek2,ek3,eth,anglm,anglmnorm)
        call get_mean_entropy(smeanbot,smeantop)
        if(myid==0) then
-          write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
+          write(iUnit,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
                ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, ek1,ek2,ek3,ntcond
-          call flush(16)
+          call flush_unit(iUnit)
        endif
     endif
 
