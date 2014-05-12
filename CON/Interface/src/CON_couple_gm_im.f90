@@ -21,6 +21,9 @@ module CON_couple_gm_im
        GM_get_for_im_crcm, GM_get_for_im_trace_crcm, GM_get_sat_for_im_crcm, &
        GM_put_from_im, GM_print_variables
 
+  use IM_wrapper, ONLY: IM_get_for_gm, IM_put_from_gm, &
+       IM_put_from_gm_line, IM_put_from_gm_crcm, IM_put_sat_from_gm
+
   implicit none
 
   private ! except

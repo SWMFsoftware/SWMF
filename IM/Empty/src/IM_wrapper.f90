@@ -1,235 +1,249 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the "empty" Inner Magnetosphere (IM) component
-!==========================================================================
-subroutine IM_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module IM_wrapper
 
-  implicit none
-
-  character (len=*), parameter :: NameSub='IM_set_param'
-
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
-
-  case default
-     call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
-  end select
-
-end subroutine IM_set_param
-
-!==============================================================================
-
-subroutine IM_init_session(iSession, TimeSimulation)
+  ! Wrapper for empty Internal Magnetosphere (IM) component
 
   implicit none
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  private ! except
 
-  character(len=*), parameter :: NameSub='IM_init_session'
+  public:: IM_set_param
+  public:: IM_init_session
+  public:: IM_run
+  public:: IM_save_restart
+  public:: IM_finalize
+  
+  ! Coupling with IE
+  public:: IM_get_for_ie
+  public:: IM_put_from_ie_mpi
+  public:: IM_put_from_ie
+  public:: IM_put_from_ie_complete
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  ! Coupling with GM
+  public:: IM_get_for_gm
+  public:: IM_put_from_gm
+  public:: IM_put_from_gm_line
+  public:: IM_put_from_gm_crcm
+  public:: IM_put_sat_from_gm
 
-end subroutine IM_init_session
+contains
 
-!==============================================================================
+  ! Wrapper for the "empty" Inner Magnetosphere (IM) component
+  !==========================================================================
+  subroutine IM_set_param(CompInfo, TypeAction)
 
-subroutine IM_finalize(TimeSimulation)
+    use CON_comp_info
 
-  implicit none
+    character (len=*), parameter :: NameSub='IM_set_param'
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    ! Arguments
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-  character(len=*), parameter :: NameSub='IM_finalize'
+    case default
+       call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    end select
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  end subroutine IM_set_param
 
-end subroutine IM_finalize
+  !============================================================================
 
-!==============================================================================
+  subroutine IM_init_session(iSession, TimeSimulation)
 
-subroutine IM_save_restart(TimeSimulation)
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  implicit none
+    character(len=*), parameter :: NameSub='IM_init_session'
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='IM_save_restart'
+  end subroutine IM_init_session
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IM_save_restart
+  subroutine IM_finalize(TimeSimulation)
 
-!==============================================================================
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-subroutine IM_run(TimeSimulation,TimeSimulationLimit)
+    character(len=*), parameter :: NameSub='IM_finalize'
 
-  implicit none
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+  end subroutine IM_finalize
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+  !============================================================================
 
-  character(len=*), parameter :: NameSub='IM_run'
+  subroutine IM_save_restart(TimeSimulation)
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-end subroutine IM_run
+    character(len=*), parameter :: NameSub='IM_save_restart'
 
-!============================================================================
-subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  implicit none
-  integer, intent(in):: nTheta, nPhi
-  real,    intent(in):: Potential_II(nTheta, nPhi)
+  end subroutine IM_save_restart
 
-  character(len=*), parameter   :: NameSub='IM_put_from_ie_mpi'
+  !============================================================================
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
-end subroutine IM_put_from_ie_mpi
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout):: TimeSimulation   ! current time of component
 
+    !INPUT ARGUMENTS:
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-!==============================================================================
+    character(len=*), parameter :: NameSub='IM_run'
 
-subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  ! Some of the arguments have complicated derived type definitions
-  ! so they are left unspecified for sake of simplicity
+  end subroutine IM_run
 
-  character(len=*), parameter   :: NameSub='IM_put_from_ie'
+  !============================================================================
+  subroutine IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    integer, intent(in):: nTheta, nPhi
+    real,    intent(in):: Potential_II(nTheta, nPhi)
 
-end subroutine IM_put_from_ie
+    character(len=*), parameter   :: NameSub='IM_put_from_ie_mpi'
 
-!==============================================================================
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-subroutine IM_put_from_ie_complete
+  end subroutine IM_put_from_ie_mpi
 
-  implicit none
+  !============================================================================
 
-  character(len=*), parameter   :: NameSub='IM_put_from_ie_complete'
+  subroutine IM_put_from_ie(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
-end subroutine IM_put_from_ie_complete
+    integer,intent(in)            :: nPoint, iPointStart, nVar
+    real, intent(in)              :: Buff_V(nVar)
+    type(IndexPtrType),intent(in) :: Index
+    type(WeightPtrType),intent(in):: Weight
+    logical,intent(in)            :: DoAdd
 
-!==============================================================================
+    character(len=*), parameter   :: NameSub = 'IM_put_from_ie'
 
-subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
-     nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  implicit none
-  character (len=*),parameter :: NameSub='IM_put_from_gm_line'
+  end subroutine IM_put_from_ie
 
-  integer, intent(in) :: nRadiusIn, nLonIn
-  real,    intent(in) :: Map_DSII(3,2,nRadiusIn,nLonIn)
-  integer, intent(in) :: nVarLineIn, nPointLineIn
-  real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
-  character(len=*), intent(in) :: NameVar
+  !============================================================================
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  subroutine IM_put_from_ie_complete
 
-end subroutine IM_put_from_gm_line
+    character(len=*), parameter   :: NameSub='IM_put_from_ie_complete'
 
-!==============================================================================
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+  end subroutine IM_put_from_ie_complete
 
-  implicit none
-  character (len=*),parameter :: NameSub='IM_put_from_gm'
+  !============================================================================
 
-  integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
-  real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
-  character (len=*),intent(in)       :: NameVar
+  subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
+       nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    integer, intent(in) :: nRadiusIn, nLonIn
+    real,    intent(in) :: Map_DSII(3,2,nRadiusIn,nLonIn)
+    integer, intent(in) :: nVarLineIn, nPointLineIn
+    real,    intent(in) :: BufferLine_VI(nVarLineIn,nPointLineIn)
+    character(len=*), intent(in) :: NameVar
 
-end subroutine IM_put_from_gm
+    character (len=*),parameter :: NameSub='IM_put_from_gm_line'
 
-!==============================================================================
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-subroutine IM_get_for_gm(Buffer_II,iSizeIn,jSizeIn,NameVar)
+  end subroutine IM_put_from_gm_line
 
-  implicit none
-  character (len=*),parameter :: NameSub='IM_get_for_gm'
+  !============================================================================
 
-  integer, intent(in) :: iSizeIn,jSizeIn
-  real, dimension(iSizeIn,jSizeIn), intent(out) :: Buffer_II
-  character (len=*),intent(in)       :: NameVar
+  subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+    integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+    real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
+    character (len=*),intent(in)       :: NameVar
 
-end subroutine IM_get_for_gm
+    character (len=*),parameter :: NameSub='IM_put_from_gm'
 
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-!===========================================================================
+  end subroutine IM_put_from_gm
 
-subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
-            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+  !============================================================================
 
-  implicit none
+  subroutine IM_get_for_gm(Buffer_IIV, iSizeIn, jSizeIn, nVar, NameVar)
 
-  integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
-  real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
-  integer, intent(in) :: nVarLine, nPointLine
-  real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
+    character (len=*),parameter :: NameSub='IM_get_for_gm'
 
-  character (len=*),intent(in) :: NameVar
-  real, intent(in) :: tSimulation
+    integer, intent(in) :: iSizeIn, jSizeIn, nVar
+    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
+    character (len=*),intent(in):: NameVar
 
-  character (len=*), parameter :: NameSub='IM_put_from_gm_crcm'
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  end subroutine IM_get_for_gm
 
-end subroutine IM_put_from_gm_crcm
+  !===========================================================================
 
-!==============================================================================
+  subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
+       BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
 
-subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
+    integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
+    real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+    integer, intent(in) :: nVarLine, nPointLine
+    real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
+    real,    intent(in) :: tSimulation
+    character (len=*), intent(in) :: NameVar
 
-  implicit none
-  character (len=*), parameter :: NameSub='IM_put_sat_from_gm'
+    character (len=*), parameter :: NameSub='IM_put_from_gm_crcm'
 
-  integer, intent(in)            :: nSats
-  real, intent(in)               :: Buffer_III(3,2,nSats)
-  character(len=100), intent(in) :: Buffer_I(nSats)
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  end subroutine IM_put_from_gm_crcm
 
-end subroutine IM_put_sat_from_gm
+  !============================================================================
 
-!==============================================================================
+  subroutine IM_put_sat_from_gm(nSats, Buffer_I, Buffer_III)
 
-subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
+    character (len=*), parameter :: NameSub='IM_put_sat_from_gm'
 
-  use CON_router,   ONLY: IndexPtrType, WeightPtrType
+    integer, intent(in)            :: nSats
+    real, intent(in)               :: Buffer_III(3,2,nSats)
+    character(len=100), intent(in) :: Buffer_I(nSats)
 
-  implicit none
-  character(len=*), parameter :: NameSub='IM_get_for_ie'
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
 
-  integer,intent(in)            :: nPoint, iPointStart, nVar
-  real,intent(out)              :: Buff_V(nVar)
-  type(IndexPtrType),intent(in) :: Index
-  type(WeightPtrType),intent(in):: Weight
+  end subroutine IM_put_sat_from_gm
 
-  call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IM_get_for_ie
+  subroutine IM_get_for_ie(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
+    use CON_router,   ONLY: IndexPtrType, WeightPtrType
+
+    character(len=*), parameter :: NameSub='IM_get_for_ie'
+
+    integer,intent(in)            :: nPoint, iPointStart, nVar
+    real,intent(out)              :: Buff_V(nVar)
+    type(IndexPtrType),intent(in) :: Index
+    type(WeightPtrType),intent(in):: Weight
+
+    call CON_stop(NameSub//': IM_ERROR: empty version cannot be used!')
+
+  end subroutine IM_get_for_ie
+
+end module IM_wrapper

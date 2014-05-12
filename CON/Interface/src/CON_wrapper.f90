@@ -32,6 +32,8 @@ module CON_wrapper
        GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
   use IE_wrapper, ONLY: &
        IE_set_param, IE_init_session, IE_run, IE_finalize, IE_save_restart
+  use IM_wrapper, ONLY: &
+       IM_set_param, IM_init_session, IM_run, IM_finalize, IM_save_restart
   use PT_wrapper, ONLY: &
        PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
   use PS_wrapper, ONLY: &

@@ -22,6 +22,9 @@ module CON_couple_ie_im
   use IE_wrapper, ONLY: IE_get_for_gm ! this is used by RAM-SCB coupler ???
   use IE_wrapper, ONLY: IE_run        ! forces IE and IM run sequentially???
 
+  use IM_wrapper, ONLY: IM_get_for_ie, IM_put_from_ie_mpi, &
+       IM_put_from_ie, IM_put_from_ie_complete
+
   implicit none
 
   private ! except
@@ -151,8 +154,6 @@ contains
     integer, parameter :: nVarImIe=3
     real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_im_ie'
-
-    external:: IM_get_for_ie
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     
@@ -187,8 +188,6 @@ contains
     integer, parameter :: nVarIeIm=4
     real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_ie_im'
-
-    external:: IM_put_from_ie
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
