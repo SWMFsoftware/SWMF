@@ -904,7 +904,7 @@ test11_check:
 	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
 	        perl -ai -ne 'print "@F[0..3] @F[6..14] ",1e20*$$F[15]," @F[16..$$#F]\n"' \
 			pic.NA.ref pic.NA.dat 
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-20 -r=1e-6 -b \
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-19 -r=1e-6 -b \
 	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
 		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
