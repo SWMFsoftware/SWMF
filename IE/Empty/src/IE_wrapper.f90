@@ -1,241 +1,306 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the "empty" Ionosphere Electrodynamics (IE) component
-!==========================================================================
-subroutine IE_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module IE_wrapper
 
   implicit none
 
-  character (len=*), parameter :: NameSub='IE_set_param'
+contains
+  ! Wrapper for the "empty" Ionosphere Electrodynamics (IE) component
+  !==========================================================================
+  subroutine IE_set_param(CompInfo, TypeAction)
 
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
+    use CON_comp_info
 
-  case default
-     call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-  end select
+    character (len=*), parameter :: NameSub='IE_set_param'
 
-end subroutine IE_set_param
+    ! Arguments
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-!==============================================================================
+    case default
+       call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+    end select
 
-subroutine IE_init_session(iSession, TimeSimulation)
+  end subroutine IE_set_param
 
-  implicit none
+  !============================================================================
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  subroutine IE_init_session(iSession, TimeSimulation)
 
-  character(len=*), parameter :: NameSub='IE_init_session'
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+    character(len=*), parameter :: NameSub='IE_init_session'
 
-end subroutine IE_init_session
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-!==============================================================================
+  end subroutine IE_init_session
 
-subroutine IE_finalize(TimeSimulation)
+  !============================================================================
 
-  implicit none
+  subroutine IE_finalize(TimeSimulation)
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  character(len=*), parameter :: NameSub='IE_finalize'
+    character(len=*), parameter :: NameSub='IE_finalize'
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-end subroutine IE_finalize
+  end subroutine IE_finalize
 
-!==============================================================================
+  !============================================================================
 
-subroutine IE_save_restart(TimeSimulation)
+  subroutine IE_save_restart(TimeSimulation)
 
-  implicit none
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    character(len=*), parameter :: NameSub='IE_save_restart'
 
-  character(len=*), parameter :: NameSub='IE_save_restart'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  end subroutine IE_save_restart
 
-end subroutine IE_save_restart
+  !============================================================================
 
-!==============================================================================
+  subroutine IE_run(TimeSimulation,TimeSimulationLimit)
 
-subroutine IE_run(TimeSimulation,TimeSimulationLimit)
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout) :: TimeSimulation   ! current time of component
 
-  implicit none
+    !INPUT ARGUMENTS:
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+    character(len=*), parameter :: NameSub='IE_run'
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='IE_run'
+  end subroutine IE_run
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_run
+  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, tSimulation)
 
-!==============================================================================
+    integer, intent(in) :: iSize,jSize
+    real,    intent(out):: Buffer_IIV(iSize,jSize,2)
+    real,    intent(in) :: tSimulation
 
-subroutine IE_get_for_gm(Buffer_II,iSize,jSize,NameVar)
+    character (len=*),parameter :: NameSub = 'IE_get_for_gm'
 
-  implicit none
-  character (len=*),parameter :: NameSub='IE_get_for_gm'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  integer, intent(in)           :: iSize,jSize
-  real, intent(out)             :: Buffer_II(iSize,jSize)
-  character (len=*),intent(in)  :: NameVar
+  end subroutine IE_get_for_gm
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_get_for_gm
+  subroutine IE_put_from_gm(Buffer_IIV, iSize, jSize, nVar)
 
-!==============================================================================
+    integer,          intent(in) :: iSize, jSize, nVar
+    real,             intent(in) :: Buffer_IIV(iSize,jSize,nVar)
 
-subroutine IE_put_from_gm(Buffer_IIV,iSize,jSize,nVar,NameVar)
+    character (len=*),parameter :: NameSub='IE_put_from_gm'
 
-  implicit none
-  character (len=*),parameter :: NameSub='IE_put_from_gm'
-  integer,          intent(in) :: iSize, jSize, nVar
-  real,             intent(in) :: Buffer_IIV(iSize,jSize,nVar)
-  character(len=*) ,intent(in) :: NameVar
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
+  end subroutine IE_put_from_gm
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_put_from_gm
+  subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
+       tSimulation)
 
-!==============================================================================
+    character (len=*),parameter :: NameSub='IE_get_for_pw'
 
-subroutine IE_get_for_pw(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
-     tSimulation)
+    integer, intent(in)           :: iSize, jSize, nVar
+    real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+    character (len=*),intent(in)  :: NameHem
+    character (len=*),intent(in)  :: Name_V(nVar)
+    real,             intent(in)  :: tSimulation
 
-  implicit none
-  character (len=*),parameter :: NameSub='IE_get_for_pw'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  integer, intent(in)           :: iSize, jSize, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
-  character (len=*),intent(in)  :: NameHem
-  character (len=*),intent(in)  :: Name_V(nVar)
-  real,             intent(in)  :: tSimulation
+  end subroutine IE_get_for_pw
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_get_for_pw
+  subroutine IE_get_for_rb(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
+       tSimulation)
 
-!==============================================================================
+    character (len=*),parameter :: NameSub='IE_get_for_rb'
 
-subroutine IE_get_for_rb(Buffer_IIV, iSize, jSize, nVar, Name_V, NameHem,&
-     tSimulation)
+    integer, intent(in)           :: iSize, jSize, nVar
+    real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+    character (len=*),intent(in)  :: NameHem
+    character (len=*),intent(in)  :: Name_V(nVar)
+    real,             intent(in)  :: tSimulation
 
-  implicit none
-  character (len=*),parameter :: NameSub='IE_get_for_rb'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  integer, intent(in)           :: iSize, jSize, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
-  character (len=*),intent(in)  :: NameHem
-  character (len=*),intent(in)  :: Name_V(nVar)
-  real,             intent(in)  :: tSimulation
+  end subroutine IE_get_for_rb
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_get_for_rb
+  subroutine IE_get_for_ps(Buffer_II, iSize, jSize, tSimulation)
 
-!==============================================================================
+    integer, intent(in) :: iSize, jSize
+    real, intent(out)   :: Buffer_II(iSize,jSize)
+    real, intent(in)    :: tSimulation
 
-subroutine IE_get_for_ps(Buffer_IIV, iSize, jSize, nVar)
+    character (len=*),parameter :: NameSub='IE_get_for_ps'
 
-  implicit none
-  character (len=*),parameter :: NameSub='IE_get_for_ps'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  integer, intent(in)           :: iSize, jSize, nVar
-  real, intent(out)             :: Buffer_IIV(iSize,jSize,nVar)
+  end subroutine IE_get_for_ps
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine IE_get_for_ps
+  subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
 
-!==============================================================================
+    use CON_router,   ONLY: IndexPtrType, WeightPtrType
 
-subroutine IE_get_for_im(nPoint,iPointStart,Index,Weight,Buff_V,nVar)
+    integer,intent(in)            :: nPoint, iPointStart, nVar
+    real,intent(out)              :: Buff_V(nVar)
+    type(IndexPtrType),intent(in) :: Index
+    type(WeightPtrType),intent(in):: Weight
 
-  ! Some of the arguments are complicated derived type
-  ! For sake of simplicity the arguments are not declared
+    character (len=*),parameter :: NameSub='IE_get_for_im'
 
-  character (len=*),parameter :: NameSub='IE_get_for_im'
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  end subroutine IE_get_for_im
 
-end subroutine IE_get_for_im
+  !============================================================================
 
-!==============================================================================
+  subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
 
-subroutine initialize_ie_ua_buffers(iOutputError)
+    integer, intent(in) :: nMlts, nLats, iBlock, nVarsToPass
+    real, dimension(nMlts, nLats, nVarsToPass), intent(in) :: Buffer_III
 
-  implicit none
+    character (len=*),parameter :: NameSub='IE_put_from_UA'
 
-  integer :: iOutputError
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  character (len=*),parameter :: NameSub='initialize_ie_ua_buffers'
+  end subroutine IE_put_from_UA
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine initialize_ie_ua_buffers
+  subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
 
-!==============================================================================
+    integer,          intent(in)  :: iSize,jSize
+    real,             intent(out) :: Buffer_II(iSize,jSize)
+    character (len=*),intent(in)  :: NameVar
+    character (len=*),intent(in)  :: NameHem
+    real,             intent(in)  :: tSimulation
 
-subroutine IE_put_from_UA(Buffer_III, iBlock, nMLTs, nLats, nVarsToPass)
+    character (len=*),parameter :: NameSub='IE_get_for_ua'
 
-  implicit none
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  integer, intent(in) :: nMlts, nLats, iBlock, nVarsToPass
-  real, dimension(nMlts, nLats, nVarsToPass), intent(in) :: Buffer_III
+  end subroutine IE_get_for_ua
 
-  character (len=*),parameter :: NameSub='IE_put_from_UA'
+  !============================================================================
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+  subroutine IE_setnMlts(iComponent, nMLTsIn, iError)
 
-end subroutine IE_put_from_UA
+    integer, intent(in)  :: iComponent, nMLTsIn
+    integer, intent(out) :: iError
 
-!==============================================================================
+    character (len=*), parameter :: NameSub='IE_setnMlts'
 
-subroutine IE_get_for_ua(Buffer_II,iSize,jSize,NameVar,NameHem,tSimulation)
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-  implicit none
+  end subroutine IE_setnMlts
 
-  integer,          intent(in)  :: iSize,jSize
-  real,             intent(out) :: Buffer_II(iSize,jSize)
-  character (len=*),intent(in)  :: NameVar
-  character (len=*),intent(in)  :: NameHem
-  real,             intent(in)  :: tSimulation
+  !============================================================================
 
-  character (len=*),parameter :: NameSub='IE_get_for_ua'
+  subroutine IE_setnLats(iComponent, nLatsIn, iError)
 
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+    integer, intent(in)  :: iComponent, nLatsIn
+    integer, intent(out) :: iError
 
-end subroutine IE_get_for_ua
+    character (len=*), parameter :: NameSub='IE_setnLats'
 
-!==============================================================================
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_setnLats
+
+  !============================================================================
+
+  subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
+
+    integer, intent(in) :: iComponent
+    real, intent(in) :: MLTsIn,LatsIn
+    integer, intent(out) :: iError
+
+    character (len=*), parameter :: NameSub='IE_setgrid'
+
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_setgrid
+
+  !============================================================================
+
+  subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
+
+    use CON_router,   ONLY: IndexPtrType, WeightPtrType
+
+    character(len=*), parameter   :: NameSub='IE_put_from_im'
+    integer,intent(in)            :: nPoint, iPointStart, nVar
+    real, intent(in)              :: Buff_V(nVar)
+    type(IndexPtrType),intent(in) :: Index
+    type(WeightPtrType),intent(in):: Weight
+    logical,intent(in)            :: DoAdd
+
+    call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_put_from_im
+
+  !============================================================================
+
+  subroutine IE_put_from_im_complete
+
+    write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
+
+  end subroutine IE_put_from_im_complete
+
+  !============================================================================
+
+  subroutine IE_groundmaginit_for_gm(nShareGroundMag)
+
+    integer, intent(out) :: nShareGroundMag
+    character(len=*), parameter :: NameSub='IE_groundmaginit_for_gm'
+    call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_groundmaginit_for_gm
+
+  !============================================================================
+
+  subroutine IE_get_mag_for_gm(Buffer_DI, iSize)  
+
+    integer, intent(in):: iSize
+    real, intent(out) :: Buffer_DI(3,iSize)
+    character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
+    call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
+
+  end subroutine IE_get_mag_for_gm
+  !============================================================================
+
+end module IE_wrapper
+
+!============================================================================
 
 subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
-
-  implicit none
 
   integer, intent(in)           :: iSize,jSize
   real, intent(in)              :: Buffer_II(iSize,jSize)
@@ -248,91 +313,15 @@ subroutine SPS_put_into_ie(Buffer_II, iSize, jSize, NameVar, iBlock)
 
 end subroutine SPS_put_into_ie
 
-!==============================================================================
+!============================================================================
 
-subroutine IE_setnMlts(iComponent, nMLTsIn, iError)
+subroutine initialize_ie_ua_buffers(iOutputError)
 
-  implicit none
+  integer :: iOutputError
 
-  integer, intent(in)  :: iComponent, nMLTsIn
-  integer, intent(out) :: iError
-
-  character (len=*), parameter :: NameSub='IE_setnMlts'
+  character (len=*),parameter :: NameSub='initialize_ie_ua_buffers'
 
   call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
 
-end subroutine IE_setnMlts
+end subroutine initialize_ie_ua_buffers
 
-!==============================================================================
-
-subroutine IE_setnLats(iComponent, nLatsIn, iError)
-
-  implicit none
-
-  integer, intent(in)  :: iComponent, nLatsIn
-  integer, intent(out) :: iError
-
-  character (len=*), parameter :: NameSub='IE_setnLats'
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_setnLats
-
-!==============================================================================
-
-subroutine IE_setgrid(iComponent, MLTsIn, LatsIn, iError)
-
-  integer, intent(in) :: iComponent
-  real, intent(in) :: MLTsIn,LatsIn
-  integer, intent(out) :: iError
-
-  character (len=*), parameter :: NameSub='IE_setgrid'
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_setgrid
-
-!==============================================================================
-
-subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
-
-  use CON_router,   ONLY: IndexPtrType, WeightPtrType
-
-  implicit none
-  character(len=*), parameter   :: NameSub='IE_put_from_im'
-  integer,intent(in)            :: nPoint, iPointStart, nVar
-  real, intent(in)              :: Buff_V(nVar)
-  type(IndexPtrType),intent(in) :: Index
-  type(WeightPtrType),intent(in):: Weight
-  logical,intent(in)            :: DoAdd
-
-  call CON_stop(NameSub//': IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_put_from_im
-!==============================================================================
-subroutine IE_put_from_im_complete
-
-  write(*,*)"Don't know what IE_put_from_im_complete is really supposed to do."
-
-end subroutine IE_put_from_im_complete
-!==============================================================================
-subroutine IE_groundmaginit_for_gm(nShareGroundMag)
-
-  implicit none
-  integer, intent(out) :: nShareGroundMag
-  character(len=*), parameter :: NameSub='IE_groundmaginit_for_gm'
-  call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_groundmaginit_for_gm
-
-!==============================================================================
-subroutine IE_get_mag_for_gm(Buffer_DI, iSize)  
-
-  implicit none
-  integer, intent(in):: iSize
-  real, intent(out) :: Buffer_DI(3,iSize)
-  character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
-  call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
-
-end subroutine IE_get_mag_for_gm
-!==============================================================================
