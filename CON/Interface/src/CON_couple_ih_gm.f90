@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE IH
 !^CMP FILE GM
 !BOP
@@ -10,15 +11,14 @@ module CON_couple_ih_gm
 ! This coupler uses the SWMF coupling toolkit.
 ! Both the IH and GM grids use AMR.
 ! IH is a source, GM is a target.
-! It is assumed that IH uses the solar radius rSun as distance unit, while
-! GM uses the Earth's radius as distance unit.
-
-! Typically the mapping is charcterized by some real matrices
-! and/or vectors. In the particular case of the cartesian
-! generalized coordinates this is the position of the origin of
+! Typically IH uses the solar radius rSun as distance unit, 
+! while GM uses the Earth's radius as distance unit.
+!
+! The mapping is characterized by rotation matrices and/or translation vectors.
+! In the particular case this is the position of the origin of
 ! the GM frame of reference in the IH frame of refernce  and the
-! matrix which characterizes the turn of the IH frame of
-! reference with respect to GM :
+! matrix which characterizes the rotation of the IH frame of
+! reference with respect to GM:
 !
 ! $$
 ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\\
@@ -30,7 +30,8 @@ module CON_couple_ih_gm
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
 
-  use GM_wrapper, ONLY: GM_synchronize_refinement, GM_put_from_ih, GM_put_from_ih_buffer
+  use GM_wrapper, ONLY: GM_synchronize_refinement, &
+       GM_put_from_ih, GM_put_from_ih_buffer
 
   implicit none
 
