@@ -32,6 +32,10 @@ module CON_wrapper
        IE_set_param, IE_init_session, IE_run, IE_finalize, IE_save_restart
   use PT_wrapper, ONLY: &
        PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
+  use PW_wrapper, ONLY: &
+       PW_set_param, PW_init_session, PW_run, PW_finalize, PW_save_restart
+  use RB_wrapper, ONLY: &
+       RB_set_param, RB_init_session, RB_run, RB_finalize, RB_save_restart
 
   implicit none
 

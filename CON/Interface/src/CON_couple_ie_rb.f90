@@ -17,6 +17,7 @@ module CON_couple_ie_rb
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_rb
+  use RB_wrapper, ONLY: RB_put_from_ie
 
   implicit none
 

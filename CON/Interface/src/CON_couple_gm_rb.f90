@@ -16,8 +16,10 @@ module CON_couple_gm_rb
   !USES:
   use CON_coupler
 
-  use GM_wrapper, ONLY: GM_get_for_rb, GM_get_for_rb_trace, GM_get_sat_for_rb, &
-       GM_satinit_for_rb
+  use GM_wrapper, ONLY: &
+       GM_get_for_rb, GM_get_for_rb_trace, GM_get_sat_for_rb, GM_satinit_for_rb
+  use RB_wrapper, ONLY: &
+       RB_put_from_gm, RB_put_sat_from_gm
 
   implicit none
 

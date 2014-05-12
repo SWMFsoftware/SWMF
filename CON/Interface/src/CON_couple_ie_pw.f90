@@ -17,6 +17,7 @@ module CON_couple_ie_pw
   use CON_coupler
 
   use IE_wrapper, ONLY: IE_get_for_pw
+  use PW_wrapper, ONLY: PW_put_from_ie
 
   implicit none
 
@@ -151,7 +152,7 @@ contains
       if(DoTest)write(*,*)NameSubSub,', variables allocated',&
            ', iProc:',iProcWorld
 
-!      do iBlock = South_, North_
+      ! do iBlock = South_, North_
 
       iBlock = North_
 
@@ -198,7 +199,7 @@ contains
                  iProcWorld,Buffer_IIV(1,1,:)
          end if
 
-!      enddo
+      ! enddo
       !\
       ! Deallocate buffer to save memory
       !/

@@ -19,6 +19,7 @@ module CON_couple_gm_pw
   use CON_coupler
 
   use GM_wrapper, ONLY: GM_get_for_pw, GM_put_from_pw
+  use PW_wrapper, ONLY: PW_get_for_gm, PW_put_from_gm
 
   implicit none
 

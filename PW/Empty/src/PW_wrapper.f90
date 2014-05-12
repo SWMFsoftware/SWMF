@@ -1,142 +1,151 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for the empty PWOM (PW) component
-!==========================================================================
-subroutine PW_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module PW_wrapper
 
-  implicit none
-
-  character (len=*), parameter :: NameSub='PW_set_param'
-
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
-
-  case default
-     call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
-  end select
-
-end subroutine PW_set_param
-
-!==============================================================================
-
-subroutine PW_init_session(iSession, TimeSimulation)
+  ! Wrapper for the empty PW component
 
   implicit none
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  private ! except
 
-  character(len=*), parameter :: NameSub='PW_init_session'
+  public:: PW_set_param
+  public:: PW_init_session
+  public:: PW_run
+  public:: PW_save_restart
+  public:: PW_finalize
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  ! coupling with GM
+  public:: PW_get_for_gm
+  public:: PW_put_from_gm
 
-end subroutine PW_init_session
+  ! coupling with IE
+  public:: PW_put_from_ie
 
-!==============================================================================
+contains
+  !==========================================================================
+  subroutine PW_set_param(CompInfo, TypeAction)
 
-subroutine PW_finalize(TimeSimulation)
+    use CON_comp_info
 
-  implicit none
+    character (len=*), parameter :: NameSub='PW_set_param'
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    ! Arguments
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-  character(len=*), parameter :: NameSub='PW_finalize'
+    case default
+       call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+    end select
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  end subroutine PW_set_param
 
-end subroutine PW_finalize
+  !============================================================================
 
-!==============================================================================
+  subroutine PW_init_session(iSession, TimeSimulation)
 
-subroutine PW_save_restart(TimeSimulation)
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  implicit none
+    character(len=*), parameter :: NameSub='PW_init_session'
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='PW_save_restart'
+  end subroutine PW_init_session
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine PW_save_restart
+  subroutine PW_finalize(TimeSimulation)
 
-!==============================================================================
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-subroutine PW_run(TimeSimulation,TimeSimulationLimit)
+    character(len=*), parameter :: NameSub='PW_finalize'
 
-  implicit none
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+  end subroutine PW_finalize
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+  !============================================================================
 
-  character(len=*), parameter :: NameSub='PW_run'
+  subroutine PW_save_restart(TimeSimulation)
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-end subroutine PW_run
+    character(len=*), parameter :: NameSub='PW_save_restart'
 
-!==============================================================================
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
-subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVar, &
-                 Name_V, iBlock)
-  implicit none
+  end subroutine PW_save_restart
 
-  character(len=*), parameter :: NameSub='PW_put_from_ie'
+  !============================================================================
 
-  !INPUT ARGUMENTS:
-  integer, intent(in):: iSize, jSize, nVar, iBlock
-  real, intent(in) :: Buffer_IIV(iSize, jSize, nVar)
-  character(len=*), intent(in) :: Name_V(nVar)
+  subroutine PW_run(TimeSimulation,TimeSimulationLimit)
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout):: TimeSimulation   ! current time of component
 
-end subroutine PW_put_from_ie
+    !INPUT ARGUMENTS:
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
+    character(len=*), parameter :: NameSub='PW_run'
 
-!==============================================================================
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
-subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
+  end subroutine PW_run
 
-  implicit none
-  character (len=*),parameter :: NameSub='PW_get_for_gm'
+  !============================================================================
 
-  integer, intent(in)           :: nVar, nFieldLine
-  real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
-  character (len=*),intent(in)  :: Name_V(nVar)
-  real,             intent(in)  :: tSimulation
+  subroutine PW_put_from_ie(Buffer_IIV, iSize, jSize, nVar, &
+       Name_V, iBlock)
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+    character(len=*), parameter :: NameSub='PW_put_from_ie'
 
-end subroutine PW_get_for_gm
+    !INPUT ARGUMENTS:
+    integer, intent(in):: iSize, jSize, nVar, iBlock
+    real, intent(in) :: Buffer_IIV(iSize, jSize, nVar)
+    character(len=*), intent(in) :: Name_V(nVar)
 
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
 
+  end subroutine PW_put_from_ie
 
-!==============================================================================
+  !============================================================================
 
-subroutine PW_put_from_gm(Buffer_I,nFieldLine)
+  subroutine PW_get_for_gm(Buffer_VI, nVar, nFieldLine, Name_V, tSimulation)
 
-  implicit none
+    character (len=*),parameter :: NameSub='PW_get_for_gm'
 
-  integer, intent(in) :: nFieldLine
-  real, intent(in)    :: Buffer_I(nFieldLine)
-  character (len=*),parameter :: NameSub='PW_put_from_gm'
-  !---------------------------------------------------------------------------
+    integer, intent(in)           :: nVar, nFieldLine
+    real, intent(out)             :: Buffer_VI(nVar, nFieldLine)
+    character (len=*),intent(in)  :: Name_V(nVar)
+    real,             intent(in)  :: tSimulation
 
-  call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
-end subroutine PW_put_from_gm
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+
+  end subroutine PW_get_for_gm
+
+  !============================================================================
+
+  subroutine PW_put_from_gm(nTotalLine, Buffer_I)
+
+    integer,intent(in) :: nTotalLine
+    real, intent(in)   :: Buffer_I(nTotalLine)
+
+    character (len=*),parameter :: NameSub = 'PW_put_from_gm'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//': PW_ERROR: empty version cannot be used!')
+  end subroutine PW_put_from_gm
+
+end module PW_wrapper
