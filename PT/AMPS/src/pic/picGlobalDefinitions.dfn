@@ -140,7 +140,9 @@
 #define _PIC_MODEL__3DGRAVITY__MODE__ON_      0
 #define _PIC_MODEL__3DGRAVITY__MODE__OFF_     1
 
-
+//definitions of the radiative cooling modes
+#define _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_  0
+#define _PIC_MODEL__RADIATIVECOOLING__MODE__OFF_        1
 
 
 

@@ -132,6 +132,8 @@
 //the model of the gravity computation
 #define _PIC_MODEL__3DGRAVITY__MODE_ _PIC_MODEL__3DGRAVITY__MODE__OFF_
 
+//default setting for the radiative cooling
+#define _PIC_MODEL__RADIATIVECOOLING__MODE_  _PIC_MODEL__RADIATIVECOOLING__MODE__OFF_
 
 
 
