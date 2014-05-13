@@ -25,7 +25,7 @@ makefile  MPIRUN=mpirun -np 4
 
 makefile ExternalModules= 
 
-ProjectSourceDirectory=srcBullet 
+ProjectSourceDirectory=srcRosetta 
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
 SourceDirectory=src
