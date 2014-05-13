@@ -335,7 +335,8 @@ contains
               knmax_in, ' do not match inmax, jnmax, knmax in ModPar.f90'
          call MPI_ABORT(iComm, 1,ierr)
       endif
-      inquire(IOLENGTH = disp) time_in, inmax, jnmax, knmax
+      !inquire(IOLENGTH = disp) time_in, inmax, jnmax, knmax
+      disp = sizeof(time_in) + 3*sizeof(inmax)
       call MPI_FILE_SET_VIEW(fhandl, disp, MPI_DOUBLE_PRECISION, filetype, &
            'native', fileinfo, ierr)
       mysize = subsizes(1)*subsizes(2)*subsizes(3)
@@ -424,8 +425,8 @@ contains
          call MPI_File_write(fhandl, jnmax, 1, MPI_INTEGER, mpi_status, ierr)
          call MPI_File_write(fhandl, knmax, 1, MPI_INTEGER, mpi_status, ierr)
       endif
-      
-      inquire(IOLENGTH = disp) time, inmax, jnmax, knmax
+      !inquire(IOLENGTH = disp) time, inmax, jnmax, knmax
+      disp = sizeof(time) + 3*sizeof(inmax)
       call MPI_FILE_SET_VIEW(fhandl, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
            fileinfo, ierr)
       mysize = subsizes(1)*subsizes(2)*subsizes(3)
@@ -450,5 +451,5 @@ contains
     end subroutine write_var_file
     
   end subroutine writedata_mpi
-  
+
 end module ModIoFSAM
