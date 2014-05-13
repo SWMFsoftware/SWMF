@@ -98,7 +98,7 @@ contains
 
     character(len=*), parameter :: NameSub='PT_finalize'
 
-    ! call AMPS_finalize
+    call AMPS_finalize
 
   end subroutine PT_finalize
 
