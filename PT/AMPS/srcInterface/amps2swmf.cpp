@@ -39,6 +39,7 @@ extern "C" {
   void amps_timestep_(double* TimeSimulation, double* TimeSimulationLimit);
   int initamps_();
   void amps_setmpicommunicator_(signed int* iComm,signed int* iProc,signed int* nProc);
+  void amps_finalize_();
 
   //import magnetic field from GM onto the 'center' nodes
   void amps_get_center_point_number(int*);
@@ -97,7 +98,7 @@ extern "C" {
       InitFlag=true;
 
       //print the output file on each iteration
-      PIC::RequiredSampleLength=1;
+      //PIC::RequiredSampleLength=1;
     }
 
 
@@ -109,12 +110,19 @@ extern "C" {
     if (PIC::ModelTestRun::mode==true) if (counter==PIC::ModelTestRun::nTotalIteraction) {
       char fname[400];
 
-      sprintf(fname,"%s/amsp.dat",PIC::OutputDataFileDirectory);
+      sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
       PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
 
       exit(0);
     }    
 
+  }
+
+  void amps_finalize_() {
+    char fname[400];
+
+    sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
 
 
