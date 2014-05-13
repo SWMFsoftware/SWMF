@@ -23,7 +23,12 @@ using namespace std;
 
 #include "Na.h"
 
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 #include "SpiceUsr.h"
+#else
+#include "SpiceEmptyDefinitions.h"
+#endif
+
 #include "SingleVariableDistribution.h"
 #include "SingleVariableDiscreteDistribution.h"
 
