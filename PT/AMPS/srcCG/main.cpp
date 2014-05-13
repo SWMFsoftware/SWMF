@@ -38,7 +38,7 @@ double BulletLocalResolution(double *x) {
   for (r=0.0,idim=0;idim<3;idim++) r+=pow(x[idim],2);
   for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
 
-    //3.3 AU
+  //3.3 AU
   if (r<1600) return 300;
 
   SubsolarAngle=acos(l[0])*180.0/Pi;
@@ -47,7 +47,7 @@ double BulletLocalResolution(double *x) {
  //  return 300*pow(r/1600.0,2.0)*(1+5*SubsolarAngle/180.0);
 
  return 300*pow(r/1600.0,2.0);
-
+ 
  /*  //2.7 AU
   if (r<1600) return 300;
 
@@ -233,8 +233,8 @@ int main(int argc,char **argv) {
 
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
-  // CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
-  CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  //  CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
@@ -329,6 +329,10 @@ int main(int argc,char **argv) {
 
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
+    
+#if _PIC_MODEL__RADIATIVECOOLING__MODE_ == _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_
+    Comet::StepOverTime();
+#endif
   }
 
   cout << "End of the run:" << PIC::nTotalSpecies << endl;

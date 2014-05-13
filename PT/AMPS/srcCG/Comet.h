@@ -46,6 +46,9 @@ namespace Comet {
   long int InjectionBoundaryModel_Limited();
   long int InjectionBoundaryModel_Limited(int spec);
 
+  double radiativeCoolingRate_Crovisier(PIC::Mesh::cDataCenterNode *CenterNode);
+  void StepOverTime();
+
   int RequestDataBuffer(int offset);
   void PrintVariableList(FILE* fout,int DataSetNumber);
   void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
@@ -303,18 +306,26 @@ namespace Comet {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
     
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
-      //  int idim=0;
-      //for (idim=0;idim<3;idim++) accl_LOCAL[idim]=5.0*x[idim]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-      
-      //Test Gravity
       int nd,i,j,k;
 
       memcpy(x_LOCAL,x,3*sizeof(double));
       memcpy(v_LOCAL,v,3*sizeof(double));
    
       nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
+      
+#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+      Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
+#endif
 
-      //   Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
+      //the gravity force spherical case
+      /*      double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
+      double r=sqrt(r2);
+      int idim;
+      
+      for (idim=0;idim<DIM;idim++) {
+	accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
+	}*/
+
       
       //Drag force
       char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -340,8 +351,30 @@ namespace Comet {
       accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);                                                                                                                             
       accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);                                                                                                                             
       accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);                                                                                                                             
-      }  
     
+
+      //the Lorentz force
+      char *offset;
+      double E[3],B[3];
+      double GrainCharge=ElectricallyChargedDust::GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
+
+      offset=startNode->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+      
+      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
+        memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
+        memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
+      }
+      else {
+        memcpy(E,swE_Typical,3*sizeof(double));
+        memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
+      }
+            
+      accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
+      accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
+      accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
+       
+    }  
+           
   //Test: no acceleration:
     memcpy(accl,accl_LOCAL,3*sizeof(double));
     return;}
@@ -416,15 +449,6 @@ namespace Comet {
     }
 
 
-
-    //the gravity force
-    double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
-    double r=sqrt(r2);
-    int idim;
-
-    for (idim=0;idim<DIM;idim++) {
-      accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
-    }
 
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_

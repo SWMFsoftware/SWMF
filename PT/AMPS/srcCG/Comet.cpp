@@ -1786,6 +1786,86 @@ bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double
 }
 */
 
+double Comet::radiativeCoolingRate_Crovisier(PIC::Mesh::cDataCenterNode *CenterNode){
+  double tau,r,res=0.0,dens,temp;
+  int idim;
+  double *position;
+
+  const double adsorptionCrossSection=4.0E-15;
+
+  position=CenterNode->GetX();
+
+  for (r=0.0,idim=0;idim<DIM;idim++) r+=pow(position[idim],2.0);
+  r=sqrt(r)*100.0; //convert r into cm
+
+  dens=CenterNode->GetNumberDensity(_H2O_SPEC_)*1.0e-6; //convert density into cm^{-3}
+  temp=PIC::IDF::LB::GetCellRotTemp(_H2O_SPEC_,CenterNode);
+
+  tau=0.4*dens*r*adsorptionCrossSection;
+
+  res=(temp<52.0) ? 4.4E-22*pow(temp,3.35) : 2.0E-20*pow(temp,2.47);
+  res*=dens*exp(-tau);
+
+  return (dens>0.0) ? res*1.0E-7/dens : 0.0; //convert energy into joule and the rate into the  rate per particle
+}
+
+void Comet::StepOverTime() {
+  double LocalTimeStep,Erot;
+  double radiativeCoolingRate=0.0;
+  
+  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],FirstCellParticle,ptr;
+  
+  int thread,i,j,k,idim,offset,cnt=0;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataBlockAMR *block;
+  PIC::Mesh::cDataCenterNode *cell;
+
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    block=node->block;
+    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+    for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++)
+        for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+	  FirstCellParticle=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+          cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+
+	  if (FirstCellParticle!=-1 && cell!=NULL){
+	    radiativeCoolingRate=radiativeCoolingRate_Crovisier(cell);
+
+	  if (radiativeCoolingRate>0.0) {
+	    for (ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) {
+	      if (PIC::ParticleBuffer::GetI(ptr)==_H2O_SPEC_) {
+		char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
+		
+		memcpy((void*)ParticleData,(void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+	  
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+#else
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+		Erot=PIC::IDF::LB::GetRotE((PIC::ParticleBuffer::byte*)ParticleData);
+		Erot-=radiativeCoolingRate*LocalTimeStep;
+		
+		if(Erot<0.0) Erot=0.0;
+		PIC::IDF::LB::SetRotE(Erot,(PIC::ParticleBuffer::byte*)ParticleData);
+	      }
+	      }
+	    }
+	  }
+	}
+    }
+  }
+#endif
+}
+
 void Comet::AntiSolarDirectionColumnMap::Print(int DataOutputFileNumber) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   FILE *fout=NULL;
