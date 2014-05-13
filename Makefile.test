@@ -34,6 +34,7 @@ test_help:
 	@echo "    test10                     (run 3T solar wind test)"
 	@echo "    test11                     (run GM-PT coupler test)"
 	@echo "    test12                     (run PC only test)"
+	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
@@ -59,6 +60,7 @@ test:
 	-@(${MAKE} test10)
 	-@(${MAKE} test11)
 	-@(${MAKE} test12)
+	-@(${MAKE} test13)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx
@@ -909,6 +911,45 @@ test11_check:
 		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
 		ls -l test11*.diff
+
+### test13: Europa's exosphere model with coupled Gm and PT components
+
+test13:
+        @echo "test13_compile..." > test13_pt.diff
+        ${MAKE} test13_compile
+        @echo "test13_rundir..." >> test13_pt.diff
+        ${MAKE} test13_rundir
+        @echo "test13_run..." >> test13_pt.diff
+        ${MAKE} test13_run
+        @echo "test13_check..." >> test13_pt.diff
+        ${MAKE} test13_check
+        if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test13_compile:
+        ./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
+        cp SWMF_data/PT/AMPS/data/input/Europa/TestCase/ModUserEuropaSingleMHDPe2.f90 GM/BATSRUS/srcUser/
+        ./Config.pl -o=GM:u=EuropaSingleMHDPe2,e=MhdPe
+        ./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=europa-test
+        ${MAKE} SWMF
+
+test13_rundir:
+        rm -rf ${TESTDIR}
+        ${MAKE} rundir RUNDIR=${TESTDIR}
+        cp Param/PARAM.in.test.GMPT.Europa ${TESTDIR}/PARAM.in
+        cp Param/LAYOUT.in.test.GMPT.Europa ${TESTDIR}/LAYOUT.in
+        cp -r SWMF_data/PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
+
+test13_run:
+        cd ${TESTDIR}; ./Restart.pl -i RESTART_n003000
+        cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+
+test13_check:
+        cp output/test13/amps.dat ${TESTDIR}/PT/plots/amps.ref
+        -(${SCRIPTDIR}/DiffNum.pl -b \
+                ${TESTDIR}/PT/plots/amps.dat \
+                ${TESTDIR}/PT/plots/amps.ref \
+                > test13_pt.diff)
+                ls -l test13*.diff
 
 ### ESMF test ###
 #
