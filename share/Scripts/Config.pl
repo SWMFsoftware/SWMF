@@ -563,6 +563,12 @@ sub set_mpi_{
 		s/^\s*M/\#M/ if /lNOMPI/ eq ($Mpi eq "yes");
 		s/^\#\s*M/M/ if /lNOMPI/ eq ($Mpi eq "no");
 	    }
+
+	    # Comment/uncomment mpi_cxx library
+	    if(/mpi_cxx/){
+		s/ \-lmpi_cxx/ \#\-lmpi_cxx/ if $Mpi eq "no";
+		s/ \#\-lmpi_cxx/ \-lmpi_cxx/ if $Mpi eq "yes";
+	    }
 	    print;
 	}
     }
