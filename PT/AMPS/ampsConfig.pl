@@ -853,6 +853,11 @@ sub ReadGeneralBlock {
       ampsConfigLib::ChangeValueOfVariable("double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber",$InputLine,"pic/pic_weight_time.cpp");
     }
 
+    elsif ($InputLine eq "TESTRUNTOTALITERATION") {
+	($InputLine,$InputComment)=split(' ',$InputComment,2);
+	ampsConfigLib::ChangeValueOfVariable("int PIC::ModelTestRun::nTotalIteraction",$InputLine,"pic/pic_init_const.cpp");
+    }
+
     elsif ($InputLine eq "INITIALSAMPLELENGTH") {
 	($InputLine,$InputComment)=split('!',$line,2);
 	chomp($InputLine);
