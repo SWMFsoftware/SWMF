@@ -82,10 +82,12 @@ CouplerMode=ices !!off, ices, swmf
 
 
 #block ../cg.pl !process settings of the moon module
-  Gravity3D=on !on,off
+  Gravity3D=off !on,off
 
   HeliocentricDistance=3.3*_AU_
   subSolarPointAzimuth=0.0
+
+  RadiativeCoolingMode=off !off, Crovisier	
 
   !!Gas parameters
   ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4

@@ -117,6 +117,16 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_PIC_MODEL__3DGRAVITY__MODE_","_PIC_MODEL__3DGRAVITY__MODE__OFF_","pic/picGlobal.dfn");
       }
   }
+  elsif ($InputLine eq "RADIATIVECOOLINGMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "CROVISIER") {
+	  ampsConfigLib::RedefineMacro("_PIC_MODEL__RADIATIVECOOLING__MODE_","_PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_PIC_MODEL__RADIATIVECOOLING__MODE_","_PIC_MODEL__RADIATIVECOOLING__MODE__OFF_","pic/picGlobal.dfn");
+      }
+  }
   elsif ($InputLine eq "HELIOCENTRICDISTANCE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
