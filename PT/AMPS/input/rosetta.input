@@ -19,7 +19,7 @@ ForceRepeatableSimulationPath=on ! on,off
 
 
 makefile  SOURCES=src
-makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice 
+makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
