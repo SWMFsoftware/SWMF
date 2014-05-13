@@ -253,7 +253,7 @@ contains
 
     use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
-    use ModMain,       ONLY: UseBody2,UseOrbit
+    use ModMain,       ONLY: UseBody2
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D, &
          RadiusMin, RadiusMax, TypeGeometry
@@ -407,7 +407,7 @@ contains
        write(unit_tmp,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
        write(unit_tmp,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
        write(unit_tmp,'(es22.15,a18)')tDimBody2,     'tDimBody2'
-       write(unit_tmp,'(l1,a39)')     UseOrbit,      'UseOrbit'
+       write(unit_tmp,'(l1,a39)')     UseBody2Orbit, 'UseBody2Orbit'
        write(unit_tmp,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
        write(unit_tmp,*)
     end if

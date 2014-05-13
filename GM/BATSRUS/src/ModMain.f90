@@ -110,9 +110,8 @@ Module ModMain
   character (len=20) :: TypeBc_I(body2_:6) = 'float'
 
   ! Logicals for bodies
-  logical :: Body1    = .false.
-  logical :: UseBody2 = .false.
-  logical :: UseOrbit=.true.
+  logical:: Body1    = .false.
+  logical:: UseBody2 = .false.
 
   !\
   ! Block AMR grid parameters

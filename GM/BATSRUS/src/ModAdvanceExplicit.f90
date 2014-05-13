@@ -16,7 +16,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModGeometry,   ONLY: Body_BLK
   use ModBlockData,  ONLY: set_block_data
   use ModImplicit,   ONLY: UsePartImplicit
-  use ModPhysics,    ONLY: No2Si_V, UnitT_
+  use ModPhysics,    ONLY: No2Si_V, UnitT_, UseBody2Orbit
   use ModCalcSource, ONLY: calc_source
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
        nCorrectedFaceValues, CorrectedFlux_VXB, &
@@ -44,7 +44,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   !/
   if(UsePartImplicit)call timing_start('advance_expl')
 
-  if(UseBody2 .and. UseOrbit) call update_secondbody
+  if(UseBody2Orbit) call update_secondbody
 
   STAGELOOP: do iStage = 1, nStage
 

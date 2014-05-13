@@ -1691,8 +1691,8 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rCurrentsBody2',rCurrentsBody2)
            call read_var('RhoDimBody2',RhoDimBody2)
            call read_var('tDimBody2'  ,tDimBody2)
-           call read_var('UseOrbit'  ,UseOrbit)
-           if(UseOrbit)then
+           call read_var('UseBody2Orbit', UseBody2Orbit)
+           if(UseBody2Orbit)then
               call read_var('OrbitPeriod [days]', OrbitPeriod)
               ! Convert orbit period from days to seconds
               OrbitPeriod = OrbitPeriod*cSecondPerDay 

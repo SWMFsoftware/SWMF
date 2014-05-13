@@ -139,6 +139,7 @@ module ModPhysics
   real :: PhaseBody2=0.0, DistanceBody2=0.0
   real :: RhoDimBody2=0.0, tDimBody2=0.0, RhoBody2=0.0, pBody2=0.0
   real :: gBody2=0.0
+  logical:: UseBody2Orbit = .false.
   real :: OrbitPeriod=0.0
 
   ! Variables for two-state shock tube problems

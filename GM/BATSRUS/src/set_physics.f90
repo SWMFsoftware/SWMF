@@ -332,9 +332,9 @@ subroutine set_physics_constants
   BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              
 
   ! Saving initial coordinates of second body:
-  if(UseOrbit)then
-     PhaseBody2    = atan2(ybody2, xbody2)
-     DistanceBody2 = sqrt(xbody2**2+ybody2**2)
+  if(UseBody2Orbit)then
+     PhaseBody2    = atan2(yBody2, xBody2)
+     DistanceBody2 = sqrt(xBody2**2 + yBody2**2)
   end if
 
 
