@@ -927,8 +927,7 @@ test13:
 
 test13_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	cp SWMF_data/PT/AMPS/data/input/Europa/TestCase/ModUserEuropaSingleMHDPe2.f90 GM/BATSRUS/srcUser/
-	./Config.pl -o=GM:u=EuropaSingleMHDPe2,e=MhdPe
+	./Config.pl -o=GM:u=EuropaSingleMHDPe,e=MhdPe
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=europa-test
 	${MAKE} SWMF
 
