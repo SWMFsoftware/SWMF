@@ -11,11 +11,7 @@ include Makefile.DEPEND
 
 OBJECTS = \
 	ModProcUA.o\
-	UA_finalize.o\
-	UA_run.o\
-	UA_init_session.o\
-	UA_save_restart.o\
-	UA_set_param.o\
+	UA_wrapper.o\
 	UA_extras.o
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src -I../srcSphereAB
