@@ -78,6 +78,8 @@ CouplerMode=ices !!off, ices, swmf
 
   RotZnum(H2O=5)
   VibTemp(H2O=2000)
+
+  TemperatureIndex(H2O,H2O)=0.5
 #endIDF
 
 
@@ -91,7 +93,7 @@ CouplerMode=ices !!off, ices, swmf
 
   !!Gas parameters
   ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
-  BjornProductionRate(H2O)=1.0e24	    
+  BjornProductionRate(H2O)=1.0e30	    
   
   !!Dust parameters
   DustTotalMassProductionRate=1.0
