@@ -448,7 +448,8 @@ EEBATSRUS: EE/BATSRUS/src/Makefile \
 
 IH/BATSRUS/src/Makefile:
 	cd IH/BATSRUS; \
-		rm -rf src srcBATL srcUser srcEquation srcInterface/*.f90; \
+		rm -rf src srcBATL srcUser srcEquation srcInterface/Mod*.f90 \
+			srcInterface/update_lagrangian_grid.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
@@ -459,13 +460,11 @@ IH/BATSRUS/src/Makefile:
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
-	cp IH/BATSRUS_share/src/IH_*.f90 IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../IH/BATSRUS/
-	echo '*' > IH/BATSRUS/src/.cvsignore
 	cd IH/BATSRUS/src; rm -f main.f90
 
 # rename IH source files to avoid name conflicts
@@ -494,7 +493,6 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS; \
 		rm -rf src srcBATL srcUser srcEquation \
-		srcInterface/OH_get_for_mh_with_xyz.f90 \
 			srcInterface/OH_wrapper.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
@@ -511,23 +509,12 @@ OH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
 			../../OH/BATSRUS/
-	echo '*' > OH/BATSRUS/src/.cvsignore
 	cd OH/BATSRUS/src; rm -f main.f90
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_mh_with_xyz.f90 \
-		OH/BATSRUS/srcInterface/OH_get_for_mh_with_xyz.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_mh.f90\
-		OH/BATSRUS/srcInterface/OH_get_for_mh.f90
-	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90\
-		OH/BATSRUS/srcInterface/OH_put_from_mh.f90
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/_sc/_ih/;s/BATSRUS/OH_BATSRUS/;s/Inner/Outer/;'\
-		OH_wrapper.f90 OH_get_for_mh_with_xyz.f90; \
-		perl -i -pe 's/SC/IH/' OH_get_for_mh_with_xyz.f90
-	cd OH/BATSRUS/srcInterface/; perl -i -pe \
-	's/IH/OH/g;s/Ih/Oh/g;s/SC/IH/g;s/Sc/Ih/g' ModBuffer.f90\
-		OH_get_for_mh.f90 OH_put_from_mh.f90;
+	's/IH/OH/g;s/Ih/Oh/g;s/_sc/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
+		OH_wrapper.f90 ModBuffer.f90
 
 # rename OH source files to avoid name conflicts
 OH_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
@@ -553,9 +540,7 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 SC/BATSRUS/src/Makefile:
 	cd SC/BATSRUS; \
 		rm -rf src srcBATL srcUser srcEquation \
-		  srcInterface/SC_wrapper.f90 srcInterface/SC_get_for_sp.f90 \
-		  srcInterface/SC_get_for_mh.f90 \
-		  srcInterface/SC_get_for_mh_with_xyz.f90 srcInterface/SC_put_from_mh.f90; \
+		       srcInterface/SC_wrapper.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../SC/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
@@ -571,27 +556,13 @@ SC/BATSRUS/src/Makefile:
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface
-	cp -f IH/BATSRUS_share/src/IH_wrapper.f90 \
+	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_sp.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_sp.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_mh.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_mh.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_mh_with_xyz.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_mh_with_xyz.f90
-	cp -f IH/BATSRUS_share/src/IH_get_for_global_buffer.f90 \
-		SC/BATSRUS/srcInterface/SC_get_for_global_buffer.f90
-	cp -f IH/BATSRUS_share/src/IH_put_from_mh.f90 \
-		SC/BATSRUS/srcInterface/SC_put_from_mh.f90
 	cd SC/BATSRUS/srcInterface/; \
 	perl -i -pe \
-	  's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/' \
-		SC_wrapper.f90 SC_get_for_sp.f90 \
-		SC_get_for_mh.f90 SC_get_for_mh_with_xyz.f90 SC_put_from_mh.f90 \
-		SC_get_for_global_buffer.f90 ;
-		perl -i -pe 's/OH/IH/' SC_get_for_mh.f90 SC_put_from_mh.f90
+		's/IH/SC/g;s/OH/IH/;s/Inner Heliosphere/Solar Corona/' \
+		SC_wrapper.f90
 	cd SC/BATSRUS/src; rm -f main.f90
-	cd SC/BATSRUS/srcBATL; rm -f *main.f90
 
 # rename SC source files to avoid name conflicts
 SC_SRC = src/*.f90 src/*.h srcBATL/*.f90 srcUser/*.f90 srcEquation/*.f90 \
