@@ -1,6 +1,9 @@
-! Wrapper for Global Magnetosphere (GM) component
-!==========================================================================
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module GM_wrapper
+
+  ! Wrapper for BATSRUS Global Magnetosphere (GM) component
 
   use GM_couple_pt
   use GM_couple_ie
@@ -63,6 +66,7 @@ module GM_wrapper
   public:: GM_get_sat_for_rb
 
 contains
+  !==========================================================================
 
   subroutine GM_set_param(CompInfo, TypeAction)
 
