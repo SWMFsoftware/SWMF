@@ -18,6 +18,15 @@ module CON_couple_ih_sc
   
   !USES:
   use CON_coupler
+
+  use SC_wrapper, ONLY: SC_synchronize_refinement, &
+       SC_get_for_mh, SC_put_from_mh, SC_get_for_global_buffer
+
+  use IH_wrapper, ONLY: IH_synchronize_refinement, &
+       IH_get_for_mh, IH_get_for_mh_with_xyz, &
+       IH_set_buffer_grid, IH_set_buffer_grid_get_info, &
+       IH_save_global_buffer, IH_match_ibc
+
   use CON_axes, ONLY: transform_matrix,transform_velocity
   use ModConst
 
@@ -77,14 +86,6 @@ contains
   !===============================================================!
   subroutine couple_ih_sc_init
 
-    interface
-       subroutine IH_set_buffer_grid(Dd)
-         use CON_domain_decomposition
-         implicit none
-         type(DomainDecompositionType),&
-              intent(out)::Dd
-       end subroutine IH_set_buffer_grid
-    end interface
     !--------------------------------------------------------------------------
     ! REDIRECT to couple_ih_sc_init_global if needed
     if (UseGlobalMpiCoupler_CC(SC_,IH_) .or. UseGlobalMpiCoupler_CC(IH_,SC_) .or. &
@@ -149,23 +150,6 @@ contains
   !INTERFACE:
   subroutine couple_ih_sc(TimeCoupling)
     !INPUT ARGUMENTS:
-    interface
-       subroutine SC_put_from_mh(nPartial,&
-            iPutStart,&
-            Put,& 
-            Weight,&
-            DoAdd,&
-            StateSI_V,&
-            nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iPutStart,nVar
-         type(IndexPtrType),intent(in)::Put
-         type(WeightPtrType),intent(in)::Weight
-         logical,intent(in)::DoAdd
-         real,dimension(nVar),intent(in)::StateSI_V
-       end subroutine SC_put_from_mh
-    end interface
 
     real,intent(in)::TimeCoupling
     !EOP
@@ -392,17 +376,7 @@ contains
   subroutine couple_sc_ih(TimeCoupling)
     use ModIoUnit
     !INPUT ARGUMENTS:
-    interface
-       subroutine SC_get_for_mh(&
-            nPartial,iGetStart,Get,w,State_V,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iGetStart,nVar
-         type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::w
-         real,dimension(nVar),intent(out)::State_V
-       end subroutine SC_get_for_mh
-    end interface
+
     integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
     integer,save::iCoupling=0
@@ -773,8 +747,8 @@ contains
     !\
     ! Get IH state variable for SC
     !/
-    if(is_proc(IH_)) &
-         call IH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
+    !if(is_proc(IH_)) &
+    ! call IH_get_for_mh_global(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
 
     !\                                    
     ! Transfer variables from IH to SC

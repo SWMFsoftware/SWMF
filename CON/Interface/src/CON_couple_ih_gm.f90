@@ -7,28 +7,32 @@
 !MODULE: CON_couple_ih_gm - couple IH to GM one way
 !INTERFACE:
 module CON_couple_ih_gm
-!DESCRIPTION:
-! This coupler uses the SWMF coupling toolkit.
-! Both the IH and GM grids use AMR.
-! IH is a source, GM is a target.
-! Typically IH uses the solar radius rSun as distance unit, 
-! while GM uses the Earth's radius as distance unit.
-!
-! The mapping is characterized by rotation matrices and/or translation vectors.
-! In the particular case this is the position of the origin of
-! the GM frame of reference in the IH frame of refernce  and the
-! matrix which characterizes the rotation of the IH frame of
-! reference with respect to GM:
-!
-! $$
-! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\\
-! {\bf V}_{GM}={\bf A}_{GM,IH}\cdot{\bf V}_{IH}
-! $$
+  !DESCRIPTION:
+  ! This coupler uses the SWMF coupling toolkit.
+  ! Both the IH and GM grids use AMR.
+  ! IH is a source, GM is a target.
+  ! Typically IH uses the solar radius rSun as distance unit, 
+  ! while GM uses the Earth's radius as distance unit.
+  !
+  ! The mapping is characterized by rotation matrices and/or 
+  ! translation vectors.
+  ! In the particular case this is the position of the origin of
+  ! the GM frame of reference in the IH frame of refernce  and the
+  ! matrix which characterizes the rotation of the IH frame of
+  ! reference with respect to GM:
+  !
+  ! $$
+  ! {\bf V}_{IH}={\bf A}_{IH,GM}\cdot{\bf V}_{GM},\\
+  ! {\bf V}_{GM}={\bf A}_{GM,IH}\cdot{\bf V}_{IH}
+  ! $$
   !USES:
   use CON_coupler
   use CON_time,ONLY:TimeStart
   use ModConst
   use CON_axes, ONLY: transform_matrix, vPlanetHgi_D, XyzPlanetHgi_D
+
+  use IH_wrapper, ONLY: IH_synchronize_refinement, &
+       IH_get_for_gm
 
   use GM_wrapper, ONLY: GM_synchronize_refinement, &
        GM_put_from_ih, GM_put_from_ih_buffer
@@ -84,12 +88,12 @@ contains
     if(DoTest)write(*,*)'couple_ih_gm_init iProc=',i_proc()
 
     call init_coupler(              &    
-       iCompSource=IH_,             & ! component index for source
-       iCompTarget=GM_,             & ! component index for target
-       nGhostPointTarget=2,         & ! number of halo points in target
-       GridDescriptorSource=IH_Grid,& ! OUT!\
-       GridDescriptorTarget=GM_Grid,& ! OUT!-General coupler variables 
-       Router=Router)                 ! OUT!/
+         iCompSource=IH_,             & ! component index for source
+         iCompTarget=GM_,             & ! component index for target
+         nGhostPointTarget=2,         & ! number of halo points in target
+         GridDescriptorSource=IH_Grid,& ! OUT!\
+         GridDescriptorTarget=GM_Grid,& ! OUT!-General coupler variables 
+         Router=Router)                 ! OUT!/
 
     IH_iGridRealization=-1
     GM_iGridRealization=-1
@@ -134,7 +138,7 @@ contains
 
        ! Transform the Earth position in HGI to IH coordinates 
        ! and change distance units to that used in IH
- 
+
        XyzPlanetIh_D = matmul(HgiToIh_DD, XyzPlanetHgi_D)/Grid_C(IH_)%UnitX
 
        ! Transform the Earth velocity from Hgi to IH coordinates 
@@ -142,7 +146,7 @@ contains
        vPlanetIh_D = matmul(HgiToIh_DD, vPlanetHgi_D)
 
        if(DoTest)write(*,*)'couple_ih_gm call set_router iProc=',i_proc()
-       
+
        if(DoTestMe)write(*,*)'couple_ih_gm_init XyzPlanetIh_D=',&
             XyzPlanetIh_D
 
@@ -238,7 +242,7 @@ contains
     integer, parameter :: Rho_=1, RhoUx_=2, RhoUz_=4, Bx_=5, Bz_=7
     !------------------------------------------------------------
     call IH_get_for_gm(&
-       nPartial,iGetStart,Get,w,State_V,nVar,CouplingTimeIhGm)
+         nPartial,iGetStart,Get,w,State_V,nVar,CouplingTimeIhGm)
 
     State_V(RhoUx_:RhoUz_)=&
          matmul(IhToGm_DD,State_V(RhoUx_:RhoUz_) &

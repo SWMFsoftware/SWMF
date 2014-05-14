@@ -15,13 +15,6 @@ OBJECTS = \
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
 	ModDensityAndGradient.o\
-	IH_set_buffer_grid.o\
-	IH_get_for_gm.o\
-	IH_get_for_mh.o\
-	IH_get_for_global_buffer.o\
-	IH_get_for_mh_with_xyz.o\
-	IH_get_for_sp.o\
-	IH_put_from_mh.o\
 	IH_wrapper.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
@@ -48,7 +41,7 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f IH_*.f90 ModGridDescriptor.f90 ModBuffer.f90 \
+	rm -f ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90
 	rm -f Makefile.DEPEND ModDensityAndGradient.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90

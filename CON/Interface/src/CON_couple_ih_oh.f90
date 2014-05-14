@@ -18,7 +18,16 @@ module CON_couple_ih_oh
   
   !USES:
   use CON_coupler
-  use CON_axes, ONLY: transform_matrix,transform_velocity
+
+  use IH_wrapper, ONLY: IH_synchronize_refinement, &
+       IH_get_for_mh, IH_get_for_sp, IH_get_for_global_buffer, &
+       IH_put_from_mh
+
+  use OH_wrapper, ONLY: OH_synchronize_refinement, &
+       OH_get_for_mh, OH_get_for_mh_with_xyz, OH_match_ibc, &
+       OH_set_buffer_grid, OH_set_buffer_grid_get_info, OH_save_global_buffer
+
+  use CON_axes, ONLY: transform_matrix, transform_velocity
   use ModConst
 
   implicit none
@@ -34,13 +43,13 @@ module CON_couple_ih_oh
   ! 7/20/04                                 - version for sc-buffer
   !EOP
 
-  !To trace the possible changes in the grids and/or mapping
+  ! To trace the possible changes in the grids and/or mapping
   integer :: OH_iGridRealization=-2
   integer :: IH_iGridInIhOh=-2
   integer :: IH_iGridInOhIh=-2
 
   ! OH <-> IH conversion matrices
-  real :: IhToOh_DD(3,3),OhToIh_DD(3,3)
+  real :: IhToOh_DD(3,3), OhToIh_DD(3,3)
 
   ! Maximum time difference [s] without remap 
   ! The 600 s corresponds to about 0.1 degree rotation between OH and IH
@@ -74,15 +83,6 @@ module CON_couple_ih_oh
 contains
   !===============================================================!
   subroutine couple_ih_oh_init
-
-    interface
-       subroutine OH_set_buffer_grid(Dd)
-         use CON_domain_decomposition
-         implicit none
-         type(DomainDecompositionType),&
-              intent(out)::Dd
-       end subroutine OH_set_buffer_grid
-    end interface
 
     !--------------------------------------------------------------------------
     ! REDIRECT to couple_ih_oh_init_global if needed
@@ -146,24 +146,6 @@ contains
   !INTERFACE:
   subroutine couple_oh_ih(TimeCoupling)
     !INPUT ARGUMENTS:
-    interface
-       subroutine IH_put_from_mh(nPartial,&
-            iPutStart,&
-            Put,& 
-            Weight,&
-            DoAdd,&
-            StateSI_V,&
-            nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iPutStart,nVar
-         type(IndexPtrType),intent(in)::Put
-         type(WeightPtrType),intent(in)::Weight
-         logical,intent(in)::DoAdd
-         real,dimension(nVar),intent(in)::StateSI_V
-       end subroutine IH_put_from_mh
-    end interface
-
     real,intent(in)::TimeCoupling
     !EOP
 
@@ -389,17 +371,7 @@ contains
   subroutine couple_ih_oh(TimeCoupling)
     use ModIoUnit
     !INPUT ARGUMENTS:
-    interface
-       subroutine IH_get_for_mh(&
-            nPartial,iGetStart,Get,w,State_V,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iGetStart,nVar
-         type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::w
-         real,dimension(nVar),intent(out)::State_V
-       end subroutine IH_get_for_mh
-    end interface
+
     integer::iPoint,nU_I(2)
     real,intent(in)::TimeCoupling
     integer,save::iCoupling=0
@@ -751,7 +723,8 @@ contains
     integer :: iBlock, iProcTo
     character (len=*), parameter :: NameSub='couple_oh_ih_global'
     !-------------------------------------------------------------------------
-    call CON_stop(NameSub//' is not yet implemented. Correct #COUPLERTYPE command in PARAM.in file')
+    call CON_stop(NameSub// &
+         ' is not yet implemented. Correct #COUPLERTYPE command in PARAM.in')
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     iProcWorld = i_proc()
@@ -774,8 +747,8 @@ contains
     !\                                                       
     ! Get OH state variable for IH          
     !/                             
-    if(is_proc(OH_)) &
-         call OH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
+    !if(is_proc(OH_)) &
+    !     call OH_get_for_mh(Buffer_VIII, iSize, jSize, kSize, nVarCouple)
     !\                                                                            
     ! Transfer variables from OH to IH
     !/                                    
@@ -791,8 +764,8 @@ contains
     !\ 
     ! Put variables into IH
     !/
-    if(is_proc(IH_)) &
-         !call IH_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
+    !if(is_proc(IH_)) &
+    !    call IH_put_from_mh(Buffer_VIII, iSize+1, jSize, kSize, nVarCouple)
 
     !\         
     ! Deallocate buffer to save memory

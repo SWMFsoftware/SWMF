@@ -20,6 +20,13 @@ module CON_couple_mh_sp
   ! at which SP runs.
 
   use CON_coupler
+
+  use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
+       IH_get_for_sp, IH_get_a_line_point                   !^CMP IF IH
+
+  use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
+       SC_get_for_sp, SC_get_a_line_point                   !^CMP IF SC
+
   use CON_global_message_pass
   use CON_axes
 
@@ -97,32 +104,6 @@ contains
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
-    interface
-       subroutine IH_get_a_line_point(nPartial,&         !^CMP IF IH BEGIN
-            iGetStart,&
-            Get,&
-            Weight,&
-            Buff_I,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iGetStart,nVar
-         type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::Weight
-         real,dimension(nVar),intent(out)::Buff_I
-       end subroutine IH_get_a_line_point                !^CMP END IH
-       subroutine SC_get_a_line_point(nPartial,&         !^CMP IF SC BEGIN
-            iGetStart,&
-            Get,&
-            Weight,&
-            Buff_I,nVar)
-         use CON_router
-         implicit none
-         integer,intent(in)::nPartial,iGetStart,nVar
-         type(IndexPtrType),intent(in)::Get
-         type(WeightPtrType),intent(in)::Weight
-         real,dimension(nVar),intent(out)::Buff_I
-       end subroutine SC_get_a_line_point               !^CMP END SC
-    end interface
 
     logical::DoneRestart
     integer::nU_I(2)

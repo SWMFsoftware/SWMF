@@ -26,24 +26,32 @@ module CON_wrapper
   use CON_comp_param
   use CON_comp_info
 
-  use CZ_wrapper, ONLY: &
-       CZ_set_param, CZ_init_session, CZ_run, CZ_finalize, CZ_save_restart
-  use GM_wrapper, ONLY: &
-       GM_set_param, GM_init_session, GM_run, GM_finalize, GM_save_restart
-  use IE_wrapper, ONLY: &
-       IE_set_param, IE_init_session, IE_run, IE_finalize, IE_save_restart
-  use IM_wrapper, ONLY: &
-       IM_set_param, IM_init_session, IM_run, IM_finalize, IM_save_restart
-  use PT_wrapper, ONLY: &
-       PT_set_param, PT_init_session, PT_run, PT_finalize, PT_save_restart
-  use PS_wrapper, ONLY: &
-       PS_set_param, PS_init_session, PS_run, PS_finalize, PS_save_restart
-  use PW_wrapper, ONLY: &
-       PW_set_param, PW_init_session, PW_run, PW_finalize, PW_save_restart
-  use RB_wrapper, ONLY: &
-       RB_set_param, RB_init_session, RB_run, RB_finalize, RB_save_restart
-  use SP_wrapper, ONLY: &
-       SP_set_param, SP_init_session, SP_run, SP_finalize, SP_save_restart
+  use CZ_wrapper, ONLY: CZ_set_param, CZ_init_session, &       !^CMP IF CZ
+       CZ_run, CZ_finalize, CZ_save_restart                    !^CMP IF CZ
+  use EE_wrapper, ONLY: EE_set_param, EE_init_session, &       !^CMP IF EE
+       EE_run, EE_finalize, EE_save_restart                    !^CMP IF EE
+  use GM_wrapper, ONLY: GM_set_param, GM_init_session, &       !^CMP IF GM
+       GM_run, GM_finalize, GM_save_restart                    !^CMP IF GM
+  use IE_wrapper, ONLY: IE_set_param, IE_init_session, &       !^CMP IF IE
+       IE_run, IE_finalize, IE_save_restart                    !^CMP IF IE
+  use IH_wrapper, ONLY: IH_set_param, IH_init_session, &       !^CMP IF IH
+       IH_run, IH_finalize, IH_save_restart                    !^CMP IF IH
+  use IM_wrapper, ONLY: IM_set_param, IM_init_session, &       !^CMP IF IM
+       IM_run, IM_finalize, IM_save_restart                    !^CMP IF IM
+  use OH_wrapper, ONLY: OH_set_param, OH_init_session, &       !^CMP IF OH
+       OH_run, OH_finalize, OH_save_restart                    !^CMP IF OH
+  use PT_wrapper, ONLY: PT_set_param, PT_init_session, &       !^CMP IF PT
+       PT_run, PT_finalize, PT_save_restart                    !^CMP IF PT
+  use PS_wrapper, ONLY: PS_set_param, PS_init_session, &       !^CMP IF PS
+       PS_run, PS_finalize, PS_save_restart                    !^CMP IF PS
+  use PW_wrapper, ONLY: PW_set_param, PW_init_session, &       !^CMP IF PW
+       PW_run, PW_finalize, PW_save_restart                    !^CMP IF PW
+  use RB_wrapper, ONLY: RB_set_param, RB_init_session, &       !^CMP IF RB
+       RB_run, RB_finalize, RB_save_restart                    !^CMP IF RB
+  use SC_wrapper, ONLY: SC_set_param, SC_init_session, &       !^CMP IF SC
+       SC_run, SC_finalize, SC_save_restart                    !^CMP IF SC
+  use SP_wrapper, ONLY: SP_set_param, SP_init_session, &       !^CMP IF SP
+       SP_run, SP_finalize, SP_save_restart                    !^CMP IF SP
 
   implicit none
 
