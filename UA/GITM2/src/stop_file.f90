@@ -12,6 +12,7 @@ subroutine check_stop
   use ModTime
   use ModInputs, only: CPUTimeMax, iOutputUnit_, DoCheckStopFile
   use ModMpi
+
   implicit none
 
   real, external :: get_timing
@@ -101,6 +102,8 @@ subroutine check_start
   use ModTime
   use ModInputs, only: CPUTimeMax, iOutputUnit_
   use ModMpi
+  use ModUtilities, only: sleep
+
   implicit none
 
   real*8  :: EndTimeLocal
@@ -124,7 +127,7 @@ subroutine check_start
            endif
         endif
 
-        if (.not. IsThere) call sleep(2)
+        if (.not. IsThere) call sleep(2.0)
 
         call MPI_BARRIER(iCommGITM,iError)
 

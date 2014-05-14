@@ -10,6 +10,7 @@ subroutine write_restart(dir)
 
   use ModIndicesInterfaces, only: get_f107            !alexey
   use ModMpi,               only: MPI_BCAST, MPI_REAL !alexey
+  use ModUtilities,         only: sleep
 
   implicit none
 
@@ -147,7 +148,7 @@ subroutine write_restart(dir)
               do while (.not.IsThere) !wait for it to get ready
                  write(*,*) '=====> rst.f90: here.txt file NOT found. Waiting in advance_temp_e' & 
                       //trim(adjustl(ens_cs)) 
-                 call sleep(1)
+                 call sleep(1.0)
                  inquire(file='../advance_temp_e'//trim(adjustl(ens_cs))//'/here.txt',EXIST=IsThere)
               enddo
 
@@ -224,7 +225,7 @@ subroutine write_restart(dir)
            
            do while (.not.IsThere) !wait for it to get ready
               write(*,*) '=====> rst.f90: here2.txt file NOT found. Waiting.' 
-              call sleep(1)
+              call sleep(1.0)
               inquire(file='here2.txt',EXIST=IsThere)
            enddo
 
