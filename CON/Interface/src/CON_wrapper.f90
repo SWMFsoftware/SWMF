@@ -40,10 +40,12 @@ module CON_wrapper
        IM_run, IM_finalize, IM_save_restart                    !^CMP IF IM
   use OH_wrapper, ONLY: OH_set_param, OH_init_session, &       !^CMP IF OH
        OH_run, OH_finalize, OH_save_restart                    !^CMP IF OH
-  use PT_wrapper, ONLY: PT_set_param, PT_init_session, &       !^CMP IF PT
-       PT_run, PT_finalize, PT_save_restart                    !^CMP IF PT
   use PS_wrapper, ONLY: PS_set_param, PS_init_session, &       !^CMP IF PS
        PS_run, PS_finalize, PS_save_restart                    !^CMP IF PS
+  use PC_wrapper, ONLY: PC_set_param, PC_init_session, &       !^CMP IF PC
+       PC_run, PC_finalize, PC_save_restart                    !^CMP IF PC
+  use PT_wrapper, ONLY: PT_set_param, PT_init_session, &       !^CMP IF PT
+       PT_run, PT_finalize, PT_save_restart                    !^CMP IF PT
   use PW_wrapper, ONLY: PW_set_param, PW_init_session, &       !^CMP IF PW
        PW_run, PW_finalize, PW_save_restart                    !^CMP IF PW
   use RB_wrapper, ONLY: RB_set_param, RB_init_session, &       !^CMP IF RB
