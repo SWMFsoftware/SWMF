@@ -176,11 +176,9 @@ subroutine HWMQT(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
            real*8,intent(inout)           :: vbar(0:maxn,0:maxo)
            real*8,intent(inout)           :: wbar(0:maxn,0:maxo)
            real*8,intent(inout),target    :: ebz(nbf,0:p)
-           real*8,intent(inout),target    :: ebm(nbf,0:p)
-         
+           real*8,intent(inout),target    :: ebm(nbf,0:p)         
            real*8,intent(inout)           :: zwght(0:p)
            integer,intent(inout)           :: lev
-          
            real*8,intent(out)             :: u,v
       end subroutine HWMupdate
    end interface
