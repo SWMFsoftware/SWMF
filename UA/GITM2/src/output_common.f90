@@ -1504,8 +1504,8 @@ subroutine output_1dall(iiLon, iiLat, iBlock, rLon, rLat, iUnit)
              TempUnit(0:nLons+1,0:nLats+1,iAlt)
         Vars(iOff+2) = inter(Tmp,iiLon,iiLat,rlon,rlat)
 
-        Tmp = Conduction(0:nLons+1,0:nLats+1,iAlt) * &
-             TempUnit(0:nLons+1,0:nLats+1,iAlt)
+        Tmp(1:nLons,1:nLats) = Conduction(1:nLons,1:nLats,iAlt) * &
+             TempUnit(1:nLons,1:nLats,iAlt)
         Vars(iOff+3) = inter(Tmp,iiLon,iiLat,rlon,rlat)
  
         Vars(iOff+4) = Vars(iOff+2) - Vars(iOff+1) + Vars(iOff+3)
