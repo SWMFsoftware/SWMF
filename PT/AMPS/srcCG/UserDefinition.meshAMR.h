@@ -139,4 +139,11 @@ public:
 
   }
 };
+
+class cInternalNastranSurfaceData_UserDefined : public cInternalSphericalData_UserDefined {
+public:
+  cInternalNastranSurfaceData_UserDefined() : cInternalSphericalData_UserDefined() {
+
+  }
+};
 #endif
