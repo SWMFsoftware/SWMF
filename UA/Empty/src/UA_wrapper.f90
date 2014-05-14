@@ -1,114 +1,125 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Wrapper for Upper Atmosphere (UA) component
-!==========================================================================
-subroutine UA_set_param(CompInfo, TypeAction)
 
-  use CON_comp_info
+module UA_wrapper
 
-  implicit none
-
-  character (len=*), parameter :: NameSub='UA_set_param'
-
-  ! Arguments
-  type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
-  character (len=*), intent(in)     :: TypeAction ! What to do
-  !-------------------------------------------------------------------------
-  select case(TypeAction)
-  case('VERSION')
-     call put(CompInfo,&
-          Use        =.false., &
-          NameVersion='Empty', &
-          Version    =0.0)
-
-  case default
-     call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
-  end select
-
-end subroutine UA_set_param
-
-!==============================================================================
-
-subroutine UA_init_session(iSession, TimeSimulation)
+  ! Wrapper for Upper Atmosphere (UA) component
 
   implicit none
 
-  !INPUT PARAMETERS:
-  integer,  intent(in) :: iSession         ! session number (starting from 1)
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  private ! except
 
-  character(len=*), parameter :: NameSub='UA_init_session'
+  public:: UA_set_param
+  public:: UA_init_session
+  public:: UA_run
+  public:: UA_save_restart
+  public:: UA_finalize
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+contains
 
-end subroutine UA_init_session
+  !==========================================================================
+  subroutine UA_set_param(CompInfo, TypeAction)
 
-!==============================================================================
+    use CON_comp_info
 
-subroutine UA_finalize(TimeSimulation)
+    character (len=*), parameter :: NameSub='UA_set_param'
 
-  implicit none
+    ! Arguments
+    type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
+    character (len=*), intent(in)    :: TypeAction ! What to do
+    !-------------------------------------------------------------------------
+    select case(TypeAction)
+    case('VERSION')
+       call put(CompInfo,&
+            Use        =.false., &
+            NameVersion='Empty', &
+            Version    =0.0)
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+    case default
+       call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    end select
 
-  character(len=*), parameter :: NameSub='UA_finalize'
+  end subroutine UA_set_param
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+  !============================================================================
 
-end subroutine UA_finalize
+  subroutine UA_init_session(iSession, TimeSimulation)
 
-!==============================================================================
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-subroutine UA_save_restart(TimeSimulation)
+    character(len=*), parameter :: NameSub='UA_init_session'
 
-  implicit none
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
-  !INPUT PARAMETERS:
-  real,     intent(in) :: TimeSimulation   ! seconds from start time
+  end subroutine UA_init_session
 
-  character(len=*), parameter :: NameSub='UA_save_restart'
+  !============================================================================
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+  subroutine UA_finalize(TimeSimulation)
 
-end subroutine UA_save_restart
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-!==============================================================================
+    character(len=*), parameter :: NameSub='UA_finalize'
 
-subroutine UA_run(TimeSimulation,TimeSimulationLimit)
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
-  implicit none
+  end subroutine UA_finalize
 
-  !INPUT/OUTPUT ARGUMENTS:
-  real, intent(inout) :: TimeSimulation   ! current time of component
+  !============================================================================
 
-  !INPUT ARGUMENTS:
-  real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+  subroutine UA_save_restart(TimeSimulation)
 
-  character(len=*), parameter :: NameSub='UA_run'
+    !INPUT PARAMETERS:
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    character(len=*), parameter :: NameSub='UA_save_restart'
 
-end subroutine UA_run
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
-!==============================================================================
+  end subroutine UA_save_restart
 
-subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
-            UAr2_lats, UAr2_mlts)
+  !============================================================================
 
-  character(len=*), parameter :: NameSub='UA_fill_electrodynamics'
+  subroutine UA_run(TimeSimulation,TimeSimulationLimit)
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+    !INPUT/OUTPUT ARGUMENTS:
+    real, intent(inout):: TimeSimulation   ! current time of component
 
-end subroutine UA_fill_electrodynamics
+    !INPUT ARGUMENTS:
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
-!==============================================================================
+    character(len=*), parameter :: NameSub='UA_run'
 
-subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
+    call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
 
-  character(len=*), parameter :: NameSub='UA_calc_electrodynamics'
+  end subroutine UA_run
+  
+end module UA_wrapper
 
-  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+! The following subroutines are empty versions of those in UA/GITM2/src/
+! The call to these routines is commented out in CON_couple_ie_ua.f90
+!
+!subroutine UA_fill_electrodynamics(UAr2_fac, UAr2_ped, UAr2_hal, &
+!     UAr2_lats, UAr2_mlts)
+!
+!  character(len=*), parameter :: NameSub='UA_fill_electrodynamics'
+!
+!  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+!
+!end subroutine UA_fill_electrodynamics
+!
+!!===========================================================================
+!
+!subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
+!
+!  character(len=*), parameter :: NameSub='UA_calc_electrodynamics'
+!
+!  call CON_stop(NameSub//': UA_ERROR: empty version cannot be used!')
+!
+!end subroutine UA_calc_electrodynamics
 
-end subroutine UA_calc_electrodynamics
 

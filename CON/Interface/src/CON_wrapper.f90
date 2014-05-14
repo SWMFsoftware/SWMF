@@ -52,6 +52,8 @@ module CON_wrapper
        SC_run, SC_finalize, SC_save_restart                    !^CMP IF SC
   use SP_wrapper, ONLY: SP_set_param, SP_init_session, &       !^CMP IF SP
        SP_run, SP_finalize, SP_save_restart                    !^CMP IF SP
+  use UA_wrapper, ONLY: UA_set_param, UA_init_session, &       !^CMP IF UA
+       UA_run, UA_finalize, UA_save_restart                    !^CMP IF UA
 
   implicit none
 
@@ -176,6 +178,8 @@ contains
     call get_comp_info(iComp,CompInfo=CompInfo)
 
     select case(iComp)
+    case(CZ_)                                     !^CMP IF CZ
+       call CZ_set_param(CompInfo,TypeAction)     !^CMP IF CZ
     case(EE_)                                     !^CMP IF EE
        call EE_set_param(CompInfo,TypeAction)     !^CMP IF EE
     case(GM_)                                     !^CMP IF GM
@@ -204,8 +208,6 @@ contains
        call SP_set_param(CompInfo,TypeAction)     !^CMP IF SP
     case(UA_)                                     !^CMP IF UA
        call UA_set_param(CompInfo,TypeAction)     !^CMP IF UA
-    case(CZ_)                                     !^CMP IF CZ
-       call CZ_set_param(CompInfo,TypeAction)     !^CMP IF CZ
     case default
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
