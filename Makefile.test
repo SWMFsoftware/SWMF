@@ -936,7 +936,7 @@ test13_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMPT.Europa ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPT.Europa ${TESTDIR}/LAYOUT.in
-	cp -r SWMF_data/PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
+	cp -r PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
 
 test13_run:
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_n003000
