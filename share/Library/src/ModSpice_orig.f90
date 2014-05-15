@@ -18,9 +18,9 @@ module ModSpice
 
   ! Number of seconds between SWMF and SPICE base times:
   ! SWMF: 1965-01-01T00:00:00
-  ! SPICE: 2000-01-01T11:58:56
+  ! SPICE: 2000-01-01T00:00:00
   ! SpiceTime = SwmfTime + DtSpiceSwmf
-  real, parameter,  public::   DtSpiceSwmf = -1104494359.0 
+  real, parameter,  public::   DtSpiceSwmf = -1104494336.0 !spice includes leap second correction
 
   ! Local variables
   logical     :: DoInitialize = .true.
@@ -41,7 +41,7 @@ contains
        RETURN
     end if
 
-    tStartSpice = tStart
+    tStartSpice = tStart+DtSpiceSwmf
 
     NameDir = 'Param/Spice/'
     if(present(NameDirIn))then
