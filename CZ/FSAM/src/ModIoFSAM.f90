@@ -311,7 +311,7 @@ contains
       real,              intent(out) :: buf(1:in-1,1:jn-1,1:kn-1)
       
       integer :: mpi_status(MPI_STATUS_SIZE)
-      integer :: inmax_in, jnmax_in, knmax_in, i, j, k
+      integer :: inmax_in, jnmax_in, knmax_in, i, j, k, nByteInquireUnit
       real    :: time_in
       !------------------------------------------------------------------------------
 
@@ -335,8 +335,10 @@ contains
               knmax_in, ' do not match inmax, jnmax, knmax in ModPar.f90'
          call MPI_ABORT(iComm, 1,ierr)
       endif
-      !inquire(IOLENGTH = disp) time_in, inmax, jnmax, knmax
-      disp = sizeof(time_in) + 3*sizeof(inmax)
+      inquire(iolength = nByteInquireUnit) 1d0
+      nByteInquireUnit = 8/nByteInquireUnit
+      inquire(IOLENGTH = disp) time_in, inmax, jnmax, knmax
+      disp = disp*nByteInquireUnit
       call MPI_FILE_SET_VIEW(fhandl, disp, MPI_DOUBLE_PRECISION, filetype, &
            'native', fileinfo, ierr)
       mysize = subsizes(1)*subsizes(2)*subsizes(3)
@@ -412,7 +414,7 @@ contains
       logical, optional,intent(in) :: DoPressure
       
       integer(kind=MPI_OFFSET_KIND) :: disp
-      integer :: mpi_status(MPI_STATUS_SIZE), i, j, k, counter, mysize
+      integer :: mpi_status(MPI_STATUS_SIZE), i, j, k, counter, mysize, nByteInquireUnit
       real, allocatable :: buf(:)
       !--------------------------------------------------------------------------------
       
@@ -425,8 +427,10 @@ contains
          call MPI_File_write(fhandl, jnmax, 1, MPI_INTEGER, mpi_status, ierr)
          call MPI_File_write(fhandl, knmax, 1, MPI_INTEGER, mpi_status, ierr)
       endif
-      !inquire(IOLENGTH = disp) time, inmax, jnmax, knmax
-      disp = sizeof(time) + 3*sizeof(inmax)
+      inquire(iolength = nByteInquireUnit) 1d0
+      nByteInquireUnit = 8/nByteInquireUnit
+      inquire(IOLENGTH = disp) time, inmax, jnmax, knmax
+      disp = disp*nByteInquireUnit
       call MPI_FILE_SET_VIEW(fhandl, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
            fileinfo, ierr)
       mysize = subsizes(1)*subsizes(2)*subsizes(3)
