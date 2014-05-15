@@ -13,7 +13,7 @@ module ModSpice
   public:: spice_get_distance    ! return the distance between two bodies
 
   ! Number of seconds between SWMF and SPICE base times:
-  real, parameter,  public::   DtSpiceSwmf = -1104494359.0 
+  real, parameter,  public::   DtSpiceSwmf = -1104494336.0 
 
 contains
   !============================================================================
