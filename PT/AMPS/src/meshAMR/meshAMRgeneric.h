@@ -1632,7 +1632,7 @@ public:
     #elif _MESH_DIMENSION_ == 2
     if (Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_CIRCLE_) exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 2");
     #elif _MESH_DIMENSION_ == 3
-    if ((Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_)&&(Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_)) {
+    if ((Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_)&&(Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_)&&(Descriptor.BondaryType!=_INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_)) {
       exit(__LINE__,__FILE__,"Error: Attempted boundary type is not allowed for _MESH_DIMENSION_ == 3");
     }
     #else
