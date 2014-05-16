@@ -15,9 +15,11 @@
 #include "meshAMRdef.h"
 #include "mpichannel.h"
 
+#include "meshAMRcutcell.h"
+
 
 class cInternalNastranSurfaceData : public cAMRexit
-#if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+#if _USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_ON_
 , public cInternalNastranSurfaceData_UserDefined
 #endif
 {
@@ -53,7 +55,7 @@ public:
   }
 
   cInternalNastranSurfaceData()
-#if _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_SPHERE_MODE_ON_
+#if _USER_DEFINED_INTERNAL_BOUNDARY_BOUNDARY_NASTRAN_MODE_ == _USER_DEFINED_INTERNAL_BOUNDARY_BOUNDARY_NASTRAN_MODE_ON_
   : cInternalNastranSurfaceData_UserDefined()
 #endif
   {
@@ -76,12 +78,34 @@ public:
   //=======================================================================
   //intersection of a block with the Sphere
   int BlockIntersection(double *xBlockMin,double *xBlockMax,double EPS) {
-    return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
+    CutCell::cTriangleFace *t;
+    int nt;
+
+    //check possible intersection between the block and the surface
+    for (nt=0,t=CutCell::BoundaryTriangleFaces;nt<CutCell::nBoundaryTriangleFaces;nt++,t=t->next) {
+      if (t->BlockIntersection(xBlockMin,xBlockMax,EPS)==true) {
+        return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
+      }
+    }
+
+    //if no intersection is found, determin if the miggle point of the block is within the surface
+    double x[3];
+    int res;
+
+    for (int i=0;i<3;i++) x[i]=0.5*(xBlockMin[i]+xBlockMax[i]);
+
+    res=(CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,EPS)==true) ? _AMR_BLOCK_INSIDE_DOMAIN_ : _AMR_BLOCK_OUTSIDE_DOMAIN_;
+
+    return res;
   }
 
 
   double GetRemainedBlockVolume(double *xBlockMinInit,double *xBlockMaxInit,double EPS,int *IntersectionStatus) {
-    return 0.0;
+    double res=1.0;
+
+    for (int idim=0;idim<3;idim++) res*=fabs(xBlockMaxInit[idim]-xBlockMinInit[idim]);
+
+    return res;
   }
 
 
