@@ -26,12 +26,12 @@ F					UseImplCond
 T					ErrPSolv
 
 #STOP
-90					MaxIteration    ! itmax
+30					MaxIteration    ! itmax
 3.15D9					tSimulationMax  ! tend_in
 3600.D0					wtLimit         
 
 #SAVEPLOT
-30					DnWriteLog    ! itintv_in
+1					DnWriteLog    ! itintv_in
 600					DnSaveRestart ! itout_in
 1.63647074637924D6  			DtWriteData   ! tout_in
 
