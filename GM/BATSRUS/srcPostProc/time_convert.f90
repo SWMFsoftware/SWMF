@@ -15,12 +15,12 @@ program time_convert
   integer::iCR
   real::LongitudeR, LongitudeL, Longitude,LongitudeIn
   integer::iYearL,iMonthL,iDayL,iHourL,iMinL
-  integer::iYearR,iMonthR,iDayR,iHourR,iMinR
+  integer::iYearR,iMonthR,iDayR,iHourR,iMinR, iUnit
   integer,parameter::iSec=0
-  real::TimeL,TimeR, Time
+  real::TimeL,TimeR, Time, TimeExact
   real::Frac=0.0
   real::TimeStart
-  integer, dimension(7) :: iTime_I,iTimeL_I,iTimeR_I
+  integer, dimension(7) :: iTime_I,iTimeL_I,iTimeR_I,iTimeExact_I
   integer:: iTime
   !================
   read(*,*)iCRIn
@@ -70,6 +70,28 @@ program time_convert
   write(*,'(a)')' 0.0'
   write(*,*)
   write(*,'(a)')'#END'
+  !\
+  ! Create two files with the time in exact hours.
+  !/
+  iTimeExact_I(1:4) = iTime_I(1:4)
+  if(iTime_I(5) >= 30)iTimeExact_I(4) = iTimeExact_I(4) + 1
+  iTimeExact_I(5:7) = 0
+  call time_int_to_real(iTimeExact_I,TimeExact)
+  call time_real_to_int(TimeExact,iTimeExact_I)
+  open(11,file='STARTTIME.in',status='replace')
+  write(11,'(a)')'#STARTTIME'
+  open(12,file='ENDTIME.in',status='replace')
+  write(12,'(a)')'#ENDTIME'
+  do iUnit=11,12
+     do iTime=1,5
+         write(iUnit,*)iTimeExact_I(iTime)
+      end do
+     write(iUnit,'(a)')' 0'
+     write(iUnit,'(a)')' 0.0'
+     write(iUnit,*)
+     write(iUnit,'(a)')'#END'
+     close(iUnit)
+  end do
   stop
 contains
  subroutine solve_time
