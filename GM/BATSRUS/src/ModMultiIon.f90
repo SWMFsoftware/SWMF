@@ -835,8 +835,9 @@ contains
           ! Put most of the stuff into the first ion fluid
           State_VGB(iRhoIon_I(1),i,j,k,iBlock) = &
                Rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
-          State_VGB(iRhoIon_I(2:nIonFluid),i,j,k,iBlock) = &
-               Rho*LowDensityRatio
+          do iFluid = 2, nIonFluid
+             State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) = Rho*LowDensityRatio
+          end do
 
           ! Set ion velocities to be equal with the total
           State_VGB(iRhoUxIon_I,i,j,k,iBlock) = &
