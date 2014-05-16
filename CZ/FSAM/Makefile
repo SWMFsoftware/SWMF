@@ -39,14 +39,16 @@ TESTDIR = run_test
 test: 
 	@echo "starting..." 
 	@echo "compiling..."
-	${MAKE} compile
+	${MAKE} compile PROBS=test
 	@echo "making rundir..."
-	${MAKE} rundir RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
+	${MAKE} rundir PROBS=test RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
 	@echo "running..."
 	${MAKE} run RUNDIR=${TESTDIR}
 
 compile:
 	rm -f src/xfsam.exe
+	cp srcProblem/ModUserSetup.${PROBS}.f90 src/ModUserSetup.f90;
+	cp srcProblem/ModPar.${PROBS}.f90 src/ModPar.f90;
 	make xfsam
 
 rundir: 
@@ -54,8 +56,9 @@ rundir:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
 			cp ${CZDIR}/src/xfsam.exe .; \
-			cp ${CZDIR}/input/PARAM.in.test PARAM.in; \
+			cp ${CZDIR}/input/PARAM.in.${PROBS} PARAM.in; \
 			cp ${CZDIR}/input/gong.l4b.14 .; \
+			cp ${CZDIR}/input/jobscript.${PROBS} ./jobscript; \
 	fi)
 
 run:
