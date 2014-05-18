@@ -1,8 +1,8 @@
-This is the layout for running GM and IE in serial mode.
+This is the layout for running GM and PT
 
 Name First Last Stride
 ======================
 #COMPONENTMAP
-GM       0 0    1   
-PT       1 1    1  
+GM       0 9999    1   
+PT       1 2       1  
 #END
