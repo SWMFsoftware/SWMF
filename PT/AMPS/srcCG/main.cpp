@@ -233,7 +233,7 @@ int main(int argc,char **argv) {
 
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
-  CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",xmin,xmax,1.0E-8);
   //  CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
