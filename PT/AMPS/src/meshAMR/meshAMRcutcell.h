@@ -42,6 +42,7 @@ namespace CutCell {
 
   struct cNASTRANnode {
     double x[3];
+    double BallAveragedExternalNormal[3];
     int id;
   };
 
@@ -110,6 +111,8 @@ namespace CutCell {
   class cTriangleFace {
   public:
   //  list<cCutBlockNode>::iterator node[3];
+    cNASTRANnode *node[3];
+
     double ExternalNormal[3],SurfaceArea;
     int attribute;
 
@@ -120,6 +123,7 @@ namespace CutCell {
 
     cTriangleFace *next,*prev;
 
+
     void GetRandomPosition(double *x,double EPS=0.0) {
       double xLocal[2];
 
@@ -128,6 +132,31 @@ namespace CutCell {
 
       for (int idim=0;idim<3;idim++) x[idim]=x0Face[idim]+xLocal[0]*e0[idim]+xLocal[1]*e1[idim]  +   EPS*ExternalNormal[idim];
     }
+
+    void GetRandomPosition(double *x,double *LocalNorm,double EPS=0.0) {
+      double xLocal[2];
+
+      //get the local position of the point
+      xLocal[0]=1.0-sqrt(rnd());
+      xLocal[1]=rnd()*(1.0-xLocal[0]);
+
+      //get the interpolated value of the BollAvaragedExternalNormal
+      double f01,f12,l=0.0;
+      int idim;
+
+      for (idim=0;idim<3;idim++) {
+        f01=(1.0-xLocal[0])*node[0]->BallAveragedExternalNormal[idim]+xLocal[0]*node[1]->BallAveragedExternalNormal[idim];
+        f12=(1.0-xLocal[0])*node[2]->BallAveragedExternalNormal[idim]+xLocal[0]*node[1]->BallAveragedExternalNormal[idim];
+
+        LocalNorm[idim]=(1.0-xLocal[1])*f01+xLocal[1]*f12;
+        l+=pow(LocalNorm[idim],2);
+      }
+
+      for (l=sqrt(l),idim=0;idim<3;idim++) LocalNorm[idim]/=l;
+
+      for (int idim=0;idim<3;idim++) x[idim]=x0Face[idim]+xLocal[0]*e0[idim]+xLocal[1]*e1[idim]  +   EPS*ExternalNormal[idim];
+    }
+
 
     void SetFaceNodes(double *x0,double *x1,double *x2) {
       int i;
@@ -360,8 +389,11 @@ namespace CutCell {
   extern cTriangleFace *BoundaryTriangleFaces;
   extern int nBoundaryTriangleFaces;
 
+  extern cNASTRANnode *BoundaryTriangleNodes;
+  extern int nBoundaryTriangleNodes;
+
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
-  void ReadNastranSurfaceMeshLongFormat(const char *fname,cTriangleFace* &SurfaceTriangulation,int &nSurfaceTriangulation,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
+  void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
 

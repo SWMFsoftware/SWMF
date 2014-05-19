@@ -29,6 +29,10 @@ using namespace std;
 
 CutCell::cTriangleFace *CutCell::BoundaryTriangleFaces=NULL;
 int CutCell::nBoundaryTriangleFaces=0;
+
+CutCell::cNASTRANnode *CutCell::BoundaryTriangleNodes=NULL;
+int CutCell::nBoundaryTriangleNodes=0;
+
 cAMRstack<CutCell::cTriangleFaceDescriptor> CutCell::BoundaryTriangleFaceDescriptor;
 
 /*struct cNodeCoordinates {
@@ -116,12 +120,12 @@ struct cNASTRANface {
   double externalNormal[3];
 };*/
 
-void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTriangleFace* &SurfaceTriangulation,int &nSurfaceTriangulation,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS) {
   CiFileOperations ifile;
   char str[10000],dat[10000],*endptr;
   long int i,j,idim,nnodes=0,nfaces=0;
 
-  if (SurfaceTriangulation!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
+  if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
 
 
   cNASTRANnode node;
@@ -256,11 +260,22 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
 
 
   //create the surface triangulation array
-  nSurfaceTriangulation=nfaces;
-  SurfaceTriangulation=new cTriangleFace[nfaces];
+  nBoundaryTriangleFaces=nfaces;
+  BoundaryTriangleFaces=new cTriangleFace[nfaces];
+
+  nBoundaryTriangleNodes=nnodes;
+  BoundaryTriangleNodes=new cNASTRANnode[nnodes];
+
+  //copy the local nodes' vector into the array
+  for (nd=0;nd<nnodes;nd++) {
+    BoundaryTriangleNodes[nd]=nodes[nd];
+    for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+  }
 
   for (nfc=0;nfc<nfaces;nfc++) {
-    SurfaceTriangulation[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+    BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+
+    for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
   }
 
   //calculate external normals to the faces
@@ -303,7 +318,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
 
       SearchDirection[idim]=sqrt(-2.0*log(rnd()))*cos(2.0*3.1415926*rnd());
       l+=pow(SearchDirection[idim],2);
-      l0+=SearchDirection[idim]*SurfaceTriangulation[nface].ExternalNormal[idim];
+      l0+=SearchDirection[idim]*BoundaryTriangleFaces[nface].ExternalNormal[idim];
     }
 
     l=sqrt(l);
@@ -315,12 +330,12 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
     int nIntersections=0;
 
     for (nfc=0;nfc<nfaces;nfc++) if (nfc!=nface) {
-      if (SurfaceTriangulation[nfc].RayIntersection(x0,SearchDirection,EPS)==true) nIntersections++;
+      if (BoundaryTriangleFaces[nfc].RayIntersection(x0,SearchDirection,EPS)==true) nIntersections++;
     }
 
     if (nIntersections%2!=0) {
       //the norm has to be reversed
-      for (idim=0;idim<3;idim++) SurfaceTriangulation[nface].ExternalNormal[idim]*=-1.0;
+      for (idim=0;idim<3;idim++) BoundaryTriangleFaces[nface].ExternalNormal[idim]*=-1.0;
     }
   }
 
@@ -334,21 +349,38 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,CutCell::cTrian
     if (thread==nTotalThreads-1) nFinishFace=nfaces;
 
     if (thread==ThisThread) {
-      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(sendBuffer+3*cnt,SurfaceTriangulation[nface].ExternalNormal,3*sizeof(double));
+      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(sendBuffer+3*cnt,BoundaryTriangleFaces[nface].ExternalNormal,3*sizeof(double));
     }
 
     MPI_Bcast(sendBuffer,3*(nFinishFace-nStartFace),MPI_DOUBLE,thread,MPI_GLOBAL_COMMUNICATOR);
 
     if (thread!=ThisThread) {
-      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(SurfaceTriangulation[nface].ExternalNormal,sendBuffer+3*cnt,3*sizeof(double));
+      for (nface=nStartFace,cnt=0;nface<nFinishFace;nface++,cnt++) memcpy(BoundaryTriangleFaces[nface].ExternalNormal,sendBuffer+3*cnt,3*sizeof(double));
     }
   }
 
   //set up the face attribute
   for (nfc=0;nfc<nfaces;nfc++) {
-    memcpy(faces[nfc].externalNormal,SurfaceTriangulation[nfc].ExternalNormal,3*sizeof(double));
-    SurfaceTriangulation[nfc].attribute=faces[nfc].faceat;
+    memcpy(faces[nfc].externalNormal,BoundaryTriangleFaces[nfc].ExternalNormal,3*sizeof(double));
+    BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
   }
+
+  //calculate the ball averaged normal for the surface nodes
+  for (nfc=0;nfc<nfaces;nfc++) for (int nd=0;nd<3;nd++) for (int idim=0;idim<3;idim++) {
+    BoundaryTriangleFaces[nfc].node[nd]->BallAveragedExternalNormal[idim]+=BoundaryTriangleFaces[nfc].ExternalNormal[idim];
+  }
+
+  for (int nd=0;nd<nBoundaryTriangleNodes;nd++) {
+    double l;
+    int idim;
+
+    for (idim=0,l=0.0;idim<3;idim++) l+=pow(BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim],2);
+
+    if (l>1.0E-50) {
+      for (idim=0,l=sqrt(l);idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]/=l;
+    }
+  }
+
 }
 
 //check weather a point (x0) in insed the domain:
