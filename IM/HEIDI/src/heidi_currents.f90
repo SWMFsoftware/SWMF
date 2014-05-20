@@ -115,6 +115,17 @@ subroutine PRESSURES
      end if    ! SCALC check
   end do       ! S loop
 
+!!$  do i = 1, io
+!!$     do j = 1, jo
+!!$        write(*,*) 'Densities: i, j, eden, rnht = ',  i, j, eden(i, j, 1),eden(i, j, 2), rnht(i, j, 1), rnht(i, j, 2)
+!!$     end do
+!!$  end do
+!!$
+!!$STOP
+
+
+
+
 end subroutine PRESSURES
 !=======================================================================
 !			 	CURRENTSETUP

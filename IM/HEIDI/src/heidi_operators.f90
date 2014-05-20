@@ -54,16 +54,17 @@ subroutine FCHECK(MARK)
               do j=1,jo
                  do i=2,io
                     if ((F2(I,J,K,L,m).lt.-1.E-10).or.   &   ! -1E-29
-                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.)) then
-                      call write_prefix; write(iUnitStdOut,*) 'Bad F,T,I,J,K,L,MARK:',F2(I,J,K,L,m),   &
+                         (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.) .or. (F2(i, j, k, l,m) .gt. 1.e+25) ) then
+                      ! F2(I,J,K,L,m) = 1.e-10 ! hack!
+                      call write_prefix; write(iUnitStdOut,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
                             T,m,I,J,K,L,MARK,Ibad
 
-                       write(*,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
-                            T,m,I,J,K,L,MARK,Ibad
-!                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
-!                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
-!                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
-!                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
+                    !   write(*,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
+                    !        T,m,I,J,K,L,MARK,Ibad
+!!$                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
+!!$                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
+!!$                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
+!!$                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
                        Ibad=Ibad+1
                        if (Ibad.eq.20) goto 151 
                     end if
@@ -241,7 +242,9 @@ subroutine heidi_driftp
   integer :: i,j,k,l,n,isign,imag
   real    :: fup,RR,corr,x
   real    :: fbc
+
   !----------------------------------------------------------------------
+  
   do I=2,IO
      do K=2,KO
         do L=2,LO
@@ -255,16 +258,7 @@ subroutine heidi_driftp
 
            do J=1,JO
               C(J) = P1(I,J) + P2(I,j,K,L)
-              
-              !if  (P1(I,J) <= 0) then 
-              !   write(*,*) 'i, j, P1 = ',i, j,  P1(i,j)
-              !   !STOP
-              !endif
-              !
-              !if  (P2(I,j, k, l) <= 0) then 
-              !   write(*,*) 'i, j,k, l, P2 = ',i, j, k, l,  P2(i,j,k,l)
-              !   !STOP
-              !endif
+
 
               C(J)=AMIN1(0.99,AMAX1(-0.99,C(J)))
               
@@ -289,6 +283,11 @@ subroutine heidi_driftp
 
 	   do J=1,JO
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(J)*FBND(J)+C(J-1)*FBND(J-1)
+              
+!!$              if((C(j).ne. C(j)) .or. (FBND(j) .ne. FBND(j)) .or. (F2(i,j,k,l,s) .ne. F2(i,j,k,l,s))) then
+!!$                 write(*,*) i, j, k, l, s, F2(i,j,k,l,s), C(j), FBND(j)
+!!$                 !STOP
+!!$              endif
 	   end do
         end do	! End L loop
 
@@ -326,6 +325,29 @@ subroutine heidi_driftp
         end if
      end do	! big K loop
   end do	! big I loop
+
+
+
+
+
+!!!!! DEBUG ONLY
+
+
+  open(unit=33, file='test_debug_operators.dat')
+  write(33,*) 'i j k l P1 P2 F2' 
+     do i =20,20
+        do j = 1,jo
+           do k =8, 8!ko
+              do l =71, 71!lo
+                 write(33,'(4I5, 3E11.3)'), i, j, k, l,  P1(I,J), P2(I,j,K,L),  F2(I,J,K,L,2)
+              end do
+           end do
+        end do
+     end do
+     
+
+
+!!!!!!
 
 end subroutine heidi_driftp
 !======================================================================

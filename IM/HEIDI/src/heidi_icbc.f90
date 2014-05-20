@@ -780,7 +780,10 @@ subroutine GEOSB
   end do	 ! S loop
 
   if (I7.eq.1 .or. IG7.eq.1) then	! LANL data injection
+     write(*,*) 'LANL data injection'
+     
      if (TM2.lt.T) then			! MPA DATA
+        write(*,*) 'TM2, T = ', TM2, T
         do while (TM2.le.T)		! Best if final TM2 > final T
            TM1=TM2
            NM1=NM2
@@ -795,24 +798,31 @@ subroutine GEOSB
            TEF2=data(9)
            TEC2=data(8)
           
-           write(*,*) 'MPA values TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
-           
-         if ((TypeBField .eq. 'mhd') .and. t>dT) then 
-           !   if (TypeBField .eq. 'mhd')  then 
+           write(*,*) ' TM1, TM2, NM1, TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
+            write(*,*) 'MHD Type BField =' , TypeBField
 
-             ! TM2 = Universal time
-              TM2=data(2)
+            !STOP
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+           ! if ((TypeBField .eq. 'mhd') .and. t>dT) then 
+           if (TypeBField .eq. 'mhd')  then 
+              !   if (TypeBField .eq. 'mhd')  then 
               
-              write(*,*) 'MHD Type BField' 
- 
+              ! TM2 = Universal time
+              !TM2=data(2)
+              
+                write(*,*) 'MHD Type BField' 
+              
               ! Tpa_p,eV 
+              write(*,*) 'Simulation time, TypeBField = ', t, TypeBField
               write(*,*) 'cBoltzmann =', cBoltzmann
               write(*,*) 'MhdEqPressure_I(1)= ', MhdEqPressure_I(1)
               write(*,*) 'MhdEqDensity_I(1) = ', MhdEqDensity_I(1)
               
               MhdEqDensity_I(1) =  MhdEqDensity_I(1)  + 1.e-20
               MhdEqPressure_I(1) = MhdEqPressure_I(1) + 1.e-20
-
+              
               TFM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! k -> eV
               ! Tpe_p,eV 
               TCM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! Tpe_p,eV 
@@ -820,21 +830,28 @@ subroutine GEOSB
               NM2  = MhdEqDensity_I(1)  
               ! electron density
               NE2 = MhdEqDensity_I(1) 
-
+              
               ! Tpa_e,eV @ midnight
               TEF2 = TFM2/7.0
               ! Tpe_e,eV  
               TEC2 =  TEF2
-
-              write(*,*) 'MHD values TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
               
-              STOP
+              write(*,*) 'MhdEqDensity_I(1),  MhdEqPressure_I(1) ', MhdEqDensity_I(1),  MhdEqPressure_I(1)
+              write(*,*) 'TFM2, TCM2, NM2, TEF2, TEC2 = ',TFM2, TCM2, NM2, TEF2, TEC2
+              
+!stop 
+
            end if
 
-
+           
+           
 
            if (L.lt.0) TM2=TIME+2*DT*(NSTEP+1)
            if (T.eq.TIME) then		! In case T2>T already
+
+              
+              write(*,*) 'I am in second IF'
+              
               TM1=TIME
               NM1=NM2
               TFM1=TFM2
@@ -842,11 +859,15 @@ subroutine GEOSB
               NE1=NE2
               TEC1=TEC2
               TEF1=TEF2
+
+               write(*,*) 'TFM2, TCM2, NM2, TEF2, TEC2 = ',TFM2, TCM2, NM2, TEF2, TEC2
+             
            end if
         end do
      end if
 
-!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      ! inputs are in /cc and eV
 

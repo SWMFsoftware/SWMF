@@ -20,8 +20,10 @@ Module ModHeidiCurrents
   integer :: Irfac, Ilfac
   
   ! Define variables for plasma pressure and other bulk quantities
-  real :: PPER(NR,NT,NS),PPAR(NR,NT,NS),RNHT(NR,NT,NS)
-  real :: EDEN(NR,NT,NS),ANIS(NR,NT,NS),EPAR(NR,NT,NS),Dst(NS)
+  real :: PPER(NR,NT,NS),PPAR(NR,NT,NS)
+  real :: RNHT(NR,NT,NS)! = 0.0
+  real :: EDEN(NR,NT,NS)! = 0.0
+  real :: ANIS(NR,NT,NS),EPAR(NR,NT,NS),Dst(NS)
   real :: NTOT(NS),ETOT(NS),JPER(NR,NT,NS)
   real :: Nspace(NR,NT,NS),Espace(NR,NT,NS)
   

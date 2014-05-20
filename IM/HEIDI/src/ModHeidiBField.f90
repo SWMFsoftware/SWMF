@@ -54,22 +54,37 @@ contains
        !/
     case('mhd')
        write(*,*) 'TimStepCounter = ', i3
-       if (i3==1) then
+       if (i3<=2) then
           write(*,*) 'CASE MHD--------->INITIALIZE B FIED'
           write(*,*) 'Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt    
         
         ! call get_analytical_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,  bField_VIII,&
         !       RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+ !        call  get_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
+!               RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
+          
           call  get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
                RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
        else
 
           write(*,*) 'REAL MHD------>Simulation Time, TimeStep, 2*TimeStep=',t, dt, 2.*dt
+          
+          
           bFieldMagnitude_III = BHeidi_III
+          
+           write(*,*) 'BField = ', BHeidi_III(44,18,4)
+
           RadialDistance_III  = RHeidi_III 
+
+          write(*,*) ' RadialDistance_III',  RadialDistance_III(44,18,4)
+
           Length_III          = SHeidi_III 
+
+          write(*,*) ' Length_III',  Length_III(4,8,4)
+
           call get_gradB0(nPoint,nR,nPhi,Phi_I, GradB0x_VIII, GradB0y_VIII, GradB0z_VIII)
 
+          write(*,*) ' call get_gradB0(n)' 
           dBdt_III=0.0
 
           ! Calculation of gradB and gradBcrossB
@@ -94,6 +109,8 @@ contains
                    Tz = DirBx * GradB0x_VIII(3,iPoint,iR,iPhi) + &
                         DirBy * GradB0y_VIII(3,iPoint,iR,iPhi) + &
                         DirBz * GradB0z_VIII(3,iPoint,iR,iPhi)  
+
+                 !  write(*,*) 'Tx, Ty, Tz =', Tx, Ty, Tz
 
                    ! Contains both dipolar and B1 contribution.
 
@@ -154,6 +171,9 @@ contains
                VarIn_IIV = B_all)
           TypePosition = 'rewind' 
        end if
+
+       write(*,*) 'Done with MHD' 
+
 
        !\
        ! Dipole magnetic field with uniform number of points along the field line. 

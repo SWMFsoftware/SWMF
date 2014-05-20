@@ -350,7 +350,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   open(unit=UnitTmp_, file=trim(TypeHModel)//'HydrogenDensity.dat', status='unknown')
 
   do iR = 1, nR
-     write(3,*) LZ(iR), Rho_III(51,iR,1)/1.e6
+     write(UnitTmp_,*) LZ(iR), Rho_III(51,iR,1)/1.e6
   end do
 
 end subroutine get_neutral_hydrogen
@@ -541,144 +541,144 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
      end do
   end do
 
-!!$  NameFile = 'EDOT88.out'                                                                 
-!!$  StringHeader = 'EDOT values'
-!!$  StringVarName = 'R MLT Edot E PA'                                                               
-!!$  TypePosition = 'rewind'                                                                 
-!!$
-!!$  do iPitch =2, 2
-!!$     do iE = 37, 37
-!!$        call save_plot_file(NameFile, &                                                   
-!!$             TypePositionIn = TypePosition,&                                              
-!!$             TypeFileIn     = TypeFile,&                                                  
-!!$             StringHeaderIn = StringHeader, &                                             
-!!$             nStepIn = 0, &                                                               
-!!$             TimeIn = 0.0, &                                                              
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &                                                 
-!!$             nDimIn = 2, &                                                                
-!!$             CoordMinIn_D = (/1.75, 0.0/),&                                               
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&                                               
-!!$             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
-!!$        TypePosition = 'append'   
-!!$     end do
-!!$  end do
-!!$
-!!$  NameFile = 'EDOT60.out'                                                                 
-!!$  StringHeader = 'EDOT values'
-!!$  StringVarName = 'R MLT Edot E PA'                                                               
-!!$  TypePosition = 'rewind'                                                                 
-!!$
-!!$  do iPitch =20, 20
-!!$     do iE = 37, 37
-!!$        call save_plot_file(NameFile, &                                                   
-!!$             TypePositionIn = TypePosition,&                                              
-!!$             TypeFileIn     = TypeFile,&                                                  
-!!$             StringHeaderIn = StringHeader, &                                             
-!!$             nStepIn = 0, &                                                               
-!!$             TimeIn = 0.0, &                                                              
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &                                                 
-!!$             nDimIn = 2, &                                                                
-!!$             CoordMinIn_D = (/1.75, 0.0/),&                                               
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&                                               
-!!$             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
-!!$        TypePosition = 'append'   
-!!$     end do
-!!$  end do
-!!$
-!!$  NameFile = 'EDOT30.out'                                                                 
-!!$  StringHeader = 'EDOT values'
-!!$  StringVarName = 'R MLT Edot E PA'                                                               
-!!$  TypePosition = 'rewind'                                                                 
-!!$
-!!$  do iPitch =42, 42
-!!$     do iE = 37, 37
-!!$        call save_plot_file(NameFile, &                                                   
-!!$             TypePositionIn = TypePosition,&                                              
-!!$             TypeFileIn     = TypeFile,&                                                  
-!!$             StringHeaderIn = StringHeader, &                                             
-!!$             nStepIn = 0, &                                                               
-!!$             TimeIn = 0.0, &                                                              
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &                                                 
-!!$             nDimIn = 2, &                                                                
-!!$             CoordMinIn_D = (/1.75, 0.0/),&                                               
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&                                               
-!!$             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
-!!$        TypePosition = 'append'   
-!!$     end do
-!!$  end do
-!!$
-!!$  NameFile = 'MUDOT88.out'
-!!$  StringHeader = 'MUDOT values'
-!!$  StringVarName = 'R MLT Mudot E PA'
-!!$  TypePosition = 'rewind'
-!!$
-!!$  do iPitch =2,2                                                                                        
-!!$     do iE = 37, 37 
-!!$        call save_plot_file(NameFile, &   
-!!$             TypePositionIn = TypePosition,& 
-!!$             TypeFileIn     = TypeFile,&   
-!!$             StringHeaderIn = StringHeader, &   
-!!$             nStepIn = 0, &
-!!$             TimeIn = 0.0, &
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &
-!!$             nDimIn = 2, & 
-!!$             CoordMinIn_D = (/1.75, 0.0/),& 
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&
-!!$             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
-!!$        TypePosition = 'append' 
-!!$     end do
-!!$  end do
-!!$
-!!$  NameFile = 'MUDOT60.out'
-!!$  StringHeader = 'EDOT values'
-!!$  StringVarName = 'R MLT Mudot E PA'
-!!$  TypePosition = 'rewind'
-!!$
-!!$  do iPitch =20,20                                                                                        
-!!$     do iE = 37, 37 
-!!$        call save_plot_file(NameFile, &   
-!!$             TypePositionIn = TypePosition,& 
-!!$             TypeFileIn     = TypeFile,&   
-!!$             StringHeaderIn = StringHeader, &   
-!!$             nStepIn = 0, &
-!!$             TimeIn = 0.0, &
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &
-!!$             nDimIn = 2, & 
-!!$             CoordMinIn_D = (/1.75, 0.0/),& 
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&
-!!$             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
-!!$        TypePosition = 'append' 
-!!$     end do
-!!$  end do
-!!$
-!!$  NameFile = 'MUDOT30.out'
-!!$  StringHeader = 'EDOT values'
-!!$  StringVarName = 'R MLT Mudot E PA'
-!!$  TypePosition = 'rewind'
-!!$
-!!$  do iPitch =42,42                                                                                        
-!!$     do iE = 37, 37 
-!!$        call save_plot_file(NameFile, &   
-!!$             TypePositionIn = TypePosition,& 
-!!$             TypeFileIn     = TypeFile,&   
-!!$             StringHeaderIn = StringHeader, &   
-!!$             nStepIn = 0, &
-!!$             TimeIn = 0.0, &
-!!$             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
-!!$             NameVarIn = StringVarName, &
-!!$             nDimIn = 2, & 
-!!$             CoordMinIn_D = (/1.75, 0.0/),& 
-!!$             CoordMaxIn_D = (/6.5, 23.0/),&
-!!$             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
-!!$        TypePosition = 'append' 
-!!$     end do
-!!$  end do
-!!$
+  NameFile = 'EDOT88.out'                                                                 
+  StringHeader = 'EDOT values'
+  StringVarName = 'R MLT Edot E PA'                                                               
+  TypePosition = 'rewind'                                                                 
+
+  do iPitch =2, 2
+     do iE = 37, 37
+        call save_plot_file(NameFile, &                                                   
+             TypePositionIn = TypePosition,&                                              
+             TypeFileIn     = TypeFile,&                                                  
+             StringHeaderIn = StringHeader, &                                             
+             nStepIn = 0, &                                                               
+             TimeIn = 0.0, &                                                              
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &                                                 
+             nDimIn = 2, &                                                                
+             CoordMinIn_D = (/1.75, 0.0/),&                                               
+             CoordMaxIn_D = (/6.5, 23.0/),&                                               
+             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
+        TypePosition = 'append'   
+     end do
+  end do
+
+  NameFile = 'EDOT60.out'                                                                 
+  StringHeader = 'EDOT values'
+  StringVarName = 'R MLT Edot E PA'                                                               
+  TypePosition = 'rewind'                                                                 
+
+  do iPitch =20, 20
+     do iE = 37, 37
+        call save_plot_file(NameFile, &                                                   
+             TypePositionIn = TypePosition,&                                              
+             TypeFileIn     = TypeFile,&                                                  
+             StringHeaderIn = StringHeader, &                                             
+             nStepIn = 0, &                                                               
+             TimeIn = 0.0, &                                                              
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &                                                 
+             nDimIn = 2, &                                                                
+             CoordMinIn_D = (/1.75, 0.0/),&                                               
+             CoordMaxIn_D = (/6.5, 23.0/),&                                               
+             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
+        TypePosition = 'append'   
+     end do
+  end do
+
+  NameFile = 'EDOT30.out'                                                                 
+  StringHeader = 'EDOT values'
+  StringVarName = 'R MLT Edot E PA'                                                               
+  TypePosition = 'rewind'                                                                 
+
+  do iPitch =42, 42
+     do iE = 37, 37
+        call save_plot_file(NameFile, &                                                   
+             TypePositionIn = TypePosition,&                                              
+             TypeFileIn     = TypeFile,&                                                  
+             StringHeaderIn = StringHeader, &                                             
+             nStepIn = 0, &                                                               
+             TimeIn = 0.0, &                                                              
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &                                                 
+             nDimIn = 2, &                                                                
+             CoordMinIn_D = (/1.75, 0.0/),&                                               
+             CoordMaxIn_D = (/6.5, 23.0/),&                                               
+             VarIn_IIV = dEdt_IIII(:,1:24,iE,iPitch:iPitch))                      
+        TypePosition = 'append'   
+     end do
+  end do
+
+  NameFile = 'MUDOT88.out'
+  StringHeader = 'MUDOT values'
+  StringVarName = 'R MLT Mudot E PA'
+  TypePosition = 'rewind'
+
+  do iPitch =2,2                                                                                        
+     do iE = 37, 37 
+        call save_plot_file(NameFile, &   
+             TypePositionIn = TypePosition,& 
+             TypeFileIn     = TypeFile,&   
+             StringHeaderIn = StringHeader, &   
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),& 
+             CoordMaxIn_D = (/6.5, 23.0/),&
+             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
+        TypePosition = 'append' 
+     end do
+  end do
+
+  NameFile = 'MUDOT60.out'
+  StringHeader = 'EDOT values'
+  StringVarName = 'R MLT Mudot E PA'
+  TypePosition = 'rewind'
+
+  do iPitch =20,20                                                                                        
+     do iE = 37, 37 
+        call save_plot_file(NameFile, &   
+             TypePositionIn = TypePosition,& 
+             TypeFileIn     = TypeFile,&   
+             StringHeaderIn = StringHeader, &   
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),& 
+             CoordMaxIn_D = (/6.5, 23.0/),&
+             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
+        TypePosition = 'append' 
+     end do
+  end do
+
+  NameFile = 'MUDOT30.out'
+  StringHeader = 'EDOT values'
+  StringVarName = 'R MLT Mudot E PA'
+  TypePosition = 'rewind'
+
+  do iPitch =42,42                                                                                        
+     do iE = 37, 37 
+        call save_plot_file(NameFile, &   
+             TypePositionIn = TypePosition,& 
+             TypeFileIn     = TypeFile,&   
+             StringHeaderIn = StringHeader, &   
+             nStepIn = 0, &
+             TimeIn = 0.0, &
+             ParamIn_I = (/ EKEV(iE), acos(mu(iPitch))*180./3.14159265, real(nR), real(NT-1)/), & 
+             NameVarIn = StringVarName, &
+             nDimIn = 2, & 
+             CoordMinIn_D = (/1.75, 0.0/),& 
+             CoordMaxIn_D = (/6.5, 23.0/),&
+             VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
+        TypePosition = 'append' 
+     end do
+  end do
+
 !!$STOP
 
 end subroutine get_coef
@@ -687,9 +687,9 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint, nPa, nT, nR,nE
+  use ModHeidiSize,   ONLY: nPoint, nPa, nT, nR, nE, dt
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor, t 
   use ModHeidiDrifts, ONLY: VrConv, P1,P2
   use ModHeidiBField
   use ModHeidiBACoefficients
@@ -715,7 +715,7 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   real                              :: TermMuR, TermMuPhi
   real                              :: TermMuR1, TermMuR2
   real                              :: GradEqBR, GradEqBPhi
-  integer                           :: iPhi, iR, iPitch,iE
+  integer                           :: iPhi, iR, iPitch,iE, iPoint
   real                              :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------------
@@ -757,6 +757,41 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
         end do
      end do
   end do
+  
+  
+  
+  !!\ This is just for testing---REMOVE!!!
+  
+ ! if(t .ge. 2. *dt) then
+     open(unit=33, file='test_debug_integrals.dat')
+     write(*,*) 'SimulationTime = ',  T, ': I am in the loop'
+     write(33,*) 'iPoint LZ En phi VPhi P2 VrConv VRVrConv B ds R GradBCrossBx GradBCrossBy GradBCrossBz'
+     do iR =20,20!nR
+        do iPhi = 2,2!nT
+           do iE =3, 3
+              do iPitch =71, 71
+                 do iPoint =1, nPoint
+                    
+                    write(33,'(1I5, 13E11.3)') iPoint, LZ(iR),  1000. * EKEV(iE), acos(mu(iPitch)),&
+                         VPhi_IIII(iR,iPhi,iE,iPitch), P2(iR,iPhi,iE,iPitch),&
+                         VrConv(iR,iPhi,iE,iPitch), VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch), &
+                         bFieldMagnitude_III(iPoint,iR,iPhi), dLength_III(iPoint,iR,iPhi), &
+                         RadialDistance_III(iPoint,iR,iPhi),  GradBCrossB_VIII(1,iPoint,iR,iPhi),  &
+                         GradBCrossB_VIII(2,iPoint,iR,iPhi),  GradBCrossB_VIII(3,iPoint,iR,iPhi)
+                 end do
+              end do
+           end do
+        end do
+     end do
+     close(33)
+!!$     STOP
+ ! endif
+
+
+!!/
+
+
+
 
 !!$   open(unit=3, file='DriftVsPA.dat')
 !!$ 
@@ -810,5 +845,8 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 !!$      end do
 !!$   end do
 !!$   close(3)
+
+
+
 
 end subroutine get_grad_curv_drift
