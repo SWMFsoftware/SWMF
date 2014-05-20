@@ -62,7 +62,8 @@ program heidi_main
      write(*,*) '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
 
      call heidi_run
-     IsBFieldNew = .false.
+     !IsBFieldNew = .false.
+     IsBFieldNew = .true.
   end do			! end time loop
 
   close(iUnitSal)           ! Closes continuous output file
