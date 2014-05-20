@@ -339,7 +339,8 @@ subroutine heidi_driftp
         do j = 1,jo
            do k =8, 8!ko
               do l =71, 71!lo
-                 write(33,'(4I5, 3E11.3)'), i, j, k, l,  P1(I,J), P2(I,j,K,L),  F2(I,J,K,L,2)
+                 write(33,'(4I5, 3E11.3)') &
+                      i, j, k, l,  P1(I,J), P2(I,j,K,L),  F2(I,J,K,L,2)
               end do
            end do
         end do
