@@ -429,6 +429,13 @@ subroutine OTHERPARA
                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
               case('numeric')
                  P2(I,J,K,L)=(C/Me-ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+                 
+!!$                 if (VPhi_IIII(i,j,k,l) .ne. VPhi_IIII(i,j,k,l)) then
+!!$                    write(*,*) 'i, j, k, l, VPhi_IIII(i,j,k,l)',  i, j, k, l, VPhi_IIII(i,j,k,l) 
+!!$                    STOP
+!!$                 endif
+
+
               end select
            end do
         end do
@@ -444,6 +451,9 @@ subroutine OTHERPARA
                  P2(I,J,K,L)=(C-ISS*3.*EKEV(K)*1000.*Z(I)*GPA)*DT/DPHI/ME
               case('numeric')
                  P2(I,J,K,L)=(C/Me - ISS*VPhi_IIII(i,j,k,l))*DT/DPHI
+                 
+                 !write(*,*) 'i, j, k, l, VPhi_IIII(i,j,k,l)',  i, j, k, l, VPhi_IIII(i,j,k,l) 
+                 
               end select
            end do
         end do
@@ -644,17 +654,17 @@ end subroutine OTHERPARA
 
 subroutine MAGCONV(I3,NST)
 
-  use ModHeidiSize,     ONLY: nS, nR, nT, nPhiCells, nThetaCells, s, io, jo, ko, lo, &
+  use ModHeidiSize,     ONLY: nS, nR, nT, nPA, nPhiCells, nThetaCells, s, io, jo, ko, lo, &
        scalc, dT
   use ModHeidiMain,     ONLY: LZ, VPhi_IIII, VR_IIII, mlt, dPhi, Phi, IsBFieldNew, dl1, nParallelSpecies, &
-       t, Me, Re, A
+       t, Me, Re, A, mu
   use ModHeidiIO,       ONLY: NameInputDirectory, NameRun, iUnitPot, iUnitStdOut, f107, day, year, &
        BySW, BzSW, uSW, Kp, IA, iPPC, lmp, tppc, lamgam, nStep, ppc, time, write_prefix
-  use ModHeidiDrifts,   ONLY: Vr, VrConv, P1
+  use ModHeidiDrifts,   ONLY: Vr, VrConv, P1, P2
   use ModHeidiCurrents, ONLY: Jfac, Jion1, Lats, Lsh, LatFac, fpot, basepot, fpot, ilfac, irfac, &
        lonfac, iR
   use ModHeidiDGCPM,    ONLY: potdgcpm, vthetacells, vmltcells, vphicells, vlzcells
-  use ModProcHEIDI,        ONLY: iComm, iError, iProc, nProc
+  use ModProcIM,        ONLY: iComm, iError, iProc, nProc
   use ModIoUnit,        ONLY: io_unit_new
   use ModHeidiInput,    ONLY: TypeBCalc
   use ModNumConst,      ONLY: cPi
@@ -1248,7 +1258,7 @@ subroutine MAGCONV(I3,NST)
 
     write(*,*) 'IA ===========', IA
 
-!!$STOP
+
 
      Irfac=Ir
      Latfac(1:Ir)=Lats(1:Ir)
@@ -1386,7 +1396,7 @@ subroutine MAGCONV(I3,NST)
 
   write(*,*) 'ISS*DT/DL1', ISS*DT/DL1
   
-
+!!$
 !!$  open(unit=3, file='DriftVsPA.dat')
 !!$  do i =14,14
 !!$     do j = 1,nT
@@ -1436,7 +1446,7 @@ subroutine MAGCONV(I3,NST)
 !!$     end do
 !!$  end do
 !!$  close(3)
-!!$
+
 
 end subroutine MAGCONV
 
