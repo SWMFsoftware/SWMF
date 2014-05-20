@@ -101,6 +101,6 @@ subroutine heidi_run
   if (mod(I3,NIBC).eq.0)     call GEOSB
   call FCHECK(23)
 
-  IsBFieldNew=.false.
-
+  !IsBFieldNew=.false.
+  IsBFieldNew=.true.
 end subroutine heidi_run
