@@ -397,6 +397,48 @@ namespace CutCell {
   bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
 
+  //refine the smooth the surface mesh
+  class cLocalTriangle;
+
+
+  class cLocalNode {
+  public:
+    cNASTRANnode *OriginalNode;
+    double x[3],xSmooth[3];
+    vector<vector<cLocalTriangle>::iterator> ball;
+    int OriginalNodeID,nodeno;
+
+    cLocalNode() {
+      OriginalNode=NULL;
+      for (int idim=0;idim<3;idim++) x[idim]=0.0,xSmooth[idim]=0.0;
+      OriginalNodeID=-1,nodeno=-1;
+    }
+  };
+
+  class cLocalEdge {
+  public:
+    vector<cLocalNode>::iterator CornerNode[2],MiddleNode;
+    vector<cLocalEdge>::iterator downEdge[2];
+    bool processed;
+
+    cLocalEdge() {
+      processed=false;
+    }
+  };
+
+  class cLocalTriangle{
+  public:
+    vector<cLocalNode>::iterator node[3];
+    vector<cLocalEdge>::iterator edge[3];
+    vector<cLocalTriangle>::iterator upTriangle;
+    cTriangleFace *TriangleFace;
+
+    cLocalTriangle() {
+      TriangleFace=NULL;
+    }
+  };
+
+  void SmoothRefine(double SmoothingCoefficient);
 
 
   class cTriangleFaceDescriptor {
