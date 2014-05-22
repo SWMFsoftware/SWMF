@@ -988,6 +988,23 @@ void CutCell::SmoothRefine(double SmoothingCoefficient) {
   nBoundaryTriangleNodes=LocalNode.size();
 
 
+  //calculate the ball averaged normal for the surface nodes
+  for (int nd=0;nd<nBoundaryTriangleNodes;nd++) for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+
+  for (int nfc=0;nfc<nBoundaryTriangleFaces;nfc++) for (int nd=0;nd<3;nd++) for (int idim=0;idim<3;idim++) {
+    BoundaryTriangleFaces[nfc].node[nd]->BallAveragedExternalNormal[idim]+=BoundaryTriangleFaces[nfc].ExternalNormal[idim];
+  }
+
+  for (int nd=0;nd<nBoundaryTriangleNodes;nd++) {
+    double l;
+    int idim;
+
+    for (idim=0,l=0.0;idim<3;idim++) l+=pow(BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim],2);
+
+    if (l>1.0E-50) {
+      for (idim=0,l=sqrt(l);idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]/=l;
+    }
+  }
 
 
 
