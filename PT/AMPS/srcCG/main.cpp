@@ -242,6 +242,20 @@ int main(int argc,char **argv) {
     CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
   }
 
+  //refine the surface mesh
+  {
+    char fname[_MAX_STRING_LENGTH_PIC_];
+
+    CutCell::SmoothRefine(0.75);
+    sprintf(fname,"%s/NucleusSurface-L1.dat",PIC::OutputDataFileDirectory);
+    if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+
+    CutCell::SmoothRefine(0.75);
+    sprintf(fname,"%s/NucleusSurface-L2.dat",PIC::OutputDataFileDirectory);
+    if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+  }
+
+
   //Computation of the gravity field for an irregular nucleus shape
   nucleusGravity::readMesh("cg.Lamy.nas");
   nucleusGravity::setDensity(300);
