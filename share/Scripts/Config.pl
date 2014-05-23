@@ -609,7 +609,8 @@ sub set_hdf5_{
 
 	# For the NAG compiler find the HDF5 include directory from h5pfc -show
 	my $H5include;
-	$H5include = $1 if $Compiler eq "f95" and `$H5pfc -show` =~ /( \-I\S+)/;
+	$H5include = $1 if ($Compiler eq "f95" or $Compiler eq "nagfor") 
+	    and `$H5pfc -show` =~ /( \-I\S+)/;
 
 	@ARGV = ($MakefileConf);
 	while(<>){
