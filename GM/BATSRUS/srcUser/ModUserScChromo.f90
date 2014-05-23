@@ -15,7 +15,8 @@ module ModUser
        IMPLEMENTED6 => user_set_cell_boundary,          &
        IMPLEMENTED7 => user_set_face_boundary,          &
        IMPLEMENTED8 => user_set_resistivity,            &
-       IMPLEMENTED9 => user_initial_perturbation
+       IMPLEMENTED9 => user_initial_perturbation,       &
+       IMPLEMENTED10=> user_update_states
 
   include 'user_module.h' !list of public methods
 
@@ -37,6 +38,12 @@ module ModUser
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
+
+  ! Input parameters for blocking the near-Sun cells to get bigger timestep
+  ! in the CME simulation
+  real    :: rSteady = 1.125
+  logical :: UseSteady = .false.
+
 
 contains 
   !============================================================================
@@ -81,6 +88,10 @@ contains
        case("#PARKERIC")
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
+
+       case("#LOWCORONASTEADY")
+          call read_var('UseSteady', UseSteady)
+          if(UseSteady) call read_var('rSteady', rSteady)
 
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -1121,5 +1132,28 @@ contains
     end do
 
   end subroutine user_initial_perturbation
+
+  !============================================================================
+
+  subroutine user_update_states(iStage, iBlock)
+
+    use ModGeometry, ONLY: true_cell, R_BLK, true_BLK, body_BLK
+
+    integer,intent(in):: iStage,iBlock
+    integer:: i,j,k
+    !--------------------------------------------------------------------------
+
+    if(UseSteady)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(R_BLK(i,j,k,iBlock)<= rSteady) &
+               true_cell(i,j,k,iBlock) = .false.
+       end do; end do; end do
+       if(all(true_cell(1:nI,1:nJ,1:nK,iBlock)==.false.)) &
+            true_blk(iBlock) = .false.
+       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
+    end if
+    call update_states_MHD(iStage, iBlock)
+
+  end subroutine user_update_states
 
 end module ModUser
