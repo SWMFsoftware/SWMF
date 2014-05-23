@@ -432,6 +432,7 @@ sub install_code_{
 	    # Try to use generic Makefile with provided compiler
 	    warn "$WARNING_: $Makefile was not found,".
 		" using generic $MakefileConfOrig.conf\n";
+	    sleep 10;
 	    $Makefile = "$MakefileConfOrig.conf";
 	    open(IN, $Makefile) or die "$ERROR_ $Makefile is missing\n";
 	    open(OUT, ">$MakefileConf") 
