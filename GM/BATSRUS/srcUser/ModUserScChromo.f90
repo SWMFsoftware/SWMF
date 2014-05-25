@@ -1148,8 +1148,7 @@ contains
           if(R_BLK(i,j,k,iBlock)<= rSteady) &
                true_cell(i,j,k,iBlock) = .false.
        end do; end do; end do
-       if(all(true_cell(1:nI,1:nJ,1:nK,iBlock)==.false.)) &
-            true_blk(iBlock) = .false.
+       true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
        body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
     end if
     call update_states_MHD(iStage, iBlock)
