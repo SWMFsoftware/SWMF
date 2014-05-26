@@ -13,6 +13,8 @@ module EEE_ModCms
 
   integer :: nLevelCms = 4
 
+  real :: RescaleB = 1.0
+
   character(len=100):: NameCmsFile
 
   ! CMS coordinates are respectively: longitude, latitude, radius
@@ -41,6 +43,7 @@ contains
     case("#CMS")
        call read_var('NameCmsFile',NameCmsFile)
        call read_var('nLevelCms', nLevelCms)
+       call read_var('RescaleB', RescaleB) ! rescale CMS difference field
     case default
        call CON_stop(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -170,7 +173,7 @@ contains
 
        B_D(3) = Bsph_D(1)*CosTheta - Bsph_D(2)*SinTheta
 
-       B_D = B_D*No2Si_V(UnitB_)
+       B_D = B_D*No2Si_V(UnitB_)*RescaleB
 
        EXIT
     end do
