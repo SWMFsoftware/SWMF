@@ -75,7 +75,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag4} $<
 
 .F90.o:
-	cpp -P -DsysDarwin -DcompXLF90 $*.F90 | grep -v '^#' > $*.f
+	cpp -C -P -DsysDarwin -DcompXLF90 $*.F90 | grep -v '^#' > $*.f
 	${COMPILE.f90} -qsuffix=f=f -o $*.o ${Cflag4} $*.f
 	rm -f $*.f
 
