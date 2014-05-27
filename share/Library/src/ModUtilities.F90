@@ -313,7 +313,7 @@ contains
       write(StringFormat,'(a,i1,a,i1,a)') "(i",lNum,".",lNum,")"
 
       ! Set the beginning part of the string to the variable name
-      String2 = ''
+      String2 = ' '
       String2(1:j-1) = String1(1:j-1)
 
       ! Expand variable names by repating name and adding numerical value
@@ -473,7 +473,7 @@ contains
     call check_dir('xxx/')
 
     write(*,'(/,a)') 'testing fix_dir_name'
-    String = ''
+    String = ' '
     call fix_dir_name(String)
     write(*,'(a)') 'fixed empty string=' // trim(String)
     String = 'GM/BATSRUS/data'
