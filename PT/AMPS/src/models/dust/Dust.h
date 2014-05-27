@@ -116,7 +116,7 @@ namespace ElectricallyChargedDust {
 
     inline void GetGroupVelocityRange(double &vmin,double &vmax,int ngroup) {
       vmin=minGrainVelocity*exp(ngroup*dLogGrainVelocity);
-      vmax=minGrainVelocity*exp(ngroup*(dLogGrainVelocity+1));
+      vmax=minGrainVelocity*exp((ngroup+1)*dLogGrainVelocity);
     }
 
     inline int GetGroupNumber(double *v) {
