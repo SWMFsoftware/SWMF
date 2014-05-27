@@ -27,7 +27,7 @@ contains
 
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Hyp_, p_, iRho_I, DefaultState_V, &
          NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
-    use BATL_size, ONLY: nI, nJ, nK, MaxDim
+    use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
 
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
@@ -36,15 +36,16 @@ contains
          UseUserOuterBcs, TypeBc_I, time_accurate, time_loop, &
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
-    use ModGeometry, ONLY: far_field_BCs_BLK, MaxBoundary, XyzMin_D
+    use ModGeometry, ONLY: &
+         far_field_BCs_BLK, MinBoundary, MaxBoundary, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
          iTrImplFirst, iTrImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
     use ModRadDiffusion, ONLY: set_rad_outflow_bc
-    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsRlonLat, nRoot_D,&
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
+         Theta_, nRoot_D, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_set_cell_boundary
     use ModFieldLineThread, ONLY: set_field_line_thread_bc
 
@@ -56,9 +57,6 @@ contains
     ! Optional arguments when called by semi-implicit scheme
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
-
-    ! Index range for sides
-    integer :: iSideMin, iSideMax
 
     ! Type of boundary for one side
     character(len=30):: TypeBc
@@ -125,39 +123,31 @@ contains
        end do
     end if
 
-    if(present(iImplBlock))then
-       ! The semi-implicit scheme does not use face boundaries
-       iSideMin = 1
-    else
-       iSideMin = max(MaxBoundary+1, 1)
-    end if
-    ! Do not apply cell boundary conditions at the pole 
-    ! This is either handled by message passing or supercell
-    if(IsRLonLat) then
-       iSideMax = 2
-    else
-       iSideMax = 6
-    end if
-
-    ! Do not work on ignored directions
-    if(nK == 1 .and. iSideMax > 4) iSideMax = 4
-    if(nJ == 1 .and. iSideMax > 2) iSideMax = 2
-
     allocate(SymmCoeff_V(nVarState))
 
-    do iSide = iSideMin, iSideMax
+    ! Loop through all sides
+    do iSide = 1, 2*nDim
 
        ! Check if this side of the block is indeed an outer boundary
+       ! Also skips periodic boundaries
        if(neiLEV(iSide,iBlock) /= NOBLK) CYCLE
+
+       ! Skip boundaries handled by ModFaceBoundary
+       ! but not for semi-implicit scheme
+       if(.not.present(iImplBlock) .and. &
+            iSide >= MinBoundary .and. iSide <= MaxBoundary) CYCLE
 
        ! Do not apply cell boundary conditions at the pole 
        ! This is either handled by message passing or supercell
        if(IsCylindricalAxis .and. iSide == 1) CYCLE
 
+       ! Skip spherical Theta/Latitude boundaries if they reach the poles
+       if(IsSphericalAxis .and. (iSide + 1)/2 == Theta_) CYCLE
+
        ! Set index limits for the ghost cell range
-       iMin = 1-nGhost; iMax = nI + nGhost
-       jMin = 1-nGhost; jMax = nJ + nGhost
-       kMin = 1-nGhost; kMax = nK + nGhost
+       iMin = 1 - nGhost; iMax = nI + nGhost
+       jMin = 1 - nGhost; jMax = nJ + nGhost
+       kMin = 1 - nGhost; kMax = nK + nGhost
        select case(iSide)
        case(1)
           iMax = 0
@@ -193,6 +183,9 @@ contains
 
        TypeBc = TypeBc_I(iSide)
        if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
+
+       !write(*,*)'! iSide, Type iMin..kMax=', iSide, TypeBc, &
+       !     iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBc)
        case('coupled')
@@ -239,20 +232,20 @@ contains
           ! Scalars are symmetric
           SymmCoeff_V = 1.0
 
-          ! Normal vector components are mirror symmetric
-          select case(iSide)
+	  ! Normal vector components are mirror symmetric
+	  select case(iSide)
           case(1,2)
-             SymmCoeff_V(iRhoUx_I(1:nFluid)) = -1.0
+	     SymmCoeff_V(iRhoUx_I(1:nFluid)) = -1.0
              if(UseB)SymmCoeff_V(Bx_) = -1.0
-          case(3,4)
-             SymmCoeff_V(iRhoUy_I(1:nFluid)) = -1.0
+ 	  case(3,4)
+	     SymmCoeff_V(iRhoUy_I(1:nFluid)) = -1.0
              if(UseB)SymmCoeff_V(By_) = -1.0
              ! For RZ geometry, mirror Z components too at the axis
              if(IsRzGeometry .and. XyzMin_D(2)==0.0 .and. iSide==3)then
-                SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
-                if(UseB)SymmCoeff_V(Bz_) = -1.0
-             end if
-          case(5,6)
+	        SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
+	        if(UseB)SymmCoeff_V(Bz_) = -1.0
+	     end if
+	  case(5,6)
              SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
              if(UseB)SymmCoeff_V(Bz_) = -1.0
           end select
@@ -327,8 +320,8 @@ contains
           if(IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
-             call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
-                  iImplBlock)
+             call set_field_line_thread_bc( &
+                  nGhost, iBlock, nVarState, State_VG, iImplBlock)
           end if
        case('user_semi')
           if(IsLinear)then
