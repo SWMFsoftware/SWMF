@@ -108,7 +108,7 @@ test_cz:
 	${MAKE} test_cz_run
 	@echo "test_cz_check..."   >> test_cz.diff
 	${MAKE} test_cz_check
-	if([ "${KEEP}"]); then rm -f run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -f run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cz_compile:
 	./Config.pl -v=Empty,CZ/FSAM -fishpak
@@ -145,7 +145,7 @@ test_pw:
 	${MAKE} test_pw_run
 	@echo "test_pw_check..." >> test_pw.diff
 	${MAKE} test_pw_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
@@ -182,7 +182,7 @@ test_ps:
 	${MAKE} test_ps_run
 	@echo "test_ps_check..." >> test_ps.diff
 	${MAKE} test_ps_check	
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ps_compile:
 	./Config.pl -v=Empty,PS/DGCPM
@@ -219,7 +219,7 @@ test_rb:
 	${MAKE} test_rb_run
 	@echo "test_rb_check..." >> test_rb.diff
 	${MAKE} test_rb_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
@@ -265,7 +265,7 @@ test1:
 	@echo "test1_check..." >> test1_ie.diff
 	@echo "test1_check..." >> test1_pw.diff
 	${MAKE} test1_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
@@ -330,7 +330,7 @@ test2:
 	@echo "test2_check..." >> test2_sc.diff
 	@echo "test2_check..." >> test2_ih.diff
 	${MAKE} test2_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
@@ -398,7 +398,7 @@ test3:
 	@echo "test3_check..." >> test3_ie.diff
 	@echo "test3_check..." >> test3_im_rcm.diff
 	${MAKE} test3_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -479,7 +479,7 @@ test4:
 	@echo "test4_check..." >> test4_ie.diff
 	@echo "test4_check..." >> test4_im_heidi.diff
 	${MAKE} test4_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
@@ -522,7 +522,7 @@ test5:
 	${MAKE} test5_run
 	@echo "test5_check..." >> test5_ee.diff
 	${MAKE} test5_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS
@@ -581,7 +581,7 @@ test6:
 	@echo "test6_check..." >> test6_ie.diff
 	@echo "test6_check..." >> test6_im_crcm.diff
 	${MAKE} test6_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
@@ -643,7 +643,7 @@ test7:
 	@echo "test7_check..." >> test7_ih.diff
 	@echo "test7_check..." >> test7_oh.diff
 	${MAKE} test7_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
@@ -697,7 +697,7 @@ test8:
 	@echo "test8_check..." >> test8_ie.diff
 	@echo "test8_check..." >> test8_im_rcm_multi.diff
 	${MAKE} test8_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test8_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -775,7 +775,7 @@ test9:
 	@echo "test9_check..." >> test9_sc_chromo.diff
 	@echo "test9_check..." >> test9_ih.diff
 	${MAKE} test9_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -827,7 +827,7 @@ test10:
 	@echo "test10_check..." >> test10_sc.diff
 	@echo "test10_check..." >> test10_ih.diff
 	${MAKE} test10_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -874,7 +874,7 @@ test11:
 	@echo "test11_check..." >> test11_gm.diff
 	@echo "test11_check..." >> test11_pt.diff
 	${MAKE} test11_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test11_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
@@ -923,7 +923,7 @@ test13:
 	${MAKE} test13_run
 	@echo "test13_check..." >> test13_pt.diff
 	${MAKE} test13_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test13_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
@@ -964,7 +964,7 @@ test_esmf:
 	${MAKE} test_esmf_run
 	@echo "test_esmf_check..." >> test_esmf.diff
 	${MAKE} test_esmf_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
@@ -1018,7 +1018,7 @@ test_ccmc:
 	${MAKE} test_ccmc_run
 	@echo "test_ccmc_check..." >> test_ccmc.diff
 	${MAKE} test_ccmc_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
@@ -1081,7 +1081,7 @@ test_ccmc_small:
 	${MAKE} test_ccmc_small_run
 	@echo "test_ccmc_small_check..." >> test_ccmc_small.diff
 	${MAKE} test_ccmc_small_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ccmc_small_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
@@ -1138,7 +1138,7 @@ test_ramscb:
 	@echo "test_ramscb_check..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_check..." >> test_ramscb_im.diff
 	${MAKE} test_ramscb_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
@@ -1183,7 +1183,7 @@ test12_old:
 	$(MAKE) test12_old_run
 	@echo "test12_old_check..." > test12_old.diff
 	$(MAKE) test12_old_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_old_compile:
 	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
@@ -1223,7 +1223,7 @@ test12:
 	$(MAKE) test12_run
 	@echo "test12_check..." > test12.diff
 	$(MAKE) test12_check
-	if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_compile:
 	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
