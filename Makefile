@@ -146,11 +146,6 @@ install: ENV_CHECK mkdir
 			then cp GM/BATSRUS/Config.pl IH/BATSRUS; \
 			     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
 		fi; \
-		if([ -d "IH/BATSRUS_share" ]); \
-		    then cp GM/BATSRUS/Config.pl IH/BATSRUS_share; \
-			perl -i -pe "s/GM/IH/; s#'src#'../../GM/BATSRUS/src#" \
-			IH/BATSRUS_share/Config.pl; \
-		fi; \
 	fi
 	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
 		do (if([ -f "$$i/Config.pl" ]); then \
@@ -477,7 +472,6 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Methods.pl IH ${IH_SRC}; \
 		${SCRIPTDIR}/Rename.pl -w -r -common=IH ${IH_SRC}
 	cd IH/BATSRUS/srcInterface; \
-		perl -i -pe 's?BATSRUS?IH_BATSRUS?' IH_*.f90; \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
