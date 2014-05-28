@@ -25,6 +25,7 @@ test:
 	-@($(MAKE) test_eosgodunov)
 	-@($(MAKE) test_levelset)
 	-@($(MAKE) test_hyades2d)
+	./Config.pl -nohdf5
 	-@($(MAKE) test_laserpackage)
 	-@($(MAKE) test_graydiffusion)
 	-@($(MAKE) test_viscosity)
