@@ -238,10 +238,6 @@ sub set_versions{
 	}
     }
 
-    die "$ERROR IH/BATSRUS_share requires GM/BATSRUS(_conf) ".
-	"and not GM/$Version{GM}\n"
-        if $Version{IH} eq 'BATSRUS_share' and $Version{GM} !~ /^BATSRUS/;
-
     die "$ERROR non Empty UA version requires non Empty IE version\n"
         if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
 
@@ -270,10 +266,6 @@ sub set_versions{
 	die "$ERROR could not find ${comp}_VERSION line in $MakefileDef\n"
 	    unless $Found{$comp}
     }
-
-    # Set equation and user routines for IH/BATSRUS_share if needed
-    &shell_command("cd GM/BATSRUS; ./Config.pl -u=Ih -e=Mhd")
-	if $Version{"IH"} eq "BATSRUS_share";
 
     @Version = @NewVersion;
 }

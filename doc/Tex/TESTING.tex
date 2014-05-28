@@ -310,7 +310,7 @@ For sake of simplicity one can configure SWMF with all 8 components
 (no Empty versions) so that all 6 stages can be done with the same
 executable. 
 \begin{verbatim}
-  Config.pl -v=SC/BATSRUS,IH/BATSRUS_share,GM/BATSRUS,SP/Kota,IM/RCM
+  Config.pl -v=SC/BATSRUS,IH/BATSRUS,GM/BATSRUS,SP/Kota,IM/RCM
   Config.pl -v=IE/Ridley_serial,UA/GITM,RB/RiceV5
 \end{verbatim}
 This is the default configuration except for the SC
@@ -479,8 +479,8 @@ components so the same executable and run directory
 can be used for the next test too. For example set
 \begin{verbatim}
   Config.pl -v=Empty
-  Config.pl -v=IH/BATSRUS_share,GM/BATSRUS,IM/RCM,IE/Ridley_serial,UA/GITM
-  Config.pl -g=GM:8,8,8,400,1 -double
+  Config.pl -v=IH/BATSRUS,GM/BATSRUS,IM/RCM,IE/Ridley_serial,UA/GITM
+  Config.pl -g=GM:8,8,8,400,1
 \end{verbatim}
 The default parameter and layout files can be used. 
 These are copied into the run directory during {\tt make rundir},
