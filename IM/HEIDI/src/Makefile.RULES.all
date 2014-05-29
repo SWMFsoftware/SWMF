@@ -1,4 +1,4 @@
-$Debug eq "yes" and $Compiler eq "f95"
+$Debug eq "yes" and ($Compiler eq "f95" or $Compiler eq "nagfor")
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline -save ${PRECISION} ModHeidiMain.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline -save ${PRECISION} ModHeidiDrifts.f90
 	${COMPILE.f90} ${SEARCH} -c -O0 -C -gline -save ${PRECISION} ModHeidiWaves.f90
