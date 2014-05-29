@@ -129,7 +129,6 @@ my $MpiCompiler;
 my $MpiHeaderFile = "share/Library/src/mpif.h";
 my $Optimize;
 my $ShowCompiler;
-my $ShowMpi;
 
 # Obtain current settings
 &get_settings_;
@@ -220,8 +219,11 @@ if($ShowCompiler){
 # Execute the actions in the appropriate order
 &install_code_ if $Install;
 
+# Change to the main directory of the SWMF if called from a component
+chdir "../.." if $IsComponent;
+
 # Check if Makefile.def is up to date
-if(-f $MakefileDef and not $IsComponent){
+if(-f $MakefileDef){
     my @Stat = stat $MakefileDef;
     my $Time = $Stat[9];
     @Stat = stat $MakefileDefOrig;
@@ -232,7 +234,7 @@ if(-f $MakefileDef and not $IsComponent){
 }
 
 # Check if Makefile.conf is up to date
-if(-f $MakefileConf and not $IsComponent){
+if(-f $MakefileConf){
     my @Stat = stat $MakefileConf;
     my $Time = $Stat[9];
     foreach ("$OS.$Compiler", $CompilerC){
@@ -271,8 +273,7 @@ if($NewPrecision and $NewPrecision ne $Precision){
 &set_fishpak_ if $NewFishpak and $NewFishpak ne $Fishpak;
 
 # Link with SPICE library is required
-&set_spice_ if ($Install or $NewSpice and $NewSpice ne $Spice) 
-    and not $IsComponent;
+&set_spice_ if $Install or ($NewSpice and $NewSpice ne $Spice);
 
 # Get new settings
 &get_settings_;
@@ -282,6 +283,11 @@ if($NewPrecision and $NewPrecision ne $Precision){
 
 # Recreate Makefile.RULES with the current settings
 &create_makefile_rules;
+
+# Return into the component directory
+chdir $DIR if $IsComponent;
+
+# DO NOT USE exit HERE as this code is called from other perl scripts!
 
 ##############################################################################
 sub get_settings_{
@@ -639,10 +645,12 @@ sub set_hdf5_{
 	}
     }
 
+    # PGF90 modules include HDF5 info if compiled with h5pfc
+    &shell_command("make clean") if $Compiler == 'pgf90';
+
     my @files = glob("src/*Hdf5_orig.f90 ".
 		     "??/*/src/*Hdf5_orig.f90 ".
-		     "share/*/src/ModHdf5Utils_orig.f90 ".
-		     "../../share/*/src/ModHdf5Utils_orig.f90");
+		     "share/*/src/ModHdf5Utils_orig.f90 ");
     foreach my $file (@files){
 	my $outfile = $file;
 	$outfile =~ s/_orig//;
@@ -651,6 +659,7 @@ sub set_hdf5_{
 	print "set_hdf5_: cp $infile $outfile\n";
 	&shell_command("cp $infile $outfile");
     }
+
 }
 
 ##############################################################################
@@ -824,8 +833,7 @@ sub set_optimization_{
 
 sub create_makefile_rules{
 
-    my @InFile = glob("src*/$MakefileRules.all */*/src*/$MakefileRules.all ".
-		      "../../share/Library/src*/$MakefileRules.all");
+    my @InFile = glob("src*/$MakefileRules.all */*/src*/$MakefileRules.all");
 
     return unless @InFile;
 
