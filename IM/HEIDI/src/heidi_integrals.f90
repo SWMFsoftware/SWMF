@@ -761,35 +761,29 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   
   
   !!\ This is just for testing---REMOVE!!!
-  
- ! if(t .ge. 2. *dt) then
-     open(unit=33, file='test_debug_integrals.dat')
-     write(*,*) 'SimulationTime = ',  T, ': I am in the loop'
-     write(33,*) 'iPoint LZ En phi VPhi P2 VrConv VRVrConv B ds R GradBCrossBx GradBCrossBy GradBCrossBz'
-     do iR =20,20!nR
-        do iPhi = 2,2!nT
-           do iE =3, 3
-              do iPitch =71, 71
-                 do iPoint =1, nPoint
-                    
-                    write(33,'(1I5, 13E11.3)') iPoint, LZ(iR),  1000. * EKEV(iE), acos(mu(iPitch)),&
-                         VPhi_IIII(iR,iPhi,iE,iPitch), P2(iR,iPhi,iE,iPitch),&
-                         VrConv(iR,iPhi,iE,iPitch), VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch), &
-                         bFieldMagnitude_III(iPoint,iR,iPhi), dLength_III(iPoint,iR,iPhi), &
-                         RadialDistance_III(iPoint,iR,iPhi),  GradBCrossB_VIII(1,iPoint,iR,iPhi),  &
-                         GradBCrossB_VIII(2,iPoint,iR,iPhi),  GradBCrossB_VIII(3,iPoint,iR,iPhi)
-                 end do
-              end do
-           end do
-        end do
-     end do
-     close(33)
-!!$     STOP
- ! endif
-
-
-!!/
-
+!!$  
+!!$ 
+!!$     open(unit=33, file='test_debug_integrals.dat')
+!!$     write(*,*) 'SimulationTime = ',  T, ': I am in the loop'
+!!$     write(33,*) 'iPoint LZ En phi VPhi P2 VrConv VRVrConv B ds R GradBCrossBx GradBCrossBy GradBCrossBz'
+!!$     do iR =20,20!nR
+!!$        do iPhi = 2,2!nT
+!!$           do iE =3, 3
+!!$              do iPitch =71, 71
+!!$                 do iPoint =1, nPoint
+!!$                    
+!!$                    write(33,'(1I5, 13E11.3)') iPoint, LZ(iR),  1000. * EKEV(iE), acos(mu(iPitch)),&
+!!$                         VPhi_IIII(iR,iPhi,iE,iPitch), P2(iR,iPhi,iE,iPitch),&
+!!$                         VrConv(iR,iPhi,iE,iPitch), VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch), &
+!!$                         bFieldMagnitude_III(iPoint,iR,iPhi), dLength_III(iPoint,iR,iPhi), &
+!!$                         RadialDistance_III(iPoint,iR,iPhi),  GradBCrossB_VIII(1,iPoint,iR,iPhi),  &
+!!$                         GradBCrossB_VIII(2,iPoint,iR,iPhi),  GradBCrossB_VIII(3,iPoint,iR,iPhi)
+!!$                 end do
+!!$              end do
+!!$           end do
+!!$        end do
+!!$     end do
+!!$     close(33)
 
 
 
