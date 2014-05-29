@@ -94,7 +94,7 @@ module rbe_cfield
   use rbe_grid
   implicit none
   real :: bo(ir,ip),ro(ir,ip),xmlto(ir,ip),y(ir,ip,0:ik+1),&
-       Hdens(ir,ip,ik),p(ir,ip,iw,ik),v(ir,ip,iw,ik),ekev(ir,ip,iw,ik),&
+       Hdens(ir,ip,ik),p(ir,ip,iw,ik),v(ir,ip,iw,ik),ekev(ir,ip,iw,ik)=0.0,&
        rmir(ir,ip,ik),tcone(ir,ip,iw,ik),tanA2(ir,ip,0:ik+1),&
        volume(ir,ip),bm(ir,ip,ik),gamma(ir,ip,iw,ik),parmod(10),rb,&
        xo(ir,ip),yo(ir,ip),tya(ir,ip,0:ik+1),gridoc(ir,ip)
@@ -120,7 +120,7 @@ module rbe_cVdrift
   use rbe_grid
   implicit none
   ! Drift velocity (lon, poloidal)
-  real:: vl(ir,ip,iw,ik),vp(ir,ip,iw,ik)
+  real:: vl(ir,ip,iw,ik)=0.0,vp(ir,ip,iw,ik)=0.0
 end module rbe_cVdrift
 !=============================================================================
 module rbe_cinitial
