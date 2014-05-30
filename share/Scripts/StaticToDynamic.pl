@@ -27,6 +27,31 @@ my $ERROR = "StaticToDynamic.pl ERROR:";
 
 while(<>){
 
+    if(/^\s*end module/i){
+
+	my $mod_name = $module;
+	$mod_name =~ s/([A-Z])/"_".lc($1)/eg;
+
+	print "
+contains
+" if not $contains;
+	print "
+  subroutine init$mod_name
+". &print_allocate ."
+  end subroutine init$mod_name
+" if not $allocate;
+
+	print "
+  subroutine clean$mod_name
+". &print_deallocate . "
+  end subroutine clean$mod_name
+" if not $deallocate;
+
+	# Print "end module..." line itself
+	print;
+	last;
+    }
+
     if($contains){
 	# Print the line out
 	print; 
@@ -38,27 +63,12 @@ while(<>){
 		last unless /^\s*$|\s*!|^\s*use\s|::/;
 		print;
 	    }
-	    $allocate=1;
-	    my $variable;
-	    print "\n";
-	    print "    if(allocated($allocated[0])) return\n";
-	    foreach $variable (@allocated){
-		print "    allocate($variable".
-		    "$dimension{$variable})\n";
-	    }
-	    print;
+            print &print_allocate.$_;
 	}
 
 	# Add deallocate statements into subroutine deallocate_* or clean_*
-	if($contains and /^\s*subroutine\s+(deallocate|clean)_/i){
-	    $deallocate=1;
-	    my $variable;
-	    print "\n";
-	    print "    if(.not.allocated($allocated[0])) return\n";
-	    foreach $variable (@allocated){
-		print "    deallocate($variable)\n";
-	    }
-	}
+	print &print_deallocate.$_
+           if $contains and /^\s*subroutine\s+(deallocate|clean)_/i;
 
 	# Nothing else to do
 	next;
@@ -72,7 +82,6 @@ while(<>){
 
     # Set $contains variable
     $contains = 1 if /^\s*contains\b/;
-
 
     # process lines which are before the contains statement
 
@@ -173,7 +182,7 @@ while(<>){
     my $variable;
     foreach $variable (@variables){
 	my $dimension = $dimension{$variable};
-	if($dimension =~ /$large/){
+	if($dimension =~ /$large/i){
 	    my $ndim = ($dimension =~ s/[^\(\),]+/:/g);
 	    if($ndim >= $mindim){
 		print "$type, allocatable :: $variable$dimension\n";
@@ -192,6 +201,41 @@ warn "$WARNING subroutine deallocate_* or clean_* was not found in $ARGV !\n"
     if $Debug and not $deallocate;
 
 exit 0;
+
+##############################################################################
+
+sub print_allocate{
+
+    $allocate=1;
+    my $variable;
+    my $result = "
+
+    if(allocated($allocated[0])) RETURN
+";
+    foreach $variable (@allocated){
+	$result .= "    allocate($variable".
+	    "$dimension{$variable})\n";
+    }
+
+    return $result;
+}
+
+##############################################################################
+
+sub print_deallocate{
+
+    $deallocate=1;
+    my $variable;
+    my $result = "
+
+    if(.not.allocated($allocated[0])) RETURN
+";
+    foreach $variable (@allocated){
+	$result .= "    deallocate($variable)\n";
+    }
+
+    return $result;
+}
 
 ##############################################################################
 
