@@ -264,7 +264,8 @@ if($NewPrecision and $NewPrecision ne $Precision){
 &set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
 
 # Link with HDF5 library is required
-&set_hdf5_ if $Install or $NewHdf5 and $NewHdf5 ne $Hdf5;
+&set_hdf5_ 
+    if ($Install and not $IsComponent) or ($NewHdf5 and $NewHdf5 ne $Hdf5);
 
 # Link with HYPRE library is required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
@@ -273,7 +274,8 @@ if($NewPrecision and $NewPrecision ne $Precision){
 &set_fishpak_ if $NewFishpak and $NewFishpak ne $Fishpak;
 
 # Link with SPICE library is required
-&set_spice_ if $Install or ($NewSpice and $NewSpice ne $Spice);
+&set_spice_ 
+    if ($Install and not $IsComponent) or ($NewSpice and $NewSpice ne $Spice);
 
 # Get new settings
 &get_settings_;
