@@ -76,22 +76,14 @@ test_numeric_rundir:
 
 # The tests run on 1 or 2 PE-s only
 test_analytic_run: 
-	if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR1}; mpiexec -np 2 ./HEIDI.exe; \
-	elif [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
-		cd ${TESTDIR1}; mpirun -np 2 ./HEIDI.exe; \
-	else \
-		cd ${TESTDIR1}; ${MPIRUN} ./HEIDI.exe; \
-	fi;
+	perl -e '$$_="${MPIRUN}";s/\-np \d/-np 2/;s/mpiexec$$/mpiexec -np 2/;\
+		 $$_="cd ${TESTDIR1}; $$_ ./HEIDI.exe > runlog"; \
+		 print "$$_\n"; `$$_`'
 
 test_numeric_run: 
-	if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR2}; mpiexec -np 2 ./HEIDI.exe; \
-	elif [ "$(MPIRUN)" = "mpirun -np 4" ]; then \
-		cd ${TESTDIR2}; mpirun -np 2 ./HEIDI.exe; \
-	else \
-		cd ${TESTDIR2}; ${MPIRUN} ./HEIDI.exe; \
-	fi;
+	perl -e '$$_="${MPIRUN}";s/\-np \d/-np 2/;s/mpiexec$$/mpiexec -np 2/;\
+		 $$_="cd ${TESTDIR2}; $$_ ./HEIDI.exe > runlog"; \
+		 print "$$_\n"; `$$_`'
 
 test_analytic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
