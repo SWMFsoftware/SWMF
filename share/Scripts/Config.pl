@@ -646,7 +646,7 @@ sub set_hdf5_{
     }
 
     # PGF90 modules include HDF5 info if compiled with h5pfc
-    &shell_command("make clean") if $Compiler == 'pgf90';
+    &shell_command("make clean") if not $Install and $Compiler eq 'pgf90';
 
     my @files = glob("src/*Hdf5_orig.f90 ".
 		     "??/*/src/*Hdf5_orig.f90 ".
