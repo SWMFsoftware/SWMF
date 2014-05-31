@@ -46,7 +46,7 @@ module ModHeidiMain
   
   ! Define flux variable, and a few others
   real, allocatable :: F2(:,:,:,:,:)
-  real ::A,T,FGEOS(NT,NE,NPA,NS)
+  real :: A, T=0.0, FGEOS(NT,NE,NPA,NS)
   
   ! Define parameters based on grid variables
   real :: ENER(NR,NS)
