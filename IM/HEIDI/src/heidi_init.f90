@@ -3,8 +3,9 @@
 subroutine heidi_init
 
   use ModHeidiSize,   ONLY: dT
-  use ModHeidiMain,   ONLY: T, f107R
-  use ModHeidiDrifts, ONLY: j18,j6, P2
+  use ModHeidiMain,   ONLY: T, f107R, init_mod_heidi_main
+  use ModHeidiDrifts, ONLY: j18,j6, P2, init_mod_heidi_drifts
+  use ModHeidiWaves,  ONLY: init_mod_heidi_waves
   use ModProcHEIDI,      ONLY: iProc
   use ModInit,        ONLY: nSt, nKp, nIBC, i2,nPr, xn, lnc, i3
   use ModHeidiIO,     ONLY: write_prefix, time, iUnitStdout, tinj, iKp,&
@@ -13,15 +14,19 @@ subroutine heidi_init
   implicit none
   !--------------------------------------------------------------------------
 
+  call init_mod_heidi_main
+  call init_mod_heidi_waves
+  call init_mod_heidi_drifts
 
   if (iProc == 0) then
      call IonoHeidiInit(year,day,ut)
   endif
 
-    if (.not. IsFramework) T = TIME
+  if (.not. IsFramework) T = TIME
   if (iProc == 0) then
      call write_prefix; write(iUnitStdOut,*) 'TIME =',TIME
   end if
+
   NST  = nint(TIME/DT/2.) + 1
   NKP  = nint(10800./DT/2.)
   NIBC = nint(TINJ/DT/2.)
