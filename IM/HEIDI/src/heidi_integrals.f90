@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !\
 ! Contains the bounced averaged numeric integrals
@@ -7,7 +8,7 @@
 
 subroutine get_IntegralH(IntegralH_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBCalc
   use ModHeidiMain,  ONLY: Phi, LZ, mu
@@ -40,31 +41,29 @@ subroutine get_IntegralH(IntegralH_III)
      a3=-0.074
      a4=0.056
 
-     do iPhi =1 , nT 
-        do iR =1, nR    
-           do iPitch =1 , nPa
-              PitchAngle_I(iPitch) = acos(mu(iPitch))
-              x = cos(PitchAngle_I(iPitch))
-              y = sqrt(1-x*x)
-              IntegralH_III(iPitch,iR, iPhi) =alpha-beta*(y+sqrt(y))+ &
-                   a1*y**(1./3.)+a2*y**(2./3.)+ a3*y+a4*y**(4./3.)
-           end do
-        end do
+     do iPitch =1 , lO
+        x = mu(iPitch)
+        y = sqrt(1-x**2)
+        IntegralH_III(iPitch,:,:) = alpha - beta*(y + sqrt(y))+ &
+             a1*y**(1./3.) + a2*y**(2./3.) + a3*y + a4*y**(4./3.)
      end do
 
   case('numeric')
      write(*,*) 'GET_INTEGRALH======>call initialize_b_field'
      call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
-          RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
+          RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII, &
+          GradB_VIII,dBdt_III)
 
      do iPhi = 1, nT
         do iR =1, nR
-           do iPitch =1, nPa
+           do iPitch =1, lO
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
+              call find_mirror_points (&
+                   nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
-                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), LZ(iR), HalfPathLength,Sb)
+                   bFieldMagnitude_III(:,iR,iPhi), dLength_III(:,iR,iPhi), &
+                   LZ(iR), HalfPathLength,Sb)
               if (HalfPathLength==0.0) HalfPathLength = cTiny
               IntegralH_III(iPitch, iR, iPhi) = HalfPathLength
            end do
@@ -77,7 +76,7 @@ end subroutine get_IntegralH
 !============================================================
 subroutine get_IntegralI(IntegralI_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBCalc
   use ModHeidiMain,  ONLY: Phi, LZ, mu
@@ -89,11 +88,11 @@ subroutine get_IntegralI(IntegralI_III)
   real                 :: SecondAdiabInv
   real                 :: bMirror_I(nPa),bMirror
   integer              :: iMirror_I(2)
-  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
+  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of B field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
   real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real                 :: GradB_VIII(3,nPoint,nR,nT)
-  real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
+  real                 :: dLength_III(nPoint-1,nR,nT) ! Length between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
   real, intent(out)    :: IntegralI_III(nPa,nR,nT)
@@ -109,18 +108,13 @@ subroutine get_IntegralI(IntegralI_III)
      a3=-0.074
      a4=0.056
 
-     do iPhi = 1, nT
-        do iR = 1, nR
-           do iPitch = 1, nPa
-              PitchAngle_I(iPitch) = acos(mu(iPitch))
-              if (PitchAngle_I(iPitch)==0.0) PitchAngle_I(iPitch)=cTiny
-              x = cos(PitchAngle_I(iPitch))
-              y=sqrt(1.-x*x)
-              IntegralI_III(iPitch,iR,iPhi)=2.*alpha*(1.-y)+2.*beta*y*alog(y)+4.*beta*(y-sqrt(y))+  &
-                   3.*a1*(y**(1./3.)-y)+6.*a2*(y**(2./3.)-y)+6.*a4*(y-y**(4./3.))  &
-                   -2.*a3*y*alog(y)
-           end do
-        end do
+     do iPitch = 1, lO
+        x = mu(iPitch)
+        y = max(sqrt(1 - x**2),cTiny)
+        IntegralI_III(iPitch,:,:) = &
+             2*alpha*(1-y) + 2*beta*y*alog(y) + 4*beta*(y-sqrt(y))+  &
+             3*a1*(y**(1./3.)-y) + 6*a2*(y**(2./3.)-y) + 6*a4*(y - y**(4./3.))  &
+             - 2*a3*y*alog(y)
      end do
 
   case('numeric')
@@ -130,7 +124,7 @@ subroutine get_IntegralI(IntegralI_III)
 
      do iPhi = 1, nT
         do iR =1, nR
-           do iPitch =1, nPa
+           do iPitch =1, lO
               PitchAngle_I(iPitch) = acos(mu(iPitch))
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
@@ -149,7 +143,7 @@ subroutine get_IntegralI(IntegralI_III)
 end subroutine get_IntegralI
 !============================================================
 subroutine get_neutral_hydrogen(NeutralHydrogen_III)
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiMain,  ONLY: Phi, LZ, mu, T, Re
   use ModHeidiBField
@@ -192,7 +186,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   if (TypeHModel=='Hodges') then 
      call  get_interpolated_hodge_density(Rho_III)
 
-     do iPitch =1, nPa
+     do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
            do iR =1, nR
@@ -217,7 +211,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   else if (TypeHModel=='Bailey') then 
      call  get_bailey_density(Rho_III)
 
-     do iPitch =1, nPa
+     do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
            do iR =1, nR
@@ -243,7 +237,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   else if (TypeHModel=='twins') then 
      call  get_TWINS_density(Rho_III)     
 
-     do iPitch =1, nPa
+     do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
            do iR =1, nR
@@ -268,7 +262,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   else if (TypeHModel=='Ostgaard') then 
      call  get_ostgaard_density(Rho_III)     
 
-     do iPitch =1, nPa
+     do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
            do iR =1, nR
@@ -292,7 +286,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
   else 
 
-     do iPitch =1, nPa
+     do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
         do iPhi = 1, nT
            do iR =1, nR
@@ -319,7 +313,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
   end if
 
-  do iPitch = 1, nPa
+  do iPitch = 1, lO
      do iPhi = 1, nT
         do iR = 1, nR
            NeutralHydrogen_III(iR,iPhi,1) = NeutralHydrogen_III(iR,iPhi,2)
@@ -357,7 +351,7 @@ end subroutine get_neutral_hydrogen
 !============================================================
 subroutine get_B_field(bFieldMagnitude_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nT, nR
   use ModHeidiMain,  ONLY: Phi, LZ,Z
   use ModHeidiBField
 
@@ -382,7 +376,7 @@ end subroutine get_B_field
 !============================================================
 subroutine get_coef(dEdt_IIII,dMudt_III)
 
-  use ModHeidiSize,   ONLY: nPoint, iPointBmin_II,iPointEq, nPa, nT, nR,nE
+  use ModHeidiSize,   ONLY: nPoint, iPointBmin_II,iPointEq, nPa, lO, nT, nR, nE, kO
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
   use ModHeidiDrifts, ONLY: VR, P1,P2
@@ -408,7 +402,6 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  real                              :: sinPitch,sin2Pitch,cosPitch,cos2Pitch
   real                              :: I2, CoeffE, CoeffMu
   real                              :: InvB, InvR, TermER, TermEPhi1,TermEPhi2,TermEPhi
   real                              :: TermER1, TermER2, TermEB, TermMuB, TermEI
@@ -434,7 +427,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-  do iPitch = 1, nPa
+  do iPitch = 1, lO
      do iR = 1, nR
         do iPhi = 1, nT
            iRPlus  = min(iR+1, nR)
@@ -448,16 +441,13 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
      end do
   end do
 
-  do iE = 1, nE
+  do iE = 1, kO
      Energy = 1000. * EKEV(iE)
-     do iPhi = 1, nT
+     do iPhi = 1, nT-1
         do iR = 1, nR
-           do iPitch = 1, nPa
+           do iPitch = 1, lO
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              sinPitch = sin(PitchAngle_I(iPitch))
-              sin2Pitch = sinPitch * sinPitch
-              cosPitch = cos(PitchAngle_I(iPitch))
-              cos2Pitch = cosPitch * cosPitch
+
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
@@ -687,7 +677,7 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint, nPa, nT, nR, nE, dt
+  use ModHeidiSize,   ONLY: nPoint, nPa, lO, nT, nR, nE, kO, dt
   use ModConst,       ONLY: cTiny  
   use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor, t 
   use ModHeidiDrifts, ONLY: VrConv, P1,P2
@@ -708,7 +698,6 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  real                              :: sinPitch,sin2Pitch,cosPitch,cos2Pitch
   real                              :: I2, CoeffE, CoeffMu
   real                              :: InvB, InvR, TermER, TermEPhi
   real                              :: TermER1, TermER2
@@ -724,16 +713,13 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
   call initialize_b_field(Z, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-  do iE = 1, nE
+  do iE = 1, kO
      Energy = 1000. * EKEV(iE)
      do iPhi = 1, nT
         do iR = 1, nR
-           do iPitch = 1, nPa
+           do iPitch = 1, lO
               PitchAngle_I(iPitch) = acos(mu(iPitch))
-              sinPitch = sin(PitchAngle_I(iPitch))
-              sin2Pitch = sinPitch * sinPitch
-              cosPitch = cos(PitchAngle_I(iPitch))
-              cos2Pitch = cosPitch * cosPitch
+
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
               call half_bounce_path_length(nPoint, iMirror_I(:),bMirror_I(iPitch),&
@@ -792,7 +778,7 @@ subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 !!$   do iR =14,14
 !!$      do iPhi = 1,nT
 !!$         do iE =37, 37
-!!$            do iPitch =1, nPa
+!!$            do iPitch =1, lO
 !!$               write(3,*)  VPhi_IIII(iR,iPhi,iE,iPitch),P2(iR,iPhi,iE,iPitch),VrConv(iR,iPhi,iE,iPitch),&
 !!$                    VR_IIII(iR,iPhi,iE,iPitch)+VrConv(iR,iPhi,iE,iPitch),&
 !!$                    iR,iPhi,iE,iPitch, acos(mu(iPitch))
