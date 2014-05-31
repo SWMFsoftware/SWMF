@@ -84,7 +84,7 @@ module ModHeidiMain
   real, allocatable :: dMudt_III(:,:,:,:)
   real, allocatable :: NeutralHydrogen(:,:,:)
   real, allocatable :: bFieldMagnitude_III(:,:,:)
-  real, dimension(nT)             :: MhdEqPressure_I, MhdEqDensity_I
+  real, dimension(nT)             :: MhdEqPressure_I = -1.0, MhdEqDensity_I = -2.0
   logical                         :: IsBFieldNew
   real, parameter                 :: RadToDeg = 180.0/cPi
 
