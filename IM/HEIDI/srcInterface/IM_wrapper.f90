@@ -503,7 +503,7 @@ contains
             VarIn_VII    = Map_DSII(:,2,:,:))
     end if
     !\
-    ! Convert Units here. Input is in SI !!!
+    ! Convert Units here. Input is in SI !
     ! Check Map_DSII for open-closed field lines, also use it for mapping
     ! to the ionosphere for electric potential.
     !/
@@ -548,13 +548,11 @@ contains
     LengthExS=0.0
     sTemp = 0.0 
 
-    do iPoint = 1, nPointLine !+ 1
+    do iPoint = 1, nPointLine + 1
+
        ! Check if this is the point after the last one, or if it is a new line segment
-
-       !     if(iPoint > nPointLine .or. &
-       !          (iPoint > 1 .and. StateLine_VI(1,min(nPointLine,iPoint)) /= iLineLast)) then
-
-       if(iPoint > 1 .and. StateLine_VI(1,iPoint) /= iLineLast) then
+       if(iPoint > nPointLine .or. &
+            (iPoint > 1 .and. StateLine_VI(1,min(nPointLine,iPoint)) /= iLineLast)) then
 
           np = i-1  ! np = number of points on each half field line
 
@@ -654,7 +652,7 @@ contains
           i = 1
           iLineLast = StateLine_VI(1,iPoint)
 
-          !if (iPoint > nPointLine) EXIT
+          if (iPoint > nPointLine) EXIT
 
        end if
 
@@ -681,7 +679,6 @@ contains
 
        iLineLast = StateLine_VI(1,iPoint)
        i = i + 1
-
 
     end do
 
@@ -799,18 +796,18 @@ contains
     rhoHeidi_III(:,:,nT)      = rhoHeidi_III(:,:,1)
 
     ! This should be gone !!!
-    Xyz_VIII(:,:,nR,:)        = Xyz_VIII(:,:,nR-1,:)
-    BHeidi_III(:,nR,:)        = BHeidi_III(:,nR-1,:)
-    RHeidi_III(:,nR,:)        = RHeidi_III(:,nR-1,:)
-    SHeidi_III(:,nR,:)        = SHeidi_III(:,nR-1,:)
-    BxHeidi_III(:,nR,:)       = BxHeidi_III(:,nR-1,:)
-    ByHeidi_III(:,nR,:)       = ByHeidi_III(:,nR-1,:)
-    BzHeidi_III(:,nR,:)       = BzHeidi_III(:,nR-1,:)
-    bGradB1xHeidi_III(:,nR,:) = bGradB1xHeidi_III(:,nR-1,:)
-    bGradB1yHeidi_III(:,nR,:) = bGradB1yHeidi_III(:,nR-1,:)  
-    bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
-    rhoHeidi_III(:,nR,:)      = rhoHeidi_III(:,nR-1,:)
-    pHeidi_III(:,nR,:)        = pHeidi_III(:,nR-1,:)
+    !Xyz_VIII(:,:,nR,:)        = Xyz_VIII(:,:,nR-1,:)
+    !BHeidi_III(:,nR,:)        = BHeidi_III(:,nR-1,:)
+    !RHeidi_III(:,nR,:)        = RHeidi_III(:,nR-1,:)
+    !SHeidi_III(:,nR,:)        = SHeidi_III(:,nR-1,:)
+    !BxHeidi_III(:,nR,:)       = BxHeidi_III(:,nR-1,:)
+    !ByHeidi_III(:,nR,:)       = ByHeidi_III(:,nR-1,:)
+    !BzHeidi_III(:,nR,:)       = BzHeidi_III(:,nR-1,:)
+    !bGradB1xHeidi_III(:,nR,:) = bGradB1xHeidi_III(:,nR-1,:)
+    !bGradB1yHeidi_III(:,nR,:) = bGradB1yHeidi_III(:,nR-1,:)  
+    !bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
+    !rhoHeidi_III(:,nR,:)      = rhoHeidi_III(:,nR-1,:)
+    !pHeidi_III(:,nR,:)        = pHeidi_III(:,nR-1,:)
 
 
     !Find the location of minimum B
