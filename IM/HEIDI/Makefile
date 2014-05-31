@@ -1,3 +1,5 @@
+SHELL=/bin/sh
+
 default: HEIDI
 
 include Makefile.def
@@ -76,14 +78,16 @@ test_numeric_rundir:
 
 # The tests run on 1 or 2 PE-s only
 test_analytic_run: 
-	perl -e '$$_="${MPIRUN}";s/\-np \d/-np 2/;s/mpiexec$$/mpiexec -np 2/;\
-		 $$_="cd ${TESTDIR1}; $$_ ./HEIDI.exe > runlog"; \
-		 print "$$_\n"; `$$_`'
+	cd ${TESTDIR1}; perl -e \
+		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
+		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
+		print "$$_\n"; `$$_`'
 
 test_numeric_run: 
-	perl -e '$$_="${MPIRUN}";s/\-np \d/-np 2/;s/mpiexec$$/mpiexec -np 2/;\
-		 $$_="cd ${TESTDIR2}; $$_ ./HEIDI.exe > runlog"; \
-		 print "$$_\n"; `$$_`'
+	cd ${TESTDIR2}; perl -e \
+		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
+		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
+		print "$$_\n"; `$$_`'
 
 test_analytic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
