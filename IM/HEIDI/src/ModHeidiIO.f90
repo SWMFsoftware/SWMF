@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 Module ModHeidiIO
   !\
@@ -10,7 +11,7 @@ Module ModHeidiIO
 
   ! Define a few time and geophysical index input variables
   integer:: year,day,nstep,ikp,iwpi,month
-  real   ::ut,r,ap,kp,f107,tint,time
+  real   ::ut,r,ap,kp,f107,tint, time = 0.0
   integer, dimension(1:7)::TimeArray
   
   ! Define some variables set with the input file
