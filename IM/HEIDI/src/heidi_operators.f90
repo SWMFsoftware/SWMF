@@ -289,17 +289,18 @@ subroutine heidi_driftp
 !!$                 !STOP
 !!$              endif
 	   end do
-        end do	! End L loop
 
         if (ISW.gt.0) then		! SW can compress magnetopause
            imag=1
            do J=1,JO
+
               if (ILMP(J+1).lt.I .and. imag.eq.1) then ! Leaving m'sphere
                  imag=0
                  if (C(J).lt.0.) then	! Gain at outer boundary
                     RNS=RNS-C(J)*FBND(J)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                     RES=RES-C(J)*FBND(J)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
-                 else			! Loss at outer boundary
+                 else
+                    ! Loss at outer boundary
                     RNL=RNL+C(J)*FBND(J)*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                     REL=REL+C(J)*FBND(J)*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
                  end if
@@ -315,6 +316,7 @@ subroutine heidi_driftp
               end if
            end do
         end if
+        end do	! End L loop
 
         if (Ib.eq.1 .and. S.eq.1) then
            do J=J6,J18
@@ -323,6 +325,8 @@ subroutine heidi_driftp
               end do
            end do	! J loop
         end if
+
+
      end do	! big K loop
   end do	! big I loop
 
