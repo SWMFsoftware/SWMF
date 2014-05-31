@@ -147,6 +147,12 @@ contains
     ! Occasional +0.0 is used to convert from single to double precision
     !/
 
+    ! On not IM processors we don't have the grid info, still have to set
+    if(.not.is_proc(IM_))then
+       LZ  = 0.0
+       Phi = 0.0
+    end if
+
     call set_grid_descriptor( IM_,           & ! component index
          nDim     = 2,                       & ! dimensionality
          nRootBlock_D = (/1,1/),             & ! number of blocks
