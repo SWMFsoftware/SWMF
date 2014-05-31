@@ -354,7 +354,7 @@ subroutine WRESULT(LNC,XN,IFIR)
   
   do S = 1, NS
      call write_prefix; write(iUnitStdOut,*)  'WRESULT: ',S,SCALC(S)
-     if (SCALC(S).eq.1) then
+     if (SCALC(S) == 1) then
         
 	if (S.eq.1) NameSpecies='_e' 
 	if (S.eq.2) NameSpecies='_h' 
@@ -370,28 +370,32 @@ subroutine WRESULT(LNC,XN,IFIR)
  
 
         !.......Find the energy and particle losses
-	do I=2,IO
-           XNO(I)=XN(I,S)
-           XN(I,S)=0
-           EO(I)=ENER(I,S)
-           ENER(I,S)=0.
-           do K=2,KO
-              do L=2,LO-1
-                 do J=1,JO
+! XN and ENER are never defined ! GTOTH
 
-                    if(L.lt.UPA(I)) then
-                       WEIGHT=F2(I,J,K,L,S)*WE(K)*WMU(L)
-                       XN(I,S)=XN(I,S)+WEIGHT  		      ! N in LZ
-                       ENER(I,S)=ENER(I,S)+EKEV(K)*WEIGHT     ! E in LZ
-                    endif
-                 end do
-              end do	! K loop
-           end do	! L loop
-
-           LNC(I,S)=XNO(I)-XN(I,S)
-           LEC(I,S)=EO(I)-ENER(I,S)
-
-        end do       
+!!$	do I = 2, IO
+!!$           XNO(I)=XN(I,S)
+!!$           XN(I,S)=0
+!!$           EO(I)=ENER(I,S)
+!!$           ENER(I,S)=0.
+!!$
+!!$           do K=2,KO
+!!$              do L=2,LO-1
+!!$                 do J=1,JO
+!!$
+!!$                    if(L < UPA(I)) then
+!!$                       WEIGHT=F2(I,J,K,L,S)*WE(K)*WMU(L)
+!!$                       XN(I,S) = XN(I,S)+WEIGHT               ! N in LZ
+!!$                       ENER(I,S)=ENER(I,S)+EKEV(K)*WEIGHT     ! E in LZ
+!!$                    endif
+!!$                    
+!!$                 end do
+!!$              end do	! K loop
+!!$           end do	! L loop
+!!$
+!!$           LNC(I,S)=XNO(I)-XN(I,S)
+!!$           LEC(I,S)=EO(I)-ENER(I,S)
+!!$
+!!$        end do       
 
 
 !!$        do L=2,LO-1
