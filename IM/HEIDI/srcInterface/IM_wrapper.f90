@@ -649,10 +649,11 @@ contains
           pHeidi_III(iPointEq,iR,iT)   = p_I(1)
           rhoHeidi_III(iPointEq,iR,iT) = rho_I(1)
 
+          if (iPoint > nPointLine) EXIT
+
           i = 1
           iLineLast = StateLine_VI(1,iPoint)
 
-          if (iPoint > nPointLine) EXIT
 
        end if
 
