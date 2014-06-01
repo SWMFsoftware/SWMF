@@ -63,8 +63,9 @@ program time_convert
      end if
   end do
   write(*,'(a)')'#STARTTIME'
-  do iTime=1,5
-     write(*,*)iTime_I(iTime)
+  write(*,'(i4.4)')iTime_I(1)   !Year
+  do iTime=2,5
+     write(*,'(i2.2)')iTime_I(iTime)
   end do
   write(*,'(a)')' 0'
   write(*,'(a)')' 0.0'
@@ -83,8 +84,9 @@ program time_convert
   open(12,file='ENDTIME.in',status='replace')
   write(12,'(a)')'#ENDTIME'
   do iUnit=11,12
-     do iTime=1,5
-         write(iUnit,*)iTimeExact_I(iTime)
+     write(iUnit,'(i4.4)')iTimeExact_I(1)     !Year
+     do iTime=2,5
+         write(iUnit,'(i2.2)')iTimeExact_I(iTime)
       end do
      write(iUnit,'(a)')' 0'
      write(iUnit,'(a)')' 0.0'

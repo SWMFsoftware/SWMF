@@ -65,8 +65,14 @@ program time_tocrno
         call solve_time
      end if
   end do
-  write(*,*)iCR
-  write(*,*)lLongitudeIn
+  write(*,'(i4.4)')iCR
+  if(lLongitudeIn < 10)then
+     write(*,'(i1.1)')lLongitudeIn
+  elseif(lLongitudeIn < 100)then
+     write(*,'(i2.2)')lLongitudeIn
+  else
+     write(*,'(i3.3)')lLongitudeIn
+  end if
 contains
  subroutine solve_time
   call time_real_to_int(TimeL,iTimeL_I)
