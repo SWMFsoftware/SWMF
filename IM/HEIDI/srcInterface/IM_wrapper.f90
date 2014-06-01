@@ -548,6 +548,10 @@ contains
     LengthExS=0.0
     sTemp = 0.0 
 
+    bGradB1xHeidi_III = 0.0
+    bGradB1yHeidi_III = 0.0
+    bGradB1zHeidi_III = 0.0
+
     do iPoint = 1, nPointLine + 1
 
        ! Check if this is the point after the last one, or if it is a new line segment
@@ -779,7 +783,7 @@ contains
              BzHeidi_III(:,iR,iT) = bDipole_VI(3,:)
           end if
 
-       end do  ! L loop
+       end do  ! R loop
     end do     ! Phi loop
 
     ! Fill in periodic boundary conditions
@@ -875,8 +879,6 @@ contains
     close(9)
 
     !  call stop_mpi('DEBUG')
-
-
 
   end subroutine IM_put_from_gm_line
 
