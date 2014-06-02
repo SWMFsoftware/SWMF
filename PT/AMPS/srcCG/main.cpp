@@ -66,6 +66,7 @@ double BulletLocalResolution(double *x) {
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
   int spec=PIC::ParticleBuffer::GetI(ptr);
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  return _PARTICLE_DELETED_ON_THE_FACE_;
   else {
   double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
@@ -77,19 +78,38 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   return _PARTICLE_REJECTED_ON_THE_FACE_;
   //  return _PARTICLE_DELETED_ON_THE_FACE_;
   }
+#else
+
+  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+
+  vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
+  vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
+  vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
+
+  return _PARTICLE_REJECTED_ON_THE_FACE_;
+
+#endif
+
 }
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize());
+  return max(1.0,t->CharacteristicSize()*3.0);
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
     double CellSize;
     double CharacteristicSpeed;
-    
-    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) CharacteristicSpeed=30.0;
-    else CharacteristicSpeed=8.0e2;
+    double dt;
+
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+      ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
+      return dt*3.0;
+    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+#else
+    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+#endif
 
     CellSize=startNode->GetCharacteristicCellSize();
     return 0.3*CellSize/CharacteristicSpeed;
@@ -233,8 +253,8 @@ int main(int argc,char **argv) {
 
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
-  CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",xmin,xmax,1.0E-8);
-  //  CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
+  //CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",xmin,xmax,1.0E-8);
+    CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",xmin,xmax,1.0E-8);
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
@@ -245,7 +265,7 @@ int main(int argc,char **argv) {
   //refine the surface mesh
   {
     char fname[_MAX_STRING_LENGTH_PIC_];
-
+    
     CutCell::SmoothRefine(0.75);
     sprintf(fname,"%s/NucleusSurface-L1.dat",PIC::OutputDataFileDirectory);
     if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
@@ -253,6 +273,7 @@ int main(int argc,char **argv) {
     CutCell::SmoothRefine(0.75);
     sprintf(fname,"%s/NucleusSurface-L2.dat",PIC::OutputDataFileDirectory);
     if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+   
   }
 
 
@@ -291,8 +312,8 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.InitCellMeasure();
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1000; //0; //00; //*10;
-  PIC::RequiredSampleLength=10; //00; //0; //0;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=4000; //0; //00; //*10;
+  PIC::RequiredSampleLength=100; //00; //0; //0;
 
 
   PIC::Init_AfterParser();
@@ -304,10 +325,15 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::initTimeStep();
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+
+  /*  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO_SPEC_);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   for (int s=0;s<PIC::nTotalSpecies;s++) if (_DUST_SPEC_<=s && s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 #endif
+  */
+
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
@@ -315,7 +341,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(2000000);
+  PIC::ParticleBuffer::Init(10000000);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
@@ -340,12 +366,22 @@ int main(int argc,char **argv) {
   sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
   PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
+  int LastDataOutputFileNumber=-1;
 
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
     
+    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+      PIC::RequiredSampleLength*=4;
+      if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
+      
+      
+      LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+      if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
+    }
+    if (PIC::ThisThread==0)   cout << "niter:" << niter << endl;
 #if _PIC_MODEL__RADIATIVECOOLING__MODE_ == _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_
-    Comet::StepOverTime();
+	Comet::StepOverTime();
 #endif
   }
 

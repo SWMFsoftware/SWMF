@@ -27,7 +27,7 @@ static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false
 static double productionDistributionJet[6000],cumulativeProductionDistributionJet[6000];
 static double productionDistributionWaist[6000],cumulativeProductionDistributionWaist[6000];
 static double productionDistributionHartley2[6000],cumulativeProductionDistributionHartley2[6000];
-static double productionDistributionNASTRAN[30000],cumulativeProductionDistributionNASTRAN[30000];
+static double productionDistributionNASTRAN[150000],cumulativeProductionDistributionNASTRAN[150000];
 static double productionDistribution[180],cumulativeProductionDistribution[180];
 static double angle;
 static double azimuthCenter;
@@ -102,7 +102,7 @@ void Comet::Init_BeforeParser() {
   ElectricallyChargedDust::maxDustRadius=DustSizeMax; //1.0e4*_MICROMETER_;
   ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(DustSampleIntervals);
   ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
-  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=100.0;
+  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=4.0;
   ElectricallyChargedDust::TotalMassDustProductionRate=DustTotalMassProductionRate;
   ElectricallyChargedDust::SizeDistribution::PowerIndex=DustSizeDistribution;
   ElectricallyChargedDust::Init_BeforeParser();
@@ -1032,7 +1032,7 @@ ot defined");
 }
 
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalData* Sphere){
-  return 1.0e24; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
+  return Comet::Bjorn_SourceRate[spec];
 }
 
 
@@ -1047,7 +1047,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
   long int totalSurfaceElementsNumber,i;
   double rSphere=1980.0;
-  
+  double area;
+
   if (probabilityFunctionDefinedNASTRAN==false) {       
     for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
       TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
@@ -1063,7 +1064,6 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
     for (i=0;i<totalSurfaceElementsNumber;i++) {
       for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
       CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); //I had middle element on body rotation...
-      
       
       for (c=0.0,X=0.0,idim=0;idim<3;idim++){
 	c+=norm[idim]*(positionSun[idim]-x[idim]);
@@ -1106,9 +1106,10 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
   //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1e-4);
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1.0e-1);
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+  //CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1e-4);
+    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1e-4);
+
+    //  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
     c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
@@ -1144,8 +1145,22 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-10.0*ExternalNormal[idim];
-  else PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+  double r2Tang=0.0;;
+  double xFace[3];
+  double vDustInit=0.01;
+  double angleVelocityNormal=asin(rnd());
+
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-vDustInit*ExternalNormal[idim];
+  for (idim=0;idim<3;idim++){
+        v_LOCAL_IAU_OBJECT[idim]=-vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
+     
+    }
+    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
+    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+  }
+  else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #endif
