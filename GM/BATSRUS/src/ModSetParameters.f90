@@ -90,7 +90,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModSort, ONLY: sort_quick
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
-  use ModPIC, ONLY: pic_read_param
+  use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
   use ModFaceBoundary, ONLY: read_face_boundary_param
   use ModFieldLineThread, ONLY: read_threads
   !CORONA SPECIFIC PARAMETERS
@@ -295,6 +295,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_potential_field(NamePlotDir)
         end if
      end if
+
+     if(UsePic)  call pic_init_region
+
 
 
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
