@@ -1214,6 +1214,45 @@ test12_old_check:
 
 ######## test ipic3d stand alone in SWMF  ###############
 
+test12_old_2:
+	@echo "test12_old_2_compile..." > test12_old_2.diff
+	$(MAKE) test12_old_2_compile
+	@echo "test12_old_2_rundir..." > test12_old_2.diff
+	$(MAKE) test12_old_2_rundir
+	@echo "test12_old_2_run..." > test12_old_2.diff
+	$(MAKE) test12_old_2_run
+	@echo "test12_old_2_check..." > test12_old_2.diff
+	$(MAKE) test12_old_2_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_old_2_compile:
+	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicX=true,periodicY=false,periodicZ=true,pseudrand=true
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+
+test12_old_2_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR}
+	cp PC/IPIC3D/input/PARAM.in.PC_only_new  ${TESTDIR}/PARAM.in
+	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
+
+test12_old_2_run:
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe > runlog; \
+	else \
+		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe > runlog; \
+	fi;
+
+test12_old_2_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7 \
+		${TESTDIR}/PC/plots/ConservedQuantities.txt \
+		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
+		> test12_old_2.diff)
+	-@(ls -l test12_old_2.diff)
+
+######## test IPIC3D coupled with BATSRUS both inside the SWMF #########
+
 test12:
 	@echo "test12_compile..." > test12.diff
 	$(MAKE) test12_compile
@@ -1226,30 +1265,28 @@ test12:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_compile:
-	./Config.pl -hdf5 -v=Empty,PC/IPIC3D 
-	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicX=true,periodicY=false,periodicZ=true,pseudrand=true
+	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
+	./Config.pl -o=PC:npx=2,npy=1,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP
 	$(MAKE) SWMF
 	$(MAKE) PIDL
-
+	
 test12_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
-	cp PC/IPIC3D/input/PARAM.in.PC_only_new  ${TESTDIR}/PARAM.in
-	cp PC/IPIC3D/input/LAYOUT.in.PC_only  ${TESTDIR}/LAYOUT.in
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_run:
-	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe > runlog; \
-	else \
-		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe > runlog; \
-	fi;
+	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe < /dev/null | tee runlog.coupled 
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/4step
 
 test12_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.e-13 -r=1e-7 \
-		${TESTDIR}/PC/plots/ConservedQuantities.txt \
-		PC/IPIC3D/output/ConservedQuantities.txt-GEM-PSEUDRAND\
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+		${TESTDIR}/RESULTS/4step/GM/log_n000000.log \
+		 Param/PC/log_n000000.log.test.GMPC.start \
 		> test12.diff)
-	-@(ls -l test12.diff)
+	ls -l test12.diff
 
 ######## test IPIC3D.exe coupled with SWMF using GM/BATSRUS #########
 
@@ -1349,7 +1386,6 @@ test_pic2_compile:
 test_pic2_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
-	cd ${TESTDIR}; ln -s ${BINDIR}/BATSRUS.exe ./
 	cp PC/IPIC3D/input/PARAM.in.start_4step  ${TESTDIR}/PARAM.in
 	cp PC/IPIC3D/input/IPIC.in.start_4step  ${TESTDIR}/IPIC.in
 	cp PC/IPIC3D/input/LAYOUT.in.GM_PC  ${TESTDIR}/LAYOUT.in
