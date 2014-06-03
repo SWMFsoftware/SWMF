@@ -70,6 +70,8 @@ module CON_couple_points
 
      real, allocatable :: DataSource_VI(:,:), DataTarget_VI(:,:)
 
+     integer:: iDecompLastSource = -1, iDecompLastTarget = -1
+
      ! Communicator and logicals to simplify message passing and execution
      logical       :: UseMe = .true.
   end type CouplePointsType
@@ -180,7 +182,6 @@ contains
     integer, allocatable:: iProcSource_I(:)
 
     ! Grid index
-    integer:: iDecompLastSource = -1, iDecompLastTarget = -1
     integer :: iDecompTarget=-1, iDecompSource=-1
     integer :: iGridSource=-1, iGridTarget=-1
 
@@ -239,11 +240,11 @@ contains
 
     endif
 
-    IsNewRoute = iDecompSource /= iDecompLastSource &
-         .or. iDecompLastTarget /= iDecompTarget
+    IsNewRoute = iDecompSource /= Coupler%iDecompLastSource &
+         .or. Coupler%iDecompLastTarget /= iDecompTarget
 
-    iDecompLastSource = iDecompSource
-    iDecompLastTarget = iDecompTarget
+    Coupler%iDecompLastSource = iDecompSource
+    Coupler%iDecompLastTarget = iDecompTarget
 
     if(IsNewRoute)then
        Coupler%nPointTarget = 0
