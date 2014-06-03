@@ -17,27 +17,29 @@ module ModPIC
   public:: pic_read_param
   public:: pic_save_region
   public:: pic_update_states
+  public:: pic_init_region
 
   logical, public:: UsePic = .false.
+  logical, public:: UseFileCoupling = .false.
 
   ! Local variables
 
   ! Coupling parameters
-  integer:: nGhostPic   = 1  ! Number of ghost cells around PIC region
+  integer, public :: nGhostPic   = 1  ! Number of ghost cells around PIC region
   integer:: nOverlapPic = 0  ! Overlap region with linear interpolation
-  integer:: DnCouplePic = 1  ! Coupling frequency
+  integer, public :: DnCouplePic = 1  ! Coupling frequency
 
   ! Conversion to PIC units
-  real   :: xUnitPicSi  = 1.0
-  real   :: uUnitPicSi  = 1.0
-  real   :: mUnitPicSi  = 1.0
+  real, public  :: xUnitPicSi  = 1.0
+  real, public  :: uUnitPicSi  = 1.0
+  real, public  :: mUnitPicSi  = 1.0
 
   ! File sent by the PIC code
   character(len=100):: NameFilePic = 'GM/IO2/ipic3d.dat'
 
   ! PIC regions
-  integer:: nRegionPic = 0
-  real, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
+  integer, public :: nRegionPic = 0
+  real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
 
 contains
   !===========================================================================
@@ -58,6 +60,7 @@ contains
        call read_var('UsePic',      UsePic)
        call read_var('nGhostPic',   nGhostPic)
        call read_var('nOverlapPic', nOverlapPic)
+       call read_var('UseFileCoupling', UseFileCoupling)
 
     case("#PICCOUPLE")
        call read_var('DnCouplePic', DnCouplePic)
@@ -97,6 +100,152 @@ contains
     end select
 
   end subroutine pic_read_param
+
+  !===========================================================================
+  subroutine pic_init_region
+
+    use ModProcMH,    ONLY: iProc, nProc, iComm
+    use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ppar_, p_, &
+         State_VGB, UseAnisoPressure
+    use ModMain,      ONLY: UseB0, Dt, time_simulation, n_step
+    use ModB0,        ONLY: B0_DGB
+    use ModCurrent,   ONLY: get_current
+    use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
+    use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
+    use ModIO,        ONLY: NamePlotDir
+    use ModIoUnit,    ONLY: UnitTmp_
+    use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_,&
+         UnitP_, UnitJ_, UnitMass_, UnitCharge_
+    use ModPlotFile,  ONLY: save_plot_file
+    use ModConst,     ONLY: cLightSpeed
+    use ModHallResist,ONLY: HallFactorMax, UseHallResist
+    use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
+
+    ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
+    integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
+         PparPic_=8, pPic_=9, JxPic_=10, JzPic_=12, nVarPic = 12
+
+    ! Coordinate, variable and parameter names
+    character(len=*), parameter:: NameVarPic = &
+         'x y rho ux uy uz bx by bz ppar p jx jy jz dt xUnitPic uUnitPic mUnitPic'
+
+    ! PIC grid indexes
+    integer:: iPic, jPic, kPic, nPic_D(MaxDim), iRegion
+
+    ! MHD grid indexes
+    integer:: i, j, k, iBlock, iProcFound
+
+    ! Cell indexes in an array
+    integer:: iCell_D(MaxDim)
+
+    ! Location of PIC node
+    real:: XyzPic_D(MaxDim)
+
+    ! Current in normalized units
+    real:: Current_D(MaxDim)
+
+    ! The PIC variable array
+    real, allocatable:: StatePic_VC(:,:,:,:), StateAllPic_VC(:,:,:,:)
+
+    ! Time step in SI units
+    real:: DtSi
+
+    ! mass per charge SI
+    real:: IonMassPerChargeSi 
+
+    ! MPI error
+    integer:: iError
+
+    ! Fist time called
+    logical :: IsFirstCall = .true.
+
+    character(len=100):: NameFile
+
+    character(len=*), parameter:: NameSub = 'pic_init_region'
+    !-------------------------------------------------------------------------
+
+    ! Save first step and then every DnCouplePic steps
+
+    ! Normalizing the system so q/(mc) == 1 in IPIC3D.
+    ! 
+    ! In CGS units the Hall speed is uH_CGS = j/(nq) = c/4pi curlB m/(q rho)
+    !
+    ! In SI  units the Hall speed is uH_SI  = j/nq = curlB/mu0 m/(q rho)
+    !
+    ! The CGS dimension of curlB/(uH rho) is 
+    !   1/[L] * [U]sqrt[RHO]/([U][RHO]) = 1/([L] sqrt[RHO]) = sqrt[L]/sqrt[M]
+    ! which can be used to scale the PIC units to true CGS units.
+    !
+    ! CGS->SI: 1kg=1000g, 1m=100cm, 1T=10000G and mu0 = 4pi*1e-7
+    !
+    ! 1  = q_PIC/(m_PIC c_pic) 
+    !    = curlB_PIC /  (4pi uH_PIC rho_PIC)     
+    !    = curlB_CGS /  (4pi uH_CGS rho_CGS) * sqrt( [M]_CGS / [L]_CGS )
+    !    = curlB_SI*100/(4pi uH_SI*100 rho_SI*0.001) 
+    !                                        * sqrt{ [M]_SI*1000 / ([L]_SI*100)
+    !    = 10^3.5/4pi * curlB_SI/(uH_SI rho_SI) * sqrt( [M]_SI / [L]_SI )
+    !    = 10^3.5/4pi * mu0_SI*q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
+    !    = 10^(-3.5)  *        q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
+    ! 
+    ! Then we can solve for the mass unit
+    ! 
+    !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2 
+
+    IonMassPerChargeSi = IonMassPerCharge* &
+         No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
+
+    mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
+
+    if(iProc==0)then
+       write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
+       write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi
+       write(*,*) NameSub,': mUnitPicSi = ',mUnitPicSi
+       write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi
+    end if
+
+    DtSi = Dt*No2Si_V(UnitT_)*DnCouplePic
+    XyzPic_D = 0.0
+    nPic_D = 1
+
+    if(.not. UseFileCoupling ) RETURN
+
+    do iRegion = 1, nRegionPic
+
+       nPic_D(1:nDim) = nint( &
+            (XyzMaxPic_DI(:,iRegion) - XyzMinPic_DI(:,iRegion)) &
+            / DxyzPic_DI(:,iRegion) )
+
+       allocate(StatePic_VC(nVarPic, nPic_D(1), nPic_D(2), nPic_D(3)))
+       StatePic_VC = 0.0
+
+       do kPic = 1, nPic_D(3); do jPic = 1, nPic_D(2); do iPic = 1, nPic_D(1)
+
+          ! Set location of PIC node
+          iCell_D = (/iPic, jPic, kPic/)
+          XyzPic_D(1:nDim) = XyzMinPic_DI(:,iRegion) &
+               + (iCell_D(1:nDim) - 0.5)*DxyzPic_DI(:,iRegion)
+
+          call find_grid_block(XyzPic_D, iProcFound, iBlock, iCell_D)
+          if(iProcFound /= iProc) CYCLE
+
+          ! Find corresponding MHD cell center
+          i = iCell_D(1); j = iCell_D(2); k = iCell_D(3)
+
+          ! For now we only support coinciding grids...
+          if(any(abs(Xyz_DGB(:,i,j,k,iBlock) - XyzPic_D) > &
+               1e-5*CellSize_DB(:,iBlock))) then
+             write(*,*)'ERROR in ',NameSub
+             write(*,*)'XyzPic_D = ', XyzPic_D
+             write(*,*)'XyzMhd_D = ', Xyz_DGB(:,i,j,k,iBlock)
+             write(*,*)'iProc, iBlock, i, j, k=', iProc, iBlock, i, j, k
+             call stop_mpi('PIC cell center does not match MHD grid!')
+          end if
+
+       end do; end do; end do
+
+    end do ! iRegion
+
+  end subroutine pic_init_region
   !===========================================================================
   subroutine pic_save_region
 
@@ -159,6 +308,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'pic_save_region'
     !-------------------------------------------------------------------------
+
+    if(.not. UseFileCoupling ) RETURN
 
     ! Save first step and then every DnCouplePic steps
     if( mod(n_step-1, DnCouplePic) /= 0) RETURN
@@ -350,6 +501,8 @@ contains
     ! Don't read PIC solution if BATSRUS only runs for a single iteration
     ! or when the simulation time is zero.
     if(time_simulation == 0.0 .or. nIter == 1) RETURN
+
+    if(.not. UseFileCoupling ) RETURN
 
     ! Check if we should read in a new PIC file
     if(n_step > nStepLast)then
