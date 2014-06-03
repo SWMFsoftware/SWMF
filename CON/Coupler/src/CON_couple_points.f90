@@ -69,6 +69,8 @@ module CON_couple_points
      integer, allocatable :: iPointTarget_I(:)
 
      real, allocatable :: DataSource_VI(:,:), DataTarget_VI(:,:)
+ 
+     integer:: iDecompLastSource = -1, iDecompLastTarget = -1
 
      ! Communicator and logicals to simplify message passing and execution
      logical       :: UseMe = .true.
@@ -239,11 +241,17 @@ contains
 
     endif
 
-    IsNewRoute = iDecompSource /= iDecompLastSource &
-         .or. iDecompLastTarget /= iDecompTarget
+    !IsNewRoute = iDecompSource /= iDecompLastSource &
+    !     .or. iDecompLastTarget /= iDecompTarget
+    !
+    !iDecompLastSource = iDecompSource
+    !iDecompLastTarget = iDecompTarget
 
-    iDecompLastSource = iDecompSource
-    iDecompLastTarget = iDecompTarget
+    IsNewRoute = iDecompSource /= Coupler%iDecompLastSource &
+         .or. Coupler%iDecompLastTarget /= iDecompTarget
+
+    Coupler%iDecompLastSource = iDecompSource
+    Coupler%iDecompLastTarget = iDecompTarget
 
     if(IsNewRoute)then
        Coupler%nPointTarget = 0

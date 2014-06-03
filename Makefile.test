@@ -1278,7 +1278,11 @@ test12_rundir:
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_run:
-	cd ${TESTDIR}; mpirun -n 4 ./SWMF.exe < /dev/null | tee runlog.coupled 
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; mpiexec -np 2 ./SWMF.exe < /dev/null | tee runlog; \
+	else \
+		cd ${TESTDIR}; mpirun -np 2 ./SWMF.exe < /dev/null | tee runlog; \
+	fi;
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/4step
 
 test12_check:

@@ -467,6 +467,83 @@ contains
 
   end subroutine GM_get_for_pt
 
+  !==============================================================================
+
+  subroutine GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
+
+    implicit none
+
+    integer, intent(inout) :: ParamInt_I(4)
+    integer, intent(in)  :: n 
+    real, optional, intent(inout) :: ParamReal_I(n)
+
+    character(len=*), parameter :: NameSub='GM_get_for_pc_init'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_for_pc_init
+
+  !==============================================================================
+
+  subroutine GM_get_for_pc_dt(DtSi)
+
+    implicit none
+
+    real, intent(out) ::  DtSi
+
+    character(len=*), parameter :: NameSub='GM_get_for_pc_dt'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_for_pc_dt
+
+  !==============================================================================
+
+  subroutine GM_get_for_pc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    implicit none
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter :: NameSub='GM_get_for_pc'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_for_pc
+
+  !===========================================================================
+
+  subroutine GM_put_from_pc( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    !  logical,          intent(in)   :: UseData ! true when data is transferred
+    ! false if positions are asked
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:)               ! Position vectors
+
+    character(len=*), parameter :: NameSub='GM_put_from_pc'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_put_from_pc
+
 end module GM_wrapper
 
 !==============================================================================

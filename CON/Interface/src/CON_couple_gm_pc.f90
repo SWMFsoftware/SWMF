@@ -2,13 +2,13 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE GM
-!^CMP FILE PT
+!^CMP FILE PC
 
 !BOP
-!MODULE: CON_couple_gm_pc - couple GM and PT components
+!MODULE: CON_couple_gm_pc - couple GM and PC components
 !
 !DESCRIPTION:
-! Couple GM and PT components both ways. 
+! Couple GM and PC components both ways. 
 !
 !INTERFACE:
 module CON_couple_gm_pc
