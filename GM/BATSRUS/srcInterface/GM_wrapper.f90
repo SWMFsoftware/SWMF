@@ -11,6 +11,7 @@ module GM_wrapper
   use GM_couple_ih
   use GM_couple_rb
   use GM_couple_pw
+  use GM_couple_pc
 
   implicit none
 
@@ -64,6 +65,12 @@ module GM_wrapper
   public:: GM_get_for_rb
   public:: GM_satinit_for_rb
   public:: GM_get_sat_for_rb
+
+  ! PC coupling
+  public:: GM_get_for_pc_dt
+  public:: GM_get_for_pc_init
+  public:: GM_get_for_pc
+  public:: GM_put_from_pc
 
 contains
   !==========================================================================
