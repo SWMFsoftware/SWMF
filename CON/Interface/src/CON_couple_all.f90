@@ -25,6 +25,7 @@ module CON_couple_all
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
   use CON_couple_gm_pt        !^CMP IF PT
+  use CON_couple_gm_pc        !^CMP IF PC
   use CON_couple_gm_pw        !^CMP IF PW
   use CON_couple_gm_rb        !^CMP IF RB
   !^CMP END GM
@@ -59,6 +60,7 @@ module CON_couple_all
   ! 03Jun08 - R. Oran <oran@umich.edu> added IH-OH coupling
   ! 23Jul08 - A. Ridley added IM-IE coupling
   ! 24Sep13 - G. Toth added GM-PT coupling
+  ! 18Feb14 - L. Daldorff added GM-PC coupling
   !EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -77,6 +79,7 @@ contains
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
     if(use_comp(GM_).and.use_comp(PT_))call couple_gm_pt_init  !^CMP IF PT
+    if(use_comp(GM_).and.use_comp(PC_))call couple_gm_pc_init  !^CMP IF PC
     !                                                     ^CMP END GM
     !                                                     ^CMP IF IE BEGIN
     if(use_comp(IE_).and.use_comp(IM_))call couple_ie_im_init  !^CMP IF IM
@@ -193,6 +196,8 @@ contains
           call couple_gm_ie(TimeSimulation)        !^CMP IF IE
        case(IM_)                                   !^CMP IF IM
           call couple_gm_im(TimeSimulation)        !^CMP IF IM
+       case(PC_)                                   !^CMP IF PC
+          call couple_gm_pc(TimeSimulation)        !^CMP IF PC
        case(PT_)                                   !^CMP IF PT
           call couple_gm_pt(TimeSimulation)        !^CMP IF PT
        case(PW_)                                   !^CMP IF PW
@@ -235,6 +240,13 @@ contains
        case default
           call error
        end select                             !^CMP END IM
+    case(PC_)                                 !^CMP IF PC BEGIN
+       select case(iCompTarget)
+       case(GM_)                                   !^CMP IF GM
+          call couple_pc_gm(TimeSimulation)        !^CMP IF GM
+       case default
+          call error
+       end select                             !^CMP END PC
     case(PW_)                                 !^CMP IF PW BEGIN
        select case(iCompTarget)
        case(GM_)                                   !^CMP IF GM
