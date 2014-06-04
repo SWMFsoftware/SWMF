@@ -66,19 +66,19 @@ CouplerMode=ices !!off, ices, swmf
 
 #endSampling
 
-#InternalDegreesOfFReedom
+#IDF
   model=off! LB !off, qLB,LB
-  vv=off
-  vt=off
-  rt=on 
+  vtRelaxation=off !on,off
+  vvRelaxation=off !on,off
+  rtRelaxation=on !on,off
 
-  TotalVibModes(Na)=1
-  TotalRotModes(Na)=1
-  CharacteristicVibTemp(Na)=2000
-  RotationalZnumber(Na)=0.25
+  nVibModes(Na=1)
+  nRotModes(Na=1)
+  VibTemp(Na=2000)
+  RotZnum(Na=0.25)
 
   TemperatureIndex(Na,Na)=1.0
-#endInternalDegreesOfFReedom
+#endIDF
 
 
 #BackgroundSpecies
