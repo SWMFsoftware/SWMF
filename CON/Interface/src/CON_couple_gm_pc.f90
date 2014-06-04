@@ -21,6 +21,8 @@ module CON_couple_gm_pc
   use GM_wrapper
   use PC_wrapper
 
+  use ModMpi
+
   implicit none
   save
 
@@ -91,7 +93,7 @@ contains
        allocate(ParamReal_I(n))
        !if(.not. allocated(ParamReal_I) ) allocate(ParamReal_I(n))
        call GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
-       call MPI_send(ParamReal_I, n, MPI_DOUBLE, i_proc0(PC_),&
+       call MPI_send(ParamReal_I, n, MPI_REAL, i_proc0(PC_),&
             1002, iCommWorld, iError)
     end if
 
@@ -109,11 +111,11 @@ contains
         allocate(ParamReal_I(n))
 
        if (is_proc0(PC_)) then
-          call MPI_recv(ParamReal_I, n, MPI_DOUBLE, i_proc0(GM_),&
+          call MPI_recv(ParamReal_I, n, MPI_REAL, i_proc0(GM_),&
                1002, iCommWorld, iStatus_I, iError)
        end if
 
-       call MPI_bcast(ParamReal_I, n, MPI_DOUBLE, 0, i_comm(PC_),iError)
+       call MPI_bcast(ParamReal_I, n, MPI_REAL, 0, i_comm(PC_),iError)
 
        call PC_put_from_gm_init(ParamInt_I, ParamReal_I, n)
 
@@ -184,24 +186,24 @@ contains
     !      PC_get_grid_info, GM_get_grid_info,  GM_find_points)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',CouplerGMtoPC%iProcWorld
- 
+
     if(is_proc0(GM_)) then
-      call GM_get_for_pc_dt(SIDt)
-      call MPI_send(SIDt, 1, MPI_DOUBLE, i_proc0(PC_),&
-                    1003, i_comm(), iError)
+       call GM_get_for_pc_dt(SIDt)
+       call MPI_send(SIDt, 1, MPI_REAL, i_proc0(PC_),&
+            1003, i_comm(), iError)
     end if
 
-   if(is_proc(PC_)) then
+    if(is_proc(PC_)) then
        if (is_proc0(PC_)) then
-          call MPI_recv(SIDt, 1, MPI_DOUBLE, i_proc0(GM_),&
+          call MPI_recv(SIDt, 1, MPI_REAL, i_proc0(GM_),&
                1003, i_comm(), iStatus_I, iError)
        end if
-       call MPI_bcast(SIDt, 1, MPI_DOUBLE, 0, i_comm(PC_),iError)
+       call MPI_bcast(SIDt, 1, MPI_REAL, 0, i_comm(PC_),iError)
        call PC_put_from_gm_dt(SIDt)
-   end if
+    end if
 
   end subroutine couple_gm_pc
-!=======================================================================
+  !=======================================================================
   subroutine couple_pc_gm(tSimulation)
 
     ! List of variables to pass
@@ -240,8 +242,8 @@ contains
     CouplerPCtoGM%nVar    = Grid_C(CouplerPCtoGM%iCompSource)%nVar
 
     if (isFirstTime)  then
-      isFirstTime = .false.
-      RETURN
+       isFirstTime = .false.
+       RETURN
     end if
 
 
@@ -250,14 +252,14 @@ contains
     if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerPCtoGM%iProcWorld
 
     call couple_points(CouplerPCtoGM, PC_get_grid_info,  PC_find_points , &
-                    PC_get_for_gm, GM_get_grid_info, GM_put_from_pc)
+         PC_get_for_gm, GM_get_grid_info, GM_put_from_pc)
 
     ! old arguments list
     !call couple_points(CouplerPCtoGM,PC_get_for_gm, GM_put_from_pc, &
     !          PC_get_grid_info, GM_get_grid_info,  PC_find_points)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=',CouplerPCtoGM%iProcWorld
- 
+
   end subroutine couple_pc_gm
 
 end module CON_couple_gm_pc
