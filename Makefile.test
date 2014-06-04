@@ -1266,7 +1266,7 @@ test12:
 
 test12_compile:
 	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
-	./Config.pl -o=PC:npx=2,npy=1,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1279,9 +1279,9 @@ test12_rundir:
 
 test12_run:
 	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
-		cd ${TESTDIR}; mpiexec -np 2 ./SWMF.exe < /dev/null | tee runlog; \
+		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe < /dev/null | tee runlog; \
 	else \
-		cd ${TESTDIR}; mpirun -np 2 ./SWMF.exe < /dev/null | tee runlog; \
+		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe < /dev/null | tee runlog; \
 	fi;
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/4step
 
