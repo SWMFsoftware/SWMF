@@ -198,7 +198,7 @@ contains
     ! Thierd time we set the state variables to the same value as given by PC componets
 
     use CON_coupler, ONLY: i_proc, PT_, n_proc
-    use BATL_lib,    ONLY: nDim, Xyz_DGB, CellSize_DB, nBlock, Unused_B, x_, y_, z_, &
+    use BATL_lib,    ONLY: nDim, Xyz_DGB, CellSize_DB, nBlock, Unused_B, &
          nI, nJ, nK, MaxDim, find_grid_block
     use ModPIC,      ONLY: XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI, nRegionPic, &
          nGhostPic
@@ -230,6 +230,7 @@ contains
     real    :: Xyz_D(MaxDim), Dist_D(MaxDim)
     integer :: iCell_D(MaxDim)
 
+    integer :: x_= 1, y_ = 1, z_ = 1 
     !--------------------------------------------------------------------------
 
     ! This function will be called 3 times :
@@ -240,6 +241,11 @@ contains
     !
     ! 3) we revive the state variables associated with the position and a indexing array
     !    to get then in the same order as the original position array given by 2)
+
+    ! to avoid index issues when nDim < 3 
+    if(ndim > 1) y_ = 2
+    if(ndim > 2) z_ = 3
+  
 
     Xyz_D   = 0.0
 
