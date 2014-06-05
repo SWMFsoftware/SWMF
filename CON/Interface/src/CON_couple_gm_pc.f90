@@ -80,46 +80,45 @@ contains
 
     iCommWorld = i_comm()
 
-    ParamInt_I = -1   
-    n = 0
- 
-    if(is_proc0(GM_)) then
-       call GM_get_for_pc_init(ParamInt_I,n)!,ParamReal_I,-1)
-       call MPI_send(ParamInt_I, 4, MPI_INTEGER, i_proc0(PC_),&
-            1001, iCommWorld, iError)
+    ! Get the integer parameters
+    if(is_proc(GM_)) call GM_get_for_pc_init(ParamInt_I, 0)
 
-       !n = nSpecis + nRegions*9 + normalization(3)
-       n = ParamInt_I(1)*3 + ParamInt_I(2)*9 + 3
-       allocate(ParamReal_I(n))
-       !if(.not. allocated(ParamReal_I) ) allocate(ParamReal_I(n))
-       call GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
-       call MPI_send(ParamReal_I, n, MPI_REAL, i_proc0(PC_),&
-            1002, iCommWorld, iError)
-    end if
-
-    if(is_proc(PC_)) then
-       if (is_proc0(PC_)) then
-          call MPI_recv(ParamInt_I, 4, MPI_INTEGER, i_proc0(GM_),&
+    if(i_comm(GM_) /= i_comm(PC_))then
+       if(i_proc0(GM_) /= i_proc0(PC_)) then
+          if(is_proc0(GM_)) call MPI_send( &
+               ParamInt_I, 4, MPI_INTEGER, i_proc0(PC_),&
+               1001, iCommWorld, iError)
+          if(is_proc0(PC_)) call MPI_recv( &
+               ParamInt_I, 4, MPI_INTEGER, i_proc0(GM_),&
                1001, iCommWorld, iStatus_I, iError)
        end if
-
-       call MPI_bcast(ParamInt_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
-
-
-       !n = nSpecis + nRegions * 6
-       n = ParamInt_I(1)*3 + ParamInt_I(2)*9 + 3
-        allocate(ParamReal_I(n))
-
-       if (is_proc0(PC_)) then
-          call MPI_recv(ParamReal_I, n, MPI_REAL, i_proc0(GM_),&
-               1002, iCommWorld, iStatus_I, iError)
-       end if
-
-       call MPI_bcast(ParamReal_I, n, MPI_REAL, 0, i_comm(PC_),iError)
-
-       call PC_put_from_gm_init(ParamInt_I, ParamReal_I, n)
-
+       if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
+            ParamInt_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
     end if
+
+    n = ParamInt_I(1)*3 + ParamInt_I(2)*9 + 3
+    allocate(ParamReal_I(n))
+
+    if(is_proc(GM_)) &
+         call GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
+
+    if(i_comm(GM_) /= i_comm(PC_))then
+       if(i_proc0(GM_) /= i_proc0(PC_)) then
+          if(is_proc0(GM_)) call MPI_send( &
+               ParamReal_I, n, MPI_REAL, i_proc0(PC_),&
+               1002, iCommWorld, iError)
+
+          if(is_proc0(PC_)) call MPI_recv( &
+               ParamReal_I, n, MPI_REAL, i_proc0(GM_),&
+               1002, iCommWorld, iStatus_I, iError)
+
+       end if
+       if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
+            ParamReal_I, n, MPI_REAL, 0, i_comm(PC_),iError)
+    end if
+       
+    if(is_proc(PC_)) &
+         call PC_put_from_gm_init(ParamInt_I, ParamReal_I, n)
 
     CouplerGMtoPC%iCompTarget = PC_
     CouplerGMtoPC%iCompSource = GM_
@@ -135,7 +134,7 @@ contains
 
   end subroutine couple_gm_pc_init
 
-!=======================================================================
+  !=======================================================================
   subroutine couple_gm_pc(tSimulation)
 
     !INPUT ARGUMENT:
@@ -174,33 +173,37 @@ contains
     CouplerGMtoPC%NameVar = Grid_C(CouplerGMtoPC%iCompSource)%NameVar
     CouplerGMtoPC%nVar    = Grid_C(CouplerGMtoPC%iCompSource)%nVar
 
-    if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerGMtoPC%iProcWorld
-
-
+    if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
     call couple_points(CouplerGMtoPC, GM_get_grid_info,  GM_find_points, &
          GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
 
-    ! old argument list
-    !call couple_points(CouplerGMtoPC,GM_get_for_pc, PC_put_from_gm, &
-    !      PC_get_grid_info, GM_get_grid_info,  GM_find_points)
-
-    if(DoTest) write(*,*) NameSub,' finished, iProc=',CouplerGMtoPC%iProcWorld
-
-    if(is_proc0(GM_)) then
+    if(i_comm(PC_) == i_comm(GM_))then
        call GM_get_for_pc_dt(SIDt)
-       call MPI_send(SIDt, 1, MPI_REAL, i_proc0(PC_),&
-            1003, i_comm(), iError)
+       call PC_put_from_gm_dt(SIDt)
+    else
+       if(is_proc0(GM_)) then
+          call GM_get_for_pc_dt(SIDt)
+
+          if(i_proc0(GM_) /= i_proc0(PC_))then
+             if(is_proc0(GM_)) call MPI_send( &
+                  SIDt, 1, MPI_REAL, i_proc0(PC_), &
+                  1003, i_comm(), iError)
+             if(is_proc0(PC_)) call MPI_recv( &
+                  SIDt, 1, MPI_REAL, i_proc0(GM_), &
+                  1003, i_comm(), iStatus_I, iError)
+          end if
+          
+       end if
+
+       if(is_proc(PC_))then
+          if(n_proc(PC_) > 1) call MPI_bcast( &
+               SIDt, 1, MPI_REAL, 0, i_comm(PC_),iError)
+          call PC_put_from_gm_dt(SIDt)
+       end if
     end if
 
-    if(is_proc(PC_)) then
-       if (is_proc0(PC_)) then
-          call MPI_recv(SIDt, 1, MPI_REAL, i_proc0(GM_),&
-               1003, i_comm(), iStatus_I, iError)
-       end if
-       call MPI_bcast(SIDt, 1, MPI_REAL, 0, i_comm(PC_),iError)
-       call PC_put_from_gm_dt(SIDt)
-    end if
+    if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_gm_pc
   !=======================================================================
