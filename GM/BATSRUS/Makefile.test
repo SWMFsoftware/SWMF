@@ -1171,7 +1171,7 @@ test_mercurysph_check:
 	gunzip -c Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz | ${SORT} \
 	        | grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/ref_3d.dat
-	gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n0000100.dat.gz | ${SORT} \
+	gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz | ${SORT} \
 		| grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/3d.dat
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
