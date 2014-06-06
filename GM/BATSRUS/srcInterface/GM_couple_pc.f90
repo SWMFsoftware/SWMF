@@ -149,10 +149,8 @@ contains
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
-    if(.not. UseAnisoPressure) then
-       write(*,*) NameSub," need Anisotropic Pressure! aborting"
-       stop(0)
-    end if
+    if(.not. UseAnisoPressure) &
+         call mpi_stop(NameSub//": need Anisotropic Pressure!")
 
     Dist_D = -1.0
     Xyz_D  =  0.0
