@@ -881,7 +881,19 @@ sub ReadGeneralBlock {
       }
     }
   
+    elsif ($InputLine eq "NASTRANSURFACEUSERDATA") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_","_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_ON_","meshAMR/meshAMRdef.h");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_","_USER_DEFINED_INTERNAL_BOUNDARY_NASTRAN_SURFACE_MODE_OFF_","meshAMR/meshAMRdef.h");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    }      
       
     elsif ($InputLine eq "#ENDGENERAL") {
       last;
