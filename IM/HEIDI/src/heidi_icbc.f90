@@ -687,10 +687,9 @@ subroutine GEOSB
   real, dimension(nT):: ParProtonTemperature_I, PerpProtonTemperature_I, ProtonDensity_I, &
        ElectronDensity_I, ParElectronTemperature_I, PerpElectronTemperature_I 
  
-  real :: NormFactor
   real, dimension(nT,nE,nPA,nS) :: FBoundfromMhd
   real, dimension(nS, nT)         :: BoundDensity_II
-  real, dimension(nS) :: NormDensity_I
+  real, dimension(nS) :: NormFactor_I
   !---------------------------------------------------------------------
   
   call write_prefix; write(iUnitStdOut,*) 'Resetting the outer boundary condition'
@@ -996,7 +995,7 @@ subroutine GEOSB
   end do
   
   !Avoid zero numbers     
-  MhdEqDensity_I  =  MhdEqDensity_I + cTiny
+  MhdEqDensity_I  = MhdEqDensity_I + cTiny
   MhdEqPressure_I = MhdEqPressure_I + cTiny
   
   !\
@@ -1036,13 +1035,15 @@ subroutine GEOSB
   nY(3)=5.1E-3*exp(6.6E-3*F107)        !ratio of He+
   nY(4)=0.011*exp(0.24*KP+0.011*F107)  !ratio of O+
 
+  FAC = 0.0
   do s = 2, nS
-     NormFactor = nY(s)/sqrt(m1(s))
+     FAC=FAC + NY(s)/sqrt(M1(s))
   end do
-  NormDensity_I(1) = 1    ! for electrons
-  do s= 2, nS
-     NormDensity_I(s) = nY(s)/NormFactor
-  end do
+     
+     NormFactor_I(1) = 1    ! for electrons
+     do s= 2, nS
+        NormFactor_I(s) = nY(s)/FAC
+     end do
   
   !\
   ! Assume the distribution at the boundary to be Maxwellian
@@ -1050,7 +1051,7 @@ subroutine GEOSB
 
   do s = 1, nS
      do j = 1, jo
-        BoundDensity_II (s,j) = ProtonDensity_I(j) * NormDensity_I(s)
+        BoundDensity_II (s,j) = ProtonDensity_I(j) * NormFactor_I(s)
      end do
   end do
 
@@ -1070,7 +1071,7 @@ subroutine GEOSB
   end do
 
   do S=1,NS
-     if (SCALC(S).eq.1) then
+     if (SCALC(S).eq.1) then ! calculates only for the desired species
         do L=1,LO
            do K=2,KO
               do J=1,JO
