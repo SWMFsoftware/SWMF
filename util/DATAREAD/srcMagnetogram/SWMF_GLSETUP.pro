@@ -1,4 +1,4 @@
-pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius
+pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL
 ;--------------------------------------------------------------------------------------------------
 ; NAME :
 ;   SWMF_GLSETUP
@@ -12,6 +12,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius
 ; KEYWORDS:
 ;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.0 will be loaded.
 ;   PlotRadius = Set up the layer of the magnetogram. Cannot be used with DemoMode.
+;   UsePIL = If set, the orientation of the flux rope will be caluclated according to the PIL direcion.
 ; CALLS   :
 ;   PLOT_IMAGE
 ; RESTRICTIONS:
@@ -20,7 +21,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius
 ;   Originally coded by Meng Jin@ AOSS, University of Michigan
 ;   v0.1 06/02/2014 Demo Version.
 ;   v0.2 06/05/2014 Added option to read binary data, remove the ASCII template file dependance.
-;                   Added DemoMode and PlotRadius keywords.                     
+;                   Added DemoMode and PlotRadius keywords.
+;   v0.3 06/06/2014 Added option to calculate the GL orientation according to the PIL.                                     
 ;---------------------------------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
@@ -30,6 +32,7 @@ device,decomposed=1
 ;Turn on/off demo mode. With the demo mode on, the pre-saved 2D data will be read instead
 ;of reading from 3D data which is much more time consuming
 if not keyword_set(DemoMode) then DemoMode=0
+
 
 ;Read Observed CME speed.
 file=''
@@ -305,6 +308,31 @@ for i=0,NN-1 do begin
   plots,x_show,y_show,psym=-1,color='00FFFF'XL
 endfor
 
+;Calculate the orientation of the flux rope according to PIL 
+;(make it vertial to PIL).
+if keyword_set(USEPIL) then begin
+  Dis_threshold_s=4
+  dismap[where(Discenter gt Dis_threshold_s)]=0
+  wmap_s=bitmap*br_field*bitmap_gradient*dismap
+  PILpoints=where(wmap_s gt 0)
+  MM=n_elements(PILpoints)
+  PIL_x=fltarr(MM)
+  PIL_y=fltarr(MM)
+  for i=0,MM-1 do begin
+    PIL_y[i]=floor(PILpoints[i]/360)
+    PIL_x[i]=PILpoints[i]-(PIL_y[i]*360)
+  endfor
+  PIL_fit=linfit(PIL_x,PIL_y,/double)
+  aa_PIL=-1./PIL_fit[1]
+  r3=[1.,aa_PIL]
+  r3=r3/sqrt(r3[0]^2+r3[1]^2)
+  GL_Orientation_s=acos(r3[0]*r2[0]+r3[1]*r2[1])*180/3.1415926
+  if GL_Orientation gt 180 then begin
+    GL_Orientation_s=360-GL_Orientation_s
+  endif
+  GL_Orientation=GL_Orientation_s
+endif
+
 ;Relationship between the observed CME speed and GL Bstrength.
 ;This factor is now based on the 2011 March 7 CME. More tests
 ;are needed in order to get a more precise value.
@@ -354,7 +382,7 @@ endfor
 ;Display the PIL map
 window,4,xs=1200,ys=800
 plot_image,bitmap*br_field*bitmap_gradient,min=-20,max=20,title='PIL Map (R = '+strtrim(PlotRadius,2)+' Rs)',$
-xtitle='Solar Longitude (Degree)',ytitle='SOlar Latitude (Pixel)',charsize=3
+xtitle='Solar Longitude (Degree)',ytitle='Solar Latitude (Pixel)',charsize=3
 
 
 !mouse.button=0
