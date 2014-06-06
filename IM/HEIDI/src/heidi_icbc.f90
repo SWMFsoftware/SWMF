@@ -654,7 +654,7 @@ end subroutine LMPLOSS
 
 subroutine GEOSB
 
-  use ModHeidiSize,  ONLY: nE, nPa, nS, s, io, ko, lo, jo, dT, scalc
+  use ModHeidiSize,  ONLY: nE, nPa, nS, nT, s, io, ko, lo, jo, dT, scalc
   use ModHeidiIO,    ONLY: Kp, tinj, F107,  &
        NameInputDirectory, iUnitStdOut, iUnitMpa, iUnitSopa, NameRun, &
        time, nStep, iBC,  write_prefix
@@ -664,8 +664,8 @@ subroutine GEOSB
        IonoGmDensity, IonoGmTemperature
   use ModNumConst,   ONLY: cDegToRad
   use ModIoUnit,     ONLY: io_unit_new
-  use ModNumConst,   ONLY: cPi
-  use ModHeidiInput, ONLY: TypeBField
+  use ModNumConst,   ONLY: cPi, cTiny
+  use ModHeidiInput, ONLY: TypeBField, TypeBoundary
   use ModConst,      ONLY: cBoltzmann
   implicit none
 
@@ -683,13 +683,18 @@ subroutine GEOSB
   save KES,TM1,TM2,NM1,NM2,TFM1,TFM2,TCM1,TCM2,TS1,TS2,FS1,FS2,  &
        I2,I6,I7,I9,IG7,NE1,NE2,TEF1,TEF2,TEC1,TEC2
 
-  integer :: iLatBoundary=-1, iLonBoundary=-1
+
+  real, dimension(nT):: ParProtonTemperature_I, PerpProtonTemperature_I, ProtonDensity_I, &
+       ElectronDensity_I, ParElectronTemperature_I, PerpElectronTemperature_I 
+ 
+  real :: NormFactor
+  real, dimension(nT,nE,nPA,nS) :: FBoundfromMhd
+  real, dimension(nS, nT)         :: BoundDensity_II
+  real, dimension(nS) :: NormDensity_I
   !---------------------------------------------------------------------
   
   call write_prefix; write(iUnitStdOut,*) 'Resetting the outer boundary condition'
-  !\
-  ! Create a few flags and open a few files
-  !/
+  
   if (T.eq.TIME) then
      I6=0
      I7=0
@@ -702,7 +707,7 @@ subroutine GEOSB
         if (IBC(S).gt.7) IG7=1
      end do
      if (I7.eq.1 .or. IG7.eq.1) then
-        do S=1,NS
+        do S=1, nS
            if (S.eq.1 .or. IBC(S).eq.7) then    ! no SOPA data
               KES(S)=KO
            else
@@ -725,24 +730,27 @@ subroutine GEOSB
            FS2(1:7)=0.
            iUnitSopa = io_unit_new()
            open(UNIT=iUnitSopa,FILE=NameInputDirectory//trim(NameRun)//'_sopa.in',status='old')
-           write(*,*) 'SOPA',  iUnitSopa
-           do I=1,3
+           do I = 1, 3
               read(iUnitSopa,*) HEADER
            end do
         end if
         
+        !\
         ! Prepare MPA input file
-        
+        !/
         TM2=TIME-1.	! Universal Time
         TM1=TM2         
-        NM2=0.          ! proton density (1/cc)
-        TFM2=0.         ! T parallel proton (eV)
-        TCM2=0.         
-        NE2=0.
-        TEC2=0.
-        TEF2=0.
+        !\
+        !Initialize the density and temperature at the boundary
+        !/
+        NM2  = 0.      ! proton density (1/cc)
+        TFM2 = 0.      ! T parallel proton (eV)
+        TCM2 = 0.         
+        NE2  = 0.
+        TEC2 = 0.
+        TEF2 = 0.
         
-!!!!!!!!!!!!!!!!!!!!
+
         iUnitMpa = io_unit_new()
         open(UNIT=iUnitMpa,FILE=NameInputDirectory//trim(NameRun)//'_mpa.in',status='old')
         
@@ -754,7 +762,7 @@ subroutine GEOSB
      end if
   end if
   
-  do S=1,NS
+  do S = 1,nS
      
      do L=1,LO
         do K=1,KO
@@ -797,54 +805,7 @@ subroutine GEOSB
            NE2=data(7)
            TEF2=data(9)
            TEC2=data(8)
-          
-           write(*,*) ' TM1, TM2, NM1, TEC2, TEF2, NE2 = ', TM1, TM2, NM1, TEC2, TEF2, NE2 
-            write(*,*) 'MHD Type BField =' , TypeBField
-
-            !STOP
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
-           ! if ((TypeBField .eq. 'mhd') .and. t>dT) then 
-           if (TypeBField .eq. 'mhd')  then 
-              !   if (TypeBField .eq. 'mhd')  then 
               
-              ! TM2 = Universal time
-              !TM2=data(2)
-              
-                write(*,*) 'MHD Type BField' 
-              
-              ! Tpa_p,eV 
-              write(*,*) 'Simulation time, TypeBField = ', t, TypeBField
-              write(*,*) 'cBoltzmann =', cBoltzmann
-              write(*,*) 'MhdEqPressure_I(1)= ', MhdEqPressure_I(1)
-              write(*,*) 'MhdEqDensity_I(1) = ', MhdEqDensity_I(1)
-              
-              MhdEqDensity_I(1) =  MhdEqDensity_I(1)  + 1.e-20
-              MhdEqPressure_I(1) = MhdEqPressure_I(1) + 1.e-20
-              
-              TFM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! k -> eV
-              ! Tpe_p,eV 
-              TCM2 = MhdEqPressure_I(1)/(MhdEqDensity_I(1)*1.0e6*cBoltzmann)/11604.0 ! Tpe_p,eV 
-              ! proton density
-              NM2  = MhdEqDensity_I(1)  
-              ! electron density
-              NE2 = MhdEqDensity_I(1) 
-              
-              ! Tpa_e,eV @ midnight
-              TEF2 = TFM2/7.0
-              ! Tpe_e,eV  
-              TEC2 =  TEF2
-              
-              write(*,*) 'MhdEqDensity_I(1),  MhdEqPressure_I(1) ', MhdEqDensity_I(1),  MhdEqPressure_I(1)
-              write(*,*) 'TFM2, TCM2, NM2, TEF2, TEC2 = ',TFM2, TCM2, NM2, TEF2, TEC2
-              
-!stop 
-
-           end if
-
-           
-           
 
            if (L.lt.0) TM2=TIME+2*DT*(NSTEP+1)
            if (T.eq.TIME) then		! In case T2>T already
@@ -866,8 +827,6 @@ subroutine GEOSB
         end do
      end if
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      ! inputs are in /cc and eV
 
@@ -878,33 +837,7 @@ subroutine GEOSB
      NEL=FAC*NE2+(1.-FAC)*NE1		! in cm-3
      TEF=(FAC*TEF2+(1.-FAC)*TEF1)*1.E-3	! in keV
      TEC=(FAC*TEC2+(1.-FAC)*TEC1)*1.E-3	! in keV
-     
-     !\
-     ! DONE reading in data
-     ! This is a total hack - we need to figure out how to NOT read in the
-     ! data above.
-     !/
-
-     if (maxval(IonoGmDensity) > 0.0) then
-
-        !write(*,*) "Ignoring LANL data, and overwriting with GM Data!!!"
-
-        !\
-        ! Find location to take boundary condition from : 67 degrees
-        !/
-        iLonBoundary = IONO_nPsi/2.0
-        !        if (iLatBoundary < 0) then
-        iLatBoundary = 1
-        do while (IONO_NORTH_Theta(iLatBoundary,1) < (90.0-67.0)*cDegToRad .and. &
-             IonoGmDensity(iLatBoundary, iLonBoundary) == 0.0)
-           iLatBoundary = iLatBoundary + 1
-        enddo
-
-        NM = IonoGmDensity(iLatBoundary, iLonBoundary)
-        TCM = IonoGmTemperature(iLatBoundary, iLonBoundary)
-        TFM = TCM
-     endif
-
+  
      NY(2)=0.34*exp(0.054*KP)	! From Young et al 1982
      NY(3)=5.1E-3*exp(6.6E-3*F107)
      NY(4)=0.011*exp(0.24*KP+0.011*F107)
@@ -1026,6 +959,129 @@ subroutine GEOSB
         end if
      end if		! SCALC check
   end do		! S loop
+!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+!!!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  if (TypeBoundary .eq. 'fromMHD') then
+  !\
+  ! Set up the boundary distribution in HEIDI. Use the boundary temperature and density from MHD
+  !/
+  
+  call write_prefix; write(iUnitStdOut,*) 'Boundary conditions passed from BATS-R-US: Density and temperature'
+  call write_prefix; write(iUnitStdOut,*) 'Simulation time, TypeBField = ', t, TypeBField
+  call write_prefix; write(iUnitStdOut,*) 'cBoltzmann =', cBoltzmann
+  call write_prefix; write(iUnitStdOut,*) 'MhdEqPressure_I = ', MhdEqPressure_I(:)
+  call write_prefix; write(iUnitStdOut,*) 'MhdEqDensity_I  = ', MhdEqDensity_I(:)
+  call write_prefix; write(iUnitStdOut,*) 
+  
+  do s = 1, nS
+     do l = 1, lo
+        do k = 1, ko
+           do j = 1, jo
+              FGEOS(J,K,L,S) = 0. 
+           enddo
+        enddo
+     enddo
+     if (SCALC(S).eq.1) then
+        if (Tinj .gt. TIME+2.*dT*nStep) then ! No injection, use IC for BC
+           do l = 1, lo
+              do k = 1, ko
+                 do j = 1, jo
+                    FGEOS(J,K,L,S) = F2(IO,J,K,L,S)
+                 end do
+              end do
+           end do
+        end if
+     end if
+  end do
+  
+  !Avoid zero numbers     
+  MhdEqDensity_I  =  MhdEqDensity_I + cTiny
+  MhdEqPressure_I = MhdEqPressure_I + cTiny
+  
+  !\
+  ! Parallel proton temperature in [keV] 
+  !/
+  ParProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0  ! k -> KeV
+  
+  !\
+  ! Perpendicular proton temperature in [keV] 
+  !/
+  PerpProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0  ! Tpe_p, KeV 
+  
+  !\
+  ! Proton density in 1/cc
+  !/
+  ProtonDensity_I  = MhdEqDensity_I 
+  
+  !\
+  ! Electron density on 1/cc
+  !/
+  ElectronDensity_I= MhdEqDensity_I(1) 
+  
+  !\
+  ! Parallel electron temperature in [KeV]
+  !/
+  ParElectronTemperature_I = ParProtonTemperature_I/7.0 
+  
+  !\
+  ! Perpendicular electron temperature in [KeV]
+  !/
+  PerpElectronTemperature_I =  ParElectronTemperature_I
+              
+  !\
+  ! Set up the composition based on the Young et al. [1982] formula
+  !/
+  nY(2)=0.34*exp(0.054*KP)	       !ratio of H+
+  nY(3)=5.1E-3*exp(6.6E-3*F107)        !ratio of He+
+  nY(4)=0.011*exp(0.24*KP+0.011*F107)  !ratio of O+
+
+  do s = 2, nS
+     NormFactor = nY(s)/sqrt(m1(s))
+  end do
+  NormDensity_I(1) = 1    ! for electrons
+  do s= 2, nS
+     NormDensity_I(s) = nY(s)/NormFactor
+  end do
+  
+  !\
+  ! Assume the distribution at the boundary to be Maxwellian
+  !/
+
+  do s = 1, nS
+     do j = 1, jo
+        BoundDensity_II (s,j) = ProtonDensity_I(j) * NormDensity_I(s)
+     end do
+  end do
+
+
+  do j = 1, jo
+     do k = 1, ko
+        do l = 1, lo
+           do s = 1, nS
+              TFM =  ParProtonTemperature_I(j)
+              TCM =  PerpProtonTemperature_I(j)
+              FBoundfromMhd(j,k,l,s) =  BoundDensity_II(s,j) * (MAS(S)*1.E13/Q/2./cPi)**1.5/  &
+                   sqrt(TFM)/TCM*exp(-EKEV(K)*((1.-MU(L)*MU(L))/TCM    &
+                   +MU(L)*MU(L)/TFM))
+           end do
+        end do
+     end do
+  end do
+
+  do S=1,NS
+     if (SCALC(S).eq.1) then
+        do L=1,LO
+           do K=2,KO
+              do J=1,JO
+                 FGEOS(J,K,L,S) = FBoundfromMHD(j,K,L,S)*FFACTOR(IO,j,K,L)
+              end do	
+           end do	
+        end do	
+     end if
+  end do	
+
+end if
 
 end subroutine GEOSB
 !=======================================================================

@@ -407,6 +407,10 @@ contains
          do iSpecies = 1, 4
             ini(iSpecies) = 7 * scalc(iSpecies)
          end do
+      case('8',  'fromMHD')
+         do iSpecies = 1, 4
+            ini(iSpecies) = 8 * scalc(iSpecies)
+         end do
       end select
   
         ! Set boundary conditions
@@ -442,6 +446,10 @@ contains
       case('7',  'fromrestart')
          do iSpecies = 1, 4
             ibc(iSpecies) = 7 * scalc(iSpecies)
+         end do
+      case('8','fromMHD')
+         do iSpecies = 1, 4
+            ibc(iSpecies) = 8 * scalc(iSpecies)
          end do
       end select
       
