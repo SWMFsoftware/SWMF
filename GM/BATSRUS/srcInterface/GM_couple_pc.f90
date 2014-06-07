@@ -150,7 +150,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(.not. UseAnisoPressure) &
-         call mpi_stop(NameSub//": need Anisotropic Pressure!")
+         call stop_mpi(NameSub//": need Anisotropic Pressure!")
 
     Dist_D = -1.0
     Xyz_D  =  0.0
