@@ -1140,16 +1140,13 @@ contains
     use ModGeometry, ONLY: true_cell, R_BLK, true_BLK, body_BLK
 
     integer,intent(in):: iStage,iBlock
-    integer:: i,j,k
     !--------------------------------------------------------------------------
 
     if(UseSteady)then
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(R_BLK(i,j,k,iBlock)<= rSteady) &
-               true_cell(i,j,k,iBlock) = .false.
-       end do; end do; end do
-       true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
-       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
+       if(minval(R_BLK(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
+          true_cell(1:nI,1:nJ,1:nK,iBlock) = .false.
+          true_BLK(iBlock) = .false.
+       end if
     end if
     call update_states_MHD(iStage, iBlock)
 
