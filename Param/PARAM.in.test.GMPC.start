@@ -229,6 +229,7 @@ no					PoissonCorrection
 GEM					SimulationName
 1					verbose
 hallmhd					fluidcoupling (only with BATSRUS)
+T					use Anisotropic P (only with BATSRUS)
 
 #PARAMS
 1.0					th = decentering parameter
@@ -299,6 +300,10 @@ PC/plots				SaveDirName
 1					bcPfaceYleft
 1					bcPfaceZright
 1					bcPfaceZleft
+0					nOverlap  (Only with BATSRUS)
+0					nOverlapP (Only with BATSRUS)
+10					nCharge   (Only with BATSRUS)
+-1					nIsotropic  (Only with BATSRUS)
 
 #END_COMP PC -----------------------------------------------------------------
 

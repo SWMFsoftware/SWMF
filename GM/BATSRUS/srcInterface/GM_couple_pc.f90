@@ -62,9 +62,6 @@ contains
        ParamInt_I(4) = lVerbose    
 
     else
-       print *,"n = ", n, x_
-       print *,"size(ParamReal_I) = ", shape(ParamReal_I)
-       print *,"size( XyzMinPic_DI) = ", shape( XyzMinPic_DI) 
        ParamReal_I(1) = XyzMinPic_DI(x_, 1)
 
        !! First part of ParamReal is the Nregion block, then Nspecis block
