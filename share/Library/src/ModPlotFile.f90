@@ -386,7 +386,7 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
+          write(UnitTmp_, "(22es18.10)") Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
        close(UnitTmp_)
        deallocate(Param_I, Coord_ID, Var_IV)
