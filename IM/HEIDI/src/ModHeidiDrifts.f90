@@ -42,6 +42,7 @@ contains
 
     if(allocated(VR)) RETURN
     allocate(VR(NR,NT,NE,NPA))
+    VR = 0.0
     allocate(EDOT(NR,NT,NE,NPA))
     allocate(MUDOT(NR,NT,NE,NPA))
     allocate(VrConv(NR,NT,NE,NPA))
