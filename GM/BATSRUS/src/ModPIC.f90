@@ -40,7 +40,8 @@ module ModPIC
   ! PIC regions
   integer, public :: nRegionPic = 0
   real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
-
+  real, public, allocatable:: XyzPic0_DI(:,:)
+  
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
@@ -72,10 +73,11 @@ contains
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
        if(allocated(XyzMinPic_DI)) deallocate( &
-            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI)
+            XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI)
        allocate( &
             XyzMinPic_DI(nDim,nRegionPic), &
             XyzMaxPic_DI(nDim,nRegionPic), &
+            XyzPic0_DI(nDim,nRegionPic), &
             DxyzPic_DI(nDim,nRegionPic))
        do iRegion = 1, nRegionPic
           call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
@@ -88,6 +90,9 @@ contains
           if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
           if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
 
+          ! Origo point for the IPIC3D grid for this region
+          XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
+  
           ! Add 1 ghost cell in the minimum and 2 in the maximum direction
           ! so that the node based PIC code has an even number of cells
           XyzMinPic_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion) &
