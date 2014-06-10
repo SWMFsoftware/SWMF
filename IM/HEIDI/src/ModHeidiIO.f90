@@ -29,7 +29,11 @@ Module ModHeidiIO
   
   ! Define SW-dependent nightside plasma input variables
   integer :: ISWB
-  real    :: NSWB,USWB,Ninj,Einj,Kinj
+  real    :: NSWB = 0.0 
+  real    :: USWB = 0.0
+  real    :: Ninj = 0.0
+  real    :: Einj = 0.0 
+  real    :: Kinj = 0.0
   
   ! Define input parameters for independent variable definition
   integer :: ipa,ifac
