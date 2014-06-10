@@ -969,16 +969,13 @@ contains
     do i=1,iSize
        do j=1,jSize
 
-          !write(*,*) 'i,j', i, j
-          !write(*,*) 'iSize,jSize = ', iSize, jSize
-          !write(*,*) 'i, j, eden(i,j,:)=', i, j, eden(i,j,1), eden(i,j,2), rnht(i,j,1), rnht(i,j,2)
-          !STOP
 
-          ! make sure pressure passed to GM is not lower than Pmin [nPa]
+          ! make sure pressure passed to GM is not lower than Pmin [Pa]
           ! to avoid too low GM pressure 
+          
           Pmin = minval(eden(i,j,:))
-          Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1e-9
-
+          Buffer_IIV(i,j,pres_) = max(sum(eden(i,j,:)), Pmin)*1.602 *1e-10
+          
           ! Add together density from H+, He+ and O+
           ! Convert from #/cc to kg/m3
           Buffer_IIV(i,j,dens_) = &
