@@ -36,6 +36,8 @@ module ModInputs
 
   logical :: UseCCMCFileName = .false.
 
+  logical :: UseSecondsInFilename = .true.    !xianjing
+
   logical :: UseIMF = .true.
   logical :: UseHpi = .true.
 

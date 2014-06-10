@@ -327,6 +327,19 @@ subroutine set_inputs
               if (UseWACCMTides) UseMSISOnly = .true.
            endif
 
+        !xianjing
+        case("#USESECONDSINFILENAME")
+           call read_in_logical(UseSecondsInFilename,iError)
+            if (iError /= 0) then
+              write(*,*) 'Incorrect format for #USESECONDSINFILENAME:'
+              write(*,*) 'This says whether you want seconds in output file'
+              write(*,*) 'name. F means no seconds in output file name.'
+           else
+              if (UseSecondsInFilename)  UseSecondsInFilename = .false.
+           endif
+
+ 
+
         case ("#DUSTDATA")
            call read_in_logical(UseDustDistribution,iError) 
            call read_in_string(cDustFile,iError)

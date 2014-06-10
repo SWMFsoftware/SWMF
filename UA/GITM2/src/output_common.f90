@@ -180,6 +180,8 @@ subroutine output(dir, iBlock, iOutputType)
   call i2s(iTimeArray(5), cMinute, 2)
   call i2s(iTimeArray(6), cSecond, 2)
 
+  if (.not. UseSecondsInFilename) cSecond='00'  !xianjing
+
   !-----------
   ! New feature - we want to be able to write to the same file over and
   ! over and over again, so we don't get 100,000,000 satellite files.
