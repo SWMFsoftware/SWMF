@@ -666,7 +666,7 @@ subroutine GEOSB
   use ModIoUnit,     ONLY: io_unit_new
   use ModNumConst,   ONLY: cPi, cTiny
   use ModHeidiInput, ONLY: TypeBField, TypeBoundary
-  use ModConst,      ONLY: cBoltzmann
+  use ModConst,      ONLY: cBoltzmann,cProtonMass 
   implicit none
 
   character(len=80) :: HEADER
@@ -808,10 +808,7 @@ subroutine GEOSB
 
            if (L.lt.0) TM2=TIME+2*DT*(NSTEP+1)
            if (T.eq.TIME) then		! In case T2>T already
-
-              
-              write(*,*) 'I am in second IF'
-              
+                            
               TM1=TIME
               NM1=NM2
               TFM1=TFM2
@@ -819,9 +816,7 @@ subroutine GEOSB
               NE1=NE2
               TEC1=TEC2
               TEF1=TEF2
-
-               write(*,*) 'TFM2, TCM2, NM2, TEF2, TEC2 = ',TFM2, TCM2, NM2, TEF2, TEC2
-             
+                           
            end if
         end do
      end if
@@ -1001,22 +996,22 @@ subroutine GEOSB
   !\
   ! Parallel proton temperature in [keV] 
   !/
-  ParProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0  ! k -> KeV
+  ParProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0 * 1.e-3 ! from K -> KeV
   
   !\
   ! Perpendicular proton temperature in [keV] 
   !/
-  PerpProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0  ! Tpe_p, KeV 
+  PerpProtonTemperature_I = MhdEqPressure_I/(MhdEqDensity_I*1.0e6*cBoltzmann)/11604.0* 1.e-3  ! Tpe_p, KeV 
   
   !\
   ! Proton density in 1/cc
   !/
-  ProtonDensity_I  = MhdEqDensity_I 
+  ProtonDensity_I  = MhdEqDensity_I/cProtonMass * 1.e-6 ! conversion to #/cc
   
   !\
   ! Electron density on 1/cc
   !/
-  ElectronDensity_I= MhdEqDensity_I(1) 
+  ElectronDensity_I= ProtonDensity_I
   
   !\
   ! Parallel electron temperature in [KeV]
@@ -1027,7 +1022,16 @@ subroutine GEOSB
   ! Perpendicular electron temperature in [KeV]
   !/
   PerpElectronTemperature_I =  ParElectronTemperature_I
-              
+ 
+
+
+  write(*,*)' MhdEqDensity_I = ', MhdEqDensity_I
+  write(*,*) 'ProtonDensity_I = ',  ProtonDensity_I
+  write(*,*) 'MhdEqPressure_I = ',  MhdEqPressure_I
+  write(*,*) 'PerpProtonTemperature_I = ',   PerpProtonTemperature_I
+
+ 
+             
   !\
   ! Set up the composition based on the Young et al. [1982] formula
   !/
@@ -1051,7 +1055,7 @@ subroutine GEOSB
 
   do s = 1, nS
      do j = 1, jo
-        BoundDensity_II (s,j) = ProtonDensity_I(j) * NormFactor_I(s)
+        BoundDensity_II(s,j) = ProtonDensity_I(j) * NormFactor_I(s)
      end do
   end do
 
