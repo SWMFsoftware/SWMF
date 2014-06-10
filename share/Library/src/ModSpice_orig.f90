@@ -45,13 +45,13 @@ contains
 
     NameDir = 'Param/Spice/'
     if(present(NameDirIn))then
-       if(NameDirIn /= '') NameDir = trim(NameDirIn) // '/'
+       if(NameDirIn /= '') NameDir = trim(adjustl(NameDirIn)) // '/'
     end if
 
-    CALL FURNSH(trim(NameDir)//'naif0010.tls')
-    CALL FURNSH(trim(NameDir)//'pck00010.tpc')
-    CALL FURNSH(trim(NameDir)//'msgr_de405_de423s.bsp')
-    CALL FURNSH(trim(NameDir)//'MSO.tf')
+    CALL FURNSH(trim(adjustl(NameDir))//'naif0010.tls')
+    CALL FURNSH(trim(adjustl(NameDir))//'pck00010.tpc')
+    CALL FURNSH(trim(adjustl(NameDir))//'msgr_de405_de423s.bsp')
+    CALL FURNSH(trim(adjustl(NameDir))//'MSO.tf')
 
     DoInitialize = .false.
 
