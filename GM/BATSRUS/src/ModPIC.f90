@@ -41,7 +41,7 @@ module ModPIC
   integer, public :: nRegionPic = 0
   real, public, allocatable:: XyzMinPic_DI(:,:), XyzMaxPic_DI(:,:), DxyzPic_DI(:,:)
   real, public, allocatable:: XyzPic0_DI(:,:)
-  
+
 contains
   !===========================================================================
   subroutine pic_read_param(NameCommand)
@@ -92,13 +92,6 @@ contains
 
           ! Origo point for the IPIC3D grid for this region
           XyzPic0_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion)
-  
-          ! Add 1 ghost cell in the minimum and 2 in the maximum direction
-          ! so that the node based PIC code has an even number of cells
-          XyzMinPic_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion) &
-               - DxyzPic_DI(1:nDim,iRegion)
-          XyzMaxPic_DI(1:nDim,iRegion) = XyzMaxPic_DI(1:nDim,iRegion) &
-               + 2*DxyzPic_DI(1:nDim,iRegion)
        end do
     case default
        if(iProc==0) call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -164,6 +157,10 @@ contains
     ! Fist time called
     logical :: IsFirstCall = .true.
 
+    ! Region check
+    integer :: nNode
+    real    :: L
+
     character(len=100):: NameFile
 
     character(len=*), parameter:: NameSub = 'pic_init_region'
@@ -211,6 +208,50 @@ contains
     DtSi = Dt*No2Si_V(UnitT_)*DnCouplePic
     XyzPic_D = 0.0
     nPic_D = 1
+
+    do iRegion = 1, nRegionPic
+       ! checking and corecting that the  domain size and Dx 
+       ! mach what IPIC3D needs ( odd number of cells)
+       if(.not.UseFileCoupling) then
+          do i=1, nDim
+             L = XyzMaxPic_DI(i,iRegion) - XyzMinPic_DI(i,iRegion)
+             nNode = floor( L/DxyzPic_DI(i,iRegion) + 0.5) + 1
+
+             ! Adding a ghost cell layar in addition
+             if(mod(nNode,2) /= 0) then 
+                XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+                     + (nNode)*DxyzPic_DI(i,iRegion)
+                XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+                     - DxyzPic_DI(i,iRegion)
+             else
+                XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+                     + (nNode + 1)*DxyzPic_DI(i,iRegion)
+                XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+                     - DxyzPic_DI(i,iRegion)
+             end if
+          end do
+       end if
+
+       if(UseFileCoupling) then
+          ! Add 1 ghost cell in the minimum and 2 in the maximum direction
+          ! so that the node based PIC code has an even number of cells
+          XyzMinPic_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion) &
+               - DxyzPic_DI(1:nDim,iRegion)
+          XyzMaxPic_DI(1:nDim,iRegion) = XyzMaxPic_DI(1:nDim,iRegion) &
+               + 2*DxyzPic_DI(1:nDim,iRegion)
+       end if
+    end do
+
+    if(iProc == 0) then
+       write(*,*) "Corrected IPIC3D  regions"
+       do iRegion = 1, nRegionPic
+          write(*,*) "  Region : ", iRegion   
+          write(*,*) "     Min Cordinate : ", &
+               XyzMinPic_DI(1:nDim,iRegion) + DxyzPic_DI(1:nDim,iRegion)
+          write(*,*) "     Max Cordinate : ", &
+               XyzMaxPic_DI(1:nDim,iRegion) - DxyzPic_DI(1:nDim,iRegion)
+       end do
+    end if
 
     if(.not. UseFileCoupling ) RETURN
 
