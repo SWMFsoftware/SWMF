@@ -79,28 +79,34 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, &
          AverageIonCharge, PePerPtotal
-    use ModMultifluid, ONLY: MassIon_I
+    use ModMultifluid, ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface
 
     integer, intent(in)  :: iBlock
-    real,    intent(out) :: TeSi_C(1:nI, 1:nJ, 1:nK)
+    real,    intent(out) :: TeSi_C(1:nI,1:nJ,1:nK)
 
     integer:: i, j, k
     !--------------------------------------------------------------------------
-    if(UseIdealEos)then
+    if(UseMultiIon)then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+               /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+       end do; end do; end do
+       TeSi_C = TeSi_C*No2Si_V(UnitTemperature_)
+    elseif(UseIdealEos)then
        if(UseElectronPressure)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
                MassIon_I(1)/AverageIonCharge
        else
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              TeSi_C(i,j,k) = State_VGB(p_,i,j,k,iBlock) &
                   /State_VGB(Rho_,i,j,k,iBlock)
           end do; end do; end do
-          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_ ) * &
+          TeSi_C = TeSi_C * No2Si_V(UnitTemperature_) * &
                MassIon_I(1)/AverageIonCharge * PePerPtotal
        end if
     else
