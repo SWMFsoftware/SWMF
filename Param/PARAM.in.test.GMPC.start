@@ -40,6 +40,10 @@ NONE			TypeNormalization
 0.5             ElectronTemperatureRatio
 
 
+#NONCONSERVATIVE
+T               UseNonConservative
+
+
 #UNIFORMSTATE
 1.0			Rho
 0.0			Ux
@@ -147,10 +151,10 @@ F			UseFileCoupling
 
 #PICREGION
 1                       nPicRegion
--80/3              	xMinCut
- 80/3               	xMaxCut
--80/4              	yMinCut
- 80/4              	yMaxCut
+-26.458333333           xMinCut
+ 26.458333333         	xMaxCut
+-19.791666667           yMinCut
+ 19.791666667	     	yMaxCut
 1.25/3			DxPic
 1.25/3			DyPic
 
@@ -217,7 +221,7 @@ F					doRrestart
 PC/restartOUT				RestartDirName
 
 #NSYNC
-0					nStep between sync
+1					nStep between sync
 
 
 #CASE
@@ -226,7 +230,7 @@ BATSRUS					Case
 Maxwell					PartInit
 default					WriteMethod 
 no					PoissonCorrection
-GEM					SimulationName
+Wave					SimulationName
 1					verbose
 hallmhd					fluidcoupling (only with BATSRUS)
 T					use Anisotropic P (only with BATSRUS)
@@ -248,8 +252,8 @@ T					use Anisotropic P (only with BATSRUS)
 1					Particles per cell in Z
 
 #SOLVER
-1.0e-3					CGtol : CG solver stopping criterium tolerance
-1.0e-3 					GMREStol : GMRES solver stopping criterium tolerance
+1.0e-8				CGtol : CG solver stopping criterium tolerance
+1.0e-8 					GMREStol : GMRES solver stopping criterium tolerance
 3					NiterMover : mover predictor corrector iteration
 
 #SAVEPLOT
@@ -294,12 +298,12 @@ PC/plots				SaveDirName
 0					bcEMfaceYleft
 0					bcEMfaceZright
 0					bcEMfaceZleft
-1					bcPfaceXright
-1					bcPfaceXlef
-1					bcPfaceYright
-1					bcPfaceYleft
-1					bcPfaceZright
-1					bcPfaceZleft
+2					bcPfaceXright
+2					bcPfaceXlef
+2					bcPfaceYright
+2					bcPfaceYleft
+2					bcPfaceZright
+2					bcPfaceZleft
 0					nOverlap  (Only with BATSRUS)
 0					nOverlapP (Only with BATSRUS)
 10					nCharge   (Only with BATSRUS)
