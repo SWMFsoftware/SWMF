@@ -37,7 +37,7 @@ contains
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I
     use ModPhysics,    ONLY: No2Si_V, UnitX_, ElectronTemperatureRatio
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
+         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi, UseFileCoupling
     use BATL_lib,      ONLY: x_, y_, z_, nDim
     use ModMain,       ONLY: lVerbose
 
@@ -58,7 +58,11 @@ contains
        ParamInt_I(1) = nIonFluid 
        ParamInt_I(2) = nRegionPic
        ParamInt_I(3) = nDim 
-       ParamInt_I(4) = lVerbose    
+       if(UseFileCoupling) then 
+         ParamInt_I(4) = 1
+       else
+         ParamInt_I(4) = 0
+       end if
 
     else
        ParamReal_I(1) = XyzMinPic_DI(x_, 1)
@@ -253,7 +257,7 @@ contains
 
        ! (nGhostPic +1) where +1 is from the IPIC3D ghost layor
        XyzMaxRegin_D = XyzMaxPic_DI(1:nDim,iRegion) - &
-            (nGhostPic +1)*DxyzPic_DI(:,iRegion)  
+            nGhostPic*DxyzPic_DI(:,iRegion)  
 
        XyzMinRegin_D = XyzPic0_DI(1:nDim,iRegion) + &
             nGhostPic*DxyzPic_DI(:,iRegion)  
