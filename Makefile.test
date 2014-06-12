@@ -1286,7 +1286,7 @@ test12_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/4step
 
 test12_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-16 -r=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2e-5 -r=1e-16 \
 		${TESTDIR}/RESULTS/4step/GM/log_n000000.log \
 		 Param/PC/log_n000000.log.test.GMPC.start \
 		> test12.diff)
