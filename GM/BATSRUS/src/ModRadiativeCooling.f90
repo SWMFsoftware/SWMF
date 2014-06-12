@@ -56,9 +56,10 @@ contains
   !============================================================================
   subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling)
 
-    use ModPhysics,       ONLY: No2Si_V, UnitN_
-    use ModVarIndexes,    ONLY: Rho_
-    use ModAdvance,       ONLY: State_VGB
+    use ModPhysics,    ONLY: No2Si_V, UnitN_
+    use ModVarIndexes, ONLY: Rho_
+    use ModAdvance,    ONLY: State_VGB
+    use ModMultiFluid, ONLY: UseMultiIon, ChargeIon_I, iRhoIon_I, MassIon_I
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: TeSiIn
@@ -66,8 +67,13 @@ contains
 
     real :: NumberDensCgs
     !--------------------------------------------------------------------------
-    ! currently proton plasma only
-    NumberDensCgs = State_VGB(Rho_, i, j, k, iBlock) * No2Si_V(UnitN_) * 1.0e-6
+    if(UseMultiIon)then
+       NumberDensCgs = &
+            sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
+            *No2Si_V(UnitN_)*1e-6
+    else
+       NumberDensCgs = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitN_)*1.0e-6
+    end if
 
     RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs)
 
@@ -87,6 +93,7 @@ contains
   real function radiative_cooling(TeSiIn, NumberDensCgs)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
+    use ModMultiFluid,    ONLY: UseMultiIon
 
     !Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
@@ -103,6 +110,12 @@ contains
        call interpolate_lookup_table(iTableRadCool, TeSiIn, NumberDensCgs, &
             CoolingTableOut_I, DoExtrapolate = .true.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
+       ! The presently stored cooling function assumes that it will be
+       ! multiplied by Nelectron*Nhydrogen. The following turns this
+       ! Nelectron*Nhydrogen into Nelectron**2. There is some slight
+       ! temperature dependence in this multiplicative coefficient below
+       ! 100,000 K, but we ignore that here.
+       if(UseMultiIon) CoolingFunctionCgs = CoolingFunctionCgs*0.83
     else
        call get_cooling_function_fit(TeSiIn, CoolingFunctionCgs)
     end if
