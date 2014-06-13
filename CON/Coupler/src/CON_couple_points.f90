@@ -393,12 +393,13 @@ contains
                Coupler%nPointTarget, iProcTarget_I)
 
           ! based on owner information set up the final communication pattern
-          call  set_data_transfer(Coupler%iCommSourceTarget, &
-               Coupler%iCompSource, Coupler%iCompTarget, &
-               Coupler%nPointSource, iProcSource_I, &
-               Coupler%nPointTarget, iProcTarget_I, &
+          call  set_data_transfer(Coupler%iCommSourceTarget,       &
+               Coupler%iCompSource, Coupler%iCompTarget,           &
+               Coupler%nProcSourceTarget,                          &
+               Coupler%nPointSource, iProcSource_I,                &
+               Coupler%nPointTarget, iProcTarget_I,                &
                Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, &
-               Coupler%nCouplePointSource_I, &
+               Coupler%nCouplePointSource_I,                       &
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I)
 
@@ -1142,7 +1143,8 @@ contains
 
   !==========================================================================
 
-  subroutine set_data_transfer(iComm, iCompSource, iCompTarget,&
+  subroutine set_data_transfer(iComm, iCompSource, iCompTarget, &
+       nProcSourceTarget,&
        nBufferSource, iProcSource_I, &
        nBufferTarget, iProcTarget_I, &
        nCoupleSource, iCoupleProcSource_I, nCouplePointSource_I,&
@@ -1159,6 +1161,9 @@ contains
 
     ! Source and target component indexes
     integer, intent(in):: iCompSource, iCompTarget
+
+    ! Number of processors in union communicator
+    integer, intent(in):: nProcSourceTarget
 
     ! Number of point positions asked from this source proc
     integer, intent(in):: nBufferSource
@@ -1248,9 +1253,10 @@ contains
        allocate(iProcTargetUnion_P(0:nProcTarget-1))
        allocate(iProcSourceLocal_P(0:nProcSource+nProcTarget-1))
        allocate(iProcTargetLocal_P(0:nProcSource+nProcTarget-1))
-       call get_rank_translation(&
-            iComm, iCompSource, iCompTarget, nProcSource, nProcTarget, &
-            iProcSourceLocal_P, iProcTargetLocal_P,                    &
+       call get_rank_translation(                       &
+            iComm, iCompSource, iCompTarget,            &
+            nProcSourceTarget, nProcSource, nProcTarget,&
+            iProcSourceLocal_P, iProcTargetLocal_P,     &
             iProcSourceUnion_P, iProcTargetUnion_P)
 
        ! nPoint_PP is number of points to sent from Source to Target
@@ -1337,16 +1343,17 @@ contains
 
   !===========================================================================
 
-  subroutine get_rank_translation(                                      &
-       iCommUnion, iCompSource, iCompTarget, nProcSource, nProcTarget,  &
-       iProcSourceLocal_I, iProcTargetLocal_I,                          &
+  subroutine get_rank_translation(                 &
+       iCommUnion, iCompSource, iCompTarget,       &
+       nProcSourceTarget, nProcSource, nProcTarget,&
+       iProcSourceLocal_I, iProcTargetLocal_I,     &
        iProcSourceUnion_I, iProcTargetUnion_I)
     ! for processor with rank iProc in the union communicator iCommUnion
     ! returns rank iProcLocal in the group associated with component iComp
     integer, intent(in) :: iCommUnion, iCompSource, iCompTarget
-    integer, intent(in) :: nProcSource, nProcTarget
-    integer, intent(out):: iProcSourceLocal_I(nProcSource+nProcTarget)
-    integer, intent(out):: iProcTargetLocal_I(nProcSource+nProcTarget)
+    integer, intent(in) :: nProcSourceTarget, nProcSource, nProcTarget
+    integer, intent(out):: iProcSourceLocal_I(nProcSourceTarget)
+    integer, intent(out):: iProcTargetLocal_I(nProcSourceTarget)
     integer, intent(out):: iProcSourceUnion_I(nProcSource)
     integer, intent(out):: iProcTargetUnion_I(nProcTarget)
 
@@ -1379,15 +1386,15 @@ contains
     deallocate(iProc_I)
 
     ! Translate ranks Union to Local
-    allocate(iProc_I(nProcSource+nProcTarget))
-    do iProc = 0, nProcSource+nProcTarget-1
+    allocate(iProc_I(nProcSourceTarget))
+    do iProc = 0, nProcSourceTarget-1
        iProc_I(iProc+1) = iProc
     end do
     call MPI_Group_translate_ranks(&
-         iGroupUnion, nProcSource+nProcTarget, iProc_I, &
+         iGroupUnion, nProcSourceTarget, iProc_I, &
          i_group(iCompSource), iProcSourceLocal_I, iError)
     call MPI_Group_translate_ranks(&
-         iGroupUnion, nProcSource+nProcTarget, iProc_I, &
+         iGroupUnion, nProcSourceTarget, iProc_I, &
          i_group(iCompTarget), iProcTargetLocal_I, iError)
     deallocate(iProc_I)
 
