@@ -148,8 +148,8 @@ contains
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
-    if(.not. UseAnisoPressure) &
-         call stop_mpi(NameSub//": need Anisotropic Pressure!")
+    !if(.not. UseAnisoPressure) &
+    !     call stop_mpi(NameSub//": need Anisotropic Pressure!")
 
     Dist_D = -1.0
     Xyz_D  =  0.0

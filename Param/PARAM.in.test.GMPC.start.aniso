@@ -49,10 +49,11 @@ T               UseNonConservative
 0.0			Ux
 0.0			Uy
 0.0			Uz
-0.2			Bx
-0.0			By
+0.0			Bx
+0.04			By
 0.0			Bz
-5.12e-4			p
+4.5e-4			Ppar
+4.5e-4			p
 
 rho   = 1
 By    = 0.04
@@ -73,40 +74,49 @@ dt    = 0.2*dtmax   = 1.066
 #USERINPUTBEGIN ----------------
 
 #WAVE
-3                       Uy_
-10000.0                 Width
--0.0090663280           Amplitude  -0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
--90.0                   Phase
+1			Rho_
+1000.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #WAVE
-4                       Uz_
-1000.0                  Width
-+0.0090663280           Amplitude  +0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+2			Ux_
+1000.0			Width
+0.005			Amplitude (rho1/rho0)*cF
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #WAVE
-6                       By_
-1000.0                  Width
-0.01                    Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
--90.0                   Phase
+6			By_
+1000.0			Width
+0.004			Amplitude (rho1/rho0)*b0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #WAVE
-7                       Bz_
-1000.0                  Width
--0.01                   Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+8			Ppar_
+10000.0			Width
+4.5e-5			Amplitude (rho1/rho0)*pPar0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+9			p_
+10000.0			Width
+7.5e-5			Amplitude (rho1/rho0)*5/3*p0
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #USERINPUTEND   ----------------
 
@@ -127,7 +137,7 @@ dt    = 0.2*dtmax   = 1.066
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-145.06125/132		DtFixed
+640/500			DtFixed
 
 #PIC
 T                       UsePic
@@ -137,7 +147,7 @@ F			UseFileCoupling
 
 #PICUNIT
  1.0                    xUnitPicSi
- 10.0                    uUnitPicSi
+ 1.0                    uUnitPicSi
 
 #PICREGION
 1                       nPicRegion
@@ -156,7 +166,7 @@ periodic                TypeBcNorth
 float                   TypeBcBottom
 float                   TypeBcTop
 
-#HALLRESISTIVITY
+HALLRESISTIVITY
 T			UseHallResistFlux
 1.0			HallFactor
 0.0			HallCmaxFactor
@@ -181,15 +191,10 @@ RK
 2                       nStage
 0.8                     CflExpl
 
-#IMPLICIT
-F                       UsePointImplicit
-F                       UsePartImplicit
-T                       UseFullImplicit
-100.0                   ImplCFL
-
-
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
+2
+-1
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -318,7 +323,7 @@ Run GM and IE in time accurate mode
 #PLANET
 NONE
 
-SAVERESTART
+#SAVERESTART
 T                       DoSaveRestart 
 2                       DnSaveRestart 
 1.28                     DtSaveRestart
@@ -340,6 +345,6 @@ F			UseRotation
 
 #STOP
 -8			MaxIter
-145.06125		TimeMax
+5.12			TimeMax
 
 

@@ -1254,43 +1254,91 @@ test12_old_2_check:
 ######## test IPIC3D coupled with BATSRUS both inside the SWMF #########
 
 test12:
-	@echo "test12_compile..." > test12.diff
-	$(MAKE) test12_compile
-	@echo "test12_rundir..." > test12.diff
-	$(MAKE) test12_rundir
-	@echo "test12_run..." > test12.diff
-	$(MAKE) test12_run
-	@echo "test12_check..." > test12.diff
-	$(MAKE) test12_check
+	$(MAKE) test12_aniso
+	-@cat test12_aniso.diff > test12.diff
+	ls -l test12.diff
+
+
+test12_aniso:
+	@echo "test12_aniso_compile..." > test12_aniso.diff
+	$(MAKE) test12_aniso_compile
+	@echo "test12_aniso_rundir..." > test12_aniso.diff
+	$(MAKE) test12_aniso_rundir
+	@echo "test12_aniso_run..." > test12_aniso.diff
+	$(MAKE) test12_aniso_run
+	@echo "test12_aniso_check..." > test12_aniso.diff
+	$(MAKE) test12_aniso_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test12_compile:
+test12_aniso_compile:
+	$(MAKE) clean
 	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
 	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
-test12_rundir:
+test12_aniso_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
-	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.GMPC.start.aniso  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
-test12_run:
+test12_aniso_run:
 	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
 		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe < /dev/null | tee runlog; \
 	else \
 		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe < /dev/null | tee runlog; \
 	fi;
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/4step
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
-test12_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-5 -a=1e-16 \
-		${TESTDIR}/RESULTS/4step/GM/log_n000000.log \
-		 Param/PC/log_n000000.log.test.GMPC.start \
-		> test12.diff)
-	ls -l test12.diff
+test12_aniso_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2e-5 -r=1e-16 \
+		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000005_n00000004.out \
+		 Param/PC/z=0_mhd_1_t00000005_n00000004.out.ref \
+		> test12_aniso.diff)
+	ls -l test12_aniso.diff
+
+
+test12_iso:
+	@echo "test12_iso_compile..." > test12_iso.diff
+	$(MAKE) test12_iso_compile
+	@echo "test12_iso_rundir..." > test12_iso.diff
+	$(MAKE) test12_iso_rundir
+	@echo "test12_iso_run..." > test12_iso.diff
+	$(MAKE) test12_iso_run
+	@echo "test12_iso_check..." > test12_iso.diff
+	$(MAKE) test12_iso_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_iso_compile:
+	$(MAKE) clean
+	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=Mhd
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test12_iso_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
+
+test12_iso_run:
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; mpiexec -np 4 ./SWMF.exe < /dev/null | tee runlog; \
+	else \
+		cd ${TESTDIR}; mpirun -np 4 ./SWMF.exe < /dev/null | tee runlog; \
+	fi;
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
+
+test12_iso_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2e-5 -r=1e-16 \
+		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000005_n00000004.out \
+		 Param/PC/z=0_mhd_1_t00000005_n00000004.out.ref \
+		> test12_iso.diff)
+	ls -l test12_iso.diff
 
 ######## test IPIC3D.exe coupled with SWMF using GM/BATSRUS #########
 
