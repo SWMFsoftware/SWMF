@@ -225,12 +225,12 @@ end subroutine ECFL
 
 subroutine WRESULT(LNC,XN,IFIR)
 
-  use ModHeidiSize,     ONLY: nR, nS, nT, nE, lo, ko, jo, io,     &
+  use ModHeidiSize,     ONLY: nR, nS, nT, nE, nPA, lo, ko, jo, io,     &
        nThetaCells, nPhiCells, s, scalc, dt
   use ModHeidiMain,     ONLY: T, mlt, lz, xne, ener, upa, F2, we, &
        wmu, lec, RadToDeg, mu, ekev, ffactor, cedr, fluxfact,     &
        cidr, pi, phi, factor, q, ecof, me, re, funi, funt, v,     &
-       ebnd, mp, m1, fgeos, dl1
+       ebnd, mp, m1, fgeos, dl1, VR_IIII
   use ModHeidiIO,       ONLY: time, tint, iUnitStdout, iPa, ires, &
        NameOutputDir, NameRun, Kp, ia, ifac, NameRestartOutDir,      &
        iUnitSal, ninj, einj, kinj, nswb, uswb, write_prefix
@@ -1057,25 +1057,25 @@ subroutine WRESULT(LNC,XN,IFIR)
               f2(:,NT,:,:,:)=f2(:,1,:,:,:)
               
               
-!!$              do L=1,NPA  
-!!$                    do K=1,NE
-!!$
-!!$                       call save_plot_file(NameFile, &
-!!$                            TypePositionIn = TypePosition,&
-!!$                            TypeFileIn     = TypeFile,&
-!!$                            StringHeaderIn = StringHeader, &
-!!$                            nStepIn = ntc, &
-!!$                            TimeIn = T, &
-!!$                            ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
-!!$                            NameVarIn = StringVarName, &
-!!$                            nDimIn = 2, &
-!!$                            CoordMinIn_D = (/1.75, 0.0/),&
-!!$                            CoordMaxIn_D = (/6.5, 24.0/),&
-!!$                            VarIn_IIV = f2(:,:,K,L,S:S))
-!!$                            TypePosition = 'append'
-!!$                            !EXIT !!!  
-!!$                       end do
-!!$                    end do
+              do L=1,NPA  
+                    do K=1,NE
+
+                       call save_plot_file(NameFile, &
+                            TypePositionIn = TypePosition,&
+                            TypeFileIn     = TypeFile,&
+                            StringHeaderIn = StringHeader, &
+                            nStepIn = ntc, &
+                            TimeIn = T, &
+                            ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
+                            NameVarIn = StringVarName, &
+                            nDimIn = 2, &
+                            CoordMinIn_D = (/1.75, 0.0/),&
+                            CoordMaxIn_D = (/6.5, 24.0/),&
+                            VarIn_IIV = f2(:,:,K,L,S:S))
+                            TypePosition = 'append'
+                            !EXIT !!!  
+                       end do
+                    end do
                  end if
               end if
 
