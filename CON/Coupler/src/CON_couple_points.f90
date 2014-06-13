@@ -403,7 +403,6 @@ contains
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I)
 
-
           if(is_proc(Coupler%iCompTarget))then
              ! Order points according to the owner processor indexes
              ! sort iProcTarget_I according to order of procs in 
@@ -1251,14 +1250,13 @@ contains
     if(is_proc(iCompSource))then
        allocate(iProcSourceUnion_P(0:nProcSource-1))
        allocate(iProcTargetUnion_P(0:nProcTarget-1))
-       allocate(iProcSourceLocal_P(0:nProcSource+nProcTarget-1))
-       allocate(iProcTargetLocal_P(0:nProcSource+nProcTarget-1))
+       allocate(iProcSourceLocal_P(0:nProcSourceTarget-1))
+       allocate(iProcTargetLocal_P(0:nProcSourceTarget-1))
        call get_rank_translation(                       &
             iComm, iCompSource, iCompTarget,            &
             nProcSourceTarget, nProcSource, nProcTarget,&
             iProcSourceLocal_P, iProcTargetLocal_P,     &
             iProcSourceUnion_P, iProcTargetUnion_P)
-
        ! nPoint_PP is number of points to sent from Source to Target
        allocate(nPoint_PP(0:nProcSource-1, 0:nProcTarget-1))
 
