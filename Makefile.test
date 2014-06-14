@@ -97,7 +97,7 @@ test_comp:
 ### SWMF tests ###
 
 #### Convection Zone model: FSAM test ####
-#
+
 test_cz:
 	@echo "starting..."        >  test_cz.diff
 	@echo "test_cz_compile..." >> test_cz.diff
@@ -115,7 +115,7 @@ test_cz_compile:
 	cp CZ/FSAM/srcProblem/ModUserSetup.SWMF.f90 CZ/FSAM/src/ModUserSetup.f90
 	cp CZ/FSAM/srcProblem/ModPar.SWMF.f90 CZ/FSAM/src/ModPar.f90
 	${MAKE} SWMF
-	
+
 test_cz_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
@@ -1258,7 +1258,6 @@ test12:
 	-@cat test12_aniso.diff > test12.diff
 	ls -l test12.diff
 
-
 test12_aniso:
 	@echo "test12_aniso_compile..." > test12_aniso.diff
 	$(MAKE) test12_aniso_compile
@@ -1293,12 +1292,11 @@ test12_aniso_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_aniso_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2e-5 -r=1e-16 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 -a=1e-16 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000005_n00000004.out \
 		 Param/PC/z=0_mhd_1_t00000005_n00000004.out.ref \
 		> test12_aniso.diff)
 	ls -l test12_aniso.diff
-
 
 test12_iso:
 	@echo "test12_iso_compile..." > test12_iso.diff
@@ -1334,7 +1332,7 @@ test12_iso_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_iso_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2e-5 -r=1e-16 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 -a=1e-16 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000005_n00000004.out \
 		 Param/PC/z=0_mhd_1_t00000005_n00000004.out.ref \
 		> test12_iso.diff)
