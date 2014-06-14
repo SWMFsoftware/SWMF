@@ -81,23 +81,25 @@ test_analytic_run:
 	cd ${TESTDIR1}; perl -e \
 		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
 		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
-		print "$$_\n"; `$$_`'
+		print "$$_\n"; exec($$_)'
 
 test_numeric_run: 
 	cd ${TESTDIR2}; perl -e \
 		'$$_="${MPIRUN}"; s/\-np \d/-np 2/; \
 		s/mpiexec$$/mpiexec -np 2/; $$_ = "$$_ ./HEIDI.exe > runlog"; \
-		print "$$_\n"; `$$_`'
+		print "$$_\n"; exec($$_)'
 
 test_analytic_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
-		${TESTDIR1}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs_analytic.002 \
+		${TESTDIR1}/IM/${OUTDIR}/hydrogen/test1_h_prs.002 \
+		${CHECKDIR}/test1_h_prs_analytic.002 \
 			> test_analytic.diff
 	ls -l test_analytic.diff
 
 test_numeric_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
-		${TESTDIR2}/IM/${OUTDIR}/hydrogen/test1_h_prs.002  ${CHECKDIR}/test1_h_prs_numeric.002 \
+		${TESTDIR2}/IM/${OUTDIR}/hydrogen/test1_h_prs.002 \
+		${CHECKDIR}/test1_h_prs_numeric.002 \
 			> test_numeric.diff
 	ls -l test_numeric.diff
 
