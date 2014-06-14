@@ -1043,12 +1043,11 @@ subroutine WRESULT(LNC,XN,IFIR)
         end if
 
 	if (IRES(13) == 1) then
+    ! Save the restart file as an ascii file
+           if(mod(T,DtSaveRestart) < 2*dt) then
 
-    !Save the restart file as an ascii file
-           if(mod(T,DtSaveRestart)< 2*dt) then
 
-
-              NameFile       = trim(NameRestartOutDir)//'restart'//trim(NameSpecies)//'.out'
+              NameFile = trim(NameRestartOutDir)//'restart'//trim(NameSpecies)//'.out'
               StringHeader   = &
                    'Phase space distribution function for all pitch angles, energies and locations.'
 
@@ -1058,17 +1057,17 @@ subroutine WRESULT(LNC,XN,IFIR)
 
               f2(:,NT,:,:,:)=f2(:,1,:,:,:)
 
-
-              do L=1,NPA  
-                 do K=1,NE
-
+              do L=1,lO 
+                 do K=1,kO
                     call save_plot_file(NameFile, &
                          TypePositionIn = TypePosition,&
                          TypeFileIn     = TypeFile,&
                          StringHeaderIn = StringHeader, &
                          nStepIn = ntc, &
                          TimeIn = T, &
-                         ParamIn_I = (/EKEV(K), RadToDeg*acos(mu(L)),real(NE), real(NPA)/), &
+                         ParamIn_I = &
+                         (/EKEV(K), RadToDeg*acos(mu(L)), &
+                         real(NE), real(NPA)/), &
                          NameVarIn = StringVarName, &
                          nDimIn = 2, &
                          CoordMinIn_D = (/1.75, 0.0/),&

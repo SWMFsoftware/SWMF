@@ -463,8 +463,8 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
            n1 = NR
            n2 = NT
 
-           do L=1,NPA 
-              do K=1,NE
+           do L=1,lO
+              do K=1,kO
                  ! Read header info 
                  call read_plot_file(NameFile,&
                       iUnitIn           = iUnit,&
@@ -487,7 +487,7 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
                  call read_plot_file(NameFile,&
                       iUnitIn       = iUnit,&
                       TypeFileIn    = TypeFile, &
-                      !CoordOut_DII  = Coord_DII,&
+                      !CoordOut_DII = Coord_DII,&
                  VarOut_IIV    = Var_IIV)
                  f2(:,:,K,L,S:S) = Var_IIV
 
