@@ -58,14 +58,12 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
   character(len=5)  :: NameSpecies
   character(len=5)  :: NameStormType
   character(len=3)  :: NamePrefix
-  character(LEN=500):: StringVarName, StringHeader, NameFile
+  character(LEN=500):: StringVarName, NameFile
   real              :: acosd
   integer           :: ntc, IFIR
   real, allocatable :: Var_IIV(:,:,:) 
   integer           :: nDim, nParam,nVar       
-  integer           :: n1, n2
   character(len=500):: NameVar
-  real              :: Param_I(4)
   character(len=20) :: TypePosition
   save ntc
   !-----------------------------------------------------------------------
@@ -455,45 +453,24 @@ subroutine Heidi_initial(LNC,XN,J6,J18)
 
         else if (INI(S).eq.7) then
            NameFile       = trim(NameRestartInDir)//'restart'//trim(NameSpecies)//'.out'
-           StringHeader   = &
-                'Phase space distribution function for all pitch angles, energies and locations.'
 
            StringVarName ='R   MLT   F   E   PA'
            iUnit = io_unit_new()
-           n1 = NR
-           n2 = NT
 
-           do L=1,lO
-              do K=1,kO
+           allocate(Var_IIV(NR,NT,1))
+           do L=1,NPA
+              do K=1,NE
                  ! Read header info 
-                 call read_plot_file(NameFile,&
-                      iUnitIn           = iUnit,&
-                      TypeFileIn        = TypeFile, &
-                      StringHeaderOut   = StringHeader,&
-                      nStepOut          = ntc, &
-                      TimeOut           = T,&
-                      nDimOut           = nDim, &
-                      nParamOut         = nParam, &
-                      nVarOut           = nVar,&
-                      n1Out             = n1,&
-                      n2Out             = n2, &
-                      ParamOut_I        = Param_I)
-
-                 ! Determine the shape of arrays from the header
-                 ! allocate(Coord_DII(2,NR,NT),Var_IIV(NR,NT,1))
-
-                 allocate(Var_IIV(NR,NT,1))
-                 ! Read the coord and var arrays
-                 call read_plot_file(NameFile,&
-                      iUnitIn       = iUnit,&
+                 call read_plot_file(NameFile,  &
+                      iUnitIn       = iUnit,    &
                       TypeFileIn    = TypeFile, &
-                      !CoordOut_DII = Coord_DII,&
-                 VarOut_IIV    = Var_IIV)
+                      nStepOut      = ntc,      &
+                      TimeOut       = T,        &
+                      VarOut_IIV    = Var_IIV)
                  f2(:,:,K,L,S:S) = Var_IIV
-
-                 deallocate(Var_IIV)  
               end do
            end do
+           deallocate(Var_IIV)  
         end if
 
 
