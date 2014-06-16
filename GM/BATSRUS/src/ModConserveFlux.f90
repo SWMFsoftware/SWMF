@@ -37,7 +37,11 @@ module ModConserveFlux
        nCorrectedFaceValues, &
        CorrectedFlux_VXB, &
        CorrectedFlux_VYB, &
-       CorrectedFlux_VZB
+       CorrectedFlux_VZB, &
+       DoConserveFlux
+  
+  ! Correct face flux near resolution change. 
+  logical :: DoConserveFlux = .true.
 
   integer, parameter :: &
        FluxLast_ = nVar + nFluid, &

@@ -20,7 +20,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModCalcSource, ONLY: calc_source
   use ModConserveFlux, ONLY: save_cons_flux, apply_cons_flux, &
        nCorrectedFaceValues, CorrectedFlux_VXB, &
-       CorrectedFlux_VYB, CorrectedFlux_VZB
+       CorrectedFlux_VYB, CorrectedFlux_VZB, DoConserveFlux
   use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
   use ModMessagePass, ONLY: exchange_messages
   use ModTimeStepControl, ONLY: calc_timestep
@@ -57,30 +57,33 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      if(UseResistivity)  call set_resistivity
 
-     do iBlock = 1, nBlock
-        if (Unused_B(iBlock)) CYCLE
-        if(all(neiLev(:,iBlock)/=1)) CYCLE
-        ! Calculate interface values for L/R states of each 
-        ! fine grid cell face at block edges with resolution changes
-        !   and apply BCs for interface states as needed.
-        call set_b0_face(iBlock)
-        call timing_start('calc_face_bfo')
-        call calc_face_value(.true.,iBlock)
-        call timing_stop('calc_face_bfo')
+     if(DoConserveFlux) then
+        do iBlock = 1, nBlock
+           if (Unused_B(iBlock)) CYCLE
+           if(all(neiLev(:,iBlock)/=1)) CYCLE
+           ! Calculate interface values for L/R states of each 
+           ! fine grid cell face at block edges with resolution changes
+           !   and apply BCs for interface states as needed.
+           call set_b0_face(iBlock)
+           call timing_start('calc_face_bfo')
+           call calc_face_value(.true.,iBlock)
+           call timing_stop('calc_face_bfo')
 
-        if(body_BLK(iBlock))call set_face_boundary(iBlock, Time_Simulation, .true.)
+           if(body_BLK(iBlock))call &
+                set_face_boundary(iBlock, Time_Simulation, .true.)
 
-        ! Compute interface fluxes for each fine grid cell face at
-        ! block edges with resolution changes.
+           ! Compute interface fluxes for each fine grid cell face at
+           ! block edges with resolution changes.
 
-        call timing_start('calc_fluxes_bfo')
-        call calc_face_flux(.true., iBlock)
-        call timing_stop('calc_fluxes_bfo')
+           call timing_start('calc_fluxes_bfo')
+           call calc_face_flux(.true., iBlock)
+           call timing_stop('calc_fluxes_bfo')
 
-        ! Save conservative flux correction for this solution block
-        call save_cons_flux(iBlock)
+           ! Save conservative flux correction for this solution block
+           call save_cons_flux(iBlock)
 
-     end do
+        end do
+     endif
 
      if(DoTestMe)write(*,*)NameSub,' done res change only'
 
@@ -125,7 +128,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         ! Enforce flux conservation by applying corrected fluxes
         ! to each coarse grid cell face at block edges with 
         ! resolution changes.
-        call apply_cons_flux(iBlock)
+        if(DoConserveFlux) call apply_cons_flux(iBlock)
+
 
         ! Compute source terms for each cell.
         call timing_start('calc_sources')

@@ -107,7 +107,8 @@ subroutine MH_set_parameters(TypeAction)
 
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
-
+  use ModConserveFlux, ONLY: DoConserveFlux
+  
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1072,6 +1073,9 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('zEarth'  ,zEarth)
            call read_var('InvD2Ray',InvD2Ray)
         end if
+
+     case('#CONSERVEFLUX')
+        call read_var('DoConserveFlux', DoConserveFlux)
 
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
