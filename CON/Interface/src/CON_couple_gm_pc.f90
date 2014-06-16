@@ -241,8 +241,8 @@ contains
 
     !-------------------------------------------------------------------------
 
-    CouplerPCtoGM%NameVar = Grid_C(CouplerPCtoGM%iCompSource)%NameVar
-    CouplerPCtoGM%nVar    = Grid_C(CouplerPCtoGM%iCompSource)%nVar
+    CouplerPCtoGM%NameVar = Grid_C(CouplerPCtoGM%iCompTarget)%NameVar
+    CouplerPCtoGM%nVar    = Grid_C(CouplerPCtoGM%iCompTarget)%nVar
 
     if (isFirstTime)  then
        isFirstTime = .false.
