@@ -712,7 +712,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
   use ModHallResist, ONLY: UseHallResist, hall_factor
-  use ModResistivity, ONLY: Eta_GB
+  use ModResistivity, ONLY: Eta_GB, Eta0
   use ModFaceGradient, ONLY: get_face_curl
   use ModPointImplicit, ONLY: UsePointImplicit_B
   use ModMultiFluid, ONLY: extract_fluid_name, &
@@ -878,8 +878,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
         ! EXTRA MHD variables
      case('eta')
-        PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlk)
-
+        if(allocated(Eta_GB))then
+           PlotVar(:,:,:,iVar) = Eta_GB(:,:,:,iBlk)
+        else
+           PlotVar(:,:,:,iVar) = Eta0
+        end if
      case('n','t','temp')
         ! Calculate the number density
         if(UseMultiSpecies)then
