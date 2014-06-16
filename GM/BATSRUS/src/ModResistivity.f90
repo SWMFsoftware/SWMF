@@ -32,7 +32,7 @@ module ModResistivity
   logical, public           :: UseHeatExchange  = .true.
   character(len=30), public :: TypeResistivity='none'
   real, public, allocatable :: Eta_GB(:,:,:,:)
-  real, public              :: Eta0, Eta0Si=0.0
+  real, public              :: Eta0=0.0, Eta0Si=0.0
 
   ! Local variables
   logical            :: UseJouleHeating  = .true.
