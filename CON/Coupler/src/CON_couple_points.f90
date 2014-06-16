@@ -1175,7 +1175,7 @@ contains
     integer, intent(in):: iProcTarget_I(nBufferTarget)
 
     ! Number of couplings performed by source on this processor
-    integer, intent(out)               :: nCoupleSource
+    integer, intent(inout)             :: nCoupleSource
     ! Processor indexes in iComm that source is coupled with
     integer, intent(inout), allocatable:: iCoupleProcSource_I( :)
     ! Number of points per processor source is coupled with
@@ -1201,6 +1201,8 @@ contains
     !----------------------------------------------------------------------
     nProcTarget    = n_proc(iCompTarget)
     nProcSource    = n_proc(iCompSource)
+    ! give nCoupleTarget initial value, to be changed if is_proc(iCompTarget)
+    nCoupleTarget = 0
 
     if(is_proc(iCompTarget))then
        if(allocated(iCoupleProcTarget_I )) deallocate(iCoupleProcTarget_I)
@@ -1226,7 +1228,7 @@ contains
        ! Skip source processors that have no data to send.
        ! Count the source processors that have data (nCoupleTarget).
        ! Compact the arrays to the source processors that have data.
-       nCoupleTarget = 0
+       ! nCoupleTarget has been defined as 0 in the beginnig of the subroutine
        do iProc = 0, nProcSource-1
           if(nCouplePoint_P(iProc) == 0) CYCLE
           ! One more source proc with data
