@@ -148,6 +148,15 @@ F			UseFileCoupling
 1.25/3			DxPic
 1.25/3			DyPic
 
+PICREGION
+1                       nPicRegion
+-2.6875000000       xMinCut
+ 2.6875000000     	xMaxCut
+-19.791666667           yMinCut
+ 19.791666667	     	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
 #OUTERBOUNDARY
 periodic                TypeBcEast
 periodic                TypeBcWest
@@ -220,7 +229,6 @@ no					PoissonCorrection
 Wave					SimulationName
 1					verbose
 hallmhd					fluidcoupling (only with BATSRUS)
-T					use Anisotropic P (only with BATSRUS)
 
 #RESTART
 F					doRrestart
@@ -238,7 +246,7 @@ PC/restartOUT				RestartDirName
 0.5					delta
 
 #ELECTRON
--25.0                                  Charge/mass ratio (qom)
+-100.0                                  Charge/mass ratio (qom)
 
 #PARTICLES
 10					Particles per cell in X
@@ -246,8 +254,8 @@ PC/restartOUT				RestartDirName
 1					Particles per cell in Z
 
 #SOLVER
-1.0e-8				CGtol : CG solver stopping criterium tolerance
-1.0e-8 					GMREStol : GMRES solver stopping criterium tolerance
+1.0e-3				CGtol : CG solver stopping criterium tolerance
+1.0e-3					GMREStol : GMRES solver stopping criterium tolerance
 3					NiterMover : mover predictor corrector iteration
 
 #SAVEPLOT
@@ -310,7 +318,7 @@ PC/plots				SaveDirName
 GM			NameComp1
 PC			NameComp2
 1                       DnCouple
-1.28                    Dtcouple
+145.06125/132           Dtcouple
 
 #DESCRIPTION
 Run GM and IE in time accurate mode
@@ -340,6 +348,6 @@ F			UseRotation
 
 #STOP
 -8			MaxIter
-145.06125		TimeMax
+4.39580 		145.06125		TimeMax
 
 
