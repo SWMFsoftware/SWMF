@@ -1291,8 +1291,8 @@ test12_aniso_run:
 
 test12_aniso_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 -a=1e-16 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000005_n00000004.out \
-		 Param/PC/z=0_mhd_1_t00000005_n00000004.out.ref \
+		${TESTDIR}/RESULTS/4step/GM/z=0_all_1_t00000005_n00000004.out \
+		output/test12/z=0_all.out.ref.aniso \
 		> test12_gmpc_aniso.diff)
 	ls -l test12_gmpc_aniso.diff
 
@@ -1330,8 +1330,8 @@ test12_iso_run:
 
 test12_iso_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 -a=1e-16 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_mhd_1_t00000004_n00000005.out \
-		 Param/PC/z=0_mhd_1_t00000004_n00000005.out.ref.iso \
+		${TESTDIR}/RESULTS/4step/GM/z=0_all_1_t00000004_n00000005.out \
+		 output/test12/z=0_all.out.ref.iso\
 		> test12_gmpc_iso.diff)
 	ls -l test12_gmpc_iso.diff
 

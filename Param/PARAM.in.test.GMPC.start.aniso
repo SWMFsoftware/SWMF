@@ -207,7 +207,7 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-z=0 mhd idl_ascii       StringPlot
+z=0 all idl_ascii       StringPlot
 1			DnOutput
 -0.05			DtOutput
 0.			DxOutput

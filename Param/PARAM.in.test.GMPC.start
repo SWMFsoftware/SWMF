@@ -148,15 +148,6 @@ F			UseFileCoupling
 1.25/3			DxPic
 1.25/3			DyPic
 
-PICREGION
-1                       nPicRegion
--2.6875000000       xMinCut
- 2.6875000000     	xMaxCut
--19.791666667           yMinCut
- 19.791666667	     	yMaxCut
-1.25/3			DxPic
-1.25/3			DyPic
-
 #OUTERBOUNDARY
 periodic                TypeBcEast
 periodic                TypeBcWest
@@ -211,7 +202,7 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-z=0 mhd idl_ascii       StringPlot
+z=0 all idl_ascii       StringPlot
 1			DnOutput
 -0.05			DtOutput
 0.			DxOutput
@@ -254,8 +245,8 @@ PC/restartOUT				RestartDirName
 1					Particles per cell in Z
 
 #SOLVER
-1.0e-3				CGtol : CG solver stopping criterium tolerance
-1.0e-3					GMREStol : GMRES solver stopping criterium tolerance
+1.0e-6					CGtol : CG solver stopping criterium tolerance
+1.0e-6					GMREStol : GMRES solver stopping criterium tolerance
 3					NiterMover : mover predictor corrector iteration
 
 #SAVEPLOT
