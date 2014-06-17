@@ -207,10 +207,12 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-z=0 all idl_ascii       StringPlot
+z=0 var idl_ascii       StringPlot
 1			DnOutput
 -0.05			DtOutput
 0.			DxOutput
+rho mx my bx by p       NameVars
+g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
 
