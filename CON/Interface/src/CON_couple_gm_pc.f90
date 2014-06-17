@@ -38,18 +38,7 @@ module CON_couple_gm_pc
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
   !EOP
 
-  ! Communicator and logicals to simplify message passing and execution
-  logical       :: UseMe = .true.
-
-  ! Check if the GM and PT processors coincide
-  logical:: IsSameLayout
-
-  ! Proc index inside SWMF
-  integer:: iProcWorld
-
   ! Router communicator info
-  integer:: iCommGmPt, nProcGmPt, iProcGmPt, iProc0Gm, iProc0Pt, nProcCommon
-
   type(CouplePointsType) :: CouplerGMtoPC,  CouplerPCtoGM
 
 contains
@@ -65,9 +54,9 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='couple_gm_pc_init'
 
-    ! ParamInt_I gives the information to allocate ParamReal_I
+    ! iParam_I gives the information to allocate ParamReal_I
     ! needed for seting up the grid and particle constants
-    integer :: ParamInt_I(4)
+    integer :: iParam_I(4)
     real, pointer, dimension(:) :: ParamReal_I
 
     integer :: n
@@ -80,29 +69,51 @@ contains
 
     iCommWorld = i_comm()
 
-    ! Get the integer parameters
-    if(is_proc(GM_)) call GM_get_for_pc_init(ParamInt_I, 0)
+    ! Initialize point couplers
+    
+    CouplerGMtoPC%iCompSource = GM_
+    CouplerGMtoPC%iCompTarget = PC_
+    CouplerGMtoPC%NameVar     = Grid_C(GM_)%NameVar
+    CouplerGMtoPC%nVar        = Grid_C(GM_)%nVar
+    CouplerGMtoPC%nDim        = iParam_I(3)
 
-    if(i_comm(GM_) /= i_comm(PC_))then
+    call couple_points_init(CouplerGMtoPC)
+
+    CouplerPCtoGM%iCompSource = PC_
+    CouplerPCtoGM%iCompTarget = GM_
+    CouplerPCtoGM%NameVar     = Grid_C(GM_)%NameVar
+    CouplerPCtoGM%nVar        = Grid_C(GM_)%nVar
+    CouplerPCtoGM%nDim        = iParam_I(3)
+
+    call couple_points_init(CouplerPCtoGM)
+
+    ! Get the integer parameters. The 0 is the size of real params for now.
+    if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, 0)
+
+    if(.not. CouplerGMtoPC%IsSameLayout)then
        if(i_proc0(GM_) /= i_proc0(PC_)) then
           if(is_proc0(GM_)) call MPI_send( &
-               ParamInt_I, 4, MPI_INTEGER, i_proc0(PC_),&
+               iParam_I, 4, MPI_INTEGER, i_proc0(PC_),&
                1001, iCommWorld, iError)
           if(is_proc0(PC_)) call MPI_recv( &
-               ParamInt_I, 4, MPI_INTEGER, i_proc0(GM_),&
+               iParam_I, 4, MPI_INTEGER, i_proc0(GM_),&
                1001, iCommWorld, iStatus_I, iError)
        end if
        if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
-            ParamInt_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
+            iParam_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
     end if
 
-    n = ParamInt_I(1)*3 + ParamInt_I(2)*9 + 3
+    ! Number of real parameters. WHY???? What is 3 and 9???
+    ! Why is this calculation here? Why not in GM/BATSRUS?
+    ! n could be the 5th element of iParam_I, for example.
+    n = iParam_I(1)*3 + iParam_I(2)*9 + 3
     allocate(ParamReal_I(n))
 
+    ! Transfer real parameters from GM to PC
     if(is_proc(GM_)) &
-         call GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
+         call GM_get_for_pc_init(iParam_I, n, ParamReal_I)
 
-    if(i_comm(GM_) /= i_comm(PC_))then
+    if(.not. CouplerGMtoPC%IsSameLayout)then
        if(i_proc0(GM_) /= i_proc0(PC_)) then
           if(is_proc0(GM_)) call MPI_send( &
                ParamReal_I, n, MPI_REAL, i_proc0(PC_),&
@@ -118,19 +129,7 @@ contains
     end if
        
     if(is_proc(PC_)) &
-         call PC_put_from_gm_init(ParamInt_I, ParamReal_I, n)
-
-    CouplerGMtoPC%iCompTarget = PC_
-    CouplerGMtoPC%iCompSource = GM_
-    CouplerGMtoPC%nDim        = ParamInt_I(3)
-
-    call couple_points_init(CouplerGMtoPC)
-
-    CouplerPCtoGM%iCompTarget = GM_
-    CouplerPCtoGM%iCompSource = PC_
-    CouplerPCtoGM%nDim        = ParamInt_I(3)
-
-    call couple_points_init(CouplerPCtoGM)
+         call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
 
   end subroutine couple_gm_pc_init
 
@@ -140,57 +139,42 @@ contains
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    ! List of variables to pass
-    character(len=lNameVar):: NameVar
-
     ! Grid index
-    integer:: iDecompLastGm = -1, iDecompLastPt = -1
 
-    integer:: iPoint, i, iError
+    integer:: iError
 
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pc'
 
-    ! Variables for general-case coupling
-
-    ! number of processors of the OTHER component to communicate with
-    integer, save:: nCoupleGm, nCouplePt
-
-    ! processors of the OTHER component to communicate with
-    integer, allocatable, save:: iCoupleProcGm_I(:), iCoupleProcPt_I(:)
-
-    ! number of entries received/sent by a processor during rendezvous
-    integer, allocatable, save:: nCouplePointGm_I(:), nCouplePointPt_I(:)
-
     integer :: iStatus_I(MPI_STATUS_SIZE)
-    real    :: SIDt
+
+    ! Time step in SI units. Keeps changing 
+    real    :: DtSi
     !-------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    CouplerGMtoPC%NameVar = Grid_C(CouplerGMtoPC%iCompSource)%NameVar
-    CouplerGMtoPC%nVar    = Grid_C(CouplerGMtoPC%iCompSource)%nVar
-
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
-    call couple_points(CouplerGMtoPC, GM_get_grid_info,  GM_find_points, &
+    call couple_points(CouplerGMtoPC, GM_get_grid_info, GM_find_points, &
          GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
 
-    if(i_comm(PC_) == i_comm(GM_))then
-       call GM_get_for_pc_dt(SIDt)
-       call PC_put_from_gm_dt(SIDt)
+    ! Transfer time step from GM to PC
+    if(CouplerGMtoPC%IsSameLayout)then
+       call GM_get_for_pc_dt(DtSi)
+       call PC_put_from_gm_dt(DtSi)
     else
        if(is_proc0(GM_)) then
-          call GM_get_for_pc_dt(SIDt)
+          call GM_get_for_pc_dt(DtSi)
 
           if(i_proc0(GM_) /= i_proc0(PC_))then
              if(is_proc0(GM_)) call MPI_send( &
-                  SIDt, 1, MPI_REAL, i_proc0(PC_), &
+                  DtSi, 1, MPI_REAL, i_proc0(PC_), &
                   1003, i_comm(), iError)
              if(is_proc0(PC_)) call MPI_recv( &
-                  SIDt, 1, MPI_REAL, i_proc0(GM_), &
+                  DtSi, 1, MPI_REAL, i_proc0(GM_), &
                   1003, i_comm(), iStatus_I, iError)
           end if
           
@@ -198,8 +182,8 @@ contains
 
        if(is_proc(PC_))then
           if(n_proc(PC_) > 1) call MPI_bcast( &
-               SIDt, 1, MPI_REAL, 0, i_comm(PC_),iError)
-          call PC_put_from_gm_dt(SIDt)
+               DtSi, 1, MPI_REAL, 0, i_comm(PC_),iError)
+          call PC_put_from_gm_dt(DtSi)
        end if
     end if
 
@@ -212,43 +196,18 @@ contains
     ! List of variables to pass
     real, intent(in) :: tSimulation
 
-    character(len=lNameVar):: NameVar
-
-    ! Grid index
-    integer:: iDecompLastGm = -1, iDecompLastPt = -1
-
-    integer:: iPoint, i, iError
+    ! The first time there is no back coupling
+    ! This is actually wrong for restarts!!!
+    logical:: IsFirstTime = .true.
 
     logical :: DoTest, DoTestMe
-
-    ! Name of this interface
     character (len=*), parameter :: NameSub='couple_pc_gm'
-
-    ! Variables for general-case coupling
-
-    ! number of processors of the OTHER component to communicate with
-    integer, save:: nCoupleGm, nCouplePt
-
-    ! processors of the OTHER component to communicate with
-    integer, allocatable, save:: iCoupleProcGm_I(:), iCoupleProcPt_I(:)
-
-    ! number of entries received/sent by a processor during rendezvous
-    integer, allocatable, save:: nCouplePointGm_I(:), nCouplePointPt_I(:)
-
-    integer :: iStatus_I(MPI_STATUS_SIZE)
-    real    :: SIDt
-    logical, save :: isFirstTime = .true.
-
     !-------------------------------------------------------------------------
 
-    CouplerPCtoGM%NameVar = Grid_C(CouplerPCtoGM%iCompTarget)%NameVar
-    CouplerPCtoGM%nVar    = Grid_C(CouplerPCtoGM%iCompTarget)%nVar
-
-    if (isFirstTime)  then
-       isFirstTime = .false.
+    if (IsFirstTime)  then
+       IsFirstTime = .false.
        RETURN
     end if
-
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
@@ -257,11 +216,7 @@ contains
     call couple_points(CouplerPCtoGM, PC_get_grid_info,  PC_find_points , &
          PC_get_for_gm, GM_get_grid_info, GM_put_from_pc)
 
-    ! old arguments list
-    !call couple_points(CouplerPCtoGM,PC_get_for_gm, GM_put_from_pc, &
-    !          PC_get_grid_info, GM_get_grid_info,  PC_find_points)
-
-    if(DoTest) write(*,*) NameSub,' finished, iProc=',CouplerPCtoGM%iProcWorld
+    if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_pc_gm
 
