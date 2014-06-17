@@ -2792,14 +2792,23 @@ contains
        RadiusMax = XyzMax_D(1)
     end if
 
-    ! Set default MaxBoundary if it was not set by #FACEBOUNDARY command
+    ! Set defaults for MinBoundary and MaxBoundary 
+    ! if they were not set by #FACEBOUNDARY command
+    ! Using face BC is necessary if there is brick cut out of the
+    ! spherical/cylindrical grid. 
     if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
        ! Use all face based BCs by default for spherical geometry
-       if(TypeGeometry(1:9) == 'spherical')   MaxBoundary = 6
+       if(TypeGeometry(1:9) == 'spherical')then
+          MinBoundary = 1
+          MaxBoundary = 6
+       end if
 
        ! Use face based boundaries by default for cylindrical geometry 
        ! except for top and bottom 
-       if(TypeGeometry == 'cylindrical') MaxBoundary = 4
+       if(TypeGeometry == 'cylindrical')then
+          MinBoundary = 1
+          MaxBoundary = 4
+       end if
     end if
 
     ! Make sure MinBoundary and MaxBoundary cover face only boundaries
