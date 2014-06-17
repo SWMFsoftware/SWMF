@@ -1,6 +1,7 @@
-GM and PT running on the same set of processors
+GM and PT running on same processors for np = 1, 2, 3
+and different set of processors for      np > 3
 
 #COMPONENTMAP
-GM	0 9999    1
+GM	0    2    1
 PT      0 9999    1
 #END
