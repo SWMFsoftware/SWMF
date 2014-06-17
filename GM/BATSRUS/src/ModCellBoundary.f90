@@ -37,7 +37,7 @@ contains
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
-         far_field_BCs_BLK, MinBoundary, MaxBoundary, XyzMin_D
+         far_field_BCs_BLK, MinFaceBoundary, MaxFaceBoundary, XyzMin_D
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
@@ -135,7 +135,7 @@ contains
        ! Skip boundaries handled by ModFaceBoundary
        ! but not for semi-implicit scheme
        if(.not.present(iImplBlock) .and. &
-            iSide >= MinBoundary .and. iSide <= MaxBoundary) CYCLE
+            iSide >= MinFaceBoundary .and. iSide <= MaxFaceBoundary) CYCLE
 
        ! Do not apply cell boundary conditions at the pole 
        ! This is either handled by message passing or supercell

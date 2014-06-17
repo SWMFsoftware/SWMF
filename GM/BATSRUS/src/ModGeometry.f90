@@ -4,7 +4,7 @@
 module ModGeometry
 
   use ModSize
-  use ModMain,       ONLY: UseBody2, body2_, ExtraBc_
+  use ModMain,       ONLY: UseBody2, Body2_, ExtraBc_
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc
   use BATL_grid,     ONLY: Xyz_DGB, CellSize_DB
@@ -42,9 +42,9 @@ module ModGeometry
 
   ! true cells are cells that are not inside a body
   logical, allocatable :: true_cell(:,:,:,:)
-  logical :: IsBoundaryCell_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,body2_:6)
-  logical :: IsBoundaryBlock_IB(body2_:6,MaxBlock) 
-  integer :: MinBoundary=6, MaxBoundary=body2_                    
+  logical :: IsBoundaryCell_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,Body2_:6)
+  logical :: IsBoundaryBlock_IB(Body2_:6,MaxBlock) 
+  integer :: MinFaceBoundary = 6, MaxFaceBoundary = Body2_
   logical :: far_field_BCs_BLK(MaxBlock)
 
   ! Radial distance from origin and second body

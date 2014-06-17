@@ -107,7 +107,7 @@ contains
     use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModGeometry, ONLY: true_cell, MinBoundary, MaxBoundary
+    use ModGeometry, ONLY: true_cell, MinFaceBoundary, MaxFaceBoundary
     use ModBoundaryCells, ONLY: iBoundary_GB
 
     integer, intent(in) :: iBlock
@@ -140,8 +140,8 @@ contains
     call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
-         iBoundary_GB(:,:,:,iBlockBc) >= MinBoundary .and. &
-         iBoundary_GB(:,:,:,iBlockBc) <= MaxBoundary
+         iBoundary_GB(:,:,:,iBlockBc) >= MinFaceBoundary .and. &
+         iBoundary_GB(:,:,:,iBlockBc) <= MaxFaceBoundary
 
     call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 

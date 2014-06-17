@@ -12,7 +12,7 @@ subroutine MH_set_parameters(TypeAction)
        read_b0_param, init_mod_b0
   use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
-       MinBoundary,MaxBoundary,&
+       MinFaceBoundary, MaxFaceBoundary, &
        read_gen_radial_grid, set_gen_radial_grid, NameGridFile
   use ModNodes, ONLY: init_mod_nodes
   use ModImplicit
@@ -1644,8 +1644,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#FACEBOUNDARY")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('MinBoundary',MinBoundary)
-        call read_var('MaxBoundary',MaxBoundary)
+        call read_var('MinFaceBoundary', MinFaceBoundary)
+        call read_var('MaxFaceBoundary', MaxFaceBoundary)
 
      case("#SOLARWIND")
         !if(.not.is_first_session())CYCLE READPARAM
@@ -2251,14 +2251,14 @@ contains
     if(IsFirstCheck)then
        call correct_grid_geometry
 
-       if( (.not.IsCartesian .or. MinBoundary <= MaxBoundary) &
+       if( (.not.IsCartesian .or. MinFaceBoundary <= MaxFaceBoundary) &
             .and. (UseVolumeIntegral4 .or. UseFaceIntegral4))then
           if(iProc==0)then
              if(.not. IsCartesian) write(*,'(a)')NameSub//&
                   ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                   'for Cartesian grid only!'
 
-             if(MinBoundary <= MaxBoundary) write(*,'(a)')NameSub//&
+             if(MinFaceBoundary <= MaxFaceBoundary) write(*,'(a)')NameSub//&
                   ': UseVolumeIntegral4/UseFaceIntegral4 are implemented ', &
                   'for cell based boundaries only!'
 
@@ -2792,37 +2792,37 @@ contains
        RadiusMax = XyzMax_D(1)
     end if
 
-    ! Set defaults for MinBoundary and MaxBoundary 
+    ! Set defaults for MinFaceBoundary and MaxFaceBoundary 
     ! if they were not set by #FACEBOUNDARY command
     ! Using face BC is necessary if there is brick cut out of the
     ! spherical/cylindrical grid. 
     if(i_line_command("#FACEBOUNDARY", iSessionIn = 1) < 0)then
        ! Use all face based BCs by default for spherical geometry
        if(TypeGeometry(1:9) == 'spherical')then
-          MinBoundary = 1
-          MaxBoundary = 6
+          MinFaceBoundary = 1
+          MaxFaceBoundary = 6
        end if
 
        ! Use face based boundaries by default for cylindrical geometry 
        ! except for top and bottom 
        if(TypeGeometry == 'cylindrical')then
-          MinBoundary = 1
-          MaxBoundary = 4
+          MinFaceBoundary = 1
+          MaxFaceBoundary = 4
        end if
     end if
 
-    ! Make sure MinBoundary and MaxBoundary cover face only boundaries
-    if(UseBody2) MinBoundary = min(Body2_, MinBoundary)
+    ! Make sure MinFaceBoundary and MaxFaceBoundary cover face only boundaries
+    if(UseBody2) MinFaceBoundary = min(Body2_, MinFaceBoundary)
     if(body1) then   
-       MinBoundary = min(Body1_, MinBoundary)
-       MaxBoundary = max(Body1_, MaxBoundary)
+       MinFaceBoundary = min(Body1_, MinFaceBoundary)
+       MaxFaceBoundary = max(Body1_, MaxFaceBoundary)
     end if
     if(UseExtraBoundary) then                        
-       MinBoundary = min(ExtraBc_, MinBoundary)
-       MaxBoundary = max(ExtraBc_, MaxBoundary)
+       MinFaceBoundary = min(ExtraBc_, MinFaceBoundary)
+       MaxFaceBoundary = max(ExtraBc_, MaxFaceBoundary)
     end if
-    MaxBoundary = min(MaxBoundary, 6)
-    MinBoundary = max(MinBoundary, body2_)
+    MaxFaceBoundary = min(MaxFaceBoundary, 6)
+    MinFaceBoundary = max(MinFaceBoundary, body2_)
 
     if(index(TypeGeometry,'_genr') < 1) call set_gen_radial_grid
 

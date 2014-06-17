@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
@@ -7,7 +8,8 @@ subroutine fix_block_geometry(iBlock)
   use ModMain, ONLY: body1_, body2_, ExtraBc_,&
        UseExtraBoundary, ProcTest, BlkTest   
   use ModMain, ONLY: UseBody2
-  use ModGeometry, ONLY: MinBoundary, MaxBoundary, IsBoundaryBlock_IB, &
+  use ModGeometry, ONLY: &
+       MinFaceBoundary, MaxFaceBoundary, IsBoundaryBlock_IB, &
        IsBoundaryCell_GI, R2_BLK, Rmin2_BLK, Body_BLK, &
        far_field_BCs_BLK, true_blk, true_cell
   use ModPhysics, ONLY : xBody2,yBody2,zBody2
@@ -61,7 +63,7 @@ subroutine fix_block_geometry(iBlock)
   !/
   true_cell(:,:,:,iBlock)=.true.
   IsBoundaryBlock_IB(:,iBlock)=.false.
-  do iBoundary = MinBoundary, MaxBoundary
+  do iBoundary = MinFaceBoundary, MaxFaceBoundary
      IsBoundaryBlock_IB(iBoundary,iBlock) = .true.
   end do
   IsBoundaryBlock_IB(ExtraBc_,iBlock) = UseExtraBoundary
@@ -69,8 +71,9 @@ subroutine fix_block_geometry(iBlock)
   ! set true_cell array (seting IsBoundaryCell_GI)
   call set_boundary_cells(iBlock)
 
-  do iBoundary = MinBoundary, min(MaxBoundary,Body1_)
-     IsBoundaryBlock_IB(iBoundary,iBlock)=any(IsBoundaryCell_GI(:,:,:,iBoundary))
+  do iBoundary = MinFaceBoundary, min(MaxFaceBoundary,Body1_)
+     IsBoundaryBlock_IB(iBoundary,iBlock) = &
+          any(IsBoundaryCell_GI(:,:,:,iBoundary))
      true_cell(:,:,:,iBlock) = &
           true_cell(:,:,:,iBlock) .and. .not.IsBoundaryCell_GI(:,:,:,iBoundary)
   end do
