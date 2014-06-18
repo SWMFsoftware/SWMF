@@ -155,7 +155,7 @@ void Europa::Init_BeforeParser() {
   }
 
   xEuropaRadial=sqrt(xEuropaRadial);
-  vEuropaRadial=(xEuropa[0]*vEuropa[0]+xEuropa[1]*vEuropa[1]+xEuropa[2]*vEuropa[2])/xEuropaRadial;
+  vEuropaRadial=(xEuropaRadial>1.0E-5) ? (xEuropa[0]*vEuropa[0]+xEuropa[1]*vEuropa[1]+xEuropa[2]*vEuropa[2])/xEuropaRadial : 0.0;
 
   // get initial position of GALILEO for line-of sight
   spkezr_c("GALILEO ORBITER",OrbitalMotion::et,"GALL_EPHIOD","none","Europa",state,&OrbitalMotion::lt);
