@@ -158,12 +158,13 @@ double sodiumTotalProductionRate(int SourceProcessCode=-1) {
 
 //the mesh resolution
 double localSphericalSurfaceResolution(double *x) {
-	double res,r,l[3];
+        double res,r,l[3] = {1.0,0.0,0.0};
 	int idim;
 	double SubsolarAngle;
 
 	for (r=0.0,idim=0;idim<3;idim++) r+=pow(x[idim],2);
-	for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
+	if (r > 0.8 * rSphere)
+	  for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
 
 	SubsolarAngle=acos(l[0]);
 
