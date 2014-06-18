@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #^CMP FILE TESTING
 
@@ -33,7 +34,7 @@ test_help:
 	@echo "    test9                      (run Chromo SC-IH coupling test)"
 	@echo "    test10                     (run 3T solar wind test)"
 	@echo "    test11                     (run GM-PT coupler test)"
-	@echo "    test12                     (run PC only test)"
+	@echo "    test12                     (run GM-PC tests)"
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
@@ -663,11 +664,11 @@ test7_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test7_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-30\
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test7/Sph_IH_log_n000000.log \
 		> test7_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=4e-30\
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/Xyz_OH_log_n000000.log \
 		> test7_oh.diff)
