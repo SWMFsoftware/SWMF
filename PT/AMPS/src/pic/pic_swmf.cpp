@@ -359,6 +359,14 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
             offset=nVarialbes*(index[cnt++]-1);
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
+            //convert momentum into velocity
+            if ((Vx_SWMF2AMPS!=-1)&&(offset>=0)) {
+              if (Rho_SWMF2AMPS!=-1) {
+                for (idim=0;idim<3;idim++) (data[offset+Rho_SWMF2AMPS]>0.0) ? data[offset+Vx_SWMF2AMPS+idim]/=data[offset+Rho_SWMF2AMPS] : 0.0;
+              }
+              else for (idim=0;idim<3;idim++) data[offset+Vx_SWMF2AMPS+idim]=0.0;
+            }
+
             //the order of the state vector: rho, V, B, p
             *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=((offset>=0)&&(Rho_SWMF2AMPS>=0)) ? data[offset+Rho_SWMF2AMPS] : 0.0;
             *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=((offset>=0)&&(P_SWMF2AMPS>=0)) ? data[offset+P_SWMF2AMPS] : 0.0;
