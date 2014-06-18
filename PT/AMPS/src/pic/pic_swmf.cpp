@@ -326,7 +326,7 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
             cell->nodeDescriptor.nodeProcessedFlag=_ON_AMR_MESH_;
 
             //convert momentum into velocity
-            if (Vx_SWMF2AMPS!=-1) {
+            if ((Vx_SWMF2AMPS!=-1)&&(offset>=0)) {
               if (Rho_SWMF2AMPS!=-1) {
                 for (idim=0;idim<3;idim++) (data[offset+Rho_SWMF2AMPS]>0.0) ? data[offset+Vx_SWMF2AMPS+idim]/=data[offset+Rho_SWMF2AMPS] : 0.0;
               }
