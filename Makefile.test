@@ -944,7 +944,8 @@ test13_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test13_check:
-	cp output/test13/amps.dat ${TESTDIR}/PT/plots/amps.ref
+	cp output/test13/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+	${TESTDIR}/PT/plots/amps.ref
 	-(${SCRIPTDIR}/DiffNum.pl -b \
 		${TESTDIR}/PT/plots/amps.dat \
 		${TESTDIR}/PT/plots/amps.ref \
