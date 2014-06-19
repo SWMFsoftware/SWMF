@@ -582,13 +582,15 @@ contains
        if(UseElectronPressure)then
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                + gm1*(1.0 - QeByQtotal)*CoronalHeating
-          ! The following needs a time step control
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + (1.0 - QeByQtotal)*CoronalHeating
+
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                + gm1*QeByQtotal*CoronalHeating
        else
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + gm1*CoronalHeating
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
        end if
-       Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + CoronalHeating
 
     end do; end do; end do
 

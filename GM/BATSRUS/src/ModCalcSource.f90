@@ -287,19 +287,24 @@ contains
                 call apportion_coronal_heating(i, j, k, iBlock, &
                      CoronalHeating_C(i,j,k), QeFraction, QparFraction)
              end if
+
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*(1.0 - QeFraction)
+                  + CoronalHeating_C(i,j,k)*(1.0 - QeFraction)*gm1
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + CoronalHeating_C(i,j,k)*(1.0 - QeFraction)
+
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QeFraction
+
              if(UseAnisoPressure) &
                   Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QparFraction
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + CoronalHeating_C(i,j,k)
           end if
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + CoronalHeating_C(i,j,k)
        end do; end do; end do
 
     end if
@@ -315,9 +320,9 @@ contains
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*gm1
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + RadCooling_C(i,j,k)
           end if
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + RadCooling_C(i,j,k)
        end do; end do; end do
     end if
 
@@ -337,6 +342,12 @@ contains
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - gm1*Pe*DivU
 
           if(.not.UseMultiIon)then
+             ! The energy equation contains the work of the electron pressure
+             ! -u.grad Pe = -div(u Pe) + Pe div(u)
+             ! The -div(u Pe) is implemented as a flux in ModFaceFlux.
+             ! Here we add the Pe div(u) source term
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + Pe*DivU
+
              ! Add "geometrical source term" p/r to the radial momentum
              ! equation. The "radial" direction is along the Y axis
              ! NOTE: here we have to use signed radial distance!

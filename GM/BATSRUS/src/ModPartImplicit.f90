@@ -2215,8 +2215,7 @@ contains
   !============================================================================
   subroutine conservative_to_primitive(State_V)
 
-    use ModAdvance, ONLY: UseElectronPressure
-    use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid, Pe_
+    use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
     use ModMultiFluid, ONLY: select_fluid, nIonFluid, &
          iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
@@ -2233,10 +2232,6 @@ contains
 
           State_V(iP) = gm1*(State_V(iP) - &
                0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
-
-          if(nIonFluid == 1 .and. iFluid == 1)then
-             if(UseElectronPressure) State_V(iP) = State_V(iP) - State_V(Pe_)
-          end if
 
           if(iFluid == 1 .and. IsMhd) &
                State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)

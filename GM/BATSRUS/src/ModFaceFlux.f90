@@ -2003,11 +2003,8 @@ contains
             Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
          end do
       end if
-      if(UseElectronPressure)then
-         Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
-         Flux_V(Energy_) = Flux_V(Energy_) &
-              + inv_gm1*(Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
-      end if
+      if(UseElectronPressure) &
+           Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
 
       if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
 
@@ -2214,8 +2211,8 @@ contains
           Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
        else
           Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
+          Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
        end if
-       Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
     end if
     if(DoIonHeatConduction)then
        Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
@@ -2235,7 +2232,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, Ew
+      real :: Rho, Ux, Uy, Uz, p, e
       real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
       !-----------------------------------------------------------------------
@@ -2263,18 +2260,14 @@ contains
 
       pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
 
-      if(UseElectronPressure)then
-         pTotal = pTotal + State_V(Pe_)
-         if(nIonFluid == 1 .and. iFluid == 1) e = e + inv_gm1*State_V(Pe_)
-      end if
+      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
-            Ew = State_V(Ew_)
+            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
          else
-            Ew = sum(State_V(WaveFirst_:WaveLast_))
+            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
-         pTotal = pTotal + (GammaWave - 1)*Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2345,7 +2338,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, Ew
+      real :: Rho, Ux, Uy, Uz, p, e
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
@@ -2371,18 +2364,14 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1
 
-      if(UseElectronPressure)then
-         pTotal = pTotal + State_V(Pe_)
-         if(nIonFluid == 1 .and. iFluid == 1) e = e + inv_gm1*State_V(Pe_)
-      end if
+      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
-            Ew = State_V(Ew_)
+            pTotal = pTotal + (GammaWave-1)*State_V(Ew_)
          else
-            Ew = sum(State_V(WaveFirst_:WaveLast_))
+            pTotal = pTotal + (GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
          end if
-         pTotal = pTotal + (GammaWave - 1)*Ew
       end if
 
       ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
@@ -2510,13 +2499,11 @@ contains
               Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
       end if
 
-      if(nIonFluid == 1 .and. iFluid == 1)then
-         ! Correct energy flux, so that the electron contribution to the energy
-         ! flux is U_e*(e_e + p_e)=u_e*(1/(gamma-1) + 1)*p_e.
-         ! We add (U_e-U_ion)*(1/(gamma-1) + 1)*p_e.
-         if(UseElectronPressure .and. HallCoeff > 0) &
-              Flux_V(Energy_) = Flux_V(Energy_) &
-              + (HallUn - Un)*(inv_gm1 + 1)*State_V(Pe_)
+      ! Correct energy flux, so that the electron contribution to the energy
+      ! flux is U_e*p_e. We add (U_e-U_ion)*p_e.
+      if(UseElectronPressure .and. nIonFluid == 1 .and. iFluid == 1)then
+         if(HallCoeff > 0) &
+              Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_)
       end if
 
       if(UseAlfvenWaves)then
@@ -2603,7 +2590,7 @@ contains
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, Ew
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
       !-----------------------------------------------------------------------
       ! Extract primitive variables
       Rho     = State_V(iRho)
@@ -2618,15 +2605,10 @@ contains
       pTotal = p
 
       if(nIonFluid == 1 .and. iFluid == 1)then
-         if(UseElectronPressure)then
-            pTotal = pTotal + State_V(Pe_)
-            e = e + inv_gm1*State_V(Pe_)
-         end if
+         if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
 
-         if(UseWavePressure)then
-            Ew = sum(State_V(WaveFirst_:WaveLast_))
-            pTotal = pTotal + (GammaWave - 1)*Ew
-         end if
+         if(UseWavePressure) &
+              pTotal = pTotal +(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
       end if
 
       ! Calculate conservative state

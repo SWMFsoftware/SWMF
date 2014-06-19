@@ -4,15 +4,14 @@ module ModEnergy
 
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
-  use ModMultiFluid, ONLY: nFluid, iFluid, nIonFluid, IonLast_, &
+  use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
        select_fluid
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, IsMhd, &
        Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
-       UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
+       UseNonConservative, nConservCrit, IsConserv_CB
   use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I
-  use ModVarIndexes, ONLY: Pe_
 
   implicit none
 
@@ -83,21 +82,6 @@ contains
           end if
        end do; end do; end do
 
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                if(IsConserv_CB(i,j,k,iBlock))then
-                   State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                        - State_VGB(Pe_,i,j,k,iBlock)
-                else
-                   Energy_GBI(i,j,k,iBlock,iFluid) = &
-                        Energy_GBI(i,j,k,iBlock,iFluid) &
-                        + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-                end if
-             end do; end do; end do
-          end if
-       end if
-
        if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
 
        do k=1, nK; do j=1, nJ; do i=1, nI
@@ -136,15 +120,6 @@ contains
                sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
                /StateOld_VCB(iRho,i,j,k,iBlock) )
        end do; end do; end do
-
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
-                     - StateOld_VCB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-       end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
@@ -185,16 +160,6 @@ contains
                   StateOld_VCB(iRho,i,j,k,iBlock))
           end if
        end do; end do; end do
-
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-                EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
-                     EnergyOld_CBI(i,j,k,iBlock,iFluid) &
-                     + inv_gm1*StateOld_VCB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-       end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
@@ -243,15 +208,6 @@ contains
                sum(State_VGB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
                /State_VGB(iRho,i, j, k, iBlock) )
        end do; end do; end do
-
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                     - State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-       end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
@@ -302,16 +258,6 @@ contains
                   State_VGB(iRho,i,j,k,iBlock))
           end if
        end do; end do; end do
-
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) &
-                     + inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
-             end do; end do; end do
-          end if
-       end if
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
@@ -464,13 +410,6 @@ contains
           end where
        end if
 
-       if(nIonFluid == 1 .and. iFluid == 1)then
-          if(UseElectronPressure)then
-             Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = & 
-                  Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) &
-                  + inv_gm1*State_VGB(Pe_,MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)
-          end if
-       end if
     end do
 
   end subroutine calc_energy_ghost

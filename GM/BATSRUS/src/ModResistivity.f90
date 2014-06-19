@@ -389,6 +389,10 @@ contains
        end if
        if(UseElectronPressure) then
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
+          ! Remove Joule heating from ion energy equation
+          if(UseResistiveFlux) &
+               Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               - inv_gm1*JouleHeating
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
 
@@ -422,8 +426,8 @@ contains
     use ModGeometry,   ONLY: true_cell
     use ModPhysics,    ONLY: gm1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: time_blk, State_VGB, &
-         UseAnisoPressure
+    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure
+    use ModEnergy,     ONLY: calc_energy_cell
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -475,6 +479,8 @@ contains
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                + DtLocal*HeatExchangePeP
        end do; end do; end do
+
+       call calc_energy_cell(iBlock)
     end do
 
   end subroutine calc_heat_exchange
