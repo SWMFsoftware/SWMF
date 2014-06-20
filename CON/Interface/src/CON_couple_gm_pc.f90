@@ -70,7 +70,7 @@ contains
     iCommWorld = i_comm()
 
     ! Initialize point couplers
-    
+
     CouplerGMtoPC%iCompSource = GM_
     CouplerGMtoPC%iCompTarget = PC_
     CouplerGMtoPC%NameVar     = Grid_C(GM_)%NameVar
@@ -103,9 +103,9 @@ contains
             iParam_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
     end if
 
-    ! Number of real parameters. WHY???? What is 3 and 9???
-    ! Why is this calculation here? Why not in GM/BATSRUS?
-    ! n could be the 5th element of iParam_I, for example.
+    ! n = number of species *3 (mass, charge, temrature ratio)
+    !     + numerb of dimentions * 9 ( xmin, xmax, dx ) for y and z also
+    !     + 3 ( Lnorm, Unorm, Mnorm) 
     n = iParam_I(1)*3 + iParam_I(2)*9 + 3
     allocate(ParamReal_I(n))
 
@@ -127,7 +127,7 @@ contains
        if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
             ParamReal_I, n, MPI_REAL, 0, i_comm(PC_),iError)
     end if
-       
+
     if(is_proc(PC_)) &
          call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
 
@@ -177,7 +177,7 @@ contains
                   DtSi, 1, MPI_REAL, i_proc0(GM_), &
                   1003, i_comm(), iStatus_I, iError)
           end if
-          
+
        end if
 
        if(is_proc(PC_))then
@@ -206,7 +206,9 @@ contains
 
     if (IsFirstTime)  then
        IsFirstTime = .false.
-       RETURN
+       ! Finnishing the setup of the IPIC3D solver
+       ! after GM -> PC coupling
+       call  PC_finilize_init_session
     end if
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)

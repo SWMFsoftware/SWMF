@@ -12,6 +12,7 @@ module PC_wrapper
 
   public:: PC_set_param
   public:: PC_init_session
+  public:: PC_finilize_init_session
   public:: PC_run
   public:: PC_save_restart
   public:: PC_finalize
@@ -49,11 +50,22 @@ contains
 
   !============================================================================
 
-  subroutine PC_init_session(iSession, TimeSimulation)
+  subroutine PC_finilize_init_session
 
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
+
+    character(len=*), parameter :: NameSub='PC_finilize_init_session'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
+
+  end subroutine PC_finilize_init_session
+
+  !============================================================================
+
+  subroutine PC_init_session(iSession, TimeSimulation)
 
     character(len=*), parameter :: NameSub='PC_init_session'
 

@@ -59,9 +59,9 @@ contains
        ParamInt_I(2) = nRegionPic
        ParamInt_I(3) = nDim 
        if(UseFileCoupling) then 
-         ParamInt_I(4) = 1
+          ParamInt_I(4) = 1
        else
-         ParamInt_I(4) = 0
+          ParamInt_I(4) = 0
        end if
 
     else
@@ -147,9 +147,6 @@ contains
 
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
-
-    !if(.not. UseAnisoPressure) &
-    !     call stop_mpi(NameSub//": need Anisotropic Pressure!")
 
     Dist_D = -1.0
     Xyz_D  =  0.0
@@ -238,7 +235,6 @@ contains
     ! to avoid index issues when nDim < 3 
     if(ndim > 1) y_ = 2
     if(ndim > 2) z_ = 3
-  
 
     Xyz_D   = 0.0
 
@@ -284,7 +280,7 @@ contains
                    ! PC domain start from origo
                    Pos_DI(1:nDim,iPoint) = &
                         (Xyz_DGB(1:nDim,i,j,k,iBlock) - &
-                         XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
+                        XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
                    iPoint = iPoint + 1
                 end do; end do; end do
              else
@@ -316,7 +312,7 @@ contains
                 ! PC domain start from origo
                 Pos_DI(1:nDim,iPoint) = &
                      (Xyz_DGB(1:nDim,i,j,k,iBlock) - &
-                      XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
+                     XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
                 iPoint = iPoint + 1
              end do; end do; end do
           else
@@ -383,6 +379,7 @@ contains
 
     character(len=*), parameter :: NameSub='GM_put_from_pc'
     !--------------------------------------------------------------------------
+
     if(.not. present(Data_VI))then
        nPoint=0;
        ! get nPoint
