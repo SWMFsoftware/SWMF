@@ -749,6 +749,8 @@ contains
     !-----------------------------------------------------------------------------------
 
     allocate(vsnp1(in,jn,kn), bsnp1(in,jn,kn))
+    vsnp1 = 0.0
+    bsnp1 = 0.0
 
     do i = ism1,iep1
        srd1(i) = sqrt(0.5d0*(d0(i+myid1*(in-5)) + d0(i-1+myid1*(in-5))))
@@ -1084,6 +1086,8 @@ contains
 
     allocate(emf1(in,jn,kn), emf2(in,jn,kn), emf3(in,jn,kn))
     allocate(eta(in,jn,kn), vsnp1(in,jn,kn), bsnp1(in,jn,kn))
+    vsnp1 = 0.0
+    bsnp1 = 0.0
 
     ! emf1
     do i=is,ie
@@ -1303,6 +1307,8 @@ contains
 
     allocate(vsnp1(in,jn,kn), bsnp1(in,jn,kn))
     allocate(emf1(in,jn,kn),emf2(in,jn,kn),emf3(in,jn,kn))
+    vsnp1 = 0.0
+    bsnp1 = 0.0
 
     ! emf1
     do i=is,ie
