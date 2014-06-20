@@ -26,13 +26,13 @@ contains
 
     ! local blktri variables
     integer iflg_blk
-    integer kk,ll,nww_ch,ierr_blk
+    integer ierr_blk
     integer, parameter :: np_blk=1,mp_blk=1, &
          n_blk=inmax-5,m_blk=jnmax-5, &
-         idimy_blk=jnmax-5,nww=50000
+         idimy_blk=jnmax-5
     real an(n_blk),bn(n_blk),cn(n_blk)
     real am(m_blk),bm(m_blk),cm(m_blk)
-    real yy(m_blk,n_blk) !!!,ww(nww)
+    real yy(m_blk,n_blk)
     integer:: iFactor_I(15)
 
     type(fishworkspace):: ww
@@ -43,8 +43,9 @@ contains
     integer kint, kp
     real phk
     real rldat(nrlpts)
-    real wsave(2*nrlpts+15)
+    real wsave(2*nrlpts)
     save wsave
+
     real qq(in-5,jn-5,nrlpts)
     real srhsb(jn-5,nrlpts),srhst(jn-5,nrlpts)
     real srhsl(in-5,nrlpts),srhsr(in-5,nrlpts)
@@ -71,14 +72,6 @@ contains
     if (firstcall) then
 
        call rffti(nrlpts,wsave,iFactor_I)
-       kk=log(dble(n_blk))/log(dble(2))+1
-       ll=2**(kk+1)
-       nww_ch=(kk-2)*ll+kk+5+max(2*n_blk,6*m_blk)
-       if(nww .lt. nww_ch) then
-          write(6,*) 'nww is set to', nww
-          write(6,*) 'nww should be',nww_ch
-          call MPI_ABORT(MPI_COMM_WORLD, 1,ierr)
-       endif
 
        do i=1,n_blk
           an(i)=ar(i)
@@ -93,8 +86,10 @@ contains
        !       write(6,*) 'initializing blktri'
        call blktri(iflg_blk,np_blk,n_blk,an,bn,cn,mp_blk, &
             m_blk,am,bm,cm,idimy_blk,yy,ierr_blk,ww)
+
        !        write(6,*) 'return from blktri'
        !        write(6,*) 'ierr_blk,ww(1)=',ierr_blk,ww(1)
+
        firstcall = .FALSE.
 
     endif
