@@ -1924,6 +1924,7 @@ sub ReadSpeciesBlock {
   
   my @MassArray=(0)x$TotalSpeciesNumber;
   my @ElectricChargeArray=(0)x$TotalSpeciesNumber;
+  my @SpeciesFoundFlag=(0)x$TotalSpeciesNumber;
   
   my $SkipSpecieFlag=0;
   
@@ -1951,6 +1952,7 @@ sub ReadSpeciesBlock {
       foreach (@SpeciesList) {
         if ($SpeciesList[$nspec] eq $s0) {
           $SkipSpecieFlag=1; #the species has been found in the list of those used in the simulation
+          $SpeciesFoundFlag[$nspec]=1;
           last;
         }
         else {
@@ -1972,7 +1974,6 @@ sub ReadSpeciesBlock {
       }      
     }
 
- 
     if ($s0 eq "#ENDSPECIES") {
       last;
     }
@@ -1980,6 +1981,14 @@ sub ReadSpeciesBlock {
   
   #add to the code the content of the Species Block
   
+  
+  #check is all modeled species where found
+  for ($nspec=0;$nspec<$TotalSpeciesNumber;$nspec++) {
+    if ($SpeciesFoundFlag[$nspec] == 0) {
+      die "Cannot find physical parameters for $SpeciesList[$nspec]\n";
+    }
+  }
+
   
   #change appropriate variables in the code
   my @t;
