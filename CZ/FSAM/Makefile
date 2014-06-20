@@ -32,38 +32,54 @@ LIB:
 	cd src; make LIB
 	cd srcInterface; make LIB
 
-TESTDIR = run_test
-
-#####################################RUN########################################
-
-test: 
-	@echo "starting..." 
-	@echo "compiling..."
-	${MAKE} compile PROBS=test
-	@echo "making rundir..."
-	${MAKE} rundir PROBS=test RUNDIR=${TESTDIR} STANDALONE="YES" PWDIR=`pwd`
-	@echo "running..."
-	${MAKE} run RUNDIR=${TESTDIR}
-
-compile:
-	rm -f src/xfsam.exe
-	cp srcProblem/ModUserSetup.${PROBS}.f90 src/ModUserSetup.f90;
-	cp srcProblem/ModPar.${PROBS}.f90 src/ModPar.f90;
-	make xfsam
+# default problem
+PROBS=test
 
 rundir: 
 	mkdir -p ${RUNDIR}/CZ
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR}; \
-			cp ${CZDIR}/src/xfsam.exe .; \
-			cp ${CZDIR}/input/PARAM.in.${PROBS} PARAM.in; \
-			cp ${CZDIR}/input/gong.l4b.14 .; \
-			cp ${CZDIR}/input/jobscript.${PROBS} ./jobscript; \
+			ln -s ${MYDIR}/src/xfsam.exe .; \
+			cp ${MYDIR}/input/PARAM.in.${PROBS} PARAM.in; \
+			cp ${MYDIR}/input/gong.l4b.14 .; \
 	fi)
 
-run:
-	cd ${RUNDIR} ; \
-	mpirun -n 6 xfsam.exe > runlog
+#####################################RUN########################################
+
+# run directory for test
+TESTDIR = run_test
+
+test: 
+	rm -f test_fsam.diff
+	@echo "compile..." > test_fsam.diff
+	${MAKE} test_compile
+	@echo "rundir..." >> test_fsam.diff
+	${MAKE} test_rundir
+	@echo "run..." >> test_fsam.diff
+	${MAKE} test_run
+	@echo "check..." >> test_fsam.diff
+	${MAKE} test_check
+
+# This should be done with Config.pl -problem=test
+# It should not recompile if the files did not change
+
+test_compile:
+	rm -f src/xfsam.exe
+	cp srcProblem/ModUserSetup.test.f90 src/ModUserSetup.f90;
+	cp srcProblem/ModPar.test.f90 src/ModPar.f90;
+	make xfsam
+
+test_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir PROBS=test RUNDIR=${TESTDIR} STANDALONE="YES"
+
+test_run:
+	cd ${TESTDIR}; mpirun -np 6 xfsam.exe > runlog
+
+test_check:
+	-${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/runlog output/runlog.ref \
+		> test_fsam.diff
+	ls -l test_fsam.diff
 
 ################################################################################
 
