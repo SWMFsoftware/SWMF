@@ -8,6 +8,10 @@
 #ifndef MERCURY_H_
 #define MERCURY_H_
 
+#include <math.h>
+
+#include "pic.h"
+
 #include "SpiceUsr.h"
 #include "Exosphere.h"
 #include "constants.h"
@@ -65,12 +69,12 @@ namespace Mercury {
     }
     else if (spec==_NA_PLUS_SPEC_) { //the Lorentz force
       long int nd;
-      char *offset;
+//      char *offset;
       int i,j,k;
-      PIC::Mesh::cDataCenterNode *CenterNode;
+//      PIC::Mesh::cDataCenterNode *CenterNode;
       double E[3],B[3];
 
-      exit(__LINE__,__FILE__,"check the numbers!");
+//      exit(__LINE__,__FILE__,"check the numbers!");
 
       if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
         exit(__LINE__,__FILE__,"Error: the cell is not found");
@@ -80,6 +84,7 @@ namespace Mercury {
       if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
   #endif
 
+/*
       CenterNode=startNode->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
@@ -91,6 +96,15 @@ namespace Mercury {
         memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
         memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
       }
+*/
+
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
+      memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
+      memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
+#else 
+      PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
+      PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+#endif
 
 
       accl_LOCAL[0]+=ElectronCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/_MASS_(_NA_);
@@ -121,6 +135,7 @@ namespace Mercury {
     accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[2]/pow(rSun2Particle,3));
 
 
+    if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
 
 
 /*    double rSolarVector[3],r2Solar,rSolar;
@@ -198,10 +213,10 @@ namespace Mercury {
   }
 
   inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
-    spec=_NAPLUS_SPEC_;
+    spec=_NA_PLUS_SPEC_;
 
     PIC::ParticleBuffer::SetI(spec,ParticleData);
-  //  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
+    if (_NA_PLUS_SPEC_>=0) return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
 
     return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
   }

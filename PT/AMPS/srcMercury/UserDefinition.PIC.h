@@ -6,17 +6,6 @@
 //#include "UserDefinition.PIC.dfn"
 
 //the species table
-/*
-#define _NA_SPEC_     0
-#define _NA_PLUS_SPEC_ 1
-*/
-
-#undef _NA_SPEC_
-#define _NA_SPEC_ 0
-
-#undef _NAPLUS_SPEC_
-#define _NAPLUS_SPEC_ 1
-
 //extern unsigned int _NA_SPEC_;
 extern int maxLocalBackdroundDensityOffset;
 
