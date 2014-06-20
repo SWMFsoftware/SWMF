@@ -3,12 +3,6 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-#EXTRA = -fp-model strict
-#CFLAGS = ${Cflag3} ${EXTRA}
-#FFLAGS = ${Lflag1} ${OPT3} ${EXTRA}
-
-#CFLAG = ${SEARCH} -c -w ${DEBUG} -dusty
-
 MODULES = \
 	ModFSAM.o \
 	ModPar.o \
@@ -46,9 +40,6 @@ ${MODULES}: ${LIBSHARE}
 $(OBJ): ${MODULES} ${LIBSHARE}
 
 EXE = xfsam.exe
-
-#.f90.o:
-#	${COMPILE.f90} ${CFLAGS} ${LIBFISH} $<
 
 xfsam: DEPEND
 	make EXE
