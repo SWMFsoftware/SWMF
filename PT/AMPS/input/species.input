@@ -4,6 +4,10 @@
   mass=3.82E-26
   charge=0
 
+#component=NA_PLUS 
+  mass=3.82E-26
+  charge=1
+
 
 #component=O
   mass=16*_AMU_
