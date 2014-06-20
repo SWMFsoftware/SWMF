@@ -33,7 +33,7 @@ contains
     real an(n_blk),bn(n_blk),cn(n_blk)
     real am(m_blk),bm(m_blk),cm(m_blk)
     real yy(m_blk,n_blk)
-    integer:: iFactor_I(15)
+    integer:: iFactor_I(15) = 0
 
     type(fishworkspace):: ww
     save ww, an, bn, cn
