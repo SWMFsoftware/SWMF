@@ -77,7 +77,10 @@ test_run:
 	cd ${TESTDIR}; mpirun -np 6 xfsam.exe > runlog
 
 test_check:
-	-${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/runlog output/runlog.ref \
+	grep -v 'Grid cell updates' ${TESTDIR}/runlog > ${TESTDIR}/runlog.new
+	grep -v 'Grid cell updates' output/runlog.ref > ${TESTDIR}/runlog.ref
+	-${SCRIPTDIR}/DiffNum.pl -a=1e-5 -t \
+		${TESTDIR}/runlog.new ${TESTDIR}/runlog.ref \
 		> test_fsam.diff
 	ls -l test_fsam.diff
 
