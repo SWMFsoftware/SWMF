@@ -56,7 +56,7 @@ xfsam: DEPEND
 
 EXE: $(OBJ)
 	${LINK.f90} $(FFLAGS) -o ${EXE} $(OBJ) $(MODULES) ${LIBFISH} \
-		-L${LIBDIR} -L${SHAREDIR} -lSHARE
+		-L${LIBDIR} -L${SHAREDIR} -lSHARE ${Lflag1}
 
 MY_LIB = libFSAM.a
 
