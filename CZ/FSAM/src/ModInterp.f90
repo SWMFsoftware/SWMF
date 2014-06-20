@@ -238,19 +238,18 @@ contains
        vmch(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xim*dxbi(i))*(q2 - q1)
     enddo
 
-    if(present(DoBc).and.DoBc)then
-       if((myid1 == 0).and.(niib == 2)) then
-          bmch(3) = bpch(3)
-          vmch(3) = vpch(3)
+    if(present(DoBc))then
+       if(DoBc)then
+          if((myid1 == 0).and.(niib == 2)) then
+             bmch(3) = bpch(3)
+             vmch(3) = vpch(3)
+          endif
+          if((myid1 == nproc1-1).and.(noib == 2)) then
+             bpch(iMax-2) = bmch(iMax-2)
+             vpch(iMax-2) = vmch(iMax-2)
+          endif
        endif
-       if((myid1 == nproc1-1).and.(noib == 2)) then
-          bpch(iMax-2) = bmch(iMax-2)
-          vpch(iMax-2) = vmch(iMax-2)
-       endif
-    endif
-
-
-    return
+    end if
 
   end subroutine xzc1d
 

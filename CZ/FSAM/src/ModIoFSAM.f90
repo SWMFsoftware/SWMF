@@ -394,7 +394,9 @@ contains
     
     fhandl = 13
     write(idout,'(I4.4)') ifile
-    if(present(DoWriteRestart).and.DoWriteRestart) write(idout,'(a3)') 'rst'
+    if(present(DoWriteRestart))then
+       if(DoWriteRestart) write(idout,'(a3)') 'rst'
+    end if
     call write_var_file(trim(v1file)//trim(idout)//'.dat', v1)
     call write_var_file(trim(v2file)//trim(idout)//'.dat', v2)
     call write_var_file(trim(v3file)//trim(idout)//'.dat', v3)
@@ -441,8 +443,9 @@ contains
                counter = 1+i-starts(1)-1 +(j-starts(2)-1)*subsizes(1) + &
                     (k-starts(3)-1)*subsizes(1)*subsizes(2)
                buf(counter) = var(i-myid1*(in-5),j-myid2*(jn-5),k)
-               if(present(DoPressure).and.DoPressure) buf(counter) = &
-                    buf(counter)/fact(i)
+               if(present(DoPressure))then
+                  if(DoPressure) buf(counter) = buf(counter)/fact(i)
+               end if
             enddo
          enddo
       enddo
