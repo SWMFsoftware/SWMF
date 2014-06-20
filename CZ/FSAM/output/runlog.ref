@@ -1,0 +1,129 @@
+------------------------ FSAM starts -------------------------- 
+ Running FSAM on    6 CPUs
+ inmax =  101 , jnmax =  101, knmax =  101
+ in =   37, jn =   53, kn =  101
+--------------------------------------------------------------- 
+ 
+ ------------------ read from gong.14b.14 --------------------
+  date and time     :Mon Jul 26 03:46:55 1993                                   
+  
+  trial model file  :/obs/jcd/tmp/gong/model/gong/july92/emdl.l4b.14.0          
+  
+  output model file :/obs/jcd/tmp/gong/model/gong/july92/emdl.l4b.14a           
+  
+  WD/GH interpolation in OPAL and Kurucz tables                                 
+  
+ nmod=           1
+ iform=          -2
+ nn=        1282
+ nrdtmd=         120
+ nidtmd=          30
+ ndtgng=          60
+ nvar=          30
+ nbccf=          48
+ gg=  6.672310000000000E-008
+ msol=  1.989000000000000E+033
+ r_sun=   69599035727.9456     
+ r_czb=   50257736505.7756     
+ rgas=   83170000.0000000     
+ sigma=  5.670000000000000E-005
+ lsol=  3.845999415477921E+033
+ hp_czb=   5587027671.14385     
+ d_czb=  0.170680926835524     
+ th_czb=   2161679.64944386     
+ gacc_czb=   51393.3386872299     
+ -----------------------------------------------------------
+ModReadParam::read_file: read and broadcast nLine=  49 lines of text
+ ovbvfq=  3.162277660168379E+049
+ref error=  0.620869080583684E+07, error=  0.220508350472725E-04
+ Solving Conduction Explicitly......................
+ref error=  0.620453407968949E+07, error=  0.212597443241713E-04
+ref error=  0.602602439378971E+07, error=  0.227992005642220E-04
+ Grid cell updates per CPU sec =  116469 at iteration =         1
+ref error=  0.602295034167903E+07, error=  0.222271493502954E-04
+ref error=  0.594112664094188E+07, error=  0.220546496566902E-04
+ Grid cell updates per CPU sec =  114378 at iteration =         2
+ref error=  0.593902953081488E+07, error=  0.224177458464543E-04
+ref error=  0.588415414165092E+07, error=  0.221638270604572E-04
+ Grid cell updates per CPU sec =  116176 at iteration =         3
+ref error=  0.588273677647759E+07, error=  0.220236904498631E-04
+ref error=  0.584096804172040E+07, error=  0.227547032916189E-04
+ Grid cell updates per CPU sec =  116735 at iteration =         4
+ref error=  0.584011087770286E+07, error=  0.226290718150570E-04
+ref error=  0.580625512268886E+07, error=  0.230540470469549E-04
+ Grid cell updates per CPU sec =  117001 at iteration =         5
+ref error=  0.580575256833844E+07, error=  0.229669807529393E-04
+ref error=  0.577725117191348E+07, error=  0.219507404243757E-04
+ Grid cell updates per CPU sec =  117755 at iteration =         6
+ref error=  0.577701982355523E+07, error=  0.228420652569757E-04
+ref error=  0.575232960012989E+07, error=  0.226772651809720E-04
+ Grid cell updates per CPU sec =  117987 at iteration =         7
+ref error=  0.575221291902503E+07, error=  0.219442368666598E-04
+ref error=  0.573043217083830E+07, error=  0.218864782391666E-04
+ Grid cell updates per CPU sec =  117885 at iteration =         8
+ref error=  0.573049169141575E+07, error=  0.223547583684969E-04
+ref error=  0.571103364937217E+07, error=  0.212238532416394E-04
+ Grid cell updates per CPU sec =  118056 at iteration =         9
+ref error=  0.571120318541022E+07, error=  0.227766874220810E-04
+ref error=  0.569362802146496E+07, error=  0.227903552972933E-04
+ Grid cell updates per CPU sec =  118517 at iteration =        10
+ref error=  0.569393808911609E+07, error=  0.227834462053692E-04
+ref error=  0.567791186744022E+07, error=  0.227802407905491E-04
+ Grid cell updates per CPU sec =  118226 at iteration =        11
+ref error=  0.567828629100884E+07, error=  0.222620930724315E-04
+ref error=  0.566352662318468E+07, error=  0.217867346477260E-04
+ Grid cell updates per CPU sec =  120243 at iteration =        12
+ref error=  0.566390453327443E+07, error=  0.231949048297561E-04
+ref error=  0.565020800354320E+07, error=  0.223364118569884E-04
+ Grid cell updates per CPU sec =  120667 at iteration =        13
+ref error=  0.565065351784036E+07, error=  0.218846443548519E-04
+ref error=  0.563788165126623E+07, error=  0.214782877057548E-04
+ Grid cell updates per CPU sec =  120789 at iteration =        14
+ref error=  0.563835359058339E+07, error=  0.220856236181861E-04
+ref error=  0.562640622909281E+07, error=  0.223943775064474E-04
+ Grid cell updates per CPU sec =  120524 at iteration =        15
+ref error=  0.562693618564813E+07, error=  0.222118413253552E-04
+ref error=  0.561574293397803E+07, error=  0.233332520774660E-04
+ Grid cell updates per CPU sec =  120732 at iteration =        16
+ref error=  0.561636072978589E+07, error=  0.221658831069378E-04
+ref error=  0.560587654515170E+07, error=  0.215254501017085E-04
+ Grid cell updates per CPU sec =  120985 at iteration =        17
+ref error=  0.560652748189129E+07, error=  0.218501647230429E-04
+ref error=  0.559657534757387E+07, error=  0.222601191237723E-04
+ Grid cell updates per CPU sec =  121045 at iteration =        18
+ref error=  0.559719923461443E+07, error=  0.221310889120543E-04
+ref error=  0.558778029626958E+07, error=  0.223800333515702E-04
+ Grid cell updates per CPU sec =  121067 at iteration =        19
+ref error=  0.558845555974417E+07, error=  0.225291936342515E-04
+ref error=  0.557951123698249E+07, error=  0.222289189176383E-04
+ Grid cell updates per CPU sec =  121114 at iteration =        20
+ref error=  0.558016632849827E+07, error=  0.231658480091147E-04
+ref error=  0.557164097613497E+07, error=  0.217463095207289E-04
+ Grid cell updates per CPU sec =  121130 at iteration =        21
+ref error=  0.557234266919385E+07, error=  0.221630738026880E-04
+ref error=  0.556423899138131E+07, error=  0.226666598422195E-04
+ Grid cell updates per CPU sec =  121190 at iteration =        22
+ref error=  0.556500616090782E+07, error=  0.227394244214467E-04
+ref error=  0.555731947543959E+07, error=  0.220325850192383E-04
+ Grid cell updates per CPU sec =  121233 at iteration =        23
+ref error=  0.555813841419036E+07, error=  0.214874608298483E-04
+ref error=  0.555076920493043E+07, error=  0.228506518839463E-04
+ Grid cell updates per CPU sec =  121218 at iteration =        24
+ref error=  0.555158094921283E+07, error=  0.225227104652360E-04
+ref error=  0.554451162947204E+07, error=  0.235505262289657E-04
+ Grid cell updates per CPU sec =  121293 at iteration =        25
+ref error=  0.554536059696439E+07, error=  0.216555221850655E-04
+ref error=  0.553858022079545E+07, error=  0.219874901074471E-04
+ Grid cell updates per CPU sec =  121389 at iteration =        26
+ref error=  0.553942912159518E+07, error=  0.223772578647926E-04
+ref error=  0.553288665408929E+07, error=  0.220019579545672E-04
+ Grid cell updates per CPU sec =  123456 at iteration =        27
+ref error=  0.553374653811899E+07, error=  0.221620007313880E-04
+ref error=  0.552745731332078E+07, error=  0.228549458753252E-04
+ Grid cell updates per CPU sec =  123228 at iteration =        28
+ref error=  0.552834933911243E+07, error=  0.218574905878746E-04
+ref error=  0.552230945313158E+07, error=  0.215130340419624E-04
+ Grid cell updates per CPU sec =  123648 at iteration =        29
+ref error=  0.552323245138502E+07, error=  0.219075598411222E-04
+ref error=  0.551739838532078E+07, error=  0.229880386886465E-04
+ Grid cell updates per CPU sec =  123705 at iteration =        30
