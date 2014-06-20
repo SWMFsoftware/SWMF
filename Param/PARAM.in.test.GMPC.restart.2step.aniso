@@ -1,0 +1,253 @@
+! Restart header for SWMF
+#INCLUDE
+RESTART.in		NameRestartFile
+
+#ECHO
+T
+
+#COMPONENT
+GM                      NameComp
+T                       UseComp
+
+#COMPONENT
+PC                      NameComp
+T                       UseComp
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#PROGRESS
+1			DnShowProgressShort
+1			DnShowProgressLong
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+! Restart header for GM
+#INCLUDE
+GM/restartIN/restart.H
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+ 1.30                  VersionUserModule
+
+#CHECKGRIDSIZE
+       8                              nI
+       8                              nJ
+       1                              nK
+     100                     MinBlockALL
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#PLASMA
+1.0             FluidMass [amu]
+1.0             IonCharge [e]  
+0.5             ElectronTemperatureRatio
+
+#NONCONSERVATIVE
+T               UseNonConservative
+
+#PIC
+T                       UsePic
+2                       nGhostPic
+0                       nOverlapPic
+F			UseFileCoupling
+
+#PICUNIT
+ 1.0                    xUnitPicSi
+ 1.0                    uUnitPicSi
+
+#PICREGION
+1                       nPicRegion
+-26.458333333           xMinCut
+ 26.458333333         	xMaxCut
+-19.791666667           yMinCut
+ 19.791666667	     	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
+#OUTERBOUNDARY
+periodic                TypeBcEast
+periodic                TypeBcWest
+periodic                TypeBcSouth
+periodic                TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+HALLRESISTIVITY
+T			UseHallResistFlux
+1.0			HallFactor
+0.0			HallCmaxFactor
+
+#TEST
+init_hall_resist	TestString
+
+#DIVBSOURCE
+F			UseB0Source
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc		TypeLimiter
+1.5		BetaLimiter
+
+RK
+3		nStage
+0.8		CflExpl
+
+#TIMESTEPPING
+2                       nStage
+0.8                     CflExpl
+
+#SAVERESTART
+T			DoSaveRestart
+2
+-1
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+
+#SAVEPLOT
+1
+z=0 var idl_ascii       StringPlot
+1			DnOutput
+-0.05			DtOutput
+0.			DxOutput
+rho mx my bx by p       NameVars
+g rbody			NamePars
+
+#END_COMP GM -----------------------------------------------------------------
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#CASE
+BATSRUS					Case
+./data/Initial-Fields_000000.h5		FieldsInit
+Maxwell					PartInit
+default					WriteMethod 
+no					PoissonCorrection
+Wave					SimulationName
+1					verbose
+hallmhd					fluidcoupling (only with BATSRUS)
+
+#RESTART
+T					doRrestart
+PC/restartIN				RestartDirName
+
+#NSYNC
+1					nStep between sync
+
+#PARAMS
+1.0					th = decentering parameter
+1.0					c  = light speed 
+0.5					Smooth
+0					nSmooth
+3.0					NpMaxNpRatio (Maximum number of particles allocated)
+0.5					delta
+
+#ELECTRON
+-25.0                                  Charge/mass ratio (qom)
+
+#PARTICLES
+10					Particles per cell in X
+10					Particles per cell in Y
+1					Particles per cell in Z
+
+#SOLVER
+1.0e-8				CGtol : CG solver stopping criterium tolerance
+1.0e-8 					GMREStol : GMRES solver stopping criterium tolerance
+3					NiterMover : mover predictor corrector iteration
+
+#SAVEPLOT
+PC/plots				SaveDirName
+1					FieldOutputCycle
+10000					ParticlesOutputCycle
+2					RestartOutputCycle
+1					DiagnosticsOutputCycle
+0					FieldOutputCycleASCII
+
+%%%%%%%%%%%% boundary conditions %%%%%%%%%%%%%%%
+
+    Caveat: if your processor topology is set to be periodic in a direction,
+    automatically the boundary condition in that direction will be periodic
+
+
+    PHI Electrostatic Potential
+    0,1 = Dirichilet boundary condition ;
+    2   = Neumann boundary condition
+
+    EM field boundary condition
+    0 = perfect conductor
+    1 = magnetic mirror
+
+    Particles Boundary condition
+    0 = exit
+    1 = perfect mirror
+    2 = riemission
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#BC
+1					bcPHIfaceXright
+1					bcPHIfaceXleft
+1					bcPHIfaceYright
+1					bcPHIfaceYleft
+1					bcPHIfaceZright
+1					bcPHIfaceZleft 
+2					bcEMfaceXright
+2					bcEMfaceXleft
+2					bcEMfaceYright
+2					bcEMfaceYleft
+2					bcEMfaceZright
+2					bcEMfaceZleft
+2					bcPfaceXright
+2					bcPfaceXlef
+2					bcPfaceYright
+2					bcPfaceYleft
+2					bcPfaceZright
+2					bcPfaceZleft
+0					nOverlap  (Only with BATSRUS)
+0					nOverlapP (Only with BATSRUS)
+10					nCharge   (Only with BATSRUS)
+-1					nIsotropic  (Only with BATSRUS)
+
+#END_COMP PC -----------------------------------------------------------------
+
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+1                       DnCouple
+1.28                    Dtcouple
+
+#DESCRIPTION
+Run GM and IE in time accurate mode
+
+
+#SAVERESTART
+T                       DoSaveRestart 
+2                       DnSaveRestart 
+5.12                    DtSaveRestart
+
+
+#IDEALAXES
+! align rotation and magnetic axes with z axis
+
+#ROTATION
+F			UseRotation
+
+#STOP
+-8			MaxIter
+5.12			TimeMax
+
+
