@@ -3,12 +3,6 @@ include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
 
-LIBFISH = -L../input -lfishpak 
-
-EXTRA = -fp-model strict
-CFLAGS = ${Cflag3} ${EXTRA}
-FFLAGS = ${Lflag1} ${OPT3} ${EXTRA}
-
 MODULES = \
 	ModFSAM.o \
 	ModPar.o \
@@ -33,7 +27,8 @@ MODULES = \
 	ModRHS.o \
 	ModIteration.o \
 	ModUserSetup.o \
-	ModInitialization.o 
+	ModInitialization.o \
+	ModFish.o
 
 OBJ = main.o
 
@@ -46,13 +41,13 @@ $(OBJ): ${MODULES} ${LIBSHARE}
 
 EXE = xfsam.exe
 
-.f90.o:
-	${COMPILE.f90} ${CFLAGS} ${LIBFISH} $<
-
-xfsam: $(OBJ)
-	${LINK.f90} $(FFLAGS) -o ${EXE} $(OBJ) $(MODULES) ${LIBFISH} \
-		-L${LIBDIR} -L${SHAREDIR} -lSHARE
+xfsam: DEPEND
+	make EXE
 	@echo "xfsam.exe has been created"
+
+EXE: $(OBJ)
+	${LINK.f90} $(FFLAGS) -o ${EXE} $(OBJ) $(MODULES) ${LIBFISH} \
+		-L${LIBDIR} -L${SHAREDIR} -lSHARE ${Lflag1}
 
 MY_LIB = libFSAM.a
 
