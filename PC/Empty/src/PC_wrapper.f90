@@ -52,9 +52,6 @@ contains
 
   subroutine PC_finilize_init_session
 
-    !INPUT PARAMETERS:
-    integer,  intent(in) :: iSession         ! session number (starting from 1)
-    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PC_finilize_init_session'
     !--------------------------------------------------------------------------
@@ -66,6 +63,10 @@ contains
   !============================================================================
 
   subroutine PC_init_session(iSession, TimeSimulation)
+
+    !INPUT PARAMETERS:
+    integer,  intent(in) :: iSession         ! session number (starting from 1)
+    real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='PC_init_session'
 
