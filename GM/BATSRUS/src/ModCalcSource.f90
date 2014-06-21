@@ -34,8 +34,7 @@ contains
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
     use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
-         apportion_coronal_heating, UseTurbulentCascade, &
-         UseWaveReflection, get_wave_reflection
+         apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
@@ -241,9 +240,7 @@ contains
                + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
        end do; end do; end do
 
-       if(UseTurbulentCascade)then
-          if(UseWaveReflection) call get_wave_reflection(iBlock)
-       end if ! UseTurbulentCascade
+       if(UseTurbulentCascade) call get_wave_reflection(iBlock)
     end if
 
     if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &

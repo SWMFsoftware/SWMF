@@ -1367,8 +1367,7 @@ contains
     real, intent(out)   :: WaveDissipation_V(WaveFirst_:WaveLast_), &
          CoronalHeating
 
-    real :: FullB_D(3), FullB, Rho, Coef
-    real :: ReflectionRate, GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
+    real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus
 
     character(len=*), parameter :: &
@@ -1389,29 +1388,8 @@ contains
     EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
     EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
 
-    if(UseWaveReflection)then
-       WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
-       WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
-    else
-       b_D = FullB_D/max(1e-15, FullB)
-       Rho = State_VGB(Rho_,i,j,k,iBlock)
-
-       call get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
-
-       call get_curl_u(i, j, k, iBlock, CurlU_D)
-
-       ! Reflection rate driven by Alfven speed gradient and
-       ! vorticity along the field lines
-       ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
-            + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
-
-       ! Local dissipation of Alfven waves.
-       ! Correct at top of closed field lines, where turbulence is balanced
-       WaveDissipation_V(WaveFirst_) = &
-            max(ReflectionRate, Coef*sqrt(EwaveMinus))*EwavePlus
-       WaveDissipation_V(WaveLast_) = &
-            max(ReflectionRate, Coef*sqrt(EwavePlus))*EwaveMinus
-    end if
+    WaveDissipation_V(WaveFirst_) = Coef*sqrt(EwaveMinus)*EwavePlus
+    WaveDissipation_V(WaveLast_) = Coef*sqrt(EwavePlus)*EwaveMinus
 
     CoronalHeating = sum(WaveDissipation_V)
 
