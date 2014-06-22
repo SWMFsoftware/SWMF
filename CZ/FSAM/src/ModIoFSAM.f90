@@ -253,7 +253,8 @@ contains
     implicit none
     
     character(len=20) :: varfile
-    integer(kind=MPI_OFFSET_KIND) :: disp
+!    integer(kind=MPI_OFFSET_KIND) :: disp
+    integer:: disp
     real, allocatable :: buf(:,:,:)
     integer :: filetype, fileinfo, fhandl, mysize, ierr, starts(1:3)
     integer, parameter, dimension(1:3) :: sizes = (/ inmax-1, jnmax-1, knmax-1 /), &
@@ -415,7 +416,8 @@ contains
       real,             intent(in) :: var(1:in,1:jn,1:kn)
       logical, optional,intent(in) :: DoPressure
       
-      integer(kind=MPI_OFFSET_KIND) :: disp
+!      integer(kind=MPI_OFFSET_KIND) :: disp
+      integer :: disp
       integer :: mpi_status(MPI_STATUS_SIZE), i, j, k, counter, mysize, nByteInquireUnit
       real, allocatable :: buf(:)
       !--------------------------------------------------------------------------------
