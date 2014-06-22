@@ -1360,7 +1360,7 @@ test12_iso_rundir:
 
 test12_iso_check:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 -a=5e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 -a=1e-7 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_all_1_t00000004_n00000005.out \
 		 output/test12/z=0_all.out.ref.iso\
 		> test12_gmpc_iso.diff)
