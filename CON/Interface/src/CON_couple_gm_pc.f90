@@ -21,8 +21,6 @@ module CON_couple_gm_pc
   use GM_wrapper
   use PC_wrapper
 
-  use ModMpi
-
   implicit none
   save
 
@@ -48,7 +46,8 @@ contains
   !INTERFACE:
   subroutine couple_gm_pc_init
 
-    integer:: iError, iCommWorld, iStatus_I(MPI_STATUS_SIZE)
+    use CON_transfer_data, ONLY: transfer_integer_array, transfer_real_array
+
     !integer:: nDimPt
 
     logical :: DoTest, DoTestMe
@@ -67,15 +66,12 @@ contains
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    iCommWorld = i_comm()
-
     ! Initialize point couplers
 
     CouplerGMtoPC%iCompSource = GM_
     CouplerGMtoPC%iCompTarget = PC_
     CouplerGMtoPC%NameVar     = Grid_C(GM_)%NameVar
     CouplerGMtoPC%nVar        = Grid_C(GM_)%nVar
-    CouplerGMtoPC%nDim        = iParam_I(3)
 
     call couple_points_init(CouplerGMtoPC)
 
@@ -83,50 +79,29 @@ contains
     CouplerPCtoGM%iCompTarget = GM_
     CouplerPCtoGM%NameVar     = Grid_C(GM_)%NameVar
     CouplerPCtoGM%nVar        = Grid_C(GM_)%nVar
-    CouplerPCtoGM%nDim        = iParam_I(3)
 
     call couple_points_init(CouplerPCtoGM)
 
+    if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
+
     ! Get the integer parameters. The 0 is the size of real params for now.
     if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, 0)
-
-    if(.not. CouplerGMtoPC%IsSameLayout)then
-       if(i_proc0(GM_) /= i_proc0(PC_)) then
-          if(is_proc0(GM_)) call MPI_send( &
-               iParam_I, 4, MPI_INTEGER, i_proc0(PC_),&
-               1001, iCommWorld, iError)
-          if(is_proc0(PC_)) call MPI_recv( &
-               iParam_I, 4, MPI_INTEGER, i_proc0(GM_),&
-               1001, iCommWorld, iStatus_I, iError)
-       end if
-       if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
-            iParam_I, 4, MPI_INTEGER, 0, i_comm(PC_),iError)
-    end if
+    call transfer_integer_array(GM_, PC_, iParam_I, &
+         UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
     ! n = number of species *3 (mass, charge, temrature ratio)
     !     + numerb of dimentions * 9 ( xmin, xmax, dx ) for y and z also
     !     + 3 ( Lnorm, Unorm, Mnorm) 
     n = iParam_I(1)*3 + iParam_I(2)*9 + 3
+
     allocate(ParamReal_I(n))
 
     ! Transfer real parameters from GM to PC
     if(is_proc(GM_)) &
          call GM_get_for_pc_init(iParam_I, n, ParamReal_I)
 
-    if(.not. CouplerGMtoPC%IsSameLayout)then
-       if(i_proc0(GM_) /= i_proc0(PC_)) then
-          if(is_proc0(GM_)) call MPI_send( &
-               ParamReal_I, n, MPI_REAL, i_proc0(PC_),&
-               1002, iCommWorld, iError)
-
-          if(is_proc0(PC_)) call MPI_recv( &
-               ParamReal_I, n, MPI_REAL, i_proc0(GM_),&
-               1002, iCommWorld, iStatus_I, iError)
-
-       end if
-       if(n_proc(PC_) > 1 .and. is_proc(PC_)) call MPI_bcast( &
-            ParamReal_I, n, MPI_REAL, 0, i_comm(PC_),iError)
-    end if
+    call transfer_real_array(GM_, PC_, ParamReal_I, &
+         UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
     if(is_proc(PC_)) &
          call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
@@ -136,22 +111,18 @@ contains
   !=======================================================================
   subroutine couple_gm_pc(tSimulation)
 
+    use CON_transfer_data, ONLY: transfer_real
+
     !INPUT ARGUMENT:
     real, intent(in) :: tSimulation
 
-    ! Grid index
-
-    integer:: iError
+    ! BATSRUS time step in SI units. Keeps changing.
+    real:: DtSi
 
     logical :: DoTest, DoTestMe
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_gm_pc'
-
-    integer :: iStatus_I(MPI_STATUS_SIZE)
-
-    ! Time step in SI units. Keeps changing 
-    real    :: DtSi
     !-------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -161,31 +132,9 @@ contains
     call couple_points(CouplerGMtoPC, GM_get_grid_info, GM_find_points, &
          GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
 
-    ! Transfer time step from GM to PC
-    if(CouplerGMtoPC%IsSameLayout)then
-       call GM_get_for_pc_dt(DtSi)
-       call PC_put_from_gm_dt(DtSi)
-    else
-       if(is_proc0(GM_)) then
-          call GM_get_for_pc_dt(DtSi)
-
-          if(i_proc0(GM_) /= i_proc0(PC_))then
-             if(is_proc0(GM_)) call MPI_send( &
-                  DtSi, 1, MPI_REAL, i_proc0(PC_), &
-                  1003, i_comm(), iError)
-             if(is_proc0(PC_)) call MPI_recv( &
-                  DtSi, 1, MPI_REAL, i_proc0(GM_), &
-                  1003, i_comm(), iStatus_I, iError)
-          end if
-
-       end if
-
-       if(is_proc(PC_))then
-          if(n_proc(PC_) > 1) call MPI_bcast( &
-               DtSi, 1, MPI_REAL, 0, i_comm(PC_),iError)
-          call PC_put_from_gm_dt(DtSi)
-       end if
-    end if
+    if(is_proc(GM_)) call GM_get_for_pc_dt(DtSi)
+    call transfer_real(GM_,PC_,DtSi)
+    if(is_proc(PC_)) call PC_put_from_gm_dt(DtSi)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
