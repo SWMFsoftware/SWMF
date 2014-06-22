@@ -19,7 +19,8 @@ MODULES = \
 	CON_buffer_grid.o\
 	CON_test_global_message_pass.o\
 	CON_coupler.o\
-	CON_couple_points.o
+	CON_couple_points.o\
+	CON_transfer_data.o
 
 SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR}
 
