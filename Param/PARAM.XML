@@ -351,6 +351,31 @@ usually defined as the string parameter 'NameSub'.
 Default is an empty string.
 </command>
 
+<command name="TESTPROC">
+	<parameter name="iProcTest" type="integer" min="0" default="0"/>
+
+#TESTPROC
+1			iProcTest
+
+The test information will be written from iProcTest when DoTestMe is used
+in the SWMF. Default value is 0.
+</command>
+
+<command name="TESTTIME">
+	<parameter name="nIterStartTest" type="integer" min="-1" 
+		   			 		default="-1"/>
+	<parameter name="tStartTest" type="real" min="-1"
+							default="-1"/>
+
+#TESTTIME
+10			nIterStartTest
+5.0			tStartTest
+
+The test information will be written if the number of iterations 
+exceed nIterStartTest or time exceeds tStarTest (in time accurate
+mode). Default value is -1 for both.
+</command>
+
 <command name="VERBOSE">
 	<parameter name="iVarTest" type="integer" input="select">
 		<option name="errors and warnings only" value="0" />
@@ -595,8 +620,8 @@ The default is DnRun = 1 for all the active components.
 	<for name="iCouple" from="1" to="$nCouple">
 		<parameter name="NameSourceTarget" type="string"
 							input="select">
-			<option name="LC SC" default="$iCouple==1" />
-			<option name="SC LC" default="$iCouple==2" />
+                        <option name="EE SC" default="$iCouple==1" />
+                        <option name="SC EE" default="$iCouple==2" />
 			<option name="SC IH" default="$iCouple==3" />
 			<option name="IH SC" default="$iCouple==4" />
 			<option name="SC SP" default="$iCouple==5" />
@@ -607,8 +632,6 @@ The default is DnRun = 1 for all the active components.
 			<option name="GM PW" default="$iCouple==10" />
                         <option name="GM RB" default="$iCouple==11" />
                         <option name="UA IE" default="$iCouple==12" />
-                        <option name="UA LA" default="$iCouple==13" />
-                        <option name="LA UA" default="$iCouple==14" />
                         <option name="IM GM" default="$iCouple==15" />
                         <option name="IM IE" default="$iCouple==16" />
 			<option name="PW GM" default="$iCouple==17" />
