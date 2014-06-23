@@ -14,6 +14,8 @@ sorted by blocks.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Main}
 
+The section should start with {\tt \#main} and finish with {\tt \#endmain}. 
+
 \begin{itemize}
 
 \item {\bf SpeciesList}
@@ -24,11 +26,11 @@ be the same as they are used in the source code. \\
 
 \item {\bf makefile}
 
-Introduces changes in the Makefile.\\
+Obsolete but still can be used. Introduces changes in the Makefile.\\
 {\tt makefile MPIRUN=mpirun -np 16}\\
 {\tt makefile SPICE=/Users/MyUser/MySpiceFolder}
 
-\item {\bf ForceRepeatableSimulationPath}
+\item {\bf ForceRepeatableSimulationPath} \\ Force AMPS to run a repeatable calculations by disabling all code optimizations/procedures that are executed based on the actual execution time \\ {\tt ForceRepeatableSimulationPath=on} \\ {\tt  ForceRepeatableSimulationPath=off}  
 
 \item {\bf DebuggerMode}
 
@@ -61,7 +63,7 @@ to avoid deletion of source code files!)\\
 
 \item {\bf TrajectoryIntersectionWithBlockFaces}
 
-\item {\bf StdOutErrorLog}
+\item {\bf StdOutErrorLog} \\ Switch (on/off) that controls output of the error messages on screen
 
 \item {\bf TimeStepMode}
 
@@ -90,14 +92,11 @@ Switches ON/OFF.
 Name of the file to write error information to.
 \\{\tt ErrorLog=error.log}
 
-\item {\bf Prefix}
+\item {\bf Prefix} \\ The prefix used for on screen output of AMPS  \\ {\tt Prefix=AMPS}
 
-\item {\bf DiagnosticStream}
+\item {\bf DiagnosticStream} \\ The location of the diagnostic information output. The run-time diagnostic can be printed either on screen or in a file: \\  {\tt DiagnosticStream=amps.log} \\ {\tt DiagnosticStream=screen }  
 
-\item {\bf OutputDirectory}
-
-Name of the folder to write results to.
-\\{\tt OutputDirectory=out}
+\item {\bf OutputDirectory} Name of the folder to write results to. \\ {\tt OutputDirectory=out}
 
 
 \end{itemize}
@@ -105,9 +104,39 @@ Name of the folder to write results to.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section {Species}
 
+The file contains database of the physical parameters of the model species. During compilation the configuration script extract the parameters only of the species used in the current model runs.
+
+The file must begin with {\tt \#species} and ends with {\tt \#endspecies}. The following are other commands 
+
+\begin{itemize}
+
+\item {\bf \#component} \\ Defines the symbolic name for the specie \\{\tt \#component=O}
+\item {\bf mass} \\ The molecule/atom mass [kg] \\ {\tt mass=16*\_ AMU \_} 
+\item {\bf charge} \\ Electric charge [e] \\ {\tt charge=0}
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Include}
+
+Parts of the input parameters can be stored in separate files and included when the code is compiling using command {\tt \#include}. 
+
+Example {\tt \#include species.input}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{UserDefinitions}
+Obsolete but still can be used. Execution of AMPS can be controlled through files "UserDefinition.Exosphere.h", "UserDefinition.meshAMR.h", "UserDefinition.PIC.h", and "UserDefinition.PIC.PhysicalModelHeaderList.h" that contains some settings of the model.
+
+The switch determines which of the files will be included into the sources of AMPS during compiling.
+
+\begin{itemize}
+\item {\bf Mesh} = [On/Off]
+\item {\bf PIC} = [On/Off]
+\end{itemize}
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
