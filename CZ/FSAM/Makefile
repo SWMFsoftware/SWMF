@@ -5,11 +5,13 @@ include Makefile.def
 help:
 	@echo Makefile targets:
 	@echo 
-	@echo 'make                          		- compile xfsam.exe'
-	@echo 'make LIB 				- compile LibCZ.a for SWMF'
-	@echo 'make run 	                        - create run directory'
-	@echo 'make test 				- test FSAM in stand alone mode'
-	@echo 'make clean				- remove object files'
+	@echo 'make            - compile xfsam.exe'
+	@echo 'make install    - install FSAM'
+	@echo 'make LIB        - compile libCZ.a for SWMF'
+	@echo 'make rundir     - create run directory'
+	@echo 'make test       - test FSAM in stand alone mode'
+	@echo 'make clean      - remove object files'
+	@echo 'make distclean  - uninstall FSAM'
 	@echo
 
 INSTALLFILES =  src/Makefile.DEPEND \
@@ -18,19 +20,20 @@ INSTALLFILES =  src/Makefile.DEPEND \
 
 install: 
 	touch ${INSTALLFILES}
+	cp srcProblem/ModUserSetup.test.f90 src/ModUserSetup.f90
+	cp srcProblem/ModPar.test.f90 src/ModPar.f90
 
 xfsam:
-	cd ${SHAREDIR};      make LIB
-	cd ${UTILDIR};       make install
-	cd src; 	     make xfsam
+	cd ${SHAREDIR}; $(MAKE) LIB
+	cd ${UTILDIR};  $(MAKE) install
+	cd src; 	$(MAKE) xfsam
 
 nompirun: xfsam
 	cd ${RUNDIR}; ./xfsam.exe
 
 LIB:	
-	cd ${UTILDIR};   make install
-	cd src; make LIB
-	cd srcInterface; make LIB
+	cd src; $(MAKE) LIB
+	cd srcInterface; $(MAKE) LIB
 
 # default problem
 PROBS=test
@@ -67,7 +70,7 @@ test_compile:
 	rm -f src/xfsam.exe
 	cp srcProblem/ModUserSetup.test.f90 src/ModUserSetup.f90;
 	cp srcProblem/ModPar.test.f90 src/ModPar.f90;
-	make xfsam
+	$(MAKE) xfsam
 
 test_rundir:
 	rm -rf ${TESTDIR}
@@ -94,11 +97,14 @@ clean:
 	@touch ${INSTALLFILES}
 	cd src; $(MAKE) clean
 	cd srcInterface; $(MAKE) clean
+	@(if [ -d util  ]; then cd util;  $(MAKE) clean; fi);
+	@(if [ -d share ]; then cd share; $(MAKE) clean; fi);
 
-distclean: clean
+distclean:
+	./Config.pl -uninstall
+
+allclean:
 	@touch ${INSTALLFILES}
-	cd src; make distclean
-	cd srcInterface; make distclean
+	cd src; $(MAKE) distclean
+	cd srcInterface; $(MAKE) distclean
 	rm -f *~
-
-allclean: distclean
