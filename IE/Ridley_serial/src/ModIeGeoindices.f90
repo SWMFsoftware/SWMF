@@ -67,15 +67,15 @@ contains
   subroutine get_index_mags(MagOut_DI)
     ! Obtain index-related magnetometer data to pass to BATS-R-US.
     use ModIonoMagPerturb, ONLY: iono_mag_perturb
-    use ModProcIE,         ONLY: iProc, nProc, iComm
+    use ModProcIE,         ONLY: nProc, iComm
     use ModMpi
 
     real, intent(out) :: MagOut_DI(3,nIndexMag) ! Mag B in NED coordinates.
 
-    integer:: i, nTmpMag, iError
+    integer:: i, iError
     real, dimension(3,nIndexMag) :: &
          XyzSmg_DI, MagPerturbJh_DI, MagPerturbJp_DI, &
-         MagPertTotal_DI, MagSum_DI
+         MagPertTotal_DI
 
     character(len=*), parameter :: NameSub='get_index_mags'
     logical :: DoTest, DoTestMe
@@ -107,15 +107,11 @@ contains
     MagPertTotal_DI = MagPerturbJh_DI + MagPerturbJp_DI
 
     ! Collect the variables from all the PEs
-    MagOut_DI=0.0
-    MagSum_DI=0.0
     if(nProc>1)then 
-       call MPI_reduce(MagPertTotal_DI, MagSum_DI, 3*nIndexMag, &
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0) MagOut_DI = MagSum_DI
-       call MPI_bcast(MagOut_DI, 3*nIndexMag, MPI_REAL,0,iComm,iError)
+       call MPI_allreduce(MagPertTotal_DI, MagOut_DI, 3*nIndexMag, &
+            MPI_REAL, MPI_SUM, iComm, iError)
     else
-       MagOut_DI=MagPertTotal_DI
+       MagOut_DI = MagPertTotal_DI
     end if
 
   end subroutine get_index_mags
