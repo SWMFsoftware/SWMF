@@ -55,9 +55,9 @@ contains
 
     ! iParam_I gives the information to allocate ParamReal_I
     ! needed for seting up the grid and particle constants
-    integer :: iParam_I(4)
-    real, pointer, dimension(:) :: ParamReal_I
-
+    integer, parameter:: nParam = 4
+    integer :: iParam_I(nParam)
+    real, allocatable :: ParamReal_I(:)
     integer :: n
 
     !DESCRIPTION:
@@ -86,25 +86,24 @@ contains
 
     ! Get the integer parameters. The 0 is the size of real params for now.
     if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, 0)
-    call transfer_integer_array(GM_, PC_, iParam_I, &
+    call transfer_integer_array(GM_, PC_, nParam, iParam_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    ! n = number of species *3 (mass, charge, temrature ratio)
-    !     + numerb of dimentions * 9 ( xmin, xmax, dx ) for y and z also
+    ! n = number of species * 3 (mass, charge, temperature ratio)
+    !     + number of dimensions * 9 (xmin, xmax, dx) for y and z also
     !     + 3 ( Lnorm, Unorm, Mnorm) 
     n = iParam_I(1)*3 + iParam_I(2)*9 + 3
-
     allocate(ParamReal_I(n))
 
     ! Transfer real parameters from GM to PC
-    if(is_proc(GM_)) &
-         call GM_get_for_pc_init(iParam_I, n, ParamReal_I)
+    if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, n, ParamReal_I)
 
-    call transfer_real_array(GM_, PC_, ParamReal_I, &
+    call transfer_real_array(GM_, PC_, n, ParamReal_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    if(is_proc(PC_)) &
-         call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
+    if(is_proc(PC_))call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
+
+    deallocate(ParamReal_I)
 
   end subroutine couple_gm_pc_init
 
