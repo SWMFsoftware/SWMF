@@ -3,27 +3,37 @@ module CON_transfer_data
   ! Transfer scalar or array of integers, reals or logicals 
   ! between two components.
   !
-  ! Usage:
+  ! Examples of usage:
   !
-  ! Transfer data that is available (and the same) on all source processors
+  ! Transfer a scalar of type integer that 
+  ! is available from all source processors and needed on all target processors:
   !
-  !    if(is_proc(Source_) call get_data_from_source_comp(Data)
-  !    call transfer_datatype(Source_, Target_, Data, 
-  !                       UseSourceRootOnly=..., UseTargetRootOnly)
-  !    if(is_proc(Target_) call put_data_into_target_comp(Data)
+  !    if(is_proc(Source_) call get_data_from_source_comp(iData)
+  !    call transfer_integer(Source_, Target_, iData, 
+  !               UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+  !    if(is_proc(Target_) call put_data_into_target_comp(iData)
   !
-  ! The data may be of type integer, real, or logical; scalar or array.
+  ! Transfer a 2D array of type real that involves all source processors, but
+  ! the result is available from source root only and needed on root target only:
+  !
+  !    allocate(Data_II(iSize,jSize))
+  !    if(is_proc(Source_) call get_data_from_source_comp(Data_II)
+  !    call transfer_real_array(Source_, Target_, iSize*jSize, Data_II, 
+  !                       UseSourceRootOnly=.true., UseTargetRootOnly=.true.)
+  !    if(is_proc0(Target_) call put_data_into_target_comp(Data_II)
+  !    deallocate(Data_II)
   !
   ! The optional UseSourceRootOnly and UseTargetOnly parameters indicate
-  ! if the Data is availale/needed only on the Source/Target root processor.
+  ! if the data is availale/needed only on the Source/Target root processor.
   ! The default is the worst case scenario, i.e.:
   !
   !   UseSourceRootOnly = .true.  (data is only avaialable on the source root) 
   !   UseTargetRootOnly = .false. (data is needed on all target processors)
   !
-  ! Setting these logicals to different vacan reduce the required communication
+  ! Setting these logicals to non-default values can reduce the communication.
 
   use ModMpi
+  use CON_comp_param, ONLY: NameComp_I
   use CON_world
 
   implicit none
@@ -31,36 +41,141 @@ module CON_transfer_data
   private ! except
   
   public:: transfer_integer
-  public:: transfer_real
   public:: transfer_integer_array
+  public:: transfer_real
   public:: transfer_real_array
 
   ! Local variables
   integer:: iStatus_I(MPI_STATUS_SIZE)
   integer:: iError
 
+  logical:: DoRootTransfer    ! transfer data from Source Root to Target Root?
+  logical:: DoTargetBroadcast ! broadcast data from Target Root to Target procs
+
 contains
 
   !===========================================================================
-  subroutine transfer_integer_array(&
-       iCompSource, iCompTarget, iData_I, UseSourceRootOnly, UseTargetRootOnly)
+
+  subroutine transfer_data_action(DoTest, iCompSource, iCompTarget, &
+       UseSourceRootOnlyIn, UseTargetRootOnlyIn)
+
+    ! Set DoRootTransfer and DoTargetBroadcast logicals as needed
+
+    logical, intent(in):: DoTest
+    integer, intent(in):: iCompSource, iCompTarget
+    logical, optional, intent(in):: UseSourceRootOnlyIn, UseTargetRootOnlyIn
+
+    integer:: iProc0Source, iProc0Target
+    logical:: UseSourceRootOnly, UseTargetRootOnly
+
+    character(len=*), parameter:: NameSub = 'transfer_data_action'
+    !-------------------------------------------------------------------------
+    ! Default values are the worst case scenario
+    UseSourceRootOnly = .true.
+    UseTargetRootOnly = .false.
+
+    if(present(UseSourceRootOnlyIn)) UseSourceRootOnly = UseSourceRootOnlyIn
+    if(present(UseTargetRootOnlyIn)) UseTargetRootOnly = UseTargetRootOnlyIn
+
+    iProc0Source = i_proc0(iCompSource)
+    iProc0Target = i_proc0(iCompTarget)
+
+    if(DoTest)then
+       write(*,*) NameSub,' starting for source, target=', &
+            NameComp_I(iCompSource),', ',NameComp_I(iCompTarget)
+       write(*,*) NameSub, &
+            ': UseSourceRootOnly, UseTargetRootOnly, iProc0Source, iProc0Target=',&
+            UseSourceRootOnly, UseTargetRootOnly, iProc0Source, iProc0Target
+    end if
+
+    ! transfer is ususally needed if source and target roots are different.
+    DoRootTransfer = iProc0Source /= iProc0Target
+
+    if(DoTest)write(*,*) NameSub,': initial DoRootTransfer=', DoRootTransfer
+
+
+    ! If data is available on all source processors then
+    ! check if target root is among them
+    if(.not.UseSourceRootOnly .and. iProc0Target > iProc0Source)then
+       DoRootTransfer = iProc0Target > i_proc_last(iCompSource) .or. &
+            modulo(iProc0Target-iProc0Source, i_proc_stride(iCompSource)) /= 0
+
+       if(DoTest)then
+          write(*,*) NameSub,': i_proc_last(Source)=', i_proc_last(iCompSource)
+          write(*,*) NameSub,': modulo(DnProc0,StrideSource)=', &
+               modulo(iProc0Target-iProc0Source, i_proc_stride(iCompSource))
+          write(*,*) NameSub,': final DoRootTransfer=', DoRootTransfer
+       end if
+    end if
+
+    ! Check if broadcast on target is needed
+    DoTargetBroadcast = n_proc(iCompTarget) > 1 .and. .not.UseTargetRootOnly
+
+    if(DoTest)write(*,*)NameSub,': initial DoTargetBroadcast=', DoTargetBroadcast
+
+    ! If there is no need to broadcast, we are done
+    if(.not.DoTargetBroadcast) RETURN
+
+    ! Only target processors may take part in the MPI broadcast
+    if(.not.is_proc(iCompTarget))then
+       if(DoTest)write(*,*)NameSub,': not a target proc, set DoTargetBroadcast=F'
+       DoTargetBroadcast = .false.
+       RETURN
+    end if
+
+    ! If only the source root has the data, broadcast is unavoidable
+    if(UseSourceRootOnly) RETURN
+
+    ! If the target root was not covered by source, it is unlikely 
+    ! that the other target processors are all covered by source
+    if(DoRootTransfer) RETURN
+
+    ! Since DoRootTransfer is false, the target root is covered by source.
+    ! Check if the last target processor is within the range of source procs,
+    ! and the stride of target is an integer multiple of the stride of source.
+
+    DoTargetBroadcast = &
+         i_proc_last(iCompTarget) > i_proc_last(iCompSource) .or. &
+         modulo(i_proc_stride(iCompTarget), i_proc_stride(iCompSource)) /= 0
+
+    if(DoTest)then
+       write(*,*)NameSub,': i_proc_last(Source)=', i_proc_last(iCompSource)
+       write(*,*)NameSub,': i_proc_last(Target)=', i_proc_last(iCompTarget)
+       write(*,*)NameSub,': modulo(stride(Target),stride(Source))=', &
+            modulo(i_proc_stride(iCompTarget), i_proc_stride(iCompSource))
+       write(*,*)NameSub,': final DoTargetBroadcast=', DoTargetBroadcast
+       
+    end if
+
+  end subroutine transfer_data_action
+
+  !===========================================================================
+  subroutine transfer_integer_array(iCompSource, iCompTarget, nData, iData_I, &
+       UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
+    integer, intent(in):: nData
     integer, intent(inout):: iData_I(:)
 
     logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
 
-    integer:: nData
-    logical:: DoBcast
-
     integer, parameter:: iTag = 1001
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'transfer_integer'
     !-------------------------------------------------------------------------
-    nData = size(iData_I)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! Default is UseSourceRootOnly = .true., so we check source root
+    call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
+         UseSourceRootOnly, UseTargetRootOnly)
 
-    ! If the root processors are different send the data to target
-    if(i_proc0(iCompSource) /= i_proc0(iCompTarget))then
+    if(DoTestMe)then
+       write(*,*) NameSub,': DoRootTransfer, DoTargetBroadcast=', &
+            DoRootTransfer, DoTargetBroadcast
+       call CON_stop('DEBUG')
+    end if
+
+    if(DoRootTransfer)then
        if(is_proc0(iCompSource)) call MPI_send( &
             iData_I, nData, MPI_INTEGER, i_proc0(iCompTarget),&
             iTag, i_comm(), iError)
@@ -69,64 +184,15 @@ contains
             iTag, i_comm(), iStatus_I, iError)
     end if
 
-    if(n_proc(iCompTarget) == 1) RETURN
-
-    ! Default is UseTargetRootOnly = .false., so we do a broadcast
-    if(present(UseTargetRootOnly))then
-       if(UseTargetRootOnly) RETURN
-    end if
-
-    if(is_proc(iCompTarget)) call MPI_bcast( &
+    if(DoTargetBroadcast) call MPI_bcast( &
          iData_I, nData, MPI_INTEGER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_integer_array
 
-
   !===========================================================================
 
-  subroutine transfer_real_array(&
-       iCompSource, iCompTarget, Data_I, UseSourceRootOnly, UseTargetRootOnly)
-
-    integer, intent(in):: iCompSource, iCompTarget
-    real, intent(inout):: Data_I(:)
-
-    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
-
-    integer:: nData
-    logical:: DoBcast
-
-    integer, parameter:: iTag = 1002
-    !-------------------------------------------------------------------------
-    nData = size(Data_I)
-
-    ! Default is UseSourceRootOnly = .true., so we check source root
-
-    ! If the root processors are different send the data to target
-    if(i_proc0(iCompSource) /= i_proc0(iCompTarget))then
-       if(is_proc0(iCompSource)) call MPI_send( &
-            Data_I, nData, MPI_REAL, i_proc0(iCompTarget),&
-            iTag, i_comm(), iError)
-       if(is_proc0(iCompTarget)) call MPI_recv( &
-            Data_I, nData, MPI_REAL, i_proc0(iCompSource),&
-            iTag, i_comm(), iStatus_I, iError)
-    end if
-
-    if(n_proc(iCompTarget) == 1) RETURN
-
-    ! Default is UseTargetRootOnly = .false., so we do a broadcast
-    if(present(UseTargetRootOnly))then
-       if(UseTargetRootOnly) RETURN
-    end if
-
-    if(is_proc(iCompTarget)) call MPI_bcast( &
-         Data_I, nData, MPI_REAL, 0, i_comm(iCompTarget), iError)
-
-  end subroutine transfer_real_array
-
-  !===========================================================================
-
-  subroutine transfer_integer( &
-       iCompSource, iCompTarget, iData, UseSourceRootOnly, UseTargetRootOnly)
+  subroutine transfer_integer(iCompSource, iCompTarget, iData, &
+       UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     integer, intent(inout):: iData
@@ -135,16 +201,46 @@ contains
     integer:: iData_I(1)
     !------------------------------------------------------------------------
     if(is_proc(iCompSource)) iData_I(1) = iData
-    call transfer_integer_array( &
-       iCompSource, iCompTarget, iData_I, UseSourceRootOnly, UseTargetRootOnly)
+    call transfer_integer_array(iCompSource, iCompTarget, 1, iData_I, &
+         UseSourceRootOnly, UseTargetRootOnly)
     if(is_proc(iCompTarget)) iData = iData_I(1)
 
   end subroutine transfer_integer
 
   !===========================================================================
 
-  subroutine transfer_real( &
-       iCompSource, iCompTarget, Data, UseSourceRootOnly, UseTargetRootOnly)
+  subroutine transfer_real_array(iCompSource, iCompTarget, nData, Data_I, &
+       UseSourceRootOnly, UseTargetRootOnly)
+
+    integer, intent(in):: iCompSource, iCompTarget
+    integer, intent(in):: nData
+    real, intent(inout):: Data_I(nData)
+
+    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+
+    integer, parameter:: iTag = 1002
+    !-------------------------------------------------------------------------
+    call transfer_data_action(.false., iCompSource, iCompTarget, &
+         UseSourceRootOnly, UseTargetRootOnly)
+
+    if(DoRootTransfer)then
+       if(is_proc0(iCompSource)) call MPI_send( &
+            Data_I, nData, MPI_REAL, i_proc0(iCompTarget),&
+            iTag, i_comm(), iError)
+       if(is_proc0(iCompTarget)) call MPI_recv( &
+            Data_I, nData, MPI_REAL, i_proc0(iCompSource),&
+            iTag, i_comm(), iStatus_I, iError)
+    end if
+
+    if(DoTargetBroadcast) call MPI_bcast( &
+         Data_I, nData, MPI_REAL, 0, i_comm(iCompTarget), iError)
+
+  end subroutine transfer_real_array
+
+  !===========================================================================
+
+  subroutine transfer_real(iCompSource, iCompTarget, Data, &
+       UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     real, intent(inout):: Data
@@ -153,8 +249,8 @@ contains
     real:: Data_I(1)
     !------------------------------------------------------------------------
     if(is_proc(iCompSource)) Data_I(1) = Data
-    call transfer_real_array( &
-       iCompSource, iCompTarget, Data_I, UseSourceRootOnly, UseTargetRootOnly)
+    call transfer_real_array(iCompSource, iCompTarget, 1, Data_I, &
+         UseSourceRootOnly, UseTargetRootOnly)
     if(is_proc(iCompTarget)) Data = Data_I(1)
 
   end subroutine transfer_real
