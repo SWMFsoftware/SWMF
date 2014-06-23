@@ -58,6 +58,5 @@ LIB: DEPEND ${MODULES}
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-
 distclean: clean
-	rm -f Makefile.DEPEND Makefile.RULES
+	rm -f ModUserSetup.f90 ModPar.f90
