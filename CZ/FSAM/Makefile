@@ -74,7 +74,11 @@ test_rundir:
 	${MAKE} rundir PROBS=test RUNDIR=${TESTDIR} STANDALONE="YES"
 
 test_run:
-	cd ${TESTDIR}; mpirun -np 6 xfsam.exe > runlog
+	@if [ "$(MPIRUN)" = "mpiexec" ]; then \
+		cd ${TESTDIR}; mpiexec -np 6 xfsam.exe > runlog; \
+	else \
+		cd ${TESTDIR}; mpirun -np 6 xfsam.exe > runlog; \
+	fi;
 
 test_check:
 	grep -v 'Grid cell updates' ${TESTDIR}/runlog > ${TESTDIR}/runlog.new
