@@ -61,7 +61,6 @@ contains
     character (len=*), intent(in)     :: TypeAction ! What to do
     logical :: DoReadMagnetometerFile = .false.
 
-    integer :: iError
 
     !-------------------------------------------------------------------------
     select case(TypeAction)
@@ -113,10 +112,10 @@ contains
       character (len=100) :: NameCommand
 
       ! Read parameters
-      logical :: DoEcho=.false., UseStrict=.true., IsUninitialized=.true.
+      logical :: UseStrict=.true., IsUninitialized=.true.
 
       ! Plot file parameters
-      integer :: iFile, i, iError, iDebugProc
+      integer :: iFile, iDebugProc
       character (len=50) :: plot_string
 
       !------------------------------------------------------------------------
@@ -413,7 +412,6 @@ contains
     real,   intent(out) :: Buffer_IIV(iSize,jSize,2)
     real,    intent(in) :: tSimulation
 
-    integer :: i,j,k
     real    :: tSimulationTmp
 
     character (len=*),parameter :: NameSub = 'IE_get_for_gm'
@@ -556,7 +554,6 @@ contains
     character (len=*),intent(in)  :: NameHem
     real,             intent(in)  :: tSimulation
 
-    integer :: i,j,k
     real    :: tSimulationTmp
     !--------------------------------------------------------------------------
     if(iSize /= IONO_nTheta .or. jSize /= IONO_nPsi)then
@@ -619,24 +616,17 @@ contains
     use IE_ModMain, ONLY: IsNewInput, LatBoundaryGm
     use ModProcIE
     use ModIonosphere
-    use ModMpi
 
     character (len=*), parameter :: NameSub = 'IE_put_from_gm'
     integer,          intent(in) :: iSize, jSize, nVar
     real                         :: Buffer_IIV(iSize, jSize, nVar)
 
-    integer :: iError, iMessageSize
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,' starting'
 
     IsNewInput = .true.
-
-    if (nProc > 1) then
-       iMessageSize = iSize*jSize*nVar
-       call MPI_Bcast(Buffer_IIV,iMessageSize,MPI_Real,0,iComm,iError)
-    endif
 
     if (iProc == 0) then
        LatBoundaryGm = Buffer_IIV(IONO_nTheta,1,1)
@@ -966,7 +956,7 @@ contains
     type(IndexPtrType),intent(in) :: Index
     type(WeightPtrType),intent(in):: Weight
     logical,intent(in)            :: DoAdd
-    integer :: iBlock,iLat,iLon
+    integer ::iLat,iLon
     !--------------------------------------------------------------------------
     if(nPoint>1)then
        write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
