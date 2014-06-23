@@ -28,12 +28,12 @@ module CON_couple_points
      ! id's of source and target models
      integer :: iCompSource, iCompTarget
 
-     ! Number of dimensions and number of variables
+     ! Number of dimensions, number of variables, number of data points found
      integer :: nDim=0, nVar=0, nData=0
 
      ! Router communicator info
-     integer :: nProcSourceTarget=-1, iCommSourceTarget=-1
-     integer :: iProcSourceTarget=-1, iProcWorld=-1, nProcCommon=-1
+     integer :: nProcUnion=-1, iCommUnion=-1
+     integer :: iProcUnion=-1, iProcWorld=-1, nProcCommon=-1
 
      ! number of processors of the OTHER component to communicate with
      integer :: nCoupleSource, nCoupleTarget
@@ -43,6 +43,9 @@ module CON_couple_points
 
      ! Check if the Source and Target processors coincide
      logical:: IsSameLayout
+
+     ! Root processor indexes with respect to the union communicator
+     integer:: iProc0Source, iProc0Target
 
      ! number of entries received/sent by a processor during rendezvous
      integer, allocatable :: nCouplePointSource_I(:), nCouplePointTarget_I(:)
@@ -72,8 +75,6 @@ module CON_couple_points
  
      integer:: iDecompLastSource = -1, iDecompLastTarget = -1
 
-     ! Communicator and logicals to simplify message passing and execution
-     logical       :: UseMe = .true.
   end type CouplePointsType
 
 contains
@@ -82,36 +83,41 @@ contains
 
     type(CouplePointsType), intent(inout) :: Coupler
     integer:: iError
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'couple_points_init'
     !--------------------------------------------------------------------------
-
-    !write(*,*)NameSub,': Initializing coupler'
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTestMe) &
+         write(*,*)NameSub,' starting for Source, Target=',&
+         NameComp_I(Coupler%iCompSource),', ',NameComp_I(Coupler%iCompTarget)
 
     Coupler%iProcWorld = i_proc()
 
-    ! Get the union communicator, the UseMe logical, 
-    ! and the root proc indexes of the two components in the union comm.
+    ! Get the union communicator and the root proc indexes of the two 
+    ! components in the union communicator
+    Coupler%iProc0Source = i_proc0(Coupler%iCompSource)
+    Coupler%iProc0Target = i_proc0(Coupler%iCompTarget)
     call set_router_comm(Coupler%iCompSource, Coupler%iCompTarget, &
-         Coupler%iCommSourceTarget, Coupler%UseMe)
+         Coupler%iCommUnion, &
+         iProc=Coupler%iProc0Source, jProc=Coupler%iProc0Target)
 
-    call MPI_comm_size(Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, &
-         iError)
-    call MPI_comm_rank(Coupler%iCommSourceTarget, Coupler%iProcSourceTarget, &
-         iError)
+    call MPI_comm_size(Coupler%iCommUnion, Coupler%nProcUnion, iError)
+    call MPI_comm_rank(Coupler%iCommUnion, Coupler%iProcUnion, iError)
 
-    ! create group on intersection of Coupler%iCompSource and 
-    ! Coupler%iCompTarget
+    ! Number of overlapping processors
     Coupler%nProcCommon = n_proc(Coupler%iCompSource) &
-         + n_proc(Coupler%iCompTarget) - Coupler%nProcSourceTarget
+         + n_proc(Coupler%iCompTarget) - Coupler%nProcUnion
 
-    Coupler%IsSameLayout = &
-         n_proc(Coupler%iCompSource) == n_proc(Coupler%iCompTarget) &
-         .and. &
-         i_proc0(Coupler%iCompSource) == i_proc0(Coupler%iCompTarget) &
-         .and. &
-         i_proc_last(Coupler%iCompSource) == i_proc_last(Coupler%iCompTarget)
+    ! The layouts agree if the union and the intersection coincide
+    Coupler%IsSameLayout = Coupler%nProcCommon == Coupler%nProcUnion
 
-    !write(*,*)NameSub,': Done initializing coupler'
+    if(DoTestMe)then
+       write(*,*)NameSub,' iProc0Source, iProc0Target = ', &
+            Coupler%iProc0Source, Coupler%iProc0Target
+       write(*,*)NameSub,' nProcUnion, nProcCommon, IsSameLayout=', &
+            Coupler%nProcUnion, Coupler%nProcCommon, Coupler%IsSameLayout
+       !call CON_stop('DEBUG')
+    end if
 
   end subroutine couple_points_init
 
@@ -208,16 +214,13 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! Exclude PEs that are not involved
-    if(.not.Coupler%UseMe) RETURN
-
     if(DoTest)write(*,*)NameSub,' starting, iProc=',Coupler%iProcWorld
 
     ! Allocate arrays for router
     if(.not.allocated(Coupler%nPointSource_P) .and. Coupler%IsSameLayout) then
 
-       allocate(Coupler%nPointSource_P(Coupler%nProcSourceTarget), &
-            Coupler%nPointTarget_P(Coupler%nProcSourceTarget))
+       allocate(Coupler%nPointSource_P(Coupler%nProcUnion), &
+            Coupler%nPointTarget_P(Coupler%nProcUnion))
 
     elseif(.not.allocated(Coupler%nPointSource_P)) then
        
@@ -236,10 +239,10 @@ contains
     if(.not.Coupler%IsSameLayout)then
 
        call MPI_bcast(iDecompSource, 1, MPI_INTEGER, &
-            i_proc0(Coupler%iCompSource), Coupler%iCommSourceTarget, iError)
+            Coupler%iProc0Source, Coupler%iCommUnion, iError)
 
        call MPI_bcast(iDecompTarget, 1, MPI_INTEGER, &
-            i_proc0(Coupler%iCompTarget), Coupler%iCommSourceTarget, iError)
+            Coupler%iProc0Target, Coupler%iCommUnion, iError)
 
     endif
 
@@ -277,7 +280,7 @@ contains
                deallocate(Coupler%iPointTarget_I)
           allocate(Coupler%iPointTarget_I(Coupler%nPointTarget))
 
-          call get_buffer_order(Coupler%nProcSourceTarget, &
+          call get_buffer_order(Coupler%nProcUnion, &
                Coupler%nPointTarget, iProcTarget_I, &
                Coupler%nPointTarget_P, Coupler%iPointTarget_I, Coupler%nData)
 
@@ -293,16 +296,16 @@ contains
           deallocate(Coupler%PosTarget_DI)
 
           ! Set number of points to be received on the GM component
-          call set_recv_info(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call set_recv_info(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nPointTarget_P, Coupler%nPointSource, &
                Coupler%nPointSource_P)
 
           ! Transfer target positions to the source processors that own them
           if(allocated(Coupler%PosSource_DI)) deallocate(Coupler%PosSource_DI)
           allocate(Coupler%PosSource_DI(Coupler%nDim,Coupler%nPointSource))
-          call transfer_buffer(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call transfer_buffer(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nDim, Coupler%nData, Coupler%nPointTarget_P, &
                PosSortTarget_DI, Coupler%nPointSource, &
                Coupler%nPointSource_P, Coupler%PosSource_DI)
@@ -328,8 +331,8 @@ contains
           ! Setup communication pattern for finding points on Source
           ! This allocates and sets iCoupleProc*_I, nCouplePoint*_I arrays
           call set_inquiry(&
-               Coupler%iCommSourceTarget, Coupler%nProcSourceTarget, &
-               Coupler%iProcSourceTarget, Coupler%iCompSource, &
+               Coupler%iCommUnion, Coupler%nProcUnion, &
+               Coupler%iProcUnion, Coupler%iCompSource, &
                Coupler%iCompTarget, Coupler%nProcCommon, &
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I, Coupler%nCoupleSource, &
@@ -351,8 +354,8 @@ contains
           ! send number of points from target to source that will be sent to 
           ! "source_find_points." result is in Coupler%nCouplePointSource_I 
           ! (number of points to be recieved)
-          call get_recv_buffer_size(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call get_recv_buffer_size(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I, Coupler%nCoupleSource, &
                Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I)
@@ -363,8 +366,8 @@ contains
           allocate(Coupler%PosSource_DI(Coupler%nDim,Coupler%nPointSource))
 
           ! Send positions from target to source, so source can find the owners
-          call transfer_buffer_real(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call transfer_buffer_real(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I, Coupler%nCoupleSource, &
                Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I, &
@@ -380,8 +383,8 @@ contains
 
           ! send owner processor indexes from source to target
           allocate(iProcTarget_I(Coupler%nPointTarget))
-          call transfer_buffer_int(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call transfer_buffer_int(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, &
                Coupler%nCouplePointSource_I, Coupler%nCoupleTarget, &
                Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I, &
@@ -389,9 +392,9 @@ contains
                Coupler%nPointTarget, iProcTarget_I)
 
           ! based on owner information set up the final communication pattern
-          call  set_data_transfer(Coupler%iCommSourceTarget,       &
+          call  set_data_transfer(Coupler%iCommUnion,       &
                Coupler%iCompSource, Coupler%iCompTarget,           &
-               Coupler%nProcSourceTarget,                          &
+               Coupler%nProcUnion,                          &
                Coupler%nPointSource, iProcSource_I,                &
                Coupler%nPointTarget, iProcTarget_I,                &
                Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, &
@@ -432,8 +435,8 @@ contains
           allocate(Coupler%PosSource_DI(Coupler%nDim, Coupler%nPointSource))
 
           ! Send target point positions to the owner source processors
-          call transfer_buffer_real(Coupler%iCommSourceTarget, &
-               Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+          call transfer_buffer_real(Coupler%iCommUnion, &
+               Coupler%nProcUnion, Coupler%iProcUnion, &
                Coupler%nCoupleTarget, Coupler%iCoupleProcTarget_I, &
                Coupler%nCouplePointTarget_I, Coupler%nCoupleSource, &
                Coupler%iCoupleProcSource_I, Coupler%nCouplePointSource_I, &
@@ -456,14 +459,14 @@ contains
     ! Transfer data to the target processor
     allocate(Coupler%DataTarget_VI(Coupler%nVar, Coupler%nData))
     if(Coupler%IsSameLayout)then
-       call transfer_buffer(Coupler%iCommSourceTarget, &
-            Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+       call transfer_buffer(Coupler%iCommUnion, &
+            Coupler%nProcUnion, Coupler%iProcUnion, &
             Coupler%nVar, Coupler%nPointSource, Coupler%nPointSource_P, &
             Coupler%DataSource_VI, Coupler%nData, Coupler%nPointTarget_P, &
             Coupler%DataTarget_VI) 
     else
-       call transfer_buffer_real(Coupler%iCommSourceTarget, &
-            Coupler%nProcSourceTarget, Coupler%iProcSourceTarget, &
+       call transfer_buffer_real(Coupler%iCommUnion, &
+            Coupler%nProcUnion, Coupler%iProcUnion, &
             Coupler%nCoupleSource, Coupler%iCoupleProcSource_I, &
             Coupler%nCouplePointSource_I, Coupler%nCoupleTarget, &
             Coupler%iCoupleProcTarget_I, Coupler%nCouplePointTarget_I, &
@@ -1140,7 +1143,7 @@ contains
   !==========================================================================
 
   subroutine set_data_transfer(iComm, iCompSource, iCompTarget, &
-       nProcSourceTarget,&
+       nProcUnion,&
        nBufferSource, iProcSource_I, &
        nBufferTarget, iProcTarget_I, &
        nCoupleSource, iCoupleProcSource_I, nCouplePointSource_I,&
@@ -1157,7 +1160,7 @@ contains
     integer, intent(in):: iCompSource, iCompTarget
 
     ! Number of processors in union communicator
-    integer, intent(in):: nProcSourceTarget
+    integer, intent(in):: nProcUnion
 
     ! Number of point positions asked from this source proc
     integer, intent(in):: nBufferSource
@@ -1246,11 +1249,11 @@ contains
     if(is_proc(iCompSource))then
        allocate(iProcSourceUnion_P(0:nProcSource-1))
        allocate(iProcTargetUnion_P(0:nProcTarget-1))
-       allocate(iProcSourceLocal_P(0:nProcSourceTarget-1))
-       allocate(iProcTargetLocal_P(0:nProcSourceTarget-1))
+       allocate(iProcSourceLocal_P(0:nProcUnion-1))
+       allocate(iProcTargetLocal_P(0:nProcUnion-1))
        call get_rank_translation(                       &
             iComm, iCompSource, iCompTarget,            &
-            nProcSourceTarget, nProcSource, nProcTarget,&
+            nProcUnion, nProcSource, nProcTarget,&
             iProcSourceLocal_P, iProcTargetLocal_P,     &
             iProcSourceUnion_P, iProcTargetUnion_P)
        ! nPoint_PP is number of points to sent from Source to Target
@@ -1339,7 +1342,7 @@ contains
 
   subroutine get_rank_translation(                 &
        iCommUnion, iCompSource, iCompTarget,       &
-       nProcSourceTarget, nProcSource, nProcTarget,&
+       nProcUnion, nProcSource, nProcTarget,&
        iProcSourceLocal_I, iProcTargetLocal_I,     &
        iProcSourceUnion_I, iProcTargetUnion_I)
 
@@ -1347,9 +1350,9 @@ contains
     ! returns rank iProcLocal in the group associated with component iComp
 
     integer, intent(in) :: iCommUnion, iCompSource, iCompTarget
-    integer, intent(in) :: nProcSourceTarget, nProcSource, nProcTarget
-    integer, intent(out):: iProcSourceLocal_I(nProcSourceTarget)
-    integer, intent(out):: iProcTargetLocal_I(nProcSourceTarget)
+    integer, intent(in) :: nProcUnion, nProcSource, nProcTarget
+    integer, intent(out):: iProcSourceLocal_I(nProcUnion)
+    integer, intent(out):: iProcTargetLocal_I(nProcUnion)
     integer, intent(out):: iProcSourceUnion_I(nProcSource)
     integer, intent(out):: iProcTargetUnion_I(nProcTarget)
 
@@ -1382,15 +1385,15 @@ contains
     deallocate(iProc_I)
 
     ! Translate ranks Union to Local
-    allocate(iProc_I(nProcSourceTarget))
-    do iProc = 0, nProcSourceTarget-1
+    allocate(iProc_I(nProcUnion))
+    do iProc = 0, nProcUnion-1
        iProc_I(iProc+1) = iProc
     end do
     call MPI_Group_translate_ranks(&
-         iGroupUnion, nProcSourceTarget, iProc_I, &
+         iGroupUnion, nProcUnion, iProc_I, &
          i_group(iCompSource), iProcSourceLocal_I, iError)
     call MPI_Group_translate_ranks(&
-         iGroupUnion, nProcSourceTarget, iProc_I, &
+         iGroupUnion, nProcUnion, iProc_I, &
          i_group(iCompTarget), iProcTargetLocal_I, iError)
     deallocate(iProc_I)
 
