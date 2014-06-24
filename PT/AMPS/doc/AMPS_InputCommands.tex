@@ -22,13 +22,16 @@ The section should start with {\tt \#main} and finish with {\tt \#endmain}.
 
 Definition of the species used in the simulation, names of the species should
 be the same as they are used in the source code. \\
-{\tt SpeciesList=Na,H,O2PLUS,O\_THERMAL}
+{\tt SpeciesList=Na,H,O2PLUS,O\_THERMAL,NA\char`_Plus}
 
 \item {\bf makefile}
 
 Obsolete but still can be used. Introduces changes in the Makefile.\\
 {\tt makefile MPIRUN=mpirun -np 16}\\
-{\tt makefile SPICE=/Users/MyUser/MySpiceFolder}
+{\tt makefile SPICE=/Users/MyUser/MySpiceFolder} \\
+{\tt makefile  SOURCES=src}  self-explanatory\\
+{\tt makefile  RUNDIR=run}  self-explanatory\\
+
 
 \item {\bf ForceRepeatableSimulationPath}=[off,on] \\ Force AMPS to run a repeatable calculations by disabling all code optimizations/procedures that are executed based on the actual execution time \\ {\tt ForceRepeatableSimulationPath=on} \\ {\tt  ForceRepeatableSimulationPath=off}  
 
