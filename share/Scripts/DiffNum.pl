@@ -80,6 +80,7 @@ my $nDiff=0;
        }
        print TEXT1 $Line1 if $TextDiff;
        $Line1 = <FILE1> or last SEARCH;
+       $Line1 = "" if $Line1 =~ /Mellanox|RDMA devices/;
        $OrigLine1 = $Line1;
        $iLine1++;
        redo SEARCH;
@@ -94,6 +95,7 @@ my $nDiff=0;
        }
        print TEXT2 $Line2 if $TextDiff;
        $Line2 = <FILE2> or last SEARCH;
+       $Line2 = "" if $Line2 =~ /Mellanox|RDMA devices/;
        $OrigLine2 = $Line2;
        $iLine2++;
        redo SEARCH;
