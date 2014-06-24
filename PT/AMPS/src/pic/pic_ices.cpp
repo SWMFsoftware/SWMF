@@ -793,19 +793,27 @@ void PIC::CPLR::ICES::createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDa
 //====================================================
 //print the ion flux at a sphere
 void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius) {
-  FILE *fout;
+  FILE *fout=NULL;
   int nZenithAngle,nPolarAngle,LocalCellNumber,i,j,k;
   double ZenithAngle,PolarAngle,x[3],n,v[3],flux;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.rootTree;
+  CMPI_channel pipe(1000000);
 
   const int nTotalZenithPoints=100;
   const double dZenithAngle=Pi/(nTotalZenithPoints-1);
   const int nTotalPolarPoints=2*nTotalZenithPoints;
   const double dPolarAngle=2.0*Pi/(nTotalPolarPoints-1);
 
-  fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Ion Flux\"\n");
-  fprintf(fout,"ZONE I=%i, J=%i, DATAPACKING=POINT\n",nTotalPolarPoints,nTotalZenithPoints);
+  if (PIC::ThisThread==0) {
+    pipe.openRecvAll();
+
+    fout=fopen(fname,"w");
+    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Ion Flux\"\n");
+    fprintf(fout,"ZONE I=%i, J=%i, DATAPACKING=POINT\n",nTotalPolarPoints,nTotalZenithPoints);
+  }
+  else pipe.openSend(0);
+
+
 
   for (nZenithAngle=0,ZenithAngle=-Pi/2.0;nZenithAngle<nTotalZenithPoints;nZenithAngle++,ZenithAngle+=dZenithAngle) {
     for (nPolarAngle=0,PolarAngle=-Pi;nPolarAngle<nTotalPolarPoints;nPolarAngle++,PolarAngle+=dPolarAngle) {
@@ -816,15 +824,31 @@ void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereR
       node=PIC::Mesh::mesh.findTreeNode(x,node);
       if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
 
-      n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
-      GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
+      if (node->Thread==PIC::ThisThread) {
+        n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
+        GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
 
-      flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
-      fprintf(fout,"%e  %e  %e\n",PolarAngle/Pi*180.0,ZenithAngle/Pi*180.0,flux);
+        flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
+
+        if (PIC::ThisThread!=0) pipe.send(flux);
+      }
+
+      if (PIC::ThisThread==0) {
+        if (node->Thread!=0) flux=pipe.recv<double>(node->Thread);
+
+        fprintf(fout,"%e  %e  %e\n",PolarAngle/Pi*180.0,ZenithAngle/Pi*180.0,flux);
+      }
+
     }
   }
 
-  fclose(fout);
+
+  if (PIC::ThisThread==0) {
+    pipe.closeRecvAll();
+    fclose(fout);
+  }
+  else pipe.closeSend();
+
 }
 
 
