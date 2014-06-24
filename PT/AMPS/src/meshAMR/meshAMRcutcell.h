@@ -394,7 +394,7 @@ namespace CutCell {
 
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
-  bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
+  bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
 
   //refine the smooth the surface mesh

@@ -78,12 +78,11 @@ public:
   //=======================================================================
   //intersection of a block with the Sphere
   int BlockIntersection(double *xBlockMin,double *xBlockMax,double EPS) {
-    CutCell::cTriangleFace *t;
     int nt;
 
     //check possible intersection between the block and the surface
-    for (nt=0,t=CutCell::BoundaryTriangleFaces;nt<CutCell::nBoundaryTriangleFaces;nt++,t=t->next) {
-      if (t->BlockIntersection(xBlockMin,xBlockMax,EPS)==true) {
+    for (nt=0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
+      if (CutCell::BoundaryTriangleFaces[nt].BlockIntersection(xBlockMin,xBlockMax,EPS)==true) {
         return _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
       }
     }
@@ -94,7 +93,7 @@ public:
 
     for (int i=0;i<3;i++) x[i]=0.5*(xBlockMin[i]+xBlockMax[i]);
 
-    res=(CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,EPS)==true) ? _AMR_BLOCK_INSIDE_DOMAIN_ : _AMR_BLOCK_OUTSIDE_DOMAIN_;
+    res=(CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,EPS)==true) ? _AMR_BLOCK_INSIDE_DOMAIN_ : _AMR_BLOCK_OUTSIDE_DOMAIN_;
 
     return res;
   }

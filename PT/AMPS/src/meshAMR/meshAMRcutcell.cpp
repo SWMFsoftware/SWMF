@@ -386,7 +386,7 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
 //check weather a point (x0) in insed the domain:
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain
 //l -> is a random ray (intersection search) direction
-bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS) {
+bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS) {
   int nface,nfaceStart,nfaceFinish,iIntersections;
   double SearchDirection[3],l;
   int idim;
@@ -403,9 +403,12 @@ bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTr
     initflag=true;
   }
 
-  nfaceStart=ThisThread*(nSurfaceTriangulation/nTotalThreads);
-  nfaceFinish=(ThisThread+1)*(nSurfaceTriangulation/nTotalThreads);
-  if (ThisThread==nTotalThreads-1) nfaceFinish=nSurfaceTriangulation;
+  if (ParallelCheck==true) {
+    nfaceStart=ThisThread*(nSurfaceTriangulation/nTotalThreads);
+    nfaceFinish=(ThisThread+1)*(nSurfaceTriangulation/nTotalThreads);
+    if (ThisThread==nTotalThreads-1) nfaceFinish=nSurfaceTriangulation;
+  }
+  else nfaceStart=0,nfaceFinish=nSurfaceTriangulation;
 
   bool flagbuffer[nTotalThreads];
 
@@ -416,7 +419,7 @@ bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTr
       l+=pow(SearchDirection[idim],2);
     }
 
-    MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    if (ParallelCheck==true) MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
 
     for (l=sqrt(l),idim=0;idim<3;idim++) SearchDirection[idim]/=l;
     iIntersections=0;
@@ -434,13 +437,22 @@ bool CutCell::CheckPointInsideDomain(double *x,CutCell::cTriangleFace* SurfaceTr
 
     }
 
-    MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
-    if (ThisThread==0) for (int thread=1;thread<nTotalThreads;thread++) if (flagbuffer[thread]==false) flag=false;
-    MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+    if (ParallelCheck==true) {
+      MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+      if (ThisThread==0) for (int thread=1;thread<nTotalThreads;thread++) if (flagbuffer[thread]==false) flag=false;
+      MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+    }
   }
   while (flag==false);
 
-  MPI_Bcast(&iIntersections,1,MPI_INT,0,MPI_COMM_WORLD);
+  if (ParallelCheck==true) {
+    int t;
+
+    MPI_Allreduce(&iIntersections,&t,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    iIntersections=t;
+  }
+
+
   return (2*(iIntersections/2)==iIntersections) ? true : false;
 }
 
@@ -682,7 +694,7 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
 
     for (int ii=0;ii<3;ii++) xCellCenter[ii]=(xCellMax[ii]+xCellMin[ii])/2.0;
 
-    CellCenterInsideDomain=CheckPointInsideDomain(xCellCenter,SurfaceTriangulation,nSurfaceTriangulation,EPS);
+    CellCenterInsideDomain=CheckPointInsideDomain(xCellCenter,SurfaceTriangulation,nSurfaceTriangulation,false,EPS);
 
 
     for (int i=0;i<2;i+=1) for (int j=0;j<2;j+=1) for (int k=0;k<2;k+=1) {

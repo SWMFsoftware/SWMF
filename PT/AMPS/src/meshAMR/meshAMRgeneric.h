@@ -4488,9 +4488,6 @@ if (startNode->Temp_ID==15) {
        //allocate the blocks:THE ORDER IS IMPORTANT
        AllocateBlock(newTreeNode);
 
-       //distribute the boundary faces
-       DistributeBoundaryCutBlocks(newTreeNode,startNode->FirstTriangleCutFace);
-
        //determine if the newTreeNode is intersected by any of the internal surface installed into the mesh
        #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_ON_
        cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor,*newDescriptor;
@@ -4510,6 +4507,13 @@ if (startNode->Temp_ID==15) {
            break;
          case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
            IntersectionCode=((cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement))->BlockIntersection(xmin,xmax,EPS);
+           break;
+         case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+           //distribute the boundary faces
+           DistributeBoundaryCutBlocks(newTreeNode,startNode->FirstTriangleCutFace);
+
+           //!!!! nastran surface faces are installed into the mesh by function DistributeBoundaryCutBlocks(newTreeNode,startNode->FirstTriangleCutFace) above!!!
+           IntersectionCode=(newTreeNode->FirstTriangleCutFace==NULL) ? _AMR_BLOCK_INSIDE_DOMAIN_ : _AMR_BLOCK_INTERSECT_DOMAIN_BOUNDARY_;
            break;
          default:
            exit(__LINE__,__FILE__,"Error: The internal boundary type is not recognized");
@@ -5794,6 +5798,7 @@ if (CallsCounter==83) {
             else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_CIRCLE_) SurfaceLocalResolution=((cInternalCircleData*)SurfaceDescriptor->BoundaryElement)->localResolution;
             else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_1D_SPHERE_) SurfaceLocalResolution=((cInternalSphere1DData*)SurfaceDescriptor->BoundaryElement)->localResolution;
             else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) SurfaceLocalResolution=((cInternalRotationBodyData*)SurfaceDescriptor->BoundaryElement)->localResolution;
+            else if (SurfaceDescriptor->BondaryType==_INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_) SurfaceLocalResolution=((cInternalNastranSurfaceData*)SurfaceDescriptor->BoundaryElement)->localResolution;
 
 
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
@@ -8239,6 +8244,9 @@ nMPIops++;
             else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) {
               IntersectionCodeTemp=((cInternalRotationBodyData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
             }
+            else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_) {
+              IntersectionCodeTemp=((cInternalNastranSurfaceData*)(bc->BoundaryElement))->BlockIntersection(xTotalMin,xTotalMax,EPS);
+            }
             else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
             if (IntersectionCodeTemp==_AMR_BLOCK_OUTSIDE_DOMAIN_) IntersectionCode=_AMR_BLOCK_OUTSIDE_DOMAIN_;
@@ -8300,6 +8308,9 @@ nMPIops++;
                      }
                      else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_) {
                        centerNode->Measure=((cInternalRotationBodyData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
+                     }
+                     else if (bc->BondaryType==_INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_) {
+                       centerNode->Measure=((cInternalNastranSurfaceData*)(bc->BoundaryElement))->GetRemainedBlockVolume(xCellMin,xCellMax,EPS,&cellIntersectionStatus);
                      }
                      else exit(__LINE__,__FILE__,"Error: unknown boundary type");
 
@@ -8687,7 +8698,7 @@ nMPIops++;
 
               for (idim=0;idim<DIM;idim++) xMiddle[idim]=0.5*(startNode->downNode[nDownNode]->xmin[idim]+startNode->downNode[nDownNode]->xmax[idim]);
 
-              if (CutCell::CheckPointInsideDomain(xMiddle,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,EPS)==true) {
+              if (CutCell::CheckPointInsideDomain(xMiddle,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,EPS)==true) {
                 downNodeDomainIntersectionFlag=_BLOCK_INSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
               }
               else downNodeDomainIntersectionFlag=_BLOCK_OUTINSIDE_DOMAIN__ALLOCATE_TREE_BLOCKS_;
