@@ -1,4 +1,4 @@
-%
+%$Id$
 %
 
 \chapter{List of input commands}
@@ -18,7 +18,7 @@ The section should start with {\tt \#main} and finish with {\tt \#endmain}.
 
 \begin{itemize}
 
-\item {\bf SpeciesList}
+\item {\bf SpeciesList}={\it species-list}
 
 Definition of the species used in the simulation, names of the species should
 be the same as they are used in the source code. \\
@@ -30,31 +30,31 @@ Obsolete but still can be used. Introduces changes in the Makefile.\\
 {\tt makefile MPIRUN=mpirun -np 16}\\
 {\tt makefile SPICE=/Users/MyUser/MySpiceFolder}
 
-\item {\bf ForceRepeatableSimulationPath} \\ Force AMPS to run a repeatable calculations by disabling all code optimizations/procedures that are executed based on the actual execution time \\ {\tt ForceRepeatableSimulationPath=on} \\ {\tt  ForceRepeatableSimulationPath=off}  
+\item {\bf ForceRepeatableSimulationPath}=[off,on] \\ Force AMPS to run a repeatable calculations by disabling all code optimizations/procedures that are executed based on the actual execution time \\ {\tt ForceRepeatableSimulationPath=on} \\ {\tt  ForceRepeatableSimulationPath=off}  
 
-\item {\bf DebuggerMode}
+\item {\bf DebuggerMode}=[off,on]
 
 Switches ON/OFF debugger mode of execution
 
-\item {\bf CouplerMode}
+\item {\bf CouplerMode}=[off,swmf,ices]
 
 Defines the mode of coupler execution, three are available:
 \\{\tt CouplerMode=off} - no coupling, 
 \\{\tt CouplerMode=swmf} - coupling within SWMF, 
 \\{\tt CouplerMode=ices} - coupling using ICES tool.
 
-\item {\bf SourceDirectory}
+\item {\bf SourceDirectory}={\it source-directory}
 
 The directory where the main source code is located, usually it is
 {\tt src} folder.\\
 {\tt SourceDirectory=src}
 
-\item {\bf ProjectSourceDirectory}
+\item {\bf ProjectSourceDirectory}={\it project-source-directory}
 
 The directory where the source code for particular project is located.\\
 {\tt ProjectSourceDirectory=srcEuropa}
 
-\item {\bf WorkingSourceDirectory}
+\item {\bf WorkingSourceDirectory}={\it working-source-directory}
 
 The directory where the code will be assembled and compiled
 (choose the one that doesn't exist in the repository in order
@@ -63,9 +63,9 @@ to avoid deletion of source code files!)\\
 
 \item {\bf TrajectoryIntersectionWithBlockFaces}
 
-\item {\bf StdOutErrorLog} \\ Switch (on/off) that controls output of the error messages on screen
+\item {\bf StdOutErrorLog}=[off,on] \\ Switch (on/off) that controls output of the error messages on screen
 
-\item {\bf TimeStepMode}
+\item {\bf TimeStepMode}=[SingleGlobalTimeStep,SpeciesGlobalTimeStep, \\ SingleLocalTimeStep,SpeciesLocalTimeStep]
 
 Defines the way the time step is performed, four are available:
 \\{\tt TimeStepMode=SingleGlobalTimeStep} - the same time step
@@ -77,26 +77,27 @@ but differs within the domain,
 \\{\tt TimeStepMode=SpeciesLocalTimeStep} - time step is different for different
 species and differs within the domain.
 
-\item {\bf ParticleWeightMode}
+\item {\bf ParticleWeightMode}=[SingleGlobalParticleWeight,SpeciesGlobalParticleWeight, \\ SingleLocalParticleWeight,SpeciesLocalParticleWeight]
+
 Defines the way the statistical weights of particles are defined, for are available:
 \\{\tt  ParticleWeightMode=SingleGlobalParticleWeight},
 \\{\tt  ParticleWeightMode=SpeciesGlobalParticleWeight},
 \\{\tt  ParticleWeightMode=SingleLocalParticleWeight},
 \\{\tt  ParticleWeightMode=SpeciesLocalParticleWeight}.
 
-\item {\bf ParticleWeightCorrectionMode}
+\item {\bf ParticleWeightCorrectionMode}=[off,on] \\
 Switches ON/OFF.
 
-\item {\bf ErrorLog}
+\item {\bf ErrorLog}={\it file-name}
 
 Name of the file to write error information to.
 \\{\tt ErrorLog=error.log}
 
-\item {\bf Prefix} \\ The prefix used for on screen output of AMPS  \\ {\tt Prefix=AMPS}
+\item {\bf Prefix}={\it prefix} \\ The prefix used for on screen output of AMPS  \\ {\tt Prefix=AMPS}
 
-\item {\bf DiagnosticStream} \\ The location of the diagnostic information output. The run-time diagnostic can be printed either on screen or in a file: \\  {\tt DiagnosticStream=amps.log} \\ {\tt DiagnosticStream=screen }  
+\item {\bf DiagnosticStream}=[screen,{\it file-name}] \\ The location of the diagnostic information output. The run-time diagnostic can be printed either on screen or in a file: \\  {\tt DiagnosticStream=amps.log} \\ {\tt DiagnosticStream=screen }  
 
-\item {\bf OutputDirectory} Name of the folder to write results to. \\ {\tt OutputDirectory=out}
+\item {\bf OutputDirectory}={\it output-directory} \\ Name of the folder to write results to. \\ {\tt OutputDirectory=out}
 
 
 \end{itemize}
@@ -110,9 +111,9 @@ The file must begin with {\tt \#species} and ends with {\tt \#endspecies}. The f
 
 \begin{itemize}
 
-\item {\bf \#component} \\ Defines the symbolic name for the specie \\{\tt \#component=O}
-\item {\bf mass} \\ The molecule/atom mass [kg] \\ {\tt mass=16*\_ AMU \_} 
-\item {\bf charge} \\ Electric charge [e] \\ {\tt charge=0}
+\item {\bf \#component}={\it specie-symbol} \\ Defines the symbolic name for the specie \\{\tt \#component=O}
+\item {\bf mass}={\it molecule/atom mass-mass} \\ The molecule/atom mass [kg] \\ {\tt mass=16*\_AMU\_} 
+\item {\bf charge}={\it electric-charge} \\ Electric charge [e] \\ {\tt charge=0}
 \end{itemize}
 
 
@@ -145,13 +146,45 @@ The switch determines which of the files will be included into the sources of AM
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{ParticleCollisions}
+The section described the particle collision model used in the simulation. The block has to begin with {\tt \#ParticleCollisions} and end with {\tt endParticleCollisions}. Additional commands:
+\begin{itemize}
+\item {\bf model} = [off,HS] \\ the name of the model that will be used
+\item {\bf SampleCollisionFrequency} = [on,off] \\ the switch turns sampling of the collision frequentcy
+\item{\bf CollisionCrossSection}=[const,function] \\ defines a collision cross section \\ {\tt CollisionCrossSection=function {\it function-name}} 
+
+{\tt CollisionCrossSection=const} \\ when constant collision cross section is used its value has to be defined for each pair of species with a constant or a function \\ {\tt const (H2O,H2O)= 2.0E-19} \\ if a collision cross section is not defined for a pair that its value is assumed being zero (no collisions between the species)
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Sampling}
+The section controls the non-standard AMPS sampling routines. The section begins with {\tt \#Sampling} and ends with {\tt \#endSampling}.
+
+\begin{itemize}
+\item {\bf SampleParallelTangentialKineticTemperature}=[on,off], direction=[] \\
+Turn on sampling of the parallel and tangential temperatures. The direction can be defined by a constant vector or a function \\ {\tt direction=const(lx,ly,lx)} \\ {\tt direction=function({\it function-name})}
+
+\end{itemize}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{IDF}
+The section defines the model of the internal degrees of freedom. The section has to begin with {\tt \#IDF} and ends with {\tt \#endIDF}. 
+
+\begin{itemize}
+\item {\bf Model}=[off,LB,qLB]
+\item {\bf vtRelaxation}=[on,off]
+\item {\bf rtRelaxation}=[on,off]
+\item {\bf vvRelaxation}=[on,off]
+\item {\bf nVibModes} \\ the number of the vibrational modes \\ Example: {\tt nVibModes(CO2=1,H2O=2)} 
+\item {\bf nRotModes} \\ the number of the rotational modes \\ Example: {\tt nRotModes(CO2=2,H2O=3)}
+\item {\bf RotZnum} \\ the rotational $Z_\nu$ number. $1/Z_\nu$ is the probability of the rotationa-translational energy exchange during a collision event. \\ {\tt RotZnum(H2O=3,CO2=2)}
+\item {\bf VibTemp} \\ the characteristic vibrational temperature \\ {\tt  VibTemp(H2O=2000,CO2=1000)}
+
+\end{itemize}
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -159,7 +192,9 @@ The switch determines which of the files will be included into the sources of AM
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Exosphere}
+\section{Additional Blocks}
+
+\subsection{Exosphere}
 
 
 
