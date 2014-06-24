@@ -1,3 +1,7 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module CON_transfer_data
 
   ! Transfer scalar or array of integers, reals or logicals 
@@ -5,8 +9,8 @@ module CON_transfer_data
   !
   ! Examples of usage:
   !
-  ! Transfer a scalar of type integer that 
-  ! is available from all source processors and needed on all target processors:
+  ! Transfer a scalar of type integer that is
+  ! available from all source processors and needed on all target processors:
   !
   !    if(is_proc(Source_) call get_data_from_source_comp(iData)
   !    call transfer_integer(Source_, Target_, iData, 
@@ -14,7 +18,7 @@ module CON_transfer_data
   !    if(is_proc(Target_) call put_data_into_target_comp(iData)
   !
   ! Transfer a 2D array of type real that involves all source processors, but
-  ! the result is available from source root only and needed on root target only:
+  ! the result is available from source root and needed on root target only:
   !
   !    allocate(Data_II(iSize,jSize))
   !    if(is_proc(Source_) call get_data_from_source_comp(Data_II)
@@ -40,10 +44,12 @@ module CON_transfer_data
 
   private ! except
   
-  public:: transfer_integer
-  public:: transfer_integer_array
   public:: transfer_real
   public:: transfer_real_array
+  public:: transfer_integer
+  public:: transfer_integer_array
+  public:: transfer_string
+  public:: transfer_string_array
 
   ! Local variables
   integer:: iStatus_I(MPI_STATUS_SIZE)
@@ -84,7 +90,7 @@ contains
        write(*,*) NameSub,' starting for source, target=', &
             NameComp_I(iCompSource),', ',NameComp_I(iCompTarget)
        write(*,*) NameSub, &
-            ': UseSourceRootOnly, UseTargetRootOnly, iProc0Source, iProc0Target=',&
+            ': UseSourceRootOnly, TargetRootOnly, iProc0Source, Target=',&
             UseSourceRootOnly, UseTargetRootOnly, iProc0Source, iProc0Target
     end if
 
@@ -111,14 +117,16 @@ contains
     ! Check if broadcast on target is needed
     DoTargetBroadcast = n_proc(iCompTarget) > 1 .and. .not.UseTargetRootOnly
 
-    if(DoTest)write(*,*)NameSub,': initial DoTargetBroadcast=', DoTargetBroadcast
+    if(DoTest)write(*,*) NameSub, &
+         ': initial DoTargetBroadcast=', DoTargetBroadcast
 
     ! If there is no need to broadcast, we are done
     if(.not.DoTargetBroadcast) RETURN
 
     ! Only target processors may take part in the MPI broadcast
     if(.not.is_proc(iCompTarget))then
-       if(DoTest)write(*,*)NameSub,': not a target proc, set DoTargetBroadcast=F'
+       if(DoTest)write(*,*) NameSub, &
+            ': not a target proc, set DoTargetBroadcast=F'
        DoTargetBroadcast = .false.
        RETURN
     end if
@@ -190,20 +198,35 @@ contains
   end subroutine transfer_integer_array
 
   !===========================================================================
-
   subroutine transfer_integer(iCompSource, iCompTarget, iData, &
        UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     integer, intent(inout):: iData
+
     logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
 
-    integer:: iData_I(1)
-    !------------------------------------------------------------------------
-    if(is_proc(iCompSource)) iData_I(1) = iData
-    call transfer_integer_array(iCompSource, iCompTarget, 1, iData_I, &
+    integer, parameter:: iTag = 1001
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'transfer_integer'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-    if(is_proc(iCompTarget)) iData = iData_I(1)
+
+    if(DoRootTransfer)then
+       if(is_proc0(iCompSource)) call MPI_send( &
+            iData, 1, MPI_INTEGER, i_proc0(iCompTarget),&
+            iTag, i_comm(), iError)
+       if(is_proc0(iCompTarget)) call MPI_recv( &
+            iData, 1, MPI_INTEGER, i_proc0(iCompSource),&
+            iTag, i_comm(), iStatus_I, iError)
+    end if
+
+    if(DoTargetBroadcast) call MPI_bcast( &
+         iData, 1, MPI_INTEGER, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_integer
 
@@ -244,16 +267,95 @@ contains
 
     integer, intent(in):: iCompSource, iCompTarget
     real, intent(inout):: Data
+
     logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
 
-    real:: Data_I(1)
-    !------------------------------------------------------------------------
-    if(is_proc(iCompSource)) Data_I(1) = Data
-    call transfer_real_array(iCompSource, iCompTarget, 1, Data_I, &
+    integer, parameter:: iTag = 1002
+    !-------------------------------------------------------------------------
+    call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
-    if(is_proc(iCompTarget)) Data = Data_I(1)
+
+    if(DoRootTransfer)then
+       if(is_proc0(iCompSource)) call MPI_send( &
+            Data, 1, MPI_REAL, i_proc0(iCompTarget),&
+            iTag, i_comm(), iError)
+       if(is_proc0(iCompTarget)) call MPI_recv( &
+            Data, 1, MPI_REAL, i_proc0(iCompSource),&
+            iTag, i_comm(), iStatus_I, iError)
+    end if
+
+    if(DoTargetBroadcast) call MPI_bcast( &
+         Data, 1, MPI_REAL, 0, i_comm(iCompTarget), iError)
 
   end subroutine transfer_real
+
+  !===========================================================================
+
+  subroutine transfer_string_array(&
+       iCompSource, iCompTarget, nString, String_I,&
+       UseSourceRootOnly, UseTargetRootOnly)
+
+    integer, intent(in):: iCompSource, iCompTarget
+    integer, intent(in):: nString
+    character(len=*), intent(inout):: String_I(nString)
+
+    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+
+    integer:: nData
+
+    integer, parameter:: iTag = 1003
+    !-------------------------------------------------------------------------
+    call transfer_data_action(.false., iCompSource, iCompTarget, &
+         UseSourceRootOnly, UseTargetRootOnly)
+
+    nData = nString*len(String_I(1))
+
+    if(DoRootTransfer)then
+       if(is_proc0(iCompSource)) call MPI_send( &
+            String_I, nData, MPI_CHARACTER, i_proc0(iCompTarget),&
+            iTag, i_comm(), iError)
+       if(is_proc0(iCompTarget)) call MPI_recv( &
+            String_I, nData, MPI_CHARACTER, i_proc0(iCompSource),&
+            iTag, i_comm(), iStatus_I, iError)
+    end if
+
+    if(DoTargetBroadcast) call MPI_bcast( &
+         String_I, nData, MPI_CHARACTER, 0, i_comm(iCompTarget), iError)
+
+  end subroutine transfer_string_array
+
+  !===========================================================================
+
+  subroutine transfer_string(iCompSource, iCompTarget, String,&
+       UseSourceRootOnly, UseTargetRootOnly)
+
+    integer, intent(in):: iCompSource, iCompTarget
+    character(len=*), intent(inout):: String
+
+    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+
+    integer:: nData
+
+    integer, parameter:: iTag = 1004
+    !-------------------------------------------------------------------------
+    call transfer_data_action(.false., iCompSource, iCompTarget, &
+         UseSourceRootOnly, UseTargetRootOnly)
+
+    nData = len(String)
+
+    if(DoRootTransfer)then
+       if(is_proc0(iCompSource)) call MPI_send( &
+            String, nData, MPI_CHARACTER, i_proc0(iCompTarget),&
+            iTag, i_comm(), iError)
+       if(is_proc0(iCompTarget)) call MPI_recv( &
+            String, nData, MPI_CHARACTER, i_proc0(iCompSource),&
+            iTag, i_comm(), iStatus_I, iError)
+    end if
+
+    if(DoTargetBroadcast) call MPI_bcast( &
+         String, nData, MPI_CHARACTER, 0, i_comm(iCompTarget), iError)
+
+  end subroutine transfer_string
 
   !===========================================================================
 
