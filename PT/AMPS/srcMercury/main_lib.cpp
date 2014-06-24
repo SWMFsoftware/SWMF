@@ -1519,8 +1519,8 @@ void amps_init() {
   PIC::CPLR::ICES::readSWMFdata(1.0);
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
-  //output the solar winf ion flux at the palnet's surface
-  if (PIC::ThisThread==0) PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",_RADIUS_(_TARGET_));
+  //output the solar wind ion flux at the palnet's surface
+  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",_RADIUS_(_TARGET_));
 
   //create the map of the solar wind flux
   int el;
