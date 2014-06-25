@@ -32,6 +32,7 @@ Obsolete but still can be used. Introduces changes in the Makefile.\\
 {\tt makefile SPICE=/Users/MyUser/MySpiceFolder} \\
 {\tt makefile  SOURCES=src}  self-explanatory\\
 {\tt makefile  RUNDIR=run}  self-explanatory\\
+{\tt makefile ExternalModules}= [models/exosphere]
 
 
 \item {\bf ForceRepeatableSimulationPath}=[off,on] \\ Force AMPS to run a repeatable calculations by disabling all code optimizations/procedures that are executed based on the actual execution time \\ {\tt ForceRepeatableSimulationPath=on} \\ {\tt  ForceRepeatableSimulationPath=off}  
@@ -142,10 +143,72 @@ The switch determines which of the files will be included into the sources of AM
 \end{itemize}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{BackgroundSpecies} 
+Describes interaction of the model particles with the background species
+
+
+\begin{itemize}
+
+\item {\bf BackgroundSpecies}=[on,off] \\ The switch defines whether the model will be used in the run.  
+
+\item {\bf SpeciesList}={\it species-list} \\ The list of the background species used in the simulation. Example: 
+
+{\tt SpeciesList=CO2,O}
+
+\item {\bf CollisionMode}=[on,off] \\ The switch determines whether collisions with the background species will be simulated
+
+\item {\bf LoadUserDefinitions}=[on,off],UserDefinitionsFileName={\it file-name} \\ Makes the compiler to include the file {\it file-name} in compiling. Example:
+
+{\tt LoadUserDefinitions=on $\backslash\backslash$ \\ UserDefinitionsFileName=UserDefinition.PIC.BackgroundAtmosphere.h}
+
+\item {\bf CollisionCrossSection}=[function,const] \\ Defines the collision cross section between the model particles and the background species. Parameters {\tt const} is used to define the hard sphere collision cross section, an {\tt function} is for a user-defined collision cross section. Example (function):  
+
+{\tt CollisionCrossSection= function $\backslash\backslash$ \\ FunctionName={\it function-name} }
+
+Example (const):
+
+{\tt CollisionCrossSection= const $\backslash\backslash$ \\     const(Na,CO)=3e-15 $\backslash\backslash$ \\ const(Na,O)=3e-14}
+
+\item {\bf CollisionScatteringAngle}=[function,isotropic] \\ Defines the model for distributing of the scattering angle after collision. {\tt isotropic} is for the isotropic angle distribution, and {\tt function} is for a user-defined function. Example (isotropic): 
+
+{\tt CollisionScatteringAngle=isotropic}
+
+Example (function): 
+
+{\tt CollisionScatteringAngle=function $\backslash\backslash$ \\ FunctionName={\it function-name}} 
+
+\item {\bf InjectConditionBackgroundParticle}=[on,off] \\ Inject background particle into the system is a injection condition is met.
+
+\item {\bf RemoveConditionModelParticle}=[on,off] \\ Remove a model particle after collision with the background species if a condition is met.
+
+
+\end{itemize}
+
+
+
+
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{General}
+
+\begin{itemize}
+\item {\bf InitialSampleLength}={\it sample-length} \\ The number of iterations that will be used in the simulation. Could be changed during the run.
+
+\item {\bf MaxMeshRefinmentLevel}={\it max-mesh-refinment-level} \\ The maximum number of the refinement levels
+
+\item {\bf EnforceRequestedMeshResolution}=[on,off] \\ Die if the requested mesh resolution is finer than that permitted by the settings of the model
+
+\item {\bf TestRunTotalIteration}={\it iteration-number} \\ The number of the iterations before the output of the code test simulation results for the nightly test
+
+\item {\bf ReferenceInjectionParticleNumber}={\it reference-number} \\ The number of the model particles that should be injected by the code each iterations. Used for evaluations of the particle weight.
+
+\end{itemize}
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -213,6 +276,8 @@ ReactionProcessor is the function that is called by the core to model the reacti
 LifeTime is the function that returns the numerical value of the species lifetime depending of the locations of a particle (could be in a shadow of the planet) \\ 
 {\tt LifeTime=Comet::ExospherePhotoionizationLifeTime} 
 
+
+\item {\bf InitSurfaceSourceDistribution}={\it function-name} \\ Defines a user-defined function that is used for the initialization of the surface volatile distribution 
 
 \item {\bf TypicalSolarWindConditions} = v(v$_x$,v$_y$,v$_z$), B(B$_x$,B$_y$,B$_z$), T, n \\ Definition of the typical solar wind conditions. Here, v, B, T, and n are bulk velocity, magnetic field, temperature, and number density of solar wind
 
