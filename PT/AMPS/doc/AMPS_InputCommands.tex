@@ -9,6 +9,7 @@ a block {\bf NAME} - and \texttt{\#endNAME} - end
 of that block. Input commands are listed below 
 sorted by blocks.
 
+The file containing the input parameters ends with the keyword {\tt \#end}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -195,9 +196,71 @@ The section defines the model of the internal degrees of freedom. The section ha
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Additional Blocks}
+\section{Exosphere}
 
-\subsection{Exosphere}
+Most of the description of the comet or planet environment will be done in this section. The following is the set of commands used in the section.
+
+\begin{itemize} 
+\item {\bf SPICE}=[on,off] \\ the switch allows the model to use the SPICE routines
+\item {\bf ExosphereSamplingMode}=[on,off] \\ ????
+\item {\bf SimulationStartTime}={\it the start-time of the simulation} \\ Defines the physical time of the simulation. Needed when multiple astronomical bodies (Sun, planets) are involved in the simulation. \\
+Example: {\tt SimulationStartTime=2009-01-24T00:00:00}
+\item{\bf addPhysicalModelHeader}={\it header-list} \\ The variable defines the list of headers where the project variables and functions are defined. \\ Example: {\tt addPhysicalModelHeader=Comet.h,Exosphere\_Helium.h}
+\item {\bf PhotolyticReactions}=[on,off], ReactionProcessor=[],LifeTime=[]  \\ Describes the functions that are used for modeling of the photolytic reactions (photo-ionization, photo-dissociation)
+
+ReactionProcessor is the function that is called by the core to model the reaction (inject the product of the reaction into the system) \\ {\tt ReactionProcessor=Comet::ExospherePhotoionizationReactionProcessor}
+
+LifeTime is the function that returns the numerical value of the species lifetime depending of the locations of a particle (could be in a shadow of the planet) \\ 
+{\tt LifeTime=Comet::ExospherePhotoionizationLifeTime} 
+
+
+\item {\bf TypicalSolarWindConditions} = v(v$_x$,v$_y$,v$_z$), B(B$_x$,B$_y$,B$_z$), T, n \\ Definition of the typical solar wind conditions. Here, v, B, T, and n are bulk velocity, magnetic field, temperature, and number density of solar wind
+
+\item {\bf SurfaceVolatileDensity}=[const, function] \\ Defines the number density of volatiles at the surface of the internal body. The number density could be given either by a constant or a function 
+ 
+Example of a constant \\ {\tt SurfaceVolatileDensity=const  $\backslash\backslash$ \\ const(Na)=2.3E16}
+
+Example of a function \\ {\tt SurfaceVolatileDensity=function $\backslash\backslash$ \\ function={\it function-name}}
+
+
+\item {\bf AccommodationCoefficient}=[constant,function] \\ Defines the accommodation coefficient for modeling of the particle/surface interaction. The coefficient can be defined either by a set of the species-dependent constants or a function.
+
+Example of a constant \\ {\tt AccommodationCoefficient=constant $\backslash\backslash$ \\ const(NA) = 0.2, const(NAPLUS)=0.2}
+
+Example of a function \\ {\tt AccommodationCoefficient=function $\backslash\backslash$ \\ function={\it function-name}}
+
+
+\item {\bf Source:ThermalDesorption}=[on,off],uThermal,VibrationalFrequency \\ Defines parameters of the thermal desorption (where it was described?)   . Example: \\ {\tt Source:ThermalDesorption=on $\backslash\backslash$ \\ uThermal(NA)=1.85*eV2J, VibrationalFrequency(NA)=1.0E13}
+ 
+
+\item {\bf Source:PhotonStimulatedDesorption}= [on,off],PhotonFlux=[],CrossSection[],InjectionVelocityRange=[] \\ Parameters of the photon stimulated desorption injection model. Example: \\   {\tt Source:PhotonStimulatedDesorption=on $\backslash\backslash$ \\ PhotonFlux\_1AU=2.0E14*1.0E4 $\backslash\backslash$ \\ CrossSection(NA)=3.0E-21*1.0E-4, InjectionVelocityRange(NA)=(10,10.0E3)}
+
+\item {\bf Source:ImpactVaporization}=[on,off],HeliocentricDistance=[],SourceRatePowerIndex=[], \\ SourceRate=[],SourceTemperature=[] \\ Impact vaporization model. Example: \\ {\tt Source:ImpactVaporization=on $\backslash\backslash$ \\ HeliocentricDistance=1.0*\_AU\_ $\backslash\backslash$ \\ SourceRatePowerIndex=0.0 $\backslash\backslash$ \\ SourceRate(H2O)=2.0E26, SourceTemperature(H2O)=200.0} 
+
+\item {\bf Source:Sputtering}=[on,off], Yield=[], InjectionVelocityRange=[] \\ Sputtering model. Example: \\ {\tt Source:Sputtering=on $\backslash\backslash$ \\ Yield(NA)=0.1, InjectionVelocityRange(NA)=(10,10.0E3)}
+
+\item {\bf Source:UserDefined}=[on,off], SourceProcessCode={\it code}, SourceRate={\it function-name}, \\ GenerateParticleProperties={\it function-name}, ModifySurfaceSpeciesAbundance=[true,false], \\ InitSurfaceSourceDistribution={\it function-name} 
+
+The structure describe the user defined particle injection boundary conditions. Example: \\ {\tt Source:UserDefined=on $\backslash\backslash$ \\ SourceProcessCode=Jet $\backslash\backslash$ \\ SourceRate=Comet::GetTotalProductionRateJet $\backslash\backslash$ \\ GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn $\backslash\backslash$ \\ ModifySurfaceSpeciesAbundance=false  $\backslash\backslash$ \\ InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init}
+
+
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+     
+
+\section{Additional parameters that are needed} 
+1. The accuracy of the volume calculation of the cut-cells (meshAMRgeneric.h\%8286)
 
 
 
