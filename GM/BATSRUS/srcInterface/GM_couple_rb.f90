@@ -439,9 +439,7 @@ contains
     integer :: iSat
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I
-    if (iProc == 0) then
-       Buffer_I = NameSat_I(1:nSats)
-    end if
+    Buffer_I = NameSat_I(1:nSats)
 
     do iSat=1, nSats
        ! Update satellite position.
@@ -471,10 +469,10 @@ contains
 
        ! Store results in Buffer_III
        if (iProc == 0) then 
-          Buffer_III(1:3,1,iSat)   = XyzSat_DI(1:3,iSat)
+          Buffer_III(1:3,1,iSat)  = XyzSat_DI(1:3,iSat)
           !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
-          Buffer_III(1:3,2,iSat) = SatRay_D
-          Buffer_III(4,2,iSat)   = B2
+          Buffer_III(1:3,2,iSat)  = SatRay_D
+          Buffer_III(4,2,iSat)    = B2
        end if
     end do
 
