@@ -141,7 +141,7 @@ contains
          cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
     use ModMain,       ONLY: MaxBlock, UseHeatConduction, UseIonHeatConduction
-    use ModMultiFluid, ONLY: MassIon_I
+    use ModMultiFluid, ONLY: UseMultiIon, MassIon_I
     use ModNumConst,   ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: UseRadCooling
@@ -225,15 +225,13 @@ contains
             FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim), &
             HeatCoef_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
             bb_DDG(MaxDim,MaxDim,0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-            HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock) )
+            HeatCond_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock), &
+            Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
 
-       if(UseHeatFluxLimiter)then
-          allocate( &
-               FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_), &
-               Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) )
-       end if
+       if(UseHeatFluxLimiter) &
+            allocate(FreeStreamFlux_G(0:nI+1,j0_:nJp1_,k0_:nKp1_))
 
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. .not.UseMultiIon)then
           allocate(PointCoef_CB(nI,nJ,nK,MaxBlock))
           if(UseAnisoPressure)then
              allocate(PointImpl_VCB(2,nI,nJ,nK,MaxBlock))
@@ -273,6 +271,7 @@ contains
     use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
+    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
@@ -287,7 +286,12 @@ contains
     !--------------------------------------------------------------------------
 
     if(IsNewBlockHeatCond)then
-       if(UseIdealEos .and. .not.DoUserHeatConduction)then
+       if(UseMultiIon)then
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
+                  /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+          end do; end do; end do
+       elseif(UseIdealEos)then
           iP = p_
           if(UseElectronPressure) iP = Pe_
 
@@ -323,7 +327,10 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    if(UseIdealEos .and. .not.DoUserHeatConduction)then
+    if(UseMultiIon)then
+       CvL = inv_gm1*sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
+       CvR = inv_gm1*sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
+    elseif(UseIdealEos)then
        CvL = inv_gm1*StateLeft_V(Rho_)/TeFraction
        CvR = inv_gm1*StateRight_V(Rho_)/TeFraction
     else
@@ -349,6 +356,7 @@ contains
          UnitEnergyDens_, UnitU_, UnitX_
     use ModVarIndexes,   ONLY: nVar, Bx_, Bz_, Rho_, p_, Pe_
     use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
+    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
 
     integer, intent(in) :: iDim, iFace, jFace, kFace, iBlock
@@ -357,6 +365,9 @@ contains
 
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
     real :: HeatCoefSi, HeatCoef, FractionFieldAligned
+
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatConduction::get_heat_cond_coef'
     !--------------------------------------------------------------------------
 
     if(UseB0)then
@@ -377,16 +388,28 @@ contains
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
-    if(UseIdealEos .and. .not.DoUserHeatConduction)then
-       if(UseElectronPressure)then
-          Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+    if(UseIdealEos)then
+       if(UseMultiIon)then
+          Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
        else
-          Te = TeFraction*State_V(p_)/State_V(Rho_)
+          if(UseElectronPressure)then
+             Te = TeFraction*State_V(Pe_)/State_V(Rho_)
+          else
+             Te = TeFraction*State_V(p_)/State_V(Rho_)
+          end if
        end if
        TeSi = Te*No2Si_V(UnitTemperature_)
 
-       ! Spitzer form for collisional regime
-       HeatCoef = HeatCondPar*Te**2.5
+       if(DoUserHeatConduction)then
+          call user_material_properties(State_V, TeIn=TeSi, &
+               HeatCondOut=HeatCoefSi)
+          HeatCoef = HeatCoefSi &
+               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+       else
+          ! Spitzer form for collisional regime
+          HeatCoef = HeatCondPar*Te**2.5
+       end if
     else
        ! Note we assume that the heat conduction formula for the
        ! ideal state is still applicable for the non-ideal state
@@ -586,7 +609,7 @@ contains
     use ModImplicit,     ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
          iTeImpl
     use ModMain,         ONLY: Dt, time_accurate, Cfl
-    use ModMultiFluid,   ONLY: MassIon_I
+    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
          UnitEnergyDens_, UnitN_, UnitT_, inv_gm1, IonMassPerCharge
@@ -607,7 +630,7 @@ contains
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
     real :: Gamma
     real :: DtLocal
-    real :: NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
+    real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
     real :: TeEpsilonSi = 1.0, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     logical :: IsNewBlockTe
@@ -620,8 +643,8 @@ contains
 
     DtLocal = Dt
 
-    if(UseElectronPressure .and. UseIdealEos .and. .not.DoUserHeatConduction) &
-         call set_resistivity
+    if(UseElectronPressure .and. .not.UseMultiIon .and. UseIdealEos &
+         .and. .not.DoUserHeatConduction) call set_resistivity
 
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -629,47 +652,55 @@ contains
        IsNewBlockTe = .true.
 
        ! For the electron flux limiter, we need Te in the ghostcells
-       if(UseHeatFluxLimiter)then
-          if(UseIdealEos .and. .not.DoUserHeatConduction)then
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                Te_G(i,j,k) = TeFraction &
-                     *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-             end do; end do; end do
-          else
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                     i, j, k, iBlock, TeOut = TeSi)
-                Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
-             end do; end do; end do
-          end if
+       if(UseMultiIon)then
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
+                  ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+          end do; end do; end do
+       elseif(UseIdealEos)then
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             Te_G(i,j,k) = TeFraction &
+                  *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+       else
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, TeOut = TeSi)
+             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+          end do; end do; end do
        end if
 
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI             
-          if(UseIdealEos .and. .not.DoUserHeatConduction)then
-             SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = TeFraction &
-                  *State_VGB(iP,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
+          TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
 
+          if(UseIdealEos)then
+             if(UseMultiIon)then
+                ! Electron number density
+                NumDens = sum( &
+                     ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+             else
+                ! For simulations with Pe_, NumDens is the electron number
+                ! density, while for single temperature simulations NumDens
+                ! is the total number density
+                NumDens = State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+             end if
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
-                     1.0/(Gamma - 1)*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = NumDens/(Gamma-1)
              else
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
-                     inv_gm1*State_VGB(Rho_,i,j,k,iBlock)/TeFraction
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = inv_gm1*NumDens
              end if
 
-             if(UseElectronPressure)then
+             if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
                 TeTiCoef = Eta_GB(i,j,k,iBlock)*Natomic &
                      *3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
              end if
 
-             TeSi = SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) &
-                  *No2Si_V(UnitTemperature_)
           else
-
              if(UseElectronPressure)then
                 call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi, &
@@ -682,16 +713,13 @@ contains
                      i, j, k, iBlock, TeOut=TeSi, CvOut = CvSi)
              end if
 
-             SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
-                  TeSi*Si2No_V(UnitTemperature_)
-
              DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = &
                   CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
           end if
 
           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
-          if(UseElectronPressure)then
+          if(UseElectronPressure .and. .not.UseMultiIon)then
              Cvi = inv_gm1*Natomic
              PointCoef_CB(i,j,k,iBlock) = TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
              PointImpl_VCB(1,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/Natomic
@@ -776,19 +804,19 @@ contains
       use ModConst,      ONLY: cBoltzmann, cElectronmass
       use ModGeometry,   ONLY: r_BLK
       use ModMain,       ONLY: UseB0
-      use ModMultiFluid, ONLY: MassIon_I
+      use ModMultiFluid, ONLY: UseMultiIon, MassIon_I, iRhoIon_I, ChargeIon_I
       use ModNumConst,   ONLY: cTolerance
       use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
            UnitEnergyDens_, UnitU_, UnitX_, AverageIonCharge, UnitPoynting_
       use ModRadDiffusion, ONLY: HeatFluxLimiter
-      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_
+      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, Pe_
       use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
       use ModUserInterface ! user_material_properties
 
       real, intent(in) :: State_V(nVar)
       integer, intent(in) :: i, j, k, iBlock
 
-      real :: TeSi, Te, NatomicSi, NeSi, Zav
+      real :: TeSi, Te, NatomicSi, Ne, NeSi, Zav
       real :: HeatCoefSi, HeatCoef
       real :: Factor, r
       real :: Bnorm, B_D(3), Bunit_D(3)
@@ -796,20 +824,34 @@ contains
       integer :: iDim
       !------------------------------------------------------------------------
 
-      if(UseIdealEos .and. .not.DoUserHeatConduction)then
-         Te = TeFraction*State_V(iP)/State_V(Rho_)
+      if(UseIdealEos)then
+         if(UseMultiIon)then
+            Te = State_V(Pe_)/sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+            Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+         else
+            Te = TeFraction*State_V(iP)/State_V(Rho_)
+            Ne = AverageIonCharge*State_V(Rho_)/MassIon_I(1)
+         end if
          TeSi = Te*No2Si_V(UnitTemperature_)
+         NeSi = Ne*No2Si_V(UnitN_)
 
          ! Spitzer form for collisional regime
-         HeatCoef = HeatCondPar*Te**2.5
-
-         NatomicSi = State_V(Rho_)/MassIon_I(1)*No2Si_V(UnitN_)
-         Zav = AverageIonCharge
+         if(DoUserHeatConduction)then
+            call user_material_properties(State_V, i, j, k, iBlock, &
+                 TeIn=TeSi, HeatCondOut=HeatCoefSi)
+            HeatCoef = HeatCoefSi &
+                 *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
+                 *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+         else
+            ! Heat conduction coefficient for proton-electron plasma
+            HeatCoef = HeatCondPar*Te**2.5
+         end if
       else
          call user_material_properties(State_V, i, j, k, iBlock, &
               TeOut=TeSi, HeatCondOut=HeatCoefSi, NatomicOut = NatomicSi, &
               AverageIonChargeOut = Zav)
 
+         NeSi = Zav*NatomicSi
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
@@ -834,7 +876,6 @@ contains
       HeatCoef_G(i,j,k) = HeatCoef
 
       if(UseHeatFluxLimiter)then
-         NeSi = Zav*NatomicSi
          FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
               *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
               *Si2No_V(UnitPoynting_)
@@ -881,6 +922,7 @@ contains
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
+    use ModMultiFluid,   ONLY: UseMultiIon
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -940,7 +982,7 @@ contains
     end if
 
     ! Point implicit source terms due to electron-ion energy exchange
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. .not.UseMultiIon)then
        if(IsLinear)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              Rhs_VC(1,i,j,k) = Rhs_VC(1,i,j,k) &
@@ -970,6 +1012,7 @@ contains
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
+    use ModMultiFluid,   ONLY: UseMultiIon
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
@@ -980,7 +1023,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! Contributions due to electron-ion energy exchange
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. .not.UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Jacobian_VVCI(1,1,i,j,k,1) = Jacobian_VVCI(1,1,i,j,k,1) &
                - PointCoef_CB(i,j,k,iBlock)
@@ -1058,6 +1101,7 @@ contains
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
+    use ModMultiFluid, ONLY: UseMultiIon
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1113,7 +1157,7 @@ contains
        end if
 
        ! update ion pressure for energy exchange between ions and electrons
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. .not.UseMultiIon)then
           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
                + DtLocal*PointCoef_CB(i,j,k,iBlock) &
