@@ -1068,7 +1068,7 @@ Possible values for TypeBcInner are:
 'fixed'           - Vr=0, Vphi=rotation, Vtheta=0
                     B=B0 (ie B1=0), fix rho, fix P
 'ionosphere'      - set V as if ionosphere gave V_iono=0
-                    float B, fix rho, fix P
+                    float B, fix rho, float P
 'ionospherefloat' - set V as if ionosphere gave V_iono=0
                     float B, float rho, float P
 'coronatoih'      - IH(OH) component obtains inner boundary from the SC(IH) component
@@ -1078,6 +1078,9 @@ Possible values for TypeBcInner are:
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
 the velocity at the inner boundary is determined by the ionosphere model.
+
+The boundary condition on Br can be changed with the #MAGNETICINNERBOUNDARY
+command.
 
 Default value for TypeBcInner is 'ionosphere' for the GM component,
 and 'unknown' for the EE, SC, IH and OH components, so the inner boundary 
@@ -1091,11 +1094,11 @@ must be set for these components.
 T		DoReflectInnerB1
 
 If DoReflectInnerB1 is true, the B1 part of the magnetic field is reflected
-at the ionosphere type inner boundary conditions, i.e. the radial 
+for the ionosphere type inner boundary conditions, i.e. the radial 
 component of the total magnetic field is forced to coincide with the B0
 value.
 
-The default value is DoReflectInnerB1 false which makes B1 float.
+The default value is DoReflectInnerB1 false, which makes B1 float.
 </command>
 
 <command name="EXTRABOUNDARY">
@@ -6077,7 +6080,7 @@ the GM-IE coupling. This only matters if BATSRUS is running as GM
 and it is coupled to IE.
 
 The BodyNDim and BodyTDim parameters define the number density and temperature
-at the inner boundary. For multifluid MHD the number density and temperature
+inside the body. For multifluid MHD the number density and temperature
 are given for all the fluids. The exact effect of these parameters depends 
 on the settings in the #INNERBOUNDARY command.
 
