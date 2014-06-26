@@ -156,6 +156,17 @@ z=0 FUL idl             StringPlot
 10.			DtSavePlot
 -1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
 
+#RBSATCOUPLING
+T			DoRbSatTrace
+
+#SATELLITE
+1			nSatellite
+MHD file		StringSatellite
+-1  			DnOutput
+5.0			DtOutput
+TestSat.dat		NameTrajectoryFile
+
+
 #END_COMP GM ###############################################################
 
 #STOP
