@@ -799,17 +799,15 @@ contains
     !=========================================================================
     subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
 
-      use ModAdvance,    ONLY: UseIdealEos
       use ModB0,         ONLY: B0_DGB
       use ModConst,      ONLY: cBoltzmann, cElectronmass
       use ModGeometry,   ONLY: r_BLK
       use ModMain,       ONLY: UseB0
-      use ModMultiFluid, ONLY: UseMultiIon, MassIon_I, iRhoIon_I, ChargeIon_I
       use ModNumConst,   ONLY: cTolerance
-      use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+      use ModPhysics,    ONLY: UnitTemperature_, &
            UnitEnergyDens_, UnitU_, UnitX_, AverageIonCharge, UnitPoynting_
       use ModRadDiffusion, ONLY: HeatFluxLimiter
-      use ModVarIndexes, ONLY: nVar, Bx_, Bz_, Rho_, Pe_
+      use ModVarIndexes, ONLY: Bx_, Bz_
       use ModRadiativeCooling, ONLY: DoExtendTransitionRegion, extension_factor
       use ModUserInterface ! user_material_properties
 
