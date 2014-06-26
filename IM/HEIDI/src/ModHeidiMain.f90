@@ -99,6 +99,7 @@ contains
     allocate(CEDR(NR,NT,NE,NPA,NS))
     allocate(CIDR(NR,NT,NE,NPA,NS))
     allocate(F2(NR,NT,NE,NPA,NS))
+    F2 = 0.0
     allocate(funt(nPa,nR,nT))
     allocate(funi(nPa,nR,nT))
     allocate(BHeidi_III(nPoint,nR,nT))
