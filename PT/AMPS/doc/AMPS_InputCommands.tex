@@ -66,7 +66,7 @@ The directory where the code will be assembled and compiled
 to avoid deletion of source code files!)\\
 {\tt WorkingSourceDirectory=srcTemp}
 
-\item {\bf TrajectoryIntersectionWithBlockFaces}
+\item {\bf TrajectoryIntersectionWithBlockFaces}=[on,off]
 
 \item {\bf StdOutErrorLog}=[off,on] \\ Switch (on/off) that controls output of the error messages on screen
 
@@ -187,7 +187,11 @@ Example (function):
 
 
 
-
+
+
+
+
+
 
 
 
@@ -205,6 +209,8 @@ Example (function):
 \item {\bf TestRunTotalIteration}={\it iteration-number} \\ The number of the iterations before the output of the code test simulation results for the nightly test
 
 \item {\bf ReferenceInjectionParticleNumber}={\it reference-number} \\ The number of the model particles that should be injected by the code each iterations. Used for evaluations of the particle weight.
+
+\item {\bf NastranSurfaceUserData}=[on,off] \\ Use the NASTRAN surface 
 
 \end{itemize}
 
@@ -249,6 +255,10 @@ The section defines the model of the internal degrees of freedom. The section ha
 \item {\bf RotZnum} \\ the rotational $Z_\nu$ number. $1/Z_\nu$ is the probability of the rotationa-translational energy exchange during a collision event. \\ {\tt RotZnum(H2O=3,CO2=2)}
 \item {\bf VibTemp} \\ the characteristic vibrational temperature \\ {\tt  VibTemp(H2O=2000,CO2=1000)}
 
+\item {\bf TemperatureIndex}{\it (spec$_1$, spec$_1$)=index} \\ Example:
+
+{\tt TemperatureIndex(H2O,H2O)=0.5}
+
 \end{itemize}
 
 
@@ -256,6 +266,22 @@ The section defines the model of the internal degrees of freedom. The section ha
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{UnimolecularReactions}
+
+\begin{itemize}
+\item {\bf UNIMOLECULARREACTIONS}=[on,off]
+
+\item {\bf REACTIONLIFETIMEMULTIPLIER}={\it multiplier}
+
+\item {\bf PROCESSOR}={\it function-name}
+
+\item {\bf LIFETIMEUSERFUNCTION}={\it function-name}
+
+\item {\bf REACTION} (PRODUCT, NONE), ID={\it reaction-symbolic-id}, LIFETIME
+
+
+
+\end{itemize}
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
