@@ -602,7 +602,7 @@ contains
     real, parameter:: dp2 = -1./12.0, dp1 = 2.0/3.0 
     !coeff to average transverse derivatives
     real, parameter:: ap2 = -1./16.0, ap1 = 9.0/16.
-    real :: Dxyz_D(nDim) 
+    real :: Dxyz_D(MaxDim) 
 
     logical :: DoTest, DoTestMe, UseFirstOrderBc
     character(len=*), parameter:: NameSub='set_block_jacobian_face'
