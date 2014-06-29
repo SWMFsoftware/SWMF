@@ -17,15 +17,20 @@ module CON_transfer_data
   !               UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
   !    if(is_proc(Target_) call put_data_into_target_comp(iData)
   !
-  ! Transfer a 2D array of type real that involves all source processors, but
-  ! the result is available from source root and needed on root target only:
+  ! Transfer a 2D array of type real that is obtained as the sum of the data 
+  ! returned by the source processors. Result is needed on root target only:
   !
   !    allocate(Data_II(iSize,jSize))
   !    if(is_proc(Source_) call get_data_from_source_comp(Data_II)
   !    call transfer_real_array(Source_, Target_, iSize*jSize, Data_II, 
-  !                       UseSourceRootOnly=.true., UseTargetRootOnly=.true.)
+  !            UseSourceSum=.true., UseTargetRootOnly=.true.)
   !    if(is_proc0(Target_) call put_data_into_target_comp(Data_II)
   !    deallocate(Data_II)
+  !
+  ! The optional UseSourceSum argument indicates that the data obtained
+  ! from the source processors should be added up either on to the root
+  ! processor (default) or added up on all processors (If it is combined with
+  ! UseSourceRootOnly = .false.).
   !
   ! The optional UseSourceRootOnly and UseTargetOnly parameters indicate
   ! if the data is availale/needed only on the Source/Target root processor.
@@ -55,33 +60,44 @@ module CON_transfer_data
   integer:: iStatus_I(MPI_STATUS_SIZE)
   integer:: iError
 
+  logical:: DoSourceSum       ! sum up data on source processors
   logical:: DoRootTransfer    ! transfer data from Source Root to Target Root?
   logical:: DoTargetBroadcast ! broadcast data from Target Root to Target procs
+
+  logical:: UseAllReduce      ! use an MPI_allreduce or MPI_reduce
 
 contains
 
   !===========================================================================
 
   subroutine transfer_data_action(DoTest, iCompSource, iCompTarget, &
-       UseSourceRootOnlyIn, UseTargetRootOnlyIn)
+       UseSourceSum, UseSourceRootOnlyIn, UseTargetRootOnlyIn)
 
     ! Set DoRootTransfer and DoTargetBroadcast logicals as needed
 
     logical, intent(in):: DoTest
     integer, intent(in):: iCompSource, iCompTarget
-    logical, optional, intent(in):: UseSourceRootOnlyIn, UseTargetRootOnlyIn
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnlyIn, UseTargetRootOnlyIn
 
     integer:: iProc0Source, iProc0Target
     logical:: UseSourceRootOnly, UseTargetRootOnly
 
     character(len=*), parameter:: NameSub = 'transfer_data_action'
     !-------------------------------------------------------------------------
-    ! Default values are the worst case scenario
+    ! Do source addition on source processors if needed. Default is false.
+    DoSourceSum = .false.
+    if(present(UseSourceSum)) DoSourceSum = UseSourceSum &
+         .and. is_proc(iCompSource) .and. n_proc(iCompSource) > 0
+
+    ! Default values for using root only represent the worst case:
     UseSourceRootOnly = .true.
     UseTargetRootOnly = .false.
-
     if(present(UseSourceRootOnlyIn)) UseSourceRootOnly = UseSourceRootOnlyIn
     if(present(UseTargetRootOnlyIn)) UseTargetRootOnly = UseTargetRootOnlyIn
+
+    ! Should we use an MPI_all_reduce on the source processors
+    UseAllReduce = DoSourceSum .and. .not. UseSourceRootOnly
 
     iProc0Source = i_proc0(iCompSource)
     iProc0Target = i_proc0(iCompTarget)
@@ -89,6 +105,8 @@ contains
     if(DoTest)then
        write(*,*) NameSub,' starting for source, target=', &
             NameComp_I(iCompSource),', ',NameComp_I(iCompTarget)
+       write(*,*) NameSub, ': DoSourceSum, UseAllReduce=', &
+            DoSourceSum, UseAllReduce
        write(*,*) NameSub, &
             ': UseSourceRootOnly, TargetRootOnly, iProc0Source, Target=',&
             UseSourceRootOnly, UseTargetRootOnly, iProc0Source, iProc0Target
@@ -98,7 +116,6 @@ contains
     DoRootTransfer = iProc0Source /= iProc0Target
 
     if(DoTest)write(*,*) NameSub,': initial DoRootTransfer=', DoRootTransfer
-
 
     ! If data is available on all source processors then
     ! check if target root is among them
@@ -159,15 +176,18 @@ contains
 
   !===========================================================================
   subroutine transfer_integer_array(iCompSource, iCompTarget, nData, iData_I, &
-       UseSourceRootOnly, UseTargetRootOnly)
+       UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     integer, intent(in):: nData
     integer, intent(inout):: iData_I(:)
 
-    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
     integer, parameter:: iTag = 1001
+
+    integer, allocatable:: iDataLocal_I(:)
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
@@ -175,12 +195,25 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
-         UseSourceRootOnly, UseTargetRootOnly)
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     if(DoTestMe)then
-       write(*,*) NameSub,': DoRootTransfer, DoTargetBroadcast=', &
-            DoRootTransfer, DoTargetBroadcast
+       write(*,*) NameSub,': DoSourceSum, DoRootTransfer, DoTargetBroadcast=',&
+            DoSourceSum, DoRootTransfer, DoTargetBroadcast
        call CON_stop('DEBUG')
+    end if
+
+    if(DoSourceSum)then
+       allocate(iDataLocal_I(nData))
+       iDataLocal_I = iData_I
+       if(UseAllReduce)then
+          call MPI_allreduce(iDataLocal_I, iData_I, nData, MPI_INTEGER, &
+               MPI_SUM, i_comm(iCompSource), iError)
+       else
+          call MPI_reduce(iDataLocal_I, iData_I, nData, MPI_INTEGER, &
+               MPI_SUM, 0, i_comm(iCompSource), iError)
+       end if
+       deallocate(iDataLocal_I)
     end if
 
     if(DoRootTransfer)then
@@ -199,14 +232,17 @@ contains
 
   !===========================================================================
   subroutine transfer_integer(iCompSource, iCompTarget, iData, &
-       UseSourceRootOnly, UseTargetRootOnly)
+       UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     integer, intent(inout):: iData
 
-    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
     integer, parameter:: iTag = 1001
+
+    integer:: iDataLocal
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_integer'
@@ -214,7 +250,18 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
-         UseSourceRootOnly, UseTargetRootOnly)
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
+
+    if(DoSourceSum)then
+       iDataLocal = iData
+       if(UseAllReduce)then
+          call MPI_allreduce(iDataLocal, iData, 1, MPI_INTEGER, &
+               MPI_SUM, i_comm(iCompSource), iError)
+       else
+          call MPI_reduce(iDataLocal, iData, 1, MPI_INTEGER, &
+               MPI_SUM, 0, i_comm(iCompSource), iError)
+       end if
+    end if
 
     if(DoRootTransfer)then
        if(is_proc0(iCompSource)) call MPI_send( &
@@ -233,18 +280,34 @@ contains
   !===========================================================================
 
   subroutine transfer_real_array(iCompSource, iCompTarget, nData, Data_I, &
-       UseSourceRootOnly, UseTargetRootOnly)
+       UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     integer, intent(in):: nData
     real, intent(inout):: Data_I(nData)
 
-    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
+
+    real, allocatable:: DataLocal_I(:)
 
     integer, parameter:: iTag = 1002
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
-         UseSourceRootOnly, UseTargetRootOnly)
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
+
+    if(DoSourceSum)then
+       allocate(DataLocal_I(nData))
+       DataLocal_I = Data_I
+       if(UseAllReduce)then
+          call MPI_allreduce(DataLocal_I, Data_I, nData, MPI_REAL, MPI_SUM, &
+               i_comm(iCompSource), iError)
+       else
+          call MPI_reduce(DataLocal_I, Data_I, nData, MPI_REAL, MPI_SUM, &
+               0, i_comm(iCompSource), iError)
+       end if
+       deallocate(DataLocal_I)
+    end if
 
     if(DoRootTransfer)then
        if(is_proc0(iCompSource)) call MPI_send( &
@@ -263,17 +326,31 @@ contains
   !===========================================================================
 
   subroutine transfer_real(iCompSource, iCompTarget, Data, &
-       UseSourceRootOnly, UseTargetRootOnly)
+       UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
     integer, intent(in):: iCompSource, iCompTarget
     real, intent(inout):: Data
 
-    logical, optional, intent(in):: UseSourceRootOnly, UseTargetRootOnly
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
+
+    real:: DataLocal
 
     integer, parameter:: iTag = 1002
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
-         UseSourceRootOnly, UseTargetRootOnly)
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
+
+    if(DoSourceSum)then
+       DataLocal = Data
+       if(UseAllReduce)then
+          call MPI_allreduce(DataLocal, Data, 1, MPI_REAL, MPI_SUM, &
+               i_comm(iCompSource), iError)
+       else
+          call MPI_reduce(DataLocal, Data, 1, MPI_REAL, MPI_SUM, 0, &
+               i_comm(iCompSource), iError)
+       end if
+    end if
 
     if(DoRootTransfer)then
        if(is_proc0(iCompSource)) call MPI_send( &
