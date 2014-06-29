@@ -724,14 +724,15 @@ contains
           DcoordDxyz_DDFD(x_,:,nI + 1,j,k,x_) = Dxyz_D
        end do; end do
     end if
-   if(neiLSouth(iBlock)==NoBlk)then
+    if(nJ==1)RETURN
+    if(neiLSouth(iBlock)==NoBlk)then
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,1,k,iBlock) - Xyz_DGB(:,i,0,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
           DcoordDxyz_DDFD(y_,:,i,1,k,y_) = Dxyz_D
        end do; end do
     end if
-    if(neiLWest(iBlock)==NoBlk)then
+    if(neiLNorth(iBlock)==NoBlk)then
        do k=1,nK; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,nJ + 1,k,iBlock) - Xyz_DGB(:,i,nJ,k,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(y_,iBlock)/sum(Dxyz_D**2))
@@ -745,6 +746,7 @@ contains
           DcoordDxyz_DDFD(z_,:,i,j,1,z_) = Dxyz_D
        end do; end do
     end if
+    if(nK==1)RETURN
     if(neiLTop(iBlock)==NoBlk)then
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,nK + 1,iBlock) - Xyz_DGB(:,i,j,nK,iBlock)
@@ -966,7 +968,7 @@ contains
     ! from the interpolation stencil.
     ! 
     !/
-    logical :: UseFirstOrderBc, UseCellCenteredJacobian
+    logical :: UseFirstOrderBc
     !--------------------------------------------------------------------------
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
@@ -993,7 +995,6 @@ contains
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
     Az = -0.25*InvDz; Bz = 0.0; Cz = +0.25*InvDz
 
-    UseCellCenteredJacobian = .false.
     if(i==1)then
        if(NeiLeast(iBlock)==-1 &
             .or. (iDir==y_ .and. &
@@ -1005,8 +1006,7 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        elseif(UseFirstOrderBc.and.NeiLeast(iBlock)==NoBlk)then
-          iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx  
-          UseCellCenteredJacobian = .true. 
+          iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx   
        end if
     elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
@@ -1020,7 +1020,6 @@ contains
     elseif(UseFirstOrderBc.and.(i==nI+1 .or. i==nI.and.iDir/=x_)&
          .and. NeiLwest(iBlock)==NoBlk)then
        iR = i; iU = i-1; Ax =-0.50*InvDx; Bx = 0.50*InvDx; Cx = 0.0
-       UseCellCenteredJacobian = .true.
     end if
 
     if(j==1)then
@@ -1035,7 +1034,6 @@ contains
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        elseif(UseFirstOrderBc.and.NeiLsouth(iBlock)==NoBlk)then
           jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy 
-          UseCellCenteredJacobian = .true.
        end if
     elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
          j==nJ .and. ((iDir==x_ .and. &
@@ -1049,7 +1047,6 @@ contains
     elseif(UseFirstOrderBc.and.(j==nJ+1 .or. j==nJ.and.iDir/=y_)&
          .and. NeiLnorth(iBlock)==NoBlk)then
        jR = j; jU = j-1; Ay =-0.50*InvDy; By = 0.50*InvDy; Cy = 0.0
-       UseCellCenteredJacobian = .true.
     end if
 
     if(k==1)then
@@ -1064,7 +1061,6 @@ contains
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        elseif(UseFirstOrderBc.and.NeiLbot(iBlock)==NoBlk)then
           kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz 
-          UseCellCenteredJacobian = .true.
        end if
     elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
          k==nK .and. ((iDir==x_ .and. &
@@ -1078,7 +1074,6 @@ contains
     elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)& 
          .and. NeiLtop(iBlock)==NoBlk)then
        kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
-       UseCellCenteredJacobian = .true.
     end if
 
     ! Use central difference to get gradient at face
@@ -1133,10 +1128,7 @@ contains
     ! multiply by the coordinate transformation matrix to obtain the
     ! cartesian gradient from the partial derivatives dScalar/dGencoord
     if(.not.IsCartesianGrid) then
-       if(UseCellCenteredJacobian)then
-       else
-         FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
-      end if
+       FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
    end if
   end subroutine get_face_gradient
 
