@@ -16,6 +16,7 @@ module CON_couple_ie_im
 
   !USES:
   use CON_coupler
+  use CON_transfer_data, ONLY: transfer_real_array
 
   use IE_wrapper, ONLY: IE_get_for_im, IE_put_from_im, IE_put_from_im_complete
 
@@ -56,9 +57,7 @@ module CON_couple_ie_im
   logical :: DoTest, DoTestMe
 
   ! Variables for the simple coupler
-  logical, save :: UseMe
   integer, save :: nTheta, nPhi
-  integer, save :: iProc0Ie, iProc0Im, iCommWorld
 
   ! Name of this interface
   character (len=*), parameter :: NameMod='CON_couple_ie_im'
@@ -87,14 +86,8 @@ contains
     call get_comp_info(IM_,NameVersion=NameVersionIm)
     if(NameVersionIm(1:3) == 'RAM')then
        ! IE-IM/RAM coupling uses MPI
-       UseMe = is_proc(IE_) .or. is_proc(IM_)
-
        nTheta = size(Grid_C(IE_) % Coord1_I)
        nPhi   = size(Grid_C(IE_) % Coord2_I)
-
-       iProc0Im   = i_proc0(IM_)
-       iProc0Ie   = i_proc0(IE_)
-       iCommWorld = i_comm()
     else
        ! IE-IM/RCM coupling uses the coupling toolkit
        call init_coupler(                 &
@@ -152,7 +145,6 @@ contains
     !EOP
 
     integer, parameter :: nVarImIe=3
-    real :: tSimulationTmp
     character(len=*), parameter:: NameSub = NameMod//'::couple_im_ie'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -161,7 +153,7 @@ contains
     if(.not.RouterImIe%IsProc) RETURN
     
     call couple_comp(& 
-         RouterImIe, nVarImIe,&
+         RouterImIe, nVarImIe, &
          fill_buffer =IM_get_for_ie,&
          apply_buffer=IE_put_from_im)
 
@@ -192,7 +184,6 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(NameVersionIm(1:3) == 'RAM')then
-       if(.not.UseMe) RETURN
        call couple_mpi
     else
        ! After everything is initialized exclude PEs which are not involved
@@ -220,60 +211,20 @@ contains
 
       character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
 
-      ! Variable to pass is potential on the 2D IE grid
-      real, dimension(:,:),  allocatable :: Potential_II
-      real, dimension(:,:,:),allocatable :: Buffer_IIV
-
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
-
-      ! Size of MPI message
-      integer:: nSize
-
-      ! General error code
-      integer :: iError
+      ! Variable to pass potential on the 2D IE grid
+      real, allocatable :: Buffer_IIV(:,:,:)
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
-      if(.not.UseMe) RETURN
+      if(DoTest)write(*,*)NameSubSub,', iProc=', i_Proc()
 
-      if(DoTest)write(*,*)NameSubSub,', iProc, iProc0Ie, iProc0Im=', &
-           i_Proc(), iProc0Ie, iProc0Im
-
-      ! Allocate buffers both on IM and IE root processors
-      allocate(Potential_II(nTheta,nPhi), stat=iError)
-      allocate(Buffer_IIV(nTheta,nPhi,2), stat=iError)
-
-      if(is_proc(IE_)) then
-         ! Need to call ALL IE processors here
-         call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, tSimulation)
-         ! IM wants only potential. The result is on IE root processor only.
-         if(is_proc0(IE_)) Potential_II = Buffer_IIV(:,:,1) 
-      end if
-
-      nSize = nTheta*nPhi
-
-      ! Transfer variables from IE root to IM root
-      if(iProc0Ie /= iProc0Im)then
-         if(is_proc0(IE_)) &
-              call MPI_send(Potential_II,nSize,MPI_REAL,iProc0Im,&
-              1,iCommWorld,iError)
-         if(is_proc0(IM_)) &
-              call MPI_recv(Potential_II,nSize,MPI_REAL,iProc0Ie,&
-              1,iCommWorld,iStatus_I,iError)
-      end if
-
-      ! Broadcast onto all IM processors if IM is running in parallel
-      if(n_proc(IM_) > 1 .and. is_proc(IM_)) &
-           call MPI_bcast(Potential_II,nSize,MPI_REAL,0,i_comm(IM_),iError)
-
-      if(DoTest)write(*,*)NameSubSub,', variables transferred iProc:',i_proc()
-
-      ! Put variables into IM
-      if(is_proc(IM_))call IM_put_from_ie_mpi(nTheta, nPhi, Potential_II)
-
-      ! Deallocate buffer to save memory
-      deallocate(Potential_II)
+      ! Allocate buffer both on IM and IE processors. IE sends two variables.
+      allocate(Buffer_IIV(nTheta,nPhi,2))
+      ! Need to call ALL IE processors here
+      if(is_proc(IE_))call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, tSimulation)
+      ! IM/RAM wants only potential. The result is on IE root processor only.
+      call transfer_real_array(IE_, IM_, nTheta*nPhi, Buffer_IIV(:,:,1))
+      if(is_proc(IM_))call IM_put_from_ie_mpi(nTheta, nPhi, Buffer_IIV(:,:,1))
       deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()
