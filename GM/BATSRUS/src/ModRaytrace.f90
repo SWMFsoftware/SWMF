@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 
@@ -146,6 +147,10 @@ module ModRaytrace
   ! Temporary array for extracting b.grad(B1) info
   real, allocatable :: bGradB1_DGB(:,:,:,:,:)
   logical:: DoExtractBGradB1 = .false.
+
+  ! Temporary array for extracting curvature of B info
+  real, allocatable :: CurvatureB_GB(:,:,:,:)
+  logical:: DoExtractCurvatureB = .false.
 
   ! Conversion matrix between SM and GM coordinates 
   ! (to be safe initialized to unit matrix)
