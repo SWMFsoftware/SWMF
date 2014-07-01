@@ -758,6 +758,16 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('nLon',      plot_range(2,ifile))
               call read_var('RadiusMin', plot_range(3,ifile))
               call read_var('RadiusMax', plot_range(4,ifile))
+              plot_range(5,ifile) =   0.0
+              plot_range(6,ifile) = 360.0
+           elseif (index(plot_string,'eqb')>0)then
+              plot_area='eqb'
+              call read_var('nRadius',   plot_range(1,ifile))
+              call read_var('nLon',      plot_range(2,ifile))
+              call read_var('RadiusMin', plot_range(3,ifile))
+              call read_var('RadiusMax', plot_range(4,ifile))
+              call read_var('LongitudeMin', plot_range(5,ifile))
+              call read_var('LongitudeMax', plot_range(6,ifile))
            elseif (index(plot_string,'ieb')>0)then
               plot_area='ieb'
            elseif (index(plot_string,'lcb')>0)then
@@ -833,12 +843,13 @@ subroutine MH_set_parameters(TypeAction)
            plot_dx(1,ifile) = -1.0
            if(index(plot_string,'idl') >0 )then
               plot_form(ifile)='idl'
-              if ((plot_area /= 'ion')&
+              if (       plot_area /= 'ion' &
                    .and. plot_area /= 'sph' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &
                    .and. plot_area /= 'eqr' &
+                   .and. plot_area /= 'eqb' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
 
               ! Extract the type of idl plot file: default is real4
@@ -940,6 +951,9 @@ subroutine MH_set_parameters(TypeAction)
                    'Variable "pos" can only be used with area "lin" !')
            elseif(index(plot_string,'eqr')>0)then
               plot_var ='eqr'
+              plot_dimensional(ifile) = .true.
+           elseif(index(plot_string,'eqb')>0)then
+              plot_var ='eqb'
               plot_dimensional(ifile) = .true.
            elseif(index(plot_string,'NUL')>0.or.index(plot_string,'nul')>0)then
               plot_var ='nul'
@@ -2907,8 +2921,9 @@ contains
 
        if(DoTestMe)write(*,*)'iFile, plot_area=',iFile, plot_area
 
-       !Don't do anything to plot_type for specific plots.
+       ! Don't do anything to plot_type for specific plots.
        if(plot_area == 'lcb')CYCLE
+       if(plot_area(1:2) == 'eq') CYCLE
 
        ! Fix plot range for sph, x=0, y=0, z=0 areas
        select case(plot_area)
