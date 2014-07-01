@@ -795,6 +795,7 @@ contains
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &
             index(plot_type(iFile),'eqr')==1 .or. &
+            index(plot_type(iFile),'eqb')==1 .or. &
             index(plot_type(iFile),'ieb')==1 .or. &
             index(plot_type(iFile),'lcb')==1 .or. &
             index(plot_type(iFile),'los')==1 .or. &
@@ -824,7 +825,8 @@ contains
           call write_plot_line(iFile)
        end if
 
-       if(index(plot_type(iFile),'eqr')>0) then
+       if(  index(plot_type(iFile),'eqr')>0 .or. &
+            index(plot_type(iFile),'eqb')>0) then
           IsFound = .true.
           call plot_ray_equator(iFile)
        end if
@@ -838,8 +840,6 @@ contains
           IsFound = .true.
           call lcb_plot(iFile)
        end if
-
-
 
        if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
           ! Assign node numbers for tec plots
