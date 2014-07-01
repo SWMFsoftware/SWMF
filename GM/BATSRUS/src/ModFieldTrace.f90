@@ -1253,7 +1253,8 @@ contains
          Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_, Ppar_
     use ModMain, ONLY: UseB0
     use ModB0,   ONLY: get_b0
-    use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB
+    use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB, &
+         DoExtractCurvatureB, CurvatureB_GB
     use ModInterpolate, ONLY: trilinear
 
     real, intent(in) :: x_D(3),Xyz_D(3)
@@ -1335,6 +1336,20 @@ contains
        PlotVar_V(5:4+nVar) = State_V
 
        n = 4 + nVar
+
+       if(DoExtractCurvatureB)then
+
+          n = n + 1
+
+          ! Interpolate curvature of the magnetic field
+          PlotVar_V(n) = &
+               trilinear(CurvatureB_GB(:,:,:,iBlock), &
+               0, nI+1, 0, nJ+1, 0, nK+1, x_D, DoExtrapolate=.false.)
+
+          if(DoExtractUnitSi) PlotVar_V(n) = &
+               PlotVar_V(n) * No2Si_V(UnitX_)
+
+       end if
 
        if(DoExtractBGradB1)then
 
@@ -1820,15 +1835,16 @@ end subroutine integrate_ray_accurate_1d
 subroutine plot_ray_equator(iFile)
 
   use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem
-  use ModIo,   ONLY: StringDateOrTime, NamePlotDir, plot_range
+  use ModIo,   ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
   use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
   use ModProcMH,  ONLY: iProc
   use ModNumConst,       ONLY: cTwoPi
   use ModIoUnit,         ONLY: UnitTmp_
   use ModPlotFile,       ONLY: save_plot_file
-  use ModRayTrace,       ONLY: RayMap_DSII, DoExtractBGradB1
+  use ModRayTrace,       ONLY: RayMap_DSII, DoExtractCurvatureB
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
+  use ModNumConst,       ONLY: cDegToRad, i_DD
 
   implicit none
 
@@ -1844,32 +1860,55 @@ subroutine plot_ray_equator(iFile)
   ! starting from the 2D polar grid.
 
   integer :: nRadius, nLon
-  real    :: rMin, rMax
+  real    :: rMin, rMax, LonMin, LonMax
   integer :: iR, iLon
   integer :: iPoint, nPoint, nVarOut, nVarPlot
-  real, allocatable :: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
+  real, allocatable:: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
   real    :: SmGm_DD(3,3)
+
+  ! Number of points along the Up and Down halves of the field line
+  integer:: nPointDn, nPointUp, nPointAll
+
+  ! Indexes of the start and end points of the Up and Down halves
+  integer:: iPointMin, iPointMid, iPointMax
+
+  ! State variables along a single field line (both halves)
+  real, allocatable:: State_VI(:,:)
+
+  ! State variables at the minimum B location indexed by r and Lon
+  real, allocatable:: StateMinB_VII(:,:,:)
+
+  ! True for "eqb" plot area
+  logical:: IsMinB
+
+  integer:: iLine
 
   character(len=100) :: NameFile, NameFileEnd
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'plot_ray_equator'
   !-------------------------------------------------------------------------
-
   call set_oktest(NameSub, DoTest, DoTestMe)
 
-  ! Extract grid info from plot_range (see MH_set_parameters for plot_type eqr)
-  nRadius = plot_range(1, iFile)
-  nLon    = plot_range(2, iFile)
-  rMin    = plot_range(3, iFile)
-  rMax    = plot_range(4, iFile)
+  IsMinB = plot_type(iFile)(1:3) == 'eqb'
+
+  DoExtractCurvatureB = IsMinB
+
+  ! Extract grid info from plot_range 
+  ! See MH_set_parameters for plot_type eqr and eqb
+  nRadius = nint(plot_range(1,iFile))
+  nLon    = nint(plot_range(2,iFile))
+  rMin    = plot_range(3,iFile)
+  rMax    = plot_range(4,iFile)
+  LonMin  = cDegToRad*plot_range(5,iFile)
+  LonMax  = cDegToRad*plot_range(6,iFile)
 
   allocate(Radius_I(nRadius), Longitude_I(nLon))
   do iR = 1, nRadius
      Radius_I(iR) = rMin + (iR-1)*(rMax - rMin)/(nRadius - 1)
   end do
   do iLon = 1, nLon
-     Longitude_I(iLon) = (iLon-1)*cTwoPi / (nLon - 1)
+     Longitude_I(iLon) = LonMin + (iLon-1)*(LonMax - LonMin)/(nLon - 1)
   end do
 
   call trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, .false.)
@@ -1879,52 +1918,119 @@ subroutine plot_ray_equator(iFile)
   if(iProc/=0) RETURN
 
   ! Set number of variables at each point along line; allocate accordingly.
-  if(DoExtractBGradB1)then
-     ! length + coordinates + variables + grad(B1)
-     nVarPlot = nVar + 7
+  if(DoExtractCurvatureB)then
+     ! length + coordinates + variables + rCurvature
+     nVarPlot = nVar + 5
   else
      ! length + coordinates + variables
      nVarPlot = nVar + 4
   end if
-  allocate(PlotVar_V(0:nVarPlot))
 
   NameFileEnd = ""
   if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
   write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
   ! Transformation matrix between the SM and GM coordinates
-  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+!!!  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+  SmGm_DD = i_DD
+
 
   call line_get(nVarOut, nPoint)
 
-  if(nVarOut /= nVarPlot)call stop_mpi(NameSub//': nVarOut error')
+  if(nVarOut /= nVarPlot)then
+     write(*,*) NameSub,': nVarOut, nVarPlot=', nVarOut, nVarPlot
+     call stop_mpi(NameSub//': nVarOut error')
+  end if
   allocate(PlotVar_VI(0:nVarOut, nPoint))
   call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
-  NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
+  if(.not.IsMinB)then
+     NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
+     open(UnitTmp_, FILE=NameFile, STATUS="replace")
+     write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
+     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p rCurve' 
 
-  open(UnitTmp_, FILE=NameFile, STATUS="replace")
-  write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
-  if(DoExtractBGradB1) then
-     write(UnitTmp_, *) &
-          'iLine l x y z rho ux uy uz bx by bz p bgradb1x bgradb1y bgradb1z' 
-  else 
-     write(UnitTmp_, *) 'iLine l x y z rho ux uy uz bx by bz p' 
+     allocate(PlotVar_V(0:nVarPlot))
+     do iPoint = 1, nPoint
+        ! Convert vectors to SM coordinates
+        PlotVar_V = PlotVar_VI(:, iPoint)
+        PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
+        PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
+        PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
+        ! Save into file
+        write(UnitTmp_, *) PlotVar_V
+     end do
+     deallocate(PlotVar_V)
+
+     close(UnitTmp_)
+  else
+     ! StateMinB: x,y,z,state variables and curvature
+     allocate(StateMinB_VII(nVar+4,nRadius,nLon), State_VI(0:nVarOut,nPoint))
+
+     iPointMin = 1
+     iPointMid = 0
+     iPointMax = 0
+     iLine  = 0
+     do iLon = 1, nLon
+        do iR = 1, nRadius
+
+           iLine = iLine + 1   ! Collect info from both directions
+           do
+              if(nint(PlotVar_VI(0,iPointMid + 1)) > iLine) EXIT
+              iPointMid = iPointMid + 1
+           end do
+
+           iLine = iLine + 1
+           iPointMax = iPointMid + 1
+           do
+              if(iPointMax == nPoint) EXIT
+              if(nint(PlotVar_VI(0,iPointMax + 1)) > iLine) EXIT
+              iPointMax = iPointMax + 1
+           end do
+
+           ! Note: we skip one of the repeated starting point!
+           nPointUp = iPointMid - iPointMin
+           nPointDn = iPointMax - iPointMid
+           nPointAll= nPointDn + nPointUp
+
+           ! Put together the two halves
+           State_VI(:,1:nPointDn) &
+                = PlotVar_VI(:,iPointMax:iPointMid+1:-1)
+           State_VI(:,nPointDn+1:nPointAll) &
+                = PlotVar_VI(:,iPointMin+1:iPointMid)
+
+           ! Find minimum of B^2
+           iPoint = minloc( sum(State_VI(4+Bx_:4+Bz_,1:nPointAll)**2, DIM=1), &
+                DIM=1)
+
+           ! Don't save line index and length
+           StateMinB_VII(:,iR,iLon) = State_VI(2:,iPoint)
+
+           ! Prepare for the next line
+           iPointMin = iPointMax + 1
+           iPointMid = iPointMax
+
+        end do
+     end do
+
+     NameFile = trim(NamePlotDir)//"eqb_"//NameFileEnd
+     call save_plot_file( &
+          NameFile, &
+          StringHeaderIn = 'Values at minimum B', &
+          TimeIn  = time_simulation, &
+          nStepIn = n_step, &
+          NameVarIn= &
+          'x y z rho ux uy uz bx by bz p rCurve',&
+          IsCartesianIn= .false., &
+          CoordIn_DII  = StateMinB_VII(1:2,:,:), &
+          VarIn_VII    = StateMinB_VII(3:,:,:))
+
+     deallocate(State_VI, StateMinB_VII)
+
   end if
 
-  do iPoint = 1, nPoint
-     ! Convert vectors to SM coordinates
-     PlotVar_V = PlotVar_VI(:, iPoint)
-     PlotVar_V(2:4) = matmul(SmGm_DD,PlotVar_V(2:4))
-     PlotVar_V(4+Ux_:4+Uz_) = matmul(SmGm_DD,PlotVar_V(4+Ux_:4+Uz_))
-     PlotVar_V(4+Bx_:4+Bz_) = matmul(SmGm_DD,PlotVar_V(4+Bx_:4+Bz_))
-     ! Save into file
-     write(UnitTmp_, *) PlotVar_V
-  end do
-  close(UnitTmp_)
-  deallocate(PlotVar_VI)
-  deallocate(PlotVar_V)
   call line_clean
+  deallocate(PlotVar_VI)
 
   ! Now save the mapping files
   NameFile = trim(NamePlotDir)//"map_north_"//NameFileEnd
@@ -1963,7 +2069,9 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, &
        DoIntegrateRay, DoExtractRay, DoTraceRay, DoMapRay, &
-       DoExtractState, DoExtractUnitSi, DoExtractBGradB1, bGradB1_DGB, &
+       DoExtractState, DoExtractUnitSi, &
+       DoExtractBGradB1, bGradB1_DGB, &
+       DoExtractCurvatureB, CurvatureB_GB, &
        RayMap_DSII, RayMapLocal_DSII, &
        NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD, CLOSEDRAY
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
@@ -1973,9 +2081,11 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModMpi
   use ModGeometry,       ONLY: CellSize_DB
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-  use BATL_lib,          ONLY: message_pass_cell
+  use BATL_lib,          ONLY: message_pass_cell, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModCoordTransform, ONLY: xyz_to_sph
-  use ModMessagePass, ONLY: exchange_messages
+  use ModMessagePass,    ONLY: exchange_messages
+  use ModNumConst,       ONLY: i_DD
 
   implicit none
 
@@ -1996,6 +2106,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   integer :: iR, iLon, iSide
   integer :: iProcFound, iBlockFound, iBlock, i, j, k, iError
   real    :: r, Phi, XyzSm_D(3), Xyz_D(3), b_D(3)
+
+  real, allocatable:: b_DG(:,:,:,:)
 
   integer :: nStateVar
 
@@ -2038,20 +2150,53 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
            if(UseB0) b_D = b_D +  B0_DGB(:,i,j,k,iBlock)
            b_D = b_D/sqrt(max(1e-30,sum(b_D**2)))
         
-           bGradB1_DGB(1,i,j,k,iBlock) = 0.5*sum(b_D *  &
+           bGradB1_DGB(:,i,j,k,iBlock) = &
+                0.5*b_D(1) *  &
                 ( State_VGB(Bx_:Bz_,i+1,j,k,iBlock)     &
-                - State_VGB(Bx_:Bz_,i-1,j,k,iBlock))) / &
-                CellSize_DB(x_,iBlock)
-
-           bGradB1_DGB(2,i,j,k,iBlock) = 0.5*sum(b_D *  &
+                - State_VGB(Bx_:Bz_,i-1,j,k,iBlock)) / &
+                CellSize_DB(x_,iBlock) &
+                + 0.5*b_D(2) *  &
                 ( State_VGB(Bx_:Bz_,i,j+1,k,iBlock)     & 
-                - State_VGB(Bx_:Bz_,i,j-1,k,iBlock))) / &
-                CellSize_DB(y_,iBlock)
-
-           bGradB1_DGB(3,i,j,k,iBlock) = 0.5*sum(b_D * &
+                - State_VGB(Bx_:Bz_,i,j-1,k,iBlock)) / &
+                CellSize_DB(y_,iBlock) &
+                + 0.5*b_D(3) * &
                 ( State_VGB(Bx_:Bz_,i,j,k+1,iBlock) &
-                - State_VGB(Bx_:Bz_,i,j,k+1,iBlock))) / &
+                - State_VGB(Bx_:Bz_,i,j,k+1,iBlock)) / &
                 CellSize_DB(z_,iBlock)
+
+        end do; end do; end do
+     end do
+  end if
+
+  if(DoExtractCurvatureB)then
+     allocate(CurvatureB_GB(0:nI+1,0:nJ+1,0:nK+1,nBlock), &
+          b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+
+        ! Calculate normalized magnetic field including B0
+        do k = MinK, MaxK; do j=MinJ, MaxJ; do i = MinI,MaxI
+           b_DG(:,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+           if(UseB0) b_DG(:,i,j,k) = b_DG(:,i,j,k) + B0_DGB(:,i,j,k,iBlock)
+           b_DG(:,i,j,k) = b_DG(:,i,j,k) &
+                /sqrt(max(1e-30, sum(b_DG(:,i,j,k)**2)))
+        end do; end do; end do
+
+        do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1; 
+           ! Calculate b.grad b
+           b_D = 0.5*b_DG(1,i,j,k) *  &
+                ( b_DG(:,i+1,j,k) - b_DG(:,i-1,j,k)) / &
+                CellSize_DB(x_,iBlock) &
+                + 0.5*b_DG(2,i,j,k) *  &
+                ( b_DG(:,i,j+1,k) - b_DG(:,i,j-1,k)) / &
+                CellSize_DB(y_,iBlock) &
+                + 0.5*b_DG(3,i,j,k) * &
+                ( b_DG(:,i,j,k+1) - b_DG(:,i,j,k-1)) / &
+                CellSize_DB(z_,iBlock)
+
+           ! Curvature = 1/|b.grad b|
+           CurvatureB_GB(i,j,k,iBlock) = &
+                1/max(1e-30, sqrt(sum(b_D**2)))
 
         end do; end do; end do
      end do
@@ -2062,6 +2207,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   DoExtractUnitSi= .true.
   nStateVar = 4 + nVar
   if(DoExtractBGradB1) nStateVar = nStateVar + 3
+  if(DoExtractCurvatureB) nStateVar = nStateVar + 1
   call line_init(nStateVar)
 
   NameVectorField = 'B'
@@ -2078,7 +2224,9 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   end do
 
   ! Transformation matrix between the SM and GM coordinates
-  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+!!!  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+
+  GmSm_DD = i_DD
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
@@ -2149,6 +2297,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   end if
 
   if(DoExtractBGradB1) deallocate(bGradB1_DGB)
+
+  if(DoExtractCurvatureB) deallocate(CurvatureB_GB, b_DG)
 
   if(DoMessagePass)call exchange_messages
 
@@ -2433,7 +2583,10 @@ subroutine write_plot_line(iFile)
 
   if(iProc==0)then
      call line_get(nVarOut, nPoint)
-     if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
+     if(nVarOut /= nStateVar)then
+        write(*,*) NameSub,': nVarOut, nStateVar=', nVarOut, nStateVar
+        call stop_mpi(NameSub//': nVarOut error')
+     end if
      allocate(PlotVar_VI(0:nVarOut, nPoint))
      call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
   end if
@@ -2641,6 +2794,7 @@ end subroutine xyz_to_ijk
 !============================================================================
 
 subroutine lcb_plot(iFile)
+
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_planet_field,  ONLY: map_planet_field
   use CON_axes,          ONLY: transform_matrix
@@ -2652,24 +2806,28 @@ subroutine lcb_plot(iFile)
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII, InvB_,RhoInvB_,pInvB_
+  use ModNumConst,       ONLY: i_DD
   use ModMpi
+
   implicit none
 
   integer, intent(in) :: iFile
 
-  character (len=*), parameter :: NameSub='lcb_plot'
   character (len=80) :: FileName
   integer, parameter :: nPts=11, nD=6
-  integer :: i,j,k, nLine, iStart,iMid,iEnd, jStart,jMid,jEnd, iLon, nLon, iD, iLC
+  integer:: i,j,k, nLine, iStart,iMid,iEnd, jStart, jMid, jEnd
+  integer:: iLon, nLon, iD, iLC
   integer :: iPoint, nPoint, nVarOut, iHemisphere, iError, nTP, iDirZ
   real :: PlotVar_V(0:4+nVar)
   real :: Radius, RadiusIono, Lon, zL,zU, zUs=40., xV,yV, Integrals(3)
   real :: XyzIono_D(3), Xyz_D(3)
-  real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
-  real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real :: Gsm2Smg_DD(3,3) = i_DD
+  real :: Smg2Gsm_DD(3,3) = i_DD
   real, allocatable :: PlotVar_VI(:,:), XyzPt_DI(:,:), zPt_I(:)
   logical :: Map1,Map2, Odd, Skip, SaveIntegrals
+
   logical :: DoTest, DoTestMe
+  character (len=*), parameter :: NameSub='lcb_plot'
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
   if(DoTest)write(*,*)NameSub,': starting'
@@ -2895,7 +3053,7 @@ subroutine lcb_plot(iFile)
   if(DoTest)write(*,*)NameSub,': finished'
 end subroutine lcb_plot
 
-!**************************************************************
+!================================================================================
 
 subroutine ieb_plot(iFile)
   use CON_line_extract,  ONLY: line_get, line_clean
@@ -2910,11 +3068,12 @@ subroutine ieb_plot(iFile)
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModIO,             ONLY: StringDateOrTime, NamePlotDir
   use ModRaytrace,       ONLY: RayResult_VII, RayIntegral_VII
+  use ModNumConst,       ONLY: i_DD
+
   implicit none
 
   integer, intent(in) :: iFile
 
-  character (len=*), parameter :: NameSub='ieb_plot'
   character (len=80) :: FileName,stmp
   character (len=2) :: Coord
   character (len=1) :: NS
@@ -2923,10 +3082,12 @@ subroutine ieb_plot(iFile)
   real :: PlotVar_V(0:4+nVar)
   real :: Radius, Lat,Lon, Theta,Phi, LonOC
   real :: XyzIono_D(3), Xyz_D(3)
-  real :: Gsm2Smg_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
-  real :: Smg2Gsm_DD(3,3) = reshape( (/ 1.,0.,0.,  0.,1.,0.,  0.,0.,1. /), (/3,3/) )
+  real :: Gsm2Smg_DD(3,3) = i_DD
+  real :: Smg2Gsm_DD(3,3) = i_DD
   real, allocatable :: PlotVar_VI(:,:), IE_lat(:), IE_lon(:)
   logical :: MapDown
+
+  character (len=*), parameter :: NameSub='ieb_plot'
   logical :: DoTest, DoTestMe
   !--------------------------------------------------------------------------
   call CON_set_do_test(NameSub,DoTest, DoTestMe)
@@ -3138,4 +3299,5 @@ subroutine ieb_plot(iFile)
   if(allocated(RayResult_VII))   deallocate(RayResult_VII)
 
   if(DoTest)write(*,*)NameSub,': finished'
+
 end subroutine ieb_plot
