@@ -2224,9 +2224,9 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   end do
 
   ! Transformation matrix between the SM and GM coordinates
-!!!  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
 
-  GmSm_DD = i_DD
+!!!  GmSm_DD = i_DD
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
