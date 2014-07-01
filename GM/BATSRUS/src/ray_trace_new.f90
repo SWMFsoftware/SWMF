@@ -1844,7 +1844,7 @@ subroutine plot_ray_equator(iFile)
   use ModRayTrace,       ONLY: RayMap_DSII, DoExtractCurvatureB
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
-  use ModNumConst,       ONLY: cDegToRad, i_DD
+  use ModNumConst,       ONLY: cDegToRad
 
   implicit none
 
@@ -1930,11 +1930,6 @@ subroutine plot_ray_equator(iFile)
   if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
   write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
-  ! Transformation matrix between the SM and GM coordinates
-!!!  SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
-  SmGm_DD = i_DD
-
-
   call line_get(nVarOut, nPoint)
 
   if(nVarOut /= nVarPlot)then
@@ -1945,6 +1940,9 @@ subroutine plot_ray_equator(iFile)
   call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
   if(.not.IsMinB)then
+     ! Convert vectors from BATSRUS coords to SM coords.
+     SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
+
      NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
      open(UnitTmp_, FILE=NameFile, STATUS="replace")
      write(UnitTmp_, *) 'nRadius, nLon, nPoint=',nRadius, nLon, nPoint
@@ -2224,9 +2222,12 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   end do
 
   ! Transformation matrix between the SM and GM coordinates
-  GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+  if(DoExtractCurvatureB)then
+     GmSm_DD = i_DD
+  else
+     GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
+  end if
 
-!!!  GmSm_DD = i_DD
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
