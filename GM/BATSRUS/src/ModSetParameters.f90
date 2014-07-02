@@ -853,11 +853,11 @@ subroutine MH_set_parameters(TypeAction)
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
 
               ! Extract the type of idl plot file: default is real4
-              TypeIdlFile_I(iFile) = 'real4' 
+              TypeFile_I(iFile) = 'real4' 
               if(index(plot_string,'idl_real8') > 0) &
-                   TypeIdlFile_I(iFile) = 'real8'
+                   TypeFile_I(iFile) = 'real8'
               if(index(plot_string,'idl_ascii') > 0) &
-                   TypeIdlFile_I(iFile) = 'ascii'
+                   TypeFile_I(iFile) = 'ascii'
            elseif(index(plot_string, 'hdf') > 0) then
               ! With these values VisIt recognises the files as timesteps
               ! with the general defaults it does not. 
@@ -865,8 +865,10 @@ subroutine MH_set_parameters(TypeAction)
               IsPlotName_t = .false.
               IsPlotName_e = .false.
               plot_form(iFile)='hdf'
+              TypeFile_I(iFile) = 'hdf5'
            elseif(index(plot_string,'tec')>0)then 
               plot_form(ifile)='tec'
+              TypeFile_I(iFile) = 'tec'
            else
               call stop_mpi('Format (idl,tec) missing from plot_string='&
                    //plot_string)

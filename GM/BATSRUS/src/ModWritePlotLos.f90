@@ -540,7 +540,7 @@ subroutine write_plot_los(iFile)
         select case(plot_form(ifile))
         case('idl')
            call save_plot_file(filename, &
-                TypeFileIn = TypeIdlFile_I(iFile), &
+                TypeFileIn = TypeFile_I(iFile), &
                 StringHeaderIn = StringHeadLine, &
                 nStepIn = n_step, &
                 TimeIn = time_simulation, &

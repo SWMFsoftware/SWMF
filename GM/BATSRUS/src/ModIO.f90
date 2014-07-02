@@ -15,7 +15,7 @@ Module ModIO
 
   ! Maximum number of output files and output variables
   ! note that:
-  !     maxfile > MaxPlotFile + MaxSatelliteFile + extras
+  !     MaxFile > MaxPlotFile + MaxSatelliteFile + extras
   ! is required. MaxSatelliteFile is defined in ModSatelliteFile.f90
   integer, parameter :: MaxPlotFile=25
   integer, parameter :: MaxFile = 350
@@ -57,12 +57,12 @@ Module ModIO
 
   ! variables for the line of sight integration plots
   character (LEN=10) :: TypeLosImage
-  integer :: n_pix_r(maxfile)
-  real :: r_size_image(maxfile), xoffset(maxfile), yoffset(maxfile)
-  real :: radius_occult(maxfile), mu_los
-  real :: offset_angle(maxfile)
-  real, dimension(3,maxfile) :: ObsPos_DI
-  character (LEN=20) :: NameLosTable(maxfile)
+  integer :: n_pix_r(MaxFile)
+  real :: r_size_image(MaxFile), xoffset(MaxFile), yoffset(MaxFile)
+  real :: radius_occult(MaxFile), mu_los
+  real :: offset_angle(MaxFile)
+  real, dimension(3,MaxFile) :: ObsPos_DI
+  character (LEN=20) :: NameLosTable(MaxFile)
   logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
 
   ! Variables for radiowave image
@@ -88,17 +88,17 @@ Module ModIO
   integer :: nFile=0, nPlotFile=0
 
   ! Saving frequencies and the last saved time step and snapshot number
-  real,    dimension(maxfile) :: dt_output=-1.
-  integer, dimension(maxfile) :: dn_output=-1, &
+  real,    dimension(MaxFile) :: dt_output=-1.
+  integer, dimension(MaxFile) :: dn_output=-1, &
        n_output_last=-1, t_output_last=-1
 
   ! Frequency of writing progress reports in terms of time steps
   integer :: dn_progress1=10, dn_progress2=100
 
-  character (LEN=10) :: plot_type(maxfile), plot_type1
-  character (LEN=3)  :: plot_form(maxfile)
+  character (LEN=10) :: plot_type(MaxFile), plot_type1
+  character (LEN=3)  :: plot_form(MaxFile)
   character (LEN=3) :: log_form
-  character (LEN=10) :: TypeIdlFile_I(maxfile)
+  character (LEN=10) :: TypeFile_I(MaxFile)
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,MaxFile) :: plot_range=0. 

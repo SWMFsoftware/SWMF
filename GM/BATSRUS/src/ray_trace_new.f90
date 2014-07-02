@@ -1835,7 +1835,8 @@ end subroutine integrate_ray_accurate_1d
 subroutine plot_ray_equator(iFile)
 
   use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem
-  use ModIo,   ONLY: StringDateOrTime, NamePlotDir, plot_range, plot_type
+  use ModIo,   ONLY: StringDateOrTime, NamePlotDir, &
+       plot_range, plot_type, TypeFile_I
   use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
   use ModProcMH,  ONLY: iProc
   use ModNumConst,       ONLY: cTwoPi
@@ -2014,6 +2015,7 @@ subroutine plot_ray_equator(iFile)
      NameFile = trim(NamePlotDir)//"eqb_"//NameFileEnd
      call save_plot_file( &
           NameFile, &
+          TypeFileIn=TypeFile_I(iFile), &
           StringHeaderIn = 'Values at minimum B', &
           TimeIn  = time_simulation, &
           nStepIn = n_step, &

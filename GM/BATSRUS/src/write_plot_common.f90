@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================================
-subroutine write_plot_common(ifile)
+subroutine write_plot_common(iFile)
 
   ! routine that loops over all blocks per processor and write the appropriate
   ! output files.
@@ -101,30 +101,30 @@ subroutine write_plot_common(ifile)
   unitstr_TEC = ''
   unitstr_IDL = ''
 
-  plot_type1=plot_type(ifile)
-  plot_vars1=plot_vars(ifile)
-  plot_pars1=plot_pars(ifile)
+  plot_type1=plot_type(iFile)
+  plot_vars1=plot_vars(iFile)
+  plot_pars1=plot_pars(iFile)
 
   call lower_case(plot_pars1)
 
-  if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
-       ' form = ',plot_form(ifile)
+  if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
+       ' form = ',plot_form(iFile)
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
   call split_string(plot_pars1, neqparmax, eqparnames, neqpar, &
        UseArraySyntaxIn=.true.)
-  call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
+  call set_eqpar(iFile-plot_,neqpar,eqparnames,eqpar)
 
   allnames=trim(plot_vars1)//' '//trim(plot_pars(iFile))
 
   if(oktest_me) then
      write(*,*) plot_vars1
      write(*,*) nplotvar,plotvarnames(1:nplotvar)
-     write(*,*) plot_dx(:,ifile)
-     write(*,*) plot_range(:,ifile)
+     write(*,*) plot_dx(:,iFile)
+     write(*,*) plot_range(:,iFile)
      write(*,*) plot_type1
-     write(*,*) plot_form(ifile)
+     write(*,*) plot_form(iFile)
   end if
 
   ! Construct the file name
@@ -162,15 +162,15 @@ subroutine write_plot_common(ifile)
 
   ! String containing the processor index and file extension
   if(nProc < 10000) then
-     write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(ifile)
+     write(NameProc, '(a,i4.4,a)') "_pe", iProc, "."//plot_form(iFile)
   elseif(nProc < 100000) then
-     write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(ifile)
+     write(NameProc, '(a,i5.5,a)') "_pe", iProc, "."//plot_form(iFile)
   else
-     write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//plot_form(ifile)
+     write(NameProc, '(a,i6.6,a)') "_pe", iProc, "."//plot_form(iFile)
   end if
 
   ! Determine if output file is formatted or unformatted
-  IsBinary = save_binary .and. plot_form(ifile)=='idl' 
+  IsBinary = save_binary .and. plot_form(iFile)=='idl' 
 
   if(IsBinary)then
      TypeForm = "unformatted"
@@ -183,7 +183,7 @@ subroutine write_plot_common(ifile)
   if(IsSphPlot)then
      ! Put hemisphere info into the filename: the 3rd character of type
      l = len_trim(NamePlotDir) + 3
-     if(plot_form(ifile)=='hdf') then
+     if(plot_form(iFile)=='hdf') then
         filename = trim(NameSnapshot)//".batl"
      else
         ! two files for the northern and southern hemispheres
@@ -194,14 +194,14 @@ subroutine write_plot_common(ifile)
         open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
         open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
      end if
-  elseif(plot_form(ifile)=='tec')then
+  elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      unit_tmp2 = io_unit_new()
      open(unit_tmp , file=filename_n, status="replace", err=999)
      open(unit_tmp2, file=filename_s, status="replace", err=999)
-  elseif(plot_form(ifile)=='hdf') then
+  elseif(plot_form(iFile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
      filename = trim(NameSnapshot)//".batl"
@@ -212,19 +212,19 @@ subroutine write_plot_common(ifile)
   end if
 
   if (IsSphPlot) then
-     if (plot_form(ifile) == 'hdf') then
-        nphi   = 360.0/plot_dx(3,ifile)
-        rplot  = plot_range(1,ifile)
-        ntheta = 2+180.0/plot_dx(2,ifile)
-        call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
+     if (plot_form(iFile) == 'hdf') then
+        nphi   = 360.0/plot_dx(3,iFile)
+        rplot  = plot_range(1,iFile)
+        ntheta = 2+180.0/plot_dx(2,iFile)
+        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
              unitstr_IDL)
         call init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, NamePlotUnit_V, nTheta,&
              nPhi, rplot)
         call barrier_mpi
      else
-        nphi   = 360.0/plot_dx(3,ifile)
-        rplot  = plot_range(1,ifile)
-        ntheta = 1 + 180.0/plot_dx(2,ifile)
+        nphi   = 360.0/plot_dx(3,iFile)
+        rplot  = plot_range(1,iFile)
+        ntheta = 1 + 180.0/plot_dx(2,iFile)
      end if
 
      if(oktest_me) write(*,*) NameSub,': nTheta, nPhi=', ntheta, nphi
@@ -241,12 +241,12 @@ subroutine write_plot_common(ifile)
   !! START IDL
   ! define from values used in the plotting, so that they don't
   ! have to be done inside the loop
-  xmin=plot_range(1,ifile)
-  xmax=plot_range(2,ifile)
-  ymin=plot_range(3,ifile)
-  ymax=plot_range(4,ifile)
-  zmin=plot_range(5,ifile)
-  zmax=plot_range(6,ifile)
+  xmin=plot_range(1,iFile)
+  xmax=plot_range(2,iFile)
+  ymin=plot_range(3,iFile)
+  ymax=plot_range(4,iFile)
+  zmin=plot_range(5,iFile)
+  zmax=plot_range(6,iFile)
 
   dxPEmin(:)=XyzMax_D(:)-XyzMin_D(:)
 
@@ -277,7 +277,7 @@ subroutine write_plot_common(ifile)
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
  
   if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot) then
-     call init_hdf5_plot(ifile, plot_type1(1:3),  &
+     call init_hdf5_plot(iFile, plot_type1(1:3),  &
           nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
   end if
@@ -287,14 +287,14 @@ subroutine write_plot_common(ifile)
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
-     call set_plotvar(iBLK, ifile-plot_, nPlotVar, plotvarnames, plotvar, &
+     call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, plotvar, &
           plotvar_inBody,plotvar_useBody)
 
-     if (plot_dimensional(ifile)) call dimensionalize_plotvar(iBLK, &
-          ifile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
+     if (plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
+          iFile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
      if (IsSphPlot) then
-        call write_plot_sph(ifile,iBLK,nplotvar,plotvar, &
+        call write_plot_sph(iFile,iBLK,nplotvar,plotvar, &
              ntheta,nphi,rplot,plotvarnames,H5Index, nBLKcellsN,nBLKcellsS)
         dxblk=1.0
         if(plot_form(iFile) == 'hdf') then
@@ -304,18 +304,18 @@ subroutine write_plot_common(ifile)
         end if
         dzblk=360.0/real(nphi)
      else
-        select case(plot_form(ifile))
+        select case(plot_form(iFile))
         case('tec')
            call plotvar_to_plotvarnodes
            if(plot_type1(1:3)=='blk' &
                 .and. iProc == iProcFound .and. iBlk==iBlockFound) &
                 PlotVarBlk = PlotVar
         case('idl')
-           call write_plot_idl(ifile,iBLK,nplotvar,plotvar, &
+           call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
                 xmin,xmax,ymin,ymax,zmin,zmax, &
                 dxblk,dyblk,dzblk,nBLKcells)
         case('hdf')
-           call write_var_hdf5(ifile, plot_type1(1:3), iBLK,H5Index, &
+           call write_var_hdf5(iFile, plot_type1(1:3), iBLK,H5Index, &
                 nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
                 dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, nBLKcells, &
                 H5Advance)
@@ -323,7 +323,7 @@ subroutine write_plot_common(ifile)
         end select
      end if
 
-     if (plot_form(ifile)=='idl') then
+     if (plot_form(iFile)=='idl') then
    	! Update number of cells per processor
         if (IsSphPlot) then
       	   nPEcellsN = nPEcellsN + nBLKcellsN
@@ -343,31 +343,31 @@ subroutine write_plot_common(ifile)
   end do ! iBLK
 
   ! Write the HDF5 output file and return
-  select case(plot_form(ifile))
+  select case(plot_form(iFile))
   case('hdf')
 
      if (isSphPlot) then
         call close_sph_hdf5_plot(nPlotVar)
      else
-        call get_idl_units(ifile, nplotvar,plotvarnames, NamePlotUnit_V, &
+        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
              unitstr_IDL)       
         call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
              NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-             IsSphPlot, plot_dimensional(ifile), xmin, xmax, ymin, ymax, zmin, zmax)
+             IsSphPlot, plot_dimensional(iFile), xmin, xmax, ymin, ymax, zmin, zmax)
      end if
 
      RETURN
   case('tec')
-     call get_tec_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
+     call get_tec_variables(iFile,nplotvar,plotvarnames,unitstr_TEC)
      if(oktest .and. iProc==0) write(*,*)unitstr_TEC
   case('idl')
-     call get_idl_units(ifile, nplotvar, plotvarnames, NamePlotUnit_V, &
+     call get_idl_units(iFile, nplotvar, plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*)unitstr_IDL
   end select
 
   ! Write files for tecplot format
-  if(plot_form(ifile)=='tec' .and. .not.IsSphPlot)then
+  if(plot_form(iFile)=='tec' .and. .not.IsSphPlot)then
 
      if(.not.allocated(PlotVarNodes_VNB)) then 
         allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBLK))
@@ -415,10 +415,10 @@ subroutine write_plot_common(ifile)
      close(unit_tmp)
   end if
 
-  if(IsSphPlot .or. plot_form(ifile)=='tec') close(unit_tmp2)
+  if(IsSphPlot .or. plot_form(iFile)=='tec') close(unit_tmp2)
 
   !! START IDL
-  if (plot_form(ifile)=='idl')then
+  if (plot_form(iFile)=='idl')then
      ! Find smallest cell size and total number of cells
      if (.not. IsSphPlot) then
         call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
@@ -446,7 +446,7 @@ subroutine write_plot_common(ifile)
   ! write header file
   if(iProc==0)then
 
-     select case(plot_form(ifile))
+     select case(plot_form(iFile))
      case('tec')
         if (IsSphPlot) then
            filename = trim(NameSnapshot) // ".S"
@@ -480,11 +480,11 @@ subroutine write_plot_common(ifile)
         write(unit_tmp,'(i8,a)')nProc,' nProc'
         write(unit_tmp,'(i8,a)')n_step,' n_step'
         write(unit_tmp,'(1pe18.10,a)')time_simulation,' t'
-        select case(plot_form(ifile))
+        select case(plot_form(iFile))
         case('tec')
            write(unit_tmp,'(a)')trim(unitstr_TEC)
            if(IsSphPlot)  &
-                write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,ifile),' plot_dx'
+                write(unit_tmp,'(2(1pe13.5),a)') plot_dx(2:3,iFile),' plot_dx'
            call get_date_time(iTime_I)
            write(unit_tmp,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
            write(unit_tmp,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
@@ -495,18 +495,18 @@ subroutine write_plot_common(ifile)
               if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
            end if
         case('idl')
-           if(plot_dimensional(ifile)) then
+           if(plot_dimensional(iFile)) then
               write(unit_tmp,'(6(1pe18.10),a)') &
-                   plot_range(:,ifile)*No2Io_V(UnitX_),' plot_range'
+                   plot_range(:,iFile)*No2Io_V(UnitX_),' plot_range'
               write(unit_tmp,'(6(1pe18.10),i10,a)') &
-                   plot_dx(:,ifile)*No2Io_V(UnitX_), &
+                   plot_dx(:,iFile)*No2Io_V(UnitX_), &
                    dxGLOBALmin*No2Io_V(UnitX_), nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            else
               write(unit_tmp,'(6(1pe18.10),a)') &
-                   plot_range(:,ifile),' plot_range'
+                   plot_range(:,iFile),' plot_range'
               write(unit_tmp,'(6(1pe18.10),i10,a)') &
-                   plot_dx(:,ifile), dxGLOBALmin, nGLOBALcells,&
+                   plot_dx(:,iFile), dxGLOBALmin, nGLOBALcells,&
                    ' plot_dx, dxmin, ncell'
            end if
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
@@ -521,7 +521,7 @@ subroutine write_plot_common(ifile)
               write(Unit_tmp,'(i8,    " nRgen"  )') size(LogRGen_I)
               write(Unit_tmp,'(es13.5," LogRgen")') LogRGen_I
            end if
-           write(unit_tmp,'(a)')TypeIdlFile_I(ifile)
+           write(unit_tmp,'(a)')TypeFile_I(iFile)
 
            ! Extra information for READAMR
            write(unit_tmp,'(3i8,a)') nRoot_D,' nRoot_D'
@@ -537,7 +537,7 @@ subroutine write_plot_common(ifile)
   end if
 
   ! Save tree information for 3D IDL file
-  if(plot_form(ifile) == 'idl' .and.               &
+  if(plot_form(iFile) == 'idl' .and.               &
        (    plot_type1(1:3) == '3d_'               &
        .or. plot_type1(1:3) == '2d_' .and. nDim<=2 &
        .or. plot_type1(1:3) == '1d_' .and. nDim==1 ) )then
@@ -1469,9 +1469,9 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   !/
 
   ! Coordinate names and units
-  if(index(plot_type(ifile),'sph')>0) then
+  if(index(plot_type(iFile),'sph')>0) then
 
-     if (plot_dimensional(ifile)) then
+     if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Z ' // trim(NameTecUnit_V(UnitX_)) &
@@ -1482,7 +1482,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   else
 
-     if (plot_dimensional(ifile)) then
+     if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Z ' // trim(NameTecUnit_V(UnitX_))
@@ -1689,7 +1689,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
      StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
 
-     if (plot_dimensional(ifile)) &
+     if (plot_dimensional(iFile)) &
           StringVarTec = trim(StringVarTec) // ' ' //NameUnit
 
   end do
@@ -1732,7 +1732,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      RETURN
   end if
 
-  if(index(plot_type(ifile),'sph')>0) then
+  if(index(plot_type(iFile),'sph')>0) then
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
