@@ -974,6 +974,8 @@ subroutine find_test_cell
 
   logical :: DoBroadcast
   integer :: IjkTest_D(MaxDim), iDir, iError
+
+  character(len=*), parameter:: NameSub = 'find_test_cell'
   !----------------------------------------------------------------------------
 
   DoBroadcast = .false.
@@ -1000,11 +1002,29 @@ subroutine find_test_cell
 
      call find_grid_block( (/ xTest, yTest, zTest /), &
           ProcTest, BlkTest, IjkTest_D)
-     iTest = IjkTest_D(1)
-     jTest = IjkTest_D(2)
-     kTest = Ijktest_D(3)
 
-     if(iProc==ProcTest) XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
+     if(ProcTest < 0)then
+
+        if(iProc==0)then
+           write(*,*) NameSub,' xTest, yTest, zTest=', xTest, yTest, zTest
+           write(*,*) NameSub,' WARNING test point was not found! Setting defaults.'
+        end if
+
+        iTest = 1
+        jTest = 1
+        kTest = 1
+        BlkTest  = 1
+        ProcTest = 0
+        xTest = 0.0
+        yTest = 0.0
+        zTest = 0.0
+        XyzTestCell_D = 0.0
+     else        
+        iTest = IjkTest_D(1)
+        jTest = IjkTest_D(2)
+        kTest = Ijktest_D(3)
+        if(iProc==ProcTest) XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
+     end if
 
   end if
   if (DoBroadcast) then
