@@ -268,18 +268,20 @@ sub readhead{
     @nx= unpack "l*", $convertfrom ? $line3conv : $line3; # Read nx from line 3
     $nxs=1; foreach $nx (@nx){$nxs*=$nx};
 
-    $ll4=$rbyte*$neqpar;               # length of line4 from input
-    read FROM, $l4, 4;
-    read FROM, $line4, $ll4;           # line4: eqpar
-    read FROM, $l4, 4;
+    if($neqpar){
+	$ll4=$rbyte*$neqpar;               # length of line4 from input
+	read FROM, $l4, 4;
+	read FROM, $line4, $ll4;           # line4: eqpar
+	read FROM, $l4, 4;
 
-    $len4=pack("L",$ll4);    # calculate length of line 4 for output
-    $len4=&convstr($len4) if $convertto;
+	$len4=pack("L",$ll4);    # calculate length of line 4 for output
+	$len4=&convstr($len4) if $convertto;
 
-    $line4conv =
-	$double ? &convdble($line4) : &convstr($line4); # convert endianness
-    $line4_= $Keep ? $line4 : $line4conv;               # line 4 for output
-    @eqpar= unpack "$r*", $convertfrom ? $line4conv : $line4;  # read eqpar
+	$line4conv =
+	    $double ? &convdble($line4) : &convstr($line4); # convert endianness
+	$line4_= $Keep ? $line4 : $line4conv;               # line 4 for output
+	@eqpar= unpack "$r*", $convertfrom ? $line4conv : $line4;  # read eqpar
+    }
 
     read FROM, $l5, 4;
     read FROM, $varnames, $strlen;              # line5: varnames
@@ -342,7 +344,7 @@ sub printhead{
     print TO   $len1,$headline,$len1;
     print TO   $len2,$line2_,$len2;
     print TO   $len3,$line3_,$len3;
-    print TO   $len4,$line4_,$len4;
+    print TO   $len4,$line4_,$len4 if $neqpar;
     print TO   $len5,$varnames,$len5;
 
 }
@@ -393,7 +395,7 @@ sub dorest{
 	read FROM, $l2l3, 8;                 # read len2, len3
 	read FROM, $line3, $ll3;             # line3: nx1, nx2..
 	read FROM, $l3l4, 8;                 # read len3, len4
-	read FROM, $line4, $ll4;             # line4: eqpar1,eqpar2..
+	read FROM, $line4, $ll4 if $neqpar;  # line4: eqpar1,eqpar2..
 	read FROM, $l4l5, 8;                 # len4,len5
 	read FROM, $varnames, $strlen;       # line5: varnames
 	read FROM, $l5, 4;                   # len5
@@ -415,14 +417,14 @@ sub dorest{
 	$line3_= $Keep ? $line3 : &convstr($line3); # convert endiannes
 	&line3tocray if $tocray;                    # insert extra Cray bytes
 
-	# Convert line 4
-
-        if($Keep){
-	    $line4_=$line4;
-	}else{
-	    $line4_= $double ? &convdble($line4) : &convstr($line4);
+	if($neqpar){
+	    # Convert line 4
+	    if($Keep){
+		$line4_=$line4;
+	    }else{
+		$line4_= $double ? &convdble($line4) : &convstr($line4);
+	    }
 	}
-
 	&printhead;
 	
 	&dobody;
