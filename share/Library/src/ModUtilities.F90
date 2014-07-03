@@ -35,6 +35,14 @@ module ModUtilities
 
   logical, public :: DoFlush = .true.
 
+  interface split_string
+     module procedure split_string, split_string_simple
+  end interface
+
+  interface join_string
+     module procedure join_string, join_string_simple
+  end interface
+
 contains
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
@@ -187,22 +195,44 @@ contains
   end subroutine flush_unit
 
   !BOP ========================================================================
+  !ROUTINE: split_string_simple - split string into array of substrings
+  !INTERFACE:
+  subroutine split_string_simple(String, String_I, nStringOut, &
+       StringSepIn, UseArraySyntaxIn)
+
+    !INPUT ARGUMENTS:
+    character(len=*),    intent(in):: String    ! string to be split
+
+    !OUTPUT ARGUMENTS:
+    character (len=*), intent(out):: String_I(:) ! array of substrings
+
+    !OPTIONAL ARGUMENTS
+    integer,   optional, intent(out):: nStringOut       ! number of substrings
+    character, optional, intent(in) :: StringSepIn      ! separator string
+    logical,   optional, intent(in) :: UseArraySyntaxIn ! expand Var(10:20:2)
+
+    call split_string(String, size(String_I), String_I, nStringOut, &
+         StringSepIn, UseArraySyntaxIn)
+
+  end subroutine split_string_simple
+
+  !BOP ========================================================================
   !ROUTINE: split_string - split string into array of substrings
   !INTERFACE:
-  subroutine split_string(String, MaxString, String_I, nString, &
+  subroutine split_string(String, MaxString, String_I, nStringOut, &
        StringSepIn, UseArraySyntaxIn)
 
     !INPUT ARGUMENTS:
     character(len=*),    intent(in):: String    ! string to be split
     integer,             intent(in):: MaxString ! maximum array size
 
-    !OPTIONAL ARGUMENTS
-    character, optional, intent(in):: StringSepIn      ! separator string
-    logical,   optional, intent(in):: UseArraySyntaxIn ! expand Var(10:20:2)
-
     !OUTPUT ARGUMENTS:
     character (len=*), intent(out):: String_I(MaxString) ! array of substrings
-    integer,           intent(out):: nString             ! number of substrings
+
+    !OPTIONAL ARGUMENTS
+    integer,   optional, intent(out):: nStringOut       ! number of substrings
+    character, optional, intent(in) :: StringSepIn      ! separator string
+    logical,   optional, intent(in) :: UseArraySyntaxIn ! expand Var(10:20:2)
 
     !DESCRIPTION:
     ! Cut the input string into an array of substrings. The separator
@@ -222,12 +252,13 @@ contains
     !\end{verbatim}
     !EOP
 
+    integer:: nString
     character:: StringSep
     logical:: UseArraySyntax
 
     character(len=len(String)+1) :: StringTmp
 
-    integer :: i,l
+    integer :: i, l
 
     character(len=*), parameter :: NameSub = 'split_string'
     !--------------------------------------------------------------------------
@@ -244,16 +275,18 @@ contains
     do
        StringTmp = adjustl(StringTmp)       ! Remove leading spaces
        i = index(StringTmp, StringSep)      ! Find end of first part   
-       if(i <= 1) RETURN                    ! Nothing before the separator
-       nString = nString +1                 ! Count parts
+       if(i <= 1) EXIT                      ! Nothing before the separator
+       nString = nString + 1                ! Count parts
 
        String_I(nString) = StringTmp(1:i-1) ! Put part into string array
-       StringTmp=StringTmp(i+1:l+1)         ! Delete part+separator from string
+       StringTmp = StringTmp(i+1:l+1)       ! Delete part+separator from string
 
        if(UseArraySyntax) call expand_array(String_I(nString))
 
-       if(nString == MaxString) RETURN      ! Check for maximum number of parts
+       if(nString == MaxString) EXIT        ! Check for maximum number of parts
     end do
+
+    if(present(nStringOut)) nStringOut = nString
 
   contains
     !========================================================================
@@ -332,6 +365,25 @@ contains
   end subroutine split_string
 
   !BOP ========================================================================
+  !ROUTINE: join_string_simple - join string array into a single string
+  !INTERFACE:
+
+  subroutine join_string_simple(String_I, String, StringSepIn)
+
+    !INPUT ARGUMENTS:
+    character(len=*),    intent(in):: String_I(:)
+
+    !OUTPUT ARGUMENTS:
+    character(len=*), intent(out):: String
+
+    !OPTIONAL ARGUMENTS:
+    character(len=*), optional, intent(in):: StringSepIn
+
+    call join_string(size(String_I), String_I, String, StringSepIn)
+
+  end subroutine join_string_simple
+
+  !BOP ========================================================================
   !ROUTINE: join_string - join string array into a single string
   !INTERFACE:
 
@@ -340,29 +392,35 @@ contains
     !INPUT ARGUMENTS:
     integer,             intent(in):: nString
     character(len=*),    intent(in):: String_I(nString)
-    character, optional, intent(in):: StringSepIn
+
     !OUTPUT ARGUMENTS:
     character (len=*), intent(out):: String
 
+    !OPTIONAL ARGUMENTS:
+    character(len=*), optional, intent(in):: StringSepIn
+
     !DESCRIPTION:
     ! Join the input string array into one string. The parts are joined
-    ! with spaces or the optional StringSepIn.
+    ! with spaces or the optional StringSepIn string (up to 10 characters).
     !EOP
 
+    character(len=10):: StringSep
+
+    integer :: i, l
+
     character(len=*), parameter :: NameSub = 'join_string'
-
-    character:: StringSep
-
-    integer :: i
     !--------------------------------------------------------------------------
     if(present(StringSepIn))then
        StringSep = StringSepIn
+       l = len(StringSepIn)
     else
        StringSep = ' '
+       l = 1
     endif
     String = String_I(1)
+
     do i = 2, nString
-      String = trim(String) // StringSep // String_I(i)
+      String = trim(String) // StringSep(1:l) // String_I(i)
     end do
 
   end subroutine join_string
