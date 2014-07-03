@@ -297,10 +297,12 @@ print,'ndim      = ',ndim,     format="(a,i8)"
 print,'neqpar    = ',neqpar,   format="(a,i8)"
 print,'nw        = ',nw,       format="(a,i8)"
 print,'nx        = ',nx,       format="(a,3i8)"
-print,'eqpar     = ',eqpar,    format="(a,100g15.8)"
+if neqpar gt 0 then $
+   print,'eqpar     = ',eqpar,    format="(a,100g15.8)"
 print,'coords    =',variables(0:ndim-1)
 print,'plotvars  =',variables(ndim:ndim+nw-1)
-print,'eqpars    =',variables(ndim+nw:*)
+if neqpar gt 0 then $
+   print,'eqpars    =',variables(ndim+nw:*)
 
 end
 ;=============================================================================
@@ -318,7 +320,8 @@ headline=''
 for i=1, lenstr do headline=headline+' '
 it=long(1)
 ndim=long(1)
-neqpar=long(1)
+neqpar=long(0)
+eqpar=0.0
 nw=long(1)
 varname=''
 for i=1, lenstr do varname=varname+' '
@@ -345,8 +348,6 @@ case ftype of
         it=0
         time=0.0
         gencoord=0
-        neqpar=0
-        eqpar=0.0
         ndim=1
         nx=lonarr(1)
         nx(0)=1
@@ -359,8 +360,10 @@ case ftype of
         ndim=abs(ndim)
         nx=lonarr(ndim)
         readf,unit,nx
-        eqpar=dblarr(neqpar)
-        readf,unit,eqpar
+        if neqpar gt 0 then begin
+           eqpar=dblarr(neqpar)
+           readf,unit,eqpar
+        endif
         readf,unit,varname
     end
     'binary':begin
@@ -371,8 +374,10 @@ case ftype of
         ndim=abs(ndim)
         nx=lonarr(ndim)
         readu,unit,nx
-        eqpar=dblarr(neqpar)
-        readu,unit,eqpar
+        if neqpar gt 0 then begin
+           eqpar=dblarr(neqpar)
+           readu,unit,eqpar
+        endif
         readu,unit,varname
     end
     'real4': begin
@@ -383,8 +388,10 @@ case ftype of
         ndim=abs(ndim)
         nx=lonarr(ndim)
         readu,unit,nx
-        eqpar=fltarr(neqpar)
-        readu,unit,eqpar
+        if neqpar gt 0 then begin
+           eqpar=fltarr(neqpar)
+           readu,unit,eqpar
+        endif
         readu,unit,varname
     end
     else: begin
@@ -532,7 +539,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
   time =  it*Param.COLLECTIVE.Dt._DATA(0)
   
   ;;Seting up "variables"
-  nVar = nw +ndim+neqpar
+  nVar = nw +ndim + neqpar
   variables = STRARR(nVAr)
   DimName = ['x','y','z']
   variables(0:ndim-1) = DimName(0:ndim-1)
@@ -4488,10 +4495,6 @@ pro save_pict, filename, headline, varname, w, x, $
   if n_elements(filetype) eq 0 then filetype = 'ascii'
   if n_elements(it) eq 0 then it=0
   if n_elements(time) eq 0 then time=0.0
-  if n_elements(eqpar) eq 0 then begin
-     eqpar = fltarr(1)
-     varname = varname + ' none'
-  endif
   neqpar = n_elements(eqpar)
 
   sw = size(w)
@@ -4530,7 +4533,7 @@ pro save_pict, filename, headline, varname, w, x, $
      printf, unit, headline
      printf, unit, it, time, ndim, neqpar, nw, format='(i8, 1e13.5, 3i3)'
      printf, unit, nx, format='(3i8)'
-     printf, unit, eqpar, format='(100(1e13.5))'
+     if neqpar gt 0 then printf, unit, eqpar, format='(100(1e13.5))'
      printf, unit, varname
      case abs(ndim) of
         1: for i=0L, nx(0)-1 do $
@@ -4548,12 +4551,12 @@ pro save_pict, filename, headline, varname, w, x, $
      ; convert reals to 4 or 8 bytes
      if filetype eq 'real4' then begin
         time  = float(time)
-        eqpar = float(eqpar)
+        if neqpar gt 0 then eqpar = float(eqpar)
         x     = float(x)
         w     = float(w)
      endif else begin
         time  = double(time)
-        eqpar = double(eqpar)
+        if neqpar gt 0 then eqpar = double(eqpar)
         x     = double(x)
         w     = double(w)
      endelse
@@ -4563,7 +4566,7 @@ pro save_pict, filename, headline, varname, w, x, $
      writeu, unit, headline
      writeu, unit, long(it), time, long(ndim), long(neqpar), long(nw)
      writeu, unit, long(nx)
-     writeu, unit, eqpar
+     if neqpar gt 0 then writeu, unit, eqpar
      writeu, unit, varname
      writeu, unit, x
      case abs(ndim) of
