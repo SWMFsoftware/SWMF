@@ -456,6 +456,7 @@ contains
 
        ! advance explicit blocks, calc timestep 
        if(.not.UseDtFixed)cfl=ExplCfl
+
        call advance_expl(.true., -1) 
 
        if(.not.UsePartImplicit2)then
@@ -478,6 +479,9 @@ contains
     !\
     ! Advance implicitly treated blocks
     !/
+
+    ! Let other parts of the code know that we are inside the implicit update
+    IsImplicitUpdate = .true.
 
     ! Switch off point implicit scheme while advancing the implicit blocks
     UsePointImplicitOrig = UsePointImplicit
@@ -572,7 +576,7 @@ contains
           call timing_start('impl_jacobian')
 
           ! Initialize variables for preconditioner calculation
-          call init_impl_resistivity
+          if(TypeSemiImplicit /= 'resistivity') call init_impl_resistivity
 
           ! Calculate approximate dR/dU matrix
           do iBlockImpl = 1, nBlockImpl
@@ -742,6 +746,9 @@ contains
     UseUpdateCheck   = UseUpdateCheckOrig
     UsePointImplicit = UsePointImplicitOrig
     DoFixAxis        = DoFixAxisOrig
+
+    ! Done with implicit update
+    IsImplicitUpdate = .false.
 
   end subroutine advance_part_impl
   !============================================================================
@@ -1475,7 +1482,8 @@ contains
     end if
 
     ! Add extra terms for (Hall) resistivity
-    if(UseResistivity .or. UseHallResist) &
+    if( (UseResistivity .or. UseHallResist) &
+         .and. TypeSemiImplicit /= 'resistivity') &
          call add_jacobian_resistivity(iBlock, nVar, Jac_VVCI)
 
     ! Add extra terms for radiative diffusion
