@@ -19,10 +19,14 @@ bb(04:06)
 c,ddd
 ee,ff
 gg(8:12:2)
-with comma separator split to  3 parts:
+with "," separator split to  3 parts:
 a(3)  bb(04:06) c
 ddd ee
 ff gg(8:12:2)
+with ") " separator split to  3 parts:
+a(3)
+bb(04:06)
+c,ddd ee,ff gg(8:12:2)
 with UseArraySyntax split to 11 parts:
 a1
 a2
@@ -38,6 +42,7 @@ gg12
 
 testing join_string
 joined string=a1 a2 a3 bb04 bb05 bb06 c,ddd ee,ff gg08 gg10 gg12
+joined string=a1; a2; a3; bb04
 
 testing upper_case and lower_case
 mixed case string=abCD 123:
