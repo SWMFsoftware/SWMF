@@ -94,6 +94,9 @@ module ModImplicit
   ! Shall we zero out contribution from ghost cells
   logical :: UseNoOverlap = .true.
 
+  ! True while doing the implicit update
+  logical :: IsImplicitUpdate = .false.
+
   !\
   ! Parameters for selecting implicit blocks
   !/
