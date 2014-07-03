@@ -1,5 +1,6 @@
 !-*- mode: f90 -*- 
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
@@ -198,7 +199,7 @@ contains
   !ROUTINE: split_string_simple - split string into array of substrings
   !INTERFACE:
   subroutine split_string_simple(String, String_I, nStringOut, &
-       StringSepIn, UseArraySyntaxIn)
+       StringSepIn, UseArraySyntaxIn, DoAddSeparator)
 
     !INPUT ARGUMENTS:
     character(len=*),    intent(in):: String    ! string to be split
@@ -207,12 +208,13 @@ contains
     character (len=*), intent(out):: String_I(:) ! array of substrings
 
     !OPTIONAL ARGUMENTS
-    integer,   optional, intent(out):: nStringOut       ! number of substrings
-    character, optional, intent(in) :: StringSepIn      ! separator string
-    logical,   optional, intent(in) :: UseArraySyntaxIn ! expand Var(10:20:2)
+    integer,          optional, intent(out):: nStringOut ! number of substrings
+    character(len=*), optional, intent(in):: StringSepIn ! separator string
+    logical, optional, intent(in):: UseArraySyntaxIn     ! expand Var(10:20:2)
+    logical, optional, intent(in):: DoAddSeparator !add separator to substrings
 
     call split_string(String, size(String_I), String_I, nStringOut, &
-         StringSepIn, UseArraySyntaxIn)
+         StringSepIn, UseArraySyntaxIn, DoAddSeparator)
 
   end subroutine split_string_simple
 
@@ -220,7 +222,7 @@ contains
   !ROUTINE: split_string - split string into array of substrings
   !INTERFACE:
   subroutine split_string(String, MaxString, String_I, nStringOut, &
-       StringSepIn, UseArraySyntaxIn)
+       StringSepIn, UseArraySyntaxIn, DoAddSeparator)
 
     !INPUT ARGUMENTS:
     character(len=*),    intent(in):: String    ! string to be split
@@ -230,14 +232,15 @@ contains
     character (len=*), intent(out):: String_I(MaxString) ! array of substrings
 
     !OPTIONAL ARGUMENTS
-    integer,   optional, intent(out):: nStringOut       ! number of substrings
-    character, optional, intent(in) :: StringSepIn      ! separator string
-    logical,   optional, intent(in) :: UseArraySyntaxIn ! expand Var(10:20:2)
+    integer,          optional, intent(out):: nStringOut ! number of substrings
+    character(len=*), optional, intent(in):: StringSepIn ! separator string
+    logical, optional, intent(in):: UseArraySyntaxIn     ! expand Var(10:20:2)
+    logical, optional, intent(in):: DoAddSeparator !add separator to substrings
 
     !DESCRIPTION:
     ! Cut the input string into an array of substrings. The separator
-    ! character is either StringSepIn or space (default). 
-    ! Multiple consecutive separator characters are treated as one.
+    ! string is either StringSepIn or a single space (default). 
+    ! Multiple consecutive separator strings are treated as one.
     ! Leading and trailing spaces are ignored. For example
     !\begin{verbatim}
     ! ' IE  GM ' --> nString=2, String\_I=(/'IE','GM'/)
@@ -252,34 +255,48 @@ contains
     !\end{verbatim}
     !EOP
 
-    integer:: nString
-    character:: StringSep
-    logical:: UseArraySyntax
+    integer          :: nString
+    character(len=10):: StringSep
+    logical          :: UseArraySyntax
 
-    character(len=len(String)+1) :: StringTmp
+    character(len=len(String)+10) :: StringTmp
 
-    integer :: i, l
+    integer :: i, l, lSep, lKeep
 
     character(len=*), parameter :: NameSub = 'split_string'
     !--------------------------------------------------------------------------
-    StringSep = ' '
-    if(present(StringSepIn)) StringSep = StringSepIn
+    if(present(StringSepIn))then
+       StringSep = StringSepIn
+       lSep      = len(StringSepIn)
+    else
+       StringSep = ' '
+       lSep      = 1
+    end if
 
     UseArraySyntax = .false.
     if(present(UseArraySyntaxIn)) UseArraySyntax = UseArraySyntaxIn
+
+    lKeep = 0
+    if(present(DoAddSeparator))then
+       if(DoAddSeparator) lKeep = lSep
+    end if
     
     nString   = 0
     StringTmp = String
     l         = len_trim(StringTmp)
-    StringTmp = trim(StringTmp) // StringSep
+    StringTmp = trim(StringTmp) // StringSep(1:lSep) ! Add separator to the end
     do
-       StringTmp = adjustl(StringTmp)       ! Remove leading spaces
-       i = index(StringTmp, StringSep)      ! Find end of first part   
-       if(i <= 1) EXIT                      ! Nothing before the separator
-       nString = nString + 1                ! Count parts
+       StringTmp = adjustl(StringTmp)          ! Remove leading spaces
+       i = index(StringTmp, StringSep(1:lSep)) ! Find end of first part   
+       if(i <= 1) EXIT                         ! Nothing before the separator
+       nString = nString + 1                   ! Count parts
 
-       String_I(nString) = StringTmp(1:i-1) ! Put part into string array
-       StringTmp = StringTmp(i+1:l+1)       ! Delete part+separator from string
+       if(lKeep>0)then                         ! Do not keep added separator
+          if(i+lKeep >= len_trim(StringTmp)) lKeep = 0 
+       end if
+
+       String_I(nString) = StringTmp(1:i-1+lKeep) ! Put part into string array
+       StringTmp = StringTmp(i+lSep:l+lSep) ! Delete part+separator from string
 
        if(UseArraySyntax) call expand_array(String_I(nString))
 
@@ -551,21 +568,29 @@ contains
        write(*,'(a)') trim(String_I(iString))
     end do
 
-    call split_string(String, MaxString, String_I, nString, ',')
-    write(*,'(a,i3,a)') 'with comma separator split to', nString, ' parts:'
+    call split_string(String, String_I, nString, ",")
+    write(*,'(a,i3,a)') 'with "," separator split to', nString, ' parts:'
     do iString = 1, nString
        write(*,'(a)') trim(String_I(iString))
     end do
 
-    call split_string(String, MaxString, String_I, nString, &
-         UseArraySyntaxIn=.true.)
+    call split_string(String, String_I, nString, ") ", DoAddSeparator=.true.)
+    write(*,'(a,i3,a)') 'with ") " separator split to', nString, ' parts:'
+    do iString = 1, nString
+       write(*,'(a)') trim(String_I(iString))
+    end do
+
+    call split_string(String, String_I, nString, UseArraySyntaxIn=.true.)
     write(*,'(a,i3,a)') 'with UseArraySyntax split to', nString,' parts:'
     do iString = 1, nString
        write(*,'(a)') trim(String_I(iString))
     end do
 
     write(*,'(/,a)') 'testing join_string'
-    call join_string(nString, String_I, String, ' ')
+    call join_string(nString, String_I, String)
+    write(*,'(a)') 'joined string='//trim(String)
+
+    call join_string(String_I(1:4), String, '; ')
     write(*,'(a)') 'joined string='//trim(String)
 
     write(*,'(/,a)') 'testing upper_case and lower_case'
