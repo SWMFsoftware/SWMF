@@ -491,6 +491,8 @@ contains
     integer(HID_T) :: DataType
     integer(HSIZE_T) :: iOneOrZero, nCellsLocal
 
+    !--------------------------------------------------------------------------
+
     if(present(nBlocksLocalIn)) then
         nBlocksLocal = nBlocksLocalIn
         allocate(nCount(DatasetRank))
@@ -510,9 +512,6 @@ contains
     !Set the nDatasetDimensionions of the DatasetID
     iOneOrZero = 0
     
-    if (iErrorHdf == -1) &
-         call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 1")
-    
     !Determine the hdf5 datatype
     if (present(Rank1RealData) .or. present(Rank2RealData) .or.&
         present(Rank3RealData) .or. present(Rank4RealData)) then
@@ -530,6 +529,10 @@ contains
     call h5dcreate_f(FileID, DatasetName, DataType, DataSpaceId, DatasetID, iErrorHdf)
 
     call h5pcreate_f(H5P_DATASET_XFER_F, PropertyListID, iErrorHdf)
+
+    if (iErrorHdf == -1) &
+         call CON_stop("iErrorHdf in subroutine write_hdf5_data. Error marker 1")
+
     if (DoCollectiveWrite) &
        call h5pset_dxpl_mpio_f(PropertyListID, H5FD_MPIO_COLLECTIVE_F, iErrorHdf)
     
