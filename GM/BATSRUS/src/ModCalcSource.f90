@@ -78,8 +78,10 @@ contains
     real, parameter:: cTwoThirds = 2.0/3.0
     real :: Visco, Tmp, ViscoCoeff
 
-    !Coronal Heating
-    real :: QeFraction, QparFraction
+    ! Coronal Heating
+    real :: QPerQtotal_I(IonFirst_:IonLast_)
+    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QePerQtotal
 
     logical :: DoTest, DoTestMe
 
@@ -239,9 +241,9 @@ contains
           if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
                + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
        end do; end do; end do
-
-       if(UseTurbulentCascade) call get_wave_reflection(iBlock)
     end if
+
+    if(UseTurbulentCascade) call get_wave_reflection(iBlock)
 
     if(UseCoronalHeating .and. DoExtendTransitionRegion .or. UseRadCooling) &
          call get_tesi_c(iBlock, TeSi_C)
@@ -276,26 +278,26 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(UseElectronPressure)then
-             if(UseTurbulentCascade .and. DoExtendTransitionRegion)then
-                call apportion_coronal_heating(i, j, k, iBlock, &
-                     CoronalHeating_C(i,j,k)*extension_factor(TeSi_C(i,j,k)), &
-                     QeFraction, QparFraction)
-             else
-                call apportion_coronal_heating(i, j, k, iBlock, &
-                     CoronalHeating_C(i,j,k), QeFraction, QparFraction)
-             end if
-
-             Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*(1.0 - QeFraction)*gm1
-             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*(1.0 - QeFraction)
+             call apportion_coronal_heating(i, j, k, iBlock, &
+                  CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
+                  QePerQtotal)
 
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QeFraction
+                  + CoronalHeating_C(i,j,k)*gm1*QePerQtotal
 
-             if(UseAnisoPressure) &
-                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QparFraction
+             do iFluid = IonFirst_, IonLast_
+                call select_fluid
+
+                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*QPerQtotal_I(iFluid)*gm1
+                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*QPerQtotal_I(iFluid)
+
+                ! Anisotropic pressure does not yet work with multi-ion
+                if(UseAnisoPressure) &
+                     Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
+                     + CoronalHeating_C(i,j,k)*gm1*QparPerQtotal_I(iFluid)
+             end do
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1

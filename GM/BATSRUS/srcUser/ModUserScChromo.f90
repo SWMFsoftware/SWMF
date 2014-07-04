@@ -549,6 +549,7 @@ contains
     use ModCoordTransform,  ONLY: xyz_to_sph
     use ModFaceValue, ONLY: calc_face_value
     use ModB0, ONLY: set_b0_face
+    use ModMultiFluid, ONLY: IonFirst_, IonLast_
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -562,9 +563,11 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real    :: U_D(3), B_D(3), r, phi, theta
-    real    :: sintheta, sinphi, costheta, cosphi
-    real    :: QeFraction, QparFraction
+    real  :: U_D(3), B_D(3), r, phi, theta
+    real :: sintheta, sinphi, costheta, cosphi
+    real :: QPerQtotal_I(IonFirst_:IonLast_)
+    real :: QparPerQtotal_I(IonFirst_:IonLast_)
+    real :: QePerQtotal
 
     character (len=*), parameter :: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -642,12 +645,14 @@ contains
              if(DoExtendTransitionRegion) CoronalHeating_C(i,j,k) = &
                   CoronalHeating_C(i,j,k)/extension_factor(TeSi_C(i,j,k))
              call apportion_coronal_heating(i, j, k, iBlock, &
-                  CoronalHeating_C(i,j,k), QeFraction, QparFraction)
+                  CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
+                  QePerQtotal)
              select case(NameVar)
              case('qebyq')
-                PlotVar_G(i,j,k) = QeFraction
+                PlotVar_G(i,j,k) = QePerQtotal
              case('qparbyq')
-                if(UseAnisoPressure) PlotVar_G(i,j,k) = QparFraction
+                if(UseAnisoPressure) &
+                     PlotVar_G(i,j,k) = QparPerQtotal_I(IonFirst_)
              end select
           end do; end do; end do
        end if

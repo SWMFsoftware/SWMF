@@ -841,12 +841,14 @@ contains
 end module ModUnsignedFluxModel
 !=========================================!Master module!======================
 module ModCoronalHeating
+
   use ModAlfvenWaveHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModUnsignedFluxModel
   use ModNonWKBHeating
-  use ModMain,      ONLY: nBLK, nI, nJ, nK
-  use ModReadParam, ONLY: lStringLine
-  use ModVarIndexes,ONLY: WaveFirst_, WaveLast_
+  use ModMain,       ONLY: nBLK, nI, nJ, nK
+  use ModReadParam,  ONLY: lStringLine
+  use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
+  use ModMultiFluid, ONLY: IonFirst_, IonLast_
 
   implicit none
   SAVE
@@ -883,7 +885,6 @@ module ModCoronalHeating
   ! Abbett's model
   !/
 
-
   ! Normalization constant for Abbett Model
   real :: HeatNormalization = 1.0
 
@@ -893,10 +894,8 @@ module ModCoronalHeating
   real    :: LperpTimesSqrtB
   real    :: Crefl = 0.04
 
-  ! Variables for incompressible turbulence
   logical :: UseTurbulentCascade = .false.
   logical :: UseWaveReflection = .true.
-  logical :: UseScaledCorrelationLength = .true.
 
   logical :: IsNewBlockAlfven = .true.
 
@@ -913,10 +912,9 @@ module ModCoronalHeating
 
   ! Switch whether to use uniform heat partition
   logical :: UseUniformHeatPartition = .true.
-  ! Electron heating is a fraction of the total coronal heating
-  real :: QeByQtotal = 0.4
-  ! The fraction of heating for ion parallel pressure: 1/3 of Qp
-  real :: QparByQtotal = 0.0
+  real :: QionRatio_I(IonFirst_:IonLast_) = 0.6
+  real :: QionParRatio_I(IonFirst_:IonLast_) = 0.0
+  real :: QeRatio = 0.4
 
   ! Dimensionless parameters for stochastic heating
   logical :: UseStochasticHeating = .false.
@@ -924,12 +922,15 @@ module ModCoronalHeating
   real :: StochasticAmplitude = 0.75
 
   logical,private:: DoInit = .true. 
+
 contains
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
 
     use ModAdvance,    ONLY: UseAnisoPressure
     use ModReadParam,  ONLY: read_var
+
+    integer :: iFluid
 
     character(len=*), intent(in):: NameCommand
     !----------------------------------------------------------------------
@@ -984,6 +985,7 @@ contains
           call read_var('HeatChCgs', HeatChCgs)
           call read_var('DecayLengthCh', DecayLengthCh)
        end if
+
     case("#HEATPARTITIONING")
        UseUniformHeatPartition = .false.
        UseStochasticHeating = .false.
@@ -991,8 +993,15 @@ contains
        select case(TypeHeatPartitioning)
        case('uniform')
           UseUniformHeatPartition = .true.
-          call read_var('QeByQtotal', QeByQtotal)
-          if(UseAnisoPressure) call read_var('QparByQtotal', QparByQtotal)
+          do iFluid = IonFirst_, IonLast_
+             call read_var('QionRatio', QionRatio_I(iFluid))
+          end do
+          if(UseAnisoPressure)then
+             do iFluid = IonFirst_, IonLast_
+                call read_var('QionParRatio', QionParRatio_I(iFluid))
+             end do
+          end if
+          QeRatio = 1.0 - sum(QionRatio_I)
        case('stochasticheating')
           UseStochasticHeating = .true.
           call read_var('StochasticExponent', StochasticExponent)
@@ -1001,6 +1010,7 @@ contains
           call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
+
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
             // NameCommand)
@@ -1649,7 +1659,7 @@ contains
   !============================================================================
 
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       CoronalHeating, QeFraction, QparFraction) 
+       CoronalHeating, QPerQtotal_I, QparPerQtotal_I, QePerQtotal) 
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
@@ -1658,11 +1668,15 @@ contains
     use ModPhysics, ONLY: IonMassPerCharge
     use ModAdvance, ONLY: State_VGB, B0_DGB, UseAnisoPressure, &
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_
+    use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
+         TeSi_C
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
-    real, intent(out) :: QeFraction, QparFraction
+    real, intent(out) :: QPerQtotal_I(IonFirst_:IonLast_), &
+         QparPerQtotal_I(IonFirst_:IonLast_), QePerQtotal
 
+    real :: Qtotal
     real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: WaveLarge
     real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
@@ -1673,6 +1687,12 @@ contains
 
     if(UseStochasticHeating)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
+
+       if(DoExtendTransitionRegion)then
+          Qtotal = CoronalHeating*extension_factor(TeSi_C(i,j,k))
+       else
+          Qtotal = CoronalHeating
+       end if
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
             /max(State_VGB(p_,i,j,k,iBlock), 1e-15)
@@ -1716,7 +1736,7 @@ contains
        ! units, resulting in a slightly different expression below.
 
        DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
-            /IonMassPerCharge/max(CoronalHeating*LperpInvGyroRad**3,1e-30) &
+            /IonMassPerCharge/max(Qtotal*LperpInvGyroRad**3,1e-30) &
             *exp(-StochasticExponent &
             *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
 
@@ -1725,11 +1745,13 @@ contains
        ! where the dissipation is via interactions with the electrons
        DampingTotal = 1.0 + DampingElectron + DampingPar + DampingPerp
 
-       QeFraction = (1.0 + DampingElectron)/DampingTotal
-       QparFraction = DampingPar/Dampingtotal
+       QPerQtotal_I = (DampingPar + DampingPerp)/Dampingtotal
+       QparPerQtotal_I = DampingPar/Dampingtotal
+       QePerQtotal = 1.0 - sum(QPerQtotal_I)
     elseif(UseUniformHeatPartition)then
-       QeFraction = QeByQtotal
-       QparFraction = QparByQtotal
+       QPerQtotal_I = QionRatio_I
+       QparPerQtotal_I = QionParRatio_I
+       QePerQtotal = QeRatio
     else
        call stop_mpi(NameSub//' Unknown heat partitioning')
     end if
