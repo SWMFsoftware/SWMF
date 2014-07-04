@@ -1051,7 +1051,7 @@ subroutine WRESULT(LNC,XN,IFIR)
               StringHeader   = &
                    'Phase space distribution function for all pitch angles, energies and locations.'
 
-              StringVarName ='R   MLT   F  E   PA'
+              StringVarName ='R MLT F E PA NE NPA'
 
               TypePosition = 'rewind'
 
@@ -1065,11 +1065,9 @@ subroutine WRESULT(LNC,XN,IFIR)
                          StringHeaderIn = StringHeader, &
                          nStepIn = ntc, &
                          TimeIn = T, &
-                         ParamIn_I = &
-                         (/EKEV(K), RadToDeg*acos(mu(L)), &
-                         real(NE), real(NPA)/), &
+                         ParamIn_I = (/ &
+                         EKEV(K), RadToDeg*acos(mu(L)), real(NE), real(NPA)/),&
                          NameVarIn = StringVarName, &
-                         nDimIn = 2, &
                          CoordMinIn_D = (/1.75, 0.0/),&
                          CoordMaxIn_D = (/6.5, 24.0/),&
                          VarIn_IIV = f2(:,:,K,L,S:S))

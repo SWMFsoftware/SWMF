@@ -197,19 +197,17 @@ subroutine BFIELD_SETUP(LossCone_I)
   use ModHeidiWaves, ONLY: amla, bfc
   use ModHeidiIO,    ONLY: hmin
   use ModProcHEIDI,     ONLY: iProc
-  use ModNumConst,   ONLY: cPi
+  use ModNumConst,   ONLY: cPi, cDegToRad
   implicit none
 
   real     :: LossCone_I(NR+4)
-  real     :: degrad,camlra,asind
+  real     :: camlra,asind
   integer  :: i,iml
   external :: asind
   !------------------------------------------------------------------------
-  degrad = cPi/180.
-
   do IML=1,ISO 
      do i=1,IO
-        camlra=amla(iml)*degrad
+        camlra=amla(iml)*cDegToRad
         BE(I,IML)=0.32/LZ(I)**3*sqrt(1.+3.*sin(camlra)**2)  &
              /cos(camlra)**6		  ! in gauss
         BFC(I)=abs(DipoleFactor)/Z(I)**3/40./sqrt(cPi*Q)	  ! in SI units
@@ -249,13 +247,12 @@ subroutine ARRAYS
   use ModProcHEIDI,     ONLY: iProc
   use ModPlotFile,   ONLY: save_plot_file
   use ModHeidiInput, ONLY: TypeBCalc
-  use ModNumConst,   ONLY: cPi
-
+  use ModNumConst,   ONLY: cPi, cRadToDeg
 
   implicit none
 
   integer  :: I,J,K,L,IDL1,IC,IML,LL
-  real     :: DPA,SEG1,SEG2,RWU,CONV,degrad,camlra,muboun,spa
+  real     :: DPA,SEG1,SEG2,RWU,CONV,camlra,muboun,spa
   real     :: ASIND,COSD,ACOSD,CON1
   real     :: sind
   real     :: amla0(Slen)
@@ -305,8 +302,7 @@ subroutine ARRAYS
      LZ(I)=LZMIN+(I-2)*DL1
   end do
   Z(1:IO)=RE*LZ(1:IO)
-  degrad=cPi/180.
-
+  
   call BFIELD_SETUP(LossCone_I)
 
   DPHI = 2.* cPI/JO		      ! Grid size for local time [rad]
@@ -539,32 +535,24 @@ subroutine ARRAYS
 !!$          TypePositionIn = TypePosition,&
 !!$          TypeFileIn     = TypeFile,&
 !!$          StringHeaderIn = StringHeader, &
-!!$          nStepIn = 0, &
-!!$          TimeIn = 0.0, &
-!!$          NameVarIn = StringVarName, &
-!!$          nDimIn = 2, & 
-!!$          CoordMinIn_D = (/1.75, 0.0/),&
-!!$          CoordMaxIn_D = (/6.5, 24.0/),&
+!!$          NameVarIn      = StringVarName, &
+!!$          CoordMinIn_D   = (/1.75, 0.0/),&
+!!$          CoordMaxIn_D   = (/6.5, 24.0/),&
 !!$          VarIn_VII = bFieldMagnitude_III(nPointEq:nPointEq,:,:))
 !!$     TypePosition = 'rewind' 
 !!$     
 
      NameFile = 'funi.out'
      StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funi '
+     StringVarName = 'R MLT funi PA NR NT'
      TypePosition = 'rewind'
-     
-     
      do l = 1, lo
         call save_plot_file(NameFile, & 
              TypePositionIn = TypePosition,&
              TypeFileIn     = TypeFile,&
              StringHeaderIn = StringHeader, &
-             nStepIn = 0, &
-             TimeIn = 0.0, &
-             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+             ParamIn_I = (/ cRadToDeg*acos(mu(L)), real(nR), real(NT)/), &
              NameVarIn = StringVarName, &
-             nDimIn = 2, & 
              CoordMinIn_D = (/1.75, 0.0/),&
              CoordMaxIn_D = (/6.5, 24.0/),&
              VarIn_VII = funi(l:l,:,:))
@@ -573,7 +561,7 @@ subroutine ARRAYS
      
      NameFile = 'funt.out'
      StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funt'
+     StringVarName = 'R MLT funt PA NR NT'
      TypePosition = 'rewind'
           
      do l = 1, lo
@@ -583,7 +571,7 @@ subroutine ARRAYS
              StringHeaderIn = StringHeader, &
              nStepIn = 0, &
              TimeIn = 0.0, &
-             ParamIn_I = (/ acos(mu(L))*180./3.14159265, real(nR), real(NT)/), &
+             ParamIn_I = (/ cRadToDeg*acos(mu(L)), real(nR), real(NT)/), &
              NameVarIn = StringVarName, &
              nDimIn = 2, & 
              CoordMinIn_D = (/1.75, 0.0/),&
