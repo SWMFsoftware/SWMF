@@ -218,7 +218,8 @@ contains
     allocate(NameVar_I(nDim + nVar + nParam))
     call split_string(NameVar, NameVar_I, i)
     if(i /= nDim + nVar + nParam)then
-       write(*,*) NameSub,': NameVar='//trim(NameVar)
+       write(*,*) NameSub,': NameFile=', trim(NameFile)
+       write(*,*) NameSub,': NameVar=', trim(NameVar)
        write(*,*) NameSub,': number of substrings=', i
        write(*,*) NameSub,': nDim, nVar, nParam, sum=',&
             nDim, nVar, nParam, nDim + nVar + nParam
