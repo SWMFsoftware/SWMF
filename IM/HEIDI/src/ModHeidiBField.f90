@@ -9,8 +9,9 @@ contains
   subroutine initialize_b_field (L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III, &
        RadialDistance_III, Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
+    use ModProcHEIDI,  ONLY: iProc
     use ModHeidiSize,  ONLY: dt
-    use ModHeidiInput, ONLY: TypeBField, StretchingFactorA, StretchingFactorB
+    use ModHeidiInput, ONLY: TypeBField
     use ModNumConst,   ONLY: cTiny
     use ModHeidiMain,  ONLY: LZ,BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III, bGradB1yHeidi_III, bGradB1zHeidi_III,&
@@ -34,18 +35,15 @@ contains
     real, dimension(nPoint,nR,nPhi), intent(out)    :: dBdt_III
     real, dimension(3,nPoint,nR,nPhi), intent(out) :: GradB_VIII, GradBCrossB_VIII
     real, dimension(3,nPoint,nR,nPhi) :: GradB0x_VIII, GradB0y_VIII, GradB0z_VIII
-    real, dimension(3,nPoint,nR,nPhi) :: bField_VIII
 
     real, dimension(3)  :: GradB2_D, GradBCrossBsph_D(3),GradBxyz_D(3),GradBCrossBxyz_D(3)
     real, dimension(3,3):: XyzSph_DD
     real, parameter     :: DipoleStrength =  -0.32   ! nTm^-3
     real                :: DirBx, DirBy, DirBz, Tx, Ty,Tz
-    character(LEN=500)  :: StringVarName, StringHeader, NameFile
-    character(len=20)   :: TypePosition
-    character(len=20)   :: TypeFile = 'ascii'
+
     ! Temp var; Should be removed
-    real, dimension(nPoint, nR ,3) :: B_all
-    real, dimension(2,nPoint,nR)   :: Coord
+    real :: b_DII(3,nPoint,nR)
+    real :: Coord_DII(2,nPoint,nR)
     !----------------------------------------------------------------------------------
     select case(TypeBField)
        
@@ -141,35 +139,26 @@ contains
              end do
           end do
           
-          ! Write out values for testing; Should be removed
-          do iPhi =1, 1
-             do iR =1, nR
-                do iPoint =1, nPoint
-                   B_all(iPoint, iR,1)   = BxHeidi_III(iPoint,iR,iPhi)
-                   B_all(iPoint, iR,2)   = ByHeidi_III(iPoint,iR,iPhi)
-                   B_all(iPoint, iR,3)   = BzHeidi_III(iPoint,iR,iPhi)
-                   Coord(1,iPoint, iR)   = Xyz_VIII(1,iPoint,iR,iPhi)/Re
-                   Coord(2,iPoint, iR)   = Xyz_VIII(3,iPoint,iR,iPhi)/Re
+          if(iProc == 0)then
+             ! Write out values for testing; Should be removed
+             do iPhi =1, 1
+                do iR =1, nR
+                   do iPoint =1, nPoint
+                      B_DII(1,iPoint,iR)     = BxHeidi_III(iPoint,iR,iPhi)
+                      B_DII(2,iPoint,iR)     = ByHeidi_III(iPoint,iR,iPhi)
+                      B_DII(3,iPoint,iR)     = BzHeidi_III(iPoint,iR,iPhi)
+                      Coord_DII(1,iPoint,iR) = Xyz_VIII(1,iPoint,iR,iPhi)/Re
+                      Coord_DII(2,iPoint,iR) = Xyz_VIII(3,iPoint,iR,iPhi)/Re
+                   end do
                 end do
              end do
-          end do
 
-          NameFile = 'BField_mhd.out'
-          StringHeader = 'Magnetic field'
-          StringVarName = 'x  z  bx  by  bz 0LT'
-          TypePosition = 'rewind'
-
-          call save_plot_file(NameFile, & 
-               TypePositionIn = TypePosition,&
-               TypeFileIn     = TypeFile,&
-               StringHeaderIn = StringHeader, &
-               nStepIn = 0, &
-               TimeIn = 0.0, &
-               NameVarIn = StringVarName, &
-               nDimIn = 2, & 
-               CoordIn_DII = Coord,&
-               VarIn_IIV = B_all)
-          TypePosition = 'rewind' 
+             call save_plot_file('BField_mhd.out', & 
+                  StringHeaderIn = 'Magnetic field', &
+                  NameVarIn = 'x z bx by bz', &
+                  CoordIn_DII = Coord_DII,&
+                  VarIn_VII = b_DII)
+          end if
        end if
 
        write(*,*) 'Done with MHD' 
@@ -793,7 +782,6 @@ contains
     use ModNumConst,    ONLY: cPi
     use ModHeidiMain,   ONLY: LZ, DipoleFactor
 
-    use ModCoordTransform, ONLY: rot_xyz_sph,xyz_to_sph
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -803,34 +791,25 @@ contains
     real,    intent(inout) :: bFieldMagnitude_III(nPoint,nR,nPhi) ! Magnitude of magnetic field 
     real,    intent(out)   :: Length_III(nPoint,nR,nPhi)          ! Length of the field line
     real,    intent(out)   :: RadialDistance_III(nPoint,nR,nPhi)
+
     !Local Variables    
-    real                   :: LatMin                              ! Minimum Latitude 
-    real                   :: LatMax                              ! Maximum Latitude 
-    real                   :: Lat                                 ! Latitude
-    real                   :: dLat                                ! Latitude cell size
-    real                   :: beta2
-    real                   :: alpha2, alpha4
-    real                   :: bField_VIII(3,nPoint,nR,nPhi)
-    real         :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
-    real                   :: GradB_VIII(3,nPoint,nR,nPhi)
-    real      :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi,dBdt
-    real                   :: a,b,c,gamma
-    integer                :: iR, iPhi,iPoint     
-    real                   :: cos2Lat1
-    complex                :: root(3)
-    integer                :: nroot, i
-    real                   :: dd, alpha
-    real                   :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w
-    real                   :: beta,t
-    real, parameter        :: DipoleStrength =  -0.32   ! nTm^-3
-
-
-    real::XyzSph_DD(3,3),bf(3),bSph(3),gradb_cart(3), gradb_sph(3), GradBCart(3),GradBSph(3),gradb1(3), GradBCart1(3)
-    real ::GradientCart(3,nPoint,nR,nPhi), GradientSpherical(3,nPoint,nR,nPhi)  
-
-    real :: xc,yc,zc
-    real, dimension(3)   :: Xyz_D, CartesianVector, CartesianVectorT2, SphericalVector,SphericalVectorT2,&
-         Sph_D
+    real      :: LatMin                              ! Minimum Latitude 
+    real      :: LatMax                              ! Maximum Latitude 
+    real      :: Lat                                 ! Latitude
+    real      :: dLat                                ! Latitude cell size
+    real      :: beta2
+    real      :: alpha2
+    real      :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
+    real      :: GradB_VIII(3,nPoint,nR,nPhi)
+    real      :: r,x,y,Vr,Vtheta,Vphi,mag,Br,Btheta,Bphi,GradR, GradTheta, GradPhi
+    real      :: a,b,c,gamma
+    integer   :: iR, iPhi,iPoint     
+    real      :: cos2Lat1
+    complex   :: root(3)
+    integer   :: nroot, i
+    real      :: dd, alpha
+    real      :: dBdt_III(nPoint,nR,nPhi), dBdtTemp,p,w
+    real      :: beta,t
     !----------------------------------------------------------------------------------
     alpha = StretchingFactorA
 
@@ -839,7 +818,6 @@ contains
     ! Time dependent B field ==> alpha1 = alpha + 1.1*sin(w*t/3600.)
     beta = 1./alpha
     alpha2 = alpha**2
-    alpha4 = alpha2**2
     beta2 = beta**2
 
     dd = 0.0
@@ -875,10 +853,6 @@ contains
                   sqrt((1. - x**2) * (y**2 + beta**2 *(1-y**2)) + alpha**2 * x**2)
              r =  RadialDistance_III(iPoint,iR,iPhi)
              
-             xc = r * cos(Lat) * cos(Phi_I(iPhi))
-             yc = r * cos(Lat) * sin(Phi_I(iPhi))
-             zc = r * sin(Lat)
-
              ! \
              !  Magnetic field components for the uniformly stretched dipole in y and z.
              !/
@@ -1161,7 +1135,7 @@ contains
 
     use ModHeidiInput,     ONLY: StretchingFactorA, StretchingFactorB
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
+    use ModHeidiMain,      ONLY: LZ, DipoleFactor
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -1179,7 +1153,7 @@ contains
     real                   :: LatMin, LatMax,dLat,Lat             
     double precision       :: r, x, y, z, Bx, By, Bz, Vx,Vy,Vz, dBdx, dBdy, dBdz
     real                   :: cos2Lat1, alpha, beta
-    real                   :: aa, bb, cc, dd, gamma,sigma, a, rad
+    real                   :: aa, bb, cc, dd, gamma, sigma, a, rad
     real                   :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3)
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
     complex                :: root(3)
@@ -1363,12 +1337,10 @@ contains
   subroutine get_asym_stretched_field(L_I, Phi_I, nPoint, nR, nPhi, bFieldMagnitude_III,&
        RadialDistance_III, Length_III, GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-    use ModNumConst,       ONLY: cPi
     use ModHeidiInput,     ONLY: StretchingFactorA,StretchingFactorB
-    use ModCoordTransform, ONLY: rot_xyz_sph, xyz_to_sph
-    use ModHeidiMain,      ONLY: LZ, Re, DipoleFactor
+    use ModCoordTransform, ONLY: rot_xyz_sph
+    use ModHeidiMain,      ONLY: LZ, DipoleFactor
     use get_gradB_components
-    use ModPlotFile,       ONLY: save_plot_file
 
     integer, intent(in)    :: nPoint                              ! Number of points along the field line
     integer, intent(in)    :: nR                                  ! Number of points in the readial direction
@@ -1381,24 +1353,18 @@ contains
     real,    intent(out)   :: GradBCrossB_VIII(3,nPoint,nR,nPhi) 
     real,    intent(out)   :: GradB_VIII(3,nPoint,nR,nPhi)
     real,    intent(out)   :: dBdt_III(nPoint,nR,nPhi)
-    real                   :: bField_VIII(3,nPoint,nR,nPhi)
+
     !Local Variables    
     real                   :: LatMin, LatMax,dLat,Lat, a, b             
     double precision       :: r, xc, yc, zc, Bx, By, Bz, Vx,Vy,Vz, dBdx, dBdy, dBdz
     real                   :: cos2Lat1
-    real                   :: aa, bb, cc, dd, gamma,sigma, rad, alpha
+    real                   :: aa, bb, cc, dd, gamma, rad, alpha
     real                   :: GradBxyz_D(3),GradBCrossBxyz_D(3),XyzSph_DD(3,3)
     real                   :: GradBSph_D(3),GradBCrossBSph_D(3)
     complex                :: root(3)
     integer                :: nroot, i, iR, iPhi,iPoint 
     real                   :: cos2Lat,sin2Lat,cos2Phi,sin2Phi
 
-    character(len=500)  :: StringVarName, StringHeader, NameFile
-    character(len=20)   :: TypePosition
-    character(len=20)   :: TypeFile = 'ascii'
-    real, dimension(nPoint, nR ,3) :: B_all
-    real, dimension(2,nPoint,nR)   :: Coord
-    real :: t1, t2, t5, t6, t8, t10, t18, beta
     real, dimension(3)   :: Xyz_D
     real :: CosPhi2, SinPhi2
 
@@ -1409,9 +1375,8 @@ contains
 
     dd = 0.0
     do iPhi = 1, nPhi
-       sigma   = cos(Phi_I(iPhi))
-       CosPhi2 = (cos(Phi_I(iPhi)))**2
-       SinPhi2 = (sin(Phi_I(iPhi)))**2
+       CosPhi2 = cos(Phi_I(iPhi))**2
+       SinPhi2 = sin(Phi_I(iPhi))**2
 
        alpha = a + b * cos(Phi_I(iPhi)) 
 
@@ -1480,10 +1445,6 @@ contains
 
              dBdt_III(iPoint,iR,iPhi) = 0.0
 
-             ! Magnetic field components in cartesian coordinates
-             bField_VIII(1,iPoint,iR,iPhi) = Bx
-             bField_VIII(2,iPoint,iR,iPhi) = By
-             bField_VIII(3,iPoint,iR,iPhi) = Bz
              !Magnitude of the B field
              bFieldMagnitude_III(iPoint,iR,iPhi) = sqrt(Bx**2 + By**2 + Bz**2)
 
@@ -1517,12 +1478,6 @@ contains
                   (L_I(iR), LatMin,Lat,Phi_I(iPhi), StretchingFactorA, StretchingFactorB)  
              Lat = Lat + dLat
 
-             B_all(iPoint, iR,1)   = Bx
-             B_all(iPoint, iR,2)   = By
-             B_all(iPoint, iR,3)   = Bz
-             Coord(1,iPoint, iR)   = xc/Re
-             Coord(2,iPoint, iR)   = zc/Re
-
           end do
        end do
     end do
@@ -1532,7 +1487,6 @@ contains
   subroutine test_general_b
 
     integer, parameter   :: nPoint = 10001
-    integer, parameter   :: nPitch = 1
     integer, parameter   :: nR = 1
     integer, parameter   :: nPhi =1
     real                 :: L_I(nR)
@@ -1549,7 +1503,6 @@ contains
     real                 :: bMirror
     integer              :: iMirror_I(2)
     real, parameter      :: Pi = 3.141592654
-    real                 :: Percent1, Percent2
     integer              :: iPoint
     real                 :: dBdt_III(nPoint,nR,nPhi)
     !----------------------------------------------------------------------------------
@@ -1569,9 +1522,7 @@ contains
        call find_mirror_points (iPoint,  PitchAngle, bFieldMagnitude_III, &
             bMirror,iMirror_I)
        call second_adiabatic_invariant(iPoint, iMirror_I, bMirror, bFieldMagnitude_III, Ds_I,L_I(1), SecondAdiabInv)
-       Percent1 = 100*abs(IntegralBAnalytic - SecondAdiabInv)/IntegralBAnalytic
        call half_bounce_path_length(iPoint, iMirror_I, bMirror,  bFieldMagnitude_III, Ds_I,L_I(1), HalfPathLength,Sb)
-       Percent2 = 200*abs(IntegralHAnalytic - HalfPathLength)/(IntegralHAnalytic+HalfPathLength)
     end do
 
   end subroutine test_general_b

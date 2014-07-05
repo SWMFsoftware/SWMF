@@ -28,7 +28,7 @@ subroutine heidi_read
        write_prefix
   use ModHeidiMain,  ONLY: ithermfirst, Re, DipoleFactor
   use ModIoUnit,     ONLY: UNITTMP_
-  use ModHeidiInput, ONLY: set_parameters,tSimulationMax
+  use ModHeidiInput, ONLY: set_parameters
   use ModProcHEIDI,     ONLY: iProc
   use CON_planet,    ONLY: init_planet_const, set_planet_defaults, get_planet 
   
@@ -142,7 +142,6 @@ subroutine CONSTANT(NKP)
   use ModHeidiMain, ONLY: dayr, rkph, f107r, apr, rsunr, dkp, me, &
        DipoleFactor, mP, q, pi, FluxFact
   use ModIoUnit,    ONLY: UNITTMP_
-  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
@@ -192,11 +191,10 @@ end subroutine CONSTANT
 !======================================================================
 subroutine BFIELD_SETUP(LossCone_I)
 
-  use ModHeidiSize,  ONLY: nR, io, iso, tmax
+  use ModHeidiSize,  ONLY: nR, io, iso
   use ModHeidiMain,  ONLY: Be, LZ, DipoleFactor, Z, Q, Re
   use ModHeidiWaves, ONLY: amla, bfc
   use ModHeidiIO,    ONLY: hmin
-  use ModProcHEIDI,     ONLY: iProc
   use ModNumConst,   ONLY: cPi, cDegToRad
   implicit none
 
@@ -237,7 +235,7 @@ end subroutine BFIELD_SETUP
 !======================================================================
 subroutine ARRAYS
 
-  use ModHeidiSize,  ONLY: nR, nT, nE, nPA, nS, dT, io, jo, ko, lo, iso, s, lo, slen, nlt
+  use ModHeidiSize,  ONLY: nR, nT, nE, nPA, nS, io, jo, ko, lo, iso, s, lo, slen, nlt
   use ModHeidiIO,    ONLY: consl, ifac, iUnitStdOut, ist, ipa, swe, rw, elb, write_prefix
   use ModHeidiMain,  ONLY: conmu1, conmu2, facmu, conf1, conf2, FluxFact, mp,&
        fFactor, funi, funt, IsBFieldNew, wmu, be, mu, upa, ekev, q, IsBFieldNew, &
@@ -252,7 +250,7 @@ subroutine ARRAYS
   implicit none
 
   integer  :: I,J,K,L,IDL1,IC,IML,LL
-  real     :: DPA,SEG1,SEG2,RWU,CONV,camlra,muboun,spa
+  real     :: DPA,SEG1,SEG2,RWU,CONV,muboun,spa
   real     :: ASIND,COSD,ACOSD,CON1
   real     :: sind
   real     :: amla0(Slen)
@@ -261,10 +259,8 @@ subroutine ARRAYS
   external :: sind, ASIND,COSD,ACOSD
   data amla0/0.0,0.2,0.4,0.6,0.8,1.0,1.5,2.0,2.5,3.0,3.5, &
        4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0/
-  integer:: iPoint
-  character(LEN=500):: StringVarName, StringHeader, NameFile
- character(len=20) :: TypePosition
- character(len=20) :: TypeFile = 'ascii'
+
+  character(len=20) :: TypePosition
   !------------------------------------------------------------------------
 
   M1(1) = 5.4462E-4
@@ -515,12 +511,9 @@ subroutine ARRAYS
      
      write(*,*) 'heidi_setup: ARRAYS---> get_IntegralI'
      call get_IntegralI(funi)
-     
-    
   end if
   
-  
-  if (TypeBCalc == 'numeric') then
+  if (TypeBCalc == 'numeric' .and. iProc==0) then
 !!$       
 !!$ !   write(*,*) 'heidi_setup: ARRAYS---> get_B_field'
 !!$ !   call get_B_field(bFieldMagnitude_III)
@@ -542,38 +535,26 @@ subroutine ARRAYS
 !!$     TypePosition = 'rewind' 
 !!$     
 
-     NameFile = 'funi.out'
-     StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funi PA NR NT'
      TypePosition = 'rewind'
      do l = 1, lo
-        call save_plot_file(NameFile, & 
+        call save_plot_file('funi.out', & 
              TypePositionIn = TypePosition,&
-             TypeFileIn     = TypeFile,&
-             StringHeaderIn = StringHeader, &
+             StringHeaderIn = 'FUNI for fixed pitch angle', &
              ParamIn_I = (/ cRadToDeg*acos(mu(L)), real(nR), real(NT)/), &
-             NameVarIn = StringVarName, &
+             NameVarIn = 'R MLT funi PA NR NT', &
              CoordMinIn_D = (/1.75, 0.0/),&
              CoordMaxIn_D = (/6.5, 24.0/),&
              VarIn_VII = funi(l:l,:,:))
         TypePosition = 'append' 
      end do
-     
-     NameFile = 'funt.out'
-     StringHeader = 'Magnetic field in the equatorial plane'
-     StringVarName = 'R MLT funt PA NR NT'
+
      TypePosition = 'rewind'
-          
      do l = 1, lo
-        call save_plot_file(NameFile, & 
+        call save_plot_file('funt.out', & 
              TypePositionIn = TypePosition,&
-             TypeFileIn     = TypeFile,&
-             StringHeaderIn = StringHeader, &
-             nStepIn = 0, &
-             TimeIn = 0.0, &
+             StringHeaderIn = 'FUNT for fixed pitch angle', &
              ParamIn_I = (/ cRadToDeg*acos(mu(L)), real(nR), real(NT)/), &
-             NameVarIn = StringVarName, &
-             nDimIn = 2, & 
+             NameVarIn = 'R MLT funt PA NR NT', &
              CoordMinIn_D = (/1.75, 0.0/),&
              CoordMaxIn_D = (/6.5, 24.0/),&
              VarIn_VII = funt(l:l,:,:))
@@ -716,7 +697,6 @@ subroutine GETKPA(i3,nst,i2,nkp)
   use ModHeidiIO,   ONLY: ilambe, lambe, tlame, ia, ap, f107, ikp, &
        kp, nStep, day, lamgam
   use ModHeidiMain, ONLY: apr, dkp, T, rkph, dayr, f107r, rsunr, A
-  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
@@ -817,15 +797,14 @@ subroutine GETSWIND
        bysw, bzsw, mdsw, usw, dpsw, nStep
   use ModHeidiMain, ONLY: LZ, phi, T, mp
   use ModIoUnit,    ONLY: io_unit_new 
-  use ModProcHEIDI,    ONLY: iProc
 
   implicit none
 
   real             :: T1,T2,BZ1,BZ2,MD1,MD2
-  real             :: U1,U2,FAC,FLO,LMPO,AMPO
-  real             :: BY1,BY2,BZ,BT
+  real             :: U1,U2,FAC,LMPO,AMPO
+  real             :: BY1,BY2,BT
   real             :: bx 
-  integer          :: i, j, k, l
+  integer          :: i, j
   character(len=8) :: header
   save T1,T2,BZ1,BZ2,MD1,MD2,U1,U2,BY1,BY2
   !------------------------------------------------------------------------
@@ -909,9 +888,9 @@ subroutine THERMAL
 
   implicit none
 
-  integer           :: i,j,i1,j1,l,jj,jjj
-  integer           :: j2,i2,ier,ntimestep,n
-  real              :: EO,FAC,FACI,sind
+  integer           :: i,j,l
+  integer           ::ier,ntimestep,n
+  real              :: EO,FAC,sind
   real              :: delt, par(2)
   real              :: chi1, kpinit, dtimestep
   character(len=80) :: filename

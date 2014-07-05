@@ -20,7 +20,7 @@ subroutine get_IntegralH(IntegralH_III)
 
   real               :: y,x,alpha,beta,a1,a2,a3,a4
   real               :: HalfPathLength,Sb
-  real               :: bMirror_I(nPa)
+  real               :: bMirror_I(nPa),bMirror
   integer            :: iMirror_I(2)
   real               :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
   real               :: RadialDistance_III(nPoint,nR,nT)
@@ -89,7 +89,7 @@ subroutine get_IntegralI(IntegralI_III)
 
   real                 :: y,x,alpha,beta,a1,a2,a3,a4
   real                 :: SecondAdiabInv
-  real                 :: bMirror_I(nPa)
+  real                 :: bMirror_I(nPa),bMirror
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of B field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
@@ -148,8 +148,8 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
   use ModProcHEIDI,  ONLY: iProc
   use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
-  use ModConst,      ONLY:  cTiny
-  use ModHeidiMain,  ONLY: Phi, LZ, mu
+  use ModConst,      ONLY: cPi,  cTiny
+  use ModHeidiMain,  ONLY: Phi, LZ, mu, T, Re
   use ModHeidiBField
   use ModHeidiHydrogenGeo
   use ModHeidiInput, ONLY: TypeHModel
@@ -346,7 +346,7 @@ subroutine get_B_field(bFieldMagnitude_III)
   ! A zillion variables are defined and only one is used??
 
   use ModHeidiSize,  ONLY: nPoint, nT, nR
-  use ModHeidiMain,  ONLY: Phi,Z
+  use ModHeidiMain,  ONLY: Phi, LZ,Z
   use ModHeidiBField
 
   implicit none
@@ -358,6 +358,7 @@ subroutine get_B_field(bFieldMagnitude_III)
   real      :: GradBCrossB_VIII(3,nPoint,nR,nT)
   real      :: GradB_VIII(3,nPoint,nR,nT)
   real      :: Length_III(nPoint,nR,nT) 
+  integer   :: iPhi, iR,iPitch
   real      :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------
@@ -375,7 +376,7 @@ subroutine get_coef(dEdt_IIII, dMudt_III)
   use ModProcHEIDI,   ONLY: iProc
   use ModHeidiSize,   ONLY: nPoint, iPointBmin_II,iPointEq, nPa, lO, nT, nR, nE, kO
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, funi, funt
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
   use ModHeidiDrifts, ONLY: VR, P1,P2
   use ModHeidiInput,  ONLY: TypeBField
   use ModHeidiBField
@@ -389,18 +390,20 @@ subroutine get_coef(dEdt_IIII, dMudt_III)
   real, intent(out):: dMudt_III(nR,nT,nE,nPA)
 
   real, dimension(nPa)              :: bMirror_I, PitchAngle_I
-  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III
+  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
   real, dimension(nPoint)           :: DriftR_I, DriftPhi_I
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint)         :: VDrift_II
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
+  real, dimension(nPa,nR,nT)        :: h,s
+  real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
   real                              :: BouncedDriftR, BouncedDriftPhi
-  real                              :: HalfPathLength,Sb
+  real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  real                              :: CoeffE, CoeffMu
+  real                              :: I2, CoeffE, CoeffMu
   real                              :: InvB, InvR, TermER, TermEPhi1,TermEPhi2,TermEPhi
-  real                              :: TermER1, TermER2, TermEB, TermEI
+  real                              :: TermER1, TermER2, TermEB, TermMuB, TermEI
   real                              :: TermMuR, TermMuPhi1,TermMuPhi2,TermMuPhi,TermMut
   real                              :: TermMuR1, TermMuR2,TermMuR3
   real                              :: GradEqBR, GradEqBPhi
@@ -408,7 +411,9 @@ subroutine get_coef(dEdt_IIII, dMudt_III)
   real                              :: dBdt_III(nPoint,nR,nT),dIdR_III(nPa,nR,nT),dIdPhi_III(nPa,nR,nT)
   real                              :: dIdt_III(nPa,nR,nT)
   real                              :: BouncedDBdt
-  integer                           :: iRPlus, iRMinus, iPhiPlus, iPhiMinus
+  real, dimension(nPoint)           :: TR1, TR2, TPhi
+  real                              :: BouncedDriftR1,BouncedDriftR2
+  integer                           :: iPoint, iRPlus, iRMinus, iPhiPlus, iPhiMinus
   integer                           :: iPointBmin
 
   character(LEN=500):: StringVarName, StringHeader, NameFile
@@ -623,26 +628,34 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint, nPa, lO, nT, nR, nE, kO
+  use ModHeidiSize,   ONLY: nPoint, nPa, lO, nT, nR, nE, kO, dt
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, mu, EKEV, Z, Re
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor, t 
+  use ModHeidiDrifts, ONLY: VrConv, P1,P2
   use ModHeidiBField
   use ModHeidiBACoefficients
 
   implicit none
 
   real, dimension(nPa)              :: bMirror_I, PitchAngle_I
-  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III
+  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
   real, dimension(nPoint)           :: DriftR_I, DriftPhi_I
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint)         :: VDrift_II
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
+  real, dimension(nPa,nR,nT)        :: h,s
   real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
   real                              :: BouncedDriftR, BouncedDriftPhi
-  real                              :: HalfPathLength,Sb
+  real                              :: HalfPathLength,Sb,SecondAdiabInv
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  integer                           :: iPhi, iR, iPitch,iE
+  real                              :: I2, CoeffE, CoeffMu
+  real                              :: InvB, InvR, TermER, TermEPhi
+  real                              :: TermER1, TermER2
+  real                              :: TermMuR, TermMuPhi
+  real                              :: TermMuR1, TermMuR2
+  real                              :: GradEqBR, GradEqBPhi
+  integer                           :: iPhi, iR, iPitch,iE, iPoint
   real                              :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------
