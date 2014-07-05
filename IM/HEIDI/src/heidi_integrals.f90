@@ -16,20 +16,21 @@ subroutine get_IntegralH(IntegralH_III)
 
   implicit none 
 
-  real                 :: y,x,alpha,beta,a1,a2,a3,a4
-  real                 :: HalfPathLength,Sb
-  real                 :: bMirror_I(nPa),bMirror
-  integer              :: iMirror_I(2)
-  real                 :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
-  real                 :: RadialDistance_III(nPoint,nR,nT)
-  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
-  real                 :: GradB_VIII(3,nPoint,nR,nT)
-  real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
-  real                 :: Length_III(nPoint,nR,nT) 
-  real                 :: PitchAngle_I(nPa)   
-  real, intent(out)    :: IntegralH_III(nPa,nR,nT)
-  integer              :: iPhi, iR,iPitch
-  real                 :: dBdt_III(nPoint,nR,nT)
+  real, intent(out)  :: IntegralH_III(nPa,nR,nT)
+
+  real               :: y,x,alpha,beta,a1,a2,a3,a4
+  real               :: HalfPathLength,Sb
+  real               :: bMirror_I(nPa)
+  integer            :: iMirror_I(2)
+  real               :: bFieldMagnitude_III(nPoint,nR,nT)! Magnitude of magnetic field 
+  real               :: RadialDistance_III(nPoint,nR,nT)
+  real               :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real               :: GradB_VIII(3,nPoint,nR,nT)
+  real               :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
+  real               :: Length_III(nPoint,nR,nT) 
+  real               :: PitchAngle_I(nPa)   
+  integer            :: iPhi, iR,iPitch
+  real               :: dBdt_III(nPoint,nR,nT)
   !----------------------------------------------------------------------------
   select case(TypeBCalc)
 
@@ -84,9 +85,11 @@ subroutine get_IntegralI(IntegralI_III)
 
   implicit none
 
+  real, intent(out)    :: IntegralI_III(nPa,nR,nT)
+
   real                 :: y,x,alpha,beta,a1,a2,a3,a4
   real                 :: SecondAdiabInv
-  real                 :: bMirror_I(nPa),bMirror
+  real                 :: bMirror_I(nPa)
   integer              :: iMirror_I(2)
   real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of B field 
   real                 :: RadialDistance_III(nPoint,nR,nT)
@@ -95,7 +98,6 @@ subroutine get_IntegralI(IntegralI_III)
   real                 :: dLength_III(nPoint-1,nR,nT) ! Length between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
-  real, intent(out)    :: IntegralI_III(nPa,nR,nT)
   integer              :: iPhi, iR,iPitch
   real                 :: dBdt_III(nPoint, nR, nT)
   !----------------------------------------------------------------------------------
@@ -143,9 +145,11 @@ subroutine get_IntegralI(IntegralI_III)
 end subroutine get_IntegralI
 !===========================================================================
 subroutine get_neutral_hydrogen(NeutralHydrogen_III)
+
+  use ModProcHEIDI,  ONLY: iProc
   use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
-  use ModConst,      ONLY: cPi,  cTiny
-  use ModHeidiMain,  ONLY: Phi, LZ, mu, T, Re
+  use ModConst,      ONLY:  cTiny
+  use ModHeidiMain,  ONLY: Phi, LZ, mu
   use ModHeidiBField
   use ModHeidiHydrogenGeo
   use ModHeidiInput, ONLY: TypeHModel
@@ -154,6 +158,8 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   use ModPlotFile,   ONLY: save_plot_file
 
   implicit none
+
+  real, intent(out)    :: NeutralHydrogen_III(nR,nT,nPa)
 
   real                 :: AvgHDensity
   real                 :: bMirror_I(nPa)
@@ -165,7 +171,6 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
   real                 :: dLength_III(nPoint-1,nR,nT)      ! Length interval between i and i+1  
   real                 :: Length_III(nPoint,nR,nT) 
   real                 :: PitchAngle_I(nPa)
-  real, intent(out)    :: NeutralHydrogen_III(nR,nT,nPa)
   real                 :: Rho_III(nPoint,nR,nT),Rho_I(nPoint)
   integer              :: iPhi, iR,iPitch
   real                 :: HalfPathLength,Sb
@@ -173,17 +178,14 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
 
 
   integer :: iPoint
-
-  character(LEN=500):: StringVarName, StringHeader, NameFile
-  character(len=20) :: TypePosition
-  character(len=20) :: TypeFile = 'ascii'
   !----------------------------------------------------------------------------------
   write(*,*) 'GET_NEUTRAL_HYDROGEN======>call initialize_b_field'
 
   call initialize_b_field(LZ, Phi, nPoint, nR, nT, bFieldMagnitude_III, &
        RadialDistance_III,Length_III, dLength_III,GradBCrossB_VIII,GradB_VIII,dBdt_III)
 
-  if (TypeHModel=='Hodges') then 
+  select case(TypeHModel)
+  case('Hodges')
      call  get_interpolated_hodge_density(Rho_III)
 
      do iPitch =1, lO
@@ -208,7 +210,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
 
-  else if (TypeHModel=='Bailey') then 
+  case('Bailey')
      call  get_bailey_density(Rho_III)
 
      do iPitch =1, lO
@@ -233,8 +235,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
 
-
-  else if (TypeHModel=='twins') then 
+  case('twins')
      call  get_TWINS_density(Rho_III)     
 
      do iPitch =1, lO
@@ -259,7 +260,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
 
-  else if (TypeHModel=='Ostgaard') then 
+  case('Ostgaard')
      call  get_ostgaard_density(Rho_III)     
 
      do iPitch =1, lO
@@ -284,7 +285,7 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
 
-  else 
+  case default
 
      do iPitch =1, lO
         PitchAngle_I(iPitch) = acos(mu(iPitch))
@@ -311,57 +312,53 @@ subroutine get_neutral_hydrogen(NeutralHydrogen_III)
         end do
      end do
 
-  end if
+  end select ! TypeHModel
 
-  do iPitch = 1, lO
-     do iPhi = 1, nT
-        do iR = 1, nR
-           NeutralHydrogen_III(iR,iPhi,1) = NeutralHydrogen_III(iR,iPhi,2)
-           if (NeutralHydrogen_III(iR,iPhi,iPitch) < 0.0) &
-                NeutralHydrogen_III(iR,iPhi,iPitch) = NeutralHydrogen_III(iR,iPhi,iPitch-1)
-        end do
-     end do
-  end do
+!!! This algorithm does not look correct !!!
+  do iPitch = 1, lO; do iPhi = 1, nT; do iR = 1, nR
+     NeutralHydrogen_III(iR,iPhi,1) = NeutralHydrogen_III(iR,iPhi,2)
+     if (NeutralHydrogen_III(iR,iPhi,iPitch) < 0.0) &
+          NeutralHydrogen_III(iR,iPhi,iPitch) = NeutralHydrogen_III(iR,iPhi,iPitch-1)
+  end do; end do; end do
 
-  NameFile = 'HGeo.out'
-  StringHeader = 'Geocoronal hydrogen density in the equatorial plane'
-  StringVarName = 'R MLT nH'
-  TypePosition = 'rewind'
+  ! Output is written from proc 0 only
+  if(iProc/=0) RETURN
 
-  call save_plot_file(NameFile, & 
-       TypePositionIn = TypePosition,&
-       TypeFileIn     = TypeFile,&
-       StringHeaderIn = StringHeader, &
-       NameVarIn = StringVarName, &
+  call save_plot_file('HGeo.out', & 
+       StringHeaderIn = &
+       'Geocoronal hydrogen density in the equatorial plane', &
+       NameVarIn = 'R MLT nH', &
        CoordMinIn_D = (/1.75, 0.0/),&
        CoordMaxIn_D = (/6.5, 24.0/),&
        VarIn_VII = Rho_III(51:51,:,:))
-  TypePosition = 'rewind' 
 
   open(unit=UnitTmp_, file=trim(TypeHModel)//'HydrogenDensity.dat', status='unknown')
-
   do iR = 1, nR
      write(UnitTmp_,*) LZ(iR), Rho_III(51,iR,1)/1.e6
   end do
+  close(UnitTmp_)
 
 end subroutine get_neutral_hydrogen
-!============================================================
+!=============================================================================
 subroutine get_B_field(bFieldMagnitude_III)
 
+  ! What's going on here??? What is this subroutine for?
+  ! A zillion variables are defined and only one is used??
+
   use ModHeidiSize,  ONLY: nPoint, nT, nR
-  use ModHeidiMain,  ONLY: Phi, LZ,Z
+  use ModHeidiMain,  ONLY: Phi,Z
   use ModHeidiBField
 
   implicit none
 
-  real                 :: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
-  real                 :: RadialDistance_III(nPoint,nR,nT)
-  real                 :: dLength_III(nPoint-1,nR,nT)       ! Length interval between i and i+1  
-  real                 :: GradBCrossB_VIII(3,nPoint,nR,nT)
-  real                 :: GradB_VIII(3,nPoint,nR,nT)
-  real                 :: Length_III(nPoint,nR,nT) 
-  integer              :: iPhi, iR,iPitch
-  real                 :: dBdt_III(nPoint,nR,nT)
+  real, intent(out):: bFieldMagnitude_III(nPoint,nR,nT) ! Magnitude of magnetic field 
+
+  real      :: RadialDistance_III(nPoint,nR,nT)
+  real      :: dLength_III(nPoint-1,nR,nT)       ! Length interval between i and i+1  
+  real      :: GradBCrossB_VIII(3,nPoint,nR,nT)
+  real      :: GradB_VIII(3,nPoint,nR,nT)
+  real      :: Length_III(nPoint,nR,nT) 
+  real      :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------
   write(*,*) 'GET_B_FIELD======>call initialize_b_field'
@@ -371,11 +368,14 @@ subroutine get_B_field(bFieldMagnitude_III)
 end subroutine get_B_field
 
 !=============================================================================
-subroutine get_coef(dEdt_IIII,dMudt_III)
+subroutine get_coef(dEdt_IIII, dMudt_III)
 
+  ! What's the purpose of this subroutine??? Describe!
+ 
+  use ModProcHEIDI,   ONLY: iProc
   use ModHeidiSize,   ONLY: nPoint, iPointBmin_II,iPointEq, nPa, lO, nT, nR, nE, kO
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND,Z, funi, funt,dPhi, DipoleFactor
+  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, funi, funt
   use ModHeidiDrifts, ONLY: VR, P1,P2
   use ModHeidiInput,  ONLY: TypeBField
   use ModHeidiBField
@@ -385,23 +385,22 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
 
   implicit none
 
+  real, intent(out):: dEdt_IIII(nR,nT,nE,nPA)
+  real, intent(out):: dMudt_III(nR,nT,nE,nPA)
+
   real, dimension(nPa)              :: bMirror_I, PitchAngle_I
-  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
-  real, dimension(nR,nT,nE,nPA)     :: dEdt_IIII
-  real, dimension(nR,nT,nE,nPA)     :: dMudt_III
+  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III
   real, dimension(nPoint)           :: DriftR_I, DriftPhi_I
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint)         :: VDrift_II
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
-  real, dimension(nPa,nR,nT)        :: h,s
-  real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
   real                              :: BouncedDriftR, BouncedDriftPhi
-  real                              :: HalfPathLength,Sb,SecondAdiabInv
+  real                              :: HalfPathLength,Sb
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  real                              :: I2, CoeffE, CoeffMu
+  real                              :: CoeffE, CoeffMu
   real                              :: InvB, InvR, TermER, TermEPhi1,TermEPhi2,TermEPhi
-  real                              :: TermER1, TermER2, TermEB, TermMuB, TermEI
+  real                              :: TermER1, TermER2, TermEB, TermEI
   real                              :: TermMuR, TermMuPhi1,TermMuPhi2,TermMuPhi,TermMut
   real                              :: TermMuR1, TermMuR2,TermMuR3
   real                              :: GradEqBR, GradEqBPhi
@@ -409,9 +408,7 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
   real                              :: dBdt_III(nPoint,nR,nT),dIdR_III(nPa,nR,nT),dIdPhi_III(nPa,nR,nT)
   real                              :: dIdt_III(nPa,nR,nT)
   real                              :: BouncedDBdt
-  real, dimension(nPoint)           :: TR1, TR2, TPhi
-  real                              :: BouncedDriftR1,BouncedDriftR2
-  integer                           :: iPoint, iRPlus, iRMinus, iPhiPlus, iPhiMinus
+  integer                           :: iRPlus, iRMinus, iPhiPlus, iPhiMinus
   integer                           :: iPointBmin
 
   character(LEN=500):: StringVarName, StringHeader, NameFile
@@ -528,6 +525,9 @@ subroutine get_coef(dEdt_IIII,dMudt_III)
      end do
   end do
 
+  ! Only root proc should write the various files below (?)
+  if(iProc /= 0) RETURN
+
   StringHeader = 'EDOT values'
   StringVarName = 'R MLT Edot E PA NR NT'
   TypePosition = 'rewind'
@@ -623,34 +623,26 @@ end subroutine get_coef
 
 subroutine get_grad_curv_drift(VPhi_IIII,VR_IIII)
 
-  use ModHeidiSize,   ONLY: nPoint, nPa, lO, nT, nR, nE, kO, dt
+  use ModHeidiSize,   ONLY: nPoint, nPa, lO, nT, nR, nE, kO
   use ModConst,       ONLY: cTiny  
-  use ModHeidiMain,   ONLY: Phi, LZ, mu, EKEV, EBND, wmu, DPHI, Z, Re, DipoleFactor, t 
-  use ModHeidiDrifts, ONLY: VrConv, P1,P2
+  use ModHeidiMain,   ONLY: Phi, mu, EKEV, Z, Re
   use ModHeidiBField
   use ModHeidiBACoefficients
 
   implicit none
 
   real, dimension(nPa)              :: bMirror_I, PitchAngle_I
-  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III, b4_III
+  real, dimension(nPoint,nR,nT)     :: bFieldMagnitude_III, RadialDistance_III, Length_III
   real, dimension(nPoint)           :: DriftR_I, DriftPhi_I
   real, dimension(3,nPoint,nR,nT)   :: GradBCrossB_VIII, GradB_VIII
   real, dimension(3,nPoint)         :: VDrift_II
   real, dimension(nPoint-1,nR,nT)   :: dLength_III
-  real, dimension(nPa,nR,nT)        :: h,s
   real, dimension(nR,nT,nE,nPA)     :: VPhi_IIII,VR_IIII
   real                              :: BouncedDriftR, BouncedDriftPhi
-  real                              :: HalfPathLength,Sb,SecondAdiabInv
+  real                              :: HalfPathLength,Sb
   integer                           :: iMirror_I(2)
   real                              :: Energy
-  real                              :: I2, CoeffE, CoeffMu
-  real                              :: InvB, InvR, TermER, TermEPhi
-  real                              :: TermER1, TermER2
-  real                              :: TermMuR, TermMuPhi
-  real                              :: TermMuR1, TermMuR2
-  real                              :: GradEqBR, GradEqBPhi
-  integer                           :: iPhi, iR, iPitch,iE, iPoint
+  integer                           :: iPhi, iR, iPitch,iE
   real                              :: dBdt_III(nPoint,nR,nT)
 
   !----------------------------------------------------------------------------
