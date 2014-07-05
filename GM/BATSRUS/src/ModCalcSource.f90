@@ -285,19 +285,16 @@ contains
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1*QePerQtotal
 
-             do iFluid = IonFirst_, IonLast_
-                call select_fluid
+             Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I*gm1
+             Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
+                  Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
-                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*QPerQtotal_I(iFluid)*gm1
-                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*QPerQtotal_I(iFluid)
-
-                ! Anisotropic pressure does not yet work with multi-ion
-                if(UseAnisoPressure) &
-                     Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                     + CoronalHeating_C(i,j,k)*gm1*QparPerQtotal_I(iFluid)
-             end do
+             ! Anisotropic pressure does not yet work with multi-ion
+             if(UseAnisoPressure) &
+                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
+                  + CoronalHeating_C(i,j,k)*gm1*QparPerQtotal_I(IonFirst_)
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*gm1
