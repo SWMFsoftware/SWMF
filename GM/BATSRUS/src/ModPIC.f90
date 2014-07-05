@@ -102,22 +102,12 @@ contains
   !===========================================================================
   subroutine pic_init_region
 
-    use ModProcMH,    ONLY: iProc, nProc, iComm
-    use ModAdvance,   ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Ppar_, p_, &
-         State_VGB, UseAnisoPressure
-    use ModMain,      ONLY: UseB0, Dt, time_simulation, n_step
-    use ModB0,        ONLY: B0_DGB
-    use ModCurrent,   ONLY: get_current
-    use ModMpi,       ONLY: MPI_reduce, MPI_SUM, MPI_REAL
+    use ModProcMH,    ONLY: iProc
+    use ModMain,      ONLY: Dt
     use BATL_lib,     ONLY: nDim, MaxDim, Xyz_DGB, CellSize_DB, find_grid_block
-    use ModIO,        ONLY: NamePlotDir
-    use ModIoUnit,    ONLY: UnitTmp_
-    use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_,&
-         UnitP_, UnitJ_, UnitMass_, UnitCharge_
-    use ModPlotFile,  ONLY: save_plot_file
-    use ModConst,     ONLY: cLightSpeed
-    use ModHallResist,ONLY: HallFactorMax, UseHallResist
-    use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
+    use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitMass_, UnitCharge_
+    use ModHallResist,ONLY: HallFactorMax
+    use ModPhysics,   ONLY: IonMassPerCharge
 
     ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
     integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
@@ -139,11 +129,8 @@ contains
     ! Location of PIC node
     real:: XyzPic_D(MaxDim)
 
-    ! Current in normalized units
-    real:: Current_D(MaxDim)
-
     ! The PIC variable array
-    real, allocatable:: StatePic_VC(:,:,:,:), StateAllPic_VC(:,:,:,:)
+    real, allocatable:: StatePic_VC(:,:,:,:)
 
     ! Time step in SI units
     real:: DtSi
@@ -151,17 +138,8 @@ contains
     ! mass per charge SI
     real:: IonMassPerChargeSi 
 
-    ! MPI error
-    integer:: iError
-
-    ! Fist time called
-    logical :: IsFirstCall = .true.
-
     ! Region check
     integer :: nNode
-    real    :: L
-
-    character(len=100):: NameFile
 
     character(len=*), parameter:: NameSub = 'pic_init_region'
     !-------------------------------------------------------------------------
@@ -211,35 +189,21 @@ contains
 
     do iRegion = 1, nRegionPic
        ! checking and corecting that the  domain size and Dx 
-       ! mach what IPIC3D needs ( odd number of cells)
-       if(.not.UseFileCoupling) then
-          do i=1, nDim
-             L = XyzMaxPic_DI(i,iRegion) - XyzMinPic_DI(i,iRegion)
-             nNode = floor( L/DxyzPic_DI(i,iRegion) + 0.5) + 1
+       ! match what IPIC3D needs ( odd number of cells)
+       do i=1, nDim
+          nNode = 1 + nint( &
+               (XyzMaxPic_DI(i,iRegion) - XyzMinPic_DI(i,iRegion)) &
+               /DxyzPic_DI(i,iRegion) )
 
-             ! Adding a ghost cell layar in addition
-             if(mod(nNode,2) /= 0) then 
-                XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-                     + (nNode)*DxyzPic_DI(i,iRegion)
-                XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-                     - DxyzPic_DI(i,iRegion)
-             else
-                XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-                     + (nNode + 1)*DxyzPic_DI(i,iRegion)
-                XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-                     - DxyzPic_DI(i,iRegion)
-             end if
-          end do
-       end if
+          ! Make sure there is an odd number of nodes
+          if(mod(nNode, 2) == 0) nNode = nNode + 1
 
-       if(UseFileCoupling) then
-          ! Add 1 ghost cell in the minimum and 2 in the maximum direction
-          ! so that the node based PIC code has an even number of cells
-          XyzMinPic_DI(1:nDim,iRegion) = XyzMinPic_DI(1:nDim,iRegion) &
-               - DxyzPic_DI(1:nDim,iRegion)
-          XyzMaxPic_DI(1:nDim,iRegion) = XyzMaxPic_DI(1:nDim,iRegion) &
-               + 2*DxyzPic_DI(1:nDim,iRegion)
-       end if
+          ! Adding ghost cell layars (1 at Min, 1 or 2 at max)
+          XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+               + nNode*DxyzPic_DI(i,iRegion)
+          XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
+               - DxyzPic_DI(i,iRegion)
+       end do
     end do
 
     if(iProc == 0) then
@@ -308,9 +272,8 @@ contains
     use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitX_, UnitRho_, UnitU_, UnitB_,&
          UnitP_, UnitJ_, UnitMass_, UnitCharge_
     use ModPlotFile,  ONLY: save_plot_file
-    use ModConst,     ONLY: cLightSpeed
-    use ModHallResist,ONLY: HallFactorMax, UseHallResist
-    use ModPhysics,   ONLY: IonMassPerCharge, TypeNormalization 
+    use ModHallResist,ONLY: HallFactorMax
+    use ModPhysics,   ONLY: IonMassPerCharge
 
     ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
     integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
