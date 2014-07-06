@@ -13,7 +13,7 @@ contains
     !===========================================================================
   subroutine write_rb_sat(iSatIn, nLat,nLon,nEnergy,nAngle,Flux_C)
     ! Write solution interpolated to satellite position to satellite files.
-    use ModIoUnit,      ONLY: io_unit_new, UnitTmp_
+    use ModIoUnit,      ONLY: UnitTmp_
     use ModInterpolate, ONLY: bilinear, trilinear
     use ModNumConst,    ONLY: cDegToRad
     use rbe_cread2,     ONLY: tint
@@ -22,7 +22,6 @@ contains
                               AngleGrid_I=>gridy
     use rbe_cfield,     ONLY: BfieldEq_C => bo
     use ModRbTime,      ONLY: iCurrentTime_I
-    use ModGmRb,        ONLY: StateBmin_IIV
     implicit none
     
     ! Arguments
@@ -36,7 +35,7 @@ contains
     !internal variables
     integer            :: iError
     logical            :: IsExist
-    character(len=100) :: NameSatFile, StringTime
+    character(len=100) :: NameSatFile
     character(len=200) :: HeadVar
     real               :: SatLat, SatLon, SatAng, &
                           LatSatGen,LonSatGen, AngSatGen
@@ -102,7 +101,7 @@ contains
        ! Write header
        write(UnitTmp_, '(2a)')'RB results for SWMF trajectory file ', &
             trim(NameSat_I(iSatIn))
-       write(UnitTmp_,*) trim(HeadVar)
+       write(UnitTmp_,'(a)') trim(HeadVar)
     else
        open(unit=UnitTmp_, file=trim(NameSatFile), status='OLD',&
             position='append', iostat=iError)
