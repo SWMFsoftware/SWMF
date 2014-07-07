@@ -240,7 +240,7 @@ contains
 
     call save_plot_file(NameFile, &
          StringHeaderIn = 'Ionospheric potential', &
-         TimeIn         = time+0.0, &
+         TimeIn         = Time, &
          NameVarIn      = 'Theta Phi Pot', &
          CoordMinIn_D   = (/0.0, 0.0/), &
          CoordMaxIn_D   = (/180.0,360.0/), &
@@ -357,6 +357,7 @@ contains
   subroutine IM_put_from_gm_line(nRadiusIn, nLonIn, Map_DSII, &
        nVarLineIn, nPointLineIn, BufferLine_VI, NameVar)
 
+    use ModProcHeidi,      ONLY: iProc
     use ModHeidiMain,      ONLY: &
          nR, nT, LZ, BHeidi_III, SHeidi_III, RHeidi_III,&
          bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III,&
@@ -392,12 +393,8 @@ contains
     integer                :: nPointLine = 0    ! number of points in all lines
     real, save, allocatable:: StateLine_VI(:,:)       ! state along all lines
     integer,save           :: iRiTiDIr_DI(3,2*nR*nT)  ! line index 
-    character(LEN=500)     :: StringVarName, StringHeader
-    character(len=20)      :: TypePosition
-    character(len=20)      :: TypeFile = 'ascii'
-    !\
+
     ! Local Variables
-    !/
     integer, parameter:: &
          I_=1, S_=2, X_=3, Y_=4, Z_=5, rho_= 6, ux_=7, uy_=8, uz_=9, p_=13
     integer, parameter:: Bx_=10, By_=11, Bz_=12, gx_=14, gy_=15, gz_=16 
@@ -446,6 +443,7 @@ contains
     DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    DoTestMe = DoTest .and. iProc == 0
     !\
     ! Save total number of points along all field lines
     !/
@@ -462,7 +460,7 @@ contains
     !/
     StateLine_VI = BufferLine_VI
 
-    if(DoTest)then
+    if(DoTestMe)then
        write(*,*)NameSub,' nVarLine,nPointLine=',nVarLine,nPointLine
 
        ! Set the file name
@@ -485,18 +483,18 @@ contains
        call save_plot_file( &
             NameFile, &
             StringHeaderIn = 'Mapping to northern ionosphere', &
-            TimeIn       = Time+0.0, &
-            NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
-            CoordMinIn_D = (/RadiusMin+0.0,   0.0/), &
-            CoordMaxIn_D = (/RadiusMax+0.0, 360.0/), &
-            VarIn_VII    = Map_DSII(:,1,:,:))
+            TimeIn         = Time, &
+            NameVarIn      = 'r Lon rIono ThetaIono PhiIono', &
+            CoordMinIn_D   = (/RadiusMin+0.0,   0.0/), &
+            CoordMaxIn_D   = (/RadiusMax+0.0, 360.0/), &
+            VarIn_VII      = Map_DSII(:,1,:,:))
 
        write(NameFile,'(a,i5.5,a)') &
             "IM/plots/map_south_t",nint(Time),".out"
        call save_plot_file( &
             NameFile, &
             StringHeaderIn = 'Mapping to southern ionosphere', &
-            TimeIn       = Time+0.0, &
+            TimeIn       = Time, &
             NameVarIn    = 'r Lon rIono ThetaIono PhiIono', &
             CoordMinIn_D = (/RadiusMin+0.0,   0.0/), &
             CoordMaxIn_D = (/RadiusMax+0.0, 360.0/), &
@@ -773,7 +771,8 @@ contains
           end if
 
           if (LZ(iR) <= rBoundary) then
-             call fill_dipole(nStep, LZ(iR), Phi(iT), XyzDipole_VI, bDipole_VI, bDipoleMagn_I, sDipole_I, rDipole_I)
+             call fill_dipole(nStep, LZ(iR), Phi(iT), &
+                  XyzDipole_VI, bDipole_VI, bDipoleMagn_I, sDipole_I, rDipole_I)
              Xyz_VIII(:,:,iR,iT)  = XyzDipole_VI(:,:)
              BHeidi_III(:,iR,iT)  = bDipoleMagn_I(:)
              RHeidi_III(:,iR,iT)  = rDipole_I(:)
@@ -822,8 +821,8 @@ contains
        end do
     end do
 
-
-    !Get the pressure, density and velocity at the HEIDI boundary in the equatorial plane
+    ! Get the pressure, density and velocity at the HEIDI boundary 
+    ! in the equatorial plane
 
     do iT = 1, nT
        MhdEqPressure_I(iT) = pHeidi_III(iPointBmin_II(nR,iT),nR,iT)
@@ -831,54 +830,47 @@ contains
        ! MhdEqVelocity = sqrt(StateLine_VI(ux_,iPointBmin)**2 + &
        !      StateLine_VI(uy_,iPointBmin)**2 + StateLine_VI(uz_,iPointBmin)**2)
 
-
-       write(*,*) 'pressure and rho from MHD: iT, P, rho = ', iT,  MhdEqPressure_I(iT),  MhdEqDensity_I(iT)
-
+       if(DoTestMe) &
+            write(*,*) 'pressure and rho from MHD: iT, P, rho = ', &
+            iT,  MhdEqPressure_I(iT),  MhdEqDensity_I(iT)
 
     end do
 
-    !STOP
+    if(DoTestMe)then
 
-    !~~~~~~~~~~~~~~~~~~~~~~~ Write out files for testing ~~~~~~~~~~~~~~~~~~~~~~
+       !~~~~~~~~~~~~~~~~~~~~~~~ Write out files for testing ~~~~~~~~~~~~~~~~~~~~~~
 
-    NameFile      = 'BFieldMagn.out'
-    StringHeader  = 'Magnetic field in the equatorial plane'
-    StringVarName = 'R MLT B'
-    TypePosition  = 'rewind'
+       call save_plot_file('BFieldMagn.out', & 
+            StringHeaderIn = 'Magnetic field in the equatorial plane', &
+            NameVarIn      = 'R MLT B', &
+            CoordMinIn_D   = (/1.75, 0.0/),&
+            CoordMaxIn_D   = (/6.5, 24.0/),&
+            VarIn_VII      = BHeidi_III(iPointEq:iPointEq,:,:))
 
-    call save_plot_file(NameFile, & 
-         TypePositionIn = TypePosition,&
-         TypeFileIn     = TypeFile,&
-         StringHeaderIn = StringHeader, &
-         nStepIn = 0, &
-         TimeIn = 0.0, &
-         NameVarIn = StringVarName, &
-         nDimIn = 2, & 
-         CoordMinIn_D = (/1.75, 0.0/),&
-         CoordMaxIn_D = (/6.5, 24.0/),&
-         VarIn_VII = BHeidi_III(iPointEq:iPointEq,:,:))
-    TypePosition = 'rewind' 
+       open(UnitTmp_,file='interface.out')
+       write(UnitTmp_,*) 'from interface'
+       write(UnitTmp_,*)'iPoint  iR  b  bx  by  bz  x  y  z  s Lat'
 
-
-    ! Use UnitTmp_ (or 9)
-    open(unit=9,file='interface.out')
-    write(9,*) 'from interface'
-    write(9,*)'iPoint  iR  b  bx  by  bz  x  y  z  s Lat'
-
-    do iPhi =1, 1
-       do iR = 1,20
-          do iPoint =1, nStep
-             write(9,'(2I5,  9E11.3)') iPoint, iR, BHeidi_III(iPoint,iR,iPhi),&
-                  BxHeidi_III(iPoint,iR,iPhi), ByHeidi_III(iPoint,iR,iPhi),&
-                  BzHeidi_III(iPoint,iR,iPhi), Xyz_VIII(1,iPoint,iR,iPhi),Xyz_VIII(2,iPoint,iR,iPhi),&
-                  Xyz_VIII(3,iPoint,iR,iPhi),SHeidi_III(iPoint,iR,iPhi),&
-                  atan(Xyz_VIII(3,iPoint,iR,iPhi)/(sqrt(Xyz_VIII(1,iPoint,iR,iPhi)**2+ Xyz_VIII(2,iPoint,iR,iPhi)**2)))
+       do iPhi =1, 1
+          do iR = 1,20
+             do iPoint =1, nStep
+                write(UnitTmp_,'(2I5,9E11.3)') &
+                     iPoint, iR, &
+                     BHeidi_III(iPoint,iR,iPhi),&
+                     BxHeidi_III(iPoint,iR,iPhi), &
+                     ByHeidi_III(iPoint,iR,iPhi),&
+                     BzHeidi_III(iPoint,iR,iPhi), &
+                     Xyz_VIII(1,iPoint,iR,iPhi),Xyz_VIII(2,iPoint,iR,iPhi),&
+                     Xyz_VIII(3,iPoint,iR,iPhi),SHeidi_III(iPoint,iR,iPhi),&
+                     atan( Xyz_VIII(3,iPoint,iR,iPhi) &
+                     /     sqrt(sum(Xyz_VIII(1:2,iPoint,iR,iPhi)**2)))
+             end do
           end do
        end do
-    end do
-    close(9)
+       close(UnitTmp_)
 
-    !  call stop_mpi('DEBUG')
+       !  call stop_mpi('DEBUG')
+    end if
 
   end subroutine IM_put_from_gm_line
 
@@ -928,13 +920,12 @@ contains
 
   subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
+    use ModProcHEIDI, ONLY: iProc
     use CON_time, ONLY : get_time
     use ModNumConst, ONLY: cPi, cDegToRad
     use ModConst, ONLY: cProtonMass
     use ModHeidiCurrents, ONLY:eden, rnht
     use ModHeidiSize,  ONLY:  nR, nT
-
-    character (len=*),parameter :: NameSub='IM_get_for_gm'
 
     integer, intent(in)                                :: iSizeIn,jSizeIn,nVar
     real, dimension(iSizeIn,jSizeIn,nVar), intent(out) :: Buffer_IIV
@@ -942,15 +933,15 @@ contains
     integer, parameter :: pres_=1, dens_=2
     integer :: iLat, iLon, l, k
     real :: T, P, latsHeidi(NR), mltsHeidi(NT)
-    logical :: DoTest, DoTestMe
     real    :: Pmin
     integer :: i,j, iSize, jSize
+
+    logical :: DoTest, DoTestMe
+    character (len=*),parameter :: NameSub='IM_get_for_gm'
     !--------------------------------------------------------------------------
-    iSize = nR
-    jSize = nT-1
-
-
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    DoTestMe = DoTest .and. iProc == 0
+
     if (DoTestMe) &
          write(*,*)NameSub,' starting with iSizeIn, jSizeIn, nVar, NameVar=',&
          iSizeIn,jSizeIn,nVar,NameVar
@@ -958,6 +949,8 @@ contains
     if(NameVar /= 'p:rho') &
          call CON_stop(NameSub//' invalid NameVar='//NameVar)
 
+    iSize = nR
+    jSize = nT-1
     if(iSizeIn /= iSize .or. jSizeIn /= jSize)then
        write(*,*)NameSub//' incorrect buffer size=',iSizeIn,jSizeIn
        call CON_stop(NameSub//' SWMF_ERROR')
