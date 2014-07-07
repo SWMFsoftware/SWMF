@@ -40,7 +40,6 @@ contains
     use ModHeidiMain
     use ModHeidiSize, ONLY: tMax
     use ModReadParam, ONLY: i_session_read
-    use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
     use ModHeidiIO!,   ONLY: IsFramework, StringPrefix
     use ModIoUnit,    ONLY: STDOUT_
 
@@ -51,9 +50,6 @@ contains
     character (len=*),  intent(in)   :: TypeAction ! What to do
 
     !Local Variables:
-    character (len=100)               :: NameCommand, StringPlot
-    logical                           :: DoEcho=.false.
-    logical                           :: UseStrict=.true.  
     integer                           :: iUnitOut
     !--------------------------------------------------------------------------
 
@@ -127,12 +123,11 @@ contains
     use ModNumConst,  ONLY: cTwoPi
     use CON_coupler,  ONLY: set_grid_descriptor, is_proc, IM_
     use ModHeidiSize, ONLY: RadiusMin, RadiusMax,NT,NR
-    use ModHeidiMain, ONLY: LZ, Z, DL1, DPHI,PHI
+    use ModHeidiMain, ONLY: LZ,PHI
 
     character (len=*), parameter :: NameSub='IM_set_grid'
     logical                      :: IsInitialized=.false.
     logical                      :: DoTest, DoTestMe
-    integer                      :: i, j  
     !-------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -262,7 +257,7 @@ contains
     type(IndexPtrType),intent(in) :: Index
     type(WeightPtrType),intent(in):: Weight
     logical,intent(in)            :: DoAdd
-    integer :: iBlock,i,j
+    integer ::i,j
     !--------------------------------------------------------------------------
     if(nPoint>1)then
        write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
@@ -363,14 +358,11 @@ contains
          bGradB1xHeidi_III,bGradB1yHeidi_III, bGradB1zHeidi_III,&
          BxHeidi_III, ByHeidi_III, BzHeidi_III,Xyz_VIII, pHeidi_III, &
          RhoHeidi_III, MhdEqPressure_I, MhdEqDensity_I
-    use ModHeidiMain,      ONLY: Phi, IsBFieldNew
+    use ModHeidiMain,      ONLY: Phi
     use ModHeidiIO,        ONLY: Time
     use ModHeidiSize,      ONLY: RadiusMin, RadiusMax, iPointBMin_II, iPointEq
     use ModIoUnit,         ONLY: UnitTmp_
     use ModPlotFile,       ONLY: save_plot_file
-    use ModHeidiBField,    ONLY: dipole_length
-    use ModCoordTransform, ONLY: xyz_to_sph
-    use ModNumConst,       ONLY: cPi
     use ModPlanetConst,    ONLY: DipoleStrengthPlanet_I, rPlanet_I, Earth_
 
     integer, intent(in)          :: nRadiusIn, nLonIn
@@ -380,7 +372,6 @@ contains
     character(len=*), intent(in) :: NameVar
     character(len=*), parameter  :: NameSub='IM_put_from_gm_line'
     character(len=100)           :: NameFile
-    logical                      :: IsFirstCall = .true.
     logical                      :: DoTest, DoTestMe
     !\
     ! These variables should either be in a module, OR
@@ -405,19 +396,11 @@ contains
     real, dimension(3,nStepInside+1)     :: bDipoleS_VI,bDipoleN_VI,XyzDipoleN_VI,XyzDipoleS_VI
     real, dimension(nStepInside+1)       :: sDipoleS_I, sDipoleN_I,rDipoleS_I,rDipoleN_I
     real, dimension(nStepInside+1)       :: bDipoleMagnS_I, bDipoleMagnN_I
-    real, dimension(nStepInside+1,nR,nT) :: BDipoleN_III, BxDipoleN_III, ByDipoleN_III, BzDipoleN_III
     real, dimension(3,nStep)             :: XyzDipole_VI, bDipole_VI
     real, dimension(nStep)               :: bDipoleMagn_I, sDipole_I, rDipole_I
-    real, dimension(3,nStepInside,nR,nT) :: XyzDipoleN_VIII,XyzDipoleS_VIII
-    real, dimension(nStepInside,nR,nT)   :: BDipoleS_III, BxDipoleS_III, ByDipoleS_III, BzDipoleS_III
-    real, dimension(nStep,nR,nT)         :: BDipoleMagn_III, STemp
-    real, dimension(3,nStep,nR,nT)       :: bDipole_VIII
-    real, dimension(nStepInside,nR)      :: rDipoleN_II, sDipoleN_II, rDipoleS_II, sDipoleS_II
-    real, dimension(nStep,nR)            :: rDipole_II, sDipole_II 
-    real, dimension(nStep,nR)            :: bGradB1x_II, bGradB1y_II
+    real, dimension(nStep,nR,nT)         :: STemp
     real, dimension(nStepInterp)         :: LengthHeidi_I,BHeidi_I,RHeidi_I,LengthHeidinew_I
-    real, dimension(nStepInterp)         :: XHeidi_I,YHeidi_I,ZHeidi_I,XHeidinew_I,XHeidi1new_I
-    real, dimension(nStepInterp)         :: LengthHeidi1new_I
+    real, dimension(nStepInterp)         :: XHeidi_I,YHeidi_I,ZHeidi_I,XHeidinew_I
     real, dimension(nStepInterp)         :: BxHeidi_I,ByHeidi_I,BzHeidi_I
     real, dimension(nStepInterp)         :: pHeidi_I, rhoHeidi_I
     real, dimension(nStepInterp)         :: bGradB1xHeidi_I, bGradB1yHeidi_I, bGradB1zHeidi_I
@@ -427,14 +410,11 @@ contains
     real, allocatable                    :: X_I(:),Y_I(:),Z_I(:)
     real, allocatable                    :: p_I(:), rho_I(:)
     real                                 :: LatBoundaryN, LatBoundaryS
-    real                                 :: LatMax, LatMin, Lat, dLat,x,y,z,a,dLength
-    real                                 :: Tr,Ttheta, r,gradB0R1,gradB0R2, gradB0Theta1,gradB0Theta2
-    integer                              :: iStep,ns,np,k
-    integer                              :: iR, iT, iDir, n
-    integer                              :: iPoint,ip, iPhi
+    real                                 ::dLength
+    integer                              ::ns,np,k
+    integer                              :: iR, iT, iDir
+    integer                              :: iPoint, iPhi
     integer                              :: iMax, i, iLineLast,iLine,iLineFirst,j
-    real                                 :: sMax
-    real                                 :: LatDipole(nStep,nR),LatDipoleN(nStepInside,nR),LatDipoleS(nStepInside,nR)
     real                                 :: xS, yS, zS, xN, yN, zN
     real                                 :: LengthExS(nR,nT,2), LengthExN(nR,nT,2)
     real                                 :: Re, DipoleFactor
@@ -890,7 +870,7 @@ contains
     character(len=100), intent(in) :: Buffer_I(nSats)
 
     ! Internal variables
-    integer :: iError, iSat, l1, l2
+    integer :: iSat, l1, l2
 
     DoWriteSats = .true.
     nImSats = nSats
@@ -921,8 +901,6 @@ contains
   subroutine IM_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
     use ModProcHEIDI, ONLY: iProc
-    use CON_time, ONLY : get_time
-    use ModNumConst, ONLY: cPi, cDegToRad
     use ModConst, ONLY: cProtonMass
     use ModHeidiCurrents, ONLY:eden, rnht
     use ModHeidiSize,  ONLY:  nR, nT
@@ -931,8 +909,6 @@ contains
     real, dimension(iSizeIn,jSizeIn,nVar), intent(out) :: Buffer_IIV
     character (len=*),intent(in)                       :: NameVar
     integer, parameter :: pres_=1, dens_=2
-    integer :: iLat, iLon, l, k
-    real :: T, P, latsHeidi(NR), mltsHeidi(NT)
     real    :: Pmin
     integer :: i,j, iSize, jSize
 
@@ -1027,7 +1003,6 @@ contains
   subroutine IM_finalize(TimeSimulation)
 
     use ModProcHeidi
-    use ModInit, ONLY:nS
     use ModHeidiIO, ONLY :iUnitSw1,iUnitSw2,&
          iUnitMpa,iUnitSopa,iUnitPot,iUnitSal
 
@@ -1047,8 +1022,8 @@ contains
 
   subroutine IM_run(SimTime, SimTimeLimit)
 
-    use ModHeidiSize,  ONLY: dt, dtMax, tmax
-    use ModHeidiMain,  ONLY: t, IsBFieldNew
+    use ModHeidiSize,  ONLY: dt, dtMax
+    use ModHeidiMain,  ONLY: t
     use ModHeidiIO,    ONLY: time
     use ModInit,       ONLY: i3
 
