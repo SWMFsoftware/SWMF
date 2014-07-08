@@ -26,9 +26,8 @@ module CON_couple_ih_oh
 
   use OH_wrapper, ONLY: &
        OH_match_ibc, &
-       OH_set_buffer_grid_get_info, OH_save_global_buffer
-
-  use ModConst
+       OH_set_buffer_grid_get_info, &
+       OH_save_global_buffer
 
   implicit none
   private !except
@@ -44,27 +43,18 @@ module CON_couple_ih_oh
   ! 7/20/04                                 - version for sc-buffer
   !EOP
 
-  ! To trace the possible changes in the grids and/or mapping
-
-  ! OH <-> IH conversion matrices
-
-  ! Maximum time difference [s] without remap 
-  ! The 600 s corresponds to about 0.1 degree rotation between OH and IH
-
-  character(len=*), parameter :: NameMod='couple_ih_oh'
-
   logical       :: IsInitialized=.false., DoMatchIBC = .true.
 
   ! Size and limits of the 3D spherical buffer grid
   integer, save :: iSize, jSize, kSize
   real, save    :: BufferMinMaxIh_DI(3,2)
 
+  character(len=*), parameter :: NameMod='couple_ih_oh'
+
 contains
 
   !===========================================================================
   subroutine couple_ih_oh_init
-
-    !DESCRIPTION:
 
     ! Couple IH and OH components via a buffer grid
     ! The subroutines:
