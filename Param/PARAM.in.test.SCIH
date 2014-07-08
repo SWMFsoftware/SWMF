@@ -30,7 +30,22 @@ T			UseBody
 3.5E+6			Body_T_Dim
 
 #INNERBOUNDARY
-coronatoih		TypeBcInner
+buffergrid		TypeBcInner
+
+#BUFFERGRID
+2			nRBuff
+64			nPhiBuff
+32			nThetaBuff
+18.0			rBuffMin
+20.0			rBuffMax
+0.0			PhiBuffMin
+360.			PhiBuffMax
+-90.0			LatBuffMin
+90.0			LatBuffMax
+
+#FACEBOUNDARY
+-1			MinBoundary
+-1			MaxBoundary
 
 #GRID
 1			nRootBlockX
@@ -246,11 +261,16 @@ z=0 MHD idl		StringPlot
 IH			NameComp
 T			UseComp
 
-#COUPLE2
+#COUPLE1
 SC                      NameSource
 IH                      NameTarget
 100                     DnCouple
 -1.0                    DtCouple
+
+#COUPLERTYPE
+SC
+IH
+MPI
 
 #STOP
 201			MaxIteration
