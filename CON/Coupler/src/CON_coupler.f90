@@ -146,10 +146,6 @@ module CON_coupler
        iVar_VCC(nVarIndexCouple,MaxComp, MaxComp) = 0
 
 
-  ! Control type of coupling for BATSRUS components
-  logical,public    :: UseGlobalMpiCoupler = .false., UseGlobalMpiCoupler_CC(MaxComp,MaxComp) = .false.
-  character(len=30) :: CouplerType
-
   !PUBLIC MEMBER FUNCTIONS:
   public :: set_coord_system    ! Sets coordinate information for a component
   public :: gen_to_stretched    ! Transform generalized coordinates to
