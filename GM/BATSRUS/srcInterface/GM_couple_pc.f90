@@ -15,9 +15,10 @@ contains
 
   subroutine GM_get_for_pc_dt(DtSi)
 
-    use ModMain,      ONLY: Dt
-    use ModPhysics,   ONLY: No2Si_V, UnitT_
-    use ModPIC,       ONLY: DnCouplePic
+    use ModMain,            ONLY: Dt, time_accurate, Time_Simulation
+    use ModPhysics,         ONLY: No2Si_V, UnitT_
+    use ModPIC,             ONLY: DnCouplePic
+    use ModTimeStepControl, ONLY: set_global_timestep
 
     implicit none
 
@@ -25,6 +26,9 @@ contains
 
     character(len=*), parameter :: NameSub='GM_get_for_pc_dt'
     !--------------------------------------------------------------------------
+
+    ! use 1.0e12 >> dt  for limiting time 
+    call set_global_timestep(1.0e12)
 
     DtSi = Dt*No2Si_V(UnitT_)*DnCouplePic
 
