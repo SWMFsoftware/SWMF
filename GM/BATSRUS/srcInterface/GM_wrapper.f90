@@ -392,7 +392,7 @@ contains
 
   end subroutine GM_save_restart
 
-  !=============================================================================
+  !============================================================================
 
   subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
@@ -403,16 +403,16 @@ contains
     real, intent(inout) :: TimeSimulation   ! current time of component
 
     !INPUT ARGUMENTS:
-    real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
+    real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
 
     character(len=*), parameter :: NameSub='GM_run'
 
     logical :: DoTest, DoTestMe
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' called with tSim, tSimLimit, iProc=',&
-         TimeSimulation, TimeSimulationLimit, iProc
+    if(DoTestMe)write(*,*)NameSub,' called with tSim, tSimLimit=',&
+         TimeSimulation, TimeSimulationLimit
 
     if(abs(Time_Simulation-TimeSimulation)>0.0001) then
        write(*,*)NameSub,' GM time=',Time_Simulation,' SWMF time=',TimeSimulation
@@ -423,6 +423,8 @@ contains
 
     ! Return time after the time step
     TimeSimulation = Time_Simulation
+
+    if(DoTestMe)write(*,*)NameSub,' finished with tSim=', TimeSimulation
 
   end subroutine GM_run
 
