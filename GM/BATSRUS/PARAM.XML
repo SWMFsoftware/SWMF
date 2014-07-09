@@ -1029,7 +1029,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<option name="ionosphere"	default="T"	/>
 		<option name="ionosphereb0"			/>
 		<option name="ionospherefloat"			/>
-		<option name="coronatoih"			/>
+		<option name="buffergrid"			/>
 		<option name="polarwind"			/>
 		<option name="ionosphereoutflow"		/>
 		<option name="user"				/>
@@ -1071,7 +1071,9 @@ Possible values for TypeBcInner are:
                     float B, fix rho, float P
 'ionospherefloat' - set V as if ionosphere gave V_iono=0
                     float B, float rho, float P
-'coronatoih'      - IH(OH) component obtains inner boundary from the SC(IH) component
+'buffergrid'      - IH(OH) component obtains inner boundary from the SC(IH)
+		    component, through a buffer grid. The buffer grid is set
+		    by the #BUFFERGRID or #HELIOBUFFERGRID commands.
 'polarwind'       - GM component obtains the inner boundary from PW component
 'ionosphereoutflow' - empirical inner boundary setup in (Hp,Op,All) multifluid
 'user'            - user defined
@@ -1099,6 +1101,39 @@ component of the total magnetic field is forced to coincide with the B0
 value.
 
 The default value is DoReflectInnerB1 false, which makes B1 float.
+</command>
+
+<command name="BUFFERGRID">
+	 <parameter name="nRBuff" type="integer" min="2" default="2" />
+	 <parameter name="nPhiBuff" type="integer" min="2" default="2" />
+	 <parameter name="nThetaBuff" type="integer" min="2" default="2" />
+	 <parameter name="rBuffMin" type="real" min="1" default="2" />
+	 <parameter name="rBuffMax" type="real" min="1" default="2" />
+	 <parameter name="PhiBuffMin" type="real" min="0" max="360"
+	 	    		      		  	   default="2" />
+	 <parameter name="PhiBuffMax" type="real" min="0" max="360"
+	 	    		      		  	   default="2" />
+	 <parameter name="LatBuffMin" type="real" min="0" max="180"
+	 	    		      		  	   default="2" />
+         <parameter name="LatBuffMax" type="real" min="1" max="180"  
+	 	    		      		  	   default="2" />
+
+#BUFFERGRID
+2	nRBuff
+90	nPhiBuff
+45	nThetaBuff
+19.0	rBuffMin
+21	rBuffMax
+0.0	PhiBuffMin
+360.0	PhiBuffMax
+-90.0	LatBuffMin
+90.0	LatBuffMax
+
+Define the radius, angular extent and the grid resolution of the uniform 
+spherical buffer grid used to pass information between two coupled components running BATSRUS. The parameters nRBuff, nPhiBuff and nThetaBuff determine the number of points in the radial, azimuthal and latitudinal directions, respectively. The parameters rBuffMin and rBuffMax determine the inner and outer radii of the spherical shell. PhiBuffMin, PhiBuffMax, LatBuffMin and LatBuffMax determine the limits (in degrees) of the buffer grid in the azimuthal and latitudinal directions. When used to pass information from the SC(IH) component to the IH(OH) component, the entire shperical shell should be used (alternativly, use the #HELIOBUFFERGRID command), but in certain application only a part of the shell may be needed. The buffer should be placed in a region where the two components overlap, and the grid resolution should be similar to the grid resolution of the coarser of the two component grids.
+This command can only be used in the first session by the IH(OH) component.  The buffer grid will only be used if 'buffergrid' is chosen for TypeBcInner in the #INNERBOUNDARY command of the target component.
+Default values are shown above.
+
 </command>
 
 <command name="EXTRABOUNDARY">
@@ -7228,7 +7263,7 @@ Default value is HelioDipoleStrength = 0.0.
 Define the radius and the grid resolution for the uniform 
 spherical buffer grid which passes information 
 from the SC(IH) component to the IH(OH) component. The resolution should
-be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.
+be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.  The buffer grid will only be used if 'buffergrid' is chosed for TypeBcInner in the #INNERBOUNDARY command of the target (IH or OH) component.
 This command can only be used in the first session by the IH(OH) component. 
 Default values are shown above.
 </command>
