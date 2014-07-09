@@ -1,9 +1,9 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
-  use ModMain,     ONLY: nPhiBuff, nThetaBuff, RBuffMin, RBuffMax
+  use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
   use ModNumConst, ONLY: cPi, cTwoPi
-  use CON_global_vector,   ONLY: ubound_vector, point_state_v
+  use CON_global_vector,   ONLY: point_state_v
   use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
        bilinear_interpolation, DomainDecompositionType, is_proc0, &
        init_decomposition, get_root_decomposition, complete_grid, &
@@ -16,9 +16,7 @@ module ModBuffer
   !is in the global vector storage
   character(LEN=10)::NameBuffer
 
-
-  type(DomainDecompositionType),target::&
-       LocalBufferDD
+  type(DomainDecompositionType),target:: LocalBufferDD
   type(GridDescriptorType)::LocalBufferGD
 
   integer:: SourceID_ = SC_, TargetID_ = IH_
@@ -50,8 +48,8 @@ contains
     if(is_proc0(CompID_).or.IsLocal)call get_root_decomposition(&
          DD,&
          iRootMapDim_D=(/1,1,1/),&
-         XyzMin_D=(/RBuffMin, 0.0, 0.0/),&
-         XyzMax_D=(/RBuffMax,cTwoPi,cPi/), &
+         XyzMin_D= BufferMin_D,  &
+         XyzMax_D= BufferMax_D, &
          nCells_D=(/1,nPhiBuff,nThetaBuff/),&
          PE_I=(/0/))
     if(.not.IsLocal)then
@@ -85,18 +83,19 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        MultiFluid_, MultiSpecie_, CollisionlessHeatFlux_, &
        RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, &
        BxCouple_, BzCouple_, PeCouple_, PparCouple_, &
-       WaveFirstCouple_, WaveLastCouple_, EhotCouple_, &
-       UseGlobalMpiCoupler
+       WaveFirstCouple_, WaveLastCouple_, EhotCouple_
+
   use CON_axes,      ONLY: transform_matrix, transform_velocity
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
   use ModMultiFluid, ONLY: IsFullyCoupledFluid
   implicit none
 
-  integer,intent(in)              :: nVar
-  real,intent(in)                 :: XyzTarget_D(MaxDim)
-  real,dimension(nVar),intent(out)::State_V
-  real,dimension(MaxDim)            ::Sph_D
+  integer,intent(in) :: nVar
+  real,   intent(in) :: XyzTarget_D(MaxDim)
+  real,   intent(out):: State_V(nVar)
+
+  real             :: Sph_D(MaxDim)
 
   character (len=3) :: TypeCoordSource
   real, save        :: SourceTarget_DD(MaxDim, MaxDim)
@@ -115,8 +114,8 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      ! Convert target coordinates to the coordiante system of the model
 
      if(Time_Simulation > TimeSimulationLast)then
-        SourceTarget_DD = &
-             transform_matrix(Time_Simulation, TypeCoordSystem, TypeCoordSource)
+        SourceTarget_DD = transform_matrix(&
+             Time_Simulation, TypeCoordSystem, TypeCoordSource)
         TimeSimulationLast = Time_Simulation
      end if
      XyzSource_D = matmul(SourceTarget_DD, XyzTarget_D)
@@ -129,7 +128,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        Sph_D(1),Sph_D(2),Sph_D(3))
 
   ! Get the target state from the spherical buffer grid
-  if(UseGlobalMpiCoupler) then       
+  if(.true.)then
      call interpolate_from_global_buffer(Sph_D, nVarCouple, Buffer_V)
   else
      Buffer_V=point_state_v(&
