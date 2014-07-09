@@ -147,7 +147,7 @@ IH			NameTarget
 IH/restartIN/restart.H
 
 #INNERBOUNDARY
-coronatoih		TypeBcInner
+buffergrid		TypeBcInner
 
 #HELIOSPHERE
 2.85E+06		BodyTDim   [K] 

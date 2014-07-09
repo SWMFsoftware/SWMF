@@ -151,7 +151,7 @@ IH/restartIN/restart.H
 HGI			TypeCoordSystem
 
 #INNERBOUNDARY
-coronatoih		TypeBcInner
+buffergrid		TypeBcInner
 
 #HELIOSPHERE
 2.85E+06		BodyTDim   [K] 

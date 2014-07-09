@@ -24,7 +24,7 @@ T			DoSaveRestart
 #INCLUDE
 IH/restartIN/restart.H
 
-! Note: cannot use "coronatoih" or "buffergrid" if there is no SC component
+! Note: cannot use "buffergrid" if there is no SC component
 #INNERBOUNDARY
 float			TypeBcInner
 
