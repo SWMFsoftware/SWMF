@@ -6,7 +6,7 @@ module BATL_pass_cell
   use BATL_geometry, ONLY: IsCartesianGrid, IsRotatedCartesian, IsRoundCube, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
-
+  use BATL_high_order, ONLY: get_ghost_for_coarse_blk
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 2*nDim range limits, we can send only the tag which
@@ -49,7 +49,7 @@ contains
   subroutine message_pass_ng_real(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn)
+       DoResChangeOnlyIn, UseHighResChangeIn)
 
     ! Message pass real array with nVar variables and BATL_size::nG ghost cells
 
@@ -68,6 +68,7 @@ contains
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
+    logical, optional, intent(in) :: UseHighResChangeIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn 
@@ -79,7 +80,8 @@ contains
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
-         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn, &
+         UseHighResChangeIn=UseHighResChangeIn)
 
   end subroutine message_pass_ng_real
 
@@ -214,11 +216,12 @@ contains
   subroutine message_pass_real(nVar, nG, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn)
+       DoResChangeOnlyIn, UseHighResChangeIn)
 
     use BATL_size, ONLY: MaxBlock, nBlock, nI, nJ, nK, nIjk_D, &
          MaxDim, nDim, jDim_, kDim_, &
-         iRatio, jRatio, kRatio, iRatio_D, InvIjkRatio
+         iRatio, jRatio, kRatio, iRatio_D, InvIjkRatio, &
+         MinI, MinJ, MinK, MaxI, MaxJ, MaxK
 
     use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
 
@@ -249,7 +252,7 @@ contains
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
     logical, optional, intent(in) :: DoTestIn
-
+    logical, optional, intent(in) :: UseHighResChangeIn
     ! Fill in the nVar variables in the ghost cells of State_VGB.
     !
     ! nWidthIn is the number of ghost cell layers to be set. Default is all.
@@ -287,9 +290,11 @@ contains
     logical:: UseMin, UseMax  ! logicals for min and max operators
     logical :: UseTime        ! true if Time_B and TimeOld_B are present
     logical :: DoTest
+    logical :: UseHighResChange
 
     ! Various indexes
-    integer :: iProlongStage  ! index for 2 stage scheme for 2nd order prolong
+    integer :: iSendStage  ! index for 2 stage scheme for 2nd order prolong or 
+                           ! high order restriction. 
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -332,6 +337,8 @@ contains
     real, allocatable:: Slope_VG(:,:,:,:)
 
     character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_cell'
+
+    integer:: nSendStage
     !--------------------------------------------------------------------------
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
@@ -359,6 +366,10 @@ contains
     DoResChangeOnly =.false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
+
+    UseHighResChange = .false. 
+    if(present(UseHighResChangeIn)) UseHighResChange = UseHighResChangeIn
+
     ! Check arguments for consistency
     if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub// &
          ' cannot use 2nd order prolongation with face restriction')
@@ -368,7 +379,7 @@ contains
 
     if(nProlongOrder < 1 .or. nProlongOrder > 2) call CON_stop(NameSub// &
          ' only nProlongOrder = 1 or 2 is implemented ')
-    
+
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
 
@@ -423,7 +434,9 @@ contains
 
     call timing_stop('init_pass')
 
-    do iProlongStage = 1, nProlongOrder
+    nSendStage = nProlongOrder
+    if(UseHighResChange) nSendStage = 2
+    do iSendStage = 1, nSendStage
        do iCountOnly = 1, 2
           DoCountOnly = iCountOnly == 1
 
@@ -470,7 +483,7 @@ contains
              if(Unused_B(iBlockSend)) CYCLE
 
              iNodeSend = iNode_B(iBlockSend)
-             
+
              IsAxisNode = .false.
 
              do kDir = -1, 1
@@ -506,11 +519,11 @@ contains
                            iDir == -1 .and. iTree_IA(Coord1_,iNodeSend) == 1
 
                       DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
-                      
+
                       ! Do prolongation in the second stage if nProlongOrder=2
                       ! We still need to call restriction and prolongation in
                       ! both stages to calculate the amount of received data
-                      if(iProlongStage == 2 .and. DiLevel == 0) CYCLE
+                      if(iSendStage == 2 .and. DiLevel == 0) CYCLE
 
                       if(DiLevel == 0)then
                          if(.not.DoResChangeOnly) call do_equal
@@ -530,7 +543,7 @@ contains
 
        ! Done for serial run
        if(nProc == 1) CYCLE
-
+       
        call timing_start('recv_pass')
 
        ! post requests
@@ -546,7 +559,7 @@ contains
 
           iBufferR  = iBufferR  + nBufferR_P(iProcSend)
        end do
-
+       
        call timing_stop('recv_pass')
 
        if(UseRSend) then
@@ -581,7 +594,7 @@ contains
        ! wait for all requests to be completed
        if(iRequestR > 0) &
             call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
-
+       
        ! wait for all sends to be completed
        if(.not.UseRSend .and. iRequestS > 0) &
             call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
@@ -590,8 +603,8 @@ contains
        call timing_start('buffer_to_state')
        call buffer_to_state
        call timing_stop('buffer_to_state')
-
-    end do ! iProlongStage
+       
+    end do ! iSendStage
 
     deallocate(Slope_VG)
 
@@ -787,8 +800,16 @@ contains
       integer :: iR, jR, kR, iS1, jS1, kS1, iS2, jS2, kS2, iVar
       integer :: iRatioRestr, jRatioRestr, kRatioRestr
       real    :: InvIjkRatioRestr
-      integer :: iBufferS, nSize
+      integer :: iBufferS, nSize, i, j, k
       real    :: WeightOld, WeightNew
+
+      real, allocatable:: Primitive_VIII(:,:,:,:)
+      real:: Ghost_I(3)
+
+      integer:: iS0,iS, jS0, jS, kS
+      integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd, Di, Dj, Dk
+      real :: CoarseCell
+      real, allocatable:: State_VG(:,:,:,:)
       !------------------------------------------------------------------------
 
       ! For sideways communication from a fine to a coarser block
@@ -821,7 +842,12 @@ contains
       ! No need to count data for local copy
       if(DoCountOnly .and. iProc == iProcRecv) RETURN
 
-      if(DoCountOnly .and. iProlongStage == nProlongOrder)then
+      if(DoCountOnly .and. (&
+           (.not. UseHighResChange .and. iSendStage == nProlongOrder) .or. &
+           (UseHighResChange .and. iSendStage == 1)))then 
+         ! For high resolution change, finer block only receives data 
+         ! when iSendStage = 1. 
+         
          ! This processor will receive a prolonged buffer from
          ! the other processor and the "recv" direction of the prolongations
          ! will be the same as the "send" direction for this restriction:
@@ -837,11 +863,15 @@ contains
               + 1 + 2*nDim
          if(present(Time_B)) nSize = nSize + 1
          nBufferR_P(iProcRecv) = nBufferR_P(iProcRecv) + nSize
-
       end if
 
       ! If this is the pure prolongation stage, all we did was counting
-      if(iProlongStage == 2) RETURN
+      if(iSendStage == 2 .and. .not. UseHighResChange) RETURN
+
+      ! For high resolution change, the finer block receives data from 
+      ! coarser or equal blocks when iSendStage = 1. Restriction will 
+      ! be done when iSendStage = 2. 
+      if(UseHighResChange .and. iSendStage == 1) RETURN
 
       iRecv = iSend - 3*iDir
       jRecv = jSend - 3*jDir
@@ -909,6 +939,9 @@ contains
       !
       !write(*,*)'iRatioRestr,InvIjkRatioRestr=',iRatioRestr,InvIjkRatioRestr
 
+      if(UseHighResChange .and. .not. allocated(Primitive_VIII)) &
+           allocate(Primitive_VIII(nVar,8,6,min(6,nK)))
+
       if(iProc == iProcRecv)then
 
          if(present(Time_B)) UseTime = &
@@ -919,7 +952,7 @@ contains
             WeightOld = (Time_B(iBlockSend) - Time_B(iBlockRecv)) &
                  /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
             WeightNew = 1 - WeightOld
-
+            
             do kR = kRMin, kRMax, DkR
                kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
                kS2 = kS1 + kRatioRestr - 1
@@ -956,41 +989,262 @@ contains
 
          else
             ! No time interpolation/extrapolation is needed
-            do kR = kRMin, kRMax, DkR
-               kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
-               kS2 = kS1 + kRatioRestr - 1
-               do jR = jRMin, jRMax, DjR
-                  jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
-                  jS2 = jS1 + jRatioRestr - 1
+
+            if(UseHighResChange .and. iDir /= 0 .and. jDir == 0 .and. kDir == 0) then
+               ! Resolution change in x-dir. 
+               ! Only work for 2D x-y plane case.
+               ! The case iDir = 1 and iDir = -1 are symmetric.
+
+               iBegin = 1; iEnd = 8
+               jBegin = 1; jEnd = 6
+               if(nK == 1) kS = 1 
+
+               if(iDir == 1) then 
+                  iS0 = iSMax
+               else
+                  iS0 = iSMin
+               endif
+
+               do kR = kRMin, kRMax, DkR ! This loop is useless for 2D.  
+                  do jR = jRMin, jRMax, DjR
+                     jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
+
+                     iS = iS0
+                     do i = iBegin, iEnd   
+                        do j = jBegin, jEnd
+                           jS = j - 3 + jS1
+                           
+                           ! i is the index along the resolution change direction.
+                           ! j is the index parallel to the resolution change direction.
+                           Primitive_VIII(:,i,j,1) = &
+                                State_VGB(:,iS,jS,kS,iBlockSend)
+                        enddo
+                        iS = iS - iDir
+                     enddo
+
+                     do iVar = 1, nVar
+                        CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS1,iBlockSend)
+
+                        call get_ghost_for_coarse_blk(CoarseCell,&
+                             Primitive_VIII(iVar,:,:,1), Ghost_I, 1)
+
+                        if(iDir == 1) then
+                           iS = 3
+                           do iR = iRmax-2, iRmax
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = Ghost_I(iS)
+                              iS = iS -iDir
+                           enddo
+                        else
+                           iS = 1
+                           do iR = iRmin, iRmin+2
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = Ghost_I(iS)
+                              iS = iS -iDir
+                           enddo
+                        endif
+                     enddo ! iVar
+                  enddo ! jR
+               enddo ! kR
+
+            else if(UseHighResChange .and. iDir == 0 .and. jDir /= 0 .and. kDir ==0) then
+
+               iBegin = 1; iEnd = 6
+               jBegin = 1; jEnd = 8
+               if(nK == 1) kS = 1
+               
+               if(jDir == 1) then 
+                  jS0 = jSMax
+               else
+                  jS0 = jSMin
+               endif
+               
+               do kR = kRMin, kRMax, DkR
                   do iR = iRMin, iRMax, DiR
                      iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
-                     iS2 = iS1 + iRatioRestr - 1
-                     if(UseMin)then
-                        do iVar = 1, nVar
-                           State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                minval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
-                                iBlockSend))
-                        end do
-                     else if(UseMax) then
-                        do iVar = 1, nVar
-                           State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                maxval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
-                                iBlockSend))
-                        end do
-                     else
-                        do iVar = 1, nVar
-                           State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                InvIjkRatioRestr * &
-                                sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
-                                iBlockSend))
-                        end do
-                     end if
-                  end do
-               end do
-            end do
-         end if
 
-      else
+                     jS = jS0
+                     do j = jBegin, jEnd
+                        do i = iBegin, iEnd
+                           iS = i - 3 + iS1
+
+                           ! j is the index along the resolution change direction.
+                           ! i is the index parallel to the resolution change direction.
+                           Primitive_VIII(:,j,i,1) = &
+                                State_VGB(:,iS,jS,kS,iBlockSend) 
+                        enddo
+                        jS = jS - jDir
+                     enddo
+
+                     do iVar = 1, nVar
+                        CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS1,iBlockSend)
+
+                        call get_ghost_for_coarse_blk(CoarseCell,&
+                             Primitive_VIII(iVar,:,:,1), Ghost_I,1)
+
+                        if(jDir == 1) then
+                           jS = 3
+                           do jR = jRmax-2, jRmax
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = Ghost_I(jS)
+                              jS = jS -jDir
+                           enddo
+                        else
+                           jS = 1
+                           do jR = jRmin, jRmin+2
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = Ghost_I(jS)
+                              jS = jS -jDir
+                           enddo
+                        endif
+                        
+                     enddo ! iVar
+                  enddo ! jR
+               enddo ! kR
+            else
+               do kR = kRMin, kRMax, DkR
+                  kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
+                  kS2 = kS1 + kRatioRestr - 1
+                  do jR = jRMin, jRMax, DjR
+                     jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
+                     jS2 = jS1 + jRatioRestr - 1
+                     do iR = iRMin, iRMax, DiR
+                        iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
+                        iS2 = iS1 + iRatioRestr - 1
+                        if(UseMin)then
+                           do iVar = 1, nVar
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
+                                   minval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
+                                   iBlockSend))
+                           end do
+                        else if(UseMax) then
+                           do iVar = 1, nVar
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
+                                   maxval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
+                                   iBlockSend))
+                           end do
+                        else
+                           do iVar = 1, nVar
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
+                                   InvIjkRatioRestr * &
+                                   sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
+                                   iBlockSend))                              
+                           end do
+                        end if
+                     end do ! iR
+                  end do ! jR
+               end do ! kR
+
+            endif ! UseHighResChange
+         end if ! UseTime
+
+      else ! iProc /= iProcRecv
+
+         if(UseHighResChange.and. iDir /= 0 .and. jDir == 0 .and. kDir == 0) then
+            if(.not. allocated(State_VG)) then
+               allocate(State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+               State_VG = 1
+            endif
+
+            iBegin = 1; iEnd = 8
+            jBegin = 1; jEnd = 6
+            if(nK ==1) kS = 1
+
+            if(iDir == 1) then 
+               iS0 = iSMax
+            else
+               iS0 = iSMin
+            endif
+
+            do kR = kRMin, kRMax, DkR
+               do jR = jRMin, jRMax, DjR
+                  jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
+
+                  iS = iS0
+                  do i = iBegin,iEnd
+                     do j = jBegin,jEnd
+                        jS = j - 3 + jS1                        
+                        Primitive_VIII(:,i,j,1) = &
+                             State_VGB(:,iS,jS,kS,iBlockSend)       
+                     enddo
+                     iS = iS - iDir
+                  enddo
+
+                  do iVar = 1, nVar
+                     CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS1,iBlockSend)
+
+                     call get_ghost_for_coarse_blk(CoarseCell,&
+                          Primitive_VIII(iVar,:,:,1), Ghost_I,1)
+
+                     if(iDir == 1) then
+                        iS = 3
+                        do iR = iRmax-2, iRmax
+                           State_VG(iVar,iR,jR,kR) = Ghost_I(iS)
+                           iS = iS -iDir
+                        enddo
+                     else
+                        iS = 1
+                        do iR = iRmin, iRmin+2
+                           State_VG(iVar,iR,jR,kR) = Ghost_I(iS)
+                           iS = iS -iDir
+                        enddo
+                     endif
+                  enddo ! iVar
+               enddo ! jR
+            enddo ! kR
+
+         else if(UseHighResChange .and. iDir == 0 .and. jDir /= 0 .and. kDir == 0) then
+            if(.not. allocated(State_VG)) then
+               allocate(State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+               State_VG = 1
+            endif
+
+            iBegin = 1; iEnd = 6
+            jBegin = 1; jEnd = 8
+            if(nK == 1) kS = 1
+
+            if(jDir == 1) then 
+               jS0 = jSMax
+            else
+               jS0 = jSMin
+            endif
+
+            do kR = kRMin, kRMax, DkR
+               do iR = iRMin, iRMax, DiR
+                  iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
+
+                  jS = jS0
+                  do j = jBegin,jEnd
+                     do i = iBegin,iEnd
+                        iS = i - 3 + iS1
+                        Primitive_VIII(:,j,i,1) = &
+                             State_VGB(:,iS,jS,kS,iBlockSend)   
+                     enddo
+                     jS = jS - jDir
+                  enddo
+
+                  do iVar = 1, nVar
+                     CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS1,iBlockSend)
+
+                     call get_ghost_for_coarse_blk(CoarseCell,&
+                          Primitive_VIII(iVar,:,:,1), Ghost_I,1)
+
+                     if(jDir == 1) then
+                        jS = 3
+                        do jR = jRmax-2, jRmax
+                           State_VG(iVar,iR,jR,kR) = Ghost_I(jS)
+                           jS = jS -jDir
+                        enddo
+                     else
+                        jS = 1
+                        do jR = jRmin, jRmin+2
+                           State_VG(iVar,iR,jR,kR) = Ghost_I(jS)
+                           jS = jS -jDir
+                        enddo
+                     endif
+                  enddo ! iVar
+               enddo ! jR
+            enddo ! kR
+
+         endif ! UseHighResChange
+
+         !write(*,*) '2 iproc,iprocrecv:', iProc, iProcRecv
          iBufferS = iBufferS_P(iProcRecv)
 
          BufferS_I(            iBufferS+1) = iBlockRecv
@@ -1017,7 +1271,13 @@ contains
                do iR = iRMin, iRMax, DiR
                   iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
                   iS2 = iS1 + iRatioRestr - 1
-                  if(UseMin) then
+                  if(UseHighResChange .and. &
+                       ((iDir /= 0 .and. jDir == 0 .and. kDir ==0) &
+                       .or. (iDir == 0 .and. jDir /=0 .and. kDir ==0))) then
+                     do iVar = 1, nVar
+                        BufferS_I(iBufferS+iVar) = State_VG(iVar,iR,jR,kR)
+                     end do
+                  else if(UseMin) then
                      do iVar = 1, nVar
                         BufferS_I(iBufferS+iVar) = &
                              minval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
@@ -1093,7 +1353,9 @@ contains
                ! No need to count data for local copy
                if(DoCountOnly .and. iProc == iProcRecv) CYCLE
 
-               if(DoCountOnly .and. iProlongStage == 1)then
+               if(DoCountOnly .and. (.not. UseHighResChange .and. &
+                    iSendStage == 1 .or. &
+                    (UseHighResChange .and. iSendStage == 2)))then
                   ! This processor will receive a restricted buffer from
                   ! the other processor and the "recv" direction of the
                   ! restriction will be the same as the "send" direction for
@@ -1113,7 +1375,10 @@ contains
                end if
 
                ! For 2nd order prolongation no prolongation is done in stage 1
-               if(iProlongStage < nProlongOrder) CYCLE
+               if(.not. UseHighResChange .and. iSendStage < nProlongOrder) CYCLE
+             
+               ! For HighResChange, only do prolongation in stage 1. 
+               if(UseHighResChange .and. iSendStage == 2) CYCLE
 
                ! Receiving range depends on iRecv,kRecv,jRecv = 0..3
                iRMin = iProlongR_DII(1,iRecv,Min_)
@@ -1164,19 +1429,19 @@ contains
                   if(kDir /= 0) kRatioRestr = 1
                end if
 
-               !if(DoTest)then
-               !   write(*,*)'iNodeSend, iProc    , iBlockSend=', &
-               !        iNodeSend, iProc, iBlockSend
-               !   write(*,*)'iNodeRecv, iProcRecv, iBlockRecv=', &
-               !        iNodeRecv, iProcRecv, iBlockRecv
-               !   write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
-               !   write(*,*)'iSend,jSend,kSend=',iSend,jSend,kSend
-               !   write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
-               !   write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
-               !        iSMin,iSmax,jSMin,jSMax,kSMin,kSmax
-               !   write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
-               !        iRMin,iRmax,jRMin,jRMax,kRMin,kRmax
-               !end if
+               ! if(DoTest)then
+               !    write(*,*)'iNodeSend, iProc    , iBlockSend=', &
+               !         iNodeSend, iProc, iBlockSend
+               !    write(*,*)'iNodeRecv, iProcRecv, iBlockRecv=', &
+               !         iNodeRecv, iProcRecv, iBlockRecv
+               !    write(*,*)'iSide,jSide,kSide=',iSide,jSide,kSide
+               !    write(*,*)'iSend,jSend,kSend=',iSend,jSend,kSend
+               !    write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
+               !    write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
+               !         iSMin,iSmax,jSMin,jSMax,kSMin,kSmax
+               !    write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
+               !         iRMin,iRmax,jRMin,jRMax,kRMin,kRmax
+               ! end if
 
                if(nProlongOrder == 2)then
                   ! Add up 2nd order corrections for all AMR dimensions
@@ -1312,7 +1577,7 @@ contains
                         end do
                      end do
                   end do
-               end if
+               end if ! nProlongOrder = 2
 
                if(iProc == iProcRecv)then
 

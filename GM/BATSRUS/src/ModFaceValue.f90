@@ -32,6 +32,7 @@ module ModFaceValue
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
+  public :: calc_high_ghost
 
   ! Local variables:
   ! Parameters for the limiter applied near resolution changes
@@ -686,7 +687,8 @@ contains
     use ModMain,     ONLY: nOrder, nOrderProlong, BlkTest, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
-         iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2
+         iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
+         UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
     use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
@@ -976,7 +978,8 @@ contains
        end if
 
        ! Now take care of faces at resolution changes
-       if(nOrderProlong==1 .and..not.UseConstrainB)then
+       if(nOrderProlong==1 .and..not.UseConstrainB &
+            .and. .not.UseHighResChange)then
 
           ! If nOrderProlong is 1 then use TVD reschange or accurate reschange 
           ! scheme and overwrite face values at resolution changes
@@ -3691,6 +3694,139 @@ contains
          State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
 
   end subroutine correct_monotone_restrict
+
+  !======================================================================
+  ! This commented subroutine maybe useful for debug. 
+
+  ! subroutine write_block_boundary(iBlock)
+  !   use ModAdvance, ONLY: State_VGB
+  !   use BATL_lib, ONLY: DiLevelNei_IIIB, Xyz_DGB
+
+  !   integer, intent(in):: iBlock
+  !   integer:: i, j, k, iVar
+  !   real:: cc1=1.0, amp=0.2, xcenter=1.8, ycenter=2.0, zcenter=2.0, lambdax=0.5,&
+  !        lambday=0.5,cone=1.0,r2,r,xex,yex,zex, wex, pi=3.14159265359, wnu, lambda=1.0
+  !   !----------------------------------------------------------------------
+
+  !   iVar = rho_
+  !   if(nK>1) then
+  !      write(*,*) 'iblock:',iBlock
+  !      write(*,*) 'block begin:', Xyz_DGB(:,1,1,1,iBlock)
+  !      write(*,*) 'block end  :', Xyz_DGB(:,nI,nJ,nK,iBlock)
+  !      write(*,*) 'left side:'
+  !      do i = -2, 0; do j = -2, nJ+3; do k = MinK, MaxK
+  !         xex = Xyz_DGB(x_,i,j,k,iBlock)
+  !         yex = Xyz_DGB(y_,i,j,k,iBlock)
+  !         zex = Xyz_DGB(z_,i,j,k,iBlock)
+
+
+  !         r2=(cone*(xex-xcenter)/lambda)**2 + (cone*(yex-ycenter)/lambda)**2 + &
+  !              (cone*(zex-zcenter)/lambda)**2
+  !         r=sqrt(r2)
+  !         wex=cc1+amp*cos(pi/4*r)**6*exp(-r2)
+  !         if(r > 2) wex = cc1
+          
+  !         !wex = 1.0 - 0.2*sin(yex*pi/lambda)
+  !         wnu = State_VGB(iVar,i,j,k,iBlock)                     
+  !         write(*,*) 'i j k:', i,j,k
+  !         write(*,*) 'x, y,z, wex, wnu, err:'
+  !         write(*,'(6e15.5)')xex,yex,zex,wex,wnu,wex-wnu
+  !      enddo; enddo; enddo
+
+
+
+  !      write(*,*) 'right side:'
+  !      do i = nI+1, nI+3; do j = -2, nJ+3; do k =MinK,MaxK
+  !         xex = Xyz_DGB(x_,i,j,k,iBlock)
+  !         yex = Xyz_DGB(y_,i,j,k,iBlock)
+  !         zex = Xyz_DGB(z_,i,j,k,iBlock)
+  !         wex = 1.0 - 0.2*sin(xex*pi/lambda)
+
+  !         r2=(cone*(xex-xcenter)/lambda)**2 + (cone*(yex-ycenter)/lambda)**2 + &
+  !              (cone*(zex-zcenter)/lambda)**2
+  !         r=sqrt(r2)
+  !         wex=cc1+amp*cos(pi/4*r)**6*exp(-r2)
+  !         if(r > 2) wex = cc1
+  !         !wex = 1.0 - 0.2*sin(yex*pi/lambda)
+  !         write(*,*) 'i j k:', i,j,k
+  !         wnu = State_VGB(iVar,i,j,k,iBlock)                     
+  !         write(*,*) 'x, y,z, wex, wnu, err:'
+  !         write(*,'(6e15.5)')xex,yex,zex,wex,wnu,wex-wnu
+  !      enddo; enddo; enddo
+  !   endif
+
+  !   if(nk == 1) then
+  !      k = 1
+  !      write(*,*) 'top side:'
+  !      do j = nJ+1, nJ+3; do i = -2, nI+3
+  !         xex = Xyz_DGB(x_,i,j,k,iBlock)
+  !         yex = Xyz_DGB(y_,i,j,k,iBlock)
+  !         wex = 1.0 - 0.2*sin(xex*pi/lambda)
+
+  !         r2=(cone*(xex-xcenter)/lambda)**2 + (cone*(yex-ycenter)/lambda)**2
+  !         r=sqrt(r2)
+  !         wex=cc1+amp*cos(pi/4*r)**6*exp(-r2)
+  !         if(r > 2) wex = cc1
+
+  !         wnu = State_VGB(iVar,i,j,k,iBlock)                     
+  !         write(*,*) 'x, y, wex, wnu, err:',&
+  !              xex,yex,wex,wnu,wex-wnu
+  !      enddo; enddo
+
+  !      write(*,*) 'bottom side:'
+  !      do j = -2, 0; do i = -2, nI+3
+  !         xex = Xyz_DGB(x_,i,j,k,iBlock)
+  !         yex = Xyz_DGB(y_,i,j,k,iBlock)
+  !         wex = 1.0 - 0.2*sin(xex*pi/lambda)
+
+  !         r2=(cone*(xex-xcenter)/lambda)**2 + (cone*(yex-ycenter)/lambda)**2
+  !         r=sqrt(r2)
+  !         wex=cc1+amp*cos(pi/4*r)**6*exp(-r2)
+  !         if(r > 2) wex = cc1
+
+  !         wnu = State_VGB(iVar,i,j,k,iBlock)                     
+  !         write(*,*) 'x, y, wex, wnu, err:',&
+  !              xex,yex,wex,wnu,wex-wnu
+  !      enddo; enddo
+  !   endif
+  ! end subroutine write_block_boundary
+  !======================================================================
+
+  subroutine calc_high_ghost(iBlock) 
+    ! The ghost cells of coarse blocks have been calculated in 
+    ! BATL_pass_cell.f90. 
+
+    ! Ghost cells of fine blocks are calculated here. 
+
+    use ModAdvance, ONLY: State_VGB
+    use ModParallel, ONLY : &
+         neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
+    use BATL_lib, ONLY: calc_high_ghost_for_fine_blk, &
+         correct_ghost_for_fine_blk, correct_ghost_for_coarse_blk
+
+    integer, intent(in):: iBlock
+    real, allocatable:: Field1_VG(:,:,:,:)
+    !----------------------------------------------------------------------
+
+    if(.not. allocated(Field1_VG)) &
+         allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
+
+    call calc_high_ghost_for_fine_blk(&
+         iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock),&
+         neiLeast(iBlock), neiLwest(iBlock), neiLsouth(iBlock), &
+         neiLnorth(iBlock), neiLtop(iBlock), neiLbot(iBlock))
+
+    ! If the corner block is not a coarse block, the ghost values for 
+    ! fine block need to be corrected. 
+    if(.not. all(neiLev(:,iBlock) /=1)) call correct_ghost_for_fine_blk(&
+         iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+
+    ! If the corner block is not a fine block, the ghost values for 
+    ! coarse block need to be corrected.     
+    if(.not. all(neiLev(:,iBlock) /= -1)) call correct_ghost_for_coarse_blk(&
+         iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+
+  end subroutine calc_high_ghost
 
 end module ModFaceValue
 

@@ -1093,6 +1093,11 @@ subroutine MH_set_parameters(TypeAction)
      case('#CONSERVEFLUX')
         call read_var('DoConserveFlux', DoConserveFlux)
 
+     case('#HIGHRESCHANGE')
+        call read_var('UseHighResChange', UseHighResChange)
+        UseTvdReschange = .false. 
+        UseAccurateResChange = .false. 
+       
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.
@@ -2728,6 +2733,11 @@ contains
     ! Update check does not work with Runge-Kutta schemes
     ! because the final update is a linear combination of all stages.
     if(.not.UseHalfStep) UseUpdateCheck = .false.
+    if(UseHighResChange) then
+       nOrderProlong = 1
+       if(nJ == 1 .or. nK >1)&
+            call stop_mpi('UseHighResChange only works for 2D!!')
+    endif
 
     IsFirstCheck = .false.
 
@@ -3096,6 +3106,8 @@ contains
 
     DoOneCoarserLayer = .not. (nOrder>1 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
+    if(UseHighResChange) DoOneCoarserLayer = .false.
+    
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
 !!! momentum limiting fails for multiion: to be debugged

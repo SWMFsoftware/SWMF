@@ -8,7 +8,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModMain
   use ModFaceBoundary, ONLY: set_face_boundary
   use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
-  use ModFaceValue,  ONLY: calc_face_value
+  use ModFaceValue,  ONLY: calc_face_value, calc_high_ghost
   use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
        DoInterpolateFlux
   use ModB0,         ONLY: set_b0_face
@@ -57,6 +57,13 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
 
      if(UseResistivity)  call set_resistivity
 
+     if(UseHighResChange) then
+        do iBlock = 1, nBlock
+           if (Unused_B(iBlock)) CYCLE
+           call calc_high_ghost(iBlock)
+        enddo
+     endif
+     
      if(DoConserveFlux) then
         do iBlock = 1, nBlock
            if (Unused_B(iBlock)) CYCLE

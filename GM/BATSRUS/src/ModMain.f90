@@ -294,4 +294,6 @@ Module ModMain
   !/
   logical:: UseFieldLineThreads = .false.
 
+  ! Use high-order accurate ghost cells. 
+  logical :: UseHighResChange = .false. 
 end module ModMain

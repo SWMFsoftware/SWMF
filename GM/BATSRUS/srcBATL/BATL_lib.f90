@@ -102,6 +102,8 @@ module BATL_lib
 
   ! Inherited from BATL_high_order
   public:: correct_face_value, calc_center_first_derivate, calc_face_value
+  public:: calc_high_ghost_for_fine_blk, correct_ghost_for_fine_blk, &
+       correct_ghost_for_coarse_blk
 
 contains
   !============================================================================

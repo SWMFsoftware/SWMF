@@ -17,7 +17,8 @@ contains
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
          UseConstrainB, UseProjection, &
-         nOrder, nOrderProlong, optimize_message_pass
+         nOrder, nOrderProlong, optimize_message_pass, &
+         UseHighResChange
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
@@ -89,7 +90,8 @@ contains
        call message_pass_cell(nVar, State_VGB, &
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn)
+            DoResChangeOnlyIn=DoResChangeOnlyIn, &
+            UseHighResChangeIn=UseHighResChange)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     else
        ! Pass corners if necessary
@@ -103,7 +105,8 @@ contains
             nCoarseLayerIn=nCoarseLayer,&
             DoSendCornerIn=DoSendCorner, &
             DoRestrictFaceIn=DoRestrictFace,&
-            DoResChangeOnlyIn=DoResChangeOnlyIn)
+            DoResChangeOnlyIn=DoResChangeOnlyIn,&
+            UseHighResChangeIn=UseHighResChange)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
 

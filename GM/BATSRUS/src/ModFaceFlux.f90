@@ -438,6 +438,7 @@ contains
     if(UseHallResist .or. UseBiermannBattery) &
          call set_ion_mass_per_charge(iBlock)
 
+    if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1) &
             call get_flux_x(1,1,1,nJ,1,nK)
@@ -452,7 +453,6 @@ contains
        if(nK > 1 .and. neiLtop(iBlock)   == 1) &
             call get_flux_z(1,nI,1,nJ,nKFace,nKFace)
     else
-       if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
        call get_flux_x(1, nIFace, jMinFace, jMaxFace, kMinFace, kMaxFace)
        if(nJ > 1) &
             call get_flux_y(iMinFace, iMaxFace, 1, nJFace, kMinFace ,kMaxFace)
