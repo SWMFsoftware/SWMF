@@ -71,8 +71,6 @@ contains
     select case(NameCommand)
     case("#INNERBOUNDARY")
        call read_var('TypeBcInner',TypeBc_I(body1_))
-       ! Backward compatibility 
-       if (TypeBc_I(body1_) == 'coronatoih') TypeBc_I(body1_)= 'buffergrid'
        if(UseBody2) call read_var('TypeBcBody2',TypeBc_I(body2_)) 
 
     case("#POLARBOUNDARY")
