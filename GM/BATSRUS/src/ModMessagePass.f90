@@ -135,7 +135,7 @@ contains
   subroutine fill_in_from_buffer(iBlock)
   
     use ModGeometry,ONLY: R_BLK
-    use ModMain,    ONLY: rBuffMin, rBuffMax
+    use ModMain,    ONLY: BufferMin_D, BufferMax_D
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use ModProcMH,  ONLY: iProc
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
@@ -154,13 +154,15 @@ contains
     end if
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(R_BLK(i,j,k,iBlock) > rBuffMax .or. R_BLK(i,j,k,iBlock) < rBuffMin)&
+       if(  R_BLK(i,j,k,iBlock) > BufferMax_D(1) .or. &
+            R_BLK(i,j,k,iBlock) < BufferMin_D(1))&
             CYCLE
-       !Get interpolated values from buffer grid:
+
+       ! Get interpolated values from buffer grid:
        call get_from_spher_buffer_grid(&
             Xyz_DGB(:,i,j,k,iBlock), nVar, State_VGB(:,i,j,k,iBlock))
 
-       !Transform primitive variables to conservative ones:
+       ! Transform primitive variables to conservative ones:
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
             State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
 

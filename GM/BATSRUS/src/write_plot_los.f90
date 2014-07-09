@@ -50,7 +50,7 @@ subroutine write_plot_los(iFile)
 
   use ModProcMH
   use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
-       time_accurate, nBlock, NameThisComp,rBuffMax,TypeCoordSystem, &
+       time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
        Body1,body1_, StartTime
   use ModGeometry, ONLY: &
        XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D
@@ -161,9 +161,9 @@ subroutine write_plot_los(iFile)
   select case(NameThisComp)
   case('SC')
      rInner = rBody 
-     rOuter = rBuffMax
+     rOuter = BufferMax_D(1)
   case('IH')
-     rInner = rBuffMax
+     rInner = BufferMax_D(1)
      rOuter = 1000.0
   case('GM')
      rInner = 0.0 ! needed for comet applications
