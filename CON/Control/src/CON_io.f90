@@ -1,5 +1,5 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
 !
@@ -75,8 +75,7 @@ contains
 
     !USES:
     use CON_coupler, ONLY: &
-         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C, &
-         UseGlobalMpiCoupler_CC, CouplerType
+         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
     use CON_physics
 
     implicit none
@@ -438,28 +437,6 @@ contains
              call read_var('nNext21',Couple_CC(iComp2,iComp1) % nNext)
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
-
-       case("#COUPLERTYPE")
-           call read_var('NameSource',NameComp1)
-          iComp1=i_comp(NameComp1)
-          if(.not.use_comp(iComp1)) then
-             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
-                  NameComp1//' is OFF or not registered in '//NameMapFile
-             iErrorSwmf = 50
-             RETURN
-          end if
-          call read_var('NameTarget',NameComp2)
-          iComp2=i_comp(NameComp2)
-          if(.not.use_comp(iComp2))then
-             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR: '// &
-                  NameComp2//' is OFF or not registered in '//NameMapFile
-             iErrorSwmf = 51
-             RETURN
-          end if
-          call read_var('CouplerType', CouplerType)
-          if(CouplerType(1:3) == 'MPI') &
-               UseGlobalMpiCoupler_CC(iComp1,iComp2) = .TRUE.
-          
        case("#COUPLETIME")
           call read_var('NameComp',NameComp)
           call read_var('DoCoupleOnTime',DoCoupleOnTime_C(i_comp(NameComp)))
