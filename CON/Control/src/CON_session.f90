@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
 !
@@ -16,7 +17,8 @@ module CON_session
   use CON_couple_all, ONLY: couple_two_comp, couple_all_init
   use CON_coupler, ONLY: &
        check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
-       DoCoupleOnTime_C
+       DoCoupleOnTime_C, &
+       IsTightCouple_CC, IsTightCouple2_CC
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart
   use CON_time, ONLY: iSession, DoTimeAccurate, &
@@ -101,7 +103,7 @@ contains
     ! This must involve all PE-s.
     !/
     do lComp = 1, nComp; iComp = i_comp(lComp)
-       if(use_comp(iComp)) call set_param_comp(iComp,'GRID')
+       if(use_comp(iComp)) call set_param_comp(iComp, 'GRID')
     end do
     !\
     ! Initialize all couplers. This must involve all PE-s.
@@ -182,6 +184,9 @@ contains
 
     !EOP
 
+    ! Indexes for tight coupling
+    integer:: lCompSlave, iCompMaster, iCompSlave
+
     character(len=*), parameter :: NameSub=NameMod//'::do_session'
     !--------------------------------------------------------------------------
 
@@ -224,10 +229,11 @@ contains
        !\
        ! Stop this session if stopping conditions are fulfilled
        !/
-       if(MaxIteration >= 0 .and. nIteration >= MaxIteration) exit TIMELOOP
+       if(MaxIteration >= 0 .and. nIteration >= MaxIteration) &
+            EXIT TIMELOOP
        if(DoTimeAccurate .and. tSimulationMax > 0.0 &
             .and. tSimulation >= tSimulationMax) &
-            exit TIMELOOP
+            EXIT TIMELOOP
 
        !\
        ! Exit from time loop and return if an external coupling should be done
@@ -242,11 +248,11 @@ contains
        !\
        ! Check periodically for stop file and cpu time
        !/
-       if(is_time_to(CheckStop,nStep,tSimulation,DoTimeAccurate))then
+       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
           if(DoTestMe)write(*,*)NameSub,' checking do_stop_now'
           if(do_stop_now())then
              IsLastSession = .true.
-             exit TIMELOOP
+             EXIT TIMELOOP
           end if
        end if
 
@@ -265,7 +271,7 @@ contains
        ! Calculate next time to synchronize for all local components
        !/
        if(DoTimeAccurate)then
-          do lComp=1,nComp
+          do lComp = 1, nComp
              iComp = i_comp(lComp)
              if(.not.IsProc_C(iComp)) CYCLE
 
@@ -327,11 +333,37 @@ contains
           end do
        end if
 
+       ! Loop through potential pairs of Master-Slave components
+       do lComp = 1, nComp
+          iCompMaster = i_comp(lComp)          
+          do lCompSlave = 1, nComp
+             iCompSlave = i_comp(lCompSlave)
+
+             ! Exclude other processors
+             if(.not.(IsProc_C(iCompMaster) .or. IsProc_C(iCompSlave))) CYCLE
+
+             ! Check if there is a master-slave relationship
+             if(.not. IsTightCouple_CC(iCompMaster,iCompSlave)) CYCLE
+
+             ! Couple Master to Slave
+             call couple_two_comp(iCompMaster, iCompSlave, tSimulation)
+
+             ! Couple Slave to Master if 2-way coupling is requested
+             if(IsTightCouple2_CC(iCompMaster,iCompSlave)) &
+                  call couple_two_comp(iCompSlave, iCompMaster, tSimulation)
+
+             if(DoTestMe)write(*,*)NameSub, &
+                  ' coupling master, slave, time, two-way=', &
+                  iCompMaster, iCompSlave, tSimulation, &
+                  IsTightCouple2_CC(iCompMaster, iCompSlave)
+
+          end do
+       end do
+
        if(DoTestMe)write(*,*)NameSub,' advance solution'
 
        ! Advance solution
-
-       do lComp=1,nComp
+       do lComp = 1, nComp
           iComp = i_comp(lComp)
           if(.not.IsProc_C(iComp)) CYCLE
 
@@ -342,10 +374,10 @@ contains
              !/
              if(tSimulation_C(iComp) <= tSimulation) then
 
-                call run_comp(iComp,tSimulation_C(iComp),&
-                     tSimulationLimit_C(iComp))
+                call run_comp(iComp, &
+                     tSimulation_C(iComp), tSimulationLimit_C(iComp))
 
-                if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
+                if(DoTestMe)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' with tSimulation and Limit=',tSimulation_C(iComp),&
                      tSimulationLimit_C(iComp)
              end if
@@ -360,7 +392,7 @@ contains
                 ! There is no progress in time
                 !tSimulation_C(iComp) = tSimulation
 
-                if(DoTest)write(*,*)NameSub,' run ',NameComp_I(iComp),&
+                if(DoTestMe)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' at nStep=',nStep
              end if
           end if
@@ -393,7 +425,8 @@ contains
           if( (IsProc_C(iCompSource).or.IsProc_C(iCompTarget)) .and. &
                is_time_to(Couple_CC(iCompSource, iCompTarget),&
                nStep, tSimulation, DoTimeAccurate))then
-             if(DoTestMe)write(*,*)NameSub,' coupling ',iCompSource,iCompTarget,tSimulation
+             if(DoTestMe)write(*,*)NameSub, &
+                  ' coupling ',iCompSource,iCompTarget,tSimulation
              call couple_two_comp(iCompSource, iCompTarget, tSimulation)
           end if
 

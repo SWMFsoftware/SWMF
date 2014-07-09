@@ -93,10 +93,16 @@ module CON_coupler
        PC_, GM_ &
        /), (/2, MaxCouple/) )
 
-  public :: DoCoupleOnTime_C ! Should do coupling limit the time step
+  ! Should do coupling limit the time step
+  logical, public :: DoCoupleOnTime_C(MaxComp) = .true.
 
-  logical :: DoCoupleOnTime_C(MaxComp) = .true.
+  ! Tight coupling parameters for one-way and two-way
+  logical, public :: IsTightCouple_CC(MaxComp,MaxComp)  = .false.
+  logical, public :: IsTightCouple2_CC(MaxComp,MaxComp) = .false.
 
+  !\
+  ! Variables related to share/Library/src/ModProcessVarName
+  !/
   integer, public :: iCompSourceCouple, iCompTargetCouple
 
   ! no. of variables to be coupled by any pair of source and target components

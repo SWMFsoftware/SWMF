@@ -75,7 +75,8 @@ contains
 
     !USES:
     use CON_coupler, ONLY: &
-         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C
+         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C, &
+         IsTightCouple_CC, IsTightCouple2_CC
     use CON_physics
 
     implicit none
@@ -437,6 +438,26 @@ contains
              call read_var('nNext21',Couple_CC(iComp2,iComp1) % nNext)
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
+
+       case("#COUPLETIGHT1", "#COUPLETIGHT2")
+          call read_var('NameMaster', NameComp1)
+          iComp1 = i_comp(NameComp1)
+          if(.not.use_comp(iComp1)) then
+             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR for NameMaster: '// &
+                  NameComp1//' is OFF or not registered in '//NameMapFile
+             RETURN
+          end if
+          call read_var('NameSlave', NameComp2)
+          iComp2 = i_comp(NameComp2)
+          if(.not.use_comp(iComp2))then
+             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR for NameSlave: '// &
+                  NameComp2//' is OFF or not registered in '//NameMapFile
+             RETURN
+          end if
+          call read_var('IsTightCouple', IsTightCouple_CC(iComp1,iComp2))
+          IsTightCouple2_CC(iComp1,iComp2) = IsTightCouple_CC(iComp1,iComp2) .and. &
+               NameCommand == "#COUPLETIGHT2"
+
        case("#COUPLETIME")
           call read_var('NameComp',NameComp)
           call read_var('DoCoupleOnTime',DoCoupleOnTime_C(i_comp(NameComp)))
