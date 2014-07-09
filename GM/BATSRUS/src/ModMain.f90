@@ -6,6 +6,7 @@ Module ModMain
   use ModKind
   use ModSize
   use ModVarIndexes
+  use ModNumConst, ONLY: cPi, cTwoPi
 
   ! The ifort compiler cannot find nBlock through ModSize
   use BATL_size, ONLY: nBlock
@@ -62,8 +63,10 @@ Module ModMain
   ! Dimensions of the buffer grid between SC and IH
   logical :: UseHelioBuffer3D = .false.
   integer :: nPhiBuff = 90,   nThetaBuff = 45, nRBuff = 2
-  real    :: rBuffMin = 19.0, rBuffMax = 21.0, dSphBuff_D(3)
-  real    :: BufferMin_D(3), BufferMax_D(3)
+  real    :: dSphBuff_D(3)
+  real    :: BufferMin_D(3) = (/ 19.0,    0.0, 0.0/)
+  real    :: BufferMax_D(3) = (/ 21.0, cTwoPi, cPi/)
+
   real, allocatable:: BufferState_VG(:,:,:,:)
   ! Named indexes for the spherical buffer (left handed coordinates!!!)
   integer, parameter :: BuffR_=1, BuffPhi_=2, BuffTheta_=3
