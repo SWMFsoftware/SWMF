@@ -21,6 +21,107 @@ T			DoSaveRestart
 2000			DnSaveRestart
 -1.0			DtSaveRestart
 
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#USER_FLAGS
+T			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F			UseUserOuterBcs
+T			UseUserICs
+T			UseUserSpecifyRefinement
+F			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+T			UseUserUpdateStates
+
+#MAGNETOGRAM
+T			UseMagnetogram
+1.0			rMagnetogram
+2.5			rSourceSurface
+0.0			HeightInnerBc
+SC/Param/CR1935_WSO.dat
+12			nHeaderLine
+-1.0			PhiShift
+0.01			UnitB
+
+#EMPIRICALSW
+WSA			NameModelSW
+
+#BODY
+T			Usebody
+1.0			rBody
+3.0E+8			BodyNDim
+3.5E+6			BodyTDim
+
+#GAMMA
+1.5000E+00		Gamma
+
+#OUTERBOUNDARY
+float	                TypeBcEast
+float   	        TypeBcWest
+float	                TypeBcSouth
+float	  		TypeBcNorth
+float	 	        TypeBcBot
+float	   		TypeBcTop
+
+#INCLUDE
+SC/Param/Grid
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
+
+#USECURLB0
+T			UseCurlB0
+2.5			rCurrentFreeB0
+
+#AMR
+30			DnRefine
+F			DoAutomaticRefinement 
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc                      TypeLimiter
+1.2			LimiterBeta
+
+#TVDRESCHANGE
+T                       UseTvdResChange
+
+#TIMESTEPPING
+2                       nStage
+0.80                    CflExpl
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+3			nPlotFiles
+x=0 MHD idl		StringPlot
+10                   	DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+z=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
+
+#END_COMP SC ----------------------------------------------------------------
+
 #BEGIN_COMP IH -------------------------------------------------------------
 
 #BODY
@@ -136,107 +237,6 @@ IH/earth_traj.dat
 IH			NameComp
 F			UseComp
 
-#BEGIN_COMP SC --------------------------------------------------------------
-
-#COORDSYSTEM
-HGR                     TypeCoordSystem
-
-#USER_FLAGS
-T			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-T			UseUserICs
-T			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-T			UseUserUpdateStates
-
-#MAGNETOGRAM
-T			UseMagnetogram
-1.0			rMagnetogram
-2.5			rSourceSurface
-0.0			HeightInnerBc
-SC/Param/CR1935_WSO.dat
-12			nHeaderLine
--1.0			PhiShift
-0.01			UnitB
-
-#EMPIRICALSW
-WSA			NameModelSW
-
-#BODY
-T			Usebody
-1.0			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
-
-#GAMMA
-1.5000E+00		Gamma
-
-#OUTERBOUNDARY
-float	                TypeBcEast
-float   	        TypeBcWest
-float	                TypeBcSouth
-float	  		TypeBcNorth
-float	 	        TypeBcBot
-float	   		TypeBcTop
-
-#INCLUDE
-SC/Param/Grid
-
-#GRIDLEVEL
-2			nLevelArea
-initial			NameArea
-
-#USECURLB0
-T			UseCurlB0
-2.5			rCurrentFreeB0
-
-#AMR
-30			DnRefine
-F			DoAutomaticRefinement 
-
-#SCHEME
-2			nOrder (1 or 2)
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
-mc                      TypeLimiter
-1.2			LimiterBeta
-
-#TVDRESCHANGE
-T                       UseTvdResChange
-
-#TIMESTEPPING
-2                       nStage
-0.80                    CflExpl
-
-#SAVELOGFILE
-T			DoSaveLogfile
-RAW			StringLogfile
-1			DnSaveLogfile
--1.			DtSaveLogfile
-
-#SAVEPLOT
-3			nPlotFiles
-x=0 MHD idl		StringPlot
-10                   	DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
-y=0 MHD idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
-z=0 MHD idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
--1.			DxSavePlot
-
-#END_COMP SC ----------------------------------------------------------------
-
 #STOP
 100			MaxIteration
 -1.0			tSimulationMax
@@ -266,11 +266,6 @@ SC                      NameSource
 IH                      NameTarget
 100                     DnCouple
 -1.0                    DtCouple
-
-#COUPLERTYPE
-SC
-IH
-MPI
 
 #STOP
 201			MaxIteration

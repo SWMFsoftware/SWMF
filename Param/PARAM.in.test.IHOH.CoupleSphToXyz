@@ -303,11 +303,6 @@ OH			NameTarget
 -1			DnCouple
 70.			DtCouple
 
-#COUPLERTYPE
-IH			NameSource
-OH			NameTarget
-MPI			TypeCoupler
-
 #STOP
 -1			MaxIteration
 50000.0			tSimulationMax

@@ -203,7 +203,7 @@ z=0 MHD idl		StringPlot
 IH			NameComp
 T			UseComp
 
-#COUPLE2
+#COUPLE1
 SC                      NameSource
 IH                      NameTarget
 100                     DnCouple

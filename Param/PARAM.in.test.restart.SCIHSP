@@ -136,7 +136,7 @@ z=0 MHD idl             StringPlot
 
 #END_COMP SC ----------------------------------------------------------------
 
-#COUPLE2
+#COUPLE1
 SC			NameSource
 IH			NameTarget
 -1			DnCouple

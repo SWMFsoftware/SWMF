@@ -469,11 +469,6 @@ IH			NameTarget
 1			DnCouple
 -1.0			DtCouple
 
-#COUPLERTYPE
-SC
-IH
-MPI
-
 #STOP
 51			MaxIter
 -1.0			TimeMax
