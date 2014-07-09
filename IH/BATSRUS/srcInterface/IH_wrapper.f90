@@ -381,7 +381,7 @@ contains
     use IH_ModGeometry,ONLY:R_BLK
     use IH_BATL_lib,  ONLY: Xyz_DGB
     use IH_ModMain,   ONLY:&
-         nI,nJ,nK,rBuffMin,rBuffMax,MaxDim,nBlock, Unused_B
+         nI,nJ,nK, BufferMax_D, MaxDim,nBlock, Unused_B
     use IH_ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
     use IH_ModProcMH, ONLY:iProc
     use IH_ModIO,     ONLY:IsRestartCoupler
@@ -391,10 +391,12 @@ contains
 
     integer  :: iBlock
     integer  :: i,j,k
-    real     :: x_D(MaxDim)
+    real     :: x_D(MaxDim), rBuffMax
     logical  :: DoTest,DoTestMe
     ! ------------------------------------------------------------------------
     if(IsRestartCoupler) RETURN
+
+    rBuffMax = BufferMax_D(1)
 
     call CON_set_do_test(StringTest, DoTest, DoTestMe)
     if(DoTest .and. iProc == 0)  write(*,*) &
