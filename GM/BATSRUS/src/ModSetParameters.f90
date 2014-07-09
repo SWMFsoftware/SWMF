@@ -1828,10 +1828,10 @@ subroutine MH_set_parameters(TypeAction)
         if(NameThisComp == 'SC') &
              call stop_mpi(NameSub//' ERROR:'// &
              ' #HELIOBUFFERGRID command can be used in IH,OH components only')
-        call read_var('rBuffMin',  rBuffMin)
-        call read_var('rBuffMax',  rBuffMax)
-        call read_var('nThetaBuff',nThetaBuff)
-        call read_var('nPhiBuff',  nPhiBuff)
+        call read_var('rBuffMin',   BufferMin_D(BuffR_))
+        call read_var('rBuffMax',   BufferMax_D(BuffR_))
+        call read_var('nThetaBuff', nThetaBuff)
+        call read_var('nPhiBuff',   nPhiBuff)
 
      case("#BUFFERGRID")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1844,10 +1844,6 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('PhiBuffMax',  BufferMax_D(BuffPhi_))
         call read_var('LatBuffMin',  BufferMin_D(BuffTheta_))
         call read_var('LatBuffMax',  BufferMax_D(BuffTheta_))
-        ! Update rBuffMin, rBuffMax 
-        ! in case #HELIOBUFFERGRID was not used
-        rBuffMin = BufferMin_D(BuffR_)
-        rBuffMax = BufferMax_D(BuffR_)
 
         ! Convert degrees to radians, latitude to co-latitude
         BufferMin_D(BuffPhi_)   = BufferMin_D(BuffPhi_) * cDegToRad
@@ -2139,16 +2135,6 @@ contains
     TDimBody2   = 10000.0! K
 
     MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
-
-    ! Default limits for  buffergrid boundary conditions
-    if (any(TypeBc_I(body1_:ExtraBc_)=='buffergrid')) then
-       BufferMin_D(BuffR_)     = 19.
-       BufferMin_D(BuffPhi_)   = 0.
-       BufferMin_D(BuffTheta_) = 0.
-       BufferMax_D(BuffR_)     = 21.
-       BufferMax_D(BuffPhi_)   = 360.
-       BufferMax_D(BuffTheta_) = 180.
-    end if
 
     nAmrCriteria = 0
     call init_mod_amr(nAmrCriteria)
