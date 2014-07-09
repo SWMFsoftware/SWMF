@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
 !
@@ -17,8 +18,7 @@ module CON_couple_all
   use CON_comp_param
   use CON_world,   ONLY: use_comp, is_proc, i_proc
   use CON_coupler, ONLY: iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
-                         DoCoupleVar_V, DoCoupleVar_VCC, &
-                         UseGlobalMpiCoupler_CC, UseGlobalMpiCoupler
+                         DoCoupleVar_V, DoCoupleVar_VCC
 
   !^CMP IF GM BEGIN
   use CON_couple_ih_gm        !^CMP IF IH
@@ -149,7 +149,6 @@ contains
     iVar_V        = iVar_VCC(:,iCompSource,iCompTarget)
     nVarCouple    = nVarCouple_CC(iCompSource,iCompTarget)
     DoCoupleVar_V = DoCoupleVar_VCC(:,iCompSource,iCompTarget)
-    UseGlobalMpiCoupler = UseGlobalMpiCoupler_CC(iCompSource,iCompTarget)
 
     select case(iCompSource)
     case(EE_)                                 !^CMP IF EE BEGIN
