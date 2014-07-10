@@ -1023,7 +1023,7 @@ contains
                      enddo
 
                      do iVar = 1, nVar
-                        CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS1,iBlockSend)
+                        CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS,iBlockSend)
 
                         call get_ghost_for_coarse_blk(CoarseCell,&
                              Primitive_VIII(iVar,:,:,1), Ghost_I, 1)
@@ -1075,7 +1075,7 @@ contains
                      enddo
 
                      do iVar = 1, nVar
-                        CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS1,iBlockSend)
+                        CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS,iBlockSend)
 
                         call get_ghost_for_coarse_blk(CoarseCell,&
                              Primitive_VIII(iVar,:,:,1), Ghost_I,1)
@@ -1167,8 +1167,8 @@ contains
                   enddo
 
                   do iVar = 1, nVar
-                     CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS1,iBlockSend)
-
+                     CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS,iBlockSend)
+                     
                      call get_ghost_for_coarse_blk(CoarseCell,&
                           Primitive_VIII(iVar,:,:,1), Ghost_I,1)
 
@@ -1220,7 +1220,7 @@ contains
                   enddo
 
                   do iVar = 1, nVar
-                     CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS1,iBlockSend)
+                     CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS,iBlockSend)
 
                      call get_ghost_for_coarse_blk(CoarseCell,&
                           Primitive_VIII(iVar,:,:,1), Ghost_I,1)
