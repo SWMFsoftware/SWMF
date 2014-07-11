@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModTimeStepControl
 
@@ -349,12 +350,10 @@ contains
 
     end if
 
-    ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit
-    ! and infinitesimal timesteps are avoided. Also avoid real overflow when
-    ! TimeSimulationLimit = Huge(0.0)
-
-    if(Time_Simulation+Cfl*Dt*No2Si_V(UnitT_)*(1+cTiny) > TimeSimulationLimit)&
-         Dt=(1+cTiny)*(TimeSimulationLimit-Time_Simulation)*Si2No_V(UnitT_)/Cfl
+    ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
+    ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
+    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)&
+         Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE

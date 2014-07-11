@@ -388,8 +388,16 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   real :: AmrTime = 0
   !---------------------------------------------------------------------------
-  !Eliminate non-positive timesteps
-  if(Time_Simulation>=TimeSimulationLimit)return 
+  ! Eliminate very small timesteps at the end
+  if(Time_Simulation + 1e-6*Dt*No2Si_V(UnitT_) >= TimeSimulationLimit)then
+
+     if(iProc == 0) write(*,*) '!!!', NameSub, &
+          ' adjusting, Time_Simulation, TimeSimulationLimit, dt=', &
+          Time_Simulation, TimeSimulationLimit, dt
+
+     Time_Simulation = TimeSimulationLimit
+     RETURN
+  end if
 
   ! Check if steady state is achieved
   if(.not.time_accurate .and. UsePartSteady .and. IsSteadyState)then
