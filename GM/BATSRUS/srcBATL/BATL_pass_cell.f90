@@ -339,6 +339,8 @@ contains
     character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_cell'
 
     integer:: nSendStage
+
+    integer:: iBlock
     !--------------------------------------------------------------------------
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
@@ -606,11 +608,55 @@ contains
        
     end do ! iSendStage
 
+     if(UseHighResChange) then
+        do iBlock = 1, nBlock
+           if (Unused_B(iBlock)) CYCLE
+           call calc_high_ghost(iBlock)
+        enddo
+     endif
+
     deallocate(Slope_VG)
 
     call timing_stop('batl_pass')
 
   contains
+    !======================================================================
+    subroutine calc_high_ghost(iBlock) 
+      ! The ghost cells of coarse blocks have been got in do_restrict
+      ! Ghost cells of fine blocks are calculated here. 
+
+      use BATL_high_order, ONLY: calc_high_ghost_for_fine_blk, &
+           correct_ghost_for_fine_blk, correct_ghost_for_coarse_blk
+
+      integer, intent(in):: iBlock
+      real, allocatable:: Field1_VG(:,:,:,:)
+      integer:: neiLev_I(6)
+      !----------------------------------------------------------------------
+
+      if(.not. allocated(Field1_VG)) &
+           allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
+
+      call calc_high_ghost_for_fine_blk(&
+           iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock))
+
+      neiLev_I(1) = DiLevelNei_IIIB(-1,0,0,iBlock)
+      neiLev_I(2) = DiLevelNei_IIIB(+1,0,0,iBlock)
+      neiLev_I(3) = DiLevelNei_IIIB(0,-1,0,iBlock)
+      neiLev_I(4) = DiLevelNei_IIIB(0,+1,0,iBlock)
+      neiLev_I(5) = DiLevelNei_IIIB(0,0,-1,iBlock)
+      neiLev_I(6) = DiLevelNei_IIIB(0,0,+1,iBlock)
+
+      ! If the corner block is not a coarse block, the ghost values for 
+      ! fine block need to be corrected. 
+      if(.not. all(neiLev_I /=1)) call correct_ghost_for_fine_blk(&
+           iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+
+      ! If the corner block is not a fine block, the ghost values for 
+      ! coarse block need to be corrected.     
+      if(.not. all(neiLev_I /= -1)) call correct_ghost_for_coarse_blk(&
+           iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+
+    end subroutine calc_high_ghost
 
     !==========================================================================
     subroutine buffer_to_state
@@ -847,7 +893,7 @@ contains
            (UseHighResChange .and. iSendStage == 1)))then 
          ! For high resolution change, finer block only receives data 
          ! when iSendStage = 1. 
-         
+
          ! This processor will receive a prolonged buffer from
          ! the other processor and the "recv" direction of the prolongations
          ! will be the same as the "send" direction for this restriction:
@@ -952,7 +998,7 @@ contains
             WeightOld = (Time_B(iBlockSend) - Time_B(iBlockRecv)) &
                  /      (Time_B(iBlockSend) - TimeOld_B(iBlockRecv))
             WeightNew = 1 - WeightOld
-            
+
             do kR = kRMin, kRMax, DkR
                kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
                kS2 = kS1 + kRatioRestr - 1
@@ -1013,7 +1059,7 @@ contains
                      do i = iBegin, iEnd   
                         do j = jBegin, jEnd
                            jS = j - 3 + jS1
-                           
+
                            ! i is the index along the resolution change direction.
                            ! j is the index parallel to the resolution change direction.
                            Primitive_VIII(:,i,j,1) = &
@@ -1050,13 +1096,13 @@ contains
                iBegin = 1; iEnd = 6
                jBegin = 1; jEnd = 8
                if(nK == 1) kS = 1
-               
+
                if(jDir == 1) then 
                   jS0 = jSMax
                else
                   jS0 = jSMin
                endif
-               
+
                do kR = kRMin, kRMax, DkR
                   do iR = iRMin, iRMax, DiR
                      iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
@@ -1093,7 +1139,7 @@ contains
                               jS = jS -jDir
                            enddo
                         endif
-                        
+
                      enddo ! iVar
                   enddo ! jR
                enddo ! kR
@@ -1168,7 +1214,7 @@ contains
 
                   do iVar = 1, nVar
                      CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS,iBlockSend)
-                     
+
                      call get_ghost_for_coarse_blk(CoarseCell,&
                           Primitive_VIII(iVar,:,:,1), Ghost_I)
 
@@ -1376,7 +1422,7 @@ contains
 
                ! For 2nd order prolongation no prolongation is done in stage 1
                if(.not. UseHighResChange .and. iSendStage < nProlongOrder) CYCLE
-             
+
                ! For HighResChange, only do prolongation in stage 1. 
                if(UseHighResChange .and. iSendStage == 2) CYCLE
 

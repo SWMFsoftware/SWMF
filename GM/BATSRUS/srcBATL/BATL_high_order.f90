@@ -349,8 +349,7 @@ contains
   end function interpolate_in_coarse_blk
   !======================================================================
 
-  subroutine calc_high_ghost_for_fine_blk(iBlock, nVar, Field1_VG, Field_VG,&
-       neiLeast, neiLwest, neiLsouth, neiLnorth, neiLtop, neiLbot)
+  subroutine calc_high_ghost_for_fine_blk(iBlock, nVar, Field1_VG, Field_VG)
     ! Works for 2D.
     ! The 3D part is also partially implemented, but need more tests. 
     
@@ -364,8 +363,6 @@ contains
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    integer, intent(in):: neiLeast, neiLwest, neiLsouth, &
-         neiLnorth, neiLtop, neiLbot
 
     integer :: i1, j1, k1, i2, j2, k2
     !integer :: iL, iR, jL, jR, kL, kR
@@ -380,7 +377,7 @@ contains
     Field1_VG = Field_VG
 
     ! Do six faces
-    if(NeiLeast == 1)then
+    if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1)then
        do k1=1, nK, 2; do j1=1, nJ, 2;
           do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
              jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -451,7 +448,7 @@ contains
        end do; end do
     end if
 
-    if(NeiLwest == 1)then
+    if(DiLevelNei_IIIB(1,0,0,iBlock) == 1)then
        do k1=1, nK, 2; do j1=1, nJ, 2
           do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
              jp = 3*j2 - 2*j1 -1 ; jm = 4*j1 -3*j2 +2
@@ -518,7 +515,7 @@ contains
        end do; end do
     end if
 
-    if(NeiLsouth == 1)then
+    if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2
@@ -586,7 +583,7 @@ contains
        end do; end do
     end if
 
-    if(NeiLnorth == 1)then
+    if(DiLevelNei_IIIB(0,1,0,iBlock) == 1)then
        do k1=1, nK, 2; do i1=1, nI, 2
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1 ; im = 4*i1 -3*i2 +2

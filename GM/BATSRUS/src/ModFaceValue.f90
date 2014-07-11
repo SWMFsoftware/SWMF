@@ -32,7 +32,6 @@ module ModFaceValue
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
 
   public :: read_face_value_param, calc_face_value, correct_monotone_restrict
-  public :: calc_high_ghost
 
   ! Local variables:
   ! Parameters for the limiter applied near resolution changes
@@ -3791,42 +3790,6 @@ contains
   !   endif
   ! end subroutine write_block_boundary
   !======================================================================
-
-  subroutine calc_high_ghost(iBlock) 
-    ! The ghost cells of coarse blocks have been calculated in 
-    ! BATL_pass_cell.f90. 
-
-    ! Ghost cells of fine blocks are calculated here. 
-
-    use ModAdvance, ONLY: State_VGB
-    use ModParallel, ONLY : &
-         neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
-    use BATL_lib, ONLY: calc_high_ghost_for_fine_blk, &
-         correct_ghost_for_fine_blk, correct_ghost_for_coarse_blk
-
-    integer, intent(in):: iBlock
-    real, allocatable:: Field1_VG(:,:,:,:)
-    !----------------------------------------------------------------------
-
-    if(.not. allocated(Field1_VG)) &
-         allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
-
-    call calc_high_ghost_for_fine_blk(&
-         iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock),&
-         neiLeast(iBlock), neiLwest(iBlock), neiLsouth(iBlock), &
-         neiLnorth(iBlock), neiLtop(iBlock), neiLbot(iBlock))
-
-    ! If the corner block is not a coarse block, the ghost values for 
-    ! fine block need to be corrected. 
-    if(.not. all(neiLev(:,iBlock) /=1)) call correct_ghost_for_fine_blk(&
-         iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-
-    ! If the corner block is not a fine block, the ghost values for 
-    ! coarse block need to be corrected.     
-    if(.not. all(neiLev(:,iBlock) /= -1)) call correct_ghost_for_coarse_blk(&
-         iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-
-  end subroutine calc_high_ghost
 
 end module ModFaceValue
 
