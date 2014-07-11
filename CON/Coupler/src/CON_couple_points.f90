@@ -616,12 +616,13 @@ contains
     real,    intent(inout):: BufferR_I(nData*nBufferR) ! recv buffer
 
     integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
-    integer:: iCouple, iBuffer
+    integer:: iCouple, iBuffer, nCoupleVoid
 
     ! MPI stuff
     integer, parameter:: iTag = 77
     integer:: iError
     integer, allocatable:: iRequest_I(:), iStatus_II(:,:)
+    integer:: iRequest
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_buffer_direct'
     !-----------------------------------------------------------------------
@@ -631,9 +632,11 @@ contains
 
     if(nCoupleS + nCoupleR == 0) RETURN
 
-    allocate(iRequest_I(nCoupleS+nCoupleR))
-    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR))
+    nCoupleVoid = count(nCouplePointS_I==0) + count(nCouplePointR_I==0)
 
+    allocate(iRequest_I(nCoupleS+nCoupleR-nCoupleVoid))
+    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR-nCoupleVoid))
+    iRequest = 1
     !\
     ! Send buffer
     !/
@@ -643,11 +646,14 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleS
-          iProcS = iCoupleProcS_I(iCouple)
-          call MPI_isend(&
-               BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
-               MPI_REAL, iProcS, iTag, iComm, iRequest_I(iCouple),iError)
-          iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
+          if(nCouplePointS_I(iCouple) > 0)then
+             iProcS = iCoupleProcS_I(iCouple)
+             call MPI_isend(&
+                  BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+                  MPI_REAL, iProcS, iTag, iComm, iRequest_I(iRequest),iError)
+             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
+             iRequest = iRequest + 1
+          end if
        end do
     end if
     if(nCoupleR > 0)then
@@ -656,18 +662,21 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleR
-          iProcR = iCoupleProcR_I(iCouple)
-          call MPI_irecv(&
-               BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
-               MPI_REAL, iProcR, iTag, iComm, &
-               iRequest_I(nCoupleS+iCouple),iError)
-          iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
+          if(nCouplePointR_I(iCouple) > 0)then
+             iProcR = iCoupleProcR_I(iCouple)
+             call MPI_irecv(&
+                  BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+                  MPI_REAL, iProcR, iTag, iComm, &
+                  iRequest_I(iRequest),iError)
+             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
+             iRequest = iRequest + 1
+          end if
        end do
     end if
     !\
     ! Finalize transfer
     !/
-    call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
+    call MPI_waitall(nCoupleS + nCoupleR - nCoupleVoid, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
   end subroutine transfer_buffer_real
 
@@ -696,6 +705,14 @@ contains
     !----------------------------------------------------------------------
     nProc = n_proc(iCompSource)
     nData = nBuffer
+
+    if(nBuffer == 0) RETURN
+    if(nCouple == 0)then
+       nData = 0
+       iBuffer_I = -1
+       RETURN
+    end if
+
     ! Set starting point of chunks in the reordered buffer
     allocate(iOrder_I(nCouple))
     iOrder_I(1) = 1
@@ -765,11 +782,12 @@ contains
     integer, intent(inout):: iBufferR_I(nData*nBufferR) ! recv buffer
 
     integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
-    integer:: iCouple, iBuffer
+    integer:: iCouple, iBuffer, nCoupleVoid
     ! MPI stuff
     integer, parameter:: iTag = 77
     integer:: iError
     integer, allocatable:: iRequest_I(:), iStatus_II(:,:)
+    integer:: iRequest
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'transfer_buffer_direct'
     !-----------------------------------------------------------------------
@@ -779,9 +797,11 @@ contains
 
     if(nCoupleS + nCoupleR == 0) RETURN
 
-    allocate(iRequest_I(nCoupleS+nCoupleR))
-    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR))
+    nCoupleVoid = count(nCouplePointS_I==0) + count(nCouplePointR_I==0)
 
+    allocate(iRequest_I(nCoupleS+nCoupleR-nCoupleVoid))
+    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR-nCoupleVoid))
+    iRequest = 1
     !\
     ! Send buffer
     !/
@@ -791,12 +811,15 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleS
-          iProcS = iCoupleProcS_I(iCouple)
-          call MPI_Isend(&
-               iBufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
-               MPI_INTEGER, iProcS, iTag, iComm, &
-               iRequest_I(iCouple),iError)       
-          iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
+          if(nCouplePointS_I(iCouple) > 0)then
+             iProcS = iCoupleProcS_I(iCouple)
+             call MPI_Isend(&
+                  iBufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+                  MPI_INTEGER, iProcS, iTag, iComm, &
+                  iRequest_I(iRequest),iError)       
+             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
+             iRequest = iRequest + 1
+          end if
        end do
     end if
     if(nCoupleR > 0)then
@@ -805,19 +828,22 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleR
-          iProcR = iCoupleProcR_I(iCouple)
-          call MPI_Irecv(&
-               iBufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
-               MPI_INTEGER, iProcR, iTag, iComm, &
-               iRequest_I(nCoupleS+iCouple),iError)
-          iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
+          if(nCouplePointR_I(iCouple) > 0)then
+             iProcR = iCoupleProcR_I(iCouple)
+             call MPI_Irecv(&
+                  iBufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+                  MPI_INTEGER, iProcR, iTag, iComm, &
+                  iRequest_I(iRequest),iError)
+             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
+             iRequest = iRequest + 1
+          end if
        end do
     end if
 
     !\
     ! Finalize transfer
     !/
-    call MPI_waitall(nCoupleS + nCoupleR, iRequest_I, iStatus_II, iError)
+    call MPI_waitall(nCoupleS + nCoupleR - nCoupleVoid, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
   end subroutine transfer_buffer_int
 
