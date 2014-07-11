@@ -820,6 +820,7 @@ contains
     real, parameter:: c1=0.05, c2=-0.3, c3=0.75
     real:: CellValue_I(4), Distance_I(4) = (/-2,-1,1,2/)
 
+    character(len=*), parameter:: NameSub = 'correct_ghost_for_coarse_blk'
     !----------------------------------------------------------------------    
     ! Only works for x-y 2D
     kDir = 0
@@ -847,8 +848,6 @@ contains
              elseif(iDir == -1) then
                 iBegin = -2
                 iEnd = 0
-             else            
-                call stop_mpi('wrong!! In correct_ghost_for_coarse_blk')
              endif
 
              k = 1
