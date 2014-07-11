@@ -59,7 +59,6 @@ contains
 
   real function calc_face_value(CellValue_I, DoLimitIn)
     ! Calculate f_{i+1/2} with f(k), where k = i-2,i-1 ... i+3
-
     real, intent(in):: CellValue_I(6)
     logical, optional, intent(in):: DoLimitIn
     logical:: DoLimit
@@ -124,71 +123,91 @@ contains
   end function two_points_interpolation
 
   !======================================================================
-  subroutine get_ghost_for_coarse_blk(CoarseCell, FineCell_III, Ghost_I, nK)
+  subroutine get_ghost_for_coarse_blk(CoarseCell, FineCell_III, Ghost_I)
     ! For 2D: 
-    !         _________
-    !         | u1|   |
-    !         |___|___|....(More fine cells are not shown.)
-    !         | u2|   | 
-    !  _______|___|___|
-    ! |       | u3| u7|
-    ! | u0    |___|___|....
-    ! |       | u4| u8|
-    ! |_______|___|___|
-    !         | u5|   |
-    !         |___|___|.....
-    !         | u6|   |
-    !         |___|___|
+    !         _________________________________
+    !         | u1|   |   |   |   |   |   |   |
+    !         |___|___|___|___|___|___|___|___|
+    !         | u2|   |   |   |   |   |   |   |
+    !  _______|___|___|___|___|___|___|___|___|
+    ! |       | u3| u7|   |   |   |   |   |   |
+    ! |Coarse |__G1___|__G2___|__G3___|___|___|
+    ! | u0    | u4| u8|   |   |   |   |   |   |
+    ! |_______|___|___|___|___|___|___|___|___|
+    !         | u5|   |   |   |   |   |   |   |
+    !         |___|___|___|___|___|___|___|___|
+    !         | u6|   |   |   |   |   |   |   |
+    !         |___|___|___|___|___|___|___|___|
+   
 
     ! First calculate the face value (f1) between u3 and u4 with u1, u2...u6.
     ! Face value between u7 and u8 (f2) and more face value can be got in the
     ! same way. 8 face values are needed. 
 
-    ! Use u0, f1, f2, f3, f4 to calculate the ghost cell covered by u3, u4, u7 
-    ! and u8. Use f1, f2, f3, f4, f5, f6 to interpolate the second ghost cell.
-    ! Use f3, f4...f7,f8 to interpolate the third ghost cell. 
+    ! Use u0, f1, f2, f3, f4 to calculate the ghost cell G1. 
+    ! Use f1, f2, f3, f4, f5, f6 to interpolate G2
+    ! Use f3, f4...f7,f8 to interpolate the third ghost cell (G3). 
+
+    use BATL_size, ONLY: nJ, nk
+
+    ! In 2D there is only 1 cell in the K direction
+    integer, parameter:: k6_ = min(nK, 6), j6_ = min(nJ,6)
     
-    real, intent(in):: CoarseCell, FineCell_III(8,6,min(nk,6))
-    real, intent(out):: Ghost_I(3)
-    integer, intent(in):: nK
+    real, intent(in) :: CoarseCell              ! value of coarse neighbor cell
+    real, intent(in) :: FineCell_III(8,j6_,k6_) ! value of local fine cells
+    real, intent(out):: Ghost_I(3)              ! coarse ghost cells for neighbor
+
+    ! Local variables
     real:: FineCell_I(8), FaceValue_I(6)
-    real:: Ghost, Cell_I(4), Distance_I(4)=(/-4,-1,1,3/)
+    real:: Ghost, Cell_I(4)
+    real:: CellInput_I(6), CellInput_II(6,6)
+    
+    ! Distances of coarse neighbor and fine cells from 1st ghost cell
+    real:: Distance_I(4)=(/-4,-1,1,3/)
+
+    ! Interpolation coefficients for G1
     real, parameter:: c1=-1./63, c2=5./12, c3 = 3./4, c4=-5./28, c5=1./36
-    logical:: DoLimit = .true. 
+
+    logical, parameter:: DoLimit = .true. ! change only for debugging
     integer:: i, j, k
     !----------------------------------------------------------------------
-    DoLimit = .true. 
 
-    if(nK == 1) then  ! 2D resolution change
-       k = 1
-       do i = 1, 8
-          FineCell_I(i) = calc_face_value(FineCell_III(i,:,k), DoLimitIn = DoLimit)
+    ! Integerpolate fine cell centers to line connecting coarse cell centers
+    if(nK == 1) then  ! 2D resolution change       
+       do i = 1, 8          
+          ! Use a temporary variable CellInput_I to avoid compile error. 
+          CellInput_I(1:j6_) = FineCell_III(i,:,1)
+          FineCell_I(i) = calc_face_value(CellInput_I, DoLimit)
        enddo
     else   
        ! 3D resolution change. Need more tests to make sure it works!!
        do i = 1, 8
+          CellInput_II(1:j6_,1:k6_) = FineCell_III(I,:,:)
           FineCell_I(i) = &
-               calc_edge_value(FineCell_III(i,:,:), DolimitIn = Dolimit)
+               calc_edge_value(CellInput_II,Dolimit)
        enddo 
     endif
 
+    ! High order interpolation for first ghost cell using coarse neighbor
     Ghost = c1*CoarseCell + c2*FineCell_I(1) + c3*FineCell_I(2) + &
          c4*FineCell_I(3) + c5*FineCell_I(4)
 
+    ! Limit value if requested
     if(DoLimit) then
-       Cell_I(1) = CoarseCell
+       Cell_I(1)   = CoarseCell
        Cell_I(2:4) = FineCell_I(1:3)
-       Ghost_I(1) = limit_interpolation(Ghost, Cell_I, Distance_I)
+       Ghost_I(1)  = limit_interpolation(Ghost, Cell_I, Distance_I)
     else
        Ghost_I(1) = Ghost
     endif
 
-    Ghost_I(2) = calc_face_value(FineCell_I(1:6), DoLimitIn = DoLimit)
-    Ghost_I(3) = calc_face_value(FineCell_I(3:8), DoLimitIn = DoLimit)
+    ! Interpolate G2 and G3 from fine edge values
+    Ghost_I(2) = calc_face_value(FineCell_I(1:6), DoLimit)
+    Ghost_I(3) = calc_face_value(FineCell_I(3:8), DoLimit)
 
   end subroutine get_ghost_for_coarse_blk
   !======================================================================
-  real function calc_edge_value(CellValue_II, DoLimitIn)
+  real function calc_edge_value(CellValue_II,DoLimitIn)
     ! For 3D, need more tests. 
     real, intent(in) :: CellValue_II(6,6)
     logical, optional, intent(in):: DoLimitIn
@@ -201,9 +220,9 @@ contains
     if(present(DoLimitIn)) DoLimit = DoLimitIn
 
     do i = iBegin, iEnd       
-       CellValue_I(i) = calc_face_value(CellValue_II(i,:), DoLimitIn = DoLimit)
+       CellValue_I(i) = calc_face_value(CellValue_II(i,:),DoLimit)
     enddo
-    calc_edge_value = calc_face_value(CellValue_I,DoLimitIn = DoLimit)
+    calc_edge_value = calc_face_value(CellValue_I,DoLimit)
   end function calc_edge_value
   !======================================================================
 
@@ -312,7 +331,7 @@ contains
     logical:: DoLimit
     real, parameter:: cpp=-45./2048, cp=105./512, &
          c0=945./1024, cm=-63./512, cmm=35./2048
-    integer, parameter:: Ipp_=1, Ip_=2, I2_=3, Im_=4, Imm_=5
+    integer, parameter:: Ipp_=1, Ip_=2, I_=3, Im_=4, Imm_=5
     real:: Temp, Distance_I(4)=(/-7,-3,1,5/)
     !----------------------------------------------------------------------
 
@@ -320,7 +339,7 @@ contains
     if(present(DoLimitIn)) DoLimit = DoLimitIn
 
     Temp = cpp*Cell_I(Ipp_) + cp*Cell_I(Ip_) + &
-         c0*Cell_I(I2_) + cm*Cell_I(Im_) + cmm*Cell_I(Imm_)        
+         c0*Cell_I(I_) + cm*Cell_I(Im_) + cmm*Cell_I(Imm_)        
     if(DoLimit) then
        interpolate_in_coarse_blk = limit_interpolation(Temp, Cell_I(Ipp_:Im_), Distance_I)
     else
@@ -338,8 +357,10 @@ contains
     use BATL_tree, ONLY: DiLevelNei_IIIB, iNodeNei_IIIB, iTree_IA, block_, &
          unset_, Proc_
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, nJ, nK, j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_
-
+         nI, nJ, nK, i0_,i2_,j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
+         jm2_,jm1_,nJm2_,nJm1_,nJp2_,nJp3_,km2_,km1_,nKm2_,nKm1_,nKp2_,&
+         nKp3_,im2_,im1_,nIm2_,nIm1_,nIp1_,nIp2_,nIp3_, i3_,j3_,k3_
+    
     integer, intent(in) :: iBlock, nVar
     real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -351,7 +372,7 @@ contains
     integer :: ip, im, jp, jm, kp, km, iVar, jpp, jmm, ipp, imm, kpp, kmm
 
     real :: FieldCoarse_VII(nVar,5,3), FieldFine_VI(nVar,3),Ghost_I(3)
-    integer, parameter:: Ipp_=1, Ip_=2, I2_=3, Im_=4, Imm_=5
+    integer, parameter:: Ipp_=1, Ip_=2, I_=3, Im_=4, Imm_=5
 
     integer:: iNode1, iNode2, iNode3, iNode0
     !-------------------------------------------------------------------------
@@ -395,34 +416,34 @@ contains
 
              !      Store the values closest to the block boundary
              !                     \ /
-             FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,0,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,0,jp,kp)
-             FieldCoarse_VII(:,I2_,1)  = Field1_VG(:,0,j2,k2)
-             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,0,jm,km)
-             FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,0,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,i0_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,i0_,jp,kp)
+             FieldCoarse_VII(:,I_,1)   = Field1_VG(:,i0_,j2,k2)
+             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,i0_,jm,km)
+             FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,i0_,jmm,kmm)
 
-             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,-1,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,-1,jp,kp)
-             FieldCoarse_VII(:,I2_,2)  = Field1_VG(:,-1,j2,k2)
-             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,-1,jm,km)
-             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,-1,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,im1_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,im1_,jp,kp)
+             FieldCoarse_VII(:,I_,2)   = Field1_VG(:,im1_,j2,k2)
+             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,im1_,jm,km)
+             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,im1_,jmm,kmm)
 
-             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,-2,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,-2,jp,kp)
-             FieldCoarse_VII(:,I2_,3)  = Field1_VG(:,-2,j2,k2)
-             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,-2,jm,km)
-             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,-2,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,im2_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,im2_,jp,kp)
+             FieldCoarse_VII(:,I_,3)   = Field1_VG(:,im2_,j2,k2)
+             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,im2_,jm,km)
+             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,im2_,jmm,kmm)
 
-             FieldFine_VI(:,1) = Field1_VG(:,1,j2,k2)
-             FieldFine_VI(:,2) = Field1_VG(:,2,j2,k2)
-             FieldFine_VI(:,3) = Field1_VG(:,3,j2,k2)
+             FieldFine_VI(:,1) = Field1_VG(:,1,  j2,k2)
+             FieldFine_VI(:,2) = Field1_VG(:,i2_,j2,k2)
+             FieldFine_VI(:,3) = Field1_VG(:,i3_,j2,k2)
 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VII(iVar,:,:), &
                      FieldFine_VI(iVar,:), Ghost_I)
-                Field_VG(iVar,0,j2,k2)  = Ghost_I(1)
-                Field_VG(iVar,-1,j2,k2) = Ghost_I(2)
-                Field_VG(iVar,-2,j2,k2) = Ghost_I(3)
+                Field_VG(iVar,i0_ ,j2,k2) = Ghost_I(1)
+                Field_VG(iVar,im1_,j2,k2) = Ghost_I(2)
+                Field_VG(iVar,im2_,j2,k2) = Ghost_I(3)
 
              enddo
 
@@ -463,34 +484,34 @@ contains
                 kpp = 7*k2 - 6*k1 -3; kmm = 8*k1 -7*k2 +4
              end if
 
-             FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,nI+1,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,nI+1,jp,kp)
-             FieldCoarse_VII(:,I2_,1)  = Field1_VG(:,nI+1,j2,k2)
-             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,nI+1,jm,km)
-             FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,nI+1,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,nIp1_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,nIp1_,jp,kp)
+             FieldCoarse_VII(:,I_,1)   = Field1_VG(:,nIp1_,j2,k2)
+             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,nIp1_,jm,km)
+             FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,nIp1_,jmm,kmm)
 
-             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,nI+2,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,nI+2,jp,kp)
-             FieldCoarse_VII(:,I2_,2)  = Field1_VG(:,nI+2,j2,k2)
-             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,nI+2,jm,km)
-             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,nI+2,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,nIp2_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,nIp2_,jp,kp)
+             FieldCoarse_VII(:,I_,2)   = Field1_VG(:,nIp2_,j2,k2)
+             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,nIp2_,jm,km)
+             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,nIp2_,jmm,kmm)
 
-             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,nI+3,jpp,kpp)
-             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,nI+3,jp,kp)
-             FieldCoarse_VII(:,I2_,3)  = Field1_VG(:,nI+3,j2,k2)
-             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,nI+3,jm,km)
-             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,nI+3,jmm,kmm)
+             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,nIp3_,jpp,kpp)
+             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,nIp3_,jp,kp)
+             FieldCoarse_VII(:,I_,3)   = Field1_VG(:,nIp3_,j2,k2)
+             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,nIp3_,jm,km)
+             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,nIp3_,jmm,kmm)
 
              FieldFine_VI(:,1) = Field1_VG(:,nI,j2,k2)
-             FieldFine_VI(:,2) = Field1_VG(:,nI-1,j2,k2)
-             FieldFine_VI(:,3) = Field1_VG(:,nI-2,j2,k2)
+             FieldFine_VI(:,2) = Field1_VG(:,nIm1_,j2,k2)
+             FieldFine_VI(:,3) = Field1_VG(:,nIm2_,j2,k2)
 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VII(iVar,:,:), &
                      FieldFine_VI(iVar,:), Ghost_I)
-                Field_VG(iVar,nI+1,j2,k2) = Ghost_I(1)
-                Field_VG(iVar,nI+2,j2,k2) = Ghost_I(2)
-                Field_VG(iVar,nI+3,j2,k2) = Ghost_I(3)
+                Field_VG(iVar,nIp1_,j2,k2) = Ghost_I(1)
+                Field_VG(iVar,nIp2_,j2,k2) = Ghost_I(2)
+                Field_VG(iVar,nIp3_,j2,k2) = Ghost_I(3)
              enddo
 
           end do; end do
@@ -531,33 +552,33 @@ contains
 
              ! Only works for 2D so far. 
              FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,ipp,j0_,k1)
-             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,ip,j0_,k1)
-             FieldCoarse_VII(:,I2_,1)  = Field1_VG(:,i2,j0_,k1)
-             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,im,j0_,k1)
+             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,ip, j0_,k1)
+             FieldCoarse_VII(:,I_,1)   = Field1_VG(:,i2, j0_,k1)
+             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,im, j0_,k1)
              FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,imm,j0_,k1)
 
-             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,ipp,j0_-1,k1)
-             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,ip,j0_-1,k1)
-             FieldCoarse_VII(:,I2_,2)  = Field1_VG(:,i2,j0_-1,k1)
-             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,im,j0_-1,k1)
-             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,imm,j0_-1,k1)
+             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,ipp,jm1_,k1)
+             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,ip, jm1_,k1)
+             FieldCoarse_VII(:,I_,2)   = Field1_VG(:,i2, jm1_,k1)
+             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,im, jm1_,k1)
+             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,imm,jm1_,k1)
 
-             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,ipp,j0_-2,k1)
-             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,ip,j0_-2,k1)
-             FieldCoarse_VII(:,I2_,3)  = Field1_VG(:,i2,j0_-2,k1)
-             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,im,j0_-2,k1)
-             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,imm,j0_-2,k1)
+             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,ipp,jm2_,k1)
+             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,ip, jm2_,k1)
+             FieldCoarse_VII(:,I_,3)   = Field1_VG(:,i2, jm2_,k1)
+             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,im, jm2_,k1)
+             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,imm,jm2_,k1)
 
-             FieldFine_VI(:,1) = Field1_VG(:,i2,j0_+1,k1)
-             FieldFine_VI(:,2) = Field1_VG(:,i2,j0_+2,k1)
-             FieldFine_VI(:,3) = Field1_VG(:,i2,j0_+3,k1)
+             FieldFine_VI(:,1) = Field1_VG(:,i2,1,k1)
+             FieldFine_VI(:,2) = Field1_VG(:,i2,j2_,k1)
+             FieldFine_VI(:,3) = Field1_VG(:,i2,j3_,k1)
 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VII(iVar,:,:), &
                      FieldFine_VI(iVar,:), Ghost_I)
-                Field_VG(iVar,i2,j0_,k2)  = Ghost_I(1)
-                Field_VG(iVar,i2,j0_-1,k2) = Ghost_I(2)
-                Field_VG(iVar,i2,j0_-2,k2) = Ghost_I(3)
+                Field_VG(iVar,i2,j0_ ,k2) = Ghost_I(1)
+                Field_VG(iVar,i2,jm1_,k2) = Ghost_I(2)
+                Field_VG(iVar,i2,jm2_,k2) = Ghost_I(3)
 
              enddo
 
@@ -598,33 +619,33 @@ contains
 
              ! Only works for 2D so far. 
              FieldCoarse_VII(:,Ipp_,1) = Field1_VG(:,ipp,nJp1_,k1)
-             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,ip,nJp1_,k1)
-             FieldCoarse_VII(:,I2_,1)  = Field1_VG(:,i2,nJp1_,k1)
-             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,im,nJp1_,k1)
+             FieldCoarse_VII(:,Ip_,1)  = Field1_VG(:,ip, nJp1_,k1)
+             FieldCoarse_VII(:,I_,1)   = Field1_VG(:,i2, nJp1_,k1)
+             FieldCoarse_VII(:,Im_,1)  = Field1_VG(:,im, nJp1_,k1)
              FieldCoarse_VII(:,Imm_,1) = Field1_VG(:,imm,nJp1_,k1)
 
-             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,ipp,nJp1_+1,k1)
-             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,ip,nJp1_+1,k1)
-             FieldCoarse_VII(:,I2_,2)  = Field1_VG(:,i2,nJp1_+1,k1)
-             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,im,nJp1_+1,k1)
-             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,imm,nJp1_+1,k1)
+             FieldCoarse_VII(:,Ipp_,2) = Field1_VG(:,ipp,nJp2_,k1)
+             FieldCoarse_VII(:,Ip_,2)  = Field1_VG(:,ip, nJp2_,k1)
+             FieldCoarse_VII(:,I_,2)   = Field1_VG(:,i2, nJp2_,k1)
+             FieldCoarse_VII(:,Im_,2)  = Field1_VG(:,im, nJp2_,k1)
+             FieldCoarse_VII(:,Imm_,2) = Field1_VG(:,imm,nJp2_,k1)
 
-             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,ipp,nJp1_+2,k1)
-             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,ip,nJp1_+2,k1)
-             FieldCoarse_VII(:,I2_,3)  = Field1_VG(:,i2,nJp1_+2,k1)
-             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,im,nJp1_+2,k1)
-             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,imm,nJp1_+2,k1)
+             FieldCoarse_VII(:,Ipp_,3) = Field1_VG(:,ipp,nJp3_,k1)
+             FieldCoarse_VII(:,Ip_,3)  = Field1_VG(:,ip, nJp3_,k1)
+             FieldCoarse_VII(:,I_,3)   = Field1_VG(:,i2, nJp3_,k1)
+             FieldCoarse_VII(:,Im_,3)  = Field1_VG(:,im, nJp3_,k1)
+             FieldCoarse_VII(:,Imm_,3) = Field1_VG(:,imm,nJp3_,k1)
 
-             FieldFine_VI(:,1) = Field1_VG(:,i2,nJ,k1)
-             FieldFine_VI(:,2) = Field1_VG(:,i2,nJ-1,k1)
-             FieldFine_VI(:,3) = Field1_VG(:,i2,nJ-2,k1)
+             FieldFine_VI(:,1) = Field1_VG(:,i2,nJ,   k1)
+             FieldFine_VI(:,2) = Field1_VG(:,i2,nJm1_,k1)
+             FieldFine_VI(:,3) = Field1_VG(:,i2,nJm2_,k1)
 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VII(iVar,:,:), &
                      FieldFine_VI(iVar,:), Ghost_I)
-                Field_VG(iVar,i2,nJp1_  ,k2) = Ghost_I(1)
-                Field_VG(iVar,i2,nJp1_+1,k2) = Ghost_I(2)
-                Field_VG(iVar,i2,nJp1_+2,k2) = Ghost_I(3)
+                Field_VG(iVar,i2,nJp1_, k2) = Ghost_I(1)
+                Field_VG(iVar,i2,nJp2_, k2) = Ghost_I(2)
+                Field_VG(iVar,i2,nJp3_, k2) = Ghost_I(3)
              enddo
           end do; end do
        end do; end do
