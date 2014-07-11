@@ -1105,18 +1105,18 @@ The default value is DoReflectInnerB1 false, which makes B1 float.
 
 <command name="BUFFERGRID">
 	 <parameter name="nRBuff" type="integer" min="2" default="2" />
-	 <parameter name="nPhiBuff" type="integer" min="2" default="2" />
-	 <parameter name="nThetaBuff" type="integer" min="2" default="2" />
-	 <parameter name="rBuffMin" type="real" min="1" default="2" />
-	 <parameter name="rBuffMax" type="real" min="1" default="2" />
+	 <parameter name="nPhiBuff" type="integer" min="2" default="90" />
+	 <parameter name="nThetaBuff" type="integer" min="2" default="45" />
+	 <parameter name="rBuffMin" type="real" min="1" default="19" />
+	 <parameter name="rBuffMax" type="real" min="$rBuffMin" default="21" />
 	 <parameter name="PhiBuffMin" type="real" min="0" max="360"
-	 	    		      		  	   default="2" />
-	 <parameter name="PhiBuffMax" type="real" min="0" max="360"
-	 	    		      		  	   default="2" />
-	 <parameter name="LatBuffMin" type="real" min="0" max="180"
-	 	    		      		  	   default="2" />
-         <parameter name="LatBuffMax" type="real" min="1" max="180"  
-	 	    		      		  	   default="2" />
+	 	    		      		  	   default="0" />
+	 <parameter name="PhiBuffMax" type="real" min="$PhiBuffMin" max="360"
+	 	    		      		  	   default="360" />
+	 <parameter name="LatBuffMin" type="real" min="-90" max="90"
+	 	    		      		  	   default="-90" />
+         <parameter name="LatBuffMax" type="real" min="$LatBuffMin" max="90"  
+	 	    		      		  	   default="90" />
 
 #BUFFERGRID
 2	nRBuff
@@ -1129,10 +1129,32 @@ The default value is DoReflectInnerB1 false, which makes B1 float.
 -90.0	LatBuffMin
 90.0	LatBuffMax
 
-Define the radius, angular extent and the grid resolution of the uniform 
-spherical buffer grid used to pass information between two coupled components running BATSRUS. The parameters nRBuff, nPhiBuff and nThetaBuff determine the number of points in the radial, azimuthal and latitudinal directions, respectively. The parameters rBuffMin and rBuffMax determine the inner and outer radii of the spherical shell. PhiBuffMin, PhiBuffMax, LatBuffMin and LatBuffMax determine the limits (in degrees) of the buffer grid in the azimuthal and latitudinal directions. When used to pass information from the SC(IH) component to the IH(OH) component, the entire shperical shell should be used (alternativly, use the #HELIOBUFFERGRID command), but in certain application only a part of the shell may be needed. The buffer should be placed in a region where the two components overlap, and the grid resolution should be similar to the grid resolution of the coarser of the two component grids.
-This command can only be used in the first session by the IH(OH) component.  The buffer grid will only be used if 'buffergrid' is chosen for TypeBcInner in the #INNERBOUNDARY command of the target component.
-Default values are shown above.
+Define the radius, angular extent and the grid resolution of the
+uniform spherical buffer grid used to pass information between two
+coupled components running BATSRUS. 
+
+The parameters nRBuff, nPhiBuff and nThetaBuff determine the number of
+points in the radial, azimuthal and latitudinal directions,
+respectively.
+
+The parameters rBuffMin and rBuffMax determine the inner and outer
+radii of the spherical shell.
+
+PhiBuffMin, PhiBuffMax, LatBuffMin and LatBuffMax determine the
+limits (in degrees) of the buffer grid in the azimuthal and
+latitudinal directions. 
+
+When used to pass information from the SC(IH)
+component to the IH(OH) component, the entire shperical shell should
+be used (alternativly, use the #HELIOBUFFERGRID command), but in
+certain application only a part of the shell may be needed. The buffer
+should be placed in a region where the two components overlap, and the
+grid resolution should be similar to the grid resolution of the
+coarser of the two component grids.  This command can only be used in
+the first session by the IH(OH) component.  The buffer grid will only
+be used if 'buffergrid' is chosen for TypeBcInner in the
+#INNERBOUNDARY command of the target component.  Default values are
+shown above.
 
 </command>
 
