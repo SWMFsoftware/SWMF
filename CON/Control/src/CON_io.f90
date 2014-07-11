@@ -23,7 +23,7 @@ module CON_io
   use ModReadParam
   use CON_variables
   use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, check_dir, &
-       split_string, lower_case
+       split_string
 
   implicit none
 
@@ -75,8 +75,8 @@ contains
 
     !USES:
     use CON_coupler, ONLY: &
-         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, DoCoupleOnTime_C, &
-         IsTightCouple_CC, IsTightCouple2_CC
+         Couple_CC, MaxCouple, nCouple, iCompCoupleOrder_II, &
+         DoCoupleOnTime_C, IsTightCouple_CC
     use CON_physics
 
     implicit none
@@ -439,24 +439,35 @@ contains
              call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
           end if
 
-       case("#COUPLETIGHT1", "#COUPLETIGHT2")
+       case("#COUPLE1TIGHT", "#COUPLE2TIGHT")
           call read_var('NameMaster', NameComp1)
           iComp1 = i_comp(NameComp1)
           if(.not.use_comp(iComp1)) then
-             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR for NameMaster: '// &
+             if(is_proc0()) write(*,*) NameSub//&
+                  ' SWMF_ERROR for NameMaster: '// &
                   NameComp1//' is OFF or not registered in '//NameMapFile
              RETURN
           end if
           call read_var('NameSlave', NameComp2)
           iComp2 = i_comp(NameComp2)
           if(.not.use_comp(iComp2))then
-             if(is_proc0()) write(*,*) NameSub//' SWMF_ERROR for NameSlave: '// &
+             if(is_proc0()) write(*,*) NameSub// &
+                  ' SWMF_ERROR for NameSlave: '// &
                   NameComp2//' is OFF or not registered in '//NameMapFile
              RETURN
           end if
           call read_var('IsTightCouple', IsTightCouple_CC(iComp1,iComp2))
-          IsTightCouple2_CC(iComp1,iComp2) = IsTightCouple_CC(iComp1,iComp2) .and. &
-               NameCommand == "#COUPLETIGHT2"
+          Couple_CC(iComp1,iComp2) % DoThis = IsTightCouple_CC(iComp1,iComp2)
+          Couple_CC(iComp2,iComp1) % DoThis = IsTightCouple_CC(iComp1,iComp2) &
+               .and. NameCommand == "#COUPLE2TIGHT"
+
+          ! Make sure that only tight coupling occurs
+          Couple_CC(iComp1,iComp2) % Dn    = -1
+          Couple_CC(iComp1,iComp2) % Dt    = -1.0
+          Couple_CC(iComp1,iComp2) % tNext = huge(1.0)
+          Couple_CC(iComp2,iComp1) % Dn = -1
+          Couple_CC(iComp2,iComp1) % Dt = -1.0
+          Couple_CC(iComp2,iComp1) % tNext = huge(1.0)
 
        case("#COUPLETIME")
           call read_var('NameComp',NameComp)
@@ -628,6 +639,10 @@ contains
 
     do iComp1=1,MaxComp
        do iComp2=1,MaxComp
+
+          ! Do not check tight couplings (it is done differently)
+          if(IsTightCouple_CC(iComp1,iComp2) .or. &
+               IsTightCouple_CC(iComp2,iComp1)) CYCLE
 
           if(is_proc0())call check_freq(&
                'SWMF couple '//NameComp_I(iComp1)//'->'//NameComp_I(iComp2), &

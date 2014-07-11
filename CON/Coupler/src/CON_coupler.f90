@@ -96,9 +96,8 @@ module CON_coupler
   ! Should do coupling limit the time step
   logical, public :: DoCoupleOnTime_C(MaxComp) = .true.
 
-  ! Tight coupling parameters for one-way and two-way
+  ! Is this a tight coupling?
   logical, public :: IsTightCouple_CC(MaxComp,MaxComp)  = .false.
-  logical, public :: IsTightCouple2_CC(MaxComp,MaxComp) = .false.
 
   !\
   ! Variables related to share/Library/src/ModProcessVarName

@@ -17,8 +17,7 @@ module CON_session
   use CON_couple_all, ONLY: couple_two_comp, couple_all_init
   use CON_coupler, ONLY: &
        check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
-       DoCoupleOnTime_C, &
-       IsTightCouple_CC, IsTightCouple2_CC
+       DoCoupleOnTime_C, IsTightCouple_CC
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart
   use CON_time, ONLY: iSession, DoTimeAccurate, &
@@ -26,6 +25,7 @@ module CON_session
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax
   use ModFreq, ONLY: is_time_to, FreqType
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
+  use CON_transfer_data, ONLY: transfer_real
 
   implicit none
 
@@ -187,6 +187,12 @@ contains
     ! Indexes for tight coupling
     integer:: lCompSlave, iCompMaster, iCompSlave
 
+    ! Time info transferred from master to slave
+    real:: tMaster
+
+    ! Check if a component just ran
+    logical:: DoneRun_C(MaxComp)
+    
     character(len=*), parameter :: NameSub=NameMod//'::do_session'
     !--------------------------------------------------------------------------
 
@@ -197,7 +203,7 @@ contains
        if(present(tCoupleExtra_C)) &
             write(*,*)NameSub,'tCoupleExtra_C=',tCoupleExtra_C(1:nComp)
     end if
-    
+
     !BOC
     !\
     ! If no component uses this PE and init_session did not stop
@@ -224,8 +230,10 @@ contains
 
     TIMELOOP: do
 
-       if(DoTestMe)write(*,*)NameSub,' nIteration, tSimulationMax=',&
-            nIteration, tSimulationMax
+       if(DoTestMe)write(*,*)NameSub,&
+            ' nIteration, tSimulation, tSimulationMax=',&
+            nIteration, tSimulation, tSimulationMax
+
        !\
        ! Stop this session if stopping conditions are fulfilled
        !/
@@ -273,7 +281,6 @@ contains
        if(DoTimeAccurate)then
           do lComp = 1, nComp
              iComp = i_comp(lComp)
-             if(.not.IsProc_C(iComp)) CYCLE
 
              ! Find the time of the next coupling
              tSimulationCouple = min( &
@@ -281,7 +288,7 @@ contains
                   MASK  =Couple_CC(iComp,:) % DoThis), &
                   minval(Couple_CC(:,iComp) % tNext, &
                   MASK  =Couple_CC(:,iComp) % DoThis))
-             
+
              ! Check for external coupling if present
              if(present(tCoupleExtra_C))then
                 if(tCoupleExtra_C(iComp) > 0.0) &
@@ -294,7 +301,7 @@ contains
 
              ! Find the time of next save restart, stop check or end of session
              tSimulationLimit = huge(1.0)
-             
+
              if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
                   tSimulationLimit = min(tSimulationLimit, SaveRestart % tNext)
 
@@ -331,36 +338,36 @@ contains
                   tSimulationLimit_C(iComp)
 
           end do
-       end if
 
-       ! Loop through potential pairs of Master-Slave components
-       do lComp = 1, nComp
-          iCompMaster = i_comp(lComp)          
-          do lCompSlave = 1, nComp
-             iCompSlave = i_comp(lCompSlave)
+          ! Loop through potential tight couplings and ensure that
+          ! they use the same time step limit
+          do iCouple = 1, nCouple
 
-             ! Exclude other processors
-             if(.not.(IsProc_C(iCompMaster) .or. IsProc_C(iCompSlave))) CYCLE
+             iCompMaster = iCompCoupleOrder_II(1,iCouple)
+             iCompSlave  = iCompCoupleOrder_II(2,iCouple)
 
              ! Check if there is a master-slave relationship
              if(.not. IsTightCouple_CC(iCompMaster,iCompSlave)) CYCLE
 
-             ! Couple Master to Slave
-             call couple_two_comp(iCompMaster, iCompSlave, tSimulation)
+             ! Exclude other processors
+             if(.not.(IsProc_C(iCompMaster) .or. IsProc_C(iCompSlave))) CYCLE
 
-             ! Couple Slave to Master if 2-way coupling is requested
-             if(IsTightCouple2_CC(iCompMaster,iCompSlave)) &
-                  call couple_two_comp(iCompSlave, iCompMaster, tSimulation)
-
-             if(DoTestMe)write(*,*)NameSub, &
-                  ' coupling master, slave, time, two-way=', &
-                  iCompMaster, iCompSlave, tSimulation, &
-                  IsTightCouple2_CC(iCompMaster, iCompSlave)
-
+             ! Make sure that slaves and master have the same limiting
+             ! This loop may need to be iterated if the slave can have 
+             ! extra couplings
+             tMaster = min( &
+                  tSimulationLimit_C(iCompMaster), &
+                  tSimulationLimit_C(iCompSlave))
+             tSimulationLimit_C(iCompMaster) = tMaster
+             tSimulationLimit_C(iCompSlave)  = tMaster
           end do
-       end do
+
+       end if
+
 
        if(DoTestMe)write(*,*)NameSub,' advance solution'
+
+       DoneRun_C = .false.
 
        ! Advance solution
        do lComp = 1, nComp
@@ -377,6 +384,8 @@ contains
                 call run_comp(iComp, &
                      tSimulation_C(iComp), tSimulationLimit_C(iComp))
 
+                DoneRun_C(iComp) = .true.
+
                 if(DoTestMe)write(*,*)NameSub,' run ',NameComp_I(iComp),&
                      ' with tSimulation and Limit=',tSimulation_C(iComp),&
                      tSimulationLimit_C(iComp)
@@ -389,6 +398,8 @@ contains
                 ! tSimulationLimit=Huge since there is no limit on time step
                 call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
 
+                DoneRun_C(iComp) = .true.
+
                 ! There is no progress in time
                 !tSimulation_C(iComp) = tSimulation
 
@@ -399,6 +410,48 @@ contains
 
        end do
 
+       if(DoTimeAccurate)then
+          ! Loop through potential tight couplings
+          do iCouple = 1, nCouple
+
+             iCompMaster = iCompCoupleOrder_II(1,iCouple)
+             iCompSlave  = iCompCoupleOrder_II(2,iCouple)
+
+             ! Check if there is a master-slave relationship
+             if(.not. IsTightCouple_CC(iCompMaster,iCompSlave)) CYCLE
+
+             ! Exclude other processors
+             if(.not.(IsProc_C(iCompMaster) .or. IsProc_C(iCompSlave))) CYCLE
+
+             ! Check if the master-slave pair did indeed run
+             ! The simulation times for master and slave must be identical
+             if(IsProc_C(iCompMaster) .and. .not. DoneRun_C(iCompMaster)) CYCLE
+             if(IsProc_C(iCompSlave)  .and. .not. DoneRun_C(iCompSlave)) CYCLE
+
+             ! Force slave simulation time to agree with master
+             if(IsProc_C(iCompMaster)) tMaster = tSimulation_C(iCompMaster)
+             call transfer_real(iCompMaster, iCompSlave, tMaster, &
+                  UseSourceRootOnly = .false.)
+             if(IsProc_C(iCompSlave)) tSimulation_C(iCompSlave) = tMaster
+
+             ! Update simulation time on these processors
+             tSimulation = min(&
+                  minval(tSimulation_C,     MASK=IsProc_C), &
+                  minval(tSimulationWait_C, MASK=IsProc_C))
+
+             ! Couple Master to Slave
+             call couple_two_comp(iCompMaster, iCompSlave, tSimulation)
+
+             ! Couple Slave to Master if 2-way coupling is requested
+             if(Couple_CC(iCompSlave,iCompMaster) % DoThis) &
+                  call couple_two_comp(iCompSlave, iCompMaster, tSimulation)
+
+             if(DoTestMe)write(*,*)NameSub, &
+                  ' coupling master, slave, time, two-way=', &
+                  iCompMaster, iCompSlave, tSimulation, &
+                  Couple_CC(iCompSlave,iCompMaster) % DoThis
+          end do
+       end if
        !\
        ! tSimulation for CON is the minimum of the simulation times of the
        ! components present on this processor
@@ -421,12 +474,15 @@ contains
           iCompSource = iCompCoupleOrder_II(1,iCouple)
           iCompTarget = iCompCoupleOrder_II(2,iCouple)
 
-          ! Couple iCompSource --> iCompTarget
-          if( (IsProc_C(iCompSource).or.IsProc_C(iCompTarget)) .and. &
-               is_time_to(Couple_CC(iCompSource, iCompTarget),&
+          ! Exclude other processors
+          if(.not.(IsProc_C(iCompSource) .or. IsProc_C(iCompTarget))) CYCLE
+
+          if(is_time_to(Couple_CC(iCompSource, iCompTarget),&
                nStep, tSimulation, DoTimeAccurate))then
+
              if(DoTestMe)write(*,*)NameSub, &
                   ' coupling ',iCompSource,iCompTarget,tSimulation
+
              call couple_two_comp(iCompSource, iCompTarget, tSimulation)
           end if
 
