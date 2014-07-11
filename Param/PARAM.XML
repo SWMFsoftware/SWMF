@@ -889,6 +889,68 @@ That can improve the parallelization and efficiency.
 The default is no shifting.
 </command>
 
+<command name="COUPLE1TIGHT" multiple="T">
+	<parameter name="NameMaster" type="string"  length="2"    />
+	<parameter name="NameSlave"  type="string"  length="2"    />
+	<parameter name="DoCouple"   type="logical" default="T"   />
+	<rule expr="$_UsedComp{$NameMaster} or not $_Components">
+		Master component must be registered and ON.
+	</rule>
+	<rule expr="$_UsedComp{$NameSlave} or not $_Components">
+		Slave component must be registered and ON.
+	</rule>
+	<rule expr="$NameMaster ne $NameSlave">
+		Master and slave components must be different.
+	</rule>
+
+#COUPLE1TIGHT
+GM			NameMaster
+PT			NameSlave
+T			DoCouple
+
+Couple two components tightly one-way. Tight coupling means that the
+two components must take identical time steps, and they are coupled 
+every time step.
+
+The NameMaster and NameSlave parameters contain the two-character 
+component ID-s for the master and slave components. 
+The tight coupling can be switched on or off with the DoCouple parameter.
+Use the COUPLE2TIGHT command for two-way coupling.
+
+The default is no coupling between the components.
+</command>
+
+<command name="COUPLE2TIGHT" multiple="T">
+	<parameter name="NameMaster" type="string"  length="2"    />
+	<parameter name="NameSlave"  type="string"  length="2"    />
+	<parameter name="DoCouple"   type="logical" default="T"   />
+	<rule expr="$_UsedComp{$NameMaster} or not $_Components">
+		Master component must be registered and ON.
+	</rule>
+	<rule expr="$_UsedComp{$NameSlave} or not $_Components">
+		Slave component must be registered and ON.
+	</rule>
+	<rule expr="$NameMaster ne $NameSlave">
+		Master and slave components must be different.
+	</rule>
+
+#COUPLE2TIGHT
+GM			NameMaster
+PC			NameSlave
+T			DoCouple
+
+Couple two components tightly two-way. Tight coupling means that the
+two components must take identical time steps, and they are coupled 
+every time step.
+
+The NameMaster and NameSlave parameters contain the two-character 
+component ID-s for the master and slave components. 
+The tight coupling can be switched on or off with the DoCouple parameter.
+Use the COUPLE1TIGHT command for one-way coupling.
+
+The default is no coupling between the components.
+</command>
+
 <command name="COUPLETIME" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
 		<option name="SC" default="T"/>
