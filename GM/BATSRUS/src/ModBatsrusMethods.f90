@@ -388,16 +388,8 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   real :: AmrTime = 0
   !---------------------------------------------------------------------------
-  ! Eliminate very small timesteps at the end
-  if(Time_Simulation + 1e-6*Dt*No2Si_V(UnitT_) >= TimeSimulationLimit)then
-
-     if(iProc == 0) write(*,*) '!!!', NameSub, &
-          ' adjusting, Time_Simulation, TimeSimulationLimit, dt=', &
-          Time_Simulation, TimeSimulationLimit, dt
-
-     Time_Simulation = TimeSimulationLimit
-     RETURN
-  end if
+  ! Check if time limit is reached (to be safe)
+  if(Time_Simulation >= TimeSimulationLimit) RETURN
 
   ! Check if steady state is achieved
   if(.not.time_accurate .and. UsePartSteady .and. IsSteadyState)then
@@ -537,6 +529,16 @@ subroutine BATS_advance(TimeSimulationLimit)
      ! Write plotfiles after AMR if required
      if(save_plots_amr)call BATS_save_files('AMRPLOTS')
 
+  end if
+
+  if(  Time_Simulation < TimeSimulationLimit .and. &
+       Time_Simulation + 1e-6*Dt*No2Si_V(UnitT_) >= TimeSimulationLimit)then
+
+     if(iProc == 0) write(*,*) '!!!', NameSub, &
+          ' final adjusting, Time_Simulation, TimeSimulationLimit, dt=', &
+          Time_Simulation, TimeSimulationLimit, dt
+
+     Time_Simulation = TimeSimulationLimit
   end if
 
 end subroutine BATS_advance
