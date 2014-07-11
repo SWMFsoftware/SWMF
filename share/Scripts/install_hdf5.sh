@@ -595,9 +595,7 @@ function build_hdf5
     # configure, we wrap the invokation in 'sh -c "..."' syntax
     echo "Invoking command to configure HDF5"
     # HDF5 is not supported on OSX but it works that is the reason for the --enable-unsupported flag 
-    echo "./configure CC="${C_COMPILER} " FC="${COMPILEF90} " --enable-fortran --enable-unsupported
-    --prefix="${HDF5INSTALLDIR} ${cf_szip}
- 
+    echo "./configure CC="${C_COMPILER} " FC="${COMPILEF90} " --enable-parallel --enable-fortran --enable-unsupported --prefix="${HDF5INSTALLDIR} ${cf_szip}
         ./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported --prefix=${HDF5INSTALLDIR} ${cf_szip}
     if [[ $? != 0 ]] ; then
        echo "HDF5 configure failed.  Giving up"
