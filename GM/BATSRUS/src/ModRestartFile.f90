@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModRestartFile
 
@@ -375,10 +375,14 @@ contains
     write(unit_tmp,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#NORMALIZATION'
-    write(unit_tmp,'(a)')'READ'
-    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
-    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
-    write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
+    if(TypeNormalization == "NONE")then
+       write(unit_tmp,'(a)')'NONE'
+    else
+       write(unit_tmp,'(a)')'READ'
+       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
+       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
+       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
+    end if
     write(unit_tmp,*)
     write(unit_tmp,'(a)')'#PLOTFILENAME'
     write(unit_tmp,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
