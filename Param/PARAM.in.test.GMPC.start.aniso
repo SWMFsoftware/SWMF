@@ -1,16 +1,21 @@
 #ECHO
 T
 
-#COMPONENT
-GM                      NameComp
-T                       UseComp
+#DESCRIPTION
+Run GM and PC in time accurate mode
 
-#COMPONENT
-PC                      NameComp
-T                       UseComp
+#PLANET
+NONE
 
-#TIMEACCURATE
-T			DoTimeAccurate
+#SAVERESTART
+T                        DoSaveRestart 
+-1                       DnSaveRestart 
+2.56                     DtSaveRestart
+
+#COUPLE2TIGHT
+GM			NameCompMaster
+PC			NameCompSlave
+T                       DoCouple
 
 #PROGRESS
 1			DnShowProgressShort
@@ -311,41 +316,8 @@ PC/plots				SaveDirName
 
 #END_COMP PC -----------------------------------------------------------------
 
-
-#COUPLE2
-GM			NameComp1
-PC			NameComp2
-1                       DnCouple
-1.28                    Dtcouple
-
-#DESCRIPTION
-Run GM and IE in time accurate mode
-
-#PLANET
-NONE
-
-#SAVERESTART
-T                       DoSaveRestart 
-2                       DnSaveRestart 
-1.28                     DtSaveRestart
-
-#STARTTIME
-2000			iYear
-3			iMonth
-21			iDay
-10			iHour
-45			iMinute
-0			iSecond
-0.0			FracSecond
-
-#IDEALAXES
-! align rotation and magnetic axes with z axis
-
-#ROTATION
-F			UseRotation
-
 #STOP
--8			MaxIter
+-1			MaxIter
 5.12			TimeMax
 
 

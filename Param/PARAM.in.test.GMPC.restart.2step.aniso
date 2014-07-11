@@ -1,24 +1,23 @@
+#ECHO
+T
+
 ! Restart header for SWMF
 #INCLUDE
 RESTART.in		NameRestartFile
 
-#ECHO
-T
-
-#COMPONENT
-GM                      NameComp
-T                       UseComp
-
-#COMPONENT
-PC                      NameComp
-T                       UseComp
-
-#TIMEACCURATE
-T			DoTimeAccurate
-
 #PROGRESS
 1			DnShowProgressShort
 1			DnShowProgressLong
+
+#SAVERESTART
+T                       DoSaveRestart 
+2                       DnSaveRestart 
+5.12                    DtSaveRestart
+
+#COUPLE2TIGHT
+GM			NameCompMaster
+PC			NameCompSlave
+T                       DoCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -35,12 +34,6 @@ Waves and GEM, Yingjuan Ma
        8                              nJ
        1                              nK
      100                     MinBlockALL
-
-#IOUNITS
-NONE			TypeIoUnit
-
-#NORMALIZATION
-NONE			TypeNormalization
 
 #PLASMA
 1.0             FluidMass [amu]
@@ -113,10 +106,6 @@ raw			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#SAVEINITIAL
-T			DoSaveInitial
-
-
 #SAVEPLOT
 1
 z=0 var idl_ascii       StringPlot
@@ -141,7 +130,7 @@ Wave					SimulationName
 hallmhd					fluidcoupling (only with BATSRUS)
 
 #RESTART
-T					doRrestart
+T					DoRrestart
 PC/restartIN				RestartDirName
 
 #NSYNC
@@ -223,31 +212,6 @@ PC/plots				SaveDirName
 
 #END_COMP PC -----------------------------------------------------------------
 
-
-#COUPLE2
-GM			NameComp1
-PC			NameComp2
-1                       DnCouple
-1.28                    Dtcouple
-
-#DESCRIPTION
-Run GM and IE in time accurate mode
-
-
-#SAVERESTART
-T                       DoSaveRestart 
-2                       DnSaveRestart 
-5.12                    DtSaveRestart
-
-
-#IDEALAXES
-! align rotation and magnetic axes with z axis
-
-#ROTATION
-F			UseRotation
-
 #STOP
 -8			MaxIter
 5.12			TimeMax
-
-
