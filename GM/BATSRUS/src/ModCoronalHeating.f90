@@ -1699,11 +1699,13 @@ contains
           Qtotal = CoronalHeating
        end if
 
-       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
-
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(iP_I(IonFirst_),i,j,k,iBlock), 1e-15) &
-            *State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)/Ne
+            /max(State_VGB(iP_I(IonFirst_),i,j,k,iBlock), 1e-15)
+
+       if(UseMultiIon)then
+          Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
+          TeByTp = TeByTp*State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)/Ne
+       end if
 
        if(UseB0) then
           B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -1748,16 +1750,16 @@ contains
 
           EkinCascade = 1.0/sqrt(LperpInvGyroRad)
 
-          ! Alfven ratio at ion gyro scale under the assumption that the
-          ! kinetic and magnetic fluctuation energies at the Lperp scale are
-          ! near equipartition (with a full wave reflection in the transition
-          ! region this would not be true)
-          AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
-
           if(iFluid == IonFirst_)then
              DeltaU = sqrt(Ewave/State_VGB(iRhoIon_I(1),i,j,k,iBlock) &
                   *EkinCascade)
           else
+             ! Alfven ratio at ion gyro scale under the assumption that the
+             ! kinetic and magnetic fluctuation energies at the Lperp scale are
+             ! near equipartition (with a full wave reflection in the
+             ! transition region this would not be true)
+             AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
+
              ! difference bulk speed between ions and protons
              Udiff_D = &
                   State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k,iBlock) &
@@ -1766,6 +1768,7 @@ contains
                   /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
              Upar = sum(Udiff_D*B_D)/B
              Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+
              DeltaU = sqrt(max((AlfvenRatio + (Upar/Valfven)**2)/AlfvenRatio &
                   *Ewave - 2.0*(Upar/Valfven)*(EwavePlus - EwaveMinus) &
                   /sqrt(AlfvenRatio), 0.0) &
