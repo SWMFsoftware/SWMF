@@ -919,7 +919,7 @@ module ModCoronalHeating
   ! Dimensionless parameters for stochastic heating
   logical :: UseStochasticHeating = .false.
   real :: StochasticExponent = 0.34
-  real :: StochasticAmplitude = 0.75
+  real :: StochasticAmplitude = 0.18
 
   logical,private:: DoInit = .true. 
 
@@ -1670,16 +1670,21 @@ contains
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
+    use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, IonFirst_, &
+         iRho_I, iRhoIon_I, iRhoUxIon_I, iRhoUx_I, iRhoUz_I, iRhoUzIon_I, iP_I
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
     real, intent(out) :: QPerQtotal_I(IonFirst_:IonLast_), &
          QparPerQtotal_I(IonFirst_:IonLast_), QePerQtotal
 
-    real :: Qtotal
-    real :: TeByTp, B2, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
-    real :: WaveLarge
-    real :: DampingElectron, DampingPar, DampingPerp, DampingTotal
+    integer :: iFluid
+    real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
+    real :: Ne, B_D(3), B, B2, InvGyroRadius, AlfvenRatio, DeltaU, Epsilon
+    real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
+    real :: Ewave, EwavePlus, EwaveMinus, EkinCascade
+    real :: DampingElectron, DampingPar_I(IonFirst_:IonLast_)
+    real :: DampingPerp_I(IonFirst_:IonLast_), DampingTotal
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
@@ -1694,64 +1699,103 @@ contains
           Qtotal = CoronalHeating
        end if
 
+       Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
+
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(p_,i,j,k,iBlock), 1e-15)
+            /max(State_VGB(iP_I(IonFirst_),i,j,k,iBlock), 1e-15) &
+            *State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)/Ne
 
        if(UseB0) then
-          B2 = sum((B0_DGB(:,i,j,k,iBlock)+State_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
+          B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
        else
-          B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+          B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end if
-       BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/max(B2, 1e-30)
-       BetaProton = 2.0*State_VGB(p_,i,j,k,iBlock)/max(B2, 1e-30)
+       B2 = max(sum(B_D**2), 1e-30)
+       B = sqrt(B2)
+
+       BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
+       BetaProton = 2.0*State_VGB(iP_I(IonFirst_),i,j,k,iBlock)/B2
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
        ! waves contributes to electron and parallel proton heating
        DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
             *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
-       DampingPar = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
+       DampingPar_I(IonFirst_) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
             *exp(-1.3/max(BetaProton, 1.0e-8))
 
-       ! Nonlinear damping/stochastic heating to perpendicular proton heating
-       if(UseAnisoPressure)then
-          Pperp = 0.5*(3*State_VGB(p_,i,j,k,iBlock) &
-               - State_VGB(Ppar_,i,j,k,iBlock))
-       else
-          Pperp = State_VGB(p_,i,j,k,iBlock)
-       end if
+       if(UseMultiIon) DampingPar_I(IonFirst_+1:IonLast_) = 0.0
 
-       ! The following is the fourth sqrt of Lperp by proton gyroradius
-       LperpInvGyroRad = sqrt(sqrt(LperpTimesSqrtB* &
-            sqrt(sqrt(B2)*State_VGB(Rho_,i,j,k,iBlock)/(2.0*Pperp)) &
-            /IonMassPerCharge))
+       EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
+       EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
+       Ewave = EwavePlus + EwaveMinus
 
-       ! Extract the Alfven wave energy density of the dominant wave
-       WaveLarge = maxval(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+       do iFluid = IonFirst_, IonLast_
 
-       ! We note that if anistropic pressure is correctly included in
-       ! the Alfven wave transport equation than the relationship between
-       ! the wave energy density and velocity perturbation squared changes
-       ! to: E_w = 0.5*rho*<\delta u^2> (1 + 1/A), where <.> is the
-       ! ensemble average and A = 1 - (Ppar - Pperp)/B^2 in normalized
-       ! units, resulting in a slightly different expression below.
+          if(UseAnisoPressure)then
+             ! Does not yet work with multi-ion
+             Pperp = 0.5*(3*State_VGB(p_,i,j,k,iBlock) &
+                  - State_VGB(Ppar_,i,j,k,iBlock))
+          else
+             Pperp = State_VGB(iP_I(iFluid),i,j,k,iBlock)
+          end if
 
-       DampingPerp = 0.18*WaveLarge*sqrt(WaveLarge*B2/(2.0*Pperp)) &
-            /IonMassPerCharge/max(Qtotal*LperpInvGyroRad**3,1e-30) &
-            *exp(-StochasticExponent &
-            *sqrt(2.0*Pperp/max(WaveLarge,1e-15))*LperpInvGyroRad)
+          ! Perpendicular ion thermal speed
+          Vperp = sqrt(2.0*Pperp/State_VGB(iRho_I(iFluid),i,j,k,iBlock))
+
+          InvGyroRadius = &
+               B/(IonMassPerCharge*MassIon_I(iFluid)/ChargeIon_I(iFluid))/Vperp
+          LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
+
+          EkinCascade = 1.0/sqrt(LperpInvGyroRad)
+
+          ! Alfven ratio at ion gyro scale under the assumption that the
+          ! kinetic and magnetic fluctuation energies at the Lperp scale are
+          ! near equipartition (with a full wave reflection in the transition
+          ! region this would not be true)
+          AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
+
+          if(iFluid == IonFirst_)then
+             DeltaU = sqrt(Ewave/State_VGB(iRhoIon_I(1),i,j,k,iBlock) &
+                  *EkinCascade)
+          else
+             ! difference bulk speed between ions and protons
+             Udiff_D = &
+                  State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k,iBlock) &
+                  /State_VGB(iRho_I(iFluid),i,j,k,iBlock) &
+                  -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
+                  /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+             Upar = sum(Udiff_D*B_D)/B
+             Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+             DeltaU = sqrt(max((AlfvenRatio + (Upar/Valfven)**2)/AlfvenRatio &
+                  *Ewave - 2.0*(Upar/Valfven)*(EwavePlus - EwaveMinus) &
+                  /sqrt(AlfvenRatio), 0.0) &
+                  *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+          end if
+
+          Epsilon = DeltaU/Vperp
+
+          ! Nonlinear damping/stochastic heating to perpendicular ion heating
+          DampingPerp_I(iFluid) = StochasticAmplitude*InvGyroRadius &
+               *State_VGB(iRho_I(iFluid),i,j,k,iBlock)*DeltaU**3 &
+               *exp(-StochasticExponent/max(Epsilon,1e-15)) &
+               /max(Qtotal, 1e-30)
+       end do
 
        ! The 1+ is due to the fraction of the cascade power that succeeds
        ! to cascade to the smallest scale (<< proton gyroradius),
        ! where the dissipation is via interactions with the electrons
-       DampingTotal = 1.0 + DampingElectron + DampingPar + DampingPerp
+       DampingTotal = 1.0 + DampingElectron &
+            + sum(DampingPar_I) + sum(DampingPerp_I)
 
-       QPerQtotal_I = (DampingPar + DampingPerp)/Dampingtotal
-       QparPerQtotal_I = DampingPar/Dampingtotal
-       QePerQtotal = 1.0 - sum(QPerQtotal_I)
+       QPerQtotal_I = (DampingPar_I + DampingPerp_I)/Dampingtotal
+       QparPerQtotal_I = DampingPar_I/Dampingtotal
+       QePerQtotal = (1.0 + DampingElectron)/DampingTotal
+
     elseif(UseUniformHeatPartition)then
        QPerQtotal_I = QionRatio_I
        QparPerQtotal_I = QionParRatio_I
        QePerQtotal = QeRatio
+
     else
        call stop_mpi(NameSub//' Unknown heat partitioning')
     end if
