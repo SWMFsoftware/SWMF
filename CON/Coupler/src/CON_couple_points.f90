@@ -616,7 +616,7 @@ contains
     real,    intent(inout):: BufferR_I(nData*nBufferR) ! recv buffer
 
     integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
-    integer:: iCouple, iBuffer, nCoupleVoid
+    integer:: iCouple, iBuffer, nCoupleAll
 
     ! MPI stuff
     integer, parameter:: iTag = 77
@@ -630,13 +630,14 @@ contains
     if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
-    if(nCoupleS + nCoupleR == 0) RETURN
+    nCoupleAll = nCoupleS + nCoupleR
 
-    nCoupleVoid = count(nCouplePointS_I==0) + count(nCouplePointR_I==0)
+    if(nCoupleAll == 0) RETURN
 
-    allocate(iRequest_I(nCoupleS+nCoupleR-nCoupleVoid))
-    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR-nCoupleVoid))
-    iRequest = 1
+    allocate(iRequest_I(nCoupleAll), iStatus_II(MPI_STATUS_SIZE,nCoupleAll))
+
+    ! Counter for sends and receives
+    iRequest = 0
     !\
     ! Send buffer
     !/
@@ -646,14 +647,13 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleS
-          if(nCouplePointS_I(iCouple) > 0)then
-             iProcS = iCoupleProcS_I(iCouple)
-             call MPI_isend(&
-                  BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
-                  MPI_REAL, iProcS, iTag, iComm, iRequest_I(iRequest),iError)
-             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
-             iRequest = iRequest + 1
-          end if
+          if(nCouplePointS_I(iCouple) == 0) CYCLE
+          iProcS = iCoupleProcS_I(iCouple)
+          iRequest = iRequest + 1
+          call MPI_isend(&
+               BufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+               MPI_REAL, iProcS, iTag, iComm, iRequest_I(iRequest),iError)
+          iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
        end do
     end if
     if(nCoupleR > 0)then
@@ -662,22 +662,22 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleR
-          if(nCouplePointR_I(iCouple) > 0)then
-             iProcR = iCoupleProcR_I(iCouple)
-             call MPI_irecv(&
-                  BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
-                  MPI_REAL, iProcR, iTag, iComm, &
-                  iRequest_I(iRequest),iError)
-             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
-             iRequest = iRequest + 1
-          end if
+          if(nCouplePointR_I(iCouple) == 0) CYCLE
+          iProcR = iCoupleProcR_I(iCouple)
+          iRequest = iRequest + 1
+          call MPI_irecv(&
+               BufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+               MPI_REAL, iProcR, iTag, iComm, &
+               iRequest_I(iRequest),iError)
+          iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
        end do
     end if
     !\
     ! Finalize transfer
     !/
-    call MPI_waitall(nCoupleS + nCoupleR - nCoupleVoid, iRequest_I, iStatus_II, iError)
+    call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
+
   end subroutine transfer_buffer_real
 
   !==========================================================================
@@ -687,9 +687,11 @@ contains
        nBuffer, iProc_I, &
        nCouple, iCoupleProc_I, nCouplePoint_I,&
        iBuffer_I, nData)
+
     ! iBuffer_I returns the order of the points with processor index
     ! corresponding to iCoupleProc_I
     ! nData is the number of points found on Source
+
     integer, intent(in) :: iCompSource, iCompTarget ! send, recv components
     integer, intent(in) :: nBuffer    ! number of points
     integer, intent(in) :: iProc_I(nBuffer)  ! proc index for each point
@@ -701,17 +703,23 @@ contains
     integer:: iBuffer, iCouple, iProc, nProc
     integer, allocatable:: iOrder_I(:)
     integer, allocatable:: iCoupleProcInv_P(:)
+
     character(len=*), parameter:: NameSub = 'get_transfer_buffer_order'
     !----------------------------------------------------------------------
-    nProc = n_proc(iCompSource)
+    ! Assume first that all points were found
     nData = nBuffer
 
+    ! Check if no points were requested by this processor
     if(nBuffer == 0) RETURN
+
+    ! Check if no points were found for this processor
     if(nCouple == 0)then
-       nData = 0
-       iBuffer_I = -1
+       nData = 0       ! no points were found 
+       iBuffer_I = -1  ! signal points outside source domain with -1
        RETURN
     end if
+
+    nProc = n_proc(iCompSource)
 
     ! Set starting point of chunks in the reordered buffer
     allocate(iOrder_I(nCouple))
@@ -782,7 +790,7 @@ contains
     integer, intent(inout):: iBufferR_I(nData*nBufferR) ! recv buffer
 
     integer:: iProcR, iProcS ! R/S is proc to Recv from/Send to
-    integer:: iCouple, iBuffer, nCoupleVoid
+    integer:: iCouple, iBuffer, nCoupleAll
     ! MPI stuff
     integer, parameter:: iTag = 77
     integer:: iError
@@ -795,13 +803,11 @@ contains
     if(DoTestMe)write(*,*)NameSub, 'called with nProc, iProc, nData=', &
          nProc, iProc, nData
 
-    if(nCoupleS + nCoupleR == 0) RETURN
+    nCoupleAll = nCoupleS + nCoupleR
+    if(nCoupleAll == 0) RETURN
 
-    nCoupleVoid = count(nCouplePointS_I==0) + count(nCouplePointR_I==0)
-
-    allocate(iRequest_I(nCoupleS+nCoupleR-nCoupleVoid))
-    allocate(iStatus_II(MPI_STATUS_SIZE,nCoupleS+nCoupleR-nCoupleVoid))
-    iRequest = 1
+    allocate(iRequest_I(nCoupleAll), iStatus_II(MPI_STATUS_SIZE,nCoupleAll))
+    iRequest = 0
     !\
     ! Send buffer
     !/
@@ -811,15 +817,14 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleS
-          if(nCouplePointS_I(iCouple) > 0)then
-             iProcS = iCoupleProcS_I(iCouple)
-             call MPI_Isend(&
-                  iBufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
-                  MPI_INTEGER, iProcS, iTag, iComm, &
-                  iRequest_I(iRequest),iError)       
-             iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
-             iRequest = iRequest + 1
-          end if
+          if(nCouplePointS_I(iCouple) == 0)CYCLE
+          iProcS = iCoupleProcS_I(iCouple)
+          iRequest = iRequest + 1
+          call MPI_Isend(&
+               iBufferS_I(iBuffer), nData*nCouplePointS_I(iCouple), &
+               MPI_INTEGER, iProcS, iTag, iComm, &
+               iRequest_I(iRequest),iError)       
+          iBuffer = iBuffer + nData*nCouplePointS_I(iCouple)
        end do
     end if
     if(nCoupleR > 0)then
@@ -828,23 +833,23 @@ contains
        !/
        iBuffer = 1
        do iCouple = 1, nCoupleR
-          if(nCouplePointR_I(iCouple) > 0)then
-             iProcR = iCoupleProcR_I(iCouple)
-             call MPI_Irecv(&
-                  iBufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
-                  MPI_INTEGER, iProcR, iTag, iComm, &
-                  iRequest_I(iRequest),iError)
-             iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
-             iRequest = iRequest + 1
-          end if
+          if(nCouplePointR_I(iCouple) == 0)CYCLE
+          iProcR = iCoupleProcR_I(iCouple)
+          iRequest = iRequest + 1
+          call MPI_Irecv(&
+               iBufferR_I(iBuffer), nData*nCouplePointR_I(iCouple),&
+               MPI_INTEGER, iProcR, iTag, iComm, &
+               iRequest_I(iRequest),iError)
+          iBuffer = iBuffer + nData*nCouplePointR_I(iCouple)
        end do
     end if
 
     !\
     ! Finalize transfer
     !/
-    call MPI_waitall(nCoupleS + nCoupleR - nCoupleVoid, iRequest_I, iStatus_II, iError)
+    call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
     deallocate(iRequest_I, iStatus_II)
+
   end subroutine transfer_buffer_int
 
   !==========================================================================
