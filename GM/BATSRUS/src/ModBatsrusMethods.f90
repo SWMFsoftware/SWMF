@@ -81,7 +81,7 @@ contains
        ! Perform initial refinement of mesh and solution blocks.
        do nRefineLevel = 1, initial_refine_levels
 
-          if (iProc == 0.and.lVerbose>0) then
+          if (iProc == 0 .and. lVerbose > 0) then
              call write_prefix; write (iUnitOut,*) NameSub, &
                   ' starting initial refinement level, nBlockAll =', &
                   nRefineLevel, nBlockAll
@@ -432,6 +432,21 @@ subroutine BATS_advance(TimeSimulationLimit)
      call advance_expl(.true., -1)
   endif
 
+  ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
+  if(  time_accurate .and. &
+       Time_Simulation < TimeSimulationLimit .and. &
+       Time_Simulation + 1e-6*Dt*No2Si_V(UnitT_) >= TimeSimulationLimit)then
+
+     if(iProc == 0 .and. lVerbose > 0)then
+        call write_prefix; write(iUnitOut,*) NameSub, &
+             ': adjusting Time_Simulation=', Time_Simulation,&
+             ' to TimeSimulationLimit=', TimeSimulationLimit,&
+             ' with Dt=', Dt
+     end if
+
+     Time_Simulation = TimeSimulationLimit
+  end if
+
   if(UsePic)call pic_update_states
 
   if(UseIM)call apply_im_pressure
@@ -529,16 +544,6 @@ subroutine BATS_advance(TimeSimulationLimit)
      ! Write plotfiles after AMR if required
      if(save_plots_amr)call BATS_save_files('AMRPLOTS')
 
-  end if
-
-  if(  Time_Simulation < TimeSimulationLimit .and. &
-       Time_Simulation + 1e-6*Dt*No2Si_V(UnitT_) >= TimeSimulationLimit)then
-
-     if(iProc == 0) write(*,*) '!!!', NameSub, &
-          ' final adjusting, Time_Simulation, TimeSimulationLimit, dt=', &
-          Time_Simulation, TimeSimulationLimit, dt
-
-     Time_Simulation = TimeSimulationLimit
   end if
 
 end subroutine BATS_advance
