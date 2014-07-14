@@ -25,22 +25,8 @@ T                       DoCouple
 #INCLUDE
 GM/restartIN/restart.H
 
-#USERMODULE
-Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
-
 #SAVEINITIAL
 T                       DoSaveIntial
-
-#CHECKGRIDSIZE
-       8                              nI
-       8                              nJ
-       1                              nK
-     100                     MinBlockALL
-
-
-#NORMALIZATION
-NONE
 
 #PLASMA
 1.0             FluidMass [amu]
@@ -94,11 +80,9 @@ Rusanov		TypeFlux
 mc		TypeLimiter
 1.5		BetaLimiter
 
-
 #FIXEDTIMESTEP
 T			UseDtFixed
 640/500			DtFixed
-
 
 #TIMESTEPPING
 2                       nStage
