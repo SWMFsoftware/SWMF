@@ -1,6 +1,9 @@
+This tests GM-PC with identical layouts up on 4 processors,
+and different layout when run on different processors.
+
 Name First Last Stride
 ======================
 #COMPONENTMAP
-GM       0 3   1   ! GM runs on all PE-s
-PC       0 3   1   ! GM runs on all PE-s
+GM       0 999 1   ! GM runs on all PE-s
+PC       0 3   1   ! PC runs on 4 PE-s
 #END
