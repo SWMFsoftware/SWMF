@@ -4,6 +4,6 @@ This is not meant to be a practical layout.
 Name First Last Stride
 ======================
 #COMPONENTMAP
-GM       1 999   1   ! GM runs on all PE-s
-PC       0 3     1   ! GM runs on all PE-s
+GM       1 999   1   ! GM runs on all PE-s except 0
+PC       0 3     1   ! PC runs on first 4 PE-s
 #END
