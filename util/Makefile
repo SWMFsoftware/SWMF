@@ -9,7 +9,7 @@ touch_install_files:
 install: touch_install_files
 	@(if [ -d HYPRE ];     then cd HYPRE;      make install; fi);
 
-###	@(if [ -d FISHPAK ];   then cd FISHPAK;    make install; fi);
+###	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make LIB; fi);
 
 clean:: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make clean; fi)
@@ -18,7 +18,7 @@ clean:: touch_install_files
 	@(if [ -d EMPIRICAL ]; then cd EMPIRICAL;  make clean; fi)
 	@(if [ -d CRASH ];     then cd CRASH;      make clean; fi)
 	@(if [ -d HYPRE ];     then cd HYPRE;      make clean; fi)
-	@(if [ -d FISHPAK ];   then cd FISHPAK;    make clean; fi)
+	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make clean; fi)
 
 distclean:: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make distclean; fi)
@@ -27,5 +27,5 @@ distclean:: touch_install_files
 	@(if [ -d EMPIRICAL ]; then cd EMPIRICAL;  make distclean; fi)
 	@(if [ -d CRASH ];     then cd CRASH;      make distclean; fi)
 	@(if [ -d HYPRE ];     then cd HYPRE;      make distclean; fi)
-	@(if [ -d FISHPAK ];   then cd FISHPAK;    make distclean; fi)
+	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make clean; fi)
 	rm -f *~ */src*/Makefile.DEPEND */src*/Makefile.RULES
