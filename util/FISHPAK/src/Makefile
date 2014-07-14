@@ -20,7 +20,7 @@ test: ModFish.o
 help:
 	@echo "    "
 	@echo "make MODULE             - create ModFish.o"
-	@echo "make LIB                - create ../lib/libFISHPAK.a"
+	@echo "make LIB                - create libFISHPAK.a in ${LIBDIR}"
 	@echo "make test               - run all tests"
 	@echo "make test TEST=blktri   - run a specific test"
 	@echo "clean                   - remove object files etc"
