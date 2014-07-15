@@ -858,11 +858,11 @@ test10_run:
 
 
 test10_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -a=1e-27 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
 	        ${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test10/SC_log_n000000.log \
 		> test10_sc.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 	        ${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test10/IH_log_n000000.log \
                 > test10_ih.diff)
