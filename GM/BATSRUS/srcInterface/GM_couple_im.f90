@@ -19,7 +19,6 @@ module GM_couple_im
 
   private ! except
 
-  ! IM/CRCM
   public:: GM_get_for_im_trace_crcm ! for IM/CRCM
   public:: GM_get_for_im_crcm       ! for IM/CRCM
   public:: GM_get_sat_for_im_crcm   ! for IM/CRCM
@@ -100,7 +99,7 @@ contains
     ! Allocate arrays
     call allocate_gm_im(iSizeIn, jSizeIn)
 
-    ! The RB ionosphere radius in normalized units
+    ! The CRCM ionosphere radius in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     DoExtractUnitSi = .true.
 
@@ -296,7 +295,7 @@ contains
   end subroutine GM_get_for_im_crcm
 
   !==========================================================================
-  subroutine GM_get_sat_for_im_crcm(Buffer_III, Buffer_I, nSats)
+  subroutine GM_get_sat_for_im_crcm(Buffer_III, Name_I, nSats)
 
     ! Subroutine to update and collect satellite locations for IM tracing
 
@@ -312,54 +311,36 @@ contains
     !Arguments
     integer, intent(in)               :: nSats
     real, intent(out)                 :: Buffer_III(4,2,nSats)
-    character (len=100), intent(out)  :: Buffer_I(nSats)
+    character (len=100), intent(out)  :: Name_I(nSats)
 
     !Internal variables
-    character (len=*), parameter :: NameSub='GM_get_sat_for_im'
-
     real ::SatRay_D(3)
-
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3)  
-    real :: Bx,By,Bz,B2
+    real :: StateSat_V(0:nVar+3), B0Sat_D(3), B2
     integer :: iSat
+
+    character (len=*), parameter :: NameSub='GM_get_sat_for_im'
     !--------------------------------------------------------------------------
-    ! Store satellite names in Buffer_I
-    if (iProc == 0) then
-       Buffer_I = NameSat_I(1:nSats)
-    end if
+    ! Store satellite names in Buffer_I (known on all processors)
+    Name_I = NameSat_I(1:nSats)
 
-    do iSat=1, nSats
+    do iSat = 1, nSats
        ! Update satellite position.
-       !call set_satellite_flags(iSat)
-       !call get_satellite_ray(iSat, sat_RayVars)
-       !
-       !! Reduce values from all 
-       !call MPI_reduce(sat_RayVars, sat_RayVarsSum, 5, MPI_REAL, MPI_SUM, &
-       !     0, iComm, iError)
-       !
-       !write(*,*) 'sat_RayVars',sat_RayVars
-       call GM_trace_sat(XyzSat_DI(1:3,iSat),SatRay_D)
-       ! Determine magnetic field magnitude at satellite B=B0+B1
-       if(UseB0)then
-          call get_b0(XyzSat_DI(:,iSat), B0Sat_D)
-       else
-          B0Sat_D=0.00
-       end if
-       call get_point_data(0.0,XyzSat_DI(:,iSat),1,nBlock,1,nVar+3,StateSat_V)
-       call collect_satellite_data(XyzSat_DI(:,iSat),StateSat_V)
+       call GM_trace_sat(XyzSat_DI(1:3,iSat), SatRay_D)
 
-       Bx = StateSat_V(Bx_)+B0Sat_D(1)
-       By = StateSat_V(By_)+B0Sat_D(2)
-       Bz = StateSat_V(Bz_)+B0Sat_D(3)
+       call get_point_data( &
+            0.0, XyzSat_DI(:,iSat), 1, nBlock, Bx_, Bz_, StateSat_V)
+       call collect_satellite_data(XyzSat_DI(:,iSat), StateSat_V)
 
-       B2 = (Bx**2.0 + By**2.0 + Bz**2.0) * (No2Si_V(UnitB_))**2.0 
-
-       ! Store results in Buffer_III
+       ! Store results in Buffer_III from processor zero
        if (iProc == 0) then 
-          Buffer_III(1:3,1,iSat)   = XyzSat_DI(1:3,iSat)
-          !Buffer_III(1:3,2,iSat) = sat_RayVarsSum(1:3)
+          Buffer_III(1:3,1,iSat) = XyzSat_DI(1:3,iSat)
           Buffer_III(1:3,2,iSat) = SatRay_D
-          Buffer_III(4,2,iSat)   = B2
+
+          ! Determine total magnetic field squared at satellite: B2 = (B0+B1)^2
+          B0Sat_D = 0.0
+          if(UseB0) call get_b0(XyzSat_DI(:,iSat), B0Sat_D)          
+          Buffer_III(4,2,iSat)   = &
+               sum( (StateSat_V(Bx_:Bz_) + B0Sat_D)**2 ) * No2Si_V(UnitB_)**2
        end if
     end do
 
@@ -411,7 +392,7 @@ contains
     ! The variables to be passed: line index, length along line, 
     ! coordinatess and primitive variables. Total is 5 + nVar.
     NameVar = 'iLine Length x y z '//NamePrimitiveVar
-    if(DoExtractBGradB1) NameVar = trim(NameVar) //' bgradb1x bgradb1y bgradb1z'
+    if(DoExtractBGradB1) NameVar = trim(NameVar)//' bgradb1x bgradb1y bgradb1z'
 
     call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
@@ -640,7 +621,7 @@ contains
   end subroutine GM_satinit_for_im
 
   !==========================================================================
-  subroutine GM_get_sat_for_im(Buffer_III, Buffer_I, nSats)
+  subroutine GM_get_sat_for_im(Buffer_III, Name_I, nSats)
 
     ! Subroutine to update and collect satellite locations for IM tracing
     ! !!!DTW 2007
@@ -654,7 +635,7 @@ contains
     !Arguments
     integer, intent(in)               :: nSats
     real, intent(out)                 :: Buffer_III(3,2,nSats)
-    character (len=100), intent(out)  :: Buffer_I(nSats)
+    character (len=100), intent(out)  :: Name_I(nSats)
 
     !Internal variables
     character (len=*), parameter :: NameSub='GM_get_sat_for_im'
@@ -664,11 +645,9 @@ contains
     integer :: iSat, iError
     !--------------------------------------------------------------------------
     ! Store satellite names in Buffer_I
-    if (iProc == 0) then
-       Buffer_I = NameSat_I(1:nSats)
-    end if
+    Name_I = NameSat_I(1:nSats)
 
-    do iSat=1, nSats
+    do iSat = 1, nSats
        ! Update satellite position.
        call set_satellite_flags(iSat)
        call get_satellite_ray(iSat, sat_RayVars)
@@ -683,7 +662,6 @@ contains
           Buffer_III(:,2,iSat) = sat_RayVarsSum(1:3)
        end if
     end do
-
 
   end subroutine GM_get_sat_for_im
 
