@@ -73,39 +73,33 @@ contains
     !    Ionosphere Electrodynamics (IE)  source\\
     !    Polar Wind (PW) target
     !
-    ! Send electrostatic potential and field aligned current from IE to PW.
+    ! Send electrostatic potential, field aligned current,
+    ! average energy and electron flux from IE to PW.
     !EOP
 
-    integer :: iProcWorld
+    ! "block" index for IE model (south = 2)
+    integer, parameter :: North_ = 1
 
-    ! Variable to pass is potential
-
-    character (len=*), parameter:: NameHem_B(2) = (/'North','South'/)
-
+    ! Number of variables to pass
     integer, parameter :: nVar = 4
-    integer, parameter :: North_ = 1, South_ = 2
 
+    ! Names of variables to pass
     character (len=*), parameter, dimension(nVar) :: &
-         NameVar_V=(/'Pot','Jr ','Ave','Tot'/)
+         NameVar_V = (/'Pot','Jr ','Ave','Tot'/)
 
-    ! Buffer for the potential on the 2D IE grid
+    ! Buffer for the variables on the 2D IE grid
     real, allocatable :: Buffer_IIV(:,:,:)
 
-    ! Name of this interface
     logical :: DoTest, DoTestMe
     character (len=*), parameter :: NameSub='couple_ie_pw'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    iProcWorld = i_proc()
-
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
-    if(DoTest)write(*,*)NameSub,', iProc, PWi_iProc0, IEi_iProc0=', &
-         iProcWorld, i_proc0(PW_), i_proc0(IE_)
+    if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
     ! Get potential from IE to PW for the North hemisphere
     allocate(Buffer_IIV(iSize,jSize,nVar))
     if(is_proc(IE_)) call IE_get_for_pw(Buffer_IIV, iSize, jSize, &
-         nVar, NameVar_V, NameHem_B(North_), tSimulation)
+         nVar, NameVar_V, 'North', tSimulation)
 
     ! The potential is only reduced to the IE root
     call transfer_real_array(IE_, PW_, iSize*jSize*nVar, Buffer_IIV)
@@ -114,7 +108,7 @@ contains
          NameVar_V, North_)
     deallocate(Buffer_IIV)
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
 
   end subroutine couple_ie_pw
 
