@@ -15,6 +15,8 @@ module CON_couple_gm_im
 
   !USES:
   use CON_coupler
+  use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
+       transfer_string, transfer_string_array
 
   use GM_wrapper, ONLY: GM_get_for_im, GM_get_for_im_line, &
        GM_get_for_im_trace, GM_satinit_for_im, GM_get_sat_for_im, &
@@ -42,13 +44,10 @@ module CON_couple_gm_im
   ! 01/01/2007 D.Welling - added satellite info tranfer
   !EOP
 
-  ! Communicator and logicals to simplify message passing and execution
-  integer, save :: iProc0Im, iProc0Gm, iCommWorld
-
-  logical :: IsInitialized = .false., UseMe=.true.
+  logical :: IsInitialized = .false.
 
   ! Size of the 2D spherical structured (possibly non-uniform) IM grid
-  integer, save :: iSize, jSize, nCells_D(2)
+  integer, save :: iSize, jSize
 
   ! Number of satellites in GM that will also be traced in IM
   integer, save :: nShareSats
@@ -65,34 +64,22 @@ contains
     ! Store IM grid size.
     !EOP
     
-    use ModProcessVarName,  ONLY: process_var_name, nVarMax
+    use ModProcessVarName,  ONLY: process_var_name
 
-    character(len=1500) :: NameVar
-    character(len=15)   :: NameList_V(nVarMax)
     integer :: nDensityGm, nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
     integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm 
 
-    ! MPI status variable
-    integer :: iStatus_I(MPI_STATUS_SIZE)
-
     ! General error code
-    integer :: iError
     !------------------------------------------------------------------------
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
 
-    UseMe = is_proc(IM_) .or. is_proc(GM_)
-    if(.not.UseMe) RETURN
-
-    ! Store these for root-to-root communication
-    iProc0Im   = i_proc0(IM_)
-    iProc0Gm   = i_proc0(GM_)
-    iCommWorld = i_comm()
+    if(.not. (is_proc(IM_) .or. is_proc(GM_))) RETURN
 
     ! This works for a regular IM grid only
-    nCells_D = ncells_decomposition_d(IM_)
-    iSize = nCells_D(1); jSize = nCells_D(2)
+    iSize = Grid_C(IM_) % nCoord_D(1)
+    jSize = Grid_C(IM_) % nCoord_D(2)
 
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
          nPGm, nPparGm, nWaveGm, nMaterialGm)
@@ -104,17 +91,8 @@ contains
     DoAnisoPressureIMCoupling = nPparGm > 0 .and. nPparIm > 0 
 
     ! Set number of satellites shared between GM and IM for tracing.
-    call GM_satinit_for_im(nShareSats)
-    
-    ! Send number of satellites GM to IM
-    if(iProc0Im /= iProc0Gm)then
-       if(is_proc0(GM_)) &
-            call MPI_send(nShareSats,1,MPI_INTEGER,iProc0Im,&
-            1,iCommWorld,iError)
-       if(is_proc0(IM_)) &
-            call MPI_recv(nShareSats,1,MPI_INTEGER,iProc0Gm,&
-            1,iCommWorld,iStatus_I,iError)
-    end if
+    if(is_proc(GM_)) call GM_satinit_for_im(nShareSats)
+    call transfer_integer(GM_, IM_, nShareSats, UseSourceRootOnly=.false.)
     
   end subroutine couple_gm_im_init
 
@@ -138,20 +116,13 @@ contains
     ! geometrical information.
     !EOP
 
-    !\
-    ! General coupling variables
-    !/
-
-    ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_gm_im'
+    ! Which IM model is used?
+    character(len=lNameVersion):: NameVersionIm
 
     logical :: DoTest, DoTestMe
-    integer :: iProcWorld
-    character(len=lNameVersion):: NameVersionIm
+    character(len=*), parameter :: NameSub='couple_gm_im'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-
-    iProcWorld = i_proc()
 
     call get_comp_info(IM_,NameVersion=NameVersionIm)
     select case(NameVersionIm(1:3))
@@ -163,511 +134,224 @@ contains
        call couple_crcm
     end select
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   contains
 
     !==========================================================================
     subroutine couple_rcm
 
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_rcm'
-
       ! Number of variables to pass
       integer :: nVarGmIm
- 
-      character (len=100) :: NameVar
+
+      character(len=100) :: NameVar
 
       ! Buffer for the variables on the 2D IM grid
-      real, dimension(:,:,:), allocatable :: Buffer_IIV
+      real, allocatable :: Buffer_IIV(:,:,:)
 
       ! Buffer for satellite locations
-      real, dimension(:,:,:), allocatable :: SatPos_DII
+      real, allocatable :: SatPos_DII(:,:,:)
 
       ! Buffer for satellite names
-      character (len=100), dimension(:), allocatable:: NameSat_I
+      character(len=100), allocatable:: NameSat_I(:)
 
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
-
-      ! General error code
-      integer :: iError
-
-      ! Message size
-      integer :: nSize
-
+      character(len=*), parameter :: NameSubSub=NameSub//'.couple_rcm'
       !------------------------------------------------------------------------
+      if(DoTest)write(*,*)NameSubSub,' starting, iProc=', i_proc()
 
-      ! After everything is initialized exclude PEs which are not involved
-      if(.not.UseMe) RETURN
-
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, iProc0Im=', &
-           iProcWorld,iProc0Gm,iProc0Im
-
-       if(DoMultiFluidIMCoupling) then
-          NameVar='vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp'
-          nVarGmIm = 10
-       else
-          NameVar='vol:z0x:z0y:bmin:rho:p'
-          nVarGmIm = 6
-       endif
+      if(DoMultiFluidIMCoupling) then
+         NameVar='vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp'
+         nVarGmIm = 10
+      else
+         NameVar='vol:z0x:z0y:bmin:rho:p'
+         nVarGmIm = 6
+      endif
 
       !\
-      ! Allocate buffers both in GM and IM
+      ! Get field line integrals from GM to IM
       !/
-
-      allocate(Buffer_IIV(iSize,jSize,nVarGmIm), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_IIV")
-      if (nShareSats > 0) then
-         allocate(SatPos_DII(3,2,nShareSats), stat=iError)
-         call check_allocate(iError,NameSubSub//": SatPos_DII")
-         allocate(NameSat_I(nShareSats),       stat=iError)
-         call check_allocate(iError,NameSubSub//": NameSat_I")
-      end if
-
-      if(DoTest)write(*,*)NameSubSub,', variables allocated',&
-           ', iProc:',iProcWorld
-
-      !\
-      ! Get field line integrals from GM
-      !/
-      if(is_proc(GM_)) &           
-           call GM_get_for_im(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
+      allocate(Buffer_IIV(iSize,jSize,nVarGmIm))
+      ! All GM processors participate in calculating the integrals
+      if(is_proc(GM_)) &
+           call GM_get_for_im(Buffer_IIV, iSize, jSize, nVarGmIm, NameVar)
+      ! The integrals are available on GM root only
+      call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
+      if(is_proc0(IM_)) &
+           call IM_put_from_gm(Buffer_IIV, iSize, jSize, nVarGmIm, NameVar)
+      deallocate(Buffer_IIV)
 
       !\
       ! If IM sat tracing is enabled, get sat locations from GM
       !/
-      if(is_proc(GM_).AND.(nShareSats > 0)) &
-           call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
-
-      !\
-      ! Transfer physical variables from GM to IM
-      !/
-      if(iProc0Im /= iProc0Gm)then
-         nSize = iSize*jSize*nVarGmIm
-         if(is_proc0(GM_)) then 
-            call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProc0Im,&
-                 1,iCommWorld,iError)
-         endif
-         if(is_proc0(IM_)) then
-            call MPI_recv(Buffer_IIV,nSize,MPI_REAL,iProc0Gm,&
-                 1,iCommWorld,iStatus_I,iError)
-         endif
-      end if
-
-      !\
-      ! Transfer satellite names from GM to IM
-      !/   
-
-      if(nShareSats > 0 .and. iProc0Im /= iProc0Gm)then
-         nSize = nShareSats*100
-         if(is_proc0(GM_)) then
-            call MPI_send(NameSat_I,nSize,MPI_BYTE,iProc0Im,&
-                 1,iCommWorld,iError)
-         endif
-         if(is_proc0(IM_)) then
-            call MPI_recv(NameSat_I,nSize,MPI_BYTE,iProc0Gm,&
-                 1,iCommWorld,iStatus_I,iError)
-         endif
-
-         ! Transfer satellite locations from GM to IM
-
-         nSize = 3*2*nShareSats
-         if(is_proc0(GM_)) then
-            call MPI_send(SatPos_DII,nSize,MPI_REAL,iProc0Im,&
-                 1,iCommWorld,iError)
-         endif
-         if(is_proc0(IM_)) then
-            call MPI_recv(SatPos_DII,nSize,MPI_REAL,iProc0Gm,&
-                 1,iCommWorld,iStatus_I,iError)
-         endif
-      end if
-
-      if(DoTest)write(*,*)NameSubSub,', variables transferred',&
-           ', iProc:',iProcWorld
-
-      !\
-      ! Put variables into IM
-      !/
-      if(is_proc0(IM_))then
-         call IM_put_from_gm(Buffer_IIV,iSize,jSize,nVarGmIm,NameVar)
-         if(nShareSats > 0) &
-              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-         if(DoTest) &
-              write(*,*)'get_fieldline_volume: IM iProc, Buffer(1,1)=',&
-              iProcWorld,Buffer_IIV(1,1,:)
-      end if
-
-      !\
-      ! Deallocate buffer to save memory
-      !/
-      deallocate(Buffer_IIV)
-
       if (nShareSats > 0) then
-         deallocate(NameSat_I)
-         deallocate(SatPos_DII)
+         allocate(SatPos_DII(3,2,nShareSats), NameSat_I(nShareSats))
+         if(is_proc(GM_)) &
+              call GM_get_sat_for_im(SatPos_DII, NameSat_I, nShareSats)
+         call transfer_string_array(GM_, IM_, nShareSats, NameSat_I, &
+              UseSourceRootOnly = .false.)
+         call transfer_real_array(GM_, IM_, size(SatPos_DII), SatPos_DII)
+         if(is_proc(IM_)) &
+              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
+         deallocate(SatPos_DII, NameSat_I)
       end if
-
-      if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
-           ', iProc:',iProcWorld
-
-      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
 
     end subroutine couple_rcm
 
     !==========================================================================
     subroutine couple_ram
 
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_ram'
+      ! Some variables do not change during a run, so transfer once only
+      logical:: IsFirstTime = .true.
 
-      ! Number of variables and points saved into the line data
-      integer :: nVarLine, nPointLine
+      ! List of variable names
+      character(len=100), save :: NameVar
 
-      ! Buffer for the line data
-      real, allocatable :: BufferLine_VI(:,:), Map_DSII(:,:,:,:)
- 
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
+      ! Number of variables saved into the line data (does not change)
+      integer, save :: nVarLine
 
-      ! General error code
-      integer :: iError
+      ! Number of points saved into the line data (keeps changing)
+      integer:: nPointLine
 
-      ! Message size
-      integer :: nSize
+      ! Buffers for the line data and mapping from equator to ionosphere
+      real, allocatable:: BufferLine_VI(:,:), Map_DSII(:,:,:,:)
 
-      ! List of variables
-      integer, parameter :: lNameVar=100
-      character (len=lNameVar) :: NameVar
+      character(len=*), parameter :: NameSubSub=NameSub//'.couple_ram'
       !------------------------------------------------------------------------
+      if(DoTest)write(*,*)NameSubSub,' starting, iProc=', i_proc()
 
-      ! After everything is initialized exclude PEs which are not involved
-      if(.not.UseMe) RETURN
+      ! Get field line trace sizes from GM and transfer it to IM
+      if(is_proc(GM_)) call GM_get_for_im_trace( &
+           iSize, jSize, nVarLine, nPointLine, NameVar)
 
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, iProc0Im=', &
-           iProcWorld,iProc0Gm,iProc0Im
-
-      !\
-      ! Get field line info from GM
-      !/
-      if(is_proc(GM_)) then
-         call GM_get_for_im_trace(iSize, jSize, nVarLine, nPointLine, NameVar)
-         if(is_proc0(GM_))then
-            allocate(Map_DSII(3,2,iSize,jSize), &
-                 BufferLine_VI(nVarLine, nPointLine))
-            call GM_get_for_im_line(iSize, jSize, Map_DSII, &
-                 nVarLine, nPointLine, BufferLine_VI)
-         end if
+      if(IsFirstTime)then
+         ! These cannot change during a run, so only transfer them once
+         call transfer_string(GM_, IM_, NameVar)
+         call transfer_integer(GM_, IM_, nVarLine)
+         IsFirstTime = .false.
       end if
+      call transfer_integer(GM_, IM_, nPointLine)
 
-      !\
-      ! Transfer variables from GM to IM
-      !/
-      if(iProc0Im /= iProc0Gm)then
+      ! Now the size is known, so allocate arrays
+      ! (only GM root and IM processors really use the arrays,
+      ! but it is simpler to allocate it on all processors)
+      allocate(Map_DSII(3,2,iSize,jSize), BufferLine_VI(nVarLine,nPointLine))
 
-         if(is_proc0(GM_)) then
-            call MPI_send(NameVar,100,MPI_CHARACTER,iProc0Im,&
-                 1,iCommWorld,iError)
-            call MPI_send(nVarLine,1,MPI_INTEGER,iProc0Im,&
-                 2,iCommWorld,iError)
-            call MPI_send(nPointLine,1,MPI_INTEGER,iProc0Im,&
-                 3,iCommWorld,iError)
-            call MPI_send(Map_DSII,size(Map_DSII),MPI_REAL,iProc0Im,&
-                 4,iCommWorld,iError)
-            call MPI_send(BufferLine_VI,size(BufferLine_VI),MPI_REAL,iProc0Im,&
-                 5,iCommWorld,iError)
-         end if
-         if(is_proc0(IM_))then
-            ! setup BufferLine in IM when not sharing proc with GM
-            call MPI_recv(NameVar,100,MPI_CHARACTER,iProc0Gm,&
-                 1,iCommWorld,iStatus_I,iError)
-            call MPI_recv(nVarLine,1,MPI_INTEGER,iProc0Gm,&
-                 2,iCommWorld,iStatus_I,iError)
-            call MPI_recv(nPointLine,1,MPI_INTEGER,iProc0Gm,&
-                 3,iCommWorld,iStatus_I,iError)
+      ! Transfer the trace data and mapping data from GM to IM
+      if(is_proc0(GM_)) call GM_get_for_im_line( &
+           iSize, jSize, Map_DSII, nVarLine, nPointLine, BufferLine_VI)
+      call transfer_real_array(GM_, IM_, size(Map_DSII), Map_DSII)
+      call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
 
-            ! Allocate buffer on the IM root processor
-            allocate(Map_DSII(3,2,iSize,jSize), &
-                 BufferLine_VI(nVarLine, nPointLine))
-
-            ! recieve variables from GM
-            call MPI_recv(Map_DSII,size(Map_DSII),MPI_REAL,iProc0Gm,&
-                 4,iCommWorld,iStatus_I,iError)
-            call MPI_recv(BufferLine_VI,size(BufferLine_VI),MPI_REAL,iProc0Gm,&
-                 5,iCommWorld,iStatus_I,iError)
-         end if
-      end if
-
-      !\
-      ! Put variables into IM
-      !/
-      if(is_proc0(IM_))then
-         call IM_put_from_gm_line( &
-              iSize, jSize, Map_DSII, &
-              nVarLine, nPointLine, BufferLine_VI, NameVar)
-         if(DoTest) &
-              write(*,*)'IM got from GM: IM iProc, Buffer(1,1)=', &
-              iProcWorld,BufferLine_VI(:,1)
-      end if
-
-      ! Deallocate buffer on root processors of GM and IM
-      if(allocated(BufferLine_VI)) deallocate(BufferLine_VI)
-      if(allocated(Map_DSII)) deallocate(Map_DSII)
-
-      if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
-           ', iProc:',iProcWorld
-
-      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
+      if(is_proc(IM_)) call IM_put_from_gm_line(iSize, jSize, Map_DSII, &
+           nVarLine, nPointLine, BufferLine_VI, NameVar)
+      deallocate(BufferLine_VI, Map_DSII)
 
     end subroutine couple_ram
-    
+
     !==========================================================================
     subroutine couple_crcm
 
- 
-    !DESCRIPTION:
-    ! Couple between two components:\\
-    !    Global Magnetosphere (GM) source\\
-    !    Inner  Magnetosphere (IM) target
-    !
-    ! Send field line volumes, average density and pressure and
-    ! geometrical information.
-    !EOP
+      !DESCRIPTION:
+      ! Couple between two components:\\
+      !    Global Magnetosphere (GM) source\\
+      !    Inner  Magnetosphere (IM) target
+      !EOP
 
-    !\
-    ! Coupling variables
-    !/
+      !\
+      ! Coupling variables
+      !/
 
-    ! Number of varibles at minimum B to pass
-    integer  :: nVarBmin
-!    integer, parameter :: nIntegral=6
+      ! Number of varibles at minimum B to pass
+      integer  :: nVarBmin
+      !    integer, parameter :: nIntegral=6
 
-    ! Names of variables to pass
-    character (len=100) :: NameVar
-!    character (len=*), parameter :: NameVar='Z0x:Z0y:Z0b:I_I:S_I:R_I:B_I:IMF'
+      ! Some variables do not change during a run, so transfer once only
+      logical:: IsFirstTime = .true.
 
-    ! Number of variables and points saved into the line data
-    integer :: nVarLine, nPointLine
+      ! Number of variables saved into the line data (does not change)
+      integer, save :: nVarLine
 
-    ! Buffer for the variables on the 2D IM grid and line data
-    real, allocatable :: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
+      ! Number of points saved into the line data (keeps changing)
+      integer:: nPointLine
 
-    ! Buffer for satellite locations   
-    real, dimension(:,:,:), allocatable :: SatPos_DII
-    
-    ! Buffer for satellite names   
-    character (len=100), dimension(:), allocatable:: NameSat_I
-    
-    ! MPI related variables
+      ! Names of variables to pass
+      character (len=100) :: NameVar
 
-    ! MPI status variable
-    integer :: iStatus_I(MPI_STATUS_SIZE)
+      ! Buffer for the variables on the 2D IM grid and line data
+      real, allocatable:: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
 
-    ! General error code
-    integer :: iError
+      ! Buffer for satellite locations   
+      real, allocatable :: SatPos_DII(:,:,:)
 
-    ! Message size
-    integer :: nSize
+      ! Buffer for satellite names   
+      character(len=100), allocatable:: NameSat_I(:)
 
-    ! Name of this method
-    character (len=*), parameter :: NameSub='couple_gm_im_crcm'
+      logical :: DoTest, DoTestMe
+      character(len=*), parameter :: NameSub='couple_gm_im_crcm'
+      !------------------------------------------------------------------------
+      call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    logical :: DoTest, DoTestMe
-    integer :: iProcWorld
+      if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
-    !-------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+      if(DoMultiFluidIMCoupling) then
+         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
+         nVarBmin = 10
+      else if(DoAnisoPressureIMCoupling)then
+         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar'
+         nVarBmin = 7
+      else
+         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
+         nVarBmin = 6
+      endif
 
-    iProcWorld = i_proc()
+      !\
+      ! Get size of field line traces
+      !/
+      if(is_proc(GM_)) call GM_get_for_im_trace_crcm( &
+           iSize, jSize, NameVar, nVarLine, nPointLine)
 
-    ! After everything is initialized exclude PEs which are not involved
-    if(.not.UseMe) RETURN
-
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
-    if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, i_proc0(IM_)=', &
-         iProcWorld,i_proc0(GM_),i_proc0(IM_)
-
-    if(DoMultiFluidIMCoupling) then
-       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
-       nVarBmin = 10
-    else if(DoAnisoPressureIMCoupling)then
-       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar'
-       nVarBmin = 7
-    else
-       NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
-       nVarBmin = 6
-    endif
-
-
-    !\
-    ! Allocate buffers both in GM and IM
-    !/
-    allocate(Buffer_IIV(iSize,jSize,nVarBmin), stat=iError)
-    call check_allocate(iError,NameSub//": Buffer_IIV")
-
-    if (nShareSats > 0) then
-       allocate(SatPos_DII(4,2,nShareSats), stat=iError)
-       call check_allocate(iError,NameSub//": SatPos_DII")
-       allocate(NameSat_I(nShareSats),       stat=iError)
-       call check_allocate(iError,NameSub//": NameSat_I")
-    end if
-
-    if(DoTest)write(*,*)NameSub,', variables allocated',&
-         ', iProc:',iProcWorld
-
-    !\
-    ! Get variables @ Bmin for each field line from GM
-    !/
-    if(is_proc(GM_)) then
-       call GM_get_for_im_trace_crcm(iSize, jSize, NameVar, nVarLine, nPointLine)
-       ! BufferLine_VI has to exist on all GM processors but only the root proc uses it
-       allocate(BufferLine_VI(nVarLine, nPointLine))
-       call GM_get_for_im_crcm(Buffer_IIV, iSize, jSize, nVarBmin, &
-            BufferLine_VI, nVarLine, nPointLine, NameVar)
-       ! The BufferLine_VI array has zero size on the non-root GM processors: deallocate
-       if(.not.is_proc0(GM_)) deallocate(BufferLine_VI)
-       if(DoTest .and. iProcWorld == 0)then
-          write(*,*) 'GM_get_for_im_crcm: iProc, Buffer_IIV(1,1,:)=',&
-               iProcWorld,Buffer_IIV(1,1,:)
-       end if
-    end if
-    !\
-    ! If IM sat tracing is enabled, get sat locations from GM
-    !/
-    if(is_proc(GM_).AND.(nShareSats > 0)) &
-         call GM_get_sat_for_im_crcm(SatPos_DII, NameSat_I, nShareSats)
-
-    !\
-    ! Transfer variables from GM to IM
-    !/
-    if(i_proc0(IM_) /= i_proc0(GM_))then
-       nSize = iSize*jSize*nVarBmin
-       if(is_proc0(GM_)) then
-          call MPI_send(nVarLine,1,MPI_INTEGER,i_proc0(IM_),&
-               1,i_comm(),iError)
-          call MPI_send(nPointLine,1,MPI_INTEGER,i_proc0(IM_),&
-               1,i_comm(),iError)
-          call MPI_send(Buffer_IIV,nSize,MPI_REAL,&
-               i_proc0(IM_),1,i_comm(),iError)
-          call MPI_send(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
-               i_proc0(IM_),2,i_comm(),iError)
-       end if
-       if(is_proc0(IM_))then
-          ! get nVarLine and nPointLine from GM 0 processor
-          call MPI_recv(nVarLine,1,MPI_INTEGER,i_proc0(GM_),&
-               1,i_comm(),iStatus_I,iError)
-          call MPI_recv(nPointLine,1,MPI_INTEGER,i_proc0(GM_),&
-               1,i_comm(),iStatus_I,iError)
-          ! setup BufferLine in IM when not sharing proc with GM
-          ! If IM and GM share procs not equal to zero proc then 
-          ! BufferLine_VI must be first dealloacted and then reallocated 
-          ! with proper size
-          if (allocated(BufferLine_VI)) deallocate(BufferLine_VI)
-          allocate(BufferLine_VI(nVarLine, nPointLine))
-
-          !recieve variables from GM
-          call MPI_recv(Buffer_IIV,nSize,MPI_REAL,&
-               i_proc0(GM_),1,i_comm(),iStatus_I,iError)
-          call MPI_recv(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,&
-               i_proc0(GM_),2,i_comm(),iStatus_I,iError)
-       end if
-    end if
-
-
-        !Broadcast variables inside IM
-    if(n_proc(IM_)>1 .and. is_proc(IM_)) then
-       nSize = iSize*jSize*nVarBmin
-       call MPI_bcast(nVarLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
-       call MPI_bcast(nPointLine,1,MPI_INTEGER,0,i_comm(IM_),iError)
-       call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(IM_),iError)
-       if (.not. allocated(BufferLine_VI))&
-            allocate(BufferLine_VI(nVarLine, nPointLine))
-       call MPI_bcast(BufferLine_VI,nVarLine*nPointLine,MPI_REAL,0,&
-            i_comm(IM_),iError)
-    endif
+      if(IsFirstTime)then
+         ! nVarLine cannot change during a run, so only transfer once
+         call transfer_integer(GM_, IM_, nVarLine)
+         IsFirstTime = .false.
+      end if
+      call transfer_integer(GM_, IM_, nPointLine)
       
+      ! Now the size is known, so allocate arrays 
+      ! (only GM root and IM processors really use the arrays,
+      ! but it is simpler to allocate it on all processors)
+      allocate(BufferLine_VI(nVarLine, nPointLine), &
+           Buffer_IIV(iSize,jSize,nVarBmin))
 
-    !\
-    ! Transfer satellite names from GM to IM
-    !/   
-    
-    if(nShareSats > 0 .and. i_proc0(IM_) /= i_proc0(GM_))then
-       nSize = nShareSats*100
-       if(is_proc0(GM_)) then
-          call MPI_send(NameSat_I,nSize,MPI_BYTE,i_proc0(IM_),&
-               1,i_comm(),iError)
-       endif
-       if(is_proc0(IM_)) then
-          call MPI_recv(NameSat_I,nSize,MPI_BYTE,i_proc0(GM_),&
-               1,i_comm(),iStatus_I,iError)
-       endif
-    
-   ! Transfer satellite locations from GM to IM
-       
-       nSize = 3*2*nShareSats
-       if(is_proc0(GM_)) then
-          call MPI_send(SatPos_DII,nSize,MPI_REAL,i_proc0(IM_),&
-               1,i_comm(),iError)
-       endif
-       if(is_proc0(IM_)) then
-          call MPI_recv(SatPos_DII,nSize,MPI_REAL,i_proc0(GM_),&
-               1,i_comm(),iStatus_I,iError)
-       endif
-    end if
- 
-!    ! Broadcast SatPos info in IM
-!    if(nShareSats>0 .and. n_proc(IM_)>1 .and. is_proc(IM_)) then
-!       call MPI_bcast(nShareSats,1,MPI_INTEGER,0,i_comm(IM_),iError)
-!       nSize = nShareSats*100
-!       call MPI_bcast(NameSat_I,nSize,MPI_BYTE,0,i_comm(IM_),iError)
-!       nSize = 3*2*nShareSats
-!       call MPI_bcast(SatPos_DII,nSize,MPI_REAL,0,i_comm(IM_),iError)
-!    endif
+      call GM_get_for_im_crcm(Buffer_IIV, iSize, jSize, nVarBmin, &
+           BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    if(DoTest)write(*,*)NameSub,', variables transferred',&
-         ', iProc:',iProcWorld
+      call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
+      call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
 
+      if(is_proc(IM_)) call IM_put_from_gm_crcm(&
+           Buffer_IIV, iSize, jSize, nVarBmin,&
+           BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
 
+      deallocate(Buffer_IIV, BufferLine_VI)
 
-       
-    !\
-    ! Put variables into IM
-    !/
-    if(is_proc(IM_)) then
-       call IM_put_from_gm_crcm(Buffer_IIV,iSize,jSize,nVarBmin,&
-            BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
-       if(DoTest) &
-            write(*,*) 'IM_put_from_gm_crcm: iProc, Buffer_IIV(1,1,:)=',&
-            iProcWorld,Buffer_IIV(1,1,:)
-    endif
+      ! If IM sat tracing is enabled, get sat locations from GM
+      if (nShareSats > 0) then
+         allocate(SatPos_DII(4,2,nShareSats), NameSat_I(nShareSats))
+         if(is_proc(GM_)) &
+              call GM_get_sat_for_im_crcm(SatPos_DII, NameSat_I, nShareSats)
+         
+         ! Transfer satellite names from GM to IM
+         call transfer_string_array(GM_, IM_, nShareSats, NameSat_I, &
+              UseSourceRootOnly = .false.)
+         ! Transfer satellite locations from GM to IM
+         call transfer_real_array(GM_, IM_, size(SatPos_DII), SatPos_DII)
 
-    if(is_proc0(IM_))then
-       if(nShareSats > 0) &
-            call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
-!       if(DoTest) &
-!            write(*,*)'IM got from GM: IM iProc, Buffer(1,1,:)=',&
-!            iProcWorld,Buffer_IIV(1,1,:)
-    end if
-    
+         if(is_proc(IM_)) &
+              call IM_put_sat_from_gm(nShareSats, NameSat_I, SatPos_DII)
+         deallocate(SatPos_DII, NameSat_I)
+      end if
 
-    !\
-    ! Deallocate buffer to save memory
-    !/
-    if(allocated(Buffer_IIV))   deallocate(Buffer_IIV)
-    if(allocated(BufferLine_VI))deallocate(BufferLine_VI)
-
-    if (nShareSats > 0) then
-       deallocate(NameSat_I)
-       deallocate(SatPos_DII)
-    end if
-
-    if(DoTest)write(*,*)NameSub,', variables deallocated',&
-         ', iProc:',iProcWorld
-
-    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
-
-    ! if(DoTest.and.is_proc0(IM_)) call IM_print_variables('GM',iError)      
-      
     end subroutine couple_crcm
 
   end subroutine couple_gm_im
@@ -688,133 +372,44 @@ contains
     ! Send pressure from IM to GM.
     !EOP
 
-    !\
-    ! General coupling variables
-    !/
+    ! Number of variables to pass
+    integer:: nVarImGm
 
-    ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_im_gm'
+    ! Names of variables to pass
+    character(len=100) :: NameVar
 
-    logical :: DoTest, DoTestMe
-    integer :: iProcWorld
+    ! Buffer for the variables on the 2D IM grid
+    real, allocatable:: Buffer_IIV(:,:,:)
 
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_im_gm'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    iProcWorld = i_proc()
-    call couple_mpi
 
-    if(DoTest)write(*,*)NameSub,': finished iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
 
+    if(DoMultiFluidIMCoupling)then
+       NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
+       nVarImGm=6
+    else if(DoAnisoPressureIMCoupling)then 
+       NameVar='p:rho:ppar:bmin'
+       nVarImGm=4
+    else
+       NameVar='p:rho'
+       nVarImGm=2
+    end if
+
+    allocate(Buffer_IIV(iSize,jSize,nVarImGm))
+    if(is_proc(IM_)) &
+         call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+    call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
+    if(is_proc(GM_)) &
+         call GM_put_from_im(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+    deallocate(Buffer_IIV)
+
+    if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
     if(DoTest.and.is_proc0(GM_)) call GM_print_variables('IM')
 
-  contains
-
-    !=========================================================================
-    subroutine couple_mpi
-
-      character (len=*), parameter :: NameSubSub=NameSub//'.couple_mpi'
-
-      ! Number of variables to pass
-      integer :: nVarImGm
-     ! Number of variables for Multi-Fluid to pass                                              
-
-      ! Variable to pass is pressure
-      character (len=100) :: NameVar
-
-      ! Buffer for the variables on the 2D IM grid
-      real, dimension(:,:,:), allocatable :: Buffer_IIV
-
-      ! MPI related variables
-
-      ! MPI status variable
-      integer :: iStatus_I(MPI_STATUS_SIZE)
-
-      ! General error code
-      integer :: iError
-
-      ! Message size
-      integer :: nSize
-
-      ! Communicator and logicals to simplify message passing and execution
-      logical :: IsUninitialized = .true., UseMe=.true.
-      !-----------------------------------------------------------------------
-
-      ! After everything is initialized exclude PEs which are not involved
-      if(.not.UseMe) RETURN
-
-      if(DoTest)write(*,*)NameSubSub,' starting, iProc=',iProcWorld
-      if(DoTest)write(*,*)NameSubSub,', iProc, GMi_iProc0, IMi_iProc0=', &
-           iProcWorld,iProc0Gm,iProc0Im
-
-     if(DoMultiFluidIMCoupling)then
-        NameVar='p:rho:Hpp:Opp:Hprho:Oprho'
-        nVarImGm=6
-     else if(DoAnisoPressureIMCoupling)then 
-        NameVar='p:rho:ppar:bmin'
-        nVarImGm=4
-     else
-        NameVar='p:rho'
-        nVarImGm=2
-     end if
-
-      !\
-      ! Allocate buffers both in GM and IM
-      !/
-      allocate(Buffer_IIV(iSize,jSize,nVarImGm), stat=iError)
-      call check_allocate(iError,NameSubSub//": Buffer_IIV")
-
-      if(DoTest)write(*,*)NameSubSub,', variables allocated',&
-           ', iProc:',iProcWorld
-
-      !\
-      ! Get pressure from IM
-      !/
-      if(is_proc(IM_)) &
-           call IM_get_for_gm(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
-
-      !\
-      ! Transfer variables from IM to GM
-      !/ 
-      nSize = iSize*jSize*nVarImGm
-      if(iProc0Im /= iProc0Gm)then
-         if(is_proc0(IM_)) &
-              call MPI_send(Buffer_IIV,nSize,MPI_REAL,iProc0Gm,&
-              1,iCommWorld,iError)
-         if(is_proc0(GM_)) &
-              call MPI_recv(Buffer_IIV,nSize,MPI_REAL,iProc0Im,&
-              1,iCommWorld,iStatus_I,iError)
-      end if
-
-      ! Broadcast variables inside GM
-      if(n_proc(GM_)>1 .and. is_proc(GM_)) &
-           call MPI_bcast(Buffer_IIV,nSize,MPI_REAL,0,i_comm(GM_),iError)
-
-      if(DoTest)write(*,*)NameSubSub,', variables transferred',&
-           ', iProc:',iProcWorld
-
-      !\
-      ! Put variables into GM
-      !/
-      if(is_proc(GM_))then
-         call GM_put_from_im(Buffer_IIV,iSize,jSize,nVarImGm,NameVar)
-         if(DoTest) &
-              write(*,*)NameSubSub//' iProc, Buffer(1,1,1)=',&
-              iProcWorld,Buffer_IIV(1,1,1)
-      end if
-
-      !\
-      ! Deallocate buffer to save memory
-      !/
-      deallocate(Buffer_IIV)
-
-      if(DoTest)write(*,*)NameSubSub,', variables deallocated',&
-           ', iProc:',iProcWorld
-
-      if(DoTest)write(*,*)NameSubSub,' finished, iProc=',iProcWorld
-
-    end subroutine couple_mpi
-
   end subroutine couple_im_gm
-
 
 end module CON_couple_gm_im
