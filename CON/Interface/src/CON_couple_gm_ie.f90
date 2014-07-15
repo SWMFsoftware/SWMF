@@ -71,10 +71,6 @@ contains
     
     iCommWorld=i_comm()
 
-    !!!   ! This works for a NODE BASED regular IE grid only
-    !!!   nCells_D = ncells_decomposition_d(IE_) + 1
-    !!!   iSize = nCells_D(1); jSize = nCells_D(2)
-
     iSize = Grid_C(IE_) % nCoord_D(1)
     jSize = Grid_C(IE_) % nCoord_D(2)
 
