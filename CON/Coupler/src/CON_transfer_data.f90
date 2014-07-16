@@ -240,7 +240,7 @@ contains
     logical, optional, intent(in):: &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
 
-    integer, parameter:: iTag = 1001
+    integer, parameter:: iTag = 1002
 
     integer:: iDataLocal
 
@@ -291,7 +291,7 @@ contains
 
     real, allocatable:: DataLocal_I(:)
 
-    integer, parameter:: iTag = 1002
+    integer, parameter:: iTag = 1003
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
@@ -336,7 +336,7 @@ contains
 
     real:: DataLocal
 
-    integer, parameter:: iTag = 1002
+    integer, parameter:: iTag = 1004
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
@@ -380,7 +380,7 @@ contains
 
     integer:: nData
 
-    integer, parameter:: iTag = 1003
+    integer, parameter:: iTag = 1005
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
@@ -413,7 +413,7 @@ contains
 
     integer:: nData
 
-    integer, parameter:: iTag = 1004
+    integer, parameter:: iTag = 1006
     !-------------------------------------------------------------------------
     call transfer_data_action(.false., iCompSource, iCompTarget, &
          UseSourceRootOnly, UseTargetRootOnly)
