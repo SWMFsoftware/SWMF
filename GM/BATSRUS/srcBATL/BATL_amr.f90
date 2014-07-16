@@ -46,7 +46,7 @@ contains
   !===========================================================================
 
   subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoBalanceOnlyIn, DoTestIn,&
-       nExtraData, pack_extra_data, unpack_extra_data)
+       nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nIJK, iRatio, jRatio, kRatio
@@ -113,6 +113,10 @@ contains
 
     optional:: pack_extra_data, unpack_extra_data
 
+    ! If UseHighOrderAMRIn is true, 5th (6th) order accuracy will be achieved
+    ! for refined (coarsened) blocks. 
+    logical, optional, intent(in):: UseHighOrderAMRIn
+
     ! Local variables
 
     ! Number of physical+ghost cells per block
@@ -131,11 +135,10 @@ contains
 
     integer:: iStatus_I(MPI_STATUS_SIZE), iError
 
-    integer, parameter:: iMinP = 2-iRatio, iMaxP = nI/iRatio + iRatio - 1
-    integer, parameter:: jMinP = 2-jRatio, jMaxP = nJ/jRatio + jRatio - 1
-    integer, parameter:: kMinP = 2-kRatio, kMaxP = nK/kRatio + kRatio - 1
-    integer, parameter:: nSizeP = &
-         (iMaxP-iMinP+1)*(jMaxP-jMinP+1)*(kMaxP-kMinP+1)
+    integer :: iMinP = 2-iRatio, iMaxP = nI/iRatio + iRatio - 1
+    integer :: jMinP = 2-jRatio, jMaxP = nJ/jRatio + jRatio - 1
+    integer :: kMinP = 2-kRatio, kMaxP = nK/kRatio + kRatio - 1
+    integer :: nSizeP 
 
     integer, parameter:: MaxTry=100
     integer:: iTry
@@ -143,7 +146,7 @@ contains
     logical:: UseMask
     integer:: nVarBuffer, nBuffer
 
-    logical:: DoTest, DoBalanceOnly
+    logical:: DoTest, DoBalanceOnly, UseHighOrderAMR
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     !-------------------------------------------------------------------------
     DoTest = .false.
@@ -151,6 +154,20 @@ contains
 
     DoBalanceOnly = .false.
     if(present(DoBalanceOnlyIn)) DoBalanceOnly = DoBalanceOnlyIn
+
+    UseHighOrderAMR = .false.
+    if(present(UseHighOrderAMRIn)) UseHighOrderAMR = UseHighOrderAMRIn
+    if(UseHighOrderAMR) then
+       ! Two ghost cell layers are needed.
+       iMinP = -1; iMaxP = nI/2 + 2
+       if(nJ > 1) then
+          jMinP = -1; jMaxP = nJ/2 + 2
+       endif
+       if(nK >1) then
+          kMinP = -1; kMaxP = nK/2 + 2
+       endif
+    endif
+    nSizeP = (iMaxP-iMinP+1)*(jMaxP-jMinP+1)*(kMaxP-kMinP+1)
 
     if(DoTest)write(*,*) NameSub,' starting'
 
@@ -468,10 +485,13 @@ contains
     subroutine send_coarsened_block
 
       use BATL_size, ONLY:  InvIjkRatio
+      use BATL_high_order, ONLY: calc_high_coarsened_cell
 
       integer :: i, j, k, i2, j2, k2, iVar, iBuffer
       logical:: DoCheckMask
       real :: CellVolume_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Volume, InvVolume
+      real :: FineCell_III(6,6,6)
+      integer :: Di, Dj, Dk
       !-----------------------------------------------------------------------
       iBuffer = 0
 
@@ -517,14 +537,28 @@ contains
          end do; end do; end do
       else
          if(IsCartesian)then
-            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-               do iVar = 1, nVar
-                  Buffer_I(iBuffer+iVar) = InvIjkRatio * &
-                       sum(State_VGB(iVar,i:i+iRatio-1,j:j+jRatio-1,&
-                       k:k+kRatio-1, iBlockSend))
-               end do
-               iBuffer = iBuffer + nVar
-            end do; end do; end do
+            if(UseHighOrderAMR) then
+               ! Calc 6th order coarsened cell. 
+               Di = iRatio - 1; Dj = jRatio - 1; Dk = kRatio - 1 
+               do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+                  do iVar = 1, nVar
+                     FineCell_III(1:max(Di*6,1), 1:max(Dj*6,1), 1:max(Dk*6,1))=&
+                          State_VGB(iVar,i-2*Di:i+3*Di,j-2*Dj:j+3*Dj,&
+                          k-2*Dk:k+3*Dk,iBlockSend)
+                     Buffer_I(iBuffer+iVar) = calc_high_coarsened_cell(FineCell_III)
+                  end do
+                  iBuffer = iBuffer + nVar
+               end do; end do; end do
+            else
+               do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+                  do iVar = 1, nVar
+                     Buffer_I(iBuffer+iVar) = InvIjkRatio * &
+                          sum(State_VGB(iVar,i:i+iRatio-1,j:j+jRatio-1,&
+                          k:k+kRatio-1, iBlockSend))
+                  end do
+                  iBuffer = iBuffer + nVar
+               end do; end do; end do
+            endif
          else
             do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
                i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
@@ -603,24 +637,39 @@ contains
       iSide = modulo(iTree_IA(Coord1_,iNodeRecv)-1, iRatio)
       jSide = modulo(iTree_IA(Coord2_,iNodeRecv)-1, jRatio)
       kSide = modulo(iTree_IA(Coord3_,iNodeRecv)-1, kRatio)
-
-      ! Send parent part of the block with one ghost cell
-      if(iRatio == 2)then
-         iMin = iSide*nI/2; iMax = iMin + nI/2 + 1
+      write(*,*) 'usehighorderamr:', UseHighOrderAMR
+      if(UseHighOrderAMR) then
+         ! Calc 5th order refined cells. 
+         ! 2 'ghost cell' layers are needed. 
+         iMin = iSide*nI/2 - 1; iMax = (iSide + 1)*nI/2 + 2
+         if(nJ >1) then
+            jMin = jSide*nJ/2 - 1; jMax = (jSide + 1)*nJ/2 + 2
+         else
+            jMin = 1; jMax = nJ
+         endif
+         if(nK >1) then
+            kMin = kSide*nK/2 - 1; kMax = (kSide + 1)*nK/2 + 2
+         else 
+            kMin = 1; kMax = nK
+         endif
       else
-         iMin = 1; iMax = nI
+         ! Send parent part of the block with one ghost cell
+         if(iRatio == 2)then
+            iMin = iSide*nI/2; iMax = iMin + nI/2 + 1
+         else
+            iMin = 1; iMax = nI
+         endif
+         if(jRatio == 2)then
+            jMin = jSide*nJ/2; jMax = jMin + nJ/2 + 1
+         else
+            jMin = 1; jMax = nJ
+         end if
+         if(kRatio == 2)then
+            kMin = kSide*nK/2; kMax = kMin + nK/2 + 1
+         else
+            kMin = 1; kMax = nK
+         end if
       endif
-      if(jRatio == 2)then
-         jMin = jSide*nJ/2; jMax = jMin + nJ/2 + 1
-      else
-         jMin = 1; jMax = nJ
-      end if
-      if(kRatio == 2)then
-         kMin = kSide*nK/2; kMax = kMin + nK/2 + 1
-      else
-         kMin = 1; kMax = nK
-      end if
-
       if(UseMask)then
          DoCheckMask = &
               .not. all(Used_GB(iMin:iMax,jMin:jMax,kMin:kMax,iBlockSend))
@@ -630,7 +679,6 @@ contains
 
       iBuffer = 1
       Buffer_I(iBuffer) = logical_to_real(DoCheckMask)
-
       if(DoCheckMask) then
          ! Set the volume of unused cells to zero
          where(Used_GB(:,:,:,iBlockSend))
@@ -736,11 +784,16 @@ contains
       ! Copy buffer into recv block of State_VGB
 
       use BATL_size, ONLY: InvIjkRatio
-
+      use BATL_high_order, ONLY: calc_high_refined_cell
       integer:: iBuffer, i, j, k
       integer:: nVarUsed
       integer:: iP, jP, kP, iR, jR, kR
+      integer:: iDir, jDir, kDir
       integer, parameter:: Di = iRatio-1, Dj = jRatio-1, Dk = kRatio-1
+
+      real:: CoarseCell_III(5,5,5) = 0
+      integer:: iP1, jP1, kP1, i1, j1, k1
+      integer:: iVar
 
       logical:: DoCheckMask
       logical:: UseSlopeI, UseSlopeJ, UseSlopeK
@@ -774,106 +827,170 @@ contains
       ! Set time step to half of the parent block
       if(present(Dt_B)) Dt_B(iBlockRecv) = 0.5*Buffer_I(iBuffer+1)
 
-      ! 1st order prolongation
-      do kR = 1, nK
-         kP = (kR + Dk)/kRatio
-         do jR = 1, nJ
-            jP = (jR + Dj)/jRatio
-            do iR = 1, nI
-               iP = (iR + Di)/iRatio
-               State_VGB(:,iR,jR,kR,iBlockRecv) = StateP_VG(1:nVar,iP,jP,kP)
-            end do
-         end do
-      end do
+      if(UseHighOrderAMR) then
+         iDir = 0; jDir = 0; kDir = 0
+         do kR = 1, nK
+            kP = (kR + Dk)/kRatio
+            if(nK >1) then
+               ! For example, cell kR=1 and kR=2 refined from the same coarser 
+               ! cell, but they are calculated from different coarser cells.
+               ! These two refined cells are symmetric about the parent coarse 
+               ! cell and the code is organized in a symmetric way. 
+               if(mod(kR,2) == 0) then
+                  kDir = -1 
+               else
+                  kDir = 1
+               endif
+            endif
 
+            do jR = 1, nJ
+               jP = (jR + Dj)/jRatio
+               if(nJ > 1) then
+                  if(mod(jR,2) == 0) then
+                     jDir = -1
+                  else
+                     jDir = 1
+                  endif
+               endif
 
-      if(BetaProlong > 0.0)then
-         ! Add corection for 2nd order prolongation
-         do kP = 1, nK/kRatio
-            kR = kRatio*(kP - 1) + 1
-            do jP = 1, nJ/jRatio
-               jR = jRatio*(jP - 1) + 1
-               do iP = 1, nI/iRatio
-                  iR = iRatio*(iP - 1) + 1
+               do iR = 1, nI
+                  iP = (iR + Di)/iRatio
 
-                  ! If one of the neighboring cells or the cell are masked we
-                  ! will only be able to use 1st order prolongation in that
-                  ! dimension 
+                  if(mod(iR,2) == 0) then
+                     iDir = -1
+                  else
+                     iDir = 1
+                  endif
+                  
+                  ! Organize the code in a symmetric way.
+                  do iVar = 1,  nVar
+                     k1 = 1
+                     do kP1 = kP-2*kDir, kP+2*kDir, sign(1,kDir)
+                        j1 = 1
+                        do jP1 = jP-2*jDir, jP+2*jDir, sign(1,jDir)
+                           i1 = 1
+                           do iP1 = iP-2*iDir, iP+2*iDir, sign(1,iDir)
+                              CoarseCell_III(i1,j1,k1) = &
+                                   StateP_VG(iVar,iP1,jP1,kP1)
+                              i1 = i1 + 1
+                           enddo
+                           j1 = j1 + 1
+                        enddo
+                        k1 = k1 + 1
+                     enddo
+                     
+                     ! Calculate 5th order refined cells.
+                     State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
+                          calc_high_refined_cell(CoarseCell_III) 
+                     ! Only works for 2D NOW!!!!!
 
-                  if(DoCheckMask) then
-                     ! If any of the neighbor cells are masked the product
-                     ! will be zero and no 2nd order prolongation can be done
-                     if(iRatio == 2) UseSlopeI = &
-                          product(StateP_VG(nVar+1,iP-1:iP+1,jP,kP)) > 0.5
-                     if(jRatio == 2) UseSlopeJ = &
-                          product(StateP_VG(nVar+1,iP,jP-1:jP+1,kP)) > 0.5
-                     if(kRatio == 2) UseSlopeK = &
-                          product(StateP_VG(nVar+1,iP,jP,kP-1:kP+1)) > 0.5
-                  end if
+                  enddo ! iVar
 
-                  if(iRatio == 2 .and. UseSlopeI)then
+               enddo
+            enddo
+         enddo
 
-                     SlopeL_V = StateP_VG(1:nVar,iP  ,jP,kP)-&
-                          StateP_VG(1:nVar,iP-1,jP,kP)
-                     SlopeR_V = StateP_VG(1:nVar,iP+1,jP,kP)-&
-                          StateP_VG(1:nVar,iP  ,jP,kP)
-                     Slope_V  = &
-                          (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
-                          BetaProlong*abs(SlopeL_V), &
-                          BetaProlong*abs(SlopeR_V), &
-                          0.5*abs(SlopeL_V+SlopeR_V))
-                     do k = kR, kR+Dk; do j = jR, jR+Dj
-                        State_VGB(:,iR,j,k,iBlockRecv) = &
-                             State_VGB(:,iR,j,k,iBlockRecv) - Slope_V
-                        State_VGB(:,iR+1,j,k,iBlockRecv) = &
-                             State_VGB(:,iR+1,j,k,iBlockRecv) + Slope_V
-                     end do; end do
-
-                  end if
-
-                  if(jRatio == 2 .and. UseSlopeJ)then
-
-                     SlopeL_V = StateP_VG(1:nVar,iP,jP  ,kP)-&
-                          StateP_VG(1:nVar,iP,jP-1,kP)
-                     SlopeR_V = StateP_VG(1:nVar,iP,jP+1,kP)-&
-                          StateP_VG(1:nVar,iP,jP  ,kP)
-                     Slope_V  = &
-                          (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
-                          BetaProlong*abs(SlopeL_V), &
-                          BetaProlong*abs(SlopeR_V), &
-                          0.5*abs(SlopeL_V+SlopeR_V))
-                     do k = kR, kR+Dk; do i = iR, iR+Di
-                        State_VGB(:,i,jR,k,iBlockRecv) = &
-                             State_VGB(:,i,jR,k,iBlockRecv) - Slope_V
-                        State_VGB(:,i,jR+1,k,iBlockRecv) = &
-                             State_VGB(:,i,jR+1,k,iBlockRecv) + Slope_V
-                     end do; end do
-
-                  end if
-
-                  if(kRatio == 2 .and. UseSlopeK)then
-
-                     SlopeL_V = StateP_VG(1:nVar,iP,jP,kP  )-&
-                          StateP_VG(1:nVar,iP,jP,kP-1)
-                     SlopeR_V = StateP_VG(1:nVar,iP,jP,kP+1)-&
-                          StateP_VG(1:nVar,iP,jP,kP)
-                     Slope_V  = &
-                          (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
-                          BetaProlong*abs(SlopeL_V), &
-                          BetaProlong*abs(SlopeR_V), &
-                          0.5*abs(SlopeL_V+SlopeR_V))
-                     do j = jR, jR+Dj; do i = iR, iR+Di
-                        State_VGB(:,i,j,kR,iBlockRecv) = &
-                             State_VGB(:,i,j,kR,iBlockRecv) - Slope_V
-                        State_VGB(:,i,j,kR+1,iBlockRecv) = &
-                             State_VGB(:,i,j,kR+1,iBlockRecv) + Slope_V
-                     end do; end do
-
-                  end if
-
+      else
+         ! 1st order prolongation
+         do kR = 1, nK
+            kP = (kR + Dk)/kRatio
+            do jR = 1, nJ
+               jP = (jR + Dj)/jRatio
+               do iR = 1, nI
+                  iP = (iR + Di)/iRatio
+                  State_VGB(:,iR,jR,kR,iBlockRecv) = StateP_VG(1:nVar,iP,jP,kP)
                end do
             end do
          end do
+
+         if(BetaProlong > 0.0)then
+            ! Add corection for 2nd order prolongation
+            do kP = 1, nK/kRatio
+               kR = kRatio*(kP - 1) + 1
+               do jP = 1, nJ/jRatio
+                  jR = jRatio*(jP - 1) + 1
+                  do iP = 1, nI/iRatio
+                     iR = iRatio*(iP - 1) + 1
+
+                     ! If one of the neighboring cells or the cell are masked we
+                     ! will only be able to use 1st order prolongation in that
+                     ! dimension 
+
+                     if(DoCheckMask) then
+                        ! If any of the neighbor cells are masked the product
+                        ! will be zero and no 2nd order prolongation can be done
+                        if(iRatio == 2) UseSlopeI = &
+                             product(StateP_VG(nVar+1,iP-1:iP+1,jP,kP)) > 0.5
+                        if(jRatio == 2) UseSlopeJ = &
+                             product(StateP_VG(nVar+1,iP,jP-1:jP+1,kP)) > 0.5
+                        if(kRatio == 2) UseSlopeK = &
+                             product(StateP_VG(nVar+1,iP,jP,kP-1:kP+1)) > 0.5
+                     end if
+
+                     if(iRatio == 2 .and. UseSlopeI)then
+
+                        SlopeL_V = StateP_VG(1:nVar,iP  ,jP,kP)-&
+                             StateP_VG(1:nVar,iP-1,jP,kP)
+                        SlopeR_V = StateP_VG(1:nVar,iP+1,jP,kP)-&
+                             StateP_VG(1:nVar,iP  ,jP,kP)
+                        Slope_V  = &
+                             (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
+                             BetaProlong*abs(SlopeL_V), &
+                             BetaProlong*abs(SlopeR_V), &
+                             0.5*abs(SlopeL_V+SlopeR_V))
+                        do k = kR, kR+Dk; do j = jR, jR+Dj
+                           State_VGB(:,iR,j,k,iBlockRecv) = &
+                                State_VGB(:,iR,j,k,iBlockRecv) - Slope_V
+                           State_VGB(:,iR+1,j,k,iBlockRecv) = &
+                                State_VGB(:,iR+1,j,k,iBlockRecv) + Slope_V
+                        end do; end do
+
+                     end if
+
+                     if(jRatio == 2 .and. UseSlopeJ)then
+
+                        SlopeL_V = StateP_VG(1:nVar,iP,jP  ,kP)-&
+                             StateP_VG(1:nVar,iP,jP-1,kP)
+                        SlopeR_V = StateP_VG(1:nVar,iP,jP+1,kP)-&
+                             StateP_VG(1:nVar,iP,jP  ,kP)
+                        Slope_V  = &
+                             (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
+                             BetaProlong*abs(SlopeL_V), &
+                             BetaProlong*abs(SlopeR_V), &
+                             0.5*abs(SlopeL_V+SlopeR_V))
+                        do k = kR, kR+Dk; do i = iR, iR+Di
+                           State_VGB(:,i,jR,k,iBlockRecv) = &
+                                State_VGB(:,i,jR,k,iBlockRecv) - Slope_V
+                           State_VGB(:,i,jR+1,k,iBlockRecv) = &
+                                State_VGB(:,i,jR+1,k,iBlockRecv) + Slope_V
+                        end do; end do
+
+                     end if
+
+                     if(kRatio == 2 .and. UseSlopeK)then
+
+                        SlopeL_V = StateP_VG(1:nVar,iP,jP,kP  )-&
+                             StateP_VG(1:nVar,iP,jP,kP-1)
+                        SlopeR_V = StateP_VG(1:nVar,iP,jP,kP+1)-&
+                             StateP_VG(1:nVar,iP,jP,kP)
+                        Slope_V  = &
+                             (sign(0.125,SlopeL_V)+sign(0.125,SlopeR_V))*min( &
+                             BetaProlong*abs(SlopeL_V), &
+                             BetaProlong*abs(SlopeR_V), &
+                             0.5*abs(SlopeL_V+SlopeR_V))
+                        do j = jR, jR+Dj; do i = iR, iR+Di
+                           State_VGB(:,i,j,kR,iBlockRecv) = &
+                                State_VGB(:,i,j,kR,iBlockRecv) - Slope_V
+                           State_VGB(:,i,j,kR+1,iBlockRecv) = &
+                                State_VGB(:,i,j,kR+1,iBlockRecv) + Slope_V
+                        end do; end do
+
+                     end if
+
+                  end do
+               end do
+            end do
+         endif
       endif
 
       if(UseSimpleRefinement) RETURN

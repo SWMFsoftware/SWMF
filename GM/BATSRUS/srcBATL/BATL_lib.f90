@@ -232,7 +232,7 @@ contains
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
        DoBalanceEachLevelIn, iTypeBalance_A, iTypeNode_A, &
        Used_GB, DoBalanceOnlyIn, DoTestIn, &
-       nExtraData, pack_extra_data, unpack_extra_data)
+       nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -273,6 +273,10 @@ contains
        end subroutine unpack_extra_data
     end interface
     optional:: pack_extra_data, unpack_extra_data
+
+    ! If UseHighOrderAMRIn is true, 5th (6th) order accuracy will be achieved
+    ! for refined (coarsened) blocks. 
+    logical, intent(in), optional:: UseHighOrderAMRIn
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -384,8 +388,9 @@ contains
          DoTestIn=DoTestIn, &
          nExtraData=nExtraData, &
          pack_extra_data=pack_extra_data, &
-         unpack_extra_data=unpack_extra_data)
-
+         unpack_extra_data=unpack_extra_data, &
+         UseHighOrderAMRIn=UseHighOrderAMRIn)
+    
     ! This logical tells find_neighbor (called by move_tree) to check 
     ! if the neighbor levels of a block (otherwise not affected by AMR) changed
     DoCheckResChange = nDim == 3 .and. IsNodeBasedGrid &

@@ -1098,6 +1098,9 @@ subroutine MH_set_parameters(TypeAction)
         UseTvdReschange = .false. 
         UseAccurateResChange = .false. 
        
+     case('#HIGHORDERAMR')
+        call read_var('UseHighOrderAMR',UseHighOrderAMR)
+        
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.

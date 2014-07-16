@@ -296,4 +296,7 @@ Module ModMain
 
   ! Use high-order accurate ghost cells. 
   logical :: UseHighResChange = .false. 
+
+  ! Use high-order accurate refined/coarsened cells.
+  logical :: UseHighOrderAMR = .false.
 end module ModMain

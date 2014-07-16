@@ -335,7 +335,7 @@ contains
     real:: Temp, Distance_I(4)=(/-7,-3,1,5/)
     !----------------------------------------------------------------------
 
-    DoLimit = .false. 
+    DoLimit = .true. 
     if(present(DoLimitIn)) DoLimit = DoLimitIn
 
     Temp = cpp*Cell_I(Ipp_) + cp*Cell_I(Ip_) + &
@@ -912,5 +912,40 @@ contains
        endif
     enddo; enddo
   end subroutine correct_ghost_for_coarse_blk
+  !======================================================================
+
+  real function calc_high_refined_cell(Cell_III)
+    ! Calc 5th order refined cell for AMR.
+    ! Only works for 2D now!!
+
+    real, intent(in):: Cell_III(5,5,5)
+    real:: Cell_I(5), Cell_II(5,5)
+    integer:: i, j, k
+    !----------------------------------------------------------------------
+
+    k = 1
+    Cell_II = Cell_III(:,:,k) ! Change these lines for 3D. 
+    do i = 1, 5 ! Eliminate j dimension
+       Cell_I(i) = interpolate_in_coarse_blk(Cell_II(i,:), .true.)
+    enddo
+    calc_high_refined_cell = interpolate_in_coarse_blk(Cell_I, .true.)
+  end function calc_high_refined_cell
+  !======================================================================
+  
+  real function calc_high_coarsened_cell(Cell_III)
+    ! Calc 6th order coarsened cell for AMR. 
+    ! Only works for 2D now. 
+
+    real, intent(in):: Cell_III(6,6,6)
+    real:: Cell_I(6), Cell_II(6,6)
+    integer:: i, j, k
+
+    k = 1
+    Cell_II = Cell_III(:,:,k) ! Change these lines for 3D.
+    do i = 1, 6
+       Cell_I(i) = calc_face_value(Cell_II(i,:), .true.)
+    enddo
+    calc_high_coarsened_cell = calc_face_value(Cell_I, .true.)
+  end function calc_high_coarsened_cell
 
 end module BATL_high_order

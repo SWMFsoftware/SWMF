@@ -61,7 +61,7 @@ contains
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
          lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
-         iNewGrid, iNewDecomposition
+         iNewGrid, iNewDecomposition, UseHighOrderAMR
     use ModGeometry, ONLY : minDXvalue,maxDXvalue,true_cell
     use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
@@ -139,7 +139,7 @@ contains
     else
        call regrid_batl(nVar, State_VGB, Dt_BLK, &
             DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTestMe, &
-            Used_GB=true_cell)
+            Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR)
     end if
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
 
