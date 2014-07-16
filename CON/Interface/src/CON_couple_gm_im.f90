@@ -132,6 +132,8 @@ contains
        call couple_ram
     case('CRC')
        call couple_crcm
+    case default
+       call CON_stop(NameSub//': unknown IM version='//NameVersionIm)
     end select
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
@@ -231,12 +233,15 @@ contains
       end if
       call transfer_integer(GM_, IM_, nPointLine)
 
-      ! Now the size is known, so allocate arrays
-      ! (only GM root and IM processors really use the arrays,
-      ! but it is simpler to allocate it on all processors)
-      allocate(Map_DSII(3,2,iSize,jSize), BufferLine_VI(nVarLine,nPointLine))
+      ! Now the size is known on GM root and IM so allocate arrays
+      if(is_proc0(GM_) .or. is_proc(IM_))then
+         allocate(Map_DSII(3,2,iSize,jSize), &
+              BufferLine_VI(nVarLine,nPointLine))
+      else
+         allocate(Map_DSII(1,1,1,1), BufferLine_VI(1,1))
+      end if
 
-      ! Transfer the trace data and mapping data from GM to IM
+      ! Transfer the trace data and mapping data from GM root to IM
       if(is_proc0(GM_)) call GM_get_for_im_line( &
            iSize, jSize, Map_DSII, nVarLine, nPointLine, BufferLine_VI)
       call transfer_real_array(GM_, IM_, size(Map_DSII), Map_DSII)
@@ -316,14 +321,19 @@ contains
          IsFirstTime = .false.
       end if
       call transfer_integer(GM_, IM_, nPointLine)
-      
-      ! Now the size is known, so allocate arrays 
-      ! (only GM root and IM processors really use the arrays,
-      ! but it is simpler to allocate it on all processors)
-      allocate(BufferLine_VI(nVarLine, nPointLine), &
-           Buffer_IIV(iSize,jSize,nVarBmin))
+     
+      ! Now the size is known on GM root and IM so allocate arrays
+      if(is_proc0(GM_) .or. is_proc(IM_))then
+         allocate(BufferLine_VI(nVarLine, nPointLine), &
+              Buffer_IIV(iSize,jSize,nVarBmin))
+      else
+         allocate(BufferLine_VI(1,1), Buffer_IIV(1,1,1))
+      end if
 
-      call GM_get_for_im_crcm(Buffer_IIV, iSize, jSize, nVarBmin, &
+      ! Only GM root returns useful info but all processors should be called
+      ! so they can deallocate ray tracing
+      if(is_proc0(GM_)) call GM_get_for_im_crcm( &
+           Buffer_IIV, iSize, jSize, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, NameVar)
 
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
