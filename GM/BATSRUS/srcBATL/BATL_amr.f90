@@ -135,9 +135,9 @@ contains
 
     integer:: iStatus_I(MPI_STATUS_SIZE), iError
 
-    integer :: iMinP = 2-iRatio, iMaxP = nI/iRatio + iRatio - 1
-    integer :: jMinP = 2-jRatio, jMaxP = nJ/jRatio + jRatio - 1
-    integer :: kMinP = 2-kRatio, kMaxP = nK/kRatio + kRatio - 1
+    integer :: iMinP, iMaxP
+    integer :: jMinP, jMaxP
+    integer :: kMinP, kMaxP
     integer :: nSizeP 
 
     integer, parameter:: MaxTry=100
@@ -162,10 +162,18 @@ contains
        iMinP = -1; iMaxP = nI/2 + 2
        if(nJ > 1) then
           jMinP = -1; jMaxP = nJ/2 + 2
+       else
+          jMinP = 1; jMaxP = 1
        endif
        if(nK >1) then
           kMinP = -1; kMaxP = nK/2 + 2
+       else
+          kMinP = 1; kMaxP = 1
        endif
+    else
+       iMinP = 2-iRatio; iMaxP = nI/iRatio + iRatio - 1
+       jMinP = 2-jRatio; jMaxP = nJ/jRatio + jRatio - 1
+       kMinP = 2-kRatio; kMaxP = nK/kRatio + kRatio - 1
     endif
     nSizeP = (iMaxP-iMinP+1)*(jMaxP-jMinP+1)*(kMaxP-kMinP+1)
 
@@ -861,7 +869,7 @@ contains
                   else
                      iDir = 1
                   endif
-                  
+
                   ! Organize the code in a symmetric way.
                   do iVar = 1,  nVar
                      k1 = 1
@@ -878,7 +886,7 @@ contains
                         enddo
                         k1 = k1 + 1
                      enddo
-                     
+
                      ! Calculate 5th order refined cells.
                      State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
                           calc_high_refined_cell(CoarseCell_III) 
