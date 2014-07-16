@@ -244,9 +244,6 @@ contains
   subroutine GM_get_for_rb(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    !call stop_mpi('RAYTRACE is OFF')
-
-
     use ModGeometry,ONLY: x2
     use ModProcMH,  ONLY: iProc
 
@@ -282,15 +279,10 @@ contains
     integer :: iLat,iLon,iLine, iLocBmin
     real    :: SolarWind_V(nVar), SmGm_DD(3,3), XyzBminSm_D(3)
     !--------------------------------------------------------------------------
+    if(iProc /= 0) RETURN
 
     if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
          call CON_stop(NameSub//' invalid NameVar='//NameVar)
-
-    if(iProc /= 0)then
-       ! Clean and return
-       call line_clean
-       RETURN
-    end if
 
     call CON_set_do_test(NameSub//'_tec', DoTestTec, DoTestMe)
     call CON_set_do_test(NameSub//'_idl', DoTestIdl, DoTestMe)

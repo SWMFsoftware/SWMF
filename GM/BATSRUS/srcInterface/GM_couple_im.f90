@@ -117,9 +117,6 @@ contains
   subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    !call stop_mpi('RAYTRACE is OFF')
-
-
     use ModGeometry,ONLY: x2
     use ModProcMH,  ONLY: iProc
     use ModIoUnit, ONLY: UNITTMP_
@@ -137,8 +134,6 @@ contains
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
 
-    character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
-
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
     real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
 
@@ -149,14 +144,17 @@ contains
     integer :: nVarExtract, nPoint, iPoint, iStartPoint
     real, allocatable :: Buffer_VI(:,:)
 
-    logical :: DoTest, DoTestMe
-
     integer :: iLat,iLon,iLine,iLocBmin
     integer :: iIonSecond
     real    :: SmGm_DD(3,3), XyzBminSm_D(3)
     real    :: SolarWind_V(nVar)
     character(len=100) :: NameOut
+
+    logical :: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
     !--------------------------------------------------------------------------
+    if(iProc /= 0) RETURN
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoMultiFluidIMCoupling)then
        if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
@@ -168,14 +166,6 @@ contains
        if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     end if
-
-    if(iProc /= 0)then
-       ! Clean and return
-       call line_clean
-       RETURN
-    end if
-
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Initialize buffer_iiv
     Buffer_IIV = 0.0
@@ -411,18 +401,19 @@ contains
     SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
     do iPoint = 1, nPointLine
        StateLine_VI(3:5,iPoint)  = &
-            matmul(SmGm_DD,         StateLine_VI(3:5        ,iPoint)) ! X,Y,Z
+            matmul(SmGm_DD, StateLine_VI(3:5,iPoint)) ! X,Y,Z
        do iFluid = 1, nFluid
           iUx5 = iUx_I(iFluid)+5; iUz5 = iUz_I(iFluid)+5
           StateLine_VI(iUx5:iUz5,iPoint)  = &
-               matmul(SmGm_DD,       StateLine_VI(iUx5:iUz5,iPoint)) ! velocity
+               matmul(SmGm_DD, StateLine_VI(iUx5:iUz5,iPoint)) ! velocity
        end do
        StateLine_VI(Bx_+5:Bz_+5,iPoint)= &
-            matmul(SmGm_DD,         StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
+            matmul(SmGm_DD, StateLine_VI(Bx_+5:Bz_+5,iPoint)) ! mag field
 
+       ! b.grad(B1)
        if(DoExtractBGradB1) &
-            StateLine_VI(nVarLine-2:nVarLine,iPoint)= &
-            matmul(SmGm_DD, StateLine_VI(nVarLine-2:nVarLine,iPoint))! b.grad(B1)
+            StateLine_VI(nVarLine-2:nVarLine,iPoint) = &
+            matmul(SmGm_DD, StateLine_VI(nVarLine-2:nVarLine,iPoint)) 
 
     end do
 
