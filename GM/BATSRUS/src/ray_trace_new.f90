@@ -1513,7 +1513,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
-  use CON_line_extract,  ONLY: line_init, line_collect
+  use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use CON_planet,        ONLY: DipoleStrength
   use ModMultiFluid
 
@@ -1690,7 +1690,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
        RayIntegral_VII, RayResult_VII, nLat*nLon*nRayIntegral, &
        MPI_REAL, MPI_SUM, 0, iComm, iError)
 
-  if(DoExtractRay) call line_collect(iComm,0)
+  if(DoExtractRay)then
+     call line_collect(iComm,0)
+     if(iProc /= 0) call line_clean
+  end if
 
   call timing_stop('integrate_ray')
 
@@ -1702,7 +1705,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
 
   use CON_ray_trace,     ONLY: ray_init
   use CON_axes,          ONLY: transform_matrix
-  use CON_line_extract,  ONLY: line_init, line_collect
+  use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
@@ -1824,7 +1827,10 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   if(DoIntegrateRay) call MPI_reduce( RayIntegral_VII, RayResult_VII, &
        size(RayIntegral_VII), MPI_REAL, MPI_SUM, 0, iComm, iError)
 
-  if(DoExtractRay) call line_collect(iComm,0)
+  if(DoExtractRay)then
+     call line_collect(iComm,0)
+     if(iProc /= 0) call line_clean
+  end if
 
   call timing_stop('integrate_ray_1d')
 
