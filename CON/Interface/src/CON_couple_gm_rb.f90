@@ -138,20 +138,25 @@ contains
     ! Allocate buffers both in GM and RB
     allocate(Integral_IIV(iSize,jSize,nIntegral))
 
-    ! Get field line integrals from GM
+    ! Get field line integrals from GM. Only GM root returns the results.
     if(is_proc(GM_)) &
          call GM_get_for_rb_trace(iSize, jSize, NameVar, nVarLine, nPointLine)
 
     ! Send over size information
     call transfer_integer(GM_, RB_, nVarLine)
     call transfer_integer(GM_, RB_, nPointLine)
-    allocate(BufferLine_VI(nVarLine, nPointLine))
 
-    if(is_proc(GM_))call GM_get_for_rb(Integral_IIV, iSize, jSize, nIntegral, &
+    if(is_proc0(GM_) .or. is_proc(RB_))then
+       allocate(BufferLine_VI(nVarLine, nPointLine))
+    else
+       allocate(BufferLine_VI(1,1))
+    end if
+
+    if(is_proc0(GM_))call GM_get_for_rb(Integral_IIV, iSize, jSize, nIntegral, &
             BufferLine_VI, nVarLine, nPointLine, NameVar)
 
-    call transfer_real_array(GM_, RB_, nVarLine*nPointLine, BufferLine_VI)
-    call transfer_real_array(GM_, RB_, iSize*jSize*nIntegral, Integral_IIV)
+    call transfer_real_array(GM_, RB_, size(BufferLine_VI), BufferLine_VI)
+    call transfer_real_array(GM_, RB_, size(Integral_IIV), Integral_IIV)
        
     if(is_proc(RB_)) call RB_put_from_gm(Integral_IIV,iSize,jSize,nIntegral,&
          BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
