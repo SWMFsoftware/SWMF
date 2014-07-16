@@ -380,10 +380,10 @@ contains
     ! Note that this routine is only called on the root processor !!!
     !/8
 
-    integer                :: nVarLine   = 0    ! number of vars per line point
-    integer                :: nPointLine = 0    ! number of points in all lines
-    real, save, allocatable:: StateLine_VI(:,:)       ! state along all lines
-    integer,save           :: iRiTiDIr_DI(3,2*nR*nT)  ! line index 
+    integer          :: nVarLine   = 0    ! number of vars per line point
+    integer          :: nPointLine = 0    ! number of points in all lines
+    real, allocatable:: StateLine_VI(:,:)       ! state along all lines
+    integer,save     :: iRiTiDIr_DI(3,2*nR*nT)  ! line index 
 
     ! Local Variables
     integer, parameter:: &
@@ -393,31 +393,31 @@ contains
     integer, parameter:: nStep = 2*(nStepInside + nStepInterp)+1
     real,    parameter:: rBoundary = 3.0
 
-    real, dimension(3,nStepInside+1)     :: bDipoleS_VI,bDipoleN_VI,XyzDipoleN_VI,XyzDipoleS_VI
-    real, dimension(nStepInside+1)       :: sDipoleS_I, sDipoleN_I,rDipoleS_I,rDipoleN_I
-    real, dimension(nStepInside+1)       :: bDipoleMagnS_I, bDipoleMagnN_I
-    real, dimension(3,nStep)             :: XyzDipole_VI, bDipole_VI
-    real, dimension(nStep)               :: bDipoleMagn_I, sDipole_I, rDipole_I
-    real, dimension(nStep,nR,nT)         :: STemp
-    real, dimension(nStepInterp)         :: LengthHeidi_I,BHeidi_I,RHeidi_I,LengthHeidinew_I
-    real, dimension(nStepInterp)         :: XHeidi_I,YHeidi_I,ZHeidi_I,XHeidinew_I
-    real, dimension(nStepInterp)         :: BxHeidi_I,ByHeidi_I,BzHeidi_I
-    real, dimension(nStepInterp)         :: pHeidi_I, rhoHeidi_I
-    real, dimension(nStepInterp)         :: bGradB1xHeidi_I, bGradB1yHeidi_I, bGradB1zHeidi_I
-    real, allocatable                    :: B_I(:), Length_I(:),RadialDist_I(:)
-    real, allocatable                    :: bGradB1x_I(:), bGradB1y_I(:), bGradB1z_I(:)
-    real, allocatable                    :: Bx_I(:), By_I(:), Bz_I(:)
-    real, allocatable                    :: X_I(:),Y_I(:),Z_I(:)
-    real, allocatable                    :: p_I(:), rho_I(:)
-    real                                 :: LatBoundaryN, LatBoundaryS
-    real                                 ::dLength
-    integer                              ::ns,np,k
-    integer                              :: iR, iT, iDir
-    integer                              :: iPoint, iPhi
-    integer                              :: iMax, i, iLineLast,iLine,iLineFirst,j
-    real                                 :: xS, yS, zS, xN, yN, zN
-    real                                 :: LengthExS(nR,nT,2), LengthExN(nR,nT,2)
-    real                                 :: Re, DipoleFactor
+    real, dimension(3,nStepInside+1):: bDipoleS_VI,bDipoleN_VI,XyzDipoleN_VI,XyzDipoleS_VI
+    real, dimension(nStepInside+1)  :: sDipoleS_I, sDipoleN_I,rDipoleS_I,rDipoleN_I
+    real, dimension(nStepInside+1)  :: bDipoleMagnS_I, bDipoleMagnN_I
+    real, dimension(3,nStep)        :: XyzDipole_VI, bDipole_VI
+    real, dimension(nStep)          :: bDipoleMagn_I, sDipole_I, rDipole_I
+    real, dimension(nStep,nR,nT)    :: STemp
+    real, dimension(nStepInterp)    :: LengthHeidi_I,BHeidi_I,RHeidi_I,LengthHeidinew_I
+    real, dimension(nStepInterp)    :: XHeidi_I,YHeidi_I,ZHeidi_I,XHeidinew_I
+    real, dimension(nStepInterp)    :: BxHeidi_I,ByHeidi_I,BzHeidi_I
+    real, dimension(nStepInterp)    :: pHeidi_I, rhoHeidi_I
+    real, dimension(nStepInterp)    :: bGradB1xHeidi_I, bGradB1yHeidi_I, bGradB1zHeidi_I
+    real, allocatable               :: B_I(:), Length_I(:),RadialDist_I(:)
+    real, allocatable               :: bGradB1x_I(:), bGradB1y_I(:), bGradB1z_I(:)
+    real, allocatable               :: Bx_I(:), By_I(:), Bz_I(:)
+    real, allocatable               :: X_I(:),Y_I(:),Z_I(:)
+    real, allocatable               :: p_I(:), rho_I(:)
+    real                            :: LatBoundaryN, LatBoundaryS
+    real                            ::dLength
+    integer                         ::ns,np,k
+    integer                         :: iR, iT, iDir
+    integer                         :: iPoint, iPhi
+    integer                         :: iMax, i, iLineLast,iLine,iLineFirst,j
+    real                            :: xS, yS, zS, xN, yN, zN
+    real                            :: LengthExS(nR,nT,2), LengthExN(nR,nT,2)
+    real                            :: Re, DipoleFactor
     !--------------------------------------------------------------------------
     Re = rPlanet_I(Earth_)
     DipoleFactor = DipoleStrengthPlanet_I(Earth_)*(Re)**3
@@ -433,7 +433,6 @@ contains
     !\
     ! Allocate buffer
     !/
-    if (allocated(StateLine_VI)) deallocate(StateLine_VI)
     allocate(StateLine_VI(nVarLine,nPointLine))
     !\
     ! Copy into local variables
@@ -665,11 +664,12 @@ contains
 
     end do
 
-    deallocate(X_I);         deallocate(Y_I);         deallocate(Z_I);
-    deallocate(B_I);         deallocate(Length_I);    deallocate(RadialDist_I);
-    deallocate(bGradB1x_I);  deallocate(bGradB1y_I);  deallocate(bGradB1z_I);
-    deallocate(Bx_I);        deallocate(By_I);        deallocate(Bz_I);
-    deallocate(p_I) ;        deallocate(rho_I);
+    deallocate(StateLine_VI)
+    deallocate(X_I, Y_I, Z_I)
+    deallocate(B_I, Length_I, RadialDist_I)
+    deallocate(bGradB1x_I, bGradB1y_I, bGradB1z_I)
+    deallocate(Bx_I, By_I, Bz_I)
+    deallocate(p_I, rho_I)
 
     !\
     ! Convert the MHD variables (B field) to Heidi grid
@@ -779,21 +779,6 @@ contains
     pHeidi_III(:,:,nT)        = pHeidi_III(:,:,1)
     rhoHeidi_III(:,:,nT)      = rhoHeidi_III(:,:,1)
 
-    ! This should be gone !!!
-    !Xyz_VIII(:,:,nR,:)        = Xyz_VIII(:,:,nR-1,:)
-    !BHeidi_III(:,nR,:)        = BHeidi_III(:,nR-1,:)
-    !RHeidi_III(:,nR,:)        = RHeidi_III(:,nR-1,:)
-    !SHeidi_III(:,nR,:)        = SHeidi_III(:,nR-1,:)
-    !BxHeidi_III(:,nR,:)       = BxHeidi_III(:,nR-1,:)
-    !ByHeidi_III(:,nR,:)       = ByHeidi_III(:,nR-1,:)
-    !BzHeidi_III(:,nR,:)       = BzHeidi_III(:,nR-1,:)
-    !bGradB1xHeidi_III(:,nR,:) = bGradB1xHeidi_III(:,nR-1,:)
-    !bGradB1yHeidi_III(:,nR,:) = bGradB1yHeidi_III(:,nR-1,:)  
-    !bGradB1zHeidi_III(:,nR,:) = bGradB1zHeidi_III(:,nR-1,:)
-    !rhoHeidi_III(:,nR,:)      = rhoHeidi_III(:,nR-1,:)
-    !pHeidi_III(:,nR,:)        = pHeidi_III(:,nR-1,:)
-
-
     !Find the location of minimum B
     do iR = 1, nR
        do iT = 1, nT
@@ -806,10 +791,7 @@ contains
 
     do iT = 1, nT
        MhdEqPressure_I(iT) = pHeidi_III(iPointBmin_II(nR,iT),nR,iT)
-       MhdEqDensity_I(iT)    = rhoHeidi_III(iPointBmin_II(nR,iT),nR,iT)
-       ! MhdEqVelocity = sqrt(StateLine_VI(ux_,iPointBmin)**2 + &
-       !      StateLine_VI(uy_,iPointBmin)**2 + StateLine_VI(uz_,iPointBmin)**2)
-
+       MhdEqDensity_I(iT)  = rhoHeidi_III(iPointBmin_II(nR,iT),nR,iT)
        if(DoTestMe) &
             write(*,*) 'pressure and rho from MHD: iT, P, rho = ', &
             iT,  MhdEqPressure_I(iT),  MhdEqDensity_I(iT)
