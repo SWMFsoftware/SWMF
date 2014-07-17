@@ -208,10 +208,10 @@ contains
       ! List of variable names
       character(len=100), save :: NameVar
 
-      ! Number of variables saved into the line data (does not change)
-      integer, save :: nVarLine
+      ! Number of variables saved into the line data
+      integer:: nVarLine
 
-      ! Number of points saved into the line data (keeps changing)
+      ! Number of points saved into the line data
       integer:: nPointLine
 
       ! Buffers for the line data and mapping from equator to ionosphere
@@ -225,13 +225,18 @@ contains
       if(is_proc(GM_)) call GM_get_for_im_trace( &
            iSize, jSize, nVarLine, nPointLine, NameVar)
 
+      if(DoTest .and. is_proc0(GM_)) write(*,*) NameSubSub, &
+           ' GM root has nVarLine, nPointLine=', nVarLine, nPointLine
+
       if(IsFirstTime)then
-         ! These cannot change during a run, so only transfer them once
+         ! This cannot change during a run, so only transfer them once
          call transfer_string(GM_, IM_, NameVar)
-         call transfer_integer(GM_, IM_, nVarLine)
          IsFirstTime = .false.
       end if
-      call transfer_integer(GM_, IM_, nPointLine)
+      call transfer_integer(GM_, IM_, nVarLine, nPointLine)
+
+      if(DoTest .and. is_proc0(IM_)) write(*,*) NameSubSub, &
+           ' IM root has nVarLine, nPointLine=', nVarLine, nPointLine
 
       ! Now the size is known on GM root and IM so allocate arrays
       if(is_proc0(GM_) .or. is_proc(IM_))then
@@ -268,15 +273,11 @@ contains
 
       ! Number of varibles at minimum B to pass
       integer  :: nVarBmin
-      !    integer, parameter :: nIntegral=6
 
-      ! Some variables do not change during a run, so transfer once only
-      logical:: IsFirstTime = .true.
+      ! Number of variables saved into the line data
+      integer:: nVarLine
 
-      ! Number of variables saved into the line data (does not change)
-      integer, save :: nVarLine
-
-      ! Number of points saved into the line data (keeps changing)
+      ! Number of points saved into the line data      
       integer:: nPointLine
 
       ! Names of variables to pass
@@ -315,12 +316,7 @@ contains
       if(is_proc(GM_)) call GM_get_for_im_trace_crcm( &
            iSize, jSize, NameVar, nVarLine, nPointLine)
 
-      if(IsFirstTime)then
-         ! nVarLine cannot change during a run, so only transfer once
-         call transfer_integer(GM_, IM_, nVarLine)
-         IsFirstTime = .false.
-      end if
-      call transfer_integer(GM_, IM_, nPointLine)
+      call transfer_integer(GM_, IM_, nVarLine, nPointLine)
      
       ! Now the size is known on GM root and IM so allocate arrays
       if(is_proc0(GM_) .or. is_proc(IM_))then
