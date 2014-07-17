@@ -5,6 +5,33 @@ module BATL_high_order
   implicit none
 
   save
+  
+  private ! except
+
+  ! Make (f(j+1/2) - f(j-1/2))/dx high order accurate. 
+  public:: correct_face_value
+
+  ! Input:  f(i-3)...f(i+3), dx
+  ! Output: (f(i+1/2) - f(i-1/2))/dx, which is 6th order accurate.
+  public:: calc_center_first_derivate
+
+  ! Input:  f(i-2)...f(i+3)
+  ! Output: f(i+1/2), which is 6th order accurate. 
+  public:: calc_face_value
+
+  ! 5th order prolongation for resolution change.
+  public:: prolongation_high_order_reschange
+
+  ! 5th order restriction for resolution change. 
+  public:: restriction_high_order_reschange
+
+  ! Make sure all the ghost cells are high order accurate.
+  public:: correct_ghost_for_fine_blk
+  public:: correct_ghost_for_coarse_blk
+
+  ! 5th order AMR.
+  public:: prolongation_high_order_amr
+  public:: restriction_high_order_amr
 
 contains
 
@@ -123,7 +150,7 @@ contains
   end function two_points_interpolation
 
   !======================================================================
-  subroutine get_ghost_for_coarse_blk(CoarseCell, FineCell_III, Ghost_I)
+  subroutine restriction_high_order_reschange(CoarseCell, FineCell_III, Ghost_I)
     ! For 2D: 
     !         _________________________________
     !         | u1|   |   |   |   |   |   |   |
@@ -205,7 +232,7 @@ contains
     Ghost_I(2) = calc_face_value(FineCell_I(1:6), DoLimit)
     Ghost_I(3) = calc_face_value(FineCell_I(3:8), DoLimit)
 
-  end subroutine get_ghost_for_coarse_blk
+  end subroutine restriction_high_order_reschange
   !======================================================================
   real function calc_edge_value(CellValue_II,DoLimitIn)
     ! For 3D, need more tests. 
@@ -349,7 +376,7 @@ contains
   end function interpolate_in_coarse_blk
   !======================================================================
 
-  subroutine calc_high_ghost_for_fine_blk(iBlock, nVar, Field1_VG, Field_VG)
+  subroutine prolongation_high_order_reschange(iBlock, nVar, Field1_VG, Field_VG)
     ! Works for 2D.
     ! The 3D part is also partially implemented, but need more tests. 
     
@@ -648,7 +675,7 @@ contains
        end do; end do
 
     end if
-  end subroutine calc_high_ghost_for_fine_blk
+  end subroutine prolongation_high_order_reschange
   !======================================================================
 
   subroutine correct_ghost_for_fine_blk(iBlock, nVar, Field_VG)
@@ -914,7 +941,7 @@ contains
   end subroutine correct_ghost_for_coarse_blk
   !======================================================================
 
-  real function calc_high_refined_cell(Cell_III)
+  real function prolongation_high_order_amr(Cell_III)
     ! Calc 5th order refined cell for AMR.
     ! Only works for 2D now!!
 
@@ -928,11 +955,11 @@ contains
     do i = 1, 5 ! Eliminate j dimension
        Cell_I(i) = interpolate_in_coarse_blk(Cell_II(i,:), .true.)
     enddo
-    calc_high_refined_cell = interpolate_in_coarse_blk(Cell_I, .true.)
-  end function calc_high_refined_cell
+    prolongation_high_order_amr = interpolate_in_coarse_blk(Cell_I, .true.)
+  end function prolongation_high_order_amr
   !======================================================================
   
-  real function calc_high_coarsened_cell(Cell_III)
+  real function restriction_high_order_amr(Cell_III)
     ! Calc 6th order coarsened cell for AMR. 
     ! Only works for 2D now. 
 
@@ -945,7 +972,7 @@ contains
     do i = 1, 6
        Cell_I(i) = calc_face_value(Cell_II(i,:), .true.)
     enddo
-    calc_high_coarsened_cell = calc_face_value(Cell_I, .true.)
-  end function calc_high_coarsened_cell
+    restriction_high_order_amr = calc_face_value(Cell_I, .true.)
+  end function restriction_high_order_amr
 
 end module BATL_high_order

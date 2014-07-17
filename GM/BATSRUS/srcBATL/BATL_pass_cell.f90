@@ -6,7 +6,7 @@ module BATL_pass_cell
   use BATL_geometry, ONLY: IsCartesianGrid, IsRotatedCartesian, IsRoundCube, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
-  use BATL_high_order, ONLY: get_ghost_for_coarse_blk
+  use BATL_high_order, ONLY: restriction_high_order_reschange
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 2*nDim range limits, we can send only the tag which
@@ -625,7 +625,7 @@ contains
       ! The ghost cells of coarse blocks have been got in do_restrict
       ! Ghost cells of fine blocks are calculated here. 
 
-      use BATL_high_order, ONLY: calc_high_ghost_for_fine_blk, &
+      use BATL_high_order, ONLY: prolongation_high_order_reschange, &
            correct_ghost_for_fine_blk, correct_ghost_for_coarse_blk
 
       integer, intent(in):: iBlock
@@ -636,7 +636,7 @@ contains
       if(.not. allocated(Field1_VG)) &
            allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
 
-      call calc_high_ghost_for_fine_blk(&
+      call prolongation_high_order_reschange(&
            iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock))
 
       neiLev_I(1) = DiLevelNei_IIIB(-1,0,0,iBlock)
@@ -1071,7 +1071,7 @@ contains
                      do iVar = 1, nVar
                         CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS,iBlockSend)
 
-                        call get_ghost_for_coarse_blk(CoarseCell,&
+                        call restriction_high_order_reschange(CoarseCell,&
                              Primitive_VIII(iVar,:,:,1), Ghost_I)
 
                         if(iDir == 1) then
@@ -1123,7 +1123,7 @@ contains
                      do iVar = 1, nVar
                         CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS,iBlockSend)
 
-                        call get_ghost_for_coarse_blk(CoarseCell,&
+                        call restriction_high_order_reschange(CoarseCell,&
                              Primitive_VIII(iVar,:,:,1), Ghost_I)
 
                         if(jDir == 1) then
@@ -1215,7 +1215,7 @@ contains
                   do iVar = 1, nVar
                      CoarseCell = State_VGB(iVar,iS0+iDir,jS1,kS,iBlockSend)
 
-                     call get_ghost_for_coarse_blk(CoarseCell,&
+                     call restriction_high_order_reschange(CoarseCell,&
                           Primitive_VIII(iVar,:,:,1), Ghost_I)
 
                      if(iDir == 1) then
@@ -1268,7 +1268,7 @@ contains
                   do iVar = 1, nVar
                      CoarseCell = State_VGB(iVar,iS1,jS0+jDir,kS,iBlockSend)
 
-                     call get_ghost_for_coarse_blk(CoarseCell,&
+                     call restriction_high_order_reschange(CoarseCell,&
                           Primitive_VIII(iVar,:,:,1), Ghost_I)
 
                      if(jDir == 1) then

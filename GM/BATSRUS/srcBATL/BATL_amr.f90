@@ -493,13 +493,13 @@ contains
     subroutine send_coarsened_block
 
       use BATL_size, ONLY:  InvIjkRatio
-      use BATL_high_order, ONLY: calc_high_coarsened_cell
+      use BATL_high_order, ONLY: restriction_high_order_amr
 
       integer :: i, j, k, i2, j2, k2, iVar, iBuffer
       logical:: DoCheckMask
       real :: CellVolume_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Volume, InvVolume
       real :: FineCell_III(6,6,6)
-      integer :: Di, Dj, Dk
+      integer :: Di, Dj, Dk, i6_, j6_, k6_
       !-----------------------------------------------------------------------
       iBuffer = 0
 
@@ -544,20 +544,21 @@ contains
             iBuffer = iBuffer + nVar
          end do; end do; end do
       else
-         if(IsCartesian)then
-            if(UseHighOrderAMR) then
-               ! Calc 6th order coarsened cell. 
-               Di = iRatio - 1; Dj = jRatio - 1; Dk = kRatio - 1 
-               do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-                  do iVar = 1, nVar
-                     FineCell_III(1:max(Di*6,1), 1:max(Dj*6,1), 1:max(Dk*6,1))=&
-                          State_VGB(iVar,i-2*Di:i+3*Di,j-2*Dj:j+3*Dj,&
-                          k-2*Dk:k+3*Dk,iBlockSend)
-                     Buffer_I(iBuffer+iVar) = calc_high_coarsened_cell(FineCell_III)
-                  end do
-                  iBuffer = iBuffer + nVar
-               end do; end do; end do
-            else
+         if(UseHighOrderAMR) then
+            ! Calc 6th order coarsened cell. 
+            Di = iRatio - 1; Dj = jRatio - 1; Dk = kRatio - 1 
+            i6_ = max(Di*6,1); j6_  = max(Dj*6,1); k6_ = max(Dk*6,1)
+            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+               do iVar = 1, nVar
+                  FineCell_III(1:i6_, 1:j6_, 1:k6_)=&
+                       State_VGB(iVar,i-2*Di:i+3*Di,j-2*Dj:j+3*Dj,&
+                       k-2*Dk:k+3*Dk,iBlockSend)
+                  Buffer_I(iBuffer+iVar) = restriction_high_order_amr(FineCell_III)
+               end do
+               iBuffer = iBuffer + nVar
+            end do; end do; end do
+         else
+            if(IsCartesian)then
                do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
                   do iVar = 1, nVar
                      Buffer_I(iBuffer+iVar) = InvIjkRatio * &
@@ -566,21 +567,20 @@ contains
                   end do
                   iBuffer = iBuffer + nVar
                end do; end do; end do
-            endif
-         else
-            do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
-               i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
-               InvVolume = 1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
-               do iVar = 1, nVar
-                  Buffer_I(iBuffer+iVar) = InvVolume * sum( &
-                       CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
-                       State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
-               end do
-               iBuffer = iBuffer + nVar
-            end do; end do; end do
-         end if
-      end if
-
+            else
+               do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
+                  i2 = i+iRatio-1; j2 = j+jRatio-1; k2 = k+kRatio-1
+                  InvVolume = 1.0/sum(CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend))
+                  do iVar = 1, nVar
+                     Buffer_I(iBuffer+iVar) = InvVolume * sum( &
+                          CellVolume_GB(i:i2,j:j2,k:k2,iBlockSend)* &
+                          State_VGB(iVar,i:i2,j:j2,k:k2,iBlockSend))
+                  end do
+                  iBuffer = iBuffer + nVar
+               end do; end do; end do
+            end if ! IsCartesian
+         end if ! UseHighOrderAMR
+      endif ! DoCheckMask
       if(present(Dt_B))then
          iBuffer = iBuffer + 1
          Buffer_I(iBuffer) = Dt_B(iBlockSend)
@@ -639,45 +639,39 @@ contains
       integer:: i, j, k, iBuffer, iVar
       real   :: CellVolume_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Volume
       logical:: DoCheckMask
+
+      integer:: Dm1, Dp2
       !----------------------------------------------------------------------
 
       ! Find the part of the block to be prolonged
       iSide = modulo(iTree_IA(Coord1_,iNodeRecv)-1, iRatio)
       jSide = modulo(iTree_IA(Coord2_,iNodeRecv)-1, jRatio)
       kSide = modulo(iTree_IA(Coord3_,iNodeRecv)-1, kRatio)
-      write(*,*) 'usehighorderamr:', UseHighOrderAMR
+
       if(UseHighOrderAMR) then
-         ! Calc 5th order refined cells. 
-         ! 2 'ghost cell' layers are needed. 
-         iMin = iSide*nI/2 - 1; iMax = (iSide + 1)*nI/2 + 2
-         if(nJ >1) then
-            jMin = jSide*nJ/2 - 1; jMax = (jSide + 1)*nJ/2 + 2
-         else
-            jMin = 1; jMax = nJ
-         endif
-         if(nK >1) then
-            kMin = kSide*nK/2 - 1; kMax = (kSide + 1)*nK/2 + 2
-         else 
-            kMin = 1; kMax = nK
-         endif
+         Dm1 = -1; Dp2 = 2
       else
-         ! Send parent part of the block with one ghost cell
-         if(iRatio == 2)then
-            iMin = iSide*nI/2; iMax = iMin + nI/2 + 1
-         else
-            iMin = 1; iMax = nI
-         endif
-         if(jRatio == 2)then
-            jMin = jSide*nJ/2; jMax = jMin + nJ/2 + 1
-         else
-            jMin = 1; jMax = nJ
-         end if
-         if(kRatio == 2)then
-            kMin = kSide*nK/2; kMax = kMin + nK/2 + 1
-         else
-            kMin = 1; kMax = nK
-         end if
+         Dm1 = 0; Dp2 = 0
       endif
+
+      ! Send parent part of the block with one/two ghost cell.
+      ! Calc 5th order refined cells, two ghost cell layers are used.
+      if(iRatio == 2)then
+         iMin = iSide*nI/2 + Dm1; iMax = iMin + nI/2 + 1 + Dp2
+      else
+         iMin = 1; iMax = nI
+      endif
+      if(jRatio == 2)then
+         jMin = jSide*nJ/2 + Dm1; jMax = jMin + nJ/2 + 1 + Dp2
+      else
+         jMin = 1; jMax = nJ
+      end if
+      if(kRatio == 2)then
+         kMin = kSide*nK/2 + Dm1; kMax = kMin + nK/2 + 1 + Dp2
+      else
+         kMin = 1; kMax = nK
+      end if
+
       if(UseMask)then
          DoCheckMask = &
               .not. all(Used_GB(iMin:iMax,jMin:jMax,kMin:kMax,iBlockSend))
@@ -792,7 +786,7 @@ contains
       ! Copy buffer into recv block of State_VGB
 
       use BATL_size, ONLY: InvIjkRatio
-      use BATL_high_order, ONLY: calc_high_refined_cell
+      use BATL_high_order, ONLY: prolongation_high_order_amr
       integer:: iBuffer, i, j, k
       integer:: nVarUsed
       integer:: iP, jP, kP, iR, jR, kR
@@ -801,7 +795,7 @@ contains
 
       real:: CoarseCell_III(5,5,5) = 0
       integer:: iP1, jP1, kP1, i1, j1, k1
-      integer:: iVar
+      integer:: iVar, i5_, j5_, k5_
 
       logical:: DoCheckMask
       logical:: UseSlopeI, UseSlopeJ, UseSlopeK
@@ -837,66 +831,39 @@ contains
 
       if(UseHighOrderAMR) then
          iDir = 0; jDir = 0; kDir = 0
+         i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ =  max(5*Dk,1)
+         ! For example, cell kR=1 and kR=2 refined from the same coarser 
+         ! cell, but they are calculated from different coarser cells.
+         ! These two refined cells are symmetric about the parent coarse 
+         ! cell and the code is organized in a symmetric way. 
          do kR = 1, nK
             kP = (kR + Dk)/kRatio
-            if(nK >1) then
-               ! For example, cell kR=1 and kR=2 refined from the same coarser 
-               ! cell, but they are calculated from different coarser cells.
-               ! These two refined cells are symmetric about the parent coarse 
-               ! cell and the code is organized in a symmetric way. 
-               if(mod(kR,2) == 0) then
-                  kDir = -1 
-               else
-                  kDir = 1
-               endif
-            endif
+            ! kDir = -1 if kR is even; kDir = 1 if kR is odd. 
+            if(kRatio == 2) kDir = 2*mod(kR,2) - 1
 
             do jR = 1, nJ
                jP = (jR + Dj)/jRatio
-               if(nJ > 1) then
-                  if(mod(jR,2) == 0) then
-                     jDir = -1
-                  else
-                     jDir = 1
-                  endif
-               endif
+               if(jRatio == 2) jDir = 2*mod(jR,2) - 1
 
                do iR = 1, nI
                   iP = (iR + Di)/iRatio
-
-                  if(mod(iR,2) == 0) then
-                     iDir = -1
-                  else
-                     iDir = 1
-                  endif
+                  if(iRatio == 2) iDir = 2*mod(iR,2) - 1
 
                   ! Organize the code in a symmetric way.
                   do iVar = 1,  nVar
-                     k1 = 1
-                     do kP1 = kP-2*kDir, kP+2*kDir, sign(1,kDir)
-                        j1 = 1
-                        do jP1 = jP-2*jDir, jP+2*jDir, sign(1,jDir)
-                           i1 = 1
-                           do iP1 = iP-2*iDir, iP+2*iDir, sign(1,iDir)
-                              CoarseCell_III(i1,j1,k1) = &
-                                   StateP_VG(iVar,iP1,jP1,kP1)
-                              i1 = i1 + 1
-                           enddo
-                           j1 = j1 + 1
-                        enddo
-                        k1 = k1 + 1
-                     enddo
+                     CoarseCell_III(1:i5_,1:j5_,1:k5_) &
+                          = StateP_VG(iVar,&
+                          iP-2*iDir:iP+2*iDir:sign(1,iDir),&
+                          jP-2*jDir:jP+2*jDir:sign(1,jDir),&
+                          kP-2*kDir:kP+2*kDir:sign(1,kDir))
 
                      ! Calculate 5th order refined cells.
                      State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                          calc_high_refined_cell(CoarseCell_III) 
-                     ! Only works for 2D NOW!!!!!
-
+                          prolongation_high_order_amr(CoarseCell_III) 
                   enddo ! iVar
-
-               enddo
-            enddo
-         enddo
+               enddo ! iR
+            enddo ! jR
+         enddo ! kR
 
       else
          ! 1st order prolongation
