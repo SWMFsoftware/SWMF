@@ -318,9 +318,11 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test1_ie.diff)
+	gunzip -c output/test1/IE*.idl.gz \
+	        > ${TESTDIR}/RESULTS/IE/it000321.idl.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=6e-5 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
-		output/test1/IE_it000321_104510_000.idl \
+		${TESTDIR}/RESULTS/IE/it000321.idl.ref \
 		>> test1_ie.diff)
 	ls -l test1_*.diff
 
@@ -1079,17 +1081,29 @@ test_ccmc_check:
 
 #### ccmc_small #######
 test_ccmc_small:
-	@echo "test_ccmc_small_compile..." > test_ccmc_small.diff
+	@echo "test_ccmc_small_compile..." > test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_compile..." > test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_compile..." > test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_compile
-	@echo "test_ccmc_small_rundir..." >> test_ccmc_small.diff
+	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_rundir
-	@echo "test_ccmc_small_run..." >> test_ccmc_small.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_run
-	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small.diff
+	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_restart_rundir
-	@echo "test_ccmc_small_run..." >> test_ccmc_small.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_run..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_run
-	@echo "test_ccmc_small_check..." >> test_ccmc_small.diff
+	@echo "test_ccmc_small_check..." >> test_ccmc_small_gm.diff
+	@echo "test_ccmc_small_check..." >> test_ccmc_small_ie.diff
+	@echo "test_ccmc_small_check..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -1099,7 +1113,6 @@ test_ccmc_small_compile:
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
 	${MAKE} SWMF
 	make PIDL
-
 
 test_ccmc_small_rundir:
 	rm -rf ${TESTDIR}
@@ -1125,8 +1138,16 @@ test_ccmc_small_run:
 test_ccmc_small_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
 		${TESTDIR}/GM/IO2/log_n000400.log \
-		Param/CCMC/test_GM_small.log > test_ccmc_small.diff)
-	ls -l test_ccmc_small.diff
+		Param/CCMC/test_GM_small.log > test_ccmc_small_gm.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t080903_000000.log \
+		Param/CCMC/test_IE_small.log > test_ccmc_small_ie.diff)
+	gunzip -c Param/CCMC/test_RB_small.fls.gz \
+                > ${TESTDIR}/RB/plots/20080903_0000_e.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/RB/plots/20080903_0000_e.fls \
+		${TESTDIR}/RB/plots/20080903_0000_e.ref) > test_ccmc_small_rb.diff
+	ls -l test_ccmc_small*.diff
 
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
@@ -1233,19 +1254,17 @@ test12_aniso_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_check:
+	gunzip -c output/test12/z=0_var.out.ref.aniso.gz \
+	        > ${TESTDIR}/RESULTS/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
-		output/test12/z=0_var.out.ref.aniso \
+		${TESTDIR}/RESULTS/z_n4.ref \
 		> test12_gmpc_aniso.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 -a=1e-8 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000002_n00000002.out \
-		${TESTDIR}/RESULTS/2step/GM/z=0_var_1_t00000002_n00000002.out\
-		> test12_gmpc_restart_aniso.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 -a=1e-8 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
 		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out\
-		>> test12_gmpc_restart_aniso.diff)
-	ls -l test12_gmpc_aniso.diff test12_gmpc_restart_aniso.diff
+		${TESTDIR}/RESULTS/z_n4.ref \
+		>> test12_gmpc_aniso.diff)
+	ls -l test12_gmpc_aniso.diff
 
 #### test IPIC3D.exe coupled with GM/BATSRUS using isotropic MHD #########
 
@@ -1278,9 +1297,11 @@ test12_iso_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_iso_check:
+	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
+	        > ${TESTDIR}/RESULTS/4step/GM/z_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_all_1_t00000004_n00000005.out \
-		output/test12/z=0_all.out.ref.iso\
+		${TESTDIR}/RESULTS/4step/GM/z_n5.ref \
 		> test12_gmpc_iso.diff)
 	ls -l test12_gmpc_iso.diff
 
