@@ -4,16 +4,16 @@
 
 module CON_transfer_data
 
-  ! Transfer scalar or array of integers, reals or logicals 
-  ! between two components.
+  ! Transfer scalar or array of integers, reals or strings
+  ! between two SWMF components.
   !
   ! Examples of usage:
   !
-  ! Transfer a scalar of type integer that is
+  ! Transfer 3 scalars of type integer that is
   ! available from all source processors and needed on all target processors:
   !
   !    if(is_proc(Source_) call get_data_from_source_comp(iData)
-  !    call transfer_integer(Source_, Target_, iData, 
+  !    call transfer_integer(Source_, Target_, iData1, iData2, iData3,
   !               UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
   !    if(is_proc(Target_) call put_data_into_target_comp(iData)
   !
@@ -49,12 +49,16 @@ module CON_transfer_data
 
   private ! except
   
-  public:: transfer_real
-  public:: transfer_real_array
-  public:: transfer_integer
-  public:: transfer_integer_array
-  public:: transfer_string
-  public:: transfer_string_array
+  public:: transfer_integer       ! transfer up to 4 integers
+  public:: transfer_integer_array ! transfer an integer array
+  public:: transfer_real          ! transfer a single real
+  public:: transfer_real_array    ! transfer a real array
+  public:: transfer_string        ! transfer a single string
+  public:: transfer_string_array  ! transfer a string array
+
+  interface transfer_integer
+     module procedure transfer_integer, transfer_integers
+  end interface
 
   ! Local variables
   integer:: iStatus_I(MPI_STATUS_SIZE)
@@ -197,12 +201,6 @@ contains
     call transfer_data_action(DoTestMe, iCompSource, iCompTarget, &
          UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
 
-    if(DoTestMe)then
-       write(*,*) NameSub,': DoSourceSum, DoRootTransfer, DoTargetBroadcast=',&
-            DoSourceSum, DoRootTransfer, DoTargetBroadcast
-       call CON_stop('DEBUG')
-    end if
-
     if(DoSourceSum)then
        allocate(iDataLocal_I(nData))
        iDataLocal_I = iData_I
@@ -230,6 +228,42 @@ contains
 
   end subroutine transfer_integer_array
 
+  !===========================================================================
+  subroutine transfer_integers(iCompSource, iCompTarget, &
+       iData1, iData2, iData3, iData4, &
+       UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
+
+    integer, intent(in):: iCompSource, iCompTarget
+    integer, intent(inout)          :: iData1, iData2
+    integer, optional, intent(inout):: iData3, iData4
+    logical, optional, intent(in):: &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly
+
+    integer:: nData, iData_I(4)
+    !------------------------------------------------------------------------
+    nData = 2
+    iData_I(1) = iData1
+    iData_I(2) = iData2
+    if(present(iData3))then
+       nData = 3
+       iData_I(3) = iData3
+    end if
+    if(present(iData4))then
+       nData = 4
+       iData_I(4) = iData4
+    end if
+
+    call transfer_integer_array(iCompSource, iCompTarget, nData, iData_I, &
+         UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
+
+    if(is_proc(iCompTarget))then
+       iData1 = iData_I(1)
+       iData2 = iData_I(2)
+       if(present(iData3)) iData3 = iData_I(3)
+       if(present(iData4)) iData4 = iData_I(4)
+    end if
+
+  end subroutine transfer_integers
   !===========================================================================
   subroutine transfer_integer(iCompSource, iCompTarget, iData, &
        UseSourceSum, UseSourceRootOnly, UseTargetRootOnly)
