@@ -99,10 +99,9 @@ contains
        BufferMinMaxIh_DI(1,:) = BufferMinMaxIh_DI(1,:) &
             *(Grid_C(OH_)%UnitX/Grid_C(IH_)%UnitX)
     end if
-    ! Pass buffer size (only called once so efficiency is not important)
-    call transfer_integer(OH_, IH_, iSize, UseSourceRootOnly = .false.)
-    call transfer_integer(OH_, IH_, jSize, UseSourceRootOnly = .false.)
-    call transfer_integer(OH_, IH_, kSize, UseSourceRootOnly = .false.)
+    ! Pass buffer size
+    call transfer_integer(OH_, IH_, iSize, jSize, kSize, &
+         UseSourceRootOnly = .false.)
 
     ! Pass buffer boundary info
     call transfer_real_array(OH_, IH_, 6, BufferMinMaxIh_DI, &

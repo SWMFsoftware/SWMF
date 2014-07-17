@@ -143,8 +143,7 @@ contains
          call GM_get_for_rb_trace(iSize, jSize, NameVar, nVarLine, nPointLine)
 
     ! Send over size information
-    call transfer_integer(GM_, RB_, nVarLine)
-    call transfer_integer(GM_, RB_, nPointLine)
+    call transfer_integer(GM_, RB_, nVarLine, nPointLine)
 
     if(is_proc0(GM_) .or. is_proc(RB_))then
        allocate(BufferLine_VI(nVarLine, nPointLine))

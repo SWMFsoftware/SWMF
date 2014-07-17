@@ -89,10 +89,9 @@ contains
             *(Grid_C(IH_)%UnitX/Grid_C(SC_)%UnitX)
     end if
 
-    ! Pass buffer size (only called once so efficiency is not important)
-    call transfer_integer(IH_, SC_, iSize, UseSourceRootOnly = .false.)
-    call transfer_integer(IH_, SC_, jSize, UseSourceRootOnly = .false.)
-    call transfer_integer(IH_, SC_, kSize, UseSourceRootOnly = .false.)
+    ! Pass buffer size
+    call transfer_integer(IH_, SC_, iSize, jSize, kSize, &
+         UseSourceRootOnly = .false.)
 
     ! Pass buffer boundary info
     call transfer_real_array(IH_, SC_, 6, BufferMinMaxSc_DI, &
