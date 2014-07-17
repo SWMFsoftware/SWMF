@@ -255,11 +255,12 @@ PC/restartOUT				RestartDirName
 
 #SAVEPLOT
 PC/plots				SaveDirName
-1					FieldOutputCycle
-10000					ParticlesOutputCycle
-4					RestartOutputCycle
-1					DiagnosticsOutputCycle
+0					FieldOutputCycle
+0					ParticlesOutputCycle
+0					RestartOutputCycle
+0					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
+0					SatelliteOutputCycle
 
 %%%%%%%%%%%% boundary conditions %%%%%%%%%%%%%%%
 

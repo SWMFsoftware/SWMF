@@ -157,6 +157,7 @@ PC/plots				SaveDirName
 2					RestartOutputCycle
 1					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
+0					SatelliteOutputCycle
 
 %%%%%%%%%%%% boundary conditions %%%%%%%%%%%%%%%
 

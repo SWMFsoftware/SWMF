@@ -257,7 +257,7 @@ PC/restartOUT				RestartDirName
 1					Particles per cell in Z
 
 #SOLVER
-1.0e-8				CGtol : CG solver stopping criterium tolerance
+1.0e-8					CGtol : CG solver stopping criterium tolerance
 1.0e-8 					GMREStol : GMRES solver stopping criterium tolerance
 3					NiterMover : mover predictor corrector iteration
 
@@ -268,6 +268,7 @@ PC/plots				SaveDirName
 4					RestartOutputCycle
 1					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
+0					SatelliteOutputCycle
 
 %%%%%%%%%%%% boundary conditions %%%%%%%%%%%%%%%
 
