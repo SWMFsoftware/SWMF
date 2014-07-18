@@ -2068,24 +2068,26 @@ Default values are shown.
 </command>
 
 <command name="NEWTON">
-	<parameter name="UseConservativeImplicit" type="logical" default="F"/>
 	<parameter name="UseNewton" type="logical" default="F"/>
 	<if expr="$UseNewton">
-		<parameter name="UseNewMatrix" type="logical" default="T"/>
+		<parameter name="UseConservativeImplicit" type="logical" 
+			   				  	default="F"/>
 		<parameter name="MaxIterNewton" type="integer" min="1"
 							   default="10" />
 	</if>
 #NEWTON
+T               UseNewton (rest of parameters read if true)
 F		UseConservativeImplicit
-T               UseNewton
-F               UseNewMatrix  (only read if UseNewton is true)
-10              MaxIterNewton (only read if UseNewton is true)
+10              MaxIterNewton 
 
-Default is UseConservativeImplicit=F and UseNewton=F, i.e. 
-no conservative fix is used and only one "Newton" iteration is done.
-UseNewMatrix decides whether the Jacobian should be recalculated
-for every Newton iteration. MaxIterNewton is the maximum number
-of Newton iterations before giving up.
+If UseNewton is true a full non-linear Newton iteration is performed.
+If UseConservativeImplicit is true, the Newton iteration is finished 
+with a conservative fix (back substitution of the solution
+into the non-linear implicit equations).
+MaxIterNewton is the maximum number of Newton iterations before giving up.
+
+Default is UseNewton=F, i.e. we do a single "Newton" iteration, which
+is the linearized implicit scheme. In most cases that is the best choice.
 </command>
 
 <command name="JACOBIAN">
