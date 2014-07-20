@@ -206,21 +206,25 @@ contains
        end do
     end if
 
-    ! Joule heating: dP/dt += (gamma-1)*eta*j**2
-    ! Heat exchange between electrons and ions (mult-ion is not coded).
-    !if(.not.UseMultiIon .and. UseResistivity .and. &
-    !     (UseElectronPressure .or. UseNonConservative))then  
-    !   call calc_resistivity_source(iBlock)
-    !   if(DoTestMe.and.VarTest==P_)call write_source('After resistive src')
-    !end if
-
     if(UseWavePressure)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          DivU            =        uDotArea_XI(i+1,j,k,1) -uDotArea_XI(i,j,k,1)
-          if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) -uDotArea_YI(i,j,k,1)
-          if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) -uDotArea_ZI(i,j,k,1)
+          if(UseMultiIon)then
+             ! The following should be Div(Uplus). For zero Hall velocity
+             ! this is the same as Div(Ue).
+             DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
+             if(nJ > 1) DivU = DivU &
+                  + uDotArea_YI(i,j+1,k,eFluid_) - uDotArea_YI(i,j,k,eFluid_)
+             if(nK > 1) DivU = DivU &
+                  + uDotArea_ZI(i,j,k+1,eFluid_) - uDotArea_ZI(i,j,k,eFluid_)
+          else
+             DivU = uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
+             if(nJ > 1) DivU = DivU &
+                  + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
+             if(nK > 1) DivU = DivU &
+                  + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
+          end if
           DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
           ! Store div U so it can be used in ModWaves
@@ -233,13 +237,20 @@ contains
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
 
-          ! Add "geometrical source term" p/r to the radial momentum equation
-          ! The "radial" direction is along the Y axis
-          ! NOTE: here we have to use signed radial distance!
-          if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
+          if(.not.UseMultiIon)then
+             ! The energy equation contains the work of the wave pressure
+             ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
+             ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
+             ! Here we add the Pwave div(u) source term
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + DivU*Pwave
+
+             ! Add "geometrical source term" p/r to the radial momentum
+             ! equation. The "radial" direction is along the Y axis
+             ! NOTE: here we have to use signed radial distance!
+             if(IsRzGeometry) Source_VC(RhoUy_,i,j,k) = &
+                  Source_VC(RhoUy_,i,j,k) + Pwave/Xyz_DGB(Dim2_,i,j,k,iBlock)
+          end if
        end do; end do; end do
     end if
 
