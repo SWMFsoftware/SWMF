@@ -230,15 +230,15 @@ contains
           ! Store div U so it can be used in ModWaves
           DivU_C(i,j,k) = DivU
 
-          Pwave = (GammaWave - 1) &
-               *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
-
           do iVar = WaveFirst_, WaveLast_
              Source_VC(iVar,i,j,k) = Source_VC(iVar,i,j,k) &
                   - DivU*(GammaWave - 1)*State_VGB(iVar,i,j,k,iBlock)
           end do
 
           if(.not.UseMultiIon)then
+             Pwave = (GammaWave - 1) &
+                  *sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
+
              ! The energy equation contains the work of the wave pressure
              ! -u.grad Pwave = -div(u Pwave) + Pwave div(u)
              ! The -div(u Pwave) is implemented as a flux in ModFaceFlux.
