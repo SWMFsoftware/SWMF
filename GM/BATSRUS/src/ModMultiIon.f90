@@ -46,6 +46,12 @@ module ModMultiIon
        Pe_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pe_Z(0:nI+1,0:nJ+1,0:nK+2)
 
+  ! wave pressure on the faces for grad Pwave
+  real, public:: &
+       Pwave_X(0:nI+2,0:nJ+1,0:nK+1), &
+       Pwave_Y(0:nI+1,0:nJ+2,0:nK+1), &
+       Pwave_Z(0:nI+1,0:nJ+1,0:nK+2)
+
   ! collision coefficient
   real :: CollisionCoefDim = -1.0
   real :: CollisionCoef = -1.0
@@ -183,6 +189,7 @@ contains
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
+    use ModWaves,   ONLY: UseWavePressure
     use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
          CellSize_DB
 
@@ -270,6 +277,31 @@ contains
           end if
           if(DoTestCell)write(*,*)NameSub,': after grad Pe, Force_D=', Force_D
 
+       end if
+
+       ! Subtract wave pressure gradient force
+       if(UseMultiIon .and. UseWavePressure)then
+          if(IsCartesianGrid)then
+             ! Gradient of Pwave in Cartesian/RZ case
+             Force_D(x_) = Force_D(x_) &
+                  - (Pwave_X(i+1,j,k) - Pwave_X(i,j,k))/CellSize_DB(x_,iBlock)
+             Force_D(y_) = Force_D(y_) &
+                  - (Pwave_Y(i,j+1,k) - Pwave_Y(i,j,k))/CellSize_DB(y_,iBlock)
+             Force_D(z_) = Force_D(z_) &
+                  - (Pwave_Z(i,j,k+1) - Pwave_Z(i,j,k))/CellSize_DB(z_,iBlock)
+          else
+             ! grad Pwave =
+             ! (1/Volume)*Integral Pwave dAreaVector over cell surface
+             Force_D = Force_D - vInv* &
+                  ( Pwave_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                  - Pwave_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
+                  + Pwave_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                  - Pwave_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) &
+                  + Pwave_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                  - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+          end if
+          if(DoTestCell)write(*,*)NameSub,': after grad Pwave, Force_D=', &
+               Force_D
        end if
 
        if(UseBoris .or. UseBorisSimple)then
