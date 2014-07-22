@@ -24,9 +24,8 @@ and a link to this executable in the current directory.
 
 4. Convert the fits file to ASCII format by running the idl program 
 run_fits_to_ascii.pro. You will be asked to insert the maximum order of 
-harmonics and the Carrington Rotation number. It is recommended (but not 
-required ) to use not more than 90 harmonics, since the computation time 
-can be very long. 
+harmonics and the Carrington Rotation number. The nHar is recommended not to 
+be greater than nLatitude.
    The idl routine generates three files:
 	*fitsfile.dat - ASCII file to be used by HARMONICS.exe to calculate 
 	 the harmonic coefficients.
