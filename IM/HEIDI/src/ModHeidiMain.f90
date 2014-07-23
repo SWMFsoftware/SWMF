@@ -95,6 +95,7 @@ contains
     if(allocated(FFACTOR)) RETURN
 
     allocate(FFACTOR(NR,NT,NE,NPA))
+    FFACTOR = 0.0
     allocate(FACMU(NPA,NR,NT))
     allocate(CEDR(NR,NT,NE,NPA,NS))
     allocate(CIDR(NR,NT,NE,NPA,NS))
