@@ -643,8 +643,8 @@ contains
 
     DtLocal = Dt
 
-    if(UseElectronPressure .and. .not.UseMultiIon .and. UseIdealEos &
-         .and. .not.DoUserHeatConduction) call set_resistivity
+    if(UseElectronPressure .and. .not.UseMultiIon .and. UseIdealEos) &
+         call set_resistivity
 
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
