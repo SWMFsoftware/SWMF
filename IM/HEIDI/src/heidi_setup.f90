@@ -3,8 +3,7 @@
 ! File name: heidi_setup.f90
 ! Contains: input and array setup routines for HEIDI
 !	HEIDI_READ
-!	CONSTANT
-!       BFIELD_SETUP
+!	CONSTANT!       BFIELD_SETUP
 !	ARRAYS
 !	GETKPA
 !	GETSWIND
@@ -59,9 +58,7 @@ subroutine heidi_read
   if (iProc==0) then
      call write_prefix; write(iUnitStdOut,*) ' year,month,day,UT',year,month,day,UT
      call write_prefix; write(iUnitStdOut,*)  'DT,TMAX,TINT,TIME',DT,TMAX,TINT,TIME
-     !call write_prefix; write(iUnitStdOut,*)  'IO,JO,KO,LO,ISO',IO,JO,KO,LO,ISO
      call write_prefix; write(iUnitStdOut,*)  '(SCALC(k),k=1,NS)',(SCALC(k),k=1,NS)
-     !call write_prefix; write(iUnitStdOut,*)  'R,AP,KP',R,AP,KP
      call write_prefix; write(iUnitStdOut,*)  '(INI(k),k=1,NS)',(INI(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  '(IBC(k),k=1,NS)',(IBC(k),k=1,NS)
      call write_prefix; write(iUnitStdOut,*)  'NAME=', NameRun
@@ -564,7 +561,6 @@ subroutine ARRAYS
   end if
 
 
-!stop
 
   !\
   ! Define conversion factors
@@ -573,15 +569,14 @@ subroutine ARRAYS
   !/
 
 
-
-  FFACTOR = 0.
-
   if (IFAC.eq.1) then	! Flux function
      do L=2,LO
         do K=1,KO
            do J =1, JO
               do i = 1, io
                  FFACTOR(I,J,K,L)=LZ(i)*LZ(i)/sqrt(EKEV(K))*MU(L)*FUNT(L,I,J)
+                
+              
               end do
            end do
         end do
@@ -678,6 +673,7 @@ subroutine ARRAYS
         end do
      end do
   end do
+
 end subroutine ARRAYS
 
 !======================================================================

@@ -55,16 +55,12 @@ subroutine FCHECK(MARK)
                  do i=2,io
                     if ((F2(I,J,K,L,m).lt.-1.E-10).or.   &   ! -1E-29
                          (F2(I,J,K,L,m)-F2(I,J,K,L,m).ne.0.) .or. (F2(i, j, k, l,m) .gt. 1.e+25) ) then
-                      ! F2(I,J,K,L,m) = 1.e-10 ! hack!
-                      call write_prefix; write(iUnitStdOut,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
+                       call write_prefix; write(iUnitStdOut,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
                             T,m,I,J,K,L,MARK,Ibad
-
-                    !   write(*,*) 'F,T,s,I,J,K,L,MARK, iBad:',F2(I,J,K,L,m),   &
-                    !        T,m,I,J,K,L,MARK,Ibad
-!!$                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
-!!$                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
-!!$                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
-!!$                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Radius:',(F2(I1,J,K,L,m),I1=2,IO,IO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Azimuth:',(F2(I,J1,K,L,m),J1=1,JO,JO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Energy:',(F2(I,J,K1,L,m),K1=2,KO,KO/10)
+                       call write_prefix; write(iUnitStdOut,*) 'Pitch angle:',(F2(I,J,K,L1,m),L1=1,LO,LO/10)
                        Ibad=Ibad+1
                        if (Ibad.eq.20) goto 151 
                     end if
@@ -113,10 +109,7 @@ subroutine DRIFTR
   real    :: fbc
   save f01,f02
   !----------------------------------------------------------------------
-  ! Initialize F to zero values
- ! F = 0.0 ! this might need to be removed
-  
-  
+   
   !\
   ! Set up injection boundary fluxes
   !/
@@ -223,6 +216,7 @@ subroutine DRIFTR
         end if
      end do	! K loop
   end do	! J loop
+
 end subroutine DRIFTR
 !======================================================================
 !			     Heidi_driftp
@@ -283,12 +277,7 @@ subroutine heidi_driftp
 
 	   do J=1,JO
               F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(J)*FBND(J)+C(J-1)*FBND(J-1)
-              
-!!$              if((C(j).ne. C(j)) .or. (FBND(j) .ne. FBND(j)) .or. (F2(i,j,k,l,s) .ne. F2(i,j,k,l,s))) then
-!!$                 write(*,*) i, j, k, l, s, F2(i,j,k,l,s), C(j), FBND(j)
-!!$                 !STOP
-!!$              endif
-	   end do
+           end do
 
         if (ISW.gt.0) then		! SW can compress magnetopause
            imag=1
@@ -329,30 +318,6 @@ subroutine heidi_driftp
 
      end do	! big K loop
   end do	! big I loop
-
-
-
-
-
-!!!!! DEBUG ONLY
-
-
-  open(unit=33, file='test_debug_operators.dat')
-  write(33,*) 'i j k l P1 P2 F2' 
-     do i =20,20
-        do j = 1,jo
-           do k =8, 8!ko
-              do l =71, 71!lo
-                 write(33,'(4I5, 3E11.3)') &
-                      i, j, k, l,  P1(I,J), P2(I,j,K,L),  F2(I,J,K,L,2)
-              end do
-           end do
-        end do
-     end do
-     
-
-
-!!!!!!
 
 end subroutine heidi_driftp
 !======================================================================
@@ -544,15 +509,10 @@ subroutine DRIFTMU
     end do	! second L loop
     
     do L=2,ULL		
-     
        F2(I,J,K,L,S)=F2(I,J,K,L,S)-C(L)*FBND(L)*DMU(L)/WMU(L)   &
             +C(L-1)*FBND(L-1)*DMU(L-1)/WMU(L)
-        if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
-        
-
-       
+       if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
     end do	! third L loop
-    
     
     !\
     ! Dayside BC for IBC=1
@@ -560,10 +520,7 @@ subroutine DRIFTMU
     if (Ib.eq.1 .and. S.eq.1 .and. J.ge.J6 .and. J.le.J18) then 
        do L=UPA(I),LO
           F2(I,J,K,L,S)=FBC(EKEV(K),FFACTOR(I,j,K,L),FINI(K)*CHI(I,J))
-          
           if (F2(I,J,K,L,S)<0.0) F2(I,J,K,L,S)=0.0
-
-          
        end do	! yet another L loop
     endif
  end do	! K loop
@@ -599,8 +556,6 @@ subroutine heidi_charexchange
                  CEN=CEN+FL*CONSL(K,S)*WE(K)*WMU(L)*DR*DPHI
                  CEE=CEE+FL*CONSL(K,S)*EKEV(K)*WE(K)*WMU(L)*DR*DPHI
                  F2(I,J,K,L,S)=FN
-
-                ! write(*,*) i,j,k,l,s,fn,F2(I,J,K,L,S),acharge(I,j,K,L,S),FFACTOR(I,j,K,L)
               end do
 	   end do
         end do
