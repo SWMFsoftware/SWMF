@@ -68,16 +68,30 @@ subroutine get_IntegralH(IntegralH_III)
               if (HalfPathLength==0.0) HalfPathLength = cTiny
               IntegralH_III(iPitch, iR, iPhi) = HalfPathLength
            end do
-           IntegralH_III(1,iR,iPhi) = IntegralH_III(2,iR,iPhi)
         end do
      end do
   end select
-
+  
+  
+ ! The h integral is identically zero for the 90 deg pitch angle (equatorilally mirroring particles). 
+  IntegralH_III(1,:,:)   = IntegralH_III(1,:,:) + cTiny  
+  
+  ! At zero deg pitch angle, the H blows up so we extrapolate the value rather than to calculate it.
+  do iR = 1, nR
+     do iPhi = 1, nT
+        IntegralH_III(lo,iR,iPhi) = IntegralH_III(lo-2,iR,iPhi)+ (Length_III(lo,iR,iPhi)-Length_III(lo-2,iR, iPhi))*&
+             (IntegralH_III(lo-1,iR,iPhi)-IntegralH_III(lo-2,iR,iPhi))/(Length_III(lo-1,iR,iPhi)-Length_III(lo-2,iR,iPhi))
+     end do
+  end do
+  
+  ! Copy the same value in the ghost cell
+  IntegralH_III(nPA,:,:) = IntegralH_III(lo,:,:)
+  
 end subroutine get_IntegralH
 !============================================================
 subroutine get_IntegralI(IntegralI_III)
 
-  use ModHeidiSize,  ONLY: nPoint, nPa, lO, nT, nR
+  use ModHeidiSize,  ONLY: nPoint, nPa, lo, nT, nR
   use ModConst,      ONLY: cPi,  cTiny
   use ModHeidiInput, ONLY: TypeBCalc
   use ModHeidiMain,  ONLY: Phi, LZ, mu
@@ -126,7 +140,7 @@ subroutine get_IntegralI(IntegralI_III)
 
      do iPhi = 1, nT
         do iR =1, nR
-           do iPitch =1, lO
+           do iPitch =1, nPa
               PitchAngle_I(iPitch) = acos(mu(iPitch))
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
@@ -139,9 +153,19 @@ subroutine get_IntegralI(IntegralI_III)
 
   end select
 
-  IntegralI_III(1,:,:)   = IntegralI_III(2,:,:)
-  IntegralI_III(nPa,:,:) = IntegralI_III(nPa-1,:,:)
+  ! The I integral is identically zero for the 90 deg pitch angle (equatorilally mirroring particles). 
+  IntegralI_III(1,:,:)   = IntegralI_III(1,:,:) + cTiny  
+  
+  ! At zero deg pitch angle, the I blows up so we extrapolate the value rather than to calculate it.
+  do iR = 1, nR
+     do iPhi = 1, nT
+        IntegralI_III(lo,iR,iPhi) = IntegralI_III(lo-2,iR,iPhi)+ (Length_III(lo,iR,iPhi)-Length_III(lo-2,iR, iPhi))*&
+             (IntegralI_III(lo-1,iR,iPhi)-IntegralI_III(lo-2,iR,iPhi))/(Length_III(lo-1,iR,iPhi)-Length_III(lo-2,iR,iPhi))
+     end do
+  end do
 
+  ! Copy the same value in the ghost cell
+  IntegralI_III(nPA,:,:) = IntegralI_III(lo,:,:)
 end subroutine get_IntegralI
 !===========================================================================
 subroutine get_neutral_hydrogen(NeutralHydrogen_III)
@@ -619,8 +643,6 @@ subroutine get_coef(dEdt_IIII, dMudt_III)
        CoordMinIn_D = (/1.75, 0.0/),& 
        CoordMaxIn_D = (/6.5, 23.0/),&
        VarIn_IIV = dMudt_III(:,1:24,iE,iPitch:iPitch)) 
-
-!!$STOP
 
 end subroutine get_coef
 
