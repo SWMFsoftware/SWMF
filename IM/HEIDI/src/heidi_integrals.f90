@@ -70,7 +70,7 @@ subroutine get_IntegralH(IntegralH_III)
            end do
         end do
      end do
-  end select
+  
   
   
  ! The h integral is identically zero for the 90 deg pitch angle (equatorilally mirroring particles). 
@@ -84,6 +84,8 @@ subroutine get_IntegralH(IntegralH_III)
      end do
   end do
   
+end select
+
   ! Copy the same value in the ghost cell
   IntegralH_III(nPA,:,:) = IntegralH_III(lo,:,:)
   
