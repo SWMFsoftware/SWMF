@@ -99,7 +99,8 @@ Module ModMain
   ! Coronal magnetic field (magnetogram + EE generator)
   !/
 
-  logical:: UseMagnetogram=.false., UseEmpiricalSW = .false.
+  logical :: UseMagnetogram=.false., UseNewMagnetogram = .false.
+  logical :: UseEmpiricalSW = .false.
 
   !\
   ! Inner and outer boundaries
