@@ -153,7 +153,7 @@ subroutine get_IntegralI(IntegralI_III)
         end do
      end do
 
-  end select
+ 
 
   ! The I integral is identically zero for the 90 deg pitch angle (equatorilally mirroring particles). 
   IntegralI_III(1,:,:)   = IntegralI_III(1,:,:) + cTiny  
@@ -165,6 +165,8 @@ subroutine get_IntegralI(IntegralI_III)
              (IntegralI_III(lo-1,iR,iPhi)-IntegralI_III(lo-2,iR,iPhi))/(Length_III(lo-1,iR,iPhi)-Length_III(lo-2,iR,iPhi))
      end do
   end do
+ 
+end select
 
   ! Copy the same value in the ghost cell
   IntegralI_III(nPA,:,:) = IntegralI_III(lo,:,:)
