@@ -1883,6 +1883,11 @@ subroutine MH_set_parameters(TypeAction)
         if(UseMagnetogram)&
              call set_parameters_magnetogram(NameCommand)
 
+     case("#NEWMAGNETOGRAM", "#READNEWPOTENTIALFIELD")
+        call read_var('UseNewMagnetogram', UseNewMagnetogram)
+        if(UseNewMagnetogram)&
+             call set_parameters_magnetogram(NameCommand)
+
      case("#SAVEPOTENTIALFIELD")
         call set_parameters_magnetogram(NameCommand)
 
