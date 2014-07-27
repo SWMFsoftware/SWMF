@@ -33,7 +33,9 @@ namespace CutCell {
 
   struct cNodeCoordinates {
     double *x;
-    int id;
+    int id,pic__shadow_attribute;
+
+    int nface;
   };
 
   struct cFaceNodeConnection {
@@ -123,6 +125,12 @@ namespace CutCell {
 
     cTriangleFace *next,*prev;
 
+    //the variables used by AMPS to determine the surface elements that are in the shadow. The values are modified by pic__ray_tracing.cpp
+    unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
+
+    void GetCenterPosition(double *x) {
+      for (int idim=0;idim<3;idim++) x[idim]=(x0Face[idim]+x1Face[idim]+x2Face[idim])/3.0;
+    }
 
     void GetRandomPosition(double *x,double EPS=0.0) {
       double xLocal[2];
@@ -369,6 +377,8 @@ namespace CutCell {
     cTriangleFace() {
       SurfaceArea=0.0,CharacteristicFaceSize=0.0;
       for (int i=0;i<3;i++) ExternalNormal[i]=0.0;
+
+      pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
     }
 
     inline double CharacteristicSize() {

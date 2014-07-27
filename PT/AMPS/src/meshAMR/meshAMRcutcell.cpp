@@ -85,6 +85,10 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
 
       nd.id=0;
       nd.x=xFace;
+      nd.pic__shadow_attribute=SurfaceTriangulation[nface].pic__shadow_attribute;
+
+      nd.nface=nface;
+
       nodeCoordinates.push_front(nd);
 
       FaceNodeConnection[nface].node[pnode]=nodeCoordinates.begin();
@@ -94,12 +98,12 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
 
   //print the mesh
   FILE *fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",(int)nodeCoordinates.size(),nSurfaceTriangulation);
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"nface\"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",(int)nodeCoordinates.size(),nSurfaceTriangulation);
 
 
   for (cnt=1,nodeitr=nodeCoordinates.begin();nodeitr!=nodeCoordinates.end();nodeitr++) {
     nodeitr->id=cnt++;
-    fprintf(fout,"%e %e %e\n",nodeitr->x[0],nodeitr->x[1],nodeitr->x[2]);
+    fprintf(fout,"%e %e %e %i %i\n",nodeitr->x[0],nodeitr->x[1],nodeitr->x[2],nodeitr->pic__shadow_attribute,nodeitr->nface);
   }
 
   for (nface=0;nface<nSurfaceTriangulation;nface++) {
