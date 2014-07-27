@@ -981,6 +981,7 @@ sub Sampling {
 
 #=============================== Read Particle Collision Model ==================
 sub ParticleCollisionModel {
+  my $ModelIsOnFlag=1;
 
   while ($line=<InputFile>) {
     ($InputFileLineNumber,$FileName)=split(' ',$line);
@@ -1005,6 +1006,7 @@ sub ParticleCollisionModel {
       }
       elsif ($InputLine eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC__PARTICLE_COLLISION_MODEL__MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+        $ModelIsOnFlag=0;
       }  
       else {
         die "Unknown option\n";
@@ -1061,13 +1063,15 @@ sub ParticleCollisionModel {
                 
             $cnt++;
           }
-              
-          if (($s0 eq -1) || ($s1 eq -1)) {
-            die "Cannot recognize model specie (line=$InputFileLineNumber)\n";
-          }
-              
-          $CrossSectionTable[$s0][$s1]=$t3;
-          $CrossSectionTable[$s1][$s0]=$t3;                  
+          
+          if ($ModelIsOnFlag == 1) {    
+            if (($s0 eq -1) || ($s1 eq -1)) {
+              die "Cannot recognize model specie (line=$InputFileLineNumber)\n";
+            }
+                
+            $CrossSectionTable[$s0][$s1]=$t3;
+            $CrossSectionTable[$s1][$s0]=$t3;    
+          }              
         }
         
         #create the new array defienition and substitute the default value
@@ -1122,6 +1126,7 @@ sub ParticleCollisionModel {
 
 #=============================== Read Internal Degrees of Freedom ==================
 sub ReadIDF {
+  my $ModelIsOnFlag=1;
   
   my @nTotalVibModes=(0)x$TotalSpeciesNumber;
   my @nTotalRotModes=(0)x$TotalSpeciesNumber;
@@ -1164,6 +1169,7 @@ sub ReadIDF {
       }
       elsif ($InputLine eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+        $ModelIsOnFlag=0;
       }  
       else {
         die "Unknown option\n";
@@ -1213,86 +1219,95 @@ sub ReadIDF {
     elsif ($InputLine eq "NVIBMODES") {
       my ($s0,$s1,$nspec);
       
-      while (defined $InputComment) {      
-        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
-           
-        if ((defined $s0)&&(defined $s1)) {
-          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
-          if ($nspec==-1) {
-            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      if ($ModelIsOnFlag == 1) {
+        while (defined $InputComment) {      
+          ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
+             
+          if ((defined $s0)&&(defined $s1)) {
+            $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+            if ($nspec==-1) {
+              die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          
+            $nTotalVibModes[$nspec]=$s1;      
           }
-        
-          $nTotalVibModes[$nspec]=$s1;      
         }
       }
     }
     elsif ($InputLine eq "NROTMODES") {
       my ($s0,$s1,$nspec);
       
-      while (defined $InputComment) {      
-        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
-      
-        if ((defined $s0)&&(defined $s1)) {
-          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
-          if ($nspec==-1) {
-            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-          }
+      if ($ModelIsOnFlag == 1) {
+        while (defined $InputComment) {      
+          ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
         
-          $nTotalRotModes[$nspec]=$s1;     
-        } 
-      }      
+          if ((defined $s0)&&(defined $s1)) {
+            $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+            if ($nspec==-1) {
+              die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          
+            $nTotalRotModes[$nspec]=$s1;     
+          } 
+        }     
+      } 
     }
     elsif ($InputLine eq "VIBTEMP") {
       my ($s0,$s1,$nspec);
       
-      while (defined $InputComment) {      
-        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
-      
-        if ((defined $s0)&&(defined $s1)) {
-          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
-          if ($nspec==-1) {
-            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-          }
+      if ($ModelIsOnFlag == 1) {
+        while (defined $InputComment) {      
+          ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
         
-          $CharacteristicVibTemp[$nspec]=$s1;     
-        } 
-      }           
+          if ((defined $s0)&&(defined $s1)) {
+            $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+            if ($nspec==-1) {
+              die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          
+            $CharacteristicVibTemp[$nspec]=$s1;     
+          } 
+        }      
+      }     
     }
     elsif ($InputLine eq "ROTZNUM") {
       my ($s0,$s1,$nspec);
       
-      while (defined $InputComment) {      
-        ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
-      
-        if ((defined $s0)&&(defined $s1)) {
-          $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
-          if ($nspec==-1) {
-            die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-          }
+      if ($ModelIsOnFlag == 1) {
+        while (defined $InputComment) {      
+          ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
         
-          $RotationalZnumber[$nspec]=$s1;  
-        }    
-      }           
+          if ((defined $s0)&&(defined $s1)) {
+            $nspec=ampsConfigLib::GetElementNumber($s0,\@SpeciesList);
+            if ($nspec==-1) {
+              die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          
+            $RotationalZnumber[$nspec]=$s1;  
+          }    
+        }   
+      }        
     }    
   
     elsif ($InputLine eq "TEMPERATUREINDEX") {     
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);     
-      $s0=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($s0==-1) {
-        die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      if ($ModelIsOnFlag == 1) {     
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);     
+        $s0=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+        if ($s0==-1) {
+          die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);     
+        $s1=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
+        if ($s1==-1) {
+          die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }      
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $TemperatureIndexTable[$s0][$s1]=$InputLine;
+        $TemperatureIndexTable[$s1][$s0]=$InputLine;  
       }
-      
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);     
-      $s1=ampsConfigLib::GetElementNumber($InputLine,\@SpeciesList);
-      if ($s1==-1) {
-        die "Cannot recognize species '$s0' in line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-      }      
-      
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $TemperatureIndexTable[$s0][$s1]=$InputLine;
-      $TemperatureIndexTable[$s1][$s0]=$InputLine;  
     }
-  
 
     elsif ($InputLine eq "#ENDIDF") {
       last;
