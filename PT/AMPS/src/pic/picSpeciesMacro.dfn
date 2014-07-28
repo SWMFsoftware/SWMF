@@ -11,6 +11,7 @@
 #define _C_SPEC_         -5
 #define _H2O_SPEC_       -6
 #define _AR_SPEC_        -7
+#define _N2_SPEC_        -8
 
 
 //Species of the background atmosphere
