@@ -8,6 +8,9 @@
   mass=3.82E-26
   charge=1
 
+#component=N2
+  mass=28*_AMU_
+  charge=0
 
 #component=O
   mass=16*_AMU_
