@@ -867,6 +867,35 @@ sub ReadGeneralBlock {
 	ampsConfigLib::ChangeValueOfVariable("const int InitialSampleLength",$s1,"main/main_lib.cpp");
     }
 
+    elsif ($InputLine eq "BLOCKCELLS") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/[,=();]/ /g;
+
+      ($InputLine,$s0,$s1,$s2,$InputComment)=split(' ',$InputLine,5);
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_X_",$s0,"meshAMR/meshAMRdef.h");
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Y_",$s1,"meshAMR/meshAMRdef.h");
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
+           
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_X_",$s0,"main/UserDefinition.meshAMR.h");
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Y_",$s1,"main/UserDefinition.meshAMR.h");
+      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Z_",$s2,"main/UserDefinition.meshAMR.h");              
+    } 
+    elsif ($InputLine eq "GHOSTCELLS") {
+      ($InputLine,$InputComment)=split('!',$line,2);
+      chomp($InputLine);
+      $InputLine=~s/[,=();]/ /g;
+
+      ($InputLine,$s0,$s1,$s2,$InputComment)=split(' ',$InputLine,5);
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_X_",$s0,"meshAMR/meshAMRdef.h");
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Y_",$s1,"meshAMR/meshAMRdef.h");
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
+      
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_X_",$s0,"main/UserDefinition.meshAMR.h");
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Y_",$s1,"main/UserDefinition.meshAMR.h");
+      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Z_",$s2,"main/UserDefinition.meshAMR.h");              
+    }
+
     elsif ($InputLine eq "ENFORCEREQUESTEDMESHRESOLUTION") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
@@ -880,6 +909,20 @@ sub ReadGeneralBlock {
         die "The option is unknown\n";
       }
     }
+  
+    elsif ($InputLine eq "CONTROLPARTICLEINSIDENASTRANSURFACE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    }  
   
     elsif ($InputLine eq "NASTRANSURFACEUSERDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
