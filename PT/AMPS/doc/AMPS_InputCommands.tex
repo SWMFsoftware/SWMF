@@ -212,6 +212,14 @@ Example (function):
 
 \item {\bf NastranSurfaceUserData}=[on,off] \\ Use the NASTRAN surface 
 
+\item {\bf ControlParticleInsideNastranSurface}=[on,off] \\ Check whether a particle is inside the surface defined by a NASTRAN mesh after finishing the particle moving step. Can significantly decrease the efficiency of the particle trajectory integration procedure. But can be useful for debugging. 
+
+\item {\bf BlockCells}=[{\it nCells$_x$,nCells$_y$,nCells$_z$}] \\ The number of the "real" cells that populate a block in each direction
+
+\item {\bf GhostCells}=[{\it nGhostCells$_x$,nGhostCells$_y$,nGhostCells$_z$}] \\ The number of the "ghost" cells that populate a block in each direction
+
+\item {\bf MaxCutCellVolumeRelativeError}={\it error} \\ The maximum relative error of the volume calculation. Implemented cut-cells will make the error smaller than the requested value. Can significantly degrade the run-time of the volume calculation procedure without any benefit because the cut-faces will give enough accuracy. 
+
 \end{itemize}
 
 
