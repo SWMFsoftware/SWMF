@@ -8283,7 +8283,7 @@ nMPIops++;
 
                else if (startNode->FirstTriangleCutFace!=NULL) {
                  //the block is cutted by a list of triangulat faces
-                 centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-3,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
+                 centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
                }
 
 
