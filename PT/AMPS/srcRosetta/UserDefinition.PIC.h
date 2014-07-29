@@ -79,6 +79,10 @@ extern int maxLocalBackdroundDensityOffset;
 
 
 
+//Include Mercury model's header
+//inlude the header of the COMET DUST model
+#undef _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_
+#define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__ON_
 
 
 //particle sampling
