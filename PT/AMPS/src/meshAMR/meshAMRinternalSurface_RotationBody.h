@@ -1304,10 +1304,10 @@ LevelProcessingDone:
 
      //perform integration
      if ((IntegrationLevel==0)||(IntegrationLevel==maxIntegrationLevel)) {
-       cCutBlock bl;
-       list<cTetrahedron> indomainConnectivityList,outdomainConnectivityList;
-       list<cTriangleCutFace> TriangleCutConnectivity;
-       typename list<cTetrahedron>::iterator itr;
+       CutCell::cCutBlock bl;
+       list<CutCell::cTetrahedron> indomainConnectivityList,outdomainConnectivityList;
+       list<CutCell::cTriangleCutFace> TriangleCutConnectivity;
+       typename list<CutCell::cTetrahedron>::iterator itr;
 
        VolumeL1=0.0;
 
@@ -1360,7 +1360,7 @@ LevelProcessingDone:
        memcpy(bl.xBlockMax,xBlockMax,3*sizeof(double));
        for (int i=0;i<3;i++) bl.dxBlock[i]=xBlockMax[i]-xBlockMin[i];
 
-       CutCell::cutBlockTetrahedronConnectivity<cCutBlockNode,cCutBlock,cCutData,cTetrahedron>(&bl,indomainConnectivityList,outdomainConnectivityList,TriangleCutConnectivity);
+       CutCell::cutBlockTetrahedronConnectivity(&bl,indomainConnectivityList,outdomainConnectivityList,TriangleCutConnectivity);
        CutBlockSet->AddTetrahedronList(indomainConnectivityList,EPS);
 
        for (itr=indomainConnectivityList.begin();itr!=indomainConnectivityList.end();itr++) {
