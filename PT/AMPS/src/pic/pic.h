@@ -137,6 +137,16 @@ namespace PIC {
 
   }
 
+  //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
+  namespace RayTracing {
+    extern unsigned int nCallsTestDirectAccess;
+
+    bool GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace);
+    bool TestDirectAccess(double *xStart,double *xTarget);
+
+    void SetCutCellShadowAttribute(double *xLightSource, bool ParallelExecution=false);
+  }
+
   //define the test-run parameters
   namespace ModelTestRun {
     extern bool mode;
@@ -2294,6 +2304,44 @@ namespace PIC {
       //the default function that returns the constant life time value
       double TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
 
+
+      //multiply the lifetime by the following constant (use it for example for adjectment to variation of a heliocentric distance)
+      static const double ReactionLifetimeMultiplier=1.0;
+
+      //the total number of the reactions that are modeled in the current model run
+      static const int nTotalUnimolecularReactions=1;
+
+      //the maximum number of the reaction products in the simulated reactions
+      static const int nMaxUnimolecularReactionProducts=1;
+
+      //the descriptor of the Unimolecular reactions
+      struct cUnimoleculecularReactionDescriptor {
+//      public:
+//        cUnimoleculecularReactionDescriptor() {}
+
+        int ReactionId;
+        double LifeTime;
+        double ReactionRate;
+        int SourceSpecie;
+        int nProducts;
+        int ProductSpecies[nMaxUnimolecularReactionProducts];
+      };
+
+      //the array of descriptors of the reactions
+      static const cUnimoleculecularReactionDescriptor UnimoleculecularReactionDescriptor[nTotalUnimolecularReactions]={0,0.0,0.0,0,0,{0}};
+
+      //the maximum number of reactions in which a species can particiepate
+      static const int nMaxSpeciesUnimolecularReactionNumber=1;
+
+      //the list of the reactions in wich a space can particcipate
+      static const int SpeciesUnimolecularReactionList[PIC::nTotalSpecies][nMaxSpeciesUnimolecularReactionNumber]={{0}};
+
+      //the total reaction rate for individual species
+      static const double TotalSpecieUnimolecularReactionRate[PIC::nTotalSpecies]={0.0};
+
+
+      void InitProductStatWeight();
+
       //the default function for processing the photolytic reactions -> the particle is removed if the reaction occured
       inline int PhotolyticReactionProcessor_default(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
         return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
@@ -2506,6 +2554,14 @@ namespace PIC {
 
         cInternalBoundaryConditionsDescriptor RegisterInternalRotationBody();
         void PrintDefaultDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalRotationBodyData *RotationBody,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
+      }
+
+      namespace NastranSurface {
+      using namespace Sphere;
+        extern cAMRheap<cInternalNastranSurfaceData> InternalNastranSurface;
+
+        cInternalBoundaryConditionsDescriptor RegisterInternalNastranSurface();
+        void PrintDefaultDataStateVector(FILE* fout,long int nElement,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalNastranSurfaceData *NastranSurface,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
       }
 
       namespace Circle {
