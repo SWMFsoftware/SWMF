@@ -72,3 +72,54 @@ int PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(double *x,lo
 
   return code;
 }
+
+void PIC::ChemicalReactions::PhotolyticReactions::InitProductStatWeight() {
+  bool NewWeightFound=false;
+  int s,sSource,sProduct,nProducts,i,iReaction;
+  double minWeight;
+  bool UnknownWeightTableBefore[PIC::nTotalSpecies],UnknownWeightTableAfter[PIC::nTotalSpecies];
+  int nUnknownWeightsBefore,nUnknownWeightsAfter;
+
+  double StatWeight[PIC::nTotalSpecies];
+
+  for (s=0,nUnknownWeightsBefore=0;s<PIC::nTotalSpecies;s++) {
+    StatWeight[s]=PIC::ParticleWeightTimeStep::GlobalParticleWeight[s];
+    UnknownWeightTableBefore[s]=false;
+
+    if (StatWeight[s]==0) UnknownWeightTableBefore[s]=true,nUnknownWeightsBefore++;
+  }
+
+  memcpy(UnknownWeightTableAfter,UnknownWeightTableBefore,PIC::nTotalSpecies*sizeof(bool));
+
+  if (nUnknownWeightsBefore!=0) {
+    do {
+      NewWeightFound=false;
+
+      for (sSource=0;sSource<PIC::nTotalSpecies;sSource++) if (UnknownWeightTableBefore[sSource]==false) {
+        //check if weight of products of this reaction is unknown
+        for (iReaction=0;iReaction<nTotalUnimolecularReactions;iReaction++) if (UnimoleculecularReactionDescriptor[iReaction].SourceSpecie==sSource) {
+          nProducts=UnimoleculecularReactionDescriptor[iReaction].nProducts;
+
+          for (i=0;i<nProducts;i++) {
+            sProduct=UnimoleculecularReactionDescriptor[iReaction].ProductSpecies[i];
+
+            if (UnknownWeightTableBefore[sProduct]==true) {
+              //the weight of the ptoduct species is unknown yet
+              StatWeight[sProduct]+=UnimoleculecularReactionDescriptor[iReaction].ReactionRate*StatWeight[sSource];
+              UnknownWeightTableAfter[sProduct]=false;
+              NewWeightFound=true;
+            }
+          }
+
+        }
+      }
+
+
+      memcpy(UnknownWeightTableBefore,UnknownWeightTableAfter,PIC::nTotalSpecies*sizeof(bool));
+    }
+    while (NewWeightFound==true);
+  }
+
+  //update the stat weight
+  for (s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::GlobalParticleWeight[s]=StatWeight[s];
+}
