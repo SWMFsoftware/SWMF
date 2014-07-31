@@ -852,6 +852,11 @@ sub ReadGeneralBlock {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       ampsConfigLib::ChangeValueOfVariable("double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber",$InputLine,"pic/pic_weight_time.cpp");
     }
+    
+    elsif ($InputLine eq "CUTCELLVOLUMECALCULATIONMAXREFINMENTLEVEL") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::RedefineMacro("_AMR__CUT_CELL_VOLUME_CALCULATION__MAX_REFINMENT_LEVEL_",$InputLine,"meshAMR/meshAMRdef.h");
+    }
 
     elsif ($InputLine eq "TESTRUNTOTALITERATION") {
 	($InputLine,$InputComment)=split(' ',$InputComment,2);
