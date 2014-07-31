@@ -1139,14 +1139,14 @@ cout <<"line=" << __LINE__ << endl;
     public:
       int nConnections;
       cBlockNode *Connection[nConnectionsMax];
-      typename list<cCutBlockNode>::iterator meshNode;
+      list<cCutBlockNode>::iterator meshNode;
       int ExtendedNodeMapID;
 
       bool ghostNode;
 
       cBlockNode() {nConnections=0,ghostNode=false;}
 
-      void assign(typename list<cCutBlockNode>::iterator nd) {
+      void assign(list<cCutBlockNode>::iterator nd) {
         meshNode=nd;
         nConnections=0;
       }
@@ -2091,7 +2091,7 @@ cout << __LINE__ << endl;
           //prepare data for the surface mesh
 //          cAMRnode<cNode> *thetraNodes[4];
 
-        typename list<cCutBlockNode>::iterator thetraNodes[4];
+        list<cCutBlockNode>::iterator thetraNodes[4];
         int i,j,k;
 
 
@@ -2141,7 +2141,7 @@ if (true) { ///(cutBlockFlag==true) {
                  cAMRnode<cNode> *upNode;*/
 
                  cTriangleCutFace newface;
-                 typename list<cCutBlockNode>::iterator upNode;
+                 list<cCutBlockNode>::iterator upNode;
 
 
                  for (k=0,j=0;j<4;j++) {
@@ -2405,7 +2405,7 @@ cout << __LINE__ << endl;
 */
 
             //prepare data for the surface mesh generation
-        typename list<cCutBlockNode>::iterator thetraNodes[4];
+        list<cCutBlockNode>::iterator thetraNodes[4];
             int i,j,k;
 
           bool flag;
@@ -2444,7 +2444,7 @@ if (true) { //(cutBlockFlag==true) {
              if (flag==true) {
 
                cTriangleCutFace newface;
-               typename list<cCutBlockNode>::iterator upNode;
+               list<cCutBlockNode>::iterator upNode;
 
 
                  for (k=0,j=0;j<4;j++) {
