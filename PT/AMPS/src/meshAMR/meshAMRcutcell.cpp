@@ -840,7 +840,7 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
   maxIntegrationLevel=1+(int)(log(1.0/(pow(RelativeError,0.333))));
 
   if (maxIntegrationLevel<0) maxIntegrationLevel=0;
-  if (maxIntegrationLevel>10) maxIntegrationLevel=10;
+  if (maxIntegrationLevel>_AMR__CUT_CELL_VOLUME_CALCULATION__MAX_REFINMENT_LEVEL_) maxIntegrationLevel=_AMR__CUT_CELL_VOLUME_CALCULATION__MAX_REFINMENT_LEVEL_;
 
   //create the list of the intersecting triangular elements
   list<cTriangleFace*> BlockTriangulationSet;

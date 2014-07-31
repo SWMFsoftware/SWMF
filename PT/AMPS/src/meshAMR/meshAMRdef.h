@@ -185,6 +185,8 @@
 
 #define _AMR_ENFORCE_CELL_RESOLUTION_MODE_ _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_
 
+//the maximum number of refinment levels used in calculating the ramain volume of cut-cells
+#define _AMR__CUT_CELL_VOLUME_CALCULATION__MAX_REFINMENT_LEVEL_  5
 
 using namespace std;
 
