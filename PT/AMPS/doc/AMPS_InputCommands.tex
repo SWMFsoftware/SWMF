@@ -220,6 +220,8 @@ Example (function):
 
 \item {\bf MaxCutCellVolumeRelativeError}={\it error} \\ The maximum relative error of the volume calculation. Implemented cut-cells will make the error smaller than the requested value. Can significantly degrade the run-time of the volume calculation procedure without any benefit because the cut-faces will give enough accuracy. 
 
+\item {\bf CutCellVolumeCalculationMaxRefinmentLevel}={\it max-refinment-level} \\ used in calculation of the cut-cell volume to limit the maximum refinement of the volume calculation (CutCell::GetRemainedBlockVolume). 
+
 \end{itemize}
 
 
