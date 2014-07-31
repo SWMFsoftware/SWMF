@@ -16,7 +16,7 @@ module ModProcessVarName
   
 
   integer,parameter :: nVarMax = 100   ! maximum number of state variables
-  integer,parameter :: nSubstance = 31 ! number of distinct fluids/species
+  integer,parameter :: nSubstance = 32 ! number of distinct fluids/species
 
   ! Number of state variables associated with each substance to be standarized
   integer,parameter :: nVarPerSubstance = 7
@@ -37,29 +37,30 @@ module ModProcessVarName
        Op_   = 6,  &
        O2p_  = 7,  & 
        He_   = 8,  &
-       OHp_  = 9,  &
-       N_    = 10, &
-       COp_  = 11, &
-       CO2p_ = 12, &
-       H2O_  = 13, &
-       H2Op_ = 14, &
-       H3Op_ = 15, &
-       Mp_   = 16, &
-       Lp_   = 17, &
-       MHCp_ = 18, &
-       HHCp_ = 19, &
-       HNIp_ = 20, &
-       Sw_   = 21, &
-       Iono_ = 22, &
-       Neu1_ = 23, &
-       Neu2_ = 24, &
-       Neu3_ = 25, &
-       Neu4_ = 26, &
-       Pui1_ = 27, &
-       Pui2_ = 28, &
-       Pui3_ = 29, &
-       Pui4_ = 30, &
-       Main_ = 31 ! main component, MHD/HD
+       He2p_ = 9,  &
+       OHp_  = 10, &
+       N_    = 11, &
+       COp_  = 12, &
+       CO2p_ = 13, &
+       H2O_  = 14, &
+       H2Op_ = 15, &
+       H3Op_ = 16, &
+       Mp_   = 17, &
+       Lp_   = 18, &
+       MHCp_ = 19, &
+       HHCp_ = 20, &
+       HNIp_ = 21, &
+       Sw_   = 22, &
+       Iono_ = 23, &
+       Neu1_ = 24, &
+       Neu2_ = 25, &
+       Neu3_ = 26, &
+       Neu4_ = 27, &
+       Pui1_ = 28, &
+       Pui2_ = 29, &
+       Pui3_ = 30, &
+       Pui4_ = 31, &
+       Main_ = 32 ! main component, MHD/HD
 
   ! String array storing the standard names of all substances
   character(len = 6) :: NameSubstance_I(nSubstance) = (/ &
@@ -71,6 +72,7 @@ module ModProcessVarName
        'Op  ',  &
        'O2p ',  & 
        'He  ',  &
+       'He2p',  &
        'OHp ',  &
        'N   ',  &
        'COp ',  &
