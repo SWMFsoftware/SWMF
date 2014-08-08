@@ -7608,8 +7608,18 @@ nMPIops++;
       //check all boundary faces for intersection with the block
       int nface;
 
+      double xmin[3],xmax[3];
+
+      xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+      xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+      xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
+      xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+      xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+      xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
       for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-        if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+        if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
           //the block is intersected by the face
           CutCell::cTriangleFaceDescriptor *t=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
@@ -7640,8 +7650,19 @@ nMPIops++;
     }
 
     //check all boundary faces for intersection with the block
+    //check all boundary faces for intersection with the block
+        double xmin[3],xmax[3];
+
+        xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+        xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+        xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
+        xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+        xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+        xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
     for (t=BoundaryFaces;t!=NULL;t=t->next) {
-      if (t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+      if (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
         //the block is intersected by the face
         CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
@@ -7685,8 +7706,18 @@ nMPIops++;
     }
 
     //check all boundary faces for intersection with the block
+    double xmin[3],xmax[3];
+
+    xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
+    xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+
     for (int nface=0;nface<nBoundaryFaces;nface++)  {
-      if (BoundaryFaces[nface].BlockIntersection(startNode->xmin,startNode->xmax,EPS)==true) {
+      if (BoundaryFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
         //the block is intersected by the face
         CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
@@ -8269,7 +8300,7 @@ nMPIops++;
              xCellMin[0]=xNodeMin[0]+i*dx,xCellMax[0]=xNodeMin[0]+(i+1)*dx;
              nd=getCenterNodeLocalNumber(i,j,k);
 
-             if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) {
+             if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) if (centerNode->Measure<=0.0) {
                if ((IntersectionCode==_AMR_BLOCK_OUTSIDE_DOMAIN_)||(IntersectionCode==_AMR_BLOCK_INSIDE_DOMAIN_)) {
                  //set the cell measure with the accounting for possible symmetry cases
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
@@ -8282,6 +8313,20 @@ nMPIops++;
                }
 
                else if (startNode->FirstTriangleCutFace!=NULL) {
+
+
+                 //TEST
+                 double *a=&centerNode->Measure;
+
+                 if ((a==(double*)0x14f374938) || (a==(double*)0x14ab5f938) || (centerNode->Temp_ID==9444) )  {
+                   double test=0;
+
+                   test+=1;
+                 }
+
+                 //END TEST
+
+
                  //the block is cutted by a list of triangulat faces
                  centerNode->Measure=GetRemainedBlockVolume(xCellMin,xCellMax,EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
                }
