@@ -252,6 +252,18 @@ namespace CutCell {
 
     }
 
+    inline void GetProjectedLocalCoordinates(double *xLocal,double *x) {
+      double c0=0.0,c1=0.0,t;
+
+      for (int i=0;i<3;i++) {
+        t=x[i]-x0Face[i];
+        c0+=t*e0[i],c1+=t*e1[i];
+      }
+
+      c=c11*c00-c01*c01;
+      xLocal[0]=(c0*c11-c1*c01)/c;
+      xLocal[1]=(c1*c00-c01*c0)/c;
+    }
 
     bool RayIntersection(double *x0,double *l,double &t,double EPS) {
       double length,lNorm;
@@ -259,7 +271,7 @@ namespace CutCell {
       lNorm=l[0]*ExternalNormal[0]+l[1]*ExternalNormal[1]+l[2]*ExternalNormal[2];
       length=(x0[0]-x0Face[0])*ExternalNormal[0]+(x0[1]-x0Face[1])*ExternalNormal[1]+(x0[2]-x0Face[2])*ExternalNormal[2];
 
-      if (fabs(length)<EPS) {
+/*      if (fabs(length)<EPS) {
         t=0.0;
       }
       else {
@@ -270,10 +282,26 @@ namespace CutCell {
 
         t=-length/lNorm;
         if (t<0.0) return false;
+      }*/
+
+/*      if (lNorm==0.0) {
+        t=0.0;
+        return true;
+      }*/
+
+
+      if (lNorm==0.0) {
+        t=0.0;
+        return false;
+      }
+      else {
+        t=-length/lNorm;
       }
 
+      if (t<0.0) return false;
+
       //find position of the intersection in the internal frame related to the face
-      double c0=0.0,c1=0.0,xLocal[2];
+/*      double c0=0.0,c1=0.0,xLocal[2];
 
       for (int i=0;i<3;i++) {
         double x=x0[i]+l[i]*t-x0Face[i];
@@ -283,14 +311,21 @@ namespace CutCell {
 
       c=c11*c00-c01*c01;
       xLocal[0]=(c0*c11-c1*c01)/c;
-      xLocal[1]=(c1*c00-c01*c0)/c;
+      xLocal[1]=(c1*c00-c01*c0)/c;*/
+
+      double x[3],xLocal[2];
+
+      for (int i=0;i<3;i++) x[i]=x0[i]+l[i]*t;
+      GetProjectedLocalCoordinates(xLocal,x);
 
       //determine weather the node in outside of the face
-      double a0=e0Length*xLocal[0],a1=e1Length*xLocal[1];
+/*      double a0=e0Length*xLocal[0],a1=e1Length*xLocal[1];
 
       if ((a0<-EPS)||(a0>EPS+e0Length)) return false;
       else if ((a1<-EPS)||(a1>EPS+e1Length)) return false;
-      else if (xLocal[0]+xLocal[1]>1.0) return false;
+      else if (xLocal[0]+xLocal[1]>1.0) return false;*/
+
+      if ((xLocal[0]<0.0)||(xLocal[0]>1.0) || (xLocal[1]<0.0)||(xLocal[1]>1.0) || (xLocal[0]+xLocal[1]>1.0)) return false;
 
       return true;
     }
