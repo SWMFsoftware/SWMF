@@ -84,11 +84,11 @@ public :
   double *SolarWindSurfaceFlux;
 
   //injection of particles from the sphere
-  typedef double (*fInjectionRate)(int spec,void *InternalSphere);
+  typedef double (*fInjectionRate)(int spec,int BoundaryElementType,void *BoundaryElement);
   fInjectionRate InjectionRate;
 
   //injection of particles from the sphere
-  typedef long int (*fInjectionBoundaryCondition)(void *InternalSphere);
+  typedef long int (*fInjectionBoundaryCondition)(int BoundaryElementType,void *BoundaryElement);
   fInjectionBoundaryCondition InjectionBoundaryCondition;
 
   //interaction of aprticles with the sphere
@@ -137,6 +137,12 @@ class cInternalRotationBodyData_UserDefined : public cInternalSphericalData_User
 public:
   cInternalRotationBodyData_UserDefined() : cInternalSphericalData_UserDefined() {
 
+  }
+};
+
+class cInternalNastranSurfaceData_UserDefined : public cInternalSphericalData_UserDefined {
+public:
+  cInternalNastranSurfaceData_UserDefined() : cInternalSphericalData_UserDefined() {
   }
 };
 #endif
