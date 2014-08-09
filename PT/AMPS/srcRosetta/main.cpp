@@ -33,7 +33,7 @@ double BulletLocalResolution(double *x) {
 
 //  return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 
-  return 50.0;
+  return 10.0;
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
@@ -48,7 +48,16 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize());
+  double res,size;
+
+  size=t->CharacteristicSize();
+
+  if (size<0.02) res=0.02;
+  else if (size>1.0) res=1.0;
+  else res=size;
+
+
+  return res;
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
