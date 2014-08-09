@@ -1525,6 +1525,11 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
 //=====================  DEBUG ==================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+
+  if (PIC::ParticleBuffer::IsParticleAllocated(ParticleData)==false) {
+	  exit(__LINE__,__FILE__,"Error: an unallocated particle is intercepted");
+  }
+
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
 #elif _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_SPHERICAL_SYMMETRY_
@@ -1545,6 +1550,59 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
   if (cell->Measure<=0.0) {
     cout << "$PREFIX:" << __FILE__<< __LINE__ << endl;
+
+    double  vol=-1,xmin[3],xmax[3],xmiddle[3];
+
+    xmin[0]=startNode->xmin[0]+i*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+    xmin[1]=startNode->xmin[1]+j*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+    xmin[2]=startNode->xmin[2]+k*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
+
+    xmax[0]=startNode->xmin[0]+(i+1)*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+    xmax[1]=startNode->xmin[1]+(j+1)*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+    xmax[2]=startNode->xmin[2]+(k+1)*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
+
+    vol=CutCell::GetRemainedBlockVolume(xmin,xmax,PIC::Mesh::mesh.EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
+    cout << "$PREFIX: recalculated volume: vol=" << vol << "(" << __FILE__ << __LINE__ << ")" << endl;
+    cout << " xInit=" << xInit[0] << ", " << xInit[1] << ", " << xInit[2] << endl;
+
+    if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+      cout << "$PREFIX: xInit is outside of the domain " << __FILE__<< __LINE__ << endl;
+    }
+    else {
+      cout << "$PREFIX: xInit is inside of the domain " << __FILE__<< __LINE__ << endl;
+    }
+
+    xmiddle[0]=startNode->xmin[0]+(i+0.5)*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+    xmiddle[1]=startNode->xmin[1]+(j+0.5)*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+    xmiddle[2]=startNode->xmin[2]+(k+0.5)*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
+
+    cout << " xMiddle=" << xmiddle[0] << ", " << xmiddle[1] << ", " << xmiddle[2] << endl;
+
+    if (CutCell::CheckPointInsideDomain(xmiddle,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+      cout << "$PREFIX: middle point of the cell is outside of the domain " << __FILE__<< __LINE__ << endl;
+    }
+    else {
+      cout << "$PREFIX: middle point of the cell is inside of the domain " << __FILE__<< __LINE__ << endl;
+    }
+
+    for (int ii=0;ii<2;ii++) for (int jj=0;jj<2;jj++) for (int kk=0;kk<2;kk++) {
+      double t[3];
+
+      t[0]=(ii==0) ? xmin[0] : xmax[0];
+      t[1]=(jj==0) ? xmin[1] : xmax[1];
+      t[2]=(kk==0) ? xmin[2] : xmax[2];
+
+      cout << "node (" << ii << "," << jj << "," << kk << ") x=" << t[0] << ", " << t[1] << ", " << t[2] << ": ";
+
+      if (CutCell::CheckPointInsideDomain(t,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+         cout << "Outside of the domain" << __FILE__<< __LINE__ << endl;
+      }
+      else {
+        cout << "Inside the domain" << __FILE__<< __LINE__ << endl;
+      }
+
+    }
+
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
 #endif
@@ -1880,6 +1938,10 @@ MovingLoop:
         Nucleus=(cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement);
 	Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
 
+
+	exit(__LINE__,__FILE__,"calculation of the time of flight is not implemented");
+
+
         Nucleus->SurfaceCurve(rSurface,xInit[0]);
 	if(xmin<=xInit[0] && xmax>=xInit[0] && rSurface>sqrt(xInit[1]*xInit[1]+xInit[2]*xInit[2])) {
 	  //the particle is inside the nucleus                                                                                                                  
@@ -1888,6 +1950,9 @@ MovingLoop:
         }
 
         break;
+      case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+    	  //do nothing
+    	break;
       default:
         exit(__LINE__,__FILE__,"Error: undetermined internal boundary type");
       }
@@ -1944,7 +2009,7 @@ MovingLoop:
           xFinal[2]=xInit[2]+dtMin*vInit[2];
 
           if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
-            dtMin*=(1.0-1.0E-5);
+            dtMin*=(1.0-1.0E-3);
             ExitFlag=false;
           }
         }
@@ -1952,9 +2017,36 @@ MovingLoop:
       }
       else if (r0<0.0) {
         if (r0>-PIC::Mesh::mesh.EPS) {
-          for (int idim=0;idim<DIM;idim++) xFinal[idim]-=(PIC::Mesh::mesh.EPS-r0)*FaceNorm[idim];
+          for (int idim=0;idim<DIM;idim++) xInit[idim]+=(0.0*PIC::Mesh::mesh.EPS-r0)*FaceNorm[idim];
+
+          memcpy(xFinal,xInit,3*sizeof(double));
+          dtMin=0.0;
         }
         else {
+          double dtRecalculated,xIntersection[3],xIntersectionLocal[2];
+          bool IntersectionCode;
+
+          IntersectionCode=IntersectionFace->RayIntersection(xInit,vInit,dtRecalculated,PIC::Mesh::mesh.EPS);
+
+          if (IntersectionCode==true) {
+            for (int idim=0;idim<3;idim++) xIntersection[idim]=xInit[idim]+dtRecalculated*vInit[idim];
+
+            IntersectionFace->GetProjectedLocalCoordinates(xIntersectionLocal,xIntersection);
+
+            printf("$PREFIX: ptr=%ld, r0=%e, dtMin=%e, dtRecalculated=%e (%ld,%s)\n",ptr,r0,dtMin,dtRecalculated,__LINE__,__FILE__);
+            printf("$PREFIX: The \"global\" coordinates of the intersection: xIntersection[]=(%e,%e,%e)  (%ld,%s)\n",xIntersection[0],xIntersection[1],xIntersection[2],__LINE__,__FILE__);
+            printf("$PREFIX: The \"local\" coordinates of the intersection: xIntersectionLocal[]=(%e,%e)  (%ld,%s)\n",xIntersectionLocal[0],xIntersectionLocal[1],__LINE__,__FILE__);
+            printf("$PREFIX: e0Length*xLocal[0]=%e, e1Length*xLocal[1]=%e, EPS=%e (%ld,%s)\n",IntersectionFace->e0Length*xIntersectionLocal[0],IntersectionFace->e1Length*xIntersectionLocal[1],PIC::Mesh::mesh.EPS,__LINE__,__FILE__);
+            printf("$PREFIX: e0Length=%e, e1Length=%e (%ld,%s)\n",IntersectionFace->e0Length,IntersectionFace->e1Length,__LINE__,__FILE__);
+          }
+          else {
+            printf("$PREFIX: the intersection is not found (%ld,%s)\n",__LINE__,__FILE__);
+          }
+
+          if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+             exit(__LINE__,__FILE__,"The point is outside of the domain");
+          }
+
           exit(__LINE__,__FILE__,"error: the point is inside the body");
         }
       }
@@ -1995,6 +2087,27 @@ MovingLoop:
       }
 
     }
+    else if (startNode->FirstTriangleCutFace!=NULL) {
+    	//use the first order integration if 'startNode' contains cut-faces, but no intersection with them is determened for the 1st order scheme
+
+        xFinal[0]=xInit[0]+dtMin*vInit[0];
+        xFinal[1]=xInit[1]+dtMin*vInit[1];
+        xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+        vFinal[0]=vInit[0]+dtMin*acclInit[0];
+        vFinal[1]=vInit[1]+dtMin*acclInit[1];
+        vFinal[2]=vInit[2]+dtMin*acclInit[2];
+
+#if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
+      newNode=PIC::Mesh::mesh.findTreeNode(xFinal,middleNode);
+#else
+      exit(__LINE__,__FILE__,"Error: the option is nor defined");
+#endif
+
+    }
+
+
+
     else if (ParticleIntersectionCode==_INTERNAL_SPHERE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
       int code;
 
@@ -2297,6 +2410,13 @@ ProcessPhotoChemistry:
       }
 
       break;
+    case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+#if  _PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_ == _PIC_MODE_ON_
+        if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+            exit(__LINE__,__FILE__,"The point is outside of the domain");
+        }
+#endif
+    	break;
     default:
       exit(__LINE__,__FILE__,"Error: the option is not recognized");
     }
@@ -2355,6 +2475,13 @@ ProcessPhotoChemistry:
 
   //=====================  DEBUG =========================
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+
+  if (PIC::ParticleBuffer::IsParticleAllocated(ParticleData)==false) {
+	  exit(__LINE__,__FILE__,"Error: an unallocated particle is intercepted");
+  }
+
+
+
   cell=startNode->block->GetCenterNode(LocalCellNumber);
 
   if ((cell->Measure<=0.0)&&(startNode->Thread==PIC::Mesh::mesh.ThisThread)) {
@@ -2382,6 +2509,24 @@ ProcessPhotoChemistry:
        cout << "$PREFIX:Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << sqrt(r) << endl;
      }
 
+
+     double  vol=-1,xmin[3],xmax[3];
+
+     if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
+
+     xmin[0]=startNode->xmin[0]+i*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+     xmin[1]=startNode->xmin[1]+j*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+     xmin[2]=startNode->xmin[2]+k*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
+
+     xmax[0]=startNode->xmin[0]+(i+1)*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+     xmax[1]=startNode->xmin[1]+(j+1)*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+     xmax[2]=startNode->xmin[2]+(k+1)*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
+
+     vol=CutCell::GetRemainedBlockVolume(xmin,xmax,PIC::Mesh::mesh.EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
+
+     if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+         exit(__LINE__,__FILE__,"The point is outside of the domain");
+     }
 
     exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
   }
