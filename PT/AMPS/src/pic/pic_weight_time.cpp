@@ -80,6 +80,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     cInternalCircleData *Circle;
     cInternalSphere1DData *Sphere1D;
     cInternalRotationBodyData *RotationBody;
+    cInternalNastranSurfaceData *NastranSurface;
 
     for (descriptor=PIC::Mesh::mesh.InternalBoundaryList.begin();descriptor!=PIC::Mesh::mesh.InternalBoundaryList.end();descriptor++) {
       switch (descriptor->BondaryType) {
@@ -87,23 +88,27 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
         if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 3D simulations");
 
         Sphere=(cInternalSphericalData*)descriptor->BoundaryElement;
-        if (Sphere->InjectionRate!=NULL) ParticleInjection+=Sphere->InjectionRate(spec,(void*)Sphere)*Sphere->maxIntersectedNodeTimeStep[spec];
+        if (Sphere->InjectionRate!=NULL) ParticleInjection+=Sphere->InjectionRate(spec,descriptor->BondaryType,(void*)Sphere)*Sphere->maxIntersectedNodeTimeStep[spec];
         break;
       case _INTERNAL_BOUNDARY_TYPE_CIRCLE_:
         if (DIM!=2) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 2D simulations");
 
         Circle=(cInternalCircleData*)descriptor->BoundaryElement;
-        if (Circle->InjectionRate!=NULL) ParticleInjection+=Circle->InjectionRate(spec,(void*)Circle)*Circle->maxIntersectedNodeTimeStep[spec];
+        if (Circle->InjectionRate!=NULL) ParticleInjection+=Circle->InjectionRate(spec,descriptor->BondaryType,(void*)Circle)*Circle->maxIntersectedNodeTimeStep[spec];
         break;
       case _INTERNAL_BOUNDARY_TYPE_1D_SPHERE_:
         if (DIM!=1) exit(__LINE__,__FILE__,"Error: cInternalSphericalData can be used ONLY for 1D simulations");
 
         Sphere1D=(cInternalSphere1DData*)descriptor->BoundaryElement;
-        if (Sphere1D->InjectionRate!=NULL) ParticleInjection+=Sphere1D->InjectionRate(spec,(void*)Sphere1D)*Sphere1D->maxIntersectedNodeTimeStep[spec];
+        if (Sphere1D->InjectionRate!=NULL) ParticleInjection+=Sphere1D->InjectionRate(spec,descriptor->BondaryType,(void*)Sphere1D)*Sphere1D->maxIntersectedNodeTimeStep[spec];
         break;
       case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
         RotationBody=(cInternalRotationBodyData*)descriptor->BoundaryElement;
-	if (RotationBody->InjectionRate!=NULL) ParticleInjection+=RotationBody->InjectionRate(spec,(void*)RotationBody)*RotationBody->maxIntersectedNodeTimeStep[spec];
+	      if (RotationBody->InjectionRate!=NULL) ParticleInjection+=RotationBody->InjectionRate(spec,descriptor->BondaryType,(void*)RotationBody)*RotationBody->maxIntersectedNodeTimeStep[spec];
+        break;
+      case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+        NastranSurface=(cInternalNastranSurfaceData*)descriptor->BoundaryElement;
+        if (NastranSurface->InjectionRate!=NULL) ParticleInjection+=NastranSurface->InjectionRate(spec,descriptor->BondaryType,(void*)NastranSurface)*NastranSurface->maxIntersectedNodeTimeStep[spec];
         break;
       default:
         exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -120,6 +125,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
 
     MPI_Bcast(&GlobalParticleWeight,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+    if (PIC::ThisThread==0) printf("$PREFIX: Global Time Step (%s) = %e (file=%s,line=%ld)\n",PIC::MolecularData::GetChemSymbol(spec),GlobalParticleWeight,__FILE__,__LINE__);
 
     if (GlobalParticleWeight<=0.0) exit(__LINE__,__FILE__,"Error: ParticleInjection has zero value");
   }
@@ -153,6 +159,7 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
   cInternalCircleData *Circle;
   cInternalSphere1DData *Sphere1D;
   cInternalRotationBodyData *RotationBody;
+  cInternalNastranSurfaceData *NastranSurface;
   double blockTimeStep=0.0;
   int s;
 
@@ -204,9 +211,13 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
           Sphere1D=(cInternalSphere1DData*)descriptor->BoundaryElement;
           if (Sphere1D->maxIntersectedNodeTimeStep[s]<blockTimeStep) Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
           break;
-	case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+	      case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
           RotationBody=(cInternalRotationBodyData*)descriptor->BoundaryElement;
           if (RotationBody->maxIntersectedNodeTimeStep[s]<blockTimeStep) RotationBody->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+          break;
+        case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+          NastranSurface=(cInternalNastranSurfaceData*)descriptor->BoundaryElement;
+          if (NastranSurface->maxIntersectedNodeTimeStep[s]<blockTimeStep) NastranSurface->maxIntersectedNodeTimeStep[s]=blockTimeStep;
           break;
         default:
           exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -248,11 +259,17 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
             Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
             blockTimeStep=Sphere1D->maxIntersectedNodeTimeStep[s];
             break;
-	  case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+	        case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
             if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalRotationBodyData can be used ONLY for 3D simulations");
 
             RotationBody=(cInternalRotationBodyData*)ptr->BoundaryElement;
             blockTimeStep=RotationBody->maxIntersectedNodeTimeStep[s];
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+            if (DIM!=3) exit(__LINE__,__FILE__,"Error: cInternalRotationBodyData can be used ONLY for 3D simulations");
+
+            NastranSurface=(cInternalNastranSurfaceData*)ptr->BoundaryElement;
+            blockTimeStep=NastranSurface->maxIntersectedNodeTimeStep[s];
             break;
           default:
             exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -285,9 +302,13 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
             Sphere1D=(cInternalSphere1DData*)ptr->BoundaryElement;
             Sphere1D->maxIntersectedNodeTimeStep[s]=blockTimeStep;
             break;
-	  case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
+	        case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
             RotationBody=(cInternalRotationBodyData*)ptr->BoundaryElement;
             RotationBody->maxIntersectedNodeTimeStep[s]=blockTimeStep;
+            break;
+          case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+            NastranSurface=(cInternalNastranSurfaceData*)ptr->BoundaryElement;
+            NastranSurface->maxIntersectedNodeTimeStep[s]=blockTimeStep;
             break;
           default:
             exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
@@ -307,6 +328,8 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
 
         if (PIC::ThisThread==0) {
           for (thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]<t) t=buffer[thread];
+
+          printf("$PREFIX: Global Time Step (%s) = %e (file=%s,line=%ld)\n",PIC::MolecularData::GetChemSymbol(s),t,__FILE__,__LINE__);
         }
 
         MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
