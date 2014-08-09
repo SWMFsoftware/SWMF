@@ -10,13 +10,14 @@
 //$Id$
 
 
-
 #include "pic.h"
 //#include "SpiceUsr.h"
 
 #include "Exosphere.h"
 #include "constants.h"
 #include "SingleVariableDiscreteDistribution.h"
+
+//#include "Rosetta.h"
 
 
 double Exosphere::swE_Typical[3]={0.0,0.0,0.0};
@@ -1815,30 +1816,30 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
 
 
 /*--------------------------------- Source Processes: BEGIN  --------------------------------------*/
-double Exosphere::SourceProcesses::totalProductionRate(int spec,void *SphereDataPointer) {
+double Exosphere::SourceProcesses::totalProductionRate(int spec,int BoundaryElementType,void *BoundaryElement) {
   double res=0.0;
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
 //  if (spec==_NA_SPEC_) {
-  res+=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,SphereDataPointer);
+  res+=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,BoundaryElementType,(cInternalSphericalData*)(BoundaryElement));
 //  }
 #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
 //  if (spec==_NA_SPEC_) {
-  res+=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  res+=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
 //  }
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
 //  if (spec==_NA_SPEC_) {
-  res+=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  res+=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
 //  }
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
 //  if (spec==_NA_SPEC_) {
-  res+=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,SphereDataPointer);
+  res+=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
 //  }
 #endif
 
@@ -1851,18 +1852,21 @@ double Exosphere::SourceProcesses::totalProductionRate(int spec,void *SphereData
 }
 
 
-long int Exosphere::SourceProcesses::InjectionBoundaryModel(void *SphereDataPointer)  {
+long int Exosphere::SourceProcesses::InjectionBoundaryModel(int BoundaryElementType,void *BoundaryElement)  {
   int spec;
   long int res=0;
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,SphereDataPointer);
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,BoundaryElementType,BoundaryElement);
 
   return res;
 }
 
-long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *SphereDataPointer) {
-  cInternalSphericalData *Sphere;
-  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
+long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int BoundaryElementType,void *BoundaryElement) {
+  cInternalSphericalData *Sphere=NULL;
+//  void *SphereDataPointer=NULL;
+  double *sphereX0=NULL,sphereRadius=0.0;
+
+  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3];
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
   long int newParticle,nInjectedParticles=0;
   PIC::ParticleBuffer::byte *newParticleData;
@@ -1872,8 +1876,14 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 
   const int nMaxInjectedParticles=10*PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber;
 
-  Sphere=(cInternalSphericalData*)SphereDataPointer;
-  Sphere->GetSphereGeometricalParameters(sphereX0,sphereRadius);
+  switch (BoundaryElementType) {
+  case _INTERNAL_BOUNDARY_TYPE_SPHERE_ :
+    Sphere=(cInternalSphericalData*)(BoundaryElement);
+    Sphere->GetSphereGeometricalParameters(sphereX0,sphereRadius);
+
+    break;
+  }
+
 
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
   ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
@@ -1891,7 +1901,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-  ModelParticlesInjectionRate=totalProductionRate(spec,SphereDataPointer)/ParticleWeight;
+  ModelParticlesInjectionRate=totalProductionRate(spec,BoundaryElementType,BoundaryElement)/ParticleWeight;
 
   if (ModelParticlesInjectionRate*ParticleWeight*LocalTimeStep<1.0E-10) return 0;
 
@@ -1912,29 +1922,29 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 /*  double TotalFlux,Flux_ImpactVaporization=0.0,Flux_PSD=0.0,Flux_TD=0.0,Flux_SW_Sputtering=0.0;
   double p,Probability_ImpactVaporization=0.0,Probability_PSD=0.0,Probability_TD=0.0,Probability_SW_Sputtering=0.0;*/
 
-  TotalFlux=totalProductionRate(spec,SphereDataPointer);
+  TotalFlux=totalProductionRate(spec,BoundaryElementType,BoundaryElement);
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
 //  Flux_ImpactVaporization=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
 
-  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]=Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(spec,BoundaryElementType,(cInternalSphericalData*)(BoundaryElement));
   #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
 //  Flux_PSD=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
-  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
   if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]>0.0) PhotonStimulatedDesorption::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
 //  Flux_TD=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
-  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]=Exosphere::SourceProcesses::ThermalDesorption::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
   if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]>0.0) ThermalDesorption::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
 //  Flux_SW_Sputtering=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(_NA_SPEC_,SphereDataPointer);
-  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,SphereDataPointer);
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]=Exosphere::SourceProcesses::SolarWindSputtering::GetTotalProductionRate(spec,BoundaryElementType,BoundaryElement);
   if (FluxSourceProcess[_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]>0.0) SolarWindSputtering::SurfaceInjectionDistribution[spec].Init(&spec);
 #endif
 
@@ -1975,7 +1985,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
    if (false) {}
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_) {
-     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1983,7 +1993,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_) {
-     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::PhotonStimulatedDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1991,7 +2001,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_) {
-     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::ThermalDesorption::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -1999,7 +2009,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,void *Spher
 #endif
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
    else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_) {
-     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);
+     flag=Exosphere::SourceProcesses::SolarWindSputtering::GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);
 
 //     SourceProcessID=_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_;
 //     if (flag==true) Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
@@ -2035,12 +2045,14 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    long int nZenithElement,nAzimuthalElement;
    int el;
 
-   Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
-   el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+   if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+     Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
+     el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-   //check is the injection of the particle will not make the surface aboundance negative
-   if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true){
-     if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
+     //check is the injection of the particle will not make the surface aboundance negative
+     if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true){
+       if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
+     }
    }
 
    //generate a particle
@@ -2051,14 +2063,17 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 
    //save the information od the particle origin: the particle origin will be sampled in SO coordinate frame
-   Sphere->GetSurfaceElementProjectionIndex(x_SO_OBJECT,nZenithElement,nAzimuthalElement);
-   el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+   if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+     Sphere->GetSurfaceElementProjectionIndex(x_SO_OBJECT,nZenithElement,nAzimuthalElement);
+     el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-   Exosphere::Planet->SampleSpeciesSurfaceSourceRate[spec][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
+     Exosphere::Planet->SampleSpeciesSurfaceSourceRate[spec][el][SourceProcessID]+=ParticleWeight*ParticleWeightCorrection/LocalTimeStep;
 
-   //sample particle injection velocity
-   Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[spec][el]+=ParticleWeight*ParticleWeightCorrection;
-   Exosphere::Planet->SampleInjectedFluxBulkSpeed[spec][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
+     //sample particle injection velocity
+     Exosphere::Planet->SampleSpeciesSurfaceInjectionFlux[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+     Exosphere::Planet->SampleInjectedFluxBulkSpeed[spec][el]+=ParticleWeight*ParticleWeightCorrection*sqrt(pow(v_IAU_OBJECT[0],2)+pow(v_IAU_OBJECT[1],2)+pow(v_IAU_OBJECT[2],2));
+   }
+   else el=0;
 
    Sampling::SetParticleSourceID(SourceProcessID,(PIC::ParticleBuffer::byte*)tempParticleData);
    Sampling::SetParicleOriginSurfaceElementNumber(el,(PIC::ParticleBuffer::byte*)tempParticleData);
@@ -2070,11 +2085,13 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    nInjectedParticles++;
 
    //for the secondary source processes accout for the decrease of the surface density
-   if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true) {
-     Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
-     el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+   if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+     if (Source_DeplitSurfaceSpeciesAbundance_Flag[SourceProcessID]==true) {
+       Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
+       el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
-     Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+       Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;
+     }
    }
 
 

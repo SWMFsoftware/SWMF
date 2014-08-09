@@ -55,6 +55,6 @@ double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFuncti
 }
 
 /*--------------------------------- SOURCE: Impact Vaporization -----------------------------------*/
-double Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(int spec,void *SphereDataPointer) {
+double Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
   return ImpactVaporization_SourceRate[spec]*pow(ImpactVaporization_HeliocentricDistance/Exosphere::xObjectRadial,ImpactVaporization_SourceRatePowerIndex);
 }

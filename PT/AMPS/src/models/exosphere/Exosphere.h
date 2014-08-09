@@ -424,7 +424,7 @@ namespace Exosphere {
       extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];
       double GetSurfaceElementProductionRate(int nElement,int *spec);
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
+      inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return SourceRate[spec];}
 
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
         double res=0.0,norm[3],sun[3],temp,SodiumSurfaceElementPopulation;
@@ -468,7 +468,7 @@ namespace Exosphere {
       }
 
 
-      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double* v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double* v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
         double ExternalNormal[3],CosSubSolarAngle;
 
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
@@ -594,18 +594,22 @@ namespace Exosphere {
         return res;
       }
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
+      inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return SourceRate[spec];}
 
       //energy distribution function of injected particles
       extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
       double EnergyDistributionFunction(double e,int *spec);
 
       //generate particle properties
-      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
 
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
         exit(__LINE__,__FILE__,"Error: not implemented");
 #endif
+
+        if (BoundaryElementType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: particle ejection from a non-spehtical body is not implemented");
+
+        cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
         return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
@@ -617,12 +621,12 @@ namespace Exosphere {
       static const double ImpactVaporization_SourceRatePowerIndex=0.0;
       static const double ImpactVaporization_SourceTemeprature[]={0.0};
 
-      double GetTotalProductionRate(int spec,void *SphereDataPointer);
+      double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
 
       //evaluate nemerically the source rate
 //      extern double CalculatedTotalSodiumSourceRate;
 
-      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
         unsigned int idim;
         double r=0.0,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
 
@@ -749,27 +753,31 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         return ((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd]*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement];
       }
 
-      inline double GetTotalProductionRate(int spec,void *SphereDataPointer) {return SourceRate[spec];}
+      inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return SourceRate[spec];}
 
       //energy distribution function of injected particles
       extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
       double EnergyDistributionFunction(double e,int *spec);
 
       //generate particle properties
-      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
+      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
 
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
         exit(__LINE__,__FILE__,"Error: not implemented");
 #endif
+
+        if (BoundaryElementType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: particle ejection from a non-spehtical body is not implemented");
+
+        cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
         return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
     }
 
 
-    double totalProductionRate(int spec,void *SphereDataPointer);
-    long int InjectionBoundaryModel(void *SphereDataPointer);
-    long int InjectionBoundaryModel(int spec,void *SphereDataPointer);
+    double totalProductionRate(int spec,int BoundaryElementType,void *BoundaryElement);
+    long int InjectionBoundaryModel(int BoundaryElementType,void *BoundaryElement);
+    long int InjectionBoundaryModel(int spec,int BoundaryElementType,void *BoundaryElement);
 
     long int InjectionBoundaryModelLimited(void *SphereDataPointer);
     long int InjectionBoundaryModelLimited(int spec,void *SphereDataPointer);
