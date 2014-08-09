@@ -25,6 +25,8 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
+
+
 my $InputFileName=$ARGV[0]; #"europa.input.Assembled.Block"; #$ARGV[0]; # moon.input.Assembled.Block;
 my $SpeciesFileName = $InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/;
 
@@ -150,7 +152,7 @@ while ($line=<InputFile>) {
   
   elsif ($InputLine eq "SPICE") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
-    
+
     if ($InputLine eq "ON") {
       ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h");
     }
@@ -611,7 +613,7 @@ while ($line=<InputFile>) {
         print EXOSPHERE_USER_DEFINITIONS "#define _EXOSPEHRE_SOURCE__USER_DEFINED__".$SourceProcessID."_".$Code."_  _EXOSPHERE_SOURCE__ON_\n";
         print EXOSPHERE_USER_DEFINITIONS "\n#undef _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_\n#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_  _EXOSPHERE_SOURCE__ON_\n";
         
-        $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."\nFluxSourceProcess[$SourceCode]=$SourceRate(spec,SphereDataPointer);\n";
+        $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."\nFluxSourceProcess[$SourceCode]=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
         
         if ($InitSurfaceSourceDistribution ne "") {
           $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."if (FluxSourceProcess[$SourceCode]>0.0) $InitSurfaceSourceDistribution();\n";
@@ -619,9 +621,9 @@ while ($line=<InputFile>) {
         
 #       $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\nSourceProcessID=$SourceCode;\nif (flag==true) Sampling::CalculatedSourceRate[spec][$SourceCode]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;\n}\n";
 
-        $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\n}\n"; 
+        $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);\n}\n"; 
         $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER."\nSamplingDensityOffset[$SourceCode]=CellSamplingDataOffset+SamplingLength;\nSamplingLength+=sizeof(double)*PIC::nTotalSpecies;\n";
-        $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE."\nres+=$SourceRate(spec,SphereDataPointer);\n";
+        $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE."\nres+=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
                
 #        print "$SourceRate, $GenerateParticleProperties\n";
         
@@ -705,7 +707,7 @@ if (-e ".ampsConfig.Settings") {
       $t=lc($1);
           
       if ($t eq "nospice") {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.h"); next;}
-      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h"); next;}
+#      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h"); next;}
     }
   }    
 }
@@ -723,7 +725,7 @@ sub getSpeciesNumber {
   } 
   
   if ($res eq -1) {
-    die "Cannot fild species $_\n";
+    die "Cannot find species $spec\n";
   }
   
   return $res;
