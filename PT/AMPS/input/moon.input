@@ -48,6 +48,10 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
   Mesh=on ! on, off
 #endUserDefinitions
 
+#General 
+NastranSurfaceUserData=on 
+#endGeneral
+
 #ParticleCollisions 
   model = off !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
