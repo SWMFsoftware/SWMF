@@ -44,6 +44,8 @@ CouplerMode=ices !!off, ices, swmf
 
 #General
   InitialSampleLength=1
+
+  NastranSurfaceUserData=on
 #endGeneral
 
 #UserDefinitions
