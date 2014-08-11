@@ -67,6 +67,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   EnforceRequestedMeshResolution=off !on,off
   InitialSampleLength=10000
   TestRunTotalIteration=50
+
+  NastranSurfaceUserData=on
 #endGeneral
 
 #block ../input/europa.input.pl !process the settings of the Europa's model
