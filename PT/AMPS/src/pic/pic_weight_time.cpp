@@ -125,7 +125,7 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
 
     MPI_Bcast(&GlobalParticleWeight,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
-    if (PIC::ThisThread==0) printf("$PREFIX: Global Time Step (%s) = %e (file=%s,line=%ld)\n",PIC::MolecularData::GetChemSymbol(spec),GlobalParticleWeight,__FILE__,__LINE__);
+    if (PIC::ThisThread==0) printf("$PREFIX: Global Particle Weight (%s) = %e (file=%s,line=%ld)\n",PIC::MolecularData::GetChemSymbol(spec),GlobalParticleWeight,__FILE__,__LINE__);
 
     if (GlobalParticleWeight<=0.0) exit(__LINE__,__FILE__,"Error: ParticleInjection has zero value");
   }
