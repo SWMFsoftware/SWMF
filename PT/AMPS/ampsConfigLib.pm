@@ -194,6 +194,32 @@ sub SubstituteCodeLine {
   close (FILEOUT);
 }
 
+#===============================  Insert a line into a file after a marker ==========================
+sub AddLineAfterMarker2File {
+  my $NewLine=$_[0];
+  my $Marker=$_[1];
+  my $File=$_[2];
+  
+  my @FileContent;
+  
+  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";  
+  @FileContent=<FILEIN>;
+  close (FILEIN);
+ 
+  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/$File");
+  
+  foreach (@FileContent) {
+    print FILEOUT "$_";
+    
+    if ($_=~m/($Marker)/) {
+      print FILEOUT "$NewLine\n";
+    }
+  }
+  
+  close (FILEOUT);
+}  
+
+
 #===============================  RECURSIVE SUBSTITUDE OF A STRING IN THE SOURCE DIRECTORY ==========
 sub RecursiveSubstitute {
   my $init=$_[0];
