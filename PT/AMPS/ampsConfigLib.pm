@@ -3,6 +3,9 @@
 use strict;
 use warnings;
 
+use POSIX qw(strftime);
+use List::Util qw(first);
+
 package ampsConfigLib;
 our @EXPORT=qw($WorkingSourceDirectory);
 
@@ -102,6 +105,8 @@ sub AddMacro {
   my $File=$_[2];
   
   open (FILEIN,">>$ampsConfigLib::WorkingSourceDirectory/$File") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$File\n";   
+
+  print FILEIN  "//The following changes are added while reading input file. [".POSIX::strftime("%m/%d/%Y", localtime)."]\n";
   print FILEIN "#undef $Macro\n#define $Macro $Value\n\n";
   close (FILEIN);
 }
@@ -212,6 +217,7 @@ sub AddLineAfterMarker2File {
     print FILEOUT "$_";
     
     if ($_=~m/($Marker)/) {
+      print FILEOUT  "//The following changes are added while reading input file. [".POSIX::strftime("%m/%d/%Y", localtime)."]\n";
       print FILEOUT "$NewLine\n";
     }
   }
@@ -268,6 +274,8 @@ sub AddLine2File {
   my $newline=$_[0];
   
   open (EDITFILE,">>$ampsConfigLib::WorkingSourceDirectory/$fname") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/$fname\n";
+
+  print EDITFILE  "//The following changes are added while reading input file. [".POSIX::strftime("%m/%d/%Y", localtime)."]\n";
   print EDITFILE "$newline\n";
   close(EDITFILE);
 }
