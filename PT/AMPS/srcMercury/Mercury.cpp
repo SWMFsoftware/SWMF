@@ -78,7 +78,7 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
     nVariables+=2;
   }
 
-/*  if (_NA_SPEC_>=0) Mercury::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=2*_NA_SPEC_;
+  if (_NA_SPEC_>=0) Mercury::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=2*_NA_SPEC_;
 
   //sodium emission
   if (_NA_SPEC_>=0) {
@@ -87,7 +87,7 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
 
     if (vlist!=NULL) sprintf(vlist,"%s,  \"Sodium Emission(5891_58A)\",  \"Sodium Emission(5897_56A)\"",vlist);
     nVariables+=2;
-  }*/
+  }
 
   return nVariables;
 }
@@ -137,7 +137,6 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
 
     //brightness of the exospheric sodium
-/*
     if (spec==_NA_SPEC_) {
       //check if the point is outside of the Moon's and Earth's shadows
       if ( (Moon::EarthShadowCheck(x)==false) && ((x[0]>0.0)||(x[1]*x[1]+x[2]*x[2]>_RADIUS_(_MOON_)*_RADIUS_(_MOON_))) ) {
@@ -146,7 +145,7 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
       }
       else res[cnt++]=0.0,res[cnt++]=0.0;
     }
-*/
+
   }
 
 
