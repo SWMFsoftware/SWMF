@@ -57,10 +57,10 @@ void Exosphere::Sampling::ReferenceGroundBasedObservations::OutputSampledData(Sp
       //the taa of the remote observation falls in the range taaStartInterval - taaFinishInterval
       char fname[_MAX_STRING_LENGTH_PIC_];
 
-      sprintf(fname,"pic.GroundBasedObservation.n=%i.ColumnDensityMap.%s.nMercuryOutputFile=%i.out=%i.dat",n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
+      sprintf(fname,"%s/pic.GroundBasedObservation.n=%i.ColumnDensityMap.%s.nMercuryOutputFile=%i.out=%i.dat",PIC::OutputDataFileDirectory,n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
       Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,RemoteObservationList[n].et);
 
-      sprintf(fname,"pic.GroundBasedObservation.n=%i.LimbColumnDensity.%s.nMercuryOutputFile=%i.out=%i.dat",n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
+      sprintf(fname,"%s/pic.GroundBasedObservation.n=%i.LimbColumnDensity.%s.nMercuryOutputFile=%i.out=%i.dat",PIC::OutputDataFileDirectory,n,RemoteObservationList[n].TimeStamp,nMercuryOutputFile,RemoteObservationList[n].nOutputFile);
       Exosphere::ColumnIntegral::Limb(fname);
 
       RemoteObservationList[n].nOutputFile++;
