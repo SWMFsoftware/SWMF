@@ -1934,7 +1934,10 @@ subroutine plot_ray_equator(iFile)
   end if
 
   NameFileEnd = ""
-  if(time_accurate) NameFileEnd = "_t"//StringDateOrTime
+  if(time_accurate)then
+     call get_time_string
+     NameFileEnd = "_t"//StringDateOrTime
+  end if
   write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
 
   call line_get(nVarOut, nPoint)
@@ -2235,7 +2238,6 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   else
      GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
   end if
-
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
