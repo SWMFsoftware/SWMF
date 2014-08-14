@@ -57,7 +57,7 @@ CouplerMode=ices !!off, ices, swmf
   MaxMeshRefinmentLevel=8! 2 !4
   EnforceRequestedMeshResolution=off !on,off
 
-  BlockCells=8,36,5
+  BlockCells=30,5,5
   GhostCells=2,2,2
   CutCellVolumeCalculationMaxRefinmentLevel=1
 
