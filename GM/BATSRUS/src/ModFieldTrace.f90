@@ -2,7 +2,6 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-
 ! The main subroutines in this file are
 ! subroutine ray_trace_accurate        - trace all rays starting from 3D MHD grid
 ! subroutine integrate_ray_accurate    - integrate rays starting from 2D IM grid
@@ -1852,6 +1851,7 @@ subroutine plot_ray_equator(iFile)
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
   use ModNumConst,       ONLY: cDegToRad
+  use ModInterpolate,    ONLY: fit_parabola
 
   implicit none
 
@@ -1869,7 +1869,7 @@ subroutine plot_ray_equator(iFile)
   integer :: nRadius, nLon
   real    :: rMin, rMax, LonMin, LonMax
   integer :: iR, iLon
-  integer :: iPoint, nPoint, nVarOut, nVarPlot
+  integer :: iPoint, nPoint, nVarOut, nVarPlot, iVar
   real, allocatable:: Radius_I(:),Longitude_I(:),PlotVar_VI(:,:),PlotVar_V(:)
   real    :: SmGm_DD(3,3)
 
@@ -1887,6 +1887,9 @@ subroutine plot_ray_equator(iFile)
 
   ! True for "eqb" plot area
   logical:: IsMinB
+
+  ! Weights for interpolating to minimum location
+  real:: Weight_I(3)
 
   integer:: iLine
 
@@ -1949,9 +1952,10 @@ subroutine plot_ray_equator(iFile)
   allocate(PlotVar_VI(0:nVarOut, nPoint))
   call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
 
+  ! Convert vectors from BATSRUS coords to SM coords.
+  SmGm_DD = transform_matrix(time_simulation, TypeCoordSystem, 'SMG')
+
   if(.not.IsMinB)then
-     ! Convert vectors from BATSRUS coords to SM coords.
-     SmGm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
 
      NameFile = trim(NamePlotDir)//"eqr"//NameFileEnd
      open(UnitTmp_, FILE=NameFile, STATUS="replace")
@@ -1972,8 +1976,8 @@ subroutine plot_ray_equator(iFile)
 
      close(UnitTmp_)
   else
-     ! StateMinB: x,y,z,state variables and curvature
-     allocate(StateMinB_VII(nVar+4,nRadius,nLon), State_VI(0:nVarOut,nPoint))
+     ! StateMinB: x,y,z,state variables and curvature at min B and Z=0
+     allocate(StateMinB_VII(2*(nVar+4),nRadius,nLon), State_VI(0:nVarOut,nPoint))
 
      iPointMin = 1
      iPointMid = 0
@@ -2007,12 +2011,38 @@ subroutine plot_ray_equator(iFile)
            State_VI(:,nPointDn+1:nPointAll) &
                 = PlotVar_VI(:,iPointMin+1:iPointMid)
 
+           ! Flip the sign of the "length" variables for the Down half
+           ! so that the length is a continuous function along the whole field line
+           State_VI(1,1:nPointDn) = -State_VI(1,1:nPointDn)
+
            ! Find minimum of B^2
            iPoint = minloc( sum(State_VI(4+Bx_:4+Bz_,1:nPointAll)**2, DIM=1), &
                 DIM=1)
 
+           ! Fit parabola around minimum B value using "length" as the coordinate
+           call fit_parabola( &
+                 State_VI(1,iPoint-1:iPoint+1), &
+                 sqrt(sum(State_VI(4+Bx_:4+Bz_,iPoint-1:iPoint+1)**2, DIM=1)), &
+                 Weight3Out_I=Weight_I)
+
            ! Don't save line index and length
-           StateMinB_VII(:,iR,iLon) = State_VI(2:,iPoint)
+
+           ! First nVar+4 variables are at minimum B
+           ! Interpolate to minimum point obtained from fit_parabola
+           do iVar = 1, nVar+4
+              StateMinB_VII(iVar,iR,iLon) = &
+                   sum(State_VI(iVar+1,iPoint-1:iPoint+1)*Weight_I)
+           end do
+
+           ! Next nVar+4 variables are at z=0 (which is the start point)
+           StateMinB_VII(nVar+5: ,iR,iLon) = State_VI(2:,nPointDn)
+
+           ! Convert magnetic fields into SM coordinate system
+           StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
+                matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
+
+           StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
+                matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
 
            ! Prepare for the next line
            iPointMin = iPointMax + 1
@@ -2029,7 +2059,8 @@ subroutine plot_ray_equator(iFile)
           TimeIn  = time_simulation, &
           nStepIn = n_step, &
           NameVarIn= &
-          'x y z rho ux uy uz bx by bz p rCurve',&
+          'x y z rho ux uy uz bxSM bySM bzSM p rCurve '// &
+          'xZ0 yZ0 zZ0 rhoZ0 uxZ0 uyZ0 uzZ0 bxSMZ0 bySMZ0 bzSMZ0 pZ0 rCurveZ0',&
           IsCartesianIn= .false., &
           CoordIn_DII  = StateMinB_VII(1:2,:,:), &
           VarIn_VII    = StateMinB_VII(3:,:,:))
@@ -2233,11 +2264,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   end do
 
   ! Transformation matrix between the SM and GM coordinates
-  if(DoExtractCurvatureB)then
-     GmSm_DD = i_DD
-  else
-     GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
-  end if
+  GmSm_DD = transform_matrix(time_simulation, 'SMG', TypeCoordSystem)
 
   ! Integrate rays starting from the latitude-longitude pairs defined
   ! by the arrays Lat_I, Lon_I
@@ -2258,7 +2285,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
         XyzSm_D(z_) = 0.0
         
         ! Convert SM position to GM (Note: these are identical for ideal axes)
-        Xyz_D = matmul(GmSm_DD,XyzSm_D)
+        Xyz_D = matmul(GmSm_DD, XyzSm_D)
 
         ! Find processor and block for the location
         call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
