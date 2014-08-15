@@ -26,3 +26,4 @@ Testing trilinear extrapolation: +Z uniform
 Testing trilinear extrapolation: +Z nonuniform
 Testing function bilinear_vector
 Testing function trilinear_vector
+Testing fit_parabola
