@@ -48,6 +48,7 @@ module ModInterpolate
   public :: bilinear           ! 2nd order interpolation in 2D
   public :: trilinear          ! 2nd order interpolation in 3D
   public :: find_cell          ! find cell in non-uniform grid
+  public :: fit_parabola       ! fit a parabola around an extremum
   public :: test_interpolation ! unit test
 
   character(len=*), parameter :: NameMod='ModInterpolate'
@@ -666,7 +667,89 @@ contains
 
   end subroutine find_cell
   !===========================================================================
+  subroutine fit_parabola(x_I, y_I, &
+       xExtremumOut, yExtremumOut, WeightOut_I)
 
+    ! Given 3 discrete points at x_D and 3 function values y_D
+    ! with the middle point being the discrete extrem value,
+    ! find the extremum value of the parabola going through the points,
+    ! and the 3rd order interpolation weights to interpolate to this point
+
+    real, intent(in)           :: x_I(3)         ! coordinates
+    real, intent(in)           :: y_I(3)         ! values
+    real, intent(out), optional:: xExtremumOut   ! coordinate of extremum
+    real, intent(out), optional:: yExtremumOut   ! value of extremum
+    real, intent(out), optional:: WeightOut_I(3) ! weights for interpolation
+
+    real:: xE, yE          ! coordinates of extremum
+    real:: x1, y1, x3, y3  ! shifted coordinates of points 1 and 3
+    real:: s1, s3          ! slopes of 1-2 and 2-3 segments
+
+    real:: Ratio, Area2
+
+    character(len=*), parameter:: NameSub = 'fit_parabola'
+    !------------------------------------------------------------------------
+
+    ! Shift coordinates so that x2 = 0
+    x1 = x_I(1) - x_I(2)
+    x3 = x_I(3) - x_I(2)
+
+    ! Shift values so that y2 = 0
+    y1 = y_I(1) - y_I(2)
+    y3 = y_I(3) - y_I(2)
+
+    if(x1 == 0.0 .or. x3 == 0.0)then
+       write(*,*) NameSub,': x_I=', x_I,' y_I=', y_I
+       call CON_stop(NameSub//' error in coordinates')
+    end if
+
+    ! Calculate slopes
+    s1 = y1/x1
+    s3 = y3/x3
+
+    if(s1*s3 > 0.0)then
+       write(*,*) NameSub,': x_I=', x_I,' y_I=', y_I
+       call CON_stop(NameSub//' error: midpoint is not an extremum')
+    end if
+
+    ! Find the position where the line connecting 
+    ! the (x1/2, s1) and (x3/2, s3) points intersects the X axis.
+    ! This is where the slope of the parabola is zero
+
+    xE = 0.5*x1 + 0.5*(x3 - x1)*s1/(s1 - s3)
+
+    if(present(xExtremumOut)) xExtremumOut = xE + x_I(2)
+
+    ! Find the value of the parabola y = a*(x-xE)**2 + yE at the extremum
+    ! We can use any 2 of the points to solve for yE.
+    
+    if(xE > 0.0)then
+       Ratio = xE**2/(xE - x1)**2
+       yE = Ratio*y1/(Ratio - 1.0)
+    else
+       Ratio = xE**2/(x3 - xE)**2
+       yE = Ratio*y3/(Ratio - 1.0)
+    end if
+
+    if(present(yExtremumOut)) yExtremumOut = yE + y_I(2)
+
+    if(.not.present(WeightOut_I)) RETURN
+
+    ! Calculate interpolation weights from the 3 points to the extremum
+
+    ! Twice the area of the triangle with sign  (x1,y1) x (x3,y3)
+    Area2 = x1*y3 - y1*x3
+
+    ! For points 1 and 3 the weight is the fraction of the triangle
+    ! Area(2,3,E)/Area(1,2,3) and Area(1,2,E)/Area(1,2,3)
+    WeightOut_I(1) =  (xE*y3 - yE*x3)/Area2
+    WeightOut_I(3) = -(xE*y1 - yE*x1)/Area2
+
+    ! For point 2 we use that the sum of weights must be 1
+    WeightOut_I(2) = 1.0 - WeightOut_I(1) - WeightOut_I(3)
+
+  end subroutine fit_parabola
+  !===========================================================================
   subroutine test_interpolation
 
     real :: a_I(0:2) = (/ 10., 20., 30. /)
@@ -700,6 +783,9 @@ contains
     logical:: IsInside
 
     real :: Result, GoodResult, Result_V(2), GoodResult_V(2)
+
+    ! Variables for fit_parabola test
+    real:: x_I(3), y_I(3), xMin, yMin, xExtremum, yExtremum, Weight_I(3)
 
     character(len=*), parameter:: NameSub=NameMod//"::test_interpolation"
     !----------------------------------------------------------------------
@@ -956,6 +1042,30 @@ contains
     if(any(abs(Result_V - GoodResult_V) > 1.e-2)) write(*,*) &
          'Test failed: Result=', Result_V, ' differs from ', GoodResult_V
 
+
+    write(*,'(a)')'Testing fit_parabola'
+    x_I = (/ 3.0, 4.0, 7.5 /)
+    xMin = 5.2; yMin = 1.2
+    y_I = -(x_I - xMin)**2 + yMin
+    call fit_parabola(x_I, y_I, xExtremum, yExtremum, Weight_I)
+
+    if(abs(xExtremum - xMin) > 1e-6) write(*,*) &
+         'Test failed: xExtremum=', xExtremum, ' differs from ', xMin
+
+    if(abs(yExtremum - yMin) > 1e-6) write(*,*) &
+         'Test failed: yExtremum=', yExtremum, ' differs from ', yMin
+
+    if(abs(sum(Weight_I) - 1.0) > 1e-6) write(*,*) &
+         'Test failed: sum of Weight_I=', Weight_I, ' is not 1'
+
+    if(abs(sum(Weight_I*x_I) - xMin) > 1e-6) write(*,*) &
+         'Test failed: Weight_I=', Weight_I, ' sum(Weight_I*x_I)=', &
+         sum(Weight_I*x_I), ' differs from ', xMin
+
+    if(abs(sum(Weight_I*y_I) - yMin) > 1e-6) write(*,*) &
+         'Test failed: Weight_I=', Weight_I, ' sum(Weight_I*y_I)=', &
+         sum(Weight_I*y_I), ' differs from ', yMin
+    
   end subroutine test_interpolation
 
 end module ModInterpolate
