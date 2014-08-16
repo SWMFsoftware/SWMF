@@ -300,11 +300,25 @@ The section defines the model of the internal degrees of freedom. The section ha
 Most of the description of the comet or planet environment will be done in this section. The following is the set of commands used in the section.
 
 \begin{itemize} 
+ 
+
+\item{\bf ReferenceGrounBasedObservationTime} 
+
+\item{\bf SpiceKernels}
+
+\item{\bf Define} {\it Macro New-Macro-Value} \\ define {\it Macro}  
+
+\item{\bf SurfaceDataStructure}=[default,{\it file-name}] \\ the command defines the data structure that is used by the exosphere model to keep its data on the surface of the internal boundary used in the simulation. The {\it default} data structure is a part of the exosphere model. The user can specify its own data structure by indicating the name of the header file ({\it file-name}) where the definition is located
+
 \item {\bf SPICE}=[on,off] \\ the switch allows the model to use the SPICE routines
+
 \item {\bf ExosphereSamplingMode}=[on,off] \\ ????
+
 \item {\bf SimulationStartTime}={\it the start-time of the simulation} \\ Defines the physical time of the simulation. Needed when multiple astronomical bodies (Sun, planets) are involved in the simulation. \\
 Example: {\tt SimulationStartTime=2009-01-24T00:00:00}
-\item{\bf addPhysicalModelHeader}={\it header-list} \\ The variable defines the list of headers where the project variables and functions are defined. \\ Example: {\tt addPhysicalModelHeader=Comet.h,Exosphere\_Helium.h}
+
+\item{\bf AddPhysicalModelHeader}={\it header-list} \\ The variable defines the list of headers where the project variables and functions are defined. \\ Example: {\tt addPhysicalModelHeader=Comet.h,Exosphere\_Helium.h}
+
 \item {\bf PhotolyticReactions}=[on,off], ReactionProcessor=[],LifeTime=[]  \\ Describes the functions that are used for modeling of the photolytic reactions (photo-ionization, photo-dissociation)
 
 ReactionProcessor is the function that is called by the core to model the reaction (inject the product of the reaction into the system) \\ {\tt ReactionProcessor=Comet::ExospherePhotoionizationReactionProcessor}
