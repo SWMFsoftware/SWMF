@@ -28,6 +28,7 @@
 //path to the SPICE Kernels directory
 const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels";
 
+/*
 //SPICE Kernels to be loaded
 const int nFurnishedSPICEkernels=6+23+7+21;
 const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"/MESSENGER/kernels/spk/msgr_de405_de423s.bsp","NAIF/naif0010.tls","OTHER/Moon.LSO.tf","OTHER/GSE.tf",
@@ -59,13 +60,14 @@ const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"/MES
     "KAGUYA/SMU1R0904051139_051247_001.bc",  "KAGUYA/SMU1R0904051331_051334_001.bc",  "KAGUYA/SMU1R0904081449_081516_001.bc",
     "KAGUYA/SMU1S0904081619_082228_001.bc", "KAGUYA/SMM0903010000_04260000_001.bsp",  "KAGUYA/SM090324014223_29103907_001.tsc"
 };
+*/
 
 
 //time stams for sampling remote column density observations
-const int nReferenceGroundBasedObservations=9; //25;
+/*const int nReferenceGroundBasedObservations=9; //25;
 const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations][_MAX_STRING_LENGTH_PIC_]={
     "1988-05-28T12:00:00","1988-10-02T12:00:00","1994-04-22T12:00:00","1993-11-29T12:00:00","1996-04-03T12:00:00",
-    "1996-09-27T12:00:00","1997-03-24T12:00:00","2002-07-16T12:00:00","1991-09-30T11:00:00"};
+    "1996-09-27T12:00:00","1997-03-24T12:00:00","2002-07-16T12:00:00","1991-09-30T11:00:00"};*/
 
 
 /*
@@ -99,11 +101,13 @@ const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations
 //redefine the value of the constant surface density
 //the constant surface sodium density
 //===================  Begin: Set Constant Surface Content (Killen-2012-JGR, Yakshinskiy&Madey-1999-?  ===============
+/*
 #undef _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_
 #define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el) (3.0E16)
 
 #undef _EXOSPHERE__SURFACE_CONTENT_
 //#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_
 #define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_
+*/
 
 #endif /* USERDEFINITION_EXOSPHERE_H_ */

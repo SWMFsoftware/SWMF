@@ -530,7 +530,9 @@ long int  BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *
           PIC::ParticleBuffer::SetV(v,newParticleData);
           PIC::ParticleBuffer::SetI(spec,newParticleData);
 
+          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
           PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+          #endif
 
 
           //inject the particle into the system
@@ -723,7 +725,10 @@ void prePopulateSWprotons(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
         PIC::ParticleBuffer::SetV(v,newParticleData);
         PIC::ParticleBuffer::SetX(x,newParticleData);
         PIC::ParticleBuffer::SetI(SW,newParticleData);
+
+        #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+        #endif
 
       }
 
@@ -1016,6 +1021,9 @@ void amps_init() {
       //set up the planet pointer in Mercury model
       Moon::Planet=Sphere;
 
+      Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
+/*
+
       //allocate the buffers for collecting the sodium surface density
       Sphere->SurfaceElementDesorptionFluxUP=new double*[PIC::nTotalSpecies];
       Sphere->SurfaceElementAdsorptionFluxDOWN=new double*[PIC::nTotalSpecies];
@@ -1118,6 +1126,7 @@ void amps_init() {
           Sphere->SampleInjectedFluxBulkSpeed[s][el]=0.0;
         }
       }
+*/
 
     }
 

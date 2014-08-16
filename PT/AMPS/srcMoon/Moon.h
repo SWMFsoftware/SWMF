@@ -340,7 +340,7 @@ namespace Moon {
       }
       else {
         memcpy(E,swE_Typical,3*sizeof(double));
-        memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
+        memcpy(B,/*Exosphere_*/swB_Typical,3*sizeof(double));
       }
 
 
