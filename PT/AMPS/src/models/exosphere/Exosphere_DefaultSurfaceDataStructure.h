@@ -105,6 +105,113 @@ public :
 
     fclose(fout);
   }
+
+  template <class T>
+  void Allocate(int nTotalSpecies, int TotalSurfaceElementNumber, int EXOSPHERE__SOURCE_MAX_ID_VALUE,T* Surface) {
+    //allocate the buffers for collecting the sodium surface density
+    SurfaceElementDesorptionFluxUP=new double*[nTotalSpecies];
+    SurfaceElementAdsorptionFluxDOWN=new double*[nTotalSpecies];
+    SurfaceElementPopulation=new double*[nTotalSpecies];
+
+    SurfaceElementDesorptionFluxUP[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
+    SurfaceElementAdsorptionFluxDOWN[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
+    SurfaceElementPopulation[0]=new double[nTotalSpecies*TotalSurfaceElementNumber];
+
+    for (int spec=1;spec<nTotalSpecies;spec++) {
+      SurfaceElementDesorptionFluxUP[spec]=SurfaceElementDesorptionFluxUP[spec-1]+TotalSurfaceElementNumber;
+      SurfaceElementAdsorptionFluxDOWN[spec]=SurfaceElementAdsorptionFluxDOWN[spec-1]+TotalSurfaceElementNumber;
+      SurfaceElementPopulation[spec]=SurfaceElementPopulation[spec-1]+TotalSurfaceElementNumber;
+    }
+
+    SurfaceElementExternalNormal=new cInternalSphericalData_UserDefined::cSurfaceElementExternalNormal[TotalSurfaceElementNumber];
+    SurfaceElementArea=new double[TotalSurfaceElementNumber];
+
+
+    ElementSourceRate=new cInternalSphericalData_UserDefined::cElementSourceRate*[nTotalSpecies];
+    ElementSourceRate[0]=new cInternalSphericalData_UserDefined::cElementSourceRate[nTotalSpecies*TotalSurfaceElementNumber];
+
+    for (int spec=1;spec<nTotalSpecies;spec++) {
+      ElementSourceRate[spec]=ElementSourceRate[spec-1]+TotalSurfaceElementNumber;
+    }
+
+
+    SolarWindSurfaceFlux=new double[TotalSurfaceElementNumber];
+
+    for (int el=0;el<TotalSurfaceElementNumber;el++) {
+      for (int spec=0;spec<nTotalSpecies;spec++) {
+        SurfaceElementDesorptionFluxUP[spec][el]=0.0;
+        SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
+        SurfaceElementPopulation[spec][el]=0.0;
+      }
+
+      SolarWindSurfaceFlux[el]=-1.0;
+
+      SurfaceElementArea[el]=Surface->GetSurfaceElementArea(el);
+      Surface->GetSurfaceElementNormal((SurfaceElementExternalNormal+el)->norm,el);
+    }
+
+    //allocate buffers for sampling surface sodium source rates and sodikum surface content
+    int offsetSpecie,offsetElement,s,el,i;
+
+    SampleSpeciesSurfaceSourceRate=new double** [nTotalSpecies];
+    SampleSpeciesSurfaceSourceRate[0]=new double *[nTotalSpecies*TotalSurfaceElementNumber];
+    SampleSpeciesSurfaceSourceRate[0][0]=new double [nTotalSpecies*TotalSurfaceElementNumber*(EXOSPHERE__SOURCE_MAX_ID_VALUE+1)];
+
+    for (offsetSpecie=0,s=0,offsetElement=0;s<nTotalSpecies;s++) {
+      SampleSpeciesSurfaceSourceRate[s]=SampleSpeciesSurfaceSourceRate[0]+offsetSpecie;
+      offsetSpecie+=TotalSurfaceElementNumber;
+
+      for (el=0;el<TotalSurfaceElementNumber;el++) {
+        SampleSpeciesSurfaceSourceRate[s][el]=SampleSpeciesSurfaceSourceRate[0][0]+offsetElement;
+        offsetElement+=EXOSPHERE__SOURCE_MAX_ID_VALUE+1;
+
+        for (i=0;i<EXOSPHERE__SOURCE_MAX_ID_VALUE+1;i++) SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
+      }
+    }
+
+    SampleSpeciesSurfaceAreaDensity=new double* [nTotalSpecies];
+    SampleSpeciesSurfaceAreaDensity[0]=new double [nTotalSpecies*TotalSurfaceElementNumber];
+
+    for (offsetSpecie=0,s=0;s<nTotalSpecies;s++) {
+      SampleSpeciesSurfaceAreaDensity[s]=SampleSpeciesSurfaceAreaDensity[0]+offsetSpecie;
+      offsetSpecie+=TotalSurfaceElementNumber;
+
+      for (el=0;el<TotalSurfaceElementNumber;el++) {
+        SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
+      }
+    }
+
+    SampleSpeciesSurfaceReturnFlux=new double* [nTotalSpecies];
+    SampleSpeciesSurfaceReturnFlux[0]=new double [nTotalSpecies*TotalSurfaceElementNumber];
+
+    SampleSpeciesSurfaceInjectionFlux=new double* [nTotalSpecies];
+    SampleSpeciesSurfaceInjectionFlux[0]=new double [nTotalSpecies*TotalSurfaceElementNumber];
+
+    SampleReturnFluxBulkSpeed=new double* [nTotalSpecies];
+    SampleReturnFluxBulkSpeed[0]=new double [nTotalSpecies*TotalSurfaceElementNumber];
+
+    SampleInjectedFluxBulkSpeed=new double* [nTotalSpecies];
+    SampleInjectedFluxBulkSpeed[0]=new double [nTotalSpecies*TotalSurfaceElementNumber];
+
+    for (offsetSpecie=0,s=0;s<nTotalSpecies;s++) {
+      SampleSpeciesSurfaceReturnFlux[s]=SampleSpeciesSurfaceReturnFlux[0]+offsetSpecie;
+      SampleSpeciesSurfaceInjectionFlux[s]=SampleSpeciesSurfaceInjectionFlux[0]+offsetSpecie;
+
+      SampleReturnFluxBulkSpeed[s]=SampleReturnFluxBulkSpeed[0]+offsetSpecie;
+      SampleInjectedFluxBulkSpeed[s]=SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
+
+      offsetSpecie+=TotalSurfaceElementNumber;
+
+      for (el=0;el<TotalSurfaceElementNumber;el++) {
+        SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
+        SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
+
+        SampleReturnFluxBulkSpeed[s][el]=0.0;
+        SampleInjectedFluxBulkSpeed[s][el]=0.0;
+      }
+    }
+  }
+
 };
 
 
