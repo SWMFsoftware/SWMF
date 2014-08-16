@@ -11,8 +11,9 @@
 
 //sampling variables
 
-long int PIC::LastSampleLength=0,PIC::CollectingSampleCounter=0,PIC::RequiredSampleLength=100,PIC::DataOutputFileNumber=0;
+long int PIC::LastSampleLength=0,PIC::CollectingSampleCounter=0,PIC::DataOutputFileNumber=0;
 int PIC::SamplingMode=_RESTART_SAMPLING_MODE_;
+long int PIC::RequiredSampleLength=100;
 
 //external sampling procedure
 const int PIC::Sampling::ExternalSamplingLocalVariables::nMaxSamplingRoutines=128;
