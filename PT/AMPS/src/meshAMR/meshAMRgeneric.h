@@ -34,10 +34,13 @@
 
 
 //include the user defined data for the internal boundaries
+/*
 #if _AMR__LOAD_USER_DEFINITION__MODE_  == _AMR__LOAD_USER_DEFINITION__MODE__ON_
 #include "UserDefinition.meshAMR.h"
 #endif
+*/
 
+#include "meshAMR_UserDefinitions.h"
 
 
 #include "meshAMRinternalSurface.h"
