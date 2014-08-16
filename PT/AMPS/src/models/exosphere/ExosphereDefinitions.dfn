@@ -1,0 +1,12 @@
+//$Id$
+//contains definitions of macro used for compiling the exosphere model
+
+//defiend the surface data structure the is used to sample to surface model data
+#define _EXOSPHERE__SURFACE_DATA_STRUCTURE__USER_DEFINED_    0
+#define _EXOSPHERE__SURFACE_DATA_STRUCTURE__DEFAULT_         1
+
+//default setting of the exospheric model
+//descriptors of the source processes
+#define _EXOSPHERE_SOURCE__ON_    0
+#define _EXOSPHERE_SOURCE__OFF_   1
+

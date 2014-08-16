@@ -1,0 +1,59 @@
+//$Id$
+//contains macros that controls compiling of the exosphere model
+
+
+#include "ExosphereDefinitions.dfn"
+
+//the data structure that is used to keep the model data on the surface of teh internal body
+#define _EXOSPHERE__SURFACE_DATA_STRUCTURE_  _EXOSPHERE__SURFACE_DATA_STRUCTURE__DEFAULT_
+
+
+//define wich of the source processes are active
+#define _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_              _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__OFF_
+
+
+//default codes for the sources processes
+#define _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_              0
+#define _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_     1
+#define _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_               2
+#define _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_            3
+
+//integration mode: steady state/time dependent
+#define _EXOSPHERE_INTEGRATION_MODE__STEADY_STATE_    0
+#define _EXOSPHERE_INTEGRATION_MODE__TIME_DEPENDENT_  1
+
+//redistribute the surface density of the exospheric component
+#define _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_         0
+#define _EXOSPHERE__SURFACE_CONTENT__UNIFORM_                1
+#define _EXOSPHERE__SURFACE_CONTENT__RADIAL_DISTRIBUTION_    2
+#define _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_           3
+
+
+//integration mode: steady state/time dependent
+#define _EXOSPHERE_INTEGRATION_MODE_ _EXOSPHERE_INTEGRATION_MODE__TIME_DEPENDENT_
+
+
+
+//default macro that is called when '_EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_' is used
+#define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(el)   (0.0)
+
+//#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_
+#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_
+
+//the default maximum ID number for the source processes (need only estimation of the MAXIMUM VALUE for allocation of memory buffers -> don't need exact value)
+#define _EXOSPHERE__SOURCE_MAX_ID_VALUE_ 3
+#define _EXOSPHERE__SOURCE_TOTAL_NUMBER_ 4
+
+//use the user defined exospheric sources
+#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ _EXOSPHERE_SOURCE__OFF_
+
+//user derined output in the data file of the exosphere model
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__MODE__ _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__(fout,DataSetNumber,pipe,CenterNodeThread,CenterNode)
+#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_(fout)
+
+//allow the orbit calculation with SPICE
+#define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
