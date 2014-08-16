@@ -35,8 +35,11 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
+ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=ices !!off, ices, swmf
+CouplerMode=swmf !!off, ices, swmf
 
 #endmain
 
@@ -46,6 +49,17 @@ CouplerMode=ices !!off, ices, swmf
   InitialSampleLength=1
 
   NastranSurfaceUserData=on
+  
+! ReferenceInjectionParticleNumber=200
+! MaxMeshRefinmentLevel=8! 2 !4
+! EnforceRequestedMeshResolution=off !on,off
+
+  BlockCells=5,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of  
 #endGeneral
 
 #UserDefinitions
@@ -103,9 +117,26 @@ CouplerMode=ices !!off, ices, swmf
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=off !off !on, off
+  
+  define _TARGET_ _EARTH_
+  define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el) (3.0E16)
+  define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)  Moon::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)  
+  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Moon::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
+  
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__OFF_
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Moon::ExchangeSurfaceAreaDensity()
+
+  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__OFF_
+  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_()  Moon::Sampling::FlushSamplingDataBuffers()
+    
+    
+
 
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
+  
+  addPhysicalModelHeader=Moon.h
 
 !  addPhysicalModelHeader=Moon.h,Exosphere_Helium.h 
 !  addPhysicalModelHeader=Exosphere_Helium.h   

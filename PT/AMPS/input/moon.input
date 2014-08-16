@@ -37,7 +37,9 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
+ParticleWeightCorrectionMode=off !on,off
 
 #endmain
 
@@ -49,7 +51,18 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 #endUserDefinitions
 
 #General 
-NastranSurfaceUserData=on 
+
+! ReferenceInjectionParticleNumber=200
+! MaxMeshRefinmentLevel=8! 2 !4
+! EnforceRequestedMeshResolution=off !on,off
+
+  BlockCells=30,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+
 #endGeneral
 
 #ParticleCollisions 
@@ -102,6 +115,21 @@ NastranSurfaceUserData=on
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=off !off !on, off
+
+  #include moon.input.spicekernels
+
+ReferenceGroundBasedObservationTime= \\ 
+    "1988-05-28T12:00:00","1988-10-02T12:00:00","1994-04-22T12:00:00","1993-11-29T12:00:00","1996-04-03T12:00:00", \\ 
+    "1996-09-27T12:00:00","1997-03-24T12:00:00","2002-07-16T12:00:00","1991-09-30T11:00:00" 
+
+  define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el) (3.0E16)
+  define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_
+  define _TARGET_ _MOON_ 
+
+! define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__ON_
+! define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__ON_
+! define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__ON_
+! define _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_              _EXOSPHERE_SOURCE__ON_
 
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
