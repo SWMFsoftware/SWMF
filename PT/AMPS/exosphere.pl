@@ -61,6 +61,8 @@ my $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER;#reserve space for sampling local 
 my $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE;#calculate the total injection rate with the user defined source processes (Exosphere.cpp);
 
 
+#The location of the definition of the exisphere model surface data structure
+my $SurfaceDataStructure="default";
 
 
 #get the list of the speces 
@@ -80,7 +82,7 @@ foreach (@SpeciesList) {
 
 
 open (InputFile,"<","$InputFileName") || die "Cannot find file \"$InputFileName\"\n";
-open (EXOSPHERE_USER_DEFINITIONS,">>$WorkingSourceDirectory/main/UserDefinition.Exosphere.h") || die "Cannot opne file $WorkingSourceDirectory/main/UserDefinition.Exosphere.h\n";
+open (EXOSPHERE_USER_DEFINITIONS,">>$WorkingSourceDirectory/models/exosphere/Exosphere.dfn") || die "Cannot opne file $WorkingSourceDirectory/models/exosphere/Exosphere.dfn\n";
 
 print EXOSPHERE_USER_DEFINITIONS "//The following changes are added while reading input file. [".strftime("%m/%d/%Y", localtime)."]\n";
 
@@ -125,23 +127,23 @@ while ($line=<InputFile>) {
       
       if ($InputLine eq "ON") {
         $ReactionFlag=1;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_\n\n","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_\n\n","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "OFF") {
         $ReactionFlag=0;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_\n\n","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS_MODE_\n#define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_\n\n","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "REACTIONPROCESSOR") {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         ($ReactionProcessor,$line)=split(' ',$line,2);
         $ReactionProcessor=~s/ //g;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_\n#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) $ReactionProcessor(t0,t1,t2,t3,t4);\n\n","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_\n#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) $ReactionProcessor(t0,t1,t2,t3,t4);\n\n","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "LIFETIME") {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         ($LifeTimeFunction,$line)=split(' ',$line,2);
         $LifeTimeFunction=~s/ //g;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_\n#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) $LifeTimeFunction(t0,t1,t2,t3);\n\n","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_\n#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) $LifeTimeFunction(t0,t1,t2,t3);\n\n","pic/picGlobal.dfn");
       }
       else {
         die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
@@ -154,15 +156,94 @@ while ($line=<InputFile>) {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
     if ($InputLine eq "ON") {
-      ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn");
     }
     elsif ($InputLine eq "OFF") {
-      ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
     }
     else {
       die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
     }
   }
+  
+  elsif ($InputLine eq "SURFACEDATASTRUCTURE") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    if ($InputLine ne "DEFAULT") {
+      #extract the file name where the defienition is stored     
+      $line=~s/=/ /g;
+      
+      ($InputLine,$InputComment)=split('!',$line,2);
+      
+      ($InputLine,$InputComment)=split(' ',$InputLine,2);
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      $InputLine=~s/ //g;
+      
+      $SurfaceDataStructure=$InputLine;
+    }
+  }  
+  
+  elsif ($InputLine eq "DEFINE") {
+    my ($macro,$value,$s0,$s1);
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    ($s0,$macro,$value,$s1)=split(' ',$InputLine,4);
+    
+    $s0=$macro;    
+    $s0=~s/[()=]/ /g;
+    ($s0,$s1)=split(' ',$s0,2);
+
+    ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","models/exosphere/Exosphere.dfn");    
+  }
+  
+  elsif ($InputLine eq "SPICEKERNELS") {
+    my @Kernels;
+    my $nKernels=0;
+    my ($KernelList,$cnt,$s0);
+    
+    $line =~s/[",()=]/ /g;
+    ($s0,$line)=split(' ',$line,2);
+    
+    @Kernels=split(' ',$line);
+    $nKernels=scalar @Kernels;
+    
+    for ($cnt=0;$cnt<$nKernels;$cnt++) {
+      $KernelList=$KernelList."\"$Kernels[$cnt]\"";
+     
+      if ($cnt!=$nKernels-1) {
+        $KernelList=$KernelList.",\n";
+      }
+    }
+    
+    ampsConfigLib::ChangeValueOfVariable("static const int nFurnishedSPICEkernels",$nKernels,"models/exosphere/Exosphere.h");  
+    ampsConfigLib::ChangeValueOfVariable("static const char SPICE_Kernels\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]","{".$KernelList."}","models/exosphere/Exosphere.h");   
+  }
+  
+  elsif ($InputLine eq "REFERENCEGROUNDBASEDOBSERVATIONTIME") {
+    my @ObservationTime;
+    my $nObservationTime=0;
+    my ($ObservationTimeList,$cnt,$s0);
+    
+    
+    $LineOriginal =~s/[",()=]/ /g;
+    ($s0,$LineOriginal)=split(' ',$LineOriginal,2);
+    
+    @ObservationTime=split(' ',$LineOriginal);
+    $nObservationTime=scalar @ObservationTime;
+    
+    for ($cnt=0;$cnt<$nObservationTime;$cnt++) {
+      $ObservationTimeList=$ObservationTimeList."\"$ObservationTime[$cnt]\"";
+     
+      if ($cnt!=$nObservationTime-1) {
+        $ObservationTimeList=$ObservationTimeList.",\n";
+      }
+    }
+       
+    ampsConfigLib::ChangeValueOfVariable("static const int nReferenceGroundBasedObservations",$nObservationTime,"models/exosphere/Exosphere.h");  
+    ampsConfigLib::ChangeValueOfVariable("static const char ReferenceGroundBasedObservationTime\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]","{".$ObservationTimeList."}","models/exosphere/Exosphere.h");   
+  }
+  
   
   elsif ($InputLine eq "TYPICALSOLARWINDCONDITIONS") {
     my @B=(0.0,0.0,0.0);
@@ -202,10 +283,10 @@ while ($line=<InputFile>) {
     }
     
     #add the parameters to the source code
-    ampsConfigLib::ChangeValueOfArray("static const double Exosphere_swVelocity_Typical\\[\\]",\@v,"models/exosphere/Exosphere.h");
-    ampsConfigLib::ChangeValueOfArray("static const double Exosphere_swB_Typical\\[\\]",\@B,"models/exosphere/Exosphere.h");
-    ampsConfigLib::ChangeValueOfVariable("static const double Exosphere_swTemperature_Typical",$T,"models/exosphere/Exosphere.h");
-    ampsConfigLib::ChangeValueOfVariable("static const double Exosphere_swNumberDensity_Typical",$n,"models/exosphere/Exosphere.h");
+    ampsConfigLib::ChangeValueOfArray("static const double swVelocity_Typical\\[\\]",\@v,"models/exosphere/Exosphere.h");
+    ampsConfigLib::ChangeValueOfArray("static const double swB_Typical\\[\\]",\@B,"models/exosphere/Exosphere.h");
+    ampsConfigLib::ChangeValueOfVariable("static const double swTemperature_Typical",$T,"models/exosphere/Exosphere.h");
+    ampsConfigLib::ChangeValueOfVariable("static const double swNumberDensity_Typical",$n,"models/exosphere/Exosphere.h");
     
   }
   elsif ($InputLine eq "ACCOMMODATIONCOEFFICIENT") {
@@ -263,7 +344,7 @@ while ($line=<InputFile>) {
 
     while (defined $s1) {
       ($s0,$s1)=split(' ',$s1,2);
-      ampsConfigLib::AddLine2File("#include \"$s0\"","main/UserDefinition.PIC.PhysicalModelHeaderList.h");
+      ampsConfigLib::AddLine2File("#include \"$s0\"","pic/pic.h");
     }    
   }
   
@@ -279,8 +360,8 @@ while ($line=<InputFile>) {
         if ($InputLine eq "FUNCTION") {
           ($FunctionName,$InputComment)=split(' ',$InputComment,2);
           
-          ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_\n#define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el) $FunctionName\n\n","main/UserDefinition.Exosphere.h");
-          ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_\n\n","main/UserDefinition.Exosphere.h");
+          ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_\n#define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(spec,el) $FunctionName\n\n","models/exosphere/Exosphere.dfn");
+          ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_\n\n","models/exosphere/Exosphere.dfn");
         }
       }
     }
@@ -323,16 +404,16 @@ while ($line=<InputFile>) {
       $OutputLine=$OutputLine."#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_\n";
       $OutputLine=$OutputLine."#endif\n\n";
       
-      ampsConfigLib::AddLine2File($OutputLine,"main/UserDefinition.Exosphere.h");
+      ampsConfigLib::AddLine2File($OutputLine,"models/exosphere/Exosphere.dfn");
     }    
     elsif ($InputLine eq "FLUXBALANCE") {
-      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_\n\n","main/UserDefinition.Exosphere.h");
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_\n\n","models/exosphere/Exosphere.dfn");
     }    
     elsif ($InputLine eq "UNIFORM") {
-      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_\n\n","main/UserDefinition.Exosphere.h");
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_\n\n","models/exosphere/Exosphere.dfn");
     }    
     elsif ($InputLine eq "RADIALDISTRIBUTION") {
-      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__RADIAL_DISTRIBUTION_\n\n","main/UserDefinition.Exosphere.h");
+      ampsConfigLib::AddLine2File("#undef _EXOSPHERE__SURFACE_CONTENT_\n#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__RADIAL_DISTRIBUTION_\n\n","models/exosphere/Exosphere.dfn");
     }       
     else {
       die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
@@ -385,13 +466,13 @@ while ($line=<InputFile>) {
       }
       
       #add the parameters to the source code
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
       ampsConfigLib::ChangeValueOfVariable("static const double PhotonStimulatedDesorption_PhotonFlux_1AU",$PhotonFlux_1AU,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double PhotonStimulatedDesorption_CrossSection\\[\\]",\@CrossSection,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double PhotonStimulatedDesorption_minInjectionEnergy\\[\\]",\@minInjectionEnergy,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double PhotonStimulatedDesorption_maxInjectionEnergy\\[\\]",\@maxInjectionEnergy,"models/exosphere/Exosphere.h");
       
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_",$SourceProcessID,"models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
  
       push(@SourceModifySurfaceSpeciesAbundance,'true');
       push(@SourceProcessesSymbolicID,"\"PhotonStimulatedDesorption\"");
@@ -423,11 +504,11 @@ while ($line=<InputFile>) {
       }
       
       #add the parameters to the source code
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__THERMAL_DESORPTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__THERMAL_DESORPTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
       ampsConfigLib::ChangeValueOfArray("static const double ThermalDesorption_uThermal\\[\\]",\@uThermal,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double ThermalDesorption_VibrationalFrequency\\[\\]",\@VibrationalFrequency,"models/exosphere/Exosphere.h");
       
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_",$SourceProcessID,"models/exosphere/Exosphere.h");     
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");     
       
       push(@SourceModifySurfaceSpeciesAbundance,'true');
       push(@SourceProcessesSymbolicID,"\"ThermalDesorption\"");
@@ -464,12 +545,12 @@ while ($line=<InputFile>) {
       }
       
       #add the parameters to the source code
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_Yield\\[\\]",\@Yield,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_minInjectionEnergy\\[\\]",\@minInjectionEnergy,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_maxInjectionEnergy\\[\\]",\@maxInjectionEnergy,"models/exosphere/Exosphere.h");
       
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_",$SourceProcessID,"models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
       
       push(@SourceModifySurfaceSpeciesAbundance,'true');
       push(@SourceProcessesSymbolicID,"\"SolarWindSputtering\"");
@@ -508,13 +589,13 @@ while ($line=<InputFile>) {
       }
       
       #add the parameters of the input file to the code      
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
       ampsConfigLib::ChangeValueOfVariable("static const double ImpactVaporization_HeliocentricDistance",$HeliocentricDistance,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfVariable("static const double ImpactVaporization_SourceRatePowerIndex",$SourceRatePowerIndex,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double ImpactVaporization_SourceRate\\[\\]",\@SourceRate,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double ImpactVaporization_SourceTemeprature\\[\\]",\@SourceTemperature,"models/exosphere/Exosphere.h");
 
-      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_",$SourceProcessID,"models/exosphere/Exosphere.h");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
             
       push(@SourceModifySurfaceSpeciesAbundance,'false');
       push(@SourceProcessesSymbolicID,"\"ImpactVaposization\"");
@@ -613,7 +694,7 @@ while ($line=<InputFile>) {
         print EXOSPHERE_USER_DEFINITIONS "#define _EXOSPEHRE_SOURCE__USER_DEFINED__".$SourceProcessID."_".$Code."_  _EXOSPHERE_SOURCE__ON_\n";
         print EXOSPHERE_USER_DEFINITIONS "\n#undef _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_\n#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_  _EXOSPHERE_SOURCE__ON_\n";
         
-        $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."\nFluxSourceProcess[$SourceCode]=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
+#        $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."\nFluxSourceProcess[$SourceCode]=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
         
         if ($InitSurfaceSourceDistribution ne "") {
           $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."if (FluxSourceProcess[$SourceCode]>0.0) $InitSurfaceSourceDistribution();\n";
@@ -621,10 +702,13 @@ while ($line=<InputFile>) {
         
 #       $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere);\nSourceProcessID=$SourceCode;\nif (flag==true) Sampling::CalculatedSourceRate[spec][$SourceCode]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;\n}\n";
 
-        $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);\n}\n"; 
-        $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER."\nSamplingDensityOffset[$SourceCode]=CellSamplingDataOffset+SamplingLength;\nSamplingLength+=sizeof(double)*PIC::nTotalSpecies;\n";
-        $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE."\nres+=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
-               
+        if (defined $SourceRate) {
+          $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS."\nFluxSourceProcess[$SourceCode]=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
+          $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS."\nelse if (SourceProcessID==$SourceCode) {\nflag=$GenerateParticleProperties(spec,(PIC::ParticleBuffer::byte*)tempParticleData,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,BoundaryElementType,BoundaryElement);\n}\n"; 
+          $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER."\nSamplingDensityOffset[$SourceCode]=CellSamplingDataOffset+SamplingLength;\nSamplingLength+=sizeof(double)*PIC::nTotalSpecies;\n";
+          $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE."\nres+=$SourceRate(spec,BoundaryElementType,BoundaryElement);\n";
+        }
+                    
 #        print "$SourceRate, $GenerateParticleProperties\n";
         
         push(@SourceProcessesSymbolicID,"\"$Code\"");
@@ -647,6 +731,16 @@ while ($line=<InputFile>) {
 }
 
 
+#set up the location of the surface data structure
+if ($SurfaceDataStructure eq "default") {
+  ampsConfigLib::AddLineAfterMarker2File("#include \"Exosphere_DefaultSurfaceDataStructure.h\"\n","//MARKER--add-definitions-after-this-line","meshAMR/meshAMR_UserDefinitions.h");
+}
+else {
+  ampsConfigLib::AddLineAfterMarker2File("#include \"$SurfaceDataStructure\"\n","//MARKER--add-definitions-after-this-line","meshAMR/meshAMR_UserDefinitions.h");
+}
+
+
+
 #the total number of sources
 my $TotalNumberOfExosphericSources=$SourceProcessID;
 my $MaxSourceIdNumber=$SourceProcessID;
@@ -656,8 +750,8 @@ if ($MaxSourceIdNumber ne 0) {
 }
 
 
-ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_TOTAL_NUMBER_",$TotalNumberOfExosphericSources,"models/exosphere/Exosphere.h");
-ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_MAX_ID_VALUE_",$MaxSourceIdNumber,"models/exosphere/Exosphere.h");
+ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_TOTAL_NUMBER_",$TotalNumberOfExosphericSources,"models/exosphere/Exosphere.dfn");
+ampsConfigLib::RedefineMacro("_EXOSPHERE__SOURCE_MAX_ID_VALUE_",$MaxSourceIdNumber,"models/exosphere/Exosphere.dfn");
 ampsConfigLib::ChangeValueOfArray("static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]",\@SourceProcessesSymbolicID,"models/exosphere/Exosphere.h");
 
 ampsConfigLib::ChangeValueOfArray("static const bool Source_DeplitSurfaceSpeciesAbundance_Flag\\[\\]",\@SourceModifySurfaceSpeciesAbundance,"models/exosphere/Exosphere.h");
@@ -706,8 +800,8 @@ if (-e ".ampsConfig.Settings") {
     if (/^SPICE=(.*)$/i) {
       $t=lc($1);
           
-      if ($t eq "nospice") {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.h"); next;}
-#      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.h"); next;}
+      if ($t eq "nospice") {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn"); next;}
+#      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn"); next;}
     }
   }    
 }
