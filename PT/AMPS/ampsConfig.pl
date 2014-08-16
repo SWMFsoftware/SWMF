@@ -869,7 +869,7 @@ sub ReadGeneralBlock {
 	$InputLine=~s/[=();]/ /g;
 
 	($s0,$s1,$s2)=split(' ',$InputLine,3);
-	ampsConfigLib::ChangeValueOfVariable("const int InitialSampleLength",$s1,"main/main_lib.cpp");
+	ampsConfigLib::ChangeValueOfVariable("long int PIC::RequiredSampleLength",$s1,"pic/pic.cpp");
     }
 
     elsif ($InputLine eq "BLOCKCELLS") {
@@ -881,10 +881,6 @@ sub ReadGeneralBlock {
       ampsConfigLib::RedefineMacro("_BLOCK_CELLS_X_",$s0,"meshAMR/meshAMRdef.h");
       ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Y_",$s1,"meshAMR/meshAMRdef.h");
       ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
-           
-      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_X_",$s0,"main/UserDefinition.meshAMR.h");
-      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Y_",$s1,"main/UserDefinition.meshAMR.h");
-      ampsConfigLib::RedefineMacro("_BLOCK_CELLS_Z_",$s2,"main/UserDefinition.meshAMR.h");              
     } 
     elsif ($InputLine eq "GHOSTCELLS") {
       ($InputLine,$InputComment)=split('!',$line,2);
@@ -895,10 +891,6 @@ sub ReadGeneralBlock {
       ampsConfigLib::RedefineMacro("_GHOST_CELLS_X_",$s0,"meshAMR/meshAMRdef.h");
       ampsConfigLib::RedefineMacro("_GHOST_CELLS_Y_",$s1,"meshAMR/meshAMRdef.h");
       ampsConfigLib::RedefineMacro("_GHOST_CELLS_Z_",$s2,"meshAMR/meshAMRdef.h");
-      
-      ampsConfigLib::RedefineMacro("_GHOST_CELLS_X_",$s0,"main/UserDefinition.meshAMR.h");
-      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Y_",$s1,"main/UserDefinition.meshAMR.h");
-      ampsConfigLib::RedefineMacro("_GHOST_CELLS_Z_",$s2,"main/UserDefinition.meshAMR.h");              
     }
 
     elsif ($InputLine eq "ENFORCEREQUESTEDMESHRESOLUTION") {
@@ -2118,7 +2110,7 @@ sub ampsConfigSettings {
   
     
     foreach (@Settings){
-      if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","main/UserDefinition.Exosphere.h"); next};
+      if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); next};
       if (/^SPICE=(.*)$/i) {`echo "SPICE=$1" >> Makefile.local`; next};
       
     }    

@@ -20,6 +20,9 @@ include Makefile.local
 CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
 
+
+#SPICE=/Users/vtenishe/SPICE/Toolkit/cspice/include
+
 install:
 	@echo " " > Makefile.local
 	@rm -f .ampsConfig.Settings
