@@ -36,7 +36,7 @@
 
 #include "specfunc.h"
 
-class cInternalSphericalData_UserDefined {
+/*class cInternalSphericalData_UserDefined {
 public :
   int faceat;
   double *SamplingBuffer;
@@ -144,5 +144,5 @@ class cInternalNastranSurfaceData_UserDefined : public cInternalSphericalData_Us
 public:
   cInternalNastranSurfaceData_UserDefined() : cInternalSphericalData_UserDefined() {
   }
-};
+};*/
 #endif

@@ -314,6 +314,7 @@ namespace Moon {
       }
 #endif
     }
+#ifdef _NAPLUS_SPEC_
     else if (spec==_NAPLUS_SPEC_) { //the Lorentz force
       long int nd;
       char *offset;
@@ -349,6 +350,7 @@ namespace Moon {
       accl_LOCAL[2]+=ElectronCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/_MASS_(_NA_);
 
     }
+#endif
 
 
 
@@ -446,10 +448,13 @@ namespace Moon {
   }
 
   inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+
+#ifdef _NAPLUS_SPEC_
     spec=_NAPLUS_SPEC_;
 
     PIC::ParticleBuffer::SetI(spec,ParticleData);
   //  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
+#endif
 
     return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
   }

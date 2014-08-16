@@ -13,6 +13,7 @@
 #define _NA_PLUS_SPEC_ 1
 */
 
+/*
 #undef _NA_SPEC_
 #define _NA_SPEC_ 0
 
@@ -105,6 +106,7 @@ extern int maxLocalBackdroundDensityOffset;
 //#undef _PIC_DYNAMIC_LOAD_BALANCING_MODE_
 //#define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
 
+*/
 
 
 
