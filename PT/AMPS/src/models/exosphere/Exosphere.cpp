@@ -118,9 +118,9 @@ void Exosphere::Init_BeforeParser() {
   int idim;
 
   //calculate the typical value of the motional electrical field
-  swE_Typical[0]=-(Exosphere_swVelocity_Typical[1]*Exosphere_swB_Typical[2]-Exosphere_swVelocity_Typical[2]*Exosphere_swB_Typical[1]);
-  swE_Typical[1]=+(Exosphere_swVelocity_Typical[0]*Exosphere_swB_Typical[2]-Exosphere_swVelocity_Typical[2]*Exosphere_swB_Typical[0]);
-  swE_Typical[2]=-(Exosphere_swVelocity_Typical[0]*Exosphere_swB_Typical[1]-Exosphere_swVelocity_Typical[1]*Exosphere_swB_Typical[0]);
+  swE_Typical[0]=-(/*Exosphere_*/swVelocity_Typical[1]*/*Exosphere_*/swB_Typical[2]-/*Exosphere_*/swVelocity_Typical[2]*/*Exosphere_*/swB_Typical[1]);
+  swE_Typical[1]=+(/*Exosphere_*/swVelocity_Typical[0]*/*Exosphere_*/swB_Typical[2]-/*Exosphere_*/swVelocity_Typical[2]*/*Exosphere_*/swB_Typical[0]);
+  swE_Typical[2]=-(/*Exosphere_*/swVelocity_Typical[0]*/*Exosphere_*/swB_Typical[1]-/*Exosphere_*/swVelocity_Typical[1]*/*Exosphere_*/swB_Typical[0]);
 
 
   //set the pre-processor into the ICES model
@@ -309,13 +309,13 @@ void Exosphere::SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& d
 
   if (data.status!=_PIC_ICES__STATUS_OK_) {
     for (i=0;i<3;i++) {
-      data.B[i]=Exosphere_swB_Typical[i];
+      data.B[i]=/*Exosphere_*/swB_Typical[i];
       data.E[i]=swE_Typical[i];
-      data.swVel[i]=Exosphere_swVelocity_Typical[i];
+      data.swVel[i]=/*Exosphere_*/swVelocity_Typical[i];
     }
 
-    data.swTemperature=Exosphere_swTemperature_Typical;
-    data.swNumberDensity=Exosphere_swNumberDensity_Typical;
+    data.swTemperature=/*Exosphere_*/swTemperature_Typical;
+    data.swNumberDensity=/*Exosphere_*/swNumberDensity_Typical;
 
     //p=2*n*k*T assuming quasi neutrality ni=ne=n and Ti=Te=T
     data.swPressure=2.0*data.swNumberDensity*Kbol*data.swTemperature;
@@ -565,7 +565,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
     for (int i=0;i<StateVectorLength;i++) if (StateVectorMax[i]<StateVector[i]) StateVectorMax[i]=StateVector[i];
 
     if (PIC::ThisThread==0) {
-      fprintf(fout,"%e   %e   %e\n",R,R*_RADIUS_(_TARGET_),atan((1.0+R)*_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0);
+      fprintf(fout,"%e   %e   %e",R,R*_RADIUS_(_TARGET_),atan((1.0+R)*_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0);
       for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
       fprintf(fout,"\n");
     }
@@ -1905,10 +1905,12 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
 
   if (ModelParticlesInjectionRate*ParticleWeight*LocalTimeStep<1.0E-10) return 0;
 
+  #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
   if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
     ParticleWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
     ModelParticlesInjectionRate/=ParticleWeightCorrection;
   }
+  #endif
 
 
 
@@ -2060,7 +2062,9 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
    PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
+   #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+   #endif
 
    //save the information od the particle origin: the particle origin will be sampled in SO coordinate frame
    if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
