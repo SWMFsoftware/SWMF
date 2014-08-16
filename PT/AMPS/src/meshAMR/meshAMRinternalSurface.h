@@ -19,9 +19,13 @@
 #define _LOAD_USER_DEFINITIONS_
 #endif
 
+/*
 #ifdef _LOAD_USER_DEFINITIONS_
 #include "UserDefinition.meshAMR.h"
 #endif
+*/
+
+#include "meshAMR_UserDefinitions.h"
 
 #include "meshAMRinternalSurface_sphere.h"
 #include "meshAMRinternalSurface_circle.h"
