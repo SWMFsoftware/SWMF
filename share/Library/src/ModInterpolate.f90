@@ -668,7 +668,7 @@ contains
   end subroutine find_cell
   !===========================================================================
   subroutine fit_parabola(x_I, y_I, &
-       xExtremumOut, yExtremumOut, WeightOut_I)
+       xExtremumOut, yExtremumOut, Weight2Out_I, Weight3Out_I)
 
     ! Given 3 discrete points at x_D and 3 function values y_D
     ! with the middle point being the discrete extrem value,
@@ -679,7 +679,8 @@ contains
     real, intent(in)           :: y_I(3)         ! values
     real, intent(out), optional:: xExtremumOut   ! coordinate of extremum
     real, intent(out), optional:: yExtremumOut   ! value of extremum
-    real, intent(out), optional:: WeightOut_I(3) ! weights for interpolation
+    real, intent(out), optional:: Weight2Out_I(3)! weights for 2nd order interpolation
+    real, intent(out), optional:: Weight3Out_I(3)! weights for 3rd order interpolation
 
     real:: xE, yE          ! coordinates of extremum
     real:: x1, y1, x3, y3  ! shifted coordinates of points 1 and 3
@@ -720,33 +721,49 @@ contains
 
     if(present(xExtremumOut)) xExtremumOut = xE + x_I(2)
 
-    ! Find the value of the parabola y = a*(x-xE)**2 + yE at the extremum
-    ! We can use any 2 of the points to solve for yE.
-    
-    if(xE > 0.0)then
-       Ratio = xE**2/(xE - x1)**2
-       yE = Ratio*y1/(Ratio - 1.0)
-    else
-       Ratio = xE**2/(x3 - xE)**2
-       yE = Ratio*y3/(Ratio - 1.0)
+    if(present(Weight2Out_I))then
+       ! Use the two points surrounding xE for linear interpolation
+       if(xE > 0.0) then
+          Weight2Out_I(1) = 0.0
+          Weight2Out_I(3) = xE/x3
+          Weight2Out_I(2) = 1.0 - Weight2Out_I(3)
+       else
+          Weight2Out_I(3) = 0.0
+          Weight2Out_I(1) = xE/x1
+          Weight2Out_I(2) = 1.0 - Weight2Out_I(1)
+       end if
     end if
 
-    if(present(yExtremumOut)) yExtremumOut = yE + y_I(2)
+    if(present(yExtremumOut) .or. present(Weight3Out_I))then
+       ! Find the value of the parabola y = a*(x-xE)**2 + yE at the extremum
+       ! We can use any 2 of the points to solve for yE.
+       if(xE > 0.0)then
+          Ratio = xE**2/(xE - x1)**2
+          yE = Ratio*y1/(Ratio - 1.0)
+       else
+          Ratio = xE**2/(x3 - xE)**2
+          yE = Ratio*y3/(Ratio - 1.0)
+       end if
+       if(present(yExtremumOut)) yExtremumOut = yE + y_I(2)
 
-    if(.not.present(WeightOut_I)) RETURN
+       if(present(Weight3Out_I))then
 
-    ! Calculate interpolation weights from the 3 points to the extremum
+          ! Calculate 3rd order interpolation weights from the 3 points 
+          ! to the location of the extremum.
+          ! We use the fact that the parabola is an exact solution.
 
-    ! Twice the area of the triangle with sign  (x1,y1) x (x3,y3)
-    Area2 = x1*y3 - y1*x3
+          ! Twice the area of the triangle with sign  (x1,y1) x (x3,y3)
+          Area2 = x1*y3 - y1*x3
 
-    ! For points 1 and 3 the weight is the fraction of the triangle
-    ! Area(2,3,E)/Area(1,2,3) and Area(1,2,E)/Area(1,2,3)
-    WeightOut_I(1) =  (xE*y3 - yE*x3)/Area2
-    WeightOut_I(3) = -(xE*y1 - yE*x1)/Area2
+          ! For points 1 and 3 the weight is the fraction of the triangle
+          ! Area(2,3,E)/Area(1,2,3) and Area(1,2,E)/Area(1,2,3)
+          Weight3Out_I(1) =  (xE*y3 - yE*x3)/Area2
+          Weight3Out_I(3) = -(xE*y1 - yE*x1)/Area2
 
-    ! For point 2 we use that the sum of weights must be 1
-    WeightOut_I(2) = 1.0 - WeightOut_I(1) - WeightOut_I(3)
+          ! For point 2 we use that the sum of weights must be 1
+          Weight3Out_I(2) = 1.0 - Weight3Out_I(1) - Weight3Out_I(3)
+       end if
+    end if
 
   end subroutine fit_parabola
   !===========================================================================
@@ -785,7 +802,8 @@ contains
     real :: Result, GoodResult, Result_V(2), GoodResult_V(2)
 
     ! Variables for fit_parabola test
-    real:: x_I(3), y_I(3), xMin, yMin, xExtremum, yExtremum, Weight_I(3)
+    real:: x_I(3), y_I(3), xMin, yMin, xExtremum, yExtremum
+    real:: Weight2_I(3), Weight3_I(3)
 
     character(len=*), parameter:: NameSub=NameMod//"::test_interpolation"
     !----------------------------------------------------------------------
@@ -1042,12 +1060,16 @@ contains
     if(any(abs(Result_V - GoodResult_V) > 1.e-2)) write(*,*) &
          'Test failed: Result=', Result_V, ' differs from ', GoodResult_V
 
-
     write(*,'(a)')'Testing fit_parabola'
-    x_I = (/ 3.0, 4.0, 7.5 /)
-    xMin = 5.2; yMin = 1.2
-    y_I = -(x_I - xMin)**2 + yMin
-    call fit_parabola(x_I, y_I, xExtremum, yExtremum, Weight_I)
+    x_I = (/ 3.1, 4.0, 5.0 /)
+    xMin = 4.2; yMin = 1.5
+    y_I = 0.1*(x_I - xMin)**2 + yMin
+    call fit_parabola(x_I, y_I, xExtremum, yExtremum, Weight2_I, Weight3_I)
+
+    ! write(*,*)'x_I, xE=', x_I, xExtremum
+    ! write(*,*)'y_I, yE=', y_I, yExtremum
+    ! write(*,*)'Weight2_I=', Weight2_I
+    ! write(*,*)'Weight3_I=', Weight3_I
 
     if(abs(xExtremum - xMin) > 1e-6) write(*,*) &
          'Test failed: xExtremum=', xExtremum, ' differs from ', xMin
@@ -1055,16 +1077,23 @@ contains
     if(abs(yExtremum - yMin) > 1e-6) write(*,*) &
          'Test failed: yExtremum=', yExtremum, ' differs from ', yMin
 
-    if(abs(sum(Weight_I) - 1.0) > 1e-6) write(*,*) &
-         'Test failed: sum of Weight_I=', Weight_I, ' is not 1'
+    if(abs(sum(Weight2_I) - 1.0) > 1e-6) write(*,*) &
+         'Test failed: sum of Weight2_I=', Weight2_I, ' is not 1'
 
-    if(abs(sum(Weight_I*x_I) - xMin) > 1e-6) write(*,*) &
-         'Test failed: Weight_I=', Weight_I, ' sum(Weight_I*x_I)=', &
-         sum(Weight_I*x_I), ' differs from ', xMin
+    if(abs(sum(Weight2_I*x_I) - xMin) > 1e-6) write(*,*) &
+         'Test failed: Weight2_I=', Weight2_I, ' sum(Weight2_I*x_I)=', &
+         sum(Weight2_I*x_I), ' differs from ', xMin
 
-    if(abs(sum(Weight_I*y_I) - yMin) > 1e-6) write(*,*) &
-         'Test failed: Weight_I=', Weight_I, ' sum(Weight_I*y_I)=', &
-         sum(Weight_I*y_I), ' differs from ', yMin
+    if(abs(sum(Weight3_I) - 1.0) > 1e-6) write(*,*) &
+         'Test failed: sum of Weight3_I=', Weight3_I, ' is not 1'
+
+    if(abs(sum(Weight3_I*x_I) - xMin) > 1e-6) write(*,*) &
+         'Test failed: Weight3_I=', Weight3_I, ' sum(Weight3_I*x_I)=', &
+         sum(Weight3_I*x_I), ' differs from ', xMin
+
+    if(abs(sum(Weight3_I*y_I) - yMin) > 1e-6) write(*,*) &
+         'Test failed: Weight3_I=', Weight3_I, ' sum(Weight3_I*y_I)=', &
+         sum(Weight3_I*y_I), ' differs from ', yMin
     
   end subroutine test_interpolation
 
