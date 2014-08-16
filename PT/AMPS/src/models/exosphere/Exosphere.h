@@ -19,64 +19,30 @@
 #include "SingleVariableDiscreteDistribution.h"
 #include "constants.h"
 
-
-//default setting of the exospheric model
-//descriptors of the source processes
-#define _EXOSPHERE_SOURCE__ON_    0
-#define _EXOSPHERE_SOURCE__OFF_   1
-
-#define _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_              0
-#define _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_     1
-#define _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_               2
-#define _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_            3
-
-//define wich of the source processes are active
-#define _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_              _EXOSPHERE_SOURCE__OFF_
-#define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__OFF_
-#define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__OFF_
-#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__OFF_
+#include "Exosphere.dfn"
 
 
-//integration mode: steady state/time dependent
-#define _EXOSPHERE_INTEGRATION_MODE__STEADY_STATE_    0
-#define _EXOSPHERE_INTEGRATION_MODE__TIME_DEPENDENT_  1
 
 
-#define _EXOSPHERE_INTEGRATION_MODE_ _EXOSPHERE_INTEGRATION_MODE__TIME_DEPENDENT_
 
-//redistribute the surface density of the exospheric component
-#define _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_         0
-#define _EXOSPHERE__SURFACE_CONTENT__UNIFORM_                1
-#define _EXOSPHERE__SURFACE_CONTENT__RADIAL_DISTRIBUTION_    2
-#define _EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_           3
-
-//default macro that is called when '_EXOSPHERE__SURFACE_CONTENT__USER_DEFINED_' is used
-#define _EXOSPHERE__SURFACE_CONTENT_DENSITY__USER_DEFINED__FUNCTION_(el)   (0.0)
-
-//#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__UNIFORM_
-#define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_
-
-//the default maximum ID number for the source processes (need only estimation of the MAXIMUM VALUE for allocation of memory buffers -> don't need exact value)
-#define _EXOSPHERE__SOURCE_MAX_ID_VALUE_ 3
-#define _EXOSPHERE__SOURCE_TOTAL_NUMBER_ 4
-
-//use the user defined exospheric sources
-#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ _EXOSPHERE_SOURCE__OFF_
-
-//user derined output in the data file of the exosphere model
-#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__MODE__ _EXOSPHERE_SOURCE__OFF_
-#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__PRINT_DATA__(fout,DataSetNumber,pipe,CenterNodeThread,CenterNode)
-#define _EXOSPHERE__USER_DEFINED_FILE_OUTPUT__VARIABLE_LIST_(fout)
-
-//allow the orbit calculation with SPICE
-#define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
 
 //user defined settings of the exospheric model
-#include "UserDefinition.Exosphere.h"
+//#include "UserDefinition.Exosphere.h"
 #include "Na.h"
 
 //define the symbolic id of source processes
 static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
+
+//the default value for for the list of the SPICE kernels that will be loaded
+static const int nFurnishedSPICEkernels=0;
+static const char SPICE_Kernels[][_MAX_STRING_LENGTH_PIC_]={""};
+
+//the default values of the list of the referenced ground based observations
+static const int nReferenceGroundBasedObservations=0;
+static const char ReferenceGroundBasedObservationTime[][_MAX_STRING_LENGTH_PIC_]={""};
+
+//the default location of the SPICE kernels
+static const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="";
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 #include "SpiceUsr.h"
@@ -105,10 +71,10 @@ namespace Exosphere {
 
 
   //typical solar wind conditions far from the planet
-  static const double Exosphere_swVelocity_Typical[]={0.0,0.0,0.0};
-  static const double Exosphere_swB_Typical[]={0.0,0.0,0.0};
-  static const double Exosphere_swTemperature_Typical=0.0;
-  static const double Exosphere_swNumberDensity_Typical=0.0;
+  static const double /*Exosphere_*/swVelocity_Typical[]={0.0,0.0,0.0};
+  static const double /*Exosphere_*/swB_Typical[]={0.0,0.0,0.0};
+  static const double /*Exosphere_*/swTemperature_Typical=0.0;
+  static const double /*Exosphere_*/swNumberDensity_Typical=0.0;
   extern double swE_Typical[3];
 
   //the total number of source processes
