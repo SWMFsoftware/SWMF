@@ -444,7 +444,7 @@ namespace PIC {
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
       *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-      //do nothing
+      exit(__LINE__,__FILE__,"Error: SetIndividualStatWeightCorrection cannot be used with _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_");
     #else
       exit(__LINE__,__FILE__,"Error: unknown option");
     #endif
@@ -2729,6 +2729,7 @@ namespace PIC {
 #include "pic__model__electrically_charged_dust.h"
 #endif
 
+/* the headers are added by the configuration scripts (exosphere.pl) during compiling of the code
 //inlude headers for the user defined models
 #if _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE_ == _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__ON_
 #include "UserDefinition.PIC.PhysicalModelHeaderList.h"
@@ -2737,5 +2738,6 @@ namespace PIC {
 #else
 !!!! ERROR:  The option is unknown !!!!!!
 #endif
+*/
 
 
