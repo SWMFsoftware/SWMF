@@ -9,6 +9,7 @@
 //#define _BLOCK_CELLS_Y_    5
 //#define _BLOCK_CELLS_Z_
 
+/*
 #undef _BLOCK_CELLS_X_
 #define _BLOCK_CELLS_X_    5
 
@@ -26,6 +27,7 @@
 
 #undef  _GHOST_CELLS_Z_
 #define _GHOST_CELLS_Z_       2
+*/
 
 
 /*
@@ -33,7 +35,7 @@
 #define _BLOCK_CELLS_X_ 30
 */
 
-
+/*
 #include "specfunc.h"
 
 class cInternalSphericalData_UserDefined {
@@ -144,5 +146,5 @@ class cInternalNastranSurfaceData_UserDefined : public cInternalSphericalData_Us
 public:
   cInternalNastranSurfaceData_UserDefined() : cInternalSphericalData_UserDefined() {
   }
-};
+};*/
 #endif

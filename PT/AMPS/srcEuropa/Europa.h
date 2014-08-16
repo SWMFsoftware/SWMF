@@ -34,12 +34,14 @@ using namespace std;
 
 #include "constants.h"
 
+/*
 //path to the SPICE Kernels directory
 const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; //"/Users/rubinmar/Codes/CSPICE/Kernels/GALILEO";
 
 //SPICE Kernels to be loaded
 const int nFurnishedSPICEkernels=6;
 const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/s980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"};
+*/
 
 
 
@@ -99,11 +101,11 @@ namespace Europa {
   extern double xEuropa[3],vEuropa[3],xEarth[3],vEarth[3];
   extern double vEuropaRadial,xEuropaRadial;
 
-  //typical solar wind conditions far from the planet
+/*  //typical solar wind conditions far from the planet
   static const double swVelocity_Typical[3]={-420.0E3,0.0,0.0};
   static const double swB_Typical[3]={-12.9E-9,4.71E-9,10.29E-9};
   static const double swTemperature_Typical=0.174e6,swNumberDensity_Typical=60.0E6;
-  extern double swE_Typical[3];
+  extern double swE_Typical[3];*/
 
   //the total number of source processes
   extern int nTotalSourceProcesses;

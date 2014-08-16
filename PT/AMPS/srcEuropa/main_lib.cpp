@@ -544,7 +544,7 @@ PIC::InitMPI();
 	const int InitialSampleLength=100;
 
 	//PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1600;
-	PIC::RequiredSampleLength=InitialSampleLength; //0;
+	//PIC::RequiredSampleLength=InitialSampleLength; //0;
 
 	Europa::Init_AfterParser();
 
@@ -622,96 +622,11 @@ PIC::InitMPI();
 		//set up the planet pointer in Europa model
 		Europa::Planet=Sphere;
 
-		//allocate the buffers for collecting the sodium surface density
+		Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
+
+
+
 /*
-		// Europa addition
-		Sphere->AllFluxDown=new cInternalSphericalData_UserDefined::cAllFluxDown[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->AllFluxUp=new cInternalSphericalData_UserDefined::cAllFluxUp[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-
-		Sphere->SodiumSurfaceAreaDensity_FluxUP=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->SodiumSurfaceAreaDensity_FluxDOWN=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->SodiumSurfaceAreaDensity=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		// Europa addition
-		Sphere->O2SurfaceAreaDensity_FluxUP=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->O2SurfaceAreaDensity_FluxDOWN=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->O2SurfaceAreaDensity=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-
-
-		Sphere->SurfaceElementExternalNormal=new cInternalSphericalData_UserDefined::cSurfaceElementExternalNormal[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->SurfaceElementArea=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		Sphere->ElementSourceRate=new cInternalSphericalData_UserDefined::cElementSourceRate[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->SolarWindSurfaceFlux=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		for (int el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-			Sphere->SodiumSurfaceAreaDensity_FluxUP[el]=0.0;
-			Sphere->SodiumSurfaceAreaDensity_FluxDOWN[el]=0.0;
-			Sphere->SodiumSurfaceAreaDensity[el]=0.0;
-
-			// Europa addition
-			Sphere->O2SurfaceAreaDensity_FluxUP[el]=0.0;
-			Sphere->O2SurfaceAreaDensity_FluxDOWN[el]=0.0;
-			Sphere->O2SurfaceAreaDensity[el]=0.0;
-
-			Sphere->SolarWindSurfaceFlux[el]=-1.0;
-
-			Sphere->SurfaceElementArea[el]=Sphere->GetSurfaceElementArea(el);
-			Sphere->GetSurfaceElementNormal((Sphere->SurfaceElementExternalNormal+el)->norm,el);
-		}
-
-		//allocate buffers for sampling surface sodium source rates and sodikum surface content
-		int offsetSpecie,offsetElement,s,el,i;
-
-		Sphere->SpeciesSurfaceSourceRate=new double** [PIC::nTotalSpecies];
-		Sphere->SpeciesSurfaceSourceRate[0]=new double *[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-		Sphere->SpeciesSurfaceSourceRate[0][0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*(_EUROPA_SOURCE_MAX_ID_VALUE_+1)];
-
-		for (offsetSpecie=0,s=0,offsetElement=0;s<PIC::nTotalSpecies;s++) {
-			Sphere->SpeciesSurfaceSourceRate[s]=Sphere->SpeciesSurfaceSourceRate[0]+offsetSpecie;
-			offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-			for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-				Sphere->SpeciesSurfaceSourceRate[s][el]=Sphere->SpeciesSurfaceSourceRate[0][0]+offsetElement;
-				offsetElement+=_EUROPA_SOURCE_MAX_ID_VALUE_+1;
-
-				for (i=0;i<_EUROPA_SOURCE_MAX_ID_VALUE_+1;i++) Sphere->SpeciesSurfaceSourceRate[s][el][i]=0.0;
-			}
-		}
-
-		Sphere->SpeciesSurfaceContent=new double* [PIC::nTotalSpecies];
-		Sphere->SpeciesSurfaceContent[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-			Sphere->SpeciesSurfaceContent[s]=Sphere->SpeciesSurfaceContent[0]+offsetSpecie;
-			offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-			for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-				Sphere->SpeciesSurfaceContent[s][el]=0.0;
-			}
-		}
-
-		Sphere->SpeciesSurfaceReturnFlux=new double* [PIC::nTotalSpecies];
-		Sphere->SpeciesSurfaceReturnFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		Sphere->ReturnFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-		Sphere->ReturnFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-		for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-			Sphere->SpeciesSurfaceReturnFlux[s]=Sphere->SpeciesSurfaceReturnFlux[0]+offsetSpecie;
-			Sphere->ReturnFluxBulkSpeed[s]=Sphere->ReturnFluxBulkSpeed[0]+offsetSpecie;
-			offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-			for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-				Sphere->SpeciesSurfaceReturnFlux[s][el]=0.0;
-				Sphere->ReturnFluxBulkSpeed[s][el]=0.0;
-			}
-		}
-
-		*/
-
     Sphere->SurfaceElementDesorptionFluxUP=new double*[PIC::nTotalSpecies];
     Sphere->SurfaceElementAdsorptionFluxDOWN=new double*[PIC::nTotalSpecies];
     Sphere->SurfaceElementPopulation=new double*[PIC::nTotalSpecies];
@@ -817,6 +732,7 @@ PIC::InitMPI();
         Sphere->SampleInjectedFluxBulkSpeed[s][el]=0.0;
       }
     }
+*/
 
 	}
 

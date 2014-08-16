@@ -23,9 +23,11 @@
 
 
 //time stams for sampling remote column density observations
+/*
 const int nReferenceGroundBasedObservations=5; //25;
 const char ReferenceGroundBasedObservationTime[nReferenceGroundBasedObservations][_MAX_STRING_LENGTH_PIC_]={
     "2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"};
+*/
 
 
 /*    "2001-05-25T00:00:00","2006-01-12T00:00:00","2005-12-18T00:00:00","2006-06-17T00:00:00","2003-10-04T00:00:00",

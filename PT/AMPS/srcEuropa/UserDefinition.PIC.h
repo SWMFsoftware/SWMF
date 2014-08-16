@@ -4,6 +4,7 @@
 //the file contains the user defined setting for compilation of the model
 
 //#include "UserDefinition.PIC.dfn"
+/*
 
 //the species table
 //#define _NA_SPEC_     0
@@ -110,6 +111,7 @@ extern int maxLocalBackdroundDensityOffset;
 
 //#undef _PIC_DYNAMIC_LOAD_BALANCING_MODE_
 //#define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+*/
 
 
 

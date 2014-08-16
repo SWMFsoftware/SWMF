@@ -23,7 +23,7 @@ char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="GALL_EPHIOD";
 
 double Europa::TotalInjectionRate=0.0;
 
-double Europa::swE_Typical[3]={0.0,0.0,0.0};
+//double Europa::swE_Typical[3]={0.0,0.0,0.0};
 double Europa::xEuropa[3]={0.0,0.0,0.0},Europa::vEuropa[3]={0.0,0.0,0.0};
 double Europa::xEarth[3]={0.0,0.0,0.0},Europa::vEarth[3]={0.0,0.0,0.0};
 double Europa::vEuropaRadial=0.0,Europa::xEuropaRadial=0.0;
