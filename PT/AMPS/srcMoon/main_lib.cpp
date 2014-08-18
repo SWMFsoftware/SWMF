@@ -1298,9 +1298,9 @@ void amps_init() {
     PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_NA_SPEC_);
 
     //copy the weight and time step from Na neutra to Na ions
-    if (_NAPLUS_SPEC_!=-1) {
-      PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_NAPLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
-      PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_NAPLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
+    if (_NA_PLUS_SPEC_>=0) {
+      PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_NA_PLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
+      PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_NA_PLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
     }
 
     //set photolytic reactions
