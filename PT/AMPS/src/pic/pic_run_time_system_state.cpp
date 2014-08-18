@@ -125,31 +125,33 @@ void PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(FILE* fout,ch
   }
 
   //sample the mean values
-  while (node!=NULL) {
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-      for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
-        for (i=0;i<_BLOCK_CELLS_X_;i++)  {
-          ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+  for (int thread=0;thread<PIC::nTotalThreads;thread++) {
+    for (node=((thread==PIC::ThisThread) ? PIC::Mesh::mesh.ParallelNodesDistributionList[thread] : PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread]);node!=NULL;node=node->nextNodeThisThread) {
 
-          while (ptr!=-1) {
-            ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-            s=PIC::ParticleBuffer::GetI(ParticleData);
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+          for (i=0;i<_BLOCK_CELLS_X_;i++)  {
+            ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
-            StatWeight=node->block->GetLocalParticleWeight(s)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
-            v=PIC::ParticleBuffer::GetV(ParticleData);
+            while (ptr!=-1) {
+              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+              s=PIC::ParticleBuffer::GetI(ParticleData);
 
-            TotalStatWeight[s]+=StatWeight;
-            MeanSpeed[s]+=StatWeight*sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-            for (idim=0;idim<3;idim++) MeanVelocity[idim+3*s]+=StatWeight*v[idim];
+              StatWeight=node->block->GetLocalParticleWeight(s)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+              v=PIC::ParticleBuffer::GetV(ParticleData);
 
-            ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+              TotalStatWeight[s]+=StatWeight;
+              MeanSpeed[s]+=StatWeight*sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+              for (idim=0;idim<3;idim++) MeanVelocity[idim+3*s]+=StatWeight*v[idim];
+
+              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+            }
+
           }
-
         }
       }
-    }
 
-    node=node->nextNodeThisThread;
+    }
   }
 
   double TempBuffer[3*PIC::nTotalSpecies];
