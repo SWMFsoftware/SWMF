@@ -100,6 +100,7 @@ stochasticheating	TypeHeatPartitioning
 0.34			StochasticExponent
 0.18			StochasticAmplitude
 
+
 #RESISTIVITY
 T			UseResistivity
 user			TypeResistivity
@@ -140,11 +141,11 @@ load			NameCommand
 RadCoolCorona.dat
 ascii			TypeFile
 
-#TRANSITIONREGION
-T			DoExtendTransitionRegion
-2.2e5			TeModSi
-1.0e1			DeltaTeModSi
-
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+SC/Param/TR.dat
+ascii			TypeFile
 
 ----------------------------------------------------
 #AMRREGION

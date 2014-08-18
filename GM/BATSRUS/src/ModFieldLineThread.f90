@@ -52,11 +52,19 @@ module ModFieldLineThread
      ! on the thread.
      !/
      real, pointer :: DGradTeOverGhostTe_DII(:,:,:)
+     !\
+     ! B0 field at the boundary
+     !/
+     real, pointer :: B0Face_DII(:,:,:)
   end type BoundaryThreads
   type(BoundaryThreads), pointer :: BoundaryThreads_B(:)
 
   integer :: nPointInThreadMax
-  real    :: DsThreadMin 
+  real    :: DsThreadMin
+  !\
+  ! Parameters of turbulence
+  !/
+  real :: HeatCondParSi, HeatCondPar
 contains
   subroutine read_threads(iSession)
     use ModSize, ONLY: MaxBlock
@@ -105,6 +113,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % SignBr_II)
     nullify(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
+    nullify(BoundaryThreads_B(iBlock) % B0Face_DII)
   end subroutine nullify_thread_b
   !=========================
   subroutine deallocate_thread_b(iBlock)
@@ -119,6 +128,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % SignBr_II)
     deallocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
+    deallocate(BoundaryThreads_B(iBlock) % B0Face_DII)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
   end subroutine deallocate_thread_b
@@ -169,7 +179,8 @@ contains
                1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(&
                1:nDim,1:nJ,1:nK))
-
+          allocate(BoundaryThreads_B(iBlock) % B0Face_DII(&
+               1:nDim,1:nJ,1:nK))
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -242,8 +253,19 @@ contains
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % SignBr_II = 0.0
     BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII = 0.0
+    BoundaryThreads_B(iBlock) % B0Face_DII = 0.0
     !Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
+       !\
+       !First, take magnetic field in the ghost cell
+       !/
+       XyzStart_D = Xyz_DGB(:, 0, j, k, iBlock)
+       !\
+       ! Magnetic field in SI!
+       !/
+       call get_magnetogram_field(&
+            XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = B0Start_D  
        !\
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
@@ -256,6 +278,12 @@ contains
        !/
        call get_magnetogram_field(&
             XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       !\
+       ! Calculate and save face field
+       !/
+       BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = &
+            (BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) + &
+            B0Start_D) * 0.5 * Si2No_V(UnitB_)
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
        BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
@@ -397,16 +425,16 @@ contains
   end subroutine set_threads_b
   !=========================================================================
   subroutine check_tr_table(iComm,TypeFileIn)
-
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
+         cEps, cElectronCharge, cTwoPi
     use ModLookupTable, ONLY: Table_I, TableType, &
          i_lookup_table, init_lookup_table, make_lookup_table
 
     integer, optional, intent(in) :: iComm
     character(LEN=*),optional,intent(in)::TypeFileIn
 
-    integer:: iMaterial, iTable, i
-    character(len=2):: NameMaterial
-    type(TableType), pointer:: Ptr
+    integer:: iTable
+    real,parameter:: CoulombLog = 20.0
     character(len=5)::TypeFile
 
     character(len=*), parameter:: NameSub = 'check_TR_table'
@@ -416,6 +444,12 @@ contains
     else
        TypeFile = 'ascii'
     end if
+    ! electron heat conduct coefficient for single charged ions
+    ! = 9.2e-12 W/(m*K^(7/2))
+    HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
+         *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
+         *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+
     iTable =  i_lookup_table('TR')
     if(iTable >= 0)return
 
@@ -439,19 +473,15 @@ contains
 
     !Fill in the table
     call make_lookup_table(iTable, calc_tr_table)
-
   end subroutine check_tr_table
   !===========================================================================
   subroutine calc_tr_table(iTableIn, Arg1, Arg2, Value_V)
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
-         cEps, cElectronCharge, cTwoPi
     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
     integer, intent(in):: iTableIn
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
     integer:: iTable, iTe
-    real, parameter:: CoulombLog = 20.0
-    real :: HeatCondParSi, DeltaLogTe, LambdaCgs_V(1)
+    real   :: DeltaLogTe, LambdaCgs_V(1)
     real,dimension(1:500):: TeSi_I, LambdaSi_I, LPe_I, UHeat_I
 
     logical, save:: IsFirstCall = .true.
@@ -474,13 +504,6 @@ contains
        iTable = i_lookup_table('radcool')
        if(iTable<=0)&
             call CON_stop('Transition region table needs radcool table')
-
-       ! electron heat conduct coefficient for single charged ions
-       ! = 9.2e-12 W/(m*K^(7/2))
-       HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
-            *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
-            *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
-
        DeltaLogTe = log(1.0e8/1.0e4)/499 !Log(MaxTe/MinTe)/(nPoint-1)
 
        TeSi_I(1) = 1.0e4; LPe_I(1) = 0.0; UHeat_I(1) = 0.0
@@ -515,6 +538,7 @@ contains
                TeSi_I(iTe)**3.50/UHeat_I(iTe) )
        end do
        LPe_I = LPe_I*HeatCondParSi
+       UHeat_I(1) = 0.0
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
     Value_V = (/ LPe_I(iTe), UHeat_I(iTe) /)

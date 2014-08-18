@@ -133,12 +133,12 @@ load			NameCommand
 SC/Param/RadCoolCorona.dat
 ascii			TypeFile
 
-#TRANSITIONREGION
-T			DoExtendTransitionRegion
-2.2e5			TeModSi
-1.0e1			DeltaTeModSi
+#LOOKUPTABLE
+TR			NameTable
+load			NameCommand
+SC/Param/TR.dat
+ascii			TypeFile
 
-turn these off when restarting
 ---------------------------------------------------
 #GRIDGEOMETRY
 spherical_lnr
