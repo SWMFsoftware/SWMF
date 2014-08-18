@@ -555,7 +555,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   use ModGeometry, ONLY: XyzStart_BLK, XyzMax_D, XyzMin_D, &
        rMin_BLK, x1,x2,y1,y2,z1,z2
   use CON_planet, ONLY: DipoleStrength
-  use ModMain,    ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+  use ModMain,    ONLY: DoAnisoPressureIMCoupling
   use ModMultiFLuid
   use BATL_lib, ONLY: IsCartesianGrid, xyz_to_coord, Xyz_DGB, CellSize_DB
   implicit none
@@ -1291,18 +1291,7 @@ contains
             +          dz2*State_VGB(:,i1,j1,k1,iBlock)))
 
        ! Convert momentum to velocity
-       State_V(Ux_:Uz_) = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
-       if(DoMultiFluidIMCoupling)then
-          State_V(iUx_I(IonFirst_:iIonSecond)) = &
-               State_V(iRhoUx_I(IonFirst_:iIonSecond))/ &
-               State_V(iRho_I(IonFirst_:iIonSecond))
-          State_V(iUy_I(IonFirst_:iIonSecond)) = &
-               State_V(iRhoUy_I(IonFirst_:iIonSecond))/ &
-               State_V(iRho_I(IonFirst_:iIonSecond))
-          State_V(iUz_I(IonFirst_:iIonSecond)) = &
-               State_V(iRhoUz_I(IonFirst_:iIonSecond))/ &
-               State_V(iRho_I(IonFirst_:iIonSecond))
-       end if
+       State_V(iUx_I) = State_V(iRhoUx_I)/State_V(iRho_I)
 
        ! Add B0 to the magnetic field
        if(UseB0)then
@@ -1312,22 +1301,13 @@ contains
 
        ! Convert to SI units if required
        if(DoExtractUnitSi)then
-          State_V(Rho_)    = State_V(Rho_)    * No2Si_V(UnitRho_)
-          State_V(Ux_:Uz_) = State_V(Ux_:Uz_) * No2Si_V(UnitU_)
+          State_V(iRho_I)  = State_V(iRho_I)  * No2Si_V(UnitRho_)
+          State_V(iUx_I)   = State_V(iUx_I)   * No2Si_V(UnitU_)
+          State_V(iUy_I)   = State_V(iUy_I)   * No2Si_V(UnitU_)
+          State_V(iUz_I)   = State_V(iUz_I)   * No2Si_V(UnitU_)
           State_V(Bx_:Bz_) = State_V(Bx_:Bz_) * No2Si_V(UnitB_)
-          State_V(p_)      = State_V(p_)      * No2Si_V(UnitP_)
-          if(DoMultiFluidIMCoupling)then
-             State_V(iRho_I(IonFirst_:iIonSecond)) = &
-                  State_V(iRho_I(IonFirst_:iIonSecond)) * No2Si_V(UnitRho_)
-             State_V(iUx_I(IonFirst_:iIonSecond)) = &
-                  State_V(iUx_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
-             State_V(iUy_I(IonFirst_:iIonSecond)) = &
-                  State_V(iUy_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
-             State_V(iUz_I(IonFirst_:iIonSecond)) = &
-                  State_V(iUz_I(IonFirst_:iIonSecond)) * No2Si_V(UnitU_)
-             State_V(iP_I(IonFirst_:iIonSecond))      =  &
-                  State_V(iP_I(IonFirst_:iIonSecond))  * No2Si_V(UnitP_)
-          end if
+          State_V(iP_I)    = State_V(iP_I)    * No2Si_V(UnitP_)
+
           if(DoAnisoPressureIMCoupling) &
                State_V(Ppar_) = State_V(Ppar_) * No2Si_V(UnitP_)
        end if
@@ -1503,7 +1483,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use CON_axes, ONLY: transform_matrix
   use ModRaytrace
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
-       UseB0, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+       UseB0, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: rBody
   use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1593,18 +1573,20 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
-     Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
-     Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
-
-     if(DoMultiFluidIMCoupling) then 
-        Extra_VGB(3:4,:,:,:,1:nBlock) = &
-             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        Extra_VGB(5:6,:,:,:,1:nBlock) = &
-             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-     endif
-
-     if(DoAnisoPressureIMCoupling) &
-          Extra_VGB(3,:,:,:,1:nBlock) = State_VGB(Ppar_,:,:,:,1:nBlock)
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+           do iFluid = 1, nFluid
+              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
+           end do
+        end do; end do; end do
+        if(DoAnisoPressureIMCoupling)then
+           do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+              Extra_VGB(3,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock)
+           end do; end do; end do
+        end if
+     end do
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nLat,nLon), &
@@ -1707,7 +1689,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use ModRaytrace
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
-       UseB0, Unused_B, DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+       UseB0, Unused_B, DoAnisoPressureIMCoupling
   use ModPhysics,        ONLY: rBody
   use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
   use ModProcMH
@@ -1781,16 +1763,20 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
 
   if(DoIntegrateRay)then
      ! Copy density and pressure into Extra_VGB
-     Extra_VGB(1,:,:,:,1:nBlock) = State_VGB(rho_,:,:,:,1:nBlock)
-     Extra_VGB(2,:,:,:,1:nBlock) = State_VGB(p_  ,:,:,:,1:nBlock)
-     if(DoMultiFluidIMCoupling) then 
-        Extra_VGB(3:4,:,:,:,1:nBlock) = &
-             State_VGB(iRho_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-        Extra_VGB(5:6,:,:,:,1:nBlock) = &
-             State_VGB(iP_I(IonFirst_:iIonSecond),:,:,:,1:nBlock)
-     if(DoAnisoPressureIMCoupling) &
-          Extra_VGB(3,:,:,:,1:nBlock) = State_VGB(Ppar_,:,:,:,1:nBlock)
-     endif
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+           do iFluid = 1, nFluid
+              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
+           end do
+        end do; end do; end do
+        if(DoAnisoPressureIMCoupling)then
+           do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+              Extra_VGB(3,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock)
+           end do; end do; end do
+        end if
+     end do
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
@@ -1844,7 +1830,6 @@ subroutine plot_ray_equator(iFile)
        plot_range, plot_type, TypeFile_I
   use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
   use ModProcMH,  ONLY: iProc
-  use ModNumConst,       ONLY: cTwoPi
   use ModIoUnit,         ONLY: UnitTmp_
   use ModPlotFile,       ONLY: save_plot_file
   use ModRayTrace,       ONLY: RayMap_DSII, DoExtractCurvatureB
@@ -1852,6 +1837,8 @@ subroutine plot_ray_equator(iFile)
   use CON_axes,          ONLY: transform_matrix
   use ModNumConst,       ONLY: cDegToRad
   use ModInterpolate,    ONLY: fit_parabola
+  use ModVarIndexes,     ONLY: NamePrimitiveVar
+  use ModUtilities,      ONLY: split_string
 
   implicit none
 
@@ -1882,8 +1869,12 @@ subroutine plot_ray_equator(iFile)
   ! State variables along a single field line (both halves)
   real, allocatable:: State_VI(:,:)
 
-  ! State variables at the minimum B location indexed by r and Lon
+  ! Coordinates, state variables and curvature
+  ! at the minimum B location indexed by r and Lon
   real, allocatable:: StateMinB_VII(:,:,:)
+
+  ! Names of quantities in StateMin_VIIB
+  character(len=12), allocatable:: Name_I(:)
 
   ! True for "eqb" plot area
   logical:: IsMinB
@@ -1977,7 +1968,10 @@ subroutine plot_ray_equator(iFile)
      close(UnitTmp_)
   else
      ! StateMinB: x,y,z,state variables and curvature at min B and Z=0
-     allocate(StateMinB_VII(2*(nVar+4),nRadius,nLon), State_VI(0:nVarOut,nPoint))
+     allocate( &
+          StateMinB_VII(2*(nVar+4),nRadius,nLon), &
+          Name_I(2*(nVar+4)), &
+          State_VI(0:nVarOut,nPoint))
 
      iPointMin = 1
      iPointMid = 0
@@ -2051,6 +2045,19 @@ subroutine plot_ray_equator(iFile)
         end do
      end do
 
+     ! Create list of variables for eqb file
+     Name_I(1) = 'x'
+     Name_I(2) = 'y'
+     Name_I(3) = 'z'
+     call split_string(NamePrimitiveVar, Name_I(4:nVar+3))
+     do iVar = 3+Bx_, 3+Bz_
+        Name_I(iVar) = trim(Name_I(iVar))//'SM'
+     end do
+     Name_I(nVar+4) = 'rCurve'
+     do iVar = 1, nVar+4
+        Name_I(iVar+nVar+4) = trim(Name_I(iVar))//'Z0'
+     end do
+
      NameFile = trim(NamePlotDir)//"eqb_"//NameFileEnd
      call save_plot_file( &
           NameFile, &
@@ -2058,14 +2065,12 @@ subroutine plot_ray_equator(iFile)
           StringHeaderIn = 'Values at minimum B', &
           TimeIn  = time_simulation, &
           nStepIn = n_step, &
-          NameVarIn= &
-          'x y z rho ux uy uz bxSM bySM bzSM p rCurve '// &
-          'xZ0 yZ0 zZ0 rhoZ0 uxZ0 uyZ0 uzZ0 bxSMZ0 bySMZ0 bzSMZ0 pZ0 rCurveZ0',&
+          NameVarIn_I= Name_I, &
           IsCartesianIn= .false., &
           CoordIn_DII  = StateMinB_VII(1:2,:,:), &
           VarIn_VII    = StateMinB_VII(3:,:,:))
 
-     deallocate(State_VI, StateMinB_VII)
+     deallocate(StateMinB_VII, Name_I, State_VI)
 
   end if
 
@@ -2125,7 +2130,6 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModCoordTransform, ONLY: xyz_to_sph
   use ModMessagePass,    ONLY: exchange_messages
-  use ModNumConst,       ONLY: i_DD
 
   implicit none
 
@@ -2859,7 +2863,6 @@ subroutine lcb_plot(iFile)
   real :: PlotVar_V(0:4+nVar)
   real :: Radius, RadiusIono, Lon, zL,zU, zUs=40., xV,yV, Integrals(3)
   real :: XyzIono_D(3), Xyz_D(3)
-  real :: Gsm2Smg_DD(3,3) = i_DD
   real :: Smg2Gsm_DD(3,3) = i_DD
   real, allocatable :: PlotVar_VI(:,:), XyzPt_DI(:,:), zPt_I(:)
   logical :: Map1,Map2, Odd, Skip, SaveIntegrals
@@ -2884,7 +2887,6 @@ subroutine lcb_plot(iFile)
   if(.not.allocated(XyzPt_DI)) allocate(XyzPt_DI(3,nPts), zPt_I(nPts))
 
   ! Transformation matrix from default (GM) to SM coordinates
-  Gsm2Smg_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
   Smg2Gsm_DD = transform_matrix(time_simulation,'SMG','GSM')
 
   if(iProc == 0)then
