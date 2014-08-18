@@ -296,7 +296,8 @@ contains
 
   subroutine init_mod_raytrace
 
-    use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling   
+    use ModMain,       ONLY: DoAnisoPressureIMCoupling   
+    use ModVarIndexes, ONLY: nFluid
 
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
@@ -306,12 +307,10 @@ contains
     if(allocated(ray)) RETURN
 
     ! Determine number of flow variable integrals
-    if(DoMultiFluidIMCoupling)then
-       nExtraIntegral = 6
-    else if(DoAnisoPressureIMCoupling)then
-       nExtraIntegral = 3
+    if(DoAnisoPressureIMCoupling)then
+       nExtraIntegral = 3         ! density, pressure and parallel p
     else
-       nExtraIntegral = 2
+       nExtraIntegral = 2*nFluid  ! density and pressure per fluid
     end if
 
     ! Number of integrals for a local ray segment
