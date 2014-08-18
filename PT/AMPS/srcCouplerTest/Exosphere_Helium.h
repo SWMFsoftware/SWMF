@@ -15,7 +15,7 @@
 
 #include "He.h"
 #include "Exosphere.h"
-#include "UserDefinition.Exosphere.h"
+//#include "UserDefinition.Exosphere.h"
 #include "Moon.h"
 
 
@@ -28,7 +28,7 @@
 
         extern double SourceRate[PIC::nTotalSpecies],maxLocalSourceRate[PIC::nTotalSpecies];
         //5% of solar wind ions are assumed Helium e.g., LeBlanc 2011 Bochsler, 2001
-        const static double sw_Helium_Ion_Flux_1AU = -swVelocity_Typical[1]*swNumberDensity_Typical*0.05*Pi*_MOON__RADIUS_*_MOON__RADIUS_;
+        const static double sw_Helium_Ion_Flux_1AU = -/*Exosphere_*/swVelocity_Typical[1]*/*Exosphere_*/swNumberDensity_Typical*0.05*Pi*_MOON__RADIUS_*_MOON__RADIUS_;
 
         //the object for distribution of injection positino on the planet's surface
         extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];

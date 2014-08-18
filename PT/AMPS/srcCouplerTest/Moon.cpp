@@ -174,10 +174,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& Reem
   double res=0.0;
 
    switch (spec) {
-   case _NA_SPEC_:
-#ifdef _NAPLUS_SPEC_
-   case _NAPLUS_SPEC_:
-#endif
+   case _NA_SPEC_: case _NA_PLUS_SPEC_:
      res=SodiumStickingProbability(ReemissionParticleFraction,Temp);
      break;
    default:
@@ -287,43 +284,7 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
-  double res=0.0;
-
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  SpiceDouble State[6],ltlocal;
-  double EccentricityVector[3];
-  double Speed2,a,c,absEccentricity;
-  const double GravitationalParameter=GravityConstant*_MASS_(_EARTH_);
-  double vMoon[3],xMoon[3],rGeocentric=0.0;
-  int idim;
-
-
-  spkezr_c("Moon",EphemerisTime,"MSGR_HCI","none","Earth",State,&ltlocal);
-
-  for (idim=0;idim<3;idim++) {
-    xMoon[idim]=State[idim]*1.0E3;
-    vMoon[idim]=State[idim+3]*1.0E3;
-
-    rGeocentric+=pow(xMoon[idim],2);
-  }
-
-  rGeocentric=sqrt(rGeocentric);
-  Speed2=vMoon[0]*vMoon[0]+vMoon[1]*vMoon[1]+vMoon[2]*vMoon[2];
-  c=xMoon[0]*vMoon[0]+xMoon[1]*vMoon[1]+xMoon[2]*vMoon[2];
-
-  for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
-    EccentricityVector[idim]=Speed2/GravitationalParameter*xMoon[idim] - c/GravitationalParameter*vMoon[idim] - xMoon[idim]/rGeocentric;
-    absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
-    a+=EccentricityVector[idim]*xMoon[idim];
-  }
-
-  absEccentricity=sqrt(absEccentricity);
-  res=acos(a/(absEccentricity*rGeocentric));
-
-  if (c<0.0) res=2.0*Pi-res;
-#endif
-
-  return res;
+  return GetTAA("Moon","Earth",_MASS_(_EARTH_),EphemerisTime);
 }
 
 
