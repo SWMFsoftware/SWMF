@@ -39,9 +39,11 @@ using namespace std;
 #include "picSpeciesMacro.dfn"
 
 //load the user defined settings
+/*
 #if _PIC_USER_DEFINITION_MODE_ == _PIC_USER_DEFINITION_MODE__ENABLED_
 #include "UserDefinition.PIC.h"
 #endif
+*/
 
 
 
