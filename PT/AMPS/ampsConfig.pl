@@ -734,19 +734,6 @@ sub ReadMainBlock {
    
   close (FILEOUT);
   
-  #add the definitions of the species macros to 'UserDefinition.PIC.h'
-  open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
-  @FileContent=<FILEIN>;
-  close (FILEIN); 
-  
-  open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
-  print FILEOUT "$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION\n";
-  
-  foreach (@FileContent) {
-    print FILEOUT "$_";
-  }
-   
-  close (FILEOUT);  
   
   #set the debugger mode
   if ($DebuggerMode == 0) {
@@ -766,6 +753,8 @@ sub ReadMainBlock {
 
 #=============================== User Definitions ==================
 sub UserDefinitions {
+
+  print "ampsConfig.pl: Warning: the user definition section is obsolete and has no effect on neither configuration nor execution of AMPS\n";
 
   while ($line=<InputFile>) {
     ($InputFileLineNumber,$FileName)=split(' ',$line);
@@ -1438,17 +1427,9 @@ sub ReadBackgroundAtmosphereBlock {
       
       if ($s0 eq "ON") {
         ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","pic/picGlobal.dfn");
-        
-        if (-e "main/UserDefinition.PIC.h") {
-          ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
-        }
       }
       elsif ($s0 eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
-        
-        if (-e "main/UserDefinition.PIC.h") {
-          ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
-        }
       }
       else {
         die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
@@ -1473,26 +1454,15 @@ sub ReadBackgroundAtmosphereBlock {
       close (BACKGROUNDSPECIES);
       
       #add definitions of the background species to the code
-      my @FileContent;
+      my $BackgroundSpeciesDefinitionString;
       my $cnt=0;
-      
-      open (FILEIN,"<$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";  
-      @FileContent=<FILEIN>;
-      close (FILEIN); 
-  
-      open (FILEOUT,">$ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/main/UserDefinition.PIC.h\n";
-      
+            
       foreach (@BackgroundSpeciesList) {
-        print FILEOUT "#undef _"."$_"."_BACKGROUND_SPEC_\n";
-        print FILEOUT "#define _"."$_"."_BACKGROUND_SPEC_  $cnt\n\n";
+        $BackgroundSpeciesDefinitionString=$BackgroundSpeciesDefinitionString."\n#undef _".$_."_BACKGROUND_SPEC_\n#define _".$_."_BACKGROUND_SPEC_  $cnt\n";
         $cnt++;
       }
       
-      foreach (@FileContent) {
-        print FILEOUT "$_";
-      }
-   
-      close (FILEOUT);
+      ampsConfigLib::AddLine2File($BackgroundSpeciesDefinitionString,"pic/picSpeciesMacro.dfn");
       
       #create the background Atmosphere Mass Table
       my @MassTable;
@@ -1528,10 +1498,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__ON_","pic/picGlobal.dfn");
       }
       elsif ($s0 eq "OFF") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_MODE_","_PIC_BACKGROUND_ATMOSPHERE_MODE__OFF_","pic/picGlobal.dfn");
       }
       else {
         die "Cannot recognize the option\n";
@@ -1657,10 +1627,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ISOTROPIC") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_","pic/picGlobal.dfn");
       }
       elsif ($s0 eq "FUNCTION") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","pic/picGlobal.dfn");
       }
     }
   
@@ -1668,10 +1638,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
       }
       elsif ($s0 eq "OFF") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
     }
 
@@ -1679,10 +1649,10 @@ sub ReadBackgroundAtmosphereBlock {
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "ON") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_ON_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
       }
       elsif ($s0 eq "OFF") {
-        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","main/UserDefinition.PIC.h");
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
     }
     
