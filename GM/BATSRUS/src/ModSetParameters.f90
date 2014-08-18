@@ -92,7 +92,6 @@ subroutine MH_set_parameters(TypeAction)
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
   use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
   use ModFaceBoundary, ONLY: read_face_boundary_param
-  use ModFieldLineThread, ONLY: read_threads, check_tr_table
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
@@ -100,6 +99,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, read_wsa_coeff
   use ModCoronalHeating,  ONLY: read_corona_heating, &
        init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
+  use ModFieldLineThread, ONLY: read_threads 
+  use ModThreadedLC,      ONLY: init_threaded_lc
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModWaves, ONLY: read_waves_param, check_waves
@@ -307,7 +308,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseCoronalHeating)call init_coronal_heating
      call check_cooling_param
 
-     if(UseFieldLineThreads)call check_tr_table(iComm)
+     if(UseFieldLineThreads.and.iSession==1)call init_threaded_lc
      ! Initialize user module and allow user to modify things
      if(UseUserInitSession)call user_init_session
 

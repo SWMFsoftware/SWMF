@@ -47,7 +47,7 @@ contains
     use BATL_lib, ONLY: IsRzGeometry, IsCylindricalAxis, IsSphericalAxis, &
          Theta_, nRoot_D, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_set_cell_boundary
-    use ModFieldLineThread, ONLY: set_field_line_thread_bc
+    use ModThreadedLC, ONLY: set_field_line_thread_bc
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock

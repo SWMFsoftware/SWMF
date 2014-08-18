@@ -75,6 +75,7 @@ OBJECTS = \
 	ModSingleFluid.o \
 	ModSize.o \
 	ModSolarwind.o \
+	ModThreadedLC.o \
 	ModTimeStepControl.o \
 	ModUserEmpty.o \
 	ModUserInterface.o \

@@ -6,6 +6,7 @@ module ModFieldLineThread
   use ModMain, ONLY: UseFieldLineThreads
   implicit none
   save
+  PRIVATE ! Except
   logical, public, allocatable :: DoThreads_B(:), IsAllocatedThread_B(:)
   ! Named indexes for local use only
 
@@ -57,14 +58,17 @@ module ModFieldLineThread
      !/
      real, pointer :: B0Face_DII(:,:,:)
   end type BoundaryThreads
-  type(BoundaryThreads), pointer :: BoundaryThreads_B(:)
-
+  type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
+  
   integer :: nPointInThreadMax
   real    :: DsThreadMin
-  !\
-  ! Parameters of turbulence
-  !/
-  real :: HeatCondParSi, HeatCondPar
+  
+  real, public :: HeatCondParSi
+  public:: UseFieldLineThreads
+  public:: BoundaryThreads
+  public:: read_threads   !Read parameters of threads
+  public:: check_tr_table !Calculate table for transition region
+  public:: set_threads    
 contains
   subroutine read_threads(iSession)
     use ModSize, ONLY: MaxBlock
@@ -424,13 +428,12 @@ contains
     !end if
   end subroutine set_threads_b
   !=========================================================================
-  subroutine check_tr_table(iComm,TypeFileIn)
+  subroutine check_tr_table(TypeFileIn)
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge, cTwoPi
     use ModLookupTable, ONLY: Table_I, TableType, &
          i_lookup_table, init_lookup_table, make_lookup_table
 
-    integer, optional, intent(in) :: iComm
     character(LEN=*),optional,intent(in)::TypeFileIn
 
     integer:: iTable
@@ -544,16 +547,4 @@ contains
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
     Value_V = (/ LPe_I(iTe), UHeat_I(iTe) /)
   end subroutine calc_tr_table
-  !=========================================================================
-  subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
-               iImplBlock)
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    integer, intent(in):: nGhost
-    integer, intent(in):: iBlock
-    integer, intent(in):: nVarState
-    real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
-    ! Optional arguments when called by semi-implicit scheme
-    integer, optional, intent(in):: iImplBlock
-  end subroutine set_field_line_thread_bc
 end module ModFieldLineThread
