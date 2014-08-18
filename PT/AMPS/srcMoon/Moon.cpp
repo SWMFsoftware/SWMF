@@ -174,7 +174,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& Reem
   double res=0.0;
 
    switch (spec) {
-   case _NA_SPEC_: case _NAPLUS_SPEC_:
+   case _NA_SPEC_: case _NA_PLUS_SPEC_:
      res=SodiumStickingProbability(ReemissionParticleFraction,Temp);
      break;
    default:
