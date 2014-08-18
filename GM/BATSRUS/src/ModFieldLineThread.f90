@@ -477,6 +477,7 @@ contains
   !===========================================================================
   subroutine calc_tr_table(iTableIn, Arg1, Arg2, Value_V)
     use ModLookupTable, ONLY: interpolate_lookup_table, i_lookup_table
+    use ModConst,      ONLY: cBoltzmann
     integer, intent(in):: iTableIn
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
