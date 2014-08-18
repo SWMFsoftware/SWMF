@@ -32,6 +32,7 @@ test_help:
 	@echo "    test7                      (run IH-OH test)"
 	@echo "    test8                      (run multifluid GM-IM coupling test)"
 	@echo "    test9                      (run Chromo SC-IH coupling test)"
+	@echo "    test9th                    (run Threaded LC-SC-IH test)"	 
 	@echo "    test10                     (run 3T solar wind test)"
 	@echo "    test11                     (run GM-PT coupler test)"
 	@echo "    test12                     (run GM-PC tests)"
@@ -822,6 +823,62 @@ test9_check:
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9_*.diff
+
+### test9th: Threaded-Field-Line LC + SC + IH with Alfven waves test ###
+
+test9th:
+	@echo "test9th_compile..." > test9th_sc_thread.diff
+	@echo "test9th_compile..." > test9th_ih.diff
+	${MAKE} test9th_compile
+	@echo "test9th_rundir..." >> test9th_sc_thread.diff
+	@echo "test9th_rundir..." >> test9th_ih.diff
+	${MAKE} test9th_rundir
+	@echo "test9th_run..." >> test9th_sc_thread.diff
+	@echo "test9th_run..." >> test9th_ih.diff
+	${MAKE} test9th_run
+	@echo "test9th_restart..." >> test9th_sc_thread.diff
+	@echo "test9th_restart..." >> test9th_ih.diff
+	${MAKE} test9th_restart
+	@echo "test9th_check..." >> test9th_sc_thread.diff
+	@echo "test9th_check..." >> test9th_ih.diff
+	${MAKE} test9th_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test9th_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
+	${MAKE} SWMF
+	make PIDL
+
+test9th_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.start.ThreadIH ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+
+test9th_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+
+test9th_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.ThreadIH PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+
+test9th_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test9th/SC_log_n000000.log \
+		> test9th_sc_thread.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test9th/IH_log_n000000.log \
+		> test9th_ih.diff)
+	ls -l test9th_*.diff
+
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 

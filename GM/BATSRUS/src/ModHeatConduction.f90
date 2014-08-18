@@ -273,17 +273,41 @@ contains
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
-
+    use ModMain,         ONLY: UseFieldLineThreads, nDim, nIJK_D
+    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModParallel,     ONLY: NOBLK, NeiLev
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
-    integer :: i, j, k, iP
+    integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
+    logical :: UseFirstOrderBc = .false.
+    logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
 
     character(len=*), parameter :: NameSub = 'ModHeatConduction::get_heat_flux'
     !--------------------------------------------------------------------------
+    !\
+    ! Use first order flux across the computational domain boundary with
+    ! threaded-field-line-model
+    !/
+    if(UseFieldLineThreads)then
+       UseFirstOrderBc = far_field_BCs_BLK(iBlock)
+    else
+       UseFirstOrderBc = .false.
+    end if
+    if(UseFirstOrderBc)then
+       iFace_D = (/iFace, jFace, kFace/) 
+       UseRightStateOnly = any(&
+            iFace_D(1:nDim)==1.and.NeiLev(1:(2*nDim-1):2,iBlock)==NOBLK)
+       UseLeftStateOnly =  any(&
+            iFace_D(1:nDim)==nIJK_D(1:nDim)+1&
+            .and.NeiLev(2:2*nDim:2,iBlock)==NOBLK)
+    else
+       UseRightStateOnly = .false.
+       UseLeftStateOnly  = .false.
+    end if
 
     if(IsNewBlockHeatCond)then
        if(UseMultiIon)then
@@ -309,14 +333,24 @@ contains
     end if
 
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
-         IsNewBlockHeatCond, Te_G, FaceGrad_D)
+         IsNewBlockHeatCond, Te_G, FaceGrad_D, &
+         UseFirstOrderBcIn=UseFirstOrderBc)
+    if(UseLeftStateOnly)then
+       call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+            StateLeft_V, Normal_D, HeatCond_D)
+    elseif(UseRightStateOnly)then
+       call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+            StateRight_V, Normal_D, HeatCond_D)
+    else
 
-    call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-         StateLeft_V, Normal_D, HeatCondL_D)
-    call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
-         StateRight_V, Normal_D, HeatCondR_D)
+       call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+            StateLeft_V, Normal_D, HeatCondL_D)
+       call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
+            StateRight_V, Normal_D, HeatCondR_D)
+       
+       HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
-    HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
+    end if
 
     if(UseHeatFluxRegion)then
        HeatCondFactor = heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
@@ -339,8 +373,13 @@ contains
        call user_material_properties(StateRight_V, CvOut = CvSi)
        CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
-    HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
-
+    if(UseLeftStateOnly)then
+       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/CvL
+    elseif(UseRightStateOnly)then
+       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/CvR
+    else
+       HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
+    end if
   end subroutine get_heat_flux
 
   !============================================================================
@@ -384,7 +423,8 @@ contains
     end if
 
     ! The magnetic field should nowhere be zero. The following fix will
-    ! turn the magnitude of the field direction to zero.
+    ! turn the magnitude of the field direction  to zero 
+    ! ????(may be to one?)???? I.Sokolov, 8/15/2014.
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
@@ -398,7 +438,11 @@ contains
              Te = TeFraction*State_V(p_)/State_V(Rho_)
           end if
        end if
-       TeSi = Te*No2Si_V(UnitTemperature_)
+       !\
+       !To calculate the extension factor for the transition
+       !region we may need the temperature in Kelvin.
+       !/
+       TeSi = Te*No2Si_V(UnitTemperature_)    
 
        if(DoUserHeatConduction)then
           call user_material_properties(State_V, TeIn=TeSi, &
@@ -623,7 +667,9 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
-
+    use ModMain, ONLY: nDim, UseFieldLineThreads
+    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModParallel,     ONLY: NOBLK, NeiLev
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
@@ -751,6 +797,38 @@ contains
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
           call get_heat_cond_tensor(State2_VG(:,i,j,k), i, j, k, iBlock)
        end do; end do; end do
+
+       if(UseFieldLineThreads.and.far_field_BCs_BLK(iBlock))then
+          !First order BC at the outer boundaries
+          if(NeiLev(1,iBlock)==NOBLK)then
+             HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
+             bb_DDG(:,:,0,:,:) = bb_DDG(:,:,1,:,:)
+          end if
+          if(NeiLev(2,iBlock)==NOBLK)then
+             HeatCoef_G(nI+1,:,:) = HeatCoef_G(nI,:,:)
+             bb_DDG(:,:,nI+1,:,:) = bb_DDG(:,:,nI,:,:)
+          end if
+          if(nDim>=2)then
+             if(NeiLev(3,iBlock)==NOBLK)then
+                HeatCoef_G(:,0,:) = HeatCoef_G(:,1,:)
+                bb_DDG(:,:,:,0,:) = bb_DDG(:,:,:,1,:)
+             end if
+             if(NeiLev(4,iBlock)==NOBLK)then
+                HeatCoef_G(:,nJ+1,:) = HeatCoef_G(:,nJ,:)
+                bb_DDG(:,:,:,nJ+1,:) = bb_DDG(:,:,:,nJ,:)
+             end if
+          end if
+          if(nDim==3)then
+             if(NeiLev(5,iBlock)==NOBLK)then
+                HeatCoef_G(:,:,0) = HeatCoef_G(:,:,1)
+                bb_DDG(:,:,:,:,0) = bb_DDG(:,:,:,:,1)
+             end if
+             if(NeiLev(6,iBlock)==NOBLK)then
+                HeatCoef_G(:,:,nK+1) = HeatCoef_G(:,:,nK)
+                bb_DDG(:,:,:,:,nK+1) = bb_DDG(:,:,:,:,nK)
+             end if
+          end if
+       end if
 
        ! Average the cell centered heat conduction tensor to the faces
        ! and multiply with the area
@@ -921,6 +999,8 @@ contains
     use ModMain,         ONLY: nI, nJ, nK
     use ModNumConst,     ONLY: i_DD
     use ModMultiFluid,   ONLY: UseMultiIon
+    use ModMain,         ONLY: UseFieldLineThreads
+    use ModGeometry,     ONLY: far_field_BCs_BLK
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -929,10 +1009,11 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk
     real :: FaceGrad_D(MaxDim)
-    logical :: IsNewBlockHeatCond
+    logical :: IsNewBlockHeatCond, UseFirstOrderBc
     !--------------------------------------------------------------------------
 
     IsNewBlockHeatCond = .true.
+    UseFirstOrderBc = UseFieldLineThreads.and.far_field_BCs_BLK(iBlock)
 
     ! Calculate the electron thermal heat flux
     do iDim = 1, nDim
@@ -941,7 +1022,8 @@ contains
 
           ! Second-order accurate electron temperature gradient
           call get_face_gradient(iDim, i, j, k, iBlock, &
-               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D)
+               IsNewBlockHeatCond, StateImpl_VG, FaceGrad_D,&
+               UseFirstOrderBcIn=UseFirstOrderBC)
 
           FluxImpl_VFD(iTeImpl,i,j,k,iDim) = &
                -sum(HeatCond_DFDB(:,i,j,k,iDim,iBlock)*FaceGrad_D(:nDim))
