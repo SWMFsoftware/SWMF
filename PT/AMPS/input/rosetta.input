@@ -79,6 +79,10 @@ CouplerMode=ices !!off, ices, swmf
 #block ../exosphere.pl !process the data block with the setting of the exospehre model
   SPICE=off !off !on, of
   
+  define _TARGET_ _EUROPA_
+  
+  addPhysicalModelHeader=Rosetta.h
+  
   Source:UserDefined=on: \\ !on,off
     SourceProcessCode= Rosetta\\
     SourceRate=Rosetta::GetTotalProduction \\
