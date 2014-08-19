@@ -140,7 +140,8 @@ contains
   subroutine set_threads
     use ModMain,     ONLY: MaxBlock, Unused_B, body1_,&
          nDim, nJ, nK
-    use ModGeometry, ONLY: Xyz_DGB, IsBoundaryBlock_IB
+    use ModGeometry, ONLY: Xyz_DGB!, IsBoundaryBlock_IB
+    use ModParallel, ONLY: NeiLev, NOBLK
     integer:: iBlock
     !--------
     do iBlock = 1, MaxBlock
@@ -156,7 +157,7 @@ contains
        ! Check if the block is at the inner boundary
        ! Otherwise CYCLE
        !/
-       if(.not.IsBoundaryBlock_IB(body1_,iBlock))then
+       if(NeiLev(1,iBlock)/=NOBLK)then
           if(IsAllocatedThread_B(iBlock))&
                call deallocate_thread_b(iBlock)
           CYCLE
@@ -219,16 +220,16 @@ contains
     real, parameter :: rBody = 1.0
 
     !Length interval, !Heliocentric distance
-    real :: Ds, R
+    real :: Ds, R, RStart
     !coordinates, field vector and modulus  
-    real :: Xyz_D(nDim), B0_D(nDim), B0
+    real :: Xyz_D(3), B0_D(3), B0
     !Same stored for the starting point
-    real :: XyzStart_D(nDim), B0Start_D(nDim),  B0Start
+    real :: XyzStart_D(3), B0Start_D(3),  B0Start
     ! 1 for ourward directed field, -1 otherwise
     real ::SignBr
     !Coordinates and magnetic field in the midpoint 
     !within the framework of the Runge-Kutta scheme
-    real :: XyzAux_D(nDim), B0Aux_D(nDim)
+    real :: XyzAux_D(3), B0Aux_D(3)
     !Aux
     real :: ROld, Aux
     !\
@@ -240,10 +241,10 @@ contains
 
     integer, parameter:: R_ = 1
     real :: Dxyz_D(3) 
-    !logical :: DoTest=.false., DoTestMe=.false.
+    logical :: DoTest=.false., DoTestMe=.false.
     !-------------
-    !call set_oktest('set_threads_b', DoTest, DoTestMe)
-
+    call set_oktest('set_threads_b', DoTest, DoTestMe)
+ 
     cTolerance = cToleranceOrig*No2Si_V(UnitB_)
     !\
     ! Initialize threads
@@ -263,89 +264,97 @@ contains
        !\
        !First, take magnetic field in the ghost cell
        !/
-       XyzStart_D = Xyz_DGB(:, 0, j, k, iBlock)
+       !XyzStart_D = Xyz_DGB(:, 0, j, k, iBlock)
        !\
        ! Magnetic field in SI!
        !/
-       call get_magnetogram_field(&
-            XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
-       BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = B0Start_D  
+       !call get_magnetogram_field(&
+       !     XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       !BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = B0Start_D  
        !\
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
        !/
        XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)
-       BoundaryThreads_B(iBlock) % Xyz_DIII(&
-                  1:nDim, 0, j, k) = XyzStart_D
-       !\
-       ! Magnetic field in SI!
-       !/
-       call get_magnetogram_field(&
-            XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
-       !\
-       ! Calculate and save face field
-       !/
-       BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = &
-            (BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) + &
-            B0Start_D) * 0.5 * Si2No_V(UnitB_)
-
-       SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
-       BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
-
-       B0Start = sqrt( sum( B0Start_D**2 ) )
-       BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
-            B0Start*Si2No_V(UnitB_)
-
-       R = sqrt( sum( XyzStart_D**2 ) )
-       BoundaryThreads_B(iBlock) % R_III(0, j, k) = R
-            
-       Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
-       COARSEN: do
+       APPROACH:do
+          BoundaryThreads_B(iBlock) % Xyz_DIII(&
+               :, 0, j, k) = XyzStart_D
           !\
-          ! Set initial Ds or increase Ds, if previous trial fails
+          ! Magnetic field in SI!
           !/
-          Ds = Ds * 2
-          iPoint = 0
-          Xyz_D = XyzStart_D
-          B0 = B0Start
-          B0_D = B0Start_D
-          POINTS: do
-             iPoint = iPoint + 1
+          call get_magnetogram_field(&
+               XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+          !\
+          ! Calculate and save face field
+          !/
+          BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = &
+               B0Start_D  * Si2No_V(UnitB_) 
+          
+          SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
+          BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
+          
+          B0Start = sqrt( sum( B0Start_D**2 ) )
+          BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
+               B0Start*Si2No_V(UnitB_)
+          
+          RStart = sqrt( sum( XyzStart_D**2 ) )
+          BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
+          
+          Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
+          COARSEN: do
              !\
-             !If the number of gridpoints in the theads is too 
-             !high, coarsen the grid
+             ! Set initial Ds or increase Ds, if previous trial fails
              !/
-             if(iPoint > nPointInThreadMax)CYCLE COARSEN
-             !\
-             !For the previous point given are Xyz_D, B0_D, B0
-             !R is only used near the photospheric end.
-             !/ 
-             !Two stage Runge-Kutta
-             !1. Point at the half of length interval:
-             XyzAux_D = Xyz_D - 0.50*Ds*SignBr*B0_D/max(B0, cTolerance)
-             
-             !2. Magnetic field in this point:
-             call get_magnetogram_field(&
-                  XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
-             
-             !3. New grid point:
-             Xyz_D = Xyz_D - Ds*SignBr*B0Aux_D/max(&
-                  sqrt(sum(B0Aux_D**2)), cTolerance)
-             R = sqrt( sum( Xyz_D**2 ) )
-             if(R <= rBody)EXIT COARSEN
-             !\
-             ! Store a point
-             !/
-             BoundaryThreads_B(iBlock) % Xyz_DIII(&
-                  1:nDim, -iPoint, j, k) = Xyz_D
-             BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = R
-             call get_magnetogram_field(&
-                  Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
-             B0 = sqrt( sum( B0_D**2 ) )
-             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
-                  B0*Si2No_V(UnitB_)
-          end do POINTS
-       end do COARSEN
+             Ds = Ds * 2
+             iPoint = 0
+             Xyz_D = XyzStart_D
+             B0 = B0Start
+             B0_D = B0Start_D
+             POINTS: do
+                iPoint = iPoint + 1
+                !\
+                !If the number of gridpoints in the theads is too 
+                !high, coarsen the grid
+                !/
+                if(iPoint > nPointInThreadMax)CYCLE COARSEN
+                !\
+                !For the previous point given are Xyz_D, B0_D, B0
+                !R is only used near the photospheric end.
+                !/ 
+                !Two stage Runge-Kutta
+                !1. Point at the half of length interval:
+                XyzAux_D = Xyz_D - 0.50*Ds*SignBr*B0_D/max(B0, cTolerance)
+                
+                !2. Magnetic field in this point:
+                call get_magnetogram_field(&
+                     XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
+                
+                !3. New grid point:
+                Xyz_D = Xyz_D - Ds*SignBr*B0Aux_D/max(&
+                     sqrt(sum(B0Aux_D**2)), cTolerance)
+                R = sqrt( sum( Xyz_D**2 ) )
+                if(R <= rBody)EXIT APPROACH
+                if(R > RStart)then
+                   !\
+                   ! Take a point somewhat closer to the sun as a starting point
+                   !/
+                   XyzStart_D = XyzStart_D* (0.9 + 0.1*rBody/RStart)
+                   CYCLE APPROACH
+                end if
+                !\
+                ! Store a point
+                !/
+                BoundaryThreads_B(iBlock) % Xyz_DIII(&
+                     :, -iPoint, j, k) = Xyz_D
+                BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = R
+                call get_magnetogram_field(&
+                     Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+                B0 = sqrt( sum( B0_D**2 ) )
+                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
+                     B0*Si2No_V(UnitB_)
+             end do POINTS
+          end do COARSEN
+       end do APPROACH
        !Calculate more accurately the intersection point
        !with the photosphere surface
        ROld = BoundaryThreads_B(iBlock) % R_III(1-iPoint, j, k)
@@ -356,7 +365,7 @@ contains
        ! Store the last point
        !/
        BoundaryThreads_B(iBlock) % Xyz_DIII(&
-            1:nDim, -iPoint, j, k) = Xyz_D
+            :, -iPoint, j, k) = Xyz_D
        BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = RBody
        call get_magnetogram_field(&
             Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
@@ -404,28 +413,28 @@ contains
             - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
             
     end do; end do
-    !if(DoTestMe.and.iBlock==BlkTest)then
-    !   write(*,'(a,3es18.10)')'Thread starting at the point  ',&
-    !        Xyz_DGB(:,1,jTest,kTest,iBlock)
-    !   write(*,'(a,3es18.10)')'Derivative of the Grad Te over ghost Te  ',&
-    !        BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_D(:,jTest,kTest)
-    !   write(*,'(a)')'x y z B R Length BLength Length2SqrtB'
-    !   do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
-    !      write(*,'(8es18.10)')&
-    !           BoundaryThreads_B(iBlock) % Xyz_DIII(:,&
-    !           iPoint, jTest,kTest),&
-    !           BoundaryThreads_B(iBlock) % B_III(&
-    !           iPoint, jTest,kTest),&
-    !           BoundaryThreads_B(iBlock) % R_III(&
-    !           iPoint, jTest,kTest),&
-    !           BoundaryThreads_B(iBlock) % Length_III(&
-    !           iPoint, jTest, kTest),&
-    !           BoundaryThreads_B(iBlock) % BLength_III(&
-    !           iPoint, jTest, kTest),&
-    !           BoundaryThreads_B(iBlock) % Length2SqrtB_III(&
-    !           iPoint, jTest, kTest)
-    !   end do
-    !end if
+    if(DoTestMe.and.iBlock==BlkTest)then
+       write(*,'(a,3es18.10)')'Thread starting at the point  ',&
+            Xyz_DGB(:,1,jTest,kTest,iBlock)
+       write(*,'(a,3es18.10)')'Derivative of the Grad Te over ghost Te  ',&
+            BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,jTest,kTest)
+       write(*,'(a)')'x y z B R Length BLength Length2SqrtB'
+       do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
+          write(*,'(8es18.10)')&
+               BoundaryThreads_B(iBlock) % Xyz_DIII(:,&
+               iPoint, jTest,kTest),&
+               BoundaryThreads_B(iBlock) % B_III(&
+               iPoint, jTest,kTest),&
+               BoundaryThreads_B(iBlock) % R_III(&
+               iPoint, jTest,kTest),&
+               BoundaryThreads_B(iBlock) % Length_III(&
+               iPoint, jTest, kTest),&
+               BoundaryThreads_B(iBlock) % BLength_III(&
+               iPoint, jTest, kTest),&
+               BoundaryThreads_B(iBlock) % Length2SqrtB_III(&
+               iPoint, jTest, kTest)
+       end do
+    end if
   end subroutine set_threads_b
   !=========================================================================
   subroutine check_tr_table(TypeFileIn)
