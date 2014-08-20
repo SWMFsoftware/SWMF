@@ -1243,30 +1243,30 @@ of the polar boundary where the outflow is defined.
 <command name="CPCPBOUNDARY">
 	<parameter name="UseCpcpBc" type="logical" default="F"/>
 	<if expr="$UseCpcpBc">
-		<parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
-		<parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
+	    <parameter name="Rho0Cpcp" type="real" min="0" default="18"/>
+	    <parameter name="RhoPerCpcp" type="real" min="0" default="0.2"/>
 	</if>
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
 28.0                    Rho0Cpcp   [amu/cc]
-0.1                     RhoPerCpcp [amu/cc / keV]
+0.1                     RhoPerCpcp [amu/cc / kV]
 
 This command only works for single fluid MHD. The inner boundary type has to
 be "ionosphere" and the GM and IE components have to be coupled together.
 
-If UseCpcpBC is true, the density at the inner boundary will depend on 
+If UseCpcpBc is true, the density at the inner boundary will depend on 
 the cross polar cap potential (CPCP) in a linear fashion:
 
 RhoBc = Rho0Cpcp + RhoPerCpcp * Cpcp
 
 where RhoBc and Rho0Cpcp are in I/O units (typically amu/cc), the 
-Cpcp is given in [keV], and the RhoPerCpcp factor is in density units per keV. 
+Cpcp is given in [kV], and the RhoPerCpcp factor is in density units per kV. 
 The Cpcp is the average of the northern and southern CPCPs. 
-The example shows some reasonable values. For CPCP = 0 keV RhoBc = 18 amu/cc,
-while for CPCP = 400 keV RhoBc = 98 amu/cc.
+The example shows some reasonable values. For CPCP = 0 kV RhoBc = 28 amu/cc,
+while for CPCP = 400 kV RhoBc = 68 amu/cc.
 
 By default the density at the inner boundary is determined by the body 
-density given in the #BODY command.
+density given in the #BODY (same as #MAGNETOSPHERE) command.
 </command>
 
 <command name="IMCOUPLINGSMOOTH">
