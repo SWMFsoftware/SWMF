@@ -153,10 +153,24 @@ namespace CutCell {
     }
   };
 
+
+  class cTriangleFace;
+
+  class cTriangleEdge {
+    cNASTRANnode *node[2];
+    cTriangleFace *face[2];
+
+    cTriangleEdge() {
+      for (int i=0;i<2;i++) node[i]=NULL,face[i]=NULL;
+    }
+  };
+
   class cTriangleFace {
   public:
   //  list<cCutBlockNode>::iterator node[3];
     cNASTRANnode *node[3];
+    list<cTriangleEdge>::iterator edge[3];
+
 
     double ExternalNormal[3],SurfaceArea;
     int attribute;
@@ -172,7 +186,7 @@ namespace CutCell {
     unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
 
     void GetCenterPosition(double *x) {
-      for (int idim=0;idim<3;idim++) x[idim]=(x0Face[idim]+x1Face[idim]+x2Face[idim])/3.0;
+      for (int idim=0;idim<3;idim++) x[idim]=x0Face[idim]+x1Face[idim]/2.0+x2Face[idim]/4.0;
     }
 
     void GetRandomPosition(double *x,double EPS=0.0) {
@@ -480,10 +494,69 @@ namespace CutCell {
   extern cNASTRANnode *BoundaryTriangleNodes;
   extern int nBoundaryTriangleNodes;
 
+  extern list<cTriangleEdge> BoundaryTriangleEdges;
+
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
+  void PrintSurfaceTriangulationMesh(const char *fname);
+
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
+  void ReadNastranSurfaceMeshLongFormat(const char *fname);
+
   bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
+
+
+  //cderive the connectivity list
+  class cConnectivityListTriangleFace;
+  class cConnectivityListTriangleEdge;
+  class cConnectivityListTriangleNode;
+  class cConnectivityListTriangleEdgeDescriptor;
+
+  class cConnectivityListTriangleNode {
+  public:
+    cNASTRANnode *node;
+    list<cConnectivityListTriangleEdgeDescriptor>::iterator ballEdgeList;
+  };
+
+  class cConnectivityListTriangleEdgeDescriptor {
+  public:
+    list<cConnectivityListTriangleEdge>::iterator edge;
+    list<cConnectivityListTriangleEdgeDescriptor>::iterator next;
+  };
+
+  class cConnectivityListTriangleEdge {
+  public:
+    list<cConnectivityListTriangleFace>::iterator face[2];
+    list<cConnectivityListTriangleNode>::iterator node[2];
+
+    void GetMiddleNode(double *x) {
+      for (int i=0;i<3;i++) x[i]=0.5*(node[0]->node->x[i]+node[1]->node->x[i]);
+    }
+
+    double GetLength() {
+      double s=0.0;
+
+      for (int i=0;i<3;i++) s+=pow(node[0]->node->x[i]+node[1]->node->x[i],2);
+      return sqrt(s);
+    }
+  };
+
+  class cConnectivityListTriangleFace {
+  public:
+    list<cConnectivityListTriangleFace>::iterator neib[3];
+    list<cConnectivityListTriangleEdge>::iterator edge[3];
+    list<cConnectivityListTriangleNode>::iterator node[3];
+
+    double GetLength() {
+      double s=0.0;
+
+      for (int i=0;i<3;i++) s+=edge[i]->GetLength();
+      return s/3.0;
+    }
+
+  };
+
+  void ReconstructConnectivityList(list<cConnectivityListTriangleNode>& nodes,list<cConnectivityListTriangleEdge>& edges,list<cConnectivityListTriangleFace>& faces,list<cConnectivityListTriangleEdgeDescriptor>& RecoveredEdgeDescriptorList);
 
   //refine the smooth the surface mesh
   class cLocalTriangle;
@@ -527,6 +600,7 @@ namespace CutCell {
   };
 
   void SmoothRefine(double SmoothingCoefficient);
+  void SmoothMeshResolution(double MaxNeibSizeRatio);
 
 
   class cTriangleFaceDescriptor {
