@@ -117,13 +117,14 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
 }
 
 
-void CutCell::PrintSurfaceTriangulationMesh(const char *fname, double *x) {
+void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
   long int nface,nnode,pnode;
 
   class cTempNodeData {
   public:
     int shadow_attribute,faceat;
     long int nface;
+    double cos_illumination_angle;
   };
 
   cTempNodeData *TempNodeData=new cTempNodeData[nBoundaryTriangleNodes];
@@ -134,6 +135,7 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname, double *x) {
 
       TempNodeData[nnode].shadow_attribute=BoundaryTriangleFaces[nface].pic__shadow_attribute;
       TempNodeData[nnode].faceat=BoundaryTriangleFaces[nface].attribute;
+      TempNodeData[nnode].cos_illumination_angle=BoundaryTriangleFaces[nface].pic__cosine_illumination_angle;
       TempNodeData[nnode].nface=nface;
 
       if ((nnode<0)||(nnode>=nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
@@ -143,32 +145,12 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname, double *x) {
 
   //print the mesh
   FILE *fout=fopen(fname,"w");
-  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"faceat\", \"nface\"");
-
-  if (x!=NULL) fprintf(fout,"\"cos(External Norm and Direction to point l)\"");
-
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"cos(face illumination angle)\", \"faceat\", \"nface\"");
   fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
 
   for (nnode=0;nnode<nBoundaryTriangleNodes;nnode++) {
-    fprintf(fout,"%e %e %e %i %i %ld",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].faceat,TempNodeData[nnode].nface);
-
-    if (x!=NULL) {
-      //get the cosine of the angle between the center of the face and teh direction to the point x
-      double xCenter[3],l=0.0,c=0.0,t;
-
-      BoundaryTriangleFaces[TempNodeData[nnode].nface].GetCenterPosition(xCenter);
-
-      for (int idim=0;idim<3;idim++) {
-        t=x[idim]-xCenter[idim];
-
-        l+=t*t;
-        c+=t*BoundaryTriangleFaces[TempNodeData[nnode].nface].ExternalNormal[idim];
-      }
-
-      fprintf(fout," %e",c/sqrt(l));
-    }
-
-    fprintf(fout,"\n");
+    fprintf(fout,"%e %e %e %i %e %i %ld\n",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],
+        TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].cos_illumination_angle,TempNodeData[nnode].faceat,TempNodeData[nnode].nface);
   }
 
   for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
