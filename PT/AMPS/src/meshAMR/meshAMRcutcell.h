@@ -186,7 +186,7 @@ namespace CutCell {
     unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
 
     void GetCenterPosition(double *x) {
-      for (int idim=0;idim<3;idim++) x[idim]=x0Face[idim]+x1Face[idim]/2.0+x2Face[idim]/4.0;
+      for (int idim=0;idim<3;idim++) x[idim]=(2.0*x0Face[idim]+x1Face[idim]+x2Face[idim])/4.0;
     }
 
     void GetRandomPosition(double *x,double EPS=0.0) {
@@ -497,10 +497,12 @@ namespace CutCell {
   extern list<cTriangleEdge> BoundaryTriangleEdges;
 
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
-  void PrintSurfaceTriangulationMesh(const char *fname);
+  void PrintSurfaceTriangulationMesh(const char *fname, double *x=NULL);
 
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname);
+
+  void GetSurfaceSizeLimits(double* xmin,double *xmax);
 
   bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
   bool GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,double *xIntersection,double &tIntersection,cTriangleFace* &FaceIntersection,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS=0.0);
