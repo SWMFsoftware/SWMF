@@ -384,12 +384,23 @@ int main(int argc,char **argv) {
 
 
   //load the NASTRAN mesh
-  CutCell::ReadNastranSurfaceMeshLongFormat("rosetta.surface.reduced.nas",xmin,xmax,1.0E-8);
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
+  PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
+
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
-    CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
+  }
+
+//  PIC::Mesh::IrregularSurface::SmoothRefine(0.0);
+
+  if (PIC::ThisThread==0) {
+    char fname[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
 
@@ -441,15 +452,34 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.GetMeshTreeStatistics();
 
 
+  //init the external normals of the cut faces
+  double xLightSource[3]={6000.0e3,0,0.0};
+
+  if (PIC::ThisThread==0) {
+    char fname[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
+  }
+
+  PIC::Mesh::IrregularSurface::InitExternalNormalVector();
+
+  if (PIC::ThisThread==0) {
+    char fname[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
+  }
+
   //test the shadow procedure
-  double xLightSource[3]={200.0,0.0,100.0}; //{6000.0e3,1.5e6,0.0};
+
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
 
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
-    CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
   }
 
   //init the volume of the cells'
