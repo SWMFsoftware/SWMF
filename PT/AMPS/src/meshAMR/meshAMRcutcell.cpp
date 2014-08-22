@@ -33,6 +33,8 @@ int CutCell::nBoundaryTriangleFaces=0;
 CutCell::cNASTRANnode *CutCell::BoundaryTriangleNodes=NULL;
 int CutCell::nBoundaryTriangleNodes=0;
 
+list<CutCell::cTriangleEdge> CutCell::BoundaryTriangleEdges;
+
 cAMRstack<CutCell::cTriangleFaceDescriptor> CutCell::BoundaryTriangleFaceDescriptor;
 
 /*struct cNodeCoordinates {
@@ -113,6 +115,70 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
   fclose(fout);
   delete [] FaceNodeConnection;
 }
+
+
+void CutCell::PrintSurfaceTriangulationMesh(const char *fname, double *x) {
+  long int nface,nnode,pnode;
+
+  class cTempNodeData {
+  public:
+    int shadow_attribute,faceat;
+    long int nface;
+  };
+
+  cTempNodeData *TempNodeData=new cTempNodeData[nBoundaryTriangleNodes];
+
+  for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
+    for (pnode=0;pnode<3;pnode++) {
+      nnode=BoundaryTriangleFaces[nface].node[pnode]-BoundaryTriangleNodes;
+
+      TempNodeData[nnode].shadow_attribute=BoundaryTriangleFaces[nface].pic__shadow_attribute;
+      TempNodeData[nnode].faceat=BoundaryTriangleFaces[nface].attribute;
+      TempNodeData[nnode].nface=nface;
+
+      if ((nnode<0)||(nnode>=nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
+    }
+  }
+
+
+  //print the mesh
+  FILE *fout=fopen(fname,"w");
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Surface shadow attribute\", \"faceat\", \"nface\"");
+
+  if (x!=NULL) fprintf(fout,"\"cos(External Norm and Direction to point l)\"");
+
+  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
+
+  for (nnode=0;nnode<nBoundaryTriangleNodes;nnode++) {
+    fprintf(fout,"%e %e %e %i %i %ld",BoundaryTriangleNodes[nnode].x[0],BoundaryTriangleNodes[nnode].x[1],BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].shadow_attribute,TempNodeData[nnode].faceat,TempNodeData[nnode].nface);
+
+    if (x!=NULL) {
+      //get the cosine of the angle between the center of the face and teh direction to the point x
+      double xCenter[3],l=0.0,c=0.0,t;
+
+      BoundaryTriangleFaces[TempNodeData[nnode].nface].GetCenterPosition(xCenter);
+
+      for (int idim=0;idim<3;idim++) {
+        t=x[idim]-xCenter[idim];
+
+        l+=t*t;
+        c+=t*BoundaryTriangleFaces[TempNodeData[nnode].nface].ExternalNormal[idim];
+      }
+
+      fprintf(fout," %e",c/sqrt(l));
+    }
+
+    fprintf(fout,"\n");
+  }
+
+  for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
+    fprintf(fout,"%ld %ld %ld\n",1+(long int)(BoundaryTriangleFaces[nface].node[0]-BoundaryTriangleNodes),1+(long int)(BoundaryTriangleFaces[nface].node[1]-BoundaryTriangleNodes),1+(long int)(BoundaryTriangleFaces[nface].node[2]-BoundaryTriangleNodes));
+  }
+
+  fclose(fout);
+  delete [] TempNodeData;
+}
+
 
 /*struct cNASTRANnode {
   double x[3];
@@ -386,6 +452,118 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfac
   }
 
 }
+
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname) {
+  CiFileOperations ifile;
+  char str[10000],dat[10000],*endptr;
+  long int i,j,idim,nnodes=0,nfaces=0;
+
+  if (BoundaryTriangleFaces!=NULL) exit(__LINE__,__FILE__,"Error: redifinition of the surface triangulation array");
+
+
+  cNASTRANnode node;
+  vector<cNASTRANnode> nodes;
+
+  cNASTRANface face;
+  vector<cNASTRANface> faces;
+
+  ifile.openfile(fname);
+  ifile.GetInputStr(str,sizeof(str));
+
+  //read nodes from the file
+
+  ifile.GetInputStr(str,sizeof(str));
+  ifile.CutInputStr(dat,str);
+
+  //load the nodes
+  while (strcmp("GRID*",dat)==0) {
+    ifile.CutInputStr(dat,str);
+    node.id=strtol(dat,&endptr,10);
+
+    ifile.CutInputStr(dat,str);
+    ifile.CutInputStr(dat,str);
+    node.x[0]=strtod(dat,&endptr);
+
+    ifile.CutInputStr(dat,str);
+    node.x[1]=strtod(dat,&endptr);
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+
+    ifile.CutInputStr(dat,str);
+    node.x[2]=strtod(dat,&endptr);
+
+    nodes.push_back(node);
+    nnodes++;
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+  //find the beginig for the face information
+  while (strcmp("CBAR",dat)==0) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+  //read the face information
+  while (strcmp("CTRIA3",dat)==0) {
+    ifile.CutInputStr(dat,str);
+
+    ifile.CutInputStr(dat,str);
+    face.faceat=strtol(dat,&endptr,10);
+
+    for (idim=0;idim<3;idim++) {
+      ifile.CutInputStr(dat,str);
+      face.node[idim]=strtol(dat,&endptr,10)-1;
+    }
+
+    nfaces++;
+    faces.push_back(face);
+
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(dat,str);
+  }
+
+
+
+  //create the surface triangulation array
+  long int nd,nfc,id;
+
+  nBoundaryTriangleFaces=nfaces;
+  BoundaryTriangleFaces=new cTriangleFace[nfaces];
+
+  nBoundaryTriangleNodes=nnodes;
+  BoundaryTriangleNodes=new cNASTRANnode[nnodes];
+
+  //copy nodes and faces into the array
+  for (nd=0;nd<nnodes;nd++) {
+    BoundaryTriangleNodes[nd]=nodes[nd];
+    for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+  }
+
+  for (nfc=0;nfc<nfaces;nfc++) {
+    BoundaryTriangleFaces[nfc].SetFaceNodes(nodes[faces[nfc].node[0]].x,nodes[faces[nfc].node[1]].x,nodes[faces[nfc].node[2]].x);
+
+    for (int idim=0;idim<3;idim++) BoundaryTriangleFaces[nfc].node[idim]=BoundaryTriangleNodes+faces[nfc].node[idim];
+    BoundaryTriangleFaces[nfc].attribute=faces[nfc].faceat;
+  }
+
+}
+
+//calcualte the size limit of the surface mesh
+void CutCell::GetSurfaceSizeLimits(double* xmin,double *xmax) {
+  int idim;
+  long int nnode;
+
+  for (idim=0;idim<3;idim++) xmin[idim]=BoundaryTriangleNodes->x[idim],xmax[idim]=BoundaryTriangleNodes->x[idim];
+
+  for (nnode=1;nnode<nBoundaryTriangleNodes;nnode++) for (idim=0;idim<3;idim++) {
+    if (xmin[idim]>BoundaryTriangleNodes[nnode].x[idim]) xmin[idim]=BoundaryTriangleNodes[nnode].x[idim];
+    if (xmax[idim]<BoundaryTriangleNodes[nnode].x[idim]) xmax[idim]=BoundaryTriangleNodes[nnode].x[idim];
+  }
+}
+
 
 //check weather a point (x0) in insed the domain:
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain
@@ -851,9 +1029,135 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
   return GetRemainedBlockVolume(xCellMin,xCellMax,EPS,RelativeError,BlockTriangulationSet,maxIntegrationLevel,0);
 }
 
+void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangleNode>& nodes,list<CutCell::cConnectivityListTriangleEdge>& edges,list<CutCell::cConnectivityListTriangleFace>& faces,list<cConnectivityListTriangleEdgeDescriptor>& RecoveredEdgeDescriptorList) {
+  long int nd,nedge,nface;
+  int idim;
+  list<cConnectivityListTriangleNode>::iterator tempNodeIteratorVector[nBoundaryTriangleNodes];
+
+  //init the list of the nodes
+  for (nd=0;nd<nBoundaryTriangleNodes;nd++) {
+    cConnectivityListTriangleNode t;
+
+    t.node=BoundaryTriangleNodes+nd;
+    t.ballEdgeList=RecoveredEdgeDescriptorList.end();
+
+    nodes.push_front(t);
+    tempNodeIteratorVector[nd]=nodes.begin();
+  }
+
+  //init the list of the faces
+  for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
+    cConnectivityListTriangleFace t;
+
+    for (idim=0;idim<3;idim++) {
+      t.edge[idim]=edges.end();
+      t.node[idim]=tempNodeIteratorVector[(long int)(BoundaryTriangleFaces[nface].node[idim]-BoundaryTriangleNodes)];
+    }
+
+    for (int i=0;i<2;i++) t.neib[i]=faces.end();
+    faces.push_back(t);
+  }
+
+  //create the connectivity list
+  list <cConnectivityListTriangleFace>::iterator f;
+
+  for (nface=0,f=faces.begin();nface<nBoundaryTriangleFaces;f++,nface++) {
+    int pedge,pnode,cnt;
+
+    for (pedge=0;pedge<3;pedge++) {
+      bool flag;
+      list<cConnectivityListTriangleEdgeDescriptor>::iterator ptr;
+      list<cConnectivityListTriangleNode>::iterator n[2];
+
+      //determine the nodes of the prospective edge
+      for (cnt=0,pnode=0;pnode<3;pnode++) if (pnode!=pedge) n[cnt++]=f->node[pnode];
+
+      //determine whether such edge already exists
+      for (flag=false,ptr=n[0]->ballEdgeList;ptr!=RecoveredEdgeDescriptorList.end();ptr=ptr->next) {
+        int cnt=0,i,j;
+        list<cConnectivityListTriangleNode>::iterator ballEdgeNode[2];
+        list<cConnectivityListTriangleEdge>::iterator ballEdge;
+
+        ballEdge=ptr->edge;
+
+        ballEdgeNode[0]=ballEdge->node[0];
+        ballEdgeNode[1]=ballEdge->node[1];
+
+        if ( ((n[0]==ballEdgeNode[0])&&(n[1]==ballEdgeNode[1])) || ((n[0]==ballEdgeNode[1])&&(n[1]==ballEdgeNode[0])) ) {
+          //the edge has been found
+          f->edge[pedge]=ballEdge;
+          f->neib[pedge]=ballEdge->face[0];
+          ballEdge->face[1]=f;
+
+          //connect the neibours
+          for (idim=0;idim<3;idim++) if (ballEdge->face[0]->edge[idim]==ballEdge) {
+            ballEdge->face[0]->neib[idim]=f;
+            break;
+          }
+
+          flag=true;
+          break;
+        }
+      }
+
+      if (flag==false) {
+        //the edge has not beed detected -> generate a new edge
+        cConnectivityListTriangleEdge e;
+        cConnectivityListTriangleEdgeDescriptor d;
+        list<cConnectivityListTriangleEdgeDescriptor>::iterator ptr;
+
+        e.node[0]=n[0],e.node[1]=n[1],e.face[1]=faces.end();
+        e.face[0]=f;
+
+        edges.push_front(e);
+
+        f->edge[pedge]=edges.begin();
+
+        //save the descriptor
+        d.edge=edges.begin();
+
+        RecoveredEdgeDescriptorList.push_front(d);
+        ptr=RecoveredEdgeDescriptorList.begin();
+        ptr->next=n[0]->ballEdgeList;
+        n[0]->ballEdgeList=ptr;
+
+        RecoveredEdgeDescriptorList.push_front(d);
+        ptr=RecoveredEdgeDescriptorList.begin();
+        ptr->next=n[1]->ballEdgeList;
+        n[1]->ballEdgeList=ptr;
+      }
+
+    }
+  }
+}
+
+
+//refin a cell if the size ratio between the neibours exeeds 'MaxNeibSizeRatio'
+void CutCell::SmoothMeshResolution(double MaxNeibSizeRatio) {
+  list<cConnectivityListTriangleNode> nodes;
+  list<cConnectivityListTriangleEdge> edges;
+  list<cConnectivityListTriangleFace> faces;
+  list<cConnectivityListTriangleEdgeDescriptor> RecoveredEdgeDescriptorList;
+
+  //reconstruct the connectivity list
+  ReconstructConnectivityList(nodes,edges,faces,RecoveredEdgeDescriptorList);
+
+  //determine the faces that need to be deleted
+  list<list<cConnectivityListTriangleFace>::iterator> RefineFaceList;
+
+
+
+}
+
+
 
 void CutCell::SmoothRefine(double SmoothingCoefficient) {
   int nd,cl,idim;
+
+
+
+
+
 
   vector<cLocalNode> LocalNode;
   vector<cLocalEdge> LocalEdge;
