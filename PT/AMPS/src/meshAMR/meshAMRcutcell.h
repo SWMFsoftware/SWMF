@@ -184,6 +184,7 @@ namespace CutCell {
 
     //the variables used by AMPS to determine the surface elements that are in the shadow. The values are modified by pic__ray_tracing.cpp
     unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
+    double pic__cosine_illumination_angle;
 
     void GetCenterPosition(double *x) {
       for (int idim=0;idim<3;idim++) x[idim]=(2.0*x0Face[idim]+x1Face[idim]+x2Face[idim])/4.0;
@@ -471,6 +472,7 @@ namespace CutCell {
       for (int i=0;i<3;i++) ExternalNormal[i]=0.0;
 
       pic__shadow_attribute=0,pic__RayTracing_TestDirectAccessCounterValue=0;
+      pic__cosine_illumination_angle=0.0;
     }
 
     inline double CharacteristicSize() {
@@ -497,7 +499,7 @@ namespace CutCell {
   extern list<cTriangleEdge> BoundaryTriangleEdges;
 
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
-  void PrintSurfaceTriangulationMesh(const char *fname, double *x=NULL);
+  void PrintSurfaceTriangulationMesh(const char *fname);
 
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname);
