@@ -144,7 +144,7 @@ ascii			TypeFile
 #AMRREGION
 InnerShell		NameRegion
 box_gen			TypeRegion
-1.1			Radius1
+1.05			Radius1
 0.0
 -70.0
 1.7			Radius2
@@ -190,8 +190,13 @@ T			UseNonConservative
 #MESSAGEPASS
 all			TypeMessagePass
 
-#RESCHANGE
+#TVDRESCHANGE
 T			UseAccurateResChange
+
+#LIMITER
+T			UseLogRhoLimiter
+F                       UseLogPLimiter
+F                       UseScalarToRhoRatioLtd
 
 #SAVELOGFILE
 T			DoSaveLogfile

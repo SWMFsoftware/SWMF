@@ -159,14 +159,14 @@ spherical_lnr
  100.0			zMax
 
 #LIMITRADIUS
-1.1			rMin
+1.05			rMin
 24.0			rMax
 
 ----------------------------------------------------
 #AMRREGION
 InnerShell		NameRegion
 box_gen			TypeRegion
-1.1			Radius1
+1.05			Radius1
 0.0
 -70.0
 1.7			Radius2
@@ -213,8 +213,13 @@ T			UseNonConservative
 #MESSAGEPASS
 all			TypeMessagePass
 
-#RESCHANGE
-T			UseAccurateResChange
+#TVDRESCHANGE
+T			UseTVDResChange
+
+#LIMITER
+T			UseLogRhoLimiter
+F                       UseLogPLimiter
+F                       UseScalarToRhoRatioLtd
 
 #SAVELOGFILE
 T			DoSaveLogfile
