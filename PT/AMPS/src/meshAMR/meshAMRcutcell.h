@@ -42,10 +42,16 @@ namespace CutCell {
     list<cNodeCoordinates>::iterator node[3];
   };
 
-  struct cNASTRANnode {
+  class cNASTRANnode {
+  public:
     double x[3];
     double BallAveragedExternalNormal[3];
     int id;
+
+    cNASTRANnode() {
+      id=-1;
+      for (int i=0;i<3;i++) BallAveragedExternalNormal[i]=0.0,x[i]=0.0;
+    }
   };
 
   struct cNASTRANface {
@@ -515,11 +521,20 @@ namespace CutCell {
   class cConnectivityListTriangleEdge;
   class cConnectivityListTriangleNode;
   class cConnectivityListTriangleEdgeDescriptor;
+  class cConnectivityListTriangleFaceDescriptor;
 
   class cConnectivityListTriangleNode {
   public:
     cNASTRANnode *node;
     list<cConnectivityListTriangleEdgeDescriptor>::iterator ballEdgeList;
+    list<cConnectivityListTriangleFaceDescriptor>::iterator ball;
+    double xSurfaceTriangulationSmooth[3];
+  };
+
+  class cConnectivityListTriangleFaceDescriptor {
+  public:
+    list<cConnectivityListTriangleFace>::iterator face;
+    list<cConnectivityListTriangleFaceDescriptor>::iterator next;
   };
 
   class cConnectivityListTriangleEdgeDescriptor {
@@ -531,7 +546,7 @@ namespace CutCell {
   class cConnectivityListTriangleEdge {
   public:
     list<cConnectivityListTriangleFace>::iterator face[2];
-    list<cConnectivityListTriangleNode>::iterator node[2];
+    list<cConnectivityListTriangleNode>::iterator node[2],MiddleNode;
 
     void GetMiddleNode(double *x) {
       for (int i=0;i<3;i++) x[i]=0.5*(node[0]->node->x[i]+node[1]->node->x[i]);
@@ -551,11 +566,18 @@ namespace CutCell {
     list<cConnectivityListTriangleEdge>::iterator edge[3];
     list<cConnectivityListTriangleNode>::iterator node[3];
 
+    list<cConnectivityListTriangleFace>::iterator upFace; //point to the 'parent' triangular face is a case if it was split
+    cTriangleFace *Triangle; //the pointer to the approptiate triangle in the surface triangulation
+
     double GetLength() {
       double s=0.0;
 
       for (int i=0;i<3;i++) s+=edge[i]->GetLength();
       return s/3.0;
+    }
+
+    cConnectivityListTriangleFace() {
+      Triangle=NULL;
     }
 
   };

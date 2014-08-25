@@ -120,6 +120,10 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
 void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
   long int nface,nnode,pnode;
 
+  int rank;
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+  if (rank!=0) return;
+
   class cTempNodeData {
   public:
     int shadow_attribute,faceat;
@@ -1037,6 +1041,8 @@ void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangl
     }
 
     for (int i=0;i<2;i++) t.neib[i]=faces.end();
+
+    t.Triangle=BoundaryTriangleFaces+nface;
     faces.push_back(t);
   }
 
@@ -1134,187 +1140,172 @@ void CutCell::SmoothMeshResolution(double MaxNeibSizeRatio) {
 
 
 void CutCell::SmoothRefine(double SmoothingCoefficient) {
-  int nd,cl,idim;
+  long int nd,cl,idim;
 
+  list<cConnectivityListTriangleNode> OrigonalNodes;
+  list<cConnectivityListTriangleEdge> OriginalEdges;
+  list<cConnectivityListTriangleFace> OriginalTriangleFaces;
+  list<cConnectivityListTriangleEdgeDescriptor> OriginalRecoveredEdgeDescriptorList;
 
+  ReconstructConnectivityList(OrigonalNodes,OriginalEdges,OriginalTriangleFaces,OriginalRecoveredEdgeDescriptorList);
 
+  //refine the triangle edges
+  cNASTRANnode NewEdgeMiddleNode[OriginalEdges.size()];
+  list<cConnectivityListTriangleNode> NewNodes;
+  list<cConnectivityListTriangleEdge>::iterator edge;
+  long int cnt;
 
+  for (cnt=0,edge=OriginalEdges.begin();edge!=OriginalEdges.end();cnt++,edge++) {
+    cConnectivityListTriangleNode n;
 
+    edge->GetMiddleNode(NewEdgeMiddleNode[cnt].x);
+    n.node=NewEdgeMiddleNode+cnt;
 
-  vector<cLocalNode> LocalNode;
-  vector<cLocalEdge> LocalEdge;
-  vector<cLocalTriangle> LocalTriangle,refinedLocalTriangle;
-
-  //estimate the needed capacity of the vectors
-  int EdgeNumber=(int)(1.5*3.0*nBoundaryTriangleFaces/2.0); //reserve 50% more just in case.....
-
-  LocalNode.reserve(nBoundaryTriangleNodes+EdgeNumber);
-  LocalEdge.reserve(EdgeNumber);
-  LocalTriangle.reserve(nBoundaryTriangleFaces);
-  refinedLocalTriangle.reserve(4*nBoundaryTriangleFaces);
-
-  //recover the original triangulation
-  for (nd=0;nd<nBoundaryTriangleNodes;nd++) {
-    cLocalNode t;
-
-    t.OriginalNode=BoundaryTriangleNodes+nd;
-    t.OriginalNodeID=BoundaryTriangleNodes[nd].id;
-    memcpy(t.x,BoundaryTriangleNodes[nd].x,3*sizeof(double));
-
-    LocalNode.push_back(t);
+    NewNodes.push_front(n);
+    edge->MiddleNode=NewNodes.begin();
   }
 
-  for (cl=0;cl<nBoundaryTriangleFaces;cl++) {
-    cLocalTriangle t;
-    cLocalEdge edge;
+  //refine the triangles
+  list<cConnectivityListTriangleFace>::iterator tr;
+  list<cConnectivityListTriangleFace> NewTriangleFaces;
 
-    //get the nodes
-    for (idim=0;idim<3;idim++) {
-      nd=BoundaryTriangleFaces[cl].node[idim]-BoundaryTriangleNodes;
-      t.node[idim]=LocalNode.begin()+nd;
-    }
+  for (tr=OriginalTriangleFaces.begin();tr!=OriginalTriangleFaces.end();tr++) {
+    cConnectivityListTriangleFace newTriangle;
 
-    //get the edges
-    for (idim=0;idim<3;idim++) {
-      nd=idim+1;
-      if (nd==3) nd=0;
-      edge.CornerNode[0]=t.node[nd];
-
-      nd+=1;
-      if (nd==3) nd=0;
-      edge.CornerNode[1]=t.node[nd];
-
-      //check if such edge already exists
-      bool foundflag=false;
-
-      for (vector<cLocalEdge>::iterator e=LocalEdge.begin();e!=LocalEdge.end();e++) {
-        if ( ((e->CornerNode[0]==edge.CornerNode[0])&&(e->CornerNode[1]==edge.CornerNode[1])) || ((e->CornerNode[1]==edge.CornerNode[0])&&(e->CornerNode[0]==edge.CornerNode[1])) ) {
-          //the edge exists:
-          t.edge[idim]=e;
-          foundflag=true;
-          break;
-        }
-      }
-
-      if (foundflag==false) {
-        //create new edge
-        cLocalNode newNode;
-
-        //get the middle point
-        for (int i=0;i<3;i++) newNode.x[i]=0.5*(edge.CornerNode[0]->x[i]+edge.CornerNode[1]->x[i]);
-
-        newNode.OriginalNodeID=edge.CornerNode[0]->OriginalNodeID;
-        LocalNode.push_back(newNode);
-        edge.MiddleNode=LocalNode.begin()+LocalNode.size()-1;
-
-        LocalEdge.push_back(edge);
-        t.edge[idim]=LocalEdge.begin()+LocalEdge.size()-1;
-      }
-    }
-
-    //add triangle to the list
-    t.TriangleFace=BoundaryTriangleFaces+cl;
-    LocalTriangle.push_back(t);
-  }
-
-  //refine cells
-  for (vector<cLocalTriangle>::iterator tr=LocalTriangle.begin();tr!=LocalTriangle.end();tr++) {
-    cLocalTriangle newTriangle;
-
-    newTriangle.upTriangle=tr;
+    newTriangle.upFace=tr;
 
     //triangle: nd0,e2,e1
     newTriangle.node[0]=tr->node[0];
     newTriangle.node[1]=tr->edge[2]->MiddleNode;
     newTriangle.node[2]=tr->edge[1]->MiddleNode;
-    refinedLocalTriangle.push_back(newTriangle);
+    NewTriangleFaces.push_back(newTriangle);
 
     //triangle:e2,nd1,e0
     newTriangle.node[0]=tr->edge[2]->MiddleNode;
     newTriangle.node[1]=tr->node[1];
     newTriangle.node[2]=tr->edge[0]->MiddleNode;
-    refinedLocalTriangle.push_back(newTriangle);
+    NewTriangleFaces.push_back(newTriangle);
 
     //triangle: e1,e0,dn2;
     newTriangle.node[0]=tr->edge[1]->MiddleNode;
     newTriangle.node[1]=tr->edge[0]->MiddleNode;
     newTriangle.node[2]=tr->node[2];
-    refinedLocalTriangle.push_back(newTriangle);
+    NewTriangleFaces.push_back(newTriangle);
 
 
     //triangle:e0,e1,e2
     newTriangle.node[0]=tr->edge[0]->MiddleNode;
     newTriangle.node[1]=tr->edge[1]->MiddleNode;
     newTriangle.node[2]=tr->edge[2]->MiddleNode;
-    refinedLocalTriangle.push_back(newTriangle);
+    NewTriangleFaces.push_back(newTriangle);
   }
+
 
   //determine the list of triangles that share the same point
-  for (vector<cLocalTriangle>::iterator tr=refinedLocalTriangle.begin();tr!=refinedLocalTriangle.end();tr++) {
-    for (idim=0;idim<3;idim++) tr->node[idim]->ball.push_back(tr);
+  list<cConnectivityListTriangleFaceDescriptor> NewFaceDescriptorList;
+  list<cConnectivityListTriangleNode>::iterator node;
+
+
+  for (int i=0;i<2;i++) {
+    list<cConnectivityListTriangleNode>::iterator ndBegin,ndEnd;
+
+    if (i==0) ndBegin=OrigonalNodes.begin(),ndEnd=OrigonalNodes.end();
+    else ndBegin=NewNodes.begin(),ndEnd=NewNodes.end();
+
+    for (node=ndBegin;node!=ndEnd;node++) node->ball=NewFaceDescriptorList.end();
   }
+
+
+  for (int i=0;i<2;i++) {
+    list<cConnectivityListTriangleFace>::iterator trBegin,trEnd;
+
+    if (i==0) trBegin=OriginalTriangleFaces.begin(),trEnd=OriginalTriangleFaces.end();
+    else trBegin=NewTriangleFaces.begin(),trEnd=NewTriangleFaces.end();
+
+    for (tr=trBegin;tr!=trEnd;tr++) for (idim=0;idim<3;idim++) {
+      cConnectivityListTriangleFaceDescriptor d;
+
+      d.face=tr;
+      d.next=tr->node[idim]->ball;
+      NewFaceDescriptorList.push_front(d);
+      tr->node[idim]->ball=NewFaceDescriptorList.begin();
+    }
+  }
+
 
   //determine smoother positions of the surface nodes
-  for (vector<cLocalNode>::iterator node=LocalNode.begin();node!=LocalNode.end();node++) {
-    int i,cnt=0;
-    double x[3]={0.0,0.0,0.0};
+  for (int i=0;i<2;i++) {
+    list<cConnectivityListTriangleNode>::iterator ndBegin,ndEnd;
+
+    if (i==0) ndBegin=OrigonalNodes.begin(),ndEnd=OrigonalNodes.end();
+    else ndBegin=NewNodes.begin(),ndEnd=NewNodes.end();
+
+    for (node=ndBegin;node!=ndEnd;node++) {
+      int cnt=0;
+      double x[3]={0.0,0.0,0.0};
+      list<cConnectivityListTriangleFaceDescriptor>::iterator p;
 
 
-    for (vector<vector<cLocalTriangle>::iterator>::iterator p=node->ball.begin();p!=node->ball.end();p++) {
-      ++cnt;
+      for (p=node->ball;p!=NewFaceDescriptorList.end();p=p->next) {
+        for (idim=0,cnt++;idim<3;idim++) if (p->face->node[idim]!=node) for (int ii=0;ii<3;ii++) x[ii]+=0.5*p->face->node[idim]->node->x[ii];
+      }
 
-      for (idim=0;idim<3;idim++) if ((*p)->node[idim]!=node) for (i=0;i<3;i++) x[i]+=0.5*(*p)->node[idim]->x[i];
+      for (idim=0;idim<3;idim++) node->xSurfaceTriangulationSmooth[idim]=(1.0-SmoothingCoefficient)*node->node->x[idim]+SmoothingCoefficient*x[idim]/(double)cnt;
     }
-
-    for (idim=0;idim<3;idim++) node->xSmooth[idim]=(1.0-SmoothingCoefficient)*node->x[idim]+SmoothingCoefficient*x[idim]/(double)cnt;
   }
+
 
   //init the new array of the surface triangualtion
-  cTriangleFace *newBoundaryTriangleFaces=new cTriangleFace[refinedLocalTriangle.size()];
-  cNASTRANnode  *newBoundaryTriangleNodes=new cNASTRANnode[LocalNode.size()];
-  int nnode,nface;
-  vector<cLocalNode>::iterator node;
-  vector<cLocalTriangle>::iterator tr;
+  cTriangleFace *newBoundaryTriangleFaces=new cTriangleFace[NewTriangleFaces.size()];
+  cNASTRANnode  *newBoundaryTriangleNodes=new cNASTRANnode[OrigonalNodes.size()+OriginalEdges.size()];
+  long int nnode,nface,i;
 
-  for (nnode=0,node=LocalNode.begin();node!=LocalNode.end();node++,nnode++) {
-    newBoundaryTriangleNodes[nnode].id=node->OriginalNodeID;
-    node->nodeno=nnode;
-    memcpy(newBoundaryTriangleNodes[nnode].x,node->xSmooth,3*sizeof(double));
+  for (nnode=0,i=0;i<2;i++) {
+    list<cConnectivityListTriangleNode>::iterator ndBegin,ndEnd;
+
+    if (i==0) ndBegin=OrigonalNodes.begin(),ndEnd=OrigonalNodes.end();
+    else ndBegin=NewNodes.begin(),ndEnd=NewNodes.end();
+
+    for (node=ndBegin;node!=ndEnd;node++) {
+      newBoundaryTriangleNodes[nnode].id=nnode;
+      node->node->id=nnode;
+      memcpy(newBoundaryTriangleNodes[nnode].x,node->xSurfaceTriangulationSmooth,3*sizeof(double));
+
+      nnode++;
+    }
   }
 
-
-  for (nface=0,tr=refinedLocalTriangle.begin();tr!=refinedLocalTriangle.end();tr++,nface++) {
+  for (nface=0,tr=NewTriangleFaces.begin();tr!=NewTriangleFaces.end();tr++,nface++) {
     double c=0.0;
 
-    newBoundaryTriangleFaces[nface].SetFaceNodes(tr->node[0]->xSmooth,tr->node[1]->xSmooth,tr->node[2]->xSmooth);
-    newBoundaryTriangleFaces[nface].attribute=tr->upTriangle->TriangleFace->attribute;
+    newBoundaryTriangleFaces[nface].SetFaceNodes(tr->node[0]->xSurfaceTriangulationSmooth,tr->node[1]->xSurfaceTriangulationSmooth,tr->node[2]->xSurfaceTriangulationSmooth);
+    newBoundaryTriangleFaces[nface].attribute=tr->upFace->Triangle->attribute;
 
     for (idim=0;idim<3;idim++) {
-      newBoundaryTriangleFaces[nface].node[idim]=newBoundaryTriangleNodes+tr->node[idim]->nodeno;
+      newBoundaryTriangleFaces[nface].node[idim]=newBoundaryTriangleNodes+tr->node[idim]->node->id;
 
-      c+=newBoundaryTriangleFaces[nface].ExternalNormal[idim]*tr->upTriangle->TriangleFace->ExternalNormal[idim];
+      c+=newBoundaryTriangleFaces[nface].ExternalNormal[idim]*tr->upFace->Triangle->ExternalNormal[idim];
     }
 
     //the direction of the external notmal must coinside with that of the priginal face
     if (c<0.0) for (idim=0;idim<3;idim++) newBoundaryTriangleFaces[nface].ExternalNormal[idim]*=-1.0;
   }
 
-
   //update the arrays
   delete [] BoundaryTriangleFaces;
   delete [] BoundaryTriangleNodes;
 
   BoundaryTriangleFaces=newBoundaryTriangleFaces;
-  nBoundaryTriangleFaces=refinedLocalTriangle.size();
+  nBoundaryTriangleFaces=NewTriangleFaces.size();
 
   BoundaryTriangleNodes=newBoundaryTriangleNodes;
-  nBoundaryTriangleNodes=LocalNode.size();
+  nBoundaryTriangleNodes=OrigonalNodes.size()+OriginalEdges.size();
 
 
   //calculate the ball averaged normal for the surface nodes
-  for (int nd=0;nd<nBoundaryTriangleNodes;nd++) for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
+  for (long int nd=0;nd<nBoundaryTriangleNodes;nd++) for (int idim=0;idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]=0.0;
 
-  for (int nfc=0;nfc<nBoundaryTriangleFaces;nfc++) for (int nd=0;nd<3;nd++) for (int idim=0;idim<3;idim++) {
+  for (long int nfc=0;nfc<nBoundaryTriangleFaces;nfc++) for (int nd=0;nd<3;nd++) for (int idim=0;idim<3;idim++) {
     BoundaryTriangleFaces[nfc].node[nd]->BallAveragedExternalNormal[idim]+=BoundaryTriangleFaces[nfc].ExternalNormal[idim];
   }
 
@@ -1328,8 +1319,6 @@ void CutCell::SmoothRefine(double SmoothingCoefficient) {
       for (idim=0,l=sqrt(l);idim<3;idim++) BoundaryTriangleNodes[nd].BallAveragedExternalNormal[idim]/=l;
     }
   }
-
-
 
 }
 
