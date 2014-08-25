@@ -139,12 +139,14 @@ namespace PIC {
 
   }
 
+
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
     extern unsigned int nCallsTestDirectAccess;
 
     bool GetBlockExitPoint(double *xBlockMin,double *xBlockMax,double *x0Ray,double *lRay,double *xBlockExit, double *xFaceExitLocal, int &nExitFace);
     bool TestDirectAccess(double *xStart,double *xTarget);
+    int CountFaceIntersectionNumber(double *xStart,double *xTarget,void* ExeptionFace=NULL);
 
     void SetCutCellShadowAttribute(double *xLightSource, bool ParallelExecution=false);
   }
@@ -1237,6 +1239,15 @@ namespace PIC {
     void Init(double*,double*,fLocalMeshResolution);
     void buildMesh();
     void loadMesh(char*);
+
+    //tratment of the cut-cells
+    namespace IrregularSurface {
+      using namespace CutCell;
+
+      //init the vectors of the external normals at the cut-faces
+      void InitExternalNormalVector();
+      bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
+    }
 
   }
 
