@@ -33,7 +33,8 @@ PICOBJ = pic.o \
 	pic_internal_boundary_rotation_body.o \
 	pic_internal_boundary_nastran_surface.o \
 	pic_swmf.o \
-	pic__ray_tracing.o
+	pic__ray_tracing.o \
+	pic_cut_cells.o 
 
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)
