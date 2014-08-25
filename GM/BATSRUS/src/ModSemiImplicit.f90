@@ -419,6 +419,7 @@ contains
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
     !------------------------------------------------------------------------
     ! Fill in SemiState so it can be message passed
+    SemiState_VGB = 0.0
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
