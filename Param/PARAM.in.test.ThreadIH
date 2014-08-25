@@ -20,8 +20,8 @@ F                       DoTimeAccurate
 
 #SAVERESTART
 T			DoSaveRestart
-10000			DnSaveRestart
--1.0			DtSaveRestart
+50000			DnSaveRestart
+-1			DtSaveRestart
 
 
 #BEGIN_COMP SC --------------------------------------------------------------
@@ -41,9 +41,12 @@ T                       UseFieldLineThreads
 
 #BODY
 T			UseBody
-1.05			rBody
+1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
+
+#BODY
+F			UseBody
 
 #MAGNETOGRAM
 T			UseMagnetogram
@@ -60,7 +63,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USER_FLAGS
-T			UseUserInnerBcs
+F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
 F			UseUserOuterBcs
@@ -156,14 +159,14 @@ spherical_lnr
  100.0			zMax
 
 #LIMITRADIUS
-1.05			rMin
+1.1			rMin
 24.0			rMax
 
 ----------------------------------------------------
 #AMRREGION
 InnerShell		NameRegion
 box_gen			TypeRegion
-1.05			Radius1
+1.1			Radius1
 0.0
 -70.0
 1.7			Radius2
@@ -189,7 +192,7 @@ initial			NameArea
 
 #DOAMR
 T			DoAmr
-30			DnAmr
+80			DnAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
@@ -206,6 +209,10 @@ mc3			TypeLimiter
 #NONCONSERVATIVE
 T			UseNonConservative
 
+
+#MESSAGEPASS
+all			TypeMessagePass
+
 #RESCHANGE
 T			UseAccurateResChange
 
@@ -215,12 +222,9 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#INNERBOUNDARY
-user			TypeBcInner
-
 #FACEBOUNDARY
--1			MinBoundary
--1			MaxBoundary
+-1
+-2
 
 #OUTERBOUNDARY
 fieldlinethreads	TypeBcEast   user for spherical and user_outerbcs
@@ -371,14 +375,14 @@ stochasticheating	TypeHeatPartitioning
 0.18			StochasticAmplitude
 
 #RESISTIVITY
-T                       UseResistivity
-user                    TypeResistivity
-0.0                     Eta0Si     ! not used
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si     ! not used
 
 #RESISTIVITYOPTIONS
-F                       UseResistiveFlux
-F                       UseJouleHeating
-T                       UseHeatExchange
+F			UseResistiveFlux
+F			UseJouleHeating
+T			UseHeatExchange
 
 #SCHEME
 2			nOrder
@@ -402,7 +406,7 @@ F			UseConstrainB
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-10			DnSaveLogfile
+1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
@@ -441,7 +445,7 @@ IH			NameComp
 F			UseComp
 
 #STOP
-50			MaxIteration
+100			MaxIteration
 -1.0			tSimulationMax
 
 End session: 1
@@ -455,6 +459,16 @@ Begin session: 2
 
 #END_COMP SC   ----------------------------------------------------------------
 
+
+#TIMEACCURATE
+T
+
+#SAVERESTART
+T                       DoSaveRestart
+-1                      DnSaveRestart
+60                      DtSaveRestart
+
+
 #COMPONENT
 IH			NameComp
 T			UseComp
@@ -462,15 +476,15 @@ T			UseComp
 #COUPLE1
 SC			NameSource
 IH			NameTarget
-1			DnCouple
--1.0			DtCouple
+-1			DnCouple
+1.0			DtCouple
 
 #STOP
-51			MaxIter
--1.0			TimeMax
+-1			MaxIter
+50			TimeMax
 
 End session: 2
-#RUN ##########################################################################
+#END ##########################################################################
 Begin session: 3
 
 #COUPLE1
