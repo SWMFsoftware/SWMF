@@ -375,7 +375,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPic, ONLY: UsePic, pic_save_region, pic_update_states
   use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
   use ModPartImplicit, ONLY: advance_part_impl
-
+  use ModHeatConduction, ONLY: calc_ei_heat_exchange
   implicit none
 
   !INPUT ARGUMENTS:
@@ -450,9 +450,11 @@ subroutine BATS_advance(TimeSimulationLimit)
   if(UsePic)call pic_update_states
 
   if(UseIM)call apply_im_pressure
+  
 
-  ! Point implicit heat exchange between electron and ions
-  if(.not.UseMultiIon .and. UseResistivity .and. UseHeatExchange &
+  if(UseHeatConduction.and.UseElectronPressure)then
+     if(.not.UseSemiImplicit)call calc_ei_heat_exchange
+  elseif(.not.UseMultiIon .and. UseResistivity .and. UseHeatExchange &
        .and. UseElectronPressure)then
      call calc_heat_exchange
   end if
