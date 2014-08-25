@@ -19,6 +19,7 @@ module ModHeatConduction
   public :: init_heat_conduction
   public :: get_heat_flux
   public :: get_ion_heat_flux
+  public :: calc_ei_heat_exchange
   public :: get_impl_heat_cond_state
   public :: get_heat_conduction_rhs
   public :: add_jacobian_heat_cond
@@ -67,7 +68,9 @@ module ModHeatConduction
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
-
+ 
+  real:: cTeTiExchangeRate
+  
   ! radiative cooling
   logical :: DoRadCooling = .false.
 
@@ -147,12 +150,13 @@ contains
     use ModRadiativeCooling, ONLY: UseRadCooling
     use ModResistivity,  ONLY: UseResistivity, UseHeatExchange
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         UnitU_, UnitX_, UnitB_, ElectronTemperatureRatio, AverageIonCharge
+         UnitU_, UnitX_, UnitB_, UnitT_, No2Si_V, UnitN_, &
+         ElectronTemperatureRatio, AverageIonCharge 
     use ModVarIndexes, ONLY: nVar
 
     real, parameter:: CoulombLog = 20.0
     real :: HeatCondParSi, IonHeatCondParSi
-
+    real::  cTeTiExchangeRateSi
     character(len=*), parameter :: &
          NameSub = 'ModHeatConduction::init_heat_conduction'
     !--------------------------------------------------------------------------
@@ -208,6 +212,51 @@ contains
          *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)**3.5 &
          *Si2No_V(UnitU_)*Si2No_V(UnitX_)
 
+    !\
+    ! In hydrogen palsma, the electron-ion heat exchange is described by
+    ! the equation as follows:
+    ! dTe/dt = -(Te-Ti)/(tau_{ei})
+    ! dTi/dt = +(Te-Ti)/(tau_{ei})
+    ! The expression for 1/tau_{ei} may be found in 
+    ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5 
+    ! note that in the Russian edition they denote k_B T as Te and 
+    ! the factor 3 is missed in the denominator:
+    ! 1/tau_ei = 2* CoulombLog * sqrt{m_e} (e^2/cEps)**2* Z**2 *Ni /&
+    ! ( 3 * (2\pi k_B Te)**1.5 M_p). This exchange rate scales linearly
+    ! with the plasma density, therefore, we introduce its ratio to 
+    ! the particle concentration. We calculate the temperature exchange
+    ! rate by multiplying the expression for electron-ion effective 
+    ! collision rate,
+    ! \nu_{ei} = CoulombLog/sqrt(cElectronMass)*  &
+    !            ( cElectronCharge**2 / cEps)**2 /&
+    !            ( 3 *(cTwoPi*cBoltzmann)**1.50 )* Ne/Te**1.5
+    !  and then multiply in by the energy exchange coefficient    
+    !            (2*cElectronMass/cProtonMass)
+    ! The calculation of the effective electron-ion collision rate is
+    ! re-usable and can be also applied to calculate the resistivity:
+    ! \eta = m \nu_{ei}/(e**2 Ne)
+    !/ 
+
+    cTeTiExchangeRateSi = &
+         CoulombLog/sqrt(cElectronMass)*  &!\
+         ( cElectronCharge**2 / cEps)**2 /&!effective ei collision frequency
+         ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
+         *(2*cElectronMass/cProtonMass)    !*energy exchange per ei collision
+    !\
+    ! While used, this should be divided by TeSi**1.5 and multipled by
+    ! mass density, N_i in SI. We will apply dimensionless density
+    ! so that the transformation coefficient shoule be multiplied by 
+    ! No2Si_V(UnitN_). We will employ dimensionless Te, therefore, we should 
+    ! divide by No2Si_V(UnitTemperature_)**1.5. We also need to convert the 
+    ! exchange rate from inverse seconds to dimensionless units by dividing by 
+    ! Si2No_V(UnitT_)
+    !/
+
+    cTeTiExchangeRate = cTeTiExchangeRateSi * &
+         (1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
+
+
+
     DoUserHeatConduction = .false.
     if(TypeHeatConduction == 'user') DoUserHeatConduction = .true.
     DoUserIonHeatConduction = .false.
@@ -240,9 +289,6 @@ contains
           end if
 
           UseHeatExchange = .false.
-          if(UseIdealEos .and. .not.DoUserHeatConduction &
-               .and. .not.UseResistivity) &
-               call stop_mpi(NameSub//': set #RESISTIVITY command')
        end if
 
        if(UseRadCooling)then
@@ -639,6 +685,103 @@ contains
     end if
 
   end function heat_cond_factor
+  !============================================================================
+  ! Non-split operator, (almost) explicit ei heat energy exchange
+  !============================================================================
+  subroutine calc_ei_heat_exchange
+
+    use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
+    use ModGeometry,   ONLY: true_cell
+    use ModPhysics,    ONLY: gm1, IonMassPerCharge, Si2No_V, UnitTemperature_
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
+    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, &
+                             UseIdealEos
+    use ModEnergy,     ONLY: calc_energy_cell
+    use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
+    use ModUserInterface
+    use ModResistivity, ONLY: Eta_GB, set_resistivity
+
+    real :: DtLocal, TeSi
+    real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
+    integer:: i, j, k, iBlock
+    !--------------------------------------------------------------------------
+    HeatExchange = 0.0
+    HeatExchangePeP = 0.0
+    HeatExchangePePpar = 0.0
+    
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+      ! For the electron flux limiter, we need Te in the ghostcells
+       if(UseMultiIon)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)/sum( &
+                  ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+          end do; end do; end do
+       elseif(UseIdealEos)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Te_G(i,j,k) = TeFraction &
+                  *State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          end do; end do; end do
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+                  i, j, k, iBlock, TeOut = TeSi)
+             Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
+          end do; end do; end do
+       end if
+       !\
+       ! More work is to be done for if .not.UseIdealEos or UseMultion
+       !/
+       if(.not.UseIdealEos)call CON_stop(&
+            'No explicit ei heat exchange for non-idealized plasmas')
+       
+       if(UseMultiion)call CON_stop(&
+            'No explicit ei heat exchange for non-idealized plasmas')
+
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+          !\
+          !We apply the energy exchange rate for temperature,
+          !Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+          !/
+          !For a hydrogen only, for ideal EOS only
+          HeatExchange = cTeTiExchangeRate * &
+               State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
+
+          ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
+          HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
+
+          HeatExchangePeP = HeatExchange &
+               *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+          ! Heat exchange for parallel ion pressure
+          if(UseAnisoPressure)then
+             HeatExchangePePpar = HeatExchange &
+                  *(State_VGB(Ppar_,i,j,k,iBlock) &
+                  - State_VGB(Pe_,i,j,k,iBlock))
+
+             State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
+                  - DtLocal*HeatExchangePePpar
+          end if
+
+          ! Heat exchange for the ions
+          State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
+               - DtLocal*HeatExchangePeP
+
+          ! Heat exchange for the electrons
+          State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
+               + DtLocal*HeatExchangePeP
+       end do; end do; end do
+
+       call calc_energy_cell(iBlock)
+    end do
+
+  end subroutine calc_ei_heat_exchange
+
 
   !============================================================================
   ! Operator split, semi-implicit subroutines
@@ -656,10 +799,9 @@ contains
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitN_, UnitT_, inv_gm1, IonMassPerCharge
+         UnitEnergyDens_, UnitN_, UnitT_, inv_gm1, AverageIonCharge
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: get_radiative_cooling
-    use ModResistivity,  ONLY: Eta_GB, set_resistivity
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
          CellFace_DB, CellFace_DFB, FaceNormal_DDFB, Xyz_DGB
     use BATL_size,       ONLY: nI, nJ, nK, j0_, nJp1_, k0_, nKp1_, &
@@ -688,9 +830,6 @@ contains
     if(UseElectronPressure) iP = Pe_
 
     DtLocal = Dt
-
-    if(UseElectronPressure .and. .not.UseMultiIon .and. UseIdealEos) &
-         call set_resistivity
 
     do iBlockSemi = 1, nBlockSemi
        iBlock = iBlockFromSemi_B(iBlockSemi)
@@ -742,8 +881,14 @@ contains
 
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
-                TeTiCoef = Eta_GB(i,j,k,iBlock)*Natomic &
-                     *3*State_VGB(Rho_,i,j,k,iBlock)/IonMassPerCharge**2
+                !\
+                !We apply the energy exchange rate for temperature,
+                !Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+                !to the electron energy density, therefore,we multiply by
+                !Ne/(\gamma -1)
+                !/
+                TeTiCoef = inv_gm1*(AverageIonCharge*Natomic)* &
+                     (cTeTiExchangeRate*Natomic/Te_G(i,j,k)**1.5)
              end if
 
           else
