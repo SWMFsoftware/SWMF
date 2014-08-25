@@ -394,7 +394,7 @@ int main(int argc,char **argv) {
     PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
-//  PIC::Mesh::IrregularSurface::SmoothRefine(0.0);
+  PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
 
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
@@ -459,7 +459,7 @@ int main(int argc,char **argv) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
@@ -468,18 +468,18 @@ int main(int argc,char **argv) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
   //test the shadow procedure
 
-  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
+  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,true);
 
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname,xLightSource);
+    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
   //init the volume of the cells'
