@@ -506,6 +506,7 @@ namespace CutCell {
 
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   void PrintSurfaceTriangulationMesh(const char *fname);
+  void PrintSurfaceTriangulationMesh(const char *fname,const char *path);
 
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname);

@@ -117,6 +117,13 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
 }
 
 
+void CutCell::PrintSurfaceTriangulationMesh(const char *fname,const char *path) {
+  char fullname[STRING_LENGTH];
+
+  sprintf(fullname,"%s/%s",path,fname);
+  PrintSurfaceTriangulationMesh(fullname);
+}
+
 void CutCell::PrintSurfaceTriangulationMesh(const char *fname) {
   long int nface,nnode,pnode;
 
