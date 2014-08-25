@@ -1,7 +1,0 @@
-This is the layout for running IE
-
-Name First Last Stride
-======================
-#COMPONENTMAP
-IE       0    7    1   ! IE runs on 2**n PEs
-#END
