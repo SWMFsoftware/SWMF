@@ -63,12 +63,11 @@ CouplerMode=ices !!off, ices, swmf
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
-    const (H2O,H2O)= 2.0E-19
-
+    const (H2O,H2O)= 3.4E-19 
 #endParticleCollisions
 
 #IDF
-  Model=LB  !off,LB,qLB
+  Model=off  !off,LB,qLB
   vtRelaxation=off !on,off
   vvRelaxation=off !on,off
   rtRelaxation=on !on,off
@@ -93,7 +92,9 @@ CouplerMode=ices !!off, ices, swmf
 
   !!Gas parameters
   ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
-  BjornProductionRate(H2O)=1.0e30	    
+  BjornProductionRate(H2O)=0.0 !!2.0e25	    
+  UniformProductionRate(H2O)=0.0 !!2.0e25
+  JetProductionRate(H2O)=1.0e25	    
   
   !!Dust parameters
   DustTotalMassProductionRate=1.0

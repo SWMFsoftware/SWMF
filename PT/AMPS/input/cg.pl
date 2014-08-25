@@ -59,6 +59,8 @@ foreach (@SpeciesList) {
 
 
 my @BjornSourceRate=(0)x$TotalSpeciesNumber;
+my @UniformSourceRate=(0)x$TotalSpeciesNumber;
+my @JetSourceRate=(0)x$TotalSpeciesNumber;
 
 #add the model header to the pic.h
 open (PIC_H,">>$WorkingSourceDirectory/pic/pic.h") || die "Cannot open $WorkingSourceDirectory/pic/pic.h";
@@ -150,6 +152,24 @@ while ($line=<InputFile>) {
       $InputLine=~s/ //g;
       $BjornSourceRate[getSpeciesNumber($spec)]=$InputLine;
       ampsConfigLib::ChangeValueOfArray("static double Bjorn_SourceRate\\[\\]",\@BjornSourceRate,"main/Comet.h");
+  }
+  elsif ($InputLine eq "UNIFORMPRODUCTIONRATE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $spec=$InputLine;
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $UniformSourceRate[getSpeciesNumber($spec)]=$InputLine;
+      ampsConfigLib::ChangeValueOfArray("static double Uniform_SourceRate\\[\\]",\@UniformSourceRate,"main/Comet.h");
+  }
+  elsif ($InputLine eq "JETPRODUCTIONRATE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $spec=$InputLine;
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      $JetSourceRate[getSpeciesNumber($spec)]=$InputLine;
+      ampsConfigLib::ChangeValueOfArray("static double Jet_SourceRate\\[\\]",\@JetSourceRate,"main/Comet.h");
   }
   elsif ($InputLine eq "DUSTRMIN") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
