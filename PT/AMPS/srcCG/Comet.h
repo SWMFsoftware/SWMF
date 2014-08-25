@@ -25,14 +25,23 @@ namespace Comet {
   static int ndist=4;
   static double Bjorn_SourceRate[]={0.0};
   static double Jet_SourceRate[]={0.0};
+  static double Uniform_SourceRate[]={0.0};
 
   extern int  GravityFieldOffset;
+
+  void PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   
   double GetTotalProductionRateBjorn(int spec,void *SphereDataPointer);
   bool GenerateParticlePropertiesBjorn(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere);
   
   double GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalData* Sphere);
   bool GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
+
+  double GetTotalProductionRateUniformNASTRAN(int spec, cInternalSphericalData* Sphere);
+  bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
+
+  double GetTotalProductionRateJetNASTRAN(int spec, cInternalSphericalData* Sphere);
+  bool GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,char* tempParticleData);
 
   //  bool GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Sphere);
   bool GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere);
@@ -387,8 +396,7 @@ namespace Comet {
       e2[2]=e0[0]*e1[1]-e0[1]*e1[0];
 
       for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]+=drag*fraction*(cos(theta)*e1[idim]+sin(theta)*e2[idim]);
-
-
+      
       /*      //the Lorentz force
       char *offset;
       double E[3],B[3];

@@ -28,6 +28,7 @@
 #include "cCutBlockSet.h"
 #include "Comet.h"
 
+
 double BulletLocalResolution(double *x) {
   int idim,i;
   double res,r,l[3];
@@ -39,14 +40,14 @@ double BulletLocalResolution(double *x) {
   for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
 
   //3.3 AU
-  if (r<1600) return 300;
+  if (r<1600) return 300*2.0; //*4.0 for OSIRIS
 
   SubsolarAngle=acos(l[0])*180.0/Pi;
   if (SubsolarAngle>=89.5) return 2000.0*pow(r/1600.0,2.0);
 
  //  return 300*pow(r/1600.0,2.0)*(1+5*SubsolarAngle/180.0);
 
- return 300*pow(r/1600.0,2.0);
+  return 300*pow(r/1600.0,2.0)*2.0; //only *4.0 for OSIRIS
  
  /*  //2.7 AU
   if (r<1600) return 300;
@@ -255,17 +256,19 @@ int main(int argc,char **argv) {
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
   //CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",xmin,xmax,1.0E-8);
     CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",xmin,xmax,1.0E-8);
-  if (PIC::ThisThread==0) {
+  //  CutCell::ReadNastranSurfaceMeshLongFormat("CG2.bdf",xmin,xmax,1.0E-8);
+  //  CutCell::ReadNastranSurfaceMeshLongFormat("C-G_MOC.bdf",xmin,xmax,1.0E-8);
+
+      if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
     CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
   }
-
+      /*
   //refine the surface mesh
   {
     char fname[_MAX_STRING_LENGTH_PIC_];
-    
     CutCell::SmoothRefine(0.75);
     sprintf(fname,"%s/NucleusSurface-L1.dat",PIC::OutputDataFileDirectory);
     if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
@@ -273,14 +276,13 @@ int main(int argc,char **argv) {
     CutCell::SmoothRefine(0.75);
     sprintf(fname,"%s/NucleusSurface-L2.dat",PIC::OutputDataFileDirectory);
     if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
-   
   }
 
-
+      
   //Computation of the gravity field for an irregular nucleus shape
   nucleusGravity::readMesh("cg.Lamy.nas");
   nucleusGravity::setDensity(300);
-  
+      */
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
   for (int i=0;i<3;i++) xmin[i]=-1.0e4,xmax[i]=1.0e4;
@@ -308,12 +310,23 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.GetMeshTreeStatistics();
 
 
+  //test the shadow procedure                                                                                                                                                                 
+  double xLightSource[3]={3.3*_AU_,0.0,0.0}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
+  PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
+
+  if (PIC::ThisThread==0) {
+    char fname[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(fname,"%s/SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
+    CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+  }
+
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=4000; //0; //00; //*10;
-  PIC::RequiredSampleLength=100; //00; //0; //0;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1000; //0; //00; //*10;
+  PIC::RequiredSampleLength=10; //00; //0; //0;
 
 
   PIC::Init_AfterParser();
@@ -341,7 +354,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(10000000);
+  PIC::ParticleBuffer::Init(2000000);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
@@ -370,7 +383,13 @@ int main(int argc,char **argv) {
 
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
-    
+
+    if (PIC::ThisThread==0) {
+      char fname[_MAX_STRING_LENGTH_PIC_];
+      
+      sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
+      if (niter==1) Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+    }
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
       PIC::RequiredSampleLength*=4;
       if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
