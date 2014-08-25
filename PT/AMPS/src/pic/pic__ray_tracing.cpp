@@ -193,14 +193,14 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 		//if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
 		nCallsTestDirectAccess=1;
 
-		for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) CutCell::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+		for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
 	}
 
 	//trace the ray
-	CutCell::cTriangleFaceDescriptor *t;
+	PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
 
 	while (node!=NULL) {
-	  CutCell::cTriangleFace *TriangleFace;
+	  PIC::Mesh::IrregularSurface::cTriangleFace *TriangleFace;
 		double IntersectionTime;
 		bool code;
 
@@ -241,46 +241,147 @@ bool PIC::RayTracing::TestDirectAccess(double *xStart,double *xTarget) {
 	return true;
 }
 
+int PIC::RayTracing::CountFaceIntersectionNumber(double *xStart,double *xTarget,void* ExeptionFace) {
+  double c=0.0,l[3],x[3];
+  int idim,IntersectionCounter=0;
+
+
+  //clculate the pointing vector
+  for (idim=0;idim<3;idim++) {
+    l[idim]=xTarget[idim]-xStart[idim];
+    c+=l[idim]*l[idim];
+    x[idim]=xStart[idim];
+  }
+
+  c=sqrt(c);
+  for (idim=0;idim<3;idim++) l[idim]/=c;
+
+  //determine the initial block
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
+
+  node=PIC::Mesh::mesh.findTreeNode(xStart);
+  if (node==NULL) return false;
+
+  //increment the call counter
+  nCallsTestDirectAccess++;
+
+  if (nCallsTestDirectAccess==0) {
+    //if the counter is 'owerflow' than re-init the counter value and the counters of the cut-faces
+    nCallsTestDirectAccess=1;
+
+    for (int n=0;n<CutCell::nBoundaryTriangleFaces;n++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[n].pic__RayTracing_TestDirectAccessCounterValue=0;
+  }
+
+  //trace the ray
+  PIC::Mesh::IrregularSurface::cTriangleFaceDescriptor *t;
+
+  while (node!=NULL) {
+    PIC::Mesh::IrregularSurface::cTriangleFace *TriangleFace;
+    double IntersectionTime;
+    bool code;
+
+    if ((t=node->FirstTriangleCutFace)!=NULL) {
+      for (;t!=NULL;t=t->next) {
+        if ((TriangleFace=t->TriangleFace)->pic__RayTracing_TestDirectAccessCounterValue!=nCallsTestDirectAccess) {
+          code=TriangleFace->RayIntersection(x,l,IntersectionTime,PIC::Mesh::mesh.EPS);
+
+          if ((TriangleFace!=(PIC::Mesh::IrregularSurface::cTriangleFace*)ExeptionFace) && (code==true)/*&&(IntersectionTime>PIC::Mesh::mesh.EPS)*/) IntersectionCounter++;
+
+          TriangleFace->pic__RayTracing_TestDirectAccessCounterValue=nCallsTestDirectAccess;
+        }
+      }
+    }
+
+    //determine the new node
+    double xNodeExit[3],xFaceExitLocal[2];
+    int nExitFace,iFace,jFace;
+
+    if (PIC::RayTracing::GetBlockExitPoint(node->xmin,node->xmax,x,l,xNodeExit,xFaceExitLocal,nExitFace)==true) {
+      iFace=(xFaceExitLocal[0]<0.5) ? 0 : 1;
+      jFace=(xFaceExitLocal[1]<0.5) ? 0 : 1;
+
+      node=node->GetNeibFace(nExitFace,iFace,jFace);
+    }
+    else {
+      PIC::RayTracing::GetBlockExitPoint(node->xmin,node->xmax,x,l,xNodeExit,xFaceExitLocal,nExitFace);
+      node=PIC::Mesh::mesh.findTreeNode(xNodeExit,node);
+    }
+
+    memcpy(x,xNodeExit,3*sizeof(double));
+  }
+
+  return IntersectionCounter;
+}
+
+
 void PIC::RayTracing::SetCutCellShadowAttribute(double *xLightSource,bool ParallelExecution) {
   double xTriangle[3],c;
-  int i,idim,iStart,iFinish,delta=1;
+  int i,idim,iStart,iFinish,nFaceThread;
 
   if (ParallelExecution==true) {
-    delta=CutCell::nBoundaryTriangleFaces/PIC::nTotalThreads;
-    iStart=delta*PIC::ThisThread;
-    iFinish=delta*(PIC::ThisThread+1);
-
-    if (iFinish>CutCell::nBoundaryTriangleFaces) iFinish=CutCell::nBoundaryTriangleFaces;
+    nFaceThread=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads;
+    iStart=nFaceThread*PIC::ThisThread;
+    iFinish=iStart+nFaceThread;
+    if (PIC::ThisThread==PIC::nTotalThreads-1) iFinish=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
   }
-  else iStart=0,iFinish=CutCell::nBoundaryTriangleFaces;
+  else iStart=0,iFinish=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
 
   for (i=iStart;i<iFinish;i++) {
-    CutCell::BoundaryTriangleFaces[i].GetCenterPosition(xTriangle);
-    for (c=0.0,idim=0;idim<3;idim++) c+=(xLightSource[idim]-xTriangle[idim])*CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+    PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].GetCenterPosition(xTriangle);
+    for (c=0.0,idim=0;idim<3;idim++) c+=(xLightSource[idim]-xTriangle[idim])*PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].ExternalNormal[idim];
 
     if (c<0.0) {
       //the point is in the shadow
-      CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_;
+      PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_;
     }
     else {
       //trace the ray to the light source
       if (TestDirectAccess(xTriangle,xLightSource)==false) {
-        CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_;
+        PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_;
       }
       else {
-        CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__FALSE_;
+        PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__shadow_attribute=_PIC__CUT_FACE_SHADOW_ATTRIBUTE__FALSE_;
       }
     }
   }
 
   //collect the attributes when the search is performed in parallel model
-  if (ParallelExecution==true) {
-    char sendBuffer[delta],recvBuffer[delta*PIC::nTotalThreads];
-    int cnt=0;
 
-    for (i=iStart;i<iFinish;i++) sendBuffer[cnt++]=CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute;
-    MPI_Allgather(sendBuffer,delta,MPI_CHAR,recvBuffer,delta,MPI_CHAR,MPI_GLOBAL_COMMUNICATOR);
-    for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute=recvBuffer[i];
+  if (ParallelExecution==true) {
+    char sendBuffer[2*nFaceThread];
+    int thread,cnt;
+
+    for (thread=0;thread<nTotalThreads;thread++) {
+      iStart=nFaceThread*thread;
+      iFinish=iStart+nFaceThread;
+      if (thread==nTotalThreads-1) iFinish=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
+
+      if (thread==PIC::ThisThread) {
+        for (i=iStart,cnt=0;i<iFinish;i++,cnt++) sendBuffer[cnt]=PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__shadow_attribute;;
+      }
+
+      MPI_Bcast(sendBuffer,iFinish-iStart,MPI_CHAR,thread,MPI_GLOBAL_COMMUNICATOR);
+
+      if (thread!=PIC::ThisThread) {
+        for (i=iStart,cnt=0;i<iFinish;i++,cnt++) PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__shadow_attribute=sendBuffer[cnt];
+      }
+    }
   }
 
+
+  //calculate the cosine of the face illumination angle
+  for (i=0;i<PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;i++) {
+    double xCenter[3],l=0.0,c=0.0,t;
+
+    PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].GetCenterPosition(xCenter);
+
+    for (int idim=0;idim<3;idim++) {
+      t=xLightSource[idim]-xCenter[idim];
+
+      l+=t*t;
+      c+=t*PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].ExternalNormal[idim];
+    }
+
+    PIC::Mesh::IrregularSurface::BoundaryTriangleFaces[i].pic__cosine_illumination_angle=c/sqrt(l);
+  }
 }
