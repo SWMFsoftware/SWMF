@@ -1,9 +1,9 @@
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
-       BoundaryThreads, BoundaryThreads_B, HeatCondParSi, check_tr_table
-  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
-       UseWaveReflection, UseWaveReflection, TypeCoronalHeating
+       BoundaryThreads, BoundaryThreads_B
+  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
+  use ModPhysics,    ONLY: AverageIonCharge
   implicit none
   real :: TeFraction, TiFraction 
   real,allocatable :: Te_G(:,:,:)
@@ -12,8 +12,8 @@ contains
   !=========================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
-    use ModPhysics,      ONLY: ElectronTemperatureRatio, AverageIonCharge
+    use ModMultifluid,   ONLY: MassIon_I
+    use ModFieldLineThread, ONLY: check_tr_table
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     ! TeFraction is used for ideal EOS:
@@ -28,11 +28,12 @@ contains
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
        TiFraction = MassIon_I(1) &
-            /(1 + AverageIonCharge*ElectronTemperatureRatio)
-       TeFraction = TiFraction*ElectronTemperatureRatio
+            /(1 + AverageIonCharge)
+       TeFraction = TiFraction
     end if
     call check_tr_table
   end subroutine init_threaded_lc
+  !================================
   !\
   ! Main routine:
   ! solves MHD equations along thread, to link the state above the
@@ -40,6 +41,13 @@ contains
   !/
   subroutine solve_boundary_thread(j, k, iBlock, TeSiIn, USiIn, AMinorIn,&
        DTeOverDsSiOut, PAvrSiOut, AMajorOut)
+    !\
+    ! USE:
+    !/
+    use ModFieldLineThread, ONLY: HeatCondParSi
+    use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_
+    use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
+    use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl 
     !\
     !The initial version: pressure is constant along the thread,
     !reflection and dissipation of the major wave is ignored
@@ -67,7 +75,36 @@ contains
     !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2  
     !/
     real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut
- 
+
+    !\
+    ! Two components array to use lookup table
+    !/ 
+    real    :: Value_V(2)
+    integer :: iTable
+    !------------------!
+    iTable = i_lookup_table('TR')
+    if(iTable<=0)call CON_stop('TR table is not set')
+    call interpolate_lookup_table(iTable, TeSiIn, 1.0e8, Value_V, &
+         DoExtrapolate=.false.)
+    !\
+    ! First value is now the product of the thread length in meters times
+    ! a geometric mean pressure, so that
+    !/
+    PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
+         No2Si_V(UnitX_) )
+    !\
+    ! Heat flux equals PAvr * UHeat (spent for radiation) +
+    ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
+    ! the pressure ratio being  Pe = Pi * AverageIonCharge
+    ! 
+    ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
+    !/
+    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) + &
+         USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
+         (1 + AverageIonCharge) ) /&
+         (HeatCondParSi * TeSiIn**2.50)
+
+    AMajorOut = 1.0    !Needs further work 
   end subroutine solve_boundary_thread
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
@@ -75,14 +112,15 @@ contains
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_
+    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
+         UnitEnergyDens_, UnitU_, UnitX_
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Bx_, Bz_, RhoUx_, RhoUz_
     use ModSize,         ONLY: nDim
     use ModConst,        ONLY: cTolerance
+    use ModImplicit,     ONLY: iTeImpl
     use ModWaves
-    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
+    use ModMain,         ONLY: jTest, kTest, BlkTest
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -92,48 +130,116 @@ contains
     integer, optional, intent(in):: iImplBlock
     
     logical:: IsNewBlock
-    integer :: i, j, k, iP, iTable, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, BDir_D(3), Value_V(2)
-    real :: PeSI, U_D(3), GradTeDotB0Dir 
-    !---------------------
+    integer :: i, j, k, iP, Major_, Minor_
+    real :: FaceGrad_D(3), TeSi, BDir_D(3)
+    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir
+    !-------------
     IsNewBlock = .true.
-    if(.not.present(iImplBlock))then
+
+    !\
+    ! Start from floating boundary values
+    !/
+    do k = MinK, MaxK; do j = MinJ, maxJ; do i = 1 - nGhost, 0
+       State_VG(:, i,j,k) = State_VG(:,1, j, k)
+    end do; end do; end do
+    !\
+    ! Fill in the temperature array
+    !/
+    if(present(iImplBlock))then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          Te_G(i, j, k) = State_VG(iTeImpl,i,j,k)
+       end do; end do; end do
+    else
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
-                  /sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+             Te_G(i,j,k) = State_VG(Pe_,i,j,k) &
+                  /sum(ChargeIon_I*State_VG(iRhoIon_I,i,j,k)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
           iP = p_
           if(UseElectronPressure) iP = Pe_
-       
+          
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = TeFraction*State_VGB(iP,i,j,k,iBlock) &
-                  /State_VGB(Rho_,i,j,k,iBlock)
+             Te_G(i,j,k) = TeFraction*State_VG(iP,i,j,k) &
+                  /State_VG(Rho_,i,j,k)
           end do; end do; end do
        else
           call CON_stop('Generic EOS is not applicable with threads')
        end if
-       !\
-       ! Start from floating boundary values
-       !/
-       do k = MinK, MaxK; do j = MinJ, MaxJ
-          Te_G( MinI:0, j, k) = Te_G( MinI:0, j, k)
-       end do; end do
-
-       iTable = i_lookup_table('TR')
-       if(iTable<=0)call CON_stop('TR table is not set')
-
-       do k = 1, nK; do j = 1, nJ
-          call get_face_gradient(1, 1, j, k, iBlock, &
-               IsNewBlock, Te_G, FaceGrad_D, &
-               UseFirstOrderBcIn=.true.)
-          BDir_D = State_VGB(Bx_:Bz_, 1, j, k, iBlock) + &
-               BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
-          BDir_D = BDir_D/sqrt(sum(BDir_D**2))* &
-               BoundaryThreads_B(iBlock) % SignBr_II(j, k)
-          
-       end do; end do
     end if
+       
+    do k = 1, nK; do j = 1, nJ
+       !\
+       ! Gradient across the boundary face
+       !/
+       call get_face_gradient(1, 1, j, k, iBlock, &
+            IsNewBlock, Te_G, FaceGrad_D, &
+            UseFirstOrderBcIn=.true.)
+       BDir_D = State_VGB(Bx_:Bz_, 1, j, k, iBlock) + &
+            BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
+       BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
+       if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
+          BDir_D = -BDir_D
+          Major_ = WaveLast_
+          Minor_ = WaveFirst_
+       else
+          Major_ = WaveFirst_
+          Minor_ = WaveLast_
+       end if
+       !\
+       ! Calculate input parameters for solving the thread
+       !/
+       TeSi = Te_G(1, j, k) * No2Si_V(UnitTemperature_)
+       AMinor = sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
+            ( sqrt(State_VGB(Rho_, 1, j, k, iBlock))* &
+            PoyntingFluxPerB)  )
+       U = sum(State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)*BDir_D)/&
+            State_VGB(Rho_, 1, j, k, iBlock)
+       call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
+            TeSiIn=TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
+            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
+       !\
+       ! Calculate temperature in the ghost cell by adding the difference 
+       ! between the required value DTeOverDs and the temperature gradient
+       ! calculated with the floating BC 
+       !/ 
+       Te_G(0, j, k) = min(max(Te_G(0, j, k) +(&
+            DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_) - &
+            sum(FaceGrad_D*BDir_D))/&
+            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
+            * BDir_D), 0.60*Te_G(0, j, k)),1.30*Te_G(0, j, k))
+       if(present(iImplBlock))then
+          State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
+          CYCLE
+       end if
+       !Prolong the gradient further way
+       do i=-1, 1-nGhost,-1
+          Te_G(i, j, k) = 2*Te_G(i+1, j, k) - Te_G(i+2, j, k) 
+       end do
+       if(UseElectronPressure)then
+          State_VG(Pe_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
+               sqrt(AverageIonCharge)
+          State_VG(p_, 1-nGhost:0, j, k) = State_VG(Pe_, 1-nGhost:0, j, k)/&
+               AverageIonCharge
+       else
+          State_VG(p_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)/&
+               sqrt(AverageIonCharge)*(1 + AverageIonCharge) 
+       end if
+       State_VG(Rho_, 1-nGhost:0, j, k) = State_VG(iP, 1-nGhost:0, j, k)* &
+            TeFraction/Te_G(1-nGhost:0, j, k) 
+       State_VG(Bx_:Bz_,1-nGhost:0, j, k) = 0
+       do i = 1-nGhost, 0
+          State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
+               U*BDir_D
+          State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
+               sqrt( State_VG(Rho_, i, j, k) )
+       end do
+    end do; end do
+    !if(DoTestMe.and.iBlock==BlkTest)then
+    !   write(*,*)'Temperature in physical cell, K',&
+    !        Te_G(1,jTest,kTest)*No2Si_V(UnitTemperature_)
+    !   write(*,*)'Temperature in ghost cell(s), K',&
+    !        Te_G(1-nGhost:0,jTest,kTest)*No2Si_V(UnitTemperature_)
+    !end if
   end subroutine set_field_line_thread_bc
 end module ModThreadedLC

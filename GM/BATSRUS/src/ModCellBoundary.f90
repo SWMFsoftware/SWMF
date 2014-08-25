@@ -91,24 +91,24 @@ contains
        select case(DimTest)
        case(x_)
           if(iTest== 1)then
-             iGhost=0; iGhost2 = -1
+             iGhost=0; iGhost2 = 1 - nGhost
           endif
           if(iTest==nI)then
-             iGhost=nI+1; iGhost2 = nI+2
+             iGhost=nI+1; iGhost2 = nI + nGhost
           endif
        case(y_)
           if(jTest== 1)then
-             jGhost=0; jGhost2 = -1
+             jGhost=0; jGhost2 = 1 - nGhost
           endif
           if(jTest==nJ)then
-             jGhost=nJ+1; jGhost2 = nJ+2
+             jGhost=nJ+1; jGhost2 = nJ + nGhost
           endif
        case(z_)
           if(kTest== 1)then
-             kGhost=0; kGhost2 = -1
+             kGhost=0; kGhost2 = 1 - nGhost
           endif
           if(kTest==nK)then
-             kGhost=nK+1; kGhost2 = nK+2
+             kGhost=nK+1; kGhost2 = nK + nGhost
           endif
        end select
 
@@ -314,13 +314,13 @@ contains
        case('none_semi')
           if(IsLinear) State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
        case('fieldlinethreads')
-          call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG)
+          call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, DoTestMe)
        case('fieldlinethreads_semi')
           if(IsLinear) then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
              call set_field_line_thread_bc( &
-                  nGhost, iBlock, nVarState, State_VG, iImplBlock)
+                  nGhost, iBlock, nVarState, State_VG, DoTestMe, iImplBlock)
           end if
        case('user_semi')
           if(IsLinear)then
