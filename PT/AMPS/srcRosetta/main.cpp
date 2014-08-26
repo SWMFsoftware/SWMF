@@ -386,13 +386,8 @@ int main(int argc,char **argv) {
   //load the NASTRAN mesh
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
+  PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
 
-  if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
-
-    sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
-    PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
-  }
 
   PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
 
