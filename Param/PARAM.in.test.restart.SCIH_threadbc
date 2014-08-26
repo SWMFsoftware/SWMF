@@ -125,6 +125,10 @@ GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
 
+#PRECONDITIONER
+left            TypePrecondSide (left, symmetric, right)
+bilu            TypePrecond (MBILU)
+
 #RADIATIVECOOLING
 T			UseRadCooling
 
@@ -192,11 +196,6 @@ all			TypeMessagePass
 
 #TVDRESCHANGE
 T			UseAccurateResChange
-
-#LIMITER
-T			UseLogRhoLimiter
-F                       UseLogPLimiter
-F                       UseScalarToRhoRatioLtd
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -353,10 +352,15 @@ turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
 
-#HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
-0.18			StochasticAmplitude
+#RESISTIVITY
+T                       UseResistivity
+user                    TypeResistivity
+0.0                     Eta0Si     ! not used
+
+#RESISTIVITYOPTIONS
+F                       UseResistiveFlux
+F                       UseJouleHeating
+T                       UseHeatExchange
 
 
 #SCHEME
@@ -446,33 +450,4 @@ IH			NameTarget
 -1			MaxIter
 100			TimeMax
 
-End session: 2
-#END ##########################################################################
-Begin session: 3
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
--1			DnCouple
--1.0			DtCouple
-
-#COMPONENT
-SC			NameComp
-F			UseComp
-
-#BEGIN_COMP IH ----------------------------------------------------------------
-
-#DOAMR
-T			DoAmr
-40			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
-
-#END_COMP IH   ----------------------------------------------------------------
-
-#STOP
-100			MaxIter
--1.0			TimeMax
-
-End session: 3
 #END ##########################################################################

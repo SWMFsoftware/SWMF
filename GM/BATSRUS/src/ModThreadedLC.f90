@@ -212,10 +212,7 @@ contains
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           CYCLE
        end if
-       !Prolong the gradient further way
-       do i=-1, 1-nGhost,-1
-          Te_G(i, j, k) = 2*Te_G(i+1, j, k) - Te_G(i+2, j, k) 
-       end do
+      
        if(UseElectronPressure)then
           State_VG(Pe_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
                sqrt(AverageIonCharge)
@@ -225,8 +222,12 @@ contains
           State_VG(p_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)/&
                sqrt(AverageIonCharge)*(1 + AverageIonCharge) 
        end if
-       State_VG(Rho_, 1-nGhost:0, j, k) = State_VG(iP, 1-nGhost:0, j, k)* &
-            TeFraction/Te_G(1-nGhost:0, j, k) 
+       State_VG(Rho_, 0, j, k) = State_VG(iP, 0, j, k)* &
+            TeFraction/Te_G(0, j, k)
+       !Prolong the density gradient further way
+       State_VG(Rho_, 1-nGhost:-1, j, k) = 2*State_VG(Rho_, 0, j, k) -&
+            State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
+
        State_VG(Bx_:Bz_,1-nGhost:0, j, k) = 0
        do i = 1-nGhost, 0
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
