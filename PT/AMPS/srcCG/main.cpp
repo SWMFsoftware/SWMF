@@ -242,6 +242,14 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 }
 
 
+double Comet::GetTotalProduction(int spec,void *BoundaryElement) {
+  return 1.0E20;
+}
+
+double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement) {
+  return GetTotalProduction(spec,BoundaryElement);
+}
+
 int main(int argc,char **argv) {
 
   //init the particle solver
@@ -255,16 +263,14 @@ int main(int argc,char **argv) {
   //load the NASTRAN mesh
   //  CutCell::ReadNastranSurfaceMeshLongFormat("surface_Thomas_elements.nas",CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,xmin,xmax,1.0E-8);
   //CutCell::ReadNastranSurfaceMeshLongFormat("cg.Lamy-surface.nas",xmin,xmax,1.0E-8);
-    CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",xmin,xmax,1.0E-8);
+  // CutCell::ReadNastranSurfaceMeshLongFormat("Sphere_3dCode.nas",xmin,xmax,1.0E-8);
   //  CutCell::ReadNastranSurfaceMeshLongFormat("CG2.bdf",xmin,xmax,1.0E-8);
-  //  CutCell::ReadNastranSurfaceMeshLongFormat("C-G_MOC.bdf",xmin,xmax,1.0E-8);
 
-      if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
 
-    sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
-    CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
-  }
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("C-G_MOC_original.bdf");
+  PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
+  PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
+
       /*
   //refine the surface mesh
   {
@@ -283,6 +289,34 @@ int main(int argc,char **argv) {
   nucleusGravity::readMesh("cg.Lamy.nas");
   nucleusGravity::setDensity(300);
       */
+
+
+
+
+
+  //set up the s/c object
+  //init the nucleus
+  cInternalBoundaryConditionsDescriptor RosettaSurfaceDescriptor;
+  cInternalNastranSurfaceData *Rosetta;
+
+//  PIC::BC::InternalBoundary::RotationBody::Init(ReserveSamplingSpace,NULL);
+  RosettaSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
+  Rosetta=(cInternalNastranSurfaceData*) RosettaSurfaceDescriptor.BoundaryElement;
+
+//  Rosetta->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
+//  Rosetta->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
+
+//  Nucleus->localResolution=Comet::localSphericalSurfaceResolution;
+  Rosetta->InjectionRate=Comet::GetTotalProduction;
+  Rosetta->faceat=0;
+//  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
+//  Rosetta->InjectionBoundaryCondition=Rosetta::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+//  Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
+  //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
+
+
+
+
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
   for (int i=0;i<3;i++) xmin[i]=-1.0e4,xmax[i]=1.0e4;
@@ -311,17 +345,15 @@ int main(int argc,char **argv) {
 
 
   //test the shadow procedure                                                                                                                                                                 
-  double xLightSource[3]={3.3*_AU_,0.0,0.0}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
+  double xLightSource[3]={3.3*_AU_,0.0,0.0}; //{6000.0e3,1.5e6,0.0};
+
+  PIC::Mesh::IrregularSurface::InitExternalNormalVector();
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
+  PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
-
-    sprintf(fname,"%s/SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
-    CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
-  }
 
   //init the volume of the cells'
+  PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure();
 
 
