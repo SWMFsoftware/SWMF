@@ -119,9 +119,9 @@ CouplerMode=ices !!off, ices, swmf
 
   !!Gas parameters
   ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
-  BjornProductionRate(H2O)=0.0 !!2.0e25	    
-  UniformProductionRate(H2O)=0.0 !!2.0e25
-  JetProductionRate(H2O)=1.0e25	    
+  BjornProductionRate(H2O)=2.0e25 !!2.0e25	    
+  UniformProductionRate(H2O)=2.0e25 !!2.0e25
+  JetProductionRate(H2O)=1.0e25 !1.0e25	    
   
   !!Dust parameters
   DustTotalMassProductionRate=1.0
