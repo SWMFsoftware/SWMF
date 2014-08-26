@@ -40,14 +40,14 @@ double BulletLocalResolution(double *x) {
   for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
 
   //3.3 AU
-  if (r<1600) return 300*2.0; //*4.0 for OSIRIS
+  if (r<1600) return 300*12.0; //*4.0 for OSIRIS
 
   SubsolarAngle=acos(l[0])*180.0/Pi;
   if (SubsolarAngle>=89.5) return 2000.0*pow(r/1600.0,2.0);
 
  //  return 300*pow(r/1600.0,2.0)*(1+5*SubsolarAngle/180.0);
 
-  return 300*pow(r/1600.0,2.0)*2.0; //only *4.0 for OSIRIS
+  return 300*pow(r/1600.0,2.0)*12.0; //only *4.0 for OSIRIS
  
  /*  //2.7 AU
   if (r<1600) return 300;
@@ -107,9 +107,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
       return dt*3.0;
-    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    }else CharacteristicSpeed=1.0e3*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #else
-    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    CharacteristicSpeed=1.0e3*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -267,7 +267,7 @@ int main(int argc,char **argv) {
   //  CutCell::ReadNastranSurfaceMeshLongFormat("CG2.bdf",xmin,xmax,1.0E-8);
 
 
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("C-G_MOC_original.bdf");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
 
@@ -299,14 +299,12 @@ int main(int argc,char **argv) {
   cInternalBoundaryConditionsDescriptor RosettaSurfaceDescriptor;
   cInternalNastranSurfaceData *Rosetta;
 
-//  PIC::BC::InternalBoundary::RotationBody::Init(ReserveSamplingSpace,NULL);
   RosettaSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
   Rosetta=(cInternalNastranSurfaceData*) RosettaSurfaceDescriptor.BoundaryElement;
 
 //  Rosetta->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
 //  Rosetta->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
 
-//  Nucleus->localResolution=Comet::localSphericalSurfaceResolution;
   Rosetta->InjectionRate=Comet::GetTotalProduction;
   Rosetta->faceat=0;
 //  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
@@ -315,11 +313,8 @@ int main(int argc,char **argv) {
   //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
 
-
-
-
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
-  for (int i=0;i<3;i++) xmin[i]=-1.0e4,xmax[i]=1.0e4;
+  for (int i=0;i<3;i++) xmin[i]=-2.0e5,xmax[i]=2.0e5;
 
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
@@ -344,17 +339,17 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.GetMeshTreeStatistics();
 
 
+  //init the volume of the cells'
+  PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
+  PIC::Mesh::mesh.InitCellMeasure();
+
+
   //test the shadow procedure                                                                                                                                                                 
   double xLightSource[3]={3.3*_AU_,0.0,0.0}; //{6000.0e3,1.5e6,0.0};
 
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
-
-
-  //init the volume of the cells'
-  PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
-  PIC::Mesh::mesh.InitCellMeasure();
 
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1000; //0; //00; //*10;
