@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O DUST
+SpeciesList=H2O 
 ErrorLog=error.log
 Prefix=AMPS
 DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
@@ -44,6 +44,9 @@ ForceRepeatableSimulationPath=off ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
+ParticleWeightCorrectionMode=on !on,off
 
 CouplerMode=ices !!off, ices, swmf
 
@@ -57,6 +60,30 @@ CouplerMode=ices !!off, ices, swmf
   PIC=on ! on, off
   Mesh=on ! on, off
 #endUserDefinitions
+
+#General
+  ReferenceInjectionParticleNumber=200
+  MaxMeshRefinmentLevel=12
+  EnforceRequestedMeshResolution=off !on,off
+  InitialSampleLength=10000
+  TestRunTotalIteration=50
+
+  NastranSurfaceUserData=on
+  
+! ReferenceInjectionParticleNumber=200
+! MaxMeshRefinmentLevel=8! 2 !4
+! EnforceRequestedMeshResolution=off !on,off
+
+  BlockCells=5,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+  
+#endGeneral
+
+
 
 #ParticleCollisions
   model = HS !!off !HS ! HS, off
@@ -109,6 +136,8 @@ CouplerMode=ices !!off, ices, swmf
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=off !on, off
+  
+  define _TARGET_ _EUROPA_
 
 #endblock
 
