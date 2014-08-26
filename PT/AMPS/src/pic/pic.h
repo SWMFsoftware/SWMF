@@ -1246,7 +1246,7 @@ namespace PIC {
 
       //init the vectors of the external normals at the cut-faces
       void InitExternalNormalVector();
-      bool CheckPointInsideDomain(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
+      bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
     }
 
   }

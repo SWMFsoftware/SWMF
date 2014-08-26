@@ -83,7 +83,7 @@ void PIC::Mesh::IrregularSurface::InitExternalNormalVector() {
 //check weather a point (x0) in insed the domain:
 //if the number if interasections of the ray (x=x0+l*t) is even than the point is within the domain; otherwise the point is outsede the domain
 //l -> is a random ray (intersection search) direction
-bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain(double *x,PIC::Mesh::IrregularSurface::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS) {
+bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::Mesh::IrregularSurface::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS) {
   int nface,nfaceStart,nfaceFinish,iIntersections;
   double l,xFinish[3];
   int idim;
