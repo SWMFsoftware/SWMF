@@ -17,6 +17,10 @@
 namespace Comet {
   using namespace Exosphere;
 
+
+  double GetTotalProduction(int spec,void *BoundaryElement);
+  double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
+
   //init the model
   void Init_BeforeParser();
   void Init_AfterParser();
