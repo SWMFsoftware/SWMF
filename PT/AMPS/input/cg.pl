@@ -139,6 +139,11 @@ while ($line=<InputFile>) {
       $InputLine=~s/ //g;
       ampsConfigLib::ChangeValueOfVariable("double subSolarPointAzimuth","$InputLine","main/Comet.cpp");
   }
+  elsif ($InputLine eq "SUBSOLARPOINTZENITH") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double subSolarPointZenith","$InputLine","main/Comet.cpp");
+  }
   elsif ($InputLine eq "NDIST") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;

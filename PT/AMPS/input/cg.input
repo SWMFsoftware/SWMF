@@ -113,15 +113,16 @@ CouplerMode=ices !!off, ices, swmf
   Gravity3D=off !on,off
 
   HeliocentricDistance=3.3*_AU_
-  subSolarPointAzimuth=0.0
+  subSolarPointAzimuth=0.0 !! in rad
+  subSolarPointZenith=1.5708 !!in rad
 
   RadiativeCoolingMode=off !off, Crovisier	
 
   !!Gas parameters
   ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
   BjornProductionRate(H2O)=2.0e25 !!2.0e25	    
-  UniformProductionRate(H2O)=2.0e25 !!2.0e25
-  JetProductionRate(H2O)=1.0e25 !1.0e25	    
+  UniformProductionRate(H2O)=0.0 !!2.0e25
+  JetProductionRate(H2O)=0.0 !1.0e25	    
   
   !!Dust parameters
   DustTotalMassProductionRate=1.0
