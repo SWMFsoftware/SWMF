@@ -13,7 +13,7 @@ makefile  SPICE=/Users/vtenishe/SPICE/Toolkit/cspice !nospice
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
-ProjectSourceDirectory=srcMercury 
+ProjectSourceDirectory=srcTitan  
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".") 
 SourceDirectory=src
@@ -35,7 +35,7 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
+TimeStepMode= SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
 
@@ -50,6 +50,26 @@ CouplerMode=off !ices !!off, ices, swmf
   PIC=on ! on, off
   Mesh=on ! on, off
 #endUserDefinitions
+
+#General
+  ReferenceInjectionParticleNumber=200
+  MaxMeshRefinmentLevel=12
+  EnforceRequestedMeshResolution=on !on,off
+  InitialSampleLength=1000
+
+
+! ReferenceInjectionParticleNumber=200
+! MaxMeshRefinmentLevel=8! 2 !4
+! EnforceRequestedMeshResolution=off !on,off
+
+  BlockCells=5,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=on !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+
+#endGeneral
 
 #ParticleCollisions 
   model = off ! HS !!off !HS ! HS, off
@@ -90,17 +110,26 @@ CouplerMode=off !ices !!off, ices, swmf
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
-  SPICE=on !off !on, off
+  SPICE=off !off !on, off
 
-!  SimulationStartTime=2008-12-30T00:00:00 
+  define _TARGET_ _TITAN_
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Titan::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+! define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Titan::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
+! define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
+! define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Europa::ExchangeSurfaceAreaDensity()
+! define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
+! define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
+
+
   SimulationStartTime=2009-01-24T00:00:00
 
-!  addPhysicalModelHeader=Moon.h,Exosphere_Helium.h 
-!  addPhysicalModelHeader=Exosphere_Helium.h   
+  addPhysicalModelHeader=Titan.h 
+
+
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
-  Source:ImpactVaporization=on \\ !on,off
+  Source:ImpactVaporization=off \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(N2)=1.69E22, SourceTemperature(N2)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
