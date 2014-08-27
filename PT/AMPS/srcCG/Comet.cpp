@@ -36,7 +36,8 @@ static double azimuthCenter;
 static double zenithCenter;
 static cInternalRotationBodyData* Nucleus;
 
-double subSolarPointAzimuth=0.0; //53.0*Pi/180; //0.0;
+double subSolarPointAzimuth=0.0;
+double subSolarPointZenith=0.0;
 
 double DustSizeMin=1.0e-7;
 double DustSizeMax=1.0e-2;
@@ -1107,15 +1108,17 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   long int totalSurfaceElementsNumber,i;
   double rSphere=1980.0;
   double area;
+  double totalProdNightSide=0.0,totalProdDaySide=0.0,scalingFactor,scalingFactorDay,totalSurfaceInShadow=0.0,totalSurfaceInDayLight=0.0;
 
-  if (probabilityFunctionDefinedNASTRAN==false) {       
+
+  /*  if (probabilityFunctionDefinedNASTRAN==false) {       
     for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
       TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
     }
     
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-    positionSun[2]=0.0;
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
     
@@ -1140,8 +1143,88 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 	productionDistributionNASTRAN[i]=ProductionRate[angleProdInt][2+Comet::ndist]/(TableTotalProductionRate/(1.0-NightSideProduction[Comet::ndist]*2))/(2*Pi*rSphere*rSphere*(cos(angleProdInt*Pi/180)-cos(angleProdInt*Pi/180+Pi/180)))*CutCell::BoundaryTriangleFaces[i].SurfaceArea+NightSideProduction[Comet::ndist]*CutCell::BoundaryTriangleFaces[i].SurfaceArea/(2*Pi*rSphere*rSphere);
 	total+=productionDistributionNASTRAN[i];
       }
+      }*/
+
+  if (probabilityFunctionDefinedNASTRAN==false) {       
+    for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
+      TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
     }
-    //    printf("total=%e \n",total);
+
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+    
+    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
+    
+    total=0.0;      
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x); 
+      
+      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
+	c+=norm[idim]*(positionSun[idim]-x[idim]);
+	X+=pow(positionSun[idim]-x[idim],2.0);
+      }
+      
+      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
+	totalSurfaceInShadow+=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+      }else{
+	totalSurfaceInDayLight+=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+      }
+    }
+    if (PIC::ThisThread==0) printf("totalSurfaceinShadow=%e, totalSurfaceinDayLight=%e \n",totalSurfaceInShadow,totalSurfaceInDayLight); 
+
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x);
+
+      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
+	c+=norm[idim]*(positionSun[idim]-x[idim]);
+	X+=pow(positionSun[idim]-x[idim],2.0);
+      }
+
+      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
+	productionDistributionNASTRAN[i]=NightSideProduction[Comet::ndist]*CutCell::BoundaryTriangleFaces[i].SurfaceArea/totalSurfaceInShadow;
+	totalProdNightSide+=productionDistributionNASTRAN[i];
+      }else{
+	double angleProd;
+	int angleProdInt;
+	angleProd=acos(c/sqrt(X))*180/Pi;
+	angleProdInt=(int) angleProd;
+	productionDistributionNASTRAN[i]=ProductionRate[angleProdInt][2+Comet::ndist]/(TableTotalProductionRate/(1.0-NightSideProduction[Comet::ndist]*(totalSurfaceInDayLight+totalSurfaceInShadow)/totalSurfaceInDayLight))/(totalSurfaceInDayLight*(cos(angleProdInt*Pi/180)-cos(angleProdInt*Pi/180+Pi/180)))*CutCell::BoundaryTriangleFaces[i].SurfaceArea+NightSideProduction[Comet::ndist]*CutCell::BoundaryTriangleFaces[i].SurfaceArea/totalSurfaceInShadow;
+	totalProdDaySide+=productionDistributionNASTRAN[i];
+      }
+    }
+
+    scalingFactor=NightSideProduction[Comet::ndist]/(1-NightSideProduction[Comet::ndist])/(totalProdNightSide/totalProdDaySide);
+
+    totalProdNightSide=0.0,totalProdDaySide=0.0;
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x);
+      
+      for (c=0.0,X=0.0,idim=0;idim<3;idim++){
+	c+=norm[idim]*(positionSun[idim]-x[idim]);
+	X+=pow(positionSun[idim]-x[idim],2.0);
+      }
+
+      if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
+	productionDistributionNASTRAN[i]=NightSideProduction[Comet::ndist]*CutCell::BoundaryTriangleFaces[i].SurfaceArea/totalSurfaceInShadow*scalingFactor;
+	total+=productionDistributionNASTRAN[i];
+	totalProdNightSide+=productionDistributionNASTRAN[i];
+      }else{
+	double angleProd;
+	int angleProdInt;
+	angleProd=acos(c/sqrt(X))*180/Pi;
+	angleProdInt=(int) angleProd;
+	productionDistributionNASTRAN[i]=ProductionRate[angleProdInt][2+Comet::ndist]/(TableTotalProductionRate/(1.0-NightSideProduction[Comet::ndist]*(totalSurfaceInDayLight+totalSurfaceInShadow)/totalSurfaceInDayLight))/(totalSurfaceInDayLight*(cos(angleProdInt*Pi/180)-cos(angleProdInt*Pi/180+Pi/180)))*CutCell::BoundaryTriangleFaces[i].SurfaceArea+NightSideProduction[Comet::ndist]*CutCell::BoundaryTriangleFaces[i].SurfaceArea/totalSurfaceInShadow;
+	total+=productionDistributionNASTRAN[i];
+	totalProdDaySide+=productionDistributionNASTRAN[i];
+      }
+    }
+
+    if (PIC::ThisThread==0) printf("ratio Production Night/Total=%e \n",totalProdNightSide/(totalProdNightSide+totalProdDaySide));
+
     
     cumulativeProductionDistributionNASTRAN[0]=0.0;
     for (i=0;i<totalSurfaceElementsNumber;i++) {
@@ -1286,9 +1369,9 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
       TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
     }
     
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-    positionSun[2]=0.0;
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
     
@@ -1442,9 +1525,9 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
   double totalArea;
 
   if (probabilityFunctionDefinedJetNASTRAN==false) {          
-    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-    positionSun[2]=0.0;
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
     
