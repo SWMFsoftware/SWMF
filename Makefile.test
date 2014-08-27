@@ -59,6 +59,7 @@ test:
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
+	-@(${MAKE} test9th)
 	-@(${MAKE} test10)
 	-@(${MAKE} test11)
 	-@(${MAKE} test12)
