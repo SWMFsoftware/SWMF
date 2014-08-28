@@ -55,7 +55,7 @@ CouplerMode=off !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=1000
+  InitialSampleLength=5000
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -129,7 +129,7 @@ CouplerMode=off !ices !!off, ices, swmf
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
-  Source:ImpactVaporization=off \\ !on,off
+  Source:ImpactVaporization=on \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(N2)=1.69E22, SourceTemperature(N2)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 

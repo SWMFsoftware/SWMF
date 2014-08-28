@@ -42,7 +42,7 @@ const double xMaxDomain=10; //modeling the vicinity of the planet
 const double yMaxDomain=15; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
-const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
+const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
 
 
 
@@ -393,7 +393,7 @@ long int sphereParticleInjection(int spec,int BoundaryElementType,void *SphereDa
 //    PIC::Distribution::InjectMaxwellianDistribution(v,vbulk,Temp,ExternalNormal,NA);
 
 
-    for (idim=0;idim<3;idim++) v[idim]=-ExternalNormal[idim]*2.0e3;
+    for (idim=0;idim<3;idim++) v[idim]=-ExternalNormal[idim]*3.0e3;
 
 
 //    InjectParticles-=ParticleWeight*ParticleWeightCorrection;
@@ -532,10 +532,10 @@ void amps_init() {
 
 
     Sphere->localResolution=localSphericalSurfaceResolution;
-    Sphere->InjectionRate=sphereInjectionRate; //Titan::SourceProcesses::totalProductionRate;
+    Sphere->InjectionRate=Titan::SourceProcesses::totalProductionRate; //Titan::SourceProcesses::totalProductionRate; sphereInjectionRate
     Sphere->faceat=0;
     Sphere->ParticleSphereInteraction=Titan::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
-    Sphere->InjectionBoundaryCondition=sphereParticleInjection; // Titan::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+    Sphere->InjectionBoundaryCondition=Titan::SourceProcesses::InjectionBoundaryModel; // Titan::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
 
     Sphere->PrintTitle=Titan::Sampling::OutputSurfaceDataFile::PrintTitle;
     Sphere->PrintVariableList=Titan::Sampling::OutputSurfaceDataFile::PrintVariableList;
