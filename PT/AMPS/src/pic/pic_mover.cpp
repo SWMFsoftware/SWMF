@@ -1562,14 +1562,14 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
     xmax[2]=startNode->xmin[2]+(k+1)*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;
 
     vol=CutCell::GetRemainedBlockVolume(xmin,xmax,PIC::Mesh::mesh.EPS,1.0E-2,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,startNode->FirstTriangleCutFace);
-    cout << "$PREFIX: recalculated volume: vol=" << vol << "(" << __FILE__ << __LINE__ << ")" << endl;
+    cout << "$PREFIX: recalculated volume: vol=" << vol << "(" << __FILE__ << "@" << __LINE__ << ")" << endl;
     cout << " xInit=" << xInit[0] << ", " << xInit[1] << ", " << xInit[2] << endl;
 
     if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
-      cout << "$PREFIX: xInit is outside of the domain " << __FILE__<< __LINE__ << endl;
+      cout << "$PREFIX: xInit is outside of the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
     }
     else {
-      cout << "$PREFIX: xInit is inside of the domain " << __FILE__<< __LINE__ << endl;
+      cout << "$PREFIX: xInit is inside of the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
     }
 
     xmiddle[0]=startNode->xmin[0]+(i+0.5)*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
@@ -1579,10 +1579,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
     cout << " xMiddle=" << xmiddle[0] << ", " << xmiddle[1] << ", " << xmiddle[2] << endl;
 
     if (CutCell::CheckPointInsideDomain(xmiddle,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
-      cout << "$PREFIX: middle point of the cell is outside of the domain " << __FILE__<< __LINE__ << endl;
+      cout << "$PREFIX: middle point of the cell is outside of the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
     }
     else {
-      cout << "$PREFIX: middle point of the cell is inside of the domain " << __FILE__<< __LINE__ << endl;
+      cout << "$PREFIX: middle point of the cell is inside of the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
     }
 
     for (int ii=0;ii<2;ii++) for (int jj=0;jj<2;jj++) for (int kk=0;kk<2;kk++) {
@@ -1595,10 +1595,10 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
       cout << "node (" << ii << "," << jj << "," << kk << ") x=" << t[0] << ", " << t[1] << ", " << t[2] << ": ";
 
       if (CutCell::CheckPointInsideDomain(t,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
-         cout << "Outside of the domain" << __FILE__<< __LINE__ << endl;
+        cout << "Outside of the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
       }
       else {
-        cout << "Inside the domain" << __FILE__<< __LINE__ << endl;
+        cout << "Inside the domain (" << __FILE__ << "@" << __LINE__ << ")" << endl;
       }
 
     }
