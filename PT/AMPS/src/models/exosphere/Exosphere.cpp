@@ -37,7 +37,7 @@ SpiceDouble Exosphere::Sampling::OutputDataFile::SO_to_HCI_TransformationMartix[
 double Exosphere::Sampling::CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
 //sampling offsets
-int Exosphere::Sampling::SamplingDensityOffset[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+int Exosphere::Sampling::SamplingDensityOffset[PIC::nTotalSpecies*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_)];
 int Exosphere::Sampling::CellSamplingDataOffset=-1;
 double **Exosphere::Sampling::PlanetNightSideReturnFlux=NULL;
 double *Exosphere::Sampling::TotalPlanetReturnFlux=NULL,*Exosphere::Sampling::PlanetSurfaceStickingRate=NULL;
@@ -76,7 +76,7 @@ int Exosphere::Sampling::RequestSamplingData(int offset) {
   if (CellSamplingDataOffset!=-1) exit(__LINE__,__FILE__,"Error: second request for the sampling data");
 
   CellSamplingDataOffset=offset;
-  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[iSource]=-1;
+  for (int s=0;s<PIC::nTotalSpecies;s++) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[s+iSource*PIC::nTotalSpecies]=-1;
 
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
@@ -1529,8 +1529,8 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
   fprintf(fout,", \"xMSGR_HCI\", \"yMSGR_HCI\", \"zMSGR_HCI\"");
 #endif
 
-  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
-    fprintf(fout,", \"Sodium number Density(%s)\"", _EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
+  if (SamplingDensityOffset[0]!=-1) for (int spec=0;spec<PIC::nTotalSpecies;spec++) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    fprintf(fout,", \"Number Density(spec=%s,source=%s)\"", PIC::MolecularData::GetChemSymbol(spec),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
   }
 
 /*
@@ -1571,11 +1571,11 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
   double TotalMeasure=0.0,Measure=0.0;
   ////,ImpactVaposizationSource=0.0;
-  int i,iSource;
+  int i,iSource,nspec;
   char *SamplingBuffer,*CellNodeSamplingBuffer;
-  double SourceRate[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
+  double SourceRate[PIC::nTotalSpecies*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_)];
 
-  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[iSource]=0.0;
+  for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[nspec+iSource*PIC::nTotalSpecies]=0.0;
 
 /*
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
@@ -1600,7 +1600,9 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
     if (Measure<=0.0) exit(__LINE__,__FILE__,"Error: non-positive cell volume is found");
     TotalMeasure+=Measure;
 
-    for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[iSource]+=*((double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
+    if (SamplingDensityOffset[0]!=-1) for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) {
+      for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[nspec+iSource*PIC::nTotalSpecies]+=*((double*)(SamplingBuffer+nspec+SamplingDensityOffset[iSource]));
+    }
 
     /*
     #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
@@ -1621,9 +1623,9 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
     */
   }
 
-  for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++){
-    if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceRate[iSource]/=PIC::LastSampleLength*TotalMeasure;
-    *((double*)(CellNodeSamplingBuffer+SamplingDensityOffset[iSource]))=SourceRate[iSource];
+  if (SamplingDensityOffset[0]!=-1) for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceRate[nspec+iSource*PIC::nTotalSpecies]/=PIC::LastSampleLength*TotalMeasure;
+    *((double*)(CellNodeSamplingBuffer+nspec+SamplingDensityOffset[iSource]))=SourceRate[nspec+iSource*PIC::nTotalSpecies];
   }
 
 
@@ -1681,9 +1683,9 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
 #endif
 
   //output the sampled number densities
-  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+  if (SamplingDensityOffset[0]!=-1) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
     if (pipe->ThisThread==CenterNodeThread) {
-      t= *((double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
+      t= *((double*)(SamplingBuffer+DataSetNumber+SamplingDensityOffset[iSource]));
     }
 
     if (pipe->ThisThread==0) {
