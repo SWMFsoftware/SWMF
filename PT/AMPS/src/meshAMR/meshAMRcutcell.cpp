@@ -1027,7 +1027,7 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
 void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangleNode>& nodes,list<CutCell::cConnectivityListTriangleEdge>& edges,list<CutCell::cConnectivityListTriangleFace>& faces,list<cConnectivityListTriangleEdgeDescriptor>& RecoveredEdgeDescriptorList) {
   long int nd,nedge,nface;
   int idim;
-  list<cConnectivityListTriangleNode>::iterator tempNodeIteratorVector[nBoundaryTriangleNodes];
+  list<cConnectivityListTriangleNode>::iterator *tempNodeIteratorVector=new list<cConnectivityListTriangleNode>::iterator [nBoundaryTriangleNodes];
 
   //init the list of the nodes
   for (nd=0;nd<nBoundaryTriangleNodes;nd++) {
@@ -1126,6 +1126,8 @@ void CutCell::ReconstructConnectivityList(list<CutCell::cConnectivityListTriangl
 
     }
   }
+
+  delete [] tempNodeIteratorVector;
 }
 
 
@@ -1159,7 +1161,7 @@ void CutCell::SmoothRefine(double SmoothingCoefficient) {
   ReconstructConnectivityList(OrigonalNodes,OriginalEdges,OriginalTriangleFaces,OriginalRecoveredEdgeDescriptorList);
 
   //refine the triangle edges
-  cNASTRANnode NewEdgeMiddleNode[OriginalEdges.size()];
+  cNASTRANnode *NewEdgeMiddleNode=new cNASTRANnode[OriginalEdges.size()];
   list<cConnectivityListTriangleNode> NewNodes;
   list<cConnectivityListTriangleEdge>::iterator edge;
   long int cnt;
@@ -1329,6 +1331,7 @@ void CutCell::SmoothRefine(double SmoothingCoefficient) {
     }
   }
 
+  delete [] NewEdgeMiddleNode;
 }
 
 int CutCell::cutBlockTetrahedronConnectivity(CutCell::cCutBlock* bl,list<CutCell::cTetrahedron>& indomainConnectivityList,list<CutCell::cTetrahedron>& outdomainConnectivityList,list<CutCell::cTriangleCutFace> &TriangleCutFaceConnectivity) {
