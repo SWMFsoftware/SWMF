@@ -966,8 +966,13 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
  //   cutBlockTetrahedronConnectivity<cCutBlockNode,cCutBlock,cCutData,cTetrahedron,cTriangleCutFace>(&bl,indomainConnectivityList,outdomainConnectivityList,TriangleCutConnectivity);
 //  int cutBlockTetrahedronConnectivity(cCutBlock* bl,list<cTetrahedron>& indomainConnectivityList,list<cTetrahedron>& outdomainConnectivityList,list<cTriangleCutFace> TriangleCutFaceConnectivity) {
 
-    for (itr=indomainConnectivityList.begin();itr!=indomainConnectivityList.end();itr++) {
-      VolumeL1+=itr->Volume();
+    if (bl.NodeBuffer.begin()!=bl.NodeBuffer.end()) {
+      for (itr=indomainConnectivityList.begin();itr!=indomainConnectivityList.end();itr++) {
+        VolumeL1+=itr->Volume();
+      }
+    }
+    else {
+      VolumeL1=pow(0.25,3)*(xCellMax[0]-xCellMin[0])*(xCellMax[1]-xCellMin[1])*(xCellMax[2]-xCellMin[2]);
     }
   }
   else {
