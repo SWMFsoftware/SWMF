@@ -129,10 +129,30 @@ CouplerMode=ices !!off, ices, swmf
 
   SPICE=on !off !on, off
 
+  ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
+
+  SpiceKernels="spk/msgr_de405_de423s.bsp","fk/msgr_dyn_v600.tf","../../NAIF/naif0010.tls","pck/pck00009_MSGR_v10.tpc","fk/msgr_v210.tf", \\ 
+    "ik/msgr_epps_v100.ti","ck/msgr20110413.bc","ck/msgr20110414.bc","ck/msgr20110415.bc","ck/msgr20110416.bc","ck/msgr20110417.bc","ck/msgr20110418.bc","ck/msgr20110419.bc","ck/msgr20110420.bc","ck/msgr20110421.bc", \\ 
+    "sclk/messenger_1486.tsc","spk/msgr_20040803_20140823_od266sc_0.bsp","../../OTHER/GSE.tf" 
+
+  define _TARGET_  _MERCURY_
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Mercury::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Mercury::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
+  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Mercury::ExchangeSurfaceAreaDensity()
+  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
+  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Mercury::Sampling::FlushSamplingDataBuffers()
+
+  define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Mercury::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
+  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Mercury::ExospherePhotoionizationLifeTime(t0,t1,t2,t3)
+
+ 
+
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
 
-!  addPhysicalModelHeader=Moon.h,Exosphere_Helium.h 
+  addPhysicalModelHeader=Mercury.h 
 !  addPhysicalModelHeader=Exosphere_Helium.h   
 
 !---------------------------------   SOURCE RATE --------------------------------------------
