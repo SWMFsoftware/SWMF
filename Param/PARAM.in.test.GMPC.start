@@ -141,7 +141,7 @@ F			UseFileCoupling
 
 #PICUNIT
  1.0                    xUnitPicSi
- 10.0                    uUnitPicSi
+ 1.0                    uUnitPicSi
 
 #PICREGION
 1                       nPicRegion
