@@ -2033,14 +2033,14 @@ MovingLoop:
 
             IntersectionFace->GetProjectedLocalCoordinates(xIntersectionLocal,xIntersection);
 
-            printf("$PREFIX: ptr=%ld, r0=%e, dtMin=%e, dtRecalculated=%e (%ld,%s)\n",ptr,r0,dtMin,dtRecalculated,__LINE__,__FILE__);
-            printf("$PREFIX: The \"global\" coordinates of the intersection: xIntersection[]=(%e,%e,%e)  (%ld,%s)\n",xIntersection[0],xIntersection[1],xIntersection[2],__LINE__,__FILE__);
-            printf("$PREFIX: The \"local\" coordinates of the intersection: xIntersectionLocal[]=(%e,%e)  (%ld,%s)\n",xIntersectionLocal[0],xIntersectionLocal[1],__LINE__,__FILE__);
-            printf("$PREFIX: e0Length*xLocal[0]=%e, e1Length*xLocal[1]=%e, EPS=%e (%ld,%s)\n",IntersectionFace->e0Length*xIntersectionLocal[0],IntersectionFace->e1Length*xIntersectionLocal[1],PIC::Mesh::mesh.EPS,__LINE__,__FILE__);
-            printf("$PREFIX: e0Length=%e, e1Length=%e (%ld,%s)\n",IntersectionFace->e0Length,IntersectionFace->e1Length,__LINE__,__FILE__);
+            printf("$PREFIX: ptr=%ld, r0=%e, dtMin=%e, dtRecalculated=%e (%i,%s)\n",ptr,r0,dtMin,dtRecalculated,__LINE__,__FILE__);
+            printf("$PREFIX: The \"global\" coordinates of the intersection: xIntersection[]=(%e,%e,%e)  (%i,%s)\n",xIntersection[0],xIntersection[1],xIntersection[2],__LINE__,__FILE__);
+            printf("$PREFIX: The \"local\" coordinates of the intersection: xIntersectionLocal[]=(%e,%e)  (%i,%s)\n",xIntersectionLocal[0],xIntersectionLocal[1],__LINE__,__FILE__);
+            printf("$PREFIX: e0Length*xLocal[0]=%e, e1Length*xLocal[1]=%e, EPS=%e (%i,%s)\n",IntersectionFace->e0Length*xIntersectionLocal[0],IntersectionFace->e1Length*xIntersectionLocal[1],PIC::Mesh::mesh.EPS,__LINE__,__FILE__);
+            printf("$PREFIX: e0Length=%e, e1Length=%e (%i,%s)\n",IntersectionFace->e0Length,IntersectionFace->e1Length,__LINE__,__FILE__);
           }
           else {
-            printf("$PREFIX: the intersection is not found (%ld,%s)\n",__LINE__,__FILE__);
+            printf("$PREFIX: the intersection is not found (%i,%s)\n",__LINE__,__FILE__);
           }
 
           if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
