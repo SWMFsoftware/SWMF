@@ -332,8 +332,6 @@ contains
     !
     call bvalp
 
-    call lapl(p,rsd)
-    !
     !      ref error and error
     !
     if((ErrPSolv).and.(mod(itnow,itintv)==0))then

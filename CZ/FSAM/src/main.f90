@@ -51,12 +51,13 @@ program xfsam
   myid2 = myid/nproc1
   myid1 = mod(myid,nproc1)
   call initialize
+
   ! open monitoring file
   ntcond = 0
   call get_global(em,ek,ek1,ek2,ek3,eth,anglm,anglmnorm)
   call get_mean_entropy(smeanbot,smeantop)
   if(myid==0) then
-     open(unit=16,file=engfile,status='replace')
+     open(unit=16,file=engfile,position="append")
      write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
           ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, &
           ek1,ek2,ek3,ntcond
