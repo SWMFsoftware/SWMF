@@ -13,6 +13,10 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Mercury";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MERCURY";
 char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="MSGR_MSO";
 
+int Mercury::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
+int Mercury::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_OFFSET_=-1;
+int Mercury::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=-1;
+
 /*//parameters of the soruce processes
 double Exosphere::SourceProcesses::ThermalDesorption::uThermal=1.85*eV2J;
 double Exosphere::SourceProcesses::ThermalDesorption::VibrationalFrequency=1.0E13;
@@ -138,8 +142,8 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
     //brightness of the exospheric sodium
     if (spec==_NA_SPEC_) {
-      //check if the point is outside of the Moon's and Earth's shadows
-      if ( (Moon::EarthShadowCheck(x)==false) && ((x[0]>0.0)||(x[1]*x[1]+x[2]*x[2]>_RADIUS_(_MOON_)*_RADIUS_(_MOON_))) ) {
+      //check if the point is outside of Mercury's shadow
+      if ( /*(Moon::EarthShadowCheck(x)==false) &&*/ ((x[0]>0.0)||(x[1]*x[1]+x[2]*x[2]>_RADIUS_(_MERCURY_)*_RADIUS_(_MERCURY_))) ) {
         res[cnt++]=1.0E-10*node->block->GetCenterNode(nd)->GetNumberDensity(_NA_SPEC_)*SodiumGfactor__5891_58A__Killen_2009_AJSS(vHeliocentric,rHeliocentric);
         res[cnt++]=1.0E-10*node->block->GetCenterNode(nd)->GetNumberDensity(_NA_SPEC_)*SodiumGfactor__5897_56A__Killen_2009_AJSS(vHeliocentric,rHeliocentric);
       }

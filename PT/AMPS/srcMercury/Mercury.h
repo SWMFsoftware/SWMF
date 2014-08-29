@@ -20,13 +20,82 @@
 //const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; 
 
 //SPICE Kernels to be loaded
+/*
 const int nFurnishedSPICEkernels=5+12+1;
 const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"MESSENGER/kernels/spk/msgr_de405_de423s.bsp","MESSENGER/kernels/fk/msgr_dyn_v600.tf","NAIF/naif0010.tls","MESSENGER/kernels/pck/pck00009_MSGR_v10.tpc","MESSENGER/kernels/fk/msgr_v210.tf",
    "MESSENGER/kernels/ik/msgr_epps_v100.ti","MESSENGER/kernels/ck/msgr20110413.bc","MESSENGER/kernels/ck/msgr20110414.bc","MESSENGER/kernels/ck/msgr20110415.bc","MESSENGER/kernels/ck/msgr20110416.bc","MESSENGER/kernels/ck/msgr20110417.bc","MESSENGER/kernels/ck/msgr20110418.bc","MESSENGER/kernels/ck/msgr20110419.bc","MESSENGER/kernels/ck/msgr20110420.bc","MESSENGER/kernels/ck/msgr20110421.bc",
      "MESSENGER/kernels/sclk/messenger_1486.tsc","MESSENGER/kernels/spk/msgr_20040803_20140823_od266sc_0.bsp","OTHER/GSE.tf"};
+*/
 
 namespace Mercury {
   using namespace Exosphere;
+
+  namespace Sampling {
+    using namespace Exosphere::Sampling;
+
+    //calculate the column integrals along the limb direction
+    namespace SubsolarLimbColumnIntegrals {
+      //sample values of the column integrals at the subsolar limb as a function of the phase angle
+      const int nPhaseAngleIntervals=50;
+      const double dPhaseAngle=Pi/nPhaseAngleIntervals;
+
+      //sample the altitude variatin of the column integral in the solar direction from the limb
+      const double maxAltitude=50.0; //altititude in radii of the object
+      const double dAltmin=0.001,dAltmax=0.001*maxAltitude; //the minimum and maximum resolution along the 'altitude' line
+      extern double rr;
+      extern long int nSampleAltitudeDistributionPoints;
+
+      //offsets in the sample for individual parameters of separate species
+      extern int _NA_EMISSION_5891_58A_SAMPLE_OFFSET_,_NA_EMISSION_5897_56A_SAMPLE_OFFSET_,_NA_COLUMN_DENSITY_OFFSET_;
+
+/*
+      struct cSampleAltitudeDistrubutionBufferElement {
+        double NA_ColumnDensity,NA_EmissionIntensity__5891_58A,NA_EmissionIntensity__5897_56A;
+      };
+
+      extern cSampleAltitudeDistrubutionBufferElement *SampleAltitudeDistrubutionBuffer;
+*/
+
+
+      extern SpiceDouble etSampleBegin;
+      extern int SamplingPhase;
+      extern int firstPhaseRadialVelocityDirection;
+
+      extern int nOutputFile;
+
+      class cSampleBufferElement {
+      public:
+//        double NA_ColumnDensity,NA_EmissionIntensity__5891_58A,NA_EmissionIntensity__5897_56A;
+//        cSampleAltitudeDistrubutionBufferElement *AltitudeDistrubutionBuffer;
+
+        double *SampleColumnIntegrals;
+        double **AltitudeDistributionColumnIntegrals;
+
+        int nSamples;
+        double JulianDate;
+
+        cSampleBufferElement() {
+          SampleColumnIntegrals=NULL,AltitudeDistributionColumnIntegrals=NULL,nSamples=0,JulianDate=0;
+        }
+      };
+
+      //sample buffer for the current sampling cycle
+      extern cSampleBufferElement SampleBuffer_AntiSunwardMotion[nPhaseAngleIntervals];
+      extern cSampleBufferElement SampleBuffer_SunwardMotion[nPhaseAngleIntervals];
+
+      //sample buffer for the lifetime of the simulation
+      extern cSampleBufferElement SampleBuffer_AntiSunwardMotion__TotalModelRun[nPhaseAngleIntervals];
+      extern cSampleBufferElement SampleBuffer_SunwardMotion__TotalModelRun[nPhaseAngleIntervals];
+
+      void EmptyFunction();
+
+      void init();
+      void CollectSample(int DataOutputFileNumber); //the function will ba called by that part of the core that prints output files
+      void PrintDataFile();
+    }
+
+
+  }
 
 
     //the total acceleration acting on a particle

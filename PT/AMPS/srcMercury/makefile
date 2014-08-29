@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = Mercury.o  main_lib.o
+MAINLIBOBJ = Mercury.o  main_lib.o Mercury_SampleSubSolarLimbColumnIntegrals.o  
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
