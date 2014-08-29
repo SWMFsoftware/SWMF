@@ -9,7 +9,7 @@ module ModLoadBalance
 
   use ModBlockData, ONLY: MaxBlockData, get_block_data, put_block_data, &
        n_block_data, use_block_data, set_block_data, clean_block_data
-  use ModImplicit, ONLY: UseBDF2, n_prev, ImplOld_VCB
+  use ModImplicit, ONLY: UseImplicit, UseBDF2, n_prev, ImplOld_VCB
   use ModCT, ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRaytrace, ONLY: ray
   use ModAdvance, ONLY: nVar
@@ -52,7 +52,7 @@ contains
     if(UseConstrainB) nBuffer = nBuffer + 3*nCellGhost
     if(DoSendRay) &
          nBuffer = nBuffer + 6*nIJK
-    if(UseBDF2 .and. n_prev > 0) &
+    if(UseImplicit .and. UseBDF2 .and. n_prev > 0) &
          nBuffer = nBuffer + nVar*nIJK
     if(DoMoveExtraData)then
        if(UseB0) &
@@ -112,7 +112,8 @@ contains
 
     end if ! DoMoveExtraData
 
-    if(UseBDF2 .and. n_prev > 0)then
+
+    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar; iData = iData+1
           Buffer_I(iData) = ImplOld_VCB(iVar,i,j,k,iBlock)
        end do; end do; end do; end do
@@ -180,7 +181,7 @@ contains
        end if
     end if ! DoMoveExtraData
 
-    if(UseBDF2 .and. n_prev > 0)then
+    if(UseImplicit .and. UseBDF2 .and. n_prev > 0)then
        do k=1,nK; do j=1,nJ; do i=1,nI; do iVar=1,nVar
           iData = iData+1
           ImplOld_VCB(iVar,i,j,k,iBlock) = Buffer_I(iData)
