@@ -257,10 +257,11 @@ contains
 
        ! (nGhostPic +1) where +1 is from the IPIC3D ghost layor
        XyzMaxRegin_D = XyzMaxPic_DI(1:nDim,iRegion) - &
-            nGhostPic*DxyzPic_DI(:,iRegion)  
+            (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
        XyzMinRegin_D = XyzPic0_DI(1:nDim,iRegion) + &
-            nGhostPic*DxyzPic_DI(:,iRegion)  
+            (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
+
 
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -295,16 +296,16 @@ contains
 
           ! what we have left is blocks intercection the pic region iRegion
           iL = max(ceiling((XyzMinRegin_D(x_) - XyzMin_D(x_))/CellSize_DB(x_,iBlock)), 0) + 1
-          iR = max(ceiling((XyzMaxRegin_D(x_) - XyzMin_D(x_))/CellSize_DB(x_,iBlock)), 0) + 1
+          iR = max(ceiling((XyzMaxRegin_D(x_) - XyzMin_D(x_))/CellSize_DB(x_,iBlock)), 0) 
           if(iR > nI ) iR = nI
           if(nDim > 1) then
              jL = max(ceiling((XyzMinRegin_D(y_) - XyzMin_D(y_))/CellSize_DB(y_,iBlock)), 0) + 1
-             jR = max(ceiling((XyzMaxRegin_D(y_) - XyzMin_D(y_))/CellSize_DB(y_,iBlock)), 0) + 1
+             jR = max(ceiling((XyzMaxRegin_D(y_) - XyzMin_D(y_))/CellSize_DB(y_,iBlock)), 0) 
              if(jR > nJ ) jR = nJ
           end if
           if(nDim > 2) then
              kL = max(ceiling((XyzMinRegin_D(z_) - XyzMin_D(z_))/CellSize_DB(z_,iBlock)), 0) + 1
-             kR = max(ceiling((XyzMaxRegin_D(z_) - XyzMin_D(z_))/CellSize_DB(z_,iBlock)), 0) + 1
+             kR = max(ceiling((XyzMaxRegin_D(z_) - XyzMin_D(z_))/CellSize_DB(z_,iBlock)), 0) 
              if(kR > nK ) kR = nK
           end if
 
