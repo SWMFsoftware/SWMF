@@ -235,6 +235,9 @@ test_interpolate:
 						>  test_interpolate.diff)
 	@ls -l test_interpolate.diff
 #######################################################################
+test_interpolate_amr.o: test_interpolate_amr.f90
+	${COMPILE.f90} ${Cflag0} test_interpolate_amr.f90
+
 OBJ_INTERPOLATE_AMR = \
 	../src/ModKind.o \
 	../src/ModInterpolateAMR.o \
