@@ -168,12 +168,15 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitX_
     use ModIoUnit, ONLY: UnitTmp_
     use ModCoordTransform, ONLY: cross_product
-
+    use ModRandomNumber, ONLY: rpseudo_random_number
+    
     logical:: DoReadShapeFile = .true.
 
     integer:: nPoint, i, j, iPoint, iTriangle, iPoint1, iPoint2, iPoint3
+    integer:: iSeed = 7
 
     real, allocatable:: Xyz_DI(:,:)
+    real :: RandomNumber
 
     character(len=100):: String1, String2
 
@@ -203,7 +206,17 @@ contains
     do iPoint = 1, nPoint
        read(UnitTmp_,*) String1, i, j, Xyz_DI(:,iPoint)
 
-       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_)
+       ! Perturb vertices of all triangles to avoid the the situation that 
+       ! a line segment is parallel to a triangle plane in is_segment_intersected
+       RandomNumber = rpseudo_random_number(iSeed, iSeed)
+       Xyz_DI(1, iPoint) = Xyz_DI(1, iPoint) + RandomNumber*1e-5
+       RandomNumber = rpseudo_random_number(iSeed, iSeed)
+       Xyz_DI(2, iPoint) = Xyz_DI(2, iPoint) + RandomNumber*1e-5
+       RandomNumber = rpseudo_random_number(iSeed, iSeed)
+       Xyz_DI(3, iPoint) = Xyz_DI(3, iPoint) + RandomNumber*1e-5
+
+       ! Convert SI unit to NO unit
+       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_) 
     end do
     do iTriangle = 1, nTriangle
        read(UnitTmp_,*) String1, i, j, iPoint1, iPoint2, iPoint3
@@ -297,6 +310,8 @@ contains
     ! that is closest to the true cell
     if (.not. is_segment_intersected(XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
          XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
+       write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
+       write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
        write(*,*) NameSub,' error for face =', iFace, jFace, kFace
        write(*,*) NameSub,' error for iside, iBlockBc=', iSide, iBlockBc
        call stop_mpi(NameSub// &
@@ -394,9 +409,9 @@ contains
        if(abs(nDotP2P1) < 1e-12) then
           if (abs(sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))) &
                < 1e-12) then
-             !write(*,*) 'segment lies in the same plane: iTriangle: ', Xyz2_D
-             !write(*,*) 'Test:', &
-             !     sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))
+             write(*,*) 'segment lies in the same plane: iTriangle: ', Xyz2_D
+             write(*,*) 'Test:', &
+                  sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))
              CYCLE
           else 
              CYCLE
