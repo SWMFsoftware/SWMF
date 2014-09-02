@@ -37,6 +37,7 @@ MODULES = \
 	ModPlanetConst.o\
 	ModPlotFile.o\
 	ModProcessVarName.o\
+	ModRandomNumber.o\
 	ModReadParam.o\
 	ModSort.o\
 	ModSpice.o\
