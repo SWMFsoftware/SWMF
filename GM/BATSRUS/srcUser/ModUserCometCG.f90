@@ -128,17 +128,12 @@ contains
   !===========================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModMain, ONLY: n_step
     use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, r_BLK
     integer, intent(in):: iBlock
 
     integer:: i, j, k
     real:: XyzInside_D(3)
     !------------------------------------------------------------------------
-    if(n_step > 1)then
-       ! This should not happen !!!
-       RETURN
-    end if
     ! Place a point inside rMinShape sphere with transcendent coordinates
     ! to reduce chances of hitting the edge or corner of triangles
     
@@ -168,7 +163,7 @@ contains
     use ModPhysics, ONLY: Si2No_V, UnitX_
     use ModIoUnit, ONLY: UnitTmp_
     use ModCoordTransform, ONLY: cross_product
-    use ModRandomNumber, ONLY: rpseudo_random_number
+    use ModRandomNumber, ONLY: random_real
     
     logical:: DoReadShapeFile = .true.
 
@@ -207,15 +202,14 @@ contains
        read(UnitTmp_,*) String1, i, j, Xyz_DI(:,iPoint)
 
        ! Perturb vertices of all triangles to avoid the the situation that 
-       ! a line segment is parallel to a triangle plane in is_segment_intersected
-       RandomNumber = rpseudo_random_number(iSeed, iSeed)
-       Xyz_DI(1, iPoint) = Xyz_DI(1, iPoint) + RandomNumber*1e-5
-       RandomNumber = rpseudo_random_number(iSeed, iSeed)
-       Xyz_DI(2, iPoint) = Xyz_DI(2, iPoint) + RandomNumber*1e-5
-       RandomNumber = rpseudo_random_number(iSeed, iSeed)
-       Xyz_DI(3, iPoint) = Xyz_DI(3, iPoint) + RandomNumber*1e-5
+       ! a line segment is parallel to a triangle plane in 
+       ! is_segment_intersected
 
-       ! Convert SI unit to NO unit
+       Xyz_DI(1, iPoint) = Xyz_DI(1, iPoint) + random_real(iSeed)*1e-5
+       Xyz_DI(2, iPoint) = Xyz_DI(2, iPoint) + random_real(iSeed)*1e-5
+       Xyz_DI(3, iPoint) = Xyz_DI(3, iPoint) + random_real(iSeed)*1e-5
+
+       ! Convert from SI units to normalized unit
        Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_) 
     end do
     do iTriangle = 1, nTriangle
