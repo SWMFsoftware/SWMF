@@ -135,7 +135,8 @@ contains
 
     if(oktest_me)call write_face_state('Initial')
 
-    call set_boundary_cells(iBlockBc)
+    ! This call may be needed for moving bodies, but not in general
+    !!! call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
          iBoundary_GB(:,:,:,iBlockBc) >= MinFaceBoundary .and. &
