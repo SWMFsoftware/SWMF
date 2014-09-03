@@ -1,44 +1,41 @@
 module ModRandomNumber
 
-implicit none
+  implicit none
 
-public :: ipseudo_random_number    ! Returns a random integer number between 1 and N
-public :: rpseudo_random_number    ! Returns a random real number between 0 and 1
+  public :: random_integer ! Returns a random integer number between 1 and N
+  public :: random_real    ! Returns a random real number between 0 and 1
 
 contains
   !============================================================================
 
-  real function rpseudo_random_number(iSeedIn, iSeedOut)
-    ! rpseudo_random_number returns a pseudo_random_number between 0 and 1
+  real function random_real(iSeed)
 
-    integer, intent(in)  :: iSeedIn
-    integer, intent(out) :: iSeedOut
+    ! returns a pseudo_random_number between 0 and 1
+    ! iSeed needs to be initialized and saved by the calling routine
 
-    integer :: iSeed
+    integer, intent(inout)  :: iSeed
+    !---------------------------------------------------------
+    iSeed = iSeed*48828125
 
-    iSeed = iSeedIn*48828125
+    if(iSeed < 0) iSeed = (iSeed + 2147483647) + 1
+    if(iSeed == 0) iSeed = 1
 
-    IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
-    if(iSeed==0) iSeed=1
+    random_real = iSeed/2147483647.0
 
-    iSeedOut = iSeed
+  end function random_real
 
-    rpseudo_random_number=FLOAT(iSeed)/2147483647
+  !============================================================================
+  integer function random_integer(n, iSeed1, iSeed2, iSeed3)
 
-  end function rpseudo_random_number
+    integer, intent(in)   :: n                 ! maximum value to be returned
+    integer, intent(inout):: iSeed1, iSeed2, iSeed3  ! integer seeds
 
-  !=============================================================================
-  integer function ipseudo_random_number( n, ix, iy, iz )
-    !
-    !*******************************************************************************
-    !
-    !! ipseudo_random_number returns a random integer between 1 and N.
-    !! The maximum N is 2147483647 for a default-sized integer
-    !
-    !  Discussion:
-    !
-    !   This function returns a uniformly distributed pseudo-
-    !   random integer in the range 1 to N.
+    ! Returns a random integer between 1 and N.
+    ! The maximum N is 2147483647 for a default-sized 4-byte integer.
+    ! The three integer seeds should be initialized to 
+    ! values in the range 1 to 30,000 before the first call and 
+    ! not altered between subsequent calls (unless a sequence of random 
+    ! numbers is to be repeated by reinitializing the seeds).
     !
     !  Author:
     !
@@ -53,42 +50,19 @@ contains
     !    An Efficient and Portable Pseudo-random Number Generator,
     !    Applied Statistics, 
     !    Volume 31, Number 2, 1982, pages 188-190.
-    !
-    !  Parameters:
-    !
-    !    Input, integer N, the maximum value to be returned.
-    !
-    !    Input/output, integer IX, IY, IZ = Integer seeds initialized to 
-    !    values in the range 1 to 30,000 before the first call to ipseudo_random_number, and 
-    !    not altered between subsequent calls (unless a sequence of random 
-    !    numbers is to be repeated by reinitializing the seeds).
-    !
-    !    Output, integer ipseudo_random_number, a random integer in the range 1 to N.
-    !
-    !  Local parameters:
-    !
-    !    U = Pseudo-random number uniformly distributed in the interval (0,1).
-    !    X = Pseudo-random number in the range 0 to 3 whose fractional part is U.
-    !
-    implicit none
-    !
-    integer:: ix, iy, iz
-    integer:: n
-    real:: u
-    real:: x
-    !
-    ix = mod ( 171 * ix, 30269 )
-    iy = mod ( 172 * iy, 30307 )
-    iz = mod ( 170 * iz, 30323 )
 
-    x = ( real ( ix ) / 30269.0E+00 ) &
-         + ( real ( iy ) / 30307.0E+00 ) &
-         + ( real ( iz ) / 30323.0E+00 )
+    real:: x ! Pseudo-random number in the range 0 to 3
+    real:: u ! Pseudo-random number uniformly distributed in the interval (0,1)
+    !--------------------------------------------------------------------------
+    iSeed1 = mod(171*iSeed1, 30269)
+    iSeed2 = mod(172*iSeed2, 30307)
+    iSeed3 = mod(170*iSeed3, 30323)
 
-    u = x - int ( x )
-    ipseudo_random_number = real ( n ) * u + 1.0E+00
+    x = iSeed1/30269.0 + iSeed2/30307.0 + iSeed3/30323.0
 
-    return
-  end function ipseudo_random_number
+    u = x - int(x)
+    random_integer = n*u + 1.0
+
+  end function random_integer
 
 end module ModRandomNumber
