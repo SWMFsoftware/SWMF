@@ -27,6 +27,7 @@ help:
 	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   test_plot_file        - test ModPlotFile"
 	@echo "   test_process_var_name - test ModProcessVarName"
+	@echo "   test_random_number    - test ModRandomNumber"
 	@echo "   test_ray_trace        - test CON_ray_trace"
 	@echo "   test_sort             - test ModSort"
 	@echo "   test_time_convert     - test ModTimeConvert"
@@ -59,6 +60,7 @@ test:
 	-@make test_lookup_table
 	-@make test_planet_field
 	-@make test_plot_file
+	-@make test_random_number
 	-@make test_ray_trace
 	-@make test_sort
 	-@make test_time_convert
@@ -280,6 +282,25 @@ test_initial_state:
 	    test_initial_state.out test_initial_state.ref \
 						 >  test_initial_state.diff)
 	@ls -l test_initial_state.diff
+
+#######################################################################
+OBJ_RANDOM_NUMBER = \
+	../src/ModRandomNumber.o
+
+test_random_number_exe:
+	@(cd ../src; make ModRandomNumber.o)
+	@make test_random_number.o
+	${LINK.f90} -o test_random_number.exe \
+		test_random_number.o ${OBJ_RANDOM_NUMBER} ${Lflag1}
+
+test_random_number:
+	@echo test_random_number starting	>  test_random_number.diff
+	@make test_random_number_exe		>> test_random_number.diff
+	@echo ./test_random_number.exe		>> test_random_number.diff
+	-@(./test_random_number.exe > test_random_number.tmp)
+	-@(diff test_random_number.tmp test_random_number.log \
+						>  test_random_number.diff)
+	@ls -l test_random_number.diff
 
 #######################################################################
 OBJ_RAY_TRACE = \
