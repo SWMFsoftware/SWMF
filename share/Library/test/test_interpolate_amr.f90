@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-  !===========================TESTS============================================
+!===========================TESTS============================================
 module ModTestInterpolateAMR
   use ModInterpolateAMR, ONLY: interpolate_amr
   implicit none
@@ -25,7 +26,10 @@ module ModTestInterpolateAMR
   integer:: iLevelTest_I(8)
   integer,parameter:: nCell = 2
 contains
+  !==================================================================
   subroutine test_interpolate_amr(nDim,nSample)
+    use ModRandomNumber, ONLY: random_real
+
     integer, intent(in)::nDim, nSample
 
     integer :: iIndexes_II(0:nDim+1,2**nDim)
@@ -48,8 +52,7 @@ contains
     integer:: iMisc , nGridOut
 
     integer:: iSeed = 1
-    !--------------------
-    call init_rand()
+    !-------------------------------------------------------------------
     nCell_D = 1; nCell_D(1:nDim) = nCell
     DxyzDomain_D      = 2*nCell
     DxyzCoarseBlock_D = nCell
@@ -71,7 +74,7 @@ contains
                 iCellIndex_D = (/i,j,k/)
                 Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
                      DxyzCoarse_D*(iCellIndex_D(1:nDim) - 0.50)
-                Var_CB(i,j,k,iBlock) = rand()
+                Var_CB(i,j,k,iBlock) = random_real(iSeed)
              end do
           end do
        end do
@@ -85,7 +88,7 @@ contains
                    iCellIndex_D = (/i,j,k/)
                    Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
                         DxyzFine_D*(iCellIndex_D(1:nDim) - 0.50)
-                   Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * rand()
+                   Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * random_real(iSeed)
                 end do
              end do
           end do
@@ -107,7 +110,7 @@ contains
        !/
        SAMPLE:do iSample = 1, nSample
           do iDir = 1, nDim
-             Xyz_D(iDir) = (0.01 +0.98*rand())*DxyzDomain_D(iDir)
+             Xyz_D(iDir) = (0.01 +0.98*random_real(iSeed))*DxyzDomain_D(iDir)
           end do
           !\
           ! call interpolate_amr
@@ -162,7 +165,7 @@ contains
           ! Test continuity
           !/
           do iDir =1, nDim
-             XyzCont_D(iDir) = Xyz_D(iDir) + (0.02*rand() - 0.01)
+             XyzCont_D(iDir) = Xyz_D(iDir) + (0.02*random_real(iSeed) - 0.01)
           end do
           !\
           ! call interpolate_amr
@@ -252,26 +255,7 @@ contains
        end do SAMPLE
     end do CASE
     deallocate(Xyz_DCB, Var_CB)
-  contains
-    !\
-    !The random number generator.
-    !From the Buneman's code TRISTAN
-    !/
-    subroutine init_rand(iSeedIn)
-      integer,optional,intent(in)::iSeedIn
-      if(present(iSeedIn))then
-         iSeed=iSeedIn
-      else
-         iSeed=1
-      end if
-    end subroutine init_rand
-    !=====================
-    real function rand()
-      iSeed = iSeed*48828125
-      IF(iSeed < 0) iSeed=(iSeed+2147483647)+1
-      if(iSeed==0) iSeed=1
-      rand=FLOAT(iSeed)/2147483647
-    end function rand
+
   end subroutine test_interpolate_amr
   !============================
   subroutine find_test(nDim, Xyz_D, &
