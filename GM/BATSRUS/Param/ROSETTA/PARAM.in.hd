@@ -1,0 +1,159 @@
+Begin session: 1
+
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+read CG shape model
+
+#PLANET
+NONE
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+F			DoSaveRestart
+
+#GRID
+1                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-16.                    xMin
+ 16.                    xMax
+-16.                    yMin
+ 16.                    yMax
+-16.                    zMin
+ 16.                    zMax
+
+#GRIDRESOLUTION
+0.25                    Resolution
+initial                 NameArea
+
+#GRIDRESOLUTION
+0.25
+shell0
+0.5
+3.0
+
+#GRIDRESOLUTION
+0.5
+sphere0
+8.0
+
+#GRIDRESOLUTION
+1.0
+all
+
+#BODY
+F			UseBody
+
+TESTXYZ
+-1.59375
+-1.40625
+-1.40625
+
+#USERINPUTBEGIN -------------------------------------
+
+#SHAPEFILE
+CG_MOC_simple.bdf		NameShapeFile
+
+#SUNDIRECTION
+ 43.57                  LatSun
+-97.27                  LonSun
+
+#COMETSTATE
+0.5e10			RhoCometMinDim [amu/cc]
+1e10			RhoCometMaxDim [amu/cc]
+0.23			uCometDim [km/s]
+180.0			TempCometDim [K]
+
+#USERINPUTEND   -------------------------------------
+
+#EXTRABOUNDARY
+T			UseExtraBoundary
+user			TypeExtraBoundary
+
+#MINIMUMPRESSURE
+1e-15			pMinDim [nPa]
+
+#PLASMA
+18.0			FluidMass [amu]
+1.0			IonCharge [e]
+0.0			ElectronTemperatureRatio
+
+#SOLARWIND
+5.0                     SwRhoDim [amu/cc]
+1000.0                SwTDim   [K]
+     0.0                SwUxDim  [km/s]
+     0.0                SwUyDim  [km/s]
+     0.0                SwUzDim  [km/s]
+     0.0                SwBxDim  [nT]
+     0.0                SwByDim  [nT]
+     0.0                SwBzDim  [nT]
+
+#OUTERBOUNDARY
+float			TypeBcEast
+float			TypeBcWest
+float			TypeBcSouth
+float			TypeBcNorth
+float			TypeBcBottom
+float			TypeBcTop
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+5                       nPlotFiles
+x=0 MHD idl             StringPlot
+5                       DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+y=0 MHD idl             StringPlot
+5                       DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+z=0 MHD idl             StringPlot
+5                        DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+3d MHD idl              StringPlot
+250                       DnSavePlot
+-1.                     DtSavePlot
+0.0                     Dx
+3d MHD tec
+500                   DnSavePlot
+-1.                     DtSavePlot
+
+#STOP
+500			MaxIteration
+-1.0			tSimulationMax
+
+End session: 1
+
+#RUN ##########################################################################
+
+Begin session: 2
+
+#SCHEME
+2                         nOrder
+Rusanov                   TypeFlux | only for nOrder=2
+minmod                    TypeLimiter
+
+#STOP
+1000                     MaxIteration
+-1.0                    tSimulationMax
+
+End session: 2
+
+#END ##########################################################################
