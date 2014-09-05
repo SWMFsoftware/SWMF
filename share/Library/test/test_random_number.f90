@@ -13,12 +13,10 @@ end program test_random
 
 subroutine CON_stop(StringError)
 
-  use ModMpi
   implicit none
 
   character (len=*), intent(in) :: StringError
   !----------------------------------------------------------------------------
-
   write(*,'(a)')StringError
   write(*,'(a,i3)')'!!! SWMF_ABORT !!!'
   stop
