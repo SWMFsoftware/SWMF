@@ -170,7 +170,7 @@ test_linear_advection_exe:
 	@(cd ../src; make ModLinearAdvection.o)
 	@make test_linear_advection.o
 	${LINK.f90} -o test_linear_advection.exe ${OBJ_LINEAR_ADVECTION} \
-		${Lflag1}
+		${Lflag2}
 
 test_linear_advection:
 	@echo test_linear_advection starting	>  test_linear_advection.diff
@@ -292,7 +292,7 @@ test_random_number_exe:
 	@(cd ../src; make ModRandomNumber.o)
 	@make test_random_number.o
 	${LINK.f90} -o test_random_number.exe \
-		test_random_number.o ${OBJ_RANDOM_NUMBER} ${Lflag1}
+		test_random_number.o ${OBJ_RANDOM_NUMBER} ${Lflag2}
 
 test_random_number:
 	@echo test_random_number starting	>  test_random_number.diff
