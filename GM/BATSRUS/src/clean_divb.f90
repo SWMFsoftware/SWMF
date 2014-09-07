@@ -34,7 +34,7 @@ subroutine clean_divb
   integer, parameter::ResDotM1DotRes_=2,ResDotOne_=1
 
   !Conjugated gradients algorithm, see
-  !http://netlib2.cs.utk.edu/linalg/old_html_templates/subsection2.6.3.1.html
+  !http://www.netlib.org/linalg/html_templates/node20.html
   !Notations
   !M^(-1)=diag(Prec_CB) - the Jacobi preconditioner
   !Residual_GB=M^{-1}r^(i)/rho_(i-1) (temporal)
