@@ -42,20 +42,6 @@ module ModUser
   ! Angular velocity
   real:: OmegaComet
 
-  ! index to indicate which boundary condition to use, default is 1
-  integer :: iCase = 1
-
-  ! For iCase == 1
-  ! Minimum and maximum density
-  real :: RhoCometMinDim=5.0, RhoCometMaxDim=1e6
-
-  ! velocity amplitude and temperature of outflow in IO units
-  real :: uCometDim=1.0, TempCometDim=1e3
-
-  ! Same in normalized units
-  real :: RhoCometMin, RhoCometMax, uComet, TempComet
-
-  ! iCase == 2 parameters
   ! minimum and maximum temperature
   real :: TempCometMinDim, TempCometMaxDim, TempCometMin, TempCometMax
 
@@ -101,18 +87,12 @@ contains
           call read_var('LatSun', LatSun)
           call read_var('LonSun', LonSun)
        case("#COMETSTATE")
-          call read_var('RhoCometMinDim', RhoCometMinDim)
-          call read_var('RhoCometMaxDim', RhoCometMaxDim)
-          call read_var('uCometDim',      uCometDim)
-          call read_var('TCometDim',      TempCometDim)
-       case("#COMETSTATE2")
           call read_var('ProductionRateMinSi', ProductionRateMinSi)
           call read_var('ProductionRateMaxSi', ProductionRateMaxSi)
           call read_var('SolarAngleMaxDim',     SolarAngleMaxDim)
           call read_var('TempCometMinDim',      TempCometMinDim)
           call read_var('TempCometMaxDim',      TempCometMaxDim)
           call read_var('TempComet75',       TempComet75Dim)
-          iCase = 2
        case("#COMETROTATION")
           call read_var('RotationCometHour', RotationCometHour)
        case('#USERINPUTEND')
@@ -140,40 +120,32 @@ contains
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
     use ModVarIndexes, ONLY: MassFluid_I
-    
+
     !------------------------------------------------------------------------
     ! We need to have unit conversions before reading the shape file 
     ! which contains everything in SI units
     call read_shape_file
 
-    select case(iCase)
-    case(1)
-       RhoCometMin  = RhoCometMinDim  * Io2No_V(UnitRho_)
-       RhoCometMax  = RhoCometMaxDim  * Io2No_V(UnitRho_)
-       uComet    = uCometDim    * Io2No_V(UnitU_)
-       TempComet = TempCometDim * Io2No_V(UnitTemperature_)
-    case(2)
-       ProductionRateMax = ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
-       ProductionRateMin = ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
-       SolarAngleMax = SolarAngleMaxDim * cDegToRad
-       TempCometMin = TempCometMinDim * Io2No_V(UnitTemperature_)
-       TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
-       TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
+    ProductionRateMax = ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+    ProductionRateMin = ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+    SolarAngleMax = SolarAngleMaxDim * cDegToRad
+    TempCometMin = TempCometMinDim * Io2No_V(UnitTemperature_)
+    TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
+    TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
-       ! uNormal = sqrt( 2kT / (pi*m) ), so Temp2uNormal = sqrt( 2k/(pi*m) )
-       Temp2uNormal = sqrt( 2*cBoltzmann/cPi/MassFluid_I(1)/cAtomicMass * &
-            No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
+    ! uNormal = sqrt( 2kT / (pi*m) ), so Temp2uNormal = sqrt( 2k/(pi*m) )
+    Temp2uNormal = sqrt( 2*cBoltzmann/cPi/MassFluid_I(1)/cAtomicMass * &
+         No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
 
-       ! Calculate the parameters for production rate (y = a*cos(theta)+b)
-       SlopeProduction = (ProductionRateMax - ProductionRateMin) / (1-cos(SolarAngleMax))
-       bProduction     = (ProductionRateMin - ProductionRateMax*cos(SolarAngleMax)) / &
-                         (1-cos(SolarAngleMax))
+    ! Calculate the parameters for production rate (y = a*cos(theta)+b)
+    SlopeProduction = (ProductionRateMax - ProductionRateMin) / (1-cos(SolarAngleMax))
+    bProduction     = (ProductionRateMin - ProductionRateMax*cos(SolarAngleMax)) / &
+         (1-cos(SolarAngleMax))
 
-       ! Calculate the parameters for temperature (y = a/cos(theta)+b)
-       cos75     = cos(75.5*cDegToRad)
-       SlopeTemp = (TempCometMax - TempComet75)/(cos75 - 1)*cos75
-       bTemp     = TempComet75 - (TempCometMax - TempComet75)/(cos75 - 1)
-    end select
+    ! Calculate the parameters for temperature (y = a/cos(theta)+b)
+    cos75     = cos(75.5*cDegToRad)
+    SlopeTemp = (TempCometMax - TempComet75)/(cos75 - 1)*cos75
+    bTemp     = TempComet75 - (TempCometMax - TempComet75)/(cos75 - 1)
 
     Time_Simulation_Last = Time_Simulation
     OmegaComet = cTwoPi / (RotationCometHour*3600 * Si2No_V(UnitT_))
@@ -181,29 +153,20 @@ contains
     call dir_to_xyz((90-LatSun)*cDegToRad, LonSun*cDegToRad, NormalSun_D)
 
     if(iProc==0)then
-       select case(iCase)
-       case(1)
-          write(*,*)'RhoCometMinDim,  RhoCometMin =', RhoCometMinDim, RhoCometMin
-          write(*,*)'RhoCometMaxDim,  RhoCometMax =', RhoCometMaxDim, RhoCometMax
-          write(*,*)'uCometDim,    uComet   =', uCometDim, uComet
-          write(*,*)'TempCometDim, TempComet=', TempCometDim, TempComet
-       case(2)
-          write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
-               ProductionRateMaxSi, ProductionRateMax
-          write(*,*) 'ProductionRateMinSi, ProductionRateMin =', &
-               ProductionRateMinSi, ProductionRateMin
-          write(*,*) 'SolarAngleMaxDim, SolarAngleMax =', SolarAngleMaxDim, SolarAngleMax
-          write(*,*) 'TempCometMinDim, TempCometMin =', TempCometMinDim, TempCometMin
-          write(*,*) 'TempCometMaxDim, TempCometMax =', TempCometMaxDim, TempCometMax
-          write(*,*) 'TempComet75Dim,  TempComet75  =', TempComet75Dim,  TempComet75
-          write(*,*) 'Temp2uNormal      =', Temp2uNormal
-          write(*,*) 'MassFluid_I =', MassFluid_I
-          write(*,*) 'Temp2uNormal*sqrt(TempCometMax) =', Temp2uNormal*sqrt(TempCometMax)
-          write(*,*) 'SlopeProduction, bProduction =', SlopeProduction, bProduction
-          write(*,*) 'SlopeTemp, bTemp             =', SlopeTemp/Io2No_V(UnitTemperature_),&
-               bTemp/Io2No_V(UnitTemperature_)
-       end select
-
+       write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
+            ProductionRateMaxSi, ProductionRateMax
+       write(*,*) 'ProductionRateMinSi, ProductionRateMin =', &
+            ProductionRateMinSi, ProductionRateMin
+       write(*,*) 'SolarAngleMaxDim, SolarAngleMax =', SolarAngleMaxDim, SolarAngleMax
+       write(*,*) 'TempCometMinDim, TempCometMin =', TempCometMinDim, TempCometMin
+       write(*,*) 'TempCometMaxDim, TempCometMax =', TempCometMaxDim, TempCometMax
+       write(*,*) 'TempComet75Dim,  TempComet75  =', TempComet75Dim,  TempComet75
+       write(*,*) 'Temp2uNormal      =', Temp2uNormal
+       write(*,*) 'MassFluid_I =', MassFluid_I
+       write(*,*) 'Temp2uNormal*sqrt(TempCometMax) =', Temp2uNormal*sqrt(TempCometMax)
+       write(*,*) 'SlopeProduction, bProduction =', SlopeProduction, bProduction
+       write(*,*) 'SlopeTemp, bTemp             =', SlopeTemp/Io2No_V(UnitTemperature_),&
+            bTemp/Io2No_V(UnitTemperature_)
        write(*,*)'RotationComet, Omega   =', RotationCometHour, OmegaComet
        write(*,*)'LatSun, LonSun, NormalSun_D=', LatSun, LonSun, NormalSun_D
     end if
@@ -350,7 +313,6 @@ contains
     real :: XyzTrueCell_D(3), XyzBodyCell_D(3)
     real :: Normal_D(3), CosAngle
     real :: TempCometLocal, uNormal, ProductionRateLocal
-    real :: RhoCometLocal
     real :: LonSunNew
     
     real, save :: FaceCoordsTest_D(3)
@@ -441,7 +403,6 @@ contains
          Normal_D = -Normal_D
 
     ! Set local outflow parameters as default that may be overwritten if illuminated
-    RhoCometLocal       = RhoCometMin
     TempCometLocal      = TempCometMin
     ProductionRateLocal = ProductionRateMin
 
@@ -458,37 +419,23 @@ contains
 
           IsIlluminated = .true.
 
-          select case(iCase)
-          case(1)
-             ! Increase density of the face if it is illuminated
-             RhoCometLocal = RhoCometMin + (RhoCometMax - RhoCometMin)*CosAngle
-          case(2)
-             ! Increase temperature of the face if it is illuminated
-             TempCometLocal      = max( TempCometMin, &
-                                        SlopeTemp / CosAngle + bTemp)
-             ! Increase neutral production rate
-             ProductionRateLocal = max( ProductionRateMin, &
-                                        SlopeProduction * CosAngle + bProduction )
-          end select
-
+          ! Increase temperature of the face if it is illuminated
+          TempCometLocal      = max( TempCometMin, &
+               SlopeTemp / CosAngle + bTemp)
+          ! Increase neutral production rate
+          ProductionRateLocal = max( ProductionRateMin, &
+               SlopeProduction * CosAngle + bProduction )
        end if
     end if
 
-    select case(iCase)
-    case(1)
-       VarsGhostFace_V(Ux_:Uz_) = Normal_D*uComet
-       VarsGhostFace_V(Rho_)    = RhoCometLocal
-       VarsGhostFace_V(P_)      = VarsGhostFace_V(Rho_)/MassFluid_I(1)*TempComet
-    case(2)
-       ! Calculate the normal velocity
-       uNormal = sqrt(TempCometLocal)*Temp2uNormal
-       
-       VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
-       VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal * MassFluid_I(1)
-       ! Adjust the pressure !!!!!!! Need to check
-       VarsGhostFace_V(P_)      = VarsGhostFace_V(Rho_)/MassFluid_I(1)*TempCometLocal / &
-            ((g+1)/2-g/cPi)
-    end select
+    ! Calculate the normal velocity
+    uNormal = sqrt(TempCometLocal)*Temp2uNormal
+    
+    VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
+    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal * MassFluid_I(1)
+    ! Adjust the pressure !!!!!!! Need to check
+    VarsGhostFace_V(P_)      = VarsGhostFace_V(Rho_)/MassFluid_I(1)*TempCometLocal / &
+         ((g+1)/2-g/cPi)
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
