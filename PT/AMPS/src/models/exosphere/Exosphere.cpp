@@ -137,7 +137,17 @@ void Exosphere::Init_BeforeParser() {
   char str[_MAX_STRING_LENGTH_PIC_];
 
   for (int nKernel=0;nKernel<nFurnishedSPICEkernels;nKernel++) {
+    struct stat buf;
+
     sprintf(str,"%s/%s",SPICE_Kernels_PATH,SPICE_Kernels[nKernel]);
+
+    if (stat(str, &buf) != 0) {
+      char f[_MAX_STRING_LENGTH_PIC_];
+
+      sprintf(f,"SPICE kernel %s is not found",str);
+      exit(__LINE__,__FILE__,f);
+    }
+
     furnsh_c(str);
   }
 
