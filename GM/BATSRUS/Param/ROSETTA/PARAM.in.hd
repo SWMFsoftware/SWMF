@@ -27,7 +27,7 @@ F			DoSaveRestart
  16.                    zMax
 
 #GRIDRESOLUTION
-0.25                    Resolution
+0.5                    Resolution
 initial                 NameArea
 
 #GRIDRESOLUTION
@@ -62,11 +62,13 @@ CG_MOC_simple.bdf		NameShapeFile
  43.57                  LatSun
 -97.27                  LonSun
 
-#COMETSTATE
-0.5e10			RhoCometMinDim [amu/cc]
-1e10			RhoCometMaxDim [amu/cc]
-0.23			uCometDim [km/s]
-180.0			TempCometDim [K]
+#COMETSTATE2
+4.087536e17		ProductionRateMinSi [m^-2 s^-1]
+1.040419e19		ProductionRateMaxSi [m^-2 s^-1]
+57.5			SolarAngleMaxDim [degree]
+133.0			TempCometMinDim [K]
+182.1			TempCometMaxDim [K]
+136.1			TempComet75Dim [K]
 
 #USERINPUTEND   -------------------------------------
 
@@ -106,9 +108,11 @@ Rusanov			TypeFlux
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
+rho p rhoflx		NameLogVars
+3.0 4.0			rLog
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -136,7 +140,7 @@ z=0 MHD idl             StringPlot
 -1.                     DtSavePlot
 
 #STOP
-500			MaxIteration
+200			MaxIteration
 -1.0			tSimulationMax
 
 End session: 1
@@ -145,13 +149,16 @@ End session: 1
 
 Begin session: 2
 
+#TIMEACCURATE
+T			DoTimeAccurate
+
 #SCHEME
 2                         nOrder
 Rusanov                   TypeFlux | only for nOrder=2
 minmod                    TypeLimiter
 
 #STOP
-1000                     MaxIteration
+500                     MaxIteration
 -1.0                    tSimulationMax
 
 End session: 2
