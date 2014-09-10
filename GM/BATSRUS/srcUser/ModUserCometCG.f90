@@ -68,6 +68,7 @@ module ModUser
   ! Constant parameters to calculate uNormal and temperature from TempCometLocal
   real :: TempToUnormal
   real :: TempToPressure
+  real :: NumdensToRho
 
 contains
   !============================================================================
@@ -153,6 +154,13 @@ contains
     !    = T[1 - (pi-2)/4*(gamma - 1)]
     ! so TempToPressure = [1 - (pi-2)/4*(gamma - 1)]/Mass
     TempToPressure = (1 - gm1*0.25*(cPi-2))/MassFluid_I(1)
+
+    ! Number density calculated as production rate/velocity
+    ! which is in units of 1/(length cubed).
+    ! This has to be multiplied with mass of molecule which is in amu,
+    ! but mass density is measured in amu/cm^3 so the 
+    ! normalized number density is in 1/cm^3.
+    NumdensToRho = MassFluid_I(1)/(No2Si_V(UnitN_)*No2Si_V(UnitX_)**3)
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -446,7 +454,7 @@ contains
     uNormal = sqrt(TempCometLocal)*TempToUnormal
     
     VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal * MassFluid_I(1)
+    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*NumdensToRho
     VarsGhostFace_V(P_)      = &
          VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
 
