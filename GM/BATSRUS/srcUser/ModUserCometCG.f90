@@ -34,13 +34,19 @@ module ModUser
   real :: rMinShape = 0.0, rMaxShape = 0.0
 
   ! Position of the sun at the start time
-  real :: LatSun=43.5, LonSun=0.0, NormalSun_D(3)
+  real :: LatSun=43.5, LonSun=0.0
 
   ! Rotation of the comet (changes the direction of the Sun)
   real:: RotationCometHour = 12.0
   
   ! Angular velocity
   real:: OmegaComet
+
+  ! Maximum change in longitude before updating the boundary conditions
+  real:: AngleUpdateDeg = 10.0
+
+  ! The time between updates
+  real:: DtUpdateSi
 
   ! minimum and maximum temperature
   real :: TempCometMinDim, TempCometMaxDim, TempCometMin, TempCometMax
@@ -59,10 +65,9 @@ module ModUser
   ! temperature distribution
   real :: SlopeProduction, bProduction, SlopeTemp, bTemp, cos75
 
-  ! Constant parameter to calculate uNormal from TempCometLocal
-  real :: Temp2uNormal
-
-  real :: Time_Simulation_Last
+  ! Constant parameters to calculate uNormal and temperature from TempCometLocal
+  real :: TempToUnormal
+  real :: TempToPressure
 
 contains
   !============================================================================
@@ -95,6 +100,7 @@ contains
           call read_var('TempComet75',       TempComet75Dim)
        case("#COMETROTATION")
           call read_var('RotationCometHour', RotationCometHour)
+          call read_var('AngleUpdateDeg', AngleUpdateDeg)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -115,7 +121,7 @@ contains
     use ModMain, ONLY: Time_Simulation
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
          UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-         UnitP_, UnitN_, UnitX_
+         UnitP_, UnitN_, UnitX_, gm1
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -126,31 +132,44 @@ contains
     ! which contains everything in SI units
     call read_shape_file
 
-    ProductionRateMax = ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
-    ProductionRateMin = ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
-    SolarAngleMax = SolarAngleMaxDim * cDegToRad
+    ProductionRateMax = &
+         ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+    ProductionRateMin = &
+         ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+
+    SolarAngleMax= SolarAngleMaxDim * cDegToRad
     TempCometMin = TempCometMinDim * Io2No_V(UnitTemperature_)
     TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
     TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
-    ! uNormal = sqrt( 2kT / (pi*m) ), so Temp2uNormal = sqrt( 2k/(pi*m) )
-    Temp2uNormal = sqrt( 2*cBoltzmann/cPi/MassFluid_I(1)/cAtomicMass * &
+    ! From Huebner & Markiewicz 2000, eq 8:
+    ! uNormal = sqrt( pi kT / 2*m ), so TempToUnormal = sqrt( pi k/ 2m )
+    ! and also unit conversions of temperature to SI, and velocity from SI
+    TempToUnormal = sqrt(cPi*cBoltzmann/(2*MassFluid_I(1)*cAtomicMass) * &
          No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
 
+    ! From Huebner & Markiewicz, 2000 eq. 13)
+    ! T' = T*((8 + 2 f_rv - pi)/(2(f_rv + 3)) = T(2f + 2 - pi)/(2f) 
+    !    = T[1 - (pi-2)/4*(gamma - 1)]
+    ! so TempToPressure = [1 - (pi-2)/4*(gamma - 1)]/Mass
+    TempToPressure = (1 - gm1*0.25*(cPi-2))/MassFluid_I(1)
+
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
-    SlopeProduction = (ProductionRateMax - ProductionRateMin) / (1-cos(SolarAngleMax))
-    bProduction     = (ProductionRateMin - ProductionRateMax*cos(SolarAngleMax)) / &
+    SlopeProduction = &
+         (ProductionRateMax - ProductionRateMin) / (1-cos(SolarAngleMax))
+    bProduction     = &
+         (ProductionRateMin - ProductionRateMax*cos(SolarAngleMax)) / &
          (1-cos(SolarAngleMax))
 
     ! Calculate the parameters for temperature (y = a/cos(theta)+b)
-    cos75     = cos(75.5*cDegToRad)
-    SlopeTemp = (TempCometMax - TempComet75)/(cos75 - 1)*cos75
-    bTemp     = TempComet75 - (TempCometMax - TempComet75)/(cos75 - 1)
+    SlopeTemp = (TempCometMax - TempComet75)/(1 - 1/cos(75.5*cDegToRad))
+    bTemp     = TempCometMax - SlopeTemp
 
-    Time_Simulation_Last = Time_Simulation
+    ! Angular velocity of the comet
     OmegaComet = cTwoPi / (RotationCometHour*3600 * Si2No_V(UnitT_))
 
-    call dir_to_xyz((90-LatSun)*cDegToRad, LonSun*cDegToRad, NormalSun_D)
+    ! Frequency of boundary condition updates
+    DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaComet) * No2Si_V(UnitT_)
 
     if(iProc==0)then
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
@@ -161,14 +180,15 @@ contains
        write(*,*) 'TempCometMinDim, TempCometMin =', TempCometMinDim, TempCometMin
        write(*,*) 'TempCometMaxDim, TempCometMax =', TempCometMaxDim, TempCometMax
        write(*,*) 'TempComet75Dim,  TempComet75  =', TempComet75Dim,  TempComet75
-       write(*,*) 'Temp2uNormal      =', Temp2uNormal
+       write(*,*) 'TempToUnormal, TempToPressure =', TempToUnormal, TempToPressure
        write(*,*) 'MassFluid_I =', MassFluid_I
-       write(*,*) 'Temp2uNormal*sqrt(TempCometMax) =', Temp2uNormal*sqrt(TempCometMax)
+       write(*,*) 'TempToUn*sqrt(TempCometMax)  =', TempToUnormal*sqrt(TempCometMax)
        write(*,*) 'SlopeProduction, bProduction =', SlopeProduction, bProduction
        write(*,*) 'SlopeTemp, bTemp             =', SlopeTemp/Io2No_V(UnitTemperature_),&
             bTemp/Io2No_V(UnitTemperature_)
-       write(*,*)'RotationComet, Omega   =', RotationCometHour, OmegaComet
-       write(*,*)'LatSun, LonSun, NormalSun_D=', LatSun, LonSun, NormalSun_D
+       write(*,*)'RotationComet, Omega  =', RotationCometHour, OmegaComet
+       write(*,*)'AngleUpdateDeg, DtUpdateSi =', AngleUpdateDeg, DtUpdateSi
+       write(*,*)'LatSun, LonSun=', LatSun, LonSun
     end if
 
   end subroutine user_init_session
@@ -287,7 +307,7 @@ contains
 
   end subroutine read_shape_file
 
-  !==============================================================================
+  !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
@@ -298,7 +318,6 @@ contains
     use ModGeometry,    ONLY: ExtraBc_
     use BATL_lib, ONLY: CellSize_DB
     use ModGeometry, ONLY: Xyz_DGB
-    use ModPhysics, ONLY: gm1, g
     use ModNumConst, ONLY : cDegToRad, cRadToDeg
     use ModCoordTransform, ONLY: dir_to_xyz
 
@@ -313,53 +332,48 @@ contains
     real :: XyzTrueCell_D(3), XyzBodyCell_D(3)
     real :: Normal_D(3), CosAngle
     real :: TempCometLocal, uNormal, ProductionRateLocal
-    real :: LonSunNew
-    
-    real, save :: FaceCoordsTest_D(3)
+    real :: LonSunNow
+    real :: FaceCoordsTest_D(3) = 0.0
 
+    real, save :: NormalSun_D(3)
     real, save:: VarsGhostFace_VDFB(nVar,3,nI+1,nJ+1,nK+1,MaxBlock)
     integer :: iDim
 
+    ! Last step and time the inner boundary values were saved
+    integer:: nStepSave = -100
+    real :: TimeSimulationSave = -1e30
+
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
-
+    ! Face normal direction
     iDim = (iSide+1)/2
-    if(.not. time_accurate .and. n_step > 1)then
-       VarsGhostFace_V = VarsGhostFace_VDFB(:, iDim, iFace,jFace,kFace,iBlockBc)
 
-       ! Check whether the VarsGhostFace_V is saved
-       if ((n_step == 2 .or. n_step == 500 .or. n_step == 501) .and. &
-            sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
-          write(*,*) '=============== n_step ', n_step, '===================='
-          write(*,*) 'FaceCoords_D  =', FaceCoords_D
-          write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
-          write(*,*) 'u_D           =', VarsGhostFace_V(Ux_:Uz_)
-          write(*,*) 'p             =', VarsGhostFace_V(p_)
-       end if
+    ! We can use the saved values if the values were saved in a previous step
+    ! and not too much time has passed since then
+    if(n_step > nStepSave &
+         .and. Time_Simulation < TimeSimulationSave + DtUpdateSi)then
+
+       VarsGhostFace_V = VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc)
        RETURN
     end if
 
-    LonSunNew = LonSun - OmegaComet*(Time_Simulation - Time_Simulation_last)*cRadToDeg
-    if (time_accurate .and. abs(LonSunNew - LonSun) > cPi/36 .or. &
-         time_simulation == 0) then
-       if (sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8) then
-          write(*,*) 'time_simulation, Dt =', time_simulation, Dt
-          write(*,*) 'New LonSun      =', LonSunNew
-          write(*,*) 'Old LonSun      =', LonSun
-       end if
-       LonSun = LonSunNew
-       Time_Simulation_Last = Time_Simulation
-       call dir_to_xyz((90-LatSun)*cDegToRad, LonSun*cDegToRad, NormalSun_D)
-    else
-       if (sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8) then
-          write(*,*) 'time_simulation, Dt =', time_simulation, Dt
-       end if
-       VarsGhostFace_V = VarsGhostFace_VDFB(:, iDim, iFace,jFace,kFace,iBlockBc)
-       RETURN
-    end if
-       
+    if (iBoundary /= ExtraBc_) &
+         call stop_mpi(NameSub//' is implemented for extra BC only')
 
-    if (iBoundary /= ExtraBc_) call stop_mpi(NameSub//' is implemented for extra BC only')
+    if(nStepSave < n_step)then
+       ! The sun is moving anti-clockwise in the rotating frame of the comet
+       LonSunNow = LonSun - OmegaComet*Time_Simulation*cRadToDeg
+
+       ! Get the direction vector to the Sun
+       call dir_to_xyz((90-LatSun)*cDegToRad, LonSunNow*cDegToRad, NormalSun_D)
+
+       if (iProc==0) write(*,*) NameSub, &
+            ': Time_Simulation, LonSunNow=', Time_Simulation, LonSunNow
+    end if
+
+    ! Save step and simulation time info
+    nStepSave          = n_step
+    TimeSimulationSave = Time_Simulation
 
     ! Floating boundary condition by default
     VarsGhostFace_V = VarsTrueFace_V
@@ -429,13 +443,12 @@ contains
     end if
 
     ! Calculate the normal velocity
-    uNormal = sqrt(TempCometLocal)*Temp2uNormal
+    uNormal = sqrt(TempCometLocal)*TempToUnormal
     
     VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
     VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal * MassFluid_I(1)
-    ! Adjust the pressure !!!!!!! Need to check
-    VarsGhostFace_V(P_)      = VarsGhostFace_V(Rho_)/MassFluid_I(1)*TempCometLocal / &
-         ((g+1)/2-g/cPi)
+    VarsGhostFace_V(P_)      = &
+         VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
