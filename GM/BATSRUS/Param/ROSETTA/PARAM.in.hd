@@ -56,7 +56,7 @@ TESTXYZ
 #USERINPUTBEGIN -------------------------------------
 
 #SHAPEFILE
-CG_MOC_simple.bdf		NameShapeFile
+CG_MOC.bdf		NameShapeFile
 
 #SUNDIRECTION
  43.57                  LatSun
@@ -70,6 +70,10 @@ CG_MOC_simple.bdf		NameShapeFile
 182.1			TempCometMaxDim [K]
 136.1			TempComet75Dim [K]
 
+#COMETROTATION
+1/60			PeriodCometHour
+10.0			UpdateAngleDeg
+
 #USERINPUTEND   -------------------------------------
 
 #EXTRABOUNDARY
@@ -78,6 +82,9 @@ user			TypeExtraBoundary
 
 #MINIMUMPRESSURE
 1e-15			pMinDim [nPa]
+
+#GAMMA
+1.4			Gamma
 
 #PLASMA
 18.0			FluidMass [amu]
