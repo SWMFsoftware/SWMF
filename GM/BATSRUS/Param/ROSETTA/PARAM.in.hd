@@ -62,7 +62,7 @@ CG_MOC_simple.bdf		NameShapeFile
  43.57                  LatSun
 -97.27                  LonSun
 
-#COMETSTATE2
+#COMETSTATE
 4.087536e17		ProductionRateMinSi [m^-2 s^-1]
 1.040419e19		ProductionRateMaxSi [m^-2 s^-1]
 57.5			SolarAngleMaxDim [degree]
