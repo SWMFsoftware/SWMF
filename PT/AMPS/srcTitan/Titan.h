@@ -116,8 +116,8 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
 
-    memcpy(accl,accl_LOCAL,3*sizeof(double));
-    return;
+/*    memcpy(accl,accl_LOCAL,3*sizeof(double));
+    return;*/
 
     //the gravity force
     double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
