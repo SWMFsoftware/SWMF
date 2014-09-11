@@ -814,12 +814,15 @@ void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereR
   else pipe.openSend(0);
 
 
+  //move the test point into the domain
+  SphereRadius*=1.02;
 
+  //calculate the flux distribution
   for (nZenithAngle=0,ZenithAngle=-Pi/2.0;nZenithAngle<nTotalZenithPoints;nZenithAngle++,ZenithAngle+=dZenithAngle) {
     for (nPolarAngle=0,PolarAngle=-Pi;nPolarAngle<nTotalPolarPoints;nPolarAngle++,PolarAngle+=dPolarAngle) {
       x[0]=SphereRadius*cos(PolarAngle)*cos(ZenithAngle);
       x[1]=SphereRadius*sin(PolarAngle)*cos(ZenithAngle);
-      x[1]=SphereRadius*sin(ZenithAngle);
+      x[2]=SphereRadius*sin(ZenithAngle);
 
       node=PIC::Mesh::mesh.findTreeNode(x,node);
       if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
