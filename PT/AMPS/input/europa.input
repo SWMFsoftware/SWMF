@@ -50,7 +50,9 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 CouplerMode=swmf !!!ices !!off, ices, swmf
 
-
+TimeStepMode=SpeciesGlobalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight
+ParticleWeightCorrectionMode=on
 
 #endmain
 
@@ -62,7 +64,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=2000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -118,10 +120,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
 
   ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
-  SpiceKernels="spk/msgr_de405_de423s.bsp","fk/msgr_dyn_v600.tf","../../NAIF/naif0010.tls","pck/pck00009_MSGR_v10.tpc","fk/msgr_v210.tf", \\ 
-    "ik/msgr_epps_v100.ti","ck/msgr20110413.bc","ck/msgr20110414.bc","ck/msgr20110415.bc","ck/msgr20110416.bc","ck/msgr20110417.bc","ck/msgr20110418.bc","ck/msgr20110419.bc","ck/msgr20110420.bc","ck/msgr20110421.bc", \\ 
-    "sclk/messenger_1486.tsc","spk/msgr_20040803_20140823_od266sc_0.bsp","../../OTHER/GSE.tf"
-
+SpiceKernels="GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/s980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"
 
   define _TARGET_ _EUROPA_ 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
