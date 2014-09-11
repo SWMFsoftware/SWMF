@@ -109,7 +109,7 @@ subroutine set_physics_constants
   ElectronCharge = 1.0/IonMassPerCharge
 
   ! For single ion fluid the average ion mass per charge is constant
-  if(.not. (UseMultiSpecies .or. UseMultiIon)) &
+  if(ChargeIon_I(1) /= 0.0 .and. nIonFluid == 1 .and. .not. UseMultiSpecies) &
        IonMassPerCharge = IonMassPerCharge * MassIon_I(1)/ChargeIon_I(1)
 
   !\
