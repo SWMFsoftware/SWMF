@@ -12,6 +12,9 @@ NONE
 #TIMEACCURATE
 F			DoTimeAccurate
 
+#UPDATECHECK
+F			DoUpdateCheck
+
 #SAVERESTART
 F			DoSaveRestart
 
@@ -27,7 +30,7 @@ F			DoSaveRestart
  16.                    zMax
 
 #GRIDRESOLUTION
-0.5                    Resolution
+0.5                     Resolution
 initial                 NameArea
 
 #GRIDRESOLUTION
@@ -71,7 +74,7 @@ CG_MOC.bdf		NameShapeFile
 136.1			TempComet75Dim [K]
 
 #COMETROTATION
-1/60			PeriodCometHour
+1/6			PeriodCometHour
 10.0			UpdateAngleDeg
 
 #USERINPUTEND   -------------------------------------
@@ -80,15 +83,18 @@ CG_MOC.bdf		NameShapeFile
 T			UseExtraBoundary
 user			TypeExtraBoundary
 
-#MINIMUMPRESSURE
-1e-15			pMinDim [nPa]
+MINIMUMPRESSURE
+1e-6			pMinDim [nPa]
+
+MINIMUMDENSITY
+1.0			RhoMinDim [amu/cc]
 
 #GAMMA
 1.4			Gamma
 
 #PLASMA
-18.0			FluidMass [amu]
-1.0			IonCharge [e]
+17.0			FluidMass [amu]  HO (not H20)
+0.0			IonCharge [e]
 0.0			ElectronTemperatureRatio
 
 #SOLARWIND
@@ -110,15 +116,17 @@ float			TypeBcBottom
 float			TypeBcTop
 
 #SCHEME
-1			nOrder
-Rusanov			TypeFlux
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.5			BetaLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho p rhoflx		NameLogVars
+dt rho p pmin pmax rhoflx
 3.0 4.0			rLog
 
 #SAVEINITIAL
@@ -127,23 +135,23 @@ T			DoSaveInitial
 #SAVEPLOT
 5                       nPlotFiles
 x=0 MHD idl             StringPlot
-5                       DnSavePlot
+50                       DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 y=0 MHD idl             StringPlot
-5                       DnSavePlot
+50                       DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 z=0 MHD idl             StringPlot
-5                        DnSavePlot
+50                        DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 3d MHD idl              StringPlot
-250                       DnSavePlot
+2500                       DnSavePlot
 -1.                     DtSavePlot
-0.0                     Dx
+1.0                     Dx
 3d MHD tec
-500                   DnSavePlot
+5000                    DnSavePlot
 -1.                     DtSavePlot
 
 #STOP
@@ -159,14 +167,9 @@ Begin session: 2
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#SCHEME
-2                         nOrder
-Rusanov                   TypeFlux | only for nOrder=2
-minmod                    TypeLimiter
-
 #STOP
-500                     MaxIteration
--1.0                    tSimulationMax
+-1                     MaxIteration
+600.0                  tSimulationMax
 
 End session: 2
 
