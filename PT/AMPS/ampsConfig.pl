@@ -714,7 +714,13 @@ sub ReadMainBlock {
   ampsConfigLib::RedefineMacro("_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE_","_PIC__USER_DEFINED__LOAD_SPECIES_MACRO__MODE__ON_","pic/picGlobal.dfn");
   
   #redefine the value of the macro that determined the coupling of AMPS
-  if (defined $CouplingMode) {ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");}
+  if (defined $CouplingMode) {
+    ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");
+   
+    if ($CouplingMode == "_PIC_COUPLER_MODE__ICES_") {
+       ampsConfigLib::RedefineMacro("_PIC_ICES_SWMF_MODE_","_PIC_ICES_MODE_ON_","pic/picGlobal.dfn");
+    } 
+  }
 
 
   #add markers to the code
