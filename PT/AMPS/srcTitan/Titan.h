@@ -26,12 +26,98 @@ namespace Titan {
 
   }
 
+  namespace UserdefinedSoruce {
+    inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+      return 1.0E20;
+    }
+
+    inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
+      unsigned int idim;
+      double r=0.0,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
+
+
+      //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+      double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
+      SpiceDouble xform[6][6];
+
+      memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
+
+      //Geenrate new particle position
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+        r+=pow(ExternalNormal[idim],2);
+      }
+
+      r=sqrt(r);
+
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]/=r;
+        x_LOCAL_IAU_OBJECT[idim]=sphereX0[idim]-sphereRadius*ExternalNormal[idim];
+      }
+
+      //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
+      x_LOCAL_SO_OBJECT[0]=xform[0][0]*x_LOCAL_IAU_OBJECT[0]+xform[0][1]*x_LOCAL_IAU_OBJECT[1]+xform[0][2]*x_LOCAL_IAU_OBJECT[2];
+      x_LOCAL_SO_OBJECT[1]=xform[1][0]*x_LOCAL_IAU_OBJECT[0]+xform[1][1]*x_LOCAL_IAU_OBJECT[1]+xform[1][2]*x_LOCAL_IAU_OBJECT[2];
+      x_LOCAL_SO_OBJECT[2]=xform[2][0]*x_LOCAL_IAU_OBJECT[0]+xform[2][1]*x_LOCAL_IAU_OBJECT[1]+xform[2][2]*x_LOCAL_IAU_OBJECT[2];
+
+
+      //determine if the particle belongs to this processor
+      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
+      if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+
+      //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+//      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,ImpactVaporization_SourceTemeprature[spec],ExternalNormal,spec);
+
+
+
+//DEBUG -> injected velocity is normal to the surface
+
+for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
+//END DEBUG
+
+
+
+      //transform the velocity vector to the coordinate frame 'MSGR_SO'
+      v_LOCAL_SO_OBJECT[0]=xform[3][0]*x_LOCAL_IAU_OBJECT[0]+xform[3][1]*x_LOCAL_IAU_OBJECT[1]+xform[3][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
+
+      v_LOCAL_SO_OBJECT[1]=xform[4][0]*x_LOCAL_IAU_OBJECT[0]+xform[4][1]*x_LOCAL_IAU_OBJECT[1]+xform[4][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
+
+      v_LOCAL_SO_OBJECT[2]=xform[5][0]*x_LOCAL_IAU_OBJECT[0]+xform[5][1]*x_LOCAL_IAU_OBJECT[1]+xform[5][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
+
+      memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
+      memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+
+      //set up the intermal energy if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__TR_RELAXATION_MODE_  == _PIC_MODE_ON_
+      PIC::IDF::InitRotTemp(ImpactVaporization_SourceTemeprature[spec],tempParticleData);
+#endif
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  == _PIC_MODE_ON_
+      exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+
+#endif
+
+      return true;
+    }
+
+  }
 
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
 
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
+
+    memcpy(accl,accl_LOCAL,3*sizeof(double));
+    return;
 
     //the gravity force
     double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];

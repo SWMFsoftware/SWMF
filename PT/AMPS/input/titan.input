@@ -129,11 +129,17 @@ CouplerMode=off !ices !!off, ices, swmf
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
-  Source:ImpactVaporization=on \\ !on,off
+  Source:ImpactVaporization=off \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(N2)=1.69E22, SourceTemperature(N2)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
 
+  Source:UserDefined=on \\ !on,off
+    SourceProcessCode=VenticalSource \\
+    SourceRate=Titan::UserdefinedSoruce::GetTotalProductionRate \\ !!!!!Moon::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
+    GenerateParticleProperties=Titan::UserdefinedSoruce::GenerateParticleProperties \\ !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
+    ModifySurfaceSpeciesAbundance=false !!!true,false
+!   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
 
 
 #endblock
