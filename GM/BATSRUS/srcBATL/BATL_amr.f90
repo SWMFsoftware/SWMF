@@ -146,6 +146,8 @@ contains
     logical:: UseMask
     integer:: nVarBuffer, nBuffer
 
+    integer:: iSizeSend, jSizeSend, kSizeSend
+
     logical:: DoTest, DoBalanceOnly, UseHighOrderAMR
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     !-------------------------------------------------------------------------
@@ -214,7 +216,20 @@ contains
        ! nVar dependent arrays are allocated and deallocated every call
        ! Buffer_I +1 for Dt_B and +1 for DoCheckMask header information
 
-       nBuffer = nVarBuffer*nIJK + 2
+       if(UseHighOrderAMR) then
+          ! High order prolongation needs 2 ghost layers at each side.
+          iSizeSend = max(nI, nI/2 + 4)
+          jSizeSend = max(nJ, nJ/2 + 4)
+          kSizeSend = max(nK, nK/2 + 4)
+          
+          if(nI == 1) iSizeSend = nI
+          if(nJ == 1) jSizeSend = nJ
+          if(nK == 1) kSizeSend = nK
+          nBuffer = nVarBuffer*iSizeSend*jSizeSend*kSizeSend + 2
+       else
+          nBuffer = nVarBuffer*nIJK + 2
+       endif
+
        if(present(nExtraData)) nBuffer = nBuffer + nExtraData
 
        allocate(Buffer_I(nBuffer), &
