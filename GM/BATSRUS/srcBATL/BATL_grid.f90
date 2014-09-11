@@ -144,6 +144,12 @@ contains
 
     if(.not.IsCartesian) then
        allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
+
+       if(UseHighFDGeometry) then
+          allocate(CellCoef_DDGB(&
+               nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          CellCoef_DDGB = 0
+       endif
     end if
 
     ! Periodicity in the radial direction is not possible at all
@@ -176,6 +182,7 @@ contains
     if(allocated(CellFace_DFB))    deallocate(CellFace_DFB)
     if(allocated(Xyz_DNB))         deallocate(Xyz_DNB)
     if(allocated(FaceNormal_DDFB)) deallocate(FaceNormal_DDFB)
+    if(allocated(CellCoef_DDGB))   deallocate(CellCoef_DDGB)
 
     CoordMin_D =  0.0
     CoordMax_D = -1.0
@@ -1385,9 +1392,10 @@ contains
                   DxIn = CellSize_DB(iSub1,iBlock))
           enddo; enddo; enddo
        enddo
-       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
-            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
-            CellSize_DB(iSub2,iBlock)
+       CellCoef_DDGB(iDimNonCart,:,MinI:MaxI,1:nJ,1:nK,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,MinI:MaxI,1:nJ,1:nK,iBlock)&
+            *CellSize_DB(iSub1,iBlock)&
+            *CellSize_DB(iSub2,iBlock)
 
 
        !  ~         ~        ~
@@ -1412,9 +1420,10 @@ contains
                   DxIn = CellSize_DB(iSub1,iBlock))
           enddo; enddo; enddo
        enddo
-       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
-            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
-            CellSize_DB(iSub2,iBlock)
+       CellCoef_DDGB(iDimNonCart,:,1:nI,MinJ:MaxJ,1:nK,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,1:nI,MinJ:MaxJ,1:nK,iBlock)&
+            *CellSize_DB(iSub1,iBlock)&
+            *CellSize_DB(iSub2,iBlock)
 
 
        !   ~         ~         ~
@@ -1439,9 +1448,10 @@ contains
                   DxIn = CellSize_DB(iSub1,iBlock))
           enddo; enddo; enddo
        enddo
-       CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock) = &
-            CellCoef_DDGB(iDimNonCart,:,:,:,:,iBlock)*CellSize_DB(iSub1,iBlock)*&
-            CellSize_DB(iSub2,iBlock)
+       CellCoef_DDGB(iDimNonCart,:,1:nI,1:nJ,MinK:MaxK,iBlock) = &
+            CellCoef_DDGB(iDimNonCart,:,1:nI,1:nJ,MinK:MaxK,iBlock)&
+            *CellSize_DB(iSub1,iBlock)&
+            *CellSize_DB(iSub2,iBlock)
 
     elseif(nJ > 1) then ! nDim == 2       
        CellCoef_DDGB(Xi_,x_,:,:,:,iBlock)  =   &
@@ -1470,10 +1480,10 @@ contains
     real:: CellValue_I(7)
     !----------------------------------------------------------------------
     if(.not.allocated(CellMetrice_DDG)) then
-       allocate(CellMetrice_DDG(nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
-            CellCoef_DDGB(nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBlock))
-       CellMetrice_DDG = 0.0; CellCoef_DDGB = 0.0
+       allocate(CellMetrice_DDG(nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+       CellMetrice_DDG = 0.0
     endif
+
     ! dx/dXi, dy/dXi, dz/dXi
     iDimNonCart = 1
     do iDimCart = 1, nDim
