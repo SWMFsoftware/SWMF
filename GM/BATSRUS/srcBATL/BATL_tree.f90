@@ -31,6 +31,7 @@ module BATL_tree
   public:: show_tree
   public:: test_tree
 
+  public:: find_neighbor_for_anynode
 
   ! DoStrictAmr :  true if we want the program to stop because we can not
   ! refine/coarsen all the blocks we want
@@ -1107,6 +1108,144 @@ contains
          all(Position_D <  PositionMax_D)
 
   end function is_point_inside_node
+
+  !===========================================================================
+
+  subroutine find_neighbor_for_anynode(iNode, DiLevelNei_III)
+    ! Find neighbours for any node in this processor or not. 
+
+    use BATL_size, ONLY: iRatio_D
+
+    integer, intent(in):: iNode
+    integer, intent(inout):: DiLevelNei_III(-1:1,-1:1,-1:1)
+
+    integer :: iLevel, i, j, k, Di, Dj, Dk, jNode
+    real :: Scale_D(MaxDim), x, y, z, y0, z0
+    integer:: iNodeNei_III(0:3,0:3,0:3)
+
+    logical:: DoTestMe = .false.
+    !-----------------------------------------------------------------------
+    if(DoTestMe)write(*,*)'Starting find neighbors for node ',iNode
+
+    ! Get AMR level of the node
+    iLevel = iTree_IA(Level_,iNode)
+
+    ! Calculate scaling factor from integer index to 0<x,y,z<1 real coordinates
+    Scale_D = 1.0/nRoot_D
+    where(iRatio_D == 2) &
+         Scale_D = Scale_D/MaxCoord_I(iLevel)
+
+    if(DoTestMe)then
+       write(*,*)'iNode, iLevel, Scale_D=', iNode, iLevel, Scale_D
+       write(*,*)'scaled coordinates=', &
+            iTree_IA(Coord1_:CoordLast_, iNode)*Scale_D
+    end if
+
+    ! Fill in self-referring info
+    iNodeNei_III(1:2,1:2,1:2) = iNode
+    DiLevelNei_III(0,0,0)     = 0
+
+    ! Loop through neighbors
+    do k=0,3
+       Dk = nint((k - 1.5)/1.5)
+       if(nDim < 3)then
+          if(k/=1) CYCLE
+          z = 0.3
+       else
+          z = (iTree_IA(Coord3_, iNode) + 0.4*k - 1.1)*Scale_D(3)
+          if(z > 1.0 .or. z < 0.0)then
+             if(IsPeriodic_D(3))then
+                z = modulo(z, 1.0)
+             elseif(.not.IsLatitudeAxis)then
+                iNodeNei_III(:,:,k) = Unset_
+                DiLevelNei_III(:,:,Dk) = Unset_
+                CYCLE
+             end if
+          end if
+       end if
+       ! store z for spherical axis 
+       z0 = z 
+       do j=0,3
+          z = z0
+          Dj = nint((j - 1.5)/1.5)
+          if(nDim < 2)then
+             if(j/=1) CYCLE
+             y = 0.3
+          else
+             y = (iTree_IA(Coord2_, iNode) + 0.4*j - 1.1)*Scale_D(2)
+             if(y > 1.0 .or. y < 0.0)then
+                if(IsPeriodic_D(2))then
+                   y = modulo(y, 1.0)
+                elseif(IsSphericalAxis)then
+                   ! Push back theta and go around half way in phi
+                   y = max(0.0, min(1.0, y))
+                   z = modulo(z0+0.5, 1.0)
+                else
+                   iNodeNei_III(:,j,k) = Unset_
+                   DiLevelNei_III(:,Dj,Dk) = Unset_
+                   CYCLE
+                end if
+             end if
+             if(z0 > 1.0 .or. z0 < 0.0)then
+                ! Push back latitude and go around half way in longitude
+                z = max(0.0, min(1.0, z0))
+                y = modulo(y+0.5, 1.0)
+             end if
+          end if
+          ! store y for cylindrical axis case
+          y0 = y
+          do i=0,3
+             ! Exclude inner points
+             if(0<i.and.i<3.and.0<j.and.j<3.and.0<k.and.k<3) CYCLE
+
+             Di = nint((i - 1.5)/1.5)
+
+             ! If neighbor is not finer, fill in the i=2 or j=2 or k=2 elements
+             if(DiLevelNei_III(Di,Dj,Dk) >= 0)then
+                if(i==2)then
+                   iNodeNei_III(i,j,k) = iNodeNei_III(1,j,k)
+                   CYCLE
+                end if
+                if(j==2)then
+                   iNodeNei_III(i,j,k) = iNodeNei_III(i,1,k)
+                   CYCLE
+                end if
+                if(k==2)then
+                   iNodeNei_III(i,j,k) = iNodeNei_III(i,j,1)
+                   CYCLE
+                end if
+             end if
+
+             x = (iTree_IA(Coord1_, iNode) + 0.4*i - 1.1)*Scale_D(1)
+             y = y0
+             if(x > 1.0 .or. x < 0.0)then
+                if(IsPeriodic_D(1))then
+                   x = modulo(x, 1.0)
+                elseif(IsCylindricalAxis .and. x < 0.0)then
+                   ! Push back radius and go around half way in phi direction
+                   x = 0.0
+                   y = modulo(y0+0.5, 1.0)
+                else
+                   iNodeNei_III(i,j,k) = Unset_
+                   DiLevelNei_III(Di,Dj,Dk) = Unset_
+                   CYCLE
+                end if
+             end if
+
+             call find_tree_node( (/x, y, z/), jNode)
+
+             iNodeNei_III(i,j,k) = jNode
+             DiLevelNei_III(Di,Dj,Dk) = &
+                  iLevel - iTree_IA(Level_, jNode)
+
+             if(DoTestMe) write(*,'(a,3i2,3f6.3,i4)') &
+                  'i,j,k,x,y,z,jNode=',i,j,k,x,y,z,jNode
+
+          end do
+       end do
+    end do
+
+  end subroutine find_neighbor_for_anynode
 
   !===========================================================================
 
