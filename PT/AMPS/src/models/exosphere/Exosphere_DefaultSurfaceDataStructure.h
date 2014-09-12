@@ -8,6 +8,17 @@
 #define _EXOSPHERE_DEFAULT_SURFACE_SAMPLING_DATASTRUCTURE_
 
 
+#define _INTERNAL_SPHERE_DATA__ON_  0
+#define _INTERNAL_SPHERE_DATA__OFF_ 1
+
+//defined the data that are stored on the faces
+//SurfaceData0 -> the surface data has not dependence of the speces; access SurfaceData0[nface]
+//SurfaceData1 -> the surface data depends on the speces; access SurfaceData1[nface][spec]
+//SurfaceData2 -> the surface data depends on the pair of the data; access SurfaceData2[nface][spec]
+
+#define _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_  _INTERNAL_SPHERE_DATA__OFF_
+#define _INTERNAL_SPHERE__EXTRA_DATA__1__MODE_  _INTERNAL_SPHERE_DATA__OFF_
+#define _INTERNAL_SPHERE__EXTRA_DATA__2__MODE_  _INTERNAL_SPHERE_DATA__OFF_
 
 #include "specfunc.h"
 
@@ -15,6 +26,11 @@ class cInternalSphericalData_UserDefined {
 public :
   int faceat;
   double *SamplingBuffer;
+
+  //extra surface data
+#if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
+  cInternalSphere_ExtraSurfaceData_0 *SurfaceData0;
+#endif
 
   //the maximum time step in the blocks that are intersected by the sphere
   double *maxIntersectedNodeTimeStep;
@@ -85,6 +101,10 @@ public :
 
     SampleSpeciesSurfaceSourceRate=NULL,SampleSpeciesSurfaceAreaDensity=NULL,SampleSpeciesSurfaceReturnFlux=NULL,SampleSpeciesSurfaceInjectionFlux=NULL,SampleReturnFluxBulkSpeed=NULL,SampleInjectedFluxBulkSpeed=NULL;
     SolarWindSurfaceFlux=NULL;
+
+#if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
+    SurfaceData0=NULL;
+#endif
   }
 
   void SaveSurfaceDensity(char *fname,int nSurfaceElements,int nSpecies) {
@@ -136,6 +156,11 @@ public :
 
 
     SolarWindSurfaceFlux=new double[TotalSurfaceElementNumber];
+
+    //allocate the extra surface data
+#if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
+    SurfaceData0=new cInternalSphere_ExtraSurfaceData_0 [TotalSurfaceElementNumber];
+#endif
 
     for (int el=0;el<TotalSurfaceElementNumber;el++) {
       for (int spec=0;spec<nTotalSpecies;spec++) {
