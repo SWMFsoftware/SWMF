@@ -1024,192 +1024,7 @@ void amps_init() {
 
     //set up the planet pointer in Mercury model
     Mercury::Planet=Sphere;
-
-/*    //allocate the buffers for collecting the sodium surface density
-    Sphere->SodiumSurfaceElementDesorptionFluxUP=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SodiumSurfaceElementAdsorptionFluxDOWN=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SodiumSurfaceElementPopulation=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SurfaceElementExternalNormal=new cInternalSphericalData_UserDefined::cSurfaceElementExternalNormal[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementArea=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->ElementSourceRate=new cInternalSphericalData_UserDefined::cElementSourceRate[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SolarWindSurfaceFlux=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-      Sphere->SodiumSurfaceElementDesorptionFluxUP[el]=0.0;
-      Sphere->SodiumSurfaceElementAdsorptionFluxDOWN[el]=0.0;
-      Sphere->SodiumSurfaceElementPopulation[el]=0.0;
-
-      Sphere->SolarWindSurfaceFlux[el]=-1.0;
-
-      Sphere->SurfaceElementArea[el]=Sphere->GetSurfaceElementArea(el);
-      Sphere->GetSurfaceElementNormal((Sphere->SurfaceElementExternalNormal+el)->norm,el);
-    }
-
-    //allocate buffers for sampling surface sodium source rates and sodikum surface content
-    int offsetSpecie,offsetElement,s,el,i;
-
-    Sphere->SampleSpeciesSurfaceSourceRate=new double** [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceSourceRate[0]=new double *[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SampleSpeciesSurfaceSourceRate[0][0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*(_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1)];
-
-    for (offsetSpecie=0,s=0,offsetElement=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceSourceRate[s]=Sphere->SampleSpeciesSurfaceSourceRate[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceSourceRate[s][el]=Sphere->SampleSpeciesSurfaceSourceRate[0][0]+offsetElement;
-        offsetElement+=_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;
-
-        for (i=0;i<_EXOSPHERE_SOURCE_MAX_ID_VALUE_+1;i++) Sphere->SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
-      }
-    }
-
-    Sphere->SampleSpeciesSurfaceAreaDensity=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceAreaDensity[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceAreaDensity[s]=Sphere->SampleSpeciesSurfaceAreaDensity[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
-      }
-    }
-
-    Sphere->SampleSpeciesSurfaceReturnFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceReturnFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleSpeciesSurfaceInjectionFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceInjectionFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleReturnFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleReturnFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleInjectedFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleInjectedFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceReturnFlux[s]=Sphere->SampleSpeciesSurfaceReturnFlux[0]+offsetSpecie;
-      Sphere->SampleSpeciesSurfaceInjectionFlux[s]=Sphere->SampleSpeciesSurfaceInjectionFlux[0]+offsetSpecie;
-
-      Sphere->SampleReturnFluxBulkSpeed[s]=Sphere->SampleReturnFluxBulkSpeed[0]+offsetSpecie;
-      Sphere->SampleInjectedFluxBulkSpeed[s]=Sphere->SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
-
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
-        Sphere->SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
-
-        Sphere->SampleReturnFluxBulkSpeed[s][el]=0.0;
-        Sphere->SampleInjectedFluxBulkSpeed[s][el]=0.0;
-      }
-    }*/
-
-    Sphere->SurfaceElementDesorptionFluxUP=new double*[PIC::nTotalSpecies];
-    Sphere->SurfaceElementAdsorptionFluxDOWN=new double*[PIC::nTotalSpecies];
-    Sphere->SurfaceElementPopulation=new double*[PIC::nTotalSpecies];
-
-    Sphere->SurfaceElementDesorptionFluxUP[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementAdsorptionFluxDOWN[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementPopulation[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int spec=1;spec<PIC::nTotalSpecies;spec++) {
-      Sphere->SurfaceElementDesorptionFluxUP[spec]=Sphere->SurfaceElementDesorptionFluxUP[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-      Sphere->SurfaceElementAdsorptionFluxDOWN[spec]=Sphere->SurfaceElementAdsorptionFluxDOWN[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-      Sphere->SurfaceElementPopulation[spec]=Sphere->SurfaceElementPopulation[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-    }
-
-    Sphere->SurfaceElementExternalNormal=new cInternalSphericalData_UserDefined::cSurfaceElementExternalNormal[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementArea=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-
-    Sphere->ElementSourceRate=new cInternalSphericalData_UserDefined::cElementSourceRate*[PIC::nTotalSpecies];
-    Sphere->ElementSourceRate[0]=new cInternalSphericalData_UserDefined::cElementSourceRate[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int spec=1;spec<PIC::nTotalSpecies;spec++) {
-      Sphere->ElementSourceRate[spec]=Sphere->ElementSourceRate[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-    }
-
-
-    Sphere->SolarWindSurfaceFlux=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
-        Sphere->SurfaceElementDesorptionFluxUP[spec][el]=0.0;
-        Sphere->SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
-        Sphere->SurfaceElementPopulation[spec][el]=0.0;
-      }
-
-      Sphere->SolarWindSurfaceFlux[el]=-1.0;
-
-      Sphere->SurfaceElementArea[el]=Sphere->GetSurfaceElementArea(el);
-      Sphere->GetSurfaceElementNormal((Sphere->SurfaceElementExternalNormal+el)->norm,el);
-    }
-
-    //allocate buffers for sampling surface sodium source rates and sodikum surface content
-    int offsetSpecie,offsetElement,s,el,i;
-
-    Sphere->SampleSpeciesSurfaceSourceRate=new double** [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceSourceRate[0]=new double *[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SampleSpeciesSurfaceSourceRate[0][0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*(_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1)];
-
-    for (offsetSpecie=0,s=0,offsetElement=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceSourceRate[s]=Sphere->SampleSpeciesSurfaceSourceRate[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceSourceRate[s][el]=Sphere->SampleSpeciesSurfaceSourceRate[0][0]+offsetElement;
-        offsetElement+=_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;
-
-        for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) Sphere->SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
-      }
-    }
-
-    Sphere->SampleSpeciesSurfaceAreaDensity=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceAreaDensity[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceAreaDensity[s]=Sphere->SampleSpeciesSurfaceAreaDensity[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
-      }
-    }
-
-    Sphere->SampleSpeciesSurfaceReturnFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceReturnFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleSpeciesSurfaceInjectionFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceInjectionFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleReturnFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleReturnFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleInjectedFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleInjectedFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceReturnFlux[s]=Sphere->SampleSpeciesSurfaceReturnFlux[0]+offsetSpecie;
-      Sphere->SampleSpeciesSurfaceInjectionFlux[s]=Sphere->SampleSpeciesSurfaceInjectionFlux[0]+offsetSpecie;
-
-      Sphere->SampleReturnFluxBulkSpeed[s]=Sphere->SampleReturnFluxBulkSpeed[0]+offsetSpecie;
-      Sphere->SampleInjectedFluxBulkSpeed[s]=Sphere->SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
-
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
-        Sphere->SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
-
-        Sphere->SampleReturnFluxBulkSpeed[s][el]=0.0;
-        Sphere->SampleInjectedFluxBulkSpeed[s][el]=0.0;
-      }
-    }
+    Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
 
 
 
@@ -1453,6 +1268,9 @@ void amps_init() {
 
 
 
+/*
+
+
   for (nFlybyPass=0;nFlybyPass<nFlybySamplePasses;nFlybyPass++) {
     utc2et_c(FlybySamplePassesUTC[nFlybyPass],&et);
 
@@ -1499,6 +1317,7 @@ void amps_init() {
   }
 
   PIC::ParticleFluxDistributionSample::Init(FluxSampleLocations,FluxSampleDirections,30.0/180.0*Pi,nTotalFluxSamplePoints);
+*/
 
 #elif _MERCURY_FIPS_SAMPLING_ == _MERCURY_MODE_OFF_
   printf("No FIPS sampling\n");
@@ -1510,8 +1329,8 @@ void amps_init() {
 
 #ifdef _ICES_CREATE_COORDINATE_LIST_
   PIC::CPLR::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::ICES::SetLocationICES("/left/ices/ICES");
-  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+  PIC::CPLR::ICES::SetLocationICES("~/ices/ICES/Models");
+  PIC::CPLR::ICES::retriveSWMFdata("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
 #endif
 
 
@@ -1520,7 +1339,8 @@ void amps_init() {
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
   //output the solar wind ion flux at the palnet's surface
-  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",_RADIUS_(_TARGET_));
+  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
+  PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
 
   //create the map of the solar wind flux
   int el;
