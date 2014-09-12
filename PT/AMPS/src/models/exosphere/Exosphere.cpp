@@ -134,6 +134,7 @@ void Exosphere::Init_BeforeParser() {
 
 
   //furnish the SPICE kernels
+#if  _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   char str[_MAX_STRING_LENGTH_PIC_];
 
   for (int nKernel=0;nKernel<nFurnishedSPICEkernels;nKernel++) {
@@ -150,6 +151,7 @@ void Exosphere::Init_BeforeParser() {
 
     furnsh_c(str);
   }
+#endif
 
   //Get the initial parameters of Mercury orbit
   SpiceDouble state[6];
