@@ -2116,6 +2116,9 @@ namespace PIC {
        //create the trajectory file
        void createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
+       //evaluate the ion flux at the surface of the spehrical interval body
+       void EvaluateSurfaceIonFlux(double ShiftFactor=1.0);
+
 
        //retrive the SWMF data file
        #define _PIC_ICES__STATUS_OK_   0

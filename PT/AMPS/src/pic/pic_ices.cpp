@@ -813,10 +813,6 @@ void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereR
   }
   else pipe.openSend(0);
 
-
-  //move the test point into the domain
-  SphereRadius*=1.02;
-
   //calculate the flux distribution
   for (nZenithAngle=0,ZenithAngle=-Pi/2.0;nZenithAngle<nTotalZenithPoints;nZenithAngle++,ZenithAngle+=dZenithAngle) {
     for (nPolarAngle=0,PolarAngle=-Pi;nPolarAngle<nTotalPolarPoints;nPolarAngle++,PolarAngle+=dPolarAngle) {
@@ -855,6 +851,76 @@ void PIC::CPLR::ICES::PrintSphereSurfaceIonFlux(char const* fname,double SphereR
 }
 
 
+//====================================================
+//evaluate the ion flux at the surface
+void PIC::CPLR::ICES::EvaluateSurfaceIonFlux(double ShiftFactor) {
+  int nTotalElements,el;
+  list<cInternalBoundaryConditionsDescriptor>::iterator d;
+  cInternalSphericalData* Sphere;
+  double x[3],norm[3],l,n,v[3],flux;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.rootTree;
+  int LocalCellNumber,i,j,k;
+
+
+  for (d=PIC::Mesh::mesh.InternalBoundaryList.begin();d!=PIC::Mesh::mesh.InternalBoundaryList.end();d++) {
+    if (d->BondaryType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
+      Sphere=(cInternalSphericalData*)d->BoundaryElement;
+      nTotalElements=Sphere->GetTotalSurfaceElementsNumber();
+
+      //assemble the table of ion fluxes
+      double FluxTable[nTotalElements];
+      CMPI_channel pipe(1000000);
+
+      if (PIC::ThisThread==0) {
+        pipe.openRecvAll();
+      }
+      else pipe.openSend(0);
+
+      for (el=0;el<nTotalElements;el++) {
+        Sphere->GetSurfaceElementNormal(norm,el);
+        Sphere->GetSurfaceElementMiddlePoint(x,el);
+
+        l=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        x[0]+=max(ShiftFactor-1.0,0.0)*l*norm[0],x[1]+=max(ShiftFactor-1.0,0.0)*l*norm[1],x[2]+=max(ShiftFactor-1.0,0.0)*l*norm[2];
+
+        node=PIC::Mesh::mesh.findTreeNode(x,node);
+        if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
+
+        if (node->Thread==PIC::ThisThread) {
+          n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
+          GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
+
+          flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
+
+          if (PIC::ThisThread!=0) pipe.send(flux);
+        }
+
+        if (PIC::ThisThread==0) {
+          if (node->Thread!=0) flux=pipe.recv<double>(node->Thread);
+
+          FluxTable[el]=flux;
+        }
+      }
+
+      if (PIC::ThisThread==0) {
+        pipe.closeRecvAll();
+      }
+      else pipe.closeSend();
+
+      //broundcast the table across all processors
+      MPI_Bcast(FluxTable,nTotalElements,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+      //save the table on the sphere
+      for (el=0;el<nTotalElements;el++) {
+        Sphere->SolarWindSurfaceFlux[el]=FluxTable[el];
+      }
+
+    }
+    else {
+      exit(__LINE__,__FILE__,"Error: unknown internal boundary type");
+    }
+  }
+}
 
 
 
