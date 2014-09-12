@@ -35,10 +35,9 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
-
 
 CouplerMode=ices !!off, ices, swmf 
 
@@ -146,6 +145,11 @@ CouplerMode=ices !!off, ices, swmf
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Mercury::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
   define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Mercury::ExospherePhotoionizationLifeTime(t0,t1,t2,t3)
+
+  define _ICES_CREATE_COORDINATE_LIST_ 
+
+  !define the extra data that will be stored on the surface
+!  SurfaceFaceData(0)=on
 
  
 
