@@ -63,6 +63,21 @@ end subroutine IO_set_SW_v_single
 
 ! ---------------------------------------------------
 
+subroutine IO_set_SW_n_single(NIn)
+
+  use ModIndices
+  implicit none
+  real, intent(in) :: NIn
+
+  call init_mod_indices
+
+  nIndices_V(sw_n_) = 1
+  Indices_TV(1,sw_n_) = NIn
+
+end subroutine IO_set_SW_n_single
+
+! ---------------------------------------------------
+
 subroutine IO_set_hpi_single(HpiIn)
 
   use ModIndices
