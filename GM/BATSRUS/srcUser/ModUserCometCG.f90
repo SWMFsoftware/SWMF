@@ -16,6 +16,9 @@ module ModUser
   use ModMain, ONLY: xTest, yTest, zTest
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
+  use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
+       UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
+       UnitP_, UnitN_, UnitX_, g, gm1
 
   include 'user_module.h' !list of public methods
 
@@ -40,7 +43,7 @@ module ModUser
   real:: RotationCometHour = 12.0
   
   ! Angular velocity
-  real:: OmegaComet
+  real:: OmegaCometSi
 
   ! Maximum change in longitude before updating the boundary conditions
   real:: AngleUpdateDeg = 10.0
@@ -120,9 +123,6 @@ contains
     ! Read shape file and convert units
 
     use ModMain, ONLY: Time_Simulation
-    use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
-         UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-         UnitP_, UnitN_, UnitX_, gm1
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -174,29 +174,40 @@ contains
     bTemp     = TempCometMax - SlopeTemp
 
     ! Angular velocity of the comet
-    OmegaComet = cTwoPi / (RotationCometHour*3600 * Si2No_V(UnitT_))
+    OmegaCometSi = cTwoPi / (RotationCometHour*3600)
 
     ! Frequency of boundary condition updates
-    DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaComet) * No2Si_V(UnitT_)
+    DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaCometSi)
 
     if(iProc==0)then
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
             ProductionRateMaxSi, ProductionRateMax
        write(*,*) 'ProductionRateMinSi, ProductionRateMin =', &
             ProductionRateMinSi, ProductionRateMin
-       write(*,*) 'SolarAngleMaxDim, SolarAngleMax =', SolarAngleMaxDim, SolarAngleMax
-       write(*,*) 'TempCometMinDim, TempCometMin =', TempCometMinDim, TempCometMin
-       write(*,*) 'TempCometMaxDim, TempCometMax =', TempCometMaxDim, TempCometMax
-       write(*,*) 'TempComet75Dim,  TempComet75  =', TempComet75Dim,  TempComet75
-       write(*,*) 'TempToUnormal, TempToPressure =', TempToUnormal, TempToPressure
-       write(*,*) 'MassFluid_I =', MassFluid_I
-       write(*,*) 'TempToUn*sqrt(TempCometMax)  =', TempToUnormal*sqrt(TempCometMax)
-       write(*,*) 'SlopeProduction, bProduction =', SlopeProduction, bProduction
-       write(*,*) 'SlopeTemp, bTemp             =', SlopeTemp/Io2No_V(UnitTemperature_),&
-            bTemp/Io2No_V(UnitTemperature_)
-       write(*,*)'RotationComet, Omega  =', RotationCometHour, OmegaComet
-       write(*,*)'AngleUpdateDeg, DtUpdateSi =', AngleUpdateDeg, DtUpdateSi
-       write(*,*)'LatSun, LonSun=', LatSun, LonSun
+       write(*,*) 'SolarAngleMaxDim, SolarAngleMax =', &
+            SolarAngleMaxDim, SolarAngleMax
+       write(*,*) 'TempCometMinDim, TempCometMin   =', &
+            TempCometMinDim, TempCometMin
+       write(*,*) 'TempCometMaxDim, TempCometMax   =', &
+            TempCometMaxDim, TempCometMax
+       write(*,*) 'TempComet75Dim,  TempComet75    =', &
+            TempComet75Dim,  TempComet75
+       write(*,*) 'TempToUnormal, TempToPressure   =', &
+            TempToUnormal, TempToPressure
+       write(*,*) 'MassFluid_I                     =', &
+            MassFluid_I
+       write(*,*) 'TempToUn*sqrt(TempCometMax)     =', &
+            TempToUnormal*sqrt(TempCometMax)
+       write(*,*) 'SlopeProduction, bProduction    =', &
+            SlopeProduction, bProduction
+       write(*,*) 'SlopeTemp, bTemp                =', &
+            SlopeTemp/Io2No_V(UnitTemperature_),bTemp/Io2No_V(UnitTemperature_)
+       write(*,*)'LatSun, LonSun initial           =', &
+            LatSun, LonSun
+       write(*,*)'RotationCometHour, OmegaCometSi  =', &
+            RotationCometHour, OmegaCometSi
+       write(*,*)'AngleUpdateDeg, DtUpdateSi       =', &
+            AngleUpdateDeg, DtUpdateSi
     end if
 
   end subroutine user_init_session
@@ -235,7 +246,6 @@ contains
   !=========================================================================
   subroutine read_shape_file
 
-    use ModPhysics, ONLY: Si2No_V, UnitX_
     use ModIoUnit, ONLY: UnitTmp_
     use ModCoordTransform, ONLY: cross_product
     use ModRandomNumber, ONLY: random_real
@@ -370,7 +380,7 @@ contains
 
     if(nStepSave < n_step)then
        ! The sun is moving anti-clockwise in the rotating frame of the comet
-       LonSunNow = LonSun - OmegaComet*Time_Simulation*cRadToDeg
+       LonSunNow = LonSun - OmegaCometSi*Time_Simulation*cRadToDeg
 
        ! Get the direction vector to the Sun
        call dir_to_xyz((90-LatSun)*cDegToRad, LonSunNow*cDegToRad, NormalSun_D)
@@ -438,7 +448,6 @@ contains
        XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
        XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
        if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) then
-
           IsIlluminated = .true.
 
           ! Increase temperature of the face if it is illuminated
@@ -461,8 +470,7 @@ contains
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
        
-       write(*,*) 'FaceCoords_D: ', FaceCoords_D
-       write(*,*) 'TestFace_D: ', (XyzBodyCell_D + XyzTrueCell_D)/2
+       write(*,*) 'FaceCoords_D  =', FaceCoords_D
        write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
        write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
        write(*,*) 'XyzIntersect_D=', XyzIntersect_D
@@ -470,10 +478,16 @@ contains
        write(*,*) 'XyzEnd_D      =', XyzEnd_D 
        write(*,*) 'Normal_D      =', Normal_D
        write(*,*) 'CosAngle      =', CosAngle
+       write(*,*) 'ProductionRate=', ProductionRateLocal
+       write(*,*) 'TempLocal [K] =', No2Si_V(UnitTemperature_)*TempCometLocal
+       write(*,*) 'Temperature[K]=', No2Si_V(UnitTemperature_)* &
+            VarsGhostFace_V(p_)*MassFluid_I(1)/VarsGhostFace_V(Rho_)
        write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
        write(*,*) 'u_D           =', VarsGhostFace_V(Ux_:Uz_)
        write(*,*) 'uNormal       =', uNormal
        write(*,*) 'p             =', VarsGhostFace_V(p_)
+       write(*,*) 'Mach number   =', &
+            uNormal/sqrt(g*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
        DoTestHere=.false.
     end if
 
