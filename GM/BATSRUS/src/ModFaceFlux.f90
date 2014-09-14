@@ -622,11 +622,16 @@ contains
             ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
             ! is 6th order. 
             do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-               do iFlux = 1, nFlux
-                  Flux_VX(iFlux,iFace,jFace,kFace) = &
-                       correct_face_value(Flux_VX(iFlux,iFace,jFace,kFace),&
-                       FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,1))
-               enddo
+
+               if(all(true_cell(&
+                    iFace-2:iFace+1,jFace,kFace,iBlockFace))) then
+                  do iFlux = 1, nFlux
+                     Flux_VX(iFlux,iFace,jFace,kFace) = &
+                          correct_face_value(Flux_VX(iFlux,iFace,jFace,kFace),&
+                          FluxCenter_VGD(iFlux,iFace-2:iFace+1,jFace,kFace,1))
+                  enddo
+               endif
+
             end do; end do; enddo
          end if
       endif
@@ -709,11 +714,16 @@ contains
             end do; end do
          else
             do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-               do iFlux = 1, nFlux
-                  Flux_VY(iFlux,iFace,jFace,kFace) = &
-                       correct_face_value(Flux_VY(iFlux,iFace,jFace,kFace),&
-                       FluxCenter_VGD(iFlux,iFace,jFace-2:jFace+1,kFace,2))
-               enddo
+               if(all(true_cell(&
+                    iFace,jFace-2:jFace+1,kFace,iBlockFace))) then
+                  do iFlux = 1, nFlux
+                     Flux_VY(iFlux,iFace,jFace,kFace) = &
+                          correct_face_value(&
+                          Flux_VY(iFlux,iFace,jFace,kFace),&
+                          FluxCenter_VGD(iFlux,iFace,jFace-2:jFace+1,kFace,2))
+                  enddo
+               endif
+
             end do; end do; enddo
          end if
       end if
@@ -792,11 +802,16 @@ contains
             end do; end do
          else
             do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
-               do iFlux = 1, nFlux
-                  Flux_VZ(iFlux,iFace,jFace,kFace) = &
-                       correct_face_value(Flux_VZ(iFlux,iFace,jFace,kFace),&
-                       FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
-               enddo
+
+               if(all(true_cell(&
+                    iFace,jFace,kFace-2:kFace+1,iBlockFace))) then
+                  do iFlux = 1, nFlux
+                     Flux_VZ(iFlux,iFace,jFace,kFace) = &
+                          correct_face_value(Flux_VZ(iFlux,iFace,jFace,kFace),&
+                          FluxCenter_VGD(iFlux,iFace,jFace,kFace-2:kFace+1,3))
+                  enddo
+               endif
+
             end do; end do; enddo
          endif
       end if
