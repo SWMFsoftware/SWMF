@@ -95,7 +95,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*3.0);
+  return max(1.0,t->CharacteristicSize()*4.5);
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -243,7 +243,8 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 
 double Comet::GetTotalProduction(int spec,void *BoundaryElement) {
-  return 1.0E20;
+  cInternalSphericalData *Sphere;
+  return Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere)+Comet::GetTotalProductionRateUniformNASTRAN(spec,Sphere)+Comet::GetTotalProductionRateJetNASTRAN(spec,Sphere);
 }
 
 double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement) {
@@ -344,16 +345,19 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.InitCellMeasure();
 
 
-  //test the shadow procedure                                                                                                                                                                 
-  double xLightSource[3]={3.3*_AU_,0.0,0.0}; //{6000.0e3,1.5e6,0.0};
+  //test the shadow procedure
+  double subSolarPointAzimuth=0.0;
+  double subSolarPointZenith=0.0;
+  double HeliocentricDistance=3.3*_AU_;  
 
+  double xLightSource[3]={HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith),HeliocentricDistance*cos(subSolarPointZenith)}; //{6000.0e3,1.5e6,0.0};                                                                                                                           
   PIC::Mesh::IrregularSurface::InitExternalNormalVector();
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1000; //0; //00; //*10;
-  PIC::RequiredSampleLength=10; //00; //0; //0;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000;
+  PIC::RequiredSampleLength=10;
 
 
   PIC::Init_AfterParser();
@@ -381,7 +385,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(2000000);
+  PIC::ParticleBuffer::Init(20000000);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
@@ -419,7 +423,7 @@ int main(int argc,char **argv) {
     }
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
       PIC::RequiredSampleLength*=4;
-      if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
+      if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
       
       
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
