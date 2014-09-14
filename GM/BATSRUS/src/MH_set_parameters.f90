@@ -2740,11 +2740,11 @@ contains
     ! Update check does not work with Runge-Kutta schemes
     ! because the final update is a linear combination of all stages.
     if(.not.UseHalfStep) UseUpdateCheck = .false.
-    if(UseHighResChange) then
-       nOrderProlong = 1
-       if(nJ == 1 .or. nK >1)&
-            call stop_mpi('UseHighResChange only works for 2D!!')
-    endif
+    
+    ! Use first order prolongation for the first stage of high 
+    ! resolution change.
+    if(UseHighResChange) nOrderProlong = 1
+
 
     IsFirstCheck = .false.
 
