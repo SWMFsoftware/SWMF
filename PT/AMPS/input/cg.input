@@ -87,14 +87,14 @@ CouplerMode=ices !!off, ices, swmf
 
 #ParticleCollisions
   model = HS !!off !HS ! HS, off
-  SampleCollisionFrequency=off !!on !on, off
+  SampleCollisionFrequency=on !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
     const (H2O,H2O)= 3.4E-19 
 #endParticleCollisions
 
 #IDF
-  Model=off  !off,LB,qLB
+  Model=LB  !off,LB,qLB
   vtRelaxation=off !on,off
   vvRelaxation=off !on,off
   rtRelaxation=on !on,off
@@ -112,14 +112,14 @@ CouplerMode=ices !!off, ices, swmf
 #block ../cg.pl !process settings of the moon module
   Gravity3D=off !on,off
 
-  HeliocentricDistance=3.3*_AU_
-  subSolarPointAzimuth=0.0 !! in rad
-  subSolarPointZenith=1.5708 !!in rad
+  HeliocentricDistance=3.5*_AU_
+  subSolarPointAzimuth=4.58546 !! in rad -97.272220 degrees which corresponds to 262.72778 degrees
+  subSolarPointZenith=0.810355 !! in rad 46.429944 degrees from zaxis
 
-  RadiativeCoolingMode=off !off, Crovisier	
+  RadiativeCoolingMode=on !off, Crovisier	
 
   !!Gas parameters
-  ndist=4 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
+  ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
   BjornProductionRate(H2O)=2.0e25 !!2.0e25	    
   UniformProductionRate(H2O)=0.0 !!2.0e25
   JetProductionRate(H2O)=0.0 !1.0e25	    
