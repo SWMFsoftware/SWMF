@@ -717,7 +717,7 @@ sub ReadMainBlock {
   if (defined $CouplingMode) {
     ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");
    
-    if ($CouplingMode == "_PIC_COUPLER_MODE__ICES_") {
+    if ($CouplingMode eq "_PIC_COUPLER_MODE__ICES_") {
        ampsConfigLib::RedefineMacro("_PIC_ICES_SWMF_MODE_","_PIC_ICES_MODE_ON_","pic/picGlobal.dfn");
     } 
   }
