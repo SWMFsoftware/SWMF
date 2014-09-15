@@ -50,6 +50,8 @@ module ModUser
 
   ! The time between updates
   real:: DtUpdateSi
+  integer:: DnUpdate = 0, nStepStart
+
 
   ! minimum and maximum temperature
   real :: TempCometMinDim, TempCometMaxDim, TempCometMin, TempCometMax
@@ -73,11 +75,15 @@ module ModUser
   real :: TempToPressure
   real :: NumdensToRho
 
+  ! Last step and time the inner boundary values were saved
+  integer:: nStepSave = -100
+  real :: TimeSimulationSave = -1e30
+
 contains
   !============================================================================
   subroutine user_read_inputs
 
-    use ModMain, ONLY: UseUserInitSession, UseExtraBoundary
+    use ModMain, ONLY: UseUserInitSession, UseExtraBoundary, n_step
     use ModReadParam
 
     character (len=100) :: NameCommand
@@ -95,16 +101,23 @@ contains
        case("#SUNDIRECTION")
           call read_var('LatSun', LatSun)
           call read_var('LonSun', LonSun)
+
+          ! If the Sun's position is changed, recalculate illumination
+          nStepSave = -100
+          TimeSimulationSave = -1e30
+
        case("#COMETSTATE")
           call read_var('ProductionRateMinSi', ProductionRateMinSi)
           call read_var('ProductionRateMaxSi', ProductionRateMaxSi)
-          call read_var('SolarAngleMaxDim',     SolarAngleMaxDim)
-          call read_var('TempCometMinDim',      TempCometMinDim)
-          call read_var('TempCometMaxDim',      TempCometMaxDim)
-          call read_var('TempComet75',       TempComet75Dim)
+          call read_var('SolarAngleMaxDim',    SolarAngleMaxDim)
+          call read_var('TempCometMinDim',     TempCometMinDim)
+          call read_var('TempCometMaxDim',     TempCometMaxDim)
+          call read_var('TempComet75',         TempComet75Dim)
        case("#COMETROTATION")
           call read_var('RotationCometHour', RotationCometHour)
-          call read_var('AngleUpdateDeg', AngleUpdateDeg)
+          call read_var('AngleUpdateDeg',    AngleUpdateDeg)
+          call read_var('DnUpdate',          DnUpdate)
+          nStepStart = n_step
        case('#USERINPUTEND')
           EXIT
        case default
@@ -143,17 +156,15 @@ contains
     TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
     TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
-    ! From Huebner & Markiewicz 2000, eq 8:
-    ! uNormal = sqrt( pi kT / 2*m ), so TempToUnormal = sqrt( pi k/ 2m )
+    ! From G. Toth's derivations
+    ! uNormal = sqrt( kT / m ), so TempToUnormal = sqrt( k/ m )
     ! and also unit conversions of temperature to SI, and velocity from SI
-    TempToUnormal = sqrt(cPi*cBoltzmann/(2*MassFluid_I(1)*cAtomicMass) * &
+    TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
          No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
 
-    ! From Huebner & Markiewicz, 2000 eq. 13)
-    ! T' = T*((8 + 2 f_rv - pi)/(2(f_rv + 3)) = T(2f + 2 - pi)/(2f) 
-    !    = T[1 - (pi-2)/4*(gamma - 1)]
-    ! so TempToPressure = [1 - (pi-2)/4*(gamma - 1)]/Mass
-    TempToPressure = (1 - gm1*0.25*(cPi-2))/MassFluid_I(1)
+    ! From G. Toth's derivations
+    ! T' = T/g so and p = n*T' = rho*T/(g*m) so TempToPressure = 1/(g*m)
+    TempToPressure = 1/(g*MassFluid_I(1))
 
     ! Number density calculated as production rate/velocity
     ! which is in units of 1/(length cubed).
@@ -194,8 +205,8 @@ contains
             TempComet75Dim,  TempComet75
        write(*,*) 'TempToUnormal, TempToPressure   =', &
             TempToUnormal, TempToPressure
-       write(*,*) 'MassFluid_I                     =', &
-            MassFluid_I
+       write(*,*) 'MassFluid_I, NumDensToRho       =', &
+            MassFluid_I, NumDensToRho
        write(*,*) 'TempToUn*sqrt(TempCometMax)     =', &
             TempToUnormal*sqrt(TempCometMax)
        write(*,*) 'SlopeProduction, bProduction    =', &
@@ -357,19 +368,16 @@ contains
     real, save:: VarsGhostFace_VDFB(nVar,3,nI+1,nJ+1,nK+1,MaxBlock)
     integer :: iDim
 
-    ! Last step and time the inner boundary values were saved
-    integer:: nStepSave = -100
-    real :: TimeSimulationSave = -1e30
-
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
     ! Face normal direction
     iDim = (iSide+1)/2
 
     ! We can use the saved values if the values were saved in a previous step
-    ! and not too much time has passed since then
+    ! and not too much time or time step has passed since then
     if(n_step > nStepSave &
-         .and. Time_Simulation < TimeSimulationSave + DtUpdateSi)then
+         .and. Time_Simulation < TimeSimulationSave + DtUpdateSi &
+         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate))then
 
        VarsGhostFace_V = VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc)
        RETURN
@@ -379,8 +387,13 @@ contains
          call stop_mpi(NameSub//' is implemented for extra BC only')
 
     if(nStepSave < n_step)then
-       ! The sun is moving anti-clockwise in the rotating frame of the comet
-       LonSunNow = LonSun - OmegaCometSi*Time_Simulation*cRadToDeg
+
+       if(time_accurate)then
+          ! The sun is moving anti-clockwise in the rotating frame of the comet
+          LonSunNow = LonSun - OmegaCometSi*Time_Simulation*cRadToDeg
+       else
+          LonSunNow = LonSun + (AngleUpdateDeg*(n_step - nStepStart))/DnUpdate
+       end if
 
        ! Get the direction vector to the Sun
        call dir_to_xyz((90-LatSun)*cDegToRad, LonSunNow*cDegToRad, NormalSun_D)
