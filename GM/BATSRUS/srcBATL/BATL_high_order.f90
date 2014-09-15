@@ -940,7 +940,7 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,j,1:min(nk,3)) = &
+                   FieldCoarse_VIII(:,i,j,1:min(nk,k0_-km2_+1)) = &
                         Field1_VG(:,iPara1,iPara2,&
                         k0_:km2_:sign(1,km2_-k0_))
                 enddo
@@ -1026,7 +1026,7 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,j,1:min(nk,3)) = &
+                   FieldCoarse_VIII(:,i,j,1:min(nk,nKp3_-nKp1_+1)) = &
                         Field1_VG(:,iPara1,iPara2,&
                         nKp1_:nKp3_:sign(1,nKp3_-nKp1_))
                 enddo
