@@ -1,10 +1,8 @@
-Begin session: 1
-
 #ECHO
 T			DoEcho
 
 #DESCRIPTION
-read CG shape model
+hydrodynamic case
 
 #PLANET
 NONE
@@ -12,49 +10,59 @@ NONE
 #TIMEACCURATE
 F			DoTimeAccurate
 
-#UPDATECHECK
-F			DoUpdateCheck
-
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
+500			DnSaveRestart
+-1.0			DtSaveRestart
+
+#STARTTIME
+2014			iYear
+08			iMonth
+23			iDay
+16			iHour
+0			iMinute
+0			iSecond
+
+Position of Rosetta
+#TESTXYZ
+-39.160000
+-49.700000
+  7.9700000
 
 #GRID
 1                       nRootBlockX
 1                       nRootBlockY
 1                       nRootBlockZ
--16.                    xMin
- 16.                    xMax
--16.                    yMin
- 16.                    yMax
--16.                    zMin
- 16.                    zMax
+-160.                    xMin
+ 160.                    xMax
+-160.                    yMin
+ 160.                    yMax
+-160.                    zMin
+ 160.                    zMax
 
 #GRIDRESOLUTION
-0.5                     Resolution
+5/32                    Resolution
 initial                 NameArea
 
 #GRIDRESOLUTION
-0.25
+5/32
 shell0
 0.5
-3.0
+4.0
 
 #GRIDRESOLUTION
-0.5
+5/8
 sphere0
 8.0
 
 #GRIDRESOLUTION
-1.0
+5/4
+sphere0
+16.0
+
+#GRIDRESOLUTION
+5/2
 all
-
-#BODY
-F			UseBody
-
-TESTXYZ
--1.59375
--1.40625
--1.40625
 
 #USERINPUTBEGIN -------------------------------------
 
@@ -63,31 +71,21 @@ CG_MOC.bdf		NameShapeFile
 
 #SUNDIRECTION
  43.57                  LatSun
--97.27                  LonSun
+  0.0                   LonSun
 
 #COMETSTATE
-4.087536e17		ProductionRateMinSi [m^-2 s^-1]
-1.040419e19		ProductionRateMaxSi [m^-2 s^-1]
+5.0e18			ProductionRateMinSi [m^-2 s^-1]
+8.0e18			ProductionRateMaxSi [m^-2 s^-1]
 57.5			SolarAngleMaxDim [degree]
 133.0			TempCometMinDim [K]
 182.1			TempCometMaxDim [K]
 136.1			TempComet75Dim [K]
-
-#COMETROTATION
-1/6			PeriodCometHour
-10.0			UpdateAngleDeg
 
 #USERINPUTEND   -------------------------------------
 
 #EXTRABOUNDARY
 T			UseExtraBoundary
 user			TypeExtraBoundary
-
-MINIMUMPRESSURE
-1e-6			pMinDim [nPa]
-
-MINIMUMDENSITY
-1.0			RhoMinDim [amu/cc]
 
 #GAMMA
 1.4			Gamma
@@ -99,7 +97,7 @@ MINIMUMDENSITY
 
 #SOLARWIND
 5.0                     SwRhoDim [amu/cc]
-1000.0                SwTDim   [K]
+1000.0                  SwTDim   [K]
      0.0                SwUxDim  [km/s]
      0.0                SwUyDim  [km/s]
      0.0                SwUzDim  [km/s]
@@ -108,25 +106,23 @@ MINIMUMDENSITY
      0.0                SwBzDim  [nT]
 
 #OUTERBOUNDARY
-float			TypeBcEast
-float			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBottom
-float			TypeBcTop
+fixed			TypeBcEast
+fixed			TypeBcWest
+fixed			TypeBcSouth
+fixed			TypeBcNorth
+fixed			TypeBcBottom
+fixed			TypeBcTop
 
 #SCHEME
-2			nOrder
+1			nOrder
 Linde			TypeFlux
-mc3			TypeLimiter
-1.5			BetaLimiter
 
 #SAVELOGFILE
 T			DoSaveLogfile
 VAR			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-dt rho p pmin pmax rhoflx
+dt rho p pmin pmax rhopnt uxpnt uypnt uzpnt Ppnt rhoflx
 3.0 4.0			rLog
 
 #SAVEINITIAL
@@ -135,42 +131,74 @@ T			DoSaveInitial
 #SAVEPLOT
 5                       nPlotFiles
 x=0 MHD idl             StringPlot
-50                       DnSavePlot
+100                       DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 y=0 MHD idl             StringPlot
-50                       DnSavePlot
+100                       DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 z=0 MHD idl             StringPlot
-50                        DnSavePlot
+100                        DnSavePlot
 -1.			DtSavePlot
 -1.			Dx
 3d MHD idl              StringPlot
-2500                       DnSavePlot
+1000                     DnSavePlot
 -1.                     DtSavePlot
-1.0                     Dx
+2.0                     Dx
 3d MHD tec
-5000                    DnSavePlot
+1000                     DnSavePlot
 -1.                     DtSavePlot
 
 #STOP
-200			MaxIteration
+100			MaxIteration
 -1.0			tSimulationMax
-
-End session: 1
 
 #RUN ##########################################################################
 
-Begin session: 2
-
-#TIMEACCURATE
-T			DoTimeAccurate
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3			TypeLimiter
+1.2			BetaLimiter
 
 #STOP
--1                     MaxIteration
-600.0                  tSimulationMax
+1000			MaxIteration
+-1.0			tSimulationMax
 
-End session: 2
+#RUN ##########################################################################
 
-#END ##########################################################################
+#SAVEPLOT
+5                       nPlotFiles
+x=0 MHD idl             StringPlot
+100                       DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+y=0 MHD idl             StringPlot
+100                       DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+z=0 MHD idl             StringPlot
+100                        DnSavePlot
+-1.			DtSavePlot
+-1.			Dx
+3d MHD idl              StringPlot
+100                     DnSavePlot
+-1.                     DtSavePlot
+2.0                     Dx
+3d MHD tec
+1000                    DnSavePlot
+-1.                     DtSavePlot
+
+#USERINPUTBEGIN -------------------------------------
+
+#COMETROTATION
+12.45			PeriodCometHour
+3.0			UpdateAngleDeg
+100			DnUpdate
+
+#USERINPUTEND   -------------------------------------
+
+#STOP
+13000                 MaxIteration
+-1.0                  tSimulationMax
