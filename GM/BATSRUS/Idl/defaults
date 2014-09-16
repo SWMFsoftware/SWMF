@@ -69,7 +69,7 @@ npict=0
 ; Slicing parameters
 firstslice=1
 dslice=1
-nslicemax=50
+nslicemax=200
 slicedir=0
 dyslicelabel=0.98
 
