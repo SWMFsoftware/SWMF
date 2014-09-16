@@ -99,7 +99,7 @@ function log_time,wlog,wlognames,timeunit
      if iyear eq -1 then begin
         if ihour gt -1 then begin
            hours = wlog(*,ihour)
-           for i=1, n_elements(hours)-1 do $
+           for i=1L, n_elements(hours)-1 do $
               while hours(i) lt hours(i-1) do $
                  hours(i) = hours(i) + 24.0
         endif
@@ -111,7 +111,7 @@ function log_time,wlog,wlognames,timeunit
 
         nday = 0
         daylast  = wlog(0,iday)
-        for i = 0, n_elements(hours) - 1 do begin
+        for i = 0L, n_elements(hours) - 1 do begin
            if daylast ne wlog(i,iday) then begin
               daylast = wlog(i,iday)
               nday = nday + 1
@@ -284,7 +284,7 @@ on_error,2
 if n_elements(filename) eq 0 then filename='file.out'
 gettype,filename,filetype
 openfile,1,filename,filetype
-gethead,1,filetype,filename,$
+gethead,1,filename,filetype,$
   headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
 close,1
 print,'filename  = ',filename, format="(a,a)"
