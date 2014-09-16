@@ -9,8 +9,8 @@
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
 ;    openfile, gettype, gethead, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
-; saveing ascii and binary data in the same format:
-;    save_pict
+; saveing ascii and binary data in the same format as used for input:
+;    save_pict, save_log
 ; reading numbers and strings from input:
 ;    asknum, askstr, str2arr, arr2arr, readplotpar, readlimits
 ; transforming initial data:
@@ -4579,3 +4579,28 @@ pro save_pict, filename, headline, varname, w, x, $
 
 end
 
+;=============================================================================
+pro save_log, filename, headline, varname, array, format=format
+
+  unit=1
+  close, unit
+
+  s = size(array)
+  ndim = s(0)
+  if ndim gt 2 then begin
+     print, 'Error in save_log: array should be 1 or 2D array'
+     return
+  end
+
+  n = s(1)
+  print, 'save_log: number of data lines to write is ',n
+
+  if not keyword_set(format) then format = '(100(e13.5))'
+
+  openw, unit, filename
+  printf, unit, headline
+  printf, unit, varname
+  for i = 0, n-1 do printf, unit, array(i,*), format=format
+  close, unit
+
+end
