@@ -2650,7 +2650,7 @@ contains
       Flux_V(iEnergy) = Un*(pTotal + e)
 
       ! Needed for adiabatic source term for electron pressure
-      HallUn = Un
+      if(iFluid == 1 .and. .not.UseB) HallUn = Un
 
     end subroutine get_hd_flux
 
