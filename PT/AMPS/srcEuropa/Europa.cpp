@@ -63,6 +63,15 @@ double Europa::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSource
 
 
 
+//energy distribution of particles injected via ion sputtering
+double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFunction(double e,int *spec) {
+  static const double Ee=0.015*eV2J;
+
+  return e/pow(Ee+e,2);
+}
+
+
+//surface temperature
 double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_SO_OBJECT) {
   exit(__LINE__,__FILE__,"not implemented");
 
