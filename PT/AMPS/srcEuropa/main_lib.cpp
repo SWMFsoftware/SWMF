@@ -531,6 +531,7 @@ PIC::InitMPI();
 
 
 	//init the Europa model
+	Exosphere::Init_BeforeParser();
 	Europa::Init_BeforeParser();
 
 	//init the particle solver
@@ -547,6 +548,7 @@ PIC::InitMPI();
 	//PIC::RequiredSampleLength=InitialSampleLength; //0;
 
 	Europa::Init_AfterParser();
+
 
 
 	//output the PDS energy distribution function
@@ -606,7 +608,7 @@ PIC::InitMPI();
 
 
 
-
+    Sphere->Radius=_RADIUS_(_TARGET_);
 		Sphere->PrintSurfaceMesh("Sphere.dat");
 		Sphere->PrintSurfaceData("SpheraData.dat",0);
 		Sphere->localResolution=localSphericalSurfaceResolution;
@@ -623,8 +625,6 @@ PIC::InitMPI();
 		Europa::Planet=Sphere;
 
 		Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
-
-
 
 /*
     Sphere->SurfaceElementDesorptionFluxUP=new double*[PIC::nTotalSpecies];
@@ -880,6 +880,9 @@ PIC::InitMPI();
 	//init the PIC solver
 	PIC::Init_AfterParser ();
 	PIC::Mover::Init();
+
+  Exosphere::Init_AfterParser();
+
 	//	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
 
 	//	for (int s=0;s<PIC::nTotalSpecies;s++) {
