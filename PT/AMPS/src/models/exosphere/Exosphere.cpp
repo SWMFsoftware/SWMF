@@ -311,6 +311,9 @@ void Exosphere::Init_AfterParser() {
 
   //init the model that described the available remote ground based observations
   Exosphere::Sampling::ReferenceGroundBasedObservations::init();
+
+  //init the source models
+  Exosphere::SourceProcesses::Init();
 }
 
 
