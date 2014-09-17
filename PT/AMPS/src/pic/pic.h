@@ -1937,8 +1937,12 @@ namespace PIC {
 
   namespace ParticleWeightTimeStep {
     typedef double (*fSetFunction) (int,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
-
     extern fSetFunction LocalParticleWeight,LocalTimeStep,LocalBlockInjectionRate;
+
+    typedef double (*fUserDefinedExtraSourceRate)(int);
+    extern fUserDefinedExtraSourceRate UserDefinedExtraSourceRate;
+
+
     extern double maxReferenceInjectedParticleNumber;
 
 

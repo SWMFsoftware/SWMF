@@ -13,6 +13,7 @@
 PIC::ParticleWeightTimeStep::fSetFunction PIC::ParticleWeightTimeStep::LocalParticleWeight=NULL,PIC::ParticleWeightTimeStep::LocalTimeStep=NULL;
 PIC::ParticleWeightTimeStep::fSetFunction PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=NULL;
 double PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=400;
+PIC::ParticleWeightTimeStep::fUserDefinedExtraSourceRate PIC::ParticleWeightTimeStep::UserDefinedExtraSourceRate=NULL;
 
 //the global particle weight/time step
 double *PIC::ParticleWeightTimeStep::GlobalParticleWeight=NULL,*PIC::ParticleWeightTimeStep::GlobalTimeStep=NULL;
@@ -120,6 +121,9 @@ void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(int spec,cTr
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
     if (PIC::VolumeParticleInjection::nRegistratedInjectionProcesses!=0) ParticleInjection+=PIC::VolumeParticleInjection::GetTotalTimeStepInjection(spec);
 #endif
+
+    //calculate the extra user defined source rate
+    if (UserDefinedExtraSourceRate!=NULL) ParticleInjection+=UserDefinedExtraSourceRate(spec);
 
     //calculate the particle weight
     GlobalParticleWeight=ParticleInjection/maxReferenceInjectedParticleNumber;
