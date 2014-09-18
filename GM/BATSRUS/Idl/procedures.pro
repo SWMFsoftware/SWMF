@@ -112,9 +112,13 @@ function log_time,wlog,wlognames,timeunit
         nday = 0
         daylast  = wlog(0,iday)
         for i = 0L, n_elements(hours) - 1 do begin
-           if daylast ne wlog(i,iday) then begin
+           dday = wlog(i,iday) - daylast
+           if dday ne 0 then begin
+              ; if we go to the next month we assume
+              ; we ended on the last day of the month(?)
+              if dday lt 0 then dday = wlog(i,iday)
               daylast = wlog(i,iday)
-              nday = nday + 1
+              nday = nday + dday
            endif
            hours[i] = nday*24.0 + $
                       wlog(i,ihour) + wlog(i,imin)/60.0 + wlog(i,isec)/3600.0
@@ -138,6 +142,7 @@ function log_time,wlog,wlognames,timeunit
 
   if n_elements(timeunit) gt 0 then begin
      case timeunit of
+        'd': logtime = hours/24
         '1': logtime = hours*3600
         's': logtime = hours*3600
         'm': logtime = hours*60
