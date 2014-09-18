@@ -772,12 +772,25 @@ contains
     real    :: State_V(nVar), Rho, InvRho, p, IonSum, InvSum
     real    :: TeRatio1, InvTeRatio1
     logical :: IsMultiIon
+
+    logical:: DoTest, DoTestMe, DoTestCell
+    character(len=*), parameter:: NameSub = 'multi_ion_update'
     !-----------------------------------------------------------------------
+    if(iProc == ProcTest .and. iBlock == BlkTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
+
+    if(DoTestMe)write(*,*) NameSub,' starting with IsFinal, testvar=', &
+         IsFinal, State_VGB(VarTest,iTest,jTest,kTest,iBlock)
 
     TeRatio1    = 1 + ElectronTemperatureRatio
     InvTeRatio1 = 1 / TeRatio1
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+
+       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
@@ -791,6 +804,9 @@ contains
        ! Keep pressures above LowPressureRatio*pTotal
        State_VGB(iPIon_I,i,j,k,iBlock) = &
             max( State_V(iPIon_I), LowPressureRatio*p )
+
+       if(DoTestCell)write(*,*) NameSub,' after low pressure:', &
+            State_VGB(VarTest,i,j,k,iBlock)
 
        if(.not.IsFinal)then
 
@@ -890,12 +906,18 @@ contains
           end if
           State_VGB(iPIon_I,i,j,k,iBlock) = p*InvRho * &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*MassIon_I(1)/MassIon_I
+
+          if(DoTestCell)write(*,*) NameSub,' after not ismultiion:', &
+               State_VGB(VarTest,i,j,k,iBlock)
        end if
 
     end do; end do; end do
 
     ! Reset total and ion energies
     call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
+
+    if(DoTestMe)write(*,*) NameSub,' finishing with testvar=', &
+         State_VGB(VarTest,iTest,jTest,kTest,iBlock)
 
   end subroutine multi_ion_update
 
