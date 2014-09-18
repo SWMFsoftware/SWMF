@@ -219,7 +219,7 @@ subroutine set_physics_constants
 
   if (UseMultiSpecies) then
      FaceState_VI(SpeciesFirst_, Body1_) = &
-          BodyRho_I(1)*(1.0 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
+          BodyRho_I(1)*(1.0 - LowDensityRatio*(SpeciesLast_-SpeciesFirst_))
      FaceState_VI(SpeciesFirst_+1:SpeciesLast_, Body1_) = &
           LowDensityRatio*BodyRho_I(1)
   endif
@@ -265,34 +265,38 @@ subroutine set_physics_constants
      endif
 
      if(nFluid > 1)then
-        ! Ratio of total pressure and sum of ion pressures depends on UseElectronPressure
+        ! Ratio of total pressure and sum of ion pressures 
+        ! depends on UseElectronPressure
         pCoef = 1 + ElectronPressureRatio
         if(UseElectronPressure) pCoef = 1.0
 
+        ! The first ion fluid contains most of the mass density of the solar
+        ! wind. The other ions carry the rest. The neutrals are not included.
+        ! We preserve the temperature of the solar wind, so the pressure
+        ! changes proportionally to the density.
         iFluid=IonFirst_
         call select_fluid
-        FaceState_VI(iRho, 1:6) = &
-             SW_Rho*(1-LowDensityRatio*(nFluid-IonFirst_))
-        FaceState_VI(iUx,  1:6) = SW_Ux
-        FaceState_VI(iUy,  1:6) = SW_Uy
-        FaceState_VI(iUz,  1:6) = SW_Uz
+        FaceState_VI(iRho,1:6) = SW_Rho*(1.0 - LowDensityRatio*(nIonFluid - 1))
+        FaceState_VI( iUx,1:6) = SW_Ux
+        FaceState_VI( iUy,1:6) = SW_Uy
+        FaceState_VI( iUz,1:6) = SW_Uz
         ! Use solar wind temperature and reduced density to get pressure
-        FaceState_VI(iP,   1:6) = SW_p/pCoef*(1.0-LowDensityRatio*(nFluid-IonFirst_))
-
+        FaceState_VI(  iP,1:6) = SW_p/pCoef &
+             *(1.0 - LowDensityRatio*(nIonFluid-1))
+        
         do iFluid = IonFirst_+1, nFluid
            call select_fluid
-           FaceState_VI(iRho, 1:6) = SW_Rho*LowDensityRatio
-           FaceState_VI(iUx,  1:6) = SW_Ux
-           FaceState_VI(iUy,  1:6) = SW_Uy
-           FaceState_VI(iUz,  1:6) = SW_Uz
+           FaceState_VI(iRho,1:6) = SW_Rho*LowDensityRatio
+           FaceState_VI( iUx,1:6) = SW_Ux
+           FaceState_VI( iUy,1:6) = SW_Uy
+           FaceState_VI( iUz,1:6) = SW_Uz
            ! Use solar wind temperature and reduced density to get pressure 
-           FaceState_VI(iP,   1:6) = SW_p/pCoef &
+           FaceState_VI(  iP,1:6) = SW_p/pCoef &
                 *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
         end do
         ! Fix total pressure if necessary (density and temperature are kept)
-        ! the min(2,nFluid) instead of 2 is needed so it compiles with gfortran
         if(UseMultiIon .and. IsMhd) FaceState_VI(P_,1:6) = &
-             pCoef*sum(FaceState_VI(iP_I(min(2,nFluid):nFluid),1))
+             pCoef*sum(FaceState_VI(iPIon_I,1))
      end if
   end if
 
