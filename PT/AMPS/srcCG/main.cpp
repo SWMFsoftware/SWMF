@@ -95,7 +95,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*4.5);
+  return max(1.0,t->CharacteristicSize()*18.0);
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -355,8 +355,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=30000;
   PIC::RequiredSampleLength=10;
 
 

@@ -1095,7 +1095,7 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec, cInternalSphericalDat
   double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
   double positionSun[3],x[3],norm[3];
   long int totalSurfaceElementsNumber,i;
-  double percentageActive=0.025;
+  double percentageActive=0.05;
   const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
   const double DistanceFromTheSun[6]={1.3,2.0,2.7,3.0,3.25,3.5};
   double HeliocentricDistance=3.3*_AU_;
