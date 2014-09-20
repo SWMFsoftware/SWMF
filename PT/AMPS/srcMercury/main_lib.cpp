@@ -906,6 +906,7 @@ void amps_init() {
   Mercury::Init_BeforeParser();
 
   //init the particle solver
+
   PIC::Init_BeforeParser();
 //  PIC::Parser::Run(inputFile);
 
@@ -915,7 +916,7 @@ void amps_init() {
 
   Mercury::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
 
-  Mercury::Init_AfterParser();
+
 
 
   //output the PDS enerfy distribution function
@@ -1012,6 +1013,7 @@ void amps_init() {
     Sphere->PrintSurfaceData(fname,0);
 
 
+    Sphere->Radius=_RADIUS_(_TARGET_);
     Sphere->localResolution=localSphericalSurfaceResolution;
     Sphere->InjectionRate=Mercury::SourceProcesses::totalProductionRate;
     Sphere->faceat=0;
@@ -1169,7 +1171,7 @@ void amps_init() {
 
 
 
-
+  Mercury::Init_AfterParser();
 
 //init the PIC solver
   PIC::Init_AfterParser ();
@@ -1187,6 +1189,8 @@ void amps_init() {
   PIC::ParticleWeightTimeStep::initTimeStep();
 
   //set up the particle weight
+  PIC::ParticleWeightTimeStep::UserDefinedExtraSourceRate=Exosphere::SourceProcesses::SolarWindSputtering::TypicalIonFluxSputteringRate;
+
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(NA);
 
@@ -1326,7 +1330,6 @@ void amps_init() {
 #endif
 
   //init ICES
-
 #ifdef _ICES_CREATE_COORDINATE_LIST_
   PIC::CPLR::ICES::createCellCenterCoordinateList();
   PIC::CPLR::ICES::SetLocationICES("~/ices/ICES/Models");
@@ -1341,6 +1344,8 @@ void amps_init() {
   //output the solar wind ion flux at the palnet's surface
   PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
   PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
+
+  Exosphere::SourceProcesses::Init();
 
   //create the map of the solar wind flux
   int el;

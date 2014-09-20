@@ -146,6 +146,9 @@ CouplerMode=ices !!off, ices, swmf
   define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Mercury::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
   define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Mercury::ExospherePhotoionizationLifeTime(t0,t1,t2,t3)
 
+  define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
+  define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
+
   define _ICES_CREATE_COORDINATE_LIST_ 
 
   !define the extra data that will be stored on the surface
@@ -187,18 +190,18 @@ CouplerMode=ices !!off, ices, swmf
 
 
  
-  Source:ImpactVaporization=on \\ !on,off
+  Source:ImpactVaporization=off \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(NA)=1.69E22, SourceTemperature(NA)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
 
 
 
-  Source:ThermalDesorption=on \\ !on,off
+  Source:ThermalDesorption=off \\ !on,off
     uThermal(NA)=1.85*eV2J, VibrationalFrequency(NA)=1.0E13
  
 
-  Source:PhotonStimulatedDesorption=on \\ !on,off
+  Source:PhotonStimulatedDesorption=off \\ !on,off
     PhotonFlux_1AU=2.0E14*1.0E4 \\   !//Killen-2012-JGR, Yakshinskii+Madey-1999-? 
     CrossSection(NA)=3.0E-21*1.0E-4, InjectionVelocityRange(NA)=10,10.0E3  !//Satantos-2010-? ; 3.0E-20*1.0E-4;  //Killen-2012-JGR, Yakshinskii+Madey-1999-? 
      

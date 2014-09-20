@@ -45,6 +45,13 @@ const double Exosphere::swTemperature_Typical=0.174e6,Exosphere::swNumberDensity
 //interaction with the surface
 const double Exosphere::SurfaceInteraction::AccomodationCoefficient=0.1;*/
 
+//energy distribution of particles injected via ion sputtering
+double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFunction(double e,int *spec) {
+  static const double Ee=0.015*eV2J;
+
+  return e/pow(Ee+e,2);
+}
+
 //sticking probability of sodium atoms
 double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& ReemissionParticleFraction,double Temp) {
 
