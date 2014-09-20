@@ -2064,6 +2064,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    long int nZenithElement,nAzimuthalElement;
    int el;
 
+#if _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ == _PIC_MODE_ON_
    if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
      Sphere->GetSurfaceElementProjectionIndex(x_IAU_OBJECT,nZenithElement,nAzimuthalElement);
      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
@@ -2073,6 +2074,7 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
        if (Exosphere::Planet->SurfaceElementPopulation[spec][el]<Sphere->SurfaceElementDesorptionFluxUP[spec][el]+ParticleWeight*ParticleWeightCorrection) continue;
      }
    }
+#endif
 
    //generate a particle
    PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);

@@ -57,3 +57,6 @@
 
 //allow the orbit calculation with SPICE
 #define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
+
+//control the positive value of the volatile surface aboundance in the particle injection procedure
+#define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_ON_
