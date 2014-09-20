@@ -71,10 +71,10 @@ namespace Exosphere {
 
 
   //typical solar wind conditions far from the planet
-  static const double /*Exosphere_*/swVelocity_Typical[]={0.0,0.0,0.0};
-  static const double /*Exosphere_*/swB_Typical[]={0.0,0.0,0.0};
-  static const double /*Exosphere_*/swTemperature_Typical=0.0;
-  static const double /*Exosphere_*/swNumberDensity_Typical=0.0;
+  static const double swVelocity_Typical[]={0.0,0.0,0.0};
+  static const double swB_Typical[]={0.0,0.0,0.0};
+  static const double swTemperature_Typical=0.0;
+  static const double swNumberDensity_Typical=0.0;
   extern double swE_Typical[3];
 
   //the total number of source processes
@@ -277,6 +277,9 @@ namespace Exosphere {
 
   //sources
   namespace SourceProcesses {
+
+    //init the model
+    void Init();
 
     //generate particle position and velocity
   //generate particle properties
@@ -681,6 +684,10 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
       //the object for distribution of injection positino on the planet's surface
       extern cSingleVariableDiscreteDistribution<int> SurfaceInjectionDistribution[PIC::nTotalSpecies];
       double GetSurfaceElementProductionRate(int nElement,int *spec);
+      void Init();
+
+      //evaluate the typical total source rate based on the typical parameters of the solar wind
+      double TypicalIonFluxSputteringRate(int spec);
 
       //evaluate nemerically the source rate
 //      extern double CalculatedTotalSodiumSourceRate;
@@ -688,9 +695,9 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
         double norm_IAU_OBJECT[3],norm_SO_OBJECT[3];
 
-        if (((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement]<=0.0) return 0.0;
+        //the sputtering source rate does not depend on the surface population and depends only on the yeild
+//        if (((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement]<=0.0) return 0.0;
 
-        //get the normal to the surface element in 'IAU' frame
         memcpy(norm_IAU_OBJECT,(((cInternalSphericalData*)SphereDataPointer)->SurfaceElementExternalNormal+SurfaceElement)->norm,3*sizeof(double));
 
         //convert the normal vector to the 'SO' frame
@@ -716,13 +723,16 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         nd=((cInternalSphericalData*)SphereDataPointer)->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
         //return the local source rate
-        return ((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd]*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement];
+        double flux=((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd];
+
+        return (flux>0.0) ? flux*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement] : 0.0;
       }
 
       inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return SourceRate[spec];}
 
       //energy distribution function of injected particles
       extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
+      double DefaultEnergyDistributionFunction(double e,int *spec);
       double EnergyDistributionFunction(double e,int *spec);
 
       //generate particle properties
