@@ -340,7 +340,8 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt
+    use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt, &
+         iNewDecomposition
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlockBc
@@ -366,6 +367,7 @@ contains
 
     real, save :: NormalSun_D(3)
     real, save:: VarsGhostFace_VDFB(nVar,3,nI+1,nJ+1,nK+1,MaxBlock)
+    integer, save :: iDecompositionSave
     integer :: iDim
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
@@ -377,7 +379,8 @@ contains
     ! and not too much time or time step has passed since then
     if(n_step > nStepSave &
          .and. Time_Simulation < TimeSimulationSave + DtUpdateSi &
-         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate))then
+         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate) &
+         .and. iDecompositionSave == iNewDecomposition)then
 
        VarsGhostFace_V = VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc)
        RETURN
@@ -405,6 +408,9 @@ contains
     ! Save step and simulation time info
     nStepSave          = n_step
     TimeSimulationSave = Time_Simulation
+
+    ! Save decomposition info
+    iDecompositionSave = iNewDecomposition
 
     ! Floating boundary condition by default
     VarsGhostFace_V = VarsTrueFace_V
