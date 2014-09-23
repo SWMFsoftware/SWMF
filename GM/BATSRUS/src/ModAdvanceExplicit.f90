@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !===========================================================================
 
 subroutine advance_expl(DoCalcTimestep, iStageMax)
@@ -163,7 +163,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if (time_accurate .and. iStage == nStage .and. DoCalcTimestep) &
              call calc_timestep(iBlock)
 
-        ! At this point all block data has surely been set in ModUser
+        ! At this point the user has surely set all "block data" 
         ! NOTE: The user has the option of calling set_block_data directly.
         call set_block_data(iBlock)
 
