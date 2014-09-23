@@ -486,7 +486,7 @@ contains
     VarsGhostFace_V(P_)      = &
          VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
 
-    if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
+    if (.false. .and. DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
        
        write(*,*) 'FaceCoords_D  =', FaceCoords_D
