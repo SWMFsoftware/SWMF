@@ -426,7 +426,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseImplicit.and.nBlockImplALL>0)then
      call advance_part_impl
-  elseif(UseLocalTimeStep) then
+  elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate) then
      call advance_localstep(TimeSimulationLimit)
   else
      call advance_expl(.true., -1)
