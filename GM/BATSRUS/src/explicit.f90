@@ -163,6 +163,10 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if (time_accurate .and. iStage == nStage .and. DoCalcTimestep) &
              call calc_timestep(iBlock)
 
+        ! At this point all block data has surely been set in ModUser
+        ! NOTE: The user has the option of calling set_block_data directly.
+        call set_block_data(iBlock)
+
      end do ! Multi-block solution update loop.
 
      if(DoTestMe)write(*,*)NameSub,' done update blocks'
@@ -206,10 +210,6 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if ((iStageMax >= 0) .and. (iStage >= iStageMax)) EXIT STAGELOOP
 
   end do STAGELOOP  ! Multi-stage solution update loop.
-
-  do iBlock = 1, nBlock
-     if(.not.Unused_B(iBlock)) call set_block_data(iBlock)
-  end do
 
   if(UsePartImplicit)call timing_stop('advance_expl')
 
