@@ -235,8 +235,7 @@ contains
        end if
     end if
 
-
-    call exchange_messages(.false.)
+    call exchange_messages
 
   end subroutine set_initial_conditions
 
@@ -273,25 +272,34 @@ end subroutine BATS_setup
 subroutine BATS_init_session
 
   use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
-       UseRadDiffusion, UseHeatConduction, UseIonHeatConduction
-  use ModMain, ONLY: UseProjection
-  use ModMain, ONLY: UseConstrainB
+       UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
+       UseProjection, UseConstrainB
   use ModCT,   ONLY: DoInitConstrainB
-  use ModHallResist, ONLY: UseHallResist, init_hall_resist, &
-       UseBiermannBattery
+  use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
   use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
   use ModRadDiffusion, ONLY: init_rad_diffusion
   use ModHeatConduction, ONLY: init_heat_conduction
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
-  use BATL_lib,    ONLY: init_amr_criteria
   use ModUserInterface ! user_initial_perturbation, user_specify_refinement
+  use ModLocalTimestep, ONLY: UseLocalTimeStepNew
+  use ModProcMH, ONLY: iProc
+  use BATL_lib, ONLY: init_amr_criteria
 
   implicit none
 
   ! Local variables
   character(len=*), parameter :: NameSub = 'BATS_init_session '
   !---------------------------------------------------------------------------
+  
+  if(UseLocalTimeStepNew)then
+     if(iProc == 0)write(*,*) &
+          NameSub,': redo load balance for time accurate local timestepping'
+     ! move coordinates and data, there are no new blocks  
+     call load_balance(.true.,.true.,.false.)
+     UseLocalTimeStepNew = .false.
+  end if
+
   ! Find the test cell defined by #TESTIJK or #TESTXYZ commands
   call find_test_cell
 
@@ -467,7 +475,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseLaserHeating) call add_laser_heating
 
-  !Calculate temperature at the end of time step
+  ! Calculate temperature at the end of time step
   if(Te0_>1)call update_te0
 
   call exchange_messages
@@ -639,11 +647,9 @@ subroutine BATS_select_blocks
   !--------------------------------------------------------------------------
 
   ! Select and load balance blocks for partially implicit/steady scheme
-  if( UsePartSteady .and. IsNewSteadySelect &
-       .or. UsePartImplicit &
-       )then
+  if(UsePartSteady .and. IsNewSteadySelect .or. UsePartImplicit)then
 
-     !Redo load balancing: move coordinates and data, there are no new blocks
+     ! Redo load balancing: move coordinates and data, there are no new blocks
      call load_balance(.true.,.true.,.false.)
 
      IsNewSteadySelect = .false.
