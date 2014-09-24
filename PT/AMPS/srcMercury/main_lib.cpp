@@ -1332,8 +1332,8 @@ void amps_init() {
   //init ICES
 #ifdef _ICES_CREATE_COORDINATE_LIST_
   PIC::CPLR::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::ICES::SetLocationICES("~/ices/ICES/Models");
-  PIC::CPLR::ICES::retriveSWMFdata("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+  PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/CODES/ICES/Models");
+  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070001"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
 #endif
 
 
@@ -1345,8 +1345,12 @@ void amps_init() {
   PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
   PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
 
-  Exosphere::SourceProcesses::Init();
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
 
+  Exosphere::SourceProcesses::Init();
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
+
+/*
   //create the map of the solar wind flux
   int el;
 
@@ -1396,6 +1400,7 @@ void amps_init() {
 
     MPI_Bcast(Mercury::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_COMM_WORLD);
   }
+*/
 
 
 #endif
