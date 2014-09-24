@@ -86,7 +86,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cDegToRad
-  use ModLocalTimeStep, ONLY: UseLocalTimeStep
+  use ModLocalTimeStep, ONLY: UseLocalTimeStep, UseLocalTimeStepNew
   use ModSort, ONLY: sort_quick
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
@@ -490,7 +490,13 @@ subroutine MH_set_parameters(TypeAction)
         UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
 
      case('#LOCALTIMESTEP')
-        call read_var('UseLocalTimeStep',UseLocalTimeStep)
+        ! Check if we had it on already
+        UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
+
+        call read_var('UseLocalTimeStep', UseLocalTimeStep)
+
+        ! Check if the local time stepping was just switched on
+        UseLocalTimeStepNew = UseLocalTimeStepNew .and. UseLocalTimeStep
 
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
