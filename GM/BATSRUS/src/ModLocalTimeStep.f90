@@ -11,12 +11,11 @@ module ModLocalTimeStep
   private ! except
 
   public:: advance_localstep  ! time accurate mode with subcycling
-  logical, public :: UseLocalTimeStep = .false.
+  logical, public :: UseLocalTimeStep    = .false.
+  logical, public :: UseLocalTimeStepNew = .false. ! if just switched on
 
-  real,    save, allocatable:: Time_B(:), TimeOld_B(:)
-  integer, save, allocatable:: iStage_B(:)
-
-  real:: DtMin, DtMax
+  ! Local variables
+  real:: DtMinSi, DtMaxSi
 
 contains
   !======================================================================
@@ -31,7 +30,7 @@ contains
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
     use ModEnergy,     ONLY: calc_energy_ghost
-    use ModPhysics,    ONLY: No2Si_V, UnitT_
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
     use ModCalcSource, ONLY: calc_source
     use ModTimeStepControl, ONLY: calc_timestep
     use ModVarIndexes, ONLY: nFluid, nVar
@@ -43,12 +42,24 @@ contains
 
     real,    intent(in) :: TimeSimulationLimit
 
-    integer, parameter:: nFlux = nVar + nFluid
+    ! Advance the solution by one time step. After the time step
+    ! the simulation time should not exceed TimeSimulationLimit.
+    ! Each block is advanced with local time steps proportional
+    ! to the block level.
+    ! For now a 2-stage scheme is applied per local time step,
+    ! so it is a temporally 2nd order accurate scheme.
 
+    ! Number of fluxes including the energy variables
+    integer, parameter:: nFlux = nVar + nFluid
     real, allocatable:: Flux_VFD(:,:,:,:,:), &
          Flux_VXB(:,:,:,:,:), Flux_VYB(:,:,:,:,:), Flux_VZB(:,:,:,:,:)
-    real:: TimeStage
-    integer :: iStage, iBlock, nTimeStage, iStageBlock
+
+    ! time and stage (1 or 2) info per block
+    real   :: Time_B(MaxBlock), TimeOld_B(MaxBlock)
+    integer:: iStage_B(MaxBlock)
+
+    real   :: TimeStage, TimeEnd, DtSiTiny
+    integer:: iStage, iBlock, nTimeStage, iStageBlock
     
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'advance_localstep'
@@ -56,14 +67,8 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*)NameSub,' starting'
 
-    ! Time step (dt) for the first two steps are zeros. It is not 
-    ! necessary and should be improved in the future. 
+    ! set global and local time steps
     call set_local_time_step(TimeSimulationLimit)
-
-    if(.not. allocated(iStage_B)) then
-       allocate(iStage_B(MaxBlock), Time_B(MaxBlock), TimeOld_B(MaxBlock))
-       iStage_B  = 1
-    endif
 
     if(.not. allocated(Flux_VFD)) allocate(&
          Flux_VFD(nFlux,1:nI+1,1:nJ+1,1:nK+1,nDim), &
@@ -71,21 +76,35 @@ contains
          Flux_VYB(nFlux,nI,nK,2,MaxBlock), &
          Flux_VZB(nFlux,nI,nJ,2,MaxBlock)) 
 
+    ! Initialize fluxes for flux correction scheme
     Flux_VFD = 0.0
     Flux_VXB = 0.0
     Flux_VYB = 0.0
     Flux_VZB = 0.0
 
-    Dt = DtMax
-    nTimeStage = nint(DtMax/DtMin)
-    TimeStage  = Time_Simulation
-    Time_B    = Time_Simulation
-    TimeOld_B = Time_Simulation
+    ! Initialize time and stage info for all blocks
+    Time_B(1:nBlock)    = Time_Simulation
+    TimeOld_B(1:nBlock) = Time_Simulation
+    iStage_B(1:nBlock)  = 1
 
+    ! The total time step is the largest
+    Dt = DtMaxSi*Si2No_V(UnitT_)
 
-    ! Use 2nd order time step. Corresponding to the 'UseHalfStep' in 
-    ! update_states_MHD.f90. 
+    ! A small fraction of the smallest time step in SI units
+    DtSiTiny = 1e-6*DtMinSi
+
+    ! Initialize time of current stage
+    TimeStage = Time_Simulation
+
+    ! Final simulation time
+    TimeEnd = Time_Simulation + DtMaxSi
+
+    ! Number of stages 
+    nTimeStage = nint(DtMaxSi/DtMinSi)
+
+    ! Loop over stages (2 stages per local time step)
     do iStage = 1, 2*nTimeStage
+
        call timing_start('message_pass_cell')
        call message_pass_cell(nVar, State_VGB, &
             DoSendCornerIn=.true., nProlongOrderIn=2, &
@@ -105,8 +124,8 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          ! Skip block that already reached the current time of the stage
-          if(Time_B(iBlock) > TimeStage*(1+1e-10)) CYCLE
+          ! Skip block that already exceeded the current time of the stage
+          if(Time_B(iBlock) > TimeStage + DtSiTiny) CYCLE
 
           ! stage for block in the 2-stage update
           iStageBlock = iStage_B(iBlock)
@@ -158,16 +177,14 @@ contains
           ! Update block time
           TimeOld_B(iBlock) = Time_B(iBlock)
           Time_B(iBlock)    = Time_B(iBlock) &
-               + Cfl*Dt_BLK(iBlock)/2*No2Si_V(UnitT_)
+               + Cfl*0.5*Dt_BLK(iBlock)*No2Si_V(UnitT_)
 
           ! Swap between iStage = 1 and 2 for this block
           iStage_B(iBlock) = 3 - iStageBlock
 
-          ! Calculate time step limit it the block has reached the end
-          ! of the time step
-          if(abs(Time_B(iBlock) - Time_Simulation - Dt*No2Si_V(UnitT_)) &
-               < 1.e-6) &
-               call calc_timestep(iBlock)
+          ! Calculate time step limit for next time step
+          ! if the block has reached the end of the time step
+          if(Time_B(iBlock) >= TimeEnd - DtSiTiny) call calc_timestep(iBlock)
 
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
@@ -181,11 +198,11 @@ contains
             Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/2)
 
        ! Update time for the stage
-       TimeStage = TimeStage + DtMin/2*No2Si_V(UnitT_)
+       TimeStage = TimeStage + 0.5*DtMinSi
 
     enddo ! iStage
 
-    Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)
+    Time_Simulation = Time_Simulation + DtMaxSi
 
     if(DoTestMe)write(*,*)NameSub,' finished'
 
@@ -223,21 +240,20 @@ contains
     call MPI_allreduce(DtDxMinPe, DtDxMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 
     ! Smallest and largest time steps in the domain (includes Cfl number)
-    DtMin = Cfl*MinDxValue*DtDxMin
-    DtMax = Cfl*MaxDxValue*DtDxMin
+    DtMinSi = Cfl*MinDxValue*DtDxMin*No2Si_V(UnitT_)
+    DtMaxSi = Cfl*MaxDxValue*DtDxMin*No2Si_V(UnitT_)
 
-    if(DoTestMe)write(*,*) NameSub,': original DtDxMin, DtMin, DtMax=', &
-          DtDxMin, DtMin, DtMax
+    if(DoTestMe)write(*,*) NameSub,': original DtDxMin, DtMinSi, DtMaxSi=', &
+          DtDxMin, DtMinSi, DtMaxSi
 
     ! Check if we reached the final time
-    if(Time_Simulation + DtMax*No2Si_V(UnitT_) > TimeSimulationLimit) then
+    if(Time_Simulation + DtMaxSi > TimeSimulationLimit) then
        ! For the last few time steps use uniform time steps
-       DtMin = min(DtMin, &
-            (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_) )
-       DtMax = DtMin
+       DtMinSi = min(DtMinSi, TimeSimulationLimit - Time_Simulation)
+       DtMaxSi = DtMinSi
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          Dt_BLK(iBlock) = DtMin/Cfl
+          Dt_BLK(iBlock) = DtMinSi/Cfl * Si2No_V(UnitT_)
        enddo
     else
        ! Set the block time step (without Cfl) proportional to refinement level
@@ -258,8 +274,8 @@ contains
        end if
     enddo
 
-    if(DoTestMe)write(*,*) NameSub,' finished with DtMin, DtMax=', &
-         DtMin, DtMax
+    if(DoTestMe)write(*,*) NameSub,' finished with DtMinSi, DtMaxSi=', &
+         DtMinSi, DtMaxSi
 
   end subroutine set_local_time_step
 
