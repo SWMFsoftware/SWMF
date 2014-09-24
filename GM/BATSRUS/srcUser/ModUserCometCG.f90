@@ -140,7 +140,7 @@ contains
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
     use ModVarIndexes, ONLY: MassFluid_I
-
+    use ModBlockData, ONLY: MaxBlockData
     !------------------------------------------------------------------------
     ! We need to have unit conversions before reading the shape file 
     ! which contains everything in SI units
@@ -189,6 +189,11 @@ contains
 
     ! Frequency of boundary condition updates
     DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaCometSi)
+
+    ! Maximum amount of data to be stored in ModBlockData
+    ! This is for the inner boundary conditions. 
+    ! In practice this is a rather generous overestimate.
+    MaxBlockData = nVar*(nI+1)*(nJ+1)*(nK+1)
 
     if(iProc==0)then
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
@@ -340,8 +345,7 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt, &
-         iNewDecomposition
+    use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlockBc
@@ -350,6 +354,8 @@ contains
     use ModGeometry, ONLY: Xyz_DGB
     use ModNumConst, ONLY : cDegToRad, cRadToDeg
     use ModCoordTransform, ONLY: dir_to_xyz
+    use ModBlockData, ONLY: use_block_data, clean_block_data, &
+         get_block_data, put_block_data
 
     logical :: DoTestHere=.true., IsIlluminated = .false.
 
@@ -366,25 +372,20 @@ contains
     real :: FaceCoordsTest_D(3) = 0.0
 
     real, save :: NormalSun_D(3)
-    real, save:: VarsGhostFace_VDFB(nVar,3,nI+1,nJ+1,nK+1,MaxBlock)
-    integer, save :: iDecompositionSave
-    integer :: iDim
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
-    ! Face normal direction
-    iDim = (iSide+1)/2
-
-    ! We can use the saved values if the values were saved in a previous step
-    ! and not too much time or time step has passed since then
-    if(n_step > nStepSave &
+    ! We can use the saved values if 
+    ! not too much time or time step has passed since the last save
+    if(use_block_data(iBlockBc) &
          .and. Time_Simulation < TimeSimulationSave + DtUpdateSi &
-         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate) &
-         .and. iDecompositionSave == iNewDecomposition)then
-
-       VarsGhostFace_V = VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc)
+         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate))then
+       call get_block_data(iBlockBc, nVar, VarsGhostFace_V)
        RETURN
     end if
+
+    ! Empty the storage if we redo the calculation
+    if(use_block_data(iBlockBc)) call clean_block_data(iBlockBc) 
 
     if (iBoundary /= ExtraBc_) &
          call stop_mpi(NameSub//' is implemented for extra BC only')
@@ -408,9 +409,6 @@ contains
     ! Save step and simulation time info
     nStepSave          = n_step
     TimeSimulationSave = Time_Simulation
-
-    ! Save decomposition info
-    iDecompositionSave = iNewDecomposition
 
     ! Floating boundary condition by default
     VarsGhostFace_V = VarsTrueFace_V
@@ -511,9 +509,9 @@ contains
     end if
 
     IsIlluminated = .false.
-          
+
     ! Store for future time steps
-    VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc) = VarsGhostFace_V
+    call put_block_data(iBlockBc, nVar, VarsGhostFace_V)
 
   end subroutine user_set_face_boundary
 
