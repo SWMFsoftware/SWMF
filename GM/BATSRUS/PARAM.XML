@@ -6467,9 +6467,10 @@ By default no minimum density limit is applied.
 #MINIMUMPRESSURE
 0.001		pMinDim [nPa] for fluid 1
 -1.0		pMinDim [nPa] for fluid 2
+0.01            PeMinDim [nPa] for electron pressure (if used)
 
-Provide minimum pressure(s) for the ion/neutral fluid(s). If the minimum
-pressure is positive, the pressure is kept above this limit for that fluid.
+Provide minimum pressure(s) for the ion/neutral fluid(s) and electrons. 
+If the minimum pressure is positive, the pressure is kept above this limit.
 The minimum pressure is given in the input/output units for pressure,
 which varies from application to application.
 A negative value indicates that no minimum pressure is applied for that fluid.
