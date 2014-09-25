@@ -115,7 +115,8 @@ module ModPhysics
   real :: LowDensityRatio = 0.0001
 
   ! Minimum threshold for electron pressure and extra internal energy
-  real :: PeMinSi = -1.1e5, PeMin, ExtraEintMinSi = 0.0, ExtraEintMin
+  real :: PeMinSi = -1.1e5, PeMinDim = -1.0, PeMin
+  real :: ExtraEintMinSi = 0.0, ExtraEintMin
 
   ! Minimum threshold for MHD density and pressure
   real :: RhoMinDim_I(nFluid) = -1.0, RhoMin_I(nFluid)
