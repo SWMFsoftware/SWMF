@@ -284,8 +284,7 @@ contains
                 do i=1,nI; do j=1,nJ; do k=1,nK
                    ! PC domain start from origo
                    Pos_DI(1:nDim,iPoint) = &
-                        (Xyz_DGB(1:nDim,i,j,k,iBlock) - &
-                        XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
+                        Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
                    iPoint = iPoint + 1
                 end do; end do; end do
              else
@@ -316,8 +315,7 @@ contains
              do i=iL,iR; do j=jL,jR; do k=kL,kR
                 ! PC domain start from origo
                 Pos_DI(1:nDim,iPoint) = &
-                     (Xyz_DGB(1:nDim,i,j,k,iBlock) - &
-                     XyzPic0_DI(1:nDim,iRegion))*No2Si_V(UnitX_)
+                     Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
                 iPoint = iPoint + 1
              end do; end do; end do
           else
