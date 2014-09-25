@@ -314,9 +314,9 @@ subroutine set_physics_constants
   if(UseOutflowPressure) pOutflow = pOutflowSi*Si2No_V(UnitP_)
 
   ! Minimum value for densities, pressures, energy
-  RhoMin_I     = RhoMinDim_I * Io2No_V(UnitRho_)
-  pMin_I       = pMinDim_I * Io2No_V(UnitP_)
-  PeMin        = PeMinSi*Si2No_V(UnitP_)
+  RhoMin_I     = RhoMinDim_I*Io2No_V(UnitRho_)
+  pMin_I       = pMinDim_I*Io2No_V(UnitP_)
+  PeMin        = max(PeMinSi*Si2No_V(UnitP_), PeMinDim*Io2No_V(UnitP_))
   ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
   ! Relaxation parameters for anisotropic ion pressure
