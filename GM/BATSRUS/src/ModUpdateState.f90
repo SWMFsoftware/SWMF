@@ -364,6 +364,15 @@ contains
             State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
     end if
 
+    if(UseElectronPressure .and. PeMin > 0.0)then
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
+       end do; end do; end do
+
+       if(DoTestMe)write(*,*) NameSub, ' after PeMin the electron pressure=', &
+            State_VGB(Pe_,iTest,jTest,kTest,iBlock)
+    end if
+
     if( IsMhd .and. &
          ((nStage==1.and..not.time_accurate) &
          .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
