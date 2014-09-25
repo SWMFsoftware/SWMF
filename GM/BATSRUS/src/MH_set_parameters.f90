@@ -300,8 +300,6 @@ subroutine MH_set_parameters(TypeAction)
 
      if(UsePic)  call pic_init_region
 
-
-
      if(UseEmpiricalSW .and. i_line_command("#EMPIRICALSW") > 0)&
           call set_empirical_model(NameModelSW, BodyTDim_I(IonFirst_))
 
@@ -605,6 +603,7 @@ subroutine MH_set_parameters(TypeAction)
         do iFluid = 1, nFluid
            call read_var('pMinDim', pMinDim_I(iFluid))
         end do
+        if(UseElectronPressure) call read_var('PeMinDim', PeMinDim)
 
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
