@@ -70,14 +70,14 @@ module ModUser
   ! temperature distribution
   real :: SlopeProduction, bProduction, SlopeTemp, bTemp, cos75
 
-  ! Constant parameters to calculate uNormal and temperature from TempCometLocal
+  ! Coefficients to calculate uNormal and temperature from TempCometLocal
   real :: TempToUnormal
   real :: TempToPressure
   real :: NumdensToRho
 
-  ! Last step and time the inner boundary values were saved
-  integer:: nStepSave = -100
-  real :: TimeSimulationSave = -1e30
+  ! Last step and time the inner boundary values were saved for each block
+  integer:: nStepSave_B(MaxBlock) = -100
+  real :: TimeSimulationSave_B(MaxBlock) = -1e30
 
 contains
   !============================================================================
@@ -103,8 +103,8 @@ contains
           call read_var('LonSun', LonSun)
 
           ! If the Sun's position is changed, recalculate illumination
-          nStepSave = -100
-          TimeSimulationSave = -1e30
+          nStepSave_B = -100
+          TimeSimulationSave_B = -1e30
 
        case("#COMETSTATE")
           call read_var('ProductionRateMinSi', ProductionRateMinSi)
@@ -348,7 +348,7 @@ contains
     use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
-         iBoundary, VarsTrueFace_V, iSide, iBlockBc
+         iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc
     use ModGeometry,    ONLY: ExtraBc_
     use BATL_lib, ONLY: CellSize_DB
     use ModGeometry, ONLY: Xyz_DGB
@@ -371,44 +371,63 @@ contains
     real :: LonSunNow
     real :: FaceCoordsTest_D(3) = 0.0
 
+    integer:: nStepLonSun = -1
     real, save :: NormalSun_D(3)
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
     ! We can use the saved values if 
     ! not too much time or time step has passed since the last save
-    if(use_block_data(iBlockBc) &
-         .and. Time_Simulation < TimeSimulationSave + DtUpdateSi &
-         .and. (DnUpdate <= 0 .or. n_step < nStepSave + DnUpdate))then
-       call get_block_data(iBlockBc, nVar, VarsGhostFace_V)
+    if(  use_block_data(iBlock)                                      .and. &
+         Time_Simulation < TimeSimulationSave_B(iBlock) + DtUpdateSi .and. &
+         (DnUpdate <= 0 .or. n_step < nStepSave_B(iBlock) + DnUpdate)) then
+       call get_block_data(iBlock, nVar, VarsGhostFace_V)
        RETURN
     end if
 
-    ! Empty the storage if we redo the calculation
-    if(use_block_data(iBlockBc)) call clean_block_data(iBlockBc) 
+    ! Empty the block storage if we redo the calculation
+    if(use_block_data(iBlock)) call clean_block_data(iBlock) 
 
     if (iBoundary /= ExtraBc_) &
          call stop_mpi(NameSub//' is implemented for extra BC only')
 
-    if(nStepSave < n_step)then
+    ! Recalculate LonSunNow if needed. Note that we use Time_Simulation
+    ! that only changes after the full time step is done
+    ! and not ModFaceBoundary::TimeBc that can change during subcycling.
+    if(nStepLonSun < n_step)then
+
+       nStepLonSun = n_step
+
+       call set_oktest(NameSub, DoTest, DoTestMe)
 
        if(time_accurate)then
           ! The sun is moving anti-clockwise in the rotating frame of the comet
           LonSunNow = LonSun - OmegaCometSi*Time_Simulation*cRadToDeg
-       else
+          if (DoTest) write(*,*) NameSub, &
+               ': iProc, Time, LonSunNow=', iProc, Time_Simulation, LonSunNow
+
+       elseif(DnUpdate > 0)then
+          ! Move the sun direction by AngleUpdateDeg every DnUpdate step
           LonSunNow = LonSun + (AngleUpdateDeg*(n_step - nStepStart))/DnUpdate
+          if (DoTest) write(*,*) NameSub, &
+               ': iProc, Step, LonSunNow=', iProc, n_step, LonSunNow
+
+       else
+          ! Use input direction
+          LonSunNow = LonSun
+          if (DoTest) write(*,*) NameSub, &
+               ': iProc, LonSun, LonSunNow=', iProc, LonSun, LonSunNow
        end if
 
        ! Get the direction vector to the Sun
        call dir_to_xyz((90-LatSun)*cDegToRad, LonSunNow*cDegToRad, NormalSun_D)
 
-       if (iProc==0) write(*,*) NameSub, &
-            ': Time_Simulation, LonSunNow=', Time_Simulation, LonSunNow
     end if
 
     ! Save step and simulation time info
-    nStepSave          = n_step
-    TimeSimulationSave = Time_Simulation
+    nStepSave_B(iBlock)          = n_step
+    TimeSimulationSave_B(iBlock) = Time_Simulation
 
     ! Floating boundary condition by default
     VarsGhostFace_V = VarsTrueFace_V
@@ -432,17 +451,18 @@ contains
        kTrue = kFace -1
     end select
 
-    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlockBc)
-    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlockBc)
+    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
+    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
 
     ! Find the intersection point between the true cell and the body cell
     ! that is closest to the true cell
-    if (.not. is_segment_intersected(XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
+    if (.not. is_segment_intersected( &
+         XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
          XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
        write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
        write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
        write(*,*) NameSub,' error for face =', iFace, jFace, kFace
-       write(*,*) NameSub,' error for iside, iBlockBc=', iSide, iBlockBc
+       write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
        call stop_mpi(NameSub// &
             ': No intersection points are found between true and the body cells')
     end if
@@ -511,7 +531,7 @@ contains
     IsIlluminated = .false.
 
     ! Store for future time steps
-    call put_block_data(iBlockBc, nVar, VarsGhostFace_V)
+    call put_block_data(iBlock, nVar, VarsGhostFace_V)
 
   end subroutine user_set_face_boundary
 
