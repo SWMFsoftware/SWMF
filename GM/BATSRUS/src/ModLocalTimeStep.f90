@@ -24,7 +24,7 @@ contains
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
-    use ModAdvance,    ONLY: State_VGB, Energy_GBI, &
+    use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
          Flux_VX, Flux_VY, Flux_VZ
     use ModGeometry,   ONLY: Body_Blk, far_field_BCs_BLK
     use ModFaceBoundary, ONLY: set_face_boundary
@@ -33,7 +33,6 @@ contains
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitT_
     use ModCalcSource, ONLY: calc_source
     use ModTimeStepControl, ONLY: calc_timestep
-    use ModVarIndexes, ONLY: nFluid, nVar
     use ModBlockData,  ONLY: set_block_data
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
