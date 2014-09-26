@@ -100,11 +100,11 @@ F		          DoAddRho
 T			  DoAddRhoU
 
 #MINIMUMPRESSURE
-3e-11
-1e-11
-1e-11
-1e-11
-
+3e-11			  pMin	total fluid
+1e-11			  pMin  Sw
+1e-11			  pMin  Hp
+1e-11			  pMin  H2Pp
+1e-11			  PeMin
 
 #PLASMA
 1.0                       IonMass Sw [amu]
