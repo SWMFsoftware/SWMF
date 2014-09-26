@@ -203,7 +203,7 @@ contains
     logical, optional, intent(in) :: DoSymInterpIn
 
     ! Local variables
-    real:: FineCell_I(8), FaceValue_I(6)
+    real:: FineCell_I(8)
     real:: Ghost, Cell_I(4)
     real:: CellInput_I(6), CellInput_II(6,6)
     logical:: DoSymInterp
@@ -219,7 +219,7 @@ contains
          315./256, 63./256])
 
     logical, parameter:: DoLimit = .true. ! change only for debugging
-    integer:: i, j, k
+    integer:: i
     character(len=*), parameter:: NameSub = 'restriction_high_order_reschange'
     !----------------------------------------------------------------------
     DoSymInterp = .true. ! Use f3...f8 to interpolate G3.
@@ -277,7 +277,7 @@ contains
     logical, optional, intent(in):: DoLimitIn
     logical:: DoLimit
     real:: CellValue_I(6)
-    integer:: i, j
+    integer:: i
     integer:: iBegin=1, iEnd=6
     !----------------------------------------------------------------------
     DoLimit = .true. 
@@ -484,7 +484,7 @@ contains
     integer :: i1, j1, k1, i2, j2, k2
     integer :: ip, im, jp, jm, kp, km, iVar, jpp, jmm, ipp, imm, kpp, kmm
 
-    real :: FieldCoarse_VII(nVar,5,3), FieldFine_VI(nVar,3),Ghost_I(3)
+    real :: FieldFine_VI(nVar,3),Ghost_I(3)
     real :: FieldCoarse_VIII(nVar,5,5,3)
     integer, parameter:: Ipp_=1, Ip_=2, I_=3, Im_=4, Imm_=5
 
@@ -574,10 +574,10 @@ contains
                 iPara2 = Index2_I(k)
                 do j = 1, 5
                    iPara1 = Index1_I(j)
-                   FieldCoarse_VIII(:,j,k,1:abs(im2_-i0_)+1) = &
-                        Field1_VG(:,&
-                        i0_:im2_:sign(1,im2_-i0_),&
-                        iPara1,iPara2)
+                   do i = 0, im2_, -1
+                      FieldCoarse_VIII(:,j,k,1-i) = &
+                           Field1_VG(:,i,iPara1,iPara2)
+                   end do
                 enddo
              enddo
 
@@ -667,8 +667,6 @@ contains
                 do j = 1, 5
                    iPara1 = Index1_I(j)
                    do i = nIp1_, nIp3_
-!                   FieldCoarse_VIII(:,j,k,1:abs(nIp3_-nIp1_)+1) = &
-!                        Field1_VG(:,nIp1_:nIp3_,iPara1,iPara2)
                       FieldCoarse_VIII(:,j,k,i-nI) = &
                            Field1_VG(:,i,iPara1,iPara2)
                    end do
@@ -762,10 +760,10 @@ contains
                 iPara2 = Index2_I(k)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,k,1:abs(jm2_-j0_)+1) = &
-                        Field1_VG(:,iPara1,&
-                        j0_:jm2_:sign(1,jm2_-j0_),&
-                        iPara2)
+                   do j = 0, jm2_, -1
+                      FieldCoarse_VIII(:,i,k,1-j) = &
+                           Field1_VG(:,iPara1,j,iPara2)
+                   enddo
                 enddo
              enddo
 
@@ -854,10 +852,10 @@ contains
                 iPara2 = Index2_I(k)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,k,1:abs(nJp3_-nJp1_)+1) = &
-                        Field1_VG(:,iPara1,&
-                        nJp1_:nJp3_:sign(1,nJp3_-nJp1_),&
-                        iPara2)
+                   do j = nJp3_, nJp1_, -1
+                      FieldCoarse_VIII(:,i,k,nJp3_-j+1) = &
+                           Field1_VG(:,iPara1,j,iPara2)
+                   end do
                 enddo
              enddo
 
@@ -944,9 +942,9 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   do k = k0_,km2_,-1
-                   FieldCoarse_VIII(:,i,j,k0_-k+1) = &
-                        Field1_VG(:,iPara1,iPara2,k)
+                   do k = 0,km2_,-1
+                      FieldCoarse_VIII(:,i,j,1-k) = &
+                           Field1_VG(:,iPara1,iPara2,k)
                    enddo
                 enddo
              enddo
@@ -1032,8 +1030,8 @@ contains
                 do i = 1, 5
                    iPara1 = Index1_I(i)
                    do k = nkp1_,nkp3_
-                   FieldCoarse_VIII(:,i,j,k-nkp1_+1) = &
-                        Field1_VG(:,iPara1,iPara2,k)
+                      FieldCoarse_VIII(:,i,j,k-nkp1_+1) = &
+                           Field1_VG(:,iPara1,iPara2,k)
                    enddo
                 enddo
              enddo
@@ -1060,7 +1058,7 @@ contains
 
   subroutine correct_face_ghost_for_fine_block(iBlock, nVar, Field_VG)
 
-    use BATL_tree, ONLY: DiLevelNei_IIIB, iNode_B
+    use BATL_tree, ONLY: DiLevelNei_IIIB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nDim
     integer, intent(in):: iBlock, nVar
@@ -1102,9 +1100,9 @@ contains
 
     integer:: iDir, jDir, kDir, iDir1, jDir1, kDir1, nDir1, iDir2, jDir2, kDir2
     integer:: jBegin, jEnd, iBegin, iEnd, kBegin, kEnd
-    integer:: Di, Dj, Dk, i, j, k, i1, j1, k1
+    integer:: Di, Dj, Dk, i, j, k
     integer:: Di1, Dj1, Dk1
-    integer:: DiLevel, DiLevel1, Count, iVar, iCount1
+    integer:: DiLevel, DiLevel1, Count, iVar
     real:: Orig, CellValue_I(6)
     integer:: FineNeiIndex_II(3,3), IEdge_, IEdge1_, nEdge, iStage
     logical:: IsFineNei_I(3)
