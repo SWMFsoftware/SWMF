@@ -160,6 +160,9 @@ module BATL_tree
   ! Number of levels below root in level (that has occured at any time)
   integer, public :: nLevel = 0
 
+  ! Levels for the finest and coarsest nodes in the current grid
+  integer, public:: nLevelMin = 0, nLevelMax = 0
+
   ! Deepest AMR level relative to root nodes (limited by 32 bit integers)
   integer, parameter, public :: MaxLevel = 30
 
@@ -1591,11 +1594,11 @@ contains
     read(UnitTmp_) iTree_IA(:,1:nNodeIn)
     close(UnitTmp_)
 
-    ! Set number of existing refinement levels
-    nLevel = maxval(iTree_IA(Level_,1:nNodeIn))
-
-    ! It is probably ordered already...
+    ! Set nLevelMin and nLevelMax
     call order_tree
+
+    ! Set nLevel too
+    nLevel = nLevelMax
 
   end subroutine read_tree_file
   
@@ -1817,7 +1820,7 @@ contains
     ! 1. root node order
     ! 2. Morton ordering for each root node
 
-    integer :: iNode, iRoot, jRoot, kRoot
+    integer :: iNode, iRoot, jRoot, kRoot, iLevel
     !-----------------------------------------------------------------------
     nNode = nRoot
     iNode = 0
@@ -1837,6 +1840,16 @@ contains
     end do
 
     nNodeUsed = iMorton
+
+    ! Set min and max refinement levels
+    nLevelMin = MaxLevel
+    nLevelMax = 0
+    do iMorton = 1, nNodeUsed
+       iNode = iNodeMorton_I(iMorton)
+       iLevel = iTree_IA(Level_,iNode)
+       nLevelMin = min(iLevel, nLevelMin)
+       nLevelMax = max(iLevel, nLevelMax)
+    end do
 
   end subroutine order_tree
   !==========================================================================
