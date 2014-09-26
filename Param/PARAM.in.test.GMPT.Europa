@@ -4,31 +4,31 @@
 T                       DoEcho
 
 #PLANET
-EUROPA
+EUROPA			NamePlanet
 
 #INCLUDE
 RESTART.in
 
 #TIMEACCURATE
-T						DoTimeAccurate
+T			DoTimeAccurate
 
 #ROTATION
 F                       UseRotation
 
 #DIPOLE
-0.0E-9                 abs Magn. Field [T]
+0.0E-9			abs Magn. Field [T]
 
 #MAGNETICAXIS
-T                       IsMagAxisPrimary (rest of parameters read if true)
-90.0                    MagAxisTheta [degree] entry in GSE, tilt from z-axis
-288.0                    MagAxisPhi   [degree] tilt from x-axis clockwise
+T			IsMagAxisPrimary (rest of parameters read if true)
+90.0			MagAxisTheta [degree] entry in GSE, tilt from z-axis
+288.0			MagAxisPhi   [degree] tilt from x-axis clockwise
 
 #TEST
 CON_axes::init_axes CON_axes::set_axes 
 
 #PROGRESS
-1                     dnProgress1 (frequency of short reports to STDOUT)
-10                    dnProgress2 (frequency of summaries to STDOUT)
+1                     DnProgress1 (frequency of short reports to STDOUT)
+10                    DnProgress2 (frequency of summaries to STDOUT)
 
 #CHECKSTOPFILE
 T
@@ -44,7 +44,7 @@ T
 #BEGIN_COMP PT ---------------------------------------
 
 #TEST
-T
+T			DoTest
 
 #END_COMP PT
 
@@ -54,32 +54,32 @@ T
 GM/restartIN/restart.H
 
 #TESTVAR
-7
+7			iVarTest (Bz)
 
 #COORDSYSTEM
-GSE                      TypeCoordSystem (Beta version; GM/BATSRUS is in GSM!)
+GSE			TypeCoordSystem
 
 #SOLARWIND
-15.0                     SW_rho_dim [n/cc]
-1.044e6                  SW_T_dim [K] | 90eV
--100.                     SW_Ux_dim [km/s] | corotation speed
-0.0                      SW_Uy_dim [km/s]
-0.0                      SW_Uz_dim [km/s]
-0.0                     SW_Bx_dim [nT]
-0.0                     SW_By_dim [nT]
--425.                    SW_Bz_dim [nT]
+15.0			SW_rho_dim [n/cc]
+1.044e6			SW_T_dim [K] | 90eV
+-100.			SW_Ux_dim [km/s] | corotation speed
+0.0			SW_Uy_dim [km/s]
+0.0			SW_Uz_dim [km/s]
+0.0			SW_Bx_dim [nT]
+0.0			SW_By_dim [nT]
+-425.			SW_Bz_dim [nT]
 
 #PLASMA
-20.0                     IonMass O [amu]
-1.0                      IonCharge O [e]
-0.6                      ElectronTemperatureRatio
+20.0			IonMass O [amu]
+1.0			IonCharge O [e]
+0.6			ElectronTemperatureRatio
 
 #BODY
-T                         body1
-1.0                       rBody
-0.0                       rCurrents
-10000.0                       BodyRhoDim (1/ccm)
-600.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+T			UseBody
+1.0			rBody
+0.0			rCurrents
+10000.0			BodyRhoDim (1/ccm)
+600.0			BodyTDim (K) temperature for fixed BC for P_BLK
 
 #UNIFORMAXIS
 T                       UseUniformAxis
@@ -87,13 +87,13 @@ T                       UseUniformAxis
 #FIXAXIS
 F                       UsePoleDiffusion
 T                       DoFixAxis
-100.0                     rFixAxis
+100.0                   rFixAxis
 1.2                     r2FixAxis
 
 #TESTXYZ
-2.0
-0.0
-0.0
+2.0			xTest
+0.0			yTest
+0.0			zTest
 
 #OUTERBOUNDARY
 outflow			TypeBcEast
@@ -104,26 +104,26 @@ float			TypeBcBottom
 float			TypeBcTop
 
 #MINIMUMDENSITY
-1E-4
+1E-4			RhoMin
 
 #MINIMUMPRESSURE
-1e-8
+1e-8			pMin
+1e-8			PeMin
 
 #TIMESTEPPING
-1                        nSTAGE
-1.0                      cfl
+1			nSTAGE
+1.0			Cfl
 
 #SCHEME
-2                         nOrder
-Linde                   TypeFlux | only for nOrder=2
-minmod			  TypeLimiter
-
+2			nOrder
+Linde			TypeFlux | only for nOrder=2
+minmod			TypeLimiter
 
 #RESTARTOUTFILE
-one
+one			TypeRestartOutFile
 
 #NONCONSERVATIVE
-T						UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 0
@@ -143,8 +143,23 @@ F                       UseUserB0
 T                       UseUserInitSession
 F                       UseUserUpdateStates
 
-#SAVEPLOTSAMR
-F                       save_plots_amr to save plots before each AMR
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3
+x=0 MHD idl		StringPlot
+-1  			DnSavePlot
+20.0			DtSavePlot
+-1.0			DxSavePlot
+y=0 MHD idl		StringPlot
+-1  			DnSavePlot
+20.0			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
+-1  			DnSavePlot
+20.0			DtSavePlot
+-1.0			DxSavePlot
 
 #SAVELOGFILE
 T                       DoSaveLogfile, rest of parameters read if true
@@ -158,15 +173,16 @@ F			DoSaveInitial
 
 #USERINPUTBEGIN --------------------
 
+! See Shematovich (2005)
 #EUROPA
-1.7E7			Neutral surface density for the exponential falling-off component [1/cm^3]
-150				Neutral scale height for the exponential falling-off component  [km]; Shematovich (2005)
-0.0E4			Neutral surface density for the power-law falling-off component [1/cm^3]
-3.5				Index for the power-law falling-off compoent
-1.0				Radius of the neutral atmos. base [planet radius]
-2.				Max fraction in cosine relative to uniform distr. [0..infinity]
-20				mean ion mass [amu]
-50.0			Minimum ion temperature (enforced in user_update_states)
+1.7E7			Neutral surface density for exponential comp. [1/cm^3]
+150			Neutral scale height for exponential comp. [km]
+0.0E4			Neutral surface density for power-law comp. [1/cm^3]
+3.5			Index for the power-law falling-off compoent
+1.0			Radius of the neutral atmos. base [planet radius]
+2.			Max fraction in cosine relative to uniform distr.
+20			mean ion mass [amu]
+50.0			Minimum ion temperature (in user_update_states) [K]
 1.0E-6			Ionization frequency (1/s)
 2.0E-15			Charge-exchange cross-section (cm^2)
 0.0E-8			recombination rate (cm^3/s)
@@ -192,11 +208,10 @@ float			! innerbcs_b
 GM                      NameComp1
 PT                      NameComp2
 -1                      DnCouple
-50                     Dtcouple
-
+50.0			Dtcouple
 
 #STOP
--1
-200.0
+-1			MaxIteration
+200.0			tSimulationMax
 
 #END
