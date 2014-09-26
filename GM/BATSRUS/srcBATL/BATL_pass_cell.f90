@@ -7,6 +7,7 @@ module BATL_pass_cell
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
   use BATL_high_order, ONLY: restriction_high_order_reschange
+
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 2*nDim range limits, we can send only the tag which
@@ -49,7 +50,7 @@ contains
   subroutine message_pass_ng_real(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn, UseHighResChangeIn)
+       DoResChangeOnlyIn, UseHighResChangeIn, iLevelMin, iLevelMax)
 
     ! Message pass real array with nVar variables and BATL_size::nG ghost cells
 
@@ -64,6 +65,7 @@ contains
     integer, optional, intent(in) :: nWidthIn
     integer, optional, intent(in) :: nProlongOrderIn
     integer, optional, intent(in) :: nCoarseLayerIn
+    integer, optional, intent(in) :: iLevelMin, iLevelMax
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
@@ -81,7 +83,8 @@ contains
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
          NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn, &
-         UseHighResChangeIn=UseHighResChangeIn)
+         UseHighResChangeIn=UseHighResChangeIn, &
+         iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_ng_real
 
@@ -89,7 +92,7 @@ contains
   subroutine message_pass_ng_real1(State_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn)
+       DoResChangeOnlyIn, iLevelMin, iLevelMax)
 
     ! Message pass real scalar with BATL_size::nG ghost cells
 
@@ -103,6 +106,7 @@ contains
     integer, optional, intent(in) :: nWidthIn
     integer, optional, intent(in) :: nProlongOrderIn
     integer, optional, intent(in) :: nCoarseLayerIn
+    integer, optional, intent(in) :: iLevelMin, iLevelMax
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
@@ -118,7 +122,8 @@ contains
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
-         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn,&
+         iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_ng_real1
 
@@ -126,7 +131,7 @@ contains
   subroutine message_pass_real1(nG, State_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn)
+       DoResChangeOnlyIn, iLevelMin, iLevelMax)
 
     ! Message pass real scalar with BATL_size::nG ghost cells
 
@@ -141,13 +146,14 @@ contains
     integer, optional, intent(in) :: nWidthIn
     integer, optional, intent(in) :: nProlongOrderIn
     integer, optional, intent(in) :: nCoarseLayerIn
-    logical, optional, intent(in) :: DoSendCornerIn
+    integer, optional, intent(in) :: iLevelMin, iLevelMax
+    logical, optional, intent(in) :: DoSendCornerIn    
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
-    character(len=*), optional,intent(in) :: NameOperatorIn 
+    character(len=*), optional, intent(in) :: NameOperatorIn 
 
     character(len=*), parameter:: NameSub = 'message_pass_real1'
     !--------------------------------------------------------------------------
@@ -156,7 +162,8 @@ contains
          nProlongOrderIn=nProlongOrderIn, nCoarseLayerIn=nCoarseLayerIn, &
          DoSendCornerIn=DoSendCornerIn, DoRestrictFaceIn=DoRestrictFaceIn, &
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
-         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn)
+         NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn,&
+         iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_real1
 
@@ -216,7 +223,7 @@ contains
   subroutine message_pass_real(nVar, nG, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn, UseHighResChangeIn)
+       DoResChangeOnlyIn, UseHighResChangeIn, iLevelMin, iLevelMax)
 
     use BATL_size, ONLY: MaxBlock, nBlock, nI, nJ, nK, nIjk_D, &
          MaxDim, nDim, jDim_, kDim_, &
@@ -227,7 +234,8 @@ contains
 
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
-         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, find_neighbor_for_anynode
+         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, Level_, &
+         find_neighbor_for_anynode
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
 
@@ -245,14 +253,16 @@ contains
     integer, optional, intent(in) :: nWidthIn
     integer, optional, intent(in) :: nProlongOrderIn
     integer, optional, intent(in) :: nCoarseLayerIn
+    integer, optional, intent(in) :: iLevelMin, iLevelMax
     logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
-    character(len=*), optional,intent(in) :: NameOperatorIn
-    real,    optional, intent(in) :: TimeOld_B(MaxBlock)
-    real,    optional, intent(in) :: Time_B(MaxBlock)
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: UseHighResChangeIn
+    real,    optional, intent(in) :: TimeOld_B(MaxBlock)
+    real,    optional, intent(in) :: Time_B(MaxBlock)
+    character(len=*), optional,intent(in) :: NameOperatorIn
+
     ! Fill in the nVar variables in the ghost cells of State_VGB.
     !
     ! nWidthIn is the number of ghost cell layers to be set. Default is all.
@@ -261,6 +271,8 @@ contains
     !     prolongation. Default is 1, ie all fine cells are equal.
     !     If it is set to 2, the 2 (or more) coarse layers are copied into 
     !     the fine cell layers one by one.
+    ! iLevelMin and iLevelMax restrict the communication for blocks with
+    !     grid levels in the iLevelMin..iLevelMax range.
     ! DoSendCornerIn determines if edges/corners are filled. Default is true.
     ! DoRestrictFaceIn determines if restriction is applied to a single layer
     !     of ghost cells instead of two layers. Default is false.
@@ -301,7 +313,7 @@ contains
     integer :: iSend, jSend, kSend, iRecv, jRecv, kRecv, iSide, jSide, kSide
     integer :: iDir, jDir, kDir
     integer :: iNodeRecv, iNodeSend
-    integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend, DiLevel
+    integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend, iLevel, DiLevel
 
     ! Is the sending node next to the symmetry axis?
     logical :: IsAxisNode
@@ -471,16 +483,18 @@ contains
     if(UseHighResChange) then
 
        ! stage 1: first order prolongation and do_equal.
-       ! stage 2: a) Do high order restriction remotely for all kinds of ghost
-       !          cells. b) Do high order prolongation for face ghost cell 
-       !          locally.  c) Pass restricted cells from fine to coarse.
-       ! stage 3: a) Refine with high order accuracy on coarse blocks for 
-       !          edges and corners and for faces that are too complex to do
-       !          locally. b)  Pass locally high order prolonged face ghost cells 
-       !          to edge/corner ghost cells of neighboring fine block.
-       !          c) Pass remotely high order refined ghost cells from coarse
-       !          to fine block for other edge and corner ghost cells and 
-       !          also for not yet done face ghost cells.
+       ! stage 2: 
+       !   a) Do high order restriction remotely for all kinds of ghost cells.
+       !   b) Do high order prolongation for face ghost cell 
+       !      locally.  c) Pass restricted cells from fine to coarse.
+       ! stage 3: 
+       !   a) Refine with high order accuracy on coarse blocks for edges and 
+       !      corners and for faces that are too complex to do locally. 
+       !   b) Pass locally high order prolonged face ghost cells 
+       !      to edge/corner ghost cells of neighboring fine block.
+       !   c) Pass remotely high order refined ghost cells from coarse
+       !      to fine block for other edge and corner ghost cells and 
+       !      also for not yet done face ghost cells.
        nSendStage = 3
 
        ! For 6th order correction, which may be better because of symmetry,
@@ -491,12 +505,13 @@ contains
        ! Used for stage 2a. 
        if(.not. allocated(State_VIIIB))&
             allocate(&
-            State_VIIIB(nVar,1:max(nI/2,1),1:max(nJ/2,1),1:max(nK/2,1),&
-            nBlock), IsAccurate_B(nBlock))
+            State_VIIIB(nVar,max(nI/2,1),max(nJ/2,1),max(nK/2,1),nBlock), &
+            IsAccurate_B(nBlock))
 
     endif
 
     do iSendStage = 1, nSendStage
+
        if(UseHighResChange) then
           State_VIIIB = 0
           IsAccurate_B = .false. 
@@ -554,6 +569,16 @@ contains
                 if(Unused_B(iBlockSend)) CYCLE
                 iNodeSend = iNode_B(iBlockSend)
 
+                ! Skip if the sending block level is not in the level range
+                if(present(iLevelMin))then
+                   iLevel = iTree_IA(Level_,iNodeSend)
+                   if(iLevel < iLevelMin) CYCLE
+                end if
+                if(present(iLevelMax))then
+                   iLevel = iTree_IA(Level_,iNodeSend)
+                   if(iLevel > iLevelMax) CYCLE
+                end if
+
                 IsAxisNode = .false.
 
                 do kDir = -1, 1
@@ -590,6 +615,14 @@ contains
                               iDir == -1 .and. iTree_IA(Coord1_,iNodeSend) == 1
 
                          DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
+
+                         ! Skip if the receiving block level is not in range
+                         if(present(iLevelMin))then
+                            if(DiLevel == -1 .and. iLevel == iLevelMin) CYCLE
+                         end if
+                         if(present(iLevelMax))then
+                            if(DiLevel == +1 .and. iLevel == iLevelMax) CYCLE
+                         end if
 
                          ! Do prolongation in the second stage if 
                          ! nProlongOrder=2. We still need to call restriction 
@@ -1246,7 +1279,6 @@ contains
       integer:: DiDir, DjDir, DkDir
       integer:: i, j, k, Di, Dj, Dk
       integer:: i0, j0, k0, ic0, jc0, kc0
-      integer:: i1, i2, j1, j2, k1, k2
       integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd
 
       real, allocatable:: Fine_VIII(:,:,:,:)
@@ -2411,9 +2443,7 @@ contains
       integer:: iDirCorner, jDirCorner, kDirCorner
       integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd, Di, Dj, Dk
       character(len=*), parameter :: NameSub = 'is_face_accurate'
-      integer:: i,j,k
 
-      logical:: DoTestMe = .false. 
       !----------------------------------------------------------------------
       ! Non-face ghost cells are also set false.
       IsAccurateFace_GB = .false.
@@ -2529,7 +2559,7 @@ contains
                   iBufferR = iBufferR + nVar
                end do; end do; end do
             else
-               do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR 
+               do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR
                   if(.not. (nK >1 .and. iSendStage == 3 &
                        .and. IsAccurateFace_GB(i,j,k,iBlockRecv)))then    
                      State_VGB(:,i,j,k,iBlockRecv) = &
@@ -2680,15 +2710,11 @@ contains
       integer :: iR, jR, kR, iS1, jS1, kS1, iS2, jS2, kS2, iVar
       integer :: iRatioRestr, jRatioRestr, kRatioRestr
       real    :: InvIjkRatioRestr
-      integer :: iBufferS, nSize, i, j, k
+      integer :: iBufferS, nSize
       real    :: WeightOld, WeightNew
 
       real, allocatable:: Primitive_VIII(:,:,:,:)
-      real:: Ghost_I(3)
 
-      integer:: iS0,iS, jS0, jS, kS
-      integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd, Di, Dj, Dk
-      real :: CoarseCell
       real, allocatable:: State_VG(:,:,:,:)
       !------------------------------------------------------------------------
 
@@ -3103,7 +3129,8 @@ contains
                end if
 
                ! For 2nd order prolongation no prolongation is done in stage 1
-               if(.not. UseHighResChange .and. iSendStage < nProlongOrder) CYCLE
+               if(.not. UseHighResChange .and. iSendStage < nProlongOrder) &
+                    CYCLE
 
                ! For HighResChange, only do restriction in stage 2.
                if(UseHighResChange .and. iSendStage == 2) CYCLE
@@ -3371,7 +3398,7 @@ contains
                   else
                      if(UseHighResChange .and. iSendStage == 3) then
                         iDir1 = 0; jDir1 = 0; kDir1 = 0
-                        i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ =  max(5*Dk,1)
+                        i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ = max(5*Dk,1)
                         do kR = kRMin, kRMax, DkR
                            kS = kSMin + abs((kR+9)/kRatioRestr &
                                 -           (kRMin+9)/kRatioRestr)
