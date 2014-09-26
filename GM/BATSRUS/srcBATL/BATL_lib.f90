@@ -44,7 +44,7 @@ module BATL_lib
 
   ! Inherited from BATL_tree
   public:: MaxNode, nNode, nNodeUsed, nRoot_D
-  public:: MaxLevel, nLevel, MaxCoord_I
+  public:: MaxLevel, nLevel, nLevelMin, nLevelMax, MaxCoord_I
   public:: Unused_B, Unused_BP
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
