@@ -666,8 +666,12 @@ contains
                 iPara2 = Index2_I(k)
                 do j = 1, 5
                    iPara1 = Index1_I(j)
-                   FieldCoarse_VIII(:,j,k,1:abs(nIp3_-nIp1_)+1) = &
-                        Field1_VG(:,nIp1_:nIp3_,iPara1,iPara2)
+                   do i = nIp1_, nIp3_
+!                   FieldCoarse_VIII(:,j,k,1:abs(nIp3_-nIp1_)+1) = &
+!                        Field1_VG(:,nIp1_:nIp3_,iPara1,iPara2)
+                      FieldCoarse_VIII(:,j,k,i-nI) = &
+                           Field1_VG(:,i,iPara1,iPara2)
+                   end do
                 enddo
              enddo
 
@@ -940,9 +944,10 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,j,1:min(nk,k0_-km2_+1)) = &
-                        Field1_VG(:,iPara1,iPara2,&
-                        k0_:km2_:sign(1,km2_-k0_))
+                   do k = k0_,km2_,-1
+                   FieldCoarse_VIII(:,i,j,k0_-k+1) = &
+                        Field1_VG(:,iPara1,iPara2,k)
+                   enddo
                 enddo
              enddo
 
@@ -1026,9 +1031,10 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   FieldCoarse_VIII(:,i,j,1:min(nk,nKp3_-nKp1_+1)) = &
-                        Field1_VG(:,iPara1,iPara2,&
-                        nKp1_:nKp3_:sign(1,nKp3_-nKp1_))
+                   do k = nkp1_,nkp3_
+                   FieldCoarse_VIII(:,i,j,k-nkp1_+1) = &
+                        Field1_VG(:,iPara1,iPara2,k)
+                   enddo
                 enddo
              enddo
 
