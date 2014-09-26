@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
 
@@ -9,13 +10,14 @@ contains
   subroutine set_batsrus_grid
 
     use BATL_lib, ONLY: nBlock, Unused_B, Unused_BP, iProc, iComm, &
-         IsNewDecomposition, IsNewTree
+         IsNewDecomposition, IsNewTree, nLevelMin, nLevelMax, &
+         CoordMax_D, CoordMin_D, nRoot_D, nI
 
     use ModMain, ONLY: nBlockMax, iNewGrid, iNewDecomposition
 
     use ModPartSteady, ONLY: UsePartSteady
 
-    use ModGeometry, ONLY: CellSize_DB, MinDxValue, MaxDxValue
+    use ModGeometry, ONLY: MinDxValue, MaxDxValue
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_
@@ -23,7 +25,7 @@ contains
     use ModIO, ONLY: restart
 
     integer:: iBlock, iError
-    real   :: DxMin, DxMax
+    real   :: CellSizeRoot
     !-------------------------------------------------------------------------
 
     ! Tell if the grid and/or the tree has changed
@@ -54,13 +56,12 @@ contains
           call set_batsrus_block(iBlock)
        end do
 
-       ! There must be a better way doing this !!!
-       ! We could get the min and max level of all used blocks from iTree_IA.
-       DxMin = minval(CellSize_DB(1,1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
-       DxMax = maxval(CellSize_DB(1,1:nBlock), MASK=(.not.Unused_B(1:nBlock)))
-       call MPI_allreduce(DxMin, minDXvalue,1,MPI_REAL,MPI_MIN,iComm,iError)
-       call MPI_allreduce(DxMax, maxDXvalue,1,MPI_REAL,MPI_MAX,iComm,iError)
+       ! Get the root cell size in the first coordinate
+       CellSizeRoot = (CoordMax_D(1) - CoordMin_D(1))/nRoot_D(1)/nI
 
+       ! Get the smallest and largert cells size in the current grid
+       MinDxValue = CellSizeRoot*0.5**nLevelMax
+       MaxDxValue = CellSizeRoot*0.5**nLevelMin
     end if
 
   end subroutine set_batsrus_grid
