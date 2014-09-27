@@ -6,8 +6,8 @@ use strict;
 
 # Default compiler per machine or OS
 my %Compiler = (
-		"Linux"               => "f95",
-		"Darwin"              => "f95",
+		"Linux"               => "nagfor",
+		"Darwin"              => "nagfor",
 		"OSF1"                => "f90",
 		"IRIX64"              => "f90",
 		"AIX"                 => "xlf90",
