@@ -852,8 +852,8 @@ contains
                 iPara2 = Index2_I(k)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   do j = nJp3_, nJp1_, -1
-                      FieldCoarse_VIII(:,i,k,nJp3_-j+1) = &
+                   do j = nJp1_, nJp3_
+                      FieldCoarse_VIII(:,i,k,j-nJp1_+1) = &
                            Field1_VG(:,iPara1,j,iPara2)
                    end do
                 enddo
@@ -942,7 +942,7 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   do k = 0,km2_,-1
+                   do k = 0, km2_, -1
                       FieldCoarse_VIII(:,i,j,1-k) = &
                            Field1_VG(:,iPara1,iPara2,k)
                    enddo
@@ -1029,7 +1029,7 @@ contains
                 iPara2 = Index2_I(j)
                 do i = 1, 5
                    iPara1 = Index1_I(i)
-                   do k = nkp1_,nkp3_
+                   do k = nkp1_, nkp3_
                       FieldCoarse_VIII(:,i,j,k-nkp1_+1) = &
                            Field1_VG(:,iPara1,iPara2,k)
                    enddo
