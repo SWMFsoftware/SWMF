@@ -16,6 +16,7 @@ test_help:
 	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
 	@echo "    test MPIRUN='mpiexec'      (run tests with mpiexec)"
 	@echo "    test_share_library         (run share/Library tests)"
+	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
@@ -44,6 +45,7 @@ test_help:
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
+	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
@@ -66,15 +68,17 @@ test:
 	-@(${MAKE} test13)
 	-@(${MAKE} test_check)
 
-# Note: the "cat ... > /dev/null" makes sure that file size are correct on nyx
+# Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
+
+DIFF_FILES = share/Library/test/*.diff BATL/*.diff ??/*/*.diff *.diff
+
 test_check:
-	@cat share/Library/test/*.diff ??/*/*.diff *.diff > /dev/null
-	-@ls -ltr share/Library/test/*.diff ??/*/*.diff *.diff > test_swmf.res
+	-@cat ${DIFF_FILES} > /dev/null
+	-@ls -ltr  ${DIFF_FILES} > test_swmf.res
 	@cat test_swmf.res
 	@echo '=============================================================='\
 		>> test_swmf.res
-	-@head -100 share/Library/test/*.diff ??/*/*.diff *.diff \
-		>> test_swmf.res
+	-@head -100 ${DIFF_FILES} >> test_swmf.res
 	@echo ' '
 	@echo 'See test_swmf.res and test_swmf.log for more detail...'
 	@echo ' '
@@ -89,6 +93,13 @@ test_share_library:
 	cd share/Library/src; ${MAKE} LIB
 	cd share/Library/test; make test
 	ls -l share/Library/test/*.diff
+
+### Unit tests of the BATL library
+
+test_batl:
+	@if([ -d BATL ]); then \
+		cd BATL; ${MAKE} test; \
+	fi
 
 ### Component tests ###
 
