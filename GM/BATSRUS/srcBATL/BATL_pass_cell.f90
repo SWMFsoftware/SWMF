@@ -3708,6 +3708,7 @@ contains
 
 
     if(nG < 3) RETURN
+    if(nDim > nDimAmr) RETURN
     call test_high_order_cartesian
     call test_high_order_non_cartesian
     
