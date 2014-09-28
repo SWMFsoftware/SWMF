@@ -56,16 +56,21 @@ cd Tmp
 rm -rf SWMF
 
 # Checkout and install the latest code together with HYPRE
-cvs co -D "`date +%m/%d/%Y` 19:00" SWMF HYPRE >& /dev/null
+cvs co -D "`date +%m/%d/%Y` 19:00" SWMF BATL HYPRE >& /dev/null
+mv BATL SWMF/
 mv HYPRE SWMF/util
 cd SWMF
-./Config.pl -install -hypre >& test_swmf.log
+./Config.pl -install -compiler=gfortran -hypre >& test_swmf.log
+cd BATL
+./Config.pl -install -compiler=gfortran >>& ../test_swmf.log
+cd ..
 
 #
 # Select one of the following options:
 #
-#make test MPIRUN= >>& test_swmf.log #	Run the tests on one processor
-make test >>& test_swmf.log #		Run the tests on two processors
+#make -j4 test MPIRUN= >>& test_swmf.log #	        Run the tests on 1 processor
+#make -j4 test >>& test_swmf.log #		        Run the tests on 2 processors
+make -j4 test MPIRUN="mpirun -np 4' >>& test_swmf.log #	Run the tests on 4 processors
 
 #
 # Send back the test results by e-mail or scp
