@@ -30,34 +30,34 @@ module BATL_size
 
   ! Index values for ghost cells that may or may not exist
   integer, parameter:: im2_  =  1 - min(3*iDim_,nG) ! i=-2
-  integer, parameter:: im1_  =  1 - 2*iDim_         ! i=-1
-  integer, parameter:: i0_   =  1 - iDim_           ! i=0
+  integer, parameter:: im1_  =  1 - min(2*iDim_,nG) ! i=-1
+  integer, parameter:: i0_   =  1 - min(iDim_,nG)   ! i=0
   integer, parameter:: i2_   =  1 + iDim_           ! i=2
   integer, parameter:: i3_   =  1 + 2*iDim_         ! i=3
   integer, parameter:: nIm2_ = nI - 2*iDim_         ! i=nI-2
   integer, parameter:: nIm1_ = nI - iDim_           ! i=nI-1
-  integer, parameter:: nIp1_ = nI + iDim_           ! i=nI+1
-  integer, parameter:: nIp2_ = nI + 2*iDim_         ! i=nI+2
+  integer, parameter:: nIp1_ = nI + min(iDim_,nG)   ! i=nI+1
+  integer, parameter:: nIp2_ = nI + min(2*iDim_,nG) ! i=nI+2
   integer, parameter:: nIp3_ = nI + min(3*iDim_,nG) ! i=nI+3
   integer, parameter:: jm2_  =  1 - min(3*jDim_,nG) ! j=-2
-  integer, parameter:: jm1_  =  1 - 2*jDim_         ! j=-1
-  integer, parameter:: j0_   =  1 - jDim_           ! j=0
+  integer, parameter:: jm1_  =  1 - min(2*jDim_,nG) ! j=-1
+  integer, parameter:: j0_   =  1 - min(jDim_,nG)   ! j=0
   integer, parameter:: j2_   =  1 + jDim_           ! j=2
   integer, parameter:: j3_   =  1 + 2*jDim_         ! j=3
   integer, parameter:: nJm2_ = nJ - 2*jDim_         ! j=nJ-2
   integer, parameter:: nJm1_ = nJ - jDim_           ! j=nJ-1
-  integer, parameter:: nJp1_ = nJ + jDim_           ! j=nJ+1
-  integer, parameter:: nJp2_ = nJ + 2*jDim_         ! j=nJ+2
+  integer, parameter:: nJp1_ = nJ + min(jDim_,nG)   ! j=nJ+1
+  integer, parameter:: nJp2_ = nJ + min(2*jDim_,nG) ! j=nJ+2
   integer, parameter:: nJp3_ = nJ + min(3*jDim_,nG) ! j=nJ+3
   integer, parameter:: km2_  =  1 - min(3*kDim_,nG) ! k=-2
-  integer, parameter:: km1_  =  1 - 2*kDim_         ! k=-1
-  integer, parameter:: k0_   =  1 - kDim_           ! k=0
+  integer, parameter:: km1_  =  1 - min(2*kDim_,nG) ! k=-1
+  integer, parameter:: k0_   =  1 - min(kDim_,nG)   ! k=0
   integer, parameter:: k2_   =  1 + kDim_           ! k=2
   integer, parameter:: k3_   =  1 + 2*kDim_         ! k=3
   integer, parameter:: nKm2_ = nK - 2*kDim_         ! k=nK-2
   integer, parameter:: nKm1_ = nK - kDim_           ! k=nK-1
-  integer, parameter:: nKp1_ = nK + kDim_           ! k=nK+1
-  integer, parameter:: nKp2_ = nK + 2*kDim_         ! k=nK+2
+  integer, parameter:: nKp1_ = nK + min(kDim_,nG)   ! k=nK+1
+  integer, parameter:: nKp2_ = nK + min(2*kDim_,nG) ! k=nK+2
   integer, parameter:: nKp3_ = nK + min(3*kDim_,nG) ! k=nK+3
 
 
