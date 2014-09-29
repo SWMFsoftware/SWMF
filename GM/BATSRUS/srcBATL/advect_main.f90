@@ -19,6 +19,10 @@ program advect
   ! Maximum refinement level
   integer:: MaxLevel = 3
 
+  ! Refinement criteria
+  real :: RhoCoarsen = 1.4
+  real :: RhoRefine  = 1.5
+
   ! Final simulation time, frequency of plots
   real :: TimeMax = 20.0
   real :: TimeStartLocalStep = 0.49999*20.0
@@ -169,7 +173,7 @@ contains
        ! Check refinement first
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsRzGeometry) Factor = 1./Xyz_DGB(r_,i,j,k,iBlock)
-          if(State_VGB(Rho_,i,j,k,iBlock) > Factor*1.5) then
+          if(State_VGB(Rho_,i,j,k,iBlock) > Factor*RhoRefine) then
              iStatusNew_A(iNode_B(iBlock)) = Refine_
              CYCLE BLOCK
           end if
@@ -177,7 +181,7 @@ contains
        ! If not refined, check for coarsening
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsRzGeometry) Factor = 1./Xyz_DGB(r_,i,j,k,iBlock)
-          if(State_VGB(Rho_,i,j,k,iBlock) < Factor*1.4)then
+          if(State_VGB(Rho_,i,j,k,iBlock) < Factor*RhoCoarsen)then
              iStatusNew_A(iNode_B(iBlock)) = Coarsen_
              CYCLE BLOCK
           end if
@@ -298,6 +302,9 @@ contains
           call read_var('IsNodeBasedGrid', IsNodeBasedRead)
        case("#AMR")
           call read_var('MaxLevel', MaxLevel)
+       case("#AMRCRITERIA")
+          call read_var('RhoCoarsen', RhoCoarsen)
+          call read_var('RhoRefine',  RhoRefine)
        case("#BLOB")
           call read_var('BlobRadius', BlobRadius)
           BlobRadius2 = BlobRadius**2
