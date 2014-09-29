@@ -4223,6 +4223,10 @@ contains
          call clean_grid
          call clean_tree
       end do
+
+      ! In previous do loop, it may cycle some loops without cleaning.
+      call clean_grid
+      call clean_tree
     end subroutine test_non_cartesian
     !----------------------------------------------------------------------
 
