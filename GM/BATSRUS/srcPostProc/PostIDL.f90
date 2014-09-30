@@ -686,7 +686,7 @@ contains
  
   subroutine set_gen_coord
 
-    use ModNumConst,       ONLY: cPi, cTwoPi, cHalfPi, cRadToDeg
+    use ModNumConst,       ONLY: cTwoPi, cRadToDeg
     use ModCoordTransform, ONLY: rot_matrix_z
     use ModUtilities,      ONLY: lower_case, split_string
 
