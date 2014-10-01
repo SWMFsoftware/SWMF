@@ -531,7 +531,7 @@ PIC::InitMPI();
 
 
 	//init the Europa model
-	Exosphere::Init_BeforeParser();
+	//Exosphere::Init_BeforeParser();
 	Europa::Init_BeforeParser();
 
 	//init the particle solver
@@ -881,7 +881,7 @@ PIC::InitMPI();
 	PIC::Init_AfterParser ();
 	PIC::Mover::Init();
 
-  Exosphere::Init_AfterParser();
+	//Exosphere::Init_AfterParser();
 
 	//	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
 
@@ -1042,8 +1042,8 @@ PIC::InitMPI();
 	//init ICES
 
 #if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
-  const char IcesLocationPath[]="";  //"/left/ices/ICES"
-  const char IcesModelCase[]=""; //"Europa09"
+  const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
+  const char IcesModelCase[]="";//"Europa09";
 
 
 	PIC::CPLR::ICES::createCellCenterCoordinateList();
@@ -1057,6 +1057,16 @@ PIC::InitMPI();
 #if _PIC_COUPLER_MODE_ ==	_PIC_COUPLER_MODE__ICES_
 	PIC::CPLR::ICES::readSWMFdata(1.0);
 	//  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
+
+
+	//output the solar wind ion flux at the palnet's surface
+	PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
+	PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
+	
+	PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
+	
+	Exosphere::SourceProcesses::Init();
+	PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
 
 
 	//create the map of the solar wind flux
