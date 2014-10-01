@@ -57,9 +57,9 @@ contains
        end do
 
        ! Get the root cell size in the first coordinate
-       CellSizeRoot = (CoordMax_D(1) - CoordMin_D(1))/nRoot_D(1)/nI
+       CellSizeRoot = (CoordMax_D(1) - CoordMin_D(1))/(nRoot_D(1)*nI)
 
-       ! Get the smallest and largert cells size in the current grid
+       ! Get the smallest and largest cell sizes in the current grid
        MinDxValue = CellSizeRoot*0.5**nLevelMax
        MaxDxValue = CellSizeRoot*0.5**nLevelMin
     end if
