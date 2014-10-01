@@ -358,7 +358,7 @@ rundir: ENV_CHECK
 		make rundircomp COMPDIR=$${i}DIR; \
 	done
 	@touch share/JobScripts/TMP_${MACHINE}
-	cp share/JobScripts/*${MACHINE}* ${RUNDIR}/
+	cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/
 	@rm -rf ${RUNDIR}/TMP_${MACHINE} share/JobScripts/TMP_${MACHINE}
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded

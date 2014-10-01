@@ -161,7 +161,7 @@ rundir:
 		ln -s ${GMDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		touch ${DIR}/share/JobScripts/TMP_${MACHINE}; \
-		cp ${DIR}/share/JobScripts/*${MACHINE}* ${RUNDIR}/; \
+		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
 		rm -f ${RUNDIR}/TMP_${MACHINE}; \
 		rm -f ${DIR}/share/JobScripts/TMP_${MACHINE}; \
 		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
