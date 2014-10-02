@@ -357,9 +357,10 @@ rundir: ENV_CHECK
 	@for i in `ls -d [A-Z][A-Z]`; do \
 		make rundircomp COMPDIR=$${i}DIR; \
 	done
-	@touch share/JobScripts/TMP_${MACHINE}
-	cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/
-	@rm -rf ${RUNDIR}/TMP_${MACHINE} share/JobScripts/TMP_${MACHINE}
+	@touch share/JobScripts/job.TMP_${MACHINE}
+	@cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/
+	@echo "cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/"
+	@rm -rf ${RUNDIR}/job.TMP_${MACHINE} share/JobScripts/job.TMP_${MACHINE}
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded
 	@echo
