@@ -1,4 +1,4 @@
-Model for transition region: [K] [1/m3] [N/m] [m/s]
+Model for transition region: [K] [1/m3] [N/m] [m/s] using RadCoolCorona.dat (CHIANTI 7.0)
       0  0.0000000000E+00  2  0  2
      500       2
 logTe logNe LPe UHeat
