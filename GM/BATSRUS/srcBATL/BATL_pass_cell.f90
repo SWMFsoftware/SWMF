@@ -313,7 +313,8 @@ contains
     integer :: iSend, jSend, kSend, iRecv, jRecv, kRecv, iSide, jSide, kSide
     integer :: iDir, jDir, kDir
     integer :: iNodeRecv, iNodeSend
-    integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend, iLevel, DiLevel
+    integer :: iBlockRecv, iProcRecv, iBlockSend, iProcSend
+    integer :: iLevelSend, DiLevel
 
     ! Is the sending node next to the symmetry axis?
     logical :: IsAxisNode
@@ -571,12 +572,12 @@ contains
 
                 ! Skip if the sending block level is not in the level range
                 if(present(iLevelMin))then
-                   iLevel = iTree_IA(Level_,iNodeSend)
-                   if(iLevel < iLevelMin) CYCLE
+                   iLevelSend = iTree_IA(Level_,iNodeSend)
+                   if(iLevelSend < iLevelMin) CYCLE
                 end if
                 if(present(iLevelMax))then
-                   iLevel = iTree_IA(Level_,iNodeSend)
-                   if(iLevel > iLevelMax) CYCLE
+                   iLevelSend = iTree_IA(Level_,iNodeSend)
+                   if(iLevelSend > iLevelMax) CYCLE
                 end if
 
                 IsAxisNode = .false.
@@ -614,14 +615,15 @@ contains
                          if(nDim > 1 .and. IsCylindricalAxis) IsAxisNode = &
                               iDir == -1 .and. iTree_IA(Coord1_,iNodeSend) == 1
 
+                         ! Level difference = own_level - neighbor_level
                          DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
 
                          ! Skip if the receiving block level is not in range
                          if(present(iLevelMin))then
-                            if(DiLevel == -1 .and. iLevel == iLevelMin) CYCLE
+                            if(iLevelSend - DiLevel < iLevelMin) CYCLE
                          end if
                          if(present(iLevelMax))then
-                            if(DiLevel == +1 .and. iLevel == iLevelMax) CYCLE
+                            if(iLevelSend - DiLevel > iLevelMax) CYCLE
                          end if
 
                          ! Do prolongation in the second stage if 
@@ -640,14 +642,17 @@ contains
                               .and. iSubStage == 2) CYCLE
 
                          if(DiLevel == 0)then
+                            ! Send data to same-level neighbor
                             if(iSendStage == 3) then
                                call corrected_do_equal
                             else
                                if(.not.DoResChangeOnly) call do_equal
                             endif
                          elseif(DiLevel == 1)then
+                            ! Send restricted data to coarser neighbor
                             call do_restrict
                          elseif(DiLevel == -1)then
+                            ! Send prolonged data to coarser neighbor
                             call do_prolong
                          endif
                       end do ! iDir
