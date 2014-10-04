@@ -801,7 +801,7 @@ if (-e ".ampsConfig.Settings") {
       $t=lc($1);
           
       if ($t eq "nospice") {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn"); next;}
-#      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn"); next;}
+      else {ampsConfigLib::RedefineMacro("_EXOSPHERE__ORBIT_CALCUALTION__MODE_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn"); next;}
     }
   }    
 }
