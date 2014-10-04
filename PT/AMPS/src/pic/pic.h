@@ -2101,6 +2101,7 @@ namespace PIC {
     //coupling of AMPS through the ICES tool
     namespace ICES {
        extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
+       extern char ModeCaseSWMF[_MAX_STRING_LENGTH_PIC_]; //the name of the model case that will be used for interpolation with ICES
 
        void Init();
        void SetLocationICES(const char*);
