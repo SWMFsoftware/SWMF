@@ -121,12 +121,14 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "CREATENEWCOORDINATELISTFORICES") { 
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
     $InputLine=~s/ //g;
+    
+    ampsConfigLib::AddLine2File("\n#undef _ICES_CREATE_COORDINATE_LIST_\n","models/exosphere/Exosphere.dfn"); 
      
     if ($InputLine eq "ON") {
-      ampsConfigLib::RedefineMacro("_ICES_CREATE_COORDINATE_LIST_","_PIC_MODE_ON_","main/main_lib.cpp");
+      ampsConfigLib::AddLine2File("\n#define _ICES_CREATE_COORDINATE_LIST_\n","models/exosphere/Exosphere.dfn"); 
     } 
     elsif ($InputLine eq "OFF") {
-      ampsConfigLib::RedefineMacro("_ICES_CREATE_COORDINATE_LIST_","_PIC_MODE_OFF_","main/main_lib.cpp");
+      #do nothing
     }
     else {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
