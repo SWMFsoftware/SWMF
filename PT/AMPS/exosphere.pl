@@ -166,6 +166,30 @@ while ($line=<InputFile>) {
     }
   }
   
+  elsif ($InputLine eq "ICESLOCATIONPATH") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/=/ /g;
+   
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    chomp($InputComment);
+   
+    $InputComment="\"".$InputComment."\"";
+    ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]",$InputComment,"pic/pic_ices.cpp");
+  }
+  elsif ($InputLine eq "ICESMODELCASE") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/=/ /g;
+   
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    chomp($InputComment);
+
+    $InputComment="\"".$InputComment."\"";
+    ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::ICES::ModeCaseSWMF\\[_MAX_STRING_LENGTH_PIC_\\]",$InputComment,"pic/pic_ices.cpp");
+  }
+  
+  
   elsif ($InputLine eq "SURFACEDATASTRUCTURE") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
