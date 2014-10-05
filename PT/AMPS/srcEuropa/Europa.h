@@ -97,7 +97,7 @@ namespace Europa {
 
 
   //simulation date and position of Europa at the time of simulations
-  const char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_]="1996-12-19T06:00:00";  //closest approach "1996-12-19T06:21:00";
+//  const char SimulationStartTimeString[_MAX_STRING_LENGTH_PIC_]="1996-12-19T06:00:00";  //closest approach "1996-12-19T06:21:00";
   extern double xEuropa[3],vEuropa[3],xEarth[3],vEarth[3];
   extern double vEuropaRadial,xEuropaRadial;
 
@@ -111,7 +111,7 @@ namespace Europa {
   extern int nTotalSourceProcesses;
 
   //the sphere that representd the planet
-  extern cInternalSphericalData *Planet;
+  //extern cInternalSphericalData *Planet;
 
   //init the model
   void Init_BeforeParser();
@@ -163,10 +163,14 @@ namespace Europa {
     }
 
     namespace OutputSurfaceDataFile {
+      using namespace Exosphere::Sampling::OutputSurfaceDataFile;
+
+/*
       void PrintVariableList(FILE* fout);
       void PrintTitle(FILE* fout);
       void PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
       void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
+*/
     }
 
     namespace O2InjectionSpeed {
