@@ -2151,7 +2151,7 @@ namespace PIC {
          }
        };
 
-       void retriveSWMFdata(const char *DataFile);
+       void retriveSWMFdata(const char *DataFile=ModeCaseSWMF);
        void retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile);
 
 
