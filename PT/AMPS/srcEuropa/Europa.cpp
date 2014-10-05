@@ -48,7 +48,7 @@ double Europa::Sampling::O2InjectionSpeed::SamplingBuffer[Europa::Sampling::O2In
 int Europa::nTotalSourceProcesses=0;
 
 //the sphere that represents the planet
-cInternalSphericalData *Europa::Planet=NULL;
+//cInternalSphericalData *Europa::Planet=NULL;
 
 /*//the total source rate values for specific source processes
 double Europa::SourceProcesses::PhotonStimulatedDesorption::SourceRate=0.0,Europa::SourceProcesses::PhotonStimulatedDesorption::maxLocalSourceRate=0.0;
@@ -73,9 +73,9 @@ double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFuncti
 
 //surface temperature
 double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_SO_OBJECT) {
-  exit(__LINE__,__FILE__,"not implemented");
 
-  return 0.0;
+
+  return 100.0;
 }
 
 //request the sampling and particle's field data
@@ -1315,6 +1315,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
 
 /*=================================== Output surface parameters =================================================*/
+/*
 void Europa::Sampling::OutputSurfaceDataFile::PrintVariableList(FILE* fout) {
   fprintf(fout,", \"Total Flux Down [s^{-1} m^{-2}]\", \"Total Flux Up [s^{-1} m^{-2}]\", \"Surface Content [s^{-1} m^{-2}]\", \"Returned particles' bulk speed [m/s]\"");
 
@@ -1520,6 +1521,7 @@ void Europa::Sampling::OutputSurfaceDataFile::flushCollectingSamplingBuffer(cInt
 void Europa::Sampling::OutputSurfaceDataFile::PrintTitle(FILE* fout) {
   fprintf(fout,"TITPLE=\"SurfaceData:  TAA=?\"");
 }
+*/
 
 
 
