@@ -51,11 +51,12 @@ module BATL_lib
   public:: iStatusNew_A, Refine_, Coarsen_, Unset_
   public:: iTree_IA, Status_,  Level_, MinLevel_, MaxLevel_, Block_, Proc_, &
        Coord0_, Coord1_, Coord2_, Coord3_, Used_
-  public:: write_tree_file, read_tree_file
   public:: IsNewDecomposition, IsNewTree
   public:: iAmrChange_B
   public:: AmrRemoved_, AmrUnchanged_, AmrMoved_, AmrRefined_, AmrCoarsened_
+  public:: write_tree_file, read_tree_file
   public:: get_tree_position
+  public:: min_tree_level
 
   ! Inherited from BATL_geometry
   public:: TypeGeometry, IsCartesianGrid, IsCartesian, IsRzGeometry
