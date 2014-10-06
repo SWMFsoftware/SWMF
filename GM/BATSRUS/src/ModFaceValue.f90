@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
 module ModFaceValue
 
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -730,7 +731,7 @@ contains
 
     real:: State_V(nVar), Energy
 
-    logical::DoTest,DoTestMe
+    logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'calc_face_value'
 
     integer:: iVarSmoothLast, iVarSmooth 
