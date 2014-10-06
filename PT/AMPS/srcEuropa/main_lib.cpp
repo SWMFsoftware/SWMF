@@ -45,7 +45,7 @@
 //#define _CHECK_MESH_CONSISTENCY_
 
 //create the nre list of points for ICES
-#define _ICES_CREATE_COORDINATE_LIST_  _PIC_MODE_ON_
+//#define _ICES_CREATE_COORDINATE_LIST_  _PIC_MODE_ON_
 
 
 #define _ICES_LOAD_DATA_
@@ -1041,7 +1041,8 @@ PIC::InitMPI();
 
 	//init ICES
 
-#if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
+#ifdef _ICES_CREATE_COORDINATE_LIST_
+/*
   const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
   const char IcesModelCase[]="";//"Europa09";
 
@@ -1049,6 +1050,13 @@ PIC::InitMPI();
 	PIC::CPLR::ICES::createCellCenterCoordinateList();
 	PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
 	PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
+*/
+
+
+
+  PIC::CPLR::ICES::createCellCenterCoordinateList();
+  //PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/ices/ICES/Models"); //("/Users/vtenishe/CODES/ICES/Models");
+  PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
 #endif
 
 
@@ -1069,58 +1077,13 @@ PIC::InitMPI();
 	PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
 
 
-	//create the map of the solar wind flux
-	int el;
-
-	for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-		int i,j,k;
-		long int nd;
-		double FaceCenterPoint[3],PlasmaVelocity[3],PlasmaNumberDensity,FaceElementNormal[3],c;
-		cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-		PIC::Mesh::cDataCenterNode *CenterNode;
-		char *offset;
-
-		Europa::Planet->GetSurfaceElementMiddlePoint(FaceCenterPoint,el);
-		Europa::Planet->GetSurfaceElementNormal(FaceElementNormal,el);
-
-		if (FaceElementNormal[0]<0.0) continue;
-
-		node=PIC::Mesh::mesh.findTreeNode(FaceCenterPoint);
-
-		if ((nd=PIC::Mesh::mesh.fingCellIndex(FaceCenterPoint,i,j,k,node,false))==-1) {
-			exit(__LINE__,__FILE__,"Error: the cell is not found");
-		}
-
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-		if ((node->Thread==PIC::ThisThread)&&(node->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is not initialized");
 #endif
 
-		if (node->Thread==PIC::ThisThread) {
-			CenterNode=node->block->GetCenterNode(nd);
-			offset=CenterNode->GetAssociatedDataBufferPointer();
 
-			if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-				memcpy(PlasmaVelocity,offset+PIC::CPLR::ICES::PlasmaBulkVelocityOffset,3*sizeof(double));
-				memcpy(&PlasmaNumberDensity,offset+PIC::CPLR::ICES::PlasmaNumberDensityOffset,sizeof(double));
-			}
-			else {
-//				exit(__LINE__,__FILE__,"Error: PIC_ICES__STATUS is not _PIC_ICES__STATUS_OK_");
+	//init particle weight of neutral species that primary source is sputtering
 
-			  PlasmaVelocity[0]=0.0,PlasmaVelocity[1]=0.0,PlasmaVelocity[2]=0.0;
-			  PlasmaNumberDensity=0.0;
-			}
-
-			c=-(PlasmaVelocity[0]*FaceElementNormal[0]+PlasmaVelocity[1]*FaceElementNormal[1]+PlasmaVelocity[2]*FaceElementNormal[2]);
-			if (c<0.0) c=0.0;
-
-			Europa::Planet->SolarWindSurfaceFlux[el]=c*PlasmaNumberDensity;
-		}
-
-		MPI_Bcast(Europa::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_GLOBAL_COMMUNICATOR);
-	}
-
-
-#endif
+	if(_O2_SPEC_>=0)
+	  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
 
 	//prepopulate the solar wind protons
 	//  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
