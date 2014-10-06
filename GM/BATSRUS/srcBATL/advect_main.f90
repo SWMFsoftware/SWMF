@@ -1390,14 +1390,6 @@ contains
                   Flux_VFD(:,iTest+1,jTest,kTest,1), CellFace_DB(1,iBlock)*Velocity_D(1)* &
                   ( exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),TimeBlock) &
                   + exact_v(Xyz_DGB(1:nDim,iTest+1,jTest,kTest,iBlockTest),TimeBlock) )/2
-             write(*,*) NameSub,' flux y left, exact=', &
-                  Flux_VFD(:,iTest,jTest,kTest,2), CellFace_DB(2,iBlock)*Velocity_D(2)* &
-                  ( exact_v(Xyz_DGB(1:nDim,iTest,jTest-1,kTest,iBlockTest),TimeBlock) &
-                  + exact_v(Xyz_DGB(1:nDim,iTest,jTest  ,kTest,iBlockTest),TimeBlock))/2
-             write(*,*) NameSub,' flux y right, exact=', &
-                  Flux_VFD(:,iTest,jTest+1,kTest,2), CellFace_DB(2,iBlock)*Velocity_D(2)* &
-                  ( exact_v(Xyz_DGB(1:nDim,iTest,jTest  ,kTest,iBlockTest),TimeBlock) &
-                  + exact_v(Xyz_DGB(1:nDim,iTest,jTest+1,kTest,iBlockTest),TimeBlock) )/2             
 
              ! Note new time
              write(*,*) NameSub,' after update state, exact=', &
