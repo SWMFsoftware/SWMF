@@ -449,6 +449,11 @@ contains
             ': Time_B can not be used with '//trim(NameOperator))
     end if
 
+    if(present(Time_B) .neqv. present(iLevelMin))then
+       call CON_stop(NameSub// &
+            ': Time_B and iLevelMin can only be used together')
+    end if
+       
     if(DoTest)write(*,*) NameSub, &
          ': Width, Prolong, Coarse, Corner, RestrictFace, ResChangeOnly=', &
          nWidth, nProlongOrder, nCoarseLayer, DoSendCorner, &
