@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2,O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
+SpeciesList=O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -148,6 +148,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
     B=(-12.9E-9,4.71E-9,10.29E-9) \\
     T=0.174e6 \\
     n=60.0E6
+
+
 #endblock
 
 
