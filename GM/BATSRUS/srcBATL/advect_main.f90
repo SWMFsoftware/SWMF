@@ -5,7 +5,7 @@ program advect
 
   use BATL_lib, ONLY: MaxDim, nDim, nDimAmr, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
-       Xyz_DGB, find_grid_block
+       Xyz_DGB, CellSize_DB, find_grid_block, message_pass_cell
 
   implicit none
 
@@ -18,6 +18,12 @@ program advect
 
   ! Maximum refinement level
   integer:: MaxLevel = 3
+
+  ! Dynamic adaptation
+  logical:: DoAdapt = .true.
+
+  ! Initial refinement radius
+  real:: RefineRadius2 = -1.0
 
   ! Refinement criteria
   real :: RhoCoarsen = 1.4
@@ -33,6 +39,9 @@ program advect
   real :: Velocity_D(nDim) = 0.0
   real :: RadialVelocity   = 0.0
   real :: AngularVelocity  = 0.0
+
+  ! Linear field. Initially f = sum(Linear_D*Xyz_D)
+  real :: Linear_D(nDim) = 1.0
 
   ! Spatial order of accuracy and beta parameter for the TVD limiter
   integer :: nOrder = 2
@@ -50,11 +59,14 @@ program advect
        DomainMax_D(3) = (/ +10.0, +5.0, +5.0 /), &
        DomainMin_D(3) = (/ -10.0, -5.0, -5.0 /)
 
+  ! Periodicity
+  logical:: IsPeriodicGrid_D(MaxDim) = .true.
+
   ! Time step counter and simulation time
   integer :: iStep
   real :: Time, TimePlot, Dt
 
-  integer, parameter:: nVar = 1, Rho_ = 1
+  integer, parameter:: nVar = 2, Rho_ = 1, Lin_=2
 
   ! Cell centered state
   real, allocatable :: State_VGB(:,:,:,:,:), StateOld_VCB(:,:,:,:,:)
@@ -88,14 +100,14 @@ program advect
   do
      if(DoTest)write(*,*)NameSub,' advance iProc, iStep=',iProc,iStep
 
-     if(iProcTest < 0)then
-        call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
-        iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
-     end if
+     call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
+     iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
+
      if(iProc==iProcTest .and. StringTest /= '')then
         write(*,*)'Test cell iTest, jTest, kTest, iBlockTest, iProcTest=', &
              iTest, jTest, kTest, iBlockTest, iProcTest
         write(*,*)'Test cell Xyz_D=', Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
+        write(*,*)'Test cell size =', CellSize_DB(:,iBlockTest)
      end if
 
      ! Save plot at required frequency
@@ -137,12 +149,20 @@ program advect
      iStep = iStep + 1
      Time  = Time + Dt
 
-     if(DoTest)write(*,*)NameSub,' adapt grid iProc=',iProc
-     if(DoTest)call barrier_mpi
+     if(DoAdapt)then
+        if(DoTest)write(*,*)NameSub,' adapt grid iProc=',iProc
+        if(DoTest)call barrier_mpi
 
-     call timing_start('amr')
-     call adapt_grid
-     call timing_stop('amr')
+        call timing_start('message_pass')
+        call message_pass_cell(nVar, State_VGB)
+        call timing_stop('message_pass')
+
+        call set_boundary(Time)
+
+        call timing_start('amr')
+        call adapt_grid
+        call timing_stop('amr')
+     end if
 
      call timing_step(iStep)
 
@@ -188,18 +208,23 @@ contains
        end do; end do; end do
     end do BLOCK
 
-    call regrid_batl(nVar,State_VGB,DoBalanceEachLevelIn=UseLocalStep)
+    call regrid_batl(nVar, State_VGB, DoBalanceEachLevelIn=UseLocalStep)
 
   end subroutine adapt_grid
   !===========================================================================
-  real function exact_density(Xyz_D)
+  function exact_v(Xyz_D, Time)
 
     use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D
     use BATL_geometry, ONLY: IsRotatedCartesian, GridRot_DD
     use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: rot_matrix_z
 
+    real:: exact_v(nVar)
+
     real, intent(in):: Xyz_D(nDim)
+    real, intent(in):: Time
+
+    ! Return the exact solution at Xyz_D and Time
 
     ! Square of the radius of the circle/sphere
     real:: XyzShift_D(nDim)
@@ -244,14 +269,16 @@ contains
 
     if(RadialVelocity > 0)then
        ! Scale by 1/r1**(D-1) so radial flow is stationary solution
-       exact_density = Rho/r1**(nDim-1)
+       exact_v(Rho_) = Rho/r1**(nDim-1)
     elseif(IsRzGeometry) then
-       exact_density = Rho/Xyz_D(r_)
+       exact_v(Rho_) = Rho/Xyz_D(r_)
     else
-       exact_density = Rho
+       exact_v(Rho_) = Rho
     end if
 
-  end function exact_density
+    exact_v(Lin_) = sum(Linear_D*(Xyz_D - Velocity_D*Time))
+
+  end function exact_v
 
   !===========================================================================
   subroutine initialize
@@ -300,8 +327,17 @@ contains
           call read_var('UseUniformaxis', UseUniformAxis)
        case("#GRIDTYPE")
           call read_var('IsNodeBasedGrid', IsNodeBasedRead)
+       case("#PERIODIC")
+          call read_var('IsPeriodic1', IsPeriodicGrid_D(1))
+          if(nDim > 1) call read_var('IsPeriodic2', IsPeriodicGrid_D(2))
+          if(nDim > 2) call read_var('IsPeriodic3', IsPeriodicGrid_D(3))
+       case("#ADAPT")
+          call read_var('DoAdapt', DoAdapt)
        case("#AMR")
           call read_var('MaxLevel', MaxLevel)
+       case("#AMRINIT")
+          call read_var('RefineRadius', RefineRadius2)
+          RefineRadius2 = RefineRadius2**2
        case("#AMRCRITERIA")
           call read_var('RhoCoarsen', RhoCoarsen)
           call read_var('RhoRefine',  RhoRefine)
@@ -352,6 +388,9 @@ contains
        end select
     end do READPARAM
 
+    ! Set initial refinement radius if not set
+    if(RefineRadius2 < 0.0) RefineRadius2 = BlobRadius2
+
     UseConstantVelocity = RadialVelocity == 0.0 .and. AngularVelocity == 0.0
 
     ! Setup generalized radius array
@@ -366,7 +405,7 @@ contains
          CoordMaxIn_D   = DomainMax_D,  &
          nRootIn_D      = nRoot_D,      & 
          TypeGeometryIn = TypeGeometry, &
-         IsPeriodicIn_D = (/.true., .true., .true./), &
+         IsPeriodicIn_D = IsPeriodicGrid_D, &
          RgenIn_I       = Rgen_I, &
          UseUniformAxisIn = UseUniformAxis)
 
@@ -396,7 +435,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              if(sum((Xyz_DGB(1:nDim,i,j,k,iBlock) - BlobCenter_D)**2) &
-                  < BlobRadius2)then
+                  < RefineRadius2)then
                 DoRefine_B(iBlock) = .true.
                 CYCLE LOOPBLOCK
              end if
@@ -432,7 +471,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           State_VGB(:,i,j,k,iBlock) &
-               = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
+               = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), Time)
        end do; end do; end do
     end do
 
@@ -458,8 +497,8 @@ contains
     use ModIoUnit, ONLY: UnitTmp_
 
     integer:: iBlock, i, j, k, iError
-    integer, parameter:: Volume_=nVar+1, Error_=nVar+2
-    real:: TotalPe_I(Error_), Total_I(Error_)
+    integer, parameter:: Volume_=nVar+1, Error_=nVar+1, nTotal=2*nVar+1
+    real:: TotalPe_I(nTotal), Total_I(nTotal)
 
     character(len=100):: NameFile = 'advect.log'
     logical :: DoInitialize = .true.
@@ -469,32 +508,32 @@ contains
        if(Unused_B(iBlock)) CYCLE
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           Total_I(1:nVar) = Total_I(1:nVar) + &
-               CellVolume_GB(i,j,k,iBlock)*State_VGB(1:nVar,i,j,k,iBlock)
+               CellVolume_GB(i,j,k,iBlock)*State_VGB(:,i,j,k,iBlock)
 
           Total_I(Volume_) = Total_I(Volume_) + CellVolume_GB(i,j,k,iBlock)
 
-          Total_I(Error_) = Total_I(Error_) &
+          Total_I(Error_+1:Error_+nVar) = Total_I(Error_+1:Error_+nVar) &
                + CellVolume_GB(i,j,k,iBlock) &
-               *abs(State_VGB(Rho_,i,j,k,iBlock)  &
-               -    exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock)))
+               *abs(State_VGB(:,i,j,k,iBlock)  &
+               -    exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), Time))
        end do; end do; end do
     end do
 
     if(nProc > 1)then
        TotalPe_I = Total_I
-       call MPI_reduce(TotalPe_I, Total_I, Error_, MPI_REAL, MPI_SUM, 0, &
+       call MPI_reduce(TotalPe_I, Total_I, nTotal, MPI_REAL, MPI_SUM, 0, &
             iComm, iError)
     end if
 
     if(iProc /= 0) RETURN
 
     ! Divide total error by total mass to get relative error
-    Total_I(Error_) = Total_I(Error_) / Total_I(1)
+    Total_I(Error_+1) = Total_I(Error_+1) / Total_I(1)
 
     if(DoInitialize)then
        open(UnitTmp_,file=NameFile, status='replace')
        write(UnitTmp_,'(a)')'Advection test for BATL'
-       write(UnitTmp_,'(a)')'step time mass volume error'
+       write(UnitTmp_,'(a)')'step time mass linear volume error_rho error_lin'
 
        DoInitialize = .false.
     else
@@ -610,7 +649,7 @@ contains
                         CoordMin_DB(:,iBlock) &
                         + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock), &
                         State_VGB(:,i,j,k,iBlock), &
-                        exact_density(Xyz_DGB(:,i,j,k,iBlock)), &
+                        exact_v(Xyz_DGB(:,i,j,k,iBlock), Time), &
                         CellVolume_GB(i,j,k,iBlock), real(iNode_B(iBlock)), &
                         real(iProc), real(iBlock)
                 end do
@@ -664,11 +703,11 @@ contains
           write(UnitTmp_,'(6(1pe18.10),i10,a)') &
                CellSizePlot_D, &
                CellSizeMinAll_D, nCellAll,            ' plot_dx, dxmin, ncell'
-          write(UnitTmp_,'(i8,a)')     nVar+8,        ' nplotvar'
+          write(UnitTmp_,'(i8,a)')     2*nVar + 7,    ' nplotvar'
           write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
           write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
           write(UnitTmp_,'(a)')        &
-               'coord1 coord2 coord3 rho rhoexact volume node proc block none' 
+               'coord1 coord2 coord3 rho lin rhoexact linexact volume node proc block none' 
           write(UnitTmp_,'(a)')        '1 1 1'        ! units
           write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
           write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
@@ -734,72 +773,135 @@ contains
 
   end subroutine finalize
   !===========================================================================
-  subroutine set_boundary
+  subroutine set_boundary(TimeBc)
 
-    use BATL_lib, ONLY: nDim, IsPeriodic_D, nBlock, Unused_B, &
-         DiLevelNei_IIIB, Unset_, Xyz_DGB
-    ! Set ghost cells outside computational domain
+    use BATL_lib, ONLY: nBlock, Unused_B
+    real, intent(in):: TimeBc
 
-    integer:: iBlock, i, j, k
+    ! Set ghost cells outside computational domain for time = TimeBc
+    integer:: iBlock
     !------------------------------------------------------------------------
-    if(all(IsPeriodic_D(1:nDim))) RETURN
-
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-
-       if(.not.IsPeriodic_D(1))then
-
-          ! Min in dimension 1
-          if(DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)then
-
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-
-          end if
-          if(DiLevelNei_IIIB(+1,0,0,iBlock) == Unset_)then
-             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-       end if
-
-       if(.not.IsPeriodic_D(2) .and. nDim > 1)then
-          ! Min in dimension 2
-          if(DiLevelNei_IIIB(0,-1,0,iBlock) == Unset_)then
-             do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-          if(DiLevelNei_IIIB(0,+1,0,iBlock) == Unset_)then
-             do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-       end if
-
-       if(.not.IsPeriodic_D(3) .and. nDim > 2)then
-          ! Min in dimension 3
-          if(DiLevelNei_IIIB(0,0,-1,iBlock) == Unset_)then
-             do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-          if(DiLevelNei_IIIB(0,0,+1,iBlock) == Unset_)then
-             do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-                State_VGB(1,i,j,k,iBlock) &
-                     = exact_density(Xyz_DGB(1:nDim,i,j,k,iBlock))
-             end do; end do; end do
-          end if
-       end if
+       call set_boundary_block(iBlock, TimeBc)
     end do
-
   end subroutine set_boundary
+  !===========================================================================
+  subroutine set_boundary_block(iBlock, TimeBc)
+
+    use BATL_lib, ONLY: nDim, IsPeriodic_D, Xyz_DGB, iNode_B, get_tree_position
+
+    integer, intent(in):: iBlock
+    real, intent(in):: TimeBc
+
+    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim), State_V(nVar)
+
+    integer:: i, j, k, iNode
+    !--------------------------------------------------------------------------
+    call get_tree_position(iNode_B(iBlock), PositionMin_D, PositionMax_D)
+
+    if(PositionMin_D(1) < 1e-10)then
+       ! Min in dimension 1
+       if(IsPeriodic_D(1))then
+          ! Update Lin including first physical cells (!)
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 2
+             State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+             State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+          end do; end do; end do
+       else
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
+             State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+             State_VGB(:,i,j,k,iBlock) = State_V
+          end do; end do; end do
+       end if
+    end if
+
+    if(PositionMax_D(1) > 1 - 1e-10)then
+       ! Max in dimension 1
+       if(IsPeriodic_D(1))then
+          ! Update Lin including first physical cell (!)
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI-1, MaxI
+             State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+             State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+          end do; end do; end do
+       else
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
+             State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+             State_VGB(:,i,j,k,iBlock) = State_V
+          end do; end do; end do
+       end if
+    end if
+
+    if(nDim > 1)then
+
+       if(PositionMin_D(2) < 1e-10)then
+          ! Min in dimension 2
+          if(IsPeriodic_D(2))then
+             ! Update Lin including first physical cells (!)
+             do k = MinK, MaxK; do j = MinJ, 2; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+             end do; end do; end do
+          else
+             do k = MinK, MaxK; do j = MinJ, 0; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(:,i,j,k,iBlock) = State_V
+             end do; end do; end do
+          end if
+       end if
+
+       if(PositionMax_D(2) > 1 - 1e-10)then
+          ! Max in dimension 2
+          if(IsPeriodic_D(2))then
+             ! Update Lin including first physical cells (!)
+             do k = MinK, MaxK; do j = nJ-1, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+             end do; end do; end do
+          else
+             do k = MinK, MaxK; do j = nJ+1, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(:,i,j,k,iBlock) = State_V
+             end do; end do; end do
+          end if
+       end if
+    end if
+
+    if(nDim > 2)then
+       if(PositionMin_D(3) < 1e-10)then
+          ! Min in dimension 3
+          if(IsPeriodic_D(3))then
+             ! Update Lin including first physical cells (!)
+             do k = MinK, 2; do j = MinJ, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+             end do; end do; end do
+          else
+             do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(:,i,j,k,iBlock) = State_V
+             end do; end do; end do
+          end if
+       end if
+
+       if(PositionMax_D(3) == 1 - 1e-10)then
+          ! Max in dimension 3
+          if(IsPeriodic_D(3))then
+             ! Update Lin including first physical cells (!)
+             do k = nK-1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(Lin_,i,j,k,iBlock) = State_V(Lin_)
+             end do; end do; end do
+          else
+             do k = nK+1, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                State_V = exact_v(Xyz_DGB(1:nDim,i,j,k,iBlock), TimeBc)
+                State_VGB(:,i,j,k,iBlock) = State_V
+             end do; end do; end do
+          end if
+       end if
+    end if
+
+  end subroutine set_boundary_block
   !===========================================================================
   subroutine calc_face_flux(iBlock)
 
@@ -821,7 +923,7 @@ contains
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !------------------------------------------------------------------------
     DoTest = do_test(NameSub, iProc, iBlock)
-    
+
     if(DoTest)then
        StateLeft_VFD  = -777.7
        StateRight_VFD = -777.7
@@ -910,7 +1012,7 @@ contains
 
     real    :: SlopeLeft_V(nVar), SlopeRight_V(nVar)
     integer :: iDim, i, j, k, Di, Dj, Dk
-    
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'limit_slope'
     !----------------------------------------------------------------------
@@ -1055,17 +1157,24 @@ contains
        if(DoTest)write(*,*)NameSub,': iProc, iStage, State=', &
             iProc, iStage, State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
-       call set_boundary
+       DtStage = (Dt*iStage)/nOrder
+
+       call set_boundary(Time + 0.5*Dt*(iStage-1))
 
        if(DoTest)write(*,*)NameSub,' after set_boundary State=', &
-             State_VGB(:,iTest,jTest,kTest,iBlockTest)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call timing_start('message_pass')
-       call message_pass_cell(nVar, State_VGB, &
-            DoSendCornerIn=.true., nProlongOrderIn=2)
+       call message_pass_cell(nVar, State_VGB)
        call timing_stop('message_pass')
 
        if(DoTest)write(*,*)NameSub,' after message_pass State=', &
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
+
+       ! This is only needed to fix Lin if periodic BCs were applied
+       call set_boundary(Time + 0.5*Dt*(iStage-1))
+
+       if(DoTest)write(*,*)NameSub,' after set_boundary State=', &
             State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
        call timing_start('update')
@@ -1073,8 +1182,6 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           call calc_face_flux(iBlock)
-
-          DtStage = (Dt*iStage)/nOrder
 
           call store_face_flux(iBlock, nVar, Flux_VFD, &
                Flux_VXB, Flux_VYB, Flux_VZB, &
@@ -1115,30 +1222,45 @@ contains
 
     use BATL_lib, ONLY: message_pass_cell, MaxBlock, nBlock, Unused_B, &
          IsCartesian, CellSize_DB, CellVolume_B, CellVolume_GB, &
-         iComm, nProc, store_face_flux, apply_flux_correction
+         iComm, nProc, store_face_flux, apply_flux_correction, &
+         nLevelMin, nLevelMax, min_tree_level, &
+         iTree_IA, Level_, iNode_B, CellFace_DB, DiLevelNei_IIIB
     use ModNumConst, ONLY: i_DD
     use ModMpi
 
     integer:: nStage, iStage, iStageBlock, iDim, iBlock
     integer:: i, j, k, Di, Dj, Dk, iError
     real :: DtMin, DtMax, DtMinPe, DtMaxPe
-    real :: TimeStage, DtLocal, InvVolume
+    real :: TimeStage, TimeBlock, DtLocal, InvVolume
     real, save, allocatable:: Dt_B(:), Time_B(:), TimeOld_B(:)
     integer, save, allocatable:: iStage_B(:)
 
-    logical:: DoTest
+    integer:: iLevelMin
+
+    logical:: DoTest, DoTestBlock
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !-----------------------------------------------------------------------
     DoTest = do_test(NameSub, iProc)
 
+    if(DoTest)then
+       write(*,*) NameSub,' starting with nLevelMin, nLevelMax=', &
+            nLevelMin, nLevelMax
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          if(is_incorrect_block(iBlock, Time)) write(*,*) '!!! just starting'
+       end do
+    end if
+
     if(.not.allocated(Dt_B))then
        allocate(Dt_B(MaxBlock), Time_B(MaxBlock), TimeOld_B(MaxBlock), &
             iStage_B(MaxBlock))
-       iStage_B  = 1
-       Time_B    = Time
-       TimeOld_B = Time
        Dt_B      = 0.0
     end if
+
+    ! For newly created blocks this is needed
+    iStage_B(1:nBlock)  = 1
+    Time_B(1:nBlock)    = Time
+    TimeOld_B(1:nBlock) = Time
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1165,25 +1287,62 @@ contains
 
     do iStage = 1, 2*nStage
 
+       ! The blocks between iLevelMin
+       iLevelMin = min_tree_level(iStage)
+       if(DoTest)write(*,*) NameSub,' starting iStage, iLevelMin=', &
+            iStage, iLevelMin
+
+       ! Update the boundary conditions for these blocks
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin) CYCLE
+          call set_boundary_block(iBlock, Time_B(iBlock))
+       end do
+
+       ! Messagepass for blocks between iLevelMin-1 and up.
        call timing_start('message_pass')
        call message_pass_cell(nVar, State_VGB, &
-            DoSendCornerIn=.true., nProlongOrderIn=2, &
-            TimeOld_B=TimeOld_B, Time_B=Time_B)
-
+            TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
        call timing_stop('message_pass')
 
-       call set_boundary
+       ! Update the boundary conditions for Linear variable
+       ! for periodic boundaries. Normally this is not really needed.
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          if(iTree_IA(Level_,iNode_B(iBlock)) < iLevelMin) CYCLE
+          call set_boundary_block(iBlock, Time_B(iBlock))
+       end do
 
        call timing_start('update')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          if(Time_B(iBlock) > TimeStage*(1+1e-10)) CYCLE
+
+          TimeBlock = Time_B(iBlock)
+          if(TimeBlock > TimeStage*(1+1e-10)) CYCLE
+
+          DoTestBlock = DoTest .and. iBlock == iBlockTest
 
           iStageBlock = iStage_B(iBlock)
 
+          if(DoTestBlock)write(*,*) NameSub,' iStage, iStageBlock, TimeOld_B, Time_B=', &
+               iStage, iStageBlock, TimeOld_B(iBlock), TimeBlock
+
+          if(DoTestBlock)write(*,*) NameSub,' starting stage with state=', &
+               State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+               exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), TimeBlock)
+
+          if(DoTest)then
+             if(is_incorrect_block(iBlock, Time_B(iBlock), UseGhost=.true.))then
+                write(*,*) '!!! at start of iStage=', iStage
+                write(*,*) '!!! iLevelMin, iLevelB=', iLevelMin, iTree_IA(Level_,iNode_B(iBlock))
+                write(*,*) '!!! DiLevelNei_IIIB(:,0,0)=', DiLevelNei_IIIB(:,0,0,iBlock)
+                write(*,*) '!!! DiLevelNei_IIIB(0,:,0)=', DiLevelNei_IIIB(0,:,0,iBlock)
+             end if
+          end if
+
           call calc_face_flux(iBlock)
 
-          DtLocal =  Dt_B(iBlock) * iStageBlock/2.0
+          DtLocal = Dt_B(iBlock) * iStageBlock/2.0
 
           if(iStageBlock==2) call store_face_flux(iBlock, nVar, Flux_VFD, &
                Flux_VXB, Flux_VYB, Flux_VZB, &
@@ -1194,8 +1353,11 @@ contains
              StateOld_VCB(:,:,:,:,iBlock) = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
           else
              State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = StateOld_VCB(:,:,:,:,iBlock)
+
+             if(DoTestBlock)write(*,*) NameSub,' after setting to StateOld=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest)
           end if
-          
+
           if(IsCartesian) InvVolume = 1.0/CellVolume_B(iBlock)
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -1212,19 +1374,61 @@ contains
           Time_B(iBlock)    = Time_B(iBlock) + Dt_B(iBlock)/2
           iStage_B(iBlock)  = 3 - iStageBlock
 
+          if(DoTest)then
+             if(is_incorrect_block(iBlock, Time_B(iBlock))) &
+                  write(*,*) NameSub, 'after update in iStage=', iStage
+          end if
+          if(DoTestBlock)then
+             ! Note old time
+             write(*,*) NameSub,' DtLocal, InvVolume=', DtLocal, InvVolume
+             write(*,*) NameSub,' flux x left, exact=', &
+                  Flux_VFD(:,iTest,jTest,kTest,1), &
+                  CellFace_DB(1,iBlock)*Velocity_D(1)* &
+                  ( exact_v(Xyz_DGB(1:nDim,iTest-1,jTest,kTest,iBlockTest),TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),TimeBlock))/2
+             write(*,*) NameSub,' flux x right, exact=', &
+                  Flux_VFD(:,iTest+1,jTest,kTest,1), CellFace_DB(1,iBlock)*Velocity_D(1)* &
+                  ( exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest+1,jTest,kTest,iBlockTest),TimeBlock) )/2
+             write(*,*) NameSub,' flux y left, exact=', &
+                  Flux_VFD(:,iTest,jTest,kTest,2), CellFace_DB(2,iBlock)*Velocity_D(2)* &
+                  ( exact_v(Xyz_DGB(1:nDim,iTest,jTest-1,kTest,iBlockTest),TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest,jTest  ,kTest,iBlockTest),TimeBlock))/2
+             write(*,*) NameSub,' flux y right, exact=', &
+                  Flux_VFD(:,iTest,jTest+1,kTest,2), CellFace_DB(2,iBlock)*Velocity_D(2)* &
+                  ( exact_v(Xyz_DGB(1:nDim,iTest,jTest  ,kTest,iBlockTest),TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest,jTest+1,kTest,iBlockTest),TimeBlock) )/2             
+
+             ! Note new time
+             write(*,*) NameSub,' after update state, exact=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+                  exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest),Time_B(iBlock))
+          end if
        end do
 
        ! Apply flux correction at the end of full steps at level n-1 or below
-       if(modulo(iStage,4) == 0) call apply_flux_correction(nVar,0,State_VGB, &
-            Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
-            iStageIn = iStage/2)
+       if(modulo(iStage, 4) == 0) then
+          call apply_flux_correction(nVar, 0, State_VGB, &
+               Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
+               iStageIn = iStage/2)
+
+          if(DoTest)write(*,*) NameSub,' after flux correction state, exact=', &
+               State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+               exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), Time_B(iBlockTest))
+
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock)) CYCLE
+             if(is_incorrect_block(iBlock, Time_B(iBlock))) &
+                  write(*,*) NameSub,' after flux correction at iStage=', iStage
+          end do
+       end if
 
        TimeStage = TimeStage + DtMin/2
 
        call timing_stop('update')
     end do
 
-    if( maxval(Time_B, MASK=.not.Unused_B) > &
+    if(  maxval(Time_B, MASK=.not.Unused_B) > &
          minval(Time_B, MASK=.not.Unused_B) + 1e-10)then
 
        write(*,*)'ERROR: minval(Time_B)=',minval(Time_B, MASK=.not.Unused_B)
@@ -1236,7 +1440,52 @@ contains
 
     end if
 
+    if(DoTest)write(*,*) NameSub,' finished with State=', &
+         State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+         exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), Time+Dt)
+
   end subroutine advance_localstep
+  !===========================================================================
+  logical function is_incorrect_block(iBlock, Time, UseGhost)
+
+    ! Check block against the analytic solution
+  
+    integer, intent(in):: iBlock
+    real,    intent(in):: Time
+    logical, optional, intent(in):: UseGhost
+
+    real:: State_V(nVar)
+    integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
+    
+    character(len=*), parameter:: NameSub = 'is_incorrect_block'
+    !------------------------------------------------------------------------
+    is_incorrect_block = .false.
+
+    if(present(UseGhost))then
+       iMin = MinI; iMax = MaxI 
+       jMin = MinJ; jMax = MaxJ
+       kMin = MinK; kMax = MaxK
+    else
+       iMin = 1; iMax = nI
+       jMin = 1; jMax = nJ 
+       kMin = 1; kMax = nK
+    end if
+       
+    do k=kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+      State_V = exact_v(Xyz_DGB(:,i,j,k,iBlock), Time)
+      if(abs(State_V(Lin_) - State_VGB(Lin_,i,j,k,iBlock)) > 1e-6)then
+
+         is_incorrect_block = .true.
+
+         write(*,*)'ERROR at iStep=', iStep
+         write(*,*)'i, j, k, iBlock, iProc=', i, j, k, iBlock, iProc
+         write(*,*)'Xyz, Time  =', Xyz_DGB(:,i,j,k,iBlock), Time
+         write(*,*)'State_VGB  =', State_VGB(Lin_,i,j,k,iBlock)
+         write(*,*)'Exact value=', State_V(Lin_)
+      end if
+    end do; end do; end do
+
+  end function is_incorrect_block
 
   !===========================================================================
   logical function do_test(NameSub, iProcIn, iBlockIn)
