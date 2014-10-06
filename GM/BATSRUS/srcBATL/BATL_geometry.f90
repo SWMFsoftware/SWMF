@@ -228,7 +228,7 @@ contains
     end if
 
     if(IsLogRadius)then
-       CoordOut_D(1) = log(CoordOut_D(1))
+       CoordOut_D(1) = log(max(CoordOut_D(1), 1e-30))
     elseif(IsGenRadius)then
        call radius_to_gen(CoordOut_D(1))
     end if
