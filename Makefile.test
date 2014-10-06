@@ -881,7 +881,7 @@ test9th_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test9th_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test9th/SC_log_n000000.log \
 		> test9th_sc_thread.diff)
