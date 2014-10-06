@@ -13,23 +13,24 @@ module BATL_tree
 
   private ! except
 
-  public:: init_tree
-  public:: clean_tree
-  public:: set_tree_param
-  public:: set_tree_root
-  public:: refine_tree_node
-  public:: coarsen_tree_node
-  public:: adapt_tree
-  public:: get_tree_position
-  public:: find_tree_node
-  public:: find_tree_cell
+  public:: init_tree        ! initialize tree
+  public:: clean_tree       ! clean tree data
+  public:: set_tree_param   ! set parameters like UseUniformAxis
+  public:: set_tree_root    ! set root nodes
+  public:: refine_tree_node ! refined one tree node
+  public:: coarsen_tree_node! coarsen one tree node
+  public:: adapt_tree       ! refine and coarsen the whole tree
+  public:: distribute_tree  ! distribute tree nodes over processors
+  public:: move_tree        ! finish load balance and compact tree
+  public:: get_tree_position! get node position in the domain
+  public:: find_tree_node   ! find tree node containing a given point
+  public:: find_tree_cell   ! find tree cell containing a given point
   ! public:: interpolate_tree ! not yet complete
-  public:: distribute_tree
-  public:: move_tree
-  public:: write_tree_file
-  public:: read_tree_file
-  public:: show_tree
-  public:: test_tree
+  public:: write_tree_file  ! save tree info for restart
+  public:: read_tree_file   ! read tree info for restart
+  public:: min_tree_level   ! return min level for a subcycling stage
+  public:: show_tree        ! show info for debugging
+  public:: test_tree        ! unit test
 
   public:: find_neighbor_for_anynode
 
@@ -38,10 +39,10 @@ module BATL_tree
   logical, public :: DoStrictAmr = .true.
 
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
-  ! wish to refine/coarsen but may not happen (e.g. DoSoftAmrCrit = .true.)
+  ! wish to refine/coarsen but may not happen (e.g. DoStrictAmr = .false.)
   ! nNodeRefine and nNodeCoarsen set the number of blocks that has to be
-  ! refined/coarsened or the program with stop. 
-  ! nNodeSort is the numbner of nodes in the ranking list iRank_A
+  ! refined/coarsened or the program will stop. 
+  ! nNodeSort is the number of nodes in the ranking list iRank_A
   ! sorted by one or more AMR criteria
 
   integer, public :: nDesiredRefine,nNodeRefine, &
@@ -56,11 +57,11 @@ module BATL_tree
   ! can also be used for refining/coarsening blocks to the point where we 
   ! have no more blocks available.
   ! Rank_A stores the criteria values for iRank_A
-  integer,public, allocatable :: iRank_A(:)
+  integer, public, allocatable :: iRank_A(:)
 
   ! Large Rank_A value means high priority for refinement, while
   ! low Rank_A value means high priority for coarsening.
-  real,public, allocatable :: Rank_A(:) 
+  real, public, allocatable :: Rank_A(:) 
 
   ! Maximun number of try to refine/coarsen the grid based on iRank_A
   integer, public :: iMaxTryAmr = 100
@@ -77,16 +78,16 @@ module BATL_tree
   ! Named indexes of iTree_IA
   integer, public, parameter :: &
        Status_   =  1, &
-       Level_    =  2, &
+       Level_    =  2, & ! grid level 
        Proc_     =  3, & ! processor index
        Block_    =  4, & ! block index
        MinLevel_ =  5, & ! minimum level allowed
        MaxLevel_ =  6, & ! maximum level allowed
-       Coord0_   =  6, &
-       Coord1_   =  7, &
-       Coord2_   =  8, &
-       Coord3_   =  9, &
-       CoordLast_=  9, &
+       Coord0_   =  6, & ! equal to Coord1_-1
+       Coord1_   =  7, & ! coordinate of node in 1st dimension
+       Coord2_   =  8, & ! coordinate of node in 2nd dimension
+       Coord3_   =  9, & ! coordinate of node in 3rd dimension
+       CoordLast_=  9, & ! Coord0_ + MaxDim (?)
        Parent_   = 10, & ! Parent_ must be 
        Child0_   = 10, & ! equal to Child0_
        Child1_   = Child0_ + 1,      &
@@ -250,11 +251,17 @@ contains
     allocate(iAmrChange_B(MaxBlock));                   iAmrChange_B   = Unset_
 
     ! Initialize minimum and maximum levels of refinement
-    iTree_IA(MinLevel_,:) = 0;
+    iTree_IA(MinLevel_,:) = 0
     iTree_IA(MaxLevel_,:) = MaxLevel
 
+    ! Initialize min and max refinement levels
+    nLevelMin = 0
+    nLevelMax = 0
+
   end subroutine init_tree
+
   !==========================================================================
+
   subroutine set_tree_param(UseUniformAxisIn)
 
     logical, optional:: UseUniformAxisIn
@@ -271,7 +278,9 @@ contains
     end if
 
   end subroutine set_tree_param
+
   !==========================================================================
+
   subroutine clean_tree
 
     if(.not.allocated(iTree_IA)) RETURN
@@ -288,6 +297,7 @@ contains
     iNodeNew = 0
 
   end subroutine clean_tree
+
   !==========================================================================
 
   integer function i_node_new()
@@ -332,7 +342,7 @@ contains
     if(present(nRootIn_D)) nRoot_D(1:nDim) = nRootIn_D
     nRoot   = product(nRoot_D)
 
-    ! Chect for even number of root blocks in phi direction around the axis
+    ! Check for even number of root blocks in phi direction around the axis
     if(IsAnyAxis)then
        if(modulo(nRoot_D(Phi_),2) /= 0) call CON_stop(NameSub // &
             ': there must be an even number of root blocks around the axis')
@@ -1875,6 +1885,42 @@ contains
     end if
 
   end subroutine order_children
+
+  !==========================================================================
+
+  integer function min_tree_level(iStage)
+
+    integer, intent(in):: iStage
+
+    ! If iStage-1 contains 2^n in its prime factorization
+    ! then grid blocks with grid levels between 
+    ! nLevelMax-n and nLevelMax are advanced in this stage.
+    ! But communication is needed at one lower level too
+    ! to get the ghost cells at resolution changes.
+
+    integer:: i, n
+    !------------------------------------------------------------------------
+
+    if(iStage == 1)then
+       ! All blocks are advanced in the first stage
+       min_tree_level = nLevelMin
+       RETURN
+    end if
+
+    i = iStage - 1
+    n = 0
+    do
+       if(mod(i, 2) == 0)then
+          i = i/2
+          n = n + 1
+       else
+          EXIT
+       end if
+    end do
+    min_tree_level = max(nLevelMin, nLevelMax - 1 - n)
+
+  end function min_tree_level
+
   !==========================================================================
 
   subroutine show_tree(String, DoShowNei)
