@@ -10,7 +10,8 @@ module ModLocalTimeStep
 
   private ! except
 
-  public:: advance_localstep  ! time accurate mode with subcycling
+  public:: advance_localstep    ! time accurate mode with subcycling
+  public:: read_localstep_param ! read parameters for algorithm
   logical, public :: UseLocalTimeStep    = .false.
   logical, public :: UseLocalTimeStepNew = .false. ! if just switched on
 
@@ -19,6 +20,31 @@ module ModLocalTimeStep
 
 contains
   !======================================================================
+  subroutine read_localstep_param(NameCommand, iSession)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+    integer, intent(in):: iSession
+
+    character(len=*), parameter:: NameSub = 'read_localstep_param'
+    !-------------------------------------------------------------------
+    select case(NameCommand)
+    case('#LOCALTIMESTEP')
+       ! Check if we had it on already
+       UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
+
+       call read_var('UseLocalTimeStep', UseLocalTimeStep)
+       
+        ! Check if the local time stepping was just switched on
+       UseLocalTimeStepNew = UseLocalTimeStepNew .and. UseLocalTimeStep
+
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+
+  end subroutine read_localstep_param
+  !======================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl
@@ -26,7 +52,8 @@ contains
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
          Flux_VX, Flux_VY, Flux_VZ
-    use ModGeometry,   ONLY: Body_Blk, far_field_BCs_BLK
+    use ModConserveFlux, ONLY: DoConserveFlux
+    use ModGeometry,     ONLY: Body_Blk, far_field_BCs_BLK
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModCellBoundary, ONLY: set_cell_boundary
     use ModEnergy,     ONLY: calc_energy_ghost
@@ -36,7 +63,7 @@ contains
     use ModBlockData,  ONLY: set_block_data
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
-    use BATL_lib,      ONLY: Unused_B, &
+    use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
     real,    intent(in) :: TimeSimulationLimit
@@ -58,28 +85,31 @@ contains
     integer:: iStage_B(MaxBlock)
 
     real   :: TimeStage, TimeEnd, DtSiTiny
-    integer:: iStage, iBlock, nTimeStage, iStageBlock
-    
+    integer:: nTimeStage, iStage, iLevelMin, iStageBlock, iBlock
+
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !-------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)NameSub,' starting'
+    if(DoTestMe)write(*,*)NameSub, &
+         ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
     ! set global and local time steps
     call set_local_time_step(TimeSimulationLimit)
 
-    if(.not. allocated(Flux_VFD)) allocate(&
-         Flux_VFD(nFlux,1:nI+1,1:nJ+1,1:nK+1,nDim), &
-         Flux_VXB(nFlux,nJ,nK,2,MaxBlock), & ! Two sides of the block
-         Flux_VYB(nFlux,nI,nK,2,MaxBlock), &
-         Flux_VZB(nFlux,nI,nJ,2,MaxBlock)) 
+    if(DoConserveFlux)then
+       if(.not. allocated(Flux_VFD)) allocate(&
+            Flux_VFD(nFlux,1:nI+1,1:nJ+1,1:nK+1,nDim), &
+            Flux_VXB(nFlux,nJ,nK,2,MaxBlock), & ! Two sides of the block
+            Flux_VYB(nFlux,nI,nK,2,MaxBlock), &
+            Flux_VZB(nFlux,nI,nJ,2,MaxBlock)) 
 
-    ! Initialize fluxes for flux correction scheme
-    Flux_VFD = 0.0
-    Flux_VXB = 0.0
-    Flux_VYB = 0.0
-    Flux_VZB = 0.0
+       ! Initialize fluxes for flux correction scheme
+       Flux_VFD = 0.0
+       Flux_VXB = 0.0
+       Flux_VYB = 0.0
+       Flux_VZB = 0.0
+    end if
 
     ! Initialize time and stage info for all blocks
     Time_B(1:nBlock)    = Time_Simulation
@@ -104,10 +134,16 @@ contains
     ! Loop over stages (2 stages per local time step)
     do iStage = 1, 2*nTimeStage
 
+       ! Number of grid levels involved in this stage
+       iLevelMin = min_tree_level(iStage)
+       if(DoTestMe)write(*,*)'iStage, iLevelMin=', iStage, iLevelMin
+
        call timing_start('message_pass_cell')
        call message_pass_cell(nVar, State_VGB, &
-            DoSendCornerIn=.true., nProlongOrderIn=2, &
-            TimeOld_B=TimeOld_B, Time_B=Time_B)
+            DoSendCornerIn=.true., &
+            nProlongOrderIn=1, &
+            DoRestrictFaceIn=.true., & 
+            TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
        call timing_stop('message_pass_cell')
 
        ! Calculate coronal heat factor
@@ -159,19 +195,21 @@ contains
 
           ! Need something like update_check in the future.
 
-          ! Store fluxes for flux correction
-          Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
-               Flux_VX(1:nFlux,1:nI+1,1:nJ,1:nK)
-          if(nJ>1) & ! 2D
-               Flux_VFD(1:nFlux,1:nI,1:nJ+1,1:nK,y_) = &
-               Flux_VY(1:nFlux,1:nI,1:nJ+1,1:nK)
-          if(nK>1) & ! 3D
-               Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
-               Flux_VZ(1:nFlux,1:nI,1:nJ,1:nK+1)
-
-          if(iStageBlock == 2) call store_face_flux(iBlock, nFlux, &
-               Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
-               DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.)
+          if(DoConserveFlux .and. iStageBlock == 2)then
+             ! Store fluxes for flux correction
+             Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
+                  Flux_VX(1:nFlux,1:nI+1,1:nJ,1:nK)
+             if(nJ>1) & ! 2D
+                  Flux_VFD(1:nFlux,1:nI,1:nJ+1,1:nK,y_) = &
+                  Flux_VY(1:nFlux,1:nI,1:nJ+1,1:nK)
+             if(nK>1) & ! 3D
+                  Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
+                  Flux_VZ(1:nFlux,1:nI,1:nJ,1:nK+1)
+             
+             call store_face_flux(iBlock, nFlux, &
+                  Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
+                  DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.)
+          end if
 
           ! Update block time
           TimeOld_B(iBlock) = Time_B(iBlock)
@@ -192,7 +230,8 @@ contains
        enddo ! iBlock
 
        ! Apply flux correction at the end of full steps
-       if(modulo(iStage, 4) == 0) call apply_flux_correction( &
+       if(DoConserveFlux .and. modulo(iStage, 4) == 0) &
+            call apply_flux_correction( &
             nVar, nFluid, State_VGB, Energy_GBI, &
             Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/2)
 
