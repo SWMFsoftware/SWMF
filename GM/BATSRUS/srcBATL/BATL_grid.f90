@@ -759,6 +759,9 @@ contains
 
     !==========================================================================
     subroutine correct_geometry_high_order
+      ! Jiang, Yan, Chi-Wang Shu, and Mengping Zhang. "Free-stream preserving o
+      ! finite difference schemes on curvilinear meshes." Brown University, 
+      ! Scientific Computing Group, Report 10 (2013): 2013.
 
       call calc_metrics(iBlock)
       call coef_cart_to_noncart(iBlock)
@@ -1315,6 +1318,7 @@ contains
   !===========================================================================
 
   subroutine calc_face_normal(iBlock)
+    ! Interpolate dx3/dx1 to the face, where x3=hat(Xi,Eta,Zeta), x1=x,y,z.
     integer, intent(in):: iBlock
     integer:: iFace, jFace, kFace
     integer:: iDimCart
@@ -1360,7 +1364,7 @@ contains
   end subroutine calc_face_normal
   !===========================================================================
   subroutine coef_cart_to_noncart(iBlock)
-
+    ! Eq (11).
     ! Calc dx3/dx1 at cell center, where x3=hat(Xi,Eta,Zeta), x1=x,y,z.
 
     integer, intent(in):: iBlock
@@ -1471,6 +1475,7 @@ contains
   !==========================================================================
 
   subroutine calc_metrics(iBlock) 
+    ! Eq (10).
 
     ! Should be called from create_grid_block.
     ! Calc dx1/dx2 at cell center, where x1=x,y,z and x2=Xi,Eta,Zeta.
