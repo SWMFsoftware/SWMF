@@ -2790,6 +2790,24 @@ subroutine calc_simple_cell_flux(iBlock)
              do i = MinI, MaxI; iFace = i
                 !!! call set_cell_values
 
+                HallCoeff     = -1.0
+                if(UseHallResist) call stop_mpi(&
+                     "Hall Resistivity has not been added for cell fulx!")
+
+                BiermannCoeff = -1.0
+                if(UseBiermannBattery) call stop_mpi(&
+                        "BiermannBattery has not been added for cell flux!")
+                
+                ViscoCoeff = 0.0
+                if(UseViscosity) call stop_mpi(&
+                     "Viscosity has not been considered for cell flux!")
+
+                Eta       = 0.0
+                if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
+
+                if(UseClimit)  call stop_mpi(&
+                     "Climit has not been implemented for cell fulx!")
+                
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
                 do iFluid = 1, nFluid
