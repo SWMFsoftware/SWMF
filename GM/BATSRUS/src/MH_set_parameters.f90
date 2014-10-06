@@ -80,13 +80,13 @@ subroutine MH_set_parameters(TypeAction)
        DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices, init_mod_geoindices
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
        UseClimit, UsePoleDiffusion, DoBurgers
-  use ModLookupTable, ONLY: read_lookup_table_param
-  use ModIonoVelocity,ONLY: read_iono_velocity_param
+  use ModLookupTable,     ONLY: read_lookup_table_param
+  use ModIonoVelocity,    ONLY: read_iono_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModLaserHeating,    ONLY: read_laser_heating_param
+  use ModLocalTimeStep,   ONLY: read_localstep_param
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cDegToRad
-  use ModLocalTimeStep, ONLY: UseLocalTimeStep, UseLocalTimeStepNew
   use ModSort, ONLY: sort_quick
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
@@ -488,13 +488,7 @@ subroutine MH_set_parameters(TypeAction)
         UseHalfStep = NameCommand == "#TIMESTEPPING" .and. nStage <= 2
 
      case('#LOCALTIMESTEP')
-        ! Check if we had it on already
-        UseLocalTimeStepNew = .not.UseLocalTimeStep .and. iSession > 1
-
-        call read_var('UseLocalTimeStep', UseLocalTimeStep)
-
-        ! Check if the local time stepping was just switched on
-        UseLocalTimeStepNew = UseLocalTimeStepNew .and. UseLocalTimeStep
+        call read_localstep_param(NameCommand, iSession)
 
      case("#FIXEDTIMESTEP")
         call read_var('UseDtFixed',UseDtFixed)
