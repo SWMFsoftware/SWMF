@@ -25,7 +25,7 @@ double PIC::ParticleWeightTimeStep::GetMaximumBlockInjectionRate(int spec,cTreeN
   double res=0.0;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
+    if (startNode->block!=NULL) res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
   }
   else {
     int i;
@@ -36,6 +36,19 @@ double PIC::ParticleWeightTimeStep::GetMaximumBlockInjectionRate(int spec,cTreeN
        c=GetMaximumBlockInjectionRate(spec,downNode);
        if (res<c) res=c;
     }
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //collect the results from all processors
+    double buffer[PIC::nTotalThreads];
+
+    MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (PIC::ThisThread==0) {
+      for (int thread=1;thread<PIC::nTotalThreads;thread++) if (buffer[thread]>res) res=buffer[thread];
+    }
+
+    MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
   }
 
   return res;
@@ -49,7 +62,7 @@ double PIC::ParticleWeightTimeStep::GetTotalBlockInjectionRate(int spec,cTreeNod
   double res=0.0;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
+    if (startNode->block!=NULL) res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
   }
   else {
     int i;
@@ -58,6 +71,19 @@ double PIC::ParticleWeightTimeStep::GetTotalBlockInjectionRate(int spec,cTreeNod
     for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) {
       res+=GetTotalBlockInjectionRate(spec,downNode);
     }
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //collect the results from all processors
+    double buffer[PIC::nTotalThreads];
+
+    MPI_Gather(&res,1,MPI_DOUBLE,buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+    if (PIC::ThisThread==0) {
+      for (int thread=1;thread<PIC::nTotalThreads;thread++) res+=buffer[thread];
+    }
+
+    MPI_Bcast(&res,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
   }
 
   return res;
@@ -339,6 +365,8 @@ void PIC::ParticleWeightTimeStep::initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBloc
         MPI_Bcast(&t,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
         PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread]->block->SetLocalTimeStep(t,s);
       }
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+      //do nothing
 #else
       exit(__LINE__,__FILE__,"Error: the option is unknown");
 #endif
