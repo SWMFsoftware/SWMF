@@ -706,7 +706,7 @@ contains
 
     use BATL_size, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          MaxBlock, nBlock
-    use BATL_tree, ONLY: nLevel, Unused_B, iNode_B, iTree_IA, Level_
+    use BATL_tree, ONLY: nLevelMax, Unused_B, iNode_B, iTree_IA, Level_
 
     integer, intent(in):: nVar, nFluid
     real, intent(inout):: &
@@ -722,11 +722,11 @@ contains
 
     integer:: iBlock, iNode, iLevel, iStage, MinLevelSend
     !-------------------------------------------------------------------------
-    ! Set the levels MinLevelSend .. nLevel which need to send fluxes
+    ! Set the levels MinLevelSend .. nLevelMax which need to send fluxes
     ! If iStageIn is a multiple of 2^p then the finest p levels should 
     ! send fluxes. 
     if(present(iStageIn))then
-       MinLevelSend = nLevel + 1
+       MinLevelSend = nLevelMax + 1
        iStage = iStageIn
        do
           ! Check if iStage is still an even number
@@ -746,7 +746,7 @@ contains
        iNode = iNode_B(iBlock)
        iLevel = iTree_IA(Level_,iNode)
        ! highest level should never be corrected
-       if(iLevel == nLevel) CYCLE
+       if(iLevel == nLevelMax) CYCLE
        if(present(iStageIn))then
           ! Check if this block has received any flux correction
           if(iLevel < MinLevelSend - 1) CYCLE

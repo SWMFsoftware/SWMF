@@ -158,9 +158,6 @@ module BATL_tree
   ! Ordering along the Morton-Hilbert space filling curve
   integer, public, allocatable :: iNodeMorton_I(:), iMortonNode_A(:)
 
-  ! Number of levels below root in level (that has occured at any time)
-  integer, public :: nLevel = 0
-
   ! Levels for the finest and coarsest nodes in the current grid
   integer, public:: nLevelMin = 0, nLevelMax = 0
 
@@ -394,9 +391,8 @@ contains
     iProc       = iTree_IA(Proc_,  iNode)
     iBlock      = iTree_IA(Block_, iNode)
 
-    ! Keep track of number of levels
-    nLevel = max(nLevel, iLevelChild)
-    if(nLevel > MaxLevel) &
+    ! Check levels
+    if(iLevelChild > MaxLevel) &
          call CON_stop('Error in refine_tree_node: too many levels')
 
     iCoord_D = 2*iTree_IA(Coord1_:Coord0_+nDim, iNode) - 1
@@ -543,7 +539,7 @@ contains
     LOOPTRY: do iTryAmr = 1, iMaxTryAmr
 
        ! Check max and min levels and coarsening of all siblings
-       iLevelMin = nLevel
+       iLevelMin = nLevelMax
        iLevelMax = 1
        do iMorton = 1, nNodeUsed
           iNode   = iNodeMorton_I(iMorton)
@@ -971,12 +967,12 @@ contains
     if(iTree_IA(Status_,iNode) == Used_) RETURN
 
     ! Get normalized coordinates within root node and scale it up
-    ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevel)-1
-    iCoord_D = min(MaxCoord_I(nLevel) - 1, &
-         int((Coord_D(iDimAmr_D) - iRoot_D(iDimAmr_D))*MaxCoord_I(nLevel)))
+    ! to the largest resolution: 0 <= iCoord_D <= MaxCoord_I(nLevelMax)-1
+    iCoord_D = min(MaxCoord_I(nLevelMax) - 1, &
+         int((Coord_D(iDimAmr_D) - iRoot_D(iDimAmr_D))*MaxCoord_I(nLevelMax)))
 
     ! Go down the tree using bit information
-    do iLevel = nLevel-1,0,-1
+    do iLevel = nLevelMax-1,0,-1
        ! Get the binary bits based on the coordinates
        iBit_D = ibits(iCoord_D, iLevel, 1)
        ! Construct child index as iChild = Sum Bit_i*2**i 
@@ -1606,9 +1602,6 @@ contains
 
     ! Set nLevelMin and nLevelMax
     call order_tree
-
-    ! Set nLevel too
-    nLevel = nLevelMax
 
   end subroutine read_tree_file
   
