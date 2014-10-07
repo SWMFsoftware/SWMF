@@ -16,6 +16,7 @@ char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";
 
 int Comet::GravityFieldOffset=-1;
 
+
 /*
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_OFFSET_=-1;
@@ -503,338 +504,6 @@ double Exosphere::OrbitalMotion::GetTAA(SpiceDouble EphemerisTime) {
 }
 
 
-double Comet::GetTotalProductionRateBjorn(int spec,void *SphereDataPointer){
-  return Comet::Bjorn_SourceRate[spec];
-
-  //    return 1.0e26; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
-}
-
-bool Comet::GenerateParticlePropertiesBjorn(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int i;
-  double rate,TableTotalProductionRate,totalSurface,gamma,SubSolarAngle,ProjectedAngle;
-  const double NightSideProduction[5]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0};
-  double x[3],n[3],rSphere,*x0Sphere;
-
-    if (probabilityFunctionDefined==false) {
-      for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-      TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
-      //totalSurface+=2*Pi*pow(Comet::Rnucleus,2.0)*(cos((double) (i*Pi/180))-cos((double) ((i+1)*Pi/180)));
-    }
-    //totalSurface=2*totalSurface;
-    
-    //Computation of the probability distribution of the production
-    for (i=0;i<90;i++) {
-      productionDistribution[i]=ProductionRate[i][2+Comet::ndist]/(TableTotalProductionRate/(1.0-NightSideProduction[Comet::ndist]*2))+NightSideProduction[Comet::ndist]*(cos((double) (i*Pi/180))-cos(double ((i+1)*Pi/180)));
-      if (i==0) {
-	cumulativeProductionDistribution[i]=productionDistribution[i];
-      }else{
-	cumulativeProductionDistribution[i]=cumulativeProductionDistribution[i-1]+productionDistribution[i];
-      }  
-    }
-    for (i=90;i<180;i++) {
-      productionDistribution[i]=NightSideProduction[Comet::ndist]*(cos((double) (i*Pi/180))-cos(double ((i+1)*Pi/180)));
-      cumulativeProductionDistribution[i]=cumulativeProductionDistribution[i-1]+productionDistribution[i];
-    }
-    probabilityFunctionDefined=true;
-    }
-
-  //Computation of the segment where the particle will be created
-    gamma=rnd();
-    i=0;
-    while (gamma>cumulativeProductionDistribution[i]){
-      i++;
-    }
-
-
-  //Computation of the angles where the particle will be created
-  SubSolarAngle=acos(cos((double) (i*Pi/180))-rnd()*(cos((double) (i*Pi/180))-cos((double) ((i+1)*Pi/180))));
-  ProjectedAngle=rnd()*2*Pi;
-
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-
-  /*  
-  Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
-
-  ExternalNormal[0]=-cos(SubSolarAngle);
-  ExternalNormal[1]=-sin(SubSolarAngle)*cos(ProjectedAngle);
-  ExternalNormal[2]=-sin(SubSolarAngle)*sin(ProjectedAngle);
-
-  
-  x_LOCAL_IAU_OBJECT[0]=rSphere*cos(SubSolarAngle);
-  x_LOCAL_IAU_OBJECT[1]=rSphere*sin(SubSolarAngle)*cos(ProjectedAngle);
-  x_LOCAL_IAU_OBJECT[2]=rSphere*sin(SubSolarAngle)*sin(ProjectedAngle);
-  */
-
-  Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
-
-  n[0]=-cos(SubSolarAngle);
-  n[1]=-sin(SubSolarAngle)*cos(ProjectedAngle);
-  n[2]=-sin(SubSolarAngle)*sin(ProjectedAngle);
-  
-  x[0]=rSphere*cos(SubSolarAngle);
-  x[1]=rSphere*sin(SubSolarAngle)*cos(ProjectedAngle);
-  x[2]=rSphere*sin(SubSolarAngle)*sin(ProjectedAngle);
-		         
-  ExternalNormal[0]=cos(subSolarPointAzimuth)*n[0]+sin(subSolarPointAzimuth)*n[1];
-  ExternalNormal[1]=-sin(subSolarPointAzimuth)*n[0]+cos(subSolarPointAzimuth)*n[1];
-  ExternalNormal[2]=n[2];
-  
-  x_LOCAL_IAU_OBJECT[0]=cos(subSolarPointAzimuth)*x[0]+sin(subSolarPointAzimuth)*x[1];
-  x_LOCAL_IAU_OBJECT[1]=-sin(subSolarPointAzimuth)*x[0]+cos(subSolarPointAzimuth)*x[1];
-  x_LOCAL_IAU_OBJECT[2]=x[2];
-
-
-    //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-  
-  SurfaceTemperature=GetSurfaceTemeprature(cos(SubSolarAngle),x_LOCAL_SO_OBJECT);
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-
-  
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-
-bool Comet::Radius(double &r,double x){
-  double rSphere=2000.0;
-
-  //Sphere->GetSphereGeometricalParameters(x0,rSphere);
-  
-  if ((x>=-rSphere-1.0e-15) && (x<=rSphere+1.0e-15)) {
-    r=sqrt(rSphere*rSphere-x*x);  
-    return true;
-    }
-  
-  //Hartley 2
-  /*  double boundary;
-  
-    if ((x>=-1165.0-1.0e-15) && (x<=1165.0+1.0e-15)) {
-    boundary=sqrt(1980.0*1980.0-x*x*1980.0*2.0/2330.0*1980.0*2.0/2330.0)/1980.0*2330.0/(2.0*1.3)-(2330.0/2.0-600.0)*0.5*(1+cos((-x*1980.0*2.0/2330.0+200.0)/1800.0*Pi));
-    
-    r=((boundary>=0)? sqrt(boundary*boundary):0.0);
-    return true;
-    }
-  */
-
-  return false;
-}
-
-//bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalRotationBodyData* Nucleus) {
-bool Comet::GenerateParticlePropertiesHartley2(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int idim;
-  double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
-  const double NightSideProduction[5]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0};
-  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
-  static double positionSun[3];
-  double HeliocentricDistance=1.064*_AU_;
-  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
-  long int totalSurfaceElementsNumber,i;
-  double l[3]={1.0,0.0,0.0};
-  double x0[3]={0.0,0.0,0.0};
-  double rSphere=1980.0;
-
-  
-
-    if (probabilityFunctionDefinedHartley2==false) {    
-      Nucleus=(cInternalRotationBodyData *) Sphere;
-      Nucleus= (cInternalRotationBodyData *) malloc(sizeof(cInternalRotationBodyData));
-      Nucleus->SetGeneralSurfaceMeshParameters(60,100);
-      //Nucleus->SetGeometricalParameters(x0,l,-rSphere,rSphere,Radius);
-      Nucleus->SetGeometricalParameters(x0,l,-1165.0,1165.0,Radius);
-      for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-	TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
-      }
-  
-      positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-      positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-      positionSun[2]=0.0;
-
-      // Nucleus->GetSphereGeometricalParameters(x0,l,xmin,xmax);
-      totalSurfaceElementsNumber=Nucleus->GetTotalSurfaceElementsNumber();
-
-      total=0.0;      
-      for (i=0;i<totalSurfaceElementsNumber;i++) {
-	  
-	Nucleus->GetSurfaceElementNormal(norm,i);
-	Nucleus->GetSurfaceElementMiddlePoint(x,i);
-
-	  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-	    c+=norm[idim]*(positionSun[idim]-x[idim]);
-	    X+=pow(positionSun[idim]-x[idim],2.0);
-	  }
-
-	  if(c<0) {
-	    productionDistributionHartley2[i]=NightSideProduction[Comet::ndist]*Nucleus->GetSurfaceElementArea(i)/(2*Pi*rSphere*rSphere);
-	    //productionDistributionHartley2[i]=1.0;
-	    total+=productionDistributionHartley2[i];
-	  }else{
-	    double angleProd;
-	    int angleProdInt;
-	    angleProd=acos(c/sqrt(X))*180/Pi;
-	    angleProdInt=(int) angleProd;
-	    productionDistributionHartley2[i]=ProductionRate[angleProdInt][2+Comet::ndist]/(TableTotalProductionRate/(1.0-NightSideProduction[Comet::ndist]*2))/(2*Pi*rSphere*rSphere*(cos(angleProdInt*Pi/180)-cos(angleProdInt*Pi/180+Pi/180)))*Nucleus->GetSurfaceElementArea(i)+NightSideProduction[Comet::ndist]*Nucleus->GetSurfaceElementArea(i)/(2*Pi*rSphere*rSphere);
-	    //productionDistributionHartley2[i]=0.0;
-	    total+=productionDistributionHartley2[i];
-	  }
-      }
-      printf("total=%e \n",total);
-      
-      cumulativeProductionDistributionHartley2[0]=0.0;
-      for (i=0;i<totalSurfaceElementsNumber;i++) {
-	if (i==0) {
-	  cumulativeProductionDistributionHartley2[i]+=productionDistributionHartley2[i]/total;
-	}else{
-	  cumulativeProductionDistributionHartley2[i]=cumulativeProductionDistributionHartley2[i-1]+productionDistributionHartley2[i]/total;
-	}
-	
-      }
-    probabilityFunctionDefinedHartley2=true;
-    }
-    
-    //Computation of the segment where the particle will be created
-    gamma=rnd();
-    i=0;
-    while (gamma>cumulativeProductionDistributionHartley2[i]){
-      i++;
-    }
-
-    Nucleus->GetSurfaceElementIndex(nAxisElement,nAzimuthalElement,i);
-
-  
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  
-  Nucleus->GetSurfaceElementRandomPoint(x_LOCAL_IAU_OBJECT,nAxisElement,nAzimuthalElement);
-  Nucleus->GetSurfaceElementNormal(ExternalNormal,i);
-  
-  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
-    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
-  }
-  cosSubSolarAngle=c/sqrt(X);
-  
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]*=-1;
-
-    //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-
-  SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
-  /*  // only normal velocity
-  v_LOCAL_IAU_OBJECT[0]=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*SurfaceTemperature))*ExternalNormal[0];
-  v_LOCAL_IAU_OBJECT[1]=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*SurfaceTemperature))*ExternalNormal[1];
-  v_LOCAL_IAU_OBJECT[2]=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*SurfaceTemperature))*ExternalNormal[2];
-  */
-
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
 
 long int Comet::InjectionBoundaryModel_Limited() {
   int spec;
@@ -869,7 +538,7 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[spec];
+    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
@@ -1368,8 +1037,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1.0);
+  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
   //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0); //1e-4
 
   for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
@@ -1425,7 +1093,14 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
+
+  #if _PIC_MODEL__RADIAL_VELOCITY_MODE_ == _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+  #else
+  double vInit=500;
+  for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-vInit*ExternalNormal[idim];
+  #endif
+
 #endif
   
   //init the internal degrees of freedom if needed
@@ -1527,11 +1202,10 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1e-4);
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
+  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
+  //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
 
-    //  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
     c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
@@ -1567,7 +1241,7 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
   SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  double r2Tang=0.0;;
+  double r2Tang=0.0;
   double xFace[3];
   double vDustInit=0.01;
   double angleVelocityNormal=asin(rnd());
@@ -1584,7 +1258,14 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
+
+  #if _PIC_MODEL__RADIAL_VELOCITY_MODE_ == _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+  #else
+  double vInit=500;
+  for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-vInit*ExternalNormal[idim];
+  #endif
+
 #endif
   
   //init the internal degrees of freedom if needed
@@ -1719,11 +1400,10 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,1e-4);
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
+  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
+  //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
 
-    //  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
     c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
@@ -1776,7 +1456,12 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
 #else
+  #if _PIC_MODEL__RADIAL_VELOCITY_MODE_ == _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  
   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+  #else
+  double vInit=500;
+  for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=-vInit*ExternalNormal[idim];
+  #endif
 #endif
   
   //init the internal degrees of freedom if needed
@@ -1818,603 +1503,6 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
   
   return true;
 }
-
-
-double Comet::GetTotalProductionRateJet(int spec,void *SphereDataPointer){
-  return Comet::Jet_SourceRate[spec];
-  //return 1.0e27; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
-}
-
-//NUCLEUS
-bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int i,j;
-  double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
-  double azimuth,zenith,azimuthTable[360],zenithTable[180],rSphere,*x0Sphere;
-  double l[3]={1.0,0.0,0.0};
-  double x0[3]={0.0,0.0,0.0};
-  double c=0.0,X=0.0,cosSubSolarAngle;
-  int totalSurfaceElementsNumber,nAxisElement,nAzimuthalElement,idim;
-  static double positionSun[3];
-  double x[3];
-  double HeliocentricDistance=1.064*_AU_;
-
-   if (probabilityFunctionDefinedJet==false) {    
-  //Computation of the probability distribution of the production. ATTENTION CASE OF ZENITH GOING OVER BOUNDARIES NOT IMPLEMENTED
-     Nucleus=(cInternalRotationBodyData *) Sphere;
-     Nucleus= (cInternalRotationBodyData *) malloc(sizeof(cInternalRotationBodyData));
-     Nucleus->SetGeneralSurfaceMeshParameters(60,100);
-     Nucleus->SetGeometricalParameters(x0,l,-1165.0,1165.0,Radius);
-     // Nucleus->GetSphereGeometricalParameters(x0,l,xmin,xmax);
-     totalSurfaceElementsNumber=Nucleus->GetTotalSurfaceElementsNumber();
-     
-     positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-     positionSun[2]=0.0;
-
-     total=0.0;      
-     for (i=0;i<totalSurfaceElementsNumber;i++) {     
-       Nucleus->GetSurfaceElementMiddlePoint(x,i);
-       
-       if (x[0]<=1165.0 && x[0]>400.0) {
-	 productionDistributionJet[i]=1.0;
-	 total+=1.0;
-       }else{
-	 productionDistributionJet[i]=0.0;
-       }
-     }
-     cumulativeProductionDistributionJet[0]=0.0;
-     for (i=0;i<totalSurfaceElementsNumber;i++) {
-       if (i==0) {
-	 cumulativeProductionDistributionJet[i]+=productionDistributionJet[i]/total;
-       }else{
-	 cumulativeProductionDistributionJet[i]=cumulativeProductionDistributionJet[i-1]+productionDistributionJet[i]/total;
-       }
-       
-     }
-     
-     probabilityFunctionDefinedJet=true;
-   }
-
-   //Computation of the area where the particle will be created
-    gamma=rnd();
-    i=0;
-    while (gamma>cumulativeProductionDistributionJet[i]){
-      i++;
-    }
-
-    Nucleus->GetSurfaceElementIndex(nAxisElement,nAzimuthalElement,i);
-    
-    
-    //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-    double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-    
-  Nucleus->GetSurfaceElementRandomPoint(x_LOCAL_IAU_OBJECT,nAxisElement,nAzimuthalElement);
-  Nucleus->GetSurfaceElementNormal(ExternalNormal,i);
-  
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]*=-1;  
-
-  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-  
-  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
-    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
-  }
-  cosSubSolarAngle=c/sqrt(X);
-  
-  SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-
-
-//NUCLEUS
-bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int i,j;
-  double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
-  double azimuth,zenith,azimuthTable[360],zenithTable[180],rSphere,*x0Sphere;
-  double l[3]={1.0,0.0,0.0};
-  double x0[3]={0.0,0.0,0.0};
-  double c=0.0,X=0.0,cosSubSolarAngle;
-  int totalSurfaceElementsNumber,nAxisElement,nAzimuthalElement,idim;
-  static double positionSun[3];
-  double x[3];
-  double HeliocentricDistance=1.064*_AU_;
-
-   if (probabilityFunctionDefinedWaist==false) {    
-  //Computation of the probability distribution of the production. ATTENTION CASE OF ZENITH GOING OVER BOUNDARIES NOT IMPLEMENTED
-     Nucleus=(cInternalRotationBodyData *) Sphere;
-     Nucleus= (cInternalRotationBodyData *) malloc(sizeof(cInternalRotationBodyData));
-     Nucleus->SetGeneralSurfaceMeshParameters(60,100);
-     Nucleus->SetGeometricalParameters(x0,l,-1165.0,1165.0,Radius);
-     // Nucleus->GetSphereGeometricalParameters(x0,l,xmin,xmax);
-     totalSurfaceElementsNumber=Nucleus->GetTotalSurfaceElementsNumber();
-     
-     positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth);
-     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth);
-     positionSun[2]=0.0;
-
-     total=0.0;      
-     for (i=0;i<totalSurfaceElementsNumber;i++) {     
-       Nucleus->GetSurfaceElementMiddlePoint(x,i);
-       
-       if (x[0]<=400.0 && x[0]>0.0 && x[2]<345/2.0 && x[2]>-345/2.0 && x[1]>0) {
-	 productionDistributionWaist[i]=1.0;
-	 total+=1.0;
-       }else{
-	 productionDistributionWaist[i]=0.0;
-       }
-     }
-     cumulativeProductionDistributionWaist[0]=0.0;
-     for (i=0;i<totalSurfaceElementsNumber;i++) {
-       if (i==0) {
-	 cumulativeProductionDistributionWaist[i]+=productionDistributionWaist[i]/total;
-       }else{
-	 cumulativeProductionDistributionWaist[i]=cumulativeProductionDistributionWaist[i-1]+productionDistributionWaist[i]/total;
-       }
-       
-     }
-     
-     probabilityFunctionDefinedWaist=true;
-   }
-
-   //Computation of the area where the particle will be created
-    gamma=rnd();
-    i=0;
-    while (gamma>cumulativeProductionDistributionWaist[i]){
-      i++;
-    }
-
-    Nucleus->GetSurfaceElementIndex(nAxisElement,nAzimuthalElement,i);
-    
-    
-    //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-    double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-    
-  Nucleus->GetSurfaceElementRandomPoint(x_LOCAL_IAU_OBJECT,nAxisElement,nAzimuthalElement);
-  Nucleus->GetSurfaceElementNormal(ExternalNormal,i);
-  
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]*=-1;  
-
-  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-  
-  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
-    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
-  }
-  cosSubSolarAngle=c/sqrt(X);
-  
-  SurfaceTemperature=GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-
-
-/* SPHERE
-bool Comet::GenerateParticlePropertiesJet(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int i,j;
-  double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
-  double azimuth,zenith,azimuthTable[360],zenithTable[180],rSphere,*x0Sphere;
-
-   if (probabilityFunctionDefinedJet==false) {    
-  //Computation of the probability distribution of the production. ATTENTION CASE OF ZENITH GOING OVER BOUNDARIES NOT IMPLEMENTED
-     
-     for (i=0;i<360;i++) {
-    for (j=0;j<180;j++) {
-      if ((azimuthCenter+angle<360) && (azimuthCenter-angle>=0) && (zenithCenter+angle<180) && (zenithCenter-angle>=0)) { //General Case
-	if ((azimuthCenter+angle>=i) && (azimuthCenter-angle<=i) && (zenithCenter+angle>=j) && (zenithCenter-angle<=j)) {
-	  productionDistributionJet[i][j]=1.0;
-	  total+=1.0;
-	}else{
-	  productionDistributionJet[i][j]=0.0;
-	}
-      }else if ((azimuthCenter+angle>360) && (azimuthCenter-angle>=0) && (zenithCenter+angle<180) && (zenithCenter-angle>=0)) { //Case if the azimuth angle goes above 360 degrees
-	if (((azimuthCenter+angle>=i) && (azimuthCenter-angle<=i) && (zenithCenter+angle>=j) && (zenithCenter-angle<=j)) || ((azimuthCenter-360+angle>=i) && (azimuthCenter-360+angle>=0) && (zenithCenter+angle>=j) && (zenithCenter-angle<=j))) {
-	  productionDistributionJet[i][j]=1.0;
-	  total+=1.0;
-	}else{
-	  productionDistributionJet[i][j]=0.0;
-	} 
-      }else if ((azimuthCenter+angle<360) && (azimuthCenter-angle<0) && (zenithCenter+angle<180) && (zenithCenter-angle>=0)) { //Case if the azimuth angle goes below 0 degrees
-	if (((azimuthCenter+angle>=i) && (azimuthCenter-angle<=i) && (zenithCenter+angle>=j) && (zenithCenter-angle<=j)) || ((azimuthCenter+360-angle<=i) && (azimuthCenter+360-angle<360) && (zenithCenter+angle>=j) && (zenithCenter-angle<=j))) {
-	  productionDistributionJet[i][j]=1.0;
-	  total+=1.0;
-	}else{
-	  productionDistributionJet[i][j]=0.0;
-	}
-      }else{
-	exit(__LINE__,__FILE__,"Zenith over boundaries not implemented");
-      }
-    }
-  }
-
-  if (total==0.0) exit(__LINE__,__FILE__,"Error: the jet has an angle of zero");
-
-  cumulativeProductionDistributionJet[0][0]=0.0;
-  for (i=0;i<360;i++) {
-    for (j=0;j<180;j++) {
-      if (i==0 && j==0) {
-	cumulativeProductionDistributionJet[i][j]+=productionDistributionJet[i][j]/total;
-      }else if (j==0) {
-	cumulativeProductionDistributionJet[i][j]=cumulativeProductionDistributionJet[i-1][179]+productionDistributionJet[i][j]/total;
-      }else{
-	cumulativeProductionDistributionJet[i][j]=cumulativeProductionDistributionJet[i][j-1]+productionDistributionJet[i][j]/total;
-      }
-    }
-  }
-  probabilityFunctionDefinedJet=true;
-  }
-  //Computation of the area where the particle will be created
-    gamma=rnd();
-    i=0;
-    j=0;
-    while (gamma>cumulativeProductionDistributioJent[i][j]){
-      if (j<179) {
-	j++;
-      }else{
-	i++;
-	j=0;
-      }
-    }
-
-
-  //Computation of the angles where the particle will be created
-    azimuth=(double) i;
-    zenith= (double) j;
-
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-
-  ExternalNormal[0]=-sin(zenith*Pi/180)*cos(azimuth*Pi/180);
-  ExternalNormal[1]=-sin(zenith*Pi/180)*sin(azimuth*Pi/180);
-  ExternalNormal[2]=-cos(zenith*Pi/180);
-
-  //SPHERE
-  Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
-  
-  x_LOCAL_IAU_OBJECT[0]=rSphere*sin(zenith*Pi/180)*cos(azimuth*Pi/180);
-  x_LOCAL_IAU_OBJECT[1]=rSphere*sin(zenith*Pi/180)*sin(azimuth*Pi/180);
-  x_LOCAL_IAU_OBJECT[2]=rSphere*cos(zenith*Pi/180);
-      
-
-  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-  double zenithX,azimuthX,SubSolarAngle,x[3],r;
-
-  x[0]=cos(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[0]-sin(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[1];
-  x[1]=sin(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[0]+cos(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[1];
-  x[2]=x_LOCAL_IAU_OBJECT[2];
-
-  r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-  zenithX=acos(x[2]/r);
-  if (x[0]!=0) azimuthX=atan(x[1]/x[0]);
-  if (x[0]==0) azimuthX=Pi/2;
-  
-  if (x[0]>=0) {
-    SubSolarAngle=acos(fabs(sin(zenithX)*cos(azimuthX)));
-    if (angle!=angle) SubSolarAngle=Pi/2;
-  }
-
-  SurfaceTemperature=GetSurfaceTemeprature(cos(SubSolarAngle),x_LOCAL_SO_OBJECT);
-  // SurfaceTemperature=180.0;
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-*/
-
-double Comet::GetTotalProductionRateWaist(int spec,void *SphereDataPointer){
-  //  return Comet::Jet_SourceRate[spec];
-  double res;
-  res=(spec==0)? 9.0e26:0.0;
-  return res; //AT THIS STAGE, WE ARE ONLY TESTING THE FUNCTION GENERATEPARTICLEPROPERTIESBJORN BELOW
-}
-/*
-bool Comet::GenerateParticlePropertiesWaist(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere) {
-  double ExternalNormal[3]; 
-  int i,j;
-  double total=0.0,TableTotalProductionRate,totalSurface,gamma,gamma2;
-  double azimuth,zenith,azimuthTable[360],zenithTable[180],rSphere,*x0Sphere;
-
-  if (probabilityFunctionDefinedWaist==false) {    
-  for (i=0;i<360;i++) {
-    for (j=0;j<180;j++) {
-      if (((90>=i) && (40<=i)) || ((360-40>=i) && (360-90<=i))) {
-	  productionDistributionJet[i][j]=1.0;
-	  total+=1.0;
-	}else{
-	  productionDistributionJet[i][j]=0.0;
-	}
-    }
-  }
-
-  if (total==0.0) exit(__LINE__,__FILE__,"Error: the jet has an angle of zero");
-
-  cumulativeProductionDistributionJet[0][0]=0.0;
-  for (i=0;i<360;i++) {
-    for (j=0;j<180;j++) {
-      if (i==0 && j==0) {
-	cumulativeProductionDistributionJet[i][j]+=productionDistributionJet[i][j]/total;
-      }else if (j==0) {
-	cumulativeProductionDistributionJet[i][j]=cumulativeProductionDistributionJet[i-1][179]+productionDistributionJet[i][j]/total;
-      }else{
-	cumulativeProductionDistributionJet[i][j]=cumulativeProductionDistributionJet[i][j-1]+productionDistributionJet[i][j]/total;
-      }
-    }
-  }
-  probabilityFunctionDefinedWaist=true;
-  }
-  //Computation of the area where the particle will be created
-    gamma=rnd();
-    i=0;
-    j=0;
-    while (gamma>cumulativeProductionDistributionJet[i][j]){
-      if (j<179) {
-	j++;
-      }else{
-	i++;
-	j=0;
-      }
-    }
-
-
-  //Computation of the angles where the particle will be created
-    azimuth=(double) i;
-    zenith= (double) j;
-
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
-  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-
-  ExternalNormal[0]=-sin(zenith*Pi/180)*cos(azimuth*Pi/180);
-  ExternalNormal[1]=-sin(zenith*Pi/180)*sin(azimuth*Pi/180);
-  ExternalNormal[2]=-cos(zenith*Pi/180);
-
-  Sphere->GetSphereGeometricalParameters(x0Sphere,rSphere);
-  
-  x_LOCAL_IAU_OBJECT[0]=rSphere*sin(zenith*Pi/180)*cos(azimuth*Pi/180);
-  x_LOCAL_IAU_OBJECT[1]=rSphere*sin(zenith*Pi/180)*sin(azimuth*Pi/180);
-  x_LOCAL_IAU_OBJECT[2]=rSphere*cos(zenith*Pi/180);
-  
-  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
-  x_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-  x_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
-  
-
-  //determine if the particle belongs to this processor
-  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
-  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
-  
-  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
-
-    double zenithX,azimuthX,SubSolarAngle,x[3],r;
-
-  x[0]=cos(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[0]-sin(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[1];
-  x[1]=sin(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[0]+cos(subSolarPointAzimuth)*x_LOCAL_IAU_OBJECT[1];
-  x[2]=x_LOCAL_IAU_OBJECT[2];
-
-  r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-  zenithX=acos(x[2]/r);
-  if (x[0]!=0) azimuthX=atan(x[1]/x[0]);
-  if (x[0]==0) azimuthX=Pi/2;
-  
-  if (x[0]>=0) {
-    SubSolarAngle=acos(fabs(sin(zenithX)*cos(azimuthX)));
-    if (angle!=angle) SubSolarAngle=Pi/2;
-  }
-
-   SurfaceTemperature=GetSurfaceTemeprature(cos(SubSolarAngle),x_LOCAL_SO_OBJECT);
-   //SurfaceTemperature=180.0;
-  PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
-  
-  //transform the velocity vector to the coordinate frame 'MSGR_SO'
-  v_LOCAL_SO_OBJECT[0]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[1]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  v_LOCAL_SO_OBJECT[2]=
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
-    (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
-  
-  
-  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
-  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
-  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
-  
-  return true;
-}
-*/
 
 double Comet::radiativeCoolingRate_Crovisier(PIC::Mesh::cDataCenterNode *CenterNode){
   double tau,r,res=0.0,dens,temp;
@@ -2672,4 +1760,8 @@ void Comet::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFa
 
   fclose(fout);
   delete [] FaceNodeConnection;
+}
+
+void Comet::GetNucleusNastranInfo(cInternalNastranSurfaceData *CG) {
+  Comet::CG=CG;
 }
