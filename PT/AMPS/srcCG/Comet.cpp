@@ -2476,7 +2476,7 @@ void Comet::StepOverTime() {
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  LocalTimeStep=Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
+  LocalTimeStep=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ptr)); //   node->Sphere->maxIntersectedNodeTimeStep[PIC::ParticleBuffer::GetI(ptr)];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
