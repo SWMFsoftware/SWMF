@@ -243,8 +243,7 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 
 double Comet::GetTotalProduction(int spec,void *BoundaryElement) {
-  cInternalSphericalData *Sphere;
-  return Comet::GetTotalProductionRateBjornNASTRAN(spec,Sphere)+Comet::GetTotalProductionRateUniformNASTRAN(spec,Sphere)+Comet::GetTotalProductionRateJetNASTRAN(spec,Sphere);
+  return Comet::GetTotalProductionRateBjornNASTRAN(spec)+Comet::GetTotalProductionRateUniformNASTRAN(spec)+Comet::GetTotalProductionRateJetNASTRAN(spec);
 }
 
 double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement) {
@@ -284,39 +283,36 @@ int main(int argc,char **argv) {
     sprintf(fname,"%s/NucleusSurface-L2.dat",PIC::OutputDataFileDirectory);
     if (PIC::ThisThread==0) CutCell::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
   }
-
-      
-  //Computation of the gravity field for an irregular nucleus shape
-  nucleusGravity::readMesh("cg.Lamy.nas");
-  nucleusGravity::setDensity(300);
       */
 
+#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+  //Computation of the gravity field for an irregular nucleus shape
+  nucleusGravity::readMesh_longformat("cg.RMOC-volume.nas");
+  nucleusGravity::setDensity(430);
+#endif   
 
-
-
-
-  //set up the s/c object
+  //set up the nastran object
   //init the nucleus
-  cInternalBoundaryConditionsDescriptor RosettaSurfaceDescriptor;
-  cInternalNastranSurfaceData *Rosetta;
+  cInternalBoundaryConditionsDescriptor CGSurfaceDescriptor;
+  cInternalNastranSurfaceData *CG;
 
-  RosettaSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
-  Rosetta=(cInternalNastranSurfaceData*) RosettaSurfaceDescriptor.BoundaryElement;
+  CGSurfaceDescriptor=PIC::BC::InternalBoundary::NastranSurface::RegisterInternalNastranSurface();
+  CG=(cInternalNastranSurfaceData*) CGSurfaceDescriptor.BoundaryElement;
 
-//  Rosetta->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
-//  Rosetta->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
+//  CG->PrintTitle=Comet::Sampling::OutputSurfaceDataFile::PrintTitle;
+//  CG->PrintVariableList=Comet::Sampling::OutputSurfaceDataFile::PrintVariableList;
 
-  Rosetta->InjectionRate=Comet::GetTotalProduction;
-  Rosetta->faceat=0;
+  CG->InjectionRate=Comet::GetTotalProduction;
+  CG->faceat=0;
 //  Nucleus->ParticleSphereInteraction=Comet::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation;
-//  Rosetta->InjectionBoundaryCondition=Rosetta::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
+//  CG->InjectionBoundaryCondition=CG::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
 //  Nucleus->InjectionBoundaryCondition=Comet::InjectionBoundaryModel_Limited; ///sphereParticleInjection;
   //PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
 
+  Comet::GetNucleusNastranInfo(CG);
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
   for (int i=0;i<3;i++) xmin[i]=-2.0e5,xmax[i]=2.0e5;
-
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
