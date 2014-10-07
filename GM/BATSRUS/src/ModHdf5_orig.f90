@@ -975,7 +975,7 @@ contains
     iData = iData + 1
 
     IntegerMetaData(iData) = 1
-    !    attName(7) = 'nLevel'
+    !    attName(7) = 'nLevelMax'
     iData = iData + 1
     IntegerMetaData(iData) = nCellsPerBlock(1)
     iData = iData + 1
@@ -1394,7 +1394,7 @@ contains
 
     use ModMain, only : Time_Simulation, CodeVersion
     !use ModProcMH, only : iProc
-    use BATL_lib, only : nLevel, nDim
+    use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
     integer(HID_T), intent(in) :: FileID
@@ -1468,7 +1468,7 @@ contains
   subroutine write_real_sim_metadata(FileID,plot_dimensional)
 
     use ModMain, only : Time_Simulation, CodeVersion
-    use BATL_lib, only : nLevel, nDim
+    use BATL_lib, only : nLevelMax, nDim
     use ModGeometry, only : x1,x2,y1,y2,z1,z2
     use ModPhysics, ONLY : No2Io_V, UnitX_
 
@@ -1538,7 +1538,7 @@ contains
 
   subroutine write_integer_plot_metadata(fileID,nPlotVar,isCutFile)
 
-    use BATL_lib, only : nDimAmr, nLevel, IsPeriodic_D 
+    use BATL_lib, only : nDimAmr, nLevelMax, IsPeriodic_D 
     use ModMain, only : n_step
     use ModGeometry, ONLY : TypeGeometry
     integer (HID_T), intent(in) :: fileID, nPlotVar
@@ -1571,8 +1571,8 @@ contains
     !    attName(5) = 'numProcessors'
     iData = iData + 1
 
-    IntegerMetaData(iData) = nLevel
-    !    attName(7) = 'nLevel'
+    IntegerMetaData(iData) = nLevelMax
+    !    attName(7) = 'nLevelMax'
     iData = iData + 1
     do i = 1, 3
        if (iPlotDim(i) == 1) then
@@ -1644,7 +1644,7 @@ contains
     !Not read by plugin at this time  Only exists so that one looking at
     !the file may know something about the simulation that created it
 
-    use BATL_lib, only : nDim, nDimAmr, nLevel
+    use BATL_lib, only : nDim, nDimAmr, nLevelMax
     use ModMain, only : n_step, nI, nJ, nK
     integer (HID_T), intent(in) :: fileID, nPlotVar
 
@@ -1673,8 +1673,8 @@ contains
     !    attName(5) = 'numProcessors'
     iData = iData + 1
 
-    IntegerMetaData(iData) = nLevel
-    !    attName(7) = 'nLevel'
+    IntegerMetaData(iData) = nLevelMax
+    !    attName(7) = 'nLevelMax'
     iData = iData + 1
 
     IntegerMetaData(iData) = n_step 
