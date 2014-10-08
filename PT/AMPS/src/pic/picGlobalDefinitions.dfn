@@ -149,6 +149,9 @@
 #define _PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_   0
 #define _PIC__CUT_FACE_SHADOW_ATTRIBUTE__FALSE_  1
 
+//Values for radial velocity mode
+#define _PIC_MODEL__RADIAL_VELOCITY_MODE__ON_  0
+#define _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  1
 
 
 

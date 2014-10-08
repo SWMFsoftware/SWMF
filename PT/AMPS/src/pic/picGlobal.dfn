@@ -1,4 +1,4 @@
-
+OA
 
 #include "picGlobalDefinitions.dfn"
 
@@ -138,6 +138,8 @@
 //check whether a particle is inside the surface described by a NASTRAN surface mesh after particle motion
 #define _PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_ _PIC_MODE_OFF_
 
+//default setting for the radial velocity mode
+#define _PIC_MODEL__RADIAL_VELOCITY_MODE_ _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_
 
 
 
