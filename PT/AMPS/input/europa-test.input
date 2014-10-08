@@ -149,6 +149,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
     T=0.174e6 \\
     n=60.0E6
 
+Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
+
 
 #endblock
 
