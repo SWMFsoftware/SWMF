@@ -358,6 +358,8 @@ Example of a function \\ {\tt AccommodationCoefficient=function $\backslash\back
 
 \item {\bf Source:Sputtering}=[on,off], Yield=[], InjectionVelocityRange=[] \\ Sputtering model. Example: \\ {\tt Source:Sputtering=on $\backslash\backslash$ \\ Yield(NA)=0.1, InjectionVelocityRange(NA)=(10,10.0E3)}
 
+\item {\bf Source:ExternalDomainBoundaryInjection}=[on,off] \\ Initialize the injection processes ID for particle injection through the external boundary of the domain
+
 \item {\bf Source:UserDefined}=[on,off], SourceProcessCode={\it code}, SourceRate={\it function-name}, \\ GenerateParticleProperties={\it function-name}, ModifySurfaceSpeciesAbundance=[true,false], \\ InitSurfaceSourceDistribution={\it function-name} 
 
 The structure describe the user defined particle injection boundary conditions. Example: \\ {\tt Source:UserDefined=on $\backslash\backslash$ \\ SourceProcessCode=Jet $\backslash\backslash$ \\ SourceRate=Comet::GetTotalProductionRateJet $\backslash\backslash$ \\ GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn $\backslash\backslash$ \\ ModifySurfaceSpeciesAbundance=false  $\backslash\backslash$ \\ InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init}
