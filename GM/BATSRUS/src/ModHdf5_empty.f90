@@ -13,43 +13,26 @@ contains
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
        isNonCartesian, NotACut)
 
-    ! Save all cells within plotting range, for each processor
-
-    use ModProcMH
-    use ModMain, ONLY: nI, nJ, nK, &
-         x_, y_, z_, Phi_, nBlockMax, Unused_B
-    use ModGeometry, ONLY: CellSize_DB,&
-         XyzStart_BLK
-    use ModIO
-    use ModMpi
-    use BATL_lib, ONLY : Xyz_DNB, IsRLonLat, IsCylindrical, CoordMin_DB,&
-        CoordMax_DB, CoordMin_D,CoordMax_D,DiLevelNei_IIIB
-
     implicit none
 
     ! Arguments
 
-    integer, intent(in)   :: iFile
-    integer, intent(in)   :: nPlotVar
-    real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
+    integer, intent(in) :: iFile
+    integer, intent(in) :: nPlotVar
+    real,    intent(in) :: xMin, xMax, yMin, yMax, zMin, zMax
     logical, intent(in) :: isNonCartesian, NotACut
     character (len=*), intent(in) :: plotType
-    real,    intent(inout):: DxBlock,DyBlock,DzBlock
+    real,    intent(inout):: DxBlock, DyBlock, DzBlock
 
-    end subroutine
+  end subroutine init_hdf5_plot
   !=========================================================================
 
   subroutine write_plot_hdf5(filename, plotType, plotVarNames, plotVarUnits,&
        nPlotVar, NotACut, nonCartesian, IsSphPlot, plot_dimensional, xmin, xmax, &
        ymin, ymax, zmin, zmax)
 
-    use BATL_tree, only: iNode_B, iTree_IA, Coord0_,&
-         Level_,iMortonNode_A
-    use BATL_lib, only : CoordMin_DB, CoordMax_DB
     use ModNumConst
     use ModMpi
-    use BATL_lib, ONLY : CoordMin_DB, MaxDim
-    use BATL_mpi, only : barrier_mpi
 
     use ModProcMH, ONLY: iProc
     
