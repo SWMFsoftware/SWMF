@@ -118,6 +118,8 @@ CouplerMode=ices !!off, ices, swmf
 
   RadiativeCoolingMode=off !off, Crovisier	
 
+  RadialVelocityMode=off !on,off
+
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
   BjornProductionRate(H2O)=2.0e25 !!2.0e25	    
