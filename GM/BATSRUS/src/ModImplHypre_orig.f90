@@ -99,7 +99,7 @@ contains
   subroutine hypre_initialize
 
     use ModMain, ONLY: iNewDecomposition
-    use BATL_lib, ONLY: nLevel
+    use BATL_lib, ONLY: nLevelMax
 
     integer:: iLevel, DiLevel, iNode, jNode
     integer:: iCoord_D(nDim), jCoord_D(nDim), iCoord0_D(nDim), jCoord0_D(nDim)
@@ -133,8 +133,8 @@ contains
     ! One part per level. We can possibly use MaxLevel (<=30), or count
     ! the number of current levels (1-5 or so).
 
-    ! Level indexes go from 0 to nLevel, hence the +1
-    nPart = nLevel + 1
+    ! Level indexes go from 0 to nLevelMax, hence the +1
+    nPart = nLevelMax + 1
 
     ! Create an empty 3D grid object
     call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
@@ -170,7 +170,7 @@ contains
     do iDim = 1, nDim
        if(.not.IsPeriodic_D(iDim)) CYCLE
 
-       do iLevel = 0, nLevel
+       do iLevel = 0, nLevelMax
           iPart = iLevel
           iLower_D = 1
           iUpper_D = MaxCoord_I(iLevel)*nRoot_D(1:nDim)*nCell_D
