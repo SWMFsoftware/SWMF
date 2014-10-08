@@ -37,6 +37,7 @@ help:
 	@echo '    [default]   SWMF'
 	@echo ' '
 	@echo '    help        (makefile option list)'
+	@echo '    info        (count lines of code)'
 	@echo '    install     (to be used via Config.pl only)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
@@ -155,6 +156,25 @@ install: ENV_CHECK mkdir
 	@echo
 	@echo Installation succeeded
 	@echo
+
+info:
+	@echo "NOTE: HYPRE and BATSRUS clones should not be installed!"
+	@echo "Total lines of Fortran: `wc -l */*/src*/*.f* */*/src*/*/*.f* | tail -1`"
+	@echo "Total lines of C++    : `wc -l */*/src*/*.c* */*/src*/*.h */*/src*/*/*.c* */*/src*/*/*.h | tail -1`"
+	@echo "share/Library/        : `wc -l share/Library/src/*.f* share/Library/test/*.f* | tail -1`"
+	@echo "util                  : `wc -l util/*/src*/*.f* | tail -1`"
+	@echo "DATAREAD,NOMPI,TIMING : `wc -l util/DATAREAD/src*/*.f* util/NOMPI/src*/*.f* util/TIMING/src*/*.f* | tail -1`"
+	@echo "CRASH                 : `wc -l util/CRASH/src*/*.f* | tail -1`"
+	@echo "FISHPAK               : `wc -l util/FISHPAK/src*/*.f* | tail -1`"
+	@echo "util/EMPIRICIAL/src*  : `wc -l util/EMPIRICAL/src*/*.f* | tail -1`"
+	@echo "CON/*	             : `wc -l CON/*/src/*.f* | tail -1`"
+	@echo "CON/Interface         : `wc -l CON/Interface/src/*.f* | tail -1`"
+	@echo "srcInterface+wrappers : `wc -l ??/*/srcInterface/*.[fc]* ??/*/src/??_wrapper.f90 | tail -1`"
+	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* | tail -1`"	
+	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl | tail -1`"
+	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
+	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
+	@echo "XML descriptions      : `wc */*.XML */*/*.XML | tail -1`"
 
 mkdir: ./lib ./bin
 
