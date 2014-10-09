@@ -78,6 +78,10 @@ int Exosphere::Sampling::RequestSamplingData(int offset) {
   CellSamplingDataOffset=offset;
   for (int s=0;s<PIC::nTotalSpecies;s++) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[s+iSource*PIC::nTotalSpecies]=-1;
 
+#if _EXOSPHERE_SOURCE__EXTERNAL_BOUNDARY_INJECTION_ == _EXOSPHERE_SOURCE__ON_
+  SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_]=CellSamplingDataOffset+SamplingLength;
+  SamplingLength+=sizeof(double)*PIC::nTotalSpecies;
+#endif
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
   SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]=CellSamplingDataOffset+SamplingLength;
@@ -159,7 +163,7 @@ void Exosphere::Init_BeforeParser() {
   utc2et_c(SimulationStartTimeString,&OrbitalMotion::et);
 
   //get initial parameters of Mercury's orbit
-  spkezr_c(ObjectName,OrbitalMotion::et,"MSGR_HCI","none","SUN",state,&OrbitalMotion::lt);
+  spkezr_c(ObjectName,OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
 
   for (idim=0,xObjectRadial=0.0;idim<3;idim++) {
     xObject_HCI[idim]=state[idim]*1.0E3,vObject_HCI[idim]=state[idim+3]*1.0E3;
@@ -170,7 +174,7 @@ void Exosphere::Init_BeforeParser() {
   vObjectRadial=(xObject_HCI[0]*vObject_HCI[0]+xObject_HCI[1]*vObject_HCI[1]+xObject_HCI[2]*vObject_HCI[2])/xObjectRadial;
 
   //get initial position of Earth
-  spkezr_c("Earth",OrbitalMotion::et,"MSGR_HCI","none","SUN",state,&OrbitalMotion::lt);
+  spkezr_c("Earth",OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
   for (idim=0;idim<3;idim++) xEarth_HCI[idim]=state[idim]*1.0E3,vEarth_HCI[idim]=state[idim+3]*1.0E3;
 
 
@@ -296,8 +300,8 @@ void Exosphere::Init_AfterParser() {
     sprintf(OrbitalDataFileName,"%s/pic.OrbitalData.dat",PIC::OutputDataFileDirectory);
     FILE *fout=fopen(OrbitalDataFileName,"w");
     fprintf(fout,"Variables: \"UTC\", \
-         \"xObject(MSGR_HCI)\", \"yObject(MSGR_HCI)\", \"zObject(MSGR_HCI)\", \
-         \"xEarth(MSGR_HCI)\", \"yEarth(MSGR_HCI)\", \"zEarth(MSGR_HCI)\", \
+         \"xObject(J2000)\", \"yObject(J2000)\", \"zObject(J2000)\", \
+         \"xEarth(J2000)\", \"yEarth(J2000)\", \"zEarth(J2000)\", \
          \"xSun(SO)\", \"ySun(SO)\", \"zSun(SO)\", \
          \"xEarth(SO)\", \"yEarth(SO)\", \"zEarth(SO)\", \
          \"UTC of the corresponding data file\", \"Output data file number\"");
@@ -1478,10 +1482,10 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 
       fprintf(fTrajectory,"%s",utcstr);
 
-      spkezr_c(ObjectName,etStart,"MSGR_HCI","none","SUN",State,&lt);
+      spkezr_c(ObjectName,etStart,"J2000","none","SUN",State,&lt);
       fprintf(fTrajectory, "  %e  %e  %e",State[0],State[1],State[2]);
 
-      spkezr_c("Earth",etStart,"MSGR_HCI","none","SUN",State,&lt);
+      spkezr_c("Earth",etStart,"J2000","none","SUN",State,&lt);
       fprintf(fTrajectory, "  %e  %e  %e",State[0],State[1],State[2]);
 
       spkezr_c("SUN",etStart,SO_FRAME,"none",ObjectName,State,&lt);
@@ -1539,13 +1543,13 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
 void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataSetNumber) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 
-  //coordinate in the MSGR_HCI frame
-  sxform_c(SO_FRAME,"MSGR_HCI",Exosphere::OrbitalMotion::et,SO_to_HCI_TransformationMartix);
-  fprintf(fout,", \"xMSGR_HCI\", \"yMSGR_HCI\", \"zMSGR_HCI\"");
+  //coordinate in the J2000 frame
+  sxform_c(SO_FRAME,"J2000",Exosphere::OrbitalMotion::et,SO_to_HCI_TransformationMartix);
+  fprintf(fout,", \"xJ2000\", \"yJ2000\", \"zJ2000\"");
 #endif
 
-  if (SamplingDensityOffset[0]!=-1) for (int spec=0;spec<PIC::nTotalSpecies;spec++) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
-    fprintf(fout,", \"Number Density(spec=%s,source=%s)\"", PIC::MolecularData::GetChemSymbol(spec),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
+  if (SamplingDensityOffset[0]!=-1) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
+    fprintf(fout,", \"Number Density(spec=%s,source=%s)\"", PIC::MolecularData::GetChemSymbol(DataSetNumber),_EXOSPHERE__SOURCE_SYMBOLIC_ID_[iSource]);
   }
 
 /*
@@ -1585,26 +1589,11 @@ void Exosphere::Sampling::OutputDataFile::PrintVariableList(FILE* fout,int DataS
 
 void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
   double TotalMeasure=0.0,Measure=0.0;
-  ////,ImpactVaposizationSource=0.0;
   int i,iSource,nspec;
   char *SamplingBuffer,*CellNodeSamplingBuffer;
   double SourceRate[PIC::nTotalSpecies*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_)];
 
   for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[nspec+iSource*PIC::nTotalSpecies]=0.0;
-
-/*
-#if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  double SourcePDS=0.0;
-#endif
-
-#if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  double SourceTD=0.0;
-#endif
-
-#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  double SourceSW=0.0;
-#endif
-*/
 
   CellNodeSamplingBuffer=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
 
@@ -1616,57 +1605,14 @@ void Exosphere::Sampling::OutputDataFile::Interpolate(PIC::Mesh::cDataCenterNode
     TotalMeasure+=Measure;
 
     if (SamplingDensityOffset[0]!=-1) for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) {
-      for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[nspec+iSource*PIC::nTotalSpecies]+=*((double*)(SamplingBuffer+nspec+SamplingDensityOffset[iSource]));
+      for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SourceRate[nspec+iSource*PIC::nTotalSpecies]+=*(nspec+(double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
     }
-
-    /*
-    #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
-    ImpactVaposizationSource+=*((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset));
-    #endif
-
-    #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-    SourcePDS+=*((double*)(SamplingBuffer+SamplingDensity__PhotonStimulatedDesorption_Offset));
-    #endif
-
-    #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-    SourceTD+=*((double*)(SamplingBuffer+SamplingDensity__ThermalDesorption_Offset));
-    #endif
-
-    #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-    SourceSW+=*((double*)(SamplingBuffer+SamplingDensity__SolarWindSputtering_Offset));
-    #endif
-    */
   }
 
   if (SamplingDensityOffset[0]!=-1) for (nspec=0;nspec<PIC::nTotalSpecies;nspec++) for (iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
     if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceRate[nspec+iSource*PIC::nTotalSpecies]/=PIC::LastSampleLength*TotalMeasure;
-    *((double*)(CellNodeSamplingBuffer+nspec+SamplingDensityOffset[iSource]))=SourceRate[nspec+iSource*PIC::nTotalSpecies];
+    *(nspec+(double*)(CellNodeSamplingBuffer+SamplingDensityOffset[iSource]))=SourceRate[nspec+iSource*PIC::nTotalSpecies];
   }
-
-
-
-/*
-  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) ImpactVaposizationSource/=PIC::LastSampleLength*TotalMeasure;
-  *((double*)(CellNodeSamplingBuffer+SamplingDensity__ImpactVaporization_Offset))=ImpactVaposizationSource;
-
-
-  #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
-  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourcePDS/=PIC::LastSampleLength*TotalMeasure;
-  *((double*)(CellNodeSamplingBuffer+SamplingDensity__PhotonStimulatedDesorption_Offset))=SourcePDS;
-  #endif
-
-  #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
-  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceTD/=PIC::LastSampleLength*TotalMeasure;
-  *((double*)(CellNodeSamplingBuffer+SamplingDensity__ThermalDesorption_Offset))=SourceTD;
-  #endif
-
-  #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
-  if ((PIC::LastSampleLength!=0)&&(nInterpolationCoeficients!=0)) SourceSW/=PIC::LastSampleLength*TotalMeasure;
-  *((double*)(CellNodeSamplingBuffer+SamplingDensity__SolarWindSputtering_Offset))=SourceSW;
-  #endif
-*/
-
-
 }
 
 void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
