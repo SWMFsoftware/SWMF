@@ -31,7 +31,7 @@
 #include "Na.h"
 
 //define the symbolic id of source processes
-static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
+static const char _EXOSPHERE__SOURCE_SYMBOLIC_ID_[][100]={"ExternalBoundaryInjection","ImpactVaposization","PhotonStimulatedDesorption","ThermalDesorption","SolarWindSputtering"};
 
 //the default value for for the list of the SPICE kernels that will be loaded
 static const int nFurnishedSPICEkernels=0;
@@ -196,7 +196,7 @@ namespace Exosphere {
 //      if (spec!=_NA_SPEC_) return;
 
       id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
-      *((double*)(SamplingBuffer+spec+SamplingDensityOffset[id]))+=LocalParticleWeight;
+      *(spec+(double*)(SamplingBuffer+SamplingDensityOffset[id]))+=LocalParticleWeight;
 /*
       switch (id) {
       case _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_:
@@ -283,7 +283,7 @@ namespace Exosphere {
 
     //generate particle position and velocity
   //generate particle properties
-  inline bool GenerateParticleProperties(double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution) {
+  inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution) {
     double ExternalNormal[3];
 
     //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
@@ -328,7 +328,7 @@ namespace Exosphere {
 
     //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
     double c=0.0,rVel=0.0,lVel[3];
-    double Speed=sqrt(EnergyDistribution->DistributeVariable()*2.0/_NA__MASS_);
+    double Speed=sqrt(EnergyDistribution->DistributeVariable()*2.0/PIC::MolecularData::GetMass(spec));
 
 
     for (idim=0;idim<3;idim++) {
@@ -580,7 +580,7 @@ namespace Exosphere {
 
         cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
-        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
+        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
     }
 
@@ -695,6 +695,8 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
       inline double GetSurfaceElementProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
         double norm_IAU_OBJECT[3],norm_SO_OBJECT[3];
 
+        if (SphereDataPointer==NULL) return 0.0;
+
         //the sputtering source rate does not depend on the surface population and depends only on the yeild
 //        if (((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[spec][SurfaceElement]<=0.0) return 0.0;
 
@@ -746,7 +748,7 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
 
         cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
-        return Exosphere::SourceProcesses::GenerateParticleProperties(x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
+        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
       }
     }
 
