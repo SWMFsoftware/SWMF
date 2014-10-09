@@ -91,8 +91,8 @@ double Exosphere::OrbitalMotion::GetPhaseAngle(SpiceDouble EphemerisTime) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceDouble StateSun[6],StateEarth[6],ltlocal;
 
-  spkezr_c("Sun",EphemerisTime,"MSGR_HCI","none",ObjectName,StateSun,&ltlocal);
-  spkezr_c("Earth",EphemerisTime,"MSGR_HCI","none",ObjectName,StateEarth,&ltlocal);
+  spkezr_c("Sun",EphemerisTime,"J2000","none",ObjectName,StateSun,&ltlocal);
+  spkezr_c("Earth",EphemerisTime,"J2000","none",ObjectName,StateEarth,&ltlocal);
 
   double c=0.0,l0=0.0,l1=0.0;
   int idim;
