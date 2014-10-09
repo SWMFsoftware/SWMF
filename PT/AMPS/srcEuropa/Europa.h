@@ -108,14 +108,14 @@ namespace Europa {
   extern double swE_Typical[3];*/
 
   //the total number of source processes
-  extern int nTotalSourceProcesses;
+  //extern int nTotalSourceProcesses;
 
   //the sphere that representd the planet
   //extern cInternalSphericalData *Planet;
 
   //init the model
   void Init_BeforeParser();
-  void Init_AfterParser();
+//  void Init_AfterParser();
 
   //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
   void SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data);
@@ -141,37 +141,7 @@ namespace Europa {
   }*/
 
   namespace Sampling {
-
-    //offsets for sampling densities that are due to different sampling processes
-    extern int SamplingDensity__ImpactVaporization_Offset;
-    extern int SamplingDensity__PhotonStimulatedDesorption_Offset;
-    extern int SamplingDensity__ThermalDesorption_Offset;
-    extern int SamplingDensity__SolarWindSputtering_Offset;
-    extern int CellSamplingDataOffset;
-
-    //the field in the particle's data that keeps the id of the source process due to which the particle has beed produced
-    extern long int ParticleData_SourceProcessID_Offset;
-    extern long int ParticleData_OriginSurfaceElementNumber_Offset;
-
-    //sample the planet's night side return flux
-    extern double **PlanetNightSideReturnFlux;
-
-    namespace OutputDataFile {
-      void PrintVariableList(FILE* fout,int DataSetNumber);
-      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
-      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
-    }
-
-    namespace OutputSurfaceDataFile {
-      using namespace Exosphere::Sampling::OutputSurfaceDataFile;
-
-/*
-      void PrintVariableList(FILE* fout);
-      void PrintTitle(FILE* fout);
-      void PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,long int SurfaceElementsInterpolationListLength,cInternalSphericalData *Sphere,int spec,CMPI_channel* pipe,int ThisThread,int nTotalThreads);
-      void flushCollectingSamplingBuffer(cInternalSphericalData* Sphere);
-*/
-    }
+    using namespace Exosphere::Sampling;
 
     namespace O2InjectionSpeed {
       const int nSampleIntervals=1000;
@@ -183,57 +153,6 @@ namespace Europa {
       void flush();
       void OutputSampledModelData(int DataOutputFileNumber);
     }
-
-    //clean the model sampling buffers after output of the data file
-    inline void FlushSamplingDataBuffers() {
-      if (Planet!=NULL) {
-        OutputSurfaceDataFile::flushCollectingSamplingBuffer(Planet);
-      }
-    }
-
-    //request the sampling buffer
-    int RequestSamplingData(int offset);
-
-    //set and get the source id
-    inline int GetParticleSourceID(PIC::ParticleBuffer::byte *pData) {return *(int*)(pData+ParticleData_SourceProcessID_Offset);}
-    inline void SetParticleSourceID(int id,PIC::ParticleBuffer::byte *pData) {*(int*)(pData+ParticleData_SourceProcessID_Offset)=id;}
-
-    //set and get the surface elemetn number of the particle's origine
-    inline int GetParicleOriginSurfaceElementNumber(PIC::ParticleBuffer::byte *pData) {return *(int*)(pData+ParticleData_OriginSurfaceElementNumber_Offset);}
-    inline void SetParicleOriginSurfaceElementNumber(int el,PIC::ParticleBuffer::byte *pData) {*(int*)(pData+ParticleData_OriginSurfaceElementNumber_Offset)=el;}
-
-    //sample particle's data
-    void inline SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
-      int id;
-
-      //determine if the particle is a sodium atom
-//      if (spec!=_O2_SPEC_) return;
-
-      return;
-
-      id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
-
-      switch (id) {
-      case _EUROPA_SOURCE__ID__IMPACT_VAPORIZATION_:
-        *((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset))+=LocalParticleWeight;
-        break;
-      case _EUROPA_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_:
-        *((double*)(SamplingBuffer+SamplingDensity__PhotonStimulatedDesorption_Offset))+=LocalParticleWeight;
-        break;
-      case _EUROPA_SOURCE__ID__THERMAL_DESORPTION_:
-        *((double*)(SamplingBuffer+SamplingDensity__ThermalDesorption_Offset))+=LocalParticleWeight;
-        break;
-      case _EUROPA_SOURCE__ID__SOLAR_WIND_SPUTTERING_:
-        *((double*)(SamplingBuffer+SamplingDensity__SolarWindSputtering_Offset))+=LocalParticleWeight;
-        break;
-      default:
-        exit(__LINE__,__FILE__,"Error: the option is not found");
-      }
-    }
-
-
-    void SampleModelData();
-    void OutputSampledModelData(int DataOutputFileNumber);
   }
 
 
@@ -1100,6 +1019,7 @@ namespace Europa {
               PIC::ParticleBuffer::SetV(v,newParticleData);
               PIC::ParticleBuffer::SetI(_OPLUS_THERMAL_SPEC_,newParticleData);
               PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+              Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticleData);
 
               _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,LocalTimeStep-TimeCounter,startNode);
             }
@@ -1227,6 +1147,7 @@ v[0]=Speed,v[1]=0.0,v[2]=0.0;
               PIC::ParticleBuffer::SetI(_OPLUS_HIGH_SPEC_,newParticleData);
 
               PIC::ParticleBuffer::SetIndividualStatWeightCorrection(RelWeight,newParticleData);
+              Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticleData);
 
 
               //inject the particle into the system
