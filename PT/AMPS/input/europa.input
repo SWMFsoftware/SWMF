@@ -64,7 +64,7 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=2000
+  ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -120,7 +120,7 @@ ParticleWeightCorrectionMode=on
 
 ! ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
-  SpiceKernels="NAIF/de430.bsp", "GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/s980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"   !, "MESSENGER/kernels/fk/msgr_dyn_v600.tf" 
+  SpiceKernels="OTHER/GSE.tf","NAIF/de430.bsp", "GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/s980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"   !, "MESSENGER/kernels/fk/msgr_dyn_v600.tf" 
 
   define _TARGET_ _EUROPA_ 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
@@ -157,6 +157,8 @@ ParticleWeightCorrectionMode=on
 
   Source:Sputtering=on\\ !on,off
     Yield(O2)=1.0, InjectionVelocityRange(O2)=10,10.0E3
+
+  Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
 #endblock
 
