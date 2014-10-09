@@ -70,6 +70,8 @@ void Exosphere::SourceProcesses::SolarWindSputtering::Init() {
   double ElementSourceRate,maxRatePerM2,t;
   int el,nTotalSurfaceElements,spec;
 
+  if (Exosphere::Planet==NULL) return;
+
   nTotalSurfaceElements=Planet->GetTotalSurfaceElementsNumber();
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) for (el=0;el<nTotalSurfaceElements;el++) {
