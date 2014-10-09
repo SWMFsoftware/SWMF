@@ -1646,7 +1646,7 @@ void Exosphere::Sampling::OutputDataFile::PrintData(FILE* fout,int DataSetNumber
   //output the sampled number densities
   if (SamplingDensityOffset[0]!=-1) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) {
     if (pipe->ThisThread==CenterNodeThread) {
-      t= *((double*)(SamplingBuffer+DataSetNumber+SamplingDensityOffset[iSource]));
+      t= *(DataSetNumber+(double*)(SamplingBuffer+SamplingDensityOffset[iSource]));
     }
 
     if (pipe->ThisThread==0) {
