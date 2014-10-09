@@ -625,6 +625,16 @@ while ($line=<InputFile>) {
       push(@SourceProcessesSymbolicID,"\"ImpactVaposization\"");
       $SourceProcessID++;
     }
+    elsif ($InputLine eq "EXTERNALDOMAINBOUNDARYINJECTION") {
+      if ($s0 eq "ON") {
+        ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__EXTERNAL_BOUNDARY_INJECTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
+        ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
+        
+        push(@SourceModifySurfaceSpeciesAbundance,'false');
+        push(@SourceProcessesSymbolicID,"\"ExternalDomainBoundaryInjection\"");
+        $SourceProcessID++;
+      }
+    }
     elsif ($InputLine eq "USERDEFINED") {
       my $Code;
       my $SourceRate;
