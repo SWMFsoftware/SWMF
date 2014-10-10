@@ -161,8 +161,10 @@ contains
        ! Enforce periodicity for cylindrical and spherical grids if
        ! there is a full grid in the Phi direction. 
        ! One can also have periodicity with a segment in Phi
-       if( abs(CoordMax_D(Phi_) - CoordMin_D(Phi_) - cTwoPi) < 1e-6 ) &
-            IsPeriodic_D(Phi_) = .true.
+       if( abs(CoordMax_D(Phi_) - CoordMin_D(Phi_) - cTwoPi) < 1e-6 )then
+          IsPeriodic_D(Phi_) = .true.
+          IsPeriodicCoord_D(Phi_) = .true.
+       end if
     end if
 
     if(IsRoundCube) IsPeriodic_D = .false.
