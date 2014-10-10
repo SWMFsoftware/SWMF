@@ -5,7 +5,7 @@ module BATL_tree
 
   use BATL_size, ONLY: MaxBlock, nBlock, MaxDim, nDim, iRatio_D, &
        nDimAmr, iDimAmr_D, nIJK_D
-  use BATL_geometry, ONLY: IsPeriodic_D, Phi_, Theta_, &
+  use BATL_geometry, ONLY: IsPeriodic_D, IsPeriodicCoord_D, Phi_, Theta_, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
 
   implicit none
@@ -29,6 +29,7 @@ module BATL_tree
   public:: write_tree_file  ! save tree info for restart
   public:: read_tree_file   ! read tree info for restart
   public:: min_tree_level   ! return min level for a subcycling stage
+  public:: set_tree_periodic! switch periodicity info on/off as needed
   public:: show_tree        ! show info for debugging
   public:: test_tree        ! unit test
 
@@ -1913,6 +1914,75 @@ contains
     min_tree_level = max(nLevelMin, nLevelMax - 1 - n)
 
   end function min_tree_level
+
+  !==========================================================================
+ 
+  subroutine set_tree_periodic(IsOn)
+
+    logical, intent(in):: IsOn
+
+    ! Switch on or off the periodic connectivity as needed
+
+    integer:: iSign, iBlock, iNode, iLevel, iCoord, MaxIndex_D(MaxDim)
+    !-----------------------------------------------------------------------
+    ! The only reason to do this if there is at least one
+    ! periodic direction that is NOT a true periodic coordinate.
+    if(.not.any(IsPeriodic_D(1:nDim) .and. .not. IsPeriodicCoord_D(1:nDim)))&
+         RETURN
+
+    if(IsOn)then
+       ! Subtract Unset_ value from DiLevelNei
+       iSign = -1
+    else
+       ! Add Unset_ value to DiLevelNei
+       iSign = +1
+    end if
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       iNode  = iNode_B(iBlock)
+       iLevel = iTree_IA(Level_, iNode)
+
+       ! Largest possible value for the node coordinate
+       ! See get_tree_position for an explanation
+       MaxIndex_D = ((MaxCoord_I(iLevel)-1)*(iRatio_D-1) + 1)*nRoot_D
+
+       if(IsPeriodic_D(1) .and. .not.IsPeriodicCoord_D(1))then
+          iCoord = iTree_IA(Coord1_, iNode)
+          if(iCoord == 1) &
+               DiLevelNei_IIIB(-1,:,:,iBlock) = &
+               DiLevelNei_IIIB(-1,:,:,iBlock) + iSign*Unset_
+          if(iCoord == MaxIndex_D(1)) &
+               DiLevelNei_IIIB(+1,:,:,iBlock) = &
+               DiLevelNei_IIIB(+1,:,:,iBlock) + iSign*Unset_
+       end if
+
+       if(nDim == 1) CYCLE
+
+       if(IsPeriodic_D(2) .and. .not.IsPeriodicCoord_D(2))then
+          iCoord = iTree_IA(Coord2_, iNode)
+          if(iCoord == 1) &
+               DiLevelNei_IIIB(:,-1,:,iBlock) = &
+               DiLevelNei_IIIB(:,-1,:,iBlock) + iSign*Unset_
+          if(iCoord == MaxIndex_D(2)) &
+               DiLevelNei_IIIB(:,+1,:,iBlock) = &
+               DiLevelNei_IIIB(:,+1,:,iBlock) + iSign*Unset_
+       end if
+
+       if(nDim == 2) CYCLE
+
+       if(IsPeriodic_D(3) .and. .not.IsPeriodicCoord_D(3))then
+          iCoord = iTree_IA(Coord3_, iNode)
+          if(iCoord == 1) &
+               DiLevelNei_IIIB(:,:,-1,iBlock) = &
+               DiLevelNei_IIIB(:,:,-1,iBlock) + iSign*Unset_
+          if(iCoord == MaxIndex_D(3)) &
+               DiLevelNei_IIIB(:,:,+1,iBlock) = &
+               DiLevelNei_IIIB(:,:,+1,iBlock) + iSign*Unset_
+       end if
+    end do
+
+  end subroutine set_tree_periodic
 
   !==========================================================================
 
