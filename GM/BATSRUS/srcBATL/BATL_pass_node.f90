@@ -25,13 +25,18 @@ module BATL_pass_node
 
 contains
 
-  subroutine message_pass_node(nVar, State_VNB, NameOperatorIn)
+  subroutine message_pass_node(nVar, State_VNB, NameOperatorIn, &
+       UsePeriodicCoordIn)
 
     ! State_VNB contains node centered data. The same node may occur in
-    ! up to 8 different blocks. Depending on 
-    ! NameOperatorIn = 'mean', 'min', 'max'    (default is 'mean')
-    ! we either take the average, the minimum, or the maximum of 
+    ! up to 8 different blocks. 
+    !
+    ! NameOperatorIn = 'mean', 'min', 'max' (default is 'mean')
+    ! controls if we take the average, the minimum, or the maximum of 
     ! the co-located values and put it back into State_VNB. 
+    !
+    ! UsePeriodicCoordIn tells that nodes next to truly periodic boundaries
+    ! should be combined.
 
     use BATL_size, ONLY: MaxBlock, &
          nBlock, nIJK_D, &
@@ -42,7 +47,8 @@ contains
 
     use BATL_tree, ONLY: &
          iNodeNei_IIIB, DiLevelNei_IIIB, Unused_B, Unused_BP, iNode_B, &
-         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_
+         iTree_IA, Proc_, Block_, Coord1_, Coord2_, Coord3_, &
+         set_tree_periodic
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
 
@@ -56,13 +62,15 @@ contains
          State_VNB(nVar,1:nI+1,1:nJ+1,1:nK+1,MaxBlock)
 
     ! Optional arguments
-    character(len=*), optional,intent(in) :: NameOperatorIn 
+    character(len=*), optional, intent(in) :: NameOperatorIn 
+    logical,          optional, intent(in) :: UsePeriodicCoordIn
 
     ! Local variables
 
     logical, parameter :: UseRSend = .false.
 
     character(len=4) :: NameOperator
+    logical          :: UsePeriodicCoord
 
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
@@ -134,6 +142,12 @@ contains
        allocate(nCount_NB(nI+1,nJ+1,nK+1,nBlock))
        nCount_NB(:,:,:,:) = 1
     end if
+
+    UsePeriodicCoord = .false.
+    if(present(UsePeriodicCoordIn)) UsePeriodicCoord = UsePeriodicCoordIn
+
+    ! If required switch off periodicity before passing the nodes
+    if(UsePeriodicCoord) call set_tree_periodic(.false.)
 
     ! Set index ranges based on arguments
     call set_range
@@ -296,6 +310,9 @@ contains
     !call timing_stop('buffer_pass_node')
 
     if(UseMean) deallocate(nCount_NB)
+
+    ! If required switch back periodicity after passing the nodes
+    if(UsePeriodicCoord) call set_tree_periodic(.true.)
 
     call timing_stop('pass_node')
 
