@@ -1,13 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-subroutine write_plot_tec(ifile,nPlotVar,PlotVarBlk,PlotVarNodes_VNB,PlotXYZNodes_DNB,&
-     unitstr_TEC,xmin,xmax,ymin,ymax,zmin,zmax)
-  !
+subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
+     PlotXYZNodes_DNB, unitstr_TEC, xmin, xmax, ymin, ymax, zmin, zmax)
+
   !NOTE: This routine assumes that the blocks are sorted on PEs by their global
   !       block number, ie blocks 1 to n on PE 0, blocks n+1 to n+m on PE 1,
   !       etc.
-  !
+
   use ModProcMH
   use ModMain, ONLY : nI,nJ,nK, nBlock, &
        nBlockALL, time_accurate,n_step,&
@@ -910,7 +910,7 @@ subroutine assign_node_numbers
   allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBLK))
   IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,:))
   call message_pass_node(1,IndexNode_VNB, &
-       NameOperatorIn='Min', UsePeriodicCoordIn = .false.)
+       NameOperatorIn='Min', UsePeriodicCoordIn = .true.)
   NodeNumberGlobal_NB(:,:,:,:) = nint(IndexNode_VNB(1,:,:,:,:))
   deallocate(IndexNode_VNB)
 
