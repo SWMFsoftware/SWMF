@@ -155,11 +155,17 @@ F			UseFileCoupling
  1.0                    uUnitPicSi
 
 #PICREGION
-1                       nPicRegion
--26.458333333           xMinCut
- 26.458333333         	xMaxCut
--19.791666667           yMinCut
- 19.791666667	     	yMaxCut
+2                       nPicRegion
+-25.1        	        xMinCut
+-5.0            	xMaxCut
+-20.0                   yMinCut
+ 20.0   	     	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+ 5.0        	        xMinCut
+ 25.0            	xMaxCut
+-20.0                   yMinCut
+ 20.0   	     	yMaxCut
 1.25/3			DxPic
 1.25/3			DyPic
 
@@ -223,38 +229,16 @@ g rbody			NamePars
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
-#CASE
-BATSRUS					Case
-./data/Initial-Fields_000000.h5		FieldsInit
-Maxwell					PartInit
-default					WriteMethod 
-no					PoissonCorrection
-Wave					SimulationName
-1					verbose
-hallmhd					fluidcoupling (only with BATSRUS)
-
-#RESTART
-F					doRrestart
-PC/restartOUT				RestartDirName
-
-#NSYNC
-1					nStep between sync
-
-#PARAMS
-1.0					th = decentering parameter
-1.0					c  = light speed 
-0.5					Smooth
-0					nSmooth
-3.0					NpMaxNpRatio (Maximum number of particles allocated)
-0.5					delta
-
 #ELECTRON
 -25.0                                  Charge/mass ratio (qom)
 
 #PARTICLES
-10					Particles per cell in X
-10					Particles per cell in Y
-1					Particles per cell in Z
+10					Particles per cell in X Region 1
+10					Particles per cell in Y Region 1
+1					Particles per cell in Z Region 1
+20					Particles per cell in X Region 2
+20					Particles per cell in Y Region 2
+1					Particles per cell in Z Region 2
 
 #SOLVER
 1.0e-8				CGtol : CG solver stopping criterium tolerance
@@ -269,52 +253,6 @@ PC/plots				SaveDirName
 1					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
 0					SatelliteOutputCycle
-
-
-%%%%%%%%%%%% boundary conditions %%%%%%%%%%%%%%%
-
-    Caveat: if your processor topology is set to be periodic in a direction,
-    automatically the boundary condition in that direction will be periodic
-
-
-    PHI Electrostatic Potential
-    0,1 = Dirichilet boundary condition ;
-    2   = Neumann boundary condition
-
-    EM field boundary condition
-    0 = perfect conductor
-    1 = magnetic mirror
-
-    Particles Boundary condition
-    0 = exit
-    1 = perfect mirror
-    2 = riemission
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-#BC
-1					bcPHIfaceXright
-1					bcPHIfaceXleft
-1					bcPHIfaceYright
-1					bcPHIfaceYleft
-1					bcPHIfaceZright
-1					bcPHIfaceZleft 
-2					bcEMfaceXright
-2					bcEMfaceXleft
-2					bcEMfaceYright
-2					bcEMfaceYleft
-2					bcEMfaceZright
-2					bcEMfaceZleft
-2					bcPfaceXright
-2					bcPfaceXlef
-2					bcPfaceYright
-2					bcPfaceYleft
-2					bcPfaceZright
-2					bcPfaceZleft
-0					nOverlap  (Only with BATSRUS)
-0					nOverlapP (Only with BATSRUS)
-10					nCharge   (Only with BATSRUS)
--1					nIsotropic  (Only with BATSRUS)
 
 #END_COMP PC -----------------------------------------------------------------
 
