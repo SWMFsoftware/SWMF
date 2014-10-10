@@ -41,7 +41,7 @@ module ModBlockData
   integer, public:: MaxBlockData = 0
 
   ! These arrays can be initialized
-  integer :: nData_B(MaxBlock) = -1        ! Number of data elements
+  integer, public :: nData_B(MaxBlock) = -1        ! Number of data elements
   integer :: iData_B(MaxBlock) = -1        ! Current position for put/get
   logical :: UseData_B(MaxBlock) = .false. ! Is the data usable?
 
@@ -51,7 +51,7 @@ module ModBlockData
   end type BlockDataType
 
   ! Array of allocatable storage
-  type(BlockDataType) :: Data_B(MaxBlock) 
+  type(BlockDataType),public :: Data_B(MaxBlock) 
 
   character(len=*), parameter :: NameMod = 'ModBlockData'
 
