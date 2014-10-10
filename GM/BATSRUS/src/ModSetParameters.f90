@@ -1498,6 +1498,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
         call read_restart_parameters(NameCommand)
 
+     case('#DOWRITEBLOCKDATA')
+        call read_restart_parameters(NameCommand)
+
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)
         call fix_dir_name(NamePlotDir)
