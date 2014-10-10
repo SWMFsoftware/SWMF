@@ -26,6 +26,8 @@ module ModRestartFile
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
        IsCartesian, IsCartesianGrid, IsGenRadius
+  use ModBlockData, ONLY : Data_B, nData_B, MaxBlockData, &
+       use_block_data, clean_block_data, put_block_data, set_block_data
 
   implicit none
 
@@ -71,6 +73,9 @@ module ModRestartFile
   integer, allocatable:: iFileMorton_I(:), iRecMorton_I(:)
 
   character(len=100) :: NameFile
+
+  ! Logical variable for saving block data in the restart
+  logical :: DoWriteBlockData = .false.
 
   ! Temporaray variables to read arbitrary precision data files
   real (Real8_) :: Dt8, Time8, Dxyz8_D(3), Xyz8_D(3)
@@ -149,6 +154,9 @@ contains
        UseRestartOutSeries = i > 0
        if(i > 0) TypeRestartOutFile = TypeRestartOutFile(1:i-1)
 
+    case("#DOWRITEBLOCKDATA")
+       call read_var('DoWriteBlockData', DoWriteBlockData)
+
     case default
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
@@ -196,6 +204,13 @@ contains
     if(iProc==0)call save_advected_points
     if(DoWriteIndices .and. iProc==0)call write_geoind_restart
 
+    if(DoWriteBlockData .and. n_step > 0) then
+       do iBlock=1,nBlock
+          if (.not.Unused_B(iBlock)) &
+               call write_block_restart_file(iBlock)
+       end do
+    end if
+
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
@@ -242,6 +257,13 @@ contains
 
     ! Try reading geoIndices restart file if needed
     if(DoWriteIndices .and. iProc==0)call read_geoind_restart
+
+    if(DoWriteBlockData) then
+       do iBlock = 1, nBlock
+          if (.not.Unused_B(iBlock)) &
+               call read_block_restart_file(iBlock)
+       end do
+    end if
 
     call timing_stop(NameSub)
 
@@ -1039,5 +1061,124 @@ contains
     Is2ndCalc  =.false.
 
   end subroutine read_geoind_restart
+
+ !============================================================================
+  subroutine write_block_restart_file(iBlock)
+
+    integer, intent(in) :: iBlock
+
+    integer   :: iBlockRestart
+    character :: StringDigit
+    character (len=100) :: NameBlockFile
+    character (len=*), parameter :: NameStart = "DataBlk"
+
+    character (len=*), parameter :: NameSub='write_block_restart_file'
+    logical :: DoTest, DoTestMe
+    !--------------------------------------------------------------------
+    if(iProc==PROCtest.and.iBlock==BLKtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+
+    write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
+
+    write(NameBlockFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
+         trim(NameRestartOutDir)//NameStart,iBlockRestart,StringRestartExt
+
+    if (UseRestartOutSeries) &
+         call string_append_iter(NameBlockFile,iteration_number)
+
+    open(unit_tmp, file=NameBlockFile, status="replace", form='UNFORMATTED')
+
+    write(Unit_tmp) nData_B(iBlock)
+    write(Unit_tmp) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
+
+    close(unit_tmp)
+
+    if(DoTestMe)then
+       write(*,*)NameSub,': iProc, iBlock  =',iProc, iBlock
+       write(*,*)NameSub,': use_block_data =',use_block_data(iBlock)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(iBlock)
+       write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
+            Data_B(iBlock)%Array_I(1:5)
+       write(*,*)NameSub,' finished'
+    end if
+
+  end subroutine write_block_restart_file
+
+  !============================================================================
+  subroutine read_block_restart_file(iBlock)
+
+    integer, intent(in) :: iBlock
+
+    integer :: nData
+    real, allocatable    :: DataTmp(:)
+
+    integer   :: iError, iBlockRestart
+    character :: StringDigit
+    character (len=100) :: NameBlockFile
+    character (len=*), parameter :: NameStart = "DataBlk"
+
+    character (len=*), parameter :: NameSub='read_block_restart_file'
+    logical :: DoTest, DoTestMe
+
+    !--------------------------------------------------------------------
+    if(iProc==PROCtest.and.iBlock==BLKtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+    
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+
+    write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
+
+    write(NameBlockFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
+         trim(NameRestartInDir)//NameStart,iBlockRestart,StringRestartExt
+
+    if (UseRestartInSeries) &
+         call string_append_iter(NameBlockFile,iteration_number)
+
+    open(unit_tmp, file=NameBlockFile, status='old', form='UNFORMATTED',&
+         iostat = iError)
+
+    if(iError /= 0) call stop_mpi(NameSub// &
+         ' read_restart_file could not open: '//trim(NameBlockFile))
+
+    read(unit_tmp, iostat = iError) nData
+
+    if(iError /= 0) call stop_mpi(NameSub// &
+         ' could not read data from '//trim(NameBlockFile))
+
+    allocate(DataTmp(1:nData))
+
+    read(unit_tmp, iostat = iError) DataTmp
+
+    if(iError /= 0) call stop_mpi(NameSub// &
+         ' could not read data from '//trim(NameBlockFile))
+
+    if(use_block_data(iBlock)) call clean_block_data(iBlock)
+
+    call put_block_data(iBlock, nData, DataTmp(1:nData))
+
+    call set_block_data(iBlock)
+
+    deallocate(DataTmp)
+
+    close(unit_tmp)
+
+    if(DoTestMe)then
+       write(*,*)NameSub,': iProc, iBlock  =',iProc, iBlock
+       write(*,*)NameSub,': use_block_data =',use_block_data(iBlock)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(iBlock)
+       write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
+            Data_B(iBlock)%Array_I(1:5)
+       write(*,*)NameSub,' finished'
+    end if
+
+  end subroutine read_block_restart_file
 
 end module ModRestartFile
