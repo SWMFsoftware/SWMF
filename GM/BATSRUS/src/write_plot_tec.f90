@@ -910,7 +910,7 @@ subroutine assign_node_numbers
   allocate(IndexNode_VNB(1,nI+1,nJ+1,nK+1,nBLK))
   IndexNode_VNB(1,:,:,:,:) = real(NodeNumberGlobal_NB(:,:,:,:))
   call message_pass_node(1,IndexNode_VNB, &
-       NameOperatorIn='Min')
+       NameOperatorIn='Min', UsePeriodicCoordIn = .false.)
   NodeNumberGlobal_NB(:,:,:,:) = nint(IndexNode_VNB(1,:,:,:,:))
   deallocate(IndexNode_VNB)
 
