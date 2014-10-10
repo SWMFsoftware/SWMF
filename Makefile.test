@@ -1328,7 +1328,7 @@ test12_aniso_check:
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
 		${TESTDIR}/RESULTS/z_n4.ref \
 		> test12_gmpc_aniso.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-9 \
 		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out\
 		${TESTDIR}/RESULTS/z_n4.ref \
 		>> test12_gmpc_aniso.diff)
