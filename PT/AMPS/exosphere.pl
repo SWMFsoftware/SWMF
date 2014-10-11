@@ -451,7 +451,7 @@ while ($line=<InputFile>) {
     ($s0,$InputComment)=split(' ',$InputComment,2);
     $s0=~s/ //g;
     
-    next if ($s0 ne "ON");
+    next if (($s0 ne "ON") && ($InputLine ne "DEFINESOURCEID"));
     
     
     if ($InputLine eq "PHOTONSTIMULATEDDESORPTION") {
@@ -635,6 +635,11 @@ while ($line=<InputFile>) {
         $SourceProcessID++;
       }
     }
+    elsif ($InputLine eq "DEFINESOURCEID") {      
+      print EXOSPHERE_USER_DEFINITIONS "#define _EXOSPEHRE_SOURCE__ID__USER_DEFINED__".$s0."_  $SourceProcessID\n";
+      $SourceProcessID++;
+    }
+    
     elsif ($InputLine eq "USERDEFINED") {
       my $Code;
       my $SourceRate;
@@ -748,6 +753,10 @@ while ($line=<InputFile>) {
         push(@SourceProcessesSymbolicID,"\"$Code\"");
         $SourceProcessID++;
       }
+    }
+    else {
+      print "The option is unknown: (line=$InputFileLineNumber, file=$FileName)\n\"$LineOriginal\"\n";
+      die;
     }
     
     
