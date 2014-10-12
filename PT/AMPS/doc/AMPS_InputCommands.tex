@@ -360,6 +360,10 @@ Example of a function \\ {\tt AccommodationCoefficient=function $\backslash\back
 
 \item {\bf Source:ExternalDomainBoundaryInjection}=[on,off] \\ Initialize the injection processes ID for particle injection through the external boundary of the domain
 
+\item{\bf Source:DefineSourceID}={\it user-defined-source-id} \\ can be use to register in AMPS' core a user-defined ID for a source process. The id is saved as a macro \_EXOSPEHRE\_SOURCE\_\_ID\_\_USER\_DEFINED\_\_{\it user-defined-source-id}{\tt \_} in the file Exosphere.dfn. The ID can be use to distinguish particles that are produced via different source processes for the sampling purposes.
+
+
+
 \item {\bf Source:UserDefined}=[on,off], SourceProcessCode={\it code}, SourceRate={\it function-name}, \\ GenerateParticleProperties={\it function-name}, ModifySurfaceSpeciesAbundance=[true,false], \\ InitSurfaceSourceDistribution={\it function-name} 
 
 The structure describe the user defined particle injection boundary conditions. Example: \\ {\tt Source:UserDefined=on $\backslash\backslash$ \\ SourceProcessCode=Jet $\backslash\backslash$ \\ SourceRate=Comet::GetTotalProductionRateJet $\backslash\backslash$ \\ GenerateParticleProperties=Comet::GenerateParticlePropertiesBjorn $\backslash\backslash$ \\ ModifySurfaceSpeciesAbundance=false  $\backslash\backslash$ \\ InitSurfaceSourceDistribution=HeliumDesorption::SurfaceInjectionDistribution.Init}
