@@ -2311,12 +2311,31 @@ ProcessPhotoChemistry:
       PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
-      dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
-
       if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_) {
         PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
       }
+      else if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_) {
+        spec=PIC::ParticleBuffer::GetI(ParticleData);
+        dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
+
+        //check the probability for the new-species particle tostay in the system
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+        double Correction,Rate;
+
+        Rate=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*newNode->block->GetLocalParticleWeight(specInit)/newNode->block->GetLocalTimeStep(specInit);
+        Correction=Rate*newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalParticleWeight(spec);
+
+        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(Correction,ParticleData);
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+        exit(__LINE__,__FILE__,"Accounting for the possible difference in the time steps and weights have not been inplemented when the individual particle weight corraction factor is off");
+
+#else
+     exit(__LINE__,__FILE__,"The option is unknown");
+#endif
+
+      }
+      else (__LINE__,__FILE__,"Error: the option is unknown");
     }
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
