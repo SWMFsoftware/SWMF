@@ -73,6 +73,13 @@ double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_
 void Europa::Init_BeforeParser() {
   Exosphere::Init_BeforeParser();
 
+  //check the state of the Sputtering source
+  if (_EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_) {
+    if (_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_) {
+      exit(__LINE__,__FILE__,"Error: _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ must be _EXOSPHERE_SOURCE__ON_ when _EUROPA__SPUTTERING_ION_SOURCE_==_EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_");
+    }
+  }
+
   //Get the initial parameters of Europa orbit
   SpiceDouble state[6];
   int idim;
@@ -392,6 +399,7 @@ double Europa::SourceProcesses::totalProductionRate(int spec,void *SphereDataPoi
    PIC::ParticleBuffer::SetI(_O2_SPEC_,(PIC::ParticleBuffer::byte*)tempParticleData);
 
    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+   Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,tempParticleData);
 
    //save the information od the particle origin: the particle origin will be sampled in GALL_EPHIOD coordinate frame
    long int nZenithElement,nAzimuthalElement;
@@ -528,6 +536,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   switch (spec) {
   case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_: case _O2PLUS_SPEC_:
 
+#if _EUROPA__SPUTTERING_ION_SOURCE__ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
     switch (spec) {
     case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_:
       Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
@@ -620,6 +629,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       PIC::ParticleBuffer::SetV(v_LOCAL_GALL_EPHIOD_EUROPA,newParticle);
       PIC::ParticleBuffer::SetI(_O2_SPEC_,newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,newParticle);
+      Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticle);
 
       //sample the particle injection rate
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
@@ -635,6 +645,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
      _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_]*rnd(),(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter);
 
     }
+#endif
 
 //    PIC::ParticleBuffer::DeleteParticle(ptr);
     ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
@@ -642,6 +653,9 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     break;
 
   case _O2_SPEC_:
+
+    return _PARTICLE_DELETED_ON_THE_FACE_;
+
     //redistribute the particle velocity and reject it back into the domain
     //get the external normal
     e0[0]=-x_LOCAL_IAU_EUROPA[0],e0[1]=-x_LOCAL_IAU_EUROPA[1],e0[2]=-x_LOCAL_IAU_EUROPA[2];
@@ -1041,9 +1055,9 @@ long int Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection(cTreeNo
 
 //the default sticking probability function
 double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& ReemissionParticleFraction,double Temp) {
-  ReemissionParticleFraction=1.0;
+  ReemissionParticleFraction=0.0;
 
-  return 0.0;
+  return 1.0;
 }
 
 //calcualte the true anomaly angle
