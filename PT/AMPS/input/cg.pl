@@ -162,6 +162,16 @@ while ($line=<InputFile>) {
       $InputLine=~s/ //g;
       ampsConfigLib::ChangeValueOfVariable("static int ndist","$InputLine","main/Comet.h");
   }
+  elsif ($InputLine eq "BJORNPRODUCTIONRATEUSERDEFINED") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_","_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ON_ ","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_","_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_OFF_ ","main/Comet.dfn");
+      }
+  }
   elsif ($InputLine eq "BJORNPRODUCTIONRATE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
