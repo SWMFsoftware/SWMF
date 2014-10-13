@@ -1324,7 +1324,7 @@ test12_aniso_run:
 test12_aniso_check:
 	gunzip -c output/test12/z=0_var.out.ref.aniso.gz \
 	        > ${TESTDIR}/RESULTS/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-10 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2.0e-10 \
 		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
 		${TESTDIR}/RESULTS/z_n4.ref \
 		> test12_gmpc_aniso.diff)
