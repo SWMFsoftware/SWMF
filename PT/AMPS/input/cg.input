@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O 
+SpeciesList=H2O
 ErrorLog=error.log
 Prefix=AMPS
 DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
@@ -44,7 +44,7 @@ ForceRepeatableSimulationPath=off ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
@@ -112,23 +112,24 @@ CouplerMode=ices !!off, ices, swmf
 #block ../cg.pl !process settings of the moon module
   Gravity3D=off !on,off
 
-  HeliocentricDistance=3.5*_AU_
-  subSolarPointAzimuth=0.328055227797 !! in rad 18.7961
-  subSolarPointZenith=0.810177475453 !! in rad 46.41975 degrees from zaxis
+  HeliocentricDistance=2.7*_AU_
+  subSolarPointAzimuth=0.0 !! in rad 18.7961
+  subSolarPointZenith=1.5708 !! in rad 46.41975 degrees from zaxis
 
   RadiativeCoolingMode=off !off, Crovisier	
 
   RadialVelocityMode=off !on,off
 
   !!Gas parameters
-  ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
+  ndist=2 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
   
   BjornProductionRateUserDefined=on !on,off
-  BjornProductionRate(H2O)=2.0e25 !!2.0e25	    
+  BjornProductionRate(H2O)=8.0e25 !!2.0e25	    
   UniformProductionRate(H2O)=0.0 !!2.0e25
   JetProductionRate(H2O)=0.0 !1.0e25	    
   
   !!Dust parameters
+  DustMode=on !!on,off
   DustTotalMassProductionRate=1.0
   PowerLawIndex=4.0	  
   dustRmin=1.0e-7
