@@ -243,7 +243,33 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 
 double Comet::GetTotalProduction(int spec,void *BoundaryElement) {
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__OFF_
   return Comet::GetTotalProductionRateBjornNASTRAN(spec)+Comet::GetTotalProductionRateUniformNASTRAN(spec)+Comet::GetTotalProductionRateJetNASTRAN(spec);
+#else
+  if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+   static bool InitFlag=false;
+   static double MeanDustGrainMass=0.0;
+
+   if (InitFlag==false) {
+     InitFlag=true;
+
+     //get mean mass of a dust grain
+     const int nTotalTest=10000;
+     double r,c,cTotal=0.0,m=0.0;
+
+
+     for (int ntest=0;ntest<nTotalTest;ntest++) {
+       ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(r,c);
+       m+=pow(r,3.0)*c;
+       cTotal+=c;
+     }
+
+     MeanDustGrainMass=m*4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity/cTotal;
+   }
+   return ElectricallyChargedDust::TotalMassDustProductionRate/MeanDustGrainMass;
+  }
+  else return Comet::GetTotalProductionRateBjornNASTRAN(spec)+Comet::GetTotalProductionRateUniformNASTRAN(spec)+Comet::GetTotalProductionRateJetNASTRAN(spec);   
+#endif
 }
 
 double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement) {
