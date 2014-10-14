@@ -687,7 +687,7 @@ contains
          end do; end do
 
       case(3, 4)
-         if(iSide == 1)then
+         if(iSide == 3)then
             j1P = 1; j2P = 2; j1G = 0; j2G = jMin; Dj = -1
          else
             j1P = nJ; j2P = nJ-1; j1G = nJ+1; j2G = jMax; Dj = +1
@@ -715,7 +715,7 @@ contains
          end do; end do
 
       case(5, 6)
-         if(iSide == 1)then
+         if(iSide == 5)then
             k1P = 1; k2P = 2; k1G = 0; k2G = kMin; Dk = -1
          else
             k1P = nK; k2P = nK-1; k1G = nK+1; k2G = kMax; Dk = +1
