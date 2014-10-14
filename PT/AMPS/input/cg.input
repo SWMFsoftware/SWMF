@@ -129,7 +129,7 @@ CouplerMode=ices !!off, ices, swmf
   JetProductionRate(H2O)=0.0 !1.0e25	    
   
   !!Dust parameters
-  DustMode=on !!on,off
+  DustMode=off !!on,off
   DustTotalMassProductionRate=1.0
   PowerLawIndex=4.0	  
   dustRmin=1.0e-7
