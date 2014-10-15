@@ -963,10 +963,12 @@ subroutine find_test_cell
   ! or print out cell coordinates corresponding to Itest, Jtest, Ktest, ...
 
   use ModProcMH
-  use ModMain
+  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, &
+       xTest, yTest, zTest, XyzTestCell_D, lVerbose, Coord_Test, UseTestCell
   use ModParallel, ONLY: NOBLK, neiLEV, neiPE, neiBLK
-  use ModGeometry, ONLY: r_BLK
-  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellFace_DFB, CellVolume_GB, &
+  use ModGeometry, ONLY: r_BLK, true_cell
+  use BATL_lib, ONLY: nBlock, Unused_B, &
+       Xyz_DGB, CellSize_DB, CellFace_DFB, CellVolume_GB, &
        IsCartesian, MaxDim, find_grid_block
   use ModMpi
 
@@ -1033,7 +1035,7 @@ subroutine find_test_cell
 
      if(iProc == ProcTest .and. UseTestCell .and. lVerbose>0)then
         write(*,*)
-        write(*,*)'Selected test cell:'
+        write(*,*)'Selected test cell, true_cell=', true_cell(iTest,jTest,kTest,BlkTest)
         write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
              'I=',Itest,' J=',Jtest,' K=',Ktest,&
              ' BLK=',BLKtest,' PE=',PROCtest
