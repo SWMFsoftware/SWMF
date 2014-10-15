@@ -1,12 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 subroutine update_states_MHD(iStage,iBlock)
+
   use ModProcMH
   use ModMain
   use ModAdvance
   use ModPhysics
-  use ModNumConst
+  use ModGeometry, ONLY: true_cell
   use ModKind, ONLY: Real8_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
@@ -419,6 +420,7 @@ contains
           B0_DC=0.00
        end if
        do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
           B0x= B0_DC(x_,i,j,k)
           B0y= B0_DC(y_,i,j,k)
           B0z= B0_DC(z_,i,j,k)
@@ -540,6 +542,7 @@ contains
        end if
 
        do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           ! State_VGB now contains an MHD update: RhoU_new = RhoU_old + DeltaRhoU
 
@@ -805,6 +808,7 @@ subroutine fix_multi_ion_update(iBlock)
   use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
   use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
        iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
+  use ModGeometry,   ONLY: true_cell
   use ModProcMH,     ONLY: iProc
 
   integer, intent(in) :: iBlock
@@ -836,6 +840,7 @@ subroutine fix_multi_ion_update(iBlock)
 
   if(UseSingleIonVelocity) then
      do k=1, nK; do j=1, nJ; do i=1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
         ! Calcualate average velocity from total momentum and density
         RhoInv= 1/sum(State_VGB(iRho_I(IonFirst_:IonLast_),i,j,k,iBlock))
@@ -856,6 +861,7 @@ subroutine fix_multi_ion_update(iBlock)
 
   if(UseSingleIonTemperature) then
      do k=1, nK; do j=1, nJ; do i=1, nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
         ! Number density
         NumDens_I = &
