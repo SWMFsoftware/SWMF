@@ -15,6 +15,8 @@ module ModMultiIon
   use ModMain, ONLY: UseUserSource, &
        iTest, jTest, kTest, VarTest, BlkTest, ProcTest
   use ModSize, ONLY: nI, nJ, nK
+  use ModGeometry, ONLY: true_cell
+  
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
 
   implicit none
@@ -142,6 +144,7 @@ contains
     end if
     
     do k=1,nK; do j=1,nJ; do i=1,nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
        ! Check if we are in the solar wind
        Rho   = State_VGB(Rho_,i,j,k,iBlock)
        p     = State_VGB(p_,i,j,k,iBlock)
@@ -225,6 +228,7 @@ contains
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTestMe .and. iTest==i .and. jTest==j .and. kTest==k 
        
@@ -447,6 +451,7 @@ contains
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
@@ -789,6 +794,7 @@ contains
     InvTeRatio1 = 1 / TeRatio1
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
 
