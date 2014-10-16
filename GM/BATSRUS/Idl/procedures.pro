@@ -79,24 +79,46 @@ function log_time,wlog,wlognames,timeunit
 
   if nwlog lt 0 then return, hours
 
+  itime = -1
   istep = -1
   iyear = -1
-  itime = -1
+  iday  = -1
   ihour = -1
+  imin  = -1
+  isec  = -1
   imsc  = -1
   for i = 0, nwlog-1 do begin
      varname = strlowcase(wlognames(i))
-     if varname eq 'step' or varname eq 'it' then istep=i
-     if varname eq 'year' or varname eq 'yr' then iyear=i
-     if varname eq 'time' or varname eq 't'  then itime=i
-     if varname eq 'hour' or varname eq 'hours' then ihour=i
-     if varname eq 'ms' or varname eq 'msec' then imsc = i
+     case varname of
+        'time': itime = i
+        't'   : if wlognames(i) eq 't' then itime=i
+        'step': istep = i
+        'it'  : istep = i
+        'year': iyear = i
+        'yr'  : iyear = i
+        'yy'  : iyear = i
+        'day' : iday  = i
+        'dy'  : iday  = i
+        'dd'  : iday  = i
+        'hour': ihour = i
+        'hr'  : ihour = i
+        'hh'  : ihour = i
+        'min' : imin  = i
+        'mn'  : imin  = i
+        'mm'  : imin  = i
+        'sec' : isec  = i
+        'sc'  : isec  = i
+        'ss'  : isec  = i
+        'msec': imsc  = i
+        'msc' : imsc  = i
+        else:
+     endcase
   endfor
 
   if itime gt -1 then begin
      hours = wlog(*,itime)/3600.0
   endif else begin
-     if iyear eq -1 then begin
+     if iyear eq -1 or iday eq -1 then begin
         if ihour gt -1 then begin
            hours = wlog(*,ihour)
            for i=1L, n_elements(hours)-1 do $
@@ -104,11 +126,7 @@ function log_time,wlog,wlognames,timeunit
                  hours(i) = hours(i) + 24.0
         endif
      endif else begin
-        iday  = iyear+2
-        ihour = iday+1
-        imin  = iday+2
-        isec  = iday+3
-
+        ; calculate time from year, day, hour, minute, second, millisec
         nday = 0
         daylast  = wlog(0,iday)
         for i = 0L, n_elements(hours) - 1 do begin
@@ -120,10 +138,11 @@ function log_time,wlog,wlognames,timeunit
               daylast = wlog(i,iday)
               nday = nday + dday
            endif
-           hours[i] = nday*24.0 + $
-                      wlog(i,ihour) + wlog(i,imin)/60.0 + wlog(i,isec)/3600.0
-
-           if imsc eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
+           hours[i] = nday*24.0
+           if ihour eq iday + 1 then hours[i] = hours[i] + wlog(i,ihour)
+           if imin  eq iday + 2 then hours[i] = hours[i] + wlog(i,imin)/60.0
+           if isec  eq iday + 3 then hours[i] = hours[i] + wlog(i,isec)/3600.0
+           if imsc  eq iday + 4 then hours[i] = hours[i] + wlog(i,imsc)/3.6e6
         endfor
      endelse
   endelse
