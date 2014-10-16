@@ -26,7 +26,7 @@ module ModRestartFile
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
        IsCartesian, IsCartesianGrid, IsGenRadius
-  use ModBlockData, ONLY : Data_B, nData_B, MaxBlockData, &
+  use ModBlockData, ONLY : Data_B, nData_B, &
        use_block_data, clean_block_data, put_block_data, set_block_data
 
   implicit none
@@ -167,10 +167,15 @@ contains
 
   subroutine write_restart_files
 
+    use ModGeometry, ONLY: true_cell
+
     integer :: iBlock
+    logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='write_restart_files'
     !------------------------------------------------------------------------
     call timing_start(NameSub)
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -219,6 +224,17 @@ contains
 
     call timing_stop(NameSub)
 
+    if(DoTestMe .and. iProc==PROCtest)then
+       write(*,*)NameSub,': iProc, BLKtest =',iProc, BLKtest
+       write(*,*)NameSub,': dt, TrueCell   =',dt_BLK(BLKtest), &
+            true_cell(Itest,Jtest,Ktest,BLKtest)
+       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,BLKtest)
+       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,BLKtest)
+       write(*,*)NameSub,': State_VGB      =', &
+            State_VGB(:,Itest,Jtest,Ktest,BLKtest)
+       write(*,*)NameSub,' finished'
+    end if
+
   end subroutine write_restart_files
 
   !===========================================================================
@@ -226,9 +242,13 @@ contains
   subroutine read_restart_files
 
     integer :: iBlock
+    logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='read_restart_files'
     !------------------------------------------------------------------------
     call timing_start(NameSub)
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     select case(TypeRestartInFile)
     case('block')
        do iBlock = 1, nBlock
@@ -267,6 +287,16 @@ contains
 
     call timing_stop(NameSub)
 
+    if(DoTestMe .and. iProc==PROCtest)then
+       write(*,*)NameSub,': iProc, BLKtest =',iProc, BLKtest
+       write(*,*)NameSub,': dt             =',dt_BLK(BLKtest)
+       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,BLKtest)
+       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,BLKtest)
+       write(*,*)NameSub,': State_VGB      =', &
+            State_VGB(:,Itest,Jtest,Ktest,BLKtest)
+       write(*,*)NameSub,' finished'
+    end if
+
   end subroutine read_restart_files
 
   !===========================================================================
@@ -277,7 +307,7 @@ contains
          nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
     use ModMain,       ONLY: UseBody2
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
-    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzMin_D, XyzMax_D, &
+    use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
          RadiusMin, RadiusMax, TypeGeometry
     use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
