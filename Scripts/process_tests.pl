@@ -1,6 +1,4 @@
 #!/usr/bin/perl
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-#  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
 
 my %WeightMachine = (
@@ -17,14 +15,20 @@ my %WeightMachine = (
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
 my %WeightTest = (
 
-    "CCHM:test2_sc"                       => "1.0",
-    "CCHM:test2_ih"                       => "1.0",
+    "CCHM:test2_gm"                       => "1.0",
+    "CCHM:test2_sc"                       => "0.5",
+    "CCHM:test2_ih"                       => "0.5",
     "CCHM:test5_ee"                       => "1.0",
     "CCHM:test7_ih"                       => "1.0",
     "CCHM:test7_oh"                       => "1.0",
-    "CCHM:GM/BATSRUS/test_corona"         => "1.0",
+    "CCHM:test9_ih"                       => "1.0",
+    "CCHM:test9_sc_chromo"                => "1.0",
+    "CCHM:test9th_ih"                     => "1.0",
+    "CCHM:test9th_sc_thread"              => "1.0",
+    "CCHM:test10_ih"                      => "1.0",
+    "CCHM:test10_sc"                      => "1.0",
+    "CCHM:GM/BATSRUS/test_corona"         => "1.0",    
     "CCHM:GM/BATSRUS/test_coronasph"      => "1.0",
-    "CCHM:GM/BATSRUS/test_corona_2t"      => "1.0",
     "CCHM:GM/BATSRUS/test_fluxemergence"  => "1.0",
     "CCHM:GM/BATSRUS/test_outerhelio"     => "1.0",
 
@@ -43,6 +47,9 @@ my %WeightTest = (
     "CWMM:test8_gm_multi"                 => "1.0",
     "CWMM:test8_ie"                       => "1.0",
     "CWMM:test8_im_rcm_multi"             => "1.0",
+    "CWMM:test_ccmc_small_gm"             => "1.0",
+    "CWMM:test_ccmc_small_ie"             => "1.0",
+    "CWMM:test_ccmc_small_rb"             => "1.0",
     "CWMM:test_pw"                        => "0.5",
     "CWMM:test_rb"                        => "0.5",
     "CWMM:GM/BATSRUS/test_earthsph"       => "0.1",
