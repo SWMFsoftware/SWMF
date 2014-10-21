@@ -412,7 +412,7 @@ namespace Moon {
 
 
 
-  inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
+  inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
     static const double LifeTime=3600.0*5.8/pow(0.4,2);
 
 
