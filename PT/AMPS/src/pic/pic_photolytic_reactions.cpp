@@ -31,7 +31,7 @@ void PIC::ChemicalReactions::PhotolyticReactions::Init() {
 }
 
 
-double PIC::ChemicalReactions::PhotolyticReactions::TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag) {
+double PIC::ChemicalReactions::PhotolyticReactions::TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   ReactionAllowedFlag=(ConstantTotalLifeTime[spec]>0.0) ? true : false;
   return ConstantTotalLifeTime[spec];
 }
@@ -51,12 +51,12 @@ void PIC::ChemicalReactions::PhotolyticReactions::SetSpeciesTotalPhotolyticLifeT
 }
 */
 
-int PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval) {
+int PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int code=_PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
   register double p,lifetime,c;
   bool flag;
 
-  lifetime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag);
+  lifetime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag,node);
   if (flag==false) return _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
 
 

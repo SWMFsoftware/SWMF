@@ -2323,7 +2323,7 @@ namespace PIC {
       #define _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_ 3
 
       //the default function that returns the constant life time value
-      double TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag);
+      double TotalLifeTime_default(double *x,int spec,long int ptr,bool &ReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
 
       //multiply the lifetime by the following constant (use it for example for adjectment to variation of a heliocentric distance)
@@ -2371,7 +2371,7 @@ namespace PIC {
       //the manager of the photolytic reaction module
       //if the reaction has occured-> spes returns the species number of the transformed particles, TimeInterval return the time when the reaction had occured
 
-       int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval);
+       int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 /*      inline int PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval) {
         int code=_PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
         register double p,lifetime,c;

@@ -50,7 +50,7 @@
 #define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_
 
 //the default procedure for calcualtion of the lifitime for the photolytic processes
-#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag) TotalLifeTime_default(x,spec,ptr,flag);
+#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag,node) TotalLifeTime_default(x,spec,ptr,flag,node);
 
 //the default procedure for processing the photolytic reactions
 #define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData) PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReactionProcessor_default(xInit,xFinal,ptr,spec,ParticleData);

@@ -143,7 +143,7 @@ while ($line=<InputFile>) {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         ($LifeTimeFunction,$line)=split(' ',$line,2);
         $LifeTimeFunction=~s/ //g;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_\n#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) $LifeTimeFunction(t0,t1,t2,t3);\n\n","pic/picGlobal.dfn");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_\n#define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) $LifeTimeFunction(t0,t1,t2,t3,t4);\n\n","pic/picGlobal.dfn");
       }
       else {
         die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
