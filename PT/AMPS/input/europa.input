@@ -113,6 +113,8 @@ ParticleWeightCorrectionMode=on
   
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
+
+  SputteringIonSource=SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
 #endblock
 
 #block ../exosphere.pl
@@ -132,12 +134,14 @@ ParticleWeightCorrectionMode=on
 
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Europa::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
-  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Europa::ExospherePhotoionizationLifeTime(t0,t1,t2,t3)
+  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Europa::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
 
   define _ICES_CREATE_COORDINATE_LIST_
+
+  define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
 
 
 ! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path  
@@ -159,6 +163,8 @@ ParticleWeightCorrectionMode=on
     Yield(O2)=1.0, InjectionVelocityRange(O2)=10,10.0E3
 
   Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
+
+ Source:DefineSourceID=PHOTO_IONIZATION  
 
 #endblock
 
