@@ -150,6 +150,23 @@ while ($line=<InputFile>) {
     }
   }
   
+  
+    elsif ($InputLine eq "SPUTTERINGIONSOURCE") { 
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    $InputLine=~s/ //g;
+     
+    if ($InputLine eq "SWMFPLASMAFLOW") {
+      ampsConfigLib::RedefineMacro("_EUROPA__SPUTTERING_ION_SOURCE_","_EUROPA__SPUTTERING_ION_SOURCE__SWMF_PLASMA_FLOW_","main/Europa.h");
+    } 
+    elsif ($InputLine eq "AMPSKINETICIONS") {
+      ampsConfigLib::RedefineMacro("_EUROPA__SPUTTERING_ION_SOURCE_","_EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_","main/Europa.h");
+    }
+    else {
+      die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
+  
+  
   elsif ($InputLine eq "UNIMOLECULARREACTION") { 
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
     $InputLine=~s/ //g;
