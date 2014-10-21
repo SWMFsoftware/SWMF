@@ -1473,7 +1473,15 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
   memcpy(accl,accl_LOCAL,3*sizeof(double));
 }
 
-inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
+inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+
+  long int nd;
+  int i,j,k;
+  double PlasmaBulkVelocity[3],ElectronDensity;
+
+  nd=PIC::Mesh::mesh.findCenterNodeIndex(x,i,j,k,node);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+  ElectronDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
 
   //only sodium can be ionized
   if (spec!=_O2_SPEC_) {
@@ -1530,7 +1538,7 @@ inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,dou
   if (spec!=_O2_SPEC_) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
 
-  ParentSpeciesLifeTime=ExospherePhotoionizationLifeTime(xFinal,spec,ptr,PhotolyticReactionAllowedFlag);
+  ParentSpeciesLifeTime=ExospherePhotoionizationLifeTime(xFinal,spec,ptr,PhotolyticReactionAllowedFlag,node);
 
   //determine if the parent particle sould be removed
   double c,p;
