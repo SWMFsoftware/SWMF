@@ -87,6 +87,12 @@ module ModUser
   ! Inner boundary condition for ions
   logical :: UseSwBC =.false.
 
+  ! Position for testing the user_set_face_boundary and the last step that
+  ! the face values were printed out
+  real    :: FaceCoordsX=0.0, FaceCoordsY=0.0, FaceCoordsZ=0.0
+  real    :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
+  integer :: nStepPritSetFace = -100
+
   ! Last step and time the inner boundary values were saved for each block
   integer :: nStepSave_B(MaxBlock) = -100
   real    :: TimeSimulationSave_B(MaxBlock) = -1e30
@@ -148,6 +154,10 @@ contains
           call read_var('AngleUpdateDeg', AngleUpdateDeg)
        case("#BODYBC")
           call read_var('UseSwBC', UseSwBC)
+       case("#TESTFACECOORDS")
+          call read_var('FaceCoordsX', FaceCoordsX)
+          call read_var('FaceCoordsY', FaceCoordsY)
+          call read_var('FaceCoordsZ', FaceCoordsZ)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -239,7 +249,8 @@ contains
        nStepSave_B          = n_step
        TimeSimulationSave_B = Time_Simulation
        nStepSaveCalcRates_B = n_step
-
+       nStepPritSetFace     = n_step
+       FaceCoordsTest_D     = (/FaceCoordsX, FaceCoordsY, FaceCoordsZ/)
     end if
 
     if(iProc==0)then
@@ -415,7 +426,7 @@ contains
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
 
-    logical :: DoTestHere=.false., IsIlluminated = .false.
+    logical :: DoTestHere=.true., IsIlluminated = .false.
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -429,7 +440,6 @@ contains
     real :: TempCometLocal, uNormal, ProductionRateLocal
     real :: LonSunNow
 
-    real, save :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
     integer :: iDim
     logical :: DoWriteOnce = .true.
 
@@ -438,6 +448,8 @@ contains
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
+
+    if (iProc /= 0) DoTestHere = .false.
 
     !! Outer boundaries
     if(iBoundary >0) then
@@ -522,7 +534,7 @@ contains
 
        call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
 
-       if ((n_step == 2 .or. n_step == 500 .or. n_step == 501) .and. &
+       if ((n_step <= nStepPritSetFace+2) .and. &
             sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
           write(*,*) '=============== n_step ', n_step, '===================='
           write(*,*) 'FaceCoords_D  =', FaceCoords_D
@@ -629,6 +641,7 @@ contains
        write(*,*) 'uNormal       =', uNormal
        write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
        DoTestHere=.false.
+       nStepPritSetFace = n_step
     end if
 
     IsIlluminated = .false.
