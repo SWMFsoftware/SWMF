@@ -17,7 +17,7 @@ inline void et2utc_c(SpiceDouble et, ConstSpiceChar *format, SpiceInt prec, Spic
 
 inline void spkezr_c(ConstSpiceChar *targ,SpiceDouble et,ConstSpiceChar *ref,ConstSpiceChar *abcorr,ConstSpiceChar *obs,SpiceDouble starg[6],SpiceDouble *lt) {
   *lt=0.0;
-  for (int i=0;i<6;i++) starg[i]=0.0;
+  for (int i=0;i<6;i++) starg[i]=1.0;
 }
 
 #endif
