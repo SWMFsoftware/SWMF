@@ -24,7 +24,7 @@ module ModUser
 
   use ModSize
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: xTest, yTest, zTest
+  use ModMain, ONLY: xTest, yTest, zTest, iNewGrid, iNewDecomposition
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
@@ -84,13 +84,10 @@ module ModUser
   real :: TempToPressure
   real :: NumdensToRho
 
-  ! Inner boundary condition for ions
+  ! Last step and time the inner boundary values were saved
+  integer:: nStepSave = -100
+  real :: TimeSimulationSave = -1e30
   logical :: UseSwBC =.false.
-
-  ! Last step and time the inner boundary values were saved for each block
-  integer:: nStepSave_B(MaxBlock) = -100
-  real   :: TimeSimulationSave_B(MaxBlock) = -1e30
-  integer :: nStepSaveCalcRates_B(MaxBlock) = -100
 
   !++++++++++++++++++++++++++++++++++++++++++++++
   ! From Martin & Xianzhe 2014
@@ -165,7 +162,7 @@ contains
 
     ! Read shape file and convert units
 
-    use ModMain, ONLY: Time_Simulation, n_step
+    use ModMain, ONLY: Time_Simulation
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
          UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
          UnitP_, UnitN_, UnitX_, gm1
@@ -173,9 +170,7 @@ contains
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
     use ModVarIndexes, ONLY: MassFluid_I
-    use ModBlockData, ONLY: MaxBlockData
-    use ModIO, ONLY: restart
-    
+
     !------------------------------------------------------------------------
     ! We need to have unit conversions before reading the shape file 
     ! which contains everything in SI units
@@ -229,19 +224,6 @@ contains
 
     call dir_to_xyz((90-LatSun)*cDegToRad, LonSun*cDegToRad, NormalSun_D)
 
-    ! Maximum amount of data to be stored in ModBlockData
-    ! This is for the inner boundary conditions.
-    ! In practice this is a rather generous overestimate.
-    ! 6: 5 comes from the neutral and 1 is for the logical.
-    MaxBlockData = 5*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
-
-    if (restart) then
-       nStepSave_B          = n_step
-       TimeSimulationSave_B = Time_Simulation
-       nStepSaveCalcRates_B = n_step
-
-    end if
-
     if(iProc==0)then
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
             ProductionRateMaxSi, ProductionRateMax
@@ -266,19 +248,12 @@ contains
   !===========================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, r_BLK, true_cell
-    use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest
-
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, r_BLK
     integer, intent(in):: iBlock
 
-    integer :: i, j, k
-    real    :: XyzInside_D(3)
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='user_set_boundary_cells'
+    integer:: i, j, k
+    real:: XyzInside_D(3)
     !------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
     ! Place a point inside rMinShape sphere with transcendent coordinates
     ! to reduce chances of hitting the edge or corner of triangles
 
@@ -299,16 +274,6 @@ contains
        end if
 
     end do; end do; end do
-
-    if(DoTestMe .and. iBlock==BLKtest .and. iProc==PROCtest)then
-       write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
-       write(*,*)NameSub,': is_segment_intersected =', &
-            is_segment_intersected(XyzInside_D, &
-            Xyz_DGB(:,Itest,Jtest,Ktest,iBlock), &
-            IsOddIn=.true.)
-       write(*,*)NameSub,': true cell?     ',&
-            true_cell(Itest,Jtest,Ktest,iBlock)
-    end if
 
   end subroutine user_set_boundary_cells
 
@@ -402,7 +367,7 @@ contains
     use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I, Bx_, Bz_
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
-         iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
+         iBoundary, VarsTrueFace_V, iSide, iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
     use ModPhysics, ONLY: gm1, LowDensityRatio, SW_Ux, SW_Uy, SW_Uz, SW_n, SW_T_dim, &
          ElectronPressureRatio, UnitTemperature_, Io2No_V, SW_Bx, SW_By, SW_Bz, &
@@ -412,10 +377,8 @@ contains
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModSolarwind,    ONLY: get_solar_wind_point
     use ModB0,           ONLY: B0_DX
-    use ModBlockData, ONLY: use_block_data, clean_block_data, &
-         get_block_data, put_block_data
 
-    logical :: DoTestHere=.true., IsIlluminated = .false.
+    logical :: DoTestHere=.false., IsIlluminated = .false.
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -430,12 +393,13 @@ contains
     real :: LonSunNow
 
     real, save :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
-    real :: TmpVarsGhostFace_V(5)
+    real, save:: VarsGhostFace_VDFB(5,3,nI+1,nJ+1,nK+1,MaxBlock)
     integer :: iDim
     logical :: DoWriteOnce = .true.
 
     integer :: iIonFluid
     real    :: UdotR(nIonFluid), URefl_D(1:3,nIonFluid)
+    integer,save :: iLastGridFBSave=-1, iLastDecompositionFBSave=-1
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
@@ -518,11 +482,12 @@ contains
 
     iDim = (iSide+1)/2
 
-    ! We can use the saved values if no AMR is done
-    if(use_block_data(iBlock)) then
-
-       call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
-
+    if(n_step > nStepSave            .and. &
+         iLastGridFBSave == iNewGrid .and. &
+         iLastDecompositionFBSave == iNewDecomposition) then
+       ! Check whether the VarsGhostFace_V is saved
+       VarsGhostFace_V(Neu1Rho_:Neu1P_) = &
+            VarsGhostFace_VDFB(:, iDim, iFace,jFace,kFace,iBlockBc)
        if ((n_step == 2 .or. n_step == 500 .or. n_step == 501) .and. &
             sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
           write(*,*) '=============== n_step ', n_step, '===================='
@@ -531,22 +496,15 @@ contains
           write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
           write(*,*) 'p             =', VarsGhostFace_V(Neu1P_)
        end if
-       if (n_step == 12) then
-          write(*,*) '=============== n_step ', n_step, '===================='
-          write(*,*) 'FaceCoords_D  =', FaceCoords_D
-          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-          write(*,*) 'p             =', VarsGhostFace_V(Neu1P_)
-       end if
        RETURN
     end if
-    
-    ! Empty the block storage if we redo the calculation
-    if(use_block_data(iBlock)) call clean_block_data(iBlock)
+
+    iLastGridFBSave = iNewGrid
+    iLastDecompositionFBSave = iNewDecomposition
 
     ! Save step and simulation time info
-    nStepSave_B(iBlock)          = n_step
-    TimeSimulationSave_B(iBlock) = Time_Simulation
+    nStepSave          = n_step
+    TimeSimulationSave = Time_Simulation
 
     ! Default indexes for the true and body cells
     iTrue = iFace; jTrue = jFace; kTrue = kFace
@@ -567,8 +525,8 @@ contains
        kTrue = kFace -1
     end select
 
-    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
-    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
+    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlockBc)
+    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlockBc)
 
     ! Find the intersection point between the true cell and the body cell
     ! that is closest to the true cell
@@ -577,7 +535,7 @@ contains
        write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
        write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
        write(*,*) NameSub,' error for face =', iFace, jFace, kFace
-       write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
+       write(*,*) NameSub,' error for iside, iBlockBc=', iSide, iBlockBc
        call stop_mpi(NameSub// &
             ': No intersection points are found between true and the body cells')
     end if
@@ -643,7 +601,7 @@ contains
     IsIlluminated = .false.
 
     ! Store for future time steps
-    call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+    VarsGhostFace_VDFB(:,iDim,iFace,jFace,kFace,iBlockBc) = VarsGhostFace_V(Neu1Rho_:Neu1P_)
 
   end subroutine user_set_face_boundary
 
@@ -880,12 +838,10 @@ contains
     use ModPhysics,  ONLY: SI2No_V, UnitN_, rPlanetSI, rBody, cPi, No2SI_V, UnitU_
     use ModConst,    ONLY: cElectronCharge, cBoltzmann, cElectronMass, cProtonMass
     use ModMain,     ONLY: Body1, iTest, jTest, kTest, BlkTest, &
-         n_step, time_simulation, time_accurate, iTest, ProcTest
+         n_step, time_simulation, time_accurate
     use ModNumConst, ONLY: cPi
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB
-    use ModBlockData, ONLY: use_block_data, clean_block_data, &
-         get_block_data, put_block_data, nData_B, Data_B
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -915,25 +871,15 @@ contains
     real, save :: sigmaeh2o = 4.53E-21  !! Ionization cross section for 20 eV electrons [m^2]
     real, save :: ve = 2.65E6           !! Speed of 20 eV electrons [m/s]
 
-    logical :: DoTest, DoTestMe
-    logical :: IsIntersectedShape
-    real    :: IsIntersectedShapeR = -1.0
+    logical :: DoTestCalcRates =.false.
+    logical, save :: IsIntersectedShape_IIIB(nI,nJ,nK,MaxBlock)
 
+    integer, save :: iLastDecompositionCRSave=-1
     integer, save :: nStepSaveCalcRates = -100
 
     character(len=*), parameter:: NameSub = 'user_calc_rates'
 
-
     real :: nTmp
-
-    !-----------------------------------------------------------------
-    if(iBlock==BlkTest .and. i==iTest .and. j==jTest .and. &
-         k==kTest .and. iProc==ProcTest) then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.
-       DoTestMe=.false.
-    end if
 
     ! H2O and H electron impact rate depending on electron temperature (Cravens et al. 1987)
     ElImpRate_I(Neu1_,1:61) = (/ 0.00E+00, 1.14E-16, 2.03E-16, 3.04E-16, 4.37E-16, 6.34E-16, 9.07E-16, &
@@ -987,8 +933,8 @@ contains
     !         rPlanetSI+0.1
     !    write(*,*)  'rBody =', rBody
 
-    ! New Block, need to check whether the cell is in the shade
-    if(.not.use_block_data(iBlock) ) then
+    if(n_step <= nStepSaveCalcRates  &
+       .or. iNewDecomposition /= iLastDecompositionCRSave) then
 
        if (iProc == 0 .and. i == 1 .and. j == 1 .and. k ==1 .and. iBlock ==1) &
             write(*,*) NameSub, 'doing calculations at n_step', n_step
@@ -997,47 +943,22 @@ contains
        DistProjection = sqrt(R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2)
 
        if (DistProjection < rMinShape .and. CosAngleTmp < 0) then
-          IsIntersectedShapeR = 1.0
+          IsIntersectedShape_IIIB(i,j,k,iBlock) = .true.
        else if (DistProjection < rMinShape .and. CosAngleTmp > 0) then
-          IsIntersectedShapeR = 0.0
+          IsIntersectedShape_IIIB(i,j,k,iBlock) = .false.
        else if (DistProjection > rMaxShape) then
-          IsIntersectedShapeR = 0.0
+          IsIntersectedShape_IIIB(i,j,k,iBlock) = .false.
        else
-          IsIntersectedShape = &
+          IsIntersectedShape_IIIB(i,j,k,iBlock) = &
                is_segment_intersected(Xyz_DGB(:,i,j,k,iBlock), &
                Xyz_DGB(:,i,j,k,iBlock)+5*rMaxShape*NormalSun_D)
-          if (IsIntersectedShape) then
-             IsIntersectedShapeR = 1.0
-          else
-             IsIntersectedShapeR = 0.0
-          end if
        end if
 
        nStepSaveCalcRates = n_step
-
-       ! Empty the block storage if we redo the calculation
-       if(use_block_data(iBlock)) call clean_block_data(iBlock)
-
-       ! Store for future time steps
-       call put_block_data(iBlock, IsIntersectedShapeR)
+       iLastDecompositionCRSave = iNewDecomposition
     end if
 
-    if(use_block_data(iBlock)) call get_block_data(iBlock, IsIntersectedShapeR)
-
-    if (IsIntersectedShapeR == 1.0) then
-       IsIntersectedShape = .true.
-    else if (IsIntersectedShapeR == 0.0) then
-       IsIntersectedShape = .false.
-    else
-       write(*,*) 'iProc, iBlock =', iProc, iBlock
-       write(*,*) 'use_block_data(iBlock)', use_block_data(iBlock)
-       write(*,*) 'nData_B(iBlock) =', nData_B(iBlock)
-       write(*,*) 'Data_B(iBlock)  =', Data_B(iBlock)%Array_I(1:nData_B(iBlock))
-       write(*,*) 'IsIntersectedShapeR =',IsIntersectedShapeR
-       call stop_mpi('IsIntersectedShapeR /= 0.0 or 1.0')
-    end if
-
-    if (IsIntersectedShape) then
+    if (IsIntersectedShape_IIIB(i,j,k,iBlock)) then
        v_II = v_II*1e-9
     else
        NCol = 0
@@ -1154,8 +1075,7 @@ contains
     !alpha_I(SW_)   = 1E-6*3.5E-12*(Te/300)**(-0.7)  !! Schmidt et al., Comput. Phys. Commun. (1988)
 
 
-    if (DoTestMe) then
-       write(*,*) NameSub
+    if (DoTestCalcRates) then
        write(*,*) ' fin_II   =', fin_II
        write(*,*) ' fii_II   =', fii_II
        write(*,*) ' fie_I    =', fie_I
@@ -1165,8 +1085,6 @@ contains
        write(*,*) ' ve_II    =', ve_II
        write(*,*) ' Qexc_II  =', Qexc_II
        write(*,*) ' Qion_II  =', Qion_II
-       write(*,*) ' IsIntersectedShapeR =', IsIntersectedShapeR
-       write(*,*) ' IsIntersectedShape  =', IsIntersectedShape
     end if
 
   end subroutine user_calc_rates
@@ -1212,7 +1130,7 @@ contains
     real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, kinAdd_I, kinSub_I
     real, dimension(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,1:nI,1:nJ,1:nK) :: kin_IIIIC
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe=.true.
     real :: theta, fenTot, feiTot,logTe
     integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm,iDim
 
