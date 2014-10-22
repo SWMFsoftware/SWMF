@@ -70,7 +70,7 @@ module ModFaceFlux
   ! Logicals so we don't need string comparisons
   logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe, DoGodunov
   logical :: DoLfNeutral, DoHllNeutral
-  
+
   !1D burgers equation, works for Hd  equations. 
   logical:: DoBurgers = .False.
 
@@ -1087,7 +1087,7 @@ contains
             ( Xyz_DGB(:,iRight,jRight,kRight, iBlockFace)          &
             - Xyz_DGB(:,iLeft, jLeft  ,kLeft, iBlockFace))**2) )
     end if
-    
+
     if(UseClimit)then
        r = 0.5*(r_BLK(iLeft,  jLeft,  kLeft,  iBlockFace) &
             +   r_BLK(iRight, jRight, kRight, iBlockFace))
@@ -2755,7 +2755,7 @@ contains
 
   end subroutine calc_cell_flux
   !===========================================================================
-subroutine calc_simple_cell_flux(iBlock)
+  subroutine calc_simple_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
 
@@ -2788,16 +2788,15 @@ subroutine calc_simple_cell_flux(iBlock)
        do k = MinK, MaxK; kFace = k
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
-                !!! call set_cell_values
-
+                
                 HallCoeff     = -1.0
                 if(UseHallResist) call stop_mpi(&
                      "Hall Resistivity has not been added for cell fulx!")
 
                 BiermannCoeff = -1.0
                 if(UseBiermannBattery) call stop_mpi(&
-                        "BiermannBattery has not been added for cell flux!")
-                
+                     "BiermannBattery has not been added for cell flux!")
+
                 ViscoCoeff = 0.0
                 if(UseViscosity) call stop_mpi(&
                      "Viscosity has not been considered for cell flux!")
@@ -2807,7 +2806,7 @@ subroutine calc_simple_cell_flux(iBlock)
 
                 if(UseClimit)  call stop_mpi(&
                      "Climit has not been implemented for cell fulx!")
-                
+
                 ! Get primitive variables used by get_physical_flux
                 Primitive_V = State_VGB(:,i,j,k,iBlock)
                 do iFluid = 1, nFluid
@@ -2823,7 +2822,7 @@ subroutine calc_simple_cell_flux(iBlock)
                    B0y = B0_DGB(x_,i,j,k,iBlock)
                    B0z = B0_DGB(x_,i,j,k,iBlock)
                 end if
-                
+
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
                      Conservative_V, Flux_V, Un_I, En, Pe)
@@ -3371,34 +3370,84 @@ subroutine calc_simple_cell_flux(iBlock)
   !============================================================================
   subroutine correct_u_normal(iDim)
 
-    ! Make Unormal 6th order accuracte
-
+    ! Make Unormal 6th order accuracte                 
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
-    use BATL_lib,  ONLY: correct_face_value
+    use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
+         Xi_, Eta_, Zeta_, nDim
+
     integer, intent(in):: iDim
 
     integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
-    real :: Ucell_I(4), Unormal 
+    real :: Ucell_I(4), Unormal, Ucell_D(3)
+    real :: Normal0_D(3), Area0_D(3)
+    integer:: iCell, iCount
     !--------------------------------------------------------------------------
 
     do iFluid = iFluidMin, iFluidMax
 
        Unormal = Unormal_I(iFluid)
        iRho = iRho_I(iFluid)
+       iRhoUx = iRhoUx_I(iFluid)
+       iRhoUz = iRhoUz_I(iFluid)
 
-       if(iDim == x_) then
-          iRhoUx = iRhoUx_I(iFluid)
-          Ucell_I = State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
-               State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
-       elseif(iDim == y_) then
-          iRhoUy = iRhoUy_I(iFluid)
-          Ucell_I = State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
-               State_VGB(iRho,iFace,jFace-2:jFace+1,kFace,iBlockFace)
+       if(.not. IsCartesian) then
+          if(iDim == x_) then
+             iCount = 1
+             do iCell = iFace - 2, iFace + 1
+                Area0_D = CellCoef_DDGB( &
+                     Xi_,:,iCell,jFace,kFace,iBlockFace)
+                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
+                     State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                iCount = iCount + 1
+             enddo
+
+          elseif(iDim == y_) then
+             iCount = 1
+             do iCell = jFace - 2, jFace + 1
+                Area0_D = CellCoef_DDGB( &
+                     Eta_,:,iFace,iCell,kFace,iBlockFace)
+                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
+                     State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                iCount = iCount + 1
+             enddo
+          elseif(iDim == z_) then
+             iCount = 1
+             do iCell = kFace - 2, kFace + 1
+                Area0_D = CellCoef_DDGB( &
+                     Zeta_,:,iFace,jFace,iCell,iBlockFace)
+                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+
+                Ucell_D = &
+                     State_VGB(iRhoUx:iRhoUz,iFace,jFace,iCell,iBlockFace)/&
+                     State_VGB(iRho,iFace,jFace,iCell,iBlockFace)
+                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                iCount = iCount + 1
+             enddo
+          endif
        else
-          iRhoUz = iRhoUz_I(iFluid)
-          Ucell_I = State_VGB(iRhoUz,iFace,jFace,kFace-2:kFace+1,iBlockFace)/&
-               State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
+          if(iDim == x_) then
+             iRhoUx = iRhoUx_I(iFluid)
+             Ucell_I = &
+                  State_VGB(iRhoUx,iFace-2:iFace+1,jFace,kFace,iBlockFace)/&
+                  State_VGB(iRho,iFace-2:iFace+1,jFace,kFace,iBlockFace)
+          elseif(iDim == y_) then
+             iRhoUy = iRhoUy_I(iFluid)
+             Ucell_I = &
+                  State_VGB(iRhoUy,iFace,jFace-2:jFace+1,kFace,iBlockFace)/&
+                  State_VGB(iRho,iFace,jFace-2:jFace+1,kFace,iBlockFace)
+          else
+             iRhoUz = iRhoUz_I(iFluid)
+             Ucell_I = State_VGB(iRhoUz,iFace,jFace,kFace-2:kFace+1,iBlockFace)/&
+                  State_VGB(iRho,iFace,jFace,kFace-2:kFace+1,iBlockFace)
+          endif
        endif
        Unormal_I(iFluid) = correct_face_value(Unormal, Ucell_I)
     enddo
