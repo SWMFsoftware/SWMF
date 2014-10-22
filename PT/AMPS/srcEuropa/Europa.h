@@ -1479,7 +1479,7 @@ inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,b
   int i,j,k;
   double PlasmaBulkVelocity[3],ElectronDensity;
 
-  nd=PIC::Mesh::mesh.findCenterNodeIndex(x,i,j,k,node);
+  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
   PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
   ElectronDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
 
