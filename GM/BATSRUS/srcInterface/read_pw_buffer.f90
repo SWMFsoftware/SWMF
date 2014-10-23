@@ -1,4 +1,6 @@
-!==============================================================================
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
@@ -98,7 +100,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
 
   !  write(*,*) 'Calling find_triangle_sph with Xyz_D =', Xyz_D
   !  write(*,*) 'nLinePw2', nLinePw2
-  if(Xyz_D(3) < 0..and. nLinePw2 /=0)then
+  if(Xyz_D(3) < 0 .and. nLinePw2 > 0)then
+     ! Southern hemisphere (z < 0) and there are southern PW field lines (nLinePw2 > 0)
      call find_triangle_sph(Xyz_D, nPoint2, &
           CoordXyzPw2_DI(:,nLinePw1+1:nLinePw1+nPoint2), &
           list2_I, lptr2_I, lend2_I, Area1, Area2, Area3, IsTriangleFound, &
