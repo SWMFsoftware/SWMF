@@ -929,7 +929,20 @@ sub ReadGeneralBlock {
         die "The option is unknown\n";
       }
     }      
-      
+    
+    elsif ($InputLine eq "DEFINE") {
+      my ($macro,$value,$s0,$s1);
+  
+      ($InputLine,$InputComment)=split('!',$line,2);
+      ($s0,$macro,$value,$s1)=split(' ',$InputLine,4);
+  
+      $s0=$macro;
+      $s0=~s/[()=]/ /g;
+      ($s0,$s1)=split(' ',$s0,2);
+  
+      ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","pic/picGlobal.dfn");
+    }
+     
     elsif ($InputLine eq "#ENDGENERAL") {
       last;
     }
