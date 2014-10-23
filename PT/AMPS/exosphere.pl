@@ -636,7 +636,14 @@ while ($line=<InputFile>) {
       }
     }
     elsif ($InputLine eq "DEFINESOURCEID") {      
-      print EXOSPHERE_USER_DEFINITIONS "#define _EXOSPEHRE_SOURCE__ID__USER_DEFINED__".$s0."_  $SourceProcessID\n";
+      my $SourceCode;
+
+      $SourceCode="_EXOSPEHRE_SOURCE__ID__USER_DEFINED__".$s0."_";
+
+      print EXOSPHERE_USER_DEFINITIONS "#define ".$SourceCode."  $SourceProcessID\n";
+      print EXOSPHERE_USER_DEFINITIONS "\n#undef _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_\n#define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_  _EXOSPHERE_SOURCE__ON_\n";
+
+      $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER."\nSamplingDensityOffset[$SourceCode]=CellSamplingDataOffset+SamplingLength;\nSamplingLength+=sizeof(double)*PIC::nTotalSpecies;\n";
       $SourceProcessID++;
     }
     
@@ -806,7 +813,7 @@ close(EXOSPHERE_USER_DEFINITIONS);
 #substitue markers in 'Exosphere.cpp'
 my @FileContent;
 
-if (defined $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS) {
+if (defined $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER) {
   my $line;
   
   open (FILEIN,"<$WorkingSourceDirectory/models/exosphere/Exosphere.cpp") || die "Cannot open file $WorkingSourceDirectory/models/exosphere/Exosphere.cpp\n";  
