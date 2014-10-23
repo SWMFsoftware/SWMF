@@ -59,10 +59,10 @@ module ModFieldLineThread
      real, pointer :: B0Face_DII(:,:,:)
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
-  
+
   integer :: nPointInThreadMax
   real    :: DsThreadMin
-  
+
   real, public :: HeatCondParSi
   public:: UseFieldLineThreads
   public:: BoundaryThreads
@@ -244,7 +244,7 @@ contains
     logical :: DoTest=.false., DoTestMe=.false.
     !-------------
     call set_oktest('set_threads_b', DoTest, DoTestMe)
- 
+
     cTolerance = cToleranceOrig*No2Si_V(UnitB_)
     !\
     ! Initialize threads
@@ -289,17 +289,17 @@ contains
           !/
           BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = &
                B0Start_D  * Si2No_V(UnitB_) 
-          
+
           SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
           BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
-          
+
           B0Start = sqrt( sum( B0Start_D**2 ) )
           BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
                B0Start*Si2No_V(UnitB_)
-          
+
           RStart = sqrt( sum( XyzStart_D**2 ) )
           BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
-          
+
           Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
           COARSEN: do
              !\
@@ -324,11 +324,11 @@ contains
                 !Two stage Runge-Kutta
                 !1. Point at the half of length interval:
                 XyzAux_D = Xyz_D - 0.50*Ds*SignBr*B0_D/max(B0, cTolerance)
-                
+
                 !2. Magnetic field in this point:
                 call get_magnetogram_field(&
                      XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
-                
+
                 !3. New grid point:
                 Xyz_D = Xyz_D - Ds*SignBr*B0Aux_D/max(&
                      sqrt(sum(B0Aux_D**2)), cTolerance)
@@ -411,7 +411,7 @@ contains
        Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
        BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,j,k) = &
             - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
-            
+
     end do; end do
     if(DoTestMe.and.iBlock==BlkTest)then
        write(*,'(a,3es18.10)')'Thread starting at the point  ',&
@@ -477,9 +477,9 @@ contains
          TypeFile = TypeFile,                                    &
          StringDescription = &
          'Model for transition region: [K] [1/m3] [N/m] [m/s]')
-    
+
     iTable = i_lookup_table('TR')
-         
+
 
     ! The table is now initialized. 
 
@@ -504,13 +504,13 @@ contains
     ! since we don't want to deal with such tiny numbers 
     real, parameter :: RadNorm = 1.0E+22
     real, parameter :: Cgs2SiEnergyDens = &
-       1.0e-7&   !erg = 1e-7 J
-       /1.0e-6    !cm3 = 1e-6 m3 
+         1.0e-7&   !erg = 1e-7 J
+         /1.0e-6    !cm3 = 1e-6 m3 
     real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
          /RadNorm*Cgs2SiEnergyDens
     !--------------------------------------------------------------------------
- 
-      
+
+
     !-------------------------------------------------------------------------
     if(IsFirstCall)then
        IsFirstCall=.false.
@@ -556,4 +556,73 @@ contains
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
     Value_V = (/ LPe_I(iTe), UHeat_I(iTe) /)
   end subroutine calc_tr_table
+  !===========================Tables for solving Alfven waves====
+  subroutine solve_a_plus_minus(Length, AMinusBC, Heating, APlusBC)!, DoWriteIn)
+    real,intent(in )::Length, AMinusBC  !Dimensionless length, BC for A-
+    real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
+    !logical,optional:: DoWriteIn
+    real:: DeltaXi
+    integer, parameter :: nI = 500
+    real,dimension(0:nI)::APlus_I=1.0,AMinus_I=1.0
+    integer::iStep,iIter, iFile
+    integer, parameter:: nIterMax = 10
+    real::Derivative, AOld, ADiffMax
+    real,parameter:: CTol=0.0010
+    !logical:: DoWrite = .false.
+    !----------------------
+    ! DoWrite = .false. ; if(present(DoWriteIn))DoWrite = DoWriteIn
+    DeltaXi=Length/nI
+    AMinus_I(0:nI)=AMinusBC
+    do iIter=1,nIterMax
+       !Go forward, integrate APlus_I with given AMinus_I
+       ADiffMax = 0.0
+       do iStep=1,nI
+          !Predictor
+          Derivative = -AMinus_I(iStep-1)*(max(0.0,APlus_I(iStep-1) - 2*AMinus_I(istep-1)) - &
+               max(0.0,AMinus_I(iStep-1) - 2*APlus_I(istep-1))) - &
+               APlus_I(iStep-1)*AMinus_I(istep-1)
+          AOld = APlus_I(iStep)
+          APlus_I(iStep) = APlus_I(iStep-1)+0.5*Derivative*DeltaXi
+
+          !Corrector
+          Derivative = -0.5*(AMinus_I(iStep-1)+AMinus_I(iStep))*&
+               (max(0.0,APlus_I(iStep)-AMinus_I(istep-1)-AMinus_I(iStep))- &
+               max(0.0,0.5*(AMinus_I(istep-1)+AMinus_I(istep))-2*APlus_I(iStep)))-&
+               0.5*(AMinus_I(istep-1)+AMinus_I(istep))*APlus_I(iStep)
+          APlus_I(iStep) = APlus_I(iStep-1)+Derivative*DeltaXi
+          ADiffMax = max(ADiffMax, abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
+       end do
+       !Go backward, integrate APlus_I with given AMinus_I
+       do iStep=nI - 1, 0, -1
+          !Predictor
+          Derivative = -APlus_I(iStep+1)*(&
+               max(0.0,APlus_I(iStep+1) - 2*AMinus_I(istep+1)) - &
+               max(0.0,AMinus_I(iStep+1) - 2*APlus_I(istep+1))     ) + &
+               APlus_I(iStep+1)*AMinus_I(istep+1)
+          AOld = AMinus_I(iStep)
+          AMinus_I(iStep) = AMinus_I(iStep+1)-0.5*Derivative*DeltaXi
+
+          !Corrector
+          Derivative = -0.5*(APlus_I(iStep+1)+APlus_I(iStep))*(&
+               max(0.0,0.5*(APlus_I(iStep)+APlus_I(istep+1))-2*AMinus_I(iStep))- &
+               max(0.0,AMinus_I(istep)-APlus_I(iStep)-APlus_I(istep+1))       )+&
+               0.5*AMinus_I(istep)*(APlus_I(iStep)+APlus_I(istep+1))
+          AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
+          ADiffMax = max(ADiffMax, &
+               abs(AOld - AMinus_I(iStep))/max(AOld,AMinus_I(iStep)))
+       end do
+       !write(*,*)ADiffMax
+       if(ADiffMax<cTol)EXIT
+    end do
+    APlusBC = APlus_I(nI)
+    Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
+    !if(.not.DoWrite)RETURN
+    !iFile = 5
+    !open(iFile,file='apm.out',status='replace')
+    !do istep=0,nI
+    !   write(iFile,*)iStep*DeltaXi,APlus_I(iStep),AMinus_I(istep),&
+    !        APlus_I(istep)*AMinus_I(istep)*(APlus_I(istep)+AMinus_I(istep))
+    !end do
+    !close(iFile)
+  end subroutine solve_a_plus_minus
 end module ModFieldLineThread
