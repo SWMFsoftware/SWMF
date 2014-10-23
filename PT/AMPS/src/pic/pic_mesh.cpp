@@ -80,6 +80,19 @@ void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber)
 void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
   int idim;
 
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  static unsigned long int nCallCounter=0;
+
+  ++nCallCounter;
+
+
+  if ((nCallCounter==589369)&&(PIC::ThisThread==0)) {
+    double s=12;
+
+    s=s+23;
+  }
+#endif
+
   struct cOutputData {
     double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
     double TranslationalParallelTemperature,TranslationalTangentialTemperature;
@@ -118,6 +131,19 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
       fprintf(fout,"%e %e ",OutputData.TranslationalParallelTemperature,OutputData.TranslationalTangentialTemperature);
 #endif
     }
+
+    //check that all values are finite
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+    if ((isfinite(OutputData.NumberDesnity)==false) || (isfinite(OutputData.ParticleNumber)==false) ||
+      (isfinite(OutputData.MeanParticleSpeed)==false))
+      exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+
+    for (idim=0;idim<3;idim++) {
+      if (isfinite(OutputData.v[idim])==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+    }
+#endif
+#endif
   }
   else pipe->send((char*)&OutputData,sizeof(OutputData));
 
@@ -199,6 +225,35 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
       InterpolatedBulkParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset)));
       InterpolatedBulk2ParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset)));
 #endif
+
+
+      //check if the numbers are real
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+      if ((isfinite(InterpolatedParticleWeight)==false) || (isfinite(InterpolatedParticleNumber)==false) ||
+         (isfinite(InterpolatedParticleNumberDeinsity)==false) || (isfinite(InterpolatedParticleSpeed)==false))
+         exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+
+
+      for (idim=0;idim<3;idim++) {
+        if ((isfinite(InterpolatedBulkVelocity[idim])==false) || (isfinite(InterpolatedBulk2Velocity[idim])==false)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+      }
+
+      #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
+      #else
+      if ((isfinite(InterpolatedBulkParallelVelocity)==false) || (isfinite(InterpolatedBulk2ParallelVelocity)==false)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+      #endif
+
+      //check is the resulting speed is a finita number
+      double v;
+
+      if (InterpolatedParticleWeight>0.0) {
+        v=InterpolatedParticleSpeed/InterpolatedParticleWeight;
+        if (isfinite(v)==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+      }
+#endif
+#endif
+
     }
 
     //stored the interpolated data in the associated data buffer
