@@ -80,6 +80,9 @@ ParticleWeightCorrectionMode=on
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+! define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+! define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
+
 #endGeneral
 
 #block ../europa.input.pl !process the settings of the Europa's model
