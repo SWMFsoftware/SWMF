@@ -37,7 +37,7 @@ SpiceDouble Exosphere::Sampling::OutputDataFile::SO_to_HCI_TransformationMartix[
 double Exosphere::Sampling::CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
 //sampling offsets
-int Exosphere::Sampling::SamplingDensityOffset[PIC::nTotalSpecies*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_)];
+int Exosphere::Sampling::SamplingDensityOffset[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 int Exosphere::Sampling::CellSamplingDataOffset=-1;
 double **Exosphere::Sampling::PlanetNightSideReturnFlux=NULL;
 double *Exosphere::Sampling::TotalPlanetReturnFlux=NULL,*Exosphere::Sampling::PlanetSurfaceStickingRate=NULL;
@@ -76,7 +76,7 @@ int Exosphere::Sampling::RequestSamplingData(int offset) {
   if (CellSamplingDataOffset!=-1) exit(__LINE__,__FILE__,"Error: second request for the sampling data");
 
   CellSamplingDataOffset=offset;
-  for (int s=0;s<PIC::nTotalSpecies;s++) for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[s+iSource*PIC::nTotalSpecies]=-1;
+  for (int iSource=0;iSource<1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_;iSource++) SamplingDensityOffset[iSource]=-1;
 
 #if _EXOSPHERE_SOURCE__EXTERNAL_BOUNDARY_INJECTION_ == _EXOSPHERE_SOURCE__ON_
   SamplingDensityOffset[_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_]=CellSamplingDataOffset+SamplingLength;

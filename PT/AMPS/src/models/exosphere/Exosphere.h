@@ -145,7 +145,7 @@ namespace Exosphere {
     extern double CalculatedSourceRate[PIC::nTotalSpecies][1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
 
     //offsets for sampling densities that are due to different sampling processes
-    extern int SamplingDensityOffset[PIC::nTotalSpecies*(1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_)];
+    extern int SamplingDensityOffset[1+_EXOSPHERE__SOURCE_MAX_ID_VALUE_];
     extern int CellSamplingDataOffset;
 
     //the field in the particle's data that keeps the id of the source process due to which the particle has beed produced
