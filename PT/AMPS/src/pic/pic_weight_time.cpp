@@ -62,7 +62,7 @@ double PIC::ParticleWeightTimeStep::GetTotalBlockInjectionRate(int spec,cTreeNod
   double res=0.0;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if (startNode->block!=NULL) res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
+    if ((startNode->block!=NULL)&&(startNode->Thread==PIC::ThisThread)) res=LocalBlockInjectionRate(spec,startNode)*startNode->block->GetLocalTimeStep(spec);
   }
   else {
     int i;
