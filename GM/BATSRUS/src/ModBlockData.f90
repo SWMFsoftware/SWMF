@@ -1,5 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModBlockData
 
   use ModSize,   ONLY: MaxBlock
@@ -34,6 +36,9 @@ module ModBlockData
      module procedure clean_block, clean_all
   end interface
 
+  public write_block_restart_files
+  public read_block_restart_files
+
   public test_block_data
 
   ! Maximum number of reals associated with a block. 
@@ -41,7 +46,7 @@ module ModBlockData
   integer, public:: MaxBlockData = 0
 
   ! These arrays can be initialized
-  integer, public :: nData_B(MaxBlock) = -1        ! Number of data elements
+  integer :: nData_B(MaxBlock) = -1        ! Number of data elements
   integer :: iData_B(MaxBlock) = -1        ! Current position for put/get
   logical :: UseData_B(MaxBlock) = .false. ! Is the data usable?
 
@@ -51,7 +56,7 @@ module ModBlockData
   end type BlockDataType
 
   ! Array of allocatable storage
-  type(BlockDataType),public :: Data_B(MaxBlock) 
+  type(BlockDataType) :: Data_B(MaxBlock) 
 
   character(len=*), parameter :: NameMod = 'ModBlockData'
 
@@ -695,5 +700,161 @@ contains
          'clean_block_data failed, n=',nData,' should be -1'
 
   end subroutine test_block_data
+
+  !===========================================================================
+  subroutine write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
+
+    use ModMain, ONLY: nBlock, Unused_B
+    use ModIO,   ONLY: Unit_Tmp
+
+    character(len=*), intent(in) :: NameRestartOutDir
+    logical,          intent(in) :: UseRestartOutSeries
+
+    integer            :: iBlock
+    character(len=100) :: NameBlockFile
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='write_block_restart_files'
+    !--------------------------------------------------------------------
+    if(iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
+    do iBlock=1,nBlock
+       if (Unused_B(iBlock)) CYCLE
+
+       call get_block_restart_namefile(iBlock, &
+            NameRestartOutDir, UseRestartOutSeries, NameBlockFile)
+
+       ! Skip blocks which do not have block data
+       if (.not. use_block_data(iBlock)) then
+          write(*,*) NameSub, ': not use_block_data, skip ', NameBlockFile
+          CYCLE
+       end if
+
+       open(unit_tmp, file=NameBlockFile, status="replace", form='UNFORMATTED')
+       write(Unit_tmp) nData_B(iBlock)
+       write(Unit_tmp) Data_B(iBlock) % Array_I(1:nData_B(iBlock))
+       close(unit_tmp)
+    end do
+
+    if(DoTestMe)then
+       write(*,*)NameSub,': iProc, iBlock  =', iProc, BLKtest
+       write(*,*)NameSub,': use_block_data =', use_block_data(BLKtest)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(BLKtest)
+       write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
+            Data_B(BLKtest)%Array_I(1:5)
+       write(*,*)NameSub,' finished'
+    end if
+
+  end subroutine write_block_restart_files
+
+  !===========================================================================
+  subroutine read_block_restart_files(NameRestartInDir, UseRestartInSeries)
+
+    use ModMain, ONLY: nBlock, Unused_B
+    use ModIO,   ONLY: Unit_Tmp
+
+    character(len=*), intent(in) :: NameRestartInDir
+    logical,          intent(in) :: UseRestartInSeries
+
+    integer  :: iBlock, iError
+
+    integer :: nData
+    real    :: DataTmp_I(1:MaxBlockData)
+
+    character(len=100) :: NameBlockFile
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='read_block_restart_files'
+    !--------------------------------------------------------------------
+    if(iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
+    do iBlock=1,nBlock
+       if (Unused_B(iBlock)) CYCLE
+
+       call get_block_restart_namefile(iBlock, &
+            NameRestartInDir, UseRestartInSeries, NameBlockFile)
+
+       open(unit_tmp, file=NameBlockFile, status='old', form='UNFORMATTED',&
+            iostat = iError)
+
+       ! Missing block data files (should be blocks without any block data)
+       if(iError /= 0) then
+          write(*,*) NameSub, ': could not open ', NameBlockFile
+          CYCLE
+       end if
+
+       ! Read the number of data elements
+       read(unit_tmp, iostat = iError) nData
+       if(iError /= 0) call stop_mpi(NameSub// &
+            ' could not read data from '//trim(NameBlockFile))
+
+       ! Read the data array
+       read(unit_tmp, iostat = iError) DataTmp_I(1:nData)
+       if(iError /= 0) call stop_mpi(NameSub// &
+            ' could not read data from '//trim(NameBlockFile))
+
+       ! Empty the block storage before putting the block data
+       if(use_block_data(iBlock)) call clean_block_data(iBlock)
+
+       call put_block_data(iBlock, nData, DataTmp_I(1:nData))
+       call set_block_data(iBlock)
+
+       close(unit_tmp)
+    end do
+
+    if(DoTestMe)then
+       write(*,*)NameSub,': iProc, iBlock  =', iProc, BLKtest
+       write(*,*)NameSub,': use_block_data =', use_block_data(BLKtest)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(BLKtest)
+       write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
+            Data_B(BLKtest)%Array_I(1:5)
+       write(*,*)NameSub,' finished'
+    end if
+
+  end subroutine read_block_restart_files
+
+  !============================================================================
+  subroutine get_block_restart_namefile(iBlock, &
+       NameRestartDir, UseRestartSeries, NameBlockFile)
+
+    use BATL_lib, ONLY: iMortonNode_A, iNode_B
+    use ModMain,  ONLY: iteration_number
+
+    integer, intent(in) :: iBlock
+    logical, intent(in) :: UseRestartSeries
+    character(len=*),  intent(in)  :: NameRestartDir
+    character(len=100),intent(out) :: NameBlockFile
+
+    integer   :: iBlockRestart
+
+    character :: StringDigit
+    character(len=*), parameter :: NameStart        = "blockdata_Blk"
+    character(len=*), parameter :: StringRestartExt = ".rst"
+
+    character(len=*), parameter :: NameSub='get_block_restart_namefile'
+    !--------------------------------------------------------------------
+
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+    write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
+
+    if (UseRestartSeries) then
+       write(NameBlockFile, &
+            '(a,i8.8,a,i'//StringDigit//'.'//StringDigit//',a)') &
+            trim(NameRestartDir)//'n', iteration_number,         &
+            '_'//NameStart,iBlockRestart,StringRestartExt
+    else
+       write(NameBlockFile,'(a,i'//StringDigit//'.'//StringDigit//',a)') &
+            trim(NameRestartDir)//NameStart,iBlockRestart,StringRestartExt
+    end if
+
+  end subroutine get_block_restart_namefile
 
 end module ModBlockData
