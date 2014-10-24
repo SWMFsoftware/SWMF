@@ -672,7 +672,7 @@ public:
 
   bool lastBranchFlag() {
     //if _BOTTOM_BRANCH_TREE_ -> the node is on the bottom of the tree
-    for (register int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (downNode[nDownNode]!=NULL) return !_BOTTOM_BRANCH_TREE_;
+    for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (downNode[nDownNode]!=NULL) return !_BOTTOM_BRANCH_TREE_;
 
     return _BOTTOM_BRANCH_TREE_;
   }
@@ -1113,6 +1113,45 @@ public:
   list<cInternalBoundaryConditionsDescriptor> InternalBoundaryList;
   cTreeNodeAMR<cBlockAMR>* DomainSurfaceBoundaryList;
   #endif
+
+  //calculate the checksumm of the distribution of the tree
+  class cTreeCheckSum {
+    CRC32 checksum;
+
+    void addblock(cTreeNodeAMR<cBlockAMR>* bl) {
+      checksum.add(bl->Temp_ID);
+
+      for (int idim=0;idim<_MESH_DIMENSION_;idim++) {
+        checksum.add(bl->xmax[idim]);
+        checksum.add(bl->xmin[idim]);
+      }
+
+      for (int nd=0;nd<(1<<_MESH_DIMENSION_);nd++) if (bl->downNode[nd]!=NULL) addblock(bl->downNode[nd]);
+    }
+
+  public:
+    unsigned long Get(cTreeNodeAMR<cBlockAMR>* StartNode,char const *msg,bool printflag) {
+      unsigned long res;
+      char message[STRING_LENGTH];
+      int rank;
+
+      checksum.clear();
+      addblock(StartNode);
+
+      MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+
+      if (printflag==true) {
+        if (msg!=NULL) sprintf(message,", %s[rank=%i,l=%ld,f=%s]",msg,rank,__LINE__,__FILE__);
+        else sprintf(message,"rank=%i,l=%ld,f=%s",rank,__LINE__,__FILE__);
+
+        printf("AMR tree checksum:\n%s\nckecksum=0x%lx\n",message,checksum.checksum());
+      }
+
+      return checksum.checksum();
+    }
+
+  } TreeCheckSum;
+
 
   //generate the mesh signeture: the signature contained the time of the mesh creeation, the user name and the computer name where the lesh is created
   void generateMeshSignature() {
