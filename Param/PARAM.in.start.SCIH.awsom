@@ -139,22 +139,12 @@ T                       UseWaveReflection
 
 #HEATPARTITIONING
 stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
+0.17			StochasticExponent
 0.18			StochasticAmplitude
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
 1e5			TauGlobalSi
-
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -265,6 +255,7 @@ mc3			TypeLimiter
 
 #MINIMUMPRESSURE
 1E-9			pMinDim
+1E-9			PeMinDim
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -431,7 +422,7 @@ T                       UseWaveReflection
 
 #HEATPARTITIONING
 stochasticheating	TypeHeatPartitioning
-0.34			StochasticExponent
+0.17			StochasticExponent
 0.18			StochasticAmplitude
 
 #ANISOTROPICPRESSURE
@@ -463,6 +454,7 @@ domain extends to 400 Rsun, i.e. including Mars orbit.
 It might be important to prevent code crashing due to CMEs with strong shocks.
 #MINIMUMPRESSURE
 1E-14			pMinDim
+1E-14			PeMinDim
 
 #NONCONSERVATIVE
 T			UseNonConservative
