@@ -137,6 +137,12 @@ load			NameCommand
 SC/Param/TR.dat
 ascii			TypeFile
 
+#LOOKUPTABLE
+AW_TR			NameTable
+load			NameCommand
+SC/Param/AW_TR.dat
+ascii			TypeFile
+
 ---------------------------------------------------
 #GRIDGEOMETRY
 spherical_lnr
@@ -200,6 +206,11 @@ T			IsStrictAmr
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#LIMITER
+T
+F
+F
 
 #NONCONSERVATIVE
 T			UseNonConservative
