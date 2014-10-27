@@ -1,0 +1,17 @@
+
+#main
+
+NS=1
+SpeciesList=C
+
+#endmain
+
+#species
+#component=C  
+  mass=1.993E-26 
+
+
+#endspecies
+
+
+#end
