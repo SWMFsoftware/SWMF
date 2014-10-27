@@ -463,28 +463,53 @@ contains
          *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
 
     iTable =  i_lookup_table('TR')
-    if(iTable >= 0)return
+    if(iTable < 0)then
 
-    ! initialize the EOS table with the default parameters
+       ! initialize the TR table
+       call init_lookup_table(                                      &
+            NameTable = 'TR',                                       &
+            NameCommand = 'save',                                   &
+            NameVar = 'logTe logNe LPe UHeat',                      &
+            nIndex_I = (/500,2/),                                   &
+            IndexMin_I =(/1.0e4, 1.0e8/),                           &
+            IndexMax_I =(/1.0e8, 1.0e18/),                          &
+            NameFile = 'TR.dat',                                    &
+            TypeFile = TypeFile,                                    &
+            StringDescription = &
+            'Model for transition region: [K] [1/m3] [N/m] [m/s]')
+
+       iTable = i_lookup_table('TR')
+
+
+       ! The table is now initialized. 
+
+       !Fill in the table
+       call make_lookup_table(iTable, calc_tr_table)
+    end if
+    iTable = i_lookup_table('AW_TR')
+    if(iTable>=0)RETURN
+    
+    ! Initialize the table for modeling Alfven Waves (AW) in the 
+    ! Transition Region (TR)
     call init_lookup_table(                                      &
-         NameTable = 'TR',                                       &
+         NameTable = 'AW_TR',                                    &
          NameCommand = 'save',                                   &
-         NameVar = 'logTe logNe LPe UHeat',                      &
-         nIndex_I = (/500,2/),                                   &
-         IndexMin_I =(/1.0e4, 1.0e8/),                           &
-         IndexMax_I =(/1.0e8, 1.0e18/),                          &
-         NameFile = 'TR.dat',                                    &
+         NameVar = 'Length AMinus Heating APlus',                &
+         nIndex_I = (/201,101/),                                 &
+         IndexMin_I =(/0.0, 0.0/),                               &
+         IndexMax_I =(/2.0, 1.0/),                               &
+         NameFile = 'AW_TR.dat',                                 &
          TypeFile = TypeFile,                                    &
          StringDescription = &
-         'Model for transition region: [K] [1/m3] [N/m] [m/s]')
-
-    iTable = i_lookup_table('TR')
+         'Model for Alfven Waves in the transition region')
+    
+    iTable = i_lookup_table('AW_TR')
 
 
     ! The table is now initialized. 
 
     !Fill in the table
-    call make_lookup_table(iTable, calc_tr_table)
+    call make_lookup_table(iTable, calc_alfven_wave_tr_table)
   end subroutine check_tr_table
   !===========================================================================
   subroutine calc_tr_table(iTableIn, Arg1, Arg2, Value_V)
@@ -508,9 +533,6 @@ contains
          /1.0e-6    !cm3 = 1e-6 m3 
     real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
          /RadNorm*Cgs2SiEnergyDens
-    !--------------------------------------------------------------------------
-
-
     !-------------------------------------------------------------------------
     if(IsFirstCall)then
        IsFirstCall=.false.
@@ -557,6 +579,25 @@ contains
     Value_V = (/ LPe_I(iTe), UHeat_I(iTe) /)
   end subroutine calc_tr_table
   !===========================Tables for solving Alfven waves====
+  subroutine calc_alfven_wave_tr_table(iTableIn, Arg1, Arg2, Value_V)
+    integer, intent(in):: iTableIn
+    real, intent(in)   :: Arg1, Arg2
+    real, intent(out)  :: Value_V(:)
+    real::Heating, APlusBC
+    !-------------------------------------------------------------------------
+    if(Arg1<=0.0.or.Arg2<=0)then
+       !Zero length or zero amplitude of ingoing wave
+       Value_V = 0.0 
+    else
+       call solve_a_plus_minus(&
+            Length=Arg1,     & 
+            AMinusBC=Arg2,   &
+            Heating=Heating, &
+            APlusBC=APlusBC  )
+       Value_V = (/Heating, APlusBC/)
+    end if
+  end subroutine calc_alfven_wave_tr_table
+  !=======================================
   subroutine solve_a_plus_minus(Length, AMinusBC, Heating, APlusBC)!, DoWriteIn)
     real,intent(in )::Length, AMinusBC  !Dimensionless length, BC for A-
     real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
