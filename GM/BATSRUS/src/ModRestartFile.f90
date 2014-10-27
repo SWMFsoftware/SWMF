@@ -1210,7 +1210,7 @@ contains
           ! Rules for initializing state variables that are not present
           ! in the restart file
           select case(NameVar_V(iVar))
-          case('bx','by','bz','hyp')
+          case('Bx','By','Bz','Hyp')
              State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = 0.0
 
           case('Pe')
