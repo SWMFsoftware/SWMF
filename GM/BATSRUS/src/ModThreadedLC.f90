@@ -1,7 +1,8 @@
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B
-  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB
+  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
+                              LPerpTimesSqrtBSi, LPerpTimesSqrtB
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: AverageIonCharge
   implicit none
@@ -45,7 +46,8 @@ contains
     ! USE:
     !/
     use ModFieldLineThread, ONLY: HeatCondParSi
-    use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_
+    use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
+                               UnitEnergyDens_, UnitTemperature_, UnitB_
     use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl 
     !\
@@ -77,10 +79,10 @@ contains
     real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut
 
     !\
-    ! Two components array to use lookup table
+    ! Two components arrays to use lookup table
     !/ 
-    real    :: Value_V(2)
-    integer :: iTable
+    real    :: Value_V(2), AWValue_V(2), Length, RhoNoDim, Heating
+    integer :: iTable, iTableAW
     !------------------!
     iTable = i_lookup_table('TR')
     if(iTable<=0)call CON_stop('TR table is not set')
@@ -92,6 +94,22 @@ contains
     !/
     PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
          No2Si_V(UnitX_) )
+
+    RhoNoDim = (PAvrSiOut*Si2No_V(UnitEnergyDens_)/sqrt(AverageIonCharge))*&
+          TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
+
+    !Dimmensionless length (related to the wave dissipation length)
+    Length = BoundaryThreads_B(iBlock)% Length2SqrtB_III(0,j,k)*&
+         sqrt(sqrt(RhoNoDim)*PoyntingFluxPerB/LperpTimesSqrtBSi**2)
+
+    !Calculate Alfven waves for the given thread length and BC for ingoing wave 
+    iTable = i_lookup_table('AW_TR')
+    if(iTable<=0)call CON_stop('AW_TR table is not set')
+    call interpolate_lookup_table(iTable, Length, AMinorIn, AWValue_V, &
+         DoExtrapolate=.false.)
+
+    Heating = AWValue_V(1)*PoyntingFluxPerBSi*&
+         BoundaryThreads_B(iBlock)% Length_III(0,j,k)*No2Si_V(UnitB_)
     !\
     ! Heat flux equals PAvr * UHeat (spent for radiation) +
     ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
@@ -99,12 +117,13 @@ contains
     ! 
     ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
     !/
-    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) + &
-         USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
+    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) - & !Radiation losses
+         Heating                                & !AW Heating
+         +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
          (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
 
-    AMajorOut = 1.0    !Needs further work 
+    AMajorOut = AWValue_V(2) 
   end subroutine solve_boundary_thread
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
@@ -113,14 +132,15 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_
+         UnitEnergyDens_, UnitU_, UnitX_, OmegaBody
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Bx_, Bz_, RhoUx_, RhoUz_
     use ModSize,         ONLY: nDim
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModWaves
-    use ModMain,         ONLY: jTest, kTest, BlkTest
+    use ModGeometry,     ONLY: Xyz_DGB
+    use ModMain,         ONLY: jTest, kTest, BlkTest, UseRotatingFrame, x_, z_
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -131,7 +151,7 @@ contains
     
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, BDir_D(3)
+    real :: FaceGrad_D(3), TeSi, BDir_D(3), FaceCoord_D(3), U_D(3), B_D(3)
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir
     !-------------
     IsNewBlock = .true.
@@ -175,7 +195,12 @@ contains
        call get_face_gradient(1, 1, j, k, iBlock, &
             IsNewBlock, Te_G, FaceGrad_D, &
             UseFirstOrderBcIn=.true.)
-       BDir_D = State_VGB(Bx_:Bz_, 1, j, k, iBlock) + &
+       !\
+       !Store B1_D field in the physical cell
+       !/
+       B_D(x_:z_) = State_VGB(Bx_:Bz_, 1, j, k, iBlock)
+       
+       BDir_D = B_D + &
             BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
        if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
@@ -193,8 +218,9 @@ contains
        AMinor = sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
             ( sqrt(State_VGB(Rho_, 1, j, k, iBlock))* &
             PoyntingFluxPerB)  )
-       U = sum(State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)*BDir_D)/&
+       U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
+       U = sum(U_D*BDir_D)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
             TeSiIn=TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
             DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
@@ -228,19 +254,22 @@ contains
        State_VG(Rho_, 1-nGhost:-1, j, k) = 2*State_VG(Rho_, 0, j, k) -&
             State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
 
-       State_VG(Bx_:Bz_,1-nGhost:0, j, k) = 0
+       !\
+       !Calculate radial component of the B1 field and
+       !maintain the radial component of the field to be 0
+       !while the tangential ones being floating
+       !/
+       FaceCoord_D(1:nDim) = Xyz_DGB(1:nDim,1,j,k,iBlock)
+       FaceCoord_D = FaceCoord_D/sqrt(sum(FaceCoord_D**2))
+       B_D = B_D - FaceCoord_D*sum(FaceCoord_D*B_D)
+ 
        do i = 1-nGhost, 0
+          State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
                U*BDir_D
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
     end do; end do
-    !if(DoTestMe.and.iBlock==BlkTest)then
-    !   write(*,*)'Temperature in physical cell, K',&
-    !        Te_G(1,jTest,kTest)*No2Si_V(UnitTemperature_)
-    !   write(*,*)'Temperature in ghost cell(s), K',&
-    !        Te_G(1-nGhost:0,jTest,kTest)*No2Si_V(UnitTemperature_)
-    !end if
   end subroutine set_field_line_thread_bc
 end module ModThreadedLC
