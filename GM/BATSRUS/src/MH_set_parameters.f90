@@ -50,7 +50,8 @@ subroutine MH_set_parameters(TypeAction)
        RelativeEps_V, AbsoluteEps_V
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
-  use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file
+  use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
+                              DoChangeRestartVariables, nVarRestartRead
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -135,8 +136,10 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Temporary variables
   logical :: DoEcho=.false.
-  integer :: nVarRead=0
+  integer :: nVarRead=0, nVarEquationRead = 0
   character (len=lStringLine) :: NameEquationRead="?"
+  logical :: IsReadNameVarRestart = .false.
+  character(len=100) :: NameVarRestartRead=''
 
   character (len=50) :: plot_string,log_string
   character (len=3)  :: plot_area, plot_var
@@ -419,7 +422,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#FLUSH")
         call read_var('DoFlush',DoFlush)
-
+        
      case("#TEST")
         call read_var('StringTest',test_string)
 
@@ -1473,20 +1476,27 @@ subroutine MH_set_parameters(TypeAction)
              ' WARNING: CodeVersion in file=',CodeVersionRead,&
              ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
 
+     case("#CHANGEVARIABLES")
+        call check_stand_alone
+        call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
+
      case("#EQUATION")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('NameEquation',NameEquationRead)
-        call read_var('nVar',        nVarRead)
-        if(NameEquationRead /= NameEquation .and. iProc==0)then
+        call read_var('nVar',        nVarEquationRead)
+        if(NameEquationRead /= NameEquation .and. iProc==0 &
+             .and. .not. DoChangeRestartVariables)then   
            write(*,'(a)')'BATSRUS was compiled with equation '// &
                 NameEquation//' which is different from '// &
                 NameEquationRead
            call stop_mpi(NameSub//' ERROR: incompatible equation names')
+           
         end if
-        if(nVarRead /= nVar .and. iProc==0)then
+        if(nVarEquationRead /= nVar .and. iProc==0 .and. &
+             .not. DoChangeRestartVariables)then
            write(*,'(a,i2,a,i2)')&
                 'BATSRUS was compiled with nVar=',nVar, &
-                ' which is different from nVarRead=',nVarRead
+                ' which is different from nVarEquationRead=',nVarEquationRead
            call stop_mpi(NameSub//' ERROR: Incompatible number of variables')
         end if
 
@@ -1498,8 +1508,14 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
         call read_restart_parameters(NameCommand)
 
-     case('#RESTARTBLOCKDATA')
+     case('#DOWRITEBLOCKDATA')
         call read_restart_parameters(NameCommand)
+
+     case("#RESTARTVARIABLES")
+        ! This reads the names of the variables saved in the input
+        ! restart file. 
+        call read_var('NameVarRestartRead',NameVarRestartRead)
+        IsReadNameVarRestart = .true.
 
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)
@@ -1586,7 +1602,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('NameUserModule',NameUserModuleRead)
         call read_var('VersionUserModule',VersionUserModuleRead)
         if(NameUserModuleRead /= NameUserModule .or. &
-             abs(VersionUserModule-VersionUserModuleRead)>0.001) then
+             abs(VersionUserModule-VersionUserModuleRead)>0.001 .and. &
+             .not. DoChangeRestartVariables) then
            if(iProc==0)write(*,'(4a,f5.2)') NameSub, &
                 ' WARNING: code is compiled with user module ',NameUserModule,&
                 ' version',VersionUserModule
@@ -2249,6 +2266,7 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
     use ModImplHypre, ONLY: IsHypreAvailable
+    use ModRestartFile, ONLY: NameVarRestart_V
 
     ! option and module parameters
     character (len=40) :: Name
@@ -2257,6 +2275,7 @@ contains
 
     real    :: BetaProlongOrig = 0.0
     logical :: IsFirstCheck = .true.
+    character(len=4) :: NameVarTemp_V(100) = ''
     !---------------------------------------------------------------------
 
     !\
@@ -2747,6 +2766,37 @@ contains
     ! resolution change.
     if(UseHighResChange) nOrderProlong = 1
 
+    ! If the state variables are changed when restarting, the names of the
+    ! state variables saved in the restart file must be specified, so they
+    ! can be properly copied into State_VGB.
+    if(DoChangeRestartVariables .and. .not. IsReadNameVarRestart &
+         .and. NameEquationRead /= NameEquation) then
+       if(iProc == 0)then
+          write(*,'(a)') NameSub//&
+               ' : Could not find  #RESTARTVARIABLES command, needed '// &
+               'when changing state variables at restart.'
+       end if
+       call stop_mpi('Correct PARAM.in')
+    end if
+ 
+    ! Check that the number of variables listed in #RESTARTVARIABLES
+    ! matches the number appearing in the #EQUATION command
+    ! (this check is useful if the #RESTARTVARIABLES command is added
+    ! manually to older restart header files, but might become redundant 
+    ! in the future).
+    if(IsReadNameVarRestart) then
+       call split_string(NameVarRestartRead,100, NameVarTemp_V, &
+            nVarRestartRead)
+       if (nVarRestartRead .ne. nVarEquationRead) then
+          write(*,*)'Number of variables in #EQUATION command is different'//&
+               ' than the number of variables listed in #RESTARTVARIABLES.'
+          call stop_mpi(NameSub//': Correct PARAM.in file!')
+       else
+          ! Save array of variable names
+          allocate(NameVarRestart_V(nVarRestartRead))
+          NameVarRestart_V = NameVarTemp_V
+       end if
+    end if
 
     IsFirstCheck = .false.
 
