@@ -552,7 +552,7 @@ contains
     end if
 
     ! Make sure that all processors are done
-    call MPI_barrier(iComm, iError)
+    if(nProc>1)call MPI_barrier(iComm, iError)
 
     ! Make sure it is not saved again
     Ptr%NameCommand = "done"
