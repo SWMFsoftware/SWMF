@@ -52,13 +52,9 @@ module ModRestartFile
   ! Variables for allowing the user to use a different set of state variables
   ! from those saved in an existing restart file.
   logical, public :: DoChangeRestartVariables = .false.
-  integer, public :: nVarRestartRead = 0 
+  integer, public :: nVarRestart = nVar 
   character(len=100), public :: NameVarRestart
   character(len=4),allocatable,public :: NameVarRestart_V(:)
-  ! Temporary array to store the complete state read from the restart file.
-  ! Allows loading only a subset of the variables into current run, if needed.
-  real,allocatable :: StateRead_VCB(:,:,:,:,:)
-  real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
   ! Local variables
   character(len=*), parameter :: StringRestartExt = ".rst"
@@ -95,6 +91,11 @@ module ModRestartFile
   real (Real4_) :: B4_X(nI+1,nJ,nK), B4_Y(nI,nJ+1,nK), B4_Z(nI,nJ,nK+1)
   real (Real8_),allocatable :: State8_CV(:,:,:,:), State8_VC(:,:,:,:)
   real (Real4_),allocatable :: State4_CV(:,:,:,:), State4_VC(:,:,:,:)
+
+  ! Temporary array to store the complete state read from the restart file.
+  ! Allows loading only a subset of the variables into current run, if needed.
+  real,allocatable :: StateRead_VCB(:,:,:,:,:)
+  real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
 contains
 
@@ -257,15 +258,15 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-  ! Allocate temporary array for reading restart data
+    ! Allocate temporary array for reading restart data
     ! with arbitrary percision and number of state variables.
-    allocate(State8_CV(nI,nJ,nK,nVarRestartRead))
-    allocate(State8_VC(nVarRestartRead,nI,nJ,nK))
-    allocate(State4_CV(nI,nJ,nK,nVarRestartRead))
-    allocate(State4_VC(nVarRestartRead,nI,nJ,nK))
-    allocate(StateRead_VCB(nVarRestartRead,nI,nJ,nK,nBlock))
+    allocate(State8_CV(nI,nJ,nK,nVarRestart))
+    allocate(State8_VC(nVarRestart,nI,nJ,nK))
+    allocate(State4_CV(nI,nJ,nK,nVarRestart))
+    allocate(State4_VC(nVarRestart,nI,nJ,nK))
+    allocate(StateRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
     if(UseImplicit .or. n_prev == n_step) &
-         allocate(ImplOldRead_VCB(nVarRestartRead,nI,nJ,nK,nBlock))
+         allocate(ImplOldRead_VCB(nVarRestart,nI,nJ,nK,nBlock))
 
     select case(TypeRestartInFile)
     case('block')
@@ -620,7 +621,7 @@ contains
 
        read(Unit_tmp, iostat = iError) State8_CV
        
-       do iVar = 1, nVarRestartRead
+       do iVar = 1, nVarRestart
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
        end do
 
@@ -632,7 +633,7 @@ contains
        end if
        if(n_prev==n_step) then
           read(Unit_tmp, iostat = iError) State8_CV
-          do iVar = 1, nVarRestartRead
+          do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
           end do
        end if
@@ -646,7 +647,7 @@ contains
        XyzStart_BLK(:,iBlock) = Xyz4_D
 
        read(Unit_tmp, iostat = iError) State4_CV
-       do iVar = 1, nVarRestartRead
+       do iVar = 1, nVarRestart
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State4_CV(:,:,:,iVar)
        end do
 
@@ -658,7 +659,7 @@ contains
        end if
        if(n_prev==n_step) then
           read(Unit_tmp, iostat = iError) State4_CV
-          do iVar = 1, nVarRestartRead
+          do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
           end do
        end if
@@ -679,7 +680,7 @@ contains
        write(*,*)'Dxyz    =', CellSize_DB(:,iBlock)
        write(*,*)'Dt,tSim =', Dt_BLK(iBlock), tSimulationRead
        write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
-       write(*,*)'State111=', StateRead_VCB(1:nVarRestartRead,1,1,1,iBlock)
+       write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
        call stop_mpi(NameSub//': corrupt restart data!!!')
     end if
 
@@ -755,7 +756,7 @@ contains
      if (DoRead) then
        inquire (IOLENGTH = lRecord ) &
             Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
-            StateRead_VCB(1:nVarRestartRead,1:nI,1:nJ,1:nK,1)
+            StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,1)
     else
        inquire (IOLENGTH = lRecord ) &
             Dt_BLK(1), CellSize_DB(:,1), XyzStart_BLK(:,1), &
@@ -769,7 +770,7 @@ contains
     end if
     if(n_prev==n_step)then
        if(DoRead) then
-          l = lReal*nVarRestartRead*nI*nJ*nK
+          l = lReal*nVarRestart*nI*nJ*nK
        else
           l = lReal*nVar*nI*nJ*nK
        end if
@@ -881,7 +882,7 @@ contains
              read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
              if(UseImplicit)then
-                do iVar = 1, nVarRestartRead
+                do iVar = 1, nVarRestart
                    ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
                 end do
              end if
@@ -893,7 +894,7 @@ contains
           Dt_BLK(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
           XyzStart_BLK(:,iBlock) = Xyz4_D
-          StateRead_VCB(1:nVarRestartRead,1:nI,1:nJ,1:nK,iBlock) = State4_VC
+          StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State4_VC
 
        else
           if(Restart_Bface)then
@@ -912,7 +913,7 @@ contains
              read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
              if(UseImplicit)then
-                do iVar = 1, nVarRestartRead
+                do iVar = 1, nVarRestart
                    ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
                 end do
              end if
@@ -924,7 +925,7 @@ contains
           Dt_BLK(iBlock) = Dt8
           CellSize_DB(:,iBLock) = Dxyz8_D
           XyzStart_BLK(:,iBlock) = Xyz8_D
-          StateRead_VCB(1:nVarRestartRead,1:nI,1:nJ,1:nK,iBlock) = State8_VC
+          StateRead_VCB(1:nVarRestart,1:nI,1:nJ,1:nK,iBlock) = State8_VC
        end if
 
        if(any(CellSize_DB(:,iBLock) < 0) .or. Dt_BLK(iBlock) < 0)then
@@ -933,7 +934,7 @@ contains
           write(*,*)'Dxyz    =', CellSize_DB(:,iBLock)
           write(*,*)'Dt      =', Dt_BLK(iBlock)
           write(*,*)'XyzStart=', XyzStart_BLK(:,iBlock)
-          write(*,*)'State111=', StateRead_VCB(1:nVarRestartRead,1,1,1,iBlock)
+          write(*,*)'State111=', StateRead_VCB(1:nVarRestart,1,1,1,iBlock)
           call stop_mpi(NameSub//': corrupt restart data!!!')
        end if
     end do
@@ -1133,9 +1134,9 @@ contains
 
   end subroutine read_geoind_restart
 
-! ===================================================================
+  ! ===================================================================
   subroutine match_copy_restart_variables
-
+    
     ! This subroutine allows to use the state stored in an existing 
     ! restart file even if the variables or their order as defined in
     ! the present equation file has changed.
@@ -1188,7 +1189,7 @@ contains
     ! Loop over the current state variables, and locate the index of 
     ! the corresponding variable in the restart file
     MATCHLOOP: do iVar = 1,nVar 
-       do iVarRead = 1, nVarRestartRead
+       do iVarRead = 1, nVarRestart
           if (NameVar_V(iVar) == NameVarRestart_V(iVarRead)) then
              iVarMatch_V(iVar) = iVarRead
              CYCLE MATCHLOOP
@@ -1242,7 +1243,7 @@ contains
     ! Check if restart file contains certain additional variables
     if(.not. UseElectronPressure) then
        ! Check if the restart file containes electron pressure
-       do iVarRead = 1, nVarRestartRead
+       do iVarRead = 1, nVarRestart
           if (NameVarRestart_V(iVarRead) == 'Pe') then
              UseElectronPressureRestart = .true.
              iVarPeRestart = iVarRead

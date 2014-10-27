@@ -51,7 +51,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
-                              DoChangeRestartVariables, nVarRestartRead
+                              DoChangeRestartVariables, nVarRestart
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -2786,14 +2786,14 @@ contains
     ! in the future).
     if(IsReadNameVarRestart) then
        call split_string(NameVarRestartRead,100, NameVarTemp_V, &
-            nVarRestartRead)
-       if (nVarRestartRead .ne. nVarEquationRead) then
+            nVarRestart)
+       if (nVarRestart /= nVarEquationRead) then
           write(*,*)'Number of variables in #EQUATION command is different'//&
                ' than the number of variables listed in #RESTARTVARIABLES.'
           call stop_mpi(NameSub//': Correct PARAM.in file!')
        else
           ! Save array of variable names
-          allocate(NameVarRestart_V(nVarRestartRead))
+          allocate(NameVarRestart_V(nVarRestart))
           NameVarRestart_V = NameVarTemp_V
        end if
     end if
