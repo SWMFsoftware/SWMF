@@ -182,8 +182,7 @@ contains
     allocate(SemiState_VGB(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(ResSemi_VCB(nVarSemi,nI,nJ,nK,MaxBlock))
 
-    if(SemiParam%DoPrecond) &
-         allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
+    allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
 
     ! Variables for the flux correction
     if(  TypeSemiImplicit == 'parcond' .or. &
