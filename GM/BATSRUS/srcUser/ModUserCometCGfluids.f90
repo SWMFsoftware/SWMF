@@ -24,8 +24,6 @@ module ModUser
 
   use ModSize
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: xTest, yTest, zTest
-  use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
   use ModMultiFluid
@@ -77,7 +75,7 @@ module ModUser
 
   ! Parameters for y=ax+b to mimic the production rate and 
   ! temperature distribution
-  real :: SlopeProduction, bProduction, SlopeTemp, bTemp, cos75
+  real :: SlopeProduction, bProduction, SlopeTemp, bTemp
 
   ! Constant parameters to calculate uNormal and temperature from TempCometLocal
   real :: TempToUnormal
@@ -87,16 +85,15 @@ module ModUser
   ! Inner boundary condition for ions
   logical :: UseSwBC =.false.
 
-  ! Position for testing the user_set_face_boundary and the last step that
-  ! the face values were printed out
-  real    :: FaceCoordsX=0.0, FaceCoordsY=0.0, FaceCoordsZ=0.0
-  real    :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
-  integer :: nStepPritSetFace = -100
+  ! FaceCoordsTest_D
+  real :: FaceCoordsX=0.0, FaceCoordsY=0.0, FaceCoordsZ=0.0
+  real :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
 
   ! Last step and time the inner boundary values were saved for each block
   integer :: nStepSave_B(MaxBlock) = -100
   real    :: TimeSimulationSave_B(MaxBlock) = -1e30
   integer :: nStepSaveCalcRates_B(MaxBlock) = -100
+  integer :: nStepPritSetFace = -100
 
   !++++++++++++++++++++++++++++++++++++++++++++++
   ! From Martin & Xianzhe 2014
@@ -177,8 +174,8 @@ contains
 
     use ModMain, ONLY: Time_Simulation, n_step
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
-         UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-         UnitP_, UnitN_, UnitX_, gm1
+         UnitU_, UnitTemperature_, UnitT_, &
+         UnitN_, UnitX_, gm1
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -337,7 +334,6 @@ contains
     integer:: iSeed = 7
 
     real, allocatable:: Xyz_DI(:,:)
-    real :: RandomNumber
 
     character(len=100):: String1, String2
 
@@ -410,19 +406,13 @@ contains
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain, ONLY: n_step, time_simulation, time_accurate, Dt
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Ux_, Uz_, MassFluid_I, Bx_, Bz_
+    use ModMain, ONLY: n_step, time_simulation
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
-    use ModPhysics, ONLY: gm1, LowDensityRatio, SW_Ux, SW_Uy, SW_Uz, SW_n, SW_T_dim, &
-         ElectronPressureRatio, UnitTemperature_, Io2No_V, SW_Bx, SW_By, SW_Bz, &
-         NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
-         BodyRho_I, BodyP_I, Si2No_V
-    use ModNumConst, ONLY : cDegToRad, cRadToDeg
-    use ModCoordTransform, ONLY: dir_to_xyz
+    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V
     use ModSolarwind,    ONLY: get_solar_wind_point
-    use ModB0,           ONLY: B0_DX
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
 
@@ -434,11 +424,9 @@ contains
 
 
     real :: XyzIntersect_D(3), XyzStart_D(3), XyzEnd_D(3)
-    real :: TestFace_D(3)
     real :: XyzTrueCell_D(3), XyzBodyCell_D(3)
     real :: Normal_D(3), CosAngle
     real :: TempCometLocal, uNormal, ProductionRateLocal
-    real :: LonSunNow
 
     integer :: iDim
     logical :: DoWriteOnce = .true.
@@ -669,7 +657,7 @@ contains
 
     logical:: IsOdd
 
-    integer:: iTriangle, nIntersect, iIntersect, iMinRatio
+    integer:: iTriangle, nIntersect, iMinRatio
 
     integer, parameter:: MaxIntersect = 10
     real:: Ratio, Ratio1, Ratio2, Ratio_I(MaxIntersect)
@@ -822,7 +810,7 @@ contains
     ! calculate all collision rates for electrons (fen, fei)
     ! (used for sources & resistivity)
 
-    use ModAdvance,    ONLY: State_VGB, Rho_
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
     use ModGeometry,   ONLY: Xyz_DGB
@@ -881,15 +869,10 @@ contains
 
     ! calculate all rates not involving electron collisions
 
-    use ModPhysics,  ONLY: SI2No_V, UnitN_, rPlanetSI, rBody, cPi, No2SI_V, UnitU_
-    use ModConst,    ONLY: cElectronCharge, cBoltzmann, cElectronMass, cProtonMass
-    use ModMain,     ONLY: Body1, iTest, jTest, kTest, BlkTest, &
-         n_step, time_simulation, time_accurate, iTest, ProcTest
-    use ModNumConst, ONLY: cPi
+    use ModConst,    ONLY: cElectronMass, cProtonMass
+    use ModMain,     ONLY: iTest, jTest, kTest, BlkTest, &
+         n_step, iTest, ProcTest
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
-    use ModAdvance,  ONLY: State_VGB
-    use ModBlockData, ONLY: use_block_data, clean_block_data, &
-         get_block_data, put_block_data, nData_B, Data_B
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -910,8 +893,8 @@ contains
     real,intent(out)   :: Qion_II(nNeutral,nIonFluid)
     real,intent(inout) :: IsIntersectedShapeR
 
-    real :: Tr, ueBulk2, ueTherm2, Ee, A(7), Tred, Mred, uSWBulk2, uSWTherm2
-    real :: DistProjection, CosAngleTmp, NCol, sigma, J3, uNeutr, log10Te, sqrtTe
+    real :: Tred, Mred
+    real :: DistProjection, CosAngleTmp, NCol, sigma, J3, log10Te, sqrtTe
     real,dimension(nNeutral,nIonFluid) :: sigma_e
     integer :: n
     real, save :: ElImpRate_I(nNeutral,61)!, ElCrossSect_I(61)
@@ -1165,19 +1148,19 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number, Dt_BLK, n_step
+         BlkTest, PROCtest, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, RhoUx_, RhoUy_, RhoUz_, &
-         Bx_,By_,Bz_, P_, Energy_
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
-    use ModGeometry,   ONLY: Rmin_BLK, r_BLK, Xyz_DGB
+         Bx_,By_,Bz_, P_
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass
+    use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModProcMH,     ONLY: iProc
     use ModPhysics,    ONLY: SW_Ux, SW_Uy, SW_Uz, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, UnitB_, &
-         ElectronPressureRatio, ElectronCharge, Si2No_V, No2Si_V, UnitEnergyDens_, UnitJ_, UnitRhoU_, UnitX_, &
+         ElectronPressureRatio, ElectronCharge, Si2No_V, No2Si_V, UnitEnergyDens_, UnitJ_, UnitRhoU_, &
          UnitTemperature_
-    use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
+    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes, ONLY: MassFluid_I
-    use ModBlockData, ONLY: use_block_data, clean_block_data, &
+    use ModBlockData, ONLY: use_block_data, &
          get_block_data, put_block_data
 
     integer, intent(in) :: iBlock
@@ -1205,9 +1188,8 @@ contains
 
     logical :: DoTest, DoTestMe
     real :: theta, fenTot, feiTot,logTe
-    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm,iDim
+    integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm
 
-    real :: a, b, d, l, f=5./8., MaxHeat
 
     logical :: DoCalcShading = .false.
     integer, save :: iBlockLast = -100
@@ -2169,7 +2151,7 @@ contains
     use ModPhysics,  ONLY: SW_N, LowDensityRatio, cBoltzmann, ElectronPressureRatio, Si2No_V, &
          No2Si_V, UnitN_, UnitP_!, UnitB_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModGeometry, ONLY: r_BLK, true_cell
+    use ModGeometry, ONLY: true_cell
 
     integer,intent(in) :: iStage, iBlock
     integer :: i,j,k,iIonFluid
@@ -2273,14 +2255,8 @@ contains
 
   subroutine derive_cell_diffusivity(iBlock, i, j, k, TeSI, nIon_I, nElec, EtaSi)
     use ModResistivity,  ONLY: Eta0SI
-    use ModAdvance,      ONLY: State_VGB
-    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
-    use ModPhysics,      ONLY: No2Si_V, UnitP_, UnitN_, UnitTemperature_, ElectronPressureRatio, &
-         UnitB_, UnitRho_
-    use ModConst,        ONLY: cBoltzmann, cElectronMass, cElectronCharge, &
-         cMu, cProtonMass, cPi, cEps!, cLightSpeed, cTwoPi
-    use ModB0,           ONLY: B0_DGB
-    use ModMain,         ONLY: UseB0, iTest, jTest, kTest, BlkTest, ProcTest
+    use ModConst,        ONLY: cElectronMass, cElectronCharge, cMu
+    use ModMain,         ONLY: iTest, jTest, kTest, BlkTest, ProcTest
     use ModProcMH,       ONLY: iProc
 
     integer, intent(in)  :: iBlock, i, j, k
@@ -2291,7 +2267,6 @@ contains
 
     real :: EtaSiColl!, EtaSiSpitzer, lnL
     !    real, save :: SpitzerCoef, EtaPerpSpitzerSi
-    logical, save :: FirstCall = .true.
     logical :: DoTest, DoTestMe=.true.
     real :: eeSigma!, B0_D(3)
     real, dimension(nIonFluid) :: fei_I, eiSigma_I
@@ -2358,28 +2333,22 @@ contains
 
   subroutine user_set_resistivity(iBlock, Eta_G)
 
-    use ModPhysics,     ONLY: No2Io_V, Io2No_V, No2Si_V, Si2No_V, &
-         UnitN_, UnitTemperature_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
+    use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
+         UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
     use ModProcMH,      ONLY: iProc
-    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest, nBlockMax
+    use ModMain,        ONLY: ProcTest, BlkTest, iTest, jTest, kTest
     use ModAdvance,     ONLY: State_VGB
-    use ModGeometry,    ONLY: Rmin_BLK, R_BLK
-    use ModVarIndexes,  ONLY: Rho_, Pe_, P_
-    use ModConst,       ONLY: cMu, cBoltzmann, cElectronMass, cElectronCharge
+    use ModVarIndexes,  ONLY: Pe_, P_
+    use ModConst,       ONLY: cBoltzmann
     use ModMultiFluid,  ONLY: MassIon_I
-    use ModResistivity, ONLY: Eta0
 
     integer, intent(in) :: iBlock
     real, intent(out) :: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
 
     integer :: i, j, k
     logical :: DoTest, DoTestMe=.true.
-    real, dimension(1:nNeutral,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: enSigma_IG
-    real, dimension(1:nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: eiSigma_IG, nIon_IG
+    real, dimension(1:nIonFluid,MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: nIon_IG
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: Te_G, nElec_G
-    real, dimension(1:nNeutral) :: fen_I
-    real, dimension(1:nIonFluid) :: fei_I
-    integer :: iIonFluid, iNeutral
     real :: EtaSi
 
     !---------------------------------------------------------------------
@@ -2431,14 +2400,12 @@ contains
        EntropyOut)
 
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, ElectronPressureRatio, inv_gm1
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, ExtraEInt_
+    use ModVarIndexes,   ONLY: nVar, p_
     use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
     use ModAdvance,      ONLY: State_VGB
     use ModMain,         ONLY: ProcTest, iTest, jTest, kTest, BlkTest
-    use ModResistivity,  ONLY: Eta0SI
     use ModProcMH,       ONLY: iProc
     use ModGeometry,     ONLY: Xyz_DGB
-    use ModNumConst,     ONLY: cTiny
 
     !------------------------------------------------------------------------
     ! The State_V vector is in normalized units
@@ -2464,7 +2431,6 @@ contains
     real, save :: KappaCoeffSI = (cBoltzmann/cElectronCharge)**2/cMu
     real :: nElec, EtaSI, TeSI
     real, dimension(nIonFluid) :: nIon_I
-    integer :: iIonFluid
     logical :: DoTest, DoTestMe=.true.
 
     real :: xmin, xmax, HeatCondFactor, widthmax, widthmin, xMaxyz, xMinyz
@@ -2572,10 +2538,10 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
+    use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
          ElectronCharge, ElectronPressureRatio, UnitTemperature_
-    use ModVarIndexes, ONLY: Rho_, P_, Pe_
+    use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
@@ -2838,14 +2804,12 @@ contains
   !========================================================================
 
   subroutine user_set_ICs(iBlock)
-    use ModIO,       ONLY: restart
     use ModProcMH,   ONLY: iProc
-    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_, Body1
+    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, UnitRho_, &
-         UnitRhoU_, UnitP_, rBody, CellState_VI
-    use ModConst,    ONLY: cBoltzmann
-    use ModGeometry, ONLY: R_BLK, true_cell
+         UnitRhoU_, UnitP_, CellState_VI
+    use ModGeometry, ONLY: true_cell
 
     integer, intent(in) :: iBlock
 
@@ -2921,8 +2885,7 @@ contains
     use ModAdvance,  ONLY: State_VGB
     use ModImplicit, ONLY: StateSemi_VGB, iTeImpl
     use ModSize,     ONLY: nI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_, SW_n, SW_Ux, SW_Uy, SW_Uz, &
-         LowDensityRatio, ElectronPressureRatio, SW_T_dim, Io2No_V
+    use ModPhysics,  ONLY: Si2No_V, UnitTemperature_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*),intent(in)  :: TypeBc
@@ -2982,10 +2945,9 @@ contains
 
     ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.                                                                                                                             
     use BATL_lib,    ONLY: iNode_B, iTree_IA, Level_
-    use ModSize,     ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: State_VGB, H2OpRho_, H2OpRhoUx_
-    use ModPhysics,  ONLY: No2SI_V, SI2No_V, UnitN_, UnitU_
-    use ModGeometry, ONLY: R_BLK, Xyz_DGB
+    use ModAdvance,  ONLY: State_VGB, H2OpRho_
+    use ModPhysics,  ONLY: No2SI_V, UnitN_
+    use ModGeometry, ONLY: Xyz_DGB
 
     ! Variables required by this user subroutine
 
@@ -3033,17 +2995,16 @@ contains
     ! This is applied to reset all ions after the neutral background
     ! is fully developed
 
-    use ModMain, ONLY: Time_Simulation, Unused_B
+    use ModMain, ONLY: Unused_B
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: SW_rho, SW_Ux, SW_Uy, SW_Uz, SW_p, LowDensityRatio, &
-         ElectronPressureRatio, Io2No_V, UnitTemperature_, &
-         SW_Bx, SW_By, SW_Bz, No2Si_V, UnitX_, Si2No_V, UnitU_, UnitN_
-    use ModGeometry, ONLY:Xyz_DGB, r_BLK, true_cell
-    use ModVarIndexes, ONLY: MassFluid_I
+         ElectronPressureRatio, &
+         SW_Bx, SW_By, SW_Bz
+    use ModGeometry, ONLY: true_cell
     use ModEnergy,    ONLY: calc_energy_cell
 
     integer :: i, j, k, iBlock
-    real:: RhoSw, RhoNeu1
+    real:: RhoSw
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     ! -------------------------------------------------------------------------
