@@ -139,7 +139,7 @@ subroutine MH_set_parameters(TypeAction)
   integer :: nVarRead=0, nVarEquationRead = 0
   character (len=lStringLine) :: NameEquationRead="?"
   logical :: IsReadNameVarRestart = .false.
-  character(len=100) :: NameVarRestartRead=''
+  character(len=lStringLine) :: NameVarRestartRead=''
 
   character (len=50) :: plot_string,log_string
   character (len=3)  :: plot_area, plot_var
@@ -1514,7 +1514,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#RESTARTVARIABLES")
         ! This reads the names of the variables saved in the input
         ! restart file. 
-        call read_var('NameVarRestartRead',NameVarRestartRead)
+        call read_var('NameVarRestartRead', NameVarRestartRead)
         IsReadNameVarRestart = .true.
 
      case("#PLOTDIR")
@@ -2265,7 +2265,6 @@ contains
 
     use ModMultiFluid, ONLY: UseMultiIon
     use ModWaves, ONLY: UseAlfvenWaves, UseWavePressure
-    use ModImplHypre, ONLY: IsHypreAvailable
     use ModRestartFile, ONLY: NameVarRestart_V
 
     ! option and module parameters
