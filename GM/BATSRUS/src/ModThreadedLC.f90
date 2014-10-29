@@ -100,7 +100,7 @@ contains
 
     !Dimmensionless length (related to the wave dissipation length)
     Length = BoundaryThreads_B(iBlock)% Length2SqrtB_III(0,j,k)*&
-         sqrt(sqrt(RhoNoDim)*PoyntingFluxPerB/LperpTimesSqrtBSi**2)
+         sqrt(sqrt(RhoNoDim)*PoyntingFluxPerB/LperpTimesSqrtB**2)
 
     !Calculate Alfven waves for the given thread length and BC for ingoing wave 
     iTable = i_lookup_table('AW_TR')
@@ -109,7 +109,7 @@ contains
          DoExtrapolate=.false.)
 
     Heating = AWValue_V(1)*PoyntingFluxPerBSi*&
-         BoundaryThreads_B(iBlock)% Length_III(0,j,k)*No2Si_V(UnitB_)
+         BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
     !\
     ! Heat flux equals PAvr * UHeat (spent for radiation) +
     ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
