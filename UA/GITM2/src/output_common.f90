@@ -158,7 +158,7 @@ subroutine output(dir, iBlock, iOutputType)
 
   if (iOutputType <= -1) &
        write(*,'(a,i7,i5,5i3)') &
-       "Writing satellite file ("//CurrentSatelliteName//") at iStep : ",&
+       "Writing satellite file ("//trim(CurrentSatelliteName)//") at iStep : ",&
        iStep, iTimeArray(1:6)
 
   call calc_physics(iBlock)
@@ -211,15 +211,15 @@ subroutine output(dir, iBlock, iOutputType)
   !! ---------------------------------------------
 
   if (iOutputType <= -1) then
-     inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat", &
+     inquire(file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".sat", &
           EXIST=IsThere)
      if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
         open(unit=iOutputUnit_, form="unformatted", &
-             file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat",&
+             file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".sat",&
              status="unknown")
      else
         open(unit=iOutputUnit_, form="unformatted", &
-             file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".sat",&
+             file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".sat",&
              status="unknown",position='append')
      endif
   else
@@ -353,14 +353,14 @@ subroutine output(dir, iBlock, iOutputType)
   if ((iProc == 0 .and. iBlock == nBlocks) .or. iOutputType <= -1) then 
 
      if (iOutputType <= -1) then
-        inquire(file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header", EXIST=IsThere)
+        inquire(file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".header", EXIST=IsThere)
         if (.not. DoAppendFiles .or. tSimulation < 0.1 .or. .not. IsThere) then
            open(unit=iOutputUnit_, &
-                file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header",&
+                file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".header",&
                 status="unknown") 
         else
            open(unit=iOutputUnit_, &
-                file=dir//"/"//CurrentSatelliteName//"_"//cTime(1:cL)//".header",&
+                file=dir//"/"//trim(CurrentSatelliteName)//"_"//cTime(1:cL)//".header",&
                 status="unknown",position='append')
         endif
      else

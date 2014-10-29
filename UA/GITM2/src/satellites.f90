@@ -184,9 +184,8 @@ subroutine move_satellites
 
   integer :: iSat, iPos, iLine = 1, i, iBlock, iOut
   real    :: r
-  character (len=8)         :: cName
   character (len=3)         :: cPos
-  character (len=iCharLen_) :: cTmp
+  integer :: l1, l2
 
   iOut = -1
   if (RCMRFlag) iOut = -2
@@ -267,10 +266,14 @@ subroutine move_satellites
 !                     iPos, i, SatCurrentPos(iSat, i, iPos)
               enddo
               write(cPos,'(i3.3)') iPos
-              cTmp  = cSatFileName(iSat)
-              cName = cTmp(1:4)//"_"//cPos
+
+              l1 = index(cSatFileName(iSat), '/', back=.true.) + 1
+              l2 = index(cSatFileName(iSat), '.') - 1
+              if (l1-1 <= 0) l1 = 1
+              if (l2+1 <= 0) l2 = len_trim(cSatFileName(iSat))
+
               CurrentSatellitePosition = SatCurrentPos(iSat,:,iPos)
-              CurrentSatelliteName     = cName
+              CurrentSatelliteName     = cSatFileName(iSat)(l1:l2)//"_"//cPos
               do iBlock = 1, nBlocks
 !                 call output_1d("UA/data/",cName,iBlock, &
 !                      SatCurrentPos(iSat,:,iPos))

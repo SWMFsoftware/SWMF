@@ -42,7 +42,7 @@ module ModSatellites
   integer             :: iSatCurrentIndex(nMaxSats)
 
   real                :: CurrentSatellitePosition(3)
-  character (len=8)   :: CurrentSatelliteName
+  character (len=50)   :: CurrentSatelliteName 
 
   integer :: CurrSat = 0
   integer :: nRCMRSat
