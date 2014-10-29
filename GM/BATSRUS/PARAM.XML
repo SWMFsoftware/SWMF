@@ -6836,6 +6836,33 @@ The default is UseHeatFluxRegion=.false.
 
 </command>
 
+<command name="HEATFLUXCOLLISIONLESS">
+	 <parameter name="UseHeatFluxCollisionless"   type="logical" default="F"/>
+	 <if expr="$UseHeatFluxCollisionless">
+	     <parameter name="CollisionlessAlpha" type="real" />
+	 </if>
+
+#HEATFLUXCOLLISIONLESS
+T                       UseHeatFluxCollisionless
+1.05                    CollisionlessAlpha
+
+If UseHeatFluxCollisionless is true, an empirical model is used to mimic the
+collisionless electron heat conduction (Hollweg, J.V., 1978). This empirical model
+reduces the polytropic index in the electron pressure equation to
+\[
+  \gamma_{H} = \frac{\gamma + \frac32(\gamma-1)\alpha}
+        {1 + \frac32(\gamma-1)\alpha},
+\]
+where $\gamma = 5/3$ and $\alpha$ is the input parameter CollisionlessAlpha.
+For the default value $\alpha=1.05$, the polytropic index for the electron pressure
+equation is reduced to $\gamma_{H} \approx 1.33$. The collisionless heat flux
+only works if the equation module contains the state variable Ehot_.
+See van der Holst et al. 2014 for more details on this empirical model.
+
+The default is UseHeatFluxCollisionless=.false.
+
+</command>
+
 <command name="SECONDBODY" if="$_IsFirstSession">
 	<parameter name="UseBody2" type="logical" default="F"/>
 	<if expr="$UseBody2">
