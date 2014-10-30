@@ -593,7 +593,7 @@ namespace Exosphere {
 
       inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
         int idim;
-        double ExternalNormal[3],r;
+        double ExternalNormal[3],r=0.0;
 
         //generate the new particle position and velocity
         for (idim=0;idim<DIM;idim++) {
@@ -605,7 +605,7 @@ namespace Exosphere {
 
         for (idim=0;idim<DIM;idim++) {
           ExternalNormal[idim]/=r;
-          x_IAU_OBJECT[idim]=sphereX0[idim]-sphereRadius*ExternalNormal[idim];
+          x_IAU_OBJECT[idim]=sphereRadius*ExternalNormal[idim]+sphereX0[idim];
           x_SO_OBJECT[idim]=x_IAU_OBJECT[idim];
 
           v_SO_OBJECT[idim]=VerticalInjection_BulkVelocity[spec]*ExternalNormal[idim];
