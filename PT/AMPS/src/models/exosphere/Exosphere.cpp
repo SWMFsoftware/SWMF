@@ -2031,6 +2031,12 @@ cout << __FILE__ << "@" << __LINE__ << "  " << x_IAU_OBJECT[0] << "  " << x_IAU_
    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
    #endif
 
+   //apply condition of tracking the particle
+   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+   PIC::ParticleTracker::InitParticleID(tempParticleData);
+   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+   #endif
+
    //save the information od the particle origin: the particle origin will be sampled in SO coordinate frame
    if (BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_) {
      Sphere->GetSurfaceElementProjectionIndex(x_SO_OBJECT,nZenithElement,nAzimuthalElement);
