@@ -140,6 +140,57 @@ namespace PIC {
   }
 
 
+  //the particle trajectory tracing
+  namespace ParticleTracker {
+    extern long int ParticleDataRecordOffset; //the offset of the trajecotry specific informaion within the particle data
+    extern unsigned int CurrentParticleID; //the counter of injected particles
+
+    struct cParticleDataRecord {
+      unsigned long int ID;
+      int Thread;
+      bool TrajectoryTrackingFlag; //the trajectory of the praticle is sampled only when TrajectoryTrackingFlag==true; the default value is  TrajectoryTrackingFlag==false
+
+      struct cLastDataRecord {
+        double x[3]; //location of the point
+        int spec; //the species of the particle
+
+        int offset;  //the location of the previous particle trajecotry data record in the files that contains tha whole trajectory information
+        unsigned int file,thread; //file -> the file where the previous particle trajecotry data record in stored; thread -> the processor number where the particle was created (used as a part of the data file name)
+      } LastDataRecord;
+    };
+
+
+    namespace TrajectoryDataBuffer {
+      extern PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord *buffer;
+      extern unsigned long int Size,CurrentPosition,nfile;
+
+      void flush(); //save in a file the trajecotry information
+      inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
+    }
+
+    namespace TrajectoryList {
+      extern unsigned long int Size,CurrentPosition,nfile;
+      extern PIC::ParticleTracker::cParticleDataRecord *buffer;
+
+      void flush(); //save in a file the list of the trajectories
+      inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
+    }
+
+    void Init();
+
+    void InitParticleID(void *ParticleData);
+    void RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData);
+    void FinilazeParticleRecord(void *ParticleData);
+    void CreateTrajectoryFile(const char *fname);
+
+    void StartParticleTrajectoryTracking(void *ParticleData);
+
+    void ApplyTrajectoryTrackingCondition(void *StartNodeVoid=NULL); //search all particles to start tracking those that met the search condition
+    void ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData); //apply the particle tracking conditions to the particle 'ParticleData'
+    bool TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData); //the default tracking criterion -> return false for all particles
+    void SetDefaultParticleTrackingFlag(void *StartNodeVoid=NULL); //set the value of 'TrajectoryTrackingFlag' to 'false' for all particles in a current simulation; used to re-set the trajectory sampling after output of the trajectory data file
+  }
+
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
     extern unsigned int nCallsTestDirectAccess;
@@ -736,8 +787,13 @@ namespace PIC {
     long int GetNewParticle();
     long int GetNewParticle(long int&);
 
+    /*DeleteParticle_withoutTrajectoryTermination() acts as  DeleteParticle() when _PIC_PARTICLE_TRACKER_MODE_  == _PIC_MODE_OFF_;
+     if _PIC_PARTICLE_TRACKER_MODE_  == _PIC_MODE_ON_ DeleteParticle_withoutTrajectoryTermination() does not terminate sampling of the particle trajectory; the function should be used only
+     from PIC::Parallel::ExchangeParticleData() when particles are moved between processors
+    */
     void DeleteParticle(long int);
     void DeleteParticle(long int,long int&);
+    void DeleteParticle_withoutTrajectoryTermination(long int);
 
     void CloneParticle(long int,long int);
 
