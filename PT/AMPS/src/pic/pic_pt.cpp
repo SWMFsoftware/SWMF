@@ -57,6 +57,7 @@ void PIC::ParticleTracker::TrajectoryDataBuffer::flush() {
 
   sprintf(fname,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::ThisThread,nfile);
   fout=fopen(fname,"w");
+
   fwrite(buffer,sizeof(PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord),CurrentPosition,fout);
   fclose(fout);
 
@@ -70,6 +71,8 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
 
   sprintf(fname,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::ThisThread,nfile);
   fout=fopen(fname,"w");
+
+  fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
   fwrite(buffer,sizeof(PIC::ParticleTracker::cParticleDataRecord),CurrentPosition,fout);
   fclose(fout);
 
@@ -143,8 +146,6 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
 
   //the number of files, and size of the last file in the list
   unsigned long int TrajectoryDataBuffer_nfile[PIC::nTotalThreads];
-
-  unsigned long int TrajectoryList_CurrentPosition[PIC::nTotalThreads];
   unsigned long int TrajectoryList_nfile[PIC::nTotalThreads];
 
   //trajecotry data buffer
@@ -152,9 +153,6 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
   MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryDataBuffer_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
   //trajecotry list
-  t=TrajectoryList::CurrentPosition;
-  MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryList_CurrentPosition,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
-
   t=TrajectoryList::nfile+1; //one more file will be written when the buffer is flushed
   MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryList_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
@@ -198,10 +196,9 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
       PIC::ParticleTracker::cParticleDataRecord StartTrajectoryPoint;
       PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord data;
 
-      TotalListLegth=(nList==TrajectoryList_nfile[thread]-1) ? TrajectoryList_CurrentPosition[thread] : TrajectoryList::Size;
-
       sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",thread,nList);
       fTrajectoryList=fopen(str,"r");
+      fread(&TotalListLegth,sizeof(unsigned long int),1,fTrajectoryList);
 
       for (tr=0;tr<TotalListLegth;tr++) {
         fread(&StartTrajectoryPoint,sizeof(PIC::ParticleTracker::cParticleDataRecord),1,fTrajectoryList);
