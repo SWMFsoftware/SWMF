@@ -580,6 +580,41 @@ while ($line=<InputFile>) {
       push(@SourceProcessesSymbolicID,"\"SolarWindSputtering\"");
       $SourceProcessID++;
     }
+    elsif ($InputLine eq "VERTICALINJECTION") {
+      my @SourceRate=(0)x$TotalSpeciesNumber;
+      my @BulkVelocity=(0)x$TotalSpeciesNumber;
+      
+      while (defined $InputComment) {
+        ($InputLine,$s0,$InputComment)=split(' ',$InputComment,3);
+        $InputLine=~s/ //g;
+        $s0=~s/ //g;
+        
+        if ($InputLine eq "SOURCERATE") {
+          ($s1,$InputComment)=split(' ',$InputComment,2);
+          $s1=~s/ //g;
+          $SourceRate[getSpeciesNumber($s0)]=$s1;
+        }
+        elsif ($InputLine eq "BULKVELOCITY") {
+          ($s1,$InputComment)=split(' ',$InputComment,2);
+          $s1=~s/ //g;
+          @BulkVelocity[getSpeciesNumber($s0)]=$s1;
+        }
+        else {
+          die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+        }
+      }
+      
+      #add the parameters of the input file to the code      
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__VERTICAL_INJECTION_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
+      ampsConfigLib::ChangeValueOfArray("static const double VerticalInjection_SourceRate\\[\\]",\@SourceRate,"models/exosphere/Exosphere.h");
+      ampsConfigLib::ChangeValueOfArray("static const double VerticalInjection_BulkVelocity\\[\\]",\@BulkVelocity,"models/exosphere/Exosphere.h");
+
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__VERTICAL_INJECTION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
+            
+      push(@SourceModifySurfaceSpeciesAbundance,'false');
+      push(@SourceProcessesSymbolicID,"\"Vertical Injection\"");
+      $SourceProcessID++;
+    }
     elsif ($InputLine eq "IMPACTVAPORIZATION") {
       my $HeliocentricDistance="_AU_";
       my $SourceRatePowerIndex=0;
