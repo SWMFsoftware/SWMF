@@ -80,8 +80,9 @@ ParticleWeightCorrectionMode=on
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
-! define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
-! define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+  define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
 #endGeneral
 
@@ -164,6 +165,11 @@ ParticleWeightCorrectionMode=on
 
   Source:Sputtering=on\\ !on,off
     Yield(O2)=1.0, InjectionVelocityRange(O2)=10,10.0E3
+
+
+  Source:VerticalInjection=on \\ !on,off
+    SourceRate(O2)=1.69E22, BulkVelocity(O2)=6000.0  
+
 
   Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
