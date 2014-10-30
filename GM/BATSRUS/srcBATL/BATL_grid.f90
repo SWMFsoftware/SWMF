@@ -382,84 +382,83 @@ contains
        end if
 
        if(IsNodeBasedGrid)then
-          if(UseHighFDGeometry) then
-             ! This is not actually 'node based'. 
-             ! This is a FD correction. It is high-order and can preserve 
-             ! free-stream solution. [Yan Jiang et al, Free-stream preserving
-             ! finite difference schemes on curvilinear meshes]
-             call correct_geometry_high_order
-          else 
-             ! Calculate face area vectors assuming flat faces
-             if(nDim == 2)then
-                ! Calculate face vectors as 90 degree rotations of edge vectors
-                do j = 1, nJ; do i = 1, nI+1
-                   FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
-                        Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
-                   FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
-                        Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
+          ! Calculate face area vectors assuming flat faces
+          if(nDim == 2)then
+             ! Calculate face vectors as 90 degree rotations of edge vectors
+             do j = 1, nJ; do i = 1, nI+1
+                FaceNormal_DDFB(x_,1,i,j,1,iBlock) = &
+                     Xyz_DN(2,i,j+1,1) - Xyz_DN(2,i,j,1)
+                FaceNormal_DDFB(y_,1,i,j,1,iBlock) = &
+                     Xyz_DN(1,i,j,1) - Xyz_DN(1,i,j+1,1)
 
-                   CellFace_DFB(1,i,j,1,iBlock) = &
-                        sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
+                CellFace_DFB(1,i,j,1,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,1,i,j,1,iBlock)**2))
 
-                end do; end do
-                do j = 1, nJ+1; do i = 1, nI
-                   FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
-                        Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
-                   FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
-                        Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
+             end do; end do
+             do j = 1, nJ+1; do i = 1, nI
+                FaceNormal_DDFB(x_,2,i,j,1,iBlock) = &
+                     Xyz_DN(2,i,j,1) - Xyz_DN(2,i+1,j,1)
+                FaceNormal_DDFB(y_,2,i,j,1,iBlock) = &
+                     Xyz_DN(1,i+1,j,1) - Xyz_DN(1,i,j,1)
 
-                   CellFace_DFB(2,i,j,1,iBlock) = &
-                        sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
+                CellFace_DFB(2,i,j,1,iBlock) = &
+                     sqrt(sum(FaceNormal_DDFB(:,2,i,j,1,iBlock)**2))
 
-                end do; end do
-             else
+             end do; end do
+          else
 
-                ! Calculate face area vectors as cross products of diagonals
-                do k = 1, nK; do j = 1, nJ
-                   Di = 1
-                   if(present(DoFaceOnly).and.j>1.and.j<nJ.and.k>1.and.k<nK) &
-                        Di=nI
-                   do i = 1, nI+1, Di
-                      FaceNormal_DDFB(:,1,i,j,k,iBlock) = 0.5*cross_product( &
-                           Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
-                           Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
+             ! Calculate face area vectors as cross products of diagonals
+             do k = 1, nK; do j = 1, nJ
+                Di = 1
+                if(present(DoFaceOnly).and.j>1.and.j<nJ.and.k>1.and.k<nK) &
+                     Di=nI
+                do i = 1, nI+1, Di
+                   FaceNormal_DDFB(:,1,i,j,k,iBlock) = 0.5*cross_product( &
+                        Xyz_DN(:,i,j+1,k+1) - Xyz_DN(:,i,j  ,k),           &
+                        Xyz_DN(:,i,j  ,k+1) - Xyz_DN(:,i,j+1,k)          )
 
-                      CellFace_DFB(1,i,j,k,iBlock) = &
-                           sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
+                   CellFace_DFB(1,i,j,k,iBlock) = &
+                        sqrt(sum(FaceNormal_DDFB(:,1,i,j,k,iBlock)**2))
 
-                   end do
-                end do; end do
-                do k = 1, nK; do i = 1, nI 
-                   Dj = 1
-                   if(present(DoFaceOnly).and.i>1.and.i<nI.and.k>1.and.k<nK) &
-                        Dj=nJ
-                   do j = 1, nJ+1, Dj
-                      FaceNormal_DDFB(:,2,i,j,k,iBlock) = 0.5*cross_product( &
-                           Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
-                           Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
-
-                      CellFace_DFB(2,i,j,k,iBlock) = &
-                           sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
-
-                   end do; end do
                 end do
-                do j = 1, nJ; do i = 1, nI
-                   Dk = 1
-                   if(present(DoFaceOnly).and.i>1.and.i<nI.and.j>1.and.j<nJ) &
-                        Dk=nK
-                   do k = 1, nK+1, Dk; 
-                      FaceNormal_DDFB(:,3,i,j,k,iBlock) = 0.5*cross_product( &
-                           Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
-                           Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
+             end do; end do
+             do k = 1, nK; do i = 1, nI 
+                Dj = 1
+                if(present(DoFaceOnly).and.i>1.and.i<nI.and.k>1.and.k<nK) &
+                     Dj=nJ
+                do j = 1, nJ+1, Dj
+                   FaceNormal_DDFB(:,2,i,j,k,iBlock) = 0.5*cross_product( &
+                        Xyz_DN(:,i+1,j,k+1) - Xyz_DN(:,i,j,k  ),           &
+                        Xyz_DN(:,i+1,j,k  ) - Xyz_DN(:,i,j,k+1)          )
 
-                      CellFace_DFB(3,i,j,k,iBlock) = &
-                           sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
+                   CellFace_DFB(2,i,j,k,iBlock) = &
+                        sqrt(sum(FaceNormal_DDFB(:,2,i,j,k,iBlock)**2))
 
-                   end do; end do
-                end do
-             end if ! if (iDim == 2)
-          endif ! if (UseHighFDGeometry)
+                end do; end do
+             end do
+             do j = 1, nJ; do i = 1, nI
+                Dk = 1
+                if(present(DoFaceOnly).and.i>1.and.i<nI.and.j>1.and.j<nJ) &
+                     Dk=nK
+                do k = 1, nK+1, Dk; 
+                   FaceNormal_DDFB(:,3,i,j,k,iBlock) = 0.5*cross_product( &
+                        Xyz_DN(:,i+1,j+1,k) - Xyz_DN(:,i  ,j,k),           &
+                        Xyz_DN(:,i  ,j+1,k) - Xyz_DN(:,i+1,j,k)          )
+
+                   CellFace_DFB(3,i,j,k,iBlock) = &
+                        sqrt(sum(FaceNormal_DDFB(:,3,i,j,k,iBlock)**2))
+
+                end do; end do
+             end do
+          end if ! if (iDim == 2)
        end if ! if (IsNodeBasedGrid)
+
+       ! This is not actually 'node based'. 
+       ! This is a FD correction. It is high-order and can preserve 
+       ! free-stream solution. [Yan Jiang et al, Free-stream preserving
+       ! finite difference schemes on curvilinear meshes]
+       if(UseHighFDGeometry) &
+            call correct_geometry_high_order
 
        ! Cell volumes for grids with no analytic formulas
        if(IsRoundCube)then
@@ -1325,10 +1324,24 @@ contains
     integer:: iFace, jFace, kFace
     integer:: iDimCart
     integer:: nIFace, nJFace, nKFace
+    real   :: Area
     !----------------------------------------------------------------------
 
     nIFace = nI + 1; nJFace = nJ + 1; nKFace = nK + 1
     do kFace = 1, nK; do jFace = 1, nJ; do iFace = 1, nIFace
+       Area = CellFace_DFB(1,iFace,jFace,kFace,iBlock)
+       if(Area < 1e-15) then
+          ! For singular point, the face area should be zero. 
+          ! Now, the area calculated with a flat plane assumation is used
+          ! to determine weather it is a singular point, and FaceNormal_DDFB
+          ! and CellFace_DFB are calculated twice. The high order face area 
+          ! in this subroutine can be used for determination, then only one
+          ! calculation is needed, but the tolerance (now it is 1e-15) may 
+          ! need to change. 
+          FaceNormal_DDFB(:,1,iFace,jFace,kFace,iBlock) = 0
+          CYCLE
+       endif
+
        do iDimCart = 1, nDim
           FaceNormal_DDFB(iDimCart,1,iFace,jFace,kFace,iBlock) = &
                calc_face_value(CellCoef_DDGB(Xi_,iDimCart, &
@@ -1340,6 +1353,12 @@ contains
     enddo; enddo; enddo
 
     do kFace = 1, nK; do jFace = 1, nJFace; do iFace = 1, nI 
+       Area = CellFace_DFB(2,iFace,jFace,kFace,iBlock)
+       if(Area < 1e-15) then
+          FaceNormal_DDFB(:,2,iFace,jFace,kFace,iBlock) = 0
+          CYCLE
+       endif
+
        do iDimCart = 1, nDim
           FaceNormal_DDFB(iDimCart,2,iFace,jFace,kFace,iBlock) = &
                calc_face_value(CellCoef_DDGB(Eta_,iDimCart, &
@@ -1352,6 +1371,12 @@ contains
 
     if(nK > 1) then
        do kFace = 1, nKFace; do jFace = 1, nJ; do iFace = 1, nI
+          Area = CellFace_DFB(3,iFace,jFace,kFace,iBlock)
+          if(Area < 1e-15) then
+             FaceNormal_DDFB(:,3,iFace,jFace,kFace,iBlock) = 0
+             CYCLE
+          endif
+
           do iDimCart = 1, nDim
              FaceNormal_DDFB(iDimCart,3,iFace,jFace,kFace,iBlock) = &
                   calc_face_value(CellCoef_DDGB(Zeta_, iDimCart, &
@@ -1366,7 +1391,7 @@ contains
   end subroutine calc_face_normal
   !===========================================================================
   subroutine coef_cart_to_noncart(iBlock)
-    ! Eq (11).
+    ! Eq (26).
     ! Calc dx3/dx1 at cell center, where x3=hat(Xi,Eta,Zeta), x1=x,y,z.
 
     integer, intent(in):: iBlock
