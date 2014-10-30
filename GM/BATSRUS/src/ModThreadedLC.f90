@@ -233,7 +233,7 @@ contains
             DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_) - &
             sum(FaceGrad_D*BDir_D))/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D), 0.60*Te_G(0, j, k)),1.00*Te_G(0, j, k))
+            * BDir_D), 0.60*Te_G(0, j, k)),1.30*Te_G(0, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           CYCLE
@@ -264,7 +264,7 @@ contains
        B_D = B_D - FaceCoord_D*sum(FaceCoord_D*B_D)
  
        do i = 1-nGhost, 0
-          State_VG(Bx_:Bz_, i, j, k) = 0.0!B_D
+          State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
                U*BDir_D
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
