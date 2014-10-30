@@ -41,17 +41,20 @@
 # set the number of MPI processes by changing select: nProc = select*ncpus
 # ncpus is the number of CPUs per node (8, 12, 16 or 20)
 
-# To run on the 12-core Westmere nodes 
-#PBS -lselect=16:ncpus=12:model=wes
+# To run on an arbitrary nodes with up to 12 CPU-s only
+### PBS -lselect=1:ncpus=8
 
-# To run on the 8-core Nehalem nodes 
-### PBS -l select=16:ncpus=8:model=neh
+# To run on the 12-core Westmere nodes
+#PBS -lselect=16:ncpus=12:model=wes
 
 # To run on the 16-core Sandy Bridge nodes
 ### PBS -lselect=16:ncpus=16:model=san
 
 # To run on the 20-core Ivy Bridge nodes
 ### PBS -l select=16:ncpus=20:model=ivy
+
+# To run on the 24-core Haswell nodes
+### PBS -l select=16:ncpus=24:model=has
 
 # To run in the development queue uncomment the following line,
 # and set the maximum walltime to 2 hours below. 
