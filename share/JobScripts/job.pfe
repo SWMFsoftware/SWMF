@@ -38,8 +38,8 @@
 #PBS -S /bin/csh
 #PBS -N SWMF
 
-# set the number of MPI processes by changing select: nProc = select*ncpus
-# ncpus is the number of CPUs per node (8, 12, 16 or 20)
+# set the number of MPI processes by changing select and ncpus:
+# nProc = select*ncpus
 
 # To run on an arbitrary nodes with up to 12 CPU-s only
 ### PBS -lselect=1:ncpus=8
