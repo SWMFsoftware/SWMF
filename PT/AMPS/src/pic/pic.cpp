@@ -42,8 +42,10 @@ void PIC::TimeStep() {
    PIC::Parallel::IterationNumberAfterRebalancing++;
 
   //sampling of the particle data
+#if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::Sampling::Sampling();
   SamplingTime=MPI_Wtime()-StartTime;
+#endif
 
   //injection boundary conditions
   InjectionBoundaryTime=MPI_Wtime();
@@ -856,6 +858,13 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
 /*----------------------------------  BEGIN OUTPUT OF THE DATA FILES SECTION --------------------------------*/
 
+
+      #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+      //print sampled particle trajectories
+      sprintf(fname,"pic.TrajectoryTracking.out=%ld",DataOutputFileNumber);
+      PIC::ParticleTracker::CreateTrajectoryFile(fname);
+      #endif
+
       //print the macroscopic parameters of the flow
       for (s=0;s<PIC::nTotalSpecies;s++) if (SaveOutputDataFile[s]==true) {
         PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
@@ -1381,6 +1390,11 @@ void PIC::Init_AfterParser() {
   //init the background atmosphere model
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
   PIC::MolecularCollisions::BackgroundAtmosphere::Init_AfterParser();
+#endif
+
+  //init particle trajectory sampling
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::Init();
 #endif
 }
 

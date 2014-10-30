@@ -384,7 +384,7 @@ void PIC::Parallel::ExchangeParticleData() {
               sendParticleCounter++;
 
               NextParticle=PIC::ParticleBuffer::GetNext(Particle);
-              PIC::ParticleBuffer::DeleteParticle(Particle);
+              PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(Particle);
               Particle=NextParticle;
             }
 

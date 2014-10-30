@@ -67,6 +67,10 @@ long int PIC::ParticleBuffer::GetNewParticle() {
   newptr=FirstPBufferParticle;
   pdataptr=GetParticleDataPointer(newptr);
 
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::InitParticleID(pdataptr);
+  #endif
+
   FirstPBufferParticle=GetNext(pdataptr);
   SetPrev(-1,pdataptr);
   SetNext(-1,pdataptr);
@@ -88,6 +92,10 @@ long int PIC::ParticleBuffer::GetNewParticle(long int &ListFirstParticle) {
   NAllPart++;
   newptr=FirstPBufferParticle;
   pdataptr=GetParticleDataPointer(newptr);
+
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::InitParticleID(pdataptr);
+  #endif
 
   FirstPBufferParticle=GetNext(pdataptr);
 
@@ -132,6 +140,16 @@ void PIC::ParticleBuffer::ExcludeParticleFromList(long int ptr,long int& ListFir
 
 
 void PIC::ParticleBuffer::DeleteParticle(long int ptr) {
+  //terminate the particle trajectory sampling
+  #if _PIC_PARTICLE_TRACKER_MODE_  == _PIC_MODE_ON_
+  byte *ParticleData=GetParticleDataPointer(ptr);
+  PIC::ParticleTracker::FinilazeParticleRecord(ParticleData);
+  #endif
+
+  DeleteParticle_withoutTrajectoryTermination(ptr);
+}
+
+void PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(long int ptr) {
 
 //#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
   if (IsParticleAllocated(ptr)==false) exit(__LINE__,__FILE__,"Error: the particle is re-deleted");

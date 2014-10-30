@@ -1,8 +1,18 @@
 
+//$Id$
+
 
 //general macro
 #define _PIC_MODE_ON_  0
 #define _PIC_MODE_OFF_ 1
+
+/*the mode of the output of the sampled particle trajectory:
+_PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ -> print the whole particle's trajectory regardless of possible changes of the species number. 
+The whole trajectory will be saved in the file that containes trajectories of the particle spacies when the particle's trajectory is terminated
+_PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_ -> the particle trajectory is split onto parts that corresponds to segments where the particle has the same 
+species number (between reactions). Each segment is saved in the trajectory file that corresponds to the appropriate species */
+#define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_     0
+#define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_ 1
 
 
 //the definition of the 'time step' mode
