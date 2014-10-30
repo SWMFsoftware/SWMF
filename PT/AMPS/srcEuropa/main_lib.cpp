@@ -900,9 +900,14 @@ PIC::InitMPI();
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_HIGH_SPEC_);
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_THERMAL_SPEC_);
 
+#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  ==  _EXOSPHERE_SOURCE__ON_
 	//copy the weight and time step from Na neutra to Na ions
 	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
 //	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
+#else
+	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+#endif
+
 
   PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
   PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
