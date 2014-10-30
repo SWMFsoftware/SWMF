@@ -136,8 +136,7 @@ void PIC::ParticleTracker::FinilazeParticleRecord(void *ParticleData) {
 
 void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
   FILE *fout[PIC::nTotalSpecies];
-  FILE **fTrajectoryData[PIC::nTotalThreads];
-  FILE *fTrajectoryList;
+  FILE *fTrajectoryList=NULL,*fTrajectoryData=NULL;
   char str[_MAX_STRING_LENGTH_PIC_];
   unsigned long int t;
   int i,spec,thread,nList;
@@ -145,14 +144,9 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
 
 
   //the number of files, and size of the last file in the list
-  unsigned long int TrajectoryDataBuffer_nfile[PIC::nTotalThreads];
   unsigned long int TrajectoryList_nfile[PIC::nTotalThreads];
 
-  //trajecotry data buffer
-  t=TrajectoryDataBuffer::nfile+1; //one more file will be written when the buffer is flushed
-  MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryDataBuffer_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
-
-  //trajecotry list
+  //trajectory list
   t=TrajectoryList::nfile+1; //one more file will be written when the buffer is flushed
   MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryList_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
@@ -176,17 +170,9 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
       fprintf(fout[spec],"VARIABLES=\"x\",\"y\",\"z\"\n");
     }
 
-    //load the trajectory data
-    for (thread=0;thread<PIC::nTotalThreads;thread++) {
-      fTrajectoryData[thread]=new FILE* [TrajectoryDataBuffer_nfile[thread]];
-
-      for (i=0;i<TrajectoryDataBuffer_nfile[thread];i++) {
-        sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",thread,i);
-        fTrajectoryData[thread][i]=fopen(str,"r");
-      }
-    }
-
     //create particle trajectories
+    unsigned long int lastRecordThread=-1,lastRecordFile=-1;
+
     for (thread=0;thread<PIC::nTotalThreads;thread++) for (nList=0;nList<TrajectoryList_nfile[thread];nList++) {
       unsigned long int tr,TotalListLegth;
       int StartTrajectorySpec; //during the particle motion the spec might be changed, which will change the trajectory output file
@@ -216,8 +202,22 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
             RecordFile=data.file;
           }
 
-          fseek (fTrajectoryData[RecordThread][RecordFile],RecordOffset*sizeof(cParticleDataRecord::cLastDataRecord),SEEK_SET);
-          fread(&data,sizeof(PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord),1,fTrajectoryData[RecordThread][RecordFile]);
+          //open the trajectory data file if needed
+          if ((RecordThread!=lastRecordThread)||(RecordFile!=lastRecordFile)) {
+            //close previously opened file
+            if (lastRecordFile!=-1) {
+              fclose(fTrajectoryData);
+            }
+
+            //open a new trajecory data file
+            lastRecordThread=RecordThread,lastRecordFile=RecordFile;
+
+            sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",RecordThread,RecordFile);
+            fTrajectoryData=fopen(str,"r");
+          }
+
+          fseek (fTrajectoryData,RecordOffset*sizeof(cParticleDataRecord::cLastDataRecord),SEEK_SET);
+          fread(&data,sizeof(PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord),1,fTrajectoryData);
 
           #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
           if (StartTrajectorySpec==-1) {
@@ -252,11 +252,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
     //close the trajectory files
     for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
 
-    for (thread=0;thread<PIC::nTotalThreads;thread++) {
-      for (i=0;i<TrajectoryDataBuffer_nfile[thread];i++) fclose(fTrajectoryData[thread][i]);
-
-      delete [] fTrajectoryData[thread];
-    }
+    if (fTrajectoryData!=NULL) fclose(fTrajectoryData);
   }
 
   //clean up the trajectory data buffers and set the default value of the particle tracking flag
