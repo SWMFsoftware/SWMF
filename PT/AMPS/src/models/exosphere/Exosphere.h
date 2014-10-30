@@ -584,6 +584,42 @@ namespace Exosphere {
       }
     }
 
+
+    namespace VerticalInjection {
+      static const double VerticalInjection_SourceRate[]={0.0};
+      static const double VerticalInjection_BulkVelocity[]={0.0};
+
+      double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
+
+      inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
+        int idim;
+        double ExternalNormal[3],r;
+
+        //generate the new particle position and velocity
+        for (idim=0;idim<DIM;idim++) {
+          ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+          r+=pow(ExternalNormal[idim],2);
+        }
+
+        r=sqrt(r);
+
+        for (idim=0;idim<DIM;idim++) {
+          ExternalNormal[idim]/=r;
+          x_IAU_OBJECT[idim]=sphereX0[idim]-sphereRadius*ExternalNormal[idim];
+          x_SO_OBJECT[idim]=x_IAU_OBJECT[idim];
+
+          v_SO_OBJECT[idim]=VerticalInjection_BulkVelocity[spec]*ExternalNormal[idim];
+          v_IAU_OBJECT[idim]=v_SO_OBJECT[idim];
+        }
+
+        //determine if the particle belongs to this processor
+        startNode=PIC::Mesh::mesh.findTreeNode(x_SO_OBJECT,startNode);
+        return (startNode->Thread==PIC::Mesh::mesh.ThisThread) ? true : false;
+      }
+
+
+    }
+
     namespace ImpactVaporization {
       static const double ImpactVaporization_SourceRate[]={0.0};
       static const double ImpactVaporization_HeliocentricDistance=1.0*_AU_;

@@ -14,6 +14,7 @@
 #define _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_     _EXOSPHERE_SOURCE__OFF_
 #define _EXOSPHERE_SOURCE__THERMAL_DESORPTION_               _EXOSPHERE_SOURCE__OFF_
 #define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_            _EXOSPHERE_SOURCE__OFF_
+#define _EXOSPHERE_SOURCE__VERTICAL_INJECTION_               _EXOSPHERE_SOURCE__OFF_
 
 
 //default codes for the sources processes
@@ -22,6 +23,7 @@
 #define _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_     2
 #define _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_               3
 #define _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_            4
+#define _EXOSPHERE_SOURCE__ID__VERTICAL_INJECTION_               5
 
 //integration mode: steady state/time dependent
 #define _EXOSPHERE_INTEGRATION_MODE__STEADY_STATE_    0
@@ -46,8 +48,8 @@
 #define _EXOSPHERE__SURFACE_CONTENT_ _EXOSPHERE__SURFACE_CONTENT__BALANCE_FLUXES_
 
 //the default maximum ID number for the source processes (need only estimation of the MAXIMUM VALUE for allocation of memory buffers -> don't need exact value)
-#define _EXOSPHERE__SOURCE_MAX_ID_VALUE_ 3
-#define _EXOSPHERE__SOURCE_TOTAL_NUMBER_ 4
+#define _EXOSPHERE__SOURCE_MAX_ID_VALUE_ 5
+#define _EXOSPHERE__SOURCE_TOTAL_NUMBER_ 6
 
 //use the user defined exospheric sources
 #define _EXOSPHERE__USER_DEFINED_SOURCE_MODEL__MODE_ _EXOSPHERE_SOURCE__OFF_

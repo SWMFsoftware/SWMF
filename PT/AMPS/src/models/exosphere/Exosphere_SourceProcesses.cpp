@@ -87,3 +87,7 @@ void Exosphere::SourceProcesses::SolarWindSputtering::Init() {
 double Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
   return ImpactVaporization_SourceRate[spec]*pow(ImpactVaporization_HeliocentricDistance/Exosphere::xObjectRadial,ImpactVaporization_SourceRatePowerIndex);
 }
+
+double Exosphere::SourceProcesses::VerticalInjection::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+  return VerticalInjection_SourceRate[spec];
+}
