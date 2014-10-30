@@ -360,6 +360,11 @@ Example of a function \\ {\tt AccommodationCoefficient=function $\backslash\back
 
 \item {\bf Source:Sputtering}=[on,off], Yield=[], InjectionVelocityRange=[] \\ Sputtering model. Example: \\ {\tt Source:Sputtering=on $\backslash\backslash$ \\ Yield(NA)=0.1, InjectionVelocityRange(NA)=(10,10.0E3)}
 
+
+\item {\bf Source:VerticalInjection}=[on,off], SourceRate[], BulkVelocity[] \\
+the source model generates particles moving vertically to the local normal with constant bulk velocity. the source model is useful for testing purposes. Example: \\ {\tt Source:VerticalInjection=on $\backslash\backslash$ \\ SourceRate(O2)=1.69E22, BulkVelocity(O2)=6000.0}
+
+
 \item {\bf Source:ExternalDomainBoundaryInjection}=[on,off] \\ Initialize the injection processes ID for particle injection through the external boundary of the domain
 
 \item{\bf Source:DefineSourceID}={\it user-defined-source-id} \\ can be use to register in AMPS' core a user-defined ID for a source process. The id is saved as a macro \_EXOSPEHRE\_SOURCE\_\_ID\_\_USER\_DEFINED\_\_{\it user-defined-source-id}{\tt \_} in the file Exosphere.dfn. The ID can be use to distinguish particles that are produced via different source processes for the sampling purposes.
