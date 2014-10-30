@@ -146,6 +146,14 @@ namespace Europa {
     }
   }*/
 
+
+  //the condition of the particle trajectory tracking
+  namespace ParticleTracker {
+    inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+      return (spec==_O2_SPEC_) ? true : false;
+    }
+  }
+
   namespace Sampling {
     using namespace Exosphere::Sampling;
 
