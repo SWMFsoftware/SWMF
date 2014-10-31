@@ -1071,8 +1071,7 @@ contains
          call user_material_properties(State_V, i, j, k, iBlock, &
               TeOut=TeSi, HeatCondOut=HeatCoefSi, NatomicOut = NatomicSi, &
               AverageIonChargeOut = Zav)
-
-         NeSi = Zav*NatomicSi
+         
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
@@ -1097,6 +1096,7 @@ contains
       HeatCoef_G(i,j,k) = HeatCoef
 
       if(UseHeatFluxLimiter)then
+         NeSi = Zav*NatomicSi
          FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
               *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
               *Si2No_V(UnitPoynting_)
