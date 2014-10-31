@@ -167,7 +167,7 @@ ParticleWeightCorrectionMode=on
     Yield(O2)=1.0, InjectionVelocityRange(O2)=10,10.0E3
 
 
-  Source:VerticalInjection=on \\ !on,off
+  Source:VerticalInjection=off \\ !on,off
     SourceRate(O2)=1.69E22, BulkVelocity(O2)=6000.0  
 
 
