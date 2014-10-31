@@ -254,6 +254,7 @@ contains
        State_VG(Rho_, 1-nGhost:-1, j, k) = 2*State_VG(Rho_, 0, j, k) -&
             State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
 
+       B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        !\
        ! Calculate Tangential field
        !/
