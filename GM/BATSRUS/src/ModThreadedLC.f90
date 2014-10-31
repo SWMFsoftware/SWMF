@@ -139,7 +139,6 @@ contains
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModWaves
-    use ModGeometry,     ONLY: Xyz_DGB
     use ModMain,         ONLY: jTest, kTest, BlkTest, UseRotatingFrame, x_, z_
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -151,7 +150,11 @@ contains
     
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, BDir_D(3), FaceCoord_D(3), U_D(3), B_D(3)
+    real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3)
+    !\
+    !Elsasser variables
+    !/
+    real :: ElsasserPlus_D(3), ElsasserMinus_D(3), SqrtRho
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir
     !-------------
     IsNewBlock = .true.
@@ -195,12 +198,8 @@ contains
        call get_face_gradient(1, 1, j, k, iBlock, &
             IsNewBlock, Te_G, FaceGrad_D, &
             UseFirstOrderBcIn=.true.)
-       !\
-       !Store B1_D field in the physical cell
-       !/
-       B_D(x_:z_) = State_VGB(Bx_:Bz_, 1, j, k, iBlock)
        
-       BDir_D = B_D + &
+       BDir_D = &!B_D + &
             BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
        if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
@@ -215,8 +214,9 @@ contains
        ! Calculate input parameters for solving the thread
        !/
        TeSi = Te_G(1, j, k) * No2Si_V(UnitTemperature_)
+       SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
        AMinor = sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
-            ( sqrt(State_VGB(Rho_, 1, j, k, iBlock))* &
+            ( SqrtRho* &
             PoyntingFluxPerB)  )
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
@@ -255,18 +255,42 @@ contains
             State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
 
        !\
-       !Calculate radial component of the B1 field and
-       !maintain the radial component of the field to be 0
-       !while the tangential ones being floating
+       ! Calculate Tangential field
        !/
-       FaceCoord_D(1:nDim) = Xyz_DGB(1:nDim,1,j,k,iBlock)
-       FaceCoord_D = FaceCoord_D/sqrt(sum(FaceCoord_D**2))
-       B_D = B_D - FaceCoord_D*sum(FaceCoord_D*B_D)
- 
+       B_D = B_D - BDir_D*sum(B_D*BDir_D)
+       U_D = U_D - BDir_D*U
+       !\
+       ! Calculate Elsasser variables
+       !/
+       ElsasserPlus_D  = U_D*SqrtRho - B_D
+       ElsasserMinus_D = U_D*SqrtRho + B_D
+       !\
+       ! Inverse formulae:
+       ! U_D = (ElsPlus + ElsMinus)/(2*SqrtRho)
+       ! B_D = (ElsMinus - ElsPlus)/2
+       ! Apply this formulae behind the boundary, assuming
+       ! that the amplitide of ingoing wave is floating, 
+       ! the amplitude of outgoing wave is zero
+       !/
+       if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
+          !\
+          ! Ingoing wave amplitude is ElsPlus:
+          !/
+          U_D =  ElsasserPlus_D/(2*SqrtRho)
+          B_D = -ElsasserPlus_D/2
+       else
+          !\
+          !Ingoing Wave amplitude is ElsMinus
+          !/
+          U_D =  ElsasserMinus_D/(2*SqrtRho)
+          B_D =  ElsasserMinus_D/2
+       end if
+       
+
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               U*BDir_D
+               (U*BDir_D + U_D)
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
