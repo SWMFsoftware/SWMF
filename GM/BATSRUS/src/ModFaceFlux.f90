@@ -2044,15 +2044,19 @@ contains
       write(*,*)'Fluxes for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
 
+      write(*,*)'Flux*Area for dir=',iDimFace,&
+           ' at I=',iFace,' J=',jFace,' K=',kFace,' Area=',Area
+
       write(*,*)'Eigenvalue_maxabs=', Cmax
       write(*,*)'CmaxDt           =', CmaxDt
       do iVar = 1, nVar + nFluid
-         write(*,'(a,a8,4(1pe13.5))') 'Var,F,F_L,F_R,dU=',&
+         write(*,'(a,a8,5es13.5)') 'Var,F,F_L,F_R,dU,c*dU/2=',&
               NameVar_V(iVar),&
               Flux_V(iVar), &
-              FluxLeft_V(iVar), &
-              FluxRight_V(iVar),&
-              StateRightCons_V(iVar)-StateLeftCons_V(iVar)
+              FluxLeft_V(iVar)*Area, &
+              FluxRight_V(iVar)*Area,&
+              StateRightCons_V(iVar)-StateLeftCons_V(iVar),&
+              0.5*Cmax*(StateRightCons_V(iVar)-StateLeftCons_V(iVar))*Area
       end do
 
     end subroutine write_test_info
