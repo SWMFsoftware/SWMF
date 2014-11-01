@@ -150,7 +150,7 @@ namespace Europa {
   //the condition of the particle trajectory tracking
   namespace ParticleTracker {
     inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
-      return (spec==_O2_SPEC_) ? true : false;
+      return (spec==_O2PLUS_SPEC_) ? true : false;
     }
   }
 
