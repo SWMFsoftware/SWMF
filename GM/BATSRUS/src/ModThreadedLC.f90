@@ -150,11 +150,7 @@ contains
     
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3)
-    !\
-    !Elsasser variables
-    !/
-    real :: ElsasserPlus_D(3), ElsasserMinus_D(3), SqrtRho
+    real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir
     !-------------
     IsNewBlock = .true.
@@ -198,8 +194,8 @@ contains
        call get_face_gradient(1, 1, j, k, iBlock, &
             IsNewBlock, Te_G, FaceGrad_D, &
             UseFirstOrderBcIn=.true.)
-       
-       BDir_D = &!B_D + &
+       B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
+       BDir_D = B_D + &
             BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
        if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
@@ -254,39 +250,15 @@ contains
        State_VG(Rho_, 1-nGhost:-1, j, k) = 2*State_VG(Rho_, 0, j, k) -&
             State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
 
-       B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        !\
        ! Calculate Tangential field
        !/
        B_D = B_D - BDir_D*sum(B_D*BDir_D)
        U_D = U_D - BDir_D*U
        !\
-       ! Calculate Elsasser variables
+       ! Version of BC as in AWSOM: float BC for B1, reflected for U
        !/
-       ElsasserPlus_D  = U_D*SqrtRho - B_D
-       ElsasserMinus_D = U_D*SqrtRho + B_D
-       !\
-       ! Inverse formulae:
-       ! U_D = (ElsPlus + ElsMinus)/(2*SqrtRho)
-       ! B_D = (ElsMinus - ElsPlus)/2
-       ! Apply this formulae behind the boundary, assuming
-       ! that the amplitide of ingoing wave is floating, 
-       ! the amplitude of outgoing wave is zero
-       !/
-       if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
-          !\
-          ! Ingoing wave amplitude is ElsPlus:
-          !/
-          U_D =  ElsasserPlus_D/(2*SqrtRho)
-          B_D = -ElsasserPlus_D/2
-       else
-          !\
-          !Ingoing Wave amplitude is ElsMinus
-          !/
-          U_D =  ElsasserMinus_D/(2*SqrtRho)
-          B_D =  ElsasserMinus_D/2
-       end if
-       
+       U_D = -U_D
 
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
