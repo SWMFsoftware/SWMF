@@ -2334,6 +2334,11 @@ ProcessPhotoChemistry:
      exit(__LINE__,__FILE__,"The option is unknown");
 #endif
 
+        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+        #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ == _PIC_MODE_ON_
+        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+        #endif
+        #endif
       }
       else (__LINE__,__FILE__,"Error: the option is unknown");
     }
@@ -2349,7 +2354,15 @@ ProcessPhotoChemistry:
     }
 
     //adjust the value of the dtLeft to match the time step for the species 'spec'
-    if (spec!=specInit) dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
+    if (spec!=specInit) {
+      dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
+
+      #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+      #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ == _PIC_MODE_ON_
+      PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+      #endif
+      #endif
+    }
 #endif
 
 
@@ -2369,6 +2382,11 @@ ProcessPhotoChemistry:
 
   }
 
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+  #endif
+  #endif
 
 
   //check if the particle is outside of the internal surfaces. In a case if the particle is inside an internal surface -> correct its position and exdcute the boundary condition procedure

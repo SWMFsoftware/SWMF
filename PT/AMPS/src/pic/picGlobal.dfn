@@ -14,9 +14,17 @@
 #define _PIC_SAMPLING_MODE_ _PIC_MODE_ON_
 
 //define the partile-tracking mode: if _PIC_PARTICLE_TRACKER_MODE is _PIC_MODE_ON_ than AMPS accumulates particle trajecotries and outpur them into a file; default value is _PIC_MODE_OFF_
-#define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+#define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
 #define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition_default(x,v, spec,ParticleData)
 #define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ 
+
+/* _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ and _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ are used when it is needed to 
+apply the particle trajectory tracking condition after the particle already has started its motion. The first is used after chemicsl reactions and the latter 
+at the end of each time step
+*/  
+
+#define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_   _PIC_MODE_OFF_
+#define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_OFF_
 
 //the maximum length of the strings
 #define _MAX_STRING_LENGTH_PIC_  500

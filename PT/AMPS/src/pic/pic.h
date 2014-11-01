@@ -143,25 +143,27 @@ namespace PIC {
   //the particle trajectory tracing
   namespace ParticleTracker {
     extern long int ParticleDataRecordOffset; //the offset of the trajecotry specific informaion within the particle data
-    extern unsigned int CurrentParticleID; //the counter of injected particles
 
-    struct cParticleDataRecord {
-      unsigned long int ID;
-      int Thread;
-      bool TrajectoryTrackingFlag; //the trajectory of the praticle is sampled only when TrajectoryTrackingFlag==true; the default value is  TrajectoryTrackingFlag==false
-
-      struct cLastDataRecord {
-        double x[3]; //location of the point
-        int spec; //the species of the particle
-
-        int offset;  //the location of the previous particle trajecotry data record in the files that contains tha whole trajectory information
-        unsigned int file,thread; //file -> the file where the previous particle trajecotry data record in stored; thread -> the processor number where the particle was created (used as a part of the data file name)
-      } LastDataRecord;
+    struct cTrajectoryRecordReference {
+      int offset;  //the location of the previous particle trajecotry data record in the files that contains tha whole trajectory information
+      unsigned int file,thread; //file -> the file where the previous particle trajecotry data record in stored; thread -> the processor number where the particle was created (used as a part of the data file name)
     };
 
+    struct cParticleData {
+      bool TrajectoryTrackingFlag; //the trajectory of the praticle is sampled only when TrajectoryTrackingFlag==true; the default value is  TrajectoryTrackingFlag==false
+
+      cTrajectoryRecordReference lastRecordReference;
+    };
+
+    struct cTrajectoryRecord {
+      double x[3],Speed;
+      int spec;
+
+      cTrajectoryRecordReference lastRecordReference;
+    };
 
     namespace TrajectoryDataBuffer {
-      extern PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord *buffer;
+      extern PIC::ParticleTracker::cTrajectoryRecord *buffer;
       extern unsigned long int Size,CurrentPosition,nfile;
 
       void flush(); //save in a file the trajecotry information
@@ -170,7 +172,7 @@ namespace PIC {
 
     namespace TrajectoryList {
       extern unsigned long int Size,CurrentPosition,nfile;
-      extern PIC::ParticleTracker::cParticleDataRecord *buffer;
+      extern PIC::ParticleTracker::cTrajectoryRecordReference *buffer;
 
       void flush(); //save in a file the list of the trajectories
       inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
@@ -184,6 +186,7 @@ namespace PIC {
     void CreateTrajectoryFile(const char *fname);
 
     void StartParticleTrajectoryTracking(void *ParticleData);
+    void StopParticleTrajectoryTracking(void *ParticleData);
 
     void ApplyTrajectoryTrackingCondition(void *StartNodeVoid=NULL); //search all particles to start tracking those that met the search condition
     void ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData); //apply the particle tracking conditions to the particle 'ParticleData'

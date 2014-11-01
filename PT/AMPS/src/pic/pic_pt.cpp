@@ -13,42 +13,39 @@
 #include "pic.h"
 
 long int PIC::ParticleTracker::ParticleDataRecordOffset=-1;
-unsigned int PIC::ParticleTracker::CurrentParticleID=0;
 
-PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord *PIC::ParticleTracker::TrajectoryDataBuffer::buffer=NULL;
+PIC::ParticleTracker::cTrajectoryRecord *PIC::ParticleTracker::TrajectoryDataBuffer::buffer=NULL;
 unsigned long int PIC::ParticleTracker::TrajectoryDataBuffer::Size=500000;
 unsigned long int PIC::ParticleTracker::TrajectoryDataBuffer::CurrentPosition=0;
 unsigned long int PIC::ParticleTracker::TrajectoryDataBuffer::nfile=0;
 
 unsigned long int PIC::ParticleTracker::TrajectoryList::Size=500000;
 unsigned long int PIC::ParticleTracker::TrajectoryList::CurrentPosition=0;
-PIC::ParticleTracker::cParticleDataRecord *PIC::ParticleTracker::TrajectoryList::buffer=NULL;
+PIC::ParticleTracker::cTrajectoryRecordReference *PIC::ParticleTracker::TrajectoryList::buffer=NULL;
 unsigned long int PIC::ParticleTracker::TrajectoryList::nfile=0;
 
 
 //init the particle tracker
 void PIC::ParticleTracker::Init() {
   //reserve memory in the particle data
-  PIC::ParticleBuffer::RequestDataStorage(ParticleDataRecordOffset,sizeof(PIC::ParticleTracker::cParticleDataRecord));
+  PIC::ParticleBuffer::RequestDataStorage(ParticleDataRecordOffset,sizeof(cParticleData));
 
   //init the data buffers
-  TrajectoryDataBuffer::buffer=new cParticleDataRecord::cLastDataRecord[TrajectoryDataBuffer::Size];
-  TrajectoryList::buffer=new cParticleDataRecord [TrajectoryList::Size];
+  TrajectoryDataBuffer::buffer=new cTrajectoryRecord[TrajectoryDataBuffer::Size];
+  TrajectoryList::buffer=new cTrajectoryRecordReference[TrajectoryList::Size];
 }
 
 
 
 //init the particle trajecotry record
 void PIC::ParticleTracker::InitParticleID(void *ParticleData) {
-  cParticleDataRecord *DataRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
+  cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
 
-  DataRecord->ID=CurrentParticleID++;
-  DataRecord->Thread=PIC::ThisThread;
   DataRecord->TrajectoryTrackingFlag=false;
 
-  DataRecord->LastDataRecord.file=0;
-  DataRecord->LastDataRecord.offset=-1;
-  DataRecord->LastDataRecord.thread=0;
+  DataRecord->lastRecordReference.file=0;
+  DataRecord->lastRecordReference.offset=-1;
+  DataRecord->lastRecordReference.thread=0;
 }
 
 void PIC::ParticleTracker::TrajectoryDataBuffer::flush() {
@@ -58,7 +55,7 @@ void PIC::ParticleTracker::TrajectoryDataBuffer::flush() {
   sprintf(fname,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::ThisThread,nfile);
   fout=fopen(fname,"w");
 
-  fwrite(buffer,sizeof(PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord),CurrentPosition,fout);
+  fwrite(buffer,sizeof(cTrajectoryRecord),CurrentPosition,fout);
   fclose(fout);
 
   CurrentPosition=0;
@@ -73,7 +70,7 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
   fout=fopen(fname,"w");
 
   fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
-  fwrite(buffer,sizeof(PIC::ParticleTracker::cParticleDataRecord),CurrentPosition,fout);
+  fwrite(buffer,sizeof(cTrajectoryRecordReference),CurrentPosition,fout);
   fclose(fout);
 
   CurrentPosition=0;
@@ -81,54 +78,46 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
 }
 
 void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData) {
-  cParticleDataRecord *ParticleTrajectoryRecord;
-  cParticleDataRecord::cLastDataRecord *BufferTrajecoryRecord;
-
-  //save trajectory point
-  BufferTrajecoryRecord=TrajectoryDataBuffer::buffer+TrajectoryDataBuffer::CurrentPosition;
-  ParticleTrajectoryRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
-
-  //the trajectory is traced only if the particle trajecotry tracking flag is set 'true'
-  if (ParticleTrajectoryRecord->TrajectoryTrackingFlag==false) return;
+  cParticleData *ParticleTrajectoryRecord;
+  cTrajectoryRecord *TrajectoryRecord;
 
   //save the data buffer if full
   if (TrajectoryDataBuffer::CurrentPosition==TrajectoryDataBuffer::Size) TrajectoryDataBuffer::flush();
 
+  //save trajectory point
+  TrajectoryRecord=TrajectoryDataBuffer::buffer+TrajectoryDataBuffer::CurrentPosition;
+  ParticleTrajectoryRecord=(cParticleData*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
+
+  //the trajectory is traced only if the particle trajecotry tracking flag is set 'true'
+  if (ParticleTrajectoryRecord->TrajectoryTrackingFlag==false) return;
+
   //save physical data
-  memcpy(BufferTrajecoryRecord->x,x,3*sizeof(double));
-  BufferTrajecoryRecord->spec=spec;
+  memcpy(TrajectoryRecord->x,x,3*sizeof(double));
+  TrajectoryRecord->Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+  TrajectoryRecord->spec=spec;
 
   //save trajectory tracking data
-  BufferTrajecoryRecord->file=ParticleTrajectoryRecord->LastDataRecord.file;
-  BufferTrajecoryRecord->thread=ParticleTrajectoryRecord->LastDataRecord.thread;
-  BufferTrajecoryRecord->offset=ParticleTrajectoryRecord->LastDataRecord.offset;
+  TrajectoryRecord->lastRecordReference=ParticleTrajectoryRecord->lastRecordReference;
 
   //update the trajecotry tracking data
-  ParticleTrajectoryRecord->LastDataRecord.file=TrajectoryDataBuffer::nfile;
-  ParticleTrajectoryRecord->LastDataRecord.thread=PIC::ThisThread;
-  ParticleTrajectoryRecord->LastDataRecord.offset=TrajectoryDataBuffer::CurrentPosition;
+  ParticleTrajectoryRecord->lastRecordReference.file=TrajectoryDataBuffer::nfile;
+  ParticleTrajectoryRecord->lastRecordReference.thread=PIC::ThisThread;
+  ParticleTrajectoryRecord->lastRecordReference.offset=TrajectoryDataBuffer::CurrentPosition;
 
   //update the trajectory data buffer pointer
   ++TrajectoryDataBuffer::CurrentPosition;
 }
 
 void PIC::ParticleTracker::FinilazeParticleRecord(void *ParticleData) {
-  cParticleDataRecord *BufferTrajecoryRecord;
-  cParticleDataRecord *ParticleTrajectoryRecord;
-
-  //save trajectory point
-  BufferTrajecoryRecord=TrajectoryList::buffer+TrajectoryList::CurrentPosition;
-  ParticleTrajectoryRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
+  cParticleData *ParticleTrajectoryRecord;
 
   //the trajectory is traced only if the particle trajecotry tracking flag is set 'true'
+  ParticleTrajectoryRecord=(cParticleData*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
   if (ParticleTrajectoryRecord->TrajectoryTrackingFlag==false) return;
 
   //save the data buffer if full
   if (TrajectoryList::CurrentPosition==TrajectoryList::Size) TrajectoryList::flush();
-
-  BufferTrajecoryRecord->LastDataRecord.file=ParticleTrajectoryRecord->LastDataRecord.file;
-  BufferTrajecoryRecord->LastDataRecord.thread=ParticleTrajectoryRecord->LastDataRecord.thread;
-  BufferTrajecoryRecord->LastDataRecord.offset=ParticleTrajectoryRecord->LastDataRecord.offset;
+  TrajectoryList::buffer[TrajectoryList::CurrentPosition]=ParticleTrajectoryRecord->lastRecordReference;
 
   //update the trajectory data buffer pointer
   ++TrajectoryList::CurrentPosition;
@@ -153,6 +142,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
   //trajectory buffer
   TrajectoryDataBuffer::flush();
   TrajectoryList::flush();
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //the file will be created only by the root processor
   if (PIC::ThisThread==0) {
@@ -167,7 +157,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
       sprintf(str,"%s.s=%i.%s.dat",fname,spec,ChemSymbol);
 
       fout[spec]=fopen(str,"w");
-      fprintf(fout[spec],"VARIABLES=\"x\",\"y\",\"z\"\n");
+      fprintf(fout[spec],"VARIABLES=\"x\",\"y\",\"z\",\"Speed\"\n");
     }
 
     //create particle trajectories
@@ -179,27 +169,27 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
       unsigned long int RecordThread,RecordOffset,RecordFile;
       FILE *trOut;
 
-      PIC::ParticleTracker::cParticleDataRecord StartTrajectoryPoint;
-      PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord data;
+      cTrajectoryRecordReference StartTrajectoryPoint;
+      cTrajectoryRecord TrajectoryRecord;
 
       sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",thread,nList);
       fTrajectoryList=fopen(str,"r");
       fread(&TotalListLegth,sizeof(unsigned long int),1,fTrajectoryList);
 
       for (tr=0;tr<TotalListLegth;tr++) {
-        fread(&StartTrajectoryPoint,sizeof(PIC::ParticleTracker::cParticleDataRecord),1,fTrajectoryList);
+        fread(&StartTrajectoryPoint,sizeof(cTrajectoryRecordReference),1,fTrajectoryList);
         StartTrajectorySpec=-1,trOut=NULL;
 
         do {
           if (StartTrajectorySpec==-1) {
-            RecordThread=StartTrajectoryPoint.LastDataRecord.thread;
-            RecordOffset=StartTrajectoryPoint.LastDataRecord.offset;
-            RecordFile=StartTrajectoryPoint.LastDataRecord.file;
+            RecordThread=StartTrajectoryPoint.thread;
+            RecordOffset=StartTrajectoryPoint.offset;
+            RecordFile=StartTrajectoryPoint.file;
           }
           else {
-            RecordThread=data.thread;
-            RecordOffset=data.offset;
-            RecordFile=data.file;
+            RecordThread=TrajectoryRecord.lastRecordReference.thread;
+            RecordOffset=TrajectoryRecord.lastRecordReference.offset;
+            RecordFile=TrajectoryRecord.lastRecordReference.file;
           }
 
           //open the trajectory data file if needed
@@ -216,34 +206,34 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
             fTrajectoryData=fopen(str,"r");
           }
 
-          fseek (fTrajectoryData,RecordOffset*sizeof(cParticleDataRecord::cLastDataRecord),SEEK_SET);
-          fread(&data,sizeof(PIC::ParticleTracker::cParticleDataRecord::cLastDataRecord),1,fTrajectoryData);
+          fseek (fTrajectoryData,RecordOffset*sizeof(cTrajectoryRecord),SEEK_SET);
+          fread(&TrajectoryRecord,sizeof(cTrajectoryRecord),1,fTrajectoryData);
 
           #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
           if (StartTrajectorySpec==-1) {
-            trOut=fout[data.spec];
+            trOut=fout[TrajectoryRecord.spec];
 
             //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[data.spec]);
-            ++TrajectoryCounter[data.spec];
-            StartTrajectorySpec=data.spec;
+            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
+            ++TrajectoryCounter[TrajectoryRecord.spec];
+            StartTrajectorySpec=TrajectoryRecord.spec;
           }
           #elif _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_
-          if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=data.spec)) {
-            trOut=fout[data.spec];
+          if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=TrajectoryRecord.spec)) {
+            trOut=fout[TrajectoryRecord.spec];
 
             //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[data.spec]);
-            ++TrajectoryCounter[data.spec];
-            StartTrajectorySpec=data.spec;
+            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
+            ++TrajectoryCounter[TrajectoryRecord.spec];
+            StartTrajectorySpec=TrajectoryRecord.spec;
           }
           #else
           exit(__LINE__,__FILE__,"Error: unknown option");
           #endif
 
-          fprintf(trOut,"%e  %e  %e\n",data.x[0],data.x[1],data.x[2]);
+          fprintf(trOut,"%e  %e  %e  %e\n",TrajectoryRecord.x[0],TrajectoryRecord.x[1],TrajectoryRecord.x[2],TrajectoryRecord.Speed);
         }
-        while (data.offset!=-1);
+        while (TrajectoryRecord.lastRecordReference.offset!=-1);
       }
 
       fclose(fTrajectoryList);
@@ -267,7 +257,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
 void PIC::ParticleTracker::SetDefaultParticleTrackingFlag(void* StartNodeVoid) {
   int i,j,k;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *downNode,*StartNode;
-  cParticleDataRecord *DataRecord;
+  cParticleData *DataRecord;
   long int ptr;
 
   StartNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*) StartNodeVoid;
@@ -286,7 +276,7 @@ void PIC::ParticleTracker::SetDefaultParticleTrackingFlag(void* StartNodeVoid) {
       ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
       while (ptr!=-1) {
-        DataRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+PIC::ParticleBuffer::GetParticleDataPointer(ptr));
+        DataRecord=(cParticleData*)(ParticleDataRecordOffset+PIC::ParticleBuffer::GetParticleDataPointer(ptr));
         DataRecord->TrajectoryTrackingFlag=false;
 
         ptr=PIC::ParticleBuffer::GetNext(ptr);
@@ -297,26 +287,35 @@ void PIC::ParticleTracker::SetDefaultParticleTrackingFlag(void* StartNodeVoid) {
 
 //set the particle tracking flag "on"
 void PIC::ParticleTracker::StartParticleTrajectoryTracking(void *ParticleData) {
-  cParticleDataRecord *DataRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
+  cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
 
   DataRecord->TrajectoryTrackingFlag=true;
 }
 
+void PIC::ParticleTracker::StopParticleTrajectoryTracking(void *ParticleData) {
+  cParticleData *DataRecord=(cParticleData*)(ParticleDataRecordOffset+((PIC::ParticleBuffer::byte*)ParticleData));
+
+  if (DataRecord->TrajectoryTrackingFlag==true) FinilazeParticleRecord(ParticleData);
+  DataRecord->TrajectoryTrackingFlag=false;
+}
+
 //the default particle trajectory tracking condition
 bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData) {
-  return true;
+  return false;
 }
 
 //apply the particle tracking condition to a particle
 void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
   bool flag;
-  cParticleDataRecord *DataRecord;
+  cParticleData *DataRecord;
 
   flag=_PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData);
 
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  DataRecord=(cParticleDataRecord*)(ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
+  DataRecord=(cParticleData*)(ParticleDataRecordOffset+(PIC::ParticleBuffer::byte*)ParticleData);
   DataRecord->TrajectoryTrackingFlag=flag;
+
+  if (flag==true) RecordTrajectoryPoint(x,v,spec,ParticleData);
   #endif
 }
 
