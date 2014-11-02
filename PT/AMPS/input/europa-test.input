@@ -136,6 +136,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
+  define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_   _EXOSPHERE_SOURCE__ON_ 
 
   SimulationStartTime=2009-01-24T00:00:00
 

@@ -149,7 +149,7 @@ ParticleWeightCorrectionMode=on
   
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
-  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_OFF_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_OFF_
 
 
 ! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path  
