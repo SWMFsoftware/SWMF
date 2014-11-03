@@ -259,7 +259,7 @@ contains
        ! Version of BC as in AWSOM: float BC for B1, reflected for U
        !/
        U_D = -U_D
-
+       U = 0.0
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
