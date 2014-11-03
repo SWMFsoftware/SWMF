@@ -6818,19 +6818,28 @@ The default is UseIonHeatConduction=.false.
 #HEATFLUXREGION
 T                       UseHeatFluxRegion
 5.0                     rCollisional
-10.0                    rCollisionless
+8.0                     rCollisionless
 
-If UseHeatFluxRegion is false, both the electron and ion heat conduction
-(as set by the #HEATCONDUCTION and #IONHEATCONDUCTION commands), are
-applied everywhere.
+If UseHeatFluxRegion is false, the electron heat conduction (as set by the
+#HEATCONDUCTION command), is applied everywhere.
 
-If UseHeatFluxRegion is true, both the electron and ion heat conduction
-are applied between the inner boundary (either Sun or planet) and
-rCollisional. Beyond r=rCollisional, both the electron and ion heat
-conduction coefficients are multiplied by
-\begin{verbatim}
-exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
-\end{verbatim}
+If UseHeatFluxRegion is true, the electron heat conduction is multiplied with
+a geometrical function depending on the sign of rCollisionless.
+If rCollisional is smaller than zero, then the electron heat is multiplied by
+\[
+f_{S} = \frac{1}{1+(r/rCollisional)^2}.
+\]
+If rCollisional is positive, then the electron heat conduction coefficient
+is multiplied by
+\[
+f_{S} = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2).
+\]
+In both cases, if the #HEATFLUXCOLLISIONLESS command is set, then the
+polytropic index in the electron pressure equation is set to
+\[
+\gamma_{e} = \gamma f_{S} + \gamma_{H}(1-f_{S}),
+\]
+where $\gamma_{H}$ is defined in the #HEATFLUXCOLLISIONLESS command.
 
 The default is UseHeatFluxRegion=.false.
 
