@@ -151,11 +151,11 @@ contains
     Br_II  = 0.0
     allocate(Coord_DII(2,nPhi,nTheta), State_VII(1,nPhi,nTheta))
     
-    iRM=0
-    do
+    
+    do iRM=0,nPhi*nTheta-1
        read(iUnit,*,iostat=iError) tempBr(iRM)
-       if (iError /= 0) EXIT
-       iRM=iRM+1
+       if (iError /= 0) &
+            call CON_stop('Check '//NameFileIn//':the # of lines < nPhi*nTheta')
     end do
     
     close(iUnit)
