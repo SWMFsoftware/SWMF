@@ -31,7 +31,7 @@ subroutine update_states(iStage,iBlock)
           IsConserv_CB(iTest,jTest,kTest,iBlock)
      write(*,*)
      do iVar=1,nVar
-        write(*,*)NameVar_V(iVar), '(TestCell)=',&
+        write(*,*)NameVar_V(iVar), '(TestCell)  =',&
              State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
      end do
      do iFluid = 1, nFluid
