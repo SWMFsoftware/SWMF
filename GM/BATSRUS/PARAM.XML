@@ -6839,7 +6839,7 @@ The default is UseHeatFluxRegion=.false.
 <command name="HEATFLUXCOLLISIONLESS">
 	 <parameter name="UseHeatFluxCollisionless"   type="logical" default="F"/>
 	 <if expr="$UseHeatFluxCollisionless">
-	     <parameter name="CollisionlessAlpha" type="real" />
+	     <parameter name="CollisionlessAlpha" type="real" default="1.05" />
 	 </if>
 
 #HEATFLUXCOLLISIONLESS
@@ -7099,7 +7099,7 @@ Default values are show.
 		<option name="unsignedflux"         />
 		<option name="NonWKB"               />
 		<option name="alfvenwavedissipation"/>
-		<option name="turbulentcassade"/>
+		<option name="turbulentcascade"/>
 	</parameter>
 	<if expr="$TypeCoronalHeating =~ /exponential/">
 		<parameter name="DecayLengthExp" type="real" 
@@ -7119,6 +7119,10 @@ Default values are show.
 		<parameter name="Crefl" type="real" 
 						default="0.04"/>
 	</if>
+	<if expr="$TypeCoronalHeating =~ /turbulentcascade/">
+	    <parameter name="UseWaveReflection" type="logical" default="T"/>
+	    <parameter name="LperpTimesSqrtBSi" type="real" default="1.5E5"/>
+	</if>
 
 #CORONALHEATING
 exponential	TypeCoronalHeating
@@ -7135,6 +7139,10 @@ alfvenwavedissipation	TypeCoronalHeating
 7.5E4			LperpTimesSqrtBSi (read for alfvenwavedissipation only)
 0.04			Crefl             (read for alfvenwavedissipation only)
 
+#CORONALHEATING
+turbulentcascade        TypeCoronalHeating
+T                       UseWaveReflection (read for turbulentcascade only)
+1.5e5                   LperpTimesSqrtBSi (read for turbulentcascade only)
 
 If UseCoronalHeating is false, no CoronalHeating is included.
 If UseCoronalHeating is true, then one can select a simple exponential scale 
@@ -7158,6 +7166,19 @@ dissapation model of Cranmer 2010. No additional input parameters are needed.
 
 For TypeCoronalHeating='alfvenwavedissipation' coronal heating is applied
 using an anisotropic formulation of the Kolmogorov-type dissipation.
+
+For TypeCoronalHeating='turbulentcascade', the Alfven wave energy density
+equations account for the partial reflection of Alfven waves due to Alfven
+speed gradients and field-aligned vorticity. The resulting counter
+propagating waves are responsible for the nonlinear turbulent cascade.
+The dissipation rate for the wave energy density, $w_{+}$, is controlled
+by the amplitude of the oppositely propagating wave,
+$|{\bf z}_{-}| =2\sqrt{w_{-}/\rho}$, and is inversely proportional to the
+correlation length, $L_{\perp}$, in the transverse (with respect to the
+magnetic field) direction. Similar to Hollweg (1986) we use a simple scaling
+law $L_{\perp} \propto B^{-1/2}$ with the proportionality constant
+$L_{\perp}\sqrt{B}$ as input parameter LperpTimesSqrtBSi.
+The UseWaveReflection logical is obsolete, but kept for compatibility.
 
 The default is TypeCoronalHeating="none"
 </command>
