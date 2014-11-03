@@ -7255,6 +7255,51 @@ heating.
 Default is DoOpenClosedField = .false.
 </command>
 
+<command name="HEATPARTITIONING">
+	 <parameter name="TypeHeatPartitioning" type="string" case="lower"
+                input="select" >
+                <option name="uniform"/>
+                <option name="stochasticheating"/>
+        </parameter>
+        <if expr="$TypeHeatPartitioning =~ /uniform/">
+                <parameter name="QionRatio" type="real" default="0.6" />
+        </if>
+	<if expr="$TypeHeatPartitioning =~ /stochasticheating/">
+                <parameter name="StochasticExponent" type="real" default="0.17" />
+                <parameter name="StochasticExponent" type="real" default="0.18" />
+        </if>
+
+#HEATPARTITIONING
+uniform			TypeHeatPartitioning
+0.6			QionRatio
+0.0			QionParRatio (if used)
+
+#HEATPARTITIONING
+stochasticheating	TypeHeatPartitioning
+0.17			StochasticExponent
+0.18			StochasticAmplitude
+
+If the #CORONALHEATING command is used in combination with more than one pressure
+state variable, then the heat partitioning is automatically called. The type
+of heat partitioning can be selected with the #HEATPARTITIONING command.
+
+TypeHeatPartitioning='uniform' is the default. QionRatio is the fraction of the
+coronal heating that is used for the ion heating, while QionParRatio is the
+fraction of the coronal heating that is used for the parallel ion heating.
+The fraction of election heating is 1.0-QionRatio.
+
+If TypeHeatPartitioning='stochasticheating', then the heat partitioning follows
+a strategy based on the dissipation of kinetic Alfven waves. In particular we
+employ the stochastic heating mechanism for the perpendicular proton temperature
+(chandran, 2011). In this mechanism, the electric field fluctuations due to
+perpendicular turbulent cascade can disturb the proton gyro motion enough to
+give rise to perpendicular stochastic heating, assuming that the velocity
+perturbation at the proton gyro-radius scale is large enough.
+See van der Holst et al. (2014) for details of the StochasticExponent and
+StochasticAmplitude input parameters.
+
+</command>
+
 <command name="RADIATIVECOOLING">
 	 <parameter name="UseRadCooling" type="logical" default="F" />
 #RADIATIVECOOLING
