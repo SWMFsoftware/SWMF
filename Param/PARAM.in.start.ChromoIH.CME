@@ -172,7 +172,7 @@ T			DoExtendTransitionRegion
 F			UsePoleDiffusion
 T			DoFixAxis
 24.0			rFixAxis
--1.1			r2FixAxis
+0.0			r2FixAxis
 
 #AMRREGION
 InnerShell		NameRegion

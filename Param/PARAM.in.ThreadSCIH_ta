@@ -179,10 +179,10 @@ SC/Param/TR.dat
 ascii			TypeFile
 
 #FIXAXIS
-F            UsePoleDiffusion
-T            DoFixAxis
-24.0            rFixAxis
--1.1            r2FixAxis
+F			UsePoleDiffusion
+T			DoFixAxis
+24.0			rFixAxis
+0.0			r2FixAxis
 
 ---------------------------------------------------
 #GRIDGEOMETRY
