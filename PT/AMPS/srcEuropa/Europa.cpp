@@ -57,7 +57,8 @@ double Europa::SourceProcesses::SolarWindSputtering::CalculatedTotalSodiumSource
 double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFunction(double e,int *spec) {
   static const double Ee=0.015*eV2J;
 
-  return e/pow(Ee+e,2);
+
+  return 1.0/pow(Ee+e,2); //Brown et al., 1984;  Rubin, 2012 PATM proposal
 }
 
 
