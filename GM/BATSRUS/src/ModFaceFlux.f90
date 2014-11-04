@@ -2823,8 +2823,8 @@ contains
 
                 if(UseB0)then
                    B0x = B0_DGB(x_,i,j,k,iBlock)
-                   B0y = B0_DGB(x_,i,j,k,iBlock)
-                   B0z = B0_DGB(x_,i,j,k,iBlock)
+                   B0y = B0_DGB(y_,i,j,k,iBlock)
+                   B0z = B0_DGB(z_,i,j,k,iBlock)
                 end if
 
                 ! Get the flux
