@@ -6825,17 +6825,19 @@ If UseHeatFluxRegion is false, the electron heat conduction (as set by the
 
 If UseHeatFluxRegion is true, the electron heat conduction is multiplied with
 a geometrical function depending on the sign of rCollisionless.
-If rCollisional is smaller than zero, then the electron heat is multiplied by
+If rCollisionless is smaller than zero, then the electron heat is multiplied by
 \[
 f_{S} = \frac{1}{1+(r/rCollisional)^2}.
 \]
-If rCollisional is positive, then the electron heat conduction coefficient
+If rCollisionless is positive, then the electron heat conduction coefficient
 is multiplied by
 \[
 f_{S} = exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2).
 \]
 In both cases, if the #HEATFLUXCOLLISIONLESS command is set, then the
-polytropic index in the electron pressure equation is set to
+polytropic index in the electron pressure equation is smoothly interpolated
+between $\gamma$ in the collisional regime and $\gamma_{H}$ in the 
+collisionless regime:
 \[
 \gamma_{e} = \gamma f_{S} + \gamma_{H}(1-f_{S}),
 \]
