@@ -38,7 +38,7 @@ module ModEUV
   integer, parameter :: Num_WaveLengths_High = 59
 
   integer, parameter :: nS2WaveLengths = 80
-integer, parameter :: nFlaresMax = 20
+  integer, parameter :: nFlaresMax = 20
   integer, parameter :: nSeeLinesMax = 10000
   integer, parameter :: FlareLength = 5
   integer :: iFlare = 1
@@ -99,13 +99,56 @@ integer, parameter :: nFlaresMax = 20
        QuantumYield_CH4_CH,                                       &
        QuantumYield_CH4_CH3Plus
 
-       real, dimension(nLons,nLats,nAlts,Num_Wavelengths_High,nBlocksMax) :: CO2_Abs_Fac
+  real, dimension(nLons,nLats,nAlts,Num_Wavelengths_High,nBlocksMax) :: CO2_Abs_Fac
+
+  real, dimension(1:Num_WaveLengths_High) :: PhotoAbs_NO, PhotoIon_NO
 
   real :: EUVEFF
 
   real, dimension(1:4) :: Quench
 
   real, dimension(1:15) :: RLMSRC
+
+!! Nighttime EUV Ionization Rates
+ !! Begin Nighttime
+
+  integer, parameter :: Num_NightWaveLens = 4
+
+  real :: nEuvIonRateS(nLons, nLats, nAlts, nIons,nBlocksMax)
+  real :: nighteuvflux(Num_NightWaveLens, nLons, nLats, nBlocksMax)
+
+  real , dimension(Num_NightWaveLens) :: Night_PhotoIon_OPlus2D, &
+       Night_PhotoIon_OPlus4S, Night_PhotoIon_OPlus2P, &
+       Night_PhotoIon_N2, Night_PhotoIon_NO, Night_PhotoIon_O2, &
+       Night_PhotoIon_N, &
+       Night_PhotoAbs_O, &
+       Night_PhotoAbs_N2, Night_PhotoAbs_NO, Night_PhotoAbs_O2, &
+       Night_PhotoAbs_N
+! real, dimension(Num_NightWaveLens,nLons,nLats,nBlocks) :: NightEUVflux
+  !! Wavelengths / 1026A, 584A, 304A, 1216A / cross section (cm2)
+
+  ! data Night_PhotoIon_O  / 1*0.0,    1.0e-17, 1.3e-17,  1*0.0/
+  ! data Night_PhotoIon_N2 / 1*0.0,    2.3e-17, 2.4e-17,  1*0.0/
+  ! data Night_PhotoIon_NO / 1.0e-17,  2.4e-17, 2.4e-17, 2.e-18/
+  ! data Night_PhotoIon_O2 / 9.8e-19,  2.3e-17, 1.1e-17,  1*0.0/
+  !  data NightEUVflux / 9.e10, 2.0e9, 0.0, 1.5e13/
+
+  data Night_PhotoIon_OPlus4S  / 0.0,    3.53e-18, 1.93e-18,  0.0/ !ok
+  data Night_PhotoIon_OPlus2D  / 0.0,    5.48e-18, 2.85e-18,  0.0/ !ok
+  data Night_PhotoIon_OPlus2P  / 0.0,    3.16e-18, 2.93e-18,  0.0/ !ok
+  data Night_PhotoIon_N2 / 0.0,    2.32e-17, 1.16e-17,  0.0/ !ok
+  data Night_PhotoIon_NO / 1.0e-17,  2.4e-17, 2.4e-17, 2.e-18/
+  data Night_PhotoIon_O2 / 1.00e-18,  2.2e-17, 1.68e-17,  0.0/ !ok
+  data Night_PhotoIon_N / 0.0,  1.1e-17, 0.65e-17,  0.0/ !ok
+
+  data Night_PhotoAbs_O  / 0.0,    1.217e-17, 7.7e-18,  0.0/ !ok
+  data Night_PhotoAbs_N2 / 0.0,    2.32e-17, 1.16e-17,  0.0/ !ok
+  data Night_PhotoAbs_NO / 1.0e-17,  2.4e-17, 2.4e-17, 2.e-18/
+  data Night_PhotoAbs_O2 / 1.6e-18,  2.2e-17, 1.68e-17,  0.01e-18/ !ok
+  data Night_PhotoAbs_N / 0.0,  1.1e-17, 0.65e-17,  0.0/ !ok
+
+  !  data NightEUVflux / 1.5e12, 1.0e12, 0.0, 1.5e14/
+  !! End Nighttime
 
   data Quench / 7.E-11, 5.E-11, 3.1401E-12, 9.1E-3/
 
@@ -188,6 +231,21 @@ integer, parameter :: nFlaresMax = 20
        0.60000E-07, 0.30000E-07, 0.15000E-07/
 
 !sigmas(1,*):
+
+!!! Add NO Photo
+
+  data PhotoIon_NO/                                                       &
+       0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 2.e-18,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 1.0e-17,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 2.4e-17, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 2.4e-17, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
+       0.00, 0.00, 0.00, 0.00, 0.00/
+
   data PhotoIon_O2/                                                       &
        0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
        0.00, 0.00, 0.00, 0.00, 0.00, 0.00,                              &
