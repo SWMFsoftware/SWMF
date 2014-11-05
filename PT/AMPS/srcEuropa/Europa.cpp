@@ -1083,6 +1083,14 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
 }
 
+double Exosphere::SourceProcesses::GetInjectionEnergy(){
+	static const double Ee=0.015*eV2J;
+	static const double XiMin = 8.24e-2; // corresponds to speed 10^3 m/s
+	double Xi = rnd();
+	while(Xi < XiMin) Xi = rnd();
+	return (1.0-Xi)*Ee/Xi;
+}
+
 void Europa::Sampling::O2InjectionSpeed::flush() {
   for (int i=0;i<nSampleIntervals;i++) SamplingBuffer[i]=0.0;
 }
