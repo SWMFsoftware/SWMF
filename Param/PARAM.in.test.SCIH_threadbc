@@ -205,6 +205,10 @@ T			IsStrictAmr
 2			nStage
 0.8			CflExpl
 
+#MINIMUMPRESSURE
+1E-9            pMinDim
+1e-9            peMinDim
+
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
