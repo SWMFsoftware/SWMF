@@ -159,47 +159,6 @@ subroutine calc_GITM_sources(iBlock)
   ! The auroral heating is specified below, after the aurora is described
   ! in get_potential
 
-  !\
-  ! Joule Heating --------------------------------------------------
-  !/
-
-  ! If you have turned off IonDrag, then Joule Heating should NOT be
-  ! included either.  This is because the Neutrals can become HIGHLY
-  ! seperated from the ions, causing MASSIVE Joule heating!!!
-
-  if (UseJouleHeating .and. UseIonDrag) then
-
-     tmp = Collisions(1:nLons,1:nLats,1:nAlts,iVIN_) * &
-          RhoI(1:nLons,1:nLats,1:nAlts)/ &
-          Rho(1:nLons,1:nLats,1:nAlts,iBlock) 
-
-     ! After reading the Thayer paper, this term needs to be taken
-     ! out, since it is approximately 1/2, which is the contribution
-     ! from ions heating the neutrals through conduction.
-     ! * &
-     !     (MeanIonMass(1:nLons,1:nLats,1:nAlts)/AMU) /  &
-     !     (MeanIonMass(1:nLons,1:nLats,1:nAlts)/AMU + &
-     !     MeanMajorMass(1:nLons,1:nLats,1:nAlts)/AMU)
-
-     JouleHeating = 0.0
-
-     do iDir = 1, 3
-
-        JouleHeating(:,:,:) = JouleHeating(:,:,:) + tmp * &
-             (IVelocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) - &
-             Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock))**2
-
-     enddo
-
-     JouleHeating = JouleHeating / &
-          TempUnit(1:nLons,1:nLats,1:nAlts) / &
-          cp(:,:,1:nAlts,iBlock)
-
-  else
-
-     JouleHeating = 0.0
-
-  endif
 
   !\
   ! Conduction ----------------------------------------------------
