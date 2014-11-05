@@ -10,3 +10,11 @@
 #define _EXOSPHERE_SOURCE__ON_    0
 #define _EXOSPHERE_SOURCE__OFF_   1
 
+//energy distribution inversion: 
+// numeric vs user defined solver for integral equation
+#define _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__NUMERIC_      0
+#define _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_ 1
+
+// injection angle distribution
+#define _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__UNIFORM_        0
+#define _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__KNUDSEN_COSINE_ 1
