@@ -281,6 +281,8 @@ namespace Exosphere {
     //init the model
     void Init();
 
+    double GetInjectionEnergy();
+
     //generate particle position and velocity
   //generate particle properties
   inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution) {
@@ -328,7 +330,13 @@ namespace Exosphere {
 
     //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
     double c=0.0,rVel=0.0,lVel[3];
+#if _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__NUMERIC_
     double Speed=sqrt(EnergyDistribution->DistributeVariable()*2.0/PIC::MolecularData::GetMass(spec));
+#elif _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_
+    double Speed=sqrt(GetInjectionEnergy()*2.0/PIC::MolecularData::GetMass(spec));
+#else
+    exit(__LINE__, __FILE__, "ERROR: _ENERGY_DISTRIBUTION_INVERSION_ is not defined ")
+#endif
 
 
     for (idim=0;idim<3;idim++) {
