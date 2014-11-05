@@ -17,7 +17,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   use ModConstants
   use ModTime, only: UTime, iJulianDay,currenttime
   use ModVertical, only: &
-       Lat, Lon, Gravity_G, Altitude_G, dAlt_F, iLon1D, iLat1D, iBlock1D
+       Lat, Lon, Gravity_G, Altitude_G, dAlt_F, iLon1D, iLat1D, iBlock1D, SZAVertical
   use ModIndicesInterfaces, only: get_HPI
   use ModTides, only: TidesNorth, TidesEast, TidesTemp
 
@@ -28,7 +28,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   real, intent(inout) :: &
        LogRho(-1:nAlts+2), &
        LogNS(-1:nAlts+2,nSpecies), &
-       LogINS(-1:nAlts+2,nIonsAdvect), &
+       LogINS(-1:nAlts+2,nIons), &
        Vel_GD(-1:nAlts+2,3), &
        IVel(-1:nAlts+2,3), &
        Temp(-1:nAlts+2), &
@@ -97,9 +97,8 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   IVel(-1:0,iUp_)      = 0.0
 
-  do iSpecies=1,nIonsAdvect
+  do iSpecies=1,nIons-1 !Advect
      dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
-     
      LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
      LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
   enddo
@@ -149,6 +148,16 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   IVel(nAlts+1,iUp_)   =  IVel(nAlts,iUp_)
   IVel(nAlts+2,iUp_)   =  IVel(nAlts-1,iUp_)
 
+!  if(SZAVertical .GE. PI/2.) then
+!     if(IVel(nAlts,iUp_) .GE. 0.0) then
+!        IVel(nAlts,iUp_) = - IVel(nAlts,iUp_)
+!        IVel(nAlts+1,iUp_) = - IVel(nAlts,iUp_)
+!        IVel(nAlts+2,iUp_) = - IVel(nAlts,iUp_)
+!        else
+!           IVel(nAlts+1:nAlts+2,iUp_) = IVel(nAlts,iUp_)
+!        endif
+!     endif
+
   ! We only let stuff flow out in the neutrals
 
   if(Vel_GD(nAlts,iUp_)>0.)then
@@ -174,11 +183,20 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 
   ! Limit the slope of the ion density
 
-  do iSpecies=1,nIonsAdvect
+  Lst = mod(UTime/3600.0+Lon/15.0,24.0)
+
+  do iSpecies=1,nIons-1 !Advect
      dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
-!     if (dn < 0.75*LogINS(nAlts,iSpecies) .and. dn > 0) &
-!          dn = 0.75*LogINS(nAlts,iSpecies)
-     if (dn > -0.25*LogINS(nAlts,iSpecies)) dn = -0.25*LogINS(nAlts,iSpecies)
+
+!     if (dn > -0.01*LogINS(nAlts,iSpecies)) dn = -0.01*LogINS(nAlts,iSpecies)
+!     dn = dn*(0.2*sin(Pi/2.-SZAVertical)+1.)
+!     dn = 0.0
+
+     if (SZAVertical > Pi/2 .and. abs(lat) > 15.0 .and. abs(lat) < 70.0) then
+        dn = dn*abs(sin(lst*pi/12))*0.5
+        !write(*,*) lst,iSpecies, SZAVertical*180.0/3.14159, dn
+     endif
+
      LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
      LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
   enddo
@@ -191,14 +209,14 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
              Mass(iSpecies) / (Temp(iAlt)*Boltzmanns_Constant)
         LogNS(iAlt,iSpecies) = &
              LogNS(iAlt-1,iSpecies) - dAlt_F(iAlt)*InvScaleHeightS
-        if (LogNS(nAlts+1,iSpecies) > 75.0 .or. &
-             LogNS(nAlts+2,iSpecies) > 75.0) then
-           write(*,*) "======> bcs : ", iSpecies, 1.0e-3/InvScaleHeightS, &
-                Gravity_G(nAlts), Mass(iSpecies), Temp(nAlts), &
-                LogNS(nAlts,iSpecies), LogNS(nAlts+1,iSpecies), &
-                dAlt_F(nAlts), LogNS(nAlts+2,iSpecies)
-        endif
      enddo
+     if (LogNS(nAlts+1,iSpecies) > 75.0 .or. &
+          LogNS(nAlts+2,iSpecies) > 75.0) then
+        write(*,*) "======> bcs : ", iSpecies, 1.0e-3/InvScaleHeightS, &
+             Gravity_G(nAlts), Mass(iSpecies), Temp(nAlts), &
+             LogNS(nAlts,iSpecies), LogNS(nAlts+1,iSpecies), &
+             dAlt_F(nAlts), LogNS(nAlts+2,iSpecies)
+     endif
   enddo
 
 end subroutine set_vertical_bcs
