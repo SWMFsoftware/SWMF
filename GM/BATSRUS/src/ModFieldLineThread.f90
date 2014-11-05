@@ -57,6 +57,10 @@ module ModFieldLineThread
      ! B0 field at the boundary
      !/
      real, pointer :: B0Face_DII(:,:,:)
+     !\
+     ! To store this value for semi-implicit heat conduction solver"
+     !/
+     real, pointer :: DDTeOverDsOverTeTrueSi_II(:,:)     
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
@@ -118,6 +122,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % SignBr_II)
     nullify(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
     nullify(BoundaryThreads_B(iBlock) % B0Face_DII)
+    nullify(BoundaryThreads_B(iBlock) % DDTeOverDsOverTeTrueSI_II)
   end subroutine nullify_thread_b
   !=========================
   subroutine deallocate_thread_b(iBlock)
@@ -133,6 +138,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % SignBr_II)
     deallocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
     deallocate(BoundaryThreads_B(iBlock) % B0Face_DII)
+    deallocate(BoundaryThreads_B(iBlock) % DDTeOverDsOverTeTrueSI_II)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
   end subroutine deallocate_thread_b
@@ -186,6 +192,8 @@ contains
                1:nDim,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % B0Face_DII(&
                1:nDim,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % DDTeOverDsOverTeTrueSI_II(&
+               1:nJ,1:nK))
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -259,6 +267,7 @@ contains
     BoundaryThreads_B(iBlock) % SignBr_II = 0.0
     BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII = 0.0
     BoundaryThreads_B(iBlock) % B0Face_DII = 0.0
+    BoundaryThreads_B(iBlock) % DDTeOverDsOverTeTrueSI_II = 0.0
     !Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
        !\

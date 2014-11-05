@@ -127,7 +127,7 @@ contains
   end subroutine solve_boundary_thread
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
-               iImplBlock)
+               iImplBlock, IsLinear)
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: get_face_gradient
@@ -144,10 +144,11 @@ contains
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-
+ 
     ! Optional arguments when called by semi-implicit scheme
     integer, optional, intent(in):: iImplBlock
-    
+    logical, optional, intent(in):: IsLinear
+
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
@@ -186,7 +187,7 @@ contains
           call CON_stop('Generic EOS is not applicable with threads')
        end if
     end if
-       
+    
     do k = 1, nK; do j = 1, nJ
        !\
        ! Gradient across the boundary face
@@ -205,6 +206,18 @@ contains
        else
           Major_ = WaveFirst_
           Minor_ = WaveLast_
+       end if
+       if(present(iImplBlock))then
+          if(IsLinear)then
+             !\
+             ! Apply linearization of DTe/Ds derivation in \delta Te(1,j,k)
+             State_VG(iTeImpl,0,j,k) = Te_G(0,j,k) +(Te_G(0, j, k)*&
+                  BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) &
+                  /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))/&
+                  sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k) &
+                  * BDir_D) 
+             CYCLE
+          end if
        end if
        !\
        ! Calculate input parameters for solving the thread
@@ -232,6 +245,17 @@ contains
             * BDir_D), 0.60*Te_G(0, j, k)),1.30*Te_G(0, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
+          !\
+          ! Calculate the derivative of DTeOverDs over \delta Te_G(1,j,k)
+          !/
+          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =&
+               -DTeOverDsSi
+          call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
+               TeSiIn=1.01*TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
+               DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
+          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
+               BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
+               DTeOverDsSi)/(0.01*TeSi)
           CYCLE
        end if
       

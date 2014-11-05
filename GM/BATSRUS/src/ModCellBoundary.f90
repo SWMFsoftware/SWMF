@@ -316,12 +316,8 @@ contains
        case('fieldlinethreads')
           call set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG)
        case('fieldlinethreads_semi')
-          if(IsLinear) then
-             State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
-          else
-             call set_field_line_thread_bc( &
-                  nGhost, iBlock, nVarState, State_VG, iImplBlock)
-          end if
+          call set_field_line_thread_bc( &
+               nGhost, iBlock, nVarState, State_VG, iImplBlock, IsLinear)
        case('user_semi')
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
