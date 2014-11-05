@@ -101,7 +101,7 @@ ParticleWeightCorrectionMode=on
   ThermalOPlus_BulkVelocity=(-90300,0,0);
   
   !Interpolation of the BATSRUS output with ICES
-  CreateNewCoordinateListForICES=on !on,off
+  CreateNewCoordinateListForICES=off !on,off
 ! IcesLocationPath=/left/ices/ICES
   IcesModelCase=Europa09
   
@@ -143,7 +143,7 @@ ParticleWeightCorrectionMode=on
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
 
-  define _ICES_CREATE_COORDINATE_LIST_
+!  define _ICES_CREATE_COORDINATE_LIST_
 
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
   
@@ -159,6 +159,7 @@ ParticleWeightCorrectionMode=on
 
   addPhysicalModelHeader=Europa.h
 
+  define _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_	
 
 !-----------------------------  TYPICAL SOLAR WIND CONDITIONS --------------------------------
   TypicalSolarWindConditions = \\
