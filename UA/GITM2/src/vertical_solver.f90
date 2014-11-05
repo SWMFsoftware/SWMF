@@ -97,7 +97,7 @@ subroutine advance_vertical_1stage( &
 
   real, intent(in) :: LogRho(-1:nAlts+2)
   real, intent(in) :: LogNS(-1:nAlts+2,nSpecies)
-  real, intent(in) :: LogINS(-1:nAlts+2,nIonsAdvect)
+  real, intent(in) :: LogINS(-1:nAlts+2,nIons)
   real, intent(in) :: Vel_GD(-1:nAlts+2,3)
   real, intent(in) :: IVel(-1:nAlts+2,3)
   real, intent(in) :: Temp(-1:nAlts+2)
@@ -105,7 +105,7 @@ subroutine advance_vertical_1stage( &
 
   real, intent(inout) :: NewLogRho(-1:nAlts+2)
   real, intent(inout) :: NewLogNS(-1:nAlts+2,nSpecies)
-  real, intent(inout) :: NewLogINS(-1:nAlts+2,nIonsAdvect)
+  real, intent(inout) :: NewLogINS(-1:nAlts+2,nIons)
   real, intent(inout) :: NewVel_GD(-1:nAlts+2,3)
   real :: NewVel2_G(-1:nAlts+2)
   real, intent(inout) :: NewTemp(-1:nAlts+2)
@@ -121,7 +121,7 @@ subroutine advance_vertical_1stage( &
 
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
        GradVertVel, DiffVertVel, DivVertVel
-  real, dimension(1:nAlts,nIonsAdvect) :: GradLogINS, DiffLogINS
+  real, dimension(1:nAlts,nIons) :: GradLogINS, DiffLogINS
   real :: NewSumRho, NewLogSumRho, rat, ed
 
   integer :: iAlt, iSpecies, jSpecies, iDim
@@ -186,7 +186,7 @@ subroutine advance_vertical_1stage( &
 
   enddo
 
-  do iSpecies=1,nIonsAdvect
+  do iSpecies=1,nIons-1
      call calc_rusanov_alts(LogINS(:,iSpecies), GradTmp, DiffTmp)
      GradLogINS(:,iSpecies) = GradTmp
      DiffLogINS(:,iSpecies) = DiffTmp
