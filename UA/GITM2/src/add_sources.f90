@@ -14,6 +14,9 @@ subroutine add_sources
   integer :: iBlock, iLon, iLat, iAlt, iSpecies
   logical :: IsFirstTime=.true.
 
+  real(kind=8), dimension(nLons,nLats,nAlts) :: eHeatingp, iHeatingp, eHeatingm, iHeatingm, iHeating
+
+
   call report("add_sources",2)
 
   if (floor((tSimulation-dt)/DtPotential) /= &
@@ -34,7 +37,7 @@ subroutine add_sources
      ! does not change.
 
      call calc_GITM_sources(iBlock)
-
+     call calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating)
      !! To turn off EuvHeating, turn UseSolarHeating=.false. in UAM.in
      !! To turn off JouleHeating, turn UseJouleHeating=.false. in UAM.in
      !! To turn off AuroralHeating, turn Use=AuroralHeating.false. in UAM.in
@@ -49,6 +52,7 @@ subroutine add_sources
            + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
            + AuroralHeating &
            + JouleHeating &
+           + ElectronHeating &
            ) &
            + Conduction &
            + ChemicalHeatingRate &
@@ -136,7 +140,7 @@ iAlt = 10
     
      call planet_limited_fluxes(iBlock)
 
-     call calc_electron_temperature(iBlock)
+     call calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating)
 
      !! To turn off Diffusion, turn UseDiffusion=.false. in UAM.in
 
