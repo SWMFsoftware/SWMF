@@ -104,7 +104,11 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-8.0			rCollisionless
+-8.0			rCollisionless
+
+#HEATFLUXCOLLISIONLESS
+T            UseHeatFluxCollisionless
+1.05            CollisionlessAlpha  
 
 #TEST
 krylov
@@ -385,6 +389,10 @@ user			TypeResistivity
 F			UseResistiveFlux
 F			UseJouleHeating
 T			UseHeatExchange
+
+#HEATFLUXCOLLISIONLESS
+T            UseHeatFluxCollisionless
+1.05            CollisionlessAlpha  
 
 #SCHEME
 2			nOrder

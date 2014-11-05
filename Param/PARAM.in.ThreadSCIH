@@ -133,8 +133,11 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-8.0			rCollisionless
+-8.0			rCollisionless
 
+#HEATFLUXCOLLISIONLESS
+T            UseHeatFluxCollisionless
+1.05            CollisionlessAlpha  
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -224,6 +227,7 @@ F			IsStrictAmr
 
 #MINIMUMPRESSURE
 1E-9            pMinDim
+1e-9            peMinDim
 
 #SCHEME
 2			nOrder (1 or 2)
@@ -390,6 +394,10 @@ user			TypeResistivity
 F			UseResistiveFlux
 F			UseJouleHeating
 T			UseHeatExchange
+
+#HEATFLUXCOLLISIONLESS
+T            UseHeatFluxCollisionless
+1.05            CollisionlessAlpha  
 
 #SCHEME
 2			nOrder
