@@ -242,7 +242,7 @@ contains
             DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_) - &
             sum(FaceGrad_D*BDir_D))/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D), 0.60*Te_G(0, j, k)),1.30*Te_G(0, j, k))
+            * BDir_D), 0.60*Te_G(0, j, k)),1.0*Te_G(0, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           !\
@@ -280,9 +280,9 @@ contains
        B_D = B_D - BDir_D*sum(B_D*BDir_D)
        U_D = U_D - BDir_D*U
        !\
-       ! Version of BC as in AWSOM: float BC for B1, reflected for U
+       ! 
        !/
-       U_D = -U_D
+       U_D = -U_D; B_D = -B_D
        U = 0.0
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
