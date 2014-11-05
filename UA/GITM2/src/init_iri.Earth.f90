@@ -153,9 +153,9 @@ subroutine init_iri
               IRIDensity(iLon,iLat,iAlt,iNOP_,iBlock)  = &
                    abs(outf(9,1)*outf(1,1))/100.0+1
               IRIDensity(iLon,iLat,iAlt,iHP_,iBlock)   = &
-                   abs(outf(6,1)*outf(1,1))/100.0+1
+                   1.0 ! abs(outf(6,1)*outf(1,1))/100.0+1
               IRIDensity(iLon,iLat,iAlt,iHeP_,iBlock)  = &
-                   abs(outf(7,1)*outf(1,1))/100.0+1
+                   1.0 ! abs(outf(7,1)*outf(1,1))/100.0+1
 
               ! IRI Ne from 60(day)/80(night) - 1000 km (-1 missing), 
               !  ions 100-1000 km
