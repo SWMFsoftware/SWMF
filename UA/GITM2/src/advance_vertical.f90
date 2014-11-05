@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine advance_vertical(iLon,iLat,iBlock)
-
+  use ModEUV, only: SZA
   use ModGITM
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
@@ -23,7 +23,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
        EddyCoef_1d, &
        ViscCoef_1d, &
        Gravity_G, Altitude_G, dAlt_C, InvRadialDistance_C, dAlt_F, InvDAlt_F, &
-        Cv_1D, dAltdLon_1D, dAltdLat_1D
+        Cv_1D, dAltdLon_1D, dAltdLat_1D, SZAVertical
   
 
   implicit none
@@ -36,6 +36,8 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   iLon1D   = iLon
   iLat1D   = iLat
   iBlock1D = iBlock
+
+  SZAVertical = SZA(iLon,iLat,iBlock)
 
   KappaTemp1 = KappaTemp(iLon,iLat,:,iBlock)
   dAltdLon_1D = dAltdLon_CB(iLon,iLat,0,iBlock)
@@ -72,7 +74,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
      IVel(:,iDim) = IVelocity(iLon,iLat,:,iDim,iBlock)
   enddo
 
-  do iSpecies = 1, nIonsAdvect
+  do iSpecies = 1, nIons-1 !Advect
      LogINS(:,iSpecies)  = log(IDensityS(iLon,iLat,:,iSpecies,iBlock))
   enddo
 
@@ -155,7 +157,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
 
   if (UseIonAdvection) then
 
-     do iIon = 1, nIonsAdvect
+     do iIon = 1, nIons-1 !Advect
         IDensityS(iLon,iLat,:,iIon,iBlock) = exp(LogINS(:,iIon))
      enddo
 
