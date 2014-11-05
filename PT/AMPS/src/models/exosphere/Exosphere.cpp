@@ -254,6 +254,8 @@ void Exosphere::Init_BeforeParser() {
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
+
+#if _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__NUMERIC_
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (SourceProcesses::SolarWindSputtering::SolarWindSputtering_Yield[spec]>0.0) {
     SourceProcesses::SolarWindSputtering::EnergyDistribution[spec].Init(SourceProcesses::SolarWindSputtering::SolarWindSputtering_minInjectionEnergy[spec], \
         SourceProcesses::SolarWindSputtering::SolarWindSputtering_maxInjectionEnergy[spec],SourceProcesses::SolarWindSputtering::EnergyDistributionFunction, \
@@ -271,6 +273,12 @@ void Exosphere::Init_BeforeParser() {
     }
 */
   }
+#elif _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_
+  // do nothing
+#else
+  exit(__LINE__, __FILE__, "ERROR: _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ is not defined")
+#endif
+
 #endif
 
 
