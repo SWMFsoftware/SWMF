@@ -23,9 +23,9 @@ module ModUser
        IMPLEMENTED15 => user_initial_perturbation
 
   use ModSize
-  use ModProcMH, ONLY: iProc
-  use ModNumConst, ONLY: cPi
-  use ModAdvance,    ONLY: Pe_, UseElectronPressure
+  use ModProcMH,    ONLY: iProc
+  use ModNumConst,  ONLY: cPi
+  use ModAdvance,   ONLY: Pe_, UseElectronPressure
   use ModMultiFluid
 
   include 'user_module.h' !list of public methods
@@ -39,6 +39,11 @@ module ModUser
        'CG Comet, G. Toth & H. Zhenguang, 2014'
 
   character (len=100) :: NameShapeFile
+
+  ! Use the CG shape or not. If not, then use a spherical body.
+  logical :: DoUseCGShape = .true.
+  real    :: rSphericalBodySi = 2.0e3
+  real    :: rSphericalBody
 
   integer:: nTriangle
   real, allocatable:: XyzTriangle_DII(:,:,:), Normal_DI(:,:)
@@ -130,6 +135,9 @@ contains
 
        case("#SHAPEFILE")
           call read_var('NameShapeFile' ,NameShapeFile)
+       case("#USECGSHAPE")
+          call read_var('DoUseCGShape',     DoUseCGShape)
+          call read_var('rSphericalBodySi', rSphericalBodySi)
        case("#SUNDIRECTION")
           call read_var('LatSun', LatSun)
           call read_var('LonSun', LonSun)
@@ -163,8 +171,8 @@ contains
        end select
     end do
 
-    UseUserInitSession = .true.
-    UseExtraBoundary   = .true.
+    ! UseUserInitSession = .true.
+    ! UseExtraBoundary   = .true.
 
   end subroutine user_read_inputs
   !===========================================================================
@@ -182,12 +190,24 @@ contains
     use ModVarIndexes, ONLY: MassFluid_I
     use ModBlockData, ONLY: MaxBlockData
     use ModIO, ONLY: restart
+
+    character(len=*), parameter :: NameSub='user_init_session'
     
     !------------------------------------------------------------------------
-    ! We need to have unit conversions before reading the shape file 
-    ! which contains everything in SI units
-    call read_shape_file
+    
+    if (DoUseCGShape) then
+       ! We need to have unit conversions before reading the shape file 
+       ! which contains everything in SI units
+       call read_shape_file
+       if (iProc ==0) &
+            write(*,*) NameSub, ': reading CG shape file.'
+    else
+       if (iProc ==0) &
+            write(*,*) NameSub, ': using spherical body: rSphericalBodySi =', &
+            rSphericalBodySi
+    end if
 
+    rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
     ProductionRateMax = &
          ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
     ProductionRateMin = &
@@ -251,6 +271,8 @@ contains
     end if
 
     if(iProc==0)then
+       write(*,*) 'rSphericalBodySi, rSphericalBody =', &
+            rSphericalBodySi, rSphericalBody
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
             ProductionRateMaxSi, ProductionRateMax
        write(*,*) 'ProductionRateMinSi, ProductionRateMin =', &
@@ -274,7 +296,8 @@ contains
   !===========================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, r_BLK, true_cell
+    use ModGeometry, ONLY: ExtraBc_, IsBoundaryCell_GI, Xyz_DGB, &
+         r_BLK, true_cell, x2
     use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest
 
     integer, intent(in):: iBlock
@@ -287,35 +310,39 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    ! Place a point inside rMinShape sphere with transcendent coordinates
-    ! to reduce chances of hitting the edge or corner of triangles
+    if (DoUseCGShape) then
+       ! Place a point inside rMinShape sphere with transcendent coordinates
+       ! to reduce chances of hitting the edge or corner of triangles
 
-    XyzInside_D = rMinShape*(/cPi/10,cPi**2/50,cPi**3/700/)
+       XyzInside_D = rMinShape*(/cPi/10,cPi**2/50,cPi**3/700/)
+       
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
+          ! Check if we are close enough
+          if(r_BLK(i,j,k,iBlock) > rMaxShape) then
+             IsBoundaryCell_GI(i,j,k,ExtraBc_) = .false.
+          elseif(r_BLK(i,j,k,iBlock) < rMinShape) then
+             IsBoundaryCell_GI(i,j,k,ExtraBc_) = .true.
+          else
+             ! Connect cell center with a point inside.
+             ! If the line segment does not intersect the shape or it intersects
+             ! even times then the point is inside the shape.
+             IsBoundaryCell_GI(i,j,k,ExtraBc_) = .not. is_segment_intersected( &
+                  XyzInside_D, Xyz_DGB(:,i,j,k,iBlock), IsOddIn=.true.)
+          end if
+       end do; end do; end do
 
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
-       ! Check if we are close enough
-       if(r_BLK(i,j,k,iBlock) > rMaxShape) then
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .false.
-       elseif(r_BLK(i,j,k,iBlock) < rMinShape) then
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .true.
-       else
-          ! Connect cell center with a point inside.
-          ! If the line segment does not intersect the shape or it intersects
-          ! even times then the point is inside the shape.
-          IsBoundaryCell_GI(i,j,k,ExtraBc_) = .not. is_segment_intersected( &
-               XyzInside_D, Xyz_DGB(:,i,j,k,iBlock), IsOddIn=.true.)
+       if(DoTestMe .and. iBlock==BLKtest .and. iProc==PROCtest)then
+          write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
+          write(*,*)NameSub,': is_segment_intersected =', &
+               is_segment_intersected(XyzInside_D, &
+               Xyz_DGB(:,Itest,Jtest,Ktest,iBlock), &
+               IsOddIn=.true.)
+          write(*,*)NameSub,': true cell?     ',&
+               true_cell(Itest,Jtest,Ktest,iBlock)
        end if
-
-    end do; end do; end do
-
-    if(DoTestMe .and. iBlock==BLKtest .and. iProc==PROCtest)then
-       write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
-       write(*,*)NameSub,': is_segment_intersected =', &
-            is_segment_intersected(XyzInside_D, &
-            Xyz_DGB(:,Itest,Jtest,Ktest,iBlock), &
-            IsOddIn=.true.)
-       write(*,*)NameSub,': true cell?     ',&
-            true_cell(Itest,Jtest,Ktest,iBlock)
+    else
+       IsBoundaryCell_GI(:,:,:,ExtraBc_) = &
+            r_BLK(:,:,:,iBlock) <= rSphericalBody
     end if
 
   end subroutine user_set_boundary_cells
@@ -403,7 +430,6 @@ contains
   end subroutine read_shape_file
 
   !==============================================================================
-
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain, ONLY: n_step, time_simulation
@@ -411,7 +437,8 @@ contains
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
-    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V
+    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V, &
+         ElectronPressureRatio
     use ModSolarwind,    ONLY: get_solar_wind_point
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
@@ -428,18 +455,17 @@ contains
     real :: Normal_D(3), CosAngle
     real :: TempCometLocal, uNormal, ProductionRateLocal
 
-    integer :: iDim
     logical :: DoWriteOnce = .true.
 
     integer :: iIonFluid
-    real    :: UdotR(nIonFluid), URefl_D(1:3,nIonFluid)
+    real    :: uNormalIon_I(nIonFluid)
 
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
 
     if (iProc /= 0) DoTestHere = .false.
 
-    !! Outer boundaries
+!!! Outer boundaries
     if(iBoundary >0) then
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
 
@@ -448,44 +474,162 @@ contains
        RETURN
     end if
 
-    !! Body boundaries
     if (iBoundary /= ExtraBc_) call stop_mpi(NameSub//' bad iBoundary value')
 
-    !! Projection length of U_ and B_ on the local surface radius vector
-    !! in units of the surface radius vector [rBody]
-    do iIonFluid=1,nIonFluid
-       UdotR(iIonFluid) = dot_product(VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)), &
-            FaceCoords_D)/dot_product(FaceCoords_D,FaceCoords_D)
-       !! Projection vectors
-       URefl_D(1:3,iIonFluid) = UdotR(iIonFluid)*FaceCoords_D(1:3)      
-    end do
-    !BdotR = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)/ &
-    !     dot_product(FaceCoords_D,FaceCoords_D)
+!!! Body boundaries
 
+    ! Default body boundary conditions
     if (UseSwBC) then
-       call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
-    else
+       ! Boundary condition with solar wind values
        if (DoWriteOnce) then
-          write(*,*) NameSub, ': Floating boundary condition'
+          write(*,*) NameSub, ': solar wind body conditions.'
           DoWriteOnce = .false.
        end if
-       ! Floating boundary condition by default
+
+       call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
+    else
+       ! Floating boundary condition
+       if (DoWriteOnce) then
+          write(*,*) NameSub, ': floating body conditions.'
+          DoWriteOnce = .false.
+       end if
+
        VarsGhostFace_V = VarsTrueFace_V
     end if
 
-    !! Projection vectors
-    !BRefl_D = BdotR*FaceCoords_D
+    !! Neutral boundary conditions -----------------------------------------
+    if (DoUseCGShape) then
 
-    !! Bz component propagated through moon, Bx and By didn't
+       ! We can use the saved values if no AMR is done
+       if(use_block_data(iBlock)) then
+
+          call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+
+          if ((n_step <= nStepPritSetFace+2) .and. &
+               sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
+             write(*,*) '=============== n_step ', n_step, '===================='
+             write(*,*) 'FaceCoords_D  =', FaceCoords_D
+             write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
+             write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
+             write(*,*) 'p             =', VarsGhostFace_V(Neu1P_)
+          end if
+          RETURN
+       end if
+
+       ! Empty the block storage if we redo the calculation
+       if(use_block_data(iBlock)) call clean_block_data(iBlock)
+
+       ! Save step and simulation time info
+       nStepSave_B(iBlock)          = n_step
+       TimeSimulationSave_B(iBlock) = Time_Simulation
+
+       ! Default indexes for the true and body cells
+       iTrue = iFace; jTrue = jFace; kTrue = kFace
+       iBody = iFace; jBody = jFace; kBody = kFace
+
+       select case(iSide)
+       case(1)
+          iBody = iFace - 1
+       case(2)
+          iTrue = iFace - 1
+       case(3)
+          jBody = jFace - 1
+       case(4)
+          jTrue = jFace - 1
+       case(5)
+          kBody = kFace -1
+       case(6)
+          kTrue = kFace -1
+       end select
+
+       XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
+       XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
+
+       ! Find the intersection point between the true cell and the body cell
+       ! that is closest to the true cell
+       if (.not. is_segment_intersected(XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
+            XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
+          write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
+          write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
+          write(*,*) NameSub,' error for face =', iFace, jFace, kFace
+          write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
+          call stop_mpi(NameSub// &
+               ': No intersection points are found between true and the body cells')
+       end if
+
+       ! Fix the normal direction if it is not pointing outward
+       if (sum(Normal_D*(XyzTrueCell_D - XyzBodyCell_D)) < 0.0) &
+            Normal_D = -Normal_D
+
+       ! Calculate the cos angle between the surface normal and the sun direction
+       CosAngle = sum(Normal_D*NormalSun_D)
+    else
+       ! Use a spherical body instead of a real CG shape
+       ! Normal is in the r direction
+       Normal_D = FaceCoords_D/sqrt(sum(FaceCoords_D*FaceCoords_D))
+       CosAngle = sum(FaceCoords_D*NormalSun_D)/sqrt(sum(FaceCoords_D*FaceCoords_D))
+    end if
+
+    ! Set local outflow parameters as default that may be overwritten if illuminated
+    TempCometLocal      = TempCometMin
+    ProductionRateLocal = ProductionRateMin
+
+    if (CosAngle > 0.0) then
+       if (DoUseCGShape) then
+          ! See whether the intersection point is in the shade by going towards the Sun
+          ! and checking for intersection with the shape
+          XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
+          XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
+          if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) &
+               IsIlluminated = .true.
+       else
+          IsIlluminated = .true.
+       end if
+    end if
+
+    if (IsIlluminated) then
+       ! Increase temperature of the face if it is illuminated
+       TempCometLocal      = max( TempCometMin, &
+            SlopeTemp / CosAngle + bTemp)
+       ! Increase neutral production rate
+       ProductionRateLocal = max( ProductionRateMin, &
+            SlopeProduction * CosAngle + bProduction )
+    end if
+
+    ! Calculate the normal velocity
+    uNormal = sqrt(TempCometLocal)*TempToUnormal
+
+    VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = Normal_D*uNormal
+    VarsGhostFace_V(Neu1Rho_)    = ProductionRateLocal/uNormal*NumdensToRho
+    VarsGhostFace_V(Neu1P_)      = &
+         VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
+
+    !! Ion boundary conditions -----------------------------------------
+
+    ! Projection length of U_ on the local surface radius vector
+    do iIonFluid=1,nIonFluid
+       uNormalIon_I(iIonFluid) = sum(&
+            VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
+            Normal_D)
+    end do
+
+    !  BdotR = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)/ &
+    !  dot_product(FaceCoords_D,FaceCoords_D)
+
+    ! Projection vectors
+    !  BRefl_D = BdotR*FaceCoords_D
+
+
+    ! Bz component propagated through moon, Bx and By didn't
     !  VarsGhostFace_V(Bx_:By_) = 0.0
     !  VarsGhostFace_V(Bz_)     = SW_Bz
 
-    !! set outward flux body value (Comet's surface not considered as plasma source)
-    !! leave inward flux untouched
+    ! set outward flux body value (Comet's surface not considered as plasma source)
+    ! leave inward flux untouched
     if (.not. UseSwBC) then
        do iIonFluid=1,nIonFluid
-          if (UdotR(iIonFluid) > 0.0) then
-             !????          VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
+          if (uNormalIon_I(iIonFluid) > 0.0) then
+             !VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
              VarsGhostFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)) = 0.0
              VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
              VarsGhostFace_V(iPIon_I(iIonFluid))   = BodyP_I(iIonFluid)
@@ -494,12 +638,12 @@ contains
     end if
 
     do iIonFluid=1,nIonFluid
-       if (UdotR(iIonFluid) > 0.0 .and. &
+       if (uNormalIon_I(iIonFluid) > 0.0 .and. &
             any(VarsGhostFace_V(iRhoIon_I) > 1e-2*Si2NO_V(UnitRho_))) then
           write(*,*) 'n_step, iIonFluid, FaceCoords_D =', &
                n_step, iIonFluid, FaceCoords_D
-          write(*,*) 'UdotR(iIonFluid)                =', &
-               UdotR(iIonFluid)
+          write(*,*) 'uNormalIon_I(iIonFluid)                =', &
+               uNormalIon_I(iIonFluid)
           write(*,*) 'BodyRho_I(iIonFluid), BodyP_I(iIonFluid) =', &
                BodyRho_I(iIonFluid), BodyP_I(iIonFluid)
           call stop_mpi('Plasma source at the surface????????')
@@ -513,121 +657,41 @@ contains
          sum(VarsGhostFace_V(iRhoIon_I))
     VarsGhostFace_V(RhoUz_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I))/ &
          sum(VarsGhostFace_V(iRhoIon_I))
-    VarsGhostFace_V(P_)     = sum(VarsGhostFace_V(iPIon_I))
 
-    iDim = (iSide+1)/2
-
-    ! We can use the saved values if no AMR is done
-    if(use_block_data(iBlock)) then
-
-       call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
-
-       if ((n_step <= nStepPritSetFace+2) .and. &
-            sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
-          write(*,*) '=============== n_step ', n_step, '===================='
-          write(*,*) 'FaceCoords_D  =', FaceCoords_D
-          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-          write(*,*) 'p             =', VarsGhostFace_V(Neu1P_)
-       end if
-       RETURN
+    if(UseElectronPressure) then
+       VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
+       VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
+    else
+       VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
+            *(1.+ElectronPressureRatio)
     end if
-    
-    ! Empty the block storage if we redo the calculation
-    if(use_block_data(iBlock)) call clean_block_data(iBlock)
-
-    ! Save step and simulation time info
-    nStepSave_B(iBlock)          = n_step
-    TimeSimulationSave_B(iBlock) = Time_Simulation
-
-    ! Default indexes for the true and body cells
-    iTrue = iFace; jTrue = jFace; kTrue = kFace
-    iBody = iFace; jBody = jFace; kBody = kFace
-
-    select case(iSide)
-    case(1)
-       iBody = iFace - 1
-    case(2)
-       iTrue = iFace - 1
-    case(3)
-       jBody = jFace - 1
-    case(4)
-       jTrue = jFace - 1
-    case(5)
-       kBody = kFace -1
-    case(6)
-       kTrue = kFace -1
-    end select
-
-    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
-    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
-
-    ! Find the intersection point between the true cell and the body cell
-    ! that is closest to the true cell
-    if (.not. is_segment_intersected(XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
-         XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
-       write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
-       write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
-       write(*,*) NameSub,' error for face =', iFace, jFace, kFace
-       write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
-       call stop_mpi(NameSub// &
-            ': No intersection points are found between true and the body cells')
-    end if
-
-    ! Fix the normal direction if it is not pointing outward
-    if (sum(Normal_D*(XyzTrueCell_D - XyzBodyCell_D)) < 0.0) &
-         Normal_D = -Normal_D
-
-    ! Set local outflow parameters as default that may be overwritten if illuminated
-    TempCometLocal      = TempCometMin
-    ProductionRateLocal = ProductionRateMin
-
-    ! Check if Sun light hits the shape
-    CosAngle = sum(Normal_D*NormalSun_D)
-
-    if (CosAngle > 0.0) then
-
-       ! See whether the intersection point is in the shade by going towards the Sun
-       ! and checking for intersection with the shape
-       XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
-       XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
-       if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) then
-
-          IsIlluminated = .true.
-
-          ! Increase temperature of the face if it is illuminated
-          TempCometLocal      = max( TempCometMin, &
-               SlopeTemp / CosAngle + bTemp)
-          ! Increase neutral production rate
-          ProductionRateLocal = max( ProductionRateMin, &
-               SlopeProduction * CosAngle + bProduction )
-       end if
-    end if
-
-    ! Calculate the normal velocity
-    uNormal = sqrt(TempCometLocal)*TempToUnormal
-
-    VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Neu1Rho_)    = ProductionRateLocal/uNormal*NumdensToRho
-    VarsGhostFace_V(Neu1P_)      = &
-         VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
 
-       write(*,*) 'FaceCoords_D: ', FaceCoords_D
-       write(*,*) 'TestFace_D: ', (XyzBodyCell_D + XyzTrueCell_D)/2
-       write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
-       write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
-       write(*,*) 'XyzIntersect_D=', XyzIntersect_D
-       write(*,*) 'XyzStart_D    =', XyzStart_D 
-       write(*,*) 'XyzEnd_D      =', XyzEnd_D 
-       write(*,*) 'Normal_D      =', Normal_D
-       write(*,*) 'CosAngle      =', CosAngle
-       write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-       write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-       write(*,*) 'uNormal       =', uNormal
-       write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
+       if (DoUseCGShape) then
+          write(*,*) 'FaceCoords_D: ', FaceCoords_D
+          write(*,*) 'TestFace_D: ', (XyzBodyCell_D + XyzTrueCell_D)/2
+          write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
+          write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
+          write(*,*) 'XyzIntersect_D=', XyzIntersect_D
+          write(*,*) 'XyzStart_D    =', XyzStart_D 
+          write(*,*) 'XyzEnd_D      =', XyzEnd_D 
+          write(*,*) 'Normal_D      =', Normal_D
+          write(*,*) 'CosAngle      =', CosAngle
+          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
+          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
+          write(*,*) 'uNormal       =', uNormal
+          write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
+       else
+          write(*,*) 'FaceCoords_D: ', FaceCoords_D
+          write(*,*) 'Normal_D      =', Normal_D
+          write(*,*) 'CosAngle      =', CosAngle
+          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
+          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
+          write(*,*) 'uNormal       =', uNormal
+          write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
+       end if
        DoTestHere=.false.
        nStepPritSetFace = n_step
     end if
@@ -635,7 +699,8 @@ contains
     IsIlluminated = .false.
 
     ! Store for future time steps
-    call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+    if (DoUseCGShape)  &
+         call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
 
   end subroutine user_set_face_boundary
 
@@ -971,7 +1036,7 @@ contains
     !    write(*,*)  'rBody =', rBody
 
     ! New Block, need to check whether the cell is in the shade
-    if(DoCalcShading) then
+    if(DoCalcShading .and. DoUseCGShape) then
 
        if (i == 1 .and. j == 1 .and. k ==1 .and. iBlock ==1) then
           write(*,*) NameSub, ': doing calculations. n_step, iProc =', &
@@ -994,6 +1059,16 @@ contains
           else
              IsIntersectedShapeR = 0.0
           end if
+       end if
+    end if
+
+    if (.not.DoUseCGShape) then
+       CosAngleTmp    = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
+       DistProjection = sqrt(R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2)
+       if (DistProjection < rSphericalBody) then
+          IsIntersectedShapeR = 1.0
+       else
+          IsIntersectedShapeR = 0.0
        end if
     end if
 
@@ -1323,18 +1398,20 @@ contains
        end do; end do; end do
     end if
 
-    ! Need to calculate the shading for the photoionization behind
-    ! the body for the first source term of the point-implicit solver.
-    if (iBlock /= iBlockLast) then
-       iBlocklast = iBlock
-       if (use_block_data(iBlock)) then
-          call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
-          DoCalcShading = .false.
+    if (DoUseCGShape) then
+       ! Need to calculate the shading for the photoionization behind
+       ! the body for the first source term of the point-implicit solver.
+       if (iBlock /= iBlockLast) then
+          iBlocklast = iBlock
+          if (use_block_data(iBlock)) then
+             call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
+             DoCalcShading = .false.
+          else
+             DoCalcShading = .true.
+          end if
        else
-          DoCalcShading = .true.
+          DoCalcShading = .false.
        end if
-    else
-       DoCalcShading = .false.
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1835,7 +1912,7 @@ contains
 
     end do;  end do;  end do
 
-    if (DoCalcShading) then
+    if (DoCalcShading .and. DoUseCGShape) then
        call put_block_data(iBlock,nI,nJ,nK,IsIntersectedShapeR_III)
     end if
 
