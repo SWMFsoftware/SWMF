@@ -24,7 +24,7 @@ module ModVarIndexes
 
   ! Fluids: total fluid, solar wind protons, cometary water ions
   character (len=4), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All ', 'Sw  ', 'H2Op', 'Neu1' /)
+       (/ 'All ', 'Sw  ', 'H2Op', 'Neu ' /)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -50,26 +50,26 @@ module ModVarIndexes
        H2OpRhoUy_  = 17, &
        H2OpRhoUz_  = 18, &
        H2OpP_      = 19, &
-       Neu1Rho_    = 20, &
-       Neu1RhoUx_  = 21, Neu1Ux_ = 21, &
-       Neu1RhoUy_  = 22, Neu1Uy_ = 22, &
-       Neu1RhoUz_  = 23, Neu1Uz_ = 23, &
-       Neu1P_      = 24, &
+       NeuRho_     = 20, &
+       NeuRhoUx_   = 21, NeuUx_ = 21, &
+       NeuRhoUy_   = 22, NeuUy_ = 22, &
+       NeuRhoUz_   = 23, NeuUz_ = 23, &
+       NeuP_       = 24, &
        Energy_     = nVar+1, &
        SwEnergy_   = nVar+2, &
        H2OpEnergy_ = nVar+3, &
-       Neu1Energy_ = nVar+4
+       NeuEnergy_  = nVar+4
  
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)  =(/Rho_,   SwRho_,   H2OpRho_,   Neu1Rho_ /) ,&
-       iRhoUx_I(nFluid)=(/RhoUx_, SwRhoUx_, H2OpRhoUx_, Neu1RhoUx_ /),&
-       iRhoUy_I(nFluid)=(/RhoUy_, SwRhoUy_, H2OpRhoUy_, Neu1RhoUy_ /),&
-       iRhoUz_I(nFluid)=(/RhoUz_, SwRhoUz_, H2OpRhoUz_, Neu1RhoUz_ /),&
-       iP_I(nFluid)    =(/p_,     SwP_,     H2OpP_,     Neu1P_ /)
+       iRho_I(nFluid)  =(/Rho_,   SwRho_,   H2OpRho_,   NeuRho_ /) ,&
+       iRhoUx_I(nFluid)=(/RhoUx_, SwRhoUx_, H2OpRhoUx_, NeuRhoUx_ /),&
+       iRhoUy_I(nFluid)=(/RhoUy_, SwRhoUy_, H2OpRhoUy_, NeuRhoUy_ /),&
+       iRhoUz_I(nFluid)=(/RhoUz_, SwRhoUz_, H2OpRhoUz_, NeuRhoUz_ /),&
+       iP_I(nFluid)    =(/p_,     SwP_,     H2OpP_,     NeuP_ /)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -94,15 +94,15 @@ module ModVarIndexes
        0.0, & ! H2OpRhoUy_
        0.0, & ! H2OpRhoUz_
        1.0, & ! H2OpP_
-       1.0, & ! Neu1Rho_
-       0.0, & ! Neu1RhoUx_
-       0.0, & ! Neu1RhoUy_
-       0.0, & ! Neu1RhoUz_
-       1.0, & ! Neu1P_
+       1.0, & ! NeuRho_
+       0.0, & ! NeuRhoUx_
+       0.0, & ! NeuRhoUy_
+       0.0, & ! NeuRhoUz_
+       1.0, & ! NeuP_
        1.0, & ! Energy_
        1.0, & ! SwEnergy_
        1.0, & ! H2OpEnergy_
-       1.0/)  ! Neu1Energy_
+       1.0/)  ! NeuEnergy_
   
   ! The names of the variables used in i/o
   character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
@@ -125,15 +125,15 @@ module ModVarIndexes
        'H2OpMy ', & ! H2OpRhoUy_
        'H2OpMz ', & ! H2OpRhoUz_
        'H2OpP  ', & ! H2OpP_
-       'Neu1Rho', & ! Neu1Rho_
-       'Neu1Mx ', & ! Neu1RhoUx_
-       'Neu1My ', & ! Neu1RhoUy_
-       'Neu1Mz ', & ! Neu1RhoUz_
-       'Neu1P_ ', & ! Neu1P_
+       'NeuRho ', & ! NeuRho_
+       'NeuMx  ', & ! NeuRhoUx_
+       'NeuMy  ', & ! NeuRhoUy_
+       'NeuMz  ', & ! NeuRhoUz_
+       'NeuP_  ', & ! NeuP_
        'E      ', & ! Energy_
        'SwE    ', & ! SwEnergy_
        'H2OpE  ', & ! H2OpEnergy_
-       'Neu1E  '/)  ! Neu1Energy_
+       'NeuE   '/)  ! NeuEnergy_
   
 
   ! The space separated list of nVar conservative variables for plotting
@@ -141,21 +141,21 @@ module ModVarIndexes
        'Rho Mx My Mz Bx By Bz E '// &
        'SwRho SwMx SwMy SwMz SwE '// &
        'H2OpRho H2OpMx H2OpMy H2OpMz H2OpE ' // &
-       'Neu1Rho Neu1Mx Neu1My Neu1Mz Neu1E '
+       'NeuRho NeuMx NeuMy NeuMz NeuE '
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
        'Rho Ux Uy Uz Bx By Bz Pe P ' // &
        'SwRho SwUx SwUy SwUz SwP '// &
        'H2OpRho H2OpUx H2OpUy H2OpUz H2OpP ' // &
-       'Neu1Rho Neu1Ux Neu1Uy Neu1Uz Neu1P '
+       'NeuRho NeuUx NeuUy NeuUz NeuP '
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p_e", "p",' // &
        '"`r^SW^+", "U_x^SW^+", "U_y^SW^+", "U_z^SW^+", "P^SW^+",'// &
        '"`r^H2O^+", "U_x^H2O^+", "U_y^H2O^+", "U_z^H2O^+", "P^H2O^+"' // &
-       '"`r^Neu1", "U_x^Neu1", "U_y^Neu1", "U_z^Neu1", "p^Neu1"'
+       '"`r^Neu", "U_x^Neu", "U_y^Neu", "U_z^Neu", "p^Neu"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
