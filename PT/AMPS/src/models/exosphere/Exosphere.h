@@ -338,7 +338,7 @@ namespace Exosphere {
     exit(__LINE__, __FILE__, "ERROR: _ENERGY_DISTRIBUTION_INVERSION_ is not defined ")
 #endif
 
-
+#if _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ == _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__UNIFORM_
     for (idim=0;idim<3;idim++) {
       lVel[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
       rVel+=pow(lVel[idim],2);
@@ -356,6 +356,38 @@ namespace Exosphere {
       //the distributed velocity vector is directed into the planet -> redirect it
       for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=(lVel[idim]-2.0*c*ExternalNormal[idim])*rVel;
     }
+#elif _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ ==  _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__KNUDSEN_COSINE_
+    // first, distribute velocity assuming normal vector to be {0,0,1}
+    double CosPhi   = cos(PiTimes2*rnd());
+    double SinTheta = pow(rnd(),0.5);
+    lVel[0] = CosPhi * SinTheta;
+    lVel[1] = pow(1.0 - CosPhi*CosPhi, 0.5) * SinTheta;
+    lVel[2] = pow(1.0 - SinTheta*SinTheta, 0.5);
+    // actual normal is obtained from {0,0,1} by 2 rotations:
+    //   1: around initial z axis by angle A
+    //   2: around new     y axis by angle B
+    //
+    // rotation matrix:  / CosB*CosA -SinA SinB*CosA \
+    //                  |  CosB*SinA  CosA SinB*SinA  |
+    //                   \-SinB         0  CosB      /
+    //
+    //         => normal = {SinB*CosA, SinB*SinA, CosB}
+    double CosB = ExternalNormal[2];
+    if(CosB < 1.0 && CosB > -1.0) {
+      double SinB = pow(1.0 - CosB*CosB, 0.5);
+      double CosA, SinA;
+      CosA = ExternalNormal[0] / SinB;
+      SinA = ExternalNormal[1] / SinB;
+      v_LOCAL_IAU_OBJECT[0]=Speed*( lVel[0]*CosB*CosA - lVel[1]*SinA + lVel[2]*SinB*CosA);
+      v_LOCAL_IAU_OBJECT[1]=Speed*( lVel[0]*CosB*SinA + lVel[1]*CosA + lVel[2]*SinB*SinA);
+      v_LOCAL_IAU_OBJECT[2]=Speed*(-lVel[0]*SinB                     + lVel[2]*CosB     );
+    }
+    else    // if abs(CosB)==1 no rotation is needed
+      for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=lVel[idim]*Speed;
+    
+#else
+    exit(__LINE__, __FILE__, "ERROR: _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ is not defined")
+#endif
 
     //transform the velocity vector to the coordinate frame 'MSGR_SO'
     v_LOCAL_SO_OBJECT[0]=
