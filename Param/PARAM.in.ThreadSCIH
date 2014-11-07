@@ -51,7 +51,7 @@ HGR			TypeCoordSystem
 #FIELDLINETHREAD
 T                       UseFieldLineThreads
 45                      nPointInThreadMax
-1.0e-3                  DsThreadMin
+2.0e-3                  DsThreadMin
 
 #BODY
 T			UseBody
