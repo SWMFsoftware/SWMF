@@ -1500,6 +1500,11 @@ namespace PIC {
       //sample collision statistics
       extern int CollsionFrequentcySamplingOffset;
 
+      //the namespace containes definitions of the user defined functions
+      namespace UserDefined {
+        double GetTotalCrossSection(double *v0,double *v1,int s0,int s1,PIC::Mesh::cDataBlockAMR* block,PIC::Mesh::cDataCenterNode *cell);
+      }
+
       int RequestSamplingData(int offset);
       void PrintVariableList(FILE* fout,int DataSetNumber);
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
