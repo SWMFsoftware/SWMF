@@ -2102,7 +2102,7 @@ contains
 
     real :: Primitive_V(nVar), Conservative_V(nFlux), Flux_V(nFlux)
 
-    real :: Un_I(nFluid+1), En, Pe
+    real :: Un_I(nFluid+1), En, Pe, Pwave
     integer :: i, j, k
 
     logical :: DoTest, DoTestMe
@@ -2141,7 +2141,7 @@ contains
             B0_DC(x_, i, j, k), &
             B0_DC(y_, i, j, k), &
             B0_DC(z_, i, j, k), &
-            Conservative_V, Flux_V, Un_I, En, Pe)
+            Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
        Flux_VC(1:nVar,i,j,k)= Flux_V(1:nVar)*Area
 

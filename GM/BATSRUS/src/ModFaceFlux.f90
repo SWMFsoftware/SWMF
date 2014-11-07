@@ -36,7 +36,8 @@ module ModFaceFlux
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
   use ModMultiIon, ONLY: &
-       Pe_X, Pe_Y, Pe_Z ! output: Pe for grad Pe in multi-ion MHD
+       Pe_X, Pe_Y, Pe_Z, & ! output: Pe for grad Pe in multi-ion MHD
+       Pwave_X, Pwave_Y, Pwave_Z ! Pwave for grad Pwave in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockCurrent, hall_factor, &
@@ -114,6 +115,7 @@ module ModFaceFlux
   real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) !B x Area for current -> BxJ
   real :: Enormal = 0.0                         !normal electric field -> div E
   real :: Pe      = 0.0                         !electron pressure -> grad Pe
+  real :: Pwave   = 0.0
 
   ! Variables for normal resistivity
   real :: EtaJx, EtaJy, EtaJz, Eta = 0.0
@@ -360,10 +362,11 @@ contains
     use ModAdvance,  ONLY: TypeFlux => FluxType
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
-    use ModMain, ONLY: nIFace, nJFace, nKFace, &
+    use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit
+    use ModWaves,    ONLY: UseWavePressure
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -599,7 +602,10 @@ contains
          if(UseB .and. UseBoris) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
-         if(UseB .and. UseMultiIon) Pe_X(iFace, jFace, kFace) = Pe
+         if(UseB .and. UseMultiIon)then
+            Pe_X(iFace, jFace, kFace) = Pe
+            if(UseWavePressure) Pwave_X(iFace,jFace,kFace) = Pwave
+         end if
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
@@ -691,7 +697,10 @@ contains
          if(UseB .and. UseBoris) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
-         if(UseB .and. UseMultiIon) Pe_Y(iFace,jFace,kFace) = Pe
+         if(UseB .and. UseMultiIon)then
+            Pe_Y(iFace,jFace,kFace) = Pe
+            if(UseWavePressure) Pwave_Y(iFace,jFace,kFace) = Pwave
+         end if
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DY(:,iFace,jFace,kFace) = bCrossArea_D
@@ -782,7 +791,10 @@ contains
          if(UseB .and. UseBoris) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
-         if(UseB .and. UseMultiIon) Pe_Z(iFace,jFace,kFace) = Pe
+         if(UseB .and. UseMultiIon)then
+            Pe_Z(iFace,jFace,kFace) = Pe
+            if(UseWavePressure) Pwave_Z(iFace,jFace,kFace) = Pwave
+         end if
 
          if(UseB .and. (UseMultiIon .or. .not.IsMhd)) &
               bCrossArea_DZ(:,iFace,jFace,kFace)= bCrossArea_D
@@ -1107,6 +1119,7 @@ contains
 
   subroutine get_numerical_flux(Flux_V)
 
+    use ModWaves, ONLY: UseWavePressure
     use ModAdvance, ONLY: DoReplaceDensity, State_VGB
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
@@ -1123,7 +1136,7 @@ contains
 
     real :: Cmax
     real :: DiffBn_D(3), DiffE
-    real :: EnLeft, EnRight, PeLeft, PeRight, Jx, Jy, Jz
+    real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
     real :: dB0_D(3), Current_D(3)
 
@@ -1298,7 +1311,7 @@ contains
     if(DoSimple)then
        State_V = StateLeft_V
        call get_physical_flux(State_V, B0x, B0y, B0z,&
-            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe)
+            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
@@ -1307,10 +1320,11 @@ contains
          .or. UseDifferentNeutralFlux)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
 
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
+            StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
+            PwaveRight)
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V, UnLeft_I(1))
@@ -1452,8 +1466,10 @@ contains
 
       Unormal_I = 0.5*(UnLeft_I + UnRight_I)
       Enormal   = 0.5*(EnLeft + EnRight)
-      if(UseMultiIon) &
-           Pe   = 0.5*(PeLeft + PeRight)
+      if(UseMultiIon)then
+         Pe = 0.5*(PeLeft + PeRight)
+         if(UseWavePressure) Pwave = 0.5*(PwaveLeft + PwaveRight)
+      end if
 
     end subroutine lax_friedrichs_flux
     !==========================================================================
@@ -1525,8 +1541,11 @@ contains
       end if
 
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
-      if(UseMultiIon) &
-           Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
+      if(UseMultiIon)then
+         Pe     = WeightRight*PeRight   + WeightLeft*PeLeft
+         if(UseWavePressure) &
+              Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+      end if
 
     end subroutine harten_lax_vanleer_flux
     !==========================================================================
@@ -1555,8 +1574,11 @@ contains
       ! Weighted average of the normal speed and electric field
       Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
       Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
-      if(UseMultiIon) &
-           Pe   = WeightRight*PeRight   + WeightLeft*PeLeft
+      if(UseMultiIon)then
+         Pe = WeightRight*PeRight + WeightLeft*PeLeft
+         if(UseWavePressure) &
+              Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+      end if
 
     end subroutine artificial_wind
     !==========================================================================
@@ -1623,14 +1645,14 @@ contains
 
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
       if(sR <= 0.) then 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
@@ -1940,10 +1962,11 @@ contains
          ! Temporary solution, should be the monotone numerical flux with 
          ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft)
+              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-              StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight)
+              StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
+              PwaveRight)
 
          call artificial_wind
          RETURN
@@ -2066,11 +2089,12 @@ contains
   !===========================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un_I, En, Pe)
+       StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModPhysics,  ONLY: gm1
+    use ModWaves,    ONLY: UseWavePressure, UseWavePressureLtd, GammaWave
     use BATL_size,   ONLY: nDim  
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
@@ -2080,6 +2104,7 @@ contains
     real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
     real,    intent(out):: Pe                  ! electron pressure for multiion
+    real,    intent(out):: Pwave               ! wave pressure for multiion
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
     real:: FluxBx, FluxBy, FluxBz
@@ -2093,6 +2118,9 @@ contains
     ! Make sure normal electric field is initialized
     En = 0.0
 
+    ! Initialize wave pressure
+    Pwave = 0.0
+
     if(UseMultiIon)then
        ! Pe has to be returned for multiion only
        if(UseElectronPressure)then
@@ -2101,6 +2129,14 @@ contains
           Pe = State_V(p_)*PePerPtotal
        else
           Pe = sum(State_V(iPIon_I))*ElectronPressureRatio
+       end if
+
+       if(UseWavePressure)then
+          if(UseWavePressureLtd)then
+             Pwave = (GammaWave - 1)*State_V(Ew_)
+          else
+             Pwave = (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
+          end if
        end if
     else
        Pe = 0.0
@@ -2685,7 +2721,7 @@ contains
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
 
     ! These are calculated but not used                                        
-    real:: Un_I(nFluid+1), En, Pe
+    real:: Un_I(nFluid+1), En, Pe, Pwave
     !------------------------------------------------------------------------
 
     if(.not.allocated(FluxLeft_VGD)) allocate( &
@@ -2727,7 +2763,7 @@ contains
 
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-                     Conservative_V, Flux_V, Un_I, En, Pe)
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
 
                 FluxLeft_VGD(:,i,j,k,iDim) = &
                      0.5*Area*(Flux_V + CmaxAll*Conservative_V)
@@ -2774,7 +2810,7 @@ contains
     real:: Conservative_V(nFlux)
 
     ! These are calculated but not used          
-    real:: Un_I(nFluid+1), En, Pe
+    real:: Un_I(nFluid+1), En, Pe, Pwave
 
     real, allocatable, save:: Flux_VD(:,:)
     integer:: iFlux
@@ -2829,7 +2865,7 @@ contains
 
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-                     Conservative_V, Flux_V, Un_I, En, Pe)
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
                 if(.not. UseHighFDGeometry) then
                    FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
                 else
