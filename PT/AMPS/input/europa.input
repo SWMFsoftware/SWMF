@@ -160,7 +160,7 @@ ParticleWeightCorrectionMode=on
   addPhysicalModelHeader=Europa.h
 
   define _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_	
-
+  define _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__KNUDSEN_COSINE_
 !-----------------------------  TYPICAL SOLAR WIND CONDITIONS --------------------------------
   TypicalSolarWindConditions = \\
     v=(-420.0E3,0.0,0.0) \\
