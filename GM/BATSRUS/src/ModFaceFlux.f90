@@ -1994,6 +1994,7 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModPhysics,  ONLY: gm1
     use ModWaves,    ONLY: UseWavePressure, UseWavePressureLtd, GammaWave
@@ -2094,6 +2095,9 @@ contains
 
     ! Set flux for electron pressure
     if(UseElectronPressure) Flux_V(Pe_) = HallUn*State_V(Pe_)
+
+    if(Ehot_ > 1 .and. UseHeatFluxCollisionless) &
+         Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid

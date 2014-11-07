@@ -118,7 +118,7 @@ module ModVarIndexes
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
 
   ! There is one scalar
-  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = Ehot_
+  integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = SignB_
 
   ! There are no multi-species
   logical, parameter :: UseMultiSpecies = .false.
