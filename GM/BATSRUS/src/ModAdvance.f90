@@ -123,7 +123,7 @@ module ModAdvance
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
 
   !Variables for ECHO scheme
-  logical:: UseFDFaceFlux = .false., UseFluxLimiter = .false.
+  logical:: UseFDFaceFlux = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
 
   !CWENO weight used to limit flux.
@@ -199,13 +199,6 @@ contains
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(time_BLK(nI,nJ,nK,MaxBlock))
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
-
-
-    if(UseFluxLimiter) then
-       allocate(Weight_IVX(2,nVar,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(Weight_IVY(2,nVar,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace))
-       allocate(Weight_IVZ(2,nVar,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace))
-    endif
 
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then

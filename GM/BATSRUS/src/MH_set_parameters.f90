@@ -1155,10 +1155,6 @@ subroutine MH_set_parameters(TypeAction)
            call sort_smooth_indicator
         endif
         
-     case('#LIMITFLUX')
-        ! Limiter for ECHO
-        call read_var('UseFluxLimiter', UseFluxLimiter)
-
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
 
@@ -2750,10 +2746,6 @@ contains
        UseRotatingFrame = .true.
     end if
 
-    if(UseFluxLimiter .and. .not. UseCweno) &
-         call stop_mpi('UseFluxLimiter only works for CWENO5!')
-    if(.not. UseFDFaceFlux .and. UseFluxLimiter) &
-         call stop_mpi('FluxLimiter only works when UseFDFaceFlux is true!!')    
     if(UseCweno .and. nOrder /= 5) &
          call stop_mpi('CWENO5 is a 5th order scheme!! ')
 

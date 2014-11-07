@@ -7,8 +7,7 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ, &
-       UseFluxLimiter
+  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ
 
   implicit none
 
@@ -93,7 +92,6 @@ module ModFaceValue
 
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
-  real:: Smooth_II(2, -2:MaxIJK+3)
 
 contains
   !============================================================================
@@ -1431,19 +1429,9 @@ contains
                      FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
+
                   call limit_var(iMin, iMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
-
-                  ! Calculate the non-linear weight for face flux interpolation.
-                  if(UseFluxLimiter) then
-                     do iFace = 1, nIFace
-                        Weight_IVX(1,iVar,iFace,j,k) = &
-                             min(1.0,Smooth_II(1,iFace-1), Smooth_II(1,iFace))
-
-                        Weight_IVX(2,iVar,iFace,j,k) = &
-                             min(1.0,Smooth_II(2,iFace-1), Smooth_II(2,iFace))
-                     enddo
-                  end if
 
                   ! Copy back the results into the 3D arrays
                   LeftState_VX(iVar,iMin:iMax,j,k)  = FaceL_I(iMin:iMax)
@@ -1590,15 +1578,6 @@ contains
                   call limit_var(jMin, jMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
 
-                  if(UseFluxLimiter) then
-                     do jFace = 1, nJFace
-                        Weight_IVY(1,iVar,i,jFace,k) = &
-                             min(1.0,Smooth_II(1,jFace-1), Smooth_II(1,jFace))
-                        Weight_IVY(2,iVar,i,jFace,k) = &
-                             min(1.0,Smooth_II(2,jFace-1), Smooth_II(2,jFace))
-                     enddo
-                  end if
-
                   ! Copy back the results into the 3D arrays
                   LeftState_VY(iVar,i,jMin:jMax,k)  = FaceL_I(jMin:jMax)
                   RightState_VY(iVar,i,jMin:jMax,k) = FaceR_I(jMin:jMax)
@@ -1741,15 +1720,6 @@ contains
 
                   call limit_var(kMin, kMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
-
-                  if(UseFluxLimiter) then
-                     do kFace = 1, nKFace
-                        Weight_IVZ(1,iVar,i,j,kFace) = &
-                             min(1.0,Smooth_II(1,kFace-1),Smooth_II(1,kFace))
-                        Weight_IVZ(2,iVar,i,j,kFace) = &
-                             min(1.0,Smooth_II(2,kFace-1),Smooth_II(2,kFace))
-                     enddo
-                  end if
 
                   ! Copy back the results into the 3D arrays
                   LeftState_VZ(iVar,i,j,kMin:kMax)  = FaceL_I(kMin:kMax)
@@ -3085,18 +3055,6 @@ contains
        w2 = Weight_I(2)
        w3 = Weight_I(3)
        w4 = Weight_I(4)
-
-       if(UseFluxLimiter) then
-          c1 = 1./(max(abs(Cell), abs(Cellm), abs(Cellp),1.e-3)**2)
-          ! c1 = 1./(max(abs(Cell), 1.e-3))**2
-          ! Smooth indicator for [x(l-1), x(l+1)].
-          Smooth_II(1,l) = w2/LinearCoeff_I(2) !ISLocal_I(2)*c1
-
-          c1 = 1./(max(abs(Cell), abs(Cellm), abs(Cellp),&
-               abs(Cellmm), abs(Cellpp), 1.e-3)**2)
-          ! Smooth indicator for [x(l-2),x(l+2)].
-          Smooth_II(2,l)  = w4/LinearCoeff_I(4) !ISmax*c1
-       endif
 
        if(UseFDFaceFlux) then
           WeightL_II(-2,l) = c3over8*w1 - c3over64*w4
