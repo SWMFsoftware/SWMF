@@ -2302,6 +2302,7 @@ contains
       integer :: iVar
 
       real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
+      real :: UnProton
       real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
       !-----------------------------------------------------------------------
 
@@ -2464,17 +2465,23 @@ contains
       end if
 
       if(UseAlfvenWaves)then
-         AlfvenSpeed = FullBn/sqrt(Rho)
+         AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
          if(SignB_>1 .and. DoThinCurrentSheet)then
             if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
          end if
 
+         if(UseMultiIon)then
+            UnProton = RhoUn_I(1)/State_V(iRhoIon_I(1))
+         else
+            UnProton = Un
+         end if
+
          do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
-            Flux_V(iVar) = (Un + AlfvenSpeed)*State_V(iVar) !!PLUS
+            Flux_V(iVar) = (UnProton + AlfvenSpeed)*State_V(iVar) !!PLUS
          end do
 
          do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
-            Flux_V(iVar) = (Un - AlfvenSpeed)*State_V(iVar) !!MINUS
+            Flux_V(iVar) = (UnProton - AlfvenSpeed)*State_V(iVar) !!MINUS
          end do
       end if
 
@@ -3156,14 +3163,15 @@ contains
          FullBy = StateLeft_V(By_) + B0y
          FullBz = StateLeft_V(Bz_) + B0z
          FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
-         Fast = max(Fast, sqrt( FullBn*FullBn / StateLeft_V(Rho_) ))
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateLeft_V(iRhoIon_I(1)) ))
 
          FullBx = StateRight_V(Bx_) + B0x
          FullBy = StateRight_V(By_) + B0y
          FullBz = StateRight_V(Bz_) + B0z
          FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
-         Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(Rho_) ))
+         Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(iRhoIon_I(1)) ))
       end if
+
       if(DoAw)then
          if(HallCoeff > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
@@ -3239,7 +3247,7 @@ contains
       if(UseElectronPressure .and. .not.UseMultiIon) p = p + State_V(Pe_)
       Sound2 = g*p*InvRho
 
-      if(UseWavePressure) &
+      if(UseWavePressure .and. .not.UseMultiIon) &
            Sound2 = Sound2 + GammaWave*(GammaWave-1)*InvRho &
            *sum(State_V(WaveFirst_:WaveLast_))
 
