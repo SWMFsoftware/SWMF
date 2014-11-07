@@ -218,7 +218,7 @@ contains
     !values at the photospheric end and the maximal 
     !value of this index is 0 for the thread point
     !at the physical cell center. 
-    integer :: j, k, iPoint
+    integer :: j, k, iPoint, nTrial
 
     !\
     ! rBody here is set to one keeping a capability to set
@@ -310,7 +310,7 @@ contains
           BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
 
           Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
-          COARSEN: do
+          COARSEN: do nTrial=1,4 !Ds is increased to 0.002 or 0.016
              !\
              ! Set initial Ds or increase Ds, if previous trial fails
              !/
@@ -363,6 +363,7 @@ contains
                      B0*Si2No_V(UnitB_)
              end do POINTS
           end do COARSEN
+          XyzStart_D = XyzStart_D* (0.9 + 0.1*rBody/RStart)
        end do APPROACH
        !Calculate more accurately the intersection point
        !with the photosphere surface
