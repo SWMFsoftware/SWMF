@@ -136,7 +136,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
-  define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_   _EXOSPHERE_SOURCE__ON_ 
+!  define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_   _EXOSPHERE_SOURCE__ON_ 
 
   SimulationStartTime=2009-01-24T00:00:00
 
@@ -149,6 +149,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
     B=(-12.9E-9,4.71E-9,10.29E-9) \\
     T=0.174e6 \\
     n=60.0E6
+
+Source:Sputtering=on
 
 Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
