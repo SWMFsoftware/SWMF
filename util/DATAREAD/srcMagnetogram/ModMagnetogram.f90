@@ -247,6 +247,7 @@ contains
     !/
     iUnit = io_unit_new()
     open(iUnit,file=File_PFSSM,status='old',iostat=iError)
+    if(iError>0)call CON_stop('Cannot open '//File_PFSSM)
     if (iHead_PFSSM /= 0) then
        do i=1,iHead_PFSSM
           read(iUnit,'(a)') Head_PFSSM
