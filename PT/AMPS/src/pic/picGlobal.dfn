@@ -126,6 +126,10 @@ at the end of each time step
 #define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_OFF_
 #define _PIC__PARTICLE_COLLISION_MODEL_ _PIC__PARTICLE_COLLISION_MODEL__HS_
 
+//the functions that are used for the user defined collision models
+#define _PIC__PARTICLE_COLLISION_MODEL__MEAN_CR_SIGMA_FUNCTION_    0
+#define _PIC__PARTICLE_COLLISION_MODEL__SIGMA_    0
+
 //sample collision frequentcy by the particle collision model
 #define _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ _PIC_MODE_ON_
 
