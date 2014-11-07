@@ -51,7 +51,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
-                              DoChangeRestartVariables, nVarRestart
+       DoChangeRestartVariables, nVarRestart
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -110,7 +110,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
   use ModConserveFlux, ONLY: DoConserveFlux
-  
+
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -422,7 +422,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#FLUSH")
         call read_var('DoFlush',DoFlush)
-        
+
      case("#TEST")
         call read_var('StringTest',test_string)
 
@@ -1101,10 +1101,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseHighResChange', UseHighResChange)
         UseTvdReschange = .false. 
         UseAccurateResChange = .false. 
-       
+
      case('#HIGHORDERAMR')
         call read_var('UseHighOrderAMR',UseHighOrderAMR)
-        
+
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.
@@ -1132,7 +1132,9 @@ subroutine MH_set_parameters(TypeAction)
         if(nDim == 1) UseFaceIntegral4 = .false.
 
      case("#SCHEME5")
-        call read_var('DoInterpolateFlux', DoInterpolateFlux)
+        ! DoInterpolateFlux may not be used anymore. 
+        ! call read_var('DoInterpolateFlux', DoInterpolateFlux)
+
         ! If UseFDFaceFlux is true. Use ECHO scheme, which based on:
         ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
         ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
@@ -1141,9 +1143,6 @@ subroutine MH_set_parameters(TypeAction)
         ! If it is not 'cweno', mp5 scheme will be used. 
         UseCweno = TypeLimiter5 == 'cweno'
         if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
-
-        if(DoInterpolateFlux .and. UseFDFaceFlux) &
-             call stop_mpi('Do not use DoInterpolateFlux and UseFDFaceFlux at the same time!')
 
         if(UseCweno .and. .not. DoInterpolateFlux) then
            ! Density and velocity use density as smooth indicator. 
@@ -1154,7 +1153,21 @@ subroutine MH_set_parameters(TypeAction)
            enddo
            call sort_smooth_indicator
         endif
-        
+
+        ! The following lines are dangerous! If #HIGHRESCHANGE or 
+        ! #HIGHORDERAMR or #CONSERVEFLUX presents before #SCHEME5, 
+        ! their input will be overwritten. Delete #HIGHRESCHANGE 
+        ! and #HIGHORDERAMR or change the code below in the future. 
+        if(UseFDFaceFlux) then
+           UseHighOrderAMR  = .true.
+
+           UseHighResChange = .true.
+           UseTvdReschange = .false. 
+           UseAccurateResChange = .false. 
+
+           DoConserveFlux   = .false. 
+        endif
+
      case('#BURGERSEQUATION')
         call read_var('DoBurgers', DoBurgers)
 
@@ -1486,7 +1499,7 @@ subroutine MH_set_parameters(TypeAction)
                 NameEquation//' which is different from '// &
                 NameEquationRead
            call stop_mpi(NameSub//' ERROR: incompatible equation names')
-           
+
         end if
         if(nVarEquationRead /= nVar .and. iProc==0 .and. &
              .not. DoChangeRestartVariables)then
@@ -1939,7 +1952,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#TRANSITIONREGION")
         call read_modified_cooling
-     
+
      case("#FIELDLINETHREAD")
         call read_threads(iSession)
 
@@ -2746,13 +2759,10 @@ contains
        UseRotatingFrame = .true.
     end if
 
-    if(UseCweno .and. nOrder /= 5) &
-         call stop_mpi('CWENO5 is a 5th order scheme!! ')
-
     ! Update check does not work with Runge-Kutta schemes
     ! because the final update is a linear combination of all stages.
     if(.not.UseHalfStep) UseUpdateCheck = .false.
-    
+
     ! Use first order prolongation for the first stage of high 
     ! resolution change.
     if(UseHighResChange) nOrderProlong = 1
@@ -2769,7 +2779,7 @@ contains
        end if
        call stop_mpi('Correct PARAM.in')
     end if
- 
+
     ! Check that the number of variables listed in #RESTARTVARIABLES
     ! matches the number appearing in the #EQUATION command
     ! (this check is useful if the #RESTARTVARIABLES command is added
@@ -2789,6 +2799,7 @@ contains
        end if
     end if
 
+    UseHighOrderAMR = UseHighOrderAMR .and. DoAmr
     IsFirstCheck = .false.
 
   end subroutine correct_parameters
@@ -3157,7 +3168,7 @@ contains
     DoOneCoarserLayer = .not. (nOrder>1 .and. &
          (UseTvdResChange .or. UseAccurateResChange))
     if(UseHighResChange) DoOneCoarserLayer = .false.
-    
+
     DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
 
 !!! momentum limiting fails for multiion: to be debugged
