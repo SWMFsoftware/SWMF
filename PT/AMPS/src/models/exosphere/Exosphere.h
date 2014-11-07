@@ -358,10 +358,10 @@ namespace Exosphere {
     }
 #elif _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ ==  _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__KNUDSEN_COSINE_
     // first, distribute velocity assuming normal vector to be {0,0,1}
-    double CosPhi   = cos(PiTimes2*rnd());
+    double Phi      = PiTimes2*rnd();
     double SinTheta = pow(rnd(),0.5);
-    lVel[0] = CosPhi * SinTheta;
-    lVel[1] = pow(1.0 - CosPhi*CosPhi, 0.5) * SinTheta;
+    lVel[0] = cos(Phi) * SinTheta;
+    lVel[1] = sin(Phi) * SinTheta;
     lVel[2] = pow(1.0 - SinTheta*SinTheta, 0.5);
     // actual normal is obtained from {0,0,1} by 2 rotations:
     //   1: around initial z axis by angle A
