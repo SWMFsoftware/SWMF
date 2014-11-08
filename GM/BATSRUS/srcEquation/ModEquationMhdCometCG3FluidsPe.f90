@@ -129,7 +129,7 @@ module ModVarIndexes
        'NeuMx  ', & ! NeuRhoUx_
        'NeuMy  ', & ! NeuRhoUy_
        'NeuMz  ', & ! NeuRhoUz_
-       'NeuP_  ', & ! NeuP_
+       'NeuP   ', & ! NeuP_
        'E      ', & ! Energy_
        'SwE    ', & ! SwEnergy_
        'H2OpE  ', & ! H2OpEnergy_
