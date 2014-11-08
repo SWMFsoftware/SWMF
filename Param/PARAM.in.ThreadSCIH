@@ -3,7 +3,7 @@ For a two-temperature solar wind simulation, configure SWMF with
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 ./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
-./Config.pl -g=SC:6,4,4,2000,2000,IH:4,4,4,4500,1
+./Config.pl -g=SC:6,4,4,2000,1,IH:4,4,4,4500,1
 
 Begin session: 1
 
