@@ -2096,8 +2096,13 @@ contains
     ! Set flux for electron pressure
     if(UseElectronPressure) Flux_V(Pe_) = HallUn*State_V(Pe_)
 
-    if(Ehot_ > 1 .and. UseHeatFluxCollisionless) &
-         Flux_V(Ehot_) = HallUn*State_V(Ehot_)
+    if(Ehot_ > 1)then
+       if(UseHeatFluxCollisionless)then
+          Flux_V(Ehot_) = HallUn*State_V(Ehot_)
+       else
+          Flux_V(Ehot_) = 0.0
+       end if
+    end if
 
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid
