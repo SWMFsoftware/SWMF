@@ -248,8 +248,10 @@ contains
     real:: cTolerance != cToleranceOrig*No2Si_V(UnitB_)
 
     integer, parameter:: R_ = 1
-    real :: Dxyz_D(3) 
+    real :: Dxyz_D(3), DirB_D(3), DirR_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
+    real:: CosBRMin = 1.0
+    integer, parameter::nCoarseMax = 4
     !-------------
     call set_oktest('set_threads_b', DoTest, DoTestMe)
 
@@ -285,86 +287,94 @@ contains
        ! of  physical cells near the boundary
        !/
        XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)
-       APPROACH:do
-          BoundaryThreads_B(iBlock) % Xyz_DIII(&
-               :, 0, j, k) = XyzStart_D
+
+       BoundaryThreads_B(iBlock) % Xyz_DIII(&
+            :, 0, j, k) = XyzStart_D
+       !\
+       ! Magnetic field in SI!
+       !/
+       call get_magnetogram_field(&
+            XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       !\
+       ! Calculate and save face field
+       !/
+       BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = &
+            B0Start_D  * Si2No_V(UnitB_) 
+
+       SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
+       BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
+
+       B0Start = sqrt( sum( B0Start_D**2 ) )
+       BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
+            B0Start*Si2No_V(UnitB_)
+
+       RStart = sqrt( sum( XyzStart_D**2 ) )
+       BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
+
+       Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
+       COARSEN: do nTrial=1,nCoarseMax !Ds is increased to 0.002 or 0.016
           !\
-          ! Magnetic field in SI!
+          ! Set initial Ds or increase Ds, if previous trial fails
           !/
-          call get_magnetogram_field(&
-               XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
-          !\
-          ! Calculate and save face field
-          !/
-          BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = &
-               B0Start_D  * Si2No_V(UnitB_) 
-
-          SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
-          BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
-
-          B0Start = sqrt( sum( B0Start_D**2 ) )
-          BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
-               B0Start*Si2No_V(UnitB_)
-
-          RStart = sqrt( sum( XyzStart_D**2 ) )
-          BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
-
-          Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
-          COARSEN: do nTrial=1,4 !Ds is increased to 0.002 or 0.016
+          Ds = Ds * 2
+          iPoint = 0
+          Xyz_D = XyzStart_D
+          B0 = B0Start
+          B0_D = B0Start_D
+          R = RStart
+          if(nTrial==nCoarseMax)then
+             CosBRMin = ( (RStart**2-rBody**2)/nPointInThreadMax +Ds**2)/&
+                  (2*rBody*Ds)
+             if(CosBRMin>0.9)call CON_stop('Increase nPointInThreadMax')
+          end if
+          POINTS: do
+             iPoint = iPoint + 1
              !\
-             ! Set initial Ds or increase Ds, if previous trial fails
+             !If the number of gridpoints in the theads is too 
+             !high, coarsen the grid
              !/
-             Ds = Ds * 2
-             iPoint = 0
-             Xyz_D = XyzStart_D
-             B0 = B0Start
-             B0_D = B0Start_D
-             POINTS: do
-                iPoint = iPoint + 1
-                !\
-                !If the number of gridpoints in the theads is too 
-                !high, coarsen the grid
-                !/
-                if(iPoint > nPointInThreadMax)CYCLE COARSEN
-                !\
-                !For the previous point given are Xyz_D, B0_D, B0
-                !R is only used near the photospheric end.
-                !/ 
-                !Two stage Runge-Kutta
-                !1. Point at the half of length interval:
-                XyzAux_D = Xyz_D - 0.50*Ds*SignBr*B0_D/max(B0, cTolerance)
+             if(iPoint > nPointInThreadMax)CYCLE COARSEN
+             !\
+             !For the previous point given are Xyz_D, B0_D, B0
+             !R is only used near the photospheric end.
+             !/ 
+             !Two stage Runge-Kutta
+             !1. Point at the half of length interval:
+             DirR_D = Xyz_D/R
+             DirB_D = SignBr*B0_D/max(B0, cTolerance)
+             if(nTrial==nCoarseMax)call limit_cosBR
+             XyzAux_D = Xyz_D - 0.50*Ds*DirB_D
 
-                !2. Magnetic field in this point:
-                call get_magnetogram_field(&
-                     XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
+             !2. Magnetic field in this point:
+             call get_magnetogram_field(&
+                  XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
+             DirB_D = SignBr*B0Aux_D/max(&
+                  sqrt(sum(B0Aux_D**2)), cTolerance**2)
+             if(nTrial==nCoarseMax)call limit_cosBR
+             !3. New grid point:
+             Xyz_D = Xyz_D - Ds*DirB_D
+             R = sqrt( sum( Xyz_D**2 ) )
+             if(R <= rBody)EXIT COARSEN
+             if(R > RStart)CYCLE COARSEN
+             !\
+             ! Store a point
+             !/
+             BoundaryThreads_B(iBlock) % Xyz_DIII(&
+                  :, -iPoint, j, k) = Xyz_D
+             BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = R
+             call get_magnetogram_field(&
+                  Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+             B0 = sqrt( sum( B0_D**2 ) )
+             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
+                  B0*Si2No_V(UnitB_)
+          end do POINTS
+       end do COARSEN
+       if(R > rBody)then
+          write(*,*)'iPoint, R=', iPoint, R
+          call CON_stop('Thread did not reach the photosphere!')
+       end if
 
-                !3. New grid point:
-                Xyz_D = Xyz_D - Ds*SignBr*B0Aux_D/max(&
-                     sqrt(sum(B0Aux_D**2)), cTolerance)
-                R = sqrt( sum( Xyz_D**2 ) )
-                if(R <= rBody)EXIT APPROACH
-                if(R > RStart)then
-                   !\
-                   ! Take a point somewhat closer to the sun as a starting point
-                   !/
-                   XyzStart_D = XyzStart_D* (0.9 + 0.1*rBody/RStart)
-                   CYCLE APPROACH
-                end if
-                !\
-                ! Store a point
-                !/
-                BoundaryThreads_B(iBlock) % Xyz_DIII(&
-                     :, -iPoint, j, k) = Xyz_D
-                BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = R
-                call get_magnetogram_field(&
-                     Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
-                B0 = sqrt( sum( B0_D**2 ) )
-                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
-                     B0*Si2No_V(UnitB_)
-             end do POINTS
-          end do COARSEN
-          XyzStart_D = XyzStart_D* (0.9 + 0.1*rBody/RStart)
-       end do APPROACH
+
        !Calculate more accurately the intersection point
        !with the photosphere surface
        ROld = BoundaryThreads_B(iBlock) % R_III(1-iPoint, j, k)
@@ -445,6 +455,16 @@ contains
                iPoint, jTest, kTest)
        end do
     end if
+  contains
+    subroutine limit_cosbr
+      real::CosBR
+      !----------
+      CosBR = sum(DirB_D*DirR_D)
+      if(CosBR>=CosBRMin)RETURN 
+      DirB_D = (DirB_D - CosBR*DirR_D)*&      !Tangential componenets
+           sqrt((1 - CosBRMin**2)/(1 - CosBR**2))+& !Reduced in magnitude
+           DirR_D*CosBRMin          !Plus increased radial comp 
+    end subroutine limit_cosbr
   end subroutine set_threads_b
   !=========================================================================
   subroutine check_tr_table(TypeFileIn)
