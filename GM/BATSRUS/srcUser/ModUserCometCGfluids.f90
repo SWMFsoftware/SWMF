@@ -192,9 +192,9 @@ contains
     use ModIO, ONLY: restart
 
     character(len=*), parameter :: NameSub='user_init_session'
-    
+
     !------------------------------------------------------------------------
-    
+
     if (DoUseCGShape) then
        ! We need to have unit conversions before reading the shape file 
        ! which contains everything in SI units
@@ -257,10 +257,11 @@ contains
     call dir_to_xyz((90-LatSun)*cDegToRad, LonSun*cDegToRad, NormalSun_D)
 
     ! Maximum amount of data to be stored in ModBlockData
-    ! This is for the inner boundary conditions.
     ! In practice this is a rather generous overestimate.
-    ! 6: 5 comes from the neutral and 1 is for the logical.
-    MaxBlockData = 5*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
+    ! The first 8 variables: 5 are needed to store the neu1 face B.C. and
+    ! 3 are used to store the face normal. The last 1 is for the shading
+    ! in the photoionization.
+    MaxBlockData = 8*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
 
     if (restart) then
        nStepSave_B          = n_step
@@ -315,7 +316,7 @@ contains
        ! to reduce chances of hitting the edge or corner of triangles
 
        XyzInside_D = rMinShape*(/cPi/10,cPi**2/50,cPi**3/700/)
-       
+
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
           ! Check if we are close enough
           if(r_BLK(i,j,k,iBlock) > rMaxShape) then
@@ -504,14 +505,24 @@ contains
        if(use_block_data(iBlock)) then
 
           call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+          call get_block_data(iBlock, 3, Normal_D)
+
+          call set_ion_face_boundary
 
           if ((n_step <= nStepPritSetFace+2) .and. &
                sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
              write(*,*) '=============== n_step ', n_step, '===================='
              write(*,*) 'FaceCoords_D  =', FaceCoords_D
-             write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-             write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-             write(*,*) 'p             =', VarsGhostFace_V(Neu1P_)
+             write(*,*) 'Normal_D      =', Normal_D
+             write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
+             write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
+             write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
+             write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
+             write(*,*) 'H2OpU_D       =', VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
+             write(*,*) 'H2OpP         =', VarsGhostFace_V(H2OpP_)
+             write(*,*) 'Neu1Rho       =', VarsGhostFace_V(Neu1Rho_)
+             write(*,*) 'Neu1u_D       =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
+             write(*,*) 'Neu1p         =', VarsGhostFace_V(Neu1p_)
           end if
           RETURN
        end if
@@ -604,94 +615,32 @@ contains
     VarsGhostFace_V(Neu1P_)      = &
          VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
 
-    !! Ion boundary conditions -----------------------------------------
-
-    ! Projection length of U_ on the local surface radius vector
-    do iIonFluid=1,nIonFluid
-       uNormalIon_I(iIonFluid) = sum(&
-            VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
-            Normal_D)
-    end do
-
-    !  BdotR = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)/ &
-    !  dot_product(FaceCoords_D,FaceCoords_D)
-
-    ! Projection vectors
-    !  BRefl_D = BdotR*FaceCoords_D
-
-
-    ! Bz component propagated through moon, Bx and By didn't
-    !  VarsGhostFace_V(Bx_:By_) = 0.0
-    !  VarsGhostFace_V(Bz_)     = SW_Bz
-
-    ! set outward flux body value (Comet's surface not considered as plasma source)
-    ! leave inward flux untouched
-    if (.not. UseSwBC) then
-       do iIonFluid=1,nIonFluid
-          if (uNormalIon_I(iIonFluid) > 0.0) then
-             !VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
-             VarsGhostFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)) = 0.0
-             VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
-             VarsGhostFace_V(iPIon_I(iIonFluid))   = BodyP_I(iIonFluid)
-          endif
-       end do
-    end if
-
-    do iIonFluid=1,nIonFluid
-       if (uNormalIon_I(iIonFluid) > 0.0 .and. &
-            any(VarsGhostFace_V(iRhoIon_I) > 1e-2*Si2NO_V(UnitRho_))) then
-          write(*,*) 'n_step, iIonFluid, FaceCoords_D =', &
-               n_step, iIonFluid, FaceCoords_D
-          write(*,*) 'uNormalIon_I(iIonFluid)                =', &
-               uNormalIon_I(iIonFluid)
-          write(*,*) 'BodyRho_I(iIonFluid), BodyP_I(iIonFluid) =', &
-               BodyRho_I(iIonFluid), BodyP_I(iIonFluid)
-          call stop_mpi('Plasma source at the surface????????')
-       end if
-    end do
-
-    VarsGhostFace_V(Rho_)   = sum(VarsGhostFace_V(iRhoIon_I))
-    VarsGhostFace_V(RhoUx_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I))/ &
-         sum(VarsGhostFace_V(iRhoIon_I))
-    VarsGhostFace_V(RhoUy_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUyIon_I))/ &
-         sum(VarsGhostFace_V(iRhoIon_I))
-    VarsGhostFace_V(RhoUz_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I))/ &
-         sum(VarsGhostFace_V(iRhoIon_I))
-
-    if(UseElectronPressure) then
-       VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
-       VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
-    else
-       VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
-            *(1.+ElectronPressureRatio)
-    end if
+    call set_ion_face_boundary
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
 
+       write(*,*) 'FaceCoords_D: ', FaceCoords_D
        if (DoUseCGShape) then
-          write(*,*) 'FaceCoords_D: ', FaceCoords_D
           write(*,*) 'TestFace_D: ', (XyzBodyCell_D + XyzTrueCell_D)/2
           write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
           write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
           write(*,*) 'XyzIntersect_D=', XyzIntersect_D
-          write(*,*) 'XyzStart_D    =', XyzStart_D 
-          write(*,*) 'XyzEnd_D      =', XyzEnd_D 
-          write(*,*) 'Normal_D      =', Normal_D
-          write(*,*) 'CosAngle      =', CosAngle
-          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-          write(*,*) 'uNormal       =', uNormal
-          write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
-       else
-          write(*,*) 'FaceCoords_D: ', FaceCoords_D
-          write(*,*) 'Normal_D      =', Normal_D
-          write(*,*) 'CosAngle      =', CosAngle
-          write(*,*) 'Rho           =', VarsGhostFace_V(Neu1Rho_)
-          write(*,*) 'u_D           =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
-          write(*,*) 'uNormal       =', uNormal
-          write(*,*) 'p             =', VarsGhostFace_V(Neu1p_)
+          write(*,*) 'XyzStart_D    =', XyzStart_D
+          write(*,*) 'XyzEnd_D      =', XyzEnd_D
        end if
+       write(*,*) 'Normal_D      =', Normal_D
+       write(*,*) 'CosAngle      =', CosAngle
+       write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
+       write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
+       write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
+       write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
+       write(*,*) 'H2OpU_D       =', VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
+       write(*,*) 'H2OpP         =', VarsGhostFace_V(H2OpP_)
+       write(*,*) 'Neu1Rho       =', VarsGhostFace_V(Neu1Rho_)
+       write(*,*) 'Neu1u_D       =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
+       write(*,*) 'Neu1uNormal   =', uNormal
+       write(*,*) 'Neu1p         =', VarsGhostFace_V(Neu1p_)
        DoTestHere=.false.
        nStepPritSetFace = n_step
     end if
@@ -699,9 +648,76 @@ contains
     IsIlluminated = .false.
 
     ! Store for future time steps
-    if (DoUseCGShape)  &
-         call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+    if (DoUseCGShape)  then
+       call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+       call put_block_data(iBlock, 3, Normal_D)
+    end if
 
+  contains
+    !=====================================================================
+    subroutine set_ion_face_boundary
+
+      ! Projection length of U_ on the local surface radius vector
+      do iIonFluid=1,nIonFluid
+         uNormalIon_I(iIonFluid) = sum(&
+              VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
+              Normal_D)
+      end do
+
+      !  BdotR = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)/ &
+      !  dot_product(FaceCoords_D,FaceCoords_D)
+
+      ! Projection vectors
+      !  BRefl_D = BdotR*FaceCoords_D
+
+
+      ! Bz component propagated through moon, Bx and By didn't
+      !  VarsGhostFace_V(Bx_:By_) = 0.0
+      !  VarsGhostFace_V(Bz_)     = SW_Bz
+
+      ! set outward flux body value (Comet's surface not considered as plasma source)
+      ! leave inward flux untouched
+      if (.not. UseSwBC) then
+         do iIonFluid=1,nIonFluid
+            if (uNormalIon_I(iIonFluid) > 0.0) then
+               !VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
+               VarsGhostFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)) = 0.0
+               VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
+               VarsGhostFace_V(iPIon_I(iIonFluid))   = BodyP_I(iIonFluid)
+            endif
+         end do
+      end if
+
+      do iIonFluid=1,nIonFluid
+         if (uNormalIon_I(iIonFluid) > 0.0 .and. &
+              any(VarsGhostFace_V(iRhoIon_I) > 1e-2*Si2NO_V(UnitRho_))) then
+            write(*,*) 'n_step, iIonFluid, FaceCoords_D =', &
+                 n_step, iIonFluid, FaceCoords_D
+            write(*,*) 'uNormalIon_I(iIonFluid)                =', &
+                 uNormalIon_I(iIonFluid)
+            write(*,*) 'BodyRho_I(iIonFluid), BodyP_I(iIonFluid) =', &
+                 BodyRho_I(iIonFluid), BodyP_I(iIonFluid)
+            call stop_mpi('Plasma source at the surface????????')
+         end if
+      end do
+
+      VarsGhostFace_V(Rho_)   = sum(VarsGhostFace_V(iRhoIon_I))
+      VarsGhostFace_V(RhoUx_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I))/ &
+           sum(VarsGhostFace_V(iRhoIon_I))
+      VarsGhostFace_V(RhoUy_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUyIon_I))/ &
+           sum(VarsGhostFace_V(iRhoIon_I))
+      VarsGhostFace_V(RhoUz_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I))/ &
+           sum(VarsGhostFace_V(iRhoIon_I))
+
+      if(UseElectronPressure) then
+         VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
+         VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
+      else
+         VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
+              *(1.+ElectronPressureRatio)
+      end if
+    end subroutine set_ion_face_boundary
+    !===========================================================
   end subroutine user_set_face_boundary
 
   !============================================================================
@@ -1090,24 +1106,24 @@ contains
        v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
     end if
 
-!    if ( is_segment_intersected(Xyz_DGB(:,i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock)+5*rMaxShape*NormalSun_D) ) then
-!       v_II = v_II*1e-9 ! Inside the body's shadow
-!    else
-!       ! N total number of water-type molecules in upstream column
-!       !       uNeutr = sqrt(UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+&
-!       !            UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2)
-!!       uNeutr = sqrt(sum((State_VGB(Neu1RhoUx_:Neu1RhoUz_,i,j,k,iBlock)/State_VGB(Neu1Rho_,i,j,k,iBlock))**2))
-!       !  (+++++++++need to fixed++++++++++++)
-!       !       NCol = Qprod/uNeutr/Dist/4.*(-atan(Xyz_DGB(x_,i,j,k,iBlock)*rPlanetSI/Dist)/cPi+0.5)
-!       NCol = 0
-!       v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
-!       !if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
-!       !   write(*,*)'sigma      = ',sigma
-!       !   write(*,*)'Dist       = ',Dist
-!       !   write(*,*)'NCol       = ',NCol
-!       !   write(*,*)'Correction = ',exp(-sigma*NCol)
-!       !end if
-!    end if
+    !    if ( is_segment_intersected(Xyz_DGB(:,i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock)+5*rMaxShape*NormalSun_D) ) then
+    !       v_II = v_II*1e-9 ! Inside the body's shadow
+    !    else
+    !       ! N total number of water-type molecules in upstream column
+    !       !       uNeutr = sqrt(UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2+&
+    !       !            UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)**2)
+    !!       uNeutr = sqrt(sum((State_VGB(Neu1RhoUx_:Neu1RhoUz_,i,j,k,iBlock)/State_VGB(Neu1Rho_,i,j,k,iBlock))**2))
+    !       !  (+++++++++need to fixed++++++++++++)
+    !       !       NCol = Qprod/uNeutr/Dist/4.*(-atan(Xyz_DGB(x_,i,j,k,iBlock)*rPlanetSI/Dist)/cPi+0.5)
+    !       NCol = 0
+    !       v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
+    !       !if(i==iTest.and.j==jTest.and.k==kTest.and.iBlock==BlkTest) then
+    !       !   write(*,*)'sigma      = ',sigma
+    !       !   write(*,*)'Dist       = ',Dist
+    !       !   write(*,*)'NCol       = ',NCol
+    !       !   write(*,*)'Correction = ',exp(-sigma*NCol)
+    !       !end if
+    !    end if
 
     if (Te <= 0.0) then
        write(*,*) '!!!!!!!!!!!!!!!!!!!!!! Te <= 0: Te =', Te
@@ -1288,7 +1304,7 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-!    write(*,*) 'calc_sources: iBlock =', iBlock
+    !    write(*,*) 'calc_sources: iBlock =', iBlock
 
     !! Set the source arrays for this block to zero
     SRho_IC        = 0.
