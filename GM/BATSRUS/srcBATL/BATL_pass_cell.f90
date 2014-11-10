@@ -657,7 +657,7 @@ contains
                             ! Send restricted data to coarser neighbor
                             call do_restrict
                          elseif(DiLevel == -1)then
-                            ! Send prolonged data to coarser neighbor
+                            ! Send prolonged data to finer neighbor
                             call do_prolong
                          endif
                       end do ! iDir
@@ -2456,7 +2456,7 @@ contains
 
       !----------------------------------------------------------------------
       ! Non-face ghost cells are also set false.
-      IsAccurateFace_GB = .false.
+      IsAccurateFace_GB(:,:,:,iBlock) = .false.
 
       ! Assume face ghost cells are accurate. 
       IsAccurateFace_GB(-2:0,      1:nJ,1:nK,iBlock) = .true. 
@@ -2570,7 +2570,7 @@ contains
                end do; end do; end do
             else
                do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR
-                  if(.not. (nK >1 .and. iSendStage == 3 &
+                  if(.not. (iSendStage == 3 &
                        .and. IsAccurateFace_GB(i,j,k,iBlockRecv)))then    
                      State_VGB(:,i,j,k,iBlockRecv) = &
                           BufferR_I(iBufferR+1:iBufferR+nVar)
