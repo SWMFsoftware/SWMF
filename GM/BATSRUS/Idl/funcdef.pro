@@ -30,8 +30,9 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ;   Function names listed below are calculated and returned.
 ;
-;   Expressions formed from the standard conservative variable names,
-;     (i.e. rho ux uy uz p bx by bz), coordinate names (x, y, z),
+;   Expressions formed from the standard conservative variable names
+;     rho, mx, my, mz, ux, uy, uz, uu, u, p, bx, by, bz, bb, b,
+;     coordinate names x, y, z, r,
 ;     and equation parameter names (gamma) and any IDL function
 ;     and operator are evaluated and returned. 
 ;
@@ -46,8 +47,8 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ; One can use "funcdef" interactively too, e.g.
 ; 
-; ekin =funcdef(x,w,'(ux^2+uy^2)*rho','mhd23',eqpar,variables)
-; cfast=funcdef(x,w,'cfast','mhd33',eqpar,variables)
+; ekin =funcdef(x,w,'(ux^2+uy^2)*rho,time,eqpar,variables)
+; cfast=funcdef(x,w,'cfast',time,eqpar,variables)
 ;
 ;===========================================================================
 
@@ -123,16 +124,23 @@ endcase
 
 if n_elements(result) gt 0 and rcut le 0 then return, sign*result
 
-; Extract coordinate variables from xx:
-case ndim of
-    1:begin
-        x=xx & y=0 & z=0
+; set the coordinates x, y, z if they occur in the variable names
+x = 0 & y = 0 & z = 0
+for idim = 0, ndim-1 do case ndim of
+    1: case variables(idim) of
+       'x': x = xx
+       'y': y = xx
+       'z': z = xx
+    endcase
+    2: case variables(idim) of
+       'x': x = xx(*,*,idim)
+       'y': y = xx(*,*,idim)
+       'z': z = xx(*,*,idim)
     end
-    2:begin
-        x=xx(*,*,0) & y=xx(*,*,1) & z=0
-    end
-    3:begin
-        x=xx(*,*,*,0) & y=xx(*,*,*,1) & z=xx(*,*,*,2)
+    3: case variables(idim) of
+       'x': x = xx(*,*,*,idim)
+       'y': y = xx(*,*,*,idim)
+       'z': z = xx(*,*,*,idim)
     end
 endcase
 r = sqrt(x^2+y^2+z^2)
@@ -290,23 +298,23 @@ case f of
         result=dblarr(n1,n2)
                                 ; Integrate along the first row
         for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
-          +(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
-          -(by(i1,0)+by(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
+          +(bz(i1,0)+bz(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5 $
+          -(by(i1,0)+by(i1-1,0))*(z(i1,0)-z(i1-1,0))*0.5
                                 ; Integrate all columns vertically
         for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
-          +(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
-          -(by(*,i2)+by(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
+          +(bz(*,i2)+bz(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5 $
+          -(by(*,i2)+by(*,i2-1))*(z(*,i2)-z(*,i2-1))*0.5
     end
     'Ay': begin
         result=dblarr(n1,n2)
                                 ; Integrate along the first row
         for i1=1,n1-1 do result(i1,0)=result(i1-1,0) $
           -(bz(i1,0)+bz(i1-1,0))*(x(i1,0)-x(i1-1,0))*0.5 $
-          +(bx(i1,0)+bx(i1-1,0))*(y(i1,0)-y(i1-1,0))*0.5
+          +(bx(i1,0)+bx(i1-1,0))*(z(i1,0)-z(i1-1,0))*0.5
                                 ; Integrate all columns vertically
         for i2=1,n2-1 do result(*,i2)=result(*,i2-1) $
           -(bz(*,i2)+bz(*,i2-1))*(x(*,i2)-x(*,i2-1))*0.5 $
-          +(bx(*,i2)+bx(*,i2-1))*(y(*,i2)-y(*,i2-1))*0.5
+          +(bx(*,i2)+bx(*,i2-1))*(z(*,i2)-z(*,i2-1))*0.5
     end
     'Az': begin
         result=dblarr(n1,n2)
