@@ -1095,6 +1095,7 @@ Possible values for TypeBcInner are:
                     reflect Br, float Bphi, float Btheta, float rho, float P
 'float'           - float Vr, reflect Vphi to rotation, float Vtheta,
                     float B, float rho, float P
+'absorb'          - float all variables but reflect Vr if Vr > 0
 'fixed'           - Vr=0, Vphi=rotation, Vtheta=0
                     B=B0 (ie B1=0), fix rho, fix P
 'ionosphere'      - set V as if ionosphere gave V_iono=0
@@ -1110,6 +1111,8 @@ Possible values for TypeBcInner are:
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
 the velocity at the inner boundary is determined by the ionosphere model.
+
+The 'absorb' inner BC only works with #ROTATION false.
 
 The boundary condition on Br can be changed with the #MAGNETICINNERBOUNDARY
 command.
