@@ -487,6 +487,16 @@ contains
     if(.not. allocated(IsAccurateFace_GB)) &
          allocate(IsAccurateFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK, nBlock))
     if(UseHighResChange) then
+       ! WARNING!!!!!!!!!!!!!!!!!!!
+       ! HighResChange has a issue with boudary condition so far. One       
+       ! boundary block's corner/edge neighbors may be not defined (like
+       ! reflect boundary) and the ghost cell values are not accurate (the
+       ! values may be 777 after AMR). This problem only occures with 
+       ! resolution change along the boundary with reflect/shear/float
+       ! (boundary conditions that ghost cells depending on physical 
+       ! cells) boundary conditions. 
+       ! Yuxi will solve this problem in the future. 
+
 
        ! stage 1: first order prolongation and do_equal.
        ! stage 2: 
