@@ -13,9 +13,17 @@
 
 #include "pic.h"
 
-#include "SpiceUsr.h"
+
 #include "Exosphere.h"
 #include "constants.h"
+
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+#include "SpiceUsr.h"
+#else
+#include "SpiceEmptyDefinitions.h"
+#endif
+
 
 
 namespace Titan {
