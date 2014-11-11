@@ -88,7 +88,9 @@ module ModUser
   real :: NumdensToRho
 
   ! Inner boundary condition for ions
-  logical :: UseSwBC =.false.
+  character (len=10) :: TypeBodyBC = 'default'
+  logical :: UseSwBC        = .false.
+  logical :: UseReflectedBC = .false.
 
   ! FaceCoordsTest_D
   real :: FaceCoordsX=0.0, FaceCoordsY=0.0, FaceCoordsZ=0.0
@@ -158,7 +160,21 @@ contains
           call read_var('RotationCometHour', RotationCometHour)
           call read_var('AngleUpdateDeg', AngleUpdateDeg)
        case("#BODYBC")
-          call read_var('UseSwBC', UseSwBC)
+          call read_var('TypeBodyBC', TypeBodyBC)
+          select case(TypeBodyBC)
+             case('solarwind')
+                UseSwBC        = .true.
+                UseReflectedBC = .false.
+             case('reflected')
+                UseSwBC        = .false.
+                UseReflectedBC = .true.
+             case('default')
+                UseSwBC        = .false.
+                UseReflectedBC = .false.
+             case default
+                if(iProc==0) call stop_mpi( &
+               NameSub//' invalid body type='//trim(NameCommand))
+             end select
        case("#TESTFACECOORDS")
           call read_var('FaceCoordsX', FaceCoordsX)
           call read_var('FaceCoordsY', FaceCoordsY)
@@ -490,7 +506,7 @@ contains
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
     else
        ! Floating boundary condition
-       if (DoWriteOnce) then
+       if (DoWriteOnce .and. .not. UseReflectedBC) then
           write(*,*) NameSub, ': floating body conditions.'
           DoWriteOnce = .false.
        end if
@@ -507,13 +523,15 @@ contains
           call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
           call get_block_data(iBlock, 3, Normal_D)
 
-          call set_ion_face_boundary
+          if (.not. UseSwBC) call set_ion_face_boundary
 
           if ((n_step <= nStepPritSetFace+2) .and. &
                sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
              write(*,*) '=============== n_step ', n_step, '===================='
              write(*,*) 'FaceCoords_D  =', FaceCoords_D
              write(*,*) 'Normal_D      =', Normal_D
+             write(*,*) 'P             =', VarsGhostFace_V(P_)
+             write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
              write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
              write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
              write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
@@ -571,15 +589,14 @@ contains
        ! Fix the normal direction if it is not pointing outward
        if (sum(Normal_D*(XyzTrueCell_D - XyzBodyCell_D)) < 0.0) &
             Normal_D = -Normal_D
-
-       ! Calculate the cos angle between the surface normal and the sun direction
-       CosAngle = sum(Normal_D*NormalSun_D)
     else
        ! Use a spherical body instead of a real CG shape
        ! Normal is in the r direction
        Normal_D = FaceCoords_D/sqrt(sum(FaceCoords_D*FaceCoords_D))
-       CosAngle = sum(FaceCoords_D*NormalSun_D)/sqrt(sum(FaceCoords_D*FaceCoords_D))
     end if
+
+    ! Calculate the cos angle between the surface normal and the sun direction
+    CosAngle = sum(Normal_D*NormalSun_D)
 
     ! Set local outflow parameters as default that may be overwritten if illuminated
     TempCometLocal      = TempCometMin
@@ -615,7 +632,7 @@ contains
     VarsGhostFace_V(Neu1P_)      = &
          VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
 
-    call set_ion_face_boundary
+    if (.not. UseSwBC) call set_ion_face_boundary
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
@@ -631,6 +648,8 @@ contains
        end if
        write(*,*) 'Normal_D      =', Normal_D
        write(*,*) 'CosAngle      =', CosAngle
+       write(*,*) 'P             =', VarsGhostFace_V(P_)
+       write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
        write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
        write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
        write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
@@ -657,6 +676,8 @@ contains
     !=====================================================================
     subroutine set_ion_face_boundary
 
+      integer :: iUx, iUz
+
       ! Projection length of U_ on the local surface radius vector
       do iIonFluid=1,nIonFluid
          uNormalIon_I(iIonFluid) = sum(&
@@ -675,18 +696,33 @@ contains
       !  VarsGhostFace_V(Bx_:By_) = 0.0
       !  VarsGhostFace_V(Bz_)     = SW_Bz
 
-      ! set outward flux body value (Comet's surface not considered as plasma source)
-      ! leave inward flux untouched
-      if (.not. UseSwBC) then
-         do iIonFluid=1,nIonFluid
+      do iIonFluid=1,nIonFluid
+         if (UseReflectedBC) then
+            ! Reflected raidal velocity uG = uT - 2*u_normal
+            if (DoWriteOnce) then
+               write(*,*) NameSub, ': reflected boundary condition'
+               DoWriteOnce = .false.
+            end if
+
             if (uNormalIon_I(iIonFluid) > 0.0) then
+               iUx = iRhoUxIon_I(iIonFluid)
+               iUz = iRhoUzIon_I(iIonFluid)
+               VarsGhostFace_V(iUx:iUz) = VarsTrueFace_V(iUx:iUz) - &
+                    2.0*uNormalIon_I(iIonFluid)*Normal_D
+            end if
+         else
+            ! set outward flux body value (Comet's surface not considered as plasma source)
+            ! leave inward flux untouched
+            if (uNormalIon_I(iIonFluid) > 0.0) then
+               iUx = iRhoUxIon_I(iIonFluid)
+               iUz = iRhoUzIon_I(iIonFluid)
                !VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
-               VarsGhostFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid)) = 0.0
+               VarsGhostFace_V(iUx:iUz) = 0.0
                VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
                VarsGhostFace_V(iPIon_I(iIonFluid))   = BodyP_I(iIonFluid)
             endif
-         end do
-      end if
+         end if
+      end do
 
       do iIonFluid=1,nIonFluid
          if (uNormalIon_I(iIonFluid) > 0.0 .and. &
@@ -975,7 +1011,7 @@ contains
     real,intent(inout) :: IsIntersectedShapeR
 
     real :: Tred, Mred
-    real :: DistProjection, CosAngleTmp, NCol, sigma, J3, log10Te, sqrtTe
+    real :: DistProjection2, CosAngleTmp, NCol, sigma, J3, log10Te, sqrtTe
     real,dimension(nNeutral,nIonFluid) :: sigma_e
     integer :: n
     real, save :: ElImpRate_I(nNeutral,61)!, ElCrossSect_I(61)
@@ -1059,14 +1095,14 @@ contains
                n_step, iProc
        end if
 
-       CosAngleTmp    = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
-       DistProjection = sqrt(R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2)
+       CosAngleTmp     = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
+       DistProjection2 = R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2
 
-       if (DistProjection < rMinShape .and. CosAngleTmp < 0) then
+       if (DistProjection2 < rMinShape**2 .and. CosAngleTmp < 0) then
           IsIntersectedShapeR = 1.0
-       else if (DistProjection < rMinShape .and. CosAngleTmp > 0) then
+       else if (DistProjection2 < rMinShape**2 .and. CosAngleTmp > 0) then
           IsIntersectedShapeR = 0.0
-       else if (DistProjection > rMaxShape) then
+       else if (DistProjection2 > rMaxShape**2) then
           IsIntersectedShapeR = 0.0
        else
           if (is_segment_intersected(Xyz_DGB(:,i,j,k,iBlock), &
@@ -1080,8 +1116,8 @@ contains
 
     if (.not.DoUseCGShape) then
        CosAngleTmp    = sum(Xyz_DGB(:,i,j,k,iBlock)*NormalSun_D)
-       DistProjection = sqrt(R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2)
-       if (DistProjection < rSphericalBody) then
+       DistProjection2= R_BLK(i,j,k,iBlock)**2 - CosAngleTmp**2
+       if (DistProjection2 < rSphericalBody**2 .and. CosAngleTmp < 0) then
           IsIntersectedShapeR = 1.0
        else
           IsIntersectedShapeR = 0.0
@@ -2240,20 +2276,30 @@ contains
   !========================================================================
 
   subroutine user_update_states(iStage,iBlock)
-    use ModAdvance,  ONLY: State_VGB
+    use ModAdvance,  ONLY: State_VGB, Energy_GBI
     use ModPhysics,  ONLY: SW_N, LowDensityRatio, cBoltzmann, ElectronPressureRatio, Si2No_V, &
          No2Si_V, UnitN_, UnitP_!, UnitB_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
+    use ModMain,     ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
 
     integer,intent(in) :: iStage, iBlock
-    integer :: i,j,k,iIonFluid
 
-    real, dimension(1:nI,1:nJ,1:nK) :: nElec_C
-    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) ::nIon_IC
+    integer :: i,j,k,iIonFluid
+    logical :: DoTest, DoTestMe   
+    real, dimension(1:nI,1:nJ,1:nK)             :: nElec_C
+    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) :: nIon_IC
+    
+    character(len=*), parameter :: NameSub='user_update_states'
 
     !----------------------------------------------------------------------
 
+    if(iProc==PROCtest .and. iBlock==BLKtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+    
     call update_states_MHD(iStage,iBlock)
 
     ! Enforce minimum temperature (pressure), Tmin, if temperatures Ti_IC or Te_C are below
@@ -2341,6 +2387,11 @@ contains
     end do; end do; end do
 
     call calc_energy_cell(iBlock)
+
+    if (DoTestMe) &
+         write(*,*) NameSub, ' after user term =', &
+         State_VGB(VarTest, iTest, jTest, kTest, iBlock), &
+         Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end subroutine user_update_states
 
