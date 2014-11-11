@@ -71,7 +71,8 @@ contains
     if(.not.DoResChangeOnly) then
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
-          if (far_field_BCs_BLK(iBlock) .and. nOrderProlong==2) call &
+          if (far_field_BCs_BLK(iBlock) .and. &
+               (nOrderProlong==2 .or. UseHighResChange)) call &
                set_cell_boundary(nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
           if(UseConstrainB)call correctP(iBlock)
           if(UseProjection)call correctP(iBlock)
