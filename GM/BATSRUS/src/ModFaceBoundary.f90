@@ -435,6 +435,9 @@ contains
            TheTmp,DtTmp,DaTmp, Cosx, Jlocal_D(3), Jpar
       integer:: iHemisphere
       integer :: iIonSecond
+
+      ! Variables for the absorbing BC
+      real:: UdotR, r2Inv
       !------------------------------------------------------------------------
 
       iBoundary = iBoundary_GB(iGhost,jGhost,kGhost,iBlockBc)
@@ -813,6 +816,27 @@ contains
                  /    sum(FaceCoords_D**2)
             VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - Brefl_D
          end if
+
+      case('absorb')
+         ! for inflow float everything 
+         VarsGhostFace_V = VarsTrueFace_V
+
+         ! Calculate 1/r^2
+         r2Inv = 1.0/sum(FaceCoords_D**2)
+
+         ! for outflow reflect radial velocity: uG = u - 2*(u.r)*r/r^2
+         do iFluid = 1, nFluid
+            iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+            UdotR = sum(VarsTrueFace_V(iUx:iUz)*FaceCoords_D)
+            if(UdotR > 0.0) &
+                 VarsGhostFace_V(iUx:iUz) = VarsTrueFace_V(iUx:iUz) &
+                 - 2*UdotR*r2Inv*FaceCoords_D
+         end do
+
+         ! Reflect Br according to DoReflectInnerB1
+         if(DoReflectInnerB1) &
+              VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) &
+              - 2*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)*r2Inv*FaceCoords_D
 
       case('buffergrid')
          ! REVISION: June  2011 - R. Oran - generalized.   
