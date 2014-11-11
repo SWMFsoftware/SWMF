@@ -15,6 +15,7 @@ test:
 	@rm -f *.diff
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
+	-@($(MAKE) test_shockramp)
 	-@($(MAKE) test_partsteady)
 	-@($(MAKE) test_hallmhd)
 	-@($(MAKE) test_twofluidmhd)
@@ -99,6 +100,7 @@ test_help:
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shocktube             (run shocktube test)"
+	@echo "    test_shockramp             (run shockramp test)"
 	@echo "    test_titan                 (run Titan tests)"
 	@echo "    test_titan_start           (run first Titan test)"
 	@echo "    test_titan_restart         (run titan restart test)"
@@ -188,6 +190,40 @@ test_shocktube_check:
 		Param/SHOCKTUBE/TestOutput/mhdhyp_ref.out \
 		> test_shocktube.diff)
 	ls -l test_shocktube.diff
+
+
+### SHOCKRAMP TEST ###
+
+test_shockramp:
+	@echo "test_shockramp_compile..." > test_shockramp.diff
+	$(MAKE) test_shockramp_compile
+	@echo "test_shockramp_rundir..." >> test_shockramp.diff
+	$(MAKE) test_shockramp_rundir
+	@echo "test_shockramp_run..." >> test_shockramp.diff
+	$(MAKE) test_shockramp_run
+	@echo "test_shockramp_check..." >> test_shockramp.diff
+	$(MAKE) test_shockramp_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_shockramp_compile:
+	./Config.pl -u=Waves -e=Hd -g=6,6,1,400,1 -ng=3
+	$(MAKE) BATSRUS
+	make PIDL
+	./Config.pl -ng=2
+
+test_shockramp_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.shockramp PARAM.in
+
+test_shockramp_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULT
+
+test_shockramp_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
+		${TESTDIR}/RESULT/GM/z=0_*t00.2*.out \
+		Param/SHOCKTUBE/TestOutput/shockramp.out \
+		> test_shockramp.diff)
+	ls -l test_shockramp.diff
 
 ### PART STEADY TEST ###
 
