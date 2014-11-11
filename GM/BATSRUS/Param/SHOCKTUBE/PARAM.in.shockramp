@@ -13,19 +13,15 @@ NONE			NameNormalization
 #NONCONSERVATIVE
 F			UseNonConservative
 
-DEBUG
-F                    DoDebug
-T                    DoDebugGhost
-
 #CHECKGRIDSIZE
 6			nI
 6			nJ
 1			nK
-10000			MinBlockALL
+800			MinBlockALL
 
 #GRID
-16			nRootBlockX
-4			nRootBlockY
+20			nRootBlockX
+5			nRootBlockY
 1			nRootBlockZ
 0.0			xMin
 4.0			xMax
@@ -35,12 +31,37 @@ T                    DoDebugGhost
 1.0			zMax
 
 #UPDATECHECK
-T                       UseUpdateCheck
+F                      UseUpdateCheck
 40.                     RhoMinPercent
 200.                    RhoMaxPercent
 40.                     pMinPercent
 200.                    pMaxPercent
 
+#DOAMR
+T	DoAmr
+1	DnAmr
+-1	DtAmr
+T
+
+#AMRCRITERIA
+1		nRefineCrit
+gradlogrho	TypeRefine
+3		CoarsenLimit
+6		RefineLimit
+
+#AMRLEVELS
+0
+2
+
+#AMRREGION
+righttop		NameRegion
+box			NameArea
+0.0			xMinBox
+0.0			yMinBox
+-1.0			zMinBox
+4.0			xMaxBox
+4.0			yMaxBox
+1.0			zMaxBox
 
 #GAMMA
 1.4			Gamma
@@ -57,9 +78,11 @@ T                       UseUpdateCheck
 0.0			Uz
 1.0			P
 
+
 #SHOCKPOSITION
 1.0/6.0			ShockPosition
 -1.0/1.73205		ShockSlope
+
 
 #USERINPUTBEGIN ----------------
 
@@ -77,37 +100,18 @@ reflect			zMinBc
 reflect			zMaxBc
 
 #SCHEME      2 ghost cells
-2                       nOrder
+5                       nOrder
 Linde                   TypeFlux
 mc3                     TypeLimiter
 2.0                     LimiterBeta
 
-
-SCHEME
-4		nOrder
-Godunov		TypeFlux
-minmod		TypeLimiter
-1.5		BetaLimiter
-T		UseVolumeIntegral4
-T		UseFaceIntegral4
-T		UseLimiter4
-
-SCHEME4
-F		UseVolumeIntegral4
-F		UseFaceIntegral4
-T		UseLimiter
-
-
-#FLATTENING
-T		UseFlattening
-F		UseDuFlat
-0.33		FlatDelta
-0.75		FlatRatioMin
-0.85		FlatRatioMax
+#SCHEME5
+T
+mp5
 
 #RUNGEKUTTA
-4		nStage
-0.4		CflExpl
+3		nStage
+0.6		CflExpl
 
 
 #SAVELOGFILE
@@ -124,13 +128,13 @@ T		DoSaveInitial
 
 #SAVEPLOT
 1			nPlotfile
-z=0 var idl_real8       PlotString
+z=0 var idl_ascii       PlotString
 -1                       DnSavePlot
-0.004                     DtSavePlot
+0.01                     DtSavePlot
 0.0                     DxSavePlot
 rho mx my mz p e        NameVar
 g                       NamePar
 
 #STOP
--1		MaxIteration
+-10		MaxIteration
 0.2		tSimulationMax
