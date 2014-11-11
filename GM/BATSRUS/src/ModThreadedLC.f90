@@ -152,7 +152,7 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir
+    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir, TeGhost
     !-------------
     IsNewBlock = .true.
 
@@ -209,13 +209,18 @@ contains
        end if
        if(present(iImplBlock))then
           if(IsLinear)then
-             !\
-             ! Apply linearization of DTe/Ds derivation in \delta Te(1,j,k)
-             State_VG(iTeImpl,0,j,k) = Te_G(0,j,k) +(Te_G(0, j, k)*&
-                  BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) &
-                  /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))/&
-                  sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k) &
-                  * BDir_D) 
+             if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))then
+                State_VG(iTeImpl,0,j,k) = 0.0  
+             else
+                !\
+                ! Apply linearization of DTe/Ds derivation in \delta Te(1,j,k)
+                !/
+                State_VG(iTeImpl,0,j,k) = Te_G(0,j,k) +(Te_G(0, j, k)*&
+                     BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) &
+                     /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))/&
+                     sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(&
+                     :,j,k)* BDir_D)
+             end if
              CYCLE
           end if
        end if
@@ -238,13 +243,18 @@ contains
        ! between the required value DTeOverDs and the temperature gradient
        ! calculated with the floating BC 
        !/ 
-       Te_G(0, j, k) = min(max(Te_G(0, j, k) +(&
+       TeGhost = Te_G(0, j, k) +(&
             DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_) - &
             sum(FaceGrad_D*BDir_D))/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D), 0.60*Te_G(0, j, k)),1.0*Te_G(0, j, k))
+            * BDir_D)
+       if(present(iImplBlock))&
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
+            TeGhost <= 0.60*Te_G(0, j, k) .or. TeGhost >= Te_G(0, j, k)
+       Te_G(0, j, k) = min(max(TeGhost, 0.60*Te_G(0, j, k)),1.0*Te_G(0, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
+          if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))CYCLE
           !\
           ! Calculate the derivative of DTeOverDs over \delta Te_G(1,j,k)
           !/
