@@ -11,7 +11,7 @@ module ModCellBoundary
   private ! except
 
   ! Public methods
-  public :: set_cell_boundary
+  public :: set_cell_boundary, set_edge_corner_ghost
 
   ! Local variables 
   ! (but we could make them public for ModUser::user_set_cell_boundary)
@@ -742,5 +742,109 @@ contains
     end subroutine set_radiation_outflow_bc
 
   end subroutine set_cell_boundary
+  !=====================================================================
+
+  subroutine set_edge_corner_ghost(nGhost,iBlock, nVarState, State_VG)
+    ! The blocks near boundary may have problem with high order resolution
+    ! change and high order AMR. These blocks' corner/edge ghost cells 
+    ! may out of boundary and can not receive data from any block. Set 
+    ! these ghost cells with the closest face ghost cell values. 
+
+    ! This approach is not accurate! If it is smooth near the resolution 
+    ! change boundary point, it will be fine. 
+        
+    use BATL_lib, ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
+    use BATL_size, ONLY: nI,nJ,nK
+
+    integer, intent(in):: nGhost
+    integer, intent(in):: iBlock
+    integer, intent(in):: nVarState
+    real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    integer:: i, j, k, iDir,jDir,kDir,kDirBegin,kDirEnd
+    integer:: iBegin,iEnd,jBegin,jEnd,kBegin,kEnd,Di,Dj,Dk,i0,j0,k0
+    !----------------------------------------------------------------------
+    if(nJ == 1) RETURN
+    if(nK == 1) then
+       kDirBegin = 0; kDirEnd = 0
+    else
+       kDirBegin = -1; kDirEnd = 1
+    endif
+
+    do kDir = kDirBegin,kDirEnd; do jDir = -1, 1; do iDir = -1, 1
+       if(abs(iDir) + abs(jDir) + abs(kDir) /=1) CYCLE
+       if(DiLevelNei_IIIB(iDir,jDir,kDir,iBlock) /=Unset_) CYCLE
+
+       if(iDir/=0) then
+          if(iDir == 1) then
+             iBegin = nI + 1; iEnd = nI + nGhost; Di = 1
+          else
+             iBegin = 0; iEnd = 1-nGhost; Di = -1
+          endif
+
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = iBegin, iEnd, Di
+             i0 = i; j0 = j; k0 = k
+             if(j<1) then
+                j0 = 1
+             elseif(j>nJ) then
+                j0 = nJ
+             endif
+             if(k <1) then
+                k0 = 1
+             elseif(k>nK) then
+                k0 = nK
+             endif
+             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
+          enddo; enddo; enddo
+       endif ! iDir /=0
+
+       if(jDir /=0) then
+          if(jDir == 1) then
+             jBegin = nJ+1; jEnd = nJ+nGhost; Dj = 1
+          else
+             jBegin = 0; jEnd = 1-nGhost; Dj = -1
+          endif
+
+          do k = MinK, MaxK; do j = jBegin,jEnd,Dj; do i = MinI, MaxI
+             i0 = i; j0=j; k0=k
+             if(i <1)then
+                i0 = 1
+             elseif(i>nI) then
+                i0 = nI
+             endif
+             if(k <1) then
+                k0 = 1
+             elseif(k>nK) then
+                k0 = nK
+             endif
+             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
+          enddo; enddo; enddo
+       endif ! jDir /=0
+
+       if(kDir /=0) then
+          if(kDir == 1) then
+             kBegin = nK + 1; kEnd = nk + nGhost; Dk = 1
+          else
+             kBegin = 0; kEnd = 1 - nGhost; Dk = -1
+          endif
+
+          do k = kBegin, kEnd, Dk; do j = MinJ, MaxJ; do i = MinI, MaxI
+             i0 = i; j0=j; k0=k
+             if(i <1)then
+                i0 = 1
+             elseif(i>nI) then
+                i0 = nI
+             endif
+             if(j<1) then
+                j0 = 1
+             elseif(j>nJ) then
+                j0 = nJ
+             endif
+             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)          
+          enddo; enddo; enddo
+       endif ! kDir /=0
+    enddo; enddo; enddo
+
+  end subroutine set_edge_corner_ghost
 
 end module ModCellBoundary

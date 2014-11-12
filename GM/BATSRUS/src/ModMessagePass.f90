@@ -12,7 +12,7 @@ contains
   ! moved form file exchange_messages.f90 
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
 
-    use ModCellBoundary, ONLY: set_cell_boundary
+    use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModProcMH
     use ModMain, ONLY : nBlock, Unused_B, &
          TypeBc_I, time_loop, &
@@ -72,8 +72,13 @@ contains
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. &
-               (nOrderProlong==2 .or. UseHighResChange)) call &
-               set_cell_boundary(nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+               (nOrderProlong==2 .or. UseHighResChange)) then
+             call set_cell_boundary&
+                  (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+             if(UseHighResChange) &
+                  call set_edge_corner_ghost&
+                  (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
+          endif
           if(UseConstrainB)call correctP(iBlock)
           if(UseProjection)call correctP(iBlock)
        end do
