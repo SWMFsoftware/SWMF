@@ -46,7 +46,8 @@ contains
   !===========================================================================
 
   subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoBalanceOnlyIn, DoTestIn,&
-       nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn)
+       nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn,&
+       DefaultStateIn_V)
 
     use BATL_size, ONLY: MaxBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nIJK, iRatio, jRatio, kRatio
@@ -117,6 +118,11 @@ contains
     ! for refined (coarsened) blocks. 
     logical, optional, intent(in):: UseHighOrderAMRIn
 
+    ! Default value of each states. Used for high order AMR. If the default
+    ! vaule is positive (like density, pressure), the value after AMR should
+    ! be positive too. 
+    real,intent(in), optional:: DefaultStateIn_V(nVar) 
+
     ! Local variables
 
     ! Number of physical+ghost cells per block
@@ -148,7 +154,7 @@ contains
 
     integer:: iSizeSend, jSizeSend, kSizeSend
 
-    logical:: DoTest, DoBalanceOnly, UseHighOrderAMR
+    logical:: DoTest, DoBalanceOnly, UseHighOrderAMR, IsPositive_V(nVar)
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     !-------------------------------------------------------------------------
     DoTest = .false.
@@ -159,6 +165,13 @@ contains
 
     UseHighOrderAMR = .false.
     if(present(UseHighOrderAMRIn)) UseHighOrderAMR = UseHighOrderAMRIn
+
+    IsPositive_V = .false. 
+    if(present(DefaultStateIn_V) .and. UseHighOrderAMR) then
+       IsPositive_V = DefaultStateIn_V > 0 
+    endif
+
+
     if(UseHighOrderAMR) then
        ! Two ghost cell layers are needed.
        iMinP = -1; iMaxP = nI/2 + 2
@@ -221,7 +234,7 @@ contains
           iSizeSend = max(nI, nI/2 + 4)
           jSizeSend = max(nJ, nJ/2 + 4)
           kSizeSend = max(nK, nK/2 + 4)
-          
+
           if(nI == 1) iSizeSend = nI
           if(nJ == 1) jSizeSend = nJ
           if(nK == 1) kSizeSend = nK
@@ -871,10 +884,12 @@ contains
                           iP-2*iDir:iP+2*iDir:sign(1,iDir),&
                           jP-2*jDir:jP+2*jDir:sign(1,jDir),&
                           kP-2*kDir:kP+2*kDir:sign(1,kDir))
-
+                     
                      ! Calculate 5th order refined cells.
                      State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                          prolongation_high_order_amr(CoarseCell_III) 
+                          prolongation_high_order_amr&
+                          (CoarseCell_III,&
+                          IsPositiveIn = IsPositive_V(iVar))
                   enddo ! iVar
                enddo ! iR
             enddo ! jR

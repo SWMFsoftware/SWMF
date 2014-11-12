@@ -231,7 +231,8 @@ contains
   subroutine regrid_batl(nVar, State_VGB, Dt_B, DoRefine_B, DoCoarsen_B, &
        DoBalanceEachLevelIn, iTypeBalance_A, iTypeNode_A, &
        Used_GB, DoBalanceOnlyIn, DoTestIn, &
-       nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn)
+       nExtraData, pack_extra_data, unpack_extra_data, &
+       UseHighOrderAMRIn, DefaultStateIn_V)
 
     integer, intent(in)   :: nVar                         ! number of variables
     real,    intent(inout):: &                            ! state variables
@@ -276,6 +277,11 @@ contains
     ! If UseHighOrderAMRIn is true, 5th (6th) order accuracy will be achieved
     ! for refined (coarsened) blocks. 
     logical, intent(in), optional:: UseHighOrderAMRIn
+
+    ! Default values of each states. Used for high order AMR. If the default
+    ! vaule is positive (like density, pressure), the value after AMR should
+    ! be positive too. 
+    real,intent(in), optional:: DefaultStateIn_V(nVar) 
 
     ! Refine, coarsen and load balance the blocks containing the nVar 
     ! state variables in State_VGB. Use second order accurate conservative
@@ -388,7 +394,8 @@ contains
          nExtraData=nExtraData, &
          pack_extra_data=pack_extra_data, &
          unpack_extra_data=unpack_extra_data, &
-         UseHighOrderAMRIn=UseHighOrderAMRIn)
+         UseHighOrderAMRIn=UseHighOrderAMRIn, &
+         DefaultStateIn_V=DefaultStateIn_V)
     
     ! This logical tells find_neighbor (called by move_tree) to check 
     ! if the neighbor levels of a block (otherwise not affected by AMR) changed

@@ -408,11 +408,12 @@ contains
 
   end subroutine get_ghost_for_fine_blk
   !======================================================================
-  real function interpolate_in_coarse_blk_1d(Cell_I, DoLimitIn, Use4thOrderIn)
+  real function interpolate_in_coarse_blk_1d(Cell_I, DoLimitIn, Use4thOrderIn, IsPositiveIn)
     real, intent(in):: Cell_I(5)
-    logical, optional, intent(in):: DoLimitIn, Use4thOrderIn
-    logical:: DoLimit, Use4thOrder
+    logical, optional, intent(in):: DoLimitIn, Use4thOrderIn, IsPositiveIn
+    logical:: DoLimit, Use4thOrder, IsPositive
     real   :: cpp, cp, c0, cm, cmm
+    real, parameter:: c1over4 = 0.25, c3over4 = 0.75, c6=0.6
 
     integer, parameter:: Ipp_=1, Ip_=2, I_=3, Im_=4, Imm_=5
     real:: Temp, Distance_I(4)=(/-7,-3,1,5/)
@@ -420,9 +421,11 @@ contains
 
     DoLimit = .true.    
     if(present(DoLimitIn)) DoLimit = DoLimitIn
-
     Use4thOrder = .false. 
     if(present(Use4thOrderIn)) Use4thOrder = Use4thOrderIn
+    IsPositive = .false. 
+    if(present(IsPositiveIn)) IsPositive = IsPositiveIn
+
     if(Use4thOrder) then 
        ! Cell_I(5) is not used. 
        cpp = -5./128;  cp = 35./128
@@ -441,6 +444,13 @@ contains
     else
        interpolate_in_coarse_blk_1d = Temp
     endif
+
+    if(IsPositive) then
+       Temp = c3over4*Cell_I(I_) + c1over4*Cell_I(Ip_)
+       if(interpolate_in_coarse_blk_1d < c6*Temp) &
+            interpolate_in_coarse_blk_1d = Temp
+    endif
+
   end function interpolate_in_coarse_blk_1d
   !======================================================================
   real function interpolate_in_coarse_blk_2d(Cell_II, DoLimitIn, Use4thOrderIn)
@@ -1620,20 +1630,35 @@ contains
   end subroutine correct_face_ghost_for_fine_block
   !======================================================================
 
-  real function prolongation_high_order_amr(Cell_III)
+  real function prolongation_high_order_amr(Cell_III, IsPositiveIn,DoTestMeIn)
     ! Calc 5th order refined cell for AMR.
     use BATL_size, ONLY: kRatio
     real, intent(in):: Cell_III(5,5,5)
+    logical, optional,intent(in):: IsPositiveIn, DoTestMeIn
+    logical:: IsPositive, DoTestMe
     real:: Cell_I(5), Cell_II(5,5)
     integer:: i, j, k
     real:: Temp, Distance_I(4)=(/-7,-3,1,5/)
     real:: CellLimit_I(4)
+    character(len=*), parameter :: NameSub = 'prolongation_high_order_amr'
     !----------------------------------------------------------------------
+    IsPositive = .false. 
+    if(present(IsPositiveIn)) IsPositive = IsPositiveIn
+
+    DoTestMe = .false. 
+    if(present(DoTestMeIn)) DoTestMe = DoTestMeIn    
+
+    if(DoTestMe) write(*,*) NameSub
 
     if(kRatio == 2) then
        do j = 1, 5; do i = 1, 5
           Cell_II(i,j) = interpolate_in_coarse_blk_1d(&
-               Cell_III(i,j,:), .true.)
+               Cell_III(i,j,:), DoLimitIn=.true., IsPositiveIn = IsPositive)
+          if(DoTestMe) then
+             write(*,*) 'i = ',i, 'j = ',j
+             write(*,*) 'Cell_III(i,j,:) = ',Cell_III(i,j,:)
+             write(*,*) 'Cell_II(i,j) = ',Cell_II(i,j)
+          endif
        enddo; enddo
        do i = 1, 4
           CellLimit_I(i) = Cell_III(i,i,i)
@@ -1647,11 +1672,27 @@ contains
     endif
 
     do i = 1, 5 ! Eliminate j dimension
-       Cell_I(i) = interpolate_in_coarse_blk_1d(Cell_II(i,:), .true.)
+       Cell_I(i) = interpolate_in_coarse_blk_1d(Cell_II(i,:), DoLimitIn=.true.,&
+            IsPositiveIn = IsPositive)
+       if(DoTestMe) then
+          write(*,*) 'i = ',i
+          write(*,*) 'Cell_II(i,:) = ',Cell_II(i,:)
+          write(*,*) 'Cell_I(i) = ',Cell_I(i)
+       endif
+
     enddo
-    Temp = interpolate_in_coarse_blk_1d(Cell_I, .true.)
+    Temp = interpolate_in_coarse_blk_1d(Cell_I, DoLimitIn=.true.,&
+         IsPositiveIn = IsPositive)
     prolongation_high_order_amr = limit_interpolation(Temp,CellLimit_I,&
          Distance_I)
+
+    if(DoTestMe) then
+       write(*,*) 'Cell_I = ',Cell_I
+       write(*,*) 'Temp = ',Temp
+       write(*,*) 'CellLimit_I = ',CellLimit_I
+       write(*,*) 'Distance_I  = ',Distance_I
+    endif
+
   end function prolongation_high_order_amr
   !======================================================================
 

@@ -79,6 +79,7 @@ contains
     use ModPartSteady,    ONLY: UsePartSteady
     use ModLocalTimeStep, ONLY: UseLocalTimeStep
     use ModUserInterface ! user_specify_refinement
+    use ModVarIndexes, ONLY: DefaultState_V
 
     logical, intent(in) :: DoFullMessagePass
     character(3), intent(in) :: TypeAmr
@@ -139,7 +140,8 @@ contains
     else
        call regrid_batl(nVar, State_VGB, Dt_BLK, &
             DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTestMe, &
-            Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR)
+            Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR, &
+            DefaultStateIn_V=DefaultState_V)
     end if
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
 
