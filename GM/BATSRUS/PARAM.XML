@@ -1054,6 +1054,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	<parameter name="TypeBcInner" type="string" case="lower"
 	input="select">
 		<option name="reflect"				/>
+		<optoin name="absorb"				/>
 		<option name="float"				/>
 		<option name="fixed"				/>
 		<option name="ionosphere"	default="T"	/>
@@ -1068,6 +1069,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<parameter name="TypeBcBody2" type="string" case="lower"
 		input="select">
 			<option name="reflect"		default="T"	/>
+			<optoin name="absorb"				/>
 			<option name="float"				/>
 			<option name="fixed"				/>
 			<option name="ionosphere"			/>
