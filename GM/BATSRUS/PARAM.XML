@@ -4542,7 +4542,7 @@ all the blocks limited by the minimum and maximum levels only
 	    <option name="1st order"  value="1"/>
 	    <option name="TVD2"       value="2" default="T"/>
 	    <option name="FIVOL4"     value="4"/>
-	    <option name="MP5"        value="5"/>
+	    <option name="MP5/CWENO5" value="5"/>
 	</parameter>
 	<parameter name="TypeFlux" type="string" input="select" case="upper">
 	    <option name="Rusanov" value="RUSANOV" default="T"/>
@@ -4565,21 +4565,29 @@ all the blocks limited by the minimum and maximum levels only
 			default="1.2" if="$TypeLimiter ne 'minmod'"/>
 	</if>
 #SCHEME
-4			nOrder (1, 2, 4 or 5)
+5			nOrder (1, 2, 4 or 5)
 Rusanov			TypeFlux
 mc3			TypeLimiter ! Only read for Order>1 and flux not Simple
 1.2			LimiterBeta ! Only read if TypeLimiter is NOT 'minmod'
 
 The nOrder parameter determines the spatial and temporal accuracy of
 the scheme. 
-The spatially first order scheme uses a one-stage time integration,
-while the spatially second order MUSCL scheme either uses 
+The spatially first order scheme uses a one-stage time integration.
+The spatially second order MUSCL scheme either uses 
 an explicit two-stage Runge-Kutta or an implicit three-level BDF2
 time discretization. 
 The 4th order finite volume scheme (FIVOL4) 
 uses the classical 4th order Runge-Kutta scheme for time integration.
-The spatially 5th order MP5 scheme uses the 3rd order Runge-Kutta scheme.
-Note that the time discretization scheme can be modified 
+The spatially 5th order schemes uses the 3rd order Runge-Kutta scheme.
+
+NOTE 1: 4th order scheme is not recommended, and it may be 
+removed in the future! The #SCHEME4 command has more options for it.
+
+NOTE 2: The 5th order scheme requires 3 ghost cells and at least 6x6x6 
+grid blocks (to be set with Config.pl -g=... -ng=...). The 1st and 2nd
+order schemes work with 2 ghost cells and can have 4x4x4 blocks.
+
+NOTE 3: the time discretization scheme can be modified 
 with the #TIMESTEPPING, #RUNGEKUTTA or #RK commands after the #SCHEME command.
 \noindent
 Possible values for TypeFlux:
@@ -4601,9 +4609,12 @@ the new Roe scheme is somewhat more robust in magnetospheric applications.
 The Simple solver is for testing purposes only at this point.
 
 No limiter is used by the 1st order scheme. The second order TVD scheme
-uses a TVD limiter everywhere. The FIVOL4 and MP5 schemes use
-the second order TVD scheme at resolution changes, but in
-the uniform part of the grid they use their own limiter.
+uses a TVD limiter everywhere. The 5th order schemes has its own
+5th order accurate limiter (see #SCHEME5 command).
+The TypeLimiter is still used where the stencil is not
+large enough for the high order scheme but sufficient
+for the second order scheme, which happens near face boundaries 
+(see the #FACEBOUNDARY command).
 Possible values for TypeLimiter:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
@@ -4620,11 +4631,6 @@ are between 1.0 and 2.0:
   LimiterBeta = 1.2 is the recommended value for the beta limiter
   LimiterBeta = 2.0 for the beta limiter is the same as the superbee limiter
 \end{verbatim}
-
-IMPORTANT: the number of ghost cell layers have to be sufficient for the
-selected scheme! The 1st and 2nd order schemes work with 2 layers.
-The MP5 scheme needs 3 layers. The FIVOL4 scheme needs 3 to 5 layers
-(see the #SCHEME4 command).
 
 The default is the second order Rusanov scheme with the minmod limiter.
 </command>
@@ -4734,16 +4740,16 @@ The default values are shown in the example.
 
 <command name="SCHEME5">
 	<parameter name="UseFDFaceFlux" type="logical" default="T"/>
-	<parameter name="TypeLimiter" type="string" input="select">
-	   <option name="mp5" default="T"/>
-	   <option name="cweno"          />	
+	<parameter name="TypeLimiter" type="string" input="select" case="lower">
+	    <option name="mp5" default="T"/>
+	    <option name="cweno"          />	
 	</parameter>   
 	<parameter name="UseHighResChange" type="logical" default="T"/>
 	<parameter name="UseHighOrderAMR"  type="logical" default="T"/>	
 
 #SCHEME5
 T			UseFDFaceFlux
-mp5			TyperLimiter5
+MP5			TyperLimiter5
 T			UseHighResChange
 T			UseHighOrderAMR	
 
@@ -4751,20 +4757,31 @@ UseFDFaceFlux is meaningful only when nOrder is 5 (see #SCHEME). If it is true,
 a finite difference space discretization, which is 5th order accurate for 
 nonlinear equations, is used. Otherwise, the finite volume based 
 discretization, which is 2nd order accurate except for 1D linear equations,
-is applied. The default value of UseFDFaceFlux is true when nOrder is 5.
+is applied. 
 
-TypeLimiter5 can be mp5 or cweno, which is used to limit 5th order space 
-interpolation.
+TypeLimiter5 can be MP5 or CWENO, which is used to limit 5th order space 
+interpolation. The MP5 scheme is recommended.
 
-The default values of UseHighResChange and UseHighOrderAMR are also true when
-nOrder is 5. If UseHighResChange is ture, all the ghost cells are filled in
-with 5th order accurate values. If UseHighOrderAMR is true, 5th order 
-interpolation is used for refinement and coarsening.
+If UseHighResChange is ture the ghost cells are filled in
+with 5th order accurate values at the grid resolution changes
+so the scheme becomes 5th order accurate even at the resolution 
+changes.
 
-DoConserveFlux (see #CONSERVEFLUX) is set to false when UseFDFaceFlux is true.
+If UseHighOrderAMR is true, 5th order interpolation is used for 
+grid refinement and coarsening, so the scheme is 5th order accurate
+even with dynamic AMR.
 
-IMPORTANT: this command should not be used before #SCHEME, or the variables 
-may be overwritten in #SCHEME.
+NOTE 1: The high order accurate flux conservation scheme is not yet implemented,
+so the DoConserveFlux parameter of the #CONSERVEFLUX command is set to false 
+when UseFDFaceFlux is true. This can be overwritten with the #CONSERVEFLUX
+command AFTER the #SCHEME5 command.
+
+NOTE 2: this command has to be used after the #SCHEME command, because the
+#SCHEME command sets the default values.
+
+NOTE 3: This command has no effect unless nOrder is set to 5 in the #SCHEME command.
+
+The default values are shown above.
 </command>
 
 <command name="CONSERVEFLUX">
@@ -4773,10 +4790,13 @@ may be overwritten in #SCHEME.
 #CONSERVEFLUX
 T		DoConserveFlux
 
-Correct face flux near resolution change to keep conservation. The default is 
-false when UseFDFaceFlux(see #SCHEME5) is true.
-</command>
+Correct face flux near resolution change to keep conservation. 
 
+The default is true in general. The only exception is when the 5th order 
+finite difference scheme is used with UseFDFaceFlux set to true (see #SCHEME5).
+The default may be overwritten with this command after the #SCHEME and #SCHEME5
+commands.
+</command>
 
 <command name="NONCONSERVATIVE">
 	<parameter name="UseNonConservative" type="logical" default="T"/>
