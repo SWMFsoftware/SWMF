@@ -118,58 +118,96 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
 
   }
 
+
+
+//defined the forces that acts upon a particle on
+#define _FORCE_GRAVITY_MODE_ _PIC_MODE_OFF_
+#define _FORCE_LORENTZ_MODE_ _PIC_MODE_OFF_
+#define _FORCE_FRAMEROTATION_MODE_ _PIC_MODE_OFF_
+
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
 
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
 
-/*    memcpy(accl,accl_LOCAL,3*sizeof(double));
-    return;*/
+    accl[0]=0.0; accl[1]=0.0;  accl[2]=0.0; 
 
-    //the gravity force
-    double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
-    double r=sqrt(r2);
-    int idim;
+#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
 
-    for (idim=0;idim<DIM;idim++) {
-      accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
+    exit(__LINE__,__FILE__,"ERROR: Lorentz force not implemented");
+
+    //********************************************************
+    // the following code is copied from srcEuropa/Europa.h
+    //********************************************************
+    long int nd;
+    char *offset;
+    int i,j,k;
+    PIC::Mesh::cDataCenterNode *CenterNode;
+    double E[3],B[3];
+
+    if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
+      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL,startNode);
+
+      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
+        exit(__LINE__,__FILE__,"Error: the cell is not found");
+      }
     }
 
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-    //correct the gravity acceleration: accout for solar gravity of the particle location
-    double rSun2Moon,rSun2Particle;
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+    if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
+#endif
 
-    rSun2Moon=xObjectRadial;
-    rSun2Particle=sqrt(pow(x_LOCAL[0]-xObjectRadial,2)+pow(x_LOCAL[1],2)+pow(x_LOCAL[2],2));
+    CenterNode=startNode->block->GetCenterNode(nd);
+    offset=CenterNode->GetAssociatedDataBufferPointer();
+    
+    PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+    PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
 
-    accl_LOCAL[0]-=GravityConstant*_MASS_(_SUN_)*((x_LOCAL[0]-xObjectRadial)/pow(rSun2Particle,3)+xObjectRadial/pow(rSun2Moon,3));
-    accl_LOCAL[1]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[1]/pow(rSun2Particle,3));
-    accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[2]/pow(rSun2Particle,3));
+    double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+    double mass=PIC::MolecularData::GetMass(spec);
 
+    accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
+    accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
+    accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
 
-    if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
-
-
-    //account for the planetary rotation around the Sun
-    double aCen[3],aCorr[3],t3,t7,t12;
-
-    t3 = RotationVector_SO_FROZEN[0] * x_LOCAL[1] - RotationVector_SO_FROZEN[1] * x_LOCAL[0];
-    t7 = RotationVector_SO_FROZEN[2] * x_LOCAL[0] - RotationVector_SO_FROZEN[0] * x_LOCAL[2];
-    t12 = RotationVector_SO_FROZEN[1] * x_LOCAL[2] - RotationVector_SO_FROZEN[2] * x_LOCAL[1];
-
-    aCen[0] = -RotationVector_SO_FROZEN[1] * t3 + RotationVector_SO_FROZEN[2] * t7;
-    aCen[1] = -RotationVector_SO_FROZEN[2] * t12 + RotationVector_SO_FROZEN[0] * t3;
-    aCen[2] = -RotationVector_SO_FROZEN[0] * t7 + RotationVector_SO_FROZEN[1] * t12;
+#endif
 
 
-    aCorr[0] = -2.0*(RotationVector_SO_FROZEN[1] * v_LOCAL[2] - RotationVector_SO_FROZEN[2] * v_LOCAL[1]);
-    aCorr[1] = -2.0*(RotationVector_SO_FROZEN[2] * v_LOCAL[0] - RotationVector_SO_FROZEN[0] * v_LOCAL[2]);
-    aCorr[2] = -2.0*(RotationVector_SO_FROZEN[0] * v_LOCAL[1] - RotationVector_SO_FROZEN[1] * v_LOCAL[0]);
+#if _FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
+  //the gravity force
+  double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
+  double r=sqrt(r2);
+  int idim;
 
-    accl_LOCAL[0]+=aCen[0]+aCorr[0];
-    accl_LOCAL[1]+=aCen[1]+aCorr[1];
-    accl_LOCAL[2]+=aCen[2]+aCorr[2];
+  for (idim=0;idim<DIM;idim++) {
+    accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
+  }
+#endif
+
+#if _FORCE_FRAMEROTATION_MODE_ == _PIC_MODE_ON_
+  // by default rotation period is ~25 days (freq = 4.63E-7 sec^-1)
+  // frame angular velocity
+  static const double Omega        = 2.0*Pi*4.63E-7;//rad/sec 
+  // frame angular velocity x 2
+  static const double TwoOmega     = 2.0*Omega;
+  // frame angular velocity squared
+  static const double SquaredOmega = Omega*Omega;
+  double aCen[3],aCorr[3];
+
+  aCen[0] = SquaredOmega * x_LOCAL[0];
+  aCen[1] = SquaredOmega * x_LOCAL[1];
+  aCen[2] = 0.0;
+
+
+  aCorr[0] = - TwoOmega * v_LOCAL[1];
+  aCorr[1] =   TwoOmega * v_LOCAL[0];
+  aCorr[2] =   0.0;
+
+  accl_LOCAL[0]+=aCen[0]+aCorr[0];
+  accl_LOCAL[1]+=aCen[1]+aCorr[1];
+  accl_LOCAL[2]+=aCen[2]+aCorr[2];
+
 #endif
 
     //copy the local value of the acceleration to the global one
@@ -180,40 +218,16 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
   inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
     static const double LifeTime=3600.0*5.8/pow(0.4,2);
 
+    // no photoionization for now
+    PhotolyticReactionAllowedFlag=false;
+    return -1.0;
 
-    //only sodium can be ionized
-    if (spec!=_NA_SPEC_) {
-      PhotolyticReactionAllowedFlag=false;
-      return -1.0;
-    }
-
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-    double res,r2=x[1]*x[1]+x[2]*x[2];
-
-    //check if the particle is outside of the Earth and lunar shadows
-    if ( ((r2>_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_))||(x[0]<0.0)) /*&& (Mercury::EarthShadowCheck(x)==false)*/ ) {
-      res=LifeTime,PhotolyticReactionAllowedFlag=true;
-    }
-    else {
-      res=-1.0,PhotolyticReactionAllowedFlag=false;
-    }
-
-
-#else
-    double res=LifeTime;
-    PhotolyticReactionAllowedFlag=true;
-#endif
-
-    return res;
   }
 
   inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
-    spec=_NA_PLUS_SPEC_;
 
-    PIC::ParticleBuffer::SetI(spec,ParticleData);
-    if (_NA_PLUS_SPEC_>=0) return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
-
-    return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+    // no photoionization for now
+    return _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
   }
 
 }
