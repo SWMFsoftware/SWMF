@@ -1054,7 +1054,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	<parameter name="TypeBcInner" type="string" case="lower"
 	input="select">
 		<option name="reflect"				/>
-		<optoin name="absorb"				/>
+		<option name="absorb"				/>
 		<option name="float"				/>
 		<option name="fixed"				/>
 		<option name="ionosphere"	default="T"	/>
@@ -1069,7 +1069,7 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<parameter name="TypeBcBody2" type="string" case="lower"
 		input="select">
 			<option name="reflect"		default="T"	/>
-			<optoin name="absorb"				/>
+			<option name="absorb"				/>
 			<option name="float"				/>
 			<option name="fixed"				/>
 			<option name="ionosphere"			/>
@@ -4731,6 +4731,52 @@ the dimensions. See Miller and Colella 2005, APJS, 160, 199.
 
 The default values are shown in the example.
 </command>
+
+<command name="SCHEME5">
+	<parameter name="UseFDFaceFlux" type="logical" default="T"/>
+	<parameter name="TypeLimiter" type="string" input="select">
+	   <option name="mp5" default="T"/>
+	   <option name="cweno"          />	
+	</parameter>   
+	<parameter name="UseHighResChange" type="logical" default="T"/>
+	<parameter name="UseHighOrderAMR"  type="logical" default="T"/>	
+
+#SCHEME5
+T			UseFDFaceFlux
+mp5			TyperLimiter5
+T			UseHighResChange
+T			UseHighOrderAMR	
+
+UseFDFaceFlux is meaningful only when nOrder is 5 (see #SCHEME). If it is true,
+a finite difference space discretization, which is 5th order accurate for 
+nonlinear equations, is used. Otherwise, the finite volume based 
+discretization, which is 2nd order accurate except for 1D linear equations,
+is applied. The default value of UseFDFaceFlux is true when nOrder is 5.
+
+TypeLimiter5 can be mp5 or cweno, which is used to limit 5th order space 
+interpolation.
+
+The default values of UseHighResChange and UseHighOrderAMR are also true when
+nOrder is 5. If UseHighResChange is ture, all the ghost cells are filled in
+with 5th order accurate values. If UseHighOrderAMR is true, 5th order 
+interpolation is used for refinement and coarsening.
+
+DoConserveFlux (see #CONSERVEFLUX) is set to false when UseFDFaceFlux is true.
+
+IMPORTANT: this command should not be used before #SCHEME, or the variables 
+may be overwritten in #SCHEME.
+</command>
+
+<command name="CONSERVEFLUX">
+	<parameter name="DoConserveFlux" type="logical" default="T"/>
+
+#CONSERVEFLUX
+T		DoConserveFlux
+
+Correct face flux near resolution change to keep conservation. The default is 
+false when UseFDFaceFlux(see #SCHEME5) is true.
+</command>
+
 
 <command name="NONCONSERVATIVE">
 	<parameter name="UseNonConservative" type="logical" default="T"/>
