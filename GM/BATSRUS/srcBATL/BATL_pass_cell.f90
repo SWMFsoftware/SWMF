@@ -495,7 +495,9 @@ contains
        ! resolution change along the boundary with reflect/shear/float
        ! (boundary conditions that ghost cells depending on physical 
        ! cells) boundary conditions. 
-       ! Yuxi will solve this problem in the future. 
+       ! To solve the problem, fill in these corner/edge ghost cells with
+       ! the nearby face ghost cell value (see ModCellBoundary::set_edge_
+       ! corner_ghost)
 
 
        ! stage 1: first order prolongation and do_equal.
