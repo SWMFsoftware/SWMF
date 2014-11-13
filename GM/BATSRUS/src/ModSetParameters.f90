@@ -2798,6 +2798,7 @@ contains
           call stop_mpi(NameSub//': Correct PARAM.in file!')
        else
           ! Save array of variable names
+          if (allocated(NameVarRestart_V)) deallocate(NameVarRestart_V)
           allocate(NameVarRestart_V(nVarRestart))
           NameVarRestart_V = NameVarTemp_V
        end if
