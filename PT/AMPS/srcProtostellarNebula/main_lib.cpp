@@ -38,8 +38,8 @@ const double DebugRunMultiplier=4.0;
 const double rSphere=_RADIUS_(_TARGET_);
 
 
-const double xMaxDomain=10; //modeling the vicinity of the planet
-const double yMaxDomain=15; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+const double xMaxDomain=1.5; //modeling the vicinity of the planet
+const double yMaxDomain=1.5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
@@ -641,7 +641,7 @@ void amps_init() {
 
   //set up the particle weight
 //  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_N2_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
 
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -890,10 +890,22 @@ t=1.0;
  
 #endif
 
-
+    //make the time advance
+    static int LastDataOutputFileNumber=0;
 
     //make the time advance
      PIC::TimeStep();
+
+     // write output file
+     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+       PIC::RequiredSampleLength*=2;
+       if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
+       
+       
+       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+     }
+     
 }
 
 
