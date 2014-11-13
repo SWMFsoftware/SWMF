@@ -105,10 +105,6 @@ Linde                   TypeFlux
 mc3                     TypeLimiter
 2.0                     LimiterBeta
 
-#SCHEME5
-T
-mp5
-
 #RUNGEKUTTA
 3		nStage
 0.6		CflExpl
