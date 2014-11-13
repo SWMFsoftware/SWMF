@@ -1521,7 +1521,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVERESTART", "#RESTARTOUTDIR","#RESTARTOUTFILE")
         call read_restart_parameters(NameCommand)
 
-     case('#DOWRITEBLOCKDATA')
+     case('#RESTARTBLOCKDATA')
         call read_restart_parameters(NameCommand)
 
      case("#RESTARTVARIABLES")
