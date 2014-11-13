@@ -1097,14 +1097,6 @@ subroutine MH_set_parameters(TypeAction)
      case('#CONSERVEFLUX')
         call read_var('DoConserveFlux', DoConserveFlux)
 
-     case('#HIGHRESCHANGE')
-        call read_var('UseHighResChange', UseHighResChange)
-        UseTvdReschange = .false. 
-        UseAccurateResChange = .false. 
-
-     case('#HIGHORDERAMR')
-        call read_var('UseHighOrderAMR',UseHighOrderAMR)
-
      case("#SCHEME")
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.
@@ -1123,6 +1115,18 @@ subroutine MH_set_parameters(TypeAction)
            TypeLimiter = "no"
         end if
 
+        if(nOrder==5) then
+           ! The commands below can be reset in #SCHEME5
+           UseFDFaceFlux    = .true. 
+           UseCweno         = .false. 
+           UseHighResChange = .true. 
+           UseHighOrderAMR  = .true. 
+
+           DoConserveFlux = .false. 
+           UseTvdReschange = .false. 
+           UseAccurateResChange = .false.            
+        endif
+
      case("#SCHEME4")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('UseVolumeIntegral4', UseVolumeIntegral4)
@@ -1140,32 +1144,32 @@ subroutine MH_set_parameters(TypeAction)
         ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
         call read_var('UseFDFaceFlux', UseFDFaceFlux)
         call read_Var('TypeLimiter5', TypeLimiter5)
+        call read_var('UseHighResChange', UseHighResChange)
+        call read_var('UseHighOrderAMR',UseHighOrderAMR)
+
         ! If it is not 'cweno', mp5 scheme will be used. 
         UseCweno = TypeLimiter5 == 'cweno'
-        if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
 
-        if(UseCweno .and. .not. DoInterpolateFlux) then
-           ! Density and velocity use density as smooth indicator. 
-           ! Other variables use themselves.
-           iVarSmooth_V(1:Uz_) = Rho_
-           do iVar = Uz_+1, nVar
-              iVarSmooth_V(iVar) = iVar
-           enddo
-           call sort_smooth_indicator
+        ! The following lines are related to cweno scheme, and it needs
+        ! more tests. 
+        !if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
+        ! if(UseCweno .and. .not. DoInterpolateFlux) then
+        !    ! Density and velocity use density as smooth indicator. 
+        !    ! Other variables use themselves.
+        !    iVarSmooth_V(1:Uz_) = Rho_
+        !    do iVar = Uz_+1, nVar
+        !       iVarSmooth_V(iVar) = iVar
+        !    enddo
+        !    call sort_smooth_indicator
+        ! endif
+
+        if(UseFDFaceFlux) then
+           DoConserveFlux   = .false. 
         endif
 
-        ! The following lines are dangerous! If #HIGHRESCHANGE or 
-        ! #HIGHORDERAMR or #CONSERVEFLUX presents before #SCHEME5, 
-        ! their input will be overwritten. Delete #HIGHRESCHANGE 
-        ! and #HIGHORDERAMR or change the code below in the future. 
-        if(UseFDFaceFlux) then
-           UseHighOrderAMR  = .true.
-
-           UseHighResChange = .true.
+        if(UseHighResChange) then
            UseTvdReschange = .false. 
            UseAccurateResChange = .false. 
-
-           DoConserveFlux   = .false. 
         endif
 
      case('#BURGERSEQUATION')
