@@ -55,16 +55,11 @@ CouplerMode=off !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=5000
+  InitialSampleLength=100
 
-
-! ReferenceInjectionParticleNumber=200
-! MaxMeshRefinmentLevel=8! 2 !4
-! EnforceRequestedMeshResolution=off !on,off
 
   BlockCells=5,5,5
   GhostCells=2,2,2
-! CutCellVolumeCalculationMaxRefinmentLevel=1
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
@@ -103,10 +98,15 @@ CouplerMode=off !ices !!off, ices, swmf
 
 
 
-!#block ../moon.input.pl !process settings of the moon module
-!  SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
-!  SodiumReemissionFraction=1.0
-!#endblock
+#block ../protostellar-nebula.input.pl !process settings of the moon module
+
+  SphereInsideDomain=on ! place star inside the computational domain
+
+ !forces that determine particle's trajectories
+ Forces=off, gravity, FrameRotation !off, gravity, Lorentz, FrameRotation
+
+#endblock
+
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
