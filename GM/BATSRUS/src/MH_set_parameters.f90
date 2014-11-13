@@ -44,7 +44,7 @@ subroutine MH_set_parameters(TypeAction)
        UseTvdResChange, UseAccurateResChange, &
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-       TypeLimiter5, UseCweno, UsePerVarLimiter,&
+       TypeLimiter5, UseCweno,&
        iVarSmooth_V, iVarSmoothIndex_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
@@ -1143,7 +1143,7 @@ subroutine MH_set_parameters(TypeAction)
         ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
         ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
         call read_var('UseFDFaceFlux', UseFDFaceFlux)
-        call read_Var('TypeLimiter5', TypeLimiter5)
+        call read_Var('TypeLimiter5', TypeLimiter5, IsLowerCase=.true.)
         call read_var('UseHighResChange', UseHighResChange)
         call read_var('UseHighOrderAMR',UseHighOrderAMR)
 
