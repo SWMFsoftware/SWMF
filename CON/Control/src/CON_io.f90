@@ -826,7 +826,11 @@ contains
     write(UNITTMP_,'(a)')'#DESCRIPTION'
     write(UNITTMP_,'(a)')trim(StringDescription)
     write(UNITTMP_,*)
-    write(UNITTMP_,'(a)')'#PLANET'
+    if(NamePlanet == 'NEW')then
+       write(UNITTMP_,'(a)')'!!! PLANET'
+    else
+       write(UNITTMP_,'(a)')'#PLANET'
+    end if
     write(UNITTMP_,'(a25,a15)') NamePlanet,         '     NamePlanet'
     write(UNITTMP_,*)
     if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then

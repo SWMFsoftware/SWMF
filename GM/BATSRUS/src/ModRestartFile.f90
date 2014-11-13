@@ -385,7 +385,11 @@ contains
     write(unit_tmp,'(i8,a32)') nBlockALL,'MinBlockALL'
     if (IsStandAlone .and. NameThisComp == 'GM') then
        write(unit_tmp,*)
-       write(unit_tmp,'(a)')'#PLANET'
+       if(NamePlanet == 'NEW')then
+          write(unit_tmp,'(a)')'!!! PLANET'
+       else
+          write(unit_tmp,'(a)')'#PLANET'
+       end if
        write(unit_tmp,'(a,a32)') NamePlanet,'NamePlanet'
        if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
           write(unit_tmp,*)
