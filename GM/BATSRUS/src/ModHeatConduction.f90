@@ -139,7 +139,7 @@ contains
 
     use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
          j0_, nJp1_, k0_, nKp1_
-    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos
+    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
@@ -148,7 +148,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: UseRadCooling
-    use ModResistivity,  ONLY: UseResistivity, UseHeatExchange
+    use ModResistivity,  ONLY: UseHeatExchange
     use ModPhysics,    ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
          UnitU_, UnitX_, UnitB_, UnitT_, No2Si_V, UnitN_, &
          ElectronTemperatureRatio, AverageIonCharge 
@@ -692,14 +692,13 @@ contains
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: true_cell
-    use ModPhysics,    ONLY: gm1, IonMassPerCharge, Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, &
                              UseIdealEos
     use ModEnergy,     ONLY: calc_energy_cell
     use ModMultifluid, ONLY: ChargeIon_I,MassIon_I, iRhoIon_I, UseMultiIon
-    use ModUserInterface
-    use ModResistivity, ONLY: Eta_GB, set_resistivity
+    use ModUserInterface ! user_material_properties
 
     real :: DtLocal, TeSi
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -809,7 +808,7 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
-    use ModMain, ONLY: nDim, UseFieldLineThreads
+    use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: far_field_BCs_BLK
     use ModParallel,     ONLY: NOBLK, NeiLev
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
