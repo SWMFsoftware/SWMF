@@ -6,6 +6,7 @@
 module ModUser
 
   use ModVarIndexes, ONLY: IonFirst_, nFluid
+  use ModMultiFluid, ONLY: nIonFluid
   use ModMain, ONLY: nI, nJ,nK
   use ModCoronalHeating, ONLY: PoyntingFluxPerBSi, PoyntingFluxPerB
   use ModUserEmpty,                                     &
@@ -15,7 +16,9 @@ module ModUser
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_set_cell_boundary,          &
        IMPLEMENTED6 => user_set_face_boundary,          &
-       IMPLEMENTED7 => user_set_resistivity
+       IMPLEMENTED7 => user_set_resistivity,            &
+       IMPLEMENTED8 => user_calc_sources,               &
+       IMPLEMENTED9 => user_init_point_implicit
 
   include 'user_module.h' !list of public methods
 
@@ -37,11 +40,14 @@ module ModUser
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
 
+  real :: ReducedMass_II(nIonFluid,nIonFluid)
+  real :: CollisionCoef_II(nIonFluid,nIonFluid)
+  real :: CollisionCoef_I(nIonFluid)
+
 contains 
   !============================================================================
   subroutine user_read_inputs
 
-    use ModVarIndexes, ONLY: IonFirst_
     use ModMain,       ONLY: UseUserInitSession, lVerbose
     use ModProcMH,     ONLY: iProc
     use ModReadParam,  ONLY: read_line, read_command, read_var
@@ -108,15 +114,16 @@ contains
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
     use ModAdvance,    ONLY: UseElectronPressure
-    use ModMultiFluid, ONLY: MassIon_I
+    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
     use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
-         cElectronMass
+         cElectronMass, cProtonMass
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
-         UnitEnergyDens_, SinThetaTilt, CosThetaTilt
+         UnitEnergyDens_, SinThetaTilt, CosThetaTilt, No2Si_V, UnitT_
     use ModMagnetogram, ONLY: UnitB
 
+    integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
@@ -161,6 +168,37 @@ contains
     ! Note EtaPerpSi is divided by cMu.
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
+
+
+    ! Coefficient for effective ion-ion collision frequencies
+    do jIon = 1, nIonFluid
+       do iIon = 1, nIonFluid
+          ReducedMass_II(iIon,jIon) = MassIon_I(iIon)*MassIon_I(jIon) &
+               /(MassIon_I(iIon) + MassIon_I(jIon))
+          CollisionCoef_II(iIon,jIon) = CoulombLog/sqrt(cProtonMass) &
+               *sqrt(ReducedMass_II(iIon,jIon))/MassIon_I(iIon) &
+               *(ChargeIon_I(iIon)*ChargeIon_I(jIon)*cElectronCharge**2 &
+               / cEps)**2 &
+               /(3*(cTwoPi*cBoltzmann)**1.5)
+       end do
+    end do
+    ! To obtain the effective ion-ion collision frequencies, the
+    ! coefficients still need to be multiplied by Nion(jIon)/reducedTemp**1.5.
+    ! Here, we already take care of the units.
+    CollisionCoef_II = CollisionCoef_II &
+         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
+
+    ! Coefficients to calculate effective ion-electron collision frequencies
+    do iIon = 1, nIonFluid
+       CollisionCoef_I(iIon) = CoulombLog*sqrt(cElectronMass)/cProtonMass &
+            /MassIon_I(iIon)*(ChargeIon_I(iIon)*cElectronCharge**2/cEps)**2 &
+            /(3*(cTwoPi*cBoltzmann)**1.5)
+    end do
+    ! To obtain the effective ion-electron collision frequencies, the
+    ! coefficients still need to be multiplied by Ne/Te**1.5.
+    ! Here, we already take care of the units.
+    CollisionCoef_I = CollisionCoef_I &
+         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -534,5 +572,139 @@ contains
     end do; end do; end do
 
   end subroutine user_set_resistivity
+
+  !============================================================================
+
+  subroutine user_calc_sources(iBlock)
+
+    use ModAdvance, ONLY: State_VGB, Source_VC, UseElectronPressure
+    use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
+         iRhoUyIon_I, iRhoUzIon_I, iPIon_I
+    use ModPhysics, ONLY: gm1, inv_gm1
+    use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
+    use ModVarIndexes, ONLY: nVar, Energy_, Pe_
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon
+    real :: ReducedTemp, CollisionFreq, Coef, Ne, Te
+    real, dimension(nIonFluid) :: Rho_I, Ux_I, Uy_I, Uz_I, P_I, &
+         Nion_I, Tion_I
+    real :: U_D(3), Du_D(3)
+    real :: State_V(nVar), Source_V(nVar+nFluid)
+
+    character(len=*), parameter :: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    ! Do not provide explicit source term when point-implicit scheme is used
+    ! IsPointImplSource is true only when called from ModPointImplicit
+    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
+
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+       State_V = State_VGB(:,i,j,k,iBlock)
+
+       Rho_I = State_V(iRhoIon_I)
+       Ux_I  = State_V(iRhoUxIon_I)/Rho_I
+       Uy_I  = State_V(iRhoUyIon_I)/Rho_I
+       Uz_I  = State_V(iRhoUzIon_I)/Rho_I
+       P_I   = State_V(iPIon_I)
+
+       Nion_I = Rho_I/MassIon_I
+       Tion_I = P_I/Nion_I
+
+       if(UseElectronPressure)then
+          Ne = sum(ChargeIon_I*Nion_I)
+          Te = State_V(Pe_)/Ne 
+       end if
+
+       Source_V = 0.0
+
+       do iIon = 1, nIonFluid
+
+          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+          iP = iPIon_I(iIon)
+          iEnergy = Energy_ + iIon
+
+          do jIon = 1, nIonFluid
+             if(iIon == jIon) CYCLE
+
+             ReducedTemp = &
+                  (MassIon_I(jIon)*Tion_I(iIon)+MassIon_I(iIon)*Tion_I(jIon)) &
+                  /(MassIon_I(iIon) + MassIon_I(jIon))
+             CollisionFreq = CollisionCoef_II(iIon,jIon) &
+                  *Nion_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
+
+             Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
+                  Uz_I(jIon) - Uz_I(iIon) /)
+             U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
+
+             ! In the following we ommit the difference velocity correction
+             ! factor and turbulence corrections
+             Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                  + Rho_I(iIon)*CollisionFreq*Du_D
+
+             Source_V(iP) = Source_V(iP) &
+                  + gm1*Nion_I(iIon)*ReducedMass_II(iIon,jIon) &
+                  *CollisionFreq*(3*(Tion_I(jIon) - Tion_I(iIon)) &
+                  /MassIon_I(jIon) + sum(Du_D**2))
+          end do
+
+          if(UseElectronPressure)then
+             Coef = CollisionCoef_I(iIon)*Ne/(Te*sqrt(Te))*gm1*3*Nion_I(iIon)
+             Source_V(Pe_) = Source_V(Pe_) + Coef*(Tion_I(iIon) - Te)
+             Source_V(iP)  = Source_V(iP)  + Coef*(Te - Tion_I(iIon))
+          end if
+
+          Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
+               + sum(U_D*Source_V(iRhoUx:iRhoUz))
+       end do
+
+       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+    end do; end do; end do
+
+  end subroutine user_calc_sources
+
+  !============================================================================
+
+  subroutine user_init_point_implicit
+
+    use ModAdvance, ONLY: UseElectronPressure
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I
+    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
+    use ModVarIndexes, ONLY: nVar, Pe_
+
+    logical :: IsPointImpl_V(nVar)
+    integer :: iVar, iPointImplVar, nPointImplVar
+
+    character(len=*), parameter :: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
+
+    IsPointImpl_V = .false.
+
+    ! All ion momenta and pressures are implicit
+    IsPointImpl_V(iRhoUxIon_I) = .true.
+    IsPointImpl_V(iRhoUyIon_I) = .true.
+    IsPointImpl_V(iRhoUzIon_I) = .true.
+    IsPointImpl_V(iPIon_I)     = .true.
+    if(UseElectronPressure) IsPointImpl_V(Pe_) = .true.
+
+    nPointImplVar = count(IsPointImpl_V)
+
+    allocate(iVarPointImpl_I(nPointImplVar))
+
+    iPointImplVar = 0
+    do iVar = 1, nVar
+       if(.not. IsPointImpl_V(iVar)) CYCLE
+       iPointImplVar = iPointImplVar + 1
+       iVarPointImpl_I(iPointImplVar) = iVar
+    end do
+
+    ! Tell the point implicit scheme if dS/dU will be set analytically
+    ! If this is set to true the DsDu_VVC matrix has to be set below.
+    IsPointImplMatrixSet = .false.
+
+  end subroutine user_init_point_implicit
 
 end module ModUser
