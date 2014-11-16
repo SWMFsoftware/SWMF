@@ -2051,13 +2051,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         label=1
      endif else label=0
 
-     i=strpos(plotmod,'over')
-     if i ge 0 then begin
-        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
-        !p.multi(0) = !p.multi(0)+1
-        if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
-     endif
-
      i=strpos(plotmod,'log')
      if i ge 0 then begin
         plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
@@ -2074,6 +2067,22 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
      !p.title=plottitles(ifunc)
      if !p.title eq 'default' then !p.title=funcs(ifunc)
+
+     if ifunc lt nfunc-1 then begin
+        if strpos(plotmodes(ifunc+1),'over') gt 0 then begin
+           nexttitle = plottitles(ifunc+1)
+           if nexttitle eq 'default' then nexttitle=funcs(ifunc+1)
+           if nexttitle ne ' ' then !p.title += ' and '+nexttitle
+        endif
+     endif
+
+     i=strpos(plotmod,'over')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        !p.multi(0) = !p.multi(0)+1
+        if !p.multi(0) ge !p.multi(1)*!p.multi(2) then !p.multi(0)=0
+        !p.title = ''
+     endif
 
 
                                 ; Calculate the next p.multi(0) explicitly
