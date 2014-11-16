@@ -2347,6 +2347,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
      if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
         and plotmod ne 'shade' then begin
+
+        if white then tvlct,bytarr(256,3)+255 ; change to all white color table
+
         if(plotmod eq 'polar')then                                       $
            plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=1,ystyle=1,/polar $
         else if keyword_set(cut) then                                    $
@@ -2359,6 +2362,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
            plotgrid,x,lines=showmesh,xstyle=1,ystyle=1,$
                     xrange=xrange,yrange=yrange
         endelse
+
+        ; restore colors
+        common colors                 
+        if white then tvlct,r_curr,g_curr,b_curr
+
      endif
 
      !p.multi(0) = multi0
