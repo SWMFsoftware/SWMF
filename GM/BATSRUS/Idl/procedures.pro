@@ -2345,27 +2345,31 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
            plot,xx,yy,XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NODATA,/NOERASE
      endif
 
+     !p.title = ''
+
      if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
         and plotmod ne 'shade' then begin
 
         if white then tvlct,bytarr(256,3)+255 ; change to all white color table
 
         if(plotmod eq 'polar')then                                       $
-           plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=1,ystyle=1,/polar $
+           plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=5,ystyle=5,/polar $
         else if keyword_set(cut) then                                    $
-           plotgrid,xx,yy,lines=showmesh,xstyle=1,ystyle=1                $
+           plotgrid,xx,yy,lines=showmesh,xstyle=5,ystyle=5               $
         else begin
            if !x.range[0] ne !x.range[1] then xrange=!x.range else $
               xrange=[min(xx),max(xx)]
            if !y.range[0] ne !y.range[1] then yrange=!y.range else $
               yrange=[min(yy),max(yy)]
-           plotgrid,x,lines=showmesh,xstyle=1,ystyle=1,$
+           plotgrid,x,lines=showmesh,xstyle=5,ystyle=5,$
                     xrange=xrange,yrange=yrange
         endelse
 
         ; restore colors
-        common colors                 
-        if white then tvlct,r_curr,g_curr,b_curr
+        if white then begin
+           common colors, r_orig, g_orig, b_orig, r_curr, g_curr, b_curr
+           tvlct, r_curr, g_curr, b_curr
+        endif
 
      endif
 
