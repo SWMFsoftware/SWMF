@@ -50,7 +50,8 @@ contains
   subroutine message_pass_ng_real(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn, UseHighResChangeIn, iLevelMin, iLevelMax)
+       DoResChangeOnlyIn, UseHighResChangeIn, DefaultState_V,&
+       iLevelMin, iLevelMax)
 
     ! Message pass real array with nVar variables and BATL_size::nG ghost cells
 
@@ -70,6 +71,7 @@ contains
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
+    real,    optional, intent(in) :: DefaultState_V(nVar)
     logical, optional, intent(in) :: UseHighResChangeIn
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
@@ -84,6 +86,7 @@ contains
          TimeOld_B=TimeOld_B, Time_B=Time_B, DoTestIn=DoTestIn, &
          NameOperatorIn=NameOperatorIn, DoResChangeOnlyIn=DoResChangeOnlyIn, &
          UseHighResChangeIn=UseHighResChangeIn, &
+         DefaultState_V=DefaultState_V,&
          iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_ng_real
@@ -223,7 +226,8 @@ contains
   subroutine message_pass_real(nVar, nG, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
-       DoResChangeOnlyIn, UseHighResChangeIn, iLevelMin, iLevelMax)
+       DoResChangeOnlyIn, UseHighResChangeIn, DefaultState_V,&
+       iLevelMin, iLevelMax)
 
     use BATL_size, ONLY: MaxBlock, nBlock, nI, nJ, nK, nIjk_D, &
          MaxDim, nDim, jDim_, kDim_, &
@@ -259,6 +263,7 @@ contains
     logical, optional, intent(in) :: DoResChangeOnlyIn
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: UseHighResChangeIn
+    real,    optional, intent(in) :: DefaultState_V(nVar)
     real,    optional, intent(in) :: TimeOld_B(MaxBlock)
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn
@@ -355,6 +360,8 @@ contains
 
     integer:: iBlock
 
+    logical:: IsPositive_V(nVar)
+
     ! Variables for coarsened block. 
     real, allocatable:: State_VIIIB(:,:,:,:,:)
     logical, allocatable:: IsAccurate_B(:)
@@ -402,6 +409,9 @@ contains
 
     UseHighResChange = .false. 
     if(present(UseHighResChangeIn)) UseHighResChange = UseHighResChangeIn
+    IsPositive_V = .false. 
+    if(UseHighResChange .and. present(DefaultState_V)) &
+         IsPositive_V = DefaultState_V > 0
 
     ! Check arguments for consistency
     if(nProlongOrder == 2 .and. DoRestrictFace) call CON_stop(NameSub// &
@@ -1392,7 +1402,8 @@ contains
             do iVar = 1, nVar
                CoarseCell = State_VGB(iVar,i0+iDir1,2*j,min(2*k,nK),iBlock)
                call restriction_high_order_reschange(CoarseCell, &
-                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp)
+                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
+                    IsPositiveIn=IsPositive_V(iVar))
                State_VIIIB(iVar,ic0:ic0-2*iDir1:-iDir1,j,k,iBlock) = Coarse_I
             enddo ! iVar
 
@@ -1588,7 +1599,8 @@ contains
                   Orig = -c1over10*Cell_I(1) + c1over2*Cell_I(2) + Cell_I(3) &
                        -c1over2*Cell_I(4) + c1over10*Cell_I(5)
                   State_VIIIB(iVar,i,j,k,iBlock) = &
-                       limit_interpolation(Orig,Cell_I(1:4),Distance_I)
+                       limit_interpolation(Orig,Cell_I(1:4),Distance_I,&
+                       IsPositiveIn=IsPositive_V(iVar))
                enddo ! iVar
             enddo; enddo
          elseif(DoResChange_D(1) .and. DoResChange_D(2)) then
@@ -1652,8 +1664,10 @@ contains
                Orig1 = sum(Coef_I*Cell1_I)
                Orig2 = sum(Coef_I*Cell2_I)
 
-               Res1 = limit_interpolation(Orig1, Cell1_I(2:5), Distance_I)
-               Res2 = limit_interpolation(Orig2, Cell2_I(2:5), Distance_I)
+               Res1 = limit_interpolation(Orig1, Cell1_I(2:5), Distance_I,&
+                    IsPositiveIn=IsPositive_V(iVar))
+               Res2 = limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
+                    IsPositiveIn=IsPositive_V(iVar))
 
                State_VIIIB(iVar,ic0,jc0,k,iBlock) = 0.5*(Res1 + Res2)
             enddo
@@ -1810,8 +1824,10 @@ contains
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I)
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I)
+                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
+                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
 
                      State_VIIIB(iVar,ic0,jc0,k,iBlock) = 0.5*(Res1 + Res2)
                   enddo
@@ -1844,8 +1860,10 @@ contains
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I)
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I)
+                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
+                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
 
                      State_VIIIB(iVar,ic0,j,kc0,iBlock) = 0.5*(Res1 + Res2)
                   enddo
@@ -1880,8 +1898,10 @@ contains
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I)
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I)
+                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
+                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
 
                      State_VIIIB(iVar,i,jc0,kc0,iBlock) = 0.5*(Res1 + Res2)
                   enddo
@@ -1919,9 +1939,12 @@ contains
                   Orig2 = sum(Coef_I*Cell2_I)
                   Orig3 = sum(Coef_I*Cell3_I)
 
-                  Res1 = limit_interpolation(Orig1, Cell1_I(2:5), Distance_I)
-                  Res2 = limit_interpolation(Orig2, Cell2_I(2:5), Distance_I)
-                  Res3 = limit_interpolation(Orig3, Cell3_I(2:5), Distance_I)
+                  Res1 = limit_interpolation(Orig1, Cell1_I(2:5), Distance_I,&
+                       IsPositiveIn=IsPositive_V(iVar))
+                  Res2 = limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
+                       IsPositiveIn=IsPositive_V(iVar))
+                  Res3 = limit_interpolation(Orig3, Cell3_I(2:5), Distance_I,&
+                       IsPositiveIn=IsPositive_V(iVar))
 
                   State_VIIIB(iVar,ic0,jc0,kc0,iBlock) = &
                        (Res1 + Res2 + Res3)/3.0
@@ -2082,7 +2105,8 @@ contains
                                    c1over10*Cell_I(5)
                               State_VIIIB(iVar,i,j,k,iBlock) =&
                                    limit_interpolation&
-                                   (Orig,Cell_I(1:4),Distance_I)
+                                   (Orig,Cell_I(1:4),Distance_I,&
+                                   IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
                            IsAccurate_III(i,j,k) = .true.
                         enddo ! i 
@@ -2106,7 +2130,8 @@ contains
                                    c1over10*Cell_I(5)
                               State_VIIIB(iVar,i,j,k,iBlock) =&
                                    limit_interpolation&
-                                   (Orig,Cell_I(1:4),Distance_I)
+                                   (Orig,Cell_I(1:4),Distance_I,&
+                                   IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
                            IsAccurate_III(i,j,k) = .true.
                         enddo ! j 
@@ -2131,7 +2156,8 @@ contains
                                    c1over10*Cell_I(5)
                               State_VIIIB(iVar,i,j,k,iBlock) =&
                                    limit_interpolation&
-                                   (Orig,Cell_I(1:4),Distance_I)
+                                   (Orig,Cell_I(1:4),Distance_I,&
+                                   IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
                            IsAccurate_III(i,j,k) = .true.
                         enddo ! k
@@ -2326,7 +2352,8 @@ contains
                               ! 2D diagonally interpolation. 
                               State_VIIIB(iVar,i,j,k,iBlock) = &
                                    limit_interpolation&
-                                   (Orig,Cell_I(1:4),Distance_I)
+                                   (Orig,Cell_I(1:4),Distance_I,&
+                                   IsPositiveIn=IsPositive_V(iVar))
                            else
                               ! Corner cell for Case 2. 
                               ! Some cells can be corrected in different 
@@ -2334,7 +2361,8 @@ contains
                               State_VIIIB(iVar,i,j,k,iBlock) = &
                                    (nCorrect*State_VIIIB(iVar,i,j,k,iBlock) +&
                                    limit_interpolation&
-                                   (Orig,Cell_I(1:4),Distance_I)) / &
+                                   (Orig,Cell_I(1:4),Distance_I,&
+                                   IsPositiveIn=IsPositive_V(iVar))) / &
                                    (nCorrect + 1)
                            endif
                         enddo ! iVar
@@ -2406,7 +2434,8 @@ contains
                      Orig = -c1over10*Cell_I(1) + c1over2*Cell_I(2) + &
                           Cell_I(3) - c1over2*Cell_I(4) + c1over10*Cell_I(5)
                      State_VIIIB(iVar,i,j,k,iBlock) = &
-                          limit_interpolation(Orig,Cell_I(1:4),Distance_I)
+                          limit_interpolation(Orig,Cell_I(1:4),Distance_I,&
+                          IsPositiveIn=IsPositive_V(iVar))
 
                   enddo ! iVar
 
@@ -2441,7 +2470,7 @@ contains
 
       call prolongation_high_order_for_face_ghost(&
            iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock), &
-           IsAccurateFace_GB(:,:,:,iBlock))
+           IsAccurateFace_GB(:,:,:,iBlock),IsPositiveIn_V=IsPositive_V)
 
       neiLev_I(1) = DiLevelNei_IIIB(-1,0,0,iBlock)
       neiLev_I(2) = DiLevelNei_IIIB(+1,0,0,iBlock)
@@ -2453,7 +2482,8 @@ contains
       ! If the corner/edge block is not a coarse block, the ghost values for 
       ! fine block need to be corrected. 
       if(.not. all(neiLev_I /=1)) call correct_face_ghost_for_fine_block(&
-           iBlock, nVar, State_VGB(:,:,:,:,iBlock))
+           iBlock, nVar, State_VGB(:,:,:,:,iBlock), &
+           IsPositiveIn_V=IsPositive_V)
 
     end subroutine high_prolong_for_face_ghost
 
@@ -3448,7 +3478,9 @@ contains
                                          iBlockSend)
 
                                     State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                         prolongation_high_order_amr(CoarseCell_III)
+                                         prolongation_high_order_amr&
+                                         (CoarseCell_III,&
+                                         IsPositiveIn=IsPositive_V(iVar))
                                  enddo
 
                               end do ! iR
@@ -3519,7 +3551,9 @@ contains
                                       iBlockSend)
 
                                  BufferS_I(iBufferS+iVar)=&
-                                      prolongation_high_order_amr(CoarseCell_III) 
+                                      prolongation_high_order_amr&
+                                      (CoarseCell_III,&
+                                      IsPositiveIn=IsPositive_V(iVar)) 
                                  
                               enddo
                               iBufferS = iBufferS + nVar

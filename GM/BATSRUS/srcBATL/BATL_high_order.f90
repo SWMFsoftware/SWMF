@@ -84,10 +84,10 @@ contains
   end function calc_center_first_derivate
   !======================================================================
 
-  real function calc_face_value(CellValue_I, DoLimitIn)
+  real function calc_face_value(CellValue_I, DoLimitIn, IsPositiveIn)
     ! Calculate f_{i+1/2} with f(k), where k = i-2,i-1 ... i+3
     real, intent(in):: CellValue_I(6)
-    logical, optional, intent(in):: DoLimitIn
+    logical, optional, intent(in):: DoLimitIn, IsPositiveIn
     logical:: DoLimit
     real, parameter:: c3over256 = 3./256, c25over256 = 25./256, &
          c150over256 = 150./256
@@ -104,13 +104,14 @@ contains
 
     calc_face_value = FaceValue
     if(DoLimit) calc_face_value = &
-         limit_interpolation(FaceValue, CellValue_I(2:5), Distance_I)
+         limit_interpolation(FaceValue, CellValue_I(2:5), Distance_I,&
+         IsPositiveIn=IsPositiveIn)
   end function calc_face_value
 
   !===========================================================================
 
   real function limit_interpolation(FaceOrig, CellValue_I, Distance_I, &
-       MaxValueIn, MinValueIn)
+       MaxValueIn, MinValueIn, IsPositiveIn)
     ! This Limiter works for ununiform grid interpolation. 
     ! See (2.18) in 'Accurate Monotonicity-Preserving Schemes with 
     ! Runge-Kutta Time Stepping' by A. Suresh & H. T. Huynh (1997)
@@ -122,19 +123,33 @@ contains
     ! This option maybe useful, but have been not used at anywhere so far.
     real, optional, intent(in):: MaxValueIn, MinValueIn
 
+    logical, optional, intent(in):: IsPositiveIn
+
+    logical:: IsPositive
+
     real:: FaceL, FaceR, FaceAV, FaceMD, FaceMin, FaceMax, MaxValue, MinValue
-    real:: MP5Result
+    real:: MP5Result, LowResult, w1, w2
+    real,parameter:: c6 = 0.6
     !----------------------------------------------------------------------
+    IsPositive = .false. 
+    if(present(IsPositiveIn)) IsPositive = IsPositiveIn
 
     FaceAV = two_points_interpolation(CellValue_I(2:3), Distance_I(2:3)) 
     FaceL = two_points_interpolation(CellValue_I(1:2), Distance_I(1:2))
     FaceR = two_points_interpolation(CellValue_I(3:4), Distance_I(3:4))
-    
+
     FaceMD = median(FaceAV, FaceL, FaceR)
     FaceMin = min(FaceMD, CellValue_I(2), CellValue_I(3))  
     FaceMax = max(FaceMD, CellValue_I(2), CellValue_I(3))
 
     MP5Result = median(FaceOrig, FaceMin, FaceMax)
+
+    if(IsPositive) then
+       w1 = abs(Distance_I(3))/(Distance_I(3) - Distance_I(2))
+       w2 = 1 - w1
+       LowResult = w1*CellValue_I(2) + w2*CellValue_I(3)
+       if(MP5Result < c6*LowResult) MP5Result = LowResult
+    endif
 
     MaxValue = MP5Result
     if(present(MaxValueIn)) MaxValue = MaxValueIn
@@ -165,7 +180,7 @@ contains
 
   !======================================================================
   subroutine restriction_high_order_reschange(CoarseCell, FineCell_III, &
-       Ghost_I, DoSymInterpIn)
+       Ghost_I, DoSymInterpIn,IsPositiveIn)
     ! For 2D: 
     !         _________________________________
     !         | u1|   |   |   |   |   |   |   |
@@ -200,13 +215,13 @@ contains
     real, intent(in) :: CoarseCell              ! value of coarse neighbor cell
     real, intent(in) :: FineCell_III(8,j6_,k6_) ! value of local fine cells
     real, intent(out):: Ghost_I(3)              ! coarse ghost cells for neighbor
-    logical, optional, intent(in) :: DoSymInterpIn
+    logical, optional, intent(in) :: DoSymInterpIn, IsPositiveIn
 
     ! Local variables
     real:: FineCell_I(8)
     real:: Ghost, Cell_I(4)
     real:: CellInput_I(6), CellInput_II(6,6)
-    logical:: DoSymInterp
+    logical:: DoSymInterp, IsPositive
 
     ! Distances of coarse neighbor and fine cells from 1st ghost cell
     real:: Distance_I(4)=(/-4,-1,1,3/)
@@ -225,19 +240,23 @@ contains
     DoSymInterp = .true. ! Use f3...f8 to interpolate G3.
     if(present(DoSymInterpIn)) DoSymInterp = DoSymInterpIn
 
+    IsPositive = .false. 
+    if(present(IsPositiveIn)) IsPositive = IsPositiveIn
+
     ! Integerpolate fine cell centers to line connecting coarse cell centers
     if(nK == 1) then  ! 2D resolution change       
        do i = 1, 8          
           ! Use a temporary variable CellInput_I to avoid compile error. 
           CellInput_I(1:j6_) = FineCell_III(i,:,1)
-          FineCell_I(i) = calc_face_value(CellInput_I, DoLimit)
+          FineCell_I(i) = calc_face_value(CellInput_I, DoLimit,&
+               IsPositiveIn=IsPositive)
        enddo
     else   
        ! 3D resolution change. Need more tests to make sure it works!!
        do i = 1, 8
           CellInput_II(1:j6_,1:k6_) = FineCell_III(I,:,:)
           FineCell_I(i) = &
-               calc_edge_value(CellInput_II,Dolimit)
+               calc_edge_value(CellInput_II,Dolimit,IsPositiveIn=IsPositive)
        enddo
     endif
 
@@ -249,21 +268,25 @@ contains
     if(DoLimit) then
        Cell_I(1)   = CoarseCell
        Cell_I(2:4) = FineCell_I(1:3)
-       Ghost_I(1)  = limit_interpolation(Ghost, Cell_I, Distance_I)
+       Ghost_I(1)  = limit_interpolation(Ghost, Cell_I, Distance_I,&
+            IsPositiveIn=IsPositive)
     else
        Ghost_I(1) = Ghost
     endif
 
     ! Interpolate G2 and G3 from fine edge values
-    Ghost_I(2) = calc_face_value(FineCell_I(1:6), DoLimit)
+    Ghost_I(2) = calc_face_value(FineCell_I(1:6), DoLimit,&
+         IsPositiveIn=IsPositive)
     if(DoSymInterp) then
-       Ghost_I(3) = calc_face_value(FineCell_I(3:8), DoLimit)
+       Ghost_I(3) = calc_face_value(FineCell_I(3:8), DoLimit,&
+            IsPositiveIn=IsPositive)
     else
        Ghost = sum(FineCell_I(1:6)*Coef_I)
        if(DoLimit) then
           Cell_I(1:3) = FineCell_I(4:6)
           Cell_I(4)  = FineCell_I(6)
-          Ghost_I(3) = limit_interpolation(Ghost, Cell_I, Distance1_I)
+          Ghost_I(3) = limit_interpolation(Ghost, Cell_I, Distance1_I,&
+               IsPositiveIn=IsPositive)
        else
           Ghost_I(3) = Ghost
        endif
@@ -271,10 +294,10 @@ contains
 
   end subroutine restriction_high_order_reschange
   !======================================================================
-  real function calc_edge_value(CellValue_II,DoLimitIn)
+  real function calc_edge_value(CellValue_II,DoLimitIn,IsPositiveIn)
     ! For 3D, need more tests. 
     real, intent(in) :: CellValue_II(6,6)
-    logical, optional, intent(in):: DoLimitIn
+    logical, optional, intent(in):: DoLimitIn, IsPositiveIn
     logical:: DoLimit
     real:: CellValue_I(6)
     integer:: i
@@ -284,14 +307,16 @@ contains
     if(present(DoLimitIn)) DoLimit = DoLimitIn
 
     do i = iBegin, iEnd       
-       CellValue_I(i) = calc_face_value(CellValue_II(i,:),DoLimit)
+       CellValue_I(i) = calc_face_value(CellValue_II(i,:),DoLimit,&
+            IsPositiveIn=IsPositiveIn)
     enddo
-    calc_edge_value = calc_face_value(CellValue_I,DoLimit)
+    calc_edge_value = calc_face_value(CellValue_I,DoLimit,&
+         IsPositiveIn=IsPositiveIn)
   end function calc_edge_value
   !======================================================================
 
   subroutine get_ghost_for_fine_blk(CoarseCell_III, FineCell_I, Ghost_I, &
-       Use4thOrderIn)
+       Use4thOrderIn, IsPositiveIn)
     ! 2D: 
     ! __________________________
     ! |        |       |       |
@@ -323,29 +348,31 @@ contains
 
     real, intent(in):: CoarseCell_III(5,5,3), FineCell_I(3)
     real, intent(out):: Ghost_I(3)
-    logical, optional, intent(in):: Use4thOrderIn
+    logical, optional, intent(in):: Use4thOrderIn, IsPositiveIn
 
     real:: CoarseCell_I(3), CoarseCell_II(5,3)
     integer:: i
-    logical:: DoLimit = .true., Use4thOrder = .true.     
+    logical:: DoLimit = .true., Use4thOrder = .true., IsPositive
     !----------------------------------------------------------------------
 
     DoLimit = .true. 
     Use4thOrder = .false. 
     if(present(Use4thOrderIn)) Use4thOrder = Use4thOrderIn
+    IsPositive = .false. 
+    if(present(IsPositiveIn)) IsPositive = IsPositiveIn
 
     if(nK == 1) then
        CoarseCell_II = CoarseCell_III(:,1,:)
        do i = 1, 3       
           CoarseCell_I(i) = &
                interpolate_in_coarse_blk_1d(CoarseCell_II(:,i), &
-               DoLimitIn=DoLimit)
+               DoLimitIn=DoLimit, IsPositiveIn=IsPositive)
        enddo
     else
        do i = 1, 3
           CoarseCell_I(i) = interpolate_in_coarse_blk_2d(&
                CoarseCell_III(:,:,i), DoLimitIn=DoLimit,&
-               Use4thOrderIn=Use4thOrder)
+               Use4thOrderIn=Use4thOrder,IsPositiveIn=IsPositive)
        enddo
     endif
 
@@ -357,6 +384,7 @@ contains
       real, parameter:: c11=-4./231, c12=4./7,c13=5./7, c14=-1./3, c15=5./77
       real, parameter:: c21=-9./572, c22=1./6,c23=1.05, c24=-3./11, c25=14./195
       real, parameter:: c31=-9./286, c32=5./7,c33=0.5, c34=-20./77, c35=1./13
+      real, parameter:: c6=0.6
       real:: Ghost, Cell_I(4), Distance_I(4)
 
       !-----------------
@@ -369,7 +397,8 @@ contains
          Cell_I(1) = CoarseCell_I(2); Cell_I(2) = CoarseCell_I(1)
          Cell_I(3) = FineCell_I(1); Cell_I(4) = FineCell_I(2)
 
-         Ghost_I(1) = limit_interpolation(Ghost, Cell_I, Distance_I)
+         Ghost_I(1) = limit_interpolation(Ghost, Cell_I, Distance_I,&
+              IsPositiveIn=IsPositive)
       else
          Ghost_I(1) = Ghost
       endif
@@ -384,7 +413,8 @@ contains
          Cell_I(1) = CoarseCell_I(3); Cell_I(2) = CoarseCell_I(2)
          Cell_I(3) = CoarseCell_I(1); Cell_I(4) = FineCell_I(1)
 
-         Ghost_I(2) = limit_interpolation(Ghost, Cell_I, Distance_I)
+         Ghost_I(2) = limit_interpolation(Ghost, Cell_I, Distance_I,&
+              IsPositiveIn=IsPositive)
       else
          Ghost_I(2) = Ghost
       endif
@@ -399,7 +429,8 @@ contains
          Cell_I(1) = CoarseCell_I(3); Cell_I(2) = CoarseCell_I(2)
          Cell_I(3) = CoarseCell_I(1); Cell_I(4) = FineCell_I(1)
 
-         Ghost_I(3) = limit_interpolation(Ghost, Cell_I, Distance_I)
+         Ghost_I(3) = limit_interpolation(Ghost, Cell_I, Distance_I,&
+              IsPositiveIn=IsPositive)
       else
          Ghost_I(3) = Ghost
       endif
@@ -453,9 +484,10 @@ contains
 
   end function interpolate_in_coarse_blk_1d
   !======================================================================
-  real function interpolate_in_coarse_blk_2d(Cell_II, DoLimitIn, Use4thOrderIn)
+  real function interpolate_in_coarse_blk_2d(Cell_II, DoLimitIn, &
+       Use4thOrderIn,IsPositiveIn)
     real, intent(in):: Cell_II(5,5)
-    logical, optional,intent(in):: DoLimitIn, Use4thOrderIn
+    logical, optional,intent(in):: DoLimitIn, Use4thOrderIn,IsPositiveIn
     logical:: DoLimit, Use4thOrder
     real:: Cell_I(5)
     integer:: i
@@ -468,15 +500,17 @@ contains
 
     do i = 1, 5 ! Eliminate j dimension
        Cell_I(i) = &
-            interpolate_in_coarse_blk_1d(Cell_II(i,:), DoLimit, Use4thOrder)
+            interpolate_in_coarse_blk_1d(Cell_II(i,:), DoLimit, &
+            Use4thOrder,IsPositiveIn=IsPositiveIn)
     enddo
     interpolate_in_coarse_blk_2d = &
-         interpolate_in_coarse_blk_1d(Cell_I, DoLimit, Use4thOrder)    
+         interpolate_in_coarse_blk_1d(Cell_I, DoLimit, Use4thOrder,&
+         IsPositiveIn=IsPositiveIn)    
   end function interpolate_in_coarse_blk_2d
   !======================================================================
 
   subroutine prolongation_high_order_for_face_ghost(&
-       iBlock, nVar, Field1_VG, Field_VG, Do5thFace_G)
+       iBlock, nVar, Field1_VG, Field_VG, Do5thFace_G, IsPositiveIn_V)
     ! High order prolongation for simple resolution change (resolution 
     ! change in only one direction).
 
@@ -490,6 +524,7 @@ contains
     real, intent(inout) :: Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real, intent(inout) :: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, intent(in) :: Do5thFace_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical, optional, intent(in):: IsPositiveIn_V(nVar)
 
     integer :: i1, j1, k1, i2, j2, k2
     integer :: ip, im, jp, jm, kp, km, iVar, jpp, jmm, ipp, imm, kpp, kmm
@@ -503,6 +538,8 @@ contains
     integer:: Index1_I(5), Index2_I(5)
     integer:: iPara1,iPara2, i, j, k
 
+    logical:: IsPositive_V(nVar)
+
     ! If it is non-simple resolution change, some face ghost cells does not
     ! have enough information to reach 5th order accuracy, then use 4th order
     ! interpolation. These 4th order face ghost cells will be sent to neighbour 
@@ -510,6 +547,8 @@ contains
     ! be overwritten by remote prolongation (iSendStage == 3). 
     logical:: Use4thOrder
     !-------------------------------------------------------------------------
+    IsPositive_V = .false. 
+    if(present(IsPositiveIn_V)) IsPositive_V = IsPositiveIn_V
 
     Field1_VG = Field_VG
 
@@ -598,7 +637,8 @@ contains
              Use4thOrder = .not.Do5thFace_G(i0_,j2,k2)
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:), &
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder, &
+                     IsPositiveIn=IsPositive_V(iVar))
                 Field_VG(iVar,i0_ ,j2,k2) = Ghost_I(1)
                 Field_VG(iVar,im1_,j2,k2) = Ghost_I(2)
                 Field_VG(iVar,im2_,j2,k2) = Ghost_I(3)
@@ -690,7 +730,8 @@ contains
              Use4thOrder = .not.Do5thFace_G(nIp1_,j2,k2)
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:),&
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder,&
+                     IsPositiveIn=IsPositive_V(iVar))
 
                 Field_VG(iVar,nIp1_,j2,k2) = Ghost_I(1)
                 Field_VG(iVar,nIp2_,j2,k2) = Ghost_I(2)
@@ -784,7 +825,8 @@ contains
              Use4thOrder = .not.Do5thFace_G(i2,j0_,k2)
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:), &
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder,&
+                     IsPositiveIn=IsPositive_V(iVar))
                 Field_VG(iVar,i2,j0_ ,k2) = Ghost_I(1)
                 Field_VG(iVar,i2,jm1_,k2) = Ghost_I(2)
                 Field_VG(iVar,i2,jm2_,k2) = Ghost_I(3)
@@ -878,7 +920,8 @@ contains
 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:), &
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder,&
+                     IsPositiveIn=IsPositive_V(iVar))
                 Field_VG(iVar,i2,nJp1_, k2) = Ghost_I(1)
                 Field_VG(iVar,i2,nJp2_, k2) = Ghost_I(2)
                 Field_VG(iVar,i2,nJp3_, k2) = Ghost_I(3)
@@ -966,7 +1009,8 @@ contains
              Use4thOrder = .not.Do5thFace_G(i2,j2,k0_) 
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:), &
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder,&
+                     IsPositiveIn=IsPositive_V(iVar))
                 Field_VG(iVar,i2,j2,k0_ ) = Ghost_I(1)
                 Field_VG(iVar,i2,j2,km1_) = Ghost_I(2)
                 Field_VG(iVar,i2,j2,km2_) = Ghost_I(3)
@@ -1053,26 +1097,29 @@ contains
              Use4thOrder = .not.Do5thFace_G(i2,j2,nKp1_)
              do iVar = 1, nVar
                 call get_ghost_for_fine_blk(FieldCoarse_VIII(iVar,:,:,:), &
-                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder)
+                     FieldFine_VI(iVar,:), Ghost_I, Use4thOrder,&
+                     IsPositiveIn=IsPositive_V(iVar))
                 Field_VG(iVar,i2,j2,nKp1_) = Ghost_I(1)
                 Field_VG(iVar,i2,j2,nKp2_) = Ghost_I(2)
                 Field_VG(iVar,i2,j2,nKp3_) = Ghost_I(3)
              enddo
           enddo; enddo
        enddo; enddo
-
-
     endif
   end subroutine prolongation_high_order_for_face_ghost
   !======================================================================
 
-  subroutine correct_face_ghost_for_fine_block(iBlock, nVar, Field_VG)
+  subroutine correct_face_ghost_for_fine_block(iBlock, nVar, Field_VG,&
+       IsPositiveIn_V)
 
     use BATL_tree, ONLY: DiLevelNei_IIIB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, nDim
     integer, intent(in):: iBlock, nVar
     real, intent(inout):: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical, optional,intent(in):: IsPositiveIn_V(nVar)
+
+    logical:: IsPositive_V(nVar)
 
     logical:: IsCorrected_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,parameter::  Distance_II(4,4) = reshape((/&
@@ -1119,6 +1166,8 @@ contains
     integer, parameter:: Edge1_ = 1, Edge2_ = 2, Corner_ = 3
     character(len=*), parameter:: NameSub = 'correct_face_ghost_for_fine_block'
     !----------------------------------------------------------------------
+    IsPositive_V = .false. 
+    if(present(IsPositiveIn_V)) IsPositive_V = IsPositiveIn_V
 
     if(nI>7 .and. nJ>7 .and. (nDim ==2 .or. nK>7)) then
        ! If there are enough information, use 6 points interpolation, which
@@ -1202,7 +1251,8 @@ contains
                       do j = jBegin, jEnd, Dj
                          Orig = sum(CellValue_I*Coef_II(:,Count))
                          Field_VG(iVar,i,j,k) = limit_interpolation(Orig,&
-                              CellValue_I(2:5), Distance_II(:,Count))
+                              CellValue_I(2:5), Distance_II(:,Count),&
+                              IsPositiveIn=IsPositive_V(iVar))
                          Count = Count + 1                      
                       enddo
                    enddo ! iVar
@@ -1240,7 +1290,8 @@ contains
                       do i = iBegin, iEnd, Di
                          Orig = sum(CellValue_I*Coef_II(:,Count))
                          Field_VG(iVar,i,j,k) = limit_interpolation(Orig,&
-                              CellValue_I(2:5),Distance_II(:,Count))
+                              CellValue_I(2:5),Distance_II(:,Count),&
+                              IsPositiveIn=IsPositive_V(iVar))
                          Count = Count + 1
                       enddo
                    enddo ! ivar
@@ -1603,7 +1654,8 @@ contains
                             Field_VG(iVar,i+(Count-1)*Di1,&
                                  j+(Count-1)*Dj1,k+(Count-1)*Dk1)&
                                  = limit_interpolation(Orig,&
-                                 CellValue_I(2:5),Distance_II(:,Count))
+                                 CellValue_I(2:5),Distance_II(:,Count),&
+                                 IsPositiveIn=IsPositive_V(iVar))
 
                             IsCorrected_G(i+(Count-1)*Di1,&
                                  j+(Count-1)*Dj1,k+(Count-1)*Dk1) = .true.
@@ -1614,7 +1666,8 @@ contains
                                  j+(Count-1)*Dj1,k+(Count-1)*Dk1)  &
                                  + & 
                                  limit_interpolation(Orig,&
-                                 CellValue_I(2:5),Distance_II(:,Count)))
+                                 CellValue_I(2:5),Distance_II(:,Count),&
+                                 IsPositiveIn=IsPositive_V(iVar)))
                          endif
                       enddo
                    enddo
@@ -1696,16 +1749,19 @@ contains
   end function prolongation_high_order_amr
   !======================================================================
 
-  real function restriction_high_order_amr(Cell_III)
+  real function restriction_high_order_amr(Cell_III, IsPositiveIn)
     ! Calc 6th order coarsened cell for AMR. 
     use BATL_size, ONLY: kRatio
     real, intent(in):: Cell_III(6,6,6)
+    logical, optional, intent(in):: IsPositiveIn
+
     real:: Cell_I(6), Cell_II(6,6)
     integer:: i, j, k
 
     if(kRatio == 2) then 
        do j = 1, 6; do i = 1, 6
-          Cell_II(i,j) = calc_face_value(Cell_III(i,j,:), .true.)
+          Cell_II(i,j) = calc_face_value(Cell_III(i,j,:), DoLimitIn=.true.,&
+               IsPositiveIn=IsPositiveIn)
        enddo; enddo
     else
        k = 1
@@ -1713,9 +1769,11 @@ contains
     endif
 
     do i = 1, 6
-       Cell_I(i) = calc_face_value(Cell_II(i,:), .true.)
+       Cell_I(i) = calc_face_value(Cell_II(i,:), DoLimitIn=.true.,&
+            IsPositiveIn=IsPositiveIn)
     enddo
-    restriction_high_order_amr = calc_face_value(Cell_I, .true.)
+    restriction_high_order_amr = calc_face_value(Cell_I, DoLimitIn=.true.,&
+         IsPositiveIn=IsPositiveIn)
   end function restriction_high_order_amr
 
 end module BATL_high_order

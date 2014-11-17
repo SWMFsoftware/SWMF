@@ -97,7 +97,8 @@ contains
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn, &
-            UseHighResChangeIn=UseHighResChange)
+            UseHighResChangeIn=UseHighResChange,&
+            DefaultState_V=DefaultState_V)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     else
        ! Pass corners if necessary
@@ -112,7 +113,8 @@ contains
             DoSendCornerIn=DoSendCorner, &
             DoRestrictFaceIn=DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
-            UseHighResChangeIn=UseHighResChange)
+            UseHighResChangeIn=UseHighResChange,&
+            DefaultState_V=DefaultState_V)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
 
