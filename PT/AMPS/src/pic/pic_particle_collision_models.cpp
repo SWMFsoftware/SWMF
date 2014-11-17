@@ -6,7 +6,7 @@
 #include "pic.h"
 
 //sampling offset of the collision frequentcy
-int PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySamplingOffset=-1;
+int PIC::MolecularCollisions::ParticleCollisionModel::CollsionFrequentcySampling::SamplingBufferOffset=-1;
 
 
 //request the sampling data
@@ -14,8 +14,8 @@ int PIC::MolecularCollisions::ParticleCollisionModel::RequestSamplingData(int of
   int SamplingLength=0;
 
 #if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
-  CollsionFrequentcySamplingOffset=offset+SamplingLength;
-  SamplingLength+=sizeof(double)*(((PIC::nTotalSpecies+1)*PIC::nTotalSpecies)/2);
+  CollsionFrequentcySampling::SamplingBufferOffset=offset+SamplingLength;
+  SamplingLength+=sizeof(double)*(PIC::nTotalSpecies*PIC::nTotalSpecies);
 #endif
 
   return SamplingLength;
@@ -28,39 +28,30 @@ void PIC::MolecularCollisions::ParticleCollisionModel::PrintVariableList(FILE* f
 }
 
 void PIC::MolecularCollisions::ParticleCollisionModel::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode)  {
-  double CollisionFrequentcy[((PIC::nTotalSpecies+1)*PIC::nTotalSpecies)/2];
+  double CollisionFrequentcy[PIC::nTotalSpecies*PIC::nTotalSpecies];
   int i,s;
   double *SamplingBuffer;
 
-  for (i=0;i<((PIC::nTotalSpecies+1)*PIC::nTotalSpecies)/2;i++) CollisionFrequentcy[i]=0.0;
+  for (i=0;i<PIC::nTotalSpecies*PIC::nTotalSpecies;i++) CollisionFrequentcy[i]=0.0;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
-    SamplingBuffer=(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySamplingOffset);
+    SamplingBuffer=(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySampling::SamplingBufferOffset);
 
-    for (s=0;s<((PIC::nTotalSpecies+1)*PIC::nTotalSpecies)/2;s++) CollisionFrequentcy[s]+=SamplingBuffer[s]*InterpolationCoeficients[i];
+    for (s=0;s<PIC::nTotalSpecies*PIC::nTotalSpecies;s++) CollisionFrequentcy[s]+=SamplingBuffer[s]*InterpolationCoeficients[i];
   }
 
-  SamplingBuffer=(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySamplingOffset);
-  for (s=0;s<((PIC::nTotalSpecies+1)*PIC::nTotalSpecies)/2;s++) SamplingBuffer[s]=CollisionFrequentcy[s]/((PIC::LastSampleLength!=0) ? PIC::LastSampleLength : 1);
+  SamplingBuffer=(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySampling::SamplingBufferOffset);
+  for (s=0;s<PIC::nTotalSpecies*PIC::nTotalSpecies;s++) SamplingBuffer[s]=CollisionFrequentcy[s]/((PIC::LastSampleLength!=0) ? PIC::LastSampleLength : 1);
 }
 
 void PIC::MolecularCollisions::ParticleCollisionModel::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
   double t;
-  double *SamplingBuffer=(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySamplingOffset);
+  double *SamplingBuffer=(double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset+CollsionFrequentcySampling::SamplingBufferOffset);
   int s;
 
   for (s=0;s<PIC::nTotalSpecies;s++) {
     if (pipe->ThisThread==CenterNodeThread) {
-
-      if (s==DataSetNumber) {
-        t= *(SamplingBuffer+((2*PIC::nTotalSpecies-(DataSetNumber-1))*DataSetNumber)/2+(s-DataSetNumber));
-      }
-      else if (s>=DataSetNumber) {
-        t= *(SamplingBuffer+((2*PIC::nTotalSpecies-(DataSetNumber-1))*DataSetNumber)/2+(s-DataSetNumber));
-      }
-      else {
-        t= *(SamplingBuffer+((2*PIC::nTotalSpecies-(s-1))*s)/2+(DataSetNumber-s));
-      }
+      t= *(SamplingBuffer+CollsionFrequentcySampling::Offset(DataSetNumber,s));
     }
 
     if (pipe->ThisThread==0) {
@@ -164,19 +155,35 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
               double m0,m1,am;
               double LocalParticleWeight_s0,LocalParticleWeight_s1;
               double LocalTimeStep_s0,LocalTimeStep_s1;
+              double minParticleWeightCorrection_s0,minParticleWeightCorrection_s1,sumWeightCorrection_s0,sumWeightCorrection_s1;
+              PIC::ParticleBuffer::byte *ParticleData;
 
               for (s0=0;s0<PIC::nTotalSpecies;s0++) if (nParticleNumber[s0]!=0) {
                 m0=PIC::MolecularData::GetMass(s0);
                 LocalParticleWeight_s0=block->GetLocalParticleWeight(s0);
                 LocalTimeStep_s0=PIC::ParticleWeightTimeStep::LocalTimeStep(s0,node);
+                sumWeightCorrection_s0=0.0;
 
                 //populate the particle list
                 s0List=s0ParticleDataList;
 
                 for (cnt=0,ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) if (PIC::ParticleBuffer::GetI(ptr)==(unsigned)s0) {
-                  PIC::ParticleBuffer::GetV(s0ParticleDataList[cnt].vel,ptr);
-                  s0ParticleDataList[cnt].ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+                  ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+
+                  PIC::ParticleBuffer::GetV(s0ParticleDataList[cnt].vel,ParticleData);
+                  s0ParticleDataList[cnt].ParticleData=ParticleData;
                   s0ParticleDataList[cnt].ValueChangedFlag=false;
+
+                  #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+                  double wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+                  if (cnt==0) minParticleWeightCorrection_s0=wc;
+                  else if (wc<minParticleWeightCorrection_s0) minParticleWeightCorrection_s0=wc;
+
+                  sumWeightCorrection_s0+=wc;
+                  #else
+                  sumWeightCorrection_s0+=1.0;
+                  #endif
 
                   cnt++;
                 }
@@ -187,16 +194,30 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                   am=m0+m1;
                   LocalParticleWeight_s1=block->GetLocalParticleWeight(s1);
                   LocalTimeStep_s1=PIC::ParticleWeightTimeStep::LocalTimeStep(s1,node);
+                  sumWeightCorrection_s1=0.0;
 
                   //populate the list
-                  if (s0==s1) s1List=s0List;
+                  if (s0==s1) s1List=s0List,minParticleWeightCorrection_s1=minParticleWeightCorrection_s0,sumWeightCorrection_s1=sumWeightCorrection_s0;
                   else {
                     s1List=s1ParticleDataList;
 
                     for (cnt=0,ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) if (PIC::ParticleBuffer::GetI(ptr)==(unsigned)s1) {
-                      PIC::ParticleBuffer::GetV(s1ParticleDataList[cnt].vel,ptr);
-                      s1ParticleDataList[cnt].ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+                      ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+
+                      PIC::ParticleBuffer::GetV(s1ParticleDataList[cnt].vel,ParticleData);
+                      s1ParticleDataList[cnt].ParticleData=ParticleData;
                       s1ParticleDataList[cnt].ValueChangedFlag=false;
+
+                      #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+                      double wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+                      if (cnt==0) minParticleWeightCorrection_s1=wc;
+                      else if (wc<minParticleWeightCorrection_s1) minParticleWeightCorrection_s1=wc;
+
+                      sumWeightCorrection_s1+=wc;
+                      #else
+                      sumWeightCorrection_s1+=1.0;
+                      #endif
 
                       cnt++;
                     }
@@ -213,11 +234,13 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     memcpy(v1,s1List[(int)(rnd()*nParticleNumber[s1])].vel,3*sizeof(double));
                     cr=sqrt(pow(v1[0]-v0[0],2)+pow(v1[1]-v0[1],2)+pow(v1[2]-v0[2],2));
 
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+                    #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
                     SigmaCr=cr*PIC::MolecularData::MolecularModels::HS::GetTotalCrossSection(s0,s1);
-#else
+                    #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+                    SigmaCr=cr*PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(v0,s0,v1,s1,block,cell);
+                    #else
                     exit(__LINE__,__FILE__,"Error: not implemented");
-#endif
+                    #endif
 
                     if (SigmaCr>SigmaCrMax) SigmaCrMax=SigmaCr;
                   }
@@ -228,10 +251,11 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                   double maxLocalTimeStep,minLocalParticleWeight;
 
                   maxLocalTimeStep=max(LocalTimeStep_s0,LocalTimeStep_s1);
-                  minLocalParticleWeight=min(LocalParticleWeight_s0,LocalParticleWeight_s1);
+                  minLocalParticleWeight=min(LocalParticleWeight_s0*minParticleWeightCorrection_s0,LocalParticleWeight_s1*minParticleWeightCorrection_s1);
 
-                  if (s0==s1) ancoll=0.5*nParticleNumber[s0]*(nParticleNumber[s0]-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
-                  else ancoll=(nParticleNumber[s0]*LocalParticleWeight_s0)*(nParticleNumber[s1]*LocalParticleWeight_s1)*SigmaCrMax*maxLocalTimeStep/minLocalParticleWeight/cellMeasure;
+                  if (s0==s1) ancoll=0.5*sumWeightCorrection_s0*(sumWeightCorrection_s0-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
+                  else ancoll=(sumWeightCorrection_s0*LocalParticleWeight_s0)*(sumWeightCorrection_s1*LocalParticleWeight_s1)*
+                      SigmaCrMax*maxLocalTimeStep/minLocalParticleWeight/cellMeasure;
 
                   ncoll=(long int)ancoll;
                   ancoll-=ncoll;
@@ -267,11 +291,13 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
                     cr=sqrt(cr);
 
-#if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
+                    #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
                     SigmaCr=cr*PIC::MolecularData::MolecularModels::HS::GetTotalCrossSection(s0,s1);
-#else
+                    #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+                    SigmaCr=cr*PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(v0,s0,v1,s1,block,cell);
+                    #else
                     exit(__LINE__,__FILE__,"Error: not implemented");
-#endif
+                    #endif
 
                     if (rnd()*SigmaCrMax>=SigmaCr) continue;
 
@@ -283,8 +309,8 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     pUpdate_s1=minLocalParticleWeight/LocalParticleWeight_s1 * LocalTimeStep_s1/maxLocalTimeStep;
 
 #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-                    pUpdate_s0*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData);
-                    pUpdate_s1*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData);
+                    pUpdate_s0/=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData);
+                    pUpdate_s1/=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData);
 #endif
 
                     UpdateFlag[0]=(rnd()<pUpdate_s0) ? true :false;
@@ -317,17 +343,21 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                       memcpy(s0List[s0ptr].vel,v0,3*sizeof(double));
 
 #if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
-                      int CollFreqOffset=CollsionFrequentcySamplingOffset+sizeof(double)*((2*PIC::nTotalSpecies-(s0-1))*s0)/2+(s1-s0);
+                      int CollFreqOffset=CollsionFrequentcySampling::SamplingBufferOffset+sizeof(double)*CollsionFrequentcySampling::Offset(s0,s1);
 
-                      *((double*)(SamplingData+CollFreqOffset))+=LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure;
-
-                      if (s0==s1) *((double*)(SamplingData+CollFreqOffset))+=LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure; //there are two collisions per a pair
+                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure;
 #endif
                     }
 
                     if (UpdateFlag[1]==true) {
                       s1List[s1ptr].ValueChangedFlag=true;
                       memcpy(s1List[s1ptr].vel,v1,3*sizeof(double));
+
+#if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
+                      int CollFreqOffset=CollsionFrequentcySampling::SamplingBufferOffset+sizeof(double)*CollsionFrequentcySampling::Offset(s1,s0);
+
+                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData)*LocalParticleWeight_s1/LocalTimeStep_s1/cellMeasure;
+#endif
                     }
                   }
 

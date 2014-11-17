@@ -1497,8 +1497,14 @@ namespace PIC {
 
     //collisions between model particles
     namespace ParticleCollisionModel {
+
       //sample collision statistics
-      extern int CollsionFrequentcySamplingOffset;
+      namespace CollsionFrequentcySampling {
+        extern int SamplingBufferOffset;
+
+        //offset to the sampling data for collision frequentcy of specie "CollidingSpecies" when it collides with specie "CollisionPartnerSpecies"
+        inline int Offset(int CollidingSpecies, int CollisionPartnerSpecies) {return CollidingSpecies*PIC::nTotalSpecies+CollisionPartnerSpecies;}
+      }
 
       //the namespace containes definitions of the user defined functions
       namespace UserDefined {
