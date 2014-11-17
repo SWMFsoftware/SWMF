@@ -147,7 +147,7 @@ module ModVarIndexes
        'rho ux uy uz bx by bz p '// &
        'HpRho HpUx HpUy HpUz HpP '// &
        'He2pRho He2pUx He2pUy He2pUz He2pP '// &
-       'pe ehot I(2)'
+       'pe ehot I(02)'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &

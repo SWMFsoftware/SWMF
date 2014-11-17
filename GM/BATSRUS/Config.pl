@@ -265,6 +265,8 @@ sub set_nwave{
 
     print "Writing new nWave = $nWaveNew into $EquationMod...\n";
 
+    my $nWaveTwo = sprintf("%02d", $nWaveNew);
+
     @ARGV = ($EquationMod);
 
     my $prev;
@@ -277,7 +279,7 @@ sub set_nwave{
         $_ = $prev . $_;
 	$prev = "";
         s/\b(nWave\s*=[^0-9]*)(\d+)/$1$nWaveNew/i;
-        s/I\([^\)]+\)/I($nWaveNew)/m if /NamePrimitiveVar\s*\=/;
+        s/I\([^\)]+\)/I($nWaveTwo)/m if /NamePrimitiveVar\s*\=/;
         print;
     }
 }

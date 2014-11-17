@@ -92,7 +92,7 @@ module ModVarIndexes
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz bx by bz I(1) EInt p'
+       'Rho Ux Uy Uz bx by bz I(01) EInt p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
