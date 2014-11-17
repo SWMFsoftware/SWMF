@@ -111,7 +111,7 @@ subroutine write_plot_common(iFile)
        ' form = ',plot_form(iFile)
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
-       UseArraySyntaxIn=.false.)
+       UseArraySyntaxIn=.true.)
   call split_string(plot_pars1, neqparmax, eqparnames, neqpar, &
        UseArraySyntaxIn=.true.)
   call set_eqpar(iFile-plot_,neqpar,eqparnames,eqpar)
