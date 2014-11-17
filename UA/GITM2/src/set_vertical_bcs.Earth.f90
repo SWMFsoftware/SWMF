@@ -40,6 +40,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   real    :: HP, v(2)
   integer :: ierror
   real    :: temptemp
+  real    :: fac
 
   integer, dimension(25) :: sw
 
@@ -188,14 +189,18 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   do iSpecies=1,nIons-1 !Advect
      dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
 
-!     if (dn > -0.01*LogINS(nAlts,iSpecies)) dn = -0.01*LogINS(nAlts,iSpecies)
+!     write(*,*) dn, dn * (2.0-cos(lst/12*Pi)), -0.01*LogINS(nAlts,iSpecies), lst
+     fac = ((1.5-cos(lst/12*Pi))/1.75)**2.0
+     dn = dn * fac
+     if (dn > -0.01*LogINS(nAlts,iSpecies)) dn = -0.01*LogINS(nAlts,iSpecies)
+
 !     dn = dn*(0.2*sin(Pi/2.-SZAVertical)+1.)
 !     dn = 0.0
 
-     if (SZAVertical > Pi/2 .and. abs(lat) > 15.0 .and. abs(lat) < 70.0) then
-        dn = dn*abs(sin(lst*pi/12))*0.5
-        !write(*,*) lst,iSpecies, SZAVertical*180.0/3.14159, dn
-     endif
+!     if (SZAVertical > Pi/2 .and. abs(lat) > 15.0 .and. abs(lat) < 70.0) then
+!        dn = dn*abs(sin(lst*pi/12))*0.5
+!        !write(*,*) lst,iSpecies, SZAVertical*180.0/3.14159, dn
+!     endif
 
      LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
      LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
