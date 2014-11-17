@@ -581,7 +581,8 @@ contains
                   FineCell_III(1:i6_, 1:j6_, 1:k6_)=&
                        State_VGB(iVar,i-2*Di:i+3*Di,j-2*Dj:j+3*Dj,&
                        k-2*Dk:k+3*Dk,iBlockSend)
-                  Buffer_I(iBuffer+iVar) = restriction_high_order_amr(FineCell_III)
+                  Buffer_I(iBuffer+iVar) = restriction_high_order_amr&
+                       (FineCell_III, IsPositiveIn=IsPositive_V(iVar))
                end do
                iBuffer = iBuffer + nVar
             end do; end do; end do
