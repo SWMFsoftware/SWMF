@@ -1,10 +1,67 @@
 
 #main
-
-NS=1
 SpeciesList=C
 
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=off ! on,off 
+
+
+makefile  SOURCES=src
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+makefile  SPICE=/Users/fougere/SPICE/cspice
+
+makefile ExternalModules=models/exosphere
+
+ProjectSourceDirectory=srcMars 
+
+WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
+SourceDirectory=src
+
+TrajectoryIntersectionWithBlockFaces=on !on, off 
+
+ErrorLog=PT/amps_error.log
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
+ParticleWeightCorrectionMode=on !on,off
+
+CouplerMode=ices !!off, ices, swmf
+
 #endmain
+
+#UserDefinitions
+  PIC=on ! on, off
+  Mesh=on ! on, off
+#endUserDefinitions
+
+#General
+  ReferenceInjectionParticleNumber=200
+  MaxMeshRefinmentLevel=12
+  EnforceRequestedMeshResolution=off !on,off
+  InitialSampleLength=10000
+  TestRunTotalIteration=50
+
+  NastranSurfaceUserData=off
+  
+! ReferenceInjectionParticleNumber=200
+! MaxMeshRefinmentLevel=8! 2 !4
+! EnforceRequestedMeshResolution=off !on,off
+
+  BlockCells=5,5,5
+  GhostCells=2,2,2
+! CutCellVolumeCalculationMaxRefinmentLevel=1
+
+  NastranSurfaceUserData=off !!!on, off
+  ControlParticleInsideNastranSurface=off !!!on,of
+  
+#endGeneral
 
 #species
 #component=C  
@@ -13,5 +70,10 @@ SpeciesList=C
 
 #endspecies
 
+#block ../mars.pl !process settings of the mars module
+
+Case=MTGCM_equinox_SL
+
+#endblock
 
 #end
