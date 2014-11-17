@@ -1670,21 +1670,21 @@ contains
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
-    use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, IonFirst_, &
-         iRho_I, iRhoIon_I, iRhoUxIon_I, iRhoUx_I, iRhoUz_I, iRhoUzIon_I, iP_I
+    use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
+         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
-    real, intent(out) :: QPerQtotal_I(IonFirst_:IonLast_), &
-         QparPerQtotal_I(IonFirst_:IonLast_), QePerQtotal
+    real, intent(out) :: QPerQtotal_I(nIonFluid), &
+         QparPerQtotal_I(nIonFluid), QePerQtotal
 
-    integer :: iFluid
+    integer :: iIon
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
     real :: Ne, B_D(3), B, B2, InvGyroRadius, AlfvenRatio, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: Ewave, EwavePlus, EwaveMinus, EkinCascade
-    real :: DampingElectron, DampingPar_I(IonFirst_:IonLast_)
-    real :: DampingPerp_I(IonFirst_:IonLast_), DampingTotal
+    real :: DampingElectron, DampingPar_I(nIonFluid)
+    real :: DampingPerp_I(nIonFluid), DampingTotal
 
     character(len=*), parameter :: &
          NameSub = 'ModCoronalHeating::apportion_coronal_heating'
@@ -1700,11 +1700,11 @@ contains
        end if
 
        TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(iP_I(IonFirst_),i,j,k,iBlock), 1e-15)
+            /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
 
        if(UseMultiIon)then
           Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
-          TeByTp = TeByTp*State_VGB(iRho_I(IonFirst_),i,j,k,iBlock)/Ne
+          TeByTp = TeByTp*State_VGB(iRhoIon_I(1),i,j,k,iBlock)/Ne
        end if
 
        if(UseB0) then
@@ -1716,41 +1716,41 @@ contains
        B = sqrt(B2)
 
        BetaElectron = 2.0*State_VGB(Pe_,i,j,k,iBlock)/B2
-       BetaProton = 2.0*State_VGB(iP_I(IonFirst_),i,j,k,iBlock)/B2
+       BetaProton = 2.0*State_VGB(iPIon_I(1),i,j,k,iBlock)/B2
 
        ! Linear Landau damping and transit-time damping of kinetic Alfven
        ! waves contributes to electron and parallel proton heating
        DampingElectron = 0.01*sqrt(TeByTp/max(BetaProton, 1.0e-8)) &
             *(1.0 + 0.17*BetaProton**1.3)/(1.0 +(2800.0*BetaElectron)**(-1.25))
-       DampingPar_I(IonFirst_) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
+       DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
             *exp(-1.3/max(BetaProton, 1.0e-8))
 
-       if(UseMultiIon) DampingPar_I(IonFirst_+1:IonLast_) = 0.0
+       if(UseMultiIon) DampingPar_I(2:) = 0.0
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
        Ewave = EwavePlus + EwaveMinus
 
-       do iFluid = IonFirst_, IonLast_
+       do iIon = 1, nIonFluid
 
           if(UseAnisoPressure)then
              ! Does not yet work with multi-ion
              Pperp = 0.5*(3*State_VGB(p_,i,j,k,iBlock) &
                   - State_VGB(Ppar_,i,j,k,iBlock))
           else
-             Pperp = State_VGB(iP_I(iFluid),i,j,k,iBlock)
+             Pperp = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
           end if
 
           ! Perpendicular ion thermal speed
-          Vperp = sqrt(2.0*Pperp/State_VGB(iRho_I(iFluid),i,j,k,iBlock))
+          Vperp = sqrt(2.0*Pperp/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock))
 
           InvGyroRadius = &
-               B/(IonMassPerCharge*MassIon_I(iFluid)/ChargeIon_I(iFluid))/Vperp
+               B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
           LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
 
           EkinCascade = 1.0/sqrt(LperpInvGyroRad)
 
-          if(iFluid == IonFirst_)then
+          if(iIon == 1)then
              DeltaU = sqrt(Ewave/State_VGB(iRhoIon_I(1),i,j,k,iBlock) &
                   *EkinCascade)
           else
@@ -1762,8 +1762,8 @@ contains
 
              ! difference bulk speed between ions and protons
              Udiff_D = &
-                  State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),i,j,k,iBlock) &
-                  /State_VGB(iRho_I(iFluid),i,j,k,iBlock) &
+                  State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) &
+                  /State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
                   -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
                   /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
              Upar = sum(Udiff_D*B_D)/B
@@ -1778,8 +1778,8 @@ contains
           Epsilon = DeltaU/Vperp
 
           ! Nonlinear damping/stochastic heating to perpendicular ion heating
-          DampingPerp_I(iFluid) = StochasticAmplitude*InvGyroRadius &
-               *State_VGB(iRho_I(iFluid),i,j,k,iBlock)*DeltaU**3 &
+          DampingPerp_I(iIon) = StochasticAmplitude*InvGyroRadius &
+               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
                *exp(-StochasticExponent/max(Epsilon,1e-15)) &
                /max(Qtotal, 1e-30)
        end do
