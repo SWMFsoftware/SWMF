@@ -216,7 +216,7 @@ contains
 
     ! Create a variable name array
     allocate(NameVar_I(nDim + nVar + nParam))
-    call split_string(NameVar, NameVar_I, i)
+    call split_string(NameVar, NameVar_I, i, UseArraySyntaxIn=.true.)
     if(i /= nDim + nVar + nParam)then
        write(*,*) NameSub,': NameFile=', trim(NameFile)
        write(*,*) NameSub,': NameVar=', trim(NameVar)
