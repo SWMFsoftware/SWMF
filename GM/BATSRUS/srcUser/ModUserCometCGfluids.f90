@@ -102,9 +102,6 @@ module ModUser
   integer :: nStepSaveCalcRates_B(MaxBlock) = -100
   integer :: nStepPritSetFace = -100
 
-  !++++++++++++++++++++++++++++++++++++++++++++++
-  ! From Martin & Xianzhe 2014
-  !++++++++++++++++++++++++++++++++++++++++++++++
   integer, parameter, public :: nNeutral = 1
   integer, parameter :: Neu1_  =  1
 
@@ -118,6 +115,7 @@ module ModUser
 
   character (len=6), parameter, public :: NameNeutral_I(nNeutral) = &
        (/ 'Neu1  ' /)
+
 contains
   !============================================================================
   subroutine user_read_inputs
@@ -146,19 +144,29 @@ contains
        case("#COMETSTATE")
           call read_var('ProductionRateMinSi', ProductionRateMinSi)
           call read_var('ProductionRateMaxSi', ProductionRateMaxSi)
-          call read_var('SolarAngleMaxDim',     SolarAngleMaxDim)
-          call read_var('TempCometMinDim',      TempCometMinDim)
-          call read_var('TempCometMaxDim',      TempCometMaxDim)
-          call read_var('TempComet75',       TempComet75Dim)
+          call read_var('SolarAngleMaxDim',    SolarAngleMaxDim)
+          call read_var('TempCometMinDim',     TempCometMinDim)
+          call read_var('TempCometMaxDim',     TempCometMaxDim)
+          call read_var('TempComet75',         TempComet75Dim)
        case("#IONIZATIONPARAM")
-          call read_var('rHelio', rHelio)   !! Heliocentric distance [AU]
-          call read_var('vHI', vHI)         !! Ionization frequency for cometary heavy ions (1/lifetime of cometary heavy neutrals)
-          call read_var('Tmin', Tmin)       !! Minimum ion temperature (enforced in update states)
-          call read_var('Qprod', Qprod)     !! Total production rate
-          call read_var('uHaser', uHaser)   !! velocity for Haser model used in preset conditions
+          ! Heliocentric distance [AU]
+          call read_var('rHelio', rHelio)
+
+          ! Ionization frequency for cometary heavy ions 
+          ! (1/lifetime of cometary heavy neutrals)
+          call read_var('vHI', vHI)
+
+          ! Minimum ion temperature (enforced in update states)
+          call read_var('Tmin', Tmin)
+
+          ! Total production rate
+          call read_var('Qprod', Qprod)
+
+          ! velocity for Haser model used in preset conditions
+          call read_var('uHaser', uHaser)
        case("#COMETROTATION")
           call read_var('RotationCometHour', RotationCometHour)
-          call read_var('AngleUpdateDeg', AngleUpdateDeg)
+          call read_var('AngleUpdateDeg',    AngleUpdateDeg)
        case("#BODYBC")
           call read_var('TypeBodyBC', TypeBodyBC)
           select case(TypeBodyBC)
@@ -288,26 +296,34 @@ contains
     end if
 
     if(iProc==0)then
-       write(*,*) 'rSphericalBodySi, rSphericalBody =', &
+       write(*,*) 'rSphericalBodySi, rSphericalBody       =', &
             rSphericalBodySi, rSphericalBody
        write(*,*) 'ProductionRateMaxSi, ProductionRateMax =', &
             ProductionRateMaxSi, ProductionRateMax
        write(*,*) 'ProductionRateMinSi, ProductionRateMin =', &
             ProductionRateMinSi, ProductionRateMin
-       write(*,*) 'SolarAngleMaxDim, SolarAngleMax =', SolarAngleMaxDim, SolarAngleMax
-       write(*,*) 'TempCometMinDim, TempCometMin =', TempCometMinDim, TempCometMin
-       write(*,*) 'TempCometMaxDim, TempCometMax =', TempCometMaxDim, TempCometMax
-       write(*,*) 'TempComet75Dim,  TempComet75  =', TempComet75Dim,  TempComet75
-       write(*,*) 'TempToUnormal, TempToPressure =', TempToUnormal, TempToPressure
+       write(*,*) 'SolarAngleMaxDim, SolarAngleMax        =', &
+            SolarAngleMaxDim, SolarAngleMax
+       write(*,*) 'TempCometMinDim, TempCometMin =', &
+            TempCometMinDim, TempCometMin
+       write(*,*) 'TempCometMaxDim, TempCometMax =', &
+            TempCometMaxDim, TempCometMax
+       write(*,*) 'TempComet75Dim,  TempComet75  =', &
+            TempComet75Dim,  TempComet75
+       write(*,*) 'TempToUnormal, TempToPressure =', &
+            TempToUnormal, TempToPressure
        write(*,*) 'MassFluid_I =', MassFluid_I
-       write(*,*) 'TempToUn*sqrt(TempCometMax)  =', TempToUnormal*sqrt(TempCometMax)
-       write(*,*) 'SlopeProduction, bProduction =', SlopeProduction, bProduction
-       write(*,*) 'SlopeTemp, bTemp             =', SlopeTemp/Io2No_V(UnitTemperature_),&
+       write(*,*) 'TempToUn*sqrt(TempCometMax)   =', &
+            TempToUnormal*sqrt(TempCometMax)
+       write(*,*) 'SlopeProduction, bProduction  =', &
+            SlopeProduction, bProduction
+       write(*,*) 'SlopeTemp, bTemp              =', &
+            SlopeTemp/Io2No_V(UnitTemperature_),&
             bTemp/Io2No_V(UnitTemperature_)
-       write(*,*)'RotationComet, Omega  =', RotationCometHour, OmegaComet
+       write(*,*)'RotationComet, Omega       =', RotationCometHour, OmegaComet
        write(*,*)'AngleUpdateDeg, DtUpdateSi =', AngleUpdateDeg, DtUpdateSi
-       write(*,*)'LatSun, LonSun=', LatSun, LonSun
-       write(*,*)'NormalSun_D   =', NormalSun_D
+       write(*,*)'LatSun, LonSun             =', LatSun, LonSun
+       write(*,*)'NormalSun_D                =', NormalSun_D
     end if
   end subroutine user_init_session
   !===========================================================================
@@ -341,10 +357,11 @@ contains
              IsBoundaryCell_GI(i,j,k,ExtraBc_) = .true.
           else
              ! Connect cell center with a point inside.
-             ! If the line segment does not intersect the shape or it intersects
-             ! even times then the point is inside the shape.
-             IsBoundaryCell_GI(i,j,k,ExtraBc_) = .not. is_segment_intersected( &
-                  XyzInside_D, Xyz_DGB(:,i,j,k,iBlock), IsOddIn=.true.)
+             ! If the line segment does not intersect the shape 
+             ! or it intersects even times then the point is inside the shape.
+             IsBoundaryCell_GI(i,j,k,ExtraBc_) = .not. &
+                  is_segment_intersected(XyzInside_D, Xyz_DGB(:,i,j,k,iBlock),&
+                  IsOddIn=.true.)
           end if
        end do; end do; end do
 
@@ -446,7 +463,7 @@ contains
 
   end subroutine read_shape_file
 
-  !==============================================================================
+  !=========================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain, ONLY: n_step, time_simulation
@@ -494,7 +511,6 @@ contains
     if (iBoundary /= ExtraBc_) call stop_mpi(NameSub//' bad iBoundary value')
 
 !!! Body boundaries
-
     ! Default body boundary conditions
     if (UseSwBC) then
        ! Boundary condition with solar wind values
@@ -527,7 +543,7 @@ contains
 
           if ((n_step <= nStepPritSetFace+2) .and. &
                sum(abs(FaceCoords_D - FaceCoordsTest_D)) < 1e-8 ) then
-             write(*,*) '=============== n_step ', n_step, '===================='
+             write(*,*) '============= n_step ', n_step, '===================='
              write(*,*) 'FaceCoords_D  =', FaceCoords_D
              write(*,*) 'Normal_D      =', Normal_D
              write(*,*) 'P             =', VarsGhostFace_V(P_)
@@ -536,7 +552,10 @@ contains
              write(*,*) 'SwU_D         =', VarsGhostFace_V(SwRhoUx_:SwRhoUz_)
              write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
              write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
-             write(*,*) 'H2OpU_D       =', VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
+             write(*,*) 'H2OpU_D       =', &
+                  VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
+             write(*,*) 'H2OpUT_D      =', &
+                  VarsTrueFace_V(H2OpRhoUx_:H2OpRhoUz_)
              write(*,*) 'H2OpP         =', VarsGhostFace_V(H2OpP_)
              write(*,*) 'Neu1Rho       =', VarsGhostFace_V(Neu1Rho_)
              write(*,*) 'Neu1u_D       =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
@@ -576,14 +595,15 @@ contains
 
        ! Find the intersection point between the true cell and the body cell
        ! that is closest to the true cell
-       if (.not. is_segment_intersected(XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
+       if (.not. is_segment_intersected( &
+            XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
             XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
           write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
           write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
           write(*,*) NameSub,' error for face =', iFace, jFace, kFace
           write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
           call stop_mpi(NameSub// &
-               ': No intersection points are found between true and the body cells')
+               ': No intersection points between true and the body cells')
        end if
 
        ! Fix the normal direction if it is not pointing outward
@@ -598,14 +618,15 @@ contains
     ! Calculate the cos angle between the surface normal and the sun direction
     CosAngle = sum(Normal_D*NormalSun_D)
 
-    ! Set local outflow parameters as default that may be overwritten if illuminated
+    ! Set local outflow parameters as default that may be overwritten 
+    ! if illuminated
     TempCometLocal      = TempCometMin
     ProductionRateLocal = ProductionRateMin
 
     if (CosAngle > 0.0) then
        if (DoUseCGShape) then
-          ! See whether the intersection point is in the shade by going towards the Sun
-          ! and checking for intersection with the shape
+          ! See whether the intersection point is in the shade  by going 
+          ! towards the Sun and checking for intersection with the shape
           XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
           XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
           if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) &
@@ -655,6 +676,7 @@ contains
        write(*,*) 'SwP           =', VarsGhostFace_V(SwP_)
        write(*,*) 'H2OpRho       =', VarsGhostFace_V(H2OpRho_)
        write(*,*) 'H2OpU_D       =', VarsGhostFace_V(H2OpRhoUx_:H2OpRhoUz_)
+       write(*,*) 'H2OpUT_D      =', VarsTrueFace_V(H2OpRhoUx_:H2OpRhoUz_)
        write(*,*) 'H2OpP         =', VarsGhostFace_V(H2OpP_)
        write(*,*) 'Neu1Rho       =', VarsGhostFace_V(Neu1Rho_)
        write(*,*) 'Neu1u_D       =', VarsGhostFace_V(Neu1Ux_:Neu1Uz_)
@@ -673,7 +695,7 @@ contains
     end if
 
   contains
-    !=====================================================================
+    !----------------------------------------------------------------------
     subroutine set_ion_face_boundary
 
       integer :: iUx, iUz
@@ -711,7 +733,8 @@ contains
                     2.0*uNormalIon_I(iIonFluid)*Normal_D
             end if
          else
-            ! set outward flux body value (Comet's surface not considered as plasma source)
+            ! set outward flux body value 
+            ! (Comet's surface not considered as plasma source)
             ! leave inward flux untouched
             if (uNormalIon_I(iIonFluid) > 0.0) then
                iUx = iRhoUxIon_I(iIonFluid)
@@ -738,11 +761,14 @@ contains
       end do
 
       VarsGhostFace_V(Rho_)   = sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUx_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I))/ &
+      VarsGhostFace_V(RhoUx_) = &
+           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I)) / &
            sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUy_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUyIon_I))/ &
+      VarsGhostFace_V(RhoUy_) = &
+           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUyIon_I)) / &
            sum(VarsGhostFace_V(iRhoIon_I))
-      VarsGhostFace_V(RhoUz_) = sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I))/ &
+      VarsGhostFace_V(RhoUz_) = &
+           sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUzIon_I)) / &
            sum(VarsGhostFace_V(iRhoIon_I))
 
       if(UseElectronPressure) then
@@ -753,10 +779,10 @@ contains
               *(1.+ElectronPressureRatio)
       end if
     end subroutine set_ion_face_boundary
-    !===========================================================
+    !----------------------------------------------------------------------
   end subroutine user_set_face_boundary
 
-  !============================================================================
+  !==========================================================================
   logical function is_segment_intersected(Xyz1_D, Xyz2_D, &
        IsOddIn, XyzIntersectOut_D, NormalOut_D)
 
@@ -796,11 +822,12 @@ contains
 
        ! Check if the segment is parallel to the plane
        if(abs(nDotP2P1) < 1e-12) then
-          if (abs(sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))) &
-               < 1e-12) then
+          if (abs(sum(Normal_DI(:,iTriangle)* &
+               (Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))) < 1e-12) then
              write(*,*) 'segment lies in the same plane: iTriangle: ', Xyz2_D
-             write(*,*) 'Test:', &
-                  sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))
+             write(*,*) 'Test:', sum( &
+                  Normal_DI(:,iTriangle)* &
+                  (Xyz1_D - XyzTriangle_DII(:,1,iTriangle)) )
              CYCLE
           else 
              CYCLE
@@ -847,13 +874,14 @@ contains
        ! Second barycentric coordinate
        Ratio2 = (uDotV*wDotU - u2*wDotV)*InvDenom
 
-       !       if (abs(Xyz2_D(1) -xTest) <= 1e-4 .and. &
-       !            abs(Xyz2_D(2) - yTest) <= 1e-4 .and. &
-       !            abs(Xyz2_D(3) - zTest) <= 1e-4) then
-       !          if (abs(Ratio2) < 1e-10 .or. abs(Ratio2 - 1.0) < 1e-10) then
-       !             write(*,*) 'iTriangle: ', iTriangle, 'Ratio1: ', Ratio1, 'Ratio2: ', Ratio2
-       !          end if
-       !       end if
+       !if (abs(Xyz2_D(1) -xTest) <= 1e-4 .and. &
+       !     abs(Xyz2_D(2) - yTest) <= 1e-4 .and. &
+       !     abs(Xyz2_D(3) - zTest) <= 1e-4) then
+       !   if (abs(Ratio2) < 1e-10 .or. abs(Ratio2 - 1.0) < 1e-10) then
+       !      write(*,*) 'iTriangle: ', iTriangle, 'Ratio1: ', Ratio1, &
+       !           'Ratio2: ', Ratio2
+       !   end if
+       !end if
 
        if(         Ratio2 <    -1e-12) CYCLE
        if(Ratio1 + Ratio2 > 1.0+1e-12) CYCLE
@@ -887,22 +915,25 @@ contains
        NormalOut_D = Normal_DI(:,iTriangle)
 
        if (nIntersect > 1) then          
-          !          write(*,*) 'nIntersect: ', nIntersect, 'Ratio_I: ', Ratio_I(1:nIntersect)
-          !          write(*,*) 'Xyz1_D: ', Xyz1_D
-          !          write(*,*) 'Xyz2_D: ', Xyz2_D
-          !          do iIntersect = 1, nIntersect
-          !             iTriangle = Triangle_I(iIntersect)
-          !             write(*,*) XyzTriangle_DII(:,1,iTriangle)
-          !             write(*,*) XyzTriangle_DII(:,2,iTriangle)
-          !             write(*,*) XyzTriangle_DII(:,3,iTriangle)
-          !          end do
+          !write(*,*) 'nIntersect: ', nIntersect
+          !write(*,*) 'Ratio_I: ', Ratio_I(1:nIntersect)
+          !write(*,*) 'Xyz1_D: ', Xyz1_D
+          !write(*,*) 'Xyz2_D: ', Xyz2_D
+          !do iIntersect = 1, nIntersect
+          !   iTriangle = Triangle_I(iIntersect)
+          !   write(*,*) XyzTriangle_DII(:,1,iTriangle)
+          !   write(*,*) XyzTriangle_DII(:,2,iTriangle)
+          !   write(*,*) XyzTriangle_DII(:,3,iTriangle)
+          !end do
           write(*,*)  'Ratio_I(iMinRatio)            = ', Ratio_I(iMinRatio) 
-          write(*,*)  'minval(Ratio_I(1:nIntersect)) = ', minval(Ratio_I(1:nIntersect))
+          write(*,*)  'minval(Ratio_I(1:nIntersect)) = ', &
+               minval(Ratio_I(1:nIntersect))
           write(*,*)  'Ratio_I(1:nIntersect)', Ratio_I(1:nIntersect)
        end if
     end if
     if(present(XyzIntersectOut_D)) then
-       XyzIntersectOut_D = Xyz1_D + minval(Ratio_I(1:nIntersect))*(Xyz2_D -  Xyz1_D)
+       XyzIntersectOut_D = Xyz1_D + &
+            minval(Ratio_I(1:nIntersect))*(Xyz2_D -  Xyz1_D)
     end if
 
     if(.not. IsOdd)then
@@ -917,11 +948,7 @@ contains
 
   end function is_segment_intersected
 
-
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  !++++ From Martin & Xianzhe ++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
+  !==========================================================================
   subroutine calc_electron_collision_rates(Te,nElec,i,j,k,iBlock,fen_I,fei_I)
 
     ! calculate all collision rates for electrons (fen, fei)
@@ -1313,7 +1340,7 @@ contains
     real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, kinAdd_I, kinSub_I
     real, dimension(1:nIonFluid,1:nNeutral,1:nNeutral,1:nIonFluid,1:nI,1:nJ,1:nK) :: kin_IIIIC
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTest, DoTestMe, TestCell
     real :: theta, fenTot, feiTot,logTe
     integer :: i,j,k,iNeutral,jNeutral,iIonFluid,jIonFluid,iTerm
 
@@ -1467,6 +1494,9 @@ contains
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
+
+       TestCell = DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest
+
        ! No need to evaluate source terms for cells inside the body
        ! if((Body1).and.(R_BLK(i,j,k,iBlock)<rBody)) CYCLE
 
@@ -1951,7 +1981,7 @@ contains
        Source_VC(By_    ,i,j,k) = SBy_C(i,j,k)                       + Source_VC(By_    ,i,j,k)
        Source_VC(Bz_    ,i,j,k) = SBz_C(i,j,k)                       + Source_VC(Bz_    ,i,j,k)
        if(UseElectronPressure) then
-          if (DoTestMe) then
+          if (TestCell) then
              write(*,*) NameSub, ': Source_VC(Pe_) before applying user term =', Source_VC(Pe_    ,i,j,k)
              write(*,*) NameSub, ': User source_VC(Pe_)                      =', SPe_C(i,j,k)
           end if
@@ -1972,9 +2002,9 @@ contains
        write(*,*) NameSub
        write(*,*)'Inputs: '
        i=iTest ; j=jTest ; k=kTest
-       theta=acos((-SW_Ux*Xyz_DGB(x_,i,j,k,iBlock)-SW_Uy*Xyz_DGB(y_,i,j,k,iBlock)&
-            -SW_Uz*Xyz_DGB(z_,i,j,k,iBlock))/R_BLK(i,j,k,iBlock)/&
-            (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
+!       theta=acos((-SW_Ux*Xyz_DGB(x_,i,j,k,iBlock)-SW_Uy*Xyz_DGB(y_,i,j,k,iBlock)&
+!            -SW_Uz*Xyz_DGB(z_,i,j,k,iBlock))/R_BLK(i,j,k,iBlock)/&
+!            (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5+1e-10)
 123    format (A13,ES25.16,A15,A3,F7.2,A3)
        write(*,123)'x         = ',Xyz_DGB(x_,i,j,k,iBlock)," [rPlanet]"
        write(*,123)'y         = ',Xyz_DGB(y_,i,j,k,iBlock)," [rPlanet]"
