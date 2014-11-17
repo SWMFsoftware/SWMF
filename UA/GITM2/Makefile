@@ -21,7 +21,7 @@ INSTALLFILES =  src/Makefile.DEPEND \
 
 install: src/ModSize.f90
 	touch ${INSTALLFILES}
-	cd src; make DYNAMIC
+#	cd src; make DYNAMIC
 #
 #       General Housekeeping
 #
