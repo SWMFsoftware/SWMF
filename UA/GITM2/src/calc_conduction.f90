@@ -54,7 +54,7 @@ subroutine calc_conduction(iBlock, Quantity, Diff, MulFac, dTdt_cond)
         dl(0) = dl(1)
         dl(nAlts+1) = dl(nAlts)
 
-        dl = 0.0
+        ! dl = 0.0
 
         ! Do a google search for a tri-diagnal solver and you will come up
         ! with this:
