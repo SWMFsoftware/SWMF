@@ -211,7 +211,7 @@ contains
     !
     ! 3. The number of fluids and species found are returned by 
     !    nDensity and nSpeed.
- 
+
     integer                   :: nDistinctSubstanceVar_I(nVarPerSubstance)
     character(len=15)                 :: NameVarIn
     integer                           :: iName, iVar, iSubstanceFound = 0
@@ -243,7 +243,7 @@ contains
              CYCLE NAMELOOP
           end if
        end do
-    
+
        ! check dictionary ( loop over density, momentum. pressure, energy)
        do iVar = 1, nVarPerSubstance 
           call find_substance_replace_name
@@ -254,7 +254,7 @@ contains
              CYCLE NAMELOOP
           end if
        end do
-       
+
        ! variable name may correspond to numbered wave/material
        ! These names are created  in BATSRUS:MH_set_parameters 
        ! and need not be changed
@@ -263,13 +263,13 @@ contains
           IsFoundVar = .true.
           CYCLE NAMELOOP
        end if
-       
-       if (lge(NameVarIn, 'm01') .and. lle(NameVarIn, 'm99')) then          
+
+       if (lge(NameVarIn, 'm1') .and. lle(NameVarIn, 'm9')) then
           nMaterial = nMaterial + 1
           IsFoundVar = .true.
           CYCLE NAMELOOP
        end if
- 
+
        if(.not. IsFoundVar) then 
           write(*,*) 'ERROR: Var name not in dictionary: ',NameVarIn
           write(*,*) 'Please use standard variable names in ModEquation '// &
@@ -280,7 +280,7 @@ contains
        end if
 
     end do NAMELOOP
-   
+
     nDensity = nDistinctSubstanceVar_I(Rho_)
     nSpeed   = nDistinctSubstanceVar_I(RhoUx_)
     nP       = nDistinctSubstanceVar_I(P_)
