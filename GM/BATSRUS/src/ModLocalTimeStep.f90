@@ -47,7 +47,7 @@ contains
   !======================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
-    use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl
+    use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, nStage
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
@@ -131,8 +131,8 @@ contains
     ! Number of stages 
     nTimeStage = nint(DtMaxSi/DtMinSi)
 
-    ! Loop over stages (2 stages per local time step)
-    do iStage = 1, 2*nTimeStage
+    ! Loop over stages (nStage stages per local time step)
+    do iStage = 1, nStage*nTimeStage
 
        ! Number of grid levels involved in this stage
        iLevelMin = min_tree_level(iStage)
@@ -162,7 +162,7 @@ contains
           ! Skip block that already exceeded the current time of the stage
           if(Time_B(iBlock) > TimeStage + DtSiTiny) CYCLE
 
-          ! stage for block in the 2-stage update
+          ! stage for block in the nStage stage update
           iStageBlock = iStage_B(iBlock)
 
           ! Update cell boundaries
@@ -195,7 +195,7 @@ contains
 
           ! Need something like update_check in the future.
 
-          if(DoConserveFlux .and. iStageBlock == 2)then
+          if(DoConserveFlux .and. iStageBlock == nStage)then
              ! Store fluxes for flux correction
              Flux_VFD(1:nFlux,1:nI+1,1:nJ,1:nK,x_) = &
                   Flux_VX(1:nFlux,1:nI+1,1:nJ,1:nK)
@@ -214,10 +214,10 @@ contains
           ! Update block time
           TimeOld_B(iBlock) = Time_B(iBlock)
           Time_B(iBlock)    = Time_B(iBlock) &
-               + Cfl*0.5*Dt_BLK(iBlock)*No2Si_V(UnitT_)
+               + Cfl*Dt_BLK(iBlock)*No2Si_V(UnitT_)/nStage
 
           ! Swap between iStage = 1 and 2 for this block
-          iStage_B(iBlock) = 3 - iStageBlock
+          if(nStage==2) iStage_B(iBlock) = 3 - iStageBlock
 
           ! Calculate time step limit for next time step
           ! if the block has reached the end of the time step
@@ -230,13 +230,13 @@ contains
        enddo ! iBlock
 
        ! Apply flux correction at the end of full steps
-       if(DoConserveFlux .and. modulo(iStage, 4) == 0) &
+       if(DoConserveFlux .and. modulo(iStage, 2*nStage) == 0) &
             call apply_flux_correction( &
             nVar, nFluid, State_VGB, Energy_GBI, &
-            Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/2)
+            Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStage/nStage)
 
        ! Update time for the stage
-       TimeStage = TimeStage + 0.5*DtMinSi
+       TimeStage = TimeStage + DtMinSi/nStage
 
     enddo ! iStage
 
