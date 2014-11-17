@@ -17,7 +17,7 @@ subroutine write_plot_common(iFile)
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
-  use ModUtilities, ONLY: lower_case, split_string
+  use ModUtilities, ONLY: lower_case, split_string, join_string
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
@@ -111,12 +111,13 @@ subroutine write_plot_common(iFile)
        ' form = ',plot_form(iFile)
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
-       UseArraySyntaxIn=.true.)
+       UseArraySyntaxIn=.false.)
   call split_string(plot_pars1, neqparmax, eqparnames, neqpar, &
        UseArraySyntaxIn=.true.)
   call set_eqpar(iFile-plot_,neqpar,eqparnames,eqpar)
 
-  allnames=trim(plot_vars1)//' '//trim(plot_pars(iFile))
+  call join_string(plotvarnames, allnames)
+  allnames=trim(allnames)//' '//trim(plot_pars(iFile))
 
   if(oktest_me) then
      write(*,*) plot_vars1
