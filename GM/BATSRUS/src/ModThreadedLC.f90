@@ -152,7 +152,7 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, GradTeDotB0Dir, TeGhost
+    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost
     !-------------
     IsNewBlock = .true.
 
@@ -237,21 +237,40 @@ contains
        U = sum(U_D*BDir_D)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
             TeSiIn=TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
-            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
+            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
+       DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
+       if(present(iImplBlock))&
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = DTeOverDs < 0.0
+       !Do not allow heat flux from the TR to the low corona
+       DTeOverDs = max(DTeOverDs,0.0)
        !\
        ! Calculate temperature in the ghost cell by adding the difference 
        ! between the required value DTeOverDs and the temperature gradient
        ! calculated with the floating BC 
        !/ 
        TeGhost = Te_G(0, j, k) +(&
-            DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_) - &
-            sum(FaceGrad_D*BDir_D))/&
+            DTeOverDs - sum(FaceGrad_D*BDir_D) )/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
             * BDir_D)
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
             TeGhost <= 0.60*Te_G(0, j, k) .or. TeGhost >= Te_G(0, j, k)
-       Te_G(0, j, k) = min(max(TeGhost, 0.60*Te_G(0, j, k)),1.0*Te_G(0, j, k))
+       !Te_G(0, j, k) = TeGhost
+       !\
+       ! Check if this is calculated correctly.
+       !/
+       !call get_face_gradient(1, 1, j, k, iBlock, &
+       !     IsNewBlock, Te_G, FaceGrad_D, &
+       !     UseFirstOrderBcIn=.true.)
+       !if( abs(sum(BDir_D*FaceGrad_D) - DTeOverDs) > &
+       ! 0.01*max(abs(DTeOverDs),abs(sum(BDir_D*FaceGrad_D))))then
+       !   write(*,*)'j,k, iBlock=', j,k, iBlock, ' DTe/Ds=', DTeOverDs
+       !   write(*,*)'BDir_D = ',BDir_D,' FaceGrad_D=', FaceGrad_D,&
+       !        ' their product=', sum(FaceGrad_D*BDir_D)
+       !   call CON_stop('Incorrect algorithm in ThreadedLc')
+       !end if
+       Te_G(0, j, k)=min(max(TeGhost, 0.60*Te_G(1, j, k)),1.0*Te_G(1, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))CYCLE
@@ -266,6 +285,11 @@ contains
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
                DTeOverDsSi)/(0.01*TeSi)
+          !\
+          !To achieve the diagonal-dominance property
+          !/
+          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =max( &
+               BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k), 0.0)
           CYCLE
        end if
       
