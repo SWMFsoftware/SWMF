@@ -1320,12 +1320,12 @@ contains
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, ExtraEintMin
+         UnitP_, ExtraEintMin, pMin_I, PeMin
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
-    use ModMultiFluid, ONLY: UseMultiIon
+    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1333,13 +1333,18 @@ contains
     real, intent(in) :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k, iP
-    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi
+    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
     real :: Gamma
     real :: DtLocal
     !--------------------------------------------------------------------------
 
-    iP = p_
-    if(UseElectronPressure) iP = Pe_
+    if(UseElectronPressure)then
+       iP = Pe_
+       pMin = PeMin
+    else
+       iP = p_
+       pMin = pMin_I(IonFirst_)
+    end if
 
     DtLocal = Dt
 
@@ -1353,14 +1358,14 @@ contains
           if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
              call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
 
-             State_VGB(iP,i,j,k,iBlock) = max(1e-30, (Gamma - 1) &
+             State_VGB(iP,i,j,k,iBlock) = max(pMin, (Gamma - 1) &
                   *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
                   + State_VGB(Ehot_,i,j,k,iBlock) + DeltaEinternal))
              State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                   *(1.0/(Gamma - 1) - inv_gm1)
           else
              State_VGB(iP,i,j,k,iBlock) = &
-                  max(1e-30, State_VGB(iP,i,j,k,iBlock) + gm1*DeltaEinternal)
+                  max(pMin, State_VGB(iP,i,j,k,iBlock) + gm1*DeltaEinternal)
           end if
        else
 
