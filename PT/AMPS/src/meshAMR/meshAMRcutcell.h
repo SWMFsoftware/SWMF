@@ -24,6 +24,7 @@
 #include <sys/resource.h>
 
 #include "meshAMRdef.h"
+#include "specfunc.h"
 
 
 #ifndef _CUT_CELL_MESHAMR_
