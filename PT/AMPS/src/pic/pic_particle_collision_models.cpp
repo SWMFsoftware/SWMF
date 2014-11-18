@@ -294,7 +294,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                     #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
                     SigmaCr=cr*PIC::MolecularData::MolecularModels::HS::GetTotalCrossSection(s0,s1);
                     #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
-                    SigmaCr=cr*PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(v0,s0,v1,s1,block,cell);
+                    SigmaCr=cr*PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(v0,v1,s0,s1,block,cell);
                     #else
                     exit(__LINE__,__FILE__,"Error: not implemented");
                     #endif
