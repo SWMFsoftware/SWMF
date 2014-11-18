@@ -1,11 +1,6 @@
 #main
 
 SpeciesList=H2O
-ErrorLog=error.log
-Prefix=AMPS
-DiagnosticStream=amps.log !!!screen !!screen, filename 'something like amps.log' 
-OutputDirectory=out
-
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=on ! on,off 
@@ -27,13 +22,10 @@ SourceDirectory=src
 
 TrajectoryIntersectionWithBlockFaces=on !on, off 
 
-!ErrorLog=amps_error.log
-Prefix=AMPS
-!DiagnosticStream=output/PT/amps.log !!!screen !!screen, filename 'something like amps.log'
-!OutputDirectory=output/PT
 
 !PT/plots
 ErrorLog=PT/amps_error.log
+Prefix=AMPS
 DiagnosticStream=PT
 OutputDirectory=PT/plots
 
@@ -80,13 +72,16 @@ CouplerMode=ices !!off, ices, swmf
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
+
+  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
   
 #endGeneral
 
 
 
 #ParticleCollisions
-  model = HS !!off !HS ! HS, off
+!  model = HS !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
@@ -116,14 +111,14 @@ CouplerMode=ices !!off, ices, swmf
   subSolarPointAzimuth=0.0 !! in rad 18.7961
   subSolarPointZenith=1.5708 !! in rad 46.41975 degrees from zaxis
 
-  RadiativeCoolingMode=off !off, Crovisier	
+  RadiativeCoolingMode=Crovisier !off, Crovisier	
 
   RadialVelocityMode=off !on,off
 
   !!Gas parameters
-  ndist=2 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4
+  ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
   
-  BjornProductionRateUserDefined=on !on,off
+  BjornProductionRateUserDefined=off !on,off
   BjornProductionRate(H2O)=8.0e25 !!2.0e25	    
   UniformProductionRate(H2O)=0.0 !!2.0e25
   JetProductionRate(H2O)=0.0 !1.0e25	    
