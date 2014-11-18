@@ -552,6 +552,28 @@ long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   return nInjectedParticles;
 }
 
+double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+
+  bool ExternalFaces[6];
+  double ExternalNormal[3],BlockSurfaceArea;
+  int nface;
+
+  if (spec!=_O_SPEC_) return 0; //inject only spec=0
+
+  double ModelParticlesInjectionRate=0.0;
+  static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
+
+  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
+    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
+	startNode->GetExternalNormal(ExternalNormal,nface);
+	BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
+	ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_SPEC_);
+      }
+  }
+
+  return ModelParticlesInjectionRate;
+}
+
 
 void amps_init() {
   PIC::InitMPI();
@@ -736,7 +758,7 @@ void amps_init() {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //set up the particle weight
-//  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
+  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
 
 
