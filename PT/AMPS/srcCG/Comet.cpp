@@ -925,7 +925,7 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
 
 
 double Comet::GetTotalProductionRateJetNASTRAN(int spec){
-  double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
+  /*  double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
   double positionSun[3],x[3],norm[3];
   long int totalSurfaceElementsNumber,i;
   double percentageActive=1.0;
@@ -1014,8 +1014,8 @@ double Comet::GetTotalProductionRateJetNASTRAN(int spec){
   if (probabilityFunctionDefinedJetNASTRAN==false && PIC::ThisThread==0)  printf("totalProductionRate=%e flux(0)=%e nightsideFlux=%e \n",totalProductionRate,fluxBjorn[0],nightSideFlux);
 
   return totalProductionRate;
-
-  //  return Comet::Jet_SourceRate[spec];
+  */
+  return Comet::Jet_SourceRate[spec];
 }
 
 bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
