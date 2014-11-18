@@ -95,7 +95,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*18.0);
+  return max(1.0,t->CharacteristicSize()*4.5);
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -107,9 +107,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
       return dt*3.0;
-    }else CharacteristicSpeed=1.0e3*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #else
-    CharacteristicSpeed=1.0e3*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -338,7 +338,7 @@ int main(int argc,char **argv) {
   Comet::GetNucleusNastranInfo(CG);
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
-  for (int i=0;i<3;i++) xmin[i]=-2.0e5,xmax[i]=2.0e5;
+  for (int i=0;i<3;i++) xmin[i]=-0.5e4,xmax[i]=0.5e4;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -377,7 +377,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=30000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000;
   PIC::RequiredSampleLength=10;
 
 
@@ -424,7 +424,6 @@ int main(int argc,char **argv) {
 
   //set the User Definted injection function
   PIC::BC::UserDefinedParticleInjectionFunction=Comet::InjectionBoundaryModel_Limited;
-
 
   //output the volume mesh
   char fname[_MAX_STRING_LENGTH_PIC_];

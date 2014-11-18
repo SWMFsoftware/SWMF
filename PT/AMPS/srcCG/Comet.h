@@ -19,7 +19,6 @@
 namespace Comet {
   using namespace Exosphere;
 
-
   double GetTotalProduction(int spec,void *BoundaryElement);
   double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
 
@@ -179,3 +178,4 @@ namespace Comet {
     return;}
       
 #endif
+
