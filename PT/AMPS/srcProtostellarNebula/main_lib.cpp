@@ -730,14 +730,15 @@ void amps_init() {
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
   PIC::ParticleWeightTimeStep::initTimeStep();
 
-  //set up the particle weight
-//  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
-
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
+
+  //set up the particle weight
+//  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
+
 
 
 
