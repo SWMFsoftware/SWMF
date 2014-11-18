@@ -23,3 +23,15 @@
 #define _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_ 1
 
 
+//The types of the dissociative-recombination models
+//List of types of O2+ DR coefficients
+#define _MARS_O2PLUS_DR_HODGES_     0
+#define _MARS_O2PLUS_DR_MEHR_       1
+#define _MARS_O2PLUS_DR_PEVERALL_   2
+#define _MARS_COPLUS_DR_ROSEN_      3
+#define _MARS_COPLUS_DR_CLOUTIER_   4
+#define _MARS_COPLUS_DR_MITCHELL_   5
+
+#define _MARS_DR_TYPE_ _MARS_COPLUS_DR_ROSEN_
+
+
