@@ -530,9 +530,9 @@ contains
          NameTable = 'AW_TR',                                    &
          NameCommand = 'save',                                   &
          NameVar = 'Length AMinus Heating APlus',                &
-         nIndex_I = (/201,101/),                                 &
+         nIndex_I = (/501,101/),                                 &
          IndexMin_I =(/0.0, 0.0/),                               &
-         IndexMax_I =(/2.0, 1.0/),                               &
+         IndexMax_I =(/5.0, 1.0/),                               &
          NameFile = 'AW_TR.dat',                                 &
          TypeFile = TypeFile,                                    &
          StringDescription = &
