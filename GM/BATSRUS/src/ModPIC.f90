@@ -108,6 +108,7 @@ contains
     use ModPhysics,   ONLY: No2Si_V, UnitT_, UnitMass_, UnitCharge_
     use ModHallResist,ONLY: HallFactorMax
     use ModPhysics,   ONLY: IonMassPerCharge
+    use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
 
     ! Assuming ideal/aniso MHD for now !!! Add Pe, PePar multi-ion???
     integer, parameter:: RhoPic_=1, UxPic_=2, UzPic_=4, BxPic_=5, BzPic_=7, &
@@ -173,6 +174,8 @@ contains
 
     IonMassPerChargeSi = IonMassPerCharge* &
          No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
+
+    if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
 
