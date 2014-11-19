@@ -34,4 +34,4 @@ char PIC::OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
 
 //define the test-run parameters
 bool PIC::ModelTestRun::mode=false;
-int PIC::ModelTestRun::nTotalIteraction=100;
+int PIC::ModelTestRun::nTotalIteraction=-1;
