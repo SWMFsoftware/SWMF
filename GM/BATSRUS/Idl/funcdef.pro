@@ -1,6 +1,6 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
@@ -57,6 +57,8 @@ if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
    help,xx,w
    retall
 endif
+
+if nelements(rcut) eq 0 then rcut = -1
 
 ; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
 siz=size(xx)
@@ -124,7 +126,23 @@ endcase
 
 if n_elements(result) gt 0 and rcut le 0 then return, sign*result
 
-; set the coordinates x, y, z if they occur in the variable names
+; set radial distance (assuming cartesian coordinates)
+case ndim of
+   1: r = abs(xx)
+   2: r = sqrt(xx(*,*,0)^2 + xx(*,*,1)^2)
+   3: r = sqrt(xx(*,*,*,0)^2 + xx(*,*,*,1)^2 + xx(*,*,*,2)^2)
+endcase
+
+if n_elements(result) gt 0 then begin
+   ; Return result after cutting out at rcut 
+   ; set value to the minimum of the remaining values
+   loc = where(r le rcut, count)
+   loc1= where(r gt rcut)
+   if count gt 0 then result(loc) = min(result(loc1))
+   return, sign*result
+endif
+
+; set the coordinate arrays x, y, z if they occur in the variable names
 x = 0 & y = 0 & z = 0
 for idim = 0, ndim-1 do case ndim of
     1: case variables(idim) of
@@ -143,14 +161,6 @@ for idim = 0, ndim-1 do case ndim of
        'z': z = xx(*,*,*,idim)
     end
 endcase
-r = sqrt(x^2+y^2+z^2)
-
-; Return result after cutting out the body
-if n_elements(result) gt 0 then begin
-    loc = where(r le rcut, count) 
-    if count gt 0 then result(loc)=min(result)
-    return, sign*result
-endif
 
 ; Extract primitive variables for calculating MHD type functions
 
@@ -209,43 +219,43 @@ for iw=0,nw-1 do case ndim of
     endcase
 endcase
                                 ; Some extra variables
-uu=ux^2+uy^2+uz^2
-bb=bx^2+by^2+bz^2
-u =sqrt(uu)
-b =sqrt(bb)
+uu = ux^2+uy^2+uz^2
+bb = bx^2+by^2+bz^2
+u  = sqrt(uu)
+b  = sqrt(bb)
 
                                 ; Change energy into pressure
 if n_elements(p) le 1 and n_elements(e) gt 1 then $
-  p=(gamma-1)*(e-0.5*(rho*uu+bb))
+   p=(gamma-1)*(e-0.5*(rho*uu+bb))
 
                                 ; Calculate gamma*p+bb if needed
 if strmid(f,1,4) eq 'fast' or strmid(f,1,4) eq 'slow' then $
-  cc=gamma*p+bb
+   cc=gamma*p+bb
 
 
 ;==== Put your function definition(s) below using the variables and eq. params
 ;     extracted from x, w and eqpar, and select cases by the function name "f"
 
 case f of
-    'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
+   'Btheta'   : result=atan(by,sqrt(bx^2+bz^2))
                                 ; momenta
-    'mx'       : result=rho*ux
-    'my'       : result=rho*uy
-    'mz'       : result=rho*uz
+   'mx'       : result=rho*ux
+   'my'       : result=rho*uy
+   'mz'       : result=rho*uz
                                 ; Boris momenta
-    'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
-    'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
-    'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
+   'mBx'      : result=rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2
+   'mBy'      : result=rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2
+   'mBz'      : result=rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2
                                 ; Electric field
-    'Ex'       : result=(by*uz-uy*bz)
-    'Ey'       : result=(bz*ux-uz*bx)
-    'Ez'       : result=(bx*uy-ux*by)
+   'Ex'       : result=(by*uz-uy*bz)
+   'Ey'       : result=(bz*ux-uz*bx)
+   'Ez'       : result=(bx*uy-ux*by)
                                 ; Total energy
-    'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
+   'e'        : result=p/(gamma-1)+0.5*(rho*uu + bb)
                                 ; Alfven speed and Mach number
-    'calfvenx' : result=bx/sqrt(rho)
-    'calfveny' : result=by/sqrt(rho)
-    'calfvenz' : result=bz/sqrt(rho)
+   'calfvenx' : result=bx/sqrt(rho)
+   'calfveny' : result=by/sqrt(rho)
+   'calfvenz' : result=bz/sqrt(rho)
     'calfven'  : result=b /sqrt(rho)
     'Malfvenx' : result=ux/bx*sqrt(rho)
     'Malfveny' : result=uy/by*sqrt(rho)
@@ -377,14 +387,17 @@ case f of
 endcase
 
 if n_elements(result) gt 0 then begin
+                                
+   if rcut gt 0 then begin
                                 ; exclude r < rcut
-    loc=where(r le rcut, count) 
-    if count gt 0 then result(loc)=min(result)
-
-    return,sign*result
+      loc = where(r le rcut, count) 
+      loc1= where(r gt rcut)
+      if count gt 0 then result(loc) = min(result(loc1))
+   endif
+   return,sign*result
 endif else begin
-    print,'Error in funcdef: function=',func,' was not calculated ?!'
-    retall
+   print,'Error in funcdef: function=',func,' was not calculated ?!'
+   retall
 endelse
 
 end
