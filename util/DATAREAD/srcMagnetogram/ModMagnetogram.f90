@@ -193,6 +193,9 @@ contains
        call read_var('PhiShift',            Phi_Shift)
        call read_var('UnitB',               UnitB)
 
+    case("#B0GRID")
+       call read_var('nR', nR)
+
     case("#SAVEPOTENTIALFIELD")
        call read_var('DoSavePotentialField', DoSavePotentialField)
 

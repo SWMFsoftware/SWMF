@@ -1922,9 +1922,9 @@ subroutine MH_set_parameters(TypeAction)
         if(UseNewMagnetogram)&
              call set_parameters_magnetogram(NameCommand)
 
-     case("#SAVEPOTENTIALFIELD")
+     case("#SAVEPOTENTIALFIELD", "#B0GRID")
         call set_parameters_magnetogram(NameCommand)
-
+        
      case('#LDEM')
         call read_var('UseLdem', UseLdem)
         if(UseLdem) then
