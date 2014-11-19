@@ -155,6 +155,9 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#USERDEFINITIONS") {
     UserDefinitions();
   } 
+  elsif ($InputLine eq "#MESH") {
+    ReadMeshBlock();
+  }
   elsif ($InputLine eq "#GENERAL") {
     ReadGeneralBlock();
   }  
@@ -1958,6 +1961,49 @@ sub ReadUnimolecularReactions {
   
 }
 
+#=============================== Read Mesh Block =============================
+sub ReadMeshBlock {
+  
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[=,]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+    
+    if ($InputLine eq "DEFINE") {
+      my ($macro,$value,$s0,$s1);
+  
+      ($InputLine,$InputComment)=split('!',$line,2);
+      ($s0,$macro,$value,$s1)=split(' ',$InputLine,4);
+  
+      $s0=$macro;
+      $s0=~s/[()=]/ /g;
+      ($s0,$s1)=split(' ',$s0,2);
+  
+      ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","meshAMR/meshAMRdef.h");
+    }
+     
+    elsif ($InputLine eq "#ENDMESH") {
+      last;
+    }
+    else {      
+      $line=~s/ //g;
+      chomp($line);
+   
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    
+  }  
+}
 
 #=============================== Read Species Block =============================
 sub ReadSpeciesBlock {
