@@ -42,10 +42,10 @@ void PIC::TimeStep() {
    PIC::Parallel::IterationNumberAfterRebalancing++;
 
   //sampling of the particle data
-#if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
+//#if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::Sampling::Sampling();
   SamplingTime=MPI_Wtime()-StartTime;
-#endif
+//#endif
 
   //injection boundary conditions
   InjectionBoundaryTime=MPI_Wtime();
@@ -355,6 +355,7 @@ void PIC::Sampling::Sampling() {
   int s,i,j,k,idim;
   long int LocalCellNumber,ptr,ptrNext;
 
+  #if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_ //<-- begining of the particle sample section
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::ParticleBuffer::byte *ParticleData,*ParticleDataNext;
@@ -791,6 +792,9 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
   //check if the number of sampled particles coinsides with the number of particles in the buffer
   if (nTotalSampledParticles!=ParticleBuffer::GetAllPartNum()) exit(__LINE__,__FILE__,"The number of the sampled particles is different from that in the particel buffer");
 
+  //END OF THE PARTICLE SAMPLING SECTION
+  #endif //<-- end of the particle sampling section
+
   //Increment the sample length
   CollectingSampleCounter++;
 
@@ -800,6 +804,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
     PIC::Mesh::mesh.ParallelBlockDataExchange();
 
     //check different sampling modes
+    #if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
     if (SamplingMode==_RESTART_SAMPLING_MODE_) {
       PIC::Mesh::switchSamplingBuffers();
       LastSampleLength=CollectingSampleCounter;
@@ -850,6 +855,11 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
       exit(__LINE__,__FILE__,"Error: the sampling mode '_ACCUMULATE_SAMPLING_MODE_' is not implemented");
     }
     else exit(__LINE__,__FILE__,"Error: the sampling mode is not defined");
+
+    #else // <-- #if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
+    LastSampleLength=CollectingSampleCounter;
+    CollectingSampleCounter=0;
+    #endif // <-- #if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
 
     //print output file
     char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
