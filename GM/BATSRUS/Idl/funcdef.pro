@@ -58,7 +58,7 @@ if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
    retall
 endif
 
-if nelements(rcut) eq 0 then rcut = -1
+if n_elements(rcut) eq 0 then rcut = -1
 
 ; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
 siz=size(xx)
