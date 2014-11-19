@@ -231,13 +231,23 @@ Example (function):
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{ParticleCollisions}
-The section described the particle collision model used in the simulation. The block has to begin with {\tt \#ParticleCollisions} and end with {\tt endParticleCollisions}. Additional commands:
+The section described the particle collision model used in the simulation. The block has to begin with {\tt \#ParticleCollisions} and ends with {\tt endParticleCollisions}. Additional commands:
 \begin{itemize}
 \item {\bf model} = [off,HS] \\ the name of the model that will be used
 \item {\bf SampleCollisionFrequency} = [on,off] \\ the switch turns sampling of the collision frequentcy
 \item{\bf CollisionCrossSection}=[const,function] \\ defines a collision cross section \\ {\tt CollisionCrossSection=function {\it function-name}} 
 
 {\tt CollisionCrossSection=const} \\ when constant collision cross section is used its value has to be defined for each pair of species with a constant or a function \\ {\tt const (H2O,H2O)= 2.0E-19} \\ if a collision cross section is not defined for a pair that its value is assumed being zero (no collisions between the species)
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mesh}
+The block contains settings of the AMPS mesh. The block begins with {\tt \#mesh} and ends with {\tt \#endmesh}.
+
+\begin{itemize}
+\item {\bf define} Macro {\it Macro-Value} \\ The value of the macro is saved in /src/meshAMR/meshAMRdef.h
+
 \end{itemize}
 
 
