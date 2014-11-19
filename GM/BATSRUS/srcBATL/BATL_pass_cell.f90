@@ -667,7 +667,7 @@ contains
                               .and. iSubStage == 1) CYCLE
                          if(iSendStage == 3 .and. DiLevel ==0 &
                               .and. iSubStage == 2) CYCLE
-
+                         
                          if(DiLevel == 0)then
                             ! Send data to same-level neighbor
                             if(iSendStage == 3) then
@@ -1469,7 +1469,8 @@ contains
                CoarseCell = State_VGB(iVar,2*i,j0+jDir1,min(2*k,nK),iBlock)
 
                call restriction_high_order_reschange(CoarseCell, &
-                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp)
+                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
+                    IsPositiveIn=IsPositive_V(iVar))
 
                State_VIIIB(iVar,i,jc0:jc0-2*jDir1:-jDir1,k,iBlock) = Coarse_I
 
@@ -1524,7 +1525,8 @@ contains
             do iVar = 1, nVar
                CoarseCell = State_VGB(iVar,2*i,2*j,k0+kDir1,iBlock)
                call restriction_high_order_reschange(CoarseCell, &
-                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp)
+                    Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
+                    IsPositiveIn=IsPositive_V(iVar))
 
                State_VIIIB(iVar,i,j,kc0:kc0-2*kDir1:-kDir1,iBlock) = Coarse_I
             enddo
@@ -1584,7 +1586,8 @@ contains
                      Cell_III(:,:,k) = &
                           State_VGB(iVar,2*i-3:2*i+2,2*j-3:2*j+2,k,iBlock)
                      State_VIIIB(iVar,i,j,k,iBlock) = &
-                          restriction_high_order_amr(Cell_III)
+                          restriction_high_order_amr(Cell_III,&
+                          IsPositiveIn=IsPositive_V(iVar))
                   enddo; enddo
 
                   ! Interpolate in diagonal direction.
@@ -2076,7 +2079,8 @@ contains
                                       2*k-3:2*k+2,&
                                       iBlock)
                                  State_VIIIB(iVar,i,j,k,iBlock) = &
-                                      restriction_high_order_amr(Cell_III)
+                                      restriction_high_order_amr(Cell_III,&
+                                      IsPositiveIn=IsPositive_V(iVar))
                               enddo ! iVar
                               IsAccurate_III(i,j,k) = .true.
 
@@ -2284,7 +2288,8 @@ contains
                            ! Some value calculated here is not accurate, 
                            ! which will be corrected in the next part. 
                            State_VIIIB(iVar,i,j,k,iBlock) = &
-                                restriction_high_order_amr(Cell_III)
+                                restriction_high_order_amr(Cell_III, &
+                                IsPositiveIn=IsPositive_V(iVar))
                         enddo
 
                         ! It is somewhat complicated to tell weather it is
@@ -2411,7 +2416,8 @@ contains
                               Cell_III = State_VGB(iVar,&
                                    2*i-3:2*i+2,2*j-3:2*j+2,2*k-3:2*k+2,iBlock)
                               State_VIIIB(iVar,i,j,k,iBlock) = &
-                                   restriction_high_order_amr(Cell_III)
+                                   restriction_high_order_amr(Cell_III,&
+                                   IsPositiveIn=IsPositive_V(iVar))
                            enddo
                         enddo
                      enddo
