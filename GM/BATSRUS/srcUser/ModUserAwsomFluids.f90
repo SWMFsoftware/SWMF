@@ -589,6 +589,7 @@ contains
     integer :: i, j, k
     integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon
     real :: ReducedTemp, CollisionFreq, Coef, Ne, Te
+    real :: Du2, Phi, Psi, RelativeDrift
     real, dimension(nIonFluid) :: Rho_I, Ux_I, Uy_I, Uz_I, P_I, &
          Nion_I, Tion_I
     real :: U_D(3), Du_D(3)
@@ -637,17 +638,24 @@ contains
 
              Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
                   Uz_I(jIon) - Uz_I(iIon) /)
-             U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
 
-             ! In the following we ommit the difference velocity correction
-             ! factor and turbulence corrections
+             Du2 = sum(Du_D**2)
+             RelativeDrift = &
+                  sqrt(Du2/(2.0*ReducedTemp/ReducedMass_II(iIon,jIon)))
+
+             ! Velocity dependent correction factors
+             ! The Phi correction factor is simplified (Nakada, 1970)
+             Psi = exp(-RelativeDrift**2)
+             Phi = 1.0/(1.0 + 0.74*RelativeDrift**3)
+
+             ! In the following we ommit the turbulence corrections
              Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                  + Rho_I(iIon)*CollisionFreq*Du_D
+                  + Rho_I(iIon)*CollisionFreq*Du_D*Phi
 
              Source_V(iP) = Source_V(iP) &
                   + gm1*Nion_I(iIon)*ReducedMass_II(iIon,jIon) &
                   *CollisionFreq*(3*(Tion_I(jIon) - Tion_I(iIon)) &
-                  /MassIon_I(jIon) + sum(Du_D**2))
+                  /MassIon_I(jIon)*Psi + Du2*Phi)
           end do
 
           if(UseElectronPressure)then
@@ -655,6 +663,8 @@ contains
              Source_V(Pe_) = Source_V(Pe_) + Coef*(Tion_I(iIon) - Te)
              Source_V(iP)  = Source_V(iP)  + Coef*(Te - Tion_I(iIon))
           end if
+
+          U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
 
           Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
                + sum(U_D*Source_V(iRhoUx:iRhoUz))
