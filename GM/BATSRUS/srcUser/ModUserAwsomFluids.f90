@@ -217,7 +217,8 @@ contains
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
-         MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_
+         MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_, &
+         UseMultiIon, IsMhd
 
     integer, intent(in) :: iBlock
 
@@ -310,10 +311,12 @@ contains
           State_VGB(iRho_I(iFluid),i,j,k,iBlock) = &
                NumDens_I(iFluid)*MassFluid_I(iFluid)
        end do
-       State_VGB(Rho_,i,j,k,iBlock) = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+       if(IsMhd .and. UseMultiIon) State_VGB(Rho_,i,j,k,iBlock) = &
+            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
        State_VGB(iP_I(IonFirst_:),i,j,k,iBlock) = NumDens_I*Tcorona
-       State_VGB(p_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       if(IsMhd .and. UseMultiIon) State_VGB(p_,i,j,k,iBlock) = &
+            sum(State_VGB(iPIon_I,i,j,k,iBlock))
        State_VGB(Pe_,i,j,k,iBlock) = &
             sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
 
@@ -475,7 +478,7 @@ contains
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,         ONLY: x_, y_, UseRotatingFrame
     use ModMultiFluid,   ONLY: iRho_I, iUx_I, iUy_I, iUz_I, iP_I, &
-         iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I
+         iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, UseMultiIon, IsMhd
     use ModPhysics,      ONLY: OmegaBody, inv_gm1
     use ModVarIndexes,   ONLY: nVar, Rho_, Bx_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_, Hyp_, Ehot_, MassFluid_I
@@ -503,7 +506,8 @@ contains
     do iFluid = IonFirst_, nFluid
        VarsGhostFace_V(iRho_I(iFluid)) = Nchromo_I(iFluid)*MassFluid_I(iFluid)
     end do
-    VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V(iRhoIon_I))
+    if(IsMhd .and. UseMultiIon) &
+         VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V(iRhoIon_I))
 
     ! zero velocity at inner boundary
     VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
@@ -532,7 +536,8 @@ contains
 
     ! Fix temperature
     VarsGhostFace_V(iP_I(IonFirst_:nFluid))=Tchromo*Nchromo_I
-    VarsGhostFace_V(p_) = sum(VarsGhostFace_V(iPIon_I))
+    if(IsMhd .and. UseMultiIon) &
+         VarsGhostFace_V(p_) = sum(VarsGhostFace_V(iPIon_I))
     VarsGhostFace_V(Pe_) = sum(ChargeIon_I*VarsGhostFace_V(iPIon_I))
 
     if(Hyp_ > 1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
@@ -625,7 +630,7 @@ contains
 
           iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
           iP = iPIon_I(iIon)
-          iEnergy = Energy_ + iIon
+          iEnergy = Energy_ + IonFirst_ - 2 + iIon
 
           do jIon = 1, nIonFluid
              if(iIon == jIon) CYCLE
