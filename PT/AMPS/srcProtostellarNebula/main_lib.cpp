@@ -90,7 +90,7 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
 
-  double CharacteristicSpeed_NA=5.0E3;
+  double CharacteristicSpeed_NA=1.0E6;
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
