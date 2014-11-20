@@ -116,7 +116,7 @@ subroutine write_plot_common(iFile)
        UseArraySyntaxIn=.true.)
   call set_eqpar(iFile-plot_,neqpar,eqparnames,eqpar)
 
-  call join_string(plotvarnames, allnames)
+  call join_string(plotvarnames(1:nplotvar), allnames)
   allnames=trim(allnames)//' '//trim(plot_pars(iFile))
 
   if(oktest_me) then
