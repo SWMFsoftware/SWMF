@@ -1710,14 +1710,24 @@ nStage=2 with the half-step predictor and CflExpl=0.8.
 T                       UseDtFixed
 10.                     DtFixedDim [sec] (read if UseDtFixed is true)
 
-Default is UseDtFixed=.false. Effective only if DoTimeAccurate is true.
-If UseDtFixed is true, the time step is fixed to DtFixedDim.
+Default is UseDtFixed=.false. 
+If UseDtFixed is true, the global time step is fixed to DtFixedDim 
+in time accurate mode, and the local time step is limited to DtFixedDim in 
+steady state mode.
 
-This is useful for debugging explicit schemes.
+In time accurate mode a fixed time step can be useful for debugging
+as well as for convergence tests.
 
 The real application is, however, for implicit and partially
-implicit/local schemes. The time step is set to DtFixedDim unless the
-update checking decides to reduce the time step for the sake of robustness.
+implicit schemes. The time step is set to DtFixedDim unless the
+time step control algorithm (see #TIMESTEPCONTROL) reduces the time 
+step for the sake of robustness.
+
+In steady state mode the limited time step can be useful for
+making transients smaller, or in some cases, solving in time accurate
+in part of the domain, and steady state mode in other parts.
+
+The default is UseDtFixed false.
 </command>
 
 <command name="PARTSTEADY">
@@ -6280,6 +6290,100 @@ Default values depend on problem_type.
 When a second body is used the gravity direction for the second body
 is independent of the GravityDir value.  Gravity due to the second body
 is radially inward toward the second body.
+</command>
+
+<command name="VISCOSITY">
+	 <parameter name="UseViscosity" type="logical" default="F"/>
+	 <parameter name="ViscoCoeffSi" type="real" min="0" 
+	 	    if="$UseViscosity"				  />
+#VISCOSITY
+T		UseViscosity
+0.01		ViscosityCoeffSi [m2/s] (read if UseViscosity is true)
+
+If UseViscosity is true, apply Navier-Stokes type 
+viscosity using the viscosity coefficient ViscoCoeffSi.
+
+Default is no viscosity.
+</command>
+
+<command name="VISCOSITYREGION">
+	<parameter name="NameViscoRegion" type="string" input="select">
+		<option name="all"  default="T"	/>
+		<option name="mask"		/>
+		<option name="sphere0"		/>
+		<option name="box0"		/>
+		<option name="sphere"		/>
+		<option name="box"		/>
+	</parameter>
+	<if expr="$NameViscoRegion !~ /all|mask|0/">
+		<parameter name="x0Visco" type="real" default="0"/>
+		<parameter name="y0Visco" type="real" default="0"/>
+		<parameter name="z0Visco" type="real" default="0"/>
+	</if>
+	<if expr="$NameViscoRegion =~ /sphere/">
+		<parameter name="rSphereVisco" type="real" min="0" default="1"/>
+		<parameter name="DrSphereVisco" type="real" min="0"
+								default="0"/>
+	</if>
+	<if expr="$NameViscoRegion =~ /mask/">
+		<parameter name="rZeroVisco" type="real" min="0" default="1"/>
+		<parameter name="rFullVisco" type="real" min="$rZeroVisco"
+								default="1.1"/>
+	</if>
+	<if expr="$NameViscoRegion =~ /box/">
+		<parameter name="xSizeBoxVisco" type="real" min="0" 
+								default="1"/>
+		<parameter name="DxSizeBoxVisco" type="real" min="0"
+								default="0"/>
+		<parameter name="ySizeBoxVisco" type="real" min="0" 
+								default="1"/>
+		<parameter name="DySizeBoxVisco" type="real" min="0"
+								default="0"/>
+		<parameter name="zSizeBoxVisco" type="real" min="0" 
+								default="1"/>
+		<parameter name="DzSizeBoxVisco" type="real" min="0"
+								default="0"/>
+	</if>
+
+#VISCOSITYREGION
+box			NameViscoRegion
+10.0			x0Visco        (only read for region sphere or box)
+0.0			y0Visco        (only read for region sphere or box)
+0.0			z0Visco        (only read for region sphere or box)
+8.0			xSizeBoxVisco  (only read for region box)
+1.0			DxSizeBoxVisco (only read for region box)
+6.0			ySizeBoxVisco  (only read for region box)
+1.0			DySizeBoxVisco (only read for region box)
+4.0			zSizeBoxVisco  (only read for region box)
+1.0			DzSizeBoxVisco (only read for region box)
+
+The NameViscoRegion parameter determines the region where viscosity
+is taken into account. Possible values are "all", "mask", "sphere", "box", 
+"sphere0" and "box0".
+
+For value "all" the viscosity is used everywhere in the computational domain. 
+
+For NameViscoRegion "mask" the rZeroVisco and rFullVisco parameters
+are read. The viscosity is set to zero for radial distance less than rZeroVisco
+and to the maximum value beyond rFullVisco. A linearly interpolated value
+is used between the two radii.
+
+For "box" and "sphere" the region is inside a box or sphere, 
+respectively, centered around the X0Visco, Y0Visco, Z0Visco point.
+If NameViscoRegion is "box0" or "sphere0", the region is centered around 
+the origin.
+
+For NameViscoRegion "sphere" or "sphere0" the rSphereVisco
+and DrSphereVisco parameters are read. The first determines the radius
+of the sphere, the second the thickness of the shell where the viscosity 
+coefficient increases from 0 to its full value linearly. This smoothing
+is useful to avoid artifacts due to a sudden change in the viscosity coefficient.
+
+For NameViscoRegion "box" or "box0" the 3 sizes and 3 smoothing widths 
+are read as shown in the example.
+
+The default value is "all", ie. the viscosity is applied everywhere
+if the it is switched on in the #VISCOSITY command.
 </command>
 
 <command name="RESISTIVITY">
