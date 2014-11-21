@@ -1997,7 +1997,7 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModPhysics,  ONLY: gm1
-    use ModWaves,    ONLY: UseWavePressure, UseWavePressureLtd, GammaWave
+    use ModWaves
     use BATL_size,   ONLY: nDim  
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
@@ -2098,6 +2098,21 @@ contains
 
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
+    if(UseAlfvenWaves)then
+       AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
+       if(SignB_>1 .and. DoThinCurrentSheet)then
+          if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
+       end if
+
+       do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
+          Flux_V(iVar) = (Un_I(iRhoIon_I(1)) + AlfvenSpeed)*State_V(iVar)
+       end do
+
+       do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
+          Flux_V(iVar) = (Un_I(iRhoIon_I(1)) - AlfvenSpeed)*State_V(iVar)
+       end do
+    end if
+
     if(ViscoCoeff > 0.0 ) then
        do iFluid = 1, nFluid
           call select_fluid
@@ -2189,7 +2204,6 @@ contains
 
       use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
-      use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -2295,7 +2309,6 @@ contains
 
       use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
-      use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e
@@ -2305,7 +2318,6 @@ contains
       integer :: iVar
 
       real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
-      real :: UnProton
       real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
       !-----------------------------------------------------------------------
 
@@ -2465,27 +2477,6 @@ contains
       if(UseElectronPressure .and. nIonFluid == 1 .and. iFluid == 1)then
          if(HallCoeff > 0) &
               Flux_V(Energy_) = Flux_V(Energy_) + (HallUn - Un)*State_V(Pe_)
-      end if
-
-      if(UseAlfvenWaves)then
-         AlfvenSpeed = FullBn/sqrt(State_V(iRhoIon_I(1)))
-         if(SignB_>1 .and. DoThinCurrentSheet)then
-            if(State_V(SignB_) < 0.0) AlfvenSpeed = -AlfvenSpeed
-         end if
-
-         if(UseMultiIon)then
-            UnProton = RhoUn_I(1)/State_V(iRhoIon_I(1))
-         else
-            UnProton = Un
-         end if
-
-         do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
-            Flux_V(iVar) = (UnProton + AlfvenSpeed)*State_V(iVar) !!PLUS
-         end do
-
-         do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
-            Flux_V(iVar) = (UnProton - AlfvenSpeed)*State_V(iVar) !!MINUS
-         end do
       end if
 
       if(UseBorisSimple)then
