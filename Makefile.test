@@ -339,7 +339,7 @@ test1_check:
 		>> test1_ie.diff)
 	ls -l test1_*.diff
 
-### test2: SC+IH test ###
+### test2: SC+IH+GM test ###
 
 test2:
 	@echo "test2_compile..." > test2_sc.diff
