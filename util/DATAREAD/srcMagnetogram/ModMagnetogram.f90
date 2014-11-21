@@ -39,7 +39,7 @@ module ModMagnetogram
 
   ! Units of the magnetic field in the file including corrections
   ! relative to the magnetic units in the SC (Gauss)
-  real, public :: UnitB=3.0
+  real, public :: UnitB=1.0
 
   ! Rotation angle around z-axis, in degrees,
   ! from the coordinate system of the component
