@@ -96,8 +96,8 @@ contains
 
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
-    use ModMain, ONLY: UseDtFixed, Dt, Dt_BLK, &
-         iTest, jTest, kTest, BlkTest
+    use ModMain, ONLY: UseDtFixed, DtFixed, Dt, Dt_BLK, Cfl, &
+         iTest, jTest, kTest, BlkTest, time_accurate
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -251,8 +251,14 @@ contains
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
     ! Reset time_BLK for fixed time step (but Dt_BLK is kept!)
-    if(UseDtFixed) time_BLK(:,:,:,iBlock) = Dt
-
+    if(UseDtFixed) then
+       if(time_accurate) then
+          time_BLK(:,:,:,iBlock) = Dt
+       else 
+          ! Limit local time step so that Cfl*time_BLK <= DtFixed
+          time_BLK(:,:,:,iBlock) = min(DtFixed/Cfl, time_BLK(:,:,:,iBlock))
+       endif
+    endif
     ! Set time step to zero inside body.
     if(.not.true_BLK(iBlock)) then
        where (.not.true_cell(1:nI,1:nJ,1:nK,iBlock))&

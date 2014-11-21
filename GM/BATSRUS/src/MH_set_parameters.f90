@@ -3136,22 +3136,12 @@ contains
     !--------------------------------------------------------------------------
     ! We need normalization for dt
     if(UseDtFixed)then
-       if(.not.time_accurate)then
-          if(iProc==0)then
-             write(*,'(a)')NameSub//&
-                  ' WARNING: UseDtFixed=T and not time accurate run',&
-                  ' cannot be used together !!!'
-             if (UseStrict) call stop_mpi('Correct PARAM.in')
-             write(*,*)NameSub//' setting UseDtFixed to false...'
-          end if
-          UseDtFixed=.false.
-       else ! fixed time step for time accurate
-          DtFixed = DtFixedDim * Io2No_V(UnitT_)
-          DtFixedOrig = DtFixed                   ! Store the initial setting
-          Dt = DtFixed
-          Cfl=1.0
-       end if
+       DtFixed = DtFixedDim * Io2No_V(UnitT_)
+       DtFixedOrig = DtFixed                   ! Store the initial setting
+       Dt = DtFixed
+       if(time_accurate) Cfl=1.0
     end if
+
 
     if(UseTimeStepControl)then
        ! Reduce initial time step / Cfl number. 
