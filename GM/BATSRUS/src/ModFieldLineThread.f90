@@ -643,7 +643,7 @@ contains
     integer::iStep,iIter, iFile
     integer, parameter:: nIterMax = 10
     real::Derivative, AOld, ADiffMax
-    real,parameter:: CTol=0.0010
+    real,parameter:: CTol=0.0010, AlphaInv = 5.0
     !logical:: DoWrite = .false.
     !----------------------
     ! DoWrite = .false. ; if(present(DoWriteIn))DoWrite = DoWriteIn
@@ -655,25 +655,35 @@ contains
        do iStep=1,nI
           !Predictor
           Derivative = -AMinus_I(iStep-1)*(max(0.0,APlus_I(iStep-1) - 2*AMinus_I(istep-1)) - &
-               max(0.0,AMinus_I(iStep-1) - 2*APlus_I(istep-1))) - &
+               max(0.0,AMinus_I(iStep-1) - 2*APlus_I(istep-1)))/&
+               max((iStep-1)*DeltaXi*AlphaInv*max(AMinus_I(iStep-1),APlus_I(istep-1)),1.0)- &
                APlus_I(iStep-1)*AMinus_I(istep-1)
           AOld = APlus_I(iStep)
           APlus_I(iStep) = APlus_I(iStep-1)+0.5*Derivative*DeltaXi
 
           !Corrector
           Derivative = -0.5*(AMinus_I(iStep-1)+AMinus_I(iStep))*&
-               (max(0.0,APlus_I(iStep)-AMinus_I(istep-1)-AMinus_I(iStep))- &
+               (max(0.0,APlus_I(iStep)-AMinus_I(istep-1)-AMinus_I(iStep))/&
+               max((iStep-0.50)*DeltaXi*AlphaInv*max(&
+               0.5*(AMinus_I(iStep-1)+AMinus_I(iStep)),APlus_I(istep-1)),1.0)- &
                max(0.0,0.5*(AMinus_I(istep-1)+AMinus_I(istep))-2*APlus_I(iStep)))-&
                0.5*(AMinus_I(istep-1)+AMinus_I(istep))*APlus_I(iStep)
           APlus_I(iStep) = APlus_I(iStep-1)+Derivative*DeltaXi
           ADiffMax = max(ADiffMax, abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
        end do
        !Go backward, integrate APlus_I with given AMinus_I
+       !We integrate equation,
+       !\
+       ! 2da_-/d\xi=
+       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]*a_+*min(2Alpha/\xi,2max(a_,a_+))-
+       ! -2a_-a_+
+       !/
        do iStep=nI - 1, 0, -1
           !Predictor
           Derivative = -APlus_I(iStep+1)*(&
                max(0.0,APlus_I(iStep+1) - 2*AMinus_I(istep+1)) - &
-               max(0.0,AMinus_I(iStep+1) - 2*APlus_I(istep+1))     ) + &
+               max(0.0,AMinus_I(iStep+1) - 2*APlus_I(istep+1))     )/&
+               max((iStep+1)*DeltaXi*AlphaInv*max(AMinus_I(iStep+1),APlus_I(istep+1)),1.0) + &
                APlus_I(iStep+1)*AMinus_I(istep+1)
           AOld = AMinus_I(iStep)
           AMinus_I(iStep) = AMinus_I(iStep+1)-0.5*Derivative*DeltaXi
@@ -681,7 +691,9 @@ contains
           !Corrector
           Derivative = -0.5*(APlus_I(iStep+1)+APlus_I(iStep))*(&
                max(0.0,0.5*(APlus_I(iStep)+APlus_I(istep+1))-2*AMinus_I(iStep))- &
-               max(0.0,AMinus_I(istep)-APlus_I(iStep)-APlus_I(istep+1))       )+&
+               max(0.0,AMinus_I(istep)-APlus_I(iStep)-APlus_I(istep+1))       )/&
+               max((iStep+0.50)*DeltaXi*AlphaInv*max(&
+               AMinus_I(iStep),0.5*(APlus_I(iStep+1)+APlus_I(iStep)) ),1.0)+&
                0.5*AMinus_I(istep)*(APlus_I(iStep)+APlus_I(istep+1))
           AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
