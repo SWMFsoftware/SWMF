@@ -781,6 +781,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
+  if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
 #endif
 
   //Sample size distribution parameters of dust grains
@@ -903,6 +904,11 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) {
           sprintf(fname,"%s/pic.flux.%s.s=%i.out=%ld.dat",OutputDataFileDirectory,ChemSymbol,s,DataOutputFileNumber);
           PIC::ParticleFluxDistributionSample::printMacroscopicParameters(fname,s);
+        }
+
+	if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) {
+          sprintf(fname,"%s/pic.pitch_angle.%s.s=%i.out=%ld.dat",OutputDataFileDirectory,ChemSymbol,s,DataOutputFileNumber);
+          PIC::PitchAngleDistributionSample::printDistributionFunction(fname,s);
         }
 
 #endif
