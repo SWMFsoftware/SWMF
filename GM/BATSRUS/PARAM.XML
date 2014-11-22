@@ -1702,32 +1702,31 @@ If the #SCHEME command is not used, then the defaults are
 nStage=2 with the half-step predictor and CflExpl=0.8.
 </command>
 
-<command name="FIXEDTIMESTEP">
-	<parameter name="UseDtFixed" type="logical" default="F" />
-	<parameter name="DtFixedDim" type="real" min="0" default="1.0" 
-							if="$UseDtFixed" />
-#FIXEDTIMESTEP
-T                       UseDtFixed
-10.                     DtFixedDim [sec] (read if UseDtFixed is true)
+<command name="FIXEDTIMESTEP" alias="TIMESTEPLIMIT">
+	<parameter name="UseDtLimit" type="logical" default="F" />
+	<parameter name="DtLimitDim" type="real" min="0" default="1.0" 
+							if="$UseDtLimit" />
+#TIMESTEPLIMIT
+T                       UseDtLimit
+10.                     DtLimitDim [sec] (read if UseDtLimit is true)
 
-Default is UseDtFixed=.false. 
-If UseDtFixed is true, the global time step is fixed to DtFixedDim 
-in time accurate mode, and the local time step is limited to DtFixedDim in 
+If UseDtLimit is true, the global time step is set to DtLimitDim 
+in time accurate mode, and the local time step is limited to DtLimitDim in 
 steady state mode.
 
-In time accurate mode a fixed time step can be useful for debugging
-as well as for convergence tests.
-
-The real application is, however, for implicit and partially
-implicit schemes. The time step is set to DtFixedDim unless the
-time step control algorithm (see #TIMESTEPCONTROL) reduces the time 
+The fixed time step is typically used with the implicit and partially
+implicit schemes in time accurate mode. The time step is set to DtLimitDim 
+unless the time step control algorithm (see #TIMESTEPCONTROL) reduces the time 
 step for the sake of robustness.
 
+The fixed time step can also be used with explicit time stepping in time accurate 
+mode for debugging as well as for convergence tests. 
+
 In steady state mode the limited time step can be useful for
-making transients smaller, or in some cases, solving in time accurate
+making transients smaller, or in some cases, solving in time accurate mode
 in part of the domain, and steady state mode in other parts.
 
-The default is UseDtFixed false.
+The default is UseDtLimit false.
 </command>
 
 <command name="PARTSTEADY">

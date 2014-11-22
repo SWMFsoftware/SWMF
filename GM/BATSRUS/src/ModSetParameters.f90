@@ -359,12 +359,11 @@ subroutine MH_set_parameters(TypeAction)
      end if
 
      if(.not.read_command(NameCommand)) CYCLE READPARAM
-     !        write (*,*) 'SAVEPLOTNAME iFile=', iFile
 
      select case(NameCommand)
 
      case("#BATLPROLONG")
-        call read_var('BetaProlong',BetaProlong )
+        call read_var('BetaProlong', BetaProlong )
 
      case("#COMPONENT")
         call read_var('NameComp', NameCompRead)
@@ -417,11 +416,11 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#ECHO")
         call check_stand_alone
-        call read_var('DoEcho',DoEcho)
+        call read_var('DoEcho', DoEcho)
         if(iProc==0)call read_echo_set(DoEcho)
 
      case("#FLUSH")
-        call read_var('DoFlush',DoFlush)
+        call read_var('DoFlush', DoFlush)
 
      case("#TEST")
         call read_var('StringTest',test_string)
@@ -476,12 +475,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('UseOptimizeMpi', UseOptimizeMpi)
 
      case("#OUTERBOUNDARY")
-        call read_var('TypeBcEast'  ,TypeBc_I(1))  
-        call read_var('TypeBcWest'  ,TypeBc_I(2))
-        call read_var('TypeBcSouth' ,TypeBc_I(3))
-        call read_var('TypeBcNorth' ,TypeBc_I(4))
-        call read_var('TypeBcBottom',TypeBc_I(5))
-        call read_var('TypeBcTop'   ,TypeBc_I(6))    
+        do i = 1, 2*nDim
+           call read_var('TypeBc', TypeBc_I(i))  
+        end do
 
      case("#TIMESTEPPING", "#RUNGEKUTTA", "#RK")
         call read_var('nStage',  nStage)
@@ -493,9 +489,9 @@ subroutine MH_set_parameters(TypeAction)
      case('#LOCALTIMESTEP')
         call read_localstep_param(NameCommand, iSession)
 
-     case("#FIXEDTIMESTEP")
-        call read_var('UseDtFixed',UseDtFixed)
-        if(UseDtFixed)call read_var('DtFixedDim', DtFixedDim)
+     case("#FIXEDTIMESTEP", "#TIMESTEPLIMIT")
+        call               read_var('UseDtLimit', UseDtFixed)
+        if(UseDtFixed)call read_var('DtLimitDim', DtFixedDim)
 
      case("#PARTSTEADY")
         call read_var('UsePartSteady',UsePartSteady)
