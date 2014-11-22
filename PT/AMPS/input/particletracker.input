@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2,O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
+SpeciesList=O2,O2PLUS
 
 
 ErrorLog=error.log
@@ -42,7 +42,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
 TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
-CouplerMode=swmf !!!ices !!off, ices, swmf
+CouplerMode=ices !swmf !!!ices !!off, ices, swmf
 
 #endmain
 
@@ -62,7 +62,7 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=10
+  InitialSampleLength=100
   TestRunTotalIteration=-1 !set infinite number ot iterations 
 
   BlockCells=5,5,5
@@ -72,13 +72,24 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
-  define _PIC_SAMPLING_MODE_  _PIC_MODE_OFF_
-  
+  define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition(x,v,spec,ParticleData)
+
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 #endGeneral
 
 #block ../exosphere.pl
   SPICE=off 
   define _TARGET_ _EUROPA_
+
+  define _ICES_CREATE_COORDINATE_LIST_
+  define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
+! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path
+  IcesModelCase=Europa09
+
+  addPhysicalModelHeader=ParticleTracker.h
+
 #endblock
 
 
