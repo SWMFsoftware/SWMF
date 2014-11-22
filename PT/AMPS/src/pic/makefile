@@ -35,7 +35,8 @@ PICOBJ = pic.o \
 	pic_swmf.o \
 	pic__ray_tracing.o \
 	pic_cut_cells.o \
-	pic_pt.o 
+	pic_pt.o \
+	pic_sample_pitch_angle_distribution.o 
 
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)
