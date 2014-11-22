@@ -372,7 +372,6 @@ contains
     integer, intent(in) :: iBlock
     logical :: DoTest, DoTestMe
 
-    integer:: MaxIJK
 
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
@@ -1994,7 +1993,6 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
     use ModPhysics,  ONLY: gm1
     use ModWaves
@@ -2105,11 +2103,11 @@ contains
        end if
 
        do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
-          Flux_V(iVar) = (Un_I(iRhoIon_I(1)) + AlfvenSpeed)*State_V(iVar)
+          Flux_V(iVar) = (Un_I(1) + AlfvenSpeed)*State_V(iVar)
        end do
 
        do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
-          Flux_V(iVar) = (Un_I(iRhoIon_I(1)) - AlfvenSpeed)*State_V(iVar)
+          Flux_V(iVar) = (Un_I(1) - AlfvenSpeed)*State_V(iVar)
        end do
     end if
 
@@ -2315,7 +2313,6 @@ contains
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
-      integer :: iVar
 
       real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
@@ -3318,7 +3315,7 @@ contains
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
-         Xi_, Eta_, Zeta_, nDim
+         Xi_, Eta_, Zeta_
 
     integer, intent(in):: iDim
 
