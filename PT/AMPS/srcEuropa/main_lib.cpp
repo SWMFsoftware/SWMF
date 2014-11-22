@@ -945,13 +945,19 @@ PIC::InitMPI();
 
 	//init the sampling of the particls' distribution functions
 	const int nSamplePoints=3;
-	double SampleLocations[nSamplePoints][DIM]={{7.6E5,6.7E5,0.0}, {2.8E5,5.6E5,0.0}, {-2.3E5,3.0E5,0.0}};
+	double SampleLocations[nSamplePoints][DIM]={{2.0E6,0.0,0.0}, {0.0,2.0E6,0.0}, {-2.0E6,0.0,0.0}};
 
 	PIC::DistributionFunctionSample::vMin=-40.0E3;
 	PIC::DistributionFunctionSample::vMax=40.0E3;
 	PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
 
 	PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+
+	//also init the sampling of the particles' pitch angle distribution functions
+	PIC::PitchAngleDistributionSample::nSampledFunctionPoints=101;
+
+	PIC::PitchAngleDistributionSample::Init(SampleLocations,nSamplePoints);
+	
 
 
 #if _GALILEO_EPD_SAMPLING_ == _EUROPA_MODE_ON_
