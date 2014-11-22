@@ -1709,6 +1709,44 @@ namespace PIC {
     void printDistributionFunction(char *fname,int spec);
   }
 
+  //sample and output the particle's pitch angle distribution function
+  namespace PitchAngleDistributionSample {
+    //the init flag
+    extern bool SamplingInitializedFlag;
+
+    //the modes for sampling of the v^2 and the absolute value of velocity
+    //extern const int _LINEAR_SAMPLING_SCALE_,_LOGARITHMIC_SAMPLING_SCALE_;
+    //extern int v2SamplingMode,speedSamplingMode;
+
+    //the range of the sine of pitch angle scale and the number of nodes in the sample
+    extern double CosPAMax, CosPAMin;
+    extern long int nSampledFunctionPoints;
+    extern double dCosPA;
+
+    //the sampling buffers
+    extern double **SamplingBuffer;
+
+    //sampling data offsets
+    //extern int Sample_Velocity_Offset,Sample_Speed_Offset,Sample_V2_Offset,SampleDataLength;
+    extern int Sample_PitchAngle_Offset,SampleDataLength;
+
+    //get the offset to the beginig of the sampling data for a particular samplePoint, spec,.....
+    long int GetSampleDataOffset(int spec,int nInterval);
+
+    //sampling  locations
+    extern double **SamplingLocations;
+    extern int nSampleLocations;
+    extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
+    extern long int *SampleLocalCellNumber;
+
+    void Init(double ProbeLocations[][DIM],int nProbeLocations);
+
+    void SampleDistributionFnction();
+    void flushSamplingBuffers();
+
+    void printDistributionFunction(char *fname,int spec);
+  }
+
 
   //sample and output the particle's distribution of particle's flux
   namespace ParticleFluxDistributionSample {
