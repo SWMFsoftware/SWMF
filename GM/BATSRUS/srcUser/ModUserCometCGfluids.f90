@@ -85,7 +85,6 @@ module ModUser
   ! Constant parameters to calculate uNormal and temperature from TempCometLocal
   real :: TempToUnormal
   real :: TempToPressure
-  real :: NumdensToRho
 
   ! Inner boundary condition for ions
   character (len=10) :: TypeBodyBC = 'default'
@@ -232,10 +231,14 @@ contains
     end if
 
     rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
+
+    ! Production rate = number density * velocity, the unit is in [m^-2 s^-1]
+    ! But, applying 1 / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_) is not correct
+    ! because Si2No_V(UnitN_) /= 1/Si2No_V(UnitX_)**3
     ProductionRateMax = &
-         ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+         ProductionRateMaxSi * Si2No_V(UnitN_) * Si2No_V(UnitU_)
     ProductionRateMin = &
-         ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+         ProductionRateMinSi * Si2No_V(UnitN_) * Si2No_V(UnitU_)
 
     SolarAngleMax = SolarAngleMaxDim * cDegToRad
     TempCometMin = TempCometMinDim * Io2No_V(UnitTemperature_)
@@ -253,13 +256,6 @@ contains
     !    = T[1 - (pi-2)/4*(gamma - 1)]
     ! so TempToPressure = [1 - (pi-2)/4*(gamma - 1)]/Mass
     TempToPressure = (1 - gm1*0.25*(cPi-2))/MassFluid_I(nFluid)
-
-    ! Number density calculated as production rate/velocity
-    ! which is in units of 1/(length cubed).
-    ! This has to be multiplied with mass of molecule which is in amu,
-    ! but mass density is measured in amu/cm^3 so the 
-    ! normalized number density is in 1/cm^3.
-    NumdensToRho = MassFluid_I(nFluid)/(No2Si_V(UnitN_)*No2Si_V(UnitX_)**3)
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -649,7 +645,7 @@ contains
     uNormal = sqrt(TempCometLocal)*TempToUnormal
 
     VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Neu1Rho_)    = ProductionRateLocal/uNormal*NumdensToRho
+    VarsGhostFace_V(Neu1Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(nFluid)
     VarsGhostFace_V(Neu1P_)      = &
          VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
 
