@@ -33,6 +33,14 @@ void PIC::ParticleTracker::Init() {
   //init the data buffers
   TrajectoryDataBuffer::buffer=new cTrajectoryRecord[TrajectoryDataBuffer::Size];
   TrajectoryList::buffer=new cTrajectoryRecordReference[TrajectoryList::Size];
+
+  //remove old and create new directory for temporary files
+  char cmd[_MAX_STRING_LENGTH_PIC_];
+  sprintf(cmd,"rm -rf %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
+  system(cmd);
+
+  sprintf(cmd,"mkdir -p %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
+  system(cmd);
 }
 
 
@@ -52,7 +60,7 @@ void PIC::ParticleTracker::TrajectoryDataBuffer::flush() {
   FILE *fout;
   char fname[_MAX_STRING_LENGTH_PIC_];
 
-  sprintf(fname,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::ThisThread,nfile);
+  sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
   fout=fopen(fname,"w");
 
   fwrite(buffer,sizeof(cTrajectoryRecord),CurrentPosition,fout);
@@ -66,7 +74,7 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
   FILE *fout;
   char fname[_MAX_STRING_LENGTH_PIC_];
 
-  sprintf(fname,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::ThisThread,nfile);
+  sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
   fout=fopen(fname,"w");
 
   fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
@@ -172,7 +180,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
       cTrajectoryRecordReference StartTrajectoryPoint;
       cTrajectoryRecord TrajectoryRecord;
 
-      sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",thread,nList);
+      sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,thread,nList);
       fTrajectoryList=fopen(str,"r");
       fread(&TotalListLegth,sizeof(unsigned long int),1,fTrajectoryList);
 
@@ -202,7 +210,7 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
             //open a new trajecory data file
             lastRecordThread=RecordThread,lastRecordFile=RecordFile;
 
-            sprintf(str,"amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",RecordThread,RecordFile);
+            sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,RecordThread,RecordFile);
             fTrajectoryData=fopen(str,"r");
           }
 
