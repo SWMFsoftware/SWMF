@@ -143,6 +143,10 @@ namespace PIC {
   //the particle trajectory tracing
   namespace ParticleTracker {
     extern long int ParticleDataRecordOffset; //the offset of the trajecotry specific informaion within the particle data
+    extern int maxSampledTrajectoryNumber; //tha maximum number of the particle trajectories that will be sampled for each species
+    extern int *threadSampledTrajectoryNumber; //the number of trajectories sampled by the current processor for each species
+    extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species
+
 
     struct cTrajectoryRecordReference {
       int offset;  //the location of the previous particle trajecotry data record in the files that contains tha whole trajectory information
@@ -179,6 +183,7 @@ namespace PIC {
     }
 
     void Init();
+    void UpdateTrajectoryCounter(); //calculate the total number of the trajectories sampled on all processors
 
     void InitParticleID(void *ParticleData);
     void RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData);
