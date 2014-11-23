@@ -11,6 +11,7 @@ my $Quiet         = ($q or $quiet or $Q or $QUIET);
 my $Ccmc          = ($CCMC or $ccmc);
 my $Input         = ($i or $input);
 my $nThread       = ($n or 4);
+my $Sleep         = ($s or $sleep);
 
 use strict;
 
@@ -51,6 +52,7 @@ closedir(DIR);
 if(@HeaderFiles){
     die "$ERROR: $PostIdl is not available, please make PIDL\n" 
 	unless -x $PostIdl;
+    sleep $Sleep;
 }elsif(not $MakeMovie){
     die "$WARNING: no header files were found\n";
 }
@@ -226,6 +228,7 @@ Usage:
    -m -movie   - create movie from the .out files and keep the .out files
    -M -MOVIE   - create movie from the .out files and delete the .out files
    -n=NUMBER   - execute PostIDL.exe in parallel on NUMBER cores. Default is 4.
+   -s=SECONDS  - sleep SECOND seconds before processing files.
    BASENAME    - the beginning of the filenames to be processed.
                  Default value is BASENAME='IO2/'
 
