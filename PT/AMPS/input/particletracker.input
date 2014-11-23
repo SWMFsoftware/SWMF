@@ -35,8 +35,8 @@ DiagnosticStream=PT
 OutputDirectory=PT/plots
 
 
-DebuggerMode=off !on,off
-ForceRepeatableSimulationPath=off ! on,off
+DebuggerMode=on !on,off
+ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
@@ -72,9 +72,12 @@ CouplerMode=ices !swmf !!!ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=300
+
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
-  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition(x,v,spec,ParticleData)
+! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 #endGeneral
