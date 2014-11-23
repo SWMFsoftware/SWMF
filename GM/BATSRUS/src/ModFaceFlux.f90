@@ -2103,11 +2103,11 @@ contains
        end if
 
        do iVar = AlfvenWavePlusFirst_, AlfvenWavePlusLast_
-          Flux_V(iVar) = (Un_I(1) + AlfvenSpeed)*State_V(iVar)
+          Flux_V(iVar) = (Un_I(IonFirst_) + AlfvenSpeed)*State_V(iVar)
        end do
 
        do iVar = AlfvenWaveMinusFirst_, AlfvenWaveMinusLast_
-          Flux_V(iVar) = (Un_I(1) - AlfvenSpeed)*State_V(iVar)
+          Flux_V(iVar) = (Un_I(IonFirst_) - AlfvenSpeed)*State_V(iVar)
        end do
     end if
 
