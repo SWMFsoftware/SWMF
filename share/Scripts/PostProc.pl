@@ -58,6 +58,10 @@ if($KeepMovieOnly){
     $MovieFlag = '-m';
 }
 
+# Set sleep option 
+my $SleepFlag; 
+$SleepFlag = '-s=10' if $Repeat;
+
 # Name of the plot directories for various components
 my %PlotDir = (
     "EE"     => "EE/IO2",
@@ -118,7 +122,7 @@ REPEAT:{
 	    }
             &concat_sat_log if $Concat;
 	}elsif( $Dir =~ /^SC|IH|OH|GM|EE$/ ){
-	    &shell("./pIDL $MovieFlag -n=$nThread $Pattern");
+	    &shell("./pIDL $MovieFlag $SleepFlag -n=$nThread $Pattern");
 	    if($Gzip){
 		&shell("./pTEC A g");
 	    }else{
