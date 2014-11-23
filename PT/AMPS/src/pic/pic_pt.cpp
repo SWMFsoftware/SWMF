@@ -24,6 +24,10 @@ unsigned long int PIC::ParticleTracker::TrajectoryList::CurrentPosition=0;
 PIC::ParticleTracker::cTrajectoryRecordReference *PIC::ParticleTracker::TrajectoryList::buffer=NULL;
 unsigned long int PIC::ParticleTracker::TrajectoryList::nfile=0;
 
+int PIC::ParticleTracker::maxSampledTrajectoryNumber=-1;
+int *PIC::ParticleTracker::threadSampledTrajectoryNumber=NULL;
+int *PIC::ParticleTracker::totalSampledTrajectoryNumber=NULL;
+
 
 //init the particle tracker
 void PIC::ParticleTracker::Init() {
@@ -34,6 +38,11 @@ void PIC::ParticleTracker::Init() {
   TrajectoryDataBuffer::buffer=new cTrajectoryRecord[TrajectoryDataBuffer::Size];
   TrajectoryList::buffer=new cTrajectoryRecordReference[TrajectoryList::Size];
 
+  //init the trajectory counter
+  threadSampledTrajectoryNumber=new int [PIC::nTotalSpecies];
+  totalSampledTrajectoryNumber=new int [PIC::nTotalSpecies];
+  for (int s=0;s<PIC::nTotalSpecies;s++) threadSampledTrajectoryNumber[s]=0,totalSampledTrajectoryNumber[s]=0;
+
   //remove old and create new directory for temporary files
   char cmd[_MAX_STRING_LENGTH_PIC_];
   sprintf(cmd,"rm -rf %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
@@ -43,7 +52,10 @@ void PIC::ParticleTracker::Init() {
   system(cmd);
 }
 
-
+//update the total number of samples trajectories
+void PIC::ParticleTracker::UpdateTrajectoryCounter() {
+  MPI_Allreduce(threadSampledTrajectoryNumber,totalSampledTrajectoryNumber,PIC::nTotalSpecies,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+}
 
 //init the particle trajecotry record
 void PIC::ParticleTracker::InitParticleID(void *ParticleData) {
@@ -309,6 +321,11 @@ void PIC::ParticleTracker::StopParticleTrajectoryTracking(void *ParticleData) {
 
 //the default particle trajectory tracking condition
 bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData) {
+  if (maxSampledTrajectoryNumber>totalSampledTrajectoryNumber[spec]) {
+    ++threadSampledTrajectoryNumber[spec];
+    return true;
+  }
+
   return false;
 }
 
