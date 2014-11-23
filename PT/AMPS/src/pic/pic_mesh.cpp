@@ -543,7 +543,9 @@ void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe)
         pipe->send(buffer,PIC::ParticleBuffer::ParticleDataLength);
 
         NextParticle=PIC::ParticleBuffer::GetNext(Particle);
-        PIC::ParticleBuffer::DeleteParticle(Particle);
+//        PIC::ParticleBuffer::DeleteParticle(Particle);
+        PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(Particle);
+
         Particle=NextParticle;
       }
 
