@@ -95,6 +95,11 @@ void PIC::TimeStep() {
   PIC::Parallel::ExchangeParticleData();
   ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
+  //update the total number of the sampled trajecotries
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::UpdateTrajectoryCounter();
+#endif
+
   //call user defined MPI procedure
 #if _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ == _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
   UserDefinedMPI_RoutineExecutionTime=MPI_Wtime();
