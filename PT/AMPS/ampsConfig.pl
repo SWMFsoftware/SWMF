@@ -918,6 +918,24 @@ sub ReadGeneralBlock {
         die "The option is unknown\n";
       }
     }  
+
+    elsif ($InputLine eq "TRAJECTORYTRACING") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_TRACKER_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_PARTICLE_TRACKER_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    }
+    elsif ($InputLine eq "MAXSAMPLEDTRAJECTORYNUMBER") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("int PIC::ParticleTracker::maxSampledTrajectoryNumber",$InputLine,"pic/pic_pt.cpp");
+    }
   
     elsif ($InputLine eq "NASTRANSURFACEUSERDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
