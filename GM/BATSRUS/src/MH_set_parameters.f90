@@ -104,6 +104,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModThreadedLC,      ONLY: init_threaded_lc
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
+  use ModCoarseAxis, ONLY: read_coarse_axis_param
   use ModWaves, ONLY: read_waves_param, check_waves
   use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
 
@@ -1592,7 +1593,8 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoFixAxis',DoFixAxis)
         call read_var('rFixAxis',rFixAxis)
         call read_var('r2FixAxis',r2FixAxis)
-
+     case('#COARSEAXIS')
+        call read_coarse_axis_param
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 

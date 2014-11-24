@@ -359,6 +359,7 @@ contains
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
+    use ModCoarseAxis,ONLY:UseCoarseAxis, coarsen_axis_cells
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModLinearSolver, ONLY: solve_linear_multiblock
@@ -382,7 +383,8 @@ contains
 
     logical :: DoTest, DoTestMe, DoTestKrylov, DoTestKrylovMe
 
-    logical :: UseUpdateCheckOrig, UsePointImplicitOrig, DoFixAxisOrig
+    logical :: UseUpdateCheckOrig, UsePointImplicitOrig, &
+         DoFixAxisOrig, UseCoarseAxisOrig
 
     real    :: pRhoRelativeMin
 
@@ -490,7 +492,8 @@ contains
     ! Switch off merging the cells around the poles during the implicit solve
     DoFixAxisOrig      = DoFixAxis
     DoFixAxis          = .false.
-
+    UseCoarseAxisOrig  = UseCoarseAxis
+    UseCoarseAxis      = .false.
     ! Use implicit time step
     if(.not.UseDtFixed)Cfl = CflImpl
 
@@ -640,7 +643,7 @@ contains
     call implicit2explicit(Impl_VGB(:,1:nI,1:nJ,1:nK,:))
 
     if(DoFixAxisOrig)call fix_axis_cells
-
+    if(UseCoarseAxisOrig)call coarsen_axis_cells
     ! Make explicit part available again for partially explicit scheme
     if(UsePartImplicit)then
        ! Restore Unused_B
@@ -746,6 +749,7 @@ contains
     UseUpdateCheck   = UseUpdateCheckOrig
     UsePointImplicit = UsePointImplicitOrig
     DoFixAxis        = DoFixAxisOrig
+    UseCoarseAxis    = UseCoarseAxisOrig
 
     ! Done with implicit update
     IsImplicitUpdate = .false.

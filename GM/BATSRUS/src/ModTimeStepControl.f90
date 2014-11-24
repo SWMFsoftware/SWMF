@@ -112,6 +112,8 @@ contains
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
+    use ModCoarseAxis,ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
+         NorthHemiSph_, SouthHemiSph_
 
     integer, intent(in) :: iBlock
 
@@ -162,6 +164,12 @@ contains
                 time_BLK(1:nI,1:nJ,k,iBlock) = time_BLK(1:nI,1:nJ,Dk+1,iBlock)
              end do
           end if
+       end if
+    elseif(UseCoarseAxis)then
+       if(CoordMax_DB(Lat_,iBlock) > cHalfPi-1e-8)then
+          call calc_coarse_axis_timestep(iBlock,NorthHemiSph_)
+       elseif(CoordMin_DB(Lat_,iBlock) < -cHalfPi+1e-8)then
+          call calc_coarse_axis_timestep(iBlock,SouthHemiSph_)
        end if
     end if
 

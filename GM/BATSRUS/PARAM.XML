@@ -1557,6 +1557,29 @@ the #UNIFORMAXIS command for more discussion.
 Default is false for both UsePoleDiffusion and DoFixAxis.
 </command>
 
+<command name="COARSEAXIS">
+	<parameter name="UsePoleDiffusion" type="logical" default="F"/>
+	<parameter name="UseCoarseAxis" type="logical" default="F"/>
+	<parameter name="nCoarseLayer"  type="integer" min="1" default="1"/>
+	
+#COARSEAXIS
+T			UsePoleDiffusion
+T			UseCoarseAxis
+1			nCoarseLayer
+
+The computational cells become very small near the symmetry axis 
+of a spherical or grid. When UsePoleDiffusion is true,
+some numerical diffusion applied between the cells on the opposite
+side of the axis. This diffusion may smooth out some artifacts that 
+show up when a discontinuity crosses the axis.
+
+When UseAxis is true, the cells around the pole are merged into pairs, if
+nCoarseLayer=1. If nCoarseLayer=2, then around the pole each 4 cells are merged
+and in the second (from the pole) layer each 2 cells are merged.
+
+Default is false for both UsePoleDiffusion and UseCoarseAxis.
+</command>
+
 </commandgroup>
 
 <commandgroup name="INITIAL TIME">

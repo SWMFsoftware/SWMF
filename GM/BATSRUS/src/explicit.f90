@@ -11,6 +11,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModFaceValue,  ONLY: calc_face_value
   use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
        DoInterpolateFlux
+  use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
   use ModB0,         ONLY: set_b0_face
   use ModParallel,   ONLY: neiLev
   use ModGeometry,   ONLY: Body_BLK
@@ -174,6 +175,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')
 
      if(IsAnyAxis .and. DoFixAxis) call fix_axis_cells
+     if(UseCoarseAxis)call coarsen_axis_cells
 
      ! Check for allowable update percentage change.
      if(UseUpdateCheck)then

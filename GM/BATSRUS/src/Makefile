@@ -26,6 +26,7 @@ OBJECTS = \
 	ModCellBoundary.o \
 	ModCharacteristic.o \
 	ModChromosphere.o \
+	ModCoarseAxis.o \
 	ModConserveFlux.o \
 	ModCoronalHeating.o \
 	ModCT.o \

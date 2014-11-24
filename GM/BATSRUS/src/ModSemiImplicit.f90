@@ -234,6 +234,7 @@ contains
     use ModProcMH, ONLY: iComm
     use ModMain, ONLY: NameThisComp, time_accurate, BlkTest, ProcTest
     use ModAdvance, ONLY: DoFixAxis
+    use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModGeometry, ONLY: true_cell
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
@@ -361,7 +362,7 @@ contains
     end do
 
     if(DoFixAxis)call fix_axis_cells
-
+    if(UseCoarseAxis)call coarsen_axis_cells
     ! Exchange messages, so ghost cells of all blocks are updated
     call exchange_messages
 
