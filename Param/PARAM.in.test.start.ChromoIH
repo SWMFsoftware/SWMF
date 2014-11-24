@@ -89,7 +89,7 @@ T			UseUserInitSession
 F			UseUserUpdateStates
 
 #POYNTINGFLUX
-0.55			PoyntingFluxPerBSi [J/m^2/s/T]
+0.55e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating
