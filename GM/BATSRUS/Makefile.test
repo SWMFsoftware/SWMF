@@ -1486,7 +1486,7 @@ test_cometCGhd:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cometCGhd_compile:
-	./Config.pl -u=CometCG -e=hd -g=8,8,8,400,1
+	./Config.pl -u=CometCG -e=Hd -g=8,8,8,400,1
 	$(MAKE) BATSRUS
 	make PIDL
 
