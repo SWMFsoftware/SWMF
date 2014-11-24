@@ -73,7 +73,6 @@ module ModUser
   ! Coefficients to calculate uNormal and temperature from TempCometLocal
   real :: TempToUnormal
   real :: TempToPressure
-  real :: NumdensToRho
 
   ! Last step and time the inner boundary values were saved for each block
   integer:: nStepSave_B(MaxBlock) = -100
@@ -146,10 +145,13 @@ contains
     ! which contains everything in SI units
     call read_shape_file
 
+    ! Production rate = number density * velocity, the unit is in [m^-2 s^-1]
+    ! But, applying 1 / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_) is not correct
+    ! because Si2No_V(UnitN_) /= 1/Si2No_V(UnitX_)**3
     ProductionRateMax = &
-         ProductionRateMaxSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+         ProductionRateMaxSi * Si2No_V(UnitN_) * Si2No_V(UnitU_)
     ProductionRateMin = &
-         ProductionRateMinSi / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_)
+         ProductionRateMinSi * Si2No_V(UnitN_) * Si2No_V(UnitU_)
 
     SolarAngleMax= SolarAngleMaxDim * cDegToRad
     TempCometMin = TempCometMinDim * Io2No_V(UnitTemperature_)
@@ -165,13 +167,6 @@ contains
     ! From G. Toth's derivations
     ! T' = T/g so and p = n*T' = rho*T/(g*m) so TempToPressure = 1/(g*m)
     TempToPressure = 1/(g*MassFluid_I(1))
-
-    ! Number density calculated as production rate/velocity
-    ! which is in units of 1/(length cubed).
-    ! This has to be multiplied with mass of molecule which is in amu,
-    ! but mass density is measured in amu/cm^3 so the 
-    ! normalized number density is in 1/cm^3.
-    NumdensToRho = MassFluid_I(1)/(No2Si_V(UnitN_)*No2Si_V(UnitX_)**3)
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -210,8 +205,7 @@ contains
             TempComet75Dim,  TempComet75
        write(*,*) 'TempToUnormal, TempToPressure   =', &
             TempToUnormal, TempToPressure
-       write(*,*) 'MassFluid_I, NumDensToRho       =', &
-            MassFluid_I, NumDensToRho
+       write(*,*) 'MassFluid_I,                    =', MassFluid_I
        write(*,*) 'TempToUn*sqrt(TempCometMax)     =', &
             TempToUnormal*sqrt(TempCometMax)
        write(*,*) 'SlopeProduction, bProduction    =', &
@@ -500,7 +494,7 @@ contains
     uNormal = sqrt(TempCometLocal)*TempToUnormal
     
     VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*NumdensToRho
+    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(1)
     VarsGhostFace_V(P_)      = &
          VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
 
