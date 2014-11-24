@@ -21,14 +21,14 @@ module ModVarIndexes
   ! loop variable for implied do-loop over spectrum
   integer, private :: iWave
 
-  integer, parameter :: nFluid    = 3
-  integer, parameter :: IonFirst_ = 2
-  integer, parameter :: IonLast_  = 3
-  logical, parameter :: IsMhd     = .true.
-  real :: MassFluid_I(2:nFluid) = (/ 1.0, 4.0 /)
+  integer, parameter :: nFluid    = 2
+  integer, parameter :: IonFirst_ = 1
+  integer, parameter :: IonLast_  = 2
+  logical, parameter :: IsMhd     = .false.
+  real :: MassFluid_I(nFluid) = (/ 1.0, 4.0 /)
 
   character(len=4), parameter :: NameFluid_I(nFluid) = &
-       (/ 'All ', 'Hp  ', 'He2p' /)
+       (/ 'Hp  ', 'He2p' /)
 
   ! Number of wave bins in spectrum
   integer, parameter :: nWave = 2
@@ -48,23 +48,17 @@ module ModVarIndexes
        By_         = 6,                  &
        Bz_         = 7,                  &
        p_          = 8,                  &
-       HpRho_      = 9,                  &
-       HpRhoUx_    = 10,                 &
-       HpRhoUy_    = 11,                 &
-       HpRhoUz_    = 12,                 &
-       HpP_        = 13,                 &
-       He2pRho_    = 14,                 &
-       He2pRhoUx_  = 15,                 &
-       He2pRhoUy_  = 16,                 &
-       He2pRhoUz_  = 17,                 &
-       He2pP_      = 18,                 &
-       Pe_         = 19,                 &
-       Ehot_       = 20,                 &
-       WaveFirst_  = 21,                 &
+       He2pRho_    = 9,                  &
+       He2pRhoUx_  = 10,                 &
+       He2pRhoUy_  = 11,                 &
+       He2pRhoUz_  = 12,                 &
+       He2pP_      = 13,                 &
+       Pe_         = 14,                 &
+       Ehot_       = 15,                 &
+       WaveFirst_  = 16,                 &
        WaveLast_   = WaveFirst_+nWave-1, &
        Energy_     = nVar+1,             &
-       HpEnergy_   = nVar+2,             &
-       He2pEnergy_ = nVar+3
+       He2pEnergy_ = nVar+2
 
   ! This is for backward compatibility with single group radiation
   integer, parameter :: Erad_ = WaveFirst_
@@ -73,11 +67,11 @@ module ModVarIndexes
   integer, parameter :: RhoU_ = RhoUx_-1, B_ = Bx_-1
 
   ! These arrays are useful for multifluid
-  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   HpRho_,   He2pRho_/)
-  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, HpRhoUx_, He2pRhoUx_/)
-  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, HpRhoUy_, He2pRhoUy_/)
-  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, HpRhoUz_, He2pRhoUz_/)
-  integer, parameter :: iP_I(nFluid)     = (/p_,     HpP_,     He2pP_/)
+  integer, parameter :: iRho_I(nFluid)   = (/Rho_,   He2pRho_/)
+  integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_, He2pRhoUx_/)
+  integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, He2pRhoUy_/)
+  integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, He2pRhoUz_/)
+  integer, parameter :: iP_I(nFluid)     = (/p_,     He2pP_/)
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -91,11 +85,6 @@ module ModVarIndexes
        0.0, & ! By_
        0.0, & ! Bz_
        1.0, & ! p_
-       1.0, & ! HpRho_
-       0.0, & ! HpRhoUx_
-       0.0, & ! HpRhoUy_
-       0.0, & ! HpRhoUz_
-       1.0, & ! HpP_        
        1.0, & ! He2pRho_
        0.0, & ! He2pRhoUx_
        0.0, & ! He2pRhoUy_
@@ -105,7 +94,6 @@ module ModVarIndexes
        0.0, & ! Ehot_
        (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! Energy_
-       1.0, & ! HpEnergy_
        1.0 /) ! He2pEnergy_
 
   ! The names of the variables used in i/o
@@ -118,11 +106,6 @@ module ModVarIndexes
        'By     ', & ! By_
        'Bz     ', & ! Bz_
        'p      ', & ! p_
-       'HpRho  ', & ! HpRho_
-       'HpMx   ', & ! HpRhoUx_
-       'HpMy   ', & ! HpRhoUy_
-       'HpMz   ', & ! HpRhoUz_
-       'HpP    ', & ! HpP_             
        'He2pRho', & ! He2pRho_
        'He2pMx ', & ! He2pRhoUx_
        'He2pMy ', & ! He2pRhoUy_
@@ -132,27 +115,23 @@ module ModVarIndexes
        'Ehot   ', & ! Ehot_
        ('I??    ', iWave=WaveFirst_,WaveLast_), &
        'E      ', & ! Energy_
-       'HpE    ', & ! HpEnergy_
        'He2pE  ' /) ! He2pEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
        'rho mx my mz bx by bz E '// &
-       'HpRho HpMx HpMy HpMz HpE '// &
        'He2pRho He2pMx He2pMy He2pMz He2pE '// &
        'pe ehot ew'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
        'rho ux uy uz bx by bz p '// &
-       'HpRho HpUx HpUy HpUz HpP '// &
        'He2pRho He2pUx He2pUy He2pUz He2pP '// &
        'pe ehot I(02)'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", '// &
-       '"`r^H^+", "U_x^H^+", "U_y^H^+", "U_z^H^+", "P^H^+", '// &
        '"`r^He2^+", "U_x^He2^+", "U_y^He2^+", "U_z^He2^+", "P^He2^+", '// &
        '"p_e", "Ehot", "Ew"'
 
