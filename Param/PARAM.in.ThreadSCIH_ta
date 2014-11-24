@@ -110,7 +110,7 @@ T			UseUserInitSession
 F			UseUserUpdateStates
 
 #POYNTINGFLUX
-1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
+0.55e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
