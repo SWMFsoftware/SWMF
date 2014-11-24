@@ -72,14 +72,8 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-#CHROMOBC
-2e17			nChromoSi [1/m^3]
-5e4			tChromoSi [K]
-1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
-
-#USERINPUTEND ----------------------------
+#POYNTINGFLUX
+0.55e6			PoyntingFluxPerBSi
 
 #CORONALHEATING
 alfvenwavedissipation	TypeCoronalHeating

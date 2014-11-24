@@ -5,7 +5,7 @@
 module ModUser
 
   use ModMain, ONLY: nI, nJ,nK
-  use ModCoronalHeating, ONLY: PoyntingFluxPerBSi, PoyntingFluxPerB
+  use ModCoronalHeating, ONLY: PoyntingFluxPerB
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -22,7 +22,7 @@ module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'Chromosphere to solar wind model with Alfven waves - Oran, van der Holst'
+       'AWSoM and AWSoM-R model'
 
   ! Input parameters for chromospheric inner BC's
   real    :: nChromoSi = 2e17, tChromoSi = 5e4
@@ -76,7 +76,6 @@ contains
        case("#CHROMOBC")
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
-          call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
 
        case("#LINETIEDBC")
           call read_var('UseUparBc', UseUparBc)
@@ -128,9 +127,8 @@ contains
          cElectronMass
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
-         UnitEnergyDens_, SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
-    use ModMagnetogram, ONLY: UnitB
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, &
+         SinThetaTilt, CosThetaTilt, BodyNDim_I, BodyTDim_I, g
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -148,9 +146,6 @@ contains
     nChromo = nChromoSi*Si2No_V(UnitN_)
     RhoChromo = nChromo*MassIon_I(1)
     tChromo = tChromoSi*Si2No_V(UnitTemperature_)
-
-    PoyntingFluxPerB = PoyntingFluxPerBSi/UnitB &
-         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
@@ -331,131 +326,6 @@ contains
 
   end subroutine user_set_ics
   !============================================================================
-  subroutine write_ghost_and_boundary
-
-    ! output ghost cells and true cells values for blocks that cross the
-    ! inner boundary, in a meridional plane close to the x=0 plane
-
-    ! ------ SPHERICAL GRID ONLY ------------
-
-    use ModProcMH,     ONLY: iProc
-    use ModIoUnit,     ONLY: UNITTMP_
-    use ModVarIndexes, ONLY: WaveFirst_, WaveLast_, rho_, p_, Bx_, Bz_
-    use ModMain,       ONLY: iteration_number, nBlock
-    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
-    use ModAdvance,    ONLY: State_VGB
-
-    integer            :: iBLK, i ,j ,k
-    real               :: x, y, z, r, x_D(3)
-    real               :: IPlus, IMinus, B, Br, rho, p
-    character(len=40)  :: FileNameTec 
-    character(len=11)  :: NameStage
-    character(len=7)   :: NameProc
-
-    character(len=*),parameter   :: NameSub='write_ghost_and_boundary'
-    !-------------------------------------------------------------------
-    write(NameStage,'(i5.5)') iteration_number
-    write(NameProc, '(i4.4)') iProc
-    FileNameTec = &
-         'SC/IO2/Boundary_n_'//trim(NameStage)//'_p'//trim(NameProc)//'.txt'
-    open(UNITTMP_, file=FileNameTec, form='formatted', access='sequential', &
-         status = 'replace')
-    write(*,*) 'Writing ', FileNameTec
-
-    ! choose a single plane (more conditions inside loop)
-    j = 4
-    k = 1
-    do iBLK = 1, nBlock
-       ! Only choose blocks that cross the boundary
-       if ( minval(r_BLK(:,:,:,iBLK)) <= 1. .and. &
-            maxval(r_BLK(:,:,:,iBLK)) > 1.) then
-
-          ! Advance in the r direction
-          do i=MinI,MaxI
-
-             x=Xyz_DGB(x_,i,j,k,iBLK)
-             ! Extract data in the x=0 plane only
-             if (abs(X) > 0.1) CYCLE
-
-             y = Xyz_DGB(y_,i,j,k,iBLK)
-             z = Xyz_DGB(z_,i,j,k,iBLK)
-             r = r_BLK(i,j,k,iBLK)
-             x_D = (/x,y,z/)
-
-             Iplus = State_VGB(WaveFirst_,i,j,k,iBLK)
-             Iminus = State_VGB(WaveLast_,i,j,k,iBLK)
-             B = sum(State_VGB(Bx_:Bz_,i,j,k,iBLK)**2)
-             Br = sum(x_D*State_VGB(Bx_:Bz_,i,j,k,iBLK))
-             rho = State_VGB(rho_,i,j,k,iBLK)
-             p = State_VGB(p_,i,j,k,iBLK)
-
-             ! write to file
-             write(UNITTMP_, '(17e12.5)') real(i),real(j),real(k),&
-                  real(iBLK), real(iProc),&
-                  x, y, z, r, Iplus, Iminus, B, Br,  rho, p
-          end do
-
-       end if
-    end do
-    close(UNITTMP_)
-
-  end subroutine write_ghost_and_boundary
-  !============================================================================
-  subroutine write_b0
-
-    ! output b0 components in all cells
-
-    use ModProcMH,     ONLY: iProc
-    use ModIoUnit,     ONLY: UNITTMP_
-    use ModMain,       ONLY: iteration_number, nBlock
-    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
-    use ModAdvance,    ONLY: B0_DGB
-
-    integer            :: iBlock, i ,j ,k
-    real               :: x, y, z, r
-    real               :: B0_x, B0_y, B0_z
-    character(len=40)  :: FileNameTec 
-    character(len=11)  :: NameStage
-    character(len=7)   :: NameProc
-
-    character(len=*),parameter   :: NameSub='write_b0'
-    !-------------------------------------------------------------------
-    write(NameStage,'(i5.5)') iteration_number
-    write(NameProc, '(i4.4)') iProc
-    FileNameTec = &
-         'SC/IO2/B0_n_'//trim(NameStage)//'_p'//trim(NameProc)//'.txt'
-    open(UNITTMP_, file=FileNameTec, form='formatted', access='sequential', &
-         status = 'replace')
-    write(*,*) 'Writing ', FileNameTec
-
-    ! choose a single plane (more conditions inside loop)
-    j = 4
-    do iBlock = 1, nBlock
-       ! Advance in the r direction
-       do k=MinK,MaxK ; do i=MinI,MaxI
-
-          x=Xyz_DGB(x_,i,j,k,iBlock)
-          ! Extract data in the x=0 plane only
-          if (abs(X) > 0.1) CYCLE
-
-          y = Xyz_DGB(y_,i,j,k,iBlock)
-          z = Xyz_DGB(z_,i,j,k,iBlock)
-          r = r_BLK(i,j,k,iBlock)
-
-          B0_x = B0_DGB(1,i,j,k,iBlock)
-          B0_y = B0_DGB(2,i,j,k,iBlock)
-          B0_z = B0_DGB(3,i,j,k,iBlock)
-
-          ! write to file
-          write(UNITTMP_, '(17e12.5)') real(i),real(j),real(k),&
-               real(iBlock), real(iProc),&
-               x, y, z, r, B0_x, B0_y, B0_z
-       end do; end do
-    end do
-    close(UNITTMP_)
-
-  end subroutine write_b0
-  !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
@@ -477,12 +347,6 @@ contains
     ! Define log variable to be saved::
     !/
     select case(TypeVar)
-    case('bcs')
-       call write_ghost_and_boundary
-
-    case('b0cells')
-       call write_b0
-
     case('eint')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -563,8 +427,6 @@ contains
     logical,          intent(out)  :: IsFound
 
     integer :: i, j, k
-    real  :: U_D(3), B_D(3), r, phi, theta
-    real :: sintheta, sinphi, costheta, cosphi
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
@@ -658,141 +520,6 @@ contains
        end if
        NameIdlUnit = 'J/m^3/s'
        NameTecUnit = 'J/m^3/s'
-
-       ! Vector components in spherical coordinates
-    case('u_r','uphi','utheta')
-       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-          !calculate angles
-          call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
-               Xyz_DGB(y_,i,j,k,iBlock), &
-               Xyz_DGB(z_,i,j,k,iBlock), r, theta, phi)
-          sinphi = sin(phi)
-          cosphi = cos(phi)
-          costheta = cos(theta)
-          sintheta = sin(theta)
-
-          ! tranform to non rotating frame if needed
-          U_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
-               State_VGB(Rho_,i,j,k,iBlock)
-          if(UseRotatingFrame) then
-             U_D(x_) = U_D(x_) - OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
-             U_D(y_) = U_D(y_) + OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
-          end if
-          U_D = 1e-3*No2Si_V(UnitU_)*U_D
-
-          select case(NameVar)
-          case('u_r')
-             PlotVar_G(i,j,k) = U_D(x_)*sintheta*cosphi + &
-                  U_D(y_)*sintheta*sinphi + &
-                  U_D(z_)*costheta
-
-          case('utheta')
-             PlotVar_G(i,j,k) = U_D(x_)*costheta*cosphi + &
-                  U_D(y_)*costheta*sinphi - &
-                  U_D(z_)*sintheta
-
-          case('uphi')
-             PlotVar_G(i,j,k) =-U_D(x_)*sinphi + U_D(y_)*cosphi
-          end select
-       end do; end do; end do 
-       NameIdlUnit = 'km/s'
-       NameTecUnit = '[km/s]'
-
-    case('b_r','bphi','btheta')
-       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-          call xyz_to_sph(Xyz_DGB(x_,i,j,k,iBlock), &
-               Xyz_DGB(y_,i,j,k,iBlock), &
-               Xyz_DGB(z_,i,j,k,iBlock), r, theta, phi)
-          sinphi = sin(phi)
-          cosphi = cos(phi)
-          costheta = cos(theta)
-          sintheta = sin(theta)
-
-          if(UseB0) then
-             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
-                  B0_DGB(:,i,j,k,iBlock)
-          else
-             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          end if
-          B_D = 1e4*No2Si_V(UnitB_)*B_D
-
-          select case(NameVar)
-          case('b_r')
-             PlotVar_G(i,j,k) = B_D(x_)*sintheta*cosphi + &
-                  B_D(y_)*sintheta*sinphi + &
-                  B_D(z_)*costheta
-
-          case('btheta')
-             PlotVar_G(i,j,k) = B_D(x_)*costheta*cosphi + &
-                  B_D(y_)*costheta*sinphi - &
-                  B_D(z_)*sintheta
-
-          case('bphi')
-             PlotVAr_G(i,j,k) =-B_D(x_)*sinphi + B_D(y_)*cosphi
-          end select
-       end do; end do; end do 
-       NameIdlUnit = 'G'
-       NameTecUnit = '[G]'
-
-    case('rhoerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(rho_,i,j,k,iBlock) &
-               -StateOld_VCB(rho_,i,j,k,iBlock))/State_VGB(rho_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('perr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(p_,i,j,k,iBlock) &
-               -StateOld_VCB(p_,i,j,k,iBlock))/State_VGB(p_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('mxerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(rhoUx_,i,j,k,iBlock) &
-               -StateOld_VCB(rhoUx_,i,j,k,iBlock))/State_VGB(rhoUx_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('myerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(rhoUy_,i,j,k,iBlock) &
-               -StateOld_VCB(rhoUy_,i,j,k,iBlock))/State_VGB(rhoUy_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('mzerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(rhoUz_,i,j,k,iBlock) &
-               -StateOld_VCB(rhoUz_,i,j,k,iBlock))/State_VGB(rhoUz_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('bxerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(bx_,i,j,k,iBlock) &
-               -StateOld_VCB(bx_,i,j,k,iBlock))/State_VGB(bx_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('byerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(by_,i,j,k,iBlock) &
-               -StateOld_VCB(by_,i,j,k,iBlock))/State_VGB(by_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('bzerr')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(bz_,i,j,k,iBlock) &
-               -StateOld_VCB(bz_,i,j,k,iBlock))/State_VGB(bz_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('i01err')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(WaveFirst_,i,j,k,iBlock) &
-               -StateOld_VCB(WaveFirst_,i,j,k,iBlock))/State_VGB(WaveFirst_,i,j,k,iBlock)
-       end do; end do; end do
-
-    case('i02err')
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          PlotVar_G(i,j,k) = (State_VGB(WaveLast_,i,j,k,iBlock) &
-               -StateOld_VCB(WaveLast_,i,j,k,iBlock))/State_VGB(WaveLast_,i,j,k,iBlock)
-       end do; end do; end do
 
     case default
        IsFound = .false.

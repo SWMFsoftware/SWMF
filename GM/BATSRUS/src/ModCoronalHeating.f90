@@ -972,6 +972,10 @@ contains
           call stop_mpi('Read_corona_heating: unknown TypeCoronalHeating = ' &
                // TypeCoronalHeating)
        end select
+
+    case("#POYNTINGFLUX")
+       call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
+
     case("#ACTIVEREGIONHEATING")
        call read_var('UseArComponent', UseArComponent)
        if(UseArComponent) then
@@ -979,6 +983,7 @@ contains
           call read_var('ArHeatB0', ArHeatB0)
           call read_var('DeltaArHeatB0', DeltaArHeatB0)
        endif
+
     case("#LONGSCALEHEATING")
        call read_var('DoChHeat', DoChHeat)
        if(DoChHeat)then
@@ -1019,7 +1024,8 @@ contains
   end subroutine read_corona_heating
   !============================================================================
   subroutine init_coronal_heating
-    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_
+    use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_, &
+         UnitU_
     use ModAlfvenWaveHeating, ONLY: set_adiabatic_law_4_waves
 
     !--------------------------------------------------------------------------
@@ -1031,8 +1037,13 @@ contains
             *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
 
-    if(UseAlfvenWaveDissipation) LperpTimesSqrtB = LperpTimesSqrtBSi &
-         *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    if(UseAlfvenWaveDissipation)then
+       LperpTimesSqrtB = LperpTimesSqrtBSi &
+            *Si2No_V(UnitX_)*sqrt(Si2No_V(UnitB_))
+    end if
+
+    PoyntingFluxPerB = PoyntingFluxPerBSi &
+         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     call set_adiabatic_law_4_waves
 

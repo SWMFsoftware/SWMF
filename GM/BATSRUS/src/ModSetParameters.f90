@@ -1940,7 +1940,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
           "#ELECTRONHEATING", "#ANISOIONHEATING", "#HEATPARTITIONING", &
-          "#COUNTERPROPAGATINGWAVE")
+          "#COUNTERPROPAGATINGWAVE", "#POYNTINGFLUX")
         call read_corona_heating(NameCommand)
 
      case("#OPENCLOSEDHEAT")

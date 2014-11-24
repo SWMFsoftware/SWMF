@@ -8,7 +8,7 @@ module ModUser
   use ModVarIndexes, ONLY: IonFirst_, nFluid
   use ModMultiFluid, ONLY: nIonFluid
   use ModMain, ONLY: nI, nJ,nK
-  use ModCoronalHeating, ONLY: PoyntingFluxPerBSi, PoyntingFluxPerB
+  use ModCoronalHeating, ONLY: PoyntingFluxPerB
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -76,7 +76,6 @@ contains
              call read_var('NchromoSi', NchromoSi_I(iFluid))
           end do
           call read_var('TchromoSi', TchromoSi)
-          call read_var('PoyntingFluxPerBSi', PoyntingFluxPerBSi)
 
        case('#SOLARDIPOLE')
           call read_var('DipoleStrengthSi',DipoleStrengthSi)
@@ -119,8 +118,8 @@ contains
          cElectronMass, cProtonMass
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, UnitB_, UnitU_, &
-         UnitEnergyDens_, SinThetaTilt, CosThetaTilt, No2Si_V, UnitT_
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, &
+         SinThetaTilt, CosThetaTilt, No2Si_V, UnitT_
 
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
@@ -138,9 +137,6 @@ contains
     ! convert to normalized units
     Nchromo_I = NchromoSi_I*Si2No_V(UnitN_)
     Tchromo = TchromoSi*Si2No_V(UnitTemperature_)
-
-    PoyntingFluxPerB = PoyntingFluxPerBSi &
-         *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
     if (.not. UseMagnetogram) then
        SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
