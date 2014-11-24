@@ -48,8 +48,6 @@ CouplerMode=ices !!off, ices, swmf
   InitialSampleLength=10000
   TestRunTotalIteration=50
 
-  NastranSurfaceUserData=off
-  
 ! ReferenceInjectionParticleNumber=200
 ! MaxMeshRefinmentLevel=8! 2 !4
 ! EnforceRequestedMeshResolution=off !on,off
@@ -58,17 +56,23 @@ CouplerMode=ices !!off, ices, swmf
   GhostCells=2,2,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
-  NastranSurfaceUserData=off !!!on, off
+  NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
   
 #endGeneral
 
-#species
-#component=C  
-  mass=1.993E-26 
+
+#include species.input
 
 
-#endspecies
+#block ../exosphere.pl
+  define _TARGET_ _MARS_
+
+  SPICE=off 
+  addPhysicalModelHeader=Mars.h
+
+  
+#endblock
 
 #block ../mars.pl !process settings of the mars module
 
