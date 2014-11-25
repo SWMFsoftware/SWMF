@@ -120,19 +120,6 @@ g rbody			NamePars
 
 #RESTART
 T					DoRrestart
-PC/restartIN				RestartDirName
-
-#ELECTRON
--25.0                                  Charge/mass ratio (qom)
-
-#PARTICLES
-10					Particles per cell in X Region 1
-10					Particles per cell in Y Region 1
-1					Particles per cell in Z Region 1
-20					Particles per cell in X Region 2
-20					Particles per cell in Y Region 2
-1					Particles per cell in Z Region 2
-
 
 #SOLVER
 1.0e-8				CGtol : CG solver stopping criterium tolerance
@@ -143,7 +130,6 @@ PC/restartIN				RestartDirName
 PC/plots				SaveDirName
 1					FieldOutputCycle
 10000					ParticlesOutputCycle
-2					RestartOutputCycle
 1					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
 0					SatelliteOutputCycle

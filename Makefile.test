@@ -1275,6 +1275,7 @@ test_ramscb_check:
 test12:
 	$(MAKE) test12_aniso
 	$(MAKE) test12_iso
+	$(MAKE) test12_3d
 
 # Run on 4 procs with mpirun or max number of procs with mpiexec
 test12_run1:
@@ -1316,7 +1317,7 @@ test12_aniso_run:
 	cp Param/PARAM.in.test.GMPC.start.2step.aniso ${TESTDIR}/PARAM.in
 	$(MAKE) test12_run1
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2step
-	cd ${TESTDIR}; Restart.pl -v -i RESULTS/2step/RESTART
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
 	cp Param/PARAM.in.test.GMPC.restart.2step.aniso ${TESTDIR}/PARAM.in
 	$(MAKE) test12_run1
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
@@ -1333,6 +1334,57 @@ test12_aniso_check:
 		${TESTDIR}/RESULTS/z_n4.ref \
 		>> test12_gmpc_aniso.diff)
 	ls -l test12_gmpc_aniso.diff
+
+#### test IPIC3D.exe coupled with GM/BATSRUS using 3D reconetion #########
+
+test12_3d:
+	@echo "test12_3d_compile..." > test12_gmpc_3d.diff
+	$(MAKE) test12_3d_compile
+	@echo "test12_3d_rundir..." > test12_gmpc_3d.diff
+	$(MAKE) test12_3d_rundir
+	@echo "test12_3d_run..." > test12_gmpc_3d.diff
+	$(MAKE) test12_3d_run
+	@echo "test12_3d_check..." > test12_gmpc_3d.diff
+	$(MAKE) test12_3d_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_3d_compile:
+	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
+	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=false,ng=1,pseudrand=true,h5hut=false
+	./Config.pl -g=GM:4,4,4,4500,1 -o=GM:u=GemReconnect,e=Mhd
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test12_3d_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.3D.start  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
+
+test12_3d_run:
+	$(MAKE) test12_run1
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
+
+test12_3d_check:
+	gunzip -c output/test12/x=0_var.out.ref.3d.gz \
+	        > ${TESTDIR}/RESULTS/4step/GM/x_n4.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+		${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
+		${TESTDIR}/RESULTS/4step/GM/x_n4.ref \
+		> test12_gmpc_3d.diff)
+	gunzip -c output/test12/y=0_var.out.ref.3d.gz \
+	        > ${TESTDIR}/RESULTS/4step/GM/y_n4.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+		${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
+		${TESTDIR}/RESULTS/4step/GM/y_n4.ref \
+		> test12_gmpc_3d.diff)
+	gunzip -c output/test12/z=0_var.out.ref.3d.gz \
+	        > ${TESTDIR}/RESULTS/4step/GM/z_n4.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
+		${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
+		${TESTDIR}/RESULTS/4step/GM/z_n4.ref \
+		> test12_gmpc_3d.diff)
+	ls -l test12_gmpc_3d.diff
 
 #### test IPIC3D.exe coupled with GM/BATSRUS using isotropic MHD #########
 

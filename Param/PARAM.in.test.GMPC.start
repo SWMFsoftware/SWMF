@@ -232,7 +232,6 @@ z=0 all idl_ascii       StringPlot
 PC/plots				SaveDirName
 0					FieldOutputCycle
 0					ParticlesOutputCycle
-0					RestartOutputCycle
 0					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
 0					SatelliteOutputCycle

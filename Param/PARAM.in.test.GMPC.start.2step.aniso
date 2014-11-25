@@ -249,7 +249,6 @@ g rbody			NamePars
 PC/plots				SaveDirName
 1					FieldOutputCycle
 10000					ParticlesOutputCycle
-2					RestartOutputCycle
 1					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
 0					SatelliteOutputCycle
