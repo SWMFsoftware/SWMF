@@ -124,7 +124,7 @@ CouplerMode=ices !!off, ices, swmf
   define _TARGET_ _MARS_
 
   SPICE=off 
-  addPhysicalModelHeader=newMars.h
+  addPhysicalModelHeader=Mars.h
 
   
 #endblock
