@@ -118,7 +118,7 @@ contains
          cElectronMass
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, BodyNDim_I, BodyTDim_I, g
+         Si2No_V, UnitTemperature_, UnitN_, BodyNDim_I, BodyTDim_I, g
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -382,20 +382,14 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
-         UseAnisoPressure, B0_DGB, StateOld_VCB, Source_VC
+         UseAnisoPressure, Source_VC
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          get_tesi_c, TeSi_C
-    use ModConst,      ONLY: rSun
     use ModCoronalHeating, ONLY: get_block_heating, CoronalHeating_C, &
          apportion_coronal_heating, IsNewBlockAlfven, get_wave_reflection
-    use ModMain,       ONLY: UseB0, UseRotatingFrame
-    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
-         UnitX_, UnitU_, UnitB_, UnitT_, OmegaBody
+    use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, UnitT_
     use ModRadiativeCooling, ONLY: RadCooling_C, get_radiative_cooling
-    use ModGeometry,   ONLY: Xyz_DGB
-    use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, By_, Bz_, RhoUx_, RhoUy_, &
-         RhoUz_, WaveFirst_, WaveLast_
-    use ModCoordTransform,  ONLY: xyz_to_sph
+    use ModVarIndexes, ONLY: Rho_, p_, Pe_, WaveFirst_, WaveLast_
     use ModFaceValue, ONLY: calc_face_value
     use ModB0, ONLY: set_b0_face
     use ModMultiFluid, ONLY: IonFirst_, IonLast_
