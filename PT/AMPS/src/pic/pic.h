@@ -1565,7 +1565,7 @@ namespace PIC {
       //the total number of the background species, the mass table, the table of cosntant collision cross sections with the model species
       static const int nTotalBackgroundSpecies=1;
       static const double BackgroundSpeciesMassTable[]={0.0};
-      static const double BackgroundAtmosphereConstantCrossSectionTable[PIC::nTotalSpecies][nTotalBackgroundSpecies];
+//      static const double BackgroundAtmosphereConstantCrossSectionTable[PIC::nTotalSpecies][nTotalBackgroundSpecies];
       static const int Background2ModelSpeciesConversionTable[]={-1};
 
       inline int GetTotalNumberBackgroundSpecies() {return nTotalBackgroundSpecies;}
