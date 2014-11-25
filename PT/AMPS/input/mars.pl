@@ -84,15 +84,21 @@ while ($line=<InputFile>) {
   $InputLine=~s/ //g;
   
   if ($InputLine eq "CASE") {
-    ($InputLine,$InputComment)=split(' ',$InputComment,2);
-    $InputLine=~s/ //g;
-    $DataCaseFiles=$DataDirectory . $InputLine ."/*.h";
+    my ($s0,$s1);
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/[=()]/ /g;
+    ($s0,$s1,$InputLine)=split(' ',$InputLine,3);
+    
+    $s1=~s/ //g;
+    $DataCaseFiles=$DataDirectory.$s1."/*.h";
 
-    if ( -d $DataDirectory . $InputLine ) {
-	`cp $DataCaseFiles $ampsConfigLib::WorkingSourceDirectory/main`;
+    if ( -d $DataDirectory.$s1 ) {
+	    `cp $DataCaseFiles $ampsConfigLib::WorkingSourceDirectory/main`;
     }
     else {
-	die "The case selected entitled $InputLine does not exist, line=$InputFileLineNumber ($InputFileName)\n";
+	     die "The case selected entitled $InputLine does not exist, line=$InputFileLineNumber ($InputFileName)\n";
     }
   }
   elsif ($InputLine eq "#ENDBLOCK") {
