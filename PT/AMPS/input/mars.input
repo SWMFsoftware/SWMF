@@ -58,18 +58,73 @@ CouplerMode=ices !!off, ices, swmf
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
+
+  define _PIC_BACKGROUND_ATMOSPHERE_MODE_ _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+  define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_ _PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__ISOTROPIC_
+  define _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION_ _BACKGROUND_ATMOSPHERE_COLLISION_CROSS_SECTION__HARD_SPHERE_
+
+  define _THERMALIZED_PARTICLE_REMOVE_CRITERION_ _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_
+
+  !the volume injection of the particles and the type of injection of model particles into a cell
+  define _PIC_VOLUME_PARTICLE_INJECTION_MODE_ _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
+
+  !the mode of volume injection
+  define _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE_  _PIC_VOLUME_PARTICLE_INJECTION__INJECTION_MODE__RATE_DEPENDENT_
+
+  !the distriburion of the collision frequency in a cell
+  define _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE_ _PIC_BACKGROUND_ATMOSPHERE_COLLISION_FREQ_MODE__LOCAL_BACKGROUND_DENSITY_
+
+  !the model for the baclground atmosphere
+  !define _MARS_BACKGROUND_ATMOSPHERE_MODEL_ _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
+  define _MARS_BACKGROUND_ATMOSPHERE_MODEL_ _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
+
+  !the mode of counting the escaping particles:
+  define _MARS_ESCAPE_PARTICLES_COUNTING_MODE_ _MARS_ESCAPE_PARTICLES_COUNTING_MODE__ESCAPE_SPEED_
+
+  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) newMars::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
+  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) newMars::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) 
+
   
 #endGeneral
 
 
 #include species.input
 
+#BackgroundSpecies
+  BackgroundSpecies=on !!on,off
+
+  SpeciesList=CO2,O
+  CollisionMode=on !on,off
+
+  CollisionCrossSection= function \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
+    FunctionName=GetCollisionCrossSectionBackgoundAtmosphereParticle1 \\
+    const(Na,CO)=3e-15 \\
+    const(Na,O)=3e-14
+
+  CollisionScatteringAngle=function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
+    FunctionName=UserDefinedVelocityScatteringAngle1
+
+  InjectConditionBackgroundParticle=KeepBackgroundAtmosphereParticle1
+  RemoveConditionModelParticle=KeepBackgroundAtmosphereParticle1
+
+
+  LoadUserDefinitions=on \\ ! on, off
+   UserDefinitionsFileName=UserDefinition.PIC.BackgroundAtmosphere.h
+
+
+#endBackgroundSpecies
+
 
 #block ../exosphere.pl
   define _TARGET_ _MARS_
 
   SPICE=off 
-  addPhysicalModelHeader=Mars.h
+  addPhysicalModelHeader=newMars.h
 
   
 #endblock
