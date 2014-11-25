@@ -7299,6 +7299,38 @@ of the parameters should be obtained from publications on the WSA model.
 Default values are show. 
 </command>
 
+<command name="POYNTINGFLUX">
+	 <parameter name="PoyntingFluxPerBSi" type="real" default="1.0E-6"/>
+
+#POYNTINGFLUX
+0.3E-6		PoyntingFluxPerBSi [J/m^2/s/T]
+
+The boundary condition for the Alfven wave energy density is empirically set
+by prescribing the Poynting flux $S_{A}$ of the outgoing waves. The wave energy
+density $w$ ($w_{+}$ for positive radial magnetic field $B_{r}$ and
+$w_{-}$ for negative $B_{r}$) then follows from
+$S_{A} = V_{A}w\propto B_{\odot}$, where $V_{A}$ is the Alfven speed,
+$B_{\odot}$ is the field strength at the inner boundary and the
+proportionality constant is estimated in Sokolov et al. (2013) as
+$(S_{A}/B)_{\odot} = 1.1\times 10^6\;{\rm W}\,{\rm m}^{-2}\,{\rm T}^{-1}$.
+Under the assumption of sufficiently small returning flux, this estimate of the
+Poynting-flux-to-field ratio is equivalent to the following averaged
+velocity perturbation
+\begin{equation}
+  <\delta{\bf u}_{\perp}\cdot\delta{\bf u}_{\perp}>^{1/2} \approx
+  15\;{\rm km}\,{\rm s}^{-1}\left( \frac{3\cdot10^{-11}\;{\rm kg}\,
+      {\rm m}^{-3}}{\rho}\right)^{1/4},
+\end{equation}
+where the mass density $3\cdot10^{-11}\;{\rm kg}\,{\rm m}^{-3}$ (ion number
+density $N_{i}=2\cdot10^{16}\;{\rm m}^{-3}$) corresponds to the
+upper chromosphere. This value is compatible with the Hinode
+observations of the turbulent velocities of $15\,{\rm km}\,{\rm s}^{-1}$.
+Hence, the energy density of the outgoing wave is set to
+$w = (S_{A}/B)_{\odot} \sqrt{\mu_{0}\rho}$.
+
+Default value for PoyntingFluxPerBSi is 1.0E-6.
+</command>
+
 <command name="CORONALHEATING">
 	<parameter name="TypeCoronalHeating" type="string" case="lower"
 		input="select" >
