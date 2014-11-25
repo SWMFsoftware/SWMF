@@ -33,9 +33,6 @@ module ModUser
   ! variables for Parker initial condition
   real    :: nCoronaSi = 1.5e14, tCoronaSi = 1.5e6
 
-  ! Dipole test
-  real    :: DipoleTiltDeg = 0.0
-
   ! Input parameters for two-temperature effects
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
@@ -52,7 +49,6 @@ contains
     use ModProcMH,     ONLY: iProc
     use ModReadParam,  ONLY: read_line, read_command, read_var
     use ModIO,         ONLY: write_prefix, write_myname, iUnitOut
-    use ModPhysics,    ONLY: DipoleStrengthSi
 
     integer :: iFluid
     character (len=100) :: NameCommand
@@ -76,10 +72,6 @@ contains
              call read_var('NchromoSi', NchromoSi_I(iFluid))
           end do
           call read_var('TchromoSi', TchromoSi)
-
-       case('#SOLARDIPOLE')
-          call read_var('DipoleStrengthSi',DipoleStrengthSi)
-          call read_var('DipoleTiltDeg',DipoleTiltDeg)
 
        case("#PARKERIC")
           call read_var('nCoronaSi', nCoronaSi)
@@ -108,7 +100,6 @@ contains
   !============================================================================
   subroutine user_init_session
 
-    use ModMain,       ONLY: UseMagnetogram
     use ModProcMH,     ONLY: iProc
     use ModIO,         ONLY: write_prefix, iUnitOut
     use ModWaves,      ONLY: UseWavePressure, UseAlfvenWaves
@@ -116,10 +107,9 @@ contains
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
     use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass, cProtonMass
-    use ModNumConst,   ONLY: cTwoPi, cDegToRad
+    use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, &
-         SinThetaTilt, CosThetaTilt, No2Si_V, UnitT_
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_
 
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
@@ -137,11 +127,6 @@ contains
     ! convert to normalized units
     Nchromo_I = NchromoSi_I*Si2No_V(UnitN_)
     Tchromo = TchromoSi*Si2No_V(UnitTemperature_)
-
-    if (.not. UseMagnetogram) then
-       SinThetaTilt = sin(cDegToRad*DipoleTiltDeg)
-       CosThetaTilt = cos(cDegToRad*DipoleTiltDeg)
-    end if
 
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then

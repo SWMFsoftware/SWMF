@@ -100,6 +100,12 @@ harmonics.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
+To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
+and activate the HELIODIPOLE command below
+HELIODIPOLE
+2.8e-4			HelioDipoleStrengthSi
+0.0			HelioDipoleTilt
+
 #USER_FLAGS
 T			UseUserInnerBcs
 F			UseUserSource
@@ -114,16 +120,6 @@ F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
-
-#USERINPUTBEGIN ------------------------
-
-To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
-and activate the SOLARDIPOLE command below
-SOLARDIPOLE
-1.5e-4			DipoleStrengthSi
-0.0			DipoleTiltDeg
-
-#USERINPUTEND ----------------------------
 
 #POYNTINGFLUX
 0.3e6			PoyntingFluxPerBSi [J/m^2/s/T]
