@@ -1,7 +1,0 @@
-#include "CometDefinitions.dfn"
-
-//define default surface temperaeture mode to use
-#define _COMET_TEMPERATURE_MODE_ _COMET_TEMPERATURE_MODE__BJORN_
-
-//define default Bjorn production rate mode to use
-#define _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ON_ 
