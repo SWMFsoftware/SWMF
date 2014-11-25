@@ -232,7 +232,6 @@ g
 PC/plots				SaveDirName
 0					FieldOutputCycle
 0					ParticlesOutputCycle
-0					RestartOutputCycle
 0					DiagnosticsOutputCycle
 4					FieldOutputCycleASCII
 0					SatelliteOutputCycle
