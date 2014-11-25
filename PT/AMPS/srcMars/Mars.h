@@ -31,6 +31,7 @@
 #include <dirent.h>
 
 #include "pic.h"
+#include "Exosphere.h"
 
 #include "specfunc.h"
 #include "ifileopr.h"
@@ -71,6 +72,26 @@ const double Semimajoraxis=1.523679; //AU, 2227,939,100km
 
 //the offset in the cells' data to the local maximum of the cells' background densit
 extern int maxLocalBackdroundDensityOffset;
+
+//BEGIN: the global parameters of the forward scattering cross section
+#include "DifferentialCrossSection.h"
+extern cDiffCrossSection ForwardCollisionCrossSection;
+extern int maxLocalBackdroundDensityOffset;
+
+extern double TotalIntegratedForwardScatteringCrossSection;
+extern int CumulativeDistributionMaskList;
+extern int *CumulativeDistributionMask;
+extern int nForwardScatteringCrossSectionLines;
+
+#ifndef _cForwardScatteringCrossSection_
+#define _cForwardScatteringCrossSection_
+struct cForwardScatteringCrossSection {
+  double Angle,DifferentialCrossSection,CumulativeDistributionFunction,deltaCumulativeDistributionFunction;
+};
+#endif
+
+extern cForwardScatteringCrossSection *ForwardScatteringCrossSectionData;
+//END: the global parameters of the forward scattering cross section
  
 namespace newMars {
 //extern cDataSetMTGCM Te;
@@ -191,7 +212,7 @@ inline void ReadMTGCM() {
   void OutputSampledModelData(int DataOutputFileNumber);
 
 	//process particles that leaves the boundary of the computational domain: calcualte the escape rate
-	int ProcessOutsideDomainParticles(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+	int ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode); //(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
 
 	//init the model
   inline void Init_AfterParser() {

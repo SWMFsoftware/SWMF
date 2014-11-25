@@ -22,7 +22,7 @@ int maxLocalBackdroundDensityOffset=-1;
 
 #include "rnd.h"
 #include "pic.h"
-#include "newMars.h"
+#include "Mars.h"
 
 int newMars::maxLocalCellOxigenProductionRateOffset=-1;//,newMars::maxLocalBackdroundDensityOffset=-1;
 int newMars::minLocalCellOxigenProductionRateOffset=-1,newMars::minLocalBackdroundDensityOffset=-1;
@@ -313,7 +313,7 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
         if ((*minRate<0.0)||(*minRate>c)) *minRate=c;
 
         for (bspec=0;bspec<bspecMax;bspec++) {
-          c=PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundNumberDensity(bspec,x);
+          c=PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberDensity(bspec,x);
           if (maxBdens[bspec]<c) maxBdens[bspec]=c;
           if ((minBdens[bspec]<0.0)||(minBdens[bspec]>c)) minBdens[bspec]=c;
         }
@@ -328,7 +328,7 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
 }
 
 //BOUNDARY CONDITIONS
-int newMars::ProcessOutsideDomainParticles(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) { //(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
   int spec;
   double rate;
   PIC::ParticleBuffer::byte *ParticleData;
