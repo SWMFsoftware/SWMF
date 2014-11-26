@@ -82,8 +82,9 @@ contains
 
     select case(NameCommand)
     case('#VISCOSITY')
-       call read_var('UseViscosity',  UseViscosity)
-       call read_var('VisosityCoeffisient',  ViscoCoeffSi)
+       call read_var('UseViscosity',      UseViscosity)
+       if(UseViscosity) &
+            call read_var('ViscosityCoeffSi',  ViscoCoeffSi)
     case('#VISCOSITYREGION')
        call read_var('NameViscosityRegion', NameViscoRegion)
 
