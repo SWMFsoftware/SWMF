@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=O
+SpeciesList=O, H
 
 
 !settings of the directories
