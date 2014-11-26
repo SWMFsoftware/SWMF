@@ -38,8 +38,8 @@ const double DebugRunMultiplier=4.0;
 const double rSphere=_RADIUS_(_TARGET_);
 
 
-const double xMaxDomain=1.5; //modeling the vicinity of the planet
-const double yMaxDomain=1.5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+const double xMaxDomain=30; //modeling the vicinity of the planet
+const double yMaxDomain=30; //the minimum size of the domain in the direction perpendicular to the direction to the sun
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
@@ -490,7 +490,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
   PIC::ParticleBuffer::byte *newParticleData;
   long int nInjectedParticles=0;
 
-  if (spec!=_O_SPEC_) return 0; //inject only spec=0
+  if (spec!=_O_SPEC_ && spec!=_H_SPEC_) return 0; //inject only spec=0
 
   static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
   double v[3];
@@ -507,7 +507,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
       startNode->GetExternalNormal(ExternalNormal,nface);
       TimeCounter=0.0;
 
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_SPEC_);
+      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,spec);
 
 
       if (ModelParticlesInjectionRate>0.0) {
@@ -525,7 +525,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
           nInjectedParticles++;
 
           //generate particles' velocity
-          PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,_O_SPEC_,-1);
+          PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,spec,-1);
 
           PIC::ParticleBuffer::SetX(x,newParticleData);
           PIC::ParticleBuffer::SetV(v,newParticleData);
@@ -558,7 +558,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
   double ExternalNormal[3],BlockSurfaceArea;
   int nface;
 
-  if (spec!=_O_SPEC_) return 0; //inject only spec=0
+  if (spec!=_O_SPEC_ && spec!=_H_SPEC_) return 0; //inject only spec=0
 
   double ModelParticlesInjectionRate=0.0;
   static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
@@ -567,7 +567,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
 	startNode->GetExternalNormal(ExternalNormal,nface);
 	BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
-	ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_SPEC_);
+	ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,spec);
       }
   }
 
@@ -760,6 +760,7 @@ void amps_init() {
   //set up the particle weight
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H_SPEC_);
 
 
 
