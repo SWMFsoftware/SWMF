@@ -200,8 +200,8 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
   aCen[2] = 0.0;
 
 
-  aCorr[0] = - TwoOmega * v_LOCAL[1];
-  aCorr[1] =   TwoOmega * v_LOCAL[0];
+  aCorr[0] =   TwoOmega * v_LOCAL[1];
+  aCorr[1] = - TwoOmega * v_LOCAL[0];
   aCorr[2] =   0.0;
 
   accl_LOCAL[0]+=aCen[0]+aCorr[0];
