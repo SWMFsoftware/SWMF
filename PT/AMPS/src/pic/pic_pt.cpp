@@ -72,29 +72,33 @@ void PIC::ParticleTracker::TrajectoryDataBuffer::flush() {
   FILE *fout;
   char fname[_MAX_STRING_LENGTH_PIC_];
 
-  sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
-  fout=fopen(fname,"w");
+  if (CurrentPosition!=0) {
+    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
+    fout=fopen(fname,"w");
 
-  fwrite(buffer,sizeof(cTrajectoryRecord),CurrentPosition,fout);
-  fclose(fout);
+    fwrite(buffer,sizeof(cTrajectoryRecord),CurrentPosition,fout);
+    fclose(fout);
 
-  CurrentPosition=0;
-  ++nfile;
+    CurrentPosition=0;
+    ++nfile;
+  }
 }
 
 void PIC::ParticleTracker::TrajectoryList::flush() {
   FILE *fout;
   char fname[_MAX_STRING_LENGTH_PIC_];
 
-  sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
-  fout=fopen(fname,"w");
+  if (CurrentPosition!=0) {
+    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
+    fout=fopen(fname,"w");
 
-  fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
-  fwrite(buffer,sizeof(cTrajectoryRecordReference),CurrentPosition,fout);
-  fclose(fout);
+    fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
+    fwrite(buffer,sizeof(cTrajectoryRecordReference),CurrentPosition,fout);
+    fclose(fout);
 
-  CurrentPosition=0;
-  ++nfile;
+    CurrentPosition=0;
+    ++nfile;
+  }
 }
 
 void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData) {
@@ -223,14 +227,14 @@ void PIC::ParticleTracker::ParticleTrajectoryFile::Output(const char *fname) {
   //the number of files, and size of the last file in the list
   unsigned long int TrajectoryList_nfile[PIC::nTotalThreads];
 
-  //trajectory list
-  t=TrajectoryList::nfile+1; //one more file will be written when the buffer is flushed
-  MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryList_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
-
-  //trajectory buffer
+  //flush trajectory buffer
   TrajectoryDataBuffer::flush();
   TrajectoryList::flush();
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+  //get the number of the trajectory list files
+  t=TrajectoryList::nfile; //one more file will be written when the buffer is flushed
+  MPI_Gather(&t,1,MPI_UNSIGNED_LONG,TrajectoryList_nfile,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
 
   //the file will be created only by the root processor
   if (PIC::ThisThread==0) {
