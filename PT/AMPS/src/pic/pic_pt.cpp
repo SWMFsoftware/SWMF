@@ -143,14 +143,82 @@ void PIC::ParticleTracker::FinilazeParticleRecord(void *ParticleData) {
   ++TrajectoryList::CurrentPosition;
 }
 
-void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
-  FILE *fout[PIC::nTotalSpecies];
-  FILE *fTrajectoryList=NULL,*fTrajectoryData=NULL;
-  char str[_MAX_STRING_LENGTH_PIC_];
+//output sampled particle trajectories
+PIC::ParticleTracker::cTrajectoryRecordReference PIC::ParticleTracker::ParticleTrajectoryFile::StartTrajectoryPoint;
+int PIC::ParticleTracker::ParticleTrajectoryFile::lastRecordThread=-1,PIC::ParticleTracker::ParticleTrajectoryFile::lastRecordFile=-1;
+FILE *PIC::ParticleTracker::ParticleTrajectoryFile::fout[PIC::nTotalSpecies];
+FILE *PIC::ParticleTracker::ParticleTrajectoryFile::fTrajectoryData=NULL;
+unsigned int PIC::ParticleTracker::ParticleTrajectoryFile::TrajectoryCounter[PIC::nTotalSpecies];
+char PIC::ParticleTracker::ParticleTrajectoryFile::str[_MAX_STRING_LENGTH_PIC_];
+
+void PIC::ParticleTracker::ParticleTrajectoryFile::OutputParticleTrajectory() {
+  unsigned long int RecordThread,RecordOffset,RecordFile;
+  cTrajectoryRecord TrajectoryRecord;
+  int StartTrajectorySpec; //during the particle motion the spec might be changed, which will change the trajectory output file
+  FILE *trOut;
+
+  StartTrajectorySpec=-1,trOut=NULL;
+
+  do {
+    if (StartTrajectorySpec==-1) {
+      RecordThread=StartTrajectoryPoint.thread;
+      RecordOffset=StartTrajectoryPoint.offset;
+      RecordFile=StartTrajectoryPoint.file;
+    }
+    else {
+      RecordThread=TrajectoryRecord.lastRecordReference.thread;
+      RecordOffset=TrajectoryRecord.lastRecordReference.offset;
+      RecordFile=TrajectoryRecord.lastRecordReference.file;
+    }
+
+    //open the trajectory data file if needed
+    if ((RecordThread!=lastRecordThread)||(RecordFile!=lastRecordFile)) {
+      //close previously opened file
+      if (lastRecordFile!=-1) {
+        fclose(fTrajectoryData);
+      }
+
+      //open a new trajecory data file
+      lastRecordThread=RecordThread,lastRecordFile=RecordFile;
+
+      sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,RecordThread,RecordFile);
+      fTrajectoryData=fopen(str,"r");
+    }
+
+    fseek (fTrajectoryData,RecordOffset*sizeof(cTrajectoryRecord),SEEK_SET);
+    fread(&TrajectoryRecord,sizeof(cTrajectoryRecord),1,fTrajectoryData);
+
+    #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
+    if (StartTrajectorySpec==-1) {
+      trOut=fout[TrajectoryRecord.spec];
+
+      //print the header of the new trajectory
+      fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
+      ++TrajectoryCounter[TrajectoryRecord.spec];
+      StartTrajectorySpec=TrajectoryRecord.spec;
+    }
+    #elif _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_
+    if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=TrajectoryRecord.spec)) {
+      trOut=fout[TrajectoryRecord.spec];
+
+      //print the header of the new trajectory
+      fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
+      ++TrajectoryCounter[TrajectoryRecord.spec];
+      StartTrajectorySpec=TrajectoryRecord.spec;
+    }
+    #else
+    exit(__LINE__,__FILE__,"Error: unknown option");
+    #endif
+
+    fprintf(trOut,"%e  %e  %e  %e\n",TrajectoryRecord.x[0],TrajectoryRecord.x[1],TrajectoryRecord.x[2],TrajectoryRecord.Speed);
+  }
+  while (TrajectoryRecord.lastRecordReference.offset!=-1);
+}
+
+void PIC::ParticleTracker::ParticleTrajectoryFile::Output(const char *fname) {
+  FILE *fTrajectoryList=NULL;
   unsigned long int t;
   int i,spec,thread,nList;
-  unsigned int TrajectoryCounter[PIC::nTotalSpecies];
-
 
   //the number of files, and size of the last file in the list
   unsigned long int TrajectoryList_nfile[PIC::nTotalThreads];
@@ -181,15 +249,8 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
     }
 
     //create particle trajectories
-    unsigned long int lastRecordThread=-1,lastRecordFile=-1;
-
     for (thread=0;thread<PIC::nTotalThreads;thread++) for (nList=0;nList<TrajectoryList_nfile[thread];nList++) {
       unsigned long int tr,TotalListLegth;
-      int StartTrajectorySpec; //during the particle motion the spec might be changed, which will change the trajectory output file
-      unsigned long int RecordThread,RecordOffset,RecordFile;
-      FILE *trOut;
-
-      cTrajectoryRecordReference StartTrajectoryPoint;
       cTrajectoryRecord TrajectoryRecord;
 
       sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,thread,nList);
@@ -198,78 +259,123 @@ void PIC::ParticleTracker::CreateTrajectoryFile(const char *fname) {
 
       for (tr=0;tr<TotalListLegth;tr++) {
         fread(&StartTrajectoryPoint,sizeof(cTrajectoryRecordReference),1,fTrajectoryList);
-        StartTrajectorySpec=-1,trOut=NULL;
-
-        do {
-          if (StartTrajectorySpec==-1) {
-            RecordThread=StartTrajectoryPoint.thread;
-            RecordOffset=StartTrajectoryPoint.offset;
-            RecordFile=StartTrajectoryPoint.file;
-          }
-          else {
-            RecordThread=TrajectoryRecord.lastRecordReference.thread;
-            RecordOffset=TrajectoryRecord.lastRecordReference.offset;
-            RecordFile=TrajectoryRecord.lastRecordReference.file;
-          }
-
-          //open the trajectory data file if needed
-          if ((RecordThread!=lastRecordThread)||(RecordFile!=lastRecordFile)) {
-            //close previously opened file
-            if (lastRecordFile!=-1) {
-              fclose(fTrajectoryData);
-            }
-
-            //open a new trajecory data file
-            lastRecordThread=RecordThread,lastRecordFile=RecordFile;
-
-            sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,RecordThread,RecordFile);
-            fTrajectoryData=fopen(str,"r");
-          }
-
-          fseek (fTrajectoryData,RecordOffset*sizeof(cTrajectoryRecord),SEEK_SET);
-          fread(&TrajectoryRecord,sizeof(cTrajectoryRecord),1,fTrajectoryData);
-
-          #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_
-          if (StartTrajectorySpec==-1) {
-            trOut=fout[TrajectoryRecord.spec];
-
-            //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
-            ++TrajectoryCounter[TrajectoryRecord.spec];
-            StartTrajectorySpec=TrajectoryRecord.spec;
-          }
-          #elif _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__SPECIES_TYPE_SEGMENTS_
-          if ((StartTrajectorySpec==-1)||(StartTrajectorySpec!=TrajectoryRecord.spec)) {
-            trOut=fout[TrajectoryRecord.spec];
-
-            //print the header of the new trajectory
-            fprintf(trOut,"ZONE T=\"Trajectory=%i\" F=POINT\n",TrajectoryCounter[TrajectoryRecord.spec]);
-            ++TrajectoryCounter[TrajectoryRecord.spec];
-            StartTrajectorySpec=TrajectoryRecord.spec;
-          }
-          #else
-          exit(__LINE__,__FILE__,"Error: unknown option");
-          #endif
-
-          fprintf(trOut,"%e  %e  %e  %e\n",TrajectoryRecord.x[0],TrajectoryRecord.x[1],TrajectoryRecord.x[2],TrajectoryRecord.Speed);
-        }
-        while (TrajectoryRecord.lastRecordReference.offset!=-1);
+        OutputParticleTrajectory(); //the starting point of the trajectory is in StartTrajectoryPoint
       }
 
       fclose(fTrajectoryList);
     }
-
-    //close the trajectory files
-    for (spec=0;spec<PIC::nTotalSpecies;spec++) fclose(fout[spec]);
-
-    if (fTrajectoryData!=NULL) fclose(fTrajectoryData);
   }
 
-  //clean up the trajectory data buffers and set the default value of the particle tracking flag
-/*  TrajectoryDataBuffer::clean();
-  TrajectoryList::clean();
+  //output trajectories of the particles that are still in the system
+  if (PIC::ThisThread==0) {
+    CMPI_channel pipe(1000000);
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],ptr;
+    int i,j,k;
+    PIC::ParticleBuffer::byte *ParticleData;
+    cParticleData ParticleTrajectoryRecord;
 
-  SetDefaultParticleTrackingFlag();*/
+
+    //output trajecotries of the particles from the root processor
+    for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+      memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+            ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+            while (ptr!=-1) {
+              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+              memcpy(&ParticleTrajectoryRecord,ParticleDataRecordOffset+ParticleData,sizeof(cParticleData));
+
+              if ((ParticleTrajectoryRecord.TrajectoryTrackingFlag==true)&&(ParticleTrajectoryRecord.lastRecordReference.offset!=-1)) {
+                StartTrajectoryPoint=ParticleTrajectoryRecord.lastRecordReference;
+                OutputParticleTrajectory(); //the starting point of the trajectory is in StartTrajectoryPoint
+              }
+
+              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+            }
+
+          }
+        }
+      }
+
+    }
+
+    //output trajecotries of the particles stored on other processors
+    pipe.openRecvAll();
+
+    for (int thread=1;thread<PIC::nTotalThreads;thread++) {
+      pipe.recv(ptr,thread);
+
+      while (ptr!=-1) {
+        pipe.recv(StartTrajectoryPoint,thread);
+        OutputParticleTrajectory(); //the starting point of the trajectory is in StartTrajectoryPoint
+
+        pipe.recv(ptr,thread);
+      }
+    }
+
+    pipe.closeRecvAll();
+  }
+  else {
+    CMPI_channel pipe(1000000);
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_],ptr;
+    int i,j,k;
+    PIC::ParticleBuffer::byte *ParticleData;
+    cParticleData ParticleTrajectoryRecord;
+
+    pipe.openSend(0);
+
+    for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+      memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        for (j=0;j<_BLOCK_CELLS_Y_;j++)  {
+          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+            ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+            while (ptr!=-1) {
+              ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+              memcpy(&ParticleTrajectoryRecord,ParticleDataRecordOffset+ParticleData,sizeof(cParticleData));
+
+              if ((ParticleTrajectoryRecord.TrajectoryTrackingFlag==true)&&(ParticleTrajectoryRecord.lastRecordReference.offset!=-1)) {
+                StartTrajectoryPoint=ParticleTrajectoryRecord.lastRecordReference;
+                pipe.send(ptr);
+                pipe.send(StartTrajectoryPoint);
+              }
+
+              ptr=PIC::ParticleBuffer::GetNext(ParticleData);
+            }
+
+          }
+        }
+      }
+    }
+
+    ptr=-1;
+    pipe.send(ptr);
+
+    pipe.closeSend();
+  }
+
+  //close open files
+  if (PIC::ThisThread==0) {
+    //close the trajectory files
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+      fclose(fout[spec]);
+      fout[spec]=NULL;
+    }
+
+    if (fTrajectoryData!=NULL) {
+      fclose(fTrajectoryData);
+      fTrajectoryData=NULL,lastRecordThread=-1,lastRecordFile=-1;
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
 

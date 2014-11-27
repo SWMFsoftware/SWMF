@@ -188,7 +188,19 @@ namespace PIC {
     void InitParticleID(void *ParticleData);
     void RecordTrajectoryPoint(double *x,double *v,int spec,void *ParticleData);
     void FinilazeParticleRecord(void *ParticleData);
-    void CreateTrajectoryFile(const char *fname);
+
+    //create the output trigectory file
+    namespace ParticleTrajectoryFile {
+      extern cTrajectoryRecordReference StartTrajectoryPoint;
+      extern int lastRecordThread,lastRecordFile;
+      extern FILE *fout[PIC::nTotalSpecies];
+      extern FILE *fTrajectoryData;
+      extern unsigned int TrajectoryCounter[PIC::nTotalSpecies];
+      extern char str[_MAX_STRING_LENGTH_PIC_];
+
+      void Output(const char *fname);
+      void OutputParticleTrajectory();
+    }
 
     void StartParticleTrajectoryTracking(void *ParticleData);
     void StopParticleTrajectoryTracking(void *ParticleData);

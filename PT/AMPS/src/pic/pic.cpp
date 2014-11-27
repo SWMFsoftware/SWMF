@@ -878,7 +878,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
       //print sampled particle trajectories
       sprintf(fname,"%s/pic.TrajectoryTracking.out=%ld",OutputDataFileDirectory,DataOutputFileNumber);
-      PIC::ParticleTracker::CreateTrajectoryFile(fname);
+      PIC::ParticleTracker::ParticleTrajectoryFile::Output(fname);
       #endif
 
       //print the macroscopic parameters of the flow
