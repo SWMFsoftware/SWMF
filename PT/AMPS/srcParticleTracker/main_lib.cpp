@@ -186,17 +186,8 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
   return ModelParticlesInjectionRate;
 }
 
-int TotalTrajectoryCounter=0,ThisThreadTrajectoryCounter=0;
 
 bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
-  static int TrajectoryCounter=0;
-  const int maxTrajectoryNumber=1000;
-
-  if (TotalTrajectoryCounter<maxTrajectoryNumber) {
-    ThisThreadTrajectoryCounter++;
-    return true;
-  }
-
   return false;
 }
 
@@ -346,7 +337,4 @@ void amps_init() {
 
 void amps_time_step () {
  		PIC::TimeStep();
-
-    //calcualte the total number of the traced trajectories
- 		MPI_Allreduce(&ThisThreadTrajectoryCounter,&TotalTrajectoryCounter,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 }
