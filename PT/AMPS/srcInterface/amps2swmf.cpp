@@ -119,10 +119,16 @@ extern "C" {
   }
 
   void amps_finalize_() {
-    char fname[400];
+    char fname[_MAX_STRING_LENGTH_PIC_];
 
     sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+
+    //save particle trajectory file
+    #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+    sprintf(fname,"%s/amps.TrajectoryTracking.out=Final",PIC::OutputDataFileDirectory);
+    PIC::ParticleTracker::ParticleTrajectoryFile::Output(fname);
+   #endif
   }
 
 
