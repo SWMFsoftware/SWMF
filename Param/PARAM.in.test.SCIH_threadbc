@@ -78,7 +78,7 @@ T			UseUserInitSession
 F			UseUserUpdateStates
 
 #POYNTINGFLUX
-0.55e6			PoyntingFluxPerBSi [J/m^2/s/T]
+1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
@@ -233,6 +233,11 @@ RAW			StringLogfile
 #FACEBOUNDARY
 -1
 -2
+
+#COARSEAXIS
+F			UsePoleDiffusion
+T                       UseCoarseAxis
+2			nCoarseLayer
 
 #OUTERBOUNDARY
 fieldlinethreads	TypeBcEast   user for spherical and user_outerbcs

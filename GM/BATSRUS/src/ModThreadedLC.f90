@@ -14,7 +14,7 @@ contains
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultifluid,   ONLY: MassIon_I
-    use ModFieldLineThread, ONLY: check_tr_table
+    use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     ! TeFraction is used for ideal EOS:
@@ -32,6 +32,8 @@ contains
             /(1 + AverageIonCharge)
        TeFraction = TiFraction
     end if
+
+    call get_poynting_flux(PoyntingFluxPerBSi)
     call check_tr_table
   end subroutine init_threaded_lc
   !================================
@@ -81,7 +83,7 @@ contains
     !\
     ! Two components arrays to use lookup table
     !/ 
-    real    :: Value_V(2), AWValue_V(2), Length, RhoNoDim, Heating
+    real    :: Value_V(3), AWValue_V(2), Length, RhoNoDim, Heating
     integer :: iTable, iTableAW
     !------------------!
     iTable = i_lookup_table('TR')

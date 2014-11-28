@@ -26,6 +26,7 @@ module ModFieldLineThread
      ! The integral, \int{B ds}, from the photoshere to the given point 
      !/
      real,pointer :: BLength_III(:,:,:)
+     real,pointer :: TMax_II(:,:)
      !\ 
      ! The integral, \int{1/sqrt(B) ds} 
      !/
@@ -73,8 +74,16 @@ module ModFieldLineThread
   public:: BoundaryThreads
   public:: read_threads   !Read parameters of threads
   public:: check_tr_table !Calculate table for transition region
-  public:: set_threads    
+  public:: set_threads
+  public:: get_poynting_flux
+  real,dimension(1:500):: TeSi_I, LambdaSi_I, LPe_I, UHeat_I  
+  real:: PoyntingFluxPerBSi  
 contains
+  subroutine get_poynting_flux(PoyntingFluxPerBIn)
+    real, intent(in)::PoyntingFluxPerBIn
+    PoyntingFluxPerBSi = PoyntingFluxPerBIn
+  end subroutine get_poynting_flux
+  !===================
   subroutine read_threads(iSession)
     use ModSize, ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
@@ -116,6 +125,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xyz_DIII)
     nullify(BoundaryThreads_B(iBlock) % Length_III)
     nullify(BoundaryThreads_B(iBlock) % BLength_III)
+    nullify(BoundaryThreads_B(iBlock) % TMax_II)
     nullify(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % R_III)
@@ -133,6 +143,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xyz_DIII)
     deallocate(BoundaryThreads_B(iBlock) % Length_III)
     deallocate(BoundaryThreads_B(iBlock) % BLength_III)
+    deallocate(BoundaryThreads_B(iBlock) % TMax_II)
     deallocate(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % R_III)
@@ -181,6 +192,7 @@ contains
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % BLength_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % TMax_II(1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % Length2SqrtB_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % B_III(&
@@ -210,7 +222,7 @@ contains
   !=====================
   subroutine set_threads_b(iBlock)
     use ModGeometry, ONLY: Xyz_DGB
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitB_
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitB_, UnitTemperature_
     use ModMain,     ONLY: nDim, nJ, nK, jTest, kTest, BlkTest
     use ModNumConst, ONLY: cToleranceOrig=>cTolerance
     integer, intent(in) :: iBlock
@@ -266,6 +278,7 @@ contains
     BoundaryThreads_B(iBlock) % Xyz_DIII = 0.0
     BoundaryThreads_B(iBlock) % Length_III = 0.0
     BoundaryThreads_B(iBlock) % BLength_III = 0.0
+    BoundaryThreads_B(iBlock) % TMax_II = 1.0e8*Si2No_V(UnitTemperature_)
     BoundaryThreads_B(iBlock) % Length2SqrtB_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % R_III = 0.0
@@ -436,6 +449,8 @@ contains
        Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
        BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,j,k) = &
             - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
+       call limit_temperature(BoundaryThreads_B(iBlock) % BLength_III(&
+               0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
 
     end do; end do
     if(DoTestMe.and.iBlock==BlkTest)then
@@ -470,6 +485,30 @@ contains
            sqrt((1 - CosBRMin**2)/(1 - CosBR**2))+& !Reduced in magnitude
            DirR_D*CosBRMin          !Plus increased radial comp 
     end subroutine limit_cosbr
+    !=====================
+    subroutine limit_temperature(BLength, TMax)
+      use ModPhysics,      ONLY: UnitX_,Si2No_V, UnitB_
+      use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
+      real, intent(in)  :: BLength
+      real, intent(out) :: TMax
+      real :: HeatFluxXLength, Value_V(3)
+      integer:: iTable
+      !-------------
+      iTable = i_lookup_table('TR')
+      if(iTable<=0)call CON_stop('TR table is not set')
+
+      HeatFluxXLength = 2*PoyntingFluxPerBSi*BLength*&
+           No2Si_V(UnitX_)*No2Si_V(UnitB_)
+      call interpolate_lookup_table(iTable=iTable,&
+                                    iVal=3,       &
+                                    ValIn=HeatFluxXLength,&
+                                    Arg2In=1.0e8, &
+                                    Value_V=Value_V,      &
+                                    Arg1Out=TMax,  & 
+                                    DoExtrapolate=.false.)
+      !write(*,*)'TMax=',TMax,' K'
+      TMax = TMax*Si2No_V(UnitTemperature_)
+    end subroutine limit_temperature
   end subroutine set_threads_b
   !=========================================================================
   subroutine check_tr_table(TypeFileIn)
@@ -504,14 +543,14 @@ contains
        call init_lookup_table(                                      &
             NameTable = 'TR',                                       &
             NameCommand = 'save',                                   &
-            NameVar = 'logTe logNe LPe UHeat',                      &
+            NameVar = 'logTe logNe LPe UHeat HeatFluxXLength',      &
             nIndex_I = (/500,2/),                                   &
             IndexMin_I =(/1.0e4, 1.0e8/),                           &
             IndexMax_I =(/1.0e8, 1.0e18/),                          &
             NameFile = 'TR.dat',                                    &
             TypeFile = TypeFile,                                    &
             StringDescription = &
-            'Model for transition region: [K] [1/m3] [N/m] [m/s]')
+            'Model for transition region: [K] [1/m3] [N/m] [m/s] [W/m]')
 
        iTable = i_lookup_table('TR')
 
@@ -555,7 +594,6 @@ contains
     real, intent(out)  :: Value_V(:)
     integer:: iTable, iTe
     real   :: DeltaLogTe, LambdaCgs_V(1)
-    real,dimension(1:500):: TeSi_I, LambdaSi_I, LPe_I, UHeat_I
 
     logical, save:: IsFirstCall = .true.
     ! at the moment, radcool not a function of Ne, but need a dummy 2nd
@@ -569,12 +607,13 @@ contains
     real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
          /RadNorm*Cgs2SiEnergyDens
     !-------------------------------------------------------------------------
+
+    DeltaLogTe = log(1.0e8/1.0e4)/499 !Log(MaxTe/MinTe)/(nPoint-1)
     if(IsFirstCall)then
        IsFirstCall=.false.
        iTable = i_lookup_table('radcool')
        if(iTable<=0)&
             call CON_stop('Transition region table needs radcool table')
-       DeltaLogTe = log(1.0e8/1.0e4)/499 !Log(MaxTe/MinTe)/(nPoint-1)
 
        TeSi_I(1) = 1.0e4; LPe_I(1) = 0.0; UHeat_I(1) = 0.0
        do iTe = 2,500 
@@ -611,7 +650,7 @@ contains
        UHeat_I(1) = 0.0
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V = (/ LPe_I(iTe), UHeat_I(iTe) /)
+    Value_V = (/ LPe_I(iTe), UHeat_I(iTe), LPe_I(iTe)*UHeat_I(iTe)/)
   end subroutine calc_tr_table
   !===========================Tables for solving Alfven waves====
   subroutine calc_alfven_wave_tr_table(iTableIn, Arg1, Arg2, Value_V)
@@ -643,7 +682,7 @@ contains
     integer::iStep,iIter, iFile
     integer, parameter:: nIterMax = 10
     real::Derivative, AOld, ADiffMax
-    real,parameter:: CTol=0.0010, AlphaInv = 5.0
+    real,parameter:: CTol=0.0010, AlphaInv = 11.0
     !logical:: DoWrite = .false.
     !----------------------
     ! DoWrite = .false. ; if(present(DoWriteIn))DoWrite = DoWriteIn
