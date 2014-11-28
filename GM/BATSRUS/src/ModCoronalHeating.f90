@@ -1790,7 +1790,7 @@ contains
 
           ! Nonlinear damping/stochastic heating to perpendicular ion heating
           DampingPerp_I(iIon) = StochasticAmplitude*InvGyroRadius &
-               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
+               *State_VGB(iRhoIon_I(1),i,j,k,iBlock)*DeltaU**3 &
                *exp(-StochasticExponent/max(Epsilon,1e-15)) &
                /max(Qtotal, 1e-30)
        end do
