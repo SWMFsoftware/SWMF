@@ -53,6 +53,9 @@ module ModUser
   real :: LatSun=43.5, LonSun=0.0
   real :: NormalSun_D(3)
 
+  ! Rotation matrix to rotate the comet so that the Sun is in the +x direction.
+  real:: Rot_DD(3,3) = 0.
+
   ! Rotation of the comet (changes the direction of the Sun)
   real:: RotationCometHour = 12.0
 
@@ -214,10 +217,31 @@ contains
     use ModVarIndexes, ONLY: MassFluid_I
     use ModBlockData, ONLY: MaxBlockData
     use ModIO, ONLY: restart
+    use ModCoordTransform, ONLY: rot_matrix_y, rot_matrix_z
 
     character(len=*), parameter :: NameSub='user_init_session'
 
     !------------------------------------------------------------------------
+
+    ! Obtained the rotation matrix from LatSun and LonSun
+    Rot_DD = matmul( rot_matrix_z(-LonSun*cDegToRad), &
+         rot_matrix_y(-LatSun*cDegToRad) )
+
+    ! Now the Sun is in the +x direction
+    LatSun = 0
+    LonSun = 0
+
+    ! Test statement, need to remove later
+    if (iProc == 0) then
+       write(*,*) '-LonSun*cDegToRad =', -LonSun*cDegToRad
+       write(*,*) '-LatSun*cDegToRad =', -LatSun*cDegToRad
+       write(*,*)         'rot_matrix_z = '
+       write(*,'(3f7.3)') rot_matrix_z(-LonSun*cDegToRad)
+       write(*,*)         'rot_matrix_y = '
+       write(*,'(3f7.3)') rot_matrix_y(-LatSun*cDegToRad)
+       write(*,*)         'Rot_DD       = '
+       write(*,'(3f7.3)')  Rot_DD
+    end if
 
     if (DoUseCGShape) then
        ! We need to have unit conversions before reading the shape file 
@@ -431,6 +455,9 @@ contains
 
        ! Convert from SI units to normalized unit
        Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_) 
+
+       ! Rotate the comet, so that the Sun is in the +x direction
+       Xyz_DI(:,iPoint) = matmul(Rot_DD, Xyz_DI(:,iPoint))
     end do
     do iTriangle = 1, nTriangle
        read(UnitTmp_,*) String1, i, j, iPoint1, iPoint2, iPoint3
