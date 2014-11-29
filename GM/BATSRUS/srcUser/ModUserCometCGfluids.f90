@@ -82,7 +82,8 @@ module ModUser
   ! temperature distribution
   real :: SlopeProduction, bProduction, SlopeTemp, bTemp
 
-  ! Constant parameters to calculate uNormal and temperature from TempCometLocal
+  ! Constant parameters to calculate uNormal and temperature 
+  ! from TempCometLocal
   real :: TempToUnormal
   real :: TempToPressure
 
@@ -1460,6 +1461,21 @@ contains
          State_VGB(iRhoIon_I,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uIonMean_DC(1:3,1:nI,1:nJ,1:nK) = 0.
 
+    do iIonFluid=1,nIonFluid
+       uIonMean_DC(1,1:nI,1:nJ,1:nK) = uIonMean_DC(1,1:nI,1:nJ,1:nK) + &
+            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK) * &
+            uIon_DIC(1,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
+            nElec_C(1:nI,1:nJ,1:nK)
+       uIonMean_DC(2,1:nI,1:nJ,1:nK) = uIonMean_DC(2,1:nI,1:nJ,1:nK) + &
+            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
+            uIon_DIC(2,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
+            nElec_C(1:nI,1:nJ,1:nK)
+       uIonMean_DC(3,1:nI,1:nJ,1:nK) = uIonMean_DC(3,1:nI,1:nJ,1:nK) + &
+            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
+            uIon_DIC(3,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
+            nElec_C(1:nI,1:nJ,1:nK)
+    end do
+
     ! Neu1 velocity componet in SI
     uNeu1_DC(1, 1:nI,1:nJ,1:nK) = &
          State_VGB(Neu1RhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
@@ -1479,21 +1495,6 @@ contains
     ! Neu1 density in SI
     nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock)/MassFluid_I(nFluid)* &
          No2SI_V(UnitN_)
-
-    do iIonFluid=1,nIonFluid
-       uIonMean_DC(1,1:nI,1:nJ,1:nK) = uIonMean_DC(1,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK) * &
-            uIon_DIC(1,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
-            nElec_C(1:nI,1:nJ,1:nK)
-       uIonMean_DC(2,1:nI,1:nJ,1:nK) = uIonMean_DC(2,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
-            uIon_DIC(2,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
-            nElec_C(1:nI,1:nJ,1:nK)
-       uIonMean_DC(3,1:nI,1:nJ,1:nK) = uIonMean_DC(3,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
-            uIon_DIC(3,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
-            nElec_C(1:nI,1:nJ,1:nK)
-    end do
 
     ! (u_i-u_n)^2 in SI
     do iIonFluid=1,nIonFluid
@@ -3644,34 +3645,133 @@ contains
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: SW_rho, SW_Ux, SW_Uy, SW_Uz, SW_p, &
          LowDensityRatio, ElectronPressureRatio, SW_Bx, SW_By, SW_Bz
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: true_cell, r_BLK
     use ModEnergy,   ONLY: calc_energy_cell
 
     integer :: i, j, k, iBlock
-    real    :: RhoSw
+    real    :: RhoSw, alpha, beta, R0, R1
+    real    :: RatioH2Op 
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-------------------------------------------------------------------------
+
+    ! The region define to be near the comet
+    R0 = rSphericalBody*1e3
+
+    ! The end of the transition region
+    R1 = rSphericalBody*2e3
+
+    ! The ration to obtained the perturbed H2OpRho from the Neu1Rho
+    RatioH2Op = vHi*LowDensityRatio
+
     do iBlock = 1, nBlock;
 
        if(Unused_B(iBlock)) CYCLE
+
+       RhoSw = SW_rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
+
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
           if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
-          RhoSw = SW_rho*(1.0 - LowDensityRatio*(IonLast_ - IonFirst_))
-          State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
-          State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
-          State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
-          State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
-          State_VGB(SwP_,i,j,k,iBlock)       = &
-               SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
+          if (r_BLK(i,j,k,iBlock) <= R0) then
+             ! Near the comet, set the ions density = RatioH2Op * nNeu1
+             ! and the u = uNeu1, Ti = Tneu
 
-          State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_rho*LowDensityRatio
-          State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Ux
-          State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uy
-          State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uz
-          State_VGB(H2OpP_,i,j,k,iBlock)     = SW_p*LowDensityRatio
+             ! Cometary heavy ion
+             State_VGB(H2OpRho_,i,j,k,iBlock)    = &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*RatioH2Op
+             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*RatioH2Op
+             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*RatioH2Op
+             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*RatioH2Op
+             State_VGB(H2OpP_,i,j,k,iBlock)   = &
+                  State_VGB(Neu1P_,i,j,k,iBlock)*RatioH2Op
 
+             ! Solar wind, assuming that LowDensityRatio**2 is small enough
+             State_VGB(SwRho_,i,j,k,iBlock) = &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*LowDensityRatio**2
+             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*LowDensityRatio**2
+             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*LowDensityRatio**2
+             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*LowDensityRatio**2
+             State_VGB(SwP_,i,j,k,iBlock)= &
+                  State_VGB(Neu1P_,i,j,k,iBlock)*LowDensityRatio**2
+
+             ! Magnetic field
+             State_VGB(Bx_,i,j,k,iBlock) = 0
+             State_VGB(By_,i,j,k,iBlock) = 0
+             State_VGB(Bz_,i,j,k,iBlock) = 0
+
+          else if (r_BLK(i,j,k,iBlock) <= R1) then
+             alpha = (r_BLK(i,j,k,iBlock)-R0)/(R1-R0)
+             beta  = 1-alpha
+             ! Transition region from near the comet to far away from the
+             ! comet.
+             ! The ion profile is set to be a linear combination between
+             ! the near comet region and far away region. 
+             State_VGB(H2OpRho_,i,j,k,iBlock)    = &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*RatioH2Op*beta + &
+                  SW_rho*LowDensityRatio*alpha
+             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*RatioH2Op*beta + &
+                  SW_rho*LowDensityRatio*SW_Ux*alpha
+             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*RatioH2Op*beta + &
+                  SW_rho*LowDensityRatio*SW_Uy*alpha
+             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*RatioH2Op*beta + &
+                  SW_rho*LowDensityRatio*SW_Uz*alpha
+             State_VGB(H2OpP_,i,j,k,iBlock)   = &
+                  State_VGB(Neu1P_,i,j,k,iBlock)*RatioH2Op*beta + &
+                  SW_p*LowDensityRatio*alpha
+
+             ! Solar wind
+             State_VGB(SwRho_,i,j,k,iBlock) = &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*LowDensityRatio**2*beta + &
+                  RhoSw*alpha
+             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*LowDensityRatio**2*beta +&
+                  RhoSw*SW_Ux*alpha
+             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*LowDensityRatio**2*beta +&
+                  RhoSw*SW_Uy*alpha
+             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
+                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*LowDensityRatio**2*beta +&
+                  RhoSw*SW_Uz*alpha
+             State_VGB(SwP_,i,j,k,iBlock)= &
+                  State_VGB(Neu1P_,i,j,k,iBlock)*LowDensityRatio**2*beta + &
+                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))*alpha
+
+
+             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx*alpha
+             State_VGB(By_,i,j,k,iBlock) = SW_By*alpha
+             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz*alpha
+          else
+             ! Far away from the comet, both ions are the same as the
+             ! solar wind conditions
+             State_VGB(SwRho_,i,j,k,iBlock)     = RhoSw
+             State_VGB(SwRhoUx_,i,j,k,iBlock)   = RhoSw*SW_Ux
+             State_VGB(SwRhoUy_,i,j,k,iBlock)   = RhoSw*SW_Uy
+             State_VGB(SwRhoUz_,i,j,k,iBlock)   = RhoSw*SW_Uz
+             State_VGB(SwP_,i,j,k,iBlock)       = &
+                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))
+
+             State_VGB(H2OpRho_,i,j,k,iBlock)   = SW_rho*LowDensityRatio
+             State_VGB(H2OpRhoUx_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Ux
+             State_VGB(H2OpRhoUy_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uy
+             State_VGB(H2OpRhoUz_,i,j,k,iBlock) = SW_rho*LowDensityRatio*SW_Uz
+             State_VGB(H2OpP_,i,j,k,iBlock)     = SW_p*LowDensityRatio
+
+             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx
+             State_VGB(By_,i,j,k,iBlock) = SW_By
+             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
+          end if
+
+          ! Total fluid
           State_VGB(Rho_,i,j,k,iBlock)       = &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
           State_VGB(RhoUx_,i,j,k,iBlock)     = &
@@ -3681,10 +3781,7 @@ contains
           State_VGB(RhoUz_,i,j,k,iBlock)     = &
                sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
 
-          State_VGB(Bx_,i,j,k,iBlock) = SW_Bx
-          State_VGB(By_,i,j,k,iBlock) = SW_By
-          State_VGB(Bz_,i,j,k,iBlock) = SW_Bz
-
+          ! Electron pressure
           if(UseElectronPressure) then
              State_VGB(P_,i,j,k,iBlock)      = &
                   sum(State_VGB(iPIon_I,i,j,k,iBlock))
