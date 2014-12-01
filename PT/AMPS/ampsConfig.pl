@@ -5,6 +5,7 @@
  
 use strict;
 use warnings;
+use Cwd;
 
 use ampsConfigLib;
 use constant {true => 1, false =>0};
@@ -15,6 +16,8 @@ my $loadedFlag_BackgroundSpeciesBlock=0;
 
 my $InputFileNameDefault="moon.input"; #"cg.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
 my $InputFileName;
+
+my $InputDirectory='.'; #the directory for the input files/tables of the model runs
 
 
 my $line;
@@ -199,7 +202,7 @@ while ($line=<InputFile>) {
       
     close BLOCK;
     
-    my $cmd="perl $BlockProcessor $InputFileName.Assembled.Block $ampsConfigLib::WorkingSourceDirectory";
+    my $cmd="perl $BlockProcessor $InputFileName.Assembled.Block $ampsConfigLib::WorkingSourceDirectory $InputDirectory";
     print "Call: $cmd\n";
   
     system($cmd) and do {
@@ -625,6 +628,19 @@ sub ReadMainBlock {
       
       ($InputLine,$OutputDirectory)=split(' ',$InputLine,2);
     }  
+    elsif ($s0 eq "INPUTDIRECTORY") {
+      my $l;
+      
+      chomp($line);
+      ($InputLine,$InputComment)=split('!',$line,2);
+      $InputLine=~s/ //g;
+      $InputLine=~s/=/ /;
+      
+      ($InputLine,$InputDirectory)=split(' ',$InputLine,2);
+      $l=getcwd();
+         
+      $InputDirectory=$l."/".$InputDirectory;
+    }    
     
     elsif ($s0 eq "#ENDMAIN") {
       last;
@@ -706,6 +722,7 @@ sub ReadMainBlock {
   ampsConfigLib::RecursiveSubstitute('\$ERRORLOG',$ErrorLog,$ampsConfigLib::WorkingSourceDirectory);
   ampsConfigLib::ChangeValueOfVariable("char PIC::DiagnospticMessageStreamName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$DiagnosticStream."\"","pic/pic_init_const.cpp");
   ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$OutputDirectory."\"","pic/pic_init_const.cpp");
+  ampsConfigLib::ChangeValueOfVariable("char PIC::InputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputDirectory."\"","pic/pic_init_const.cpp");
   
   #redefine the value for the macro controlling output error messages into stdout
   ampsConfigLib::RedefineMacro("_STDOUT_ERRORLOG_MODE_",$StdoutErrorLog,"general/specfunc.h");
