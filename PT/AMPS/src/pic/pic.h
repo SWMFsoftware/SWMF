@@ -93,8 +93,9 @@ namespace PIC {
   extern FILE* DiagnospticMessageStream;
   extern char DiagnospticMessageStreamName[_MAX_STRING_LENGTH_PIC_];
 
-  //the directory for output files
+  //the directory for the input and output files
   extern char OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
+  extern char InputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
 
 
   //the variables that controls the sampling procedure

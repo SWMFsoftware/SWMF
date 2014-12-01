@@ -29,8 +29,9 @@ double PIC::Alarm::StartTime=0.0,PIC::Alarm::RequestedExecutionWallTime=0.0;
 FILE* PIC::DiagnospticMessageStream=stdout;
 char PIC::DiagnospticMessageStreamName[_MAX_STRING_LENGTH_PIC_]="stdout";
 
-//the directory for output files
+//the directory for the output and input files
 char PIC::OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
+char PIC::InputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
 
 //define the test-run parameters
 bool PIC::ModelTestRun::mode=false;
