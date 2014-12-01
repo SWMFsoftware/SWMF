@@ -26,6 +26,7 @@ use ampsConfigLib;
 my $InputFileName="mars.input.Assembled.Block";   #$ARGV[0];
 my $SpeciesFileName="mars.input.Assembled.Species";
 my $WorkingSourceDirectory="srcTemp";  #$ARGV[1];
+my $InputDirectory=$ARGV[2];  #the location of the data files that will be used in the model run
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
 
@@ -94,8 +95,10 @@ while ($line=<InputFile>) {
     $s1=~s/ //g;
     $DataCaseFiles=$DataDirectory.$s1."/*.h";
 
+    `mkdir -p $InputDirectory`;
+
     if ( -d $DataDirectory.$s1 ) {
-	    `cp $DataCaseFiles $ampsConfigLib::WorkingSourceDirectory/main`;
+	    `cp $DataCaseFiles $InputDirectory`;
     }
     else {
 	     die "The case selected entitled $InputLine does not exist, line=$InputFileLineNumber ($InputFileName)\n";
