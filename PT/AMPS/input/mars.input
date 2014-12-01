@@ -25,6 +25,7 @@ ErrorLog=PT/amps_error.log
 Prefix=AMPS
 DiagnosticStream=PT
 OutputDirectory=PT/plots
+InputDirectory=InputData 
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
