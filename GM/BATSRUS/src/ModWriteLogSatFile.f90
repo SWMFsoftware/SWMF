@@ -2,7 +2,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
-subroutine write_logfile(iSatIn,iFile)
+subroutine write_logfile(iSatIn, iFile)
   use ModProcMH
   use ModMain
   use ModVarIndexes
@@ -80,14 +80,14 @@ subroutine write_logfile(iSatIn,iFile)
   nLogR    = 0
   LogR_I   = 0.0
   if (iSatIn == 0) then
-     call split_string(log_vars,MaxLogVar,NameLogVar_I,nLogVar)
+     call split_string(log_vars, MaxLogVar, NameLogVar_I, nLogVar)
      do i=1,nLogVar
         if(index(NameLogVar_I(i),'flx')>0) nFluxVar = nFluxVar + 1
         if(index(NameLogVar_I(i),'pnt')>0 .or.  &
              index(NameLogVar_I(i),'test')>0)  DoWritePosition = .true.
      end do
      if (nFluxVar >0) then
-        call split_string(log_R_str, MaxLogR, NameLogR_I,nLogR)
+        call split_string(log_R_str, MaxLogR, NameLogR_I, nLogR)
         do i=1,nLogR
            read(NameLogR_I(i),*) LogR_I(i)
         end do
@@ -95,9 +95,9 @@ subroutine write_logfile(iSatIn,iFile)
      StringTime = log_time
   elseif (iSatIn>=1) then
      iSat = iSatIn
-     if (.not. DoTrackSatellite_I(iSat)) return
-     call split_string(StringSatVar_I(iSat),MaxLogVar, &
-          NameLogVar_I,nLogVar)
+     if (.not. DoTrackSatellite_I(iSat)) RETURN
+     call split_string(StringSatVar_I(iSat), MaxLogVar, &
+          NameLogVar_I, nLogVar, UseArraySyntaxIn=.true.)
      StringTime = TimeSat_I(iSat)
      DoWritePosition = .true.
   end if
