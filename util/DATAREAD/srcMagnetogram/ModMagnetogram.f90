@@ -738,8 +738,8 @@ contains
 
     Ro_PFSSM = Param_I(1)
     Rs_PFSSM = Param_I(2)
-    Phi_Shift = Param_I(3)
-    nRExt = nint(Param_I(4))
+    Phi_Shift = 0.0 !Param_I(3)
+    nRExt = 0 !nint(Param_I(4))
 
     nR = n_D(1) - 1
     nPhi = n_D(2) - 1
