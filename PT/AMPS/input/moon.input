@@ -78,6 +78,11 @@ ParticleWeightCorrectionMode=off !on,off
   SampleParallelTangentialKineticTemperature=on \\ !on,off direction=const(0.0,0.0,0.0); direction=function(??????)
     direction=const(1.0,2.0,3.0)
 
+ VelocityDistributionSampling=on \\ !on, off
+   x=(7.6E5,6.7E5,0.0), (2.8E5,5.6E5,0.0), (-2.3E5,3.0E5,0.0)  \\
+   nSampleIntervals=500 \\
+   vmin=-40e3, vmax=40e3
+
 #endSampling
 
 
