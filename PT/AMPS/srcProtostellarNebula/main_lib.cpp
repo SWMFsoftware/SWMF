@@ -774,7 +774,7 @@ void amps_init() {
 //  int LastDataOutputFileNumber=-1;
 
 
-  //init the sampling of the particls' distribution functions
+/*  //init the sampling of the particls' distribution functions: THE DECLARATION IS MOVED INTO THE INPUT FILE
   const int nSamplePoints=3;
   double SampleLocations[nSamplePoints][DIM]={{7.6E5,6.7E5,0.0}, {2.8E5,5.6E5,0.0}, {-2.3E5,3.0E5,0.0}};
 
@@ -782,7 +782,7 @@ void amps_init() {
   PIC::DistributionFunctionSample::vMax=40.0E3;
   PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
 
-  PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+  PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);*/
 }
 
 

@@ -1691,6 +1691,7 @@ namespace PIC {
   }
 
   //sample and output the particle's distribution function
+  //the coordinates of the sampled locations are set by ampsConfig.pl (#Sampling -> VelocityDistributionSampling)
   namespace DistributionFunctionSample {
     //the init flag
     extern bool SamplingInitializedFlag;
@@ -1714,12 +1715,12 @@ namespace PIC {
     long int GetSampleDataOffset(int spec,int nInterval);
 
     //sampling  locations
-    extern double **SamplingLocations;
+    extern double SamplingLocations[][3];
     extern int nSamleLocations;
     extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
     extern long int *SampleLocalCellNumber;
 
-    void Init(double ProbeLocations[][DIM],int nProbeLocations);
+    void Init();
 
     void SampleDistributionFnction();
     void flushSamplingBuffers();

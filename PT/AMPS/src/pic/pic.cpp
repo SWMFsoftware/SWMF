@@ -1366,6 +1366,11 @@ void PIC::Init_BeforeParser() {
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
   PIC::IDF::Init();
 #endif
+
+  //init the velocity distribution sample procedure
+#if _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
+  PIC::DistributionFunctionSample::Init();
+#endif
 }
 
 void PIC::Init_AfterParser() {

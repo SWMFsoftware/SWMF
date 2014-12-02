@@ -160,5 +160,8 @@ at the end of each time step
 //default setting for the radial velocity mode
 #define _PIC_MODEL__RADIAL_VELOCITY_MODE_ _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_
 
+//default sampling model for the particle velocity
+#define _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ _PIC_MODE_OFF_
+
 
 

@@ -9,10 +9,11 @@
 
 const int PIC::DistributionFunctionSample::_LINEAR_SAMPLING_SCALE_=0,PIC::DistributionFunctionSample::_LOGARITHMIC_SAMPLING_SCALE_=1;
 int PIC::DistributionFunctionSample::v2SamplingMode=_LINEAR_SAMPLING_SCALE_,PIC::DistributionFunctionSample::speedSamplingMode=_LINEAR_SAMPLING_SCALE_;
-double PIC::DistributionFunctionSample::vMin=-1000.0,PIC::DistributionFunctionSample::vMax=1000.0;
+double PIC::DistributionFunctionSample::vMin=-1000.0;
+double PIC::DistributionFunctionSample::vMax=1000.0;
 long int PIC::DistributionFunctionSample::nSampledFunctionPoints=100;
 double** PIC::DistributionFunctionSample::SamplingBuffer=NULL;
-double** PIC::DistributionFunctionSample::SamplingLocations=NULL;
+double PIC::DistributionFunctionSample::SamplingLocations[][3]={{0.0,0.0,0.0}};
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** PIC::DistributionFunctionSample::SampleNodes=NULL;
 double PIC::DistributionFunctionSample::dV=0.0,PIC::DistributionFunctionSample::dV2=0.0,PIC::DistributionFunctionSample::dSpeed=0.0;
 long int *PIC::DistributionFunctionSample::SampleLocalCellNumber=NULL;
@@ -24,8 +25,10 @@ int PIC::DistributionFunctionSample::Sample_V2_Offset=0,PIC::DistributionFunctio
 
 //====================================================
 //init the sampling buffers
-void PIC::DistributionFunctionSample::Init(double ProbeLocations[][DIM],int nProbeLocations) {
+void PIC::DistributionFunctionSample::Init() {
   int idim,nProbe,i,j,k;
+
+  if (SamplingInitializedFlag==true) exit(__LINE__,__FILE__,"Error: DistributionFunctionSample is already initialized");
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_OFF_
   if (PIC::Mesh::mesh.ThisThread==0) fprintf(PIC::DiagnospticMessageStream,"WARNING: Sampling of the distribution function is prohibited in the settings of the model");
@@ -33,7 +36,7 @@ void PIC::DistributionFunctionSample::Init(double ProbeLocations[][DIM],int nPro
 #endif
 
 
-  nSamleLocations=nProbeLocations;
+//  nSamleLocations=nProbeLocations;
   SamplingInitializedFlag=true;
 
   //get the lenfths of the sampling intervals
@@ -54,22 +57,22 @@ void PIC::DistributionFunctionSample::Init(double ProbeLocations[][DIM],int nPro
   SampleDataLength++;
 
   //allocate the sampling buffers
-  SampleLocalCellNumber=new long int [nProbeLocations];
-  SampleNodes=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nProbeLocations];
-  SamplingLocations=new double* [nProbeLocations];
-  SamplingLocations[0]=new double [DIM*nProbeLocations];
+  SampleLocalCellNumber=new long int [nSamleLocations];
+  SampleNodes=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nSamleLocations];
+//  SamplingLocations=new double* [nProbeLocations];
+//  SamplingLocations[0]=new double [DIM*nProbeLocations];
 
-  SamplingBuffer=new double* [nProbeLocations];
-  SamplingBuffer[0]=new double [nProbeLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1)];
+  SamplingBuffer=new double* [nSamleLocations];
+  SamplingBuffer[0]=new double [nSamleLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1)];
 
-  for (nProbe=1;nProbe<nProbeLocations;nProbe++) {
-    SamplingLocations[nProbe]=SamplingLocations[nProbe-1]+DIM;
+  for (nProbe=1;nProbe<nSamleLocations;nProbe++) {
+//    SamplingLocations[nProbe]=SamplingLocations[nProbe-1]+DIM;
     SamplingBuffer[nProbe]=SamplingBuffer[nProbe-1]+PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1);
   }
 
   //init the sampling informations
-  for (nProbe=0;nProbe<nProbeLocations;nProbe++) {
-    for (idim=0;idim<DIM;idim++) SamplingLocations[nProbe][idim]=ProbeLocations[nProbe][idim];
+  for (nProbe=0;nProbe<nSamleLocations;nProbe++) {
+//    for (idim=0;idim<DIM;idim++) SamplingLocations[nProbe][idim]=ProbeLocations[nProbe][idim];
 
     SampleNodes[nProbe]=PIC::Mesh::mesh.findTreeNode(SamplingLocations[nProbe]);
     if (SampleNodes[nProbe]==NULL) exit(__LINE__,__FILE__,"Error: the point is outside of the domain");
