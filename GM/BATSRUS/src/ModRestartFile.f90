@@ -569,7 +569,7 @@ contains
     read(UnitTmp_,*) nBlockAllRead
 
     if(nBlockAllRead /= nBlockAll) &
-         call stop_mpi('Incorrect nBlockAll value in //trim(NameFile)')
+         call stop_mpi('Incorrect nBlockAll value in '//trim(NameFile))
 
     do iMorton = 1, nBlockAll
        read(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
