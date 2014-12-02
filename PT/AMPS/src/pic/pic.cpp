@@ -1367,10 +1367,6 @@ void PIC::Init_BeforeParser() {
   PIC::IDF::Init();
 #endif
 
-  //init the velocity distribution sample procedure
-#if _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
-  PIC::DistributionFunctionSample::Init();
-#endif
 }
 
 void PIC::Init_AfterParser() {
@@ -1421,6 +1417,11 @@ void PIC::Init_AfterParser() {
   //init particle trajectory sampling
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
   PIC::ParticleTracker::Init();
+#endif
+
+  //init the velocity distribution sample procedure
+#if _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
+  PIC::DistributionFunctionSample::Init();
 #endif
 }
 
