@@ -1334,6 +1334,7 @@ void amps_init() {
   //  int LastDataOutputFileNumber=-1;
 
 
+/* MOVED INTO THE INPUT FILE
     //init the sampling of the particls' distribution functions
     const int nSamplePoints=3;
     double SampleLocations[nSamplePoints][DIM]={{7.6E5,6.7E5,0.0}, {2.8E5,5.6E5,0.0}, {-2.3E5,3.0E5,0.0}};
@@ -1343,6 +1344,7 @@ void amps_init() {
     PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
 
     PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+*/
 
 
   #if _MERCURY_FIPS_SAMPLING_ == _MERCURY_MODE_ON_
