@@ -6,6 +6,7 @@
 use strict;
 use warnings;
 use Cwd;
+use Scalar::Util qw/looks_like_number/;
 
 use ampsConfigLib;
 use constant {true => 1, false =>0};
@@ -1048,6 +1049,104 @@ sub Sampling {
         die "Unknown option\n";
       }
     }
+    
+    
+    elsif ($InputLine eq "VELOCITYDISTRIBUTIONSAMPLING") {
+      my $ReadSampleLocations=0;
+      my @SampleLocationTable;
+      my $t;
+      
+      $InputComment=~s/[()]/ /g;
+      
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($ReadSampleLocations == 1) { #reading of the sample location coordinates is in progress
+          if (looks_like_number($InputLine)) {
+            push(@SampleLocationTable,$InputLine);
+          } 
+          else {
+            $ReadSampleLocations=0;
+          }         
+        }
+        
+        if ($ReadSampleLocations == 0) { #'$InputLine' is not a number
+          if ($InputLine eq "ON") {
+            ampsConfigLib::RedefineMacro("_PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_","_PIC_MODE_ON_","pic/picGlobal.dfn");
+          }
+          elsif ($InputLine eq "OFF") {
+            ampsConfigLib::RedefineMacro("_PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+          }
+          elsif ($InputLine eq "VMIN") {
+            ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+            if (defined $InputLine) {
+              ampsConfigLib::ChangeValueOfVariable("double PIC::DistributionFunctionSample::vMin",$InputLine,"pic/pic_sample_distribution_function.cpp");
+            }
+            else {
+              die "#1 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          }
+          elsif ($InputLine eq "VMAX") {
+            ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+            if (defined $InputLine) {
+              ampsConfigLib::ChangeValueOfVariable("double PIC::DistributionFunctionSample::vMax",$InputLine,"pic/pic_sample_distribution_function.cpp");
+            }
+            else {
+              die "#2 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          }
+          elsif ($InputLine eq "NSAMPLEINTERVALS") {
+            ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+            if (defined $InputLine) {
+              ampsConfigLib::ChangeValueOfVariable("long int PIC::DistributionFunctionSample::nSampledFunctionPoints",$InputLine,"pic/pic_sample_distribution_function.cpp");
+            }
+            else {
+              die "#3 Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          }
+          elsif ($InputLine eq "X") {
+            #start reading of the sample location coordinates
+            $ReadSampleLocations=1;
+          }
+          else {
+            die "#4 $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
+        
+      }
+      
+      #insert the number of the sample points into the code
+      my ($i,$j);
+      my @Table;
+      
+      $j=0;
+      
+      for ($i=0;$i<(scalar @SampleLocationTable);$i++) {
+        if ($j==0) {
+          $t="{";
+        }
+                
+        $t=$t."$SampleLocationTable[$i]";
+        $j++;
+        
+        if ($j==3) {          
+          $t=$t."}";
+          $j=0;
+         
+          push(@Table,"$t");
+        }
+        else {
+          $t=$t.",";
+        }
+      }
+      
+      ampsConfigLib::ChangeValueOfArray("double PIC::DistributionFunctionSample::SamplingLocations\\[\\]\\[3\\]",\@Table,"pic/pic_sample_distribution_function.cpp");
+      ampsConfigLib::ChangeValueOfVariable("int PIC::DistributionFunctionSample::nSamleLocations",(scalar @Table),"pic/pic_sample_distribution_function.cpp");      
+    }
+    
       
     elsif ($InputLine eq "#ENDSAMPLING") {
       last;
