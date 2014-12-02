@@ -253,9 +253,17 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                   maxLocalTimeStep=max(LocalTimeStep_s0,LocalTimeStep_s1);
                   minLocalParticleWeight=min(LocalParticleWeight_s0*minParticleWeightCorrection_s0,LocalParticleWeight_s1*minParticleWeightCorrection_s1);
 
-                  if (s0==s1) ancoll=0.5*sumWeightCorrection_s0*(nParticleNumber[s0]-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
-                  else ancoll=(sumWeightCorrection_s0*LocalParticleWeight_s0)*(sumWeightCorrection_s1*LocalParticleWeight_s1)*
-                      SigmaCrMax*maxLocalTimeStep/minLocalParticleWeight/cellMeasure;
+//                  if (s0==s1) ancoll=0.5*sumWeightCorrection_s0*(nParticleNumber[s0]-1.0)*LocalParticleWeight_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
+
+                  if (s0==s1) {
+                    ancoll=0.5*sumWeightCorrection_s0/minParticleWeightCorrection_s0*
+                        (sumWeightCorrection_s0/minParticleWeightCorrection_s0-1.0)*
+                        LocalParticleWeight_s0*minParticleWeightCorrection_s0*SigmaCrMax*LocalTimeStep_s0/cellMeasure;
+                  }
+                  else {
+                    ancoll=(sumWeightCorrection_s0*LocalParticleWeight_s0)*(sumWeightCorrection_s1*LocalParticleWeight_s1)*
+                        SigmaCrMax*maxLocalTimeStep/minLocalParticleWeight/cellMeasure;
+                  }
 
                   ncoll=(long int)ancoll;
                   ancoll-=ncoll;
