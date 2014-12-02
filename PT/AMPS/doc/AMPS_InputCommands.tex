@@ -265,7 +265,7 @@ The section controls the non-standard AMPS sampling routines. The section begins
 \item {\bf SampleParallelTangentialKineticTemperature}=[on,off], direction=[] \\
 Turn on sampling of the parallel and tangential temperatures. The direction can be defined by a constant vector or a function \\ {\tt direction=const(lx,ly,lx)} \\ {\tt direction=function({\it function-name})}
 
-\item {VelocityDistributionSampling}=[on, off], x=(), nSampleIntervals,vmin,vmax \\
+\item {\bf VelocityDistributionSampling}=[on, off], x=(), nSampleIntervals,vmin,vmax \\
 Define locations for sampling the velocity distribution function. {\it x} is the list of the locations, {\it nSampleIntervals} is the number of the intervals in the velocity space, and {\it xmin} and {\it xmax} are the minimum and maximum velocity limits of the distribution function. Example: 
 
  {\tt VelocityDistributionSampling=on !on,off $\backslash\backslash$   \\ x=(7.6E5,6.7E5,0.0), (2.8E5,5.6E5,0.0), (-2.3E5,3.0E5,0.0) $\backslash\backslash$ \\
