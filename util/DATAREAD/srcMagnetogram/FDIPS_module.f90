@@ -547,8 +547,8 @@ contains
             StringHeaderIn = &
             'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
             nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-            //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
-            ParamIn_I = (/ rMin, rMax, 0.0, 0.0 /), &
+            //' Ro_PFSSM Rs_PFSSM', &
+            ParamIn_I = (/ rMin, rMax /), &
             nDimIn=3, VarIn_VIII=B_DX, &
             Coord1In_I=RadiusNode_I, &
             Coord2In_I=Phi_I(1:nPhiOut), &

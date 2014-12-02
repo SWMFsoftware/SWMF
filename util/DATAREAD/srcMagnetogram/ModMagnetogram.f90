@@ -702,8 +702,8 @@ contains
     call save_plot_file(FileNameOut, TypeFileIn='real8', StringHeaderIn = &
          'Radius [Rs] Longitude [Deg] Latitude [Deg] B [G]', &
          nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
-         //' Ro_PFSSM Rs_PFSSM PhiShift nRExt', &
-         ParamIn_I = (/ Ro_PFSSM, Rs_PFSSM, Phi_Shift, real(nRExt)/), &
+         //' Ro_PFSSM Rs_PFSSM', &
+         ParamIn_I = (/ Ro_PFSSM, Rs_PFSSM /), &
          nDimIn=3, VarIn_VIII=B_DN, &
          Coord1In_I=Radius_I, &
          Coord2In_I=Phi_I, &
@@ -723,7 +723,7 @@ contains
 
     integer :: iError
     integer :: n_D(3), nParam
-    real :: Param_I(4)
+    real :: Param_I(2)
 
     character(len=*), parameter :: &
          NameSub = 'ModMagnetogram::read_potential_field'
@@ -738,8 +738,8 @@ contains
 
     Ro_PFSSM = Param_I(1)
     Rs_PFSSM = Param_I(2)
-    Phi_Shift = 0.0 !Param_I(3)
-    nRExt = 0 !nint(Param_I(4))
+    Phi_Shift = 0.0
+    nRExt = 0
 
     nR = n_D(1) - 1
     nPhi = n_D(2) - 1
