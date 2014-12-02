@@ -87,6 +87,15 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   
 #endGeneral
 
+#Sampling
+
+ VelocityDistributionSampling=on \\ !on, off
+   x=(2.0E6,0.0,0.0), (0.0,2.0E6,0.0), (-2.0E6,0.0,0.0) \\ 
+   nSampleIntervals=500 \\
+   vmin=-40e3, vmax=40e3
+
+#endSampling
+
 #block ../input/europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
   
