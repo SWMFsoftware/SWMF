@@ -186,7 +186,13 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
     LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
+    double x[3];
+    TriangleCutFace->GetCenterPosition(x);
+    node=PIC::Mesh::mesh.findTreeNode(x,node);
+    LocalTimeStep=node->block->GetLocalTimeStep(spec);
+
+    //    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
@@ -490,7 +496,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000;
   PIC::RequiredSampleLength=10;
 
 
