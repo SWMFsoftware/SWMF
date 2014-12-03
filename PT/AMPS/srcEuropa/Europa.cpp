@@ -653,7 +653,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
     break;
 
-  case _O2_SPEC_:
+  case _O2_SPEC_: case _H2O_SPEC_:
 
     return _PARTICLE_DELETED_ON_THE_FACE_;
 
@@ -667,7 +667,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       double EmptyArray[3]={0.0,0.0,0.0};
       double SurfaceTemp=GetSurfaceTemeprature(x_LOCAL_IAU_EUROPA);
 
-      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_EUROPA,EmptyArray,SurfaceTemp,e0,_O2_SPEC_,-1);
+      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_EUROPA,EmptyArray,SurfaceTemp,e0,spec,-1);
     }
 
     //tranform the velocity into the "global" coordinate frame
