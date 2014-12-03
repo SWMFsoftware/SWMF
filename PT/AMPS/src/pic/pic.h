@@ -1753,12 +1753,12 @@ namespace PIC {
     long int GetSampleDataOffset(int spec,int nInterval);
 
     //sampling  locations
-    extern double **SamplingLocations;
+    extern double SamplingLocations[][3];
     extern int nSampleLocations;
     extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** SampleNodes;
     extern long int *SampleLocalCellNumber;
 
-    void Init(double ProbeLocations[][DIM],int nProbeLocations);
+    void Init();//double ProbeLocations[][DIM],int nProbeLocations);
 
     void SampleDistributionFnction();
     void flushSamplingBuffers();
