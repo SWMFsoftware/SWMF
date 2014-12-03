@@ -28,6 +28,60 @@
 #include "cCutBlockSet.h"
 #include "Comet.h"
 
+static double SampleFluxDown[150000];
+
+void FlushBackfluxSampling() {
+  for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+    SampleFluxDown[i]=0.0;
+  }
+}
+
+
+void PrintBackFluxSurfaceTriangulationMesh(const char *fname) {
+  long int nface,nnode,pnode;
+
+  int rank;
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+  if (rank!=0) return;
+  printf("pass MPI \n");
+
+  class cTempNodeData {
+  public:
+    double NodeBackflux;
+  };
+
+  cTempNodeData *TempNodeData=new cTempNodeData[CutCell::nBoundaryTriangleNodes];
+
+  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+    for (pnode=0;pnode<3;pnode++) {
+      nnode=CutCell::BoundaryTriangleFaces[nface].node[pnode]-CutCell::BoundaryTriangleNodes;
+      //      printf("nnode=%li nface=%li pnode=%li \n",nnode,nface,pnode);
+      if ((nnode<0)||(nnode>=CutCell::nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
+
+      TempNodeData[nnode].NodeBackflux=SampleFluxDown[nface]/PIC::LastSampleLength;
+      //if (SampleFluxDown[nface]!=0.0) printf("TempNodeData[nnode].NodeBackflux=%e SampleFluxDown[nface]=%e \n",TempNodeData[nnode].NodeBackflux,SampleFluxDown[nface]);
+      //printf("Nodebackflux \n");
+    }
+  }
+
+   printf("Nodebackflux Done \n");
+  //print the mesh
+  FILE *fout=fopen(fname,"w");
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"BackFlux\"");
+  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
+
+  for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) {
+    fprintf(fout,"%e %e %e %e\n",CutCell::BoundaryTriangleNodes[nnode].x[0],CutCell::BoundaryTriangleNodes[nnode].x[1],CutCell::BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].NodeBackflux);
+  }
+
+  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+    fprintf(fout,"%ld %ld %ld\n",1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[0]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[1]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[2]-CutCell::BoundaryTriangleNodes));
+  }
+
+  fclose(fout);
+  delete [] TempNodeData;
+}
+
 
 double BulletLocalResolution(double *x) {
   int idim,i;
@@ -67,6 +121,7 @@ double BulletLocalResolution(double *x) {
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
   int spec=PIC::ParticleBuffer::GetI(ptr);
 
+#if _SAMPLE_BACKFLUX_MODE_ == _SAMPLE_BACKFLUX_MODE__OFF_
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  return _PARTICLE_DELETED_ON_THE_FACE_;
   else {
@@ -90,6 +145,64 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   return _PARTICLE_REJECTED_ON_THE_FACE_;
 
 #endif
+#else
+
+  double c=vInit[0]*TriangleCutFace->ExternalNormal[0]+vInit[1]*TriangleCutFace->ExternalNormal[1]+vInit[2]*TriangleCutFace->ExternalNormal[2];
+
+  double scalar=0.0,X=0.0;
+  double x[3],positionSun[3];
+  int idim,i=0,j=0;
+  double subSolarPointAzimuth=0.0;
+  double subSolarPointZenith=0.0;
+  double HeliocentricDistance=3.3*_AU_;
+
+  double ParticleWeight,wc,LocalTimeStep;
+
+  PIC::ParticleBuffer::byte *ParticleData;
+
+  TriangleCutFace->GetCenterPosition(x);
+
+  positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+  positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+  positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+
+  for (scalar=0.0,X=0.0,idim=0;idim<3;idim++){
+    scalar+=TriangleCutFace->ExternalNormal[idim]*(positionSun[idim]-x[idim]);
+  }
+
+  if (scalar<0.0 ||  TriangleCutFace->pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
+    //    printf("Backflux sampling begins \n");
+    while (CutCell::BoundaryTriangleFaces[j].node[0]!=TriangleCutFace->node[0] || CutCell::BoundaryTriangleFaces[j].node[1]!=TriangleCutFace->node[1] || CutCell::BoundaryTriangleFaces[j].node[2]!=TriangleCutFace->node[2]) j++;
+
+    //  printf("j=%i \n",j);
+
+    ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+    //printf("PartData done \n");
+
+    ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+    //printf("PartWeight done \n");
+    wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+    //printf("PartWeight correction done \n");
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+    LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
+#else
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+  //printf("TimeStep done \n");
+    SampleFluxDown[j]+=ParticleWeight*wc/TriangleCutFace->SurfaceArea/LocalTimeStep;
+    //    printf("SampleFluxDown[j]=%e \n",Comet::SampleFluxDown[j]);
+    // printf("Backflux sampling ends \n");
+    return _PARTICLE_DELETED_ON_THE_FACE_;
+  }else{
+    vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
+    vInit[1]-=2.0*c*TriangleCutFace->ExternalNormal[1];
+    vInit[2]-=2.0*c*TriangleCutFace->ExternalNormal[2];
+
+    return _PARTICLE_REJECTED_ON_THE_FACE_;
+  }
+#endif
 
 }
 
@@ -107,9 +220,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
       return dt*3.0;
-    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    }else CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #else
-    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -338,7 +451,7 @@ int main(int argc,char **argv) {
   Comet::GetNucleusNastranInfo(CG);
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
-  for (int i=0;i<3;i++) xmin[i]=-0.5e4,xmax[i]=0.5e4;
+  for (int i=0;i<3;i++) xmin[i]=-0.8e4,xmax[i]=0.8e4;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -377,7 +490,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500000;
   PIC::RequiredSampleLength=10;
 
 
@@ -435,16 +548,22 @@ int main(int argc,char **argv) {
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
 
-    if (PIC::ThisThread==0) {
+    if (PIC::ThisThread==0 && niter==1) {
       char fname[_MAX_STRING_LENGTH_PIC_];
       
       sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
-      if (niter==1) Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+      Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
     }
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
       PIC::RequiredSampleLength*=4;
       if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
       
+      char fname2[_MAX_STRING_LENGTH_PIC_];
+      
+      sprintf(fname2,"%s/SurfaceTriangulation_Backflux.dat",PIC::OutputDataFileDirectory);
+      if (PIC::Mesh::mesh.ThisThread==0) PrintBackFluxSurfaceTriangulationMesh(fname2);
+
+      FlushBackfluxSampling();
       
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;

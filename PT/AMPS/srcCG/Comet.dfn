@@ -5,3 +5,5 @@
 
 //define default Bjorn production rate mode to use
 #define _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ON_ 
+
+#define _SAMPLE_BACKFLUX_MODE_  _SAMPLE_BACKFLUX_MODE__OFF_
