@@ -914,7 +914,7 @@ void PIC::CPLR::ICES::EvaluateSurfaceIonFlux(double ShiftFactor) {
       //save the table on the sphere
       for (el=0,TotalSurfaceFlux=0.0;el<nTotalElements;el++) {
         Sphere->SolarWindSurfaceFlux[el]=FluxTable[el];
-        if (FluxTable[el]>0.0) TotalSurfaceFlux+=FluxTable[el];
+        if (FluxTable[el]>0.0) TotalSurfaceFlux+=FluxTable[el]*Sphere->SurfaceElementArea[el];
       }
 
       Sphere->TotalSolarWindSurfaceFlux=TotalSurfaceFlux;
