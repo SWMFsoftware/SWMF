@@ -155,7 +155,8 @@ contains
     ! Periodicity in the radial direction is not possible at all
     if(r_ > 0) IsPeriodic_D(r_) = .false.
 
-    if(Theta_ > 0) IsPeriodic_D(Theta_) = .false.
+    if(Theta_ > 0 .and. (IsSphericalAxis .or. IsLatitudeAxis)) &
+         IsPeriodic_D(Theta_) = .false.
 
     if(Phi_ > 0)then
        ! Enforce periodicity for cylindrical and spherical grids if

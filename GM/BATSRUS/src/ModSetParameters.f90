@@ -2846,6 +2846,14 @@ contains
        XyzMax_D = (/ &
             sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
             cTwoPi, cHalfPi /)
+    case('spherical_wedge')
+       !            R,  Phi,          Latitude
+       XyzMin_D = (/x1, y1*cDegToRad, z1*cDegToRad/)
+       XyzMax_D = (/x2, y2*cDegToRad, z2*cDegToRad/)
+       x1 = -x2; y1 = x1; y2 = x2; z1 = x1; z2 = x2
+
+       ! BATL need to understand that the wedge geometry is spherical
+       TypeGeometry = 'spherical'
     case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
        !            R,   Phi, Z
        XyzMin_D = (/0.0, 0.0, z1/) 
