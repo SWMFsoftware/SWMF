@@ -36,7 +36,7 @@ ForceRepeatableSimulationPath=off ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
@@ -73,15 +73,15 @@ CouplerMode=ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
-  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
-  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
+!!  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+!!  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
   
 #endGeneral
 
 
 
 #ParticleCollisions
-!  model = HS !!off !HS ! HS, off
+  model = HS !!off !HS ! HS, off
   SampleCollisionFrequency=on !!on !on, off
 
   CollisionCrossSection=const \\ !const, function
@@ -89,7 +89,7 @@ CouplerMode=ices !!off, ices, swmf
 #endParticleCollisions
 
 #IDF
-  Model=LB  !off,LB,qLB
+  Model=off  !off,LB,qLB
   vtRelaxation=off !on,off
   vvRelaxation=off !on,off
   rtRelaxation=on !on,off
@@ -107,13 +107,15 @@ CouplerMode=ices !!off, ices, swmf
 #block ../cg.pl !process settings of the moon module
   Gravity3D=off !on,off
 
-  HeliocentricDistance=2.7*_AU_
-  subSolarPointAzimuth=0.0 !! in rad 18.7961
-  subSolarPointZenith=1.5708 !! in rad 46.41975 degrees from zaxis
+  HeliocentricDistance=3.6*_AU_
+  subSolarPointAzimuth=5.1763159960548 !! in rad 18.7961
+  subSolarPointZenith=0.81030348822463 !! in rad 46.41975 degrees from zaxis
 
-  RadiativeCoolingMode=Crovisier !off, Crovisier	
+  RadiativeCoolingMode=off !off, Crovisier	
 
   RadialVelocityMode=off !on,off
+
+  SampleBackFluxMode=on
 
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
