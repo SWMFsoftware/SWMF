@@ -945,8 +945,8 @@ PIC::InitMPI();
 
 
 	//init the sampling of the particls' distribution functions
-	const int nSamplePoints=3;
-	double SampleLocations[nSamplePoints][DIM]={{2.0E6,0.0,0.0}, {0.0,2.0E6,0.0}, {-2.0E6,0.0,0.0}};
+	//const int nSamplePoints=3;
+	//double SampleLocations[nSamplePoints][DIM]={{2.0E6,0.0,0.0}, {0.0,2.0E6,0.0}, {-2.0E6,0.0,0.0}};
 
 /* THE DEFINITION OF THE SAMPLE LOCATIONS IS IN THE INPUT FILE
 	PIC::DistributionFunctionSample::vMin=-40.0E3;
@@ -957,9 +957,9 @@ PIC::InitMPI();
 */
 
 	//also init the sampling of the particles' pitch angle distribution functions
-	PIC::PitchAngleDistributionSample::nSampledFunctionPoints=101;
+	//PIC::PitchAngleDistributionSample::nSampledFunctionPoints=101;
 
-	PIC::PitchAngleDistributionSample::Init(SampleLocations,nSamplePoints);
+	//PIC::PitchAngleDistributionSample::Init(SampleLocations,nSamplePoints);
 	
 
 
