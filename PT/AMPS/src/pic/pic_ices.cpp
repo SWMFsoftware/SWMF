@@ -869,7 +869,7 @@ void PIC::CPLR::ICES::EvaluateSurfaceIonFlux(double ShiftFactor) {
       nTotalElements=Sphere->GetTotalSurfaceElementsNumber();
 
       //assemble the table of ion fluxes
-      double FluxTable[nTotalElements];
+      double FluxTable[nTotalElements],TotalSurfaceFlux;
       CMPI_channel pipe(1000000);
 
       if (PIC::ThisThread==0) {
@@ -912,9 +912,12 @@ void PIC::CPLR::ICES::EvaluateSurfaceIonFlux(double ShiftFactor) {
       MPI_Bcast(FluxTable,nTotalElements,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
       //save the table on the sphere
-      for (el=0;el<nTotalElements;el++) {
+      for (el=0,TotalSurfaceFlux=0.0;el<nTotalElements;el++) {
         Sphere->SolarWindSurfaceFlux[el]=FluxTable[el];
+        if (FluxTable[el]>0.0) TotalSurfaceFlux+=FluxTable[el];
       }
+
+      Sphere->TotalSolarWindSurfaceFlux=TotalSurfaceFlux;
 
     }
     else {
