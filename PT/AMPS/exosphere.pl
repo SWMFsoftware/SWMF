@@ -540,21 +540,24 @@ while ($line=<InputFile>) {
     }
     elsif ($InputLine eq "SPUTTERING") {
       my @Yield=(0)x$TotalSpeciesNumber;
+      my @SourceRate=(0)x$TotalSpeciesNumber;
       my @minInjectionEnergy=(0)x$TotalSpeciesNumber;
       my @maxInjectionEnergy=(0)x$TotalSpeciesNumber;
-      
+           
       while (defined $InputComment) {
-        ($InputLine,$s0,$InputComment)=split(' ',$InputComment,3);
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
         $InputLine=~s/ //g;
-        $s0=~s/ //g;
         
         if ($InputLine eq "YIELD") {
-          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          ($s0,$InputLine,$InputComment)=split(' ',$InputComment,3);
           $InputLine=~s/ //g;
+          $s0=~s/ //g;
           
           $Yield[getSpeciesNumber($s0)]=$InputLine;
         }
         elsif ($InputLine eq "INJECTIONVELOCITYRANGE") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          
           my $nspec=getSpeciesNumber($s0);
           ($s0,$s1,$InputComment)=split(' ',$InputComment,3);
           $s0=~s/ //g;
@@ -563,14 +566,38 @@ while ($line=<InputFile>) {
           $minInjectionEnergy[$nspec]="_".$SpeciesList[$nspec]."__MASS_*pow($s0,2)/2.0";
           $maxInjectionEnergy[$nspec]="_".$SpeciesList[$nspec]."__MASS_*pow($s1,2)/2.0";
         }
+        
+        elsif ($InputLine eq "MODE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $InputLine=~s/ //g;
+          
+          if ($InputLine eq "YIELD") {
+            ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_","_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_","models/exosphere/Exosphere.dfn");
+          }
+          elsif ($InputLine eq "USERDEFINEDSOURCERATE") {
+            ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_","_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_","models/exosphere/Exosphere.dfn");
+          }
+          else {
+            die "#1 $InputLine: Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+          }
+        }
+        elsif ($InputLine eq "SOURCERATE") {
+          ($s0,$InputLine,$InputComment)=split(' ',$InputComment,3);
+          $InputLine=~s/ //g;
+          
+          $SourceRate[getSpeciesNumber($s0)]=$InputLine;
+        }
         else {
-          die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
-        }        
+          die "#2 $InputLine: Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+        }  
+              
       }
       
       #add the parameters to the source code
       ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_","_EXOSPHERE_SOURCE__ON_","models/exosphere/Exosphere.dfn");
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_Yield\\[\\]",\@Yield,"models/exosphere/Exosphere.h");
+      ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_UserRequestedSourceRate\\[\\]",\@SourceRate,"models/exosphere/Exosphere.h");
+      
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_minInjectionEnergy\\[\\]",\@minInjectionEnergy,"models/exosphere/Exosphere.h");
       ampsConfigLib::ChangeValueOfArray("static const double SolarWindSputtering_maxInjectionEnergy\\[\\]",\@maxInjectionEnergy,"models/exosphere/Exosphere.h");
       
