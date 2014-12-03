@@ -48,8 +48,14 @@ cSingleVariableDistribution<int> Exosphere::SourceProcesses::SolarWindSputtering
 cSingleVariableDiscreteDistribution<int> Exosphere::SourceProcesses::SolarWindSputtering::SurfaceInjectionDistribution[PIC::nTotalSpecies];
 
 double Exosphere::SourceProcesses::SolarWindSputtering::TypicalIonFluxSputteringRate(int spec) {
+  #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_
   return SolarWindSputtering_Yield[spec]*Pi*pow(Exosphere::Planet->Radius,2)*Exosphere::swNumberDensity_Typical*
       sqrt(pow(Exosphere::swVelocity_Typical[0],2)+pow(Exosphere::swVelocity_Typical[1],2)+pow(Exosphere::swVelocity_Typical[2],2));
+  #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_
+  return SolarWindSputtering_UserRequestedSourceRate[spec];
+  #else
+  exit(__LINE__,__FILE__,"Error: the option is unknown");
+  #endif
 }
 
 double Exosphere::SourceProcesses::SolarWindSputtering::GetSurfaceElementProductionRate(int nElement,int *spec) {

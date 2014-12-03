@@ -18,3 +18,7 @@
 // injection angle distribution
 #define _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__UNIFORM_        0
 #define _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__KNUDSEN_COSINE_ 1
+
+//sputtering mode: calculation of the source rate using Yield vs taking the source rate from the input file 
+#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_        0
+#define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_  1

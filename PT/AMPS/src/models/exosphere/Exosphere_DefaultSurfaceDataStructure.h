@@ -72,7 +72,7 @@ public :
   double **SampleInjectedFluxBulkSpeed;
 
   //solar wind wurface flux
-  double *SolarWindSurfaceFlux;
+  double *SolarWindSurfaceFlux,TotalSolarWindSurfaceFlux;
 
   //injection of particles from the sphere
   typedef double (*fInjectionRate)(int spec,int BoundaryElementType,void *BoundaryElement);
@@ -100,7 +100,7 @@ public :
     ElementSourceRate=NULL;
 
     SampleSpeciesSurfaceSourceRate=NULL,SampleSpeciesSurfaceAreaDensity=NULL,SampleSpeciesSurfaceReturnFlux=NULL,SampleSpeciesSurfaceInjectionFlux=NULL,SampleReturnFluxBulkSpeed=NULL,SampleInjectedFluxBulkSpeed=NULL;
-    SolarWindSurfaceFlux=NULL;
+    SolarWindSurfaceFlux=NULL,TotalSolarWindSurfaceFlux=0.0;
 
 #if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
     SurfaceData0=NULL;

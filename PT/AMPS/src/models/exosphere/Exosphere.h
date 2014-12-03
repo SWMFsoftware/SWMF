@@ -752,6 +752,7 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
 
     namespace SolarWindSputtering {
       static const double SolarWindSputtering_Yield[]={0.0};
+      static const double SolarWindSputtering_UserRequestedSourceRate[]={0.0};
       static const double SolarWindSputtering_minInjectionEnergy[]={0.0};
       static const double SolarWindSputtering_maxInjectionEnergy[]={0.0};
 
@@ -803,10 +804,24 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         //return the local source rate
         double flux=((cInternalSphericalData*)SphereDataPointer)->SolarWindSurfaceFlux[nd];
 
+        #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_
         return (flux>0.0) ? flux*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement] : 0.0;
+        #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_
+        return (flux>0.0) ? SolarWindSputtering_UserRequestedSourceRate[spec]*flux*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement]/((cInternalSphericalData*)SphereDataPointer)->TotalSolarWindSurfaceFlux : 0.0;
+        #else
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
+        #endif
       }
 
-      inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return SourceRate[spec];}
+      inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+        #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_
+        return SourceRate[spec];
+        #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_
+        return SolarWindSputtering_UserRequestedSourceRate[spec];
+        #else
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
+        #endif
+      }
 
       //energy distribution function of injected particles
       extern cSingleVariableDistribution<int> EnergyDistribution[PIC::nTotalSpecies];
