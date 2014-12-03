@@ -12,7 +12,7 @@
 double PIC::PitchAngleDistributionSample::CosPAMin=-1.0,PIC::PitchAngleDistributionSample::CosPAMax=1.0;
 long int PIC::PitchAngleDistributionSample::nSampledFunctionPoints=201;
 double** PIC::PitchAngleDistributionSample::SamplingBuffer=NULL;
-double** PIC::PitchAngleDistributionSample::SamplingLocations=NULL;
+double PIC::PitchAngleDistributionSample::SamplingLocations[][3]={{0.0,0.0,0.0}};
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>** PIC::PitchAngleDistributionSample::SampleNodes=NULL;
 double PIC::PitchAngleDistributionSample::dCosPA=0.01;
 long int *PIC::PitchAngleDistributionSample::SampleLocalCellNumber=NULL;
@@ -25,7 +25,7 @@ PIC::PitchAngleDistributionSample::SampleDataLength=0;
 
 //====================================================
 //init the sampling buffers
-void PIC::PitchAngleDistributionSample::Init(double ProbeLocations[][DIM],int nProbeLocations) {
+void PIC::PitchAngleDistributionSample::Init() {//double ProbeLocations[][DIM],int nProbeLocations) {
   int idim,nProbe,i,j,k;
 
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_OFF_
@@ -37,7 +37,7 @@ void PIC::PitchAngleDistributionSample::Init(double ProbeLocations[][DIM],int nP
   if(DIM < 3)
     exit(__LINE__,__FILE__,"Error: DIM < 3, pitch angle calculations are not meaningful ");
 
-  nSampleLocations=nProbeLocations;
+  //  nSampleLocations=nProbeLocations;
   SamplingInitializedFlag=true;
 
   //get the lenfths of the sampling intervals
@@ -49,22 +49,22 @@ void PIC::PitchAngleDistributionSample::Init(double ProbeLocations[][DIM],int nP
   SampleDataLength=1;
 
   //allocate the sampling buffers
-  SampleLocalCellNumber=new long int [nProbeLocations];
-  SampleNodes=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nProbeLocations];
-  SamplingLocations=new double* [nProbeLocations];
-  SamplingLocations[0]=new double [DIM*nProbeLocations];
+  SampleLocalCellNumber=new long int [nSampleLocations];
+  SampleNodes=new cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* [nSampleLocations];
+  //  SamplingLocations=new double* [nProbeLocations];
+  //  SamplingLocations[0]=new double [DIM*nProbeLocations];
 
-  SamplingBuffer=new double* [nProbeLocations];
-  SamplingBuffer[0]=new double [nProbeLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1)];
+  SamplingBuffer=new double* [nSampleLocations];
+  SamplingBuffer[0]=new double [nSampleLocations*PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1)];
 
-  for (nProbe=1;nProbe<nProbeLocations;nProbe++) {
-    SamplingLocations[nProbe]=SamplingLocations[nProbe-1]+DIM;
+  for (nProbe=1;nProbe<nSampleLocations;nProbe++) {
+    //    SamplingLocations[nProbe]=SamplingLocations[nProbe-1]+DIM;
     SamplingBuffer[nProbe]=SamplingBuffer[nProbe-1]+PIC::nTotalSpecies*SampleDataLength*(nSampledFunctionPoints-1);
   }
 
   //init the sampling informations
-  for (nProbe=0;nProbe<nProbeLocations;nProbe++) {
-    for (idim=0;idim<DIM;idim++) SamplingLocations[nProbe][idim]=ProbeLocations[nProbe][idim];
+  for (nProbe=0;nProbe<nSampleLocations;nProbe++) {
+    //    for (idim=0;idim<DIM;idim++) SamplingLocations[nProbe][idim]=ProbeLocations[nProbe][idim];
 
     SampleNodes[nProbe]=PIC::Mesh::mesh.findTreeNode(SamplingLocations[nProbe]);
     if (SampleNodes[nProbe]==NULL) exit(__LINE__,__FILE__,"Error: the point is outside of the domain");
@@ -169,10 +169,10 @@ void PIC::PitchAngleDistributionSample::printDistributionFunction(char *fname,in
 
       fprintf(PIC::DiagnospticMessageStream,"printing output file: %s.........         ",str);
 
-      fprintf(fout,"\"TITLE=Pitch Angle distribution function at x=%e",SamplingLocations[nProbe][0]);
+      fprintf(fout,"TITLE=\"Pitch Angle distribution function at x=%e",SamplingLocations[nProbe][0]);
       for (idim=1;idim<DIM;idim++) fprintf(fout,", %e",SamplingLocations[nProbe][idim]);
 
-      fprintf(fout,"\"\nVARIABLES=\"Sample Interval\",\"Cos(PitchAngle)\"\n");
+      fprintf(fout,"\"\nVARIABLES=\"Cos(PitchAngle)\",\"f\"\n");
 
       //collect the sampled information from other processors
       for (thread=1;thread<PIC::Mesh::mesh.nTotalThreads;thread++) for (nVariable=0;nVariable<SampleDataLength;nVariable++) {
@@ -201,7 +201,7 @@ void PIC::PitchAngleDistributionSample::printDistributionFunction(char *fname,in
         double CosPA=0.0;
 	CosPA=CosPAMin+i*dCosPA;
 
-        fprintf(fout,"%ld  %e ",i,CosPA);
+        fprintf(fout,"%e ",CosPA);
 
         offset=GetSampleDataOffset(spec,Sample_PitchAngle_Offset);
         fprintf(fout,"  %e\n",SamplingBuffer[nProbe][i+offset]);
