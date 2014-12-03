@@ -80,11 +80,30 @@ ParticleWeightCorrectionMode=on
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  TrajectoryTracing=on			  
+  MaxSampledTrajectoryNumber=300
+
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
   define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
-  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+!  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
 #endGeneral
+
+#Sampling
+
+  PitchAngleDistributionSampling=on \\ !on, off
+    x=(-2.0E6, 0.0,   0.0),   (-1.7E6, 1.0E6, 0.0),   (-1.0E6, 1.7E6, 0.0),  \\
+      ( 0.0,   2.0E6, 0.0),   ( 1.0E6, 1.7E6, 0.0),   ( 1.7E6, 1.0E6, 0.0),  \\
+      ( 2.0E6, 0.0,   0.0),   ( 1.7E6,-1.0E6, 0.0),   ( 1.0E6,-1.7E6, 0.0),  \\
+      ( 0.0,  -2.0E6, 0.0),   (-1.0E6,-1.7E6, 0.0),   (-1.7E6,-1.0E6, 0.0),  \\
+                              (-1.7E6, 0.0,   1.0E6), (-1.0E6, 0.0,   1.7E6),\\
+      ( 0.0,   0.0,   2.0E6), ( 1.0E6, 0.0,   1.7E6), ( 1.7E6, 0.0,   1.0E6),\\
+                              ( 1.7E6, 0.0,  -1.0E6), ( 1.0E6, 0.0,  -1.7E6),\\
+      ( 0.0,   0.0,  -2.0E6), (-1.0E6, 0.0,  -1.7E6), (-1.7E6, 0.0,  -1.0E6) \\
+    nSampleIntervals=200
+
+#endSampling
 
 #block ../europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
@@ -147,7 +166,7 @@ ParticleWeightCorrectionMode=on
 
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
   
-  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
+!  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_OFF_
 
@@ -169,7 +188,7 @@ ParticleWeightCorrectionMode=on
     n=60.0E6
 
   Source:Sputtering=on\\ !on,off
-    Yield(O2)=1.0, InjectionVelocityRange(O2)=10,10.0E3
+    Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3
 
 
   Source:VerticalInjection=off \\ !on,off
