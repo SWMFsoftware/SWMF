@@ -1423,6 +1423,11 @@ void PIC::Init_AfterParser() {
 #if _PIC_VELOCITY_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::DistributionFunctionSample::Init();
 #endif
+
+  //init the pitch angle distribution sample procedure
+#if _PIC_PITCH_ANGLE_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
+  PIC::PitchAngleDistributionSample::Init();
+#endif
 }
 
 //====================================================
