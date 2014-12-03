@@ -231,7 +231,7 @@ if (spec==_OPLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
     CharacteristicSpeed=10.0*9.6E4;
     break;
 
-  case _O2_SPEC_:
+  case _O2_SPEC_:case _H2O_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
   case _O2PLUS_SPEC_:
@@ -908,6 +908,7 @@ PIC::InitMPI();
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
 #endif
 
+	if (_H2O_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
 
   PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
   PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
