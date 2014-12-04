@@ -610,7 +610,7 @@ contains
     subroutine set_solar_wind_bc_buffer
 
       use ModVarIndexes, ONLY: Bx_, Bz_
-      use ModAdvance, ONLY : B0_DGB
+      use ModB0, ONLY : B0_DGB
       use BATL_lib, ONLY: Xyz_DGB
 
       ! index and location of a single point

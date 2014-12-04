@@ -779,7 +779,8 @@ contains
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
 
     use ModMain, ONLY: UseB0, z_
-    use ModAdvance, ONLY: State_VGB, B0_DGB, Bx_, Bz_
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_
+    use ModB0, ONLY: B0_DGB
     use ModGeometry, ONLY: r_BLK
     use BATL_lib, ONLY: Xyz_DGB
 
@@ -1057,7 +1058,8 @@ contains
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB
+    use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in) :: i, j, k, iBlock
@@ -1188,7 +1190,8 @@ contains
     use ModExpansionFactors, ONLY: UMin
     use ModMain,       ONLY: x_, z_, UseB0
     use ModVarIndexes, ONLY: Bx_, Bz_,Rho_,RhoUx_,RhoUz_
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB
+    use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
@@ -1340,7 +1343,8 @@ contains
   subroutine calc_alfven_wave_dissipation(i, j, k, iBlock, WaveDissipation_V, &
        CoronalHeating)
 
-    use ModAdvance, ONLY: State_VGB, B0_DGB
+    use ModAdvance, ONLY: State_VGB
+    use ModB0,      ONLY: B0_DGB
     use ModMain, ONLY: UseB0
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_
 
@@ -1677,8 +1681,9 @@ contains
 
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge
-    use ModAdvance, ONLY: State_VGB, B0_DGB, UseAnisoPressure, &
+    use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
          Rho_, Bx_, Bz_, Pe_, p_, Ppar_
+    use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &

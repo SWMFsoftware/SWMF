@@ -51,7 +51,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
-       DoChangeRestartVariables, nVarRestart
+       DoChangeRestartVariables, nVarRestart, UseRestartWithFullB
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -1526,6 +1526,9 @@ subroutine MH_set_parameters(TypeAction)
         ! restart file. 
         call read_var('NameVarRestartRead', NameVarRestartRead)
         IsReadNameVarRestart = .true.
+
+     case("#RESTARTWITHFULLB")
+        UseRestartWithFullB = .true.
 
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)

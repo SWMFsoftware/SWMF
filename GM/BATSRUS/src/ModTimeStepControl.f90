@@ -283,7 +283,7 @@ contains
     use ModMain
     use ModAdvance,  ONLY: time_BLK, State_VGB, rho_, Bx_, Bz_, P_, &
          iTypeAdvance_B, ExplBlock_
-    use ModAdvance,  ONLY: B0_DGB
+    use ModB0,       ONLY: B0_DGB
     use ModGeometry, ONLY: true_cell, true_BLK, XyzStart_BLK
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitX_, UnitU_, UnitT_, UnitB_, &

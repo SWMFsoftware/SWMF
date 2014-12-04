@@ -34,8 +34,8 @@ contains
        nVar)
     !USES:
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_,&
-         B0_DGB
+    use ModAdvance, ONLY: State_VGB,rho_,rhoUx_,rhoUz_,Bx_,Bz_,P_
+    use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitRhoU_, UnitP_, UnitB_
 
     !INPUT ARGUMENTS:

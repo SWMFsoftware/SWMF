@@ -16,7 +16,8 @@ subroutine ray_trace_accurate
   use ModRaytrace
   use CON_ray_trace,  ONLY: ray_init
   use ModMain
-  use ModAdvance,     ONLY: State_VGB, Bx_, Bz_, B0_DGB
+  use ModAdvance,     ONLY: State_VGB, Bx_, Bz_
+  use ModB0,          ONLY: B0_DGB
   use ModGeometry,    ONLY: r_BLK, true_cell
   use ModMessagePass, ONLY: exchange_messages
   use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
@@ -1485,7 +1486,8 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
        UseB0, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
+  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_
+  use ModB0,      ONLY: B0_DGB
   use ModProcMH
   use ModMpi
   use BATL_lib,          ONLY: message_pass_cell
@@ -1691,7 +1693,8 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B, DoAnisoPressureIMCoupling
   use ModPhysics,        ONLY: rBody
-  use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_, B0_DGB
+  use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_
+  use ModB0,             ONLY: B0_DGB
   use ModProcMH
   use ModMpi
   use ModUtilities,      ONLY: check_allocate
@@ -2121,7 +2124,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
        NameVectorField, Bxyz_DGB, nRay_D, CpuTimeStartRay, GmSm_DD, CLOSEDRAY
   use ModMain,    ONLY: nBlock, Time_Simulation, TypeCoordSystem, UseB0
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, B0_DGB
+  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_
+  use ModB0,      ONLY: B0_DGB
   use ModProcMH,  ONLY: iProc, iComm
   use ModMpi
   use ModGeometry,       ONLY: CellSize_DB
@@ -2450,7 +2454,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
        CpuTimeStartRay, oktest_ray, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
-  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_, B0_DGB
+  use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
+  use ModB0,       ONLY: B0_DGB
   use ModMain,     ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: CellSize_DB, x_, y_, z_

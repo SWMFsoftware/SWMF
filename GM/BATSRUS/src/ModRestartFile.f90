@@ -97,6 +97,9 @@ module ModRestartFile
   real,allocatable :: StateRead_VCB(:,:,:,:,:)
   real,allocatable :: ImplOldRead_VCB(:,:,:,:,:)
 
+  ! Logical variable if FullB is saved in restart
+  logical, public :: UseRestartWithFullB = .false.
+
 contains
 
   subroutine init_mod_restart_file
@@ -178,6 +181,7 @@ contains
 
   subroutine write_restart_files
 
+    use ModB0,       ONLY: UseB0, add_b0, subtract_b0
     use ModGeometry, ONLY: true_cell
 
     integer :: iBlock
@@ -190,7 +194,12 @@ contains
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
-          if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
+          if(.not.Unused_B(iBlock)) call reverse_field(iBlock)
+       end do
+    end if
+    if(UseB0)then
+       do iBlock = 1, nBlock
+          if(.not.Unused_B(iBlock)) call add_b0(iBlock)
        end do
     end if
 
@@ -226,6 +235,11 @@ contains
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
+       end do
+    end if
+    if(UseB0)then
+       do iBlock = 1, nBlock
+          if(.not.Unused_B(iBlock)) call subtract_b0(iBlock)
        end do
     end if
 
@@ -310,6 +324,8 @@ contains
           if (.not.Unused_B(iBlock)) call reverse_field(iBlock)
        end do
     end if
+    ! The subtraction of B0 from full B0+B1 to obtain B1 is in set_ICs
+    ! after B0 is set
 
     ! Try reading geoIndices restart file if needed
     if(DoWriteIndices .and. iProc==0)call read_geoind_restart
@@ -506,6 +522,9 @@ contains
        write(unit_tmp,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
        write(unit_tmp,*)
     end if
+
+    write(unit_tmp,'(a)')'#RESTARTWITHFULLB'
+    write(unit_tmp,*)
 
     write(unit_tmp,'(a)')'#END'
     write(unit_tmp,*)

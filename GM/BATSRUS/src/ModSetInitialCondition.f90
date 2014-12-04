@@ -5,7 +5,7 @@ subroutine set_ics(iBlock)
 
   use ModMain
   use ModAdvance
-  use ModB0, ONLY: set_b0_cell
+  use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
   use ModGeometry, ONLY: true_cell, R2_BLK
   use ModIO, ONLY : restart
   use ModPhysics
@@ -13,6 +13,7 @@ subroutine set_ics(iBlock)
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
+  use ModRestartFile, ONLY: UseRestartWithFullB
   use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
@@ -49,7 +50,10 @@ subroutine set_ics(iBlock)
      !\
      ! If used, initialize solution variables and parameters.
      !/
-     if(UseB0)call set_b0_cell(iBlock)
+     if(UseB0) call set_b0_cell(iBlock)
+
+     ! Subtract B0 from Full B0+B1 from restart to obtain B1
+     if(UseB0 .and. restart .and. UseRestartWithFullB) call subtract_b0(iBlock)
 
      if(.not.restart)then
 

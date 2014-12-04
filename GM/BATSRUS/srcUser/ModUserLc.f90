@@ -324,7 +324,8 @@ contains
 
   subroutine user_set_ics(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, WaveFirst_, WaveLast_
+    use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk, true_cell
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, &
@@ -611,7 +612,8 @@ contains
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
-    use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, tmp1_BLK
+    use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_, &
          UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization

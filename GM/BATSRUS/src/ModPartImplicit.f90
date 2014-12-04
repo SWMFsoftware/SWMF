@@ -2264,7 +2264,7 @@ contains
 
     use ModProcMH
     use ModMain
-    use ModAdvance,  ONLY: B0_DGB
+    use ModB0,  ONLY: B0_DGB
     use ModGeometry, ONLY: true_cell, true_BLK
     use ModMpi
     use BATL_lib, ONLY: CellVolume_GB

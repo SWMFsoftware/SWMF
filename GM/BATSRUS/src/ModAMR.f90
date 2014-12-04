@@ -236,8 +236,9 @@ contains
     use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B,&
          DoThinCurrentSheet
     use ModGeometry,   ONLY: r_BLK, true_cell
-    use ModAdvance,    ONLY: State_VGB, StateOld_VCB, B0_DGB, &
+    use ModAdvance,    ONLY: State_VGB, StateOld_VCB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
+    use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: rCurrents
     use ModPhysics,    ONLY: UseSunEarth
     use ModCurrent,    ONLY: get_current

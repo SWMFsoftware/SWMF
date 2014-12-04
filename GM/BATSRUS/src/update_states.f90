@@ -5,6 +5,7 @@ subroutine update_states(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
+  use ModB0, ONLY: B0_DGB
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
   use BATL_lib, ONLY: Xyz_DGB
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -150,6 +151,7 @@ subroutine update_check(iStage)
   use ModMain
   use ModImplicit, ONLY: UsePartImplicit
   use ModAdvance
+  use ModB0, ONLY: B0_DGB
   use ModPhysics
   use ModGeometry, ONLY : true_cell
   use ModNumConst, ONLY: cTiny
@@ -813,6 +815,7 @@ subroutine select_conservative
   use ModNumConst
   use ModMain
   use ModAdvance
+  use ModB0, ONLY: B0_DGB
   use ModGeometry
   use BATL_lib, ONLY: Xyz_DGB
   implicit none

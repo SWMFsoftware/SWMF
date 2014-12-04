@@ -68,7 +68,8 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
   use ModRaytrace, ONLY : ray
   use ModPhysics,  ONLY : Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
   use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
-  use ModAdvance,  ONLY : State_VGB, B0_DGB, RhoUz_, Bx_, Bz_
+  use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_
+  use ModB0,       ONLY: B0_DGB
   use ModMultiFluid, ONLY : IonFirst_, IonLast_, iFluid
   implicit none
 

@@ -6,6 +6,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModProcMH
   use ModMain
   use ModAdvance
+  use ModB0, ONLY: B0_DGB
   use ModPhysics
   use ModGeometry, ONLY: true_cell
   use ModKind, ONLY: Real8_

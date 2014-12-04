@@ -356,7 +356,8 @@ contains
 
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB, B0_DGB
+    use ModAdvance, ONLY: State_VGB
+    use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: inv_gm1
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
@@ -396,7 +397,8 @@ contains
     use ModMain,       ONLY: Unused_B,nBLK,x_,y_,z_
     use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
     use ModGeometry,   ONLY: R_BLK
-    use ModAdvance,    ONLY: State_VGB,tmp1_BLK,B0_DGB
+    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
+    use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: inv_gm1,&
          No2Si_V,UnitEnergydens_,UnitX_,UnitRho_
 

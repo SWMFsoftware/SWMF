@@ -29,6 +29,8 @@ module ModB0
   public:: set_b0_face      ! set face centered B0_DX,Y,Z
   public:: set_b0_source    ! set DivB0 and CurlB0
   public:: get_b0           ! get B0 at an arbitrary point
+  public:: add_b0           ! add B0 to B1 for given block
+  public:: subtract_b0      ! subtract B0 from B0+B1 for given block
 
   ! If B0 varies with time it should be update at some frequency
   logical, public:: DoUpdateB0  = UseB
@@ -673,8 +675,8 @@ contains
 
   end subroutine get_b0_multipole
 
-
   !============================================================================
+
   subroutine add_b0_body2(XyzIn_D, B0_D)
 
     !\
@@ -711,5 +713,47 @@ contains
 
   end subroutine add_b0_body2
 
+  !============================================================================
+
+  subroutine add_b0(iBlock)
+
+    ! add B0 to B1 to obtain Full B0+B1
+
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    implicit none
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    !--------------------------------------------------------------------------
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            + B0_DGB(:,i,j,k,iBlock)
+    end do; end do; end do
+
+  end subroutine add_b0
+
+  !============================================================================
+
+  subroutine subtract_b0(iBlock)
+
+    ! subtract B0 from full B0+B1 to obtain B1
+    use ModAdvance,    ONLY: State_VGB
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    implicit none
+
+    integer, intent(in) :: iBlock
+
+    integer :: i, j, k
+    !--------------------------------------------------------------------------
+
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+       State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+            - B0_DGB(:,i,j,k,iBlock)
+    end do; end do; end do
+
+  end subroutine subtract_b0
 
 end module ModB0

@@ -192,7 +192,8 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB
+    use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_
     use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_
@@ -328,7 +329,8 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB
+    use ModAdvance,    ONLY: State_VGB, tmp1_BLK
+    use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
@@ -396,7 +398,7 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
-    use ModAdvance,    ONLY: State_VGB, B0_DGB
+    use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &

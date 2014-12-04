@@ -699,9 +699,10 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModProcMH
   use ModMain
   use ModVarIndexes
-  use ModAdvance, ONLY : time_BLK,B0_DGB, &
+  use ModAdvance, ONLY : time_BLK, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
        Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
+  use ModB0, ONLY: B0_DGB
   use ModGeometry
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
        AverageIonCharge, ElectronTemperatureRatio, &

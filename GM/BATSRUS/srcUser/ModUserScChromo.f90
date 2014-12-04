@@ -172,8 +172,8 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure, &
-         UseAnisoPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use ModB0,         ONLY: B0_DGB
     use ModCoronalHeating, ONLY: UseTurbulentCascade
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModMultiFluid, ONLY: MassIon_I
@@ -313,7 +313,8 @@ contains
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModAdvance,    ONLY: State_VGB, tmp1_BLK, B0_DGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, tmp1_BLK, UseElectronPressure
+    use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
@@ -516,7 +517,7 @@ contains
 
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Bx_, Bz_
     use ModMultiFluid, ONLY: MassIon_I

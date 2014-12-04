@@ -479,7 +479,8 @@ contains
     use IH_ModSize,           ONLY: nI, nJ, nK
     use IH_ModMain,           ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
     use IH_ModAdvance,        ONLY: &
-         State_VGB, B0_DGB, UseElectronPressure, UseAnisoPressure
+         State_VGB, UseElectronPressure, UseAnisoPressure
+    use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics,        ONLY: &
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
          UnitX_, UnitEnergyDens_,  inv_g
@@ -747,8 +748,8 @@ contains
   subroutine IH_get_for_mh(nPartial,iGetStart,Get,W,State_V,nVar)
 
     !USES:
-    use IH_ModAdvance, ONLY: State_VGB, B0_DGB, UseElectronPressure, &
-         UseAnisoPressure
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, inv_g
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
@@ -1126,7 +1127,8 @@ contains
 
   subroutine IH_get_a_line_point(nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
-    use IH_ModAdvance,ONLY: State_VGB, B0_DGB, Bx_, Bz_
+    use IH_ModAdvance,ONLY: State_VGB, Bx_, Bz_
+    use IH_ModB0,     ONLY: B0_DGB
     use IH_BATL_lib,  ONLY: CellSize_DB
     use IH_ModMain,   ONLY: UseB0
     use CON_router
@@ -1191,8 +1193,9 @@ contains
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
          Bfield_, Wave_, ElectronPressure_, AnisoPressure_, &
          CollisionlessHeatFlux_      
-    use IH_ModAdvance,    ONLY: State_VGB, B0_DGB, UseElectronPressure, &
+    use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
+    use IH_ModB0,         ONLY: B0_DGB
     use IH_ModPhysics,    ONLY: Si2No_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
          UnitEnergyDens_
     use IH_ModMain,       ONLY: UseB0
@@ -1372,8 +1375,9 @@ contains
 
   subroutine IH_get_for_sp(nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
-    use IH_ModAdvance,ONLY: State_VGB, B0_DGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_
-    use IH_ModPhysics,ONLY: No2Si_V, UnitRho_, UnitP_, UnitU_, UnitB_, UnitX_
+    use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_
+    use IH_ModB0,      ONLY: B0_DGB
+    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitU_, UnitB_, UnitX_
     use CON_router
     use IH_BATL_lib, ONLY: Xyz_DGB
     use IH_ModMain,  ONLY: UseB0
@@ -1456,7 +1460,8 @@ contains
        nPartial,iGetStart,Get,W,State_V,nVar,TimeCoupling)
 
     !USES:
-    use IH_ModAdvance, ONLY: State_VGB, B0_DGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
+    use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_,P_
+    use IH_ModB0,      ONLY: B0_DGB
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
     use IH_ModMain,    ONLY: UseRotatingFrame,UseB0
     use CON_router
