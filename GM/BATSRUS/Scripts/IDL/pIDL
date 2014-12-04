@@ -82,7 +82,7 @@ exit 0 unless $MakeMovie;
 
 # Collect the .out files
 opendir(DIR,'.');
-my @OutFiles = sort(grep /\.out$/, readdir(DIR));
+my @OutFiles = sort(grep /^$Pattern.*\.out$/, readdir(DIR));
 closedir(DIR);
 
 # Group the .out files and save the last and first steps
