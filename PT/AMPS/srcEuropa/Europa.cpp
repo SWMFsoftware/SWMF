@@ -1083,12 +1083,63 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
 }
 
-double Exosphere::SourceProcesses::GetInjectionEnergy(){
-	static const double Ee=0.015*eV2J;
-	static const double XiMin = 8.24e-2; // corresponds to speed 10^3 m/s
-	double Xi = rnd();
-	while(Xi < XiMin) Xi = rnd();
-	return (1.0-Xi)*Ee/Xi;
+double Exosphere::SourceProcesses::GetInjectionEnergy(int spec, int SourceProcessID) {
+	double res,r;
+	bool flag;
+
+	//the maximum velocity of the injected particle
+	static const double vmax=10.0E3;
+
+	//parameters of the O2 sputtering distribution
+  static const double U_o2=0.015*eV2J;  //the community accepted parameter of the energy distribution
+  static const double Emax_o2=_O2__MASS_*vmax*vmax/2.0; //the maximum energy of the ejected particle
+
+	//parameters of the H2O sputtring energy distribution
+	static const double U_h2o=0.033*eV2J; //the parameter of the distribution (Martin's PATM proposal)
+	static const double Emax_h2o=_H2O__MASS_*vmax*vmax/2.0; //the maximum energy of the ejected particle
+
+
+	switch (spec) {
+	case _O2_SPEC_ :
+	  switch (SourceProcessID) {
+	  case _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_ :
+	    r=rnd();
+	    res=U_o2*Emax_o2*(1.0-r)/(U_o2+r*Emax_o2);
+	    break;
+	  default:
+	    exit(__LINE__,__FILE__,"Error: not implemented");
+	  }
+
+	  break;
+	case _H2O_SPEC_:
+	  switch (SourceProcessID) {
+	  case _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_ :
+
+	    do {
+	      r=rnd();
+	      res=U_h2o*(r+sqrt(r))/(1.0-r);
+	    }
+	    while (res>Emax_h2o);
+
+	    break;
+	  default:
+	    exit(__LINE__,__FILE__,"Error: not implemented");
+	  }
+
+	  break;
+	default:
+	  exit(__LINE__,__FILE__,"Error: not implemented");
+	}
+
+/*
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+    if (isfinite(res)==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+#endif
+#endif
+*/
+
+	return res;
 }
 
 void Europa::Sampling::O2InjectionSpeed::flush() {
