@@ -79,7 +79,7 @@ const double yMaxDomain=5; //the minimum size of the domain in the direction per
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
 
-const double dxMinGlobal=1,dxMaxGlobal=1;
+const double dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
 
 //the species
 //int NA=0;
@@ -181,15 +181,20 @@ res/=2.1;
 
 double localResolution(double *x) {
 	int idim;
-	double lnR,res,r=0.0;
+	double lnR,res,r=0.0, d1,d2,d3,d=0.0;
 
 	for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
-
 	r=sqrt(r);
+	// accomodation for the O2Plus tail's shape
+	d1 = x[0];
+	d2 = 0.5*(           x[1] + sqrt(3.0)*x[2]);
+	d3 = 0.5*(-sqrt(3.0)*x[1] +           x[2]);
+	d  = - rSphere*d1 + 0.2*d2*d2 + 1.6*d3*d3;
+	d  = sqrt(d);
 
 	if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
 
-	if (r>dxMinGlobal*rSphere) {
+	if (r>dxMinGlobal*rSphere && d > 2.0*rSphere) {
 		lnR=log(r);
 		res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
 	}
