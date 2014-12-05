@@ -1,29 +1,42 @@
-pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL
-;--------------------------------------------------------------------------------------------------
+pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL, CMEGrid=CMEGrid
+;-----------------------------------------------------------------------
 ; NAME :
 ;   SWMF_GLSETUP
 ; PURPOSE :
-;   Determine the Gibson-Low flux rope parameters from the input magnetogram and observed CME speed.
+;   Determine the Gibson-Low flux rope parameters from the input
+;   magnetogram and observed CME speed.
+
 ; INPUT PARAMETERS :
-;   The observed CME speed, the input magnetic field of SWMF, the location of the CME source region
-;   (Interactive Selection).
+;   The observed CME speed, the input magnetic field of SWMF, the
+;   location of the CME source region(Interactive Selection).
 ; OUTPUTS :
 ;   Recommended GL flux rope parameters.
 ; KEYWORDS:
-;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.0 will be loaded.
-;   PlotRadius = Set up the layer of the magnetogram. Cannot be used with DemoMode.
-;   UsePIL = If set, the orientation of the flux rope will be caluclated according to the PIL direcion.
+;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.0 will
+;   be loaded.
+;   PlotRadius = Set up the layer of the magnetogram. Cannot be used
+;   with DemoMode.
+;   UsePIL = If set, the orientation of the flux rope will be
+;   caluclated according to the PIL direcion.
+;   CMEGrid = If set, the grid refinement parameters for CME will be
+;   calculated.
 ; CALLS   :
 ;   PLOT_IMAGE
 ; RESTRICTIONS:
-;   PlotRadius can only be 0.015 increament from 1.0. Please do not use large raduis for the GL setup.   
+;   - PlotRadius can only be 0.015 increament from 1.0. Please do not
+;   use large raduis for the GL setup.
+;   - For the active regions with mixed polarities, try to use higher
+;     layers of the magnetogram to reduce complexity.
 ; MODIFICATION HISTORY:
 ;   Originally coded by Meng Jin@ AOSS, University of Michigan
 ;   v0.1 06/02/2014 Demo Version.
-;   v0.2 06/05/2014 Added option to read binary data, remove the ASCII template file dependance.
-;                   Added DemoMode and PlotRadius keywords.
-;   v0.3 06/06/2014 Added option to calculate the GL orientation according to the PIL.                                     
-;---------------------------------------------------------------------------------------------------
+;   v0.2 06/05/2014 Added option to read binary data, remove the ASCII
+;    template file dependance; added DemoMode and PlotRadius keywords.
+;   v0.3 06/06/2014 Added option to calculate the GL orientation
+;    according to the PIL.         
+;   v0.4 11/24/2014 Added option to calculate the CME grid
+;    information.
+;------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
 device,decomposed=1
@@ -208,7 +221,7 @@ plots,xNegativeWeight,yNegativeWeight,/data,psym=-2,color='FF0000'XL
 ;Calculate the orientation from the PIL (In development)
 r1=[xPositiveWeight-xNegativeWeight,yPositiveWeight-yNegativeWeight]
 r1=r1/sqrt(r1[0]^2+r1[1]^2)
-r2=[1.0,0.0]
+r2=[-1.0,0.0]
 GL_Orientation=acos(r1[0]*r2[0]+r1[1]*r2[1])*180/3.1415926
 if r1[1] lt 0 then begin
   GL_Orientation=360-GL_Orientation
@@ -345,6 +358,13 @@ GL_Bstrength=CMESpeed/factor_BV
 factor_RL=35.
 GL_Radius=PIL_Length/factor_RL
 
+;Calculate the CME grid refinement parameters based on the flux rope                 
+;location and size.                                                                                            
+if keyword_set(CMEGrid) then begin
+CMEbox_Start=[1.1,GL_Longitude-40.*GL_Radius,GL_Latitude-20.*GL_Radius]
+CMEbox_End=[20.0,GL_Longitude+40.*GL_Radius,GL_Latitude+20.*GL_Radius]
+endif
+
 ;Recommended GL flux rope parameters
 print,'========================================'
 print,'The Recommended GL FLux Rope Parameters'
@@ -357,6 +377,20 @@ print,FORMAT='(A20,5X,F6.2)','Bstrength: ',GL_Bstrength
 print,FORMAT='(A20,5X,F6.2)','Stretch (FIXED): ',0.6
 print,FORMAT='(A20,5X,F6.2)','Distance (FIXED): ',1.8
 print,'-----------------------------------------'
+
+
+if keyword_set(CMEGrid) then begin
+print,'=========================================='
+print,'The Recommended Grid Refinement Parameters'
+print,'=========================================='
+print,FORMAT='(A20,5X,F6.2)','R_Start: ', CMEbox_start[0]
+print,FORMAT='(A20,5X,F6.2)','R_End: ', CMEbox_end[0]
+print,FORMAT='(A20,5X,F6.2)','Longitude_Start: ', CMEbox_start[1]
+print,FORMAT='(A20,5X,F6.2)','Longitude_End: ', CMEbox_end[1]
+print,FORMAT='(A20,5X,F6.2)','Latitude_Start: ', CMEbox_start[2]
+print,FORMAT='(A20,5X,F6.2)','Latitude_End: ', CMEbox_end[2]
+print,'-----------------------------------------'
+endif
 
 ;The region size is used to cover the whole area of active region in order to show a zoom-in image.
 RegionSize=50
