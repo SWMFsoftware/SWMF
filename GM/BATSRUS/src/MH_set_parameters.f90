@@ -72,7 +72,7 @@ subroutine MH_set_parameters(TypeAction)
        TNeutralsISW_dim, mProtonMass
 
   use ModMultiIon, ONLY: multi_ion_set_parameters
-  use ModSolarwind, ONLY: UseSolarwindFile, NameSolarwindFile, &
+  use ModSolarwind, ONLY: UseSolarwindFile, read_solar_wind_param, &
        read_solar_wind_file, normalize_solar_wind_data
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
@@ -1399,11 +1399,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ShockPosition',ShockPosition)
         call read_var('ShockSlope',ShockSlope)
 
-     case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
-        call read_var('UseSolarWindFile',UseSolarwindFile)
+     case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE", "#REFRESHSOLARWINDFILE")
+        call read_solar_wind_param(NameCommand)
         DoReadSolarwindFile = UseSolarwindFile
-        if (UseSolarwindFile) &
-             call read_var('NameSolarWindFile', NameSolarWindFile)
 
      case("#RAYTRACE")
         call read_var('UseRaytrace',UseRaytrace)

@@ -11,12 +11,15 @@ module ModSolarwind
 
   private ! except
   public :: read_solar_wind_file
+  public :: read_solar_wind_param
   public :: normalize_solar_wind_data
   public :: get_solar_wind_point
 
   logical, public :: UseSolarwindFile = .false.
 
-  character(len=500), public :: NameSolarwindFile
+  ! Local variables
+
+  character(len=500):: NameSolarwindFile
 
   integer, parameter :: nTimeVar = 7
   integer, parameter :: MaxData  = 50000
@@ -59,6 +62,27 @@ module ModSolarwind
   logical :: DoReadAgain = .false.
 
 contains
+  !============================================================================
+  subroutine read_solar_wind_param(NameCommand)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_solar_wind_param'
+    !-------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
+       call read_var('UseSolarWindFile', UseSolarwindFile)
+       if (UseSolarwindFile) &
+            call read_var('NameSolarWindFile', NameSolarWindFile)
+    case("#REFRESHSOLARWINDFILE")
+       call read_var('DoReadAgain', DoReadAgain)
+    case default
+       call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
+    end select
+
+  end subroutine read_solar_wind_param
   !============================================================================
   subroutine read_solar_wind_file
 
