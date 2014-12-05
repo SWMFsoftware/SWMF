@@ -6194,6 +6194,7 @@ Temperature (Temp)     K
 The input files  can have the following optional commands at the beginning
 \begin{verbatim}
 #REREAD      Reread the file if the simulation runs beyond the final time
+             See also the #REFRESHSOLARWINDFILE command
 
 #COOR
 GSM          The coordinate system of the data: GSM (default) or GSE
@@ -6241,6 +6242,22 @@ GSM
 The maximum number of lines of data allowed in the input file is 50,000.  
 However, this can be modified by changing the variable Max_Upstream_Npts 
 in the file GM/BATSRUS/get_solar_wind_point.f90. 
+</command>
+
+<command name="REFRESHSOLARWINDFILE">
+	<parameter name="DoReadAgain" type="logical" default="F"/>
+
+#REFRESHSOLARWINDFILE
+T			DoReadAgain
+
+If DoReadAgain is set to true and the code is using a solar wind data file, 
+the code will stop running when the time goes beyond the end of the last 
+data point in the solar wind input file and wait until new data arrives
+(see #SOLARWINDFILE command). The same effect can be achieved with the #REREAD
+command put into the solar wind input file itself (see #SOLARWIND command).
+
+Default is DoReadAgain false, so the code keeps running with the last
+value read. 
 </command>
 
 <command name="BODY" alias="MAGNETOSPHERE" if="$_IsFirstSession">
@@ -7317,7 +7334,7 @@ Under the assumption of sufficiently small returning flux, this estimate of the
 Poynting-flux-to-field ratio is equivalent to the following averaged
 velocity perturbation
 \begin{equation}
-  <\delta{\bf u}_{\perp}\cdot\delta{\bf u}_{\perp}>^{1/2} \approx
+  (\delta{\bf u}_{\perp}\cdot\delta{\bf u}_{\perp})^{1/2} \approx
   15\;{\rm km}\,{\rm s}^{-1}\left( \frac{3\cdot10^{-11}\;{\rm kg}\,
       {\rm m}^{-3}}{\rho}\right)^{1/4},
 \end{equation}
