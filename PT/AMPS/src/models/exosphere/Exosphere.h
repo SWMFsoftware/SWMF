@@ -281,11 +281,11 @@ namespace Exosphere {
     //init the model
     void Init();
 
-    double GetInjectionEnergy();
+    double GetInjectionEnergy(int spec,int SourceProcessID);
 
     //generate particle position and velocity
   //generate particle properties
-  inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution) {
+  inline bool GenerateParticleProperties(int spec,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT, double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, cInternalSphericalData* Sphere,cSingleVariableDiscreteDistribution<int> *SurfaceInjectionDistribution,cSingleVariableDistribution<int> *EnergyDistribution,int SourceProcessID) {
     double ExternalNormal[3];
 
     //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
@@ -333,9 +333,15 @@ namespace Exosphere {
 #if _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__NUMERIC_
     double Speed=sqrt(EnergyDistribution->DistributeVariable()*2.0/PIC::MolecularData::GetMass(spec));
 #elif _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION_ == _EXOSPHERE__ENERGY_DISTRIBUTION_INVERSION__USER_DEFINED_
-    double Speed=sqrt(GetInjectionEnergy()*2.0/PIC::MolecularData::GetMass(spec));
+    double Speed=sqrt(GetInjectionEnergy(spec,SourceProcessID)*2.0/PIC::MolecularData::GetMass(spec));
 #else
     exit(__LINE__, __FILE__, "ERROR: _ENERGY_DISTRIBUTION_INVERSION_ is not defined ")
+#endif
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+    if (isfinite(Speed)==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+#endif
 #endif
 
 #if _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION_ == _EXOSPHERE__INJECTION_ANGLE_DISTRIBUTION__UNIFORM_
@@ -418,6 +424,16 @@ namespace Exosphere {
     memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
     memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
     memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+      for (int idim=0;idim<3;idim++) {
+        if ((isfinite(x_SO_OBJECT[idim])==false) || (isfinite(x_IAU_OBJECT[idim])==false) || (isfinite(v_SO_OBJECT[idim])==false) || (isfinite(v_IAU_OBJECT[idim])==false)) {
+          exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+        }
+      }
+#endif
+#endif
 
     return true;
   }
@@ -620,7 +636,7 @@ namespace Exosphere {
 
         cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
-        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
+        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec,_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_);
       }
     }
 
@@ -839,7 +855,7 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
 
         cInternalSphericalData* Sphere=(cInternalSphericalData*)BoundaryElement;
 
-        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec);
+        return Exosphere::SourceProcesses::GenerateParticleProperties(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,Sphere,SurfaceInjectionDistribution+spec,EnergyDistribution+spec,_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_);
       }
     }
 
