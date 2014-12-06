@@ -208,10 +208,10 @@ test_shockramp:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shockramp_compile:
-	./Config.pl -u=Waves -e=Hd -g=6,6,1,400,1 -ng=3 -O0
+	./Config.pl -u=Waves -e=Hd -g=6,6,1,400,1 -ng=3
 	$(MAKE) BATSRUS
 	make PIDL
-	./Config.pl -ng=2 -O4
+	./Config.pl -ng=2
 
 test_shockramp_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.shockramp PARAM.in
