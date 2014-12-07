@@ -28,7 +28,7 @@ contains
     !\nu_{\rm eff} = \frac{4}{3}\sqrt{\frac{2\pi}{m_e}}*
     !                *\frac{e^4*Na*CoulombLog}{Te^{3/2}}
 
-    !We re-rite it in the following manner:
+    !We re-write it in the following manner:
     ! \nu_{\rm eff} = 
     !  =\frac{8\pi}{3}\left(\frac{e^2}{m_ec^2}\right)^2 * 
     ! (which is the Thomson cross-section)
