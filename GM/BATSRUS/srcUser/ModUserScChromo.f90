@@ -542,7 +542,14 @@ contains
          call CON_stop('Wrong iSide in user_set_cell_boundary')
 
     IsFound = .true.
-
+    !\
+    ! The routine is only used by the solver for semi-implicit heat 
+    ! conduction along the magnetic field. To calculate the heat
+    ! conduction coefficicients, which are averaged over the true cell
+    ! and ghost cell, we need to know the magnetic field and temperature
+    ! in the ghost cell. To calculate the fux, we also need to set the 
+    ! ghost cell temperature within the implicit solver.  
+    !/
     if(TypeBc == 'usersemi')then
        StateSemi_VGB(iTeImpl,0,:,:,iBlock) = tChromo
        RETURN
@@ -645,7 +652,10 @@ contains
     !--------------------------------------------------------------------------
 
     rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-
+    !\
+    ! Magnetic field: radial magnetic field is set to zero, the other are floating
+    ! Density is fixed,
+    !/
     B1_D  = VarsTrueFace_V(Bx_:Bz_)
     B1r_D = sum(rUnit_D*B1_D)*rUnit_D
     B1t_D = B1_D - B1r_D
@@ -653,7 +663,11 @@ contains
 
     ! Fix density
     VarsGhostFace_V(Rho_) = RhoChromo
-
+    
+    !\
+    ! The perpendicular to the mf components of velocity are reflected. The parallel to the
+    ! the field velocity is either floating or reflected
+    !/
     if (UseUparBc) then
        ! Use line-tied boundary conditions
        U_D = VarsTrueFace_V(Ux_:Uz_)
@@ -679,9 +693,15 @@ contains
        VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)-2*OmegaBody*FaceCoords_D(y_)
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)+2*OmegaBody*FaceCoords_D(x_)
     end if   
+    !\
+    ! Temperature is fixed 
+    !/
 
     Temperature = tChromo
 
+    !\
+    ! If the CME is applied, we modify: density, temperature, magnetic field
+    !/
     if(UseCme)then
        call EEE_get_state_BC(Runit_D, RhoCme, Ucme_D, Bcme_D, pCme, TimeBc, &
             n_step, iteration_number)
