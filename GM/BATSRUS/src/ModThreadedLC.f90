@@ -5,9 +5,25 @@ module ModThreadedLC
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
   use ModPhysics,    ONLY: AverageIonCharge
+  use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   implicit none
+
   real :: TeFraction, TiFraction 
   real,allocatable :: Te_G(:,:,:)
+
+  real, parameter:: TeSiMin = 5.0e5    ![K]
+  real           :: TeMin
+
+  !\
+  ! Gravitation potential
+  !/
+  real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
+       (cBoltzmann*rSun)
+  !\
+  !   Hydrostatic equilibrium in an isothermal corona: 
+  !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
+  ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+  !/
 
 contains
   !=========================================================================
@@ -15,6 +31,8 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultifluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux
+    use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
+    !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     ! TeFraction is used for ideal EOS:
@@ -32,7 +50,7 @@ contains
             /(1 + AverageIonCharge)
        TeFraction = TiFraction
     end if
-
+    TeMin = TeSiMin*Si2No_V(UnitTemperature_)
     call get_poynting_flux(PoyntingFluxPerBSi)
     call check_tr_table
   end subroutine init_threaded_lc
@@ -42,7 +60,8 @@ contains
   ! solves MHD equations along thread, to link the state above the
   ! inner boundary of the global solar corona to the photosphere
   !/
-  subroutine solve_boundary_thread(j, k, iBlock, TeSiIn, USiIn, AMinorIn,&
+  subroutine solve_boundary_thread(j, k, iBlock, &
+       TeSiIn, PeSiIn, USiIn, AMinorIn,          &
        DTeOverDsSiOut, PAvrSiOut, AMajorOut)
     !\
     ! USE:
@@ -50,8 +69,10 @@ contains
     use ModFieldLineThread, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
                                UnitEnergyDens_, UnitTemperature_, UnitB_
+    use ModMultiFluid,   ONLY: MassIon_I
     use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
-    use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl 
+    use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
+    use ModProcMH,       ONLY: iProc
     !\
     !The initial version: pressure is constant along the thread,
     !reflection and dissipation of the major wave is ignored
@@ -69,7 +90,7 @@ contains
     ! AMinorIn: for the wave propagating toward the Sun 
     !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2 
     !/
-    real,   intent(in):: TeSiIn, USiIn, AMinorIn
+    real,   intent(in):: TeSiIn, PeSiIn, USiIn, AMinorIn
     !\
     !OUTPUT:
     !DTeOverDsSiOut: Temperature derivative along the thread, at the end point
@@ -83,19 +104,50 @@ contains
     !\
     ! Two components arrays to use lookup table
     !/ 
-    real    :: Value_V(3), AWValue_V(2), Length, RhoNoDim, Heating
+    real    :: Value_V(3), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
     integer :: iTable, iTableAW
-    !------------------!
+
+  
+    !\
+    ! 
+    !/
+    real:: Alpha, SqrtAlphaPlus1
+    
+    real           :: PSiMin
+
+    logical :: DoTest, DoTestMe
+
+    character(len=*), parameter :: NameSub = 'solve_boundary_thread'
+    !-------------------------------------------------------------------------
+    if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    endif
+
     iTable = i_lookup_table('TR')
     if(iTable<=0)call CON_stop('TR table is not set')
+
     call interpolate_lookup_table(iTable, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
+
     !\
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
+    PSiMin = PeSiIn * TeSiMin/TeSiIn
+
     PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
-         No2Si_V(UnitX_) )
+         No2Si_V(UnitX_))
+    Alpha = (-USiIn/Value_V(2)) * (PeSiIn/ PAvrSiOut) * &
+         (inv_gm1 +1) * (1 + AverageIonCharge)/sqrt(AverageIonCharge)
+    Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
+   
+    SqrtAlphaPlus1 = sqrt(1 + Alpha)
+    ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
+
+    GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
+         (1 - 1/BoundaryThreads_B(iBlock)%R_III(0,j,k) )
 
     RhoNoDim = (PAvrSiOut*Si2No_V(UnitEnergyDens_)/sqrt(AverageIonCharge))*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
@@ -125,7 +177,37 @@ contains
          (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
 
-    AMajorOut = AWValue_V(2) 
+    AMajorOut = AWValue_V(2)
+    if(DoTestMe)then
+       write(*,*)'TeSiIn=       ',TeSiIn,' K '
+       write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
+            *No2Si_V(UnitTemperature_),' K'
+       write(*,*)'PeSiIn = ', PeSiIn
+       write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
+       write(*,*)'AMinorIn=     ', AMinorIn
+       write(*,*)'USiIn=        ',USiIn,' m/s'
+       write(*,*)'Thread Length=', &
+            BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
+            No2Si_V(UnitX_),' m, dimless length=',&
+            BoundaryThreads_B(iBlock)% Length_III(0,j,k)
+       write(*,*)'Dimensionless length characteristic of AW dissipation=',Length
+       write(*,*)'Pressure=     ',PAvrSiOut
+       write(*,*)'Alpha = ', Alpha
+       write(*,*)'Poynting Flux max=',PoyntingFluxPerBSi*&
+            BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_),' W/m2'
+       write(*,*)'Pointling flux in the TR=', Heating,' W/m2'
+       write(*,*)'AMajorOut=    ', AMajorOut
+       write(*,*)'Contributions to dT/ds:'
+       write(*,*)'Radiation losses=',PAvrSiOut*Value_V(2)/SqrtAlphaPlus1 ,&
+            ' W/m2'
+       write(*,*)'Gravitational energy loss=',&
+             USiIn * (PAvrSiOut/sqrt(AverageIonCharge))*GravityCoef
+       write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
+            ', dT/ds*Length=',DTeOverDsSiOut*&
+            BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
+            No2Si_V(UnitX_),' K'
+    end if
+
   end subroutine solve_boundary_thread
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
@@ -134,14 +216,19 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_, OmegaBody
+         UnitEnergyDens_, UnitU_, UnitX_, OmegaBody, inv_gm1
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Bx_, Bz_, RhoUx_, RhoUz_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Bx_, Bz_, &
+         RhoUx_, RhoUz_, EHot_
+    use ModGeometry,     ONLY: Xyz_DGB 
     use ModSize,         ONLY: nDim
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModWaves
-    use ModMain,         ONLY: jTest, kTest, BlkTest, UseRotatingFrame, x_, z_
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
+    use ModMain, ONLY: BlkTest, ProcTest, jTest, kTest
+    use ModProcMH, ONLY: iProc
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -153,9 +240,17 @@ contains
 
     logical:: IsNewBlock
     integer :: i, j, k, iP, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost
-    !-------------
+    real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
+    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub = 'set_thread_bc'
+    !--------------------------------------------------------------------------
+    if(iBlock==BLKtest.and.iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    endif
+
     IsNewBlock = .true.
 
     !\
@@ -210,7 +305,12 @@ contains
           Minor_ = WaveLast_
        end if
        if(present(iImplBlock))then
+          if(DoTestMe.and.j==jTest.and.k==kTest)&
+               write(*,*)'iImplBlock=',iImplBlock,' IsLinear=',IsLinear
           if(IsLinear)then
+             if(DoTestMe.and.j==jTest.and.k==kTest)&
+                  write(*,*)'UseLimitedDTe=',&
+                  BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)
              if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))then
                 State_VG(iTeImpl,0,j,k) = 0.0  
              else
@@ -237,8 +337,10 @@ contains
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
+
+       PeSi = State_VGB(Pe_, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
-            TeSiIn=TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
+            TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
        if(present(iImplBlock))&
@@ -258,20 +360,26 @@ contains
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
             TeGhost <= 0.60*Te_G(0, j, k) .or. TeGhost >= Te_G(0, j, k)
-       !Te_G(0, j, k) = TeGhost
-       !\
-       ! Check if this is calculated correctly.
-       !/
-       !call get_face_gradient(1, 1, j, k, iBlock, &
-       !     IsNewBlock, Te_G, FaceGrad_D, &
-       !     UseFirstOrderBcIn=.true.)
-       !if( abs(sum(BDir_D*FaceGrad_D) - DTeOverDs) > &
-       ! 0.01*max(abs(DTeOverDs),abs(sum(BDir_D*FaceGrad_D))))then
-       !   write(*,*)'j,k, iBlock=', j,k, iBlock, ' DTe/Ds=', DTeOverDs
-       !   write(*,*)'BDir_D = ',BDir_D,' FaceGrad_D=', FaceGrad_D,&
-       !        ' their product=', sum(FaceGrad_D*BDir_D)
-       !   call CON_stop('Incorrect algorithm in ThreadedLc')
-       !end if
+       if(DoTestMe.and.j==jTest.and.k==kTest)then
+          write(*,*)'BDir_D=',BDir_D
+          write(*,*)'DTeOverDs=', DTeOverDs
+          write(*,*)'FaceGrad_D=',FaceGrad_D
+          write(*,*)'sum(FaceGrad_D*BDir_D)=',sum(FaceGrad_D*BDir_D)
+          write(*,*)'DGradTeOverGhostTe=',&
+               BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k)
+          write(*,*)'DGradTeOverGhostTe\cdot BDir_D=',&
+               sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
+               * BDir_D)
+          write(*,*)'TeGhost=',TeGhost 
+          Te_G(0, j, k) = TeGhost
+       
+          write(*,*)'Check if gradTe=dT/ds'
+       
+          call get_face_gradient(1, 1, j, k, iBlock, &
+                IsNewBlock, Te_G, FaceGrad_D, &
+                UseFirstOrderBcIn=.true.)
+          write(*,*)'sum(BDir_D*FaceGrad_D)=',sum(BDir_D*FaceGrad_D)
+       end if
        Te_G(0, j, k)=min(max(TeGhost, 0.60*Te_G(1, j, k)),1.0*Te_G(1, j, k))
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
@@ -282,7 +390,8 @@ contains
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =&
                -DTeOverDsSi
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
-               TeSiIn=1.01*TeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
+               TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
+               USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
                DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
