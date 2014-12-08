@@ -111,7 +111,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
   use ModConserveFlux, ONLY: DoConserveFlux
-
+  use BATL_lib, ONLY: Dim2_, Dim3_
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -162,7 +162,7 @@ subroutine MH_set_parameters(TypeAction)
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
   real                        :: VersionUserModuleRead=0.0
-  integer :: iSession, iPlotFile, iVar
+  integer :: iSession, iPlotFile, iVar, iDim
 
   character(len=10) :: NamePrimitive_V(nVar)
 
@@ -1562,13 +1562,32 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 
 
-     case("#GRIDGEOMETRY")
+     case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
         ! need to read in the general grid file      
         if(TypeGeometry == 'spherical_genr') then
            call read_var('NameGridFile',NameGridFile)
            call read_gen_radial_grid(NameGridFile)
+        end if
+        if(NameCommand == '#GRIDGEOMETRYLIMIT')then
+           do iDim = 1, nDim
+              call read_var('CoordMin_D', XyzMin_D(iDim))
+              call read_var('CoordMax_D', XyzMax_D(iDim))
+           end do
+           if(TypeGeometry(1:9) == 'spherical')then
+              RadiusMin = XyzMin_D(1)
+              RadiusMax = XyzMax_D(1)
+              XyzMin_D(Dim2_) = XyzMin_D(Dim2_)*cDegToRad
+              XyzMax_D(Dim2_) = XyzMax_D(Dim2_)*cDegToRad
+              XyzMin_D(Dim3_) = XyzMin_D(Dim3_)*cDegToRad
+              XyzMax_D(Dim3_) = XyzMax_D(Dim3_)*cDegToRad
+           elseif(TypeGeometry(1:11) == 'cylindrical')then
+              RadiusMin = XyzMin_D(1)
+              RadiusMax = XyzMax_D(1)
+              XyzMin_D(Dim2_) = XyzMin_D(Dim2_)*cDegToRad
+              XyzMax_D(Dim2_) = XyzMax_D(Dim2_)*cDegToRad
+           end if
         end if
 
      case("#GRIDSYMMETRY")
@@ -1594,8 +1613,10 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoFixAxis',DoFixAxis)
         call read_var('rFixAxis',rFixAxis)
         call read_var('r2FixAxis',r2FixAxis)
+
      case('#COARSEAXIS')
         call read_coarse_axis_param
+
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('nRootBlockX',proc_dims(1)) 
@@ -2832,48 +2853,44 @@ contains
 
     ! Set XyzMin_D, XyzMax_D based on 
     ! #GRID, #GRIDGEOMETRY, and #LIMITRADIUS
-    select case(TypeGeometry)
-    case('cartesian', 'round', 'rotatedcartesian')
-       XyzMin_D = (/x1, y1, z1/)
-       XyzMax_D = (/x2, y2, z2/)
-    case('rz')
-       z1 = -0.5
-       z2 = +0.5
-       XyzMin_D = (/x1, y1, z1/)
-       XyzMax_D = (/x2, y2, z2/)
-    case('spherical', 'spherical_lnr', 'spherical_genr')
-       !             R,   Phi, Latitude
-       XyzMin_D = (/ 0.0, 0.0, -cHalfPi/)
-       XyzMax_D = (/ &
-            sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
-            cTwoPi, cHalfPi /)
-    case('spherical_wedge')
-       !            R,  Phi,          Latitude
-       XyzMin_D = (/x1, y1*cDegToRad, z1*cDegToRad/)
-       XyzMax_D = (/x2, y2*cDegToRad, z2*cDegToRad/)
-       x1 = -x2; y1 = x1; y2 = x2; z1 = x1; z2 = x2
+    ! #GRIDGEOMETRYLIMIT already sets XyzMin_D, XyzMax_D so that it does not
+    ! have to be reset here
+    if(.not.i_line_command("#GRIDGEOMETRYLIMIT", iSessionIn = 1) > 0) then
+       select case(TypeGeometry)
+       case('cartesian', 'round', 'rotatedcartesian')
+          XyzMin_D = (/x1, y1, z1/)
+          XyzMax_D = (/x2, y2, z2/)
+       case('rz')
+          z1 = -0.5
+          z2 = +0.5
+          XyzMin_D = (/x1, y1, z1/)
+          XyzMax_D = (/x2, y2, z2/)
+       case('spherical', 'spherical_lnr', 'spherical_genr')
+          !             R,   Phi, Latitude
+          XyzMin_D = (/ 0.0, 0.0, -cHalfPi/)
+          XyzMax_D = (/ &
+               sqrt(max(x1**2,x2**2) + max(y1**2,y2**2) + max(z1**2,z2**2)), &
+               cTwoPi, cHalfPi /)
+       case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
+          !            R,   Phi, Z
+          XyzMin_D = (/0.0, 0.0, z1/) 
+          XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
+       case default
+          call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
+       end select
 
-       ! BATL need to understand that the wedge geometry is spherical
-       TypeGeometry = 'spherical'
-    case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
-       !            R,   Phi, Z
-       XyzMin_D = (/0.0, 0.0, z1/) 
-       XyzMax_D = (/sqrt(max(x1**2,x2**2) + max(y1**2,y2**2)), cTwoPi, z2/)
-    case default
-       call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
-    end select
-
-    if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
-       XyzMin_D(1) = RadiusMin
-       XyzMax_D(1) = RadiusMax
-    else
-       if(Body1 .and. rBody > 0.0)then
-          ! Set inner boundary to match rBody for spherical coordinates
-          if(TypeGeometry(1:3)=='sph' .or. TypeGeometry(1:3)=='cyl') &
-               XyzMin_D(1) = rBody
+       if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
+          XyzMin_D(1) = RadiusMin
+          XyzMax_D(1) = RadiusMax
+       else
+          if(Body1 .and. rBody > 0.0)then
+             ! Set inner boundary to match rBody for spherical coordinates
+             if(TypeGeometry(1:3)=='sph' .or. TypeGeometry(1:3)=='cyl') &
+                  XyzMin_D(1) = rBody
+          end if
+          RadiusMin = XyzMin_D(1)
+          RadiusMax = XyzMax_D(1)
        end if
-       RadiusMin = XyzMin_D(1)
-       RadiusMax = XyzMax_D(1)
     end if
 
     ! Set defaults for MinFaceBoundary and MaxFaceBoundary 
