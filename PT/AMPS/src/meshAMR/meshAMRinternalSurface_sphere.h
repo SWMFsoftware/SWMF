@@ -583,7 +583,114 @@ Not_Inside_Sphere:
    }
 
 
+ private:
+
+   inline double _angle_aux_2(double x, double y) {
+     // auxilary angle first arising in volume cut by 2 planes
+     // valid for the unit sphere
+     double x2 = x * x, y2 = y * y;
+     double misc = 1.0 - x2 * y2 - x2 - y2;
+     if(misc == 0.0) return 0.5 * Pi;
+     double corr = (misc < 0.0) ? Pi : 0.0;
+     return corr + atan(2.0 * x * y * sqrt(1.0 - x2 - y2) / misc );
+   }
+
+   inline double _angle_aux_3(double x, double y, double z) {
+     // auxilary angle first arising in volume cut by 3 planes
+     // valid for the unit sphere
+     double x2 = x * x, y2 = y * y, z2 = z * z;
+     double sqrtxz = sqrt(1.0 - x2 - z2), sqrtyz = sqrt(1.0 - y2 - z2);
+     double misc = x * y -  sqrtxz * sqrtyz;
+     if(misc == 0.0) return 0.5 * Pi;
+     return atan( (y * sqrtxz + x * sqrtyz) / misc);
+   }
+
+   inline double _volume_3(double x, double y, double z) {
+     // volume cut by 3 planes, x >= 0, y >= 0, z >= 0
+     // valid for the unit sphere
+     double x2 = x * x, y2 = y * y, z2 = z * z;
+     double sqrtxy = sqrt(1.0 - x2 - y2);
+     double sqrtxz = sqrt(1.0 - x2 - z2);
+     double sqrtyz = sqrt(1.0 - z2 - y2);
+     return (x * y * sqrtxy + y * z * sqrtyz + x * z * sqrtxz) / 3. -
+       x * y * z +
+       (Pi -
+	x*(3. - x2)*(0.5*Pi + _angle_aux_3(y,z,x)) -
+	y*(3. - y2)*(0.5*Pi + _angle_aux_3(x,z,y)) -
+	z*(3. - z2)*(0.5*Pi + _angle_aux_3(x,y,z)) -
+	_angle_aux_2(x,y) - _angle_aux_2(x,z) - _angle_aux_2(y,z)) / 6.;
+   }
+   
+
+ public:
+
    double GetRemainedBlockVolume(double *xBlockMinInit,double *xBlockMaxInit,double EPS,int *IntersectionStatus) {
+     int BlockIntersectionCode;
+     double res=0.0,TotalResult=0.0;
+     int idim;
+
+     BlockIntersectionCode=BlockIntersection(xBlockMinInit,xBlockMaxInit,EPS);
+     *IntersectionStatus=BlockIntersectionCode;
+
+
+     if (BlockIntersectionCode==_AMR_BLOCK_OUTSIDE_DOMAIN_) 
+       return 0.0;
+
+
+
+     if (BlockIntersectionCode==_AMR_BLOCK_INSIDE_DOMAIN_) {
+       for (res=1.0,idim=0;idim<3;idim++) res*=xBlockMaxInit[idim]-xBlockMinInit[idim];
+       return res;
+     }
+
+
+     // check if cell intersects one of the planes x[idim]==0
+     for(idim = 0; idim < 3; ++idim){
+       if(xBlockMinInit[idim] * xBlockMaxInit[idim] < 0.0) {
+	 double xBlockMiddle[3];
+	 memcpy(xBlockMiddle, xBlockMinInit, 3*sizeof(double));
+	 xBlockMiddle[idim] = 0.0;
+	 res += GetRemainedBlockVolume(xBlockMinInit, xBlockMiddle,  EPS, IntersectionStatus);
+	 res += GetRemainedBlockVolume(xBlockMiddle,  xBlockMaxInit, EPS, IntersectionStatus);
+	 return res;
+       }
+     }
+
+     // reflect coordinates if needed (for convenience)
+     // also normalize them to radius of the sphere  
+     double x[3], d[3], R3 = Radius*Radius*Radius;
+     for(idim = 0; idim < 3; ++idim){
+       d[idim]= xBlockMaxInit[idim] - xBlockMinInit[idim];
+       if(xBlockMinInit[idim] < 0. && xBlockMaxInit[idim] <= 0.)
+	 x[idim] = - xBlockMaxInit[idim] / Radius;
+       else
+	 x[idim] =   xBlockMinInit[idim] / Radius;
+     }
+
+     // now the cell lays fully in the first octant
+     // and x are the coordinates of the vertex closest to the origin
+
+     // check the trivial cases: cube whithin or outside the sphere
+     if( x[0]*x[0] + x[1]*x[1] + x[2]*x[2] >= 1.0 ) return R3 * d[0] * d[1] *d[2];        // outside
+
+     if( (x[0]+d[0])*(x[0]+d[0]) +
+	 (x[1]+d[1])*(x[1]+d[1]) +
+	 (x[2]+d[2])*(x[2]+d[2]) < 1.0 ) return 0.0;// within
+
+     // add volumes cut by three plains with weight -1, 0 or +1
+     for(int i = 0; i < 2; ++i)
+       for(int j = 0; j < 2; ++j)
+	 for(int k = 0; k < 2; ++k)
+	   if((x[0]+i*d[0])*(x[0]+i*d[0]) +
+	      (x[1]+j*d[1])*(x[1]+j*d[1]) +
+	      (x[2]+k*d[2])*(x[2]+k*d[2]) < 1.0)
+          res +=
+            (((i+j+k)%2==0)?1.:-1.)*
+            _volume_3(x[0]+i*d[0],x[1]+j*d[1],x[2]+k*d[2]);
+     return R3 * (d[0]*d[1]*d[2]-res);
+   }
+
+   double GetRemainedBlockVolumeNumerical(double *xBlockMinInit,double *xBlockMaxInit,double EPS,int *IntersectionStatus) {
      int BlockIntersectionCode;
      double res=0.0,TotalResult=0.0;
      int idim;
