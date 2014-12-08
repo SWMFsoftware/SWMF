@@ -5,9 +5,6 @@
 //=======================================================================
 //the file contains functions descpibing specific phhysical functions for sodium
 
-#ifndef _Na_PAHYSICAL_PARAMETERS_
-#define _Na_PAHYSICAL_PARAMETERS_
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -294,5 +291,4 @@ double SodiumGfactor__5897_56A__Killen_2009_AJSS(double HeliocentricVelocity,dou
 }
 
 
-#endif
 

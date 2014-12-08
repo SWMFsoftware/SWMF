@@ -5,8 +5,8 @@
 //=======================================================================
 //the file contains functions descpibing specific phhysical functions for sodium
 
-#ifndef _Na_PAHYSICAL_PARAMETERS_
-#define _Na_PAHYSICAL_PARAMETERS_
+#ifndef _Na_PHYSICAL_PARAMETERS_
+#define _Na_PHYSICAL_PARAMETERS_
 
 //the solar dariation pressure as a function of heliocentric distrance and velocty
 //taken from Combi-1997-icarus.pdf
