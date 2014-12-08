@@ -8,7 +8,7 @@ module ModThreadedLC
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   implicit none
 
-  real :: TeFraction, TiFraction 
+  real :: TeFraction, TiFraction, PeFraction
   real,allocatable :: Te_G(:,:,:)
 
   real, parameter:: TeSiMin = 5.0e5    ![K]
@@ -24,7 +24,7 @@ module ModThreadedLC
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
   !/
-
+  integer:: iP
 contains
   !=========================================================================
   subroutine init_threaded_lc
@@ -32,6 +32,7 @@ contains
     use ModMultifluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux
     use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
+    use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
@@ -42,6 +43,8 @@ contains
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
        TiFraction = MassIon_I(1)
        TeFraction = MassIon_I(1)/AverageIonCharge
+       iP = Pe_
+       PeFraction = 1.0
     else
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
        ! so that p=rho/massion *T*(1+ne/n Te/T)
@@ -49,7 +52,14 @@ contains
        TiFraction = MassIon_I(1) &
             /(1 + AverageIonCharge)
        TeFraction = TiFraction
+       iP = p_
+       PeFraction = AverageIonCharge/(1.0 + AverageIonCharge) 
     end if
+    !\
+    ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
+    ! Pe = PeFraction*State_V(iP)
+    !/
+
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
     call get_poynting_flux(PoyntingFluxPerBSi)
     call check_tr_table
@@ -218,7 +228,7 @@ contains
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, OmegaBody, inv_gm1
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Bx_, Bz_, &
+    use ModVarIndexes,   ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
     use ModGeometry,     ONLY: Xyz_DGB 
     use ModSize,         ONLY: nDim
@@ -239,7 +249,7 @@ contains
     logical, optional, intent(in):: IsLinear
 
     logical:: IsNewBlock
-    integer :: i, j, k, iP, Major_, Minor_
+    integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
     logical:: DoTest, DoTestMe
@@ -273,9 +283,6 @@ contains
                   /sum(ChargeIon_I*State_VG(iRhoIon_I,i,j,k)/MassIon_I)
           end do; end do; end do
        elseif(UseIdealEos)then
-          iP = p_
-          if(UseElectronPressure) iP = Pe_
-          
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_G(i,j,k) = TeFraction*State_VG(iP,i,j,k) &
                   /State_VG(Rho_,i,j,k)
@@ -329,7 +336,16 @@ contains
        !\
        ! Calculate input parameters for solving the thread
        !/
-       TeSi = Te_G(1, j, k) * No2Si_V(UnitTemperature_)
+       if(present(iImplBlock))&
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
+            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k)
+       if(DoTestMe.and.j==jTest.and.k==kTest)&
+            write(*,*)'Te_G(0,j,k)=',Te_G(0,j,k),' TMax=',&
+            BoundaryThreads_B(iBlock) % TMax_II(j,k)
+       Te_G(0, j, k) = min(Te_G(0, j, k), &
+            BoundaryThreads_B(iBlock) % TMax_II(j,k))
+
+       TeSi = Te_G(0, j, k) * No2Si_V(UnitTemperature_)
        SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
        AMinor = sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
             ( SqrtRho* &
@@ -338,13 +354,15 @@ contains
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
 
-       PeSi = State_VGB(Pe_, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
+       PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
        if(present(iImplBlock))&
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = DTeOverDs < 0.0
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
+            DTeOverDs < 0.0
        !Do not allow heat flux from the TR to the low corona
        DTeOverDs = max(DTeOverDs,0.0)
        !\
@@ -352,6 +370,7 @@ contains
        ! between the required value DTeOverDs and the temperature gradient
        ! calculated with the floating BC 
        !/ 
+
        TeGhost = Te_G(0, j, k) +(&
             DTeOverDs - sum(FaceGrad_D*BDir_D) )/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
@@ -361,6 +380,7 @@ contains
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
             TeGhost <= 0.60*Te_G(0, j, k) .or. TeGhost >= Te_G(0, j, k)
        if(DoTestMe.and.j==jTest.and.k==kTest)then
+          write(*,*)'TeSi=',TeSi,' K'
           write(*,*)'BDir_D=',BDir_D
           write(*,*)'DTeOverDs=', DTeOverDs
           write(*,*)'FaceGrad_D=',FaceGrad_D
@@ -370,7 +390,7 @@ contains
           write(*,*)'DGradTeOverGhostTe\cdot BDir_D=',&
                sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
                * BDir_D)
-          write(*,*)'TeGhost=',TeGhost 
+          write(*,*)'TeGhost=',TeGhost*No2Si_V(UnitTemperature_),' K' 
           Te_G(0, j, k) = TeGhost
        
           write(*,*)'Check if gradTe=dT/ds'
@@ -404,15 +424,12 @@ contains
           CYCLE
        end if
       
-       if(UseElectronPressure)then
-          State_VG(Pe_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
-               sqrt(AverageIonCharge)
-          State_VG(p_, 1-nGhost:0, j, k) = State_VG(Pe_, 1-nGhost:0, j, k)/&
-               AverageIonCharge
-       else
-          State_VG(p_, 1-nGhost:0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)/&
-               sqrt(AverageIonCharge)*(1 + AverageIonCharge) 
-       end if
+       State_VG(iP, 0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
+               sqrt(AverageIonCharge)/PeFraction
+       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP, 0, j, k)
+       if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
+            State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
+
        State_VG(Rho_, 0, j, k) = State_VG(iP, 0, j, k)* &
             TeFraction/Te_G(0, j, k)
        !Prolong the density gradient further way
@@ -432,10 +449,21 @@ contains
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (U*BDir_D + U_D)
+               (U                       &
+               *BDir_D + U_D)
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
+       if(Ehot_ > 1)then
+          if(UseHeatFluxCollisionless)then
+             call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
+             iP = p_; if(UseElectronPressure) iP = Pe_
+             State_VG(Ehot_,1-nGhost:0,j,k) = &
+                  State_VG(iP,1-nGhost:0,j,k)*(1.0/(Gamma - 1) - inv_gm1)
+          else
+             State_VG(Ehot_,1-nGhost:0,j,k) = 0.0
+          end if
+       end if
     end do; end do
   end subroutine set_field_line_thread_bc
 end module ModThreadedLC
