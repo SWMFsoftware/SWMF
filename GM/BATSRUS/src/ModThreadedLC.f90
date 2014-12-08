@@ -426,7 +426,8 @@ contains
       
        State_VG(iP, 0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
                sqrt(AverageIonCharge)/PeFraction
-       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP, 0, j, k)
+       State_VG(iP, 1-nGhost:-1, j, k) = max(State_VG(iP, 0, j, k), &
+            2*State_VG(Pe_,0,j,k)-State_VG(Pe_,1,j,k))
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
