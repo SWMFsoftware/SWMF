@@ -4,7 +4,7 @@ DEFAULT_TARGET : lib
 
 include ../../Makefile.conf
 
-MAINLIBOBJ = Titan.o  main_lib.o   
+MAINLIBOBJ = Titan.o  main_lib.o TGITM_interpolate.o 
 MAINOBJ = main.o
 
 lib : $(MAINLIBOBJ)
