@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2  
+SpeciesList=H2O  
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -75,6 +75,30 @@ CouplerMode=ices !!off, ices, swmf
   ControlParticleInsideNastranSurface=on !!!on,of
 #endGeneral
 
+#BackgroundSpecies
+! this is a comment
+! \\ is line break symbol (concat  with  next line) 
+  BackgroundSpecies=on !!on,off
+
+  SpeciesList=H2O
+  CollisionMode=on !on,off
+
+  CollisionCrossSection=const \\ !!!const \\ !const -> hard sphere, function -> the name of the user-defined function that calculates cross section with the background species
+    FunctionName=GetCollisionCrossSectionBackgoundAtmosphereParticle1 \\
+    const(H2O,H2O)=3e-15 
+
+  CollisionScatteringAngle=isotropic \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
+    FunctionName=UserDefinedVelocityScatteringAngle1
+
+  InjectConditionBackgroundParticle=KeepBackgroundAtmosphereParticle1
+  RemoveConditionModelParticle=KeepBackgroundAtmosphereParticle1
+
+
+  LoadUserDefinitions=on \\ ! on, off
+   UserDefinitionsFileName=UserDefinition.PIC.BackgroundAtmosphere.h
+
+
+#endBackgroundSpecies
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model
   SPICE=off !off !on, of
