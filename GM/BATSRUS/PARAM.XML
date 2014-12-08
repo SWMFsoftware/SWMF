@@ -1476,6 +1476,40 @@ however, are not rotated automatically (yet), so they require some attention.
 The default is Cartesian geometry.
 </command>
 
+<command name="GRIDGEOMETRYLIMIT" if="$_IsFirstSession">
+	<parameter name="TypeGeometry" type="string" input="select">
+		<option name="cartesian" default="T"	/>
+		<option name="rotatedcartesian"         />
+		<option name="rz"                       />
+		<option name="cylindrical"		/>
+		<option name="cylindrical_lnr"		/>
+		<option name="cylindrical_genr"		/>
+		<option name="spherical"		/>
+		<option name="spherical_lnr"		/>
+		<option name="spherical_genr"		/>
+	</parameter>
+        <parameter name="CoordMin_D(1)"   type="real"                      />
+        <parameter name="CoordMax_D(1)"   type="real" min="$CoordMin_D(1)" />
+	<parameter name="CoordMin_D(2)"   type="real"                      />
+        <parameter name="CoordMax_D(2)"   type="real" min="$CoordMin_D(2)" />
+        <parameter name="CoordMin_D(3)"   type="real"                      />
+        <parameter name="CoordMax_D(3)"   type="real" min="$CoordMin_D(3)" />
+#GRIDGEOMETRYLIMIT
+spherical			TypeGeometry
+1.0				CoordMin_D(1) Radius
+24.0				CoordMax_D(1)
+0.0				CoordMin_D(2) Longitude
+360.0				CoordMax_D(2)
+-90.0				CoordMin_D(3) Latitude
+90.0				CoordMax_D(3)
+
+The #GRIDGEOMETRYLIMIT command is similar to the #GRIDGEOMETRY command, but
+provides in addition the flexibility to change the limits of the
+generalized coordinates. This allows to construct grids such as a spherical
+or cylindrical wedge geometries. For spherical and cylindrical grids the angles
+are provided in degrees.
+</command>
+
 <command name="LIMITRADIUS" if="$_IsFirstSession">
 	<parameter name="rMin" type="real" default="0"/>
 	<parameter name="rMax" type="real" min="$rMin" default="1000"/>
