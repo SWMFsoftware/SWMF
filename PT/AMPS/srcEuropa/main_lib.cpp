@@ -190,7 +190,7 @@ double localResolution(double *x) {
 	d2 = 0.5*(           x[1] + sqrt(3.0)*x[2]);
 	d3 = 0.5*(-sqrt(3.0)*x[1] +           x[2]);
 	d  = - rSphere*d1 + 0.2*d2*d2 + 1.6*d3*d3;
-	d  = sqrt(d);
+	d  = ( (d>0.0) ? 1. : -1.) * sqrt(fabs(d));
 
 	if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
 
