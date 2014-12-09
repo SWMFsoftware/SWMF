@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2,O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
+SpeciesList=H2O,O2,O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -81,7 +81,7 @@ ParticleWeightCorrectionMode=on
   ControlParticleInsideNastranSurface=off !!!on,of
 
   TrajectoryTracing=on			  
-  MaxSampledTrajectoryNumber=300
+  MaxSampledTrajectoryNumber=3000
 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
   define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
@@ -162,7 +162,7 @@ ParticleWeightCorrectionMode=on
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
 
-!  define _ICES_CREATE_COORDINATE_LIST_
+! define _ICES_CREATE_COORDINATE_LIST_
 
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
   
@@ -188,7 +188,10 @@ ParticleWeightCorrectionMode=on
     n=60.0E6
 
   Source:Sputtering=on\\ !on,off
-    Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3
+    Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
+    Mode=Yield \\ !Yield, UserDefinedSourceRate 
+    SourceRate(O2)=1.0E26 \\
+    SourceRate(H2O)=2.0E27, InjectionVelocityRange(H2O)=10,10.0E3
 
 
   Source:VerticalInjection=off \\ !on,off
