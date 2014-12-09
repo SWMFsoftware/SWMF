@@ -1546,7 +1546,7 @@ void Exosphere::Sampling::OutputSampledModelData(int DataOutputFileNumber) {
   double domainCharacteristicSize=0.0;
   for (int idim=0;idim<DIM;idim++) domainCharacteristicSize=max(max(fabs(PIC::Mesh::mesh.xGlobalMax[idim]),fabs(PIC::Mesh::mesh.xGlobalMin[idim])),domainCharacteristicSize);
 
-  Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),5*_RADIUS_(_TARGET_),80,Exosphere::OrbitalMotion::et);
+  Exosphere::ColumnIntegral::CircularMap(fname,domainCharacteristicSize,0.05*_RADIUS_(_TARGET_),min(5*_RADIUS_(_TARGET_),0.1*domainCharacteristicSize),80,Exosphere::OrbitalMotion::et);
 
   //sodium column density along the limb direction
   sprintf(fname,"%s/pic.LimbColumnDensity.%s.out=%i.dat",PIC::OutputDataFileDirectory,utcstr,DataOutputFileNumber);
