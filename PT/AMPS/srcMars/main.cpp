@@ -563,7 +563,7 @@ int main(int argc,char **argv) {
 
      PIC::TimeStep();
 
-     PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
+//     PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
 
 
 
