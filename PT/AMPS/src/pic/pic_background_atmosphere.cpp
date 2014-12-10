@@ -882,6 +882,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
         next=PIC::ParticleBuffer::GetNext(pdata);
         prev=PIC::ParticleBuffer::GetPrev(pdata);
 
+        #if _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_ == _PIC_MODE_ON_
         if (KeepConditionModelParticle(pdata)==false) {
           //the particle should be removed
           //reconnect particles from the list
@@ -892,6 +893,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
 
           PIC::ParticleBuffer::DeleteParticle(ptr);
         }
+        #endif
 
         ptr=next;
       }
