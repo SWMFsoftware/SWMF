@@ -23,6 +23,7 @@
 #define _CO_PLUS_BACKGROUND_SPEC_   -3
 #define _O_PLUS_BACKGROUND_SPEC_    -4
 #define _N2_BACKGROUND_SPEC_        -5
+#define _H2O_BACKGROUND_SPEC_       -6
 
 #endif
 
