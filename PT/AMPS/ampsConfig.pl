@@ -1884,6 +1884,9 @@ sub ReadBackgroundAtmosphereBlock {
       elsif ($s0 eq "FUNCTION") {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION_","_PIC_BACKGROUND_ATMOSPHERE_COLLISION_VELOCITY_REDISTRIBUTION__USER_DEFINED_","pic/picGlobal.dfn");
       }
+      else {
+        die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
+      }  
     }
   
     elsif ($s0 eq "INJECTCONDITIONBACKGROUNDPARTICLE") {
@@ -1895,6 +1898,9 @@ sub ReadBackgroundAtmosphereBlock {
       elsif ($s0 eq "OFF") {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__BACKGROUND_PARTICLE_ACCEPTANCE_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
       }
+      else {
+        die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
+      }
     }
 
     elsif ($s0 eq "REMOVECONDITIONMODELPARTICLE") {
@@ -1905,6 +1911,9 @@ sub ReadBackgroundAtmosphereBlock {
       }
       elsif ($s0 eq "OFF") {
         ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
       }
     }
     
@@ -1926,7 +1935,12 @@ sub ReadBackgroundAtmosphereBlock {
         
         ampsConfigLib::RedefineMacro("_PIC_BACKGROUND_ATMOSPHERE__UDER_DEFINITION_","\"$FileName\"","pic/pic.h");
       }
-
+      elsif ($s0 eq "OFF") {
+        ampsConfigLib::AddMacro("_PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_","_PIC_MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "Cannot recognize the option (line=$InputLine, nline=$InputFileLineNumber)\n";
+      }
 
     }
 
