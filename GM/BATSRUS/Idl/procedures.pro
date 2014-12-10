@@ -3927,10 +3927,12 @@ else xtitle0='Time ['+timeunit+']'
 if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
   ytitles0=ytitles else ytitles0=funcs
 
-if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
-if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
+if !p.thick eq 0 then begin
+   if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
+endif else $
+   thick = !p.thick
 
-;thick=3 ; !!! temp
+if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 
 ; Set size of plot windows
 ppp   = nfunc
