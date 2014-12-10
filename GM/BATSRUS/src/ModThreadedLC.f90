@@ -153,7 +153,7 @@ contains
     PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
          No2Si_V(UnitX_))
 
-    RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
+    RhoNoDim = (PAvrSiOut*Si2No_V(UnitEnergyDens_)/sqrt(AverageIonCharge))*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
 
     !Dimmensionless length (related to the wave dissipation length)
@@ -188,8 +188,8 @@ contains
     !/
     DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) - & !Radiation losses
          Heating                                & !AW Heating
-         +USiIn * (PeSiIn/AverageIonCharge) * & !5/2*U*Pi
-         GravityCoef ) /&
+         +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
+         (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
 
 
@@ -199,13 +199,7 @@ contains
     Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
    
     SqrtAlphaPlus1 = sqrt(1 + Alpha)
-    PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1*       & !
-         !\
-         !   Hydrostatic equilibrium in an isothermal corona: 
-         !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-         ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
-         !/
-         exp(-GravityCoef/(1 + AverageIonCharge))  !
+    ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
 
     AMajorOut = AWValue_V(2)
     if(DoTestMe)then
