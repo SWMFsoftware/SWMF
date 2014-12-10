@@ -24,12 +24,17 @@ module ModThreadedLC
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
   ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
   !/
+  !\
+  !energy flux needed to raise the mass flux rho*u to the heliocentric 
+  !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+  !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
+  !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*(1/R_sun -1/r)
   integer:: iP
 contains
   !=========================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModMultifluid,   ONLY: MassIon_I
+    use ModMultiFluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux
     use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
     use ModVarIndexes,         ONLY: Pe_, p_
@@ -145,21 +150,10 @@ contains
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
-    PSiMin = PeSiIn * TeSiMin/TeSiIn
-
     PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
          No2Si_V(UnitX_))
-    Alpha = (-USiIn/Value_V(2)) * (PeSiIn/ PAvrSiOut) * &
-         (inv_gm1 +1) * (1 + AverageIonCharge)/sqrt(AverageIonCharge)
-    Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
-   
-    SqrtAlphaPlus1 = sqrt(1 + Alpha)
-    ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
 
-    GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
-         (1 - 1/BoundaryThreads_B(iBlock)%R_III(0,j,k) )
-
-    RhoNoDim = (PAvrSiOut*Si2No_V(UnitEnergyDens_)/sqrt(AverageIonCharge))*&
+    RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
 
     !Dimmensionless length (related to the wave dissipation length)
@@ -175,6 +169,17 @@ contains
     Heating = AWValue_V(1)*PoyntingFluxPerBSi*&
          BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
     !\
+    !cGravPot = cGravitation*mSun*cAtomicMass/&
+    !/   (cBoltzmann*rSun)
+    !\
+    !energy flux needed to raise the mass flux rho*u to the heliocentric 
+    !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+    !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+    !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+    !/
+    GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
+         (1 - 1/BoundaryThreads_B(iBlock)%R_III(0,j,k) )
+    !\
     ! Heat flux equals PAvr * UHeat (spent for radiation) +
     ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
     ! the pressure ratio being  Pe = Pi * AverageIonCharge
@@ -183,9 +188,24 @@ contains
     !/
     DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) - & !Radiation losses
          Heating                                & !AW Heating
-         +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
-         (1 + AverageIonCharge) ) /&
+         +USiIn * (PeSiIn/AverageIonCharge) * & !5/2*U*Pi
+         GravityCoef ) /&
          (HeatCondParSi * TeSiIn**2.50)
+
+
+    PSiMin = PeSiIn * TeSiMin/TeSiIn
+    Alpha = (-USiIn/Value_V(2)) * (PeSiIn/ PAvrSiOut) * &
+         (inv_gm1 +1) * (1 + AverageIonCharge)/sqrt(AverageIonCharge)
+    Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
+   
+    SqrtAlphaPlus1 = sqrt(1 + Alpha)
+    PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1*       & !
+         !\
+         !   Hydrostatic equilibrium in an isothermal corona: 
+         !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
+         ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+         !/
+         exp(-GravityCoef/(1 + AverageIonCharge))  !
 
     AMajorOut = AWValue_V(2)
     if(DoTestMe)then
@@ -227,7 +247,7 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, OmegaBody, inv_gm1
-    use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
+    use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
     use ModGeometry,     ONLY: Xyz_DGB 
@@ -336,16 +356,17 @@ contains
        !\
        ! Calculate input parameters for solving the thread
        !/
-       if(present(iImplBlock))&
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
-            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k)
        if(DoTestMe.and.j==jTest.and.k==kTest)&
             write(*,*)'Te_G(0,j,k)=',Te_G(0,j,k),' TMax=',&
             BoundaryThreads_B(iBlock) % TMax_II(j,k)
+       if(present(iImplBlock))&
+            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
+            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k)
        Te_G(0, j, k) = min(Te_G(0, j, k), &
             BoundaryThreads_B(iBlock) % TMax_II(j,k))
 
        TeSi = Te_G(0, j, k) * No2Si_V(UnitTemperature_)
+
        SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
        AMinor = sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
             ( SqrtRho* &
@@ -423,22 +444,34 @@ contains
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k), 0.0)
           CYCLE
        end if
-      
+
+       !\
+       ! 
+       !/
        State_VG(iP, 0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
-               sqrt(AverageIonCharge)/PeFraction
-       State_VG(iP, 1-nGhost:-1, j, k) = max(State_VG(iP, 0, j, k), &
-            2*State_VG(Pe_,0,j,k)-State_VG(Pe_,1,j,k))
+            sqrt(AverageIonCharge)/PeFraction
+       !\
+       !Exponential extrapolation of pressure
+       !/
+       State_VG(iP, 1-nGhost:-1, j, k) =  &
+            State_VG(iP,0,j,k)**2/State_VG(iP,1,j,k)
+
+       !\
+       ! Assign ion pressure (if separate from electron one)
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
        State_VG(Rho_, 0, j, k) = State_VG(iP, 0, j, k)* &
-            TeFraction/Te_G(0, j, k)
-       !Prolong the density gradient further way
-       State_VG(Rho_, 1-nGhost:-1, j, k) = 2*State_VG(Rho_, 0, j, k) -&
-            State_VG(iP, 0, j, k)* TeFraction/Te_G(1, j, k)
+            TeFraction/Te_G(1, j, k)
+       !\
+       !Exponential extrapolation of density
+       !/
+       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2/ &
+            State_VG(Rho_, 1, j, k) 
 
        !\
-       ! Calculate Tangential field
+       ! Magnetic field and velocity vector components orthogonal to 
+       ! B0 filed are all reflected 
        !/
        B_D = B_D - BDir_D*sum(B_D*BDir_D)
        U_D = U_D - BDir_D*U
@@ -446,15 +479,21 @@ contains
        ! 
        !/
        U_D = -U_D; B_D = -B_D
-       U = 0.0
+
+       !\
+       ! Velocity component along B0 field is reflected if inward directed
+       ! Otherwise it is extrapolated inversely proportional to density
+       !/
+    
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (U                       &
+               (max(-U,U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k)) &
                *BDir_D + U_D)
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
+
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
              call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
