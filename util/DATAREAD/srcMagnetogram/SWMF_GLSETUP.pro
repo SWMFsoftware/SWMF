@@ -15,7 +15,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL, CMEGr
 ;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.0 will
 ;   be loaded.
 ;   PlotRadius = Set up the layer of the magnetogram. Cannot be used
-;   with DemoMode.
+;   with DemoMode. Default it 1.015.
 ;   UsePIL = If set, the orientation of the flux rope will be
 ;   caluclated according to the PIL direcion.
 ;   CMEGrid = If set, the grid refinement parameters for CME will be
@@ -46,14 +46,13 @@ device,decomposed=1
 ;of reading from 3D data which is much more time consuming
 if not keyword_set(DemoMode) then DemoMode=0
 
-
 ;Read Observed CME speed.
 file=''
 CMESpeed=0.0
 read,prompt='Please Input the Observed CME Speed (km/s): ',CMESpeed
 
 ;Setup the magnetogram layer, default is at the solar surface
-if not keyword_set(PlotRadius) then  PlotRadius=1.00
+if not keyword_set(PlotRadius) then  PlotRadius=1.015
 
 if keyword_set(DemoMode) and keyword_set(PlotRadius) then begin
   print,'DemoMode and PlotRadius Cannot be Used at the same time!'
@@ -266,7 +265,7 @@ br_field_gradient=sqrt(ddx^2+ddy^2)
 
 ;Cell size is used to divide the magnetogram to sub regions in order to determine
 ;the PIL. 
-cell_size=2
+cell_size=1
 
 ;Setup the threshold for selecting cells near the PIL.
 flux_threshold=1.0
@@ -335,12 +334,20 @@ if keyword_set(USEPIL) then begin
     PIL_y[i]=floor(PILpoints[i]/360)
     PIL_x[i]=PILpoints[i]-(PIL_y[i]*360)
   endfor
-  PIL_fit=linfit(PIL_x,PIL_y,/double)
+  
+ 
+  PIL_xx=PIL_x[sort(PIL_x)]
+  PIL_yy=PIL_y[sort(PIL_y)]
+  PIL_fit=ladfit(PIL_xx,PIL_yy,/double)
   aa_PIL=-1./PIL_fit[1]
-  r3=[1.,aa_PIL]
+  if r1[0] lt 0 then begin 
+     r3=[-1.,-aa_PIL]
+  endif else begin
+     r3=[1.,aa_PIL]
+  endelse
   r3=r3/sqrt(r3[0]^2+r3[1]^2)
   GL_Orientation_s=acos(r3[0]*r2[0]+r3[1]*r2[1])*180/3.1415926
-  if GL_Orientation gt 180 then begin
+  if r3[1] lt 0 then begin
     GL_Orientation_s=360-GL_Orientation_s
   endif
   GL_Orientation=GL_Orientation_s
@@ -355,7 +362,7 @@ GL_Bstrength=CMESpeed/factor_BV
 ;Relationship between the PIL length and the GL flux rope Radius.
 ;This factor is now based on the 2011 March 7 CME. More tests
 ;are needed in order to get a more precise value.
-factor_RL=35.
+factor_RL=17.5
 GL_Radius=PIL_Length/factor_RL
 
 ;Calculate the CME grid refinement parameters based on the flux rope                 
