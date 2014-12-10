@@ -100,6 +100,9 @@ module ModUser
   real :: R1PerturbedSi  = 2e6, R1Perturbed
   real :: ratioPerturbed = 1e-10
 
+  ! minimum temperature for neutral
+  real :: TneuMinSi = 120.0
+
   ! FaceCoordsTest_D
   real :: FaceCoordsX=0.0, FaceCoordsY=0.0, FaceCoordsZ=0.0
   real :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
@@ -199,6 +202,8 @@ contains
           call read_var('R0PerturbedSi' , R0PerturbedSi)
           call read_var('R1PerturbedSi' , R1PerturbedSi)
           call read_var('ratioPerturbed', ratioPerturbed)
+       case("#TNEUMIN")
+          call read_var('TneuMinSi', TneuMinSi)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -1392,7 +1397,7 @@ contains
          BlkTest, PROCtest, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
     use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModProcMH,     ONLY: iProc
@@ -2119,20 +2124,31 @@ contains
           SPeTerm_IC(7,i,j,k) = 2./3.*sum(vAdd_I) * &
                Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
 
-          logTe = log(Te_C(i,j,k))
           ! electron cooling due to collisions w/ water vapor
-          SPeTerm_IC(8,i,j,k) = &
-               exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)
+
+          ! logTe = log(Te_C(i,j,k))
+          ! SPeTerm_IC(8,i,j,k) = &
+          !     exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)
 
           !if(Te_C(i,j,k)<1.5*TempNeu1_C(i,j,k)) then
-             SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TempNeu1_C(i,j,k))* &
-                  (Te_C(i,j,k)-TempNeu1_C(i,j,k))
+          !   SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TempNeu1_C(i,j,k))* &
+          !        (Te_C(i,j,k)-TempNeu1_C(i,j,k))
           !else
           !   SPeTerm_IC(8,i,j,k)=SPeTerm_IC(8,i,j,k)+4.5e-9
           !end if
 
+          SPeTerm_IC(8,i,j,k) = 4e-9* &
+               (1-exp(-cBoltzmann*(Te_C(i,j,k)-TempNeu1_C(i,j,k)) &
+               /0.033/cEV))
+
+          if (Te_C(i,j,k) > 2181.65) then
+             SPeTerm_IC(8,i,j,k) = SPeTerm_IC(8,i,j,k) + &
+                  6.5e-9*(0.415-exp(-(cBoltzmann*Te_C(i,j,k)-0.1*cEV)/&
+                  (0.1*cEV)))
+          end if
+
           SPeTerm_IC(8,i,j,k) = -2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
-               SPeTerm_IC(8,i,j,k)/1e6*1.60217733e-19* &
+               SPeTerm_IC(8,i,j,k)/1e6*cEV* &
                Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
        end if
 
@@ -2759,7 +2775,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
     use ModPhysics,  ONLY: SW_N, LowDensityRatio, &
          cBoltzmann, ElectronPressureRatio, &
-         Si2No_V, No2Si_V, UnitN_, UnitP_
+         Si2No_V, No2Si_V, UnitN_, UnitP_, UnitTemperature_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell
     use ModMain,     ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
@@ -2768,7 +2784,7 @@ contains
 
     integer :: i,j,k,iIonFluid
     logical :: DoTest, DoTestMe   
-    real, dimension(1:nI,1:nJ,1:nK)             :: nElec_C
+    real, dimension(1:nI,1:nJ,1:nK)             :: nElec_C, TempNeu1_C
     real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) :: nIon_IC
 
     character(len=*), parameter :: NameSub='user_update_states'
@@ -2786,8 +2802,20 @@ contains
     ! Enforce minimum temperature (pressure), Tmin, 
     ! if temperatures Ti_IC or Te_C are below
 
+    TempNeu1_C = State_VGB(Neu1P_,1:nI,1:nJ,1:nK,iBlock)* &
+         MassFluid_I(nFluid)/State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) * &
+         No2SI_V(UnitTemperature_)
+
     do k=1,nK; do j=1,nJ; do i=1,nI
        if (.not. true_cell(i,j,k,iBlock)) CYCLE
+
+       ! set minimum temperature for the neutral fluid, skip other
+       ! moments at this time.
+       if (TempNeu1_C(i,j,k) < TneuMinSi) then
+          State_VGB(Neu1P_,i,j,k,iBlock) = &
+               State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) * &
+               TneuMinSi*Si2NO_V(UnitTemperature_)
+       end if
 
        do iIonFluid=1,nIonFluid
           ! set minimum mass density (and in these locations Ti = Tmin 
