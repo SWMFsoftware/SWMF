@@ -57,7 +57,9 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
   else res=size;
 
 
-  return res;
+//  return res;
+
+  return 1.0;
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
