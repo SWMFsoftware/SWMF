@@ -30,7 +30,7 @@ bool *PIC::Sampling::SaveOutputDataFile=NULL;
 //perform one time step
 void PIC::TimeStep() {
    double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
-   double ParticleCollisionTime=0.0;
+   double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
 
    //Collect and exchange the run's statictic information
    static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
@@ -77,6 +77,13 @@ void PIC::TimeStep() {
   ParticleCollisionTime=MPI_Wtime()-ParticleCollisionTime;
 #endif
 
+  //simulate collisions with the background atmosphere
+#if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_
+  BackgroundAtmosphereCollisionTime=MPI_Wtime();
+  MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
+  BackgroundAtmosphereCollisionTime=MPI_Wtime()-BackgroundAtmosphereCollisionTime;
+#endif
+
 
   //move existing particles
   ParticleMovingTime=MPI_Wtime();
@@ -115,6 +122,7 @@ void PIC::TimeStep() {
     double ParticleExchangeTime;
     double SamplingTime;
     double ParticleCollisionTime;
+    double BackgroundAtmosphereCollisionTime;
     double InjectionBoundaryTime;
     double ParticleMovingTime;
     double Latency;
@@ -142,6 +150,7 @@ void PIC::TimeStep() {
     localRunStatisticData.ParticleExchangeTime=ParticleExchangeTime;
     localRunStatisticData.SamplingTime=SamplingTime;
     localRunStatisticData.ParticleCollisionTime=ParticleCollisionTime;
+    localRunStatisticData.BackgroundAtmosphereCollisionTime=BackgroundAtmosphereCollisionTime;
     localRunStatisticData.ParticleMovingTime=ParticleMovingTime;
     localRunStatisticData.InjectionBoundaryTime=InjectionBoundaryTime;
     localRunStatisticData.Latency=PIC::Parallel::Latency;
@@ -185,18 +194,19 @@ void PIC::TimeStep() {
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:12:\t nInjected Particls\n");
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:13:\t User Defined MPI Routine - Execution Time\n");
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:14:\t Particle Collision Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:15:\t Background Atmosphere Collision Time\n");
 
 
-      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\n");
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\t\t 15\n");
 
 //      fprintf(PIC::DiagnospticMessageStream,"Thread, Total Particle's number, Total Interation Time, Iteration Execution Time, Sampling Time, Injection Boundary Time, Particle Moving Time, Particle Exchange Time, Latency, Send Particles, Recv Particles, nInjected Particls\n");
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
+        fprintf(PIC::DiagnospticMessageStream,"$PREFIX:%i\t %ld\t %e\t %e\t %e\t %e\t %e\t %e\t %e\t %ld\t %ld\t %ld\t %e\t %e\t %e\n",thread,ExchangeBuffer[thread].TotalParticlesNumber,ExchangeBuffer[thread].TotalInterationRunTime,
             ExchangeBuffer[thread].IterationExecutionTime,ExchangeBuffer[thread].SamplingTime,ExchangeBuffer[thread].InjectionBoundaryTime,ExchangeBuffer[thread].ParticleMovingTime,
             ExchangeBuffer[thread].ParticleExchangeTime,ExchangeBuffer[thread].Latency,ExchangeBuffer[thread].sendParticleCounter,
             ExchangeBuffer[thread].recvParticleCounter,ExchangeBuffer[thread].nInjectedParticles/((nExchangeStatisticsIterationNumberSteps!=0) ? nExchangeStatisticsIterationNumberSteps : 1),
-            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,ExchangeBuffer[thread].ParticleCollisionTime);
+            ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,ExchangeBuffer[thread].ParticleCollisionTime,ExchangeBuffer[thread].BackgroundAtmosphereCollisionTime);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
         nTotalInjectedParticels+=ExchangeBuffer[thread].nInjectedParticles;
