@@ -76,6 +76,8 @@ ParticleWeightCorrectionMode=on
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=on !!!on,of
+
+  define _PIC_CONTROL_PARTICLE_INSIDE_NASTRAN_SURFACE_  _PIC_MODE_OFF_
 #endGeneral
 
 #BackgroundSpecies
