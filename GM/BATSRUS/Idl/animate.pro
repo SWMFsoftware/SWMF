@@ -53,12 +53,7 @@ endif else $
 
    print,'======= FILE DESCRIPTION ============================'
    nfile=0
-   if filename eq '' and logfilename ne '' then begin
-      filename=logfilename
-      while strpos(filename,'.log') ge 0 $
-         do strput,filename,'.out',strpos(filename,'.log')
-      askstr,'filename(s)   ',filename,1
-   endif else $
+   if filename eq '' or doask then $
       askstr,'filename(s)   ',filename,doask
 
    if stregex(filename, '[?*[]', /boolean) then begin
@@ -66,9 +61,12 @@ endif else $
        nfile = n_elements(filenames)
    endif else $
      str2arr,filename,filenames,nfile
+
    gettype,filenames,filetypes,npictinfiles
-   print,'filetype(s)   =',filetypes
-   print,'npictinfile(s)=',npictinfiles
+
+   print, 'filenames     =', filenames
+   print, 'filetype(s)   =', filetypes
+   print, 'npictinfile(s)=', npictinfiles
 
    ; Extend firstpict and dpict into arrays of size nfile
    arr2arr,firstpict,nfile
