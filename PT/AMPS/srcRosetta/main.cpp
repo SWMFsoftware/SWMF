@@ -82,9 +82,9 @@ double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
       startNode->GetExternalNormal(ExternalNormal,nface);
       BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
 
-      if (spec!=_O2_SPEC_) return 0.0;
+      if (spec!=_H2O_SPEC_) return 0.0;
 
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,_O2_SPEC_);
+      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(n,temp,v,ExternalNormal,_H2O_SPEC_);
 
       res+=ModelParticlesInjectionRate*BlockSurfaceArea;
     }
@@ -103,7 +103,7 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
       startNode->GetExternalNormal(ExternalNormal,nface);
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O2_SPEC_);
+      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_H2O_SPEC_);
 
       if (ModelParticlesInjectionRate>0.0) return true;
     }
@@ -121,7 +121,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
   PIC::ParticleBuffer::byte *newParticleData;
   long int nInjectedParticles=0;
 
-  if (spec!=_O2_SPEC_) return 0; //inject only spec=0
+  if (spec!=_H2O_SPEC_) return 0; //inject only spec=0
 
   static double vNA[3]={2.0e3,000.0,000.0},nNA=5.0E6,tempNA=20.0;
   double v[3];
@@ -138,7 +138,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
       startNode->GetExternalNormal(ExternalNormal,nface);
       TimeCounter=0.0;
 
-      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O2_SPEC_);
+      ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_H2O_SPEC_);
 
 
       if (ModelParticlesInjectionRate>0.0) {
@@ -156,7 +156,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
           nInjectedParticles++;
 
           //generate particles' velocity
-          PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,_O2_SPEC_,-1);
+          PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,_H2O_SPEC_,-1);
 
           PIC::ParticleBuffer::SetX(x,newParticleData);
           PIC::ParticleBuffer::SetV(v,newParticleData);
@@ -339,14 +339,14 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 		CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x);
 
 		//place the point inside the domain
-		for (int idim=0;idim<3;idim++) x[idim]+=1.2*PIC::Mesh::mesh.EPS*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
+		for (int idim=0;idim<3;idim++) x[idim]+=0.001*PIC::Mesh::mesh.EPS*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
 
 
 		//check if the point is inside the domain
-		if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,PIC::Mesh::mesh.EPS)==false) {
+/*		if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,PIC::Mesh::mesh.EPS)==false) {
 			//exit(__LINE__,__FILE__,"The point is outside of the domain");
 			PositionGenerated=false;
-		}
+		}*/
     }
     while (PositionGenerated==false);
 
@@ -356,7 +356,14 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
     if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 
     //get the velocity vector
-    for (int idim=0;idim<3;idim++) v[idim]=500.0*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
+//    for (int idim=0;idim<3;idim++) v[idim]=500.0*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
+
+    const static double vbulk[3]={0.0,0.0,0.0};
+    const static double SurfaceTemperature=200.0;
+
+    PIC::Distribution::InjectMaxwellianDistribution(v,vbulk,SurfaceTemperature,CutCell::BoundaryTriangleFaces[nface].ExternalNormal,_H2O_SPEC_);
+
+
 
     memcpy(x_SO_OBJECT,x,3*sizeof(double));
     memcpy(x_IAU_OBJECT,x,3*sizeof(double));
@@ -384,12 +391,12 @@ int main(int argc,char **argv) {
 
 
   //load the NASTRAN mesh
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("rosetta.surface.reduced.nas"); //("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
 
 
-  PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
+//  PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
 
   if (PIC::ThisThread==0) {
     char fname[_MAX_STRING_LENGTH_PIC_];
@@ -494,7 +501,7 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::initTimeStep();
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
