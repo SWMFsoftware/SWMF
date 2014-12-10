@@ -52,6 +52,9 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 CouplerMode=ices !!off, ices, swmf
 
+TimeStepMode=SpeciesGlobalTimeStep
+ParticleWeightMode=SpeciesGlobalParticleWeight
+ParticleWeightCorrectionMode=on
 
 
 #endmain
@@ -90,12 +93,8 @@ CouplerMode=ices !!off, ices, swmf
   CollisionScatteringAngle=isotropic \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle
     FunctionName=UserDefinedVelocityScatteringAngle1
 
-  InjectConditionBackgroundParticle=KeepBackgroundAtmosphereParticle1
-  RemoveConditionModelParticle=KeepBackgroundAtmosphereParticle1
-
-
-  LoadUserDefinitions=on \\ ! on, off
-   UserDefinitionsFileName=UserDefinition.PIC.BackgroundAtmosphere.h
+  InjectConditionBackgroundParticle=off 
+  RemoveConditionModelParticle=off 
 
 
 #endBackgroundSpecies
