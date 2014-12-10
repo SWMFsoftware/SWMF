@@ -14,23 +14,10 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionCrossSectionB
 
 
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetSigmaCrMax(int spec,int BackgroundSpecieNumber,PIC::ParticleBuffer::byte *modelParticleData) {
-  return 10000.0*3.0E-19;
+  return 1000.0*3.0E-19;
 
 }
 
-//distribute the direction of the relative velocity of particles after collision
-double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionScatteringAngle(double* Vrel,double TranslationalEnergy,int spec,int BackgroundSpecieNumber) {
-    return 0.0;
- //return ForwardCollisionCrossSection.GetRandomScatteringAngle(TranslationalEnergy);
-}
-
-
-double GetBackgroundMolecularMass(int BackgroundSpecieNumber) {
-    // define background species mass in kg 
-  static const double BackgroundSpecieMass[3]={26.56E-27,73.05E-27,46.49E-27};
-  //static const double BackgroundSpecieMass[1]={26.56E-27};
-  return BackgroundSpecieMass[BackgroundSpecieNumber];
-}
 
 void PIC::MolecularCollisions::BackgroundAtmosphere::GenerateBackgoundAtmosphereParticle(PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData,int BackgroundSpecieNumber,PIC::Mesh::cDataCenterNode *cell,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int idim;
@@ -60,7 +47,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::GenerateBackgoundAtmosphere
 
 double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberDensity(int BackgroundSpecieNumber,double *x) {
   double res=0.0;
-  res = 1.0;
+  res = 1.0e17;
   return res;
 }
 
@@ -79,65 +66,6 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCellLocalBackgroundNum
   return GetBackgroundLocalNumberDensity(BackgroundSpecieNumber,x);
 }
 
-//check if the particle should remain in the simulation
-#if _THERMALIZED_PARTICLE_REMOVE_CRITERION_ == _THERMALIZED_PARTICLE_REMOVE_CRITERION__ESCAPE_SPEED_
-bool PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData) {
-  double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0};
-
-  PIC::ParticleBuffer::GetV(v,BackgroundAtmosphereParticleData);
-  PIC::ParticleBuffer::GetX(x,BackgroundAtmosphereParticleData);
-
-  return (0.5*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])>GravityConstant*_MASS_(_TARGET_)/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])) ? true : false;
-}
-#elif _THERMALIZED_PARTICLE_REMOVE_CRITERION_ == _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_
-bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(PIC::ParticleBuffer::byte *BackgroundAtmosphereParticleData) {
-  /*
-  //static MTGSM file readers
-  static cDataSetMTGCM Tn;
-  static bool InitFlag=false;
-
-  //init the readers
-  if (InitFlag==false) {
-    InitFlag=true;
-
-    Tn.PlanetRadius=_RADIUS_(_TARGET_);
-    Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-    Tn.ReadDataFile("Tn.h");
-  }
-
-  //only oxigen atoms can be keeped in the system
-  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_O_SPEC_) return false;
-
-  static const double massOxigen=26.56E-27;
-  double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0},vThermal2;
-
-  PIC::ParticleBuffer::GetV(v,BackgroundAtmosphereParticleData);
-  PIC::ParticleBuffer::GetX(x,BackgroundAtmosphereParticleData);
-
-  //the neutral temeprature
-  double temp;
 
 
-#if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-  const static double GlobalNeutalTemeprature=179.0;
 
-  temp=(Tn.DataValueDefined(x)==true) ? Tn.Interpolate(x) : GlobalNeutalTemeprature;
-#elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
-  temp=MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetNeutralTemeprature(x);
-#else
-        exit(__LINE__,__FILE__,"Error: the option is not defined");
-#endif
-
-
-  vThermal2=3.0*Kbol*temp/massOxigen;
-
-  return (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>4*vThermal2) ? true : false;
-  */
-  return 0; 
-}
-#endif
-
-
-int GetTotalNumberBackgroundSpecies() {
-  return 1;
-}
