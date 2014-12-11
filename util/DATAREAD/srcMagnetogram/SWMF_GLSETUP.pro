@@ -337,8 +337,8 @@ if keyword_set(USEPIL) then begin
   
  
   PIL_xx=PIL_x[sort(PIL_x)]
-  PIL_yy=PIL_y[sort(PIL_y)]
-  PIL_fit=ladfit(PIL_xx,PIL_yy,/double)
+  PIL_yy=PIL_y[sort(PIL_x)]
+  PIL_fit=ladfit(PIL_xx,PIL_yy,/double)  
   aa_PIL=-1./PIL_fit[1]
   if r1[0] lt 0 then begin 
      r3=[-1.,-aa_PIL]
