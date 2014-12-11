@@ -130,7 +130,7 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e1;
-        memcpy(xFaceExitLocal,xFace,2*sizeof(double));
+        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
@@ -148,7 +148,7 @@ bool PIC::RayTracing::GetBlockExitPoint(double *xBlockMin,double *xBlockMax,doub
 
         xFaceExitLocal[0]=xFace[0]/e0;
         xFaceExitLocal[1]=xFace[1]/e1;
-        memcpy(xFaceExitLocal,xFace,2*sizeof(double));
+        //memcpy(xFaceExitLocal,xFace,2*sizeof(double));
       }
     }
   }
