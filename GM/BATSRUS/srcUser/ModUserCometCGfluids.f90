@@ -2845,10 +2845,8 @@ contains
                   MassIon_I(iMajorIon)
 
              ! Set the mass density of the minor ion fluid 
-             ! so that the density can not drop below 
-             ! (major ion fluid mass density)*LowDensityRatio
-             State_VGB(     iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock)*LowDensityRatio
+             ! to be Sw_n*LowDensityRatio
+             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)=Sw_n*LowDensityRatio
 
              ! The velocity of the minor ion fluid is the same as the major ion
              State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
@@ -2899,10 +2897,9 @@ contains
 
        ! if the electron pressure equation is used and the electron temperature
        ! is lower than the neutral temperature
-       if(UseElectronPressure .and. &
-            State_VGB(Pe_,i,j,k,iBlock) < nElec*TempNeu1) then
-          State_VGB(  Pe_,i,j,k,iBlock) = nElec*TempNeu1
-       end if
+       if(UseElectronPressure)  &
+            State_VGB(Pe_,i,j,k,iBlock) = max(nElec*TempNeu1, &
+            State_VGB(Pe_,i,j,k,iBlock))
 
     end do; end do; end do   ! do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -3317,7 +3314,7 @@ contains
           end if
        end do; end do; end do
 
-    case('tiSw')
+    case('tisw')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -3326,7 +3323,7 @@ contains
                MassIon_I(Sw_)* NO2SI_V(UnitTemperature_) 
        end do; end do; end do
    
-    case('tiH2Op')
+    case('tih2op')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
