@@ -2776,7 +2776,7 @@ contains
 
   subroutine user_update_states(iStage,iBlock)
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
-    use ModPhysics,  ONLY: SW_N, LowDensityRatio, &
+    use ModPhysics,  ONLY: SW_Rho, LowDensityRatio, &
          cBoltzmann, ElectronPressureRatio, &
          Si2No_V, No2Si_V, UnitN_, UnitP_, UnitTemperature_
     use ModEnergy,   ONLY: calc_energy_cell
@@ -2845,8 +2845,9 @@ contains
                   MassIon_I(iMajorIon)
 
              ! Set the mass density of the minor ion fluid 
-             ! to be Sw_n*LowDensityRatio
-             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)=Sw_n*LowDensityRatio
+             ! to be Sw_Rho*LowDensityRatio
+             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
+                  Sw_Rho*LowDensityRatio
 
              ! The velocity of the minor ion fluid is the same as the major ion
              State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
