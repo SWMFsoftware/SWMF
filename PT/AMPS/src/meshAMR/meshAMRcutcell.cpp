@@ -834,11 +834,11 @@ double CutCell::GetRemainedBlockVolume(double* xCellMin,double* xCellMax,double 
 
   //if no intersection is found -> determine weather the block is inside or outside of the domain
   if (IntersectionFound==false) {
-  if (CheckPointInsideDomain(xCellMin,BoundaryTriangleFaces,nBoundaryTriangleFaces,false,EPS)==true) {
-    //the block is within the domain
-    return (xCellMax[0]-xCellMin[0])*(xCellMax[1]-xCellMin[1])*(xCellMax[2]-xCellMin[2]);
-  }
-  else return 0.0;
+//    if (CheckPointInsideDomain(xCellMin,BoundaryTriangleFaces,nBoundaryTriangleFaces,false,EPS)==true) {
+      //the block is within the domain
+      return (xCellMax[0]-xCellMin[0])*(xCellMax[1]-xCellMin[1])*(xCellMax[2]-xCellMin[2]);
+//    }
+//    else return 0.0;
   }
 
 
