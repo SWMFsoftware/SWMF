@@ -3317,15 +3317,23 @@ contains
           end if
        end do; end do; end do
 
-    case('ti1')
+    case('tiSw')
        NameIdlUnit = 'K'
        NameTecUnit = '[K]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = State_VGB(iPIon_I(1),i,j,k,iBlock)* &
-               NO2SI_V(UnitP_)/ &
-               (cBoltzmann*State_VGB(iRhoIon_I(1),i,j,k,iBlock)/ &
-               MassIon_I(1)*NO2SI_V(UnitN_))
+          PlotVar_G(i,j,k) = State_VGB(iPIon_I(SW_),i,j,k,iBlock) / &
+               State_VGB(iRhoIon_I(Sw_),i,j,k,iBlock) * &
+               MassIon_I(Sw_)* NO2SI_V(UnitTemperature_) 
        end do; end do; end do
+   
+    case('tiH2Op')
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = State_VGB(iPIon_I(H2Op_),i,j,k,iBlock) / &
+               State_VGB(iRhoIon_I(H2Op_),i,j,k,iBlock) * &
+               MassIon_I(H2Op_)* NO2SI_V(UnitTemperature_) 
+      end do; end do; end do
 
     case('uex')
        NameIdlUnit = 'km/s'
