@@ -68,7 +68,7 @@ ParticleWeightCorrectionMode=on
 
 #General
   ReferenceInjectionParticleNumber=200
-  MaxMeshRefinmentLevel=2 !4
+  MaxMeshRefinmentLevel=7 !2 !4
   EnforceRequestedMeshResolution=off !on,off
 
   BlockCells=8,36,5
