@@ -665,8 +665,8 @@ contains
     VarsGhostFace_V(Rho_) = RhoChromo
     
     !\
-    ! The perpendicular to the mf components of velocity are reflected. The parallel to the
-    ! the field velocity is either floating or reflected
+    ! The perpendicular to the mf components of velocity are reflected.
+    ! The parallel to the field velocity is either floating or reflected
     !/
     if (UseUparBc) then
        ! Use line-tied boundary conditions
@@ -680,7 +680,10 @@ contains
        bUnitGhost_D = FullBGhost_D/sqrt(max(1e-30,sum(FullBGhost_D**2)))
        bUnitTrue_D = FullBTrue_D/sqrt(max(1e-30,sum(FullBTrue_D**2)))
 
-       ! extrapolate field-aligned velocity component
+       ! Extrapolate field-aligned velocity component to satisfy
+       ! the induction equation under steady state conditions.
+       ! The density ratio is to satisfy mass conservation along the field
+       ! line as well.
        VarsGhostFace_V(Ux_:Uz_) = RhoTrue/RhoGhost* &
             sum(U_D*bUnitTrue_D)*bUnitGhost_D
     else
