@@ -321,12 +321,12 @@ void amps_init() {
 	PIC::ParticleBuffer::Init(10000000);
 
   //init ICES
-#ifdef _ICES_CREATE_COORDINATE_LIST_
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
+  #ifdef _ICES_CREATE_COORDINATE_LIST_
   PIC::CPLR::ICES::createCellCenterCoordinateList();
   PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
-#endif
+  #endif
 
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
   PIC::CPLR::ICES::readSWMFdata(1.0);
 #endif
 }
