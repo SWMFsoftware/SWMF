@@ -207,6 +207,13 @@ endif else $
       if ipict eq 0 then print,FORMAT='("ipict:    ",$)'
       print,FORMAT='(i4,$)',ipict+1
 
+      if n_elements(velpos) gt 1 and velrandom gt 0 then begin
+         ; reset a subset of the vector positions to a random value
+         ii = velrandom*indgen(velvector/velrandom) + (ipict mod velrandom)
+         velpos(ii,0) = randomu(seed,n_elements(ii),/double)*1e6
+         velpos(ii,1) = randomu(seed,n_elements(ii),/double)*1e6
+      endif
+
       for ifile=0,nfile-1 do begin
 
          if npict gt 1 or nfile gt 1 or noautorange then begin
