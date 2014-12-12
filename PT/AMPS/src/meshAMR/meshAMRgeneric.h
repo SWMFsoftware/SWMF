@@ -5596,8 +5596,11 @@ if (CallsCounter==83) {
             if ((ndptr=block->GetCornerNode(nd))==NULL) continue;
 
             if (ndptr->nodeDescriptor.nodeProcessedFlag==_AMR_FALSE_) {
+              ++meshNodesNumber;
+              if (_MAX_MESH_ELEMENT_NUMBER_==meshNodesNumber) exit(__LINE__,__FILE__,"Error: the maximum values of the mesh element counter is reached. Increase the value of _MESH_ELEMENTS_NUMBERING_BITS_");
+
               ndptr->nodeDescriptor.nodeProcessedFlag=_AMR_TRUE_;
-              ndptr->nodeDescriptor.nodeno=(++meshNodesNumber);
+              ndptr->nodeDescriptor.nodeno=meshNodesNumber;
             }
 
             if (ndptr->nodeDescriptor.maxRefinmentLevel<level) ndptr->nodeDescriptor.maxRefinmentLevel=level;
