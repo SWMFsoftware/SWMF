@@ -28,12 +28,19 @@
 
 double BulletLocalResolution(double *x) {
   int idim;
+  double res,r;
 
 
 
-//  return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
+return  ((fabs(x[0])<100.0)||(x[1]*x[1]+x[2]*x[2]<40.0*40.0)) ? 5.0 : 100.0;
 
-  return 10.0;
+  r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+  if (r<0.5) res=10.0;
+  else if (res<5.0) res=0.24;
+  else res=10.0;
+
+  return res;
 }
 
 int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace) {
@@ -52,14 +59,13 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
 
   size=t->CharacteristicSize();
 
-  if (size<0.02) res=0.02;
-  else if (size>1.0) res=1.0;
-  else res=size;
+  if (size<0.01) res=0.01;
+  else if (size<1.0) res=0.01*pow(10.0,size);
+  else res=0.25;
 
 
-//  return res;
+  return res;
 
-  return 1.0;
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -486,13 +492,18 @@ int main(int argc,char **argv) {
     PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
 
+  //output the volume mesh
+  char fname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
+  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
+
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
 
 
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=2000; //0; //00; //*10;
-  PIC::RequiredSampleLength=100; //00; //0; //0;
+  PIC::RequiredSampleLength=500; //00; //0; //0;
 
 
   PIC::Init_AfterParser ();
@@ -517,14 +528,23 @@ int main(int argc,char **argv) {
   PIC::Mover::ProcessTriangleCutFaceIntersection=SurfaceBoundaryCondition;
 
 
-  //output the volume mesh
-  char fname[_MAX_STRING_LENGTH_PIC_];
-  sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
-  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
+
 
 
   for (long int niter=0;niter<100000001;niter++) {
+    static int LastDataOutputFileNumber=-1;
+
     PIC::TimeStep();
+
+    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+      PIC::RequiredSampleLength*=2;
+      if (PIC::RequiredSampleLength>40000) PIC::RequiredSampleLength=40000;
+
+
+      LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+      if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+    }
+
   }
 
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
