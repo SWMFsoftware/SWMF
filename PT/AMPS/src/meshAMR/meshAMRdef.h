@@ -122,7 +122,7 @@
 
 
 //the number of bits reserved to store the counting number of the mesh elements
-#define _MESH_ELEMENTS_NUMBERING_BITS_   24
+#define _MESH_ELEMENTS_NUMBERING_BITS_   27
 #define _MAX_MESH_ELEMENT_NUMBER_        (-1+(1<<_MESH_ELEMENTS_NUMBERING_BITS_)) 
 
 
