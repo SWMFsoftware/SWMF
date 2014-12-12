@@ -153,7 +153,7 @@ contains
     PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
          No2Si_V(UnitX_))
 
-    RhoNoDim = (PAvrSiOut*Si2No_V(UnitEnergyDens_)/sqrt(AverageIonCharge))*&
+    RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
 
     !Dimmensionless length (related to the wave dissipation length)
@@ -390,10 +390,6 @@ contains
             DTeOverDs - sum(FaceGrad_D*BDir_D) )/&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
             * BDir_D)
-       if(present(iImplBlock))&
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
-            TeGhost <= 0.60*Te_G(0, j, k) .or. TeGhost >= Te_G(0, j, k)
        if(DoTestMe.and.j==jTest.and.k==kTest)then
           write(*,*)'TeSi=',TeSi,' K'
           write(*,*)'BDir_D=',BDir_D
@@ -415,7 +411,7 @@ contains
                 UseFirstOrderBcIn=.true.)
           write(*,*)'sum(BDir_D*FaceGrad_D)=',sum(BDir_D*FaceGrad_D)
        end if
-       Te_G(0, j, k)=min(max(TeGhost, 0.60*Te_G(1, j, k)),1.0*Te_G(1, j, k))
+       Te_G(0, j, k) = TeGhost 
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))CYCLE
