@@ -1,4 +1,5 @@
-%  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+%  Copyright (C) 2002 Regents of the University of Michigan, 
+%  portions used with permission 
 %  For more information, see http://csem.engin.umich.edu/tools/swmf
 %\documentclass{book}
 %\newcommand{\BATSRUS}{BATS-R-US}
@@ -531,11 +532,13 @@ modes are available
 Plotmode  Parameters  Description
 -----------------------------------------------------------------
 stream    velvector   stream/fieldlines at random/selected points
-          velpos      
+          velpos  
+          velrandom
 
 vector    velvector   arrows at random/selected positions
-          velpos
+          velpos  
           velspeed
+          velrandom
 velovect              arrows at every grid point
 ovelovect             arrows at every grid point (for overplot)
 \end{verbatim}
@@ -547,7 +550,12 @@ During an animation the arrows can move from their initial position
 parallel to the local velocity at a speed proportional to the magnitude
 of the velocity and the {\bf velspeed} parameter. The maximum value
 is the default {\tt velspeed=5}, while {\tt velspeed=0} does not allow
-the arrows to move. 
+the arrows to move. When the arrows move, it may be necessary to 
+reinitialize them with a random position periodically, otherwise the 
+arrows may converge to a small part of the domain. Setting {\tt velrandom}
+to a small positive integer value (e.g. 5) will reinitialize the
+position of every 5th vector every 5 picture of the animation.
+
 The 'velovect' and 'ovelovect' plotting modes 
 can be used for Cartesian grids only.
 
@@ -558,6 +566,7 @@ Option  Description
 log     show the 10 based logarithm of the function if it is positive
 over    overplot the previous function
 noaxis  do not show the axes
+#ctNNN  use color table NNN (NNN is an integer from 0 to 999).
 \end{verbatim}
 
 For 2D plots there are a few more options
@@ -569,8 +578,8 @@ mesh    show the mesh (lines connecting grid points)
            only for structured grid
 body    show the spherical body with radius {\bf rBody} 
            at the origin as a black circle
-white   draw vectors or stream lines with white color even 
-           for postscript output (only useful for overplotting)
+white   draw vectors, stream lines and the grid/mesh with white color even 
+           for postscript output
 \end{verbatim}
    Note that it makes no sense to overplot the grid for the 
    {\tt surface} plotting mode, on the other hand {\tt plotmode='shademesh'}
@@ -582,7 +591,8 @@ white   draw vectors or stream lines with white color even
 \begin{verbatim}
 plotmode='contbargridlog streamwhiteoverbody'
 \end{verbatim} 
-   will show the 10 based logarithm of the first scalar quantity with a color bar 
+   will show the 10 based logarithm of the first scalar quantity with 
+   a color bar 
    and a mesh, and overplot the second vector quantity with white streamlines
    and a black body at the origin.
 
