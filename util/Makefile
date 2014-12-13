@@ -5,13 +5,14 @@ touch_install_files:
 					  EMPIRICAL/srcIE/Makefile.DEPEND \
 					  EMPIRICAL/srcUA/Makefile.RULES; fi)
 	@(if [ -d CRASH ];     then touch CRASH/src/Makefile.DEPEND \
-					  CRASH/src/Makefile.RULES; fi)
+				  	  CRASH/src/Makefile.RULES; fi)
+
 install: touch_install_files
 	@(if [ -d HYPRE ];     then cd HYPRE;      make install; fi);
 
 ###	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make LIB; fi);
 
-clean:: touch_install_files
+clean: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make clean; fi)
 	@(if [ -d TIMING ];    then cd TIMING;     make clean; fi)
 	@(if [ -d DATAREAD ];  then cd DATAREAD;   make clean; fi)
@@ -20,7 +21,7 @@ clean:: touch_install_files
 	@(if [ -d HYPRE ];     then cd HYPRE;      make clean; fi)
 	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make clean; fi)
 
-distclean:: touch_install_files
+distclean: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make distclean; fi)
 	@(if [ -d TIMING ];    then cd TIMING;     make distclean; fi)
 	@(if [ -d DATAREAD ];  then cd DATAREAD;   make distclean; fi)
