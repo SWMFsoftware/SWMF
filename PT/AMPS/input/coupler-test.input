@@ -84,7 +84,7 @@ CouplerMode=swmf !!off, ices, swmf
 
 
 #BackgroundSpecies
-  BackgroundSpecies=on !!on,off
+  BackgroundSpecies=off !!on,off
 
   SpeciesList=CO2,O  
   CollisionMode=off !on !on,off
@@ -97,13 +97,9 @@ CouplerMode=swmf !!off, ices, swmf
   CollisionScatteringAngle=function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle  
     FunctionName=UserDefinedVelocityScatteringAngle1   
 
-  InjectConditionBackgroundParticle=KeepBackgroundAtmosphereParticle1   
-  RemoveConditionModelParticle=KeepBackgroundAtmosphereParticle1  
+  InjectConditionBackgroundParticle=off    
+  RemoveConditionModelParticle=off   
 
-
-  LoadUserDefinitions=on \\ ! on, off
-   UserDefinitionsFileName=UserDefinition.PIC.BackgroundAtmosphere.h
- 
 
 #endBackgroundSpecies 
 
