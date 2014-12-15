@@ -149,6 +149,16 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_SAMPLE_BACKFLUX_MODE_","_SAMPLE_BACKFLUX_MODE__OFF_","main/Comet.dfn");
       }
   }
+  elsif ($InputLine eq "COMPUTEMAXIMUMLIFTABLESIZEMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_","_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_","_COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__OFF_","main/Comet.dfn");
+      }
+  }
   elsif ($InputLine eq "HELIOCENTRICDISTANCE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;

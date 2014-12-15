@@ -89,7 +89,7 @@ CouplerMode=ices !!off, ices, swmf
 #endParticleCollisions
 
 #IDF
-  Model=off  !off,LB,qLB
+  Model=LB  !off,LB,qLB
   vtRelaxation=off !on,off
   vvRelaxation=off !on,off
   rtRelaxation=on !on,off
@@ -107,15 +107,16 @@ CouplerMode=ices !!off, ices, swmf
 #block ../cg.pl !process settings of the moon module
   Gravity3D=off !on,off
 
-  HeliocentricDistance=3.6*_AU_
+  HeliocentricDistance=3.5*_AU_
   subSolarPointAzimuth=5.1763159960548 !! in rad 18.7961
   subSolarPointZenith=0.81030348822463 !! in rad 46.41975 degrees from zaxis
 
-  RadiativeCoolingMode=off !off, Crovisier	
+  RadiativeCoolingMode=Crovisier !off, Crovisier	
 
   RadialVelocityMode=off !on,off
 
-  SampleBackFluxMode=on
+  SampleBackFluxMode=off
+  ComputeMaximumLiftableSizeMode=off
 
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
