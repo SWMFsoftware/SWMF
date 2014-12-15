@@ -19,6 +19,8 @@
 namespace Comet {
   using namespace Exosphere;
 
+  void PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname);
+
   double GetTotalProduction(int spec,void *BoundaryElement);
   double GetTotalProduction(int spec,int BoundaryElementType,void *BoundaryElement);
 

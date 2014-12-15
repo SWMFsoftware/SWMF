@@ -55,12 +55,9 @@ void PrintBackFluxSurfaceTriangulationMesh(const char *fname) {
   for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
     for (pnode=0;pnode<3;pnode++) {
       nnode=CutCell::BoundaryTriangleFaces[nface].node[pnode]-CutCell::BoundaryTriangleNodes;
-      //      printf("nnode=%li nface=%li pnode=%li \n",nnode,nface,pnode);
       if ((nnode<0)||(nnode>=CutCell::nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
 
       TempNodeData[nnode].NodeBackflux=SampleFluxDown[nface]/PIC::LastSampleLength;
-      //if (SampleFluxDown[nface]!=0.0) printf("TempNodeData[nnode].NodeBackflux=%e SampleFluxDown[nface]=%e \n",TempNodeData[nnode].NodeBackflux,SampleFluxDown[nface]);
-      //printf("Nodebackflux \n");
     }
   }
 
@@ -171,18 +168,14 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
   }
 
   if (scalar<0.0 ||  TriangleCutFace->pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
-    //    printf("Backflux sampling begins \n");
     while (CutCell::BoundaryTriangleFaces[j].node[0]!=TriangleCutFace->node[0] || CutCell::BoundaryTriangleFaces[j].node[1]!=TriangleCutFace->node[1] || CutCell::BoundaryTriangleFaces[j].node[2]!=TriangleCutFace->node[2]) j++;
 
-    //  printf("j=%i \n",j);
-
+   
     ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-    //printf("PartData done \n");
-
+   
     ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
-    //printf("PartWeight done \n");
     wc=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
-    //printf("PartWeight correction done \n");
+   
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
     LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
@@ -191,15 +184,11 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
     TriangleCutFace->GetCenterPosition(x);
     node=PIC::Mesh::mesh.findTreeNode(x,node);
     LocalTimeStep=node->block->GetLocalTimeStep(spec);
-
-    //    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
+ //    LocalTimeStep=Comet::CG->maxIntersectedNodeTimeStep[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
-  //printf("TimeStep done \n");
     SampleFluxDown[j]+=ParticleWeight*wc/TriangleCutFace->SurfaceArea/LocalTimeStep;
-    //    printf("SampleFluxDown[j]=%e \n",Comet::SampleFluxDown[j]);
-    // printf("Backflux sampling ends \n");
     return _PARTICLE_DELETED_ON_THE_FACE_;
   }else{
     vInit[0]-=2.0*c*TriangleCutFace->ExternalNormal[0];
@@ -457,7 +446,7 @@ int main(int argc,char **argv) {
   Comet::GetNucleusNastranInfo(CG);
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
-  for (int i=0;i<3;i++) xmin[i]=-0.8e4,xmax[i]=0.8e4;
+  for (int i=0;i<3;i++) xmin[i]=-2.0e5,xmax[i]=2.0e5;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -559,18 +548,30 @@ int main(int argc,char **argv) {
       
       sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
       Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
-    }
-    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-      PIC::RequiredSampleLength*=4;
-      if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
-      
+
+#if _SAMPLE_BACKFLUX_MODE_ == _SAMPLE_BACKFLUX_MODE__ON_      
       char fname2[_MAX_STRING_LENGTH_PIC_];
+
+      if (PIC::Mesh::mesh.ThisThread==0) cout << "Printing backflux sampling output " << endl;
       
       sprintf(fname2,"%s/SurfaceTriangulation_Backflux.dat",PIC::OutputDataFileDirectory);
       if (PIC::Mesh::mesh.ThisThread==0) PrintBackFluxSurfaceTriangulationMesh(fname2);
 
       FlushBackfluxSampling();
-      
+#endif      
+
+#if _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_ == _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__ON_
+      char fname3[_MAX_STRING_LENGTH_PIC_];
+
+      sprintf(fname3,"%s/SurfaceTriangulation_MaxLiftableSize.dat",PIC::OutputDataFileDirectory);
+      Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(fname3);
+#endif
+    }
+
+    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+      PIC::RequiredSampleLength*=4;
+      if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
+
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
     }

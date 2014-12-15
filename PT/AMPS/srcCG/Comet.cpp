@@ -1227,6 +1227,7 @@ void Comet::StepOverTime() {
   PIC::Mesh::cDataBlockAMR *block;
   PIC::Mesh::cDataCenterNode *cell;
 
+  PIC::ParticleBuffer::byte *ParticleData;
 
 #if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
 
@@ -1246,9 +1247,7 @@ void Comet::StepOverTime() {
 	  if (radiativeCoolingRate>0.0) {
 	    for (ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) {
 	      if (PIC::ParticleBuffer::GetI(ptr)==_H2O_SPEC_) {
-		char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
-		
-		memcpy((void*)ParticleData,(void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+		ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);		
 	  
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[PIC::ParticleBuffer::GetI(ptr)];
@@ -1258,11 +1257,11 @@ void Comet::StepOverTime() {
   exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-		Erot=PIC::IDF::LB::GetRotE((PIC::ParticleBuffer::byte*)ParticleData);
+		Erot=PIC::IDF::LB::GetRotE(ParticleData);
 		Erot-=radiativeCoolingRate*LocalTimeStep;
 		
 		if(Erot<0.0) Erot=0.0;
-		PIC::IDF::LB::SetRotE(Erot,(PIC::ParticleBuffer::byte*)ParticleData);
+		PIC::IDF::LB::SetRotE(Erot,ParticleData);
 	      }
 	      }
 	    }
@@ -1348,6 +1347,106 @@ void Comet::GetNucleusNastranInfo(cInternalNastranSurfaceData *CG) {
   Comet::CG=CG;
 }
 
+
+void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  const double minTemp[6]={172.0,163.0,150.0,145.0,139.0,133.0};
+  long int nface,nnode,pnode;
+
+  int rank;
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+  if (rank!=0) return;
+
+  class cTempNodeData {
+  public:
+    double MaxLiftableSize;
+  };
+
+  cTempNodeData *TempNodeData=new cTempNodeData[CutCell::nBoundaryTriangleNodes];
+
+  double x[3],accl_LOCAL[3],normGravity;
+  int nd,i,j,k,idim;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL;
+  double GasNumberDensity,GasBulkVelocity[3],GasMass,cr2,numerator,denominator;
+
+  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+    normGravity=0.0,numerator=0.0;
+    for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]=0.0;
+    CutCell::BoundaryTriangleFaces[nface].GetCenterPosition(x);      
+
+#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+    //the gravity force non spherical case
+    Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
+    nucleusGravity::gravity(accl_LOCAL,x);
+#else
+    //    the gravity force spherical case
+    double r2=x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+    double r=sqrt(r2);
+    double mass=1.0e13;
+    
+    for (idim=0;idim<DIM;idim++) {
+      accl_LOCAL[idim]=-GravityConstant*mass/r2*x[idim]/r;
+    }
+#endif
+    for (idim=0;idim<DIM;idim++) normGravity+=pow(accl_LOCAL[idim],2.0);
+    normGravity=sqrt(normGravity);
+ 
+    denominator=4*ElectricallyChargedDust::MeanDustDensity*normGravity;
+
+    double norm[3],c=0.0,X=0.0,flux,surfaceTemp,v,positionSun[3];
+    double HeliocentricDistance=0.0;
+
+    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+
+    for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
+    CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x,PIC::Mesh::mesh.EPS);
+    for (c=0.0,X=0.0,idim=0;idim<3;idim++){
+      c+=norm[idim]*(positionSun[idim]-x[idim]);
+      X+=pow(positionSun[idim]-x[idim],2.0);
+    }
+    if(c<0 || CutCell::BoundaryTriangleFaces[nface].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
+      flux=nightSideFlux;
+      surfaceTemp=minTemp[Comet::ndist];
+    }else{
+      double angleProd;
+      int angleProdInt;
+      angleProd=acos(c/sqrt(X))*180/Pi;
+      angleProdInt=(int) angleProd;
+      flux=fluxBjorn[angleProdInt];
+      surfaceTemp=Exosphere::GetSurfaceTemeprature(c/sqrt(X),x);
+    }
+    GasMass=PIC::MolecularData::GetMass(0);
+    v=sqrt(2*Kbol*surfaceTemp/(Pi*GasMass));
+    numerator=3*GasMass*flux*v;
+     
+   for (pnode=0;pnode<3;pnode++) {
+      nnode=CutCell::BoundaryTriangleFaces[nface].node[pnode]-CutCell::BoundaryTriangleNodes;
+      if ((nnode<0)||(nnode>=CutCell::nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
+
+      TempNodeData[nnode].MaxLiftableSize=numerator/denominator;
+    }
+  }
+
+  //print the mesh
+  FILE *fout=fopen(fname,"w");
+  fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"MaxLiftableSize (m)\"");
+  fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
+
+  for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) {
+    fprintf(fout,"%e %e %e %e\n",CutCell::BoundaryTriangleNodes[nnode].x[0],CutCell::BoundaryTriangleNodes[nnode].x[1],CutCell::BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].MaxLiftableSize);
+  }
+
+  for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+    fprintf(fout,"%ld %ld %ld\n",1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[0]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[1]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[2]-CutCell::BoundaryTriangleNodes));
+  }
+
+  fclose(fout);
+  delete [] TempNodeData;
+#endif
+}
+
 double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(double *v0,double *v1,int s0,int s1,PIC::Mesh::cDataBlockAMR *block,PIC::Mesh::cDataCenterNode *cell) {
   double T=cell->GetTranslationalTemperature(_H2O_SPEC_);
 
@@ -1359,3 +1458,4 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
   else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;*/
 else return 0.0;
 }
+
