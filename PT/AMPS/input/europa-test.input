@@ -85,6 +85,8 @@ CouplerMode=swmf !!!ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
   
+
+  define _EUROPA_MESH_RESOLUTION_MODE_  0  !0 -> used in test13, 1 -> resolves the tail, ......
 #endGeneral
 
 #Sampling
