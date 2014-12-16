@@ -79,7 +79,11 @@ const double yMaxDomain=5; //the minimum size of the domain in the direction per
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
 
+#if _EUROPA_MESH_RESOLUTION_MODE_ == 0
+const double dxMinGlobal=1,dxMaxGlobal=1;
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == 1
 const double dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
+#endif
 
 //the species
 //int NA=0;
@@ -179,6 +183,29 @@ res/=2.1;
 	return rSphere*res;
 }
 
+
+#if _EUROPA_MESH_RESOLUTION_MODE_ == 0
+double localResolution(double *x) {
+        int idim;
+        double lnR,res,r=0.0;
+
+        for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
+
+        r=sqrt(r);
+
+        if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
+
+        if (r>dxMinGlobal*rSphere) {
+                lnR=log(r);
+                res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
+        }
+        else res=dxMinGlobal;
+
+        //  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
+
+        return rSphere*res;
+}
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == 1
 double localResolution(double *x) {
 	int idim;
 	double lnR,res,r=0.0, d1,d2,d3,d=0.0;
@@ -204,6 +231,7 @@ double localResolution(double *x) {
 
 	return rSphere*res;
 }
+#endif
 
 //set up the local time step
 

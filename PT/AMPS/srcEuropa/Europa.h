@@ -94,6 +94,11 @@ const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"GALI
 
 #define _EUROPA__SPUTTERING_ION_SOURCE_ _EUROPA__SPUTTERING_ION_SOURCE__SWMF_PLASMA_FLOW_
 
+#ifndef _EUROPA_MESH_RESOLUTION_MODE_
+#define _EUROPA_MESH_RESOLUTION_MODE_ 0
+#endif
+
+
 namespace Europa {
   using namespace Exosphere;
 
