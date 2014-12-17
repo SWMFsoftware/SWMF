@@ -809,8 +809,10 @@ contains
   !============================================================================
   subroutine add_segment(Ds, XyzLos_D)
 
-    use ModAdvance,     ONLY: UseElectronPressure
+    use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
     use ModInterpolate, ONLY: bilinear, trilinear
+    use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
+    use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
     use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
     use BATL_lib,       ONLY: xyz_to_coord
     use ModUserInterface ! user_set_plot_var
@@ -921,14 +923,16 @@ contains
 !!! All these log and 10** should be eliminated.
 !!! The general table should be log based, so it does the log internally
 
-       ! Fully ionized hydrogen plasma only for now.
-!!! Should call generic get_electron_temperature function !!!
-       if(UseElectronPressure)then
-          Te = State_V(Pe_)/Rho
-       else
-          ! Fixed mean molecular weight, mu, and electron/ion temperature
-          ! equilibrium.
-          Te = 0.5*State_V(P_)/Rho
+       if(UseMultiIon)then
+          Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
+          Te = State_V(Pe_)/Ne
+       elseif(UseIdealEos)then
+          Ne = Rho*AverageIonCharge/MassIon_I(1)
+          if(UseElectronPressure)then
+             Te = State_V(Pe_)/Ne
+          else
+             Te = State_V(p_)/Ne * PePerPtotal
+          end if
        end if
 
 !!! So minimum temperature is cTolerance in SI units???
@@ -941,8 +945,7 @@ contains
        !LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
 !!! Really, cTolerance is the minimum number density in CGS units???
-       ! What about ion mass??? Should call get_electron_density.
-       Ne = 1e-6*max(Rho*No2Si_V(UnitN_), cTolerance)
+       Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
        LogNe = log10(Ne)
 
        ! rconv converts solar radii units to CGS for response function exponent
