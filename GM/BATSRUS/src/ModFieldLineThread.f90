@@ -34,7 +34,7 @@ module ModFieldLineThread
      !\
      ! Magnetic field intensity and heliocentric distance
      !/
-     real,pointer :: B_III(:,:,:),R_III(:,:,:)
+     real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
      !\
      ! number of points
      !/
@@ -76,7 +76,8 @@ module ModFieldLineThread
   public:: check_tr_table !Calculate table for transition region
   public:: set_threads
   public:: get_poynting_flux
-  real,dimension(1:500):: TeSi_I, LambdaSi_I, LPe_I, UHeat_I  
+  real,dimension(1:500):: &
+       TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
   real:: PoyntingFluxPerBSi  
 contains
   subroutine get_poynting_flux(PoyntingFluxPerBIn)
@@ -128,7 +129,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % TMax_II)
     nullify(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
-    nullify(BoundaryThreads_B(iBlock) % R_III)
+    nullify(BoundaryThreads_B(iBlock) % RInv_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % SignBr_II)
     nullify(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
@@ -146,7 +147,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % TMax_II)
     deallocate(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
-    deallocate(BoundaryThreads_B(iBlock) % R_III)
+    deallocate(BoundaryThreads_B(iBlock) % RInv_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % SignBr_II)
     deallocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
@@ -162,8 +163,12 @@ contains
          nDim, nJ, nK
     use ModGeometry, ONLY: Xyz_DGB!, IsBoundaryBlock_IB
     use ModParallel, ONLY: NeiLev, NOBLK
-    integer:: iBlock
+    use ModMpi
+    use ModProcMH
+    integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
+    integer:: iError
     !--------
+    nBlockSet = 0
     do iBlock = 1, MaxBlock
        if(Unused_B(iBlock))then
           DoThreads_B(iBlock) = .false.
@@ -197,7 +202,7 @@ contains
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % B_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
-          allocate(BoundaryThreads_B(iBlock) % R_III(&
+          allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                1:nJ,1:nK))
@@ -217,7 +222,24 @@ contains
        ! on updating B_0 field
        !/
        call set_threads_b(iBlock)
+       nBlockSet = nBlockSet + 1
+       do k = 1, nK; do j = 1,nJ
+          nPointMin = min(nPointMin, BoundaryThreads_B(iBlock)%nPoint_II(j,k))
+       end do; end do
     end do
+    if(nProc==1)then
+       nBlockSetAll = nBlockSet
+       nPointMinAll = nPointMin
+    else
+       call MPI_REDUCE(nBlockSet, nBlockSetAll, 1, MPI_INTEGER, MPI_SUM,&
+            0, iComm, iError)
+       call MPI_REDUCE(nPointMin, nPointMinAll, 1, MPI_INTEGER, MPI_MIN,&
+            0, iComm, iError)
+    end if
+    if(nBlockSetAll > 0.and.iProc==0)then
+       write(*,*)'Set threads in ',nBlockSetAll,' blocks'
+       write(*,*)'nPointMin = ',nPointMinAll
+    end if
   end subroutine set_threads
   !=====================
   subroutine set_threads_b(iBlock)
@@ -281,7 +303,7 @@ contains
     BoundaryThreads_B(iBlock) % TMax_II = 1.0e8*Si2No_V(UnitTemperature_)
     BoundaryThreads_B(iBlock) % Length2SqrtB_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
-    BoundaryThreads_B(iBlock) % R_III = 0.0
+    BoundaryThreads_B(iBlock) % RInv_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % SignBr_II = 0.0
     BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII = 0.0
@@ -327,7 +349,7 @@ contains
             B0Start*Si2No_V(UnitB_)
 
        RStart = sqrt( sum( XyzStart_D**2 ) )
-       BoundaryThreads_B(iBlock) % R_III(0, j, k) = RStart
+       BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
 
        Ds = 0.50*DsThreadMin ! To enter the grid coarsening loop
        COARSEN: do nTrial=1,nCoarseMax !Ds is increased to 0.002 or 0.016
@@ -379,7 +401,7 @@ contains
              !/
              BoundaryThreads_B(iBlock) % Xyz_DIII(&
                   :, -iPoint, j, k) = Xyz_D
-             BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = R
+             BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call get_magnetogram_field(&
                   Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
              B0 = sqrt( sum( B0_D**2 ) )
@@ -395,7 +417,7 @@ contains
 
        !Calculate more accurately the intersection point
        !with the photosphere surface
-       ROld = BoundaryThreads_B(iBlock) % R_III(1-iPoint, j, k)
+       ROld = 1/BoundaryThreads_B(iBlock) % RInv_III(1-iPoint, j, k)
        Aux = (ROld - RBody) / (ROld -R)
        Xyz_D =(1 - Aux)* BoundaryThreads_B(iBlock) % Xyz_DIII(&
             :, 1-iPoint, j, k) +  Aux*Xyz_D 
@@ -404,7 +426,7 @@ contains
        !/
        BoundaryThreads_B(iBlock) % Xyz_DIII(&
             :, -iPoint, j, k) = Xyz_D
-       BoundaryThreads_B(iBlock) % R_III(-iPoint, j, k) = RBody
+       BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/RBody
        call get_magnetogram_field(&
             Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0 = sqrt( sum( B0_D**2 ) )
@@ -458,14 +480,14 @@ contains
             Xyz_DGB(:,1,jTest,kTest,iBlock)
        write(*,'(a,3es18.10)')'Derivative of the Grad Te over ghost Te  ',&
             BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,jTest,kTest)
-       write(*,'(a)')'x y z B R Length BLength Length2SqrtB'
+       write(*,'(a)')'x y z B RInv Length BLength Length2SqrtB'
        do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
           write(*,'(8es18.10)')&
                BoundaryThreads_B(iBlock) % Xyz_DIII(:,&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % B_III(&
                iPoint, jTest,kTest),&
-               BoundaryThreads_B(iBlock) % R_III(&
+               BoundaryThreads_B(iBlock) % RInv_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % Length_III(&
                iPoint, jTest, kTest),&
@@ -491,7 +513,7 @@ contains
       use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
-      real :: HeatFluxXLength, Value_V(3)
+      real :: HeatFluxXLength, Value_V(4)
       integer:: iTable
       !-------------
       iTable = i_lookup_table('TR')
@@ -543,7 +565,8 @@ contains
        call init_lookup_table(                                      &
             NameTable = 'TR',                                       &
             NameCommand = 'save',                                   &
-            NameVar = 'logTe logNe LPe UHeat HeatFluxXLength',      &
+            NameVar =                                               &
+            'logTe logNe LPe UHeat FluxXLength dFluxXLegthOverDU',  &
             nIndex_I = (/500,2/),                                   &
             IndexMin_I =(/1.0e4, 1.0e8/),                           &
             IndexMax_I =(/1.0e8, 1.0e18/),                          &
@@ -646,11 +669,24 @@ contains
                ( TeSi_I(iTe-1)**3.50/UHeat_I(iTe-1) + &
                TeSi_I(iTe)**3.50/UHeat_I(iTe) )
        end do
+       dFluxXLengthOverDU_I(1) = &
+            (LPe_I(2)*UHeat_I(2) - LPe_I(1)*UHeat_I(1))/&
+            (DeltaLogTe*TeSi_I(1)**3.50)
+       do iTe = 2,499
+          dFluxXLengthOverDU_I(iTe) = &
+               (LPe_I(iTe+1)*UHeat_I(iTe+1) - LPe_I(iTe-1)*UHeat_I(iTe-1))/&
+               (2*DeltaLogTe*TeSi_I(iTe)**3.50)
+       end do
+       dFluxXLengthOverDU_I(500) = &
+            (LPe_I(500)*UHeat_I(500) - LPe_I(499)*UHeat_I(499))/&
+            (DeltaLogTe*TeSi_I(500)**3.50)
+
        LPe_I = LPe_I*HeatCondParSi
        UHeat_I(1) = 0.0
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V = (/ LPe_I(iTe), UHeat_I(iTe), LPe_I(iTe)*UHeat_I(iTe)/)
+    Value_V = (/ LPe_I(iTe), UHeat_I(iTe), &
+         LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe)/)
   end subroutine calc_tr_table
   !===========================Tables for solving Alfven waves====
   subroutine calc_alfven_wave_tr_table(iTableIn, Arg1, Arg2, Value_V)

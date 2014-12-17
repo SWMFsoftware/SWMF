@@ -119,7 +119,7 @@ contains
     !\
     ! Two components arrays to use lookup table
     !/ 
-    real    :: Value_V(3), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
+    real    :: Value_V(4), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
     integer :: iTable, iTableAW
 
   
@@ -178,7 +178,7 @@ contains
     !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
     !/
     GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
-         (1 - 1/BoundaryThreads_B(iBlock)%R_III(0,j,k) )
+         (1 - BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
     !\
     ! Heat flux equals PAvr * UHeat (spent for radiation) +
     ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
@@ -233,6 +233,45 @@ contains
     end if
 
   end subroutine solve_boundary_thread
+  !=========================================================================
+ !============================================================================!
+  ! This routine solves three-diagonal system of equations:                    !
+  !  ||m_1 u_1  0....        || ||w_1|| ||r_1||                                !
+  !  ||l_2 m_2 u_2...        || ||w_2|| ||r_2||                                !
+  !  || 0  l_3 m_3 u_3       ||.||w_3||=||r_3||                                !
+  !  ||...                   || ||...|| ||...||                                !
+  !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                                !
+  ! From: Numerical Recipes, Chapter 2.6, p.40.                                !
+  !============================================================================!
+  subroutine tridag(n,L_I,M_I,U_I,R_I,W_I)
+    implicit none
+    !--------------------------------------------------------------------------!
+    integer, intent(in):: n
+    real, intent(in):: L_I(n),M_I(n),U_I(n),R_I(n)
+    real, intent(out):: W_I(n)
+    !--------------------------------------------------------------------------!
+    integer:: j
+    real:: Aux,Aux_I(2:n)
+    !--------------------------------------------------------------------------!
+    if (M_I(1).eq.0.0) then
+       call CON_stop('Error in tridag: M_I(1)=0')
+    end if
+    Aux = M_I(1)
+    W_I(1) = R_I(1)/Aux
+    do j=2,n
+       Aux_I(j) = U_I(j-1)/Aux
+       Aux = M_I(j)-L_I(j)*Aux_I(j)
+       if (Aux.eq.0.0) then
+          write(*,*)'j, M_I(j), L_I(j), Aux_I(j) = ',j, M_I(j),L_I(j),Aux_I(j)
+          call CON_stop('Tridag failed')
+       end if
+       W_I(j) = (R_I(j)-L_I(j)*W_I(j-1))/Aux
+    end do
+    do j=n-1,1,-1
+       W_I(j) = W_I(j)-Aux_I(j+1)*W_I(j+1)
+    end do
+    !------------------------------------ DONE --------------------------------!
+  end subroutine tridag
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
@@ -487,7 +526,6 @@ contains
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
              call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
-             iP = p_; if(UseElectronPressure) iP = Pe_
              State_VG(Ehot_,1-nGhost:0,j,k) = &
                   State_VG(iP,1-nGhost:0,j,k)*(1.0/(Gamma - 1) - inv_gm1)
           else
