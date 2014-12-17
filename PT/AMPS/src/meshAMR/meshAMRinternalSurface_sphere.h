@@ -295,6 +295,7 @@ public:
     x[2]=cosZenithAngle;
   }
 
+
   inline void GetSurfaceCoordinate(double *x,double iZenithPoint,double  iAzimutalPoint) {
     GetSurfaceNormal(x,iZenithPoint,iAzimutalPoint);
 
@@ -303,9 +304,22 @@ public:
     x[2]=Radius*x[2]+OriginPosition[2];
   }
 
+  inline void GetSurfaceLonLatNormal(double &lon,double &lat,double iZenithPoint,double  iAzimutalPoint) {
+    double x[3],r;
+    int idim;
+
+    GetSurfaceCoordinate(x,iZenithPoint,iAzimutalPoint);
+
+    for (idim=0;idim<3;idim++) x[idim]-=OriginPosition[idim];
+    r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+    lat=180.0/Pi*asin(x[2]/r);
+    lon=180.0/Pi*dAzimuthalAngle*iAzimutalPoint;
+  }
+
   void PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag=true) {
     long int iZenith,iAzimuthal;
-    FILE *fout=NULL;
+    FILE *fout=NULL,*fout2d=NULL;
     double x[3];
 
     CMPI_channel pipe(1000000);
@@ -314,7 +328,12 @@ public:
     MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
 
     if (ThisThread==0) {
+      char fname2d[300];
+
+      sprintf(fname2d,"%s.2d.dat",fname);
+
       fout=fopen(fname,"w");
+      fout2d=fopen(fname2d,"w");
       pipe.openRecvAll();
 
       //print the output file title
@@ -325,13 +344,18 @@ public:
 
       //print the variable list
       fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
+      fprintf(fout2d,"VARIABLES=\"Lon\", \"Lat\"");
+
+
       if (PrintStateVectorFlag==true) {
         if (PrintVariableList==NULL) exit(__LINE__,__FILE__,"Error: PrintVariableList is not defined");
         PrintVariableList(fout);
+        PrintVariableList(fout2d);
       }
 
       //print the number of variables and blocks
       fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
+      fprintf(fout2d,"ZONE I=%i, J=%i, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
     }
     else pipe.openSend(0);
 
@@ -340,7 +364,14 @@ public:
 
     for (iZenith=0;iZenith<nZenithSurfaceElements+1;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
       GetSurfaceCoordinate(x,iZenith,iAzimuthal);
-      if (ThisThread==0) fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
+
+      if (ThisThread==0) {
+        fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
+
+        double lon,lat;
+        GetSurfaceLonLatNormal(lon,lat,iZenith,iAzimuthal);
+        fprintf(fout2d,"%e %e ",lon,lat);
+      }
 
       if (PrintStateVectorFlag==true) {
         if (PrintDataStateVector==NULL) exit(__LINE__,__FILE__,"Error: PrintDataStateVector is not defined");
@@ -369,9 +400,13 @@ public:
 
 
         PrintDataStateVector(fout,iZenith,iAzimuthal,InterpolationList,InterpolationListLength,this,nDataSet,&pipe,ThisThread,nTotalThreads);
+        PrintDataStateVector(fout2d,iZenith,iAzimuthal,InterpolationList,InterpolationListLength,this,nDataSet,&pipe,ThisThread,nTotalThreads);
       }
 
-      if (ThisThread==0) fprintf(fout,"\n");
+      if (ThisThread==0) {
+        fprintf(fout,"\n");
+        fprintf(fout2d,"\n");
+      }
     }
 
     //close the pipe
@@ -404,6 +439,7 @@ public:
       }
 
       fclose(fout);
+      fclose(fout2d);
     }
   }
 
