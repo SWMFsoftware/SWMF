@@ -1129,12 +1129,14 @@ PIC::InitMPI();
 
 	//init particle weight of neutral species that primary source is sputtering
 
-/*
+
 #if  _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
+#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_ 
 	if(_O2_SPEC_>=0)
 	  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
 #endif
-*/
+#endif
+
 
 	//prepopulate the solar wind protons
 	//  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
