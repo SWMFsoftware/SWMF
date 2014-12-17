@@ -1,8 +1,0 @@
-#OUTERBOUNDARY
-float			xMinBc
-float			xMaxBc
-reflect			yMinBc
-reflect			yMaxBc
-reflect			zMinBc
-reflect			zMaxBc
-
