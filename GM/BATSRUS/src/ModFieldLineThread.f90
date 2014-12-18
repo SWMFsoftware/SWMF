@@ -66,8 +66,15 @@ module ModFieldLineThread
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
-  integer :: nPointInThreadMax
-  real    :: DsThreadMin
+  integer,public :: nPointInThreadMax
+  real           :: DsThreadMin
+
+  real, parameter :: RadNorm = 1.0E+22
+  real, parameter :: Cgs2SiEnergyDens = &
+       1.0e-7&   !erg = 1e-7 J
+       /1.0e-6    !cm3 = 1e-6 m3 
+  real, public, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
+       /RadNorm*Cgs2SiEnergyDens
 
   real, public :: HeatCondParSi
   public:: UseFieldLineThreads
@@ -76,6 +83,8 @@ module ModFieldLineThread
   public:: check_tr_table !Calculate table for transition region
   public:: set_threads
   public:: get_poynting_flux
+  public:: solve_a_plus_minus
+
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
   real:: PoyntingFluxPerBSi  
@@ -623,12 +632,12 @@ contains
     ! index, and might want to include Ne dependence in table later.
     ! Table variable should be normalized to radloss_cgs * 10E+22
     ! since we don't want to deal with such tiny numbers 
-    real, parameter :: RadNorm = 1.0E+22
-    real, parameter :: Cgs2SiEnergyDens = &
-         1.0e-7&   !erg = 1e-7 J
-         /1.0e-6    !cm3 = 1e-6 m3 
-    real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
-         /RadNorm*Cgs2SiEnergyDens
+    !real, parameter :: RadNorm = 1.0E+22
+    !real, parameter :: Cgs2SiEnergyDens = &
+    !     1.0e-7&   !erg = 1e-7 J
+    !     /1.0e-6    !cm3 = 1e-6 m3 
+    !real, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
+    !     /RadNorm*Cgs2SiEnergyDens
     !-------------------------------------------------------------------------
 
     DeltaLogTe = log(1.0e8/1.0e4)/499 !Log(MaxTe/MinTe)/(nPoint-1)
@@ -693,36 +702,48 @@ contains
     integer, intent(in):: iTableIn
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
-    real::Heating, APlusBC
+
+    real:: DeltaXi
+    integer, parameter :: nI = 500
+    integer:: i
+    real::Heating, APlusBC, ReflCoef_I(0:nI), Xi_I(0:nI)
+    real, parameter:: AlphaInv = 5.5
     !-------------------------------------------------------------------------
     if(Arg1<=0.0.or.Arg2<=0)then
        !Zero length or zero amplitude of ingoing wave
        Value_V = 0.0 
     else
+       Xi_I(0) = 0.0; ReflCoef_I(0) = 1.0e30
+       DeltaXi=Arg1/nI
+       do i = 1, nI
+          Xi_I(i) = Xi_I(i-1) + DeltaXi
+          ReflCoef_I(i)=1/(AlphaInv*max(1.0e-30,Xi_I(i)))
+       end do
        call solve_a_plus_minus(&
-            Length=Arg1,     & 
-            AMinusBC=Arg2,   &
-            Heating=Heating, &
+            nI=nI,                     &
+            ReflCoef_I=ReflCoef_I,     &
+            Xi_I=Xi_I,                 &
+            AMinusBC=Arg2,             &
+            Heating=Heating,           &
             APlusBC=APlusBC  )
        Value_V = (/Heating, APlusBC/)
     end if
   end subroutine calc_alfven_wave_tr_table
   !=======================================
-  subroutine solve_a_plus_minus(Length, AMinusBC, Heating, APlusBC)!, DoWriteIn)
-    real,intent(in )::Length, AMinusBC  !Dimensionless length, BC for A-
+  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
+       Heating, APlusBC)
+    integer,intent(in):: nI
+    real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
+    real,intent(in )::AMinusBC  !BC for A-
     real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
-    !logical,optional:: DoWriteIn
     real:: DeltaXi
-    integer, parameter :: nI = 500
-    real,dimension(0:nI)::APlus_I=1.0,AMinus_I=1.0
+    real,dimension(0:500)::APlus_I,AMinus_I
     integer::iStep,iIter, iFile
     integer, parameter:: nIterMax = 10
     real::Derivative, AOld, ADiffMax
-    real,parameter:: CTol=0.0010, AlphaInv = 11.0
-    !logical:: DoWrite = .false.
+    real,parameter:: CTol=0.0010
     !----------------------
-    ! DoWrite = .false. ; if(present(DoWriteIn))DoWrite = DoWriteIn
-    DeltaXi=Length/nI
+    APlus_I(0:nI)=1.0
     AMinus_I(0:nI)=AMinusBC
     do iIter=1,nIterMax
        !Go forward, integrate APlus_I with given AMinus_I
@@ -730,18 +751,19 @@ contains
        do iStep=1,nI
           !Predictor
           Derivative = -AMinus_I(iStep-1)*(max(0.0,APlus_I(iStep-1) - 2*AMinus_I(istep-1)) - &
-               max(0.0,AMinus_I(iStep-1) - 2*APlus_I(istep-1)))/&
-               max((iStep-1)*DeltaXi*AlphaInv*max(AMinus_I(iStep-1),APlus_I(istep-1)),1.0)- &
+               max(0.0,AMinus_I(iStep-1) - 2*APlus_I(istep-1)) )*&
+               min(0.5*ReflCoef_I(iStep-1)/max(AMinus_I(iStep-1),APlus_I(istep-1)),1.0)- &
                APlus_I(iStep-1)*AMinus_I(istep-1)
           AOld = APlus_I(iStep)
+          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
           APlus_I(iStep) = APlus_I(iStep-1)+0.5*Derivative*DeltaXi
 
           !Corrector
           Derivative = -0.5*(AMinus_I(iStep-1)+AMinus_I(iStep))*&
-               (max(0.0,APlus_I(iStep)-AMinus_I(istep-1)-AMinus_I(iStep))/&
-               max((iStep-0.50)*DeltaXi*AlphaInv*max(&
-               0.5*(AMinus_I(iStep-1)+AMinus_I(iStep)),APlus_I(istep-1)),1.0)- &
-               max(0.0,0.5*(AMinus_I(istep-1)+AMinus_I(istep))-2*APlus_I(iStep)))-&
+               (max(0.0,APlus_I(iStep)-AMinus_I(istep-1)-AMinus_I(iStep))- &
+               max(0.0,0.5*(AMinus_I(istep-1)+AMinus_I(istep))-2*APlus_I(iStep)))*&
+               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/max(&
+               0.5*(AMinus_I(iStep-1)+AMinus_I(iStep)),APlus_I(istep-1)),1.0)-&
                0.5*(AMinus_I(istep-1)+AMinus_I(istep))*APlus_I(iStep)
           APlus_I(iStep) = APlus_I(iStep-1)+Derivative*DeltaXi
           ADiffMax = max(ADiffMax, abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
@@ -757,24 +779,24 @@ contains
           !Predictor
           Derivative = -APlus_I(iStep+1)*(&
                max(0.0,APlus_I(iStep+1) - 2*AMinus_I(istep+1)) - &
-               max(0.0,AMinus_I(iStep+1) - 2*APlus_I(istep+1))     )/&
-               max((iStep+1)*DeltaXi*AlphaInv*max(AMinus_I(iStep+1),APlus_I(istep+1)),1.0) + &
+               max(0.0,AMinus_I(iStep+1) - 2*APlus_I(istep+1))     )*&
+               min(0.5*ReflCoef_I(iStep+1)/max(AMinus_I(iStep+1),APlus_I(istep+1)),1.0) + &
                APlus_I(iStep+1)*AMinus_I(istep+1)
           AOld = AMinus_I(iStep)
+          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
           AMinus_I(iStep) = AMinus_I(iStep+1)-0.5*Derivative*DeltaXi
 
           !Corrector
           Derivative = -0.5*(APlus_I(iStep+1)+APlus_I(iStep))*(&
                max(0.0,0.5*(APlus_I(iStep)+APlus_I(istep+1))-2*AMinus_I(iStep))- &
-               max(0.0,AMinus_I(istep)-APlus_I(iStep)-APlus_I(istep+1))       )/&
-               max((iStep+0.50)*DeltaXi*AlphaInv*max(&
+               max(0.0,AMinus_I(istep)-APlus_I(iStep)-APlus_I(istep+1))       )*&
+               min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/max(&
                AMinus_I(iStep),0.5*(APlus_I(iStep+1)+APlus_I(iStep)) ),1.0)+&
                0.5*AMinus_I(istep)*(APlus_I(iStep)+APlus_I(istep+1))
           AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
                abs(AOld - AMinus_I(iStep))/max(AOld,AMinus_I(iStep)))
        end do
-       !write(*,*)ADiffMax
        if(ADiffMax<cTol)EXIT
     end do
     APlusBC = APlus_I(nI)
@@ -783,7 +805,7 @@ contains
     !iFile = 5
     !open(iFile,file='apm.out',status='replace')
     !do istep=0,nI
-    !   write(iFile,*)iStep*DeltaXi,APlus_I(iStep),AMinus_I(istep),&
+    !   write(iFile,*)Xi_I(iStep),APlus_I(iStep),AMinus_I(istep),&
     !        APlus_I(istep)*AMinus_I(istep)*(APlus_I(istep)+AMinus_I(istep))
     !end do
     !close(iFile)
