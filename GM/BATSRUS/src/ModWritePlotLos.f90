@@ -493,7 +493,7 @@ subroutine write_plot_los(iFile)
         close(unit_tmp)
      else
         ! description of file contains units, physics and dimension
-        StringHeadLine = 'LOS integrals_var22'
+        StringHeadLine = 'LOS integrals'
         ! Write Auxilliary header info, which is useful for EUV images.
         ! Makes it easier to identify, and automatically process synthetic 
         ! images from different instruments/locations
@@ -811,7 +811,8 @@ contains
 
     use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
     use ModInterpolate, ONLY: bilinear, trilinear
-    use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
+    use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
+         iRhoIon_I, iPIon_I
     use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
     use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
     use BATL_lib,       ONLY: xyz_to_coord
@@ -925,14 +926,15 @@ contains
 
        if(UseMultiIon)then
           Ne = sum(ChargeIon_I*State_V(iRhoIon_I)/MassIon_I)
-          Te = State_V(Pe_)/Ne
        elseif(UseIdealEos)then
           Ne = Rho*AverageIonCharge/MassIon_I(1)
-          if(UseElectronPressure)then
-             Te = State_V(Pe_)/Ne
-          else
-             Te = State_V(p_)/Ne * PePerPtotal
-          end if
+       end if
+       if(UseElectronPressure)then
+          Te = State_V(Pe_)/Ne
+       elseif(UseMultiIon)then
+          Te = sum(State_V(iPIon_I))*PePerPtotal/Ne 
+       else
+          Te = State_V(p_)*PePerPtotal/Ne 
        end if
 
 !!! So minimum temperature is cTolerance in SI units???
