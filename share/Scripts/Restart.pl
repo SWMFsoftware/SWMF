@@ -1,6 +1,9 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
+
+use POSIX 'mktime', 'strftime';
 
 my $Help        = ($h or $H or $help);
 my $Mode        = ($m or $mode or "auto");
@@ -50,6 +53,7 @@ my $RestartOutFile = "RESTART.out";# Name of SWMF output restart file
 my $RestartInFile  = "RESTART.in"; # Name of SWMF input restart file
 my $SimulationTime = -1;           # Simulation time
 my $nStep          = -1;           # Number of steps
+my $DateTime;                      # Date+Time string for restart tree
 
 # List of input and output restart directory name(s) for each component
 # Alternative names should be separated by commas without space.
@@ -99,7 +103,8 @@ my %UnitSecond = ("ns" => 1e-9,      # nano second
 		  "m" => 60,         # minute
 		  "h" => 3600,       # hour
 		  "d" => 86400,      # day
-		  "y" => 31536000    # year
+		  "y" => 31536000,   # year
+		  "date" => -1,      # date+time
 		  );
 
 # Check the time unit parameter if given
@@ -177,8 +182,29 @@ sub get_time_step{
 
     my $Time = -1;
     my $Step = -1;
+
+    my $iYear    = -1;
+    my $iMonth   = -1;
+    my $iDay     = -1;
+    my $iHour    = -1;
+    my $iMinute  = -1;
+    my $iSecond  = -1;
+
+    my $wDay;
+    my $yDay;
+    my $IsDst;
+
     open(FILE, $File) or die "$ERROR could not open file $File\n";
     while(<FILE>){
+	if(/\#STARTTIME/){
+	    # Read in start date and time
+	    $iYear  = <FILE>; $iYear   =~ s/\s*(\d+).*\n/$1/;
+	    $iMonth = <FILE>; $iMonth  =~ s/\s*(\d+).*\n/$1/;
+	    $iDay   = <FILE>; $iDay    =~ s/\s*(\d+).*\n/$1/;
+	    $iHour  = <FILE>; $iHour   =~ s/\s*(\d+).*\n/$1/;
+	    $iMinute= <FILE>; $iMinute =~ s/\s*(\d+).*\n/$1/;
+	    $iSecond= <FILE>; $iSecond =~ s/\s*(\d+).*\n/$1/;
+	}
 	if(/\#TIMESIMULATION/){
 	    # Read in simulation time
 	    $Time = <FILE>; chop($Time);
@@ -198,6 +224,29 @@ sub get_time_step{
     die "$ERROR could not find time step in $File!\n" if $Step < 0;
 
     print "# Restart.pl read Time=$Time Step=$Step from $File\n" if $Verbose;
+
+    if($TimeUnit eq "date" and not $DateTime){
+	print "# Restart.pl read Date=$iYear/$iMonth/$iDay $iHour:$iMinute:$iSecond\n"
+	    if $Verbose;
+
+	# Number of seconds since January 1st 1970. 
+	# For POSIX::mktime the year is 0 for 1900, month is 0 for January.
+	my $StartTime = mktime(
+	    $iSecond, $iMinute, $iHour, $iDay, $iMonth-1, $iYear-1900, 0, 0, -1);
+
+	my $CurrentTime = $StartTime + $Time;
+    
+	($iSecond, $iMinute, $iHour, $iDay, $iMonth, $iYear, $wDay, $yDay, $IsDst) = 
+	    localtime($CurrentTime);
+
+	# Convert to normal year and month notation
+	$iYear += 1900;
+	$iMonth += 1;
+
+	$DateTime = sprintf("%4d_%02d_%02dT%02d_%02d_%02d",
+			    $iYear, $iMonth, $iDay, $iHour, $iMinute, $iSecond);
+
+    }
 
     # Save time and step if not yet specified
     $SimulationTime = $Time if $SimulationTime < 0;
@@ -223,19 +272,23 @@ sub create_tree_check{
     if(not $ARGV[0]){
 	# Check if it is a time accurate run
 	if($SimulationTime){
-	    # If the time unit is not set try to guess it from simulation time
-	    if(not $TimeUnit){
-		my $Unit;
-		$TimeUnit = "ns"; 
-		foreach $Unit (sort {$UnitSecond{$a} <=> $UnitSecond{$b}} 
-			       keys %UnitSecond){
-		    $TimeUnit = $Unit if $SimulationTime >= $UnitSecond{$Unit};
+	    if($TimeUnit eq "date"){
+		$RestartTree = "SWMF_RESTART_$DateTime";
+	    }else{
+		# If the time unit is not set try to guess it from simulation time
+		if(not $TimeUnit){
+		    my $Unit;
+		    $TimeUnit = "ns"; 
+		    foreach $Unit (sort {$UnitSecond{$a} <=> $UnitSecond{$b}} 
+				   keys %UnitSecond){
+			$TimeUnit = $Unit if $SimulationTime >= $UnitSecond{$Unit};
+		    }
 		}
+		# Use the simulation time for time accurate runs
+		$RestartTree = sprintf("RESTART_t%9.4f%s", 
+				       $SimulationTime/$UnitSecond{$TimeUnit},
+				       $TimeUnit);
 	    }
-	    # Use the simulation time for time accurate runs
-	    $RestartTree = sprintf("RESTART_t%9.4f%s", 
-				   $SimulationTime/$UnitSecond{$TimeUnit},
-				   $TimeUnit);
 	}else{
 	    # Use the time step number for steady state runs
 	    $RestartTree = sprintf "RESTART_n%6d", $nStep;
@@ -509,7 +562,7 @@ Usage:
     DIR         Name of the restart directory tree. This argument
                 must be specified if the -i switch is used. Otherwise
                 the default name is RESTART_n012345 for steady state runs
-                and RESTART_t012.34u for time accurate runs, where the
+                and RESTART_t0123.4567u for time accurate runs, where the
                 numbers should be replaced with the actual time step and
                 simulation time, and the "u" with the actual time unit.
 
