@@ -520,7 +520,7 @@ contains
     character (len=*),intent(in)       :: NameVar
 
     integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6, &
-         HpRho_=7, OpRho_=8,HpP_=9,OpP_=10
+         HpRho_=7, HpP_=8, OpRho_=9, OpP_=10
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
@@ -627,7 +627,7 @@ contains
       else
          write(UNITTMP_,'(a)') &
               'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin",&           
-              & "rho","p","Hprho","Oprho","Hpp","Opp"'
+              & "rho","p","Hprho","Hpp","Oprho","Opp"'
       end if
       write(UNITTMP_,'(a,i4,a,i4,a)') &
            'ZONE T="SAVE", I=',jsize,', J=',isize,', K=1, F=POINT'
@@ -646,8 +646,8 @@ contains
                  Buffer_IIV(i,j,rho_), &
                  Buffer_IIV(i,j,p_), &
                  Buffer_IIV(i,j,Hprho_), &
-                 Buffer_IIV(i,j,Oprho_), &
                  Buffer_IIV(i,j,Hpp_), &
+                 Buffer_IIV(i,j,Oprho_), &
                  Buffer_IIV(i,j,Opp_)
          end if
       end do; end do
