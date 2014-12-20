@@ -1293,6 +1293,8 @@ contains
 
        ! Convert momentum to velocity
        State_V(iUx_I) = State_V(iRhoUx_I)/State_V(iRho_I)
+       State_V(iUy_I) = State_V(iRhoUy_I)/State_V(iRho_I)
+       State_V(iUz_I) = State_V(iRhoUz_I)/State_V(iRho_I)
 
        ! Add B0 to the magnetic field
        if(UseB0)then
