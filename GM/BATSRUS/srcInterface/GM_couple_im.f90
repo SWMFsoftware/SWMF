@@ -74,7 +74,6 @@ contains
     ! Provide total number of points along rays 
     ! and the number of variables to pass to IM
     use ModRayTrace, ONLY: DoExtractUnitSi
-    use ModMain, ONLY: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
     use CON_line_extract, ONLY: line_get
 
     integer, intent(in)           :: iSizeIn, jSizeIn
@@ -120,8 +119,7 @@ contains
     use ModGeometry,ONLY: x2
     use ModProcMH,  ONLY: iProc
     use ModIoUnit, ONLY: UNITTMP_
-    use ModMain, ONLY: Time_Simulation, TypeCoordSystem, &
-         DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
+    use ModMain, ONLY: Time_Simulation, TypeCoordSystem
     use ModVarIndexes, ONLY: &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, p_, Ppar_, &
          iRho_I, iP_I, MassFluid_I, IonFirst_, IonLast_, nVar
@@ -460,24 +458,19 @@ contains
 
   subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
 
-    !call stop_mpi('RCM is OFF')
-
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: DoMultiFluidIMCoupling
-
     use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
          HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY
 
-    character (len=*), parameter :: NameSub='GM_get_for_im'
-
-    integer, intent(in)                                :: iSizeIn, jSizeIn, nVar
-    real, intent(out), dimension(iSizeIn,jSizeIn,nVar) :: Buffer_IIV
-    character (len=*), intent(in)                      :: NameVar
+    integer,          intent(in) :: iSizeIn, jSizeIn, nVar
+    real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
+    character(len=*), intent(in) :: NameVar
 
     real :: Radius
 
     logical :: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub='GM_get_for_im'
     !--------------------------------------------------------------------------
 
     if(DoMultiFluidIMCoupling)then
@@ -687,8 +680,7 @@ contains
     use CON_comp_param, ONLY: lNameVersion
     use ModImPressure                              ! Storage for IM pressure
     use ModNumConst
-    use ModMain, ONLY : n_step,time_simulation, DoMultiFluidIMCoupling, &
-         DoAnisoPressureIMCoupling
+    use ModMain, ONLY : n_step,time_simulation
     use ModIoUnit, ONLY: UNITTMP_
     use ModProcMH, ONLY: iProc
     use ModRaytrace, ONLY: UseAccurateTrace, DoMapEquatorRay
@@ -831,16 +823,15 @@ contains
       OPEN (UNIT=UNITTMP_, FILE=filename, STATUS='unknown', &
            iostat =iError)
       if (iError /= 0) call CON_stop("Can not open file "//filename)
-      write(UNITTMP_,'(a79)')            'IM pressure_var22'
-      write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,2
+      write(UNITTMP_,'(a79)')            'IM pressure'
+      write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,0,2
       write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
-      write(UNITTMP_,'(100(1pe13.5))')   0.0
       if(DoMultiFluidIMCoupling)then
-         write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho nothing'
+         write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho'
       else if(DoAnisoPressureIMCoupling)then
-         write(UNITTMP_,'(a79)')'Lon Lat p rho ppar bmin nothing'
+         write(UNITTMP_,'(a79)')'Lon Lat p rho ppar bmin'
       else
-         write(UNITTMP_,'(a79)')'Lon Lat p rho nothing'
+         write(UNITTMP_,'(a79)')'Lon Lat p rho'
       endif
       do i=iSizeIn,1,-1
          do j=1,jSizeIn
