@@ -121,7 +121,7 @@ module ModRaytrace
   integer, parameter :: &
        InvB_=1, Z0x_=2, Z0y_=3, Z0b_=4, RhoInvB_=5, pInvB_=6, & 
        pparinvB_ = 7, &
-       HpRhoInvB_ = 7, OpRhoInvB_ = 8, HppInvB_ =9, OppInvB_=10, &
+       HpRhoInvB_ = 7, HppInvB_ = 8, OpRhoInvB_ = 9, OppInvB_=10, &
        xEnd_=11, yEnd_=12, zEnd_=13, Length_=14
 
   ! Number of integrals
