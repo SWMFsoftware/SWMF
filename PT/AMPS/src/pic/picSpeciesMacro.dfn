@@ -15,6 +15,7 @@
 #define _O2_SPEC_        -9
 #define _O2PLUS_SPEC_    -10
 #define _H_SPEC_         -11
+#define _H_PLUS_SPEC_    -12
 
 
 //Species of the background atmosphere
