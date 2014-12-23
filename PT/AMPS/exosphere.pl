@@ -166,6 +166,43 @@ while ($line=<InputFile>) {
     }
   }
   
+  
+  elsif ($InputLine eq "BACKGROUNDIONINJECTION") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    if ($InputLine eq "ON") {
+      ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn");
+    }
+    elsif ($InputLine eq "OFF") {
+      ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
+    }
+    else {
+      die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+    
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "INJECTIONMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "STEADYSTATE") {
+        ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_","models/exosphere/Exosphere.dfn");
+      }
+      elsif ($InputLine eq "TIMEDEPENDENT") {
+        ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__TIME_DEPENDENT_","models/exosphere/Exosphere.dfn");
+      }
+      else {
+        die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    else {
+      die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+    
+  }
+  
+  
+  
   elsif ($InputLine eq "ICESLOCATIONPATH") {
     ($InputLine,$InputComment)=split('!',$line,2);
     chomp($InputLine);
