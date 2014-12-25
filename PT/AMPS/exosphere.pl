@@ -170,6 +170,8 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "BACKGROUNDIONINJECTION") {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
+    my @IonNumberDensityFractionTable=(0)x$TotalSpeciesNumber;
+
     if ($InputLine eq "ON") {
       ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn");
     }
@@ -177,28 +179,49 @@ while ($line=<InputFile>) {
       ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
     }
     else {
-      die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+      die "Cannot recognize the option #0, line=$InputFileLineNumber ($InputFileName)\n";
     }
     
-    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+#    print "$InputComment \n";
     
-    if ($InputLine eq "INJECTIONMODE") {
+    while (defined $InputComment) {
+      $InputComment=~s/[()]/ /g;
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       
-      if ($InputLine eq "STEADYSTATE") {
-        ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_","models/exosphere/Exosphere.dfn");
+#      print "$InputComment \n";
+        
+      if ($InputLine eq "INJECTIONMODE") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($InputLine eq "STEADYSTATE") {
+          ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_","models/exosphere/Exosphere.dfn");
+        }
+        elsif ($InputLine eq "TIMEDEPENDENT") {
+          ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__TIME_DEPENDENT_","models/exosphere/Exosphere.dfn");
+        }
+        else {
+          die "Cannot recognize the option #1, line=$InputFileLineNumber ($InputFileName)\n";
+        }
       }
-      elsif ($InputLine eq "TIMEDEPENDENT") {
-        ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__TIME_DEPENDENT_","models/exosphere/Exosphere.dfn");
+      elsif ($InputLine eq "IONNUMBERDENSITYFRACTION") {
+        my ($spec,$t);
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $spec=getSpeciesNumber($InputLine);
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $IonNumberDensityFractionTable[$spec]=$InputLine;
       }
+      
       else {
-        die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+        die "Cannot recognize the option #2 ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
       }
-    }
-    else {
-      die "Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
+    
     }
     
+    
+    #save the table
+    ampsConfigLib::ChangeValueOfArray("static const double IonNumberDensityFraction\\[\\]",\@IonNumberDensityFractionTable,"models/exosphere/Exosphere.h");
   }
   
   
