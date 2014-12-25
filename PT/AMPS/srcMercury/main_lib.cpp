@@ -373,16 +373,22 @@ double localResolution(double *x) {
 //set up the local time step
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double CellSize;
+  double CellSize,CharacteristicSpeed;
 
-  double CharacteristicSpeed_NA=5.0E3;
+  switch (spec) {
+  case _NA_SPEC_:
+    CharacteristicSpeed=5.0E3;
+    break;
+  case _H_PLUS_SPEC_:
+    CharacteristicSpeed=2.0*420.0E3;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown species");
+  }
 
-//  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
   CellSize=startNode->GetCharacteristicCellSize();
-  return 0.3*CellSize/CharacteristicSpeed_NA;
-
-
+  return 0.3*CellSize/CharacteristicSpeed;
 }
 
 double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -1169,6 +1175,26 @@ void amps_init() {
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
 
+  //init the boundary injection procedure
+  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
+  PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
+  PIC::BC::InitBoundingBoxInjectionBlockList();
+
+  //init ICES
+#ifdef _ICES_CREATE_COORDINATE_LIST_
+//  PIC::CPLR::ICES::createCellCenterCoordinateList();
+//  PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/CODES/ICES/Models");
+//  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070001"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+
+  PIC::CPLR::ICES::createCellCenterCoordinateList();
+  PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+
+#endif
+
+
+#ifdef _ICES_LOAD_DATA_
+  PIC::CPLR::ICES::readSWMFdata(1.0);
+#endif
 
 
   Mercury::Init_AfterParser();
@@ -1192,11 +1218,17 @@ void amps_init() {
   PIC::ParticleWeightTimeStep::UserDefinedExtraSourceRate=Exosphere::SourceProcesses::SolarWindSputtering::TypicalIonFluxSputteringRate;
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(NA);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_NA_SPEC_);
 
   //copy the weight and time step from Na neutra to Na ions
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(NAPLUS,NA,5.0E3/800.0E3);
-  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(NAPLUS,NA,5.0E3/800.0E3);
+  if (_NA_PLUS_SPEC_>0) {
+    PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_NA_PLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
+    PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_NA_PLUS_SPEC_,_NA_SPEC_,5.0E3/800.0E3);
+  }
+
+  if (_H_PLUS_SPEC_>0) {
+    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H_PLUS_SPEC_);
+  }
 
   //set photolytic reactions
 /*  PIC::ChemicalReactions::PhotolyticReactions::SetReactionProcessor(sodiumPhotoionizationReactionProcessor,NA);
@@ -1216,9 +1248,9 @@ void amps_init() {
 //  PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
-  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
+/*  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
-  PIC::BC::InitBoundingBoxInjectionBlockList();
+  PIC::BC::InitBoundingBoxInjectionBlockList();*/
 
 
   //init the particle buffer
@@ -1331,81 +1363,6 @@ void amps_init() {
   exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
 
-  //init ICES
-#ifdef _ICES_CREATE_COORDINATE_LIST_
-  PIC::CPLR::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/CODES/ICES/Models");
-  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070001"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
-#endif
-
-
-#ifdef _ICES_LOAD_DATA_
-  PIC::CPLR::ICES::readSWMFdata(1.0);
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
-
-  //output the solar wind ion flux at the palnet's surface
-  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
-  PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
-
-  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
-
-  Exosphere::SourceProcesses::Init();
-  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
-
-/*
-  //create the map of the solar wind flux
-  int el;
-
-  for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-    int i,j,k;
-    long int nd;
-    double FaceCenterPoint[3],PlasmaVelocity[3],PlasmaNumberDensity,FaceElementNormal[3],c;
-    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-    PIC::Mesh::cDataCenterNode *CenterNode;
-    char *offset;
-
-    Mercury::Planet->GetSurfaceElementMiddlePoint(FaceCenterPoint,el);
-    Mercury::Planet->GetSurfaceElementNormal(FaceElementNormal,el);
-
-    if (FaceElementNormal[0]<0.0) continue;
-
-    node=PIC::Mesh::mesh.findTreeNode(FaceCenterPoint);
-
-    if ((nd=PIC::Mesh::mesh.fingCellIndex(FaceCenterPoint,i,j,k,node,false))==-1) {
-      exit(__LINE__,__FILE__,"Error: the cell is not found");
-    }
-
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-    if ((node->Thread==PIC::ThisThread)&&(node->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is not initialized");
-#endif
-
-    if (node->Thread==PIC::ThisThread) {
-      CenterNode=node->block->GetCenterNode(nd);
-      offset=CenterNode->GetAssociatedDataBufferPointer();
-
-      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-        memcpy(PlasmaVelocity,offset+PIC::CPLR::ICES::PlasmaBulkVelocityOffset,3*sizeof(double));
-        memcpy(&PlasmaNumberDensity,offset+PIC::CPLR::ICES::PlasmaNumberDensityOffset,sizeof(double));
-      }
-      else {
-        double EmptyArray[3]={0.0,0.0,0.0};
-
-        memcpy(PlasmaVelocity,EmptyArray,3*sizeof(double));
-        memcpy(&PlasmaNumberDensity,EmptyArray,sizeof(double));
-      }
-
-      c=-(PlasmaVelocity[0]*FaceElementNormal[0]+PlasmaVelocity[1]*FaceElementNormal[1]+PlasmaVelocity[2]*FaceElementNormal[2]);
-      if (c<0.0) c=0.0;
-
-      Mercury::Planet->SolarWindSurfaceFlux[el]=c*PlasmaNumberDensity;
-    }
-
-    MPI_Bcast(Mercury::Planet->SolarWindSurfaceFlux+el,1,MPI_DOUBLE,node->Thread,MPI_COMM_WORLD);
-  }
-*/
-
-
-#endif
 
   //prepopulate the solar wind protons
 //  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
@@ -1461,6 +1418,20 @@ void amps_init() {
 
 //  VT_TRACER("main");
 
+//  Mercury::Init_AfterMesh();
+
+#ifdef _ICES_LOAD_DATA_
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
+
+  //output the solar wind ion flux at the palnet's surface
+  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
+  PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
+
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
+
+  Exosphere::SourceProcesses::Init();
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
+#endif
 }
 
 

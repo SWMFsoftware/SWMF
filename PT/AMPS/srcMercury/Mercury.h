@@ -136,36 +136,23 @@ namespace Mercury {
         accl_LOCAL[2]+=radiationPressureAcceleration*x_LOCAL[2]/rHeliocentric;
       }
     }
-    else if (spec==_NA_PLUS_SPEC_) { //the Lorentz force
-      long int nd;
-//      char *offset;
-      int i,j,k;
-//      PIC::Mesh::cDataCenterNode *CenterNode;
-      double E[3],B[3];
 
-//      exit(__LINE__,__FILE__,"check the numbers!");
+    //the Lorentz force
+    double elCharge;
+
+    if ((elCharge=PIC::MolecularData::GetElectricCharge(spec))>0.0) {
+      long int nd;
+      int i,j,k;
+      double E[3],B[3];
 
       if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
         exit(__LINE__,__FILE__,"Error: the cell is not found");
       }
 
-  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
       if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
-  #endif
+      #endif
 
-/*
-      CenterNode=startNode->block->GetCenterNode(nd);
-      offset=CenterNode->GetAssociatedDataBufferPointer();
-
-      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
-        memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
-        memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
-      }
-      else {
-        memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
-        memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
-      }
-*/
 
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
       memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
@@ -175,10 +162,11 @@ namespace Mercury {
       PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
 #endif
 
+      elCharge/=PIC::MolecularData::GetMass(spec);
 
-      accl_LOCAL[0]+=ElectronCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/_MASS_(_NA_);
-      accl_LOCAL[1]+=ElectronCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/_MASS_(_NA_);
-      accl_LOCAL[2]+=ElectronCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/_MASS_(_NA_);
+      accl_LOCAL[0]+=elCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1]);
+      accl_LOCAL[1]+=elCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0]);
+      accl_LOCAL[2]+=elCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0]);
 
     }
 
