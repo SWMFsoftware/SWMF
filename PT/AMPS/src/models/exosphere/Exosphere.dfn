@@ -74,3 +74,7 @@
 
 //sputtering mode: calculation of the source rate using Yield vs taking the source rate from the input file 
 #define _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_
+
+//parameters of the model for the ion injection with the parameters of the background plasma
+#define _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ _PIC_MODE_OFF_
+#define _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_

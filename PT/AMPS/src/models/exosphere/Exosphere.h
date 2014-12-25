@@ -90,6 +90,7 @@ namespace Exosphere {
   //init the model
   void Init_BeforeParser();
   void Init_AfterParser();
+ // void Init_AfterMesh();
 
   //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
   void SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data);
@@ -673,6 +674,25 @@ namespace Exosphere {
         return (startNode->Thread==PIC::Mesh::mesh.ThisThread) ? true : false;
       }
 
+
+    }
+
+    namespace BackgroundPlasmaBoundaryIonInjection {
+
+      //the number density fraction of particular ion species in the background plasma flow
+      static const double IonNumberDensityFraction[]={1.0}; //the number density fraction of the particular ion species in the total background plasma flow (IonNumberDensityFraction[spec])
+      extern long int nTotalBoundaryInjectionFaces;  //the number of the computationsl mesh faces at the boundary of the domain
+      extern double **BoundaryFaceProductionFraction; //the fraction of the total production rate that is due to a particular block (BoundaryBlockProductionFraction[spec][block]
+      extern double *maxLocalTimeStep; //the maximum value of the time step across the boundary of the computational domain (maxLocalTimeStep[spec])
+      extern double *minParticleWeight; //the minimum value of the particle weight across the computational domain (minParticleWeight[spec])
+
+      extern double *TotalInjectionRateTable; //the rate of the ion injection through the boundary of the computational domain; the table is used to save the data calculated by GetTotalProductionRate for a steady state case. In a time-dependent case the value of the source rate is re-calculated each time when that function is acceced
+
+      void getMinMaxLimits();
+      double GetTotalProductionRate(int spec);
+
+      long int ParticleInjection(int spec);
+      long int ParticleInjection();
 
     }
 

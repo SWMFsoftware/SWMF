@@ -126,6 +126,11 @@ $MARKER:RESERVE-CELL-SAMPLING-DATA-BUFFER$
 void Exosphere::Init_BeforeParser() {
   int idim;
 
+  //set the model of inhectino of the ion at the boundary of the domain due to the background plasma evnoronment
+  #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON
+  PIC::ParticleWeightTimeStep::ExosphereModelExtraSourceRate=SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTotalProductionRate;
+  #endif
+
   //calculate the typical value of the motional electrical field
   swE_Typical[0]=-(/*Exosphere_*/swVelocity_Typical[1]*/*Exosphere_*/swB_Typical[2]-/*Exosphere_*/swVelocity_Typical[2]*/*Exosphere_*/swB_Typical[1]);
   swE_Typical[1]=+(/*Exosphere_*/swVelocity_Typical[0]*/*Exosphere_*/swB_Typical[2]-/*Exosphere_*/swVelocity_Typical[2]*/*Exosphere_*/swB_Typical[0]);
@@ -340,6 +345,13 @@ void Exosphere::Init_AfterParser() {
   //init the source models
   Exosphere::SourceProcesses::Init();
 }
+
+/*void Exosphere::Init_AfterMesh() {
+  //init the model of the background plasma ion injection
+  #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON_
+  SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Init();
+  #endif
+}*/
 
 
 
@@ -1847,6 +1859,11 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int BoundaryElementT
   long int res=0;
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,BoundaryElementType,BoundaryElement);
+
+  //inject the background plasma ions
+  #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON_
+  res+=BackgroundPlasmaBoundaryIonInjection::ParticleInjection();
+  #endif
 
   return res;
 }

@@ -9,7 +9,8 @@ EXOSPHEREOBJ = Exosphere.o \
 	Exosphere_SourceProcesses.o \
 	Exosphere_Parallel.o \
 	Exosphere_ReferenceGroundBasedObservations.o \
-	Exosphere_ChamberlainExosphereModel.o 
+	Exosphere_ChamberlainExosphereModel.o \
+	Exosphere_BackgroundPlasmaSource.o
 
 exosphere : $(EXOSPHEREOBJ)
 	ar -src exosphere.a $(EXOSPHEREOBJ)
