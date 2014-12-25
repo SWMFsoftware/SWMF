@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=Na  !, NA_Plus !lkdsjflksdj   
+SpeciesList=Na,h_plus  !, NA_Plus !lkdsjflksdj   
 
 
 !settings of the directories
@@ -62,6 +62,13 @@ CouplerMode=ices !!off, ices, swmf
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
+
+
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=3000
+
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+!  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 #endGeneral
 
 #ParticleCollisions 
@@ -108,8 +115,8 @@ CouplerMode=ices !!off, ices, swmf
   CollisionScatteringAngle=function \\ !isotropic \\ !isotripic -> isotropic distribution of the angle, function -> the name of the function that distribute the scattering angle  
     FunctionName=UserDefinedVelocityScatteringAngle1   
 
-  InjectConditionBackgroundParticle=KeepBackgroundAtmosphereParticle1   
-  RemoveConditionModelParticle=KeepBackgroundAtmosphereParticle1  
+  InjectConditionBackgroundParticle=off   
+  RemoveConditionModelParticle=off   
 
 
   LoadUserDefinitions=on \\ ! on, off
@@ -144,7 +151,7 @@ CouplerMode=ices !!off, ices, swmf
 
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Mercury::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
-  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3) Mercury::ExospherePhotoionizationLifeTime(t0,t1,t2,t3)
+  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Mercury::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
@@ -159,8 +166,19 @@ CouplerMode=ices !!off, ices, swmf
 !  SimulationStartTime=2008-12-30T00:00:00 
   SimulationStartTime=2009-01-24T00:00:00
 
+  IcesModelCase=MERCURY_RESTART_n070001
+
   addPhysicalModelHeader=Mercury.h 
 !  addPhysicalModelHeader=Exosphere_Helium.h   
+
+!  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_OFF_
+
+
+  BackgroundIonInjection=on \\ !on,off
+    InjectionMode=SteadyState \\ ! SteadyState, TimeDependent 
+    IonNumberDensityFraction(H_PLUS)=1.0 
 
 !---------------------------------   SOURCE RATE --------------------------------------------
   Source:Sputtering=on \\ !on,off
