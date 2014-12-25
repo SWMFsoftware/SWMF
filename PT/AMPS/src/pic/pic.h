@@ -2091,9 +2091,13 @@ namespace PIC {
     typedef double (*fSetFunction) (int,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     extern fSetFunction LocalParticleWeight,LocalTimeStep,LocalBlockInjectionRate;
 
+    //a user-defined function for calculation of an extra source rate
     typedef double (*fUserDefinedExtraSourceRate)(int);
     extern fUserDefinedExtraSourceRate UserDefinedExtraSourceRate;
 
+    //the extra source rate calcualted by the exosphere model (src/models/exosphere)
+    typedef double (*fExosphereModelExtraSourceRate)(int);
+    extern fExosphereModelExtraSourceRate ExosphereModelExtraSourceRate;
 
     extern double maxReferenceInjectedParticleNumber;
 
