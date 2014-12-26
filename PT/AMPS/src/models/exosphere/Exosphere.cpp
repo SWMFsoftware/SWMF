@@ -129,6 +129,7 @@ void Exosphere::Init_BeforeParser() {
   //set the model of inhectino of the ion at the boundary of the domain due to the background plasma evnoronment
   #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON
   PIC::ParticleWeightTimeStep::ExosphereModelExtraSourceRate=SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTotalProductionRate;
+  PIC::BC::ExosphereModelExtraInjectionFunction=SourceProcesses::BackgroundPlasmaBoundaryIonInjection::ParticleInjection;
   #endif
 
   //calculate the typical value of the motional electrical field
@@ -1859,11 +1860,6 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int BoundaryElementT
   long int res=0;
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,BoundaryElementType,BoundaryElement);
-
-  //inject the background plasma ions
-  #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON_
-  res+=BackgroundPlasmaBoundaryIonInjection::ParticleInjection();
-  #endif
 
   return res;
 }
