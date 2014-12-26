@@ -24,6 +24,7 @@
 #define _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_               -4
 #define _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_            -5
 #define _EXOSPHERE_SOURCE__ID__VERTICAL_INJECTION_               -6
+#define _EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_  -7
 
 //integration mode: steady state/time dependent
 #define _EXOSPHERE_INTEGRATION_MODE__STEADY_STATE_    0
