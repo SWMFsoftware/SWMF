@@ -2502,7 +2502,7 @@ ProcessPhotoChemistry:
 
   //check if the block is allocated
   if (startNode->block==NULL) {
-    cout << "$PREFIX: Most probably the time step is too large. Error at" << __FILE__ << "@" << __LINE__  << endl;
+    cout << "$PREFIX: Most probably the time step is too large. Error at " << __FILE__ << "@" << __LINE__  << endl;
     cout << "$PREFIX: startNode->block==NULL" << endl;
     cout << "$PREFIX: ThisThread=" << PIC::ThisThread << ", startNode->Thread=" << startNode->Thread << endl;
     cout << "$PREFIX: x=" << xFinal[0] << ", " << xFinal[1] << ", " << xFinal[2] << endl;
