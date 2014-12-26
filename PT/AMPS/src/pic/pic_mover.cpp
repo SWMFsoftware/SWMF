@@ -2500,6 +2500,18 @@ ProcessPhotoChemistry:
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located4");
 
 
+  //check if the block is allocated
+  if (startNode->block==NULL) {
+    cout << "$PREFIX: Most probably the time step is too large. Error at" << __FILE__ << "@" << __LINE__  << endl;
+    cout << "$PREFIX: startNode->block==NULL" << endl;
+    cout << "$PREFIX: ThisThread=" << PIC::ThisThread << ", startNode->Thread=" << startNode->Thread << endl;
+    cout << "$PREFIX: x=" << xFinal[0] << ", " << xFinal[1] << ", " << xFinal[2] << endl;
+    cout << "$PREFIX: v=" << vFinal[0] << ", " << vFinal[1] << ", " << vFinal[2] << endl;
+    cout << "$PREFIX: startNode->xmin=" << startNode->xmin[0] << ", " << startNode->xmin[1] << ", " << startNode->xmin[2] << endl;
+    cout << "$PREFIX: startNode->xmax=" << startNode->xmax[0] << ", " << startNode->xmax[1] << ", " << startNode->xmax[2] << endl;
+  }
+
+
   PIC::Mesh::cDataBlockAMR *block=startNode->block;
   long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
