@@ -2618,6 +2618,10 @@ namespace PIC {
     typedef long int (*fUserDefinedParticleInjectionFunction)();
     extern fUserDefinedParticleInjectionFunction UserDefinedParticleInjectionFunction;
 
+    //the extra injection process by the exosphere model (src/models/exosphere)
+    typedef long int (*fExosphereModelExtraInjectionFunction)();
+    extern fExosphereModelExtraInjectionFunction ExosphereModelExtraInjectionFunction;
+
     namespace InternalBoundary {
 
       namespace Sphere {

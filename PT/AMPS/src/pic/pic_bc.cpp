@@ -18,6 +18,9 @@ double *PIC::BC::ParticleProductionRate=NULL;
 long int PIC::BC::nTotalInjectedParticles=0;
 PIC::BC::fUserDefinedParticleInjectionFunction PIC::BC::UserDefinedParticleInjectionFunction=NULL;
 
+//the extra injection process by the exosphere model (src/models/exosphere)
+PIC::BC::fExosphereModelExtraInjectionFunction PIC::BC::ExosphereModelExtraInjectionFunction=NULL;
+
 //====================================================
 //create the list of blocks where the injection BCs are applied
 void PIC::BC::InitBoundingBoxInjectionBlockList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {

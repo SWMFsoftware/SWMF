@@ -61,6 +61,9 @@ void PIC::TimeStep() {
   //call a user-defined injection function
   if (PIC::BC::UserDefinedParticleInjectionFunction!=NULL) PIC::BC::nTotalInjectedParticles+=PIC::BC::UserDefinedParticleInjectionFunction();
 
+  //the extra injection process by the exosphere model (src/models/exosphere)
+  if (BC::ExosphereModelExtraInjectionFunction!=NULL) PIC::BC::nTotalInjectedParticles+=BC::ExosphereModelExtraInjectionFunction();
+
   InjectionBoundaryTime=MPI_Wtime()-InjectionBoundaryTime;
 
 
