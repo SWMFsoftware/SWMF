@@ -263,11 +263,15 @@ StartParticleInjection:
     double v[3],c0,c1;
     long int newParticle,nd;
     PIC::ParticleBuffer::byte *newParticleData;
-    double PlasmaNumberDensity,PlasmaBulkVelocity[3],PlasmaTemeprature;
+    double PlasmaNumberDensity,PlasmaBulkVelocity[3],PlasmaTemeprature,LocalTimeStep,LocalParticleWeight;
+    const double ParticleWeightCorrection=1.0;
 
     if (node->Thread==PIC::Mesh::mesh.ThisThread) {
       //calculate the probability of injection of the new particle at this moment
-      p=node->block->GetLocalTimeStep(spec)/node->block->GetLocalParticleWeight(spec)*Ratio;
+      LocalTimeStep=node->block->GetLocalTimeStep(spec);
+      LocalParticleWeight=node->block->GetLocalParticleWeight(spec);
+
+      p=LocalTimeStep/LocalParticleWeight*Ratio;
 
       if (rnd()<p) {
         //generate the new particle position on the face
@@ -281,6 +285,10 @@ StartParticleInjection:
          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
          nInjectedParticles++;
 
+         Exosphere::Sampling::CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
+         PIC::BC::nInjectedParticles[spec]+=1;
+         PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
+
          //get macrospcopic parameters of the plasma at the point of the injection
          nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node); //findCenterNodeIndex(x,i,j,k,node); //fingCellIndex(x,i,j,k,node);
 
@@ -289,12 +297,17 @@ StartParticleInjection:
          PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
          PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature(x,nd,node);
 
-         PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec,-1);
+         do {
+           PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec,-1);
+         }
+         while (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>vmax*vmax);
 
          PIC::ParticleBuffer::SetX(x,newParticleData);
          PIC::ParticleBuffer::SetV(v,newParticleData);
          PIC::ParticleBuffer::SetI(spec,newParticleData);
-         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,newParticleData);
+
+         Exosphere::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_,(PIC::ParticleBuffer::byte*)newParticleData);
 
          //apply condition of tracking the particle
          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
