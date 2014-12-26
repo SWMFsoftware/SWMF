@@ -54,13 +54,25 @@ double Exosphere::SourceProcesses::SolarWindSputtering::EnergyDistributionFuncti
 
 //sticking probability of sodium atoms
 double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& ReemissionParticleFraction,double Temp) {
+  double res;
 
   ReemissionParticleFraction=1.0;
 
-  if (Temp<300.0) return 1.0;
-  if (Temp<650.0) return 1.0-(Temp-300.0)/350.0;
+  switch (spec) {
+  case _NA_SPEC_:
+    if (Temp<300.0) res=1.0;
+    else if (Temp<650.0) res=1.0-(Temp-300.0)/350.0;
 
-  return 0.0;
+    break;
+  case _H_PLUS_SPEC_:
+    res=1.0;
+
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown species");
+  }
+
+  return res;
 }
 
 
