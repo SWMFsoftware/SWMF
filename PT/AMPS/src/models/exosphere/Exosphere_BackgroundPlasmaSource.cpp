@@ -154,6 +154,10 @@ double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTota
           PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
           PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature(x,nd,node);
 
+          if ( (isfinite(PlasmaNumberDensity)==false) || (isfinite(PlasmaTemeprature)==false) || (isfinite(PlasmaBulkVelocity[0])==false) || (isfinite(PlasmaBulkVelocity[1])==false) || (isfinite(PlasmaBulkVelocity[2])==false) ) {
+            exit(__LINE__,__FILE__,"Error: a non-normalized number is found");
+          }
+
           BoundaryFaceProductionFraction[spec][nBoundaryFace]=IonNumberDensityFraction[spec]*BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(PlasmaNumberDensity,PlasmaTemeprature,PlasmaBulkVelocity,ExternalNormal,spec);
         }
 
@@ -226,30 +230,35 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
 
   //generate the time interval till the next particle injection
   while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<maxLocalTimeStep[spec]) {
+    double TimeStepFraction=TimeCounter/maxLocalTimeStep[spec];
+
     //determine the face for the particle injection
-    if (ProductionFractionSum+FaceProductionFraction<TimeCounter/maxLocalTimeStep[spec]) {
+    if (ProductionFractionSum+FaceProductionFraction<TimeStepFraction) {
+      ProductionFractionSum+=FaceProductionFraction;
+      ++nface;
       goto FindInjectionFace; //enter into the search loop at the place it was exited the last time
     }
 
-    while (ProductionFractionSum+FaceProductionFraction<TimeCounter/maxLocalTimeStep[spec]) { //loop through the face untill the condition in met
+    while (ProductionFractionSum+FaceProductionFraction<TimeStepFraction) { //loop through the face untill the condition in met
       for (;nodeptr!=end;nodeptr++) {
         node=*nodeptr;
         nface=0;
 
         if (PIC::Mesh::mesh.ExternalBoundaryBlock(node,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-          for (;nface<2*DIM;nface++) {
 
 FindInjectionFace:
+          for (;nface<2*DIM;nface++) {
             if (ExternalFaces[nface]==true) {
               if (nBoundaryFace==nTotalBoundaryInjectionFaces) exit(__LINE__,__FILE__,"Error: nBoundaryFace exxeds the allowed value range");
 
-              ProductionFractionSum+=FaceProductionFraction;
               FaceProductionFraction=BoundaryFaceProductionFraction[spec][++nBoundaryFace];
 
-              if (ProductionFractionSum+FaceProductionFraction>TimeCounter/maxLocalTimeStep[spec]) {
+              if (ProductionFractionSum+FaceProductionFraction>TimeStepFraction) {
                 //exit out of the loop - the block and the face are found
                 goto StartParticleInjection;
               }
+
+              ProductionFractionSum+=FaceProductionFraction;
             }
           }
 
@@ -297,6 +306,7 @@ StartParticleInjection:
          PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
          PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature(x,nd,node);
 
+
          do {
            PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec,-1);
          }
@@ -327,10 +337,9 @@ StartParticleInjection:
 }
 
 long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::ParticleInjection() {
-  long int t=0,nInjectedParticles=0;
+  long int nInjectedParticles=0;
 
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) nInjectedParticles+=ParticleInjection(spec);
 
-//  MPI_Allreduce(&t,&nInjectedParticles,1,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
   return nInjectedParticles;
 }
