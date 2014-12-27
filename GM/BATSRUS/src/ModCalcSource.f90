@@ -590,7 +590,7 @@ contains
                      Gbody*Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)**3
                 Source_VC(iRhoUx:iRhoUz,i,j,k) =Source_VC(iRhoUx:iRhoUz,i,j,k)&
                      + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
                      sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)*ForcePerRho_D)
              end do; end do; end do
 
@@ -601,9 +601,9 @@ contains
                         * (Xyz_DGB(:,i,j,k,iBlock)-(/xBody2,yBody2,zBody2/)) &
                         / r2_BLK(i,j,k,iBlock)**3
                    Source_VC(iRhoUx:iRhoUz,i,j,k) = &
-                        Source_VC(iRhoUx:iRhoUz,i,j,k)&
+                        Source_VC(iRhoUx:iRhoUz,i,j,k) &
                         + State_VGB(iRho,i,j,k,iBlock)*ForcePerRho_D
-                   Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
+                   Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) + &
                         sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
                         *   ForcePerRho_D)
                 end do; end do; end do
@@ -614,7 +614,7 @@ contains
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
                 Source_VC(iRhoUGrav,i,j,k) = Source_VC(iRhoUGrav,i,j,k) &
                      + Gbody*State_VGB(iRho,i,j,k,iBlock)
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                      + Gbody*State_VGB(iRhoUGrav,i,j,k,iBlock)
              end do; end do; end do
           end if
@@ -644,7 +644,7 @@ contains
                      + State_VGB(iRho,i,j,k,iBlock) &
                      *Omega2 * Xyz_DGB(y_,i,j,k,iBlock)
 
-                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                      + Omega2 * sum(State_VGB(iRhoUx:iRhoUy,i,j,k,iBlock) &
                      *                         Xyz_DGB(x_:y_,i,j,k,iBlock))
              end do; end do; end do
