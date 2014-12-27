@@ -103,6 +103,12 @@ namespace Mercury {
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
 
+/*
+    memcpy(accl,accl_LOCAL,3*sizeof(double));
+    return;
+*/
+
+
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
 
