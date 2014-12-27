@@ -178,6 +178,7 @@ CouplerMode=ices !!off, ices, swmf
 
   BackgroundIonInjection=on \\ !on,off
     InjectionMode=SteadyState \\ ! SteadyState, TimeDependent 
+    vmax=1500.0e3 \\ !the maximum velocity of the injected particles
     IonNumberDensityFraction(H_PLUS)=1.0 
 
 !---------------------------------   SOURCE RATE --------------------------------------------
