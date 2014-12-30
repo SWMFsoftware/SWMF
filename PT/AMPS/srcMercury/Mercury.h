@@ -30,6 +30,19 @@ const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"MESS
 namespace Mercury {
   using namespace Exosphere;
 
+  //the condition of the particle trajectory tracking
+  namespace ParticleTracker {
+    inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+
+      //only those solar wind ions are traced, which trajectories are close to the surface of Mercury
+      if (spec==_H_PLUS_SPEC_) {
+        if (x[1]*x[1]+x[2]*x[2]>pow(2.0*_RADIUS_(_TARGET_),2)) return false;
+      }
+
+      return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
+    }
+  }
+
   namespace Sampling {
     using namespace Exosphere::Sampling;
 
