@@ -59,7 +59,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& Reem
   ReemissionParticleFraction=1.0;
 
   switch (spec) {
-  case _NA_SPEC_:
+  case _NA_SPEC_: case _NA_PLUS_SPEC_:
     if (Temp<300.0) res=1.0;
     else if (Temp<650.0) res=1.0-(Temp-300.0)/350.0;
 
