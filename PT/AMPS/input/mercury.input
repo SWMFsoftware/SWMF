@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=Na,h_plus  !, NA_Plus !lkdsjflksdj   
+SpeciesList=Na,na_plus,h_plus  !, NA_Plus !lkdsjflksdj   
 
 
 !settings of the directories
@@ -65,10 +65,10 @@ CouplerMode=ices !!off, ices, swmf
 
 
   TrajectoryTracing=on
-  MaxSampledTrajectoryNumber=3000
+  MaxSampledTrajectoryNumber=10000
 
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
-!  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Mercury::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 #endGeneral
 
 #ParticleCollisions 
