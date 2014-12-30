@@ -1,6 +1,0 @@
-This layout is efficient to run SC and IH together.
-
-#COMPONENTMAP
-IH    0  999    1
-OH    0  999    1
-#END
