@@ -6,23 +6,21 @@ use strict;
 use warnings;
 use POSIX qw(strftime);
 use List::Util qw(first);
+use IO::File;
 
 #$nNode,$nCells -> the number of the nodes and cells, $nTitleLines -> the number of the title lines (TITLE, ZODE, VARABLE) in the output file
 
-my ($str,$s0,$s1,$s2,$line,$nNode,$nCells,$nTitleLines,$i,$nDataFiles,$nVariables);
-my (@data,@sum);
+my ($str,$s0,$s1,$s2,$line,$nNode,$nCells,$nTitleLines,$i,$nDataFiles,$nVariables,@data);
 
 #arguments:
 #$ARGV[0] -> the name of the intput file
 #$ARGV[1] -> the working directory
-print "Average AMPS output files:\nArguments: @ARGV\n";
-
+print "Average AMPS output files:\n";
 
 #the output file
-open (fAveraged,">averaged.dat");
+open (fAveraged,">amps.averaged.dat");
 
 #read the variable list and the number of the number of the cells and nodes
-
 open (fInput,"<$ARGV[0]");
 $nTitleLines=0;
 
@@ -74,28 +72,25 @@ close (fInput);
 
 #open the input data files
 my @filehandles;
-
-print "Files to avarage: @ARGV \n";
-
+my ($nline,$nfile,$file);
 $nDataFiles=scalar(@ARGV);
+
 print "Output file number: $nDataFiles\n";
+print "Files to average: \n";
 
 for ($i=0;$i<$nDataFiles;$i++) {
   print "$ARGV[$i]\n";
 
-  open(FILE, "<$ARGV[$i]") || die;
-  #push the typeglobe to the end of the array
-  push(@filehandles, *FILE);    
+  $file=IO::File->new("< $ARGV[$i]");
+  push(@filehandles,$file);
 
-  for ($i=0;$i<$nTitleLines;$i++) {
-    $line=<FILE>;
+  for ($nline=0;$nline<$nTitleLines;$nline++) {
+    $line=<$file>;
   }
 }
 
 
-
 #average of output the model data
-my ($nfile,$nline,$file);
 my @tmp=((0)x$nVariables);
 
 for ($nline=0;$nline<$nNode;$nline++) {   
@@ -103,7 +98,9 @@ for ($nline=0;$nline<$nNode;$nline++) {
     $tmp[$i]=0.0;
   }
 
-  foreach $file (@filehandles) {
+  for ($nfile=0;$nfile<$nDataFiles;$nfile++) {
+    $file=$filehandles[$nfile];
+    
     $line=<$file>;
     @data=split(' ',$line);
 
@@ -119,8 +116,6 @@ for ($nline=0;$nline<$nNode;$nline++) {
   print fAveraged "@tmp\n";
 } 
 
-print "#1\n";
-
 #output the connectivity list
 $file=$filehandles[0];
 
@@ -128,8 +123,6 @@ for ($nline=0;$nline<$nCells;$nline++) {
   $line=<$file>;
   print fAveraged "$line\n";
 }
-
-
 
 #close open file
 foreach $file (@filehandles) {
