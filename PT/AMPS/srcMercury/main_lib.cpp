@@ -379,6 +379,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   case _NA_SPEC_:
     CharacteristicSpeed=5.0E3;
     break;
+  case _NA_PLUS_SPEC_:
+    CharacteristicSpeed=400.0E3;
+    break;
   case _H_PLUS_SPEC_:
     CharacteristicSpeed=1500.0E3;
     break;
@@ -1666,6 +1669,17 @@ t=1.0;
 
     //make the time advance
      PIC::TimeStep();
+
+     //increase the sample length
+     static int LastDataOutputFileNumber=-1;
+
+     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+       PIC::RequiredSampleLength*=2;
+       if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
+
+       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+     }
 }
 
 
