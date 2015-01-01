@@ -480,6 +480,7 @@ sub ReadMainBlock {
       if ($s0 eq "OFF") {$CouplingMode="_PIC_COUPLER_MODE__OFF_";}
       elsif ($s0 eq "ICES") {$CouplingMode="_PIC_COUPLER_MODE__ICES_";}
       elsif ($s0 eq "SWMF") {$CouplingMode="_PIC_COUPLER_MODE__SWMF_";}
+      elsif ($s0 eq "CCMC") {$CouplingMode="_PIC_COUPLER_MODE__CCMC_";}
       else {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
