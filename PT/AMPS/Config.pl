@@ -61,6 +61,8 @@ foreach (@Arguments) {
      print "-spice-kernels=PATH\t\tpath to the location of the SPICE kernels.\n";
      print "-ices-path=PATH\t\t\tpath to the location of ICES\n";
      print "-application=case\t\tthe name of the model case to use.\n";
+     print "-boost-path=PATH\t\tthe path to the boost library.\n";
+     print "-kameleon-path=PATH\t\tthe path for the Kameleon library.\n";
      
      exit;
    }
