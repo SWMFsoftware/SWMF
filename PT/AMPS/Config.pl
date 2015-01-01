@@ -124,6 +124,9 @@ foreach (@Arguments) {
   if (/^-spice-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`;     next};
   if (/^-ices-path=(.*)$/i)       {`echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;     next};
   
+  if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> .ampsConfig.Settings`;     next};
+  
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
 
