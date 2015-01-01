@@ -141,6 +141,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_COUPLER_MODE__OFF_       0
 #define _PIC_COUPLER_MODE__ICES_      1
 #define _PIC_COUPLER_MODE__SWMF_      2
+#define _PIC_COUPLER_MODE__CCMC_      3
 
 //the generic particle transformation codes
 #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_       0
