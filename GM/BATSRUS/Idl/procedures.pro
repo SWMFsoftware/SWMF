@@ -244,9 +244,15 @@ pro gettype,filenames,filetypes,npictinfiles
         filetypes(ifile)    = 'log'
         npictinfiles(ifile) = 1
      endif else begin
-        if strpos(filenames(ifile),'settings.hdf') ge 0 then begin
-           dirname = strmid(filenames(ifile),0,strpos(filenames(ifile),"settings.hdf"))
-           file_id = H5F_OPEN(dirname+'proc0.hdf')
+        if strpos(filenames(ifile),'settings_region') ge 0 then begin
+           ; For example: 
+           ; if filenames = 'output/settings_region0.hdf', then:
+           ; dirname = 'output/' and regioname = '_region0.hdf'.
+           
+           ibegin = strpos(filenames(ifile),'settings_region') + strlen('settings')
+           regionname = strmid(filenames(ifile),ibegin)
+           dirname = strmid(filenames(ifile),0,strpos(filenames(ifile),"settings_region"))
+           file_id = H5F_OPEN(dirname+'proc0'+regionname)
            group_id = H5G_OPEN(file_id, '/fields/Bx')
            npictinfiles(ifile) = H5G_GET_NUM_OBJS(group_id)
            h5G_CLOSE, group_id
@@ -453,8 +459,10 @@ pro get_pict_hdf,filenames,npict,x,w,$
 
     ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
   
-  dirname = strmid(filenames,0,strpos(filenames,"settings.hdf"))
-  
+  dirname = strmid(filenames,0,strpos(filenames,"settings_region"))
+  ibegin = strpos(filenames,'settings_region') + strlen('settings')
+  regionname = strmid(filenames,ibegin)
+
   Param = H5_PARSE(filenames)
 
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
@@ -536,7 +544,7 @@ pro get_pict_hdf,filenames,npict,x,w,$
 
   ;;;;;;;;;;;;;;;;; GETING TIMELINE ++  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  filename= dirname+'proc0.hdf'
+  filename= dirname+'proc0'+regionname
   file_id = H5F_OPEN(filename)
   
   ;; Find the cronological timeline index SortIdx_I
@@ -574,8 +582,8 @@ pro get_pict_hdf,filenames,npict,x,w,$
   ;; loop over all files
   for iproc=0,nproc-1 do begin
      
-     filename = dirname+'proc' + string(iproc,FORMAT='(I0)')+ '.hdf'
-     
+     filename = dirname+'proc' + string(iproc,FORMAT='(I0)')+ regionname
+
      file_id = H5F_OPEN(filename)
      iMin = MinIJK_PD(iproc,0)
      iMax = MaxIJK_PD(iproc,0)
