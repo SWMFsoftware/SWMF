@@ -52,4 +52,8 @@
   mass=1.993E-26
   charge=0
 
+#component=H_PLUS
+  mass=1.0*_AMU_
+  charge=1.0
+
 #endspecies
