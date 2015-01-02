@@ -42,7 +42,7 @@ static const int nReferenceGroundBasedObservations=0;
 static const char ReferenceGroundBasedObservationTime[][_MAX_STRING_LENGTH_PIC_]={""};
 
 //the default location of the SPICE kernels
-static const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="";
+const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="";
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 #include "SpiceUsr.h"
