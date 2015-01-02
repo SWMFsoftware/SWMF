@@ -13,12 +13,15 @@ OutputDirectory=out
 DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=on ! on,off 
 
-makefile  SOURCES=src
-makefile  RUNDIR=run
-makefile  MPIRUN=mpirun -np 4
+makefile SOURCES=src
+makefile RUNDIR=run
+makefile MPIRUN=mpirun -np 4
 makefile ExternalModules=models/exosphere
 
-ProjectSourceDirectory=srcParticleTracker
+makefile Kameleon=/Users/ccmc/Kameleon-plus
+makefile Boost=/Users/vtenishe/ccmc/boost
+
+ProjectSourceDirectory=srcCCMC 
 TrajectoryIntersectionWithBlockFaces=off !on, off
 
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
@@ -42,7 +45,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
 TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
-CouplerMode=ices !swmf !!!ices !!off, ices, swmf
+CouplerMode=ccmc !ices !swmf !!!ices !!off, ices, swmf
 
 #endmain
 
@@ -77,23 +80,33 @@ CouplerMode=ices !swmf !!!ices !!off, ices, swmf
 
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
-! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition(x,v,spec,ParticleData)
+! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
-  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) CCMC::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 #endGeneral
 
 #block ../exosphere.pl
   SPICE=off 
   define _TARGET_ _EUROPA_
 
-  define _ICES_CREATE_COORDINATE_LIST_
+! define _ICES_CREATE_COORDINATE_LIST_
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
 ! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path
   IcesModelCase=Europa09
 
-  addPhysicalModelHeader=ParticleTracker.h
+  addPhysicalModelHeader=ccmc.h
 
 #endblock
+
+#block ../ccmc.pl
+  xmin=(-1.0,-1.0,-1.0)
+  xmax=(1.0,1.0,1.0)
+
+  sphere=on \\ !on, off
+    radius=1.0
+
+#endblock
+
 
 
 
