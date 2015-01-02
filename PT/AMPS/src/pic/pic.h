@@ -2253,7 +2253,6 @@ namespace PIC {
 
     }
 
-
     //coupling of AMPS through the ICES tool
     namespace ICES {
        extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
@@ -2373,12 +2372,26 @@ namespace PIC {
        }
     }
 
+    //coupling with the CCMC's Kemeleon
+    namespace CCMC {
+      using namespace ICES;
+
+      //the mass of the dominant background plasma ion
+      extern double PlasmaSpeciesAtomicMass;
+
+      namespace LFM {
+        void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      }
+
+    }
 
     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
       ICES::GetBackgroundElectricField(E,x,nd,node);
       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
       SWMF::GetBackgroundElectricField(E,x,nd,node);
+      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
+      CCMC::GetBackgroundElectricField(E,x,nd,node);
       #else
       exit(__LINE__,__FILE__,"not implemented");
       #endif
@@ -2389,6 +2402,8 @@ namespace PIC {
        ICES::GetBackgroundMagneticField(B,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundMagneticField(B,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
+       CCMC::GetBackgroundMagneticField(B,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2400,6 +2415,8 @@ namespace PIC {
        ICES::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
+       CCMC::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
