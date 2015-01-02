@@ -2393,7 +2393,9 @@ sub ampsConfigSettings {
       if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); next};
       if (/^SPICE=(.*)$/i) {`echo "SPICE=$1" >> Makefile.local`; next};
       if (/^ICESLOCATION=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); next}; 
-      
+  
+      if (/^BOOST=(.*)$/i) {`echo "BOOST=$1" >> Makefile.local`; next};
+      if (/^KAMELEON=(.*)$/i) {`echo "KAMELEON=$1" >> Makefile.local`; next};
     }    
   }
 }
