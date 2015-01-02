@@ -9,7 +9,7 @@
 #include "pic.h"
 
 
-char PIC::CPLR::ICES::locationICES[_MAX_STRING_LENGTH_PIC_]=""; //location of the data and the dace cases
+char PIC::CPLR::ICES::locationICES[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/ices/ICES/Models";
 char PIC::CPLR::ICES::ModeCaseSWMF[_MAX_STRING_LENGTH_PIC_]="";
 
 //background plasma parameter's offsets
