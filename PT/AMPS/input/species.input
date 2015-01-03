@@ -56,4 +56,8 @@
   mass=1.0*_AMU_
   charge=1.0
 
+#component=Ca
+  mass=40.0*_AMU_
+  charge=0
+
 #endspecies
