@@ -2991,6 +2991,7 @@ out. The unit of the pertrubation output is nT.
 				<option name="rfr" />
 				<option name="line" value="lin" />
 				<option name="eq.rays" value="eqr" />
+				<option name="min B surface" value="eqb" />
 				<option name="cut" />
 				<option name="slice" value="slc" 
 					if="$plotform =~ /\btec\b/"/>
@@ -3025,6 +3026,7 @@ out. The unit of the pertrubation output is nT.
 				<option name="Position variables"    value="POS"  if="$plotarea eq 'lin'" />
 				<option name="Position vars. scaled" value="pos"  if="$plotarea eq 'lin'"/>
 				<option name="Equatorial rays" value="eqr"  if="$plotarea eq 'eqr'"/>
+				<option name="Minimum B surface" value="eqb" if="$plotarea eq 'eqb'"/>
 				<option name="Basic block variables"    value="BBK" />
 				<option name="Basic block vars. scaled"	value="bbk" />
 				<option name="Set variables"    value="VAR" />
@@ -3107,13 +3109,21 @@ out. The unit of the pertrubation output is nT.
 			<parameter name="RadiusMin" type="real" min="1" default="3"/>
 			<parameter name="RadiusMax" type="real" min="1" default="10"/>
 		</if>
+		<if expr="$plotarea =~ /\beqb\b/">
+			<parameter name="nRadius" type="real" min="1" default="20"/>
+			<parameter name="nLon"    type="real" min="1" default="25"/>
+			<parameter name="RadiusMin" type="real" min="1" default="3"/>
+			<parameter name="RadiusMax" type="real" min="1" default="10"/>
+			<parameter name="LongitudeMin" type="real" min="0" default="0"/>
+			<parameter name="LongitudeMax" type="real" max="360" default="360"/>
+		</if>
 		<if expr="$plotarea =~ /\blcb\b/">
 			<parameter name="Radius"  type="integer" min="0." default="6."/>
 			<parameter name="nLon"    type="real"    min="4"  default="36"/>
 		</if>
 		<parameter name="DxSavePlot" type="real" min="-1.0" 
 							default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
 			<parameter name="NamePars" type="string" length="100"/>
@@ -3226,6 +3236,15 @@ eqr eqr idl		StringPlot
 25			nLon
 3.0			RadiusMin
 10.0			RadiusMax
+eqb eqb tec		StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+20			nRadius
+25			nLon
+3.0			RadiusMin
+10.0			RadiusMax
+60.0			LongitudeMin
+300.0			LongitudeMax
 ieb nul tec             StringPlot  !IE grid field line plots
 1000                    DnSavePlot
 -1.                     DtSavePlot
@@ -3248,7 +3267,7 @@ StringPlot must contain the following 3 parts in the following order
 plotform plotarea plotvar
 
 plotform = 'tec', 'hdf', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
-plotarea = '1d', '2d', '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', 'rfr', 'eqr', 'ieb', 'lcb'
+plotarea = '1d', '2d', '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', 'rfr', 'eqr', 'eqb', 'ieb', 'lcb'
 plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'tbl', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
 plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'TBL', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
 \end{verbatim}
@@ -3288,6 +3307,7 @@ lin   - one dimensional plot along a field or stream or current line
 blk   - 3D single block cell centered data, block specified point location
 rfr   - radiotelescope pixel image plot
 eqr   - field lines traced from the magnetic equatorial plane
+eqb   - minimum B surface on a grid defined on the magnetic equatorial plane
 ieb   - field lines traced from a subset of the IE coupled grid
 lcb   - last closed field lines
 \end{verbatim}
@@ -3299,36 +3319,42 @@ The plotvar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
 values or as non-dimensional values:
 \begin{verbatim}
- ALL CAPS  - dimensional
- all lower - dimensionless
+ CAPITALIZED  - dimensional
+ lower case   - dimensionless
 
- 'mhd' - vars: rho Ux Uy Uz E Bx By Bz P Jx Jy Jz
-         pars: g rbody
- 'hd'  - vars: rho Ux Uy Uz E P
-         pars: g rbody
- 'ful' - vars: rho Ux Uy Uz E Bx By Bz B1x B1y B1z P Jx Jy Jz
-         pars: g rbody
- 'raw' - vars: rho rhoUx rhoUy rhoUz E Bx By Bz P b1x b1y b1z divb
-         pars: g rbody
- 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk
-         pars: R_ray
- 'flx' - vars: rho rhoUr Br jr pvecr
-         pars: g eta
  'var' - vars: READ FROM PARAMETER FILE
          pars: READ FROM PARAMETER FILE
+ 'all' - vars: all state variables define in the equation module
+         pars: g
+ 'hd'  - vars: Primitive_Variables
+         pars: g rbody
+ 'mhd' - vars: Primitive_Variables Jx Jy Jz
+         pars: g rbody
+ 'ful' - vars: Primitive_Variables B1x B1y B1z e Jx Jy Jz
+         pars: g rbody
+ 'raw' - vars: Conservative_Variables P b1x b1y b1z divb
+         pars: g rbody
+ 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk    (DoMapEquatorRay=F
+         vars: bx by bz req1 phi1 req2 phi2 status blk        (DoMapEquatorRay=T)
+         pars: rbody
+ 'eqr' - vars: iLine l x y z rho ux uy uz bx by bz p rCurve   (for all rays traced)
+         pars: nRadius, nLon, nPoint
+ 'eqb' - vars: z PrimVarMinB rCurve xZ0 yZ0 zZ0 PrimVarZ0 rCurveZ0  (B is in SM coordinates)
+ 'flx' - vars: rho mr br p jr pvecr
+         pars: g rbody
  'sol' - vars: wl pb
          pars: mu
  'euv' - vars: euv171 euv195 euv284
-         pars:
+         pars: mu
  'sxr' - vars: sxr
-         pars:
+         pars: mu
  'tbl' - vars: listed in the LOS table file
-         pars:
- 'bbk' - vars: dx pe blk blkall
-         pars: 
+         pars: mu
  'rwi' - vars: Intensity
          pars: 
  'int' - vars: 1/B n/B p/B
+         pars: 
+ 'bbk' - vars: dx pe blk blkall
          pars: 
  'nul' - vars: 
          pars: 
@@ -3341,6 +3367,9 @@ Depending on StringPlot, further information is read from the parameter file
 in this order:
 \begin{verbatim}
  PlotRange		if plotarea is 'cut', 'dpl', or 'slc'
+ nRadius nLon           if plotarea is 'eqr' or 'eqb'
+ RadiusMin RadiusMax    if plotarea is 'eqr' or 'eqb'
+ LonMin LonMax          if plotarea is 'eqb'
  Point			if plotarea is 'slc', or 'blk'
  Normal			if plotarea is 'slc'
  DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
@@ -3452,7 +3481,6 @@ ascii                   TypeFile
 \noindent
 The possible values for NameVars with plotarea 'los' 
 are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
-
 
 The radiotelescope pixel image (plotarea 'rfr') plots present the
 plasma emissivity integrals along the ray trajectories within a 2D
