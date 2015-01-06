@@ -64,7 +64,7 @@ double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& Reem
     else if (Temp<650.0) res=1.0-(Temp-300.0)/350.0;
 
     break;
-  case _H_PLUS_SPEC_:
+  case _H_PLUS_SPEC_: case _HE_2PLUS_SPEC_:
     res=1.0;
 
     break;

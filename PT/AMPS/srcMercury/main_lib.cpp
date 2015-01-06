@@ -382,7 +382,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   case _NA_PLUS_SPEC_:
     CharacteristicSpeed=400.0E3;
     break;
-  case _H_PLUS_SPEC_:
+  case _H_PLUS_SPEC_: case _HE_2PLUS_SPEC_:
     CharacteristicSpeed=1500.0E3;
     break;
   default:
@@ -1231,6 +1231,10 @@ void amps_init() {
 
   if (_H_PLUS_SPEC_>0) {
     PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H_PLUS_SPEC_);
+  }
+
+  if (_HE_2PLUS_SPEC_>0) {
+    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_HE_2PLUS_SPEC_);
   }
 
   //set photolytic reactions
