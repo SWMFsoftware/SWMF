@@ -410,13 +410,13 @@ contains
                   i, Coord_ID(n,:), Var_IV(n,:)
           end do
        case(2)
-          do i = 1, n1; do j = 1, n2
+          do j = 1, n2; do i = 1, n1
              n = i + n1*(j-1)
              write(UNITTMP_,'(2i6,100es18.10)') &
                   j, i, Coord_ID(n,:), Var_IV(n, :)
           end do; end do
        case(3)
-          do i = 1, n1; do j = 1, n2; do k = 1, n3
+          do k = 1, n3; do j = 1, n2; do i = 1, n1
              n = i + n1*(j-1) + n1*n2*(k-1)
              write(UNITTMP_,'(3i6,100es18.10)') &
                   k, j, i, Coord_ID(n,:), Var_IV(n, :)
