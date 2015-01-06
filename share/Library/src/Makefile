@@ -45,12 +45,13 @@ MODULES = \
 	ModTriangulate.o\
 	ModTriangulateSpherical.o\
 	ModUtilities.o\
+	ModUtilities_c.o\
 	CON_axes.o\
 	CON_geopack.o\
 	CON_line_extract.o\
 	CON_planet.o\
 	CON_planet_field.o\
-	CON_ray_trace.o
+	CON_ray_trace.o\
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${MODULES}

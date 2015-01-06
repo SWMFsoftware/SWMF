@@ -263,6 +263,7 @@ OBJ_INITIAL_STATE = \
 	../src/ModIoUnit.o \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
+	../src/ModUtilities_c.o \
 	../src/ModReadParam.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
@@ -380,6 +381,7 @@ OBJ_AXES = \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
 	../src/ModUtilities.o \
+	../src/ModUtilities_c.o \
 	../src/ModKind.o \
 	../src/ModConst.o \
 	../src/ModNumConst.o \
@@ -415,7 +417,8 @@ OBJ_PLANET_FIELD = \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
-	../src/ModUtilities.o
+	../src/ModUtilities.o \
+	../src/ModUtilities_c.o
 
 test_planet_field_exe:
 	@(cd ../src; make CON_planet_field.o)
@@ -440,6 +443,7 @@ OBJ_PLOT_FILE = \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
+	../src/ModUtilities_c.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o
 
@@ -467,6 +471,7 @@ OBJ_LOOKUP_TABLE = \
 	../src/ModReadParam.o \
 	../src/ModInterpolate.o \
 	../src/ModUtilities.o \
+	../src/ModUtilities_c.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
 	../src/ModLookupTable.o
@@ -492,7 +497,8 @@ OBJ_UTILITIES = \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
-	../src/ModUtilities.o
+	../src/ModUtilities.o \
+	../src/ModUtilities_c.o
 
 test_utilities_exe:
 	@(cd ../src; make ModUtilities.o)
@@ -507,6 +513,7 @@ test_utilities:
 	-@(diff test_utilities.tmp test_utilities.log \
 						>  test_utilities.diff)
 	@ls -l test_utilities.diff
+	@rmdir xxx
 
 #######################################################################
 
@@ -539,6 +546,7 @@ OBJ_PROCESS_VAR_NAME = \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
 	../src/ModUtilities.o \
+	../src/ModUtilities_c.o \
 	../src/ModProcessVarName.o
 
 test_process_var_name:

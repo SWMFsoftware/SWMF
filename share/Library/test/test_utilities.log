@@ -4,6 +4,8 @@ check_dir returned successfully
 check directory "xxx/"
 ERROR: check_dir ERROR: Cannot find/write into directory xxx/
 Do not actually stop in the test
+testing make_dir
+make directory "xxx/"
 
 testing fix_dir_name
 fixed empty string=

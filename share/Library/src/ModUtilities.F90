@@ -33,6 +33,7 @@ module ModUtilities
   public:: sleep
   public:: check_allocate
   public:: test_mod_utility
+  public:: make_dir
 
   logical, public :: DoFlush = .true.
 
@@ -45,6 +46,34 @@ module ModUtilities
   end interface
 
 contains
+
+
+  !BOP ========================================================================
+  !ROUTINE: make_dir - Create a directory
+  !INTERFACE:
+  subroutine make_dir(NameDir)
+
+    use iso_c_binding
+
+    !INPUT/OUTPUT ARGUMENTS:
+    character(len=*), intent(in)::NameDir
+
+    ! Define an interface to mkdir_wrapper, which is implemented in ModUtilities_c.c.
+    interface
+       subroutine mkdir_wrapper(path) bind(C)
+         use iso_c_binding
+         character(kind=c_char), intent(in)::path
+       end subroutine mkdir_wrapper
+    end interface
+
+    !DESCRIPTION:
+    ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x). If directory already exists, this function does nothing.
+    !EOP
+
+    call mkdir_wrapper(NameDir//C_NULL_CHAR)
+    
+  end subroutine make_dir
+
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
   !INTERFACE:
@@ -106,7 +135,7 @@ contains
     endif
 
   end subroutine check_dir
-
+  
   !BOP ========================================================================
   !ROUTINE: fix_dir_name - add a slash to the end of the directory name
   !INTERFACE:
@@ -547,6 +576,11 @@ contains
     write(*,'(a)') 'check directory "xxx/"'
     call check_dir('xxx/')
 
+    write(*,'(a)') 'testing make_dir'
+    write(*,'(a)') 'make directory "xxx/"'
+    call make_dir('xxx')
+    call check_dir('xxx/')
+
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
     call fix_dir_name(String)
@@ -600,6 +634,7 @@ contains
     write(*,'(a)') 'upper case string='//trim(String)
     call lower_case(String)
     write(*,'(a)') 'lower case string='//trim(String)
+
 
   end subroutine test_mod_utility
 
