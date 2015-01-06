@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=Na,na_plus,h_plus  !, NA_Plus !lkdsjflksdj   
+SpeciesList=Na,na_plus,h_plus,He_2plus  !, NA_Plus !lkdsjflksdj   
 
 
 !settings of the directories
@@ -52,7 +52,7 @@ CouplerMode=ices !!off, ices, swmf
 
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=2000
   MaxMeshRefinmentLevel=8! 2 !4
   EnforceRequestedMeshResolution=off !on,off
 
@@ -179,7 +179,8 @@ CouplerMode=ices !!off, ices, swmf
   BackgroundIonInjection=on \\ !on,off
     InjectionMode=SteadyState \\ ! SteadyState, TimeDependent 
     vmax=1500.0e3 \\ !the maximum velocity of the injected particles
-    IonNumberDensityFraction(H_PLUS)=1.0 
+    IonNumberDensityFraction(H_PLUS)=0.98 \\
+    IonNumberDensityFraction(He_2PLUS)=0.02 !Aellig et al., JGR, 2001, vol 28, no 14m pp2767-2770  
 
 !---------------------------------   SOURCE RATE --------------------------------------------
   Source:Sputtering=on \\ !on,off
@@ -209,18 +210,18 @@ CouplerMode=ices !!off, ices, swmf
 
 
  
-  Source:ImpactVaporization=off \\ !on,off
+  Source:ImpactVaporization=on \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(NA)=1.69E22, SourceTemperature(NA)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
 
 
 
-  Source:ThermalDesorption=off \\ !on,off
+  Source:ThermalDesorption=on \\ !on,off
     uThermal(NA)=1.85*eV2J, VibrationalFrequency(NA)=1.0E13
  
 
-  Source:PhotonStimulatedDesorption=off \\ !on,off
+  Source:PhotonStimulatedDesorption=on \\ !on,off
     PhotonFlux_1AU=2.0E14*1.0E4 \\   !//Killen-2012-JGR, Yakshinskii+Madey-1999-? 
     CrossSection(NA)=3.0E-21*1.0E-4, InjectionVelocityRange(NA)=10,10.0E3  !//Satantos-2010-? ; 3.0E-20*1.0E-4;  //Killen-2012-JGR, Yakshinskii+Madey-1999-? 
      
