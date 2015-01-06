@@ -1250,16 +1250,17 @@ contains
     use CON_line_extract, ONLY: line_put
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitRho_, UnitU_, UnitP_, UnitB_
     use ModAdvance, ONLY: State_VGB, nVar, &
-         Rho_, RhoUx_, RhoUz_, Ux_, Uz_, p_, Bx_, Bz_, Ppar_
+         Bx_, Bz_, Ppar_
     use ModMain, ONLY: UseB0
     use ModB0,   ONLY: get_b0
     use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB, &
          DoExtractCurvatureB, CurvatureB_GB
     use ModInterpolate, ONLY: trilinear
 
-    real, intent(in) :: x_D(3),Xyz_D(3)
+    real, intent(in) :: x_D(3)   ! normalized coordinates
+    real, intent(in) :: Xyz_D(3) ! Cartesian coordinates
 
-    real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar+3)
+    real    :: State_V(nVar), B0_D(3), PlotVar_V(4+nVar+4)
     integer :: n, iLine
     !----------------------------------------------------------------------
 
@@ -1488,7 +1489,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
        UseB0, DoAnisoPressureIMCoupling
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_
+  use ModAdvance, ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
   use ModB0,      ONLY: B0_DGB
   use ModProcMH
   use ModMpi
@@ -1695,7 +1696,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B, DoAnisoPressureIMCoupling
   use ModPhysics,        ONLY: rBody
-  use ModAdvance,        ONLY: nVar, State_VGB, Rho_, p_, Ppar_, Bx_, Bz_
+  use ModAdvance,        ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
   use ModB0,             ONLY: B0_DGB
   use ModProcMH
   use ModMpi
@@ -1937,7 +1938,12 @@ subroutine plot_ray_equator(iFile)
      call get_time_string
      NameFileEnd = "_t"//StringDateOrTime
   end if
-  write(NameFileEnd,'(a,i7.7,a)') trim(NameFileEnd) // '_n',n_step, '.out'
+  write(NameFileEnd,'(a,i7.7)') trim(NameFileEnd) // '_n',n_step
+  if(TypeFile_I(iFile) == 'tec')then
+     NameFileEnd = trim(NameFileEnd)//'.dat'
+  else
+     NameFileEnd = trim(NameFileEnd)//'.out'
+  end if
 
   call line_get(nVarOut, nPoint)
 
@@ -2063,7 +2069,7 @@ subroutine plot_ray_equator(iFile)
         Name_I(iVar+nVar+4) = trim(Name_I(iVar))//'Z0'
      end do
 
-     NameFile = trim(NamePlotDir)//"eqb_"//NameFileEnd
+     NameFile = trim(NamePlotDir)//"eqb"//NameFileEnd
      call save_plot_file( &
           NameFile, &
           TypeFileIn=TypeFile_I(iFile), &
@@ -2083,9 +2089,10 @@ subroutine plot_ray_equator(iFile)
   deallocate(PlotVar_VI)
 
   ! Now save the mapping files
-  NameFile = trim(NamePlotDir)//"map_north_"//NameFileEnd
+  NameFile = trim(NamePlotDir)//"map_north"//NameFileEnd
   call save_plot_file( &
        NameFile, &
+       TypeFileIn=TypeFile_I(iFile), &
        StringHeaderIn = 'Mapping to northern ionosphere', &
        TimeIn       = time_simulation, &
        nStepIn      = n_step, &
@@ -2094,9 +2101,10 @@ subroutine plot_ray_equator(iFile)
        CoordMaxIn_D = (/rMax, 360.0/), &
        VarIn_VII  = RayMap_DSII(:,1,:,:))
 
-  NameFile = trim(NamePlotDir)//"map_south_"//NameFileEnd
+  NameFile = trim(NamePlotDir)//"map_south"//NameFileEnd
   call save_plot_file( &
        NameFile, &
+       TypeFileIn=TypeFile_I(iFile), &
        StringHeaderIn = 'Mapping to southern ionosphere', &
        TimeIn       = time_simulation, &
        nStepIn      = n_step, &
@@ -2849,7 +2857,7 @@ subroutine lcb_plot(iFile)
   use CON_axes,          ONLY: transform_matrix
   use ModIoUnit,         ONLY: UnitTmp_
   use ModAdvance,        ONLY: nVar
-  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, time_accurate, n_step
+  use ModMain,           ONLY: Time_Simulation, time_accurate, n_step
   use ModNumConst,       ONLY: cDegToRad
   use ModProcMH,         ONLY: iProc, iComm
   use ModPhysics,        ONLY: Si2No_V, No2Si_V, UnitX_, UnitRho_, UnitP_, UnitB_, rBody
