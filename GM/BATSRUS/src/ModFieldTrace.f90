@@ -1838,7 +1838,7 @@ subroutine plot_ray_equator(iFile)
   use ModProcMH,  ONLY: iProc
   use ModIoUnit,         ONLY: UnitTmp_
   use ModPlotFile,       ONLY: save_plot_file
-  use ModRayTrace,       ONLY: RayMap_DSII, DoExtractCurvatureB
+  use ModRayTrace,       ONLY: RayMap_DSII, DoExtractCurvatureB, CLOSEDRAY
   use CON_line_extract,  ONLY: line_get, line_clean
   use CON_axes,          ONLY: transform_matrix
   use ModNumConst,       ONLY: cDegToRad
@@ -2010,44 +2010,54 @@ subroutine plot_ray_equator(iFile)
            nPointDn = iPointMax - iPointMid
            nPointAll= nPointDn + nPointUp
 
-           ! Put together the two halves
-           State_VI(:,1:nPointDn) &
-                = PlotVar_VI(:,iPointMax:iPointMid+1:-1)
-           State_VI(:,nPointDn+1:nPointAll) &
-                = PlotVar_VI(:,iPointMin+1:iPointMid)
+           ! Skip all (half)open field lines 
+           if(any(RayMap_DSII(1,:,iR,iLon) < CLOSEDRAY))then
+              ! Set impossible values (density cannot be zero)
+              StateMinB_VII(:,iR,iLon)  = 0.0
+              ! Set coordinates to starting point position in the SM Z=0 plane
+              StateMinB_VII(1:2,iR,iLon)           = 2*PlotVar_VI(2:3,iPointMin)
+              StateMinB_VII(nVar+5:nVar+6,iR,iLon) =   PlotVar_VI(2:3,iPointMin)
+           else
+              ! Put together the two halves
+              State_VI(:,1:nPointDn) &
+                   = PlotVar_VI(:,iPointMax:iPointMid+1:-1)
+              State_VI(:,nPointDn+1:nPointAll) &
+                   = PlotVar_VI(:,iPointMin+1:iPointMid)
 
-           ! Flip the sign of the "length" variables for the Down half
-           ! so that the length is a continuous function along the whole field line
-           State_VI(1,1:nPointDn) = -State_VI(1,1:nPointDn)
+              ! Flip the sign of the "length" variables for the Down half
+              ! so that the length is a continuous function along the whole field line
+              State_VI(1,1:nPointDn) = -State_VI(1,1:nPointDn)
 
-           ! Find minimum of B^2
-           iPoint = minloc( sum(State_VI(4+Bx_:4+Bz_,1:nPointAll)**2, DIM=1), &
-                DIM=1)
+              ! Find minimum of B^2
+              iPoint = minloc( sum(State_VI(4+Bx_:4+Bz_,1:nPointAll)**2, DIM=1), &
+                   DIM=1)
 
-           ! Fit parabola around minimum B value using "length" as the coordinate
-           call fit_parabola( &
-                 State_VI(1,iPoint-1:iPoint+1), &
-                 sqrt(sum(State_VI(4+Bx_:4+Bz_,iPoint-1:iPoint+1)**2, DIM=1)), &
-                 Weight3Out_I=Weight_I)
+              ! Fit parabola around minimum B value using "length" as the coordinate
+              call fit_parabola( &
+                   State_VI(1,iPoint-1:iPoint+1), &
+                   sqrt(sum(State_VI(4+Bx_:4+Bz_,iPoint-1:iPoint+1)**2, DIM=1)), &
+                   Weight3Out_I=Weight_I)
 
-           ! Don't save line index and length
+              ! Don't save line index and length
 
-           ! First nVar+4 variables are at minimum B
-           ! Interpolate to minimum point obtained from fit_parabola
-           do iVar = 1, nVar+4
-              StateMinB_VII(iVar,iR,iLon) = &
-                   sum(State_VI(iVar+1,iPoint-1:iPoint+1)*Weight_I)
-           end do
+              ! First nVar+4 variables are at minimum B
+              ! Interpolate to minimum point obtained from fit_parabola
+              do iVar = 1, nVar+4
+                 StateMinB_VII(iVar,iR,iLon) = &
+                      sum(State_VI(iVar+1,iPoint-1:iPoint+1)*Weight_I)
+              end do
 
-           ! Next nVar+4 variables are at z=0 (which is the start point)
-           StateMinB_VII(nVar+5: ,iR,iLon) = State_VI(2:,nPointDn)
+              ! Next nVar+4 variables are at z=0 (which is the start point)
+              StateMinB_VII(nVar+5: ,iR,iLon) = State_VI(2:,nPointDn)
 
-           ! Convert magnetic fields into SM coordinate system
-           StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
-                matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
+              ! Convert magnetic fields into SM coordinate system
+              StateMinB_VII(3+Bx_:3+Bz_,iR,iLon) = &
+                   matmul(SmGm_DD, StateMinB_VII(3+Bx_:3+Bz_,iR,iLon))
 
-           StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
-                matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
+              StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon) = &
+                   matmul(SmGm_DD, StateMinB_VII(nVar+7+Bx_:nVar+7+Bz_,iR,iLon))
+
+           end if
 
            ! Prepare for the next line
            iPointMin = iPointMax + 1
