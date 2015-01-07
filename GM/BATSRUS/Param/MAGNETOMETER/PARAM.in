@@ -6,16 +6,15 @@ T			DoEcho
 100			DnShowProgressLong
 
 #DESCRIPTION
-Run GM in time accurate mode
-
-#PLANET
-EARTH			NamePlanet
+Test magnetometer calculation and min B plots
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 #TIMEACCURATE
 T			DoTimeAccurate
+
+! June is chosen to make the magnetic equatorial plane tilted
 
 #STARTTIME
 2000			iYear
@@ -92,14 +91,6 @@ GM/Param/MAGNETOMETER/magin.dat				MagInputFile
 1			nOrder
 Rusanov			TypeFlux
 
-#TIMESTEPPING
-2			nStage
-0.8			Cfl
-
-#FIXEDTIMESTEP
-T                       UseDtFixed
-5.0			DtFixedDim
-
 #SAVEPLOT
 5                       nPlotFile
 x=0 FUL idl             StringPlot
@@ -120,9 +111,9 @@ eqb eqb idl_ascii	StringPlot
 20			nRadius
 25			nLon
 3.0			RadiusMin	
-10.0			RadiusMax
-60.0			LonMin
-300.0			LonMax
+20.0			RadiusMax
+0.0			LongitudeMin
+360.0			LongitudeMax
 eqb eqb tec		StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
@@ -130,11 +121,10 @@ eqb eqb tec		StringPlot
 25			nLon
 3.0			RadiusMin	
 10.0			RadiusMax
-60.0			LonMin
-300.0			LonMax
+60.0			LongitudeMin
+300.0			LongitudeMax
 
 #STOP
--1			MaxIter
-60.0			tSimMax
+-1			MaxIteration
+60.0			tSimulationMax
 
-#END
