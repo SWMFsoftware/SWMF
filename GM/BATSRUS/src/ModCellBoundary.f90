@@ -38,7 +38,9 @@ contains
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, MinFaceBoundary, MaxFaceBoundary, XyzMin_D
-    use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI
+    use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
+         nVectorVar,iVectorVar_I
+    use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
          iTrImplFirst, iTrImplLast
@@ -48,6 +50,7 @@ contains
          Theta_, nRoot_D, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModUserInterface ! user_set_cell_boundary
     use ModThreadedLC, ONLY: set_field_line_thread_bc
+    use BATL_lib, ONLY: IsCartesianGrid
 
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
@@ -229,50 +232,56 @@ contains
           end if
 
        case('reflect')
-          ! Scalars are symmetric
-          SymmCoeff_V = 1.0
+          if(IsCartesianGrid)then
+             ! Scalars are symmetric
+             SymmCoeff_V = 1.0
 
-	  ! Normal vector components are mirror symmetric
-	  select case(iSide)
-          case(1,2)
-	     SymmCoeff_V(iRhoUx_I(1:nFluid)) = -1.0
-             if(UseB)SymmCoeff_V(Bx_) = -1.0
- 	  case(3,4)
-	     SymmCoeff_V(iRhoUy_I(1:nFluid)) = -1.0
-             if(UseB)SymmCoeff_V(By_) = -1.0
-             ! For RZ geometry, mirror Z components too at the axis
-             if(IsRzGeometry .and. XyzMin_D(2)==0.0 .and. iSide==3)then
-	        SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
-	        if(UseB)SymmCoeff_V(Bz_) = -1.0
-	     end if
-	  case(5,6)
-             SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
-             if(UseB)SymmCoeff_V(Bz_) = -1.0
-          end select
-          call set_symm_bc(1, nVarState, SymmCoeff_V)
-
-       case('reflect_semi')
-          ! Scalars are symmetric
-          SymmCoeff_V = 1.0
-
-          ! Semi-implicit scheme is mostly applied to scalars
-          ! The only exception right now is the magnetic field
-          if(TypeSemiImplicit == 'resistivity')then
+             ! Normal vector components are mirror symmetric
              select case(iSide)
              case(1,2)
-                SymmCoeff_V(BxImpl_) = -1.0
+                SymmCoeff_V(iRhoUx_I(1:nFluid)) = -1.0
+                if(UseB)SymmCoeff_V(Bx_) = -1.0
              case(3,4)
-                SymmCoeff_V(ByImpl_) = -1.0
+                SymmCoeff_V(iRhoUy_I(1:nFluid)) = -1.0
+                if(UseB)SymmCoeff_V(By_) = -1.0
                 ! For RZ geometry, mirror Z components too at the axis
                 if(IsRzGeometry .and. XyzMin_D(2)==0.0 .and. iSide==3)then
-                   SymmCoeff_V(BzImpl_) = -1.0
+                   SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
+                   if(UseB)SymmCoeff_V(Bz_) = -1.0
                 end if
              case(5,6)
-                SymmCoeff_V(BzImpl_) = -1.0
+                SymmCoeff_V(iRhoUz_I(1:nFluid)) = -1.0
+                if(UseB)SymmCoeff_V(Bz_) = -1.0
              end select
+             call set_symm_bc(1, nVarState, SymmCoeff_V)
+          else
+             call set_reflect_bc(nVectorVar, iVectorVar_I)             
           end if
-          call set_symm_bc(1, nVarState, SymmCoeff_V)
+       case('reflect_semi')
+          if(IsCartesianGrid .or. TypeSemiImplicit /= 'resistivity')then
+             ! Scalars are symmetric
+             SymmCoeff_V = 1.0
 
+             ! Semi-implicit scheme is mostly applied to scalars
+             ! The only exception right now is the magnetic field
+             if(TypeSemiImplicit == 'resistivity')then
+                select case(iSide)
+                case(1,2)
+                   SymmCoeff_V(BxImpl_) = -1.0
+                case(3,4)
+                   SymmCoeff_V(ByImpl_) = -1.0
+                   ! For RZ geometry, mirror Z components too at the axis
+                   if(IsRzGeometry .and. XyzMin_D(2)==0.0 .and. iSide==3)then
+                      SymmCoeff_V(BzImpl_) = -1.0
+                   end if
+                case(5,6)
+                   SymmCoeff_V(BzImpl_) = -1.0
+                end select
+             end if
+             call set_symm_bc(1, nVarState, SymmCoeff_V)
+          else
+             call set_reflect_bc(nVectorSemi, iVectorSemi_I)
+          end if
        case('linetied')
           ! Most variables float
           call set_float_bc(1, nVarState)
@@ -502,6 +511,92 @@ contains
 
     end subroutine set_symm_bc
 
+    !==========================================================================
+    subroutine set_reflect_bc(nVector, iVector_I)
+
+      ! Copy variables in a symmetric fashion, and then
+      ! reflect the normal component of all vector variables
+
+      use BATL_lib, ONLY: Xyz_DGB
+
+      integer, intent(in):: nVector
+      integer, allocatable:: iVector_I(:)
+
+      integer:: iVector, iVarX, iVarZ
+      integer:: i, j, k, iL, iR, jL, jR, kL, kR
+      real :: Normal_D(MaxDim), VarNormal_D(MaxDim), InvNormal2
+      !-----------------------------------------------------------------------
+      ! Scalars are symmetric
+      SymmCoeff_V = 1.0
+      call set_symm_bc(1, nVarState, SymmCoeff_V)
+
+      select case(iSide)
+      case(1,2)
+         if(iSide == 1)then
+            iL = 0; iR = 1
+         else
+            iL = nI; iR = nI+1
+         end if
+
+         do k = kMin, kMax; do j = jMin, jMax
+            ! Face normal is parallel with vector connecting the cell centers
+            Normal_D = Xyz_DGB(:,iR,j,k,iBlock) - Xyz_DGB(:,iL,j,k,iBlock)
+            InvNormal2 = 1/sum(Normal_D**2)
+            do iVector = 1, nVector
+               iVarX = iVector_I(iVector); iVarZ = iVarX + 2
+               do i = iMin, iMax
+                  VarNormal_D = InvNormal2* &
+                       sum(Normal_D*State_VG(iVarX:iVarZ,i,j,k))*Normal_D
+                  State_VG(iVarX:iVarZ,i,j,k) = &
+                       State_VG(iVarX:iVarZ,i,j,k) - 2*VarNormal_D
+               end do
+            end do
+         end do; end do
+      case(3,4)
+         if(iSide == 3)then
+            jL = 0; jR = 1
+         else
+            jL = nJ; jR = nJ+1
+         end if
+
+         do k = kMin, kMax; do i = iMin, iMax
+            ! Face normal is parallel with vector connecting the cell centers
+            Normal_D = Xyz_DGB(:,i,jR,k,iBlock) - Xyz_DGB(:,i,jL,k,iBlock)
+            InvNormal2 = 1/sum(Normal_D**2)
+            do iVector = 1, nVector
+               iVarX = iVector_I(iVector); iVarZ = iVarX + 2
+               do j = jMin, jMax
+                  VarNormal_D = InvNormal2* &
+                       sum(Normal_D*State_VG(iVarX:iVarZ,i,j,k))*Normal_D
+                  State_VG(iVarX:iVarZ,i,j,k) = &
+                       State_VG(iVarX:iVarZ,i,j,k) - 2*VarNormal_D
+               end do
+            end do
+         end do; end do
+      case(5,6)
+         if(iSide == 5)then
+            kL = 0; kR = 1
+         else
+            kL = nK; kR = nK+1
+         end if
+
+         do j = jMin, jMax; do i = iMin, iMax
+            ! Face normal is parallel with vector connecting the cell centers
+            Normal_D = Xyz_DGB(:,i,j,kR,iBlock) - Xyz_DGB(:,i,j,kL,iBlock)
+            InvNormal2 = 1/sum(Normal_D**2)
+            do iVector = 1, nVector
+               iVarX = iVector_I(iVector); iVarZ = iVarX + 2
+               do k = kMin, kMax
+                  VarNormal_D = InvNormal2* &
+                       sum(Normal_D*State_VG(iVarX:iVarZ,i,j,k))*Normal_D
+                  State_VG(iVarX:iVarZ,i,j,k) = &
+                       State_VG(iVarX:iVarZ,i,j,k) - 2*VarNormal_D
+               end do
+            end do
+         end do; end do
+      end select
+
+    end subroutine set_reflect_bc
     !==========================================================================
     subroutine set_fixed_bc(iVarMin, iVarMax, State_V)
 
