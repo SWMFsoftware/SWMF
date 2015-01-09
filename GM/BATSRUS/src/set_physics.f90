@@ -326,12 +326,18 @@ subroutine set_physics_constants
   !\
   ! Now do the magnetic field stuff
   !/
+  ! Monopole strength (usually zero)
+  if(TypeNormalization == 'NONE')then
+     MonopoleStrength = MonopoleStrengthSi
+  else
+     MonopoleStrength = MonopoleStrengthSi*Si2No_V(UnitB_)
+  end if
+
   ! The *ThetaTilt and Bdp variables are not needed for GM except
   ! for reporting them in write_progress.
 
   ! Nondimensionalize dipole strength.
   Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
-
 
   BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              
 
