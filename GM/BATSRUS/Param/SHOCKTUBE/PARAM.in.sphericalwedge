@@ -1,0 +1,172 @@
+Config.pl -e=Mhd -u=Waves -g=8,2,2,1000,1
+
+#ECHO
+T			DoEcho
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+NONCONSERVATIVE
+T			UseNonConservative
+
+#GRID
+64			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-10.0			xMin
+ 10.0			xMax
+-10.0			yMin
+ 10.0			yMax
+-10.0			zMin
+ 10.0			zMax
+
+#GRIDGEOMETRYLIMIT
+spherical                       TypeGeometry
+4.0                             CoordMin_D(1) Radius
+8.0                             CoordMax_D(1)
+175.0                           CoordMin_D(2) Longitude
+185.0                           CoordMax_D(2)
+-5.0                            CoordMin_D(3) Latitude
++5.0                            CoordMax_D(3)
+
+! This makes the unperturbed sound speed = 1 for gamma=5/3
+
+#UNIFORMSTATE
+5.0			rho (left state)
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+3.0			p
+
+#MONOPOLEB0
+16.0			MonopoleStrengthSi
+
+#USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------
+
+TOPHAT
+8			iVar   p
+0.01			Amplitude
+6.0			LambdaX
+6.0			LambdaY
+6.0			LambdaZ
+0.0			CenterX
+0.0			CenterY
+0.0			CenterZ
+
+#POWERPROFILE
+5			iVar   Bx
+0.0			CoeffX
+1			nPowerX
+0.0			CoeffY
+1			nPowerY
+0.0			CoeffZ
+1			nPowerZ
+
+#POWERPROFILE
+6			iVar   By
+0.0			CoeffX
+1			nPowerX
+0.0			CoeffY
+1			nPowerY
+0.0			CoeffZ
+1			nPowerZ
+
+#POWERPROFILE
+7			iVar   Bz
+0.0			CoeffX
+1			nPowerX
+0.0			CoeffY
+1			nPowerY
+0.0			CoeffZ
+1			nPowerZ
+
+#POWERPROFILE
+8			iVar   p
+0.01			CoeffX
+2			nPowerX
+0.01			CoeffY
+2			nPowerY
+0.01			CoeffZ
+2			nPowerZ
+
+
+
+#USERINPUTEND ---------------------
+
+#FACEBOUNDARY
+6		MinFaceBoundary
+-2		MaxFaceBoundary
+
+#OUTERBOUNDARY
+reflect			rMin
+reflect			rMax
+reflect			PhiMin
+reflect			PhiMax
+reflect			ThetaMin
+reflect			ThetaMax
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVERESTART
+F			DoSaverestart
+
+#PLOTFILENAME
+second			NameMaxTimeUnit
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotfile
+y=0 ful idl_ascii	PlotString
+-1              	DnSavePlot
+0.5            	        DtSavePlot
+0.0             	DxSavePlot
+z=0 ful idl_ascii	PlotString
+-1              	DnSavePlot
+0.5            	        DtSavePlot
+0.0             	DxSavePlot
+
+
+1d ful idl_ascii	PlotString
+-1              	DnSavePlot
+0.5            	        DtSavePlot
+0.0             	DxSavePlot
+
+#STOP
+-1			MaxIteration
+8.0			tSimulationMax
