@@ -170,57 +170,15 @@ contains
   !INTERFACE:
   subroutine flush_unit(iUnit)
 
-    !USES:
-#ifdef compNAGF95
-    use F90_UNIX_IO,only: flush 
-#endif
-
     !INPUT ARGUMENTS:
     integer, intent(in) :: iUnit
 
     !DESCRIPTION:
-    ! Do a flush in an operating system dependent manner if DoFlush is true.
+    ! Flush the I/O unit iUnit if DoFlush is true
     !EOP
 
-    integer :: iError
     !-------------------------------------------------------------------------
-    if(.not.DoFlush) RETURN
-
-#ifdef sysIRIX64
-    call flush(iUnit,iError) 
-#endif
-
-#ifdef sysAIX
-    call flush_(iUnit)       
-#endif
-
-#ifdef compNAGF95
-    call flush(iUnit,iError)
-#endif
- 
-#ifdef compPGF90
-    call flush(iUnit)
-#endif
-
-#ifdef compXLF90
-    call flush(iUnit)
-#endif
-
-#ifdef compifort
-    call flush(iUnit) 
-#endif
-
-#ifdef compmpif90
-    call flush(iUnit) 
-#endif
-
-#ifdef sysOSF1
-    call flush(iUnit) 
-#endif
-
-#ifdef syslf95
-    call flush(iUnit) 
-#endif
+    if(DoFlush) flush(iUnit)
 
   end subroutine flush_unit
 
