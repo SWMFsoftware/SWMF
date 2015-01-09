@@ -371,6 +371,21 @@ given by the three parameters. The default is no shift
 (at least for most planets).
 </command>
 
+<command name="MONOPOLEB0">
+	<parameter name="MonopoleStrengthSi" type="real" default="0"/>
+
+#MONOPOLEB0
+16.0			MonopoleStrengthSi [Tesla]
+
+The MonopoleStrengthSi variable contains the
+magnetic strength of the monopole B0 field at R=1 radial distance.
+The unit is Tesla unless the normalization is set to NONE
+(see #NORMALIZATION command), when it is just the normalized value.
+
+The default value is zero.
+</command>
+
+
 <command name="DIPOLE" if="$_IsStandAlone">
 	<parameter name="DipoleStrength" type="real" />
 
@@ -1488,26 +1503,28 @@ The default is Cartesian geometry.
 		<option name="spherical_lnr"		/>
 		<option name="spherical_genr"		/>
 	</parameter>
-        <parameter name="CoordMin_D(1)"   type="real"                      />
-        <parameter name="CoordMax_D(1)"   type="real" min="$CoordMin_D(1)" />
-	<parameter name="CoordMin_D(2)"   type="real"                      />
-        <parameter name="CoordMax_D(2)"   type="real" min="$CoordMin_D(2)" />
-        <parameter name="CoordMin_D(3)"   type="real"                      />
-        <parameter name="CoordMax_D(3)"   type="real" min="$CoordMin_D(3)" />
+        <parameter name="Coord1Min" type="real"                  />
+        <parameter name="Coord1Max" type="real" min="$Coord1Min" />
+	<parameter name="Coord2Min" type="real"                  />
+        <parameter name="Coord2Max" type="real" min="$Coord2Min" />
+        <parameter name="Coord3Min" type="real"                  />
+        <parameter name="Coord3Max" type="real" min="$Coord3Min" />
 #GRIDGEOMETRYLIMIT
 spherical			TypeGeometry
-1.0				CoordMin_D(1) Radius
-24.0				CoordMax_D(1)
-0.0				CoordMin_D(2) Longitude
-360.0				CoordMax_D(2)
--90.0				CoordMin_D(3) Latitude
-90.0				CoordMax_D(3)
+1.0				Coord1Min Radius
+24.0				Coord1Max
+0.0				Coord2Min Longitude
+360.0				Coord2Max
+-90.0				Coord3Min Latitude
+90.0				Coord3Max
 
 The #GRIDGEOMETRYLIMIT command is similar to the #GRIDGEOMETRY command, but
 provides in addition the flexibility to change the limits of the
 generalized coordinates. This allows to construct grids such as a spherical
-or cylindrical wedge geometries. For spherical and cylindrical grids the angles
+or cylindrical wedge. For spherical and cylindrical grids the angles
 are provided in degrees.
+
+Default is Cartesian grid.
 </command>
 
 <command name="LIMITRADIUS" if="$_IsFirstSession">
