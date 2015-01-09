@@ -237,7 +237,13 @@ subroutine MH_set_parameters(TypeAction)
         call init_axes(StartTime)
      end if
 
-     if(IsStandAlone .and. NameThisComp=='GM') then
+     if(MonopoleStrengthSi /= 0.0)then
+        UseB0       = .true.
+        UseB0Source = .false.
+        UseCurlB0   = .false.
+        DoUpdateB0  = .false.
+        DtUpdateB0  = -1.0
+     elseif(IsStandAlone .and. NameThisComp=='GM') then
         ! Check and set some planet variables (e.g. DoUpdateB0)
         call check_planet_var(iProc==0, time_accurate)
 
@@ -1315,7 +1321,7 @@ subroutine MH_set_parameters(TypeAction)
         ! reinitialize constrained transport if needed
         DoInitConstrainB = .true.
 
-     case("#USEB0", "#DIVBSOURCE", "#USECURLB0")
+     case("#USEB0", "#DIVBSOURCE", "#USECURLB0", "#MONOPOLEB0")
         if(.not.is_first_session())CYCLE READPARAM
         call read_b0_param(NameCommand)
 
