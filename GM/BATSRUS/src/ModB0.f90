@@ -69,6 +69,7 @@ contains
   subroutine read_b0_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
+    use ModPhysics,   ONLY: MonopoleStrengthSi
 
     character(len=*), intent(in):: NameCommand
 
@@ -85,6 +86,9 @@ contains
     case("#USECURLB0")
        call read_var('UseCurlB0', UseCurlB0)
        if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
+
+    case("#MONOPOLEB0")
+       call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
@@ -164,6 +168,7 @@ contains
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        call get_b0(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
     end do; end do; end do
+
     !\
     ! If use field line threads, then in the block with newly  
     ! calculated B0 the threads may or may not need to be calculated
@@ -521,7 +526,8 @@ contains
 
     use ModMain,          ONLY : Time_Simulation, NameThisComp, &
          TypeCoordSystem, IsStandAlone
-    use ModPhysics,       ONLY: Si2No_V, UnitB_, DipoleStrengthSi
+    use ModPhysics,       ONLY: Si2No_V, UnitB_, DipoleStrengthSi, &
+         MonopoleStrength
     use CON_planet_field, ONLY: get_planet_field
     use ModMain,          ONLY: UseBody2
     use ModMain,          ONLY: UseUserB0, UseMagnetogram
@@ -529,6 +535,8 @@ contains
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
+
+    real:: r
     !-------------------------------------------------------------------------
 
     if(UseMagnetogram)then
@@ -536,6 +544,9 @@ contains
        B0_D = B0_D*Si2No_V(UnitB_)
     elseif(UseUserB0)then
        call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+    elseif(MonopoleStrength /= 0.0)then
+       r = sqrt(sum(Xyz_D(1:nDim)**2))
+       B0_D = MonopoleStrength*Xyz_D/r**nDim
     elseif(IsStandAlone .and. DipoleStrengthSi==0.0)then
        B0_D = 0.0
        RETURN
