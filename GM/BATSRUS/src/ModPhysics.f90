@@ -209,4 +209,8 @@ module ModPhysics
   logical :: UseStar = .false.
   real :: RadiusStar=1.0,MassStar=1.0,RotationPeriodStar=25.38
 
+  ! Number and indexes of vector variables in State_VGB
+  integer:: nVectorVar = 0
+  integer, allocatable:: iVectorVar_I(:) ! Index of first components
+
 end module ModPhysics

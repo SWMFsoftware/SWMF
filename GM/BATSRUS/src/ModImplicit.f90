@@ -22,6 +22,10 @@ module ModSemiImplVar
   ! Number of semi-implicit variables solved together
   integer, public:: nVarSemi
 
+  ! Number of vectors and indexes of first components among semi-impl vars
+  integer, public:: nVectorSemi = 0               
+  integer, public, allocatable:: iVectorSemi_I(:)
+
   ! Named indices for semi-implicit variables
   integer, public :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
