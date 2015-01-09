@@ -22,9 +22,6 @@ module ModSemiImplicit
   ! The index of the variable currently being solved for
   integer:: iVarSemi
 
-  ! Total number of semi-implicit unknowns
-  integer:: nSemi
-
   ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
   ! and have a single ghost cell at most.
   ! The SemiAll_ variables are indexed from 1..nVarSemiAll
@@ -123,12 +120,16 @@ contains
     use BATL_lib, ONLY: MaxDim, nI, nJ, nK, nIJK, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes, ONLY: nWave
+    use ModResistivity, ONLY: BxImpl_
 
     character(len=*), parameter:: NameSub = 'init_mod_semi_impl'
     !------------------------------------------------------------------------
     if(allocated(SemiAll_VCB)) RETURN
 
     allocate(iBlockFromSemi_B(MaxBlock))
+
+    nVectorSemi = 0
+    if(allocated(iVectorSemi_I)) deallocate(iVectorSemi_I)
 
     select case(TypeSemiImplicit)
     case('radiation')
@@ -148,6 +149,9 @@ contains
     case('resistivity')
        ! (Hall) resistivity: magnetic field
        nVarSemiAll = MaxDim
+       nVectorSemi = 1
+       allocate(iVectorSemi_I(nVectorSemi))
+       iVectorSemi_I(1) = BxImpl_
     case default
        call stop_mpi(NameSub//': nVarSemiAll unknown for'//TypeSemiImplicit)
     end select
@@ -224,6 +228,7 @@ contains
     if(allocated(Rhs_I))             deallocate(Rhs_I)
     if(allocated(x_I))               deallocate(x_I)
     if(allocated(JacobiPrec_I))      deallocate(JacobiPrec_I)
+    if(allocated(iVectorSemi_I))     deallocate(iVectorSemi_I)
 
   end subroutine clean_mod_semi_impl
   !============================================================================
@@ -239,7 +244,7 @@ contains
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nIJK, nBlock, Unused_B
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B
 
     use ModRadDiffusion,   ONLY: &
          get_impl_rad_diff_state, set_rad_diff_range, update_impl_rad_diff
@@ -270,9 +275,6 @@ contains
        if(iProc == ProcTest .and. iBlock == BlkTest) &
             iBlockSemiTest = nBlockSemi
     end do
-
-    ! Total number of semi-implicit unknowns
-    nSemi = nBlockSemi*nVarSemi*nIJK
 
     ! Get current state and dCons/dSemi derivatives
     DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0

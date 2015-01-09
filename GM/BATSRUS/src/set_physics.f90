@@ -21,7 +21,7 @@ subroutine set_physics_constants
   real :: MassBody2Si
   real :: pCoef
 
-  integer :: i, iVar, iBoundary
+  integer :: i, iBoundary
 
   character (len=*), parameter :: NameSub = "set_physics_constants"
 
@@ -606,6 +606,7 @@ subroutine init_mhd_variables
 
   ! Set default I/O units and unit names for the state variables 
   ! in MHD type equations
+  ! Also set number and indexes of vector variables
 
   use ModProcMH,  ONLY: iProc
   use ModVarIndexes
@@ -747,6 +748,14 @@ subroutine init_mhd_variables
      UnitUser_V(Ehot_)        = No2Io_V(UnitEnergyDens_)
      NameUnitUserTec_V(Ehot_) = NameTecUnit_V(UnitEnergyDens_)
      NameUnitUserIdl_V(Ehot_) = NameIdlUnit_V(UnitEnergyDens_)
+  end if
+
+  if(nVectorVar == 0)then
+     nVectorVar = nFluid
+     if(UseB) nVectorVar = nVectorVar + 1
+     allocate(iVectorVar_I(nVectorVar))
+     iVectorVar_I(1:nFluid) = iRhoUx_I
+     if(UseB) iVectorVar_I(nFluid+1) = Bx_
   end if
 
 end subroutine init_mhd_variables
