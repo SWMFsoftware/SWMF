@@ -45,9 +45,10 @@ module ModPhysics
   !\
   ! Dipole and multipole expansion terms NOW ONLY IH SHOULD USE THESE
   !/
-  real :: Bdp, DipoleStrengthSi=0.0 ! the dipole moment of B0
-  real, dimension(1:3,1:3) :: Qqp  =0.0   ! the quadrupole moment of B0
-  real, dimension(1:3,1:3,1:3) :: Oop=0   ! the octupole moment of B0
+  real :: MonopoleStrength = 0.0, MonopoleStrengthSi = 0.0 ! the monopole B0
+  real :: Bdp, DipoleStrengthSi=0.0            ! the dipole moment of B0
+  real :: Qqp(3,3)  =0.0                       ! the quadrupole moment of B0
+  real :: Oop(3,3,3)=0.0                       ! the octupole moment of B0
 
   real :: THETAtilt=0.0, &                ! tilt angle of magnetic axis
        SinThetaTilt=0.0, CosThetaTilt=1.0 ! NOW ONLY IH SHOULD USE THIS !!!
