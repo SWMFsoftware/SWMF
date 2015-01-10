@@ -203,21 +203,7 @@ namespace PIC {
     void FinilazeParticleRecord(void *ParticleData);
 
     //create the output trigectory file
-//    namespace ParticleTrajectoryFile {
-//      extern cTrajectoryRecordReference StartTrajectoryPoint;
-/*      extern int lastRecordThread,lastRecordFile;
-      extern FILE *fout[PIC::nTotalSpecies];
-      extern FILE *fTrajectoryData;
-      extern unsigned int TrajectoryCounter[PIC::nTotalSpecies];
-      extern char str[_MAX_STRING_LENGTH_PIC_];
-
-
-      void CompileSingleTrajectoryFile();
-      void SaveCurrectParticlesTrajectoryList();*/
-
-      void OutputTrajectory(const char *fname);
-//      void OutputParticleTrajectory();
- //   }
+    void OutputTrajectory(const char *fname);
 
     void StartParticleTrajectoryTracking(void *ParticleData);
     void StopParticleTrajectoryTracking(void *ParticleData);
