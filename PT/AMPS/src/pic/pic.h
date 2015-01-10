@@ -147,28 +147,40 @@ namespace PIC {
     extern int maxSampledTrajectoryNumber; //tha maximum number of the particle trajectories that will be sampled for each species
     extern int *threadSampledTrajectoryNumber; //the number of trajectories sampled by the current processor for each species
     extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species
+    extern unsigned int SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
 
 
-    struct cTrajectoryRecordReference {
-      int offset;  //the location of the previous particle trajecotry data record in the files that contains tha whole trajectory information
-      unsigned int file,thread; //file -> the file where the previous particle trajecotry data record in stored; thread -> the processor number where the particle was created (used as a part of the data file name)
+    struct cTrajectoryID {
+      unsigned int StartingThread; //the thread where the trajectory has been originated
+      unsigned int id; //the counting number of the trajecory on the processor where it was originated
     };
+
 
     struct cParticleData {
       bool TrajectoryTrackingFlag; //the trajectory of the praticle is sampled only when TrajectoryTrackingFlag==true; the default value is  TrajectoryTrackingFlag==false
 
-      cTrajectoryRecordReference lastRecordReference;
+      cTrajectoryID Trajectory;
+      unsigned int nSampledTrajectoryPoints; //the number of the points of the particle trajectory
     };
 
-    struct cTrajectoryRecord {
+    struct cTrajectoryPhysicalData {
       double x[3],Speed;
       int spec;
-
-      cTrajectoryRecordReference lastRecordReference;
     };
 
-    namespace TrajectoryDataBuffer {
-      extern PIC::ParticleTracker::cTrajectoryRecord *buffer;
+    struct cTrajectoryDataRecord {
+      cTrajectoryPhysicalData data;
+      cTrajectoryID Trajectory;
+      unsigned int offset; //the point number in the trajectory
+    };
+
+    struct cTrajectoryListRecord {
+      cTrajectoryID Trajectory;
+      unsigned int nSampledTrajectoryPoints; //the number of the points of the particle trajectory
+    };
+
+    namespace TrajectoryData {
+      extern PIC::ParticleTracker::cTrajectoryDataRecord *buffer;
       extern unsigned long int Size,CurrentPosition,nfile;
 
       void flush(); //save in a file the trajecotry information
@@ -177,7 +189,7 @@ namespace PIC {
 
     namespace TrajectoryList {
       extern unsigned long int Size,CurrentPosition,nfile;
-      extern PIC::ParticleTracker::cTrajectoryRecordReference *buffer;
+      extern PIC::ParticleTracker::cTrajectoryListRecord *buffer;
 
       void flush(); //save in a file the list of the trajectories
       inline void clean() {CurrentPosition=0;nfile=0;} //reset to the initial set all counters
@@ -191,17 +203,21 @@ namespace PIC {
     void FinilazeParticleRecord(void *ParticleData);
 
     //create the output trigectory file
-    namespace ParticleTrajectoryFile {
-      extern cTrajectoryRecordReference StartTrajectoryPoint;
-      extern int lastRecordThread,lastRecordFile;
+//    namespace ParticleTrajectoryFile {
+//      extern cTrajectoryRecordReference StartTrajectoryPoint;
+/*      extern int lastRecordThread,lastRecordFile;
       extern FILE *fout[PIC::nTotalSpecies];
       extern FILE *fTrajectoryData;
       extern unsigned int TrajectoryCounter[PIC::nTotalSpecies];
       extern char str[_MAX_STRING_LENGTH_PIC_];
 
-      void Output(const char *fname);
-      void OutputParticleTrajectory();
-    }
+
+      void CompileSingleTrajectoryFile();
+      void SaveCurrectParticlesTrajectoryList();*/
+
+      void OutputTrajectory(const char *fname);
+//      void OutputParticleTrajectory();
+ //   }
 
     void StartParticleTrajectoryTracking(void *ParticleData);
     void StopParticleTrajectoryTracking(void *ParticleData);
