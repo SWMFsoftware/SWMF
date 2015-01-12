@@ -415,11 +415,11 @@ test_magnetometer_check:
 		${TESTDIR}/IO2/GM_mag_n00000000.mag \
 		Param/MAGNETOMETER/TestOutput/GM_mag_n00000000.mag \
 		> test_magnetometer.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-11 \
 		${TESTDIR}/IO2/eqb_t00000100_n0000362.out \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100_n0000362.out \
 		>> test_magnetometer.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=1e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-11 \
 		${TESTDIR}/IO2/eqb_t00000100_n0000362.dat \
 		Param/MAGNETOMETER/TestOutput/eqb_t00000100_n0000362.dat \
 		>> test_magnetometer.diff)
