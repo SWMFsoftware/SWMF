@@ -23,14 +23,21 @@ int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5897_56A_SAMPLE_O
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_COLUMN_DENSITY_OFFSET_=-1;
 */
 
-static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false,probabilityFunctionDefinedWaist=false,probabilityFunctionDefinedHartley2=false,probabilityFunctionDefinedNASTRAN=false,probabilityFunctionDefinedUniformNASTRAN=false,probabilityFunctionDefinedJetNASTRAN=false;
+static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false,probabilityFunctionDefinedWaist=false,probabilityFunctionDefinedHartley2=false,probabilityFunctionDefinedNASTRAN=false,probabilityFunctionDefinedUniformNASTRAN=false;
 //static double productionDistributionJet[360][180],cumulativeProductionDistributionJet[360][180];
 static double productionDistributionJet[6000],cumulativeProductionDistributionJet[6000];
 static double productionDistributionWaist[6000],cumulativeProductionDistributionWaist[6000];
 static double productionDistributionHartley2[6000],cumulativeProductionDistributionHartley2[6000];
 static double productionDistributionNASTRAN[150000],cumulativeProductionDistributionNASTRAN[150000];
 static double productionDistributionUniformNASTRAN[150000],cumulativeProductionDistributionUniformNASTRAN[150000];
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_
+static double productionDistributionJetNASTRAN[3][150000],cumulativeProductionDistributionJetNASTRAN[3][150000],fluxDFMS[3][150000];
+static bool definedFluxDFMS[3],probabilityFunctionDefinedJetNASTRAN[3];
+static double DFMSproduction[3];
+#else
 static double productionDistributionJetNASTRAN[150000],cumulativeProductionDistributionJetNASTRAN[150000];
+static bool probabilityFunctionDefinedJetNASTRAN=false;
+#endif
 static double productionDistribution[180],cumulativeProductionDistribution[180];
 static double angle;
 static double azimuthCenter;
@@ -1046,9 +1053,114 @@ double Comet::GetTotalProductionRateJetNASTRAN(int spec){
 
   return totalProductionRate;
   */
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_
+  if (definedFluxDFMS[spec]==false) {
+  long int File_Header = 0;
+  static double **Data=NULL;
+  long int Data_length;
+  
+  FILE *fH;
+  fH = fopen("majorSpeciesFromDFMS.txt","r");
+
+  //readDATAlength
+  char str[10000];
+  Data_length=0;
+  rewind(fH);
+  while (!feof(fH)){
+    fgets(str,10000,fH);
+    Data_length++;
+  }
+  Data_length -= (1+File_Header);
+
+  printf("Data_length: %li \n",Data_length);
+  
+  Data = new double* [Data_length];
+  Data[0] = new double [Data_length*9];
+  for (int i=0;i<Data_length;i++) { 
+    Data[i]=Data[0]+i*9;  
+    for (int j=0;j<9;j++) Data[i][j]=0.0;
+  }
+
+  //read DATA
+  long int nline,i=0;
+  double f1,f2,f3,f4,f5,f6,f7,f8,f9;
+  char strH[10000];
+
+  rewind(fH);
+
+  // Header
+  for (nline=0;nline<File_Header;nline++) {
+    fgets(strH,10000,fH);
+  }
+  // Data
+  for(i=0;i<Data_length;i++,nline++) {
+    fscanf(fH,"%le%le%le%le%le%le%le%le%le\n",&f1,&f2,&f3,&f4,&f5,&f6,&f7,&f8,&f9);
+    Data[i][0]=f1;
+    Data[i][1]=f2;
+    Data[i][2]=f3;
+    Data[i][3]=f4;
+    Data[i][4]=f5;
+    Data[i][5]=f6;
+    Data[i][6]=f7;
+    Data[i][7]=f8;
+    Data[i][8]=f9;
+  }
+
+  int ct=0,idim;
+  double scalar=0.0,norm=0.0,xSpacecraft[3],angle,r=0.0,x[3];
+
+  //initialization to zero
+  for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) fluxDFMS[spec][i]=0.0;
+
+  for (ct=0;ct<Data_length;ct++) {    
+    xSpacecraft[0]=cos(Data[ct][3]*Pi/180.0)*cos(Data[ct][4]*Pi/180.0);
+    xSpacecraft[1]=sin(Data[ct][3]*Pi/180.0)*cos(Data[ct][4]*Pi/180.0);
+    xSpacecraft[2]=sin(Data[ct][4]*Pi/180.0);
+
+    for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(x);
+      scalar=0.0,norm=0.0,r=0.0;
+
+      for (idim=0;idim<3;idim++) {
+	scalar+=x[idim]*xSpacecraft[idim];
+	norm+=pow(x[idim],2.0);
+	r+=pow(x[idim],2.0);
+      }
+      norm=sqrt(norm);
+      angle=acos(scalar/norm)*180.0/Pi;
+      r=sqrt(r);
+      
+      if (spec==_H2O_SPEC_) {
+	if(angle<5.0 && Data[ct][6]>0.0 && Data[ct][6]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0<7.0e26) fluxDFMS[spec][i]=Data[ct][6]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0/(4*Pi*r*r);
+      }
+      else if (spec==_CO_SPEC_) {
+	if(angle<5.0 && Data[ct][7]>0.0 && Data[ct][7]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0<1.0e26) fluxDFMS[spec][i]=Data[ct][7]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0/(4*Pi*r*r);
+      }
+      else if (spec==_CO2_SPEC_) {
+	if(angle<5.0 && Data[ct][8]>0.0 && Data[ct][8]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0<1.0e26) fluxDFMS[spec][i]=Data[ct][8]*1.0e6*4*Pi*pow(Data[ct][1]*1000.0,2.0)*600.0/(4*Pi*r*r);
+      }
+    }
+  }
+  
+  DFMSproduction[spec]=0.0;
+
+  for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) DFMSproduction[spec]+=fluxDFMS[spec][i]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+
+  for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) productionDistributionJetNASTRAN[spec][i]=fluxDFMS[spec][i]/DFMSproduction[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+
+  definedFluxDFMS[spec]=true;
+
+  printf("DFMSproduction[%i]=%e \n",spec,DFMSproduction[spec]);
+  }
+  return DFMSproduction[spec];
+#else
   return Comet::Jet_SourceRate[spec];
+#endif
+
 }
 
+
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_    
 bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
   double ExternalNormal[3]; 
   int idim;
@@ -1062,13 +1174,14 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
   double totalArea=0.0;
   double totalActiveArea=0.0;
 
-  if (probabilityFunctionDefinedJetNASTRAN==false) {          
+  //  if (probabilityFunctionDefinedJetNASTRAN==false) {          
+  if (probabilityFunctionDefinedJetNASTRAN[spec]==false) {          
     positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
     positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
     
     totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-    
+    /*
     total=0.0; 
     totalArea=0.0;
     for (i=0;i<totalSurfaceElementsNumber;i++) {
@@ -1110,16 +1223,34 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
       }
       
     }
-    probabilityFunctionDefinedJetNASTRAN=true;
-  }
+    */
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_    
+    cumulativeProductionDistributionJetNASTRAN[spec][0]=0.0;
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      if (i==0) {
+	cumulativeProductionDistributionJetNASTRAN[spec][i]+=productionDistributionJetNASTRAN[spec][i];
+      }else{
+	cumulativeProductionDistributionJetNASTRAN[spec][i]=cumulativeProductionDistributionJetNASTRAN[spec][i-1]+productionDistributionJetNASTRAN[spec][i];
+      }
+    }
+#endif
+
+    probabilityFunctionDefinedJetNASTRAN[spec]=true;
+    }
+
   
   //Computation of the segment where the particle will be created
   gamma=rnd();
   i=0;
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_    
+  while (gamma>cumulativeProductionDistributionJetNASTRAN[spec][i]){
+    i++;
+  }
+#else
   while (gamma>cumulativeProductionDistributionJetNASTRAN[i]){
     i++;
   }
-    
+#endif
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
@@ -1223,6 +1354,15 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
   
   return true;
 }
+#else
+
+bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData){
+return false;
+}
+
+
+#endif
+
 
 double Comet::radiativeCoolingRate_Crovisier(PIC::Mesh::cDataCenterNode *CenterNode){
   double tau,r,res=0.0,dens,temp;
@@ -1482,11 +1622,13 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
   double T=cell->GetTranslationalTemperature(_H2O_SPEC_);
 
   if (s0==_H2O_SPEC_ && s1==_H2O_SPEC_) return (T>1.0) ? 1.66E-19/pow(T/300.0,0.6) : 0.0;
-  /*  else if ((s0==_H2O_SPEC_ && s1==_CO2_SPEC_) || (s0==_CO2_SPEC_ && s1==_H2O_SPEC_)) return 3.4E-19;
+#if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_
+  else if ((s0==_H2O_SPEC_ && s1==_CO2_SPEC_) || (s0==_CO2_SPEC_ && s1==_H2O_SPEC_)) return 3.4E-19;
   else if ((s0==_H2O_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_H2O_SPEC_)) return 3.2E-19;
   else if ((s0==_CO2_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_CO2_SPEC_)) return 3.2E-19;
   else if (s0==_CO2_SPEC_ && s1==_CO2_SPEC_) return 3.4E-19;
-  else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;*/
+  else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
+#endif
 else return 0.0;
 }
 
