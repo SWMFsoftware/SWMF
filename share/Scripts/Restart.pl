@@ -240,10 +240,11 @@ sub get_time_step{
 	    localtime($CurrentTime);
 
 	# Convert to normal year and month notation
-	$iYear += 1900;
+	$iYear  += 1900;
 	$iMonth += 1;
 
-	$DateTime = sprintf("%4d_%02d_%02dT%02d_%02d_%02d",
+	# Format requested by SWPC: YYYYMMDD_HHMM
+	$DateTime = sprintf("%4d%02d%02d_%02d%02d%02d",
 			    $iYear, $iMonth, $iDay, $iHour, $iMinute, $iSecond);
 
     }
@@ -273,7 +274,7 @@ sub create_tree_check{
 	# Check if it is a time accurate run
 	if($SimulationTime){
 	    if($TimeUnit eq "date"){
-		$RestartTree = "SWMF_RESTART_$DateTime";
+		$RestartTree = "RESTART_SWMF.$DateTime";
 	    }else{
 		# If the time unit is not set try to guess it from simulation time
 		if(not $TimeUnit){
@@ -511,11 +512,11 @@ Usage:
 
     Restart.pl -h
 
-    Restart.pl [-o] [-t=s|m|h|d|y] [-m=a|f|s] [-c] [-v] [DIR]
+    Restart.pl [-o] [-t=UNIT] [-m=a|f|s] [-c] [-v] [DIR]
 
     Restart.pl -i [-m=a|f|s] [-c] [-v] DIR
 
-    Restart.pl -r=REPEAT [-w=WAIT] [-o] [-t=s|m|h|d|y] [-v] &
+    Restart.pl -r=REPEAT [-w=WAIT] [-o] [-t=UNIT] [-v] &
 
     -h -help    Print help message and exit.
 
@@ -545,9 +546,11 @@ Usage:
     -t=UNIT     Time unit to form the name of the restart tree from the
     -time=...   simulation time (only matters for time accurate run).
     -u=UNIT     The UNIT can be given as one of the following strings:
-    -unit=...   ns, us, ms, s, m, h, d, y corresponding to 
-                nanosec, microsec, millisec, seconds, minute, hour, day, and year,
-                respectively. The -t option has no effect if the 
+    -unit=...   "ns", "us", "ms", "s", "m", "h", "d", "y" and "date" 
+                corresponding to nanosec, microsec, millisec, seconds, 
+                minute, hour, day, year, and a full date-time string in the
+                YYYYMMDD_HHMMSS format, respectively. 
+                The -t option has no effect if the 
                 name of the restart tree is specified by the parameter DIR.
                 The default time unit is the largest unit which does not 
                 exceed the simulation time.
@@ -576,11 +579,11 @@ Restart.pl -c
 
 Restart.pl
 
-    Create restart trees every 10 minutes, use hours as the 
-    time unit for the simulation time in the restart tree names,
+    Check every 15 seconds for new restart output, and move it to 
+    a new restart tree with the date and time in the name,
     and save output and error messages (if any) into Restart.log:
 
-Restart.pl -o -r=600 -t=h >& Restart.log &
+Restart.pl -o -r=15 -t=date >& Restart.log &
 
     Check linking to the existing RESTART_t002.00h tree:
 
