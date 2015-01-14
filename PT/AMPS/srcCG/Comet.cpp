@@ -254,7 +254,7 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
   angle=acos(CosSubSolarAngle);
   
   res=(angle<=75*Pi/180.0) ? max(Tmin,a/cos(angle)+b) : Tmin; 
-
+  return res;
 #else
   exit(__LINE__,__FILE__,"Temperature mode does not exist");
 #endif
@@ -1143,6 +1143,14 @@ double Comet::GetTotalProductionRateJetNASTRAN(int spec){
   }
   
   DFMSproduction[spec]=0.0;
+
+  for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+    if (fluxDFMS[spec][i]==0.0) {
+      if (spec==_H2O_SPEC_) fluxDFMS[spec][i]=1.0e14;
+      if (spec==_CO_SPEC_) fluxDFMS[spec][i]=1.0e13;
+      if (spec==_CO2_SPEC_) fluxDFMS[spec][i]=1.0e13;
+    }
+  }
 
   for (i=0;i<CutCell::nBoundaryTriangleFaces;i++) DFMSproduction[spec]+=fluxDFMS[spec][i]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
 
