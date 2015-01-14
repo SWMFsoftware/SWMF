@@ -51,7 +51,7 @@ contains
   !BOP ========================================================================
   !ROUTINE: make_dir - Create a directory
   !INTERFACE:
-  subroutine make_dir(NameDir,perm)
+  subroutine make_dir(NameDir,perm,retval,errno,msg)
 
     use iso_c_binding
 
@@ -59,19 +59,23 @@ contains
     character(len=*), intent(in)::NameDir ! Directory name
     integer,optional::perm ! Octal permissions value
 
+    !OUTPUT ARGUMENTS:
+    integer,optional::errno ! System error number
+    integer,optional::retval ! mkdir return value
+    character(len=1),allocatable,dimension(:),optional::msg ! Error message
+
     !DESCRIPTION:
     ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x) by default. If directory already exists, this function does nothing.
     !
     ! The perm parameter sets the permissions for the new directory. This should be specified in octal notation, which in Fortran is written with a capital O followed by the digits in quotes. For instance, the permissions 0755 would be written O'0775'. Note that this subroutine honors the umask set in the current environment. This means that the new directory may have certain permissions turned off, even if the corresponding bits are set to on in the permission octal passed to this function. There is currently no way to override this.
+    !
+    ! The retval, errno, and msg parameters contain the return value, error number, and error string returned from mkdir(). If no error occurred, retval=0, otherwise retval=-1. errno and msg will contain meaningful values only if retval=-1. The numerical values of errno are found in errno.h and are not standardized, so exact values of these should not be relied upon.
     !EOP
 
     integer(c_int)::permval ! Octal permissions (value passed to C)
-    integer::errno ! Error number from C
-    integer::retval ! mkdir return value
-    character(len=1),allocatable::msg(:)
     character(len=1,kind=c_char)::c_msg
-    integer::i ! Loop counter
-    integer::strlen ! Length of error string
+    integer::c_errno ! Error number as returned from C
+    integer::c_retval ! Return value as retrieved from C
 
     interface
        ! Define an interface to mkdir_wrapper, which is implemented in ModUtilities_c.c.
@@ -82,6 +86,11 @@ contains
          integer(kind=c_int)::errno
        end function mkdir_wrapper
 
+       ! Define an interface to strerror from the C library
+       type(c_ptr) function strerror(errno) bind(C)
+         use iso_c_binding
+         integer(kind=c_int),value::errno
+       end function strerror
     end interface
 
     if(.not. present(perm)) then
@@ -90,9 +99,42 @@ contains
        permval=perm
     endif
 
-    retval=mkdir_wrapper(NameDir//C_NULL_CHAR,permval,errno)
+    c_retval=mkdir_wrapper(NameDir//C_NULL_CHAR,permval,c_errno)
+
+    if(present(errno)) then
+       errno=c_errno
+    endif
+
+    if(present(retval)) then
+       retval=c_retval
+    endif
+
+    if(c_retval==-1) then
+       if(present(msg)) then
+          msg=c_to_f_string(strerror(c_errno))
+       endif
+    endif
 
   end subroutine make_dir
+
+  function c_to_f_string(s) result(str)
+    use iso_c_binding
+    type(c_ptr):: s
+    character,pointer,dimension(:) :: str
+    integer::string_shape(1)
+
+    interface
+       integer(kind=c_size_t) function strlen(s) bind(C)
+         use iso_c_binding
+         type(c_ptr)::s
+       end function strlen
+    end interface
+
+    string_shape(1)=strlen(s)*2-1
+
+    call c_f_pointer(s,str,string_shape)
+
+  end function c_to_f_string
 
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
@@ -544,6 +586,8 @@ contains
     integer :: nString
     character(len=30) :: String_I(MaxString)  
     integer :: iString
+    character(len=1),allocatable,dimension(:)::errstr
+    integer::retval
 
     character(len=*), parameter :: NameSub = 'test_mod_utility'
     !-----------------------------------------------------------------------
@@ -558,6 +602,9 @@ contains
     write(*,'(a)') 'make directory "xxx/"'
     call make_dir('xxx')
     call check_dir('xxx/')
+    write(*,'(a)') 'Making directory again (should produce "File exists" error)'
+    call make_dir('xxx',retval=retval,msg=errstr)
+    write(*,*) retval,errstr
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '

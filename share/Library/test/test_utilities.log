@@ -6,6 +6,8 @@ ERROR: check_dir ERROR: Cannot find/write into directory xxx/
 Do not actually stop in the test
 testing make_dir
 make directory "xxx/"
+Making directory again (should produce "File exists" error)
+          -1 File exists
 
 testing fix_dir_name
 fixed empty string=
