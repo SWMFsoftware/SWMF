@@ -230,9 +230,26 @@ double Exosphere::GetSurfaceTemeprature(double CosSubSolarAngle,double *x_LOCAL_
     res=(SurfaceTemp[angle][4+1]>minTemp[Comet::ndist]) ?  SurfaceTemp[angle][4+1] : minTemp[Comet::ndist];
   }
   return res;
-#else
+
+#elif _COMET_TEMPERATURE_MODE_ == _COMET_TEMPERATURE_MODE__CONSTANT_
   double surfaceTemperatureConstant=180.0;
   return surfaceTemperatureConstant;
+
+#elif _COMET_TEMPERATURE_MODE_ == _COMET_TEMPERATURE_MODE__ANALYTICAL_
+  double Tmax=182.09922,T75=136.11149,Tmin=133;
+  double res;
+
+  double angle,a,b;
+
+  a=(Tmax-T75)/(1-1/cos(75*Pi/180.0));
+  b=Tmax-a;
+  
+  angle=acos(CosSubSolarAngle);
+  
+  res=(angle<=75*Pi/180.0) ? max(Tmin,a/cos(angle)+b) : Tmin; 
+
+#else
+  exit(__LINE__,__FILE__,"Temperature mode does not exist");
 #endif
 }
 
@@ -503,6 +520,18 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   int angle;
   double angletemp;
 
+#if _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ ==  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ANALYTICAL_
+  double Qmin=4.5e17,Qmax=6.3e18;
+
+  for (i=0;i<90;i++) {
+    angle=(double) i;
+    fluxBjorn[i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
+  }
+
+  nightSideFlux=Qmin;  
+
+#else
+
   if (Comet::ndist<5) {
     for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
       TableTotalProductionRate+=ProductionRate[i][2+ndist];
@@ -534,6 +563,8 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   }
 
   nightSideFlux=BjornTotalProductionRate*NightSideProduction[Comet::ndist]/(2*Pi*rSphere*rSphere)*percentageActive;
+#endif
+
 
 #if _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ ==  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ON_
   return Comet::Bjorn_SourceRate[spec];
@@ -626,8 +657,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
       }
       
     }
-
-    /*    FILE *out;
+    /*
+    FILE *out;
     out = fopen("GasFlux.dat","w");
     fprintf(out,"Angle Flux(m-2.s-1) \n");
     for (i=0;i<90;i++) {
@@ -644,8 +675,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
       fprintf(fout,"%e %e \n",ProductionRate[i][0],Exosphere::GetSurfaceTemeprature(cos(angletemp),x));
     }
     fclose(fout);
+    
     */
-
     probabilityFunctionDefinedNASTRAN=true;
   }
   
