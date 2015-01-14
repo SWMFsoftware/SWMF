@@ -51,27 +51,47 @@ contains
   !BOP ========================================================================
   !ROUTINE: make_dir - Create a directory
   !INTERFACE:
-  subroutine make_dir(NameDir)
+  subroutine make_dir(NameDir,perm)
 
     use iso_c_binding
 
-    !INPUT/OUTPUT ARGUMENTS:
-    character(len=*), intent(in)::NameDir
-
-    ! Define an interface to mkdir_wrapper, which is implemented in ModUtilities_c.c.
-    interface
-       subroutine mkdir_wrapper(path) bind(C)
-         use iso_c_binding
-         character(kind=c_char), intent(in)::path
-       end subroutine mkdir_wrapper
-    end interface
+    !INPUT ARGUMENTS:
+    character(len=*), intent(in)::NameDir ! Directory name
+    integer,optional::perm ! Octal permissions value
 
     !DESCRIPTION:
-    ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x). If directory already exists, this function does nothing.
+    ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x) by default. If directory already exists, this function does nothing.
+    !
+    ! The perm parameter sets the permissions for the new directory. This should be specified in octal notation, which in Fortran is written with a capital O followed by the digits in quotes. For instance, the permissions 0755 would be written O'0775'. Note that this subroutine honors the umask set in the current environment. This means that the new directory may have certain permissions turned off, even if the corresponding bits are set to on in the permission octal passed to this function. There is currently no way to override this.
     !EOP
 
-    call mkdir_wrapper(NameDir//C_NULL_CHAR)
-    
+    integer(c_int)::permval ! Octal permissions (value passed to C)
+    integer::errno ! Error number from C
+    integer::retval ! mkdir return value
+    character(len=1),allocatable::msg(:)
+    character(len=1,kind=c_char)::c_msg
+    integer::i ! Loop counter
+    integer::strlen ! Length of error string
+
+    interface
+       ! Define an interface to mkdir_wrapper, which is implemented in ModUtilities_c.c.
+       integer(kind=c_int) function mkdir_wrapper(path,perm,errno) bind(C)
+         use iso_c_binding
+         character(kind=c_char), intent(in)::path
+         integer(kind=c_int),intent(in),value::perm
+         integer(kind=c_int)::errno
+       end function mkdir_wrapper
+
+    end interface
+
+    if(.not. present(perm)) then
+       permval=O'0755'
+    else
+       permval=perm
+    endif
+
+    retval=mkdir_wrapper(NameDir//C_NULL_CHAR,permval,errno)
+
   end subroutine make_dir
 
   !BOP ========================================================================
