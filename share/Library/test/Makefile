@@ -501,7 +501,7 @@ OBJ_UTILITIES = \
 	../src/ModUtilities_c.o
 
 test_utilities_exe:
-	@(cd ../src; make ModUtilities.o)
+	@(cd ../src; make ModUtilities.o ModUtilities_c.o)
 	@make test_utilities.o
 	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag1}
 
