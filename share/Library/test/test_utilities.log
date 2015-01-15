@@ -7,7 +7,7 @@ Do not actually stop in the test
 testing make_dir
 make directory "xxx/"
 Making directory again (should produce "File exists" error)
-          -1 File exists
+          -1
 
 testing fix_dir_name
 fixed empty string=

@@ -51,7 +51,7 @@ contains
   !BOP ========================================================================
   !ROUTINE: make_dir - Create a directory
   !INTERFACE:
-  subroutine make_dir(NameDir,perm,retval,errno,msg)
+  subroutine make_dir(NameDir,perm,retval,errno)
 
     use iso_c_binding
 
@@ -62,7 +62,6 @@ contains
     !OUTPUT ARGUMENTS:
     integer,optional::errno ! System error number
     integer,optional::retval ! mkdir return value
-    character(len=1),allocatable,dimension(:),optional::msg ! Error message
 
     !DESCRIPTION:
     ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x) by default. If directory already exists, this function does nothing.
@@ -73,7 +72,6 @@ contains
     !EOP
 
     integer(c_int)::permval ! Octal permissions (value passed to C)
-    character(len=1,kind=c_char)::c_msg
     integer::c_errno ! Error number as returned from C
     integer::c_retval ! Return value as retrieved from C
 
@@ -109,32 +107,7 @@ contains
        retval=c_retval
     endif
 
-    if(c_retval==-1) then
-       if(present(msg)) then
-          msg=c_to_f_string(strerror(c_errno))
-       endif
-    endif
-
   end subroutine make_dir
-
-  function c_to_f_string(s) result(str)
-    use iso_c_binding
-    type(c_ptr):: s
-    character,pointer,dimension(:) :: str
-    integer::string_shape(1)
-
-    interface
-       integer(kind=c_size_t) function strlen(s) bind(C)
-         use iso_c_binding
-         type(c_ptr)::s
-       end function strlen
-    end interface
-
-    string_shape(1)=strlen(s)*2-1
-
-    call c_f_pointer(s,str,string_shape)
-
-  end function c_to_f_string
 
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
@@ -603,8 +576,8 @@ contains
     call make_dir('xxx')
     call check_dir('xxx/')
     write(*,'(a)') 'Making directory again (should produce "File exists" error)'
-    call make_dir('xxx',retval=retval,msg=errstr)
-    write(*,*) retval,errstr
+    call make_dir('xxx',retval=retval)
+    write(*,*) retval
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
