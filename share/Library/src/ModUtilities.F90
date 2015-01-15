@@ -66,9 +66,22 @@ contains
     !DESCRIPTION:
     ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x) by default. If directory already exists, this function does nothing.
     !
-    ! The perm parameter sets the permissions for the new directory. This should be specified in octal notation, which in Fortran is written with a capital O followed by the digits in quotes. For instance, the permissions 0755 would be written O'0775'. Note that this subroutine honors the umask set in the current environment. This means that the new directory may have certain permissions turned off, even if the corresponding bits are set to on in the permission octal passed to this function. There is currently no way to override this.
+    ! The perm parameter sets the permissions for the new
+    ! directory. This should be specified in octal notation, which in
+    ! Fortran is written with a capital O followed by the digits in
+    ! quotes. For instance, the permissions 0755 would be written
+    ! O'0775'. Note that this subroutine honors the umask set in the
+    ! current environment. This means that the new directory may have
+    ! certain permissions turned off, even if the corresponding bits
+    ! are set to on in the permission octal passed to this
+    ! function. There is currently no way to override this.
     !
-    ! The retval, errno, and msg parameters contain the return value, error number, and error string returned from mkdir(). If no error occurred, retval=0, otherwise retval=-1. errno and msg will contain meaningful values only if retval=-1. The numerical values of errno are found in errno.h and are not standardized, so exact values of these should not be relied upon.
+    ! The retval, errno, and msg parameters contain the return value,
+    ! error number, and error string returned from mkdir(). If no
+    ! error occurred, retval=0, otherwise retval=-1. errno and msg
+    ! will contain meaningful values only if retval=-1. The numerical
+    ! values of errno are found in errno.h and are not standardized,
+    ! so exact values of these should not be relied upon.
     !EOP
 
     integer(c_int)::permval ! Octal permissions (value passed to C)
