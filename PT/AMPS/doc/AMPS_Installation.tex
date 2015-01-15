@@ -2,21 +2,45 @@
 
 \section{Stand-alone mode}
 
+\subsection{CVS installation}
+Full command for AMPS checkout:\\\\
+{\tt cvs -d username@herot.engin.umich.edu:/CVS/FRAMEWORK checkout AMPS}
+\subsection{SPICE installation}
+Go to the following URL to download the newest version of SPICE (cspice)\\\\
+\url{http://naif.jpl.nasa.gov/naif/toolkit_C.html}\\\\
+choose the proper version and download these two files
+\begin{itemize}
+ \item cspice.tar.Z
+ \item importCSpice.csh
+\end{itemize}
+Copy these two files into a folder where you want to have you SPICE installation, then\\\\
+{\tt /bin/csh importCSPice.csh}\\\\
+for installation
+
+
+
 \subsection {Installation command}
 \begin{enumerate}
-\item Make sur there is CVS on your computer. 
-\item Then go to a folder you wish to install AMPS in via Terminal. Then type: \\
+\item Add current directory '.' to your PATH, i.e. put  {\tt PATH=\$PATH:.} in your\\
+.bashrc file (.bash\_profile for OSX)
+\item Make sure that CVS is installed on your computer. 
+\item Then go to a folder you wish to install AMPS in via terminal. Then type: \\
 {\tt CVS checkout AMPS }\\
 AMPS is being set up into a subfolder called AMPS.
 \item Now move into the AMPS folder:\\
  {\tt cd AMPS}
-\item Now choose an application you wish to use and install the code regarding your interest. In case it is Moon, you may type to the terminal\\ 
+\item Now choose an application you wish to use and install the code regarding your interest.
+In case you want to do a simulation of the Moon, type the following into the command line:\\
 {\tt Config.pl -install -application=moon}\\
 You may choose one of the following existing applications:\\ 
-{\tt  bullet}, {\tt CG }, {\tt CouplerTest }, {\tt Enceladus }, {\tt Europa }, {\tt Hartley2 }, {\tt Hartley2RotationBody }, {\tt Interface }, {\tt Mercury }, {\tt Moon }, {\tt Rosetta }, {\tt Shock}\\
+{\tt  bullet}, {\tt CG}, {\tt CouplerTest}, {\tt Enceladus}, {\tt Europa}, {\tt Hartley2},
+{\tt Hartley2RotationBody}, {\tt Interface}, {\tt Mercury}, {\tt Moon}, {\tt Rosetta}, {\tt Shock}\\
+ToDo: SHORT DESCRIPTION OF ALL THESE PRE-DEFINED CASES
 \item Set the path for SPICE and for SPICE Kernels by typing the following two lines:\\
 {\tt Config.pl -spice-path=/Users/Username/SPICE/cspice }\\
-{\tt Config.pl -spice-kernels=/Users/Username/SPICE/Kernels }
+{\tt Config.pl -spice-kernels=/Users/Username/SPICE/Kernels }\\\\
+If you do not need any SPICE functions for you simulation it can be turned off by\\\\
+{\tt Config.pl -spice-kernels=nospice}
 \end{enumerate}
 Now the code is ready to compile. Type {\tt make} into the terminal and compile the code. An executable file called ''{\tt amps}'' appears in the AMPS folder. You may run the code now with the executable or submit it via a job-file on a supercomputer. It takes 6-8 hours to run on a single core. The output files are generated under the AMPS folder and data outputs are in the PT/plots folder.
 
