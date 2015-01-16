@@ -293,10 +293,14 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
 
       for (i=0;i<length;i++) {
         cTrajectoryListRecord Record;
+        int el;
 
         fread(&Record,sizeof(PIC::ParticleTracker::cTrajectoryListRecord),1,fTrajectoryList);
 
-        nSampledTrajectoryPoints[Record.Trajectory.id+TrajectoryCounterOffset[Record.Trajectory.StartingThread]]=Record.nSampledTrajectoryPoints;
+        el=Record.Trajectory.id+TrajectoryCounterOffset[Record.Trajectory.StartingThread];
+        if ((el<0)||(el>=nTotalTracedTrajectories)) exit(__LINE__,__FILE__,"Error: out of range");
+
+        nSampledTrajectoryPoints[el]=Record.nSampledTrajectoryPoints;
         nReadTrajectoryNumber++;
        }
 
@@ -345,8 +349,14 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
             fread(&TrajectoryRecord,sizeof(cTrajectoryDataRecord),1,fTrajectoryData);
             GlobalTrajectoryNumber=TrajectoryRecord.Trajectory.id+TrajectoryCounterOffset[TrajectoryRecord.Trajectory.StartingThread];
 
+            if (GlobalTrajectoryNumber>=nTotalTracedTrajectories) exit(__LINE__,__FILE__,"Error: out of range");
+
             if (SampledTrajectoryDataOffset[GlobalTrajectoryNumber]!=-1) {
-              TempTrajectoryBuffer[SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset]=TrajectoryRecord.data;
+              int el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset;
+
+              if ((el<0.0)||(el>=TrajectoryPointBufferLength)) exit(__LINE__,__FILE__,"Error: out of range");
+
+              TempTrajectoryBuffer[el]=TrajectoryRecord.data;
               ++nReadSampledTrajectoryPoints[GlobalTrajectoryNumber];
               ++ReadTrajectoryPoints;
 
