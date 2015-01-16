@@ -100,7 +100,7 @@ double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTota
 
   if (IonNumberDensityFraction[spec]==0.0) return 0.0;
 
-#if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ == _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_
+#if _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ == _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_
   if (TotalInjectionRateTable!=NULL) {
     if (TotalInjectionRateTable[spec]>=0.0) return TotalInjectionRateTable[spec];
   }
@@ -172,7 +172,7 @@ double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTota
   MPI_Allreduce(BoundaryFaceProductionFraction[spec],buffer,nTotalBoundaryInjectionFaces,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
   for (res=0.0,nBoundaryFace=0;nBoundaryFace<nTotalBoundaryInjectionFaces;nBoundaryFace++) res+=buffer[nBoundaryFace];
 
-  #if _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ == _EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_
+  #if _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ == _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_
   TotalInjectionRateTable[spec]=res;
   #endif
 
