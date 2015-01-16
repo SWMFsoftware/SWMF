@@ -36,7 +36,7 @@ namespace Mercury {
 
       //only those solar wind ions are traced, which trajectories are close to the surface of Mercury
       if ((spec==_H_PLUS_SPEC_)||(spec==_HE_2PLUS_SPEC_)) {
-        if (x[1]*x[1]+x[2]*x[2]>pow(2.0*_RADIUS_(_TARGET_),2)) return false;
+        if (x[1]*x[1]+x[2]*x[2]>pow(4.0*_RADIUS_(_TARGET_),2)) return false;
       }
 
       return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
@@ -212,6 +212,8 @@ namespace Mercury {
 
 
     if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
+
+    PIC::Debugger::CatchOutLimitValue(accl_LOCAL,DIM,__LINE__,__FILE__);
 
 
 /*    double rSolarVector[3],r2Solar,rSolar;

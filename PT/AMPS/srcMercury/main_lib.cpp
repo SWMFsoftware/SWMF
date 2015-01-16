@@ -347,6 +347,8 @@ double localSphericalSurfaceResolution(double *x) {
   res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
 
+  res/=2.2;
+
 
   return rSphere*res;
 }
@@ -1428,7 +1430,7 @@ void amps_init() {
 //  Mercury::Init_AfterMesh();
 
 #ifdef _ICES_LOAD_DATA_
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
+//  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
   //output the solar wind ion flux at the palnet's surface
   PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));

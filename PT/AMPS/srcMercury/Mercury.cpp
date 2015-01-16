@@ -129,6 +129,21 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   int i,j,k,nd,cnt=0,spec;
   double NumberDensity;
 
+  static unsigned long int nCallCounter=0;
+
+  //DEBUGGING: BEGIN 
+  ++nCallCounter;  
+  
+  if (nCallCounter==18854) {
+    double a=0.0;
+
+    a+=2.454;
+  }
+
+
+  //DEBUGGING: END 
+   
+
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
   for (i=0;i<resLength;i++) res[i]=0.0;
 
@@ -171,6 +186,11 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
   }
 
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   PIC::Debugger::CatchOutLimitValue(res,cnt,__LINE__,__FILE__);
+#endif
+#endif 
 
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
 }
