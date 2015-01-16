@@ -2518,7 +2518,11 @@ ProcessPhotoChemistry:
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
 
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
   PIC::Debugger::CatchOutLimitValue(vFinal,DIM,__LINE__,__FILE__);
+#endif
+#endif
 
   PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
