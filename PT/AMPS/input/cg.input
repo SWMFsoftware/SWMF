@@ -73,8 +73,8 @@ CouplerMode=ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
-!  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
-!  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
+!!  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+!!  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
   
 #endGeneral
 
@@ -115,15 +115,13 @@ CouplerMode=ices !!off, ices, swmf
 
   RadialVelocityMode=off !on,off
 
-  CometTemperatureMode=Analytical !Bjorn,Constant,Analytical
-
   SampleBackFluxMode=off
   ComputeMaximumLiftableSizeMode=off
 
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
   
-  BjornProductionRateUserDefined=Analytical !on,off,Analytical
+  BjornProductionRateUserDefined=off !on,off
   BjornProductionRate(H2O)=8.0e25 !!2.0e25	    
   UniformProductionRate(H2O)=0.0 !!2.0e25
   JetProductionRate(H2O)=0.0 !1.0e25	    

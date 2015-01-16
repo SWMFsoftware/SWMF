@@ -182,19 +182,6 @@ while ($line=<InputFile>) {
       $InputLine=~s/ //g;
       ampsConfigLib::ChangeValueOfVariable("static int ndist","$InputLine","main/Comet.h");
   }
-  elsif ($InputLine eq "COMETTEMPERATUREMODE") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $InputLine=~s/ //g;
-      if ($InputLine eq "BJORN") {
-	  ampsConfigLib::RedefineMacro("_COMET_TEMPERATURE_MODE_","_COMET_TEMPERATURE_MODE__BJORN_","main/Comet.dfn");
-      }
-      elsif ($InputLine eq "CONSTANT") {
-	  ampsConfigLib::RedefineMacro("_COMET_TEMPERATURE_MODE_","_COMET_TEMPERATURE_MODE__CONSTANT_","main/Comet.dfn");
-      }
-      elsif ($InputLine eq "ANALYTICAL") {
-	  ampsConfigLib::RedefineMacro("_COMET_TEMPERATURE_MODE_","_COMET_TEMPERATURE_MODE__ANALYTICAL_ ","main/Comet.dfn");
-      }
-  }
   elsif ($InputLine eq "BJORNPRODUCTIONRATEUSERDEFINED") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
@@ -203,19 +190,6 @@ while ($line=<InputFile>) {
       }
       elsif ($InputLine eq "OFF") {
 	  ampsConfigLib::RedefineMacro("_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_","_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_OFF_ ","main/Comet.dfn");
-      }
-      elsif ($InputLine eq "ANALYTICAL") {
-	  ampsConfigLib::RedefineMacro("_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_","_BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ANALYTICAL_ ","main/Comet.dfn");
-      }
-  }
-  elsif ($InputLine eq "MODELSOURCEDFMS") {
-      ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      $InputLine=~s/ //g;
-      if ($InputLine eq "ON") {
-	  ampsConfigLib::RedefineMacro("_MODEL_SOURCE_DFMS_","_MODEL_SOURCE_DFMS_ON_ ","main/Comet.dfn");
-      }
-      elsif ($InputLine eq "OFF") {
-	  ampsConfigLib::RedefineMacro("_MODEL_SOURCE_DFMS_","_MODEL_SOURCE_DFMS_OFF_ ","main/Comet.dfn");
       }
   }
   elsif ($InputLine eq "BJORNPRODUCTIONRATE") {
