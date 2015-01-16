@@ -149,16 +149,19 @@ for idim = 0, ndim-1 do case ndim of
        'x': x = xx
        'y': y = xx
        'z': z = xx
+       else: x = xx
     endcase
     2: case variables(idim) of
        'x': x = xx(*,*,idim)
        'y': y = xx(*,*,idim)
        'z': z = xx(*,*,idim)
+       else: 
     end
     3: case variables(idim) of
        'x': x = xx(*,*,*,idim)
        'y': y = xx(*,*,*,idim)
        'z': z = xx(*,*,*,idim)
+       else:
     end
 endcase
 
