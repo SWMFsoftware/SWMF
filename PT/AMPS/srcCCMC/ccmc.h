@@ -2,6 +2,8 @@
 #ifndef CCMC_H
 #define CCMC_H
 
+//$Id$
+
 #include <math.h>
 
 #include "pic.h"

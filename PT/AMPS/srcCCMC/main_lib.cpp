@@ -296,7 +296,7 @@ void amps_init() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::CCMC::LFM::LoadDataFile("/Users/ccmc/Example_Runs/MLFM/total.LFM.total_S-IMF-time_step_1630500.cdf");
+	PIC::CPLR::CCMC::LFM::LoadDataFile("/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
 
 	//init the PIC solver
 	PIC::Init_AfterParser();
