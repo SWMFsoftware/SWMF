@@ -74,7 +74,7 @@ void PIC::ParticleTracker::TrajectoryData::flush() {
   char fname[_MAX_STRING_LENGTH_PIC_];
 
   if (CurrentPosition!=0) {
-    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
+    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%ld.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
     fout=fopen(fname,"w");
 
     fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
@@ -91,7 +91,7 @@ void PIC::ParticleTracker::TrajectoryList::flush() {
   char fname[_MAX_STRING_LENGTH_PIC_];
 
   if (CurrentPosition!=0) {
-    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryList.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
+    sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%ld.TrajectoryList.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
     fout=fopen(fname,"w");
 
     fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);

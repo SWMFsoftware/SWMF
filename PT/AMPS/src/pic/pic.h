@@ -2162,7 +2162,7 @@ namespace PIC {
       if ( (isfinite(val)==false)|| ((t>0.0)&&((t<minAllowedValue)||(t>maxAllowedValue))) ) {
         char msg[600];
 
-        sprintf(msg,"Error: value of limits: val=%e, (line=%ld,file=%s)",val,line,fname);
+        sprintf(msg,"Error: value of limits: val=%e, (line=%i,file=%s)",val,line,fname);
         exit(line,fname,msg);
       }
     }
