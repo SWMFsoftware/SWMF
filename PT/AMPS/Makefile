@@ -8,6 +8,10 @@ WSD=srcTemp
 InputFileAMPS=moon.input
 SPICE=nospice
 
+#Compiling with the CCMC's Kameleon
+KAMELEON=nokameleon
+BOOST=noboost  
+
 include Makefile.def
 include Makefile.conf
 
@@ -74,7 +78,7 @@ export Flags
 
 #Flags=-O3 -fasm-blocks  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
 
-SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${CWD}
+SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
@@ -112,11 +116,21 @@ LIB:
 amps: ${LIB_AMPS}
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
+
+ifeq ($(KAMELEON),nokameleon)
 ifeq ($(SPICE),nospice)
 	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${CPPLIB} 
 else 
 	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} \
 	${SPICE}/lib/cspice.a ${CPPLIB}
+endif
+else 
+ifeq ($(SPICE),nospice)
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${KAMELEON}/lib/ccmc/libccmc.dylib ${CPPLIB}  
+else
+	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} \
+	${SPICE}/lib/cspice.a ${KAMELEON}/lib/ccmc/libccmc.dylib  ${CPPLIB}
+endif
 endif
 
 TESTDIR = run_test
