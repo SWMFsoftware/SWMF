@@ -1438,6 +1438,9 @@ namespace PIC {
     //sample the normal and tangential kinetic temperatures: constant origin of the direction of the normal
     static const double constNormalDirection__SampleParallelTangentialTemperature[3]={0.0,0.0,0.0};
 
+    //the number of the first output file that is printed
+    static const int FirstPrintedOutputFile=-1;
+
     namespace ExternalSamplingLocalVariables {
 
       //the external procedures for sampling particle data
@@ -1475,6 +1478,7 @@ namespace PIC {
 
 
     void Sampling();
+    void CatchOutLimitSampledValue();
 
     //sample the particle data
     inline void SampleParticleData(char* ParticleData,char *SamplingBuffer,PIC::Mesh::cDataBlockAMR *block,PIC::Mesh::cDataCenterNode *cell,double TimeStepFraction) {
@@ -2147,6 +2151,27 @@ namespace PIC {
     //InfiniteLoop==false ==> no problem found; InfiniteLoop==true => the actual number of particles does not consider the that in teh particle buffer
     bool InfiniteLoop(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
     void FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+
+    //check is a variable value is within an allowed range
+    const double minAllowedValue=1.0E-80;
+    const double maxAllowedValue=1.0E80;
+
+    inline void CatchOutLimitValue(double val,int line,const char *fname) {
+      double t=fabs(val);
+
+      if ( (isfinite(val)==false)|| ((t>0.0)&&((t<minAllowedValue)||(t>maxAllowedValue))) ) {
+        char msg[600];
+
+        sprintf(msg,"Error: value of limits: val=%e, (line=%ld,file=%s)",val,line,fname);
+        exit(line,fname,msg);
+      }
+    }
+
+    inline void CatchOutLimitValue(double* valArray,int lengthArray, int line,const char *fname) {
+      int i;
+
+      for (i=0;i<lengthArray;i++) CatchOutLimitValue(valArray[i],line,fname);
+    }
   }
 
   namespace Alarm {

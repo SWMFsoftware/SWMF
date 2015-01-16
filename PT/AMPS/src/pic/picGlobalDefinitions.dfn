@@ -165,7 +165,9 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_MODEL__RADIAL_VELOCITY_MODE__ON_  0
 #define _PIC_MODEL__RADIAL_VELOCITY_MODE__OFF_  1
 
-
+//call PIC::Debugger::CatchOutLimitValue to check whether the variable value is within an allowed limit
+#define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_    0
+#define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_OFF_   1
 
 
 

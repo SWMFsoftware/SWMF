@@ -2518,6 +2518,8 @@ ProcessPhotoChemistry:
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
 
+  PIC::Debugger::CatchOutLimitValue(vFinal,DIM,__LINE__,__FILE__);
+
   PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
 

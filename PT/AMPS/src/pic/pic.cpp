@@ -42,9 +42,22 @@ void PIC::TimeStep() {
    PIC::Parallel::IterationNumberAfterRebalancing++;
 
   //sampling of the particle data
-//#if _PIC_SAMPLING_MODE_ == _PIC_MODE_ON_
+   SamplingTime=MPI_Wtime();
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   Sampling::CatchOutLimitSampledValue();
+#endif
+#endif
+
   PIC::Sampling::Sampling();
-  SamplingTime=MPI_Wtime()-StartTime;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   Sampling::CatchOutLimitSampledValue();
+#endif
+#endif
+
+  SamplingTime=MPI_Wtime()-SamplingTime;
 //#endif
 
   //injection boundary conditions
@@ -510,6 +523,14 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
             SamplingData=cell->GetAssociatedDataBufferPointer()+/*PIC::Mesh::*/collectingCellSampleDataPointerOffset;
             memcpy((void*)tempSamplingBuffer,(void*)SamplingData,/*PIC::Mesh::*/sampleSetDataLength);
 
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+            for (s=0;s<PIC::nTotalSpecies;s++) PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
+#endif
+#endif
+
+
 //            ptr=cell->FirstCellParticle;
             ptrNext=ptr;
             ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
@@ -621,11 +642,15 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
               v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData); ///ParticleData);
 
-
-
-
               LocalParticleWeight=block->GetLocalParticleWeight(s);
               LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData); //ParticleData);
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+              PIC::Debugger::CatchOutLimitValue(v,DIM,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue(LocalParticleWeight,__LINE__,__FILE__);
+#endif
+#endif
 
 
 //              move sample memory into cash
@@ -681,6 +706,16 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               }
 
               *(s+(double*)(tempSamplingBuffer+/*PIC::Mesh::*/sampledParticleSpeedRelativeOffset))+=sqrt(Speed2)*LocalParticleWeight;
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__); 
+              PIC::Debugger::CatchOutLimitValue(sampledVelocityOffset,DIM,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue(sampledVelocity2Offset,DIM,__LINE__,__FILE__);
+              PIC::Debugger::CatchOutLimitValue((s+(double*)(tempSamplingBuffer+sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
+#endif
+#endif
+
 
               //sample the data for calculation the normal and tangential kinetic temepratures
             #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
@@ -785,21 +820,47 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
   exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
 
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   CatchOutLimitSampledValue();
+#endif
+#endif
+
   //sample user defined data
   if (PIC::IndividualModelSampling::SamplingProcedure.size()!=0) {
     int nfunc,nfuncTotal=PIC::IndividualModelSampling::SamplingProcedure.size();
 
     for (nfunc=0;nfunc<nfuncTotal;nfunc++) PIC::IndividualModelSampling::SamplingProcedure[nfunc]();
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   CatchOutLimitSampledValue();
+#endif
+#endif
   }
 
   //sample local data sets of the user defined functions
   for (int nfunc=0;nfunc<PIC::Sampling::ExternalSamplingLocalVariables::SamplingRoutinesRegistrationCounter;nfunc++) PIC::Sampling::ExternalSamplingLocalVariables::SamplingProcessor[nfunc]();
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   CatchOutLimitSampledValue();
+#endif
+#endif
+
 
   //sample the distrivution function
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
   if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
+#endif
+
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+   CatchOutLimitSampledValue();
+#endif
 #endif
 
   //Sample size distribution parameters of dust grains
@@ -904,7 +965,9 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
           fflush(stdout);
         }
 
-        PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+        if (DataOutputFileNumber>=FirstPrintedOutputFile) {
+          PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+        }
 
         if (PIC::Mesh::mesh.ThisThread==0) {
           fprintf(PIC::DiagnospticMessageStream,"done.\n");

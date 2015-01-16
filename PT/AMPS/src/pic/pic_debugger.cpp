@@ -182,4 +182,45 @@ void PIC::Debugger::FindDoubleReferencedParticle(cTreeNodeAMR<PIC::Mesh::cDataBl
 }
 
 
+//catch the out of limit value in the sample buffer (check only the base quantaty)
+void PIC::Sampling::CatchOutLimitSampledValue() {
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  int s,i,j,k;
+  PIC::Mesh::cDataCenterNode *cell;
+  PIC::Mesh::cDataBlockAMR *block;
+  long int LocalCellNumber;
+  char *SamplingBuffer;
+
+
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+    block=node->block;
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      cell=block->GetCenterNode(LocalCellNumber);
+
+      SamplingBuffer=cell->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset;
+
+
+      for (s=0;s<PIC::nTotalSpecies;s++) {
+        PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleWeghtRelativeOffset)),1,__LINE__,__FILE__);
+        PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleNumberRelativeOffset)),1,__LINE__,__FILE__);
+        PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleNumberDensityRelativeOffset)),1,__LINE__,__FILE__);
+
+        PIC::Debugger::CatchOutLimitValue((3*s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleVelocityRelativeOffset)),DIM,__LINE__,__FILE__);
+        PIC::Debugger::CatchOutLimitValue((3*s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleVelocity2RelativeOffset)),DIM,__LINE__,__FILE__);
+        PIC::Debugger::CatchOutLimitValue((s+(double*)(SamplingBuffer+PIC::Mesh::sampledParticleSpeedRelativeOffset)),1,__LINE__,__FILE__);
+      }
+
+    }
+  }
+
+#endif
+#endif
+}
+
 
