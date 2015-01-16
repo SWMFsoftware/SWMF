@@ -53,7 +53,7 @@ CouplerMode=ices !!off, ices, swmf
 
 #General
   ReferenceInjectionParticleNumber=2000
-  MaxMeshRefinmentLevel=8! 2 !4
+  MaxMeshRefinmentLevel=10! 2 !4
   EnforceRequestedMeshResolution=off !on,off
 
   BlockCells=30,5,5
@@ -63,12 +63,14 @@ CouplerMode=ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  FirstPrintedOutputFile=-1  
 
-  TrajectoryTracing=on
-  MaxSampledTrajectoryNumber=10000
 
-  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
-  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Mercury::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+ TrajectoryTracing=on
+ MaxSampledTrajectoryNumber=10000
+
+ define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+ define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Mercury::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 #endGeneral
 
 #ParticleCollisions 
@@ -171,7 +173,7 @@ CouplerMode=ices !!off, ices, swmf
   addPhysicalModelHeader=Mercury.h 
 !  addPhysicalModelHeader=Exosphere_Helium.h   
 
-!  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
+! define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_OFF_
 
