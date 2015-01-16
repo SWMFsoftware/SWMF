@@ -17,3 +17,6 @@
 
 #define _MODEL_SOURCE_DFMS_OFF_ 0
 #define _MODEL_SOURCE_DFMS_ON_ 1
+
+#define _DFMS_RATIO_MODE_OFF_ 0
+#define _DFMS_RATIO_MODE_ON_ 1
