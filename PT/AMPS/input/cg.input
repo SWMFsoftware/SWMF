@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O
+SpeciesList=H2O CO CO2
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=on ! on,off 
@@ -99,8 +99,17 @@ CouplerMode=ices !!off, ices, swmf
 
   RotZnum(H2O=5)
   VibTemp(H2O=2000)
+  nRotModes(CO=2)
+  nRotModes(CO2=2)
+  RotZnum(CO=5)
+  RotZnum(CO2=5)
 
   TemperatureIndex(H2O,H2O)=0.5
+  TemperatureIndex(CO,CO)=0.5
+  TemperatureIndex(CO2,CO2)=0.5
+  TemperatureIndex(H2O,CO)=0.5
+  TemperatureIndex(H2O,CO2)=0.5
+  TemperatureIndex(CO,CO2)=0.5
 #endIDF
 
 
@@ -124,10 +133,25 @@ CouplerMode=ices !!off, ices, swmf
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
   
   BjornProductionRateUserDefined=Analytical !on,off,Analytical
-  BjornProductionRate(H2O)=8.0e25 !!2.0e25	    
+  DFMSRatioMode=off !on,off
+  !! if BjornProductionRateUserDefined=on, use following values
+  BjornProductionRate(H2O)=1.0e25 !!2.0e25	    
+  BjornProductionRate(CO)=0.0
+  BjornProductionRate(CO2)=0.0
+
   UniformProductionRate(H2O)=0.0 !!2.0e25
+  UniformProductionRate(CO)=0.0
+  UniformProductionRate(CO2)=0.0
+
+  ModelSourceDFMS=off !on,off
+  !! if ModelSourceDFMS=off, use following values
   JetProductionRate(H2O)=0.0 !1.0e25	    
+  JetProductionRate(CO2)=0.0 !1.0e25	    
+  JetProductionRate(CO)=0.0 !1.0e25	    
   
+
+
+
   !!Dust parameters
   DustMode=off !!on,off
   DustTotalMassProductionRate=1.0
