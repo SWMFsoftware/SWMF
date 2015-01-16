@@ -879,6 +879,11 @@ sub ReadGeneralBlock {
 	($InputLine,$InputComment)=split(' ',$InputComment,2);
 	ampsConfigLib::ChangeValueOfVariable("int PIC::ModelTestRun::nTotalIteraction",$InputLine,"pic/pic_init_const.cpp");
     }
+    
+    elsif ($InputLine eq "FIRSTPRINTEDOUTPUTFILE") {
+	    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
+    }
 
     elsif ($InputLine eq "INITIALSAMPLELENGTH") {
 	($InputLine,$InputComment)=split('!',$line,2);
