@@ -61,7 +61,7 @@ at the end of each time step
 #define _PIC_SAMPLING_BREAK_LOAD_REBALANCING_MODE_ _PIC_MODE_ON_
 
 //the modes of using the ICES
-#define _PIC_ICES_SWMF_MODE_ _PIC_ICES_MODE_OFF_
+#define _PIC_ICES_SWMF_MODE_ _PIC_ICES_MODE_ON_
 #define _PIC_ICES_DSMC_MODE_ _PIC_ICES_MODE_OFF_
 
 //particle transformation, photolytic reactions
