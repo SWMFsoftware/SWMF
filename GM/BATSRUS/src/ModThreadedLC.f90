@@ -10,6 +10,8 @@ module ModThreadedLC
 
   real :: TeFraction, TiFraction, PeFraction
   real,allocatable :: Te_G(:,:,:)
+  real,allocatable,dimension(:):: APlus_I, AMinus_I, SqrtRho_I,&
+       TeSi_I, ConsSi_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, Va_I, ReflCoef_I
 
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
@@ -22,7 +24,7 @@ module ModThreadedLC
   !\
   !   Hydrostatic equilibrium in an isothermal corona: 
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-  ! => N_i\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+  ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
   !/
   !\
   !energy flux needed to raise the mass flux rho*u to the heliocentric 
@@ -35,12 +37,26 @@ contains
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultiFluid,   ONLY: MassIon_I
-    use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux
+    use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux, &
+         nPointInThreadMax
     use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
     use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
+    allocate(ReflCoef_I(nPointInThreadMax)); ReflCoef_I = 0.0
+    allocate( SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
 
+    allocate( APlus_I(nPointInThreadMax));  APlus_I = 0.0
+    allocate(AMinus_I(nPointInThreadMax)); AMinus_I = 0.0
+    allocate(  TeSi_I(nPointInThreadMax));   TeSi_I = 0.0
+    allocate(ConsSi_I(nPointInThreadMax)); ConsSi_I = 0.0
+    allocate(PAvrSi_I(nPointInThreadMax)); PAvrSi_I = 0.0
+    allocate(   Res_I(nPointInThreadMax));    Res_I = 0.0
+    allocate(     U_I(nPointInThreadMax));      U_I = 0.0
+    allocate(     L_I(nPointInThreadMax));      L_I = 0.0
+    allocate(     M_I(nPointInThreadMax));      M_I = 0.0
+    allocate(    Xi_I(nPointInThreadMax));     Xi_I = 0.0
+    allocate(    Va_I(nPointInThreadMax));     Va_I = 0.0
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
