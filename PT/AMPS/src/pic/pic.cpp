@@ -1415,17 +1415,11 @@ void PIC::Init_BeforeParser() {
   signal(SIGFPE,SignalHandler);
 
 
-  //init ICES
-#if _PIC_ICES_SWMF_MODE_ == _PIC_ICES_MODE_ON_
-#define _PIC_INIT_ICES_
-#endif
-
-#if _PIC_ICES_DSMC_MODE_ == _PIC_ICES_MODE_ON_
-#define _PIC_INIT_ICES_
-#endif
-
-#ifdef _PIC_INIT_ICES_
+  //init coupler 
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_ 
   PIC::CPLR::ICES::Init();
+#elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
+  PIC::CPLR::CCMC::Init();
 #endif
 
   //init the background atmosphere model
