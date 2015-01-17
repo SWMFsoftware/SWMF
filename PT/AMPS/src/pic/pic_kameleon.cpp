@@ -31,6 +31,19 @@
 
 double PIC::CPLR::CCMC::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
+void PIC::CPLR::CCMC::LFM::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
+  ccmc::Kameleon kameleon;
+
+  kameleon.open(fname);
+
+  xmin[0]=cm2m*kameleon.getVariableAttribute("x","actual_min").getAttributeFloat();
+  xmin[1]=cm2m*kameleon.getVariableAttribute("y","actual_min").getAttributeFloat();
+  xmin[2]=cm2m*kameleon.getVariableAttribute("z","actual_min").getAttributeFloat();
+
+  xmax[0]=cm2m*kameleon.getVariableAttribute("x","actual_max").getAttributeFloat();
+  xmax[1]=cm2m*kameleon.getVariableAttribute("y","actual_max").getAttributeFloat();
+  xmax[2]=cm2m*kameleon.getVariableAttribute("z","actual_max").getAttributeFloat();
+}
 
 void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static ccmc::LFM *lfm=NULL;
@@ -82,6 +95,9 @@ void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh
       x[1]=xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j);
       x[2]=xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k);
 
+      //transfor the coordinated into the LFM frame
+      for (idim=0;idim<3;idim++) x[idim]/=_RADIUS_(_EARTH_);
+
       //locate the cell
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
@@ -96,11 +112,11 @@ void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh
 
       p=interpolator->interpolate("p",x[0],x[1],x[2]);
       n=interpolator->interpolate("rho",x[0],x[1],x[2])/PlasmaSpeciesAtomicMass;
-      T=p/(n*Kbol);
+      T=(n>0.0) ? p/(n*Kbol) : 0.0;
 
-      *(double*)(offset+PlasmaPressureOffset)=p;
-      *(double*)(offset+PlasmaNumberDensityOffset)=n;
-      *(double*)(offset+PlasmaTemperatureOffset)=T;
+      *((double*)(offset+PlasmaPressureOffset))=p;
+      *((double*)(offset+PlasmaNumberDensityOffset))=n;
+      *((double*)(offset+PlasmaTemperatureOffset))=T;
     }
   }
   else {
