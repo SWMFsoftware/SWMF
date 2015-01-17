@@ -1,3 +1,4 @@
+//$Id$
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,8 +18,6 @@
 
 #include <sys/time.h>
 #include <sys/resource.h>
-
-//$Id$
 
 #include "pic.h"
 #include "constants.h"
@@ -254,6 +253,19 @@ void amps_init() {
 		xmin[idim]=DomainCenterOffset[idim]-DomainLength[idim]/2.0;
 	}
 
+	//read the domain size from the data file
+	PIC::CPLR::CCMC::LFM::GetDomainLimits(xmin,xmax,"/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
+
+	for (idim=0;idim<3;idim++) {
+	  double xCenter,dx;
+
+	  xCenter=xmax[idim]+xmin[idim];
+	  dx=0.8*(xmax[idim]-xmin[idim]);
+
+	  xmin[idim]=xCenter-0.5*dx;
+	  xmax[idim]=xCenter+0.5*dx;
+	}
+
 	//generate only the tree
 	PIC::Mesh::mesh.AllowBlockAllocation=false;
 	PIC::Mesh::mesh.init(xmin,xmax,localResolution);
@@ -331,6 +343,8 @@ void amps_init() {
 
   PIC::CPLR::ICES::readSWMFdata(1.0);
 #endif
+
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 }
 
 
