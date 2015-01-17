@@ -145,6 +145,7 @@ contains
     real:: Alpha, SqrtAlphaPlus1
     
     real           :: PSiMin
+    integer:: nPoint, iPoint
 
     logical :: DoTest, DoTestMe
 
@@ -218,6 +219,55 @@ contains
     ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
 
     AMajorOut = AWValue_V(2)
+    nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k) -1
+
+    TeSi_I(nPoint) = TeSiIn
+    iTable = i_lookup_table('TR')   
+    do iPoint = 1, nPoint-1
+       call interpolate_lookup_table(&
+            iTable=iTable,       &
+            iVal=1,              &
+            ValIn=PAvrSiOut*     &
+            BoundaryThreads_B(iBlock)% Length_III(iPoint-nPoint,j,k) * &
+            No2Si_V(UnitX_),     &
+            Arg2In=1.0e8,        &
+            Value_V=Value_V,     &
+            Arg1Out=TeSi_I(iPoint),  & 
+            DoExtrapolate=.false.)
+    end do
+
+    PAvrSi_I(1) = PAvrSiOut
+    !\
+    !   Hydrostatic equilibrium in an isothermal corona: 
+    !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
+    ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+    !/
+    GravityCoef = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+    do iPoint = 2, nPoint
+       PAvrSi_I(iPoint) = PAvrSi_I(iPoint-1)*&
+            exp( (0.5/TeSi_I(iPoint) + 0.5/TeSi_I(iPoint-1))*GravityCoef*&
+            (BoundaryThreads_B(iBlock)%RInv_III(iPoint-nPoint,j,k) - &
+            BoundaryThreads_B(iBlock)%RInv_III(iPoint-1-nPoint,j,k)))
+    end do
+
+    do iPoint=1,nPoint
+       RhoNoDim = (PAvrSi_I(iPoint)*sqrt(AverageIonCharge)*&
+            Si2No_V(UnitEnergyDens_)/PeFraction)*&
+            TeFraction/(TeSi_I(iPoint)*Si2No_V(UnitTemperature_))
+       SqrtRho_I(iPoint) = sqrt(RhoNoDim)
+    end do
+    Xi_I(1) = 0.0
+    do iPoint = 2, nPoint
+       Xi_I(iPoint) = Xi_I(iPoint-1) + &
+            (BoundaryThreads_B(iBlock)% Length2SqrtB_III(iPoint-nPoint,j,k) - &
+            BoundaryThreads_B(iBlock)% Length2SqrtB_III(iPoint-1-nPoint,j,k))*&
+         sqrt(0.5*(SqrtRho_I(iPoint) + SqrtRho_I(iPoint-1))&
+         *PoyntingFluxPerB/LperpTimesSqrtB**2)
+    end do
+    do iPoint = 1, nPoint
+       Va_I(iPoint) = BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)&
+            /SqrtRho_I(iPoint)
+    end do
     if(DoTestMe)then
        write(*,*)'TeSiIn=       ',TeSiIn,' K '
        write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
