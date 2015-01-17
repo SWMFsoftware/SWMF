@@ -36,6 +36,10 @@ module ModFieldLineThread
      !/
      real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
      !\
+     !  Temperature and pressure SI
+     !/
+     real,pointer :: TSi_III(:,:,:),PSi_III(:,:,:)
+     !\
      ! number of points
      !/
      integer,pointer :: nPoint_II(:,:)
@@ -139,6 +143,8 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
+    nullify(BoundaryThreads_B(iBlock) % TSi_III)
+    nullify(BoundaryThreads_B(iBlock) % PSi_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
     nullify(BoundaryThreads_B(iBlock) % SignBr_II)
     nullify(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
@@ -157,6 +163,8 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Length2SqrtB_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
+    deallocate(BoundaryThreads_B(iBlock) % TSi_III)
+    deallocate(BoundaryThreads_B(iBlock) % PSi_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
     deallocate(BoundaryThreads_B(iBlock) % SignBr_II)
     deallocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
@@ -212,6 +220,10 @@ contains
           allocate(BoundaryThreads_B(iBlock) % B_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
+               -nPointInThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % TSi_III(&
+               -nPointInThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % PSi_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                1:nJ,1:nK))
@@ -313,6 +325,8 @@ contains
     BoundaryThreads_B(iBlock) % Length2SqrtB_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
+    BoundaryThreads_B(iBlock) % TSi_III = 0.0
+    BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % SignBr_II = 0.0
     BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII = 0.0
@@ -497,6 +511,10 @@ contains
                BoundaryThreads_B(iBlock) % B_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % RInv_III(&
+               iPoint, jTest,kTest),&
+               BoundaryThreads_B(iBlock) % TSi_III(&
+               iPoint, jTest,kTest),&
+               BoundaryThreads_B(iBlock) % PSi_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % Length_III(&
                iPoint, jTest, kTest),&
@@ -731,11 +749,12 @@ contains
   end subroutine calc_alfven_wave_tr_table
   !=======================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       Heating, APlusBC)
+       Heating, APlusBC, APlusOut_I, AMinusOut_I)
     integer,intent(in):: nI
     real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
     real,intent(in )::AMinusBC  !BC for A-
     real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
+    real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
     real:: DeltaXi
     real,dimension(0:500)::APlus_I,AMinus_I
     integer::iStep,iIter, iFile
@@ -801,13 +820,7 @@ contains
     end do
     APlusBC = APlus_I(nI)
     Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
-    !if(.not.DoWrite)RETURN
-    !iFile = 5
-    !open(iFile,file='apm.out',status='replace')
-    !do istep=0,nI
-    !   write(iFile,*)Xi_I(iStep),APlus_I(iStep),AMinus_I(istep),&
-    !        APlus_I(istep)*AMinus_I(istep)*(APlus_I(istep)+AMinus_I(istep))
-    !end do
-    !close(iFile)
+    if(present(APlusOut_I))APlusOut_I(0:nI) = APlus_I(0:nI)
+    if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
   end subroutine solve_a_plus_minus
 end module ModFieldLineThread
