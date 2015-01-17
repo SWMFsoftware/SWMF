@@ -35,6 +35,8 @@
 #define VacuumPermittivity   8.854187817620E-12
 #define PlanckConstant       6.62606957E-34
 #define SpeedOfLight         299792458.0
+#define cm2m                 1.0E-2
+#define m2cm                 100.0
 
 
 
