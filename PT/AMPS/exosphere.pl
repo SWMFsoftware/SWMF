@@ -173,7 +173,7 @@ while ($line=<InputFile>) {
     my @IonNumberDensityFractionTable=(0)x$TotalSpeciesNumber;
 
     if ($InputLine eq "ON") {
-      ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_ON_","models/exosphere/Exosphere.dfn");
       
       #set up the appriprite source ID
       ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__ID__BACKGROUND_PLASMA_ION_INJECTION_",$SourceProcessID,"models/exosphere/Exosphere.dfn");
@@ -183,7 +183,7 @@ while ($line=<InputFile>) {
       $SourceProcessID++;   
     }
     elsif ($InputLine eq "OFF") {
-      ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
+      ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
     }
     else {
       die "Cannot recognize the option #0, line=$InputFileLineNumber ($InputFileName)\n";
@@ -201,10 +201,10 @@ while ($line=<InputFile>) {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         
         if ($InputLine eq "STEADYSTATE") {
-          ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_","models/exosphere/Exosphere.dfn");
+          ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_","models/exosphere/Exosphere.dfn");
         }
         elsif ($InputLine eq "TIMEDEPENDENT") {
-          ampsConfigLib::RedefineMacro("_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__TIME_DEPENDENT_","models/exosphere/Exosphere.dfn");
+          ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE_","_EXOSPHERE__BACKGROUND_PLASMA_ION_INJECTION_MODE__TIME_DEPENDENT_","models/exosphere/Exosphere.dfn");
         }
         else {
           die "Cannot recognize the option #1, line=$InputFileLineNumber ($InputFileName)\n";
