@@ -26,6 +26,13 @@ die "$ERROR: there should be two file arguments!\n" unless $#ARGV == 1;
 my $File1 = $ARGV[0];
 my $File2 = $ARGV[1];
 
+if(not -e $File1){
+    print "$ERROR: $File1 does not exist\n"; die "$ERROR\n";
+}
+if(not -e $File2){
+    print "$ERROR: $File2 does not exist\n"; die "$ERROR\n";
+}
+
 if(not -T $File1){
     print "$ERROR: $File1 is not an ASCII file\n"; die "$ERROR\n";
 }
