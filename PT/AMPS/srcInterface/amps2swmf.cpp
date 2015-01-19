@@ -126,7 +126,7 @@ extern "C" {
     //save particle trajectory file
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     sprintf(fname,"%s/amps.TrajectoryTracking.out=Final",PIC::OutputDataFileDirectory);
-    PIC::ParticleTracker::ParticleTrajectoryFile::Output(fname);
+    PIC::ParticleTracker::OutputTrajectory(fname);
    #endif
   }
 
