@@ -262,8 +262,8 @@ OBJ_INITIAL_STATE = \
 	test_initial_state.o \
 	../src/ModIoUnit.o \
 	../src/ModMpiInterfaces.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/ModReadParam.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
@@ -380,8 +380,8 @@ OBJ_AXES = \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/ModKind.o \
 	../src/ModConst.o \
 	../src/ModNumConst.o \
@@ -417,8 +417,8 @@ OBJ_PLANET_FIELD = \
 	../src/ModIoUnit.o \
 	../src/ModReadParam.o \
 	../src/ModTimeConvert.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o
+	../src/ModUtility.o \
+	../src/ModUtility_c.o
 
 test_planet_field_exe:
 	@(cd ../src; make CON_planet_field.o)
@@ -442,8 +442,8 @@ OBJ_PLOT_FILE = \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o
 
@@ -470,8 +470,8 @@ OBJ_LOOKUP_TABLE = \
 	../src/ModMpiInterfaces.o \
 	../src/ModReadParam.o \
 	../src/ModInterpolate.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/ModHdf5Utils.o \
 	../src/ModPlotFile.o \
 	../src/ModLookupTable.o
@@ -497,11 +497,11 @@ OBJ_UTILITIES = \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o
+	../src/ModUtility.o \
+	../src/ModUtility_c.o
 
 test_utilities_exe:
-	@(cd ../src; make ModUtilities.o ModUtilities_c.o)
+	@(cd ../src; make ModUtility.o ModUtility_c.o)
 	@make test_utilities.o
 	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag1}
 
@@ -545,8 +545,8 @@ OBJ_PROCESS_VAR_NAME = \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
-	../src/ModUtilities.o \
-	../src/ModUtilities_c.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/ModProcessVarName.o
 
 test_process_var_name:
