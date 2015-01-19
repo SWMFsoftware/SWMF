@@ -218,6 +218,16 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_MODEL_SOURCE_DFMS_","_MODEL_SOURCE_DFMS_OFF_ ","main/Comet.dfn");
       }
   }
+  elsif ($InputLine eq "TRACKINGSURFACEELEMENTMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_TRACKING_SURFACE_ELEMENT_MODE_","_TRACKING_SURFACE_ELEMENT_MODE_ON_ ","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_TRACKING_SURFACE_ELEMENT_MODE_","_TRACKING_SURFACE_ELEMENT_MODE_OFF_ ","main/Comet.dfn");
+      }
+  }
   elsif ($InputLine eq "DFMSRATIOMODE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
