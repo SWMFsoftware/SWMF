@@ -28,13 +28,13 @@ static bool probabilityFunctionDefinedJet=false,probabilityFunctionDefined=false
 static double productionDistributionJet[6000],cumulativeProductionDistributionJet[6000];
 static double productionDistributionWaist[6000],cumulativeProductionDistributionWaist[6000];
 static double productionDistributionHartley2[6000],cumulativeProductionDistributionHartley2[6000];
-static double productionDistributionUniformNASTRAN[150000],cumulativeProductionDistributionUniformNASTRAN[150000];
+static double productionDistributionUniformNASTRAN[200000],cumulativeProductionDistributionUniformNASTRAN[200000];
 #if _MODEL_SOURCE_DFMS_ == _MODEL_SOURCE_DFMS_ON_
-static double productionDistributionJetNASTRAN[3][150000],cumulativeProductionDistributionJetNASTRAN[3][150000],fluxDFMS[3][150000];
+static double productionDistributionJetNASTRAN[3][200000],cumulativeProductionDistributionJetNASTRAN[3][200000],fluxDFMS[3][200000];
 static bool definedFluxDFMS[3],probabilityFunctionDefinedJetNASTRAN[3];
 static double DFMSproduction[3];
 #else
-static double productionDistributionJetNASTRAN[150000],cumulativeProductionDistributionJetNASTRAN[150000];
+static double productionDistributionJetNASTRAN[200000],cumulativeProductionDistributionJetNASTRAN[200000];
 static bool probabilityFunctionDefinedJetNASTRAN=false;
 #endif
 static double productionDistribution[180],cumulativeProductionDistribution[180];
@@ -56,19 +56,27 @@ double fluxBjorn[90];
 double nightSideFlux;
 
 #if _DFMS_RATIO_MODE_ == _DFMS_RATIO_MODE_ON_
-static double ratioBjornSpec[3][150000];
-static double productionDistributionNASTRAN[3][150000],cumulativeProductionDistributionNASTRAN[3][150000],fluxBjornDFMS[3][150000];
+static double ratioBjornSpec[3][200000];
+static double productionDistributionNASTRAN[3][200000],cumulativeProductionDistributionNASTRAN[3][200000],fluxBjornDFMS[3][200000];
 static bool definedFluxBjornDFMS[3],probabilityFunctionDefinedNASTRAN[3];
 static double DFMSBjornProduction[3];
 #else
-static double productionDistributionNASTRAN[150000],cumulativeProductionDistributionNASTRAN[150000];
+static double productionDistributionNASTRAN[200000],cumulativeProductionDistributionNASTRAN[200000];
 static bool probabilityFunctionDefinedNASTRAN=false;
 #endif
 
-static double gravityAngle[150000];
+static double gravityAngle[200000];
 static bool gravityAngleInitialized=false;
 
+long int offsetSurfaceElement;
+
 void Comet::Init_BeforeParser() {
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  // Keep track of original surface element the particle was created from
+  PIC::ParticleBuffer::RequestDataStorage(offsetSurfaceElement,sizeof(int));
+#endif
+
+
 #if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
   //request sampling buffer and particle fields
   PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestDataBuffer);
@@ -840,6 +848,10 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   while (gamma>cumulativeProductionDistributionNASTRAN[spec][i]){
     i++;
   }
+
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
@@ -1029,6 +1041,10 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   while (gamma>cumulativeProductionDistributionNASTRAN[i]){
     i++;
   }
+
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
@@ -1191,6 +1207,10 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   while (gamma>cumulativeProductionDistributionUniformNASTRAN[i]){
     i++;
   }
+
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
     
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
@@ -1596,6 +1616,11 @@ bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,d
     i++;
   }
 #endif
+
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  Comet::SetParticleSurfaceElement(i,(PIC::ParticleBuffer::byte *) tempParticleData);
+#endif
+
   //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
@@ -1892,6 +1917,8 @@ void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
 
 #if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
     //the gravity force non spherical case
+    startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
+    nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
     Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
     nucleusGravity::gravity(accl_LOCAL,x);
 #else
@@ -1975,5 +2002,13 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
   else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
 #endif
 else return 0.0;
+}
+
+unsigned int Comet::GetParticleSurfaceElement(PIC::ParticleBuffer::byte *ParticleDataStart) {
+  return *((int*)(ParticleDataStart+offsetSurfaceElement));
+}
+
+void Comet::SetParticleSurfaceElement(int SurfaceElement,PIC::ParticleBuffer::byte *ParticleDataStart) {
+      *((int*) (ParticleDataStart+offsetSurfaceElement))=SurfaceElement;
 }
 

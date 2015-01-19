@@ -28,7 +28,94 @@
 #include "cCutBlockSet.h"
 #include "Comet.h"
 
+
 static double SampleFluxDown[150000];
+
+void FlushElementSampling(double *sample) {
+  for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
+    sample[i]=0.0;
+  }
+}
+
+void SampleSurfaceElement(double *x,double *sample) {
+  //find cell of interest
+  int i,j,k;
+  long int LocalCellNumber,nface;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL;  
+  startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
+  if (startNode->Thread==PIC::Mesh::mesh.ThisThread) {
+    PIC::Mesh::cDataBlockAMR *block=startNode->block;
+    LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
+    long int FirstCellParticle=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)],ptr;
+    PIC::ParticleBuffer::byte *ParticleData;
+    double normalization=0.0;
+    
+    if (FirstCellParticle!=-1) {
+      for (ptr=FirstCellParticle;ptr!=-1;ptr=PIC::ParticleBuffer::GetNext(ptr)) {    
+	ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+	nface=Comet::GetParticleSurfaceElement(ParticleData);
+	sample[nface]+=block->GetLocalParticleWeight(_H2O_SPEC_)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)/CutCell::BoundaryTriangleFaces[nface].SurfaceArea;
+      }
+    }
+  }
+}
+
+void PrintSampledSurfaceElementSurfaceTriangulationMesh(const char *fname,double * x,double * sample) {
+#if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  long int nface,nnode,pnode;
+  class cTempNodeData {
+  public:
+    double Probability;
+  };
+
+  cTempNodeData *TempNodeData=new cTempNodeData[CutCell::nBoundaryTriangleNodes];
+
+  //initialization
+  for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) TempNodeData[nnode].Probability=0.0;
+  
+  int i,j,k;
+  long int LocalCellNumber;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL;  
+  startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
+
+  if (startNode->Thread==PIC::Mesh::mesh.ThisThread) {
+    PIC::Mesh::cDataBlockAMR *block=startNode->block;
+    LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
+    long int FirstCellParticle=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)],ptr;
+    PIC::ParticleBuffer::byte *ParticleData;
+    double normalization=0.0;
+
+    for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+      for (pnode=0;pnode<3;pnode++) {
+	nnode=CutCell::BoundaryTriangleFaces[nface].node[pnode]-CutCell::BoundaryTriangleNodes;
+	if ((nnode<0)||(nnode>=CutCell::nBoundaryTriangleNodes)) exit(__LINE__,__FILE__,"Error: out of range");
+	
+	TempNodeData[nnode].Probability+=sample[nface];
+	normalization+=sample[nface];
+      }
+    }
+    
+    if (normalization!=0.0) for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) TempNodeData[nnode].Probability=TempNodeData[nnode].Probability*3.0/normalization;
+    
+    //print the mesh
+    FILE *fout=fopen(fname,"w");
+    fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\",\"Probability\"");
+    fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",CutCell::nBoundaryTriangleNodes,CutCell::nBoundaryTriangleFaces);
+    
+    for (nnode=0;nnode<CutCell::nBoundaryTriangleNodes;nnode++) {
+      fprintf(fout,"%e %e %e %e\n",CutCell::BoundaryTriangleNodes[nnode].x[0],CutCell::BoundaryTriangleNodes[nnode].x[1],CutCell::BoundaryTriangleNodes[nnode].x[2],TempNodeData[nnode].Probability);
+    }
+    
+    for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
+      fprintf(fout,"%ld %ld %ld\n",1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[0]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[1]-CutCell::BoundaryTriangleNodes),1+(long int)(CutCell::BoundaryTriangleFaces[nface].node[2]-CutCell::BoundaryTriangleNodes));
+    }
+    
+    fclose(fout);
+    delete [] TempNodeData;
+  }
+#endif
+}
+
 
 void FlushBackfluxSampling() {
   for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
@@ -203,7 +290,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*4.5);
+  return max(1.0,t->CharacteristicSize()*4.5); //4.5
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -215,9 +302,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
       return dt*3.0;
-    }else CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #else
-    CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -402,6 +489,8 @@ int main(int argc,char **argv) {
 
 
   PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
+  //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.SHAP4.bdf");
+  //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
 
@@ -485,7 +574,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000; //700000;
   PIC::RequiredSampleLength=10;
 
 
@@ -538,17 +627,46 @@ int main(int argc,char **argv) {
   sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
   PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
+#if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+  const int nLocations=2;
+  static double SampleElement[nLocations][150000];
+
+  double SampleLocations[nLocations][DIM]={
+    {0.0,0.0,10.0e3},
+    {10.0e3,10.0e3,10.0e3}};
+
+  //  if (PIC::Mesh::mesh.ThisThread==0) {
+    for (int i=0;i<nLocations;i++) FlushElementSampling(SampleElement[i]);
+    //}
+#endif
+  
   int LastDataOutputFileNumber=-1;
 
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
 
     if (PIC::ThisThread==0 && niter==1) {
-      char fname[_MAX_STRING_LENGTH_PIC_];
+      //      char fname[_MAX_STRING_LENGTH_PIC_];
       
-      sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
-      Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
+      //sprintf(fname,"%s/SurfaceTriangulation_Jet.dat",PIC::OutputDataFileDirectory);
+      //Comet::PrintSurfaceTriangulationMesh(fname,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,1.0E-8);
 
+
+#if _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_ == _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__ON_
+      char fname3[_MAX_STRING_LENGTH_PIC_];
+
+      sprintf(fname3,"%s/SurfaceTriangulation_MaxLiftableSize.dat",PIC::OutputDataFileDirectory);
+      Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(fname3);
+#endif
+    }
+
+#if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+    //    if (PIC::Mesh::mesh.ThisThread==0) {
+      for (int i=0;i<nLocations;i++) SampleSurfaceElement(SampleLocations[i],SampleElement[i]);
+      // }
+#endif
+
+    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
 #if _SAMPLE_BACKFLUX_MODE_ == _SAMPLE_BACKFLUX_MODE__ON_      
       char fname2[_MAX_STRING_LENGTH_PIC_];
 
@@ -560,16 +678,20 @@ int main(int argc,char **argv) {
       FlushBackfluxSampling();
 #endif      
 
-#if _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE_ == _COMPUTE_MAXIMUM_LIFTABLE_SIZE_MODE__ON_
-      char fname3[_MAX_STRING_LENGTH_PIC_];
+#if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
+      for (int counter=0;counter<nLocations;counter++) {
+	char fnameElement[_MAX_STRING_LENGTH_PIC_];
 
-      sprintf(fname3,"%s/SurfaceTriangulation_MaxLiftableSize.dat",PIC::OutputDataFileDirectory);
-      Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(fname3);
+	if (PIC::Mesh::mesh.ThisThread==0) cout << "Printing Sampled Surface Element output " << endl;
+	
+	sprintf(fnameElement,"%s/SurfaceTriangulation_SampledElement_%i.dat",PIC::OutputDataFileDirectory,counter);
+	PrintSampledSurfaceElementSurfaceTriangulationMesh(fnameElement,SampleLocations[counter],SampleElement[counter]);
+	
+	FlushElementSampling(SampleElement[counter]);
+      }
 #endif
-    }
 
-    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-      PIC::RequiredSampleLength*=4;
+      PIC::RequiredSampleLength*=2;
       if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
 
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
