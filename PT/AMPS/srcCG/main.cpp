@@ -29,7 +29,7 @@
 #include "Comet.h"
 
 
-static double SampleFluxDown[150000];
+static double SampleFluxDown[200000];
 
 void FlushElementSampling(double *sample) {
   for (int i=0;i<CutCell::nBoundaryTriangleFaces;i++) {
@@ -290,7 +290,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*4.5); //4.5
+  return max(1.0,t->CharacteristicSize()*18.0); //4.5
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -488,8 +488,8 @@ int main(int argc,char **argv) {
   //  CutCell::ReadNastranSurfaceMeshLongFormat("CG2.bdf",xmin,xmax,1.0E-8);
 
 
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
-  //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.SHAP4.bdf");
+  //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.SHAP4.bdf");
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -629,7 +629,7 @@ int main(int argc,char **argv) {
 
 #if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
   const int nLocations=2;
-  static double SampleElement[nLocations][150000];
+  static double SampleElement[nLocations][200000];
 
   double SampleLocations[nLocations][DIM]={
     {0.0,0.0,10.0e3},
