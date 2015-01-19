@@ -19,6 +19,9 @@
 namespace Comet {
   using namespace Exosphere;
 
+  unsigned int GetParticleSurfaceElement(PIC::ParticleBuffer::byte *ParticleDataStart);
+  void SetParticleSurfaceElement(int SurfaceElement,PIC::ParticleBuffer::byte *ParticleDataStart);
+
   void PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname);
 
   double GetTotalProduction(int spec,void *BoundaryElement);
