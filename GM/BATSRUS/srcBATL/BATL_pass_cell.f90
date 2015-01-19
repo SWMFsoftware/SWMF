@@ -513,10 +513,11 @@ contains
        ! stage 1: first order prolongation and do_equal.
        ! stage 2: 
        !   a) Do high order restriction remotely for all kinds of ghost cells.
-       !   b) Do high order prolongation for face ghost cell 
-       !      locally.  c) Pass restricted cells from fine to coarse.
+       !   b) Pass restricted cells from fine to coarse.
+       !   c) Do high order prolongation for face ghost cell 
+       !      locally.
        ! stage 3: 
-       !   a) Refine with high order accuracy on coarse blocks for edges and 
+       !   a) Remote high order prolongation on coarse blocks for edges and 
        !      corners and for faces that are too complex to do locally. 
        !   b) Pass locally high order prolonged face ghost cells 
        !      to edge/corner ghost cells of neighboring fine block.
