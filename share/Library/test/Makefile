@@ -510,7 +510,7 @@ test_utilities:
 	@make test_utilities_exe		>> test_utilities.diff
 	@echo ./test_utilities.exe		>> test_utilities.diff
 	-@(./test_utilities.exe > test_utilities.tmp)
-	-@(diff test_utilities.tmp test_utilities.log \
+	-@(diff -b test_utilities.tmp test_utilities.log \
 						>  test_utilities.diff)
 	@ls -l test_utilities.diff
 	@rmdir xxx
