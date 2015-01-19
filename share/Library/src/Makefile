@@ -44,8 +44,8 @@ MODULES = \
 	ModTimeConvert.o\
 	ModTriangulate.o\
 	ModTriangulateSpherical.o\
-	ModUtilities.o\
-	ModUtilities_c.o\
+	ModUtility.o\
+	ModUtility_c.o\
 	CON_axes.o\
 	CON_geopack.o\
 	CON_line_extract.o\

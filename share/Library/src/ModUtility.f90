@@ -1,4 +1,3 @@
-!-*- mode: f90 -*- 
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
@@ -23,6 +22,7 @@ module ModUtilities
 
   private ! except
 
+  public:: make_dir
   public:: check_dir
   public:: fix_dir_name
   public:: flush_unit
@@ -33,7 +33,6 @@ module ModUtilities
   public:: sleep
   public:: check_allocate
   public:: test_mod_utility
-  public:: make_dir
 
   logical, public :: DoFlush = .true.
 
@@ -64,7 +63,9 @@ contains
     integer,optional::retval ! mkdir return value
 
     !DESCRIPTION:
-    ! Create the directory specified by NameDir. The directory will have permissions 0755 (drwxr-xr-x) by default. If directory already exists, this function does nothing.
+    ! Create the directory specified by NameDir. 
+    ! The directory will have permissions 0755 (drwxr-xr-x) by default. 
+    ! If directory already exists, this function does nothing.
     !
     ! The perm parameter sets the permissions for the new
     ! directory. This should be specified in octal notation, which in
