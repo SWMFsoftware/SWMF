@@ -90,27 +90,32 @@ function log_time,wlog,wlognames,timeunit
   for i = 0, nwlog-1 do begin
      varname = strlowcase(wlognames(i))
      case varname of
-        'time': itime = i
-        't'   : if wlognames(i) eq 't' then itime=i
-        'step': istep = i
-        'it'  : istep = i
-        'year': iyear = i
-        'yr'  : iyear = i
-        'yy'  : iyear = i
-        'day' : iday  = i
-        'dy'  : iday  = i
-        'dd'  : iday  = i
-        'hour': ihour = i
-        'hr'  : ihour = i
-        'hh'  : ihour = i
-        'min' : imin  = i
-        'mn'  : imin  = i
-        'mm'  : imin  = i
-        'sec' : isec  = i
-        'sc'  : isec  = i
-        'ss'  : isec  = i
-        'msec': imsc  = i
-        'msc' : imsc  = i
+        'time'       : itime = i
+        't'          : if wlognames(i) eq 't' then itime=i
+        'step'       : istep = i
+        'it'         : istep = i
+        'year'       : iyear = i
+        'yr'         : iyear = i
+        'yy'         : iyear = i
+        'day'        : iday  = i
+        'dy'         : iday  = i
+        'dd'         : iday  = i
+        'hour'       : ihour = i
+        'hr'         : ihour = i
+        'hh'         : ihour = i
+        'minute'     : imin  = i
+        'min'        : imin  = i
+        'mn'         : imin  = i
+        'mm'         : imin  = i
+        'second'     : isec  = i
+        'sec'        : isec  = i
+        'sc'         : isec  = i
+        'ss'         : isec  = i
+        'millisecond': imsc  = i
+        'millisec'   : imsc  = i
+        'msecond'    : imsc  = i
+        'msec'       : imsc  = i
+        'msc'        : imsc  = i
         else:
      endcase
   endfor
