@@ -1197,7 +1197,8 @@ void amps_init() {
 #endif
 
 
-#ifdef _ICES_LOAD_DATA_
+  //#ifdef _ICES_LOAD_DATA_
+#if _PIC_COUPLER_MODE_ ==       _PIC_COUPLER_MODE__ICES_
   PIC::CPLR::ICES::readSWMFdata(1.0);
 #endif
 
@@ -1429,7 +1430,8 @@ void amps_init() {
 
 //  Mercury::Init_AfterMesh();
 
-#ifdef _ICES_LOAD_DATA_
+#if _PIC_COUPLER_MODE_ ==       _PIC_COUPLER_MODE__ICES_
+  //#ifdef _ICES_LOAD_DATA_
 //  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 
   //output the solar wind ion flux at the palnet's surface
