@@ -13,14 +13,14 @@ T			DoTimeAccurate
 #SAVERESTART                                                     
 T                       DoSaveRestart
 -1                      DnSaveRestart
-1800.0                  DtSaveRestart
+60.0                    DtSaveRestart
 
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-200.0			DtCheckStop
+60.0			DtCheckStop
 
-#CPUTIMEMAX
+CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
 
 #COUPLEORDER
@@ -58,13 +58,6 @@ F			DoCoupleOnTime
 #INCLUDE
 GM/restartIN/restart.H
 
-#MAGNETOSPHERE
-T                       body1
-2.5                     Rbody
-3.0                     Rcurrents
-28.0                    Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
-
 #OUTERBOUNDARY
 outflow			TypeBcEast
 vary			TypeBcWest
@@ -89,28 +82,13 @@ IMF.dat         	NameSolarWindFile
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
 
-#SATELLITE                             
-4			nSatellite
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-geotail_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-goes08_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-goes10_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-polar_20000406_08.dat
+
+INCLUDE
+SATELLITES.in
 
 ! There has to be an identical MAGNETOMETER command+parameters in IE too.
 #MAGNETOMETER
-station12.dat		NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
 
@@ -232,7 +210,7 @@ F			UseFakeRegion2
 
 ! Same parameters as the MAGNETOMETER command in GM
 #MAGNETOMETER
-station12.dat		NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
 
@@ -249,6 +227,6 @@ aur idl                 StringPlot
 
 #STOP
 -1			MaxIter
-259200.0		TimeMax
+86400.0			TimeMax
 
 #END ############################################################

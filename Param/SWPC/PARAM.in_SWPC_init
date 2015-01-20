@@ -131,28 +131,13 @@ z=0 MHD idl             StringPlot
 100			DnRefine
 F			DoAutomaticRefinement 
 
-#SATELLITE                             
-4			nSatellite
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-geotail_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-goes08_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-goes10_20000406_08.dat
-MHD RAY			StringSatellite
--1			DnOutput
-5.0			DtOutput
-polar_20000406_08.dat
+! Satellite trajectories
+INCLUDE
+SATELLITE.in
 
 ! There has to be an identical MAGNETOMETER command+parameters in IE too.
 #MAGNETOMETER
-station12.dat		NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
 
@@ -178,7 +163,7 @@ F			UseFakeRegion2
 
 ! Same parameters as the MAGNETOMETER command in GM
 #MAGNETOMETER
-station12.dat		NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 -1			DnOutput
 60.0			DtOutput
 
@@ -228,14 +213,14 @@ T			DoTimeAccurate
 #SAVERESTART                                                     
 T                       DoSaveRestart
 -1                      DnSaveRestart
-1800.0                  DtSaveRestart
+60.0                    DtSaveRestart
 
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-200.0			DtCheckStop
+60.0			DtCheckStop
 
-#CPUTIMEMAX
+CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
 
 #COMPONENT
@@ -372,7 +357,7 @@ aur idl                 StringPlot
 
 #STOP
 -1			MaxIter
-259200.0		TimeMax
+86400.0			TimeMax
 
 #END ############################################################
 
