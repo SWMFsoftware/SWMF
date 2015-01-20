@@ -70,7 +70,7 @@ ${MY_LIB}:	$(OBJECTS)
 		rm -f ${MY_LIB}
 		${AR} ${MY_LIB} $(OBJECTS)
 
-# RCM needs its own rules
+# RCM needs the -save flag (CFLAGS)
 
 .SUFFIXES:
 .SUFFIXES: .f90 .F90 .f .o
@@ -81,19 +81,6 @@ ${MY_LIB}:	$(OBJECTS)
 
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
-
-# IM_wrapper needs to be compiled with the same precision as others
-IM_wrapper.o: IM_wrapper.f90 \
-	ModProcRCM.o \
-	rcm_variables.o \
-	rcm_io.o \
-	${SHAREDIR}/ModReadParam.o \
-	${SHAREDIR}/ModUtilities.o \
-	${SHAREDIR}/ModNumConst.o \
-	${LIBRARYDIR}/CON_comp_info.o \
-	${COUPLERDIR}/CON_coupler.o \
-	${SHAREDIR}/ModIoUnit.o
-		${COMPILE.f90} $(CFLAGS) $(PRECISION) IM_wrapper.f90
 
 distclean: clean
 	-@(rm -f ${LIBDIR}/libRCM.a) 
