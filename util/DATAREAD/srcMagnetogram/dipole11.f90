@@ -5,7 +5,8 @@ program dipole11
   ! Create a magnetogram with spherical harmonics (1,1)
   ! proportional to sin(Theta)*cos(Phi)
 
-  use ModNumConst, ONLY: cTwoPi
+  use ModNumConst, ONLY: cTwoPi, cRadToDeg
+  use ModPlotFile, ONLY: save_plot_file
 
   implicit none
 
@@ -13,9 +14,29 @@ program dipole11
   integer, parameter:: nPhi = 360, nTheta = 180
   real, parameter:: dPhi= cTwoPi/nPhi, dSinTheta = 2.0/nTheta
 
+  real:: Phi_I(nPhi), Theta_I(nTheta), Br_II(nPhi, nTheta)
+
   real :: Theta
   integer:: iPhi, iTheta
-  !--------------------------------------------------------------
+  !---------------------------------------------------------------------------
+
+  ! Uniform in Phi
+  do iPhi = 1, nPhi
+     Phi_I(iPhi) = dPhi*(iPhi - 1)
+  end do
+
+  ! Uniform in sin(theta) and start from Theta = Pi (!) and finish at 0
+  do iTheta = 1, nTheta
+     Theta_I(iTheta) = acos( (iTheta-0.5)*dSinTheta - 1.0 )
+  end do
+
+  ! Br = A*sin(theta)*cos(phi)
+  do iTheta = 1, nTheta
+     do iPhi = 1, nPhi
+        ! NOTE: this is not optimized at all
+        Br_II(iPhi,iTheta) = Amplitude * sin(Theta_I(iTheta)) *cos(Phi_I(iPhi))
+     end do
+  end do
 
   open(11,file='fitsfile.dat',status='replace')
   write(11,'(a)')'#CR'
@@ -27,14 +48,20 @@ program dipole11
   write(11,*)nTheta
   write(11,'(a)')'#START'
 
-  do iTheta = 0, nTheta-1
-     Theta = acos( (iTheta+0.5)*dSinTheta - 1.0 )
-     do iPhi = 0, nPhi-1
-        write(11,'(e15.6)')Amplitude * sin(Theta) *cos(iPhi*dPhi)
+  do iTheta = 1, nTheta
+     do iPhi = 1, nPhi
+        write(11,'(e15.6)') Br_II(iPhi,iTheta)
      end do
   end do
   close(11)
-  stop
+
+  call save_plot_file('dipole11.out', &
+       StringHeaderIn = 'DIPOLE11 output: [deg] [G]', &
+       NameVarIn = 'Longitude Latitude Br LongitudeShift', &
+       ParamIn_I = (/ 0.5 /), &
+       Coord1In_I = cRadToDeg*Phi_I, &
+       Coord2In_I = 90.0 - cRadToDeg*Theta_I, &
+       VarIn_II  = Br_II)
 
 end program dipole11
 !=================================================================
