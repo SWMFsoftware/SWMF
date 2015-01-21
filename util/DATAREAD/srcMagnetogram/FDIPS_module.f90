@@ -24,6 +24,7 @@ module ModPotentialField
   real             :: Tolerance          = 1e-10
 
   ! magnetogram parameters
+  logical           :: IsNewMagnetogramStyle = .false.
   character(len=100):: NameFileIn = 'fitsfile.dat'  ! filename
   logical           :: UseCosTheta = .true. 
   real              :: BrMax = 3500.0               ! Saturation level of MDI
@@ -121,6 +122,10 @@ contains
        case("#PARALLEL")
           call read_var('nProcTheta', nProcTheta)
           call read_var('nProcPhi'  , nProcPhi)
+       case("#MAGNETOGRAMFILE")
+          IsNewMagnetogramStyle = .true.
+          call read_var('NameFileIn' , NameFileIn)
+          call read_var('BrMax'      , BrMax)
        case("#MAGNETOGRAM")
           call read_var('NameFileIn' , NameFileIn)
           call read_var('UseCosTheta', UseCosTheta)
@@ -190,6 +195,7 @@ contains
   subroutine read_magnetogram
 
     use ModIoUnit, ONLY: UnitTmp_
+    use ModPlotFile, ONLY: read_plot_file
 
     ! Read the raw magnetogram file into a 2d array
 
@@ -200,54 +206,83 @@ contains
     real :: BrAverage, Weight
     character (len=100) :: String
 
-    real, allocatable:: Br0_II(:,:)
+    real, allocatable:: Br0_II(:,:), Var_II(:,:), Phi0_I(:), Theta0_I(:)
 
     character(len=*), parameter:: NameSub = 'read_magnetogram'
     !------------------------------------------------------------------------
-    open(UnitTmp_, file=NameFileIn, status='old', iostat=iError)
-    if(iError /= 0) call CON_stop(NameSub// &
-         ': could not open input file'//trim(NameFileIn))
-    do 
-       read(UnitTmp_,'(a)', iostat = iError ) String
-       if(index(String,'#CR')>0)then
-          read(UnitTmp_,*) nCarringtonRotation
-       endif
-       if(index(String,'#ARRAYSIZE')>0)then
-          read(UnitTmp_,*) nPhi0
-          read(UnitTmp_,*) nTheta0
-       endif
-       if(index(String,'#START')>0) EXIT
-    end do
-    
-    write(*,*)'nCarringtonRotation, nTheta0, nPhi0: ',&
-         nCarringtonRotation, nTheta0, nPhi0
+    if(IsNewMagnetogramStyle)then
 
-    allocate(Br0_II(nTheta0,nPhi0))
+       call read_plot_file(NameFileIn, n1Out = nPhi0, n2Out = nTheta0, &
+            iErrorOut=iError)
 
-    ! input file is in longitude, latitude
-    do iTheta = nTheta0, 1, -1
-       do iPhi = 1, nPhi0
-          read(UnitTmp_,*) Br0_II(iTheta,iPhi)
-          if (abs(Br0_II(iTheta,iPhi)) > BrMax) &
-               Br0_II(iTheta,iPhi) = sign(BrMax, Br0_II(iTheta,iPhi))
+       if(iError /= 0) call CON_stop(NameSub// &
+            ': could not read header from file'//trim(NameFileIn))
+
+       allocate(Phi0_I(nPhi0), Theta0_I(nTheta0), Var_II(nPhi0,nTheta0), &
+            Br0_II(nTheta0,nPhi0))
+       
+       call read_plot_file(NameFileIn, &
+            Coord1Out_I=Phi0_I, Coord2Out_I=Theta0_I, VarOut_II = Var_II, &
+            iErrorOut=iError)
+
+       if(iError /= 0) call CON_stop(NameSub// &
+            ': could not read date from file'//trim(NameFileIn))
+
+       ! Check if the theta coordinate is uniformt or not
+       UseCosTheta = abs(Theta0_I(3) - 2*Theta0_I(2) + Theta0_I(1)) > 1e-6
+
+       ! Br0 is defined with the opposite index order
+       Br0_II = transpose(Var_II)
+
+       deallocate(Var_II)
+
+    else
+       open(UnitTmp_, file=NameFileIn, status='old', iostat=iError)
+       if(iError /= 0) call CON_stop(NameSub// &
+            ': could not open input file'//trim(NameFileIn))
+       do 
+          read(UnitTmp_,'(a)', iostat = iError ) String
+          if(index(String,'#CR')>0)then
+             read(UnitTmp_,*) nCarringtonRotation
+          endif
+          if(index(String,'#ARRAYSIZE')>0)then
+             read(UnitTmp_,*) nPhi0
+             read(UnitTmp_,*) nTheta0
+          endif
+          if(index(String,'#START')>0) EXIT
        end do
-    end do
+
+       write(*,*)'nCarringtonRotation, nTheta0, nPhi0: ',&
+            nCarringtonRotation, nTheta0, nPhi0
+
+       allocate(Br0_II(nTheta0,nPhi0))
+
+       ! input file is in longitude, latitude
+       do iTheta = nTheta0, 1, -1
+          do iPhi = 1, nPhi0
+             read(UnitTmp_,*) Br0_II(iTheta,iPhi)
+          end do
+       end do
+    end if
+
+    ! Fix too large values of Br
+    where (abs(Br0_II) > BrMax) Br0_II = sign(BrMax, Br0_II)
 
     if(nTheta0 > nThetaAll)then
        ! Set integer coarsening ratio
        nThetaRatio = nTheta0 / nThetaAll
-       nThetaAll      = nTheta0 / nThetaRatio
+       nThetaAll   = nTheta0 / nThetaRatio
     else
        nThetaRatio = 1
-       nThetaAll      = nTheta0
+       nThetaAll   = nTheta0
     end if
 
     if(nPhi0 > nPhiAll)then
        nPhiRatio = nPhi0 / nPhiAll
-       nPhiAll      = nPhi0 / nPhiRatio
+       nPhiAll   = nPhi0 / nPhiRatio
     else
        nPhiRatio = 1
-       nPhiAll      = nPhi0
+       nPhiAll   = nPhi0
     end if
 
     allocate(Br_II(nThetaAll,nPhiAll))
@@ -273,7 +308,7 @@ contains
           do iTheta = 1, nThetaAll
              iTheta0 = nThetaRatio*(iTheta-1) + 1
              iTheta1 = iTheta0 + nThetaRatio - 1
-          
+
              Br_II(iTheta,iPhi) = Br_II(iTheta,iPhi) &
                   + Weight * sum( Br0_II(iTheta0:iTheta1, kPhi))
           end do
