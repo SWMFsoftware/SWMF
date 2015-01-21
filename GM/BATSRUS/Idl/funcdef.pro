@@ -155,13 +155,20 @@ for idim = 0, ndim-1 do case ndim of
        'x': x = xx(*,*,idim)
        'y': y = xx(*,*,idim)
        'z': z = xx(*,*,idim)
-       else: 
+       else: case idim of
+          0: x = xx(*,*,idim)
+          1: y = xx(*,*,idim)
+       endcase
     end
     3: case variables(idim) of
        'x': x = xx(*,*,*,idim)
        'y': y = xx(*,*,*,idim)
        'z': z = xx(*,*,*,idim)
-       else:
+       else: case idim of
+          0: x = xx(*,*,*,idim)
+          1: y = xx(*,*,*,idim)
+          2: z = xx(*,*,*,idim)
+       endcase
     end
 endcase
 
