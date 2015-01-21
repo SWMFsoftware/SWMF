@@ -181,7 +181,7 @@ contains
        n_D = cshift(n_D, -1)        ! shift nVar/n_D(3) to n_D(0)
     else
        call CON_stop(NameSub // &
-            'none of VarIn_* variables are present')
+            ': none of the VarIn_* variables are present')
     endif
     ! Extract information
     nVar = n_D(0)
@@ -534,6 +534,7 @@ contains
        CoordOut_DI,                                    &
        Coord1Out_I, Coord2Out_I, Coord3Out_I,          &
        CoordOut_I, CoordOut_DII, CoordOut_DIII,        &
+       VarOut_I,  VarOut_II,  VarOut_III,              &
        VarOut_VI, VarOut_VII, VarOut_VIII,             &
        VarOut_IV, VarOut_IIV, VarOut_IIIV,             &
        iErrorOut)
@@ -563,6 +564,9 @@ contains
     real,             optional, intent(out):: CoordOut_I(:)          ! 1D
     real,             optional, intent(out):: CoordOut_DII(:,:,:)    ! 2D
     real,             optional, intent(out):: CoordOut_DIII(:,:,:,:) ! 3D
+    real,             optional, intent(out):: VarOut_I(:)    ! variable  in 1D
+    real,             optional, intent(out):: VarOut_II(:,:)       !        2D
+    real,             optional, intent(out):: VarOut_III(:,:,:)    !        3D
     real,             optional, intent(out):: VarOut_VI(:,:) ! variables in 1D
     real,             optional, intent(out):: VarOut_VII(:,:,:)    !        2D
     real,             optional, intent(out):: VarOut_VIII(:,:,:,:) !        3D
@@ -602,9 +606,18 @@ contains
     DoReadHeader = .false.
 
     ! No data is read. Leave file open !
-    if(.not. (present(VarOut_VI) .or. present(VarOut_VII) &
+    if(.not. (present(VarOut_I) .or. present(VarOut_II) &
+         .or. present(VarOut_III) &
+         .or. present(VarOut_VI) .or. present(VarOut_VII) &
          .or. present(VarOut_VIII).or. present(VarOut_IV)&
          .or. present(VarOut_IIV).or. present(VarOut_IIIV))) RETURN
+
+    if((present(VarOut_I) .or. present(VarOut_II) .or. present(VarOut_III)) &
+         .and. nVar /= 1)then
+       write(*,*) NameSub,': the number of variables is ', nVar, &
+            ' (larger than 1) in file ', NameFile
+       call CON_stop(NameSub//' called with scalar variable argument')
+    end if
 
     ! If data is read, next header needs to be read
     DoReadHeader = .true.
@@ -666,12 +679,15 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          if(present(VarOut_VI))   VarOut_VI(iVar, n)      = Var_IV(n, iVar)
-          if(present(VarOut_VII))  VarOut_VII(iVar,i,j)    = Var_IV(n, iVar)
-          if(present(VarOut_VIII)) VarOut_VIII(iVar,i,j,k) = Var_IV(n, iVar)
-          if(present(VarOut_IV))   VarOut_IV(i,iVar)       = Var_IV(n, iVar)
-          if(present(VarOut_IIV))  VarOut_IIV(i,j,iVar)    = Var_IV(n, iVar)
-          if(present(VarOut_IIIV)) VarOut_IIIV(i,j,k,iVar) = Var_IV(n, iVar)
+          if(present(VarOut_I))    VarOut_I(n)             = Var_IV(n,iVar)
+          if(present(VarOut_II))   VarOut_II(i,j)          = Var_IV(n,iVar)
+          if(present(VarOut_III))  VarOut_III(i,j,k)       = Var_IV(n,iVar)
+          if(present(VarOut_VI))   VarOut_VI(iVar,n)       = Var_IV(n,iVar)
+          if(present(VarOut_VII))  VarOut_VII(iVar,i,j)    = Var_IV(n,iVar)
+          if(present(VarOut_VIII)) VarOut_VIII(iVar,i,j,k) = Var_IV(n,iVar)
+          if(present(VarOut_IV))   VarOut_IV(i,iVar)       = Var_IV(n,iVar)
+          if(present(VarOut_IIV))  VarOut_IIV(i,j,iVar)    = Var_IV(n,iVar)
+          if(present(VarOut_IIIV)) VarOut_IIIV(i,j,k,iVar) = Var_IV(n,iVar)
 
        end do; end do; end do
     end do
