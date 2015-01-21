@@ -64,6 +64,7 @@ contains
        CoordMinIn_D, CoordMaxIn_D, &
        Coord1In_I, Coord2In_I, Coord3In_I, &
        CoordIn_I, CoordIn_DII, CoordIn_DIII,&
+       VarIn_I,  VarIn_II,  VarIn_III,  &
        VarIn_VI, VarIn_VII, VarIn_VIII, &
        VarIn_IV, VarIn_IIV, VarIn_IIIV, iCommIn)
 
@@ -89,6 +90,9 @@ contains
     real,             optional, intent(in):: Coord3In_I(:)  ! coords for axis 3
     real,             optional, intent(in):: CoordMinIn_D(:)! min coordinates
     real,             optional, intent(in):: CoordMaxIn_D(:)! max coordinates
+    real,             optional, intent(in):: VarIn_I(:)     ! variable  in 1D
+    real,             optional, intent(in):: VarIn_II(:,:)               ! 2D
+    real,             optional, intent(in):: VarIn_III(:,:,:)            ! 3D
     real,             optional, intent(in):: VarIn_VI(:,:)  ! variables in 1D
     real,             optional, intent(in):: VarIn_VII(:,:,:)            ! 2D
     real,             optional, intent(in):: VarIn_VIII(:,:,:,:)         ! 3D
@@ -142,10 +146,18 @@ contains
     else
        nParam = 0
     end if
-    ! Figure out grid dimensions and number of variables       
+    ! Figure out grid dimensions and number of variables. Default is 1.
     n_D = 1
-    ! For VI, VII, VIII types
-    if(present(VarIn_VI))then
+    if(present(VarIn_I))then
+       nDim = 1
+       n_D(1:1) = shape(VarIn_I)
+    elseif(present(VarIn_II)) then
+       nDim = 2
+       n_D(1:2) = shape(VarIn_II)
+    elseif(present(VarIn_III)) then
+       nDim = 3
+       n_D(1:3) = shape(VarIn_III)
+    elseif(present(VarIn_VI))then
        nDim = 1
        n_D(0:1) = shape(VarIn_VI)
     elseif(present(VarIn_VII))then
@@ -169,7 +181,7 @@ contains
        n_D = cshift(n_D, -1)        ! shift nVar/n_D(3) to n_D(0)
     else
        call CON_stop(NameSub // &
-            'none of VarIn_VI/VarIn_IV,VarIn_VII/VarIn_IIV,VarIn_VIII/VarIn_IIIV are present')
+            'none of VarIn_* variables are present')
     endif
     ! Extract information
     nVar = n_D(0)
@@ -288,18 +300,25 @@ contains
              iG = (ii - 1)*nCellsPerBlock(1) + i
              jG = (jj - 1)*nCellsPerBlock(2) + j
              kG = (kk - 1)*nCellsPerBlock(3) + k
-             if(present(VarIn_VI)) &
-                  VarHdf5Output(i,1,1,iBlk,1:nVar) = VarIn_VI(1:nVar,iG)
-             if(present(VarIn_VII)) &
-                  VarHdf5Output(i,j,1,iBlk,1:nVar) = VarIn_VII(1:nVar,iG,jG)
-             if(present(VarIn_VIII)) &
-                  VarHdf5Output(i,j,k,iBlk,1:nVar)= VarIn_VIII(1:nVar,iG,jG,kG)
-             if(present(VarIn_IV)) &
-                  VarHdf5Output(i,1,1,iBlk,1:nVar) = VarIn_IV(iG,1:nVar)
-             if(present(VarIn_IIV)) &
-                  VarHdf5Output(i,j,1,iBlk,1:nVar) = VarIn_IIV(iG,jG,1:nVar)
-             if(present(VarIn_IIIV)) &
-                  VarHdf5Output(i,j,k,iBlk,1:nVar)= VarIn_IIIV(iG,jG,kG,1:nVar)
+             if(present(VarIn_I)) then
+                VarHdf5Output(i,1,1,iBlk,1)      = VarIn_I(iG)
+             elseif(present(VarIn_II)) then
+                VarHdf5Output(i,j,1,iBlk,1)      = VarIn_II(iG,jG)
+             elseif(present(VarIn_III)) then
+                VarHdf5Output(i,j,k,iBlk,1)      = VarIn_III(iG,jG,kG)
+             elseif(present(VarIn_VI)) then
+                VarHdf5Output(i,1,1,iBlk,1:nVar) = VarIn_VI(1:nVar,iG)
+             elseif(present(VarIn_VII)) then
+                VarHdf5Output(i,j,1,iBlk,1:nVar) = VarIn_VII(1:nVar,iG,jG)
+             elseif(present(VarIn_VIII)) then
+                VarHdf5Output(i,j,k,iBlk,1:nVar)= VarIn_VIII(1:nVar,iG,jG,kG)
+             elseif(present(VarIn_IV)) then
+                VarHdf5Output(i,1,1,iBlk,1:nVar) = VarIn_IV(iG,1:nVar)
+             elseif(present(VarIn_IIV)) then
+                VarHdf5Output(i,j,1,iBlk,1:nVar) = VarIn_IIV(iG,jG,1:nVar)
+             elseif(present(VarIn_IIIV)) then
+                VarHdf5Output(i,j,k,iBlk,1:nVar)= VarIn_IIIV(iG,jG,kG,1:nVar)
+             endif
           end do; end do; end do;
           do n = 1, nDim
              if(n==1) then
@@ -351,6 +370,9 @@ contains
           n = 0
           do k = 1, n3; do j = 1, n2; do i = 1,n1
              n = n + 1
+             if(present(VarIn_I))    Var_IV(n,iVar) = VarIn_I(i)
+             if(present(VarIn_II))   Var_IV(n,iVar) = VarIn_II(i,j)
+             if(present(VarIn_III))  Var_IV(n,iVar) = VarIn_III(i,j,k)
              if(present(VarIn_VI))   Var_IV(n,iVar) = VarIn_VI(iVar,i)
              if(present(VarIn_VII))  Var_IV(n,iVar) = VarIn_VII(iVar,i,j)
              if(present(VarIn_VIII)) Var_IV(n,iVar) = VarIn_VIII(iVar,i,j,k)
