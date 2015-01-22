@@ -896,7 +896,7 @@ InjectionTangentionalSpeed+=sqrt(v1);
 */
 
 
-void amps_init() {
+void amps_init_mesh() {
   //  MPI_Init(&argc,&argv);
     PIC::InitMPI();
 
@@ -1284,7 +1284,10 @@ void amps_init() {
     PIC::Mesh::mesh.InitCellMeasure();
 
 
+}
 
+void amps_init() {
+  int idim;
 
 
   //init the PIC solver
