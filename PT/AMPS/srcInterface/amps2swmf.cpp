@@ -32,6 +32,7 @@ using namespace std;
 
 
 void amps_init();
+void amps_init_mesh();
 void amps_time_step();
 
 
@@ -55,7 +56,7 @@ extern "C" {
 
     //initialize the coupler and AMPS
     PIC::CPLR::SWMF::init();
-    amps_init();
+    amps_init_mesh();
   }
 
 
@@ -79,6 +80,24 @@ extern "C" {
 
     if (swmfTimeSimulation<0.0) swmfTimeSimulation=*TimeSimulation;
 
+    //call AMPS only after the first coupling has occured
+    if (PIC::CPLR::SWMF::FirstCouplingOccured==false) {
+      *TimeSimulation=*TimeSimulationLimit;
+      return;
+    }
+
+    //init AMPS
+    if (InitFlag==false) {
+      //initamps_();
+
+      amps_init();
+      InitFlag=true;
+
+      //print the output file on each iteration
+      //PIC::RequiredSampleLength=1;
+    }
+
+    //determine whether to proceed with the current iteraction
     if (swmfTimeSimulation+PIC::ParticleWeightTimeStep::GlobalTimeStep[0]>*TimeSimulationLimit) {
       *TimeSimulation=*TimeSimulationLimit;
       return;
@@ -88,19 +107,7 @@ extern "C" {
       *TimeSimulation=swmfTimeSimulation;
     }
 
-
-    if (InitFlag==false) {
-      //initamps_();
-
-      //amps_init();
-
-      InitFlag=true;
-
-      //print the output file on each iteration
-      //PIC::RequiredSampleLength=1;
-    }
-
-
+    //call AMPS
     static long int counter=0;
     counter++;
 
@@ -113,7 +120,7 @@ extern "C" {
       PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
 
       exit(0);
-    }    
+    }
 
   }
 
