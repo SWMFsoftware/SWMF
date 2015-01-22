@@ -883,7 +883,7 @@ InjectionTangentionalSpeed+=sqrt(v1);
   return nInjectedParticles;
 }
 
-void amps_init() {
+void amps_init_mesh() {
 //  MPI_Init(&argc,&argv);
   PIC::InitMPI();
 
@@ -1179,7 +1179,9 @@ void amps_init() {
 
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
+}
 
+void amps_init() {
   //init the boundary injection procedure
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
