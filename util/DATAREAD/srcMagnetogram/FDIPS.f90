@@ -243,6 +243,7 @@ program potential_field
 
   if(DoReadMagnetogram .and. iProc == 0) call read_magnetogram
 
+  call MPI_bcast(UseCosTheta, 1, MPI_LOGICAL, 0, iComm, iError)
   call MPI_bcast(nThetaAll, 1, MPI_INTEGER, 0, iComm, iError)
   call MPI_bcast(nPhiAll,   1, MPI_INTEGER, 0, iComm, iError)
   if (.not. allocated(Br_II)) allocate(Br_II(nThetaAll,nPhiAll))
@@ -286,6 +287,7 @@ program potential_field
 
      i = 0
      do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
+
         i = i + 1
         e_I(i)  = RadiusNode_I(iR)**2 &
              /(Radius_I(iR)**2 * dRadiusNode_I(iR) * dRadius_I(iR))
@@ -293,13 +295,21 @@ program potential_field
         f_I(i)  = RadiusNode_I(iR+1)**2 &
              /(Radius_I(iR)**2 * dRadiusNode_I(iR+1) * dRadius_I(iR))
 
-        e1_I(i) = SinThetaNode_I(iTheta)**2 / &
-             (Radius_I(iR)**2 * dCosThetaNode_I(iTheta)  *dCosTheta_I(iTheta))
+        if(UseCosTheta)then
+           e1_I(i) = SinThetaNode_I(iTheta)**2 / &
+                (Radius_I(iR)**2 * dCosThetaNode_I(iTheta)  *dCosTheta_I(iTheta))
+
+           f1_I(i) = SinThetaNode_I(iTheta+1)**2 /&
+                (Radius_I(iR)**2 * dCosThetaNode_I(iTheta+1)*dCosTheta_I(iTheta))
+        else
+           e1_I(i) = SinThetaNode_I(iTheta) / &
+                (Radius_I(iR)**2 * dThetaNode_I(iTheta)  *dCosTheta_I(iTheta))
+
+           f1_I(i) = SinThetaNode_I(iTheta+1) /&
+                (Radius_I(iR)**2 * dThetaNode_I(iTheta+1)*dCosTheta_I(iTheta))
+        end if
 
         !e1_I(i) = 0.0
-
-        f1_I(i) = SinThetaNode_I(iTheta+1)**2 /&
-             (Radius_I(iR)**2 * dCosThetaNode_I(iTheta+1)*dCosTheta_I(iTheta))
 
         !f1_I(i) = 0.0
 
