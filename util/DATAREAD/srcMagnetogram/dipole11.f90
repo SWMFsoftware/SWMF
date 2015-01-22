@@ -5,7 +5,7 @@ program dipole11
   ! Create a magnetogram with spherical harmonics (1,1)
   ! proportional to sin(Theta)*cos(Phi)
 
-  use ModNumConst, ONLY: cTwoPi, cRadToDeg
+  use ModNumConst, ONLY: cPi, cTwoPi, cRadToDeg
   use ModPlotFile, ONLY: save_plot_file
 
   implicit none
@@ -34,7 +34,7 @@ program dipole11
   do iTheta = 1, nTheta
      do iPhi = 1, nPhi
         ! NOTE: this is not optimized at all
-        Br_II(iPhi,iTheta) = Amplitude * sin(Theta_I(iTheta)) *cos(Phi_I(iPhi))
+        Br_II(iPhi,iTheta) = Amplitude * sin(Theta_I(iTheta)) * cos(Phi_I(iPhi))
      end do
   end do
 
@@ -58,7 +58,28 @@ program dipole11
   call save_plot_file('dipole11.out', &
        StringHeaderIn = 'DIPOLE11 output: [deg] [G]', &
        NameVarIn = 'Longitude Latitude Br LongitudeShift', &
-       ParamIn_I = (/ 0.5 /), &
+       ParamIn_I = (/ 0.0 /), &
+       Coord1In_I = cRadToDeg*Phi_I, &
+       Coord2In_I = 90.0 - cRadToDeg*Theta_I, &
+       VarIn_II  = Br_II)
+
+  ! Uniform latitude distribution and start from Theta = Pi (!) and finish at 0
+  do iTheta = 1, nTheta
+     Theta_I(iTheta) = cPi*(1 - (iTheta - 0.5)/nTheta)
+  end do
+
+  ! Br = A*sin(theta)*cos(phi)
+  do iTheta = 1, nTheta
+     do iPhi = 1, nPhi
+        ! NOTE: this is not optimized at all
+        Br_II(iPhi,iTheta) = Amplitude * sin(Theta_I(iTheta)) * cos(Phi_I(iPhi))
+     end do
+  end do
+
+  call save_plot_file('dipole11uniform.out', &
+       StringHeaderIn = 'DIPOLE11 output: [deg] [G]', &
+       NameVarIn = 'Longitude Latitude Br LongitudeShift', &
+       ParamIn_I = (/ 0.0 /), &
        Coord1In_I = cRadToDeg*Phi_I, &
        Coord2In_I = 90.0 - cRadToDeg*Theta_I, &
        VarIn_II  = Br_II)
