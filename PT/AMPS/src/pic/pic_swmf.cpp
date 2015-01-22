@@ -27,21 +27,26 @@
 
 using namespace std;
 
-int PIC::CPLR::SWMF::MagneticFieldOffset=-1,PIC::CPLR::SWMF::PlasmaDensityOffset=-1,PIC::CPLR::SWMF::BulkVelocityOffset=-1,PIC::CPLR::SWMF::PlasmaPressureOffset=-1;
+int PIC::CPLR::SWMF::MagneticFieldOffset=-1,PIC::CPLR::SWMF::PlasmaNumberDensityOffset=-1,PIC::CPLR::SWMF::BulkVelocityOffset=-1,PIC::CPLR::SWMF::PlasmaPressureOffset=-1,PIC::CPLR::SWMF::PlasmaTemperatureOffset=-1;
 int PIC::CPLR::SWMF::TotalDataLength=0;
+double PIC::CPLR::SWMF::MeanPlasmaAtomicMass=1.0*_AMU_;
+bool PIC::CPLR::SWMF::FirstCouplingOccured=false;
 
 
 int PIC::CPLR::SWMF::RequestDataBuffer(int offset) {
   MagneticFieldOffset=offset;
   TotalDataLength=3;
 
-  PlasmaDensityOffset=offset+TotalDataLength*sizeof(double);
-  TotalDataLength++;
-
   BulkVelocityOffset=offset+TotalDataLength*sizeof(double);
   TotalDataLength+=3;
 
   PlasmaPressureOffset=offset+TotalDataLength*sizeof(double);
+  TotalDataLength++;
+
+  PlasmaNumberDensityOffset=offset+TotalDataLength*sizeof(double);
+  TotalDataLength++;
+
+  PlasmaTemperatureOffset=offset+TotalDataLength*sizeof(double);
   TotalDataLength++;
 
   return TotalDataLength*sizeof(double);
@@ -50,7 +55,7 @@ int PIC::CPLR::SWMF::RequestDataBuffer(int offset) {
 }
 
 void PIC::CPLR::SWMF::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"gmRho\",\"gmP\",\"gmVx\",\"gmVy\",\"gmVz\",\"gmBx\",\"gmBy\",\"gmBz\"");
+  fprintf(fout,",\"gmN\",\"gmP\",\"gmVx\",\"gmVy\",\"gmVz\",\"gmBx\",\"gmBy\",\"gmBz\"");
 }
 
 void PIC::CPLR::SWMF::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
@@ -64,13 +69,13 @@ void PIC::CPLR::SWMF::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList
     for (idim=0,SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+BulkVelocityOffset;idim<3;idim++) V[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
 
     P+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PlasmaPressureOffset)))*InterpolationCoeficients[i];
-    Rho+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PlasmaDensityOffset)))*InterpolationCoeficients[i];
+    Rho+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset)))*InterpolationCoeficients[i];
   }
 
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+MagneticFieldOffset,B,3*sizeof(double));
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+BulkVelocityOffset,V,3*sizeof(double));
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+PlasmaPressureOffset,&P,sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PlasmaDensityOffset,&Rho,sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset,&Rho,sizeof(double));
 }
 
 void PIC::CPLR::SWMF::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
@@ -79,7 +84,7 @@ void PIC::CPLR::SWMF::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,
 
   //Density
   if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PlasmaDensityOffset));
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset));
   }
 
   if (pipe->ThisThread==0) {
@@ -281,6 +286,9 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
   PIC::Mesh::cDataBlockAMR *block;
   PIC::Mesh::cDataCenterNode *cell;
 
+  //set up the 'first coupling occuerd' flag
+  FirstCouplingOccured=true;
+
   //init the cell processing flags
   ResetCenterPointProcessingFlag();
 
@@ -333,10 +341,21 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
               else for (idim=0;idim<3;idim++) data[offset+Vx_SWMF2AMPS+idim]=0.0;
             }
 
-            //the order of the state vector: rho, V, B, p
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=((offset>=0)&&(Rho_SWMF2AMPS>=0)) ? data[offset+Rho_SWMF2AMPS] : 0.0;
+            //the order of the state vector: number density, temperature
+            if ((offset>=0)&&(Rho_SWMF2AMPS>=0)) {
+              *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset))=data[offset+Rho_SWMF2AMPS]/MeanPlasmaAtomicMass;
+              *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaTemperatureOffset))=(P_SWMF2AMPS>=0) ? data[offset+P_SWMF2AMPS]/(Kbol*data[offset+Rho_SWMF2AMPS]/MeanPlasmaAtomicMass) : 0.0;
+            }
+            else {
+              *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset))=0.0;
+              *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaTemperatureOffset))=0.0;
+            }
+
+            //get pressure
             *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=((offset>=0)&&(P_SWMF2AMPS>=0)) ? data[offset+P_SWMF2AMPS] : 0.0;
 
+
+            //bulk velocity and magnetic field
             for (idim=0;idim<3;idim++) {
               *((double*)(cell->GetAssociatedDataBufferPointer()+BulkVelocityOffset+idim*sizeof(double)))=((offset>=0)&&(Vx_SWMF2AMPS>=0)) ? data[offset+Vx_SWMF2AMPS+idim] : 0.0;
               *((double*)(cell->GetAssociatedDataBufferPointer()+MagneticFieldOffset+idim*sizeof(double)))=((offset>=0)&&(Bx_SWMF2AMPS>=0)) ? data[offset+Bx_SWMF2AMPS+idim] : 0.0;
@@ -368,7 +387,7 @@ void PIC::CPLR::SWMF::RecieveCenterPointData(char* ValiableList, int nVarialbes,
             }
 
             //the order of the state vector: rho, V, B, p
-            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaDensityOffset))=((offset>=0)&&(Rho_SWMF2AMPS>=0)) ? data[offset+Rho_SWMF2AMPS] : 0.0;
+            *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaNumberDensityOffset))=((offset>=0)&&(Rho_SWMF2AMPS>=0)) ? data[offset+Rho_SWMF2AMPS] : 0.0;
             *((double*)(cell->GetAssociatedDataBufferPointer()+PlasmaPressureOffset))=((offset>=0)&&(P_SWMF2AMPS>=0)) ? data[offset+P_SWMF2AMPS] : 0.0;
 
             for (idim=0;idim<3;idim++) {
