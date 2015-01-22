@@ -2234,7 +2234,14 @@ namespace PIC {
 
     //coupling with SWMF
     namespace SWMF {
-      extern int MagneticFieldOffset,TotalDataLength,PlasmaDensityOffset,BulkVelocityOffset,PlasmaPressureOffset;
+      extern int MagneticFieldOffset,TotalDataLength,BulkVelocityOffset,PlasmaPressureOffset;
+      extern int PlasmaNumberDensityOffset,PlasmaTemperatureOffset;
+
+      //the mean mass of the plasma speies atoms/molecules (needed to conver mass density into number density)
+      extern double MeanPlasmaAtomicMass;
+
+      //the flug if 'false; by default and is teruned to 'true' after the first coupling procedure (used to pospond initialization of AMPS till the backround field information is exported to AMPS)
+      extern bool FirstCouplingOccured;
 
       //init the coupler
       void init();
@@ -2267,6 +2274,20 @@ namespace PIC {
         for (idim=0;idim<3;idim++) v[idim]=offset[idim];
       }
 
+
+
+      inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(PlasmaPressureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(PlasmaNumberDensityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+      inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(PlasmaTemperatureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
       inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
         double B[3],v[3];
 
@@ -2276,6 +2297,16 @@ namespace PIC {
         E[0]=-(v[1]*B[2]-B[1]*v[2]);
         E[1]=-(-v[0]*B[2]+B[0]*v[2]);
         E[2]=-(v[0]*B[1]-B[0]*v[1]);
+      }
+
+      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        register int idim;
+        register char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+
+        double *b=(double*)(offset+MagneticFieldOffset);
+
+        for (idim=0;idim<3;idim++) B[idim]=b[idim];
+        GetBackgroundElectricField(E,x,nd,node);
       }
 
     }
@@ -2455,6 +2486,8 @@ namespace PIC {
 
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
        res=ICES::GetBackgroundPlasmaPressure(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       res=SWMF::GetBackgroundPlasmaPressure(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2467,6 +2500,8 @@ namespace PIC {
 
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
        res=ICES::GetBackgroundPlasmaNumberDensity(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       res=SWMF::GetBackgroundPlasmaNumberDensity(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2479,6 +2514,8 @@ namespace PIC {
 
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
        res=ICES::GetBackgroundPlasmaTemperature(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       res=SWMF::GetBackgroundPlasmaTemperature(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2488,7 +2525,9 @@ namespace PIC {
 
      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       GetBackgroundFieldsVector(E,B,x,nd,node);
+       ICES::GetBackgroundFieldsVector(E,B,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       SWMF::GetBackgroundFieldsVector(E,B,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
