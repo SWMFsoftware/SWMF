@@ -125,6 +125,8 @@ namespace Mercury {
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
 
+    if ((isfinite(v_LOCAL[0])==false)||(isfinite(v_LOCAL[1])==false)||(isfinite(v_LOCAL[2])==false)) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
+
     //get the radiation pressure acceleration
     if (spec==_NA_SPEC_) {
       if ((x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2]>_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_))||(x_LOCAL[0]>0.0)) { //calculate the radiation pressure force
@@ -211,7 +213,7 @@ namespace Mercury {
     accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[2]/pow(rSun2Particle,3));
 
 
-    if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
+    if ((isfinite(accl_LOCAL[0])==false)||(isfinite(accl_LOCAL[1])==false)||(isfinite(accl_LOCAL[2])==false)) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
 
     PIC::Debugger::CatchOutLimitValue(accl_LOCAL,DIM,__LINE__,__FILE__);
 
