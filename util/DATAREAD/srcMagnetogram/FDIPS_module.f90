@@ -12,6 +12,7 @@ module ModPotentialField
   ! grid and domain parameters
   integer:: nR = 150, nThetaAll = 180, nPhiAll = 360
   real   :: rMin = 1.0, rMax = 2.5
+  logical:: UseLogRadius = .false.  ! logarithmic or linear in radius
 
   ! domain decomposition
   integer:: nProcTheta = 2, nProcPhi = 2
@@ -26,7 +27,7 @@ module ModPotentialField
   ! magnetogram parameters
   logical           :: IsNewMagnetogramStyle = .false.
   character(len=100):: NameFileIn = 'fitsfile.dat'  ! filename
-  logical           :: UseCosTheta = .true. 
+  logical           :: UseCosTheta  = .true. 
   real              :: BrMax = 3500.0               ! Saturation level of MDI
 
   ! output paramters
@@ -115,6 +116,7 @@ contains
        case("#DOMAIN")
           call read_var('rMin', rMin)
           call read_var('rMax', rMax)
+          call read_var('UseLogRadius', UseLogRadius)
        case("#GRID")
           call read_var('nR    ', nR)
           call read_var('nThetaAll', nThetaAll)
@@ -334,7 +336,7 @@ contains
     use ModConst, ONLY: cPi, cTwoPi
 
     integer :: iR, iTheta, iPhi
-    real:: dR, dTheta, dPhi, dZ, z
+    real:: dR, dLogR, dTheta, dPhi, dZ, z
     !--------------------------------------------------------------------------
 
     ! The processor coordinate
@@ -419,15 +421,29 @@ contains
 
     ! nR is the number of mesh cells in radial direction
     ! cell centered radial coordinate
-    dR = (rMax - rMin)/nR
-    do iR = 0, nR+1
-       Radius_I(iR) = rMin + (iR - 0.5)*dR
-    end do
-    ! node based radial coordinate
-    do iR = 1, nR+1
-       RadiusNode_I(iR) = rMin + (iR - 1)*dR
-    end do
-    dRadius_I = RadiusNode_I(2:nR+1) - RadiusNode_I(1:nR)
+
+    if(UseLogRadius)then
+       dLogR = log(rMax/rMin)/nR
+       do iR = 0, nR+1
+          Radius_I(iR) = rMin*exp( (iR - 0.5)*dLogR )
+       end do
+       ! node based radial coordinate                                               
+       do iR = 1, nR+1
+          RadiusNode_I(iR) = rMin*exp( (iR - 1)*dLogR )
+       end do
+
+    else
+       dR = (rMax - rMin)/nR
+       do iR = 0, nR+1
+          Radius_I(iR) = rMin + (iR - 0.5)*dR
+       end do
+       ! node based radial coordinate
+       do iR = 1, nR+1
+          RadiusNode_I(iR) = rMin + (iR - 1)*dR
+       end do
+    end if
+
+    dRadius_I     = RadiusNode_I(2:nR+1) - RadiusNode_I(1:nR)
     dRadiusNode_I = Radius_I(1:nR+1) - Radius_I(0:nR)
 
     if(UseCosTheta)then
@@ -480,7 +496,8 @@ contains
 
     else
        dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
-       dThetaNode_I = dTheta
+!!!       dCosThetaNode_I       = SinThetaNode_I*dTheta
+       dThetaNode_I          = dTheta
     end if
 
     dPhi = cTwoPi/nPhiAll
