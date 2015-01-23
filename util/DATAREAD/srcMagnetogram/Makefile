@@ -132,6 +132,7 @@ test_fdips:
 	make FDIPS
 	make DIPOLE11
 	./DIPOLE11.exe
+	cp -f FDIPS.in.orig FDIPS.in
 	@echo "test_fdips_run..." >> test_fdips.diff
 	mpirun -np 4 ./FDIPS.exe > fdips.log
 	./redistribute.pl fdips_field_np010202.out fdips.out
@@ -155,13 +156,13 @@ test_fdips_hypre:
 	make FDIPS_HYPRE
 	make DIPOLE11
 	./DIPOLE11.exe
+	cp -f FDIPS.in.orig FDIPS.in
+	perl -i -pe 's/^BiCGSTAB/GMRES/i;s/^ILU/AMG/' FDIPS.in
 	@echo "test_fdips_hypre_run..." >> test_fdips_hypre.diff
-	perl -i -pe 's/BiCGSTAB/GMRES/i;s/ILU/AMG/' FDIPS.in
 	mpirun -np 4 ./FDIPS.exe > fdips_hypre.log
 	./redistribute.pl fdips_field_np010202.out fdips.out
 	@echo "test_fdips_hypre_check..." >> test_fdips_hypre.diff
 	make test_fdips_hypre_check
-	perl -i -pe 's/GMRES/BiCGSTAB/i;s/AMG/ILU/' FDIPS.in
 
 test_fdips_hypre_check:
 	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
