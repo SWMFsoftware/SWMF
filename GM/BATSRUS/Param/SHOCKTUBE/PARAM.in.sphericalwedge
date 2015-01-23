@@ -1,4 +1,4 @@
-Config.pl -e=Mhd -u=Waves -g=8,2,2,1000,1
+Config.pl -e=Mhd -u=Waves -f -g=8,2,2,1000,1
 
 #ECHO
 T			DoEcho
