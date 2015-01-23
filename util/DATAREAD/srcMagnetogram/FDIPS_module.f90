@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPotentialField
   
@@ -209,16 +210,19 @@ contains
     character (len=100) :: String
 
     real, allocatable:: Br0_II(:,:), Var_II(:,:), Phi0_I(:), Theta0_I(:)
+    real:: Param_I(1)
 
     character(len=*), parameter:: NameSub = 'read_magnetogram'
     !------------------------------------------------------------------------
     if(IsNewMagnetogramStyle)then
 
        call read_plot_file(NameFileIn, n1Out = nPhi0, n2Out = nTheta0, &
-            iErrorOut=iError)
+            ParamOut_I=Param_I, iErrorOut=iError)
 
        if(iError /= 0) call CON_stop(NameSub// &
             ': could not read header from file'//trim(NameFileIn))
+
+       write(*,*)'nTheta0, nPhi0, LongitudeShift: ', nTheta0, nPhi0, Param_I
 
        allocate(Phi0_I(nPhi0), Theta0_I(nTheta0), Var_II(nPhi0,nTheta0), &
             Br0_II(nTheta0,nPhi0))
@@ -270,7 +274,13 @@ contains
     ! Fix too large values of Br
     where (abs(Br0_II) > BrMax) Br0_II = sign(BrMax, Br0_II)
 
-    if(nTheta0 > nThetaAll)then
+    if(nTheta0 > nThetaAll .and. nThetaAll > 1)then
+
+       if(modulo(nTheta0, nThetaAll) /= 0)then
+          write(*,*) NameSub,' nTheta in file    =', nTheta0
+          write(*,*) NameSub,' nTheta in FDIPS.in=', nThetaAll
+          call CON_stop(NameSub//': not an integer coarsening ratio')
+       end if
        ! Set integer coarsening ratio
        nThetaRatio = nTheta0 / nThetaAll
        nThetaAll   = nTheta0 / nThetaRatio
@@ -279,7 +289,12 @@ contains
        nThetaAll   = nTheta0
     end if
 
-    if(nPhi0 > nPhiAll)then
+    if(nPhi0 > nPhiAll .and. nPhiAll > 1)then
+       if(modulo(nPhi0, nPhiAll) /= 0)then
+          write(*,*) NameSub,' nPhi in file    =', nPhi0
+          write(*,*) NameSub,' nPhi in FDIPS.in=', nPhiAll
+          call CON_stop(NameSub//': not an integer coarsening ratio')
+       end if
        nPhiRatio = nPhi0 / nPhiAll
        nPhiAll   = nPhi0 / nPhiRatio
     else
@@ -457,7 +472,7 @@ contains
 
        !Set the boundary condition of Theta_I
        if (iProcTheta == 0) &
-            Theta_I(0)             = -Theta_I(1)
+            Theta_I(0) = -Theta_I(1)
        if (iProcTheta == nProcTheta-1) &
             Theta_I(nTheta+1) = cTwoPi - Theta_I(nTheta)
 
@@ -486,17 +501,12 @@ contains
     SinThetaNode_I = sin(ThetaNode_I)
 
     if(UseCosTheta)then
-       dCosTheta_I = dZ
+       dCosTheta_I     = dZ
        dCosThetaNode_I = dZ
-
-       ! The definitions below work better for l=m=1 harmonics test
-       !dCosTheta_I(1:nThetaAll) = SinTheta_I(1:nThetaAll)*dTheta_I
-       !dCosThetaNode_I(2:nThetaAll) = SinThetaNode_I(2:nThetaAll)* &
-       !     (Theta_I(2:nThetaAll)-Theta_I(1:nThetaAll-1))
-
+       dThetaNode_I    = Theta_I(1:nTheta+1) - Theta_I(0:nTheta)
     else
        dCosTheta_I(1:nTheta) = SinTheta_I(1:nTheta)*dTheta
-!!!       dCosThetaNode_I       = SinThetaNode_I*dTheta
+       dCosThetaNode_I       = SinThetaNode_I*dTheta
        dThetaNode_I          = dTheta
     end if
 
