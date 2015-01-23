@@ -98,7 +98,7 @@ contains
     !\
     ! USE:
     !/
-    use ModFieldLineThread, ONLY: HeatCondParSi
+    use ModFieldLineThread, ONLY: HeatCondParSi, solve_a_plus_minus
     use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
                                UnitEnergyDens_, UnitTemperature_, UnitB_
     use ModMultiFluid,   ONLY: MassIon_I
@@ -301,6 +301,19 @@ contains
     end do
     ReflCoef_I(nPoint) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
                                (Xi_I(nPoint) -    Xi_I(nPoint-1))
+    !\
+    ! Solve amplitudes of the Alfven waves (arrays there have dimension
+    ! (0:nI)
+    !/
+    call solve_a_plus_minus(&
+            nI=nPoint-1,                    & 
+            ReflCoef_I=ReflCoef_I(1:nPoint),&
+            Xi_I=Xi_I(1:nPoint),            &
+            AMinusBC=AMinorIn,              &
+            Heating=AWValue_V(1),           &
+            APlusBC=AWValue_V(2),           &
+            APlusOut_I=APlus_I(1:nPoint),   &
+            AMinusOut_I=AMinus_I(1:nPoint)  )
 
     if(DoTestMe)then
        write(*,*)'TeSiIn=       ',TeSiIn,' K '
