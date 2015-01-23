@@ -9,16 +9,16 @@ T			UseCosTheta
 dipole11.out		NameFileIn
 3500.0			BrMax
 
+! For a non-default domain size and/or logarithmic radial grid
 #DOMAIN
-1.0			rMin
-25.0			rMax
-T			UseLogRadius
+1.0			rMin         (default is 1)
+25.0			rMax         (default is 2.5)
+T			UseLogRadius (default is F)
 
-! The number of radial points have to be defined
-! In the Theta and Phi directions coarsening by an integer ratio is allowed
-! relative to the magnetogram resolution
+! In the Theta and Phi directions coarsening relative to the magnetogram resolution
+! by an integer ratio is allowed. Refinement is not possible.
 #GRID
-20			nR
+20			nR     (number of cells in the radial direction)
 20			nTheta (set 0 to use the magnetogram resolution)
 20			nPhi   (set 0 to use the magnetogram resolution)
 
