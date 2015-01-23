@@ -37,6 +37,7 @@
 
 
 void amps_init();
+void amps_init_mesh();
 void amps_time_step();
 
 
@@ -46,6 +47,7 @@ void amps_time_step();
 int main(int argc,char **argv) {
 //	MPI_Init(&argc,&argv);
 
+  amps_init_mesh();
   amps_init();
 
 

@@ -31,12 +31,17 @@
 
 
 void amps_init();
+void amps_init_mesh();
 void amps_time_step();
 
 
 int main(int argc,char **argv) {
   //      MPI_Init(&argc,&argv);
 
+
+cout << "Start: MERCURY" << endl;
+
+  amps_init_mesh();
   amps_init();
 
 
