@@ -11,7 +11,8 @@ module ModThreadedLC
   real :: TeFraction, TiFraction, PeFraction
   real,allocatable :: Te_G(:,:,:)
   real,allocatable,dimension(:):: APlus_I, AMinus_I, SqrtRho_I,&
-       TeSi_I, ConsSi_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, Va_I, ReflCoef_I
+       TeSi_I, ConsSi_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
+       VaLog_I, ReflCoef_I
 
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
@@ -56,7 +57,7 @@ contains
     allocate(     L_I(nPointInThreadMax));      L_I = 0.0
     allocate(     M_I(nPointInThreadMax));      M_I = 0.0
     allocate(    Xi_I(nPointInThreadMax));     Xi_I = 0.0
-    allocate(    Va_I(nPointInThreadMax));     Va_I = 0.0
+    allocate( VaLog_I(nPointInThreadMax));  VaLog_I = 0.0
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
@@ -137,7 +138,6 @@ contains
     !/ 
     real    :: Value_V(4), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
     integer :: iTable, iTableAW
-
   
     !\
     ! 
@@ -219,8 +219,17 @@ contains
     ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
 
     AMajorOut = AWValue_V(2)
+
+    !Full 1D model
+    !\
+    ! Reduce by 0ne the number of points in order to avoid too
+    ! close points to the photosphere
+    !/ 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k) -1
 
+    !\
+    ! As a first approximation, recover Te from the analytical solution
+    !/
     TeSi_I(nPoint) = TeSiIn
     iTable = i_lookup_table('TR')   
     do iPoint = 1, nPoint-1
@@ -235,7 +244,10 @@ contains
             Arg1Out=TeSi_I(iPoint),  & 
             DoExtrapolate=.false.)
     end do
-
+    !\
+    ! The analytical solution assumes constant pressure and 
+    ! no heating. Calculate the pressure distribution
+    !/ 
     PAvrSi_I(1) = PAvrSiOut
     !\
     !   Hydrostatic equilibrium in an isothermal corona: 
@@ -249,13 +261,19 @@ contains
             (BoundaryThreads_B(iBlock)%RInv_III(iPoint-nPoint,j,k) - &
             BoundaryThreads_B(iBlock)%RInv_III(iPoint-1-nPoint,j,k)))
     end do
-
+    !\
+    ! Now prepare to calculate Alfven wave amplitude distribution
+    ! 1. Calculate sqrt(RhoNoDim
+    !/
     do iPoint=1,nPoint
        RhoNoDim = (PAvrSi_I(iPoint)*sqrt(AverageIonCharge)*&
             Si2No_V(UnitEnergyDens_)/PeFraction)*&
             TeFraction/(TeSi_I(iPoint)*Si2No_V(UnitTemperature_))
        SqrtRho_I(iPoint) = sqrt(RhoNoDim)
     end do
+    !\
+    ! 2. Calculate dimensionless length (in terms of the dissipation length
+    !/
     Xi_I(1) = 0.0
     do iPoint = 2, nPoint
        Xi_I(iPoint) = Xi_I(iPoint-1) + &
@@ -264,10 +282,26 @@ contains
          sqrt(0.5*(SqrtRho_I(iPoint) + SqrtRho_I(iPoint-1))&
          *PoyntingFluxPerB/LperpTimesSqrtB**2)
     end do
+    !\
+    ! 3. Calculate Alfven wave speed
+    !/
     do iPoint = 1, nPoint
-       Va_I(iPoint) = BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)&
-            /SqrtRho_I(iPoint)
+       VaLog_I(iPoint) = log(BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)&
+            /SqrtRho_I(iPoint))
     end do
+    !\
+    ! 4. Calculate the reflection coefficient
+    !/
+    ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(Xi_I(2) - Xi_I(1))
+    do iPoint = 2, nPoint-1
+       ReflCoef_i(iPoint) = min(abs(VaLog_I(iPoint) - VaLog_I(iPoint-1))/&
+                                      (Xi_I(iPoint) -    Xi_I(iPoint-1)),&
+                                abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
+                                      (Xi_I(iPoint+1) -    Xi_I(iPoint)))
+    end do
+    ReflCoef_I(nPoint) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
+                               (Xi_I(nPoint) -    Xi_I(nPoint-1))
+
     if(DoTestMe)then
        write(*,*)'TeSiIn=       ',TeSiIn,' K '
        write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
