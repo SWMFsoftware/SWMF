@@ -4,7 +4,7 @@
 dipole11uniform.out		NameFileIn
 3500.0				BrMax
 
-! Default output file name is fits_file.dat
+! Default output file name is harmonics.dat
 #OUTPUT
 harmonics11uniform.dat		NameFileOut
 
@@ -15,4 +15,4 @@ harmonics11uniform.dat		NameFileOut
 
 ! Default is true
 #CHEBYSHEV
-T				UseChebyshevNode
+F				UseChebyshevNode
