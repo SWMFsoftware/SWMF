@@ -11,7 +11,7 @@ MY_LIB = ${LIBDIR}/libMAGNETOGRAM.a
 OBJECTS = \
 	ModMagnetogram.o
 
-OBJECTS_EXE= \
+OBJECTS_HARMONICS= \
 	harmonics.o \
 	ModMagHarmonics.o
 
@@ -46,21 +46,22 @@ HYPRE: hypre.o ${LIBDIR}/libSHARE.a ${HYPRELIB}/libHYPRE.a
 		-L${LIBDIR} -lSHARE ${Lflag1} ${HYPRELIB}
 
 HARMONICS:
-	make ${EXE}
-	@echo ${EXE} has been compiled.
-	ln -sf ${EXE} .
+	make ${HARMONICSEXE}
+	@echo ${HARMONICSEXE} has been compiled.
+	ln -sf ${HARMONICSEXE} .
 
-EXE = ${BINDIR}/HARMONICS.exe
+HARMONICSEXE = ${BINDIR}/HARMONICS.exe
 
-${EXE}: ${OBJECTS_EXE}
-	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} -L${LIBDIR} -lSHARE ${Lflag1}
+${HARMONICSEXE}: ${OBJECTS_HARMONICS}
+	${LINK.f90} -o ${HARMONICSEXE} ${OBJECTS_HARMONICS} \
+		-L${LIBDIR} -lSHARE ${Lflag1}
 
 DIPOLE:
 	make DIPOLE.exe
 
 DIPOLE.exe: dipole.o
 	${LINK.f90} -o DIPOLE.exe dipole.o \
-	-L${LIBDIR} -lSHARE ${Lflag1}
+		-L${LIBDIR} -lSHARE ${Lflag1}
 
 DIPOLE11:
 	make DIPOLE11.exe
@@ -80,7 +81,7 @@ ${MY_LIB}: ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS}
 
 distclean: clean
-	rm -f *.dat *.out *.log *.diff
+	rm -f *.dat *.out *.log *.diff FDIPS.in HARMONICS.in
 
 ### TESTS FOR HARMONICS ###
 
