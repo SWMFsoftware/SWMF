@@ -234,7 +234,7 @@ contains
        if(iError /= 0) call CON_stop(NameSub// &
             ': could not read date from file'//trim(NameFileIn))
 
-       ! Check if the theta coordinate is uniformt or not
+       ! Check if the theta coordinate is uniform or not
        UseCosTheta = abs(Theta0_I(3) - 2*Theta0_I(2) + Theta0_I(1)) > 1e-6
 
        ! Br0 is defined with the opposite index order
@@ -269,6 +269,7 @@ contains
              read(UnitTmp_,*) Br0_II(iTheta,iPhi)
           end do
        end do
+       close(UnitTmp_)
     end if
 
     ! Fix too large values of Br
@@ -339,8 +340,6 @@ contains
     Br_II = Br_II - BrAverage
 
     deallocate(Br0_II)
-
-    close(UnitTmp_)
 
   end subroutine read_magnetogram
 
