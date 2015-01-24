@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 include ../../../Makefile.def
@@ -11,10 +12,10 @@ OBJECTS = \
 	ModMagnetogram.o
 
 OBJECTS_EXE= \
-	main.o \
+	harmonics.o \
 	ModMagHarmonics.o
 
-main.o: ModMagHarmonics.o
+harmonics.o: ModMagHarmonics.o
 
 POTENTIAL: potential_field.o ${LIBDIR}/libSHARE.a
 	${LINK.f90} -o POTENTIAL.exe potential_field.o \
@@ -97,13 +98,14 @@ test_harmonics:
 	make DIPOLE11
 	./DIPOLE11.exe
 	@echo "test_harmonics_run..." >> test_harmonics.diff
+	cp HARMONICS.in.orig HARMONICS.in
 	./HARMONICS.exe > harmonics.log
 	@echo "test_harmonics_check..." >> test_harmonics.diff
 	make test_harmonics_check
 
 test_harmonics_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		harmonics.dat \
+		harmonics11uniform.dat \
 		harmonics.ref > test_harmonics.diff
 	ls -l test_harmonics.diff
 
