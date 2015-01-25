@@ -45,12 +45,14 @@ void PIC::ParticleTracker::Init() {
   for (int s=0;s<PIC::nTotalSpecies;s++) threadSampledTrajectoryNumber[s]=0,totalSampledTrajectoryNumber[s]=0;
 
   //remove old and create new directory for temporary files
-  char cmd[_MAX_STRING_LENGTH_PIC_];
-  sprintf(cmd,"rm -rf %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
-  system(cmd);
+  if (PIC::ThisThread==0) {
+    char cmd[_MAX_STRING_LENGTH_PIC_];
+    sprintf(cmd,"rm -rf %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
+    system(cmd);
 
-  sprintf(cmd,"mkdir -p %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
-  system(cmd);
+    sprintf(cmd,"mkdir -p %s/ParticleTrackerTmp",PIC::OutputDataFileDirectory);
+    system(cmd);
+  }
 }
 
 //update the total number of samples trajectories
