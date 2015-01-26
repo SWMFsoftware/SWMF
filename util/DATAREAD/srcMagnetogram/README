@@ -1,44 +1,76 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 ##########################################################################
-# How to create a harmonics input file for SWMF from a raw magnetogram #
-# fits file:                						 #
-##########################################################################
+How to create input magnetogram files for the SWMF from a
+raw magnetogram fits file:
 
 These are the steps for creating a magnetogram file for SWMF from 
 any raw magnetogram fits file.
-The steps below require IDL to be installed on your machine.
+
+The steps below require IDL or python (includling astropy)
+to be installed on your machine.
 
 1. If the SWMF is already installed and compiled, skip to step 2. Otherwise,
    in the main SWMF path, type:
+
     ./Config.pl -install
     make
-2. In the directory SWMF_path/util/DATAREAD/srcMagnetogram, compile the HARMONICS 
-   executable by typing:
+
+   To test if the codes work try:
+
+   cd util/DATAREAD/srcMagnetogram
+   make test_harmonics
+   make test_fdips
+
+   The resulting test_harmonics.diff and test_fdips.diff files should be empty.
+
+2. In the directory SWMF_path/util/DATAREAD/srcMagnetogram
+   compile the HARMONICS.exe and/or FDIPS.exe executables:
+
 	make HARMONICS
-This will create the HARMONICS.exe executable in the directory SWMF_path/bin
-and a link to this executable in the current directory.
+        make FDIPS
 
-3. Rename your magnetogram file by typing:
-	cp your_magnetoram_file.fits fitsfile.fits
+3. Convert the raw magnetogram file from FITS to ASCII format. 
+   There are two ways to do this:
 
-4. Convert the fits file to ASCII format by running the idl program 
-run_fits_to_ascii.pro. You will be asked to insert the maximum order of 
-harmonics and the Carrington Rotation number. The nHar is recommended not to 
-be greater than nLatitude.
-   The idl routine generates three files:
-	*fitsfile.dat - ASCII file to be used by HARMONICS.exe to calculate 
-	 the harmonic coefficients.
-	*fitsfile.H - the header of the original fits file with information 
-	 about the magnetogram source.
-	*fitsfile_tec.dat - a Tecplot file to display the original magnetogram.
-5. Run HARMONICS.exe. This executable can be run in parallel mode for faster 
-computation. This run will generate a file called harmonics.dat that 
-can be used in SWMF. For convenience, it is recommended to rename the file with 
-the following naming format:
-	cp harmonics.dat CRxxxx_OBS.dat
-where xxxx is the Carrington Rotation number and OBS is the observatory name 
-(MDI,WSO,MWO,GONG etc.)
-6. Move the CRxxxx_OBS.dat file to the path defined under the #MAGNETOGRAM command 
-in the PARAM.in file (usually in the run directory you are using).
+3a. Run the python script 
+
+   ./remap_magnetogram.py your_magnetogram_file.fits output_file.dat
+
+3b. Use IDL to convert. Rename your magnetogram file and run the scripts
+
+   cp your_magnetoram_file.fits fitsfile.fits
+   idl run_fits_to_ascii.pro
+
+   The idl routine generates four files:
+
+	fitsfile.dat - obsolete ASCII file that was used by 
+                       HARMONICS.exe and FDIPS.exe 
+	fitsfile.H - the header of the original fits file with information 
+                     about the magnetogram source.
+	fitsfile_tec.dat - a Tecplot file to display the original magnetogram.
+
+        fitsfile_idl.out - the new ASCII file format to be used by 
+                           HARMONICS.exe or FDIPS.exe
+
+4. Create and edit the input file HARMONICS.in and/or FDIPS.in:
+
+   cp HARMONICS.in.orig HARMONICS.in
+   emacs HARMONICS.in
+
+   cp FDIPIS.in.orig FDIPS.in
+   emacs FDIPS.in
+
+   The original input files contain the documentation about all options.
+
+5. Run the executables HARMONICS.exe and/or FDIPS.exe
+
+   ./HARMONICS.exe
+
+   mpirun -np 4 ./FDIPS.exe
+
+6. Move the output file to the location where it is expected by the
+   #MAGNETOGRAM  and/or #READPOTENTIALFIELD commands in the PARAM.in file.
 
