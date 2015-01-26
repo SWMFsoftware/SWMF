@@ -60,7 +60,7 @@ endif else $
        spawn,'/bin/ls '+filename, filenames
        nfile = n_elements(filenames)
    endif else $
-     str2arr,filename,filenames,nfile
+     string_to_array,filename,filenames,nfile
 
    gettype,filenames,filetypes,npictinfiles
 
@@ -255,7 +255,7 @@ endif else $
 
             if(keyword_set(plottitles_file))then begin
                plottitle = plottitles_file(ifile)
-               str2arr,plottitle,plottitles,nfunc,';'
+               string_to_array,plottitle,plottitles,nfunc,';'
             end
 
             plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$

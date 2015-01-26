@@ -54,7 +54,7 @@ if stregex(filename, '[?*[]', /boolean) then begin
     spawn,'/bin/ls '+filename, filenames
     nfile = n_elements(filenames)
 endif else $
-  str2arr,filename,filenames,nfile
+  string_to_array,filename,filenames,nfile
 
 if nfile gt 10 then begin
    print,'Error in getpict: cannot handle more than 10 files.'

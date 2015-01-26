@@ -34,7 +34,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
     filename = ask('filename',filename)
   endif
 
-  str2arr,filename,filenames,nfile
+  string_to_array,filename,filenames,nfile
   if nfile gt 3 then begin
      print,'Error in getpict: cannot handle more than 3 files.'
      retall
@@ -47,7 +47,7 @@ pro read_idl_file, filename, npict, nxreg, xreglimits, transform, $
 
 
   physics=''
-  str2arr,physics,physicss,nfile
+  string_to_array,physics,physicss,nfile
   physics=''
   for ifile=0,nfile-1 do begin
 

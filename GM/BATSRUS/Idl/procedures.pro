@@ -1,7 +1,8 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
-; Written by G. Toth for the Versatile Advection Code and BATSRUS
+;
+; Written by G. Toth for the Versatile Advection Code and BATSRUS/SWMF
 ; Some improvements by Aaron Ridley.
 ;
 ; Procedures for
@@ -12,7 +13,7 @@
 ; saveing ascii and binary data in the same format as used for input:
 ;    save_pict, save_log
 ; reading numbers and strings from input:
-;    asknum, askstr, str2arr, arr2arr, readplotpar, readlimits
+;    asknum, askstr, string_to_array, arr2arr, readplotpar, readlimits
 ; transforming initial data:
 ;    readtransform, do_transform, do_my_transform, 
 ;    regulargrid, polargrid, unpolargrid, spheregrid, getaxes
@@ -20,7 +21,7 @@
 ; calculating functions of the data
 ;    getfunc, getlimits
 ; plotting
-;    plot_func, plotgrid, plot_log
+;    plot_func, plot_grid, plot_log
 ; calculating cell corners and cell volumes for general 2D grids
 ;    gengrid
 ; comparing two w,x or wlog arrays for relative differences
@@ -43,7 +44,7 @@
 ; calculating symmetric differences with respect to some mirror plane
 ;    symmdiff
 ; calculating derivatives in 2D for general grids
-;    grad,div,curl,grad_rz,div_rz,curl_rz, filledge,intedge,intedge_rz
+;    grad_2d,div,curl,grad_rz,div_rz,curl_rz, filledge,intedge,intedge_rz
 ; taking a part of an array or coarsen an array
 ;    triplet, quadruplet, coarsen
 ; eliminating degenerate dimensions from an array
@@ -453,7 +454,7 @@ if keyword_set(pictsize) then begin
     endcase
 endif else begin
                                 ; Set variables 
-    str2arr,varname,variables,nvar,/arraysyntax
+    string_to_array,varname,variables,nvar,/arraysyntax
 endelse
 
 end
@@ -963,7 +964,7 @@ pro askstr,prompt,var,doask
 end
 
 ;=============================================================================
-pro str2arr,s,a,n,sep,arraysyntax=arraysyntax
+pro string_to_array,s,a,n,sep,arraysyntax=arraysyntax
 
 ; If s is an array copy it to a.
 ; If s is a string then split string s at the sep characters 
@@ -1097,10 +1098,10 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    askstr,'autorange(s) (y/n)         ',autorange,doask
 
    nfunc=0
-   str2arr,func,funcs,nfunc
-   str2arr,plotmode,plotmodes,nfunc
-   str2arr,plottitle,plottitles,nfunc,';'
-   str2arr,autorange,autoranges,nfunc
+   string_to_array,func,funcs,nfunc
+   string_to_array,plotmode,plotmodes,nfunc
+   string_to_array,plottitle,plottitles,nfunc,';'
+   string_to_array,autorange,autoranges,nfunc
 
    nplot = nfunc
    funcs1=strarr(nfunc)
@@ -1348,9 +1349,9 @@ pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
 end
 
 ;==============================================================================
-function grid_data,x,y,data,nxreg,xreglimits,triangles,wregpad
+function get_grid_data,x,y,data,nxreg,xreglimits,triangles,wregpad
 
-return,griddata(x,y,data,$
+return, griddata(x,y,data,$
         dimension=nxreg,$
 	start=xreglimits(0:1),$
 	delta=[(xreglimits(2)-xreglimits(0))/(nxreg(0)-1),  $
@@ -1451,8 +1452,8 @@ pro regulargrid,x_old,nxreg_old,xreglimits_old,x,xreg,nxreg,xreglimits,$
    case 1 of
 
    symmtri eq 3: for iw=0,nw-1 do $
-      wreg(*,*,iw)=grid_data(xx,yy,reform(w(*,*,iw)),nxreg,xreglimits,$
-                             triangles,wregpad(iw))
+      wreg(*,*,iw)=get_grid_data(xx, yy, reform(w(*,*,iw)), nxreg,xreglimits,$
+                                 triangles, wregpad(iw))
 
    symmtri eq 0 or (symmtri lt 3 and nrectan eq 0): for iw=0,nw-1 do $
       wreg(*,*,iw)=trigrid(xx,yy,w(*,*,iw),triangles, $
@@ -2376,15 +2377,15 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         if white then tvlct,bytarr(256,3)+255 ; change to all white color table
 
         if(plotmod eq 'polar')then                                       $
-           plotgrid,xx,yy*angleunit,lines=showmesh,xstyle=5,ystyle=5,/polar $
+           plot_grid,xx,yy*angleunit,lines=showmesh,xstyle=5,ystyle=5,/polar $
         else if keyword_set(cut) then                                    $
-           plotgrid,xx,yy,lines=showmesh,xstyle=5,ystyle=5               $
+           plot_grid,xx,yy,lines=showmesh,xstyle=5,ystyle=5               $
         else begin
            if !x.range[0] ne !x.range[1] then xrange=!x.range else $
               xrange=[min(xx),max(xx)]
            if !y.range[0] ne !y.range[1] then yrange=!y.range else $
               yrange=[min(yy),max(yy)]
-           plotgrid,x,lines=showmesh,xstyle=5,ystyle=5,$
+           plot_grid,x,lines=showmesh,xstyle=5,ystyle=5,$
                     xrange=xrange,yrange=yrange
         endelse
 
@@ -3044,7 +3045,7 @@ return,intf
 end
 
 ;===========================================================================
-function grad,idir,f,x,y
+function grad_2d,idir,f,x,y
 ;
 ; Take gradient of "f" in direction "idir" on the "x,y" structured 2D grid.
 ; Gradient is the contour integral of edge_normal_idir*f_edge_averaged
@@ -3398,14 +3399,14 @@ return
 end
 
 ;===================================================================
-pro plotgrid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar,$
+pro plot_grid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar,$
              xrange=xrange,yrange=yrange,noorigin=noorigin
 ;===================================================================
 
 on_error,2
 
 if not keyword_set(x) then begin
-    print,'Usage: plotgrid, x [,y] [,/lines] [,/polar]',$
+    print,'Usage: plot_grid, x [,y] [,/lines] [,/polar]',$
       ' [,xstyle=3] [,ystyle=1]',$
       '                   [,xrange=[-10,10]], [yrange=[-10,10]]'
     retall
@@ -3487,12 +3488,12 @@ return
 
 ERROR1:
    print,'size(x)=',sizx
-   print,'Error: plotgrid,x  requires x(nx,ny,2) array'
+   print,'Error: plot_grid,x  requires x(nx,ny,2) array'
    retall
 
 ERROR2:
    print,'size(x)=',sizx,' size(y)=',sizy
-   print,'Error: plotgrid,x,y requires x(nx,ny) y(nx,ny) arrays'
+   print,'Error: plot_grid,x,y requires x(nx,ny) y(nx,ny) arrays'
    retall
 
 
@@ -3779,7 +3780,7 @@ while not eof(unit) do begin
           nheadline = nheadline + 1
        endif else begin
           ; split line into numbers
-          str2arr,line, numbers, nwlog
+          string_to_array,line, numbers, nwlog
           ; create arrays to read data into
           wlog_ = dblarr(nwlog)
           wlog  = dblarr(nwlog,buf)
@@ -3802,7 +3803,7 @@ while not eof(unit) do begin
                 if j ge 0 then strput, line, '      ', j
 
                 ; split line into names
-                str2arr, line, wlognames, nname
+                string_to_array, line, wlognames, nname
 
                 ; if number of names agree we are done
                 if nname eq nwlog then BREAK
@@ -3879,7 +3880,7 @@ pro plot_log, logfilenames, func, $
 ; Set the optional variables to zero to get the default behavior.
 
 nlog = n_elements(logfilenames)
-str2arr,func,funcs,nfunc
+string_to_array,func,funcs,nfunc
 
 ; read in arrays if not present
 if   (nlog eq 1 and n_elements(wlognames0) eq 0) $
@@ -4103,7 +4104,7 @@ on_error,2
 
 interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
   verbose=verbose
-str2arr,varname,varnames,nvar
+string_to_array,varname,varnames,nvar
 ntime = n_elements(time)
 
 print,'var rms(A-B) rsm(A) rms(B)'
@@ -4121,7 +4122,7 @@ pro interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
 
 on_error,2
 
-str2arr,logfilename,logfilenames,nfile
+string_to_array,logfilename,logfilenames,nfile
 
 get_log, logfilenames(0), wlog0, varnames0, verbose=verbose
 get_log, logfilenames(1), wlog1, varnames1, verbose=verbose
@@ -4139,7 +4140,7 @@ pro interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,time,$
 
 on_error,2
 
-str2arr,varname,varnames,nvar
+string_to_array,varname,varnames,nvar
 
 if nvar eq 0 then begin
     print,'Usage: interpol_log, wlog0, wlog1, var0, var1, varnames ', $

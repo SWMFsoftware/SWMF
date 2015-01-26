@@ -16,7 +16,7 @@ if stregex(logfilename, '[?*[]', /boolean) then begin
     spawn,'/bin/ls '+logfilename, logfilenames
     nlogfile = n_elements(logfilenames)
 endif else $
-  str2arr,logfilename,logfilenames,nlogfile
+  string_to_array,logfilename,logfilenames,nlogfile
 
 if nlogfile gt 10 then begin
    print,'Error in getlog: cannot handle more than 10 files.'

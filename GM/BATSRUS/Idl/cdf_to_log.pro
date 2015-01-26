@@ -9,7 +9,7 @@ openw,1,logfilename
 printf,1,"Extracted from ",cdffilename
 printf,1,"year mo dy hr mn sc msc X Y Z bx by bz #START"
 
-str2arr,cdffilename,cdffilenames,ncdf
+string_to_array,cdffilename,cdffilenames,ncdf
 for icdf=0,ncdf-1 do begin
     id = cdf_open(cdffilenames(icdf))
     re = cdf_inquire(id)
