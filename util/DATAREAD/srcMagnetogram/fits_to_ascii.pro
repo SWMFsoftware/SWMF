@@ -1,39 +1,32 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
 pro fits_to_ascii, FileIn, DataName, silent=silent
 
 ; Purpose:
-;  Read fits file and write header to a file with .H extension
-;  and the data into a ASCII file.
+;  Read fits magnetogram file and write out an ASCII file.
 ;
 ; Usage:
-;   fits_to_tec [,FileName] [,DataName] [,/silent]
+;   fits_to_ascii [,FileIn] [, FileOut] [,/silent]
 ;
-; DataName is a string which contains the type of data of the image
-; it is used as the data type header of the Tecplot file
-; for example: DataName='Br[G]' or 'U[km/s]'
-; Add /silent to suppress verbose information.
+; FileIn  - name of the fits file. Default is fitsfile.fits
+; FileOut - first part of the names of the output files. Default is fitsfile
+;           so the files will by fitstfile.H, fitsfile.dat 
 
-;if n_elements(FileIn) eq 0 then begin 
-;    FileIn = 'fitsfile.fits'
-;endif
+; /silent - suppress verbose information.
+
+if n_elements(FileIn)  eq 0 then FileIn  = 'fitsfile.fits'
+if n_elements(FileOut) eq 0 then FileOut = 'fitsfile'
 
 nMax=180
-CR=1900
 
-read,nMax,prompt='enter order of harmonics (nMax:)' 
-nMax=strtrim(nMax,2)
-read,CR,prompt='enter Carrington Rotation number:' 
-CR=strtrim(CR,2)
+FileHeader= FileOut + '.H'
+FileDat   = FileOut + '.dat'
+FileTec   = FileOut + '_tec.dat'
+FileIdl   = FileOut + '_idl.out' 
+DataName  = 'Br [G]'  
 
-FileFits  = 'fitsfile.fits'
-FileHeader='fitsfile.H'
-FileDat='fitsfile.dat'
-FileTec='fitsfile_tec.dat'
-FileIdl='fitsfile_idl.out' 
-DataName='Br [G]'  
-
-Data = readfits(FileFits, ImHeader, silent=silent)
+Data = read_fits(FileIn, ImHeader, silent=silent)
 
 if not keyword_set(silent) then begin
     print,''
@@ -47,50 +40,53 @@ free_lun, lun
 
 ; Get image dimensions
 s=size(Data)
-Nx=s(1)
-Ny=s(2)
+nLon=s(1)
+nLat=s(2)
 
-; Removing missing data by multiply B by sin(lat)^8
-for i=0L,Ny-1 do begin
-    theta=!PI*float(i)/float(Ny)
-    for j=0L,Nx-1 do begin
-        if(abs(Data(i*Nx+j)) ge 5000.0) then $
-          Data(i*Nx+j)=Data(i*Nx+j)*sin(theta)^8
-    endfor
-endfor
+;;; This makes no sense...
+;;; ; Removing missing data by multiply B by sin(lat)^8
+;;; for i=0L,nLat-1 do begin
+;;;     theta = !PI*float(i)/float(nLat)
+;;;     for j=0L,nLon-1 do begin
+;;;         if(abs(Data(i*nLon+j)) ge 5000.0) then $
+;;;             Data(i*nLon+j) = Data(i*nLon+j)*sin(theta)^8
+;;;     endfor
+;;; endfor
 
 if not keyword_set(silent) then begin
     print,''
-    print,'Writing TecPlot file ',FileDat
+    print,'Writing simple data file ',FileDat
     print,''
 endif
 
 openw,lun,FileDat,/get_lun
-printf,lun,'#CR'
-printf,lun,CR
 printf,lun,'#nMax'
 printf,lun,nMax
 printf,lun,'#ARRAYSIZE'
-printf,lun,strtrim(Nx,2)
-printf,lun,strtrim(Ny,2)
+printf,lun,strtrim(nLon,2)
+printf,lun,strtrim(nLat,2)
 printf,lun,'#START'
 
-for i=0L,Ny-1 do begin
-    for j=0L,Nx-1 do begin
-        if(abs(Data(i*Nx+j)) gt 1900.0)then $
-          Data(i*Nx+j)=abs(Data(i*Nx+j))*Data(i*Nx+j)/abs(Data(i*Nx+j)+1e-3)
-        printf,lun, format = '(1e14.6)',Data(i*Nx+j)
+for i=0L,nLat-1 do begin
+    for j=0L,nLon-1 do begin
+        printf,lun, format = '(1e14.6)',Data(j,i)
     endfor
 endfor
 
 free_lun, lun
 
-openw,lun,FileTec,/get_lun
-printf,lun,' TITLE="',FileFits,'"'
-printf,lun,'VARIABLES = "',DataName,'"'
-printf,lun,'ZONE T="',FileTec,'", I= ',Nx,' J= ',Ny,' , K=1, F=POINT'
+if not keyword_set(silent) then begin
+    print,''
+    print,'Writing TecPlot file ',FileTec
+    print,''
+endif
 
-for i=0L,Ny-1 do for j=0L,Nx-1 do $
+openw, lun, FileTec, /get_lun
+printf,lun,' TITLE="',FileIn,'"'
+printf,lun,'VARIABLES = "',DataName,'"'
+printf,lun,'ZONE T="',FileTec,'", I= ',nLon,' J= ',nLat,' , K=1, F=POINT'
+
+for i=0L,nLat-1 do for j=0L,nLon-1 do $
   printf,lun, format = '(1e14.6)',Data(j,i)
 
 free_lun, lun
@@ -101,23 +97,22 @@ if not keyword_set(silent) then begin
     print,''
 endif
 
-openw,lun,FileIdl,/get_lun
+openw, lun, FileIdl, /get_lun
 printf,lun,' Longitude [Deg], Latitude [Deg],',DataName
-printf,lun,0 ,0.0 ,  2, 1, 1
-printf,lun, Nx,' ',Ny
-printf,lun, '0.0'
-printf,lun,'x1 x2 v01 p01'
+printf,lun, 0, 0.0, 2, 1, 1
+printf,lun, nLon,' ',nLat
+printf,lun, '0.5'
+printf,lun,'Longitude Latitude Br LongitudeShift'
 
-for i=0L,Ny-1 do begin
-    for j=0L,Nx-1 do begin
-        printf,lun,format ='(3e14.6)',j,i,Data(j,i)
-    endfor
+dLon = 360.0/nLon
+for i=0L,nLat-1 do begin
+   Latitude =  asin((2*i-nLat+1.0)/nLat)/!dtor
+   for j=0L,nLon-1 do begin
+      printf,lun,format ='(3e14.6)', j*dLon, Latitude, Data(j,i)
+   endfor
 endfor
 
-
 free_lun,lun
-    
-
 
 if not keyword_set(silent) then print,'Conversion done'
 
