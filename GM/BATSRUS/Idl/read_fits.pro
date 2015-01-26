@@ -1,11 +1,12 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ; Purpose:
 ;
 ; Reading FITS files into IDL.
 ;
 ; This file contains all functions and procedures needed for
-; the basic features of the readfits function.
+; the basic features of the read_fits function.
 ;
 ; Basic usage:
 ;
@@ -15,18 +16,18 @@
 ; while the optional header parameter returns a string array 
 ; with the header information.
 
-function gettok,st,char
+function get_token,st,char
 ;+
 ; NAME:
-;   GETTOK
+;   GET_TOKEN
 ; PURPOSE:
 ;   Retrieve the first part of the string up to a specified character
 ; EXPLANATION:
-;   GET TOKen - Retrieve first part of string until the character char
+;   GET TOKEN - Retrieve first part of string until the character char
 ;   is encountered.
 ;
 ; CALLING SEQUENCE:
-;   token = gettok( st, char )
+;   token = get_token( st, char )
 ;
 ; INPUT:
 ;   char - character separating tokens, scalar string
@@ -38,11 +39,11 @@ function gettok,st,char
 ;   token - scalar string value is returned
 ;
 ; EXAMPLE:
-;   If ST is 'abc=999' then gettok(ST,'=') would return
+;   If ST is 'abc=999' then get_token(ST,'=') would return
 ;   'abc' and ST would be left as '999'
 ;
 ; NOTES:
-;       A version of GETTOK that accepts vector strings is available for users
+;       A version of GET_TOKEN that accepts vector strings is available for users
 ;       of IDL V5.3 or later from  http://idlastro.gsfc.nasa.gov/ftp/v53/
 ; HISTORY
 ;   version 1  by D. Lindler APR,86
@@ -253,19 +254,19 @@ FUNCTION valid_num, string, value, INTEGER=integer
 END
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
+function SX_PAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
                                   NoContinue = NoContinue, SILENT = silent
 ;+
 ; NAME:
-;      SXPAR
+;      SX_PAR
 ; PURPOSE:
 ;      Obtain the value of a parameter in a FITS header
 ;
 ; CALLING SEQUENCE:
-;      result = SXPAR( Hdr, Name, [ Abort, COUNT=, COMMENT =, /NoCONTINUE  ])   
+;      result = SX_PAR( Hdr, Name, [ Abort, COUNT=, COMMENT =, /NoCONTINUE  ])   
 ;
 ; INPUTS:
-;      Hdr =  FITS header array, (e.g. as returned by READFITS) 
+;      Hdr =  FITS header array, (e.g. as returned by READ_FITS) 
 ;             string array, each element should have a length of 80 characters      
 ;
 ;      Name = String name of the parameter to return.   If Name is of the
@@ -275,10 +276,10 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;             type of the first valid match of keywordN found.
 ;
 ; OPTIONAL INPUTS:
-;       ABORT - string specifying that SXPAR should do a RETALL
+;       ABORT - string specifying that SX_PAR should do a RETALL
 ;               if a parameter is not found.  ABORT should contain
 ;               a string to be printed if the keyword parameter is not found.
-;               If not supplied, SXPAR will return quietly with COUNT = 0
+;               If not supplied, SX_PAR will return quietly with COUNT = 0
 ;               (and !ERR = -1) if a keyword is not found.
 ;
 ; OPTIONAL INPUT KEYWORDS: 
@@ -289,7 +290,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;
 ; OPTIONAL OUTPUT KEYWORDS:
 ;       COUNT - Optional keyword to return a value equal to the number of 
-;               parameters found by SXPAR, integer scalar
+;               parameters found by SX_PAR, integer scalar
 ;
 ;       COMMENT - Array of comments associated with the returned values
 ;
@@ -315,8 +316,8 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;       Given a FITS header, h, return the values of all the NAXISi values
 ;       into a vector.    Then place the history records into a string vector.
 ;
-;       IDL> naxisi = sxpar( h ,'NAXIS*')         ; Extract NAXISi value
-;       IDL> history = sxpar( h, 'HISTORY' )      ; Extract HISTORY records
+;       IDL> naxisi = sx_par( h ,'NAXIS*')         ; Extract NAXISi value
+;       IDL> history = sx_par( h, 'HISTORY' )      ; Extract HISTORY records
 ;
 ; PROCEDURE:
 ;       The first 8 chacters of each element of Hdr are searched for a 
@@ -343,13 +344,13 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;       type LONG, then it is returned as DOUBLE.
 ;
 ; NOTES:
-;       The functions SXPAR() and FXPAR() are nearly identical, although
-;       FXPAR() has slightly more sophisticated parsing.   There is no
+;       The functions SX_PAR() and FX_PAR() are nearly identical, although
+;       FX_PAR() has slightly more sophisticated parsing.   There is no
 ;       particular reason for having two nearly identical procedures, but
 ;       both are too widely used to drop either one.
 ;
 ; PROCEDURES CALLED:
-;       GETTOK(), VALID_NUM()
+;       GET_TOKEN(), VALID_NUM()
 ; MODIFICATION HISTORY:
 ;       DMS, May, 1983, STPAR Written.
 ;       D. Lindler Jan 90 added ABORT input parameter
@@ -373,7 +374,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;-
 ;----------------------------------------------------------------------
  if N_params() LT 2 then begin
-     print,'Syntax -     result =  sxpar( hdr, name, [abort])'
+     print,'Syntax -     result =  sx_par( hdr, name, [abort])'
      print,'   Input Keywords:    /NOCONTINUE, /SILENT'
      print,'   Output Keywords:   COUNT=,  COMMENT= '
      return, -1
@@ -503,7 +504,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ; This is a string that could be continued on the next line.  Check this
 ; possibility with the following four criteria: *1) Ends with '&'
 ; (2) Next line is CONTINUE  (3) LONGSTRN keyword is present (recursive call to
-; SXPAR) 4. /NOCONTINE is not set
+; SX_PAR) 4. /NOCONTINE is not set
 
     if not keyword_set(nocontinue) then begin
                 off = off + 1
@@ -512,7 +513,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
                 if (strlen(val) gt 0) and $
                   (strmid(val, strlen(val)-1, 1) EQ '&') and $
                   (strmid(hdr[nfound[i]+off],0,8) EQ 'CONTINUE') then begin
-                   if (size(sxpar(hdr, 'LONGSTRN',/NoCONTINUE)))[1] EQ 7 then begin                    
+                   if (size(sx_par(hdr, 'LONGSTRN',/NoCONTINUE)))[1] EQ 7 then begin                    
                   value = strmid(val, 0, strlen(val)-1)
                   test = hdr[nfound[i]+off]
                   test = strmid(test, 8, strlen(test)-8)
@@ -540,7 +541,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ; Find the first word in TEST.  Is it a logical value ('T' or 'F')
 
                 test2 = test
-                value = gettok(test2,' ')
+                value = get_token(test2,' ')
                if ( value EQ 'T' ) then value = 1b else $
                if ( value EQ 'F' ) then value = 0b else begin
 
@@ -548,7 +549,7 @@ function SXPAR, hdr, name, abort, COUNT=matches, COMMENT = comments, $
 ;  the next word, if any, are both valid values.
 
                 if strlen(test2) EQ 0 then goto, NOT_COMPLEX
-                value2 = gettok( test2, ' ') 
+                value2 = get_token( test2, ' ') 
                 if value2 EQ '' then goto, NOT_COMPLEX
                 On_ioerror, NOT_COMPLEX
                 value2 = float(value2)
@@ -611,22 +612,22 @@ return, value
 
 END                 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
+pro sx_add_par, Header, Name, Value, Comment, Location, before=before, $
                  savecomment = savecom, after=after , format=format, pdu = pdu
 ;+
 ; NAME:
-;       SXADDPAR
+;       SX_ADD_PAR
 ; PURPOSE:
 ;       Add or modify a parameter in a FITS header array.
 ;
 ; CALLING SEQUENCE:
-;       SXADDPAR, Header, Name, Value, [ Comment,  Location, /SaveComment, 
+;       SX_ADD_PAR, Header, Name, Value, [ Comment,  Location, /SaveComment, 
 ;                               BEFORE =, AFTER = , FORMAT= , /PDU]
 ;
 ; INPUTS:
 ;       Header = String array containing FITS or STSDAS header.    The
 ;               length of each element must be 80 characters.    If not 
-;               defined, then SXADDPAR will create an empty FITS header array.
+;               defined, then SX_ADD_PAR will create an empty FITS header array.
 ;
 ;       Name = Name of parameter. If Name is already in the header the value 
 ;               and possibly comment fields are modified.  Otherwise a new 
@@ -648,7 +649,7 @@ pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       Location = Keyword string name.  The parameter will be placed before the
 ;               location of this keyword.    This parameter is identical to
 ;               the BEFORE keyword and is kept only for consistency with
-;               earlier versions of SXADDPAR.
+;               earlier versions of SX_ADD_PAR.
 ;
 ; OPTIONAL INPUT KEYWORD PARAMETERS:
 ;       BEFORE  = Keyword string name.  The parameter will be placed before the
@@ -680,9 +681,9 @@ pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       Add a keyword 'TELESCOP' with the value 'KPNO-4m' and comment 'Name
 ;       of Telescope' to an existing FITS header h.
 ;
-;       IDL> sxaddpar, h, 'TELESCOPE','KPNO-4m','Name of Telescope'
+;       IDL> sx_add_par, h, 'TELESCOPE','KPNO-4m','Name of Telescope'
 ; NOTES:
-;       The functions SXADDPAR() and FXADDPAR() are nearly identical, with the
+;       The functions SX_ADD_PAR() and FXADDPAR() are nearly identical, with the
 ;       major difference being that FXADDPAR forces required FITS keywords
 ;       BITPIX, NAXISi, EXTEND, PCOUNT, GCOUNT to appear in the required order
 ;       in the header, and FXADDPAR supports the OGIP LongString convention.   
@@ -711,7 +712,7 @@ pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       Added keywords BEFORE and AFTER. K. Venkatakrishna, May '92
 ;       Pad string values to at least 8 characters   W. Landsman  April 94
 ;       Aug 95: added /PDU option and changed routine to update last occurence
-;               of an existing keyword (the one SXPAR reads) instead of the
+;               of an existing keyword (the one SX_PAR reads) instead of the
 ;               first occurence.
 ;       Comment for string data can start after column 32 W. Landsman June 97
 ;       Make sure closing quote supplied with string value  W. Landsman  June 98
@@ -726,11 +727,11 @@ pro sxaddpar, Header, Name, Value, Comment, Location, before=before, $
 ;       June 2003, Added SAVECOMMENT keyword    W. Landsman
 ;       Jan 2004, If END is missing, then add it at the end W. Landsman
 ;       May 2005 Fix SAVECOMMENT error with non-string values W. Landsman
-;       Oct 2005 Jan 2004 change made SXADDPAR fail for empty strings W.L. 
+;       Oct 2005 Jan 2004 change made SX_ADD_PAR fail for empty strings W.L. 
 ;       
 ;-
  if N_params() LT 3 then begin             ;Need at least 3 parameters
-      print,'Syntax - Sxaddpar, Header, Name,  Value, [Comment, Postion'
+      print,'Syntax - Sx_Add_Par, Header, Name,  Value, [Comment, Postion'
       print,'                      BEFORE = ,AFTER = , FORMAT =, /SAVECOMMENT]'
       return
  endif
@@ -961,16 +962,16 @@ REPLACE:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;+
 ; NAME:
-;       READFITS
+;       READ_FITS
 ; PURPOSE:
 ;       Read a FITS file into IDL data and header variables. 
 ; EXPLANATION:
-;       READFITS() can also read gzip or Unix compressed FITS files.
+;       READ_FITS() can also read gzip or Unix compressed FITS files.
 ;       See http://idlastro.gsfc.nasa.gov/fitsio.html for other ways of
 ;       reading FITS files with IDL.   
 ;
 ; CALLING SEQUENCE:
-;       Result = READFITS( Filename/Fileunit,[ Header, heap, /NOSCALE, EXTEN_NO=,
+;       Result = READ_FITS( Filename/Fileunit,[ Header, heap, /NOSCALE, EXTEN_NO=,
 ;                     NSLICE=, /SILENT , STARTROW =, NUMROW = , HBUFFER=,
 ;                     /CHECKSUM, /COMPRESS, /No_Unsigned, NaNVALUE = ]
 ;
@@ -983,10 +984,10 @@ REPLACE:
 ;                                   OR
 ;       Fileunit - A scalar integer specifying the unit of an already opened
 ;                  FITS file.  The unit will remain open after exiting 
-;                  READFITS().  There are two possible reasons for choosing 
+;                  READ_FITS().  There are two possible reasons for choosing 
 ;                  to specify a unit number rather than a file name:
 ;          (1) For a FITS file with many extensions, one can move to the 
-;              desired extensions with FXPOSIT() and then use READFITS().  This
+;              desired extensions with FXPOSIT() and then use READ_FITS().  This
 ;              is more efficient than repeatedly starting at the beginning of 
 ;              the file.
 ;          (2) For reading a FITS file across a Web http: address after opening
@@ -1007,7 +1008,7 @@ REPLACE:
 ;              data array (e.g. for variable length binary extensions).
 ;
 ; OPTIONAL INPUT KEYWORDS:
-;       /CHECKSUM - If set, then READFITS() will call FITS_TEST_CHECKSUM to 
+;       /CHECKSUM - If set, then READ_FITS() will call FITS_TEST_CHECKSUM to 
 ;                verify the data integrity if CHECKSUM keywords are present
 ;                in the FITS header.   Cannot be used with the NSLICE, NUMROW
 ;                or STARTROW keywords, since verifying the checksum requires 
@@ -1015,7 +1016,7 @@ REPLACE:
 ;               information.
 ;
 ;       /COMPRESS - Signal that the file is gzip compressed.  By default, 
-;               READFITS will assume that if the file name extension ends in 
+;               READ_FITS will assume that if the file name extension ends in 
 ;               '.gz' then the file is gzip compressed.   The /COMPRESS keyword
 ;               is required only if the the gzip compressed file name does not 
 ;               end in '.gz'
@@ -1045,9 +1046,9 @@ REPLACE:
 ;                image of a file 'wfpc.fits' contains a 800 x 800 x 4 array, 
 ;                then 
 ;
-;                 IDL> im = readfits('wfpc.fits',h, nslice=2)
+;                 IDL> im = read_fits('wfpc.fits',h, nslice=2)
 ;                           is equivalent to 
-;                 IDL> im = readfits('wfpc.fits',h)
+;                 IDL> im = read_fits('wfpc.fits',h)
 ;                 IDL> im = im[*,*,2]
 ;                 but the use of the NSLICE keyword is much more efficient.
 ;
@@ -1058,12 +1059,12 @@ REPLACE:
 ;                 arrays.
 ;
 ;       POINT_LUN  -  Position (in bytes) in the FITS file at which to start
-;                 reading.   Useful if READFITS is called by another procedure
+;                 reading.   Useful if READ_FITS is called by another procedure
 ;                 which needs to directly read a FITS extension.    Should 
 ;                 always be a multiple of 2880, and not be used with EXTEN_NO
 ;                 keyword.
 ;
-;       /SILENT - Normally, READFITS will display the size the array at the
+;       /SILENT - Normally, READ_FITS will display the size the array at the
 ;                 terminal.  The SILENT keyword will suppress this
 ;
 ;        STARTROW - Non-negative integer scalar specifying the row
@@ -1079,22 +1080,22 @@ REPLACE:
 ;       Read a FITS file test.fits into an IDL image array, IM and FITS 
 ;       header array, H.   Do not scale the data with BSCALE and BZERO.
 ;
-;              IDL> im = READFITS( 'test.fits', h, /NOSCALE)
+;              IDL> im = READ_FITS( 'test.fits', h, /NOSCALE)
 ;
 ;       If the file contains a FITS extension, it could be read with
 ;
-;              IDL> tab = READFITS( 'test.fits', htab, /EXTEN )
+;              IDL> tab = READ_FITS( 'test.fits', htab, /EXTEN )
 ;
 ;       The function TBGET() can be used for further processing of a binary 
 ;       table, and FTGET() for an ASCII table.
 ;       To read only rows 100-149 of the FITS extension,
 ;
-;              IDL> tab = READFITS( 'test.fits', htab, /EXTEN, 
+;              IDL> tab = READ_FITS( 'test.fits', htab, /EXTEN, 
 ;                                   STARTR=100, NUMR = 50 )
 ;
 ;       To read in a file that has been compressed:
 ;
-;              IDL> tab = READFITS('test.fits.gz',h)
+;              IDL> tab = READ_FITS('test.fits.gz',h)
 ;
 ; ERROR HANDLING:
 ;       If an error is encountered reading the FITS file, then 
@@ -1102,7 +1103,7 @@ REPLACE:
 ;                   (via the MESSAGE facility)
 ;               (2) the error message is displayed (unless /SILENT is set),
 ;                   and the message is also stored in !!ERROR_STATE.MSG
-;               (3) READFITS returns with a value of -1
+;               (3) READ_FITS returns with a value of -1
 ; RESTRICTIONS:
 ;       (1) Cannot handle random group FITS
 ;
@@ -1119,7 +1120,7 @@ REPLACE:
 ;       (2) The use of the NSLICE keyword is incompatible with the NUMROW
 ;       or STARTROW keywords.
 ;
-;       (3) READFITS() underwent a substantial rewrite in February 2000 to 
+;       (3) READ_FITS() underwent a substantial rewrite in February 2000 to 
 ;       take advantage of new features in IDL V5.3
 ;            1. The /swap_if_little_endian keyword is now used to OPENR rather
 ;                than calling IEEE_TO_HOST for improved performance
@@ -1135,10 +1136,10 @@ REPLACE:
 ;       (4) On some Unix shells, one may get a "Broken pipe" message if reading
 ;        a Unix compressed (.Z) file, and not reading to the end of the file 
 ;       (i.e. the decompression has not gone to completion).     This is an 
-;        informative message only, and should not affect the output of READFITS.   
+;        informative message only, and should not affect the output of READ_FITS.   
 ; PROCEDURES USED:
-;       Functions:   SXPAR()
-;       Procedures:  SXADDPAR, SXDELPAR
+;       Functions:   SX_PAR()
+;       Procedures:  SX_ADD_PAR, SXDELPAR
 ; MINIMUM IDL VERSION:
 ;       V5.3 (Uses STRJOIN, /COMPRESS keyword to OPENR)
 ;
@@ -1163,7 +1164,7 @@ REPLACE:
 ;       Restored NaNVALUE keyword for backwards compatibility,
 ;               William Thompson, 16-Aug-2004, GSFC
 ;-
-function READFITS, filename, header, heap, CHECKSUM=checksum, $ 
+function READ_FITS, filename, header, heap, CHECKSUM=checksum, $ 
                    COMPRESS = compress, HBUFFER=hbuf, EXTEN_NO = exten_no, $
                    NOSCALE = noscale, NSLICE = nslice, $
                    NO_UNSIGNED = no_unsigned,  NUMROW = numrow, $
@@ -1176,7 +1177,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
 ; Check for filename input
 
    if N_params() LT 1 then begin                
-      print,'Syntax - im = READFITS( filename, [ h, heap, /NOSCALE, /SILENT,'
+      print,'Syntax - im = READ_FITS( filename, [ h, heap, /NOSCALE, /SILENT,'
       print,'                 EXTEN_NO =, STARTROW = , NUMROW=, NSLICE = ,'
       print,'                 HBUFFER = ,/NO_UNSIGNED, /CHECKSUM, /COMPRESS]'
       return, -1
@@ -1283,13 +1284,13 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
                 
 ; Get parameters that determine size of data region.
                 
-       bitpix =  sxpar(header,'BITPIX')
-       naxis  = sxpar(header,'NAXIS')
-       gcount = sxpar(header,'GCOUNT') > 1
-       pcount = sxpar(header,'PCOUNT')
+       bitpix =  sx_par(header,'BITPIX')
+       naxis  = sx_par(header,'NAXIS')
+       gcount = sx_par(header,'GCOUNT') > 1
+       pcount = sx_par(header,'PCOUNT')
                 
        if naxis GT 0 then begin 
-            dims = sxpar( header,'NAXIS*')           ;Read dimensions
+            dims = sx_par( header,'NAXIS*')           ;Read dimensions
             ndata = dims[0]
             if naxis GT 1 then for i = 2, naxis do ndata = ndata*dims[i-1]
                         
@@ -1333,7 +1334,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
 ; Check for dummy extension header
 
  if Naxis GT 0 then begin 
-        Nax = sxpar( header, 'NAXIS*' )   ;Read NAXES
+        Nax = sx_par( header, 'NAXIS*' )   ;Read NAXES
         ndata = nax[0]
         if naxis GT 1 then for i = 2, naxis do ndata = ndata*nax[i-1]
 
@@ -1360,7 +1361,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
 
 ; Check for FITS extensions, GROUPS
 
- groups = sxpar( header, 'GROUPS' ) 
+ groups = sx_par( header, 'GROUPS' ) 
  if groups then message,NoPrint=Silent, $
            'WARNING - FITS file contains random GROUPS', /INF
 
@@ -1378,7 +1379,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
    endif 
 
    if exten_no GT 0 then begin
-        xtension = strtrim( sxpar( header, 'XTENSION' , Count = N_ext),2)
+        xtension = strtrim( sx_par( header, 'XTENSION' , Count = N_ext),2)
         if N_ext EQ 0 then message, /INF, NoPRINT = Silent, $
                 'WARNING - Header missing XTENSION keyword'
    endif 
@@ -1392,7 +1393,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
         endif 
         nax[1] = nax[1] - startrow    
         nax[1] = nax[1] < numrow
-        sxaddpar, header, 'NAXIS2', nax[1]
+        sx_add_par, header, 'NAXIS2', nax[1]
         if gzip then begin
                 if startrow GT 0 then begin
                         tmp=bytarr(startrow*nax[0],/nozero)
@@ -1409,7 +1410,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
         nax = nax[0:naxis-2]
         sxdelpar,header,'NAXIS' + strtrim(naxis,2)
         naxis = naxis-1
-        sxaddpar,header,'NAXIS',naxis
+        sx_add_par,header,'NAXIS',naxis
         ndata = ndata/lastdim
         nskip = nslice*ndata*abs(bitpix/8) 
         if gzip then  begin 
@@ -1440,7 +1441,7 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
     readu, unit, data
     ;;; if unixZ then if not is_ieee_big() then ieee_to_host,data
     if (exten_no GT 0) and (pcount GT 0) then begin
-        theap = sxpar(header,'THEAP')
+        theap = sx_par(header,'THEAP')
         skip = theap - N_elements(data)
         if skip GT 0 then begin 
                 temp = bytarr(skip,/nozero)
@@ -1470,13 +1471,13 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
 
           Nblank = 0
           if bitpix GT 0 then begin
-                blank = sxpar( header, 'BLANK', Count = N_blank) 
+                blank = sx_par( header, 'BLANK', Count = N_blank) 
                 if N_blank GT 0 then $ 
                         blankval = where( data EQ blank, Nblank)
           endif
 
-          Bscale = float( sxpar( header, 'BSCALE' , Count = N_bscale))
-          Bzero = float( sxpar(header, 'BZERO', Count = N_Bzero ))
+          Bscale = float( sx_par( header, 'BSCALE' , Count = N_bscale))
+          Bzero = float( sx_par(header, 'BZERO', Count = N_Bzero ))
  
 ; Check for unsigned integer (BZERO = 2^15) or unsigned long (BZERO = 2^31)
 
@@ -1488,8 +1489,8 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
            endif else unsgn = 0
 
           if unsgn then begin
-                 sxaddpar, header, 'BZERO', 0
-                 sxaddpar, header, 'O_BZERO', bzero, $
+                 sx_add_par, header, 'BZERO', 0
+                 sx_add_par, header, 'O_BZERO', bzero, $
                           'Original Data is unsigned Integer'
                    if unsgn_int then $ 
                         data =  uint(data) - 32768U else $
@@ -1500,15 +1501,15 @@ function READFITS, filename, header, heap, CHECKSUM=checksum, $
           if N_Bscale GT 0  then $ 
                if ( Bscale NE 1. ) then begin
                    data = temporary(data) * Bscale 
-                   sxaddpar, header, 'BSCALE', 1.
-                   sxaddpar, header, 'O_BSCALE', Bscale,' Original BSCALE Value'
+                   sx_add_par, header, 'BSCALE', 1.
+                   sx_add_par, header, 'O_BSCALE', Bscale,' Original BSCALE Value'
                endif
 
          if N_Bzero GT 0  then $
-               if (Bzero NE 0) then begin
+            if (Bzero NE 0) then begin
                      data = temporary( data ) + Bzero
-                     sxaddpar, header, 'BZERO', 0.
-                     sxaddpar, header, 'O_BZERO', Bzero,' Original BZERO Value'
+                     sx_add_par, header, 'BZERO', 0.
+                     sx_add_par, header, 'O_BZERO', Bzero,' Original BZERO Value'
                endif
         
         endelse
