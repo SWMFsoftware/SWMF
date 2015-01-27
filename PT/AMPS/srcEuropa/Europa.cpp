@@ -69,6 +69,22 @@ double Exosphere::GetSurfaceTemeprature(double cosSubsolarAngle,double *x_LOCAL_
   return 100.0;
 }
 
+double Europa::EnergeticIonSputteringRate(int spec) {
+  double res;
+
+  switch (spec) {
+  case _O2_SPEC_ :
+    res=1.0E26;
+    break;
+  case _H2O_SPEC_:
+    res=2.0E27;
+    break;
+  default:
+    res=0.0;
+  }
+
+  return res;
+}
 
 //init the model
 void Europa::Init_BeforeParser() {
@@ -77,8 +93,10 @@ void Europa::Init_BeforeParser() {
   //check the state of the Sputtering source
   if (_EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_) {
     if (_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_) {
-      exit(__LINE__,__FILE__,"Error: _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ must be _EXOSPHERE_SOURCE__ON_ when _EUROPA__SPUTTERING_ION_SOURCE_==_EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_");
+      exit(__LINE__,__FILE__,"Error: _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ must be _EXOSPHERE_SOURCE__OFF_ when _EUROPA__SPUTTERING_ION_SOURCE_==_EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_");
     }
+
+    PIC::ParticleWeightTimeStep::UserDefinedExtraSourceRate=EnergeticIonSputteringRate;
   }
 
   //Get the initial parameters of Europa orbit
@@ -464,6 +482,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   SpiceDouble xform[6][6];
 
 
+
   Sphere=(cInternalSphericalData*)SphereDataPointer;
 //  startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter;
 
@@ -511,6 +530,8 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   exit(__LINE__,__FILE__"Error: the model is implemeted only for _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_");
 #endif
 
+  //sample the total return flux
+  Exosphere::Sampling::TotalPlanetReturnFlux[spec]+=ParticleWeight;
 
   Sphere->GetSurfaceElementProjectionIndex(x_LOCAL_GALL_EPHIOD_EUROPA,nZenithElement,nAzimuthalElement);
   el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
@@ -537,7 +558,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   switch (spec) {
   case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_: case _O2PLUS_SPEC_:
 
-#if _EUROPA__SPUTTERING_ION_SOURCE__ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
+#if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
     switch (spec) {
     case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_:
       Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
@@ -579,7 +600,11 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
 
     while (Yield>0.0) {
-      Europa::EuropaO2Neutrals::O2SputterInjection(SputteringSpeed,WeightCorrectionFactor);
+      do {
+        Europa::EuropaO2Neutrals::O2SputterInjection(SputteringSpeed,WeightCorrectionFactor);
+      }
+      while (maxSputteredParticleVelocity<SputteringSpeed);
+
       if (WeightCorrectionFactor>Yield) WeightCorrectionFactor=Yield;
       Yield-=WeightCorrectionFactor;
 
@@ -630,7 +655,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       PIC::ParticleBuffer::SetV(v_LOCAL_GALL_EPHIOD_EUROPA,newParticle);
       PIC::ParticleBuffer::SetI(_O2_SPEC_,newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,newParticle);
-      Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticle);
+      Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,PIC::ParticleBuffer::GetParticleDataPointer(newParticle));
 
       //sample the particle injection rate
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_

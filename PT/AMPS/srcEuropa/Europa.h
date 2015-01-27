@@ -124,6 +124,11 @@ namespace Europa {
   //the sphere that representd the planet
   //extern cInternalSphericalData *Planet;
 
+
+  //return the typical source rate that is due to sputtering by the energetic ions (that sputtering model that is not buid into the core but implemented as a part of the particle/surface interaction model)
+  double EnergeticIonSputteringRate(int);
+  const double maxSputteredParticleVelocity=10.0*1.0E3;
+
   //init the model
   void Init_BeforeParser();
 //  void Init_AfterParser();
