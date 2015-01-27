@@ -398,20 +398,28 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
-    use ModVarIndexes, ONLY: Pe_, Bx_, Bz_
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
+    use ModPhysics,    ONLY: inv_gm1, GBody, rBody
+    use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
-         iRho_I, MassFluid_I
+         iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
+    use ModNumConst,   ONLY: cTolerance
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    integer :: i, j, k, iFluid
+    integer :: Minor_, Major_
+    integer :: i, j, k, iFluid, iRho, iRhoUx, iRhoUz, iP
     real    :: Br1_D(3), Bt1_D(3)
     real    :: Runit_D(3)
+    real    :: U, U_D(3), Bdir_D(3), Bfull_D(3)
+    real    :: Gamma, SignBr
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -427,29 +435,83 @@ contains
        RETURN
     end if
 
-    ! The electron heat conduction requires the electron temperature
-    ! in the ghost cells
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = -1, 0
-       do iFluid = IonFirst_, IonLast_
-          State_VGB(iRho_I(iFluid),i,j,k,iBlock) = &
-               Nchromo_I(iFluid)*MassFluid_I(iFluid)
-       end do
-       State_VGB(Pe_,i,j,k,iBlock) = Tchromo &
-            *sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
-    end do; end do; end do
-
-    ! The following is only needed for the semi-implicit heat conduction,
-    ! which averages the cell centered heat conduction coefficient towards
-    ! the face
     do k = MinK, MaxK; do j = MinJ, MaxJ
        Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
 
        Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
        Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
 
-       do i = -1, 0
+       ! Set B1r=0, and B1theta = B1theta(1) and B1phi = B1phi(1)
+       do i = MinI, 0
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
        end do
+
+       Bfull_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+       Bdir_D = Bfull_D/max(sqrt(sum(Bfull_D**2)), cTolerance)
+
+       SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*Bfull_D))
+       if(SignBr < 0.0)then
+          Bdir_D = -Bdir_D
+          Major_ = WaveLast_
+          Minor_ = WaveFirst_
+       else
+          Major_ = WaveFirst_
+          Minor_ = WaveLast_
+       end if
+
+       do iFluid = IonFirst_, nFluid
+          iRho = iRho_I(iFluid)
+          iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
+
+          U_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
+               /State_VGB(iRho,1,j,k,iBlock)
+          U = sum(U_D*Bdir_D)
+
+          U_D = U_D - Bdir_D*U
+          U_D = -U_D
+
+          do i = MinI, 0
+             ! exponential scaleheight
+             State_VGB(iRho,i,j,k,iBlock) = &
+                  Nchromo_I(iFluid)*MassFluid_I(iFluid)*exp(-GBody/rBody &
+                  *MassFluid_I(iFluid)/Tchromo &
+                  *(rBody/r_BLK(i,j,k,iBlock) - 1.0))
+
+             ! reflect transverse component, mass conservation along field line
+             ! (Will be replaced by B.Grad(rho U//B /B) = 0 condition)
+             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                  State_VGB(iRho,1,j,k,iBlock)*U*Bdir_D & ! float rho.U//B
+                  + State_VGB(iRho,i,j,k,iBlock)*U_D      ! reflect transverse
+
+             ! Fix ion temperature T_s
+             State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
+                  *State_VGB(iRho,i,j,k,iBlock)/MassFluid_I(iFluid)
+          end do
+       end do
+
+       do i = MinI, 0
+          ! Te = T_s and ne = sum(n_s)
+          if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = &
+               sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
+
+          ! Outgoing wave energy
+          State_VGB(Major_,i,j,k,iBlock) = PoyntingFluxPerB &
+               *sqrt(State_VGB(iRho,i,j,k,iBlock))
+
+          ! Ingoing wave energy
+          State_VGB(Minor_,i,j,k,iBlock) = 0.0
+       end do
+
+       if(Ehot_ > 1)then
+          if(UseHeatFluxCollisionless)then
+             call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
+             iP = p_; if(UseElectronPressure) iP = Pe_
+             State_VGB(Ehot_,MinI:0,j,k,iBlock) = &
+                  State_VGB(iP,MinI:0,j,k,iBlock)*(1.0/(Gamma - 1) - inv_gm1)
+          else
+             State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
+          end if
+       end if
 
     end do; end do
 
@@ -457,6 +519,7 @@ contains
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
+    use ModAdvance,      ONLY: State_VGB, UseElectronPressure
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
     use ModMain,         ONLY: x_, y_, UseRotatingFrame
     use ModMultiFluid,   ONLY: iRho_I, iUx_I, iUy_I, iUz_I, iP_I, &
@@ -469,7 +532,7 @@ contains
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
-    integer :: iFluid
+    integer :: iFluid, iP
     real :: FullBr, Ewave
     real :: Gamma
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
@@ -527,8 +590,9 @@ contains
     if(Ehot_ > 1)then
        if(UseHeatFluxCollisionless)then
           call get_gamma_collisionless(FaceCoords_D, Gamma)
+          iP = p_; if(UseElectronPressure) iP = Pe_
           VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(Pe_)*(1.0/(Gamma - 1) - inv_gm1)
+               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - inv_gm1)
        else
           VarsGhostFace_V(Ehot_) = 0.0
        end if
