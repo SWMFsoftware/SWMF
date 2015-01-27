@@ -398,6 +398,7 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
+    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_, Theta_, Phi_
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
@@ -409,6 +410,7 @@ contains
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
     use ModNumConst,   ONLY: cTolerance
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
+    use ModCoordTransform, ONLY: xyz_to_sph
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -416,10 +418,12 @@ contains
 
     integer :: Minor_, Major_
     integer :: i, j, k, iFluid, iRho, iRhoUx, iRhoUz, iP
-    real    :: Br1_D(3), Bt1_D(3)
-    real    :: Runit_D(3)
-    real    :: U, U_D(3), Bdir_D(3), Bfull_D(3)
-    real    :: Gamma, SignBr
+    real    :: Br1_D(3), Bt1_D(3), Runit_D(3)
+    real    :: FullB_D(3), SignBr
+    real    :: Gamma
+    real    :: RhoUparByB_G(0:nJ+1,0:nK+1), RhoUparByB
+    real    :: r, Phi, Theta, Br, Btheta, Bphi
+    real    :: SinPhi, CosPhi, SinTheta, CosTheta, DeltaR
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -446,29 +450,8 @@ contains
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
        end do
 
-       Bfull_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
-       Bdir_D = Bfull_D/max(sqrt(sum(Bfull_D**2)), cTolerance)
-
-       SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*Bfull_D))
-       if(SignBr < 0.0)then
-          Bdir_D = -Bdir_D
-          Major_ = WaveLast_
-          Minor_ = WaveFirst_
-       else
-          Major_ = WaveFirst_
-          Minor_ = WaveLast_
-       end if
-
        do iFluid = IonFirst_, nFluid
           iRho = iRho_I(iFluid)
-          iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
-
-          U_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
-               /State_VGB(iRho,1,j,k,iBlock)
-          U = sum(U_D*Bdir_D)
-
-          U_D = U_D - Bdir_D*U
-          U_D = -U_D
 
           do i = MinI, 0
              ! exponential scaleheight
@@ -477,17 +460,21 @@ contains
                   *MassFluid_I(iFluid)/Tchromo &
                   *(rBody/r_BLK(i,j,k,iBlock) - 1.0))
 
-             ! reflect transverse component, mass conservation along field line
-             ! (Will be replaced by B.Grad(rho U//B /B) = 0 condition)
-             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                  State_VGB(iRho,1,j,k,iBlock)*U*Bdir_D & ! float rho.U//B
-                  + State_VGB(iRho,i,j,k,iBlock)*U_D      ! reflect transverse
-
              ! Fix ion temperature T_s
              State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
                   *State_VGB(iRho,i,j,k,iBlock)/MassFluid_I(iFluid)
           end do
        end do
+
+       FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+       SignBr = sign(1.0, sum(Xyz_DGB(:,1,j,k,iBlock)*FullB_D))
+       if(SignBr < 0.0)then
+          Major_ = WaveLast_
+          Minor_ = WaveFirst_
+       else
+          Major_ = WaveFirst_
+          Minor_ = WaveLast_
+       end if
 
        do i = MinI, 0
           ! Te = T_s and ne = sum(n_s)
@@ -514,6 +501,59 @@ contains
        end if
 
     end do; end do
+
+
+    ! The boundary conditions for the momentum is based on the condition
+    ! B \cdot \nabla ( rhoUpar/B ) = 0
+    do iFluid = IonFirst_, nFluid
+       iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
+
+       ! Store the needed rhoUpar/B in the physical cells in an array
+       do k = 0, nK+1; do j = 0, nJ+1
+          FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+          RhoUparByB_G(j,k) = &
+               sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*FullB_D) &
+               /max(sum(FullB_D**2), cTolerance**2)
+       end do; end do
+
+       do k = 1, nK; do j = 1, nJ
+          call xyz_to_sph( &
+               Xyz_DGB(x_,1,j,k,iBlock), &
+               Xyz_DGB(y_,1,j,k,iBlock), &
+               Xyz_DGB(z_,1,j,k,iBlock), r, Theta, Phi)
+
+          SinPhi = sin(Phi)
+          CosPhi = cos(Phi)
+          SinTheta = sin(Theta)
+          CosTheta = cos(Theta)
+
+          FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+
+          ! We divide by Br, so make sure it is not zero
+          Br = max(FullB_D(x_)*SinTheta*CosPhi + &
+               FullB_D(y_)*SinTheta*SinPhi + &
+               FullB_D(z_)*CosTheta, cTolerance)
+          Btheta = FullB_D(x_)*CosTheta*CosPhi + &
+               FullB_D(y_)*CosTheta*SinPhi - &
+               FullB_D(z_)*SinTheta
+          Bphi = -FullB_D(x_)*SinPhi + FullB_D(y_)*CosPhi
+
+          do i = MinI, 0
+             DeltaR = r - r_BLK(i,j,k,iBlock)
+             ! This is the rhoUpar/B in the ghost cell, based on the
+             ! B \cdot \nabla ( rhoUpar/B ) = 0 condition
+             RhoUparByB = RhoUparByB_G(j,k) &
+                  - Btheta/Br*0.5*DeltaR/(r*CellSize_DB(Theta_,iBlock)) &
+                  *(RhoUparByB_G(j,k+1) - RhoUparByB_G(j,k-1)) &
+                  - Bphi/Br*0.5*DeltaR/(r*SinTheta*CellSize_DB(Phi_,iBlock)) &
+                  *(RhoUparByB_G(j+1,k) - RhoUparByB_G(j-1,k))
+
+             ! multiply by B0+B1 in the ghost cell to obtain the momentum
+             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
+             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = RhoUparByB*FullB_D
+          end do
+       end do; end do
+    end do
 
   end subroutine user_set_cell_boundary
   !============================================================================
