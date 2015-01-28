@@ -308,7 +308,7 @@ StartParticleInjection:
 
 
          do {
-           PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec,-1);
+           PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec);
          }
          while (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>vmax*vmax);
 
