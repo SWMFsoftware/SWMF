@@ -16,6 +16,7 @@
 
 double Exosphere::OrbitalMotion::AccumulatedPlanetRotation=0.0,Exosphere::OrbitalMotion::TotalSimulationTime=0.0,Exosphere::OrbitalMotion::TAA=0.0;
 double Exosphere::OrbitalMotion::CoordinateFrameRotationRate=0.0;
+double Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[3];
 
 //SPICE ephemeris time
 SpiceDouble Exosphere::OrbitalMotion::et=0.0,Exosphere::OrbitalMotion::lt=0.0;
@@ -37,6 +38,26 @@ SpiceDouble Exosphere::OrbitalMotion::IAU_to_SO_TransformationMartix[6][6]={
 //the number intervals of orbit points printed for the time interval between two outputs of the data file
 int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;
 
+//update the transformation matrixes
+void Exosphere::OrbitalMotion::UpdateTransformationMartix() {
+  sxform_c(Exosphere::SO_FRAME,Exosphere::IAU_FRAME,Europa::OrbitalMotion::et,SO_to_IAU_TransformationMartix);
+  sxform_c(Exosphere::IAU_FRAME,Exosphere::SO_FRAME,Europa::OrbitalMotion::et,IAU_to_SO_TransformationMartix);
+}
+
+void Exosphere::OrbitalMotion::UpdateRotationVector_SO_J2000() {
+  SpiceDouble xform[6][6],rot[3][3],av[3];
+  int idim;
+
+  sxform_c ("J2000",Exosphere::SO_FRAME,Europa::OrbitalMotion::et,xform);
+  xf2rav_c (xform,rot,av);
+
+  for (CoordinateFrameRotationRate=0.0,idim=0;idim<3;idim++) {
+    RotationRateVector_SO_J2000[idim]=av[idim];
+    CoordinateFrameRotationRate+=pow(av[idim],2);
+  }
+
+  CoordinateFrameRotationRate=sqrt(CoordinateFrameRotationRate);
+}
 
 double Exosphere::OrbitalMotion::GetTAA(const char* TargetName, const char* CenterBodyName, double CenterBodyMass, SpiceDouble EphemerisTime) {
   double res=0.0;
