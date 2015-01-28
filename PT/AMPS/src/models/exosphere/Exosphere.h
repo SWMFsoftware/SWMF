@@ -247,13 +247,19 @@ namespace Exosphere {
     //matrixes for tranformation SO->IAU and IAU->SO coordinate frames
     extern SpiceDouble SO_to_IAU_TransformationMartix[6][6],IAU_to_SO_TransformationMartix[6][6];
 
+
     //parameters of orbital motion of Object
     extern double CoordinateFrameRotationRate;
+    extern double RotationRateVector_SO_J2000[3];
 
     //the number of sub-intervals printed for a single interval between outputs of model data files in the pic.OrbitalData.dat
     extern int nOrbitalPositionOutputMultiplier;
 
     inline double GetCosineSubsolarAngle(double *x) { return x[0]/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);}
+
+    //update the Transformation Matrixes and calculate the rotation vector
+    void UpdateTransformationMartix();
+    void UpdateRotationVector_SO_J2000();
 
     //calculate TAA
     double GetTAA(SpiceDouble);
