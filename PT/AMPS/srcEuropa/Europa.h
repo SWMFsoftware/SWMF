@@ -157,6 +157,23 @@ namespace Europa {
   }*/
 
 
+  namespace Plume {
+    extern double xSource_SO[3]; //the location of the source
+    extern SpiceDouble xSource_IAU[3]; //the location of the source
+    extern double PlumeExternalNormal_SO[3]; //the normal to the Europa's surface at the location of the plume
+
+    const double PlumeSourceRate[]={0.0};
+    const double PlumeSourceTemeprature=230.0;
+
+    const double PlumeWLon=180.0;
+    const double PlumeLat=-66.0;
+
+    void SetPlumeLocation();
+    double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
+    bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement);
+  }
+
+
   //the condition of the particle trajectory tracking
   namespace ParticleTracker {
     inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
@@ -182,6 +199,8 @@ namespace Europa {
 
   //orbital motion of the Planet
   namespace OrbitalMotion {
+  using namespace Exosphere::OrbitalMotion;
+
     extern double AccumulatedPlanetRotation,TotalSimulationTime,TAA;
 
     //SPICE ephemeris time
@@ -1466,18 +1485,18 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
 #if _FORCE_FRAMEROTATION_MODE_ == _PIC_MODE_ON_
   double aCen[3],aCorr[3],t3,t7,t12;
 
-  t3 = RotationVector_SO_FROZEN[0] * x_LOCAL[1] - RotationVector_SO_FROZEN[1] * x_LOCAL[0];
-  t7 = RotationVector_SO_FROZEN[2] * x_LOCAL[0] - RotationVector_SO_FROZEN[0] * x_LOCAL[2];
-  t12 = RotationVector_SO_FROZEN[1] * x_LOCAL[2] - RotationVector_SO_FROZEN[2] * x_LOCAL[1];
+  t3 = Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * x_LOCAL[1] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * x_LOCAL[0];
+  t7 = Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * x_LOCAL[0] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * x_LOCAL[2];
+  t12 = Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * x_LOCAL[2] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * x_LOCAL[1];
 
-  aCen[0] = -RotationVector_SO_FROZEN[1] * t3 + RotationVector_SO_FROZEN[2] * t7;
-  aCen[1] = -RotationVector_SO_FROZEN[2] * t12 + RotationVector_SO_FROZEN[0] * t3;
-  aCen[2] = -RotationVector_SO_FROZEN[0] * t7 + RotationVector_SO_FROZEN[1] * t12;
+  aCen[0] = -Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * t3 + Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * t7;
+  aCen[1] = -Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * t12 + Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * t3;
+  aCen[2] = -Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * t7 + Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * t12;
 
 
-  aCorr[0] = -2.0*(RotationVector_SO_FROZEN[1] * v_LOCAL[2] - RotationVector_SO_FROZEN[2] * v_LOCAL[1]);
-  aCorr[1] = -2.0*(RotationVector_SO_FROZEN[2] * v_LOCAL[0] - RotationVector_SO_FROZEN[0] * v_LOCAL[2]);
-  aCorr[2] = -2.0*(RotationVector_SO_FROZEN[0] * v_LOCAL[1] - RotationVector_SO_FROZEN[1] * v_LOCAL[0]);
+  aCorr[0] = -2.0*(Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * v_LOCAL[2] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * v_LOCAL[1]);
+  aCorr[1] = -2.0*(Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[2] * v_LOCAL[0] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * v_LOCAL[2]);
+  aCorr[2] = -2.0*(Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[0] * v_LOCAL[1] - Exosphere::OrbitalMotion::RotationRateVector_SO_J2000[1] * v_LOCAL[0]);
 
   accl_LOCAL[0]+=aCen[0]+aCorr[0];
   accl_LOCAL[1]+=aCen[1]+aCorr[1];
