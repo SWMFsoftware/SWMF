@@ -517,10 +517,7 @@ contains
        end do; end do
 
        do k = 1, nK; do j = 1, nJ
-          call xyz_to_sph( &
-               Xyz_DGB(x_,1,j,k,iBlock), &
-               Xyz_DGB(y_,1,j,k,iBlock), &
-               Xyz_DGB(z_,1,j,k,iBlock), r, Theta, Phi)
+          call xyz_to_sph(Xyz_DGB(:,1,j,k,iBlock), r, Theta, Phi)
 
           SinPhi = sin(Phi)
           CosPhi = cos(Phi)
@@ -541,11 +538,13 @@ contains
           do i = MinI, 0
              DeltaR = r - r_BLK(i,j,k,iBlock)
              ! This is the rhoUpar/B in the ghost cell, based on the
-             ! B \cdot \nabla ( rhoUpar/B ) = 0 condition
+             ! B \cdot \nabla ( rhoUpar/B ) = 0 condition.
+             ! The spherical is an r-longitude-latitude grid, so that the
+             ! theta index in reverse. 
              RhoUparByB = RhoUparByB_G(j,k) &
-                  - Btheta/Br*0.5*DeltaR/(r*CellSize_DB(Theta_,iBlock)) &
-                  *(RhoUparByB_G(j,k+1) - RhoUparByB_G(j,k-1)) &
-                  - Bphi/Br*0.5*DeltaR/(r*SinTheta*CellSize_DB(Phi_,iBlock)) &
+                  + Btheta/Br*0.5*DeltaR/(r*CellSize_DB(Theta_,iBlock)) &
+                  *(RhoUparByB_G(j,k-1) - RhoUparByB_G(j,k+1)) &
+                  + Bphi/Br*0.5*DeltaR/(r*SinTheta*CellSize_DB(Phi_,iBlock)) &
                   *(RhoUparByB_G(j+1,k) - RhoUparByB_G(j-1,k))
 
              ! multiply by B0+B1 in the ghost cell to obtain the momentum
