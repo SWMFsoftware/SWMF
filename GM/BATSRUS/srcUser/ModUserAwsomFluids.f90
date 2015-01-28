@@ -491,10 +491,12 @@ contains
 
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
-             call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
              iP = p_; if(UseElectronPressure) iP = Pe_
-             State_VGB(Ehot_,MinI:0,j,k,iBlock) = &
-                  State_VGB(iP,MinI:0,j,k,iBlock)*(1.0/(Gamma - 1) - inv_gm1)
+             do i = MinI, 0
+                call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+                State_VGB(Ehot_,i,j,k,iBlock) = &
+                     State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma - 1) - inv_gm1)
+             end do
           else
              State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
           end if
@@ -505,7 +507,7 @@ contains
 
     ! The boundary conditions for the momentum is based on the condition
     ! B \cdot \nabla ( rhoUpar/B ) = 0
-    do iFluid = IonFirst_, nFluid
+    do iFluid = IonFirst_, IonLast_
        iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
        ! Store the needed rhoUpar/B in the physical cells in an array
@@ -526,21 +528,23 @@ contains
 
           FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
 
-          ! We divide by Br, so make sure it is not zero
-          Br = max(FullB_D(x_)*SinTheta*CosPhi + &
+          Br = FullB_D(x_)*SinTheta*CosPhi + &
                FullB_D(y_)*SinTheta*SinPhi + &
-               FullB_D(z_)*CosTheta, cTolerance)
+               FullB_D(z_)*CosTheta
           Btheta = FullB_D(x_)*CosTheta*CosPhi + &
                FullB_D(y_)*CosTheta*SinPhi - &
                FullB_D(z_)*SinTheta
           Bphi = -FullB_D(x_)*SinPhi + FullB_D(y_)*CosPhi
+
+          ! We divide by Br, so make sure it is not zero
+          if(abs(Br) < cTolerance) Br = cTolerance*sign(1.0, Br)
 
           do i = MinI, 0
              DeltaR = r - r_BLK(i,j,k,iBlock)
              ! This is the rhoUpar/B in the ghost cell, based on the
              ! B \cdot \nabla ( rhoUpar/B ) = 0 condition.
              ! The spherical is an r-longitude-latitude grid, so that the
-             ! theta index in reverse. 
+             ! theta index is in reverse. 
              RhoUparByB = RhoUparByB_G(j,k) &
                   + Btheta/Br*0.5*DeltaR/(r*CellSize_DB(Theta_,iBlock)) &
                   *(RhoUparByB_G(j,k-1) - RhoUparByB_G(j,k+1)) &
