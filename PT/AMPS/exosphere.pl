@@ -184,6 +184,7 @@ while ($line=<InputFile>) {
     }
     elsif ($InputLine eq "OFF") {
       ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_","_PIC_MODE_OFF_","models/exosphere/Exosphere.dfn");
+      next;
     }
     else {
       die "Cannot recognize the option #0, line=$InputFileLineNumber ($InputFileName)\n";
@@ -288,6 +289,10 @@ while ($line=<InputFile>) {
     $s0=$macro;    
     $s0=~s/[()=]/ /g;
     ($s0,$s1)=split(' ',$s0,2);
+
+    if (!defined $value) {
+      $value=" ";
+    }
 
     ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","models/exosphere/Exosphere.dfn");    
   }
@@ -956,10 +961,30 @@ if (defined $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER) {
   open (FILEOUT,">$WorkingSourceDirectory/models/exosphere/Exosphere.cpp") || die "Cannot open file $WorkingSourceDirectory/models/exosphere/Exosphere.cpp\n";
   
   foreach (@FileContent) {   
+    if (!defined $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS) {
+      $MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS=" ";
+    }
+    
     $_=~s/\$MARKER:CALCULATE-SOURCE-FLUX-WITH-USER-DEFINED-FUNCTIONS\$/$MARKER__CALCULATE_SOURCE_FLUX_WITH_USER_DEFINED_FUNCTIONS/;
+    
+    if (!defined $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS) {
+      $MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS=" ";
+    }
+    
     $_=~s/\$MARKER:GENERATE-PARTICLE-PROPERTIES-WITH-USER-DEFINED-FUNCTIONS\$/$MARKER__GENERATE_PARTICLE_PROPERTIES_WITH_USER_DEFINED_FUNCTIONS/;
+        
+    if (!defined $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER) {
+      $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER=" "; 
+    }
+    
     $_=~s/\$MARKER:RESERVE-CELL-SAMPLING-DATA-BUFFER\$/$MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER/;
+        
+    if (!defined $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE) {
+      $MARKER__USER_DEFINED_TOTAL_SOURCE_RATE=" ";
+    }
+    
     $_=~s/\$MARKER:USER-DEFINED-TOTAL-SOURCE-RATE\$/$MARKER__USER_DEFINED_TOTAL_SOURCE_RATE/;
+    
       
     print FILEOUT "$_";
   }
