@@ -1041,13 +1041,13 @@ void amps_init() {
 
     for (n=0;n<nSampleSteps;n++) {
       //position of the s/c
-      spkezr_c("GALILEO ORBITER",et,"GALL_EPHIOD","NONE","EUROPA",state,&lt);
+      spkezr_c("GALILEO ORBITER",et,Exosphere::SO_FRAME,"NONE","EUROPA",state,&lt);
 
 
       //get the pointing vector in the 'MSO' frame
       //memcpy(bsight,bsight_INIT,3*sizeof(double));
 
-      //???      pxform_c ("MSGR_EPPS_FIPS","GALL_EPHIOD",et,rotate);
+      //???      pxform_c ("MSGR_EPPS_FIPS",Exosphere::SO_FRAME,et,rotate);
       //???      mxv_c(rotate,bsight,pointing);
 
       //print the pointing information
@@ -1225,15 +1225,14 @@ void amps_time_step () {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   int idim;
 
-
 		//determine the parameters of the orbital motion of Europa
 		SpiceDouble StateBegin[6],StateEnd[6],lt;
 		double lBegin[3],rBegin,lEnd[3],rEnd,vTangentialBegin=0.0,vTangentialEnd=0.0,c0=0.0,c1=0.0;
 		//    int idim;
 
-		spkezr_c("Europa",Europa::OrbitalMotion::et,"GALL_EPHIOD","none","Jupiter",StateBegin,&lt);
+		spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateBegin,&lt);
 		Europa::OrbitalMotion::et+=PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_];
-		spkezr_c("Europa",Europa::OrbitalMotion::et,"GALL_EPHIOD","none","Jupiter",StateEnd,&lt);
+		spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateEnd,&lt);
 
 		for (rBegin=0.0,rEnd=0.0,idim=0;idim<3;idim++) {
 			StateBegin[idim]*=1.0E3,StateBegin[3+idim]*=1.0E3;
@@ -1299,7 +1298,7 @@ void amps_time_step () {
 		//determine direction to the Sun and rotation angle in the coordinate frame related to Europa
 		SpiceDouble state[6],l=0.0;
 
-		spkezr_c("SUN",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],"IAU_EUROPA","none","EUROPA",state,&lt);
+		spkezr_c("SUN",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Exosphere::IAU_FRAME,"none","EUROPA",state,&lt);
 
 		for (idim=0;idim<3;idim++) l+=pow(state[idim],2);
 
@@ -1311,11 +1310,9 @@ void amps_time_step () {
 		if (Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]<0.0) Europa::OrbitalMotion::PlanetAxisToSunRotationAngle=2.0*Pi-Europa::OrbitalMotion::PlanetAxisToSunRotationAngle;
 
 
-		//matrixes for transformation GALL_EPHIOD->IAU and IAU->GALL_EPHIOD coordinate frames
-		sxform_c("GALL_EPHIOD","IAU_EUROPA",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Europa::OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix);
-		sxform_c("IAU_EUROPA","GALL_EPHIOD",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Europa::OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix);
-
-		sxform_c("IAU_EUROPA","GALL_ESOM",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix);
+		//Update the transformation matrixes and rotation vector
+		Exosphere::OrbitalMotion::UpdateTransformationMartix();
+		Exosphere::OrbitalMotion::UpdateRotationVector_SO_J2000();
 
 #else
 		double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 

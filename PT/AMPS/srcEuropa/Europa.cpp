@@ -18,7 +18,10 @@
 //the object name and the names of the frames
 char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Europa";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_EUROPA";
-char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="GALL_EPHIOD";
+char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="GALL_EOJ";  //Europa-centric inertial Orbital Jupiter:
+//This system has its X axis pointing in direction of Europa's motion (assumed to magnetospheric flow past Europa),
+//Y is along the direction from Europa to Jupiter orthogonal to X;
+//defined in galileo.tf
 
 
 double Europa::TotalInjectionRate=0.0;
@@ -106,7 +109,7 @@ void Europa::Init_BeforeParser() {
   utc2et_c(SimulationStartTimeString,&OrbitalMotion::et);
 
   //get initial parameters of Europa's orbit
-  spkezr_c("Europa",OrbitalMotion::et,"GALL_EPHIOD","none","Jupiter",state,&OrbitalMotion::lt);
+  spkezr_c("Europa",OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",state,&OrbitalMotion::lt);
 
   for (idim=0,xEuropaRadial=0.0;idim<3;idim++) {
     xEuropa[idim]=state[idim]*1.0E3,vEuropa[idim]=state[idim+3]*1.0E3;
@@ -117,8 +120,12 @@ void Europa::Init_BeforeParser() {
   vEuropaRadial=(xEuropaRadial>1.0E-5) ? (xEuropa[0]*vEuropa[0]+xEuropa[1]*vEuropa[1]+xEuropa[2]*vEuropa[2])/xEuropaRadial : 0.0;
 
   // get initial position of GALILEO for line-of sight
-  spkezr_c("GALILEO ORBITER",OrbitalMotion::et,"GALL_EPHIOD","none","Europa",state,&OrbitalMotion::lt);
+  spkezr_c("GALILEO ORBITER",OrbitalMotion::et,Exosphere::SO_FRAME,"none","Europa",state,&OrbitalMotion::lt);
   for (idim=0;idim<3;idim++) xEarth[idim]=state[idim]*1.0E3,vEarth[idim]=state[idim+3]*1.0E3;
+
+  //init the location of the plume
+  OrbitalMotion::UpdateTransformationMartix();
+  Plume::SetPlumeLocation();
 }
 
 
@@ -180,7 +187,7 @@ void Europa::ColumnDensityIntegration_Tail(char *fname) {
   //find position of Galileo
   SpiceDouble State[6],lt;
 
-  spkezr_c("GALILEO ORBITER",Europa::OrbitalMotion::et,"GALL_EPHIOD","none","Europa",State,&lt);
+  spkezr_c("GALILEO ORBITER",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Europa",State,&lt);
 
   xEarth_new[0]=State[0]*1.0E3;
   xEarth_new[1]=State[1]*1.0E3;
@@ -217,7 +224,7 @@ void Europa::ColumnDensityIntegration_Map(char *fname) {
   //find position of Europa as seen from Galileo
   SpiceDouble State[6],lt;
 
-  spkezr_c("GALILEO ORBITER",Europa::OrbitalMotion::et,"GALL_EPHIOD","none","Europa",State,&lt);
+  spkezr_c("GALILEO ORBITER",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Europa",State,&lt);
 
   xEarth_new[0]=State[0]*1.0E3;
   xEarth_new[1]=State[1]*1.0E3;
