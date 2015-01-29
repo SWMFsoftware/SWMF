@@ -10,6 +10,7 @@ double Europa::Plume::PlumeExternalNormal_SO[3]; //the normal to the Europa's su
 
 //determine the location of the plume source in the "global" frame of reference
 void Europa::Plume::SetPlumeLocation() {
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   SpiceInt id,n;
   SpiceBoolean  found;
   int idim;
@@ -37,6 +38,9 @@ void Europa::Plume::SetPlumeLocation() {
   }
 
   for (iSO=0,l=sqrt(l);iSO<3;iSO++) PlumeExternalNormal_SO[iSO]=-xSource_SO[iSO]/l;
+#else
+  for (int idim=0;idim<3;idim++) xSource_IAU[idim]=0.0,xSource_SO[idim]=0.0,PlumeExternalNormal_SO[idim]=0.0;
+#endif
 }
 
 double Europa::Plume::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
