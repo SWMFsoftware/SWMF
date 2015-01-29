@@ -1,13 +1,16 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
-  use ModMagnetogram,   ONLY: get_magnetogram_field
-  !\
-  !Input arguments: x,y,z, output - B0 vector in SI units
-  !/
-  use ModMain, ONLY: UseFieldLineThreads
+
+  use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
+  use ModB0,   ONLY: get_b0
+
   implicit none
   save
+
   PRIVATE ! Except
-  logical, public, allocatable :: DoThreads_B(:), IsAllocatedThread_B(:)
+  logical, public, allocatable:: IsAllocatedThread_B(:)
   ! Named indexes for local use only
 
   !In the boundary blocks the physical cells near the boundary are connected 
@@ -92,18 +95,20 @@ module ModFieldLineThread
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
   real:: PoyntingFluxPerBSi  
+
 contains
+  !=============================================================================
   subroutine get_poynting_flux(PoyntingFluxPerBIn)
     real, intent(in)::PoyntingFluxPerBIn
     PoyntingFluxPerBSi = PoyntingFluxPerBIn
   end subroutine get_poynting_flux
-  !===================
+  !=============================================================================
   subroutine read_threads(iSession)
     use ModSize, ONLY: MaxBlock
     use ModReadParam, ONLY: read_var
     integer, intent(in):: iSession
     integer :: iBlock
-    !-------------
+    !--------------------------------------------------------------------------
 
     call read_var('UseFieldLineThreads', UseFieldLineThreads)
     if(UseFieldLineThreads)then
@@ -133,9 +138,10 @@ contains
        end if
     end if
   end subroutine read_threads
-  !=========================
+  !=============================================================================
   subroutine nullify_thread_b(iBlock)
     integer, intent(in) :: iBlock
+    !---------------------------------------------------------------------------
     nullify(BoundaryThreads_B(iBlock) % Xyz_DIII)
     nullify(BoundaryThreads_B(iBlock) % Length_III)
     nullify(BoundaryThreads_B(iBlock) % BLength_III)
@@ -152,10 +158,10 @@ contains
     nullify(BoundaryThreads_B(iBlock) % DDTeOverDsOverTeTrueSI_II)
     nullify(BoundaryThreads_B(iBlock) % UseLimitedDTe_II)
   end subroutine nullify_thread_b
-  !=========================
+  !==============================================================================
   subroutine deallocate_thread_b(iBlock)
     integer, intent(in) :: iBlock
-    !------
+    !---------------------------------------------------------------------------
     deallocate(BoundaryThreads_B(iBlock) % Xyz_DIII)
     deallocate(BoundaryThreads_B(iBlock) % Length_III)
     deallocate(BoundaryThreads_B(iBlock) % BLength_III)
@@ -174,17 +180,16 @@ contains
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
   end subroutine deallocate_thread_b
-  !========================
+  !==============================================================================
   subroutine set_threads
-    use ModMain,     ONLY: MaxBlock, Unused_B, body1_,&
+    use ModMain,     ONLY: MaxBlock, Unused_B,&
          nDim, nJ, nK
-    use ModGeometry, ONLY: Xyz_DGB!, IsBoundaryBlock_IB
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
     use ModProcMH
     integer:: iBlock, nBlockSet, nBlockSetAll, nPointMin, nPointMinAll, j, k
     integer:: iError
-    !--------
+    !---------------------------------------------------------------------------
     nBlockSet = 0
     do iBlock = 1, MaxBlock
        if(Unused_B(iBlock))then
@@ -262,12 +267,12 @@ contains
        write(*,*)'nPointMin = ',nPointMinAll
     end if
   end subroutine set_threads
-  !=====================
+  !========================================================================
   subroutine set_threads_b(iBlock)
     use ModGeometry, ONLY: Xyz_DGB
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitB_, UnitTemperature_
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitTemperature_
     use ModMain,     ONLY: nDim, nJ, nK, jTest, kTest, BlkTest
-    use ModNumConst, ONLY: cToleranceOrig=>cTolerance
+    use ModNumConst, ONLY: cTolerance
     integer, intent(in) :: iBlock
     !\
     ! Locals:
@@ -304,17 +309,15 @@ contains
     !Here, the magnetic field in SI units is used, therefore,
     !SI field tolerance should be used
     !/
-    real:: cTolerance != cToleranceOrig*No2Si_V(UnitB_)
 
     integer, parameter:: R_ = 1
     real :: Dxyz_D(3), DirB_D(3), DirR_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
     integer, parameter::nCoarseMax = 4
-    !-------------
+    !---------------------------------------------------------------------
     call set_oktest('set_threads_b', DoTest, DoTestMe)
 
-    cTolerance = cToleranceOrig*No2Si_V(UnitB_)
     !\
     ! Initialize threads
     !/
@@ -342,8 +345,7 @@ contains
        !\
        ! Magnetic field in SI!
        !/
-       !call get_magnetogram_field(&
-       !     XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       !call get_b0(XyzStart_D(1), B0Start_D)
        !BoundaryThreads_B(iBlock) % B0Face_DII(1:nDim, j, k) = B0Start_D  
        !\
        ! Starting points for all threads are in the centers
@@ -351,25 +353,21 @@ contains
        !/
        XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)
 
-       BoundaryThreads_B(iBlock) % Xyz_DIII(&
-            :, 0, j, k) = XyzStart_D
+       BoundaryThreads_B(iBlock) % Xyz_DIII(:,0,j,k) = XyzStart_D
        !\
        ! Magnetic field in SI!
        !/
-       call get_magnetogram_field(&
-            XyzStart_D(1), XyzStart_D(2), XyzStart_D(3), B0Start_D)
+       call get_b0(XyzStart_D, B0Start_D)
        !\
        ! Calculate and save face field
        !/
-       BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = &
-            B0Start_D  * Si2No_V(UnitB_) 
+       BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k) = B0Start_D
 
        SignBr = sign(1.0, sum(XyzStart_D*B0Start_D) )
        BoundaryThreads_B(iBlock) % SignBr_II(j, k) = SignBr
 
        B0Start = sqrt( sum( B0Start_D**2 ) )
-       BoundaryThreads_B(iBlock) % B_III(0, j, k) = &
-            B0Start*Si2No_V(UnitB_)
+       BoundaryThreads_B(iBlock) % B_III(0, j, k) = B0Start
 
        RStart = sqrt( sum( XyzStart_D**2 ) )
        BoundaryThreads_B(iBlock) % RInv_III(0, j, k) = 1/RStart
@@ -409,8 +407,7 @@ contains
              XyzAux_D = Xyz_D - 0.50*Ds*DirB_D
 
              !2. Magnetic field in this point:
-             call get_magnetogram_field(&
-                  XyzAux_D(1), XyzAux_D(2), XyzAux_D(3), B0Aux_D)
+             call get_b0(XyzAux_D, B0Aux_D)
              DirB_D = SignBr*B0Aux_D/max(&
                   sqrt(sum(B0Aux_D**2)), cTolerance**2)
              if(nTrial==nCoarseMax)call limit_cosBR
@@ -425,11 +422,9 @@ contains
              BoundaryThreads_B(iBlock) % Xyz_DIII(&
                   :, -iPoint, j, k) = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
-             call get_magnetogram_field(&
-                  Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+             call get_b0(Xyz_D, B0_D)
              B0 = sqrt( sum( B0_D**2 ) )
-             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
-                  B0*Si2No_V(UnitB_)
+             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
           end do POINTS
        end do COARSEN
        if(R > rBody)then
@@ -450,11 +445,9 @@ contains
        BoundaryThreads_B(iBlock) % Xyz_DIII(&
             :, -iPoint, j, k) = Xyz_D
        BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/RBody
-       call get_magnetogram_field(&
-            Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+       call get_b0(Xyz_D, B0_D)
        B0 = sqrt( sum( B0_D**2 ) )
-       BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = &
-            B0*Si2No_V(UnitB_)
+       BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
        !Store the number of points
        BoundaryThreads_B(iBlock) % nPoint_II(j,k) = iPoint
        !\
@@ -534,15 +527,15 @@ contains
            sqrt((1 - CosBRMin**2)/(1 - CosBR**2))+& !Reduced in magnitude
            DirR_D*CosBRMin          !Plus increased radial comp 
     end subroutine limit_cosbr
-    !=====================
+    !=========================================================================
     subroutine limit_temperature(BLength, TMax)
-      use ModPhysics,      ONLY: UnitX_,Si2No_V, UnitB_
+      use ModPhysics,      ONLY: UnitX_, Si2No_V, UnitB_
       use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
       real, intent(in)  :: BLength
       real, intent(out) :: TMax
       real :: HeatFluxXLength, Value_V(4)
       integer:: iTable
-      !-------------
+      !---------------------------------------------------------------------
       iTable = i_lookup_table('TR')
       if(iTable<=0)call CON_stop('TR table is not set')
 
@@ -561,9 +554,9 @@ contains
   end subroutine set_threads_b
   !=========================================================================
   subroutine check_tr_table(TypeFileIn)
-    use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
+    use ModConst,      ONLY: cBoltzmann, cElectronMass, &
          cEps, cElectronCharge, cTwoPi
-    use ModLookupTable, ONLY: Table_I, TableType, &
+    use ModLookupTable, ONLY: &
          i_lookup_table, init_lookup_table, make_lookup_table
 
     character(LEN=*),optional,intent(in)::TypeFileIn
@@ -715,7 +708,8 @@ contains
     Value_V = (/ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe)/)
   end subroutine calc_tr_table
-  !===========================Tables for solving Alfven waves====
+  !=============================================================================
+  ! Tables for solving Alfven waves====
   subroutine calc_alfven_wave_tr_table(iTableIn, Arg1, Arg2, Value_V)
     integer, intent(in):: iTableIn
     real, intent(in)   :: Arg1, Arg2
@@ -747,7 +741,7 @@ contains
        Value_V = (/Heating, APlusBC/)
     end if
   end subroutine calc_alfven_wave_tr_table
-  !=======================================
+  !=============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
        Heating, APlusBC, APlusOut_I, AMinusOut_I)
     integer,intent(in):: nI
@@ -757,11 +751,11 @@ contains
     real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
     real:: DeltaXi
     real,dimension(0:500)::APlus_I,AMinus_I
-    integer::iStep,iIter, iFile
+    integer::iStep,iIter
     integer, parameter:: nIterMax = 10
     real::Derivative, AOld, ADiffMax
     real,parameter:: CTol=0.0010
-    !----------------------
+    !---------------------------------------------------------------------------
     APlus_I(0:nI)=1.0
     AMinus_I(0:nI)=AMinusBC
     do iIter=1,nIterMax
@@ -822,5 +816,7 @@ contains
     Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
     if(present(APlusOut_I))APlusOut_I(0:nI) = APlus_I(0:nI)
     if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
+
   end subroutine solve_a_plus_minus
+
 end module ModFieldLineThread
