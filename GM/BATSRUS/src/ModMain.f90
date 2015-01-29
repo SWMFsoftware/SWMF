@@ -1,7 +1,8 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-Module ModMain
+
+module ModMain
 
   use ModKind
   use ModSize
@@ -289,11 +290,12 @@ Module ModMain
   logical :: DoThinCurrentSheet = .false.
   
   !\
-  ! Logical for the use of the boundary condition at the surface
+  ! Logicals for the use of the boundary condition at the surface
   ! well above the transition region, which in connected by the 
   ! magnetic field line threads with the photosphere boundary.
   !/
   logical:: UseFieldLineThreads = .false.
+  logical, public, allocatable :: DoThreads_B(:)
 
   ! Use high-order accurate ghost cells. 
   logical :: UseHighResChange = .false. 
