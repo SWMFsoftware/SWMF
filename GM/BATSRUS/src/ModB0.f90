@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModB0
 
@@ -55,7 +56,6 @@ module ModB0
   ! The numerical curl and divergence of B0 for one block
   real, public, allocatable :: CurlB0_DC(:,:,:,:)
   real, public, allocatable :: DivB0_C(:,:,:)
-
 
   ! Local variables
 
@@ -149,10 +149,10 @@ contains
     ! Calculate the cell centered B0 for block iBlock
 
     use ModProcMH, ONLY: iProc
-    use ModMain,   ONLY: ProcTest, BlkTest, iTest, jTest, kTest
+    use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B, &
+         ProcTest, BlkTest, iTest, jTest, kTest
     use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
-    use ModFieldLineThread, ONLY: UseFieldLineThreads, &
-                                   DoThreads_B
+
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
