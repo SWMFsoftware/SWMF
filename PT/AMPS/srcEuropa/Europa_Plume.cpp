@@ -26,9 +26,13 @@ void Europa::Plume::SetPlumeLocation() {
   int iSO,iIAU;
   double l=0.0;
 
+  for (iIAU=0;iIAU<3;iIAU++) xSource_IAU[iIAU]*=1.0E3;
+
   for (iSO=0;iSO<3;iSO++) {
-    for (xSource_SO[iSO]=0.0,iIAU=0;iIAU<3;iIAU++) xSource_SO[iSO]+=Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[iSO][iIAU]*xSource_IAU[iIAU];
-    xSource_SO[iSO]*=1.0E3;
+    for (xSource_SO[iSO]=0.0,iIAU=0;iIAU<3;iIAU++) {
+      xSource_SO[iSO]+=OrbitalMotion::IAU_to_SO_TransformationMartix[iSO][iIAU]*xSource_IAU[iIAU];
+    }
+
     l+=pow(xSource_SO[iSO],2);
   }
 
