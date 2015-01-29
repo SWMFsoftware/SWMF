@@ -574,7 +574,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=700000; //700000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=350000; //700000;
   PIC::RequiredSampleLength=10;
 
 
@@ -603,7 +603,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(20000000);
+  PIC::ParticleBuffer::Init(15000000);
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
@@ -692,7 +692,7 @@ int main(int argc,char **argv) {
 #endif
 
       PIC::RequiredSampleLength*=2;
-      if (PIC::RequiredSampleLength>10000) PIC::RequiredSampleLength=10000;
+      if (PIC::RequiredSampleLength>700) PIC::RequiredSampleLength=700;
 
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
