@@ -41,6 +41,21 @@ my $s1;
 my $s2;
 
 
+#get the list of the speces 
+my $TotalSpeciesNumber;
+my @SpeciesList;
+
+open (SPECIES,"<$SpeciesFileName") || die "Cannot open file $SpeciesFileName\n";
+$TotalSpeciesNumber=<SPECIES>;
+@SpeciesList=<SPECIES>;
+close (SPECIES);
+      
+chomp($TotalSpeciesNumber);
+foreach (@SpeciesList) {
+  chomp($_);
+}
+
+
 #add the model header to the pic.h
 open (PIC_H,">>$WorkingSourceDirectory/pic/pic.h") || die "Cannot open $WorkingSourceDirectory/pic/pic.h";
 print PIC_H "#include \"Europa.h\"\n";
@@ -148,6 +163,43 @@ while ($line=<InputFile>) {
     else {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
     }
+  }
+  
+  elsif ($InputLine eq "PLUME") {
+    my @SourceRate=(0)x$TotalSpeciesNumber;
+    
+    $InputComment=~s/[()=,]/ /g;
+    
+    while (defined $InputComment) { 
+      my $spec;
+      
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "TEMP") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("const double PlumeSourceTemeprature",$InputLine,"main/Europa.h");
+      }
+      elsif ($InputLine eq "LAT") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("const double PlumeLat",$InputLine,"main/Europa.h");
+      }
+      elsif ($InputLine eq "WLON") {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        ampsConfigLib::ChangeValueOfVariable("const double PlumeWLon",$InputLine,"main/Europa.h");
+      }
+      elsif ($InputLine eq "SOURCERATE") {
+        my $spec;
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $spec=getSpeciesNumber($InputLine);
+        
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        $SourceRate[$spec]=$InputLine;        
+      }
+    }
+    
+    #update the source array in main/Europa.h 
+    ampsConfigLib::ChangeValueOfArray("const double PlumeSourceRate\\[\\]",\@SourceRate,"main/Europa.h");
   }
   
   
@@ -301,4 +353,22 @@ while ($line=<InputFile>) {
 }
 
 
+#=============================== Determine the species number  =============================
+sub getSpeciesNumber {
+  my $res=-1;
+  my $spec=$_[0];
+  
+  for (my $i=0;$i<$TotalSpeciesNumber;$i++) {
+    if ($spec eq $SpeciesList[$i]) {
+      $res=$i;
+      last;
+    }
+  } 
+  
+  if ($res eq -1) {
+    die "Cannot find species $spec\n";
+  }
+  
+  return $res;
+}
 
