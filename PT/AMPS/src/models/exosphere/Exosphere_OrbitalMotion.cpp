@@ -40,15 +40,26 @@ int Exosphere::OrbitalMotion::nOrbitalPositionOutputMultiplier=1;
 
 //update the transformation matrixes
 void Exosphere::OrbitalMotion::UpdateTransformationMartix() {
-  sxform_c(Exosphere::SO_FRAME,Exosphere::IAU_FRAME,Europa::OrbitalMotion::et,SO_to_IAU_TransformationMartix);
-  sxform_c(Exosphere::IAU_FRAME,Exosphere::SO_FRAME,Europa::OrbitalMotion::et,IAU_to_SO_TransformationMartix);
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+  sxform_c(Exosphere::SO_FRAME,Exosphere::IAU_FRAME,et,SO_to_IAU_TransformationMartix);
+  sxform_c(Exosphere::IAU_FRAME,Exosphere::SO_FRAME,et,IAU_to_SO_TransformationMartix);
+#else
+  int i,j;
+
+  for (i=0;i<6;i++) for (j=0;j<6;j++) {
+    SO_to_IAU_TransformationMartix[i][j]=(i==j) ? 1.0 : 0.0;
+    IAU_to_SO_TransformationMartix[i][j]=(i==j) ? 1.0 : 0.0;
+  }
+#endif
 }
 
 void Exosphere::OrbitalMotion::UpdateRotationVector_SO_J2000() {
-  SpiceDouble xform[6][6],rot[3][3],av[3];
   int idim;
 
-  sxform_c ("J2000",Exosphere::SO_FRAME,Europa::OrbitalMotion::et,xform);
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+  SpiceDouble xform[6][6],rot[3][3],av[3];
+
+  sxform_c ("J2000",Exosphere::SO_FRAME,OrbitalMotion::et,xform);
   xf2rav_c (xform,rot,av);
 
   for (CoordinateFrameRotationRate=0.0,idim=0;idim<3;idim++) {
@@ -57,6 +68,10 @@ void Exosphere::OrbitalMotion::UpdateRotationVector_SO_J2000() {
   }
 
   CoordinateFrameRotationRate=sqrt(CoordinateFrameRotationRate);
+#else
+  for (idim=0;idim<3;idim++) RotationRateVector_SO_J2000[idim]=0.0;
+  CoordinateFrameRotationRate=0.0;
+#endif
 }
 
 double Exosphere::OrbitalMotion::GetTAA(const char* TargetName, const char* CenterBodyName, double CenterBodyMass, SpiceDouble EphemerisTime) {
