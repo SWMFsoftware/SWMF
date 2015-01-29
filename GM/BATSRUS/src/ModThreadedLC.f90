@@ -140,7 +140,7 @@ contains
     ! Two components arrays to use lookup table
     !/ 
     real    :: Value_V(4), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
-    integer :: iTable, iTableAW
+    integer :: iTable
   
     !\
     ! 
@@ -395,12 +395,11 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_, OmegaBody, inv_gm1
+         UnitEnergyDens_, UnitU_, UnitX_, inv_gm1
     use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
-    use ModVarIndexes,   ONLY: nVar, Rho_, Pe_, p_, Bx_, Bz_, &
+    use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
     use ModGeometry,     ONLY: Xyz_DGB 
-    use ModSize,         ONLY: nDim
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModWaves
