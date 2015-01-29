@@ -6,7 +6,6 @@ module ModMagHarmonics
   implicit none  
 
   !The logical is to be set. 
-
   logical:: UseSinLatitudeGrid = .true.
   logical:: UseChebyshevNode   = .true.
   
@@ -160,6 +159,10 @@ contains
        UseSinLatitudeGrid = &
             abs(Latitude_I(3) - 2*Latitude_I(2) + Latitude_I(1)) > 1e-6
 
+       ! There is no point using Chebyshev transform if the original grid
+       ! is already uniform in theta
+       if(.not.UseSinLatitudeGrid) UseChebyshevNode = .false.
+
        deallocate(Latitude_I)
     else
        iUnit = 9
@@ -250,8 +253,6 @@ contains
        nThetaOut=nThetaOut
     end if
 
-    !nThetaOut = 283
-    
     write(*,*) 'Original nTheta=', nThetaIn
     write(*,*) 'New nTheta=     ', nThetaOut
 
@@ -263,7 +264,7 @@ contains
        ThetaIn_I(iTheta) = colatitude(iTheta)
     end do
     dThetaChebyshev = cPi/(nThetaOut-1)
-    !write(*,*) 'New Theta:'
+
     do iTheta = 0, nThetaOut-1
        ThetaOut_I(iTheta) = cPi - iTheta*dThetaChebyshev
     end do
@@ -386,7 +387,7 @@ contains
 
     !Save Legendre polynoms
     if (UseChebyshevNode) then
-       call Chebyshev_transform
+       call chebyshev_transform
        allocate(PNMTheta_III(nHarmonics+1,nHarmonics+1,0:nTheta-1))
        PNMTheta_III = 0.0
        dThetaChebyshev = cPi/(nTheta-1)
@@ -469,8 +470,8 @@ contains
              ! Use Chebyshev Weight in theta direction
              da = ChebyshevWeightE_I(iTheta)*ChebyshevWeightW_I(iTheta)*dPhi
           else
-             Theta=colatitude(iTheta) 
-             SinTheta=max(sin(Theta), 0.0)
+             Theta = colatitude(iTheta) 
+             SinTheta = max(sin(Theta), 0.0)
              if(UseSinLatitudeGrid)then
                 da = dSinTheta*dPhi
              else
@@ -493,10 +494,8 @@ contains
                   nArray(iNM)+1,mArray(iNM)+1,iTheta)!/SinTheta
           SumArea = SumArea+da*nPhi
        end do
-       gArray(iNM) = &
-            NormalizationFactor*gArray(iNM)/SumArea
-       hArray(iNM) = &
-            NormalizationFactor*hArray(iNM)/SumArea
+       gArray(iNM) = NormalizationFactor*gArray(iNM)/SumArea
+       hArray(iNM) = NormalizationFactor*hArray(iNM)/SumArea
     end do
 
     iNM=0
