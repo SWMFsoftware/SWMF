@@ -10,6 +10,7 @@ typedef double SpiceDouble;
 typedef int SpiceInt;
 typedef char SpiceChar;
 typedef const char ConstSpiceChar;
+typedef int SpiceBoolean;
 
 inline void furnsh_c(ConstSpiceChar *file) {}
 inline void utc2et_c(ConstSpiceChar *utcstr,SpiceDouble *et) {*et=0.0;}
