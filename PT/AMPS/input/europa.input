@@ -139,7 +139,14 @@ ParticleWeightCorrectionMode=on
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
 
-  SputteringIonSource=SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+  SputteringIonSource=AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+
+  plume= \\ 
+    SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
+    Temp=230.0 \\ 
+    lat=-66.0 \\  
+    wlon=180.0 
+
 #endblock
 
 #block ../exosphere.pl
@@ -189,7 +196,7 @@ ParticleWeightCorrectionMode=on
     T=0.174e6 \\
     n=60.0E6
 
-  Source:Sputtering=on\\ !on,off
+  Source:Sputtering=off\\ !on,off
     Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
     Mode=UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
     SourceRate(O2)=1.0E26 \\
@@ -201,6 +208,13 @@ ParticleWeightCorrectionMode=on
 
 
   Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
+
+  Source:UserDefined=on \\ !on,off
+    SourceProcessCode=Plume  \\
+    SourceRate=Europa::Plume::GetTotalProductionRate \\
+    GenerateParticleProperties=Europa::Plume::GenerateParticleProperties \\  
+    ModifySurfaceSpeciesAbundance=false !!!true,false
+!   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
 
  Source:DefineSourceID=PHOTO_IONIZATION  
 
