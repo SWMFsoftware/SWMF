@@ -170,15 +170,14 @@ contains
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
-    PAvrSiOut = Value_V(1)/( BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
-         No2Si_V(UnitX_))
+    PAvrSiOut = Value_V(1)/BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
 
     RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
 
     !Dimmensionless length (related to the wave dissipation length)
-    Length = BoundaryThreads_B(iBlock)% Length2SqrtB_III(0,j,k)*&
-         sqrt(sqrt(RhoNoDim)*PoyntingFluxPerB/LperpTimesSqrtB**2)
+    Length = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
+         sqrt(sqrt(RhoNoDim))
 
     !Calculate Alfven waves for the given thread length and BC for ingoing wave 
     iTable = i_lookup_table('AW_TR')
@@ -240,8 +239,7 @@ contains
             iTable=iTable,       &
             iVal=1,              &
             ValIn=PAvrSiOut*     &
-            BoundaryThreads_B(iBlock)% Length_III(iPoint-nPoint,j,k) * &
-            No2Si_V(UnitX_),     &
+            BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
             Arg2In=1.0e8,        &
             Value_V=Value_V,     &
             Arg1Out=TeSi_I(iPoint),  & 
@@ -280,10 +278,9 @@ contains
     Xi_I(1) = 0.0
     do iPoint = 2, nPoint
        Xi_I(iPoint) = Xi_I(iPoint-1) + &
-            (BoundaryThreads_B(iBlock)% Length2SqrtB_III(iPoint-nPoint,j,k) - &
-            BoundaryThreads_B(iBlock)% Length2SqrtB_III(iPoint-1-nPoint,j,k))*&
-         sqrt(0.5*(SqrtRho_I(iPoint) + SqrtRho_I(iPoint-1))&
-         *PoyntingFluxPerB/LperpTimesSqrtB**2)
+            (BoundaryThreads_B(iBlock)% DXi_III(iPoint-nPoint,j,k) - &
+            BoundaryThreads_B(iBlock)% DXi_III(iPoint-1-nPoint,j,k))*&
+         sqrt(0.5*(SqrtRho_I(iPoint) + SqrtRho_I(iPoint-1)))
     end do
     !\
     ! 3. Calculate Alfven wave speed
@@ -317,6 +314,10 @@ contains
             APlusBC=AWValue_V(2),           &
             APlusOut_I=APlus_I(1:nPoint),   &
             AMinusOut_I=AMinus_I(1:nPoint)  )
+    !\
+    ! Solve equation
+    ! 
+    !/
 
     if(DoTestMe)then
        write(*,*)'TeSiIn=       ',TeSiIn,' K '
@@ -327,9 +328,9 @@ contains
        write(*,*)'AMinorIn=     ', AMinorIn
        write(*,*)'USiIn=        ',USiIn,' m/s'
        write(*,*)'Thread Length=', &
-            BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
-            No2Si_V(UnitX_),' m, dimless length=',&
-            BoundaryThreads_B(iBlock)% Length_III(0,j,k)
+            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
+           ,' m, dimless length=',  Si2No_V(UnitX_)*&
+            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
        write(*,*)'Dimensionless length characteristic of AW dissipation=',Length
        write(*,*)'Pressure=     ',PAvrSiOut
        write(*,*)'Alpha = ', Alpha
@@ -344,8 +345,7 @@ contains
              USiIn * (PAvrSiOut/sqrt(AverageIonCharge))*GravityCoef
        write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
             ', dT/ds*Length=',DTeOverDsSiOut*&
-            BoundaryThreads_B(iBlock)% Length_III(0,j,k) * &
-            No2Si_V(UnitX_),' K'
+            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
     end if
 
   end subroutine solve_boundary_thread
