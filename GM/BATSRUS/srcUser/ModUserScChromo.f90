@@ -181,6 +181,7 @@ contains
          UnitN_, AverageIonCharge
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, Bz_, p_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_
+    use ModWaves, ONLY: UseAlfvenWaves
 
     integer, intent(in) :: iBlock
 
@@ -202,7 +203,7 @@ contains
     tCorona   = tCoronaSi*Si2No_V(UnitTemperature_)
 
     ! normalize with isothermal sound speed.
-    Usound = sqrt(tCorona*(1.0+AverageIonCharge)/MassIon_I(1))
+    Usound  = sqrt(tCorona*(1.0 + AverageIonCharge)/MassIon_I(1))
     Uescape = sqrt(-GBody*2.0)/Usound
 
     !\
@@ -211,7 +212,15 @@ contains
     !   rho x u_r x r^2 = constant
     !/
     rTransonic = 0.25*Uescape**2
-    if(.not.(rTransonic>exp(1.0))) call stop_mpi('sonic point inside Sun')
+    if(.not.(rTransonic>exp(1.0)))then
+       write(*,*) NameSub, 'Gbody=', Gbody
+       write(*,*) NameSub,' nCoronaSi, RhoCorona =', NcoronaSi, RhoCorona
+       write(*,*) NameSub,' TcoronaSi, Tcorona   =', TcoronaSi, Tcorona
+       write(*,*) NameSub,' Usound    =', Usound
+       write(*,*) NameSub,' Uescape   =', Uescape
+       write(*,*) NameSub,' rTransonic=', rTransonic
+       call stop_mpi(NameSub//'sonic point inside Sun')
+    end if
 
     uCorona = rTransonic**2*exp(1.5 - 2.0*rTransonic)
 
@@ -285,25 +294,27 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
 
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-       Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
 
-       if (Br >= 0.0) then
-          State_VGB(WaveFirst_,i,j,k,iBlock) =  &
-               PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
-          if(UseTurbulentCascade)then
-             State_VGB(WaveLast_,i,j,k,iBlock) = &
-                  1e-4*State_VGB(WaveFirst_,i,j,k,iBlock)
+       if(UseAlfvenWaves)then
+          Br = sum(B0_DGB(1:3,i,j,k,iBlock)*r_D)
+          if (Br >= 0.0) then
+             State_VGB(WaveFirst_,i,j,k,iBlock) =  &
+                  PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+             if(UseTurbulentCascade)then
+                State_VGB(WaveLast_,i,j,k,iBlock) = &
+                     1e-4*State_VGB(WaveFirst_,i,j,k,iBlock)
+             else
+                State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
+             end if
           else
-             State_VGB(WaveLast_,i,j,k,iBlock) = 1e-30
-          end if
-       else
-          State_VGB(WaveLast_,i,j,k,iBlock) =  &
-               PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
-          if(UseTurbulentCascade)then
-             State_VGB(WaveFirst_,i,j,k,iBlock) = &
-                  1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
-          else
-             State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
+             State_VGB(WaveLast_,i,j,k,iBlock) =  &
+                  PoyntingFluxPerB*sqrt(State_VGB(rho_,i,j,k,iBlock))
+             if(UseTurbulentCascade)then
+                State_VGB(WaveFirst_,i,j,k,iBlock) = &
+                     1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
+             else
+                State_VGB(WaveFirst_,i,j,k,iBlock) = 1e-30
+             end if
           end if
        end if
 
