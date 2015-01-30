@@ -516,7 +516,7 @@ sub help{
     print "
 Convert data files with some MPI distribution into another distribution.
 
-   Fix/distribution [-h] [-D] [-s=SNAPSHOTS] [-f] [-g=GHOSTCELL] filein fileout
+   redistribute.pl [-h] [-D] [-s=SNAPSHOTS] [-f] [-g=GHOSTCELL] filein fileout
 
 -h            print this help message
 -D            print debug information
@@ -531,34 +531,34 @@ fileout       name of the output files without/ignored processor rank '_nnn'
 
 Examples:
 
-Merge data files on 2 x 2 PE-s into a single file:
+Merge data files on 1 x 2 x 2 PE-s into a single file:
 
-   Fix/distribution data/exampleA22_np0202.ini data/exampleA22.ini
+   redistribute.pl fdips_field_np010202.out fdips_field.out
 
 Scatter the first snapshot of a single data file into 3 x 1 PE-s:
 
-   Fix/distribution -s=1 data/exampleA22.out data/exampleA22_np0301.out
+   redistribute.pl -s=1 exampleA22.out exampleA22_np0301.out
 
 Rearrange a 2 x 2 distribution into a 1 x 3 distribution with a new name:
 
-   Fix/distribution data/old_np0202.out data/new_np0103.out
+   redistribute.pl old_np0202.out new_np0103.out
 
 Rearrange snapshots 2,4,6 of a 2x2x2 distribution into 4x2x1 distribution:
 
-   Fix/distribution -s=2:6:2 data/old_np020202.out data/new_np040201.out
+   redistribute.pl -s=2:6:2 old_np020202.out new_np040201.out
 
-Create a file with the default number of ghost layers at the outer boundary:
+Create a file with the default 2 ghost layers at the outer boundary:
 
-   Fix/distribution -f data/old.out data/new_np0202.out
+   redistribute.pl -f old.out new_np0202.out
 
-Create a file with the default 4 ghost layers at the outer boundary:
+Create a file with 4 ghost layers at the outer boundary:
 
-   Fix/distribution -g=4 data/old.out data/new_np0202.out
+   redistribute.pl -g=4 old.out new_np0202.out
 
-Processor rank in the filename (if any) is ignored, so these two are the same:
+Processor rank in the filenames (if any) is ignored, so these two are the same:
 
-   Fix/distribution data/old_np020202_000.out data/new_np040201_003.out
-   Fix/distribution data/old_np020202.out     data/new_np040201.out
+   redistribute.pl old_np020202_000.out new_np040201_003.out
+   redistribute.pl old_np020202.out     new_np040201.out
 
 ";
     exit;
