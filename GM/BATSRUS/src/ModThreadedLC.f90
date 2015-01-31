@@ -13,9 +13,9 @@ module ModThreadedLC
 
   real :: TeFraction, TiFraction, PeFraction
   real,allocatable :: Te_G(:,:,:)
-  real,allocatable,dimension(:):: APlus_I, AMinus_I, SqrtRho_I,&
-       TeSi_I, ConsSi_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
-       VaLog_I, ReflCoef_I, DCons_I, DXi_I
+  real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, SqrtRho_I,&
+       TeSi_I, Cons_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
+       VaLog_I,  DCons_I, DXi_I
 
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
@@ -47,13 +47,14 @@ contains
     use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
-    allocate(ReflCoef_I(0:nPointInThreadMax)); ReflCoef_I = 0.0
-    allocate( SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
 
+    allocate(ReflCoef_I(0:nPointInThreadMax)); ReflCoef_I = 0.0
     allocate( APlus_I(0:nPointInThreadMax)); APlus_I = 0.0
     allocate(AMinus_I(0:nPointInThreadMax));AMinus_I = 0.0
+
+    allocate( SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
     allocate(  TeSi_I(nPointInThreadMax));    TeSi_I = 0.0
-    allocate(ConsSi_I(nPointInThreadMax));  ConsSi_I = 0.0
+    allocate(  Cons_I(nPointInThreadMax));    Cons_I = 0.0
     allocate(PAvrSi_I(nPointInThreadMax));  PAvrSi_I = 0.0
     allocate(   Res_I(nPointInThreadMax));     Res_I = 0.0
     allocate(     U_I(nPointInThreadMax));       U_I = 0.0
@@ -61,6 +62,7 @@ contains
     allocate(     M_I(nPointInThreadMax));       M_I = 0.0
     allocate(    Xi_I(0:nPointInThreadMax));    Xi_I = 0.0
     allocate( VaLog_I(nPointInThreadMax));   VaLog_I = 0.0
+    allocate( DCons_I(nPointInThreadMax));   DCons_I = 0.0
     allocate(   DXi_I(nPointInThreadMax));     DXi_I = 0.0
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
@@ -151,6 +153,11 @@ contains
     real           :: PSiMin
     integer:: nPoint, iPoint
 
+    !\
+    ! For transforming conservative to TeSi and back 
+    !/
+    real, parameter:: cTwoSevenths = 2.0/7.0 
+
     logical :: DoTest, DoTestMe
 
     character(len=*), parameter :: NameSub = 'solve_boundary_thread'
@@ -206,8 +213,8 @@ contains
     ! 
     ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
     !/
-    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) -                      & !Radiation losses
-         Heating                                                     & !AW Heating
+    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) -       & !Radiation losses
+         Heating                                      & !AW Heating
          +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
          (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
@@ -235,7 +242,7 @@ contains
     !/
     TeSi_I(nPoint) = TeSiIn
     iTable = i_lookup_table('TR')   
-    do iPoint = 1, nPoint-1
+    do iPoint = nPoint-1, 1, -1
        call interpolate_lookup_table(&
             iTable=iTable,           &
             iVal=1,                  &
@@ -305,7 +312,7 @@ contains
     ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
   
     !\
-    ! Solve amplitudes of the Alfven waves (arrays there have dimension
+    ! Solve amplitudes of the Alfven waves (arrays there have dimension)
     ! (0:nI)
     !/
     call solve_a_plus_minus(&
@@ -318,10 +325,68 @@ contains
             APlusOut_I=APlus_I(0:nPoint),   &
             AMinusOut_I=AMinus_I(0:nPoint)  )
     !\
+    ! The number of points to solve temperature is nPoint - 1
+    !/
+    M_I = 0.0; U_I = 0.0; L_I = 0.0; DCons_I = 0.0; Cons_I = 0.0
+    
+    U_I(1) = -BoundaryThreads_B(iBlock)% BLength_III(1-nPoint,j,k)
+    M_I(1) = -U_I(1)
+    do iPoint = 2, nPoint-1
+       U_I(iPoint) = -BoundaryThreads_B(iBlock)% BLength_III(iPoint-nPoint,j,k)
+       L_I(iPoint) =  U_I(iPoint-1)
+       M_I(iPoint) = -U_I(iPoint) - L_I(iPoint)
+    end do
+    !\
+    !Shape the source. 1. Add divergence of the AW Poynting flux
+    !                  2. Add right heat flux 
+    !/
+    
+    Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
+
+    do iPoint = 1, nPoint-1
+       Res_I(iPoint) = (APlus_I(iPoint-1)**2 - AMinus_I(iPoint-1)**2)&
+                      -(APlus_I(iPoint  )**2 - AMinus_I(iPoint  )**2)&
+                      +( Cons_I(iPoint)      -   Cons_I(iPoint+1))*U_I(iPoint)
+    end do
+    !\
+    ! 3. Add left heat flux to the TR
+    !/
+    Res_I(1) = Res_I(1) !+....
+    !\
+    ! 4. Add left heat fluxes
+    !/
+    do iPoint = 2, nPoint-1
+       Res_I(iPoint) = Res_I(iPoint) &
+                  +( Cons_I(iPoint)      -   Cons_I(iPoint-1))*L_I(iPoint)
+    end do 
+    !\
+    ! 5. Add cooling
+    !/
+
+   
+    !\
     ! Solve equation
     ! 
     !/
+    !=========================================================================!
+    ! This routine solves three-diagonal system of equations:      `          !
+    !  ||m_1 u_1  0....        || ||w_1|| ||r_1||                             !
+    !  ||l_2 m_2 u_2...        || ||w_2|| ||r_2||                             !
+    !  || 0  l_3 m_3 u_3       ||.||w_3||=||r_3||                             !
+    !  ||...                   || ||...|| ||...||                             !
+    !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                             !
+    ! From: Numerical Recipes, Chapter 2.6, p.40.   
+    ! I do not remember, why it is misspelled tridag instead of tridiag       !
+    !========================================================================!
+    call tridag(n=nPoint-1,  &
+         L_I=L_I(1:nPoint-1),&
+         M_I=M_I(1:nPoint-1),&
+         U_I=U_I(1:nPoint-1),&
+         R_I=Res_I(1:iPoint-1),&
+         W_I=DCons_I(1:nPoint-1))
 
+    Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1)
+    TeSi_I(1:nPoint-1) = (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
     if(DoTestMe)then
        write(*,*)'TeSiIn=       ',TeSiIn,' K '
        write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
@@ -353,7 +418,7 @@ contains
 
   end subroutine solve_boundary_thread
   !=========================================================================
- !============================================================================!
+  !============================================================================!
   ! This routine solves three-diagonal system of equations:                    !
   !  ||m_1 u_1  0....        || ||w_1|| ||r_1||                                !
   !  ||l_2 m_2 u_2...        || ||w_2|| ||r_2||                                !
