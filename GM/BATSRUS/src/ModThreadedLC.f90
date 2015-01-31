@@ -15,7 +15,7 @@ module ModThreadedLC
   real,allocatable :: Te_G(:,:,:)
   real,allocatable,dimension(:):: APlus_I, AMinus_I, SqrtRho_I,&
        TeSi_I, ConsSi_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
-       VaLog_I, ReflCoef_I
+       VaLog_I, ReflCoef_I, DCons_I, DXi_I
 
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
@@ -47,20 +47,21 @@ contains
     use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
-    allocate(ReflCoef_I(nPointInThreadMax)); ReflCoef_I = 0.0
+    allocate(ReflCoef_I(0:nPointInThreadMax)); ReflCoef_I = 0.0
     allocate( SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
 
-    allocate( APlus_I(nPointInThreadMax));  APlus_I = 0.0
-    allocate(AMinus_I(nPointInThreadMax)); AMinus_I = 0.0
-    allocate(  TeSi_I(nPointInThreadMax));   TeSi_I = 0.0
-    allocate(ConsSi_I(nPointInThreadMax)); ConsSi_I = 0.0
-    allocate(PAvrSi_I(nPointInThreadMax)); PAvrSi_I = 0.0
-    allocate(   Res_I(nPointInThreadMax));    Res_I = 0.0
-    allocate(     U_I(nPointInThreadMax));      U_I = 0.0
-    allocate(     L_I(nPointInThreadMax));      L_I = 0.0
-    allocate(     M_I(nPointInThreadMax));      M_I = 0.0
-    allocate(    Xi_I(nPointInThreadMax));     Xi_I = 0.0
-    allocate( VaLog_I(nPointInThreadMax));  VaLog_I = 0.0
+    allocate( APlus_I(0:nPointInThreadMax)); APlus_I = 0.0
+    allocate(AMinus_I(0:nPointInThreadMax));AMinus_I = 0.0
+    allocate(  TeSi_I(nPointInThreadMax));    TeSi_I = 0.0
+    allocate(ConsSi_I(nPointInThreadMax));  ConsSi_I = 0.0
+    allocate(PAvrSi_I(nPointInThreadMax));  PAvrSi_I = 0.0
+    allocate(   Res_I(nPointInThreadMax));     Res_I = 0.0
+    allocate(     U_I(nPointInThreadMax));       U_I = 0.0
+    allocate(     L_I(nPointInThreadMax));       L_I = 0.0
+    allocate(     M_I(nPointInThreadMax));       M_I = 0.0
+    allocate(    Xi_I(0:nPointInThreadMax));    Xi_I = 0.0
+    allocate( VaLog_I(nPointInThreadMax));   VaLog_I = 0.0
+    allocate(   DXi_I(nPointInThreadMax));     DXi_I = 0.0
     ! TeFraction is used for ideal EOS:
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
@@ -205,8 +206,8 @@ contains
     ! 
     ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
     !/
-    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) - & !Radiation losses
-         Heating                                & !AW Heating
+    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) -                      & !Radiation losses
+         Heating                                                     & !AW Heating
          +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
          (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
@@ -227,7 +228,7 @@ contains
     ! Reduce by 0ne the number of points in order to avoid too
     ! close points to the photosphere
     !/ 
-    nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k) -1
+    nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
 
     !\
     ! As a first approximation, recover Te from the analytical solution
@@ -236,12 +237,12 @@ contains
     iTable = i_lookup_table('TR')   
     do iPoint = 1, nPoint-1
        call interpolate_lookup_table(&
-            iTable=iTable,       &
-            iVal=1,              &
-            ValIn=PAvrSiOut*     &
+            iTable=iTable,           &
+            iVal=1,                  &
+            ValIn=PAvrSiOut*         &
             BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-            Arg2In=1.0e8,        &
-            Value_V=Value_V,     &
+            Arg2In=1.0e8,            &
+            Value_V=Value_V,         &
             Arg1Out=TeSi_I(iPoint),  & 
             DoExtrapolate=.false.)
     end do
@@ -264,56 +265,58 @@ contains
     end do
     !\
     ! Now prepare to calculate Alfven wave amplitude distribution
-    ! 1. Calculate sqrt(RhoNoDim
     !/
+    Xi_I(0) = 0.0
     do iPoint=1,nPoint
+       !\
+       ! 1. Calculate sqrt(RhoNoDim)
+       !/
        RhoNoDim = (PAvrSi_I(iPoint)*sqrt(AverageIonCharge)*&
             Si2No_V(UnitEnergyDens_)/PeFraction)*&
             TeFraction/(TeSi_I(iPoint)*Si2No_V(UnitTemperature_))
        SqrtRho_I(iPoint) = sqrt(RhoNoDim)
-    end do
-    !\
-    ! 2. Calculate dimensionless length (in terms of the dissipation length
-    !/
-    Xi_I(1) = 0.0
-    do iPoint = 2, nPoint
-       Xi_I(iPoint) = Xi_I(iPoint-1) + &
-            (BoundaryThreads_B(iBlock)% DXi_III(iPoint-nPoint,j,k) - &
-            BoundaryThreads_B(iBlock)% DXi_III(iPoint-1-nPoint,j,k))*&
-         sqrt(0.5*(SqrtRho_I(iPoint) + SqrtRho_I(iPoint-1)))
-    end do
-    !\
-    ! 3. Calculate Alfven wave speed
-    !/
-    do iPoint = 1, nPoint
+       !\
+       ! 2. Calculate Alfven wave speed
+       !/
        VaLog_I(iPoint) = log(BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)&
             /SqrtRho_I(iPoint))
+       !\
+       ! 3. Calculate dimensionless length (in terms of the dissipation length
+       !/
+       DXi_I(iPoint) = &
+            (BoundaryThreads_B(iBlock)% DXi_III(iPoint-nPoint,j,k) - &
+            BoundaryThreads_B(iBlock)% DXi_III(iPoint-1-nPoint,j,k))*&
+         sqrt(SqrtRho_I(iPoint))
+       Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint) 
+
     end do
+    
     !\
     ! 4. Calculate the reflection coefficient
     !/
-    ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(Xi_I(2) - Xi_I(1))
-    do iPoint = 2, nPoint-1
-       ReflCoef_i(iPoint) = min(abs(VaLog_I(iPoint) - VaLog_I(iPoint-1))/&
-                                      (Xi_I(iPoint) -    Xi_I(iPoint-1)),&
-                                abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
-                                      (Xi_I(iPoint+1) -    Xi_I(iPoint)))
+    ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
+    ReflCoef_I(0) =  ReflCoef_I(1)
+    do iPoint = 2, nPoint-2
+       ReflCoef_i(iPoint) = abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
+                                      (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
     end do
-    ReflCoef_I(nPoint) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
-                               (Xi_I(nPoint) -    Xi_I(nPoint-1))
+    ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
+         (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
+    ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
+  
     !\
     ! Solve amplitudes of the Alfven waves (arrays there have dimension
     ! (0:nI)
     !/
     call solve_a_plus_minus(&
-            nI=nPoint-1,                    & 
-            ReflCoef_I=ReflCoef_I(1:nPoint),&
-            Xi_I=Xi_I(1:nPoint),            &
+            nI=nPoint,                      & 
+            ReflCoef_I=ReflCoef_I(0:nPoint),&
+            Xi_I=Xi_I(0:nPoint),            &
             AMinusBC=AMinorIn,              &
             Heating=AWValue_V(1),           &
             APlusBC=AWValue_V(2),           &
-            APlusOut_I=APlus_I(1:nPoint),   &
-            AMinusOut_I=AMinus_I(1:nPoint)  )
+            APlusOut_I=APlus_I(0:nPoint),   &
+            AMinusOut_I=AMinus_I(0:nPoint)  )
     !\
     ! Solve equation
     ! 

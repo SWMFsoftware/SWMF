@@ -95,6 +95,14 @@ module ModFieldLineThread
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
   real:: PoyntingFluxPerBSi  
+  
+  !\
+  ! The number of grid spaces which are covered by the TR model
+  ! the smaller is this number, the better the TR assumption work
+  ! However, 1 is not recommended, as long as the length of the 
+  ! last interval is not controlled (may be too small) 
+  !/
+  integer, parameter:: nIntervalTR = 2 
 
 contains
   !=============================================================================
@@ -442,8 +450,12 @@ contains
        call get_b0(Xyz_D, B0_D)
        B0 = sqrt( sum( B0_D**2 ) )
        BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
-       !Store the number of points
-       BoundaryThreads_B(iBlock) % nPoint_II(j,k) = iPoint
+       !\
+       !Store the number of points. This will be the number of temperature nodes
+       !such that the first one is on the top of the TR, the last one is in the center
+       !of physical cell 
+       !/
+       BoundaryThreads_B(iBlock) % nPoint_II(j,k) = iPoint + 1 - nIntervalTR
        !\
        !Store the lengths
        !/
