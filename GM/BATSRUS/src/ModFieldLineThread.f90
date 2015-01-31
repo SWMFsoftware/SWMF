@@ -278,7 +278,8 @@ contains
   !========================================================================
   subroutine set_threads_b(iBlock)
     use ModGeometry, ONLY: Xyz_DGB
-    use ModPhysics,  ONLY: Si2No_V, No2Si_V, UnitTemperature_, UnitX_
+    use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
+                           UnitTemperature_, UnitX_, UnitB_
     use ModMain,     ONLY: nDim, nJ, nK, jTest, kTest, BlkTest
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
@@ -292,7 +293,7 @@ contains
     !values at the photospheric end and the maximal 
     !value of this index is 0 for the thread point
     !at the physical cell center. 
-    integer :: j, k, iPoint, nTrial
+    integer :: j, k, iPoint, nTrial, iInterval
 
     !\
     ! rBody here is set to one keeping a capability to set
@@ -470,7 +471,12 @@ contains
             0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
             0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
        iPoint = iPoint - 1
-       do while(iPoint>0)
+       !\
+       !     |           |
+       !-iPoint-1      -iPoint
+       !/
+       iInterval = 1
+       do while(iInterval < nIntervalTR)
           BoundaryThreads_B(iBlock) % LengthSi_III(&
                1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
                -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
@@ -485,7 +491,56 @@ contains
                0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
                0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
           iPoint = iPoint - 1
+          iInterval = iInterval + 1
        end do
+       !\
+       !     |            |...........|           Temperature nodes
+       !-iPoint-nInterval          -iPoint
+       !                        x           x            Flux nodes
+       !                    -iPoint-1    -iPoint
+       !/
+       BoundaryThreads_B(iBlock) % DXi_III(&
+            -1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
+            -iPoint, j, k)
+       BoundaryThreads_B(iBlock) % DXi_III(&
+            -iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
+            -1-iPoint, j, k) &
+            + 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
+       do while(iPoint>0)
+          BoundaryThreads_B(iBlock) % LengthSi_III(&
+               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
+               -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
+          BoundaryThreads_B(iBlock) % BLength_III(&
+               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BLength_III(&
+               -iPoint, j, k) + Ds*0.50*(&
+               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
+               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
+          BoundaryThreads_B(iBlock) % DXi_III(&
+               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
+               -iPoint, j, k) + Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) 
+          iPoint = iPoint - 1
+       end do
+       !\
+       !          |       |           Temperature nodes
+       !         -1       0
+       !              x       x       Flux nodes
+       !             -1       0
+       !/
+
+       !\
+       ! Correct the effective length of the last flux node
+       !          |       |           Temperature nodes
+       !         -1       0
+       !              x   <---x       Flux nodes
+       !             -1       0
+       ! 
+       !/
+       BoundaryThreads_B(iBlock) % DXi_III(&
+            0, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
+            0, j, k) - 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+            BoundaryThreads_B(iBlock) % B_III(0, j, k))
        !\
        !Evaluate the deravitive of temperature gradient over Te in the
        !ghost cell
