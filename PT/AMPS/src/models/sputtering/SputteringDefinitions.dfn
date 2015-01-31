@@ -1,0 +1,11 @@
+// contains definitions of macro used for compiling the sputtering model
+
+#define _SPUTTERING__ON_   0
+#define _SPUTTERING__OFF_  1
+
+// Surface type
+#define _SPUTTERING__ICE_ 0
+
+// Sputtering models for different surfaces
+#define _SPUTERING__ICE__RUBIN_   0
+#define _SPUTERING__ICE__TEOLIS_  1
