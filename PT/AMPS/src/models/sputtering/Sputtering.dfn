@@ -1,0 +1,9 @@
+#include "SputteringDefinitions.dfn"
+
+// do or don't use sputtering
+#define _SPUTTERING__ACTIVE_ _SPUTTERING_OFF_
+
+// which sputtering surfaces to use
+#define _SPUTTERING__SURFACE_ _SPUTTERING__ICE_
+// default model for ice
+#define _SPUTTERING__ICE__MODEL_ _SPUTTERING__ICE__TEOLIS_
