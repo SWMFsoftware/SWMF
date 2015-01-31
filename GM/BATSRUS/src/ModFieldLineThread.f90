@@ -452,9 +452,9 @@ contains
        B0 = sqrt( sum( B0_D**2 ) )
        BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) = B0
        !\
-       !Store the number of points. This will be the number of temperature nodes
-       !such that the first one is on the top of the TR, the last one is in the center
-       !of physical cell 
+       !Store the number of points. This will be the number of temperature 
+       !nodes such that the first one is on the top of the TR, the last 
+       !one is in the center of physical cell 
        !/
        BoundaryThreads_B(iBlock) % nPoint_II(j,k) = iPoint + 1 - nIntervalTR
        !\
@@ -499,6 +499,10 @@ contains
        !                        x           x            Flux nodes
        !                    -iPoint-1    -iPoint
        !/
+
+       BoundaryThreads_B(iBlock) % BLength_III(&
+            -1-iPoint, j, k) = 1/(BoundaryThreads_B(iBlock) % BLength_III(&
+            -iPoint, j, k)*PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
        BoundaryThreads_B(iBlock) % DXi_III(&
             -1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
             -iPoint, j, k)
@@ -516,6 +520,11 @@ contains
                -iPoint, j, k) + Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
+          BoundaryThreads_B(iBlock) % BLength_III(&
+               -iPoint, j, k) = 1/(PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
+               No2Si_V(UnitX_)*Ds*0.50*(&
+               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
+               BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) ) )
           BoundaryThreads_B(iBlock) % DXi_III(&
                1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
                -iPoint, j, k) + Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
