@@ -22,12 +22,15 @@ module ModThreadedLC
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
 
-  real, parameter:: CoolingPerP2 = RadCool2Si/(cBoltzmann*cBoltzmann)
+  real, parameter:: cCoolingPerP2 = RadCool2Si/(cBoltzmann*cBoltzmann)
   !\
   ! Gravitation potential
   !/
   real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
        (cBoltzmann*rSun)
+  !\
+  ! The use of this constant:
+  !/
   !\
   !   Hydrostatic equilibrium in an isothermal corona: 
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -37,8 +40,12 @@ module ModThreadedLC
   !energy flux needed to raise the mass flux rho*u to the heliocentric 
   !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
-  !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*(1/R_sun -1/r)
+  !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
+
   integer:: iP
+
+  logical :: Use1DModel = .false.
+
 contains
   !=========================================================================
   subroutine init_threaded_lc
@@ -52,22 +59,24 @@ contains
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     allocate(ReflCoef_I(0:nPointInThreadMax)); ReflCoef_I = 0.0
-    allocate( APlus_I(0:nPointInThreadMax)); APlus_I = 0.0
-    allocate(AMinus_I(0:nPointInThreadMax));AMinus_I = 0.0
+    allocate(   APlus_I(0:nPointInThreadMax));    APlus_I = 0.0
+    allocate(  AMinus_I(0:nPointInThreadMax));   AMinus_I = 0.0
 
-    allocate( SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
-    allocate(  TeSi_I(nPointInThreadMax));    TeSi_I = 0.0
-    allocate(  Cons_I(nPointInThreadMax));    Cons_I = 0.0
-    allocate(PAvrSi_I(nPointInThreadMax));  PAvrSi_I = 0.0
-    allocate(   Res_I(nPointInThreadMax));     Res_I = 0.0
-    allocate(     U_I(nPointInThreadMax));       U_I = 0.0
-    allocate(     L_I(nPointInThreadMax));       L_I = 0.0
-    allocate(     M_I(nPointInThreadMax));       M_I = 0.0
-    allocate(    Xi_I(0:nPointInThreadMax));    Xi_I = 0.0
-    allocate( VaLog_I(nPointInThreadMax));   VaLog_I = 0.0
-    allocate( DCons_I(nPointInThreadMax));   DCons_I = 0.0
-    allocate(   DXi_I(nPointInThreadMax));     DXi_I = 0.0
+    allocate(SqrtRho_I(nPointInThreadMax));  SqrtRho_I = 0.0
+    allocate(   TeSi_I(nPointInThreadMax));     TeSi_I = 0.0
+    allocate(   Cons_I(nPointInThreadMax));     Cons_I = 0.0
+    allocate( PAvrSi_I(nPointInThreadMax));   PAvrSi_I = 0.0
+    allocate(    Res_I(nPointInThreadMax));      Res_I = 0.0
+    allocate(      U_I(nPointInThreadMax));        U_I = 0.0
+    allocate(      L_I(nPointInThreadMax));        L_I = 0.0
+    allocate(      M_I(nPointInThreadMax));        M_I = 0.0
+    allocate(     Xi_I(0:nPointInThreadMax));     Xi_I = 0.0
+    allocate(  VaLog_I(nPointInThreadMax));    VaLog_I = 0.0
+    allocate(  DCons_I(nPointInThreadMax));    DCons_I = 0.0
+    allocate(    DXi_I(nPointInThreadMax));      DXi_I = 0.0
+    !\
     ! TeFraction is used for ideal EOS:
+    !/
     if(UseElectronPressure)then
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
@@ -143,24 +152,52 @@ contains
     real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut
 
     !\
-    ! Two components arrays to use lookup table
+    ! Arrays and table numbers needed to use lookup table
     !/ 
-    real    :: Value_V(4), AWValue_V(2), ValCooling(1) 
-    real    :: Length, RhoNoDim, AWHeating, GravityCoef
+    real    :: Value_V(4), AWValue_V(2), ValCooling(1)
     integer :: iTable, iTableAW, iTableRadcool
-  
     !\
-    ! 
+    !---------Used in 0D analytical model-----------------------
     !/
-    real:: Alpha, SqrtAlphaPlus1
-    
-    real           :: PSiMin
-    integer:: nPoint, iPoint
+    !\
+    !Dimmensionless length (related to the wave dissipation length)
+    !/
+    real    :: AWLength
+    !\
+    ! Dimensionless Rho needed to calculate the dimmensionless length of the TR
+    !/
+    real    :: RhoNoDim 
+    !\
+    ! Total contribution from the AW heating to the TR energetics
+    !/
+    real    :: AWHeating
+    !\
+    !---------Used in 1D numerical model------------------------
+    !/
+
+    !\
+    ! The plasma properties dependent coefficient needed to evaluate the 
+    ! eefect of gravity
+    !/
+    real    :: GravityCoef
+    !\
+    ! Number of TEMPERATURE nodes (first one is on the top of TR
+    ! the last one is in the physical cell of the SC model
+    !/
+    integer :: nPoint 
+    !\
+    ! Loop variable
+    !/
+    integer :: iPoint
 
     !\
     ! For transforming conservative to TeSi and back 
     !/
-    real, parameter:: cTwoSevenths = 2.0/7.0 
+    real, parameter:: cTwoSevenths = 2.0/7.0
+    !\
+    ! Enthalpy correction coefficient
+    !/
+    real    :: EnthalpyCorrection
 
     logical :: DoTest, DoTestMe
 
@@ -168,6 +205,21 @@ contains
     !-------------------------------------------------------------------------
     if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
+       if(DoTestMe)then
+          write(*,*)'TeSiIn=       ',TeSiIn,' K '
+          write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
+               *No2Si_V(UnitTemperature_),' K'
+          write(*,*)'PeSiIn = ', PeSiIn
+          write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
+          write(*,*)'AMinorIn=     ', AMinorIn
+          write(*,*)'USiIn=        ',USiIn,' m/s'
+          write(*,*)'Thread Length=', &
+               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
+               ,' m, dimless length=',  Si2No_V(UnitX_)*&
+               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+          write(*,*)'Poynting Flux max=',PoyntingFluxPerBSi*&
+               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_),' W/m2'
+       end if
     else
        DoTest=.false.; DoTestMe=.false.
     endif
@@ -184,56 +236,51 @@ contains
     !/
     PAvrSiOut = Value_V(LengthPAvrSi_)/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+    if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PAvrSiOut
+    if(.not.Use1DModel)then
+       RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
+            TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
+       
+       !Dimmensionless length (related to the wave dissipation length)
+       AWLength = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
+            sqrt(sqrt(RhoNoDim))
+       !\
+       !Calculate Alfven waves for the given thread length and BC 
+       !for ingoing wave
+       !/ 
+       iTableAW = i_lookup_table('AW_TR')
+       if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
+       call interpolate_lookup_table(iTableAW, AWLength, AMinorIn, AWValue_V, &
+            DoExtrapolate=.false.)
 
-    RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
-          TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
+       AWHeating = AWValue_V(AWHeating_)*PoyntingFluxPerBSi*&
+            BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
 
-    !Dimmensionless length (related to the wave dissipation length)
-    Length = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
-         sqrt(sqrt(RhoNoDim))
+       !\
+       ! Heat flux equals PAvr * UHeat (spent for radiation) +
+       ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
+       ! the pressure ratio being  Pe = Pi * AverageIonCharge
+       ! 
+       ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
+       !/
+       DTeOverDsSiOut = ( PAvrSiOut * Value_V(UHeat_) -  & !Radiation losses
+            AWHeating                                    & !AW Heating
+            +USiIn * (PAvrSiOut/sqrt(AverageIonCharge))  & !5/2*U*Pi
+            *(inv_gm1 +1)*(1 + AverageIonCharge) ) /&
+            (HeatCondParSi * TeSiIn**2.50)    
 
-    !Calculate Alfven waves for the given thread length and BC for ingoing wave 
-    iTableAW = i_lookup_table('AW_TR')
-    if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
-    call interpolate_lookup_table(iTableAW, Length, AMinorIn, AWValue_V, &
-         DoExtrapolate=.false.)
-
-    AWHeating = AWValue_V(AWHeating_)*PoyntingFluxPerBSi*&
-         BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
-    !\
-    !cGravPot = cGravitation*mSun*cAtomicMass/&
-    !/   (cBoltzmann*rSun)
-    !\
-    !energy flux needed to raise the mass flux rho*u to the heliocentric 
-    !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-    !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-    !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
-    !/
-    GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
-         (1 - BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
-    !\
-    ! Heat flux equals PAvr * UHeat (spent for radiation) +
-    ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
-    ! the pressure ratio being  Pe = Pi * AverageIonCharge
-    ! 
-    ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
-    !/
-    DTeOverDsSiOut = ( PAvrSiOut * Value_V(UHeat_) -  & !Radiation losses
-         AWHeating                                      & !AW Heating
-         +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
-         (1 + AverageIonCharge) ) /&
-         (HeatCondParSi * TeSiIn**2.50)
-
-
-    PSiMin = PeSiIn * TeSiMin/TeSiIn
-    Alpha = (-USiIn/Value_V(UHeat_)) * (PeSiIn/ PAvrSiOut) * &
-         (inv_gm1 +1) * (1 + AverageIonCharge)/sqrt(AverageIonCharge)
-    Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
-   
-    SqrtAlphaPlus1 = sqrt(1 + Alpha)
-    ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
-
-    AMajorOut = AWValue_V(APlusBC_)
+       AMajorOut = AWValue_V(APlusBC_)
+       if(DoTestMe)then
+          write(*,*)'Dimensionless length characteristic of AW dissipation=',&
+            AWLength
+          write(*,*)'Pointling flux in the TR=', AWHeating,' W/m2'
+          write(*,*)'AMajorOut=    ', AMajorOut
+          write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
+               ', dT/ds*Length=',DTeOverDsSiOut*&
+               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
+       end if
+       RETURN
+    end if
 
     !Full 1D model
     !\
@@ -356,8 +403,8 @@ contains
        Res_I(iPoint) = (APlus_I(iPoint-1)**2 - AMinus_I(iPoint-1)**2)&
                       -(APlus_I(iPoint  )**2 - AMinus_I(iPoint  )**2)&
                       +( Cons_I(iPoint)      -   Cons_I(iPoint+1))*U_I(iPoint)&
-                      -BoundaryThreads_B(iBlock)%DsOverB_III(iPoint-nPoint,j,k)*&
-                      ValCooling(1)*CoolingPerP2*&
+                      -BoundaryThreads_B(iBlock)%DsOverB_III(iPoint-nPoint,j,k)&
+                      *ValCooling(1)*cCoolingPerP2*&
                       (PAvrSi_I(iPoint)/TeSi_I(iPoint))**2
     end do
     !\
@@ -372,9 +419,18 @@ contains
        Res_I(iPoint) = Res_I(iPoint) &
                   +( Cons_I(iPoint)      -   Cons_I(iPoint-1))*L_I(iPoint)
     end do 
+
     !\
-    ! 5. Add cooling
+    !cGravPot = cGravitation*mSun*cAtomicMass/&
+    !/   (cBoltzmann*rSun)
+    !\
+    !energy flux needed to raise the mass flux rho*u to the heliocentric 
+    !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+    !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+    !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
     !/
+    !GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
+    !     (1 - BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
 
    
     !\
@@ -401,29 +457,8 @@ contains
     Cons_I(1:nPoint-1) = Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1)
     TeSi_I(1:nPoint-1) = (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
     if(DoTestMe)then
-       write(*,*)'TeSiIn=       ',TeSiIn,' K '
-       write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
-            *No2Si_V(UnitTemperature_),' K'
-       write(*,*)'PeSiIn = ', PeSiIn
-       write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
-       write(*,*)'AMinorIn=     ', AMinorIn
-       write(*,*)'USiIn=        ',USiIn,' m/s'
-       write(*,*)'Thread Length=', &
-            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
-           ,' m, dimless length=',  Si2No_V(UnitX_)*&
-            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-       write(*,*)'Dimensionless length characteristic of AW dissipation=',Length
-       write(*,*)'Pressure=     ',PAvrSiOut
-       write(*,*)'Alpha = ', Alpha
-       write(*,*)'Poynting Flux max=',PoyntingFluxPerBSi*&
-            BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_),' W/m2'
-       write(*,*)'Pointling flux in the TR=', AWHeating,' W/m2'
+       write(*,*)'Pressure 0D (SI) = ',PAvrSiOut
        write(*,*)'AMajorOut=    ', AMajorOut
-       write(*,*)'Contributions to dT/ds:'
-       write(*,*)'Radiation losses=',PAvrSiOut*Value_V(2)/SqrtAlphaPlus1 ,&
-            ' W/m2'
-       write(*,*)'Gravitational energy loss=',&
-             USiIn * (PAvrSiOut/sqrt(AverageIonCharge))*GravityCoef
        write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
             ', dT/ds*Length=',DTeOverDsSiOut*&
             BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
