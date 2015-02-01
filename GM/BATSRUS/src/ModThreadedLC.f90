@@ -3,7 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
-       BoundaryThreads, BoundaryThreads_B
+       BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
+       LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
+       RadCool2Si
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
@@ -20,6 +22,7 @@ module ModThreadedLC
   real, parameter:: TeSiMin = 5.0e5    ![K]
   real           :: TeMin
 
+  real, parameter:: CoolingPerP2 = RadCool2Si/(cBoltzmann*cBoltzmann)
   !\
   ! Gravitation potential
   !/
@@ -142,8 +145,9 @@ contains
     !\
     ! Two components arrays to use lookup table
     !/ 
-    real    :: Value_V(4), AWValue_V(2), Length, RhoNoDim, Heating, GravityCoef
-    integer :: iTable
+    real    :: Value_V(4), AWValue_V(2), ValCooling(1) 
+    real    :: Length, RhoNoDim, AWHeating, GravityCoef
+    integer :: iTable, iTableAW, iTableRadcool
   
     !\
     ! 
@@ -178,7 +182,8 @@ contains
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
-    PAvrSiOut = Value_V(1)/BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+    PAvrSiOut = Value_V(LengthPAvrSi_)/&
+         BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
 
     RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
           TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
@@ -188,12 +193,12 @@ contains
          sqrt(sqrt(RhoNoDim))
 
     !Calculate Alfven waves for the given thread length and BC for ingoing wave 
-    iTable = i_lookup_table('AW_TR')
-    if(iTable<=0)call CON_stop('AW_TR table is not set')
-    call interpolate_lookup_table(iTable, Length, AMinorIn, AWValue_V, &
+    iTableAW = i_lookup_table('AW_TR')
+    if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
+    call interpolate_lookup_table(iTableAW, Length, AMinorIn, AWValue_V, &
          DoExtrapolate=.false.)
 
-    Heating = AWValue_V(1)*PoyntingFluxPerBSi*&
+    AWHeating = AWValue_V(AWHeating_)*PoyntingFluxPerBSi*&
          BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
     !\
     !cGravPot = cGravitation*mSun*cAtomicMass/&
@@ -213,22 +218,22 @@ contains
     ! 
     ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
     !/
-    DTeOverDsSiOut = ( PAvrSiOut * Value_V(2) -       & !Radiation losses
-         Heating                                      & !AW Heating
+    DTeOverDsSiOut = ( PAvrSiOut * Value_V(UHeat_) -  & !Radiation losses
+         AWHeating                                      & !AW Heating
          +USiIn * (PAvrSiOut/sqrt(AverageIonCharge)) *(inv_gm1 +1) * & !5/2*U*Pi
          (1 + AverageIonCharge) ) /&
          (HeatCondParSi * TeSiIn**2.50)
 
 
     PSiMin = PeSiIn * TeSiMin/TeSiIn
-    Alpha = (-USiIn/Value_V(2)) * (PeSiIn/ PAvrSiOut) * &
+    Alpha = (-USiIn/Value_V(UHeat_)) * (PeSiIn/ PAvrSiOut) * &
          (inv_gm1 +1) * (1 + AverageIonCharge)/sqrt(AverageIonCharge)
     Alpha = max(Alpha, -1 +  (PSiMin/PAvrSiOut)**2)
    
     SqrtAlphaPlus1 = sqrt(1 + Alpha)
     ! PAvrSiOut =  PAvrSiOut*SqrtAlphaPlus1
 
-    AMajorOut = AWValue_V(2)
+    AMajorOut = AWValue_V(APlusBC_)
 
     !Full 1D model
     !\
@@ -236,12 +241,11 @@ contains
     ! close points to the photosphere
     !/ 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
-
+    iTableRadCool = i_lookup_table('radcool')
     !\
     ! As a first approximation, recover Te from the analytical solution
     !/
     TeSi_I(nPoint) = TeSiIn
-    iTable = i_lookup_table('TR')   
     do iPoint = nPoint-1, 1, -1
        call interpolate_lookup_table(&
             iTable=iTable,           &
@@ -320,8 +324,8 @@ contains
             ReflCoef_I=ReflCoef_I(0:nPoint),&
             Xi_I=Xi_I(0:nPoint),            &
             AMinusBC=AMinorIn,              &
-            Heating=AWValue_V(1),           &
-            APlusBC=AWValue_V(2),           &
+            Heating=AWValue_V(AWHeating_),  &
+            APlusBC=AWValue_V(APlusBC_),    &
             APlusOut_I=APlus_I(0:nPoint),   &
             AMinusOut_I=AMinus_I(0:nPoint)  )
     !\
@@ -329,31 +333,40 @@ contains
     !/
     M_I = 0.0; U_I = 0.0; L_I = 0.0; DCons_I = 0.0; Cons_I = 0.0
     
-    U_I(1) = -BoundaryThreads_B(iBlock)% BLength_III(1-nPoint,j,k)
+    U_I(1) = -BoundaryThreads_B(iBlock)% BDsInv_III(1-nPoint,j,k)
     M_I(1) = -U_I(1)
     do iPoint = 2, nPoint-1
-       U_I(iPoint) = -BoundaryThreads_B(iBlock)% BLength_III(iPoint-nPoint,j,k)
+       U_I(iPoint) = -BoundaryThreads_B(iBlock)% BDsInv_III(iPoint-nPoint,j,k)
        L_I(iPoint) =  U_I(iPoint-1)
        M_I(iPoint) = -U_I(iPoint) - L_I(iPoint)
     end do
+    M_I(1) = M_I(1) + Value_V(DHeatFluxXOverU_)*&
+         BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
     !\
     !Shape the source. 1. Add divergence of the AW Poynting flux
     !                  2. Add right heat flux 
+    !                  3. Add radiation cooling
     !/
     
     Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
 
     do iPoint = 1, nPoint-1
+       call interpolate_lookup_table(iTableRadCool,&
+               TeSi_I(iPoint), 1.0e2, ValCooling)
        Res_I(iPoint) = (APlus_I(iPoint-1)**2 - AMinus_I(iPoint-1)**2)&
                       -(APlus_I(iPoint  )**2 - AMinus_I(iPoint  )**2)&
-                      +( Cons_I(iPoint)      -   Cons_I(iPoint+1))*U_I(iPoint)
+                      +( Cons_I(iPoint)      -   Cons_I(iPoint+1))*U_I(iPoint)&
+                      -BoundaryThreads_B(iBlock)%DsOverB_III(iPoint-nPoint,j,k)*&
+                      ValCooling(1)*CoolingPerP2*&
+                      (PAvrSi_I(iPoint)/TeSi_I(iPoint))**2
     end do
     !\
-    ! 3. Add left heat flux to the TR
+    ! 4. Add left heat flux to the TR
     !/
-    Res_I(1) = Res_I(1) !+....
+    Res_I(1) = Res_I(1) - Value_V(HeatFluxLength_)*&
+         BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
     !\
-    ! 4. Add left heat fluxes
+    ! 5. Add left heat fluxes
     !/
     do iPoint = 2, nPoint-1
        Res_I(iPoint) = Res_I(iPoint) &
@@ -404,7 +417,7 @@ contains
        write(*,*)'Alpha = ', Alpha
        write(*,*)'Poynting Flux max=',PoyntingFluxPerBSi*&
             BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_),' W/m2'
-       write(*,*)'Pointling flux in the TR=', Heating,' W/m2'
+       write(*,*)'Pointling flux in the TR=', AWHeating,' W/m2'
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Contributions to dT/ds:'
        write(*,*)'Radiation losses=',PAvrSiOut*Value_V(2)/SqrtAlphaPlus1 ,&

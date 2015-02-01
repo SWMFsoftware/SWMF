@@ -28,7 +28,8 @@ module ModFieldLineThread
      !\ 
      ! The integral, \int{B ds}, from the photoshere to the given point 
      !/
-     real,pointer :: BLength_III(:,:,:)
+     real,pointer :: BDsInv_III(:,:,:)
+     real,pointer :: DsOverB_III(:,:,:)
      real,pointer :: TMax_II(:,:)
      !\ 
      ! The integral, \int{1/sqrt(B) ds} 
@@ -103,6 +104,13 @@ module ModFieldLineThread
   ! last interval is not controlled (may be too small) 
   !/
   integer, parameter:: nIntervalTR = 2 
+  
+  !\
+  ! Named indexes
+  !/
+  integer,public,parameter:: AWHeating_ = 1, APlusBC_ = 2
+  integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
+  integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
 
 contains
   !=============================================================================
@@ -152,7 +160,8 @@ contains
     !---------------------------------------------------------------------------
     nullify(BoundaryThreads_B(iBlock) % Xyz_DIII)
     nullify(BoundaryThreads_B(iBlock) % LengthSi_III)
-    nullify(BoundaryThreads_B(iBlock) % BLength_III)
+    nullify(BoundaryThreads_B(iBlock) % BDsInv_III)
+    nullify(BoundaryThreads_B(iBlock) % DsOverB_III) 
     nullify(BoundaryThreads_B(iBlock) % TMax_II)
     nullify(BoundaryThreads_B(iBlock) % DXi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
@@ -172,7 +181,8 @@ contains
     !---------------------------------------------------------------------------
     deallocate(BoundaryThreads_B(iBlock) % Xyz_DIII)
     deallocate(BoundaryThreads_B(iBlock) % LengthSi_III)
-    deallocate(BoundaryThreads_B(iBlock) % BLength_III)
+    deallocate(BoundaryThreads_B(iBlock) % BDsInv_III)
+    deallocate(BoundaryThreads_B(iBlock) % DsOverB_III)
     deallocate(BoundaryThreads_B(iBlock) % TMax_II)
     deallocate(BoundaryThreads_B(iBlock) % DXi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
@@ -225,7 +235,9 @@ contains
                1:nDim,-nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
-          allocate(BoundaryThreads_B(iBlock) % BLength_III(&
+          allocate(BoundaryThreads_B(iBlock) % BDsInv_III(&
+               -nPointInThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % DsOverB_III(&
                -nPointInThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % TMax_II(1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % DXi_III(&
@@ -334,7 +346,8 @@ contains
     !/
     BoundaryThreads_B(iBlock) % Xyz_DIII = 0.0
     BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
-    BoundaryThreads_B(iBlock) % BLength_III = 0.0
+    BoundaryThreads_B(iBlock) % BDsInv_III = 0.0
+    BoundaryThreads_B(iBlock) % DsOverB_III = 0.0
     BoundaryThreads_B(iBlock) % TMax_II = 1.0e8*Si2No_V(UnitTemperature_)
     BoundaryThreads_B(iBlock) % DXi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
@@ -462,7 +475,7 @@ contains
        !/
        BoundaryThreads_B(iBlock) % LengthSi_III(&
             1-iPoint, j, k) = Ds*Aux*No2Si_V(UnitX_)
-       BoundaryThreads_B(iBlock) % BLength_III(&
+       BoundaryThreads_B(iBlock) % BDsInv_III(&
             1-iPoint, j, k) = Ds*Aux*0.50*(&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
             BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
@@ -480,8 +493,8 @@ contains
           BoundaryThreads_B(iBlock) % LengthSi_III(&
                1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
                -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
-          BoundaryThreads_B(iBlock) % BLength_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BLength_III(&
+          BoundaryThreads_B(iBlock) % BDsInv_III(&
+               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BDsInv_III(&
                -iPoint, j, k) + Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
@@ -499,9 +512,9 @@ contains
        !                        x           x            Flux nodes
        !                    -iPoint-1    -iPoint
        !/
-
-       BoundaryThreads_B(iBlock) % BLength_III(&
-            -1-iPoint, j, k) = 1/(BoundaryThreads_B(iBlock) % BLength_III(&
+       
+       BoundaryThreads_B(iBlock) % BDsInv_III(&
+            -1-iPoint, j, k) = 1/(BoundaryThreads_B(iBlock) % BDsInv_III(&
             -iPoint, j, k)*PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
        BoundaryThreads_B(iBlock) % DXi_III(&
             -1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
@@ -511,16 +524,20 @@ contains
             -1-iPoint, j, k) &
             + 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
+       BoundaryThreads_B(iBlock) % DsOverB_III(&
+            -iPoint, j, k) = 0.50*Ds*No2Si_V(UnitX_)/&
+            (BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
+            *PoyntingFluxPerBSi*No2Si_V(UnitB_))
        do while(iPoint>0)
           BoundaryThreads_B(iBlock) % LengthSi_III(&
                1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
                -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
-          BoundaryThreads_B(iBlock) % BLength_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BLength_III(&
+          BoundaryThreads_B(iBlock) % BDsInv_III(&
+               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BDsInv_III(&
                -iPoint, j, k) + Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-          BoundaryThreads_B(iBlock) % BLength_III(&
+          BoundaryThreads_B(iBlock) % BDsInv_III(&
                -iPoint, j, k) = 1/(PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
                No2Si_V(UnitX_)*Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
@@ -529,6 +546,10 @@ contains
                1-iPoint, j, k) = BoundaryThreads_B(iBlock) % DXi_III(&
                -iPoint, j, k) + Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) 
+          BoundaryThreads_B(iBlock) % DsOverB_III(&
+               1-iPoint, j, k) = Ds*No2Si_V(UnitX_)/&
+               (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)&
+               *PoyntingFluxPerBSi*No2Si_V(UnitB_))
           iPoint = iPoint - 1
        end do
        !\
@@ -557,7 +578,7 @@ contains
        Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
        BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,j,k) = &
             - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
-       call limit_temperature(BoundaryThreads_B(iBlock) % BLength_III(&
+       call limit_temperature(BoundaryThreads_B(iBlock) % BDsInv_III(&
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
 
     end do; end do
@@ -581,7 +602,7 @@ contains
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % LengthSi_III(&
                iPoint, jTest, kTest),&
-               BoundaryThreads_B(iBlock) % BLength_III(&
+               BoundaryThreads_B(iBlock) % BDsInv_III(&
                iPoint, jTest, kTest),&
                BoundaryThreads_B(iBlock) % DXi_III(&
                iPoint, jTest, kTest)
@@ -612,7 +633,7 @@ contains
       HeatFluxXLength = 2*PoyntingFluxPerBSi*BLength*&
            No2Si_V(UnitX_)*No2Si_V(UnitB_)
       call interpolate_lookup_table(iTable=iTable,&
-                                    iVal=3,       &
+                                    iVal=HeatFluxLength_,       &
                                     ValIn=HeatFluxXLength,&
                                     Arg2In=1.0e8, &
                                     Value_V=Value_V,      &
@@ -775,7 +796,7 @@ contains
        UHeat_I(1) = 0.0
     end if
     iTe = 1 + nint(log(Arg1/1.0e4)/DeltaLogTe)
-    Value_V = (/ LPe_I(iTe), UHeat_I(iTe), &
+    Value_V(LengthPAvrSi_:DHeatFluxXOverU_) = (/ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe)/)
   end subroutine calc_tr_table
   !=============================================================================
@@ -808,7 +829,7 @@ contains
             AMinusBC=Arg2,             &
             Heating=Heating,           &
             APlusBC=APlusBC  )
-       Value_V = (/Heating, APlusBC/)
+       Value_V(AWHeating_:APlusBC_) = (/Heating, APlusBC/)
     end if
   end subroutine calc_alfven_wave_tr_table
   !=============================================================================
