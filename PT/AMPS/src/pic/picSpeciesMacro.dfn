@@ -4,19 +4,25 @@
 #ifndef _SPECIES_MACRO_DEFINITION_
 #define _SPECIES_MACRO_DEFINITION_
 
-#define _NA_SPEC_        -1
-#define _NA_PLUS_SPEC_   -2
-#define _HE_SPEC_        -3
-#define _O_SPEC_         -4
-#define _C_SPEC_         -5
-#define _H2O_SPEC_       -6
-#define _AR_SPEC_        -7
-#define _N2_SPEC_        -8
-#define _O2_SPEC_        -9
-#define _O2PLUS_SPEC_    -10
-#define _H_SPEC_         -11
-#define _H_PLUS_SPEC_    -12
-#define _HE_2PLUS_SPEC_  -13
+#define _NA_SPEC_         -1
+#define _NA_PLUS_SPEC_    -2
+#define _HE_SPEC_         -3
+#define _O_SPEC_          -4
+#define _C_SPEC_          -5
+#define _H2O_SPEC_        -6
+#define _AR_SPEC_         -7
+#define _N2_SPEC_         -8
+#define _O2_SPEC_         -9
+#define _O2PLUS_SPEC_     -10
+#define _H_SPEC_          -11
+#define _H_PLUS_SPEC_     -12
+#define _HE_2PLUS_SPEC_   -13
+#define _OH_SPEC_         -14
+#define _OH_PLUS_SPEC_    -15
+#define _O_PLUS_SPEC_     -16
+#define _H2O_PLUS_SPEC_   -17
+#define _H2_SPEC_         -18
+#define _ELECTRON_SPEC_   -19
 
 
 //Species of the background atmosphere
