@@ -1118,10 +1118,10 @@ contains
     integer, intent(in):: iBlock, nVar
     real, intent(inout):: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, optional,intent(in):: IsPositiveIn_V(nVar)
-
+    
     logical:: IsPositive_V(nVar)
 
-    logical:: IsCorrected_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical:: IsCorrected_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,parameter::  Distance_II(4,4) = reshape((/&
          -2,-1,4,5, &
          -3,-2,3,4, &
@@ -1418,7 +1418,7 @@ contains
 
           nEdge = 1 ! case 2
           if(IsFineNei_I(Edge1_) .and. IsFineNei_I(Edge2_)) nEdge = 2 !case 3
-          IsCorrected_G = .false. 
+          IsCorrected_VG = .false. 
           do iStage = 1, nEdge
              ! If nEdge is 2:
              ! iStage 1: calculate these cells can only interpolated in 
@@ -1649,7 +1649,7 @@ contains
                       do Count = 1, 4
                          Orig = sum(CellValue_I*Coef_II(:,Count))
 
-                         if(.not. IsCorrected_G(i+(Count-1)*Di1,&
+                         if(.not. IsCorrected_VG(iVar,i+(Count-1)*Di1,&
                               j+(Count-1)*Dj1,k+(Count-1)*Dk1)) then
                             Field_VG(iVar,i+(Count-1)*Di1,&
                                  j+(Count-1)*Dj1,k+(Count-1)*Dk1)&
@@ -1657,7 +1657,7 @@ contains
                                  CellValue_I(2:5),Distance_II(:,Count),&
                                  IsPositiveIn=IsPositive_V(iVar))
 
-                            IsCorrected_G(i+(Count-1)*Di1,&
+                            IsCorrected_VG(iVar,i+(Count-1)*Di1,&
                                  j+(Count-1)*Dj1,k+(Count-1)*Dk1) = .true.
                          else
                             Field_VG(iVar,i+(Count-1)*Di1,&
