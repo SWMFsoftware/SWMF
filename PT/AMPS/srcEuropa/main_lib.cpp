@@ -1311,8 +1311,9 @@ void amps_time_step () {
 
 
 		//Update the transformation matrixes and rotation vector
-		Exosphere::OrbitalMotion::UpdateTransformationMartix();
-		Exosphere::OrbitalMotion::UpdateRotationVector_SO_J2000();
+		Europa::OrbitalMotion::UpdateTransformationMartix();
+		Europa::OrbitalMotion::UpdateRotationVector_SO_J2000();
+		Europa::OrbitalMotion::UpdateSunJupiterLocation();
 
 #else
 		double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
@@ -1336,7 +1337,7 @@ void amps_time_step () {
 		  {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
 		  { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
 		  {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
-		std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix[0][0]);
+		std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::SO_to_IAU_TransformationMartix[0][0]);
 
 		SpiceDouble TransMatrix2[6][6] = {
 		  {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
@@ -1345,7 +1346,7 @@ void amps_time_step () {
 		  {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
 		  {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
 		  {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
-		std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][0]);
+		std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]);
 
 		SpiceDouble TransMatrix3[6][6] = {
 		  {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},

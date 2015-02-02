@@ -203,14 +203,15 @@ namespace Europa {
 
     extern double AccumulatedPlanetRotation,TotalSimulationTime,TAA;
 
+    //The locations of the Sun nad Jupiter in the frame wherethe simulation is performed (cenetered on Europa)
+    extern double xJupiter_SO[3],xSun_SO[3];
+    void UpdateSunJupiterLocation();
+
     //SPICE ephemeris time
     extern SpiceDouble et,lt;
 
     //direction to the Sun and the angle of the rotation between planetary axes and the direction to the Sun on the Z-plane
     extern double SunDirection_IAU_EUROPA[3],PlanetAxisToSunRotationAngle;
-
-    //matrixes for transformation GALL_EPHIOD->IAU and IAU->GALL_EPHIOD coordinate frames
-    extern SpiceDouble GALL_EPHIOD_to_IAU_TransformationMartix[6][6],IAU_to_GALL_EPHIOD_TransformationMartix[6][6];
     extern double IAU_to_LS_TransformationMatrix[3][3];
 
 
@@ -694,7 +695,7 @@ namespace Europa {
       extern double CalculatedTotalSodiumSourceRate;
 
       inline double GetLocalProductionRate(int spec,int SurfaceElement,void *SphereDataPointer) {
-        double norm_IAU_EUROPA[3],norm_GALL_EPHIOD_EUROPA[3];
+        double norm_IAU_EUROPA[3],norm_SO[3];
         int idim;
 
         if (((cInternalSphericalData*)SphereDataPointer)->SurfaceElementPopulation[_NA_SPEC_][SurfaceElement]<=0.0) return 0.0;
@@ -704,25 +705,25 @@ namespace Europa {
         for (idim=0;idim<DIM;idim++) norm_IAU_EUROPA[idim]*=-1.0;
 
         //convert the normal vector to the 'GALL_EPHIOD' frame
-        norm_GALL_EPHIOD_EUROPA[0]=
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][0]*norm_IAU_EUROPA[0])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][1]*norm_IAU_EUROPA[1])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][2]*norm_IAU_EUROPA[2]);
+        norm_SO[0]=
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*norm_IAU_EUROPA[0])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*norm_IAU_EUROPA[1])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*norm_IAU_EUROPA[2]);
 
-        norm_GALL_EPHIOD_EUROPA[1]=
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][0]*norm_IAU_EUROPA[0])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][1]*norm_IAU_EUROPA[1])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][2]*norm_IAU_EUROPA[2]);
+        norm_SO[1]=
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*norm_IAU_EUROPA[0])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*norm_IAU_EUROPA[1])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*norm_IAU_EUROPA[2]);
 
-        norm_GALL_EPHIOD_EUROPA[2]=
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][0]*norm_IAU_EUROPA[0])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][1]*norm_IAU_EUROPA[1])+
-            (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][2]*norm_IAU_EUROPA[2]);
+        norm_SO[2]=
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*norm_IAU_EUROPA[0])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*norm_IAU_EUROPA[1])+
+            (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*norm_IAU_EUROPA[2]);
 
         //get the surface element that is pointer by the vectorm norm_GALL_EPHIOD_EUROPA
         long int nZenithElement,nAzimuthalElement,nd;
 
-        ((cInternalSphericalData*)SphereDataPointer)->GetSurfaceElementProjectionIndex(norm_GALL_EPHIOD_EUROPA,nZenithElement,nAzimuthalElement);
+        ((cInternalSphericalData*)SphereDataPointer)->GetSurfaceElementProjectionIndex(norm_SO,nZenithElement,nAzimuthalElement);
         nd=((cInternalSphericalData*)SphereDataPointer)->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
         //return the local source rate
@@ -799,19 +800,19 @@ namespace Europa {
 
        //transfer the position into the coordinate frame related to the rotating coordinate frame 'GALL_EPHIOD'
        x_LOCAL_GALL_EPHIOD_EUROPA[0]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[0][2]*x_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_EUROPA[2]);
 
        x_LOCAL_GALL_EPHIOD_EUROPA[1]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[1][2]*x_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_EUROPA[2]);
 
        x_LOCAL_GALL_EPHIOD_EUROPA[2]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[2][2]*x_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_EUROPA[2]);
 
 
        //determine if the particle belongs to this processor
@@ -845,28 +846,28 @@ namespace Europa {
 
        //transform the velocity vector to the coordinate frame 'GALL_EPHIOD'
        v_LOCAL_GALL_EPHIOD_EUROPA[0]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][2]*x_LOCAL_IAU_EUROPA[2])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][3]*v_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][4]*v_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[3][5]*v_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_EUROPA[2])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_EUROPA[2]);
 
        v_LOCAL_GALL_EPHIOD_EUROPA[1]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][2]*x_LOCAL_IAU_EUROPA[2])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][3]*v_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][4]*v_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[4][5]*v_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_EUROPA[2])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_EUROPA[2]);
 
        v_LOCAL_GALL_EPHIOD_EUROPA[2]=
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][0]*x_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][1]*x_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][2]*x_LOCAL_IAU_EUROPA[2])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][3]*v_LOCAL_IAU_EUROPA[0])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][4]*v_LOCAL_IAU_EUROPA[1])+
-           (OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[5][5]*v_LOCAL_IAU_EUROPA[2]);
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_EUROPA[2])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_EUROPA[0])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_EUROPA[1])+
+           (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_EUROPA[2]);
 
        memcpy(x_GALL_EPHIOD_EUROPA,x_LOCAL_GALL_EPHIOD_EUROPA,3*sizeof(double));
        memcpy(x_IAU_EUROPA,x_LOCAL_IAU_EUROPA,3*sizeof(double));
@@ -1467,18 +1468,35 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
 #endif
 
 
-/*  //correct the gravity acceleration: accout for solar gravity of the particle location
-  double rSolarVector[3],r2Solar,rSolar;
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+//the effects of Sun's and Jupiter's gravity as well as of the rotation of the frame of reference are calculated only when the orbit calculationa are preformed
 
-  rSolarVector[0]=xEuropaRadial-x_LOCAL[0];
-  rSolarVector[1]=x_LOCAL[1],rSolarVector[2]=x_LOCAL[2];
+#if _FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
+  //correct the gravity acceleration: accout for solar and Jupiter's gravity of the particle location
+  double r3SunEuropa,rParticleSunVector[3],r3ParticleSun=0.0;
+  double r3JupiterEuropa,rParticleJupiterVector[3],r3ParticleJupiter=0.0;
 
-  r2Solar=(rSolarVector[0]*rSolarVector[0])+(rSolarVector[1]*rSolarVector[1])+(rSolarVector[2]*rSolarVector[2]);
-  rSolar=sqrt(r2Solar);
+  r3SunEuropa=pow(pow(OrbitalMotion::xSun_SO[0],2)+pow(OrbitalMotion::xSun_SO[1],2)+pow(OrbitalMotion::xSun_SO[2],2),1.5);
+  r3JupiterEuropa=pow(pow(OrbitalMotion::xJupiter_SO[0],2)+pow(OrbitalMotion::xJupiter_SO[1],2)+pow(OrbitalMotion::xJupiter_SO[2],2),1.5);
 
-  accl_LOCAL[0]+=GravityConstant*_MASS_(_SUN_)*(1.0/r2Solar*rSolarVector[0]/rSolar-1.0/pow(xEuropaRadial,2)); //x-axis in solar coordinate frame and GALL_EPHIOD have opposite direction
-  accl_LOCAL[1]-=GravityConstant*_MASS_(_SUN_)/r2Solar*rSolarVector[1]/rSolar;
-  accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)/r2Solar*rSolarVector[2]/rSolar;*/
+  for (idim=0;idim<3;idim++) {
+    rParticleSunVector[idim]=x_LOCAL[idim]-OrbitalMotion::xSun_SO[idim];
+    r3ParticleSun+=pow(rParticleSunVector[idim],2);
+
+    rParticleJupiterVector[idim]=x_LOCAL[idim]-OrbitalMotion::xJupiter_SO[idim];
+    r3ParticleJupiter+=pow(rParticleJupiterVector[idim],2);
+  }
+
+  r3ParticleSun=pow(r3ParticleSun,1.5);
+  r3ParticleJupiter=pow(r3ParticleJupiter,1.5);
+
+  for (idim=0;idim<3;idim++) {
+    accl_LOCAL[idim]-=GravityConstant*(
+        _MASS_(_SUN_)*(rParticleSunVector[idim]/r3ParticleSun + OrbitalMotion::xSun_SO[idim]/r3SunEuropa) +
+        _MASS_(_JUPITER_)*(rParticleJupiterVector[idim]/r3ParticleJupiter + OrbitalMotion::xJupiter_SO[idim]/r3JupiterEuropa)
+    );
+  }
+#endif
 
 
   //account for the planetary rotation around the Sun
@@ -1502,6 +1520,7 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
   accl_LOCAL[1]+=aCen[1]+aCorr[1];
   accl_LOCAL[2]+=aCen[2]+aCorr[2];
 
+#endif
 #endif
 
 

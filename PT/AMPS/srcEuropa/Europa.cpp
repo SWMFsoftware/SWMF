@@ -480,12 +480,12 @@ double Europa::SourceProcesses::totalProductionRate(int spec,void *SphereDataPoi
 
 
 /*=============================== INTERACTION WITH THE SURFACE: BEGIN  ===========================================*/
-int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(int spec,long int ptr,double *x_GALL_EPHIOD_EUROPA,double *v_GALL_EPHIOD_EUROPA,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer)  {
+int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(int spec,long int ptr,double *x_SO,double *v_SO,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer)  {
   double radiusSphere,*x0Sphere,lNorm[3],rNorm,lVel[3],rVel,c;
   cInternalSphericalData *Sphere;
 //  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
   int idim;
-  double vi,vt,vf,v_LOCAL_GALL_EPHIOD_EUROPA[3],x_LOCAL_GALL_EPHIOD_EUROPA[3],v_LOCAL_IAU_EUROPA[3],x_LOCAL_IAU_EUROPA[3],SurfaceTemp,beta;
+  double vi,vt,vf,v_LOCAL_SO[3],x_LOCAL_SO[3],v_LOCAL_IAU_EUROPA[3],x_LOCAL_IAU_EUROPA[3],SurfaceTemp,beta;
   SpiceDouble xform[6][6];
 
 
@@ -493,15 +493,15 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   Sphere=(cInternalSphericalData*)SphereDataPointer;
 //  startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter;
 
-  memcpy(v_LOCAL_GALL_EPHIOD_EUROPA,v_GALL_EPHIOD_EUROPA,3*sizeof(double));
-  memcpy(x_LOCAL_GALL_EPHIOD_EUROPA,x_GALL_EPHIOD_EUROPA,3*sizeof(double));
+  memcpy(v_LOCAL_SO,v_SO,3*sizeof(double));
+  memcpy(x_LOCAL_SO,x_SO,3*sizeof(double));
 
   //convert the position vector from GALL_EPHIOD_EUROPA to IAU_EUROPA coordinate frames
-  memcpy(xform,OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix,36*sizeof(double));
+  memcpy(xform,OrbitalMotion::SO_to_IAU_TransformationMartix,36*sizeof(double));
 
-  x_LOCAL_IAU_EUROPA[0]=xform[0][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[0][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[0][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2];
-  x_LOCAL_IAU_EUROPA[1]=xform[1][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[1][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[1][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2];
-  x_LOCAL_IAU_EUROPA[2]=xform[2][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[2][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[2][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2];
+  x_LOCAL_IAU_EUROPA[0]=xform[0][0]*x_LOCAL_SO[0]+xform[0][1]*x_LOCAL_SO[1]+xform[0][2]*x_LOCAL_SO[2];
+  x_LOCAL_IAU_EUROPA[1]=xform[1][0]*x_LOCAL_SO[0]+xform[1][1]*x_LOCAL_SO[1]+xform[1][2]*x_LOCAL_SO[2];
+  x_LOCAL_IAU_EUROPA[2]=xform[2][0]*x_LOCAL_SO[0]+xform[2][1]*x_LOCAL_SO[1]+xform[2][2]*x_LOCAL_SO[2];
 
   //get local surface temperature
 //  cosSubsolarAngle=Europa::OrbitalMotion::GetCosineSubsolarAngle(x_LOCAL_GALL_EPHIOD_EUROPA);
@@ -510,14 +510,14 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
   //sample parameters of the back flux: speed is calculate in IAU (relative to the planet) but the flux is sampled in GALL_EPHIOD (one axis is always directed to the Sun)
   //convert the velocity vector from GALL_EPHIOD_EUROPA to IAU_EUROPA coordinate frames
-  v_LOCAL_IAU_EUROPA[0]=xform[3][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[3][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[3][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2]+
-      xform[3][3]*v_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[3][4]*v_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[3][5]*v_LOCAL_GALL_EPHIOD_EUROPA[2];
+  v_LOCAL_IAU_EUROPA[0]=xform[3][0]*x_LOCAL_SO[0]+xform[3][1]*x_LOCAL_SO[1]+xform[3][2]*x_LOCAL_SO[2]+
+      xform[3][3]*v_LOCAL_SO[0]+xform[3][4]*v_LOCAL_SO[1]+xform[3][5]*v_LOCAL_SO[2];
 
-  v_LOCAL_IAU_EUROPA[1]=xform[4][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[4][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[4][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2]+
-      xform[4][3]*v_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[4][4]*v_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[4][5]*v_LOCAL_GALL_EPHIOD_EUROPA[2];
+  v_LOCAL_IAU_EUROPA[1]=xform[4][0]*x_LOCAL_SO[0]+xform[4][1]*x_LOCAL_SO[1]+xform[4][2]*x_LOCAL_SO[2]+
+      xform[4][3]*v_LOCAL_SO[0]+xform[4][4]*v_LOCAL_SO[1]+xform[4][5]*v_LOCAL_SO[2];
 
-  v_LOCAL_IAU_EUROPA[2]=xform[5][0]*x_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[5][1]*x_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[5][2]*x_LOCAL_GALL_EPHIOD_EUROPA[2]+
-      xform[5][3]*v_LOCAL_GALL_EPHIOD_EUROPA[0]+xform[5][4]*v_LOCAL_GALL_EPHIOD_EUROPA[1]+xform[5][5]*v_LOCAL_GALL_EPHIOD_EUROPA[2];
+  v_LOCAL_IAU_EUROPA[2]=xform[5][0]*x_LOCAL_SO[0]+xform[5][1]*x_LOCAL_SO[1]+xform[5][2]*x_LOCAL_SO[2]+
+      xform[5][3]*v_LOCAL_SO[0]+xform[5][4]*v_LOCAL_SO[1]+xform[5][5]*v_LOCAL_SO[2];
 
 
   vi=sqrt(v_LOCAL_IAU_EUROPA[0]*v_LOCAL_IAU_EUROPA[0]+v_LOCAL_IAU_EUROPA[1]*v_LOCAL_IAU_EUROPA[1]+v_LOCAL_IAU_EUROPA[2]*v_LOCAL_IAU_EUROPA[2]);
@@ -540,14 +540,14 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   //sample the total return flux
   Exosphere::Sampling::TotalPlanetReturnFlux[spec]+=ParticleWeight;
 
-  Sphere->GetSurfaceElementProjectionIndex(x_LOCAL_GALL_EPHIOD_EUROPA,nZenithElement,nAzimuthalElement);
+  Sphere->GetSurfaceElementProjectionIndex(x_LOCAL_SO,nZenithElement,nAzimuthalElement);
   el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
 
   Sphere->SampleSpeciesSurfaceReturnFlux[spec][el]+=ParticleWeight;
   Sphere->SampleReturnFluxBulkSpeed[spec][el]+=vi*ParticleWeight;
 
   //sample returned flux on the night side of the planet
-  if (x_LOCAL_GALL_EPHIOD_EUROPA[0]<0.0) {
+  if (x_LOCAL_SO[0]<0.0) {
     //the night size
     int id;
 
@@ -603,7 +603,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     e2[2]=(e0[0]*e1[1])-(e0[1]*e1[0]);
 
     //convert velocity vector from IAU_EUROPA -> GALL_EPHIOD_EUROPA coordinate frame
-    memcpy(xform,OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix,36*sizeof(double));
+    memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
 
     while (Yield>0.0) {
@@ -643,13 +643,13 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       vSputtered_IAU[2]=SputteringSpeed*(cosTheta*e0[2]+sinTheta*(cosPhi*e1[2]+sinPhi*e2[2]));
 
       //convert velocity of the sputtered particle into the "global" coordinate frame
-      v_LOCAL_GALL_EPHIOD_EUROPA[0]=xform[3][0]*x_LOCAL_IAU_EUROPA[0]+xform[3][1]*x_LOCAL_IAU_EUROPA[1]+xform[3][2]*x_LOCAL_IAU_EUROPA[2]+
+      v_LOCAL_SO[0]=xform[3][0]*x_LOCAL_IAU_EUROPA[0]+xform[3][1]*x_LOCAL_IAU_EUROPA[1]+xform[3][2]*x_LOCAL_IAU_EUROPA[2]+
           xform[3][3]*vSputtered_IAU[0]+xform[3][4]*vSputtered_IAU[1]+xform[3][5]*vSputtered_IAU[2];
 
-      v_LOCAL_GALL_EPHIOD_EUROPA[1]=xform[4][0]*x_LOCAL_IAU_EUROPA[0]+xform[4][1]*x_LOCAL_IAU_EUROPA[1]+xform[4][2]*x_LOCAL_IAU_EUROPA[2]+
+      v_LOCAL_SO[1]=xform[4][0]*x_LOCAL_IAU_EUROPA[0]+xform[4][1]*x_LOCAL_IAU_EUROPA[1]+xform[4][2]*x_LOCAL_IAU_EUROPA[2]+
           xform[4][3]*vSputtered_IAU[0]+xform[4][4]*vSputtered_IAU[1]+xform[4][5]*vSputtered_IAU[2];
 
-      v_LOCAL_GALL_EPHIOD_EUROPA[2]=xform[5][0]*x_LOCAL_IAU_EUROPA[0]+xform[5][1]*x_LOCAL_IAU_EUROPA[1]+xform[5][2]*x_LOCAL_IAU_EUROPA[2]+
+      v_LOCAL_SO[2]=xform[5][0]*x_LOCAL_IAU_EUROPA[0]+xform[5][1]*x_LOCAL_IAU_EUROPA[1]+xform[5][2]*x_LOCAL_IAU_EUROPA[2]+
           xform[5][3]*vSputtered_IAU[0]+xform[5][4]*vSputtered_IAU[1]+xform[5][5]*vSputtered_IAU[2];
 
       vi=sqrt(vSputtered_IAU[0]*vSputtered_IAU[0]+vSputtered_IAU[1]*vSputtered_IAU[1]+vSputtered_IAU[2]*vSputtered_IAU[2]);
@@ -658,8 +658,8 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
       //generate new particle and inject it into the system
       newParticle=PIC::ParticleBuffer::GetNewParticle();
 
-      PIC::ParticleBuffer::SetX(x_LOCAL_GALL_EPHIOD_EUROPA,newParticle);
-      PIC::ParticleBuffer::SetV(v_LOCAL_GALL_EPHIOD_EUROPA,newParticle);
+      PIC::ParticleBuffer::SetX(x_LOCAL_SO,newParticle);
+      PIC::ParticleBuffer::SetV(v_LOCAL_SO,newParticle);
       PIC::ParticleBuffer::SetI(_O2_SPEC_,newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,newParticle);
       Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,PIC::ParticleBuffer::GetParticleDataPointer(newParticle));
@@ -703,18 +703,18 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     }
 
     //tranform the velocity into the "global" coordinate frame
-    memcpy(xform,OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix,36*sizeof(double));
+    memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
-    v_LOCAL_GALL_EPHIOD_EUROPA[0]=xform[3][0]*x_LOCAL_IAU_EUROPA[0]+xform[3][1]*x_LOCAL_IAU_EUROPA[1]+xform[3][2]*x_LOCAL_IAU_EUROPA[2]+
+    v_LOCAL_SO[0]=xform[3][0]*x_LOCAL_IAU_EUROPA[0]+xform[3][1]*x_LOCAL_IAU_EUROPA[1]+xform[3][2]*x_LOCAL_IAU_EUROPA[2]+
         xform[3][3]*v_LOCAL_IAU_EUROPA[0]+xform[3][4]*v_LOCAL_IAU_EUROPA[1]+xform[3][5]*v_LOCAL_IAU_EUROPA[2];
 
-    v_LOCAL_GALL_EPHIOD_EUROPA[1]=xform[4][0]*x_LOCAL_IAU_EUROPA[0]+xform[4][1]*x_LOCAL_IAU_EUROPA[1]+xform[4][2]*x_LOCAL_IAU_EUROPA[2]+
+    v_LOCAL_SO[1]=xform[4][0]*x_LOCAL_IAU_EUROPA[0]+xform[4][1]*x_LOCAL_IAU_EUROPA[1]+xform[4][2]*x_LOCAL_IAU_EUROPA[2]+
         xform[4][3]*v_LOCAL_IAU_EUROPA[0]+xform[4][4]*v_LOCAL_IAU_EUROPA[1]+xform[4][5]*v_LOCAL_IAU_EUROPA[2];
 
-    v_LOCAL_GALL_EPHIOD_EUROPA[2]=xform[5][0]*x_LOCAL_IAU_EUROPA[0]+xform[5][1]*x_LOCAL_IAU_EUROPA[1]+xform[5][2]*x_LOCAL_IAU_EUROPA[2]+
+    v_LOCAL_SO[2]=xform[5][0]*x_LOCAL_IAU_EUROPA[0]+xform[5][1]*x_LOCAL_IAU_EUROPA[1]+xform[5][2]*x_LOCAL_IAU_EUROPA[2]+
         xform[5][3]*v_LOCAL_IAU_EUROPA[0]+xform[5][4]*v_LOCAL_IAU_EUROPA[1]+xform[5][5]*v_LOCAL_IAU_EUROPA[2];
 
-    memcpy(v_GALL_EPHIOD_EUROPA,v_LOCAL_GALL_EPHIOD_EUROPA,3*sizeof(double));
+    memcpy(v_SO,v_LOCAL_SO,3*sizeof(double));
     ReturnCode=_PARTICLE_REJECTED_ON_THE_FACE_;
     break;
 
