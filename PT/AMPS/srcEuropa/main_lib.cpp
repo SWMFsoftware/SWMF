@@ -34,6 +34,7 @@
 #include "pic.h"
 #include "constants.h"
 #include "Europa.h"
+#include "ElectronImpact.h"
 
 //the modeling case
 #define _EUROPA_MODEL_MODE__NEAR_PLANET_    0
@@ -570,6 +571,11 @@ PIC::InitMPI();
 	//init the particle solver
 	PIC::Init_BeforeParser();
 
+
+	//output the parameters of the implemented physical models
+	if (PIC::ThisThread==0) {
+	  ElectronImpact::H2O::Print("H2O-ElectronImpact.dat",PIC::OutputDataFileDirectory);
+	}
 
 
 //	PIC::Parser::Run(inputFile);
