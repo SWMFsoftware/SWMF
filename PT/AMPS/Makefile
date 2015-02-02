@@ -64,6 +64,7 @@ clean:
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/exosphere;$(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/main;            $(MAKE) clean; fi);
 	@(if [ -d srcInterface ]; then cd srcInterface;     $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/models/electron_impact;     $(MAKE) clean; fi);
 
 tar:
 	cd ../pic-tower/sources/general; rm -f *.o *.a
@@ -78,7 +79,7 @@ export Flags
 
 #Flags=-O3 -fasm-blocks  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
 
-SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
+SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
@@ -90,13 +91,14 @@ ${LIB_AMPS}:
 	cd ${WSD}/meshAMR; make SEARCH_C="${SEARCH}" 
 	cd ${WSD}/pic; make SEARCH_C="${SEARCH}"
 	cd ${WSD}/species; make SEARCH_C="${SEARCH}"
+	cd ${WSD}/models/electron_impact; make SEARCH_C="${SEARCH}"
 
 #compile external modules
 	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH}")) 
 	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 else
 	rm -rf ${WSD}/tmpSPICE
@@ -104,7 +106,7 @@ else
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o  tmpSPICE/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o tmpSPICE/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
