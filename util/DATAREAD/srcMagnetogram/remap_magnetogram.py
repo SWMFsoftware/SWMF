@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-# this magnetogram remapping can either be run as a script from 
-# the unix command line
-# or imported into Python
-# accompanying files (must be in same directory):
-#    remap_magnetogram.py.README.txt 
-#         by  Richard A. Frazin July-Sept 2104
+#this magnetogram remapping can either be run as a script from the unix command line
+#  or imported into Python
+#accompanying files (must be in same directory):
+#    remap_magnetogram.py.README.txt
+#         by  Richard A. Frazin July 2014 - February 2015
 
 from astropy.io import fits
 from scipy import interpolate
@@ -14,173 +13,226 @@ import numpy as np
 import sys
 import time
 import argparse
+import pdb
 
-parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="""
-remap_magnetogram.py pre-processes the FITS format magnetograms 
-into ASCII files that can by read by FDIPS.exe, BATSRUS.exe and SWMF.exe
-and IDL macros. The script can read the following types of magnetograms:
 
-   Hathaway synchronic
-   ADAPT synchronic
-   GONG synoptic
-   GONG hourly updated
-   MDI synoptic
-
-In the case of the GONG and MDI maps, these routines only convert the
-existing .fits files into the standard ASCII format with no remapping.
-In case of the ADAPT and the Hathaway map, the code allows arbitrary
-output resolution, specified by [nlat] and [nlon] with defaults being
-180 and 360.  The code opens the .fits file and automatically
-recognizes the type of map it is.  In all cases the output is a
-sin(latitude) grid.  
-
-The script uses the scipy and astropy packages that can be installed, 
-for example, with MacPorts.
-""")
-parser.add_argument('inputfile', help='Input FITS file')
-parser.add_argument('outputfile', help='Output magnetogram file')
-parser.add_argument('nlat', nargs='?', type=int, default=180, help='Number of latitudes')
-parser.add_argument('nlon', nargs='?', type=int, default=360, help='Number of longitudes')
-
-args = parser.parse_args()
-
-def remap(inputfile, outputfile, nlat = 180, nlong = 360):
+def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'):
     """
-    This takes an ADAPT or Hathaway magnetogram on a regular spherical
-    inputfile includes the path.  outputfile requires the desired suffix.
-    nlat and nlong are desired number of sin(lat) point and longitude points
-       in the output grid.
-    Return values are new and old maps. 
-    This uses an interpolation/integration scheme to conserve magnetic flux.
+    Flux-conserving magnetogram remapping tool.
+    inputfile - FITS file containing original magnetogram (include path)
+    outputfile - contains result in customized output format (include path)
+    nlat  (opitonal) = desired number of latitude  points in output,
+         if not specified, will be set to the same as the input file
+    nlong (optional) = desired number of longitude points in output
+        if not specified, will be set to the same as the input file
+    out_grid (optional), choices are 'sin(lat)' or 'regular'
+        if not specified, the output grid will be the same type
+    If nlat, nlong and out_grid are ALL left out, no remapping is done,
+        and the code simply reformats.
     Note that ADAPT files may have multiple maps.  Only the 1st is utilized.
-    My MATLAB code remap_mag.m uses the same algorithm but runs much faster
-      and conserves the flux 1 part in 10^5 (on Hathaway magnetograms),
-      whereas here it's not very close.  Is this due to differences in the
-      integrator (or maybe even the interpolator)?  
+    My MATLAB code remap_mag.m uses the same algorithm but runs much faster.
+       by Richard Frazin, July 2014 - Feb 2015
     """
-    hdulist = fits.open(inputfile)
-    d = hdulist[0].data
-    try:
-        magtype = hdulist[0].header['MODEL']
-    except KeyError, err:
-        try:
-            magtype = hdulist[0].header['SFT_TYP']
-            if magtype == 'Baseline / Assimilation' :
-                magtype = 'Hathaway'
-        except KeyError, er:
-            magytpe = 'Unknown'
+    pi = 3.141592653589793
 
-    if magtype == 'Unknown' :
-        print 'Error. Unknown magnetogram type.'
-        return -1
-            
-    nlo = hdulist[0].header['NAXIS1'] # number of longitude points
-    nla = hdulist[0].header['NAXIS2'] #           latitude
-    hdulist[0].header['NAXIS1'] = nlong # new number of longitude points
-    hdulist[0].header['NAXIS2'] = nlat  #               latitude
-    hdulist[0].header.set('REMAP','lat -> sin(lat)')  #make a new keyword for the header
+    if ( (out_grid != 'sin(lat)') and (out_grid != 'regular') and (out_grid != 'unspecified') ):
+        print "Unknown output grid type.  Choices are blank, 'unspecified', 'regular' and 'sin(lat)' "
+        return(-1)
     
-    if magtype == 'Hathaway':
-         print 'I think this is a Hathaway synchronic map. native size: ',str(nla),' X ',str(nlo)
-         hdulist[0].header.set('GRID','sin(latitude)')
+    cc =  FITS_RECOGNIZE(inputfile)
+    if cc == -1:
+        print "Input file not recognized."
+        return(-1)
+    else:
+        magtype = cc[0]
+        grid_type = cc[1]
 
-    if magtype == 'ADAPT':
-        nim = hdulist[0].header['NAXIS3'] # number of images
-        imdex = 5  #which of the 12 maps do you want?
-        print 'I think this is an ADAPT synchronic map.  This file contains ', str(nim), ' images.  Using only number ' + str(imdex)
-        print 'native size: ',str(nla),' X ',str(nlo)
-        gridtype = hdulist[0].header['GRID'] # = 1. for a uniform spherical grid
-        if gridtype != 1.0:
-            print('rempap_magnetogram.py: the keyword \'GRID\' is not 1.   Either this is not an ADAPT map or this data is not on a uniform spherical mesh.')
-            return(-1)
-        gridtype = 'sin(latitude)'
-        hdulist[0].header['GRID'] = gridtype #change the header value
+    if out_grid == 'unspecified':
+        out_grid = grid_type
+
+    #what kind of transformation are we doing?
+    if grid_type == out_grid:
+        transformation = 'rebin' #no change in grid type, so just rebin
+    elif ( (grid_type == 'regular') and (out_grid == 'sin(lat)') ):
+        transformation = 'reg2sin'
+    elif ( (grid_type == 'sin(lat)') and (out_grid == 'regular') ):
+        transformation = 'sin2reg'
+    else:
+        print "Unknown transformation type."
+        return(-1)
+
+    g = fits.open(inputfile)
+    d = g[0].data
+    if magtype == 'ADAPT Synchronic':
+        nim = g[0].header['NAXIS3'] # number of images
+        imdex = 0  #which of the 12 maps do you want?
+        print 'This file contains ', str(nim), ' images.  Using only number ', str(imdex)
         if nim > 1:  #just keep one of them for now
             d = d[imdex,:,:]
 
+    nlo = g[0].header['NAXIS1'] # number of longitude points
+    nla = g[0].header['NAXIS2'] #           latitude
+    
+    if nlat == -1:
+        nlat = nla
+    elif nlat < 1:
+        print "nlat has to be -1 or a positive integer."
+        return(-1)
 
-    #if nlo != nlong, first make a hybrid map that is (nla X nlong), otherwise, do nothing
-    if nlo == nlong:
-        hybrid = d
-    else: #find the common factors of nlo and nlong for the rebin and add integration aglorithm
-        ## pf = PrimeFactors(nlo)
-        ## nlo_fac = np.asarray(pf.compute_prime_factors())
-        ## pf = PrimeFactors(nlong)
-        ## nlong_fac = np.asarray(pf.compute_prime_factors())
-        ## pf = np.array(1) #array of common factors
-        ## for k in np.arange(nlong_fac.size):
-        ##     crap = np.where(nlong_fac[k] == nlo_fac); crap = crap[0]
-        ##     if crap.size != 0: #they don't have this factor in common
-        ##         pf = np.append(pf,nlong_fac[k]) # put it in the common factor array
-        ##         nlong_fac[k] = 1 # replace it with 1 in the other arrays
-        ##         nlo_fac[np.min(crap)] = 1 #
+    if nlong == -1:
+        nlong = nlo
+    elif nlong < 1:
+        print "nlong has to be -1 or a positive integer."
+        return(-1)
+    
+    
+    g[0].header['NAXIS1'] = nlong # new number of longitude points
+    g[0].header['NAXIS2'] = nlat  #               latitude
+    
+    try:
+        g[0].header['GRID'] = out_grid #change the existing header value
+    except KeyError, er:
+        g[0].header.set('GRID',out_grid) #create FITS header keyword
 
-        ## nlong_fac = np.prod(nlong_fac) #nlong = nlong_fac*pf and nlo = nlo_fac*pf
-        ## nlo_fac   = np.prod(nlo_fac)   #  thus, the least common mulitple is 
-        ## pf        = np.prod(pf)        #      pf*nlo_fac*nlong_fac
-        #print 'common factor: ' + str(pf) + ' upsample factor: ' + str(nlong_fac) + ' rebin factor: ' + str(nlo_fac)
+    try:
+        g[0].header['CTYPE2'] = out_grid #change the existing header value
+    except KeyError, er:
+        g[0].header.set('CTYPE2',out_grid) #create FITS header keyword
 
-        #this way is simpler ... duh!
-        crap = np.arange(nlo)
-        for pf in crap[::-1]:
-            if ( (np.mod(nlo,pf) == 0) and (np.mod(nlong,pf) == 0)): #greatest common factor
+    if out_grid == 'sin(lat)':
+        newlat = (180/pi)*np.arcsin(np.linspace(-1. + 1./2/nlat,1. - 1./2/nlat,nlat))
+    elif out_grid == 'regular':
+        newlat = (180/pi)*np.linspace(-pi/2 + pi/2/nlat,pi/2 - pi/2/nlat,nlat)
+    else:
+        print "out_grid incorrectly set."
+        return(-1)
+
+
+    if ( (nlo == nlong) and (nla == nlat) and (grid_type == out_grid) ):
+        newmap = d  #no remapping
+    else:
+        #first make a hybrid map that is (nla X nlong) by using the rebin
+        #    and add alg. in the longitude direction.  If nlo = nlong, hybrid --> d
+        hybrid = np.zeros([nla,nlong]) 
+        crap = np.arange(nlo+1)
+        for pf in crap[nlo+1:0:-1]: #pf will be the greatest common factor of nlong and nlo
+            if ( (np.mod(nlo,pf) == 0) and (np.mod(nlong,pf) == 0)): #common factor test
                 nlo_fac   = nlo/pf
                 nlong_fac = nlong/pf
                 break
-
-        hybrid = np.zeros([nla,nlong]) #intermediate hybrid map
         for k in np.arange(nla):
             w = np.kron(d[k,:],np.ones(nlong_fac)) #this array has length pf*nlo_fac*nlong_fac
             for l in np.arange(nlong):  #take the average over nlo_fac bins of w
                 hybrid[k,l] = np.sum(w[l*nlo_fac:(l+1)*nlo_fac])/nlo_fac
 
-    newmap = np.zeros([nlat,nlong])
+        newmap = np.zeros([nlat,nlong]) #output map                           
+        if transformation == 'rebin':  #do rebin and add in the latitude direction, if nlo = nlat, newmap --> d
+            crap = np.arange(nla+1)
+            for pf in crap[nla+1:0:-1]: #pf will be the greatest common factor of nla and nlat
+                if ( (np.mod(nla,pf) == 0) and (np.mod(nlat,pf) == 0) ): # common factor test
+                    nla_fac  = nla/pf
+                    nlat_fac = nlat/pf
+                    break
+                
+            for k in np.arange(nlong):
+                w = np.kron(hybrid[:,k].T,np.ones(nlat_fac))#length is pf*nla_fac*nlat_fac
+                for l in np.arange(nlat):
+                    newmap[l,k] = np.sum(w[l*nla_fac:(l+1)*nla_fac])/nla_fac
+
+        elif transformation == 'reg2sin':
+            oldlat =  np.linspace(-pi/2 + pi/2/nla,pi/2 - pi/2/nla,nla) #old latitude grid
+            oldlat = np.hstack((-pi/2-1.e-9,oldlat,pi/2+1.e-9)) #for the interpolator
+            bin_boundary = np.arcsin(np.linspace(-1.,1.,nlat+1))   #boundaries of new sin(latitude) grid
+            for k in np.arange(nlong):   #the magnetic field value assigned is the flux divided by the area.  
+                u = np.hstack((hybrid[0,k],hybrid[:,k],hybrid[nla-1,k]))
+                crap = interpolate.interp1d(oldlat,u,kind='linear') #magnetic field interpolator
+                fcn = lambda x : crap(x)*np.cos(x)  #this is B(theta)*cos(theta)
+                for l in np.arange(nlat):
+                    result = integrate.quad(fcn,bin_boundary[l],bin_boundary[l+1],epsabs=1.e-3,epsrel=1.e-3)/(np.sin(bin_boundary[l+1]) - np.sin(bin_boundary[l]))
+                    newmap[l,k] = result[0]
+
+        elif transformation == 'sin2reg':
+            oldlat = np.arcsin(np.linspace(-1. + 1./2/nla,1. - 1./2/nla,nla)) #arcsin(old sin(latitude) grid)
+            oldlat = np.hstack((-pi/2-1.e-9,oldlat,pi/2+1.e-9)) #for the interpolator
+            bin_boundary = np.linspace(-pi/2,pi/2,nlat+1) #boundaries of new latitude grid
+            #pdb.set_trace()
+            for k in np.arange(nlong):   #the magnetic field value assigned is the flux divided by the area.  
+                u = np.hstack((hybrid[0,k],hybrid[:,k],hybrid[nla-1,k]))
+                crap = interpolate.interp1d(oldlat,u,kind='linear') #magnetic field interpolator
+                fcn = lambda x : crap(x)*np.cos(x)  #this is B(theta)*cos(theta)
+                for l in np.arange(nlat):
+                    result = integrate.quad(fcn,bin_boundary[l],bin_boundary[l+1],epsabs=1.e-3,epsrel=1.e-3)/(np.sin(bin_boundary[l+1]) - np.sin(bin_boundary[l]))
+                    newmap[l,k] = result[0]
+
+        else:
+            print "Unknown transformation type."
+            return(-1)
+
+
+    #test for flux conservation in the transformation        
+    test_flux = False 
+    if test_flux:
+        if grid_type == 'regular':
+            latt =  np.cos(np.linspace(-pi/2 + pi/2/nla,pi/2 - pi/2/nla,nla))
+            cosgrid = np.kron(latt,np.ones((nlo,1))).T
+            oldflux = np.sum(np.multiply(cosgrid,d))*2.*pi*pi/nlo/nla
+        elif grid_type == 'sin(lat)':
+            oldflux = np.sum(d)*4.*pi/nlo/nla
+        else:
+            print "Bad grid_type."
+            return(-1)
+        if out_grid == 'regular':
+            latt =  np.cos(np.linspace(-pi/2 + pi/2/nlat,pi/2 - pi/2/nlat,nlat))
+            cosgrid = np.kron(latt,np.ones((nlong,1))).T
+            newflux = np.sum(np.multiply(cosgrid,newmap))*2.*pi*pi/nlong/nlat
+        elif out_grid == 'sin(lat)':
+            newflux = np.sum(newmap)*4.*pi/nlong/nlat
+        else:
+            print "Bad out_grid."
+            return(-1)
+        print "original flux =",str(oldflux),", new flux =",str(newflux)
     
-    pi = 3.141592653589793
-    newlat = np.zeros(nlat)
-    oldlat =  np.linspace(-pi/2 + pi/2/nla,pi/2 - pi/2/nla,nla) #old latitude grid
-    oldlat = np.hstack((-pi/2-1.e-9,oldlat,pi/2+1.e-9)) #for the interpolator
-    bin_boundary = np.linspace(-1.,1.,nlat+1)
 
-    #the magnetic field value assigned is the flux divided by the area.    
-    for k in np.arange(nlong):
-        u = np.hstack((hybrid[0,k],hybrid[:,k],hybrid[nla-1,k]))
-        crap = interpolate.interp1d(oldlat,u,kind='linear')
-        fcn = lambda x : crap(x)*np.cos(x)  #x is latitude in radians
-        for l in np.arange(nlat):
-            newlat[l] = 0.5*(np.arcsin(bin_boundary[l]) + np.arcsin(bin_boundary[l+1]))*180./pi
-            result = integrate.quad(fcn,np.arcsin(bin_boundary[l]),np.arcsin(bin_boundary[l+1]),epsabs=1.e-3,epsrel=1.e-3)/(bin_boundary[l+1] - bin_boundary[l])
-            newmap[l,k] = result[0]
-
-    #ascii output file
-    fid = open(outputfile,'w')
-
-
-    if magtype == 'ADAPT' :
-        try:
-            CRnumber = str(hdulist[0].header['CRROTEDG'])
-        except KeyError, er:
-            CRnumber = '0'
-        try:
-            mapdate = hdulist[0].header['MAPTIME']
-        except KeyError, er:
-            mapdate = '0000-00-00T00:00:00'
-
-    if magtype == 'Hathaway' :
+    #try to get some context information from the FITS file to include in output
+    try:
+        CRnumber = str(g[0].header['CRROTEDG'])  #works for ADAPT
+    except KeyError, er:
         CRnumber = '0'
+
+    if CRnumber == '0':    
         try :
-            mapdate = hdulist[0].header['MAP_DATE']
+            CRnumber = str(g[0].header['CAR_ROT']) #works on GONG
+        except KeyError,er:
+            CRnumber = '0'
+
+    if magtype.find('GONG') > -1:
+        mapdate = g[0].header['DATE'] #works for GONG
+    else:                          
+        try:
+            mapdate = g[0].header['MAPTIME']  #works for ADAPT
         except KeyError, er:
             mapdate = '0000-00-00T00:00:00'
+
+        if mapdate == '0000-00-00T00:00:00':    
+            try :
+                mapdate = g[0].header['MAP_DATE']  #works for Hathaway
+            except KeyError, er:
+                mapdate = '0000-00-00T00:00:00'
+
+    try :
+        long0 = g[0].header['LONG0'] #works on GONG 
+    except KeyError, er:
+        long0 = 0
+
+    #ascii output file, Gabor format, the first line is arbitary
+    fid = open(outputfile,'w')
     
-    #new output format
-    #the first line is arbitary
     line0 = 'magnetogram type = '+magtype+', grid_type = sin(lat), CR'+CRnumber+ ', MapDate = '+mapdate+', units: [Deg], [G], created at: '+time.ctime()+'\n' 
     fid.write(line0)
     line0 = '       0      0.00000       2       1       1 \n'
     fid.write(line0)
     fid.write('      '+str(nlong)+'     '+str(nlat)+'\n')
-    fid.write(str(0.5*360./nlong) + ' \n') #longitude shift 
+    fid.write(str(long0 + 0.5*360./nlong) + ' \n') #longitude shift (important for GONG Hourly)
     fid.write('Longitude Latitude Br LongitudeShift \n')
     
     for k in np.arange(nlat):
@@ -191,7 +243,7 @@ def remap(inputfile, outputfile, nlat = 180, nlong = 360):
     #old output format
     ## fid.write('#CR\n')
     ## try:
-    ##     fid.write(str(hdulist[0].header['CRROTEDG']) + '\n')
+    ##     fid.write(str(g[0].header['CRROTEDG']) + '\n')
     ## except KeyError, er:
     ##     fid.write('-1')
     ## fid.write('#nMax\n')
@@ -204,146 +256,162 @@ def remap(inputfile, outputfile, nlat = 180, nlong = 360):
     ##     for l in np.arange(nlong):
     ##         fid.write(str(newmap[k,l]) + '\n')
 
-    hdulist.close()
+    g.close()
     fid.close()
     return(newmap,d)
 
 
-def GONGFITStoASCII(inputfile,outputfile):
+
+    
+
+def FITS_RECOGNIZE(inputfile):
     """
-    The GONG and MDI fits files are on a sin(latitude) grid.  All that needs
-    to be done is to rewrite the data in ascii format.
+    This function opens inputfile and tries to determine what type of magnetogram
+    it is as well as the type of grid on which the datatype is represented.  The
+    magnetogram types and grid types are: 
+      Hathaway Synchronic, regular
+      ADAPT Synchronic, regular 
+      GONG Synoptic, sin(lat)
+      GONG Hourly updated, sin(lat)
+      MDI Synoptic, sin(lat)
+    This function returns a tuple with this information.  The output tuple is:
+      (magnetogram_type,grid_type)
     """
 
+    magnetogram_type = 'unknown'
+    grid_type = 'unknown'
     g = fits.open(inputfile)
-    nlong = g[0].header['NAXIS1'] # number of longitude points
-    nlat  = g[0].header['NAXIS2'] #           latitude
+
     try:
-        telescope = g[0].header['TELESCOP']
-    except KeyErr, er:
-        telescope = 'other'
-                
+        telescope = g[0].header['TELESCOP'] #works for MDI, GONG
+    except KeyError, er:
+        telescope = 'unknown'
+        
     try:
-        inst = g[0].header['INSTRUME']
+        inst = g[0].header['INSTRUME'] #works for MDI
     except KeyError,er:
-        inst = 'other'
+        inst = 'unknown'
 
     try:
-        ctyp = g[0].header['CTYPE2']
+        ctyp = g[0].header['CTYPE2'] #works for MDI, GONG
     except KeyError, er:
-        ctyp = 'other'
+        ctyp = 'unknown'
 
-    if telescope != 'NSO-GONG' :    
-        if ( (ctyp != 'Sine Latitude') or (inst != 'MDI') ):
-            print 'not a GONG magetogram, not getting the Keywords expected from an MDI magnetogram'
-            return(-1)
-  
-    if ( (telescope != 'NSO-GONG') and (telescope != 'SOHO') ):
-        print 'Not a GONG or MDI magnetogram!'
-        return(-1);
+    try:
+        model = g[0].header['MODEL'] #works for ADAPT
+    except KeyError, err:
+        model = 'unknown'
 
-    newlat = np.arcsin(np.linspace(-1.+1./nlat , 1.-1./nlat ,nlat))*180/3.141592653589793
-
-    fid = open(outputfile,'w')
-    
-    try :
-        CR = str(g[0].header['CAR_ROT'])
+    try:
+        sft = g[0].header['SFT_TYP'] #works for Hathaway
     except KeyError,er:
-        CR = '0'
-    
-    try :
-        mapdate = g[0].header['DATE']
-    except KeyError, er:
-        mapdate = '0000-00-00T00:00:00'
+        sft = 'unknown'
 
-    try :
-        long0 = g[0].header['LONG0']
-    except KeyError, er:
-        long0 = 0
-
-    #new output format
-    #the first line is arbitary
-    line0 = 'magnetogram type = '+telescope+', grid_type = sin(lat), CR'+CR+ ', MapDate = '+mapdate+', units: [Deg], [G], created at: '+time.ctime()+'\n' 
-    fid.write(line0)
-    line0 = '       0      0.00000       2       1       1 \n'
-    fid.write(line0)
-    fid.write('      '+str(nlong)+'     '+str(nlat)+'\n')
-    fid.write(str(long0+0.5)+' \n') #longitude shift 
-    fid.write('Longitude Latitude Br LongitudeShift \n')
-    
-    for k in np.arange(nlat):
-         for l in np.arange(nlong):
-             line0 = str(l*360./nlong) + ' ' + str(newlat[k]) + ' ' + str(g[0].data[k,l]) + ' \n'
-             fid.write(line0)
-       
-
-    #old output format
-    ## fid.write('#CR\n')
-    ## try:
-    ##     fid.write(str(g[0].header['CAR_ROT']) + '\n')
-    ## except KeyError, er:
-    ##     fid.write('-1')
-    ## fid.write('#nMax\n')
-    ## fid.write(str(-1) + '\n')
-    ## fid.write('#ARRAYSIZE\n')
-    ## fid.write(str(nlong) + '\n')
-    ## fid.write(str(nlat) + '\n')
-    ## fid.write('#START\n')
-
-    ## for k in np.arange(nlat):
-    ##     for l in np.arange(nlong):
-    ##         fid.write(str(g[0].data[k,l]) + '\n')
-
+    nlo = g[0].header['NAXIS1'] # number of longitude points
+    nla = g[0].header['NAXIS2'] #           latitude
+        
     g.close()
-    fid.close()
-    return(0)
-    
+
+    if telescope.find('NSO-GONG') > -1 :
+        magnetogram_type = 'NSO-GONG Synoptic'
+        try:
+            long0 = g[0].header['LONG0']
+            if float(long0) > 0.:
+                magnetogram_type = 'NSO-GONG Hourly'
+        except KeyError, er:
+            long0 = - 1
+        if ctyp.find('CRLT-CEA') > -1:
+            grid_type = 'sin(lat)'
+        else:
+            print "unknown NSO-GONG magnetogram type"
+            return(-1)
+
+    if telescope.find('SOHO') > -1:
+        if ( (inst.find('MDI') > -1) & (ctyp.find('Sine Latitude') > -1) ):
+            magnetogram_type = 'MDI Synoptic'
+            grid_type = 'sin(lat)'
+        else :
+            print "unknown SOHO magnetogram type"
+            return(-1)
+
+    if model.find('ADAPT') > -1:
+        magnetogram_type = 'ADAPT Synchronic'
+        try:
+            adapt_grid = g[0].header['GRID']
+        except KeyError, er:
+            adapt_grid = -1.
+        if adapt_grid == 1.:
+            grid_type = 'regular'
+        else:
+            print "unknown ADAPT magnetogram type"
+            return(-1)
+
+    if sft.find('Baseline / Assimilation') > -1:
+        magnetogram_type = 'Hathaway Synchronic'
+        grid_type = 'regular'
+
+    if  ( (magnetogram_type == 'unknown') or (grid_type == 'unknown') ):
+        print "I don't recognize the type of this magnetogram."
+        return(-1)
+                
+    print "I think this is a",magnetogram_type,"magnetogram on a",str(nla),"X",str(nlo),grid_type,"grid."
+    return( (magnetogram_type, grid_type) )
 
     
+
 if __name__ == '__main__':
 
-    if len(sys.argv) < 3:
-        print 'format: python remap_magnetogram.remap inputfile ouputfile [nlat] [nlong]'
-        exit()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="""
+    remap_magnetogram.py pre-processes the FITS format magnetograms 
+    into ASCII files that can by read by FDIPS.exe, BATSRUS.exe and SWMF.exe
+    and IDL macros. The script can read the following types of magnetograms:
 
-    inputfile = sys.argv[1] # sys.argv[0] is the 'remap_magnetogram.py' command!
-    outputfile = sys.argv[2]
-    print 'inputfile is: ', inputfile
-    print 'outputfile will be: ', outputfile
+       Hathaway Synchronic
+       ADAPT Synchronic
+       GONG Synoptic
+       GONG Hourly updated
+       MDI Synoptic
 
-    #check to see if it's a GONG or MDI magnetogram
-    g = fits.open(inputfile)
-    try:
-        telescope = g[0].header['TELESCOP']
-    except KeyError, er:
-        telescope = 'other'
+    The code opens the .fits file and automatically recognizes the type of
+    map it is, which determines whether it is on a sin(latitude) or regular
+    spherical grid.  The output can be any desired resolution, on either a
+    sin(latitude) or regular spherical grid.  If the output grid type is not
+    specified, it will be the same as the original .fits file.  If the
+    resolution is not specified, it will be the same as the original .fits
+    file.  From the unix command line, the calling sequence is:
 
-    try:
-        inst = g[0].header['INSTRUME']
-    except KeyError,er:
-        inst = 'other'
+    [python] remap_magnetogram inputfile outputfile [nlat] [nlong] ['uniform','sinlat']
 
-    try:
-        ctyp = g[0].header['CTYPE2']
-    except KeyError, er:
-        ctyp = 'other'
+    Within Python, the remapping is done with the remap function contained
+    in this file.
+    
+    The script uses the scipy and astropy packages that can be installed, 
+    for example, with MacPorts.
+    """)
+    parser.add_argument('inputfile', help='Input FITS file, incl. path')
+    parser.add_argument('outputfile', help='Output magnetogram file, incl. path')
+    parser.add_argument('nlat', nargs='?', type=int, default=-1, help='Number of latitude points, blank or -1 for no change.')
+    parser.add_argument('nlong', nargs='?', type=int, default=-1, help='Number of longitude points, blank or -1 for no change.')
+    parser.add_argument('grid_type',nargs='?',choices=['uniform','sinlat'],help="leave blank for no change.  'uniform' for uniform polar angle bins, 'sinlat' for sin(latitude) bins.")
 
-    g.close()
-        
-    if ( (ctyp == 'Sine Latitude') and (inst == 'MDI') ):
-        telescope = 'NSO-GONG'
-        
-    if telescope == 'NSO-GONG':
-        GONGFITStoASCII(inputfile,outputfile)
+    args = parser.parse_args()
+
+    if args.nlat < -1:
+        print "nlat must be -1 or a postive integer.  No output."
+        quit()
+    if args.nlong < -1:
+        print "nlong must be -1 or a postive integer.  No output."
+        quit()
+
+    if args.grid_type == 'sinlat':
+        grid_type = 'sin(lat)'
+    elif args.grid_type == 'uniform':
+        grid_type = 'regular'
     else:
-        if len(sys.argv) > 3:
-            if len(sys.argv) != 5:
-                print 'format: python remap_magnetogram.py inputfile ouputfile [nlat] [nlong]'
-                exit()
-            nlat = int(sys.argv[3])
-            nlong = int(sys.argv[4])
-            print 'the output grid have ', str(nlat), 'latitude points and ', str(nlong), ' longitude points.'
-        if len(sys.argv) > 3:
-            remap(inputfile,outputfile,nlat,nlong)
-        else:
-            remap(inputfile, outputfile)
+        grid_type = 'unspecified'
+
+    #c = FITS_RECOGNIZE(args.inputfile)
+    #print c[0]
+    #print c[1]
+
+    remap(args.inputfile, args.outputfile, args.nlat, args.nlong, grid_type )
