@@ -352,7 +352,7 @@ contains
     BoundaryThreads_B(iBlock) % DXi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
-    BoundaryThreads_B(iBlock) % TSi_III = 0.0
+    BoundaryThreads_B(iBlock) % TSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % SignBr_II = 0.0
@@ -834,22 +834,29 @@ contains
   end subroutine calc_alfven_wave_tr_table
   !=============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       Heating, APlusBC, APlusOut_I, AMinusOut_I)
+       Heating, APlusBC, APlusOut_I, AMinusOut_I,nIterIn)
     integer,intent(in):: nI
     real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
     real,intent(in )::AMinusBC  !BC for A-
     real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
     real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
+    integer,optional,intent(in)::nIterIn
     real:: DeltaXi
     real,dimension(0:500)::APlus_I,AMinus_I
     integer::iStep,iIter
     integer, parameter:: nIterMax = 10
+    integer:: nIter
     real::Derivative, AOld, ADiffMax
     real,parameter:: CTol=0.0010
     !---------------------------------------------------------------------------
     APlus_I(0:nI)=1.0
     AMinus_I(0:nI)=AMinusBC
-    do iIter=1,nIterMax
+    if(present(nIterIn))then
+       nIter=nIterIn
+    else
+       nIter=nIterMax
+    end if
+    do iIter=1,nIter
        !Go forward, integrate APlus_I with given AMinus_I
        ADiffMax = 0.0
        do iStep=1,nI
