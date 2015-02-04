@@ -22,6 +22,10 @@ module ModGmGeoindices
   ! but unnecessary ones may be shut off.
   logical :: DoCalcKp = .false., DoCalcDst = .false.
   
+  ! How many TOTAL shared magnetometers are required to calculate all
+  ! indices?  This is set in init_mod_geoindices.
+  integer :: nIndexMag = 0
+
   ! K-index is evaluated over a rolling time window, typically three hours.
   ! It may be desirable to reduce this window, changing the Kp index so
   ! that it is more indicative of dB/dt.  This requires careful rescaling
@@ -86,6 +90,11 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     IsInitialized=.true.
+
+    ! Set number of shared magnetometers.
+    if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
+    !if(DoCalcDst) nIndexMag = nIndexMag+nKpMag !Not yet implemented..
+    ! ...etc.
 
     ! Initialize grid and arrays.  FaKe_p uses stations fixed in SMG coords.
     XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
