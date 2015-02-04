@@ -25,10 +25,13 @@ module ModGroundMagPerturb
   integer, parameter:: r_=1, phi_=2, theta_=3
 
   logical,            public:: save_magnetometer_data = .false.
+  integer,            public:: nMagnetometer = 0
   character(len=100), public:: MagInputFile
 
+  ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
+  real, allocatable,  public:: IeMagPerturb_DII(:,:,:) 
+
   !local variables
-  integer            :: nMagnetometer = 1
   integer, parameter :: MaxMagnetometer = 500
   integer            :: iUnitMag = -1
   real               :: PosMagnetometer_II(2,MaxMagnetometer)
@@ -39,8 +42,9 @@ contains
   !===========================================================================
   subroutine ground_mag_perturb(nMag, Xyz_DI, MagPerturb_DI)
 
-    ! This subroutine is used to calculate the ground magnetic perturbations, 
-    ! at given point in GM cells.
+    ! This subroutine is used to calculate the 3D ground magnetic perturbations, 
+    ! at a given set of points (Xyz_DI) for nMag different magnetometers,
+    ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
     use ModSize,           ONLY: nI, nJ, nK, nBLK
     use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
@@ -136,6 +140,12 @@ contains
 
   !=====================================================================
   subroutine ground_mag_perturb_fac(nMag, Xyz_DI, MagPerturb_DI)
+    ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
+    ! pertubation of the magnetic field (returned as MagPerturb_DI) due
+    ! to "gap region" field-aligned currents.  These are the FACs taken 
+    ! towards the inner boundary of BATS-R-US and mapped to ionospheric
+    ! altitudes (sub-MHD locations, the so-called "gap region") along assumed
+    ! dipole field lines.
 
     use ModProcMH,         ONLY: iProc, nProc, iComm
     use ModMain,           ONLY: Time_Simulation
@@ -267,6 +277,9 @@ contains
   end subroutine ground_mag_perturb_fac
   !================================================================
   subroutine read_mag_input_file
+    ! Read the magnetometer input file which governs the number of virtual
+    ! magnetometers to be used and their location and coordinate systems.
+    ! Input values read from file are saved in module-level variables.
 
     use ModProcMH, ONLY: iProc, iComm
     use ModMain, ONLY: lVerbose
@@ -358,6 +371,10 @@ contains
        ! Number of magnetometers 
        nMagnetometer = nStat
 
+       ! Allocate IE array using nMagnetometer, initialize to zero.
+       allocate(IeMagPerturb_DII(3,2,nMagnetometer))
+       IeMagPerturb_DII = 0.0
+
        write(*,*) NameSub, ': Number of Magnetometers: ', nMagnetometer
 
        ! Save the positions (maglatitude, maglongitude)
@@ -382,6 +399,8 @@ contains
 
   !===========================================================================
   subroutine open_magnetometer_output_file
+    ! Open and initialize the magnetometer output file.  A new IO logical unit
+    ! is created and saved for future writes to this file.
 
     use ModMain,   ONLY: n_step
     use ModIoUnit, ONLY: io_unit_new
@@ -418,12 +437,15 @@ contains
     write(iUnitMag, '(1X,a)') MagName_I(nMagnetometer)
     write(iUnitMag, '(a)')  &
          'nstep year mo dy hr mn sc msc station X Y Z '// &
-         'dBn dBe dBd facdBn facdBe facdBd'
+         'dBn dBe dBd mhdBn mhdBe mhdBd facdBn facdBe facdBd ' // &
+         'JhdBn JhdBe JhdBd JpBn JpBe JpBd'
 
   end subroutine open_magnetometer_output_file
 
   !=====================================================================
   subroutine write_magnetometers
+    ! Write ground magnetometer field perturbations to file.  Values, IO units,
+    ! and other information is gathered from module level variables.
 
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
@@ -434,8 +456,7 @@ contains
 
     integer           :: iMag, iTime_I(7), iError
     !year,month,day,hour,minute,second,msecond
-    real, dimension(3):: Xyz_D, &
-         MagVarFac_D, MagVarGm_D
+    real, dimension(3):: Xyz_D, MagVarFac_D, MagVarGm_D, MagVarTotal_D
     real, dimension(3,nMagnetometer):: MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
          MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI
     real:: MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
@@ -508,13 +529,23 @@ contains
           write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
           write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
 
+          ! Get total perturbation
+          MagVarTotal_D = MagVarGm_D + MagVarFac_D +  &
+               IeMagPerturb_DII(:,1,iMag) + IeMagPerturb_DII(:,2,iMag)
+
           ! Write position of magnetometer in SGM Coords
           write(iUnitMag,'(3es13.5)',ADVANCE='NO') &
                MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_)
+          ! Write the total perturbation to file:
+          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarTotal_D
           ! Get the Mag_perturb data and Write out
           write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarGm_D
           ! Write the FACs' perturbations
-          write(iUnitMag, '(3es13.5)') MagVarFac_D
+          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarFac_D
+          ! Write the Hall current perturbation:
+          write(iUnitMag, '(3es13.5)', ADVANCE='NO') IeMagPerturb_DII(:,1,iMag)
+          ! Write the Pederson current perturbation:
+          write(iUnitMag, '(3es13.5)') IeMagPerturb_DII(:,2,iMag)
 
        end do
        call flush_unit(iUnitMag)
@@ -523,12 +554,13 @@ contains
   end subroutine write_magnetometers
 
   !=====================================================================
-
   subroutine close_magnetometer_output_file
-
+    ! Close the magnetometer output file (flush buffer, release IO unit).
     close(iUnitMag)
+    deallocate(IeMagPerturb_DII)
 
   end subroutine close_magnetometer_output_file
+
   !============================================================================
 
 end module ModGroundMagPerturb
