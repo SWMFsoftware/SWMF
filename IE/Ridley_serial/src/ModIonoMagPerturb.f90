@@ -17,10 +17,10 @@ module ModIonoMagPerturb
   public:: open_iono_magperturb_file
   public:: close_iono_magperturb_file
   public:: write_iono_magperturb_file
-  
+
   logical, public    :: save_magnetometer_data = .false., &
        Initialized_Mag_File=.false.
-  integer            :: nMagnetometer = 1
+  integer            :: nMagnetometer = 0
   integer            :: iUnitMag = -1
   integer, parameter :: MaxMagnetometer = 500
   real, dimension(2,MaxMagnetometer) :: PosMagnetometer_II
@@ -30,13 +30,17 @@ module ModIonoMagPerturb
 contains
   !======================================================================
   subroutine iono_mag_perturb(nMag, Xyz0_DI, JhMagPerturb_DI, JpMagPerturb_DI)
+    ! For a series of nMag virtual observatories at SMG coordinates Xyz0_DI, 
+    ! calculate the magnetic pertubation from the ionospheric Pederson currents
+    ! (JpMagPerturb_DI) and Hall currents (JhMagPerturb_DI) in three orthogonal
+    ! directions.
 
     use CON_planet_field, ONLY: get_planet_field
 
     implicit none
 
     integer,intent(in)                     :: nMag
-    real,   intent(in), dimension(3,nMag)  :: Xyz0_DI
+    real,   intent(in),  dimension(3,nMag) :: Xyz0_DI
     real,   intent(out), dimension(3,nMag) :: JhMagPerturb_DI, JpMagPerturb_DI
 
     integer, parameter :: nTheta = IONO_nTheta, nPsi = IONO_nPsi
@@ -202,6 +206,8 @@ contains
 
   !=====================================================================
   subroutine open_iono_magperturb_file
+    ! Open and initialize the magnetometer output file.  A new IO logical unit
+    ! is created and saved for future writes to this file.
 
     use ModIoUnit, ONLY: io_unit_new
     implicit none
@@ -230,7 +236,73 @@ contains
   end subroutine open_iono_magperturb_file
 
   !======================================================================
+  subroutine get_iono_magperturb_now(PerturbJh_DI, PerturbJp_DI, Xyz_DI)
+    ! For all virtual magnetometers, update magnetometer coordinates in SMG 
+    ! coordinates.  Then, calculate the perturbation from the Hall and Pederson 
+    ! currents and return them to caller as PerturbJhOut_DI, PerturbJpOut_DI.
+    ! Updated magnetometer coordinates are also returned as Xyz_DI.
+
+    use CON_axes, ONLY: transform_matrix
+    use ModMpi
+
+    implicit none
+
+    real, intent(out), dimension(3,nMagnetometer) :: PerturbJh_DI, PerturbJp_DI
+    real, intent(out), dimension(3,nMagnetometer) :: Xyz_DI
+
+    real, dimension(3,nMagnetometer):: MagVarSum_Jh_DI, MagVarSum_Jp_DI
+    real, dimension(3):: Xyz_D
+    real, dimension(3,3) :: MagtoGsm_DD, GsmtoSmg_DD
+
+    integer :: iMag, iError
+    !--------------------------------------------------------------------------
+
+    ! Create rotation matrices.
+    MagtoGsm_DD = transform_matrix(Time_Simulation, MagInCoord, 'GSM')
+    GsmtoSmg_DD = transform_matrix(Time_Simulation, 'GSM', 'SMG')
+
+    ! Get current positions of magnetometers in SMG coordinates.
+    do iMag = 1 , nMagnetometer
+       ! (360,360) is for the station at the center of the planet
+       if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
+            nint(PosMagnetometer_II(2,iMag)) == 360) then
+          Xyz_DI(:,iMag) = 0.0
+       else
+          call  sph_to_xyz(IONO_Radius,             &
+               (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
+               PosMagnetometer_II(2,iMag)*cDegToRad,      &
+               Xyz_D)
+          Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
+          Xyz_DI(:,iMag) = matmul(GsmtoSmg_DD, Xyz_D)
+       end if
+
+    end do
+
+    ! calculate the magnetic perturbation caused by Hall and Perdersen currents
+    call iono_mag_perturb(nMagnetometer, Xyz_DI, PerturbJh_DI, PerturbJp_DI)
+
+     !\
+     ! Collect the variables from all the PEs
+     !/
+    MagVarSum_Jh_DI = 0.0
+    MagVarSum_Jp_DI = 0.0
+    if(nProc>1)then 
+       call MPI_reduce(PerturbJh_DI, MagVarSum_Jh_DI, 3*nMagnetometer, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       call MPI_reduce(PerturbJp_DI, MagVarSum_Jp_DI, 3*nMagnetometer, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       if(iProc==0) then
+          PerturbJh_DI = MagVarSum_Jh_DI
+          PerturbJp_DI = MagVarSum_Jp_DI
+       end if
+    end if
+    
+  end subroutine get_iono_magperturb_now
+  !======================================================================
   subroutine read_mag_input_file
+    ! Read the magnetometer input file which governs the number of virtual
+    ! magnetometers to be used and their location and coordinate systems.
+    ! Input values read from file are saved in module-level variables.
 
     use ModMpi
 
@@ -302,7 +374,6 @@ contains
     if(DoTest)write(*,*) NameSub,': nstat=',nStat
 
     ! Number of magnetometers                    
-
     nMagnetometer = nStat
 
     write(*,*) NameSub, ': Number of Magnetometers: ', nMagnetometer
@@ -318,85 +389,53 @@ contains
 
   !======================================================================
   subroutine write_iono_magperturb_file
+    ! For all virtual magnetometers, calculate the pertubation from the Hall and
+    ! Pederson currents and write them to file.
 
-    use CON_axes, ONLY: transform_matrix
     use ModMpi
     use ModUtilities, ONLY: flush_unit
+    
     implicit none
 
-    real, dimension(3,nMagnetometer):: Xyz_DI, MagPerturbJh_DI, MagPerturbJp_DI, &
-         MagVarSum_Jh_DI, MagVarSum_Jp_DI
-    real, dimension(3):: Xyz_D
-    real, dimension(3,3) :: MagtoGsm_DD, GsmtoSmg_DD
-    integer :: iMag, iError, i
+    real, dimension(3,nMagnetometer):: MagPerturbJh_DI, MagPerturbJp_DI, Xyz_DI
+    integer :: iMag, i
+    !---------------------------------------------------------------------
 
-    MagtoGsm_DD = transform_matrix(Time_Simulation, &
-         MagInCoord, 'GSM')
-    GsmtoSmg_DD = transform_matrix(Time_Simulation, 'GSM', 'SMG')
-
-    do iMag = 1 , nMagnetometer
-       ! (360,360) is for the station at the center of the planet
-       if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
-            nint(PosMagnetometer_II(2,iMag)) == 360) then
-          Xyz_DI(:,iMag) = 0.0
-       else
-          call  sph_to_xyz(IONO_Radius,             &
-               (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
-               PosMagnetometer_II(2,iMag)*cDegToRad,      &
-               Xyz_D)
-          Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
-          Xyz_DI(:,iMag) = matmul(GsmtoSmg_DD, Xyz_D)
-       end if
-
-    end do
-    ! calculate the magnetic perturbation caused by Hall and Perdersen currents
-    call iono_mag_perturb(nMagnetometer, Xyz_DI, MagPerturbJh_DI, MagPerturbJp_DI)
-
-     !\
-     ! Collect the variables from all the PEs
-     !/
-      MagVarSum_Jh_DI = 0.0
-      MagVarSum_Jp_DI = 0.0
-      if(nProc>1)then 
-         call MPI_reduce(MagPerturbJh_DI, MagVarSum_Jh_DI, 3*nMagnetometer, &
-              MPI_REAL, MPI_SUM, 0, iComm, iError)
-         call MPI_reduce(MagPerturbJp_DI, MagVarSum_Jp_DI, 3*nMagnetometer, &
-              MPI_REAL, MPI_SUM, 0, iComm, iError)
-         if(iProc==0) then
-            MagPerturbJh_DI = MagVarSum_Jh_DI
-            MagPerturbJp_DI = MagVarSum_Jp_DI
-         end if
-      end if
+    ! Calculate pertubation on all procs:
+    call get_iono_magperturb_now(MagPerturbJh_DI, MagPerturbJp_DI, Xyz_DI)
     
-     if(iProc==0) then
-       do iMag = 1, nMagnetometer
-          ! writing
-          write(iUnitMag,'(i8)',ADVANCE='NO') nSolve
-          write(iUnitMag,'(i5,5(1x,i2.2),1x,i3.3)',ADVANCE='NO') &
-               (Time_array(i),i=1,7)
-          write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
+    ! Write file only on iProc=0:
+    if(iProc/=0)return
 
-          ! Write position of magnetometer in SGM Coords
-          write(iUnitMag,'(3es13.5)',ADVANCE='NO') Xyz_DI(:,iMag)
-          ! Get the magnetic perturb data and Write out
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagPerturbJh_DI(:,iMag)
-          ! Write the Jp perturbations
-          write(iUnitMag, '(3es13.5)') MagPerturbJp_DI(:,iMag)
-
-       end do
-       call flush_unit(iUnitMag)
-
-    end if
+    do iMag = 1, nMagnetometer
+       ! writing
+       write(iUnitMag,'(i8)',ADVANCE='NO') nSolve
+       write(iUnitMag,'(i5,5(1x,i2.2),1x,i3.3)',ADVANCE='NO') &
+            (Time_array(i),i=1,7)
+       write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
+       
+       ! Write position of magnetometer in SGM Coords
+       write(iUnitMag,'(3es13.5)',ADVANCE='NO') Xyz_DI(:,iMag)
+       ! Get the magnetic perturb data and Write out
+       write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagPerturbJh_DI(:,iMag)
+       ! Write the Jp perturbations
+       write(iUnitMag, '(3es13.5)') MagPerturbJp_DI(:,iMag)
+       
+    end do
+    call flush_unit(iUnitMag)
 
   end subroutine write_iono_magperturb_file
 
   !=====================================================================
   subroutine close_iono_magperturb_file
+    ! Close the magnetometer output file (flush buffer, release IO unit).
 
     implicit none
 
     close(iUnit)
 
   end subroutine close_iono_magperturb_file
+
+  !=====================================================================
 
 end module ModIonoMagPerturb

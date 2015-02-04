@@ -1331,30 +1331,66 @@ contains
   !============================================================================
 
   subroutine IE_groundmaginit_for_gm(nShareGroundMag)
-    ! Get number of shared ground magnetometers.
-    use ModIeGeoindices, ONLY: nIndexMag, init_geoindices
+    ! Get number of shared ground magnetometers between IE and GM and prepare
+    ! this value for broadcasting to the GM module.
+
+    use ModIonoMagPerturb, ONLY: nMagnetometer
+    use ModIeGeoindices,   ONLY: nIndexMag, init_geoindices
 
     integer, intent(out) :: nShareGroundMag
 
     call init_geoindices
-    nShareGroundMag=nIndexMag
+
+    nShareGroundMag=nIndexMag + nMagnetometer
 
   end subroutine IE_groundmaginit_for_gm
 
   !============================================================================
 
-  subroutine IE_get_mag_for_gm(Buffer_DI, iSize)
+  subroutine IE_get_mag_for_gm(Buffer_DII, iSize)
+    ! For all virtual magnetometers and virtual index magnetometers, collect
+    ! the magnetic pertubation calculated from the IE/Ridley_serial results.
+    ! These values are returned to the GM module to calculate the total
+    ! pertubation experienced by each station.
+    ! iSize is the number of expected magnetometers for successful coupling.
+    ! Buffer_DII is an array that hold all values to be passed to GM.
 
-    use ModIeGeoindices, ONLY: get_index_mags, nIndexMag
+    use ModIonoMagPerturb, ONLY: nMagnetometer, get_iono_magperturb_now
+    use ModIeGeoindices,   ONLY: get_index_mags, nIndexMag
 
     integer, intent(in):: iSize
-    real, intent(out)  :: Buffer_DI(3,iSize)
+    real, intent(out)  :: Buffer_DII(3,2,iSize)
+    
+    real, dimension(3, nIndexMag)     :: IndexMagJh_DI, IndexMagJp_DI
+    real, dimension(3, nMagnetometer) :: VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI
+    integer :: i
     character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
+    !--------------------------------------------------------------------------
+    ! Initialize Buffer to zero.
+    Buffer_DII = 0.0
 
-    if(nIndexMag.ne.iSize) call CON_stop( &
+    if( (nIndexMag+nMagnetometer) .ne. iSize) call CON_stop( &
          NameSub//' Number of magnetometers does not match!')
 
-    call get_index_mags(Buffer_DI)
+    if (nIndexMag>0) then
+       ! Obtain hall/pederson perturbs for index magnetometers:
+       call get_index_mags(IndexMagJh_DI, IndexMagJp_DI)
+       ! Place hall and pederson perturbs into Buffer.
+       do i=1, nIndexMag 
+          Buffer_DII(:,1,i) = IndexMagJh_DI(:,i)
+          Buffer_DII(:,2,i) = IndexMagJp_DI(:,i)
+       end do
+    end if
+
+    if (nMagnetometer>0) then
+       ! Obtain hall/pederson perturbs for regular magnetometers:
+       call get_iono_magperturb_now(VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI)
+       ! Place hall and pederson perturbs into Buffer.
+       do i=1+nIndexMag, nIndexMag+nMagnetometer
+          Buffer_DII(:,1,i) = VirtMagJh_DI(:,i-nIndexMag)
+          Buffer_DII(:,2,i) = VirtMagJp_DI(:,i-nIndexMag)
+       end do
+    end if
 
   end subroutine IE_get_mag_for_gm
 

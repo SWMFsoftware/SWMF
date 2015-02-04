@@ -64,18 +64,22 @@ contains
   end subroutine init_geoindices
 
   !===========================================================================
-  subroutine get_index_mags(MagOut_DI)
-    ! Obtain index-related magnetometer data to pass to BATS-R-US.
+  subroutine get_index_mags(MagJhOut_DI, MagJpOut_DI)
+    ! Obtain index-related magnetometer perturbations from Hall (MagJhOut_DI)
+    ! Pederson (MagJpOut_DI) currents to pass to the GM module.
+
     use ModIonoMagPerturb, ONLY: iono_mag_perturb
     use ModProcIE,         ONLY: nProc, iComm
     use ModMpi
 
-    real, intent(out) :: MagOut_DI(3,nIndexMag) ! Mag B in NED coordinates.
+    ! Mag B in NED coordinates.
+    real, intent(out), dimension(3,nIndexMag) :: MagJhOut_DI, MagJpOut_DI 
 
     integer:: i, iError
     real, dimension(3,nIndexMag) :: &
          XyzSmg_DI, MagPerturbJh_DI, MagPerturbJp_DI, &
-         MagPertTotal_DI
+         MagPertTotalJh_DI, MagPertTotalJp_DI
+
 
     character(len=*), parameter :: NameSub='get_index_mags'
     logical :: DoTest, DoTestMe
@@ -101,17 +105,18 @@ contains
     if( nIndexMag .ne. (i-1) ) call CON_stop(&
          NameSub//' Indexing error!  Not all magnetometers accounted for.')
 
-    ! Collect Hall and Pedersen B pertubations, sum them.
-    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturbJh_DI, &
-         MagPerturbJp_DI)
-    MagPertTotal_DI = MagPerturbJh_DI + MagPerturbJp_DI
+    ! Collect Hall and Pedersen B perturbations.
+    call iono_mag_perturb(nIndexMag, XyzSmg_DI, MagPerturbJh_DI, MagPerturbJp_DI)
 
     ! Collect the variables from all the PEs
     if(nProc>1)then 
-       call MPI_allreduce(MagPertTotal_DI, MagOut_DI, 3*nIndexMag, &
+       call MPI_allreduce(MagPertTotalJh_DI, MagJhOut_DI, 3*nIndexMag, &
+            MPI_REAL, MPI_SUM, iComm, iError)
+       call MPI_allreduce(MagPertTotalJp_DI, MagJpOut_DI, 3*nIndexMag, &
             MPI_REAL, MPI_SUM, iComm, iError)
     else
-       MagOut_DI = MagPertTotal_DI
+       MagJhOut_DI = MagPertTotalJh_DI
+       MagJpOut_DI = MagPertTotalJp_DI
     end if
 
   end subroutine get_index_mags
