@@ -66,6 +66,14 @@ contains
     !EOP
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    ! Get number of shared magnetometers from IE to the GM processors
+    if(is_proc(IE_)) call IE_groundmaginit_for_gm(nShareGroundMag)
+    call transfer_integer(IE_, GM_, nShareGroundMag, UseSourceRootOnly=.false.)
+
+    if(DoTest) &
+         write(*,'(a,i3.3)') 'nShareGroundMag=', nShareGroundMag
+
     if(IsInitialized) RETURN
     IsInitialized = .true.
     
@@ -74,12 +82,6 @@ contains
     iSize = Grid_C(IE_) % nCoord_D(1)
     jSize = Grid_C(IE_) % nCoord_D(2)
 
-    ! Get number of shared magnetometers from IE to the GM processors
-    if(is_proc(IE_)) call IE_groundmaginit_for_gm(nShareGroundMag)
-    call transfer_integer(IE_, GM_, nShareGroundMag, UseSourceRootOnly=.false.)
-
-    if(DoTest) &
-         write(*,'(a,i3.3)') 'nShareGroundMag=', nShareGroundMag
 
   end subroutine couple_gm_ie_init
 
