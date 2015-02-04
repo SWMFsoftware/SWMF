@@ -638,6 +638,7 @@ contains
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
+    real :: PeGhost, DPAvrOverDsSi, DPAvrOverDs, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -756,11 +757,15 @@ contains
        ! between the required value DTeOverDs and the temperature gradient
        ! calculated with the floating BC 
        !/ 
-
+       !\
+       ! Trasformation coefficient -Delta R/b_R, exclude the division by zero.
+       !/
+       MinusDeltaROverBR = 1/&
+            min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
+            * BDir_D),-0.1*sqrt(&
+            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))) 
        TeGhost = Te_G(0, j, k) +(&
-            DTeOverDs - sum(FaceGrad_D*BDir_D) )/&
-            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D)
+            DTeOverDs - sum(FaceGrad_D*BDir_D) )*MinusDeltaROverBR
        if(DoTestMe.and.j==jTest.and.k==kTest)then
           write(*,*)'TeSi=',TeSi,' K'
           write(*,*)'BDir_D=',BDir_D
