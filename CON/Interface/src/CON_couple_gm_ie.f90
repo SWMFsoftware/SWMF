@@ -114,7 +114,7 @@ contains
     real, dimension(:,:,:), allocatable :: Buffer_IIV
 
     ! Buffer for magnetometer sharing.
-    real, dimension(:,:), allocatable   :: Buffer_DI
+    real, dimension(:,:,:), allocatable   :: Buffer_DII
 
     ! Number of variables to pass (potential,jouleheating)
     integer, parameter :: nVar = 2
@@ -137,15 +137,15 @@ contains
     deallocate(Buffer_IIV)
 
     if(nShareGroundMag>0)then
-       allocate(Buffer_DI(3,nShareGroundMag))
+       allocate(Buffer_DII(3,2,nShareGroundMag))
        ! Collect magnetometer values if sharing ground mags.
-       if(is_proc(IE_))call IE_get_mag_for_gm(Buffer_DI, nShareGroundMag)
+       if(is_proc(IE_))call IE_get_mag_for_gm(Buffer_DII, nShareGroundMag)
 
        ! The magnetometer data is allreduced onto all the IE processors
-       call transfer_real_array(IE_, GM_, 3*nShareGroundMag, Buffer_DI, &
+       call transfer_real_array(IE_, GM_, 6*nShareGroundMag, Buffer_DII, &
             UseSourceRootOnly=.false.)
-       if(is_proc(GM_))call GM_put_mag_from_ie(Buffer_DI, nShareGroundMag)
-       deallocate(Buffer_DI)
+       if(is_proc(GM_))call GM_put_mag_from_ie(Buffer_DII, nShareGroundMag)
+       deallocate(Buffer_DII)
     end if
 
     if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
