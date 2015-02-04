@@ -134,7 +134,7 @@ contains
   !/
   subroutine solve_boundary_thread(j, k, iBlock, &
        TeSiIn, PeSiIn, USiIn, AMinorIn,          &
-       DTeOverDsSiOut, PAvrSiOut, AMajorOut,DPAvrOverDsSiOut)
+       DTeOverDsSiOut, PAvrSiOut, AMajorOut)
     !\
     ! USE:
     !/
@@ -171,7 +171,7 @@ contains
     !AMajorOut: For the wave propagating outward the Sun
     !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2  
     !/
-    real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut, DPAvrOverDsSiOut
+    real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut
 
     !\
     ! Arrays and table numbers needed to use lookup table
@@ -296,10 +296,6 @@ contains
             (HeatCondParSi * TeSiIn**2.50)    
 
        AMajorOut = AWValue_V(APlusBC_)
-       !\
-       ! No way to find the pressure gradient
-       !/
-       DPAvrOverDsSiOut = 0.0
        if(DoTestMe)then
           write(*,*)'Dimensionless length characteristic of AW dissipation=',&
             AWLength
@@ -561,9 +557,6 @@ contains
          (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
     PAvrSiOut = PAvrSi_I(nPoint)
-    DPAvrOverDsSiOut = 0.0!(PAvrSi_I(nPoint) - PAvrSi_I(nPoint-1))/&
-         !(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
-         !BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)) 
     AMajorOut = AWValue_V(APlusBC_)
     if(DoTestMe)then
        write(*,*)'Pressure 1D (SI) = ',PAvrSiOut
@@ -645,7 +638,6 @@ contains
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
     real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
-    real :: PeGhost, DPAvrOverDsSi, DPAvrOverDs, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -751,10 +743,8 @@ contains
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
-            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor,&
-            DPAvrOverDsSiOut=DPAvrOverDsSi)
+            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
-       DPAvrOverDs = DPAvrOverDsSi/Si2No_V(UnitX_)
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
@@ -766,15 +756,11 @@ contains
        ! between the required value DTeOverDs and the temperature gradient
        ! calculated with the floating BC 
        !/ 
-       !\
-       ! Trasformation coefficient -Delta R/b_R, exclude the division by zero.
-       !/
-       MinusDeltaROverBR = 1/&
-            min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D),-0.1*sqrt(&
-            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))) 
+
        TeGhost = Te_G(0, j, k) +(&
-            DTeOverDs - sum(FaceGrad_D*BDir_D) )*MinusDeltaROverBR
+            DTeOverDs - sum(FaceGrad_D*BDir_D) )/&
+            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
+            * BDir_D)
        if(DoTestMe.and.j==jTest.and.k==kTest)then
           write(*,*)'TeSi=',TeSi,' K'
           write(*,*)'BDir_D=',BDir_D
@@ -808,8 +794,7 @@ contains
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
                TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
                USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
-               DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor,&
-               DPAvrOverDsSiOut=DPAvrOverDsSi) 
+               DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
                DTeOverDsSi)/(0.01*TeSi)
@@ -820,10 +805,11 @@ contains
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k), 0.0)
           CYCLE
        end if
+
        !\
        ! 
        !/
-       State_VG(iP, 0, j, k) = (PAvrSi + DPAvrOverDs*MinusDeltaROverBR)*&
+       State_VG(iP, 0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
             sqrt(AverageIonCharge)/PeFraction
        !\
        !Exponential extrapolation of pressure
