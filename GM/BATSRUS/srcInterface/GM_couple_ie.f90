@@ -376,19 +376,36 @@ contains
   end subroutine GM_put_from_ie
 
   !==========================================================================
-  subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+  subroutine GM_put_mag_from_ie(Buffer_DII, iSize)
+    ! Get magnetometer "measurements" from IE.  They are received via input
+    ! array Buffer_DII, which has dimensions (3x2xiSize) where iSize should
+    ! equal the total number of shared magnetometers.
 
-    ! Get magnetometer "measurements" from IE.
-    use ModGmGeoindices, ONLY: nKpMag, MagPerbIE_DI
+    use ModGroundMagPerturb, ONLY: nMagnetometer, IeMagPerturb_DII
+    use ModGmGeoindices,     ONLY: nIndexMag, MagPerbIE_DI
 
     integer, intent(in) :: iSize
-    real, intent(in)    :: Buffer_DI(3,iSize)
+    real, intent(in)    :: Buffer_DII(3,2,iSize)
 
     character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
+    logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
-    if(nKpMag .ne. iSize)call CON_stop(NameSub// &
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe)write(*,*)NameSub, ' nIndexMag, nMag, iSize = ', &
+         nIndexMag, nMagnetometer, iSize
+
+    if( (nIndexMag+nMagnetometer) .ne. iSize)call CON_stop(NameSub// &
          ' Number of shared magnetometers does not match!')
-    MagPerbIE_DI = Buffer_DI
+    
+    ! Place geomagnetic index data into right place (combine hall+pederson):
+    if (nIndexMag>0) &
+         MagPerbIE_DI(:,:) = Buffer_DII(:,1,1:nIndexMag) &
+         + Buffer_DII(:,2,1:nIndexMag)
+
+    ! Place regular mag data into right place (keep hall/pederson separate):
+    if (nMagnetometer>0) &
+         IeMagPerturb_DII = Buffer_DII(:,:,nIndexMag+1:)
 
   end subroutine GM_put_mag_from_ie
 
