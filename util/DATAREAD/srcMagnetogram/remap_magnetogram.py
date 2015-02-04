@@ -25,7 +25,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
          if not specified, will be set to the same as the input file
     nlong (optional) = desired number of longitude points in output
         if not specified, will be set to the same as the input file
-    out_grid (optional), choices are 'sin(lat)' or 'regular'
+    out_grid (optional), choices are 'sin(lat)' or 'uniform'
         if not specified, the output grid will be the same type
     If nlat, nlong and out_grid are ALL left out, no remapping is done,
         and the code simply reformats.
@@ -35,8 +35,8 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
     """
     pi = 3.141592653589793
 
-    if ( (out_grid != 'sin(lat)') and (out_grid != 'regular') and (out_grid != 'unspecified') ):
-        print "Unknown output grid type.  Choices are blank, 'unspecified', 'regular' and 'sin(lat)' "
+    if ( (out_grid != 'sin(lat)') and (out_grid != 'uniform') and (out_grid != 'unspecified') ):
+        print "Unknown output grid type.  Choices are blank, 'unspecified', 'uniform' and 'sin(lat)' "
         return(-1)
     
     cc =  FITS_RECOGNIZE(inputfile)
@@ -53,9 +53,9 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
     #what kind of transformation are we doing?
     if grid_type == out_grid:
         transformation = 'rebin' #no change in grid type, so just rebin
-    elif ( (grid_type == 'regular') and (out_grid == 'sin(lat)') ):
+    elif ( (grid_type == 'uniform') and (out_grid == 'sin(lat)') ):
         transformation = 'reg2sin'
-    elif ( (grid_type == 'sin(lat)') and (out_grid == 'regular') ):
+    elif ( (grid_type == 'sin(lat)') and (out_grid == 'uniform') ):
         transformation = 'sin2reg'
     else:
         print "Unknown transformation type."
@@ -101,7 +101,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
 
     if out_grid == 'sin(lat)':
         newlat = (180/pi)*np.arcsin(np.linspace(-1. + 1./2/nlat,1. - 1./2/nlat,nlat))
-    elif out_grid == 'regular':
+    elif out_grid == 'uniform':
         newlat = (180/pi)*np.linspace(-pi/2 + pi/2/nlat,pi/2 - pi/2/nlat,nlat)
     else:
         print "out_grid incorrectly set."
@@ -172,7 +172,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
     #test for flux conservation in the transformation        
     test_flux = False 
     if test_flux:
-        if grid_type == 'regular':
+        if grid_type == 'uniform':
             latt =  np.cos(np.linspace(-pi/2 + pi/2/nla,pi/2 - pi/2/nla,nla))
             cosgrid = np.kron(latt,np.ones((nlo,1))).T
             oldflux = np.sum(np.multiply(cosgrid,d))*2.*pi*pi/nlo/nla
@@ -181,7 +181,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
         else:
             print "Bad grid_type."
             return(-1)
-        if out_grid == 'regular':
+        if out_grid == 'uniform':
             latt =  np.cos(np.linspace(-pi/2 + pi/2/nlat,pi/2 - pi/2/nlat,nlat))
             cosgrid = np.kron(latt,np.ones((nlong,1))).T
             newflux = np.sum(np.multiply(cosgrid,newmap))*2.*pi*pi/nlong/nlat
@@ -201,7 +201,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
 
     if CRnumber == '0':    
         try :
-            CRnumber = str(g[0].header['CAR_ROT']) #works on GONG
+            CRnumber = str(g[0].header['CAR_ROT']) #works on GONG and MDI
         except KeyError,er:
             CRnumber = '0'
 
@@ -219,6 +219,16 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
             except KeyError, er:
                 mapdate = '0000-00-00T00:00:00'
 
+        if mapdate == '0000-00-00T00:00:00':    
+            try :
+                mapdate = g[0].header['T_OBS']  #works for MDI
+            except KeyError, er:
+                mapdate = '0000-00-00T00:00:00'
+    try:
+        bunit = g[0].header['BUNIT']  #works on GONG, MDI
+    except KeyError, er:   #Hathaway and ADAPT don't list units
+        bunit = 'Gauss'  #assume it's Gauss if you don't know
+                
     try :
         long0 = g[0].header['LONG0'] #works on GONG 
     except KeyError, er:
@@ -227,7 +237,7 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
     #ascii output file, Gabor format, the first line is arbitary
     fid = open(outputfile,'w')
     
-    line0 = 'magnetogram type = '+magtype+', grid_type = sin(lat), CR'+CRnumber+ ', MapDate = '+mapdate+', units: [Deg], [G], created at: '+time.ctime()+'\n' 
+    line0 = 'magnetogram type = '+magtype+', grid_type = sin(lat), CR'+CRnumber+ ', MapDate = '+mapdate+', units: ['+bunit+'], created at: '+time.ctime()+'\n' 
     fid.write(line0)
     line0 = '       0      0.00000       2       1       1 \n'
     fid.write(line0)
@@ -259,9 +269,6 @@ def remap(inputfile, outputfile, nlat = -1, nlong = -1, out_grid = 'unspecified'
     g.close()
     fid.close()
     return(newmap,d)
-
-
-
     
 
 def FITS_RECOGNIZE(inputfile):
@@ -341,14 +348,14 @@ def FITS_RECOGNIZE(inputfile):
         except KeyError, er:
             adapt_grid = -1.
         if adapt_grid == 1.:
-            grid_type = 'regular'
+            grid_type = 'uniform'
         else:
             print "unknown ADAPT magnetogram type"
             return(-1)
 
     if sft.find('Baseline / Assimilation') > -1:
         magnetogram_type = 'Hathaway Synchronic'
-        grid_type = 'regular'
+        grid_type = 'uniform'
 
     if  ( (magnetogram_type == 'unknown') or (grid_type == 'unknown') ):
         print "I don't recognize the type of this magnetogram."
@@ -378,40 +385,43 @@ if __name__ == '__main__':
     sin(latitude) or regular spherical grid.  If the output grid type is not
     specified, it will be the same as the original .fits file.  If the
     resolution is not specified, it will be the same as the original .fits
-    file.  From the unix command line, the calling sequence is:
+    file. The calling syntax from the command line is shown above. Some examples:
 
-    [python] remap_magnetogram inputfile outputfile [nlat] [nlong] ['uniform','sinlat']
-
+    ./remap_magnetogram.py test.fits test.out
+    ./remap_magnetogram.py test.fits test.out 180 360
+    ./remap_magnetogram.py test.fits test.out -grid=uniform
+ 
     Within Python, the remapping is done with the remap function contained
     in this file.
     
     The script uses the scipy and astropy packages that can be installed, 
     for example, with MacPorts.
     """)
-    parser.add_argument('inputfile', help='Input FITS file, incl. path')
-    parser.add_argument('outputfile', help='Output magnetogram file, incl. path')
-    parser.add_argument('nlat', nargs='?', type=int, default=-1, help='Number of latitude points, blank or -1 for no change.')
-    parser.add_argument('nlong', nargs='?', type=int, default=-1, help='Number of longitude points, blank or -1 for no change.')
-    parser.add_argument('grid_type',nargs='?',choices=['uniform','sinlat'],help="leave blank for no change.  'uniform' for uniform polar angle bins, 'sinlat' for sin(latitude) bins.")
+    parser.add_argument('inputfile', help='Input FITS file name including path')
+    parser.add_argument('outputfile', help='Output magnetogram file name including path')
+    parser.add_argument('nlat', nargs='?', type=int, default=-1, help='Number of latitude points in output. Default is same as input.')
+    parser.add_argument('nlon', nargs='?', type=int, default=-1, help='Number of longitude points in output. Default is same as input.')
+    parser.add_argument('-grid',choices=['uniform','sinlat'],help="type of latitude grid in the output. Default is same as input.")
 
     args = parser.parse_args()
 
     if args.nlat < -1:
         print "nlat must be -1 or a postive integer.  No output."
         quit()
-    if args.nlong < -1:
-        print "nlong must be -1 or a postive integer.  No output."
+    if args.nlon < -1:
+        print "nlon must be -1 or a postive integer.  No output."
         quit()
 
-    if args.grid_type == 'sinlat':
+    grid_type = 'unspecified'
+    if args.grid == 'sinlat':
         grid_type = 'sin(lat)'
-    elif args.grid_type == 'uniform':
-        grid_type = 'regular'
-    else:
-        grid_type = 'unspecified'
+    elif args.grid == 'uniform':
+        grid_type = 'uniform'
 
-    #c = FITS_RECOGNIZE(args.inputfile)
-    #print c[0]
-    #print c[1]
+    remap(args.inputfile, args.outputfile, args.nlat, args.nlon, grid_type )
 
-    remap(args.inputfile, args.outputfile, args.nlat, args.nlong, grid_type )
+    
+
+        
+
+    
