@@ -373,11 +373,11 @@ contains
 
   !==============================================================================
 
-  subroutine GM_put_mag_from_ie(Buffer_DI, iSize)
+  subroutine GM_put_mag_from_ie(Buffer_DII, iSize)
 
     implicit none
     integer, intent(in) :: iSize
-    real, intent(in)    :: Buffer_DI(3,iSize)
+    real, intent(in)    :: Buffer_DII(3,2,iSize)
     character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
     call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
