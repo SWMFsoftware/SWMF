@@ -2,6 +2,9 @@
 
 #include "Sputtering.h"
 
+double Sputtering::Ice::GetSputteringSpeed(int spec, double* v){
+}
+
 // description of Martin Rubin's model ----------------------------------------
 inline double Sputtering::Ice::Rubin::SputteringYield(double speed,
 						      int spec_projectile,
