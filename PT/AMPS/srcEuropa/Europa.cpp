@@ -563,14 +563,14 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   long int newParticle;
 
   switch (spec) {
-  case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_: case _O2PLUS_SPEC_:
+  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_:
 
 #if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
     switch (spec) {
-    case _OPLUS_THERMAL_SPEC_: case _OPLUS_HIGH_SPEC_:
+    case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_:
       Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
       break;
-    case _O2PLUS_SPEC_:
+    case _O2_PLUS_SPEC_:
       Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O2_),2);
       break;
     default:
@@ -1067,10 +1067,10 @@ double Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjectionRate(int s
       BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
 
       //high energy ions (O+)
-      if (spec==_OPLUS_HIGH_SPEC_) res+=GetTotalProductionRate(spec)*BlockSurfaceArea;
+      if (spec==_O_PLUS_HIGH_SPEC_) res+=GetTotalProductionRate(spec)*BlockSurfaceArea;
 
       //thermal ions (O+)
-      if (spec==_OPLUS_THERMAL_SPEC_) res+=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Thermal_OPlus_NumberDensity,Thermal_OPlus_Temperature,Thermal_OPlus_BulkVelocity,ExternalNormal,spec)*BlockSurfaceArea;
+      if (spec==_O_PLUS_THERMAL_SPEC_) res+=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Thermal_OPlus_NumberDensity,Thermal_OPlus_Temperature,Thermal_OPlus_BulkVelocity,ExternalNormal,spec)*BlockSurfaceArea;
     }
   }
 

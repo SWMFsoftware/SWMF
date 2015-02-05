@@ -177,7 +177,7 @@ namespace Europa {
   //the condition of the particle trajectory tracking
   namespace ParticleTracker {
     inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
-      return (spec==_O2PLUS_SPEC_) ? true : false;
+      return (spec==_O2_PLUS_SPEC_) ? true : false;
     }
   }
 
@@ -1011,7 +1011,7 @@ namespace Europa {
       PIC::ParticleBuffer::byte *newParticleData;
       long int nInjectedParticles=0;
 
-      if (Spec!=_OPLUS_HIGH_SPEC_) return 0; //inject only O ions
+      if (Spec!=_O_PLUS_HIGH_SPEC_) return 0; //inject only O ions
 
 
 
@@ -1038,10 +1038,10 @@ namespace Europa {
 
 
           //inject thermal O ions
-          ParticleWeight=startNode->block->GetLocalParticleWeight(_OPLUS_THERMAL_SPEC_);
-          LocalTimeStep=startNode->block->GetLocalTimeStep(_OPLUS_THERMAL_SPEC_);
+          ParticleWeight=startNode->block->GetLocalParticleWeight(_O_PLUS_THERMAL_SPEC_);
+          LocalTimeStep=startNode->block->GetLocalTimeStep(_O_PLUS_THERMAL_SPEC_);
           TimeCounter=0.0;
-          ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Thermal_OPlus_NumberDensity,Thermal_OPlus_Temperature,Thermal_OPlus_BulkVelocity,ExternalNormal,_OPLUS_THERMAL_SPEC_);
+          ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(Thermal_OPlus_NumberDensity,Thermal_OPlus_Temperature,Thermal_OPlus_BulkVelocity,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
 
           if (ModelParticlesInjectionRate>0.0) {
             ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
@@ -1052,7 +1052,7 @@ namespace Europa {
               for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim]-ExternalNormal[idim]*PIC::Mesh::mesh.EPS;
 
               //generate particles' velocity
-              PIC::Distribution::InjectMaxwellianDistribution(v,Thermal_OPlus_BulkVelocity,Thermal_OPlus_Temperature,ExternalNormal,_OPLUS_THERMAL_SPEC_,-1);
+              PIC::Distribution::InjectMaxwellianDistribution(v,Thermal_OPlus_BulkVelocity,Thermal_OPlus_Temperature,ExternalNormal,_O_PLUS_THERMAL_SPEC_,-1);
 
               //generate new particle and inject it into the system
               newParticle=PIC::ParticleBuffer::GetNewParticle();
@@ -1061,7 +1061,7 @@ namespace Europa {
 
               PIC::ParticleBuffer::SetX(x,newParticleData);
               PIC::ParticleBuffer::SetV(v,newParticleData);
-              PIC::ParticleBuffer::SetI(_OPLUS_THERMAL_SPEC_,newParticleData);
+              PIC::ParticleBuffer::SetI(_O_PLUS_THERMAL_SPEC_,newParticleData);
               PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
               Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticleData);
 
@@ -1071,10 +1071,10 @@ namespace Europa {
           }
 
           //inject the high energy O ions
-          ParticleWeight=startNode->block->GetLocalParticleWeight(_OPLUS_HIGH_SPEC_);
-          LocalTimeStep=startNode->block->GetLocalTimeStep(_OPLUS_HIGH_SPEC_);
+          ParticleWeight=startNode->block->GetLocalParticleWeight(_O_PLUS_HIGH_SPEC_);
+          LocalTimeStep=startNode->block->GetLocalTimeStep(_O_PLUS_HIGH_SPEC_);
           TimeCounter=0.0;
-          ModelParticlesInjectionRate=GetTotalProductionRate(_OPLUS_HIGH_SPEC_);
+          ModelParticlesInjectionRate=GetTotalProductionRate(_O_PLUS_HIGH_SPEC_);
 
           if (ModelParticlesInjectionRate>0.0) {
 
@@ -1188,7 +1188,7 @@ v[0]=Speed,v[1]=0.0,v[2]=0.0;
 
               PIC::ParticleBuffer::SetX(x,newParticleData);
               PIC::ParticleBuffer::SetV(v,newParticleData);
-              PIC::ParticleBuffer::SetI(_OPLUS_HIGH_SPEC_,newParticleData);
+              PIC::ParticleBuffer::SetI(_O_PLUS_HIGH_SPEC_,newParticleData);
 
               PIC::ParticleBuffer::SetIndividualStatWeightCorrection(RelWeight,newParticleData);
               Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,newParticleData);
@@ -1578,7 +1578,7 @@ inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,b
 inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
 
 
-  PIC::ParticleBuffer::SetI(_O2PLUS_SPEC_,ParticleData);
+  PIC::ParticleBuffer::SetI(_O2_PLUS_SPEC_,ParticleData);
   return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
 
 //  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
@@ -1609,13 +1609,13 @@ inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,dou
 
 
   //determine if a daugher particle should be generated
-  if (_O2PLUS_SPEC_!=-1) {
+  if (_O2_PLUS_SPEC_!=-1) {
     double TimeIntervalProduct;
     PIC::Mesh::cDataBlockAMR *block=node->block;
     long int newParticle,nDaugherParticles;
 
-    TimeIntervalProduct=TimeInterval*block->GetLocalTimeStep(_O2PLUS_SPEC_)/block->GetLocalTimeStep(_O2_SPEC_);
-    c=(1.0-exp(-TimeIntervalProduct/ParentSpeciesLifeTime))*block->GetLocalParticleWeight(_O2_SPEC_)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)/block->GetLocalParticleWeight(_O2PLUS_SPEC_); //the number of model O2+ particles generated during time interval 'TimeIntervalProduct'
+    TimeIntervalProduct=TimeInterval*block->GetLocalTimeStep(_O2_PLUS_SPEC_)/block->GetLocalTimeStep(_O2_SPEC_);
+    c=(1.0-exp(-TimeIntervalProduct/ParentSpeciesLifeTime))*block->GetLocalParticleWeight(_O2_SPEC_)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)/block->GetLocalParticleWeight(_O2_PLUS_SPEC_); //the number of model O2+ particles generated during time interval 'TimeIntervalProduct'
 
     nDaugherParticles=(int)c;
     c-=nDaugherParticles;
@@ -1634,7 +1634,7 @@ inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,dou
 
 
       PIC::ParticleBuffer::CloneParticle(newParticle,ptr);
-      PIC::ParticleBuffer::SetI(_O2PLUS_SPEC_,newParticle);
+      PIC::ParticleBuffer::SetI(_O2_PLUS_SPEC_,newParticle);
       PIC::ParticleBuffer::SetV(vFinal,newParticle);
       PIC::ParticleBuffer::SetX(x,newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticle);

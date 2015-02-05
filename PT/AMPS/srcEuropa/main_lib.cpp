@@ -254,21 +254,21 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
 //	CharacteristicSpeed=1.0E6;
 
-/*if (spec==_OPLUS_HIGH_SPEC_) CharacteristicSpeed=10.0*1.6E6;
-if (spec==_OPLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
+/*if (spec==_O_PLUS_HIGH_SPEC_) CharacteristicSpeed=10.0*1.6E6;
+if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
 
   switch (spec) {
-  case _OPLUS_HIGH_SPEC_:
+  case _O_PLUS_HIGH_SPEC_:
     CharacteristicSpeed=10.0*1.6E6;
     break;
-  case _OPLUS_THERMAL_SPEC_:
+  case _O_PLUS_THERMAL_SPEC_:
     CharacteristicSpeed=10.0*9.6E4;
     break;
 
   case _O2_SPEC_:case _H2O_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
-  case _O2PLUS_SPEC_:
+  case _O2_PLUS_SPEC_:
     CharacteristicSpeed=10*1.0e4;
     break;
   default:
@@ -320,7 +320,7 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
 	if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
 		for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
 			startNode->GetExternalNormal(ExternalNormal,nface);
-			ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_OPLUS_HIGH_SPEC_);
+			ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_HIGH_SPEC_);
 
 			if (ModelParticlesInjectionRate>0.0) return true;
 		}
@@ -341,7 +341,7 @@ long int  BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *
 	PIC::ParticleBuffer::byte *newParticleData;
 	long int nInjectedParticles=0;
 
-	if ((spec!=_OPLUS_HIGH_SPEC_)&&(spec!=_OPLUS_THERMAL_SPEC_)) return 0; //inject only spec=0
+	if ((spec!=_O_PLUS_HIGH_SPEC_)&&(spec!=_O_PLUS_THERMAL_SPEC_)) return 0; //inject only spec=0
 
 	static double vNA[3]={0.0,000.0,000.0},nNA=5.0E6,tempNA=8.0E4;
 	double v[3];
@@ -358,7 +358,7 @@ long int  BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *
 			startNode->GetExternalNormal(ExternalNormal,nface);
 			TimeCounter=0.0;
 
-			ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_OPLUS_THERMAL_SPEC_);
+			ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
 
 
 			if (ModelParticlesInjectionRate>0.0) {
@@ -375,7 +375,7 @@ long int  BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *
 					newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 					nInjectedParticles++;
 
-					PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_OPLUS_THERMAL_SPEC_);
+					PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
 
 					PIC::ParticleBuffer::SetX(x,newParticleData);
 					PIC::ParticleBuffer::SetV(v,newParticleData);
@@ -575,6 +575,10 @@ PIC::InitMPI();
 	//output the parameters of the implemented physical models
 	if (PIC::ThisThread==0) {
 	  ElectronImpact::H2O::Print("H2O-ElectronImpact.dat",PIC::OutputDataFileDirectory);
+	  ElectronImpact::O2::Print("O2-ElectronImpact.dat",PIC::OutputDataFileDirectory);
+	  ElectronImpact::H2::Print("H2-ElectronImpact.dat",PIC::OutputDataFileDirectory);
+	  ElectronImpact::O::Print("O-ElectronImpact.dat",PIC::OutputDataFileDirectory);
+	  ElectronImpact::H::Print("H-ElectronImpact.dat",PIC::OutputDataFileDirectory);
 	}
 
 
@@ -937,21 +941,21 @@ void amps_init() {
 
 	//set up the particle weight
 	PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjectionRate;
-	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_HIGH_SPEC_);
-	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_OPLUS_THERMAL_SPEC_);
+	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_HIGH_SPEC_);
+	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_THERMAL_SPEC_);
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  ==  _EXOSPHERE_SOURCE__ON_
 	//copy the weight and time step from Na neutra to Na ions
-	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
-//	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_OPLUS_THERMAL_SPEC_,1.0e4);
+	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
+//	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
 #else
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
 #endif
 
 	if (_H2O_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
 
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
-  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2PLUS_SPEC_,_OPLUS_THERMAL_SPEC_,1.0);
+  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
+  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
 
 	//set photolytic reactions
 	//PIC::ChemicalReactions::PhotolyticReactions::SetReactionProcessor(sodiumPhotoionizationReactionProcessor,_O2_SPEC_);
