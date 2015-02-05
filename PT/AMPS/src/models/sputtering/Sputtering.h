@@ -8,7 +8,7 @@
 // 2) add a corresponding branch in:
 //    - Sputtering::Init,
 //    - Sputtering::GetSputteringYield,
-//    - Sputtering::SurfaceType::GetSputteringVelocity
+//    - Sputtering::SurfaceType::GetSputteringSpeed
 //------------------------------------------------------------------------
 
 #ifndef _SPUTTERING_ 
@@ -55,7 +55,7 @@ namespace Sputtering {
     } 
     // namespace Teolis -------------------------------------------------------
 
-    void GetSputteringVelocity(int spec, double* v);
+    double GetSputteringSpeed(int spec, double* v);
   }
   // namespace Ice ============================================================
 
@@ -142,9 +142,9 @@ namespace Sputtering {
   // 2nd Master function
   //   input: species of a sputtered particle
   //  output: its velocity vector
-  void GetSputteringVelocity(int spec, double* v){
+  void GetSputteringSpeed(int spec, double* v){
 #if _SPUTTERING__SURFACE_ == _SPUTTERING__ICE_
-    Ice::GetSputteringVelocity(spec,v);
+    Ice::GetSputteringSpeed(spec,v);
 #else
     exit(__LINE__,__FILE__,"Error: sputtering surface type is not recognized");
 #endif
