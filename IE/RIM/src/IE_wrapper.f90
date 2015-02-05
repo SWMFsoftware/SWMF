@@ -1143,10 +1143,10 @@ contains
 
   !===========================================================================
 
-  subroutine IE_get_mag_for_gm(Buffer_DI, iSize)
+  subroutine IE_get_mag_for_gm(Buffer_DII, iSize)
 
     integer, intent(in):: iSize
-    real, intent(out) :: Buffer_DI(3,iSize)
+    real, intent(out) :: Buffer_DII(3,2,iSize)
 
     character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
 
