@@ -256,9 +256,8 @@ contains
        end do
     end if
 
-    if (save_magnetometer_data .and. iProc == 0) then
-       call open_magnetometer_output_file
-    end if
+    if (save_magnetometer_data .and. iProc == 0) &
+         call open_magnetometer_output_file
 
     plot_type(restart_)='restart'
     plot_type(logfile_)='logfile'
@@ -409,10 +408,13 @@ subroutine BATS_advance(TimeSimulationLimit)
      RETURN
   end if
 
-  call set_oktest(NameSub,DoTest,DoTestMe)
+  call set_oktest(NameSub, DoTest, DoTestMe)
 
   ! We are advancing in time
   time_loop = .true.
+
+  ! Some files should be saved at the beginning of the time step
+  call BATS_save_files('BEGINSTEP')
 
   ! Select block types and load balance blocks
   call BATS_select_blocks
@@ -686,6 +688,7 @@ subroutine BATS_save_files(TypeSaveIn)
   DoAssignNodeNumbers = .true.
   TypeSave = TypeSaveIn
   call upper_case(TypeSave)
+
   select case(TypeSave)
   case('INITIAL')
      ! Do not save current step or time
@@ -719,7 +722,7 @@ subroutine BATS_save_files(TypeSaveIn)
      call save_files_final
   case('FINALWITHRESTART')
      call save_files_final
-  case('NORMAL')
+  case('NORMAL', 'BEGINSTEP')
      call save_files
   case('AMRPLOTS')
      do iFile=plot_+1, plot_+nPlotFile
@@ -744,7 +747,12 @@ contains
     logical :: DoSave = .false.
     integer :: t_output_current
 
-    do ifile=1,nfile
+    do iFile = 1, nFile
+       ! We want to use the IE magnetic perturbations that were passed 
+       ! in the last coupling together with the current GM perturbations.
+       ! So BEGINSTEP and INITIAL are allowed.
+       if(iFile==magfile_ .eqv. TypeSave == 'NORMAL') CYCLE
+
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
              call save_file
@@ -783,7 +791,7 @@ contains
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
-    use ModGroundMagPerturb, ONLY: save_magnetometer_data, write_magnetometers
+    use ModGroundMagPerturb, ONLY: write_magnetometers
     use ModGmGeoindices, ONLY: DoWriteIndices, write_geoindices
     use ModMessagePass, ONLY: exchange_messages
 
@@ -914,9 +922,7 @@ contains
 
     elseif(ifile == magfile_) then
        !Cases for magnetometer files
-
        if(time_accurate) then  
-          if(.not.save_magnetometer_data)return 
           call timing_start('save_magnetometer')
           call write_magnetometers   
           call timing_stop('save_magnetometer')  
@@ -927,7 +933,7 @@ contains
        if(time_accurate .and. DoWriteIndices) call write_geoindices
     end if
 
-    n_output_last(ifile)=n_step
+    n_output_last(ifile) = n_step
 
     if(iProc==0 .and. lVerbose>0 .and. &
          ifile /= logfile_ .and. iFile /= magfile_ .and. iFile /= indexfile_ &
@@ -971,7 +977,7 @@ contains
        end do
     end if
 
-    if (DoWriteIndices) call finalize_geoindices()
+    if (DoWriteIndices) call finalize_geoindices
     if (save_magnetometer_data .and. iProc==0) &
          call close_magnetometer_output_file   
 
