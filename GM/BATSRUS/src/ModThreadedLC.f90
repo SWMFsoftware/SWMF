@@ -18,7 +18,7 @@ module ModThreadedLC
   real :: TeFraction, TiFraction, PeFraction
   real,allocatable :: Te_G(:,:,:)
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
-       TeSi_I, Cons_I, PAvrSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
+       TeSi_I, Cons_I, PeSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
        VaLog_I,  DCons_I, DXi_I, ResHeating_I, ResCooling_I, ResEnthalpy_I,&
        ResHeatCond_I
   
@@ -26,7 +26,7 @@ module ModThreadedLC
   real, parameter:: TeSiMin = 3.5e5    ![K]
   real           :: TeMin, ConsMin
 
-  real, parameter:: cCoolingPerP2 = RadCool2Si/(cBoltzmann*cBoltzmann)
+  real :: cCoolingPerPe2
   !\
   ! Gravitation potential
   !/
@@ -71,7 +71,7 @@ contains
 
     allocate(   TeSi_I(nPointThreadMax));     TeSi_I = 0.0
     allocate(   Cons_I(nPointThreadMax));     Cons_I = 0.0
-    allocate( PAvrSi_I(nPointThreadMax));   PAvrSi_I = 0.0
+    allocate( PeSi_I(nPointThreadMax));   PeSi_I = 0.0
     allocate(    Res_I(nPointThreadMax));      Res_I = 0.0
 
     allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
@@ -123,6 +123,7 @@ contains
     GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
 
     ConsMin = (2.0/7)*HeatCondParSi*TeSiMin**3.50
+    cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*AverageIonCharge)
   end subroutine init_threaded_lc
   !================================
   !\
@@ -132,7 +133,7 @@ contains
   !/
   subroutine solve_boundary_thread(j, k, iBlock, &
        iAction, TeSiIn, PeSiIn, USiIn, AMinorIn, &
-       DTeOverDsSiOut, PAvrSiOut, AMajorOut)
+       DTeOverDsSiOut, PeSiOut, AMajorOut)
     !\
     ! USE:
     !/
@@ -165,11 +166,11 @@ contains
     !OUTPUT:
     !DTeOverDsSiOut: Temperature derivative along the thread, at the end point
     !                Used to find the electron temperature in the ghostcell
-    !PAvrSiOut: The geometric mean of electron and ion pressure (\sqrt{Pe*Pi})
+    !PeSiOut: The electron pressure 
     !AMajorOut: For the wave propagating outward the Sun
     !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2  
     !/
-    real,  intent(out):: DTeOverDsSiOut, PAvrSiOut, AMajorOut
+    real,  intent(out):: DTeOverDsSiOut, PeSiOut, AMajorOut
 
     !\
     ! Arrays and table numbers needed to use lookup table
@@ -203,7 +204,6 @@ contains
     ! Loop variable
     !/
     integer :: iPoint
-    real    :: SqrtRho
 
     !\
     ! For transforming conservative to TeSi and back 
@@ -258,9 +258,9 @@ contains
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
-    PAvrSiOut = Value_V(LengthPAvrSi_)/&
+    PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-    if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PAvrSiOut
+    if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PeSiOut
     if(.not.Use1DModel)then
        RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
             TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
@@ -287,10 +287,11 @@ contains
        ! 
        ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
        !/
-       DTeOverDsSiOut = ( PAvrSiOut * Value_V(UHeat_) -  & !Radiation losses
+       DTeOverDsSiOut = ( PeSiOut/sqrt(AverageIonCharge) * &
+            Value_V(UHeat_)                           -  & !Radiation losses
             AWHeating                                    & !AW Heating
-            +USiIn * (PAvrSiOut/sqrt(AverageIonCharge))  & !5/2*U*Pi
-            *(inv_gm1 +1)*(1 + AverageIonCharge) ) /&
+            +USiIn * (PeSiOut/AverageIonCharge)          & !5/2*U*(Pi+Pe)
+            *(inv_gm1 +1)*(1 + AverageIonCharge) )/      &
             (HeatCondParSi * TeSiIn**2.50)    
 
        AMajorOut = AWValue_V(APlusBC_)
@@ -316,8 +317,8 @@ contains
     do iPoint = nPoint-1, 1, -1
        call interpolate_lookup_table(&
             iTable=iTable,           &
-            iVal=1,                  &
-            ValIn=PAvrSiOut*         &
+            iVal=LengthPAvrSi_,      &
+            ValIn=PeSiOut/sqrt(AverageIonCharge)*                       &
             BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
             Arg2In=1.0e8,            &
             Value_V=Value_V,         &
@@ -330,85 +331,27 @@ contains
     ! The analytical solution assumes constant pressure and 
     ! no heating. Calculate the pressure distribution
     !/ 
-    PAvrSi_I(1) = PAvrSiOut
+    !PeSi_I(1) = PeSiOut
     !\
     !   Hydrostatic equilibrium in an isothermal corona: 
     !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
     ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
     !/
     !GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-    do iPoint = 2, nPoint
-       PAvrSi_I(iPoint) = PAvrSi_I(iPoint-1)*&
-            exp( (0.5/TeSi_I(iPoint) + 0.5/TeSi_I(iPoint-1))*GravHydroStat*&
-            (BoundaryThreads_B(iBlock)%RInv_III(iPoint-nPoint,j,k) - &
-            BoundaryThreads_B(iBlock)%RInv_III(iPoint-1-nPoint,j,k)))
-    end do
+    !do iPoint = 2, nPoint
+    !   PeSi_I(iPoint) = PeSi_I(iPoint-1)*&
+    !        exp( (0.5/TeSi_I(iPoint) + 0.5/TeSi_I(iPoint-1))*GravHydroStat*&
+    !        (BoundaryThreads_B(iBlock)%RInv_III(iPoint-nPoint,j,k) - &
+    !        BoundaryThreads_B(iBlock)%RInv_III(iPoint-1-nPoint,j,k)))
+    !end do
+    call set_pressure
     do iIter = 1,nIter
-    !\
-    ! Now prepare to calculate Alfven wave amplitude distribution
-    !/
-    Xi_I(0) = 0.0
-    do iPoint=1,nPoint
-       !\
-       ! 1. Calculate sqrt(RhoNoDim)
-       !/
-       RhoNoDim = (PAvrSi_I(iPoint)*sqrt(AverageIonCharge)*&
-            Si2No_V(UnitEnergyDens_)/PeFraction)*&
-            TeFraction/(TeSi_I(iPoint)*Si2No_V(UnitTemperature_))
-       if(RhoNoDim<=0.0)then
-          write(*,*)'iPoint=',iPoint,' PAvrSi_I(iPoint)=',&
-               PAvrSi_I(iPoint),' TeSi_I(iPoint)=',TeSi_I(iPoint)
-          call CON_stop('Non-positive Density in '//NameSub)
-       end if
-       SqrtRho = sqrt(RhoNoDim)
-       !\
-       ! 2. Calculate Alfven wave speed
-       !/
-       VaLog_I(iPoint) = &
-            log(BoundaryThreads_B(iBlock)% B_III(iPoint-nPoint,j,k)/SqrtRho)
-       !\
-       ! 3. Calculate dimensionless length (in terms of the dissipation length
-       !/
-       DXi_I(iPoint) = &
-            (BoundaryThreads_B(iBlock)% DXi_III(iPoint-nPoint,j,k) - &
-            BoundaryThreads_B(iBlock)% DXi_III(iPoint-1-nPoint,j,k))*&
-            sqrt(SqrtRho)
-       Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint) 
-
-    end do
-    
-    !\
-    ! 4. Calculate the reflection coefficient
-    !/
-    ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
-    ReflCoef_I(0) =  ReflCoef_I(1)
-    do iPoint = 2, nPoint-2
-       ReflCoef_i(iPoint) = abs(VaLog_I(iPoint+1) - VaLog_I(iPoint))/&
-                                      (0.50*(DXi_I(iPoint+1) +  DXi_I(iPoint)))
-    end do
-    ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
-         (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
-    ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
-  
-    !\
-    ! Solve amplitudes of the Alfven waves (arrays there have dimension)
-    ! (0:nI)
-    !/
-    call solve_a_plus_minus(&
-            nI=nPoint,                      & 
-            ReflCoef_I=ReflCoef_I(0:nPoint),&
-            Xi_I=Xi_I(0:nPoint),            &
-            AMinusBC=AMinorIn,              &
-            Heating=AWValue_V(AWHeating_),  &
-            APlusBC=AWValue_V(APlusBC_),    &
-            APlusOut_I=APlus_I(0:nPoint),   &
-            AMinusOut_I=AMinus_I(0:nPoint), &
-            nIterIn=nIter+iIter)
+    call get_res_heating(nIterIn=nIter+iIter)
     !\
     ! The number of points to solve temperature is nPoint - 1
     !/
     M_I = 0.0; U_I = 0.0; L_I = 0.0; DCons_I = 0.0; ResHeatCond_I = 0.0
-    ResHeating_I = 0.0; ResCooling_I = 0.0; ResEnthalpy_I = 0.0
+    ResCooling_I = 0.0; ResEnthalpy_I = 0.0
     
     U_I(1) = -BoundaryThreads_B(iBlock)% BDsInv_III(1-nPoint,j,k)
     M_I(1) = -U_I(1)
@@ -425,16 +368,14 @@ contains
     !                  3. Add radiation cooling
     !/
 
-    ResHeating_I(1:nPoint-1) = &
-         (APlus_I(0:nPoint-2)**2 - AMinus_I(0:nPoint-2)**2)&
-         -(APlus_I(1:nPoint-1  )**2 - AMinus_I(1:nPoint-1)**2)
+
     do iPoint = 1, nPoint-1
        call interpolate_lookup_table(iTableRadCool,&
                TeSi_I(iPoint), 1.0e2, ValCooling)
        ResCooling_I(iPoint) = &
                       -BoundaryThreads_B(iBlock)%DsOverB_III(iPoint-nPoint,j,k)&
-                      *ValCooling(1)*cCoolingPerP2*&
-                      (PAvrSi_I(iPoint)/TeSi_I(iPoint))**2
+                      *ValCooling(1)*cCoolingPerPe2*&
+                      (PeSi_I(iPoint)/TeSi_I(iPoint))**2
     end do
     ResHeatCond_I(1:nPoint-1) = &
          ( Cons_I(1:nPoint-1) - Cons_I(2:nPoint))*U_I(1:nPoint-1)
@@ -452,7 +393,7 @@ contains
     ! Add enthalpy correction
     !/
     if(USiLtd>0)then
-       FluxConst = USiLtd * (PAvrSi_I(nPoint)/sqrt(AverageIonCharge))& !5/2*U*Pi
+       FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
           *(inv_gm1 +1)*(1 + AverageIonCharge)/&
             (TeSiIn*PoyntingFluxPerBSi*&
             BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
@@ -529,24 +470,7 @@ contains
 
     call interpolate_lookup_table(iTable, TeSi_I(1), 1.0e8, Value_V, &
          DoExtrapolate=.false.)
-    !\
-    ! First value is now the product of the thread length in meters times
-    ! a geometric mean pressure, so that
-    !/
-    PAvrSi_I(1) = Value_V(LengthPAvrSi_)/&
-         BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-    !\
-    !   Hydrostatic equilibrium in an isothermal corona: 
-    !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-    ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
-    !/
-    !GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-    do iPoint = 2, nPoint
-       PAvrSi_I(iPoint) = PAvrSi_I(iPoint-1)*&
-            exp( (0.5/TeSi_I(iPoint) + 0.5/TeSi_I(iPoint-1))*GravHydroStat*&
-            (BoundaryThreads_B(iBlock)%RInv_III(iPoint-nPoint,j,k) - &
-            BoundaryThreads_B(iBlock)%RInv_III(iPoint-1-nPoint,j,k)))
-    end do
+    call set_pressure
     end do
     !\
     ! Outputs
@@ -554,16 +478,113 @@ contains
     DTeOverDsSiOut = (TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
          (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
-    PAvrSiOut = PAvrSi_I(nPoint)
+    PeSiOut = PeSi_I(nPoint)
     AMajorOut = AWValue_V(APlusBC_)
     if(DoTestMe)then
-       write(*,*)'Pressure 1D (SI) = ',PAvrSiOut
+       write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
             ', dT/ds*Length=',DTeOverDsSiOut*&
             BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
     end if
+  contains
+    !=======================
+    subroutine get_res_heating(nIterIn)
+      integer, intent(in)::nIterIn
+      integer:: iPointHere
+      real    :: SqrtRho, RhoNoDim
+      !--------------------
+      !\
+      ! Now prepare to calculate Alfven wave amplitude distribution
+      !/
+      Xi_I(0) = 0.0
+      do iPointHere=1,nPoint
+         !\
+         ! 1. Calculate sqrt(RhoNoDim)
+         !/
+         RhoNoDim = (PeSi_I(iPointHere)*&
+              Si2No_V(UnitEnergyDens_)/PeFraction)*&
+              TeFraction/(TeSi_I(iPointHere)*Si2No_V(UnitTemperature_))
+         if(RhoNoDim<=0.0)then
+            write(*,*)'iPoint=',iPointHere,' PeSi_I(iPoint)=',&
+                 PeSi_I(iPointHere),' TeSi_I(iPoint)=',TeSi_I(iPointHere)
+            call CON_stop('Non-positive Density in '//NameSub)
+         end if
+         SqrtRho = sqrt(RhoNoDim)
+         !\
+         ! 2. Calculate Alfven wave speed
+         !/
+         VaLog_I(iPointHere) = &
+            log(BoundaryThreads_B(iBlock)% B_III(iPointHere-nPoint,j,k)/SqrtRho)
+         !\
+         ! 3. Calculate dimensionless length (in terms of the dissipation length
+         !/
+         DXi_I(iPointHere) = &
+              (BoundaryThreads_B(iBlock)% DXi_III(iPointHere-nPoint,j,k) - &
+              BoundaryThreads_B(iBlock)% DXi_III(iPointHere-1-nPoint,j,k))*&
+              sqrt(SqrtRho)
+         Xi_I(iPointHere) = Xi_I(iPointHere-1) + DXi_I(iPointHere) 
 
+      end do
+    
+      !\
+      ! 4. Calculate the reflection coefficient
+      !/
+      ReflCoef_I(1) = abs(VaLog_I(2) - VaLog_I(1))/(0.50*DXi_I(2) + DXi_I(1))
+      ReflCoef_I(0) =  ReflCoef_I(1)
+      do iPointHere = 2, nPoint-2
+         ReflCoef_i(iPointHere) = &
+              abs(VaLog_I(iPointHere+1) - VaLog_I(iPointHere))/&
+              (0.50*(DXi_I(iPointHere+1) +  DXi_I(iPointHere)))
+      end do
+      ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
+           (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
+      ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
+  
+      !\
+      ! Solve amplitudes of the Alfven waves (arrays there have dimension)
+      ! (0:nI)
+      !/
+      call solve_a_plus_minus(&
+           nI=nPoint,                      & 
+           ReflCoef_I=ReflCoef_I(0:nPoint),&
+           Xi_I=Xi_I(0:nPoint),            &
+           AMinusBC=AMinorIn,              &
+           Heating=AWValue_V(AWHeating_),  &
+           APlusBC=AWValue_V(APlusBC_),    &
+           APlusOut_I=APlus_I(0:nPoint),   &
+           AMinusOut_I=AMinus_I(0:nPoint), &
+           nIterIn=nIterIn)
+
+      ResHeating_I = 0.0
+      ResHeating_I(1:nPoint-1) = &
+           (APlus_I(0:nPoint-2)**2 - AMinus_I(0:nPoint-2)**2)&
+           -(APlus_I(1:nPoint-1  )**2 - AMinus_I(1:nPoint-1)**2)
+    end subroutine get_res_heating
+    !=============================
+    subroutine set_pressure
+      integer::iPointHere
+      !---------------
+      !\
+      ! First value is now the product of the thread length in meters times
+      ! a geometric mean pressure, so that
+      !/
+      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+           BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+      !\
+      !   Hydrostatic equilibrium in an isothermal corona: 
+      !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
+      ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+      !/
+      !GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+      do iPointHere = 2, nPoint
+         PeSi_I(iPointHere) = PeSi_I(iPointHere-1)*&
+            exp( (0.5/TeSi_I(iPointHere) + 0.5/TeSi_I(iPointHere-1))*&
+            GravHydroStat*&
+            (BoundaryThreads_B(iBlock)%RInv_III(iPointHere-nPoint,j,k) - &
+            BoundaryThreads_B(iBlock)%RInv_III(iPointHere-1-nPoint,j,k)))
+      end do
+    end subroutine set_pressure
   end subroutine solve_boundary_thread
   !=========================================================================
   !============================================================================!
@@ -641,8 +662,8 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PAvrSI, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
-    real :: PeGhost, DPAvrOverDsSi, DPAvrOverDs, MinusDeltaROverBR
+    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
+    real :: PeGhost, DPeOverDsSi, DPeOverDs, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -753,7 +774,7 @@ contains
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, iAction=iAction,    &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
-            DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
+            DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
@@ -808,7 +829,7 @@ contains
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
                iAction=iAction, TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
                USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
-               DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
+               DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
                DTeOverDsSi)/(0.01*TeSi)
@@ -823,8 +844,7 @@ contains
        !\
        ! 
        !/
-       State_VG(iP, 0, j, k) = PAvrSi*Si2No_V(UnitEnergyDens_)*&
-            sqrt(AverageIonCharge)/PeFraction
+       State_VG(iP, 0, j, k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        !\
        !Exponential extrapolation of pressure
        !/
