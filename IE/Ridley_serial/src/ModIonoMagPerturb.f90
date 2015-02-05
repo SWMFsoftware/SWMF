@@ -252,14 +252,13 @@ contains
 
     real, dimension(3,nMagnetometer):: MagVarSum_Jh_DI, MagVarSum_Jp_DI
     real, dimension(3):: Xyz_D
-    real, dimension(3,3) :: MagtoGsm_DD, GsmtoSmg_DD
+    real, dimension(3,3) :: MagtoSmg_DD
 
     integer :: iMag, iError
     !--------------------------------------------------------------------------
 
-    ! Create rotation matrices.
-    MagtoGsm_DD = transform_matrix(Time_Simulation, MagInCoord, 'GSM')
-    GsmtoSmg_DD = transform_matrix(Time_Simulation, 'GSM', 'SMG')
+    ! Create rotation matrix.
+    MagtoSmg_DD = transform_matrix(Time_Simulation, MagInCoord, 'SMG')
 
     ! Get current positions of magnetometers in SMG coordinates.
     do iMag = 1 , nMagnetometer
@@ -268,12 +267,10 @@ contains
             nint(PosMagnetometer_II(2,iMag)) == 360) then
           Xyz_DI(:,iMag) = 0.0
        else
-          call  sph_to_xyz(IONO_Radius,             &
+          call  sph_to_xyz(IONO_Radius, &
                (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
-               PosMagnetometer_II(2,iMag)*cDegToRad,      &
-               Xyz_D)
-          Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
-          Xyz_DI(:,iMag) = matmul(GsmtoSmg_DD, Xyz_D)
+               PosMagnetometer_II(2,iMag)*cDegToRad, Xyz_D)
+          Xyz_DI(:,iMag) = matmul(MagtoSmg_DD, Xyz_D)
        end if
 
     end do

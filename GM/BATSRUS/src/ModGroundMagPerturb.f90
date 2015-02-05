@@ -370,12 +370,9 @@ contains
 
        ! Number of magnetometers 
        nMagnetometer = nStat
-
-       ! Allocate IE array using nMagnetometer, initialize to zero.
-       allocate(IeMagPerturb_DII(3,2,nMagnetometer))
-       IeMagPerturb_DII = 0.0
-
        write(*,*) NameSub, ': Number of Magnetometers: ', nMagnetometer
+       if (nMagnetometer==0.0) call CON_stop(NameSub // &
+            ' No magnetometers found in input file!')
 
        ! Save the positions (maglatitude, maglongitude)
        do iMag=1, nMagnetometer
@@ -394,7 +391,11 @@ contains
     ! Tell the other processors the coordinates
     call MPI_Bcast(PosMagnetometer_II, 2*nMagnetometer, MPI_REAL, 0, &
          iComm, iError)
-    !-----------------------------------------------------------------------
+
+    ! Allocate IE array using nMagnetometer, initialize to zero.
+    allocate(IeMagPerturb_DII(3,2,nMagnetometer))
+    IeMagPerturb_DII = 0.0
+
   end subroutine read_mag_input_file
 
   !===========================================================================
@@ -533,19 +534,11 @@ contains
           MagVarTotal_D = MagVarGm_D + MagVarFac_D +  &
                IeMagPerturb_DII(:,1,iMag) + IeMagPerturb_DII(:,2,iMag)
 
-          ! Write position of magnetometer in SGM Coords
-          write(iUnitMag,'(3es13.5)',ADVANCE='NO') &
-               MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_)
-          ! Write the total perturbation to file:
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarTotal_D
-          ! Get the Mag_perturb data and Write out
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarGm_D
-          ! Write the FACs' perturbations
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagVarFac_D
-          ! Write the Hall current perturbation:
-          write(iUnitMag, '(3es13.5)', ADVANCE='NO') IeMagPerturb_DII(:,1,iMag)
-          ! Write the Pederson current perturbation:
-          write(iUnitMag, '(3es13.5)') IeMagPerturb_DII(:,2,iMag)
+          ! Write position of magnetometer and perturbation to file:
+          write(iUnitMag,'(18es13.5)') &
+               MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
+               MagVarTotal_D, MagVarGm_D, MagVarFac_D, &
+               IeMagPerturb_DII(:,1,iMag), IeMagPerturb_DII(:,2,iMag)
 
        end do
        call flush_unit(iUnitMag)
@@ -557,7 +550,7 @@ contains
   subroutine close_magnetometer_output_file
     ! Close the magnetometer output file (flush buffer, release IO unit).
     close(iUnitMag)
-    deallocate(IeMagPerturb_DII)
+    if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
 
   end subroutine close_magnetometer_output_file
 

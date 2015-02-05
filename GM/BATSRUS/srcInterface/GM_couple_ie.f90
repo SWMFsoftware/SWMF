@@ -395,7 +395,7 @@ contains
     if(DoTestMe)write(*,*)NameSub, ' nIndexMag, nMag, iSize = ', &
          nIndexMag, nMagnetometer, iSize
 
-    if( (nIndexMag+nMagnetometer) .ne. iSize)call CON_stop(NameSub// &
+    if( (nIndexMag+nMagnetometer) /= iSize)call CON_stop(NameSub// &
          ' Number of shared magnetometers does not match!')
     
     ! Place geomagnetic index data into right place (combine hall+pederson):

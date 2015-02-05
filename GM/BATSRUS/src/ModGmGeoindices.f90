@@ -93,7 +93,7 @@ contains
 
     ! Set number of shared magnetometers.
     if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
-    !if(DoCalcDst) nIndexMag = nIndexMag+nKpMag !Not yet implemented..
+    !if(DoCalcDst) nIndexMag = nIndexMag+nDstMag !Not yet implemented..
     ! ...etc.
 
     ! Initialize grid and arrays.  FaKe_p uses stations fixed in SMG coords.

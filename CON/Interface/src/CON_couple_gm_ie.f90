@@ -115,7 +115,7 @@ contains
     ! Buffer for the potential on the 2D IE grid
     real, dimension(:,:,:), allocatable :: Buffer_IIV
 
-    ! Buffer for magnetometer sharing.
+    ! Buffer for magnetometer sharing (3 x 2 x nMagnetometers)
     real, dimension(:,:,:), allocatable   :: Buffer_DII
 
     ! Number of variables to pass (potential,jouleheating)
@@ -139,7 +139,9 @@ contains
     deallocate(Buffer_IIV)
 
     if(nShareGroundMag>0)then
+       ! 3 directions, 2 sources (hall and peder) for each magnetometer:
        allocate(Buffer_DII(3,2,nShareGroundMag))
+
        ! Collect magnetometer values if sharing ground mags.
        if(is_proc(IE_))call IE_get_mag_for_gm(Buffer_DII, nShareGroundMag)
 
