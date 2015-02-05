@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2,O2PLUS,OPLUS_HIGH,OPLUS_THERMAL 
+SpeciesList=O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL 
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
