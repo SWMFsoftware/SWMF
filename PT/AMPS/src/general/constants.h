@@ -22,6 +22,7 @@
 //metric conversion coefficients
 #define _NANO_  1.0E-9
 #define _MICRO_ 1.0E-6
+#define _A_     1.0E-10
 
 
 //physical constants
@@ -38,6 +39,9 @@
 #define cm2m                 1.0E-2
 #define m2cm                 100.0
 
+//convert time units
+#define Min2Sec 60.0
+#define Hour2Sec 60.0*Min2Sec
 
 
 //macro funcrions for generating planet spacifica calls
