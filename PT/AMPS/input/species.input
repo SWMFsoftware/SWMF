@@ -24,15 +24,15 @@
   mass=32*_AMU_
   charge=0
   
-#component=O2PLUS
+#component=O2_PLUS
   mass=32*_AMU_
   charge=1.0     
   
-#component=OPLUS_HIGH
+#component=O_PLUS_HIGH
   mass=16*_AMU_
   charge=1.0   
   
-#component=OPLUS_THERMAL
+#component=O_PLUS_THERMAL
   mass=16*_AMU_ 
   charge=1.0 
   
