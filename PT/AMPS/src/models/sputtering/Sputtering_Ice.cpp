@@ -99,9 +99,9 @@ inline double Sputtering::Ice::Rubin::SputteringYield(double speed,
   switch(spec_projectile){
   case _H_PLUS_SPEC_:
     projectile = 0; m = _MASS_(_H_);  break;
-  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_:
+  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O_PLUS_SPEC_:
     projectile = 1; m = _MASS_(_O_);  break;
-  case _O2PLUS_SPEC_:
+  case _O2_PLUS_SPEC_:
     projectile = 2; m = _MASS_(_O2_); break;
   default:
     return 0.0;
@@ -245,9 +245,9 @@ inline double Sputtering::Ice::Teolis::SputteringYield(double speed,
   switch(spec_projectile){
   case _H_PLUS_SPEC_:
     projectile = 0; m = _MASS_(_H_);  break;
-  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_:
+  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O_PLUS_SPEC_:
     projectile = 1; m = _MASS_(_O_);  break;
-  case _O2PLUS_SPEC_:
+  case _O2_PLUS_SPEC_:
     projectile = 2; m = _MASS_(_O2_); break;
   default:
     return 0.0;
