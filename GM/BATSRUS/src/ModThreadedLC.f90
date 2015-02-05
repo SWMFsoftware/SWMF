@@ -5,7 +5,7 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       RadCool2Si
+       RadCool2Si, Use1DModel, DoInit_, Done_, Enthalpy_, Heat_
 
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
@@ -52,42 +52,40 @@ module ModThreadedLC
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
 
   integer:: iP
-
-  logical :: Use1DModel = .true.
-
+  integer, parameter:: Impl_=3
 contains
   !=========================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultiFluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux, &
-         nPointInThreadMax, HeatCondParSi
+         nPointThreadMax, HeatCondParSi
     use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
     use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
-    allocate(ReflCoef_I(0:nPointInThreadMax)); ReflCoef_I = 0.0
-    allocate(   APlus_I(0:nPointInThreadMax));    APlus_I = 0.0
-    allocate(  AMinus_I(0:nPointInThreadMax));   AMinus_I = 0.0
+    allocate(ReflCoef_I(0:nPointThreadMax)); ReflCoef_I = 0.0
+    allocate(   APlus_I(0:nPointThreadMax));    APlus_I = 0.0
+    allocate(  AMinus_I(0:nPointThreadMax));   AMinus_I = 0.0
 
-    allocate(   TeSi_I(nPointInThreadMax));     TeSi_I = 0.0
-    allocate(   Cons_I(nPointInThreadMax));     Cons_I = 0.0
-    allocate( PAvrSi_I(nPointInThreadMax));   PAvrSi_I = 0.0
-    allocate(    Res_I(nPointInThreadMax));      Res_I = 0.0
+    allocate(   TeSi_I(nPointThreadMax));     TeSi_I = 0.0
+    allocate(   Cons_I(nPointThreadMax));     Cons_I = 0.0
+    allocate( PAvrSi_I(nPointThreadMax));   PAvrSi_I = 0.0
+    allocate(    Res_I(nPointThreadMax));      Res_I = 0.0
 
-    allocate( ResHeating_I(nPointInThreadMax)); ResHeating_I = 0.0
-    allocate( ResCooling_I(nPointInThreadMax)); ResCooling_I = 0.0
-    allocate(ResEnthalpy_I(nPointInThreadMax));ResEnthalpy_I = 0.0
-    allocate(ResHeatCond_I(nPointInThreadMax));ResHeatCond_I = 0.0
+    allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
+    allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
+    allocate(ResEnthalpy_I(nPointThreadMax));ResEnthalpy_I = 0.0
+    allocate(ResHeatCond_I(nPointThreadMax));ResHeatCond_I = 0.0
 
-    allocate(      U_I(nPointInThreadMax));        U_I = 0.0
-    allocate(      L_I(nPointInThreadMax));        L_I = 0.0
-    allocate(      M_I(nPointInThreadMax));        M_I = 0.0
-    allocate(     Xi_I(0:nPointInThreadMax));     Xi_I = 0.0
-    allocate(  VaLog_I(nPointInThreadMax));    VaLog_I = 0.0
-    allocate(  DCons_I(nPointInThreadMax));    DCons_I = 0.0
-    allocate(    DXi_I(nPointInThreadMax));      DXi_I = 0.0
+    allocate(      U_I(nPointThreadMax));        U_I = 0.0
+    allocate(      L_I(nPointThreadMax));        L_I = 0.0
+    allocate(      M_I(nPointThreadMax));        M_I = 0.0
+    allocate(     Xi_I(0:nPointThreadMax));     Xi_I = 0.0
+    allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
+    allocate(  DCons_I(nPointThreadMax));    DCons_I = 0.0
+    allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
     !\
     ! TeFraction is used for ideal EOS:
     !/
@@ -133,7 +131,7 @@ contains
   ! inner boundary of the global solar corona to the photosphere
   !/
   subroutine solve_boundary_thread(j, k, iBlock, &
-       TeSiIn, PeSiIn, USiIn, AMinorIn,          &
+       iAction, TeSiIn, PeSiIn, USiIn, AMinorIn, &
        DTeOverDsSiOut, PAvrSiOut, AMajorOut)
     !\
     ! USE:
@@ -153,7 +151,7 @@ contains
     !\
     !Cell and block indexes for the boundary point
     !/
-    integer,intent(in):: j, k, iBlock 
+    integer,intent(in):: j, k, iBlock, iAction 
     !\
     ! Parameters of the state in the true cell near the boundary:
     ! TeSiIn: Temperature in K 
@@ -634,6 +632,12 @@ contains
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
 
+    !\
+    ! Determines, which action should be done with the thread 
+    ! before setting the BC
+    !/
+    integer:: iAction
+    
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
@@ -649,6 +653,11 @@ contains
     endif
 
     IsNewBlock = .true.
+    if(present(iImplBlock))then
+       iAction=Impl_
+    else
+       iAction=BoundaryThreads_B(iBlock)%iAction
+    end if
 
     !\
     ! Start from floating boundary values
@@ -742,7 +751,7 @@ contains
        U = sum(U_D*BDir_D)
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
-       call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
+       call solve_boundary_thread(j=j, k=k, iBlock=iBlock, iAction=iAction,    &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
@@ -797,7 +806,7 @@ contains
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =&
                -DTeOverDsSi
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
-               TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
+               iAction=iAction, TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
                USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
                DTeOverDsSiOut=DTeOverDsSi, PAvrSiOut=PAvrSi, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
@@ -870,5 +879,6 @@ contains
           end if
        end if
     end do; end do
+    BoundaryThreads_B(iBlock)%iAction = Done_
   end subroutine set_field_line_thread_bc
 end module ModThreadedLC

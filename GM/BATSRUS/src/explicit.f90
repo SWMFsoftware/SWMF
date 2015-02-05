@@ -27,7 +27,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use ModTimeStepControl, ONLY: calc_timestep
   use BATL_lib, ONLY: message_pass_face, IsAnyAxis
   use ModResistivity, ONLY: set_resistivity, UseResistivity
-
+  use ModFieldLineThread, ONLY: UseFieldLineThreads, Use1DModel, &
+                                advance_threads, Enthalpy_
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -204,7 +205,11 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(DoCalcTimeStep) &
           Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
 
-     if(iStage < nStage)call exchange_messages
+     if(iStage < nStage)then
+        if(UseFieldLineThreads.and.Use1DModel) &
+             call advance_threads(Enthalpy_)
+        call exchange_messages
+     end if
 
      if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
 

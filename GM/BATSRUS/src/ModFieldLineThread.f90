@@ -20,7 +20,6 @@ module ModFieldLineThread
      !Three coordinates for each point of each thread (enumerated by j and k) 
      !/
      real,pointer :: Xyz_DIII(:,:,:,:)
-
      !\ 
      ! The thread length, \int{ds}, from the photoshere to the given point 
      !/
@@ -40,7 +39,11 @@ module ModFieldLineThread
      !/
      real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
      !\
-     !  Temperature and pressure SI
+     ! The type of last update for the thread solution
+     !/
+     integer :: iAction
+     !\
+     !  Thread solution: temperature and pressure SI
      !/
      real,pointer :: TSi_III(:,:,:),PSi_III(:,:,:)
      !\
@@ -74,7 +77,7 @@ module ModFieldLineThread
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
-  integer,public :: nPointInThreadMax
+  integer,public :: nPointThreadMax
   real           :: DsThreadMin
 
   real, parameter :: RadNorm = 1.0E+22
@@ -84,7 +87,10 @@ module ModFieldLineThread
   real, public, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
        /RadNorm*Cgs2SiEnergyDens
 
+  logical,public :: Use1DModel = .true.
+
   real, public :: HeatCondParSi
+
   public:: UseFieldLineThreads
   public:: BoundaryThreads
   public:: read_threads   !Read parameters of threads
@@ -92,7 +98,7 @@ module ModFieldLineThread
   public:: set_threads
   public:: get_poynting_flux
   public:: solve_a_plus_minus
-
+  public:: advance_threads
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
   real:: PoyntingFluxPerBSi  
@@ -111,6 +117,7 @@ module ModFieldLineThread
   integer,public,parameter:: AWHeating_ = 1, APlusBC_ = 2
   integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
   integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
+  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2
 
 contains
   !=============================================================================
@@ -140,7 +147,7 @@ contains
              call nullify_thread_b(iBlock)
           end do
        end if
-       call read_var('nPointInThreadMax', nPointInThreadMax)
+       call read_var('nPointThreadMax', nPointThreadMax)
        call read_var('DsThreadMin', DsThreadMin)
     else
        if(allocated(DoThreads_B))then
@@ -209,6 +216,7 @@ contains
     integer:: iError
     !---------------------------------------------------------------------------
     nBlockSet = 0
+    nPointMin = nPointThreadMax
     do iBlock = 1, MaxBlock
        if(Unused_B(iBlock))then
           DoThreads_B(iBlock) = .false.
@@ -232,24 +240,24 @@ contains
        !/
        if(.not.IsAllocatedThread_B(iBlock))then
           allocate(BoundaryThreads_B(iBlock) % Xyz_DIII(&
-               1:nDim,-nPointInThreadMax:0,1:nJ,1:nK))
+               1:nDim,-nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % BDsInv_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % DsOverB_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % TMax_II(1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % DXi_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % B_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % TSi_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
-               -nPointInThreadMax:0,1:nJ,1:nK))
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % SignBr_II(&
@@ -400,9 +408,9 @@ contains
           B0_D = B0Start_D
           R = RStart
           if(nTrial==nCoarseMax)then
-             CosBRMin = ( (RStart**2-rBody**2)/nPointInThreadMax +Ds**2)/&
+             CosBRMin = ( (RStart**2-rBody**2)/nPointThreadMax +Ds**2)/&
                   (2*rBody*Ds)
-             if(CosBRMin>0.9)call CON_stop('Increase nPointInThreadMax')
+             if(CosBRMin>0.9)call CON_stop('Increase nPointThreadMax')
           end if
           POINTS: do
              iPoint = iPoint + 1
@@ -410,7 +418,7 @@ contains
              !If the number of gridpoints in the theads is too 
              !high, coarsen the grid
              !/
-             if(iPoint > nPointInThreadMax)CYCLE COARSEN
+             if(iPoint > nPointThreadMax)CYCLE COARSEN
              !\
              !For the previous point given are Xyz_D, B0_D, B0
              !R is only used near the photospheric end.
@@ -916,5 +924,19 @@ contains
     if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
 
   end subroutine solve_a_plus_minus
-
+  !=====================
+  subroutine advance_threads(iAction)
+    use ModMain,     ONLY: MaxBlock, Unused_B
+    integer, intent(in)::iAction
+    integer:: iBlock
+    !---------------------------------------------------------------------------
+    do iBlock = 1, MaxBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
+            call CON_stop('An attempt to advance not advanced threads')
+       BoundaryThreads_B(iBlock)%iAction = iAction
+    end do
+  end subroutine advance_threads
+  !=====================
 end module ModFieldLineThread
