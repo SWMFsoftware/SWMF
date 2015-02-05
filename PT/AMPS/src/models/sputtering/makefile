@@ -4,7 +4,7 @@ DEFAULT_TARGET : sputtering
 
 include ../../../Makefile.conf
 
-SPUTTERINGOBJ = Sputtering.o
+SPUTTERINGOBJ = Sputtering_Ice.o
 
 sputtering : $(SPUTTERINGOBJ)
 	ar -src sputtering.a $(SPUTTERINGOBJ)
