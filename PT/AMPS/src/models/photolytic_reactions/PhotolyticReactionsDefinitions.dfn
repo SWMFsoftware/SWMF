@@ -1,0 +1,5 @@
+//$Id$
+//the definitions of the photolytic reaction model
+
+#define _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_  0
+#define _PHOTOLYTIC_REACTIONS__SUN__QUIET_   1
