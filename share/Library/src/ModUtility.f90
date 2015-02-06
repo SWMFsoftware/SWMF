@@ -50,76 +50,99 @@ contains
   !BOP ========================================================================
   !ROUTINE: make_dir - Create a directory
   !INTERFACE:
-  subroutine make_dir(NameDir,perm,retval,errno)
+  subroutine make_dir(NameDir, iPermissionIn, iErrorOut, iErrorNumberOut)
 
     use iso_c_binding
 
     !INPUT ARGUMENTS:
-    character(len=*), intent(in)::NameDir ! Directory name
-    integer,optional::perm ! Octal permissions value
+    character(len=*), intent(in):: NameDir ! Directory name
+
+    integer, intent(in), optional:: iPermissionIn ! Access permission
 
     !OUTPUT ARGUMENTS:
-    integer,optional::errno ! System error number
-    integer,optional::retval ! mkdir return value
+    integer, intent(out), optional:: iErrorOut    ! 0 on success, -1 otherwise
+    integer, intent(out), optional:: iErrorNumberOut ! C error number
 
     !DESCRIPTION:
-    ! Create the directory specified by NameDir. 
-    ! The directory will have permissions 0755 (drwxr-xr-x) by default. 
-    ! If directory already exists, this function does nothing.
+    ! Create the directory specified by NameDir. Trailing spaces are ignored.
+    ! Nested directories are also allowed.
+    ! If the directory already exists, this function does nothing.
     !
-    ! The perm parameter sets the permissions for the new
+    ! The optional iPermissionIn parameter sets the permissions for the new
     ! directory. This should be specified in octal notation, which in
-    ! Fortran is written with a capital O followed by the digits in
-    ! quotes. For instance, the permissions 0755 would be written
-    ! O'0775'. Note that this subroutine honors the umask set in the
-    ! current environment. This means that the new directory may have
-    ! certain permissions turned off, even if the corresponding bits
-    ! are set to on in the permission octal passed to this
-    ! function. There is currently no way to override this.
+    ! Fortran is written with a capital O followed by the digits in quotes. 
+    ! For instance, the permissions 0755 would be written as O'0775',
+    ! which is the default value (drwxr-xr-x).
+    ! The actual directory will have permissions modified by 
+    ! the default mask (set by the Unix command umask). 
     !
-    ! The retval, errno, and msg parameters contain the return value,
-    ! error number, and error string returned from mkdir(). If no
-    ! error occurred, retval=0, otherwise retval=-1. errno and msg
-    ! will contain meaningful values only if retval=-1. The numerical
-    ! values of errno are found in errno.h and are not standardized,
+    ! The optional iErrorOut is set to 0 if no error occured and -1 otherwise. 
+    ! If iError is not present, the code stops with an error message.
+    !
+    ! The iErrorNumber contains the return value from the C mkdir() function.
+    ! Values of iErrorNumber are found in errno.h and are not standardized,
     ! so exact values of these should not be relied upon.
     !EOP
 
-    integer(c_int)::permval ! Octal permissions (value passed to C)
-    integer::c_errno ! Error number as returned from C
-    integer::c_retval ! Return value as retrieved from C
+    integer(c_int):: iPermission ! Octal permissions (value passed to C)
+    integer:: iErrorNumber       ! Error number as returned from C
+    integer:: iError             ! Return value as retrieved from C
 
     interface
-       ! Define an interface to mkdir_wrapper, which is implemented in ModUtilities_c.c.
-       integer(kind=c_int) function mkdir_wrapper(path,perm,errno) bind(C)
+       ! Interface for mkdir_wrapper implemented in ModUtility_c.c
+       integer(kind=c_int) function make_dir_c(path, perm, errno) bind(C)
          use iso_c_binding
-         character(kind=c_char), intent(in)::path
-         integer(kind=c_int),intent(in),value::perm
-         integer(kind=c_int)::errno
-       end function mkdir_wrapper
+         character(kind=c_char), intent(in):: path
+         integer(kind=c_int), intent(in), value:: perm
+         integer(kind=c_int), intent(out):: errno
+       end function make_dir_c
 
-       ! Define an interface to strerror from the C library
-       type(c_ptr) function strerror(errno) bind(C)
-         use iso_c_binding
-         integer(kind=c_int),value::errno
-       end function strerror
     end interface
 
-    if(.not. present(perm)) then
-       permval=O'0755'
+    integer:: i, j, k, l
+
+    character(len=*), parameter:: NameSub = 'make_dir'
+    !------------------------------------------------------------------------
+    if(.not. present(iPermissionIn)) then
+       iPermission = O'0755'
     else
-       permval=perm
+       iPermission = iPermissionIn
     endif
 
-    c_retval=mkdir_wrapper(NameDir//C_NULL_CHAR,permval,c_errno)
+    ! Create the directory. 
+    ! If NameDir contains one or more /, then create the top directory first
+    ! and then the subdirectories.
 
-    if(present(errno)) then
-       errno=c_errno
-    endif
+    l = len_trim(NameDir)
+    i = 1
+    do
+       ! Find the next '/' in NameDir
+       j = l
+       k = index(NameDir(i:l), '/')
+       if(k > 1) j = i + k - 1
 
-    if(present(retval)) then
-       retval=c_retval
-    endif
+       ! Create (sub)directory
+       iError = make_dir_c(NameDir(1:j)//C_NULL_CHAR, iPermission, iErrorNumber)
+
+       ! Check for errors
+       if(iError /= 0)then
+          if(present(iErrorOut))then
+             iErrorOut = iError
+             if(present(iErrorNumberOut)) iErrorNumberOut = iErrorNumber
+             RETURN
+          else
+             write(*,*) NameSub,' iError, iErrorNumber=', iError, iErrorNumber 
+             call CON_stop(NameSub//' failed to open directory '//trim(NameDir))
+          end if
+       end if
+
+       i = j + 1
+       if(i > l) EXIT
+
+    end do
+
+    if(present(iErrorOut))       iErrorOut = iError
+    if(present(iErrorNumberOut)) iErrorNumberOut = iErrorNumber
 
   end subroutine make_dir
 
@@ -147,12 +170,13 @@ contains
     ! other PE thinks that the directory does not exist.
     !EOP
 
-    character(len=*), parameter :: NameSub='check_dir'
     integer, parameter :: MaxDir=100, lNameDir=100
     integer, save :: nDir=0
 
     character(len=lNameDir), save :: NameDir_I(MaxDir)
     integer :: iDir, iError
+
+    character(len=*), parameter :: NameSub='check_dir'
     !--------------------------------------------------------------------------
     ! Only directory names shorter than lNameDir can be stored
     if(len_trim(NameDir) <= lNameDir) then
@@ -573,8 +597,7 @@ contains
     integer :: nString
     character(len=30) :: String_I(MaxString)  
     integer :: iString
-    character(len=1),allocatable,dimension(:)::errstr
-    integer::retval
+    integer:: iError
 
     character(len=*), parameter :: NameSub = 'test_mod_utility'
     !-----------------------------------------------------------------------
@@ -590,8 +613,8 @@ contains
     call make_dir('xxx')
     call check_dir('xxx/')
     write(*,'(a)') 'Making directory again (should produce "File exists" error)'
-    call make_dir('xxx',retval=retval)
-    write(*,*) retval
+    call make_dir('xxx', iErrorOut=iError)
+    write(*,*) iError
 
     write(*,'(/,a)') 'testing fix_dir_name'
     String = ' '
