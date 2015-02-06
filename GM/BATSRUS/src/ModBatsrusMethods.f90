@@ -750,8 +750,7 @@ contains
     do iFile = 1, nFile
        ! We want to use the IE magnetic perturbations that were passed 
        ! in the last coupling together with the current GM perturbations.
-       ! So BEGINSTEP and INITIAL are allowed.
-       if(iFile==magfile_ .eqv. TypeSave == 'NORMAL') CYCLE
+       if(iFile==magfile_ .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
@@ -791,7 +790,7 @@ contains
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
-    use ModGroundMagPerturb, ONLY: write_magnetometers
+    use ModGroundMagPerturb, ONLY: save_magnetometer_data, write_magnetometers
     use ModGmGeoindices, ONLY: DoWriteIndices, write_geoindices
     use ModMessagePass, ONLY: exchange_messages
 
@@ -922,6 +921,7 @@ contains
 
     elseif(ifile == magfile_) then
        !Cases for magnetometer files
+       if(.not.save_magnetometer_data) RETURN
        if(time_accurate) then  
           call timing_start('save_magnetometer')
           call write_magnetometers   
