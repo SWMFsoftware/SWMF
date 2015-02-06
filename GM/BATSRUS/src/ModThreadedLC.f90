@@ -255,7 +255,7 @@ contains
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
     if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PeSiOut
     if(.not.Use1DModel)then
-       RhoNoDimOut = RhoNoDimCoef*(PeSiIn/TeSiIn)
+       RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
        
        !Dimmensionless length (related to the wave dissipation length)
        AWLength = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
@@ -299,6 +299,15 @@ contains
     end if
     !Full 1D model
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
+    if(iAction/=DoInit_)then
+       !\
+       ! Retrieve temperature and pressure distribution
+       !/
+       TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k)
+       PeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)
+       TeSi_I(nPoint)   = TeSiIn
+    end if
+
     iTableRadCool = i_lookup_table('radcool')
     call set_initial_thread
 
@@ -661,6 +670,8 @@ contains
 
     IsNewBlock = .true.
     if(present(iImplBlock))then
+       if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
+            call CON_stop('Algorithm error in '//NameSub)
        iAction=Impl_
     else
        iAction=BoundaryThreads_B(iBlock)%iAction
@@ -736,12 +747,11 @@ contains
        !/
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
-            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k)
-       Te_G(0, j, k) = min(Te_G(0, j, k), &
-            BoundaryThreads_B(iBlock) % TMax_II(j,k))
-
-       TeSi = max(Te_G(0, j, k) * No2Si_V(UnitTemperature_), TeSiMin)
-
+            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k).or.&
+            Te_G(0, j, k)<TeMin
+       Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
+            BoundaryThreads_B(iBlock) % TMax_II(j,k)))
+       TeSi = Te_G(0, j, k)*No2Si_V(UnitTemperature_)
        SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
        AMinor = min(sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
             ( SqrtRho* PoyntingFluxPerB)  ),1.0)
