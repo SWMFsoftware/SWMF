@@ -696,12 +696,6 @@ contains
     end if
     
     do k = 1, nK; do j = 1, nJ
-       !\
-       ! Gradient across the boundary face
-       !/
-       call get_face_gradient(1, 1, j, k, iBlock, &
-            IsNewBlock, Te_G, FaceGrad_D, &
-            UseFirstOrderBcIn=.true.)
        B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B_D + &
             BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
@@ -715,6 +709,12 @@ contains
           Minor_ = WaveLast_
        end if
        if(present(iImplBlock))then
+          !\
+          ! Gradient across the boundary face
+          !/
+          call get_face_gradient(1, 1, j, k, iBlock, &
+               IsNewBlock, Te_G, FaceGrad_D, &
+               UseFirstOrderBcIn=.true.)
           if(IsLinear)then
              if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))then
                 State_VG(iTeImpl,0,j,k) = 0.0  
@@ -754,29 +754,28 @@ contains
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
             RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor)
-       DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
-       if(present(iImplBlock))&
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
-            DTeOverDs < 0.0
-       !Do not allow heat flux from the TR to the low corona
-       DTeOverDs = max(DTeOverDs,0.0)
-       !\
-       ! Calculate temperature in the ghost cell by adding the difference 
-       ! between the required value DTeOverDs and the temperature gradient
-       ! calculated with the floating BC 
-       !/ 
-       !\
-       ! Trasformation coefficient -Delta R/b_R, exclude the division by zero.
-       !/
-       MinusDeltaROverBR = 1/&
+       if(present(iImplBlock))then
+          DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
+          BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
+               BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
+               DTeOverDs < 0.0
+          !Do not allow heat flux from the TR to the low corona
+          DTeOverDs = max(DTeOverDs,0.0)
+          !\
+          ! Calculate temperature in the ghost cell by adding the difference 
+          ! between the required value DTeOverDs and the temperature gradient
+          ! calculated with the floating BC 
+          !/ 
+          !\
+          ! Trasformation coefficient -Delta R/b_R, avoid the division by zero.
+          !/
+          MinusDeltaROverBR = 1/&
             min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
             * BDir_D),-0.1*sqrt(&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))) 
-       TeGhost = Te_G(0, j, k) +(&
-            DTeOverDs - sum(FaceGrad_D*BDir_D) )*MinusDeltaROverBR
-       Te_G(0, j, k) = TeGhost 
-       if(present(iImplBlock))then
+          TeGhost = Te_G(0, j, k) +(&
+               DTeOverDs - sum(FaceGrad_D*BDir_D) )*MinusDeltaROverBR
+          Te_G(0, j, k) = TeGhost 
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))CYCLE
           !\
