@@ -454,8 +454,8 @@ test3_check:
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/GM_mag_n00000000.mag \
-		output/test3/GM_mag_n00000000.mag \
+		${TESTDIR}/RESULTS/GM/magnetometers_n00000000.mag \
+		output/test3/magnetometers_n00000000.mag \
 		>> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
