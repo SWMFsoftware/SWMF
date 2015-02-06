@@ -412,8 +412,8 @@ test_magnetometer_run:
 
 test_magnetometer_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-		${TESTDIR}/IO2/GM_mag_n00000000.mag \
-		Param/MAGNETOMETER/TestOutput/GM_mag_n00000000.mag \
+		${TESTDIR}/IO2/magnetometers_n00000000.mag \
+		Param/MAGNETOMETER/TestOutput/magnetometers_n00000000.mag \
 		> test_magnetometer.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=2e-11 \
 		${TESTDIR}/IO2/eqb_t00000100_n0000362.out \
