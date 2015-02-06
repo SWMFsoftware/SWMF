@@ -16,7 +16,7 @@ module ModGroundMagPerturb
 
   public:: read_mag_input_file
   public:: open_magnetometer_output_file
-  public:: close_magnetometer_output_file
+  public:: finalize_magnetometer
   public:: write_magnetometers
   public:: ground_mag_perturb
   public:: ground_mag_perturb_fac
@@ -25,7 +25,7 @@ module ModGroundMagPerturb
   integer, parameter:: r_=1, phi_=2, theta_=3
 
   logical,            public:: save_magnetometer_data = .false.
-  integer,            public:: nMagnetometer = 0
+  integer,            public:: nMagnetometer=0
   character(len=100), public:: MagInputFile
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
@@ -418,10 +418,10 @@ contains
        ! Event date added to magnetic perturbation file name
        call get_date_time(iTime_I)
        write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
-            trim(NamePlotDir), 'GM_mag_e', iTime_I(1:6), '.mag'
+            trim(NamePlotDir), 'magnetometers_e', iTime_I(1:6), '.mag'
     else
        write(NameFile,'(a,a, i8.8, a)') &
-            trim(NamePlotDir), 'GM_mag_n', n_step, '.mag'
+            trim(NamePlotDir), 'magnetometers_n', n_step, '.mag'
     end if
     if(oktest) then
        write(*,*) 'open_magnetometer_output_files: NameFile:', NameFile
@@ -547,12 +547,15 @@ contains
   end subroutine write_magnetometers
 
   !=====================================================================
-  subroutine close_magnetometer_output_file
+  subroutine finalize_magnetometer
     ! Close the magnetometer output file (flush buffer, release IO unit).
-    close(iUnitMag)
+
+    use ModProcMH, ONLY: iProc
+
+    if(iProc==0)close(iUnitMag)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
 
-  end subroutine close_magnetometer_output_file
+  end subroutine finalize_magnetometer
 
   !============================================================================
 

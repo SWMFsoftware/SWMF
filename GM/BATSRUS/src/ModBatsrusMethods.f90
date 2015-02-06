@@ -962,7 +962,7 @@ contains
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
     use ModGmGeoindices,  ONLY: DoWriteIndices, finalize_geoindices
     use ModGroundMagPerturb, ONLY: &
-         save_magnetometer_data, close_magnetometer_output_file
+         save_magnetometer_data, finalize_magnetometer
 
     integer :: iSat
     !-----------------------------------------------------------------------
@@ -979,7 +979,7 @@ contains
 
     if (DoWriteIndices) call finalize_geoindices
     if (save_magnetometer_data .and. iProc==0) &
-         call close_magnetometer_output_file   
+         call finalize_magnetometer   
 
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 
