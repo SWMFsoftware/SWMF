@@ -3,8 +3,6 @@
 
 include ../../../Makefile.def
 
-SEARCH_EXTRA = -I../src
-
 include ../../../Makefile.conf
 
 MPIRUN = mpirun -np 2

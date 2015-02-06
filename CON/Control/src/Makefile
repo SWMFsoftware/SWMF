@@ -1,10 +1,10 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL =/bin/sh
 
 # CON needs modules from other subdirectories
-SEARCH_EXTRA = -I${INTERFACEDIR} -I${INTERFACEDIR}/Modules -I${LIBRARYDIR} -I${COUPLERDIR}
 SEARCHDIR = -I${SHAREDIR} -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def

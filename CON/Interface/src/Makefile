@@ -1,4 +1,5 @@
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 SHELL =/bin/sh
@@ -8,8 +9,6 @@ include ../../../Makefile.conf
 include Makefile.DEPEND
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
-
-SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -IModules
 
 LINKMODULES:
 	rm -rf Modules
