@@ -20,13 +20,17 @@ module ModThreadedLC
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
        TeSi_I, Cons_I, PeSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
        VaLog_I,  DCons_I, DXi_I, ResHeating_I, ResCooling_I, ResEnthalpy_I,&
-       ResHeatCond_I
+       ResHeatCond_I, SpecHeat_I, IntEnergy_I
   
 
   real, parameter:: TeSiMin = 3.5e5    ![K]
   real           :: TeMin, ConsMin
 
-  real :: cCoolingPerPe2
+  real :: cCoolingPerPe2, RhoNoDimCoef
+  !\
+  ! For transforming conservative to TeSi and back 
+  !/
+  real, parameter:: cTwoSevenths = 2.0/7.0
   !\
   ! Gravitation potential
   !/
@@ -60,7 +64,7 @@ contains
     use ModMultiFluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux, &
          nPointThreadMax, HeatCondParSi
-    use ModPhysics,            ONLY: UnitTemperature_, Si2No_V
+    use ModPhysics,            ONLY: UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,         ONLY: Pe_, p_
     !-------------------
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
@@ -73,6 +77,8 @@ contains
     allocate(   Cons_I(nPointThreadMax));     Cons_I = 0.0
     allocate( PeSi_I(nPointThreadMax));   PeSi_I = 0.0
     allocate(    Res_I(nPointThreadMax));      Res_I = 0.0
+    allocate(   SpecHeat_I(nPointThreadMax));   SpecHeat_I = 0.0
+    allocate(  IntEnergy_I(nPointThreadMax));  IntEnergy_I = 0.0
 
     allocate( ResHeating_I(nPointThreadMax)); ResHeating_I = 0.0
     allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
@@ -86,6 +92,7 @@ contains
     allocate(  VaLog_I(nPointThreadMax));    VaLog_I = 0.0
     allocate(  DCons_I(nPointThreadMax));    DCons_I = 0.0
     allocate(    DXi_I(nPointThreadMax));      DXi_I = 0.0
+
     !\
     ! TeFraction is used for ideal EOS:
     !/
@@ -107,6 +114,7 @@ contains
        iP = p_
        PeFraction = AverageIonCharge/(1.0 + AverageIonCharge) 
     end if
+
     !\
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
     ! Pe = PeFraction*State_V(iP)
@@ -122,8 +130,10 @@ contains
     !/
     GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
 
-    ConsMin = (2.0/7)*HeatCondParSi*TeSiMin**3.50
+    ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
     cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*AverageIonCharge)
+    RhoNoDimCoef = Si2No_V(UnitEnergyDens_)/PeFraction*&
+         TeFraction/Si2No_V(UnitTemperature_)
   end subroutine init_threaded_lc
   !================================
   !\
@@ -133,13 +143,13 @@ contains
   !/
   subroutine solve_boundary_thread(j, k, iBlock, &
        iAction, TeSiIn, PeSiIn, USiIn, AMinorIn, &
-       DTeOverDsSiOut, PeSiOut, AMajorOut)
+       DTeOverDsSiOut, PeSiOut, RhoNoDimOut, AMajorOut)
     !\
     ! USE:
     !/
     use ModFieldLineThread, ONLY: HeatCondParSi, solve_a_plus_minus
     use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
-                               UnitEnergyDens_, UnitTemperature_, UnitB_
+                               UnitB_
     use ModMultiFluid,   ONLY: MassIon_I
     use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
     use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
@@ -170,7 +180,7 @@ contains
     !AMajorOut: For the wave propagating outward the Sun
     !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2  
     !/
-    real,  intent(out):: DTeOverDsSiOut, PeSiOut, AMajorOut
+    real,  intent(out):: DTeOverDsSiOut, PeSiOut, RhoNoDimOut, AMajorOut
 
     !\
     ! Arrays and table numbers needed to use lookup table
@@ -185,10 +195,6 @@ contains
     !/
     real    :: AWLength
     !\
-    ! Dimensionless Rho needed to calculate the dimmensionless length of the TR
-    !/
-    real    :: RhoNoDim 
-    !\
     ! Total contribution from the AW heating to the TR energetics
     !/
     real    :: AWHeating
@@ -200,10 +206,6 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer :: nPoint 
-    !\
-    ! For transforming conservative to TeSi and back 
-    !/
-    real, parameter:: cTwoSevenths = 2.0/7.0
     integer        :: nIter=5
     !\
     ! Enthalpy correction coefficient
@@ -222,18 +224,15 @@ contains
        call set_oktest(NameSub, DoTest, DoTestMe)
        if(DoTestMe)then
           write(*,*)'TeSiIn=       ',TeSiIn,' K '
-          write(*,*)'TMax=         ', BoundaryThreads_B(iBlock) % TMax_II(j,k)&
-               *No2Si_V(UnitTemperature_),' K'
           write(*,*)'PeSiIn = ', PeSiIn
           write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
           write(*,*)'AMinorIn=     ', AMinorIn
           write(*,*)'USiIn=        ',USiIn,' m/s'
           write(*,*)'Thread Length=', &
                BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
-               ,' m, dimless length=',  Si2No_V(UnitX_)*&
-               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-          write(*,*)'Poynting Flux max=',PoyntingFluxPerBSi*&
-               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_),' W/m2'
+               ,' m = ',  Si2No_V(UnitX_)*&
+               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' Rs'
+          write(*,*)'iAction=',iAction
        end if
     else
        DoTest=.false.; DoTestMe=.false.
@@ -256,12 +255,11 @@ contains
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
     if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PeSiOut
     if(.not.Use1DModel)then
-       RhoNoDim = (PeSiIn*Si2No_V(UnitEnergyDens_)/PeFraction)*&
-            TeFraction/(TeSiIn*Si2No_V(UnitTemperature_))
+       RhoNoDimOut = RhoNoDimCoef*(PeSiIn/TeSiIn)
        
        !Dimmensionless length (related to the wave dissipation length)
        AWLength = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
-            sqrt(sqrt(RhoNoDim))
+            sqrt(sqrt(RhoNoDimOut))
        !\
        !Calculate Alfven waves for the given thread length and BC 
        !for ingoing wave
@@ -292,7 +290,6 @@ contains
        if(DoTestMe)then
           write(*,*)'Dimensionless length characteristic of AW dissipation=',&
             AWLength
-          write(*,*)'Pointling flux in the TR=', AWHeating,' W/m2'
           write(*,*)'AMajorOut=    ', AMajorOut
           write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
                ', dT/ds*Length=',DTeOverDsSiOut*&
@@ -312,6 +309,7 @@ contains
          (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
     PeSiOut = PeSi_I(nPoint)
+    RhoNoDimOut = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
     AMajorOut = AWValue_V(APlusBC_)
     if(DoTestMe)then
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
@@ -335,9 +333,7 @@ contains
          !\
          ! 1. Calculate sqrt(RhoNoDim)
          !/
-         RhoNoDim = (PeSi_I(iPoint)*&
-              Si2No_V(UnitEnergyDens_)/PeFraction)*&
-              TeFraction/(TeSi_I(iPoint)*Si2No_V(UnitTemperature_))
+         RhoNoDim = RhoNoDimCoef*PeSi_I(iPoint)/TeSi_I(iPoint)
          if(RhoNoDim<=0.0)then
             write(*,*)'iPoint=',iPoint,' PeSi_I(iPoint)=',&
                  PeSi_I(iPoint),' TeSi_I(iPoint)=',TeSi_I(iPoint)
@@ -653,7 +649,7 @@ contains
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
     real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
-    real :: PeGhost, DPeOverDsSi, DPeOverDs, MinusDeltaROverBR
+    real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -719,12 +715,7 @@ contains
           Minor_ = WaveLast_
        end if
        if(present(iImplBlock))then
-          if(DoTestMe.and.j==jTest.and.k==kTest)&
-               write(*,*)'iImplBlock=',iImplBlock,' IsLinear=',IsLinear
           if(IsLinear)then
-             if(DoTestMe.and.j==jTest.and.k==kTest)&
-                  write(*,*)'UseLimitedDTe=',&
-                  BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)
              if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))then
                 State_VG(iTeImpl,0,j,k) = 0.0  
              else
@@ -743,9 +734,6 @@ contains
        !\
        ! Calculate input parameters for solving the thread
        !/
-       if(DoTestMe.and.j==jTest.and.k==kTest)&
-            write(*,*)'Te_G(0,j,k)=',Te_G(0,j,k),' TMax=',&
-            BoundaryThreads_B(iBlock) % TMax_II(j,k)
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
             BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k)
@@ -764,7 +752,8 @@ contains
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, iAction=iAction,    &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
-            DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut, AMajorOut=AMajor)
+            DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
+            RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor)
        DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
        if(present(iImplBlock))&
             BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
@@ -786,27 +775,6 @@ contains
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))) 
        TeGhost = Te_G(0, j, k) +(&
             DTeOverDs - sum(FaceGrad_D*BDir_D) )*MinusDeltaROverBR
-       if(DoTestMe.and.j==jTest.and.k==kTest)then
-          write(*,*)'TeSi=',TeSi,' K'
-          write(*,*)'BDir_D=',BDir_D
-          write(*,*)'DTeOverDs=', DTeOverDs
-          write(*,*)'FaceGrad_D=',FaceGrad_D
-          write(*,*)'sum(FaceGrad_D*BDir_D)=',sum(FaceGrad_D*BDir_D)
-          write(*,*)'DGradTeOverGhostTe=',&
-               BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k)
-          write(*,*)'DGradTeOverGhostTe\cdot BDir_D=',&
-               sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-               * BDir_D)
-          write(*,*)'TeGhost=',TeGhost*No2Si_V(UnitTemperature_),' K' 
-          Te_G(0, j, k) = TeGhost
-       
-          write(*,*)'Check if gradTe=dT/ds'
-       
-          call get_face_gradient(1, 1, j, k, iBlock, &
-                IsNewBlock, Te_G, FaceGrad_D, &
-                UseFirstOrderBcIn=.true.)
-          write(*,*)'sum(BDir_D*FaceGrad_D)=',sum(BDir_D*FaceGrad_D)
-       end if
        Te_G(0, j, k) = TeGhost 
        if(present(iImplBlock))then
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
@@ -819,7 +787,8 @@ contains
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
                iAction=iAction, TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
                USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
-               DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut, AMajorOut=AMajor) 
+               DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
+               RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
                DTeOverDsSi)/(0.01*TeSi)
