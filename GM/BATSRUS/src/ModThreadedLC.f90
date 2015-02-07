@@ -62,7 +62,7 @@ contains
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModMultiFluid,   ONLY: MassIon_I
-    use ModFieldLineThread, ONLY: check_tr_table, get_poynting_flux, &
+    use ModFieldLineThread, ONLY: check_tr_table, & 
          nPointThreadMax, HeatCondParSi
     use ModPhysics,            ONLY: UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,         ONLY: Pe_, p_
@@ -121,7 +121,6 @@ contains
     !/
 
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
-    call get_poynting_flux(PoyntingFluxPerBSi)
     call check_tr_table
     !\
     !   Hydrostatic equilibrium in an isothermal corona: 
@@ -237,10 +236,6 @@ contains
     else
        DoTest=.false.; DoTestMe=.false.
     endif
-    if(TeSiIn<TeSiMin)then
-       write(*,*)'TeSiIn=',TeSiIn
-       call CON_stop('Too small TeSiIn in '//NameSub)
-    end if
     iTable = i_lookup_table('TR')
     if(iTable<=0)call CON_stop('TR table is not set')
 
@@ -825,7 +820,7 @@ contains
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
        State_VG(Rho_, 0, j, k) = State_VG(iP, 0, j, k)* &
-            TeFraction/Te_G(1, j, k)
+             TeFraction/Te_G(1, j, k) !RhoNoDimOut
        !\
        !Exponential extrapolation of density
        !/

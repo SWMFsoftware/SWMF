@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
-
+  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
 
@@ -21,27 +21,46 @@ module ModFieldLineThread
      !/
      real,pointer :: Xyz_DIII(:,:,:,:)
      !\ 
-     ! The thread length, \int{ds}, from the photoshere to the given point 
+     ! The thread length, \int{ds}, from the photoshere to the given point
+     ! Renamed and revised: in meters  
      !/
      real,pointer :: LengthSi_III(:,:,:)
      !\ 
-     ! The integral, \int{B ds}, from the photoshere to the given point 
+     ! The integral, \int{B ds}, from the photoshere to the given point
+     ! Renamed and revised: only the value BDsInv_III(0,j,k) keeps this 
+     ! sense and used for calculating TMax_II(j,k). The values of 
+     ! BDsInv_III(negative iPoint,j,k) are equal to 
+     ! ds[m]/(B[T]*PoyntingFluxPerBSi). Are used to calculate 
+     ! the dimensionless heat flux as (Cons_I(iPoint)-Cons_I(iPoint+1))*BDsInv
      !/
      real,pointer :: BDsInv_III(:,:,:)
-     real,pointer :: DsOverB_III(:,:,:)
+     !\
+     ! Dimensionless TMax, such that the ingoing heat flux to the TR at this
+     ! temperature equals the Poynting flux (which is not realistic and means
+     ! that the input tempreture exceeding TMax assumes that something is 
+     ! going wrong.   
+     !/
      real,pointer :: TMax_II(:,:)
+
+     !\
+     ! Ds[m]/(B[T]*PoyntingFluxPerBSi)
+     !/
+     real,pointer :: DsOverB_III(:,:,:)
+
+
      !\ 
-     ! The integral, \int{1/sqrt(B) ds} 
+     ! The integral, sqrt(PoyntingFluxPerB/LPerp**2)*\int{1/sqrt(B) ds} 
      !/
      real,pointer :: DXi_III(:,:,:)
      !\
-     ! Magnetic field intensity and heliocentric distance
+     ! Magnetic field intensity and the inverse of heliocentric distance 
      !/
      real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
      !\
      ! The type of last update for the thread solution
      !/
      integer :: iAction
+
      !\
      !  Thread solution: temperature and pressure SI
      !/
@@ -77,6 +96,7 @@ module ModFieldLineThread
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
+  !
   integer,public :: nPointThreadMax
   real           :: DsThreadMin
 
@@ -84,24 +104,57 @@ module ModFieldLineThread
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   !erg = 1e-7 J
        /1.0e-6    !cm3 = 1e-6 m3 
+  !\
+  ! To find the volumetric radiative cooling rate in J/(m^3 s)
+  ! the value found from radcool table should be multiplied by
+  ! RadcoolSi and by n_e[m^{-3}]*n_i[m^{-3}]
+  !/
   real, public, parameter :: Radcool2Si = 1.0e-12 & ! (cm-3=>m-3)**2
-       /RadNorm*Cgs2SiEnergyDens
-
+                          *Cgs2SiEnergyDens/RadNorm
+  !\
+  !If his logical is true, 1D equation is solved for the parameter distribution
+  !along the field line. Otherwise, the analytical solution is used
+  !/
   logical,public :: Use1DModel = .true.
 
+  !\
+  ! A constant factor to calculate the electron heat conduction
+  !/
   real, public :: HeatCondParSi
 
+  !\
+  ! Logical from ModMain.
+  !/
   public:: UseFieldLineThreads
+
   public:: BoundaryThreads
-  public:: read_threads   !Read parameters of threads
-  public:: check_tr_table !Calculate table for transition region
-  public:: set_threads
-  public:: get_poynting_flux
-  public:: solve_a_plus_minus
-  public:: advance_threads
+  public:: read_threads      !Read parameters of threads
+  public:: check_tr_table    !Calculate a table for transition region
+  !\
+  ! Correspondent named indexes: meaning of the columns in the table
+  !/
+  integer,public,parameter:: AWHeating_ = 1, APlusBC_ = 2
+  integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
+  integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
+  !\
+  ! Global arrays used in calculating the tables
+  !/
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
-  real:: PoyntingFluxPerBSi  
+
+  public:: set_threads       !(Re)Sets threads in the inner boundary blocks 
+  public:: solve_a_plus_minus!Solves the AW amplitudes
+
+  !\
+  ! Called prior to different invokes of set_cell_boundary, to determine
+  ! how the solution on the thread should be (or not be) advanced:
+  ! after hydro stage or after the heat conduction stage etc
+  !/
+  public:: advance_threads    
+  !\
+  ! Correspondent named indexes
+  !/
+  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2
   
   !\
   ! The number of grid spaces which are covered by the TR model
@@ -111,20 +164,7 @@ module ModFieldLineThread
   !/
   integer, parameter:: nIntervalTR = 2 
   
-  !\
-  ! Named indexes
-  !/
-  integer,public,parameter:: AWHeating_ = 1, APlusBC_ = 2
-  integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
-  integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
-  integer,public,parameter:: DoInit_=-1, Done_=0, Enthalpy_=1, Heat_=2
-
 contains
-  !=============================================================================
-  subroutine get_poynting_flux(PoyntingFluxPerBIn)
-    real, intent(in)::PoyntingFluxPerBIn
-    PoyntingFluxPerBSi = PoyntingFluxPerBIn
-  end subroutine get_poynting_flux
   !=============================================================================
   subroutine read_threads(iSession)
     use ModSize, ONLY: MaxBlock
@@ -352,6 +392,7 @@ contains
     !\
     ! Initialize threads
     !/
+    BoundaryThreads_B(iBlock) % iAction = DoInit_
     BoundaryThreads_B(iBlock) % Xyz_DIII = 0.0
     BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
     BoundaryThreads_B(iBlock) % BDsInv_III = 0.0
@@ -647,7 +688,6 @@ contains
                                     Value_V=Value_V,      &
                                     Arg1Out=TMax,  & 
                                     DoExtrapolate=.false.)
-      !write(*,*)'TMax=',TMax,' K'
       TMax = TMax*Si2No_V(UnitTemperature_)
     end subroutine limit_temperature
   end subroutine set_threads_b
