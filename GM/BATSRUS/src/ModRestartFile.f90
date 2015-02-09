@@ -114,7 +114,7 @@ contains
   subroutine read_restart_parameters(NameCommand)
 
     use ModReadParam, ONLY: read_var
-    use ModUtilities, ONLY: fix_dir_name, check_dir
+    use ModUtilities, ONLY: fix_dir_name
     use ModMain,      ONLY: UseStrict
 
     character(len=*), intent(in) :: NameCommand
@@ -124,16 +124,15 @@ contains
 
     select case(NameCommand)
     case("#SAVERESTART")
-       call read_var('DoSaveRestart',save_restart_file)
+       call read_var('DoSaveRestart', save_restart_file)
        if(save_restart_file)then
-          if(iProc==0)call check_dir(NameRestartOutDir)
-          call read_var('DnSaveRestart',dn_output(restart_))
-          call read_var('DtSaveRestart',dt_output(restart_))
-          nfile=max(nfile,restart_)
+          call read_var('DnSaveRestart', dn_output(restart_))
+          call read_var('DtSaveRestart', dt_output(restart_))
+          nFile = max(nFile, restart_)
        end if
     case("#NEWRESTART")
-       restart=.true.
-       call read_var('DoRestartBFace',Restart_Bface)
+       restart = .true.
+       call read_var('DoRestartBFace', Restart_Bface)
     case("#BLOCKLEVELSRELOADED")
        ! Sets logical for upgrade of restart files 
        ! to include LEVmin and LEVmax
@@ -150,11 +149,9 @@ contains
     case("#RESTARTINDIR")
        call read_var("NameRestartInDir",NameRestartInDir)
        call fix_dir_name(NameRestartInDir)
-       if (iProc==0) call check_dir(NameRestartInDir)
     case("#RESTARTOUTDIR")
        call read_var("NameRestartOutDir",NameRestartOutDir)
        call fix_dir_name(NameRestartOutDir)
-       if (iProc==0) call check_dir(NameRestartOutDir)
     case("#RESTARTINFILE")
        call read_var('TypeRestartInFile',TypeRestartInFile)
        i = index(TypeRestartInFile, 'series')
