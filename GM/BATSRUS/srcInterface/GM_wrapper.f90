@@ -379,14 +379,19 @@ contains
 
   end subroutine GM_finalize
 
-  !==============================================================================
+  !============================================================================
 
   subroutine GM_save_restart(TimeSimulation)
+
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use ModRestartFile, ONLY: NameRestartOutDir
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='GM_save_restart'
+    !--------------------------------------------------------------------------
+    if( NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
 
     call BATS_save_files('RESTART')
 
@@ -415,8 +420,10 @@ contains
          TimeSimulation, TimeSimulationLimit
 
     if(abs(Time_Simulation-TimeSimulation)>0.0001) then
-       write(*,*)NameSub,' GM time=',Time_Simulation,' SWMF time=',TimeSimulation
-       call CON_stop(NameSub//' SWMF_ERROR: GM and SWMF simulation times differ')
+       write(*,*)NameSub,' GM time=', Time_Simulation, &
+            ' SWMF time=', TimeSimulation
+       call CON_stop(NameSub// &
+            ' SWMF_ERROR: GM and SWMF simulation times differ')
     end if
 
     call BATS_advance(TimeSimulationLimit)
