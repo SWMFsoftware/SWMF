@@ -1,4 +1,4 @@
-MODULE Rcm_variables
+module Rcm_variables
 
   ! SWMF: use the temporary unit number provided by ModIoUnit
   use ModIoUnit, ONLY : UNITTMP_, STDOUT_
@@ -18,8 +18,10 @@ MODULE Rcm_variables
     ! SWMF: logical units are now obtained from ModIoUnit::io_unit_new()
     INTEGER :: LUN_2 = 12, LUN_3 = 13, LUN_4=14
 !
-    ! SWMF: added variable directory name for flexible IO
+    ! SWMF: added variable directory names for flexible IO
     character(len=100) :: NameRcmDir='IM/'
+    character(len=200) :: NameRestartOutDir = 'IM/restartOUT'
+
 !
     ! SWMF: added restart logical, time step, and plot frequency
     logical :: DoRestart=.false.
@@ -254,4 +256,4 @@ MODULE Rcm_variables
 ! SWMF: allocatable arrays(1-n_gc:isize+n_gc,1-n_gc:jsize+n_gc,kcsize)
 !    REAL (rprec), allocatable :: eeta_blk(:,:,:)
 !
-END MODULE Rcm_variables
+end module Rcm_variables
