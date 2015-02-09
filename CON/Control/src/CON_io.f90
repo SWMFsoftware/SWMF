@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
@@ -22,7 +23,7 @@ module CON_io
        dLongitudeHgi, dLongitudeHgiDeg, init_axes
   use ModReadParam
   use CON_variables
-  use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, check_dir, &
+  use ModUtilities, ONLY: DoFlush, flush_unit, fix_dir_name, make_dir, &
        split_string
 
   implicit none
@@ -52,11 +53,16 @@ module CON_io
 
   ! writing to STDOUT vs. log files
   logical                     :: UseStdout=.true.
-  character(len=lNameFile)    :: NameStdoutDir='STDOUT/'
-  character(len=*), parameter :: NameStdoutExt='.log'
+  character(len=lNameFile)    :: NameStdoutDir = 'STDOUT/'
+  character(len=*), parameter :: NameStdoutExt = '.log'
 
   ! Saving restart information
-  character(len=lNameFile)    :: NameRestartFile='RESTART.out'
+  character(len=lNameFile)    :: NameRestartFile = 'RESTART.out'
+
+  ! Name of the restart directory that may contain date/time part
+  character(len=lNameFile)    :: NameRestartOutDir = ''
+  ! Name of the restart directory with date/time info inserted
+  character(len=lNameFile)    :: NameRestartOutDirNow = ''
 
   ! How often shall we save restart files?
   ! Default: every 100000 time steps or 1e30 seconds (ie at the end of the run)
@@ -168,7 +174,7 @@ contains
        select case(NameCommand)
        case("#ECHO")
 
-          call read_var('DoEcho',DoEcho)
+          call read_var('DoEcho', DoEcho)
           if(is_proc0())call read_echo_set(DoEcho)
 
        case("#FLUSH")
@@ -176,14 +182,12 @@ contains
 
        case("#STDOUT")
 
-          call read_var('UseStdout',UseStdout)
-          call set_stdout
+          call read_var('UseStdout', UseStdout)
 
        case("#STDOUTDIR")
 
           call read_var('NameStdoutDir',NameStdoutDir)
           call fix_dir_name(NameStdoutDir)
-          if(is_proc0())call check_dir(NameStdoutDir)
 
        case("#DESCRIPTION")
           call read_var('StringDescription',StringDescription)
@@ -248,12 +252,12 @@ contains
 
        case("#END")
 
-          IsLastRead=.true.
+          IsLastRead = .true.
           EXIT
 
        case("#RUN")
 
-          IsLastRead=.false.
+          IsLastRead = .false.
           EXIT
 
        case("#TIMEACCURATE")
@@ -272,23 +276,28 @@ contains
 
        case("#SAVERESTART")
 
-          call read_var('DoSaveRestart',SaveRestart % DoThis)
+          call read_var('DoSaveRestart', SaveRestart % DoThis)
           if(SaveRestart % DoThis)then
-             call read_var('DnSaveRestart',SaveRestart % Dn)
-             call read_var('DtSaveRestart',SaveRestart % Dt)
+             call read_var('DnSaveRestart', SaveRestart % Dn)
+             call read_var('DtSaveRestart', SaveRestart % Dt)
              SaveRestart % nNext = SaveRestart % Dn
              SaveRestart % tNext = SaveRestart % Dt
           endif
 
        case("#RESTARTFILE")
 
-          call read_var('NameRestartFile',NameRestartFile)
+          call read_var('NameRestartFile', NameRestartFile)
+
+       case("#RESTARTOUTDIR")
+
+          call read_var('NameRestartOutDir', NameRestartOutDir)
+          call fix_dir_name(NameRestartOutDir)
 
        case("#STOP")
 
           if(IsStandAlone)then
-             call read_var('MaxIteration'  ,MaxIteration)
-             call read_var('tSimulationMax',tSimulationMax)
+             call read_var('MaxIteration'  , MaxIteration)
+             call read_var('tSimulationMax', tSimulationMax)
           else if(is_proc0()) then
              write(*,*)NameSub// &
                   ' SWMF_WARNING: stop condition has been set externally'
@@ -330,34 +339,34 @@ contains
 
        case("#CPUTIMEMAX")
 
-          call read_var('CpuTimeMax',CpuTimeMax)
+          call read_var('CpuTimeMax', CpuTimeMax)
 
        case("#CHECKSTOPFILE")
 
-          call read_var('DoCheckStopFile',DoCheckStopFile)
+          call read_var('DoCheckStopFile', DoCheckStopFile)
 
        case("#CHECKSTOP")
 
-          call read_var('DoCheckStop',CheckStop % DoThis)
+          call read_var('DoCheckStop', CheckStop % DoThis)
           if(CheckStop % DoThis)then
-             call read_var('DnCheckStop',CheckStop % Dn)
-             call read_var('DtCheckStop',CheckStop % Dt)
+             call read_var('DnCheckStop', CheckStop % Dn)
+             call read_var('DtCheckStop', CheckStop % Dt)
           end if
 
        case("#PROGRESS")
 
-          call read_var('DnShowProgressShort',DnShowProgressShort)
-          call read_var('DnShowProgressLong', DnShowProgressLong)
+          call read_var('DnShowProgressShort', DnShowProgressShort)
+          call read_var('DnShowProgressLong',  DnShowProgressLong)
 
        case("#COMPONENT")
 
-          call read_var('NameComp',NameComp)
-          call read_var('UseComp',UseComp)
-          call put_comp_info(NameComp,Use=UseComp)
+          call read_var('NameComp', NameComp)
+          call read_var('UseComp',  UseComp)
+          call put_comp_info(NameComp, Use=UseComp)
 
        case("#COUPLEORDER")
 
-          call read_var('nCouple',nCouple)
+          call read_var('nCouple', nCouple)
           if(nCouple > MaxCouple)then
              if(is_proc0()) write(*,*)NameSub// &
                   ' SWMF_ERROR: nCouple > MaxCouple=',MaxCouple
@@ -367,9 +376,9 @@ contains
              end if
              nCouple = MaxCouple
           end if
-          do iCouple = 1,nCouple
+          do iCouple = 1, nCouple
              ! Read in a string with the names of source and target components
-             call read_var('NameSource NameTarget',NameSourceTarget)
+             call read_var('NameSource NameTarget', NameSourceTarget)
              ! Split the string
              call split_string(NameSourceTarget,2,&
                   NameSourceTarget_I,nName)
@@ -430,13 +439,13 @@ contains
           endif
           if(NameCommand(9:13)=="SHIFT")then
              ! Shift Comp1->Comp2 coupling
-             call read_var('nNext12',Couple_CC(iComp1,iComp2) % nNext)
-             call read_var('tNext12',Couple_CC(iComp1,iComp2) % tNext)
+             call read_var('nNext12', Couple_CC(iComp1,iComp2) % nNext)
+             call read_var('tNext12', Couple_CC(iComp1,iComp2) % tNext)
           end if
           if(NameCommand=="#COUPLE2SHIFT")then
              ! Shift Comp2->Comp1 coupling
-             call read_var('nNext21',Couple_CC(iComp2,iComp1) % nNext)
-             call read_var('tNext21',Couple_CC(iComp2,iComp1) % tNext)
+             call read_var('nNext21', Couple_CC(iComp2,iComp1) % nNext)
+             call read_var('tNext21', Couple_CC(iComp2,iComp1) % tNext)
           end if
 
        case("#COUPLE1TIGHT", "#COUPLE2TIGHT")
@@ -470,21 +479,21 @@ contains
           Couple_CC(iComp2,iComp1) % tNext = huge(1.0)
 
        case("#COUPLETIME")
-          call read_var('NameComp',NameComp)
-          call read_var('DoCoupleOnTime',DoCoupleOnTime_C(i_comp(NameComp)))
+          call read_var('NameComp', NameComp)
+          call read_var('DoCoupleOnTime', DoCoupleOnTime_C(i_comp(NameComp)))
        case("#CYCLE")
-          call read_var('NameComp',NameComp)
-          call read_var('DnRun',DnRun_C(i_comp(NameComp)))
+          call read_var('NameComp', NameComp)
+          call read_var('DnRun', DnRun_C(i_comp(NameComp)))
        case("#VERSION")
           VersionRead = VersionSwmf ! set default value
-          call read_var('Version',VersionRead)
+          call read_var('Version', VersionRead)
           if(abs(VersionRead-VersionSwmf)>0.005.and.is_proc0())&
                write(*,'(a,f6.3,a,f6.3)') &
                NameSub//': SWMF_WARNING version in file is ',&
                VersionRead,' but SWMF version is ',VersionSwmf
 
        case("#PRECISION")
-          call read_var('nByteReal',nByteRealRead)
+          call read_var('nByteReal', nByteRealRead)
           if(nByteReal/=nByteRealRead)then
              if(is_proc0()) then
                 write(*,'(a,i1,a)') NameSub//' WARNING: '//&
@@ -505,7 +514,7 @@ contains
              if(UseStrict)RETURN
              CYCLE
           end if
-          call read_var('nStep',nStep)
+          call read_var('nStep', nStep)
 
        case("#TIMESIMULATION")
           if(.not.is_first_read())then
@@ -513,7 +522,7 @@ contains
              CYCLE
           end if
           if(IsStandAlone)then
-             call read_var('tSimulation',tSimulation)
+             call read_var('tSimulation', tSimulation)
           else
              write(*,*)NameSub// &
                   ' SWMF_WARNING: simulation time has been set externally'
@@ -527,14 +536,14 @@ contains
              CYCLE
           end if
           if(IsStandAlone)then
-             call read_var('iYear'  ,TimeStart % iYear)
-             call read_var('iMonth' ,TimeStart % iMonth)
-             call read_var('iDay'   ,TimeStart % iDay)
-             call read_var('iHour'  ,TimeStart % iHour)
-             call read_var('iMinute',TimeStart % iMinute)
-             call read_var('iSecond',TimeStart % iSecond)
+             call read_var('iYear',   TimeStart % iYear)
+             call read_var('iMonth',  TimeStart % iMonth)
+             call read_var('iDay',    TimeStart % iDay)
+             call read_var('iHour',   TimeStart % iHour)
+             call read_var('iMinute', TimeStart % iMinute)
+             call read_var('iSecond', TimeStart % iSecond)
              FracSecond = TimeStart % FracSecond ! set default value
-             call read_var('FracSecond',FracSecond)
+             call read_var('FracSecond', FracSecond)
              TimeStart % FracSecond = FracSecond
              call time_int_to_real(TimeStart)
           else
@@ -599,6 +608,8 @@ contains
        end select
     end do
     ! end reading parameters
+
+    call set_stdout
 
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN
@@ -752,10 +763,13 @@ contains
     integer :: lComp, iComp, iUnitOut
     character (len=lNameFile) :: NameFile
     !-------------------------------------------------------------------------
-    if(.not.UseStdout .and. is_proc0())call check_dir(NameStdoutDir)
-    do lComp=1,n_comp()
+    ! Make STDOUTDIR if STDOUT is sent to files
+    if(.not.UseStdout .and. is_proc0())call make_dir(NameStdoutDir)
+
+    do lComp=1, n_comp()
        iComp=i_comp(lComp)
 
+       if(.not.use_comp(iComp)) CYCLE
        if(.not.is_proc(iComp)) CYCLE
 
        if(.not.UseStdout)then
@@ -791,6 +805,10 @@ contains
   !INTERFACE:
   subroutine save_restart
 
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use CON_time, ONLY: get_time
+    use ModTimeConvert, ONLY: TimeType, time_real_to_int
+
     !DESCRIPTION:
     ! Save restart information for all components.
     ! Then save restart information for CON, such as code version,
@@ -799,20 +817,45 @@ contains
     ! etc. The file is in the \#COMMAND parameters format, and
     ! it should simply be included into the input parameter file
     ! with the \#INCLUDE file command.
+    ! Set the name of the restart directory based on the DATE-TIME if required.
+    ! Set NameRestartOutDirComp for the components too.
     !EOP
 
-    character(len=*), parameter :: NameSub=NameMod//'::save_restart'
-    
     integer :: lComp, iComp, iError
+    integer :: i
+    type(TimeType):: TimeCurrent
+
+    character(len=*), parameter :: NameSub=NameMod//'::save_restart'
     !------------------------------------------------------------------------
 
     if(lVerbose>0 .and. is_proc0()) &
          write(*,*)NameSub,' is called at nStep,tSimulation=',&
          nStep,tSimulation
 
-    do lComp = 1,n_comp()
+    if(NameRestartOutDir /= '')then
+       i = index(NameRestartOutDir, 'YYYYMMDD_HHMMSS')
+       if(i > 0)then
+          call get_time(tCurrentOut = TimeCurrent % Time)
+          call time_real_to_int(TimeCurrent)
+          NameRestartOutDirNow = NameRestartOutDir(1:i-1) // &
+               TimeCurrent % String(1:8) // '_' // TimeCurrent % String(9:14) &
+               // NameRestartOutDir(i+15:len(NameRestartOutDir))
+       else
+          NameRestartOutDirNow = NameRestartOutDir
+       end if
+       if(is_proc0()) call make_dir(NameRestartOutDirNow)
+    end if
+
+    NameRestartOutDirComp = ''
+    do lComp = 1, n_comp()
        iComp = i_comp(lComp)
-       call save_restart_comp(iComp,tSimulation)
+
+       if(NameRestartOutDir /= '') then
+          NameRestartOutDirComp = &
+               trim(NameRestartOutDirNow)//NameComp_I(iComp)//'/'
+          if(is_proc0(iComp)) call make_dir(NameRestartOutDirComp)
+       end if
+       call save_restart_comp(iComp, tSimulation)
     end do
 
     ! Ensure that all components have written restart state before 
@@ -821,7 +864,7 @@ contains
 
     if(.not.is_proc0()) RETURN
 
-    open(UNITTMP_,FILE=NameRestartFile)
+    open(UNITTMP_, FILE=trim(NameRestartOutDirNow)//NameRestartFile)
 
     write(UNITTMP_,'(a)')'#DESCRIPTION'
     write(UNITTMP_,'(a)')trim(StringDescription)
