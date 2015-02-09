@@ -21,7 +21,10 @@ module ModThreadedLC
        TeSi_I, Cons_I, PeSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
        VaLog_I,  DCons_I, DXi_I, ResHeating_I, ResCooling_I, ResEnthalpy_I,&
        ResHeatCond_I, SpecHeat_I, IntEnergy_I
-  
+  !\
+  ! Table numbers needed to use lookup table
+  !/ 
+  integer :: iTableTR, iTableAW, iTableRadcool  
 
   real, parameter:: TeSiMin = 3.5e5    ![K]
   real           :: TeMin, ConsMin
@@ -61,6 +64,7 @@ contains
   !=========================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use ModLookupTable,  ONLY: i_lookup_table
     use ModMultiFluid,   ONLY: MassIon_I
     use ModFieldLineThread, ONLY: check_tr_table, & 
          nPointThreadMax, HeatCondParSi
@@ -114,14 +118,22 @@ contains
        iP = p_
        PeFraction = AverageIonCharge/(1.0 + AverageIonCharge) 
     end if
-
     !\
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
     ! Pe = PeFraction*State_V(iP)
     !/
 
-    TeMin = TeSiMin*Si2No_V(UnitTemperature_)
     call check_tr_table
+    iTableTR = i_lookup_table('TR')
+    if(iTableTR<=0)call CON_stop('TR table is not set')
+    iTableAW = i_lookup_table('AW_TR')
+    if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
+    iTableRadCool = i_lookup_table('radcool')
+    if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
+
+    TeMin = TeSiMin*Si2No_V(UnitTemperature_)
+    ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
+
     !\
     !   Hydrostatic equilibrium in an isothermal corona: 
     !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -129,8 +141,16 @@ contains
     !/
     GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
 
-    ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
+    !\
+    ! With this constant, the volumetric radiative cooling rate is
+    ! the table value multiplied by cCoolingPerPe2*(PeSi/TeSi)**2
+    !/
     cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*AverageIonCharge)
+
+    !\
+    ! With this constant, the dimensionless density 
+    ! equals RhoNoDimCoef*PeSi/TeSi
+    !/
     RhoNoDimCoef = Si2No_V(UnitEnergyDens_)/PeFraction*&
          TeFraction/Si2No_V(UnitTemperature_)
   end subroutine init_threaded_lc
@@ -150,7 +170,7 @@ contains
     use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
                                UnitB_
     use ModMultiFluid,   ONLY: MassIon_I
-    use ModLookupTable,  ONLY: i_lookup_table, interpolate_lookup_table
+    use ModLookupTable,  ONLY: interpolate_lookup_table
     use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
     use ModProcMH,       ONLY: iProc
     !\
@@ -182,10 +202,9 @@ contains
     real,  intent(out):: DTeOverDsSiOut, PeSiOut, RhoNoDimOut, AMajorOut
 
     !\
-    ! Arrays and table numbers needed to use lookup table
+    ! Arrays needed to use lookup table
     !/ 
     real    :: Value_V(4), AWValue_V(2), ValCooling(1)
-    integer :: iTable, iTableAW, iTableRadcool
     !\
     !---------Used in 0D analytical model-----------------------
     !/
@@ -205,15 +224,15 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer :: nPoint 
-    integer        :: nIter=5
-    !\
-    ! Enthalpy correction coefficient
-    !/
-    real    :: FluxConst, EnthalpyCorrection, DEnthalpyCorrOverDU
+    integer        :: nIter = 10
     !\
     ! Limited USiIn
     !/
     real :: USiLtd
+    !\
+    ! Corrrect density and pressure values in the ghost cell
+    !/
+    real :: GhostCellCorr
 
     logical :: DoTest, DoTestMe
 
@@ -236,10 +255,8 @@ contains
     else
        DoTest=.false.; DoTestMe=.false.
     endif
-    iTable = i_lookup_table('TR')
-    if(iTable<=0)call CON_stop('TR table is not set')
 
-    call interpolate_lookup_table(iTable, TeSiIn, 1.0e8, Value_V, &
+    call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
     USiLtd = sign(min(abs(USiIn),0.05*Value_V(UHeat_)),USiIn)
     !\
@@ -248,10 +265,12 @@ contains
     !/
     PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-    if(DoTestMe)write(*,*)'Pressure 0D (SI) = ',PeSiOut
+    RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
+    if(DoTestMe)then
+       write(*,*)'Pressure 0D (SI) = ',PeSiOut
+       write(*,*)'Dimensionless density (input)=',RhoNoDimOut
+    end if
     if(.not.Use1DModel)then
-       RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
-       
        !Dimmensionless length (related to the wave dissipation length)
        AWLength = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
             sqrt(sqrt(RhoNoDimOut))
@@ -259,8 +278,6 @@ contains
        !Calculate Alfven waves for the given thread length and BC 
        !for ingoing wave
        !/ 
-       iTableAW = i_lookup_table('AW_TR')
-       if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
        call interpolate_lookup_table(iTableAW, AWLength, AMinorIn, AWValue_V, &
             DoExtrapolate=.false.)
 
@@ -300,28 +317,79 @@ contains
        !/
        TeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k)
        PeSi_I(1:nPoint) = BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)
-       TeSi_I(nPoint)   = TeSiIn
+       TeSi_I(nPoint)   = TeSiIn 
     end if
-
-    iTableRadCool = i_lookup_table('radcool')
-    call set_initial_thread
-
+    select case(iAction)
+    case(Enthalpy_)
+       call get_res_heating(nIterIn=2*nIter)
+       !\
+       ! For a given ResHeating_I advance the effect of heating
+       ! and hydrodynamic motion through a time step (or half time step
+       ! for 2-stage scheme). Store temperature and pressure
+       !/
+       call advance_heating_and_hydro
+    case(Impl_)
+       call advance_heat_cond
+       !\
+       ! Initialize redundant output parameter
+       !/
+       AMajorOut = 0.0
+       !\
+       ! Output for temperature gradient, all the other outputs
+       ! are meaningless
+       !/
+       DTeOverDsSiOut = (TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
+            (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
+            BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
+       if(DoTestMe)then
+          write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
+               ', dT/ds*Length=',DTeOverDsSiOut*&
+               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
+       end if
+       RETURN
+    case(Heat_)
+       call advance_heat_cond
+       !\
+       ! Calculate AWaves and store pressure and temperature
+       !/
+       call get_res_heating(nIterIn=2*nIter) 
+       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
+       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
+    case(DoInit_)
+       call set_initial_thread
+    case default
+       write(*,*)'iAction=',iAction
+       call CON_stop('Unknown action in '//NameSub)
+    end select
+    !\
+    ! Initialize redundant output parameter
+    !/
+    DTeOverDsSiOut = 0.0 
     !\
     ! Outputs
     !/
-    DTeOverDsSiOut = (TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
-         (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
-         BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
     PeSiOut = PeSi_I(nPoint)
     RhoNoDimOut = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
     AMajorOut = AWValue_V(APlusBC_)
     if(DoTestMe)then
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'AMajorOut=    ', AMajorOut
-       write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
-            ', dT/ds*Length=',DTeOverDsSiOut*&
-            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
+       write(*,*)'RhoNoDimOut=  ', RhoNoDimOut
     end if
+    RETURN !The correction accounting for gradients does not work
+    GhostCellCorr = 1/(&
+         (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
+         sqrt(&
+            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
+    PeSiOut = exp(log(PeSi_I(nPoint)) + &
+         (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
+    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
+    if(DoTestMe)then
+       write(*,*)'Corrected:'
+       write(*,*)'Pressure 1D (SI) = ',PeSiOut
+       write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
+    end if    
   contains
     !=======================
     subroutine get_res_heating(nIterIn)
@@ -420,6 +488,8 @@ contains
     end subroutine set_pressure
     !==========================
     subroutine get_heat_cond
+      integer:: iPoint
+      !----------------
       !\
       ! The number of points to solve temperature is nPoint - 1
       !/
@@ -440,11 +510,7 @@ contains
       !/
       ResHeatCond_I(2:nPoint-1) = ResHeatCond_I(2:nPoint-1) &
            +( Cons_I(2:nPoint-1) - Cons_I(1:nPoint-2))*L_I(2:nPoint-1) 
-    end subroutine get_heat_cond
-    !=============
-    subroutine get_rad_cooling
-      integer:: iPoint
-      !-------------------
+
       ResCooling_I = 0.0;
       do iPoint = 1, nPoint-1
          call interpolate_lookup_table(iTableRadCool,&
@@ -454,9 +520,15 @@ contains
               *ValCooling(1)*cCoolingPerPe2*&
               (PeSi_I(iPoint)/TeSi_I(iPoint))**2
       end do
-    end subroutine get_rad_cooling
+      M_I(1) = M_I(1) -2*ResCooling_I(1)/&
+           (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+    end subroutine get_heat_cond
     !======================
     subroutine set_initial_thread
+      !\
+      ! Enthalpy correction coefficient
+      !/
+      real    :: FluxConst, EnthalpyCorrection, DEnthalpyCorrOverDU
       !\
       ! Loop variable
       !/
@@ -470,7 +542,7 @@ contains
       TeSi_I(nPoint) = TeSiIn
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
-              iTable=iTable,           &
+              iTable=iTableTR,           &
               iVal=LengthPAvrSi_,      &
               ValIn=PeSiOut/sqrt(AverageIonCharge)*                       &
               BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
@@ -486,13 +558,12 @@ contains
       ! no heating. Calculate the pressure distribution
       !/ 
       call set_pressure
+      call get_res_heating(nIterIn=nIter)
       do iIter = 1,nIter
          !\
          !Shape the source.
          !/
-         call get_res_heating(nIterIn=nIter+iIter)
          call get_heat_cond
-         call get_rad_cooling
          DCons_I = 0.0;  ResEnthalpy_I = 0.0
          !\
          ! Add enthalpy correction
@@ -570,11 +641,145 @@ contains
          TeSi_I(1:nPoint-1) = &
               (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
          
-         call interpolate_lookup_table(iTable, TeSi_I(1), 1.0e8, Value_V, &
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+              DoExtrapolate=.false.)
+         call set_pressure
+         call get_res_heating(nIterIn=nIter+iIter)
+      end do
+      BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
+      BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
+    end subroutine set_initial_thread
+    !==========================
+    subroutine advance_heating_and_hydro
+      use ModMain,    ONLY: cfl, nStage
+      use ModAdvance, ONLY: time_BLK
+      use ModPhysics, ONLY: No2Si_V, UnitT_
+      !\
+      ! Time step in the physical cell from which the thread originates
+      ! divided by nStage if needed
+      !/
+      real ::DtLocal
+      !\
+      ! Enthalpy correction coefficient
+      !/
+      real    :: FluxConst
+      !\
+      ! Loop variable
+      !/
+      integer :: iPoint
+      !\
+      ! Specific heat, IntEnergy
+      !/
+      real    :: SpecHeat, IntEnergy
+      !-------------
+      DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)/nStage
+      !\
+      ! Multiply the heating source term and speed by the time step
+      !/
+      ResHeating_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal
+      USiLtd = USiLtd*DtLocal
+      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
+           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+      !\
+      ! Add enthalpy correction
+      !/
+      if(USiLtd>0)then
+         FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
+              *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+              (TeSiIn*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+         !\
+         ! Solve equation!
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1)_{i-1})=Res
+         !/
+         IntEnergy = PeSi_I(1)*SpecHeat_I(1)
+         SpecHeat  = IntEnergy/TeSi_I(1)
+         TeSi_I(1) = max(TeSiMin,(ResHeating_I(1) + IntEnergy)/&
+              (SpecHeat + FluxConst))
+         do iPoint = 2, nPoint-1
+            IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
+            SpecHeat  = IntEnergy/TeSi_I(iPoint)
+            TeSi_I(iPoint) =max(TeSiMin,&
+                 (ResHeating_I(iPoint) + IntEnergy + &
+                 FluxConst*TeSi_I(iPoint-1) )/(SpecHeat + FluxConst) )
+         end do
+      elseif(USiLtd<0)then
+         FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
+              *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+              (TeSiIn*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+         !\
+         ! Solve equation!
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1)_i)=Res
+         !/
+         do iPoint = nPoint-1, 2, -1
+            IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
+            SpecHeat  = IntEnergy/TeSi_I(iPoint)
+            TeSi_I(iPoint) =max(TeSiMin, &
+                 (ResHeating_I(iPoint) + IntEnergy - &
+                 FluxConst*TeSi_I(iPoint+1) )/(SpecHeat - FluxConst))
+         end do
+         IntEnergy = PeSi_I(1)*SpecHeat_I(1)
+         SpecHeat  = IntEnergy/TeSi_I(1)
+         TeSi_I(1) = (ResHeating_I(1) + IntEnergy -&
+               FluxConst*TeSi_I(2) )/SpecHeat
+      end if
+      !\
+      ! Set pressure for updated temperature and store pressure and temperature
+      !/
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+      call set_pressure
+      BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
+      BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
+    end subroutine advance_heating_and_hydro
+    !========================
+    subroutine advance_heat_cond
+      use ModMain,    ONLY: cfl
+      use ModAdvance, ONLY: time_BLK
+      use ModPhysics, ONLY: UnitT_, No2Si_V
+      !\
+      ! Time step in the physical cell from which the thread originates
+      !/
+      real ::DtLocal
+      integer :: iIter
+      !-----------
+      DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
+      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
+           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+      IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
+      do iIter = 1, nIter
+         call get_heat_cond
+         Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1) - &
+              SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + DtLocal*(&
+              ResHeatCond_I(1:nPoint-1) + ResCooling_I(1:nPoint-1))
+         U_I(1:nPoint-1) = DtLocal*U_I(1:nPoint-1)
+         L_I(1:nPoint-1) = DtLocal*L_I(1:nPoint-1)
+         M_I(2:nPoint-1) = DtLocal*M_I(2:nPoint-1) + &
+              SpecHeat_I(2:nPoint-1)*PeSi_I(2:nPoint-1)/&
+              (3.50*Cons_I(2:nPoint-1))
+         M_I(1) = DtLocal*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
+              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+         DCons_I = 0.0
+         call tridag(n=nPoint-1,  &
+              L_I=L_I(1:nPoint-1),&
+              M_I=M_I(1:nPoint-1),&
+              U_I=U_I(1:nPoint-1),&
+              R_I=Res_I(1:nPoint-1),&
+              W_I=DCons_I(1:nPoint-1))
+         Cons_I(1:nPoint-1) = &
+              max(ConsMin,Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1))
+         TeSi_I(1:nPoint-1) = &
+              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+         
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
          call set_pressure
       end do
-    end subroutine set_initial_thread
+    end subroutine advance_heat_cond
   end subroutine solve_boundary_thread
   !=========================================================================
   !============================================================================!
@@ -671,7 +876,7 @@ contains
     else
        iAction=BoundaryThreads_B(iBlock)%iAction
     end if
-
+    if(iAction==Done_)RETURN
     !\
     ! Start from floating boundary values
     !/
@@ -759,6 +964,7 @@ contains
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
             RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor)
+       !if(iAction==Enthalpy_)CYCLE
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
@@ -789,13 +995,13 @@ contains
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =&
                -DTeOverDsSi
           call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
-               iAction=iAction, TeSiIn=1.01*TeSi, PeSiIn=1.01*PeSi, &
+               iAction=iAction, TeSiIn=1.02*TeSi, PeSiIn=1.02*PeSi, &
                USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
                DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
                RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor) 
           BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
-               DTeOverDsSi)/(0.01*TeSi)
+               DTeOverDsSi)/(0.02*TeSi)
           !\
           !To achieve the diagonal-dominance property
           !/
@@ -803,7 +1009,6 @@ contains
                BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k), 0.0)
           CYCLE
        end if
-
        !\
        ! 
        !/
@@ -819,8 +1024,7 @@ contains
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
-       State_VG(Rho_, 0, j, k) = State_VG(iP, 0, j, k)* &
-             TeFraction/Te_G(1, j, k) !RhoNoDimOut
+       State_VG(Rho_, 0, j, k) = RhoNoDimOut
        !\
        !Exponential extrapolation of density
        !/
