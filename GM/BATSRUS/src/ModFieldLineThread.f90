@@ -163,7 +163,11 @@ module ModFieldLineThread
   ! last interval is not controlled (may be too small) 
   !/
   integer, parameter:: nIntervalTR = 2 
-  
+  !\
+  ! Determines, if the thread bc is called at the first stage of the 
+  ! multistage loop in explicit.f90
+  !/
+  integer, public   :: iStage = 0
 contains
   !=============================================================================
   subroutine read_threads(iSession)
@@ -965,11 +969,14 @@ contains
 
   end subroutine solve_a_plus_minus
   !=====================
-  subroutine advance_threads(iAction)
-    use ModMain,     ONLY: MaxBlock, Unused_B
+  subroutine advance_threads(iAction,iStageIn)
+    use ModMain,     ONLY: MaxBlock, Unused_B, nStage
     integer, intent(in)::iAction
+    integer, optional, intent(in) :: iStageIn
     integer:: iBlock
-    !---------------------------------------------------------------------------
+    !------------------------------------
+    iStage = nStage
+    if(present(iStageIn))iStage=iStageIn
     do iBlock = 1, MaxBlock
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
