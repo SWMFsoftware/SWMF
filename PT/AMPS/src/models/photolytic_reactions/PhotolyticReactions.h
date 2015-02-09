@@ -120,6 +120,11 @@ namespace PhotolyticReactions {
       Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable);
     }
   }
+
+  inline void Init() {
+    H2O::Huebner1992ASS::Init();
+    O2::Huebner1992ASS::Init();
+  }
 }
 
 
