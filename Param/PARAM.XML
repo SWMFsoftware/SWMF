@@ -1029,20 +1029,47 @@ It is a good idea, however, to save restart files multiple times during
 long runs.
 </command>
 
+<command name="RESTARTOUTDIR">
+	 <parameter name="NameRestartOutDir" type="string" length="100"
+	 	    			     default="" />
+
+#RESTARTOUTDIR
+SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
+
+The main purpose of this command is to allow saving multiple restart trees
+in time accurate mode without running the Restart.pl script in the background.
+
+NameRestartOutDir sets the name of the output restart directory tree
+for the SWMF. If the YYYYMMDD_HHMMSS string is part of NameRestartOutDir, 
+it will be replaced with the date-time information corresponding to the 
+restart data, for example "SWMF_RESTART.20150209_124900/".
+The SWMF output restart file (see #RESTARTFILE) will be written into this 
+directory. The components should also write their restart information into a 
+subdirectory named by the component ID, for example 
+"SWMF_RESTART.20150209_124900/GM/". 
+This feature is currently only implemented for BATSRUS and IM/RCM2.
+
+The default value is an empty string, so the SWMF restart file is written
+into the run directory and all components write into their respective
+output restart directories. The Restart.pl script can be used to move
+this information into a restart tree. The Restart.pl script works for
+all the components.
+</command>
+
 <command name="RESTARTFILE">
 	<parameter name="NameRestartFile" type="string" length="100"
 				default="RESTART.out" />
 
 #RESTARTFILE
-RESTART_test.in
+RESTART.out
 
-The NameRestartFile variable contains the file name
-for the restart file for CON itself. This file contains information
-such as initial time, simulation time and time step, version number,
-description of the simulation, name of the planet, etc. The file
-is in the same format as PARAM.in, so it can be simply included
-with the #INCLUDE command. To avoid unpleasant surprises,
-do not include the file which is being written.
+The NameRestartFile variable contains the name of the SWMF restart file.
+This file contains information such as initial date and time, simulation time,
+time step, version number, description of the simulation, name of the planet, 
+etc. This file is usually written into the main run directory, but this can be
+changed with the #RESTARTOUTDIR command. The Restart.pl script can be used 
+to link this file to the RESTART.in, which is normally included into 
+PARAM.in with the #INCLUDE command for restarts.
 
 The default value for NameRestartFile is "RESTART.out".
 </command>
