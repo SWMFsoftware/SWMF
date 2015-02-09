@@ -34,7 +34,7 @@ subroutine MH_set_parameters(TypeAction)
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
   use CON_axes,         ONLY: init_axes,get_axes
-  use ModUtilities,     ONLY: check_dir, fix_dir_name, DoFlush, &
+  use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
        split_string, join_string
   use CON_planet,       ONLY: get_planet
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
@@ -51,7 +51,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
   use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
   use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
-       DoChangeRestartVariables, nVarRestart, UseRestartWithFullB
+       DoChangeRestartVariables, nVarRestart, UseRestartWithFullB, &
+       NameRestartInDir, NameRestartOutDir
   use ModHallResist,    ONLY: &
        UseHallResist, HallFactorMax, HallCmaxFactor, &
        PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
@@ -180,7 +181,7 @@ subroutine MH_set_parameters(TypeAction)
      IsUninitialized=.false.
   end if
 
-  if(iSession>1)then
+  if(iSession > 1)then
      restart=.false.           ! restart in session 1 only
   end if
 
@@ -197,6 +198,11 @@ subroutine MH_set_parameters(TypeAction)
   select case(TypeAction)
   case('CHECK')
      if(iProc==0)write(*,*) NameSub,': CHECK iSession =',iSession
+
+     ! Make output and check input directories
+     if(iProc==0) call make_dir(NamePlotDir)
+     if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
+     if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
 
      if(StartTimeCheck > 0.0 .and. abs(StartTime - StartTimeCheck) > 0.001)then
         write(*,*)NameSub//' WARNING: '//NameThisComp//'::StartTimeCheck=', &
@@ -629,7 +635,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
-           if(iProc==0)call check_dir(NamePlotDir)
            nfile=max(nfile,logfile_)
            call read_var('StringLog',log_string)
            call read_var('DnSaveLogfile',dn_output(logfile_))
@@ -686,9 +691,6 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEPLOT")
         call read_var('nPlotFile', nPlotFile)
-
-        if(nPlotFile>0 .and. iProc==0)call check_dir(NamePlotDir)
-
         nfile = max(nfile, plot_ + nPlotFile)
         if (nFile > MaxFile .or. nPlotFile > MaxPlotFile) call stop_mpi(&
              'The number of ouput files is too large in #SAVEPLOT:'&
@@ -1537,7 +1539,6 @@ subroutine MH_set_parameters(TypeAction)
      case("#PLOTDIR")
         call read_var("NamePlotDir",NamePlotDir)
         call fix_dir_name(NamePlotDir)
-        if (iProc==0) call check_dir(NamePlotDir)
 
      case("#SATELLITE")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1561,9 +1562,6 @@ subroutine MH_set_parameters(TypeAction)
         DoReadMagnetometerFile = .true.
         save_magnetometer_data = .true.
         call read_var('MagInputFile', MagInputFile)
-
-        if (iProc==0) call check_dir(NamePlotDir)
-
         call read_var('DnOutput', dn_output(magfile_))
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 
