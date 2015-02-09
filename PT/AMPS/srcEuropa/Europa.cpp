@@ -1232,7 +1232,153 @@ void Europa::Sampling::O2InjectionSpeed::OutputSampledModelData(int DataOutputFi
 
 
 
+double Europa::LossProcesses::PhotolyticReactionRate=0.0;
+double Europa::LossProcesses::ElectronImpactRate=0.0;
+double Europa::LossProcesses::ElectronTemeprature=0.0;
 
+double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  long int nd;
+  int i,j,k;
+  double PlasmaBulkVelocity[3],ElectronDensity;
+
+  PhotolyticReactionRate=0.0,ElectronImpactRate=0.0;
+
+  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+  ElectronDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
+
+  PhotolyticReactionAllowedFlag=true;
+
+  //only sodium can be ionized
+  if ((spec!=_O2_SPEC_)&&(spec!=_H2O_SPEC_)) {
+    PhotolyticReactionAllowedFlag=false;
+    return -1.0;
+  }
+
+#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+  //determine whether the particle is in a shadow of Europa;  Jupiter will be added later
+  bool shadow=false;
+
+  //Europa:
+  if (xSun_SO[0]*x[0]+xSun_SO[1]*x[1]+xSun_SO[2]*x[2]<0.0) {
+    //the point is behind Euripa and could in a shadow
+    //check whether the point is within the cone determined by the Sun and Europa's terminator line
+    double cosThetaSquared=0.0,cosThetaSquaredMax=0.0;
+    double lengthParticleSquared=0.0,lengthEuropaSquared=0.0;
+
+    for (int i=0;i<3;i++) {
+      double t=x[i]-xSun_SO[i];
+      double t2=t*t;
+      double xSun2=xSun_SO[i]*xSun_SO[i];
+
+      cosThetaSquared+=t2*xSun2;
+      lengthParticleSquared+=t2;
+      lengthEuropaSquared+=xSun2;
+    }
+
+    cosThetaSquared/=lengthParticleSquared*lengthEuropaSquared;
+    cosThetaSquaredMax=lengthEuropaSquared/(_RADIUS_(_EUROPA_)*_RADIUS_(_EUROPA_)+lengthEuropaSquared);
+
+    if (cosThetaSquared>cosThetaSquaredMax) shadow=true;
+  }
+
+  if (shadow==false) {
+    static const double EuropaHeliocentricDistance=5.2*_AU_;
+
+    static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(EuropaHeliocentricDistance);
+    static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(EuropaHeliocentricDistance);
+
+    switch (spec) {
+    case _H2O_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H2O;
+      break;
+    case _O2_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_O2;
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: unknown specie");
+    }
+  }
+#else
+  switch (spec) {
+  case _H2O_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactions::H2O::GetTotalReactionRate(5.2*_AU_);
+    break;
+  case _O2_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactions::O2::GetTotalReactionRate(5.2*_AU_);
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown specie");
+  }
+
+#endif
+
+  //calcualte the rate due to the electron impact
+  //characteristic values
+  static const double ThermalElectronTemeprature=20.0;
+  static const double HotElectronTemeprature=250.0;
+
+  static const double ThermalElectronDensity=0.95*40.0E6;
+  static const double HotElectronDensity=0.05*40.0E6;
+
+  static const double HotElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+
+  static const double HotElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+
+
+  ElectronTemeprature=ThermalElectronTemeprature;
+
+
+  switch (spec){
+  case _H2O_SPEC_:
+    ElectronImpactRate=HotElectronImpactRate_H2O+ThermalElectronImpactRate_H2O;
+    break;
+  case _O2_SPEC_:
+    ElectronImpactRate=HotElectronImpactRate_O2+ThermalElectronImpactRate_O2;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown species");
+  }
+
+
+  return 1.0/(PhotolyticReactionRate+ElectronImpactRate);
+}
+
+
+int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+  int *ReactionProductsList,nReactionProducts;
+
+
+  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+
+  //determine the product and its of the rection
+  if (rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) {
+    //the photolytic reaction root
+  }
+  else {
+    //the electron impact root
+
+    switch (spec) {
+    case _H2O_SPEC_ :
+      ElectronImpact::H2O::GenerateReactionChannel(ElectronTemeprature,ReactionProductsList,nReactionProducts);
+      break;
+    case _O2_SPEC_:
+      ElectronImpact::O2::GenerateReactionChannel(ElectronTemeprature,ReactionProductsList,nReactionProducts);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+  }
+
+
+
+  PIC::ParticleBuffer::SetI(_O2_PLUS_SPEC_,ParticleData);
+  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
+
+//  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+}
 
 
 
