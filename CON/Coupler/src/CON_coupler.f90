@@ -47,6 +47,10 @@ module CON_coupler
 
   type(CoordSystemType), target :: Grid_C(MaxComp+3)
 
+  ! Name of the output restart directory for the component being coupled
+  public :: NameRestartOutDirComp  
+  character(len=200):: NameRestartOutDirComp = ''
+
   public :: Couple_CC           ! Frequency of couplings
 
   type(FreqType) :: Couple_CC(MaxComp,MaxComp) = &
