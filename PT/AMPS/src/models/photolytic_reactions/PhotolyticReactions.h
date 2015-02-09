@@ -86,10 +86,9 @@ namespace PhotolyticReactions {
   //reaction rates for O2
   namespace O2 {
     namespace Huebner1992ASS {
-      using namespace PhotolyticReactions::H2O::Huebner1992ASS;
-
       const int nMaxReactionProducts=3;
       const int nReactionChannels=5;
+      const double TableHeliocentricDistance=1.0*_AU_;
 
       extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
       extern double EmissionWaveLength[nReactionChannels];
@@ -97,6 +96,11 @@ namespace PhotolyticReactions {
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
       extern double ExcessEnergyTable_QuietSun[nReactionChannels],ExcessEnergyTable_ActiveSun[nReactionChannels];
+      extern double *ReactionRateTable,*ExcessEnergyTable;
+      extern double TotalReactionRate;
+
+      //the buffer to return the list of the reaction products
+      extern int ReturnReactionProductList[nMaxReactionProducts];
 
       void Init();
 

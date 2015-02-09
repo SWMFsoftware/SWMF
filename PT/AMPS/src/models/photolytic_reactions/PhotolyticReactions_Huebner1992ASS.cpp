@@ -32,6 +32,7 @@ double PhotolyticReactions::H2O::Huebner1992ASS::ReactionRateTable_ActiveSun[nRe
 double *PhotolyticReactions::H2O::Huebner1992ASS::ReactionRateTable=NULL;
 double PhotolyticReactions::H2O::Huebner1992ASS::TotalReactionRate=0.0;
 double *PhotolyticReactions::H2O::Huebner1992ASS::ExcessEnergyTable=NULL;
+int PhotolyticReactions::H2O::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
 
 void PhotolyticReactions::H2O::Huebner1992ASS::Init() {
   //init the tables
@@ -72,6 +73,12 @@ double PhotolyticReactions::O2::Huebner1992ASS::ExcessEnergyTable_QuietSun[nReac
 double PhotolyticReactions::O2::Huebner1992ASS::ExcessEnergyTable_ActiveSun[nReactionChannels]={
     5.85*eV2J,1.55*eV2J,0.74*eV2J,19.3*eV2J,27.3*eV2J
 };
+
+
+double *PhotolyticReactions::O2::Huebner1992ASS::ReactionRateTable=NULL;
+double *PhotolyticReactions::O2::Huebner1992ASS::ExcessEnergyTable=NULL;
+double PhotolyticReactions::O2::Huebner1992ASS::TotalReactionRate=0.0;
+int PhotolyticReactions::O2::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
 
 void PhotolyticReactions::O2::Huebner1992ASS::Init() {
   //init the tables
