@@ -943,15 +943,18 @@ contains
 
   subroutine IM_save_restart(TimeSimulation)
 
-    use RCM_variables, ONLY: iUnitOut
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use RCM_variables, ONLY: iUnitOut, NameRestartOutDir
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='IM_save_restart'
-
+    !-------------------------------------------------------------------------
     call IM_write_prefix; write(iUnitOut,*) &
          NameSub,' at TimeSimulation=',TimeSimulation
+
+    if(NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
 
     call RCM_advec (4, nint(TimeSimulation), nint(TimeSimulation), 0)
 
