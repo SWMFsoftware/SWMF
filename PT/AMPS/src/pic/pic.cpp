@@ -6,7 +6,7 @@
 //the general functions for the pic solver
 
 #include "pic.h"
-
+#include "PhotolyticReactions.h"
 
 
 //sampling variables
@@ -1437,6 +1437,10 @@ void PIC::Init_BeforeParser() {
   PIC::IDF::Init();
 #endif
 
+  //Init the photolytic reaction model
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+  ::PhotolyticReactions::Init();
+#endif
 }
 
 void PIC::Init_AfterParser() {
