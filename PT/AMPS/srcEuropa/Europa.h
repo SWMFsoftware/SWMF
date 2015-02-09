@@ -34,6 +34,9 @@ using namespace std;
 
 #include "constants.h"
 
+#include "PhotolyticReactions.h"
+#include "ElectronImpact.h"
+
 /*
 //path to the SPICE Kernels directory
 const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; //"/Users/rubinmar/Codes/CSPICE/Kernels/GALILEO";
@@ -1529,60 +1532,14 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
   memcpy(accl,accl_LOCAL,3*sizeof(double));
 }
 
-inline double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-
-  long int nd;
-  int i,j,k;
-  double PlasmaBulkVelocity[3],ElectronDensity;
-
-  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
-  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
-  ElectronDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
-
-  //only sodium can be ionized
-  if (spec!=_O2_SPEC_) {
-    PhotolyticReactionAllowedFlag=false;
-    return -1.0;
-  }
-
-  PhotolyticReactionAllowedFlag=true;
-  return 3.8e5;
 
 
-  static const double LifeTime=3600.0*5.8/pow(0.4,2);
+  namespace LossProcesses {
+   extern double PhotolyticReactionRate,ElectronImpactRate,ElectronTemeprature;
 
-#if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  double res,r2=x[1]*x[1]+x[2]*x[2];
-
-  //check if the particle is outside of the Earth and lunar shadows
-  if ( ((r2>_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_))||(x[0]<0.0)) /*&& (Mercury::EarthShadowCheck(x)==false)*/ ) {
-    res=LifeTime,PhotolyticReactionAllowedFlag=true;
-  }
-  else {
-    res=-1.0,PhotolyticReactionAllowedFlag=false;
-  }
-
-/*    //check if the particle intersect the surface of the Earth
-  if (pow(x[0]-Mercury::xEarth_SO[0],2)+pow(x[1]-Mercury::xEarth_SO[1],2)+pow(x[2]-Mercury::xEarth_SO[2],2)<_RADIUS_(_EARTH_)*_RADIUS_(_EARTH_)) {
-    res=1.0E-10*LifeTime,PhotolyticReactionAllowedFlag=true;
-  }*/
-
-#else
-  double res=LifeTime;
-  PhotolyticReactionAllowedFlag=true;
-#endif
-
-  return res;
-}
-
-inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
-
-
-  PIC::ParticleBuffer::SetI(_O2_PLUS_SPEC_,ParticleData);
-  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
-
-//  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
-}
+   double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+   int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData);
+  };
 
 
 //xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
@@ -1594,7 +1551,7 @@ inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,dou
   if (spec!=_O2_SPEC_) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
 
-  ParentSpeciesLifeTime=ExospherePhotoionizationLifeTime(xFinal,spec,ptr,PhotolyticReactionAllowedFlag,node);
+  ParentSpeciesLifeTime=LossProcesses::ExospherePhotoionizationLifeTime(xFinal,spec,ptr,PhotolyticReactionAllowedFlag,node);
 
   //determine if the parent particle sould be removed
   double c,p;
