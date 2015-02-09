@@ -130,7 +130,7 @@ double ElectronImpact::H2O::Burger2010SSR::General::GetTotalRateCoefficient(doub
   if (el<0.0) {
     // take the data from the first elecemnt of the data array
     for (nChannel=0;nChannel<nReactionChannels;nChannel++) {
-      t=1.0E6*pow(10.0,RateCoefficientTable[0+nChannel*RateCoefficientTableLength]);
+      t=1.0E-6*pow(10.0,RateCoefficientTable[0+nChannel*RateCoefficientTableLength]);
 
       RateTable[nChannel]=t;
       res+=t;
@@ -139,7 +139,7 @@ double ElectronImpact::H2O::Burger2010SSR::General::GetTotalRateCoefficient(doub
   else if (el>=RateCoefficientTableLength) {
     //take the last element of the data array
     for (nChannel=0;nChannel<nReactionChannels;nChannel++) {
-      t=1.0E6*pow(10.0,RateCoefficientTable[RateCoefficientTableLength-1+nChannel*RateCoefficientTableLength]);
+      t=1.0E-6*pow(10.0,RateCoefficientTable[RateCoefficientTableLength-1+nChannel*RateCoefficientTableLength]);
 
       RateTable[nChannel]=t;
       res+=t;
@@ -151,7 +151,7 @@ double ElectronImpact::H2O::Burger2010SSR::General::GetTotalRateCoefficient(doub
 
     i1=i0+1,c1=1.0-c0;
     for (nChannel=0;nChannel<nReactionChannels;nChannel++) {
-      t=1.0E6*pow(10.0,c0*RateCoefficientTable[i0+nChannel*RateCoefficientTableLength]+c1*RateCoefficientTable[i1+nChannel*RateCoefficientTableLength]);
+      t=1.0E-6*pow(10.0,c0*RateCoefficientTable[i0+nChannel*RateCoefficientTableLength]+c1*RateCoefficientTable[i1+nChannel*RateCoefficientTableLength]);
 
       RateTable[nChannel]=t;
       res+=t;
@@ -212,7 +212,7 @@ void ElectronImpact::H2O::Burger2010SSR::General::Print(const char* fname,const 
   for (int i=0;i<RateCoefficientTableLength;i++) {
     fprintf(fout,"%e",pow(10.0,minRateCoefficientTableElectronTemeprature_LOG10+i*dRateCoefficientTableElectronTemeprature_LOG10));
 
-    for (nChannel=0;nChannel<nReactionChannels;nChannel++) fprintf(fout,", %e",1.0E6*pow(10.0,RateCoefficientTable[i+nChannel*RateCoefficientTableLength]));
+    for (nChannel=0;nChannel<nReactionChannels;nChannel++) fprintf(fout,", %e",1.0E-6*pow(10.0,RateCoefficientTable[i+nChannel*RateCoefficientTableLength]));
     fprintf(fout,"\n");
   }
 
