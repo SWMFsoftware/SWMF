@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !QUOTE: \clearpage
@@ -51,7 +52,7 @@ module CON_time
   ! How often a component should run
   integer :: DnRun_C(MaxComp) = 1
 
-  ! Initial and current date/time
+  ! Initial date/time
   type(TimeType) :: TimeStart
 
   ! Date/time to finish the simulation
@@ -126,7 +127,7 @@ contains
   !IROUTINE: get_time - get time related parameters
   !INTERFACE:
   subroutine get_time(&
-       DoTimeAccurateOut,tSimulationOut,TimeStartOut,&
+       DoTimeAccurateOut, tSimulationOut, TimeStartOut,&
        tStartOut, tCurrentOut, nStepOut)
 
     !OUTPUT ARGUMENTS:
@@ -148,12 +149,16 @@ contains
 
   end subroutine get_time
   !BOP ========================================================================
-  !IROUTINE: save_end_time - save TimeEnd (instead of TimeStart and tSimulation) 
+  !IROUTINE: save_end_time - save TimeEnd instead of TimeStart and tSimulation
   !INTERFACE:
   subroutine save_end_time
+
+    ! Set TimeStart to TimeEnd and set simulation time to zero
+    ! Also set nStep to zero. These will be saved into RESTART.out
+
     !EOP
     !-------------------------------------------------------------------------
-    !Put TimeEnd to TimeStart, the latter will be saved in the RESTART.in file
+
     TimeStart % iYear      = TimeEnd % iYear   
     TimeStart % iMonth     = TimeEnd % iMonth 
     TimeStart % iDay       = TimeEnd % iDay    
@@ -162,9 +167,9 @@ contains
     TimeStart % iSecond    = TimeEnd % iSecond
     TimeStart % FracSecond = TimeEnd % FracSecond 
 
-    !Nullify tSimulation and nStep, which will be also saved 
     tSimulation = 0
     nStep       = 0
+
   end subroutine save_end_time
 
 end module CON_time
