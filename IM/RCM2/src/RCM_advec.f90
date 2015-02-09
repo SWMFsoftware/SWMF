@@ -1,11 +1,10 @@
-!-*- F90 -*- so emacs thinks this is an f90 file
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
 ! Routines for interfacing with MHD
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine rcm_getSize(idim1,idim2)
-  USE Rcm_variables
+  use Rcm_variables
   implicit none
   integer, intent(inout) :: idim1,idim2
 
@@ -15,7 +14,7 @@ end subroutine rcm_getSize
 !
 !
 subroutine rcm_getLatLon(RCM_lat,RCM_lon)
-  USE Rcm_variables
+  use Rcm_variables
   implicit none
   real, intent(inout), dimension(isize) :: RCM_lat
   real, intent(inout), dimension(jsize) :: RCM_lon
@@ -1406,21 +1405,19 @@ CONTAINS
     call Write_Label(iCurrentTime)
 
     !
-    WRITE (time_char,'(I2.2,A1,I2.2,A1,I2.2)') &
+    write (time_char,'(I2.2,A1,I2.2,A1,I2.2)') &
          label%intg(3), ':', label%intg(4), ':', label%intg(5)
     call IM_write_prefix
-    WRITE (iUnitOut,'(A23,I5.5,A13)') &
+    write (iUnitOut,'(A23,I5.5,A13)') &
          '   Saving Restart at T=',iCurrentTime,'s ('//time_char//') '
 
-    !Open and write text file
-    write(filename,'(a)') "RCMrestart.txt"
-    open(LUN, file=trim(NameRcmDir)//"restartOUT/"//filename, status='replace')
+    ! Open and write text file
+    open(LUN, file=trim(NameRestartOutDir)//"RCMrestart.txt", status='replace')
     write(LUN,*) label
     close(LUN)
 
-    !Open and write binary file
-    write(filename,'(a)') "RCMrestart.rst"
-    open(LUN, file=trim(NameRcmDir)//"restartOUT/"//filename, &
+    ! Open and write binary file
+    open(LUN, file=trim(NameRestartOutDir)//"RCMrestart.rst", &
          status='replace', form='unformatted')
     write(LUN) eeta
     close(LUN)
