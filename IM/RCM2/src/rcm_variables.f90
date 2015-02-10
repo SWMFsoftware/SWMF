@@ -20,7 +20,7 @@ module Rcm_variables
 !
     ! SWMF: added variable directory names for flexible IO
     character(len=100) :: NameRcmDir='IM/'
-    character(len=200) :: NameRestartOutDir = 'IM/restartOUT'
+    character(len=200) :: NameRestartOutDir = 'IM/restartOUT/'
 
 !
     ! SWMF: added restart logical, time step, and plot frequency
