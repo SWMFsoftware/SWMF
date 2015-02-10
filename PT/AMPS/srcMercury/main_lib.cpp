@@ -706,10 +706,10 @@ void prePopulateSWprotons(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double *anpart=new double [PIC::Mesh::mesh.nTotalThreads];
     double *volume=new double [PIC::Mesh::mesh.nTotalThreads];
 
-    MPI_Gather(&nTotalGeneratedParticles,1,MPI_LONG,GeneratedParticle,1,MPI_LONG,0,MPI_COMM_WORLD);
-    MPI_Gather(&nTotalProcessorBlocks,1,MPI_LONG,GeneratedNodes,1,MPI_LONG,0,MPI_COMM_WORLD);
-    MPI_Gather(&aNpartTotal,1,MPI_DOUBLE,anpart,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Gather(&TotalDomainVolume,1,MPI_DOUBLE,volume,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Gather(&nTotalGeneratedParticles,1,MPI_LONG,GeneratedParticle,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Gather(&nTotalProcessorBlocks,1,MPI_LONG,GeneratedNodes,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Gather(&aNpartTotal,1,MPI_DOUBLE,anpart,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Gather(&TotalDomainVolume,1,MPI_DOUBLE,volume,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
 
     if (PIC::Mesh::mesh.ThisThread==0) {
@@ -910,7 +910,7 @@ void amps_init_mesh() {
 
 
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
   //init the Mercury model
@@ -1140,10 +1140,10 @@ void amps_init_mesh() {
   if (PIC::Mesh::mesh.ThisThread==0) {
     PIC::Mesh::mesh.buildMesh();
     PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
   else {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
 
@@ -1250,7 +1250,7 @@ void amps_init() {
 //  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 //  PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
 
