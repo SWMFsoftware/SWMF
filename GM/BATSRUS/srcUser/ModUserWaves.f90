@@ -548,7 +548,7 @@ contains
           if(iPower_V(iVar) <= 0)then
              ! iPower==0: Tophat
              ! iPower< 0: Gaussian profile multiplied by smoother: 
-             !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
+             !    ampl*exp(-(r/d)^2)*(cos(0.25*pi*r/d))^6 for r/d < 2
              do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
                 x = Xyz_DGB(x_,i,j,k,iBlock) - x_V(iVar)
                 y = Xyz_DGB(y_,i,j,k,iBlock) - y_V(iVar)
