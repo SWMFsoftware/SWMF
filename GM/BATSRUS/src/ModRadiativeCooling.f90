@@ -54,7 +54,7 @@ contains
 
   end subroutine check_cooling_param
   !============================================================================
-  subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling)
+  subroutine get_radiative_cooling(i, j, k, iBlock, TeSiIn, RadiativeCooling, iError)
 
     use ModPhysics,    ONLY: No2Si_V, UnitN_
     use ModVarIndexes, ONLY: Rho_
@@ -64,9 +64,10 @@ contains
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(in) :: TeSiIn
     real,   intent(out) :: RadiativeCooling
-
+    integer,intent(out),optional::iError
     real :: NumberDensCgs
     !--------------------------------------------------------------------------
+    if(present(iError))iError=0
     if(UseMultiIon)then
        NumberDensCgs = &
             sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I) &
@@ -75,7 +76,7 @@ contains
        NumberDensCgs = State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitN_)*1.0e-6
     end if
 
-    RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs)
+    RadiativeCooling = - radiative_cooling(TeSiIn, NumberDensCgs,iError)
 
     ! include multiplicative factors to make up for extention of
     ! perpendicular heating at low temperatures (as per Abbett 2007).
@@ -90,13 +91,14 @@ contains
     end if
   end subroutine get_radiative_cooling
   !===========================================================================
-  real function radiative_cooling(TeSiIn, NumberDensCgs)
+  real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
     use ModMultiFluid,    ONLY: UseMultiIon
 
     !Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
+    integer,optional,intent(out)::iError
 
     real :: CoolingFunctionCgs
     real :: CoolingTableOut_I(1)
@@ -106,9 +108,16 @@ contains
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
-       ! since we don't want to deal with such tiny numbers 
+       ! since we don't want to deal with such tiny numbers
+       if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.NumberDensCgs<1.0e2.or.&
+            NumberDensCgs<1.0e2.or.NumberDensCgs>1.0e14)then
+          write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
+          if(present(iError))iError=1
+          if(TeSiIn<0.0)call CON_stop(&
+               'Negative temperature in calculating rad. cooling')
+       end if
        call interpolate_lookup_table(iTableRadCool, TeSiIn, NumberDensCgs, &
-            CoolingTableOut_I, DoExtrapolate = .true.)
+            CoolingTableOut_I, DoExtrapolate = .false.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
        ! The presently stored cooling function assumes that it will be
        ! multiplied by Nelectron*Nhydrogen. The following turns this
