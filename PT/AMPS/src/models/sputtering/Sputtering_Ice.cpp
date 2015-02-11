@@ -2,7 +2,56 @@
 
 #include "Sputtering.h"
 
-double Sputtering::Ice::GetSputteringSpeed(int spec, double* v){
+inline void Sputtering::Ice::GetSputteringSpeed(int spec, 
+					 double& speed, 
+					 double& weight_correction){
+  // parameters of sputtering energy/speed/log-speed distribution
+  // speed is generated in the log-velocity space
+  //      log(speed) = log(Vmin) + rnd() * (log(Vmax) - log(Vmax))
+  // statictical weight correction is
+  //      weight_correction = {dP/dlog(v)|v=speed} / {dP/dlog(v)|max}
+  // H2O: 
+  //    energy distribution dP/dE = 2 * Uh2o * E / (E + Uh2o)^3
+  //    <E>               = infinity
+  //    <v>               = 1.5 * pi * sqrt(0.5 * Uh20 / MASSh2o) ~ 1800 m/s
+  //    exp(<Log v>)      = sqrt(2 * exp(1) * Uh2o / MASSh2o)     ~ 1260 m/s
+  //    (dP/dlog(v))_max  = 16/27
+  const double Uh2o            = 0.055*eV2J;
+  const double logVh2o_min     = log(1.0E1);
+  const double logVh2o_max     = log(6.0E3);
+  const double pdf_logVh2o_max = 16./27.;
+  // O2:
+  //    energy distribution dP/dE = Uo2 */ (E + Uo2)^2
+  //    <E>          = infinity
+  //    <v>          = pi * sqrt(0.5 * Uo2 / MASSo2) ~ 470 m/s
+  //    exp(<Log v>) = sqrt(2 * Uo2 / MASSo2)        ~ 300 m/s
+  //    (dP/dlog(v))_max  = 1/2
+  const double Uo2            = 0.015*eV2J;
+  const double logVo2_min     = log(1.0E1);
+  const double logVo2_max     = log(2.0E3);
+  const double pdf_logVo2_max = 0.5;
+  double logv, speed2;
+  
+  switch(spec){
+  case _H2O_SPEC_:
+    logv  = logVh2o_min + rnd()*(logVh2o_max - logVh2o_min);
+    speed = exp(logv);
+    speed2= speed * speed;
+    weight_correction = 
+      Uh2o * pow(_MASS_(_H2O_) * speed2, 2.0) / 
+      pow(0.5 * _MASS_(_H2O_) * speed2 + Uh2o, 3.0)  /  pdf_logVh2o_max;
+    break;
+  case _O2_SPEC_:
+    logv  = logVo2_min + rnd()*(logVo2_max - logVo2_min);
+    speed = exp(logv);
+    speed2= speed * speed;
+    weight_correction = 
+      Uo2 * _MASS_(_O2_) * speed2 / 
+      pow(0.5 * _MASS_(_O2_) * speed2 + Uo2, 2.0)  /  pdf_logVo2_max;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: uninitialized sputtering target species");
+  }  
 }
 
 // description of Martin Rubin's model ----------------------------------------
