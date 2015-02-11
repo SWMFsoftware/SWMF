@@ -9,6 +9,7 @@
 #define CONSTANTS_ATOMICDATA_H_
 
 #define _AMU_ 1.66053886E-27
+#define _ELECTRON__MASS_ (0.000548579909*_AMU_)
 
 
 /*-------------------------  H  --------------------------------*/
