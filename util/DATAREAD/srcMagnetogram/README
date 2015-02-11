@@ -71,6 +71,11 @@ to be installed on your machine.
 
    mpirun -np 4 ./FDIPS.exe
 
-6. Move the output file to the location where it is expected by the
+6. Combine the FDIPS output files (1 per processor) into a single file 
+   with the redistribute.pl script, for example
+
+   ./redistribute.pl fdips_field_np010202.out fdips.out
+
+7. Move the output file to the location where it is expected by the
    #MAGNETOGRAM  and/or #READPOTENTIALFIELD commands in the PARAM.in file.
 
