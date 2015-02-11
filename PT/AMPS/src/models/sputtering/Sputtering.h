@@ -4,11 +4,11 @@
 // 1) add a new namespace(s):
 //    - namespace SurfaceType (if needed)
 //    - namespace ModelName   (within namespace SurfaceType)
-//    source file Sputtering.cpp contains yield table for all models
+//    source file Sputtering_<SurfaceType>.cpp contains yield table
+//    for corresponding surface type models and velocity injection distribution
 // 2) add a corresponding branch in:
 //    - Sputtering::Init,
 //    - Sputtering::GetSputteringYield,
-//    - Sputtering::SurfaceType::GetSputteringSpeed
 //------------------------------------------------------------------------
 
 #ifndef _SPUTTERING_ 
@@ -55,7 +55,7 @@ namespace Sputtering {
     } 
     // namespace Teolis -------------------------------------------------------
 
-    double GetSputteringSpeed(int spec, double* v);
+    inline void GetSputteringSpeed(int spec, double& speed, double& weight_correction);
   }
   // namespace Ice ============================================================
 
@@ -141,10 +141,10 @@ namespace Sputtering {
   
   // 2nd Master function
   //   input: species of a sputtered particle
-  //  output: its velocity vector
-  void GetSputteringSpeed(int spec, double* v){
+  //  output: its speed and statistical weight correction
+  void GetSputteringSpeed(int spec, double& speed, double& weight_correction){
 #if _SPUTTERING__SURFACE_ == _SPUTTERING__ICE_
-    Ice::GetSputteringSpeed(spec,v);
+    Ice::GetSputteringSpeed(spec,speed, weight_correction);
 #else
     exit(__LINE__,__FILE__,"Error: sputtering surface type is not recognized");
 #endif
