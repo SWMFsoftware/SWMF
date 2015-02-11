@@ -2,7 +2,7 @@
 
 #include "Sputtering.h"
 
-inline void Sputtering::Ice::GetSputteringSpeed(int spec, 
+void Sputtering::Ice::GetSputteringSpeed(int spec, 
 					 double& speed, 
 					 double& weight_correction){
   // parameters of sputtering energy/speed/log-speed distribution
@@ -55,9 +55,9 @@ inline void Sputtering::Ice::GetSputteringSpeed(int spec,
 }
 
 // description of Martin Rubin's model ----------------------------------------
-inline double Sputtering::Ice::Rubin::SputteringYield(double speed,
-						      int spec_projectile,
-						      int spec_target){
+double Sputtering::Ice::Rubin::SputteringYield(double speed,
+					       int spec_projectile,
+					       int spec_target){
   // Matrix contains sputtering yields for H2O
   // [Energy_level][Projectile]
   // Projectile = 0:H^+; 1:O^(n+), 2:O2^(n+)
@@ -168,9 +168,9 @@ inline double Sputtering::Ice::Rubin::SputteringYield(double speed,
 }
 
 // description of Benjamin Teolis's model -------------------------------------
-inline double Sputtering::Ice::Teolis::SputteringYield(double speed,
-						      int spec_projectile,
-						      int spec_target){
+double Sputtering::Ice::Teolis::SputteringYield(double speed,
+						int spec_projectile,
+						int spec_target){
   // Matrix contains sputtering yields for
   // [Energy_level][Target][Projectile]
   // Energy_level is calculated from energy E(eV) by 
