@@ -15,8 +15,8 @@ dipole11.out		NameFileIn
 25.0			rMax         (default is 2.5)
 T			UseLogRadius (default is F)
 
-! In the Theta and Phi directions coarsening relative to the magnetogram resolution
-! by an integer ratio is allowed. Refinement is not possible.
+! In the Theta and Phi directions coarsening relative to the magnetogram 
+! resolution by an integer ratio is allowed. Refinement is not possible.
 #GRID
 20			nR     (number of cells in the radial direction)
 20			nTheta (set 0 to use the magnetogram resolution)
@@ -39,7 +39,7 @@ TESTIJK
 2			nProcTheta
 2			nProcPhi
 
-! Standard solver
+! Standard solver (these are the defaults)
 #SOLVER                 ! NO HYPRE
 BiCGSTAB		NameSolver (BiCGSTAB)
 ILU			NamePreconditioner (ILU or NONE)
@@ -62,15 +62,23 @@ HYPRE
 0.3			TruncFactorAmg
 T			UseSinglePart
 
+
 ! Save up to three files containing the potential or the magnetic field.
-! The tecplot output (that contains Bx, By, Bz) only works in serial mode.
 ! The parallel field and potential output can be merged with redistribute.pl
+! The solar corona component of the SWMF uses the TypeOutput="field" file.
+
 #OUTPUT
 field			TypeOutput    (field, potential, or tecplot)
 fdips_field.out		NameFileField
 ascii			TypeFileField (ascii, real4 or real8)
 
-#OUTPUT
+! This output file contains the potential that is used for testing the solver
+OUTPUT
 potential		TypeOutput
 fdips_potential.out	NameFilePotential
 real8			TypeFilePotential
+
+! The tecplot output (that contains Bx, By, Bz) only works in serial mode. 
+OUTPUT
+tecplot			TypeOutput
+fdips_field.dat		NameFilePotential
