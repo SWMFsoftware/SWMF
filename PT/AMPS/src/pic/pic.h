@@ -819,6 +819,7 @@ namespace PIC {
     void DeleteParticle_withoutTrajectoryTermination(long int);
 
     void CloneParticle(long int,long int);
+    void CloneParticle(byte*,byte*);
 
     void ExcludeParticleFromList(long int,long int&);
 

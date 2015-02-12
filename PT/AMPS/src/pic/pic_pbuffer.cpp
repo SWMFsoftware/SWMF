@@ -169,22 +169,27 @@ void PIC::ParticleBuffer::DeleteParticle(long int ptr,long int& ListFirstParticl
 
 
 
-void PIC::ParticleBuffer::CloneParticle(long int copy,long int source) {
-  byte *SourceData,*CopyData;
+void PIC::ParticleBuffer::CloneParticle(byte* CopyData,byte* SourceData) {
   long int next,prev;
-
-  SourceData=GetParticleDataPointer(source);
-  CopyData=GetParticleDataPointer(copy);
 
   prev=GetPrev(CopyData);
   next=GetNext(CopyData);
 
-//  for (i=0;i<ParticleDataLength;i++) CopyData[i]=SourceData[i];
   memcpy(CopyData,SourceData,ParticleDataLength*sizeof(byte));
 
   SetPrev(prev,CopyData);
   SetNext(next,CopyData);
 }
+
+void PIC::ParticleBuffer::CloneParticle(long int copy,long int source) {
+  byte *SourceData,*CopyData;
+
+  SourceData=GetParticleDataPointer(source);
+  CopyData=GetParticleDataPointer(copy);
+
+  CloneParticle(CopyData,SourceData);
+}
+
 
 //==========================================================
 //save the particle buffer in a restart file
