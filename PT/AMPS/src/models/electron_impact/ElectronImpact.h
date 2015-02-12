@@ -316,6 +316,28 @@ namespace ElectronImpact {
     }
   }
 
+  void GenerateReactionProducts(int spec,double ElectronTemeprature,int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+    switch (spec) {
+    case _H2O_SPEC_ :
+      H2O::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _O2_SPEC_:
+      O2::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _H2_SPEC_:
+      H2::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _H_SPEC_:
+      H::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _O_SPEC_:
+      O::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+  }
 
 }
 
