@@ -566,12 +566,20 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_:
 
 #if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
+#if _SPUTTERING__ACTIVE_ == _SPUTTERING__ON_
+
+    int iTargetSpecies, nTargetSpecies;
+    const int *TargetSpeciesTable;
+    double *YieldTable;
+    
     switch (spec) {
     case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_:
-      Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
+      //Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
+      nTargetSpecies=Sputtering::GetSputteringYield(vi, _O_PLUS_THERMAL_SPEC_, TargetSpeciesTable, YieldTable);
       break;
     case _O2_PLUS_SPEC_:
-      Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O2_),2);
+      //Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O2_),2);
+      nTargetSpecies=Sputtering::GetSputteringYield(vi, _O2_PLUS_SPEC_, TargetSpeciesTable, YieldTable);
       break;
     default:
       exit(__LINE__,__FILE__,"Error: the specie is not recognized");
@@ -605,15 +613,16 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     //convert velocity vector from IAU_EUROPA -> GALL_EPHIOD_EUROPA coordinate frame
     memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
-
-    while (Yield>0.0) {
-      do {
-        Europa::EuropaO2Neutrals::O2SputterInjection(SputteringSpeed,WeightCorrectionFactor);
+    for(iTargetSpecies = 0; iTargetSpecies < nTargetSpecies; iTargetSpecies++){
+      while (YieldTable[iTargetSpecies]>0.0) {
+	do {
+	  //Europa::EuropaO2Neutrals::O2SputterInjection(SputteringSpeed,WeightCorrectionFactor);
+	  Sputtering::GetSputteringSpeed(TargetSpeciesTable[iTargetSpecies], SputteringSpeed, WeightCorrectionFactor);	  
       }
       while (maxSputteredParticleVelocity<SputteringSpeed);
 
-      if (WeightCorrectionFactor>Yield) WeightCorrectionFactor=Yield;
-      Yield-=WeightCorrectionFactor;
+      if (WeightCorrectionFactor>YieldTable[iTargetSpecies]) WeightCorrectionFactor=YieldTable[iTargetSpecies];
+      YieldTable[iTargetSpecies]-=WeightCorrectionFactor;
 
       //sample the injection speed of O2
       int vInterval=(int)(SputteringSpeed/Europa::Sampling::O2InjectionSpeed::dv);
@@ -660,24 +669,25 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
       PIC::ParticleBuffer::SetX(x_LOCAL_SO,newParticle);
       PIC::ParticleBuffer::SetV(v_LOCAL_SO,newParticle);
-      PIC::ParticleBuffer::SetI(_O2_SPEC_,newParticle);
+      PIC::ParticleBuffer::SetI(TargetSpeciesTable[iTargetSpecies],newParticle);
       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(WeightCorrectionFactor,newParticle);
       Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,PIC::ParticleBuffer::GetParticleDataPointer(newParticle));
 
       //sample the particle injection rate
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-      ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*WeightCorrectionFactor;
+      ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[TargetSpeciesTable[iTargetSpecies]]*WeightCorrectionFactor;
 #else
       exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
 #endif
 
-      Sphere->SampleSpeciesSurfaceInjectionFlux[_O2_SPEC_][el]+=ParticleWeight;
-      Sphere->SampleInjectedFluxBulkSpeed[_O2_SPEC_][el]+=vi*ParticleWeight;
+      Sphere->SampleSpeciesSurfaceInjectionFlux[TargetSpeciesTable[iTargetSpecies]][el]+=ParticleWeight;
+      Sphere->SampleInjectedFluxBulkSpeed[TargetSpeciesTable[iTargetSpecies]][el]+=vi*ParticleWeight;
 
       //inject the particle into the system
-     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_]*rnd(),(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter);
+     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,PIC::ParticleWeightTimeStep::GlobalTimeStep[TargetSpeciesTable[iTargetSpecies]]*rnd(),(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter);
 
     }
+#endif
 #endif
 
 //    PIC::ParticleBuffer::DeleteParticle(ptr);
