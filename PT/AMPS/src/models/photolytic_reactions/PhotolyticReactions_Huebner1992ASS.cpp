@@ -96,6 +96,182 @@ void PhotolyticReactions::O2::Huebner1992ASS::Init() {
   for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
 }
 
+
+//-----------------------------------   H ----------------------------------------------
+int PhotolyticReactions::H::Huebner1992ASS::ReactionProducts[nReactionChannels][nMaxReactionProducts]={
+    {_H_PLUS_SPEC_,_ELECTRON_SPEC_}
+};
+
+double PhotolyticReactions::H::Huebner1992ASS::ReactionRateTable_QuietSun[nReactionChannels]={
+  7.26E-8
+};
+
+double PhotolyticReactions::H::Huebner1992ASS::ReactionRateTable_ActiveSun[nReactionChannels]={
+  1.72E-7
+};
+
+double PhotolyticReactions::H::Huebner1992ASS::EmissionWaveLength[nReactionChannels]={
+    -1.0
+};
+
+double PhotolyticReactions::H::Huebner1992ASS::ExcessEnergyTable_QuietSun[nReactionChannels]={
+    3.54*eV2J
+};
+
+double PhotolyticReactions::H::Huebner1992ASS::ExcessEnergyTable_ActiveSun[nReactionChannels]={
+    3.97*eV2J
+};
+
+double *PhotolyticReactions::H::Huebner1992ASS::ReactionRateTable=NULL;
+double PhotolyticReactions::H::Huebner1992ASS::TotalReactionRate=0.0;
+double *PhotolyticReactions::H::Huebner1992ASS::ExcessEnergyTable=NULL;
+int PhotolyticReactions::H::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::H::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
+
+void PhotolyticReactions::H::Huebner1992ASS::Init() {
+  //init the tables
+  if (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_) ReactionRateTable=ReactionRateTable_ActiveSun;
+  else if  (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__QUIET_) ReactionRateTable=ReactionRateTable_QuietSun;
+  else exit(__LINE__,__FILE__,"Error: the option is unknown");
+
+  //calculate the total rate
+  for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
+}
+
+//-----------------------------------   H2 ----------------------------------------------
+int PhotolyticReactions::H2::Huebner1992ASS::ReactionProducts[nReactionChannels][nMaxReactionProducts]={
+    {_H_PLUS_SPEC_,_H_PLUS_SPEC_,-1},
+    {_H_PLUS_SPEC_,_H_PLUS_SPEC_,-1},
+    {_H2_PLUS_SPEC_,_ELECTRON_SPEC_,-1},
+    {_H_SPEC_,_H_PLUS_SPEC_,_ELECTRON_SPEC_}
+};
+
+double PhotolyticReactions::H2::Huebner1992ASS::ReactionRateTable_QuietSun[nReactionChannels]={
+  4.80E-8,3.44E-8,5.41E-8,9.52E-9
+};
+
+double PhotolyticReactions::H2::Huebner1992ASS::ReactionRateTable_ActiveSun[nReactionChannels]={
+  1.09E-7,8.21E-8,1.15E-7,2.79E-8
+};
+
+double PhotolyticReactions::H2::Huebner1992ASS::EmissionWaveLength[nReactionChannels]={
+    -1.0,-1.0,-1.0,1.0
+};
+
+double PhotolyticReactions::H2::Huebner1992ASS::ExcessEnergyTable_QuietSun[nReactionChannels]={
+    8.23*eV2J,0.44*eV2J,6.56*eV2J,24.8*eV2J
+};
+
+double PhotolyticReactions::H2::Huebner1992ASS::ExcessEnergyTable_ActiveSun[nReactionChannels]={
+    8.22*eV2J,0.42*eV2J,7.17*eV2J,27.0*eV2J
+};
+
+double *PhotolyticReactions::H2::Huebner1992ASS::ReactionRateTable=NULL;
+double PhotolyticReactions::H2::Huebner1992ASS::TotalReactionRate=0.0;
+double *PhotolyticReactions::H2::Huebner1992ASS::ExcessEnergyTable=NULL;
+int PhotolyticReactions::H2::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::H2::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
+
+void PhotolyticReactions::H2::Huebner1992ASS::Init() {
+  //init the tables
+  if (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_) ReactionRateTable=ReactionRateTable_ActiveSun;
+  else if  (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__QUIET_) ReactionRateTable=ReactionRateTable_QuietSun;
+  else exit(__LINE__,__FILE__,"Error: the option is unknown");
+
+  //calculate the total rate
+  for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
+}
+//-----------------------------------   O ----------------------------------------------
+int PhotolyticReactions::O::Huebner1992ASS::ReactionProducts[nReactionChannels][nMaxReactionProducts]={
+    {_O_PLUS_SPEC_,_ELECTRON_SPEC_}
+};
+
+double PhotolyticReactions::O::Huebner1992ASS::ReactionRateTable_QuietSun[nReactionChannels]={
+  1.96E-7
+};
+
+double PhotolyticReactions::O::Huebner1992ASS::ReactionRateTable_ActiveSun[nReactionChannels]={
+  5.28E-7
+};
+
+double PhotolyticReactions::O::Huebner1992ASS::EmissionWaveLength[nReactionChannels]={
+    -1.0
+};
+
+double PhotolyticReactions::O::Huebner1992ASS::ExcessEnergyTable_QuietSun[nReactionChannels]={
+    18.9*eV2J
+};
+
+double PhotolyticReactions::O::Huebner1992ASS::ExcessEnergyTable_ActiveSun[nReactionChannels]={
+    23.1*eV2J
+};
+
+double *PhotolyticReactions::O::Huebner1992ASS::ReactionRateTable=NULL;
+double PhotolyticReactions::O::Huebner1992ASS::TotalReactionRate=0.0;
+double *PhotolyticReactions::O::Huebner1992ASS::ExcessEnergyTable=NULL;
+int PhotolyticReactions::O::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::O::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
+
+void PhotolyticReactions::O::Huebner1992ASS::Init() {
+  //init the tables
+  if (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_) ReactionRateTable=ReactionRateTable_ActiveSun;
+  else if  (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__QUIET_) ReactionRateTable=ReactionRateTable_QuietSun;
+  else exit(__LINE__,__FILE__,"Error: the option is unknown");
+
+  //calculate the total rate
+  for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
+}
+
+//-----------------------------------   OH ----------------------------------------------
+int PhotolyticReactions::OH::Huebner1992ASS::ReactionProducts[nReactionChannels][nMaxReactionProducts]={
+    {_O_SPEC_,_H_SPEC_},
+    {_O_SPEC_,_H_SPEC_},
+    {_O_SPEC_,_H_SPEC_},
+    {_OH_PLUS_SPEC_,_ELECTRON_SPEC_}
+};
+
+double PhotolyticReactions::OH::Huebner1992ASS::ReactionRateTable_QuietSun[nReactionChannels]={
+  1.20E-5,7.01E-6,8.33E-7,2.43E-7
+};
+
+double PhotolyticReactions::OH::Huebner1992ASS::ReactionRateTable_ActiveSun[nReactionChannels]={
+  1.38E-5,1.76E-5,2.11E-6,6.43E-5
+};
+
+double PhotolyticReactions::OH::Huebner1992ASS::EmissionWaveLength[nReactionChannels]={
+    -1.0,-1.0,-1.0,1.0
+};
+
+double PhotolyticReactions::OH::Huebner1992ASS::ExcessEnergyTable_QuietSun[nReactionChannels]={
+    2.0*eV2J,7.73*eV2J,10.0*eV2J,19.4*eV2J
+};
+
+double PhotolyticReactions::OH::Huebner1992ASS::ExcessEnergyTable_ActiveSun[nReactionChannels]={
+    2.14*eV2J,7.74*eV2J,10.0*eV2J,23.6*eV2J
+};
+
+
+
+double *PhotolyticReactions::OH::Huebner1992ASS::ReactionRateTable=NULL;
+double *PhotolyticReactions::OH::Huebner1992ASS::ExcessEnergyTable=NULL;
+double PhotolyticReactions::OH::Huebner1992ASS::TotalReactionRate=0.0;
+int PhotolyticReactions::OH::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::OH::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
+
+void PhotolyticReactions::OH::Huebner1992ASS::Init() {
+  //init the tables
+  if (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__ACTIVE_) {
+    ReactionRateTable=ReactionRateTable_ActiveSun,ExcessEnergyTable=ExcessEnergyTable_ActiveSun;
+  }
+  else if (_PHOTOLYTIC_REACTIONS__SUN_ == _PHOTOLYTIC_REACTIONS__SUN__QUIET_) {
+    ReactionRateTable=ReactionRateTable_QuietSun,ExcessEnergyTable=ExcessEnergyTable_QuietSun;
+  }
+  else exit(__LINE__,__FILE__,"Error: the option is unknown");
+
+  //calculate the total rate
+  for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
+}
+
 //-----------------------------------  Chemical model ----------------------------------------
 void PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* ReturnReactionProductTable,double *ReturnReactionProductVelocityTable,
     double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int nMaxReactionProducts,
