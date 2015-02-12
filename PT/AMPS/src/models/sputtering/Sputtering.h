@@ -24,7 +24,7 @@ namespace Sputtering {
   static int nSpecTarget;
   static int *SpecTarget;
   // list of yields corresponding to list of SpecTarget
-  extern double *Yield;
+  static double *Yield;
 
   // icy surface ==============================================================
   namespace Ice {
@@ -68,7 +68,7 @@ namespace Sputtering {
   //  output: list of species and vector of corresponding yields,
   //          returns number of species sputtered
   int GetSputteringYield(double speed, int spec_projectile,
-			 const int* spec_target, double* yield);
+			 const int* &spec_target, double* &yield);
   
   // 2nd Master function
   //   input: species of a sputtered particle
