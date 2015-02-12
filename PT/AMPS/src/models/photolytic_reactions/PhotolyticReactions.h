@@ -349,6 +349,32 @@ namespace PhotolyticReactions {
     OH::Huebner1992ASS::Init();
     O::Huebner1992ASS::Init();
   }
+
+  inline void GenerateReactionProducts(int spec,int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+    switch (spec) {
+    case _H2O_SPEC_ :
+      H2O::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _O2_SPEC_:
+      O2::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _H2_SPEC_:
+      H2::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _H_SPEC_:
+      H::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _OH_SPEC_:
+      OH::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    case _O_SPEC_:
+      O::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+  }
+
 }
 
 
