@@ -2,9 +2,6 @@
 
 #include "Sputtering.h"
 
-  // list of Yyelds corresponding to list of sputtered species SpecTargetTable
-double *Sputtering::Yield;
-
 // initialization of sputtering model
 void Sputtering::Init(){
   
@@ -35,18 +32,18 @@ void Sputtering::Init(){
   
   int count = 0; // count species actually used in the simulation     
   for(int iSpecTarget = 0; iSpecTarget < nSpecTargetInit; iSpecTarget++)
-    if(SpecTargetInit[iSpecTarget] > 0) ++count;
-  else { // set number and list of species in simulation
-    Sputtering::nSpecTarget = count;
-    Sputtering::SpecTarget  = new int[count];
-    Sputtering::Yield       = new double[count];
-    for(int iSpecTarget=0, i=0; iSpecTarget < nSpecTargetInit; iSpecTarget++)
-      if(SpecTargetInit[iSpecTarget] > 0){
-	Sputtering::Yield[i]        = 0.0;
-	Sputtering::SpecTarget[i++] = SpecTargetInit[iSpecTarget];
-      } 
-  }
+    if(SpecTargetInit[iSpecTarget] >= 0) ++count;
+  // set number and list of species in simulation
+  Sputtering::nSpecTarget = count;
+  Sputtering::SpecTarget  = new int[count];
+  Sputtering::Yield       = new double[count];
+  for(int iSpecTarget=0, i=0; iSpecTarget < nSpecTargetInit; iSpecTarget++)
+    if(SpecTargetInit[iSpecTarget] >= 0){
+      Sputtering::Yield[i]        = 0.0;
+      Sputtering::SpecTarget[i++] = SpecTargetInit[iSpecTarget];
+    } 
 }
+
 
 
 // 1st Master function: 
@@ -54,7 +51,7 @@ void Sputtering::Init(){
   //  output: list of species and vector of corresponding yields,
   //          returns number of species sputtered
 int Sputtering::GetSputteringYield(double speed, int spec_projectile,
-		       const int* spec_target, double* yield){
+		       const int* &spec_target, double* &yield){
   // calculate yield for every species in the list SpecTarget
   for(int iSpec=0; iSpec < Sputtering::nSpecTarget; iSpec++){
     
@@ -72,7 +69,7 @@ int Sputtering::GetSputteringYield(double speed, int spec_projectile,
     exit(__LINE__,__FILE__,"Error: ice sputtering model is not recognized");
 #endif
     // icy surface done
-    
+
 #else
     exit(__LINE__,__FILE__,"Error: sputtering surface type is not recognized");
 #endif
