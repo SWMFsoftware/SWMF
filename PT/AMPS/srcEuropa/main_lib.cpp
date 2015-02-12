@@ -1164,7 +1164,7 @@ void amps_init() {
 
 
 	// initialize sputtering physical model
-#if _SPUTTERING__ACTIVE_ == _SPUTTERING__ON_
+#if _SPUTTERING__MODE_ == _SPUTTERING__ON_
 	Sputtering::Init();
 #endif
 
