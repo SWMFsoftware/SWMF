@@ -566,7 +566,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_:
 
 #if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
-#if _SPUTTERING__ACTIVE_ == _SPUTTERING__ON_
+#if _SPUTTERING__MODE_ == _SPUTTERING__ON_
 
     int iTargetSpecies, nTargetSpecies;
     const int *TargetSpeciesTable;
