@@ -1163,6 +1163,12 @@ void amps_init() {
 #endif
 
 
+	// initialize sputtering physical model
+#if _SPUTTERING__ACTIVE_ == _SPUTTERING__ON_
+	Sputtering::Init();
+#endif
+
+
 	//prepopulate the solar wind protons
 	//  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
 
