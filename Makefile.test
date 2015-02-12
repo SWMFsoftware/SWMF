@@ -16,6 +16,7 @@ test_help:
 	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
 	@echo "    test MPIRUN='mpiexec'      (run tests with mpiexec)"
 	@echo "    test_share_library         (run share/Library tests)"
+	@echo "    test_util                  (run util/ tests)"
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
@@ -45,6 +46,7 @@ test_help:
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
+	-@(${MAKE} test_util)
 	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_pw)
@@ -70,7 +72,7 @@ test:
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
-DIFF_FILES = share/Library/test/*.diff BATL/*.diff ??/*/*.diff *.diff
+DIFF_FILES = share/Library/test/*.diff util/*/src*/*.diff BATL/*.diff ??/*/*.diff *.diff
 
 test_check:
 	-@cat ${DIFF_FILES} > /dev/null
@@ -93,6 +95,11 @@ test_share_library:
 	cd share/Library/src; ${MAKE} LIB
 	cd share/Library/test; make test
 	ls -l share/Library/test/*.diff
+
+### Unit tests of the utilities
+
+test_util:
+	cd util; make test
 
 ### Unit tests of the BATL library
 

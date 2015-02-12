@@ -89,6 +89,8 @@ test:
 	@rm -f *.diff
 	-@(make test_harmonics)
 	-@(make test_potential)
+	-@(make test_fdips)
+	-@(make test_fdips_hypre)
 	@ls -l *.diff
 
 test_harmonics:
@@ -108,7 +110,7 @@ test_harmonics_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		harmonics11uniform.dat \
 		harmonics.ref > test_harmonics.diff
-	ls -l test_harmonics.diff
+	@ls -l test_harmonics.diff
 
 ###############################################################################
 
@@ -126,7 +128,7 @@ test_potential_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 		potential.log \
 		potential.ref > test_potential.diff
-	ls -l test_potential.diff
+	@ls -l test_potential.diff
 
 ###############################################################################
 
@@ -151,7 +153,7 @@ test_fdips_check:
 	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
 		fdips.out \
 		fdips_ref.out > test_fdips.diff
-	ls -l test_fdips_log.diff test_fdips.diff
+	@ls -l test_fdips_log.diff test_fdips.diff
 
 ###############################################################################
 
@@ -177,4 +179,4 @@ test_fdips_hypre_check:
 	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
 		fdips.out \
 		fdips_ref.out > test_fdips_hypre.diff
-	ls -l test_fdips_hypre_log.diff test_fdips_hypre.diff
+	@ls -l test_fdips_hypre_log.diff test_fdips_hypre.diff

@@ -12,6 +12,11 @@ install: touch_install_files
 
 ###	@(if [ -d FISHPAK ];   then cd FISHPAK/src;make LIB; fi);
 
+test:
+	rm -f */src*/*.diff
+	cd DATAREAD/srcMagnetogram; make test
+	ls -l */src*/*.diff
+
 clean: touch_install_files
 	@(if [ -d NOMPI ];     then cd NOMPI/src;  make clean; fi)
 	@(if [ -d TIMING ];    then cd TIMING;     make clean; fi)
