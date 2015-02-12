@@ -265,7 +265,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
     CharacteristicSpeed=10.0*9.6E4;
     break;
 
-  case _O2_SPEC_:case _H2O_SPEC_:
+  case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
   case _O2_PLUS_SPEC_:
@@ -956,6 +956,20 @@ void amps_init() {
 
   PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
   PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+
+  //init weight of the daugter products of the photolytic and electron impact reactions
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
+    double yield=0.0;
+
+    yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*
+        (PhotolyticReactions::H2O::GetSpeciesReactionYield(spec)+ElectronImpact::H2O::GetSpeciesReactionYield(spec,20.0));
+
+    yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*
+        (PhotolyticReactions::O2::GetSpeciesReactionYield(spec)+ElectronImpact::O2::GetSpeciesReactionYield(spec,20.0));
+
+    yield/=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_];
+    PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(spec,_H2O_SPEC_,yield);
+  }
 
 	//set photolytic reactions
 	//PIC::ChemicalReactions::PhotolyticReactions::SetReactionProcessor(sodiumPhotoionizationReactionProcessor,_O2_SPEC_);
