@@ -36,6 +36,7 @@ using namespace std;
 
 #include "PhotolyticReactions.h"
 #include "ElectronImpact.h"
+#include "Sputtering.h"
 
 /*
 //path to the SPICE Kernels directory
