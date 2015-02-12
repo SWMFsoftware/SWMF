@@ -136,6 +136,7 @@ test_fdips:
 	make DIPOLE11
 	./DIPOLE11.exe
 	cp -f FDIPS.in.orig FDIPS.in
+	perl -i -pe 's/real8/ascii/' FDIPS.in
 	@echo "test_fdips_run..." >> test_fdips.diff
 	mpirun -np 4 ./FDIPS.exe > fdips.log
 	./redistribute.pl fdips_field_np010202.out fdips.out
@@ -160,6 +161,7 @@ test_fdips_hypre:
 	make DIPOLE11
 	./DIPOLE11.exe
 	cp -f FDIPS.in.orig FDIPS.in
+	perl -i -pe 's/real8/ascii/' FDIPS.in
 	perl -i -pe 's/^BiCGSTAB/GMRES/i;s/^ILU/AMG/' FDIPS.in
 	@echo "test_fdips_hypre_run..." >> test_fdips_hypre.diff
 	mpirun -np 4 ./FDIPS.exe > fdips_hypre.log
