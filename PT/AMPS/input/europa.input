@@ -149,6 +149,15 @@ ParticleWeightCorrectionMode=on
 
 #endblock
 
+#block ../sputtering.pl !process the settings of the Europa's model
+
+  SputteringMode=on !on/off
+  SputteringSurface=Ice \\
+    model=Teolis !Rubin/Teolis    
+
+#endblock
+
+
 #block ../exosphere.pl
   SPICE=on
 
