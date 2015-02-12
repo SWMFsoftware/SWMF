@@ -18,27 +18,15 @@ namespace PhotolyticReactions {
 
   //the general functions and variables used by particular model
   namespace Huebner1992ASS {
-    inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* ReturnReactionProductTable,
-        double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int nMaxReactionProducts,double TotalReactionRate) {
-      int i;
-      double summ=0.0;
 
-      //1. Determine the reaction channel
-      for (TotalReactionRate*=rnd(),i=0,summ=0.0;i<nReactionChannels;i++) {
-        summ+=ReactionRateTable[i];
-        if (summ>TotalReactionRate) break;
-      }
+    //generate the channel of the reaction, determin its products and velocities
+    void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* ReturnReactionProductTable,double *ReturnReactionProductVelocityTable,
+        double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int nMaxReactionProducts,
+        double TotalReactionRate,double *ExcessEnergyTable);
 
-      if (i==nReactionChannels) i=-1;
-      ReactionChannel=i;
 
-      //2. Init the list of the reaction products
-      for (i=0,nReactionProducts=0;i<nMaxReactionProducts;i++) {
-        if (TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts]>=0) {
-          ReturnReactionProductTable[nReactionProducts++]=TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts];
-        }
-      }
-    }
+    //calculate the yield fpr a particular specie
+    double GetSpeciesReactionYield(int spec,double *ReactionRateTable, int nReactionChannels, int* TotalReactionProductTable, int nMaxReactionProducts);
   }
 
   //reaction rates for H2O
@@ -58,6 +46,8 @@ namespace PhotolyticReactions {
 
       //the buffer to return the list of the reaction products
       extern int ReturnReactionProductList[nMaxReactionProducts];
+      extern double ReturnReactionProductVelocity[3*nMaxReactionProducts];
+
 
       void Init();
 
@@ -65,20 +55,31 @@ namespace PhotolyticReactions {
         return TotalReactionRate*pow(TableHeliocentricDistance/HeliocentricDistance,2);
       }
 
-      inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable) {
-        PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate);
+      inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+        PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
+        ReactionProductVelocityTable=ReturnReactionProductVelocity;
       }
+
+      inline double GetSpeciesReactionYield(int spec) {
+        return PhotolyticReactions::Huebner1992ASS::GetSpeciesReactionYield(spec,ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts);
+      }
+
+
     }
 
     inline double GetTotalReactionRate(double HeliocentricDistance) {
       return Huebner1992ASS::GetTotalReactionRate(HeliocentricDistance);
     }
 
-    inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable) {
-      Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable);
+    inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+      Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+    }
+
+    inline double GetSpeciesReactionYield(int spec) {
+      return Huebner1992ASS::GetSpeciesReactionYield(spec);
     }
 
   }
@@ -101,6 +102,7 @@ namespace PhotolyticReactions {
 
       //the buffer to return the list of the reaction products
       extern int ReturnReactionProductList[nMaxReactionProducts];
+      extern double ReturnReactionProductVelocity[3*nMaxReactionProducts];
 
       void Init();
 
@@ -108,11 +110,16 @@ namespace PhotolyticReactions {
         return TotalReactionRate*pow(TableHeliocentricDistance/HeliocentricDistance,2);
       }
 
-      inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable) {
-        PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate);
+      inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+        PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
+        ReactionProductVelocityTable=ReturnReactionProductVelocity;
+      }
+
+      inline double GetSpeciesReactionYield(int spec) {
+        return PhotolyticReactions::Huebner1992ASS::GetSpeciesReactionYield(spec,ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts);
       }
     }
 
@@ -120,8 +127,12 @@ namespace PhotolyticReactions {
       return Huebner1992ASS::GetTotalReactionRate(HeliocentricDistance);
     }
 
-    inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable) {
-      Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable);
+    inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+      Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
+    }
+
+    inline double GetSpeciesReactionYield(int spec) {
+      return Huebner1992ASS::GetSpeciesReactionYield(spec);
     }
   }
 

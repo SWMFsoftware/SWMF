@@ -33,6 +33,7 @@ double *PhotolyticReactions::H2O::Huebner1992ASS::ReactionRateTable=NULL;
 double PhotolyticReactions::H2O::Huebner1992ASS::TotalReactionRate=0.0;
 double *PhotolyticReactions::H2O::Huebner1992ASS::ExcessEnergyTable=NULL;
 int PhotolyticReactions::H2O::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::H2O::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
 
 void PhotolyticReactions::H2O::Huebner1992ASS::Init() {
   //init the tables
@@ -79,6 +80,7 @@ double *PhotolyticReactions::O2::Huebner1992ASS::ReactionRateTable=NULL;
 double *PhotolyticReactions::O2::Huebner1992ASS::ExcessEnergyTable=NULL;
 double PhotolyticReactions::O2::Huebner1992ASS::TotalReactionRate=0.0;
 int PhotolyticReactions::O2::Huebner1992ASS::ReturnReactionProductList[nMaxReactionProducts];
+double PhotolyticReactions::O2::Huebner1992ASS::ReturnReactionProductVelocity[3*nMaxReactionProducts];
 
 void PhotolyticReactions::O2::Huebner1992ASS::Init() {
   //init the tables
@@ -92,4 +94,127 @@ void PhotolyticReactions::O2::Huebner1992ASS::Init() {
 
   //calculate the total rate
   for (int nChannel=0;nChannel<nReactionChannels;nChannel++) TotalReactionRate+=ReactionRateTable[nChannel];
+}
+
+//-----------------------------------  Chemical model ----------------------------------------
+void PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* ReturnReactionProductTable,double *ReturnReactionProductVelocityTable,
+    double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int nMaxReactionProducts,
+    double TotalReactionRate,double *ExcessEnergyTable) {
+  int i;
+  double summ=0.0;
+
+  //1. Determine the reaction channel
+  for (TotalReactionRate*=rnd(),i=0,summ=0.0;i<nReactionChannels;i++) {
+    summ+=ReactionRateTable[i];
+    if (summ>TotalReactionRate) break;
+  }
+
+  if (i==nReactionChannels) i=-1;
+  ReactionChannel=i;
+
+  //2. Init the list of the reaction products
+  int t,iElectronProduct=-1;
+
+  for (i=0,nReactionProducts=0;i<nMaxReactionProducts;i++) {
+    if ((t=TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts])>=0) {
+      ReturnReactionProductTable[nReactionProducts++]=t;
+
+      if (t==_ELECTRON_SPEC_) {
+        if (iElectronProduct!=-1) {
+          exit(__LINE__,__FILE__,"Error: two electrons in the product list is not allowed");
+        }
+
+        iElectronProduct=nReactionProducts-1;
+      }
+
+    }
+  }
+
+  //3. Distribute velocity of the reaction components
+  if ( ((iElectronProduct==-1)&&(nReactionProducts>2)) && ((iElectronProduct!=-1)&&(nReactionProducts>3)) ) {
+    exit(__LINE__,__FILE__,"Too many reaction products. The models is not implemented for this mode");
+  }
+
+  int i0Product=0,i1Product=1; //the location of the products in the reaction product vector
+  double TotalEnergy=0.0;
+  double HeavyProductsCenterMassVelocity[3]={0.0,0.0,0.0};
+  double l[3],ll=0.0; //the direction of the relative velocity of the "heavy" part of the products and the electron
+  double i0ProductMass,i1ProductMass,MassHeavyProducts;
+
+  if (ExcessEnergyTable!=NULL) TotalEnergy=ExcessEnergyTable[ReactionChannel];
+
+  //determine the position of the heavy reaction products in the reacion product list
+  if (iElectronProduct!=-1) {
+    switch (iElectronProduct) {
+    case 0:
+      i0Product=2;
+      break;
+    case 1:
+      i1Product=2;
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Too many species. The model is not implementes for a case where there are more that 2 products + 1 electron");
+    }
+  }
+
+  //get the mass of the heavy reaction products
+  i0ProductMass=PIC::MolecularData::GetMass(ReturnReactionProductTable[i0Product]);
+  i1ProductMass=PIC::MolecularData::GetMass(ReturnReactionProductTable[i1Product]);
+  MassHeavyProducts=i0ProductMass+i1ProductMass;
+
+  //distribution the electron velocity (if used)
+  if (iElectronProduct!=1) {
+    //generate velocity of the electron and substract it from the total excsess energy
+    double VelocityElectron;
+
+    for (ll=0.0,i=0;i<3;i++) {
+      l[i]=sqrt(-2.0*log(rnd()))*cos(2.0*Pi*rnd());
+      ll+=pow(l[i],2);
+    }
+
+    ll=sqrt(ll);
+    l[0]/=ll,l[1]/=ll,l[2]/=ll;
+
+    VelocityElectron=sqrt(2.0*TotalEnergy/(_MASS_(_ELECTRON_)*(1.0+_MASS_(_ELECTRON_)/MassHeavyProducts)));
+
+    for (i=0;i<3;i++) {
+      ReturnReactionProductVelocityTable[i+3*iElectronProduct]=l[i]*VelocityElectron;
+      HeavyProductsCenterMassVelocity[i]=-l[i]*VelocityElectron*_MASS_(_ELECTRON_)/MassHeavyProducts;
+    }
+
+    TotalEnergy-=_MASS_(_ELECTRON_)/2.0*pow(VelocityElectron,2);
+    if (TotalEnergy<0.0) TotalEnergy=0.0;
+  }
+
+  //generate velocity of the heavy reaction products
+  double i0Velocity,i1Velocity;
+
+  for (ll=0.0,i=0;i<3;i++) {
+    l[i]=sqrt(-2.0*log(rnd()))*cos(2.0*Pi*rnd());
+    ll+=pow(l[i],2);
+  }
+
+  ll=sqrt(ll);
+  l[0]/=ll,l[1]/=ll,l[2]/=ll;
+
+  i0Velocity=sqrt(2.0*TotalEnergy/(i0ProductMass*(1.0+i0ProductMass/i1ProductMass)));
+  i1Velocity=-i0Velocity*i0ProductMass/i1ProductMass;
+
+  for (i=0;i<3;i++) {
+    ReturnReactionProductVelocityTable[i+3*i0Product]=l[i]*i0Velocity+HeavyProductsCenterMassVelocity[i];
+    ReturnReactionProductVelocityTable[i+3*i1Product]=l[i]*i1Velocity+HeavyProductsCenterMassVelocity[i];
+  }
+}
+
+double PhotolyticReactions::Huebner1992ASS::GetSpeciesReactionYield(int spec,double *ReactionRateTable, int nReactionChannels, int* TotalReactionProductTable, int nMaxReactionProducts) {
+  double Yield=0.0,TotalReactionRate=0.0;
+  int ReactionChannel,i;
+
+  for (ReactionChannel=0;ReactionChannel<nReactionChannels;ReactionChannel++) {
+    TotalReactionRate+=ReactionRateTable[ReactionChannel];
+
+    for (i=0;i<nMaxReactionProducts;i++) if (TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts]==spec) Yield+=TotalReactionRate;
+  }
+
+  return (TotalReactionRate>0.0) ? Yield/TotalReactionRate : 0.0;
 }
