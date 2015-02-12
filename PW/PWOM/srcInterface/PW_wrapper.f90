@@ -231,6 +231,8 @@ contains
        RETURN
     end if
 
+    ! Need to get electrodynamics in SA mode
+    if(.not. UseIE)call PW_get_electrodynamics
 
     do iLine=1,nLine
        call move_line
@@ -293,8 +295,9 @@ contains
           Phi_G( j,1:iSize) = Grid_C(IE_) % Coord2_I(j)
        end do
 
-       ! This has to be initialized (will be replaced below)
+       ! This has to be initialized (values will be replaced below)
        Potential_G = 0.0 
+
        call PW_get_electrodynamics
        call initial_line_location
     end if
