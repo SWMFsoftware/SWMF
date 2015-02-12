@@ -201,7 +201,7 @@ contains
     use ModPWOM, ONLY: iLine, nLine, Time, nStep, DtHorizontalOrig, &
          DtHorizontal, DtOutput, &
          DoPlotElectrodynamics, DtPlotElectrodynamics, &
-         Tmax
+         Tmax, UseIE
 
     !INPUT/OUTPUT ARGUMENTS:
     real, intent(inout) :: TimeSimulation   ! current time of component
