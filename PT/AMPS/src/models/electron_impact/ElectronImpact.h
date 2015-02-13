@@ -316,7 +316,7 @@ namespace ElectronImpact {
     }
   }
 
-  void GenerateReactionProducts(int spec,double ElectronTemeprature,int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
+  inline void GenerateReactionProducts(int spec,double ElectronTemeprature,int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
     switch (spec) {
     case _H2O_SPEC_ :
       H2O::GenerateReactionProducts(ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductTable,ReactionProductVelocityTable);
