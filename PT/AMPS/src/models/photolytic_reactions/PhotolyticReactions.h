@@ -14,6 +14,11 @@
 #include "pic.h"
 #include "PhotolyticReactions.dfn"
 
+
+/*-----------------------------  !!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!! ---------------------------------------------
+ * In the list of the reaction products it is assumed that the products are ordered by deacreasing of their mass (first heavy that light)
+ */
+
 namespace PhotolyticReactions {
 
   //the general functions and variables used by particular model
@@ -21,7 +26,7 @@ namespace PhotolyticReactions {
 
     //generate the channel of the reaction, determin its products and velocities
     void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* ReturnReactionProductTable,double *ReturnReactionProductVelocityTable,
-        double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int nMaxReactionProducts,
+        double *ReactionRateTable, int nReactionChannels,int* TotalReactionProductTable,int *ReactionCannelProductNumber,double *ReactionProductMassTable,int nMaxReactionProducts,
         double TotalReactionRate,double *ExcessEnergyTable);
 
 
@@ -36,8 +41,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=7;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -57,7 +62,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
@@ -91,8 +96,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=5;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -112,7 +117,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
@@ -143,8 +148,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=1;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -164,7 +169,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
@@ -194,8 +199,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=4;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -215,7 +220,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
@@ -245,8 +250,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=4;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -266,7 +271,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
@@ -296,8 +301,8 @@ namespace PhotolyticReactions {
       const int nReactionChannels=1;
       const double TableHeliocentricDistance=1.0*_AU_;
 
-      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts];
-      extern double EmissionWaveLength[nReactionChannels];
+      extern int ReactionProducts[nReactionChannels][nMaxReactionProducts],ReactionCannelProductNumber[nReactionChannels];
+      extern double EmissionWaveLength[nReactionChannels],ReactionProductMassTable[nReactionChannels][nMaxReactionProducts];
 
       //the table of the rates for each channel
       extern double ReactionRateTable_QuietSun[nReactionChannels],ReactionRateTable_ActiveSun[nReactionChannels];
@@ -317,7 +322,7 @@ namespace PhotolyticReactions {
 
       inline void GenerateReactionProducts(int &ReactionChannel,int &nReactionProducts, int* &ReactionProductTable,double* &ReactionProductVelocityTable) {
         PhotolyticReactions::Huebner1992ASS::GenerateReactionProducts(ReactionChannel,nReactionProducts,ReturnReactionProductList,ReturnReactionProductVelocity,
-            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
+            ReactionRateTable,nReactionChannels,&ReactionProducts[0][0],ReactionCannelProductNumber,&ReactionProductMassTable[0][0],nMaxReactionProducts,TotalReactionRate,ExcessEnergyTable);
 
         ReactionProductTable=ReturnReactionProductList;
         ReactionProductVelocityTable=ReturnReactionProductVelocity;
