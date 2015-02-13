@@ -175,7 +175,19 @@ void ElectronImpact::Burger2010SSR::GenerateReactionProducts(double ElectronTeme
   }
 
   if (nChannel==nReactionChannels) nChannel-=1; //keep the reaction channel index within the range
+  ReactionChannel=nChannel;
 
+  // Init the list of the reaction products
+  int t;
+
+  for (i=0,nReactionProducts=0;i<nMaxReactionProducts;i++) {
+    if ((t=ReactionChannelProducts[i+ReactionChannel*nMaxReactionProducts])>=0) {
+      ReturnReactionProductTable[nReactionProducts++]=t;
+    }
+  }
+
+  //init the tavle of the reaction rate products and their velocities
+  for (i=0;i<nReactionProducts;i++) for (int idim=0;idim<3;idim++) ReturnReactionProductVelocityTable[idim+3*i]=0.0;
 }
 
 
