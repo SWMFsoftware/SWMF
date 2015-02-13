@@ -926,8 +926,8 @@ contains
                   RadCoolEpsilonR)
              call get_radiative_cooling(i, j, k, iBlock, TeSi-TeEpsilonSi, &
                   RadCoolEpsilonL)
-             CoolHeatDeriv_CB(i,j,k,iBlock) = &
-                  0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon
+             CoolHeatDeriv_CB(i,j,k,iBlock) = min(0.0, &
+                  0.5*(RadCoolEpsilonR - RadCoolEpsilonL)/TeEpsilon)
           end if
 
        end do; end do; end do

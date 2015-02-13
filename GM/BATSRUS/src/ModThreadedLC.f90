@@ -5,7 +5,7 @@ module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       RadCool2Si, Use1DModel, DoInit_, Done_, Enthalpy_, Heat_
+       RadCool2Si, Use1DModel, DoInit_, Done_, Enthalpy_, Heat_, iStage
 
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
@@ -321,7 +321,6 @@ contains
     end if
     select case(iAction)
     case(Enthalpy_)
-       call get_res_heating(nIterIn=2*nIter)
        !\
        ! For a given ResHeating_I advance the effect of heating
        ! and hydrodynamic motion through a time step (or half time step
@@ -376,7 +375,7 @@ contains
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'RhoNoDimOut=  ', RhoNoDimOut
     end if
-    RETURN !The correction accounting for gradients does not work
+    ! RETURN !The correction accounting for gradients does not work
     GhostCellCorr = 1/(&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
@@ -488,6 +487,7 @@ contains
     end subroutine set_pressure
     !==========================
     subroutine get_heat_cond
+      use ModGeometry, ONLY:Xyz_DGB
       integer:: iPoint
       !----------------
       !\
@@ -513,6 +513,13 @@ contains
 
       ResCooling_I = 0.0;
       do iPoint = 1, nPoint-1
+         if(TeSi_I(iPoint)>1.0e7)then
+            write(*,*)'Failure in heat condusction setting'
+            write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+            write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
+            write(*,*)'TeSi_I=',TeSi_I
+            call CON_stop('Stop!!!')
+         end if
          call interpolate_lookup_table(iTableRadCool,&
               TeSi_I(iPoint), 1.0e2, ValCooling)
          ResCooling_I(iPoint) = &
@@ -651,7 +658,7 @@ contains
     end subroutine set_initial_thread
     !==========================
     subroutine advance_heating_and_hydro
-      use ModMain,    ONLY: cfl, nStage
+      use ModMain,    ONLY: cfl, nStage, time_accurate, Dt
       use ModAdvance, ONLY: time_BLK
       use ModPhysics, ONLY: No2Si_V, UnitT_
       !\
@@ -672,17 +679,26 @@ contains
       !/
       real    :: SpecHeat, IntEnergy
       !-------------
-      DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)/nStage
+      if(time_accurate)then
+         DtLocal = Dt
+      else
+         DtLocal = cfl*time_BLK(1,j,k,iBlock)
+      end if
+      DtLocal = iStage*DtLocal**No2Si_V(UnitT_)/nStage
       !\
       ! Multiply the heating source term and speed by the time step
       !/
+      call get_res_heating(nIterIn=2*nIter)
       ResHeating_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal
       USiLtd = USiLtd*DtLocal
       SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
            BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
       !\
       ! Add enthalpy correction
       !/
+      M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0
       if(USiLtd>0)then
          FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
               *(inv_gm1 +1)*(1 + AverageIonCharge)/&
@@ -692,17 +708,34 @@ contains
          ! Solve equation!
          ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1)_{i-1})=Res
          !/
-         IntEnergy = PeSi_I(1)*SpecHeat_I(1)
+         IntEnergy = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**3.50 &
+              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
          SpecHeat  = IntEnergy/TeSi_I(1)
+         M_I(1) = SpecHeat + FluxConst
+         Res_I(1) = ResHeating_I(1) - FluxConst*TeSi_I(1)
          TeSi_I(1) = max(TeSiMin,(ResHeating_I(1) + IntEnergy)/&
               (SpecHeat + FluxConst))
          do iPoint = 2, nPoint-1
             IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
             SpecHeat  = IntEnergy/TeSi_I(iPoint)
-            TeSi_I(iPoint) =max(TeSiMin,&
+            M_I(iPoint) = SpecHeat + FluxConst
+            L_I(iPoint) = -FluxConst
+            Res_I(iPoint) = ResHeating_I(iPoint) + FluxConst*(TeSi_I(iPoint-1)-&
+                 TeSi_I(iPoint))
+            TeSi_I(iPoint) = &!max(TeSiMin,&
                  (ResHeating_I(iPoint) + IntEnergy + &
-                 FluxConst*TeSi_I(iPoint-1) )/(SpecHeat + FluxConst) )
+                 FluxConst*TeSi_I(iPoint-1) )/(SpecHeat + FluxConst)! )
          end do
+         if(any(TeSi_I(2:nPoint-1)<TeSiMin))call CON_stop(&
+              'Te < TeSiMin at positive U')
+         !L_I(2) = 0.0
+         !call tridag(n=nPoint-2,  &
+         !     L_I=L_I(2:nPoint-1),&
+         !     M_I=M_I(2:nPoint-1),&
+         !     U_I=U_I(2:nPoint-1),&
+         !     R_I=Res_I(2:nPoint-1),&
+         !     W_I=DCons_I(2:nPoint-1))
+      !TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1),TeSiMin)
       elseif(USiLtd<0)then
          FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
               *(inv_gm1 +1)*(1 + AverageIonCharge)/&
@@ -715,27 +748,46 @@ contains
          do iPoint = nPoint-1, 2, -1
             IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
             SpecHeat  = IntEnergy/TeSi_I(iPoint)
-            TeSi_I(iPoint) =max(TeSiMin, &
+            M_I(iPoint) = SpecHeat - FluxConst
+            U_I(iPoint) = FluxConst
+            Res_I(iPoint) = ResHeating_I(iPoint) - FluxConst*(TeSi_I(iPoint+1)-&
+                 TeSi_I(iPoint))
+            TeSi_I(iPoint) = &!max(TeSiMin, &
                  (ResHeating_I(iPoint) + IntEnergy - &
-                 FluxConst*TeSi_I(iPoint+1) )/(SpecHeat - FluxConst))
+                 FluxConst*TeSi_I(iPoint+1) )/(SpecHeat - FluxConst)!)
          end do
-         IntEnergy = PeSi_I(1)*SpecHeat_I(1)
+         IntEnergy = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**3.50 &
+              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
          SpecHeat  = IntEnergy/TeSi_I(1)
+         M_I(1) = SpecHeat
+         U_I(1) = FluxConst
+         Res_I(1) = ResHeating_I(1) - FluxConst*TeSi_I(2)
          TeSi_I(1) = (ResHeating_I(1) + IntEnergy -&
-               FluxConst*TeSi_I(2) )/SpecHeat
+              FluxConst*TeSi_I(2) )/SpecHeat
+         !call tridag(n=nPoint-1,  &
+         !  L_I=L_I(1:nPoint-1),&
+         !  M_I=M_I(1:nPoint-1),&
+         !  U_I=U_I(1:nPoint-1),&
+         !  R_I=Res_I(1:nPoint-1),&
+         !  W_I=DCons_I(1:nPoint-1))
+         !TeSi_I(1:nPoint-1) = max(TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1),TeSiMin)
+         if(any(TeSi_I(1:nPoint-1)<TeSiMin))call CON_stop(&
+              'Te < TeSiMin at negative U')
       end if
+     
       !\
       ! Set pressure for updated temperature and store pressure and temperature
       !/
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       call set_pressure
+      if(iStage/=nStage)RETURN
       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
     end subroutine advance_heating_and_hydro
     !========================
     subroutine advance_heat_cond
-      use ModMain,    ONLY: cfl
+      use ModMain,    ONLY: cfl, Dt, time_accurate
       use ModAdvance, ONLY: time_BLK
       use ModPhysics, ONLY: UnitT_, No2Si_V
       !\
@@ -744,7 +796,11 @@ contains
       real ::DtLocal
       integer :: iIter
       !-----------
-      DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
+      if(time_accurate)then
+         DtLocal = Dt*No2Si_V(UnitT_)
+      else
+         DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
+      end if
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
@@ -824,7 +880,7 @@ contains
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
     use ModAdvance,      ONLY: State_VGB
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK    
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, inv_gm1
@@ -834,6 +890,7 @@ contains
     use ModGeometry,     ONLY: Xyz_DGB 
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
+    use ModGeometry,     ONLY: Xyz_DGB
     use ModWaves
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -911,7 +968,7 @@ contains
        BDir_D = B_D + &
             BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
-       if(BoundaryThreads_B(iBlock) % SignBr_II(j, k) < 0.0)then
+       if(sign(1.0,sum(BDir_D*Xyz_DGB(:,1,j,k,iBlock))) < 0.0)then
           BDir_D = -BDir_D
           Major_ = WaveLast_
           Minor_ = WaveFirst_
@@ -933,11 +990,13 @@ contains
                 !\
                 ! Apply linearization of DTe/Ds derivation in \delta Te(1,j,k)
                 !/
+                MinusDeltaROverBR = 1/&
+                     min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
+                     * BDir_D),-0.1*sqrt(&
+                     sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
                 State_VG(iTeImpl,0,j,k) = Te_G(0,j,k) +(Te_G(0, j, k)*&
                      BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) &
-                     /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))/&
-                     sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(&
-                     :,j,k)* BDir_D)
+                     /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))*MinusDeltaROverBR
              end if
              CYCLE
           end if
@@ -967,11 +1026,11 @@ contains
        !if(iAction==Enthalpy_)CYCLE
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
-          BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
-               BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
-               DTeOverDs < 0.0
+          !BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
+          !     BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
+          !     DTeOverDs < 0.0
           !Do not allow heat flux from the TR to the low corona
-          DTeOverDs = max(DTeOverDs,0.0)
+          !DTeOverDs = max(DTeOverDs,0.0)
           !\
           ! Calculate temperature in the ghost cell by adding the difference 
           ! between the required value DTeOverDs and the temperature gradient
