@@ -26,8 +26,8 @@ module ModThreadedLC
   !/ 
   integer :: iTableTR, iTableAW, iTableRadcool  
 
-  real, parameter:: TeSiMin = 3.5e5    ![K]
-  real           :: TeMin, ConsMin
+  real, parameter:: TeSiMin = 3.0e5, TeSiMax = 1.0e8  ![K]
+  real           :: TeMin, ConsMin, TeMax
 
   real :: cCoolingPerPe2, RhoNoDimCoef
   !\
@@ -132,6 +132,7 @@ contains
     if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
 
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
+    TeMax = TeSiMax*Si2No_V(UnitTemperature_)
     ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
 
     !\
@@ -513,11 +514,11 @@ contains
 
       ResCooling_I = 0.0;
       do iPoint = 1, nPoint-1
-         if(TeSi_I(iPoint)>1.0e7)then
+         if(TeSi_I(iPoint)>1.0e8)then
             write(*,*)'Failure in heat condusction setting'
             write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
             write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
-            write(*,*)'TeSi_I=',TeSi_I
+            write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
             call CON_stop('Stop!!!')
          end if
          call interpolate_lookup_table(iTableRadCool,&
@@ -673,7 +674,7 @@ contains
       !\
       ! Loop variable
       !/
-      integer :: iPoint
+      integer :: iPoint, iIter
       !\
       ! Specific heat, IntEnergy
       !/
@@ -685,102 +686,90 @@ contains
          DtLocal = cfl*time_BLK(1,j,k,iBlock)
       end if
       DtLocal = iStage*DtLocal**No2Si_V(UnitT_)/nStage
+      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
+           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+      IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
       !\
       ! Multiply the heating source term and speed by the time step
       !/
-      call get_res_heating(nIterIn=2*nIter)
-      ResHeating_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal
       USiLtd = USiLtd*DtLocal
-      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
-           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-           DoExtrapolate=.false.)
-      !\
-      ! Add enthalpy correction
-      !/
-      M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0
-      if(USiLtd>0)then
-         FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-              *(inv_gm1 +1)*(1 + AverageIonCharge)/&
-              (TeSiIn*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+      do iIter = 1,5
+         call get_res_heating(nIterIn=5+iIter)
+         Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +&
+              IntEnergy_I(1:nPoint-1) - &
+              SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
          !\
-         ! Solve equation!
-         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1)_{i-1})=Res
+         ! Add enthalpy correction
          !/
-         IntEnergy = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**3.50 &
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-         SpecHeat  = IntEnergy/TeSi_I(1)
-         M_I(1) = SpecHeat + FluxConst
-         Res_I(1) = ResHeating_I(1) - FluxConst*TeSi_I(1)
-         TeSi_I(1) = max(TeSiMin,(ResHeating_I(1) + IntEnergy)/&
-              (SpecHeat + FluxConst))
-         do iPoint = 2, nPoint-1
-            IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
-            SpecHeat  = IntEnergy/TeSi_I(iPoint)
-            M_I(iPoint) = SpecHeat + FluxConst
-            L_I(iPoint) = -FluxConst
-            Res_I(iPoint) = ResHeating_I(iPoint) + FluxConst*(TeSi_I(iPoint-1)-&
-                 TeSi_I(iPoint))
-            TeSi_I(iPoint) = &!max(TeSiMin,&
-                 (ResHeating_I(iPoint) + IntEnergy + &
-                 FluxConst*TeSi_I(iPoint-1) )/(SpecHeat + FluxConst)! )
-         end do
-         if(any(TeSi_I(2:nPoint-1)<TeSiMin))call CON_stop(&
-              'Te < TeSiMin at positive U')
-         !L_I(2) = 0.0
-         !call tridag(n=nPoint-2,  &
-         !     L_I=L_I(2:nPoint-1),&
-         !     M_I=M_I(2:nPoint-1),&
-         !     U_I=U_I(2:nPoint-1),&
-         !     R_I=Res_I(2:nPoint-1),&
-         !     W_I=DCons_I(2:nPoint-1))
-      !TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1),TeSiMin)
-      elseif(USiLtd<0)then
-         FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-              *(inv_gm1 +1)*(1 + AverageIonCharge)/&
-              (TeSiIn*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+         M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0
+         if(USiLtd>0)then
+            FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
+                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 (TeSiIn*PoyntingFluxPerBSi*&
+                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+            !\
+            ! Solve equation!
+            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
+            !                              -FluxConst*(T^n_i-T^n_{i-1}) = &
+            !                  ResHeating  -FluxConst*(T^n_i-T^n_{i-1})
+            !/
+            IntEnergy = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**3.50 &
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+            SpecHeat  = IntEnergy/TeSi_I(1)
+            TeSi_I(1) = max(TeSiMin,(Res_I(1) + IntEnergy)/&
+                 (SpecHeat + FluxConst))
+            L_I(3:nPoint-1) = -FluxConst
+            M_I(2:nPoint-1) = FluxConst + &
+                 PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
+            Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
+                 FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+            call tridag(n=nPoint-2,  &
+                 L_I=L_I(2:nPoint-1),&
+                 M_I=M_I(2:nPoint-1),&
+                 U_I=U_I(2:nPoint-1),&
+                 R_I=Res_I(2:nPoint-1),&
+                 W_I=DCons_I(2:nPoint-1))
+            TeSi_I(2:nPoint-1) = TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1)
+         elseif(USiLtd<0)then
+            FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
+                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 (TeSiIn*PoyntingFluxPerBSi*&
+                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+            !\
+            ! Solve equation!
+            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)&
+            !                            - FluxConst*(T^n_{i+1}-T^n_i) = &
+            !                        Res - FluxConst*(T^n_{i+1}-T^n_i)
+            !/ 
+            U_I(1:nPoint-1) = FluxConst
+            M_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/&
+                 TeSi_I(2:nPoint-1) - FluxConst
+            Res_I(2:nPoint-1) = Res_I(2:Npoint-1)&
+                 -FluxConst*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
+            M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+            Res_I(1) = Res_I(1) - FluxConst*TeSi_I(2)
+            call tridag(n=nPoint-1,  &
+                 L_I=L_I(1:nPoint-1),&
+                 M_I=M_I(1:nPoint-1),&
+                 U_I=U_I(1:nPoint-1),&
+                 R_I=Res_I(1:nPoint-1),&
+                 W_I=DCons_I(1:nPoint-1))
+            TeSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1)
+         end if
+ 
          !\
-         ! Solve equation!
-         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1)_i)=Res
+         ! Set pressure for updated temperature 
          !/
-         do iPoint = nPoint-1, 2, -1
-            IntEnergy = PeSi_I(iPoint)*SpecHeat_I(iPoint)
-            SpecHeat  = IntEnergy/TeSi_I(iPoint)
-            M_I(iPoint) = SpecHeat - FluxConst
-            U_I(iPoint) = FluxConst
-            Res_I(iPoint) = ResHeating_I(iPoint) - FluxConst*(TeSi_I(iPoint+1)-&
-                 TeSi_I(iPoint))
-            TeSi_I(iPoint) = &!max(TeSiMin, &
-                 (ResHeating_I(iPoint) + IntEnergy - &
-                 FluxConst*TeSi_I(iPoint+1) )/(SpecHeat - FluxConst)!)
-         end do
-         IntEnergy = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**3.50 &
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-         SpecHeat  = IntEnergy/TeSi_I(1)
-         M_I(1) = SpecHeat
-         U_I(1) = FluxConst
-         Res_I(1) = ResHeating_I(1) - FluxConst*TeSi_I(2)
-         TeSi_I(1) = (ResHeating_I(1) + IntEnergy -&
-              FluxConst*TeSi_I(2) )/SpecHeat
-         !call tridag(n=nPoint-1,  &
-         !  L_I=L_I(1:nPoint-1),&
-         !  M_I=M_I(1:nPoint-1),&
-         !  U_I=U_I(1:nPoint-1),&
-         !  R_I=Res_I(1:nPoint-1),&
-         !  W_I=DCons_I(1:nPoint-1))
-         !TeSi_I(1:nPoint-1) = max(TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1),TeSiMin)
-         if(any(TeSi_I(1:nPoint-1)<TeSiMin))call CON_stop(&
-              'Te < TeSiMin at negative U')
-      end if
-     
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+              DoExtrapolate=.false.)
+         call set_pressure
+      end do
       !\
-      ! Set pressure for updated temperature and store pressure and temperature
+      ! Store pressure and temperature
       !/
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-           DoExtrapolate=.false.)
-      call set_pressure
       if(iStage/=nStage)RETURN
       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
