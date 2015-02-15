@@ -215,6 +215,9 @@ T                       DoSaveRestart
 -1                      DnSaveRestart
 60.0                    DtSaveRestart
 
+#RESTARTOUTDIR
+SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
+
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
@@ -355,9 +358,18 @@ aur idl                 StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-#STOP
+STOP
 -1			MaxIter
 86400.0			TimeMax
+
+#ENDTIME            
+2000			year                                            
+04              	month                                                
+07              	day                                                
+00			hour
+00             		minute                                            
+00              	second                                        
+0.0			FracSecond 
 
 #END ############################################################
 
