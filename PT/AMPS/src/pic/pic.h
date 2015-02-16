@@ -2605,7 +2605,7 @@ namespace PIC {
       void InitProductStatWeight();
 
       //the default function for processing the photolytic reactions -> the particle is removed if the reaction occured
-      inline int PhotolyticReactionProcessor_default(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+      inline int PhotolyticReactionProcessor_default(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
         return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
       }
 

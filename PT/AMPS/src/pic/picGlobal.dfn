@@ -72,7 +72,7 @@ at the end of each time step
 #define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag,node) TotalLifeTime_default(x,spec,ptr,flag,node);
 
 //the default procedure for processing the photolytic reactions
-#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,ptr,spec,ParticleData) PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReactionProcessor_default(xInit,xFinal,ptr,spec,ParticleData);
+#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,node) PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReactionProcessor_default(xInit,xFinal,vFinal,ptr,spec,ParticleData,node);
 
 //sampling of the particle data
 #define _PIC_SAMPLE_PARTICLE_DATA_MODE_  _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
