@@ -1298,6 +1298,10 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
 
     static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(EuropaHeliocentricDistance);
     static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(EuropaHeliocentricDistance);
+    static const double PhotolyticReactionRate_H2=PhotolyticReactions::H2::GetTotalReactionRate(EuropaHeliocentricDistance);
+    static const double PhotolyticReactionRate_H=PhotolyticReactions::H::GetTotalReactionRate(EuropaHeliocentricDistance);
+    static const double PhotolyticReactionRate_OH=PhotolyticReactions::OH::GetTotalReactionRate(EuropaHeliocentricDistance);
+    static const double PhotolyticReactionRate_O=PhotolyticReactions::O::GetTotalReactionRate(EuropaHeliocentricDistance);
 
     switch (spec) {
     case _H2O_SPEC_:
@@ -1305,6 +1309,18 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
       break;
     case _O2_SPEC_:
       PhotolyticReactionRate=PhotolyticReactionRate_O2;
+      break;
+    case _H2_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H2;
+      break;
+    case _H_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_H;
+      break;
+    case _OH_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_OH;
+      break;
+    case _O_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_O;
       break;
     default:
       exit(__LINE__,__FILE__,"Error: unknown specie");
@@ -1338,9 +1354,17 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
   static const double HotElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
   static const double ThermalElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
 
+  static const double HotElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+
+  static const double HotElectronImpactRate_H=ElectronImpact::H::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H=ElectronImpact::H::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+
+  static const double HotElectronImpactRate_O=ElectronImpact::O::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_O=ElectronImpact::O::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+
 
   ElectronTemeprature=ThermalElectronTemeprature;
-
 
   switch (spec){
   case _H2O_SPEC_:
@@ -1348,6 +1372,15 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
     break;
   case _O2_SPEC_:
     ElectronImpactRate=HotElectronImpactRate_O2+ThermalElectronImpactRate_O2;
+    break;
+  case _H2_SPEC_:
+    ElectronImpactRate=HotElectronImpactRate_H2+ThermalElectronImpactRate_H2;
+    break;
+  case _H_SPEC_:
+    ElectronImpactRate=HotElectronImpactRate_H+ThermalElectronImpactRate_H;
+    break;
+  case _O_SPEC_:
+    ElectronImpactRate=HotElectronImpactRate_O+ThermalElectronImpactRate_O;
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown species");
@@ -1358,37 +1391,124 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
 }
 
 
-int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
   int *ReactionProductsList,nReactionProducts;
+  double *ReactionProductVelocity;
+  int ReactionChannel;
+  bool PhotolyticReactionRoute;
+
+  PhotolyticReactionRoute=(rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) ? true : false;
+
+  if (PhotolyticReactionRoute==true) {
+    PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+  }
+  else {
+    ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+  }
+
+  //inject the products of the reaction
+  double ParentTimeStep,ParentParticleWeight;
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+#else
+  ParentParticleWeight=0.0;
+  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  ParentTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#else
+  ParentTimeStep=0.0;
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+
+  //account for the parent particle correction factor
+  ParentParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+  //the particle buffer used to set-up the new particle data
+  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+  //copy the state of the initial parent particle into the new-daugher particle (just in case....)
+  PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
+
+  for (int iProduct=0;iProduct<nReactionProducts;iProduct++) {
+    double ProductTimeStep,ProductParticleWeight;
+    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+    int nInjectedParticles=0,specProduct=ReactionProductsList[iProduct];
+    long int newParticle;
+    PIC::ParticleBuffer::byte *newParticleData;
+
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+     ProductParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[specProduct];
+#else
+     ProductParticleWeight=0.0;
+     exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
+#else
+     ProductTimeStep=0.0;
+     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight;
+
+     //inject the product particles
+     TimeIncrement+=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
+
+     while (TimeCounter+TimeIncrement<ProductTimeStep) {
+       TimeCounter+=TimeIncrement;
+       TimeIncrement+=-log(rnd())/ModelParticleInjectionRate;
+
+       //determine the velocity of the product specie
+       double ProductParticleVelocity[3];
+
+       for (int idim=0;idim<3;idim++) ProductParticleVelocity[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
+
+       //generate a particle
+       PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
+       PIC::ParticleBuffer::SetV(ProductParticleVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);
+       PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+       #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+       #endif
+
+       //apply condition of tracking the particle
+       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+       PIC::ParticleTracker::InitParticleID(tempParticleData);
+       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
+       #endif
+
+
+       //get and injection into the system the new model particle
+       newParticle=PIC::ParticleBuffer::GetNewParticle();
+       newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+       memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+       _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ProductTimeStep-TimeCounter,node,true);
+
+       //when another particle is injected -> generate new velocity vector
+       if (TimeCounter+TimeIncrement<ProductTimeStep) {
+         if (PhotolyticReactionRoute==true) {
+           PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+         }
+         else {
+           ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+         }
+       }
+
+     }
+
+  }
 
 
   return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
-
-  //determine the product and its of the rection
-  if (rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) {
-    //the photolytic reaction root
-  }
-  else {
-    //the electron impact root
-
-    switch (spec) {
-    case _H2O_SPEC_ :
-      ElectronImpact::H2O::GenerateReactionChannel(ElectronTemeprature,ReactionProductsList,nReactionProducts);
-      break;
-    case _O2_SPEC_:
-      ElectronImpact::O2::GenerateReactionChannel(ElectronTemeprature,ReactionProductsList,nReactionProducts);
-      break;
-    default:
-      exit(__LINE__,__FILE__,"Error: the species is unknown");
-    }
-  }
-
-
-
-  PIC::ParticleBuffer::SetI(_O2_PLUS_SPEC_,ParticleData);
-  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
-
-//  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
 }
 
 
