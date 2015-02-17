@@ -1,7 +1,7 @@
-#include "SputteringDefinitions.dfn"
+//$Id$
+//Settings of the Sputtering model
 
-// do or don't use sputtering
-#define _SPUTTERING__MODE_ _SPUTTERING__OFF_
+#include "SputteringDefinitions.dfn"
 
 // which sputtering surfaces to use
 #define _SPUTTERING__SURFACE_ _SPUTTERING__ICE_

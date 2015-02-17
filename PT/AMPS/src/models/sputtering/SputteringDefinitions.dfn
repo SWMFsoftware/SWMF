@@ -1,7 +1,5 @@
+//$Id$
 // contains definitions of macro used for compiling the sputtering model
-
-#define _SPUTTERING__ON_   0
-#define _SPUTTERING__OFF_  1
 
 // Surface type
 #define _SPUTTERING__ICE_ 0
