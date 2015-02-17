@@ -20,6 +20,14 @@
   mass=1*_AMU_
   charge=0
 
+#component=H2 
+  mass=2*_AMU_
+  charge=0
+
+#component=OH
+  mass=17*_AMU_
+  charge=0
+
 #component=O2
   mass=32*_AMU_
   charge=0
