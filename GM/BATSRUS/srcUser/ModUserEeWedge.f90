@@ -149,7 +149,7 @@ contains
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
     use ModPhysics,     ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
          UnitEnergyDens_
-    use ModGeometry,    ONLY: z1
+    use ModGeometry,    ONLY: RadiusMin
 
     real :: InitialState(1:4)
 
@@ -167,23 +167,22 @@ contains
     if(iProc==0) write(*,*) NameSub, &
          'iTableInitialState, EOS , Chianti = ', &
          iTableInitialState, iTableEOS, iTableChianti
-    !    z1 = 0.95  !6.96e8 =rSun 
+
+    !    RadiusMin = 0.95  !6.96e8 =rSun 
     call interpolate_lookup_table(iTableInitialState, &
-         z1*No2Si_V(UnitX_), 2.5, InitialState, &
+         RadiusMin*No2Si_V(UnitX_), 2.5, InitialState, &
          DoExtrapolate = .false.)
+ 
     BotDensity  = InitialState(1)*Si2No_V(UnitRho_)
     BotExtraE   = InitialState(3)*Si2No_V(UnitEnergyDens_)
     BotPressure = InitialState(4)*Si2No_V(UnitP_)
-    ! change at r = 0.95 Rs try fixing ghost cell values 
-    BotDensity  = 6.85976
-    BotExtraE   = 2.0
-    BotPressure = 2.39586e+10
 
     if(iProc==0) then
-       write(*,*)'z1 = ',z1
-       write(*,*)'BotDen = ',BotDensity
-       write(*,*)'BotPres = ',BotPressure
+       write(*,*)'RadiusMin = ', RadiusMin
+       write(*,*)'BotDen = ',    BotDensity
+       write(*,*)'BotPres = ',   BotPressure
     end if
+
     if(.not.allocated(srcthin_GB)) &
          allocate(srcthin_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
@@ -459,8 +458,6 @@ contains
     case(1)
        select case(TypeBc)
        case('fixvalue')
-          write(*,*)'fix value BC used'
-
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
              State_VGB(rho_,i,j,k,iBlock) = BotDensity
 
@@ -468,7 +465,7 @@ contains
 
              ! Reflect RhoUr
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+                  State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
                   -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))*Runit_D
 
              ! Float Br
