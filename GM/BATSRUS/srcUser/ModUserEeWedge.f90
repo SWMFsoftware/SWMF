@@ -466,7 +466,8 @@ contains
              ! Reflect RhoUr
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
-                  -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))*Runit_D
+                  -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock)) &
+                  *Runit_D
 
              ! Float Br
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
