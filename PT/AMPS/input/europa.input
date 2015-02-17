@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H2O,O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL 
+SpeciesList=H2O,O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL,H2,H,OH 
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -139,7 +139,7 @@ ParticleWeightCorrectionMode=on
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
 
-  SputteringIonSource=AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+  SputteringIonSource=SwmfPlasmaFlow !!!AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
 
   plume= \\ 
     SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
@@ -149,14 +149,10 @@ ParticleWeightCorrectionMode=on
 
 #endblock
 
-#block ../sputtering.pl !process the settings of the Europa's model
-
-  SputteringMode=on !on/off
-  SputteringSurface=Ice \\
-    model=Teolis !Rubin/Teolis    
-
+#block models/Sputtering/Sputtering.pl
+  Surface=ice
+  model=Teolis
 #endblock
-
 
 #block ../exosphere.pl
   SPICE=on
@@ -174,7 +170,7 @@ ParticleWeightCorrectionMode=on
   define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4)
+  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4,t5,t6) Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
   define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Europa::LossProcesses::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
@@ -205,7 +201,7 @@ ParticleWeightCorrectionMode=on
     T=0.174e6 \\
     n=60.0E6
 
-  Source:Sputtering=off\\ !on,off
+  Source:Sputtering=on\\ !on,off
     Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
     Mode=UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
     SourceRate(O2)=1.0E26 \\
