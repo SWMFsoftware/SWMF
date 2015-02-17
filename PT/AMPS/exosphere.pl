@@ -137,7 +137,7 @@ while ($line=<InputFile>) {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
         ($ReactionProcessor,$line)=split(' ',$line,2);
         $ReactionProcessor=~s/ //g;
-        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_\n#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4) $ReactionProcessor(t0,t1,t2,t3,t4);\n\n","pic/picGlobal.dfn");
+        ampsConfigLib::AddLine2File("#undef _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_\n#define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4,t5,t6) $ReactionProcessor(t0,t1,t2,t3,t4,t5,t6);\n\n","pic/picGlobal.dfn");
       }
       elsif ($InputLine eq "LIFETIME") {
         ($InputLine,$InputComment)=split(' ',$InputComment,2);
