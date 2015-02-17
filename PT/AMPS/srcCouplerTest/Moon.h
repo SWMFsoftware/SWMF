@@ -445,7 +445,7 @@ namespace Moon {
     return res;
   }
 
-  inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+  inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
     if (_NA_PLUS_SPEC_>=0) {
       PIC::ParticleBuffer::SetI(_NA_PLUS_SPEC_,ParticleData);
