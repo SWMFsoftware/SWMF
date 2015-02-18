@@ -38,6 +38,12 @@ reflect			TypeBcNorth
 fixvalue   	 	TypeBcBottom
 no_inflow   		TypeBcTop
 
+#NORMALIZATION
+READ			TypeNormalization
+1.5E05			No2SiUnitx
+6.4E03			No2SiUnitU
+2.7E-4			No2SiUnitRho
+
 #USERFLAGS
 F                       UseUserInnerBcs
 T                       UseUserSource
