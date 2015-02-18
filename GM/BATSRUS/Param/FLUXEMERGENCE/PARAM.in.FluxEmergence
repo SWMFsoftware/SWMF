@@ -4,6 +4,9 @@ T			DoEcho
 #COMPONENT
 EE			NameComp
 
+#COORDSYSTEM
+GSM			TypeCoordSystem
+
 #PROGRESS
 10                      DnProgressShort
 100                     DnProgressLong
