@@ -19,6 +19,9 @@ NONE                    NamePlanet
 
 #BEGIN_COMP EE -------------------------------------------------------------
 
+#COORDSYSTEM
+GSM			TypeCoordSystem
+
 #INCLUDE
 Grid.3D
 
