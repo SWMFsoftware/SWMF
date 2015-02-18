@@ -292,7 +292,7 @@ namespace Mercury {
     return res;
   }
 
-  inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
+  inline int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
     spec=_NA_PLUS_SPEC_;
 
     PIC::ParticleBuffer::SetI(spec,ParticleData);
