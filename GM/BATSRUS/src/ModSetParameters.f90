@@ -1839,6 +1839,17 @@ subroutine MH_set_parameters(TypeAction)
                    ' ERROR: cannot handle coordinate system '&
                    //TypeCoordSystem)
            end select
+        case('EE')
+           select case(TypeCoordSystem)
+           case('HGR','HGC')
+              UseRotatingFrame = .true.
+           case('HGI','GSM')
+              UseRotatingFrame = .false.
+           case default
+              call stop_mpi(NameSub// &
+                   ' ERROR: cannot handle coordinate system '&
+                   //TypeCoordSystem)
+           end select
         end select
 
      case("#NSTEP")
@@ -1948,7 +1959,7 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#SAVEPOTENTIALFIELD", "#B0GRID")
         call set_parameters_magnetogram(NameCommand)
-        
+
      case('#LDEM')
         call read_var('UseLdem', UseLdem)
         if(UseLdem) then
@@ -2091,17 +2102,13 @@ contains
        UseRotatingFrame  = .false.
        UseRotatingBc     = .false.
        TypeCoordSystem   = 'HGI'
-    case('SC')
+    case('SC','EE')
        UseRotatingFrame  = .true.
        UseRotatingBc     = .false.
        TypeCoordSystem   = 'HGR'
     case('GM')
        UseRotatingFrame  = .false.
        UseRotatingBc     = .true.
-       TypeCoordSystem   = 'GSM'
-    case('EE')
-       UseRotatingFrame  = .false.
-       UseRotatingBc     = .false.
        TypeCoordSystem   = 'GSM'
     end select
 
@@ -2214,10 +2221,11 @@ contains
     if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
 
     select case(NameThisComp)
-    case('SC','IH','OH')
+    case('SC','IH','OH','EE')
        ! Body parameters
        UseGravity=.true.
        body1      =.true.
+       if(NameThisComp == 'EE') body1 = .false.
        Rbody      = 1.00
        Rcurrents  =-1.00
 
@@ -2262,35 +2270,6 @@ contains
        ! Normalization and I/O units
        TypeNormalization = "PLANETARY"
        TypeIoUnit        = "PLANETARY"
-
-    case('EE')
-       ! Body Parameters
-       UseGravity = .true.
-       GravityDir = 3
-       GravitySi  = -273.06667
-       body1      = .false.
-       Rbody      = 1.00
-       Rcurrents  =-1.00
-
-       ! Non Conservative Parameters
-       UseNonConservative = .false.
-       nConservCrit       = 0
-       rConserv           = -1.
-
-       ! Boundary Conditions and Normalization
-       TypeBc_I(1:4) = 'periodic'
-       TypeBc_I(5)         = 'fixvalue'
-       TypeBc_I(6)         = 'no_inflow'
-       TypeBc_I(body1_)       = 'unknown'
-       BodyTDim_I    = 25000.0          ! K
-       BodyNDim_I    = 5.0              ! /cc
-
-       ! Normalization and I/O units
-       TypeNormalization = "READ"
-       No2Si_V(UnitX_)   = 1.5e5
-       No2Si_V(UnitU_)   = 6.4e3
-       No2Si_V(UnitRho_) = 2.7e-4
-       TypeIoUnit        = "HELIOSPHERIC"
 
     end select
 
