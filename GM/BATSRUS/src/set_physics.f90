@@ -14,6 +14,7 @@ subroutine set_physics_constants
   use ModVarIndexes
   use ModMultiFluid
   use ModAdvance, ONLY: UseElectronPressure, Pe_, UseAnisoPressure, Ppar_
+  use BATL_lib, ONLY: IsCartesian
 
   implicit none
 
@@ -43,7 +44,7 @@ subroutine set_physics_constants
         rPlanetSi = 1000.0  ! 1 km
         NamePlanetRadius = 'km'
      end if
-  case('SC', 'IH', 'OH')
+  case('SC', 'IH', 'OH', 'EE')
      if(UseStar) then
         rPlanetSi   = RadiusStar*rSun
         MassBodySi  = MassStar*mSun
@@ -55,13 +56,12 @@ subroutine set_physics_constants
      endif
      SW_n_dim    = BodyNDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
      SW_T_dim    = BodyTDim_I(IonFirst_)  ! Needed for SOLARWIND normalization only
-  case('EE')
-     MassBodySi = mSun
-     RotPeriodSi = RotationPeriodSun
-     rPlanetSi = 1000.0  ! 1 km
-     NamePlanetRadius = 'km'
+     if(NameThisComp == 'EE' .and. IsCartesian)then
+        rPlanetSi = 1000.0  ! 1 km
+        NamePlanetRadius = 'km'
+     end if
   end select
- 
+
   ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
   ! and it is DIFFERENT from SWMF's inertial OmegaPlanet 
   ! defined in CON_planet !!!
@@ -283,7 +283,7 @@ subroutine set_physics_constants
         ! Use solar wind temperature and reduced density to get pressure
         FaceState_VI(  iP,1:6) = SW_p/pCoef &
              *(1.0 - LowDensityRatio*(nIonFluid-1))
-        
+
         do iFluid = IonFirst_+1, nFluid
            call select_fluid
            FaceState_VI(iRho,1:6) = SW_Rho*LowDensityRatio
