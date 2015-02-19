@@ -57,7 +57,8 @@ module ModThreadedLC
   !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
-
+  !/
+  real    :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
   integer:: iP
   integer, parameter:: Impl_=3
 contains
@@ -141,7 +142,13 @@ contains
     ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
     !/
     GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
-
+    !\
+    !energy flux needed to raise the mass flux rho*u to the heliocentric 
+    !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+    !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
+    !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
+    !/
+    GravHydroDyn  = cGravPot*MassIon_I(1)/AverageIonCharge
     !\
     ! With this constant, the volumetric radiative cooling rate is
     ! the table value multiplied by cCoolingPerPe2*(PeSi/TeSi)**2
@@ -608,6 +615,10 @@ contains
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          end if
          
+         Res_I(1:nPoint-1) = &
+              ResHeating_I(1:nPoint-1) +  ResCooling_I(1:nPoint-1) +&
+              ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1)
+         !==========Add Gravity Source================================
          !\
          !cGravPot = cGravitation*mSun*cAtomicMass/&
          !/   (cBoltzmann*rSun)
@@ -617,12 +628,12 @@ contains
          !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
          !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
          !/
-         !GravityCoef =  cGravPot/TeSiIn*MassIon_I(1)*          & 
-         !     (1 - BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
-         
-         Res_I(1:nPoint-1) = &
-              ResHeating_I(1:nPoint-1) +  ResCooling_I(1:nPoint-1) +&
-              ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1)
+         Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + 0.5*GravHydroDyn*FluxConst*(&
+              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
+              + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+         Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
+                BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
+              + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
          !\
          ! Solve equation
          ! 
@@ -709,6 +720,19 @@ contains
                  *(inv_gm1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+            !==========Add Gravity Source================================
+            !\
+            !cGravPot = cGravitation*mSun*cAtomicMass/&
+            !/   (cBoltzmann*rSun)
+            !\
+            !energy flux needed to raise the mass flux rho*u to the heliocentric 
+            !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+            !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+            !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+            !/
+            Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
+                 BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
+                 + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
             !\
             ! Solve equation!
             ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
@@ -725,6 +749,20 @@ contains
                  PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
             Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
                  FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+            !==========Add Gravity Source================================
+            !\
+            !cGravPot = cGravitation*mSun*cAtomicMass/&
+            !/   (cBoltzmann*rSun)
+            !\
+            !energy flux needed to raise the mass flux rho*u to the heliocentric 
+            !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+            !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+            !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+            !/
+            Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
+                 0.5*GravHydroDyn*FluxConst*(&
+                 - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
+                 + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
             call tridag(n=nPoint-2,  &
                  L_I=L_I(2:nPoint-1),&
                  M_I=M_I(2:nPoint-1),&
@@ -751,6 +789,23 @@ contains
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
                  /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
             Res_I(1) = Res_I(1) - FluxConst*TeSi_I(2)
+            !==========Add Gravity Source================================
+            !\
+            !cGravPot = cGravitation*mSun*cAtomicMass/&
+            !/   (cBoltzmann*rSun)
+            !\
+            !energy flux needed to raise the mass flux rho*u to the heliocentric 
+            !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+            !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+            !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+            !/
+            Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
+                 0.5*GravHydroDyn*FluxConst*(&
+                 - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
+                 + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+            Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
+                 BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
+                 + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
             call tridag(n=nPoint-1,  &
                  L_I=L_I(1:nPoint-1),&
                  M_I=M_I(1:nPoint-1),&
@@ -1098,8 +1153,8 @@ contains
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (max(-U,U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k)) &
-               *BDir_D + U_D)
+               (U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k) &
+               *BDir_D + U_D)   !  max(-U,
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
