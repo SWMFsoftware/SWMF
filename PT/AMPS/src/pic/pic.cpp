@@ -854,7 +854,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
-  if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
+  if (_PIC_COUPLER_MODE_!=_PIC_COUPLER_MODE__OFF_) if (PIC::PitchAngleDistributionSample::SamplingInitializedFlag==true) PIC::PitchAngleDistributionSample::SampleDistributionFnction();
 #endif
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
