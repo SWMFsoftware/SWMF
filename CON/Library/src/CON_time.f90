@@ -159,14 +159,7 @@ contains
     !EOP
     !-------------------------------------------------------------------------
 
-    TimeStart % iYear      = TimeEnd % iYear   
-    TimeStart % iMonth     = TimeEnd % iMonth 
-    TimeStart % iDay       = TimeEnd % iDay    
-    TimeStart % iHour      = TimeEnd % iHour   
-    TimeStart % iMinute    = TimeEnd % iMinute
-    TimeStart % iSecond    = TimeEnd % iSecond
-    TimeStart % FracSecond = TimeEnd % FracSecond 
-
+    TimeStart = TimeEnd
     tSimulation = 0
     nStep       = 0
 
