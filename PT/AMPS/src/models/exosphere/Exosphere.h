@@ -197,6 +197,8 @@ namespace Exosphere {
 //      if (spec!=_NA_SPEC_) return;
 
       id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
+      if ((id<0.0)||(id>_EXOSPHERE__SOURCE_MAX_ID_VALUE_)) exit(__LINE__,__FILE__,"Error: the particle source ID is out of range");
+
       *(spec+(double*)(SamplingBuffer+SamplingDensityOffset[id]))+=LocalParticleWeight;
 /*
       switch (id) {
@@ -851,6 +853,8 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         return (flux>0.0) ? flux*SolarWindSputtering_Yield[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement] : 0.0;
         #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_
         return (flux>0.0) ? SolarWindSputtering_UserRequestedSourceRate[spec]*flux*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement]/((cInternalSphericalData*)SphereDataPointer)->TotalSolarWindSurfaceFlux : 0.0;
+        #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__UNIFORM_USER_SOURCE_RATE_
+        return SolarWindSputtering_UserRequestedSourceRate[spec]*((cInternalSphericalData*)SphereDataPointer)->SurfaceElementArea[SurfaceElement]/(4.0*Pi*pow(((cInternalSphericalData*)SphereDataPointer)->Radius,2));
         #else
         exit(__LINE__,__FILE__,"Error: the option is unknown");
         #endif
@@ -860,6 +864,8 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*4.0E3;
         #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__YIELD_
         return SourceRate[spec];
         #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_
+        return SolarWindSputtering_UserRequestedSourceRate[spec];
+        #elif _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_ == _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__UNIFORM_USER_SOURCE_RATE_
         return SolarWindSputtering_UserRequestedSourceRate[spec];
         #else
         exit(__LINE__,__FILE__,"Error: the option is unknown");
