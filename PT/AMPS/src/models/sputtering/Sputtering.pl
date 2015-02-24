@@ -72,8 +72,8 @@ while ($line=<InputFile>) {
       die;
     }
     
-    ampsConfigLib::AddLine2File("#undef _SPUTTERING__SURFACE_\n#define _SPUTTERING__SURFACE_ _SPUTTERING__".$Surface."_","models/Sputtering/Sputtering.dfn");
-    ampsConfigLib::AddLine2File("#undef _SPUTTERING__ICE__MODEL_\n#define _SPUTTERING__ICE__MODEL_ _SPUTTERING__ICE__".$Model."_","models/Sputtering/Sputtering.dfn");
+    ampsConfigLib::AddLine2File("#undef _SPUTTERING__SURFACE_\n#define _SPUTTERING__SURFACE_ _SPUTTERING__".$Surface."_","models/sputtering/Sputtering.dfn");
+    ampsConfigLib::AddLine2File("#undef _SPUTTERING__ICE__MODEL_\n#define _SPUTTERING__ICE__MODEL_ _SPUTTERING__ICE__".$Model."_","models/sputtering/Sputtering.dfn");
     
     #quit the loop
     last;
