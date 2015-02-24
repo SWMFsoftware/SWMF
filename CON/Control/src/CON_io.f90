@@ -684,11 +684,11 @@ contains
     ! Checks for UseEndTime=.true.
     if(UseEndTime)then
        if(.not.DoTimeAccurate)&
-            call CON_stop('#TIMEEND command cannot be used in steady-state')
+            call CON_stop('#ENDTIME command cannot be used in steady-state')
        if(.not.IsLastRead)&
-            call CON_stop('#TIMEEND command can be only used in the last session')
+            call CON_stop('#ENDTIME command can be only used in the last session')
 
-       !Determine, when to stop the simulation
+       ! Determine, when to stop the simulation
        tSimulationMax = TimeEnd % Time - TimeStart % Time
        MaxIteration = -1
     end if
