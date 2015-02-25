@@ -44,7 +44,6 @@ program pw
   !****************************************************************************
   ! Move the flux tube, solve each fieldline, and advance the time
   !****************************************************************************
-
   if (DoTimeAccurate) then
      TIMELOOP:do
         if (Time >= Tmax) exit TIMELOOP
@@ -58,12 +57,11 @@ program pw
         call PW_get_electrodynamics
 
         do iLine=1,nLine
-           
+
            ! move_line moves the flux tube, then we can use the angular
            !position to get the lat and lon
            
            call move_line
-           
            !  Call the flux tube to be solved
            
            call PW_advance_line
@@ -116,7 +114,7 @@ program pw
        OmegaLine_I, JrLine_I, iThetaLine_I,iPhiLine_I,    &
        NameRestartIn, NameRestart, NameGraphics,          &
        NameOutput,  iUnitRestart, iUnitRestartIn,         &
-       iUnitGraphics,iUnitOutput, iLineGlobal)
+       iUnitGraphics,iUnitOutput, iLineGlobal,IsNorth_I)
   
 
   call MPI_FINALIZE(errcode)
