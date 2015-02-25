@@ -51,6 +51,7 @@ module ModPWOM
        xLine_I,yLine_I,zLine_I,          &
        xLineOld_I,yLineOld_I,zLineOld_I, &
        UthetaLine_I,UphiLine_I,          &
+       ThetaLineOld_I, PhiLineOld_I,     &
        UxLine_I,UyLine_I,UzLine_I,       &
        OmegaLine_I,                      &
        JrLine_I,EfluxLine_I,AvELine_I
@@ -97,6 +98,8 @@ module ModPWOM
   character(13)  :: TypeDiffusion='LaxFriedrichs'
   real ::  BetaIn = 1.0  ! limiter beta: 1 <= Beta <= 2, 0 for first order
   real ::  Beta = 1.0    ! actual beta used (changes in implicit scheme) 
+
+  logical, dimension(:),allocatable :: IsNorth_I
 
 contains
   !==========================================================================
