@@ -6,10 +6,10 @@ subroutine get_weimer_potential
   use ModNumConst,ONLY:cPi,cTwoPi,cHalfPi,cRadToDeg
   use ModPWOM,    ONLY:Theta_G,Phi_G,nTheta,nPhi,&
        SigmaH_G,SigmaP_G,Jr_G,Potential_G,&
-       Time,allocate_ie_variables
+       Time,allocate_ie_variables,nLine,IsNorth_I
   implicit none
   character (len=100), dimension(100):: Lines_I
-  integer :: iError,iPhi,iTheta
+  integer :: iError,iPhi,iTheta,iLine
   real    :: temp, dTheta, dPhi
   logical,save :: UseIMF, IsFirst=.true.
   !real :: MLT_C(257,65), MLatitude_C(257,65),TempPotential_C(257,65)
@@ -49,8 +49,8 @@ subroutine get_weimer_potential
      if (iError /= 0) then
         call con_stop("PW_ERROR:Can not find IMF Bz.")
      else
-        write(*,*) "Setting potential to Weimer [1996]."
-        Lines_I(3) = "weimer96"    ! Change to "zero" if you want
+        write(*,*) "Setting potential to Weimer [2005]."
+        Lines_I(3) = "weimer05"    ! Change to "zero" if you want
      endif
      Lines_I(4) = "ihp"
      Lines_I(5) = "idontknow"
@@ -61,10 +61,12 @@ subroutine get_weimer_potential
      Lines_I(10) = ""
      Lines_I(11) = "#END"
 
-
+     
      call EIE_set_inputs(Lines_I)
 
+
      call EIE_Initialize(iError)
+
      if (iError /= 0) call &
           con_stop('PW_ERROR: EIE_Initialize failed at get_weimer_potential')
 
@@ -75,7 +77,13 @@ subroutine get_weimer_potential
   call IO_SetnLats(nTheta)
   call IO_SetTime(CurrentTime)
 
-  call IO_SetNorth
+  do iLine=1,nLine
+     if (IsNorth_I(iLine)) then
+        call IO_SetNorth
+     else
+        call IO_SetSouth
+     endif
+  end do
 
 
   call get_IMF_Bz(CurrentTime, temp, iError)
@@ -86,6 +94,9 @@ subroutine get_weimer_potential
 
   call get_SW_V(CurrentTime, temp, iError)
   call IO_SetSWV(temp)
+  call get_SW_N(CurrentTime, temp, iError)
+  call IO_SetSWN(temp)
+
   if (iError /= 0) call &
        con_stop('PW_ERROR: get_SW_V failed in get_weimer_potential')
 
