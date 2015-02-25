@@ -41,7 +41,7 @@ module ModCommonVariables
   !scaling reference for peak topside heat flux  in aurora during quiet times
   real, parameter  :: EtopAurora = 2.0e-3, EfluxRef = 7.0  
   real, parameter  :: EtopMin = 5e-4   !minimum heat flux (due to polar rain)
-  real, parameter  :: EtopPhotoElectrons = 1e-3   !Peak Heat Flux from photoelectrons
+  real, parameter  :: EtopPhotoElectrons = 2.0e-3   !Peak Heat Flux from photoelectrons
   Logical :: UsePhotoElectronHeatFlux = .true., UseAuroralHeatFlux = .true., &
              UseCuspHeatFlux = .true.
 
