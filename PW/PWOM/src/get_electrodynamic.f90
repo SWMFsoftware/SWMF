@@ -17,8 +17,8 @@ subroutine PW_get_electrodynamics
   integer :: iError
   logical,save :: IsFirst = .true.
   real :: dTheta1, dPhi1
+  !real, dimension(0:360+1, 0:90+1) :: x,y,z
   !---------------------------------------------------------------------------
-  
   if ((IsStandAlone .or. .not. UseIE) .and. .not.UseWeimer) then
      open(UnitTmp_, FILE=NamePhiNorth)  
      if(IsFirst)then
@@ -44,6 +44,14 @@ subroutine PW_get_electrodynamics
      call get_weimer_potential
   endif
   
+  !Test E-Field with Uniform Potential
+  !rLowerBoundary = rPlanet+110.0e3
+  !z = rlowerboundary*cos(Theta_G)
+  !x = rlowerboundary*sin(Theta_G)*cos(Phi_G)
+  !y = rlowerboundary*sin(Theta_G)*sin(Phi_G)
+
+  !Potential_G = x/rlowerboundary*20000
+
   ! Set EIE for Aurora when weimer not used
   if (.not.UseWeimer .and. UseAurora .and. IsFirst) then
           Lines_I(1) = "#BACKGROUND"
@@ -178,7 +186,9 @@ subroutine PW_get_electrodynamics
         uExBphi_C(iPhi,iTheta)   = &
              (-Etheta_C(iPhi,iTheta)*Br_G(iPhi,iTheta)) &
              / BmagnitudeSquared_G(iPhi,iTheta) &
-             + OmegaPlanet*rPlanet*sin(Theta_G(iPhi,iTheta)) !corotation
+
+             !N. Perlongo - Reversed Corotation Direction
+             - OmegaPlanet*rPlanet*sin(Theta_G(iPhi,iTheta)) !corotation
         
         uExBr_C(iPhi,iTheta)     = &
              (-Ephi_C(iPhi,iTheta)*Btheta_G(iPhi,iTheta)) &
