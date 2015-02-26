@@ -35,11 +35,11 @@
 //the parameters of the domain and the sphere
 
 const double DebugRunMultiplier=4.0;
-const double rSphere=_RADIUS_(_TARGET_);
+const double rSphere=4010430.7796;
 
 
-const double xMaxDomain=10; //modeling the vicinity of the planet
-const double yMaxDomain=15; //the minimum size of the domain in the direction perpendicular to the direction to the sun
+const double xMaxDomain=1.25; 
+const double yMaxDomain=1.25; 
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
@@ -92,12 +92,12 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
 
-  double CharacteristicSpeed_NA=5.0E3;
+  double CharacteristicSpeed_N2=2.0E3;
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
   CellSize=startNode->GetCharacteristicCellSize();
-  return 0.3*CellSize/CharacteristicSpeed_NA;
+  return 0.1*CellSize/CharacteristicSpeed_N2;
 
 
 }
@@ -482,7 +482,7 @@ void amps_init() {
 
   Titan::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
   Titan::Init_AfterParser();
-
+  Titan::tgitm_exobase::read_tgitm();
 
 
   //register the sphere
@@ -725,11 +725,11 @@ void amps_init() {
   const int nSamplePoints=3;
   double SampleLocations[nSamplePoints][DIM]={{7.6E5,6.7E5,0.0}, {2.8E5,5.6E5,0.0}, {-2.3E5,3.0E5,0.0}};
 
-  PIC::DistributionFunctionSample::vMin=-40.0E3;
-  PIC::DistributionFunctionSample::vMax=40.0E3;
-  PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
+ // PIC::DistributionFunctionSample::vMin=-40.0E3;
+ // PIC::DistributionFunctionSample::vMax=40.0E3;
+ // PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
 
-  PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+ // PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
 }
 
 
@@ -751,16 +751,16 @@ void amps_time_step(){
 
     SpiceDouble HCI_to_MSO_TransformationMartix[6][6];
 
-    spkezr_c("Mercury",Mercury::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateBegin,&lt);
-    spkezr_c("SUN",Mercury::OrbitalMotion::et,"MSGR_MSO","none","Mercury",StateSun,&lt);
+    spkezr_c("Titan",Titan::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateBegin,&lt);
+    spkezr_c("SUN",Titan::OrbitalMotion::et,"MSGR_MSO","none","Titan",StateSun,&lt);
 
-    //calculate Mercury's velocity in an itertial frame, which have dirtectional vectors that coinsides with that of MSO
-    sxform_c("MSGR_HCI","MSGR_MSO",Mercury::OrbitalMotion::et+0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],HCI_to_MSO_TransformationMartix);
-    spkezr_c("Mercury",Mercury::OrbitalMotion::et+0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],"MSGR_HCI","none","SUN",StateMiddle,&lt);
+    //calculate Titan's velocity in an itertial frame, which have dirtectional vectors that coinsides with that of MSO
+    sxform_c("MSGR_HCI","MSGR_MSO",Titan::OrbitalMotion::et+0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],HCI_to_MSO_TransformationMartix);
+    spkezr_c("Titan",Titan::OrbitalMotion::et+0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],"MSGR_HCI","none","SUN",StateMiddle,&lt);
 
 
-    Mercury::OrbitalMotion::et+=PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
-    spkezr_c("Mercury",Mercury::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateEnd,&lt);
+    Titan::OrbitalMotion::et+=PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
+    spkezr_c("Titan",Titan::OrbitalMotion::et,"MSGR_HCI","none","SUN",StateEnd,&lt);
 
 
     for (rBegin=0.0,rEnd=0.0,idim=0;idim<3;idim++) {
@@ -771,17 +771,17 @@ void amps_time_step(){
       rBegin+=pow(StateBegin[idim],2);
       rEnd+=pow(StateEnd[idim],2);
 
-      Mercury::xObject_HCI[idim]=StateBegin[idim];
-      Mercury::vObject_HCI[idim]=StateBegin[3+idim];
+      Titan::xObject_HCI[idim]=StateBegin[idim];
+      Titan::vObject_HCI[idim]=StateBegin[3+idim];
 
-      Mercury::xSun_SO[idim]=1.0E3*StateSun[idim];
-      Mercury::vSun_SO[idim]=1.0E3*StateSun[3+idim];
+      Titan::xSun_SO[idim]=1.0E3*StateSun[idim];
+      Titan::vSun_SO[idim]=1.0E3*StateSun[3+idim];
     }
 
     //calculate parameters of SO_FROZEN
     //velocity of the coordinate frame
     for (idim=0;idim<3;idim++) {
-      Mercury::vObject_SO_FROZEN[idim]=
+      Titan::vObject_SO_FROZEN[idim]=
           HCI_to_MSO_TransformationMartix[idim][0]*StateMiddle[3+0]+
           HCI_to_MSO_TransformationMartix[idim][1]*StateMiddle[3+1]+
           HCI_to_MSO_TransformationMartix[idim][2]*StateMiddle[3+2];
@@ -793,14 +793,14 @@ void amps_time_step(){
     double SunPointingDirectionEnd[3],SunPointingDirectionEnd_MSO_FROZEN[3];
 
     //calculate Sun pointing at the end of the iteration in HCI frame (et is already incremented!!!!!!)
-    sxform_c("MSGR_MSO","MSGR_HCI",Mercury::OrbitalMotion::et,fmatrix);
+    sxform_c("MSGR_MSO","MSGR_HCI",Titan::OrbitalMotion::et,fmatrix);
 
     SunPointingDirectionEnd[0]=fmatrix[0][0];
     SunPointingDirectionEnd[1]=fmatrix[1][0];
     SunPointingDirectionEnd[2]=fmatrix[2][0];
 
     //convert the pointing direction vector into MSO_FROZEN frame
-    sxform_c("MSGR_HCI","MSGR_MSO",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],fmatrix);
+    sxform_c("MSGR_HCI","MSGR_MSO",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],fmatrix);
 
     for (idim=0;idim<3;idim++) {
       SunPointingDirectionEnd_MSO_FROZEN[idim]=
@@ -810,21 +810,21 @@ void amps_time_step(){
     }
 
     //calculate the rate of rotation in MSO_FROZEN
-    Mercury::RotationRate_SO_FROZEN=acos(SunPointingDirectionEnd_MSO_FROZEN[0])/PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
+    Titan::RotationRate_SO_FROZEN=acos(SunPointingDirectionEnd_MSO_FROZEN[0])/PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_];
 
 
     //calculate the direction of rotation
     double c=sqrt(pow(SunPointingDirectionEnd_MSO_FROZEN[1],2)+pow(SunPointingDirectionEnd_MSO_FROZEN[2],2));
 
     if (c>0.0) {
-      Mercury::RotationVector_SO_FROZEN[0]=0.0;
-      Mercury::RotationVector_SO_FROZEN[1]=-SunPointingDirectionEnd_MSO_FROZEN[2]/c*Mercury::RotationRate_SO_FROZEN;
-      Mercury::RotationVector_SO_FROZEN[2]=SunPointingDirectionEnd_MSO_FROZEN[1]/c*Mercury::RotationRate_SO_FROZEN;
+      Titan::RotationVector_SO_FROZEN[0]=0.0;
+      Titan::RotationVector_SO_FROZEN[1]=-SunPointingDirectionEnd_MSO_FROZEN[2]/c*Titan::RotationRate_SO_FROZEN;
+      Titan::RotationVector_SO_FROZEN[2]=SunPointingDirectionEnd_MSO_FROZEN[1]/c*Titan::RotationRate_SO_FROZEN;
     }
     else {
-      Mercury::RotationVector_SO_FROZEN[0]=0.0;
-      Mercury::RotationVector_SO_FROZEN[1]=0.0;
-      Mercury::RotationVector_SO_FROZEN[2]=0.0;
+      Titan::RotationVector_SO_FROZEN[0]=0.0;
+      Titan::RotationVector_SO_FROZEN[1]=0.0;
+      Titan::RotationVector_SO_FROZEN[2]=0.0;
     }
 
 
@@ -839,18 +839,18 @@ void amps_time_step(){
 
 
     /*
-    sxform_c("MSGR_MSO","MSGR_HCI",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T1);
-    sxform_c("MSGR_HCI","MSGR_MSO",Mercury::OrbitalMotion::et,T2);
+    sxform_c("MSGR_MSO","MSGR_HCI",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T1);
+    sxform_c("MSGR_HCI","MSGR_MSO",Titan::OrbitalMotion::et,T2);
 */
 
-    sxform_c("MSGR_MSO","MSGR_HCI",Mercury::OrbitalMotion::et,T1);
-    sxform_c("MSGR_HCI","MSGR_MSO",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
+    sxform_c("MSGR_MSO","MSGR_HCI",Titan::OrbitalMotion::et,T1);
+    sxform_c("MSGR_HCI","MSGR_MSO",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
 
 
 /*
     furnsh_c("/Users/vtenishe/SPICE/Kernels/OTHER/Moon.LSO.tf");
-    sxform_c("LSO","MSGR_HCI",Mercury::OrbitalMotion::et,T1);
-    sxform_c("MSGR_HCI","LSO",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
+    sxform_c("LSO","MSGR_HCI",Titan::OrbitalMotion::et,T1);
+    sxform_c("MSGR_HCI","LSO",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
 */
 
 
@@ -895,7 +895,7 @@ t=1.0;
     //CALCULATE THE EFECT OF THE TRANSFORMATION AND TRANSTER THE TRANSFORMED VEWCTROS TO HCI
     double T3[3][3];
 
-    sxform_c("MSGR_MSO","MSGR_HCI",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
+    sxform_c("MSGR_MSO","MSGR_HCI",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],T2);
 
     for (i=0;i<3;i++) for (j=0;j<3;j++) {
       T3[i][j]=0.0;
@@ -912,7 +912,7 @@ t=1.0;
     //RECALCULATE THE MATRIX AGIN
     double newRotationVector[3],newRate;
 
-    newRate=Exosphere::OrbitalMotion::FrameRotation::GetRotationVector(newRotationVector,"MSGR_MSO",Mercury::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],Mercury::OrbitalMotion::et);
+    newRate=Exosphere::OrbitalMotion::FrameRotation::GetRotationVector(newRotationVector,"MSGR_MSO",Titan::OrbitalMotion::et-PIC::ParticleWeightTimeStep::GlobalTimeStep[_NA_SPEC_],Titan::OrbitalMotion::et);
 
 
     //END OF TRANSFORMATIUON TESTS ------------------
@@ -928,11 +928,11 @@ t=1.0;
       c1+=StateEnd[3+idim]*lEnd[idim];
     }
 
-    Mercury::xObjectRadial=0.5*(rBegin+rEnd);
-    Mercury::vObjectRadial=0.5*(c0+c1);
+    Titan::xObjectRadial=0.5*(rBegin+rEnd);
+    Titan::vObjectRadial=0.5*(c0+c1);
 
     //calculate TAA
-    Mercury::OrbitalMotion::TAA=Mercury::OrbitalMotion::GetTAA(Mercury::OrbitalMotion::et);
+    Titan::OrbitalMotion::TAA=Titan::OrbitalMotion::GetTAA(Titan::OrbitalMotion::et);
 
     for (idim=0;idim<3;idim++) {
       vTangentialBegin+=pow(StateBegin[3+idim]-c0*lBegin[idim],2);
@@ -942,23 +942,23 @@ t=1.0;
     vTangentialBegin=sqrt(vTangentialBegin);
     vTangentialEnd=sqrt(vTangentialEnd);
 
-    Mercury::OrbitalMotion::CoordinateFrameRotationRate=0.5*(vTangentialBegin/rBegin+vTangentialEnd/rEnd);
+    Titan::OrbitalMotion::CoordinateFrameRotationRate=0.5*(vTangentialBegin/rBegin+vTangentialEnd/rEnd);
 
 
     //determine direction to the Sun and rotation angle in the coordiname frame related to Mercury
     SpiceDouble state[6],l=0.0;
 
-    spkezr_c("SUN",Mercury::OrbitalMotion::et,"IAU_MERCURY","none","MERCURY",state,&lt);
+    spkezr_c("SUN",Titan::OrbitalMotion::et,"IAU_Titan","none","Titan",state,&lt);
 
     for (idim=0;idim<3;idim++) l+=pow(state[idim],2);
 
     for (l=sqrt(l),idim=0;idim<3;idim++) {
-      Mercury::OrbitalMotion::SunDirection_IAU_OBJECT[idim]=state[idim]/l;
+      Titan::OrbitalMotion::SunDirection_IAU_OBJECT[idim]=state[idim]/l;
     }
 
     //matrixes for tranformation MSO->IAU and IAU->MSO coordinate frames
-    sxform_c("MSGR_MSO","IAU_MERCURY",Mercury::OrbitalMotion::et,Mercury::OrbitalMotion::SO_to_IAU_TransformationMartix);
-    sxform_c("IAU_MERCURY","MSGR_MSO",Mercury::OrbitalMotion::et,Mercury::OrbitalMotion::IAU_to_SO_TransformationMartix);
+    sxform_c("MSGR_MSO","IAU_Titan",Titan::OrbitalMotion::et,Titan::OrbitalMotion::SO_to_IAU_TransformationMartix);
+    sxform_c("IAU_Titan","MSGR_MSO",Titan::OrbitalMotion::et,Titan::OrbitalMotion::IAU_to_SO_TransformationMartix);
 #endif
 
 

@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=N2  !, NA_Plus !lkdsjflksdj   
+SpeciesList=N2,CH4,H2 
 
 
 !settings of the directories
@@ -28,17 +28,14 @@ ErrorLog=PT/amps_error.log
 DiagnosticStream=PT
 OutputDirectory=PT/plots
 
-
 DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=on ! on,off
-
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 TimeStepMode= SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
-
 
 CouplerMode=off !ices !!off, ices, swmf 
 
@@ -52,10 +49,10 @@ CouplerMode=off !ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=20
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=5000
+  InitialSampleLength=10
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -76,7 +73,12 @@ CouplerMode=off !ices !!off, ices, swmf
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
-    const (Na,Na)= 1.23E-15
+     const (N2,N2)= 5.462884E-19 \\
+     const (CH4,CH4)= 7.3289901E-19 \\
+     const (H2,H2)= 2.6786476E-19 
+!    const (N2,CH4)= 6.3617251E-19 \\
+!    const (N2,H2)= 3.9980473E-19 \\
+!    const (CH4,H2)= 4.7175977-19 
 #endParticleCollisions
 
 
@@ -92,21 +94,16 @@ CouplerMode=off !ices !!off, ices, swmf
   vvRelaxation=off !on,off
   rtRelaxation=on !on,off
 
-  nVibModes(Na=1)
-  nRotModes(Na=1)
-  VibTemp(Na=2000)
-  RotZnum(Na=0.25)
+  nRotModes(N2=2)
+  nRotModes(H2=2)
+  nRotModes(CH4=3)
+  RotZnum(N2=1.0)
+  RotZnum(H2=1.0)
+  RotZnum(CH4=1.0)
 
-  TemperatureIndex(Na,Na)=1.0
+  TemperatureIndex(N2,N2)=1.0
 #endIDF
 
-
-
-
-!#block ../moon.input.pl !process settings of the moon module
-!  SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
-!  SodiumReemissionFraction=1.0
-!#endblock
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
@@ -129,15 +126,21 @@ CouplerMode=off !ices !!off, ices, swmf
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
-  Source:ImpactVaporization=off \\ !on,off
+  Source:ImpactVaporization=on \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
-    SourceRate(N2)=1.69E22, SourceTemperature(N2)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
-
-  Source:UserDefined=on \\ !on,off
+    SourceRate(N2)=3.8571796E+031, SourceTemperature(N2)=161.0   \\ !SourceRate(N2)=5.247813e29, SourceTemperature(N2)=155.0
+    SourceRate(CH4)=1.9625345E+030, SourceTemperature(CH4)=161.0  \\
+    SourceRate(H2)=4.550927E+029, SourceTemperature(H2)=161.0
+    !SourceRate(N2)=3.115E+031, SourceTemperature(N2)=118.0   \\
+    !SourceRate(CH4)=1.53077E+030, SourceTemperature(CH4)=118.0  \\ 
+    !SourceRate(H2)=4.662794E+029, SourceTemperature(H2)=118.0   
+    
+    
+  Source:UserDefined=off \\ !on,off
     SourceProcessCode=VenticalSource \\
-    SourceRate=Titan::UserdefinedSoruce::GetTotalProductionRate \\ !!!!!Moon::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
-    GenerateParticleProperties=Titan::UserdefinedSoruce::GenerateParticleProperties \\ !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
+    SourceRate=Titan::tgitm_exobase::GetTotalProductionRate \\
+    GenerateParticleProperties=Titan::tgitm_exobase::GenerateParticleProperties \\
     ModifySurfaceSpeciesAbundance=false !!!true,false
 !   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
 

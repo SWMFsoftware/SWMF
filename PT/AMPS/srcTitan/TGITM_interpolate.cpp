@@ -1,30 +1,43 @@
-
+//$Id$
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <array>
+#include "Titan.h"
+
+
 using namespace std;
 
-
-void read_tgitm(double tgitm_grid[5184][7], int ndes)
-{
+	double Titan::tgitm_exobase::tgitm_grid[Titan::tgitm_exobase::ndes][10], Titan::tgitm_exobase::interp_val[7];
 	
+	
+	void Titan::tgitm_exobase::read_tgitm() {
+	const int nLatitudes = 72;
+
+	
+	cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::ndes<<endl;
 	ifstream fin("TGITM_EXOBASE.dat");
+	
 	if(fin.is_open())
 	{
-		for(int i=0;i<ndes;i++)
+		for(int i=0;i<Titan::tgitm_exobase::ndes;i++)
 		{
-			for(int j=0;j<6;j++)
+			for(int j=0;j<10;j++)
 			{
-				fin >> tgitm_grid[i][j];
+				fin >> Titan::tgitm_exobase::tgitm_grid[i][j];
+				//cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::tgitm_grid[i][j]<<endl;
 			}
 		}
 	}
+	else
+	{
+			cout<<"THE FILE DID NOT OPEN"<<endl;
+	}
 	
-}
+	}
 
 
-void tgitm_interpolate(double polar, double azimuth, double interp_val[4], double tgitm_grid[5184][7])
+  void Titan::tgitm_exobase::tgitm_interpolate(double polar, double azimuth)
 //Angles should be in Titan center frame
 {
 	double lat, lng, fp[4];
@@ -33,7 +46,7 @@ void tgitm_interpolate(double polar, double azimuth, double interp_val[4], doubl
 	tgitm_lb_lng=2.5, tgitm_hb_lng=357.5, dlat=2.5, dlng=5.0;
 	const int nLatitudes = 72;
 	const double rad2dg=57.2957795;
-	
+
 	//lat=polar;
 	//lng=azimuth;
 	
@@ -56,29 +69,35 @@ void tgitm_interpolate(double polar, double azimuth, double interp_val[4], doubl
 	itp_point[3]=itp_point[2]+1;
 	
 	
-	for(int i=0; i<4; i++)
+	for(int i=0; i<7; i++)
 	{
-		fp[0] = tgitm_grid[itp_point[0]][i+2];
-		fp[1] = tgitm_grid[itp_point[1]][i+2];
-		fp[2] = tgitm_grid[itp_point[2]][i+2];
-		fp[3] = tgitm_grid[itp_point[3]][i+2];
+		fp[0] = Titan::tgitm_exobase::tgitm_grid[itp_point[0]][i+2];
+		fp[1] = Titan::tgitm_exobase::tgitm_grid[itp_point[1]][i+2];
+		fp[2] = Titan::tgitm_exobase::tgitm_grid[itp_point[2]][i+2];
+		fp[3] = Titan::tgitm_exobase::tgitm_grid[itp_point[3]][i+2];
 	
-		interp_val[i]=fp[0]*(tgitm_grid[itp_point[2]][0]-lng)*(tgitm_grid[itp_point[3]][1]-lat)+
+		Titan::tgitm_exobase::interp_val[i]=fp[0]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(Titan::tgitm_exobase::tgitm_grid[itp_point[3]][1]-lat)+
 		
-		fp[1]*(tgitm_grid[itp_point[2]][0]-lng)*(lat -tgitm_grid[itp_point[2]][1])+
+		fp[1]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(lat -Titan::tgitm_exobase::tgitm_grid[itp_point[2]][1])+
 		
-		fp[2]*(lng-tgitm_grid[itp_point[0]][0])*(tgitm_grid[itp_point[1]][1]-lat)+
+		fp[2]*(lng-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])*(Titan::tgitm_exobase::tgitm_grid[itp_point[1]][1]-lat)+
 		
-		fp[3]*(lng-tgitm_grid[itp_point[0]][0])*(lat-tgitm_grid[itp_point[0]][1]);
+		fp[3]*(lng-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])*(lat-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][1]);
 			
-		interp_val[i]=interp_val[i]/(tgitm_grid[itp_point[2]][0]-tgitm_grid[itp_point[0]][0])
-		/(tgitm_grid[itp_point[1]][1]-tgitm_grid[itp_point[0]][1]);
+		Titan::tgitm_exobase::interp_val[i]=Titan::tgitm_exobase::interp_val[i]/(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])
+		/(Titan::tgitm_exobase::tgitm_grid[itp_point[1]][1]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][1]);
+		
+		
 	}
-
+	/*cout<<"start"<<endl;
+	cout<<itp_point[0]<<"\t"<<itp_point[1]<<"\t"<<itp_point[2]<<"\t"<<itp_point[3]<<"\t"<<endl;
+	cout<<fp[0]<<"\t"<<fp[1]<<"\t"<<fp[2]<<"\t"<<fp[3]<<"\t"<<endl;
+	cout<<"lat"<<"\t"<<lat<<"\t"<<"lng"<<"\t"<<lng<<"\t"<<Titan::tgitm_exobase::interp_val[3]<<"\t"<<endl;
+	cout<<"end"<<endl<<endl<<endl;*/
 }
 
 
-int main()
+/*int main()
 {
 	const int ndes=5184;
 	double tgitm_grid[ndes][7], interp_val[4];
@@ -147,3 +166,4 @@ int main()
 		return 0;
 		
 }
+*/

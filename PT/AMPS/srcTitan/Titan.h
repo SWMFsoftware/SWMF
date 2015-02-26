@@ -13,7 +13,8 @@
 
 #include "pic.h"
 
-
+#include <stdexcept>
+#include <cstdlib>
 #include "Exosphere.h"
 #include "constants.h"
 
@@ -29,6 +30,122 @@
 namespace Titan {
   using namespace Exosphere;
 
+  namespace tgitm_exobase {
+	const int ndes=5184;
+	extern double tgitm_grid[ndes][10], interp_val[7];
+	
+	void read_tgitm();
+	void tgitm_interpolate(double polar, double azimuth);
+	
+	inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
+      return 5.234441936979082E+029;
+    }
+
+	inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
+	double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
+	double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
+
+		unsigned int idim;
+		double r,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
+		//'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+		double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
+		SpiceDouble xform[6][6];
+		double pol,azi,rrr,r4,r3;
+//##################################################################################
+		double  n2flx=0.0;
+		const double n2totflx=5.234441936979082E+029;
+
+		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
+	
+//Geenrate new particle position
+		
+		while(rnd()> n2flx/n2totflx){ 
+			r=0.0;
+			for (idim=0;idim<DIM;idim++) {
+				ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+				r+=pow(ExternalNormal[idim],2);
+			}
+			r=sqrt(r);
+			azi = atan2(ExternalNormal[0],ExternalNormal[1]);
+			if(azi<0.0)azi=azi+2.0*Pi; 
+			pol = acos(ExternalNormal[2]/r);
+			tgitm_interpolate(pol, azi);
+			n2flx=interp_val[4];
+			//if(rnd()> n2flx/n2totflx) return false;
+		}
+//##################################################################################
+			
+		for (idim=0;idim<DIM;idim++) {
+			ExternalNormal[idim]/=r;
+			x_LOCAL_IAU_OBJECT[idim]=sphereX0[idim]-sphereRadius*ExternalNormal[idim];
+		}
+
+		//transfer the position into the coordinate frame related to the rotting coordinate frame 'MSGR_SO'
+		x_LOCAL_SO_OBJECT[0]=xform[0][0]*x_LOCAL_IAU_OBJECT[0]+xform[0][1]*x_LOCAL_IAU_OBJECT[1]+xform[0][2]*x_LOCAL_IAU_OBJECT[2];
+		x_LOCAL_SO_OBJECT[1]=xform[1][0]*x_LOCAL_IAU_OBJECT[0]+xform[1][1]*x_LOCAL_IAU_OBJECT[1]+xform[1][2]*x_LOCAL_IAU_OBJECT[2];
+		x_LOCAL_SO_OBJECT[2]=xform[2][0]*x_LOCAL_IAU_OBJECT[0]+xform[2][1]*x_LOCAL_IAU_OBJECT[1]+xform[2][2]*x_LOCAL_IAU_OBJECT[2];
+
+/////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//r4=0.0;
+		/*for(idim=0;idim<3;idim++){r4 +=pow(x_LOCAL_SO_OBJECT[idim],2);}
+		r4=sqrt(r4);
+		cout<<endl;
+		cout<<"!!!!!!!!!!!!!!!!"<<"\t"<<n2flx/n2totflx<<endl;
+		cout<<"!!!!!!!!!!!!!!!!"<<"\t"<<n2totflx<<endl;
+		cout<<"!!!!!!!!!!!!!!!!"<<"\t"<<n2flx<<endl;
+		cout<<"azi"<<"\t"<<azi<<endl;
+		cout<<"pol"<<"\t"<<pol<<endl;
+		cout<<"r"<<"\t"<<r<<endl;
+		cout<<"r4"<<"\t"<<r4<<endl;
+		cout<<"sphereRadius"<<"\t"<<sphereRadius<<endl;
+		for(int i=0;i<7;i++){
+		cout<<i<<"\t"<<interp_val[i]<<endl;
+		}	
+		for(idim=0;idim<DIM;idim++){
+		cout<<idim<<"\t"<<x_LOCAL_SO_OBJECT[idim]<<endl;
+		}
+		if(r4 < sphereRadius) cout<<"r4"<<"\t"<<r4<<endl;*/
+/////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+		//determine if the particle belongs to this processor
+		startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
+		if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+		//generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+
+		PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
+
+		//transform the velocity vector to the coordinate frame 'MSGR_SO'
+      v_LOCAL_SO_OBJECT[0]=xform[3][0]*x_LOCAL_IAU_OBJECT[0]+xform[3][1]*x_LOCAL_IAU_OBJECT[1]+xform[3][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[3][3]*v_LOCAL_IAU_OBJECT[0]+xform[3][4]*v_LOCAL_IAU_OBJECT[1]+xform[3][5]*v_LOCAL_IAU_OBJECT[2];
+
+      v_LOCAL_SO_OBJECT[1]=xform[4][0]*x_LOCAL_IAU_OBJECT[0]+xform[4][1]*x_LOCAL_IAU_OBJECT[1]+xform[4][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[4][3]*v_LOCAL_IAU_OBJECT[0]+xform[4][4]*v_LOCAL_IAU_OBJECT[1]+xform[4][5]*v_LOCAL_IAU_OBJECT[2];
+
+      v_LOCAL_SO_OBJECT[2]=xform[5][0]*x_LOCAL_IAU_OBJECT[0]+xform[5][1]*x_LOCAL_IAU_OBJECT[1]+xform[5][2]*x_LOCAL_IAU_OBJECT[2]+
+          xform[5][3]*v_LOCAL_IAU_OBJECT[0]+xform[5][4]*v_LOCAL_IAU_OBJECT[1]+xform[5][5]*v_LOCAL_IAU_OBJECT[2];
+
+      memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
+      memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
+      memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+
+      //set up the intermal energy if needed
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODE_ == _PIC_MODE_ON_
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__TR_RELAXATION_MODE_  == _PIC_MODE_ON_
+      PIC::IDF::InitRotTemp(ImpactVaporization_SourceTemeprature[spec],tempParticleData);
+#endif
+
+#if _PIC_INTERNAL_DEGREES_OF_FREEDOM__VT_RELAXATION_MODE_  == _PIC_MODE_ON_
+      exit(__LINE__,__FILE__,"Error: not implemented");
+#endif
+
+#endif
+		return true;
+		}
+	}
+	
   namespace Sampling {
     using namespace Exosphere::Sampling;
 
@@ -73,8 +190,8 @@ namespace Titan {
       startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
       if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 
-      //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
-//      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,ImpactVaporization_SourceTemeprature[spec],ExternalNormal,spec);
+     //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+//   PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,ImpactVaporization_SourceTemeprature[spec],ExternalNormal,spec);
 
 
 
