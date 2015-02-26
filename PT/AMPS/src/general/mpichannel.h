@@ -1,7 +1,7 @@
 //  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 //  For more information, see http://csem.engin.umich.edu/tools/swmf
 //====================================================================
-//$$
+//$Id$
 //====================================================================
 
 #ifndef MPI_CHANNEL
@@ -196,9 +196,12 @@ public:
     }
   };
 
-  template<class T> inline void send(T data) {
-    register long int i,length=sizeof(T); 
-    register char *ptr;
+  template<class T> inline void send(T* data,int nsend) {
+    int length=nsend*sizeof(T);
+
+    if (length>max_MPIbuffer_size) {
+      exit(__LINE__,"Error: the length of the data vector exeeds that of the internal data buffer. Need to increase the size of the data buffer used when initialize the channel obsect.");
+    }
 
     if (sendptr+length>=max_MPIbuffer_size) {
 
@@ -216,16 +219,15 @@ public:
       sendptr=0;
     } 
      
-    for (i=0,ptr=(char*)&data;i<length;i++,ptr++) sendBuffer[sendptr++]=*ptr; 
+    memcpy(sendBuffer+sendptr,data,length);
+    sendptr+=length;
   }
 
 
-  template<class T> void inline send(T* data,long int nsend) {
-    register long int i;
-    register T* dataptr; 
-
-    for (i=0,dataptr=data;i<nsend;i++,dataptr++) send(*dataptr);
+  template<class T> inline void send(T data) {
+    send(&data,1);
   }
+
 
   void openRecv(int thread) { 
     if (max_MPIbuffer_size==0) init(MPI_CHANNEL_DEFAULT_BUFFER_SIZE);
@@ -270,11 +272,9 @@ public:
     for (thread=0;thread<TotalThreadsNumber;thread++) if (thread!=ThisThread) closeRecv(thread);
   };
 
-  template<class T> inline void recv(T& data,int thread) {
-    register long int i,length=sizeof(T);
-    register T t;
-    register char *ptr;
-   
+  template<class T> inline T* recvPointer(int nrecv,int thread) {
+    int length=nrecv*sizeof(T);
+
     if (recvptr[thread]>=RecvDataLength[thread]) {
 
 #ifdef MPI_ON
@@ -293,22 +293,31 @@ public:
       recvptr[thread]=0;
     }
 
-    for (i=0,ptr=(char*)&t;i<length;i++,ptr++) *ptr=recvBuffer[thread][recvptr[thread]++];    
-    data=t;  
+    T* res=(T*)(recvBuffer[thread]+recvptr[thread]);
+    recvptr[thread]+=length;
+
+    return res;
   }
 
-  template<class T> inline void recv(T* data,long int nrecv,int thread) {
-    register long int i;
-    register T *dataptr;
+  template<class T> inline void recv(T& data,int thread) {
+    T* t;
 
-    for (i=0,dataptr=data;i<nrecv;i++,dataptr++) recv(*dataptr,thread);
+    t=(recvPointer<T>(1,thread));
+    data=*t;
+  }
+
+   template<class T> inline void recv(T* data,int nrecv,int thread) {
+    T* t;
+
+    t=recvPointer<T>(nrecv,thread);
+    memcpy(data,t,nrecv*sizeof(T));
   } 
 
   template<class T> inline T recv(int thread) {
-    T data;
-   
-    recv(data,thread); 
-    return data;
+    T* t;
+
+    t=recvPointer<T>(1,thread);
+    return *t;
   }
 
   //open/close procedures in the Bcast mode
