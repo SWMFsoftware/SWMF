@@ -113,6 +113,10 @@ module ModUser
   integer :: nStepSaveCalcRates_B(MaxBlock) = -100
   integer :: nStepPritSetFace = -100
 
+  ! If this variable is set .true., then use the Haser neutral background
+  ! Only for testing purpose
+  logical :: DoUseNeuBackground = .false.
+
   integer, parameter, public :: nNeuFluid = 1
   integer, parameter :: Neu1_  =  1
 
@@ -149,6 +153,8 @@ contains
        case("#USECGSHAPE")
           call read_var('DoUseCGShape',     DoUseCGShape)
           call read_var('rSphericalBodySi', rSphericalBodySi)
+       case("#USENEUBACKGROUND")
+          call read_var('DoUseNeuBackground', DoUseNeuBackground)
        case("#SUNDIRECTION")
           call read_var('LatSun', LatSun)
           call read_var('LonSun', LonSun)
@@ -320,7 +326,7 @@ contains
     ! The first 8 variables: 5 are needed to store the neu1 face B.C. and
     ! 3 are used to store the face normal. The last 1 is for the shading
     ! in the photoionization.
-    MaxBlockData = 8*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
+    MaxBlockData = 11*(nI+1)*(nJ+1)*(nK+1) + nI*nJ*nK
 
     R0Perturbed = R0PerturbedSi*Si2NO_V(UnitX_)
     R1Perturbed = R1PerturbedSi*Si2NO_V(UnitX_)
@@ -370,6 +376,7 @@ contains
        write(*,*)'AngleUpdateDeg, DtUpdateSi =', AngleUpdateDeg, DtUpdateSi
        write(*,*)'LatSun, LonSun             =', LatSun, LonSun
        write(*,*)'NormalSun_D                =', NormalSun_D
+       write(*,*)'TminSi, Tmin               =', TminSi, Tmin
     end if
   end subroutine user_init_session
   !===========================================================================
@@ -526,7 +533,7 @@ contains
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
 
-    logical :: DoTestHere=.true., IsIlluminated = .false.
+    logical :: DoTestHere=.false., IsIlluminated = .false.
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -535,7 +542,7 @@ contains
 
     real :: XyzIntersect_D(3), XyzStart_D(3), XyzEnd_D(3)
     real :: XyzTrueCell_D(3), XyzBodyCell_D(3)
-    real :: Normal_D(3), CosAngle
+    real :: Normal_D(3), CosAngle, NormalFace_D(3)
     real :: TempCometLocal, uNormal, ProductionRateLocal
 
     logical :: DoWriteOnce = .true.
@@ -546,7 +553,7 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
 
-    if (iProc /= 0) DoTestHere = .false.
+    ! if (iProc /= 0) DoTestHere = .false.
 
 !!! Outer boundaries
     if(iBoundary >0) then
@@ -587,6 +594,7 @@ contains
 
           call get_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
           call get_block_data(iBlock, 3, Normal_D)
+          call get_block_data(iBlock, 3, NormalFace_D)
 
           if (.not. UseSwBC) call set_ion_face_boundary
 
@@ -595,6 +603,7 @@ contains
              write(*,*) '============= n_step ', n_step, '===================='
              write(*,*) 'FaceCoords_D  =', FaceCoords_D
              write(*,*) 'Normal_D      =', Normal_D
+             write(*,*) 'NormalFace_D  =', NormalFace_D
              write(*,*) 'P             =', VarsGhostFace_V(P_)
              write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
              write(*,*) 'SwRho         =', VarsGhostFace_V(SwRho_)
@@ -627,16 +636,22 @@ contains
        select case(iSide)
        case(1)
           iBody = iFace - 1
+          NormalFace_D = (/ 1.0, 0.0, 0.0/)
        case(2)
           iTrue = iFace - 1
+          NormalFace_D = (/-1.0, 0.0, 0.0/)
        case(3)
           jBody = jFace - 1
+          NormalFace_D = (/ 0.0, 1.0, 0.0/)
        case(4)
           jTrue = jFace - 1
+          NormalFace_D = (/ 0.0,-1.0, 0.0/)
        case(5)
           kBody = kFace -1
+          NormalFace_D = (/ 0.0, 0.0, 1.0/)
        case(6)
           kTrue = kFace -1
+          NormalFace_D = (/ 0.0, 0.0,-1.0/)
        end select
 
        XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
@@ -717,6 +732,7 @@ contains
           write(*,*) 'XyzEnd_D      =', XyzEnd_D
        end if
        write(*,*) 'Normal_D      =', Normal_D
+       write(*,*) 'NormalFace_D  =', NormalFace_D
        write(*,*) 'CosAngle      =', CosAngle
        write(*,*) 'P             =', VarsGhostFace_V(P_)
        write(*,*) 'Pe            =', VarsGhostFace_V(Pe_)
@@ -741,6 +757,7 @@ contains
     if (DoUseCGShape)  then
        call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
        call put_block_data(iBlock, 3, Normal_D)
+       call put_block_data(iBlock, 3, NormalFace_D)
     end if
 
   contains
@@ -749,12 +766,19 @@ contains
 
       integer :: iUx, iUz
 
-      ! Projection length of U_ on the local surface radius vector
+      ! Projection length of U_ on the local surface normal vector
       do iIonFluid=1,nIonFluid
          uNormalIon_I(iIonFluid) = sum(&
               VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
               Normal_D)
       end do
+
+      ! Projection length of U_ on the local cartesian surface normal vector
+      !do iIonFluid=1,nIonFluid
+      !   uNormalIon_I(iIonFluid) = sum(&
+      !        VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
+      !        NormalFace_D)
+      !end do
 
       !  BdotR = dot_product(VarsTrueFace_V(Bx_:Bz_),FaceCoords_D)/ &
       !  dot_product(FaceCoords_D,FaceCoords_D)
@@ -771,7 +795,7 @@ contains
          if (UseReflectedBC) then
             ! Reflected raidal velocity uG = uT - 2*u_normal
             if (DoWriteOnce) then
-               write(*,*) NameSub, ': reflected boundary condition'
+!               write(*,*) NameSub, ': reflected boundary condition'
                DoWriteOnce = .false.
             end if
 
@@ -1504,26 +1528,26 @@ contains
     ! ion velocity components in SI
     uIon_DIC(1,1:nIonFluid,1:nI,1:nJ,1:nK) = &
          State_VGB(iRhoUxIon_I,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(iRhoIon_I,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(iRhoIon_I,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uIon_DIC(2,1:nIonFluid,1:nI,1:nJ,1:nK) = &
          State_VGB(iRhoUyIon_I,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(iRhoIon_I,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(iRhoIon_I,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uIon_DIC(3,1:nIonFluid,1:nI,1:nJ,1:nK) = &
          State_VGB(iRhoUzIon_I,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(iRhoIon_I,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(iRhoIon_I,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uIonMean_DC(1:3,1:nI,1:nJ,1:nK) = 0.
 
     do iIonFluid=1,nIonFluid
        uIonMean_DC(1,1:nI,1:nJ,1:nK) = uIonMean_DC(1,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK) * &
+            nIon_IC(   iIonFluid,1:nI,1:nJ,1:nK) * &
             uIon_DIC(1,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
             nElec_C(1:nI,1:nJ,1:nK)
        uIonMean_DC(2,1:nI,1:nJ,1:nK) = uIonMean_DC(2,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
+            nIon_IC(   iIonFluid,1:nI,1:nJ,1:nK)* &
             uIon_DIC(2,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
             nElec_C(1:nI,1:nJ,1:nK)
        uIonMean_DC(3,1:nI,1:nJ,1:nK) = uIonMean_DC(3,1:nI,1:nJ,1:nK) + &
-            nIon_IC(iIonFluid,1:nI,1:nJ,1:nK)* &
+            nIon_IC(   iIonFluid,1:nI,1:nJ,1:nK)* &
             uIon_DIC(3,iIonFluid,1:nI,1:nJ,1:nK) * ChargeIon_I(iIonFluid) / &
             nElec_C(1:nI,1:nJ,1:nK)
     end do
@@ -1531,13 +1555,13 @@ contains
     ! Neu1 velocity componet in SI
     uNeu1_DC(1, 1:nI,1:nJ,1:nK) = &
          State_VGB(Neu1RhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(Neu1Rho_,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uNeu1_DC(2, 1:nI,1:nJ,1:nK) = &
          State_VGB(Neu1RhoUy_,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(Neu1Rho_,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
     uNeu1_DC(3, 1:nI,1:nJ,1:nK) = &
          State_VGB(Neu1RhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
-         State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
+         State_VGB(Neu1Rho_,  1:nI,1:nJ,1:nK,iBlock) *No2SI_V(UnitU_)
 
     ! Neu1 temperature in SI
     TempNeu1_C = State_VGB(Neu1P_,1:nI,1:nJ,1:nK,iBlock)* &
@@ -2129,30 +2153,36 @@ contains
 
           ! electron cooling due to collisions w/ water vapor
 
-          ! logTe = log(Te_C(i,j,k))
-          ! SPeTerm_IC(8,i,j,k) = &
-          !     exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)
+          logTe = log(Te_C(i,j,k))
+          SPeTerm_IC(8,i,j,k) = &
+               exp(-188.4701+33.2547*logTe-2.0792*logTe**2+0.0425*logTe**3)
 
-          !if(Te_C(i,j,k)<1.5*TempNeu1_C(i,j,k)) then
-          !   SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TempNeu1_C(i,j,k))* &
-          !        (Te_C(i,j,k)-TempNeu1_C(i,j,k))
-          !else
-          !   SPeTerm_IC(8,i,j,k)=SPeTerm_IC(8,i,j,k)+4.5e-9
-          !end if
-
-          SPeTerm_IC(8,i,j,k) = 4e-9* &
-               (1-exp(-cBoltzmann*(Te_C(i,j,k)-TempNeu1_C(i,j,k)) &
-               /0.033/cEV))
-
-          if (Te_C(i,j,k) > 2181.65) then
-             SPeTerm_IC(8,i,j,k) = SPeTerm_IC(8,i,j,k) + &
-                  6.5e-9*(0.415-exp(-(cBoltzmann*Te_C(i,j,k)-0.1*cEV)/&
-                  (0.1*cEV)))
+          if(Te_C(i,j,k)<1.5*TempNeu1_C(i,j,k)) then
+             SPeTerm_IC(8,i,j,k)=4.5e-9/(0.5*TempNeu1_C(i,j,k))* &
+                  (Te_C(i,j,k)-TempNeu1_C(i,j,k))
+          else
+             SPeTerm_IC(8,i,j,k)=SPeTerm_IC(8,i,j,k)+4.5e-9
           end if
 
+          !SPeTerm_IC(8,i,j,k) = 4e-9* &
+          !     (1-exp(-cBoltzmann*(Te_C(i,j,k)-TempNeu1_C(i,j,k)) &
+          !     /0.033/cEV))
+          !
+          !if (Te_C(i,j,k) > 2181.65) then
+          !   SPeTerm_IC(8,i,j,k) = SPeTerm_IC(8,i,j,k) + &
+          !        6.5e-9*(0.415-exp(-(cBoltzmann*Te_C(i,j,k)-0.1*cEV)/&
+          !        (0.1*cEV)))
+          !end if
+          
+!          SPeTerm_IC(8,i,j,k) = -2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
+!               SPeTerm_IC(8,i,j,k)/1e6*cEV* &
+!               Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+!
           SPeTerm_IC(8,i,j,k) = -2./3.*nNeu1_C(i,j,k)*nElec_C(i,j,k)* &
-               SPeTerm_IC(8,i,j,k)/1e6*cEV* &
+               SPeTerm_IC(8,i,j,k)/1e6*1.60217733e-19* &
                Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+
+
        end if
 
        ! sum up individual terms
@@ -2206,14 +2236,14 @@ contains
             Source_VC(Bz_    ,i,j,k)
 
        if(UseElectronPressure) then
-          if (TestCell) then
-             write(*,*) NameSub, &
-                  ': Source_VC(Pe_) before applying user term =', &
-                  Source_VC(Pe_    ,i,j,k)
-             write(*,*) NameSub, &
-                  ': User source_VC(Pe_)                      =', &
-                  SPe_C(i,j,k)
-          end if
+!          if (TestCell) then
+!             write(*,*) NameSub, &
+!                  ': Source_VC(Pe_) before applying user term =', &
+!                  Source_VC(Pe_    ,i,j,k)
+!             write(*,*) NameSub, &
+!                  ': User source_VC(Pe_)                      =', &
+!                  SPe_C(i,j,k)
+!          end if
           Source_VC(P_     ,i,j,k) = sum(SP_IC(1:nIonFluid,i,j,k))   + &
                Source_VC(P_     ,i,j,k)
           Source_VC(Pe_    ,i,j,k) = SPe_C(i,j,k)                    + &
@@ -2253,14 +2283,15 @@ contains
           write(*,123)'uny       = ',uNeu1_DC(2,i,j,k)," [m/s]"
           write(*,123)'unz       = ',uNeu1_DC(3,i,j,k)," [m/s]"
           write(*,123)'Tn        = ',TempNeu1_C(i,j,k)," [K]"
-          write(*,123)'Pn        = ',nNeu1_C*TempNeu1_C*cBoltzmann, " [Pa]"
+!          write(*,123)'Pn        = ',nNeu1_C(i,j,k)*TempNeu1_C(i,j,k) &
+!               *cBoltzmann, " [Pa]"
        end do
        write(*,*)''
        write(*,*)'Total plasma phase (e- and i+):'
        write(*,123)'Rho       = ', &
             State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitRho_), " [kg/m^3]"
-       write(*,123)'n         = ', State_VGB(Rho_,i,j,k,iBlock) / &
-            MassFluid_I(nFluid)*No2SI_V(UnitN_), " [1/m^3]"
+!       write(*,123)'n         = ', State_VGB(Rho_,i,j,k,iBlock) / &
+!            MassFluid_I(nFluid)*No2SI_V(UnitN_), " [1/m^3]"
        write(*,123)'uRhox     = ', &
             State_VGB(RhoUx_,i,j,k,iBlock)*No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
        write(*,123)'uRhoy     = ', &
@@ -2386,9 +2417,9 @@ contains
           write(*,123)'Rho       = ', &
                State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)* &
                No2SI_V(UnitRho_)," [kg/m^3]"
-          write(*,123)'n         = ', &
-               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
-               MassIon_I(iIonFluid)* No2SI_V(UnitN_)," [1/m^3]"
+!          write(*,123)'n         = ', &
+!               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
+!               MassIon_I(iIonFluid)* No2SI_V(UnitN_)," [1/m^3]"
           write(*,123)'rhoUx     = ', &
                State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)* &
                No2SI_V(UnitRhoU_),&
@@ -2776,11 +2807,11 @@ contains
 
   subroutine user_update_states(iStage,iBlock)
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
-    use ModPhysics,  ONLY: SW_Rho, LowDensityRatio, &
+    use ModPhysics,  ONLY: SW_Rho, Sw_N, LowDensityRatio, &
          cBoltzmann, ElectronPressureRatio, &
-         Si2No_V, No2Si_V, UnitN_, UnitP_, UnitTemperature_
+         Si2No_V, No2Si_V, UnitN_, UnitP_, UnitTemperature_, UnitX_, UnitU_
     use ModEnergy,   ONLY: calc_energy_cell
-    use ModGeometry, ONLY: true_cell
+    use ModGeometry, ONLY: true_cell, r_BLK, xyz_DGB
     use ModMain,     ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
 
     integer,intent(in) :: iStage, iBlock
@@ -2789,6 +2820,9 @@ contains
     real    :: nElec, TempNeu1
     real    :: Ux, Uy, Uz, Ti
     real, dimension(1:nIonFluid) :: nIon_I
+
+    real, dimension(1:nI,1:nJ,1:nK) :: nElec_C
+    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) ::nIon_IC
 
     logical :: DoTest, DoTestMe   
     character(len=*), parameter :: NameSub='user_update_states'
@@ -2811,96 +2845,173 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
        if (.not. true_cell(i,j,k,iBlock)) CYCLE
 
-       ! set minimum temperature for the neutral fluid, skip other
-       ! moments at this time.
-       State_VGB(       Neu1P_,i,j,k,iBlock) = max( &
-            State_VGB(  Neu1P_,i,j,k,iBlock), &
-            State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)*TempNeuMin)
-
-       TempNeu1 = &
-            State_VGB(Neu1P_,  i,j,k,iBlock)*MassFluid_I(nFluid)/ &
-            State_VGB(Neu1Rho_,i,j,k,iBlock)
-       
-       do iIonFluid=1,nIonFluid
-
-          ! Set the minor ion profile so that in that region, the fluids
-          ! behave like a single-fluid, only valid for 2 ion fluids now
-          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
-               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
-
-             ! The index for the major ion fluid, only valid for 2 ion fluids
-             iMajorIon = nIonFluid+1-iIonFluid
-
-             ! Velocity of the major ion fluid
-             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-
-             ! Temperature of the Major ion fluid
-             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
-                  MassIon_I(iMajorIon)
-
-             ! Set the mass density of the minor ion fluid 
-             ! to be Sw_Rho*LowDensityRatio
-             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
-                  Sw_Rho*LowDensityRatio
-
-             ! The velocity of the minor ion fluid is the same as the major ion
-             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
-             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
-             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
-
-             ! The temperature of the minor ion is the same as the major ion
-             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
-                  MassIon_I(iIonFluid) * Ti
-          end if ! if statement for minor ion
-
-          ! The temperature of either ion fluid can not drop below Tmin
-          State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
-               State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
-               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*Tmin / &
-               MassIon_I(iIonFluid) )
-       end do
-
-       ! Total fluid
-       State_VGB(Rho_,i,j,k,iBlock)       = &
-            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-       State_VGB(RhoUx_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-       State_VGB(RhoUy_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-       State_VGB(RhoUz_,i,j,k,iBlock)     = &
-            sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
-
-       ! Total fluid pressure
-       if(UseElectronPressure) then
-          State_VGB(P_,i,j,k,iBlock)      = &
-               sum(State_VGB(iPIon_I,i,j,k,iBlock))
-       else
-          State_VGB(P_,i,j,k,iBlock)      = &
-               sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
-               (1.+ElectronPressureRatio)
+       if (DoUseNeuBackground) then
+          State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/ &
+               (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
+               exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)* &
+               Si2No_V(UnitN_) * MassFluid_I(nFluid)
+          State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = &
+               State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)*&
+               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+          State_VGB(Neu1P_,i,j,k,iBlock)     = &
+               State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
+               *TempNeuMinSi*Si2No_V(UnitTemperature_)
        end if
 
-       ! ion density
-       nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
 
-       ! electron density
-       nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
+       ! set minimum temperature for the neutral fluid, skip other
+       ! moments at this time.
+       !       State_VGB(       Neu1P_,i,j,k,iBlock) = max( &
+       !            State_VGB(  Neu1P_,i,j,k,iBlock), &
+       !            State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)*TempNeuMin)
+       !
+       !       TempNeu1 = &
+       !            State_VGB(Neu1P_,  i,j,k,iBlock)*MassFluid_I(nFluid)/ &
+       !            State_VGB(Neu1Rho_,i,j,k,iBlock)
+       !
+       !       do iIonFluid=1,nIonFluid
+       !
+       !! Set the minor ion profile so that in that region, the fluids
+       ! behave like a single-fluid, only valid for 2 ion fluids now
+       !          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
+       !               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
+       !
+       !             ! The index for the major ion fluid, only valid for 2 ion fluids
+       !             iMajorIon = nIonFluid+1-iIonFluid
+       !
+       !             ! Velocity of the major ion fluid
+       !             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
+       !                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+       !             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
+       !                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+       !             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
+       !                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+       !
+       !             ! Temperature of the Major ion fluid
+       !             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
+       !                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
+       !                  MassIon_I(iMajorIon)
+       !
+       !             ! Set the mass density of the minor ion fluid 
+       !             ! to be Sw_Rho*LowDensityRatio
+       !             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
+       !                  Sw_Rho*LowDensityRatio
+       !
+       !             ! The velocity of the minor ion fluid is the same as the major ion
+       !             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
+       !                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
+       !             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
+       !                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
+       !             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
+       !                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
+       !
+       !             ! The temperature of the minor ion is the same as the major ion
+       !             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
+       !                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
+       !                  MassIon_I(iIonFluid) * Ti
+       !          end if ! if statement for minor ion
+       !
+       !          ! The temperature of either ion fluid can not drop below Tmin
+       !          State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
+       !               State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
+       !               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*Tmin / &
+       !               MassIon_I(iIonFluid) )
+       !       end do
+       !
+       !       ! Total fluid
+       !       State_VGB(Rho_,i,j,k,iBlock)       = &
+       !            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+       !       State_VGB(RhoUx_,i,j,k,iBlock)     = &
+       !            sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
+       !       State_VGB(RhoUy_,i,j,k,iBlock)     = &
+       !            sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
+       !       State_VGB(RhoUz_,i,j,k,iBlock)     = &
+       !            sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+       !
+       !       ! Total fluid pressure
+       !       if(UseElectronPressure) then
+       !          State_VGB(P_,i,j,k,iBlock)      = &
+       !               sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       !       else
+       !          State_VGB(P_,i,j,k,iBlock)      = &
+       !               sum(State_VGB(iPIon_I,i,j,k,iBlock))* &
+       !               (1.+ElectronPressureRatio)
+       !       end if
+       !
+       !       ! ion density
+       !       nIon_I(1:nIonFluid) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+       !
+       !       ! electron density
+       !       nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
+       !
+       !       ! if the electron pressure equation is used and the electron temperature
+       !       ! is lower than the neutral temperature
+       !       if(UseElectronPressure)  &
+       !            State_VGB(Pe_,i,j,k,iBlock) = max(nElec*TempNeu1, &
+       !            State_VGB(Pe_,i,j,k,iBlock))
+       !
 
-       ! if the electron pressure equation is used and the electron temperature
-       ! is lower than the neutral temperature
-       if(UseElectronPressure)  &
-            State_VGB(Pe_,i,j,k,iBlock) = max(nElec*TempNeu1, &
-            State_VGB(Pe_,i,j,k,iBlock))
+       do iIonFluid=1,nIonFluid
+          ! set minimum mass density (and in these locations Ti = Tmin and vi=vbulkplasma)                                                                                              
+          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < SW_n*MassIon_I(iIonFluid)*LowDensityRatio**2) then
+             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = SW_n*MassIon_I(iIonFluid)*LowDensityRatio**2
+             State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * &
+                  State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * &
+                  State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * &
+                  State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock) = State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)/ &
+                  MassIon_I(iIonFluid)*No2SI_V(UnitN_)*cBoltzmann*TminSi*SI2No_V(UnitP_)
+
+             !! Fix SW                                                                                                                                                                  
+             State_VGB(iRhoUxIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUyIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUzIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iPIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock)/ &
+                  MassIon_I(SW_)*No2SI_V(UnitN_)*cBoltzmann*TminSi*SI2No_V(UnitP_)
+
+          end if
+       end do
+
+       State_VGB(Rho_,i,j,k,iBlock) = sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
+
+       nIon_IC(1:nIonFluid,i,j,k) = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
+       nElec_C(i,j,k) = sum(nIon_IC(1:nIonFluid,i,j,k)*ChargeIon_I(1:nIonFluid))
+
+       do iIonFluid=1,nIonFluid
+          ! set minimum pressure                                                                                                                                                        
+          if(State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)*NO2SI_V(UnitP_) < &
+               nIon_IC(iIonFluid,i,j,k)*cBoltzmann*TminSi) then
+             State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock) = &
+                  nIon_IC(iIonFluid,i,j,k)*cBoltzmann*TminSi*SI2No_V(UnitP_)
+          end if
+          if(State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)*NO2SI_V(UnitP_) < &
+               nIon_IC(iIonFluid,i,j,k)*cBoltzmann*1000.0) then
+             !! Fix SW                                                                                                                                                                  
+             State_VGB(iRhoUxIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUyIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iRhoUzIon_I(SW_),i,j,k,iBlock) = State_VGB(iRhoIon_I(SW_),i,j,k,iBlock) * &
+                  State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+             State_VGB(iPIon_I(SW_),i,j,k,iBlock) = &
+                  nIon_IC(SW_,i,j,k)*cBoltzmann*TminSi*SI2No_V(UnitP_)
+          end if
+
+       end do
+
+       if(UseElectronPressure) then
+          State_VGB(P_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+          if (State_VGB(Pe_,i,j,k,iBlock)*NO2SI_V(UnitP_) < nElec_C(i,j,k)*cBoltzmann*TminSi) then
+             State_VGB(Pe_,i,j,k,iBlock) = nElec_C(i,j,k)*cBoltzmann*TminSi*SI2No_V(UnitP_)
+          end if
+       else
+          State_VGB(P_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1.+ElectronPressureRatio)
+       end if
 
     end do; end do; end do   ! do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -3337,60 +3448,39 @@ contains
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
           nIon_I(1:nIonFluid) = &
-               State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
+               State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
           uIon_I(1,1:nIonFluid) = State_VGB(iRhoUxIon_I,i,j,k,iBlock) / &
-               State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
+               State_VGB(iRhoIon_I,i,j,k,iBlock)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(1) = 0.
-          do iIonFluid=1,nIonFluid
-             uIonMean_I(1) = uIonMean_I(1)+nIon_I(iIonFluid)* &
-                  uIon_I(1,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
-          end do
           PlotVar_G(i,j,k) = &
-               (uIonMean_I(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_))/1E3
+               sum(nIon_I*uIon_I(1,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
        end do; end do; end do
 
     case('uey')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
           uIon_I(2,1:nIonFluid) = State_VGB(iRhoUyIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(2) = 0.
-          do iIonFluid=1,nIonFluid
-             uIonMean_I(2) = uIonMean_I(2)+nIon_I(iIonFluid)* &
-                  uIon_I(2,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
-          end do
           PlotVar_G(i,j,k) = &
-               (uIonMean_I(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_))/1E3
+               sum(nIon_I*uIon_I(2,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
        end do; end do; end do
 
     case('uez')
        NameIdlUnit = 'km/s'
        NameTecUnit = '[km/s]'
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          call get_current(i,j,k,iBlock,Current_I)
           nIon_I(1:nIonFluid) = &
                State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*No2SI_V(UnitN_)
           uIon_I(3,1:nIonFluid) = State_VGB(iRhoUzIon_I,i,j,k,iBlock) / &
                State_VGB(iRhoIon_I,i,j,k,iBlock)*No2SI_V(UnitU_)
           nElec = sum(nIon_I(1:nIonFluid)*ChargeIon_I(1:nIonFluid))
-          uIonMean_I(3) = 0.
-          do iIonFluid=1,nIonFluid
-             uIonMean_I(3) = uIonMean_I(3)+nIon_I(iIonFluid)* &
-                  uIon_I(3,iIonFluid)/nElec*ChargeIon_I(iIonFluid)
-          end do
           PlotVar_G(i,j,k) = &
-               (uIonMean_I(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
-               ElectronCharge)*No2SI_V(UnitU_))/1E3
+               sum(nIon_I*uIon_I(3,1:nIonFluid)*ChargeIon_I(1:nIonFluid))/nElec
        end do; end do; end do
 
     case('dt')
@@ -3521,7 +3611,7 @@ contains
     use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_
     use ModAdvance,  ONLY: P_, Pe_, State_VGB
     use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, UnitRho_, &
-         UnitRhoU_, UnitP_, CellState_VI
+         UnitRhoU_, UnitP_, CellState_VI, UnitU_
     use ModGeometry, ONLY: true_cell
 
     integer, intent(in) :: iBlock
@@ -3553,6 +3643,10 @@ contains
           write(*,123)'Rho       = ', &
                State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*No2SI_V(UnitRho_),&
                " [kg/m^3]"
+          write(*,123)'Ux        = ', &
+               State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock) / &
+               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*No2SI_V(UnitU_), &
+               " [km/s]"
           write(*,123)'rhoUx     = ', &
                State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)* &
                No2SI_V(UnitRhoU_), " [kg/(m^2*s)]"
