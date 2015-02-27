@@ -859,7 +859,6 @@ sub ReadGeneralBlock {
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
     
    
-       
     
     if ($InputLine eq "MAXMESHREFINMENTLEVEL") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -884,6 +883,39 @@ sub ReadGeneralBlock {
 	    ($InputLine,$InputComment)=split(' ',$InputComment,2);
 	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
     }
+    
+    
+   elsif ($InputLine eq "RECOVERMACROSCOPICSAMPLEDDATA") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        chomp($line);
+        $line=~s/[();]/ /g;
+        $line=~s/(=)/ /;
+        $line=~s/(=)/ /;
+        
+        my $s0;
+        
+        while (defined $line) {
+          ($s0,$line)=split(' ',$line,2);
+          
+          if ($s0 eq "file") {
+            ($s0,$line)=split(' ',$line,2);      
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SavedSamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_init_const.cpp");
+            last;
+          }
+        }
+ 
+        ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    } 
+    
 
     elsif ($InputLine eq "INITIALSAMPLELENGTH") {
 	($InputLine,$InputComment)=split('!',$line,2);
