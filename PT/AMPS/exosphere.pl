@@ -653,6 +653,9 @@ while ($line=<InputFile>) {
           elsif ($InputLine eq "USERDEFINEDSOURCERATE") {
             ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_","_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__USER_SOURCE_RATE_","models/exosphere/Exosphere.dfn");
           }
+          elsif ($InputLine eq "UNIFORMUSERDEFINEDSOURCERATE") {
+            ampsConfigLib::RedefineMacro("_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE_","_EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_MODE__UNIFORM_USER_SOURCE_RATE_","models/exosphere/Exosphere.dfn");
+          }
           else {
             die "#1 $InputLine: Cannot recognize the option, line=$InputFileLineNumber ($InputFileName)\n";
           }
