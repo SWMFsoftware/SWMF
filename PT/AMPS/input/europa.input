@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H2O,O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL,H2,H,OH 
+SpeciesList=H2O,O2
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -48,7 +48,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=ices !!!ices !!off, ices, swmf
+CouplerMode=off !ices !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
@@ -64,7 +64,7 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=20000 
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -89,6 +89,12 @@ ParticleWeightCorrectionMode=on
 !  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
   define _EUROPA_MESH_RESOLUTION_MODE_  0  !0 -> used in test13, 1 -> resolves the tail, ......
+
+   define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
+
+
+  RecoverMacroscopicSampledData=on \\ !!on, off
+    file=pic.SamplingDataRestart.out=1.dat 
 
 #endGeneral
 
@@ -139,17 +145,17 @@ ParticleWeightCorrectionMode=on
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
 
-  SputteringIonSource=SwmfPlasmaFlow !!!AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+  SputteringIonSource=Uniform !SwmfPlasmaFlow !!!AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
 
-  plume= \\ 
-    SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
-    Temp=230.0 \\ 
-    lat=-66.0 \\  
-    wlon=180.0 
+ plume= \\ 
+   SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
+   Temp=230.0 \\ 
+   lat=-66.0 \\  
+   wlon=180.0 
 
 #endblock
 
-#block models/Sputtering/Sputtering.pl
+#block models/sputtering/Sputtering.pl
   Surface=ice
   model=Teolis
 #endblock
@@ -159,7 +165,7 @@ ParticleWeightCorrectionMode=on
 
 ! ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
-  SpiceKernels="OTHER/GSE.tf","NAIF/de430.bsp", "GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/s980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"   !, "MESSENGER/kernels/fk/msgr_dyn_v600.tf" 
+  SpiceKernels="OTHER/GSE.tf","NAIF/de430.bsp", "GALILEO/MK00062B.TSC","NAIF/naif0010.tls","PCK/PCK00006.TPC","GALILEO/S980326B.bsp","GALILEO/pk96030a.tpc","GALILEO/galileo.tf"   !, "MESSENGER/kernels/fk/msgr_dyn_v600.tf" 
 
   define _TARGET_ _EUROPA_ 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
@@ -176,7 +182,7 @@ ParticleWeightCorrectionMode=on
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
 
- define _ICES_CREATE_COORDINATE_LIST_
+!define _ICES_CREATE_COORDINATE_LIST_
 
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
   
@@ -203,9 +209,9 @@ ParticleWeightCorrectionMode=on
 
   Source:Sputtering=on\\ !on,off
     Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
-    Mode=UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
-    SourceRate(O2)=1.0E26 \\
-    SourceRate(H2O)=2.0E27, InjectionVelocityRange(H2O)=10,10.0E3
+    Mode=UniformUserDefinedSourceRate \\ !!!UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
+    SourceRate(O2)=1.0E27 \\
+    SourceRate(H2O)=1.0E27, InjectionVelocityRange(H2O)=10,10.0E3
 
 
   Source:VerticalInjection=off \\ !on,off
@@ -214,7 +220,7 @@ ParticleWeightCorrectionMode=on
 
   Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
-  Source:UserDefined=on \\ !on,off
+  Source:UserDefined=off \\ !on,off
     SourceProcessCode=Plume  \\
     SourceRate=Europa::Plume::GetTotalProductionRate \\
     GenerateParticleProperties=Europa::Plume::GenerateParticleProperties \\  
