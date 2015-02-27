@@ -169,6 +169,15 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_    0
 #define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_OFF_   1
 
+//the mode of the output of the AMPS' macroscopic data file (1. Tecplot Ascii or 2. binary restart file of the sampled data for the further readout and translation into TECPLOT data format)
+#define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_               0
+#define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_  1
+
+//run AMPS just to read saved sanpling data restart file
+#define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_  0
+#define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_ 1
+
+
 
 
 

@@ -32,6 +32,25 @@ void PIC::TimeStep() {
    double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
 
+   //recover the sampling data from the sampling data restart file, print the TECPLOT files and quit
+   if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_==_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_) {
+     Restart::ReadSamplingData(Restart::SavedSamplingDataRestartFileName);
+     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+     for (int s=0;s<PIC::nTotalSpecies;s++) {
+       char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+
+       PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+       sprintf(fname,"RECOVERED.%s.%s.s=%i.dat",Restart::SavedSamplingDataRestartFileName,ChemSymbol,s);
+       PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+     }
+
+     if (PIC::ThisThread==0) printf("Sucesfully recoved the sampled data from restart file \"%s\". Execution is complete. See you later :-)\n",Restart::SavedSamplingDataRestartFileName);
+     MPI_Finalize();
+     exit(EXIT_SUCCESS);
+   }
+
+
    //Collect and exchange the run's statictic information
    static const int nRunStatisticExchangeIterationsMin=5,nRunStatisticExchangeIterationsMax=500,nRunStatisticExchangeTime=120;
    static long int nTotalIterations=0,nInteractionsAfterRunStatisticExchange=0;
@@ -966,7 +985,9 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         }
 
         if (DataOutputFileNumber>=FirstPrintedOutputFile) {
-          PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+          if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
+            PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+          }
         }
 
         if (PIC::Mesh::mesh.ThisThread==0) {
@@ -993,6 +1014,12 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
         }
 
 #endif
+      }
+
+      //save the sampling data restart file in case when the macroscopic data are downloaded from remote host for post-processing
+      if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_) {
+        sprintf(fname,"%s/pic.SamplingDataRestart.out=%ld.dat",OutputDataFileDirectory,DataOutputFileNumber);
+        PIC::Restart::SaveSamplingData(fname);
       }
 
       //print the sampled local data sets of the user defined functions
@@ -1502,6 +1529,7 @@ void PIC::Init_AfterParser() {
 #if _PIC_PITCH_ANGLE_DISTRIBUTION_SAMPLING_MODE_ == _PIC_MODE_ON_
   PIC::PitchAngleDistributionSample::Init();
 #endif
+
 }
 
 //====================================================

@@ -2537,6 +2537,27 @@ namespace PIC {
 
   }
 
+
+  //Save and read the restart files
+  namespace Restart {
+    //sampled data
+    extern char SavedSamplingDataRestartFileName[_MAX_STRING_LENGTH_PIC_]; // <- the name of the sampled restart file that will be used in the 'read' procedures to recoved the sampled data. The name is set in AMPS' input file
+
+    void SaveSamplingData(const char*);
+    void SaveSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
+
+    void ReadSamplingData(const char*);
+    void ReadSamplingDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,FILE*);
+
+    //Particle data
+    void SaveParticleData(const char*);
+    void SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
+
+    void LoadParticleData(const char*);
+    void ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,FILE*);
+  }
+
+  //chemical reactions
   namespace ChemicalReactions {
 
     namespace PhotolyticReactions {
