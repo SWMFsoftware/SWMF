@@ -895,14 +895,34 @@ sub ReadGeneralBlock {
         $line=~s/(=)/ /;
         
         my $s0;
+        ($s0,$line)=split(' ',$line,2);
+        ($s0,$line)=split(' ',$line,2);
         
         while (defined $line) {
           ($s0,$line)=split(' ',$line,2);
-          
-          if ($s0 eq "file") {
-            ($s0,$line)=split(' ',$line,2);      
-            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SavedSamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_init_const.cpp");
-            last;
+          $s0=uc($s0);
+                    
+          if ($s0 eq "FILE") {
+            ($s0,$line)=split(' ',$line,2); 
+                             
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+            $line=~s/(=)/ /;
+          }
+          elsif ($s0 eq "EXECUTION") {
+            ($s0,$line)=split(' ',$line,2);
+            $s0=uc($s0);
+            
+            if ($s0 eq "STOP") {
+              ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__STOP_","pic/picGlobal.dfn");              
+            }
+            elsif ($s0 eq "CONTINUE") {
+              ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__CONTINUE_","pic/picGlobal.dfn");                            
+            }
+            else {
+              die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+            
+            $line=~s/(=)/ /;
           }
         }
  
@@ -910,6 +930,102 @@ sub ReadGeneralBlock {
       }
       elsif ($InputLine eq "OFF") {
         ampsConfigLib::RedefineMacro("_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_","_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    } 
+    
+    
+   elsif ($InputLine eq "RECOVERPARTICLEDATA") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+            
+      if ($InputLine eq "ON") {
+        chomp($line);
+        $line=~s/[();]/ /g;
+        $line=~s/(=)/ /;
+        $line=~s/(=)/ /;
+         
+        my $s0;
+        ($s0,$line)=split(' ',$line,2);
+        ($s0,$line)=split(' ',$line,2);
+        
+        while (defined $line) {
+          ($s0,$line)=split(' ',$line,2);
+          $s0=uc($s0);
+          
+          if ($s0 eq "FILE") {
+            ($s0,$line)=split(' ',$line,2);      
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::ParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+          }
+          else {
+            die "45: $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
+ 
+        ampsConfigLib::RedefineMacro("_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
+      }
+      else {
+        die "The option is unknown\n";
+      }
+    }    
+    elsif ($InputLine eq "SAVEPARTICLERESTARTFILE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        chomp($line);
+        $line=~s/[();]/ /g;
+        $line=~s/(=)/ /;
+        $line=~s/(=)/ /;
+        
+        my $s0;
+        ($s0,$line)=split(' ',$line,2);
+        ($s0,$line)=split(' ',$line,2);
+        
+        while (defined $line) {
+          ($s0,$line)=split(' ',$line,2);
+          $s0=uc($s0);
+          
+          if ($s0 eq "FILE") {
+            ($s0,$line)=split(' ',$line,2);      
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::ParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+            
+            $line=~s/(=)/ /;
+          }
+          elsif ($s0 eq "SAVEMODE") {
+            ($s0,$line)=split(' ',$line,2);
+            $s0=uc($s0);
+            
+            if ($s0 eq "OVERWRITE") {
+              ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::ParticleDataRestartFileOverwriteMode","true","pic/pic_restart.cpp");
+            }
+            elsif ($s0 eq "NEWFILE") {
+              ampsConfigLib::ChangeValueOfVariable("bool PIC::Restart::ParticleDataRestartFileOverwriteMode","false","pic/pic_restart.cpp");
+            }
+            else {
+              die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+            }
+          
+            $line=~s/(=)/ /;
+          }
+          elsif ($s0 eq "ITERATIONINTERVAL") {
+            ($s0,$line)=split(' ',$line,2);
+            ampsConfigLib::ChangeValueOfVariable("int PIC::Restart::ParticleRestartAutosaveIterationInterval",$s0,"pic/pic_restart.cpp");
+          
+            $line=~s/(=)/ /;
+          }
+          else {
+            die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
+ 
+        ampsConfigLib::RedefineMacro("_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_","_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_","pic/picGlobal.dfn");
       }
       else {
         die "The option is unknown\n";
