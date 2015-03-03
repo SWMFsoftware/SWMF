@@ -2553,8 +2553,12 @@ namespace PIC {
     void SaveParticleData(const char*);
     void SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,CMPI_channel*,FILE*);
 
-    void LoadParticleData(const char*);
+    void ReadParticleData(const char*);
     void ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,FILE*);
+
+    //calcualte the check sum of the save/read particle data
+    unsigned long GetParticleDataCheckSum();
+    void GetParticleDataBlockCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,CRC32* CheckSum,int &PrevNodeThread);
   }
 
   //chemical reactions
