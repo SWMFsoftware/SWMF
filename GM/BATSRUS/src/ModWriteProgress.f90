@@ -182,7 +182,7 @@ subroutine write_runtime_values()
 
   if(NameThisComp == 'GM' .and. SW_n > 0.0)then
      call write_prefix; write(iUnitOut,*)
-     StringFormat = '(10X,A17,"]: ",F15.6,A10,F15.6)'
+     StringFormat = '(10X,A17,"]: ",es15.6,A10,es15.6)'
      call write_prefix; write(iUnitOut,StringFormat) &
           'SW_n_dim   ['//NameIdlUnit_V(UnitN_),SW_n_dim,  ',  SW_n:  ',SW_n
      call write_prefix; write(iUnitOut,StringFormat) &

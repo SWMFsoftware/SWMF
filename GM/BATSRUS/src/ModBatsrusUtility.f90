@@ -1039,10 +1039,10 @@ subroutine find_test_cell
         write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
              'I=',Itest,' J=',Jtest,' K=',Ktest,&
              ' BLK=',BLKtest,' PE=',PROCtest
-        write(*,'(a,3f12.5,a,f12.5)') &
+        write(*,'(a,3es13.5,a,es13.5)') &
              'x,y,z=',Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest), &
              ' r=',r_BLK(iTest,jTest,kTest,BLKtest)
-        write(*,'(a,3f12.5,a,f12.5)') &
+        write(*,'(a,3es13.5,a,es13.5)') &
              ' CellSize_D=',CellSize_DB(:,BLKtest),&
              ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
         if(.not.IsCartesian) write(*,'(a,3f12.5)') &
