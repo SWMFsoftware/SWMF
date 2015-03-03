@@ -846,7 +846,12 @@ contains
 
       if(UseElectronPressure) then
          VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
-         VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
+
+         ! Assume that electron velocity is the same as cometary ion velocity
+         ! Use body pressure*electron pressure ratio for outflow,
+         ! float otherwise
+         if(uNormalIon_I(H2Op_) > 0.0) &
+              VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
       else
          VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
               *(1.+ElectronPressureRatio)
@@ -1423,7 +1428,7 @@ contains
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
          BlkTest, PROCtest, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
-         RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_
+         RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
     use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
@@ -2402,6 +2407,7 @@ contains
        end if
        write(*,*)''
        write(*,123)'dt        = ',Dt_BLK(iBlock)*No2SI_V(UnitT_)," [s]"
+       write(*,123)'dt        = ',time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)," [s]"
        write(*,*)''
        write(*,*)'Individual ion fluids:'
        do iIonFluid=1,nIonFluid
