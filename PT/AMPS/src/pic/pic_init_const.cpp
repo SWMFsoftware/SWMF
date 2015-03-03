@@ -37,5 +37,3 @@ char PIC::InputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
 bool PIC::ModelTestRun::mode=false;
 int PIC::ModelTestRun::nTotalIteraction=-1;
 
-//the name of the resdtart files
-char PIC::Restart::SavedSamplingDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="";
