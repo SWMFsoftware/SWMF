@@ -662,12 +662,14 @@ contains
        ! Add momentum source terms containing the gradient of electron pressure
        call multi_ion_source_expl(iBlock)
 
+       if(DoTestMe) call write_source('After MultiIon sources explicit')
+
        ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
        ! Explicit evaluation of these source terms is for code development only
-       if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) &
-            call multi_ion_source_impl(iBlock)
-
-       if(DoTestMe) call write_source('After MultiIon sources')
+       if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) then
+          call multi_ion_source_impl(iBlock)
+          if(DoTestMe) call write_source('After MultiIon sources implicit')
+       end if
     end if
 
     ! Add JxB term for nonconservativ MHD scheme (like LFM)
