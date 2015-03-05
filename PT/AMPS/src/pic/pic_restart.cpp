@@ -251,7 +251,7 @@ void PIC::Restart::SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
               ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               for (int t=0;t<ParticleNumberTable[i][j][k]-1;t++) ptr=PIC::ParticleBuffer::GetNext(ptr);
             }
-            else PIC::ParticleBuffer::GetPrev(ptr);
+            else ptr=PIC::ParticleBuffer::GetPrev(ptr);
 
            memcpy(tempParticleData,PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
 
@@ -348,7 +348,7 @@ unsigned long PIC::Restart::GetParticleDataCheckSum() {
   MPI_Bcast(&CheckSum,sizeof(CRC32),MPI_CHAR,PrevNodeThread,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
-    printf("$PREFIX:The particle datat CRC32 checksum=0x%lx (%ld@%s):\n",CheckSum.checksum(),__LINE__,__FILE__);
+    printf("$PREFIX:The particle data CRC32 checksum=0x%lx (%ld@%s):\n",CheckSum.checksum(),__LINE__,__FILE__);
   }
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
