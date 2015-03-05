@@ -956,7 +956,7 @@ sub ReadGeneralBlock {
           
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2);      
-            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::ParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::recoverParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
           }
           else {
             die "45: $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
@@ -991,7 +991,7 @@ sub ReadGeneralBlock {
           
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2);      
-            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::ParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
+            ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::saveParticleDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
             
             $line=~s/(=)/ /;
           }
