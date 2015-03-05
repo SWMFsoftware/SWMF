@@ -285,6 +285,7 @@ void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
       if (node->block!=NULL) {
         //read the data for this block
         fread(&ParticleNumberTable[0][0][0],sizeof(int),_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_,fRestart);
+        memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
         int i,j,k,np;
         char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -292,15 +293,15 @@ void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
 
         //block is allocated -> march through the cells and save them into the restart file
         for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-          FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
-
           for (np=0;np<ParticleNumberTable[i][j][k];np++) {
             fread(tempParticleData,sizeof(char),PIC::ParticleBuffer::ParticleDataLength,fRestart);
-            PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+            ptr=PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
 
             PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*) PIC::ParticleBuffer::GetParticleDataPointer(ptr),(PIC::ParticleBuffer::byte*) tempParticleData);
           }
         }
+
+        memcpy(node->block->FirstCellParticleTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
       }
       else {
         //skip the data for this block
@@ -382,6 +383,7 @@ void PIC::Restart::GetParticleDataBlockCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlo
       int i,j,k,LocalCellNumber;
       long int ptr;
       long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+      char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
 
       memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
@@ -389,7 +391,11 @@ void PIC::Restart::GetParticleDataBlockCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlo
         ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
         while (ptr!=-1) {
-          CheckSum->add((char*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+          memcpy(tempParticleData,PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+
+          CheckSum->add(tempParticleData,sizeof(unsigned char));
+          CheckSum->add(tempParticleData+sizeof(unsigned char)+2*sizeof(long int),
+              PIC::ParticleBuffer::ParticleDataLength-sizeof(unsigned char)-2*sizeof(long int));
 
           ptr=PIC::ParticleBuffer::GetNext(ptr);
         }
