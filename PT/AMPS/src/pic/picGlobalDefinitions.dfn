@@ -173,10 +173,21 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_               0
 #define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_  1
 
-//run AMPS just to read saved sanpling data restart file
+//make AMPS to read saved sampling data restart file
 #define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_  0
 #define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_OFF_ 1
 
+//kill or continue AMPS' execution after reading of the sample data restart file
+#define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__STOP_      0
+#define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__CONTINUE_  1
+  
+//read of the particle restart file
+#define _PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_ON_  0
+#define _PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_OFF_ 1
+
+//auto-save the particle data restart file
+#define _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ON_  0
+#define _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_ 1
 
 
 

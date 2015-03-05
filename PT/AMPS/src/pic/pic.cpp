@@ -34,20 +34,60 @@ void PIC::TimeStep() {
 
    //recover the sampling data from the sampling data restart file, print the TECPLOT files and quit
    if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_==_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_) {
-     Restart::ReadSamplingData(Restart::SavedSamplingDataRestartFileName);
-     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+     static bool RestartFileReadFlag=false;
 
-     for (int s=0;s<PIC::nTotalSpecies;s++) {
-       char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+     if (RestartFileReadFlag==false) {
+       RestartFileReadFlag=true;
 
-       PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
-       sprintf(fname,"RECOVERED.%s.%s.s=%i.dat",Restart::SavedSamplingDataRestartFileName,ChemSymbol,s);
-       PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+       Restart::ReadSamplingData(Restart::SamplingDataRestartFileName);
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+       for (int s=0;s<PIC::nTotalSpecies;s++) {
+         char fname[_MAX_STRING_LENGTH_PIC_],ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+
+         PIC::MolecularData::GetChemSymbol(ChemSymbol,s);
+         sprintf(fname,"RECOVERED.%s.%s.s=%i.dat",Restart::SamplingDataRestartFileName,ChemSymbol,s);
+         PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,s);
+       }
+
+       if (_PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE_ == _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__EXECUTION_MODE__STOP_) {
+         if (PIC::ThisThread==0) printf("Sucesfully recoved the sampled data from restart file \"%s\". Execution is complete. See you later :-)\n",Restart::SamplingDataRestartFileName);
+         MPI_Finalize();
+         exit(EXIT_SUCCESS);
+       }
      }
+   }
 
-     if (PIC::ThisThread==0) printf("Sucesfully recoved the sampled data from restart file \"%s\". Execution is complete. See you later :-)\n",Restart::SavedSamplingDataRestartFileName);
-     MPI_Finalize();
-     exit(EXIT_SUCCESS);
+   //recover the particle data restart file
+   if (_PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_ == _PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_ON_) {
+     static bool RestartFileReadFlag=false;
+
+     if (RestartFileReadFlag==false) {
+       RestartFileReadFlag=true;
+
+       Restart::ReadParticleData(Restart::recoverParticleDataRestartFileName);
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+     }
+   }
+
+   //save the particle data restart file
+   if (_PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ == _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ON_) {
+     static long int IterationCounter=0;
+     static int saveRestartFileCounter=0;
+
+     IterationCounter++;
+
+     if (IterationCounter%Restart::ParticleRestartAutosaveIterationInterval==0) {
+       char fname[_MAX_STRING_LENGTH_PIC_];
+
+       if (Restart::ParticleDataRestartFileOverwriteMode==true) sprintf(fname,"%s",Restart::saveParticleDataRestartFileName);
+       else sprintf(fname,"%s.restart=%i",Restart::saveParticleDataRestartFileName,saveRestartFileCounter);
+
+       Restart::SaveParticleData(fname);
+       saveRestartFileCounter++;
+
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+     }
    }
 
 

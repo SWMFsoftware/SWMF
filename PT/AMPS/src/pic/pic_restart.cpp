@@ -3,6 +3,14 @@
 
 #include "pic.h"
 
+int PIC::Restart::ParticleRestartAutosaveIterationInterval=1;
+char PIC::Restart::SamplingDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="SampleData.restart";
+
+char PIC::Restart::saveParticleDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="ParticleData.restart";
+char PIC::Restart::recoverParticleDataRestartFileName[_MAX_STRING_LENGTH_PIC_]="ParticleData.restart";
+bool PIC::Restart::ParticleDataRestartFileOverwriteMode=true;
+
+
 //-------------------------------------- Save/Load Sampling Data Restart File ---------------------------------------------------------
 //save sampling data
 void PIC::Restart::SaveSamplingData(const char* fname) {
@@ -183,48 +191,218 @@ void PIC::Restart::SaveParticleData(const char* fname) {
   else pipe.closeSend();
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  GetParticleDataCheckSum();
 }
 
 void PIC::Restart::SaveParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,CMPI_channel* pipe,FILE* fRestart) {
-
   //save the data
   if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if (node->block!=NULL) {
+    if ((node->Thread==PIC::ThisThread)||(PIC::ThisThread==0)) {
       int i,j,k,LocalCellNumber;
       PIC::Mesh::cDataCenterNode *cell;
       char* SamplingData;
+      long int ptr;
 
-      //block is allocated -> march through the cells and save them into the restart file
-      for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-        LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-        cell=node->block->GetCenterNode(LocalCellNumber);
+      //determine the number of the model particle in the each cell of the block
+      int nTotalParticleNumber=0;
+      int ParticleNumberTable[_BLOCK_CELLS_X_][_BLOCK_CELLS_Y_][_BLOCK_CELLS_Z_];
+      long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
 
-        SamplingData=cell->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset;
+      if (node->Thread==PIC::ThisThread) {
+        memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
-        if (PIC::ThisThread==0) {
-          //save the data into the file
-          if (node->Thread!=0) SamplingData=pipe->recvPointer<char>(PIC::Mesh::sampleSetDataLength,node->Thread);
-          fwrite(SamplingData,sizeof(char),PIC::Mesh::sampleSetDataLength,fRestart);
+        for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+          ParticleNumberTable[i][j][k]=0;
+          ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+          while (ptr!=-1) {
+            ParticleNumberTable[i][j][k]++;
+            nTotalParticleNumber++;
+            ptr=PIC::ParticleBuffer::GetNext(ptr);
+          }
         }
-        else {
-          pipe->send(SamplingData,PIC::Mesh::sampleSetDataLength);
+
+        if (node->Thread!=0) {
+          pipe->send(nTotalParticleNumber);
+          if (nTotalParticleNumber!=0) pipe->send(&ParticleNumberTable[0][0][0],_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_);
+        }
+      }
+      else if (PIC::ThisThread==0) {
+        pipe->recv(&nTotalParticleNumber,1,node->Thread);
+        if (nTotalParticleNumber!=0) pipe->recv(&ParticleNumberTable[0][0][0],_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_,node->Thread);
+      }
+
+      //save the particle number into the restart file
+      if (PIC::ThisThread==0) {
+        fwrite(&nTotalParticleNumber,sizeof(int),1,fRestart);
+        if (nTotalParticleNumber!=0) fwrite(&ParticleNumberTable[0][0][0],sizeof(int),_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_,fRestart);
+      }
+
+      //save the particle data into the restart file
+      //IMPORTANT: save the partilce data in the reverse order so, when thay are read back from the restart file they are in the seme order as
+      //in the memory before saving --> the checksum of the particle data is the same
+      if (nTotalParticleNumber!=0) for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+        int n;
+
+        for (n=0;n<ParticleNumberTable[i][j][k];n++) {
+          if (node->Thread==PIC::ThisThread) {
+            if (n==0) {
+              ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+              for (int t=0;t<ParticleNumberTable[i][j][k]-1;t++) ptr=PIC::ParticleBuffer::GetNext(ptr);
+            }
+            else PIC::ParticleBuffer::GetPrev(ptr);
+
+           memcpy(tempParticleData,PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+
+           if (node->Thread!=0) pipe->send(tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+          }
+          else {
+            pipe->recv(tempParticleData,PIC::ParticleBuffer::ParticleDataLength,node->Thread);
+          }
+
+          if (PIC::ThisThread==0) fwrite(tempParticleData,sizeof(char),PIC::ParticleBuffer::ParticleDataLength,fRestart);
         }
       }
     }
   }
   else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) SaveSamplingDataBlock(node->downNode[nDownNode],pipe,fRestart);
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) SaveParticleDataBlock(node->downNode[nDownNode],pipe,fRestart);
   }
 }
 
 
+void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,FILE* fRestart) {
+  //read the data
+  if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    int nTotalParticleNumber=0;
+    int ParticleNumberTable[_BLOCK_CELLS_X_][_BLOCK_CELLS_Y_][_BLOCK_CELLS_Z_];
+    long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+    fread(&nTotalParticleNumber,sizeof(int),1,fRestart);
+
+    if (nTotalParticleNumber!=0) {
+      if (node->block!=NULL) {
+        //read the data for this block
+        fread(&ParticleNumberTable[0][0][0],sizeof(int),_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_,fRestart);
+
+        int i,j,k,np;
+        char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+        long int ptr;
+
+        //block is allocated -> march through the cells and save them into the restart file
+        for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+          FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+
+          for (np=0;np<ParticleNumberTable[i][j][k];np++) {
+            fread(tempParticleData,sizeof(char),PIC::ParticleBuffer::ParticleDataLength,fRestart);
+            PIC::ParticleBuffer::GetNewParticle(FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+
+            PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*) PIC::ParticleBuffer::GetParticleDataPointer(ptr),(PIC::ParticleBuffer::byte*) tempParticleData);
+          }
+        }
+      }
+      else {
+        //skip the data for this block
+        fseek(fRestart,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int)+
+            nTotalParticleNumber*PIC::ParticleBuffer::ParticleDataLength*sizeof(char),SEEK_CUR);
+      }
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) ReadParticleDataBlock(node->downNode[nDownNode],fRestart);
+  }
+}
 
 
+void PIC::Restart::ReadParticleData(const char* fname) {
+  FILE *fRestart=NULL;
+
+  fRestart=fopen(fname,"r");
+
+  if (fRestart==NULL) {
+    char msg[200];
+
+    sprintf(msg,"Error: restart file %s is not found",fname);
+    exit(__LINE__,__FILE__,msg);
+  }
+
+  fread(&PIC::LastSampleLength,sizeof(PIC::LastSampleLength),1,fRestart);
+  fread(&PIC::DataOutputFileNumber,sizeof(PIC::DataOutputFileNumber),1,fRestart);
+
+  ReadParticleDataBlock(PIC::Mesh::mesh.rootTree,fRestart);
+  fclose(fRestart);
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  GetParticleDataCheckSum();
+}
+
+//calculate the check sum of the particle data
+//-------------------------------------- Calculate the checlsum of the particle buffer ------------------------------------------------
+unsigned long PIC::Restart::GetParticleDataCheckSum() {
+  CRC32 CheckSum;
+
+  //the thread number that was processed last: the checkSum object is sent from PrevNodeThread directly to node->Thread
+  //at the begining of the calculation CheckSum is located on the root thread
+  int PrevNodeThread=0;
+
+  GetParticleDataBlockCheckSum(PIC::Mesh::mesh.rootTree,&CheckSum,PrevNodeThread);
+  MPI_Bcast(&CheckSum,sizeof(CRC32),MPI_CHAR,PrevNodeThread,MPI_GLOBAL_COMMUNICATOR);
+
+  if (PIC::ThisThread==0) {
+    printf("$PREFIX:The particle datat CRC32 checksum=0x%lx (%ld@%s):\n",CheckSum.checksum(),__LINE__,__FILE__);
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  return CheckSum.checksum();
+}
 
 
+void PIC::Restart::GetParticleDataBlockCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,CRC32* CheckSum,int &PrevNodeThread) {
+  //save the data
+  if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    //recieve the CheckSum object
 
+    if ((node->Thread==PIC::ThisThread)||(PIC::ThisThread==PrevNodeThread)) {
+      if (node->Thread!=PrevNodeThread) {
+        if (PIC::ThisThread==PrevNodeThread) {
+          //send CheckSum to node->Thread
+          MPI_Send(CheckSum,sizeof(CRC32),MPI_CHAR,node->Thread,0,MPI_GLOBAL_COMMUNICATOR);
+        }
+        else {
+          //recieve CheckSum from PrevNodeThread
+          MPI_Status status;
+          MPI_Recv(CheckSum,sizeof(CRC32),MPI_CHAR,PrevNodeThread,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
+        }
+      }
+    }
 
+    PrevNodeThread=node->Thread;
+
+    //calculate the chekc sum
+    if (node->Thread==PIC::ThisThread) {
+      int i,j,k,LocalCellNumber;
+      long int ptr;
+      long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+
+      memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+
+      for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+        while (ptr!=-1) {
+          CheckSum->add((char*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+
+          ptr=PIC::ParticleBuffer::GetNext(ptr);
+        }
+      }
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) GetParticleDataBlockCheckSum(node->downNode[nDownNode],CheckSum,PrevNodeThread);
+  }
+}
 
 
 
