@@ -327,9 +327,6 @@ void PIC::Restart::ReadParticleData(const char* fname) {
     exit(__LINE__,__FILE__,msg);
   }
 
-  fread(&PIC::LastSampleLength,sizeof(PIC::LastSampleLength),1,fRestart);
-  fread(&PIC::DataOutputFileNumber,sizeof(PIC::DataOutputFileNumber),1,fRestart);
-
   ReadParticleDataBlock(PIC::Mesh::mesh.rootTree,fRestart);
   fclose(fRestart);
 
