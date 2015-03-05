@@ -1123,8 +1123,9 @@ subroutine MH_set_parameters(TypeAction)
         if(nOrder==5) then
            ! The commands below can be reset in #SCHEME5
            UseFDFaceFlux    = .true. 
-           UseCweno         = .false. 
-           UseHighResChange = .true. 
+           UseCweno         = .false.
+           !HighResChange does not work for 1D.
+           if(nJ > 1) UseHighResChange = .true. 
            UseHighOrderAMR  = .true. 
 
            DoConserveFlux = .false. 
