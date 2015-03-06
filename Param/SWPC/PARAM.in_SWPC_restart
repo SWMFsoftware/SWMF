@@ -136,14 +136,6 @@ IMCOUPLINGSMOOTH
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa]
 
-#SAVELOGFILE
-T			DoSaveLogfile
-VAR			StringLogfile
--1			DnSaveLogfile
-5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstflx
-3.0			StringRFlux
-
 #SAVELOGNAME
 F                       IsLogName_n
 T                       IsLogName_e
@@ -152,6 +144,14 @@ T                       IsLogName_e
 F                       IsPlotName_n
 F                       IsPlotName_t
 T                       IsPlotName_e
+
+#SAVELOGFILE
+T			DoSaveLogfile
+VAR			StringLogfile
+-1			DnSaveLogfile
+5.0			DtSaveLogfile
+dt rho mx my mz p bx by bz pmin pmax dst dstflx
+3.0			StringRFlux
 
 #SAVEPLOT
 2                       nPlotFiles
@@ -232,11 +232,11 @@ STOP
 86400.0			TimeMax
 
 #ENDTIME            
-2000			year                                            
+2014			year                                            
 04              	month                                                
-07              	day                                                
+10              	day                                                
 00			hour
-00             		minute                                            
+03             		minute                                            
 00              	second                                        
 0.0			FracSecond 
 

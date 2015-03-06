@@ -8,9 +8,9 @@ Example file to start a run for the SWPC code selection
 F			DoTimeAccurate
 
 #STARTTIME            
-2000			year                                            
+2014			year                                            
 04              	month                                                
-06              	day                                                
+10              	day                                                
 00			hour
 00             		minute                                            
 00              	second                                        
@@ -45,7 +45,7 @@ IE			NameComp2
 
 ! Maximum resolution initially
 #GRIDRESOLUTION
-1.0			Resolution
+2.0			Resolution
 initial			NameArea
 
 ! Minimum resolution in the computational domain
@@ -107,6 +107,15 @@ T			DoReadAgain
 #SCHEME
 1			nOrder
 Sokolov			TypeFlux
+
+#SAVELOGNAME
+F                       IsLogName_n
+T                       IsLogName_e
+
+#SAVEPLOTNAME
+F                       IsPlotName_n
+F                       IsPlotName_t
+T                       IsPlotName_e
 
 #SAVELOGFILE
 T			DoSaveLo5Dgfile
@@ -304,15 +313,6 @@ IMCOUPLINGSMOOTH
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa]
 
-#SAVELOGNAME
-F                       IsLogName_n
-T                       IsLogName_e
-
-#SAVEPLOTNAME
-F                       IsPlotName_n
-F                       IsPlotName_t
-T                       IsPlotName_e
-
 #SAVEPLOT
 2                       nPlotFiles
 y=0 MHD idl             StringPlot
@@ -363,11 +363,11 @@ STOP
 86400.0			TimeMax
 
 #ENDTIME            
-2000			year                                            
+2014			year                                            
 04              	month                                                
-07              	day                                                
+10              	day                                                
 00			hour
-00             		minute                                            
+02             		minute                                            
 00              	second                                        
 0.0			FracSecond 
 
