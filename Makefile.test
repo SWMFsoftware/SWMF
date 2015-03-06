@@ -491,6 +491,95 @@ test3_check:
 		> test3_im_rcm.diff)
 	ls -l test3_*.diff
 
+### Test_Swpc: GM+IE+IM ###
+
+test_swpc:
+	@echo "test_swpc_compile..." > test_swpc_gm.diff
+	@echo "test_swpc_compile..." > test_swpc_ie.diff
+	@echo "test_swpc_compile..." > test_swpc_im_rcm.diff
+	${MAKE} test_swpc_compile
+	@echo "test_swpc_rundir..." >> test_swpc_gm.diff
+	@echo "test_swpc_rundir..." >> test_swpc_ie.diff
+	@echo "test_swpc_rundir..." >> test_swpc_im_rcm.diff
+	${MAKE} test_swpc_rundir
+	@echo "test_swpc_run..." >> test_swpc_gm.diff
+	@echo "test_swpc_run..." >> test_swpc_ie.diff
+	@echo "test_swpc_run..." >> test_swpc_im_rcm.diff
+	${MAKE} test_swpc_run
+	@echo "test_swpc_restart..." >> test_swpc_gm.diff
+	@echo "test_swpc_restart..." >> test_swpc_ie.diff
+	@echo "test_swpc_restart..." >> test_swpc_im_rcm.diff
+	${MAKE} test_swpc_restart
+	@echo "test_swpc_check..." >> test_swpc_gm.diff
+	@echo "test_swpc_check..." >> test_swpc_ie.diff
+	@echo "test_swpc_check..." >> test_swpc_im_rcm.diff
+	${MAKE} test_swpc_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_swpc_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,1 -o=GM:u=Default,e=Mhd
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cp ${TESTDIR}/LAYOUT.in_SWPC ${TESTDIR}/LAYOUT.in
+	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_SWPC_init
+	cp ${TESTDIR}/PARAM.in_SWPC_init ${TESTDIR}/PARAM.in
+	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_restart
+
+test_swpc_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+
+# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
+test_swpc_restart:
+	cd ${TESTDIR}; cp PARAM.in_SWPC_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+
+#	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
+#		mv runlog_restart RESULTS
+
+test_swpc_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/test_swpc/GM_log_n000001.log \
+		> test_swpc_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/magnetometers_n00000000.mag \
+		output/test_swpc/magnetometers_n00000000.mag \
+		>> test_swpc_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
+		output/test_swpc/GM_geoindex.log \
+		>> test_swpc_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
+		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
+		output/test_swpc/GM_restart_geoindex.txt \
+		>> test_swpc_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
+		output/test_swpc/IE.log \
+		> test_swpc_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-5 \
+		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
+		output/test_swpc/IE.mag \
+		>> test_swpc_ie.diff)
+	gunzip -c output/test_swpc/IM_2d__max_t00000020.dat.gz \
+		> ${TESTDIR}/RESULTS/IM/t20.dat
+# Remove date stamp from tecplot files
+	cd ${TESTDIR}/RESULTS/IM; \
+		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+		${TESTDIR}/RESULTS/IM/t20.txt \
+		${TESTDIR}/RESULTS/IM/t20.dat \
+		> test_swpc_im_rcm.diff)
+	ls -l test_swpc_*.diff
+
 ### Test4: GM+IE+HEIDI ###############
 
 test4:
