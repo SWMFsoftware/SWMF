@@ -736,7 +736,7 @@ contains
     call read_plot_file(NamePotentialFieldFile, TypeFileIn='real8', &
          nOut_D=n_D, nParamOut=nParam, ParamOut_I=Param_I)
 
-    write(*,*)'nParam = ',nParam
+    !!!write(*,*)'nParam = ',nParam
 
     Ro_PFSSM = Param_I(1)
     Rs_PFSSM = Param_I(2)
