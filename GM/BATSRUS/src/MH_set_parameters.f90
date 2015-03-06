@@ -153,6 +153,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Variables for checking/reading #STARTTIME command
   real (Real8_)         :: StartTimeCheck = -1.0_Real8_
+  real:: tSimulationCheck = -1.0
 
   ! Variable for #UNIFORMAXIS
   logical:: UseUniformAxis = .true.
@@ -204,10 +205,14 @@ subroutine MH_set_parameters(TypeAction)
      if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
      if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
 
-     if(StartTimeCheck > 0.0 .and. abs(StartTime - StartTimeCheck) > 0.001)then
-        write(*,*)NameSub//' WARNING: '//NameThisComp//'::StartTimeCheck=', &
-             StartTimeCheck,' differs from CON::StartTime=', &
-             StartTime,' !!!'
+     if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0 .and. &
+          abs(StartTime + time_simulation - StartTimeCheck - tSimulationCheck)&
+          > 0.001)then
+        write(*,*)NameSub//' WARNING: '// &
+             NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
+             StartTimeCheck + tSimulationCheck, &
+             ' differs from CON::StartTime+tSimulation=', &
+             StartTime + time_simulation,' !!!'
         if(UseStrict)then
            call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
         else
@@ -1880,7 +1885,11 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('tSimulation',time_simulation)
+        if(IsStandAlone)then
+           call read_var('tSimulation',time_simulation)
+        else
+           call read_var('tSimulation',tSimulationCheck)
+        end if
 
      case("#HELIOUPDATEB0")
         if(.not.UseB0)CYCLE READPARAM
