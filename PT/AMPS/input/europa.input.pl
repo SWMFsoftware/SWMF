@@ -213,6 +213,9 @@ while ($line=<InputFile>) {
     elsif ($InputLine eq "AMPSKINETICIONS") {
       ampsConfigLib::RedefineMacro("_EUROPA__SPUTTERING_ION_SOURCE_","_EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_","main/Europa.h");
     }
+    elsif ($InputLine eq "UNIFORM") {
+      ampsConfigLib::RedefineMacro("_EUROPA__SPUTTERING_ION_SOURCE_","_EUROPA__SPUTTERING_ION_SOURCE__UNIFORM_","main/Europa.h");
+    }
     else {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
     }
