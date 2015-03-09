@@ -82,7 +82,7 @@ contains
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, StartTime, iStartTime_I, UseRotatingBc
+         time_accurate, time_simulation, StartTime, iStartTime_I, UseRotatingBc
     use ModB0, ONLY: DtUpdateB0, DoUpdateB0
     use CON_physics, ONLY: get_time, get_planet
     use ModTimeConvert, ONLY: time_real_to_int
@@ -90,7 +90,7 @@ contains
     character (len=*), parameter :: NameSub='GM_set_param'
 
     ! Arguments
-    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp.
+    type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp
     character (len=*), intent(in)     :: TypeAction ! What to do
 
     logical :: DoTest,DoTestMe
@@ -102,7 +102,7 @@ contains
 
     select case(TypeAction)
     case('VERSION')
-       call put(CompInfo,&
+       call put(CompInfo,                              &
             Use        =.true.,                        &
             NameVersion='BATSRUS (Univ. of Michigan)', &
             Version    =CodeVersion)
@@ -118,6 +118,7 @@ contains
     case('CHECK')
        call get_time( &
             DoTimeAccurateOut = time_accurate, &
+            tSimulationOut    = time_simulation, &
             tStartOut         = StartTime)
        call get_planet( &
             DtUpdateB0Out  = DtUpdateB0,    &
@@ -311,9 +312,8 @@ contains
   subroutine GM_init_session(iSession, TimeSimulation)
 
     use ModProcMH,   ONLY: iProc
-    use ModMain,     ONLY: Time_Simulation, UseIe, UsePw, TypeBC_I, body1_
+    use ModMain,     ONLY: UseIe, UsePw, TypeBC_I, body1_
     use ModMain,     ONLY: UseIM
-    use CON_physics, ONLY: get_time
     use CON_coupler, ONLY: Couple_CC, IE_, IM_, GM_, IH_, PW_
 
     !INPUT PARAMETERS:
@@ -324,7 +324,7 @@ contains
 
     logical :: IsUninitialized = .true.
     logical :: DoTest, DoTestMe
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
     UseIm = Couple_CC(IM_,GM_) % DoThis
@@ -338,15 +338,14 @@ contains
        if(Couple_CC(IH_,GM_) % DoThis) then
           TypeBc_I(2)='coupled'
        else
-          if(iProc==0)write(*,*)NameSub,' WARNING: IH and GM are not coupled,',&
+          if(iProc==0)write(*,*)NameSub, &
+               ' WARNING: IH and GM are not coupled,',&
                ' changing west boundary type from "coupled" to "vary"'
           TypeBc_I(2)='vary'
        end if
     end if
 
     if(IsUninitialized)then
-
-       call get_time(tSimulationOut=Time_Simulation)
        call BATS_setup
        IsUninitialized = .false.
     end if
@@ -401,7 +400,6 @@ contains
 
   subroutine GM_run(TimeSimulation,TimeSimulationLimit)
 
-    use ModProcMH, ONLY: iProc
     use ModMain,   ONLY: Time_Simulation
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -419,7 +417,7 @@ contains
     if(DoTestMe)write(*,*)NameSub,' called with tSim, tSimLimit=',&
          TimeSimulation, TimeSimulationLimit
 
-    if(abs(Time_Simulation-TimeSimulation)>0.0001) then
+    if(abs(Time_Simulation - TimeSimulation)>0.0001) then
        write(*,*)NameSub,' GM time=', Time_Simulation, &
             ' SWMF time=', TimeSimulation
        call CON_stop(NameSub// &
