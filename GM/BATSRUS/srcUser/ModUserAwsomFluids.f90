@@ -37,9 +37,9 @@ module ModUser
   real    :: TeFraction, TiFraction
   real    :: EtaPerpSi
 
-  real :: ReducedMass_II(nIonFluid,nIonFluid)
-  real :: CollisionCoef_II(nIonFluid,nIonFluid)
-  real :: CollisionCoef_I(nIonFluid)
+  real :: Mass_I(0:nIonFluid), Charge_I(0:nIonFluid)
+  real :: ReducedMass_II(0:nIonFluid,0:nIonFluid)
+  real :: CollisionCoef_II(0:nIonFluid,0:nIonFluid)
 
 contains 
   !============================================================================
@@ -150,15 +150,20 @@ contains
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
 
+    Mass_I(0) = cElectronMass/cProtonMass
+    Mass_I(1:) = MassIon_I
+    Charge_I(0) = 1.0
+    Charge_I(1:) = ChargeIon_I
+
     ! Coefficient for effective ion-ion collision frequencies
-    do jIon = 1, nIonFluid
-       do iIon = 1, nIonFluid
-          ReducedMass_II(iIon,jIon) = MassIon_I(iIon)*MassIon_I(jIon) &
-               /(MassIon_I(iIon) + MassIon_I(jIon))
-          CollisionCoef_II(iIon,jIon) = CoulombLog/sqrt(cProtonMass) &
-               *sqrt(ReducedMass_II(iIon,jIon))/MassIon_I(iIon) &
-               *(ChargeIon_I(iIon)*ChargeIon_I(jIon)*cElectronCharge**2 &
-               / cEps)**2 &
+    do jIon = 0, nIonFluid
+       do iIon = 0, nIonFluid
+          ReducedMass_II(iIon,jIon) = Mass_I(iIon)*Mass_I(jIon) &
+               /(Mass_I(iIon) + Mass_I(jIon))
+
+          CollisionCoef_II(iIon,jIon) = CoulombLog &
+               *sqrt(ReducedMass_II(iIon,jIon)/cProtonMass)/Mass_I(iIon) &
+               *(Charge_I(iIon)*Charge_I(jIon)*cElectronCharge**2/cEps)**2 &
                /(3*(cTwoPi*cBoltzmann)**1.5)
        end do
     end do
@@ -166,18 +171,6 @@ contains
     ! coefficients still need to be multiplied by Nion(jIon)/reducedTemp**1.5.
     ! Here, we already take care of the units.
     CollisionCoef_II = CollisionCoef_II &
-         *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
-
-    ! Coefficients to calculate effective ion-electron collision frequencies
-    do iIon = 1, nIonFluid
-       CollisionCoef_I(iIon) = CoulombLog*sqrt(cElectronMass)/cProtonMass &
-            /MassIon_I(iIon)*(ChargeIon_I(iIon)*cElectronCharge**2/cEps)**2 &
-            /(3*(cTwoPi*cBoltzmann)**1.5)
-    end do
-    ! To obtain the effective ion-electron collision frequencies, the
-    ! coefficients still need to be multiplied by Ne/Te**1.5.
-    ! Here, we already take care of the units.
-    CollisionCoef_I = CollisionCoef_I &
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     if(iProc == 0)then
@@ -671,22 +664,23 @@ contains
 
   subroutine user_calc_sources(iBlock)
 
-    use ModAdvance, ONLY: State_VGB, Source_VC, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
          iRhoUyIon_I, iRhoUzIon_I, iPIon_I
-    use ModPhysics, ONLY: gm1, inv_gm1
+    use ModPhysics,    ONLY: gm1, inv_gm1
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes, ONLY: nVar, Energy_, Pe_
+    use ModConst,      ONLY: cElectronMass, cProtonMass
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon
-    real :: ReducedTemp, CollisionFreq, Coef, Ne, Te
+    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst
+    real :: ReducedTemp, CollisionRate, Coef
     real :: Du2, Phi, Psi, RelativeDrift
-    real, dimension(nIonFluid) :: Rho_I, Ux_I, Uy_I, Uz_I, P_I, &
-         Nion_I, Tion_I
-    real :: U_D(3), Du_D(3)
+    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I
+    real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
+    real :: U_D(3), Du_D(3), Me_D(3)
     real :: State_V(nVar), Source_V(nVar+nFluid)
 
     character(len=*), parameter :: NameSub = 'user_calc_sources'
@@ -695,40 +689,54 @@ contains
     ! IsPointImplSource is true only when called from ModPointImplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
+    iIonFirst = 1
+    if(UseElectronPressure) iIonFirst = 0
+
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
-       Rho_I = State_V(iRhoIon_I)
-       Ux_I  = State_V(iRhoUxIon_I)/Rho_I
-       Uy_I  = State_V(iRhoUyIon_I)/Rho_I
-       Uz_I  = State_V(iRhoUzIon_I)/Rho_I
-       P_I   = State_V(iPIon_I)
-
-       Nion_I = Rho_I/MassIon_I
-       Tion_I = P_I/Nion_I
+       RhoIon_I = State_V(iRhoIon_I)
+       Ux_I(1:) = State_V(iRhoUxIon_I)/RhoIon_I
+       Uy_I(1:) = State_V(iRhoUyIon_I)/RhoIon_I
+       Uz_I(1:) = State_V(iRhoUzIon_I)/RhoIon_I
+       P_I(1:) = State_V(iPIon_I)
+       N_I(1:) = RhoIon_I/MassIon_I
+       T_I(1:) = P_I(1:)/N_I(1:)
 
        if(UseElectronPressure)then
-          Ne = sum(ChargeIon_I*Nion_I)
-          Te = State_V(Pe_)/Ne 
+          ChargeDensIon_I = ChargeIon_I*N_I(1:)
+          P_I(0) = State_V(Pe_)
+          N_I(0) = sum(ChargeDensIon_I)
+          T_I(0) = P_I(0)/N_I(0)
+          Ux_I(0) = sum(ChargeDensIon_I*Ux_I(1:))/N_I(0)
+          Uy_I(0) = sum(ChargeDensIon_I*Uy_I(1:))/N_I(0)
+          Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
        end if
 
        Source_V = 0.0
 
-       do iIon = 1, nIonFluid
+       do iIon = iIonFirst, nIonFluid
 
-          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
-          iP = iPIon_I(iIon)
-          iEnergy = Energy_ + IonFirst_ - 2 + iIon
+          if(iIon == 0)then
+             Me_D = 0.0
+             iP = Pe_
+          else
+             iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+             iP = iPIon_I(iIon)
+             iEnergy = Energy_ + IonFirst_ - 2 + iIon
+          end if
 
-          do jIon = 1, nIonFluid
+          do jIon = iIonFirst, nIonFluid
              if(iIon == jIon) CYCLE
 
-             ReducedTemp = &
-                  (MassIon_I(jIon)*Tion_I(iIon)+MassIon_I(iIon)*Tion_I(jIon)) &
-                  /(MassIon_I(iIon) + MassIon_I(jIon))
-             CollisionFreq = CollisionCoef_II(iIon,jIon) &
-                  *Nion_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
+             ReducedTemp = (Mass_I(jIon)*T_I(iIon)+Mass_I(iIon)*T_I(jIon)) &
+                  /(Mass_I(iIon) + Mass_I(jIon))
+
+             ! Turbulence modifies the collision rate, but we do not
+             ! incorporate that here
+             CollisionRate = CollisionCoef_II(iIon,jIon) &
+                  *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
 
              Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
                   Uz_I(jIon) - Uz_I(iIon) /)
@@ -742,26 +750,37 @@ contains
              Psi = exp(-RelativeDrift**2)
              Phi = 1.0/(1.0 + 0.74*RelativeDrift**3)
 
-             ! In the following we ommit the turbulence corrections
-             Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                  + Rho_I(iIon)*CollisionFreq*Du_D*Phi
+             if(iIon == 0)then
+                Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D*Phi
+             else
+                Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                     + RhoIon_I(iIon)*CollisionRate*Du_D*Phi
+             end if
 
              Source_V(iP) = Source_V(iP) &
-                  + gm1*Nion_I(iIon)*ReducedMass_II(iIon,jIon) &
-                  *CollisionFreq*(3*(Tion_I(jIon) - Tion_I(iIon)) &
-                  /MassIon_I(jIon)*Psi + Du2*Phi)
+                  + gm1*N_I(iIon)*ReducedMass_II(iIon,jIon) &
+                  *CollisionRate*(3*(T_I(jIon) - T_I(iIon)) &
+                  /Mass_I(jIon)*Psi + Du2*Phi)
           end do
 
-          if(UseElectronPressure)then
-             Coef = CollisionCoef_I(iIon)*Ne/(Te*sqrt(Te))*gm1*3*Nion_I(iIon)
-             Source_V(Pe_) = Source_V(Pe_) + Coef*(Tion_I(iIon) - Te)
-             Source_V(iP)  = Source_V(iP)  + Coef*(Te - Tion_I(iIon))
+          if(iIon == 0)then
+             do jIon = 1, nIonFluid
+                iRhoUx = iRhoUxIon_I(jIon); iRhoUz = iRhoUzIon_I(jIon)
+                iEnergy = Energy_ + IonFirst_ - 2 + jIon
+
+                Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
+                     + ChargeDensIon_I(jIon)/N_I(0) *Me_D
+
+                U_D = (/ Ux_I(jIon), Uy_I(jIon), Uz_I(jIon) /)
+                Source_V(iEnergy) = Source_V(iEnergy) &
+                     + sum(U_D*Source_V(iRhoUx:iRhoUz))
+             end do
+          else
+             U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
+             Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
+                  + sum(U_D*Source_V(iRhoUx:iRhoUz))
           end if
 
-          U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
-
-          Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
-               + sum(U_D*Source_V(iRhoUx:iRhoUz))
        end do
 
        Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
