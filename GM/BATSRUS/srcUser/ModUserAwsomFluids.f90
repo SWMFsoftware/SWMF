@@ -724,7 +724,6 @@ contains
           else
              iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
              iP = iPIon_I(iIon)
-             iEnergy = Energy_ + IonFirst_ - 2 + iIon
           end if
 
           do jIon = iIonFirst, nIonFluid
@@ -762,25 +761,19 @@ contains
                   *CollisionRate*(3*(T_I(jIon) - T_I(iIon)) &
                   /Mass_I(jIon)*Psi + Du2*Phi)
           end do
+       end do
 
-          if(iIon == 0)then
-             do jIon = 1, nIonFluid
-                iRhoUx = iRhoUxIon_I(jIon); iRhoUz = iRhoUzIon_I(jIon)
-                iEnergy = Energy_ + IonFirst_ - 2 + jIon
+       do iIon = 1, nIonFluid
+          iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
+          iP = iPIon_I(iIon)
+          iEnergy = Energy_ + IonFirst_ - 2 + iIon
 
-                Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                     + ChargeDensIon_I(jIon)/N_I(0) *Me_D
+          if(UseElectronPressure) Source_V(iRhoUx:iRhoUz) &
+               = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon)/N_I(0)*Me_D
 
-                U_D = (/ Ux_I(jIon), Uy_I(jIon), Uz_I(jIon) /)
-                Source_V(iEnergy) = Source_V(iEnergy) &
-                     + sum(U_D*Source_V(iRhoUx:iRhoUz))
-             end do
-          else
-             U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
-             Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
-                  + sum(U_D*Source_V(iRhoUx:iRhoUz))
-          end if
-
+          U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
+          Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
+               + sum(U_D*Source_V(iRhoUx:iRhoUz))
        end do
 
        Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
