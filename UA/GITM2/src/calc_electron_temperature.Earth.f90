@@ -256,6 +256,15 @@ do iLon = 1, nLons
          c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
          d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
 
+
+         if (iAlt .EQ. nAlts) then
+            a(iAlt) = 0.
+            b(iAlt) = -xcoef - iHeatingp(iLon,iLat,iAlt)
+            c(iAlt) = 0.
+            d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
+         endif
+
+
          iConduction(iLon,iLat,iAlt) = c(iAlt)*ti(iLon,iLat,iAlt+1) + &
               a(iAlt)*ti(iLon,iLat,iAlt+1) + &
               (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tti
@@ -268,12 +277,6 @@ do iLon = 1, nLons
       c(1)=0
       d(1)=Temperature(iLon,iLat,1,iBlock)*TempUnit(iLon,iLat,1)
       
-      a(nAlts)=0.
-      b(nAlts)=1.
-      c(nAlts)=0.
-      d(nAlts)=ti(iLon,iLat,nAlts) + ( ilam*(ti(iLon,iLat,nAlts-1)-ti(iLon,iLat,nAlts))*2/zl/(zu+zl) &
-           +iHeating(iLon,iLat,nAlts) )/xcoef
-
       call tridag(a, b, c, d, u)
 
       itemp(iLon,iLat,1:nAlts) = u(1:nAlts) 
