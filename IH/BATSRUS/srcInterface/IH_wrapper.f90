@@ -44,9 +44,6 @@ contains
 
   subroutine IH_init_session(iSession, TimeSimulation)
 
-    use IH_ModMain,     ONLY: Time_Simulation
-    use CON_physics, ONLY: get_time
-
     !INPUT PARAMETERS:
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -59,9 +56,6 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
     if(IsUninitialized)then
-
-       call get_time(tSimulationOut=Time_Simulation)
-
        call IH_BATS_setup
        IsUninitialized = .false.
     end if
@@ -79,7 +73,7 @@ contains
     use IH_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use IH_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use IH_ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, StartTime, iStartTime_I
+         time_accurate, time_simulation, StartTime, iStartTime_I
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
 
@@ -112,6 +106,7 @@ contains
     case('READ','CHECK')
        call get_time( &
             DoTimeAccurateOut = time_accurate, &
+            tSimulationOut=Time_Simulation, &
             tStartOut         = StartTime)
        call time_real_to_int(StartTime,iStartTime_I)
 
