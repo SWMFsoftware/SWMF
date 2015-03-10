@@ -686,7 +686,8 @@ void amps_init() {
 
   //set up the particle weight
 //  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_N2_SPEC_);
+//  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_N2_SPEC_);
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s); 
 
   //copy the weight and time step from Na neutra to Na ions
 //  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(NAPLUS,NA,5.0E3/800.0E3);
