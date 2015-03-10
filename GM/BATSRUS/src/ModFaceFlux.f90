@@ -3315,7 +3315,7 @@ contains
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
-         Xi_, Eta_, Zeta_
+         Xi_, Eta_, Zeta_, nDim
 
     integer, intent(in):: iDim
 
@@ -3336,27 +3336,27 @@ contains
           if(iDim == x_) then
              iCount = 1
              do iCell = iFace - 2, iFace + 1
-                Area0_D = CellCoef_DDGB( &
+                Area0_D(1:nDim) = CellCoef_DDGB( &
                      Xi_,:,iCell,jFace,kFace,iBlockFace)
-                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/sqrt(sum(Area0_D(1:nDim)**2))
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iCell,jFace,kFace,iBlockFace)/&
                      State_VGB(iRho,iCell,jFace,kFace,iBlockFace)
-                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
                 iCount = iCount + 1
              enddo
 
           elseif(iDim == y_) then
              iCount = 1
              do iCell = jFace - 2, jFace + 1
-                Area0_D = CellCoef_DDGB( &
+                Area0_D(1:nDim) = CellCoef_DDGB( &
                      Eta_,:,iFace,iCell,kFace,iBlockFace)
-                Normal0_D = Area0_D/sqrt(sum(Area0_D(:)**2))
+                Normal0_D(1:nDim) = Area0_D(1:nDim)/sqrt(sum(Area0_D(1:nDim)**2))
 
                 Ucell_D = &
                      State_VGB(iRhoUx:iRhoUz,iFace,iCell,kFace,iBlockFace)/&
                      State_VGB(iRho,iFace,iCell,kFace,iBlockFace)
-                Ucell_I(iCount) = sum(Ucell_D*Normal0_D)
+                Ucell_I(iCount) = sum(Ucell_D(1:nDim)*Normal0_D(1:nDim))
                 iCount = iCount + 1
              enddo
           elseif(iDim == z_) then
