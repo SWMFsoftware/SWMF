@@ -16,7 +16,7 @@ using namespace std;
 
 	
 	cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::ndes<<endl;
-	ifstream fin("TGITM_EXOBASE.dat");
+	ifstream fin("data/input/Titan/TGITM_EXOBASE.dat");
 	
 	if(fin.is_open())
 	{
