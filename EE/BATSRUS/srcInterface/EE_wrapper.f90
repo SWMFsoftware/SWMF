@@ -26,7 +26,7 @@ contains
     use EE_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use EE_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use EE_ModMain, ONLY : CodeVersion, NameThisComp, &
-         time_accurate, StartTime, iStartTime_I
+         time_accurate, time_simulation, StartTime, iStartTime_I
     use ModTimeConvert, ONLY: time_real_to_int
 
     type(CompInfoType), intent(inout):: CompInfo   ! Information for this comp.
@@ -59,6 +59,7 @@ contains
     case('CHECK')
        call get_time( &
             DoTimeAccurateOut = time_accurate, &
+            tSimulationOut=Time_Simulation, &
             tStartOut         = StartTime)
        call time_real_to_int(StartTime, iStartTime_I)
 
@@ -88,7 +89,6 @@ contains
     use CON_coupler
     use CON_comp_param, ONLY: EE_
     use EE_domain_decomposition
-    use EE_ModGeometry, ONLY: TypeGeometry
     use EE_ModMain, ONLY: TypeCoordSystem, NameVarCouple
     use EE_ModPhysics, ONLY: No2Si_V, UnitX_
 
@@ -143,9 +143,6 @@ contains
 
   subroutine EE_init_session(iSession, TimeSimulation)
 
-    use EE_ModMain,  ONLY: Time_Simulation
-    use CON_physics, ONLY: get_time
-
     integer, intent(in) :: iSession         ! session number (starting from 1)
     real,    intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -157,9 +154,6 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(IsUninitialized)then
-
-       call get_time(tSimulationOut=Time_Simulation)
-
        call EE_BATS_setup
        IsUninitialized = .false.
     end if
