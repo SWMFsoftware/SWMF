@@ -226,7 +226,7 @@ contains
     integer, parameter :: nCorner = 8
     real     :: Corner_DI(3, nCorner)
     real     :: DistMin_D(3), DistMax_D(3), Radius1Sqr
-    integer  :: i, j, k, iDim, iCorner
+    integer  :: i, j, k, iDim, iCorner, Dk
 
     ! These variables are needed for generalized coordinates
     real :: Xyz_D(3)
@@ -397,14 +397,17 @@ contains
     if(DoTestBlock)write(*,*) NameSub,' DoRefine (from corners)=',DoRefine
 
     if(DoRefine) UseBlock = .true.
-
+    
     if(NameArea == 'brick_gen' .or. IsCartesianGrid) RETURN
 
     ! Non-cartesian case
     UseBlock = .true.
 
+    Dk=1
+    if(nK == 1) Dk=0
+      
     ! Check all nodes of the block
-    do k=1,nK+1; do j=1,nJ+1; do i=1,nI+1
+    do k=1,nK+Dk; do j=1,nJ+1; do i=1,nI+1
 
        ! Shift to area center
        Xyz_D = Xyz_DNB(:,i,j,k,iBlock) - Area % Center_D
