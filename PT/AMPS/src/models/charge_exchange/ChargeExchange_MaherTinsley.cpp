@@ -11,7 +11,7 @@ double ChargeExchange::MaherTinsley::LifeTime(int      spec,
   // this model is for atomic hydrogen only
   if(spec != _H_SPEC_) return 1E+100;
  
-  v_th = sqrt(2.0 * PlasmaTemperature / _MASS_(_H_));
+  v_th = sqrt(2.0 * Kbol * PlasmaTemperature / _MASS_(_H_));
   for(int idim = 0; idim < 3; idim++ )
     omega += pow(vParticle[idim]-vPlasma[idim], 2.0);
   omega = pow(omega, 0.5) / v_th;
