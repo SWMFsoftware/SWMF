@@ -878,9 +878,11 @@ subroutine THERMAL
   use ModHeidiMain,  ONLY: mlt, ithermfirst, itherminit, LZ, xne, F2, ffactor, ekev, mas, q
   use ModHeidiDGCPM, ONLY: dendgcpm,  vthetacells, vphicells, gridx, gridy, gridoc, &
        vlzcells,vmltcells, potdgcpm
-  use ModHeidiIO,    ONLY: NameRun, ist, iUnitStdOut, write_prefix
+  use ModHeidiIO,    ONLY: NameRun,NameInputDirectory,ist, iUnitStdOut, write_prefix
   use ModProcHEIDI,     ONLY: iComm, iError, Iproc
   use ModNumConst,   ONLY: cPi
+
+
 
   implicit none
 
@@ -933,7 +935,9 @@ subroutine THERMAL
      delt=2*DT*dtimestep
      if (ithermfirst.eq.2) then
         if (itherminit.eq.1) then  ! Read initial plasmasphere from file
-           filename=trim(NameRun)//'_dgcpm.in'
+           filename= trim(NameInputDirectory)//trim(NameRun)//'_dgcpm.in'
+
+           !open(UNITTMP_,FILE=NameInputDirectory//trim(NameRun)//'_Le.dat',status='old')
 
            if (iProc==0) then
               call write_prefix; write(iUnitStdOut,*) 'Reading in plasmasphere file: ',filename
