@@ -19,10 +19,12 @@ namespace OH {
 
   void Init_BeforeParser();
 
+  //-------------------------------------------------------------------------------------
   namespace Sampling{
     using namespace Exosphere::Sampling;
   }
 
+  //-------------------------------------------------------------------------------------
   namespace Output{
 
     extern int TotalDataLength;
@@ -41,6 +43,13 @@ namespace OH {
     int RequestDataBuffer(int offset);
   }
 
+  //-------------------------------------------------------------------------------------
+  namespace Loss {
+    double LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+    int ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+  }
+
+  //-------------------------------------------------------------------------------------
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
 
     accl[0]=0.0; accl[1]=0.0;  accl[2]=0.0; 
