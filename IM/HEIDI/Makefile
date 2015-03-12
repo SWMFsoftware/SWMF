@@ -34,6 +34,8 @@ TESTDIR1  = run_test_analytic
 TESTDIR2  = run_test_numeric
 HEIDIDIR  = ${DIR}/IM/HEIDI
 CHECKDIR  = output
+SADIR     = run_heidi
+
 
 test:
 	@rm -f *.diff
@@ -102,6 +104,13 @@ test_numeric_check:
 		${CHECKDIR}/test1_h_prs_numeric.002 \
 			> test_numeric.diff
 	ls -l test_numeric.diff
+
+
+
+rundir_heidi:
+	make rundir RUNDIR=${SADIR} STANDALONE="YES" PWDIR=`pwd`
+	cd input; cp PARAM.analytic.in ../${SADIR}/PARAM.in
+
 
 rundir:
 	mkdir -p ${RUNDIR}/IM
