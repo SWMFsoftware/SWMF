@@ -1,0 +1,4 @@
+// definitins of macros for charge exchange model
+
+// model name
+#define _CHARGE_EXCHANGE__MAHER_TINSLEY_ 0
