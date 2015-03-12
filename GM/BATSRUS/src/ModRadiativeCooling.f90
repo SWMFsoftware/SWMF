@@ -94,6 +94,7 @@ contains
   real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
+    use ModMain,          ONLY: test_string
     use ModMultiFluid,    ONLY: UseMultiIon
 
     !Imput - dimensional, output: dimensionless
@@ -103,18 +104,23 @@ contains
     real :: CoolingFunctionCgs
     real :: CoolingTableOut_I(1)
     real, parameter :: RadNorm = 1.0E+22
+
+    character(len=*), parameter :: NameSub = 'radiative_cooling'
     !--------------------------------------------------------------------------
+
     if(UseRadCoolingTable) then
        ! at the moment, radC not a function of Ne, but need a dummy 2nd
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
-       if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.NumberDensCgs<1.0e2.or.&
-            NumberDensCgs<1.0e2.or.NumberDensCgs>1.0e14)then
-          write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
-          if(present(iError))iError=1
-          if(TeSiIn<0.0)call CON_stop(&
-               'Negative temperature in calculating rad. cooling')
+       if(index(test_string, NameSub)>0)then
+          if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.NumberDensCgs<1.0e2.or.&
+               NumberDensCgs<1.0e2.or.NumberDensCgs>1.0e14)then
+             write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
+             if(present(iError))iError=1
+             if(TeSiIn<0.0)call CON_stop(&
+                  'Negative temperature in calculating rad. cooling')
+          end if
        end if
        call interpolate_lookup_table(iTableRadCool, TeSiIn, NumberDensCgs, &
             CoolingTableOut_I, DoExtrapolate = .false.)
