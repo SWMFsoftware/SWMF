@@ -1,12 +1,13 @@
 #include "ChargeExchange.h"
 
 
-double ChargeExchange::CrossSection(int      spec,
-				    double* vParticle,
-				    double* vPlasma,
-				    double   PlasmaTemperature) {
+double ChargeExchange::LifeTime(int      spec,
+				double* vParticle,
+				double* vPlasma,
+				double   PlasmaTemperature,
+				double   PlasmaNumberDensity) {
 #if _CHARGE_EXCHANGE__MODEL_ == _CHARGE_EXCHANGE__MAHER_TINSLEY_
-  return ChargeExchange::MaherTinsley::CrossSection(spec, vParticle, vPlasma, PlasmaTemperature);
+  return ChargeExchange::MaherTinsley::LifeTime(spec, vParticle, vPlasma, PlasmaTemperature,PlasmaNumberDensity);
 #else
   exit(__LINE__,__FILE__,"Error: charge exchange model is not recognized");
 #endif

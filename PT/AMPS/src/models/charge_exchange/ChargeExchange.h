@@ -20,19 +20,21 @@ namespace ChargeExchange {
   // Maher & Tinsley model (JGR, vol.82, 689-695)==============================
   namespace MaherTinsley {
 
-    double CrossSection(int      spec,
-			double* vParticle,
-			double* vPlasma,
-			double   PlasmaTemperature);
+    double LifeTime(int      spec,
+		    double* vParticle,
+		    double* vPlasma,
+		    double   PlasmaTemperature,
+		    double   PlasmaNumberDensity);
   } 
   // namespace MaherTinsley====================================================
 
 
   // wrapper function: 
-  double CrossSection(int      spec,
-		      double* vParticle,
-		      double* vPlasma,
-		      double   PlasmaTemperature);
+  double LifeTime(int      spec,
+		  double* vParticle,
+		  double* vPlasma,
+		  double   PlasmaTemperature,
+		  double   PlasmaNumberDensity);
 }
 
 #endif//_CHARGEEXCHANGE_H_
