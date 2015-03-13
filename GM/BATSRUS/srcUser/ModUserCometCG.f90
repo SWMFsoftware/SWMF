@@ -158,15 +158,24 @@ contains
     TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
     TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
+    ! From Huebner and Markiwitz u_0 = sqrt(8kT/m pi)*0.8257 for f_rv=3 (H2O)
+    ! 0.8345 for f_rv=2 (OH) and 0.8728 for f_rv=0 (H)
+    TempToUnormal = 1.31763*sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
+         No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
+
+    ! T' = C*T so and p = n*T' = rho*C*T/*m so TempToPressure = C/m
+    ! where C = 0.8097 for f_rv=0, 0.8858 for f_rv=2, 0.9049 for f_rv=3 (H20)
+    TempToPressure = 0.9049/MassFluid_I(1)
+
     ! From G. Toth's derivations
     ! uNormal = sqrt( kT / m ), so TempToUnormal = sqrt( k/ m )
     ! and also unit conversions of temperature to SI, and velocity from SI
-    TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
-         No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
-
+    !TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
+    !     No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
+    !
     ! From G. Toth's derivations
     ! T' = T/g so and p = n*T' = rho*T/(g*m) so TempToPressure = 1/(g*m)
-    TempToPressure = 1/(g*MassFluid_I(1))
+    !TempToPressure = 1/(g*MassFluid_I(1))
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
