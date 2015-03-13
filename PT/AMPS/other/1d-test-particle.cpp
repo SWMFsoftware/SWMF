@@ -56,8 +56,8 @@ double rnd() {
 
 const int nDensitySampleIntervals=10000;
 const int nVelocityDistributionSampledIntervals=500;
-const double nMaxVelocityDistributionSampled=10.0E3;
-const double dVelocityDistributionInterval=nMaxVelocityDistributionSampled/nVelocityDistributionSampledIntervals;
+const double MaxVelocity=10.0E3;
+const double dVelocityDistributionInterval=MaxVelocity/nVelocityDistributionSampledIntervals;
 
 const int nTotalTestParticles=500;
 
@@ -76,7 +76,7 @@ double SetSamplingTime() {  //set up the time interval for sampling. must be mor
 }
 
 double SetTimeStep() { //evaluate the time set used for integration of the particle trajectory
-  return (xMax-xMin)/nDensitySampleIntervals/1000.0;
+  return (xMax-xMin)/nDensitySampleIntervals/MaxVelocity/2.0;
 }
 
 void GetParticleAcceleration(double *a,double *x) { //calcualte the acceleration of a particle
@@ -89,16 +89,18 @@ void GetParticleAcceleration(double *a,double *x) { //calcualte the acceleration
   c=GravityConstant*MassEuropa/pow(r2,1.5);
 
   for (idim=0;idim<3;idim++) a[idim]=-c*x[idim];
+
+
+  a[0]=0.0,a[1]=0.0,a[2]=0.0;
 }
 
 void InitParticleVelocity(double *v) { //init the particle velocity
   double r,E,Speed,lVel[3];
 
-  static const double vmax=10000;
   static const double _O2__MASS_=32*_AMU_;
 
   static const double U_o2=0.015*eV2J;  //the community accepted parameter of the energy distribution      //Burger 2010-SSR
-  static const double Emax_o2=_O2__MASS_*vmax*vmax/2.0; //the maximum energy of the ejected particle
+  static const double Emax_o2=_O2__MASS_*MaxVelocity*MaxVelocity/2.0; //the maximum energy of the ejected particle
 
   do {
     r=rnd();
@@ -140,6 +142,8 @@ void InitParticleVelocity(double *v) { //init the particle velocity
     for (int idim=0;idim<3;idim++) v[idim]=lVel[idim]*Speed;
 
 
+
+  v[0]=2000.0,v[1]=0.0,v[2]=0.0;
 }
 
 
@@ -331,7 +335,7 @@ int main(int argc, char **argv) {
     fout=fopen("VelocityDistributionFunction.dat","w");
     fprintf(fout,"VARIABLES=\"v\", \"fInit(v)\", \"fLeftBoundaryReflection(v)\"\n");
 
-    double fmax[2]={0.0,0.0};
+    double fmax[2]={-1.0,-1.0};
 
     for (int mode=0;mode<2;mode++) {
       for (i=0;i<nVelocityDistributionSampledIntervals;i++) if (fmax[mode]<VelocityDistributionBuffer[mode][i]) fmax[mode]=VelocityDistributionBuffer[mode][i];
