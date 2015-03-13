@@ -120,9 +120,13 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
     return -1.0;
   }
 
+  // temporary variables
+  double v1[3]={0.0,0.0,0.0}, v2[3]={1E+5,0.0,0.0};
+  double Temp = 1E+5, NDen=1E+5;
+  //-------------------
   switch (spec) {
   case _H_SPEC_:
-  lifetime=1E8;// / ChargeExchange::LifeTime(_H_SPEC_, v1, v2, Temp, NDen);
+    lifetime= ChargeExchange::LifeTime(_H_SPEC_, v1, v2, Temp, NDen);
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown specie");

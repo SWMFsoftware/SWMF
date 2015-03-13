@@ -10,6 +10,9 @@
 // self-explanatory
 #include "constants.h"
 
+// charge exchange physical model
+#include "ChargeExchange.h"
+
 // SPICE is not used for this application
 // use empty functions to fill in
 #include "SpiceEmptyDefinitions.h"
