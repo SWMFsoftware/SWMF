@@ -86,11 +86,11 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
 
     O.PlanetRadius=_RADIUS_(_TARGET_);
     O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    O.ReadDataFile("O.h");
+    O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
 
     CO2.PlanetRadius=_RADIUS_(_TARGET_);
     CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    CO2.ReadDataFile("CO2.h");
+    CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
   }
 
 
@@ -217,7 +217,7 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
   }
 
   //only oxigen atoms can be keeped in the system
-  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_O_SPEC_) return false;
+  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_C_SPEC_) return false;
 
   static const double massOxigen=26.56E-27;
   double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0},vThermal2;

@@ -21,7 +21,7 @@
 #include <sys/resource.h>
 
 //the species
-unsigned int _O_SPEC_=0;
+unsigned int _C_SPEC_=0;
 
 //forward scattering cross section
 #include "ForwardScatteringCrossSection.h"
@@ -46,15 +46,8 @@ const double dxMinGlobal=2.0,dxMaxGlobal=5.0;
 const double dxMinSphere=DebugRunMultiplier*2.0/100,dxMaxSphere=DebugRunMultiplier*4.0/100.0;
 
 
-
-
-
-
-
 //the total acceleration of the particles
 //#include "species/Na.h"
-
-
 
 
 //double SodiumRadiationPressureAcceleration_Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);
@@ -79,8 +72,6 @@ void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,doub
 
 }
 */
-
-
 
 
 
@@ -230,10 +221,10 @@ cDataSetMTGCM O,COp;
 
  O.PlanetRadius=3396.0E3;
  O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
- O.ReadDataFile("O.h");
+ O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
     COp.PlanetRadius=3396.0E3;
     COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    COp.ReadDataFile("COp.h");
+    COp.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/COp.h");
 
  double t,x[3]={0.0,550.2E3+O.PlanetRadius,0.0};
 // t=O.Interpolate(x);
@@ -253,7 +244,7 @@ cDataSetMTGCM O,COp;
  //for (i=0;i<nPoints;i++) {
    //Lat=-Pi/2.0+i*dLat;
 
-   for (j=0;j<301;j++) {
+   for (j=0;j<10;j++) {
      Lat=-Pi+j*dLat;
        Lat=60.0*Pi/180;
 
@@ -261,29 +252,11 @@ cDataSetMTGCM O,COp;
      x[1]=0;//R*cos(Lat)*sin(Lon);
      x[2]=R*sin(Lat);
 
-    // t=COp.Interpolate(x);
-       bool validAlt = false;
-       double z0 = 199E3;
-      while (validAlt == false) {
-       // Hot Carbon
-       double COpScaleHeight=50.2E3; //Solar Min
-       //	double COpScaleHeight=102.1E3; //Solar Max
-       double Altitude,vectop[3]={0.0,0.0,0.0};
-       double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-       double r=sqrt(r2);
-       int idim;
-       //for (idim=0;idim<DIM;idim++) {Altitudevec[idim]=x[idim]*(x[idim]/r);}
-       for (idim=0;idim<DIM;idim++) {vectop[idim] = (3396.0E3+z0)*(x[idim]/r);}
-      Altitude = r-3396.0E3;	
-       
-       if (Altitude<z0){t=COp.Interpolate(x);}
-       else if (Altitude>=z0){t=COp.Interpolate(vectop)*exp(-(Altitude-z0)/COpScaleHeight);}
+       t=COp.Interpolate(x);
+     
+   //    cout <<(R-3396.0E3)/1000<<"  "<<t<<"\n"<< endl;
 
-
-     if (log10(t)>10.0||t==0) {z0-=1E3;}
-     else {validAlt = true;}
-       }
-
+     
      fprintf(fout,"%e  %e\n",(R-3396.0E3)/1000,t);
      
     R+=1E3;
@@ -292,10 +265,13 @@ cDataSetMTGCM O,COp;
 
  fclose(fout);
 }
+  //  exit(__LINE__,__FILE__,"test");
+
 }
 
 int main(int argc,char **argv) {
-  MPI_Init(&argc,&argv);
+//  MPI_Init(&argc,&argv);
+PIC::InitMPI();
 
   rnd_seed();
 
@@ -306,26 +282,30 @@ int main(int argc,char **argv) {
 
   //==================  set up the PIC solver
 
-  char inputFile[]="mercury.input";
+//  char inputFile[]="mars.input";
 
 
-  MPI_Barrier(MPI_COMM_WORLD);
+ // MPI_Barrier(MPI_COMM_WORLD);
+MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //set up the alarm
  // PIC::Alarm::SetAlarm(8.0*3600.0-15*60);
 
   //init the particle solver
   PIC::Init_BeforeParser();
-  PIC::Parser::Run(inputFile);
-//  PIC::Init_AfterParser();
+ // PIC::Parser::Run(inputFile);
+		//  PIC::Init_AfterParser();
 
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=100;
-  PIC::RequiredSampleLength=200; //0;
+ // PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=100;
+ // PIC::RequiredSampleLength=200; //0;
 
 
   //================== print TGCM solution
    OxigenTGCM();
+    
+    
+    
    newMars::Init_AfterParser();
 
 
@@ -503,13 +483,13 @@ int main(int argc,char **argv) {
   if (PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber>5000) PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=500; //50000;
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=NULL;
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_C_SPEC_);
 
 
 
 
 //  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",_O_SPEC_);
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",_C_SPEC_);
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
@@ -532,7 +512,7 @@ int main(int argc,char **argv) {
 
 
   //the total theoretical injection rate of hot oxigen
-  double rate=PIC::VolumeParticleInjection::GetTotalInjectionRate(_O_SPEC_);
+  double rate=PIC::VolumeParticleInjection::GetTotalInjectionRate(_C_SPEC_);
   if (PIC::ThisThread==0) {
     printf("Total theoretical injection rate of hot oxige: %e (%s@%i)\n",rate,__FILE__,__LINE__);
     printf("Integrated DR rate from Fox modes: %e\n",MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetTotalO2PlusDissociativeRecombinationRate());

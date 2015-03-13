@@ -3,6 +3,9 @@
 //========================================================================
 /*
  * $Log$
+ * Revision 1.2  2014/11/25 04:52:40  vtenishe
+ * few function calls are changed
+ *
  * Revision 1.1  2014/10/27 16:32:04  yunilee
  * source files for mars simulation
  *
@@ -153,51 +156,51 @@ inline void ReadMTGCM() {
 				
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Te.ReadDataFile("Te.h");
+		Te.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Te.h");
 		
 		Tn.PlanetRadius=_RADIUS_(_TARGET_);
 		Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Tn.ReadDataFile("Tn.h");
+		Tn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Tn.h");
 				
 		Ti.PlanetRadius=_RADIUS_(_TARGET_);
 		Ti.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Ti.ReadDataFile("Ti.h");
+		Ti.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Ti.h");
 		
 		O2p.PlanetRadius=_RADIUS_(_TARGET_);
 		O2p.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O2p.ReadDataFile("O2p.h");
+		O2p.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O2p.h");
 				
 		E.PlanetRadius=_RADIUS_(_TARGET_);
 		E.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		E.ReadDataFile("E.h");
+		E.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/E.h");
 		
 		O.PlanetRadius=_RADIUS_(_TARGET_);
 		O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O.ReadDataFile("O.h");
+		O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
 		
 		CO.PlanetRadius=_RADIUS_(_TARGET_);
 		CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO.ReadDataFile("CO.h");
+		CO.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO.h");
 		
 		CO2.PlanetRadius=_RADIUS_(_TARGET_);
 		CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO2.ReadDataFile("CO2.h");
+		CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
 	
 		Un.PlanetRadius=_RADIUS_(_TARGET_);
 		Un.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Un.ReadDataFile("Un.h");
+		Un.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Un.h");
 		
 		Vn.PlanetRadius=_RADIUS_(_TARGET_);
 		Vn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Vn.ReadDataFile("Vn.h");
+		Vn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Vn.h");
 		
 		Wn.PlanetRadius=_RADIUS_(_TARGET_);
 		Wn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Wn.ReadDataFile("Wn.h");
+		Wn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Wn.h");
 		
 		COp.PlanetRadius=_RADIUS_(_TARGET_);
 		COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		COp.ReadDataFile("COp.h");
+		COp.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/COp.h");
 
 		//pent=chdir("..");
 	
@@ -322,7 +325,7 @@ inline void ReadMTGCM() {
 		double r=sqrt(r2);
     //	Altitude = r-_RADIUS_(_TARGET_);	
         
-		bool validt=false;
+/*		bool validt=false;
 		while (validt==false) {
         // Hot Carbon
             double COpScaleHeight=53.8E3;//50.2E3; //Solar Min
@@ -370,11 +373,11 @@ inline void ReadMTGCM() {
                 nz+=1E3;
             }
             
-            /*	if (z0<135.0E3) {
+  */          /*	if (z0<135.0E3) {
              validt=true;
              t=0.0;}
              else {*/
-            if (Altitude>=1500E3) {
+    /*        if (Altitude>=1500E3) {
                 if (t>1E10) {z0-=1E3;}
                 else {validt=true;}
             }
@@ -399,7 +402,8 @@ inline void ReadMTGCM() {
 			production_rate=2.0E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.48)*t*E.Interpolate(x);
     #endif
             }
-		else {
+		else {*/
+t=O2p.Interpolate(x);
     #if DR == Rosen //Rosen [1998]
 			production_rate=2.75E-7*pow(300/Te.Interpolate(x),0.55)*t*E.Interpolate(x);
     #endif
@@ -409,7 +413,7 @@ inline void ReadMTGCM() {
     #if DR == Mitchell //Mitchell and Hus [1985]
 			production_rate=2.0E-7*pow(300/Te.Interpolate(x),0.48)*t*E.Interpolate(x);
     #endif
-            }
+    //        }
         /*
          //Photodissociation of CO
          double frequency=(2.81E-7)/pow(Semimajoraxis,2); //s^-1, Solar low, Huebner et al.[92]	
@@ -422,13 +426,16 @@ inline void ReadMTGCM() {
          production_rate=CO.Interpolate(x)*frequency;
          */
         
-        
+//       cout<<Altitude<<"  "<<production_rate<<endl;
+//	exit(__LINE__,__FILE__);
+ 
         // if (production_rate>=1E3){z0-=1E3;}// {cout << Altitude <<"  "<< production_rate << endl;
         //	exit(__LINE__,__FILE__);}
         // else
         // validAlt = true;
         // }
         return production_rate*1.0e6;
+       // return 1*1.0e6;
 	}
     
 

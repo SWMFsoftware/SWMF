@@ -6,6 +6,9 @@
  */
 /*
  * $Log$
+ * Revision 1.4  2014/11/25 04:52:40  vtenishe
+ * few function calls are changed
+ *
  * Revision 1.1  2014/10/27 16:32:04  yunilee
  * source files for mars simulation
  *
@@ -158,8 +161,8 @@ void newMars::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Cent
   cBackgroundDensityBuffer BackgroundDensityBuffer[nBackgroundSpecies];
 
   if (pipe->ThisThread==CenterNodeThread) {
-    buffer.TheoreticalLocalInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,CenterNode);
-    buffer.NumericalLocalInjectionRate=*(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
+    buffer.TheoreticalLocalInjectionRate=PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,CenterNode);
+    buffer.NumericalLocalInjectionRate=*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()));
 
     buffer.maxTheoreticalLocalInjectionRate=*((double*)(maxLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()));
     buffer.minTheoreticalLocalInjectionRate=*((double*)(minLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()));
@@ -206,8 +209,8 @@ void newMars::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double 
   for (i=0;i<nInterpolationCoeficients;i++) {
     c=InterpolationCoeficients[i];
 
-    InterpoaltedLocalOxigenProductionRate+=c*(*(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer())));
-    TheoreticalOxigenInjectionRate+=c*PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,InterpolationList[i])/InterpolationList[i]->Measure;
+    InterpoaltedLocalOxigenProductionRate+=c*(*(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+InterpolationList[i]->GetAssociatedDataBufferPointer())));
+    TheoreticalOxigenInjectionRate+=c*PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,InterpolationList[i])/InterpolationList[i]->Measure;
 
     if (maxTheoreticalLocalInjectionRate<*((double*)(maxLocalCellOxigenProductionRateOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()))) {
       maxTheoreticalLocalInjectionRate=*((double*)(maxLocalCellOxigenProductionRateOffset+InterpolationList[i]->GetAssociatedDataBufferPointer()));
@@ -215,8 +218,8 @@ void newMars::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double 
   }
 
   //stored the interpolated data in the associated data buffer
-  *(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedLocalOxigenProductionRate;
-  *(_O_SPEC_+(double*)(PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=TheoreticalOxigenInjectionRate;
+  *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CenterNode->GetAssociatedDataBufferPointer()))=InterpoaltedLocalOxigenProductionRate;
+  *(_C_SPEC_+(double*)(PIC::Mesh::cDataCenterNode::LocalParticleVolumeInjectionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=TheoreticalOxigenInjectionRate;
 
   *((double*)(maxLocalCellOxigenProductionRateOffset+CenterNode->GetAssociatedDataBufferPointer()))=maxTheoreticalLocalInjectionRate;
 }
@@ -227,7 +230,7 @@ void newMars::ProductionRateCaluclation(bool *InjectionFlag,double *Rate, int iC
   int iLevel,i,LastLevel=0;
   double LastResult=0.0,res;
 
-  const int iLevelMax=100;
+  const int iLevelMax=10;
 
 
   if (node==NULL) {
@@ -368,7 +371,7 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
        double ModelParticleInjectionRate,TimeCounter=0.0,LocalTimeStep;
        long int newParticle;
        PIC::ParticleBuffer::byte *newParticleData;
-       double LocalParticleWeight=node->block->GetLocalParticleWeight(_O_SPEC_);
+       double LocalParticleWeight=node->block->GetLocalParticleWeight(_C_SPEC_);
 
        /*
        ProductionRateCaluclation(InjectionFlag,Rate,iCellIndex,jCellIndex,kCellIndex,cell,node);
@@ -377,8 +380,8 @@ int newMars::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vI
 
 
        //two O particles will be produce ar the same time
-       ModelParticleInjectionRate=0.5*PIC::VolumeParticleInjection::GetCellInjectionRate(_O_SPEC_,cell)/LocalParticleWeight;
-       LocalTimeStep=node->block->GetLocalTimeStep(_O_SPEC_);
+       ModelParticleInjectionRate=0.5*PIC::VolumeParticleInjection::GetCellInjectionRate(_C_SPEC_,cell)/LocalParticleWeight;
+       LocalTimeStep=node->block->GetLocalTimeStep(_C_SPEC_);
 
 
 
@@ -544,12 +547,12 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
     nInjectedParticles++;
-    PIC::BC::nInjectedParticles[_O_SPEC_]++;
-    PIC::BC::ParticleProductionRate[_O_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+    PIC::BC::nInjectedParticles[_C_SPEC_]++;
+    PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
 
     PIC::ParticleBuffer::SetX(x,newParticleData);
     PIC::ParticleBuffer::SetV(velocityO1,newParticleData);
-    PIC::ParticleBuffer::SetI(_O_SPEC_,newParticleData);
+    PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
 
 
     //TEST!!!!!!!
@@ -568,12 +571,12 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
     nInjectedParticles++;
-    PIC::BC::nInjectedParticles[_O_SPEC_]++;
-    PIC::BC::ParticleProductionRate[_O_SPEC_]+=LocalParticleWeight/LocalTimeStep;
+    PIC::BC::nInjectedParticles[_C_SPEC_]++;
+    PIC::BC::ParticleProductionRate[_C_SPEC_]+=LocalParticleWeight/LocalTimeStep;
 
     PIC::ParticleBuffer::SetX(x,newParticleData);
     PIC::ParticleBuffer::SetV(velocityO2,newParticleData);
-    PIC::ParticleBuffer::SetI(_O_SPEC_,newParticleData);
+    PIC::ParticleBuffer::SetI(_C_SPEC_,newParticleData);
 
 
     //TEST!!!!!!!
@@ -590,13 +593,13 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,LocalTimeStep-TimeCounter,node,true);
 */
     //increment the source rate counter
-    PIC::VolumeParticleInjection::SourceRate[_O_SPEC_]+=1.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep;
-    *(_O_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=1.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep/cell->Measure;
+    PIC::VolumeParticleInjection::SourceRate[_C_SPEC_]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
+    *(_C_SPEC_+(double*)(sampledLocalInjectionRateOffset+PIC::Mesh::collectingCellSampleDataPointerOffset+cell->GetAssociatedDataBufferPointer()))+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep/cell->Measure;
          
          //sample production rate on the spherical mesh
          int el=SphericalSamplingMesh.GetSamplingElementNumber(x);
          if (el!=-1) {
-             SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el]+=1.0*node->block->GetLocalParticleWeight(_O_SPEC_)/LocalTimeStep;
+             SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el]+=1.0*node->block->GetLocalParticleWeight(_C_SPEC_)/LocalTimeStep;
              
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
              if (!isfinite(SphericalSamplingMesh.SamplingBuffer[LocalSourceRateOffsetSamplingSphericalVolumeMesh][el])) {
