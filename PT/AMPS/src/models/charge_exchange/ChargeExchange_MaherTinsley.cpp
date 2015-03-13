@@ -17,7 +17,7 @@ double ChargeExchange::MaherTinsley::LifeTime(int      spec,
   omega = pow(omega, 0.5) / v_th;
   v_rel = v_th * ( exp(-omega*omega)/sqrtPi + (omega + 0.5/omega)*erf(omega));
 
-  sigma = (1.6 - 0.0695 * pow(log(v_rel), 2.0))*1E-14*1E-4; // m^2
+  sigma = pow(1.6 - 0.0695 * log(v_rel), 2.0)*1E-14*1E-4; // m^2
   return 1.0 / (PlasmaNumberDensity * v_rel * sigma);
 } 
 
