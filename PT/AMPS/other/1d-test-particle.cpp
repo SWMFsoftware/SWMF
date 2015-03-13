@@ -36,6 +36,9 @@ const double _AMU_=1.66053886E-27;
 #define _DENSITY_SAMPLING__LEFT_BOUNDARY_REFLECTION_   2
 #define _DENSITY_SAMPLING__RIGHT_BOUNDARY_REFLECTION_  3
 
+#define _VELOCITY_DISTRIBUTION_SAMPLING__INITIAL_INJECTION_          0
+#define _VELOCITY_DISTRIBUTION_SAMPLING__LEFT_BOUNDARY_REFLECTION_   1
+
 
 unsigned long int rndLastSeed;
 
@@ -64,7 +67,7 @@ const double xMax=10.0*xMin;
 const double ParticleMass=32*_AMU_;
 const double SourceRate=1.0E27;
 
-double VelocityDistributionSampling[nVelocityDistributionSampledIntervals];
+double VelocityDistributionSampling[2][nVelocityDistributionSampledIntervals];
 double DensitySampling[4][nDensitySampleIntervals];
 int ModelParticleState;
 
@@ -195,7 +198,7 @@ int main(int argc, char **argv) {
   TimeStep=SetTimeStep();
 
   //init the sampling buffers
-  for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionSampling[i]=0.0;
+  for (int mode=0;mode<2;mode++) for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionSampling[mode][i]=0.0;
   for (int mode=0;mode<4;mode++) for (i=0;i<nDensitySampleIntervals;i++) DensitySampling[mode][i]=0.0;
 
 
@@ -218,7 +221,7 @@ int main(int argc, char **argv) {
     //sample the initial velocity of the injected particles
     double Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
     int iSpeedInterval=Speed/dVelocityDistributionInterval;
-    if (iSpeedInterval<nVelocityDistributionSampledIntervals) VelocityDistributionSampling[iSpeedInterval]++;
+    if (iSpeedInterval<nVelocityDistributionSampledIntervals) VelocityDistributionSampling[_VELOCITY_DISTRIBUTION_SAMPLING__INITIAL_INJECTION_][iSpeedInterval]++;
 
 
     while (TimeCounter<SamplingTime) {
@@ -268,6 +271,12 @@ int main(int argc, char **argv) {
         code=ProcessLeftBoundaryIntersection(x,v);
         ModelParticleState=_DENSITY_SAMPLING__LEFT_BOUNDARY_REFLECTION_;
         if (code==_BOUNDARY_MODE__LEFT_DOMAIN_) break; // the particle left domain and tracking of its trajectory is terminated
+
+        //sample the initial velocity of the injected particles
+        double Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        int iSpeedInterval=Speed/dVelocityDistributionInterval;
+        if (iSpeedInterval<nVelocityDistributionSampledIntervals) VelocityDistributionSampling[_VELOCITY_DISTRIBUTION_SAMPLING__LEFT_BOUNDARY_REFLECTION_][iSpeedInterval]++;
+
       }
       else if (x[0]>=xMax) {
         code=ProcessRightBoundaryIntersection(x,v);
@@ -288,10 +297,10 @@ int main(int argc, char **argv) {
 
   //collect sampled data from all processors and output density into the data file
   double DensitySamplingBuffer[4][nDensitySampleIntervals];
-  double VelocityDistributionBuffer[nVelocityDistributionSampledIntervals];
+  double VelocityDistributionBuffer[2][nVelocityDistributionSampledIntervals];
 
   MPI_Reduce(&DensitySampling[0][0],&DensitySamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-  MPI_Reduce(VelocityDistributionSampling,VelocityDistributionBuffer,nVelocityDistributionSampledIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+  MPI_Reduce(&VelocityDistributionSampling[0][0],&VelocityDistributionBuffer[0][0],2*nVelocityDistributionSampledIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
   if (thread==0) {
     FILE *fout;
@@ -320,14 +329,17 @@ int main(int argc, char **argv) {
 
     //save the velocity distribution
     fout=fopen("VelocityDistributionFunction.dat","w");
-    fprintf(fout,"VARIABLES=\"v\", \"f(v)\"\n");
+    fprintf(fout,"VARIABLES=\"v\", \"fInit(v)\", \"fLeftBoundaryReflection(v)\"\n");
 
-    double fmax=0.0;
-    for (i=0;i<nVelocityDistributionSampledIntervals;i++) if (fmax<VelocityDistributionSampling[i]) fmax=VelocityDistributionSampling[i];
-    for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionSampling[i]/=fmax;
+    double fmax[2]={0.0,0.0};
+
+    for (int mode=0;mode<2;mode++) {
+      for (i=0;i<nVelocityDistributionSampledIntervals;i++) if (fmax[mode]<VelocityDistributionBuffer[mode][i]) fmax[mode]=VelocityDistributionBuffer[mode][i];
+      for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionBuffer[mode][i]/=fmax[mode];
+    }
 
     for (i=0;i<nVelocityDistributionSampledIntervals;i++) {
-      fprintf(fout,"%e  %e\n",(0.5+i)*dVelocityDistributionInterval,VelocityDistributionSampling[i]);
+      fprintf(fout,"%e  %e  %e\n",(0.5+i)*dVelocityDistributionInterval,VelocityDistributionBuffer[0][i],VelocityDistributionBuffer[1][i]);
     }
 
     fclose(fout);
