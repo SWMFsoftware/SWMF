@@ -59,7 +59,7 @@ const int nVelocityDistributionSampledIntervals=500;
 const double nMaxVelocityDistributionSampled=10.0E3;
 const double dVelocityDistributionInterval=nMaxVelocityDistributionSampled/nVelocityDistributionSampledIntervals;
 
-const int nTotalTestParticles=4000;
+const int nTotalTestParticles=500;
 
 const double xMin=1.569E6;
 const double xMax=10.0*xMin;
@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
 
     //calculate density
     for (int ncell=0;ncell<nDensitySampleIntervals;ncell++) {
-      double c=1.0/TimeCounter/(4.0/3.0*Pi*(pow(xMin+(1+ncell)*dx,3)-pow(xMin+ncell*dx,3)));
+      double c=1.0/SamplingTime/(4.0/3.0*Pi*(pow(xMin+(1+ncell)*dx,3)-pow(xMin+ncell*dx,3)));
 
       for (int mode=0;mode<4;mode++) DensitySamplingBuffer[mode][ncell]*=c;
     }
