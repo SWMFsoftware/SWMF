@@ -32,12 +32,20 @@ module IH_wrapper
   public:: IH_save_global_buffer
   public:: IH_match_ibc
 
+  ! Point coupling
+  public:: IH_get_grid_info
+  public:: IH_find_points
+
   ! Coupling with SP
   public:: IH_get_for_sp
   public:: IH_get_a_line_point
 
   ! Coupling with GM
   public:: IH_get_for_gm
+
+  ! Coupling with PT
+  public:: IH_get_for_pt
+  public:: IH_put_from_pt
 
 contains
   !==========================================================================
@@ -119,7 +127,34 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_run
+  !==============================================================================
+  subroutine IH_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
+    integer, intent(out):: nDimOut    ! grid dimensionality
+    integer, intent(out):: iGridOut   ! grid index (increases with AMR)
+    integer, intent(out):: iDecompOut ! decomposition index 
+
+    character(len=*), parameter :: NameSub='IH_get_grid_info'
+
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_get_grid_info
+  !==============================================================================
+  subroutine IH_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+    integer, intent(in) :: nDimIn                ! dimension of position vectors
+    integer, intent(in) :: nPoint                ! number of positions
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+    integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+    ! Find array of points and return processor indexes owning them
+    ! Could be generalized to return multiple processors...
+
+    character(len=*), parameter:: NameSub = 'IH_find_points'
+   
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_find_points
   !===============================================================
 
   subroutine IH_synchronize_refinement(iProc0,iCommUnion)
@@ -292,5 +327,42 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_get_for_global_buffer
+  !============================================================================
+  subroutine IH_get_for_pt(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    ! Get magnetic field data from IH to PT
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter :: NameSub='IH_get_for_pt'
+
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_get_for_pt
+
+  !===========================================================================
+  subroutine IH_put_from_pt( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
+
+    character(len=*), parameter :: NameSub='IH_put_from_pt'
+
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_put_from_pt
 
 end module IH_wrapper
