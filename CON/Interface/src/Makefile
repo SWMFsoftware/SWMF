@@ -10,21 +10,7 @@ include Makefile.DEPEND
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
 
-LINKMODULES:
-	rm -rf Modules
-	mkdir -p Modules
-	cd Modules; ln -s ${GMDIR}/src*/*.mod ${PTDIR}/src*/*.mod ${UTILDIR}/*/src*/*.mod .
-
-#	-(cd Modules; ln -s ${DIR}/*/*/src*/*.mod .)
-
-#	-(cd Modules; ln -s ${DIR}/*/*/src*/*.mod ${DIR}/*/*/src*/??_wrapper.o .)
-
-#	rm -f ??_wrapper.mod ??_wrapper.o
-#	ln -s ${PTDIR}/src*/pt_wrapper.mod . ; ln -s ${PTDIR}/src*/PT_wrapper.o .
-#	ln -s ${GMDIR}/src*/gm_wrapper.mod . ; ln -s ${GMDIR}/src*/GM_wrapper.o .
-#
-
-DEPEND: #LINKMODULES
+DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
 
 #^CMP IF GM BEGIN
@@ -44,19 +30,23 @@ MOD12 = CON_couple_ie_ps.o	#^CMP IF PS
 MOD13 = CON_couple_ie_rb.o	#^CMP IF RB
 #^CMP END IE
 #^CMP IF IH BEGIN
-MOD07 = CON_couple_ih_sc.o       #^CMP IF SC
-MOD14 = CON_couple_ih_oh.o       #^CMP IF OH
+MOD07 = CON_couple_ih_sc.o	#^CMP IF SC
+MOD14 = CON_couple_ih_oh.o	#^CMP IF OH
 #^CMP END IH
 #^CMP IF SC BEGIN
-MOD16 = CON_couple_ee_sc.o       #^CMP IF EE
+MOD16 = CON_couple_ee_sc.o	#^CMP IF EE
 #^CMP END SC
+#^CMP IF OH BEGIN
+MOD19 = CON_couple_oh_pt.o	#^CMP IF PT
+#^CMP END OH
 
-MOD08 = CON_couple_mh_sp.o       #^CMP IF SP
+MOD08 = CON_couple_mh_sp.o	#^CMP IF SP
+
 
 MODULES = \
 	${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} ${MOD07} ${MOD08} \
 	${MOD09} ${MOD10} ${MOD11} ${MOD12} ${MOD13} ${MOD14} ${MOD16} \
-	${MOD17} ${MOD18}\
+	${MOD17} ${MOD18} ${MOD19} \
 	CON_wrapper.o \
 	CON_couple_all.o
 
@@ -73,4 +63,4 @@ ${MY_LIB}: ${MODULES}
 	${AR} ${MY_LIB} ${MODULES}
 
 distclean: clean
-	rm -rf Makefile.DEPEND Modules
+	rm -rf Makefile.DEPEND
