@@ -518,7 +518,7 @@ OH/BATSRUS/src/Makefile:
 		update_lagrangian_grid.f90 \
 		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
 		ModDensityAndGradient.f90 \
-		../../../OH/BATSRUS/srcInterface
+		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
@@ -527,6 +527,7 @@ OH/BATSRUS/src/Makefile:
 	cd OH/BATSRUS/src; rm -f main.f90
 	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		OH/BATSRUS/srcInterface/OH_wrapper.f90
+
 	cd OH/BATSRUS/srcInterface/; perl -i -pe \
 	's/IH/OH/g;s/Ih/Oh/g;s/_sc/_ih/;s/SC/IH/g;s/Sc/Ih/g;s/Inner/Outer/' \
 		OH_wrapper.f90 ModBuffer.f90
@@ -543,7 +544,8 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 	touch OH/BATSRUS/srcInterface/Makefile.DEPEND
 	cd OH/BATSRUS; \
 		perl -i -pe 's/GM/OH/' Config.pl; \
-		./Config.pl -install=c -e=Mhd
+		./Config.pl -install=c -e=OuterHelio -u=OuterHelio
+
 
 #^CMP END OH
 
