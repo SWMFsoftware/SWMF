@@ -223,7 +223,7 @@ sub set_versions{
     foreach $compversion (@NewVersion){
 
 	die("$ERROR directory $compversion does not exist.")
-	    unless -d $compversion;
+	    unless $compversion =~ /\/\w/ and -d $compversion;
 
 	($comp,$version) = split(/\//,$compversion);
 	if($Version{$comp} ne $version){
