@@ -69,7 +69,7 @@ extern "C" {
   }
 
 
-  void amps_recieve_gm2amps_center_point_data_(char *NameVar, int *nVar, double *data,int *index) {
+  void amps_recieve_batsrus2amps_center_point_data_(char *NameVar, int *nVar, double *data,int *index) {
     PIC::CPLR::SWMF::RecieveCenterPointData(NameVar,*nVar,data,index);
   }
 

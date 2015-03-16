@@ -217,7 +217,7 @@ contains
        call amps_get_center_point_coordinates(Pos_DI) 
 
     elseif(present(Data_VI))then
-       call amps_recieve_gm2amps_center_point_data(&
+       call amps_recieve_batsrus2amps_center_point_data(&
             NameVar//char(0), nVar, Data_VI, iPoint_I)
     else
        call CON_stop(NameSub//': neither Pos_DI nor Data_VI are present!')
@@ -246,23 +246,23 @@ contains
 
     character(len=*), parameter :: NameSub='PT_put_from_oh'
     !--------------------------------------------------------------------------
-    !if(present(Pos_DI))then
-    !   ! set number of grid points on this processor
-    !   call amps_get_center_point_number(nPoint)
-
+    if(present(Pos_DI))then
+       ! set number of grid points on this processor
+       call amps_get_center_point_number(nPoint)
+       
        ! allocate position array
-    !   allocate(Pos_DI(3,nPoint))
-
+       allocate(Pos_DI(3,nPoint))
+       
        ! get point positions from AMPS
-    !   call amps_get_center_point_coordinates(Pos_DI) 
+       call amps_get_center_point_coordinates(Pos_DI) 
 
-    !elseif(present(Data_VI))then
-    !   call amps_recieve_oh2amps_center_point_data(&
-    !        NameVar//char(0), nVar, Data_VI, iPoint_I)
-    !else
-    !   call CON_stop(NameSub//': neither Pos_DI nor Data_VI are present!')
-    !end if
-
+    elseif(present(Data_VI))then
+       call amps_recieve_batsrus2amps_center_point_data(&
+            NameVar//char(0), nVar, Data_VI, iPoint_I)
+    else
+       call CON_stop(NameSub//': neither Pos_DI nor Data_VI are present!')
+    end if
+    
   end subroutine PT_put_from_oh
 
   !==============================================================================
