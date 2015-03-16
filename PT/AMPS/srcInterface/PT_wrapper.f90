@@ -17,8 +17,16 @@ module PT_wrapper
   public:: PT_save_restart
   public:: PT_finalize
 
-  public:: PT_get_grid_info ! Generic coupler
-  public:: PT_put_from_gm   ! Coupling with GM
+  ! Point coupling
+  public:: PT_get_grid_info 
+  public:: PT_find_points
+
+  ! GM coupling
+  public:: PT_put_from_gm  
+
+  ! OH coupling
+  public:: PT_put_from_oh
+  public:: PT_get_for_oh
 
 contains
 
@@ -154,6 +162,29 @@ contains
 
   end subroutine PT_get_grid_info
 
+  !==============================================================================
+  subroutine PT_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+    integer, intent(in) :: nDimIn                ! dimension of position vectors
+    integer, intent(in) :: nPoint                ! number of positions
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+    integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+    ! Find array of points and return processor indexes owning them
+    ! Could be generalized to return multiple processors...
+
+    !real:: Xyz_D(MaxDim) = 0.0
+    integer:: iPoint, iBlock
+
+    character(len=*), parameter:: NameSub = 'PT_find_points'
+    !--------------------------------------------------------------------------
+    !do iPoint = 1, nPoint
+    !   Xyz_D(1:nDimIn) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+    !   call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock)
+    !end do
+
+  end subroutine PT_find_points
+
   !============================================================================
 
   subroutine PT_put_from_gm( &
@@ -193,5 +224,108 @@ contains
     end if
 
   end subroutine PT_put_from_gm
+
+  !============================================================================
+
+  subroutine PT_put_from_oh( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    use CON_coupler, ONLY: i_proc, PT_, n_proc
+
+    implicit none
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+
+    real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Position vectors
+
+    integer:: iPoint, i
+
+    character(len=*), parameter :: NameSub='PT_put_from_oh'
+    !--------------------------------------------------------------------------
+    !if(present(Pos_DI))then
+    !   ! set number of grid points on this processor
+    !   call amps_get_center_point_number(nPoint)
+
+       ! allocate position array
+    !   allocate(Pos_DI(3,nPoint))
+
+       ! get point positions from AMPS
+    !   call amps_get_center_point_coordinates(Pos_DI) 
+
+    !elseif(present(Data_VI))then
+    !   call amps_recieve_oh2amps_center_point_data(&
+    !        NameVar//char(0), nVar, Data_VI, iPoint_I)
+    !else
+    !   call CON_stop(NameSub//': neither Pos_DI nor Data_VI are present!')
+    !end if
+
+  end subroutine PT_put_from_oh
+
+  !==============================================================================
+  subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    ! Get data from PT to OH
+
+    implicit none
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    !real:: Xyz_D(MaxDim), B0_D(MaxDim)
+    !real:: Dist_D(MaxDim), State_V(nVar)
+    !integer:: iCell_D(MaxDim)
+
+    integer:: iPoint, iBlock, iProcFound
+
+    character(len=*), parameter :: NameSub='PT_get_for_oh'
+    !--------------------------------------------------------------------------
+
+    !Dist_D = -1.0
+    !Xyz_D  =  0.0
+
+    !do iPoint = 1, nPoint
+
+    !   Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+    !   call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
+    !        UseGhostCell = .true.)
+
+    !   if(iProcFound /= iProc)then
+    !      write(*,*)NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
+    !      call stop_mpi(NameSub//' could not find position on this proc')
+    !   end if
+
+    !   select case(nDim)
+    !   case (1)
+    !      State_V = linear(State_VGB(:,:,MinJ,MinK,iBlock), &
+    !           nVar, MinI, MaxI, Xyz_D(1), iCell = iCell_D(1), Dist = Dist_D(1))
+    !   case (2)
+    !      State_V = bilinear(State_VGB(:,:,:,MinK,iBlock), &
+    !           nVar, MinI, MaxI, MinJ, MaxJ, Xyz_D(1:2), iCell_D = iCell_D(1:2), Dist_D = Dist_D(1:2))
+    !   case (3)
+    !      State_V = trilinear(State_VGB(:,:,:,:,iBlock), &
+    !           nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_D, iCell_D = iCell_D, Dist_D = Dist_D)
+    !   end select
+
+    !   if(UseB0)then
+    !      call get_b0(Xyz_D, B0_D)
+    !      State_V(Bx_:Bz_) = State_V(Bx_:Bz_) + B0_D
+    !   end if
+
+    !   Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
+
+    !end do
+
+  end subroutine PT_get_for_oh
 
 end module PT_wrapper

@@ -31,7 +31,7 @@ contains
 
   end subroutine PT_set_param
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_init_session(iSession, TimeSimulation)
 
@@ -45,7 +45,7 @@ contains
 
   end subroutine PT_init_session
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_finalize(TimeSimulation)
 
@@ -58,7 +58,7 @@ contains
 
   end subroutine PT_finalize
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_save_restart(TimeSimulation)
 
@@ -71,7 +71,7 @@ contains
 
   end subroutine PT_save_restart
 
-  !==============================================================================
+  !============================================================================
 
   subroutine PT_run(TimeSimulation,TimeSimulationLimit)
 
@@ -87,7 +87,7 @@ contains
 
   end subroutine PT_run
 
-  !==============================================================================
+  !============================================================================
   subroutine PT_get_grid_info(nDimOut, iGridOut, iDecompOut)
 
     integer, intent(out):: nDimOut    ! grid dimensionality
@@ -99,7 +99,21 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_get_grid_info
-  !==============================================================================
+  !============================================================================
+  subroutine PT_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
+
+    integer, intent(in) :: nDimIn               ! dimension of position vectors
+    integer, intent(in) :: nPoint                ! number of positions
+    real,    intent(in) :: Xyz_DI(nDimIn,nPoint) ! positions
+    integer, intent(out):: iProc_I(nPoint)       ! processor owning position
+
+    character(len=*), parameter:: NameSub = 'PT_find_points'
+    !--------------------------------------------------------------------------
+ 
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+  end subroutine PT_find_points
+  !============================================================================
   subroutine PT_put_from_gm( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
@@ -115,5 +129,42 @@ contains
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
 
   end subroutine PT_put_from_gm
+  !============================================================================
+  subroutine PT_put_from_oh( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
+
+    real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Position vectors
+
+    character(len=*), parameter :: NameSub='PT_put_from_oh'
+
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+  end subroutine PT_put_from_oh
+  !============================================================================
+  subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
+       Data_VI)
+
+    ! Get data from PT to OH
+
+    logical,          intent(in):: IsNew   ! true for new point array
+    character(len=*), intent(in):: NameVar ! List of variables
+    integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+    integer,          intent(in):: nDimIn  ! Dimensionality of positions
+    integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+
+    real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+    real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array
+
+    character(len=*), parameter :: NameSub='PT_get_for_oh'
+
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+  end subroutine PT_get_for_oh
 
 end module PT_wrapper
