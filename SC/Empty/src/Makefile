@@ -9,7 +9,7 @@ SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.conf
 
-SC_wrapper.f90:
+SC_wrapper.f90: ../../../IH/Empty/src/IH_wrapper.f90
 	cp -f ../../../IH/Empty/src/IH_wrapper.f90 SC_wrapper.f90
 	perl -i -pe \
 	's/IH/SC/g;s/BATSRUS/SC_BATSRUS/;s/Inner/Solar/;s/Heliosphere/Corona/'\
