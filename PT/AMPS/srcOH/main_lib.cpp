@@ -36,7 +36,7 @@ const double xMaxDomain=1500*1.5E11; //meters
 //the minimum size of the domain in the direction perpendicular to the direction to the sun
 const double yMaxDomain=500*1.5E11; //meters
 
-const double dxMinGlobal=DebugRunMultiplier*15 *1.5E11;
+const double dxMinGlobal=DebugRunMultiplier*30 *1.5E11;
 const double dxMaxGlobal=DebugRunMultiplier*150*1.5E11;
 
 
@@ -179,15 +179,16 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
 }
 
 
-void amps_init() {
+void amps_init_mesh(){
+
+
   PIC::InitMPI();
   
-  
-  //SetUp the alarm
+   //SetUp the alarm
   //  PIC::Alarm::SetAlarm(2000);
   
   rnd_seed();
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   
   
   OH::Init_BeforeParser();
@@ -259,10 +260,10 @@ void amps_init() {
   if (PIC::Mesh::mesh.ThisThread==0) {
     PIC::Mesh::mesh.buildMesh();
     PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
   else {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
   
@@ -293,9 +294,11 @@ void amps_init() {
   
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
-  
-  
-  
+
+}
+
+void amps_init() {
+ 
   
   
   //init the PIC solver
@@ -317,7 +320,7 @@ void amps_init() {
    PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H_SPEC_);
    
    
-   MPI_Barrier(MPI_COMM_WORLD);
+   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
    if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
    
    //init the particle buffer
