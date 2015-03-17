@@ -59,10 +59,10 @@ const int nVelocityDistributionSampledIntervals=500;
 const double MaxVelocity=10.0E3;
 const double dVelocityDistributionInterval=MaxVelocity/nVelocityDistributionSampledIntervals;
 
-const int nTotalTestParticles=500;
+const int nTotalTestParticles=2000;
 
 const double xMin=1.569E6;
-const double xMax=10.0*xMin;
+const double xMax=3.0*xMin;
 
 const double ParticleMass=32*_AMU_;
 const double SourceRate=1.0E27;
