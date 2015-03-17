@@ -20,14 +20,17 @@
 
 #include "pic.h"
 #include "constants.h"
+#include "OH.h"
 
 
 void amps_init();
+void amps_init_mesh();
 void amps_time_step();
 
 
 int main(int argc,char **argv) {
 
+  amps_init_mesh();
   amps_init();
 
   //time step
