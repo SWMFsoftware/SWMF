@@ -811,6 +811,7 @@ contains
     use ModMain,         ONLY: UseFieldLineThreads
     use ModGeometry,     ONLY: far_field_BCs_BLK
     use ModParallel,     ONLY: NOBLK, NeiLev
+
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
@@ -820,6 +821,7 @@ contains
     real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
     real :: TeEpsilonSi = 1.0, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
+    real :: bb_DD(nDim,nDim)
     logical :: IsNewBlockTe
     !--------------------------------------------------------------------------
 
@@ -979,12 +981,21 @@ contains
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+             bb_DD = 0.5*(bb_DDG(:nDim,:nDim,i,j,k) &
+                  +       bb_DDG(:nDim,:nDim,i-Di,j-Dj,k-Dk))
+
              HeatCoef = 0.5*(HeatCoef_G(i,j,k) + HeatCoef_G(i-Di,j-Dj,k-Dk))
 
              if(UseHeatFluxLimiter)then
                 call get_face_gradient(iDim, i, j, k, iBlock, &
                      IsNewBlockTe, Te_G, GradTe_D)
-                GradTe = sqrt(sum(GradTe_D(:nDim)**2))
+
+                GradTe = 0.0
+                do iDir = 1, nDim
+                   GradTe = GradTe + sum(bb_DD(iDir,:)*GradTe_D(:nDim)) &
+                        *GradTe_D(iDir)
+                end do
+                GradTe = sqrt(GradTe)
 
                 FreeStreamFlux = 0.5*(FreeStreamFlux_G(i,j,k) &
                      + FreeStreamFlux_G(i-Di,j-Dj,k-Dk))
@@ -996,20 +1007,15 @@ contains
 
              if(IsCartesian)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DB(iDim,iBlock)*HeatCoef &
-                     *0.5*(bb_DDG(iDim,:nDim,i,j,k) &
-                     +     bb_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
+                     CellFace_DB(iDim,iBlock)*HeatCoef*bb_DD(iDim,:)
              elseif(IsRzGeometry)then
                 HeatCond_DFDB(:nDim,i,j,k,iDim,iBlock) = &
-                     CellFace_DFB(iDim,i,j,k,iBlock)*HeatCoef &
-                     *0.5*(bb_DDG(iDim,:nDim,i,j,k) &
-                     +     bb_DDG(iDim,:nDim,i-Di,j-Dj,k-Dk))
+                     CellFace_DFB(iDim,i,j,k,iBlock)*HeatCoef*bb_DD(iDim,:)
              else
                 do iDir = 1, nDim
-                   HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = 0.5*HeatCoef &
+                   HeatCond_DFDB(iDir,i,j,k,iDim,iBlock) = HeatCoef &
                         *sum( FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
-                        *(bb_DDG(:nDim,iDir,i,j,k) &
-                        + bb_DDG(:nDim,iDir,i-Di,j-Dj,k-Dk)) )
+                        *bb_DD(:,iDir) )
                 end do
              end if
           end do; end do; end do
@@ -1070,10 +1076,12 @@ contains
          call user_material_properties(State_V, i, j, k, iBlock, &
               TeOut=TeSi, HeatCondOut=HeatCoefSi, NatomicOut = NatomicSi, &
               AverageIonChargeOut = Zav)
-         
+
          HeatCoef = HeatCoefSi &
               *Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_) &
               *Si2No_V(UnitU_)*Si2No_V(UnitX_)
+
+         NeSi = Zav*NatomicSi
       end if
 
       ! Artificial modified heat conduction for a smoother transition
@@ -1095,7 +1103,6 @@ contains
       HeatCoef_G(i,j,k) = HeatCoef
 
       if(UseHeatFluxLimiter)then
-         NeSi = Zav*NatomicSi
          FreeStreamFlux_G(i,j,k) = HeatFluxLimiter &
               *NeSi*cBoltzmann*TeSi*sqrt(cBoltzmann*TeSi/cElectronMass) &
               *Si2No_V(UnitPoynting_)
