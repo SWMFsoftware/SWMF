@@ -382,22 +382,52 @@ void Exosphere::SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& d
 
 //calculate the sodium column density and plot
 void Exosphere::ColumnIntegral::Tail(char *fname) {
-  double xEarth_new[3]={0.0,0.0,0.0};
+  double xEarth[3]={0.0,0.0,0.0};
 
   const int nPoints=500;
-  const double IntegrationRangeBegin=-50.0E6;
-  const double IntegrationRangeEnd=50.0E6;
+  const double IntegrationRangeBegin=-50.0*_RADIUS_(_TARGET_);
+  const double IntegrationRangeEnd=50.0*_RADIUS_(_TARGET_);
   const double IntegrationStep=(IntegrationRangeEnd-IntegrationRangeBegin)/(nPoints-1);
 
 
-  //find position of Earth
-  SpiceDouble State[6],lt;
+  //the column density will be calculated in the plane that containes: the object, the Earth and the Sun
+  //find position of Earth and Sun and construct the coordinate frame in that plane such that e0 -> is in the direction from the Earth to the Object
+  SpiceDouble StateEarth[6],StateSun[6],lt;
+  double e0[3],e1[3],l0=0.0,l1=0.0,c=0.0;
+  int idim;
 
-  spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,State,&lt);
+  spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,StateEarth,&lt);
+  spkezr_c("Sun",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,StateSun,&lt);
 
-  xEarth_new[0]=State[0]*1.0E3;
-  xEarth_new[1]=State[1]*1.0E3;
-  xEarth_new[2]=State[2]*1.0E3;
+  for (idim=0;idim<3;idim++) {
+    xEarth[idim]=1.0E3*StateEarth[idim];
+
+    l0+=pow(StateEarth[idim],2);
+    l1+=pow(StateSun[idim],2);
+  }
+
+  l0=sqrt(l0);
+  l1=sqrt(l1);
+
+  for (idim=0;idim<3;idim++) {
+    e0[idim]=-StateEarth[idim]/l0;
+    e1[idim]=StateSun[idim]/l1;
+
+    c+=e0[idim]*e1[idim];
+  }
+
+  if (fabs(c)>1.0-1.0E-15) {
+    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s\%%ld)\n",__FILE__,__LINE__);
+    return;
+  }
+
+  for (idim=0,l1=0.0;idim<3;idim++) {
+    e1[idim]-=c*e0[idim];
+    l1+=pow(e1[idim],2);
+  }
+
+  for (l1=sqrt(l1),idim=0;idim<3;idim++) e1[idim]/=l1;
+
 
   //open the output file
   FILE *fout=NULL;
@@ -408,7 +438,7 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
     char vlist[_MAX_STRING_LENGTH_PIC_]="";
 
     ColumnIntegral::GetVariableList(vlist);
-    fprintf(fout,"VARIABLES=\"Distance from the planet\" %s\n",vlist);
+    fprintf(fout,"VARIABLES=\"Distance from the planet [m]\", \"Distance from the planet [rObject]\",  %s\n",vlist);
   }
 
   for (npoint=0;npoint<nPoints;npoint++) {
@@ -416,15 +446,19 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
      int StateVectorLength=ColumnIntegral::GetVariableList(NULL);
      double StateVector[StateVectorLength];
 
-     l[0]=-(IntegrationRangeBegin+npoint*IntegrationStep)-xEarth_new[0];
-     l[1]=-xEarth_new[1];
-     l[2]=-xEarth_new[2];
+     for (c=0.0,idim=0;idim<3;idim++) {
+       l[idim]=(IntegrationRangeBegin+npoint*IntegrationStep)*e1[idim]-xEarth[idim];
+       c+=pow(l[idim],2);
+     }
 
-     PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarth_new,l,ColumnIntegral::CoulumnDensityIntegrant);
+     for (c=sqrt(c),idim=0;idim<3;idim++) l[idim]/=c;
+
+
+     PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,xEarth,l,ColumnIntegral::CoulumnDensityIntegrant);
      ColumnIntegral::ProcessColumnIntegrationVector(StateVector,StateVectorLength);
 
      if (PIC::ThisThread==0) {
-       fprintf(fout,"%e  ",IntegrationRangeBegin+npoint*IntegrationStep);
+       fprintf(fout,"%e  %e  ",IntegrationRangeBegin+npoint*IntegrationStep,(IntegrationRangeBegin+npoint*IntegrationStep)/_RADIUS_(_TARGET_));
 
        for (int i=0;i<StateVectorLength;i++) fprintf(fout,"   %e",StateVector[i]);
        fprintf(fout,"\n");
