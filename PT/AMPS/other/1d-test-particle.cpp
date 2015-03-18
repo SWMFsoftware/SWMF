@@ -339,7 +339,7 @@ int main(int argc, char **argv) {
 
     for (int mode=0;mode<2;mode++) {
       for (i=0;i<nVelocityDistributionSampledIntervals;i++) if (fmax[mode]<VelocityDistributionBuffer[mode][i]) fmax[mode]=VelocityDistributionBuffer[mode][i];
-      for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionBuffer[mode][i]/=fmax[mode];
+      for (i=0;i<nVelocityDistributionSampledIntervals;i++) if (fmax[mode]>0.0) VelocityDistributionBuffer[mode][i]/=fmax[mode];
     }
 
     for (i=0;i<nVelocityDistributionSampledIntervals;i++) {
