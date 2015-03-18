@@ -105,12 +105,16 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 
   long int nd;
   int i,j,k;
+  double PlasmaNumberDensity, PlasmaPressure, PlasmaTemperature;
   double PlasmaBulkVelocity[3];
 
   double lifetime=0.0;
 
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
-  //  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+  PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
+  PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure(x,nd,node);
+  PlasmaTemperature   = PlasmaPressure / (Kbol * PlasmaNumberDensity);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
 
   PhotolyticReactionAllowedFlag=true;
 
@@ -121,12 +125,11 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
   }
 
   // temporary variables
-  double v1[3]={0.0,0.0,0.0}, v2[3]={1E+5,0.0,0.0};
-  double Temp = 1E+5, NDen=1E+5;
+  double v1[3]={0.0,0.0,0.0};
   //-------------------
   switch (spec) {
   case _H_SPEC_:
-    lifetime= ChargeExchange::LifeTime(_H_SPEC_, v1, v2, Temp, NDen);
+    lifetime= ChargeExchange::LifeTime(_H_SPEC_, v1, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown specie");
