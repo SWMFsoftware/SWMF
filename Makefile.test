@@ -480,6 +480,10 @@ test3_check:
 		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
 		output/test3/IE.mag \
 		>> test3_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-5 \
+		${TESTDIR}/RESULTS/IE/it000321_104520_000.idl \
+		output/test3/IE_it000321_104520_000.idl \
+		>> test3_ie.diff)
 	gunzip -c output/test3/IM_2d__max_t00000020.dat.gz \
 		> ${TESTDIR}/RESULTS/IM/t20.dat
 # Remove date stamp from tecplot files
