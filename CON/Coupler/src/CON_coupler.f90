@@ -93,8 +93,9 @@ module CON_coupler
        IE_, RB_, &
        IE_, UA_, &
        IH_, OH_, &
-       OH_, IH_,  &
-       PC_, GM_ &
+       OH_, IH_, &
+       OH_, PT_, &
+       PC_, GM_  &
        /), (/2, MaxCouple/) )
 
   ! Should do coupling limit the time step
