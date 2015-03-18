@@ -471,63 +471,44 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
 
 void Exosphere::ColumnIntegral::GetSubsolarPointDirection(double *LimbDirection,double *EarthPosition) {
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  SpiceInt n,nxpts;
-  SpiceDouble rad[3],xpt0[3],xpt1[3],xLimb_IAU[3],xLimb_SO[3];
-  SpiceDouble EarthState_IAU[6],EarthState_SO[6],lt,SunState_IAU[6];
-  SpiceEllipse limb;
-  SpicePlane plane;
+  //determine the position of the limb
+  SpiceDouble EarthState_SO[6],lt,SunState_SO[6];
+  double rEarth[3];
 
-  //find the limb
-  bodvrd_c(ObjectName, "RADII", 3, &n, rad );
-  spkezr_c("Earth",Exosphere::OrbitalMotion::et,IAU_FRAME,"none",ObjectName,EarthState_IAU,&lt);
-  edlimb_c(rad[0],rad[1],rad[2],EarthState_IAU,&limb);
-
-  //find intersection of the limb with the plane hat contains position of the Earth, center of the boly and the Sun
-  spkezr_c("SUN",Exosphere::OrbitalMotion::et,IAU_FRAME,"none","EARTH",SunState_IAU,&lt);
-  psv2pl_c (EarthState_IAU,EarthState_IAU,SunState_IAU,&plane);
-  inelpl_c (&limb,&plane,&nxpts,xpt0,xpt1);
-
-  //choose the limb
-  double cosXpt0=0.0,cosXpt1=0.0;
-  int idim=0;
-
-  if (nxpts<2) {
-    exit(__LINE__,__FILE__,"Error: cannot file point of intersection of the plane that contains centers of the Earth, the Object and the Sun with the elips of the limb");
-  }
-
-  for (idim=0;idim<3;idim++) {
-    cosXpt0+=(xpt0[idim]-EarthState_IAU[idim])*(SunState_IAU[idim]-EarthState_IAU[idim]);
-    cosXpt1+=(xpt1[idim]-EarthState_IAU[idim])*(SunState_IAU[idim]-EarthState_IAU[idim]);
-  }
-
-  if (cosXpt0>cosXpt1) memcpy(xLimb_IAU,xpt0,3*sizeof(SpiceDouble)); //'xpt0' is closer to the Sun
-  else memcpy(xLimb_IAU,xpt1,3*sizeof(SpiceDouble)); //'xpt1' is closer to the Sun
-
-
-  //recalcualte position of the Earth in the SO_FRAME
   spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,EarthState_SO,&lt);
+  spkezr_c("SUN",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,SunState_SO,&lt);
 
-  //get the column integral
-  double l[3],c=0.0;
+  //the direction to the limb is the part of the vector Object-Sun that is notmal to the vector Object-Earth
+  double xLimb_SO[3],l1=0.0,l2=0.0,c=0.0,l=0.0;
+  int idim;
 
   for (idim=0;idim<3;idim++) {
-    //recalculate position of the limb in the 'SO_FRAME'
-    xLimb_SO[idim]=
-        (OrbitalMotion::IAU_to_SO_TransformationMartix[idim][0]*xLimb_IAU[0])+
-        (OrbitalMotion::IAU_to_SO_TransformationMartix[idim][1]*xLimb_IAU[1])+
-        (OrbitalMotion::IAU_to_SO_TransformationMartix[idim][2]*xLimb_IAU[2]);
+    l2+=pow(EarthState_SO[idim],2);
+    l1+=pow(SunState_SO[idim],2);
+    c+=EarthState_SO[idim]*SunState_SO[idim];
 
-
-    //gwt the pointing vector
-    l[idim]=xLimb_SO[idim]-EarthState_SO[idim];
-    c+=pow(l[idim],2);
-
-    EarthPosition[idim]=1.0E3*EarthState_SO[idim];
+    rEarth[idim]=1.0E3*EarthState_SO[idim];
   }
 
-  for (c=sqrt(c),idim=0;idim<3;idim++) LimbDirection[idim]=l[idim]/c;
+  for (idim=0;idim<3;idim++) {
+    xLimb_SO[idim]=SunState_SO[idim]-c*EarthState_SO[idim]/l2;
+    l+=pow(xLimb_SO[idim],2);
+  }
+
+  l=_RADIUS_(_TARGET_)/sqrt(l);
+
+  for (c=0.0,idim=0;idim<3;idim++) {
+    xLimb_SO[idim]*=l;
+    EarthPosition[idim]=1.0E3*EarthState_SO[idim];
+
+    //get the pointing vector
+    LimbDirection[idim]=xLimb_SO[idim]-EarthPosition[idim];
+    c+=pow(LimbDirection[idim],2);
+  }
+
+  for (c=sqrt(c),idim=0;idim<3;idim++) LimbDirection[idim]/=c;
 #else
-  for (int idim=0;idim<3;idim++) LimbDirection[idim]=0.0;
+  for (int idim=0;idim<3;idim++) LimbDirection[idim]=0.0,EarthPosition[idim]=0.0;
 #endif
 }
 
