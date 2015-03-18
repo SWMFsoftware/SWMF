@@ -100,6 +100,13 @@ module ModUser
   real :: R1PerturbedSi  = 2e6, R1Perturbed
   real :: ratioPerturbed = 1e-10
 
+  ! Parameters to increase the neutral density in the source term to
+  ! approach the steady state solution more easily (hopefully)
+  logical :: DoEnhancedNeu   = .false.
+  integer :: EnhancedRatio   = 20
+  integer :: DecadeDn        = 10000
+  integer :: nStepEnhanceNeu = -100
+
   ! minimum temperature for neutral
   real :: TempNeuMinSi = 60.0, TempNeuMin
 
@@ -210,6 +217,10 @@ contains
           call read_var('ratioPerturbed', ratioPerturbed)
        case("#MINIMUMNEUTEMPERATURE")
           call read_var('TempNeuMinSi', TempNeuMinSi)
+       case('#ENHANCENEU')
+          call read_var('DoEnhancedNeu', DoEnhancedNeu)
+          call read_var('EnhancedRatio', EnhancedRatio)
+          call read_var('DecadeDn',      DecadeDn)
        case('#USERINPUTEND')
           EXIT
        case default
@@ -342,6 +353,10 @@ contains
        FaceCoordsTest_D     = (/FaceCoordsX, FaceCoordsY, FaceCoordsZ/)
     end if
 
+    if (nStepEnhanceNeu < 0) then
+       nStepEnhanceNeu = n_step
+    end if
+
     if(iProc==0)then
        write(*,*) 'rSphericalBodySi, rSphericalBody       =', &
             rSphericalBodySi, rSphericalBody
@@ -377,6 +392,7 @@ contains
        write(*,*)'LatSun, LonSun             =', LatSun, LonSun
        write(*,*)'NormalSun_D                =', NormalSun_D
        write(*,*)'TminSi, Tmin               =', TminSi, Tmin
+       write(*,*)'nStepEnhanceNeu            =', nStepEnhanceNeu
     end if
   end subroutine user_init_session
   !===========================================================================
@@ -1032,6 +1048,7 @@ contains
     ! calculate all collision rates for electrons (fen, fei)
     ! (used for sources & resistivity)
 
+    use ModMain,       ONLY: n_step
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: No2SI_V, UnitN_
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
@@ -1070,8 +1087,14 @@ contains
     ! and Itikawa, Phys. Fluids 1983
     !  fen_I(H2O_) = 2.745E-5*NnNeu_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)
     !               /1e6*Te**(-0.62)      !! rate in [1/s]
-    fen_I(Neu1_) = 2.745E-5*State_VGB(Neu1Rho_, i, j, k, iBlock)/1e6 &
-         *Te**(-0.62)/MassFluid_I(nFluid)*No2SI_V(UnitN_)
+    if (DoEnhancedNeu) then
+       fen_I(Neu1_) = 2.745E-5*State_VGB(Neu1Rho_, i, j, k, iBlock)/1e6 &
+            *Te**(-0.62)/MassFluid_I(nFluid)*No2SI_V(UnitN_) &
+            * max(EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+    else
+       fen_I(Neu1_) = 2.745E-5*State_VGB(Neu1Rho_, i, j, k, iBlock)/1e6 &
+            *Te**(-0.62)/MassFluid_I(nFluid)*No2SI_V(UnitN_)
+    end if
 
     ! Electron - ion collision rates
     ! e - H2Op, Schunk and Nagy, Ionospheres, Cambridge University Press, 2000
@@ -1426,7 +1449,7 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, Dt_BLK
+         BlkTest, PROCtest, Dt_BLK, n_step
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
@@ -1574,8 +1597,14 @@ contains
          No2SI_V(UnitTemperature_)
 
     ! Neu1 density in SI
-    nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock)/MassFluid_I(nFluid)* &
-         No2SI_V(UnitN_)
+    if (DoEnhancedNeu) then
+       nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) &
+            / MassFluid_I(nFluid)*No2SI_V(UnitN_) &
+            * max(EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+    else
+       nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) &
+            / MassFluid_I(nFluid)*No2SI_V(UnitN_)
+    end if
 
     ! (u_i-u_n)^2 in SI
     do iIonFluid=1,nIonFluid
@@ -3348,7 +3377,7 @@ contains
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
-    use ModMain,       ONLY: Dt_BLK
+    use ModMain,       ONLY: Dt_BLK, n_step
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -3378,8 +3407,15 @@ contains
        NameTecUnit = '[1/cm^3]'
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
-               MassFluid_I(nFluid)*No2Si_V(UnitN_)
+          if (DoEnhancedNeu) then
+             PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
+                  MassFluid_I(nFluid)*No2Si_V(UnitN_) * &
+                  max( &
+                  EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+          else
+             PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
+                  MassFluid_I(nFluid)*No2Si_V(UnitN_)
+          end if
        end do; end do; end do
 
     case('unx1')
