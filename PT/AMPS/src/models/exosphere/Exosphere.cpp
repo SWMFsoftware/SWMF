@@ -417,7 +417,7 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
   }
 
   if (fabs(c)>1.0-1.0E-15) {
-    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s\%%ld)\n",__FILE__,__LINE__);
+    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%ld)\n",__FILE__,__LINE__);
     return;
   }
 
@@ -438,7 +438,7 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
     char vlist[_MAX_STRING_LENGTH_PIC_]="";
 
     ColumnIntegral::GetVariableList(vlist);
-    fprintf(fout,"VARIABLES=\"Distance from the planet [m]\", \"Distance from the planet [rObject]\",  %s\n",vlist);
+    fprintf(fout,"VARIABLES=\"R [m]\", \"R [rObject]\",  %s\n",vlist);
   }
 
   for (npoint=0;npoint<nPoints;npoint++) {
@@ -551,6 +551,40 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
 
 
   //determine the position of the limb
+  SpiceDouble EarthState_SO[6],lt,SunState_SO[6];
+  double rEarth[3];
+
+  spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,EarthState_SO,&lt);
+  spkezr_c("SUN",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,SunState_SO,&lt);
+
+  //the direction to the limb is the part of the vector Object-Sun that is notmal to the vector Object-Earth
+  double xLimb_SO[3],l1=0.0,l2=0.0,c=0.0,l=0.0;
+  int idim;
+
+  for (idim=0;idim<3;idim++) {
+    l2+=pow(EarthState_SO[idim],2);
+    l1+=pow(SunState_SO[idim],2);
+    c+=EarthState_SO[idim]*SunState_SO[idim];
+
+    rEarth[idim]=1.0E3*EarthState_SO[idim];
+  }
+
+  if (fabs(c/sqrt(l1*l2))>1.0-1.0E-15) {
+    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%ld)\n",__FILE__,__LINE__);
+    return;
+  }
+
+  for (idim=0;idim<3;idim++) {
+    xLimb_SO[idim]=SunState_SO[idim]-c*EarthState_SO[idim]/l2;
+    l+=pow(xLimb_SO[idim],2);
+  }
+
+  l=_RADIUS_(_TARGET_)/sqrt(l);
+
+  for (idim=0;idim<3;idim++) xLimb_SO[idim]*=l;
+
+
+/*
   SpiceInt n,nxpts;
   SpiceDouble rad[3],xpt0[3],xpt1[3],xLimb_IAU[3],xLimb_SO[3];
   SpiceDouble EarthState_IAU[6],EarthState_SO[6],lt,SunState_IAU[6];
@@ -562,9 +596,11 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
   spkezr_c("Earth",Exosphere::OrbitalMotion::et,IAU_FRAME,"none",ObjectName,EarthState_IAU,&lt);
   edlimb_c(rad[0],rad[1],rad[2],EarthState_IAU,&limb);
 
-  //find intersection of the limb with the plane hat contains position of the Earth, center of the boly and the Sun
-  spkezr_c("SUN",Exosphere::OrbitalMotion::et,IAU_FRAME,"none","EARTH",SunState_IAU,&lt);
-  psv2pl_c (EarthState_IAU,EarthState_IAU,SunState_IAU,&plane);
+  //find intersection of the limb with the plane hat contains position of the Earth, center of the Object and the Sun
+  SpiceDouble rObject_IAU[3]={0.0,0.0,0.0};
+
+  spkezr_c("SUN",Exosphere::OrbitalMotion::et,IAU_FRAME,"none",ObjectName,SunState_IAU,&lt);
+  psv2pl_c (rObject_IAU,EarthState_IAU,SunState_IAU,&plane);
   inelpl_c (&limb,&plane,&nxpts,xpt0,xpt1);
 
   //choose the limb
@@ -583,12 +619,11 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
   if (cosXpt0>cosXpt1) memcpy(xLimb_IAU,xpt0,3*sizeof(SpiceDouble)); //'xpt0' is closer to the Sun
   else memcpy(xLimb_IAU,xpt1,3*sizeof(SpiceDouble)); //'xpt1' is closer to the Sun
 
-
   //recalcualte position of the Earth in the SO_FRAME
   spkezr_c("Earth",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,EarthState_SO,&lt);
 
   //get the column integral
-  double l[3],rEarth[3],c=0.0;
+  double l[3],rEarth[3],c;
 
   for (idim=0;idim<3;idim++) {
     //recalculate position of the limb in the 'SO_FRAME'
@@ -600,8 +635,12 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
     //Convert position of the limb in meters
     xLimb_SO[idim]*=1.0E3;
     rEarth[idim]=1.0E3*EarthState_SO[idim];
-  }
+  }*/
 
+/*  //the vectory of xLimb_SO has to be normal to the vector of EarthState_SO
+  if ((c=fabs(xLimb_SO[0]*EarthState_SO[0]+xLimb_SO[1]*EarthState_SO[1]+xLimb_SO[2]*EarthState_SO[2]))>1.0E5) {
+    exit(__LINE__,__FILE__,"Something wrong in calculation of the pointing vector to the limb");
+  }*/
 
   //open the output file
   if (PIC::ThisThread==0) {
@@ -616,7 +655,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
     et2utc_c(Exosphere::OrbitalMotion::et,"ISOC",0,lenout,utcstr);
     fprintf(fout,"TITLE=\"UTC=%s, Radial size of the planet=%e\"\n",utcstr,atan(_RADIUS_(_TARGET_)/sqrt(rEarth[0]*rEarth[0]+rEarth[1]*rEarth[1]+rEarth[2]*rEarth[2]))/Pi*180.0);
 
-    fprintf(fout,"VARIABLES=\"R [Object Radii]\", \"R [m]\", \"Angle from the center of the object [degree]\" %s \n",vlist);
+    fprintf(fout,"VARIABLES=\"Altitude [Object Radii]\", \"Altitude [m]\", \"Angle from the center of the object [degree]\" %s \n",vlist);
     fprintf(fout,"ZONE T=\"Column Density Along the Limb\"\n");
 
 
@@ -642,6 +681,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
   for (int i=0;i<StateVectorLength;i++) StateVectorMax[i]=0.0;
 
   while (R<maxAltitude) {
+    double l[3];
 
     //get the pointing direction
     for (c=0.0,idim=0;idim<3;idim++) {
@@ -674,7 +714,7 @@ void Exosphere::ColumnIntegral::Limb(char *fname) {
     static SpiceDouble lastStateMoonEarth_SO[6]={0.0,0.0,0.0,0.0,0.0,0.0};
     static int cnt=0;
 
-    spkezr_c("Moon",Exosphere::OrbitalMotion::et,SO_FRAME,"none","Earth",StateMoonEarth_SO,&lt);
+    spkezr_c(ObjectName,Exosphere::OrbitalMotion::et,SO_FRAME,"none","Earth",StateMoonEarth_SO,&lt);
     spkezr_c("Sun",Exosphere::OrbitalMotion::et,SO_FRAME,"none",ObjectName,StateSun_SO,&lt);
 
     if (PIC::DataOutputFileNumber!=0) if (lastStateMoonEarth_SO[3]*StateMoonEarth_SO[3]<0.0) {
