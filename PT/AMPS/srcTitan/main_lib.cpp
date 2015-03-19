@@ -38,11 +38,12 @@ const double DebugRunMultiplier=4.0;
 const double rSphere=4010430.7796;
 
 
-const double xMaxDomain=1.25; 
-const double yMaxDomain=1.25; 
+const double xMaxDomain=1.5; 
+const double yMaxDomain=1.5; 
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
-const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
+//const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
+const double dxMinSphere=0.08,dxMaxSphere=0.48; //Units of planetary radii
 
 
 
@@ -64,7 +65,8 @@ double localSphericalSurfaceResolution(double *x) {
 
   res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
-
+	//cout << "res0 " << res*rSphere << endl;
+  
   return rSphere*res;
 }
 
@@ -79,24 +81,30 @@ double localResolution(double *x) {
   if (r>dxMinGlobal*rSphere) {
     lnR=log(r);
     res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
+     
+    // cout << "res1 " << res*rSphere << endl;
   }
-  else res=dxMinGlobal;
-
+  else{
+	res=dxMinGlobal;
+	//cout << "res2 " << res*rSphere << endl;
+	   
+}
 //  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
 
   return rSphere*res;
 }
-
+///////////////////////////////////////
 //set up the local time step
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
 
-  double CharacteristicSpeed_N2=2.0E3;
+  double CharacteristicSpeed_N2=2.5E3;
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
   CellSize=startNode->GetCharacteristicCellSize();
+//  cout << "time step s" << 0.1*CellSize/CharacteristicSpeed_N2 << endl;
   return 0.1*CellSize/CharacteristicSpeed_N2;
 
 
@@ -670,7 +678,7 @@ void amps_init() {
 
 
 //init the PIC solver
-  PIC::Init_AfterParser ();
+	PIC::Init_AfterParser ();
 	PIC::Mover::Init();
 //	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
 
@@ -690,7 +698,9 @@ void amps_init() {
   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s); 
 
   //copy the weight and time step from Na neutra to Na ions
-//  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(NAPLUS,NA,5.0E3/800.0E3);
+  ////////////////////////////////Change lines below for new weighting scheme OJ////////////////////
+  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(1,0,5.0E3/800.0E3);
+  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(3,2,5.0E3/800.0E3);
 //  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(NAPLUS,NA,5.0E3/800.0E3);
 
   //set photolytic reactions
