@@ -1,10 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !============================================================================!
 subroutine write_logfile_SP(TypeActionLogFile)
-  use SP_ModMain
+  use SP_ModMain, ONLY: PInjection, DeltaLnP, SP_Time, SP_DirOut, nP, &
+                        iStdOut, prefix, NameParticle, check_allocate
   use ModIOUnit
   implicit none
+  real, external::momentum_to_kinetic_energy, energy_in
   character(LEN=*),intent(in):: TypeActionLogFile
   !--------------------------------------------------------------------------!
   character(LEN=*),parameter:: NameSub=' write_logfile_SP'
@@ -75,7 +78,7 @@ subroutine write_logfile_SP(TypeActionLogFile)
 end subroutine write_logfile_SP
 !============================================================================!
 subroutine integrate_diff_energy_flux(P_I,E_I,ELow,TotalDEFlux)
-  use SP_ModMain
+  use SP_ModMain, ONLY: nX,nP, F_II
   implicit none
   !--------------------------------------------------------------------------!
   real,intent(in):: ELow
@@ -89,14 +92,22 @@ subroutine integrate_diff_energy_flux(P_I,E_I,ELow,TotalDEFlux)
   do iLnP = 1,nP-1
      if ((E_I(iLnP)>ELow).and.(.not.IsFound)) then
         IsFound = .true.
+        !\
+        ! Contribution from an incomplete interval
+        ! [ ELow, E_I(iLnP) ]
+        !/
         TotalDEFlux =(&
-             (0.50*(E_I(iLnP+1)+ELow)-E_I(iLnP))*&
-                     F_II(iLnP+1,nX)*P_I(iLnP+1)**2+ &
-              0.50*(E_I(iLnP+1)-ELow)*&
-                     F_II(iLnP  ,nX)*P_I(iLnP  )**2)*&
-                    (E_I(iLnP+1)-ELow)/(E_I(iLnP+1)-E_I(iLnP))
+             (-0.50*(E_I(iLnP) + ELow) + E_I(iLnP+1) )*&
+                     F_II(iLnP,nX)*P_I(iLnP)**2  &
+             -0.50*(E_I(iLnP)-ELow)*&
+                     F_II(iLnP+1,nX)*P_I(iLnP+1)**2)*&
+                    (E_I(iLnP)-ELow)/(E_I(iLnP+1)-E_I(iLnP))
      end if
      if (IsFound) then
+        !\
+        ! Contribution from the interval
+        ! [ E_I(iLnP), E_I(iLnP+1) ]
+        !/
         TotalDEFlux = TotalDEFlux+&
              0.50*(E_I (iLnP+1) -  E_I(iLnP  ))*  &
                    (F_II(iLnP  ,nX)*P_I(iLnP  )**2+&
