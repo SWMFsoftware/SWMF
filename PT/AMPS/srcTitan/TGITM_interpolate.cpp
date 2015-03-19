@@ -9,38 +9,78 @@
 using namespace std;
 
 	const int nd = Titan::tgitm_exobase::ndes, nc = Titan::tgitm_exobase::nclmns,
-	np = Titan::tgitm_exobase::nintp;
-	double Titan::tgitm_exobase::tgitm_grid[nd][nc],
-	Titan::tgitm_exobase::interp_val[np],Titan::tgitm_exobase::maxflx[PIC::nTotalSpecies];
+	np = Titan::tgitm_exobase::nintp,on=1,off=0,nspc=PIC::nTotalSpecies;
 	
+	double Titan::tgitm_exobase::tgitm_grid[nd][nc],realT,
+	Titan::tgitm_exobase::interp_val[np],Titan::tgitm_exobase::maxflx[PIC::nTotalSpecies],
+	Titan::tgitm_exobase::totalflux[PIC::nTotalSpecies];
+	
+	const double numT=Titan::tgitm_exobase::Tnum;
+
+
+
+/////####################################################################################################3
+/*
+ * read_tgitm(): This function reads in a flux s^-1 and temperature map (N2,CH4,H2) from the 
+ * Bell GITM result at the exobase (lat and long) current the exobase is set at 4010430.7796m 
+ * e.g. main_lib.cpp line 38. The current setup adjusts the N2 flux on each surface element by
+ * sqrt(numT/realT) where numT is the gas temperature set for an imposed numerical distribution 
+ * and realT is the real temperature of the element.
+ * 
+ * Additionally the total integrated surface flux is calculated in this function e.g. 
+ * totalflux[PIC::nTotalSpecies] this  values are used in the gettotalproductionrate function.
+*/
 	void Titan::tgitm_exobase::read_tgitm() {
 	const int nLatitudes = 72;
 
 	
-	//cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::ndes<<endl;
 	ifstream fin("data/input/Titan/TGITM_EXOBASE.dat");
 	
 	if(fin.is_open())
 	{
+		//initialize toatal flux values to 0
+		for(int i=0;i<nspc;i++)Titan::tgitm_exobase::totalflux[i]=0.0;
+		
 		for(int i=0;i<nd;i++)
 		{
 			for(int j=0;j<nc;j++)
 			{
+				//Read in flux and temperature map
 				fin >> Titan::tgitm_exobase::tgitm_grid[i][j];
-				//cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::tgitm_grid[i][j]<<endl;
 			}
+			
+				for(int j=2;j<5;j++){
+						
+						//If Snum is on implement numerical distribution (e.g. weighted velocity distribution function)
+						if(Titan::tgitm_exobase::Snum == on && j == 2){
+							realT=Titan::tgitm_exobase::tgitm_grid[i][5]; //index 5 is column with temperature
+							//This line scaled the flux from the local surface element
+							Titan::tgitm_exobase::tgitm_grid[i][j] = Titan::tgitm_exobase::tgitm_grid[i][j]*sqrt(numT/realT);
+						}
+						//Sum up total fluxes
+						Titan::tgitm_exobase::totalflux[j-2] = Titan::tgitm_exobase::totalflux[j-2]+
+						Titan::tgitm_exobase::tgitm_grid[i][j];
+				}
+			
 		}
 	}
 	else
 	{
-			cout<<"THE FILE DID NOT OPEN"<<endl;
+		cout<<"THE FILE DID NOT OPEN"<<endl;
+	}
+
 	}
 	
-	}
-
-
+/////###########################################################################################################3
+/*
+ This function interpolates a generated particles coordinated to calculated the nummerical flux
+ * from a surface element in the simulation the interpolated values are put in array interp_val[i]
+ * The function does a 2D interpolation and is used in Titan.h. In Titan.h the a particle is accepted using
+ * acceptance rejection based on the local maximum flux Titan.h (line 69). In this function we find the local
+ * maximum using the four interpolation points.
+ */
   void Titan::tgitm_exobase::tgitm_interpolate(double polar, double azimuth)
-//Angles should be in Titan center frame
+//Angles should be in Titan centered frame
 {
 	double lat, lng, fp[4];
 	int i_lat, i_lng, i_cell, itp_point[4];
@@ -49,9 +89,6 @@ using namespace std;
 	const int nLatitudes = 72;
 	const double rad2dg=57.2957795;
 
-	//lat=polar;
-	//lng=azimuth;
-	
 	//Spherical coordinates conveted to lattitude and east longitude for interpolation
 	lat=180.0-polar*rad2dg;
 	lng=360.0-azimuth*rad2dg;
@@ -70,6 +107,8 @@ using namespace std;
 	itp_point[2]=itp_point[0]+nLatitudes;
 	itp_point[3]=itp_point[2]+1;
 	
+	//The above translates particle's position to map consistent with the Bell result
+	///////////
 	
 	for(int i=0; i<np; i++)
 	{
@@ -79,21 +118,17 @@ using namespace std;
 		fp[3] = Titan::tgitm_exobase::tgitm_grid[itp_point[3]][i+2];
 		
 		
-
-//	if (initflag==false) {
-//		initflag=true; 
 	if(i < np-1){
 		Titan::tgitm_exobase::maxflx[i]=fp[0];
-		/*cout<<'a'<<'\t'<<fp[0]<<endl;
-		cout<<'b'<<'\t'<<fp[1]<<endl;
-		cout<<'c'<<'\t'<<fp[2]<<endl;
-		cout<<'d'<<'\t'<<fp[3]<<endl;*/
+
 		for (int j=0; j<4; j++)
 		{ 
+			//calculate local maxium in flux
 			if (Titan::tgitm_exobase::maxflx[i] <fp[j] ) Titan::tgitm_exobase::maxflx[i]=fp[j];
 		}
 	}
 	
+	////Interpolation routine
 		Titan::tgitm_exobase::interp_val[i]=fp[0]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(Titan::tgitm_exobase::tgitm_grid[itp_point[3]][1]-lat)+
 		
 		fp[1]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(lat -Titan::tgitm_exobase::tgitm_grid[itp_point[2]][1])+
@@ -104,84 +139,8 @@ using namespace std;
 			
 		Titan::tgitm_exobase::interp_val[i]=Titan::tgitm_exobase::interp_val[i]/(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])
 		/(Titan::tgitm_exobase::tgitm_grid[itp_point[1]][1]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][1]);
-		
-		
 	}
-	/*cout<<"start"<<endl;
-	cout<<itp_point[0]<<"\t"<<itp_point[1]<<"\t"<<itp_point[2]<<"\t"<<itp_point[3]<<"\t"<<endl;
-	cout<<fp[0]<<"\t"<<fp[1]<<"\t"<<fp[2]<<"\t"<<fp[3]<<"\t"<<endl;
-	cout<<"lat"<<"\t"<<lat<<"\t"<<"lng"<<"\t"<<lng<<"\t"<<Titan::tgitm_exobase::interp_val[3]<<"\t"<<endl;
-	cout<<"end"<<endl<<endl<<endl;*/
 }
 
 
-/*int main()
-{
-	const int ndes=5184;
-	double tgitm_grid[ndes][7], interp_val[4];
-	double theta,phi,dtheta,dphi;
-	int ntheta=100,nphi=100,ii[4],iii,cnt;
-	cout<<"Hello"<<endl;
-	
-	read_tgitm(tgitm_grid, ndes);
-	
-	for(int i=0;i<ndes;i++)
-		{
-			for(int j=0;j<6;j++)
-			{
-				cout << tgitm_grid[i][j]<<'\t';
-			}
-			cout <<endl;
-		}
-		dtheta=360.0/ntheta;
-		dphi=180.0/nphi;
-		theta=0.0;
-		phi=0.0;
-		ofstream fo("TGITM_cc.dat");
-		fo<< "VARIABLES= "<<"long, "<<"lat, "<<"n[N2], " <<"n[CH4], "<<"n{H2], "<<"T[K] "<<endl;
-		fo<<"ZONE NODES= "<<ntheta*nphi<<","<<"ELEMENTS= "<< (ntheta-1)*(nphi-1)<<", "<< "DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL"<<endl;
-		
-		
-		
-		for(int i=0;i<ntheta;i++)
-		{
-			for( int j=0;j<nphi;j++)
-			{
-				tgitm_interpolate(phi, theta, interp_val, tgitm_grid);
-				fo<<theta<<"\t"<<phi<<"\t"<<interp_val[0]<<"\t"<<interp_val[1]<<"\t"<<
-				interp_val[2]<<"\t"<<interp_val[3]<<"\t"<<endl;
-				phi=phi+dphi;
-				//return 0;
-			}
-			phi=0.0;
-			theta=theta+dtheta;
-		}
-		iii=0;
-		cnt=0;
-		for(int i=1;i<=(ntheta-1)*(nphi-1);i++)
-		{
-			cnt=cnt+1;
-			if(cnt % nphi != 0)
-			{
-				iii=iii+1;
-			}
-			else
-			{
-				cnt=1;
-				iii=iii+2;
-			}
-			
-			ii[0]=iii;
-			ii[1]=ii[0]+1;
-			ii[2]=ii[1]+nphi;
-			ii[3]=ii[2]-1;
-			fo<<ii[0]<<"\t"<<ii[1]<<"\t"<<ii[2]<<"\t"<<ii[3]<<"\t"<<endl;
-			
-		}
-		fo.close();
-		
-		
-		return 0;
-		
-}
-*/
+
