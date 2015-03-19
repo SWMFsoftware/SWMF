@@ -39,7 +39,7 @@ PICOBJ = pic.o \
 	pic_sample_pitch_angle_distribution.o \
 	pic_kameleon.o \
 	pic_restart.o \
-	pic_arm.o
+	pic_arms.o
 
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)

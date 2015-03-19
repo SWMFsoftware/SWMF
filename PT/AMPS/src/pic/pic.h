@@ -2452,7 +2452,7 @@ namespace PIC {
       //path to the location of the datafiles
       extern char path[_MAX_STRING_LENGTH_PIC_];
 
-      //read output of ARM (reference???)
+      //read output of ARMS (reference???)
       namespace ARMS {
         //read ARMS' output file
         namespace OUTPUT {
