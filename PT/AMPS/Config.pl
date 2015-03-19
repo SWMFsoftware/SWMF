@@ -53,7 +53,7 @@ foreach (@Arguments) {
    if ((/^-h$/)||(/^-help/)) { #print help message
      print "Config.pl can be used for installing and setting of AMPS\n";
      print "AMPS' settings can be defined in the SWMF's Config.pl: Config.pl -o=PT:spice-path=path,spice-kernels=path,ices-path=path,application=casename\n\n";
-     print "Usage: Config.pl [-help] [-show] [-spice-path] [-spice-kernels] [-ices-path] [-application]\n";
+     print "Usage: Config.pl [-help] [-show] [-spice-path] [-spice-kernels] [-ices-path] [-cplr-data-path] [-application]\n";
      print "\nInformation:\n";
      print "-h -help\t\t\tshow help message.\n";
      print "-s -show\t\t\tshow current settings.\n";
@@ -63,6 +63,7 @@ foreach (@Arguments) {
      print "-application=case\t\tthe name of the model case to use.\n";
      print "-boost-path=PATH\t\tthe path to the boost library.\n";
      print "-kameleon-path=PATH\t\tthe path for the Kameleon library.\n";
+     print "-cplr-data-path=PATH\t\tthe path to the data files used to import other model results by PIC::CPLR::DATAFILE.\n";
      
      exit;
    }
@@ -128,6 +129,8 @@ foreach (@Arguments) {
   
   if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> .ampsConfig.Settings`;     next};
   if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> .ampsConfig.Settings`;     next};
+  
+  if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> .ampsConfig.Settings`;     next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
