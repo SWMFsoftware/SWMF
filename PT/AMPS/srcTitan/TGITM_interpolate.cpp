@@ -8,21 +8,23 @@
 
 using namespace std;
 
-	double Titan::tgitm_exobase::tgitm_grid[Titan::tgitm_exobase::ndes][10], Titan::tgitm_exobase::interp_val[7];
-	
+	const int nd = Titan::tgitm_exobase::ndes, nc = Titan::tgitm_exobase::nclmns,
+	np = Titan::tgitm_exobase::nintp;
+	double Titan::tgitm_exobase::tgitm_grid[nd][nc],
+	Titan::tgitm_exobase::interp_val[np],Titan::tgitm_exobase::maxflx[PIC::nTotalSpecies];
 	
 	void Titan::tgitm_exobase::read_tgitm() {
 	const int nLatitudes = 72;
 
 	
-	cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::ndes<<endl;
+	//cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::ndes<<endl;
 	ifstream fin("data/input/Titan/TGITM_EXOBASE.dat");
 	
 	if(fin.is_open())
 	{
-		for(int i=0;i<Titan::tgitm_exobase::ndes;i++)
+		for(int i=0;i<nd;i++)
 		{
-			for(int j=0;j<10;j++)
+			for(int j=0;j<nc;j++)
 			{
 				fin >> Titan::tgitm_exobase::tgitm_grid[i][j];
 				//cout<<"!!!!!!!!!!!!!"<<"\t"<<Titan::tgitm_exobase::tgitm_grid[i][j]<<endl;
@@ -69,12 +71,28 @@ using namespace std;
 	itp_point[3]=itp_point[2]+1;
 	
 	
-	for(int i=0; i<7; i++)
+	for(int i=0; i<np; i++)
 	{
 		fp[0] = Titan::tgitm_exobase::tgitm_grid[itp_point[0]][i+2];
 		fp[1] = Titan::tgitm_exobase::tgitm_grid[itp_point[1]][i+2];
 		fp[2] = Titan::tgitm_exobase::tgitm_grid[itp_point[2]][i+2];
 		fp[3] = Titan::tgitm_exobase::tgitm_grid[itp_point[3]][i+2];
+		
+		
+
+//	if (initflag==false) {
+//		initflag=true; 
+	if(i < np-1){
+		Titan::tgitm_exobase::maxflx[i]=fp[0];
+		/*cout<<'a'<<'\t'<<fp[0]<<endl;
+		cout<<'b'<<'\t'<<fp[1]<<endl;
+		cout<<'c'<<'\t'<<fp[2]<<endl;
+		cout<<'d'<<'\t'<<fp[3]<<endl;*/
+		for (int j=0; j<4; j++)
+		{ 
+			if (Titan::tgitm_exobase::maxflx[i] <fp[j] ) Titan::tgitm_exobase::maxflx[i]=fp[j];
+		}
+	}
 	
 		Titan::tgitm_exobase::interp_val[i]=fp[0]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(Titan::tgitm_exobase::tgitm_grid[itp_point[3]][1]-lat)+
 		
