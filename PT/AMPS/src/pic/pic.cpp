@@ -1487,6 +1487,8 @@ void PIC::Init_BeforeParser() {
   PIC::CPLR::ICES::Init();
 #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
   PIC::CPLR::CCMC::Init();
+#elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+  PIC::CPLR::DATAFILE::Init();
 #endif
 
   //init the background atmosphere model

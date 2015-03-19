@@ -2445,6 +2445,22 @@ namespace PIC {
 
     }
 
+    //reading output/restart/etc files from other codes
+    namespace DATAFILE {
+      using namespace ICES;
+
+      //path to the location of the datafiles
+      extern char path[_MAX_STRING_LENGTH_PIC_];
+
+      //read output of ARM (reference???)
+      namespace ARMS {
+        //read ARMS' output file
+        namespace OUTPUT {
+          void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+        }
+      }
+    }
+
     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
       ICES::GetBackgroundElectricField(E,x,nd,node);
@@ -2452,6 +2468,8 @@ namespace PIC {
       SWMF::GetBackgroundElectricField(E,x,nd,node);
       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
       CCMC::GetBackgroundElectricField(E,x,nd,node);
+      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+      DATAFILE::GetBackgroundElectricField(E,x,nd,node);
       #else
       exit(__LINE__,__FILE__,"not implemented");
       #endif
@@ -2464,6 +2482,8 @@ namespace PIC {
        SWMF::GetBackgroundMagneticField(B,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
        CCMC::GetBackgroundMagneticField(B,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       DATAFILE::GetBackgroundMagneticField(B,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2477,6 +2497,8 @@ namespace PIC {
        SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
        CCMC::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       DATAFILE::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
