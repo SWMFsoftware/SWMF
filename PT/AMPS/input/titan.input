@@ -1,9 +1,7 @@
 
 #main  
 
-SpeciesList=N2,CH4,H2,N2_hot 
-
-
+SpeciesList=N2,CH4,H2
 !settings of the directories
 !update the following variables in the makefile 
 
@@ -52,7 +50,7 @@ CouplerMode=off !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=400
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=100
+  InitialSampleLength=25000
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -73,12 +71,12 @@ CouplerMode=off !ices !!off, ices, swmf
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
-     const (N2,N2)= 5.462884E-19 \\
-     const (CH4,CH4)= 7.3289901E-19 \\
-     const (H2,H2)= 2.6786476E-19 
-!    const (N2,CH4)= 6.3617251E-19 \\
-!    const (N2,H2)= 3.9980473E-19 \\
-!    const (CH4,H2)= 4.7175977-19 
+    const (N2,N2)= 5.462884E-19 \\     
+    const (CH4,CH4)= 7.3289901E-19 \\
+    const (H2,H2)= 2.6786476E-19 \\
+    const (N2,CH4)= 6.3617251E-19 \\
+    const (N2,H2)= 3.9980473E-19 \\
+    const (CH4,H2)= 4.7175977-19 
 #endParticleCollisions
 
 
