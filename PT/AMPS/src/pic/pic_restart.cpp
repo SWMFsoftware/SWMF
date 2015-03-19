@@ -348,7 +348,7 @@ unsigned long PIC::Restart::GetParticleDataCheckSum() {
   MPI_Bcast(&CheckSum,sizeof(CRC32),MPI_CHAR,PrevNodeThread,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
-    printf("$PREFIX:The particle data CRC32 checksum=0x%lx (%ld@%s):\n",CheckSum.checksum(),__LINE__,__FILE__);
+    printf("$PREFIX:The particle data CRC32 checksum=0x%lx (%i@%s):\n",CheckSum.checksum(),__LINE__,__FILE__);
   }
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);

@@ -417,7 +417,7 @@ void Exosphere::ColumnIntegral::Tail(char *fname) {
   }
 
   if (fabs(c)>1.0-1.0E-15) {
-    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%ld)\n",__FILE__,__LINE__);
+    printf("$PREFIX:WARNING: the Object, Earth and Sun are aligned - can not define the plane in which the column integrals will be calculated. The output of the column integrals is skipped. Sorry :-( (%s@%i)\n",__FILE__,__LINE__);
     return;
   }
 
