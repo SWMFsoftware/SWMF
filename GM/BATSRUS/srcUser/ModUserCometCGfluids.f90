@@ -353,7 +353,7 @@ contains
        FaceCoordsTest_D     = (/FaceCoordsX, FaceCoordsY, FaceCoordsZ/)
     end if
 
-    if (nStepEnhanceNeu < 0) then
+    if (DoEnhancedNeu) then
        nStepEnhanceNeu = n_step
     end if
 
