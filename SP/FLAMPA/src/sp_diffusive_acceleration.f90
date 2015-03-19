@@ -109,14 +109,14 @@ subroutine advance_diffusion(Dt,n,X_DI,F_I,DOuter_I,DInner_I)
   ! Update the solution from f^(n) to f^(n+1):
   !/
   call tridag(n,Lower_I,Main_I,Upper_I,F_I,F_I)
-  !------------------------------------ DONE --------------------------------!
+  !--------- DONE -------------------!
 end subroutine advance_diffusion
 !============================================================================!
-subroutine enhance_diffusion(Din_I,Dout_I)
-  use SP_ModMain
+subroutine enhance_diffusion(DInner_I,DOuter_I)
+  use SP_ModMain, ONLY:nX, DiffCoeffMin
   implicit none
-  real,dimension(nX),intent(inout):: Din_I  
-  real,dimension(nX),intent(in):: Dout_I
-  Din_I = max(Din_I,DiffCoeffMin/Dout_I) 
+  real,dimension(nX),intent(inout):: DInner_I  
+  real,dimension(nX),intent(in):: DOuter_I
+  DInner_I = max(DInner_I,DiffCoeffMin/DOuter_I) 
 end subroutine enhance_diffusion
 !============================================================================!
