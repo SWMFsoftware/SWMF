@@ -631,7 +631,7 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
 
   do iLon=1, nLons
     do iLat=1, nLats
-      do iAlt=0, nAlts+1 
+      do iAlt=1, nAlts 
       
         tte = te(iLon,iLat,iAlt)
         ttn = tn(iLon,iLat,iAlt)
