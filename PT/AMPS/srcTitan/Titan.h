@@ -31,35 +31,19 @@ namespace Titan {
   using namespace Exosphere;
 
   namespace tgitm_exobase {
-	const int ndes=5184,nclmns=6,nintp=nclmns-2;
+	
+	const int ndes=5184,nclmns=6,nintp=nclmns-2,Tnum = 800.0;
+	const int Snum = 1;
 	extern double tgitm_grid[ndes][nclmns],interp_val[nintp],
-	maxflx[PIC::nTotalSpecies];
+	maxflx[PIC::nTotalSpecies],totalflux[PIC::nTotalSpecies];
 	
 	void read_tgitm();
+	
 	void tgitm_interpolate(double polar, double azimuth);
 	
 	inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
-		double totflx;
-		const int _H2_SPEC=2, _N2_hot_SPEC=3;
-		const double cld_n2frac =0.846337503627120, hot_n2frac = 0.153662496365279;
-    switch (spec) {
-    case _N2_SPEC_:
-      //totflx=5.234441936979082E+029;
-      totflx=5.234441936979082E+029*cld_n2frac;
-      break;
-    case _CH4_SPEC_:
-      totflx= 1.418603333195361E+029;
-      break;
-    case _H2_SPEC:
-      totflx=9.567547774989199E+028;
-      break;
-    case _N2_hot_SPEC:
-      totflx=5.234441936979082E+029*hot_n2frac;
-      break;
-    default:
-      exit(__LINE__,__FILE__,"Error: The source rate for the species is not defined");
-    }
-		return totflx;
+			
+			return totalflux[spec];
 		}
 
 	inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
@@ -68,34 +52,20 @@ namespace Titan {
 
 		unsigned int idim;
 		long int nZenithElement,nAzimuthalElement;
-		int el,ss;
-		const int _H2_SPEC=2, _N2_hot_SPEC=3;
+		int el;
 		double r,vbulk[3]={0.0,0.0,0.0},ExternalNormal[3];
 		//'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
 		double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
 		SpiceDouble xform[6][6];
 		double pol,azi,rrr,r4,r3;
-//##################################################################################
 		double  flx=0.0, mxflx=1.0,ParticleWeight;
 		double ParticleWeightCorrection=1.0;
 		double vel_wght = 500.0;
-		
-		//ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
-		//cInternalSphericalData *Sphere=NULL;
-
-		/*switch (BoundaryElementType) {
-			case _INTERNAL_BOUNDARY_TYPE_SPHERE_ :
-			Sphere=(cInternalSphericalData*)(BoundaryElement);
-			Sphere->GetSphereGeometricalParameters(sphereX0,sphereRadius);
-		break;
-		}*/
-
 
 		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
 //Geenrate new particle position
-		ss=spec;
-		if(spec==3)ss=0;
+//First the generated particle position must be consistent with local flux
 		while( rnd() > flx/mxflx ){ 
 			r=0.0;
 			for (idim=0;idim<DIM;idim++) {
@@ -108,10 +78,11 @@ namespace Titan {
 			pol = acos(ExternalNormal[2]/r);
 			tgitm_interpolate(pol, azi);
 			mxflx=maxflx[spec];
-			flx=interp_val[ss];
+			flx=interp_val[spec];
 
 		}
-//##################################################################################
+//
+//###### Particle has been accepted
 			
 		for (idim=0;idim<DIM;idim++) {
 			ExternalNormal[idim]/=r;
@@ -122,61 +93,34 @@ namespace Titan {
 		x_LOCAL_SO_OBJECT[1]=xform[1][0]*x_LOCAL_IAU_OBJECT[0]+xform[1][1]*x_LOCAL_IAU_OBJECT[1]+xform[1][2]*x_LOCAL_IAU_OBJECT[2];
 		x_LOCAL_SO_OBJECT[2]=xform[2][0]*x_LOCAL_IAU_OBJECT[0]+xform[2][1]*x_LOCAL_IAU_OBJECT[1]+xform[2][2]*x_LOCAL_IAU_OBJECT[2];
 
-
-		
-/////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-		/*cout<<"azi"<<"\t"<<azi<<endl;
-		cout<<"pol"<<"\t"<<pol<<endl;
-		cout << flx << '\t'<< mxflx <<endl;*/
-
-/////!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 		//determine if the particle belongs to this processor
 		startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
 		if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 		
-		//flux from exobase
-		/*Sphere->GetSurfaceElementProjectionIndex(x_LOCAL_SO_OBJECT,nZenithElement,nAzimuthalElement);
-		el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
-		Sphere->SurfaceElementDesorptionFluxUP[spec][el]+=ParticleWeight*ParticleWeightCorrection;*/
-		//////////////////////////////////////////////////////////////
-		
-		//cout<<"ParticleWeight"<<ParticleWeight*ParticleWeightCorrection<<endl;
-		//cout<<Sphere->SurfaceElementDesorptionFluxUP[spec][el]<<endl;
-		//cout<<spec<<"\t "<<el<<endl<<endl;
+
 		//generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+		
+		//Switch statement used to implement numerical velocity distribution for better statistics
 		double speed;
 		//PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
-		
 		switch (spec) {
 		case _N2_SPEC_:
-				speed=vel_wght+1.0;
-				while(speed > vel_wght){
-				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
+				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,Tnum,ExternalNormal,spec);
 				for (idim=0;idim<DIM;idim++) {
-				speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
+					speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
 				}
 				speed=sqrt(speed);
-			}
+				//correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and 
+				//interp_val true temperature of surface element 
+				ParticleWeightCorrection=pow((1.0/Tnum)/(1.0/interp_val[3]),1.5)*exp(-1.0/interp_val[3])/exp(-1.0/interp_val[3]);
+				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
 		case _CH4_SPEC_:
 			PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 			break;
-		case _H2_SPEC:
+		case _H2_SPEC_:
 			PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 			break;
-		case _N2_hot_SPEC:
-			speed=0.0;
-			while(speed < vel_wght){
-				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
-				for (idim=0;idim<DIM;idim++) {
-				speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
-				}
-				speed=sqrt(speed);
-			}
-		  break;
 		default:
 		  exit(__LINE__,__FILE__,"Error: The speed for the species is not defined");
 		}
