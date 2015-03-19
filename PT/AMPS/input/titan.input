@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=N2,CH4,H2 
+SpeciesList=N2,CH4,H2,N2_hot 
 
 
 !settings of the directories
@@ -49,10 +49,10 @@ CouplerMode=off !ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=20
+  ReferenceInjectionParticleNumber=400
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=10
+  InitialSampleLength=100
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -126,7 +126,7 @@ CouplerMode=off !ices !!off, ices, swmf
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
-  Source:ImpactVaporization=on \\ !on,off
+  Source:ImpactVaporization=off \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
     SourceRate(N2)=3.8571796E+031, SourceTemperature(N2)=161.0   \\ !SourceRate(N2)=5.247813e29, SourceTemperature(N2)=155.0
@@ -137,7 +137,7 @@ CouplerMode=off !ices !!off, ices, swmf
     !SourceRate(H2)=4.662794E+029, SourceTemperature(H2)=118.0   
     
     
-  Source:UserDefined=off \\ !on,off
+  Source:UserDefined=on \\ !on,off
     SourceProcessCode=VenticalSource \\
     SourceRate=Titan::tgitm_exobase::GetTotalProductionRate \\
     GenerateParticleProperties=Titan::tgitm_exobase::GenerateParticleProperties \\
