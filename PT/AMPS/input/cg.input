@@ -1,8 +1,9 @@
 #main
 
-SpeciesList=H2O CO CO2
+SpeciesList=H2O
+!CO CO2
 
-DebuggerMode=on !on,off
+DebuggerMode=off !on,off
 ForceRepeatableSimulationPath=on ! on,off 
 
 
@@ -30,10 +31,6 @@ DiagnosticStream=PT
 OutputDirectory=PT/plots
 
 
-DebuggerMode=on !on,off
-ForceRepeatableSimulationPath=off ! on,off
-
-
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
@@ -41,8 +38,6 @@ ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, Spec
 ParticleWeightCorrectionMode=on !on,off
 
 CouplerMode=ices !!off, ices, swmf
-
-
 
 #endmain
 
@@ -99,17 +94,17 @@ CouplerMode=ices !!off, ices, swmf
 
   RotZnum(H2O=5)
   VibTemp(H2O=2000)
-  nRotModes(CO=2)
-  nRotModes(CO2=2)
-  RotZnum(CO=5)
-  RotZnum(CO2=5)
+!  nRotModes(CO=2)
+!  nRotModes(CO2=2)
+!  RotZnum(CO=5)
+!  RotZnum(CO2=5)
 
   TemperatureIndex(H2O,H2O)=0.5
-  TemperatureIndex(CO,CO)=0.5
-  TemperatureIndex(CO2,CO2)=0.5
-  TemperatureIndex(H2O,CO)=0.5
-  TemperatureIndex(H2O,CO2)=0.5
-  TemperatureIndex(CO,CO2)=0.5
+!  TemperatureIndex(CO,CO)=0.5
+!  TemperatureIndex(CO2,CO2)=0.5
+!  TemperatureIndex(H2O,CO)=0.5
+!  TemperatureIndex(H2O,CO2)=0.5
+!  TemperatureIndex(CO,CO2)=0.5
 #endIDF
 
 
@@ -127,28 +122,26 @@ CouplerMode=ices !!off, ices, swmf
   CometTemperatureMode=Analytical !Bjorn,Constant,Analytical
 
   SampleBackFluxMode=off
-  ComputeMaximumLiftableSizeMode=off
+  ComputeMaximumLiftableSizeMode=on
 
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
   
   BjornProductionRateUserDefined=Analytical !on,off,Analytical
-  MultispeciesAnalyticalMode=on !on,off
-  DFMSRatioMode=off !on,off
+  MultispeciesAnalyticalMode=off !on,off
+  
   !! if BjornProductionRateUserDefined=on, use following values
   BjornProductionRate(H2O)=0.0 !!2.0e25	    
-  BjornProductionRate(CO)=0.0
-  BjornProductionRate(CO2)=0.0
+  !BjornProductionRate(CO)=0.0
+  !BjornProductionRate(CO2)=0.0
 
   UniformProductionRate(H2O)=0.0 !!8.0e25
-  UniformProductionRate(CO)=0.0
-  UniformProductionRate(CO2)=0.0
+  !UniformProductionRate(CO)=0.0
+  !UniformProductionRate(CO2)=0.0
 
-  ModelSourceDFMS=off !on,off
-  !! if ModelSourceDFMS=off, use following values
   JetProductionRate(H2O)=0.0 !1.0e25	    
-  JetProductionRate(CO2)=0.0 !1.0e25	    
-  JetProductionRate(CO)=0.0 !1.0e25	    
+ ! JetProductionRate(CO2)=0.0 !1.0e25	    
+ ! JetProductionRate(CO)=0.0 !1.0e25	    
   
   TrackingSurfaceElementMode=off !on,off
 
@@ -156,9 +149,9 @@ CouplerMode=ices !!off, ices, swmf
   !!Dust parameters
   DustMode=off !!on,off
   DustTotalMassProductionRate=1.0
-  PowerLawIndex=4.0	  
+  PowerLawIndex=3.4	  
   dustRmin=1.0e-7
-  dustRmax=1.0e-2
+  dustRmax=1.0e-4
   nDustRadiusGroups=10
 
 #endblock
