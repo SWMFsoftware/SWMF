@@ -93,10 +93,12 @@ module ModAdvance
   real, allocatable :: Ey_CB(:,:,:,:)
   real, allocatable :: Ez_CB(:,:,:,:)
 
-  !\
   ! Local cell-centered source terms and divB.
-  !/
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
+
+  ! Extra source terms coming from other models in the SWMF
+  ! It should be allocated in the coupler
+  real, allocatable :: ExtraSource_ICB(:,:,:,:,:)
   
   real, allocatable :: DivB1_GB(:,:,:,:)
 
