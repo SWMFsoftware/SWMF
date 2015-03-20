@@ -77,12 +77,15 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
 int OH::Output::RequestDataBuffer(int offset){
   OH::Output::ohSourceDensityOffset=offset;
   OH::Output::TotalDataLength = 1;
+  offset+=sizeof(double);
 
   OH::Output::ohSourceMomentumOffset=offset;
-  OH::Output::TotalDataLength++;
+  OH::Output::TotalDataLength+=3;
+  offset+=3*sizeof(double);
 
   OH::Output::ohSourceEnergyOffset=offset;
   OH::Output::TotalDataLength++;
+  offset+=sizeof(double);
 
   return OH::Output::TotalDataLength*sizeof(double);
 }
@@ -265,6 +268,9 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
 void OH::Init_BeforeParser(){
   Exosphere::Init_BeforeParser();
   OH::Output::Init();
+
+  //set the coupling procedure
+  PIC::CPLR::SWMF::SendCenterPointData.push_back(Coupling::Send);
 }
 
 
