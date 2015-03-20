@@ -529,11 +529,11 @@ contains
     use IH_ModSize,           ONLY: nI, nJ, nK
     use IH_ModMain,           ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
     use IH_ModAdvance,        ONLY: &
-         State_VGB, UseElectronPressure, UseAnisoPressure
+         State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
     use IH_ModPhysics,        ONLY: &
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
-         UnitX_, UnitEnergyDens_,  inv_g
+         UnitEnergyDens_
     use IH_ModVarIndexes,     ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar
@@ -542,10 +542,9 @@ contains
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_,  &
          PeCouple_, PparCouple_, WaveFirstCouple_,  &
          WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
-         AnisoPressure_, ElectronPressure_, MultiFluid_,&
-         MultiSpecie_, CollisionlessHeatFlux_, nVarCouple, Grid_C
+         AnisoPressure_, ElectronPressure_,&
+         CollisionlessHeatFlux_, nVarCouple
     use ModCoordTransform, ONLY: sph_to_xyz
-    use CON_axes,          ONLY: transform_matrix, transform_velocity
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,          ONLY: xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
 
@@ -580,7 +579,6 @@ contains
     ! (in IH_BATSRUS grid generalized coordinates)
     real :: BufferNorm_D(3)
 
-    real :: SourceToTarget_DD(3,3)
     ! variable indices in buffer
     integer   :: &
          iRhoCouple,       &
@@ -596,7 +594,7 @@ contains
          iEhotCouple
 
 
-    integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta, iDim
+    integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta
     integer   :: iFound, jFound, kFound
     real      :: x, y, z, r, theta, phi
 
@@ -798,9 +796,9 @@ contains
   subroutine IH_get_for_mh(nPartial,iGetStart,Get,W,State_V,nVar)
 
     !USES:
-    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0,      ONLY: B0_DGB
-    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, inv_g
+    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
          WaveLast_, Pe_, Ppar_, Ehot_
@@ -811,7 +809,7 @@ contains
          RhoCouple_, RhoUxCouple_, &
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_, PeCouple_, PparCouple_,&
          WaveFirstCouple_, WaveLastCouple_, Bfield_, Wave_, AnisoPressure_, &
-         ElectronPressure_, MultiFluid_, MultiSpecie_, EhotCouple_, &
+         ElectronPressure_, EhotCouple_, &
          CollisionlessHeatFlux_
 
     !INPUT ARGUMENTS:
@@ -821,7 +819,7 @@ contains
     real,dimension(nVar),intent(out)::State_V
 
     integer   :: iGet, i, j, k, iBlock
-    real      :: Weight,X_D(nDim)
+    real      :: Weight
     integer   :: &
          iRhoCouple,       &
          iRhoUxCouple,     &
@@ -984,18 +982,18 @@ contains
     use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use IH_ModB0,         ONLY: B0_DGB
     use IH_ModPhysics,    ONLY: &
-         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitX_, inv_g, &
+         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
          UnitEnergyDens_
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
     use IH_ModMain,       ONLY: UseB0
     use IH_BATL_lib,      ONLY: Xyz_DGB
-    use CON_coupler,   ONLY: SC_, IH_, iVar_V, DoCoupleVar_V,&
+    use CON_coupler,   ONLY: SC_, iVar_V, DoCoupleVar_V,&
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
          Bfield_, Wave_, AnisoPressure_, CollisionlessHeatFlux_, &
-         ElectronPressure_, MultiFluid_, MultiSpecie_
+         ElectronPressure_
     use CON_router, ONLY: IndexPtrType, WeightPtrType
     use CON_coupler,ONLY: SC_
 
@@ -1274,7 +1272,7 @@ contains
     character (len=*), parameter :: NameSub='IH_put_from_mh'
 
     real,dimension(nVar)::State_V
-    integer             ::iPut, i, j, k, iBlock
+    integer             :: i, j, k, iBlock
     integer   :: &
          iRhoCouple,       &
          iRhoUxCouple,     &
@@ -1677,33 +1675,82 @@ contains
 
   !===========================================================================
   subroutine IH_put_from_pt( &
-       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+       NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use CON_coupler, ONLY: i_proc, n_proc
-    use IH_BATL_lib,    ONLY: nDim
-    !use IH_ModProcMH,   ONLY: iProc
+    use IH_BATL_lib,    ONLY: &
+         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB
+    use IH_ModPhysics, ONLY: &
+         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_
+    use IH_ModGeometry, ONLY: true_cell
+    use IH_ModAdvance, ONLY: ExtraSource_ICB
 
-    !  logical,          intent(in)   :: UseData ! true when data is transferred
-    ! false if positions are asked
-    character(len=*), intent(inout):: NameVar ! List of variables
-    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
-    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    character(len=*), intent(inout):: NameVar  ! List of variables
+    integer,          intent(inout):: nVarData ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint   ! Number of points in Pos_DI
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
-    real, intent(out), allocatable, optional:: Pos_DI(:,:)               ! Position vectors
+    real, intent(out), allocatable, optional:: Pos_DI(:,:)  ! Position vectors
+
+    ! For unit conversion
+    real, allocatable, save:: Si2No_I(:) 
+
+    integer:: i, j, k, iBlock, iPoint
 
     character(len=*), parameter :: NameSub='IH_put_from_pt'
     !--------------------------------------------------------------------------
 
-    !if(.not. present(Data_VI))then
-    !   Provide BATSRUS grid points to PT
-    !
-    !   RETURN
-    !end if
+    if(.not. present(Data_VI))then
+       ! Provide BATSRUS grid points to PT
+
+       nPoint = 0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             nPoint = nPoint + 1
+          end do; end do; end do
+       end do
+
+       if(allocated(Pos_DI)) deallocate(Pos_DI)
+       allocate(Pos_DI(nDim,nPoint))
+
+       iPoint = 0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             iPoint = iPoint + 1
+             Pos_DI(1:nDim,iPoint) = &
+                  Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
+          end do; end do; end do
+       end do
+       RETURN
+    end if
 
     ! set source terms due to neutral charge exchange
-    
+
+    if(.not.allocated(Si2No_I))then
+       allocate(Si2No_I(nVarData))
+       Si2No_I(1)   = Si2No_V(UnitRho_)
+       Si2No_I(2:4) = Si2No_V(UnitRhoU_)
+       Si2No_I(5)   = Si2No_V(UnitEnergyDens_)
+    end if
+
+    if(.not.allocated(ExtraSource_ICB)) &
+         allocate(ExtraSource_ICB(nVarData,nI,nJ,nK,MaxBlock))
+
+    iPoint = 0
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+          iPoint = iPoint + 1
+          ExtraSource_ICB(:,i,j,k,iBlock) = Data_VI(:,iPoint_I(iPoint))*Si2No_I
+       end do; end do; end do
+    end do
 
   end subroutine IH_put_from_pt
 
