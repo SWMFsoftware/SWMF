@@ -40,7 +40,7 @@ ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, Spec
 ParticleWeightCorrectionMode=on !on,off
 
 
-CouplerMode=off !ices !!off, ices, swmf 
+CouplerMode=swmf !ices !!off, ices, swmf 
 
 #endmain
 
