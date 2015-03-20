@@ -262,6 +262,13 @@ contains
        case default
           call error
        end select                             !^CMP END PW
+    case(PT_)
+       select case(iCompTarget)               !^CMP IF PT BEGIN
+       case(OH_)                                   !^CMP IF OH
+          call couple_pt_oh(TimeSimulation)        !^CMP IF OH
+       case default
+          call error
+       end select                             !^CMP END PT
     case default
        call CON_stop(NameSub//&
             ' SWMF_ERROR: no coupling implemented from source '// &
