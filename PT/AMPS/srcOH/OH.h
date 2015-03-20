@@ -1,3 +1,5 @@
+//$Id$
+
 #ifndef _OH_H_
 #define _OH_H_
 
@@ -25,6 +27,10 @@ namespace OH {
   //-------------------------------------------------------------------------------------
   namespace Sampling{
     using namespace Exosphere::Sampling;
+  }
+
+  namespace Coupling {
+    void Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI);
   }
 
   //-------------------------------------------------------------------------------------
