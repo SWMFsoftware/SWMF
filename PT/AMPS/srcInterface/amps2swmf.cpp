@@ -73,7 +73,7 @@ extern "C" {
     PIC::CPLR::SWMF::RecieveCenterPointData(NameVar,*nVar,data,index);
   }
 
-  void amps_send_batsrus2amps_center_point_data_(int *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
+  void amps_send_batsrus2amps_center_point_data_(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
     list<PIC::CPLR::SWMF::fSendCenterPointData>::iterator f;
 
     for (f=PIC::CPLR::SWMF::SendCenterPointData.begin();f!=PIC::CPLR::SWMF::SendCenterPointData.end();f++) {
