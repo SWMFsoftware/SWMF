@@ -2260,6 +2260,20 @@ namespace PIC {
       void GetCenterPointCoordinates(double *x);
       void RecieveCenterPointData(char* ValiableList, int nVarialbes,double *data,int *index);
 
+      //send AMPS's data to SWMF: multiple user-defined send routines could be implemeted
+/*
+      Description of the parameters: ARRAYS are fortran style - second index is first!!!!!!!!!
+      character(len=*), intent(in):: NameVar ! List of variables
+      integer,          intent(in):: nVarIn  ! Number of variables in Data_VI
+      integer,          intent(in):: nDimIn  ! Dimensionality of positions
+      integer,          intent(in):: nPoint  ! Number of points in Xyz_DI
+      real, intent(in) :: Xyz_DI(nDimIn,nPoint)  ! Position vectors
+      real, intent(out):: Data_VI(nVarIn,nPoint) ! Data array*/
+
+      typedef void (*fSendCenterPointData)(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI);
+      extern list <fSendCenterPointData> SendCenterPointData;
+
+
       //calcualte physical parameters
       inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
         register int idim;
