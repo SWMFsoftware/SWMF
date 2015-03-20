@@ -60,7 +60,7 @@ namespace Titan {
 		double pol,azi,rrr,r4,r3;
 		double  flx=0.0, mxflx=1.0,ParticleWeight;
 		double ParticleWeightCorrection=1.0;
-		double vel_wght = 500.0;
+		double vel_wght = 500.0,mN2=4.64e-26;
 
 		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
@@ -110,9 +110,12 @@ namespace Titan {
 					speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
 				}
 				speed=sqrt(speed);
+				
 				//correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and 
 				//interp_val true temperature of surface element 
-				ParticleWeightCorrection=pow((1.0/Tnum)/(1.0/interp_val[3]),1.5)*exp(-1.0/interp_val[3])/exp(-1.0/interp_val[3]);
+				ParticleWeightCorrection=pow((1.0/Tnum)/(1.0/interp_val[3]),1.5)*
+				exp(-mN2*speed*speed/2.0/Kbol/interp_val[3])/exp(-mN2*speed*speed/2.0/Kbol/interp_val[3]);
+				
 				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
 		case _CH4_SPEC_:
