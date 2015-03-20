@@ -31,6 +31,7 @@ int PIC::CPLR::SWMF::MagneticFieldOffset=-1,PIC::CPLR::SWMF::PlasmaNumberDensity
 int PIC::CPLR::SWMF::TotalDataLength=0;
 double PIC::CPLR::SWMF::MeanPlasmaAtomicMass=1.0*_AMU_;
 bool PIC::CPLR::SWMF::FirstCouplingOccured=false;
+list<PIC::CPLR::SWMF::fSendCenterPointData> PIC::CPLR::SWMF::SendCenterPointData;
 
 
 int PIC::CPLR::SWMF::RequestDataBuffer(int offset) {
