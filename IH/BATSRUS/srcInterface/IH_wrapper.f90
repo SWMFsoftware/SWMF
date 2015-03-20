@@ -1683,6 +1683,7 @@ contains
          No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_
     use IH_ModGeometry, ONLY: true_cell
     use IH_ModAdvance, ONLY: ExtraSource_ICB
+    use IH_ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
     character(len=*), intent(inout):: NameVar  ! List of variables
     integer,          intent(inout):: nVarData ! Number of variables in Data_VI
@@ -1697,8 +1698,12 @@ contains
 
     integer:: i, j, k, iBlock, iPoint
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='IH_put_from_pt'
     !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,' starting with present(Data_VI)=', &
+         present(Data_VI)
 
     if(.not. present(Data_VI))then
        ! Provide BATSRUS grid points to PT
@@ -1726,6 +1731,9 @@ contains
                   Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
           end do; end do; end do
        end do
+
+       if(DoTestMe)write(*,*) NameSub,' finished setting positions'
+
        RETURN
     end if
 
@@ -1751,6 +1759,9 @@ contains
           ExtraSource_ICB(:,i,j,k,iBlock) = Data_VI(:,iPoint_I(iPoint))*Si2No_I
        end do; end do; end do
     end do
+
+    if(DoTestMe)write(*,*) NameSub,' finished with source=', &
+         ExtraSource_ICB(:,iTest,jTest,kTest,BlkTest)
 
   end subroutine IH_put_from_pt
 
