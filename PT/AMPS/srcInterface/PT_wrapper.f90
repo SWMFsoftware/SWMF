@@ -173,15 +173,22 @@ contains
     ! Find array of points and return processor indexes owning them
     ! Could be generalized to return multiple processors...
 
-    !real:: Xyz_D(MaxDim) = 0.0
-    integer:: iPoint, iBlock
+    real::x(3) = 0.0
+    integer:: iPoint, thread
 
     character(len=*), parameter:: NameSub = 'PT_find_points'
     !--------------------------------------------------------------------------
-    !do iPoint = 1, nPoint
-    !   Xyz_D(1:nDimIn) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-    !   call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock)
-    !end do
+    do iPoint = 1, nPoint
+      x(:)=0.0
+      x(1:nDimIn)=Xyz_DI(:,iPoint)
+      
+      call amps_get_point_thread_number(thread,x)
+      iProc_I(nPoint)=thread
+      
+    
+ !      Xyz_D(1:nDimIn) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+ !      call find_grid_block(Xyz_D, iProc_I(iPoint), iBlock)
+    end do
 
   end subroutine PT_find_points
 
@@ -287,12 +294,24 @@ contains
     !integer:: iCell_D(MaxDim)
 
     integer:: iPoint, iBlock, iProcFound
+    real:: Xyz_D(nDimIn,nPoint);
 
     character(len=*), parameter :: NameSub='PT_get_for_oh'
     !--------------------------------------------------------------------------
 
+
+    !conver the coordinates to SI
+    do iPoint = 1, nPoint
+      Xyz_D(:,iPoint) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+    end do
+
+    call amps_send_batsrus2amps_center_point_data(NameVar,nVarIn,nDimIn,nPoint,Xyz_D,Data_VI)
+
+
     !Dist_D = -1.0
     !Xyz_D  =  0.0
+    
+    
 
     !do iPoint = 1, nPoint
 

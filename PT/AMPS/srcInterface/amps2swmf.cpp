@@ -73,6 +73,13 @@ extern "C" {
     PIC::CPLR::SWMF::RecieveCenterPointData(NameVar,*nVar,data,index);
   }
 
+  void amps_send_batsrus2amps_center_point_data_(int *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
+    list<PIC::CPLR::SWMF::fSendCenterPointData>::iterator f;
+
+    for (f=PIC::CPLR::SWMF::SendCenterPointData.begin();f!=PIC::CPLR::SWMF::SendCenterPointData.end();f++) {
+      (*f)(NameVar,nVarIn,nDimIn,nPoint,Xyz_DI,Data_VI);
+    }
+  }
 
   void amps_timestep_(double* TimeSimulation, double* TimeSimulationLimit) {
     static bool InitFlag=false;
@@ -146,6 +153,14 @@ extern "C" {
     AMPS2SWMF::PARAMIN::read_paramin(&ss);
 
     return 0;
+  }
+
+  //find the thread number that point 'x' is located at
+  void amps_get_point_thread_number_(int *thread,double *x) {
+    static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=NULL;
+
+    node=PIC::Mesh::mesh.findTreeNode(x,node);
+    *thread=(node!=NULL) ? node->Thread : -1;
   }
 
 
