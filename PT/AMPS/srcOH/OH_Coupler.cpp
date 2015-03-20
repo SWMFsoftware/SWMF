@@ -27,7 +27,7 @@ void OH::Coupling::Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, do
 
     vname[i1-i0]=0;
 
-    if (strcmp(vname,"rho")==0) Density_AMPS2OH=n;
+    if (strcmp(vname,"srho")==0) Density_AMPS2OH=n;
 
     n++;
     i0=i1;
