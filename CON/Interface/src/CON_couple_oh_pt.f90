@@ -71,8 +71,8 @@ contains
 
     CouplerPtToOh%iCompSource = PT_
     CouplerPtToOh%iCompTarget = OH_
-    CouplerPtToOh%NameVar     = 'Smx Smy Smz Se' ! charge exchange sources
-    CouplerPtToOh%nVar        = 4
+    CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se' ! charge exchange sources
+    CouplerPtToOh%nVar        = 5
 
     call couple_points_init(CouplerPtToOh)
 
