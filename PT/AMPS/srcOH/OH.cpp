@@ -278,6 +278,7 @@ void OH::Init_BeforeParser(){
 
 //-----------------------------------------------------------------------------
 //substitutes for Exosphere functions
+char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_],Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_],Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_];
 
 //calcualte the true anomaly angle
 double Exosphere::OrbitalMotion::GetTAA(SpiceDouble et) {
