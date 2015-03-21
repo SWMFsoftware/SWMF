@@ -43,7 +43,7 @@ const double yMaxDomain=1.5;
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 //const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
-const double dxMinSphere=0.08,dxMaxSphere=0.48; //Units of planetary radii
+const double dxMinSphere=0.06,dxMaxSphere=0.34; //Units of planetary radii
 
 
 
@@ -103,7 +103,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
-  CellSize=startNode->GetCharacteristicCellSize();
+	CellSize=startNode->GetCharacteristicCellSize();
 //  cout << "time step s" << 0.1*CellSize/CharacteristicSpeed_N2 << endl;
   return 0.1*CellSize/CharacteristicSpeed_N2;
 
@@ -484,13 +484,12 @@ void amps_init() {
   MPI_Barrier(MPI_COMM_WORLD);
 
 
-  //init the Mercury model
+  Titan::tgitm_exobase::read_tgitm();
   Titan::Init_BeforeParser();
   PIC::Init_BeforeParser();
-
   Titan::OrbitalMotion::nOrbitalPositionOutputMultiplier=10;
   Titan::Init_AfterParser();
-  Titan::tgitm_exobase::read_tgitm();
+  
 
 
   //register the sphere
@@ -699,8 +698,7 @@ void amps_init() {
 
   //copy the weight and time step from Na neutra to Na ions
   ////////////////////////////////Change lines below for new weighting scheme OJ////////////////////
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(1,0,5.0E3/800.0E3);
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(3,2,5.0E3/800.0E3);
+//  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(1,0,5.0E3/800.0E3);
 //  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(NAPLUS,NA,5.0E3/800.0E3);
 
   //set photolytic reactions
