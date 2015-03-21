@@ -42,14 +42,13 @@ namespace Titan {
 	void tgitm_interpolate(double polar, double azimuth);
 	
 	inline double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {
-			
 			return totalflux[spec];
 		}
 
 	inline bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
 	double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
 	double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode, int BoundaryElementType,void *BoundaryElement) {
-
+		
 		unsigned int idim;
 		long int nZenithElement,nAzimuthalElement;
 		int el;
@@ -60,7 +59,8 @@ namespace Titan {
 		double pol,azi,rrr,r4,r3;
 		double  flx=0.0, mxflx=1.0,ParticleWeight;
 		double ParticleWeightCorrection=1.0;
-		double vel_wght = 500.0,mN2=4.64e-26;
+		double vel_wght = 500.0;
+		const double _N2__MASS_ = 4.64950898e-26;
 
 		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
 
@@ -97,7 +97,6 @@ namespace Titan {
 		startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
 		if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
 		
-
 		//generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
 		
 		//Switch statement used to implement numerical velocity distribution for better statistics
@@ -105,6 +104,7 @@ namespace Titan {
 		//PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 		switch (spec) {
 		case _N2_SPEC_:
+		
 				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,Tnum,ExternalNormal,spec);
 				for (idim=0;idim<DIM;idim++) {
 					speed+=pow(v_LOCAL_IAU_OBJECT[idim],2);
@@ -113,11 +113,12 @@ namespace Titan {
 				
 				//correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and 
 				//interp_val true temperature of surface element 
-				ParticleWeightCorrection=pow((1.0/Tnum)/(1.0/interp_val[3]),1.5)*
-				exp(-mN2*speed*speed/2.0/Kbol/interp_val[3])/exp(-mN2*speed*speed/2.0/Kbol/interp_val[3]);
+				ParticleWeightCorrection=
+				exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
 				
 				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
+		
 		case _CH4_SPEC_:
 			PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 			break;
