@@ -2934,6 +2934,8 @@ properly capturing the magnetic pertubation from all current systems.
 
 <command name="MAGNETOMETER">
 	<parameter name="NameMagInputFile" type="string" length="100"/>
+	<parameter name="TypeFileOut" type="string" length="6" 
+		   default="single"/>
 	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
 	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
 	<rule expr="-f $NameMagInputFile">
@@ -2941,6 +2943,7 @@ properly capturing the magnetic pertubation from all current systems.
 	</rule>
 #MAGNETOMETER
 magin.dat		NameMagInputFile
+single                  TypeFileOut
 -1			DnOutput
 60.0			DtOutput
 
@@ -2968,10 +2971,15 @@ The coordinate system accepts MAG (geomagnetic coordinate) or SMG
 (solar magnetic coordinate) so far. The station name can have maximum 3 characters.
 The name, latitude, and longitude should be sperated with space in between.
 
+The TypeFileOut specifies the format of the output file.  'single' creates a single
+output file for all magnetometers and all output times.   'epoch' creates a new file
+for all magnetometers for each output time.  The naming convention for the files is
+controlled by the #SAVEPLOTNAME command.
+
 The DnOutput and DtOutput parameters determine the frequency of writing out the
 calculated perturbations in number of time steps and time interval, respectively.
 
-The output of the ground-based magnetic perturbations is in GM/IO2/mag_n*.dat, 
+The output of the ground-based magnetic perturbations is in GM/IO2/mag_*.dat, 
 in which the location of each station in GSM cartisian coordinates, the 3 components
 (northward, eastward, and downward in SM coordiantes) of the magnetic perturbations by 
 magnetospheric currents, and the 3 components (northward, eastward, and downward 

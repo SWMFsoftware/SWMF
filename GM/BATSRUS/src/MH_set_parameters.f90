@@ -1568,6 +1568,7 @@ subroutine MH_set_parameters(TypeAction)
         DoReadMagnetometerFile = .true.
         save_magnetometer_data = .true.
         call read_var('MagInputFile', MagInputFile)
+        call read_var('TypeMagFileOut', TypeMagFileOut)
         call read_var('DnOutput', dn_output(magfile_))
         call read_var('DtOutput', dt_output(magfile_)) 
         nFile = max(nFile, magfile_) 

@@ -27,6 +27,7 @@ module ModGroundMagPerturb
   logical,            public:: save_magnetometer_data = .false.
   integer,            public:: nMagnetometer=0
   character(len=100), public:: MagInputFile
+  character(len=6),   public:: TypeMagFileOut='single'
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
   real, allocatable,  public:: IeMagPerturb_DII(:,:,:) 
@@ -414,6 +415,9 @@ contains
     ! Open the output file 
     call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
 
+    ! If writing new files every time, no initialization needed.
+    if(TypeMagFileOut .eq. 'epochs')return
+
     if(IsLogName_e)then
        ! Event date added to magnetic perturbation file name
        call get_date_time(iTime_I)
@@ -455,11 +459,12 @@ contains
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
-    integer           :: iMag, iTime_I(7), iError
+    integer           :: iMag, iError
     !year,month,day,hour,minute,second,msecond
-    real, dimension(3):: Xyz_D, MagVarFac_D, MagVarGm_D, MagVarTotal_D
+    real, dimension(3):: Xyz_D
     real, dimension(3,nMagnetometer):: MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
-         MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI
+         MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI, MagVarFac_DI, &
+         MagVarGm_DI, MagVarTotal_DI
     real:: MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
     !--------------------------------------------------------
 
@@ -514,36 +519,111 @@ contains
        if(iProc==0)MagPerturbFacSph_DI = MagVarSum_DI
     end if
 
-    !\
-    ! Write variables
-    !/
+    ! Collect variables, send to appropriate write subroutine.
     if(iProc==0)then      
        do iMag=1,nMagnetometer
+          !normalize the variable to I/O unit:
+          MagVarGm_DI( :,iMag)  = MagPerturbGMSph_DI( :,iMag) * No2Io_V(UnitB_)
+          MagVarFac_DI( :,iMag) = MagPerturbFacSph_DI(:,iMag) * No2Io_V(UnitB_)
 
-          call get_date_time(iTime_I)
-
-          !normalize the variable to I/O unit...
-          MagVarGm_D  = MagPerturbGMSph_DI( :,iMag) * No2Io_V(UnitB_)
-          MagVarFac_D = MagPerturbFacSph_DI(:,iMag) * No2Io_V(UnitB_)
-
-          write(iUnitMag,'(i8)',ADVANCE='NO') n_step
-          write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
-          write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
-
-          ! Get total perturbation
-          MagVarTotal_D = MagVarGm_D + MagVarFac_D +  &
+          ! Get total perturbation:
+          MagVarTotal_DI( :,iMag) = MagVarGm_DI( :,iMag)+MagVarFac_DI( :,iMag)+&
                IeMagPerturb_DII(:,1,iMag) + IeMagPerturb_DII(:,2,iMag)
-
-          ! Write position of magnetometer and perturbation to file:
-          write(iUnitMag,'(18es13.5)') &
-               MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
-               MagVarTotal_D, MagVarGm_D, MagVarFac_D, &
-               IeMagPerturb_DII(:,1,iMag), IeMagPerturb_DII(:,2,iMag)
-
        end do
-       call flush_unit(iUnitMag)
+
+       select case(TypeMagFileOut)
+          case('single')
+             call write_mag_single
+          case('epochs')
+             call write_mag_epoch
+       end select
+
     end if
 
+  contains
+    !=====================================================================
+    subroutine write_mag_single
+      ! For TypeMagFileOut == 'single', write a single record to the file.
+
+      integer :: iTime_I(7)
+      !--------------------------------------------------------------------
+      ! Get current time.
+      call get_date_time(iTime_I)
+
+      ! Write data to file.
+      do iMag=1, nMagnetometer
+         ! Write time and magnetometer number to file:
+         write(iUnitMag,'(i8)',ADVANCE='NO') n_step
+         write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
+         write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
+
+         ! Write position of magnetometer and perturbation to file:  
+         write(iUnitMag,'(18es13.5)') &
+              MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
+              MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
+              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
+              IeMagPerturb_DII(:,2,iMag)
+      end do
+
+      ! Flush file buffer.
+      call flush_unit(iUnitMag)
+
+    end subroutine write_mag_single
+
+    !=====================================================================
+    subroutine write_mag_epoch
+      ! For TypeMagFileOut == 'epochs', write one file for every write epoch.
+      use ModIoUnit, ONLY: UnitTmp_
+      use ModIO,     ONLY: NamePlotDir, IsLogName_e
+
+      integer :: iError,  iTime_I(7)
+
+      character(len=100):: NameFile
+      !------------------------------------------------------------------------
+      call get_date_time(iTime_I)
+      if(IsLogName_e)then
+         ! Event date added to magnetic perturbation file name
+         write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+              trim(NamePlotDir), 'magnetometers_e', iTime_I(1:6), '.mag'
+      else
+         write(NameFile,'(a,a, i8.8, a)') &
+              trim(NamePlotDir), 'magnetometers_n', n_step, '.mag'
+      end if
+
+      ! Open file for output:
+      open(UnitTmp_, file=NameFile, status="replace")
+
+      ! Write the header
+      write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagnetometer, ' magnetometers:'
+      do iMag=1,nMagnetometer-1 
+         write(UnitTmp_, '(1X,a)', ADVANCE='NO') MagName_I(iMag)
+      end do
+      write(UnitTmp_, '(1X,a)') MagName_I(nMagnetometer)
+      write(UnitTmp_, '(a)')  &
+           'nstep year mo dy hr mn sc msc station X Y Z '// &
+           'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
+           'dBnHal dBeHal dBdHal dBnPed dBePed dBdPed'
+
+      ! Write data to file.
+      do iMag=1, nMagnetometer
+         ! Write time and magnetometer number to file:
+         write(UnitTmp_,'(i8)',ADVANCE='NO') n_step
+         write(UnitTmp_,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
+         write(UnitTmp_,'(1X,i4)', ADVANCE='NO')  iMag
+
+         ! Write position of magnetometer and perturbation to file:  
+         write(UnitTmp_,'(18es13.5)') &
+              MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
+              MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
+              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
+              IeMagPerturb_DII(:,2,iMag)
+      end do
+
+      ! Close file:
+      close(UnitTmp_)
+
+    end subroutine write_mag_epoch
+    !=====================================================================
   end subroutine write_magnetometers
 
   !=====================================================================
@@ -552,7 +632,7 @@ contains
 
     use ModProcMH, ONLY: iProc
 
-    if(iProc==0)close(iUnitMag)
+    if(iProc==0 .and. TypeMagFileOut .ne. 'epochs') close(iUnitMag)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
 
   end subroutine finalize_magnetometer
