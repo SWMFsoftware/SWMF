@@ -1933,7 +1933,7 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
   long int newParticle,nInjectedParticles=0;
   PIC::ParticleBuffer::byte *newParticleData;
-  double ParticleWeightCorrection=1.0;
+  double ParticleWeightCorrection=1.0,SpeciesWeightCorrection=1.0; //the first is used to correct weight of a particulat particle, the latter is to correct the weight al all particles of the species to limit the number of the injected model particles
   bool flag;
   int SourceProcessID;
 
@@ -1970,8 +1970,8 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
 
   #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
   if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
-    ParticleWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
-    ModelParticlesInjectionRate/=ParticleWeightCorrection;
+    SpeciesWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
+    ModelParticlesInjectionRate/=SpeciesWeightCorrection;
   }
   #endif
 
@@ -2049,6 +2049,13 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
     char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
     PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
+    //set the default value for the correction factor
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+    ParticleWeightCorrection=1.0;
+    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+    #endif
+
+
    //to satisfy the compiler and fit the while structure
    if (false) {}
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
@@ -2100,6 +2107,12 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int spec,int Boundar
    }
 
    if (flag==false) continue;
+
+   //retrive the particle weight correction factor from what a 'GenerateParticleProperties' function could set
+   #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+   ParticleWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
+   ParticleWeightCorrection*=SpeciesWeightCorrection;
+   #endif
 
    //sample the injection information
    Sampling::CalculatedSourceRate[spec][SourceProcessID]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
