@@ -91,6 +91,7 @@ SATELLITES.in
 ! There has to be an identical MAGNETOMETER command+parameters in IE too.
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
+single			TypeFileOut
 -1			DnOutput
 60.0			DtOutput
 

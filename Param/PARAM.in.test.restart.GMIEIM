@@ -95,6 +95,7 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat
 
 #MAGNETOMETER
 Param/magnetometer_location.dat
+single			TypeFileOut
 -1			DnOutput
 5.0			DtOutput
 
