@@ -59,7 +59,7 @@ const int nVelocityDistributionSampledIntervals=500;
 const double MaxVelocity=10.0E3;
 const double dVelocityDistributionInterval=MaxVelocity/nVelocityDistributionSampledIntervals;
 
-const int nTotalTestParticles=2000;
+const int nTotalTestParticles=200;
 
 const double xMin=1.569E6;
 const double xMax=3.0*xMin;
@@ -70,6 +70,7 @@ const double SourceRate=1.0E27;
 double VelocityDistributionSampling[2][nVelocityDistributionSampledIntervals];
 double DensitySampling[4][nDensitySampleIntervals];
 double BulkVelocitySampling[4][nDensitySampleIntervals];
+double SpeedSampling[4][nDensitySampleIntervals];
 int ModelParticleState;
 
 double SetSamplingTime() {  //set up the time interval for sampling. must be more that the time needed for a particle to pass through the domain
@@ -92,7 +93,7 @@ void GetParticleAcceleration(double *a,double *x) { //calcualte the acceleration
   for (idim=0;idim<3;idim++) a[idim]=-c*x[idim];
 
 
-  a[0]=0.0,a[1]=0.0,a[2]=0.0;
+//  a[0]=0.0,a[1]=0.0,a[2]=0.0;
 }
 
 void InitParticleVelocity(double *v) { //init the particle velocity
@@ -144,7 +145,7 @@ void InitParticleVelocity(double *v) { //init the particle velocity
 
 
 
-  v[0]=2000.0,v[1]=0.0,v[2]=0.0;
+  v[0]=1500.0,v[1]=0.0,v[2]=0.0;
 }
 
 
@@ -170,6 +171,8 @@ int ProcessLeftBoundaryIntersection(double *x,double *v) {  //process boundary i
 
   v[1]=c*sin(2.0*Pi*c1);  //tangential velocity
   v[2]=c*cos(2.0*Pi*c1);  //tangential velocity
+
+  return _BOUNDARY_MODE__LEFT_DOMAIN_;
 
   return _BOUNDARY_MODE__SCATTERED_BACK_;
 }
@@ -205,7 +208,7 @@ int main(int argc, char **argv) {
 
   //init the sampling buffers
   for (int mode=0;mode<2;mode++) for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionSampling[mode][i]=0.0;
-  for (int mode=0;mode<4;mode++) for (i=0;i<nDensitySampleIntervals;i++) DensitySampling[mode][i]=0.0,BulkVelocitySampling[mode][i]=0.0;
+  for (int mode=0;mode<4;mode++) for (i=0;i<nDensitySampleIntervals;i++) DensitySampling[mode][i]=0.0,BulkVelocitySampling[mode][i]=0.0,SpeedSampling[mode][i]=0.0;
 
 
   //calcualte the particle weight
@@ -223,6 +226,10 @@ int main(int argc, char **argv) {
 
     ModelParticleState=_DENSITY_SAMPLING__INITAL_INJECTION_;
     x[0]=xMin,x[1]=0.0,x[2]=0.0;
+
+    if (thread==0) {
+      if (nTestParticles%1==0) std::cout << "nTestParticles=" << nTestParticles << std::endl;
+    }
 
     //sample the initial velocity of the injected particles
     double Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
@@ -296,6 +303,9 @@ int main(int argc, char **argv) {
 
         BulkVelocitySampling[0][ncell]+=v[0]*TimeStep*ParticleWeight;
         BulkVelocitySampling[ModelParticleState][ncell]+=v[0]*TimeStep*ParticleWeight;
+
+        SpeedSampling[0][ncell]+=fabs(v[0])*TimeStep*ParticleWeight;
+        SpeedSampling[ModelParticleState][ncell]+=fabs(v[0])*TimeStep*ParticleWeight;
       }
 
     }
@@ -305,11 +315,12 @@ int main(int argc, char **argv) {
 
 
   //collect sampled data from all processors and output density into the data file
-  double DensitySamplingBuffer[4][nDensitySampleIntervals],BulkVelocitySamplingBuffer[4][nDensitySampleIntervals];
+  double DensitySamplingBuffer[4][nDensitySampleIntervals],BulkVelocitySamplingBuffer[4][nDensitySampleIntervals],SpeedSamplingBuffer[4][nDensitySampleIntervals];
   double VelocityDistributionBuffer[2][nVelocityDistributionSampledIntervals];
 
   MPI_Reduce(&DensitySampling[0][0],&DensitySamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
   MPI_Reduce(&BulkVelocitySampling[0][0],&BulkVelocitySamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+  MPI_Reduce(&SpeedSampling[0][0],&SpeedSamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
   MPI_Reduce(&VelocityDistributionSampling[0][0],&VelocityDistributionBuffer[0][0],2*nVelocityDistributionSampledIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
   if (thread==0) {
@@ -320,23 +331,30 @@ int main(int argc, char **argv) {
       double c=1.0/SamplingTime/(4.0/3.0*Pi*(pow(xMin+(1+ncell)*dx,3)-pow(xMin+ncell*dx,3)))/nTotalThreads;
 
       for (int mode=0;mode<4;mode++) {
-        if (DensitySamplingBuffer[mode][ncell]>0.0) BulkVelocitySamplingBuffer[mode][ncell]/=DensitySamplingBuffer[mode][ncell];
+        if (DensitySamplingBuffer[mode][ncell]>0.0) {
+          BulkVelocitySamplingBuffer[mode][ncell]/=DensitySamplingBuffer[mode][ncell];
+          SpeedSamplingBuffer[mode][ncell]/=DensitySamplingBuffer[mode][ncell];
+        }
+
         DensitySamplingBuffer[mode][ncell]*=c;
       }
     }
 
     //save the density profile
     fout=fopen("data.dat","w");
-    fprintf(fout,"VARIABLES=\"x\", \"Altitude\", \"Total Density\", \"Density_INITAL_INJECTION_\", \"Density_LEFT_BOUNDARY_REFLECTION_\", \"Density_RIGHT_BOUNDARY_REFLECTION_\", \"Total Bulk Velocity\", \"Bulk Velocity_INITAL_INJECTION_\", \"Bulk Velocity_LEFT_BOUNDARY_REFLECTION_\", \"Bulk Velocity_RIGHT_BOUNDARY_REFLECTION_\"\n");
+    fprintf(fout,"VARIABLES=\"x\", \"Altitude\", \"Total Density\", \"Density_INITAL_INJECTION_\", \"Density_LEFT_BOUNDARY_REFLECTION_\", \"Density_RIGHT_BOUNDARY_REFLECTION_\", \"Total Bulk Velocity\", \"Bulk Velocity_INITAL_INJECTION_\", \"Bulk Velocity_LEFT_BOUNDARY_REFLECTION_\", \"Bulk Velocity_RIGHT_BOUNDARY_REFLECTION_\"  , \"Total Speed\", \"Speed_INITAL_INJECTION_\", \"Speed_LEFT_BOUNDARY_REFLECTION_\", \"Speed_RIGHT_BOUNDARY_REFLECTION_\" \n");
 
 
     for (int ncell=0;ncell<nDensitySampleIntervals;ncell++) {
-      fprintf(fout,"%e  %e  %e %e  %e  %e  %e %e  %e  %e \n",xMin+(0.5+ncell)*dx,(0.5+ncell)*dx,
+      fprintf(fout,"%e  %e  %e %e  %e  %e      %e %e  %e  %e     %e %e  %e  %e\n",xMin+(0.5+ncell)*dx,(0.5+ncell)*dx,
           DensitySamplingBuffer[0][ncell],DensitySamplingBuffer[1][ncell],
           DensitySamplingBuffer[2][ncell],DensitySamplingBuffer[3][ncell],
 
           BulkVelocitySamplingBuffer[0][ncell],BulkVelocitySamplingBuffer[1][ncell],
-          BulkVelocitySamplingBuffer[2][ncell],BulkVelocitySamplingBuffer[3][ncell]
+          BulkVelocitySamplingBuffer[2][ncell],BulkVelocitySamplingBuffer[3][ncell],
+
+          SpeedSamplingBuffer[0][ncell],SpeedSamplingBuffer[1][ncell],
+          SpeedSamplingBuffer[2][ncell],SpeedSamplingBuffer[3][ncell]
       );
 
     }
