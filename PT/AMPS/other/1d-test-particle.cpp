@@ -69,6 +69,7 @@ const double SourceRate=1.0E27;
 
 double VelocityDistributionSampling[2][nVelocityDistributionSampledIntervals];
 double DensitySampling[4][nDensitySampleIntervals];
+double BulkVelocitySampling[4][nDensitySampleIntervals];
 int ModelParticleState;
 
 double SetSamplingTime() {  //set up the time interval for sampling. must be more that the time needed for a particle to pass through the domain
@@ -188,13 +189,14 @@ void rnd_seed(int seed) {
 }
 
 int main(int argc, char **argv) {
-  int thread,i;
+  int thread,i,nTotalThreads;
   double SamplingTime,TimeStep;
   double const dx=(xMax-xMin)/nDensitySampleIntervals;
   double ParticleWeight,TimeCounter;
 
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD,&thread);
+  MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
 
   //init the random number generator
   rnd_seed(-1);
@@ -203,7 +205,7 @@ int main(int argc, char **argv) {
 
   //init the sampling buffers
   for (int mode=0;mode<2;mode++) for (i=0;i<nVelocityDistributionSampledIntervals;i++) VelocityDistributionSampling[mode][i]=0.0;
-  for (int mode=0;mode<4;mode++) for (i=0;i<nDensitySampleIntervals;i++) DensitySampling[mode][i]=0.0;
+  for (int mode=0;mode<4;mode++) for (i=0;i<nDensitySampleIntervals;i++) DensitySampling[mode][i]=0.0,BulkVelocitySampling[mode][i]=0.0;
 
 
   //calcualte the particle weight
@@ -291,6 +293,9 @@ int main(int argc, char **argv) {
         ncell=(int)((x[0]-xMin)/dx);
         DensitySampling[0][ncell]+=TimeStep*ParticleWeight;
         DensitySampling[ModelParticleState][ncell]+=TimeStep*ParticleWeight;
+
+        BulkVelocitySampling[0][ncell]+=v[0]*TimeStep*ParticleWeight;
+        BulkVelocitySampling[ModelParticleState][ncell]+=v[0]*TimeStep*ParticleWeight;
       }
 
     }
@@ -300,10 +305,11 @@ int main(int argc, char **argv) {
 
 
   //collect sampled data from all processors and output density into the data file
-  double DensitySamplingBuffer[4][nDensitySampleIntervals];
+  double DensitySamplingBuffer[4][nDensitySampleIntervals],BulkVelocitySamplingBuffer[4][nDensitySampleIntervals];
   double VelocityDistributionBuffer[2][nVelocityDistributionSampledIntervals];
 
   MPI_Reduce(&DensitySampling[0][0],&DensitySamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+  MPI_Reduce(&BulkVelocitySampling[0][0],&BulkVelocitySamplingBuffer[0][0],4*nDensitySampleIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
   MPI_Reduce(&VelocityDistributionSampling[0][0],&VelocityDistributionBuffer[0][0],2*nVelocityDistributionSampledIntervals,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
 
   if (thread==0) {
@@ -311,20 +317,26 @@ int main(int argc, char **argv) {
 
     //calculate density
     for (int ncell=0;ncell<nDensitySampleIntervals;ncell++) {
-      double c=1.0/SamplingTime/(4.0/3.0*Pi*(pow(xMin+(1+ncell)*dx,3)-pow(xMin+ncell*dx,3)));
+      double c=1.0/SamplingTime/(4.0/3.0*Pi*(pow(xMin+(1+ncell)*dx,3)-pow(xMin+ncell*dx,3)))/nTotalThreads;
 
-      for (int mode=0;mode<4;mode++) DensitySamplingBuffer[mode][ncell]*=c;
+      for (int mode=0;mode<4;mode++) {
+        if (DensitySamplingBuffer[mode][ncell]>0.0) BulkVelocitySamplingBuffer[mode][ncell]/=DensitySamplingBuffer[mode][ncell];
+        DensitySamplingBuffer[mode][ncell]*=c;
+      }
     }
 
     //save the density profile
     fout=fopen("data.dat","w");
-    fprintf(fout,"VARIABLES=\"x\", \"Altitude\", \"Total Density\", \"Density_INITAL_INJECTION_\", \"Density_LEFT_BOUNDARY_REFLECTION_\", \"Density_RIGHT_BOUNDARY_REFLECTION_\"\n");
+    fprintf(fout,"VARIABLES=\"x\", \"Altitude\", \"Total Density\", \"Density_INITAL_INJECTION_\", \"Density_LEFT_BOUNDARY_REFLECTION_\", \"Density_RIGHT_BOUNDARY_REFLECTION_\", \"Total Bulk Velocity\", \"Bulk Velocity_INITAL_INJECTION_\", \"Bulk Velocity_LEFT_BOUNDARY_REFLECTION_\", \"Bulk Velocity_RIGHT_BOUNDARY_REFLECTION_\"\n");
 
 
     for (int ncell=0;ncell<nDensitySampleIntervals;ncell++) {
-      fprintf(fout,"%e  %e  %e %e  %e  %e \n",xMin+(0.5+ncell)*dx,(0.5+ncell)*dx,
+      fprintf(fout,"%e  %e  %e %e  %e  %e  %e %e  %e  %e \n",xMin+(0.5+ncell)*dx,(0.5+ncell)*dx,
           DensitySamplingBuffer[0][ncell],DensitySamplingBuffer[1][ncell],
-          DensitySamplingBuffer[2][ncell],DensitySamplingBuffer[3][ncell]
+          DensitySamplingBuffer[2][ncell],DensitySamplingBuffer[3][ncell],
+
+          BulkVelocitySamplingBuffer[0][ncell],BulkVelocitySamplingBuffer[1][ncell],
+          BulkVelocitySamplingBuffer[2][ncell],BulkVelocitySamplingBuffer[3][ncell]
       );
 
     }
