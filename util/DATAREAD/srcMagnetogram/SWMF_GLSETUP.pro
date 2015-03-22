@@ -1,4 +1,5 @@
-pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL, CMEGrid=CMEGrid
+pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
+USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, SetGLRadius=SetGLRadius
 ;-----------------------------------------------------------------------
 ; NAME :
 ;   SWMF_GLSETUP
@@ -15,16 +16,23 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL, CMEGr
 ;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.0 will
 ;   be loaded.
 ;   PlotRadius = Set up the layer of the magnetogram. Cannot be used
-;   with DemoMode. Default it 1.015.
+;   with DemoMode. Default it 1.03.
 ;   UsePIL = If set, the orientation of the flux rope will be
 ;   caluclated according to the PIL direcion.
 ;   CMEGrid = If set, the grid refinement parameters for CME will be
 ;   calculated.
+;   ARMag = 1 or 2, if 1, the AR magnetic parameter is calculated
+;   based on the average Br around the weighted center; if 2, the
+;   AR magnetic parameter is calculated based on the average total field
+;   along the PIL. The corresponding empirical relationships will be
+;   used accordingly. The Default is 1.
+;   SetGLRadius = If set, the GL flux rope raidus can be manually setup.
 ; CALLS   :
 ;   PLOT_IMAGE
 ; RESTRICTIONS:
-;   - PlotRadius can only be 0.015 increament from 1.0. Please do not
-;   use large raduis for the GL setup.
+;   - PlotRadius can only be 0.015 increament from 1.0. Please use
+;     default value (1.03) for GL setup since the empirical
+;     relationship is derived from that layer.
 ;   - For the active regions with mixed polarities, try to use higher
 ;     layers of the magnetogram to reduce complexity.
 ; MODIFICATION HISTORY:
@@ -35,7 +43,14 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, USEPIL=USEPIL, CMEGr
 ;   v0.3 06/06/2014 Added option to calculate the GL orientation
 ;    according to the PIL.         
 ;   v0.4 11/24/2014 Added option to calculate the CME grid
+;   v0.5 02/28/2015 Calculate the total magnetic field along the PIL
+;   v0.6 03/10/2015 Added option for determining the AR parameter 
 ;    information.
+;   v0.7 03/16/2015 Added option to manually set the radius of the
+;   flux rope
+;   v0.8 03/17/2015 Added two empirical equations to determine the
+;   poloroidal flux of the GL flux rope.
+;   v0.9 03/20/2015 Improved the coefficients of the empirical equations.  
 ;------------------------------------------------------------------------
 
 ;Setup the color mode and a better IDL font.
@@ -46,24 +61,38 @@ device,decomposed=1
 ;of reading from 3D data which is much more time consuming
 if not keyword_set(DemoMode) then DemoMode=0
 
+;set default option for ARMag
+if not keyword_set(ARMag) then ARMag=2
+if ARMag ne 1 and ARMag ne 2 then begin
+   print, 'ARMag can only be 1 or 2!'
+   print, 'Use Default option: ARMag = 2'
+   ARMag=2
+endif
+
 ;Read Observed CME speed.
 file=''
 CMESpeed=0.0
 read,prompt='Please Input the Observed CME Speed (km/s): ',CMESpeed
 
+;Read GL flux rope radius.
+if keyword_set(SetGLRadius) then begin
+   read,prompt='Please Input the GL flux rope radius (Rs): ',GL_Radius
+endif
+
 ;Setup the magnetogram layer, default is at the solar surface
-if not keyword_set(PlotRadius) then  PlotRadius=1.015
+if not keyword_set(PlotRadius) then  PlotRadius=1.03
 
 if keyword_set(DemoMode) and keyword_set(PlotRadius) then begin
   print,'DemoMode and PlotRadius Cannot be Used at the same time!'
   print,'Play DemoMode...'
-  PlotRadius=1.00
+  PlotRadius=1.03
 endif
 
 ;Read the SWMF input magnetic field
 if not DemoMode then begin
   read, prompt='Input Magnetic Field of SWMF (Format can be ASCII/Binary): ',file
-  data={field1:dblarr(6562980),field2:dblarr(6562980),field3:dblarr(6562980),field4:dblarr(6562980)}
+  data={field1:dblarr(6562980),field2:dblarr(6562980),field3:dblarr(6562980),field4:dblarr(6562980),$
+       field5:dblarr(6562980),field6:dblarr(6562980)}
   if QUERY_ASCII(file,info) then begin
     openr,lun,file,/get_lun
     line=''
@@ -78,6 +107,8 @@ if not DemoMode then begin
        data.field2[i]=linedata[1]
        data.field3[i]=linedata[2]
        data.field4[i]=linedata[3]
+       data.field5[i]=linedata[4]
+       data.field6[i]=linedata[5]
     endfor
 
   endif else begin
@@ -89,6 +120,8 @@ if not DemoMode then begin
     line5=bytarr(80)
     tmp_line1=dblarr(6562980*3)  
     tmp_line2=dblarr(6562980)
+    tmp_line3=dblarr(6562980)
+    tmp_line4=dblarr(6562980)
     readu,lun,line1
     readu,lun,line2
     readu,lun,line3
@@ -100,6 +133,10 @@ if not DemoMode then begin
     data.field3=tmp_line1[6562980*2:6562980*3-1]
     readu,lun,tmp_line2
     data.field4=tmp_line2
+    readu,lun,tmp_line3
+    data.field5=tmp_line3
+    readu,lun,tmp_line4
+    data.field6=tmp_line4
     free_lun,lun
   endelse
   
@@ -107,8 +144,9 @@ if not DemoMode then begin
   nn=long(0)
   index=where(abs(data.field1-PlotRadius) lt 0.001)
   Br_field=dblarr(360,180)
-  ;Bphi_field=dblarr(360,180)
-  ;Btheta_field=dblarr(360,180)
+  Bphi_field=dblarr(360,180)
+  Btheta_field=dblarr(360,180)
+  bt_field=dblarr(360,180)
   Longitude=dblarr(360,180)
   Latitude=dblarr(360,180)
   for i=0,179 do begin
@@ -120,8 +158,8 @@ if not DemoMode then begin
         Longitude[j,i]=data.field2[index[nn]]
         Latitude[j,i]=data.field3[index[nn]]
         Br_field[j,i]=data.field4[index[nn]]
-        ;Bphi_field[j,i]=data.field5[index[nn]]
-        ;Btheta_field[j,i]=data.field6[index[nn]]
+        Bphi_field[j,i]=data.field5[index[nn]]
+        Btheta_field[j,i]=data.field6[index[nn]]
         nn=nn+1
       endelse
     endfor
@@ -132,6 +170,8 @@ endif
 if DemoMode then begin
   restore,'magneticfield_1.0.sav'
 endif
+
+bt_field=sqrt(bphi_field^2+btheta_field^2+br_field^2)
 
 ;Display the magnetogram and let user interactively select the CME source region. The
 ;procedure to select is:
@@ -145,7 +185,7 @@ endif
 ;is uniform in sin(latitude). This will be changed in the future to degree. 
  
 window,2,xs=1200,ys=800
-plot_image,br_field,min=-40,max=40,charsize=3,title='SWMF Input Magnetogram (R ='$
+plot_image,br_field,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
 +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
 ytitle='Solar Latitude (Pixel)'
 print,'Please Select the CME Source Region (POSITIVE)'
@@ -211,13 +251,12 @@ xNegativeWeight=xNegativeWeight/TotalNegativeFlux
 yNegativeWeight=yNegativeWeight/TotalNegativeFlux
 
 ;Plot the weighted centers on the magnetogram.
-plot_image,br_field,min=-40,max=40,charsize=3,title='SWMF Input Magnetogram (R = '+strtrim(PlotRadius,2)+' Rs)',$
+plot_image,br_field,min=-5,max=5,charsize=3,title='SWMF Input Magnetogram (R = '+strtrim(PlotRadius,2)+' Rs)',$
 xtitle='Solar Longitude (Degree)',ytitle='Solar Latitude (Pixel)'
 plots,xPositiveWeight,yPositiveWeight,/data,psym=-2,color='0000FF'XL
 plots,xNegativeWeight,yNegativeWeight,/data,psym=-2,color='FF0000'XL
 
 ;Calculate the GL flux rope orientation from the two weighted points.
-;Calculate the orientation from the PIL (In development)
 r1=[xPositiveWeight-xNegativeWeight,yPositiveWeight-yNegativeWeight]
 r1=r1/sqrt(r1[0]^2+r1[1]^2)
 r2=[-1.0,0.0]
@@ -253,6 +292,8 @@ GL_Latitude=Latitude[xProfile[index],yProfile[index]]
 GL_Longitude=Longitude[xProfile[index],yProfile[index]]
 GL_Latitude=GL_Latitude*180./3.1415926
 GL_Longitude=GL_Longitude*180./3.1415926
+ar_center=[xProfile[index],yProfile[index]]
+
 
 ;Calculate the gradient of the Br field
 ddx=(shift(br_field,-1,0)-shift(br_field,1,0))/2.
@@ -291,8 +332,7 @@ bitmap_gradient[*,*]=1.0
 bitmap_gradient[where(br_field_gradient lt 0.5)]=0.0
 
 ;Distance cut-off for determining the PIL. 
-Dis_threshold=6
-
+Dis_threshold=8
 DisCenter=fltarr(360,180)
 for i=0,359 do begin
   for j=0,179 do begin
@@ -310,6 +350,24 @@ wmap=bitmap*br_field*bitmap_gradient*dismap
 ;At this moment, the PIL length is represented by degree and does not 
 ;take into account the effect of different latitude. It will be improved later. 
 PIL_Length=(n_elements(where(wmap lt 0))+n_elements(where(wmap gt 0)))/2.
+
+;Calculate the AR magnetic field strength in order to determine the
+;right poloidal flux needed.
+showpoints=where(wmap ne 0)
+NN=n_elements(showpoints)
+pillines=intarr(NN,2)
+bt_pil=0.0
+RegionSize_ARMag=8
+for i=0,NN-1 do begin
+  y_show=floor(showpoints[i]/360)
+  x_show=showpoints[i]-(y_show*360)
+  pillines[i,*]=[x_show,y_show]
+  bt_pil=bt_pil+bt_field[x_show,y_show]
+endfor
+
+bt_pil=bt_pil/nn
+br_ar=average(abs(br_field[ar_center[0]-RegionSize_ARMag/2:ar_center[0]+RegionSize_ARMag/2,$
+                           ar_center[1]-RegionSize_ARMag/2:ar_center[1]+RegionSize_ARMag/2]))
 
 ;Showing the PIL
 showpoints=where(wmap gt 0)
@@ -334,8 +392,7 @@ if keyword_set(USEPIL) then begin
     PIL_y[i]=floor(PILpoints[i]/360)
     PIL_x[i]=PILpoints[i]-(PIL_y[i]*360)
   endfor
-  
- 
+   
   PIL_xx=PIL_x[sort(PIL_x)]
   PIL_yy=PIL_y[sort(PIL_x)]
   PIL_fit=ladfit(PIL_xx,PIL_yy,/double)  
@@ -353,17 +410,23 @@ if keyword_set(USEPIL) then begin
   GL_Orientation=GL_Orientation_s
 endif
 
-;Relationship between the observed CME speed and GL Bstrength.
-;This factor is now based on the 2011 March 7 CME. More tests
-;are needed in order to get a more precise value.
-factor_BV=2200./2.25
-GL_Bstrength=CMESpeed/factor_BV
+;Calculate the poloidal flux needed for the observed CME velocity.
+if ARMag eq 1 then begin
+   GL_poloidal=(CMESpeed-655.00575+34.468279*br_ar-862.)/111.19675   
+endif else begin
+   GL_poloidal=((CMESpeed+478.)/(33.2875/bt_pil)^0.494-655.00575)/111.19675
+endelse
 
-;Relationship between the PIL length and the GL flux rope Radius.
-;This factor is now based on the 2011 March 7 CME. More tests
-;are needed in order to get a more precise value.
-factor_RL=17.5
-GL_Radius=PIL_Length/factor_RL
+;Relationship between the PIL length and the GL flux rope Radius.                                              
+;This factor is now based on the 2011 March 7 CME. More tests                                                   
+;are needed in order to get a more precise value.  
+if not keyword_set(SetGLRadius) then begin
+   factor_RL=17.5
+   GL_Radius=PIL_Length/factor_RL   
+endif
+
+;Relationship between the GL Poloidal flux and GL Bstrength.
+GL_Bstrength=(GL_poloidal-0.073579605)/(21.457435*GL_Radius^4)
 
 ;Calculate the CME grid refinement parameters based on the flux rope                 
 ;location and size.                                                                                            
@@ -405,13 +468,13 @@ RegionSize=50
 ;Display the zoom-in image of the active region with weighted centers and PIL.
 window,3,xs=800,ys=800
 plot_image,br_field[xProfile[index]-RegionSize/2:xProfile[index]+RegionSize/2,$
-yProfile[index]-RegionSize/2:yProfile[index]+RegionSize/2],min=-10,max=10,charsize=3,$
+yProfile[index]-RegionSize/2:yProfile[index]+RegionSize/2],min=-3,max=3,charsize=3,$
 title='CME Source Region (R = '+strtrim(PlotRadius,2)+' Rs)',$
 xtitle='Solar Longitude (Pixel)',ytitle='Solar Latitude (Pixel)'
-plots,xPositiveWeight-(xProfile[index]-RegionSize/2),yPositiveWeight-(yProfile[index]-RegionSize/2),/data,psym=-2,$
-color='0000FF'XL,symsize=3,thick=3
-plots,xNegativeWeight-(xProfile[index]-RegionSize/2),yNegativeWeight-(yProfile[index]-RegionSize/2),/data,psym=-2,$
-color='FF0000'XL,symsize=3,thick=3
+plots,xPositiveWeight-(xProfile[index]-RegionSize/2),yPositiveWeight-(yProfile[index]-RegionSize/2),$
+/data,psym=-2,color='0000FF'XL,symsize=3,thick=3
+plots,xNegativeWeight-(xProfile[index]-RegionSize/2),yNegativeWeight-(yProfile[index]-RegionSize/2),$
+/data,psym=-2,color='FF0000'XL,symsize=3,thick=3
 for i=0,NN-1 do begin
   y_show=floor(showpoints[i]/360)
   x_show=showpoints[i]-(y_show*360)
