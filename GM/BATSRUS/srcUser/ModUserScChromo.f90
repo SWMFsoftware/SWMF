@@ -572,7 +572,7 @@ contains
     ! in the ghost cells
     NumDensIon = RhoChromo/MassIon_I(1)
     NumDensElectron = NumDensIon*AverageIonCharge
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = -1, 0
+    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
        State_VGB(Rho_,i,j,k,iBlock) = RhoChromo
        if(UseElectronPressure)then
           State_VGB(Pe_,i,j,k,iBlock) = NumDensElectron*tChromo
@@ -590,7 +590,7 @@ contains
        Br1_D = sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
        Bt1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) - Br1_D
 
-       do i = -1, 0
+       do i = MinI, 0
           State_VGB(Bx_:Bz_,i,j,k,iBlock) = Bt1_D
        end do
 
@@ -610,7 +610,7 @@ contains
           BrCme   = sum(Runit_D*Bcme_D)
           BrCme_D = BrCme*Runit_D
 
-          do i = -1, 0
+          do i = MinI, 0
              State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)+RhoCme
              if(UseElectronPressure)then
                 State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
