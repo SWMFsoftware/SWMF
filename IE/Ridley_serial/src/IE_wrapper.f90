@@ -1341,7 +1341,7 @@ contains
 
     call init_geoindices
 
-    nShareGroundMag=nIndexMag + nMagnetometer
+    nShareGroundMag = nIndexMag + nMagnetometer
 
   end subroutine IE_groundmaginit_for_gm
 
@@ -1361,32 +1361,34 @@ contains
     integer, intent(in):: iSize
     real, intent(out)  :: Buffer_DII(3,2,iSize)
     
-    real, dimension(3, nIndexMag)     :: IndexMagJh_DI, IndexMagJp_DI
-    real, dimension(3, nMagnetometer) :: VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI
+    real, dimension(3,nIndexMag)     :: IndexMagJh_DI, IndexMagJp_DI
+    real, dimension(3,nMagnetometer) :: VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI
     integer :: i
     character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
     !--------------------------------------------------------------------------
     ! Initialize Buffer to zero.
     Buffer_DII = 0.0
 
-    if( (nIndexMag+nMagnetometer) .ne. iSize) call CON_stop( &
+    if( (nIndexMag+nMagnetometer) /= iSize) call CON_stop( &
          NameSub//' Number of magnetometers does not match!')
 
     if (nIndexMag>0) then
-       ! Obtain hall/pederson perturbs for index magnetometers:
+       ! Obtain Hall and Pedersen perturbations for index magnetometers
        call get_index_mags(IndexMagJh_DI, IndexMagJp_DI)
-       ! Place hall and pederson perturbs into Buffer.
+
+       ! Place perturbations into the beginning of the Buffer
        do i=1, nIndexMag 
           Buffer_DII(:,1,i) = IndexMagJh_DI(:,i)
           Buffer_DII(:,2,i) = IndexMagJp_DI(:,i)
        end do
     end if
 
-    if (nMagnetometer>0) then
-       ! Obtain hall/pederson perturbs for regular magnetometers:
+    if (nMagnetometer > 0) then
+       ! Obtain Hall and Pedersen perturbations for regular magnetometers
        call get_iono_magperturb_now(VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI)
-       ! Place hall and pederson perturbs into Buffer.
-       do i=1+nIndexMag, nIndexMag+nMagnetometer
+
+       ! Place perturbations into end of Buffer
+       do i = nIndexMag + 1, nIndexMag + nMagnetometer
           Buffer_DII(:,1,i) = VirtMagJh_DI(:,i-nIndexMag)
           Buffer_DII(:,2,i) = VirtMagJp_DI(:,i-nIndexMag)
        end do

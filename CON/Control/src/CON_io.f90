@@ -47,12 +47,14 @@ module CON_io
 
   character (len=*), parameter :: NameMod='CON_io'
 
-  ! Name of the input parameter file
+  ! Maximum length of file names
   integer, parameter :: lNameFile=100
-  character (LEN=*), parameter :: NameParamFile="PARAM.in"
+
+  ! Name of the input parameter file
+  character (len=*), parameter :: NameParamFile = 'PARAM.in'
 
   ! writing to STDOUT vs. log files
-  logical                     :: UseStdout=.true.
+  logical                     :: UseStdout     = .true.
   character(len=lNameFile)    :: NameStdoutDir = 'STDOUT/'
   character(len=*), parameter :: NameStdoutExt = '.log'
 
