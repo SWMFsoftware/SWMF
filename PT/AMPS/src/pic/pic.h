@@ -2470,6 +2470,7 @@ namespace PIC {
       namespace ARMS {
         //read ARMS' output file
         namespace OUTPUT {
+	  extern double TimeCoupleNext;
           void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }
       }
@@ -2525,6 +2526,8 @@ namespace PIC {
        res=ICES::GetBackgroundPlasmaPressure(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaPressure(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       res=DATAFILE::GetBackgroundPlasmaPressure(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2539,6 +2542,8 @@ namespace PIC {
        res=ICES::GetBackgroundPlasmaNumberDensity(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaNumberDensity(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       res=DATAFILE::GetBackgroundPlasmaNumberDensity(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2553,6 +2558,8 @@ namespace PIC {
        res=ICES::GetBackgroundPlasmaTemperature(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaTemperature(x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       res=DATAFILE::GetBackgroundPlasmaTemperature(x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
@@ -2565,6 +2572,8 @@ namespace PIC {
        ICES::GetBackgroundFieldsVector(E,B,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundFieldsVector(E,B,x,nd,node);
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       DATAFILE::GetBackgroundFieldsVector(E,B,x,nd,node);
        #else
        exit(__LINE__,__FILE__,"not implemented");
        #endif
