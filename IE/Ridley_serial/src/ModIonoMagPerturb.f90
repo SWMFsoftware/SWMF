@@ -143,7 +143,7 @@ contains
        ! Biot-Savart integral to calculate the magnetic perturbations
        if (Xyz0_D(3) < 0) then           
           ! southern hemisphere
-          if (iproc/=nproc-1)CYCLE
+          if (iProc /= nProc-1)CYCLE
           do i = nTheta+1, nTheta*2
              do j = 1, nPsi
 
@@ -163,7 +163,7 @@ contains
 
        else
           ! northern hemisphere
-          if(iProc/=0)CYCLE
+          if(iProc /= 0)CYCLE
           do i = 1, nTheta
              do j = 1, nPsi
 
@@ -283,12 +283,12 @@ contains
      !/
     MagVarSum_Jh_DI = 0.0
     MagVarSum_Jp_DI = 0.0
-    if(nProc>1)then 
+    if(nProc > 1)then 
        call MPI_reduce(PerturbJh_DI, MagVarSum_Jh_DI, 3*nMagnetometer, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
        call MPI_reduce(PerturbJp_DI, MagVarSum_Jp_DI, 3*nMagnetometer, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0) then
+       if(iProc == 0) then
           PerturbJh_DI = MagVarSum_Jh_DI
           PerturbJp_DI = MagVarSum_Jp_DI
        end if
