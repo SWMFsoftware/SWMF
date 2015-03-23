@@ -1680,7 +1680,7 @@ contains
     use IH_BATL_lib,    ONLY: &
          nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB
     use IH_ModPhysics, ONLY: &
-         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_
+         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_, UnitT_
     use IH_ModGeometry, ONLY: true_cell
     use IH_ModAdvance, ONLY: ExtraSource_ICB
     use IH_ModMain, ONLY: iTest, jTest, kTest, BlkTest
@@ -1741,9 +1741,9 @@ contains
 
     if(.not.allocated(Si2No_I))then
        allocate(Si2No_I(nVarData))
-       Si2No_I(1)   = Si2No_V(UnitRho_)
-       Si2No_I(2:4) = Si2No_V(UnitRhoU_)
-       Si2No_I(5)   = Si2No_V(UnitEnergyDens_)
+       Si2No_I(1)   = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
+       Si2No_I(2:4) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
+       Si2No_I(5)   = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
     end if
 
     if(.not.allocated(ExtraSource_ICB)) &
