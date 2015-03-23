@@ -64,149 +64,117 @@ for iTime=0, nTime-1 do begin
 ; grid ------------------------------------------------------------------------
    printf, lun, '#XPOS'
    for iX = 0, nX-1 do begin
-      printf, lun, struc(iTime).XPOS(iX),format='(E13.5,A1,$)'
+      printf, lun, struc(iTime).XPOS(iX),format='(E13.5)'
    endfor
-   printf, lun, ''
    printf, lun, '#ZPOS'
    for iZ = 0, nZ-1 do begin
-      printf, lun, struc(iTime).ZPOS(iZ),format='(E13.5,A1,$)'
+      printf, lun, struc(iTime).ZPOS(iZ),format='(E13.5)'
    endfor
-   printf, lun, ''
 ; electron mass density -------------------------------------------------------
    printf, lun, '#N_E'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).N_E(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).N_E(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; thermal pressure ------------------------------------------------------------
    printf, lun, '#PRE'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).PRE(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).PRE(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; temperature -----------------------------------------------------------------
    printf, lun, '#TEM'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).TEM(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).TEM(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; velocity in radial direction ------------------------------------------------
    printf, lun, '#VEL_RAD'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).VEL_RAD(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).VEL_RAD(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; velocity in theta direction -------------------------------------------------
    printf, lun, '#VEL_THETA'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).VEL_THETA(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).VEL_THETA(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; velocity in phi direction ---------------------------------------------------
    printf, lun, '#VEL_PHI'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).VEL_PHI(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).VEL_PHI(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; magnetic field in radial direction ------------------------------------------
    printf, lun, '#B_RAD'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).B_RAD(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).B_RAD(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; magnetic field in theta direction -------------------------------------------
    printf, lun, '#B_THETA'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).B_THETA(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).B_THETA(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; magnetic field in phi direction ---------------------------------------------
    printf, lun, '#B_PHI'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).B_PHI(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).B_PHI(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; current density in radial direction -----------------------------------------
    printf, lun, '#J_RAD'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).J_RAD(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).J_RAD(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; current density in theta direction ------------------------------------------
    printf, lun, '#J_THETA'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).J_THETA(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).J_THETA(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; current density in phi direction --------------------------------------------
    printf, lun, '#J_PHI'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).J_PHI(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).J_PHI(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; Alfven speed ----------------------------------------------------------------
    printf, lun, '#ALF'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).ALF(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).ALF(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; plasma beta -----------------------------------------------------------------
    printf, lun, '#BETA'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).BETA(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).BETA(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
 ; poloidal flux function ------------------------------------------------------
    printf, lun, '#FLUX'
    for iZ = 0, nZ-1 do begin
       for iX = 0, nX-1 do begin
-         printf, lun, struc(iTime).FLUX(iX,iZ),format='(E13.5,A1,$)'
+         printf, lun, struc(iTime).FLUX(iX,iZ),format='(E13.5)'
       endfor
-      printf, lun, ''
    endfor
-   printf, lun, ''
    printf, lun, '#END'
    free_lun, lun
 endfor
