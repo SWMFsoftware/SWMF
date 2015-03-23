@@ -84,6 +84,7 @@ RAW			StringLogfile
 
 #MAGNETOMETER
 GM/Param/MAGNETOMETER/magin.dat				MagInputFile
+single							TypeFileOut
 -1							DnOutput
 10.0							DtOutput
 
