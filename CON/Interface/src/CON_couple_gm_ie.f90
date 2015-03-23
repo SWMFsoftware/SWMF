@@ -138,8 +138,8 @@ contains
     if(is_proc(GM_))call GM_put_from_ie(Buffer_IIV, iSize, jSize)
     deallocate(Buffer_IIV)
 
-    if(nShareGroundMag>0)then
-       ! 3 directions, 2 sources (hall and peder) for each magnetometer:
+    if(nShareGroundMag > 0)then
+       ! 3 directions, 2 sources (hall and pedersen) for each magnetometer
        allocate(Buffer_DII(3,2,nShareGroundMag))
 
        ! Collect magnetometer values if sharing ground mags.
