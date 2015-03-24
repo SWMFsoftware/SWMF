@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module ModReadMhData
+module SP_ModReadMhData
   use SP_ModMain, ONLY : State_VI, X_DI, nX, iStdOut, prefix
   implicit none
   SAVE
@@ -123,4 +123,4 @@ contains
     iShock=i_shock(RhoSmooth_I(1:nX))
   end subroutine mh_transform_for_flampa
   !======================================================
-end module ModReadMhData
+end module SP_ModReadMhData

@@ -260,7 +260,7 @@ contains
   end subroutine SP_init_session
   !==================================================================
   subroutine SP_run(tInOut,tLimit)
-
+    use SP_ModReadMhData,ONLY:read_ihdata_for_sp,mh_transform_for_flampa
     use ModNumConst
 
     real,intent(inout)::tInOut

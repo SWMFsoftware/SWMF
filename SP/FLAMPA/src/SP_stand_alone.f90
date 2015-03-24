@@ -8,6 +8,7 @@
 !============================================================================!
 program CON_stand_alone
   use SP_ModMain
+  use SP_ModReadMhData,ONLY:read_ihdata_for_sp
   implicit none
   !--------------------------------------------------------------------------!
   integer:: iIter,iX
