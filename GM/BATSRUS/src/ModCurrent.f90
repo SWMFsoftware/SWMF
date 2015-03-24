@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan      
 module ModCurrent
 
   use ModCoordTransform, ONLY: sph_to_xyz
@@ -22,11 +22,12 @@ contains
     ! otherwise use second order scheme when possible.
 
     use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
-    use ModGeometry, ONLY: True_Cell, true_BLK
+    use ModGeometry, ONLY: True_Cell, true_BLK, r_BLK
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB
     use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
+    use ModB0, ONLY: UseCurlB0, rCurrentFreeB0, set_b0_source, CurlB0_DC
 
     integer, intent(in) :: i, j, k, iBlock
     real,    intent(out):: Current_D(3)
@@ -39,6 +40,8 @@ contains
     integer:: iL, iR, jL, jR, kL, kR
     real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     real   :: InvDx2, InvDy2, InvDz2
+
+    integer:: iBlockLast = -1
     !--------------------------------------------------------------------------
 
     ! Exclude body cells
@@ -199,6 +202,19 @@ contains
        call calc_cartesian_j
     else
        call calc_gencoord_j
+    end if
+
+    ! Add curl B0 if necessary
+    if(UseCurlB0)then
+       ! Curl B0 is zero inside rCurrentFreeB0
+       if(r_BLK(i,j,k,iBlock) < rCurrentFreeB0) RETURN
+       ! Curl B0 is only calculated for the physical cells
+       if(i<1 .or. i>nI .or. j<1 .or. j>nJ .or. k<1 .or. k>nK)RETURN
+       ! Optimize for multiple calls for the same block
+       if(iBlock /= iBlockLast)call set_b0_source(iBlock)
+       iBlockLast = iBlock
+       ! Add curl(B0) to the current
+       Current_D = Current_D + CurlB0_DC(:,i,j,k)
     end if
 
   contains
