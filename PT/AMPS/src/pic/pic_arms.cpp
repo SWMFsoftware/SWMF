@@ -15,7 +15,7 @@
 #include "pic.h"
 
 //path to the location of the data files
-char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]="/Users/dborovik/AMPS_dev/AMPS";
+char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
 double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=0.0;
 
 //read ARM's output file
@@ -141,8 +141,6 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
     const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
     const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
     
-    
-    
     if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
       double *xNodeMin=startNode->xmin;
       double *xNodeMax=startNode->xmax;
@@ -160,7 +158,7 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	    double radius  = pow(radpol2 + x[2]*x[2],0.5);
 	    int xCell = floor( (radpol - Xpos[0]) / dX);
 	    int zCell = floor( (x[2]   - Zpos[0]) / dZ);
-	    if(xCell < 0 || zCell < 0 || xCell > nX || zCell > nZ) continue;
+	    if(xCell < 0||zCell < 0||xCell >= nX-1||zCell >= nZ-1) continue;
 	    
 	    // interpolation weights
 	    double wX = (pow(radpol,2)-pow(Xpos[xCell],2)) / (twodX*Xpos[xCell]+dX2);
@@ -168,9 +166,9 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	    
 	    //interpolate values
 	    double DataInterp[nvar] = {0.0}, E[nvar] = {0.0};
-	    for(int ivar=0;ivar<nvar;ivar++)for(int ii=0;ii<1;ii++)for(int jj=0;jj<1;jj++)
-								     DataInterp[ivar] += 
-								       Data[ivar][xCell+ii][zCell+jj] * ((1-wX)*(1-ii) + wX*ii) * ((1-wZ)*(1-jj) + wZ*jj);
+	    for(int ivar=0;ivar<nvar;ivar++)for(int ii=0;ii<2;ii++) for(int jj=0;jj<2;jj++)
+		  DataInterp[ivar] += 
+		    Data[ivar][xCell+ii][zCell+jj] * ((1-wX)*(1-ii) + wX*ii) * ((1-wZ)*(1-jj) + wZ*jj);
 	    {
 	      // transform data to cartesian: 
 	      // initial data has vectors' components in spherical coordinates
