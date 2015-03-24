@@ -460,7 +460,7 @@ test3_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test3/GM_log_n000001.log \
 		> test3_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=5e-5 \
 		${TESTDIR}/RESULTS/GM/magnetometers_n00000000.mag \
 		output/test3/magnetometers_n00000000.mag \
 		>> test3_gm.diff)
@@ -480,7 +480,7 @@ test3_check:
 		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
 		output/test3/IE.mag \
 		>> test3_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=5e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104520_000.idl \
 		output/test3/IE_it000321_104520_000.idl \
 		>> test3_ie.diff)
