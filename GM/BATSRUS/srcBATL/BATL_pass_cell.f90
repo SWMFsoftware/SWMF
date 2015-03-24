@@ -1319,13 +1319,17 @@ contains
       real:: Cell1_I(6)=0, Cell2_I(6)=0, Cell3_I(6)=0
       real:: Distance_I(4) = (/-2,-1,1,2/)
       real:: Cell_III(6,6,6)
-      logical, allocatable:: IsAccurate_III(:,:,:) 
+
+      ! Some points can be calculated in 2 or 3 symmetric ways, use their
+      ! average. 
+      integer, allocatable:: CalTimes_III(:,:,:)
       integer, allocatable:: nCorrected_III(:,:,:)
       logical:: DoResChange_D(3), IsAccurateGhost, DoSymInterp
       real, parameter:: c1=0.05, c2=-0.3, c3=0.75, c1over10=1./10, c1over2=1./2
       real:: Coef_I(6) 
       real:: Orig, Orig1, Orig2, Orig3, Res1, Res2, Res3
-      integer:: nResChange, nEdge, nCorrect 
+      integer:: nResChange, nEdge, nCorrect, iGhost, iCalTime
+      real:: weight1, weight2
       character(len=*), parameter :: NameSub = 'calc_accurate_coarsened_block'
       !----------------------------------------------------------------------
 
@@ -1338,9 +1342,9 @@ contains
       if(.not. allocated(Fine_VIII))&
            allocate(Fine_VIII(nVar,8,6,min(6,nK)))
 
-      if(.not. allocated(IsAccurate_III)) &
-           allocate(IsAccurate_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))
-      IsAccurate_III = .false.
+      if(.not. allocated(CalTimes_III)) &
+           allocate(CalTimes_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))
+      CalTimes_III = 0
 
       DoResChange_D = .false.
       DoSymInterp = .true.
@@ -1408,7 +1412,8 @@ contains
                State_VIIIB(iVar,ic0:ic0-2*iDir1:-iDir1,j,k,iBlock) = Coarse_I
             enddo ! iVar
 
-            IsAccurate_III(ic0:ic0-2*iDir1:-iDir1,j,k) = .true.
+            CalTimes_III(ic0:ic0-2*iDir1:-iDir1,j,k) = &
+                 CalTimes_III(ic0:ic0-2*iDir1:-iDir1,j,k) + 1
          enddo; enddo
       enddo
 
@@ -1445,9 +1450,6 @@ contains
          Dk = sign(1,kEnd - kBegin)
 
          do k = kBegin, kEnd, Dk; do i = iBegin, iEnd, Di
-            ! The coarsened cell has been calculated. 
-            if(IsAccurate_III(i,jc0,k)) CYCLE
-
             if(nK == 1) then
                do iPerp = 1, 8
                   Fine_VIII(:,iPerp,:,k) = &
@@ -1473,10 +1475,20 @@ contains
                     Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
                     IsPositiveIn=IsPositive_V(iVar))
 
-               State_VIIIB(iVar,i,jc0:jc0-2*jDir1:-jDir1,k,iBlock) = Coarse_I
-
+               do iGhost = 1, 3 ! 3 layer ghost cells.
+                  ! For ghost cells can be calculated in several symmetric
+                  ! ways, use their average. 
+                  iCalTime = CalTimes_III(i,jc0-(iGhost-1)*jDir1,k)
+                  weight1 = iCalTime/(iCalTime + 1.0)
+                  weight2 = 1.0 - weight1
+                  State_VIIIB(iVar,i,jc0-(iGhost-1)*jDir1,k,iBlock) &
+                       = weight1*&
+                       State_VIIIB(iVar,i,jc0-(iGhost-1)*jDir1,k,iBlock)&
+                       + weight2*Coarse_I(iGhost)
+               enddo
             enddo ! iVar
-            IsAccurate_III(i,jc0:jc0-2*jDir1:-jDir1,k) = .true.
+            CalTimes_III(i,jc0:jc0-2*jDir1:-jDir1,k) = &
+                 CalTimes_III(i,jc0:jc0-2*jDir1:-jDir1,k) + 1
          enddo; enddo
       enddo
 
@@ -1512,7 +1524,6 @@ contains
          Dj = sign(1,jEnd - jBegin)
 
          do j = jBegin, jEnd, Dj; do i = iBegin, iEnd, Di
-            if(IsAccurate_III(i,j,kc0)) CYCLE
 
             do iPerp = 1, 8
                Fine_VIII(:,iPerp,:,:) = &
@@ -1529,9 +1540,19 @@ contains
                     Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
                     IsPositiveIn=IsPositive_V(iVar))
 
-               State_VIIIB(iVar,i,j,kc0:kc0-2*kDir1:-kDir1,iBlock) = Coarse_I
+
+               do iGhost = 1, 3 ! 3 layer ghost cells.
+                  iCalTime = CalTimes_III(i,j,kc0-(iGhost-1)*kDir1)
+                  weight1 = iCalTime/(iCalTime + 1.0)
+                  weight2 = 1.0 - weight1
+                  State_VIIIB(iVar,i,j,kc0-(iGhost-1)*kDir1,iBlock) = &
+                       weight1*&
+                       State_VIIIB(iVar,i,j,kc0-(iGhost-1)*kDir1,iBlock) &
+                       + weight2*Coarse_I(iGhost)
+               enddo
             enddo
-            IsAccurate_III(i,j,kc0:kc0-2*kDir1:-kDir1) = .true.
+            CalTimes_III(i,j,kc0:kc0-2*kDir1:-kDir1) = &
+                 CalTimes_III(i,j,kc0:kc0-2*kDir1:-kDir1) + 1
          enddo; enddo
       enddo ! kDir1
 
@@ -2065,7 +2086,7 @@ contains
                      do k = kBegin, kEnd, Dk
                         do j = jBegin, jEnd, Dj
                            do i = iBegin, iEnd, Di
-                              if(IsAccurate_III(i,j,k)) CYCLE
+                              if(CalTimes_III(i,j,k)>0) CYCLE
                               if(DoResChange_D(1) .and. &
                                    j == jBegin .and. k == kBegin) CYCLE
                               if(DoResChange_D(2) .and. &
@@ -2083,7 +2104,7 @@ contains
                                       restriction_high_order_amr(Cell_III,&
                                       IsPositiveIn=IsPositive_V(iVar))
                               enddo ! iVar
-                              IsAccurate_III(i,j,k) = .true.
+                              CalTimes_III(i,j,k) = CalTimes_III(i,j,k)+1
 
                            enddo ! i
                         enddo ! j
@@ -2113,7 +2134,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           IsAccurate_III(i,j,k) = .true.
+                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
                         enddo ! i 
                      elseif(DoResChange_D(2)) then
                         i = iBegin; k = kBegin                        
@@ -2138,7 +2159,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           IsAccurate_III(i,j,k) = .true.
+                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
                         enddo ! j 
 
                      elseif(DoResChange_D(3)) then
@@ -2164,7 +2185,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           IsAccurate_III(i,j,k) = .true.
+                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k)+1  
                         enddo ! k
                      endif
                   enddo
@@ -2276,7 +2297,7 @@ contains
                do k = kBegin, kEnd, Dk
                   do j = jBegin, jEnd, Dj
                      do i = iBegin, iEnd, Di
-                        if(IsAccurate_III(i,j,k)) CYCLE
+                        if(CalTimes_III(i,j,k)>0) CYCLE
                         if(kDir1 == 0 .and. &
                              (i==iBegin .and. j==jBegin)) CYCLE
                         if(jDir1 == 0 .and. &
@@ -2294,7 +2315,7 @@ contains
                         enddo
 
                         ! It is somewhat complicated to tell weather it is
-                        ! accurate or not. So, do not set IsAccurate_III value.
+                        ! accurate or not. So, do not set CalTimes_III value.
 
                      enddo ! i 
                   enddo ! j 
@@ -2375,7 +2396,7 @@ contains
 
                         ! If it is accurate, it will not be overwritten by 
                         ! simple restriction for the inner cell code. 
-                        IsAccurate_III(i,j,k) = .true.
+                        CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
 
                         nCorrected_III(i,j,k) = nCorrected_III(i,j,k) + 1
                      enddo ! i 
@@ -2471,7 +2492,6 @@ contains
 
       if(.not. allocated(Field1_VG)) &
            allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
-
 
       call is_face_accurate(iBlock)
 
@@ -4349,7 +4369,7 @@ contains
                iNode_I = (/72,79,86,93,100,107,114,121/)
             endif
          endif
-
+         
          do iCount = 0, nCount-1
             if(DoTestMeOnly) then
                write(*,*) ''
@@ -4358,7 +4378,7 @@ contains
             call init_tree(MaxBlockTest)
             call init_geometry(NameGeometry, &
                  IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
-
+            
             call init_grid(DomainMin_D(1:nDim), DomainMax_D(1:nDim), &
                  UseDegreeIn=.false.)
             call set_tree_root( nRootTest_D(1:nDim))
