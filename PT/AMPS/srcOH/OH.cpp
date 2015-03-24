@@ -145,24 +145,10 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 }
 
 int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
-
-  int *ReactionProductsList,nReactionProducts;
-  double *ReactionProductVelocity;
-  int ReactionChannel;
-  bool PhotolyticReactionRoute;
-  /*
-  PhotolyticReactionRoute=(rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) ? true : false;
-
-  if (PhotolyticReactionRoute==true) {
-    PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-  }
-  else {
-    ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-  }
-
+  
   //inject the products of the reaction
   double ParentTimeStep,ParentParticleWeight;
-
+  
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
   ParentParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
 #else
@@ -187,81 +173,66 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
 
   //copy the state of the initial parent particle into the new-daugher particle (just in case....)
   PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
+  long int newParticle;
+  PIC::ParticleBuffer::byte *newParticleData;
+  double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+  
+  ModelParticleInjectionRate=1.0/ParentTimeStep;
+  TimeIncrement=-log(rnd())/ModelParticleInjectionRate * rnd(); 
+  TimeCounter += TimeIncrement;
+  //<- *rnd() is to account for the injection of the first particle in the curent interaction
+  
+  /*
+   *
+   *  double ProductTimeStep=ParentTimeStep;
+   *  double ProductParticleWeight=ParentParticleWeight;
+   *  double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
+   *  
+   *    
+   *  ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight;
+   *
+   *  //inject the product particles
+   *  TimeIncrement+=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
+   *  
+   *  while (TimeCounter+TimeIncrement<ProductTimeStep) {
+   *    TimeCounter+=TimeIncrement;
+   *    TimeIncrement+=-log(rnd())/ModelParticleInjectionRate;
+   *
+   *    //determine the velocity of the product specie
+   *    double ProductParticleVelocity[3];
+   *
+   *       for (int idim=0;idim<3;idim++) 
+   *	 ProductParticleVelocity[idim]=vFinal[idim];
+   *
+   *
+   *
+   *       //apply condition of tracking the particle
+   *       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+   *       PIC::ParticleTracker::InitParticleID(tempParticleData);
+   *       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
+   *       #endif
+   */
+  
+  //generate a particle
+  PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetV(vFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
-  for (int iProduct=0;iProduct<nReactionProducts;iProduct++) {
-    double ProductTimeStep,ProductParticleWeight;
-    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
-    int nInjectedParticles=0,specProduct=ReactionProductsList[iProduct];
-    long int newParticle;
-    PIC::ParticleBuffer::byte *newParticleData;
-
-
-#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-     ProductParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[specProduct];
-#else
-     ProductParticleWeight=0.0;
-     exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+  PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 #endif
 
-#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-     ProductTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[specProduct];
-#else
-     ProductTimeStep=0.0;
-     exit(__LINE__,__FILE__,"Error: the time step node is not defined");
-#endif
 
-     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight;
-
-     //inject the product particles
-     TimeIncrement+=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
-
-     while (TimeCounter+TimeIncrement<ProductTimeStep) {
-       TimeCounter+=TimeIncrement;
-       TimeIncrement+=-log(rnd())/ModelParticleInjectionRate;
-
-       //determine the velocity of the product specie
-       double ProductParticleVelocity[3];
-
-       for (int idim=0;idim<3;idim++) ProductParticleVelocity[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
-
-       //generate a particle
-       PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
-       PIC::ParticleBuffer::SetV(ProductParticleVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);
-       PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
-
-       #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-       #endif
-
-       //apply condition of tracking the particle
-       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-       PIC::ParticleTracker::InitParticleID(tempParticleData);
-       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
-       #endif
-
-
-       //get and injection into the system the new model particle
-       newParticle=PIC::ParticleBuffer::GetNewParticle();
-       newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-       memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
-
-       _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ProductTimeStep-TimeCounter,node,true);
-
-       //when another particle is injected -> generate new velocity vector
-       if (TimeCounter+TimeIncrement<ProductTimeStep) {
-         if (PhotolyticReactionRoute==true) {
-           PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-         }
-         else {
-           ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-         }
-       }
-
-     }
-
-  }
-  */
-
+  
+  //get and injection into the system the new model particle
+  newParticle=PIC::ParticleBuffer::GetNewParticle();
+  newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+  memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+  
+  _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ParentTimeStep-TimeCounter,node,true);
+  //     }
+  
+  
   return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
 
 }
