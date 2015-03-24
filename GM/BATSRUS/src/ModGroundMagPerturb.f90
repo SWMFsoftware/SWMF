@@ -27,7 +27,7 @@ module ModGroundMagPerturb
   logical,            public:: save_magnetometer_data = .false.
   integer,            public:: nMagnetometer=0
   character(len=100), public:: MagInputFile
-  character(len=6),   public:: TypeMagFileOut='single'
+  character(len=7),   public:: TypeMagFileOut='single '
 
   ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
   real, allocatable,  public:: IeMagPerturb_DII(:,:,:) 
@@ -416,7 +416,7 @@ contains
     call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
 
     ! If writing new files every time, no initialization needed.
-    if(TypeMagFileOut .eq. 'epochs')return
+    if(TypeMagFileOut /= 'single')return
 
     if(IsLogName_e)then
        ! Event date added to magnetic perturbation file name
@@ -466,7 +466,12 @@ contains
          MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI, MagVarFac_DI, &
          MagVarGm_DI, MagVarTotal_DI
     real:: MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
-    !--------------------------------------------------------
+
+    character(len=*), parameter :: NameSub = 'write_magnetometers'
+    logical                     :: DoTest, DoTestMe
+    !---------------------------------------------------------------------
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! Matrix between two coordinates
     MagtoGsm_DD = transform_matrix(Time_Simulation, &
@@ -534,8 +539,10 @@ contains
        select case(TypeMagFileOut)
           case('single')
              call write_mag_single
-          case('epochs')
-             call write_mag_epoch
+          case('step')
+             call write_mag_step
+          case('station')
+             call CON_stop(NameSub//': separate mag files not implemented yet.')
        end select
 
     end if
@@ -571,8 +578,8 @@ contains
     end subroutine write_mag_single
 
     !=====================================================================
-    subroutine write_mag_epoch
-      ! For TypeMagFileOut == 'epochs', write one file for every write epoch.
+    subroutine write_mag_step
+      ! For TypeMagFileOut == 'step', write one file for every write step.
       use ModIoUnit, ONLY: UnitTmp_
       use ModIO,     ONLY: NamePlotDir, IsLogName_e
 
@@ -622,7 +629,7 @@ contains
       ! Close file:
       close(UnitTmp_)
 
-    end subroutine write_mag_epoch
+    end subroutine write_mag_step
     !=====================================================================
   end subroutine write_magnetometers
 
@@ -632,7 +639,7 @@ contains
 
     use ModProcMH, ONLY: iProc
 
-    if(iProc==0 .and. TypeMagFileOut .ne. 'epochs') close(iUnitMag)
+    if(iProc==0 .and. TypeMagFileOut /= 'step') close(iUnitMag)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
 
   end subroutine finalize_magnetometer
