@@ -146,7 +146,8 @@ contains
   !===========================================================================
   subroutine set_gen_radial_grid
 
-    !Set a single elemene
+    ! Set a single element array when generalized radial coordinate
+    ! is not used, but still should be set.
 
     if(allocated(LogRGen_I)) deallocate(LogRGen_I)
     allocate(LogRGen_I(1))
