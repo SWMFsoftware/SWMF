@@ -189,10 +189,12 @@ contains
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_
-    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_
+    use ModVarIndexes, ONLY: Rho_, Bx_, Bz_, p_, Pe_, WaveFirst_, WaveLast_, &
+         Ew_
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
          MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_, &
          UseMultiIon, IsMhd
+    use ModWaves, ONLY: UseWavePressureLtd
 
     integer, intent(in) :: iBlock
 
@@ -315,7 +317,8 @@ contains
           State_VGB(WaveFirst_,i,j,k,iBlock) = &
                1e-4*State_VGB(WaveLast_,i,j,k,iBlock)
        end if
-
+       if(UseWavePressureLtd) State_VGB(Ew_,i,j,k,iBlock) = &
+            sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -398,12 +401,14 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModPhysics,    ONLY: inv_gm1, GBody, rBody
-    use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ehot_, p_
+    use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
+         Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
     use ModNumConst,   ONLY: cTolerance
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModCoordTransform, ONLY: xyz_to_sph
+    use ModWaves, ONLY: UseWavePressureLtd
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -480,6 +485,9 @@ contains
 
           ! Ingoing wave energy
           State_VGB(Minor_,i,j,k,iBlock) = 0.0
+
+          if(UseWavePressureLtd) State_VGB(Ew_,i,j,k,iBlock) &
+               = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
        end do
 
        if(Ehot_ > 1)then
@@ -562,9 +570,10 @@ contains
          iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, UseMultiIon, IsMhd
     use ModPhysics,      ONLY: OmegaBody, inv_gm1
     use ModVarIndexes,   ONLY: nVar, Rho_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Pe_, Hyp_, Ehot_, MassFluid_I
+         WaveFirst_, WaveLast_, Ew_, Pe_, Hyp_, Ehot_, MassFluid_I
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
+    use ModWaves, ONLY: UseWavePressureLtd
 
     real, intent(out) :: VarsGhostFace_V(nVar)
 
@@ -614,6 +623,8 @@ contains
        VarsGhostFace_V(WaveFirst_) = 0.0
        VarsGhostFace_V(WaveLast_) = Ewave
     end if
+    if(UseWavePressureLtd) &
+         VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
 
     ! Fix temperature
     VarsGhostFace_V(iP_I(IonFirst_:nFluid))=Tchromo*Nchromo_I
