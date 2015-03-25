@@ -102,8 +102,8 @@ module ModUser
 
   ! Parameters to increase the neutral density in the source term to
   ! approach the steady state solution more easily (hopefully)
-  logical :: DoEnhancedNeu   = .false.
-  integer :: EnhancedRatio   = 20
+  logical :: DoEnhanceNeu    = .false.
+  real    :: EnhancedRatio   = 20
   integer :: DecadeDn        = 10000
   integer :: nStepEnhanceNeu = -100
 
@@ -218,7 +218,7 @@ contains
        case("#MINIMUMNEUTEMPERATURE")
           call read_var('TempNeuMinSi', TempNeuMinSi)
        case('#ENHANCENEU')
-          call read_var('DoEnhancedNeu', DoEnhancedNeu)
+          call read_var('DoEnhanceNeu',  DoEnhanceNeu)
           call read_var('EnhancedRatio', EnhancedRatio)
           call read_var('DecadeDn',      DecadeDn)
        case('#USERINPUTEND')
@@ -301,17 +301,14 @@ contains
     TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
     TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
-    ! From Huebner & Markiewicz 2000, eq 8:
-    ! uNormal = sqrt( pi kT / 2*m ), so TempToUnormal = sqrt( pi k/ 2m )
-    ! and also unit conversions of temperature to SI, and velocity from SI
-    TempToUnormal = sqrt(cPi*cBoltzmann/(2*MassFluid_I(nFluid)*cAtomicMass) * &
-         No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
+    ! From Huebner and Markiwitz u_0 = sqrt(8kT/m pi)*0.8257 for f_rv=3 (H2O)
+    ! 0.8345 for f_rv=2 (OH) and 0.8728 for f_rv=0 (H)
+    TempToUnormal = 1.31763*sqrt(cBoltzmann/(MassFluid_I(nFluid)*cAtomicMass) &
+         * No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
 
-    ! From Huebner & Markiewicz, 2000 eq. 13)
-    ! T' = T*((8 + 2 f_rv - pi)/(2(f_rv + 3)) = T(2f + 2 - pi)/(2f) 
-    !    = T[1 - (pi-2)/4*(gamma - 1)]
-    ! so TempToPressure = [1 - (pi-2)/4*(gamma - 1)]/Mass
-    TempToPressure = (1 - gm1*0.25*(cPi-2))/MassFluid_I(nFluid)
+    ! T' = C*T so and p = n*T' = rho*C*T/*m so TempToPressure = C/m
+    ! where C = 0.8097 for f_rv=0, 0.8858 for f_rv=2, 0.9049 for f_rv=3 (H20)
+    TempToPressure = 0.9049/MassFluid_I(nFluid)
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -1087,10 +1084,11 @@ contains
     ! and Itikawa, Phys. Fluids 1983
     !  fen_I(H2O_) = 2.745E-5*NnNeu_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)
     !               /1e6*Te**(-0.62)      !! rate in [1/s]
-    if (DoEnhancedNeu) then
+    if (DoEnhanceNeu) then
        fen_I(Neu1_) = 2.745E-5*State_VGB(Neu1Rho_, i, j, k, iBlock)/1e6 &
             *Te**(-0.62)/MassFluid_I(nFluid)*No2SI_V(UnitN_) &
-            * max(EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+            *max((EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step))/DecadeDn,&
+            1.0)
     else
        fen_I(Neu1_) = 2.745E-5*State_VGB(Neu1Rho_, i, j, k, iBlock)/1e6 &
             *Te**(-0.62)/MassFluid_I(nFluid)*No2SI_V(UnitN_)
@@ -1597,10 +1595,11 @@ contains
          No2SI_V(UnitTemperature_)
 
     ! Neu1 density in SI
-    if (DoEnhancedNeu) then
+    if (DoEnhanceNeu) then
        nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) &
             / MassFluid_I(nFluid)*No2SI_V(UnitN_) &
-            * max(EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+            * max((EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step))/DecadeDn,&
+            1.0)
     else
        nNeu1_C  = State_VGB(Neu1Rho_,1:nI,1:nJ,1:nK,iBlock) &
             / MassFluid_I(nFluid)*No2SI_V(UnitN_)
@@ -3407,11 +3406,12 @@ contains
        NameTecUnit = '[1/cm^3]'
        !do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          if (DoEnhancedNeu) then
+          if (DoEnhanceNeu) then
              PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
                   MassFluid_I(nFluid)*No2Si_V(UnitN_) * &
                   max( &
-                  EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step)/DecadeDn,1)
+                  (EnhancedRatio*(DecadeDn+nStepEnhanceNeu-n_step))/DecadeDn, &
+                  1.0)
           else
              PlotVar_G(i,j,k) = State_VGB(Neu1Rho_,i,j,k,iBlock)/ &
                   MassFluid_I(nFluid)*No2Si_V(UnitN_)
