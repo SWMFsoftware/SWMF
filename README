@@ -35,7 +35,7 @@ the SWMF and create the user manual please follow the instructions below.
 # !!! Getting SWMF from CVS (requires CVS access) !!!
 # Set the CVS environment variables (with your user name)
 
-setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/FRAMEWORK
+setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/CVS/FRAMEWORK
 setenv CVS_RSH ssh
 
 # Check out the SWMF distribution
@@ -139,13 +139,24 @@ doc/SWMF.pdf
 
 # You can try running the standard test suite by typing
 
-make test
+make -j test
 
-# in the main directory. This requires a machine where mpirun is available.
-# The tests run on 2 CPU cores by default. To run on (up to 4) cores use
-
-make test MPIRUN='mpirun -np 4'
-
-# the results of the tests are summarized in test_swmf.res
+# in the main directory. The -j flag allows parallel compilation.
+# This requires a machine where mpirun is available.
+# The tests run on 2 CPU cores by default. 
+# The results of the tests are summarized in test_swmf.res
 # Successful passing of the test is indicated by empty *.diff files.
+
+# To run the tests on more (up to 8) cores use
+
+make -j test MPIRUN='mpirun -np 4'
+
+# You can also run an individual test. The list of available SWMF tests
+# can be listed with
+
+make test_help
+
+# For example, to run test3 on a single core use
+
+make -j test3 MPIRUN=
 \end{verbatim}

@@ -14,22 +14,25 @@ modeling community.  In its current form the SWMF contains many
 domains extending from the surface of the Sun to the upper atmosphere of the 
 Earth: 
 \begin{enumerate}
-\item EE -- Eruptive Event generator (currently empirical models only)
+\item CZ -- Convection Zone
+\item EE -- Eruptive Event generator
 \item GM -- Global Magnetosphere 
 \item IE -- Ionosphere Electrodynamics
-\item IM -- Inner Magnetosphere
 \item IH -- Inner Heliosphere
-\item LA -- Lower Atmosphere (under development)
-\item LC -- Lower Corona
+\item IM -- Inner Magnetosphere
 \item OH -- Outer Heliosphere
+\item PC -- Particle-in-Cell
 \item PS -- Plasma Sphere (under development)
+\item PT -- Particle Tracker
 \item PW -- Polar Wind
 \item RB -- Radiation Belts
 \item SC -- Solar Corona
 \item SP -- Solar Energetic Particles 
 \item UA -- Upper Atmosphere
 \end{enumerate}
-The core of the SWMF and most of the models are implemented in Fortran 90. 
+The core of the SWMF and most of the models are implemented in Fortran 90.
+Some models are written in Fortran 77, and others are written in C++.
+A few features of Fortran 2003 and 2008 are also used.
 The parallel communications use the Message Passing Interface (MPI) library. 
 The SWMF creates a single executable. Note, however, that the
 models in the SWMF can still be compiled into stand-alone executables.
@@ -67,7 +70,8 @@ T\'oth, Igor Sokolov and Ovsei Volberg:
 \end{itemize}
 The SWMF has undergone major improvements over the years. 
 The current version has a fully automated test suite designed
-by Gabor Toth. Empirical models were added in a systematic way.
+by G\'abor T\'oth. 
+Empirical models were added in a systematic way.
 The shared libraries and utilities have been greatly extended.
 The SWMF has been coupled to the Earth System Modeling Framework (ESMF).
 
@@ -76,25 +80,24 @@ models were developed by the following research groups
 and individuals:
 \begin{itemize}
 \item
-The Lower Corona (LC), Solar Corona (SC), Inner Heliosphere (IH), 
+The Eruptive Event generator (EE), Solar Corona (SC), Inner Heliosphere (IH), 
 Outer Heliosphere (OH), and the Global Magnetosphere (GM) 
 components are based on \BATSRUS\ MHD code developed at CSEM. 
-\BATSRUS\ is highly parallel up to 3-dimensional block-adaptive 
+\BATSRUS\ is a highly parallel up to 3-dimensional block-adaptive 
 hydrodynamic and MHD code. 
 Currently the main developers of \BATSRUS\ are Gabor Toth,
-Bart van der Holst, Igor Sokolov, and Darren De Zeeuw.
-The Lower Corona specific part was developed by
-Cooper Downs and Ilia Roussev at the University of Hawaii.
+Bart van der Holst, and Igor Sokolov.
 The current version of the Solar Corona model was developed
-by Bart van der Holst, Chip Manchester, Igor Sokolov, and Ofer Cohen. 
+by Bart van der Holst, Chip Manchester, Igor Sokolov with contributions
+from Cooper Downs, Ilia Roussev and Ofer Cohen. 
 The Inner Heliosphere model was mostly developed by Chip Manchester.
-The Outer Heliosphere model was developed by Merav Opher and Gabor
-Toth. The Global Magnetosphere model was developed by 
+The Outer Heliosphere model was developed by Merav Opher and Gabor Toth. 
+The Global Magnetosphere model was developed by 
 Darren De Zeeuw, Gabor Toth, Aaron Ridley and many others.
 The physics based Eruptive Even Generator model is also based on
 \BATSRUS. It is developed by Fang Fang, Chip Manchester and Bart van
 der Holst. The EE model alrady works as a stand-alone code, and
-it will by coupled to the SWMF in the future.
+it will by coupled to other components in the SWMF in the future.
 
 \item
 The Ionospheric Electrodynamics (IE) model is the Ridley Ionosphere Model
@@ -105,7 +108,7 @@ the RIM version is fully parallel with many new options, however it is still
 being developed, and it is not yet fully functional.
 
 \item
-The first Inner Magnetosphere (IM) component in the SWMF was
+The first Inner Magnetosphere (IM) model in the SWMF was
 the Rice Convection Model (RCM) developed Dick Wolf, Stan Sazykin and 
 others at Rice University, also modified by Darren De Zeeuw at the
 University of Michigan. The current version of the model with oxygen and loss
@@ -119,8 +122,16 @@ The RAM-SCB model was developed by Vania Jordanova, Sorin Zaharia and
 Dan Welling. RAM-SCB is currently only available at Los Alamos National
 Laboratory. The CRCM, HEIDI and RAM-SCB models are also 2 dimensional
 in space, but they resolve energy as well as pitch angle.
-Currently only the RCM and CRCM models are 2-way coupled with the
-GM component. 
+
+\item
+The Particle-in-Cell (PC) model is the implicit PIC code iPIC3D
+developed by Stefano Markidis and his group at KTH Sweden
+and Giovanni Lapenta and his group at KU Leuven, Belgium.
+The code was adapted, integrated into the SWMF and coupled
+with BATS-R-US by Lars Daldorff and Gabor Toth.
+iPIC3D solves for the electric and magnetic fields on 
+a 3D Cartesian grid and the motion of electron and ion
+macroparticles. iPIC3D is a parallel code written in C++. 
 
 \item
 The Polar Wind (PW) component is the Polar Wind Outflow Model (PWOM)
@@ -129,16 +140,25 @@ at the University of Michigan.  This code solves the
 multifluid equations along multiple field lines and it is fully parallel.
 
 \item
+The Particle Tracker (PT) model is the Adaptive Mesh Particle Scheme (AMPS).
+The main developer of AMPS is Valeriy Tenishev. AMPS solves the motion
+and interaction of neutral and charged particles on an up to 3D 
+adaptive grid. AMPS is a parallel code written in C++.
+
+\item
 The Radiation Belt Environment (RBE) model is developed by Meiching Fok
 and Alex Glocer at NASA Goddard. It is a spatially 2-dimensional code with 
 extra two dimensions for pitch angle and energy. 
 
 \item
-The Solar Energetic Particle (SP) component is the
-K\'ota's SEP model which was developed by Joseph Kota 
-at the University of Arizona.
+One of the Solar Energetic Particle (SP) models is the
+K\'ota's SEP model by Joseph Kota at the University of Arizona.
 It solves the equations for the advection and acceleration of
-energetic particles along a magnetic field line in a 3D phase space.
+energetic particles along a magnetic field line in a 3D phase space
+using energy and pitch angle as the extra two dimensions.
+The other SP model is the Field Line AdvectionFLAMPA Model for 
+Particle Acceleration (FLAMPA) by Igor Sokolov. FLAMPA also solves
+for energy distribution but assumes an isotropic pitch angle distribution.
 
 \item
 The Upper Atmosphere (UA) model is the 
@@ -163,49 +183,43 @@ The following empirical models are available:
 
 \section{The SWMF in a Few Paragraphs}
 
-The SWMF is a structured collection of software building blocks that
-can be used or customized to develop Sun-Earth system modeling
-components, and to assemble them into applications. The SWMF consists
-of utilities and data structures for coupling model components. The
-SWMF contains a Control Module (CON), which is responsible for
-component registration, processor layout for each component and
-coupling schedules.  It controls initialization and execution of the
-components. A component is adapted from user-supplied physics codes,
+The SWMF is a software framework that allows integration
+of various models into a coherent system. The SWMF allows
+running and coupling any meaningful subset of the models together.
+The main applications of the SWMF are related to space
+physics and space weather, but it can be, and has been, used for 
+other applications that the models allow.
+The SWMF contains a Control Module (CON), which is responsible for
+component registration, processor layout for each component as well
+as initialization, execution and coupling schedules.  
+The SWMF contains templates (examples) and utilities for 
+integrating and coupling models. 
+A component is adapted from user-supplied physics codes,
 (for example \BATSRUS\ or RCM), by adding two relatively small units
 of code:
 \begin{itemize}
-\item A wrapper, which provides the control functions, and
+\item A wrapper, which provides the control functions for CON, and
 \item A coupling interface to perform the data exchange with other
 components.
 \end{itemize}
 Both the wrapper and coupling interface are constructed from the
-building blocks provided by the framework. From 
-component software technology perspective both the wrapper and
-coupling interface are component interfaces: the wrapper is an
-interface with CON, and the coupling interface is an interface with
-another component. A physics
-model code and its wrapper, which comprise a component, share the
-communication group.  The coupling interface uses the union
-communicator of the two components that it links together.
+building blocks provided by the framework. 
 
 An SWMF component is compiled into a separate library that resides in
 the directory {\tt lib}, which is created as part of the installation
-process described later in this document.  Currently the component
-libraries are static libraries. The executable image is created in the
+process described later in this document. The executable {\tt SWMF.exe}
+is created in the
 directory {\tt bin}, which is created during the compilation.  If a
-user does not want to build some particular component, this component
-should be substituted by an empty version of the component.
-
-An important feature of the SWMF is the component registration.  A
-component to be included in the run should be registered by the
-framework.  Currently entering the line for the component in the input
-file called {\tt LAYOUT.in} does the registration.  Thus the SWMF
-performs the run-time registration of components.
+user does not want to use some particular component, this component
+should be configures to an empty version of the component.
 
 The framework controls the initialization, execution, coupling and
 finalization of components.  The execution is done in sessions. In
 each session the parameters of the framework and the components can be
-changed.  The parameters are read from the {\tt PARAM.in} file, which
+changed. The list of usable (non-empty) components and their 
+processor layout (the array of processors used by that component)
+are defined in the {\tt LAYOUT.in} file.
+The input parameters are read from the {\tt PARAM.in} file, which
 may contain further included parameter files.  These parameters are
 read and broadcast by CON and the component specific parameters are
 sent to the components. The structure of the parameter file will be
@@ -222,67 +236,91 @@ The execution is sequential for the components with overlapping layouts.
 This can be useful when the execution time of the components vary a lot
 during the run, or when a component needs a lot of processors 
 for memory storage, but it requires little CPU time.
-Of course this still allows the individual components to execute in parallel.
+Of course, this still allows the individual components to execute in parallel.
 For steady state calculations the components are allowed to progress
 at different rates towards steady state. Each component can be called
 at different frequencies by the control module.
 
-The coupling of the components is realized either with plain MPI
-calls, or via the SWMF coupling toolkit, which can couple components
-based on the following types of parallel distributed grids:
-\begin{itemize}
-\item 3D block adaptive (AMR) parallel grid
-\item 2D spherical grid
-\item Logically Cartesian uniform grid
-\item Logically Cartesian non-uniform grid 
-\end{itemize}
-The SWMF coupling toolkit performs an efficient N to M parallel
-coupling based on a router. The router is calculated in advance using
-the domain decomposition and grid description obtained from the
-components.  The router is updated only when the domain decompositions
-or the grids of the components change, or when the mapping geometry
-changes.  The coupling toolkit takes care of linear interpolation in
-space based on the grid descriptor.  Temporal interpolation is not
-supported by the current implementation.
+The coupling of the components is done through the SWMF. 
+Couplings are done individually betwee one source and one target component.
+The frequency of couplings is determined by the input parameters.
+Two-way coupling is performed as two separate couplings
+with the source and target roles reversed.
+Each coupling only involves the processors used by either the
+source or target component. All other processors can keep working
+on their tasks.
+There are several utilities that facilitate component couplings. 
+The most basic approach relies on plain MPI calls using the various 
+functions of the SWMF that define the MPI communicators
+and information about the layout. While this approach is general,
+writing correct and efficient MPI code is not easy. The following
+libraries can make coupling much easier.
 
-The framework has been ported to many platforms using many different
-compilers and MPI libraries. The list of compilers includes
-Absoft, gfortran, ifort, Lahey, NAG, PGF90, and XLF90.
-The MPI libraries used so far include many versions of MPICH, MVAPICH and 
-OpenMpi. 
+Passing scalars and small arrays between
+the source and target components can be done easily with the functions defined in 
+CON\_transfer\_data. Here the coupling consists of
+\begin{itemize}
+\item an optional data reduction (MPI\_SUM) on the source component
+\item single source processor to single target processor data transfer
+\item an optional data broadcast on the processors of the target component
+\end{itemize}
+For large amounts of data distributed over many processors, the 
+CON\_couple\_points utility can be used with efficient N to M parallel
+communication. The point coupling algorithm consists of the following steps
+\begin{itemize}
+\item checking if the communication pattern needs to be updated
+\item if yes, then target model sends the list of point coordinates 
+      to the source model and the source model responds with the processor
+      indexes.
+\item source processors interpolates and send their data to the appropriate
+      target processors directly
+\end{itemize}
+Finally, the SWMF coupling toolkit also allows N to M coupling between 
+components that describe their grids for the SWMF.
+Temporal interpolation is not directly supported by any of these
+utilities, but the components can do that internally.
 
 \section{System Requirements}
 
 In order to install and run the SMWF the following minimum system
 requirements apply.
-
 \begin{itemize}
 \item The SWMF runs only under the UNIX/Linux operating systems.  This now
   includes Macintosh system 10.x because it is based on BSD UNIX.  The
   SWMF does not run under any Microsoft Windows operating system.
-\item A FORTRAN 77 and FORTRAN 90 compiler must be installed.
+\item A FORTRAN compiler must be installed.
+\item A C/C++ compiler must be installed.
 \item The Perl interpreter must be installed.
 \item A version of the Message Passing Interface (MPI) library must be
   installed for parallel execution.
-\item You may be able to compile the code and do very small test
+\item Some models use HDF5 output. For these the parallel version of 
+  the HDF5 library has to be installed. The {\tt share/Scripts/install\_hdf5.sh}
+  shell script can be used to do that.
+\item Some models use the SPICE library to determine position and 
+  orientation of various objects. To use these features, the SPICE
+  library needs to be installed.
+\item In order to generate the documentation, LaTex has to be installed.
+  The PDF generation requires the {\tt dvips} and {\tt ps2pdf}
+  utilities. The  {\tt latex2html} package is needed to generate 
+  the HTML version, 
+\end{itemize}
+One may be able to compile the code and do very small test
 runs on 1 or 2 processor machines.  However, to do most physically
 meaningful runs the SWMF requires a parallel processor machine with a 
 minimum of 8 processors and a minimum of 8GB of memory.
-\item Very large runs require many more processors.
-\item In order to generate the documentation you must have LaTex installed on
-your system.  The PDF generation requires the {\tt dvips} and {\tt ps2pdf}
-utilities.  To generate the HTML version you also must install the
-{\tt latex2html} package. 
+Very large runs require many more processors.
 
-\end{itemize}
+The framework has been ported to many platforms using many different
+compilers and MPI libraries. The list of Fortran compilers includes
+Absoft, gfortran, ifort, Lahey, NAG, PGF90, and XLF90.
+The list of C compilers include gcc, clang, icc, pgcc, mpxlc.
+The MPI libraries used so far include many versions of MPICH, MVAPICH and 
+OpenMpi. 
 
-In addition to the above requirements, the SWMF output is designed to
-be visualized using either IDL or Tecplot.  You may be able to
-visualize the output with other packages, but formats and scripts have
-been designed for only these two visualization softwares.
-
-
-
+In addition to the above requirements, the SWMF output is typically
+visualized using IDL, Tecplot, python (SpacePy) or VisIt. 
+Other visualization packages may also be used, but the output file
+formats and scripts have been designed for these visualization softwares.
 
 %-----------------------------------------------------------------------
 % Chapter 2
@@ -299,11 +337,10 @@ The top level directory contains the following subdirectories:
 \item {\tt CON}     - the source code for the control module of the SWMF
 \item {\tt Copyrights} - copyright files
 \item {\tt ESMF}    - the ESMF wrapper for the SWMF
-\item {\tt GM, IE, ... UA} - component directories
+\item {\tt CZ, EE, ... UA} - component directories
 \item {\tt Param}   - description of CON parameters, parameter and layout files
 \item {\tt Scripts} - shell and Perl scripts
 \item {\tt doc}     - the documentation directory %^CMP IF DOC
-\item {\tt gui}     - the SWMF graphical user interface
 \item {\tt output}  - reference test results for the SWMF tests
 \item {\tt share}   - shared scripts and source code
 \item {\tt util}    - utilities such as TIMING, NOMPI, empirical models, etc.
@@ -321,8 +358,7 @@ and the following files
 \subsubsection{Getting help with scripts and the Makefile}
 
 Most of the Perl and shell scripts that are distributed with the SWMF
-provide help which can be accessed as follows using the {\tt -h} flag.
-For example, 
+provide help which can be accessed wit the {\tt -h} flag. For example, 
 \begin{verbatim}
   Config.pl -h
 \end{verbatim}
@@ -335,9 +371,8 @@ make help
 
 \subsubsection{Input commands: PARAM.XML}
 
-A very useful set of files to become familiar with are the {\tt PARAM.XML}
-files.  Such a file exists for the SWMF itself and for each of the
-physics components.  The file for the SWMF is found at
+The inpuct commands used in the {\tt PARAM.in} and their meaning are 
+described in the {\tt PARAM.XML} files. For the SWMF itself it is found in
 \begin{verbatim}
 Param/PARAM.XML
 \end{verbatim}
@@ -361,26 +396,27 @@ The editor GUI can be started as
 \begin{verbatim}
 share/Scripts/ParamEditor.pl
 \end{verbatim}
-This editor allows constructing PARAM.in files with pull down menus, 
+This editor allows constructing {\tt PARAM.in} files with pull down menus, 
 shows the manual for the edited commands, and checks the correctness of
 the parameter file and highlights the errors. All this functionality 
 is based on the PARAM.XML files.
 
 \subsubsection{Have the working directory in your path}
 
-In order to run executable files in the UNIX environment you must have
-the current working directory either your path or in the filename you
-want to execute. In UNIX the current working directory is represented
+In order to run executable files in the UNIX environment, either
+the current working directory has to be in the path or the filename has
+to be typed with the path.
+In UNIX the current working directory is represented
 by the period (.).  For example
 \begin{verbatim} 
 ./Config.pl -s
 \end{verbatim}
 will execute the Config.pl script if it is in your current directory.  
-If you add the `.' to your path using for example
+If the `.' is added to the path, for example with
 \begin{verbatim}
 set path = (${path} .)
 \end{verbatim}
-then you can simply type
+then one can simply type
 \begin{verbatim} 
 Config.pl -s
 \end{verbatim}
@@ -397,76 +433,39 @@ the README file is quoted verbatim below.
 
 \section{Platform specific information}
 
-\subsection{Pleiades machine at NASA Ames}
-
-Currently on pleiades you should load the following modules
-(includes modules for optional HDF5 output and IDL for visualization)
+The SWMF is tested every night on several computers.
+The test page can be found at
 \begin{verbatim}
-  module load comp-intel/11.1.072
-  module load mpi-sgi/mpt.2.04.10789
-  module load hdf5/1.8.3/intel/mpt
-  module load hdfeos/5.1.12
-  module load idl
+  http://herot.engin.umich.edu/~gtoth
 \end{verbatim}
-It is best adding the above statements into the .cshrc file in the 
-home directory. 
-Note that ifort 12.0 cannot compile the SWMF code.
-The module versions keep changing. Use
+This page shows which tests passed and which tests failed.
+It also shows the combination of compilers and libraries
+used on various machines (click on the Explanations link at the top).
+
+If you are running on one of the tested machines, 
+you can use the {\tt module load XYZ} command to load 
+the appropriate modules. It is best to do this in the {\tt .cshrc} or equivalent 
+customization file in the home directory. Use
 \begin{verbatim}
    module avail
 \end{verbatim}
 to see the list of all available modules.
 
-\subsection{Nyx and Flux at the University of Michigan}
-
-Note that on nyx/flux the tcsh shell has to be started manually after login
-by typing 'tcsh'. You can either use the pgf90, NAG or ifort compilers. 
-For the pgf90 compiler use
-\begin{verbatim}
-  Config.pl -install -compiler=pgf90
-  module load pgi
-  module swap openmpi openmpi/1.3.2-pgi
-\end{verbatim}
-For the NAG compiler use
-\begin{verbatim}
-  Config.pl -install -compiler=f95
-  module load nag/5.1
-  module swap openmpi/1.3.2-nag
-\end{verbatim}
-For the Intel ifort compiler use
-\begin{verbatim}
-  Config.pl -install -compiler=ifort
-  module load intel-comp
-  module swap openmpi openmpi/1.4.3/intel/11.0
-\end{verbatim}
-Currently the most reliable compiler on nyx/flux is pgf90, 
-but this may change. The ifort compiler often gives better performance.
-The NAG compiler is recommended for debugging.
-Note that gfortran 4.1.2 (current version on nyx/flux) 
-does not work properly with the SWMF.
-The module versions keep changing. Use
-\begin{verbatim}
-  module avail
-\end{verbatim}
-to see the list of all available modules.
-
 \section{Building and Running an Executable}
 
-At compile time, the user can select which physics components should be
-compiled.  
-Any component not compiled will not be available for
-use at run time.  The physics components can be selected with the {\tt -v} flag
+At compile time, the user can select the physics models to be
+compiled.  All components with an {\tt Empty} model version will be 
+unavailable for use at run time.  
+The physics components can be selected with the {\tt -v} flag
 of the Config.pl script. For example typing
 \begin{verbatim}
   Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/Kota
 \end{verbatim}
 will select BATSRUS for the SC and IH components and K\'ota's model for
-the SP component and the other components are set to Empty versions
-that contain empty subroutines for compilation, but cannot be used.
-The default configuration includes a working version for all components, 
-which takes up more memory, but is the most general.
-The only exception is SC, which requires configuration, so the 
-default version is Empty for the Solar Corona component.
+the SP componens. All the other components are set to 
+the {\tt Empty} model versions that contain empty subroutines for compilation, 
+but cannot be used. Note that {\tt Empty} always has to be listed first.
+The default configuration uses the Empty version for all components.
 
 The grid size of several components can also be set with the {\tt -g}
 flag of the {\tt Config.pl} script. For example the 
@@ -495,21 +494,20 @@ to debug the code with 0 optimization level, and
   Config.pl -nodebug -O4
 \end{verbatim}
 to run the code at maximum optimization level and without the debugging flags.
-
-Before compiling SWMF it is always a good idea to check its configuration
+Before compiling the SWMF, it is always a good idea to check its configuration
 with
 \begin{verbatim}
   Config.pl -show
 \end{verbatim}
-
 To build the executable {\bf bin/SWMF.exe}, type:
 \begin{verbatim}
-  make
+  make -j
 \end{verbatim} 
-Depending on the configuration, the compiler settings and the machine 
-that you are compiling on, this can take from 2 to up to 30 minutes.  
-In addition, you may want to make the post processing
-codes (for BATSRUS only) also:
+The -j flag allows parallel compilation, which can reduce the compilation
+time considerably.
+Depending on the configuration, the compiler settings and the machine, 
+compiling the code can take several minutes. 
+In addition, the post processing codes for BATSRUS can be compiled with
 \begin{verbatim}
   make PSPH
   make PIDL
@@ -541,7 +539,7 @@ The {\tt run} directory will contain links to the codes
 which were created in the previous step as well as subdirectories
 where input and output of the different components will reside.
 On some systems the compute nodes cannot access symbolic links
-accross different file systems. In this case the executable should be 
+across different file systems. In this case the executable should be 
 copied instead of linked, so in our example the following commands
 should be done every time after the SWMF has been (re)compiled:
 \begin{verbatim}
@@ -563,6 +561,7 @@ example input files. Many of these are used by the nightly test suite.
 An example processor map file LAYOUT.in to run the executable with
 five components on 16 processors is:
 \begin{verbatim}
+ID  First Last Stride
 #COMPONENTMAP
 GM    0    4    1
 IE    5    6    1
@@ -594,17 +593,19 @@ if it is possible on your computer, you can run the code interactively.  For
 example, to run the SWMF interactively:
 \begin{verbatim}
 cd run_halloween2
-mpirun -np 16 SWMF.exe
+mpirun -np 16 SWMF.exe | tee runlog
 \end{verbatim}
+The {\tt | tee runlog} splits the output and send it to the screen
+as well as into the {\tt runlog} file.
 The SWMF provides example job scripts for several machines. 
-These job scripts are found in 
+These job script files are found in the
 \begin{verbatim}
-share/JobScripts
+share/JobScripts/
 \end{verbatim}
-in the subdirectories named after the operating system. If the name
-of the file in the appropriate subdirectory matches the 
-name of the machine, the job script is copied into
-the {\tt run} directory when it is created.
+directory. If the name of some of the job script files matches the
+name of the machine returned by the {\tt hostname} command (numbers
+at the end of the machine name are ignored, so pfe23 matches job.pfe), 
+the job script is copied into the {\tt run} directory when it is created.
 These job scripts serve as a starting point only, they must
 be customized before they can be used for submitting a job.
 
@@ -632,7 +633,7 @@ so post-processing during the run can limit the amount of disk space used
 by the raw data files. It also avoids the need to wait for a long time 
 for the post-processing after the run is done. 
 
-The PostProc.pl script is copied into the run directory and it should
+The {\tt PostProc.pl} script is copied into the run directory and it should
 be executed from the run directory.
 To demonstrate the use of the script, here are a few simple examples.
 After or during a run, you may simply type
@@ -652,17 +653,19 @@ and gzip large ASCII files:
 \end{verbatim}
 After the run is finished, create IDL movie files and concatenate
 various log and satellite files (for restarted runs),
-and create a directory tree with the output
-of all the components, the input parameter file and the 'runlog' file
-(if present)
+and create a directory tree {\tt RESULTS/NewRun} with the output
+of all the components, the input parameter file, 
+a restart directory tree (if restart information was saved), 
+and the {\tt runlog} file (if present):
 \begin{verbatim}
 ./PostProc.pl -M -cat -o RESULTS/NewRun
 \end{verbatim}
-The RESULTS/NewRun directory will contain the PARAM.in file, the
+The {\tt RESULTS/NewRun} directory will contain the PARAM.in file, the
 runlog file (the standard output should be piped into that file),
+the restart directory named {\tt RESULTS/NewRun/RESTART/},
 and the output files for each component in a subdirectory named
-accordingly (eg. RESULTS/NewRun/GM/). The output directories of
-the components (e.g. GM/IO2/) will be empty.
+accordingly (eg. {\tt RESULTS/NewRun/GM/}). The output directories of
+the components (e.g. {\tt GM/IO2/}) will be empty after this.
 
 To see all the options of the script, including parallel processing and
 syncing results to a remote computer, type
