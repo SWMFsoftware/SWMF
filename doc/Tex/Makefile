@@ -201,7 +201,6 @@ SWMF.dvi: \
 	SWMF_configuration.tex \
 	SWMF_param.tex \
 	SWMF_control.tex \
-	SWMF_example_runs.tex \
 	SWMFXML
 
 REFERENCE.dvi:\
@@ -210,6 +209,20 @@ REFERENCE.dvi:\
 MAINTENANCE.dvi:\
 	PM_wrapper.protex \
 	PM_XY_coupler.protex
+
+SWPCXML:
+	@rm -f SWPC.XML SWPCXML.tex
+	cd ../..; ${SCRIPTDIR}/ParamToXml.pl -o=doc/Tex/SWPC.XML Param/SWPC/PARAM.in*
+	${SCRIPTDIR}/XmlToTex.pl SWPC.XML > SWPCXML.tex	
+
+SWPC.dvi: \
+	HEADER.tex \
+	SWPC.tex \
+	SWMF_introduction.tex \
+	SWMF_configuration.tex \
+	SWMF_param.tex \
+	SWMF_control.tex \
+	SWPCXML
 
 PDF_FILES = SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf PHYSICS.pdf \
 		SOFTWARE_STANDARD.pdf
@@ -228,8 +241,8 @@ HTML: cleanhtml
 
 clean:
 	rm -f *.out *.aux *.log *.toc *.ind *.idx *.ilg *.dvi *.ps *~ *.protex
-	rm -f SWMFREF.tex SWMFXML.tex BATSRUS_SCRIPTS.tex
-	@echo 'rm -f SWMFREF SWMFXML BATSRUS_SCRIPTS'
+	rm -f SWMFREF.tex SWMFXML.tex SWPC.XML SWPCXML.tex BATSRUS_SCRIPTS.tex
+	@echo 'rm -f SWMFREF SWMFXML SWPCXML BATSRUS_SCRIPTS'
 	@rm -f ${SWMFREF} ${SWMFXML} ${BATSRUS_SCRIPTS}
 
 cleanpdf: clean
