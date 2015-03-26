@@ -374,3 +374,39 @@ STOP
 
 #END ############################################################
 
+
+! This is here as an example, also to make documentation
+#BEGIN_COMP GM
+
+#SATELLITE
+7			nSatellite
+MHD time date		StringSatellite
+-1			DnOutput
+3.			DtOutput
+Satellites/goes11.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.			DtOutput
+Satellites/goes12.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.  			DtOutput
+Satellites/lanl89.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.  			DtOutput
+Satellites/lanl94.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.  			DtOutput
+Satellites/lanl97.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.  			DtOutput
+Satellites/lanl01.dat
+MHD time date		StringSatellite
+-1			DnOutput
+3.  			DtOutput
+Satellites/lanl02.dat
+
+#END_COMP GM
