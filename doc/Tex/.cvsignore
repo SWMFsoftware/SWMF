@@ -2,9 +2,12 @@
 *.aux
 *.dvi
 *.toc
+*.out
 *.protex
 *.ps
 SWMF.tex
 SWMFREF.tex
 SWMFXML.tex
+SWPC.XML
+SWPCXML.tex
 BATSRUS_SCRIPTS.tex
