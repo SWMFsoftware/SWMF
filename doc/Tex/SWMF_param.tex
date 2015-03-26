@@ -24,14 +24,13 @@ For example the GM parameters are enclosed between the
 #END_COMP GM
 \end{verbatim}
 commands. We refer to the lines starting with a \# character as commands.
-
 For example if the command string 
 \begin{verbatim}
 #END
 \end{verbatim}
 is present, it indicates the end of the run and lines following
 this command are ignored. If the \#END command is not
-present, the end of the file indicates the end of the run.
+present, the end of the PARAM.in file indicates the end of the run.
 
 There are several features of the input parameter file syntax
 that allow the user to easily run the code
@@ -122,7 +121,7 @@ My first run            StringDescription (3 spaces or TAB before the comment)
 
 #STOP
 -1.                     tSimulationMax
-100		        MaxIteration
+100                     MaxIteration
 
 #RUN ------------ last command of this session -----------------
 
@@ -212,6 +211,7 @@ with a number of other commands which {\bf must occur after the
 #IDEALAXES
 #ROTATIONAXIS
 #MAGNETICAXIS
+#MAGNETICCENTER
 #ROTATION
 #DIPOLE
 \end{verbatim}
@@ -271,9 +271,12 @@ the starting date and time) and the step number are
 given by the \#TIMESIMULATION and \#NSTEP commands. Finally
 the \#VERSION and \#PRECISION commands check the consistency
 of the current version and real precision with the run which
-is being continued. As it was explained above, 
-all modifications of the planet parameters should follow 
-the \#PLANET command, i.e. they should be after 
+is being continued. For sake of convenience, the \#IDEALAXES,
+\#ROTATEHGR and \#ROTATEHGI commands are also saved 
+into the restart file if they were set in the run.
+
+As it was explained above, all modifications of the planet 
+parameters should follow the \#PLANET command, i.e. they should be after 
 the \#INCLUDE RESTART.in command. In case the description is
 changed it should also follow, e.g.
 \begin{verbatim}
@@ -282,8 +285,6 @@ RESTART.in
 
 #DESCRIPTION
 We continue the run for another 2 hours
-
-#IDEALAXES
 \end{verbatim}
 When the run starts from scratch, the PARAM.in file
 should start similarly with the 
@@ -329,8 +330,11 @@ These are described in the PARAM.XML files,
 and in chapter \ref{chapter:commands} (which was produced from them).
 The {\tt PARAM.XML} file also defines which commands are required
 with the {\tt required="T"} attribute of the {\tt <command...>} tag.
-For the control module the only required command is the \#STOP command,
-which defines the final time step or the final time of the run.
+For the control module the only required command in every
+session is the \#STOP command
+(or this can be replaced with the \#ENDTIME command in the last session), 
+which defines the final time step in steady state mode 
+or the final time of the session in time accurate mode.
 
 \subsection{Iterations, Time Steps and Time \label{section:frequency}}
 
