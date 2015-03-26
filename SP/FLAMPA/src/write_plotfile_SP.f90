@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================================
 subroutine write_plotfile_SP(DoPlot,TypeOutput)
@@ -188,7 +189,8 @@ subroutine write_plotfile_SP(DoPlot,TypeOutput)
         write(NameFile,'(a,i4.4,a,i4.4,a)')trim(SP_DirOut)//'Wave_ix',&
              iX,'_n',SP_iPlot,SP_NameExtension
         write(iStdout,*)prefix,' '
-        write(iStdout,*)prefix,'Opening File '//trim(NameFile)//' to Save wave spectra'//&
+        write(iStdout,*)prefix,&
+             'Opening File '//trim(NameFile)//' to Save wave spectra'//&
              ' at SP_Time =',SP_Time
         write(iStdout,*)prefix,' '
         !\
