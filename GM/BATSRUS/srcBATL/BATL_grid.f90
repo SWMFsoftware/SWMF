@@ -145,11 +145,6 @@ contains
     if(.not.IsCartesian) then
        allocate(FaceNormal_DDFB(nDim,nDim,1:nI+1,1:nJ+1,1:nK+1,MaxBlock))
 
-       if(UseHighFDGeometry) then
-          allocate(CellCoef_DDGB(&
-               nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-          CellCoef_DDGB = 0
-       endif
     end if
 
     ! Periodicity in the radial direction is not possible at all
@@ -1400,6 +1395,13 @@ contains
     real:: CartValue1_I(1:7), CartValue2_I(1:7)
     !----------------------------------------------------------------------
 
+    if(.not. allocated(CellCoef_DDGB)) then
+       allocate(CellCoef_DDGB(&
+            nDim,nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       CellCoef_DDGB = 0
+    endif
+
+    
     if(nK > 1) then ! nDim == 3
 
        !  ~       ~        ~

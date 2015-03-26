@@ -112,7 +112,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
   use ModConserveFlux, ONLY: DoConserveFlux
-  use BATL_lib, ONLY: Dim2_, Dim3_
+  use BATL_lib, ONLY: Dim2_, Dim3_, create_grid, set_high_geometry
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -1108,6 +1108,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoConserveFlux', DoConserveFlux)
 
      case("#SCHEME")
+        if(iSession>1) nOrderOld = nOrder
         call read_var('nOrder'  ,nOrder)
         ! Set default value for nStage. Can be overwritten if desired.
         nStage = nOrder
@@ -2346,7 +2347,11 @@ contains
              kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
           end if
        end if
-    end if
+    else if(nOrderOld/=5 .and. nOrder==5 .and. UseFDFaceFlux) then
+       ! calculate high-order geometry coefficients
+       call set_high_geometry(UseFDFaceFluxIn=UseFDFaceFlux)
+       call create_grid 
+    endif ! IsFirstCheck
 
     ! Get the number of used ghost cell layers
     select case(nOrder)

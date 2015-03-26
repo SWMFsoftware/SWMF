@@ -18,6 +18,7 @@ module BATL_geometry
   public:: gen_to_radius  ! convert generalized coordinate to radial coordinate
   public:: test_geometry  ! unit test
   public:: rot_to_cart    ! Rotate a vector/matrix from rotated to Cartesian
+  public::set_high_geometry
   interface rot_to_cart
      module procedure rot_to_cart_vector, rot_to_cart_matrix
   end interface
@@ -86,7 +87,7 @@ contains
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
     real,             optional, intent(in):: RgenIn_I(:)
     logical,          optional, intent(in):: UseFDFaceFluxIn
-
+    
     ! Initialize geometry for BATL
     !
     ! TypeGeometry can be
@@ -136,10 +137,6 @@ contains
     ! Grid is Cartesian (even in RZ geometry)
     IsCartesianGrid = IsCartesian .or. IsRzGeometry
 
-    if(present(UseFDFaceFluxIn)) then
-       if(UseFDFaceFluxIn .and. .not. IsCartesian) UseHighFDGeometry = .true.
-    endif
-
     ! Set up a rotation matrix
     if(IsRotatedCartesian)then
        ! Rotate around the Z axis with atan(3/4)
@@ -172,7 +169,20 @@ contains
        LogRgen_I = alog(RgenIn_I)
     end if
 
+    call set_high_geometry(UseFDFaceFluxIn)
+    
   end subroutine init_geometry
+
+  !======================================================================
+
+  subroutine set_high_geometry(UseFDFaceFluxIn)
+    logical, optional, intent(in):: UseFDFaceFluxIn
+    !----------------------------------------------------------------------
+    
+    if(present(UseFDFaceFluxIn)) then
+       if(UseFDFaceFluxIn .and. .not. IsCartesian) UseHighFDGeometry = .true.
+    endif
+  end subroutine set_high_geometry
 
   !=========================================================================
 

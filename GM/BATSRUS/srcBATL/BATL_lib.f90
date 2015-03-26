@@ -68,7 +68,7 @@ module BATL_lib
   public:: IsPeriodic_D, IsNodeBasedGrid
   public:: xyz_to_coord, coord_to_xyz, radius_to_gen, gen_to_radius
   public:: Xi_, Eta_, Zeta_
-  public:: UseHighFDGeometry
+  public:: UseHighFDGeometry, set_high_geometry
 
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB
@@ -77,6 +77,7 @@ module BATL_lib
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid, average_grid_node
   public:: CellMetrice_DDG, CellCoef_DDGB
+  public:: create_grid
 
   ! Inherited from BATL_amr
   public:: BetaProlong

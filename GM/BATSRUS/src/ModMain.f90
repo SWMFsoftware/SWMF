@@ -43,7 +43,7 @@ module ModMain
   !\
   ! Time stepping parameters and values.
   !/
-  integer :: n_step, nOrder, nStage, iteration_number=0
+  integer :: n_step, nOrder, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
 
   real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(nBLK)
