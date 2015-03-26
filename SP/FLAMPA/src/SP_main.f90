@@ -5,6 +5,28 @@ module SP_ModMain
   use ModTurbulence
   use ModUtilities,ONLY:check_allocate
   implicit none
+  SAVE
+  !\
+  ! Logical for actions
+  !/
+  logical :: DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
+  logical :: DoRestart=.false.
+  logical :: DoInit=.true.
+  !\
+  ! For MPI
+  !/
+  
+  integer:: iProc=-1, nProc=-1, iComm=-1
+
+  !\
+  ! Not used in stand-alone mode
+  !/
+
+  real::XyzLine_D(3)=(/0.0,0.0,0.0/)
+  real::RBoundSC=1.2     
+  real::RBoundIH=21.0     
+  integer::nSmooth=0
+
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
   integer:: nX=100      !Number of points along the spatial coordinate.      !
   real:: CFL=0.9        !Maximum allowed time step.                          !
@@ -31,20 +53,20 @@ module SP_ModMain
                         !Default valuse is .false. With this logical set to  !
                         !.true., the non-turbulent diffusion is used upstream!
   real:: DsResolution=0.10
-  real,allocatable,save,dimension(:):: DInner_I,DOuter_I,DInnerInj_I
+  real,allocatable,dimension(:):: DInner_I,DOuter_I,DInnerInj_I
                         !Diffusion coefficient at momentum p, Laplacian      !
                         !multiplier, and diffusion coefficient at PInjection.!
-  real,allocatable,save,dimension(:):: Rho_I,RhoOld_I,RhoSmooth_I,&          !
+  real,allocatable,dimension(:):: Rho_I,RhoOld_I,RhoSmooth_I,&          !
                                        RhoSmoothOld_I,FermiA_I               !
-  real,allocatable,save,dimension(:):: B_I,BOld_I,BSmooth_I,&                !
+  real,allocatable,dimension(:):: B_I,BOld_I,BSmooth_I,&                !
                                        BSmoothOld_I                          !
                         !Mass density, old value of mass density, and MF     !
                         !and Fermi acceleration rate.                        !
-  real,allocatable,save,dimension(:):: T_I
+  real,allocatable,dimension(:):: T_I
                         !Temperature in units of NameEnergyUnit [KeV]        !
-  real,allocatable,save,dimension(:):: U_I
+  real,allocatable,dimension(:):: U_I
                         !Velocity, in m/s                                    !
-  real,allocatable,save,dimension(:,:):: X_DI,State_VI,F_II
+  real,allocatable,dimension(:,:):: X_DI,State_VI,F_II
                         !Three Lagrangian coordinates, MHD state and         !
                         !full distribution function, f(x,p).                 !
   integer:: iDataSet=0 !Index in file name from IH_ data                    !
@@ -90,11 +112,11 @@ module SP_ModMain
                         !These are functions used to transform momentum into !
                         !(kinetic)energy, and vice versa. The last function  !
                         !is used to set the energy unit for the simulations. !
-  integer,save::iShock=1,iShockOld=1
-  integer:: iStdOut=6
+  integer  :: iShock=1,iShockOld=1
+  integer  :: iStdOut=6
   character(LEN=4):: prefix='SP: '
-  logical:: DoWriteAll=.false.
-Contains
+  logical         :: DoWriteAll=.false.
+contains
   subroutine SP_allocate
     !------------------------------------------------------------------------!
     integer:: iError,iX,iLnP
@@ -245,7 +267,7 @@ subroutine SP_diffusive_shock(&
      write(iStdOut,*)prefix,'EInjection = ',EInjection,' '//NameEnergyUnit
      EInjection = EInjection*&
          energy_in(NameEnergyUnit)!Convert injection energy in MKS units.    !
-     write(iStdOut,*)prefix,'EInjection = ',EInjection,' J'
+     write(iStdOut,*)prefix,'EInjectionSi = ',EInjection,' J'
      PInjection = &
          kinetic_energy_to_momentum(EInjection,&
          NameParticle)            !Compute injection momentum in MKS units.  !

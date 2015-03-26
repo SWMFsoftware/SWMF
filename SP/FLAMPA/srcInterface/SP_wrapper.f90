@@ -5,8 +5,8 @@
 module SP_wrapper
 
   use ModUtilities,ONLY:check_allocate
-  use SP_ModMain
-
+  use SP_ModMain,ONLY: prefix, iStdOut, DoWriteAll, DoRun,&
+       SaveMhData, DoReadMhData, XyzLine_D, RBoundSC, RBoundIH, nSmooth
   implicit none
 
   save
@@ -27,14 +27,7 @@ module SP_wrapper
 
   ! Local variables
 
-  integer:: iProc=-1, nProc=-1, iComm=-1
 
-  real::XyzLine_D(3)=(/0.0,0.0,0.0/)
-  real::RBoundSC=1.2      !^CMP IF SC
-  real::RBoundIH=21.0     !^CMP IF IH
-  logical::DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
-  logical::DoRestart=.false.
-  integer::nSmooth=0
 
 contains
 
@@ -52,6 +45,7 @@ contains
        RSCOut,&     !^CMP IF SC
        RIHOut &     !^CMP IF IH
        )
+    use SP_ModMain, ONLY: DsResolution
 
     real,intent(out)::DsOut,XyzOut_D(3)
     real,intent(out)::RSCOut         !^CMP IF SC
@@ -63,7 +57,7 @@ contains
   end subroutine SP_get_line_param
   !==================================================================
   subroutine SP_put_input_time(TimeIn)
-
+    use SP_ModMain, ONLY: DInner_I, DataInputTime, nX, SP_allocate
     use CON_coupler
 
     real,intent(in)::TimeIn
@@ -80,16 +74,15 @@ contains
   subroutine SP_set_param(CompInfo,TypeAction)
     use CON_comp_info
     use CON_coupler
-    use ModReadParam
+    use SP_ModMain, ONLY:iProc, nProc, iComm, DoInit, DoRestart, &
+         iDataSet, SP_Time
+    use ModConst, ONLY: rSun
     use ModIOUnit,ONLY:STDOUT_
-
+    use SP_ModSetParam, ONLY:i_session_read, SP_set_parameters
+    !-----------------------
     type(CompInfoType),intent(inout)       :: CompInfo
     character(len=*), intent(in)           :: TypeAction
     character (len=*), parameter :: NameSub='SP_set_param'
-    ! The name of the command
-    character (len=100) :: NameCommand
-    logical,save::DoInit=.true.
-    integer::iVerbose=0
     !-----------------------------------------------------------!
     select case(TypeAction)
     case('VERSION')
@@ -116,49 +109,7 @@ contains
           DoRestart=.false.
        end if
     case('READ')
-       write(iStdOut,*)NameSub//': CHECK iSession =',i_session_read()
-       if(DoInit)then
-          DoInit=.false.
-       end if
-       do
-          if(.not.read_line() ) EXIT
-          if(.not.read_command(NameCommand)) CYCLE
-          select case(NameCommand)
-          case('#RESTART')
-             DoRestart=.true.
-          case('#LINE')
-             call read_var('XyzLine_D(x_)',XyzLine_D(1))
-             call read_var('XyzLine_D(y_)',XyzLine_D(2))
-             call read_var('XyzLine_D(z_)',XyzLine_D(3))
-             call read_var('RBoundSC'     ,RBoundSC    )!^CMP IF SC 
-             call read_var('RBoundIH'     ,RBoundIH    )!^CMP IF IH
-          case('#RTRANSIENT')
-             !           call read_var('rTransient',rTransient)
-          case('#DORUN')
-             call read_var('DoRun',DoRun)
-          case('#SAVEMHDATA')
-             call read_var('SaveMhData',SaveMhData)
-          case('#DOREADMHDATA')
-             call read_var('DoReadMhData',DoReadMhData)
-          case('#NSTEP')
-             call read_var('nStep',iDataSet)
-          case('#TSIMULATION')
-             call read_var('tSimulation',SP_Time)
-          case('#PLOT')
-             !           call read_var('DnPlot',kfriss)
-          case('#VERBOSE')
-             call read_var('iVerbose',iVerbose)
-             if(iVerbose>0)DoWriteAll=.true.
-             if(DoWriteAll.and.iProc==0)&
-                  write(*,*)prefix,' Verbose everything'
-          case('#NSMOOTH')
-             call read_var('nSmooth',nSmooth)
-          case default
-             call CON_stop(NameSub//&
-                  ': Unknown command '&
-                  //NameCommand)
-          end select
-       end do
+       call SP_set_parameters(TypeAction)
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
        if(nProc/=1)call CON_stop(&
@@ -177,7 +128,7 @@ contains
        W,&
        DoAdd,&
        Buff_I,nVar)
-
+    use SP_ModMain, ONLY: nX, State_VI, X_DI
     use CON_router
 
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -201,7 +152,7 @@ contains
   end subroutine SP_put_from_mh
   !======================================================================
   subroutine SP_save_mhdata
-
+    use SP_ModMain, ONLY: iDataSet, nX, DataInputTime, X_DI, State_VI
     use ModIoUnit
     use ModConst 
 
@@ -221,7 +172,7 @@ contains
   !==========================================================================
 
   subroutine sp_smooth_data
-
+    use SP_ModMain, ONLY:State_VI, nX
     use ModNumConst
 
 
@@ -249,7 +200,8 @@ contains
   end subroutine sp_smooth_data
   !==================================================================
   subroutine SP_init_session(iSession,TimeIn)
-
+    use ModNumConst, ONLY: cZero
+    use SP_ModMain,ONLY: SP_Time, SP_diffusive_shock
     integer,  intent(in) :: iSession    ! session number (starting from 1)
     real,     intent(in) :: TimeIn      ! seconds from start time
     logical,save::DoInit=.true.
@@ -262,6 +214,7 @@ contains
   subroutine SP_run(tInOut,tLimit)
     use SP_ModReadMhData,ONLY:read_ihdata_for_sp,mh_transform_for_flampa
     use ModNumConst
+    use SP_ModMain, ONLY: iDataSet, DataInputTime, SP_diffusive_shock
 
     real,intent(inout)::tInOut
     real,intent(in):: tLimit
@@ -281,14 +234,14 @@ contains
   end subroutine SP_run
   !==================================================================
   subroutine SP_finalize(TimeSimulation)
-    use SP_ModMain
+    use SP_ModMain, ONLY: SP_diffusive_shock
 
     real,intent(in)::TimeSimulation
     call SP_diffusive_shock("FINALIZE")
   end subroutine SP_finalize
   !==================================================================
   subroutine SP_save_restart(TimeSimulation)
-
+    use SP_ModMain, ONLY: SP_Time, iDataSet
     use ModIOUnit,ONLY:io_unit_new
     use CON_coupler
 
@@ -310,7 +263,7 @@ contains
     close(iFile)
     !  call SP_save_f
     !  if(.not.SaveMhData)call SP_save_mh_data
-    return
+    RETURN
 10  call CON_stop('SP/restartOUT directory is not available')
   end subroutine SP_save_restart
 
