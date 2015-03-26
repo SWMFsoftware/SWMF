@@ -18,17 +18,31 @@
 !July 20-WORKED! 
 !July 28-4 neutral fluids
 !September 28 - source terms as McNutt
+!March 25, 2015 - adapted to be solved with either multifluid neutrals or single 
+!ion MHD used for PT-OH coupling by A. Michael with help from  G. Toth 
 !==============================================================================
 module ModUser
 
-  use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBLK
-  use ModMain
-  use ModPhysics
-  use ModAdvance,  ONLY : State_VGB
-  use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
-  use ModVarIndexes
-  use ModProcMH
-  use ModMultiFluid
+  use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBLK
+  use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
+       nBlock, Unused_B
+  use ModPhysics,    ONLY: g, UnitX_, Io2Si_V, Si2Io_V, No2Io_V, No2Si_V, & 
+       Io2No_V, inv_g, NameTecUnit_V, UnitAngle_, UnitDivB_, UnitEnergyDens_, &
+       UnitJ_, UnitN_, UnitRho_, UnitU_, rBody, UnitB_, UnitP_, UnitTemperature_, &
+       UnitT_, UnitRhoU_, Si2No_V
+  use ModNumConst,      ONLY: cRadToDeg, cTwoPi
+  use ModConst,         ONLY: cBoltzmann, cProtonMass
+  use ModAdvance,    ONLY: State_VGB, Source_VC
+  use ModGeometry,   ONLY: Xyz_DGB, r_BLK, true_cell
+  use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
+       Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
+       nFluid, NameVar_V
+  use ModProcMH,     ONLY: iProc 
+  use ModMultiFluid, ONLY: UseNeutralFluid, RhoNeutralsISW, RhoNeutralsISW_dim, &
+       PNeutralsISW, PNeutralsISW_dim, UxNeutralsISW, UyNeutralsISW, UzNeutralsISW, &
+       TNeutralsISW_dim, UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
+       mProtonMass, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iEnergy, &
+       RhoBcFactor_I, uBcFactor_I, select_fluid
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
        IMPLEMENTED2  => user_set_face_boundary,                  &
@@ -48,9 +62,34 @@ module ModUser
   real,              parameter :: VersionUserModule = 2.3
   character (len=*), parameter :: &
        NameUserModule = 'Outer Heliosphere with 4 neutrals, Opher & Toth'
-
+  
+  !these are the variable used for multiflud neutrals 
+  !that are not defined in ModEquationMhd.f90 used for K-MHD
+  integer, parameter :: &
+       NeuRho_    = min(nVar, 9), &
+       NeuRhoUx_  = min(nVar-2, 10), NeuUx_ = NeuRhoUx_, &
+       NeuRhoUy_  = min(nVar-1, 11), NeuUy_ = NeuRhoUy_, &
+       NeuRhoUz_  = min(nVar  , 12), NeuUz_ = NeuRhoUz_, &
+       NeuP_      = min(nVar  , 13), &
+       Ne2Rho_    = min(nVar  , 14), &
+       Ne2RhoUx_  = min(nVar-2, 15), Ne2Ux_ = Ne2RhoUx_, &
+       Ne2RhoUy_  = min(nVar-1, 16), Ne2Uy_ = Ne2RhoUy_, &
+       Ne2RhoUz_  = min(nVar  , 17), Ne2Uz_ = Ne2RhoUz_, &
+       Ne2P_      = min(nVar  , 18), &
+       Ne3Rho_    = min(nVar  , 19), &
+       Ne3RhoUx_  = min(nVar-2, 20), Ne3Ux_ = Ne3RhoUx_, &
+       Ne3RhoUy_  = min(nVar-1, 21), Ne3Uy_ = Ne3RhoUy_, &
+       Ne3RhoUz_  = min(nVar  , 22), Ne3Uz_ = Ne3RhoUz_, &
+       Ne3P_      = min(nVar  , 23), &
+       Ne4Rho_    = min(nVar  , 24), &
+       Ne4RhoUx_  = min(nVar-2, 25), Ne4Ux_ = Ne4RhoUx_, &
+       Ne4RhoUy_  = min(nVar-1, 26), Ne4Uy_ = Ne4RhoUy_, &
+       Ne4RhoUz_  = min(nVar  , 27), Ne4Uz_ = Ne4RhoUz_, &
+       Ne4P_      = min(nVar  , 28)
+  
   ! Named indexes for fluids
-  integer, parameter :: Ion_ = 1, Neu_ = 2, Ne2_ = 3, Ne3_ = 4, Ne4_= 5 
+  integer, parameter :: Ion_ = 1, Neu_ = min(nFluid,2), &
+       Ne2_ = min(nFluid,3), Ne3_ = min(nFluid,4), Ne4_= min(nFluid,5) 
 
   logical :: UseSource_I(Ion_:Ne4_) = .true.
 
@@ -162,8 +201,7 @@ contains
   !=========================================================================
 
   subroutine user_read_inputs
-    use ModMain
-    use ModProcMH,    ONLY: iProc
+
     use ModReadParam
 
     character (len=100) :: NameCommand
@@ -215,15 +253,15 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
-      ! case("#FACTORS")
-      !    call read_var('RhoNeuFactor', RhoNeuFactor)
-      !    call read_var('uNeuFactor'  , uNeuFactor)
-      !    call read_var('RhoNe2Factor', RhoNe2Factor)
-      !    call read_var('uNe2Factor'  , uNe2Factor)
-      !    call read_var('RhoNe3Factor', RhoNe3Factor)
-      !    call read_var('uNe3Factor'  , uNe3Factor)
-      !    call read_var('RhoNe4Factor', RhoNe4Factor)
-      !    call read_var('uNe4Factor'  , uNe4Factor)
+          ! case("#FACTORS")
+          !    call read_var('RhoNeuFactor', RhoNeuFactor)
+          !    call read_var('uNeuFactor'  , uNeuFactor)
+          !    call read_var('RhoNe2Factor', RhoNe2Factor)
+          !    call read_var('uNe2Factor'  , uNe2Factor)
+          !    call read_var('RhoNe3Factor', RhoNe3Factor)
+          !    call read_var('uNe3Factor'  , uNe3Factor)
+          !    call read_var('RhoNe4Factor', RhoNe4Factor)
+          !    call read_var('uNe4Factor'  , uNe4Factor)
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -235,11 +273,6 @@ contains
   !==========================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
-    use ModMain
-    use ModVarIndexes
-    use ModAdvance
-    use ModPhysics  
-    use ModProcMH
     use ModFaceBoundary, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBlockBc
 
@@ -343,50 +376,52 @@ contains
     VarsGhostFace_V(Ux_:Uz_) = matmul(XyzSph_DD, Vsph_D)
     VarsGhostFace_V(Bx_:Bz_) = matmul(XyzSph_DD, Bsph_D)
 
-    ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
-    !
-    ! Pop I is going through the inner BCs    
+    if(UseNeutralFluid)then
 
-    ! soft boundary for Pop I-IV
+       ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
+       !
+       ! Pop I is going through the inner BCs    
 
-    VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
+       ! soft boundary for Pop I-IV
 
-    ! PopII leaves the domain at a supersonic velocity 
-    ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-    ! For the transient case when it flows inward, we use a fraction of ions
+       VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
 
-    if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(3)
-       VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(3)
-       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-            uBcFactor_I(3)
-    else
-       VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
-    end if
+       ! PopII leaves the domain at a supersonic velocity 
+       ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+       ! For the transient case when it flows inward, we use a fraction of ions
 
-    ! Pop III has the velocity and temperature of the ions at inner boundary
-    ! the density is taken to be a fraction of the ions
+       if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne2_)
+          VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne2_)
+          VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne2_)
+       else
+          VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
+       end if
 
-    if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(4)
-       VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(4)
-       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-            uBcFactor_I(4)
-    else
-       VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
-    end if
+       ! Pop III has the velocity and temperature of the ions at inner boundary
+       ! the density is taken to be a fraction of the ions
 
-    ! Pop IV 
+       if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne3_)
+          VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne3_)
+          VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne3_)
+       else
+          VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
+       end if
 
-    if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(5)
-       VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(5)
-       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-            uBcFactor_I(5)
-    else
-       VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
-    end if
+       ! Pop IV 
 
+       if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne4_)
+          VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne4_)
+          VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne4_)
+       else
+          VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
+       end if
+    endif
     if(DoTestMe)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
        write(*,*) NameSub,' i,j,kFace=', iFace, jFace, kFace
@@ -398,11 +433,12 @@ contains
        write(*,*) NameSub,' pGhost   =', VarsGhostFace_V(p_)
        write(*,*) NameSub,' Ughost   =', VarsGhostFace_V(Ux_:Uz_)
        write(*,*) NameSub,' Bghost   =', VarsGhostFace_V(Bx_:Bz_)
-       write(*,*) NameSub,'Pop1=',VarsGhostFace_V(NeuRho_:NeuP_)
-       write(*,*) NameSub,'Pop2=',VarsGhostFace_V(Ne2Rho_:Ne2P_)
-       write(*,*) NameSub,'Pop3=',VarsGhostFace_V(Ne3Rho_:Ne3P_)
+       if(UseNeutralFluid)then
+          write(*,*) NameSub,'Pop1=',VarsGhostFace_V(NeuRho_:NeuP_)
+          write(*,*) NameSub,'Pop2=',VarsGhostFace_V(Ne2Rho_:Ne2P_)
+          write(*,*) NameSub,'Pop3=',VarsGhostFace_V(Ne3Rho_:Ne3P_)
+       end if
     end if
-
 
   end subroutine user_set_face_boundary
 
@@ -435,12 +471,6 @@ contains
 
     ! The ISM enters at the east boundary (negative x)
 
-    use ModMain
-    use ModVarIndexes
-    use ModProcMH
-    use ModAdvance, ONLY : State_VGB
-    use ModMultiFluid
-
     integer,intent(in)::iBlock, iSide
     character (len=*),intent(in) :: TypeBc
     logical,intent(out) :: IsFound
@@ -457,48 +487,51 @@ contains
     State_VGB(By_,-1:2,:,:,iBlock)=VLISW_By
     State_VGB(Bz_,-1:2,:,:,iBlock)=VLISW_Bz
     State_VGB(p_,-1:2,:,:,iBlock)=VLISW_p
-    !
-    ! PopIV is the one one coming with the ISW
-    ! The separation between Pop IV and Pop I is arbitrary so
-    ! we took the separation as Vlad in x=-1500AU
-    !
-    !!State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = 0.361*RhoNeutralsISW    
-    !!State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UxNeutralsISW    
-    !!State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UyNeutralsISW   
-    !!State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UzNeutralsISW    
-    !hydro run State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.3202*PNeutralsISW
-    !!State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.361*PNeutralsISW
 
-    ! augst26 cond
-    State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = RhoNeutralsISW
-    State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = RhoNeutralsISW*UxNeutralsISW
-    State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = RhoNeutralsISW*UyNeutralsISW
-    State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = RhoNeutralsISW*UzNeutralsISW
-    State_VGB(Ne4P_,-1:2,:,:,iBlock)     = PNeutralsISW
-
-    !
-    ! In general you should specify as many values as many incoming 
-    ! characteristic waves are present. For a neutral fluid this 
-    ! is 0 for supersonic outflow, 1 for subsonic outflow, 
-    ! 4 for subsonic inflow and 5 for supersonic inflow. 
-
-    !ausg26 cond
-    !!State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW    
-    !!State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW    
-    !!State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW   
-    !!State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW    
-    ! hydro run State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.6798*PNeutralsISW
-    !!State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.639*PNeutralsISW
-
-    !
-    !\
-    ! PopII and III supersonic outflow
-    !/
-    !!do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
-    !conditions of August 26
-    do iVar = NeuRho_, Ne3P_; do i = -1, 2
-       State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
-    end do; end do
+    if(UseNeutralFluid)then
+       !
+       ! PopIV is the one one coming with the ISW
+       ! The separation between Pop IV and Pop I is arbitrary so
+       ! we took the separation as Vlad in x=-1500AU
+       !
+       !!State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = 0.361*RhoNeutralsISW    
+       !!State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UxNeutralsISW    
+       !!State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UyNeutralsISW   
+       !!State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = 0.361*RhoNeutralsISW*UzNeutralsISW    
+       !hydro run State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.3202*PNeutralsISW
+       !!State_VGB(Ne4P_,-1:2,:,:,iBlock)     = 0.361*PNeutralsISW
+       
+       ! augst26 cond
+       State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = RhoNeutralsISW
+       State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = RhoNeutralsISW*UxNeutralsISW
+       State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = RhoNeutralsISW*UyNeutralsISW
+       State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = RhoNeutralsISW*UzNeutralsISW
+       State_VGB(Ne4P_,-1:2,:,:,iBlock)     = PNeutralsISW
+       
+       !
+       ! In general you should specify as many values as many incoming 
+       ! characteristic waves are present. For a neutral fluid this 
+       ! is 0 for supersonic outflow, 1 for subsonic outflow, 
+       ! 4 for subsonic inflow and 5 for supersonic inflow. 
+       
+       !ausg26 cond
+       !!State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW    
+       !!State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW    
+       !!State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW   
+       !!State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW    
+       ! hydro run State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.6798*PNeutralsISW
+       !!State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.639*PNeutralsISW
+       
+       !
+       !\
+       ! PopII and III supersonic outflow
+       !/
+       !!do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
+       !conditions of August 26
+       do iVar = NeuRho_, Ne3P_; do i = -1, 2
+          State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
+       end do; end do
+    endif
 
   end subroutine user_set_cell_boundary
 
@@ -506,8 +539,6 @@ contains
 
   subroutine user_set_ics(iBlock)
 
-    use ModVarIndexes    
-    use ModAdvance,  ONLY: State_VGB    
     use ModPhysics,  ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
 
@@ -611,50 +642,51 @@ contains
        ! momentum
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*v_D
 
-       !\
-       ! PopI
-       !/
-       State_VGB(NeuRho_,i,j,k,iBlock)  =  RhoNeutralsISW
-       State_VGB(NeuP_,i,j,k,iBlock) =   PNeutralsISW
-       !!     State_VGB(NeuRhoUx_:NeuRhoUz_,i,j,k,iBlock) = &
-       !!          0.06*State_VGB(NeuRho_,i,j,k,iBlock)*v_D
-       State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
-       State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
-       State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
-
-
-       !! State_VGB(NeuRho_,i,j,k,iBlock) = &
-       !!    RhoNeutralsISW*Exp(-lambda*thetaN/((r**2)*SinThetaN)) &
-       !!    *Exp(-lambda*thetaN/(r*SinThetaN))              
-       !! State_VGB(NeuP_,i,j,k,iBlock) = &
-       !!    PNeutralsISW*Exp(-lambda*thetaN/(r*SinThetaN))
-
-       !\
-       ! PopII - I set it to be about 100km/s radially. 
-       ! The temperature is set to be 10^5K for this population.
-       ! v_D is the plasma velocity, we take one quarter of that.
-       !/
-       State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
-       State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW 
-       State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = &
-            0.25*State_VGB(Ne2Rho_,i,j,k,iBlock)*v_D
-       !\ 
-       ! PopIII
-       !/
-       State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1 * State_VGB(Rho_,i,j,k,iBlock)
-       State_VGB(Ne3P_,i,j,k,iBlock)   = 0.1 * State_VGB(p_,i,j,k,iBlock)
-       State_VGB(Ne3RhoUx_:Ne3RhoUz_,i,j,k,iBlock) = &
-            State_VGB(Ne3Rho_,i,j,k,iBlock)*v_D
-
-       !\
-       ! PopIV
-       !/
-       State_VGB(Ne4Rho_,i,j,k,iBlock)  =RhoNeutralsISW
-       State_VGB(Ne4RhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW 
-       State_VGB(Ne4RhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW 
-       State_VGB(Ne4RhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
-       State_VGB(Ne4P_,i,j,k,iBlock) = PNeutralsISW
-
+       if(UseNeutralFluid)then
+          !\
+          ! PopI
+          !/
+          State_VGB(NeuRho_,i,j,k,iBlock)  =  RhoNeutralsISW
+          State_VGB(NeuP_,i,j,k,iBlock) =   PNeutralsISW
+          !!     State_VGB(NeuRhoUx_:NeuRhoUz_,i,j,k,iBlock) = &
+          !!          0.06*State_VGB(NeuRho_,i,j,k,iBlock)*v_D
+          State_VGB(NeuRhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
+          State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
+          State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
+          
+          
+          !! State_VGB(NeuRho_,i,j,k,iBlock) = &
+          !!    RhoNeutralsISW*Exp(-lambda*thetaN/((r**2)*SinThetaN)) &
+          !!    *Exp(-lambda*thetaN/(r*SinThetaN))              
+          !! State_VGB(NeuP_,i,j,k,iBlock) = &
+          !!    PNeutralsISW*Exp(-lambda*thetaN/(r*SinThetaN))
+          
+          !\
+          ! PopII - I set it to be about 100km/s radially. 
+          ! The temperature is set to be 10^5K for this population.
+          ! v_D is the plasma velocity, we take one quarter of that.
+          !/
+          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 * RhoNeutralsISW
+          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 * PNeutralsISW 
+          State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = &
+               0.25*State_VGB(Ne2Rho_,i,j,k,iBlock)*v_D
+          !\ 
+          ! PopIII
+          !/
+          State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1 * State_VGB(Rho_,i,j,k,iBlock)
+          State_VGB(Ne3P_,i,j,k,iBlock)   = 0.1 * State_VGB(p_,i,j,k,iBlock)
+          State_VGB(Ne3RhoUx_:Ne3RhoUz_,i,j,k,iBlock) = &
+               State_VGB(Ne3Rho_,i,j,k,iBlock)*v_D
+          
+          !\
+          ! PopIV
+          !/
+          State_VGB(Ne4Rho_,i,j,k,iBlock)  =RhoNeutralsISW
+          State_VGB(Ne4RhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW 
+          State_VGB(Ne4RhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW 
+          State_VGB(Ne4RhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
+          State_VGB(Ne4P_,i,j,k,iBlock) = PNeutralsISW
+       endif
 
        if(DoTestCell)then
           write(*,*)NameSub,' x, y, z, r             =', x, y, z, r
@@ -683,18 +715,23 @@ contains
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-------------------------------------------------------------------
+
+    !This subroutine is not needed when not using the 4 neutral fluids
+    if(.not.UseNeutralFluid) &
+         call CON_stop(NameSub//':  no neutral fluids present')
+
     do iBlock = 1, nBlock
 
        if( Unused_B(iBlock) ) CYCLE
 
-       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(3) * &
+       State_VGB(Ne2Rho_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
             State_VGB(Rho_,:,:,:,iBlock)
 
        State_VGB(Ne2RhoUx_:Ne2RhoUz_,:,:,:,iBlock) = &
-            RhoBcFactor_I(3)*uBcFactor_I(3)* &
+            RhoBcFactor_I(Ne2_)*uBcFactor_I(Ne2_)* &
             State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)
 
-       State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(3) * &
+       State_VGB(Ne2P_,:,:,:,iBlock) = RhoBcFactor_I(Ne2_) * &
             State_VGB(p_,:,:,:,iBlock)
 
        call calc_energy(MinI,MaxI, MinJ,MaxJ, MinK,MaxK, iBlock, Ne2_, Ne2_)
@@ -705,10 +742,6 @@ contains
   !=====================================================================
 
   subroutine user_action(NameAction)
-
-    use ModMain
-    use ModPhysics
-    use ModMultiFluid
 
     character(len=*), intent(in):: NameAction
 
@@ -740,14 +773,16 @@ contains
     write(*,StringFormat) 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
     write(*,'(10X,A19,F15.6)') 'VLISW_a_dim[km/s]: ',VLISW_a_dim
     write(*,'(10X,A19,F15.6)') 'VLISW_T_dim[K]: ',VLISW_T_dim! 
-    !neutrals
-    write(*,*)     
-    write(*,StringFormat) 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
-    write(*,StringFormat) 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
-    write(*,StringFormat) 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
-    write(*,StringFormat) 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
-    write(*,StringFormat) 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
-    write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
+    if(UseNeutralFluid)then
+       !neutrals
+       write(*,*)     
+       write(*,StringFormat) 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
+       write(*,StringFormat) 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
+       write(*,StringFormat) 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
+       write(*,StringFormat) 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
+       write(*,StringFormat) 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
+       write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
+    endif
     write(*,*)
 
   end subroutine user_action
@@ -755,7 +790,6 @@ contains
   !=====================================================================
   subroutine user_io_units
 
-    use ModPhysics
     use ModConst, ONLY: cAU, cProtonMass
     !
     character (len=*), parameter :: Name='user_io_units'
@@ -834,26 +868,29 @@ contains
     !
     !
     ! The units of rho_dim are n/cc and unitUSER_rho g/cc
-    !/
-    !merav june01    PNeutralsISW   = RhoNeutralsISW * 
-    !TNeutralsISW_dim*Io2No_V(UnitTemperature_)
-    !merav june01  SWH_p   = SWH_rho * SW_T_dim*Io2No_V(UnitTemperature_)
 
-    RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
-    PNeutralsISW_dim = No2Io_V(UnitP_)*inv_g*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
-
-    !PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
-    PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW 
-    UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
-    UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
-    UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
-    mNeutrals    = mProtonMass*cProtonMass
-
-    !merav
-    !write(*,*) 'PNeutralsISW',PNeutralsISW
-    !write(*,*) 'PNeutralsISW1',PNeutralsISW1
-    !merav
-
+    if(UseNeutralFluid)then
+       !/
+       !merav june01    PNeutralsISW   = RhoNeutralsISW * 
+       !TNeutralsISW_dim*Io2No_V(UnitTemperature_)
+       !merav june01  SWH_p   = SWH_rho * SW_T_dim*Io2No_V(UnitTemperature_)
+       
+       RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
+       PNeutralsISW_dim = No2Io_V(UnitP_)*inv_g*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
+       
+       !PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
+       PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW 
+       UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
+       UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
+       UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
+       mNeutrals    = mProtonMass*cProtonMass
+       
+       !merav
+       !write(*,*) 'PNeutralsISW',PNeutralsISW
+       !write(*,*) 'PNeutralsISW1',PNeutralsISW1
+       !merav
+    endif
+  
     ! set strings for writing Tecplot output
     !/
     NameTecUnit_V(UnitX_)            = 'AU'
@@ -869,7 +906,6 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: Source_VC
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -882,7 +918,7 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: Name='user_set_plot_var'
+    character (len=*), parameter :: NameSub='user_set_plot_var'
 
     !-------------------------------------------------------------------
 
@@ -892,11 +928,21 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('srho')
-       NameTecVar = 'Srho'
-       PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
+       if(UseNeutralFluid)then
+          NameTecVar = 'Srho'
+          PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
+       else
+          !This is not needed when not using the 4 neutral fluids
+          call CON_stop(NameSub//': no neutral fluids present')
+       endif
     case('fluid')
-       call select_region(iBlock)
-       PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
+       if(UseNeutralFluid)then
+          call select_region(iBlock)
+          PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
+       else
+          !This is not needed when not using the 4 nutral fluids
+          call CON_stop(NameSub//': no neutral fluids present')
+       endif
     case('mach')
        PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
@@ -935,7 +981,7 @@ contains
     ! outside the Termination Shock they will be just destroyed 
     ! (see more details below). 
     !
-    ! The _I(1) is the ionized fluid and _I(2)-_I(4) are the neutral fluids
+    ! The _I(1) is the ionized fluid and _I(Neu_)-_I(Ne4_) are the neutral fluids
     !/
     ! 
     ! History of implementation:
@@ -956,13 +1002,8 @@ contains
     ! September - source terms written as McNutt (1998)
     ! 
     !-------------------------------------------------------------------
-    use ModProcMH
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
          IsPointImplSource, IsPointImplPerturbed
-    use ModMain
-    use ModVarIndexes
-    use ModAdvance
-    use ModPhysics
     use ModNumConst
 
     integer, intent(in) :: iBlock
@@ -987,6 +1028,10 @@ contains
     logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !-----------------------------------------------------------------------
+
+    !This subroutine is not needed when not using the 4 neutral fluids                   
+    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
+
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -1010,7 +1055,7 @@ contains
 
 !!! Experiment: zero temperature Neu
 !!!if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest) &
-     !!!     State_V(NeuP_) = 1e-30 !!!
+!!!     State_V(NeuP_) = 1e-30 !!!
 
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I  = State_V(iRhoUy_I)/State_V(iRho_I)
@@ -1342,7 +1387,12 @@ contains
     integer :: i, j, k
     real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, B2, MachAlfven2
     real    :: MachMagneto2
+
+    character(len=*), parameter:: NameSub = 'select_region'
     !------------------------------------------------------------------------
+
+    !This subroutine is not needed when not using the 4 neutral fluids                   
+    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     ! Produce fluid3 at the inner boundary
 
@@ -1400,35 +1450,33 @@ contains
 
   subroutine user_init_point_implicit
 
-    use ModVarIndexes, ONLY: &
-         Rho_,RhoUx_,RhoUy_,RhoUz_,P_,NeuRho_,NeuRhoUx_,NeuRhoUy_,&
-         NeuRhoUz_,NeuP_,Ne2Rho_,Ne2RhoUx_,Ne2RhoUy_,Ne2RhoUz_,Ne2P_,&
-         Ne3Rho_,Ne3RhoUx_,Ne3RhoUy_,Ne3RhoUz_,Ne3P_,&
-         Ne4Rho_,Ne4RhoUx_,Ne4RhoUy_,Ne4RhoUz_,Ne4P_
-
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, EpsPointImpl_V
+
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !------------------------------------------------------------------------
+
+    !This subroutine is not needed when not using the 4 neutral fluids                    
+    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     ! Allocate and set iVarPointImpl_I
     ! In this example there are 3 implicit variables
 
-
     ! All the neutrals momenta and plasma are implicit 
     ! (3 neutral fluid and 1 ion)
-
+    
     allocate(iVarPointImpl_I(20))
-
+    
     iVarPointImpl_I = (/Rho_,RhoUx_, RhoUy_, RhoUz_, P_, &
          NeuRho_, NeuRhoUx_, NeuRhoUy_, NeuRhoUz_, NeuP_, &
          Ne2Rho_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_, Ne2P_, &
          Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_, &
          Ne4Rho_, Ne4RhoUx_, Ne4RhoUy_, Ne4RhoUz_, Ne4P_/)
-
+    
     ! Because the second and third populations of neutrals have initially 
     ! very small values I'm
     ! setting EpsPointImpl_V to be small for these variables ??? !!!
     EpsPointImpl_V(Ne2Rho_:Ne4P_) = 1.e-11
-
+        
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set.
 
