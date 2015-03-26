@@ -198,13 +198,13 @@ of the \#STOP command. The components are called at
 the frequency defined by the \#CYCLE command. For example
 \begin{verbatim}
 #CYCLE
-GM          NameComp
-1           DnRun
+GM               NameComp
+1                DnRun
 #END
 
 #CYCLE
-IM          NameComp
-2           DnRun
+IM               NameComp
+2                DnRun
 #END
 \end{verbatim}
 means that IM runs in every second time step of the SWMF.
@@ -235,8 +235,8 @@ into a (quasi-)steady state solution. For example
 we used the
 \begin{verbatim}
 #COUPLE2
-IMNameComp1
-GMNameComp2
+IM                      NameComp1
+GM                      NameComp2
 10                      DnCouple
 -1.                     DtCouple
 \end{verbatim}
@@ -259,15 +259,15 @@ This can be achieved by
 \begin{verbatim}
 ! No need to run SC too often, it is already in steady state
 #CYCLE
-SC               NameComp
-1000             DnRun
+SC                      NameComp
+1000                    DnRun
 
-! No need to couple SC too often
-#COUPLE2
-SC               NameSource
-IH               NameTarget
-1000             DnCouple
--1.0             DtCouple
+! No need to couple SC to IH too often
+#COUPLE1
+SC                      NameSource
+IH                      NameTarget
+1000                    DnCouple
+-1.0                    DtCouple
 \end{verbatim}
 Since SC and IH are always coupled at the beginning of the session,
 further couplings are not necessary.
@@ -277,7 +277,7 @@ further couplings are not necessary.
 The SWMF runs in time accurate mode by default. The
 \begin{verbatim}
 #TIMEACCURATE
-T                DoTimeAccurate
+T                       DoTimeAccurate
 \end{verbatim}
 command is only needed in a time accurate session following a 
 steady state session.
@@ -289,6 +289,30 @@ at the end of session and execution. Since the time
 steps (in terms of physical and/or CPU time) of the components can be 
 vastly different, this minimal synchronization provides the 
 most possibilities for efficient concurrent execution.
+
+In time accurate mode the coupling times have to be defined
+with the DtCouple arguments. For example
+\begin{verbatim}
+#COUPLE2
+GM                      NameComp1
+IM                      NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+\end{verbatim}
+will couple the GM and IM components every 10 seconds. 
+
+In some cases the models have to be coupled every time step.
+An example is the coupling between the MHD model GM/BATSRUS and 
+the Particle-in-Cell model PC/IPIC3D. This can be achieved with
+\begin{verbatim}
+#COUPLE2TIGHT
+GM                      NameMaster
+PC                      NameSlave
+T                       DoCouple
+\end{verbatim}
+command. In this case the master component (GM) tells the slave
+component (PC) the time step to be used. The tight 
+coupling requires models and couplers that support this option.
 
 By default the component time steps are limited by the
 time of couplings. This means that if GM can take 4 second
@@ -304,9 +328,9 @@ In certain cases the efficiency can be improved with the
 \#COUPLETIME command, which can allow a component to 
 step through the coupling time. For example
 \begin{verbatim}
-#CYCLE
-GM             NameComp
-F              DoCoupleOnTime
+#COUPLETIME
+GM                      NameComp
+F                       DoCoupleOnTime
 \end{verbatim}
 will allow the GM component to use 4 second time steps even
 if it is coupled at every 5 seconds. Of course this will
@@ -326,10 +350,10 @@ in the default order
 \begin{verbatim}
 #COUPLEORDER
 4             nCouple	  
-GM IE	      NameSourceTarget
-UA IE	      NameSourceTarget
-IE UA	      NameSourceTarget
-IE GM	      NameSourceTarget
+GM IE         NameSourceTarget
+UA IE         NameSourceTarget
+IE UA         NameSourceTarget
+IE GM         NameSourceTarget
 \end{verbatim}
 and the to-IE and from-IE coupling times coincide, e.g.
 \begin{verbatim}
