@@ -833,6 +833,15 @@ contains
          end if
       end do
 
+      ! Set a vacuum cleaner for the solar wind at the body
+      ! if the solar wind is inward, let the ghost face rho and P value to
+      ! be half of the true face value.
+      if (uNormalIon_I(Sw_) <= 0.0) then
+         VarsGhostFace_V(iRhoIon_I(Sw_)) = 0.5* VarsTrueFace_V(iRhoIon_I(Sw_))
+         VarsGhostFace_V(iPIon_I(Sw_))   = 0.5* VarsTrueFace_V(iPIon_I(Sw_))
+      end if
+
+
       do iIonFluid=1,nIonFluid
          if (uNormalIon_I(iIonFluid) > 0.0 .and. &
               any(VarsGhostFace_V(iRhoIon_I) > 1e-2*Si2NO_V(UnitRho_))) then
