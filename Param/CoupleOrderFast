@@ -4,14 +4,7 @@ The coupling order can be defined for all components
 even if only a subset is used.
 
 #COUPLEORDER
-21			nCouple
-SC IH			NameSourceTarget
-IH SC			NameSourceTarget
-SC SP			NameSourceTarget
-IH SP			NameSourceTarget
-IH GM			NameSourceTarget
-IH OH                   NameSourceTarget
-OH IH                   NameSourceTarget
+28			nCouple
 IE GM			NameSourceTarget
 IE IM                   NameSourceTarget
 IE RB			NameSourceTarget
@@ -21,8 +14,22 @@ IE UA			NameSourceTarget
 GM IE                   NameSourceTarget
 IM IE			NameSourceTarget
 UA IE			NameSourceTarget
+EE SC			NameSourceTarget
+SC EE			NameSourceTarget
+SC IH			NameSourceTarget
+IH SC			NameSourceTarget
+SC SP			NameSourceTarget
+IH SP			NameSourceTarget
+IH GM			NameSourceTarget
+IH OH                   NameSourceTarget
+OH IH                   NameSourceTarget
+OH PT                   NameSourceTarget
+PT OH			NameSourceTarget
 GM IM                   NameSourceTarget
-GM PW			NameSourceTarget
-GM RB                   NameSourceTarget
 IM GM                   NameSourceTarget
+GM PC                   NameSourceTarget
+PC GM			NameSourceTarget
+GM PT			NameSourceTarget
+GM PW			NameSourceTarget
 PW GM			NameSourceTarget
+GM RB                   NameSourceTarget
