@@ -2,21 +2,14 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module SP_ModMain
   use ModConst
-  use ModTurbulence
   use ModUtilities,ONLY:check_allocate
   implicit none
   SAVE
   !\
-  ! Logical for actions
+  ! Logicals for actions
   !/
-  logical :: DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
-  logical :: DoRestart=.false.
   logical :: DoInit=.true.
-  !\
-  ! For MPI
-  !/
-  
-  integer:: iProc=-1, nProc=-1, iComm=-1
+  logical :: DoRestart=.false.
 
   !\
   ! Not used in stand-alone mode
@@ -24,7 +17,21 @@ module SP_ModMain
 
   real::XyzLine_D(3)=(/0.0,0.0,0.0/)
   real::RBoundSC=1.2     
-  real::RBoundIH=21.0     
+  real::RBoundIH=21.0 
+
+  !\
+  ! Logicals for actions
+  !/
+  logical :: DoRun=.true.,SaveMhData=.false.,DoReadMhData=.false.
+
+  
+  !\
+  ! For MPI
+  !/
+  
+  integer:: iProc=-1, nProc=-1, iComm=-1
+
+    
   integer::nSmooth=0
 
   integer:: nP=200      !Number of grids along the (ln p)-coordinate.        !
@@ -223,6 +230,7 @@ contains
                X_DI(3,iShockOld+1:nX)**2>4.0*RSun**2)
     !   call write_shock(i_shock,RhoIn_I)
   end function i_shock
+  !=================
   subroutine write_shock(i_shock,RhoIn_I)
     integer,intent(in)::i_shock
     real,dimension(nX),intent(in)::RhoIn_I
@@ -236,327 +244,332 @@ contains
          minval(RhoIn_I(i_shock+1:i_shock+nint(1.0/DsResolution))),&
          ', Mach number = ',AlfvenMach
   end subroutine write_shock
-
-!============================================================================!
-!============================================================================!
-subroutine SP_diffusive_shock(&
-     TypeAction,              &                  
-     TimeToFinish,            &                
-     nToFinish)
-  use ModLogAdvection
-  !--------------------------------------------------------------------------!
-  integer:: nStep=1,iStep,iX,iLnP !Number of time steps, current index of    !
-                                  !time step, current index of x-coordinate, !
-                                  !and current index of (ln p)-coordinate.   !
-  integer:: iFile                 !File unit to be assigned.                 !
-  real:: Energy,Momentum          !Energy and momentum of particles.         !
-  integer::nProgress,iProgress    !To split time interval between snapshots  !
-  real::DtProgress                !in order for the shock wave to propagate  !
-                                  !not more than one grid cell per time step !
-  real::DtReduction  
-  save
-  character(LEN=*),intent(in):: TypeAction
-  real,intent(in),optional   :: TimeToFinish  
-  integer,intent(in),optional:: nToFinish
-  !--------------------------------------------------------------------------!
-  write(iStdOut,*)prefix//TypeAction
-  select case(TypeAction)
-  !---------------------------------- INIT ----------------------------------!
-  case("INIT")
-    
-     write(iStdOut,*)prefix,'EInjection = ',EInjection,' '//NameEnergyUnit
-     EInjection = EInjection*&
-         energy_in(NameEnergyUnit)!Convert injection energy in MKS units.    !
-     write(iStdOut,*)prefix,'EInjectionSi = ',EInjection,' J'
-     PInjection = &
-         kinetic_energy_to_momentum(EInjection,&
-         NameParticle)            !Compute injection momentum in MKS units.  !
-     write(iStdOut,*)prefix,'PInjection = ',PInjection,' Kg*m/s'
-     Energy = EnergyMax*&
-         energy_in(NameEnergyUnit)!Convert maximum energy in MKS units.      !
-     write(iStdOut,*)prefix,'EnergyMax = ',EnergyMax,' '//NameEnergyUnit,&
-          ' = ',Energy, ' J'
-     Momentum = &
-         kinetic_energy_to_momentum(Energy,&
-         NameParticle)            !Compute maximum momentum in MKS units.    !
-     write(iStdOut,*)prefix,'PMax = ',Momentum,'Kg*m/s'
-     PMaxLog = &
-         log(Momentum/PInjection) !Compute the maximum range with respect to !
-                                  !the (ln p)-coordinate.                    !
-     DeltaLnP = PMaxLog/nP        !Step-size with respect to the             !
-                                  !(ln p)-coordinate.                        !
-     
-     write(iStdOut,*)prefix,' Log(Momentum) interval', PMaxLog,&
-          ' is divided by ',nP,' equaly spaced intervals, DeltaLnP = ',&
-          DeltaLnP
-     if (DoLogFile) call write_logfile_SP('OPEN')
-  !----------------------------------- RUN ----------------------------------!
-  case("RUN")
-     !-----------------------------------------------------------------------!
-     ! Advance the solution of the diffusive kinetic equation:               !
-     !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]       !
-     ! from strat time, SP_Time, to end time, TimeToFinish.                  !
-     !-----------------------------------------------------------------------!
-     nProgress = max(iShock-iShockOld,1)
-     iShockOld = min(iShockOld,iShock-1)
-     DtProgress = (TimeToFinish-SP_Time)/real(nProgress)
-     do iProgress=1,nProgress
-        Rho_I(1:nX)=RhoSmoothOld_I(1:nX)+&
-             (RhoSmooth_I(1:nX)-RhoSmoothOld_I(1:nX))*&
-             real(iProgress)/real(nProgress)
-        B_I(1:nX)=BSmoothOld_I(1:nX)+&
-             (BSmooth_I(1:nX)-BSmoothOld_I(1:nX))*&
-             real(iProgress)/real(nProgress)
-        !\
-        ! Steepen shock wave front +/- (1.0/DsResolution) points from
-        ! position of shock front::
-        !/
-        iShock=iShockOld+iProgress
-        if(iShock>nint(1.0/DsResolution).and.&
-             iShock<nX-nint(1.0/DsResolution))then
-           !\
-           ! Obtain the Alfven Mach number of the shock wave::
-           !/
-           AlfvenMach=Rho_I(iShock+1-nint(1.0/DsResolution))*&
-                (U_I(iShock+1-nint(1.0/DsResolution))-  &
-                 U_I(iShock+nint(1.0/DsResolution)))/   &
-                (Rho_I(iShock+1-nint(1.0/DsResolution))-&
-                 Rho_I(iShock+nint(1.0/DsResolution)))/ &
-                (B_I(iShock+nint(1.0/DsResolution))/    &
-                 sqrt(cMu*cProtonMass*Rho_I(iShock+nint(1.0/DsResolution))))
-           call write_shock(iShock,Rho_I(1:nX))
-           Rho_I(iShock+1-nint(1.0/DsResolution):iShock)=&
-                maxval(Rho_I(iShock+1-nint(1.0/DsResolution):iShock))
-           Rho_I(iShock+1:iShock+nint(1.0/DsResolution))=&
-                minval(Rho_I(iShock+1:iShock+nint(1.0/DsResolution)))
-           B_I(iShock+1-nint(1.0/DsResolution):iShock)=&
-                maxval(B_I(iShock+1-nint(1.0/DsResolution):iShock))
-           B_I(iShock+1:iShock+nint(1.0/DsResolution))=&
-                minval(B_I(iShock+1:iShock+nint(1.0/DsResolution)))
-        end if
-        !\
-        ! Obtain the Fermi acceleration rate divided by
-        ! the time step, and then divided by DeltaLnP: 
-        !/
-        FermiA_I(1:nX) = log(Rho_I(1:nX)/RhoOld_I(1:nX)) / (3*DeltaLnP)
-
-        if(UseTurbulentSpectrum)then
-           !Calculate the Alfven speed
-           if (DoInitSpectrum)&
-                call initSpectrum(nX,nP,X_DI(1:3,1:nX),B_I(1:nX),pInjection,DeltaLnP,&
-                iShock,cInjection,AlfvenMach)
-           call set_wave_advection_rates(nX,     &
-                                  B_I(1:nX),     &
-                                  BOld_I(1:nX),  &
-                                  Rho_I(1:nX),   &
-                                  RhoOld_I(1:nX),&
-                                  X_DI(1:3,1:nX),&
-                                  DeltaLnP,      &
-                                  DtProgress,    &
-                                  DtReduction)
-           !\
-           ! Check if the number of time steps is greater than 1:
-           !/
-           nStep = 1+int(max(DtReduction,maxval(abs(FermiA_I(1:nX))))/CFL)
-        else
-           !\
-           ! Check if the number of time steps is greater than 1:
-           !/
-           nStep = 1+int(maxval(abs(FermiA_I(1:nX)))/CFL)
-        end if
-
-        RhoOld_I(1:nX)=Rho_I(1:nX)
-        BOld_I(1:nX) = B_I(1:nX)
-
-        SP_Dt = DtProgress/real(nStep)
-        write(iStdOut,*)prefix,' Time step is set to ',SP_Dt,' s'
-        !\
-        ! If nStep>1, compute the Fermi acceleration rate
-        ! divided by the time step, and then divided by DeltaLnP:
-        !/
-        if (nStep>1) then
-           FermiA_I = FermiA_I/real(nStep)
-           if(UseTurbulentSpectrum) call reduce_advection_rates(nStep)
-        end if
-        !\
-        ! Approximate the diffusion coefficient and define
-        ! the Laplacian multiplier:
-        !/
-        DOuter_I(1:nX) = B_I(1:nX)
-        !\
-        ! Compute the diffusion coefficient at the
-        ! injection energy:
-        !/
-        if (DoTest) then
-           DInnerInj_I(1:nX) = BOverDeltaB2   !Value for test purposes only.
-        else
-           Energy = momentum_to_energy(PInjection,NameParticle)
-           if(.not.UseTurbulentSpectrum)then
-              DInnerInj_I(1:nX) = BOverDeltaB2*& !Physically meaningful value.
-                   cGyroRadius*(PInjection*cLightSpeed)**2/&
-                   (B_I(1:nX)**2*Energy)
-              if(UseRealDiffusionUpstream)then
-                 ! reset the diffusion coefficient upstream to be equal to
-                 !(1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
-                 where(X_DI(1,1:nX)**2+&
-                       X_DI(2,1:nX)**2+&
-                       X_DI(3,1:nX)**2>&
-                      (X_DI(1,iShock)**2+&
-                       X_DI(2,iShock)**2+&
-                       X_DI(3,iShock)**2)*1.2)
-                 DInnerInj_I(1:nX)=&
-                      sqrt(X_DI(1,1:nX)**2+&
+  
+  !============================================================================!
+  !============================================================================!
+  subroutine SP_diffusive_shock(&
+       TypeAction,              &                  
+       TimeToFinish,            &                
+       nToFinish)
+    use ModLogAdvection
+    use SP_ModDiffusion
+    use ModTurbulence, ONLY: UseTurbulentSpectrum, DoInitSpectrum, set_dxx,&
+         set_wave_advection_rates, reduce_advection_rates, dxx, initspectrum,&
+         updatespectrum
+    !--------------------------------------------------------------------------!
+    integer:: nStep=1,iStep,iX,iLnP !Number of time steps, current index of    !
+    !time step, current index of x-coordinate, !
+    !and current index of (ln p)-coordinate.   !
+    integer:: iFile                 !File unit to be assigned.                 !
+    real:: Energy,Momentum          !Energy and momentum of particles.         !
+    integer::nProgress,iProgress    !To split time interval between snapshots  !
+    real::DtProgress                !in order for the shock wave to propagate  !
+    !not more than one grid cell per time step !
+    real::DtReduction  
+    save
+    character(LEN=*),intent(in):: TypeAction
+    real,intent(in),optional   :: TimeToFinish  
+    integer,intent(in),optional:: nToFinish
+    !--------------------------------------------------------------------------!
+    write(iStdOut,*)prefix//TypeAction
+    select case(TypeAction)
+       !---------------------------------- INIT ----------------------------------!
+    case("INIT")
+       
+       write(iStdOut,*)prefix,'EInjection = ',EInjection,' '//NameEnergyUnit
+       EInjection = EInjection*&
+            energy_in(NameEnergyUnit)!Convert injection energy in MKS units.    !
+       write(iStdOut,*)prefix,'EInjectionSi = ',EInjection,' J'
+       PInjection = &
+            kinetic_energy_to_momentum(EInjection,&
+            NameParticle)            !Compute injection momentum in MKS units.  !
+       write(iStdOut,*)prefix,'PInjection = ',PInjection,' Kg*m/s'
+       Energy = EnergyMax*&
+            energy_in(NameEnergyUnit)!Convert maximum energy in MKS units.      !
+       write(iStdOut,*)prefix,'EnergyMax = ',EnergyMax,' '//NameEnergyUnit,&
+            ' = ',Energy, ' J'
+       Momentum = &
+            kinetic_energy_to_momentum(Energy,&
+            NameParticle)            !Compute maximum momentum in MKS units.    !
+       write(iStdOut,*)prefix,'PMax = ',Momentum,'Kg*m/s'
+       PMaxLog = &
+            log(Momentum/PInjection) !Compute the maximum range with respect to !
+       !the (ln p)-coordinate.                    !
+       DeltaLnP = PMaxLog/nP        !Step-size with respect to the             !
+       !(ln p)-coordinate.                        !
+       
+       write(iStdOut,*)prefix,' Log(Momentum) interval', PMaxLog,&
+            ' is divided by ',nP,' equaly spaced intervals, DeltaLnP = ',&
+            DeltaLnP
+       if (DoLogFile) call write_logfile_SP('OPEN')
+       !----------------------------------- RUN ----------------------------------!
+    case("RUN")
+       !-----------------------------------------------------------------------!
+       ! Advance the solution of the diffusive kinetic equation:               !
+       !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]       !
+       ! from strat time, SP_Time, to end time, TimeToFinish.                  !
+       !-----------------------------------------------------------------------!
+       nProgress = max(iShock-iShockOld,1)
+       iShockOld = min(iShockOld,iShock-1)
+       DtProgress = (TimeToFinish-SP_Time)/real(nProgress)
+       do iProgress=1,nProgress
+          Rho_I(1:nX)=RhoSmoothOld_I(1:nX)+&
+               (RhoSmooth_I(1:nX)-RhoSmoothOld_I(1:nX))*&
+               real(iProgress)/real(nProgress)
+          B_I(1:nX)=BSmoothOld_I(1:nX)+&
+               (BSmooth_I(1:nX)-BSmoothOld_I(1:nX))*&
+               real(iProgress)/real(nProgress)
+          !\
+          ! Steepen shock wave front +/- (1.0/DsResolution) points from
+          ! position of shock front::
+          !/
+          iShock=iShockOld+iProgress
+          if(iShock>nint(1.0/DsResolution).and.&
+               iShock<nX-nint(1.0/DsResolution))then
+             !\
+             ! Obtain the Alfven Mach number of the shock wave::
+             !/
+             AlfvenMach=Rho_I(iShock+1-nint(1.0/DsResolution))*&
+                  (U_I(iShock+1-nint(1.0/DsResolution))-  &
+                  U_I(iShock+nint(1.0/DsResolution)))/   &
+                  (Rho_I(iShock+1-nint(1.0/DsResolution))-&
+                  Rho_I(iShock+nint(1.0/DsResolution)))/ &
+                  (B_I(iShock+nint(1.0/DsResolution))/    &
+                  sqrt(cMu*cProtonMass*Rho_I(iShock+nint(1.0/DsResolution))))
+             call write_shock(iShock,Rho_I(1:nX))
+             Rho_I(iShock+1-nint(1.0/DsResolution):iShock)=&
+                  maxval(Rho_I(iShock+1-nint(1.0/DsResolution):iShock))
+             Rho_I(iShock+1:iShock+nint(1.0/DsResolution))=&
+                  minval(Rho_I(iShock+1:iShock+nint(1.0/DsResolution)))
+             B_I(iShock+1-nint(1.0/DsResolution):iShock)=&
+                  maxval(B_I(iShock+1-nint(1.0/DsResolution):iShock))
+             B_I(iShock+1:iShock+nint(1.0/DsResolution))=&
+                  minval(B_I(iShock+1:iShock+nint(1.0/DsResolution)))
+          end if
+          !\
+          ! Obtain the Fermi acceleration rate divided by
+          ! the time step, and then divided by DeltaLnP: 
+          !/
+          FermiA_I(1:nX) = log(Rho_I(1:nX)/RhoOld_I(1:nX)) / (3*DeltaLnP)
+          
+          if(UseTurbulentSpectrum)then
+             !Calculate the Alfven speed
+             if (DoInitSpectrum)&
+                  call initSpectrum(nX,nP,X_DI(1:3,1:nX),B_I(1:nX),pInjection,DeltaLnP,&
+                  iShock,cInjection,AlfvenMach)
+             call set_wave_advection_rates(nX,     &
+                  B_I(1:nX),     &
+                  BOld_I(1:nX),  &
+                  Rho_I(1:nX),   &
+                  RhoOld_I(1:nX),&
+                  X_DI(1:3,1:nX),&
+                  DeltaLnP,      &
+                  DtProgress,    &
+                  DtReduction)
+             !\
+             ! Check if the number of time steps is greater than 1:
+             !/
+             nStep = 1+int(max(DtReduction,maxval(abs(FermiA_I(1:nX))))/CFL)
+          else
+             !\
+             ! Check if the number of time steps is greater than 1:
+             !/
+             nStep = 1+int(maxval(abs(FermiA_I(1:nX)))/CFL)
+          end if
+          
+          RhoOld_I(1:nX)=Rho_I(1:nX)
+          BOld_I(1:nX) = B_I(1:nX)
+          
+          SP_Dt = DtProgress/real(nStep)
+          write(iStdOut,*)prefix,' Time step is set to ',SP_Dt,' s'
+          !\
+          ! If nStep>1, compute the Fermi acceleration rate
+          ! divided by the time step, and then divided by DeltaLnP:
+          !/
+          if (nStep>1) then
+             FermiA_I = FermiA_I/real(nStep)
+             if(UseTurbulentSpectrum) call reduce_advection_rates(nStep)
+          end if
+          !\
+          ! Approximate the diffusion coefficient and define
+          ! the Laplacian multiplier:
+          !/
+          DOuter_I(1:nX) = B_I(1:nX)
+          !\
+          ! Compute the diffusion coefficient at the
+          ! injection energy:
+          !/
+          if (DoTest) then
+             DInnerInj_I(1:nX) = BOverDeltaB2   !Value for test purposes only.
+          else
+             Energy = momentum_to_energy(PInjection,NameParticle)
+             if(.not.UseTurbulentSpectrum)then
+                DInnerInj_I(1:nX) = BOverDeltaB2*& !Physically meaningful value.
+                     cGyroRadius*(PInjection*cLightSpeed)**2/&
+                     (B_I(1:nX)**2*Energy)
+                if(UseRealDiffusionUpstream)then
+                   ! reset the diffusion coefficient upstream to be equal to
+                   !(1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
+                   where(X_DI(1,1:nX)**2+&
+                        X_DI(2,1:nX)**2+&
+                        X_DI(3,1:nX)**2>&
+                        (X_DI(1,iShock)**2+&
+                        X_DI(2,iShock)**2+&
+                        X_DI(3,iShock)**2)*1.2)
+                      DInnerInj_I(1:nX)=&
+                           sqrt(X_DI(1,1:nX)**2+&
                            X_DI(2,1:nX)**2+&
                            X_DI(3,1:nX)**2)*&
-                       6.6667e-2*&
-                       (PInjection*cLightSpeed**2)/&
-                       (B_I(1:nX)*Energy)*&
-                       (PInjection*cLightSpeed/energy_in('GeV'))**(1.0/3)
-                 elsewhere
-                    DInnerInj_I(1:nX)=DInnerInj_I(1:nX)/min(1.0,&
-                         sqrt((X_DI(1,1:nX)**2+&
-                               X_DI(2,1:nX)**2+&
-                               X_DI(3,1:nX)**2)/&
-                              (X_DI(1,iShock)**2+&
-                               X_DI(2,iShock)**2+&
-                               X_DI(3,iShock)**2))/0.9)/&
-                              (BOverDeltaB2*10.0*CInjection*AlfvenMach)
-                 end where
-              end if
-           end if
-        end if
-
-        do iStep=1,nStep
-           if(UseTurbulentSpectrum)then
-              call set_dxx(nX,nP,B_I(1:nX))
-           end if
-           do iX=1,nX
-              !\
-              ! Apply the boundary condition for F_II at injection momentum::
-              ! We assume distribution function for suprathermal particles
-              ! given by: 
-              ! f(p_thermal<p<p_injection,x)=CInjection*(1/4pi/(SuprathIndex-3))*&
-              !                   f_injection*(Rho(x)/(2TM_i)^(3/2))*&
-              !                   ((2TM_i)^(1/2)/p_injection)^SuprathIndex
-              ! where f_injection is a dimensionless constant of the order of
-              ! unity, equal to 1 by default, and the default spectral index
-              ! for suprathermal particles is SuprathIndex=5.
-              !/
-              if (.not.DoTest) F_II(0,iX)=FInjection*CInjection*&
-                   0.250/cPi/(SuprathIndex-3.0)*Rho_I(iX)/&
-                   kinetic_energy_to_momentum(&
-                   T_I(iX)*energy_in(NameEnergyUnit),NameParticle)**3*&
-                   (kinetic_energy_to_momentum(&
-                   T_I(iX)*energy_in(NameEnergyUnit),NameParticle)    &
-                   /PInjection)**SuprathIndex
-              if(F_II(0,iX)<=0.0)then
-                 write(*,*)'Negative distribution function after BC', iX, F_II(0,iX)
-              end if
-              !\
-              ! Advance the advection part of the DKE:
-              !/
-              call advance_log_advection(FermiA_I(iX),nP,1,1,F_II(:,iX),.false.)
-              if(F_II(0,iX)<=0.0)then
-                 write(*,*)'Negative distribution function after advection', iX, F_II(0,iX)
-              end if
-           end do
-         
-           
-           do iLnP=1,nP
-              Momentum = exp(real(iLnP)*DeltaLnP) !This gives P/PInjection.
-              if(.not.UseTurbulentSpectrum)then
-                 if (.not.UseRelativistic) then
-                    DInner_I = DInnerInj_I*Momentum**2
-                 else
-                    DInner_I = DInnerInj_I*Momentum**2 *&
-                         momentum_to_energy(1.0*    PInjection,NameParticle)/&
-                         momentum_to_energy(Momentum*PInjection,NameParticle)
-                 end if
-
-                 if(UseRealDiffusionUpstream)&
-                      ! reset the diffusion coefficient upstream to be equal to
-                      !(1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
-                      where(X_DI(1,iShock+1:nX)**2+&
-                            X_DI(2,iShock+1:nX)**2+&
-                            X_DI(3,iShock+1:nX)**2>&
+                           6.6667e-2*&
+                           (PInjection*cLightSpeed**2)/&
+                           (B_I(1:nX)*Energy)*&
+                           (PInjection*cLightSpeed/energy_in('GeV'))**(1.0/3)
+                   elsewhere
+                      DInnerInj_I(1:nX)=DInnerInj_I(1:nX)/min(1.0,&
+                           sqrt((X_DI(1,1:nX)**2+&
+                           X_DI(2,1:nX)**2+&
+                           X_DI(3,1:nX)**2)/&
                            (X_DI(1,iShock)**2+&
-                            X_DI(2,iShock)**2+&
-                            X_DI(3,iShock)**2)*1.2)&
-                            DInner_I(iShock+1:nX)=&
-                            DInner_I(iShock+1:nX)*Momentum**(-2.0/3)
-              end if
-              if(UseTurbulentSpectrum)then
-                 do iX=1,nX
-                    DInner_I(iX)=Dxx(PInjection*Momentum,B_I(iX),iX,&
-                         NameParticle)/B_I(iX)
-                 end do
-              end if
-              
-              !\
-              ! For a given spatial and temporal resolution, the value of
-              ! the diffusion coefficient should be artificially enhanced
-              ! in order to get the diffusion length larger than the shock
-              ! front width - governed by artificially enhanced numerical
-              ! dissipation. By doing this, the Fermi acceleration rate
-              ! decreases accordingly for lower particle energies.
-              !/
-              call enhance_diffusion(DInner_I,DOuter_I)
-              !\
-              ! Advance the diffusion part of the DKE:
-              !/
-              call advance_diffusion(SP_Dt,nX,X_DI(:,1:nX),F_II(iLnP,1:nX),&
-                   DOuter_I(1:nX),DInner_I(1:nX))
-           end do  !iLnP
-           
-           !\
-           ! Update turbulence spectrum:
-           !/
-           if(UseTurbulentSpectrum)then
-              call UpdateSpectrum(nX,nP,pInjection,DeltaLnP,X_DI,&
-                   F_II,B_I,Rho_I,SP_Dt)
-           end if
-           SP_Time = SP_Time+SP_Dt
-           if (DoLogFile) call write_logfile_SP('WRITE')
-           if(any(F_II(0,:)<=0.0))then
-              write(*,*)'Negative distribution function', F_II(0,:)
-           end if
-           call write_plotfile_SP(&
-                int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
-        end do  !iStep
-        call outputSpectrum_ishock(iShock)
-     end do     !iProgress loop
-  !--------------------------------- FINALIZE -------------------------------!
-  case("FINALIZE")
-     if (DoLogFile) call write_logfile_SP('CLOSE')
-     call write_plotfile_SP(.true.,SP_TypePlot)
-  case default
-     call CON_stop('Unknown action in SP_difussive_shock'//TypeAction)
-  end select
-  !------------------------------------ DONE --------------------------------!
-
-Contains
-  
+                           X_DI(2,iShock)**2+&
+                           X_DI(3,iShock)**2))/0.9)/&
+                           (BOverDeltaB2*10.0*CInjection*AlfvenMach)
+                   end where
+                end if
+             end if
+          end if
+          
+          do iStep=1,nStep
+             if(UseTurbulentSpectrum)then
+                call set_dxx(nX,nP,B_I(1:nX))
+             end if
+             do iX=1,nX
+                !\
+                ! Apply the boundary condition for F_II at injection momentum::
+                ! We assume distribution function for suprathermal particles
+                ! given by: 
+                ! f(p_thermal<p<p_injection,x)=CInjection*(1/4pi/(SuprathIndex-3))*&
+                !                   f_injection*(Rho(x)/(2TM_i)^(3/2))*&
+                !                   ((2TM_i)^(1/2)/p_injection)^SuprathIndex
+                ! where f_injection is a dimensionless constant of the order of
+                ! unity, equal to 1 by default, and the default spectral index
+                ! for suprathermal particles is SuprathIndex=5.
+                !/
+                if (.not.DoTest) F_II(0,iX)=FInjection*CInjection*&
+                     0.250/cPi/(SuprathIndex-3.0)*Rho_I(iX)/&
+                     kinetic_energy_to_momentum(&
+                     T_I(iX)*energy_in(NameEnergyUnit),NameParticle)**3*&
+                     (kinetic_energy_to_momentum(&
+                     T_I(iX)*energy_in(NameEnergyUnit),NameParticle)    &
+                     /PInjection)**SuprathIndex
+                if(F_II(0,iX)<=0.0)then
+                   write(*,*)'Negative distribution function after BC', iX, F_II(0,iX)
+                end if
+                !\
+                ! Advance the advection part of the DKE:
+                !/
+                call advance_log_advection(FermiA_I(iX),nP,1,1,F_II(:,iX),.false.)
+                if(F_II(0,iX)<=0.0)then
+                   write(*,*)'Negative distribution function after advection', iX, F_II(0,iX)
+                end if
+             end do
+             
+             
+             do iLnP=1,nP
+                Momentum = exp(real(iLnP)*DeltaLnP) !This gives P/PInjection.
+                if(.not.UseTurbulentSpectrum)then
+                   if (.not.UseRelativistic) then
+                      DInner_I = DInnerInj_I*Momentum**2
+                   else
+                      DInner_I = DInnerInj_I*Momentum**2 *&
+                           momentum_to_energy(1.0*    PInjection,NameParticle)/&
+                           momentum_to_energy(Momentum*PInjection,NameParticle)
+                   end if
+                   
+                   if(UseRealDiffusionUpstream)&
+                        ! reset the diffusion coefficient upstream to be equal to
+                        !(1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
+                        where(X_DI(1,iShock+1:nX)**2+&
+                        X_DI(2,iShock+1:nX)**2+&
+                        X_DI(3,iShock+1:nX)**2>&
+                        (X_DI(1,iShock)**2+&
+                        X_DI(2,iShock)**2+&
+                        X_DI(3,iShock)**2)*1.2)&
+                        DInner_I(iShock+1:nX)=&
+                        DInner_I(iShock+1:nX)*Momentum**(-2.0/3)
+                end if
+                if(UseTurbulentSpectrum)then
+                   do iX=1,nX
+                      DInner_I(iX)=Dxx(PInjection*Momentum,B_I(iX),iX,&
+                           NameParticle)/B_I(iX)
+                   end do
+                end if
+                
+                !\
+                ! For a given spatial and temporal resolution, the value of
+                ! the diffusion coefficient should be artificially enhanced
+                ! in order to get the diffusion length larger than the shock
+                ! front width - governed by artificially enhanced numerical
+                ! dissipation. By doing this, the Fermi acceleration rate
+                ! decreases accordingly for lower particle energies.
+                !/
+                DInner_I(1:nX) = max(DInner_I(1:nX),&
+                     DiffCoeffMin/DOuter_I(1:nX))
+                !\
+                ! Advance the diffusion part of the DKE:
+                !/
+                call advance_diffusion(SP_Dt,nX,X_DI(:,1:nX),F_II(iLnP,1:nX),&
+                     DOuter_I(1:nX),DInner_I(1:nX))
+             end do  !iLnP
+             
+             !\
+             ! Update turbulence spectrum:
+             !/
+             if(UseTurbulentSpectrum)then
+                call UpdateSpectrum(nX,nP,pInjection,DeltaLnP,X_DI,&
+                     F_II,B_I,Rho_I,SP_Dt)
+             end if
+             SP_Time = SP_Time+SP_Dt
+             if (DoLogFile) call write_logfile_SP('WRITE')
+             if(any(F_II(0,:)<=0.0))then
+                write(*,*)'Negative distribution function', F_II(0,:)
+             end if
+             call write_plotfile_SP(&
+                  int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
+          end do  !iStep
+          call outputSpectrum_ishock(iShock)
+       end do     !iProgress loop
+       !--------------------------------- FINALIZE -------------------------------!
+    case("FINALIZE")
+       if (DoLogFile) call write_logfile_SP('CLOSE')
+       call write_plotfile_SP(.true.,SP_TypePlot)
+    case default
+       call CON_stop('Unknown action in SP_difussive_shock'//TypeAction)
+    end select
+    !------------------------------------ DONE --------------------------------!
+    
+  contains
+    
     subroutine OutputSpectrum_iShock(nFile)
+      use ModTurbulence,ONLY: nKOutput, DeltaLNK, IPlus_IX, IMinus_IX, KMin
       use ModIoUnit
       integer::nFile,iX,iK,iFile,iError
       character(LEN=10000)::str,NameFile
       real::R
-
+      
       iFile=io_unit_new()
       write(NameFile,'(a,i4.4,a)')trim(SP_DirOut)//'Spectrum_iShock_',nfile,'.dat'
       open(iFile,file=NameFile,status='replace',iostat=iError)
-
+      
       R=sqrt(sum(X_DI(:,iShock)**2 ))/cAU
       write(iFile,'(a,f5.3,a,F5.0,a,i5,a)')  'TITLE="Rshock=', R, ' AU, SP_time=',SP_time,'s, iX=',iShock+5,'"'
       write(iFile,*) 'VARIABLES = "k", "I+", "I-"'
-
+      
       do iK=nKOutput,nP
          write(iFile,*) B_I(iShock+5)*Kmin*exp(real(iK-1)*DeltaLnK),&
               IPlus_IX(iK,iShock+5),IMinus_IX(iK,iShock+5)
       end do
-
+      
       close(iFile)
     end subroutine OutputSpectrum_iShock
-
-end subroutine SP_diffusive_shock
+  end subroutine SP_diffusive_shock
 end module SP_ModMain
