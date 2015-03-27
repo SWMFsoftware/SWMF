@@ -310,10 +310,9 @@ sub concat_sat_log{
 	my $BaseName = $File;
 
 	# Remove extension
-	$BaseName =~ s/_n\d+\.(log|sat|mag)$// or
-	    $BaseName =~ s/_t[\d_]+\.(log|mag)$// or
+	$BaseName =~ s/_[ent][\d\-_]+\.(log|sat|mag)$// or
 	    die "$ERROR: file name $File does not match "
-	    .   "_nSTEPNUMBER.(log|sat) format\n";
+	    .   "_[ent]TIMESTAMP.(log|sat|mag) format\n";
 
 	# Check if there was another file with the same base name.
 	my $FirstFile = $FirstFile{$BaseName};
