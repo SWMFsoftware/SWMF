@@ -8,6 +8,7 @@
 //Coupler functions for OH
 
 #include "OH.h"
+double OH::Coupling::TimeAfterCoupling[PIC::nTotalSpecies] = {0.0};
 
 void OH::Coupling::Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI) {
   int i0=0,i1=0;
@@ -66,6 +67,9 @@ void OH::Coupling::Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, do
 
   }
 
+  // reset time after last coupling session
+  for(int spec=0; spec < PIC::nTotalSpecies; spec++)
+    OH::Coupling::TimeAfterCoupling[spec] = 0.0;
 }
 
 

@@ -11,26 +11,27 @@ int OH::Output::ohSourceEnergyOffset  =-1;
 
 
 void OH::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"ohSourceDensity\",\"ohSourceMomentum\",\"ohSourceEnergy\"");
+  fprintf(fout,",\"ohSourceDensity\",\"ohSourceMomentumX\",\"ohSourceMomentumY\",\"ohSourceMomentumZ\",\"ohSourceEnergy\"");
 }
 
 void OH::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode){
 
-  double S1=0.0, S2=0.0, S3=0.0;
+  double S1=0.0, S2[3]={0.0}, S3=0.0;
   int i,idim;
   char *SamplingBuffer;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
 
     S1+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceDensityOffset)))*InterpolationCoeficients[i];
-
-    S2+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset)))*InterpolationCoeficients[i];
+    
+    for(idim=0 ; idim<3; idim++)
+      S2[idim]+=(*(idim+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset)))*InterpolationCoeficients[i];
 
     S3+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset)))*InterpolationCoeficients[i];
   }
 
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceDensityOffset,&S1,sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset,&S2,sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset,&S2,3*sizeof(double));
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset,&S3,sizeof(double));
 
 }
@@ -51,18 +52,20 @@ void OH::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int C
   else pipe->send(t);
 
   //SourceMomentum
-  if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset));
+  for(int idim=0; idim < 3; idim++){
+    if (pipe->ThisThread==CenterNodeThread) {
+      t= *(idim+(double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceMomentumOffset));
+    }
+    
+    if (pipe->ThisThread==0) {
+      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
+      
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
   }
 
-  if (pipe->ThisThread==0) {
-    if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
-
-    fprintf(fout,"%e ",t);
-  }
-  else pipe->send(t);
-
-  //SourceDensity
+  //SourceEnergy
   if (pipe->ThisThread==CenterNodeThread) {
     t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OH::Output::ohSourceEnergyOffset));
   }
@@ -129,12 +132,12 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
     return -1.0;
   }
 
-  // temporary variables
-  double v1[3]={0.0,0.0,0.0};
+  // velocity of a particle
+  double v[3]={0.0,0.0,0.0};
   //-------------------
   switch (spec) {
   case _H_SPEC_:
-    lifetime= ChargeExchange::LifeTime(_H_SPEC_, v1, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
+    lifetime= ChargeExchange::LifeTime(_H_SPEC_, v, PlasmaBulkVelocity, PlasmaTemperature, PlasmaNumberDensity);
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown specie");
@@ -145,7 +148,8 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
 }
 
 int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
-  
+  //for one lost particle one new particle is generated
+  //----------------------------------------------------------------------
   //inject the products of the reaction
   double ParentTimeStep,ParentParticleWeight;
   
@@ -171,67 +175,57 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
   PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
-  //copy the state of the initial parent particle into the new-daugher particle (just in case....)
+  //copy the state of the initial parent particle into the new-daugher particle
   PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
-  long int newParticle;
-  PIC::ParticleBuffer::byte *newParticleData;
+
+  // injection time of the particle (after the beginning of AMPS' time step)
   double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
-  
   ModelParticleInjectionRate=1.0/ParentTimeStep;
   TimeIncrement=-log(rnd())/ModelParticleInjectionRate * rnd(); 
   TimeCounter += TimeIncrement;
-  //<- *rnd() is to account for the injection of the first particle in the curent interaction
-  
-  /*
-   *
-   *  double ProductTimeStep=ParentTimeStep;
-   *  double ProductParticleWeight=ParentParticleWeight;
-   *  double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
-   *  
-   *    
-   *  ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight;
-   *
-   *  //inject the product particles
-   *  TimeIncrement+=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
-   *  
-   *  while (TimeCounter+TimeIncrement<ProductTimeStep) {
-   *    TimeCounter+=TimeIncrement;
-   *    TimeIncrement+=-log(rnd())/ModelParticleInjectionRate;
-   *
-   *    //determine the velocity of the product specie
-   *    double ProductParticleVelocity[3];
-   *
-   *       for (int idim=0;idim<3;idim++) 
-   *	 ProductParticleVelocity[idim]=vFinal[idim];
-   *
-   *
-   *
-   *       //apply condition of tracking the particle
-   *       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-   *       PIC::ParticleTracker::InitParticleID(tempParticleData);
-   *       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
-   *       #endif
-   */
   
   //generate a particle
+  // new particle comes from solar wind and has velocity ~ plasma bulk velocity
+  double PlasmaBulkVelocity[3];
+  {
+    long int nd;
+    int i,j,k;
+    nd=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,node);
+    PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,xFinal,nd,node);
+    
+    // charge exchange process transfers momentum and energy to plasma
+    PIC::Mesh::cDataCenterNode *CenterNode;
+    char *offset;
+    double v2 = 0.0, plasmav2 = 0.0;
+    CenterNode=node->block->GetCenterNode(nd);
+    offset=CenterNode->GetAssociatedDataBufferPointer(); 
+    *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0; 
+    for(int idim=0; idim<3; idim++){
+      *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) += 
+	ParentParticleWeight*_MASS_(_H_)*(vFinal[idim]-PlasmaBulkVelocity[idim])/CenterNode->Measure; 
+      v2      +=vFinal[idim]*vFinal[idim];
+      plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
+    }
+    *((double*)(offset+OH::Output::ohSourceEnergyOffset)) += 
+      ParentParticleWeight*0.5*_MASS_(_H_)*(v2-plasmav2)/CenterNode->Measure; 
+  }
+
   PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
-  PIC::ParticleBuffer::SetV(vFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
+  PIC::ParticleBuffer::SetV(PlasmaBulkVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);  
   PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
 #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
   PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 #endif
 
-
-  
   //get and injection into the system the new model particle
+  long int newParticle;
+  PIC::ParticleBuffer::byte *newParticleData;
   newParticle=PIC::ParticleBuffer::GetNewParticle();
   newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
   memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
   
   _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ParentTimeStep-TimeCounter,node,true);
-  //     }
-  
   
   return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
 

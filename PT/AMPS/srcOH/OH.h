@@ -30,6 +30,7 @@ namespace OH {
   }
 
   namespace Coupling {
+    extern double TimeAfterCoupling[PIC::nTotalSpecies];
     void Send(char *NameVar, int *nVarIn, int *nDimIn, int *nPoint, double *Xyz_DI, double *Data_VI);
   }
 

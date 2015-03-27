@@ -333,6 +333,11 @@ void amps_time_step(){
     //make the time advance
     static int LastDataOutputFileNumber=0;
 
+    // change time after las coupling session for each species
+    for(int spec=0; spec < PIC::nTotalSpecies; spec++)
+      OH::Coupling::TimeAfterCoupling[spec] += 
+	PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+
     //make the time advance
      PIC::TimeStep();
 
