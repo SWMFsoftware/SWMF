@@ -43,6 +43,8 @@ contains
 
     integer :: iBlock
 
+    logical :: UseHighResChangeTmp
+
     logical:: DoTest, DoTestMe, DoTime, DoTimeMe
     character (len=*), parameter :: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
@@ -60,6 +62,15 @@ contains
 
     DoTwoCoarseLayers = &
          nOrder>1 .and. nOrderProlong==1 .and. .not. DoOneCoarserLayer
+
+    UseHighResChangeTmp = .false.
+    if(nOrder<5 .and. UseHighResChange) then
+       ! For part implicit run, nOrder may be set to the same as nOrderImpl to
+       ! calcuate (\partial R)/(\partial U)*(\Delta U), then use lower order
+       ! resolution changes.
+       UseHighResChange = .false.
+       UseHighResChangeTmp = .true.
+    endif
 
     if(DoTestMe)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
@@ -135,9 +146,11 @@ contains
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
 
+    if(nOrder<5 .and. UseHighResChangeTmp) UseHighResChange=.true.
+    
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)
-
+    
     if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine exchange_messages
