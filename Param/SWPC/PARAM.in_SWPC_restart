@@ -148,7 +148,7 @@ T                       IsPlotName_e
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR			StringLogfile
+VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst dstflx

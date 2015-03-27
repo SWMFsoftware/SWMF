@@ -119,7 +119,7 @@ T                       IsPlotName_e
 
 #SAVELOGFILE
 T			DoSaveLo5Dgfile
-VAR			StringLogfile
+VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst dstflx
@@ -136,9 +136,11 @@ z=0 MHD idl             StringPlot
 -1.                     DtSavePlot
 -1.                     DxSavePlot
 
-#AMR
-100			DnRefine
-F			DoAutomaticRefinement 
+#DOAMR
+T			DoAmr
+100			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
 
 ! Satellite trajectories
 INCLUDE
@@ -196,8 +198,8 @@ min idl                 StringPlot
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#AMR
--1			DnRefine
+#DOAMR
+F			DoAmr
 
 #SCHEME
 2			nORDER
