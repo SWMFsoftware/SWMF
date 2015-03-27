@@ -83,6 +83,10 @@ If UseStrict is true, the SWMF does not attempt to correct problems,
 but it stops after the warning message. If it is set to false, SWMF
 attempts to correct the problems after the warning message is issued.
 It is possible to switch back and forth between strict and non-strict mode. 
+A typical use is to switch off strict mode when a component is switched off
+in a session so some of the processors are idling. Once all processors are
+used, it is a good idea to switch back to strict mode.
+
 The default is strict mode.
 </command>
 
@@ -145,10 +149,9 @@ is used to control the frequencies of various actions.
 The steady-state mode also allows the components to use various
 acceleration techniques. For example the BATSRUS code (in the GM, IH, SC
 components) can use local time stepping to accelerate convergence
-to steady state. It is also envisioned that in steady state mode
-the various components will be allowed to use different number
-of iterations per global iteration, thus they can converge to steady state
-at the same rate and an optimal global convergence can be achieved.
+to steady state. In steady state mode the various components 
+are allowed to use different number of iterations per global iteration, 
+thus they can converge to steady state more optimally (see the #CYCLE command).
 
 The default value is the time accurate mode.
 </command>
@@ -204,7 +207,10 @@ The #ENDTIME command sets the date and time in Greenwich Mean Time
 (GMT) or Universal Time (UT) when the simulation should be ended.
 This is an alternative to the #STOP command in the final session.
 This time is stored in the final restart file as the start time for
-the restarted run, and tSimulation is set to zero.
+the restarted run, and the tSimulation parameter of the #TIMESIMULATION 
+and the nStep parameter of the #NSTEP commands are set to zero.
+This avoids accumulation of tSimulation or nStep for continuously
+restarted runs.
 
 There is no default value.
 </command>
@@ -256,7 +262,8 @@ If tSimulation reaches this value the session is finished.
 Using a negative value for either variables means that the
 corresponding condition is  not checked. The default values
 are MaxIteration=0 and tSimulationMax = 0.0, so the #STOP command
-must be used in every session.
+must be used in every session. The only exception is the last
+session, where the #ENDTIME command can be used instead of #STOP.
 </command>
 
 <command name="CHECKSTOP">
@@ -615,103 +622,62 @@ The default is DnRun = 1 for all the active components.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="COUPLEORDER">
-	<parameter name="nCouple" type="integer" min="0" max="20" 
-							default="20" />
+	<parameter name="nCouple" type="integer" min="0" max="30" 
+		   default="10"/>
 	<for name="iCouple" from="1" to="$nCouple">
-		<parameter name="NameSourceTarget" type="string"
-							input="select">
-                        <option name="EE SC" default="$iCouple==1" />
-                        <option name="SC EE" default="$iCouple==2" />
-			<option name="SC IH" default="$iCouple==3" />
-			<option name="IH SC" default="$iCouple==4" />
-			<option name="SC SP" default="$iCouple==5" />
-			<option name="IH SP" default="$iCouple==6" />
-			<option name="IH GM" default="$iCouple==7" />
-                        <option name="GM IE" default="$iCouple==8" />
-                        <option name="GM IM" default="$iCouple==9" />
-			<option name="GM PW" default="$iCouple==10" />
-                        <option name="GM RB" default="$iCouple==11" />
-                        <option name="UA IE" default="$iCouple==12" />
-                        <option name="IM GM" default="$iCouple==15" />
-                        <option name="IM IE" default="$iCouple==16" />
-			<option name="PW GM" default="$iCouple==17" />
-                        <option name="IE GM" default="$iCouple==18" />
-                        <option name="IE IM" default="$iCouple==19" />
-			<option name="IE PW" default="$iCouple==20" />
-			<option name="IE PS" default="$iCouple==21" />
-			<option name="IE RB" default="$iCouple==22" />
-                        <option name="IE UA" default="$iCouple==23" />
-			<option name="IH OH" default="$iCouple==24" />
-			<option name="OH IH" default="$iCouple==25" />
-		</parameter>
+	    <parameter name="NameSourceTarget" type="string" length="5"/>
 	</for>
 
 #COUPLEORDER
-25                nCouple
-LC SC             NameSourceTarget
-SC LC             NameSourceTarget
-SC IH             NameSourceTarget
-IH SC             NameSourceTarget
-SC SP             NameSourceTarget
-IH SP             NameSourceTarget
-IH GM             NameSourceTarget
-GM IE             NameSourceTarget
-GM IM             NameSourceTarget
-GM PW             NameSourceTarget
-GM RB             NameSourceTarget
-UA IE             NameSourceTarget
-UA LA             NameSourceTarget
-LA UA             NameSourceTarget
-IM GM             NameSourceTarget
-IM IE             NameSourceTarget
-PW GM             NameSourceTarget
-IE GM             NameSourceTarget
-IE IM             NameSourceTarget
-IE PW             NameSourceTarget
-IE PS             NameSourceTarget
-IE RB             NameSourceTarget
-IE UA             NameSourceTarget
-IH OH             NameSourceTarget
-OH IH             NameSourceTarget
+5                       nCouple
+IE GM                   NameSourceTarget
+IE IM                   NameSourceTarget
+GM IE                   NameSourceTarget
+GM IM                   NameSourceTarget
+IM GM                   NameSourceTarget
 
 The nCouple variable determines the maximum number of couplings
-among the components. The NameSourceTarget string contains the
-two-character ID for the source and target components separated by
-spaces. The order of the couplings is most important for the
+among the components. The NameSourceTarget string contains the two
+two-character IDs for the source and target components separated by
+a space. The order of the couplings is most important for the
 couplings done at the beginning of the session. Some components need
 to get information from the others before they can initialize properly.
-For example IM gets information from GM. 
+For example IM/RCM2 gets information from GM/BATSRUS. 
 
-With respect coupling between IE and the other components 
+With respect to coupling between IE and the other components 
 there are two strategies:
 
-1. All components send information to IE first, then IE solves for the potential,
-   and sends info back to all the other components.
+1. All components send information to IE first, then IE solves for 
+   the potential and sends it back to all the other components.
 
 2. IE sends information based on its current state first, then receives info
    from the other components, and solves for the potential in parallel with the
    other components.
 
-The default coupling order shown above follows the first strategy. In this case
+The default coupling order follows the first strategy. In this case
 IE runs in a serial mode, so it should share processors with one of the 
 components that are coupled to IE. 
 
-The second strategy leads to parallel execution IF the layout puts IE on a processor
-that is NOT shared with the slowest of the components (typically GM, sometimes IM). 
+The example shown above follows the second strategy, which leads to 
+concurrent execution IF the layout puts IE on a processor
+that is NOT shared with the slowest of the components 
+(typically GM, sometimes IM). 
 To use the second strategy it is simplest to add the
 
 #INCLUDE
 Param/CoupleOrderFast
 
 command into the PARAM.in file. The Param/CoupleOrderFast contains the 
-coupling order that allows parallel execution of IE.
+coupling order that allows concurrent execution of IE.
 
 NOTE: The #COUPLEORDER command defines only the order of the couplings, 
 so it can list couplings that are not active in a run. 
 
 NOTE: The order of the 'SC SP' and 'IH SP' couplings should not be reversed!
 
-The default coupling order is shown above. 
+The default coupling order is specified by the iCompCoupleOrder_II array
+initialized in the \\
+CON/Coupler/src/CON_coupler.f90 file.
 </command>
 
 <command name="COUPLE1" multiple="T">
@@ -1045,7 +1011,7 @@ it will be replaced with the date-time information corresponding to the
 restart data, for example "SWMF_RESTART.20150209_124900/".
 The SWMF output restart file (see #RESTARTFILE) will be written into this 
 directory. The components should also write their restart information into a 
-subdirectory named by the component ID, for example 
+subdirectory named by the component ID, for example \\
 "SWMF_RESTART.20150209_124900/GM/". 
 This feature is currently only implemented for BATSRUS and IM/RCM2.
 
