@@ -50,6 +50,8 @@ contains
                write(*,*)prefix,' Verbose everything'
        case('#NSMOOTH')
           call read_var('nSmooth',nSmooth)
+       case('#TEST')
+          call read_var('DoTest', DoTest)
        case default
           call CON_stop(NameSub//&
                ': Unknown command '&
