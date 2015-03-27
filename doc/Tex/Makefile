@@ -212,7 +212,9 @@ MAINTENANCE.dvi:\
 
 SWPCXML:
 	@rm -f SWPC.XML SWPCXML.tex
-	cd ../..; ${SCRIPTDIR}/ParamToXml.pl -o=doc/Tex/SWPC.XML Param/SWPC/PARAM.in*
+	cd ../..; ${SCRIPTDIR}/ParamToXml.pl -o=doc/Tex/SWPC.XML \
+		Param/SWPC/PARAM.in_SWPC_init \
+		Param/SWPC/PARAM.in_SWPC_restart
 	${SCRIPTDIR}/XmlToTex.pl SWPC.XML > SWPCXML.tex	
 
 SWPC.dvi: \
@@ -224,7 +226,8 @@ SWPC.dvi: \
 	SWMF_control.tex \
 	SWPCXML
 
-PDF_FILES = SWMF.pdf TESTING.pdf REFERENCE.pdf MAINTENANCE.pdf PHYSICS.pdf \
+PDF_FILES = SWMF.pdf SWPC.pdf TESTING.pdf REFERENCE.pdf \
+		MAINTENANCE.pdf PHYSICS.pdf \
 		SOFTWARE_STANDARD.pdf
 
 PDF: ${PDF_FILES}
