@@ -9,12 +9,18 @@
 program CON_stand_alone
   use SP_ModMain
   use SP_ModReadMhData,ONLY:read_ihdata_for_sp
+  use SP_ModSetParam
+  use ModIoUnit, ONLY: STDOUT_
   implicit none
   !--------------------------------------------------------------------------!
   integer:: iIter,iX
   !--------------------------------------------------------------------------!
-  prefix='SP: ';iStdOut=6      !Set the string to be printed on screen.   !
+  prefix='SP: ';iStdOut=STDOUT_   !Set the string to be printed on screen.   !
   DoTest=.false.
+  call read_file('PARAM.in')
+  call read_init
+  call read_echo_set(.true.)
+  call SP_set_parameters('READ')
   if(DoTest)write(iStdOut,'(a)')prefix//'Do the test only'
   if(DoTest)then
      !------------------------------- INIT ----------------------------------!
