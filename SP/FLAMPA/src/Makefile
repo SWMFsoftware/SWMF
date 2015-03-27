@@ -8,11 +8,11 @@ include Makefile.DEPEND
 
 
 OBJECTS = ModLogAdvection.o \
+	SP_ModDiffusion.o \
 	SP_ModTurbulence.o \
 	SP_main.o \
 	SP_set_param.o \
 	read_ihdata_for_sp.o \
-	sp_diffusive_acceleration.o \
 	write_logfile_SP.o \
 	write_plotfile_SP.o 
 
