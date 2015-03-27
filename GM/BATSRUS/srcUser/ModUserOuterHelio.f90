@@ -32,7 +32,7 @@ module ModUser
        UnitT_, UnitRhoU_, Si2No_V
   use ModNumConst,      ONLY: cRadToDeg, cTwoPi
   use ModConst,         ONLY: cBoltzmann, cProtonMass
-  use ModAdvance,    ONLY: State_VGB, Source_VC
+  use ModAdvance,    ONLY: State_VGB, Source_VC, ExtraSource_ICB
   use ModGeometry,   ONLY: Xyz_DGB, r_BLK, true_cell
   use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
        Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
@@ -1029,8 +1029,40 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !-----------------------------------------------------------------------
 
-    !This subroutine is not needed when not using the 4 neutral fluids                   
-    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
+    !updating sources from AMPS in PT-OH coupling
+    if(.not.UseNeutralFluid)then
+       
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+          !Extract conservative variables
+          State_V = State_VGB(:,i,j,k,iBlock)
+
+          Ux_I  = State_V(RhoUx_)/State_V(Rho_)
+          Uy_I  = State_V(RhoUy_)/State_V(Rho_)
+          Uz_I  = State_V(RhoUz_)/State_V(Rho_)
+
+          U2_I  = Ux_I**2 + Uy_I**2 + Uz_I**2
+
+          !updating the source terms
+          Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
+               + ExtraSource_ICB(1,i,j,k,iBlock)
+          Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
+               + ExtraSource_ICB(2,i,j,k,iBlock)
+          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+               + ExtraSource_ICB(3,i,j,k,iBlock)
+          Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+               + ExtraSource_ICB(4,i,j,k,iBlock)
+          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+               + ExtraSource_ICB(5,i,j,k,iBlock)
+          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+               + (g-1)*( Source_VC(Energy_,i,j,k) &
+               - Ux_I(Ion_)*Source_VC(RhoUx_,i,j,k) &
+               - Uy_I(Ion_)*Source_VC(RhoUy_,i,j,k) &
+               - Uz_I(Ion_)*Source_VC(RhoUz_,i,j,k) &
+               + 0.5*U2_I(Ion_)*Source_VC(Rho_,i,j,k) )
+       end do; end do; end do
+       RETURN
+    end if
 
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
