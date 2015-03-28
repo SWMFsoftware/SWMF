@@ -2449,29 +2449,28 @@ void Exosphere::Sampling::OutputSurfaceDataFile::PrintDataStateVector(FILE* fout
     BulkSpeedUp+=Sphere->SampleInjectedFluxBulkSpeed[spec][nSurfaceElement];
     SampleSpeciesSurfaceInjectionFlux+=Sphere->SampleSpeciesSurfaceInjectionFlux[spec][nSurfaceElement];
 
+   //calculate the total injection rate
+    if (PIC::LastSampleLength!=0) for (int i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) TotalFluxUp+=Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][i]/PIC::LastSampleLength;
+
 
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
     t=(PIC::LastSampleLength!=0) ? Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][_EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_]/PIC::LastSampleLength : 0.0;
     FluxIV+=t;
-    TotalFluxUp+=t;
 #endif
 
 #if _EXOSPHERE_SOURCE__PHOTON_STIMULATED_DESPRPTION_ == _EXOSPHERE_SOURCE__ON_
     t=(PIC::LastSampleLength!=0) ? Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][_EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_]/PIC::LastSampleLength : 0.0;
     FluxPDS+=t;
-    TotalFluxUp+=t;
 #endif
 
 #if _EXOSPHERE_SOURCE__THERMAL_DESORPTION_ == _EXOSPHERE_SOURCE__ON_
    t=(PIC::LastSampleLength!=0) ? Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][_EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_]/PIC::LastSampleLength : 0.0;
    FluxTD+=t;
-   TotalFluxUp+=t;
 #endif
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
    t=(PIC::LastSampleLength!=0) ? Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][_EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_]/PIC::LastSampleLength : 0.0;
    FluxSW+=t;
-   TotalFluxUp+=t;
 
    SolarWindIncidentFlux+=Sphere->SolarWindSurfaceFlux[nSurfaceElement]*InterpolationCoefficient;
 #endif
@@ -2479,7 +2478,6 @@ void Exosphere::Sampling::OutputSurfaceDataFile::PrintDataStateVector(FILE* fout
 #if _EXOSPHERE_SOURCE__VERTICAL_INJECTION_ == _EXOSPHERE_SOURCE__ON_
     t=(PIC::LastSampleLength!=0) ? Sphere->SampleSpeciesSurfaceSourceRate[spec][nSurfaceElement][_EXOSPHERE_SOURCE__ID__VERTICAL_INJECTION_]/PIC::LastSampleLength : 0.0;
     FluxVI+=t;
-    TotalFluxUp+=t;
 #endif
 
     InterpolationNormalization+=InterpolationCoefficient;
