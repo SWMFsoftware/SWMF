@@ -924,6 +924,16 @@ module ModCoronalHeating
 
   logical,private:: DoInit = .true. 
 
+  ! The power spectrum of magnetic energy fluctuations in the solar wind
+  ! follows a Kolmogorov spectrum (\vardelta B)^(-5/3) in the inertial range
+  ! of the turbulence. Podesta et al. (2006) found based on in situ
+  ! observations  at 1 AU a spectral index of 3/2 for kinetic energy
+  ! fluctuations.
+  ! If the logical UseKolmogorov is .false., we assume a 3/2 spectral
+  ! index (for the entire solar corona and inner heliosphere) in the
+  ! stochastic heating mechanism, otherwise we assume it to be 5/3
+  logical :: UseKolmogorov = .false.
+
 contains
   !==========================================================================
   subroutine read_corona_heating(NameCommand)
@@ -1016,6 +1026,9 @@ contains
           call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
+
+    case("#KOLMOGOROV")
+       call read_var('UseKolmogorov', UseKolmogorov)
 
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
@@ -1764,18 +1777,16 @@ contains
                B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
           LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
 
-          EkinCascade = 1.0/sqrt(LperpInvGyroRad)
+          if(UseKolmogorov)then
+             EkinCascade = 1.0/LperpInvGyroRad**(2.0/3.0)
+          else
+             EkinCascade = 1.0/sqrt(LperpInvGyroRad)
+          end if
 
           if(iIon == 1)then
              DeltaU = sqrt(Ewave/State_VGB(iRhoIon_I(1),i,j,k,iBlock) &
                   *EkinCascade)
           else
-             ! Alfven ratio at ion gyro scale under the assumption that the
-             ! kinetic and magnetic fluctuation energies at the Lperp scale are
-             ! near equipartition (with a full wave reflection in the
-             ! transition region this would not be true)
-             AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
-
              ! difference bulk speed between ions and protons
              Udiff_D = &
                   State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) &
@@ -1785,10 +1796,22 @@ contains
              Upar = sum(Udiff_D*B_D)/B
              Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
 
-             DeltaU = sqrt(max((AlfvenRatio + (Upar/Valfven)**2)/AlfvenRatio &
-                  *Ewave - 2.0*(Upar/Valfven)*(EwavePlus - EwaveMinus) &
-                  /sqrt(AlfvenRatio), 0.0) &
-                  *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+             ! Alfven ratio at ion gyro scale under the assumption that the
+             ! kinetic and magnetic fluctuation energies at the Lperp scale are
+             ! near equipartition (with a full wave reflection in the
+             ! transition region this would not be true)
+             if(UseKolmogorov)then
+                DeltaU = sqrt( (EwavePlus*(1 - Upar/Valfven)**2 &
+                     + EwaveMinus*(1 + Upar/Valfven)**2) &
+                     *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock) )
+             else
+                AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
+
+                DeltaU = sqrt(max((AlfvenRatio+(Upar/Valfven)**2)/AlfvenRatio &
+                     *Ewave - 2.0*(Upar/Valfven)*(EwavePlus - EwaveMinus) &
+                     /sqrt(AlfvenRatio), 0.0) &
+                     *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock))
+             end if
           end if
 
           Epsilon = DeltaU/Vperp
