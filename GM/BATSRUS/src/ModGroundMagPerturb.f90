@@ -36,7 +36,7 @@ module ModGroundMagPerturb
   integer, parameter :: MaxMagnetometer = 500
   integer            :: iUnitMag = -1
   real               :: PosMagnetometer_II(2,MaxMagnetometer)
-  character(len=3)   :: MagName_I(MaxMagnetometer), MagInCoord='MAG'
+  character(len=3)   :: MagName_I(MaxMagnetometer), TypeCoordMagIn='MAG'
 
 contains
 
@@ -60,7 +60,7 @@ contains
     real,    intent(in), dimension(3,nMag) :: Xyz_DI
     real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
     integer  :: i,j,k,iBLK,iMag
-    real     :: r3, XyzSph_DD(3,3), GsmtoSmg_DD(3,3)
+    real     :: r3, XyzSph_DD(3,3), GmtoSmg_DD(3,3)
     real, dimension(3):: Xyz_D, Temp_D, Current_D, MagPerturb_D, TmpSph_D
     real, external    :: integrate_BLK
     real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
@@ -79,7 +79,7 @@ contains
     ! Calculate the magnetic perturbations in cartesian coordinates
     !/
 
-    GsmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+    GmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
 
     do iMag = 1, nMag
        Xyz_D = Xyz_DI(:,iMag)
@@ -117,10 +117,10 @@ contains
        MagPerturb_DI(z_,iMag) = Integrate_BLK(1,Temp_BLK_z)/(4*cPi)
 
        ! Convert to SMG coordinates
-       MagPerturb_D = matmul(GsmtoSmg_DD, MagPerturb_DI(:,iMag))
+       MagPerturb_D = matmul(GmtoSmg_DD, MagPerturb_DI(:,iMag))
 
        ! Transform to spherical coordinates (r,theta,phi) components
-       Xyz_D = matmul(GsmtoSmg_DD, Xyz_DI(:,iMag))
+       Xyz_D = matmul(GmtoSmg_DD, Xyz_DI(:,iMag))
 
        if (Xyz_D(1) == 0.0 .and. Xyz_D(2) == 0.0 .and. Xyz_D(3) == 0.0) then
           MagPerturb_DI(:,iMag) = MagPerturb_D
@@ -327,13 +327,13 @@ contains
           if (iError /= 0) EXIT READFILE
 
           if(index(Line,'#COORD')>0) then
-             read(unit_tmp,'(a)') MagInCoord
-             select case(MagInCoord)
-             case('MAG','SMG')
+             read(unit_tmp,'(a)') TypeCoordMagIn
+             select case(TypeCoordMagIn)
+             case('MAG','GEO','SMG')
                 call write_prefix;
-                write(iUnitOut,'(a)') 'Magnetometer Coordinates='//MagInCoord
+                write(iUnitOut,'(a)') 'Magnetometer Coordinates='//TypeCoordMagIn
              case default
-                call stop_mpi(NameSub//' invalid MagInCoord='//MagInCoord)
+                call stop_mpi(NameSub//' invalid TypeCoordMagIn='//TypeCoordMagIn)
              end select
           endif
 
@@ -384,7 +384,7 @@ contains
     end if
 
     ! Tell the coordinates to the other processors
-    call MPI_Bcast(MagInCoord, 3, MPI_CHARACTER, 0, iComm, iError)
+    call MPI_Bcast(TypeCoordMagIn, 3, MPI_CHARACTER, 0, iComm, iError)
     ! Tell the number of magnetometers to the other processors
     call MPI_Bcast(nMagnetometer, 1, MPI_INTEGER, 0, iComm, iError)
     ! Tell the magnetometer name to the other processors
@@ -463,9 +463,9 @@ contains
     !year,month,day,hour,minute,second,msecond
     real, dimension(3):: Xyz_D
     real, dimension(3,nMagnetometer):: MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
-         MagGsmXyz_DI, MagSmgXyz_DI, MagVarSum_DI, MagVarFac_DI, &
+         MagGmXyz_DI, MagSmXyz_DI, MagVarSum_DI, MagVarFac_DI, &
          MagVarGm_DI, MagVarTotal_DI
-    real:: MagtoGsm_DD(3,3), GsmtoSmg_DD(3,3)
+    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3)
 
     character(len=*), parameter :: NameSub = 'write_magnetometers'
     logical                     :: DoTest, DoTestMe
@@ -474,13 +474,13 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! Matrix between two coordinates
-    MagtoGsm_DD = transform_matrix(Time_Simulation, &
-         MagInCoord, TypeCoordSystem)
-    GsmtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+    MagtoGm_DD = transform_matrix(Time_Simulation, &
+         TypeCoordMagIn, TypeCoordSystem)
+    GmtoSm_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
 
     !\
     ! Transform the Radius position into cartesian coordinates. 
-    ! Transform the magnetometer position from MagInCorrd to GSM/SM
+    ! Transform the magnetometer position from MagInCorrd to GM/SM
     !/
 
     do iMag=1,nMagnetometer
@@ -493,11 +493,11 @@ contains
                (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
                PosMagnetometer_II(2,iMag)*cDegToRad,      &
                Xyz_D)
-          Xyz_D = matmul(MagtoGsm_DD, Xyz_D)
+          Xyz_D = matmul(MagtoGm_DD, Xyz_D)
        end if
 
-       MagGsmXyz_DI(:,iMag) = Xyz_D
-       MagSmgXyz_DI(:,iMag) = matmul(GsmtoSmg_DD,Xyz_D)
+       MagGmXyz_DI(:,iMag) = Xyz_D
+       MagSmXyz_DI(:,iMag) = matmul(GmtoSm_DD, Xyz_D)
     end do
 
     !-------------------------------------------------------------------
@@ -505,10 +505,10 @@ contains
     ! The results are in SM spherical coordinates.
     !------------------------------------------------------------------
     call ground_mag_perturb(    nMagnetometer, &
-         MagGsmXyz_DI, MagPerturbGmSph_DI) 
+         MagGmXyz_DI, MagPerturbGmSph_DI) 
 
     call ground_mag_perturb_fac(nMagnetometer, &
-         MagSmgXyz_DI, MagPerturbFacSph_DI)
+         MagSmXyz_DI, MagPerturbFacSph_DI)
 
     !\
     ! Collect the variables from all the PEs
@@ -566,7 +566,7 @@ contains
 
          ! Write position of magnetometer and perturbation to file:  
          write(iUnitMag,'(18es13.5)') &
-              MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
+              MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
               MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
               MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
               IeMagPerturb_DII(:,2,iMag)
@@ -583,7 +583,7 @@ contains
       use ModIoUnit, ONLY: UnitTmp_
       use ModIO,     ONLY: NamePlotDir, IsLogName_e
 
-      integer :: iError,  iTime_I(7)
+      integer ::  iTime_I(7)
 
       character(len=100):: NameFile
       !------------------------------------------------------------------------
@@ -620,7 +620,7 @@ contains
 
          ! Write position of magnetometer and perturbation to file:  
          write(UnitTmp_,'(18es13.5)') &
-              MagSmgXyz_DI(:,iMag)*rPlanet_I(Earth_), &
+              MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
               MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
               MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
               IeMagPerturb_DII(:,2,iMag)
