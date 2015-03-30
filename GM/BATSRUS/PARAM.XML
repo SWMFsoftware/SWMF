@@ -990,66 +990,73 @@ Constrained Transport scheme.
 </command>
 
 <command name="OUTERBOUNDARY">
-	<foreach name="Side" values=
-	"TypeBcEast,TypeBcWest,TypeBcSouth,TypeBcNorth,TypeBcBot,TypeBcTop">
+	<foreach name="Side" values="TypeBc1,TypeBc2,TypeBc3,TypeBc4,TypeBc5,TypeBc6">
 		<parameter name="$Side" type="string" input="select">
-			<option name="inflow/vary"
-					default="$Side eq 'TypeBcWest'" />
-			<option name="float/outflow"
-					default="$Side ne 'TypeBcWest'" />
-			<option name="heliofloat"/>
-			<option name="reflect"/>
+			<option name="coupled" />
 			<option name="periodic"/>
+			<option name="float"          default="T"/>
+			<option name="outflow" />
+			<option name="reflect"/>
+			<option name="linetied"/>
 			<option name="fixed"/>
 			<option value="fixedb1" name="fixed B1"/>
+			<option name="inflow/vary"/>
 			<option name="shear"/>
-			<option name="linetied"/>
-			<option name="raeder"/>
-			<option name="user"/>
-			<option name="coupled" />
 			<option name="none" />
-			<option name="ihbuffer" />
+			<option name="user"/>
 		</parameter>
 	</foreach>
 	<rule
-	expr="not($TypeBcEast eq 'periodic' xor $TypeBcWest eq 'periodic')">
-		East and west BCs must be both periodic or neither
+	expr="not($TypeBc1 eq 'periodic' xor $TypeBc2 eq 'periodic')">
+		 First and second BCs must be both periodic or neither
 	</rule>
 	<rule
-	expr="not($TypeBcSouth eq 'periodic' xor $TypeBcNorth eq 'periodic')">
-		South and North BCs must be both periodic or neither
+	expr="not($TypeBc3 eq 'periodic' xor $TypeBc4 eq 'periodic')">
+	        Third and fourth BCs must be both periodic or neither
 	</rule>
 	<rule
-	expr="not($TypeBcBot eq 'periodic' xor $TypeBcTop eq 'periodic')">
-		Bottom and top BCs must be both periodic or neither
+	expr="not($TypeBc5 eq 'periodic' xor $TypeBc6 eq 'periodic')">
+		Fifth and sixth BCs must be both periodic or neither
 	</rule>
 #OUTERBOUNDARY
-outflow                 TypeBcEast
-inflow                  TypeBcWest
-float                   TypeBcSouth
-float                   TypeBcNorth
-float                   TypeBcBottom
-float                   TypeBcTop
+outflow                 TypeBc1
+inflow                  TypeBc2
+float                   TypeBc3 (only read in 2D and 3D)
+float                   TypeBc4 (only read in 2D and 3D)
+float                   TypeBc5 (only read in 3D)
+float                   TypeBc6 (only read in 3D)
 
-Default depends on problem type.\\
+This command defines how the ghost cells are filled in at the 
+cell based boundaries. TypeBc1 and TypeBc2 describe the boundaries
+at the minimum and maximum values of the first coordinate. 
+TypeBc3 and TypeBc4 describe the boundaries
+at the minimum and maximum values of the second coordinate for 2D and 3D grids.
+TypeBc5 and TypeBc6 describe the boundaries at the minimum and maximum values 
+of the third coordinate for 3D grids.
+
 Possible values:
 \begin{verbatim}
-coupled       - GM coupled to the IH component (at the 'west' boundary)
-fixed         - fixed solarwind values
-fixedB1       - fixed solarwind values without correction for the dipole B0
-float/outflow - zero gradient
-heliofloat    - floating for the SC component (requires #FACEOUTERBC)
-linetied      - float P, rho, and B, reflect all components of U
-raeder        - Jimmy Raeder's BC
-reflect       - reflective
+coupled       - set from coupling with another component (e.g. IH to GM)
 periodic      - periodic
-vary/inflow   - time dependent BC (same as fixed for non time_accurate)
+float         - zero gradient for all variables except:
+                Phi=0 set for the scalar in hyperbolic div B control (see #HYPERBOLICDIVB)
+		radiative outflow boundaries are applied for radiation energy densities
+outflow       - same as 'float' but the pressure is set to pOutflow from #OUTFLOWPRESSURE
+reflect       - reflective (anti-symmetric for the normal components of V and B, 
+                            symmetric for all other variables)
+linetied      - symmetric for density, anti-symmetric for momentum, float all others
+fixed         - fixed solarwind values, total B is set
+fixedB1       - fixed solarwind values, B1 is set
+inflow/vary   - time dependent boundary based on solar wind input file (#SOLARWINDFILE)
 shear         - sheared (intended for shock tube problem only)
-arcadetop     - intended for arcade problem only
-arcadebot     - intended for arcade problem only
-arcadebotcont - intended for arcade problem only
+none          - do not change ghost cells. This is useful for simple tests only.
+fieldlinethreads - threaded magnetic field BC for AWSOM-R solar model
 user          - user defined
 \end{verbatim}
+
+The default values are 'float' on all sides for the EE, SC, IH, and OH components.
+For the GM component the default is TypeBc1='outflow', TypeBc2='inflow'
+and the rest are 'fixed'. 
 </command>
 
 <command name="OUTFLOWPRESSURE">
@@ -1066,30 +1073,36 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 </command>
 
 <command name="INNERBOUNDARY">
-	<parameter name="TypeBcInner" type="string" case="lower"
+	<parameter name="TypeBcBody" type="string" case="lower"
 	input="select">
-		<option name="reflect"				/>
 		<option name="absorb"				/>
+		<option name="reflect"				/>
+		<option name="reflectb"				/>
 		<option name="float"				/>
+		<option name="outflow"				/>
+		<option name="heliofloat"			/>
 		<option name="fixed"				/>
-		<option name="ionosphere"	default="T"	/>
-		<option name="ionosphereb0"			/>
-		<option name="ionospherefloat"			/>
-		<option name="buffergrid"			/>
-		<option name="polarwind"			/>
+		<option name="fixedb1"				/>
+		<option name="inflow"				/>
+		<option name="vary"				/>
+		<option name="ionosphere"	    default="T" />
 		<option name="ionosphereoutflow"		/>
+		<option name="ionospherefloat"			/>
+		<option name="linetied"				/>
+		<option name="polarwind"			/>
+		<option name="buffergrid"			/>
 		<option name="user"				/>
 	</parameter>
 	<if expr="$UseBody2">
 		<parameter name="TypeBcBody2" type="string" case="lower"
 		input="select">
-			<option name="reflect"		default="T"	/>
 			<option name="absorb"				/>
+			<option name="reflect"		default="T" 	/>
+			<option name="reflectb"				/>
 			<option name="float"				/>
-			<option name="fixed"				/>
-			<option name="ionosphere"			/>
-			<option name="ionosphereb0"			/>
+			<option name="ionosphere"	    		/>
 			<option name="ionospherefloat"			/>
+			<option name="linetied"				/>
 		</parameter>
 	</if>
 	<rule
@@ -1097,33 +1110,49 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 	For the second body COROTATION AND AN IONOSPHERIC BOUNDARY DO NOT WORK.
 	</rule>
 #INNERBOUNDARY
-ionosphere              TypeBcInner
+ionosphere              TypeBcBody
 ionosphere              TypeBcBody2  !read only if UseBody2=T
 
-This command should appear after the #SECONDBODY command when using 
-two bodies. Note: for the second body COROTATION AND AN IONOSPHERIC 
-BOUNDARY DO NOT WORK.
+TypeBcBody determines the boundary conditions at the spherical surface of 
+the inner body when these are described with face boundary conditions. 
+For Cartesian grids this is always the case, because the spherical surface
+is not aligned with the grid blocks, so a ghost cell based boundary condition
+is not possible. For spherical grids, however, both the cell and face based 
+boundary conditions can be used depending on the settings of the #FACEBOUNDARY
+command. If cell based boundary is used then the boundary condition at
+the body surface is determined by the TypeBc1 parameter of the #OUTERBOUNDARY 
+command. See the #FACEBOUNDARY command for a more detailed explanation.
 
-Default value for TypeBcBody2 is 'reflect'.
+TypeBcBody2 is only read if the second body is used (see the #SECONDBODY
+command that has to occur BEFORE this command). 
+The second body can be anywhere in the computational domain, 
+so its sperical surface is never aligned with the grid block boundaries, 
+consequently only face boundary conditions can be applied which 
+is controlled by this command.
 
-Possible values for TypeBcInner are:
+Possible values for TypeBcBody are:
 \begin{verbatim}
-'reflect'         - reflect Vr, reflect Vphi to rotation, float Vtheta,
-                    reflect Br, float Bphi, float Btheta, float rho, float P
-'float'           - float Vr, reflect Vphi to rotation, float Vtheta,
-                    float B, float rho, float P
 'absorb'          - float all variables but reflect Vr if Vr > 0
-'fixed'           - Vr=0, Vphi=rotation, Vtheta=0
-                    B=B0 (ie B1=0), fix rho, fix P
-'ionosphere'      - set V as if ionosphere gave V_iono=0
+'reflect'         - reflect velocity relative to corotation, 
+                    reflect the radial component of B1, float B transverse, rho and P
+'reflectb'        - same as reflect, but the radial component of full B is reflected.
+'float'           - float all variables
+'outflow'	  - same as 'float' but the pressure is set to pOutflow from #OUTFLOWPRESSURE
+'heliofloat'	  - very complicated outflow boundary condition for heliosphere
+'fixed'           - use initial solar wind values. Total B is set to solar wind B.
+'fixedb1'	  - use initial solar wind values. B1 is set is to solar wind B.
+'inflow/vary'     - set the solar wind values. Total B is set to solar wind B.
+'ionosphere'      - reflect velocity relative to corotation + ionosphere ExB drift
                     float B, fix rho, float P
-'ionospherefloat' - set V as if ionosphere gave V_iono=0
-                    float B, float rho, float P
+'ionospherefloat/linetied' - same as ionosphere but density floats too
+'ionosphereoutflow' - same as ionosphere but an empirical outflow formula 
+                    is applied above 55 degrees latitude
+'polarwind'       - same as ionosphere, but in the polar region use
+                    the density and velocity from PW component if coupled,
+                    or apply values read from the #POLARWIND command
 'buffergrid'      - IH(OH) component obtains inner boundary from the SC(IH)
 		    component, through a buffer grid. The buffer grid is set
 		    by the #BUFFERGRID or #HELIOBUFFERGRID commands.
-'polarwind'       - GM component obtains the inner boundary from PW component
-'ionosphereoutflow' - empirical inner boundary setup in (Hp,Op,All) multifluid
 'user'            - user defined
 \end{verbatim}
 For 'ionosphere' and 'ionospherefloat' types and a coupled GM-IE run,
@@ -1134,9 +1163,14 @@ The 'absorb' inner BC only works with #ROTATION false.
 The boundary condition on Br can be changed with the #MAGNETICINNERBOUNDARY
 command.
 
-Default value for TypeBcInner is 'ionosphere' for the GM component,
+For the second body TypeBcBody2 can have the following values:
+'absorb', 'reflect', 'reflectb', 'float', 'ionosphere', 'ionospherefloat/linetied',
+however, the corotation and ionospheric drift velocities are zero for the second body.
+
+Default value for TypeBcBody is 'ionosphere' for the GM component,
 and 'unknown' for the EE, SC, IH and OH components, so the inner boundary 
-must be set for these components.
+must be set for the non-GM components.
+Default value for TypeBcBody2 is 'reflect'.
 </command>
 
 <command name="MAGNETICINNERBOUNDARY">
@@ -1202,7 +1236,7 @@ should be placed in a region where the two components overlap, and the
 grid resolution should be similar to the grid resolution of the
 coarser of the two component grids.  This command can only be used in
 the first session by the IH(OH) component.  The buffer grid will only
-be used if 'buffergrid' is chosen for TypeBcInner in the
+be used if 'buffergrid' is chosen for TypeBcBody in the
 #INNERBOUNDARY command of the target component.  Default values are
 shown above.
 
@@ -2607,7 +2641,7 @@ Default value is "GM/IO2".
 	<parameter name="DoSaveLogfile" type="logical" default="F" />
 	<if expr="$DoSaveLogfile">
 		<parameter name="StringLog" type="strings" min="1" max="4">
-			<part name="NameLogVar" type="string" input="select"
+			<part name="StringLogVar" type="string" input="select"
 							required="T">
 				<option name="MHD variables"     value="MHD"
 								 default="T" />
@@ -2632,10 +2666,9 @@ Default value is "GM/IO2".
 		<parameter name="DtSaveLogfile" type="real"    min="-1"
 								default="-1" />
 		<parameter name="NameLogVars" type="string" length="100"
-			if="$NameLogVar =~ /var/i" />
-		<parameter name="StringLogRadii" type="strings" 
-			min="1" max="10" length="100"
-			if="($NameLogVar=~/flx/i or $NameLogVars=~/flx/i)">
+			if="$StringLogVar =~ /var/i" />
+		<parameter name="StringLogRadii" type="strings" min="1" max="10" 
+			length="100" if="($StringLogVar=~/flx/i or $NameLogVars=~/flx/i)">
 			<part name="LogRadii" type="real" min="$rBody" 
 								multiple="T"/>
 		</parameter>
@@ -2648,74 +2681,112 @@ VAR step date           StringLog
 rho p rhoflx            NameLogVars (read if StrigLog is 'var' or 'VAR')
 4.0  10.0               rLog  (radii for the flux. Read if vars include 'flx')
 
-Default is DoSaveLogfile=.false.
-The logfile can contain averages or point values and other scalar
-quantities.  It is written into an ASCII file named as\\
-
-NAMEPLOTDIR/log_TIMESTEP.log\\
-
-\noindent
-where NAMEPLOTDIR can be defined with the #PLOTDIR command (default is IO2).\\
-The StringLog can contain two groups of information in arbitrary order.
-The first is LogVar which is a single 3 character string that indicates
-the type of variables that are to be written.  The second group indicates
-the type of time/iteration output format to use.  This second group is
-not required and defaults to something standard for each logvar case.\\
-Any of the identifiers for the timetype can be included in arbitrary order.
-
+If DoSaveLogFile is set to true then an ASCII logfile containing
+averages, point values, fluxes and other scalar quantities is written
+at the frequency determined by DnSaveLogfile and DtSaveLogfile.
+The logfile is written into IO2/log_TIMESTAMP.log. The TIMESTAMP contains
+the time step or the date-time string (see the #SAVELOGNAME command).
+The logfile has a very simple format:
 \begin{verbatim}
-logvar   = 'mhd', 'raw', 'flx' or 'var' - unitless output
-logvar   = 'MHD', 'RAW', 'FLX' or 'VAR' - dimensional output
-timetype = 'none', 'step', 'time', 'date'
+arbitrary header line that can define for example the units
+name1 name2 name3 ... nameN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+...
 \end{verbatim}
+The number variables as well as the number of data lines are arbitrary.
+The IDL macros getlog and plotlog can be used for visualization of one
+or more logfiles.
 
-The logvar string is not optional and must be found on the line.
-The timetype is optional - when not specified a logical choice is made
- by the code.
-
-The log_var string defines the variables to print in the log file
-It also controls whether or not the variables will come out in
-dimensional or non-dimensional form by the capitalization of the log_var
-string.
+The StringLog parameter can contain the following parts in arbitrary order:
 \begin{verbatim}
-ALL CAPS  - dimensional
-all lower - dimensionless
+StringLogVar  = 'mhd', 'raw', 'flx' or 'var' - normalized units
+StringLogVar  = 'MHD', 'RAW', 'FLX' or 'VAR' - I/O units
+StringLogTime = 'none', 'step', 'time', and/or 'date'
+\end{verbatim}
+The StringLogVar part is required and it determines the list
+of variables to be saved into the logile.
+The capitalization of StringLogVar controls whether the variables 
+are written in normalized units (lower case) or I/O units (UPPER CASE).
+(see the #IOUNITS command). The StringLogTime part is optional.
 
-'raw' - vars: dt rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
-      - time: step time
-'mhd' - vars: rho rhoUx rhoUy rhoUz Bx By Bz E Pmin Pmax
-      - time: step date time
-'flx' - vars: rho Pmin Pmax rhoflx pvecflx e2dflx
-      - time: step date time
-'var' - vars: READ FROM PARAMETER FILE
-      - time: step time
-\end{verbatim}
-log_vars is read only when the log_string contains var or VAR.  The choices
-for variables are currently:
+The possible values for StringLogVar and the corresponding
+variables together with the default values for 
+StringLogTime are the following:
 \begin{verbatim}
-Average value on grid:   rho rhoUx rhoUy rhoUz Ux Uy Uz Bx By Bz P E
-Value at the test point: rhopnt rhoUxpnt rhoUypnt rhoUxpnt Uxpnt Uypnt Uzpnt
-                         Bxpnt Bypnt Bzpnt B1xpnt B1ypnt B1zpnt
-                         Epnt Ppnt Jxpnt Jypnt Jzpnt
-                         theta1pnt theta2pnt phi1pnt phi2pnt statuspnt
-Ionosphere values:       cpcpn cpcps
+raw or RAW   - step time Dt AverageConsVars Pmin Pmax
+mhd or MHD   - step date time AverageConsVars Pmin Pmax
+flx or FLX   - step date time Rho Pmin Pmax RhoFlx Pvecflx e2dflx
+var or VAR   - step time NameLogVars
+\end{verbatim}
+The right side shows what will be saved into the logfile.
+The 'step', 'time' and 'date' columns correspond to the default
+value of StringLogTime that is discussed below. About the other variables:
+Dt is the length of the time step, the AverageConsVars contain a list of
+averages of the conservative variables (defined in ModEquation) over the whole domain,
+and Pmin and Pmax are the minimum and maximum pressures over the whole domain. 
+The flux variables are integrals of fluxes through spherical surfaces at the 
+radial distances defined by the rLog parameter that is read if any of the 
+variables contain 'flx' (see below).
 
-Max or Min on grid:  Pmin Pmax
-Flux values:         Aflx rhoflx Bflx B2flx pvecflx e2dflx
-Other variables:     dt
-\end{verbatim}
-timetype values mean the following:
+If StringLogVar is 'var' or 'VAR', then the NameLogVars parameter is read and 
+it should contain a space separated list of any of the following log variable names: 
 \begin{verbatim}
- none  = there will be no indication of time in the logfile (not even an
-               # of steps)
- step  = # of time steps (n_steps)
- date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc
- time  = time is given as a real number - elapsed time since the start of
-         the run.  Units are determined by log_var and unitUSER_t
+Dt                  - time step
+Cfl                 - CFL number (may vary due to #TIMESTEPCONTROL)
+
+Pmin Pmax           - minimum and maximum pressure over the grid
+
+VAR                 - average of variable VAR (listed in NameVar_V of ModEquation.f90)
+Ux Uy Uz            - average velocity on the grid
+Ekinx Ekiny Ekinz   - average kinetic energy in X, Y and Z directions
+Ekin                - average kinetic energy
+Erad Ew             - average radiation/wave energy (summed for all groups/waves)
+Theta1 Theta2       - average of colatitude of fieldline tracing (for testing)
+Phi1 Phi2 Status    - average of longitude and status of fieldline (for testing)
+
+VARpnt              - point value of VAR (listed in NameVar_V) at the test cell
+Uxpnt Uypnt Uzpnt   - point value of velocity at test cell
+B1xpnt B1ypnt B1zpnt- point value of B1 field at test cell
+Jxpint Jypnt Jzpnt  - point value of current density
+Theta1pnt Theta2pnt - point value of colatitude of fieldline mapping
+Phi1pnt Phi2pnt     - point value of longitude  of fieldline mapping
+Statuspnt           - point value of status of fieldline tracing from test cell:
+  (0: open, 1: connected along B, 2: connected along -B, 3: closed)
+
+Jinmax Joutmax      - maximum of inward and outward currents at rCurrents of #BODY
+Jin Jout            - surface integral of inward and outward currents at rCurrents
+
+Aflx                - surface integral of 1      at radii defined in rLog (area)
+Rhoflx              - surface integral of rho*Ur at radii defined in rLog
+Bflx                - surface integral of Br     at radii defined in rLog
+B2flx               - surface integral of B.B Ur at radii defined in rLog
+Pvecflx             - surface integral of ExB    at radii defined in rLog (Poynting flux)
+Dstflx              - surface integral of B1z    at radii defined in rLog (Dst index)
+
+DstDivb             - error of the dstflx integral due to finite value of div B
+Dst                 - Biot-Savart integral for Dst index
+
+E2dflx              - circular integral of Ex*y-Ey*x 
+
+ANYTHINGELSE        - quantity defined in user_get_log_var
 \end{verbatim}
-these can be listed in any combination in the log_string line.\\
-R_log is read only when one of the variables used is a 'flx' variable.  R_log
-is a list of radii at which to calculate the flux through a sphere.
+The possible (0 or more) values for StringLogTime are the following:
+\begin{verbatim}
+ none  - there will be no indication of time in the logfile (not even the number of steps)
+ step  - number of time steps
+ date  - date-time as 7 integers:  year month day hour minute second millisecond,
+ time  - simulation time 
+\end{verbatim}
+The rLog parameter contains a list of radius values (in normalized units) 
+where the *flx variables are calculated. 
+The rLog parameter is only read when there is at least one 'flx' variable.
+The logfile will contain the name of the flx variable combined with
+the radial value, for example 'dstflx_R=3.0 dstflx_R=3.5 dstflx_R=5.0'.
+
+
+The default is DoSaveLogFile false.
 </command>
 
 <command name="SATELLITE" if="$_IsFirstSession">
@@ -2756,7 +2827,7 @@ is a list of radii at which to calculate the flux through a sphere.
 	</for>
 #SATELLITE
 2                       nSatellite
-MHD ray                 StringSatellite (variables and optional ray tracing)
+MHD ray                 StringSatellite
 100                     DnOutput
 -1.                     DtOutput [sec]
 satellite1.dat          NameTrajectoryFile
@@ -2766,6 +2837,7 @@ VAR step date           StringSatellite
 satellite2.dat          NameTrajectoryFile
 rho p                   NameSatelliteVars ! Read if StringSatellite 
                                           ! contains 'var' or 'VAR'
+
 The numerical solution can be extracted along one or more satellite
 trajectories. The number of satellites is defined by the 
 nSatellite parameter (default is 0).
@@ -2774,45 +2846,50 @@ For each satellite the StringSatellite parameter determines what
 is saved into the satellite file(s).
 The StringSatellite can contain the following parts in arbitrary order
 \begin{verbatim}
-satellitevar   = 'mhd', 'ful' or 'var' (unitless output)
-                 'MHD', 'FUL' or 'VAR' (dimensional output)
-optionalvar    = 'ray', 'none', 'step', 'time', and/or 'date'
+SatelliteVar   = 'mhd', 'ful' or 'var' (normalized units)
+                 'MHD', 'FUL' or 'VAR' (I/O units)
+OptionalVar    = 'ray', 'none', 'step', 'time', and/or 'date'
 \end{verbatim}
-The 'satellitevar' part is required and determines the list
+The SatelliteVar part is required and determines the list
 of variables to be saved along the satellite trajectory. 
-It also controls whether or not the variables will come out in
-dimensional or non-dimensional form by the capitalization of the
-satellitevars string: ALL CAPS means dimensional, all lower means 
-dimensionless. 
+The capitalization of SatelliteVar controls whether the variables 
+are written in normalized units (lower case) or I/O units (UPPER CASE).
+See the #IOUNITS command.
 
-If 'satellitevar' is set to 'mhd', the variables 
-'rho ux uy uz bx by bz p jx jy jz' will be saved, while 'ful' implies
-'rho ux uy uz bx by bz b1x b1y b1z p jx jy jz'.
-
-If satellitevar is set to 'var' then the list of variables is read 
+If SatelliteVar' is set to 'mhd' or 'MHD', the primitive variables 
+(rho, u, B, p, pPar) and the current density (Jx, Jy, Jz) will be saved, 
+while the 'ful' or 'FUL' value also saves the B1 field values.
+If SatelliteVar is set to 'var' or 'VAR' then the list of variables is read 
 from the NameSatelliteVar parameter as a space separated list. 
-The choices for variables are currently:
+The choices for saved variables are any of the variable names
+listed in the NameVar_V variable in ModEquation.f90, 
+and the following case insensitive variable names 
+(after the name of the fluid is removed, e.g. OpPperp is Pperp for fluid Op):
 \begin{verbatim}
-rho, rho, rhouy, rhouz, ux, uy, uz,Bx, By, Bz, B1x, B1y, B1z,
-E, P, Jx, Jy, Jz, theta1, theta2, phi1, phi2, status.
+Mx, My, Mz, Ux, Uy, Uz       - momentum and velocity components
+B1x, B1y, B1z, B0x, B0y, B0z - magnetic field perturbation and background
+Jx, Jy, Jz                   - current density
+n                            - number density
+T, Temp                      - temperature
+Pperp                        - perpendicular pressure
+Theta1, Theta2               - colatitude of mapped field line along B and -B
+Phi1, Phi2                   - longitude  of mapped field line along B and -B
+Status                       - field line topology 
+        (0: open, 1: closed along B, 2: closed along -B 3: fully closed)
 \end{verbatim}
-
-If the optional 'optionalvar' part contains 'ray' then the ray variables 
-'theta1 phi1 theta2 phi2 status' are saved as well. 
+If the optional OptionalVar part contains 'ray' then the ray (fieldline)
+tracing variables  'Theta1 Phi1 Theta2 Phi2 Status' are saved as well. 
 The strings 'step', 'time' and 'date' define the corresponding
 time information. The value 'none' means that no time information is saved.
 \begin{verbatim}
- none  = there will be no indication of time in the logfile 
-         (not even the number of steps),
- step  = number of time steps,
- date  = time is given as an array of 7 integers:  year mo dy hr mn sc msc,
- time  = time is given as a real number - elapsed time since the start of
-         the run.  Units are determined by satellitevar and unitUSER_t.
-
- ray   = theta1 phi1 theta2 phi2 status
+ none  - there will be no indication of time in the logfile (not even the number of steps)
+ step  - number of time steps
+ date  - date-time as 7 integers:  year month day hour minute second millisecond,
+ time  - simulation time 
+ ray   - fieldline tracing variables: theta1 phi1 theta2 phi2 status
 \end{verbatim}
-More than one 'optionalvar' can be listed. They can be put together in any
-combination.\\
+More than one OptionalVar strings can be listed. They can be put together in any
+combination. The default value for OptionalVar is 'step date'.\\
 
 \noindent
 The DnOutput and DtOutput parameters determine the frequency of extracting
@@ -2821,39 +2898,44 @@ values along the satellite trajectories. \\
 \noindent
 The extracted satellite information is saved into the files named
 \begin{verbatim}
-PLOTDIR/sat_TRAJECTORYNAME_nTIMESTEP.sat
+PLOTDIR/sat_TRAJECTORYNAME_TIMESTAMP.sat
 \end{verbatim}
-where TIMESTEP is the number of time steps (e.g. 000925), 
-and TRAJECTORYNAME is the name of the trajectory file.\\
-
-\noindent
-The default is nSatellite=0, i.e. no satellite data is saved.
+where TIMESTAMP contains the time step or the date-and-time information 
+(see #SAVELOGNAME command) and TRAJECTORYNAME is the name of the trajectory file.
+The satellite files have a very simple format:
+\begin{verbatim}
+arbitrary header line that can define for example the units
+name1 name2 name3 ... nameN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+value1 value2 value3 ... valueN
+...
+\end{verbatim}
+The number variables as well as the number of data lines are arbitrary.
+The IDL macros getlog and plotlog can be used for visualization of one
+or more logfiles.
 
 Satellite input files contain the trajectory of the satellite.  They should
-have to following format:
+have the following format:
 \begin{verbatim}
 #COOR
 GSM
 
 #START
  2004  6  24   0   0  58   0  2.9  -3.1 - 3.7  
- 2004  6  24   0   1  58   0  2.8  -3.2 - 3.6  
+ 2004  6  24   0   1  58   0  2.8  -3.2 - 3.6
+ ...
 \end{verbatim}
+The #COOR command is optional.  It indicates which coordinate system is used
+for the trajectory coordinates. Possible values (GSM, GEO, GSE, SMG, HGI, HGR...)
+and their meaning is described in share/Library/src/CON_axes.f90 for example 
+The default coordinate system is GSM. 
+After the #START line the data lines contain
+the date-time information (year, month, day, hour, minute, second, millisecond)
+and the x, y and z coordinates in normalized units 
+(typically planetary or solar radius, see the #NORMALIZATION command).
 
-The #COOR command is optional.  It indicates which coordinate system the data
-represents.  The default is GSM, but others are possible.
-
-The file containing the satellite trajectory should include data in the 
-following order:
-\begin{verbatim}
-yr mn dy hr min sec msec x y z
-\end{verbatim}
-with the position variables in units of the body radii or the length scale
-normalization.
-
-The maximum number of lines of data allowed in the input file is 50,000.  
-However, this can be modified by changing the variable Max_Satellite_Npts 
-in the file GM/BATSRUS/ModIO.f90.
+The default is nSatellite=0, i.e. no satellite data is saved.
 </command>
 
 <command name="STEADYSTATESATELLITE" if="$_IsFirstSession">
@@ -2908,7 +2990,7 @@ the simulation against indices created from observations.  It is also
 useful in an operational setting, where quick-look activity indices
 are paramount.  #GEOMAGINDICES activates the calculation of such
 indices.  Results are written at a time cadence of DtOutput to the
-file geoindex_n[iteration].log
+file geoindex_TIMESTAMP.log
 
 At present, only a synthetic version of Kp is available.
 nSizeKpWindow, set in minutes and defaulting to 180 (3 hours), sets
@@ -2924,12 +3006,14 @@ positions and 50 degrees magnetic latitude.
 
 Because Kp requires a time history of geomagnetic activity, special restart
 files are saved when #GEOMAGINDICES is used.  If nSizeKpWindow changes between
-restarts, however, the files will be rendered unuseable because the time 
+restarts, however, the files will be rendered unusable because the time 
 history will no longer be valid for the calculation.
 
 #GEOMAGINDICES should be used with the IE command of the same name.
 This activates magnetometers in the IE component that are key for
 properly capturing the magnetic pertubation from all current systems.
+
+By default no indices are calculated.
 </command>
 
 <command name="MAGNETOMETER">
@@ -2950,11 +3034,9 @@ single                  TypeFileOut
 60.0			DtOutput
 
 The #MAGNETOMETER command is used for the calculation of the ground perturbations
-caused by two current systems: 
-field aligned currents in the 'gap' region and magnetopsheric currents.
-No ionospheric currents are considered here. To calculate the ionospheric 
-current effect, use the same command in the IE section, 
-which will output the perturbation results in IE.
+caused by the field aligned currents in the 'gap' region and the magnetopsheric currents
+in the GM domain. In addition, the effects of the ionospheric currents are also included
+if the same command is used in the IE section and the GM and IE components are coupled.
 
 The NameMagInputFile parameter gives the file name that contains the
 locations on the Earth where the user is interested in calculating 
@@ -2964,34 +3046,38 @@ the ground magnetic perturbations. The file has the following format:
 MAG			The coordinate system for the latitude/longitude below
 
 #START
-abc	20.0	120.0	The name of the station, latitude, longitude
-def 	-30.0	230.0
-ghi	85.0	-80.0
+YKC   68.93   299.36    The name of the station, latitude, longitude
+MEA   61.57   306.20
+NEW   54.85   304.68
+...
 \end{verbatim}
+The coordinate system can be set to GEO (geographic), MAG (geomagnetic) or SMG 
+(solar magnetic) coordinates. The station names can have maximum 3 characters.
+The name, latitude, and longitude columns should be separated with spaces.
 
-The coordinate system accepts MAG (geomagnetic coordinate) or SMG 
-(solar magnetic coordinate) so far. The station name can have maximum 3 characters.
-The name, latitude, and longitude should be sperated with space in between.
-
-The TypeFileOut specifies the format of the output file.  'single' creates a 
-single output file for all magnetometers and all output times.  'step' creates 
-a new file for all magnetometers for each output time.  The naming convention 
-for the files is controlled by the #SAVELOGNAME command.
+The TypeFileOut parameter specifies the format of the output file. 
+The value 'single' creates a single output file for all magnetometers and all output times, 
+while  'step' creates a new file for all magnetometers for each output time.  
+The naming convention for the files is controlled by the #SAVELOGNAME command.
 
 The DnOutput and DtOutput parameters determine the frequency of writing out the
 calculated perturbations in number of time steps and time interval, respectively.
 
-The output of the ground-based magnetic perturbations is in GM/IO2/mag_*.dat, 
+The output of the ground-based magnetic perturbations is in the file
+\begin{verbatim}
+GM/IO2/magnetometers_*.dat, 
+\end{verbatim}
 in which the location of each station in GSM cartisian coordinates, the 3 components
 (northward, eastward, and downward in SM coordiantes) of the magnetic perturbations by 
 magnetospheric currents, and the 3 components (northward, eastward, and downward 
 in SM coordiantes) of the magnetic perturbations by field-aligned currents are written 
-out. The unit of the pertrubation output is nT.
+out. The unit of the perturbation output is nT.
+
+Default is no magnetic perturbation calculation.
 </command>
 
 <command name="SAVEPLOT">
-	<parameter name="nPlotFile" type="integer" min="0" max="15"
-		default="1" />
+	<parameter name="nPlotFile" type="integer" min="0" max="15" default="1" />
 	<for name="iPlot" from="1" to="$nPlotFile">
 		<parameter name="StringPlot" type="strings" min="3" max="3">
 			<part name="plotform" type="string" input="select" 
@@ -3148,8 +3234,7 @@ out. The unit of the pertrubation output is nT.
 			<parameter name="Radius"  type="integer" min="0." default="6."/>
 			<parameter name="nLon"    type="real"    min="4"  default="36"/>
 		</if>
-		<parameter name="DxSavePlot" type="real" min="-1.0" 
-							default="-1.0"
+		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
 	if="($plotform=~/\bidl/ and $plotarea!~/\b(sph|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="100"/>
@@ -3583,30 +3668,42 @@ The IDL output from line of sight integration is always in ASCII format.
 </command>
 
 <command name="SAVEPLOTNAME">
-	<parameter name="IsPlotName_n" type="logical" default="T" />
-	<parameter name="IsPlotName_t" type="logical" default="T" />
-	<parameter name="IsPlotName_e" type="logical" default="F" />
+	<parameter name="UsePlotNameStep" type="logical" default="T" />
+	<parameter name="UsePlotNameTime" type="logical" default="T" />
+	<parameter name="UsePlotNameDateTime" type="logical" default="F" />
 #SAVEPLOTNAME
-T			IsPlotName_n
-T			IsPlotName_t
-F			IsPlotName_e
+T			UsePlotNameStep
+T			UsePlotNameTime
+F			UsePlotNameDateTime
 
-Plot files are named with the preferred set of substrings.
-     _n is interation number, ie. _n0000127
-     _t is simulation time, ie. _t00000010
-     _e is event time, ie. _e20000321-104510-000
+The TIMESTAMP of plot files (see #SAVEPLOT) can contain the time step
+in the _nSTEP format, the simulation time in the _tSIMTIME format and
+the date and time in the _eYYYYMMDD-HHMMSS-MSC format. 
+Any combination of these logicals are allowed
+
+The default values are UsePlotNameStep and UsePlotNameTime true and
+UsePlotNameDateTime false.
 </command>
 
 <command name="SAVELOGNAME">
-	<parameter name="IsLogName_n" type="logical" default="T" />
-	<parameter name="IsLogName_e" type="logical" default="F" />
+	<parameter name="UseLogNameStep" type="logical" default="T" />
+	<parameter name="UseLogNameDateTime" type="logical" default="F" />
 #SAVELOGNAME
-T			IsLogName_n
-F			IsLogName_e
+T			UseLogNameStep
+F			UseLogNameDateTime
 
-Log files are named with the preferred set of substrings.
-     _n is interation number, ie. _n000000
-     _e is event time, ie. _e20000321-104500
+The TIMESTAMP part of the names of logfiles (see #LOGFILE), 
+satellite files (see #SATELLITE) 
+and magnetometer files (see #MAGNETOMETER) can be controlled
+with the logicals UseLogNameStep and UseLogNameDateTime.
+If UseLogNameStep is true, the TIMESTAMP will contain the time step
+in the form _nTIMESTEP (see #NSTEP command). 
+If UseLogNameDateTime is true, the TIMESTAMP will contain the date and time
+in the form _eYYYYMMDD-HHMMSS. If both logicals are true, both the
+step and the date-time will be in the TIMESTAMP. If both are false,
+the TIMESTAMP will be empty.
+
+The default is UseLogNameStep true and UseLogNameDateTime false.
 </command>
 
 <command name="SAVEBINARY">
@@ -4001,13 +4098,11 @@ to the 'user' area.
 			<option name="currentsheet"			/>
 			<option name="user"				/>
 		</part>
-		<part name="StretchArea" type="string" input="select"
-			required="F"
+		<part name="StretchArea" type="string" input="select" required="F"
 			if="$NameArea =~ /sphere|shell|cylinder|ring/">
 			<option name="stretched" />
 		</part>
-		<part name="RotateArea" type="string" input="select" 
-			required="F" 
+		<part name="RotateArea" type="string" input="select" required="F" 
 			if="$NameArea =~ /box\b|brick0?\b|cylinder|ring/">
 			<option name="rotated" />
 		</part>
@@ -4139,15 +4234,23 @@ user			NameArea
 
 The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
 or refinement level, respectively, in a given area. The Resolution parameter
-refers to the size of the cell in the first direction (Dx or Dr).
+refers to the size of the cell in the first direction (typically Dx or Dr).
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
+Note that the #AMRREGION in combination with the #AMRCRITERIALEVEL
+and #AMRCRITERIARESOLUTION commands allow even more flexibility in controlling 
+the grid adaptation, but the initial resolution/level still has to be set
+by this command.
+
 If NameArea is set to 'initial', it determines the number of grid adaptations
 used to initialize the grid. The grid adaptations are done according to the
-other GRIDLEVEL and GRIDESOLUTION commands. The default is no refinement initially,
+other GRIDLEVEL and GRIDESOLUTION commands. 
+{\bf The default is no refinement initially,
 which means that the grid is uniform at the beginning, and it is refined during
-the run according to the #AMR or #DOAMR commands.
+the run according to the #AMR or #DOAMR commands. This means that one has
+to set the initial refinement level to get a non-uniform grid from the
+beginning.}
 
 For other values of NameArea, the command specifies the shape of the area. 
 where the blocks are to be refined. If the desired grid resolution is finer
@@ -4213,6 +4316,8 @@ The 'user' area results in a call of the subroutine user_specify_refinement
 defined in the user module. The user can define an arbitrary set of criteria 
 for refinement.  Again, stretching, rotation and centering cannot be applied 
 to the 'user' area.
+
+The default is a uniform grid.
 </command>
 
 <command name="AMRLEVELS">
@@ -4279,19 +4384,18 @@ T                       DoAmr (the rest is only read if true)
 -1.0                    DtAmr
 T                       IsStrictAmr
 
-DoAmr is telling if you do AMR based on geometrical description or 
-AMR criteria decided during the simulation every DnAmr step or DtAmr 
-intervals. NOTE: DtAmr is not implemented by 7 Aug 2011.
-For both DtAmr and DnAmr negative numbers will be ignored. If IsStrictAmr 
-is true, we demand that the number of cells indicated by criteria or 
-percentage should be refined or coarsened, otherwise the code stops.
-If IsStrictAmr is false, the code will continue with the maximum of 
-available blocks. 
-
+DoAmr is telling if you do adaptive mesh refinement (AMR) 
+during the simulation every DnAmr step or DtAmr intervals.
+For both DtAmr and DnAmr negative values mean that no AMR is
+performed based on that condition. If IsStrictAmr is true, 
+we demand that the AMR is fully performed. If the AMR would require
+too many grid blocks, the code stops with an error message.
+If IsStrictAmr is false, the code will the a partial AMR allowed by
+the maximum of available blocks and continue running.
 For pure geometry based AMR the IsStrictAmr=F will causes the code to 
 skip the complete AMR if there are not enough blocsk.
 
-Default is DoAmr false and IsStrictAmr true.
+Defaults are DoAmr false and IsStrictAmr true.
 </command>
 
 <command name="AMRLIMIT"> 
@@ -4565,9 +4669,10 @@ T                       UseSunEarth   ! Only if there are any 'transient' crit
 
 The #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command defines the 
 criteria to select blocks for refinement or coarsening when the #DOAMR 
-command is used with DoAmr=T parameter. In one seesion youu can only have one
-#AMRCRITERIALEVE or #AMRCRITERIARESOLUTION. #AMRCRITERIARESOLUTION is equvilent
-to #AMRCRITERIALEVE but works on cell resolution (dx) instead of levels.
+command is used with DoAmr=T parameter. In one seesion you can only have one
+#AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command. 
+#AMRCRITERIARESOLUTION is equvilent with #AMRCRITERIALEVEL but works on 
+cell resolution (dx) instead of levels.
 
 The number of criteria is given by the nCriteria parameter.
 Up to 3 different types of criteria (given by TypeCriteria) can be used. 
@@ -4924,8 +5029,17 @@ commands.
 #NONCONSERVATIVE
 T		UseNonConservative
 
-For Earth the default is using non-conservative equations 
-(close to the body).
+If UseNonConservative is false, the total energy density equation is solved
+everywhere, and the pressure is derived from the total energy density. 
+If UseNonConservative is true, then the pressure equation is solved, and
+the total energy density is calculated from the pressure and the kinetic
+and magnetic energy densities either everywhere (if nConservCrit=0), 
+or in the regions defined in the #CONSERVATIVECRITERIA command. 
+For further control of neutral fluids see the #NEUTRALFLUID command.
+
+For the GM component the default is using non-conservative pressure equations within 6 planet
+radii as long as NamePlanet is not set to NONE (see the #PLANET command). Otherwise, and also
+for the other components, the default is using the conservative energy equation everywhere.
 </command>
 
 <command name="CONSERVATIVECRITERIA">
@@ -4967,8 +5081,8 @@ Select the parts of the grid where the conservative vs. non-conservative
 schemes are applied. The number of criteria is arbitrary, although 
 there is no point applying the same criterion more than once.
 
-If no criteria is used, the whole domain will use conservative or
-non-conservative equations depending on UseNonConservative set in
+If no criteria is used, the whole domain will use conservative energy density or
+non-conservative pressure equations depending on UseNonConservative set in
 command #NONCONSERVATIVE.
 
 The physics based conservative criteria ('p' and 'GradP')
@@ -5542,12 +5656,23 @@ Default is UseClimit false.
 T			UseBorisCorrection
 1.0			BorisClightFactor !Only if UseBorisCorrection is true
 
-Default is boris_correction=.false.
-Use semi-relativistic MHD equations with speed of light reduced by
+If UseBorisCorrection is set to true, the semi-relativistic MHD equations 
+are solved. The semi-relativistic MHD equations limit the Alfven speed to
+the speed of light. The speed of light can be artificially reduced by
 the BorisClightFactor. Set BorisClightFactor=1.0 for true semi-relativistic
-MHD. Gives the same steady state as normal MHD analytically, but there
-can be differences due to discretization errors. 
-You can use either Boris or BorisSimple but not both.
+MHD. BorisClightFactor less than 1 can be used to allow larger explicit time steps,
+and to reduce the numerical diffusion. Typical values are 0.01 to 0.02
+which set the speed of light to 3000km/s to 6000km/s, respectively.
+Note that semi-relativistic MHD gives the same steady state solution 
+as normal MHD analytically, but there can be differences due to discretization errors,
+in particular the Boris correction reduces the numerical diffusion. 
+See Toth et al. 2011 (Journal of Geophysical Research, 116, A07211, doi:10.1029/2010JA016370)
+for an in-depth discussion.
+
+See also the #BORISSIMPLE command as an alternative. Note that you cannot set
+both UseBorisCorrection and UseBorisSimple to true.
+
+Default is UseBorisCorrection=.false.
 </command>
 
 <command name="BORISSIMPLE">
@@ -5923,25 +6048,26 @@ T			DoFixPolarRegion (rest read if true)
 
 This command sets various parameters for the GM-IM coupling.
 
-The TauCoupleIm parameter determine how fast the GM pressure p 
+The TauCoupleIm parameter determines how fast the GM pressure p 
 (and possibly density rho) 
-should be nudged towards the IM pressure pIm (and density dIM). 
-The RCM pressure and denstiy are updated every time IM->GM coupling occurs,
-but the nudging towards these values is done in every GM time step.
+should be relaxed towards the IM pressure pIm (and density dIM). 
+The IM pressure and denstiy are updated every time IM->GM coupling occurs,
+but the relaxation towards these values is done in every GM time step.
 When GM is not run in time accurate mode, the pressure is set as
-
+\begin{verbatim}
 p' = (p*TauCoupleIm + pIm)/(TauCoupleIm+1)
-
+\end{verbatim}
 Therefore the larger TauCoupleIm is the slower the adjustment will be.
 It takes approximately 2*TauCoupleIm time steps to get p close to pIm.
-In time accurate mode, the nudging is based on physical time:
-
+In time accurate mode, the relaxation is based on physical time:
+\begin{verbatim}
 p' = p + min(1.0, dt/TauCoupleIm)*(pIm - p)
-
+\end{verbatim}
 where dt is the time step. It takes about 2*TauCoupleIm seconds
 to get p close to pIm. If the time step dt exceeds TauCoupleIm, 
 p' = pIm is set in a single step.
-The default value is TauCoupleIm=20.0, which corresponds to typical nudging.
+The default value is TauCoupleIm=20.0, which corresponds to typical 
+relaxation rate.
 
 The DoImSatTrace logical sets whether the IM component receives the locations 
 of the satellites in GM mapped down along the magnetic field lines. The IM
@@ -5951,25 +6077,23 @@ The DoCoupleImPressure logical sets whether GM pressure is driven by IM
 pressure. Default is true, and it should always be true (except for testing), 
 because pressure is the dominant variable in the IM to GM coupling.
 
-The DoCoupleImDensity logical sets whether the GM density is driven 
-by IM density. The default value is false. This is a new feature in the 
-IM-GM coupling, which is not fully tested.
+The DoCoupleImDensity logical sets whether the GM density is relaxed
+towards the IM density.
 
 The DoFixPolarRegion logical decides if we try to fix the pressure 
 (and density) values in the open field line region. The pressure/density 
 tends to diffuse 
-numerically from the closed field line region (nudged by IM) into the
+numerically from the closed field line region (controlled by IM) into the
 polar region that should not be affected by IM. This can cause unphysically
 fast outflow from the polar region. If DoFixPolarRegion is set to true, 
-the pressure (and density) are nudged toward the values given 
+the pressure (and density) are relaxed toward the values given 
 in the #POLARBOUNDARY command in the open field line region within
 radius defined by rFixPolarRegion and where the flow points outward.
-This is a very new feature that hasn't been tested in real runs yet.
 
 If DoFixPolarRegion is true then the following parameters are also read:
 
 The rFixPolarRegion radius (given in planetary radii) sets the outer
-limit for nudging the pressure (density) in the open field line region
+limit for relaxing the pressure (density) in the open field line region
 towards the PolarNDim and PolarTDim values. For multi-fluid MHD,
 the PolarNDim and PolarTDim parameters are read for each fluid.
 
@@ -6312,7 +6436,8 @@ T            Bx is ignored and set to zero if true
 \end{verbatim}
 The #REREAD command tells BATS-R-US to reread the solarwind file 
 when the simulation goes past the time of the last data in the current file.
-The default behavior is to keep using the last data point.
+The default behavior is to keep using the last data point, but
+this can also be changed with the #REFRESHSOLARWINDFILE command.
 
 The #VAR command allows reading an extended set of variables, 
 e.g. densities of multiple species, electron pressure, etc.
@@ -6768,14 +6893,15 @@ By default no minimum density limit is applied.
 	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
 
 #MINIMUMPRESSURE
-0.001		pMinDim [nPa] for fluid 1
--1.0		pMinDim [nPa] for fluid 2
-0.01            PeMinDim [nPa] for electron pressure (if used)
+0.001		pMinDim for fluid 1
+-1.0		pMinDim for fluid 2
+0.01            PeMinDim for electron pressure (if used)
 
 Provide minimum pressure(s) for the ion/neutral fluid(s) and electrons. 
 If the minimum pressure is positive, the pressure is kept above this limit.
 The minimum pressure is given in the input/output units for pressure,
-which varies from application to application.
+which varies from application to application (the planetary unit is nPa,
+heliospheric unit is dyne).
 A negative value indicates that no minimum pressure is applied for that fluid.
 
 By default no minimum pressure limit is applied.
@@ -7757,7 +7883,8 @@ Default value is HelioDipoleStrength = 0.0.
 Define the radius and the grid resolution for the uniform 
 spherical buffer grid which passes information 
 from the SC(IH) component to the IH(OH) component. The resolution should
-be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.  The buffer grid will only be used if 'buffergrid' is chosed for TypeBcInner in the #INNERBOUNDARY command of the target (IH or OH) component.
+be similar to the grid resolution of the coarser of the SC(IH) and IH(OH) grids.  The buffer grid will only be used if 'buffergrid' is chosed for TypeBcBody in the 
+#INNERBOUNDARY command of the target (IH or OH) component.
 This command can only be used in the first session by the IH(OH) component. 
 Default values are shown above.
 </command>
@@ -7804,9 +7931,26 @@ plasma is $\pm V_A=\pm|B|/\sqrt{\rho}$.  </command>
 		default="Param/" />
 
 #INCLUDE
-Param/SSS_3000		NameIncludeFile
+GM/restartIN/restart.H		NameIncludeFile
 
-Include a library file from Param/ or any file from anywhere else.
+Include a file. The most useful application is including the restart 
+header file as show by the example. Including this file helps making sure
+that the original and restarted runs use consistent settings.
+The #INCLUDE command can also be useful if a sequence of commands is used 
+many times in different parameters files. For example one can define
+a typical grid for some application and reuse it. Nested include files are
+allowed but not recommended, because it makes things difficult to track.
+Using #INCLUDE can make the main PARAM.in file shorter. On the other hand, 
+distributing the input information over several files is more error prone 
+than using a single file. A PARAM.in file with included files 
+can be expanded into a single file with the
+\begin{verbatim}
+share/Scripts/ParamConvert.pl run/PARAM.in run/PARAM.expand
+\end{verbatim}
+script. Note that the include command for the restart header file
+is not expanded.
+
+The default is to use a single PARAM.in file.
 </command>
 
 </commandgroup>
