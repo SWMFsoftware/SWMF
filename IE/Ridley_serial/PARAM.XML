@@ -210,10 +210,6 @@ This command currently has no parameters associated with it.
 
 <command name="MAGNETOMETER">
 	<parameter name="NameMagInputFile" type="string" length="100"/>
-	<parameter name="TypeFileOut" type="string" input="select"> 
-		<option name="single" default="T"/>
-		<option name="step"/>
-	</parameter>
 	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
 	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
 	<rule expr="-f $NameMagInputFile">
@@ -221,7 +217,6 @@ This command currently has no parameters associated with it.
 	</rule>
 #MAGNETOMETER
 magin.dat		NameMagInputFile
-single                  TypeFileOut
 -1			DnOutput
 60.0			DtOutput
 
@@ -249,22 +244,18 @@ The coordinate system can be set to GEO (geographic), MAG (geomagnetic) or SMG
 (solar magnetic) coordinates. The station names can have maximum 3 characters.
 The name, latitude, and longitude columns should be separated with spaces.
 
-The TypeFileOut parameter specifies the format of the output file. 
-The value 'single' creates a single output file for all magnetometers and all output times, 
-while  'step' creates a new file for all magnetometers for each output time.  
-The naming convention for the files is controlled by the #SAVELOGNAME command.
-
 The DnOutput and DtOutput parameters determine the frequency of writing out the
 calculated perturbations in number of potential solves 
 and time intervals, respectively.
 
-The output of the ground-based magnetic perturbations is in the file
+The ground-based magnetic perturbations are written into the output file
 \begin{verbatim}
-IE/ionosphere/IE_mag_TIMESTAMP.mag 
+IE/ionosphere/IE_mag_tYYMMDD_HHMMSS.mag 
 \end{verbatim}
-in which the location of each station in SM coordinates, the 3 components
-(northward, eastward, and downward in SM coordiantes) of the magnetic perturbations 
-due to Hall and Pedersen currents are saved. 
+in which the number of solves, the station index, 
+the location of the station in SM coordinates, the 3 components
+(northward, eastward, and downward in SM coordiantes) 
+of the magnetic perturbations due to Hall and Pedersen currents are saved. 
 The unit of the perturbation output is nT.
 
 Default is no magnetic perturbation calculation.
