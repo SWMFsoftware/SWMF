@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModIonoMagPerturb
 
@@ -24,7 +25,7 @@ module ModIonoMagPerturb
   integer            :: iUnitMag = -1
   integer, parameter :: MaxMagnetometer = 500
   real, dimension(2,MaxMagnetometer) :: PosMagnetometer_II
-  character(len=3)   :: MagName_I(MaxMagnetometer), MagInCoord
+  character(len=3)   :: MagName_I(MaxMagnetometer), TypeCoordMagIn
 
 
 contains
@@ -45,14 +46,14 @@ contains
 
     integer, parameter :: nTheta = IONO_nTheta, nPsi = IONO_nPsi
 
-    real, dimension(nTheta*2, nPsi, 3) :: Jh_DII, Jp_DII, Xyz_DII, eIono_DII
-    real, dimension(nTheta*2, nPsi)    :: Phi, Theta, Psi, ETh, EPs, SigmaH, SigmaP, &
-         sintheta, sinphi, costheta, cosphi, Br, Bn, b
+    real, dimension(nTheta*2, nPsi, 3) :: Jh_IID, Jp_IID, Xyz_IID, eIono_IID
+    real, dimension(nTheta*2, nPsi)    :: Phi, Theta, Psi, ETh, EPs, &
+         SigmaH, SigmaP, SinTheta, SinPhi, CosTheta, CosPhi
     real, dimension(3)                 :: bIono_D,  Xyz0_D, MagJh_D, MagJp_D, &
          XyzIono_D, tempJh_dB, tempJp_dB, TempMagJh_D,TempMagJp_D
 
     real :: dTheta(nTheta*2),dPsi(nPsi)
-    real :: sinclats, cosclats, sinlons, coslons, dv
+    real :: dv
     real :: XyzSph_DD(3,3)
     integer :: i, j, iMag
     !\
@@ -79,10 +80,10 @@ contains
     dTheta(nTheta+1:nTheta*2)  = dTheta_South
     dPsi = dPsi_South
 
-    sintheta = sin(Theta)
-    sinphi   = sin(Psi)
-    costheta = cos(Theta)
-    cosphi   = cos(Psi)
+    SinTheta = sin(Theta)
+    SinPhi   = sin(Psi)
+    CosTheta = cos(Theta)
+    CosPhi   = cos(Psi)
 
     ! dTheta at the poles is 1 degree; the rest are 2 degrees.
     ! dPsi is 4 degrees.
@@ -96,7 +97,7 @@ contains
              ETh(i,j) = -(PHI(i+1,j)-PHI(i,j))/                     &
                   (dTheta(i)*Radius)
              EPs(i,j) = -(PHI(i,j+1)-PHI(i,j))/                     &
-                  (dPsi(j)*Radius*sinTheta(i,j))
+                  (dPsi(j)*Radius*SinTheta(i,j))
           end do
           ETh(nTheta*2,j)   = ETh(nTheta*2-1,j)
           EPs(nTheta*2,j)   = EPs(nTheta*2-1,j)
@@ -106,7 +107,7 @@ contains
              ETh(i,j) = -(PHI(i+1,j)-PHI(i,j))/                     &
                   (dTheta(i)*Radius)
              EPs(i,j) = -(PHI(i,1)-PHI(i,j))/                       &
-                  (dPsi(j)*Radius*sinTheta(i,j))
+                  (dPsi(j)*Radius*SinTheta(i,j))
           end do
 
           ETh(nTheta*2,j)   = ETh(nTheta*2-1,j)
@@ -116,21 +117,21 @@ contains
     end do
 
     ! convert to xyz coords
-    eIono_DII(:,:,1) =  ETh*costheta*cosphi - EPs*sinphi
-    eIono_DII(:,:,2) =  ETh*costheta*sinphi + EPs*cosphi
-    eIono_DII(:,:,3) = -ETh*sintheta
+    eIono_IID(:,:,1) =  ETh*CosTheta*CosPhi - EPs*SinPhi
+    eIono_IID(:,:,2) =  ETh*CosTheta*SinPhi + EPs*CosPhi
+    eIono_IID(:,:,3) = -ETh*SinTheta
 
     do i = 1, nTheta*2
        do j = 1, nPsi
           call sph_to_xyz(Radius, Theta(i,j), Psi(i,j), XyzIono_D)
-          Xyz_DII(i,j,:) = XyzIono_D
+          Xyz_IID(i,j,:) = XyzIono_D
           ! get the magnetic field in SMG coords.
           call get_planet_field(Time_simulation, XyzIono_D, 'SMG', bIono_D)
           bIono_D = bIono_D/sqrt(sum(bIono_D**2))
 
           ! get the Hall and Perdersen currents in xyz coords
-          Jh_DII(i,j,:) = cross_product(bIono_D, eIono_DII(i,j,:)) * SigmaH(i,j)
-          Jp_DII(i,j,:) = eIono_DII(i,j,:) * SigmaP(i,j)
+          Jh_IID(i,j,:) = cross_product(bIono_D, eIono_IID(i,j,:))*SigmaH(i,j)
+          Jp_IID(i,j,:) = eIono_IID(i,j,:) * SigmaP(i,j)
        end do
     end do
 
@@ -147,13 +148,15 @@ contains
           do i = nTheta+1, nTheta*2
              do j = 1, nPsi
 
-                tempJh_dB = cross_product(Jh_DII(i,j,:), Xyz0_D-Xyz_DII(i,j,:)) &
-                     / (sqrt( sum( (Xyz_DII(i,j,:)-Xyz0_D)**2 )) )**3
+                tempJh_dB = &
+                     cross_product(Jh_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
+                     / (sqrt( sum( (Xyz_IID(i,j,:)-Xyz0_D)**2 )) )**3
 
-                tempJp_dB = cross_product(Jp_DII(i,j,:), Xyz0_D-Xyz_DII(i,j,:)) &
-                     / (sqrt( sum( (Xyz_DII(i,j,:)-Xyz0_D)**2 )) )**3
+                tempJp_dB = &
+                     cross_product(Jp_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
+                     / (sqrt( sum( (Xyz_IID(i,j,:)-Xyz0_D)**2 )) )**3
 
-                dv = cMu/(4*cPi) * Radius**2 * dTheta(i) * dPsi(j) * sintheta(i,j)
+                dv = cMu/(4*cPi) * Radius**2 * dTheta(i)*dPsi(j)*SinTheta(i,j)
 
                 MagJh_D = MagJh_D + tempJh_dB * dv
                 MagJp_D = MagJp_D + tempJp_dB * dv                
@@ -167,13 +170,15 @@ contains
           do i = 1, nTheta
              do j = 1, nPsi
 
-                tempJh_dB = cross_product(Jh_DII(i,j,:), Xyz0_D-Xyz_DII(i,j,:)) &
-                     / (sqrt(sum((Xyz_DII(i,j,:)-Xyz0_D)**2)))**3
+                tempJh_dB = &
+                     cross_product(Jh_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
+                     / (sqrt(sum((Xyz_IID(i,j,:)-Xyz0_D)**2)))**3
 
-                tempJp_dB = cross_product(Jp_DII(i,j,:), Xyz0_D-Xyz_DII(i,j,:)) &
-                     / (sqrt(sum((Xyz_DII(i,j,:)-Xyz0_D)**2)))**3
+                tempJp_dB = &
+                     cross_product(Jp_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
+                     / (sqrt(sum((Xyz_IID(i,j,:)-Xyz0_D)**2)))**3
 
-                dv = cMu/(4*cPi) * Radius**2 * dTheta(i) * dPsi(j) * sintheta(i,j)
+                dv = cMu/(4*cPi) * Radius**2 * dTheta(i)*dPsi(j)*SinTheta(i,j)
 
                 MagJh_D = MagJh_D + tempJh_dB * dv
                 MagJp_D = MagJp_D + tempJp_dB * dv
@@ -238,7 +243,7 @@ contains
   !======================================================================
   subroutine get_iono_magperturb_now(PerturbJh_DI, PerturbJp_DI, Xyz_DI)
     ! For all virtual magnetometers, update magnetometer coordinates in SMG 
-    ! coordinates.  Then, calculate the perturbation from the Hall and Pederson 
+    ! coordinates. Then, calculate the perturbation from the Hall and Pederson 
     ! currents and return them to caller as PerturbJhOut_DI, PerturbJpOut_DI.
     ! Updated magnetometer coordinates are also returned as Xyz_DI.
 
@@ -258,7 +263,7 @@ contains
     !--------------------------------------------------------------------------
 
     ! Create rotation matrix.
-    MagtoSmg_DD = transform_matrix(Time_Simulation, MagInCoord, 'SMG')
+    MagtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordMagIn, 'SMG')
 
     ! Get current positions of magnetometers in SMG coordinates.
     do iMag = 1 , nMagnetometer
@@ -305,12 +310,12 @@ contains
 
     implicit none
 
-    integer :: iError, nStat, iComm=-1 
+    integer :: iError, nStat
 
     ! One line of input     
     character (len=100) :: Line
     character(len=3) :: iMagName
-    real             :: iMagmLat, iMagmLon, Xyz_D(3)
+    real             :: iMagmLat, iMagmLon
     real, dimension(MaxMagnetometer):: MagmLat_I, MagmLon_I
     integer          :: iMag
     character(len=*), parameter :: NameSub = 'read_magnetometer_input_files'
@@ -330,7 +335,7 @@ contains
          ' ERROR: unable to open file ' // trim(filename))
 
     nStat = 0
-    ! Read the file: read #COORD TypeCoord, #START                                
+    ! Read the file: read #COORD TypeCoord, #START
     READFILE: do
 
        read(iunit,'(a)', iostat = iError ) Line
@@ -338,13 +343,13 @@ contains
        if (iError /= 0) EXIT READFILE
 
        if(index(Line,'#COORD')>0) then
-          read(iunit,'(a)') MagInCoord
-          select case(MagInCoord)
-          case('MAG','SMG')
+          read(iunit,'(a)') TypeCoordMagIn
+          select case(TypeCoordMagIn)
+          case('MAG', 'GEO', 'SMG')
              call write_prefix;
-             write(*,*) 'Magnetometer Coordinates='//MagInCoord
+             write(*,*) 'Magnetometer Coordinates='//TypeCoordMagIn
           case default
-             call CON_stop(NameSub//' invalid MagInCoord='//MagInCoord)
+             call CON_stop(NameSub//' invalid TypeCoordMagIn='//TypeCoordMagIn)
           end select
        end if
 
@@ -353,10 +358,10 @@ contains
              read(iunit,*, iostat=iError) iMagName, iMagmLat, iMagmLon
              if (iError /= 0) EXIT READFILE
 
-             !Add new points                                                     
+             !Add new points
              nStat = nStat + 1
 
-             !Store the locations and name of the stations                       
+             !Store the locations and name of the stations
              MagmLat_I(nStat)    = iMagmLat
              MagmLon_I(nStat)    = iMagmLon
              MagName_I(nStat)    = iMagName
@@ -386,8 +391,8 @@ contains
 
   !======================================================================
   subroutine write_iono_magperturb_file
-    ! For all virtual magnetometers, calculate the pertubation from the Hall and
-    ! Pederson currents and write them to file.
+    ! For all virtual magnetometers, calculate the pertubation from the 
+    ! Hall and Pedersen currents and write them to file.
 
     use ModMpi
     use ModUtilities, ONLY: flush_unit
