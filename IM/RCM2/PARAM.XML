@@ -202,7 +202,14 @@ value is 5 seconds.
 0.7      		FractionH
 0.3      		FractionO
 
-Fractional composition in RCM of H+ and O+.  The two need to add up to 1.0
+When RCM is coupled with a single fluid MHD code, the boundary conditions
+obtained from GM do not determine the composition of the plasma.
+This command sets the assumed fraction of H+ and O+. 
+The two need to add up to 1.0. The combined global-inner magnetospheric 
+dynamics strongly depends on these values. Coupling with a multi-ion
+MHD code removes this adjustable parameter.
+
+Default values are shown.
 </command>
 	
 <command name="CHARGEEXCHANGE">
@@ -302,10 +309,18 @@ Default value is 1, i.e. no change.
 	</if>
 
 #DECAY
-F			UseDecay
+T			UseDecay
 36000.  		DecayTimescale in seconds
 
-Add a decay to the ring current vi exp(-(deltaT/DecayTimescale))
+If UseDecay is true, add an exponential decay to the ring current, so if there are
+no other effects, it decays proportional to 
+\begin{verbatim}
+exp(-(deltaT/DecayTimescale))
+\end{verbatim}
+This ad hoc decay can improve agreement with observed recovery after magnetic storms.
+The value 10 hours shown by the example seems to be close to optimal.
+
+The default is UseDecay false.
 </command>
 
 </commandgroup>
