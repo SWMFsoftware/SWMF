@@ -223,14 +223,6 @@ contains
              end if
           end do
 
-       case('raeder')
-          call set_float_bc(1, nVarState)
-          if(iSide==4.or.iSide==3)then
-             call set_fixed_bc(By_,By_,DefaultState_V(By_))
-          elseif(iSide==5.or.iSide==6)then
-             call set_fixed_bc(Bz_,Bz_,DefaultState_V(Bz_))
-          end if
-
        case('reflect')
           if(IsCartesianGrid)then
              ! Scalars are symmetric
