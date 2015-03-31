@@ -27,5 +27,5 @@ F		IsUseJr
 8		nTotalLine
 
 #STOP
-5.0		Tmax
+50.0		Tmax
 -1		MaxStep
