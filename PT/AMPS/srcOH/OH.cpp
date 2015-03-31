@@ -133,7 +133,8 @@ double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReac
   }
 
   // velocity of a particle
-  double v[3]={0.0,0.0,0.0};
+  double v[3];
+  PIC::ParticleBuffer::GetV(v,ptr);  
   //-------------------
   switch (spec) {
   case _H_SPEC_:
