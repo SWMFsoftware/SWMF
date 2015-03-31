@@ -168,6 +168,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
   tempBackgroundAtmosphereParticle=PIC::ParticleBuffer::GetNewParticle();
   BackgroundAtmosphereParticleData=PIC::ParticleBuffer::GetParticleDataPointer(tempBackgroundAtmosphereParticle);
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)BackgroundAtmosphereParticleData);
 
   //sample the processor load
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
@@ -380,6 +381,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
             long int p;
 
             p=PIC::ParticleBuffer::GetNewParticle(cell->FirstCellParticle);
+            PIC::ParticleBuffer::SetParticleAllocated(p);
             PIC::ParticleBuffer::CloneParticle(p,tempBackgroundAtmosphereParticle);
 
             //set particle weight
@@ -523,6 +525,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
   tempBackgroundAtmosphereParticle=PIC::ParticleBuffer::GetNewParticle();
   BackgroundAtmosphereParticleData=PIC::ParticleBuffer::GetParticleDataPointer(tempBackgroundAtmosphereParticle);
+  PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)BackgroundAtmosphereParticleData);
 
   //sample the processor load
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
@@ -742,6 +745,7 @@ _StartParticleCollisionLoop_:
                 newParticle=PIC::ParticleBuffer::GetNewParticle(block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]);
                 PIC::ParticleBuffer::CloneParticle(newParticle,tempBackgroundAtmosphereParticle);
                 newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+                PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
 
                 //set the position of the new particle to be the position of the original model particle
                 PIC::ParticleBuffer::SetX(xModelParticle,newParticleData);
