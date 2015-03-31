@@ -69,7 +69,7 @@ while ($line=<InputFile>) {
       die;
     }
     
-    ampsConfigLib::AddLine2File("#undef _CHARGE_EXCHANGE__MODEL_\n#define _CHARGEEXCHANGE__MODEL_ _CHARGEEXCHANGE__".$Model."_","models/charge_exchange/ChargeExchange.dfn");
+    ampsConfigLib::AddLine2File("#undef _CHARGE_EXCHANGE__MODEL_\n#define _CHARGE_EXCHANGE__MODEL_ _CHARGE_EXCHANGE__".$Model."_","models/charge_exchange/ChargeExchange.dfn");
     
     #quit the loop
     last;
