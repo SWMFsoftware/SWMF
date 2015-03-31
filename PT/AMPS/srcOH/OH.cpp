@@ -196,18 +196,21 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
     // charge exchange process transfers momentum and energy to plasma
     PIC::Mesh::cDataCenterNode *CenterNode;
     char *offset;
-    double v2 = 0.0, plasmav2 = 0.0;
     CenterNode=node->block->GetCenterNode(nd);
     offset=CenterNode->GetAssociatedDataBufferPointer(); 
+    double v2 = 0.0, plasmav2 = 0.0;
+    double c = ParentParticleWeight 
+                   / PIC::ParticleWeightTimeStep::GlobalTimeStep[spec]
+                   / CenterNode->Measure;
     *((double*)(offset+OH::Output::ohSourceDensityOffset)) += 0.0; 
     for(int idim=0; idim<3; idim++){
       *(idim + (double*)(offset+OH::Output::ohSourceMomentumOffset)) += 
-	ParentParticleWeight*_MASS_(_H_)*(vFinal[idim]-PlasmaBulkVelocity[idim])/CenterNode->Measure; 
+	c*_MASS_(_H_)*(vFinal[idim]-PlasmaBulkVelocity[idim]); 
       v2      +=vFinal[idim]*vFinal[idim];
       plasmav2+=PlasmaBulkVelocity[idim]*PlasmaBulkVelocity[idim];
     }
     *((double*)(offset+OH::Output::ohSourceEnergyOffset)) += 
-      ParentParticleWeight*0.5*_MASS_(_H_)*(v2-plasmav2)/CenterNode->Measure; 
+      c*0.5*_MASS_(_H_)*(v2-plasmav2); 
   }
 
   PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
