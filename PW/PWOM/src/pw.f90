@@ -164,9 +164,6 @@ subroutine move_line
 
   ! Get the velocity of field line advection from a
   ! bilinear interpolation.
-
-  write(*,*) 'moving the line ...', DtHorizontal
-
   !N. Perlongo 2015 - sTheta variable keeps southern hemisphere in domain
   if (ThetaLine_I(iLine) > 90 * cDegToRad) then
      sTheta = 180*cDegToRad-ThetaLine_I(iLine)
