@@ -59,7 +59,6 @@ namespace Titan {
 		double pol,azi,rrr,r4,r3;
 		double  flx=0.0, mxflx=1.0,ParticleWeight;
 		double ParticleWeightCorrection=1.0;
-		double vel_wght = 500.0;
 		const double _N2__MASS_ = 4.64950898e-26;
 
 		memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
@@ -81,6 +80,8 @@ namespace Titan {
 			flx=interp_val[spec];
 
 		}
+		
+		cout<<spec<<'\t'<<flx<<'\t'<<mxflx<<endl;
 //
 //###### Particle has been accepted
 			
@@ -114,9 +115,10 @@ namespace Titan {
 				//correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and 
 				//interp_val true temperature of surface element 
 				ParticleWeightCorrection=exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
-  
-//				  pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
-//				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
+				  
+				  
+				  /*ParticleWeightCorrection=pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
+				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);*/
 				//cout<<speed<<'\t'<<ParticleWeightCorrection<<endl;
 				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
