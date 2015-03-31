@@ -254,7 +254,7 @@ IE/ionosphere/IE_mag_tYYMMDD_HHMMSS.mag
 \end{verbatim}
 in which the number of solves, the station index, 
 the location of the station in SM coordinates, the 3 components
-(northward, eastward, and downward in SM coordiantes) 
+(magnetic northward, eastward, and downward) 
 of the magnetic perturbations due to Hall and Pedersen currents are saved. 
 The unit of the perturbation output is nT.
 
