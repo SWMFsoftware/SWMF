@@ -6,6 +6,9 @@
  */
 /*
  * $Log$
+ * Revision 1.5  2015/03/13 19:17:12  yunilee
+ * Changes for Mars code initialization
+ *
  * Revision 1.4  2014/11/25 04:52:40  vtenishe
  * few function calls are changed
  *
@@ -545,6 +548,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     //particle ONE
     newParticle=PIC::ParticleBuffer::GetNewParticle();
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
 
     nInjectedParticles++;
     PIC::BC::nInjectedParticles[_C_SPEC_]++;
@@ -569,6 +573,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     //particle TWO
     newParticle=PIC::ParticleBuffer::GetNewParticle();
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)newParticleData);
 
     nInjectedParticles++;
     PIC::BC::nInjectedParticles[_C_SPEC_]++;
