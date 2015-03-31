@@ -1750,7 +1750,23 @@ MovingLoop:
         } 
 
         startNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
-        if (startNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+
+        if (startNode==NULL) {
+          //the partcle is outside of the domain -> correct particle location and determine the newNode;
+          double xmin[3],xmax[3];
+          int ii;
+
+          memcpy(xmin,PIC::Mesh::mesh.xGlobalMin,3*sizeof(double));
+          memcpy(xmax,PIC::Mesh::mesh.xGlobalMax,3*sizeof(double));
+
+          for (ii=0;ii<3;ii++) {
+            if (xmin[ii]>=xInit[ii]) xInit[ii]=xmin[ii]+PIC::Mesh::mesh.EPS;                         
+            if (xmax[ii]<=xInit[ii]) xInit[ii]=xmax[ii]-PIC::Mesh::mesh.EPS;
+          }
+
+          startNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
+          if (startNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+        }
 
         code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,startNode);
         memcpy(vFinal,vInit,3*sizeof(double));
@@ -2281,7 +2297,24 @@ exit(__LINE__,__FILE__,"not implemented");
          } 
 
          newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);
-         if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+
+         if (newNode==NULL) {
+           //the partcle is outside of the domain -> correct particle location and determine the newNode;
+           double xmin[3],xmax[3];
+           int ii;
+
+           memcpy(xmin,PIC::Mesh::mesh.xGlobalMin,3*sizeof(double));
+           memcpy(xmax,PIC::Mesh::mesh.xGlobalMax,3*sizeof(double));
+
+           for (ii=0;ii<3;ii++) {
+             if (xmin[ii]>=xInit[ii]) xInit[ii]=xmin[ii]+PIC::Mesh::mesh.EPS; 
+             if (xmax[ii]<=xInit[ii]) xInit[ii]=xmax[ii]-PIC::Mesh::mesh.EPS;
+           }
+
+           newNode=PIC::Mesh::mesh.findTreeNode(xInit,middleNode);           
+
+           if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+         }
 
          code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,newNode);
          memcpy(vFinal,vInit,3*sizeof(double));
