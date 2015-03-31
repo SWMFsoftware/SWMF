@@ -49,13 +49,14 @@ using namespace std;
 				fin >> Titan::tgitm_exobase::tgitm_grid[i][j];
 			}
 			
+//for loop below over species 2 - N2, 3 - CH4, 4 - H2
 				for(int j=2;j<5;j++){
 						
 						//If Snum is on implement numerical distribution (e.g. weighted velocity distribution function)
 						if(Titan::tgitm_exobase::Snum == on && j == 2){
 							realT=Titan::tgitm_exobase::tgitm_grid[i][5]; //index 5 is column with temperature
 							//This line scaled the flux from the local surface element
-							Titan::tgitm_exobase::tgitm_grid[i][j] = Titan::tgitm_exobase::tgitm_grid[i][j]*sqrt(numT/realT);
+							Titan::tgitm_exobase::tgitm_grid[i][j] = Titan::tgitm_exobase::tgitm_grid[i][j]*((j==2) ? pow(numT/realT,2) : 1.0);
 						}
 						//Sum up total fluxes
 						Titan::tgitm_exobase::totalflux[j-2] = Titan::tgitm_exobase::totalflux[j-2]+
