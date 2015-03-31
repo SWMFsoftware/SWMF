@@ -3063,15 +3063,17 @@ The naming convention for the files is controlled by the #SAVELOGNAME command.
 The DnOutput and DtOutput parameters determine the frequency of writing out the
 calculated perturbations in number of time steps and time interval, respectively.
 
-The output of the ground-based magnetic perturbations is in the file
+The ground-based magnetic perturbations are written into the output file
 \begin{verbatim}
 GM/IO2/magnetometers_*.dat, 
 \end{verbatim}
-in which the location of each station in GSM cartisian coordinates, the 3 components
-(northward, eastward, and downward in SM coordiantes) of the magnetic perturbations by 
-magnetospheric currents, and the 3 components (northward, eastward, and downward 
-in SM coordiantes) of the magnetic perturbations by field-aligned currents are written 
-out. The unit of the perturbation output is nT.
+in which the number of time steps, the date and time, the station index, 
+the x, y and z coordinates of the station in SM coordinates, the 3 components
+(magnetic northward, eastward, and downward) of the total 
+magnetic perturbations, as well as the contributions due to 
+magnetospheric currents, field-aligned currents in the gap region,
+Hall currents and  in the ionosphere are saved,
+The units of coordinates is meters, while the magnetic perturbations are given in nT.
 
 Default is no magnetic perturbation calculation.
 </command>
@@ -3242,13 +3244,17 @@ Default is no magnetic perturbation calculation.
 		</if>
 	</for>
 #SAVEPLOT
-16			nPlotfile
+15			nPlotFile
 3d  MHD tec		StringPlot ! 3d plot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
 2d  FUL hdf		StringPlot ! 2d HDF plot with a lot of data
 100			DnSavePlot
 -1.			DtSavePlot
+1d  HD idl		StringPlot ! 1d IDL plot along X axis with hydro variables
+100			DnSavePlot
+-1.			DtSavePlot
+0.			DxSavePlot ! with smallest grid resolution
 y=0 VAR idl		StringPlot ! y=0 plane plot with listed variables
 -1			DnSavePlot
 100.			DtSavePlot
@@ -3265,7 +3271,7 @@ cut ray idl_real8	StringPlot ! 3D cut IDL (ONLY!) plot with raytrace info
 -10.			zMinCut    
 10.			zMaxCut    
 -1.			DxSavePlot ! unstructured grid (for IDL plots)
-sph flx idl_ascii	StringPlot ! spherical plot
+sph flx idl_ascii	StringPlot ! spherical surface plot
 -1			DnSavePlot
 100.			DtSavePlot
 4.			Radius     ! of spherical surface
@@ -3297,6 +3303,22 @@ F			IsParallel
 1.0			yStartLine
 -3.5			zStartLine
 T			IsParallel
+eqr eqr idl		StringPlot ! Equatorial (magnetic) field line tracing info
+1000                    DnSavePlot
+-1.                     DtSavePlot
+20			nRadius    ! Starting points on the SM equatorial plane
+25			nLon
+3.0			RadiusMin
+10.0			RadiusMax
+eqb eqb tec		StringPlot ! Minimum B surface plot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+20			nRadius    ! Starting points on the SM equatorial plane
+25			nLon
+3.0			RadiusMin
+10.0			RadiusMax
+60.0			LongitudeMin
+300.0			LongitudeMax
 dpl MHD tec		StringPlot  ! dipole slice Tecplot (ONLY!) plot
 -1			DnSavePlot
 10.			DtSavePlot
@@ -3327,82 +3349,51 @@ blk MHD tec		StringPlot  ! general block Tecplot (ONLY!) plot
  5.			xPoint
  1.			yPoint
  1.			zPoint
-1d  BBK tec		StringPlot ! 1d plot with BLK data, Tecplot (ONLY!)
-1000			DnSavePlot
--1.			DtSavePlot
-rfr rwi tec             StringPlot
-10                      DnSavePlot
--1.0                    DtSavePlot
-150.0                   ObsPosX
-145.7                   ObsPosY 
-50.0                    ObsPosZ
-10MHz, 42.3MHz, 100MHz     StringRadioFrequency
-20.0                    X_Size_Image
-20.0                    Y_Size_Image
-200                     n_Pix_X
-200                     n_Pix_Y
-eqr eqr idl		StringPlot
+ieb nul tec             StringPlot  !IE grid field line plots Tecplot (ONLY!)
 1000                    DnSavePlot
 -1.                     DtSavePlot
-20			nRadius
-25			nLon
-3.0			RadiusMin
-10.0			RadiusMax
-eqb eqb tec		StringPlot
-1000                    DnSavePlot
--1.                     DtSavePlot
-20			nRadius
-25			nLon
-3.0			RadiusMin
-10.0			RadiusMax
-60.0			LongitudeMin
-300.0			LongitudeMax
-ieb nul tec             StringPlot  !IE grid field line plots
-1000                    DnSavePlot
--1.                     DtSavePlot
-lcb nul tec             StringPlot  !last closed field line plots
-1000                    DnSavePlot
--1.                     DtSavePlot
-6.			Radius
-36			nLon
-lcb int tec             StringPlot  !last closed field line plots with integrals stored
-1000                    DnSavePlot
+lcb int tec             StringPlot  !last closed field line plots with integrals 
+1000                    DnSavePlot  !Tecplot (ONLY!)
 -1.                     DtSavePlot
 6.			Radius
 36			nLon
 
-Default is nPlotFile=0. \\
+The #SAVEPLOT command determines the number and type of plot files
+saved from BATS-R-US. 
 
-\noindent
+The nPlotFile parameter sets the number of plot files to be saved.
+For each plot file, the StringPlot parameters defines the format 
+and the content as detailed below. 
+The PlotString is always followed by the plotting frequencies
+DnSavePlot and DtSavePlot that determine the frequency of saves
+in temrs of time steps and simulation time, respectively.
+The rest of the parameters read for a given plot file 
+depends on StringPlot.
+
 StringPlot must contain the following 3 parts in the following order
 \begin{verbatim}
-plotform plotarea plotvar
-
-plotform = 'tec', 'hdf', 'idl', 'idl_real4', 'idl_real8', 'idl_ascii'
-plotarea = '1d', '2d', '3d' , 'x=0', 'y=0', 'z=0', 'cut', 'dpl', 'slc', 'sph', 'los', 'lin', 'blk', 'rfr', 'eqr', 'eqb', 'ieb', 'lcb'
-plotvar  = 'mhd', 'hd', 'ful', 'raw', 'ray', 'flx', 'sol', 'euv', 'sxr', 'tbl', 'pos', 'var', 'bbk' 'rwi' 'int' 'nul' - normalized
-plotvar  = 'MHD', 'hd', 'FUL', 'RAW', 'RAY', 'FLX', 'SOL', 'EUV', 'SXR', 'TBL', 'pos', 'VAR', 'BBK' 'RWI' 'INT' 'NUL' - dimensional
+PlotForm PlotArea PlotVar
 \end{verbatim}
-NOTES: The plotvar option 'sol' is only valid for plotarea 'los';
-       The plotvar option 'euv' is only valid for plotarea 'los';
-       The plotvar option 'sxr' is only valid for plotarea 'los';
-       The plotvar option 'tbl' is only valid for plotarea 'los';
-       the plotvar option 'pos' is only valid for plotarea 'lin'.
-       the plotvar option 'rwi' is only valid for plotarea 'rfr'.
-\\
-
-\noindent
-The plotform string selects the output to be usable for 
-Tecplot (tec), VISIT (hdf), or IDL (idl*) visualization software. 
+Each of these parts can have different values. Most (but not all) combinations are valid.
+The PlotForm can have one of the following values:
+\begin{verbatim}
+tec             - Tecplot format
+hdf             - HDF5 format (for VisIt)
+idl/idl_real4   - Single precision binary "IDL" format
+idl_real8       - Double precision binary "IDL" format
+idl_ascii       - ASCII "IDL" format
+\end{verbatim}
+The Tecplot format (for most plot areas) interpolates data 
+to the grid cell corners (nodes).
+The HDF and IDL formats save the cell center values.
 The HDF output works only if the HDF library is installed, 
-the appropriate parallel HDF module is loaded and BATSRUS is 
+the appropriate parallel HDF module is loaded and BATSRUS/SWMF is 
 configured with the -hdf flag.
-The IDL output can be written as single
-precision binary (idl_real4), double precision binary (idl_real8) 
-or ASCII file (idl_ascii). The default is 'idl_real4' that can also 
-be written simply as 'idl'.
+The "IDL" format can be read with the IDL visualization macros 
+(getpict, animate, slice) in BATSRUS/Idl or with the SpacePy python package.
+The ASCII "IDL" format can be easily read with any other plotting software. 
 
-The plotarea string defines the 1, 2, or 3D volume of the plotting area:
+The PlotArea string defines a 1, 2, or 3D volume for plotting:
 \begin{verbatim}
 1d    - 1D cut along the X axis (saves tree file)
 2d    - 2D cut (like Z=0)       (saves tree file)
@@ -3427,7 +3418,7 @@ The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
 This can be used for reconstructing the full grid and use the data
 with the READAMR library, for example. 
 
-The plotvar string defines the plot variables and the equation parameters.
+The PlotVar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
 values or as non-dimensional values:
 \begin{verbatim}
@@ -3446,63 +3437,62 @@ values or as non-dimensional values:
          pars: g rbody
  'raw' - vars: Conservative_Variables P b1x b1y b1z divb
          pars: g rbody
- 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk    (DoMapEquatorRay=F
-         vars: bx by bz req1 phi1 req2 phi2 status blk        (DoMapEquatorRay=T)
+ 'ray' - vars: bx by bz theta1 phi1 theta2 phi2 status blk    (if DoMapEquatorRay=F)
+         vars: bx by bz req1 phi1 req2 phi2 status blk        (if DoMapEquatorRay=T)
          pars: rbody
  'eqr' - vars: iLine l x y z rho ux uy uz bx by bz p rCurve   (for all rays traced)
          pars: nRadius, nLon, nPoint
  'eqb' - vars: z PrimVarMinB rCurve xZ0 yZ0 zZ0 PrimVarZ0 rCurveZ0  (B is in SM coordinates)
  'flx' - vars: rho mr br p jr pvecr
          pars: g rbody
- 'sol' - vars: wl pb
-         pars: mu
- 'euv' - vars: euv171 euv195 euv284
-         pars: mu
- 'sxr' - vars: sxr
-         pars: mu
- 'tbl' - vars: listed in the LOS table file
-         pars: mu
- 'rwi' - vars: Intensity
-         pars: 
- 'int' - vars: 1/B n/B p/B
-         pars: 
  'bbk' - vars: dx pe blk blkall
          pars: 
- 'nul' - vars: 
+ 'pos' - vars  x y z                                          (PlotArea='lin' only)
+         pars:
+ 'sol' - vars: wl pb                                          (PlotArea='los' only)
+         pars: mu
+ 'euv' - vars: euv171 euv195 euv284                           (PlotArea='los' only)
+         pars: mu
+ 'sxr' - vars: sxr                                            (PlotArea='los' only)
+         pars: mu
+ 'tbl' - vars: listed in the LOS table file                   (PlotArea='los' only)
+         pars: mu
+ 'int' - vars: 1/B n/B p/B                                    (PlotArea='lcb' only)
+         pars: 
+ 'nul' - vars:                                                (PlotArea='lcb' only)
          pars: 
 \end{verbatim}
-The plot_string is always followed by the plotting frequencies
-DnSavePlot and DtSavePlot.\\
-
-\noindent
-Depending on StringPlot, further information is read from the parameter file
-in this order:
+Depending on StringPlot, the following parameters are also read 
+from the parameter file in this order:
 \begin{verbatim}
- PlotRange		if plotarea is 'cut', 'dpl', or 'slc'
- nRadius nLon           if plotarea is 'eqr' or 'eqb'
- RadiusMin RadiusMax    if plotarea is 'eqr' or 'eqb'
- LonMin LonMax          if plotarea is 'eqb'
- Point			if plotarea is 'slc', or 'blk'
- Normal			if plotarea is 'slc'
- DxSavePlot		if plotform is 'idl' and plotarea is not sph, ion, los
- Radius                 if plotarea is 'sph'
- NameVars		if plotform is 'var'
- NamePars		if plotform is 'var'
+ xMinCut ... zMaxCut	 if PlotArea is 'cut', 'dpl', or 'slc'
+ nRadius nLon            if PlotArea is 'eqr' or 'eqb'
+ RadiusMin RadiusMax     if PlotArea is 'eqr' or 'eqb'
+ LonMin LonMax           if PlotArea is 'eqb'
+ xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
+ xNormal yNormal zNormal if PlotArea is 'slc'
+ DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
+ Radius                  if PlotArea is 'sph'
+ NameVars		 if PlotVar  is 'var' or 'VAR'
+ NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
-The PlotRange is described by 6 coordinates. 
+The six parameters xMinCut ... zMaxCut define a 3D box in Cartesian 
+coordinates: the plotting range.
 For IDL plots, if the width in one or two 
 dimensions is less than the smallest cell size within the plotarea, 
 then the plot file will be 2 or 1 dimensional, respectively.
 If the range is thin but symmetric about one of the x=0, y=0, or z=0 planes, 
-data will be averaged in the postprocessing.\\
+data will be averaged in the postprocessing.
 
-For Tecplot (tec) file and 'cut', Plotrange is read but 
-only 1 dimension is used.  
-Cuts are entire x, y, or z = constant planes (2D only, 1D or 3D cuts are not
-implemented.  For x=constant, for example, the y and z ranges 
-do not matter as long at they are "wider" than the x range.  The slice will be 
-located at the average of the two x ranges.  So, for example to save a plot in
-a x=-5 constant plane cut in tec. The following would work for the plot range:
+For Tecplot plots (PlotForm='tec') and PlotArea='dpl' or 'slc' the plot range 
+clips the cut plane.
+For Tecplot files with PlotArea 'cut', the xMin .. zMax parameters are read
+but interpreted differently from IDL.
+Cuts are entire x, y, or z equal constant planes (1D or 3D cuts are not
+implemented).  For x constant, for example, the y and z ranges 
+do not matter as long as they are wider than the x range.  The slice will be 
+located at the average of xMinCut and xMaxCut.  So, for example to save a plot in
+a x=-5 constant plane cut, the following can be used:
 \begin{verbatim}
  -5.01			xMinCut
  -4.99			xMaxCut
@@ -3511,12 +3501,10 @@ a x=-5 constant plane cut in tec. The following would work for the plot range:
  -10.			zMinCut
   10.			zMaxCut
 \end{verbatim}
-The 'dpl' and 'slc' Tecplot plots use Plotrange like the IDL plots, and will
-clip the cut plane when it exits the defined box.
-
-\noindent
-Point is described by the coordinate of any point on the cut plane, often the origin,
-or inside of a 3D block. Normal is the coordinate of a vector normal to the plane.  
+The xPoint, yPoint, zPoint parameters give the coordinate of a point
+inside a grid block for PlotArea 'blk'.
+For PlotArea 'slc' they mean the coordinates of a point on the slice plane,
+and xNormal, yNormal, zNormal define a normal vector to the slice plane. 
 If the normal in any given coordinate direction is less than 0.01, 
 then no cuts are computed for cell edges parallel to that coordinate direction.
 For example, the following would result in only computing cuts on cell 
@@ -3526,17 +3514,17 @@ edges parallel to the Z axis.
   0.0			yNormal
   1.0			zNormal
 \end{verbatim}
-
-\noindent
-Possible values for DxSavePlot (for IDL files):
+The DxSavePlot parameter determines the grid resolution for 
+IDL files if the simulation is run on Cartesian grids
+(non-Cartesian grids are always saved as unstructured files):
 \begin{verbatim}
-  any positive value	- fixed resolution
-  0.	- fixed resolution based on the smallest cell in the plotting area
- -1.	- unstructured grid will be produced by PostIDL.exe
+  positive value - uniform grid with Dx=DxSavePlot
+  0.	         - uniform grid with smallest cell in the plotting area
+ -1.	         - unstructured grid with original AMR cells
 \end{verbatim}
-Radius is the radius of the spherical cut for plotarea='sph'
+The Radius parameter is the radius of the spherical cut for PlotArea='sph'
 
-The line-of-sight (plotarea 'los') plots calculate integrals along the
+The line-of-sight (PlotArea 'los') plots calculate integrals along the
 lines of sight of some quantity and create a 2D Cartesian square
 shaped grid of the integrated values. Only the circle enclosed in the
 square is actually calculated and the corners are filled in with
@@ -3551,7 +3539,6 @@ values, an occultational disk is used to block the lines of sight
 going through the Sun.  The variables which control the direction of
 the lines of sight and the grid position and resolution are the
 following:
-
 \begin{verbatim}
  ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
                            HGI coordinates (SC,IH and OH) or the GM coordinates
@@ -3564,7 +3551,6 @@ following:
                           plot variables.
  nPix                   - the number of pixels in each direction
 \end{verbatim}
-
 For line-of-site Extreme Ultraviolet (EUV) and Soft X-Ray (SXR) plots,
 the same parametes are read as for the wl and pb plots (above) but now
 the integration is carried out to the surface of the sun so rOccult should
@@ -3575,54 +3561,21 @@ table specific to the EUV or SXR instument (e.g. SOHO EIT, STEREO EUVI,
 Yohkoh SXT) the tables for the response need to be read in by additional
 lines in the PARAM.in file. This follows the #LOOKUPTABLE command 
 syntax e.g:
-
 \begin{verbatim}
 #LOOKUPTABLE
 euv                     NameTable
 load                    NameCommand
-SC/Param/los_Eit.dat     NameFile
+SC/Param/los_Eit.dat    NameFile
 ascii                   TypeFile
 
 #LOOKUPTABLE
 sxr                     NameTable
 load                    NameCommand
-SC/Param/los_Sxt.dat     NameFile
+SC/Param/los_Sxt.dat    NameFile
 ascii                   TypeFile
 \end{verbatim}
-
-\noindent
-The possible values for NameVars with plotarea 'los' 
+The possible values for NameVars with PlotArea 'los' 
 are listed in subroutine set_plotvar_los in write_plot_los.f90. \\
-
-The radiotelescope pixel image (plotarea 'rfr') plots present the
-plasma emissivity integrals along the ray trajectories within a 2D
-Cartesian square shaped grid. The radiowave rays with the frequencies 
-on the order of tens of MegaHertz undergo significant refraction
-when travelling through non-uniform space plasmas; hence the name
-'rfr'. The radio wave raytracing is performed by a modification of 
-the Boris's algorithm. The image plane center coincides with
-the origin of the computational domain (usually the center of the Sun).
-The observer's position is specified at an arbitrary point of the
-solar system. The image plane is always orthogonal to the straight
-line connecting the observer with the center of the sun.
-The following variables specify the observer's position, the image 
-plane size, the resolution, and the radio frequencies at which 
-the plasma emissivity is integrated:
-\begin{verbatim}
- ObsPosX,ObsPosY,ObsPosZ - the position of the observer in (rotated) 
-                           HGI coordinates (SC, IH and OH) or the GM coordinates
- StringRadioFrequency    - set of frequencies. The number of frequencies
-			   determines the number of plots, one for each
-			   frequency. A frequency is specified as a number 
-			   followed by a frequency unit. The units are
-			   Hz, kHz, MHz, GHz, or THz.
- X_Size_Image, Y_Size_Image - X and Y dimensions of the image plane in 
-			      solar radii
- n_Pix_X,  n_Pix_Y       - the number of pixels in X and Y directions
-\end{verbatim}
-
-\noindent
-The only possible values for NameVars with plotarea 'rfr' is 'rwi'. \\ 
 
 \noindent
 The possible values for NameVars for other plot areas
@@ -3632,23 +3585,24 @@ are listed in subroutine set_plotvar in write_plot_common.f90.\\
 The possible values for NamePars are listed in subroutine 
 set_eqpar in write_plot_common.f90\\
 
-A plot file is produced by each processor.  This file is ASCII in 'tec'
-format and can be either binary or ASCII in 'idl' format as chosen under
-the #SAVEBINARY flag.  The name of the files are
+Most plot files are written in parallel: each processor
+writes out part of the data. These intermediate files are ASCII in 'tec'
+format and can be either binary or ASCII in 'idl' format as chosen with
+the #SAVEBINARY command (default is binary). The name of the files are
 \begin{verbatim}
- IO2/plotarea_plotvar_plotnumber_timeinfo_PEnumber.extension
+ IO2/PlotArea_PlotVar_PlotNumber_TIMESTAMP_PEnumber.extension
 \end{verbatim}
 where extension is 'tec' for the TEC and 'idl' for the IDL file formats.
-The plotnumber goes from 1 to nplot in the order of the files in PARAM.in.
-The 'timeinfo' contains simulation time as hours-minutes-seconds
-(for time accurate runs only), and time step number.
+The PlotNumber goes from 1 to nPlotFilr in the order of the files in PARAM.in.
+The TIMESTAMP contains time step, simulation time or date-time information
+depending on the settings in the #SAVEPLOTNAME command.
 Spherical plot area 'sph' creates two files per processor starting with
-'spN' and 'spS' for the northern and southern hemispheres, respectively.  
+'spN' and 'spS' for the northern and southern hemispheres, respectively.
 
 After all processors wrote their plot files, processor 0 writes a small 
 ASCII header file named as
 \begin{verbatim}
- IO2/plotarea_plotvar_plotnumber_timestep.headextension
+ IO2/PlotArea_PlotVar_PlotNumber_TIMESTAMP.headextension
 \end{verbatim}
 where headextension is:
 \begin{verbatim}
@@ -3660,11 +3614,11 @@ where headextension is:
 \noindent
 The line of sight integration produces TecPlot and IDL files directly:
 \begin{verbatim}
- IO2/los_plotvar_plotnumber_timestep.extension
+ IO2/los_PlotVar_PlotNumber_TIMESTAMP.extension
 \end{verbatim}
 where extension is 'dat' for TecPlot and 'out' for IDL file formats.
-The IDL output from line of sight integration is always in ASCII format.
 
+Default is nPlotFile=0, so no plot files are saved.
 </command>
 
 <command name="SAVEPLOTNAME">
