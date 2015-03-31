@@ -1,3 +1,4 @@
+//$Id$
 // Physical model for charge exchange
 // HOW TO ADD A NEW MODEL
 // Two additions are required:
@@ -27,6 +28,17 @@ namespace ChargeExchange {
 		    double   PlasmaNumberDensity);
   } 
   // namespace MaherTinsley====================================================
+
+  // Lindsay & Stebbings model (JGR, vol.110, A12213, 2005)====================
+  namespace LindsayStebbings {
+
+    double LifeTime(int      spec,
+		    double* vParticle,
+		    double* vPlasma,
+		    double   PlasmaTemperature,
+		    double   PlasmaNumberDensity);
+  } 
+  // namespace LindsayStabbings================================================
 
 
   // wrapper function: 

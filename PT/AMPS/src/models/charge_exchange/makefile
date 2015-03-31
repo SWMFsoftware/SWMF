@@ -4,7 +4,7 @@ DEFAULT_TARGET : charge_exchange
 
 include ../../../Makefile.conf
 
-CHARGEEXCHANGEOBJ = ChargeExchange.o ChargeExchange_MaherTinsley.o
+CHARGEEXCHANGEOBJ = ChargeExchange.o ChargeExchange_MaherTinsley.o ChargeExchange_LindsayStebbings.o
 
 charge_exchange : $(CHARGEEXCHANGEOBJ)
 	ar -src charge_exchange.a $(CHARGEEXCHANGEOBJ)
