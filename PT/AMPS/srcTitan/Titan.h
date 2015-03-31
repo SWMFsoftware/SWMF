@@ -100,7 +100,7 @@ namespace Titan {
 		//generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
 		
 		//Switch statement used to implement numerical velocity distribution for better statistics
-		double speed;
+		double speed=0.0;
 		//PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
 		switch (spec) {
 		case _N2_SPEC_:
@@ -113,9 +113,10 @@ namespace Titan {
 				
 				//correction factor based on ratios of maxwelliams Tnum temperature of hot distribution and 
 				//interp_val true temperature of surface element 
-				ParticleWeightCorrection=
-				  pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
-				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
+				ParticleWeightCorrection=exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
+  
+//				  pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
+//				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
 				//cout<<speed<<'\t'<<ParticleWeightCorrection<<endl;
 				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
