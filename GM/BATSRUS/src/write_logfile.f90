@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !=============================================================================
 subroutine write_logfile(iSatIn, iFile)
   use ModProcMH
@@ -306,7 +306,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
   real, external :: integrate_BLK, maxval_BLK, minval_BLK
-  real, external :: calc_sphere,integrate_circle
+  real, external :: calc_sphere, integrate_circle
 
   !-------------------------------------------------------------------------
   call set_oktest('set_logvar',DoTest,DoTestMe)
