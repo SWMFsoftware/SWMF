@@ -1756,6 +1756,8 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           iPoint = iPoint + 1
+          if(iPoint_I(iPoint) < 0) &
+               call CON_stop(NameSub//': IH point is outside of PT domain')
           ExtraSource_ICB(:,i,j,k,iBlock) = Data_VI(:,iPoint_I(iPoint))*Si2No_I
        end do; end do; end do
     end do
