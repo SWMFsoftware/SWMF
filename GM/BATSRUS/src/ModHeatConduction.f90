@@ -78,6 +78,7 @@ module ModHeatConduction
   real, allocatable :: CoolHeat_CB(:,:,:,:)
   real, allocatable :: CoolHeatDeriv_CB(:,:,:,:)
 
+  real :: TminSi = -1.0, Tmin
 contains
 
   !============================================================================
@@ -126,6 +127,9 @@ contains
                   //TypeIonHeatConduction)
           end select
        end if
+
+    case("#MINIMUMTEMPERATURE")
+       call read_var('TminSi', TminSi)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -303,6 +307,8 @@ contains
 
        iTeImpl = 1
     end if
+
+    Tmin = TminSi*Si2No_V(UnitTemperature_)
 
   end subroutine init_heat_conduction
 
@@ -1332,7 +1338,8 @@ contains
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
-    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_
+    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_, ChargeIon_I, MassIon_I, &
+         iRhoIon_I
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1340,7 +1347,7 @@ contains
     real, intent(in) :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k, iP
-    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
+    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin, Ne
     real :: Gamma
     real :: DtLocal
     !--------------------------------------------------------------------------
@@ -1409,6 +1416,11 @@ contains
 
              State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
           end if
+       end if
+
+       if(Tmin >= 0.0)then
+          Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+          State_VGB(iP,i,j,k,iBlock) = max(Ne*Tmin, State_VGB(iP,i,j,k,iBlock))
        end if
     end do; end do; end do
 
