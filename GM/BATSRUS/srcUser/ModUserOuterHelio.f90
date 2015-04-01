@@ -1012,6 +1012,7 @@ contains
 
     real :: cth
     real :: State_V(nVar)  
+    real :: Ux, Uy, Uz, U2
 
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
@@ -1029,50 +1030,53 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !-----------------------------------------------------------------------
 
-    !updating sources from AMPS in PT-OH coupling
-    if(.not.UseNeutralFluid)then
-       
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-
-          !Extract conservative variables
-          State_V = State_VGB(:,i,j,k,iBlock)
-
-          Ux_I  = State_V(RhoUx_)/State_V(Rho_)
-          Uy_I  = State_V(RhoUy_)/State_V(Rho_)
-          Uz_I  = State_V(RhoUz_)/State_V(Rho_)
-
-          U2_I  = Ux_I**2 + Uy_I**2 + Uz_I**2
-
-          !updating the source terms
-          Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
-               + ExtraSource_ICB(1,i,j,k,iBlock)
-          Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
-               + ExtraSource_ICB(2,i,j,k,iBlock)
-          Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
-               + ExtraSource_ICB(3,i,j,k,iBlock)
-          Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
-               + ExtraSource_ICB(4,i,j,k,iBlock)
-          Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + ExtraSource_ICB(5,i,j,k,iBlock)
-          Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               + (g-1)*( Source_VC(Energy_,i,j,k) &
-               - Ux_I(Ion_)*Source_VC(RhoUx_,i,j,k) &
-               - Uy_I(Ion_)*Source_VC(RhoUy_,i,j,k) &
-               - Uz_I(Ion_)*Source_VC(RhoUz_,i,j,k) &
-               + 0.5*U2_I(Ion_)*Source_VC(Rho_,i,j,k) )
-       end do; end do; end do
-       RETURN
-    end if
-
-    ! Do not provide explicit source term when point-implicit scheme is used
-    ! IsPointImplSource is true only when called from ModPointImplicit
-    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
-
     if(iBlock == BLKtest .and. iProc == PROCtest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
        DoTest = .false.; DoTestMe = .false.
     endif
+
+    !updating sources from AMPS in PT-OH coupling
+    if(.not.UseNeutralFluid)then
+       if(.not.allocated(ExtraSource_ICB))then
+          call CON_stop(NameSub//': ExtraSource_ICB is not allocated')
+       else
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+
+             !Extract conservative variables
+             State_V = State_VGB(:,i,j,k,iBlock)
+
+             Ux  = State_V(RhoUx_)/State_V(Rho_)
+             Uy  = State_V(RhoUy_)/State_V(Rho_)
+             Uz  = State_V(RhoUz_)/State_V(Rho_)
+
+             U2  = Ux**2 + Uy**2 + Uz**2
+
+             !updating the source terms
+             Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
+                  + ExtraSource_ICB(1,i,j,k,iBlock)
+             Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
+                  + ExtraSource_ICB(2,i,j,k,iBlock)
+             Source_VC(RhoUy_,i,j,k) = Source_VC(RhoUy_,i,j,k) &
+                  + ExtraSource_ICB(3,i,j,k,iBlock)
+             Source_VC(RhoUz_,i,j,k) = Source_VC(RhoUz_,i,j,k) &
+                  + ExtraSource_ICB(4,i,j,k,iBlock)
+             Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
+                  + ExtraSource_ICB(5,i,j,k,iBlock)
+             Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                  + (g-1)*( Source_VC(Energy_,i,j,k) &
+                  - Ux*Source_VC(RhoUx_,i,j,k) &
+                  - Uy*Source_VC(RhoUy_,i,j,k) &
+                  - Uz*Source_VC(RhoUz_,i,j,k) &
+                  + 0.5*U2*Source_VC(Rho_,i,j,k) )
+          end do; end do; end do
+          RETURN
+       end if
+    end if
+
+    ! Do not provide explicit source term when point-implicit scheme is used
+    ! IsPointImplSource is true only when called from ModPointImplicit
+    if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
     !  calculating some constants cBoltzmann is J/K 
     cth = 2.0*cBoltzmann/mNeutrals
