@@ -71,7 +71,7 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
    double ExternalNormal[3],ModelParticlesInjectionRate;
    int nface;
 
-   static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
+   static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
 
    if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
      for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
@@ -96,7 +96,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
    if (spec!=_H_SPEC_) return 0; //inject only spec=0
 
-   static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
+   static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
    double v[3];
 
 
@@ -165,7 +165,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
   if (spec!=_H_SPEC_) return 0; //inject only spec=0
   
   double ModelParticlesInjectionRate=0.0;
-  static double vNA[3]={0.0,0.0,0.0},nNA=5.0E6,tempNA=1.0E5;
+  static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
   
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
