@@ -2228,7 +2228,7 @@ contains
   subroutine conservative_to_primitive(State_V)
 
     use ModVarIndexes, ONLY: Bx_, Bz_, IsMhd, nFluid
-    use ModMultiFluid, ONLY: select_fluid, nIonFluid, &
+    use ModMultiFluid, ONLY: select_fluid, &
          iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModPhysics, ONLY: gm1
