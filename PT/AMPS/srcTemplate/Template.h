@@ -41,7 +41,7 @@
 #else
 // SPICE is NOT used for this application: include empty substitutes
 #include "SpiceEmptyDefinitions.h"
-#endif
+#endif//_EXOSPHERE__ORBIT_CALCULATION__MODE_ == _PIC_MODE_ON_
 
 /*****************************************************************************
  * The following namespace contains variables, functions etc. 
@@ -50,9 +50,11 @@
 namespace Template {
   // it is based on a generic application named Exosphere
   using namespace Exosphere;
+
   //--------------------------------------------------------------------------
   // specific initialization procedures
   void Init_BeforeParser();
+
   //--------------------------------------------------------------------------
   // methods for sampling & printing physical parameters to a separate file
   namespace Sampling{
@@ -64,18 +66,19 @@ namespace Template {
      * if needed - use as template, otherwise - remove / comment out
      *************************************************************************/
     namespace Gamma {
-      const  int    nSampleIntervals = 100;
+      const  int    nSampleInterval = 100;
       const  double GammaMax = 1.0;
       const  double GammaMin = 0.0;
       // function implementations are in Template_Sampling_Gamma.cpp
-      extern double SamplingBuffer[nSampleIntervals];
+      extern double SampleBuffer[nSampleInterval];
       void Init();
       void SampleData();
       // the following functions is called by the code's core;
       // prints data to a separate file (see implementation)
-      void PrintSampledData(int DataOutputFileNumber);
+      void PrintSampleData(int DataOutputFileNumber);
     }
   }
+
   //--------------------------------------------------------------------------
   // methods for coupling with SWMF
   namespace Coupling {
@@ -87,6 +90,7 @@ namespace Template {
     void Send(char *NameVar, int *nVarIn, int *nDimIn, 
 	      int *nPoint, double *Xyz_DI, double *Data_VI);
   }
+
   //--------------------------------------------------------------------------
   // methods for printing physical parameters to the general AMPS output file
   namespace Output{
@@ -108,6 +112,7 @@ namespace Template {
     // printing of variables' values
     void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
   }
+
   //--------------------------------------------------------------------------
   // methods for the reaction processing specific for the application
   namespace Physics {
@@ -132,6 +137,7 @@ namespace Template {
 			    PIC::ParticleBuffer::byte *ParticleData, 
 			    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
     }
+
     //------------------------------------------------------------------------
     // Processes at key events, e.g. particle hits a surface of a planet
     namespace Incidential {
@@ -142,6 +148,7 @@ namespace Template {
 				    void *NodeDataPonter,
 				    void *SphereDataPointer);      
     }
+
     //------------------------------------------------------------------------
     // self-explanatory
     void inline TotalParticleAcceleration(double *accl, int spec, long int ptr,
@@ -191,7 +198,7 @@ namespace Template {
       // finally, get fields' values at the cell
       PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
       PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
-#endif
+#endif//_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
 
       //......................................................................
       // calculate acceleraton due to Lorentz force
@@ -200,7 +207,7 @@ namespace Template {
       accl_LOCAL[0]+=ElCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
       accl_LOCAL[1]+=ElCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
       accl_LOCAL[2]+=ElCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
-#endif
+#endif//_FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
       // calculate gravitational force if needed
@@ -214,7 +221,7 @@ namespace Template {
       for (int idim=0;idim<DIM;idim++) {
 	accl_LOCAL[idim]-=GravityConstant*MassTemplateBody/r2*x_LOCAL[idim]/r;
       }
-#endif
+#endif//_FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
       //copy the local values of the acceleration to the global ones
@@ -223,4 +230,4 @@ namespace Template {
   }
 }
 
-#endif
+#endif//_TEMPLATE_H_
