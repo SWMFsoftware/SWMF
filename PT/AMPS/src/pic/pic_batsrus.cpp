@@ -47,12 +47,8 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeN
     char fullname[_MAX_STRING_LENGTH_PIC_],NameVar[_MAX_STRING_LENGTH_PIC_];
     int length=_MAX_STRING_LENGTH_PIC_;
 
-    //sprintf(fullname,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
-
-
-
-    sprintf(fullname,"%s",fname);
-
+    //get the full file name
+    sprintf(fullname,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
 
     //export MPI parameters into BATL
     int iComm=MPI_Comm_c2f(MPI_GLOBAL_COMMUNICATOR);
@@ -114,11 +110,11 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeN
 
     if (pBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: p is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
-
-    int IsFound;
-    double x[3]={0.0,0.0,0.0};
-
-    batsrus2amps_get_data_point_(x,StateLocal,&IsFound);
+    //the first element in the state vector is the "weight" -> adjust the offsets
+    rhoBATSRUS2AMPS++;
+    mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
+    bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
+    pBATSRUS2AMPS++;
   }
 
 
@@ -135,24 +131,23 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeN
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
     double x[3],T,n,p;
+    int IsFound;
 
     for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
-      x[0]=xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i);
-      x[1]=xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j);
-      x[2]=xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k);
+      x[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
+      x[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
+      x[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
 
       //recover the data from the BATSRUS data file
-      int IsFound;
-
       batsrus2amps_get_data_point_(x,StateLocal,&IsFound);
 
+      //the found state vector could be located on onother processor
       if (IsFound==true) {
         MPI_Allreduce(StateLocal,State,nVar+1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
         //devide the interpolated values by the "total weight"
         for (int n=1;n<nVar+1;n++) State[n]/=State[0];
       }
-      else for (int n=0;n<nVar+1;n++) State[n]=0.0;
 
       //locate the cell
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -160,18 +155,36 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeN
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
       //save the interpolated values
-      for (idim=0;idim<3;idim++) {
-        *(idim+(double*)(offset+MagneticFieldOffset))=State[0];
-        *(idim+(double*)(offset+PlasmaBulkVelocityOffset))=State[0];
+      if (IsFound==true) {
+        int idim;
+
+        //convert momentum into velocity
+        if (State[rhoBATSRUS2AMPS]>0.0) for (idim=0;idim<3;idim++) State[mxBATSRUS2AMPS+idim]/=State[rhoBATSRUS2AMPS];
+
+        //the order of the state vector: number density, temperature
+        *((double*)(offset+PlasmaNumberDensityOffset))=State[rhoBATSRUS2AMPS]/PlasmaSpeciesAtomicMass;
+        *((double*)(offset+PlasmaTemperatureOffset))=(State[rhoBATSRUS2AMPS]>0.0) ? State[pBATSRUS2AMPS]/(Kbol*State[rhoBATSRUS2AMPS]/PlasmaSpeciesAtomicMass) : 0.0;
+
+        //get pressure
+        *((double*)(offset+PlasmaPressureOffset))=State[pBATSRUS2AMPS];
+
+        //bulk velocity and magnetic field
+        for (idim=0;idim<3;idim++) {
+          *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=State[mxBATSRUS2AMPS+idim];
+          *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim];
+        }
+
       }
+      else {
+        *((double*)(offset+PlasmaNumberDensityOffset))=0.0;
+        *((double*)(offset+PlasmaTemperatureOffset))=0.0;
+        *((double*)(offset+PlasmaPressureOffset))=0.0;
 
-      p=State[0];
-      n=State[0];
-      T=(n>0.0) ? p/(n*Kbol) : 0.0;
-
-      *((double*)(offset+PlasmaPressureOffset))=p;
-      *((double*)(offset+PlasmaNumberDensityOffset))=n;
-      *((double*)(offset+PlasmaTemperatureOffset))=T;
+        for (idim=0;idim<3;idim++) {
+          *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=0.0;
+          *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=0.0;
+        }
+      }
     }
   }
   else {
