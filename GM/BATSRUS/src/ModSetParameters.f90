@@ -830,11 +830,11 @@ subroutine MH_set_parameters(TypeAction)
               !call read_var('nRadioFrequency', nRadioFrequency)
               call read_var('StringRadioFrequency', &
                    StringRadioFrequency_I(iFile))
-              call read_var('X_Size_Image', X_Size_Image(ifile))
-              call read_var('Y_Size_Image', Y_Size_Image(ifile))
+              call read_var('xSizeImage', X_Size_Image(ifile))
+              call read_var('ySizeImage', Y_Size_Image(ifile))
               ! read the number of pixels
-              call read_var('n_Pix_X', n_Pix_X(ifile))            
-              call read_var('n_Pix_Y', n_Pix_Y(ifile))            
+              call read_var('nPixX', n_Pix_X(ifile))            
+              call read_var('nPixY', n_Pix_Y(ifile))            
            elseif (index(plot_string,'ion')>0) then
               plot_area='ion'
            elseif(index(plot_string,'1d')>0)then
@@ -2452,15 +2452,19 @@ contains
     select case(TypeFluxNeutral)
     case('default')
        select case(FluxType)
-       case('Rusanov', 'Linde')
+       case('Rusanov', 'Linde', 'Sokolov', 'Godunov')
           TypeFluxNeutral = FluxType
        case default
           TypeFluxNeutral = 'Linde'
        end select
     case('RUSANOV','TVDLF','Rusanov')
        TypeFluxNeutral = 'Rusanov'
-    case('LINDE','HLLEL','Linde')
+    case('LINDE','HLLE','Linde')
        TypeFluxNeutral = 'Linde'
+    case('SOKOLOV','AW','Sokolov')
+       TypeFluxNeutral = 'Sokolov'
+    case('GODUNOV','Godunov')
+       TypeFluxNeutral = 'Godunov'
     case default
        if(iProc==0)then
           write(*,'(a)')NameSub// &
@@ -2528,11 +2532,7 @@ contains
        if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
     end if
 
-    if(nStage == 1)then
-       UseBDF2 = .false.
-    elseif (time_accurate .and. nStage == 2)then
-       UseBDF2 = .true.
-    end if
+    UseBdf2 = nStage > 1 .and. time_accurate
 
     ! Make sure periodic boundary conditions are symmetric
     if(any(TypeBc_I(1:2)=='periodic')) TypeBc_I(1:2)='periodic'
