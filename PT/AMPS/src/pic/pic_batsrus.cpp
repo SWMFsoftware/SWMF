@@ -14,9 +14,9 @@
 #include <fstream>
 #include <cstdlib>
 
+//the definition of the fortran wrapper functinos from pic_batsrus_wrapper.f90
 extern "C"
 {
-
   void batsrus2amps_get_nvar_(int *nVar);
   void batsrus2amps_domain_limits_(double *xmin,double *xmax);
   void batsrus2amps_openfile_(char *FileName,int *FileNameLength);
@@ -27,15 +27,24 @@ extern "C"
   void batsrus2amps_set_mpi_parameters_(int* ThisThread,int *nTotalThreads,int *Communicator);
 }
 
+//definition of the variabled from BATSRUS namespace
+double PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::PlasmaSpeciesAtomicMass=_AMU_;
+double PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::UnitLength=1.0;
 
+//read BATSRUS' .idl file
 void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static double *StateLocal=NULL,*State=NULL;
   static int nVar;
 
+  //the offsets of the physical variables in the .idl file
+  static int rhoBATSRUS2AMPS=-1;
+  static int mxBATSRUS2AMPS=-1,myBATSRUS2AMPS=-1,mzBATSRUS2AMPS=-1;
+  static int bxBATSRUS2AMPS=-1,byBATSRUS2AMPS=-1,bzBATSRUS2AMPS=-1;
+  static int pBATSRUS2AMPS=-1;
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     //open data file
-    char fullname[_MAX_STRING_LENGTH_PIC_],varlist[_MAX_STRING_LENGTH_PIC_];
+    char fullname[_MAX_STRING_LENGTH_PIC_],NameVar[_MAX_STRING_LENGTH_PIC_];
     int length=_MAX_STRING_LENGTH_PIC_;
 
     //sprintf(fullname,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
@@ -44,27 +53,67 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(const char *fname,cTreeN
 
     sprintf(fullname,"%s",fname);
 
-    for (length=0;length<_MAX_STRING_LENGTH_PIC_;length++) if (fullname[length]==0) {
-//      length-=1;
-      break;
-    }
 
-//    length++;
-
+    //export MPI parameters into BATL
     int iComm=MPI_Comm_c2f(MPI_GLOBAL_COMMUNICATOR);
-
     batsrus2amps_set_mpi_parameters_(&PIC::ThisThread,&PIC::nTotalThreads,&iComm);
 
-//    batsrus2amps_read_file_header_(fullname,&length);
-//    batsrus2amps_get_namevardata_(varlist,&length);
-//    batsrus2amps_get_nvar_(&nVar);
 
+    //open the data file
+    for (length=0;length<_MAX_STRING_LENGTH_PIC_;length++) if (fullname[length]==0) break;
     batsrus2amps_openfile_(fullname,&length);
 
-    batsrus2amps_get_namevardata_(varlist,&length);
+    //read the variable nabmer and string
+    length=_MAX_STRING_LENGTH_PIC_;
+    batsrus2amps_get_namevardata_(NameVar,&length);
     batsrus2amps_get_nvar_(&nVar);
     State=new double [nVar+1];
     StateLocal=new double [nVar+1];
+
+    //parse the variable line
+    char vname[200];
+    int i0=0,i1=0;
+
+    while ((NameVar[i0]!=0)&&(NameVar[i0]==' ')) i0++;
+
+    for (int n=0;n<nVar;n++) {
+      i1=i0;
+      while (NameVar[i1]!=' ') {
+        vname[i1-i0]=tolower(NameVar[i1]);
+        i1++;
+      }
+
+      vname[i1-i0]=0;
+
+      if (strcmp(vname,"rho")==0) rhoBATSRUS2AMPS=n;
+
+      if (strcmp(vname,"mx")==0) mxBATSRUS2AMPS=n;
+      if (strcmp(vname,"my")==0) myBATSRUS2AMPS=n;
+      if (strcmp(vname,"mz")==0) mzBATSRUS2AMPS=n;
+
+      if (strcmp(vname,"bx")==0) bxBATSRUS2AMPS=n;
+      if (strcmp(vname,"by")==0) byBATSRUS2AMPS=n;
+      if (strcmp(vname,"bz")==0) bzBATSRUS2AMPS=n;
+
+      if (strcmp(vname,"p")==0) pBATSRUS2AMPS=n;
+
+      i0=i1;
+      while ((NameVar[i0]!=0)&&(NameVar[i0]==' ')) i0++;
+    }
+
+    //check whether the state vector containes all nessesary physical quantaties
+    if (rhoBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: rho is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+
+    if (mxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Mx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if (myBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: My is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if (mzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Mz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+
+    if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if (bzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+
+    if (pBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: p is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+
 
     int IsFound;
     double x[3]={0.0,0.0,0.0};
