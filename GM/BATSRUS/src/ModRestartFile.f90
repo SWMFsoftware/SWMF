@@ -353,7 +353,7 @@ contains
     use ModMain,       ONLY: UseBody2
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
-         RadiusMin, RadiusMax, TypeGeometry
+         RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
@@ -362,13 +362,14 @@ contains
     use ModIO,       ONLY: NameMaxTimeUnit
 
     integer :: iFluid
+    logical :: isLimitedGeometry
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
 
     NameFile = trim(NameRestartOutDir)//NameHeaderFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
-    
+
     open(unit_tmp,file=NameFile)
 
     write(unit_tmp,'(a)')'#CODEVERSION'
@@ -439,10 +440,25 @@ contains
     write(unit_tmp,'(a)')'#TIMESIMULATION'
     write(unit_tmp,'(es22.15,a18)')time_simulation,'tSimulation'
     write(unit_tmp,*)
-    if(.not.IsCartesian)then                        
-       write(unit_tmp,'(a)')'#GRIDGEOMETRY'
+    if(.not.IsCartesian)then
+       isLimitedGeometry=.false.
+       if(abs(CoordDimMin_D(1)) >1e-15 .or. abs(CoordDimMax_D(1))>1e-15) &
+            isLimitedGeometry=.true.
+       if(isLimitedGeometry) then
+          write(unit_tmp,'(a)')'#GRIDGEOMETRYLIMIT'
+       else 
+          write(unit_tmp,'(a)')'#GRIDGEOMETRY'
+       endif
        write(unit_tmp,'(a20,a20)')TypeGeometry, 'TypeGeometry'
        if(IsGenRadius) write(unit_tmp,'(a100)')NameGridFile
+       if(isLimitedGeometry) then
+          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(1),'Coord1Min'
+          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(1),'Coord1Max'
+          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(2),'Coord2Min'
+          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(2),'Coord2Max'
+          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(3),'Coord3Min'
+          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(3),'Coord3Max'
+       endif
        write(unit_tmp,*)
     end if
     write(unit_tmp,'(a)')'#GRID'
@@ -461,7 +477,7 @@ contains
        write(unit_tmp,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
        write(unit_tmp,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
        write(unit_tmp,*)
-    end if                                      
+    end if
     write(unit_tmp,'(a)')'#COORDSYSTEM'
     write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
     write(unit_tmp,*)

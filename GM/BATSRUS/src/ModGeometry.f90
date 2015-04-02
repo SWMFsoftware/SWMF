@@ -23,7 +23,10 @@ module ModGeometry
   real :: xyzStart_BLK(3,MaxBlock)
   real :: XyzMin_D(3)
   real :: XyzMax_D(3)
+  real :: CoordDimMin_D(3)=0
+  real :: CoordDimMax_D(3)=0
   real :: RadiusMin = -1.0, RadiusMax = -1.0
+  
 
   ! Mirror symmetry in the 3 directions
   integer:: nMirror_D(3) = 1

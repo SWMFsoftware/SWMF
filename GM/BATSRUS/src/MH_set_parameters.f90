@@ -12,7 +12,7 @@ subroutine MH_set_parameters(TypeAction)
        read_b0_param, init_mod_b0
   use ModGeometry, ONLY: init_mod_geometry, TypeGeometry, nMirror_D, &
        x1,x2,y1,y2,z1,z2,XyzMin_D,XyzMax_D,RadiusMin,RadiusMax,&
-       MinFaceBoundary, MaxFaceBoundary, &
+       MinFaceBoundary, MaxFaceBoundary, CoordDimMin_D, CoordDimMax_D, &
        read_gen_radial_grid, set_gen_radial_grid, NameGridFile
   use ModNodes, ONLY: init_mod_nodes
   use ModImplicit
@@ -1585,9 +1585,11 @@ subroutine MH_set_parameters(TypeAction)
         end if
         if(NameCommand == '#GRIDGEOMETRYLIMIT')then
            do iDim = 1, nDim
-              call read_var('CoordMin_D', XyzMin_D(iDim))
-              call read_var('CoordMax_D', XyzMax_D(iDim))
+              call read_var('CoordMin_D', CoordDimMin_D(iDim))
+              call read_var('CoordMax_D', CoordDimMax_D(iDim))
            end do
+           XyzMin_D = CoordDimMin_D
+           XyzMax_D = CoordDimMax_D
            if(TypeGeometry(1:9) == 'spherical')then
               RadiusMin = XyzMin_D(1)
               RadiusMax = XyzMax_D(1)
