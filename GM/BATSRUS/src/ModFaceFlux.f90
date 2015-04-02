@@ -61,19 +61,21 @@ module ModFaceFlux
   ! Number of fluxes including pressure and energy fluxes
   integer, parameter :: nFlux=nVar+nFluid
 
-  ! Range of fluid indexes for the current solver
+  ! Range of fluid and variable indexes for the current solver
   integer:: iFluidMin = 1, iFluidMax = nFluid
+  integer:: iVarMin   = 1, iVarMax   = nVar
+  integer:: iEnergyMin= nVar+1, iEnergyMax = nVar + nFluid
 
   ! Neutral fluids may use different flux function
   logical:: UseDifferentNeutralFlux = .false.
   character(len=10):: TypeFluxNeutral = 'default'
 
   ! Logicals so we don't need string comparisons
-  logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe, DoGodunov
-  logical :: DoLfNeutral, DoHllNeutral
+  logical :: DoSimple, DoLf, DoHll, DoHlld, DoAw, DoRoeOld, DoRoe
+  logical :: DoLfNeutral, DoHllNeutral, DoAwNeutral, DoGodunovNeutral
 
-  !1D burgers equation, works for Hd  equations. 
-  logical:: DoBurgers = .False.
+  ! 1D burgers equation, works for Hd  equations. 
+  logical:: DoBurgers = .false.
 
   logical :: UseLindeFix
   logical :: DoTestCell
@@ -391,11 +393,11 @@ contains
     DoAw     = TypeFlux == 'Sokolov'
     DoRoeOld = TypeFlux == 'RoeOld'
     DoRoe    = TypeFlux == 'Roe'
-    DoGodunov= TypeFlux == 'Godunov'
 
-    UseDifferentNeutralFlux = UseNeutralFluid .and. TypeFluxNeutral /= TypeFlux
-    DoLfNeutral             = TypeFluxNeutral == 'Rusanov'
-    DoHllNeutral            = TypeFluxNeutral == 'Linde'
+    DoLfNeutral      = TypeFluxNeutral == 'Rusanov'
+    DoHllNeutral     = TypeFluxNeutral == 'Linde'
+    DoAwNeutral      = TypeFluxNeutral == 'Sokolov'
+    DoGodunovNeutral = TypeFluxNeutral == 'Godunov'
 
     UseRS7 = DoRoe  ! This is always true for the current implementation
 
@@ -1047,6 +1049,8 @@ contains
     real :: NatomicSi, TeSi
 
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    character(len=*), parameter:: NameSub = 'get_numerical_flux'
     !-----------------------------------------------------------------------
 
     ! Initialize diffusion coefficient for time step restriction
@@ -1218,7 +1222,7 @@ contains
     end if
 
     if(DoLf .or. DoHll .or. DoAw .or. DoRoe .or. DoRoeOld &
-         .or. UseDifferentNeutralFlux)then
+         .or. DoLfNeutral .or. DoHllNeutral .or. DoAwNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
             StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
@@ -1247,37 +1251,32 @@ contains
        end if
     end if
 
-    if(UseDifferentNeutralFlux)then
-       iFluidMin = 1; iFluidMax = IonLast_
-    else
-       iFluidMin = 1; iFluidMax = nFluid
-    end if
-
     ! Initialize CmaxDt so we can take maximum of ion and neutral cmaxdt
     CmaxDt = 0.0
 
-    if(DoSimple)then
-       if(UseDtFixed)then 
-          CmaxDt = 1.0
-       else
+    ! Calculate ion fluxes first (all ion fluids together)
+    if(UseB)then
+       iFluidMin = 1; iFluidMax = IonLast_
+       iVarMin = iRho_I(iFluidMin); iVarMax = iP_I(iFluidMax)
+       iEnergyMin = nVar + iFluidMin; iEnergyMax = nVar + iFluidMax
+
+       if(DoSimple)then
           call simple_flux
+       elseif(DoLf)then
+          call lax_friedrichs_flux
+       elseif(DoHll)then
+          call harten_lax_vanleer_flux
+       elseif(DoHlld)then
+          call hlld_flux
+       elseif(DoAw)then
+          call artificial_wind
+       elseif(DoRoeOld)then
+          call roe_solver(Flux_V)
+       elseif(DoRoe)then
+          call roe_solver_new
+       else
+          call stop_mpi(NameSub//': Unknown flux type for ions')
        end if
-    end if
-    if(DoLf)     call lax_friedrichs_flux
-    if(DoHll)    call harten_lax_vanleer_flux
-    if(DoHlld)   call hlld_flux
-    if(DoAw)     call artificial_wind
-    if(DoRoeOld) call roe_solver(Flux_V)
-    if(DoRoe)    call roe_solver_new
-    if(DoGodunov)call godunov_flux
-
-    if(UseDifferentNeutralFlux)then
-       iFluidMin = IonLast_+1; iFluidMax = nFluid
-
-       if(DoLfNeutral)  call lax_friedrichs_flux
-       if(DoHllNeutral) call harten_lax_vanleer_flux
-
-       iFluidMin = 1
     end if
 
     if(UseLindeFix)then
@@ -1297,6 +1296,29 @@ contains
           Flux_V(Energy_) = Flux_V(Energy_) - Cmax*DiffE
        end if
     end if
+
+    ! Calculate neutral fluxes one-by-one
+    do iFluidMin = NeutralFirst_, nFluid
+       iFluidMax = iFluidMin
+       iFluid = iFluidMin
+       call select_fluid
+       iVarMin = iRho; iVarMax = iP
+       iEnergyMin = iEnergy; iEnergyMax = iEnergy
+       if(DoLfNeutral)then
+          call lax_friedrichs_flux
+       elseif(DoHllNeutral)then
+          call harten_lax_vanleer_flux
+       elseif(DoAwNeutral)then
+          call artificial_wind
+       elseif(DoGodunovNeutral)then
+          call godunov_flux
+       else
+          call stop_mpi(NameSub//': Unknown flux type for neutrals')
+       end if
+    end do
+
+    ! Restore
+    iFluidMin = 1; iFluidMax = nFluid
 
     ! Multiply Flux by Area. This is needed in div Flux in update_states_MHD
     Flux_V = Flux_V*Area
@@ -1334,7 +1356,11 @@ contains
       real    :: Cmax_I(nFluid)
       !----------------------------------------------------------------------
       ! This is needed for the time step constraint only (CmaxDt)
-      call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
+      if(UseDtFixed)then 
+         CmaxDt = 1.0
+      else
+         call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
+      end if
 
     end subroutine simple_flux
 
@@ -1342,34 +1368,33 @@ contains
     subroutine lax_friedrichs_flux
 
       real    :: Cmax_I(nFluid)
-      integer :: iVar
       !----------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
 
-      if(UseNeutralFluid)then
-         do iFluid = iFluidMin, iFluidMax
-            Cmax = Cmax_I(iFluid)
-            do iVar = iRho_I(iFluid), iP_I(iFluid)
-               Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
-                    - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
-            end do
-            iVar = nVar + iFluid ! energy index
-            Flux_V(iVar) = 0.5*(FluxLeft_V(iVar) + FluxRight_V(iVar) &
-                 - Cmax*(StateRightCons_V(iVar) - StateLeftCons_V(iVar)))
-         end do
-         ! Cmax is used for Linde fix of Bn flux, hyperbolic cleaning, etc.
-         Cmax = Cmax_I(1)
-      else
-         Cmax = maxval(Cmax_I)
-         Flux_V = 0.5*(FluxLeft_V + FluxRight_V &
-              - Cmax*(StateRightCons_V - StateLeftCons_V))
-      end if
+      Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
+      Flux_V(iVarMin:iVarMax) = &
+           0.5*(FluxLeft_V(iVarMin:iVarMax) + FluxRight_V(iVarMin:iVarMax) &
+           - Cmax*(StateRightCons_V(iVarMin:iVarMax) &
+           -       StateLeftCons_V(iVarMin:iVarMax)))
+      ! energy flux
+      Flux_V(iEnergyMin:iEnergyMax) = &
+           0.5*(FluxLeft_V(iEnergyMin:iEnergyMax) + &
+           FluxRight_V(iEnergyMin:iEnergyMax) &
+           - Cmax*(StateRightCons_V(iEnergyMin:iEnergyMax) &
+           -       StateLeftCons_V(iEnergyMin:iEnergyMax)))
 
-      Unormal_I = 0.5*(UnLeft_I + UnRight_I)
-      Enormal   = 0.5*(EnLeft + EnRight)
-      if(UseMultiIon)then
-         Pe = 0.5*(PeLeft + PeRight)
-         if(UseWavePressure) Pwave = 0.5*(PwaveLeft + PwaveRight)
+      Unormal_I(iFluidMin:iFluidMax) = 0.5* &
+           (UnLeft_I(iFluidMin:iFluidMax) + UnRight_I(iFluidMin:iFluidMax))
+
+      ! These quantities should be calculated with the ion fluxes
+      if(iFluidMin == 1)then
+         Enormal   = 0.5*(EnLeft + EnRight)
+         if(UseElectronPressure) &
+              Unormal_I(eFluid_) = 0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
+         if(UseMultiIon)then
+            Pe = 0.5*(PeLeft + PeRight)
+            if(UseWavePressure) Pwave = 0.5*(PwaveLeft + PwaveRight)
+         end if
       end if
 
     end subroutine lax_friedrichs_flux
@@ -1379,7 +1404,6 @@ contains
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
-      integer :: iVar
       !-----------------------------------------------------------------------
 
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
@@ -1392,60 +1416,46 @@ contains
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
 
+      Cmax   =maxval(Cmax_I(iFluidMin:iFluidMax))
+      Cleft  =min(0.0, &
+           minval(CleftStateLeft_I(iFluidMin:iFluidMax)), &
+           minval(CleftStateHat_I(iFluidMin:iFluidMax)))
+      Cright =max(0.0, &
+           maxval(CrightStateRight_I(iFluidMin:iFluidMax)), &
+           maxval(CrightStateHat_I(iFluidMin:iFluidMax)))
 
-      if(UseNeutralFluid)then
-         ! Cmax is used for Linde fix of Bn flux, hyperbolic cleaning, etc.
-         Cmax = Cmax_I(1)
+      WeightLeft  = Cright/(Cright - Cleft)
+      WeightRight = 1.0 - WeightLeft
+      Diffusion   = Cright*WeightRight
 
-         do iFluid = iFluidMin, iFluidMax
-            Cleft =min(0.0, CleftStateLeft_I(iFluid), CleftStateHat_I(iFluid))
-            Cright=max(0.0,CrightStateRight_I(iFluid),CrightStateHat_I(iFluid))
+      Flux_V(iVarMin:iVarMax) = &
+           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
+           -            StateLeftCons_V(iVarMin:iVarMax)) )
 
-            WeightLeft  = Cright/(Cright - Cleft)
-            WeightRight = 1.0 - WeightLeft
-            Diffusion   = Cright*WeightRight
+      ! Energy flux
+      Flux_V(iEnergyMin:iEnergyMax) = &
+           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
+           -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
 
-            do iVar = iRho_I(iFluid), iP_I(iFluid)
-               Flux_V(iVar) = &
-                    (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar)&
-                    - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
-            end do
+      ! Weighted average of the normal speed
+      Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
 
-            iVar = nVar + iFluid ! energy index
-            Flux_V(iVar) = &
-                 (WeightRight*FluxRight_V(iVar)+WeightLeft*FluxLeft_V(iVar) &
-                 - Diffusion*(StateRightCons_V(iVar)-StateLeftCons_V(iVar)))
-
-            ! Weighted average of the normal speed
-            Unormal_I(iFluid) = &
-                 WeightRight*UnRight_I(iFluid) + WeightLeft*UnLeft_I(iFluid)
-
-            if(iFluid==1) Unormal_I(eFluid_) = &
-                 WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
-
-         end do
-      else
-         Cmax   = maxval(Cmax_I)
-         Cleft  =min(0.0, minval(CleftStateLeft_I), minval(CleftStateHat_I))
-         Cright =max(0.0, maxval(CrightStateRight_I), maxval(CrightStateHat_I))
-
-         WeightLeft  = Cright/(Cright - Cleft)
-         WeightRight = 1.0 - WeightLeft
-         Diffusion   = Cright*WeightRight
-
-         Flux_V = &
-              (WeightRight*FluxRight_V+WeightLeft*FluxLeft_V&
-              - Diffusion*(StateRightCons_V-StateLeftCons_V))
-
-         ! Weighted average of the normal speed
-         Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
-      end if
-
-      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
-      if(UseMultiIon)then
-         Pe     = WeightRight*PeRight   + WeightLeft*PeLeft
-         if(UseWavePressure) &
-              Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+      ! These quantities should be calculated with the ion fluxes
+      if(iFluidMin == 1)then
+         Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
+         if(UseElectronPressure) Unormal_I(eFluid_) = &
+              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseMultiIon)then
+            Pe = WeightRight*PeRight   + WeightLeft*PeLeft
+            if(UseWavePressure) &
+                 Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+         end if
       end if
 
     end subroutine harten_lax_vanleer_flux
@@ -1458,32 +1468,52 @@ contains
 
       ! The propagation speeds are modified by the DoAw = .true. !
       call get_speed_max(State_V, B0x, B0y, B0z,  &
-           Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I)
+           Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
+           UseAwSpeedIn = .true.)
 
-      Cmax   = maxval(Cmax_I)
-      Cleft  = min(0.0, minval(Cleft_I))
-      Cright = max(0.0, maxval(Cright_I))
+      Cmax   = maxval(Cmax_I(iFluidMin:iFluidMax))
+      Cleft  = min(0.0, minval(Cleft_I(iFluidMin:iFluidMax)))
+      Cright = max(0.0, maxval(Cright_I(iFluidMin:iFluidMax)))
 
       WeightLeft  = Cright/(Cright - Cleft)
       WeightRight = 1.0 - WeightLeft
       Diffusion   = Cright*WeightRight
 
-      Flux_V = &
-           (WeightRight*FluxRight_V + WeightLeft*FluxLeft_V &
-           - Diffusion*(StateRightCons_V - StateLeftCons_V))
+      Flux_V(iVarMin:iVarMax) = &
+           ( WeightRight*FluxRight_V(iVarMin:iVarMax)     &
+           + WeightLeft*FluxLeft_V(iVarMin:iVarMax)       &
+           - Diffusion*(StateRightCons_V(iVarMin:iVarMax) &
+           -            StateLeftCons_V(iVarMin:iVarMax)) )
+
+      ! Energy flux
+      Flux_V(iEnergyMin:iEnergyMax) = &
+           ( WeightRight*FluxRight_V(iEnergyMin:iEnergyMax)     &
+           + WeightLeft*FluxLeft_V(iEnergyMin:iEnergyMax)       &
+           - Diffusion*(StateRightCons_V(iEnergyMin:iEnergyMax) &
+           -            StateLeftCons_V(iEnergyMin:iEnergyMax)) )
 
       ! Weighted average of the normal speed and electric field
-      Unormal_I = WeightRight*UnRight_I + WeightLeft*UnLeft_I
-      Enormal   = WeightRight*EnRight   + WeightLeft*EnLeft
-      if(UseMultiIon)then
-         Pe = WeightRight*PeRight + WeightLeft*PeLeft
-         if(UseWavePressure) &
-              Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+      Unormal_I(iFluidMin:iFluidMax) = &
+           WeightRight*UnRight_I(iFluidMin:iFluidMax) &
+           + WeightLeft*UnLeft_I(iFluidMin:iFluidMax)
+
+      ! These quantities should be calculated with the ion fluxes
+      if(iFluidMin == 1)then
+         Enormal   = WeightRight*EnRight + WeightLeft*EnLeft
+         if(UseElectronPressure) Unormal_I(eFluid_) = &
+              WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
+         if(UseMultiIon)then
+            Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            if(UseWavePressure) &
+                 Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
+         end if
       end if
 
     end subroutine artificial_wind
     !==========================================================================
     subroutine hlld_flux
+
+      ! The HLLD scheme works for single ion fluid only
 
       use ModPhysics, ONLY: Inv_Gm1, gm1
       use ModNumConst, ONLY: cTiny
@@ -1493,7 +1523,7 @@ contains
       ! Rotated flux for vector variables
       real :: FluxRot_V(nFluxMhd)
 
-      ! Needed as an argument for get_physcal_flux
+      ! Needed as an argument for get_physical_flux
       real :: StateCons_V(nFlux)
 
       ! Left and right state (scalars and extra variables only)
@@ -1521,8 +1551,8 @@ contains
       real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
 
       integer, parameter :: ScalarMax_ = max(ScalarFirst_, ScalarLast_)
-      real :: Scalar_V(ScalarFirst_:ScalarMax_)
-      integer :: iVar
+      ! real :: Scalar_V(ScalarFirst_:ScalarMax_)
+      ! integer :: iVar
       !-----------------------------------------------------------------------
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
@@ -1609,9 +1639,9 @@ contains
          ! Density and scalars for left intermediate states
          InvSLUn = 1.0/(sL-Un)
          Rho     = DsRhoL*InvSLUn
-         do iVar = ScalarFirst_, ScalarLast_
-            Scalar_V(iVar) = StateLeft_V(iVar)*DsL*InvSLUn
-         end do
+         !do iVar = ScalarFirst_, ScalarLast_
+         !   Scalar_V(iVar) = StateLeft_V(iVar)*DsL*InvSLUn
+         !end do
 
          ! Tangential velocity and magnetic field 
          ! for the outer intermediate left state
@@ -1682,9 +1712,9 @@ contains
          ! Density and scalars for right intermediate states
          InvSRUn = 1.0/(sR-Un)
          Rho     = DsRhoR*InvSRUn
-         do iVar = ScalarFirst_, ScalarLast_
-            Scalar_V(iVar) = StateRight_V(iVar)*DsR*InvSRUn
-         end do
+         !do iVar = ScalarFirst_, ScalarLast_
+         !   Scalar_V(iVar) = StateRight_V(iVar)*DsR*InvSRUn
+         !end do
 
          ! Tangential velocity and magnetic field 
          ! for the outer intermediate right state
@@ -1806,6 +1836,8 @@ contains
     !==========================================================================
     subroutine godunov_flux
 
+      ! The Godunov flux works for hydro fluid (no magnetic field)
+
       use ModAdvance,  ONLY: UseElectronPressure
       use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
            pL, pR, UnL, UnR, UnStar, pStar
@@ -1822,13 +1854,13 @@ contains
       integer::iVar
       !-----------------------------------------------------------------------
       ! Scalar variables
-      RhoL = StateLeft_V(Rho_)
-      pL   = StateLeft_V(p_)
-      RhoR = StateRight_V(Rho_)
-      pR   = StateRight_V(p_)
+      RhoL = StateLeft_V(iRho)
+      pL   = StateLeft_V(iP)
+      RhoR = StateRight_V(iRho)
+      pR   = StateRight_V(iP)
 
-      UnL  = sum( StateLeft_V(Ux_:Uz_) *Normal_D )
-      UnR  = sum( StateRight_V(Ux_:Uz_)*Normal_D )
+      UnL  = sum( StateLeft_V(iUx:iUz) *Normal_D )
+      UnR  = sum( StateRight_V(iUx:iUz)*Normal_D )
 
       if(UseWavePressure)then
          ! Increase maximum speed due to isotropic wave pressure
@@ -1842,20 +1874,20 @@ contains
          !It is easier to add zero than using if(UseWavePressure)
          pWaveL = 0.0; pWaveR = 0.0
       end if
-      if(UseElectronPressure)then
-         ! StateLeft_V(p_) and StateRight_V(p_) are the ion pressure
+      if(UseElectronPressure .and. iFluid==1)then
+         ! StateLeft_V(iP) and StateRight_V(iP) are the ion pressure
          ! Add the electron pressure to the total pressure
          PeL = StateLeft_V(Pe_)
          PeR = StateRight_V(Pe_)
          pL = pL + PeL
          pR = pR + PeR
       else
-         ! StateLeft_V(p_) and StateRight_V(p_) already include the electron
+         ! StateLeft_V(iP) and StateRight_V(iP) already include the electron
          ! pressure
          PeL = 0.0; PeR = 0.0
       end if
 
-      !Take the parameters at the Contact Discontinuity (CD)
+      ! Take the parameters at the Contact Discontinuity (CD)
       call pu_star
 
       ! At strong shocks use the artificial wind scheme
@@ -1908,8 +1940,8 @@ contains
       pTotal               = p
       p                    = pTotal - pWaveStar - PeStar
 
-      StateStar_V(Rho_)    = Rho
-      StateStar_V(Ux_:Uz_) = StateStar_V(Ux_:Uz_) + (Un-UnSide)*Normal_D
+      StateStar_V(iRho)    = Rho
+      StateStar_V(iUx:iUz) = StateStar_V(iUx:iUz) + (Un-UnSide)*Normal_D
       StateStar_V(P_)      = p
       do iVar=ScalarFirst_, ScalarLast_
          StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
@@ -1917,35 +1949,37 @@ contains
 
       ! Calculate flux 
       ! (1) calculate momenta
-      StateStar_V(RhoUx_:RhoUz_) = StateStar_V(Ux_:Uz_) * Rho
+      StateStar_V(iRhoUx:iRhoUz) = StateStar_V(iUx:iUz) * Rho
 
       ! (2) take advective part of the flux
       Flux_V(1:nVar) = StateStar_V * Un 
 
       ! (3) add the pressure gradient
       ! also add the force due to the radiation and electron pressure gradient
-      Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + pTotal*Normal_D
+      Flux_V(iRhoUx:iRhoUz) = Flux_V(iRhoUx:iRhoUz) + pTotal*Normal_D
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
-      e = inv_gm1*p + 0.5*sum(StateStar_V(RhoUx_:RhoUz_)**2)/Rho
-      Flux_V(Energy_) = (e + pTotal)*Un
+      e = inv_gm1*p + 0.5*sum(StateStar_V(iRhoUx:iRhoUz)**2)/Rho
+      Flux_V(iEnergyMin) = (e + pTotal)*Un
 
-      Cmax      = max(wR, -wL)
-      CmaxDt    = Cmax
-      Unormal_I = Un
+      Cmax                 = max(wR, -wL)
+      CmaxDt               = Cmax
+      Unormal_I(iFluidMin) = Un
 
-      if(UseWavePressure)then
-         GammaRatio = inv_gm1*(GammaWave - 1)
-         Factor = (1.0 - GammaRatio) + GammaRatio*Adiabatic/Isothermal
-         do iVar = WaveFirst_, WaveLast_
-            Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
-         end do
+      if(iFluidMin == 1)then
+         if(UseWavePressure)then
+            GammaRatio = inv_gm1*(GammaWave - 1)
+            Factor = (1.0 - GammaRatio) + GammaRatio*Adiabatic/Isothermal
+            do iVar = WaveFirst_, WaveLast_
+               Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
+            end do
+         end if
+         if(UseElectronPressure) &
+              Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
+
+         if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
       end if
-      if(UseElectronPressure) &
-           Flux_V(Pe_) = (Adiabatic/Isothermal)*StateStar_V(Pe_)*Un
-
-      if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
 
     end subroutine godunov_flux
 
@@ -2628,7 +2662,7 @@ contains
          FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
          FluxRight_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
 
-    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0         
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)
@@ -2796,7 +2830,8 @@ contains
   end subroutine calc_simple_cell_flux
   !===========================================================================
 
-  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I)
+  subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
+       UseAwSpeedIn)
 
     use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUz, iP
     use ModMain, ONLY: Climit
@@ -2809,15 +2844,21 @@ contains
     real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
+    logical, optional, intent(in):: UseAwSpeedIn    ! Use AW speed definitions
+
+    logical:: UseAwSpeed
+
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
     !--------------------------------------------------------------------------
+    UseAwSpeed = .false.
+    if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
 
        if(iFluid == 1 .and. UseB)then
-          if(DoAW)then
+          if(UseAwSpeed)then
              ! For AW flux UnLeft_I,UnRight_I 
              ! are already set by get_physical_flux
              UnLeft = minval(UnLeft_I(1:nIonFluid))
@@ -2832,7 +2873,7 @@ contains
        elseif(DoBurgers)then
           call get_burgers_speed
        else
-          if(DoAw)then
+          if(UseAwSpeed)then
              UnLeft = UnLeft_I(iFluid)
              UnRight= UnRight_I(iFluid)
           end if
@@ -2943,7 +2984,7 @@ contains
       ! In extreme cases "slow" wave can be faster than "fast" wave
       ! so take the maximum of the two
 
-      if(DoAw)then
+      if(UseAwSpeed)then
          Un           = min(UnRight, UnLeft)
          Cleft_I(1)   = min(Un*GammaA2 - Fast, Un - Slow)
          Un           = max(UnLeft, UnRight)
@@ -3026,7 +3067,7 @@ contains
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
-      if(DoAw)then
+      if(UseAwSpeed)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results is
          ! an upper estimate of the left and right Alfven speeds 
@@ -3163,7 +3204,7 @@ contains
          Fast = max(Fast, sqrt( FullBn*FullBn / StateRight_V(iRhoIon_I(1)) ))
       end if
 
-      if(DoAw)then
+      if(UseAwSpeed)then
          if(HallCoeff > 0.0)then
             Cleft_I(1)   = min(UnLeft, UnRight, HallUnLeft, HallUnRight)
             Cright_I(1)  = max(UnLeft, UnRight, HallUnLeft, HallUnRight)
@@ -3198,7 +3239,7 @@ contains
             write(*,*)NameSub,' Area,Area2=',Area, Area2
             write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D
          end if
-         if(DoAw)then
+         if(UseAwSpeed)then
             write(*,*)NameSub,' UnLeft=',  UnLeft
             write(*,*)NameSub,' UnRight=', UnRight
          end if
