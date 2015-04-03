@@ -66,6 +66,22 @@ CouplerMode=swmf !ices !!off, ices, swmf
 
 #endGeneral
 
+#block ../oh.input.pl !process the settings of the Outer Heliosphere model
+  
+  !injection of the neutrals
+  InjectionVelocity=(26.3E3,0.0,-2.3E3);!default=(26.3E3,0.0,-2.3E3)
+  InjectionNDensity= 0.18E-6;		!default=0.18E-6
+  InjectionTemperature=6519;		!default=6519
+  
+  !domain settings
+  DomainXMin=(-2.25E14,-2.25E14,-2.25E14);!default=(-2.25E14,-2.25E14,-2.25E14)
+  DomainXMax=( 2.25E14, 2.25E14, 2.25E14);!default=( 2.25E14, 2.25E14, 2.25E14)
+  DomainDXmin = 1.8E13;			  !default=1.8E13
+  DomainDXMax = 1.8E13;			  !default=1.8E13
+
+#endblock
+
+
 #ParticleCollisions 
   model = off ! HS !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
@@ -73,34 +89,6 @@ CouplerMode=swmf !ices !!off, ices, swmf
   CollisionCrossSection=const \\ !const, function 
     const (Na,Na)= 1.23E-15
 #endParticleCollisions
-
-
-#Sampling 
-!  SampleParallelTangentialKineticTemperature=off \\ !on,off direction=const(0.0,0.0,0.0); direction=function(??????)
-!    direction=const(1.0,2.0,3.0)
-
-! VelocityDistributionSampling=on \\ !on, off
-!   x=(7.6E5,6.7E5,0.0), (2.8E5,5.6E5,0.0), (-2.3E5,3.0E5,0.0)  \\
-!   nSampleIntervals=500 \\
-!   vmin=-40e3, vmax=40e3
-
-#endSampling
-
-#IDF
-!  model=off! LB !off, qLB,LB
-!  vtRelaxation=off !on,off
-!  vvRelaxation=off !on,off
-!  rtRelaxation=on !on,off
-
-!  nVibModes(Na=1)
-!  nRotModes(Na=1)
-!  VibTemp(Na=2000)
-!  RotZnum(Na=0.25)
-
-!  TemperatureIndex(Na,Na)=1.0
-#endIDF
-
-
 
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
@@ -113,34 +101,11 @@ CouplerMode=swmf !ices !!off, ices, swmf
   define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
   define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2,t3,t4,t5,t6) OH::Loss::ReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
   define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) OH::Loss::LifeTime(t0,t1,t2,t3,t4)
-! define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) OH::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
-! define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
-! define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Europa::ExchangeSurfaceAreaDensity()
-! define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
-! define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
-
-!  SimulationStartTime=2009-01-24T00:00:00
 
   addPhysicalModelHeader=OH.h 
 
 
-
-!---------------------------------   SOURCE RATE --------------------------------------------
- 
-!  Source:ImpactVaporization=off \\ !on,off
-!    HeliocentricDistance=1.0*_AU_ \\ 
-!    SourceRatePowerIndex=0.0 \\
-!    SourceRate(N2)=1.69E22, SourceTemperature(N2)=6000.0  !//Killen-2012-JGR ;2500.0; //////1.79e21; //Killen-2012-JGR   ;1.1e22;  2.05e22 IV for Sarantos 2010 
-!
-!  Source:UserDefined=on \\ !on,off
-!    SourceProcessCode=VenticalSource \\
-!    SourceRate=ProtostellarNebula::UserdefinedSoruce::GetTotalProductionRate \\ !!!!!Moon::GetTotalProductionRateBjorn !!!Exosphere::SourceProcesses::ImpactVaporization::GetTotalProductionRate \\
-!    GenerateParticleProperties=ProtostellarNebula::UserdefinedSoruce::GenerateParticleProperties \\ !!Moon::GenerateParticlePropertiesBjorn !!Moon::GenerateParticlePropertiesBjorn  !!!Exosphere::SourceProcesses::ImpactVaporization::GenerateParticleProperties \\
-!    ModifySurfaceSpeciesAbundance=false !!!true,false
-!!   InitSurfaceSourceDistribution=SolarWindSputtering::SurfaceInjectionDistribution.Init
-!
-!
 #endblock
 
 #end
