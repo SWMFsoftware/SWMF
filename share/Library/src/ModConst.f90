@@ -181,7 +181,6 @@ contains
   end function kappa_0_e
 end module ModConst
 !====================================================================
-!====================================================================
 real function momentum_to_energy(Momentum,NameParticle)
   use ModConst
   implicit none
