@@ -2,8 +2,20 @@
 
 #include "OH.h"
 
+//  injection boundary condition
+double OH::InjectionVelocity[3] = {26.3E3, 0.0, -2.3E3};
+double OH::InjectionNDensity    = 0.18E-6;
+double OH::InjectionTemperature = 6519;
 
-// OUTPUT -----------------------------------------------------------------------------------
+// computational domain size
+double OH::DomainXMin[3] = {-2.25E14,-2.25E14,-2.25E14};
+double OH::DomainXMax[3] = { 2.25E14, 2.25E14, 2.25E14};
+double OH::DomainDXMin   = 1.8E13;
+double OH::DomainDXMax   = 1.8E13;
+
+
+
+// OUTPUT ---------------------------------------------------------------------
 int OH::Output::TotalDataLength = 0; 
 int OH::Output::ohSourceDensityOffset =-1; 
 int OH::Output::ohSourceMomentumOffset=-1;

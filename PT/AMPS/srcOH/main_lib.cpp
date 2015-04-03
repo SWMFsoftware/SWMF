@@ -1,4 +1,4 @@
-
+//$Id$
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +46,7 @@ double localResolution(double *x) {
   int idim;
   double lnR,res,r=0.0;
   
-  res = dxMinGlobal;
+  res = OH::DomainDXMin;
   return res;
 }
 
@@ -71,12 +71,10 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
    double ExternalNormal[3],ModelParticlesInjectionRate;
    int nface;
 
-   static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
-
    if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
      for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
        startNode->GetExternalNormal(ExternalNormal,nface);
-       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_H_SPEC_);
+       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(OH::InjectionNDensity,OH::InjectionTemperature,OH::InjectionVelocity,ExternalNormal,_H_SPEC_);
 
        if (ModelParticlesInjectionRate>0.0) return true;
      }
@@ -96,7 +94,6 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 
    if (spec!=_H_SPEC_) return 0; //inject only spec=0
 
-   static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
    double v[3];
 
 
@@ -111,7 +108,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
        startNode->GetExternalNormal(ExternalNormal,nface);
        TimeCounter=0.0;
 
-       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,spec);
+       ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(OH::InjectionNDensity,OH::InjectionTemperature,OH::InjectionVelocity,ExternalNormal,spec);
 
 
        if (ModelParticlesInjectionRate>0.0) {
@@ -129,7 +126,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
 	   nInjectedParticles++;
 
 	   //generate particles' velocity
-	   PIC::Distribution::InjectMaxwellianDistribution(v,vNA,tempNA,ExternalNormal,spec,-1);
+	   PIC::Distribution::InjectMaxwellianDistribution(v,OH::InjectionVelocity,OH::InjectionTemperature,ExternalNormal,spec,-1);
 
 	   PIC::ParticleBuffer::SetX(x,newParticleData);
 	   PIC::ParticleBuffer::SetV(v,newParticleData);
@@ -165,13 +162,12 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
   if (spec!=_H_SPEC_) return 0; //inject only spec=0
   
   double ModelParticlesInjectionRate=0.0;
-  static double vNA[3]={26.3E3,0.0,-2.3E3},nNA=0.18E-6,tempNA=6519;
   
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
 	startNode->GetExternalNormal(ExternalNormal,nface);
 	BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
-	ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,spec);
+	ModelParticlesInjectionRate+=BlockSurfaceArea*PIC::BC::CalculateInjectionRate_MaxwellianDistribution(OH::InjectionNDensity,OH::InjectionTemperature,OH::InjectionVelocity,ExternalNormal,spec);
       }
   }
   
@@ -253,7 +249,7 @@ void amps_init_mesh(){
   
   //generate only the tree
   PIC::Mesh::mesh.AllowBlockAllocation=false;
-  PIC::Mesh::mesh.init(xmin,xmax,localResolution);
+  PIC::Mesh::mesh.init(OH::DomainXMin,OH::DomainXMax,localResolution);
   PIC::Mesh::mesh.memoryAllocationReport();
   
   
@@ -343,12 +339,9 @@ void amps_time_step(){
 
      // write output file
      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-       PIC::RequiredSampleLength*=2;
-       if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
-       
-       
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
-       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+       if (PIC::Mesh::mesh.ThisThread==0) 
+	 cout << "AMPS: Output file " << PIC::DataOutputFileNumber<< " is done" << endl;
      }
      
 }
