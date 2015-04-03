@@ -74,10 +74,11 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
   static int nVar;
 
   //the offsets of the physical variables in the .idl file
-  static int rhoBATSRUS2AMPS=-1;
-  static int mxBATSRUS2AMPS=-1,myBATSRUS2AMPS=-1,mzBATSRUS2AMPS=-1;
-  static int bxBATSRUS2AMPS=-1,byBATSRUS2AMPS=-1,bzBATSRUS2AMPS=-1;
-  static int pBATSRUS2AMPS=-1;
+  static int rhoBATSRUS2AMPS=-2;
+  static int mxBATSRUS2AMPS=-2,myBATSRUS2AMPS=-2,mzBATSRUS2AMPS=-2;
+  static int uxBATSRUS2AMPS=-2,uyBATSRUS2AMPS=-2,uzBATSRUS2AMPS=-2;
+  static int bxBATSRUS2AMPS=-2,byBATSRUS2AMPS=-2,bzBATSRUS2AMPS=-2;
+  static int pBATSRUS2AMPS=-2;
 
   if (InitFlag==false) exit(__LINE__,__FILE__,"Error: the reader needs to be initialized first! Call PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::InitAMR before PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile");
 
@@ -121,6 +122,10 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
       if (strcmp(vname,"my")==0) myBATSRUS2AMPS=n;
       if (strcmp(vname,"mz")==0) mzBATSRUS2AMPS=n;
 
+      if (strcmp(vname,"ux")==0) uxBATSRUS2AMPS=n;
+      if (strcmp(vname,"uy")==0) uyBATSRUS2AMPS=n;
+      if (strcmp(vname,"uz")==0) uzBATSRUS2AMPS=n;
+
       if (strcmp(vname,"bx")==0) bxBATSRUS2AMPS=n;
       if (strcmp(vname,"by")==0) byBATSRUS2AMPS=n;
       if (strcmp(vname,"bz")==0) bzBATSRUS2AMPS=n;
@@ -134,9 +139,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
     //check whether the state vector containes all nessesary physical quantaties
     if (rhoBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: rho is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
-    if (mxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Mx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if (myBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: My is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if (mzBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Mz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if ((mxBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mx or ux is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if ((myBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: My or uy is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if ((mzBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mz or uz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
     if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
     if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
@@ -164,6 +169,8 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
 
       uname[i1-i0]=0;
 
+      if (strcmp(uname,"r")==0) --n; //the special coordinate is not a part of the vector that is returned by the interpolation routine
+
       if (strcmp(uname,"mp/cc")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E6/PlasmaSpeciesAtomicMass;
       if (strcmp(uname,"km/s")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E3;
       if (strcmp(uname,"nt")==0) PhysicalVariableUnitConversionTable[n+1]=1.0E-9;
@@ -172,21 +179,29 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
       i0=i1;
       while ((UnitVar[i0]!=0)&&(UnitVar[i0]==' ')) i0++;
     }
-  }
 
-  //the first element in the state vector is the "weight" -> adjust the offsets
-  rhoBATSRUS2AMPS++;
-  mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
-  bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
-  pBATSRUS2AMPS++;
 
-  //check whether the unit conversion factors are defined foe all physical variables
-  if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || \
-      (PhysicalVariableUnitConversionTable[mxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[myBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[mzBATSRUS2AMPS]==0.0) || \
-      (PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[byBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[bzBATSRUS2AMPS]==0.0) || \
-      (PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]==0.0)) {
-    exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
-  }
+    //the first element in the state vector is the "weight" -> adjust the offsets
+    rhoBATSRUS2AMPS++;
+    mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
+    uxBATSRUS2AMPS++,uyBATSRUS2AMPS++,uzBATSRUS2AMPS++;
+    bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
+    pBATSRUS2AMPS++;
+
+    //check whether the unit conversion factors are defined for all physical variables
+    if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || \
+        (PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[byBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[bzBATSRUS2AMPS]==0.0) || \
+        (PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]==0.0)) {
+      exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
+    }
+
+    if ( ((mxBATSRUS2AMPS>=0) && ((PhysicalVariableUnitConversionTable[mxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[myBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[mzBATSRUS2AMPS]==0.0))) || \
+       ((uxBATSRUS2AMPS>=0) && ((PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS]==0.0) || (PhysicalVariableUnitConversionTable[uyBATSRUS2AMPS]==0.0)  || (PhysicalVariableUnitConversionTable[uzBATSRUS2AMPS]==0.0))) ) {
+      exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
+    }
+
+  } //end of the initialization
+
 
   //perform the interpolation loop
   int i,j,k,nd,idim;
@@ -220,6 +235,8 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
       }
 
       //locate the cell
+      if (startNode->block==NULL) continue;
+
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
       offset=CenterNode->GetAssociatedDataBufferPointer();
@@ -227,6 +244,11 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
       //save the interpolated values
       if (IsFound==true) {
         int idim;
+
+        //if momentum is read that convert it to velocity
+        if (mxBATSRUS2AMPS>=0) {
+          exit(__LINE__,__FILE__,"Error: conversion of the momentun into the velocity is not implemented. The implementation should be simular to that in PIC::CPLR::SWMF::RecieveCenterPointData");
+        }
 
         //the order of the state vector: number density, temperature
         *((double*)(offset+PlasmaNumberDensityOffset))=State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS];
@@ -237,8 +259,14 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
 
         //bulk velocity and magnetic field
         for (idim=0;idim<3;idim++) {
-          *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=State[mxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[mxBATSRUS2AMPS];
           *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=State[bxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[bxBATSRUS2AMPS];
+
+          if (uxBATSRUS2AMPS>=0) {
+            *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=State[uxBATSRUS2AMPS+idim]*PhysicalVariableUnitConversionTable[uxBATSRUS2AMPS];
+          }
+          else {
+            exit(__LINE__,__FILE__,"Error: saving of the velocity derived from the momentum is not implemented");
+          }
         }
 
       }
