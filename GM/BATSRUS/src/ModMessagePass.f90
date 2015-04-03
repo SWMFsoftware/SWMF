@@ -43,7 +43,7 @@ contains
 
     integer :: iBlock
 
-    logical :: UseHighResChangeTmp
+    logical :: UseHighResChangeNow
 
     logical:: DoTest, DoTestMe, DoTime, DoTimeMe
     character (len=*), parameter :: NameSub = 'exchange_messages'
@@ -63,14 +63,7 @@ contains
     DoTwoCoarseLayers = &
          nOrder>1 .and. nOrderProlong==1 .and. .not. DoOneCoarserLayer
 
-    UseHighResChangeTmp = .false.
-    if(nOrder<5 .and. UseHighResChange) then
-       ! For part implicit run, nOrder may be set to the same as nOrderImpl to
-       ! calcuate (\partial R)/(\partial U)*(\Delta U), then use lower order
-       ! resolution changes.
-       UseHighResChange = .false.
-       UseHighResChangeTmp = .true.
-    endif
+    UseHighResChangeNow = nOrder==5 .and. UseHighResChange
 
     if(DoTestMe)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
@@ -83,10 +76,10 @@ contains
        do iBlock = 1, nBlock
           if (Unused_B(iBlock)) CYCLE
           if (far_field_BCs_BLK(iBlock) .and. &
-               (nOrderProlong==2 .or. UseHighResChange)) then
+               (nOrderProlong==2 .or. UseHighResChangeNow)) then
              call set_cell_boundary&
                   (nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-             if(UseHighResChange) &
+             if(UseHighResChangeNow) &
                   call set_edge_corner_ghost&
                   (nG,iBlock,nVar,State_VGB(:,:,:,:,iBlock))
           endif
@@ -108,7 +101,7 @@ contains
             nWidthIn=nWidth, nProlongOrderIn=1, &
             nCoarseLayerIn=nCoarseLayer, DoRestrictFaceIn = DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn, &
-            UseHighResChangeIn=UseHighResChange,&
+            UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     else
@@ -124,7 +117,7 @@ contains
             DoSendCornerIn=DoSendCorner, &
             DoRestrictFaceIn=DoRestrictFace,&
             DoResChangeOnlyIn=DoResChangeOnlyIn,&
-            UseHighResChangeIn=UseHighResChange,&
+            UseHighResChangeIn=UseHighResChangeNow,&
             DefaultState_V=DefaultState_V)
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
@@ -146,8 +139,6 @@ contains
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
 
-    if(nOrder<5 .and. UseHighResChangeTmp) UseHighResChange=.true.
-    
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)
     
