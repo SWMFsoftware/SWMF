@@ -1,0 +1,8 @@
+This is the layout for running OH and PT.
+
+Name First Last Stride
+======================
+#COMPONENTMAP
+PT       1    2    1   ! PT runs on 1 or 2 PE-s
+OH       0 9999    1   ! OH runs on all PE-s
+#END
