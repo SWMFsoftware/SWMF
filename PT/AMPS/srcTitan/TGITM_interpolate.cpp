@@ -39,7 +39,10 @@ using namespace std;
 	if(fin.is_open())
 	{
 		//initialize toatal flux values to 0
-		for(int i=0;i<nspc;i++)Titan::tgitm_exobase::totalflux[i]=0.0;
+		for(int i=0;i<nspc;i++){
+			Titan::tgitm_exobase::totalflux[i]=0.0;
+			Titan::tgitm_exobase::maxflx[i]=0.0;
+		}
 		
 		for(int i=0;i<nd;i++)
 		{
@@ -50,17 +53,17 @@ using namespace std;
 			}
 			
 //for loop below over species 2 - N2, 3 - CH4, 4 - H2
+				realT=Titan::tgitm_exobase::tgitm_grid[i][5]; //index 5 is column with temperature
 				for(int j=2;j<5;j++){
-						
-						//If Snum is on implement numerical distribution (e.g. weighted velocity distribution function)
-						if(Titan::tgitm_exobase::Snum == on && j == 2){
-							realT=Titan::tgitm_exobase::tgitm_grid[i][5]; //index 5 is column with temperature
-							//This line scaled the flux from the local surface element
-							Titan::tgitm_exobase::tgitm_grid[i][j] = Titan::tgitm_exobase::tgitm_grid[i][j]*((j==2) ? pow(numT/realT,2) : 1.0);
-						}
-						//Sum up total fluxes
-						Titan::tgitm_exobase::totalflux[j-2] = Titan::tgitm_exobase::totalflux[j-2]+
-						Titan::tgitm_exobase::tgitm_grid[i][j];
+					
+					//This line scaled the flux from the local surface element
+					//Titan::tgitm_exobase::tgitm_grid[i][j] = Titan::tgitm_exobase::tgitm_grid[i][j]*((j==2) ? pow(numT/realT,2) : 1.0);
+					
+					//Get Max flux
+					if(Titan::tgitm_exobase::maxflx[j-2] < tgitm_exobase::tgitm_grid[i][j])Titan::tgitm_exobase::maxflx[j-2]=Titan::tgitm_exobase::tgitm_grid[i][j];
+					//Sum up total fluxes
+					Titan::tgitm_exobase::totalflux[j-2] = Titan::tgitm_exobase::totalflux[j-2]+
+					Titan::tgitm_exobase::tgitm_grid[i][j]*Titan::tgitm_exobase::tgitm_grid[i][nc-1];
 				}
 			
 		}
@@ -69,7 +72,14 @@ using namespace std;
 	{
 		cout<<"THE FILE DID NOT OPEN"<<endl;
 	}
-
+		cout<<"source rates"<<endl;
+		cout<<_N2_SPEC_<<'\t'<<Titan::tgitm_exobase::totalflux[0]<<endl;
+		cout<<_CH4_SPEC_<<'\t'<<Titan::tgitm_exobase::totalflux[1]<<endl;
+		cout<<_H2_SPEC_<<'\t'<<Titan::tgitm_exobase::totalflux[2]<<endl;
+		cout<<"max flux values"<<endl;
+		cout<<_N2_SPEC_<<'\t'<<Titan::tgitm_exobase::maxflx[0]<<endl;
+		cout<<_CH4_SPEC_<<'\t'<<Titan::tgitm_exobase::maxflx[1]<<endl;
+		cout<<_H2_SPEC_<<'\t'<<Titan::tgitm_exobase::maxflx[2]<<endl;
 	}
 	
 /////###########################################################################################################3
@@ -85,14 +95,15 @@ using namespace std;
 {
 	double lat, lng, fp[4];
 	int i_lat, i_lng, i_cell, itp_point[4];
-	const double tgitm_lb_lat=1.25, tgitm_hb_lat=178.75, 
-	tgitm_lb_lng=2.5, tgitm_hb_lng=357.5, dlat=2.5, dlng=5.0;
+	const double tgitm_lb_lat=1.25/57.2957795, tgitm_hb_lat=178.75/57.2957795, 
+	tgitm_lb_lng=2.5/57.2957795, tgitm_hb_lng=357.5/57.2957795, dlat=2.5/57.2957795, dlng=5.0/57.2957795;
 	const int nLatitudes = 72;
 	const double rad2dg=57.2957795;
 
 	//Spherical coordinates conveted to lattitude and east longitude for interpolation
-	lat=180.0-polar*rad2dg;
-	lng=360.0-azimuth*rad2dg;
+	
+	lat=polar;
+	lng=azimuth;
 	
 	if(lng < tgitm_lb_lng) lng=tgitm_lb_lng+dlng*0.25;
 	if(lng > tgitm_hb_lng) lng=tgitm_hb_lng-dlng*0.25;
@@ -108,9 +119,7 @@ using namespace std;
 	itp_point[2]=itp_point[0]+nLatitudes;
 	itp_point[3]=itp_point[2]+1;
 	
-	//The above translates particle's position to map consistent with the Bell result
-	///////////
-	
+
 	for(int i=0; i<np; i++)
 	{
 		fp[0] = Titan::tgitm_exobase::tgitm_grid[itp_point[0]][i+2];
@@ -119,17 +128,8 @@ using namespace std;
 		fp[3] = Titan::tgitm_exobase::tgitm_grid[itp_point[3]][i+2];
 		
 		
-	if(i < np-1){
-		Titan::tgitm_exobase::maxflx[i]=fp[0];
-
-		for (int j=0; j<4; j++)
-		{ 
-			//calculate local maxium in flux
-			if (Titan::tgitm_exobase::maxflx[i] <fp[j] ) Titan::tgitm_exobase::maxflx[i]=fp[j];
-		}
-	}
+	////Interpolation routine http://en.wikipedia.org/wiki/Bilinear_interpolation
 	
-	////Interpolation routine
 		Titan::tgitm_exobase::interp_val[i]=fp[0]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(Titan::tgitm_exobase::tgitm_grid[itp_point[3]][1]-lat)+
 		
 		fp[1]*(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-lng)*(lat -Titan::tgitm_exobase::tgitm_grid[itp_point[2]][1])+
@@ -138,6 +138,9 @@ using namespace std;
 		
 		fp[3]*(lng-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])*(lat-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][1]);
 			
+			
+	//Interpolation routine continued
+	
 		Titan::tgitm_exobase::interp_val[i]=Titan::tgitm_exobase::interp_val[i]/(Titan::tgitm_exobase::tgitm_grid[itp_point[2]][0]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][0])
 		/(Titan::tgitm_exobase::tgitm_grid[itp_point[1]][1]-Titan::tgitm_exobase::tgitm_grid[itp_point[0]][1]);
 	}
