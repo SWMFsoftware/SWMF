@@ -32,7 +32,7 @@ namespace Titan {
 
   namespace tgitm_exobase {
 	
-	const int ndes=5184,nclmns=6,nintp=nclmns-2,Tnum = 800.0;
+	const int ndes=5184,nclmns=7,nintp=nclmns-3,Tnum = 800.0;
 	const int Snum = 1;
 	extern double tgitm_grid[ndes][nclmns],interp_val[nintp],
 	maxflx[PIC::nTotalSpecies],totalflux[PIC::nTotalSpecies];
@@ -57,7 +57,7 @@ namespace Titan {
 		double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
 		SpiceDouble xform[6][6];
 		double pol,azi,rrr,r4,r3;
-		double  flx=0.0, mxflx=1.0,ParticleWeight;
+		double  flx=0.0, ParticleWeight;
 		double ParticleWeightCorrection=1.0;
 		const double _N2__MASS_ = 4.64950898e-26;
 
@@ -65,24 +65,21 @@ namespace Titan {
 
 //Geenrate new particle position
 //First the generated particle position must be consistent with local flux
-		while( rnd() > flx/mxflx ){ 
+		while( rnd() > flx/maxflx[spec] ){ 
 			r=0.0;
 			for (idim=0;idim<DIM;idim++) {
 				ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
 				r+=pow(ExternalNormal[idim],2);
 			}
 			r=sqrt(r);
-			azi = atan2(ExternalNormal[0],ExternalNormal[1]);
+			azi = atan2(ExternalNormal[1],ExternalNormal[0]);
 			if(azi<0.0)azi=azi+2.0*Pi; 
 			pol = acos(ExternalNormal[2]/r);
 			tgitm_interpolate(pol, azi);
-			mxflx=maxflx[spec];
 			flx=interp_val[spec];
-
 		}
-		
-		cout<<spec<<'\t'<<flx<<'\t'<<mxflx<<endl;
-//
+
+//		
 //###### Particle has been accepted
 			
 		for (idim=0;idim<DIM;idim++) {
@@ -102,8 +99,8 @@ namespace Titan {
 		
 		//Switch statement used to implement numerical velocity distribution for better statistics
 		double speed=0.0;
-		//PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
-		switch (spec) {
+		PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,interp_val[3],ExternalNormal,spec);
+		/*switch (spec) {
 		case _N2_SPEC_:
 		
 				PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,Tnum,ExternalNormal,spec);
@@ -116,9 +113,8 @@ namespace Titan {
 				//interp_val true temperature of surface element 
 				ParticleWeightCorrection=exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
 				  
-				  
-				  /*ParticleWeightCorrection=pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
-				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);*/
+				  ParticleWeightCorrection=pow((1.0/interp_val[3])/(1.0/Tnum),1.5)
+				  *exp(-_N2__MASS_*speed*speed/2.0/Kbol/interp_val[3])/exp(-_N2__MASS_*speed*speed/2.0/Kbol/Tnum);
 				//cout<<speed<<'\t'<<ParticleWeightCorrection<<endl;
 				PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 		  break;
@@ -131,7 +127,7 @@ namespace Titan {
 			break;
 		default:
 		  exit(__LINE__,__FILE__,"Error: The speed for the species is not defined");
-		}
+		}*/
 		
 
 
