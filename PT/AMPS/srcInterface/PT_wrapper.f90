@@ -60,7 +60,10 @@ contains
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
        call AMPS_SetMpiCommunicator(iComm, iProc, nProc)
 
-    case('READ', 'CHECK')
+    case('CHECK')
+       ! AMPS could check now the input parameters for consistency
+
+    case('READ')
        ! get section of PARAM.in that contains the PT module
        allocate(StringLineF_I(i_line_read()+1:n_line_read()))
        call read_text(StringLineF_I)
