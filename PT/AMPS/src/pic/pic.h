@@ -2470,7 +2470,7 @@ namespace PIC {
       namespace ARMS {
         //read ARMS' output file
         namespace OUTPUT {
-	        extern double TimeCoupleNext;
+          extern double TimeCoupleNext;
           void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }
       }
@@ -2481,8 +2481,12 @@ namespace PIC {
         namespace OUTPUT {
           extern double PlasmaSpeciesAtomicMass; //the mass of the dominant background plasma ion
           extern double UnitLength; //the spatial units used in the BATSRUS' output file
+          extern char filename[_MAX_STRING_LENGTH_PIC_];
+          extern bool InitFlag;
 
-          void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+          void Init(const char *fname);
+          void GetDomainLimits(double *xmin,double *xmax);
+          void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }
       }
     }
