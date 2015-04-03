@@ -39,6 +39,7 @@ test_help:
 	@echo "    test11                     (run GM-PT coupler test)"
 	@echo "    test12                     (run GM-PC tests)"
 	@echo "    test13                     (run GM-PT test: Europa)"
+	@echo "    test14                     (run OH-PT test)"
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
@@ -1129,6 +1130,49 @@ test13_check:
 		${TESTDIR}/PT/plots/amps.ref \
 		> test13_pt.diff)
 		ls -l test13*.diff
+
+### test14: OH/BATSRUS standalone model coupled with OuterHelio project in PT 
+
+test14:
+	@echo "test14_compile..." > test14_ohpt.diff
+	${MAKE} test14_compile
+	@echo "test14_rundir..." >> test14_ohpt.diff
+	${MAKE} test14_rundir
+	@echo "test14_run..." >> test14_ohpt.diff
+	${MAKE} test14_run
+	@echo "test14_check..." >> test14_ohpt.diff
+	${MAKE} test14_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test14_compile:
+	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
+	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=Mhd
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh
+	${MAKE} SWMF
+	make PIDL
+
+test14_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.OHPT ${TESTDIR}/LAYOUT.in
+
+test14_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test14_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
+		${TESTDIR}/RESULTS/OH/log_n000000.log \
+		output/test14/OH_log_n000000.log \
+		> test14_ohpt.diff)
+	cp output/test14/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+	${TESTDIR}//RESULTS/PT/amps.ref
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/RESULTS/PT/amps.dat \
+		${TESTDIR}/RESULTS/PT/amps.ref \
+		> test14_ohpt.diff)
+		ls -l test14*.diff
 
 ### ESMF test ###
 #
