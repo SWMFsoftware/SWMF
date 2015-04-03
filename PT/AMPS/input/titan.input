@@ -47,10 +47,10 @@ CouplerMode=off !ices !!off, ices, swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=400
+  ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=25000
+  InitialSampleLength=500
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -67,7 +67,7 @@ CouplerMode=off !ices !!off, ices, swmf
 #endGeneral
 
 #ParticleCollisions 
-  model = off ! HS !!off !HS ! HS, off
+  model = HS ! HS !!off !HS ! HS, off
   SampleCollisionFrequency=off !!on !on, off
 
   CollisionCrossSection=const \\ !const, function 
@@ -127,9 +127,9 @@ CouplerMode=off !ices !!off, ices, swmf
   Source:ImpactVaporization=off \\ !on,off
     HeliocentricDistance=1.0*_AU_ \\ 
     SourceRatePowerIndex=0.0 \\
-    SourceRate(N2)=3.8571796E+031, SourceTemperature(N2)=161.0   \\ !SourceRate(N2)=5.247813e29, SourceTemperature(N2)=155.0
+    SourceRate(N2)=3.8571796E+031, SourceTemperature(N2)=161.0   \\
     SourceRate(CH4)=1.9625345E+030, SourceTemperature(CH4)=161.0  \\
-    SourceRate(H2)=4.550927E+029, SourceTemperature(H2)=161.0
+    SourceRate(H2)=5.5724003E+029, SourceTemperature(H2)=161.0
     !SourceRate(N2)=3.115E+031, SourceTemperature(N2)=118.0   \\
     !SourceRate(CH4)=1.53077E+030, SourceTemperature(CH4)=118.0  \\ 
     !SourceRate(H2)=4.662794E+029, SourceTemperature(H2)=118.0   
