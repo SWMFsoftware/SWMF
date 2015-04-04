@@ -200,7 +200,14 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	      *(idim+(double*)(offset+MagneticFieldOffset))     =DataInterp[b_+idim];
 	      *(idim+(double*)(offset+PlasmaBulkVelocityOffset))=DataInterp[v_+idim];
 	    }
-	    
+	    // E = -VxB
+	    *(0+(double*)(offset+ElectricFieldOffset)) = 
+	      DataInterp[b_+1]*DataInterp[v_+2] - DataInterp[b_+2]*DataInterp[v_+1];
+	    *(1+(double*)(offset+ElectricFieldOffset)) = 
+	      DataInterp[b_+2]*DataInterp[v_+0] - DataInterp[b_+0]*DataInterp[v_+2];
+	    *(2+(double*)(offset+ElectricFieldOffset)) = 
+	      DataInterp[b_+0]*DataInterp[v_+1] - DataInterp[b_+1]*DataInterp[v_+0];
+    
 	    *((double*)(offset+PlasmaPressureOffset))     =DataInterp[p_];
 	    *((double*)(offset+PlasmaNumberDensityOffset))=DataInterp[n_];
 	    *((double*)(offset+PlasmaTemperatureOffset))  =DataInterp[t_];
