@@ -1,12 +1,8 @@
 !$Id$
 !the wrapper for reading BATSRUS data files into AMPS
 
-!use BATL_lib, ONLY: iProc, nProc, iComm, nI, nJ, nK, nDim, init_mpi, clean_mpi, coord_to_xyz
-!use ModReadAmr, ONLY: nVar, CoordMin_D, CoordMax_D, readamr_read, readamr_get, readamr_clean
-!use ModConst, ONLY: cPi
-!use ModMpi, ONLY: MPI_REAL, MPI_SUM, MPI_allreduce
-
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Determine the number of the variables in the state vector that are returned by the interpolation routine
 subroutine batsrus2amps_get_nvar(res)
   use ModReadAmr, ONLY: nVar
 
@@ -16,6 +12,8 @@ subroutine batsrus2amps_get_nvar(res)
   res=nVar 
 end subroutine batsrus2amps_get_nvar    
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Get the string that containes the names of the variables that are returned by the interpolation routine 
 subroutine batsrus2amps_get_namevardata(varlist,varlistlength) 
   use ModReadAmr, ONLY:NameVarData
   
@@ -26,6 +24,8 @@ subroutine batsrus2amps_get_namevardata(varlist,varlistlength)
   varlist(1:varlistlength)=NameVarData(1:varlistlength)
 end subroutine batsrus2amps_get_namevardata  
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Get the string that containes defienition of the units of the 1. the point coordinate and 2. the interpolated variables
 subroutine batsrus2amps_get_nameunitdata(unitlist,unitlistlength) 
   use ModReadAmr, ONLY:NameUnitData
   
@@ -36,7 +36,8 @@ subroutine batsrus2amps_get_nameunitdata(unitlist,unitlistlength)
   unitlist(1:unitlistlength)=NameUnitData(1:unitlistlength)
 end subroutine batsrus2amps_get_nameunitdata  
   
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Determine the boundary of the computational domain in the normalized units
 subroutine batsrus2amps_domain_limits(xmin,xmax) 
   use ModReadAmr, ONLY: CoordMin_D, CoordMax_D
   
@@ -47,6 +48,8 @@ subroutine batsrus2amps_domain_limits(xmin,xmax)
   xmax(:)=CoordMax_D(:)
 end subroutine batsrus2amps_domain_limits  
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Read the data file (.idl)
 subroutine batsrus2amps_openfile(FileName,FileNameLength)
   use ModReadAmr, ONLY:readamr_read 
   
@@ -57,6 +60,8 @@ subroutine batsrus2amps_openfile(FileName,FileNameLength)
   call readamr_read(FileName, IsNewGridIn = .false., IsVerboseIn=.true.)
 end subroutine batsrus2amps_openfile 
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Initialize the reading procedure. Read the header file. After this step it is possible to find the list of the variables and units as well as the limits of the computational domain
 subroutine batsrus2amps_read_file_header(FileName,FileNameLength)
   use ModReadAmr, ONLY:readamr_init
   
@@ -70,12 +75,16 @@ subroutine batsrus2amps_read_file_header(FileName,FileNameLength)
 end subroutine batsrus2amps_read_file_header
   
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Close the data file and deallocate all memory buffers allocated by the interpolation routine
 subroutine batsrus2amps_closefile()
   use ModReadAmr, ONLY:readamr_clean
   
   call readamr_clean
 end subroutine batsrus2amps_closefile
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Get the interpolated values in a point
 subroutine batsrus2amps_get_data_point(x,res,FoundFlag) 
   use ModReadAmr, ONLY:nVar,readamr_get
   use BATL_lib, ONLY:nDim
@@ -94,11 +103,10 @@ subroutine batsrus2amps_get_data_point(x,res,FoundFlag)
   
   res(:)=State(:)
   FoundFlag=IsFound
-  
-  
 end subroutine batsrus2amps_get_data_point
 
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!Export the MPI parameters into the interpolation routine
 subroutine batsrus2amps_set_mpi_parameters(ThisThread,nTotalThreads,Communicator)
   use BATL_lib,  ONLY: iProc,nProc,iComm
   
