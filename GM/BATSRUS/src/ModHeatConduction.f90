@@ -1426,6 +1426,10 @@ contains
                 Nion = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)/MassIon_I(iIon)
                 State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
                      max(Nion*Tmin, State_VGB(iPIon_I(iIon),i,j,k,iBlock))
+
+                if(UseAnisoPressure .and. .not.UseMultiIon) &
+                     State_VGB(Ppar_,i,j,k,iBlock) = &
+                     max(Nion*Tmin, State_VGB(Ppar_,i,j,k,iBlock))
              end do
           end if
        end if
