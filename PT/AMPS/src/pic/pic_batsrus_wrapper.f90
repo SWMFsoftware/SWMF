@@ -25,6 +25,16 @@ subroutine batsrus2amps_get_namevardata(varlist,varlistlength)
   
   varlist(1:varlistlength)=NameVarData(1:varlistlength)
 end subroutine batsrus2amps_get_namevardata  
+
+subroutine batsrus2amps_get_nameunitdata(unitlist,unitlistlength) 
+  use ModReadAmr, ONLY:NameUnitData
+  
+  implicit none
+  integer,intent(in)::unitlistlength
+  character(len=unitlistlength),intent(out)::unitlist
+  
+  unitlist(1:unitlistlength)=NameUnitData(1:unitlistlength)
+end subroutine batsrus2amps_get_nameunitdata  
   
 
 subroutine batsrus2amps_domain_limits(xmin,xmax) 
@@ -44,7 +54,7 @@ subroutine batsrus2amps_openfile(FileName,FileNameLength)
   integer,intent(in)::FileNameLength
   character(len=FileNameLength),intent(in):: FileName
 
-  call readamr_read(FileName, IsNewGridIn = .true., IsVerboseIn=.true., UseCoordTest=.false.)
+  call readamr_read(FileName, IsNewGridIn = .false., IsVerboseIn=.true.)
 end subroutine batsrus2amps_openfile 
 
 subroutine batsrus2amps_read_file_header(FileName,FileNameLength)
