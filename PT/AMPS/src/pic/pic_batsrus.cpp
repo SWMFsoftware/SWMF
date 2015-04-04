@@ -38,7 +38,7 @@ extern "C"
 }
 
 //definition of the variabled from BATSRUS namespace
-double PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::PlasmaSpeciesAtomicMass=_AMU_;
+double PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::PlasmaSpeciesAtomicMass=1.0;
 double PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::UnitLength=1.0;
 char PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::filename[_MAX_STRING_LENGTH_PIC_]="";
 bool PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::InitFlag=false;
@@ -200,6 +200,10 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
       exit(__LINE__,__FILE__,"Error: the physical variable unit conversion factor is not defined");
     }
 
+
+    cout << PlasmaNumberDensityOffset << "  " << PlasmaTemperatureOffset << "  " << PlasmaPressureOffset <<  "   "  <<  MagneticFieldOffset <<  "   " << PlasmaBulkVelocityOffset << endl;
+
+
   } //end of the initialization
 
 
@@ -255,7 +259,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
         *((double*)(offset+PlasmaTemperatureOffset))=(State[rhoBATSRUS2AMPS]>0.0) ? PhysicalVariableUnitConversionTable[pBATSRUS2AMPS]*State[pBATSRUS2AMPS]/(Kbol*State[rhoBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]) : 0.0;
 
         //get pressure
-        *((double*)(offset+PlasmaPressureOffset))=State[pBATSRUS2AMPS]*State[pBATSRUS2AMPS];
+        *((double*)(offset+PlasmaPressureOffset))=State[pBATSRUS2AMPS]*PhysicalVariableUnitConversionTable[pBATSRUS2AMPS];
 
         //bulk velocity and magnetic field
         for (idim=0;idim<3;idim++) {
