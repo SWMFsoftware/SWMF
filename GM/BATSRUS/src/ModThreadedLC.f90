@@ -495,7 +495,6 @@ contains
     end subroutine set_pressure
     !==========================
     subroutine get_heat_cond
-      use ModGeometry, ONLY:Xyz_DGB
       integer:: iPoint
       !----------------
       !\
@@ -506,6 +505,9 @@ contains
       M_I(2:nPoint-1) = -U_I(2:nPoint-1) - L_I(2:nPoint-1)
       M_I(1) = -U_I(1) + Value_V(DHeatFluxXOverU_)*&
            BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
+      !\
+      ! Right heat fluxes
+      !/
       ResHeatCond_I(1:nPoint-1) = &
            ( Cons_I(1:nPoint-1) - Cons_I(2:nPoint))*U_I(1:nPoint-1)
       !\
@@ -514,11 +516,16 @@ contains
       ResHeatCond_I(1) = ResHeatCond_I(1) - Value_V(HeatFluxLength_)*&
            BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
       !\
-      ! 5. Add left heat fluxes
+      ! 5. Add other left heat fluxes
       !/
       ResHeatCond_I(2:nPoint-1) = ResHeatCond_I(2:nPoint-1) &
            +( Cons_I(2:nPoint-1) - Cons_I(1:nPoint-2))*L_I(2:nPoint-1) 
-
+    end subroutine get_heat_cond
+    !===========================
+    subroutine get_cooling
+      use ModGeometry, ONLY: Xyz_DGB
+      integer ::  iPoint
+      !-----------------
       ResCooling_I = 0.0;
       do iPoint = 1, nPoint-1
          if(TeSi_I(iPoint)>1.0e8)then
@@ -535,9 +542,7 @@ contains
               *ValCooling(1)*cCoolingPerPe2*&
               (PeSi_I(iPoint)/TeSi_I(iPoint))**2
       end do
-      M_I(1) = M_I(1) -2*ResCooling_I(1)/&
-           (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
-    end subroutine get_heat_cond
+    end subroutine get_cooling
     !======================
     subroutine set_initial_thread
       !\
@@ -579,6 +584,16 @@ contains
          !Shape the source.
          !/
          call get_heat_cond
+         call get_cooling
+         !\
+         ! Correct the temperature derivative near the TR
+         ! due to the pressure dependence of the radiative cooling, 
+         ! the pressure near the TR beibg the (tabulated) function
+         ! of the temperature near TR
+         !/
+         M_I(1) = M_I(1) -2*ResCooling_I(1)/&
+              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+
          DCons_I = 0.0;  ResEnthalpy_I = 0.0
          !\
          ! Add enthalpy correction
@@ -710,6 +725,7 @@ contains
       ! Multiply the heating source term and speed by the time step
       !/
       USiLtd = USiLtd*DtLocal
+      
 !!!
       USiLtd = 0.0
 !!!
@@ -825,6 +841,16 @@ contains
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
       do iIter = 1, nIter
          call get_heat_cond
+         call get_cooling
+         !\
+         ! Correct the temperature derivative near the TR
+         ! due to the pressure dependence of the radiative cooling, 
+         ! the pressure near the TR beibg the (tabulated) function
+         ! of the temperature near TR
+         !/
+         M_I(1) = M_I(1) -2*ResCooling_I(1)/&
+              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+
          Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1) - &
               SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + DtLocal*(&
               ResHeatCond_I(1:nPoint-1) + ResCooling_I(1:nPoint-1))
