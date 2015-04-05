@@ -16,7 +16,7 @@
 
 //path to the location of the data files
 char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
-double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=0.0;
+double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=-1.0;
 
 //read ARM's output file
 void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -40,7 +40,10 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
     
     // start reading: read essential constants time & size of the grid
     char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
-    while(fin.eof()==false && (nX < 0 || nZ < 0) ){
+    // reset parameters
+    nX = -1; nZ=-1; time =-1.0;
+    TimeCoupleNext=-1.0;
+    while(fin.eof()==false && (nX < 0 || nZ < 0|| time < 0 || TimeCoupleNext < 0) ){
       if(fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false){
 	exit(__LINE__,__FILE__, "ERROR: the size of the grid couldn't be read.");
 	break;
@@ -54,7 +57,9 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
       else
 	if((strcmp("#TIME_NEXT",str1)==0)){
 	  fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	  PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=strtod(str1, NULL);
+	  TimeCoupleNext=strtod(str1, NULL);
+	  if(TimeCoupleNext < 0)
+	    exit(__LINE__,__FILE__,"Reached the last ARMS data file; exit");
 	}
 	else
 	  if((strcmp("#NX",str1)==0)){
