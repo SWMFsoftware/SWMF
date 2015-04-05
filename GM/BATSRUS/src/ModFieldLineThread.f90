@@ -389,7 +389,7 @@ contains
     real :: Dxyz_D(3), DirB_D(3), DirR_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
-    integer, parameter::nCoarseMax = 4
+    integer, parameter::nCoarseMax = 2
     !---------------------------------------------------------------------
     call set_oktest('set_threads_b', DoTest, DoTestMe)
 
