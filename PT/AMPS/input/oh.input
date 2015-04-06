@@ -68,6 +68,9 @@ CouplerMode=swmf !ices !!off, ices, swmf
 
 #block ../oh.input.pl !process the settings of the Outer Heliosphere model
   
+  ! user defined global time step
+  UserGlobalTimeStep=-1.0   ! default = -1.0 (i.e. use time step defined by AMPS)
+
   !injection of the neutrals
   InjectionVelocity=(26.3E3,0.0,-2.3E3);!default=(26.3E3,0.0,-2.3E3)
   InjectionNDensity= 0.18E-6;		!default=0.18E-6

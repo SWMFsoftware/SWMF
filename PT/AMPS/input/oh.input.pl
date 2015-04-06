@@ -110,6 +110,15 @@ while ($line=<InputFile>) {
     ampsConfigLib::ChangeValueOfVariable("double OH::InjectionTemperature",$s1,"main/OH.cpp");   
   }
 
+  elsif ($InputLine eq "USERGLOBALTIMESTEP") {
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/[=();]/ /g;
+    
+    ($s0,$s1,$s2)=split(' ',$InputLine,3);
+    ampsConfigLib::ChangeValueOfVariable("double OH::UserGlobalTimeStep",$s1,"main/OH.cpp");   
+  }
+
   elsif ($InputLine eq "DOMAINXMAX") {
       ($InputLine,$InputComment)=split('!',$line,2);
       chomp($InputLine);
