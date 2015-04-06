@@ -2,6 +2,9 @@
 
 #include "OH.h"
 
+// user defined global time step
+double OH::UserGlobalTimeStep = -1.0;
+
 //  injection boundary condition
 double OH::InjectionVelocity[3] = {26.3E3, 0.0, -2.3E3};
 double OH::InjectionNDensity    = 0.18E-6;

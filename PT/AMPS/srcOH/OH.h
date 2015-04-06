@@ -22,6 +22,9 @@
 namespace OH {
   using namespace Exosphere;
   
+  // user defined global time step
+  extern double UserGlobalTimeStep;
+
   //  injection boundary condition
   extern double InjectionVelocity[3];
   extern double InjectionNDensity;

@@ -321,6 +321,16 @@ void amps_init() {
    
    //init the particle buffer
    PIC::ParticleBuffer::Init(10000000);
+
+   // change global time step if it's set in the input file
+   if(OH::UserGlobalTimeStep > 0.0){
+     if (PIC::Mesh::mesh.ThisThread==0) 
+       cout << "AMPS:: Global time steps of all species are changed to " << 
+	 OH::UserGlobalTimeStep << 
+	 " by user (see oh.input)\n";
+     for(int spec=0; spec < PIC::nTotalSpecies; spec++)
+       PIC::ParticleWeightTimeStep::GlobalTimeStep[spec] = OH::UserGlobalTimeStep;
+   }
 }
 
 //time step
