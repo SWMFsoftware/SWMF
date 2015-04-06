@@ -835,8 +835,6 @@ subroutine MH_set_parameters(TypeAction)
               ! read the number of pixels
               call read_var('nPixX', n_Pix_X(ifile))            
               call read_var('nPixY', n_Pix_Y(ifile))            
-           elseif (index(plot_string,'ion')>0) then
-              plot_area='ion'
            elseif(index(plot_string,'1d')>0)then
               plot_area='1d_'
            elseif(index(plot_string,'2d')>0)then
@@ -858,8 +856,7 @@ subroutine MH_set_parameters(TypeAction)
            plot_dx(1,ifile) = -1.0
            if(index(plot_string,'idl') >0 )then
               plot_form(ifile)='idl'
-              if (       plot_area /= 'ion' &
-                   .and. plot_area /= 'sph' &
+              if (       plot_area /= 'sph' &
                    .and. plot_area /= 'los' &
                    .and. plot_area /= 'rfr' &
                    .and. plot_area /= 'lin' &
