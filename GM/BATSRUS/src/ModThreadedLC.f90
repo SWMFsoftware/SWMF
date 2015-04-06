@@ -1,6 +1,15 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!\
+! Version Easter 2015
+! 1. BC for velocity projection onto the MF: float mass flux, if U>0
+!    reflected velocity, if U<0
+! 2. In calculating _intial_thread: neglect gravity
+! 3. In Heat_ and Impl_ modes: only half step heat conduction is used
+! 4. In hydro-and-heating mode: a new scheme is applied with adding the
+!    half-step heat conduction
+!/
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
@@ -825,14 +834,19 @@ contains
       !\
       ! Time step in the physical cell from which the thread originates
       !/
-      real ::DtLocal
+      real ::DtLocal, DtHeatCond
       integer :: iIter
+      integer,parameter::iCooling2HeatCond=1
       !-----------
       if(time_accurate)then
          DtLocal = Dt*No2Si_V(UnitT_)
       else
          DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
       end if
+      !\
+      ! Version Easter 2015
+      !/
+      DtHeatCond = DtLocal
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
@@ -847,19 +861,31 @@ contains
          ! due to the pressure dependence of the radiative cooling, 
          ! the pressure near the TR beibg the (tabulated) function
          ! of the temperature near TR
+         ! Contribution to dPe/dCons = -dCooling/dPe*dPe/dCons
+         !                   = -2Cooling/Pe*Pe/(Pe*L*UHeat(T))
          !/
-         M_I(1) = M_I(1) -2*ResCooling_I(1)/&
+         M_I(1) = M_I(1) -2*ResCooling_I(1)*iCooling2HeatCond/&
               (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
 
-         Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1) - &
-              SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + DtLocal*(&
-              ResHeatCond_I(1:nPoint-1) + ResCooling_I(1:nPoint-1))
-         U_I(1:nPoint-1) = DtLocal*U_I(1:nPoint-1)
-         L_I(1:nPoint-1) = DtLocal*L_I(1:nPoint-1)
-         M_I(2:nPoint-1) = DtLocal*M_I(2:nPoint-1) + &
+         Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1)    - &
+              SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + &
+              DtHeatCond*(ResHeatCond_I(1:nPoint-1)      + &
+              iCooling2HeatCond*ResCooling_I(1:nPoint-1))
+         !\
+         ! Version Easter 2015
+         !/
+         U_I(1:nPoint-1) = DtHeatCond*U_I(1:nPoint-1)
+         L_I(1:nPoint-1) = DtHeatCond*L_I(1:nPoint-1)
+         M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
               SpecHeat_I(2:nPoint-1)*PeSi_I(2:nPoint-1)/&
               (3.50*Cons_I(2:nPoint-1))
-         M_I(1) = DtLocal*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
+         !\
+         ! Near TR
+         ! Pe*L = \int_0^T{\kappa_0T^{2.5}dT/UHeat(T)}
+         ! LdPe/dT=\kappa_0T^T^{2.5}/UHeat(T)
+         ! dPe/dCons=Pe/(Pe*L*UHeat(T))
+         !/ 
+         M_I(1) = DtHeatCond*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
               /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
          DCons_I = 0.0
          call tridag(n=nPoint-1,  &
@@ -1152,7 +1178,7 @@ contains
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
                (U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k) &
-               *BDir_D + U_D)   !  max(-U,
+               *BDir_D + U_D)   !  Easter 2015 version
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
