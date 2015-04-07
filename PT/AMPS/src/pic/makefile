@@ -3,6 +3,7 @@ SHELL =/bin/sh
 DEFAULT_TARGET : amps  
 
 include ../../Makefile.conf
+include ../../Makefile.local
 
 PICOBJ = pic.o \
 	pic_parallel.o \
@@ -39,7 +40,12 @@ PICOBJ = pic.o \
 	pic_sample_pitch_angle_distribution.o \
 	pic_kameleon.o \
 	pic_restart.o \
-	pic_arms.o
+	pic_arms.o 
+	
+ifneq ($(BATL),nobatl)	
+PICOBJ+=pic_batsrus.o \
+	pic_batsrus_wrapper.o
+endif
 
 amps : $(PICOBJ)
 	ar -src amps.a $(PICOBJ)
