@@ -52,8 +52,8 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   double CharacteristicSpeed;
 
   switch (spec) {
-  case _H_SPEC_:
-    CharacteristicSpeed=1.0e5;
+  case _H_PLUS_SPEC_:
+    CharacteristicSpeed=1.0e6;
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
@@ -76,7 +76,7 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
   double ExternalNormal[3],ModelParticlesInjectionRate;
   int nface;
 
-  static double v[3]={1.0e5,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0};
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
@@ -99,7 +99,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
   PIC::ParticleBuffer::byte *newParticleData;
   long int nInjectedParticles=0;
 
-  static double v[3]={1.0e5,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0};
 
   double ModelParticlesInjectionRate;
 
@@ -169,7 +169,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
 
 
   double ModelParticlesInjectionRate=0.0;
-  static double v[3]={1.0e5,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0};
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
@@ -346,7 +346,7 @@ void amps_time_step () {
       sprintf(fname,"%s%d%s","dataARMS.t=",nOutputFile,".dat");
       PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(fname);
       std::cout<<"Load ARMS data file "<<nOutputFile<<
-	" at global time "<< GlobalTime << "; next file to be load at time " << 
+	" at global time "<< GlobalTime << "; next file will be loaded at time " << 
 	PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext <<"\n";
     }
   PIC::TimeStep();
