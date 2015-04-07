@@ -11,6 +11,8 @@ SPICE=nospice
 #Compiling with the CCMC's Kameleon
 KAMELEON=nokameleon
 BOOST=noboost
+BATL=nobatl
+SWMF=noswmf
 
 include Makefile.def
 include Makefile.conf
