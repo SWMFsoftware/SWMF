@@ -64,6 +64,8 @@ foreach (@Arguments) {
      print "-boost-path=PATH\t\tthe path to the boost library.\n";
      print "-kameleon-path=PATH\t\tthe path for the Kameleon library.\n";
      print "-cplr-data-path=PATH\t\tthe path to the data files used to import other model results by PIC::CPLR::DATAFILE.\n";
+     print "-batl-path=PATH\t\t\tthe path to the BATL directory\n";
+     print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
      
      exit;
    }
@@ -129,6 +131,9 @@ foreach (@Arguments) {
   
   if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> .ampsConfig.Settings`;     next};
   if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> .ampsConfig.Settings`;     next};
+  
+  if (/^-batl-path=(.*)$/i)       {`echo "BATL=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> .ampsConfig.Settings`;     next};  
   
   if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> .ampsConfig.Settings`;     next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
   
