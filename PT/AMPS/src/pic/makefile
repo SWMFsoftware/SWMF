@@ -2,6 +2,8 @@ SHELL =/bin/sh
 
 DEFAULT_TARGET : amps  
 
+BATL=nobatl
+
 include ../../Makefile.conf
 include ../../Makefile.local
 
