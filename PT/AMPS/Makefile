@@ -23,6 +23,28 @@ include Makefile.local
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
 CWD=${MYDIR}
+AMPSLINKER=${CC}
+
+
+	AMPSLINKLIB= 
+	
+ifneq ($(BATL),nobatl)	
+	AMPSLINKLIB+=${BATL}/lib/libREADAMR.a
+	AMPSLINKER=${LINK.f90}
+endif
+	
+ifneq ($(SWMF),noswmf)	
+	AMPSLINKLIB+=${SWMF}/lib/*
+	AMPSLINKER=${LINK.f90}
+endif
+
+ifneq ($(KAMELEON),nokameleon)
+	AMPSLINKLIB+=${KAMELEON}/lib/ccmc/libccmc.dylib 
+endif
+
+ifneq ($(SPICE),nospice)
+	AMPSLINKLIB+=${SPICE}/lib/cspice.a
+endif
 
 
 #SPICE=/Users/vtenishe/SPICE/Toolkit/cspice/include
@@ -122,25 +144,16 @@ LIB:
 	make ${LIB_AMPS} 
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
 
+amps_link:
+	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a -lm -lstdc++ -lmpi_cxx ${AMPSLINKLIB} 
+
 amps: ${LIB_AMPS}
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
+	make amps_link
 
-ifeq ($(KAMELEON),nokameleon)
-ifeq ($(SPICE),nospice)
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${CPPLIB} 
-else 
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} \
-	${SPICE}/lib/cspice.a ${CPPLIB}
-endif
-else 
-ifeq ($(SPICE),nospice)
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} ${KAMELEON}/lib/ccmc/libccmc.dylib ${CPPLIB}  
-else
-	${CC} -o ${EXE} ${WSD}/main/main.a ${LIB_AMPS} ${Lib} ${MPILIB} \
-	${SPICE}/lib/cspice.a ${KAMELEON}/lib/ccmc/libccmc.dylib  ${CPPLIB}
-endif
-endif
+	
+
 
 TESTDIR = run_test
 
