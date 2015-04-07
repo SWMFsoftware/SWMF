@@ -2550,6 +2550,9 @@ sub ampsConfigSettings {
   
       if (/^BOOST=(.*)$/i) {`echo "BOOST=$1" >> Makefile.local`; next};
       if (/^KAMELEON=(.*)$/i) {`echo "KAMELEON=$1" >> Makefile.local`; next};
+
+      if (/^BATL=(.*)$/i) {`echo "BATL=$1" >> Makefile.local`; next};
+      if (/^SWMF=(.*)$/i) {`echo "SWMF=$1" >> Makefile.local`; next};
       
       if (/^CPLRDATA=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_arms.cpp"); next};
     }    
