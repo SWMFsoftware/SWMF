@@ -280,9 +280,9 @@ void PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile(cTreeNodeAMR<PIC::Mesh::
         B=(double*)(offset+MagneticFieldOffset);
         E=(double*)(offset+ElectricFieldOffset);
 
-        E[0]=+(v[1]*B[2]-B[1]*v[2]);
-        E[1]=-(v[0]*B[2]-B[0]*v[2]);
-        E[2]=+(v[0]*B[1]-B[0]*v[1]);
+        E[0]=-(v[1]*B[2]-B[1]*v[2]);
+        E[1]=+(v[0]*B[2]-B[0]*v[2]);
+        E[2]=-(v[0]*B[1]-B[0]*v[1]);
       }
       else {
         *((double*)(offset+PlasmaNumberDensityOffset))=0.0;
