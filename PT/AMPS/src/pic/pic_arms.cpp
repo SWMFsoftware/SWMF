@@ -118,11 +118,11 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 		  else//         VEL_PHI [cm/s]
 		    if((strcmp("#VEL_PHI",str1)==0)){offset=v_+2;convert=cm2m;}
 		    else//         B_RAD [Gauss]
-		      if((strcmp("#B_RAD",str1)==0)){offset=b_;convert=1E+5;}
+		      if((strcmp("#B_RAD",str1)==0)){offset=b_;convert=1E-4;}
 		      else//         B_THETA [Gauss]
-			if((strcmp("#B_THETA",str1)==0)){offset=b_+1;convert=1E+5;}
+			if((strcmp("#B_THETA",str1)==0)){offset=b_+1;convert=1E-4;}
 			else//         B_PHI [Gauss]
-			  if((strcmp("#B_PHI",str1)==0)){offset=b_+2;convert=1E+5;}
+			  if((strcmp("#B_PHI",str1)==0)){offset=b_+2;convert=1E-4;}
 	  if(offset >= 0)
 	    for(int iZ = 0; iZ < nZ; iZ++){
 	      for(int iX = 0; iX < nX; iX++){
