@@ -78,7 +78,6 @@ module ModHeatConduction
   real, allocatable :: CoolHeat_CB(:,:,:,:)
   real, allocatable :: CoolHeatDeriv_CB(:,:,:,:)
 
-  real :: TminSi = -1.0, Tmin
 contains
 
   !============================================================================
@@ -127,9 +126,6 @@ contains
                   //TypeIonHeatConduction)
           end select
        end if
-
-    case("#MINIMUMTEMPERATURE")
-       call read_var('TminSi', TminSi)
 
     case default
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
@@ -307,8 +303,6 @@ contains
 
        iTeImpl = 1
     end if
-
-    Tmin = TminSi*Si2No_V(UnitTemperature_)
 
   end subroutine init_heat_conduction
 
@@ -1339,21 +1333,21 @@ contains
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, ExtraEintMin, pMin_I, PeMin
+         UnitP_, ExtraEintMin, pMin_I, PeMin, TeMin
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
-    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_, nIonFluid, &
-         ChargeIon_I, MassIon_I, iRhoIon_I, iPIon_I
+    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_, ChargeIon_I, MassIon_I, &
+         iRhoIon_I
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
     real, intent(in) :: OldSemiAll_VC(nVarSemiAll,nI,nJ,nK)
     real, intent(in) :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
-    integer :: i, j, k, iP, iIon
-    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin, Ne, Nion
+    integer :: i, j, k, iP
+    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin, Ne
     real :: Gamma
     real :: DtLocal
     !--------------------------------------------------------------------------
@@ -1424,20 +1418,10 @@ contains
           end if
        end if
 
-       if(Tmin >= 0.0)then
+       if(UseElectronPressure .and. TeMin > 0.0)then
           Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
-          State_VGB(iP,i,j,k,iBlock) = max(Ne*Tmin, State_VGB(iP,i,j,k,iBlock))
-          if(UseElectronPressure)then
-             do iIon = 1, nIonFluid
-                Nion = State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)/MassIon_I(iIon)
-                State_VGB(iPIon_I(iIon),i,j,k,iBlock) = &
-                     max(Nion*Tmin, State_VGB(iPIon_I(iIon),i,j,k,iBlock))
-
-                if(UseAnisoPressure .and. .not.UseMultiIon) &
-                     State_VGB(Ppar_,i,j,k,iBlock) = &
-                     max(Nion*Tmin, State_VGB(Ppar_,i,j,k,iBlock))
-             end do
-          end if
+          State_VGB(Pe_,i,j,k,iBlock) = &
+               max(Ne*PeMin, State_VGB(Pe_,i,j,k,iBlock))
        end if
     end do; end do; end do
 
