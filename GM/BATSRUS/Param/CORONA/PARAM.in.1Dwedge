@@ -164,6 +164,10 @@ F			UseRhoRatioLimiter
 #MINIMUMDENSITY
 1e-24			RhoMinDim [amu/cc] for fluid 1
 
+#MINIMUMTEMPERATURE
+5e4			TMinDim  [K] for fluid 1
+5e4			TeMinDim [K]
+
 #NONCONSERVATIVE
 T			UseNonConservative
 
