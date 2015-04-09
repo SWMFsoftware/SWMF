@@ -3,8 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !\
 ! Version Easter 2015
-! 1. BC for velocity projection onto the MF: float mass flux, if U>0
-!    reflected velocity, if U<0
+! 1. At the semi-Inplicit thermal heat conduction stage in BATSRUS the
+!    fixed BC for temperature in the ghost cell is used 
 ! 2. In calculating _intial_thread: neglect gravity
 ! 3. In Heat_ and Impl_ modes: only half step heat conduction is used
 ! 4. In hydro-and-heating mode: a new scheme is applied with adding the
@@ -946,14 +946,14 @@ contains
       else
          DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
       end if
-      DtHeatCond = DtLocal
+      DtHeatCond = DtLocal*0.50
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
            BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
-      do iIter = 1, 1 !nIter
+      do iIter = 1, 1
          call get_heat_cond
          call get_cooling
          !\
@@ -1085,7 +1085,7 @@ contains
     real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
     real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
-    real, parameter:: GradLimiter = 0.1 !Version Easter 2015
+    real, parameter:: GradLimiter = 0.1 
     real :: GradTDotB
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -1155,20 +1155,10 @@ contains
                UseFirstOrderBcIn=.true.)
 
           if(IsLinear)then
-             if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))then
-                State_VG(iTeImpl,0,j,k) = 0.0  
-             else
-                !\
-                ! Apply linearization of DTe/Ds derivation in \delta Te(1,j,k)
-                !/
-                MinusDeltaROverBR = 1/&
-                     min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-                     * BDir_D),-GradLimiter*sqrt(&
-                     sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
-                State_VG(iTeImpl,0,j,k) = Te_G(0,j,k) +(Te_G(0, j, k)*&
-                     BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) &
-                     /Si2No_V(UnitX_) - sum(FaceGrad_D*BDir_D))*MinusDeltaROverBR
-             end if
+             !\
+             !Version Easter 2015
+             !/
+             State_VG(iTeImpl,0,j,k) = 0.0  
              CYCLE
           end if
        end if
@@ -1200,11 +1190,6 @@ contains
             RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor)
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
-          !BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = &
-          !     BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k).or.&
-          !     DTeOverDs < 0.0
-          !Do not allow heat flux from the TR to the low corona
-          !DTeOverDs = max(DTeOverDs,0.0)
           !\
           ! Calculate temperature in the ghost cell by adding the difference 
           ! between the required value DTeOverDs and the temperature gradient
@@ -1218,12 +1203,6 @@ contains
             * BDir_D),-GradLimiter*sqrt(&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
           GradTDotB = sum(FaceGrad_D*BDir_D)
-          !\
-          ! Version Easter 2015 Limit GradTDotB
-          !/
-          BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = .true.!&
-          !     abs(GradTDotB)>=abs(DTeOverDs)
-          !GradTDotB = sign(min( abs(GradTDotB), abs(DTeOverDs)), GradTDotB)
           TeGhost = Te_G(0, j, k) +(&
                DTeOverDs - GradTDotB)*MinusDeltaROverBR
           if(DoTestMe.and.j==jTest.and.k==kTest)then
@@ -1232,26 +1211,10 @@ contains
           end if
           Te_G(0, j, k) = TeGhost 
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
-         
-          if(BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k))CYCLE
           !\
-          ! Calculate the derivative of DTeOverDs over \delta Te_G(1,j,k)
+          ! Version Easter 2015 Limit GradTDotB
           !/
-          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =&
-               -DTeOverDsSi
-          call solve_boundary_thread(j=j, k=k, iBlock=iBlock, &
-               iAction=iAction, TeSiIn=1.02*TeSi, PeSiIn=1.02*PeSi, &
-               USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor, &
-               DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
-               RhoNoDimOut=RhoNoDimOut, AMajorOut=AMajor) 
-          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) = (&
-               BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) + &
-               DTeOverDsSi)/(0.02*TeSi)
-          !\
-          !To achieve the diagonal-dominance property
-          !/
-          BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k) =max( &
-               BoundaryThreads_B(iBlock)%DDTeOverDsOverTeTrueSi_II(j,k), 0.0)
+          BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = .true.
           CYCLE
        end if
        !\
@@ -1286,17 +1249,12 @@ contains
        ! 
        !/
        U_D = -U_D; B_D = -B_D
-
-       !\
-       ! Velocity component along B0 field is reflected if inward directed
-       ! Otherwise it is extrapolated inversely proportional to density
-       !/
-    
+   
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
                (U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k) &
-               *BDir_D + U_D)   !  Easter 2015 version max(-U,
+               *BDir_D + U_D)   !  max(-U,
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
