@@ -2500,9 +2500,14 @@ namespace PIC {
         extern int maxScriptPointNumber; //the maximum number of point that one single script can have
         extern int nTotalVarlablesTECPLOT; //the total number of the variabled in the TECPLOT output file (including thoses that are not needed)
 
-        struct cLoadedVariableData {
+        class cLoadedVariableData {
+        public:
           int offset;
           double ScaleFactor;
+
+          cLoadedVariableData() {
+            offset=-1,ScaleFactor=0.0;
+          }
         };
 
         extern cLoadedVariableData Velocity,Pressure,MagneticField,Density;
@@ -2520,8 +2525,15 @@ namespace PIC {
         int CreateScript(const char *ScriptBaseName,const char* DataFileTECPLOT,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         void LoadDataFile(const char *fname,int nTotalOutputFiles,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
+        //the function call all nessesary methods of the TECPLOT namespace to export the data
+        void ImportData(const char* fname);
+
       }
     }
+
+    //save and load the center node associated data from the AMPS' data buffers
+    void SaveCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+    void LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_

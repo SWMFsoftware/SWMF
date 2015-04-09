@@ -12,7 +12,7 @@
 
 
 //the procedures that created the script and extract data from tecplot data files
-double PIC::CPLR::DATAFILE::TECPLOT::xDataMin[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::xDataMax[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::UnitLength=1.0;
+double PIC::CPLR::DATAFILE::TECPLOT::xDataMin[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::xDataMax[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::UnitLength=0.0;
 int PIC::CPLR::DATAFILE::TECPLOT::maxScriptPointNumber=15000;
 int PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=0;
 
@@ -484,8 +484,202 @@ void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mes
   if (startNode==PIC::Mesh::mesh.rootTree) {
     fclose(fData);
   }
-
 }
 
 
+//save and loand the interpolated values from the AMPS' data buffers
+void PIC::CPLR::SaveCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  static CMPI_channel pipe;
+  static FILE *fout=NULL;
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    pipe.init(1000000);
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      pipe.openRecvAll();
+      fout=fopen(fname,"w");
+    }
+    else pipe.openSend(0);
+  }
+
+  //loop through all points
+  //create the list of the points
+  //perform the interpolation loop
+  int i,j,k,nd;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char *offset;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+  char SendCellFlag;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((PIC::ThisThread==0)||(startNode->Thread==PIC::ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      SendCellFlag=true;
+
+      //determine whether the cell data neede to be saved
+      if (startNode->Thread==PIC::ThisThread) {
+        //locate the cell
+        if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
+
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        if (SendCellFlag==true) {
+          if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
+          else SendCellFlag=false,offset=NULL;
+        }
+
+        if (startNode->Thread!=0) pipe.send(SendCellFlag);
+      }
+      else {
+        pipe.recv(SendCellFlag,startNode->Thread);
+      }
+
+      //save the cell data saving flag
+      if (PIC::ThisThread==0) fwrite(&SendCellFlag,sizeof(char),1,fout);
+
+      //save the cell data
+      if (SendCellFlag==true) {
+        if (startNode->Thread==PIC::ThisThread) {
+          if (startNode->Thread==0) {
+            fwrite(offset,sizeof(char),CenterNode->AssociatedDataLength(),fout);
+          }
+          else {
+            pipe.send(offset,CenterNode->AssociatedDataLength());
+          }
+        }
+        else {
+          char data[CenterNode->AssociatedDataLength()];
+
+          pipe.recv(data,CenterNode->AssociatedDataLength(),startNode->Thread);
+          fwrite(data,sizeof(char),CenterNode->AssociatedDataLength(),fout);
+        }
+      }
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) SaveCenterNodeAssociatedData(fname,startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      pipe.closeRecvAll();
+      fclose(fout);
+    }
+    else pipe.closeSend();
+
+    pipe.remove();
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  }
+}
+
+
+void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  static FILE *fData=NULL;
+  static int CenterNodeAssociatedLength;
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    fData=fopen(fname,"r");
+
+    PIC::Mesh::cDataCenterNode cell;
+    CenterNodeAssociatedLength=cell.AssociatedDataLength();
+  }
+
+  //loop through all points
+  //create the list of the points
+  //perform the interpolation loop
+  int i,j,k,nd;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char *offset;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+  char LoadCellFlag,savedLoadCellFlag;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if (startNode->Thread!=PIC::ThisThread) {
+       //the block belongs to a other processor -> skip all data
+      for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++)  {
+        fread(&savedLoadCellFlag,sizeof(char),1,fData);
+
+        if (savedLoadCellFlag==true) {
+          //the cell data is saved -> skip it
+          fseek(fData,CenterNodeAssociatedLength,SEEK_CUR);
+        }
+      }
+
+    }
+    else for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      LoadCellFlag=true;
+
+      //determine whether the cell data needed to be read
+      //locate the cell
+      if (startNode->block==NULL) LoadCellFlag=false,offset=NULL;
+
+      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      if (LoadCellFlag==true) {
+        if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
+        else LoadCellFlag=false,offset=NULL;
+      }
+
+      //read and compare the saved 'cell read' flag
+      fread(&savedLoadCellFlag,sizeof(char),1,fData);
+      if (savedLoadCellFlag!=LoadCellFlag) exit(__LINE__,__FILE__,"LoadCellFlag is not consistent with the saved one. Someing is wrong with saving/reading of the binary data");
+
+      if (LoadCellFlag==true) {
+        //read the data
+        fread(offset,sizeof(char),CenterNode->AssociatedDataLength(),fData);
+      }
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) LoadCenterNodeAssociatedData(fname,startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    fclose(fData);
+  }
+}
+
+
+//export data from a TECPLOT output file: the function includes all nessesary calls
+void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
+
+  //check whether all variables needed to read the data are set
+  if (UnitLength==0.0) exit(__LINE__,__FILE__,"The variable is not set");
+  for (int idim=0;idim<3;idim++) if (xDataMin[idim]==xDataMax[idim]) exit(__LINE__,__FILE__,"The variable is not set");
+  if (nTotalVarlablesTECPLOT==0) exit(__LINE__,__FILE__,"The variable is not set");
+
+  if (Velocity.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
+  if (Pressure.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
+  if (MagneticField.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
+  if (Density.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
+
+  //create TECPLOT script and run TECPLOT
+  int nFileOutputs; //the number of hte TECPLOT files that contain the contain the interpolated values
+  char command[_MAX_STRING_LENGTH_PIC_],ScriptBaseName[_MAX_STRING_LENGTH_PIC_];
+
+  sprintf(ScriptBaseName,"%s.AMPS.ImportData",fname);
+  nFileOutputs=PIC::CPLR::DATAFILE::TECPLOT::CreateScript(ScriptBaseName,fname);
+
+  sprintf(command,"tec360 -b %s %s.thread=%i.mcr",fname,ScriptBaseName,PIC::ThisThread);
+  system(command);
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+  //read the data file
+  LoadDataFile(ScriptBaseName,nFileOutputs);
+
+  //remove the temporary files and scripts
+  sprintf(command,"rm -f %s.thread=%i.mcr",ScriptBaseName,PIC::ThisThread);
+  system(command);
+
+  sprintf(command,"rm -f %s.thread=%i.*.dat",ScriptBaseName,PIC::ThisThread);
+  system(command);
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+}
 
