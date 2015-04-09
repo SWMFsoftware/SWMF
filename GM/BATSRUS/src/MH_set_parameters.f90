@@ -3066,7 +3066,8 @@ contains
        case('y=0')
           plot_range(1:5:2, iFile) = XyzMin_D
           plot_range(2:6:2, iFile) = XyzMax_D
-          if(plot_form(iFile) == 'idl' .and. (IsRLonLat.or.IsCylindrical)) then
+          if(plot_form(iFile) == 'idl' .and. (IsRLonLat .or. IsCylindrical) &
+               .and. XyzMin_D(2) < cPi .and. XyzMax_D(2) > cPi) then
              ! Limit plot range in Phi direction to be small around 180 degs
              plot_range(3, iFile) = cPi - SmallSize_D(y_)
              plot_range(4, iFile) = cPi + SmallSize_D(y_)
@@ -3107,6 +3108,9 @@ contains
 
        plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), XyzMin_D)
        plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), XyzMax_D)
+
+       if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
+            ' limited range   =',plot_range(:,ifile)
 
        ! Regular grid is not (yet) working for non-Cartesian grids
        ! because multiple pieces are used in the domain for x=0 and y=0 area
