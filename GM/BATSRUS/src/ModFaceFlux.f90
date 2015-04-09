@@ -582,7 +582,6 @@ contains
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         ! Only works for Cartesian coordinate so far. 
          if(UseFDFaceFlux) call correct_u_normal(x_) 
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
