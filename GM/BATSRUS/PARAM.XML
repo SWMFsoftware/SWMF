@@ -6843,22 +6843,21 @@ A negative value indicates that no minimum density is applied for that fluid.
 By default no minimum density limit is applied.
 </command>
 
-<command name="MINIMUMPRESSURE">
-	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
+<command name="MINIMUMTEMPERATURE">
+	<parameter name="TMinDim" type="real" min="-1" default="-1"/>
 
-#MINIMUMPRESSURE
-0.001		pMinDim for fluid 1
--1.0		pMinDim for fluid 2
-0.01            PeMinDim for electron pressure (if used)
+#MINIMUMTEMPERATURE
+5e4		TMinDim for fluid 1
+-1.0		TMinDim for fluid 2
+2e4             TeMinDim for electron pressure (if used)
 
-Provide minimum pressure(s) for the ion/neutral fluid(s) and electrons. 
-If the minimum pressure is positive, the pressure is kept above this limit.
-The minimum pressure is given in the input/output units for pressure,
-which varies from application to application (the planetary unit is nPa,
-heliospheric unit is dyne).
-A negative value indicates that no minimum pressure is applied for that fluid.
+Provide minimum temperature(s) for the ion/neutral fluid(s) and electrons. 
+If the minimum temperature (TMinDim)is positive, the temperature is kept above
+this limit. The minimum temperature is given in Kelvin.
+A negative value indicates that no minimum temperature is applied for that
+fluid.
 
-By default no minimum pressure limit is applied.
+By default no minimum temperature limit is applied.
 </command>
 
 <command name="ELECTRONPRESSURE">
