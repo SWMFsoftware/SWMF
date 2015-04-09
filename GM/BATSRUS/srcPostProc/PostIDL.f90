@@ -505,6 +505,13 @@ contains
 
     endif
 
+    if(ix1 < 1 .or. ix1 > nx1 .or. ix2 < 1 .or. ix2 > nx2)then
+       write(*,*)'!!! Error: ix1, nx1, ix2, nx2=', ix1, nx1, ix2, nx2
+       write(*,*)'!!! idim1, idim2=', idim1, idim2
+       write(*,*)'!!! Xyz_D   =', Xyz_D
+       write(*,*)'!!! XyzGen_D=', XyzGen_D
+    end if
+
     jcell=lookup(ix1,ix2)
     if(jcell>0)then
        ! A cell has already been found for this projected location
@@ -783,7 +790,8 @@ contains
     if (rCyl == 0.0) then
        XyzGen_D(2) = 0.0
     else
-       XyzGen_D(2) = modulo(atan2(Xyz_D(2), Xyz_D(1)), cTwoPi)
+       XyzGen_D(2) = &
+            modulo(atan2(Xyz_D(2), Xyz_D(1)) - XyzMin(2), cTwoPi) + XyzMin(2)
     end if
 
     select case(TypeGeometry)
