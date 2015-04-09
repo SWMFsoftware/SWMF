@@ -23,7 +23,6 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
-  use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, iRhoIon_I
 
   implicit none
 
@@ -217,6 +216,7 @@ contains
 
     real, parameter:: cThird = 1./3.
     real:: Coeff1, Coeff2
+    integer:: iFluid, iRho
     !--------------------------------------------------------------------------
 
     if(UseHalfStep .or. nStage == 1 .or. nStage == 4)then
@@ -365,26 +365,6 @@ contains
 
        if(DoTestMe)write(*,*) NameSub, ' after min density correct densities=', &
             State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
-    end if
-
-    if(UseElectronPressure)then
-       if(PeMin > 0.0)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             State_VGB(Pe_,i,j,k,iBlock) = &
-                  max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
-          end do; end do; end do
-       end if
-       if(TeMin > 0.0)then
-          do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
-             State_VGB(Pe_,i,j,k,iBlock) = &
-                  max(Ne*TeMin, State_VGB(Pe_,i,j,k,iBlock))
-          end do; end do; end do
-       end if
-
-       if(DoTestMe)write(*,*) NameSub, &
-            ' after PeMin and TeMin the electron pressure=', &
-            State_VGB(Pe_,iTest,jTest,kTest,iBlock)
     end if
 
     if( IsMhd .and. &

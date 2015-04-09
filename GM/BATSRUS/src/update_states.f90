@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 subroutine update_states(iStage,iBlock)
@@ -759,7 +760,7 @@ contains
                (State_VGB(Bz_,i,j,k,iBlock) - &
                StateOld_VCB(Bz_,i,j,k,iBlock))**2 )
 
-          call calc_pressure1_point(i,j,k,iBlock)
+          call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
 
           ! For multifluid update all other energies and call calc_pressure_point
        else
@@ -773,7 +774,7 @@ contains
                (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
                (cOne-time_fraction) * StateOld_VCB(p_,i,j,k,iBlock)
 
-          call calc_energy1_point(i,j,k,iBlock)
+          call calc_energy(i,i,j,j,k,k,iBlock,1,1)
        end if
     else                      ! Non-Boris interpolation                
 

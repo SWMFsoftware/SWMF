@@ -1333,13 +1333,12 @@ contains
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
     use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, ExtraEintMin, pMin_I, PeMin, TeMin
+         UnitP_, ExtraEintMin, pMin_I, PeMin
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use BATL_lib,    ONLY: Xyz_DGB
     use ModUserInterface ! user_material_properties
-    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_, ChargeIon_I, MassIon_I, &
-         iRhoIon_I
+    use ModMultiFluid, ONLY: UseMultiIon, IonFirst_
 
     integer, intent(in) :: iBlock, iBlockSemi
     real, intent(in) :: NewSemiAll_VC(nVarSemiAll,nI,nJ,nK)
@@ -1347,7 +1346,7 @@ contains
     real, intent(in) :: DconsDsemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k, iP
-    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin, Ne
+    real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
     real :: Gamma
     real :: DtLocal
     !--------------------------------------------------------------------------
@@ -1416,12 +1415,6 @@ contains
 
              State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
           end if
-       end if
-
-       if(UseElectronPressure .and. TeMin > 0.0)then
-          Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
-          State_VGB(Pe_,i,j,k,iBlock) = &
-               max(Ne*PeMin, State_VGB(Pe_,i,j,k,iBlock))
        end if
     end do; end do; end do
 

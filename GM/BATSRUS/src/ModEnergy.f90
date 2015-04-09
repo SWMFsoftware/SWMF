@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModEnergy
 
@@ -6,14 +7,28 @@ module ModEnergy
   use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
-       select_fluid, MassFluid_I, iRho_I
+       select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, IsMhd, &
+  use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, Pe_, IsMhd, &
        Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
-       UseNonConservative, nConservCrit, IsConserv_CB
-  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I, TMin_I
+       UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
+  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I, PeMin, Tmin_I, TeMin
 
   implicit none
+
+  private ! except
+
+  public:: calc_energy_or_pressure  ! p -> e or e -> p
+  public:: calc_pressure            ! e -> p in a range of cells/fluids
+  public:: calc_pressure_point      ! e -> p in 1 cell for all fluids
+  public:: calc_pressure_cell       ! e -> p in physical cells
+  public:: calc_energy              ! p -> e in a range of cells/fluids
+  public:: calc_energy_point        ! p -> e in one cell for all fluids
+  public:: calc_energy_cell         ! p -> e in physical cells
+  public:: calc_energy_ghost        ! p -> e in ghost cells
+  public:: calc_old_pressure        ! eold -> pold (ModPartImplicit)
+  public:: calc_old_energy          ! pold -> eold (ModPartImplicit)
+  public:: correctP                 ! obsolete method for CT and projection
 
 contains
 
@@ -56,7 +71,8 @@ contains
        RETURN
     end if
 
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
+    ! Make sure pressure used for energy is larger than floor value
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid)
 
     ! A mix of conservative and non-conservative scheme (at least for the ions)
     FLUIDLOOP: do iFluid = 1, nFluid
@@ -68,7 +84,7 @@ contains
        end if
 
        call select_fluid
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
              State_VGB(iP,i,j,k,iBlock) =                             &
                   gm1*( Energy_GBI(i,j,k,iBlock,iFluid)               &
@@ -84,19 +100,21 @@ contains
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE FLUIDLOOP
 
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
-             State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
-                  - gm1*0.5*sum(State_VGB(Bx_:Bz_,i, j, k,iBlock)**2)
+             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  - gm1*0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           else
-             Energy_GBI(i, j, k, iBlock, iFluid) = &
-                  Energy_GBI(i, j, k, iBlock, iFluid) + &
+             Energy_GBI(i,j,k,iBlock,iFluid) = &
+                  Energy_GBI(i,j,k,iBlock,iFluid) + &
                   0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if
        end do; end do; end do
     end do FLUIDLOOP
 
-    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, iFluid, nFluid)
+    ! Make sure pressure used for energy is larger than floor value
+    call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, &
+         DoUpdateEnergy = .true.)
 
   end subroutine calc_energy_or_pressure
 
@@ -114,7 +132,7 @@ contains
     !--------------------------------------------------------------------------
     do iFluid = 1, nFluid
        call select_fluid
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VCB(iP, i, j, k,iBlock) = &
                gm1*(EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5*   &
                sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
@@ -123,13 +141,11 @@ contains
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
                - gm1*0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
     end do
-
-    call limit_old_pressure(iBlock)
 
   end subroutine calc_old_pressure
 
@@ -145,16 +161,14 @@ contains
     integer :: i, j, k
     !--------------------------------------------------------------------------
 
-    call limit_old_pressure(iBlock)
-
     do iFluid = 1, nFluid
        call select_fluid
        ! Calculate thermal plus kinetic energy
-       do k=1, nK; do j=1, nJ; do i=1, nI
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if (StateOld_VCB(iRho,i,j,k,iBlock) <= 0.0)then
              EnergyOld_CBI(i,j,k,iBlock,iFluid) = 0.0
           else
-             EnergyOld_CBI(i, j, k, iBlock, iFluid) = &
+             EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
                   inv_gm1*StateOld_VCB(iP,i,j,k,iBlock) &
                   + 0.5*(sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
                   StateOld_VCB(iRho,i,j,k,iBlock))
@@ -164,9 +178,9 @@ contains
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          EnergyOld_CBI(i,j,k,iBlock, iFluid) = &
-               EnergyOld_CBI(i,j,k,iBlock, iFluid) + &
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
+               EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
                0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
@@ -202,23 +216,23 @@ contains
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          State_VGB(iP, i, j, k, iBlock) = &
-               gm1*(Energy_GBI(i, j, k, iBlock, iFluid) - 0.5*   &
-               sum(State_VGB(iRhoUx:iRhoUz,i, j, k, iBlock)**2)  &
-               /State_VGB(iRho,i, j, k, iBlock) )
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VGB(iP,i,j,k,iBlock) = &
+               gm1*(Energy_GBI(i,j,k,iBlock,iFluid) - 0.5*   &
+               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
+               /State_VGB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          State_VGB(iP, i, j, k,iBlock) = State_VGB(iP, i, j, k,iBlock) &
-               - gm1*0.5*sum(State_VGB(Bx_:Bz_,i, j, k,iBlock)**2)
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+               - gm1*0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
     end do
 
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
-         iBlock, iFluidMin, iFluidMax)
+         iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
 
     if(DoTestMe)then
        write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
@@ -248,11 +262,11 @@ contains
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
        ! Calculate thermal plus kinetic energy
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           if (State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
              Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
           else
-             Energy_GBI(i, j, k, iBlock, iFluid) = &
+             Energy_GBI(i,j,k,iBlock,iFluid) = &
                   inv_gm1*State_VGB(iP,i,j,k,iBlock) &
                   +0.5*(sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
                   State_VGB(iRho,i,j,k,iBlock))
@@ -262,9 +276,9 @@ contains
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        ! Add magnetic energy for ion fluid
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          Energy_GBI(i,j,k,iBlock, iFluid) = &
-               Energy_GBI(i,j,k,iBlock, iFluid) + &
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          Energy_GBI(i,j,k,iBlock,iFluid) = &
+               Energy_GBI(i,j,k,iBlock,iFluid) + &
                0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
@@ -295,27 +309,6 @@ contains
 
   !===========================================================================
 
-  subroutine calc_pressure1_cell(iBlock)
-    integer, intent(in) :: iBlock
-    call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,1)
-  end subroutine calc_pressure1_cell
-
-  !===========================================================================
-
-  subroutine calc_pressure1_ghost(iBlock)
-    integer, intent(in) :: iBlock
-    call calc_pressure(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,1)
-  end subroutine calc_pressure1_ghost
-
-  !===========================================================================
-
-  subroutine calc_pressure1_point(i, j, k, iBlock)
-    integer, intent(in) :: i, j, k, iBlock
-    call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
-  end subroutine calc_pressure1_point
-
-  !===========================================================================
-
   subroutine calc_energy_cell(iBlock)
     integer, intent(in) :: iBlock
     call calc_energy(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
@@ -341,72 +334,38 @@ contains
        if( .not.any(abs(DiLevelNei_IIIB(-1:1,-1:1,-1:1,iBlock)) == 1) ) RETURN
     end if
 
-!!$    !------------------- for calculation on ghost cells only ----------------
-!!$    if( DoResChangeOnly ) then
-!!$       
-!!$       if( any(abs(DiLevelNei_IIIB(-1,:,:,iBlock)) == 1) ) then
-!!$          !call limit_pressure(-1,0,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-!!$          call calc_energy(-1,0,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-!!$       end if
-!!$
-!!$       if( any(abs(DiLevelNei_IIIB(1,:,:,iBlock)) == 1) ) then
-!!$          !call limit_pressure(nI+1,nI+2,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-!!$          call calc_energy(nI+1,nI+2,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-!!$       end if
-!!$
-!!$       if( any(abs(DiLevelNei_IIIB(:,-1,:,iBlock)) == 1) ) then
-!!$          !call limit_pressure(MinI,MaxI,-1,0,MinK,MaxK,iBlock,1,nFluid)
-!!$          call calc_energy(MinI,MaxI,-1,0,MinK,MaxK,iBlock,1,nFluid)
-!!$       end if
-!!$
-!!$       if( any(abs(DiLevelNei_IIIB(:,1,:,iBlock)) == 1) ) then
-!!$          !call limit_pressure(MinI,MaxI,nJ+1,nJ+2,MinK,MaxK,iBlock,1,nFluid)
-!!$          call calc_energy(MinI,MaxI,nJ+1,nJ+2,MinK,MaxK,iBlock,1,nFluid)
-!!$       end if
-!!$       if( any(abs(DiLevelNei_IIIB(:,:,-1,iBlock)) == 1) ) then
-!!$          !call limit_pressure(MinI,MaxI,MinJ,MaxJ,-1,0,iBlock,1,nFluid)
-!!$          call calc_energy(MinI,MaxI,MinJ,MaxJ,-1,0,iBlock,1,nFluid)
-!!$       end if
-!!$       if( any(abs(DiLevelNei_IIIB(:,:,1,iBlock)) == 1) ) then
-!!$          !call limit_pressure(MinI,MaxI,MinJ,MaxJ,nK+1,nK+2,iBlock,1,nFluid)
-!!$          call calc_energy(MinI,MaxI,MinJ,MaxJ,nK+1,nK+2,iBlock,1,nFluid)
-!!$       end if
-!!$
-!!$
-!!$    end if
+    call limit_pressure(MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iBlock, 1, nFluid)
 
-    call limit_pressure(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
-
-    do iFluid = 1,nFluid
+    do iFluid = 1, nFluid
 
        call select_fluid
 
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
-          where(State_VGB(iRho, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock) <= 0.0)
+          where(State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) <= 0.0)
              Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = 0.0
           elsewhere
-             Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = &                  
-                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &                
-                  +0.5*((State_VGB(iRhoUx, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 + &    
-                  State_VGB(iRhoUy, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 + &           
-                  State_VGB(iRhoUz, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2)/&            
-                  State_VGB(iRho, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)) + &               
-                  0.5*(State_VGB(Bx_,MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 +&           
-                  State_VGB(By_,MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 +&                
-                  State_VGB(Bz_,MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 )                 
+             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = &
+                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &
+                  +0.5*((State_VGB(iRhoUx,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
+                  State_VGB(iRhoUy,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
+                  State_VGB(iRhoUz,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2)/&
+                  State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)) + &
+                  0.5*(State_VGB(Bx_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &           
+                  State_VGB(By_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 +&
+                  State_VGB(Bz_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 )
           end where
        else
           ! HD energy
-          where(State_VGB(iRho, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock) <= 0.0)
-             Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = 0.0
+          where(State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) <= 0.0)
+             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = 0.0
           elsewhere
-             Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = &                  
-                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &                
-                  +0.5*((State_VGB(iRhoUx, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 + &    
-                  State_VGB(iRhoUy, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2 + &           
-                  State_VGB(iRhoUz, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock)**2)/&            
-                  State_VGB(iRho, MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock))               
+             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = &
+                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &
+                  +0.5*((State_VGB(iRhoUx,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
+                  State_VGB(iRhoUy,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 +&
+                  State_VGB(iRhoUz,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2)/&
+                  State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock))
           end where
        end if
 
@@ -423,91 +382,82 @@ contains
 
   !===========================================================================
 
-  subroutine calc_energy1_cell(iBlock)
-    integer, intent(in) :: iBlock
-    call calc_energy(1,nI,1,nJ,1,nK,iBlock,1,1)
-  end subroutine calc_energy1_cell
-
-  !===========================================================================
-
-  subroutine calc_energy1_ghost(iBlock)
-    integer, intent(in) :: iBlock
-    call calc_energy(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,1)
-  end subroutine calc_energy1_ghost
-
-  !===========================================================================
-
-  subroutine calc_energy1_point(i, j, k, iBlock)
-    integer, intent(in) :: i, j, k, iBlock
-    call calc_energy(i,i,j,j,k,k,iBlock,1,1)
-  end subroutine calc_energy1_point
-
-  !===========================================================================
   subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
-       iBlock, iFluidMin, iFluidMax)
+       iBlock, iFluidMin, iFluidMax, DoUpdateEnergy)
 
     ! Keep pressure(s) in State_VGB above pMin_I limit
+    ! If DoUpdateEnergy is present, also modify energy to remain consistent
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
+    logical, intent(in), optional:: DoUpdateEnergy ! if present should be true
 
     integer:: i, j, k
-    real :: NumDens
+    real :: NumDens, p, pMin, Ne
     !------------------------------------------------------------------------
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
+       pMin = pMin_I(iFluid)
        iP = iP_I(iFluid)
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          State_VGB(iP,i,j,k,iBlock) = max(pMin_I(iFluid), &
-               State_VGB(iP,i,j,k,iBlock))
-       end do; end do; end do
+       if(present(DoUpdateEnergy))then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             p = State_VGB(iP,i,j,k,iBlock)
+             if(p < pMin)then
+                State_VGB(iP,i,j,k,iBlock) = pMin
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) + inv_gm1*(pMin - p)
+             end if
+          end do; end do; end do
+       else
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+          end do; end do; end do
+       end if
     end do
 
     do iFluid = iFluidMin, iFluidMax
-       if(TMin_I(iFluid) < 0.0) CYCLE
+       if(Tmin_I(iFluid) < 0.0) CYCLE
        iP = iP_I(iFluid)
-       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-          NumDens = State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
-          State_VGB(iP,i,j,k,iBlock) = max(NumDens*TMin_I(iFluid), &
-               State_VGB(iP,i,j,k,iBlock))
-       end do; end do; end do
+       if(present(DoUpdateEnergy))then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             p = State_VGB(iP,i,j,k,iBlock)
+             NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
+             pMin = NumDens*Tmin_I(iFluid)
+             if(p < pMin)then
+                State_VGB(iP,i,j,k,iBlock) = pMin
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) + inv_gm1*(pMin - p)
+             end if
+          end do; end do; end do
+       else
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
+             pMin = NumDens*Tmin_I(iFluid)
+             State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+          end do; end do; end do
+       end if
     end do
+
+    if(UseElectronPressure .and. iFluidMin == 1)then
+       if(PeMin > 0.0)then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
+          end do; end do; end do
+       end if
+       if(TeMin > 0.0)then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(Ne*TeMin, State_VGB(Pe_,i,j,k,iBlock))
+          end do; end do; end do
+       end if
+    end if
 
   end subroutine limit_pressure
 
-  !===========================================================================
-  subroutine limit_old_pressure(iBlock)
-
-    ! Keep pressure(s) in StateOld_VCB above pMin_I limit
-
-    integer, intent(in) :: iBlock
-
-    integer:: i, j, k
-    real :: NumDens
-    !------------------------------------------------------------------------
-    do iFluid = 1, nFluid
-       if(pMin_I(iFluid) < 0.0) CYCLE
-       iP = iP_I(iFluid)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VCB(iP,i,j,k,iBlock) = max(pMin_I(iFluid), &
-               StateOld_VCB(iP,i,j,k,iBlock))
-       end do; end do; end do
-    end do
-
-    do iFluid = 1, nFluid
-       if(TMin_I(iFluid) < 0.0) CYCLE
-       iP = iP_I(iFluid)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          NumDens=StateOld_VCB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
-          StateOld_VCB(iP,i,j,k,iBlock) = max(NumDens*TMin_I(iFluid), &
-               StateOld_VCB(iP,i,j,k,iBlock))
-       end do; end do; end do
-    end do
-
-  end subroutine limit_old_pressure
-
   !============================================================================
-  ! moved form file exchange_messages.f90 
+  ! moved from file exchange_messages.f90 
   subroutine correctP(iBlock)
 
     ! Make pressure and energy consistent and maintain thermal energy ratio 
