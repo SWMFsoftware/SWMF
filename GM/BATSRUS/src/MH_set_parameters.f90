@@ -616,6 +616,12 @@ subroutine MH_set_parameters(TypeAction)
         end do
         if(UseElectronPressure) call read_var('PeMinDim', PeMinDim)
 
+     case("#MINIMUMTEMPERATURE")
+        do iFluid = 1, nFluid
+           call read_var('TMinDim', TMinDim_I(iFluid))
+        end do
+        if(UseElectronPressure) call read_var('TeMinDim', TeMinDim)
+
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
 
@@ -631,8 +637,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#RADIATION", "#HEATFLUXLIMITER", "#ACCURATERADIATION")
         call read_rad_diffusion_param(NameCommand)
 
-     case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION", &
-          "#MINIMUMTEMPERATURE")
+     case("#HEATCONDUCTION", "#WEAKFIELDCONDUCTION", "#IONHEATCONDUCTION")
         call read_heatconduction_param(NameCommand)
 
      case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
