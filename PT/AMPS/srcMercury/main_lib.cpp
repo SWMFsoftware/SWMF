@@ -1204,6 +1204,40 @@ void amps_init() {
   PIC::CPLR::ICES::readSWMFdata(1.0);
 #endif
 
+  double xminTECPLOT[3]={-240,-32,-32},xmaxTECPLOT[3]={16,32,32};
+  int nOutputsTECPLOT;
+  char command[200];
+
+  PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_RADIUS_(_TARGET_);
+  PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimits(xminTECPLOT,xmaxTECPLOT);
+  nOutputsTECPLOT=PIC::CPLR::DATAFILE::TECPLOT::CreateScript("ExtractDataPoints","3d__mhd_2_n00000001.plt");
+
+  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
+  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
+  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
+  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
+
+  PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=14;
+
+  sprintf(command,"tec360 -b 3d__mhd_2_n00000001.plt ExtractDataPoints.thread=%i.mcr",PIC::ThisThread);
+  system(command);
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+
+  PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile("ExtractDataPoints",nOutputsTECPLOT);
+ // PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
+
+
+
+/*  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::PlasmaSpeciesAtomicMass=1.0;
+  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::UnitLength=_RADIUS_(_TARGET_);
+  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::Init("3d__mhd_1_n00000001.idl");
+  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile();*/
+
+
+
+
 
   Mercury::Init_AfterParser();
 
@@ -1252,6 +1286,14 @@ void amps_init() {
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
+
+
+//  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.data.dat",0);
+
+
+  PIC::CPLR::DATAFILE::SaveBinaryFile("SavedCellData.bin");
+  PIC::CPLR::DATAFILE::LoadBinaryFile("SavedCellData.bin");
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
 
 
 
