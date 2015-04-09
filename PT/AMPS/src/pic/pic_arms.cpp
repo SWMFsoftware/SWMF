@@ -181,14 +181,14 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	      double cosTheta  = x[2] / radius, sinTheta = radpol / radius;
 	      double tmp;
 	      // transform velocity vector
-	      tmp = DataInterp[v_]*cosTheta+DataInterp[v_+1]*sinTheta;
-	      DataInterp[v_]   = DataInterp[v_]*sinTheta-DataInterp[v_+1]*cosTheta;
+	      tmp = DataInterp[v_]*cosTheta-DataInterp[v_+1]*sinTheta;
+	      DataInterp[v_]   = DataInterp[v_]*sinTheta+DataInterp[v_+1]*cosTheta;
 	      DataInterp[v_+1] = DataInterp[v_]*sinPhi+DataInterp[v_+2]*cosPhi;
 	      DataInterp[v_  ] = DataInterp[v_]*cosPhi-DataInterp[v_+2]*sinPhi;
 	      DataInterp[v_+2] = tmp;
 	      // transfrom magnetic field vector
-	      tmp = DataInterp[b_]*cosTheta+DataInterp[b_+1]*sinTheta;
-	      DataInterp[b_]   = DataInterp[b_]*sinTheta-DataInterp[b_+1]*cosTheta;
+	      tmp = DataInterp[b_]*cosTheta-DataInterp[b_+1]*sinTheta;
+	      DataInterp[b_]   = DataInterp[b_]*sinTheta+DataInterp[b_+1]*cosTheta;
 	      DataInterp[b_+1] = DataInterp[b_]*sinPhi+DataInterp[b_+2]*cosPhi;
 	      DataInterp[b_  ] = DataInterp[b_]*cosPhi-DataInterp[b_+2]*sinPhi;
 	      DataInterp[b_+2] = tmp;
