@@ -23,6 +23,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
+  use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, iRhoIon_I
 
   implicit none
 
@@ -36,7 +37,7 @@ subroutine update_states_MHD(iStage,iBlock)
        Bx, By, Bz, BxOld, ByOld, BzOld, B0x, B0y, B0z, RhoUx, RhoUy, RhoUz,&
        mBorisMinusRhoUxOld, mBorisMinusRhoUyOld, mBorisMinusRhoUzOld,&
        Rho, RhoInv, eCorr
-  real:: DtLocal, DtFactor, Coeff
+  real:: DtLocal, DtFactor, Coeff, Ne
   real:: B0_DC(3,nI,nJ,nK)
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'update_states_mhd'
@@ -366,12 +367,23 @@ contains
             State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
     end if
 
-    if(UseElectronPressure .and. PeMin > 0.0)then
-       do k=1,nK; do j=1,nJ; do i=1,nI
-          State_VGB(Pe_,i,j,k,iBlock) = max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
-       end do; end do; end do
+    if(UseElectronPressure)then
+       if(PeMin > 0.0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
+          end do; end do; end do
+       end if
+       if(TeMin > 0.0)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
+             State_VGB(Pe_,i,j,k,iBlock) = &
+                  max(Ne*TeMin, State_VGB(Pe_,i,j,k,iBlock))
+          end do; end do; end do
+       end if
 
-       if(DoTestMe)write(*,*) NameSub, ' after PeMin the electron pressure=', &
+       if(DoTestMe)write(*,*) NameSub, &
+            ' after PeMin and TeMin the electron pressure=', &
             State_VGB(Pe_,iTest,jTest,kTest,iBlock)
     end if
 
