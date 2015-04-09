@@ -245,9 +245,14 @@ Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
 
-#MINIMUMPRESSURE
-1E-9			pMinDim
-1E-9			PeMinDim
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5e4			TMinDim  [K] for fluid 1
+5e4			TeMinDim [K]
 
 #NONCONSERVATIVE
 T			UseNonConservative
