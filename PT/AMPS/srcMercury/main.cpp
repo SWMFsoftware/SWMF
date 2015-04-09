@@ -38,6 +38,8 @@ void amps_time_step();
 int main(int argc,char **argv) {
   //      MPI_Init(&argc,&argv);
 
+//  PIC::InitMPI();
+//  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::Init("3d__mhd_1_n00000001.idl"); //"3d__all_3_t00000010_n0000059.idl"); //"3d__mhd_1_n00000001.idl");
 
 cout << "Start: MERCURY" << endl;
 

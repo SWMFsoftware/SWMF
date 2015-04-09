@@ -1210,22 +1210,22 @@ void amps_init() {
 
   PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_RADIUS_(_TARGET_);
   PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimits(xminTECPLOT,xmaxTECPLOT);
-  nOutputsTECPLOT=PIC::CPLR::DATAFILE::TECPLOT::CreateScript("ExtractDataPoints","3d__mhd_2_n00000001.plt");
-
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
-
   PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=14;
 
+  PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_2_n00000001.plt");
+
+/*  nOutputsTECPLOT=PIC::CPLR::DATAFILE::TECPLOT::CreateScript("ExtractDataPoints","3d__mhd_2_n00000001.plt");
   sprintf(command,"tec360 -b 3d__mhd_2_n00000001.plt ExtractDataPoints.thread=%i.mcr",PIC::ThisThread);
   system(command);
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
-  PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile("ExtractDataPoints",nOutputsTECPLOT);
+  PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile("ExtractDataPoints",nOutputsTECPLOT);*/
  // PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
 
 
@@ -1294,6 +1294,11 @@ void amps_init() {
   PIC::CPLR::DATAFILE::SaveBinaryFile("SavedCellData.bin");
   PIC::CPLR::DATAFILE::LoadBinaryFile("SavedCellData.bin");
   PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+
+
+  PIC::CPLR::SaveCenterNodeAssociatedData("SavedAssociatedData.bin");
+  PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedAssociatedData.dat",0);
 
 
 
