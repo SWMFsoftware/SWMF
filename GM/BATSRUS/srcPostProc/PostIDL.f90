@@ -8,6 +8,7 @@ program PostIDL
   ! and put structured Coord_DC and State_VC together and save into a VAC file
 
   use ModPlotFile, ONLY: save_plot_file
+  use ModNumConst, ONLY: cHalfPi
 
   implicit none
 
@@ -221,11 +222,11 @@ program PostIDL
 
      ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
      if(idim0==2)then
-        if(TypeGeometry(1:9)=='spherical') then
+        if(TypeGeometry(1:9)=='spherical' .and. xmax1 > cHalfPi) then
            ! Use LatMin < Lat' < 2*LatMax-LatMin as generalized coordinate
            UseDoubleCut = .true.; nx2 = 2*nx2; 
            ! nxyz(3) = 2*nxyz(3)
-        elseif(TypeGeometry=='cylindrical')then
+        elseif(TypeGeometry=='cylindrical' .and. xmax2 > cHalfPi)then
            ! Use rMin < r' < 2*rMax - rMin as generalized coordinate
            UseDoubleCut = .true.; nx1 = 2*nx1; 
            ! nxyz(1) = 2*nxyz(1)
@@ -827,7 +828,7 @@ contains
           case(2)
              ! This is x=0 or y=0 plane, use axial radius vs Z
              Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
-             ! XyzGen_D(2) = xmin2 ! could be usedul for structured grid
+             ! XyzGen_D(2) = xmin2 ! could be useful for structured grid
           case(3)
              ! This is the z=0 plane
              ! Stretch X and Y with rSph/rCyl instead of simply
