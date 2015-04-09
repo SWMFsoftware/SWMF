@@ -317,6 +317,8 @@ subroutine set_physics_constants
   RhoMin_I     = RhoMinDim_I*Io2No_V(UnitRho_)
   pMin_I       = pMinDim_I*Io2No_V(UnitP_)
   PeMin        = max(PeMinSi*Si2No_V(UnitP_), PeMinDim*Io2No_V(UnitP_))
+  TMin_I       = TMinDim_I*Io2No_V(UnitTemperature_)
+  TeMin        = TeMinDim*Io2No_V(UnitTemperature_)
   ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
   ! Relaxation parameters for anisotropic ion pressure
