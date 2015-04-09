@@ -132,7 +132,6 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
             fprintf(fScript,"  VARLOADMODE = BYNAME\n");
             fprintf(fScript,"  ASSIGNSTRANDIDS = YES\n");
             fprintf(fScript,"  INITIALPLOTTYPE = CARTESIAN3D\n");
-            fprintf(fScript,"  VARNAMELIST = '\"X [R]\" \"Y [R]\" \"Z [R]\" \"`r [amu/cm^3]\" \"U_x [km/s]\" \"U_y [km/s]\" \"U_z [km/s]\" \"B_x [nT]\" \"B_y [nT]\" \"B_z [nT]\" \"p [nPa]\" \"J_x [`mA/m^2]\" \"J_y [`mA/m^2]\" \"J_z [`mA/m^2]\"'\n");
           }
 
           fprintf(fScript,"$!EXTRACTFROMPOLYLINE\n");
