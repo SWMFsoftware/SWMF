@@ -2466,6 +2466,10 @@ namespace PIC {
       //path to the location of the datafiles
       extern char path[_MAX_STRING_LENGTH_PIC_];
 
+      //save and loand the interpolated values from the AMPS' data buffers
+      void SaveBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      void LoadBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
       //read output of ARMS (reference???)
       namespace ARMS {
         //read ARMS' output file
@@ -2488,6 +2492,34 @@ namespace PIC {
           void GetDomainLimits(double *xmin,double *xmax);
           void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }
+      }
+
+      namespace TECPLOT {
+        extern double xDataMin[3],xDataMax[3];
+        extern double UnitLength; //the spatial units used in the BATSRUS' output file
+        extern int maxScriptPointNumber; //the maximum number of point that one single script can have
+        extern int nTotalVarlablesTECPLOT; //the total number of the variabled in the TECPLOT output file (including thoses that are not needed)
+
+        struct cLoadedVariableData {
+          int offset;
+          double ScaleFactor;
+        };
+
+        extern cLoadedVariableData Velocity,Pressure,MagneticField,Density;
+        inline void SetLoadedDensityVariableData(int offset,double ScaleFactor) {Density.offset=offset,Density.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedVelocityVariableData(int offset,double ScaleFactor) {Velocity.offset=offset,Velocity.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedPressureVariableData(int offset,double ScaleFactor) {Pressure.offset=offset,Pressure.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedMagneticFieldVariableData(int offset,double ScaleFactor) {MagneticField.offset=offset,MagneticField.ScaleFactor=ScaleFactor;}
+
+        void SetDomainLimits(double *xmin,double *xmax);
+        void ExtractData(const char *fname);
+
+        //function CreatePointList: 1. calculates the number of the points the will be interpolated and 2. is fScript!=NULL save tham into fScript
+        int CountInterpolatedPointNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+
+        int CreateScript(const char *ScriptBaseName,const char* DataFileTECPLOT,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+        void LoadDataFile(const char *fname,int nTotalOutputFiles,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
       }
     }
 

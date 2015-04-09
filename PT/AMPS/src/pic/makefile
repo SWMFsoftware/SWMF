@@ -42,7 +42,8 @@ PICOBJ = pic.o \
 	pic_sample_pitch_angle_distribution.o \
 	pic_kameleon.o \
 	pic_restart.o \
-	pic_arms.o 
+	pic_arms.o \
+	pic_tecplot.o
 	
 ifneq ($(BATL),nobatl)	
 PICOBJ+=pic_batsrus.o \
