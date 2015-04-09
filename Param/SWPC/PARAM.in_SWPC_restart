@@ -62,12 +62,12 @@ F			DoCoupleOnTime
 GM/restartIN/restart.H
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-vary			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBot
-float			TypeBcTop
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner

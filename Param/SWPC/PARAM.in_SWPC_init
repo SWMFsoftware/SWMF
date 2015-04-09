@@ -69,24 +69,24 @@ shell0			NameArea
 2.5			r1Shell
 8			r2Shell
 
-#MAGNETOSPHERE
-T                       body1
-2.5                     Rbody
-3.0                     Rcurrents
-28.0                    Magneto_rho_dim (/ccm) density for fixed BC for rho_BLK
-25000.0                 Magneto_T_dim (K) temperature for fixed BC for P_BLK
+#BODY
+T                       UseBody
+2.5                     rBody     (in planet radius)
+3.0                     rCurrents (in planet radius)
+28.0                    BodyNDim  (/cc)
+25000.0                 BodyTDim  (K)
 
 #TIMESTEPPING
 1			nStage
 0.80			CflExlp
 
 #OUTERBOUNDARY
-outflow			TypeBcEast
-vary			TypeBcWest
-float			TypeBcSouth
-float			TypeBcNorth
-float			TypeBcBot
-float			TypeBcTop
+outflow			TypeBc1
+vary			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
