@@ -6,12 +6,12 @@ module ModEnergy
   use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
-       select_fluid
+       select_fluid, MassFluid_I, iRho_I
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, IsMhd, &
        Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB
-  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I
+  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I, TMin_I
 
   implicit none
 
@@ -452,13 +452,24 @@ contains
     integer, intent(in) :: iFluidMin, iFluidMax
 
     integer:: i, j, k
+    real :: NumDens
     !------------------------------------------------------------------------
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
        iP = iP_I(iFluid)
-       do k=kMin, kMax; do j=jMin, jMax; do i=iMin, iMax
-          State_VGB(iP, i, j, k, iBlock) = max(pMin_I(iFluid), &
-               State_VGB(iP, i, j, k, iBlock))
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          State_VGB(iP,i,j,k,iBlock) = max(pMin_I(iFluid), &
+               State_VGB(iP,i,j,k,iBlock))
+       end do; end do; end do
+    end do
+
+    do iFluid = iFluidMin, iFluidMax
+       if(TMin_I(iFluid) < 0.0) CYCLE
+       iP = iP_I(iFluid)
+       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+          NumDens = State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
+          State_VGB(iP,i,j,k,iBlock) = max(NumDens*TMin_I(iFluid), &
+               State_VGB(iP,i,j,k,iBlock))
        end do; end do; end do
     end do
 
@@ -472,13 +483,24 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i, j, k
+    real :: NumDens
     !------------------------------------------------------------------------
     do iFluid = 1, nFluid
        if(pMin_I(iFluid) < 0.0) CYCLE
        iP = iP_I(iFluid)
-       do k=1, nK; do j=1, nJ; do i=1, nI
-          StateOld_VCB(iP, i, j, k, iBlock) = max(pMin_I(iFluid), &
-               StateOld_VCB(iP, i, j, k, iBlock))
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          StateOld_VCB(iP,i,j,k,iBlock) = max(pMin_I(iFluid), &
+               StateOld_VCB(iP,i,j,k,iBlock))
+       end do; end do; end do
+    end do
+
+    do iFluid = 1, nFluid
+       if(TMin_I(iFluid) < 0.0) CYCLE
+       iP = iP_I(iFluid)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          NumDens=StateOld_VCB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
+          StateOld_VCB(iP,i,j,k,iBlock) = max(NumDens*TMin_I(iFluid), &
+               StateOld_VCB(iP,i,j,k,iBlock))
        end do; end do; end do
     end do
 
