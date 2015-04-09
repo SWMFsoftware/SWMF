@@ -815,7 +815,7 @@ contains
          get_gamma_collisionless
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads
-    use ModGeometry,     ONLY: far_field_BCs_BLK
+    use ModGeometry,     ONLY: far_field_BCs_BLK, Xyz_DGB
     use ModParallel,     ONLY: NOBLK, NeiLev
 
     real, intent(out)  :: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
@@ -928,6 +928,12 @@ contains
           end if
 
           if(DoRadCooling)then
+             if(TeSi<=TeEpsilonSi)then
+                write(*,*)'Temoerature is less than TeEpsilonSi=',&
+                     TeEpsilonSi, ' K'
+                write(*,*)'Te=',TeSi,' K at Xyz=',Xyz_DGB(:,i,j,k,iBlock)
+             end if
+ 
              call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                   CoolHeat_CB(i,j,k,iBlock))
              call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
