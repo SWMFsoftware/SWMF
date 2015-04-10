@@ -125,9 +125,9 @@ Param/CORONA/grid_TR.dat
 1.01			Coord1Min Radius
 24.0			Coord1Max
 0.0			Coord2Min Longitude
-10.0			Coord2Max
--5.0			Coord3Min Latitude
-+5.0			Coord3Max
+2.0			Coord2Max
+-1.0			Coord3Min Latitude
++1.0			Coord3Max
 
 #GRID
 32			nRootBlockX

@@ -126,8 +126,8 @@ spherical_genr
 Param/CORONA/grid_TR.dat
 1.01			Coord1Min Radius
 24.0			Coord1Max
-85.0			Coord2Min Longitude
-95.0			Coord2Max
+89.0			Coord2Min Longitude
+91.0			Coord2Max
 -89.9			Coord3Min Latitude
 89.9			Coord3Max
 
