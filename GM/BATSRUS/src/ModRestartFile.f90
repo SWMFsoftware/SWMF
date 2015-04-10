@@ -362,7 +362,7 @@ contains
     use ModIO,       ONLY: NameMaxTimeUnit
 
     integer :: iFluid
-    logical :: isLimitedGeometry
+    logical :: IsLimitedGeometry=.false.
     !--------------------------------------------------------------------------
 
     if (iProc/=0) RETURN
@@ -441,17 +441,17 @@ contains
     write(unit_tmp,'(es22.15,a18)')time_simulation,'tSimulation'
     write(unit_tmp,*)
     if(.not.IsCartesian)then
-       isLimitedGeometry=.false.
+       IsLimitedGeometry=.false.
        if(abs(CoordDimMin_D(1)) >1e-15 .or. abs(CoordDimMax_D(1))>1e-15) &
-            isLimitedGeometry=.true.
-       if(isLimitedGeometry) then
+            IsLimitedGeometry=.true.
+       if(IsLimitedGeometry) then
           write(unit_tmp,'(a)')'#GRIDGEOMETRYLIMIT'
        else 
           write(unit_tmp,'(a)')'#GRIDGEOMETRY'
        endif
        write(unit_tmp,'(a20,a20)')TypeGeometry, 'TypeGeometry'
        if(IsGenRadius) write(unit_tmp,'(a100)')NameGridFile
-       if(isLimitedGeometry) then
+       if(IsLimitedGeometry) then
           write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(1),'Coord1Min'
           write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(1),'Coord1Max'
           write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(2),'Coord2Min'
@@ -472,7 +472,8 @@ contains
     write(unit_tmp,'(es22.15,a18)')z1,'zMin'
     write(unit_tmp,'(es22.15,a18)')z2,'zMax'
     write(unit_tmp,*)
-    if(.not.IsCartesianGrid .and. RadiusMin >= 0.0 .and. RadiusMax > 0.0)then
+    if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
+         .and. .not.IsLimitedGeometry)then
        write(unit_tmp,'(a)')'#LIMITRADIUS'
        write(unit_tmp,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
        write(unit_tmp,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
