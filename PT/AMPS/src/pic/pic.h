@@ -2495,10 +2495,16 @@ namespace PIC {
       }
 
       namespace TECPLOT {
-        extern double xDataMin[3],xDataMax[3];
+        extern double xDataMin[3],xDataMax[3]; //the size of the domain. used when DataMode==DataMode_XYZ
+        extern double rDataMin,rDataMax; //the radial size of the domain. used when DataMode==DataMode_SPERICAL
+
         extern double UnitLength; //the spatial units used in the BATSRUS' output file
         extern int maxScriptPointNumber; //the maximum number of point that one single script can have
         extern int nTotalVarlablesTECPLOT; //the total number of the variabled in the TECPLOT output file (including thoses that are not needed)
+
+        const int DataMode_SPHERICAL=0;
+        const int DataMode_XYZ=1;
+        extern int DataMode;
 
         class cLoadedVariableData {
         public:
@@ -2516,7 +2522,8 @@ namespace PIC {
         inline void SetLoadedPressureVariableData(int offset,double ScaleFactor) {Pressure.offset=offset,Pressure.ScaleFactor=ScaleFactor;}
         inline void SetLoadedMagneticFieldVariableData(int offset,double ScaleFactor) {MagneticField.offset=offset,MagneticField.ScaleFactor=ScaleFactor;}
 
-        void SetDomainLimits(double *xmin,double *xmax);
+        void SetDomainLimitsXYZ(double *xmin,double *xmax);
+        void SetDomainLimitsSPHERICAL(double rmin,double rmax);
         void ExtractData(const char *fname);
 
         //function CreatePointList: 1. calculates the number of the points the will be interpolated and 2. is fScript!=NULL save tham into fScript

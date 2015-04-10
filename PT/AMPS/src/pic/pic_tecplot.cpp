@@ -13,14 +13,20 @@
 
 //the procedures that created the script and extract data from tecplot data files
 double PIC::CPLR::DATAFILE::TECPLOT::xDataMin[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::xDataMax[3]={0.0,0.0,0.0},PIC::CPLR::DATAFILE::TECPLOT::UnitLength=0.0;
+double PIC::CPLR::DATAFILE::TECPLOT::rDataMin=0.0,PIC::CPLR::DATAFILE::TECPLOT::rDataMax=0.0;
 int PIC::CPLR::DATAFILE::TECPLOT::maxScriptPointNumber=15000;
 int PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=0;
+int PIC::CPLR::DATAFILE::TECPLOT::DataMode=-1;
 
 PIC::CPLR::DATAFILE::TECPLOT::cLoadedVariableData PIC::CPLR::DATAFILE::TECPLOT::Velocity,PIC::CPLR::DATAFILE::TECPLOT::Pressure,PIC::CPLR::DATAFILE::TECPLOT::MagneticField,PIC::CPLR::DATAFILE::TECPLOT::Density;
 
 //set the limits of the domain in the data file
-void PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimits(double *xmin,double *xmax) {
+void PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(double *xmin,double *xmax) {
   for (int idim=0;idim<3;idim++) xDataMin[idim]=xmin[idim],xDataMax[idim]=xmax[idim];
+}
+
+void PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(double rmin,double rmax) {
+  rDataMin=rmin,rDataMax=rmax;
 }
 
 //calcualte the number of the points that need to be extracted and save them into a file
@@ -58,7 +64,19 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       if (startNode->block->GetCenterNode(nd)==NULL) continue;
 
       //count the point if it is within the limits of the domain
-      if ( (xDataMin[0]<x[0])&&(x[0]<xDataMax[0]) && (xDataMin[1]<x[1])&&(x[1]<xDataMax[1]) && (xDataMin[2]<x[2])&&(x[2]<xDataMax[2]) ) {
+      bool PointWithinDomainTECPLOT=true;
+
+      if (DataMode==DataMode_XYZ) {
+        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+      }
+      else if (DataMode==DataMode_SPHERICAL) {
+        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+        if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
+      }
+      else exit(__LINE__,__FILE__,"Error: unknown option");
+
+      if (PointWithinDomainTECPLOT==true) {
         nExtractedPoints++;
       }
 
@@ -112,7 +130,19 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       if (startNode->block->GetCenterNode(nd)==NULL) continue;
 
       //save the point if it is within the limits of the domain
-      if ( (xDataMin[0]<x[0])&&(x[0]<xDataMax[0]) && (xDataMin[1]<x[1])&&(x[1]<xDataMax[1]) && (xDataMin[2]<x[2])&&(x[2]<xDataMax[2]) ) {
+      bool PointWithinDomainTECPLOT=true;
+
+      if (DataMode==DataMode_XYZ) {
+        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+      }
+      else if (DataMode==DataMode_SPHERICAL) {
+        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+        if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
+      }
+      else exit(__LINE__,__FILE__,"Error: unknown option");
+
+      if (PointWithinDomainTECPLOT==true) {
         //open new script file if needed
         if ((fScript==NULL) || (nScriptPrintedPoints==maxScriptPointNumber)) {
           nScriptPrintedPoints=0;
@@ -218,7 +248,19 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
       //save the point if it is within the limits of the domain
-      if ( (xDataMin[0]<x[0])&&(x[0]<xDataMax[0]) && (xDataMin[1]<x[1])&&(x[1]<xDataMax[1]) && (xDataMin[2]<x[2])&&(x[2]<xDataMax[2]) ) {
+      bool PointWithinDomainTECPLOT=true;
+
+      if (DataMode==DataMode_XYZ) {
+        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+      }
+      else if (DataMode==DataMode_SPHERICAL) {
+        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+
+        if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
+      }
+      else exit(__LINE__,__FILE__,"Error: unknown option");
+
+      if (PointWithinDomainTECPLOT==true) {
         //open new script file if needed
         if ((FirstPassFlag==true) || (nLoadedDataPoints==maxScriptPointNumber)) {
           nLoadedDataPoints=0;
@@ -648,9 +690,18 @@ void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
 void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
 
   //check whether all variables needed to read the data are set
+  if (DataMode==-1) exit(__LINE__,__FILE__,"The DataMode is not initialized");
+
   if (UnitLength==0.0) exit(__LINE__,__FILE__,"The variable is not set");
-  for (int idim=0;idim<3;idim++) if (xDataMin[idim]==xDataMax[idim]) exit(__LINE__,__FILE__,"The variable is not set");
   if (nTotalVarlablesTECPLOT==0) exit(__LINE__,__FILE__,"The variable is not set");
+
+  if (DataMode==DataMode_XYZ) {
+    for (int idim=0;idim<3;idim++) if (xDataMin[idim]==xDataMax[idim]) exit(__LINE__,__FILE__,"The variable is not set");
+  }
+  else if (DataMode==DataMode_SPHERICAL) {
+    if (rDataMin==rDataMax) exit(__LINE__,__FILE__,"The variable is not set");
+  }
+  else exit(__LINE__,__FILE__,"Error: unknown value of DataMode");
 
   if (Velocity.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
   if (Pressure.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
