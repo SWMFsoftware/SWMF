@@ -2526,6 +2526,8 @@ namespace PIC {
         void SetDomainLimitsSPHERICAL(double rmin,double rmax);
         void ExtractData(const char *fname);
 
+        void ResetCellProcessingFlag(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
         //function CreatePointList: 1. calculates the number of the points the will be interpolated and 2. is fScript!=NULL save tham into fScript
         int CountInterpolatedPointNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
 

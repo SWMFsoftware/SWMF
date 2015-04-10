@@ -29,12 +29,47 @@ void PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(double rmin,double r
   rDataMin=rmin,rDataMax=rmax;
 }
 
+
+void PIC::CPLR::DATAFILE::TECPLOT::ResetCellProcessingFlag(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  int i,j,k,nd;
+
+//  return;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    double *xNodeMin=startNode->xmin;
+    double *xNodeMax=startNode->xmax;
+    double x[3];
+    PIC::Mesh::cDataCenterNode *CenterNode;
+
+    if (startNode->block==NULL) return;
+
+    for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      //locate the cell
+      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
+
+      //reset the flag
+      CenterNode->nodeDescriptor.nodeProcessedFlag=_PIC_MODE_OFF_;
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) ResetCellProcessingFlag(startNode->downNode[nDownNode]);
+  }
+}
+
+
 //calcualte the number of the points that need to be extracted and save them into a file
 int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static int nExtractedPoints=0;
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     nExtractedPoints=0;
+    ResetCellProcessingFlag();
   }
 
   //create the list of the points
@@ -50,6 +85,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
     double x[3];
+    PIC::Mesh::cDataCenterNode *CenterNode;
 
     if (startNode->Thread==PIC::ThisThread) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
@@ -61,7 +97,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       if (startNode->block==NULL) continue;
 
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-      if (startNode->block->GetCenterNode(nd)==NULL) continue;
+      if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 
       //count the point if it is within the limits of the domain
       bool PointWithinDomainTECPLOT=true;
@@ -76,8 +112,9 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       }
       else exit(__LINE__,__FILE__,"Error: unknown option");
 
-      if (PointWithinDomainTECPLOT==true) {
+      if ((PointWithinDomainTECPLOT==true)&&(CenterNode->nodeDescriptor.nodeProcessedFlag==_PIC_MODE_OFF_)) {
         nExtractedPoints++;
+        CenterNode->nodeDescriptor.nodeProcessedFlag=_PIC_MODE_ON_;
       }
 
     }
@@ -100,6 +137,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
   //init the datapoint number
   if (startNode==PIC::Mesh::mesh.rootTree) {
     nDataPointLeft=CountInterpolatedPointNumber(startNode);
+    ResetCellProcessingFlag();
   }
 
   //loop through all points
@@ -116,6 +154,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
     double x[3];
+    PIC::Mesh::cDataCenterNode *CenterNode;
 
     if (startNode->Thread==PIC::ThisThread) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
@@ -127,7 +166,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       if (startNode->block==NULL) continue;
 
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-      if (startNode->block->GetCenterNode(nd)==NULL) continue;
+      if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 
       //save the point if it is within the limits of the domain
       bool PointWithinDomainTECPLOT=true;
@@ -142,7 +181,9 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       }
       else exit(__LINE__,__FILE__,"Error: unknown option");
 
-      if (PointWithinDomainTECPLOT==true) {
+      if ((PointWithinDomainTECPLOT==true)&&(CenterNode->nodeDescriptor.nodeProcessedFlag==_PIC_MODE_OFF_)) {
+        CenterNode->nodeDescriptor.nodeProcessedFlag=_PIC_MODE_ON_;
+
         //open new script file if needed
         if ((fScript==NULL) || (nScriptPrintedPoints==maxScriptPointNumber)) {
           nScriptPrintedPoints=0;
@@ -215,6 +256,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
     data=new double [nTotalVarlablesTECPLOT];
     nLoadedDataFile=0,nLoadedDataPoints=0;
     FirstPassFlag=true;
+    ResetCellProcessingFlag();
   }
 
   //loop through all points
@@ -260,71 +302,75 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
       }
       else exit(__LINE__,__FILE__,"Error: unknown option");
 
-      if (PointWithinDomainTECPLOT==true) {
-        //open new script file if needed
-        if ((FirstPassFlag==true) || (nLoadedDataPoints==maxScriptPointNumber)) {
-          nLoadedDataPoints=0;
+      if (CenterNode->nodeDescriptor.nodeProcessedFlag==_PIC_MODE_OFF_) {
+        CenterNode->nodeDescriptor.nodeProcessedFlag=_PIC_MODE_ON_;
 
-          if (FirstPassFlag==false) {
-            fin.closefile();
+        if (PointWithinDomainTECPLOT==true) {
+          //open new script file if needed
+          if ((FirstPassFlag==true) || (nLoadedDataPoints==maxScriptPointNumber)) {
+            nLoadedDataPoints=0;
+
+            if (FirstPassFlag==false) {
+              fin.closefile();
+            }
+
+            FirstPassFlag=false;
+            sprintf(DataFileName,"%s.thread=%i.%i.dat",fname,PIC::ThisThread,nLoadedDataFile);
+            fin.openfile(DataFileName);
+
+            //skip the first 2+nTotalVarlablesTECPLOT lines
+            for (int i=0;i<2+nTotalVarlablesTECPLOT;i++) fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+
+            nLoadedDataFile++;
           }
 
-          FirstPassFlag=false;
-          sprintf(DataFileName,"%s.thread=%i.%i.dat",fname,PIC::ThisThread,nLoadedDataFile);
-          fin.openfile(DataFileName);
+          //read data points
+          fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
 
-          //skip the first 2+nTotalVarlablesTECPLOT lines
-          for (int i=0;i<2+nTotalVarlablesTECPLOT;i++) fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+          for (int i=0;i<nTotalVarlablesTECPLOT;i++) {
+            fin.CutInputStr(str1,str);
+            data[i]=strtod(str1, NULL);
+          }
 
-          nLoadedDataFile++;
+          //save the data on the AMPS data buffers
+          //the order of the state vector: number density, temperature
+          *((double*)(offset+PlasmaNumberDensityOffset))=data[Density.offset]*Density.ScaleFactor;
+          *((double*)(offset+PlasmaTemperatureOffset))=(data[Density.offset]>0.0) ? data[Pressure.offset]*Pressure.ScaleFactor/(Kbol*data[Density.offset]*Density.ScaleFactor) : 0.0;
+
+          //get pressure
+          *((double*)(offset+PlasmaPressureOffset))=data[Pressure.offset]*Pressure.ScaleFactor;
+
+          //bulk velocity and magnetic field
+          for (idim=0;idim<3;idim++) {
+            *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=data[idim+MagneticField.offset]*MagneticField.ScaleFactor;
+            *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=data[idim+Velocity.offset]*Velocity.ScaleFactor;
+          }
+
+          //calculate the electric field
+          double *E,*B,*v;
+
+          v=(double*)(offset+PlasmaBulkVelocityOffset);
+          B=(double*)(offset+MagneticFieldOffset);
+          E=(double*)(offset+ElectricFieldOffset);
+
+          E[0]=-(v[1]*B[2]-B[1]*v[2]);
+          E[1]=+(v[0]*B[2]-B[0]*v[2]);
+          E[2]=-(v[0]*B[1]-B[0]*v[1]);
+
+
+
+          //increment the point counter
+          nLoadedDataPoints++;
         }
+        else {
+          *((double*)(offset+PlasmaNumberDensityOffset))=0.0;
+          *((double*)(offset+PlasmaTemperatureOffset))=0.0;
+          *((double*)(offset+PlasmaPressureOffset))=0.0;
 
-        //read data points
-        fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
-
-        for (int i=0;i<nTotalVarlablesTECPLOT;i++) {
-          fin.CutInputStr(str1,str);
-          data[i]=strtod(str1, NULL);
-        }
-
-        //save the data on the AMPS data buffers
-        //the order of the state vector: number density, temperature
-        *((double*)(offset+PlasmaNumberDensityOffset))=data[Density.offset]*Density.ScaleFactor;
-        *((double*)(offset+PlasmaTemperatureOffset))=(data[Density.offset]>0.0) ? data[Pressure.offset]*Pressure.ScaleFactor/(Kbol*data[Density.offset]*Density.ScaleFactor) : 0.0;
-
-        //get pressure
-        *((double*)(offset+PlasmaPressureOffset))=data[Pressure.offset]*Pressure.ScaleFactor;
-
-        //bulk velocity and magnetic field
-        for (idim=0;idim<3;idim++) {
-          *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=data[idim+MagneticField.offset]*MagneticField.ScaleFactor;
-          *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=data[idim+Velocity.offset]*Velocity.ScaleFactor;
-        }
-
-        //calculate the electric field
-        double *E,*B,*v;
-
-        v=(double*)(offset+PlasmaBulkVelocityOffset);
-        B=(double*)(offset+MagneticFieldOffset);
-        E=(double*)(offset+ElectricFieldOffset);
-
-        E[0]=-(v[1]*B[2]-B[1]*v[2]);
-        E[1]=+(v[0]*B[2]-B[0]*v[2]);
-        E[2]=-(v[0]*B[1]-B[0]*v[1]);
-
-
-
-        //increment the point counter
-        nLoadedDataPoints++;
-      }
-      else {
-        *((double*)(offset+PlasmaNumberDensityOffset))=0.0;
-        *((double*)(offset+PlasmaTemperatureOffset))=0.0;
-        *((double*)(offset+PlasmaPressureOffset))=0.0;
-
-        for (idim=0;idim<3;idim++) {
-          *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=0.0;
-          *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=0.0;
+          for (idim=0;idim<3;idim++) {
+            *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=0.0;
+            *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=0.0;
+          }
         }
       }
 
