@@ -1,0 +1,344 @@
+#ECHO
+T                       DoEcho
+
+#PLANET
+NONE
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#STARTTIME
+2014                    iYear
+8                       iMonth
+23                       iDay
+16                       iHour
+0                       iMinute
+0                       iSecond
+0.0			FracSecond
+
+INCLUDE
+GM/restartIN/restart.H
+
+#GRID
+1                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-16.0                   xMin
+ 16.0                   xMax
+-16.0                   yMin
+ 16.0                   yMax
+-16.0                   zMin
+ 16.0                   zMax
+
+#GRIDLEVEL
+3
+initial
+
+#GRIDLEVEL
+3
+shell0
+0.5
+4.0
+
+#GRIDLEVEL
+1
+all
+
+#SAVERESTART
+T
+5000
+-1
+
+#BODY
+T                         body1
+1.0e-6                    rBody
+0.0                       rCurrents
+1.0e-9                    BodyRhoDim (1/ccm)
+25.0                      BodyTDim (K) temperature for fixed BC for P_BLK
+1.0e-9                    BodyRhoDim (1/ccm)
+180.0                     BodyTDim (K) temperature for fixed BC for P_BLK
+1.0e-9			  BodyRhoDim (1/ccm)
+180.0			  BodyTDim (K) temperature for fixed BC for P_BLK
+
+#USERINPUTBEGIN -------------------------------------
+
+#SHAPEFILE
+CG_MOC.bdf               NameShapeFile
+
+#USECGSHAPE
+T			DoUseCGShape
+2.0e3			rSphericalBodySi [m]
+
+#SUNDIRECTION
+ 43.57                  LatSun
+  0.0                   LonSun
+
+#COMETSTATE
+4.087536e20             ProductionRateMinSi [m^-2 s^-1]
+1.040419e21             ProductionRateMaxSi [m^-2 s^-1]
+57.5                    SolarAngleMaxDim [degree]
+133.0                   TempCometMinDim [K]
+182.1                   TempCometMaxDim [K]
+136.1                   TempComet75Dim [K]
+
+#IONIZATIONPARAM
+0.9			Heliocentric distance [AU]
+2.0E-6			Ionization frequency for cometary heavy ions
+15.0			Minimum ion temperature
+1e20			Total production rate [1/s]
+30.0			uhaser [m/s]
+
+#BODYBC
+solarwind		UseSwBC
+
+#MINIMUMNEUTEMPERATURE
+100.0
+
+#USERINPUTEND   -------------------------------------
+
+#SOLARWIND
+ 1.0                    SW_rho_dim [n/cc]    \
+100.0                   SW_T_dim [K]          |
+ 0.0                    SW_Ux_dim [km/s]      |
+ 0.0                    SW_Uy_dim [km/s]      | 3.3 AU
+ 0.0                    SW_Uz_dim [km/s]      |
+ 0.0                    SW_Bx_dim [nT]        |
+ 0.0                    SW_By_dim [nT]        |
+ 0.0                    SW_Bz_dim [nT]       /
+
+#OUTERBOUNDARY
+user                   TypeBcEast
+user                   TypeBcWest
+user                   TypeBcSouth
+user                   TypeBcNorth
+user                   TypeBcBottom
+user                   TypeBcTop
+
+#EXTRABOUNDARY
+T                       UseExtraBoundary
+user                    TypeExtraBoundary
+
+#FACEBOUNDARY
+0                       MinFaceBoundary
+6                       MaxFaceBoundary
+
+#MHDIONS
+T		          DoAddRhoP
+T			  DoAddRhoU
+
+#MINIMUMPRESSURE
+2e-15
+1e-15
+1e-15
+1e-15
+1e-15
+
+#MINIMUMDENSITY
+2e-15
+1e-15
+1e-15
+1e-15
+
+#GAMMA
+1.4			gamma
+
+#PLASMA
+1.0                       IonMass SWp [amu]
+18.0                      IonMass H2Op [amu]
+18.0			  H2O Neutral [amu]
+1.0                       IonCharge SWp [e]
+1.0                       IonCharge H2Op [e]
+1.0                       ElectronPressureRatio
+
+#MULTIION
+1e-7			  LowDensityRatio
+1e-12			  LowPressureRatio
+F			  DoRestrictMultiIon
+3.0                       MachNumberMultiIon (read if DoRestrictMultiIon)
+0.25                      ParabolaWidthMultiIon (read if DoRestrictMultiIon)
+
+#MULTIIONSTATE
+T                         UseSingleIonVelocity
+F                         UseSingleIonTemperature
+
+#SCHEME
+1                         nOrder
+Linde                     TypeFlux | only for nOrder=2
+
+#TIMESTEPPING
+1                       nStage
+0.8                     CflExpl
+
+#NEUTRALFLUID
+F                       DoConserveNeutrals
+Linde                   TypeFluxNeutral
+
+#POINTIMPLICIT
+F                         UsePointImplicit
+1.0                       BetaPointImpl
+F                         IsAsymetric
+T                         DoNormalizeCell 
+
+#RESTARTOUTFILE
+one
+
+#NONCONSERVATIVE
+T                         UseNonConservative
+
+#CONSERVATIVECRITERIA
+0
+
+#USERFLAGS
+T                        UseUserInnerBcs
+F                        UseUserSource
+F                        UseUserPerturbation
+F                        UseUserOuterBcs
+T                        UseUserICs
+F                        UseUserSpecifyRefinement
+T                        UseUserLogFiles
+T                        UseUserWritePlot
+F                        UseUserAMR
+F                        UseUserEchoInput
+F                        UseUserB0
+T                        UseUserInitSession
+F                        UseUserUpdateStates (T????)
+
+#SAVELOGFILE
+T                       DoSaveLogfile, rest of parameters read if true
+VAR step date time      StringLog
+1                      DnSaveLogfile
+-1.                     DtSaveLogfile [sec]
+dtpnt rho Ux Uy Uz Bx By Bz p rhopnt Uxpnt Uypnt Uzpnt ppnt Pmin Pmax Neu1Rhoflx
+3.0 4.0 80.0 1e3 1e4 4.8e5
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+4                       nplotfiles
+x=0 MHD idl             plot_string
+10                    DnSavePlot
+-1.                     DtSavePlot
+-1.			Dx
+y=0 MHD idl             plot_string
+10                    DnSavePlot
+-1.                     DtSavePlot
+-1.			Dx
+z=0 MHD idl             plot_string
+10                    DnSavePlot
+-1.                     DtSavePlot
+-1.			Dx
+3d MHD tec              plot_string
+50000                   DnSavePlot
+-1.                     DtSavePlot
+
+#STOP
+80
+-1.0
+
+#RUN
+
+END
+===============================================================
+
+#USERINPUTBEGIN -------------------------------------
+
+#BODYBC
+reflected		UseSwBC
+
+#USERINPUTEND   -------------------------------------
+
+#SOLARWIND
+8.0                     SW_rho_dim [n/cc]
+1.e5                    SW_T_dim [K]
+-371.                   SW_Ux_dim [km/s]
+0.0                     SW_Uy_dim [km/s]
+0.0                     SW_Uz_dim [km/s]
+-3.4                    SW_Bx_dim [nT]
+3.4                     SW_By_dim [nT]
+0.0                     SW_Bz_dim [nT]
+
+#TIMESTEPPING
+1                       nStage
+0.2                     CflExpl
+
+#NEUTRALFLUID
+F                       DoConserveNeutrals
+Linde                   TypeFluxNeutral
+
+#POINTIMPLICIT
+T                         UsePointImplicit
+1.0                       BetaPointImpl
+T                         IsAsymetric
+T                         DoNormalizeCell
+
+#USERFLAGS
+T                        UseUserInnerBcs
+T                        UseUserSource
+T                        UseUserPerturbation
+F                        UseUserOuterBcs
+T                        UseUserICs
+F                        UseUserSpecifyRefinement
+T                        UseUserLogFiles
+T                        UseUserWritePlot
+F                        UseUserAMR
+F                        UseUserEchoInput
+F                        UseUserB0
+T                        UseUserInitSession
+T                        UseUserUpdateStates (T????)
+
+#STOP
+100
+-1.0
+
+#RUN
+
+END
+==============================================================
+
+#MULTIIONSTATE
+F                         UseSingleIonVelocity
+F                         UseSingleIonTemperature
+
+#POINTIMPLICIT
+T                         UsePointImplicit
+1.0                       BetaPointImpl
+F                         IsAsymetric
+T                         DoNormalizeCell
+
+#USERFLAGS
+T                        UseUserInnerBcs
+T                        UseUserSource
+F                        UseUserPerturbation
+F                        UseUserOuterBcs
+T                        UseUserICs
+F                        UseUserSpecifyRefinement
+T                        UseUserLogFiles
+T                        UseUserWritePlot
+F                        UseUserAMR
+F                        UseUserEchoInput
+F                        UseUserB0
+T                        UseUserInitSession
+T                        UseUserUpdateStates
+
+#STOP
+150
+-1.0
+
+#RUN
+
+END
+
+===============================================================
+#TIMEACCURATE
+T                       DoTimeAccurate
+
+#STOP
+180
+-1.0
+
+#RUN
+
+#END
+
+===============================================================
