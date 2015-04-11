@@ -444,7 +444,15 @@ contains
     Dictionary_III(Neu1_, RhoUz_, 2) = 'neumz'
     Dictionary_III(Neu1_, p_,     2) = 'neup'
     Dictionary_III(Neu1_, Energy_,2) = 'neue'
-   
+
+    ! Create Alternate names for arbitrary neutral
+    Dictionary_III(Neu1_, Rho_,   3) = 'Neu1Rho'
+    Dictionary_III(Neu1_, RhoUx_, 3) = 'Neu1Mx'
+    Dictionary_III(Neu1_, RhoUy_, 3) = 'Neu1My'
+    Dictionary_III(Neu1_, RhoUz_, 3) = 'Neu1Mz'
+    Dictionary_III(Neu1_, p_,     3) = 'Neu1P'
+    Dictionary_III(Neu1_, Energy_,3) = 'Neu1E'
+
     ! Outer Heliosphere Pop2 / arbitrary neutral
     Dictionary_III(Neu2_, Rho_,   2) = 'ne2rho'
     Dictionary_III(Neu2_, RhoUx_, 2) = 'ne2mx'
