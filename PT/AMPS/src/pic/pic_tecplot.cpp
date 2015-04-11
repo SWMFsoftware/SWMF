@@ -678,10 +678,10 @@ void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
   const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
   const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
 
-  char LoadCellFlag,savedLoadCellFlag;
+  char savedLoadCellFlag;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if (startNode->Thread!=PIC::ThisThread) {
+    if (startNode->block==NULL) {
        //the block belongs to a other processor -> skip all data
       for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++)  {
         fread(&savedLoadCellFlag,sizeof(char),1,fData);
@@ -694,26 +694,22 @@ void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
 
     }
     else for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-      LoadCellFlag=true;
-
-      //determine whether the cell data needed to be read
-      //locate the cell
-      if (startNode->block==NULL) LoadCellFlag=false,offset=NULL;
-
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-      if (LoadCellFlag==true) {
-        if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
-        else LoadCellFlag=false,offset=NULL;
-      }
-
-      //read and compare the saved 'cell read' flag
       fread(&savedLoadCellFlag,sizeof(char),1,fData);
-      if (savedLoadCellFlag!=LoadCellFlag) exit(__LINE__,__FILE__,"LoadCellFlag is not consistent with the saved one. Someing is wrong with saving/reading of the binary data");
 
-      if (LoadCellFlag==true) {
-        //read the data
-        fread(offset,sizeof(char),CenterNode->AssociatedDataLength(),fData);
+      if (savedLoadCellFlag==true) {
+        //determine whether the cell data needed to be read
+        //locate the cell
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+
+        if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) {
+          offset=CenterNode->GetAssociatedDataBufferPointer();
+
+          //read center cells' associated data
+          fread(offset,sizeof(char),CenterNode->AssociatedDataLength(),fData);
+        }
+        else fseek(fData,CenterNodeAssociatedLength,SEEK_CUR);
       }
+
     }
   }
   else {
