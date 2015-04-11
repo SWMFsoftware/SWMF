@@ -1210,7 +1210,11 @@ void amps_init() {
 
   PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_RADIUS_(_TARGET_);
   PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
-  PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.0,60.0);
+  PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.0,50.0);
+
+
+//  PIC::CPLR::DATAFILE::LoadBinaryFile("data/input/Mercury/040915-Jia/SavedCellData.bin");
+  PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
 
 
 /*
@@ -1223,13 +1227,15 @@ void amps_init() {
   PIC::CPLR::DATAFILE::TECPLOT::ImportData("data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt"); //data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt
 */
 
-  PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_XYZ;
+
+
+/*  PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
   PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
   PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=14;
-  PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_2_n00000001.plt");
+  PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_2_n00000001.plt");*/
 
   Mercury::Init_AfterParser();
 
@@ -1288,11 +1294,11 @@ void amps_init() {
   PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
 
 
-/*
+
   PIC::CPLR::SaveCenterNodeAssociatedData("SavedAssociatedData.bin");
   PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
   PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedAssociatedData.dat",0);
-*/
+
 
 
 
