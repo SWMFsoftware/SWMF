@@ -27,7 +27,7 @@ at the end of each time step
 #define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_OFF_
 
 //the maximum length of the strings
-#define _MAX_STRING_LENGTH_PIC_  500
+#define _MAX_STRING_LENGTH_PIC_  2000
 
 //debugger mode
 #define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
