@@ -47,16 +47,16 @@ module ModVarIndexes
        Bx_         = 5,                  &
        By_         = 6,                  &
        Bz_         = 7,                  &
-       p_          = 8,                  &
-       He2pRho_    = 9,                  &
-       He2pRhoUx_  = 10,                 &
-       He2pRhoUy_  = 11,                 &
-       He2pRhoUz_  = 12,                 &
-       He2pP_      = 13,                 &
-       Pe_         = 14,                 &
-       Ehot_       = 15,                 &
-       WaveFirst_  = 16,                 &
+       Pe_         = 8,                  &
+       Ehot_       = 9,                  &
+       WaveFirst_  = 10,                 &
        WaveLast_   = WaveFirst_+nWave-1, &
+       p_          = WaveLast_+1,        &
+       He2pRho_    = p_+1,               &
+       He2pRhoUx_  = p_+2,               &
+       He2pRhoUy_  = p_+3,               &
+       He2pRhoUz_  = p_+4,               &
+       He2pP_      = p_+5,               &
        Energy_     = nVar+1,             &
        He2pEnergy_ = nVar+2
 
@@ -84,15 +84,15 @@ module ModVarIndexes
        0.0, & ! Bx_
        0.0, & ! By_
        0.0, & ! Bz_
+       1.0, & ! Pe_
+       0.0, & ! Ehot_
+       (1.0, iWave=WaveFirst_,WaveLast_), &
        1.0, & ! p_
        1.0, & ! He2pRho_
        0.0, & ! He2pRhoUx_
        0.0, & ! He2pRhoUy_
        0.0, & ! He2pRhoUz_
-       1.0, & ! He2pP_        
-       1.0, & ! Pe_
-       0.0, & ! Ehot_
-       (1.0, iWave=WaveFirst_,WaveLast_), &
+       1.0, & ! He2pP_
        1.0, & ! Energy_
        1.0 /) ! He2pEnergy_
 
@@ -105,35 +105,33 @@ module ModVarIndexes
        'Bx     ', & ! Bx_
        'By     ', & ! By_
        'Bz     ', & ! Bz_
+       'Pe     ', & ! Pe_
+       'Ehot   ', & ! Ehot_
+       ('I??    ', iWave=WaveFirst_,WaveLast_), &
        'p      ', & ! p_
        'He2pRho', & ! He2pRho_
        'He2pMx ', & ! He2pRhoUx_
        'He2pMy ', & ! He2pRhoUy_
        'He2pMz ', & ! He2pRhoUz_
        'He2pP  ', & ! He2pP_             
-       'Pe     ', & ! Pe_
-       'Ehot   ', & ! Ehot_
-       ('I??    ', iWave=WaveFirst_,WaveLast_), &
        'E      ', & ! Energy_
        'He2pE  ' /) ! He2pEnergy_
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz E '// &
-       'He2pRho He2pMx He2pMy He2pMz He2pE '// &
-       'pe ehot ew'
+       'rho mx my mz bx by bz pe ehot ew E '// &
+       'He2pRho He2pMx He2pMy He2pMz He2pE'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz p '// &
-       'He2pRho He2pUx He2pUy He2pUz He2pP '// &
-       'pe ehot I(02)'
+       'rho ux uy uz bx by bz pe ehot I(02) p '// &
+       'He2pRho He2pUx He2pUy He2pUz He2pP'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", '// &
-       '"`r^He2^+", "U_x^He2^+", "U_y^He2^+", "U_z^He2^+", "P^He2^+", '// &
-       '"p_e", "Ehot", "Ew"'
+       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", '// &
+       '"p_e", "Ehot", "Ew", "p", '// &
+       '"`r^He2^+", "U_x^He2^+", "U_y^He2^+", "U_z^He2^+", "P^He2^+"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
