@@ -69,6 +69,7 @@ test:
 	-@(${MAKE} test11)
 	-@(${MAKE} test12)
 	-@(${MAKE} test13)
+	-@(${MAKE} test14)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
