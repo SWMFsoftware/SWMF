@@ -79,8 +79,6 @@ subroutine write_plot_common(iFile)
 
   integer :: iTime_I(7)
 
-  character(len=*), parameter :: NameSub = 'write_plot_common'
-
   character(len=10) :: NamePlotVar
 
   ! Event date for filename
@@ -89,6 +87,7 @@ subroutine write_plot_common(iFile)
 
   logical :: oktest,oktest_me, NotACut, H5Advance,IsNonCartesianPlot
 
+  character(len=*), parameter :: NameSub = 'write_plot_common'
   !---------------------------------------------------------------------------
 
   ! Initialize stuff
