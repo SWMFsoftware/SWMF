@@ -1587,8 +1587,8 @@ subroutine MH_set_parameters(TypeAction)
         end if
         if(NameCommand == '#GRIDGEOMETRYLIMIT')then
            do iDim = 1, nDim
-              call read_var('CoordMin_D', CoordDimMin_D(iDim))
-              call read_var('CoordMax_D', CoordDimMax_D(iDim))
+              call read_var('CoordDimMin_D', CoordDimMin_D(iDim))
+              call read_var('CoordDimMax_D', CoordDimMax_D(iDim))
            end do
            XyzMin_D = CoordDimMin_D
            XyzMax_D = CoordDimMax_D
@@ -2975,7 +2975,7 @@ contains
 
     use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nIJK_D
     use ModParallel, ONLY: proc_dims
-    use BATL_lib,    ONLY: radius_to_gen
+    use BATL_lib,    ONLY: radius_to_gen, Phi_, Theta_
     use ModKind,     ONLY: nByteReal
     use ModIO
 
@@ -3018,6 +3018,16 @@ contains
 
        ! Fix plot range for sph, x=0, y=0, z=0 areas
        select case(plot_area)
+       case('cut')
+          if(IsLogRadius) plot_range(1:2,iFile) = log(plot_range(1:2,iFile))
+          if(IsGenRadius) then
+             call radius_to_gen(plot_range(1,iFile))
+             call radius_to_gen(plot_range(2,iFile))
+          end if
+          if(Phi_ > 0) plot_range(2*Phi_-1:2*Phi_,iFile) = &
+               cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile) 
+          if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
+               cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
        case('sph')
           if(IsCartesianGrid)then
              plot_dx(1,ifile) = 1.0    ! set to match write_plot_sph
