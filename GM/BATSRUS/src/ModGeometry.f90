@@ -12,28 +12,30 @@ module ModGeometry
   implicit none
   SAVE
 
+  ! Grid geometry description
   character(len=20):: TypeGeometry = 'cartesian'
 
-  !\
-  ! Geometry parameters.
-  !/
+  ! Cartesian box limits that may be cut out of a non-Cartesian grid
   real :: x1, x2, y1, y2, z1, z2
+
+  ! Total volume of used (true) cells
   real :: DomainVolume = -1.0
-  real :: xyzStart(3)
-  real :: xyzStart_BLK(3,MaxBlock)
-  real :: XyzMin_D(3)
-  real :: XyzMax_D(3)
-  real :: CoordDimMin_D(3)=0
-  real :: CoordDimMax_D(3)=0
+
+  ! Coordinates of 1,1,1 cell. Coord111_DB would be a good name.
+  ! Same as BATL_lib::CoordMin_DB + 0.5*CellSize_DB
+  real :: XyzStart_BLK(3,MaxBlock)
+
+  ! Obsolete variables. Same as BATL_lib::CoordMin_D and CoordMax_D
+  real :: XyzMin_D(3), XyzMax_D(3)
+
+  ! Coodinate limits in true radius and degrees (used in restart.H)
+  real :: CoordDimMin_D(3) = 0.0, CoordDimMax_D(3) = 0.0
   real :: RadiusMin = -1.0, RadiusMax = -1.0
   
-
   ! Mirror symmetry in the 3 directions
   integer:: nMirror_D(3) = 1
 
-  !\
-  ! Other block solution and geometry parameters.
-  !/
+  ! Smallest and largest cell sizes in the first dimension
   real:: minDXvalue, maxDXvalue
 
   ! Variables describing cells inside boundaries
@@ -47,7 +49,11 @@ module ModGeometry
   logical, allocatable :: true_cell(:,:,:,:)
   logical :: IsBoundaryCell_GI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,Body2_:6)
   logical :: IsBoundaryBlock_IB(Body2_:6,MaxBlock) 
+
+  ! Range of boundaries handled with face values
   integer :: MinFaceBoundary = 6, MaxFaceBoundary = Body2_
+
+  ! True for blocks next to the cell based boundaries
   logical :: far_field_BCs_BLK(MaxBlock)
 
   ! Radial distance from origin and second body
