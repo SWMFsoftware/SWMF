@@ -14,8 +14,8 @@ program game_of_life
 
   call init_batl( &
        MaxBlockIn     = 100,            &
-       CoordMinIn_D   = (/-10.,-10./),  &
-       CoordMaxIn_D   = (/+10.,+10./),  &
+       CoordMinIn_D   = (/-10.,-10.,-0.5/),  &
+       CoordMaxIn_D   = (/+10.,+10.,+0.5/),  &
        IsPeriodicIn_D = (/.true., .true., .true./) )
 
   allocate(iState_GB(MinI:MaxI,MinJ:MaxJ,MaxBlock), nNei_C(nI,nJ), r_C(nI,nJ),&
