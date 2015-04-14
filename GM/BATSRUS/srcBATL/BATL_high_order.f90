@@ -367,7 +367,7 @@ contains
     real:: CoarseCell_I(3), CoarseCell_II(0:5,3)
     integer:: i
     logical:: DoLimit = .true., Use4thOrder = .true., IsPositive
-    logical:: IsAccurate_II(0:5,0:5), Use3rdType1, Use3rdType2
+    logical:: IsAccurate_II(0:5,0:5)
 
     ! Type=0: from jmm to jpp are accurate.
     ! Type=1: Only jmm is not accurate.
@@ -672,8 +672,7 @@ contains
     ! High order prolongation for simple resolution change (resolution 
     ! change in only one direction).
 
-    use BATL_mpi,  ONLY: iProc
-    use BATL_tree, ONLY: DiLevelNei_IIIB, iNodeNei_IIIB, iNode_B
+    use BATL_tree, ONLY: DiLevelNei_IIIB, iNodeNei_IIIB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          nI, nJ, nK, i0_,i2_,j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
          jm2_,jm1_,nJm2_,nJm1_,nJp2_,nJp3_,km2_,km1_,nKm2_,nKm1_,nKp2_,&
@@ -1495,7 +1494,7 @@ contains
     integer:: jBegin, jEnd, iBegin, iEnd, kBegin, kEnd
     integer:: Di, Dj, Dk, i, j, k
     integer:: Di1, Dj1, Dk1
-    integer:: DiLevel, DiLevel1,Count, iVar
+    integer:: DiLevel, DiLevel1, iVar
     real:: Orig, CellValue_I(4)
     integer:: FineNeiIndex_II(3,3), IEdge_, IEdge1_, nEdge, iStage
     logical:: IsFineNei_I(3)

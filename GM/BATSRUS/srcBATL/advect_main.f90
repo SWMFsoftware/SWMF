@@ -300,7 +300,7 @@ contains
     integer:: nRoot_D(MaxDim) = (/4,4,2/)
     logical, allocatable:: DoRefine_B(:)
     real :: BlobRadius, Rgen_I(3)
-    integer :: iDim, i, j, k, iBlock, iLevel, iTest_D(MaxDim)
+    integer :: iDim, i, j, k, iBlock, iLevel
     logical:: IsNodeBasedRead = .true.
     logical:: UseUniformAxis
     !------------------------------------------------------------------------
@@ -796,7 +796,7 @@ contains
 
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim), State_V(nVar)
 
-    integer:: i, j, k, iNode
+    integer:: i, j, k
     !--------------------------------------------------------------------------
     call get_tree_position(iNode_B(iBlock), PositionMin_D, PositionMax_D)
 

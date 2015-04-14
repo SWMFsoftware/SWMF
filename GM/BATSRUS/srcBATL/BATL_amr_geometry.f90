@@ -3,7 +3,7 @@
 module BATL_amr_geometry
 
   use BATL_mpi, ONLY: iProc
-  use BATL_size, ONLY: nI, nJ, nK
+  use BATL_size, ONLY: nI
 
   implicit none
 

@@ -823,7 +823,6 @@ contains
       integer, parameter:: Di = iRatio-1, Dj = jRatio-1, Dk = kRatio-1
 
       real:: CoarseCell_III(5,5,5) = 0
-      integer:: iP1, jP1, kP1, i1, j1, k1
       integer:: iVar, i5_, j5_, k5_
 
       logical:: DoCheckMask
