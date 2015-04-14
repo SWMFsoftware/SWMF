@@ -24,10 +24,9 @@ module BATL_grid
   public :: find_grid_block
   public :: interpolate_grid
   public :: test_grid
-
-  real, public:: &
-       CoordMin_D(MaxDim),      & ! Min gen. coords of domain
-       CoordMax_D(MaxDim)         ! Max gen. coordinates of domain
+  
+  ! Coordinate limits of domain inherited from BATL_geometry
+  public:: CoordMin_D, CoordMax_D
 
   real, public, allocatable::   &
        CoordMin_DB(:,:),        &    ! Min gen. coordinates of a block domain
@@ -41,7 +40,7 @@ module BATL_grid
        Xyz_DNB(:,:,:,:,:),      &    ! Cartesian node coordinates
        FaceNormal_DDFB(:,:,:,:,:,:),&! Normal face area vector
        CellMetrice_DDG(:,:,:,:,:), & ! Metrics at cell center. Like: dx/dXi.
-       CellCoef_DDGB(:,:,:,:,:,:)    ! Cartesian to non-Cartesian transform coef
+       CellCoef_DDGB(:,:,:,:,:,:)    ! X,Y,Z to general coord transform coef
 
   logical, public:: IsNodeBasedGrid = .true.
 
@@ -161,6 +160,10 @@ contains
           IsPeriodic_D(Phi_) = .true.
           IsPeriodicCoord_D(Phi_) = .true.
        end if
+
+       ! Set logical for the sign of the minimum Phi coordinate
+       IsNegativePhiMin = CoordMin_D(Phi_) < 0.0
+
     end if
 
     if(IsRoundCube) IsPeriodic_D = .false.

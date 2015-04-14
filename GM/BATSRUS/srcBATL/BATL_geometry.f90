@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_geometry
 
@@ -29,6 +30,9 @@ module BATL_geometry
 
   character(len=20), public:: TypeGeometry = 'cartesian'
 
+  real, public:: CoordMin_D(MaxDim)             ! Min gen. coords of domain
+  real, public:: CoordMax_D(MaxDim)             ! Max gen. coords of domain
+
   ! Cartesian, cylindrical or spherical coordinates
   logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid (possibly RZ)
   logical, public:: IsCartesian       = .true.  ! Normal Cartesian geometry
@@ -44,6 +48,7 @@ module BATL_geometry
   logical, public:: IsAnyAxis         = .false. ! true if any of the above 3 is
   logical, public:: IsLogRadius       = .false. ! logarithmic radial coordinate
   logical, public:: IsGenRadius       = .false. ! stretched radial coordinate
+  logical, public:: IsNegativePhiMin  = .false. ! PhiMin < 0 domain boundary
 
   ! Use geometry transform desighed for 5th order accuracy FD method.
   logical, public:: UseHighFDGeometry
@@ -200,7 +205,7 @@ contains
   subroutine xyz_to_coord(XyzIn_D, CoordOut_D)
 
     use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
-    use ModNumConst,       ONLY: cHalfPi
+    use ModNumConst,       ONLY: cHalfPi, cTwoPi
 
     real, intent(in) :: XyzIn_D(MaxDim)
     real, intent(out):: CoordOut_D(MaxDim)
@@ -216,10 +221,10 @@ contains
     elseif(IsRotatedCartesian)then
        CoordOut_D = matmul(XyzIn_D, GridRot_DD) 
     elseif(IsCylindrical)then
-       x = XyzIn_D(1); y = XyzIn_D(2)
-       CoordOut_D(1) = sqrt(x**2 + y**2)
-       CoordOut_D(2) = atan2_check(y, x)
-       CoordOut_D(3) = XyzIn_D(3)
+       x = XyzIn_D(x_); y = XyzIn_D(y_)
+       CoordOut_D(r_)   = sqrt(x**2 + y**2)
+       CoordOut_D(Phi_) = atan2_check(y, x)
+       CoordOut_D(z_)   = XyzIn_D(z_)
     elseif(IsSpherical)then
        call xyz_to_sph(XyzIn_D, CoordOut_D)
     elseif(IsRLonLat)then
@@ -238,6 +243,12 @@ contains
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
+    end if
+
+    if(IsNegativePhiMin)then
+       ! Allow for negative Phi angles
+       if(CoordOut_D(Phi_) > CoordMax_D(Phi_)) &
+            CoordOut_D(Phi_) = CoordOut_D(Phi_) - cTwoPi
     end if
 
     if(IsLogRadius)then
