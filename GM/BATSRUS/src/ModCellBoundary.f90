@@ -840,9 +840,9 @@ contains
     ! This approach is not accurate! If it is smooth near the resolution 
     ! change boundary point, it will be fine. 
         
-    use BATL_lib, ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
+    use BATL_lib,  ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
     use BATL_size, ONLY: nI,nJ,nK
-
+    
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -881,7 +881,9 @@ contains
              elseif(k>nK) then
                 k0 = nK
              endif
-             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
+             if(abs(State_VG(1,i,j,k) - 777)<1e-10 .and. &
+                  abs(State_VG(nVarState,i,j,k) - 777)<1e-10) &
+                  State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
           enddo; enddo; enddo
        endif ! iDir /=0
 
@@ -904,7 +906,9 @@ contains
              elseif(k>nK) then
                 k0 = nK
              endif
-             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
+             if(abs(State_VG(1,i,j,k) - 777)<1e-10 .and. &
+                  abs(State_VG(nVarState,i,j,k) - 777)<1e-10) &
+                  State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
           enddo; enddo; enddo
        endif ! jDir /=0
 
@@ -927,11 +931,13 @@ contains
              elseif(j>nJ) then
                 j0 = nJ
              endif
-             State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)          
+             if(abs(State_VG(1,i,j,k) - 777)<1e-10 .and. &
+                  abs(State_VG(nVarState,i,j,k) - 777)<1e-10) &
+                  State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)          
           enddo; enddo; enddo
        endif ! kDir /=0
     enddo; enddo; enddo
 
   end subroutine set_edge_corner_ghost
-
+  
 end module ModCellBoundary
