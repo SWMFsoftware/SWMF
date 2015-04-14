@@ -5,11 +5,10 @@
 module ModRestartFile
 
   use ModProcMH,     ONLY: iProc, nProc, iComm
-  use ModIO,         ONLY: Unit_Tmp, nFile, Dt_Output, Dn_Output, Restart_, &
+  use ModIO,         ONLY: nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
-  use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain,       ONLY: &
-       nBlockAll, nBlock, Unused_B, ProcTest, BlkTest, iTest, jTest, kTest, &
+       nBlockAll, ProcTest, BlkTest, iTest, jTest, kTest, &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_
@@ -25,7 +24,8 @@ module ModRestartFile
   use ModGmGeoindices, ONLY: DoWriteIndices
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
-       IsCartesian, IsCartesianGrid, IsGenRadius
+       IsCartesian, IsCartesianGrid, IsGenRadius, &
+       nBlock, Unused_B, nDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
 
   implicit none
@@ -64,7 +64,6 @@ module ModRestartFile
   character(len=*), parameter :: NameIndexFile    = "index.rst"
   character(len=*), parameter :: NameGeoindFile   = "geoindex.rst"
 
-  logical :: RestartBlockLevels=.false. ! Load LEVmin,LEVmax in octree restart
   integer :: nByteRealRead = 8     ! Real precision in restart files
 
   ! One can use 'block', 'proc' or 'one' format for input and output 
@@ -133,10 +132,6 @@ contains
     case("#NEWRESTART")
        restart = .true.
        call read_var('DoRestartBFace', Restart_Bface)
-    case("#BLOCKLEVELSRELOADED")
-       ! Sets logical for upgrade of restart files 
-       ! to include LEVmin and LEVmax
-       RestartBlockLevels=.true.
     case("#PRECISION")
        call read_var('nByteReal',nByteRealRead)
        if(nByteReal/=nByteRealRead)then
@@ -361,7 +356,7 @@ contains
     use ModReadParam,ONLY: i_line_command
     use ModIO,       ONLY: NameMaxTimeUnit
 
-    integer :: iFluid
+    integer :: iFluid, iDim
     logical :: IsLimitedGeometry=.false.
     !--------------------------------------------------------------------------
 
@@ -370,191 +365,187 @@ contains
     NameFile = trim(NameRestartOutDir)//NameHeaderFile
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(unit_tmp,file=NameFile)
+    open(UnitTmp_,file=NameFile)
 
-    write(unit_tmp,'(a)')'#CODEVERSION'
-    write(unit_tmp,'(f5.2,a35)')CodeVersion,'CodeVersion'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#USERMODULE'
-    write(unit_tmp,'(a)')       NameUserModule
-    write(unit_tmp,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#COMPONENT'
-    write(unit_tmp,'(a2,a38)')NameThisComp,'NameComp'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#PRECISION'
-    write(unit_tmp,'(i1,a39)')nByteReal,'nByteReal'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#EQUATION'
-    write(unit_tmp,'(a,a32)')NameEquation,'NameEquation'
-    write(unit_tmp,'(i8,a32)')nVar,'nVar'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#RESTARTVARIABLES'
-    write(unit_tmp,'(a,a32)')NameVarCouple,'NameVarCouple'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#CHECKGRIDSIZE'
-    write(unit_tmp,'(i8,a32)') nI,'nI'
-    write(unit_tmp,'(i8,a32)') nJ,'nJ'
-    write(unit_tmp,'(i8,a32)') nK,'nK'
-    write(unit_tmp,'(i8,a32)') nBlockALL,'MinBlockALL'
+    write(UnitTmp_,'(a)')'#CODEVERSION'
+    write(UnitTmp_,'(f5.2,a35)')CodeVersion,'CodeVersion'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#USERMODULE'
+    write(UnitTmp_,'(a)')       NameUserModule
+    write(UnitTmp_,'(f5.2,a35)')VersionUserModule,'VersionUserModule'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#COMPONENT'
+    write(UnitTmp_,'(a2,a38)')NameThisComp,'NameComp'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#PRECISION'
+    write(UnitTmp_,'(i1,a39)')nByteReal,'nByteReal'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#EQUATION'
+    write(UnitTmp_,'(a,a32)')NameEquation,'NameEquation'
+    write(UnitTmp_,'(i8,a32)')nVar,'nVar'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#RESTARTVARIABLES'
+    write(UnitTmp_,'(a,a32)')NameVarCouple,'NameVarCouple'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
+    write(UnitTmp_,'(i8,a32)') nI,'nI'
+    write(UnitTmp_,'(i8,a32)') nJ,'nJ'
+    write(UnitTmp_,'(i8,a32)') nK,'nK'
+    write(UnitTmp_,'(i8,a32)') nBlockALL,'MinBlockALL'
     if (IsStandAlone .and. NameThisComp == 'GM') then
-       write(unit_tmp,*)
+       write(UnitTmp_,*)
        if(NamePlanet == 'NEW')then
-          write(unit_tmp,'(a)')'!!! PLANET'
+          write(UnitTmp_,'(a)')'!!! PLANET'
        else
-          write(unit_tmp,'(a)')'#PLANET'
+          write(UnitTmp_,'(a)')'#PLANET'
        end if
-       write(unit_tmp,'(a,a32)') NamePlanet,'NamePlanet'
+       write(UnitTmp_,'(a,a32)') NamePlanet,'NamePlanet'
        if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
-          write(unit_tmp,*)
-          write(unit_tmp,'(a)')'#IDEALAXES'
+          write(UnitTmp_,*)
+          write(UnitTmp_,'(a)')'#IDEALAXES'
        end if
     end if
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#NEWRESTART'
-    write(unit_tmp,'(l1,a39)')UseConstrainB,'DoRestartBFace'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#RESTARTINFILE'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#NEWRESTART'
+    write(UnitTmp_,'(l1,a39)')UseConstrainB,'DoRestartBFace'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#RESTARTINFILE'
     ! Note that the output file format is saved as the input for next restart
-    write(unit_tmp,'(a,a30)')TypeRestartOutFile,'TypeRestartInFile'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#BLOCKLEVELSRELOADED'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#NSTEP'
-    write(unit_tmp,'(i8,a32)')n_step,'nStep'
-    write(unit_tmp,*)
+    write(UnitTmp_,'(a,a30)')TypeRestartOutFile,'TypeRestartInFile'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#NSTEP'
+    write(UnitTmp_,'(i8,a32)')n_step,'nStep'
+    write(UnitTmp_,*)
     if(n_prev == n_step)then
-       write(unit_tmp,'(a)')'#NPREVIOUS'
-       write(unit_tmp,'(i8,a32)')n_prev,'nPrev'
-       write(unit_tmp,'(es22.15,a18)')dt_prev,'DtPrev'
-       write(unit_tmp,*)
+       write(UnitTmp_,'(a)')'#NPREVIOUS'
+       write(UnitTmp_,'(i8,a32)')n_prev,'nPrev'
+       write(UnitTmp_,'(es22.15,a18)')dt_prev,'DtPrev'
+       write(UnitTmp_,*)
     end if
-    write(unit_tmp,'(a)')'#STARTTIME'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(1),'iYear'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(2),'iMonth'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(3),'iDay'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(4),'iHour'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(5),'iMinute'
-    write(unit_tmp,'(i8,a32)')iStartTime_I(6),'iSecond'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#TIMESIMULATION'
-    write(unit_tmp,'(es22.15,a18)')time_simulation,'tSimulation'
-    write(unit_tmp,*)
+    write(UnitTmp_,'(a)')'#STARTTIME'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(1),'iYear'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(2),'iMonth'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(3),'iDay'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(4),'iHour'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(5),'iMinute'
+    write(UnitTmp_,'(i8,a32)')iStartTime_I(6),'iSecond'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#TIMESIMULATION'
+    write(UnitTmp_,'(es22.15,a18)')time_simulation,'tSimulation'
+    write(UnitTmp_,*)
     if(.not.IsCartesian)then
-       IsLimitedGeometry=.false.
-       if(abs(CoordDimMin_D(1)) >1e-15 .or. abs(CoordDimMax_D(1))>1e-15) &
-            IsLimitedGeometry=.true.
+       IsLimitedGeometry = CoordDimMin_D(1) < CoordDimMax_D(1)
        if(IsLimitedGeometry) then
-          write(unit_tmp,'(a)')'#GRIDGEOMETRYLIMIT'
+          write(UnitTmp_,'(a)')'#GRIDGEOMETRYLIMIT'
        else 
-          write(unit_tmp,'(a)')'#GRIDGEOMETRY'
+          write(UnitTmp_,'(a)')'#GRIDGEOMETRY'
        endif
-       write(unit_tmp,'(a20,a20)')TypeGeometry, 'TypeGeometry'
-       if(IsGenRadius) write(unit_tmp,'(a100)')NameGridFile
+       write(UnitTmp_,'(a20,a20)')TypeGeometry, 'TypeGeometry'
+       if(IsGenRadius) write(UnitTmp_,'(a100)')NameGridFile
        if(IsLimitedGeometry) then
-          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(1),'Coord1Min'
-          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(1),'Coord1Max'
-          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(2),'Coord2Min'
-          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(2),'Coord2Max'
-          write(unit_tmp,'(es22.15,a18)')CoordDimMin_D(3),'Coord3Min'
-          write(unit_tmp,'(es22.15,a18)')CoordDimMax_D(3),'Coord3Max'
+          do iDim = 1, nDim
+             write(UnitTmp_,'(es22.15,a18)') &
+                  CoordDimMin_D(iDim), 'CoordDimMin_D'
+             write(UnitTmp_,'(es22.15,a18)') &
+                  CoordDimMax_D(iDim), 'CoordDimMax_D'
+          end do
        endif
-       write(unit_tmp,*)
+       write(UnitTmp_,*)
     end if
-    write(unit_tmp,'(a)')'#GRID'
-    write(unit_tmp,'(i8,a32)')proc_dims(1),'nRootBlockX'
-    write(unit_tmp,'(i8,a32)')proc_dims(2),'nRootBlockY'
-    write(unit_tmp,'(i8,a32)')proc_dims(3),'nRootBlockZ'
-    write(unit_tmp,'(es22.15,a18)')x1,'xMin'
-    write(unit_tmp,'(es22.15,a18)')x2,'xMax'
-    write(unit_tmp,'(es22.15,a18)')y1,'yMin'
-    write(unit_tmp,'(es22.15,a18)')y2,'yMax'
-    write(unit_tmp,'(es22.15,a18)')z1,'zMin'
-    write(unit_tmp,'(es22.15,a18)')z2,'zMax'
-    write(unit_tmp,*)
+    write(UnitTmp_,'(a)')'#GRID'
+    write(UnitTmp_,'(i8,a32)')proc_dims(1),'nRootBlockX'
+    write(UnitTmp_,'(i8,a32)')proc_dims(2),'nRootBlockY'
+    write(UnitTmp_,'(i8,a32)')proc_dims(3),'nRootBlockZ'
+    write(UnitTmp_,'(es22.15,a18)')x1,'xMin'
+    write(UnitTmp_,'(es22.15,a18)')x2,'xMax'
+    write(UnitTmp_,'(es22.15,a18)')y1,'yMin'
+    write(UnitTmp_,'(es22.15,a18)')y2,'yMax'
+    write(UnitTmp_,'(es22.15,a18)')z1,'zMin'
+    write(UnitTmp_,'(es22.15,a18)')z2,'zMax'
+    write(UnitTmp_,*)
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
-       write(unit_tmp,'(a)')'#LIMITRADIUS'
-       write(unit_tmp,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
-       write(unit_tmp,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
-       write(unit_tmp,*)
+       write(UnitTmp_,'(a)')'#LIMITRADIUS'
+       write(UnitTmp_,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
+       write(UnitTmp_,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
+       write(UnitTmp_,*)
     end if
-    write(unit_tmp,'(a)')'#COORDSYSTEM'
-    write(unit_tmp,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#SOLARWIND'
-    write(unit_tmp,'(es22.15,a18)')SW_n_dim,  'SwNDim'
-    write(unit_tmp,'(es22.15,a18)')SW_T_dim,  'SwTDim'
-    write(unit_tmp,'(es22.15,a18)')SW_Ux_dim, 'SwUxDim'
-    write(unit_tmp,'(es22.15,a18)')SW_Uy_dim, 'SwUyDim'
-    write(unit_tmp,'(es22.15,a18)')SW_Uz_dim, 'SwUzDim'
-    write(unit_tmp,'(es22.15,a18)')SW_Bx_dim, 'SwBxDdim'
-    write(unit_tmp,'(es22.15,a18)')SW_By_dim, 'SwByDim'
-    write(unit_tmp,'(es22.15,a18)')SW_Bz_dim, 'SwBzDim'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#IOUNITS'
-    write(unit_tmp,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#NORMALIZATION'
+    write(UnitTmp_,'(a)')'#COORDSYSTEM'
+    write(UnitTmp_,'(a3,a37)') TypeCoordSystem,'TypeCoordSystem'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#SOLARWIND'
+    write(UnitTmp_,'(es22.15,a18)')SW_n_dim,  'SwNDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_T_dim,  'SwTDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_Ux_dim, 'SwUxDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_Uy_dim, 'SwUyDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_Uz_dim, 'SwUzDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_Bx_dim, 'SwBxDdim'
+    write(UnitTmp_,'(es22.15,a18)')SW_By_dim, 'SwByDim'
+    write(UnitTmp_,'(es22.15,a18)')SW_Bz_dim, 'SwBzDim'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#IOUNITS'
+    write(UnitTmp_,'(a20,a20)')TypeIoUnit,'TypeIoUnit'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#NORMALIZATION'
     if(TypeNormalization == "NONE")then
-       write(unit_tmp,'(a)')'NONE'
+       write(UnitTmp_,'(a)')'NONE'
     else
-       write(unit_tmp,'(a)')'READ'
-       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
-       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
-       write(unit_tmp,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
+       write(UnitTmp_,'(a)')'READ'
+       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitX_),   'No2SiUnitX'
+       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitU_),   'No2SiUnitU'
+       write(UnitTmp_,'(es22.15,a18)')No2Si_V(UnitRho_), 'No2SiUnitRho'
     end if
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'#PLOTFILENAME'
-    write(unit_tmp,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
-    write(unit_tmp,*)
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#PLOTFILENAME'
+    write(UnitTmp_,'(a10,a30)') NameMaxTimeUnit, 'NameMaxTimeUnit'
+    write(UnitTmp_,*)
 
     if(body1)then
-       write(unit_tmp,'(a)')'#BODY'
-       write(unit_tmp,'(l1,a39)')      .true., 'UseBody'
-       write(unit_tmp,'(es22.15,a18)') rBody, 'rBody'
+       write(UnitTmp_,'(a)')'#BODY'
+       write(UnitTmp_,'(l1,a39)')      .true., 'UseBody'
+       write(UnitTmp_,'(es22.15,a18)') rBody, 'rBody'
        if(NameThisComp=='GM') &
-            write(unit_tmp,'(es22.15,a18)') rCurrents, 'rCurrents'
+            write(UnitTmp_,'(es22.15,a18)') rCurrents, 'rCurrents'
        do iFluid = IonFirst_, nFluid
-          write(unit_tmp,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
-          write(unit_tmp,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
+          write(UnitTmp_,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
+          write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
        end do
-       write(unit_tmp,*)
+       write(UnitTmp_,*)
     end if
 
     if(UseBody2)then
-       write(unit_tmp,'(a)')'#SECONDBODY'
-       write(unit_tmp,'(l1,a39)')     UseBody2,      'UseBody2'
-       write(unit_tmp,'(es22.15,a18)')Rbody2,        'rBody2'
-       write(unit_tmp,'(es22.15,a18)')xbody2,        'xBody2'
-       write(unit_tmp,'(es22.15,a18)')ybody2,        'yBody2'
-       write(unit_tmp,'(es22.15,a18)')zbody2,        'zBody2'
-       write(unit_tmp,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
-       write(unit_tmp,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
-       write(unit_tmp,'(es22.15,a18)')tDimBody2,     'tDimBody2'
-       write(unit_tmp,'(l1,a39)')     UseBody2Orbit, 'UseBody2Orbit'
-       write(unit_tmp,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
-       write(unit_tmp,*)
+       write(UnitTmp_,'(a)')'#SECONDBODY'
+       write(UnitTmp_,'(l1,a39)')     UseBody2,      'UseBody2'
+       write(UnitTmp_,'(es22.15,a18)')Rbody2,        'rBody2'
+       write(UnitTmp_,'(es22.15,a18)')xbody2,        'xBody2'
+       write(UnitTmp_,'(es22.15,a18)')ybody2,        'yBody2'
+       write(UnitTmp_,'(es22.15,a18)')zbody2,        'zBody2'
+       write(UnitTmp_,'(es22.15,a18)')rCurrentsBody2,'rCurrentsBody2'
+       write(UnitTmp_,'(es22.15,a18)')RhoDimBody2,   'RhoDimBody2'
+       write(UnitTmp_,'(es22.15,a18)')tDimBody2,     'tDimBody2'
+       write(UnitTmp_,'(l1,a39)')     UseBody2Orbit, 'UseBody2Orbit'
+       write(UnitTmp_,'(es22.15,a18)')OrbitPeriod,   'OrbitPeriod'
+       write(UnitTmp_,*)
     end if
 
-    write(unit_tmp,'(a)')'#RESTARTWITHFULLB'
-    write(unit_tmp,*)
+    write(UnitTmp_,'(a)')'#RESTARTWITHFULLB'
+    write(UnitTmp_,*)
 
-    write(unit_tmp,'(a)')'#END'
-    write(unit_tmp,*)
-    write(unit_tmp,'(a)')'Additional info'
-    write(unit_tmp,*)
-    write(unit_tmp,'(l8,a)') time_accurate,   ' time_accurate'
-    write(unit_tmp,*)
-    if(time_accurate)write(unit_tmp,'(2es13.5,a)')&
+    write(UnitTmp_,'(a)')'#END'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'Additional info'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(l8,a)') time_accurate,   ' time_accurate'
+    write(UnitTmp_,*)
+    if(time_accurate)write(UnitTmp_,'(2es13.5,a)')&
          time_simulation, dt, ' time_simulation, dt'
 
-    write(unit_tmp,'(a)')'Io2Si_V='
-    write(unit_tmp,'(100es13.5)') Io2Si_V
-    write(unit_tmp,'(a)')'No2Io_V='
-    write(unit_tmp,'(100es13.5)') No2Io_V
+    write(UnitTmp_,'(a)')'Io2Si_V='
+    write(UnitTmp_,'(100es13.5)') Io2Si_V
+    write(UnitTmp_,'(a)')'No2Io_V='
+    write(UnitTmp_,'(100es13.5)') No2Io_V
 
-    close(unit_tmp)
+    close(UnitTmp_)
 
   end subroutine write_restart_header
 
@@ -635,7 +626,7 @@ contains
          trim(NameRestartInDir)//NameBlkFile,iBlockRestart,StringRestartExt
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(unit_tmp, file=NameFile, status='old', form='UNFORMATTED',&
+    open(UnitTmp_, file=NameFile, status='old', form='UNFORMATTED',&
          iostat = iError)
 
     if(iError /= 0) call stop_mpi(NameSub// &
@@ -648,54 +639,54 @@ contains
 
     ! Do not overwrite time_simulation which is read from header file
     if(nByteRealRead == 8)then
-       read(unit_tmp, iostat = iError) Dt8, Time8
+       read(UnitTmp_, iostat = iError) Dt8, Time8
        dt_BLK(iBlock) = Dt8
        tSimulationRead   = Time8
 
-       read(unit_tmp, iostat = iError) Dxyz8_D, Xyz8_D
+       read(UnitTmp_, iostat = iError) Dxyz8_D, Xyz8_D
        CellSize_DB(:,iBlock) = Dxyz8_D
        XyzStart_BLK(:,iBlock) = Xyz8_D
 
-       read(Unit_tmp, iostat = iError) State8_CV
+       read(UnitTmp_, iostat = iError) State8_CV
        
        do iVar = 1, nVarRestart
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
        end do
 
        if(Restart_Bface)then
-          read(Unit_tmp, iostat = iError) b8_X, b8_Y, b8_Z               
+          read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z               
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
        end if
        if(n_prev==n_step) then
-          read(Unit_tmp, iostat = iError) State8_CV
+          read(UnitTmp_, iostat = iError) State8_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State8_CV(:,:,:,iVar)
           end do
        end if
     else
-       read(unit_tmp, iostat = iError) Dt4, Time4
+       read(UnitTmp_, iostat = iError) Dt4, Time4
        dt_BLK(iBlock) = Dt4
        tSimulationRead   = Time4
 
-       read(unit_tmp, iostat = iError) Dxyz4_D, Xyz4_D
+       read(UnitTmp_, iostat = iError) Dxyz4_D, Xyz4_D
        CellSize_DB(:,iBlock) = Dxyz4_D
        XyzStart_BLK(:,iBlock) = Xyz4_D
 
-       read(Unit_tmp, iostat = iError) State4_CV
+       read(UnitTmp_, iostat = iError) State4_CV
        do iVar = 1, nVarRestart
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State4_CV(:,:,:,iVar)
        end do
 
        if(Restart_Bface)then
-          read(Unit_tmp, iostat = iError) b4_X, b4_Y, b4_Z               
+          read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z               
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
        end if
        if(n_prev==n_step) then
-          read(Unit_tmp, iostat = iError) State4_CV
+          read(UnitTmp_, iostat = iError) State4_CV
           do iVar = 1, nVarRestart
              ImplOldRead_VCB(iVar,:,:,:,iBlock) = State4_CV(:,:,:,iVar)
           end do
@@ -705,7 +696,7 @@ contains
     if(iError /= 0) call stop_mpi(NameSub// &
          ' could not read data from '//trim(NameFile))
 
-    close(unit_tmp)
+    close(UnitTmp_)
 
     if(CodeVersion>5.60 .and. CodeVersion <7.00) &
          dt_BLK(iBlock)=dt_BLK(iBlock)/cfl
@@ -753,21 +744,21 @@ contains
 
     if (UseRestartOutSeries) call string_append_iter(NameFile,iteration_number)
 
-    open(unit_tmp, file=NameFile, status="replace", form='UNFORMATTED')
+    open(UnitTmp_, file=NameFile, status="replace", form='UNFORMATTED')
 
-    write(Unit_tmp) dt_BLK(iBlock),time_Simulation
-    write(Unit_tmp) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
-    write(Unit_tmp) &
+    write(UnitTmp_) dt_BLK(iBlock),time_Simulation
+    write(UnitTmp_) CellSize_DB(:,iBlock), xyzStart_BLK(:,iBlock)
+    write(UnitTmp_) &
          ( State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock), iVar=1,nVar)
     if(UseConstrainB)then
-       write(Unit_tmp) &
+       write(UnitTmp_) &
             BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock),&
             ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock),&
             BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock)
     end if
-    if(n_prev==n_step) write(Unit_tmp) &
+    if(n_prev==n_step) write(UnitTmp_) &
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
-    close(unit_tmp)
+    close(UnitTmp_)
 
   end subroutine write_restart_file
 
@@ -827,7 +818,7 @@ contains
        if (UseRestartInSeries) &
             call string_append_iter(NameFile, iteration_number)
 
-       open(Unit_Tmp, file=NameFile, &
+       open(UnitTmp_, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
             status = 'old', iostat=iError)
     else
@@ -839,14 +830,14 @@ contains
 
        ! Delete and open file (only from proc 0 for type 'one')
        if(iProc==0 .or. TypeRestartOutFile == 'proc') &
-            open(Unit_Tmp, file=NameFile, &
+            open(UnitTmp_, file=NameFile, &
             RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
             status = 'replace', iostat=iError)
 
        if(TypeRestartOutFile == 'one') then
           ! Make sure that all processors wait until the file is re-opened
           call barrier_mpi
-          if(iProc > 0)open(Unit_Tmp, file=NameFile, &
+          if(iProc > 0)open(UnitTmp_, file=NameFile, &
                RECL = lRecord, ACCESS = 'direct', FORM = 'unformatted', &
                status = 'old', iostat=iError)
        end if
@@ -905,7 +896,7 @@ contains
        if(nByteRealRead == 4)then
           if(Restart_Bface)then
              ! Read with face centered magnetic field for constrained transport
-             read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
+             read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   B4_X, B4_Y, B4_Z
              if(UseConstrainB)then
                 BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B4_X
@@ -916,7 +907,7 @@ contains
           endif
           if(n_prev==n_step)then
              ! Read with previous state for sake of implicit BDF2 scheme
-             read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
+             read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC, &
                   State4_CV
              if(UseImplicit)then
                 do iVar = 1, nVarRestart
@@ -926,7 +917,7 @@ contains
              IsRead = .true.
           end if
           if(.not.IsRead) &
-               read(Unit_Tmp, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
+               read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
           
           Dt_BLK(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
@@ -936,7 +927,7 @@ contains
        else
           if(Restart_Bface)then
              ! Read with face centered magnetic field for constrained transport
-             read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
+             read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   B8_X, B8_Y, B8_Z
              if(UseConstrainB)then
                 BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = B8_X
@@ -947,7 +938,7 @@ contains
           endif
           if(n_prev==n_step)then
              ! Read with previous state for sake of implicit BDF2 scheme
-             read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
+             read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC, &
                   State8_CV
              if(UseImplicit)then
                 do iVar = 1, nVarRestart
@@ -957,7 +948,7 @@ contains
              IsRead = .true.
           end if
           if(.not.IsRead) &
-               read(Unit_Tmp, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
+               read(UnitTmp_, rec=iRec) Dt8, Dxyz8_D, Xyz8_D, State8_VC
 
           Dt_BLK(iBlock) = Dt8
           CellSize_DB(:,iBLock) = Dxyz8_D
@@ -976,7 +967,7 @@ contains
        end if
     end do
 
-    close(Unit_Tmp)
+    close(UnitTmp_)
 
   end subroutine read_direct_restart_file
 
@@ -1015,7 +1006,7 @@ contains
 
        if(UseConstrainB)then
           ! Save face centered magnetic field 
-          write(Unit_tmp, rec=iRec)  Dt_BLK(iBlock),&
+          write(UnitTmp_, rec=iRec)  Dt_BLK(iBlock),&
                CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
                State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock), &
@@ -1026,7 +1017,7 @@ contains
        endif
        if(n_prev==n_step)then
           ! Save previous time step for sake of BDF2 scheme
-          write(Unit_tmp, rec=iRec) &
+          write(UnitTmp_, rec=iRec) &
                Dt_BLK(iBlock), &
                CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
@@ -1035,14 +1026,14 @@ contains
           CYCLE
        endif
 
-       write(Unit_tmp, rec=iRec) &
+       write(UnitTmp_, rec=iRec) &
             Dt_BLK(iBlock), &
             CellSize_DB(:,iBLock), &
             XyzStart_BLK(:,iBlock), &
             State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
     end do
 
-    close(Unit_Tmp)
+    close(UnitTmp_)
 
   end subroutine write_direct_restart_file
 
@@ -1074,8 +1065,6 @@ contains
 
     ! Save ModGmGeoindices::MagPerturb_II to a restart file on proc 0
 
-    use ModIO,          ONLY: Unit_Tmp
-    use ModProcMH,      ONLY: iProc
     use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII
 
     integer            :: i, j, iDim
@@ -1093,17 +1082,17 @@ contains
     do iDim=1, 2
        ! Open restart file.
        NameFile = trim(NameRestartOutDir)//NameDim(iDim)//'_'//NameGeoIndFile
-       open(Unit_Tmp, file=NameFile, status='REPLACE')
+       open(UnitTmp_, file=NameFile, status='REPLACE')
 
        ! Size of array:
-       write(Unit_Tmp,*) nKpMag, iSizeKpWindow
+       write(UnitTmp_,*) nKpMag, iSizeKpWindow
        ! Save MagPerturb_II
        do j = 1, iSizeKpWindow
           do i = 1, nKpMag
-             write(Unit_Tmp, '(es20.12)' ) MagPerturb_DII(iDim, i,j)
+             write(UnitTmp_, '(es20.12)' ) MagPerturb_DII(iDim, i,j)
           end do
        end do
-       close(Unit_Tmp)
+       close(UnitTmp_)
     end do
 
   end subroutine write_geoind_restart
@@ -1113,7 +1102,6 @@ contains
 
     ! Read MagPerturb_II from restart file on processor 0
 
-    use ModIO,          ONLY: Unit_Tmp
     use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII, &
          IsFirstCalc, Is2ndCalc
 
@@ -1134,7 +1122,8 @@ contains
        ! Check for restart file.  If one exists, use it.
        inquire(file=NameFile, exist=DoRestart)
        if(.not. DoRestart) then
-          write(*,*) NameSub,": WARNING did not find geoindices restart file ",&
+          write(*,*) NameSub, &
+               ": WARNING did not find geoindices restart file ", &
                trim(NameFile)
           MagPerturb_DII(iDim,:,:) = 0.0
           CYCLE
@@ -1142,11 +1131,11 @@ contains
 
        write(*,*)'GM: ',NameSub, ' reading ',trim(NameFile)
 
-       open(Unit_Tmp, file=NameFile, status='OLD', action='READ')
+       open(UnitTmp_, file=NameFile, status='OLD', action='READ')
 
        ! Read size of array, ensure that it matches expected.
        ! If not, it means that the restart is incompatible and cannot be used.
-       read(Unit_Tmp, *) nMagTmp, iSizeTmp
+       read(UnitTmp_, *) nMagTmp, iSizeTmp
 
        if( nMagTmp /= nKpMag .or. iSizeTmp /= iSizeKpWindow ) then
           write(*,*)'ERROR: in file ',trim(NameFile)
@@ -1159,10 +1148,10 @@ contains
 
        do j = 1, iSizeKpWindow
           do i = 1, nKpMag
-             read(Unit_Tmp,*) MagPerturb_DII(iDim,i,j)
+             read(UnitTmp_,*) MagPerturb_DII(iDim,i,j)
           end do
        end do
-       close(Unit_Tmp)
+       close(UnitTmp_)
 
     end do
 
