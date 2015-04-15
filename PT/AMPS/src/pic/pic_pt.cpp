@@ -29,6 +29,8 @@ int *PIC::ParticleTracker::threadSampledTrajectoryNumber=NULL;
 int *PIC::ParticleTracker::totalSampledTrajectoryNumber=NULL;
 unsigned int PIC::ParticleTracker::SampledTrajectoryCounter=0;
 
+int PIC::ParticleTracker::nMaxSavedSignleTrajectoryPoints=1000;
+
 
 //init the particle tracker
 void PIC::ParticleTracker::Init() {
@@ -327,9 +329,9 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       //reset the offset array
       for (i=0;i<nTotalTracedTrajectories;i++) SampledTrajectoryDataOffset[i]=-1,nReadSampledTrajectoryPoints[i]=0;
 
-      while (UsedTrajectoryPointBuffer+nSampledTrajectoryPoints[nReadTrajectoryNumber]<=TrajectoryPointBufferLength) {
+      while (UsedTrajectoryPointBuffer+std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints)<=TrajectoryPointBufferLength) {
         SampledTrajectoryDataOffset[nReadTrajectoryNumber]=UsedTrajectoryPointBuffer;
-        UsedTrajectoryPointBuffer+=nSampledTrajectoryPoints[nReadTrajectoryNumber];
+        UsedTrajectoryPointBuffer+=std::min(nSampledTrajectoryPoints[nReadTrajectoryNumber],nMaxSavedSignleTrajectoryPoints);
         nReadTrajectoryNumber++;
 
         if (nReadTrajectoryNumber==nTotalTracedTrajectories) break;
@@ -356,6 +358,15 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
             if (SampledTrajectoryDataOffset[GlobalTrajectoryNumber]!=-1) {
               int el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset;
 
+              //if the total number of the sampled trajectory points exeeeds 'nMaxSavedSignleTrajectoryPoints' -> scale 'el' accordinaly
+              if (nSampledTrajectoryPoints[GlobalTrajectoryNumber]>=nMaxSavedSignleTrajectoryPoints) {
+                int Step=1+nSampledTrajectoryPoints[GlobalTrajectoryNumber]/nMaxSavedSignleTrajectoryPoints;
+
+                if (TrajectoryRecord.offset%Step!=0) continue;
+
+                el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset/Step;
+              }
+
               if ((el<0.0)||(el>=TrajectoryPointBufferLength)) exit(__LINE__,__FILE__,"Error: out of range");
 
               TempTrajectoryBuffer[el]=TrajectoryRecord.data;
@@ -375,16 +386,6 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
             break;
           }
         }
-
-        //if all points are found stop reading the trajectory files
-        if (ReadTrajectoryPoints==UsedTrajectoryPointBuffer) {
-          break;
-        }
-      }
-
-      //check whether all trajecotry points are found
-      if (ReadTrajectoryPoints!=UsedTrajectoryPointBuffer) {
-        exit(__LINE__,__FILE__,"Error: some trajectory points are not found");
       }
 
       //save the found trajectories
@@ -397,7 +398,7 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
         offset=SampledTrajectoryDataOffset[tr];
         StartTrajectorySpec=-1;
 
-        for (i=0;i<nSampledTrajectoryPoints[tr];i++) {
+        for (i=0;i<nReadSampledTrajectoryPoints[tr];i++) {
           TrajectoryData=TempTrajectoryBuffer+offset+i;
 
           #if _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ == _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_

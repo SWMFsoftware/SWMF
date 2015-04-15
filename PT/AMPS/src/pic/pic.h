@@ -149,6 +149,7 @@ namespace PIC {
     extern int *totalSampledTrajectoryNumber; //the number of trajectories sampled by ALL PROCESSORS for each species
     extern unsigned int SampledTrajectoryCounter; //the total number of traced trajectories originate on the current processor -> used as a part of the trajecotry ID
 
+    extern int nMaxSavedSignleTrajectoryPoints; //the maximum number of the trajectory points saved in the output trajectory file for each particle trajectory
 
     struct cTrajectoryID {
       unsigned int StartingThread; //the thread where the trajectory has been originated

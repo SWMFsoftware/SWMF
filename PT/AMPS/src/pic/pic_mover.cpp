@@ -2407,10 +2407,12 @@ ProcessPhotoChemistry:
     memcpy(vInit,vFinal,3*sizeof(double));
     memcpy(xInit,xFinal,3*sizeof(double));
 
+/*
     //save the trajectory point
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData);
     #endif
+*/
 
 
   }
@@ -2550,6 +2552,11 @@ ProcessPhotoChemistry:
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
+
+  //save the trajectory point
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData);
+  #endif
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 #if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
