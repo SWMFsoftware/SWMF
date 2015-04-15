@@ -1255,7 +1255,7 @@ pro do_transform,transform,ifile,gencoord,variables,nw,x,w, $
                  wregpad,triangles,symmtri,nvector,vectors,usereg,$
                  dotransform,doask
 
-usereg = (not gencoord and transform eq 'unpolar') or $
+usereg = (transform eq 'unpolar') or $
   (gencoord and (transform eq 'polar' or transform eq 'regular' $
                  or transform eq 'sphere'))
 
@@ -1809,11 +1809,11 @@ pro unpolargrid2,nvector,vectors,x,w,xreg,wreg
   xreg=x
   phi=x(*,*,1)
 
-  phimax = max(abs(phi))
+  phirange = max(phi) - min(phi)
 
   ; If phi is in local time or degrees, change it to radians
-  if      abs(phimax - 24.0) lt 0.1 then phi=phi*!pi/12 $
-  else if phimax gt 20.0            then phi=phi*!pi/180
+  if      abs(phirange - 24.0) lt 0.1 then phi=phi*!pi/12 $
+  else if phirange gt 6.3             then phi=phi*!pi/180
 
   xreg(*,*,0)=x(*,*,0)*cos(phi)
   xreg(*,*,1)=x(*,*,0)*sin(phi)
@@ -2099,6 +2099,23 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         !p.title = ''
      endif
 
+                                ; Check if the angular unit of phi is given
+     angleunit = -1.0
+     i=strpos(plotmod,'polardeg')
+     if i ge 0 then begin
+        angleunit = !dtor
+        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+8)
+     endif
+     i=strpos(plotmod,'polarhour')
+     if i ge 0 then begin
+        angleunit = !pi/12
+        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+9)
+     endif
+     i=strpos(plotmod,'polarrad')
+     if i ge 0 then begin
+        angleunit = 1.0
+        plotmod=strmid(plotmod,0,i+5)+strmid(plotmod,i+8)
+     endif
 
                                 ; Calculate the next p.multi(0) explicitly
      if !p.multi(0) gt 0 then multi0=!p.multi(0)-1 $
@@ -2222,11 +2239,12 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      if plotmod eq 'cont' or plotmod eq 'polar' then $
         levels=(findgen(contourlevel+2)-1)/(contourlevel-1) $
                *(f_max-f_min)+f_min
-
-                                ; figure out the units of angle in the second coordinate
-     if plotmod eq 'polar' then begin
+     
+                                ; figure out the units of angle in the 
+                                ; second coordinate if not already set
+     if plotmod eq 'polar' and angleunit lt 0 then begin
         if max(yy)-min(yy) gt 300 then $
-           angleunit = !pi/180 $ ; degrees
+           angleunit = !dtor $ ; degrees
         else if max(yy)-min(yy) gt 20 then $
            angleunit = !pi/12 $ ; local time
         else $
