@@ -3122,12 +3122,6 @@ contains
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' limited range   =',plot_range(:,ifile)
 
-       ! Regular grid is not (yet) working for non-Cartesian grids
-       ! because multiple pieces are used in the domain for x=0 and y=0 area
-       if(plot_form(iFile) == 'idl' .and. &
-            .not.(IsCartesianGrid.or.IsRotatedCartesian)) &
-            plot_dx(1, iFile) = -1.0
-
        ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
        if(plot_dx(1, iFile) <= cTiny)then
 
