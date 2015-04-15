@@ -147,14 +147,13 @@ LIB:
 	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
 
 amps_link:
-	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a -lm -lstdc++ -lmpi_cxx ${AMPSLINKLIB} 
+	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
+		${CPPLIB} ${AMPSLINKLIB}
 
 amps: ${LIB_AMPS}
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
 	make amps_link
-
-	
 
 
 TESTDIR = run_test
