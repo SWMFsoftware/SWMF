@@ -1456,7 +1456,7 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, Dt_BLK, n_step
+         BlkTest, PROCtest, n_step
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
          RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
@@ -2367,13 +2367,13 @@ contains
        write(*,123)'SRho      = ', sum(SRho_IC(1:nIonFluid,i,j,k))* &
             No2SI_V(UnitRho_)/No2SI_V(UnitT_), &
             " [kg/(m^3*s)]"," (", &
-            100.*sum(SRho_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock) / &
+            100.*sum(SRho_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock) / &
             (State_VGB(Rho_,i,j,k,iBlock)),"%)"
        if (State_VGB(RhoUx_,i,j,k,iBlock) /= 0.) then
           write(*,123)'SRhoUx    = ', sum(SRhoUx_IC(1:nIonFluid,i,j,k))* &
                No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
                " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUx_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock)/ &
+               100.*sum(SRhoUx_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(RhoUx_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SRhoUx    = ', sum(SRhoUx_IC(1:nIonFluid,i,j,k))* &
@@ -2384,8 +2384,8 @@ contains
           write(*,123)'SRhoUy    = ', sum(SRhoUy_IC(1:nIonFluid,i,j,k))* &
                No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
                " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUy_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock) / &
-               (State_VGB(RhoUy_,i,j,k,iBlock)),"%)"
+               100.*sum(SRhoUy_IC(1:nIonFluid,i,j,k)) * &
+               time_BLK(i,j,k,iBlock)/(State_VGB(RhoUy_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SRhoUy    = ', sum(SRhoUy_IC(1:nIonFluid,i,j,k))* &
                No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
@@ -2395,8 +2395,8 @@ contains
           write(*,123)'SRhoUz    = ', sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
                No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
                " [kg/(m^2*s^2)]", " (", &
-               100.*sum(SRhoUz_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock) / &
-               (State_VGB(RhoUz_,i,j,k,iBlock)),"%)"
+               100.*sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
+               time_BLK(i,j,k,iBlock)/(State_VGB(RhoUz_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SRhoUz    = ', sum(SRhoUz_IC(1:nIonFluid,i,j,k))* &
                No2SI_V(UnitRhoU_)/No2SI_V(UnitT_), &
@@ -2405,7 +2405,7 @@ contains
        if (State_VGB(Bx_,i,j,k,iBlock) /= 0.) then
           write(*,123)'SBx       = ', &
                SBx_C(i,j,k)*No2SI_V(UnitB_)/No2SI_V(UnitT_)," [T/s]"," (", &
-               100.*SBx_C(i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SBx_C(i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(Bx_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SBx       = ', &
@@ -2414,7 +2414,7 @@ contains
        if (State_VGB(By_,i,j,k,iBlock) /= 0.) then
           write(*,123)'SBy       = ', &
                SBy_C(i,j,k)*No2SI_V(UnitB_)/No2SI_V(UnitT_), " [T/s]"," (", &
-               100.*SBy_C(i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SBy_C(i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(By_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SBy       = ', &
@@ -2423,7 +2423,7 @@ contains
        if (State_VGB(Bz_,i,j,k,iBlock) /= 0.) then
           write(*,123)'SBz       = ', &
                SBz_C(i,j,k)*No2SI_V(UnitB_)/No2SI_V(UnitT_), " [T/s]"," (", &
-               100.*SBz_C(i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SBz_C(i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(Bz_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SBz       = ', &
@@ -2433,17 +2433,17 @@ contains
           write(*,123)'SP        = ', &
                sum(SP_IC(1:nIonFluid,i,j,k))*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*sum(SP_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock) / &
+               100.*sum(SP_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock) / &
                (State_VGB(P_,i,j,k,iBlock)),"%)"
        else
           write(*,123)'SP        = ', &
                sum(SP_IC(1:nIonFluid,i,j,k))*No2SI_V(UnitP_)/No2SI_V(UnitT_)*&
                (1+ElectronPressureRatio)," [Pa/s]"," (", &
-               100.*sum(SP_IC(1:nIonFluid,i,j,k))*Dt_BLK(iBlock)/ &
+               100.*sum(SP_IC(1:nIonFluid,i,j,k))*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(P_,i,j,k,iBlock))*(1+ElectronPressureRatio),"%)"
        end if
        write(*,*)''
-       write(*,123)'dt        = ',Dt_BLK(iBlock)*No2SI_V(UnitT_)," [s]"
+       write(*,123)'dt        = ',time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)," [s]"
        write(*,123)'dt        = ',time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)," [s]"
        write(*,*)''
        write(*,*)'Individual ion fluids:'
@@ -2479,58 +2479,63 @@ contains
           write(*,123)'SRho      = ', &
                SRho_IC(iIonFluid,i,j,k)*No2SI_V(UnitRho_)/No2SI_V(UnitT_), &
                " [kg/(m^3*s)]"," (", &
-               100.*SRho_IC(iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+               100.*SRho_IC(iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                (State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SRhoT1   = ', &
                SRhoTerm_IIC(1,iIonFluid,i,j,k)*No2SI_V(UnitRho_)/ &
                No2SI_V(UnitT_), " [kg/(m^3*s)]"," (", &
-               100.*SRhoTerm_IIC(1,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+               100.*SRhoTerm_IIC(1,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                (State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SRhoT2   = ', &
                SRhoTerm_IIC(2,iIonFluid,i,j,k)*No2SI_V(UnitRho_)/ &
                No2SI_V(UnitT_), " [kg/(m^3*s)]"," (", &
-               100.*SRhoTerm_IIC(2,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+               100.*SRhoTerm_IIC(2,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                (State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SRhoT3   = ', &
                SRhoTerm_IIC(3,iIonFluid,i,j,k)*No2SI_V(UnitRho_)/ &
                No2SI_V(UnitT_), " [kg/(m^3*s)]"," (", &
-               100.*SRhoTerm_IIC(3,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+               100.*SRhoTerm_IIC(3,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                (State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SRhoT4   = ',&
                SRhoTerm_IIC(4,iIonFluid,i,j,k)*No2SI_V(UnitRho_)/ &
                No2SI_V(UnitT_), " [kg/(m^3*s)]"," (", &
-               100.*SRhoTerm_IIC(4,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+               100.*SRhoTerm_IIC(4,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                (State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           if (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock) /= 0.) then
              write(*,123)'SRhoUx    = ', &
                   SRhoUx_IC(iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]"," (", &
-                  100.*SRhoUx_IC(iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUx_IC(iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUxT1 = ', &
                   SRhoUxTerm_IIC(1,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (",&
-                  100.*SRhoUxTerm_IIC(1,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUxTerm_IIC(1,iIonFluid,i,j,k)*&
+                  time_BLK(i,j,k,iBlock)/&
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUxT2 = ', &
                   SRhoUxTerm_IIC(2,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUxTerm_IIC(2,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUxTerm_IIC(2,iIonFluid,i,j,k)*&
+                  time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUxT3 = ', &
                   SRhoUxTerm_IIC(3,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUxTerm_IIC(3,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUxTerm_IIC(3,iIonFluid,i,j,k)*&
+                  time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUxT4 = ', &
                   SRhoUxTerm_IIC(4,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUxTerm_IIC(4,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUxTerm_IIC(4,iIonFluid,i,j,k)* &
+                  time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUxT5 = ', &
                   SRhoUxTerm_IIC(5,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUxTerm_IIC(5,iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUxTerm_IIC(5,iIonFluid,i,j,k) * &
+                  time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUxIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           else
              write(*,123)'SRhoUx    = ', &
@@ -2556,32 +2561,37 @@ contains
              write(*,123)'SRhoUy    = ', &
                   SRhoUy_IC(iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUy_IC(iIonFluid,i,j,k)*Dt_BLK(iBlock) / &
+                  100.*SRhoUy_IC(iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock) / &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUyT1 = ', &
                   SRhoUyTerm_IIC(1,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUyTerm_IIC(1,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUyTerm_IIC(1,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUyT2 = ', &
                   SRhoUyTerm_IIC(2,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUyTerm_IIC(2,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUyTerm_IIC(2,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUyT3 = ', &
                   SRhoUyTerm_IIC(3,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUyTerm_IIC(3,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUyTerm_IIC(3,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUyT4 = ', &
                   SRhoUyTerm_IIC(4,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUyTerm_IIC(4,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUyTerm_IIC(4,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUyT5 = ', &
                   SRhoUyTerm_IIC(5,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUyTerm_IIC(5,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUyTerm_IIC(5,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUyIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           else
              write(*,123)'SRhoUy    = ', &
@@ -2607,32 +2617,37 @@ contains
              write(*,123)'SRhoUz    = ', &
                   SRhoUz_IC(iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUz_IC(iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUz_IC(iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUzT1 = ', &
                   SRhoUzTerm_IIC(1,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUzTerm_IIC(1,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUzTerm_IIC(1,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUzT2 = ', &
                   SRhoUzTerm_IIC(2,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/&
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUzTerm_IIC(2,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUzTerm_IIC(2,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUzT3 = ', &
                   SRhoUzTerm_IIC(3,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUzTerm_IIC(3,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUzTerm_IIC(3,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUzT4 = ', &
                   SRhoUzTerm_IIC(4,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUzTerm_IIC(4,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUzTerm_IIC(4,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
              write(*,123)' SRhoUzT5 = ', &
                   SRhoUzTerm_IIC(5,iIonFluid,i,j,k)*No2SI_V(UnitRhoU_)/ &
                   No2SI_V(UnitT_), " [kg/(m^2*s^2)]", " (", &
-                  100.*SRhoUzTerm_IIC(5,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SRhoUzTerm_IIC(5,iIonFluid,i,j,k) *&
+                  time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(iRhoUzIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           else
              write(*,123)'SRhoUz    = ', &
@@ -2657,47 +2672,47 @@ contains
           write(*,123)'SP        = ', &
                SP_IC(iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SP_IC(iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SP_IC(iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT1     = ', &
                SPTerm_IIC(1,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(1,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(1,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT2     = ', &
                SPTerm_IIC(2,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(2,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(2,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT3     = ', &
                SPTerm_IIC(3,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(3,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(3,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT4     = ', &
                SPTerm_IIC(4,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(4,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(4,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT5     = ', &
                SPTerm_IIC(5,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(5,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(5,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT6     = ', &
                SPTerm_IIC(6,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(6,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(6,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT7     = ', &
                SPTerm_IIC(7,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(7,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(7,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
           write(*,123)' SPT8     = ', &
                SPTerm_IIC(8,iIonFluid,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                " [Pa/s]"," (", &
-               100.*SPTerm_IIC(8,iIonFluid,i,j,k)*Dt_BLK(iBlock)/ &
+               100.*SPTerm_IIC(8,iIonFluid,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                (State_VGB(iPIon_I(iIonFluid),i,j,k,iBlock)),"%)"
        end do
        write(*,*)''
@@ -2720,47 +2735,47 @@ contains
              write(*,123)'SPe       = ', &
                   SPe_C(i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPe_C(i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPe_C(i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT1    = ', &
                   SPeTerm_IC(1,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(1,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(1,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT2    = ', &
                   SPeTerm_IC(2,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(2,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(2,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT3    = ', &
                   SPeTerm_IC(3,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(3,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(3,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT4    = ', &
                   SPeTerm_IC(4,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(4,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(4,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT5    = ', &
                   SPeTerm_IC(5,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(5,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(5,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT6    = ', &
                   SPeTerm_IC(6,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(6,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(6,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT7    = ', &
                   SPeTerm_IC(7,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(7,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(7,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
              write(*,123)' SPeT8    = ', &
                   SPeTerm_IC(8,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_), &
                   " [Pa/s]"," (", &
-                  100.*SPeTerm_IC(8,i,j,k)*Dt_BLK(iBlock)/ &
+                  100.*SPeTerm_IC(8,i,j,k)*time_BLK(i,j,k,iBlock)/ &
                   (State_VGB(Pe_,i,j,k,iBlock)),"%)"
           else
              write(*,123)'SPe       = ', &
@@ -3377,14 +3392,14 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, time_BLK
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_,&
          ElectronCharge, ElectronPressureRatio, UnitTemperature_
     use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
     use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
-    use ModMain,       ONLY: Dt_BLK, n_step
+    use ModMain,       ONLY: n_step
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -3536,7 +3551,7 @@ contains
     case('dt')
        NameIdlUnit = 's'
        NameTecUnit = '[s]'
-       PlotVar_G(:,:,:) = Dt_BLK(iBlock)*No2SI_V(UnitT_)
+       PlotVar_G(:,:,:) = time_BLK(i,j,k,iBlock)*No2SI_V(UnitT_)
 
     case('ns')
        NameIdlUnit = ' '   
@@ -3780,8 +3795,9 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,       ONLY: Dt_BLK, BLKtest
-    use ModPhysics,    ONLY: No2SI_V, UnitT_
+    use ModMain,    ONLY: BLKtest,iTest,jTest,kTest
+    use ModPhysics, ONLY: No2SI_V, UnitT_
+    use ModAdvance, ONLY: time_BLK  
 
     real, intent(out)             :: VarValue
     character (len=*), intent(in) :: TypeVar
@@ -3791,7 +3807,7 @@ contains
     !-------------------------------------------------------------------------
     select case(TypeVar)
     case('dtpnt')
-       VarValue = Dt_BLK(BLKtest)*No2SI_V(UnitT_)
+       VarValue = time_BLK(iTest,jTest,kTest,BLKtest)*No2SI_V(UnitT_)
     case default
        VarValue = -7777.0
     end select
