@@ -9,7 +9,8 @@ subroutine write_plot_common(iFile)
 
   use ModProcMH
   use ModMain
-  use ModGeometry, ONLY: XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I
+  use ModGeometry, ONLY: &
+       XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, MinDxValue
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, cLight, UnitU_
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
@@ -47,6 +48,7 @@ subroutine write_plot_common(iFile)
   character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
+
   ! True for spherical plots
   logical:: IsSphPlot
 
@@ -64,6 +66,14 @@ subroutine write_plot_common(iFile)
   character (len=20) :: TypeForm
 
   logical:: IsBinary
+
+  ! If DoSaveGenCoord is true, save generalized coordinates (e.g. r, phi, lat)
+  ! In this case the coordinates are saved in normalized units (CoordUnit=1.0)
+  ! If DoSaveGenCoord is false, save x,y,z coordinates with either normalized
+  ! or I/O units.
+  logical:: DoSaveGenCoord
+  real   :: CoordUnit
+  real   :: PlotRange_I(6)  ! plot range adjusted
 
   ! Indices and coordinates
   integer :: iBLK,i,j,k,l,iVar, H5Index, iProcFound, iBlockFound
@@ -103,6 +113,7 @@ subroutine write_plot_common(iFile)
   plot_type1=plot_type(iFile)
   plot_vars1=plot_vars(iFile)
   plot_pars1=plot_pars(iFile)
+  PlotRange_I = plot_range(:,iFile)
 
   call lower_case(plot_pars1)
 
@@ -118,13 +129,28 @@ subroutine write_plot_common(iFile)
   call join_string(plotvarnames(1:nplotvar), allnames)
   allnames=trim(allnames)//' '//trim(plot_pars(iFile))
 
+  if(plot_form(iFile) == 'idl')then
+     ! Adjust plotting range with unspecified plot resolution 
+     ! so that it is aligned with the current grid resolution
+     if(plot_type1(1:3) == 'cut' .and. plot_dx(1,iFile) <= 0.0) &
+          call adjust_plot_range(MinDxValue, PlotRange_I)
+
+     ! Save generalized coordinates for cuts out of non-Cartesian grids
+     DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
+     if(DoSaveGenCoord)then
+        CoordUnit = 1.0
+     else
+        CoordUnit = No2Io_V(UnitX_)
+     end if
+  end if
+
   if(oktest_me) then
-     write(*,*) plot_vars1
-     write(*,*) nplotvar,plotvarnames(1:nplotvar)
-     write(*,*) plot_dx(:,iFile)
-     write(*,*) plot_range(:,iFile)
-     write(*,*) plot_type1
-     write(*,*) plot_form(iFile)
+     write(*,*) NameSub, ' ', plot_vars1
+     write(*,*) NameSub, ' ', nplotvar, plotvarnames(1:nplotvar)
+     write(*,*) NameSub, ' ', plot_dx(:,iFile)
+     write(*,*) NameSub, ' ', PlotRange_I(iFile)     
+     write(*,*) NameSub, ' ', plot_type1
+     write(*,*) NameSub, ' ', plot_form(iFile)
   end if
 
   ! Construct the file name
@@ -191,8 +217,10 @@ subroutine write_plot_common(iFile)
         filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
         ! open the files
         unit_tmp2 = io_unit_new()
-        open(unit_tmp , file=filename_n, status="replace", form=TypeForm, err=999)
-        open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, err=999)
+        open(unit_tmp , file=filename_n, status="replace", form=TypeForm, &
+             err=999)
+        open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, &
+             err=999)
      end if
   elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
@@ -214,7 +242,7 @@ subroutine write_plot_common(iFile)
   if (IsSphPlot) then
      if (plot_form(iFile) == 'hdf') then
         nphi   = 360.0/plot_dx(3,iFile)
-        rplot  = plot_range(1,iFile)
+        rplot  = PlotRange_I(1)
         ntheta = 2+180.0/plot_dx(2,iFile)
         call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
              unitstr_IDL)
@@ -223,7 +251,7 @@ subroutine write_plot_common(iFile)
         call barrier_mpi
      else
         nphi   = 360.0/plot_dx(3,iFile)
-        rplot  = plot_range(1,iFile)
+        rplot  = PlotRange_I(1)
         ntheta = 1 + 180.0/plot_dx(2,iFile)
      end if
 
@@ -239,14 +267,13 @@ subroutine write_plot_common(iFile)
        (nDim==2 .and. (plot_type1(1:3) == '2d_' .or. plot_type1(1:3) == 'z=0'))
 
   !! START IDL
-  ! define from values used in the plotting, so that they don't
-  ! have to be done inside the loop
-  xmin=plot_range(1,iFile)
-  xmax=plot_range(2,iFile)
-  ymin=plot_range(3,iFile)
-  ymax=plot_range(4,iFile)
-  zmin=plot_range(5,iFile)
-  zmax=plot_range(6,iFile)
+  ! initialize values used in the plotting
+  xmin = PlotRange_I(1)
+  xmax = PlotRange_I(2)
+  ymin = PlotRange_I(3)
+  ymax = PlotRange_I(4)
+  zmin = PlotRange_I(5)
+  zmax = PlotRange_I(6)
 
   dxPEmin(:)=XyzMax_D(:)-XyzMin_D(:)
 
@@ -312,8 +339,8 @@ subroutine write_plot_common(iFile)
                 PlotVarBlk = PlotVar
         case('idl')
            call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
-                xmin,xmax,ymin,ymax,zmin,zmax, &
-                dxblk,dyblk,dzblk,nBLKcells)
+                DoSaveGenCoord, CoordUnit, xmin, xmax, ymin, ymax, zmin, zmax, &
+                dxblk, dyblk, dzblk, nBLKcells)
         case('hdf')
            call write_var_hdf5(iFile, plot_type1(1:3), iBLK,H5Index, &
                 nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
@@ -495,20 +522,12 @@ subroutine write_plot_common(iFile)
               if (i==2) write(unit_tmp,'(a)')'Southern Hemisphere'
            end if
         case('idl')
-           if(plot_dimensional(iFile)) then
-              write(unit_tmp,'(6(1pe18.10),a)') &
-                   plot_range(:,iFile)*No2Io_V(UnitX_),' plot_range'
-              write(unit_tmp,'(6(1pe18.10),i10,a)') &
-                   plot_dx(:,iFile)*No2Io_V(UnitX_), &
-                   dxGLOBALmin*No2Io_V(UnitX_), nGLOBALcells,&
-                   ' plot_dx, dxmin, ncell'
-           else
-              write(unit_tmp,'(6(1pe18.10),a)') &
-                   plot_range(:,iFile),' plot_range'
-              write(unit_tmp,'(6(1pe18.10),i10,a)') &
-                   plot_dx(:,iFile), dxGLOBALmin, nGLOBALcells,&
-                   ' plot_dx, dxmin, ncell'
-           end if
+           write(unit_tmp,'(6(1pe18.10),a)') &
+                PlotRange_I*CoordUnit,' plot_range'
+           write(unit_tmp,'(6(1pe18.10),i10,a)') &
+                plot_dx(:,iFile)*CoordUnit, &
+                dxGLOBALmin*CoordUnit, nGLOBALcells,&
+                ' plot_dx, dxmin, ncell'
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
            write(unit_tmp,'(i8,a)')neqpar,' neqpar'
            write(unit_tmp,'(10es13.5)')eqpar(1:neqpar)
@@ -1826,3 +1845,48 @@ subroutine reverse_field(iBlock)
 
 end subroutine reverse_field
 !==========================================================================
+subroutine adjust_plot_range(PlotRes1, PlotRange_I)
+
+  ! Adjust plot range so it conincides with the cell boundaries
+  ! of the cells of size PlotRes1 in the first dimension
+
+  use ModKind,  ONLY: nByteReal
+  use BATL_lib, ONLY: nDim, CoordMax_D, CoordMin_D, nIJK_D, nRoot_D
+
+  implicit none
+
+  real, intent(in)   :: PlotRes1       ! smallest cell size in coord1 to plot
+  real, intent(inout):: PlotRange_I(6) ! plot range to be adjusted
+
+  real:: CellSizeMax_D(nDim), SmallSize_D(nDim), PlotRes_D(nDim)
+  integer:: iDim, iMin, iMax
+  !-----------------------------------------------------------------------
+  ! Largest cell size and a much smaller distance for 2D cuts  
+  CellSizeMax_D = (CoordMax_D(1:nDim) - CoordMin_D(1:nDim)) &
+       /(nIJK_D(1:nDim)*nRoot_D(1:nDim))
+
+  ! Calculate plot cell size in all directions
+  PlotRes_D = PlotRes1/CellSizeMax_D(1) * CellSizeMax_D
+
+  if(nByteReal == 8)then
+     SmallSize_D   = 1e-9*CellSizeMax_D
+  else
+     SmallSize_D   = 1e-6*CellSizeMax_D
+  end if
+
+  do iDim = 1, nDim
+     iMin = 2*iDim - 1; iMax = iMin+1
+
+     ! Skip ignored dimensions of 2D and 1D cuts
+     if(PlotRange_I(iMax) - PlotRange_I(iMin) <= 1.5*PlotRes_D(iDim)) CYCLE
+
+     ! Shift plot range slightly outward
+     PlotRange_I(iMin) = PlotRange_I(iMin) - SmallSize_D(iDim)
+     PlotRange_I(iMax) = PlotRange_I(iMax) + SmallSize_D(iDim)
+
+     ! Round plot range to multiple of plot resolution
+     Plotrange_I(iMin:iMax) = CoordMin_D(iDim) + PlotRes_D(iDim)* &
+          nint( (PlotRange_I(iMin:iMax) - CoordMin_D(iDim))/PlotRes_D(iDim) )
+  end do
+
+end subroutine adjust_plot_range
