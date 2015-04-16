@@ -28,6 +28,10 @@ namespace SEP3D {
   // methods for the reaction processing specific for the application
   namespace Physics {
     //------------------------------------------------------------------------
+    // particle mover
+    int Mover_Axisymmetric_SecondOrder(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode, bool FirstBoundaryFlag);
+    int Mover_Axisymmetric_SecondOrder(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    //------------------------------------------------------------------------
     // self-explanatory
     void inline TotalParticleAcceleration(double *accl, int spec, long int ptr,
 					  double *x, double *v, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
