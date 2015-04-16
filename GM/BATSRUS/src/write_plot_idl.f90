@@ -9,6 +9,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
 
   use ModProcMH
   use ModMain,     ONLY: PROCtest, BLKtest, test_string
+  use ModPhysics,  ONLY: No2Io_V, UnitX_
   use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzStart_BLK
   use ModIO,       ONLY: save_binary, plot_type1, plot_dx, plot_range, &
        nPlotVarMax
@@ -28,16 +29,16 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   integer, intent(in)   :: iFile, iBlock
   integer, intent(in)   :: nPlotVar
   real,    intent(in)   :: PlotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-  real,    intent(in)   :: xMin,xMax,yMin,yMax,zMin,zMax
-  real,    intent(inout):: DxBlock,DyBlock,DzBlock
+  real,    intent(in)   :: xMin, xMax, yMin, yMax, zMin, zMax
+  real,    intent(inout):: DxBlock, DyBlock, DzBlock
   integer, intent(out)  :: nCell
 
   ! Local variables
   ! Indices and coordinates
   integer :: iVar, i, j, k, i2, j2, k2, iMin, iMax, jMin, jMax, kMin, kMax
   integer :: nRestrict, nRestrictX, nRestrictY, nRestrictZ
-  real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict
-  real :: xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
+  real :: Coord_D(3), x, y, z, ySqueezed, Dx, Restrict, xUnit
+  real :: xMin1, xMax1, yMin1, yMax1, zMin1, zMax1
   real :: Plot_V(nPlotVarMax)
   logical:: IsBinary, DoSaveGenCoord
 
@@ -63,6 +64,12 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
 
   ! Save generalized coordinates for cuts out of non-Cartesian grids
   DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
+
+  if(DoSaveGenCoord)then
+     xUnit = 1.0
+  else
+     xUnit = No2Io_V(UnitX_)
+  end if
 
   ! Initialize number of cells saved from this block
   ! Note that if this is moved inside the if statement
@@ -92,16 +99,17 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            Coord_D = CoordMin_DB(:,iBlock) &
                 + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
         else
-           Coord_D = Xyz_DGB(:,i,j,k,iBlock)
+           Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
         end if
         if(IsBinary)then
-           write(UnitTmp_) DxBlock, Coord_D, PlotVar(i,j,k,1:nPlotVar)
+           write(UnitTmp_) DxBlock*xUnit, Coord_D, PlotVar(i,j,k,1:nPlotVar)
         else
            do iVar=1,nPlotVar
               Plot_V(iVar) = PlotVar(i,j,k,iVar)
               if(abs(Plot_V(iVar))<1.0d-99)Plot_V(iVar)=0.0
            end do
-           write(UnitTmp_,'(50(1pe13.5))') DxBlock, Coord_D, Plot_V(1:nPlotVar)
+           write(UnitTmp_,'(50(1pe13.5))') &
+                DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
         endif
      end do; end do; end do
 
@@ -187,17 +195,18 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            Coord_D = CoordMin_DB(:,iBlock) &
                 + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
         else
-           Coord_D = Xyz_DGB(:,i,j,k,iBlock)
+           Coord_D = Xyz_DGB(:,i,j,k,iBlock)*xUnit
         end if
 
         if(IsBinary)then
-           write(UnitTmp_) DxBlock, Coord_D, PlotVar(i,j,k,1:nPlotVar)
+           write(UnitTmp_) DxBlock*xUnit, Coord_D, PlotVar(i,j,k,1:nPlotVar)
         else
            do iVar=1, nPlotVar
               Plot_V(iVar) = PlotVar(i,j,k,iVar)
               if(abs(Plot_V(iVar)) < 1.0d-99) Plot_V(iVar) = 0.0
            end do
-           write(UnitTmp_,'(50es13.5)') DxBlock, Coord_D, Plot_V(1:nPlotVar)
+           write(UnitTmp_,'(50es13.5)') &
+                DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
         endif
         nCell = nCell + 1
      end do; end do; end do
@@ -240,20 +249,20 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
                  Coord_D = CoordMin_DB(:,iBlock) &
                       + (0.5*(/i+i2,j+j2,k+k2/) - 0.5)*CellSize_DB(:,iBlock)
               else
-                 Coord_D = (/x, y, z/)
+                 Coord_D = (/x, y, z/)*xUnit
               end if
 
               do iVar=1,nPlotVar
                  Plot_V(iVar) = Restrict*sum(PlotVar(i:i2,j:j2,k:k2,iVar))
               end do
               if(IsBinary)then
-                 write(UnitTmp_)DxBlock, Coord_D, Plot_V(1:nPlotVar)
+                 write(UnitTmp_)DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
               else
                  do iVar = 1, nPlotVar
                     if(abs(Plot_V(iVar)) < 1.0d-99)Plot_V(iVar)=0.0
                  end do
-                 write(UnitTmp_,'(50es13.5)')DxBlock, Coord_D,&
-                      Plot_V(1:nPlotVar)
+                 write(UnitTmp_,'(50es13.5)') &
+                      DxBlock*xUnit, Coord_D, Plot_V(1:nPlotVar)
               endif
               nCell = nCell + 1
            end do
