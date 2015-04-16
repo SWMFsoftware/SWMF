@@ -39,7 +39,7 @@ TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, 
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=ices !!off, ices, swmf 
+CouplerMode=file !!off, ices, swmf 
 
 #endmain
 
@@ -158,7 +158,7 @@ CouplerMode=ices !!off, ices, swmf
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
   define _EXOSPHERE__SOURCE_PROCESSES__CONTROL_POSITIVE_VOLATILE_SURFACE_ABOUNDANCE_ _PIC_MODE_OFF_
 
-  define _ICES_CREATE_COORDINATE_LIST_ 
+! define _ICES_CREATE_COORDINATE_LIST_ 
 
   !define the extra data that will be stored on the surface
 !  SurfaceFaceData(0)=on
