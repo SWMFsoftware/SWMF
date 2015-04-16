@@ -29,8 +29,14 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   ParticleDataBuffer=(PIC::ParticleBuffer::byte*) malloc(ParticleDataLength*MaxNPart);
 
   //init the list of particles in the buffer
-  for (long int ptr=0;ptr<MaxNPart-1;ptr++) SetNext(ptr+1,ptr);
+  for (long int ptr=0;ptr<MaxNPart-1;ptr++) {
+    SetNext(ptr+1,ptr);
+    SetParticleDeleted(ptr);
+  }
+
   SetNext(-1,MaxNPart-1);
+  SetParticleDeleted(MaxNPart-1);
+
   FirstPBufferParticle=0;
 
 }
