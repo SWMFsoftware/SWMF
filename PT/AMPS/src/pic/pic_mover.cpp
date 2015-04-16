@@ -2373,7 +2373,7 @@ ProcessPhotoChemistry:
         #endif
         #endif
       }
-      else (__LINE__,__FILE__,"Error: the option is unknown");
+      else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
