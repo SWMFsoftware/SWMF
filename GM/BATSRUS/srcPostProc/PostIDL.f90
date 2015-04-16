@@ -9,6 +9,10 @@ program PostIDL
 
   use ModPlotFile, ONLY: save_plot_file
   use ModNumConst, ONLY: cHalfPi
+  use ModInterpolate, ONLY: linear
+  use ModNumConst,       ONLY: cTwoPi, cRadToDeg
+  use ModCoordTransform, ONLY: rot_matrix_z
+  use ModUtilities,      ONLY: lower_case, split_string, join_string
 
   implicit none
 
@@ -28,7 +32,7 @@ program PostIDL
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
   real :: t
   real, allocatable :: Coord_DC(:,:,:,:), State_VC(:,:,:,:)
-  real, dimension(:), allocatable :: w1, eqpar, dxdoubled
+  real, allocatable :: w1(:), eqpar(:), dxdoubled(:)
   real, allocatable :: Param_I(:)
 
   real(Real4_)              :: DxCell4, Xyz4_D(3)
@@ -48,22 +52,20 @@ program PostIDL
 
   integer :: idim, icutdim(3), ndim, nspecialpar
   real    :: specialpar(3)
-  character (LEN=5), dimension(3)            :: coord
-  character (LEN=5), dimension(3), parameter :: &
-       coord_xyz=(/'x    ','y    ','z    '/), &
-       coord_sph=(/'r    ','theta','phi  '/)     !Theta is colatitude
+  character(len=5):: NameCoord_D(3) = (/'x    ','y    ','z    '/)
+  character(len=5):: NameCoordPlot_D(3)
 
   logical :: structured, read_binary=.false., UseLookup=.false.
   character (len=100) :: filename, filenamehead, coordnames
-  character (len=500) :: varnames, unitnames, fileheadout
-  integer :: l, ll, me
+  character (len=500) :: varnames, unitnames
+  integer :: l, me
 
   ! Variables for the 2D lookup table
   integer :: ix1,ix2,ixmin1,ixmax1,ixmin2,ixmax2,nx1,nx2,idim1,idim2,jcell=0
   integer :: idim0 ! the ignored dimension
   integer :: iError
   real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2, dx1cell=0.0, dx2cell=0.0
-  integer, dimension(:,:), allocatable :: lookup
+  integer, allocatable :: lookup(:,:)
 
   ! Variables for checking binary compatibility
   integer            :: nByteRealRead
@@ -86,7 +88,7 @@ program PostIDL
   real, allocatable:: LogRgen_I(:)
   !---------------------------------------------------------------------------
 
-  write(*,'(a)')'PostIDL (G.Toth 2000-2002) starting'
+  write(*,'(a)')'PostIDL (G.Toth 2000-) starting'
 
   ! Read information from STDIN
   read(*,'(a)')filenamehead
@@ -97,11 +99,6 @@ program PostIDL
 
   read(*,*)numprocs
   write(*,*)trim(filenamehead),', numprocs=',numprocs
-  if(filenamehead(1:2) == 'sp')then
-     coord=coord_sph
-  else
-     coord=coord_xyz
-  end if
   read(*,*)it
   read(*,*)t
   write(*,*)'n_step=',it,' time_simulation=',t
@@ -109,7 +106,9 @@ program PostIDL
   write(*,*)'xyzmin=',xyzmin
   write(*,*)'xyzmax=',xyzmax
   read(*,*) CellSizePlot_D, dxyzmin, ncell
-  write(*,*)'dxyz,dxyzmin,ncell=', CellSizePlot_D, dxyzmin,ncell
+  write(*,*)'CellSizePlot_D=', CellSizePlot_D
+  write(*,*)'CellSizeMin_D =', dxyzmin
+  write(*,*)'nCell         =', nCell
   read(*,*)nw
   read(*,*)neqpar
   allocate(eqpar(neqpar))
@@ -122,9 +121,9 @@ program PostIDL
   if(unitnames=='')unitnames='normalized units'
 
   read_binary = .false.
-  read(*,'(l8)',err=1,end=1)read_binary
+  read(*,'(l8)',err=1,end=1) read_binary
 1 continue
-  write(*,*)'binary   =',read_binary
+  write(*,*)'binary   =', read_binary
 
   if(read_binary)then
      nByteRealRead = -1
@@ -142,7 +141,7 @@ program PostIDL
      write(*,*)'nByteReal=',nByteRealRead
   end if
 
-  !Read TypeGeometry, if possible
+  ! Read TypeGeometry, if possible
   read(*,'(a)',err=3,end=3) TypeGeometryRead
   TypeGeometry = TypeGeometryRead
 3 continue
@@ -155,9 +154,23 @@ program PostIDL
         read(unit_tmp,*)iPoint,TorusSurface_I(iPoint)
      end do
   end if
-  if(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
+
+  ! Set coordinate names different from default x, y, z
+  if(filenamehead(1:3) == 'sph')then
+     NameCoord_D    = (/'r    ','theta','phi  '/)
+  elseif(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
      TypeGeometry = 'cartesian'
-     coord = (/'x    ','r    ','phi  '/)
+     NameCoord_D    = (/'x    ','r    ','phi  '/)
+  elseif(filenamehead(1:3) == 'cut')then
+     select case(TypeGeometry(1:5))
+     case('spher')
+        ! In reality this is the r-lon-lat coordinate system
+        NameCoord_D = (/'r    ','phi  ','lat  '/)
+     case('cylin')
+        NameCoord_D = (/'r    ','phi  ','z    '/)
+     case('round')
+        NameCoord_D = (/'xi   ','eta  ','zeta '/)
+     end select
   end if
 
   IsLogRadius = index(TypeGeometry,'lnr')  > 0
@@ -194,15 +207,15 @@ program PostIDL
   ndim=0
   nspecialpar=0
   icutdim=0
-  do i=1,3
+  do i = 1, 3
      if(nxyz(i)>1)then
         ndim=ndim+1
         icutdim(ndim)=i
      else
         icutdim(3)=i
-        nspecialpar=nspecialpar+1
-        specialpar(nspecialpar)=0.5*(xyzmax(i)+xyzmin(i))
-        varnames=trim(varnames)//' cut'//trim(coord(i))
+        nspecialpar = nspecialpar + 1
+        specialpar(nspecialpar) = 0.5*(xyzmax(i) + xyzmin(i))
+        varnames=trim(varnames)//' cut'//trim(NameCoord_D(i))
      end if
   end do
 
@@ -337,7 +350,7 @@ program PostIDL
         countcell=countcell+1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
-        if(TypeGeometry == 'cartesian')then
+        if(TypeGeometry == 'cartesian' .or. filenamehead(1:3) == 'cut')then
            XyzGen_D = Xyz_D
         else
            call set_gen_coord
@@ -354,8 +367,8 @@ program PostIDL
            endif
 
            ! Calculate indices for lookup table
-           ix1=nint((XyzGen_D(idim1)-xmin1)/dx1+halfeps)
-           ix2=nint((XyzGen_D(idim2)-xmin2)/dx2+halfeps)
+           ix1 = nint((XyzGen_D(idim1) - xmin1)/dx1 + halfeps)
+           ix2 = nint((XyzGen_D(idim2) - xmin2)/dx2 + halfeps)
 
            call unstructured_2D
 
@@ -365,11 +378,11 @@ program PostIDL
 
         x = XyzGen_D(1); y = XyzGen_D(2); z = XyzGen_D(3)
 
-        if(dxcell<dx+1.e-6)then
+        if(dxcell < dx+1.e-6)then
            ! Cell has the correct size or finer
-           i=max(1,nint((x-xmin)/dx+0.5))
-           j=max(1,nint((y-ymin)/dy+0.5))
-           k=max(1,nint((z-zmin)/dz+0.5))
+           i = max(1, nint((x-xmin)/dx+0.5))
+           j = max(1, nint((y-ymin)/dy+0.5))
+           k = max(1, nint((z-zmin)/dz+0.5))
 
            if(dxcell<dx-1.e-6)then
               ! Cell is finer, calculate volume fraction
@@ -377,6 +390,7 @@ program PostIDL
            else
               frac=1.0
            end if
+
            State_VC(:,i,j,k) = State_VC(:,i,j,k) + frac*w1
            do iDim = 1, nDim
               Coord_DC(iDim,i,j,k) = Coord_DC(iDim,i,j,k) &
@@ -393,9 +407,10 @@ program PostIDL
            kmax=min(nz,max(1,nint((z+0.5*dzcell-zmin)/dz)))
 
            ! First order prolongation
-           do iw=1,nw
+           do iw = 1, nw
               State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)= &
-                   State_VC(iw,imin:imax,jmin:jmax,kmin:kmax)+w1(iw)
+                   State_VC(iw,imin:imax,jmin:jmax,kmin:kmax) &
+                   + w1(iw)
            end do
            do iDim = 1, nDim
               Coord_DC(iDim,imin:imax,jmin:jmax,kmin:kmax) = &
@@ -406,7 +421,7 @@ program PostIDL
            if(imax<imin.or.jmax<jmin.or.kmax<kmin)&
                 write(*,*)'!!! Empty box for cell dx,x,y,z=',dxcell,x,y,z
 
-           total=total+(imax-imin+1)*(jmax-jmin+1)*(kmax-kmin+1)
+           total = total + (imax-imin+1)*(jmax-jmin+1)*(kmax-kmin+1)
         end if
      end do ! read file
 
@@ -416,7 +431,7 @@ program PostIDL
   end do ! me
 
   if(countcell/=ncell)&
-     write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
+       write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
 
   if(structured)then
      volume=product(real(nxyz))
@@ -454,10 +469,32 @@ program PostIDL
      nxyz(1)=icell
   end if
 
- 
-  filename=filenamehead(1:l-2)//'.out'
+  if(filenamehead(1:3) == 'cut')then
+
+     ! Convert radians to degrees
+     do iDim = 1, nDim
+        select case(NameCoordPlot_D(iDim))
+        case('r')
+           ! Convert generalized coordinates to radius and degrees
+           if(IsLogRadius)then
+              Coord_DC(iDim,1:nx,:,:) = exp(Coord_DC(iDim,1:nx,:,:))
+           elseif(IsGenRadius)then
+              do k = 1, nz; do j = 1, ny; do i = 1, nx
+                 Coord_DC(iDim,i,j,k) = exp(linear(LogRgen_I, 0, nRgen-1, &
+                      Coord_DC(iDim,i,j,k)*(nRgen-1), DoExtrapolate=.true.) )
+              end do; end do; end do
+           end if
+
+        case('phi', 'theta', 'lat')
+           Coord_DC(iDim,1:nx,:,:) = Coord_DC(iDim,1:nx,:,:)*cRadToDeg
+        end select
+     end do
+
+  endif
+
+  filename = filenamehead(1:l-2)//'.out'
   write(*,*)'writing file =',trim(filename)
-   
+
   ! Param_I is the combination of eqpar and specialpar
   allocate(Param_I(neqpar+nspecialpar))
   do i=1,neqpar
@@ -470,16 +507,16 @@ program PostIDL
   ! the sizes of Coord_DC and State_VC may be modified by cell averaging 
   ! in unstructured grids. Only the first dimension (1:nx) needs to be set
   call save_plot_file(filename,&
-        TypeFileIn = TypeFile, &
-        StringHeaderIn = fileheadout,&
-        nStepIn = it, TimeIn = t, &
-        ParamIn_I = Param_I, &
-        NameVarIn = varnames, &
-        IsCartesianIn = TypeGeometry=='cartesian' .and. structured,&
-        nDimIn = ndim,&
-        CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
-        VarIn_VIII = State_VC(:,1:nx,:,:))
- 
+       TypeFileIn = TypeFile, &
+       StringHeaderIn = unitnames, &
+       nStepIn = it, TimeIn = t, &
+       ParamIn_I = Param_I, &
+       NameVarIn = varnames, &
+       IsCartesianIn = TypeGeometry=='cartesian' .and. structured,&
+       nDimIn = ndim,&
+       CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
+       VarIn_VIII = State_VC(:,1:nx,:,:))
+
   deallocate(Coord_DC,State_VC,Param_I)
   deallocate(w1, eqpar)
   if(read_binary.and.nByteRealRead==4) deallocate(State4_V)
@@ -497,7 +534,7 @@ contains
     dxyzcell(1)=dxcell; dxyzcell(2)=dycell; dxyzcell(3)=dzcell
     dx1cell=dxyzcell(idim1); dx2cell=dxyzcell(idim2)
 
-    if(dx1cell>1.9*dx1)then
+    if(dx1cell > 1.9*dx1)then
        ! Lookup indices of possible finer pairs
        ixmin1=nint((XyzGen_D(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps)
        ixmax1=nint((XyzGen_D(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps)
@@ -661,42 +698,25 @@ contains
 
   subroutine set_strings
 
-    ! Produce fileheadout for the VAC file based on the name of the headerfile
-    fileheadout=unitnames(1:494)
-
-    ! Length of the headerline
-    l=len_trim(fileheadout)
-
-    !Replace underscores with dashes 
-    do ll=1,l
-       if(fileheadout(ll:ll)=='_')fileheadout(ll:ll)='-'
-    enddo
-    ! Add _xxx13, _xxx23 or _xxx33 to fileheadout based on ndim
-    ! The _xxx comes from filenamehead (e.g. y=0_var_... --> _var 
-    ! where var is 2 or 3 character-long)
-    ll = 7; if(filenamehead(7:7) == '_') ll = 6
-    write(fileheadout,'(a,i1,i1)') fileheadout(1:l)//filenamehead(4:ll),ndim,3
-
     ! Produce coordinate names 
     !         ('x y z', 'x y', 'x z', 'y z' or 'r theta', 'r phi' ...)
 
-    coordnames=coord(icutdim(1))
-    ! Fix coordinate name for non-cartesian cut along phi=90 deg:
-    if(index(filenamehead,'x=0')>0) coordnames='y'
-    do idim = 2, ndim
-       coordnames=trim(coordnames)//' '//trim(coord(icutdim(idim)))
-    end do
-    varnames=trim(coordnames)//' '//trim(varnames)
+    ! Reorder coordinate names for cuts
+    NameCoordPlot_D(1:nDim) = NameCoord_D(iCutDim(1:nDim))
+
+    ! Fix first coordinate name for non-cartesian cut along phi=90,270 deg
+    ! that is a cut in the SECOND generalized coordinate.
+    if(filenamehead(1:3) == 'x=0') NameCoordPlot_D(1) = 'y'
+
+    call join_string(NameCoordPlot_D(1:nDim), coordnames)
+
+    varnames = trim(coordnames)//' '//trim(varnames)
 
   end subroutine set_strings
 
   !===========================================================================
- 
-  subroutine set_gen_coord
 
-    use ModNumConst,       ONLY: cTwoPi, cRadToDeg
-    use ModCoordTransform, ONLY: rot_matrix_z
-    use ModUtilities,      ONLY: lower_case, split_string
+  subroutine set_gen_coord
 
     ! Calculate the generalized coordinates mostly for lookup
     real:: rCyl ! distance from axis Z
@@ -731,7 +751,7 @@ contains
 
           ! The rotation matrix should be the same as in BATL_geometry
           GridRot_DD = rot_matrix_z(0.6,0.8)
-          
+
           ! Find vectors
           MaxWord = nDim + nW + nEqpar
           allocate(NameVar_V(MaxWord))
@@ -747,7 +767,7 @@ contains
              call lower_case(NameVar)
 
              l = len_trim(NameVar)
-             
+
              ! Identify vectors as 3 strings ending with x, y, z
              if(NameVar(l:l) /= 'x') CYCLE
 
@@ -828,7 +848,7 @@ contains
           case(2)
              ! This is x=0 or y=0 plane, use axial radius vs Z
              Xyz_D(1) = sign(1.00,Xyz_D(1)+Xyz_D(2))*rCyl
-             ! XyzGen_D(2) = xmin2 ! could be useful for structured grid
+             XyzGen_D(2) = xmin2 ! could be useful for structured grid
           case(3)
              ! This is the z=0 plane
              ! Stretch X and Y with rSph/rCyl instead of simply
@@ -873,7 +893,6 @@ contains
        write(*,*)'Unknown TypeGeometry='//TypeGeometry
        stop
     end select
-
 
     if(IsLogRadius .or. IsGenRadius) XyzGen_D(1) = log(XyzGen_D(1))
 
