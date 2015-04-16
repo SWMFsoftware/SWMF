@@ -64,6 +64,11 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   ! Save generalized coordinates for cuts out of non-Cartesian grids
   DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
 
+  ! Initialize number of cells saved from this block
+  ! Note that if this is moved inside the if statement
+  ! the NAG compiler with optimization on fails !
+  nCell = 0
+
   if(index(test_string,'SAVEPLOTALL')>0)then
 
      ! Save all cells of block including ghost cells
@@ -81,9 +86,8 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      plot_Dx(2,iFile) = DyBlock
      plot_Dx(3,iFile) = DzBlock
 
-     nCell=0
      do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-        nCell=nCell+1
+        nCell = nCell + 1
         if(DoSaveGenCoord)then
            Coord_D = CoordMin_DB(:,iBlock) &
                 + ((/i,j,k/)-0.5)*CellSize_DB(:,iBlock)
@@ -169,8 +173,6 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
      write(*,*) NameSub, 'zMin1,zMax1=',zMin1,zMax1
   end if
 
-  ! Count number of cells saved into the plot
-  nCell = 0
   if(DxBlock >= Dx)then
      ! Cell is equal or coarser than Dx, save all cells in cut
      do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
@@ -197,7 +199,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
            end do
            write(UnitTmp_,'(50es13.5)') DxBlock, Coord_D, Plot_V(1:nPlotVar)
         endif
-        nCell = nCell+1
+        nCell = nCell + 1
      end do; end do; end do
   else
      ! Block is finer then required resolution
@@ -253,7 +255,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
                  write(UnitTmp_,'(50es13.5)')DxBlock, Coord_D,&
                       Plot_V(1:nPlotVar)
               endif
-              nCell=nCell+1
+              nCell = nCell + 1
            end do
         end do
      end do
