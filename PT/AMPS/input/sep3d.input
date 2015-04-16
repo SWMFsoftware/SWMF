@@ -83,6 +83,11 @@ CouplerMode= file !ices !swmf !!!ices !!off, ices, swmf
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) SEP3D::Physics::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node)
+
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag)
+
 #endGeneral
 
 #block ../exosphere.pl
