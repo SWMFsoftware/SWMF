@@ -132,53 +132,73 @@ contains
     allocate(DInner_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'DInner_I')
     DInner_I = 1.0
+
     allocate(DInnerInj_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'DInnerInj_I')
     DInnerInj_I = 1.0
+
     allocate(DOuter_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'DOuter_I')
     DOuter_I = 1.0
+
     allocate(FermiA_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'FermiA_I')
     FermiA_I = 0.0
+
     allocate(Rho_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'Rho_I')
     Rho_I = 1.0
+
     allocate(RhoOld_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoOld_I')
     RhoOld_I = 1.0
+
     allocate(RhoSmooth_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoSmooth_I')
     RhoSmooth_I = 1.0
+
     allocate(RhoSmoothOld_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoSmoothOld_I')
     RhoSmoothOld_I = 1.0
+
     allocate(T_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'T_I')
     T_I = 1.0
+
     allocate(B_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'B_I')
     B_I = 1.0
+
     allocate(BOld_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoOld_I')
     BOld_I = 1.0
+
     allocate(BSmooth_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoSmooth_I')
     BSmooth_I = 1.0
+
     allocate(BSmoothOld_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'RhoSmoothOld_I')
     BSmoothOld_I = 1.0
+
     allocate(U_I(1:nX),stat=iError)
     call check_allocate(iError,NameSub//'U_I')
     U_I = 0.0
+
     allocate(X_DI(3,1:nX),stat=iError)
     call check_allocate(iError,NameSub//'X_DI')
-    allocate(State_VI(8,1:nX),stat=iError)
-    call check_allocate(iError,NameSub//'State_VI')
+    !\
+    ! Used in testing only
+    !/
     do iX=1,nX
        X_DI(1  ,iX) = real(iX)
        X_DI(2:3,iX) = 0.0
     end do
+
+    allocate(State_VI(8,1:nX),stat=iError)
+    call check_allocate(iError,NameSub//'State_VI')
+    State_VI = 0.0
+
     allocate(F_II(0:nP+1,1:nX),stat=iError)
     call check_allocate(iError,NameSub//'F_II')
 
@@ -323,9 +343,9 @@ contains
           ! Steepen shock wave front +/- (1.0/DsResolution) points from
           ! position of shock front::
           !/
-          iShock=iShockOld+iProgress
-          if(iShock>nint(1.0/DsResolution).and.&
-               iShock<nX-nint(1.0/DsResolution))then
+          iShock = iShockOld + iProgress
+          if(iShock > nint(1.0/DsResolution).and.&
+               iShock < nX-nint(1.0/DsResolution))then
              !\
              ! Obtain the Alfven Mach number of the shock wave::
              !/
