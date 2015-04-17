@@ -4,10 +4,14 @@ Module ModTurbulence
   use ModConst
   implicit none
   SAVE
-  logical::DoInitSpectrum=.true.
-  logical::UseTurbulentSpectrum=.true.
+  !\
+  ! Logicals, all .false. by default
+  !/
+  logical::DoInitSpectrum=.false.
+  logical::UseTurbulentSpectrum=.false.
   logical::UseAdvectionWithAlfvenSpeed=.false.
-  logical::DoOutputGamma=.true.
+  logical::DoOutputGamma=.false.
+
   integer::iXOutputStart=350
   integer::iXOutputStride=50
   integer::iXOutputLast=1000
@@ -645,5 +649,5 @@ contains
     end if
 
   end subroutine UpdateSpectrum
-
-  end Module ModTurbulence
+  !=====================
+end Module ModTurbulence
