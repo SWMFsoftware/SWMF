@@ -104,6 +104,7 @@ module ModFieldLineThread
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   !erg = 1e-7 J
        /1.0e-6    !cm3 = 1e-6 m3 
+  real, parameter:: TeGlobalMaxSi = 1.60e6
   !\
   ! To find the volumetric radiative cooling rate in J/(m^3 s)
   ! the value found from radcool table should be multiplied by
@@ -692,7 +693,13 @@ contains
                                     Value_V=Value_V,      &
                                     Arg1Out=TMax,  & 
                                     DoExtrapolate=.false.)
-      TMax = TMax*Si2No_V(UnitTemperature_)
+      !\
+      ! Version Easter 2015
+      ! Globally limiting the temparture is mot much
+      ! physical, however, at large enough timerature 
+      ! the existing semi-implicit solver is unstable 
+      !/
+      TMax = min(TMax,TeGlobalMaxSi)*Si2No_V(UnitTemperature_)
     end subroutine limit_temperature
   end subroutine set_threads_b
   !=========================================================================

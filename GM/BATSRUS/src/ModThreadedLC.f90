@@ -9,6 +9,11 @@
 ! 3. In Heat_ and Impl_ modes: only half step heat conduction is used
 ! 4. In hydro-and-heating mode: a new scheme is applied with adding the
 !    half-step heat conduction
+! 5. BC for density: floating for the negative velocity along the TFL,
+!    the value from the TFL end point (not extrapolated with the barometric 
+!    scale otherwise.
+! 6. Global upper limit for the temperature on the top of threads, presently,
+!    1.60e+6 K 
 !/
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
@@ -402,7 +407,15 @@ contains
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
+    !\
+    ! Easter 2015 Version
+    !/
+    !PeSiOut = min(1.20*PeSiIn, max(PeSiOut, PeSiIn))
+    if(USiIn>0.0)then
+       RhoNoDimOut = RhoNoDimCoef* PeSi_I(nPoint)/TeSi_I(nPoint)
+    else
+       RhoNoDimOut = RhoNoDimCoef* PeSiIn/TeSiIn
+    end if
     if(DoTestMe)then
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
@@ -1183,7 +1196,8 @@ contains
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
 
-       PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)*No2Si_V(UnitEnergyDens_)
+       PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
+            *Te_G(0,j,k)/Te_G(1,j,k)*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, iAction=iAction,    &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
