@@ -235,7 +235,7 @@ program PostIDL
 
      ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
      if(idim0==2)then
-        if(TypeGeometry(1:9)=='spherical' .and. xmax1 > cHalfPi) then
+        if(TypeGeometry(1:9)=='spherical' .and. xmax2 > cHalfPi) then
            ! Use LatMin < Lat' < 2*LatMax-LatMin as generalized coordinate
            UseDoubleCut = .true.; nx2 = 2*nx2; 
            ! nxyz(3) = 2*nxyz(3)
@@ -271,7 +271,8 @@ program PostIDL
               ! Cell sizes have to be stored for unstructured 2D grid
               allocate(dxdoubled(ncell))
            end if
-           write(*,*)'allocate done'
+           write(*,*)'allocate done with nx1, nx2, UseDoubleCut=', &
+                nx1, nx2, UseDoubleCut
         end if
      end if
   endif
