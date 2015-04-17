@@ -41,7 +41,6 @@ int SEP3D::Physics::Mover_Axisymmetric_SecondOrder(long int ptr, double dtTotal,
   memcpy(xmaxBlock,startNode->xmax,DIM*sizeof(double));
   
   MovingTimeFinished=true;
-  dtMin=dtTotal;
 
   double acclInit[3],acclMiddle[3],vv;
   
