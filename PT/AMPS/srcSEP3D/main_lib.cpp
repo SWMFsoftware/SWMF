@@ -53,7 +53,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
   switch (spec) {
   case _H_PLUS_SPEC_:
-    CharacteristicSpeed=1.0e6;
+    CharacteristicSpeed=1.0e10;
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
@@ -76,12 +76,12 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
   double ExternalNormal[3],ModelParticlesInjectionRate;
   int nface;
 
-  static double v[3]={1.0e6,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
       startNode->GetExternalNormal(ExternalNormal,nface);
-      ModelParticlesInjectionRate=-(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
+      ModelParticlesInjectionRate=-NDensity*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
 
       if (ModelParticlesInjectionRate>0.0) return true;
     }
@@ -99,7 +99,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
   PIC::ParticleBuffer::byte *newParticleData;
   long int nInjectedParticles=0;
 
-  static double v[3]={1.0e6,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
 
   double ModelParticlesInjectionRate;
 
@@ -112,7 +112,7 @@ long int BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *s
       startNode->GetExternalNormal(ExternalNormal,nface);
       TimeCounter=0.0;
 
-      ModelParticlesInjectionRate=-(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
+      ModelParticlesInjectionRate=-NDensity*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
 
 
       if (ModelParticlesInjectionRate>0.0) {
@@ -169,7 +169,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
 
 
   double ModelParticlesInjectionRate=0.0;
-  static double v[3]={1.0e6,0.0,0.0};
+  static double v[3]={1.0e6,0.0,0.0}, NDensity=1.0E+13;
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
@@ -177,7 +177,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
       BlockSurfaceArea=startNode->GetBlockFaceSurfaceArea(nface);
 
       if (v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]<0.0) {
-        ModelParticlesInjectionRate+=-BlockSurfaceArea*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
+        ModelParticlesInjectionRate+=-NDensity*BlockSurfaceArea*(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
       }
     }
   }
@@ -189,50 +189,6 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
 bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
   return false;
 }
-
-void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
-  double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
-
-  memcpy(x_LOCAL,x,3*sizeof(double));
-  memcpy(v_LOCAL,v,3*sizeof(double));
-
-#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
-    long int nd;
-    char *offset;
-    int i,j,k;
-    PIC::Mesh::cDataCenterNode *CenterNode;
-    double E[3],B[3];
-
-    if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
-      startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL,startNode);
-
-      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
-        exit(__LINE__,__FILE__,"Error: the cell is not found");
-      }
-    }
-
-    #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-    if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
-    #endif //<-- _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-
-    CenterNode=startNode->block->GetCenterNode(nd);
-    offset=CenterNode->GetAssociatedDataBufferPointer();
-
-    PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
-    PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-
-    double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
-    double mass=PIC::MolecularData::GetMass(spec);
-
-    accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
-    accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
-    accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
-#endif //<-- _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
-
-  //copy the local value of the acceleration to the global one
-  memcpy(accl,accl_LOCAL,3*sizeof(double));
-}
-
 
 void amps_init_mesh() {
   PIC::InitMPI();
@@ -291,7 +247,7 @@ void amps_init_mesh() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile("dataARMS.t=0.dat");
+	PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile("dataARMS.t=20.dat");
 }
 
 void amps_init(){
@@ -319,12 +275,14 @@ void amps_init(){
   
   //init the particle buffer
   PIC::ParticleBuffer::Init(10000000);
-  
+
+  {  // prepopulate the domain
+    double NDensity=1.0E+10, Temperature=6000, Velocity[3]={1.0E6,0.0,0.0};
+    for (int s=0;s<PIC::nTotalSpecies;s++)
+      PIC::InitialCondition::PrepopulateDomain(s,NDensity, Velocity, Temperature);
+  }
+
   PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
-
-
-  PIC::ParticleWeightTimeStep::GlobalTimeStep[0]=
-    PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext / 200;
 
 }
 
@@ -335,11 +293,11 @@ void amps_init(){
 void amps_time_step () {
 
   static double GlobalTime =-1.0;
-  static int    nOutputFile = 0;
+  static int    nOutputFile = 20;
   char fname[_MAX_STRING_LENGTH_PIC_];
   
-    if(GlobalTime < 0) 
-    GlobalTime = 0.0;
+  if(GlobalTime < 0) 
+    GlobalTime = PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCurrent;
   else
     if(GlobalTime >=PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext){
       nOutputFile++;
