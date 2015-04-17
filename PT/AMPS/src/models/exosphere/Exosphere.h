@@ -429,6 +429,27 @@ namespace Exosphere {
         (OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
         (OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
 
+
+
+/*    {  //test: set vertical injection velocity
+      double l=0.0;
+      int i;
+
+      for (i=0;i<3;i++) l+=pow(x_LOCAL_IAU_OBJECT[i],2);
+
+      l=sqrt(l);
+
+      for (i=0;i<3;i++) {
+        x_LOCAL_SO_OBJECT[i]=x_LOCAL_IAU_OBJECT[i];
+
+        v_LOCAL_IAU_OBJECT[i]=1500.0*x_LOCAL_IAU_OBJECT[i]/l;
+        v_LOCAL_SO_OBJECT[i]=v_LOCAL_IAU_OBJECT[i];
+      }
+
+    }*/
+
+
+
     memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
     memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
     memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
@@ -690,12 +711,33 @@ namespace Exosphere {
       //the number density fraction of particular ion species in the background plasma flow
       static const double IonNumberDensityFraction[]={1.0}; //the number density fraction of the particular ion species in the total background plasma flow (IonNumberDensityFraction[spec])
       static const double vmax=1000.0E3; //the maximum velocity of the injected ions
+
+      //a cartesian grid is introduces on each face. the number of the cells on that grid corresponds to that is cells in the block to improve modeling of the variatino of the injectino rate
+      static const int nFaceInjectionIntervals=std::max(_BLOCK_CELLS_X_,std::max(_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_));
       extern long int nTotalBoundaryInjectionFaces;  //the number of the computationsl mesh faces at the boundary of the domain
-      extern double **BoundaryFaceProductionFraction; //the fraction of the total production rate that is due to a particular block (BoundaryBlockProductionFraction[spec][block]
+
+      extern double **BoundaryFaceTotalInjectionRate; //the total production rate that is due to a particular block (BoundaryBlockProductionFraction[spec][nInjectionFace]
+      extern double *maxBoundaryFaceTotalInjectionRate; //the maximum value of the boundary face injectino rate
+
+      extern double ***BoundaryFaceLocalInjectionRate; //flux at defferent locations across the face BoundaryFaceLocalInjectionRate[spec][nInjectionFace][SurfaceElement]
+      extern double **maxBoundaryFaceLocalInjectionRate; //max production rate through a boundary face (a cartisian mesh is introduced on block faces) [spec][nInjectionFace]
+
       extern double *maxLocalTimeStep; //the maximum value of the time step across the boundary of the computational domain (maxLocalTimeStep[spec])
       extern double *minParticleWeight; //the minimum value of the particle weight across the computational domain (minParticleWeight[spec])
 
       extern double *TotalInjectionRateTable; //the rate of the ion injection through the boundary of the computational domain; the table is used to save the data calculated by GetTotalProductionRate for a steady state case. In a time-dependent case the value of the source rate is re-calculated each time when that function is acceced
+
+      class cBoundaryFaceDescriptor {
+      public:
+        int nface;
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
+
+        cBoundaryFaceDescriptor() {
+          nface=-1,node=NULL;
+        }
+      };
+
+      extern cBoundaryFaceDescriptor *BoundaryFaceDescriptor;
 
       void getMinMaxLimits();
       double GetTotalProductionRate(int spec);
