@@ -1213,8 +1213,8 @@ void amps_init() {
   PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.0,50.0);
 
 
-//  PIC::CPLR::DATAFILE::LoadBinaryFile("data/input/Mercury/040915-Jia/SavedCellData.bin");
-  PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
+  PIC::CPLR::DATAFILE::LoadBinaryFile("data/input/Mercury/040915-Jia/SavedCellData.bin");
+//  PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
 
 
 /*
@@ -1286,7 +1286,7 @@ void amps_init() {
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
 
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.data.dat",0);
+/*  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.data.dat",0);
 
 
   PIC::CPLR::DATAFILE::SaveBinaryFile("SavedCellData.bin");
@@ -1297,7 +1297,7 @@ void amps_init() {
 
   PIC::CPLR::SaveCenterNodeAssociatedData("SavedAssociatedData.bin");
   PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedAssociatedData.dat",0);
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedAssociatedData.dat",0);*/
 
 
 
@@ -1313,7 +1313,7 @@ void amps_init() {
 
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(10000000);
+  PIC::ParticleBuffer::Init(1000000);
 //  double TimeCounter=time(NULL);
 //  int LastDataOutputFileNumber=-1;
 
