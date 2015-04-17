@@ -18,7 +18,7 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
   int iCell,jCell,kCell,nInjectionProcess;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   PIC::Mesh::cDataCenterNode *cell;
-  long int nd,nInjectedParticles=0;
+  long int nd,nGlobalInjectedParticles,nLocalInjectedParticles=0;
 
   //local copy of the block's cells
   int cellListLength=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::ThisThread]->block->GetCenterNodeListLength();
@@ -66,7 +66,7 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
       anpart=NumberDensity*cell->Measure/ParticleWeight;
       npart=(int)(anpart);
       if (rnd()<anpart-npart) npart++;
-      nInjectedParticles+=npart;
+      nLocalInjectedParticles+=npart;
 
       while (npart-->0) {
         x[0]=xMiddle[0]+(xmax[0]-xmin[0])/_BLOCK_CELLS_X_*(rnd()-0.5);
@@ -99,7 +99,8 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
     memcpy(node->block->FirstCellParticleTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
   }
 
-  return nInjectedParticles;
+  MPI_Allreduce(&nLocalInjectedParticles,&nGlobalInjectedParticles,1,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  return nGlobalInjectedParticles;
 }
 
 
