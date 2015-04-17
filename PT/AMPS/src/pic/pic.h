@@ -2475,6 +2475,7 @@ namespace PIC {
       namespace ARMS {
         //read ARMS' output file
         namespace OUTPUT {
+	  extern double TimeCurrent;
           extern double TimeCoupleNext;
           void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }

@@ -16,13 +16,12 @@
 
 //path to the location of the data files
 char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
+double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCurrent   =-1.0;
 double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=-1.0;
 
 //read ARM's output file
 void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 
-  // current time
-  static double time = -1.0;
   // size of the uniform grid
   static int nX = -1, nZ = -1;
   // container for the data and grid
@@ -41,9 +40,10 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
     // start reading: read essential constants time & size of the grid
     char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
     // reset parameters
-    nX = -1; nZ=-1; time =-1.0;
+    nX = -1; nZ=-1; 
+    TimeCurrent   =-1.0;
     TimeCoupleNext=-1.0;
-    while(fin.eof()==false && (nX < 0 || nZ < 0|| time < 0 || TimeCoupleNext < 0) ){
+    while(fin.eof()==false && (nX < 0 || nZ < 0|| TimeCurrent < 0 || TimeCoupleNext < 0) ){
       if(fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false){
 	exit(__LINE__,__FILE__, "ERROR: the size of the grid couldn't be read.");
 	break;
@@ -52,7 +52,7 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
       
       if((strcmp("#TIME",str1)==0)){
 	fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	time = strtod(str1, NULL);
+	TimeCurrent = strtod(str1, NULL);
       }
       else
 	if((strcmp("#TIME_NEXT",str1)==0)){
@@ -106,7 +106,7 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	  int offset = -1; 
 	  double convert = -1.0;
 	  //           N_E is electron mass density [cm^-3]
-	  if((strcmp("#N_E",str1)==0)){offset=n_;convert=pow(cm2m,-3)/ ElectronMass;}
+	  if((strcmp("#N_E",str1)==0)){offset=n_;convert=pow(cm2m,-3);}
 	  else//         PRE is thermal pressure [dyn/cm^-2]
 	    if((strcmp("#PRE",str1)==0)){offset=p_;convert=0.1;}
 	    else//         TEM is temperature [K]
