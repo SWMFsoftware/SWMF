@@ -5,7 +5,9 @@
 subroutine write_plotfile_SP(DoPlot,TypeOutput)
   use ModIOUnit
   use SP_ModMain
-  use ModTurbulence
+  use ModTurbulence,ONLY: DoOutputGamma, iXOutputStart,iXOutputLast,&
+       iXOutputStride, iPlus_IX, iMinus_IX, Gamma_I, i_output, nKOutput, kMin,&
+       DeltaLnK
   use ModUtilities, ONLY: split_string
   implicit none
   !--------------------------------------------------------------------------!
@@ -214,7 +216,7 @@ contains
   !============================================================================
   subroutine sp_set_plotvar
     implicit none
-    !--------------------------------------------------------------------------
+    !----------------------------------------------------------------------
     do iVar=1,nVar
        SP_NamePlotVar = SP_NamePlotVar_I(iVar)
        select case(SP_NamePlotVar)
@@ -235,8 +237,8 @@ contains
           end if
           PlotVar_III(iLnP,iX,iVar) = &
                log(F_II(iLnP  ,iX)/   &
-               F_II(iLnP-1,iX))/  &
-               DeltaLnP+2.0
+               F_II(iLnP-1,iX))/      &
+               DeltaLnP + 2.0
        case default
           write(iStdOut,*)prefix//' unknown plot var '//SP_NamePlotVar
           stop
@@ -313,5 +315,4 @@ contains
        end select
     end do
   end subroutine sp_get_idl_units
-
 end subroutine write_plotfile_SP
