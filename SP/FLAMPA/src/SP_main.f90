@@ -556,7 +556,7 @@ contains
              call write_plotfile_SP(&
                   int(SP_Time/SP_TimePlot)/=SP_iPlot,SP_TypePlot)
           end do  !iStep
-          call outputSpectrum_ishock(iShock)
+          if(UseTurbulentSpectrum)call outputSpectrum_ishock(iShock)
        end do     !iProgress loop
        !--------------------------------- FINALIZE -------------------------------!
     case("FINALIZE")

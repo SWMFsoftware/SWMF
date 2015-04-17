@@ -1,11 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !============================================================================!
-!============================================================================!
-! This module is a template that can be used to convert the MAIN program     !
-! of a model, implemented in F90/95, so that it complies with the SWMF       !
-! requirements and retain its ability to work as a STAND-ALONE module.       !
-!============================================================================!
 program CON_stand_alone
   use SP_ModMain
   use SP_ModReadMhData,ONLY:read_ihdata_for_sp
@@ -33,9 +28,9 @@ program CON_stand_alone
      !-----------------------------------------------------------------------!
      do iIter=1,nX/2
         write(iStdOut,*)prefix,"iIter = ",iIter
-        Rho_I(iIter) = 2.50
+        RhoSmooth_I(iIter) = 2.50
         if (iIter>1) then
-           Rho_I(iIter-1) = 4.0
+           RhoSmooth_I(iIter-1) = 4.0
            do iX=1,iIter-1
               X_DI(1,iX) = 0.250*real(iX+3*iIter)
            end do

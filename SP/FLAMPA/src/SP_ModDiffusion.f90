@@ -71,7 +71,7 @@ contains
     real:: DsMesh_I(2:n), &
          DsFace_I(2:n-1)        !Mesh spacing and face spacing.                !
     real, dimension(n):: &
-         Main_I,Upper_I,Lower_I !Main, upper, and lower diagonals.             !
+         Main_I,Upper_I,Lower_I, R_I !Main, upper, and lower diagonals.        !
     integer:: i
     real:: Aux1,Aux2
     !--------------------------------------------------------------------------!
@@ -116,7 +116,8 @@ contains
     !\
     ! Update the solution from f^(n) to f^(n+1):
     !/
-    call tridag(n,Lower_I,Main_I,Upper_I,F_I,F_I)
+    R_I = F_I
+    call tridag(n,Lower_I,Main_I,Upper_I,R_I,F_I)
     !--------- DONE -------------------!
   end subroutine advance_diffusion
   !===============================!
