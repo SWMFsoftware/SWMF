@@ -2651,6 +2651,13 @@ namespace PIC {
 
   }
 
+  //prepopulate the domain
+  namespace InitialCondition {
+    //constant number density
+    long int PrepopulateDomain(int spec,double NumberDensity,double *Velocity,double Temperature);
+
+
+  }
 
   //Save and read the restart files
   namespace Restart {
