@@ -37,7 +37,8 @@ namespace SEP3D {
 					  double *x, double *v, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
       //......................................................................
       // local values of position, velocity and acceleration
-      double x_LOCAL[3], v_LOCAL[3], accl_LOCAL[3]={0.0};
+      double x_LOCAL[3], v_LOCAL[3], accl_LOCAL_CLASSIC[3]={0.0};
+      double accl_LOCAL_RELATIVISTIC[3]={0.0};
       memcpy(x_LOCAL,x,3*sizeof(double));
       memcpy(v_LOCAL,v,3*sizeof(double));
 
@@ -86,9 +87,9 @@ namespace SEP3D {
       // calculate acceleraton due to Lorentz force
       double ElCharge=PIC::MolecularData::GetElectricCharge(spec);
       double mass=PIC::MolecularData::GetMass(spec);
-      accl_LOCAL[0]+=ElCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
-      accl_LOCAL[1]+=ElCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
-      accl_LOCAL[2]+=ElCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
+      accl_LOCAL_CLASSIC[0]+=ElCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
+      accl_LOCAL_CLASSIC[1]+=ElCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
+      accl_LOCAL_CLASSIC[2]+=ElCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
 #endif//_FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
@@ -100,13 +101,26 @@ namespace SEP3D {
       r=sqrt(r2);
       // calculate acceleration due to gravity
       for (int idim=0;idim<DIM;idim++) {
-	accl_LOCAL[idim]-=GravityConstant*_SUN__MASS_/r2*x_LOCAL[idim]/r;
+	accl_LOCAL_CLASSIC[idim]-=GravityConstant*_SUN__MASS_/r2*x_LOCAL[idim]/r;
       }
 #endif//_FORCE_GRAVITY_MODE_ == _PIC_MODE_ON_
 
       //......................................................................
+      // convert classic acceleration to relativistic
+      double speed2=0.0, VelDotAccl=0.0;
+      double c2=SpeedOfLight*SpeedOfLight;
+      for(int idim=0; idim<DIM;idim++){
+	speed2    += v_LOCAL[idim]*v_LOCAL[idim];
+	VelDotAccl+= v_LOCAL[idim]*accl_LOCAL_CLASSIC[idim]; 
+      }
+      if(speed2 > c2) exit(__LINE__,__FILE__,"Error: superluminous particle");
+      double RelGamma = pow(1.0 - speed2/c2, -0.5);
+      for(int idim=0; idim<DIM;idim++)
+	accl_LOCAL_RELATIVISTIC[idim]= 
+	  (accl_LOCAL_CLASSIC[idim]-VelDotAccl*v_LOCAL[idim]/c2)/RelGamma;
+
       //copy the local values of the acceleration to the global ones
-      memcpy(accl,accl_LOCAL,3*sizeof(double));
+      memcpy(accl,accl_LOCAL_RELATIVISTIC,3*sizeof(double));
     }
   }
 }
