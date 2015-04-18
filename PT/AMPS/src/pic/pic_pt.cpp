@@ -542,7 +542,7 @@ void PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(void* StartNodeVoid)
   if (StartNode==NULL) StartNode=PIC::Mesh::mesh.rootTree;
 
   //serch the tree
-  for (i=0;i<(1<<DIM);i++) if ((downNode=StartNode->downNode[i])!=NULL) SetDefaultParticleTrackingFlag(downNode);
+  for (i=0;i<(1<<DIM);i++) if ((downNode=StartNode->downNode[i])!=NULL) ApplyTrajectoryTrackingCondition(downNode);
 
   //reset the particles
   if (StartNode->block!=NULL) {
