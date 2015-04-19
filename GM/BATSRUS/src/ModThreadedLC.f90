@@ -13,13 +13,15 @@
 !    the value from the TFL end point (not extrapolated with the barometric 
 !    scale otherwise.
 ! 6. Global upper limit for the temperature on the top of threads, presently,
-!    1.60e+6 K 
+!    1.60e+6 K
+! 7. Set_pressure is called after the first stage of hydro_and_heating advance
+!    but not after the Impl_ action (the latter does not matter though)  
 !/
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
-       RadCool2Si, Use1DModel, DoInit_, Done_, Enthalpy_, Heat_, iStage
+       RadCool2Si, DoInit_, Done_, Enthalpy_, Heat_, iStage
 
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
@@ -283,57 +285,7 @@ contains
     call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
     USiLtd = sign(min(abs(USiIn),0.05*Value_V(UHeat_)),USiIn)
-    !\
-    ! First value is now the product of the thread length in meters times
-    ! a geometric mean pressure, so that
-    !/
-    PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-         BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-    RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
-    if(DoTestMe)then
-       write(*,*)'Pressure 0D (SI) = ',PeSiOut
-       write(*,*)'Dimensionless density (input)=',RhoNoDimOut
-    end if
-    if(.not.Use1DModel)then
-       !Dimmensionless length (related to the wave dissipation length)
-       AWLength = BoundaryThreads_B(iBlock)% DXi_III(0,j,k)*&
-            sqrt(sqrt(RhoNoDimOut))
-       !\
-       !Calculate Alfven waves for the given thread length and BC 
-       !for ingoing wave
-       !/ 
-       call interpolate_lookup_table(iTableAW, AWLength, AMinorIn, AWValue_V, &
-            DoExtrapolate=.false.)
 
-       AWHeating = AWValue_V(AWHeating_)*PoyntingFluxPerBSi*&
-            BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)
-
-       !\
-       ! Heat flux equals PAvr * UHeat (spent for radiation) +
-       ! Pi * U * (5/2) + Pe * U * (5/2) (carried away by outflow), 
-       ! the pressure ratio being  Pe = Pi * AverageIonCharge
-       ! 
-       ! Temperature gradient equals the heat flux divided by kappa0*T**2.5
-       !/
-       DTeOverDsSiOut = ( PeSiOut/sqrt(AverageIonCharge) * &
-            Value_V(UHeat_)                           -  & !Radiation losses
-            AWHeating                                    & !AW Heating
-            +USiIn * (PeSiOut/AverageIonCharge)          & !5/2*U*(Pi+Pe)
-            *(inv_gm1 +1)*(1 + AverageIonCharge) )/      &
-            (HeatCondParSi * TeSiIn**2.50)    
-
-       AMajorOut = AWValue_V(APlusBC_)
-       if(DoTestMe)then
-          write(*,*)'Dimensionless length characteristic of AW dissipation=',&
-            AWLength
-          write(*,*)'AMajorOut=    ', AMajorOut
-          write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
-               ', dT/ds*Length=',DTeOverDsSiOut*&
-               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
-       end if
-       RETURN
-    end if
-    !Full 1D model
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
        !\
@@ -372,6 +324,7 @@ contains
        RETURN
     case(Heat_)
        call advance_heat_cond
+       call set_pressure
        !\
        ! Calculate AWaves and store pressure and temperature
        !/
@@ -407,15 +360,7 @@ contains
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    !\
-    ! Easter 2015 Version
-    !/
-    !PeSiOut = min(1.20*PeSiIn, max(PeSiOut, PeSiIn))
-    if(USiIn>0.0)then
-       RhoNoDimOut = RhoNoDimCoef* PeSi_I(nPoint)/TeSi_I(nPoint)
-    else
-       RhoNoDimOut = RhoNoDimCoef* PeSiIn/TeSiIn
-    end if
+    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
     if(DoTestMe)then
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
@@ -755,51 +700,7 @@ contains
 !!!      USiLtd = max(USiLtd, 0.0)
 !!!
       !do iIter = 1,nIter
-      !   Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +&
-      !        IntEnergy_I(1:nPoint-1) - &
-      !        SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
-         !\
-         ! Add enthalpy correction
-         !/
-      !   M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0; FluxConst = 0.0
-      !   M_I(2:nPoint-1) = &
-      !        PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-      !   M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-      !           /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-      !
-      !   if(USiLtd>0)then
-      !      FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-      !           *(inv_gm1 +1)*(1 + AverageIonCharge)/&
-      !           (TeSiIn*PoyntingFluxPerBSi*&
-      !           BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-            !\
-            ! Solve equation!
-            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
-            !                              -FluxConst*(T^n_i-T^n_{i-1}) = &
-            !                  ResHeating  -FluxConst*(T^n_i-T^n_{i-1})
-            !/
-      !      L_I(2:nPoint-1) =  L_I(2:nPoint-1) - FluxConst
-      !      M_I(1:nPoint-1) =  FluxConst + M_I(1:nPoint-1)
-      !      Res_I(1) = Res_I(1) - FluxConst*TeSi_I(1)
-      !      Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
-      !           FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-      !   elseif(USiLtd<0)then
-      !      FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-      !           *(inv_gm1 +1)*(1 + AverageIonCharge)/&
-      !           (TeSiIn*PoyntingFluxPerBSi*&
-      !           BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-            !\
-            ! Solve equation!
-            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)&
-            !                            - FluxConst*(T^n_{i+1}-T^n_i) = &
-            !                        Res - FluxConst*(T^n_{i+1}-T^n_i)
-            !/ 
-      !      U_I(1:nPoint-1) = U_I(1:nPoint-1) + FluxConst
-      !      M_I(2:nPoint-1) = M_I(2:nPoint-1) - FluxConst
-      !      Res_I(1) = Res_I(1) - FluxConst*TeSi_I(2)
-      !      Res_I(2:nPoint-1) = Res_I(2:Npoint-1)&
-      !           -FluxConst*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
-      !   end if
+
          !==========Add Gravity Source================================
          !\
          !cGravPot = cGravitation*mSun*cAtomicMass/&
@@ -935,7 +836,10 @@ contains
       !\
       ! Store pressure and temperature
       !/
-      if(iStage/=nStage)RETURN
+      if(iStage/=nStage)then
+         call set_pressure
+         RETURN
+      end if
       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
     end subroutine advance_heating_and_hydro
@@ -1014,7 +918,6 @@ contains
          
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
-         call set_pressure
       end do
     end subroutine advance_heat_cond
   end subroutine solve_boundary_thread
@@ -1095,7 +998,7 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, TeGhost, Gamma
+    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, Gamma
     real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     real, parameter:: GradLimiter = 0.1 
@@ -1160,28 +1063,23 @@ contains
           Minor_ = WaveLast_
        end if
        if(present(iImplBlock))then
-          !\
-          ! Gradient across the boundary face
-          !/
-          call get_face_gradient(1, 1, j, k, iBlock, &
-               IsNewBlock, Te_G, FaceGrad_D, &
-               UseFirstOrderBcIn=.true.)
-
-          if(IsLinear)then
+         if(IsLinear)then
              !\
              !Version Easter 2015
              !/
              State_VG(iTeImpl,0,j,k) = 0.0  
              CYCLE
           end if
+          !\
+          ! Gradient across the boundary face
+          !/
+          call get_face_gradient(1, 1, j, k, iBlock, &
+               IsNewBlock, Te_G, FaceGrad_D, &
+               UseFirstOrderBcIn=.true.)
        end if
        !\
        ! Calculate input parameters for solving the thread
        !/
-       if(present(iImplBlock))&
-            BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k)=&
-            BoundaryThreads_B(iBlock) % TMax_II(j,k)<Te_G(0, j, k).or.&
-            Te_G(0, j, k)<TeMin
        if(DoTestMe.and.j==jTest.and.k==kTest)then
           write(*,*)NameSub//': before limiting TeGhost=',&
                Te_G(0, j, k)*No2Si_V(UnitTemperature_)
@@ -1217,23 +1115,21 @@ contains
             * BDir_D),-GradLimiter*sqrt(&
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
           GradTDotB = sum(FaceGrad_D*BDir_D)
-          TeGhost = Te_G(0, j, k) +(&
+          Te_G(0, j, k) = Te_G(0, j, k) +(&
                DTeOverDs - GradTDotB)*MinusDeltaROverBR
+          !\
+          ! Version Easter 2015 Limit TeGhost
+          !/
+          Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
+               BoundaryThreads_B(iBlock) % TMax_II(j,k)))
           if(DoTestMe.and.j==jTest.and.k==kTest)then
              write(*,*)NameSub//': reset TeGhost=',&
-                  TeGhost*No2Si_V(UnitTemperature_)
+                  Te_G(0, j, k)*No2Si_V(UnitTemperature_)
           end if
-          Te_G(0, j, k) = TeGhost 
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
-          !\
-          ! Version Easter 2015 Limit GradTDotB
-          !/
-          BoundaryThreads_B(iBlock)%UseLimitedDTe_II(j,k) = .true.
           CYCLE
        end if
-       !\
-       ! 
-       !/
+      
        State_VG(iP, 0, j, k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        !\
        !Exponential extrapolation of pressure
@@ -1267,7 +1163,7 @@ contains
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k) &
+               (max(-U,U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k)) &
                *BDir_D + U_D)   !  max(-U,
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )

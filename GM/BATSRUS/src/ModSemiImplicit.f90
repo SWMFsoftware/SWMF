@@ -252,8 +252,7 @@ contains
          get_impl_heat_cond_state, update_impl_heat_cond
     use ModResistivity,    ONLY: &
          get_impl_resistivity_state, update_impl_resistivity
-    use ModFieldLineThread, ONLY: UseFieldLineThreads, Use1DModel, &
-                                  advance_threads, Heat_
+    use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
 
@@ -368,7 +367,7 @@ contains
     if(DoFixAxis)call fix_axis_cells
     if(UseCoarseAxis)call coarsen_axis_cells
     ! Exchange messages, so ghost cells of all blocks are updated
-    if(UseFieldLineThreads.and.Use1DModel) &
+    if(UseFieldLineThreads) &
          call advance_threads(Heat_)
     call exchange_messages
 

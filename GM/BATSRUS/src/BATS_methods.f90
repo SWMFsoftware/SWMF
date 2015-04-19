@@ -383,8 +383,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
   use ModPartImplicit, ONLY: advance_part_impl
   use ModHeatConduction, ONLY: calc_ei_heat_exchange
-  use ModFieldLineThread, ONLY: UseFieldLineThreads, Use1DModel, &
-                                advance_threads, Enthalpy_
+  use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_
   implicit none
 
   !INPUT ARGUMENTS:
@@ -482,8 +481,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! Calculate temperature at the end of time step
   if(Te0_>1)call update_te0
 
-  if(UseFieldLineThreads.and.Use1DModel) &
-                                call advance_threads(Enthalpy_)
+  if(UseFieldLineThreads)call advance_threads(Enthalpy_)
   call exchange_messages
 
   if(UseSemiImplicit .and. (Dt>0 .or. .not.time_accurate)) &
