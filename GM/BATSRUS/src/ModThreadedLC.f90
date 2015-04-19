@@ -285,7 +285,17 @@ contains
     call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
     USiLtd = sign(min(abs(USiIn),0.05*Value_V(UHeat_)),USiIn)
-
+    !\
+    ! First value is now the product of the thread length in meters times
+    ! a geometric mean pressure, so that
+    !/
+    PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+         BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+    RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
+    if(DoTestMe)then
+       write(*,*)'Pressure 0D (SI) = ',PeSiOut
+       write(*,*)'Dimensionless density (input)=',RhoNoDimOut
+    end if
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
        !\
