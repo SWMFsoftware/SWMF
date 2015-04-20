@@ -62,17 +62,8 @@ subroutine set_physics_constants
      end if
   end select
 
-  ! Note for GM  !!! BATSRUS's OmegaBody is siderial (relative to the Sun)
-  ! and it is DIFFERENT from SWMF's inertial OmegaPlanet 
-  ! defined in CON_planet !!!
-  if (RotPeriodSi == cZero) then
-     OmegaBody = 0.0
-  else
-     OmegaBody = cTwoPi/RotPeriodSi
-  end if
   ! Second body mass is set to zero by default
   MassBody2Si = 0.0
-
 
   ! Make sure that MassIon_I is consistent with MassFluid_I
   MassIon_I = MassFluid_I(IonFirst_:IonLast_)
@@ -124,25 +115,14 @@ subroutine set_physics_constants
   cRadiationNo = cRadiation &
        * Si2No_V(UnitEnergyDens_) / Si2No_V(UnitTemperature_)**4
 
-  !\
-  ! Convert rotation, and gravity to non-dimensional values
-  !/
-  ! if the rotation period is less than 1 second then you made
-  ! a mistake - the period is to fast
-  if (abs(RotPeriodSi) > 1.) then
-     OmegaBody = OmegaBody * (1.0/Si2No_V(UnitT_))
-  else
-     if(UseRotatingFrame)then
-        write(*,*) "--------------------------------------------------"
-        write(*,*) "WARNING in ",NameSub,":"
-        write(*,*) "You have set UseRotatingFrame = ",UseRotatingFrame
-        write(*,*) "but RotPeriodSi in seconds= ",RotPeriodSi
-        write(*,*) "This is too fast! Setting OmegaBody=0.0           "
-        write(*,*) "--------------------------------------------------"
-     end if
+  ! Convert rotation period to normalized angular velocity
+  if (RotPeriodSi == 0.0) then
      OmegaBody = 0.0
+  else
+     OmegaBody = cTwoPi/RotPeriodSi * (1.0/Si2No_V(UnitT_))
   end if
 
+  ! Convert gravity to non-dimensional values
   if(GravityDir == 0)then
      ! Note: The mass of the body is in SI units
      Gbody  = -cGravitation*MassBodySi*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
