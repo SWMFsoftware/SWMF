@@ -261,7 +261,7 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       sprintf(str,"%s.s=%i.%s.dat",fname,spec,ChemSymbol);
 
       fout[spec]=fopen(str,"w");
-      fprintf(fout[spec],"VARIABLES=\"x\",\"y\",\"z\",\"Speed\"\n");
+      fprintf(fout[spec],"VARIABLES=\"x\", \"y\", \"z\", \"spec\", \"Speed\"\n");
     }
 
     //Create the array of sampled trajectory points for all trajectories (used also as a flag to determine trajectories that was already processed)
@@ -423,7 +423,7 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
           exit(__LINE__,__FILE__,"Error: unknown option");
           #endif
 
-          fprintf(trOut,"%e  %e  %e  %e\n",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->Speed);
+          fprintf(trOut,"%e  %e  %e  %i  %e\n",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->spec,TrajectoryData->Speed);
         }
       }
 
