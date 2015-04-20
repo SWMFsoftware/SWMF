@@ -960,8 +960,8 @@ test9th:
 
 test9th_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -o=SC:u=ScChromo,e=MhdWaves
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesSignB
 	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
