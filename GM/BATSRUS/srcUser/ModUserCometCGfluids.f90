@@ -3795,7 +3795,7 @@ contains
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    use ModMain,    ONLY: BLKtest,iTest,jTest,kTest
+    use ModMain,    ONLY: BLKtest,iTest,jTest,kTest, ProcTest
     use ModPhysics, ONLY: No2SI_V, UnitT_
     use ModAdvance, ONLY: time_BLK  
 
@@ -3807,7 +3807,11 @@ contains
     !-------------------------------------------------------------------------
     select case(TypeVar)
     case('dtpnt')
-       VarValue = time_BLK(iTest,jTest,kTest,BLKtest)*No2SI_V(UnitT_)
+       if (iProc == ProcTest) then
+          VarValue = time_BLK(iTest,jTest,kTest,BLKtest)*No2SI_V(UnitT_)
+       else
+          VarValue = 0.0
+       end if
     case default
        VarValue = -7777.0
     end select
