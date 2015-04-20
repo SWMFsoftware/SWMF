@@ -78,6 +78,7 @@ CouplerMode= file !ices !swmf !!!ices !!off, ices, swmf
   TrajectoryTracing=on
   MaxSampledTrajectoryNumber=300
 
+  define _PIC_COUPLER_MODE__DATAFILE_ARMS_ _PIC_MODE_ON_
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
