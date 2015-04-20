@@ -2477,7 +2477,13 @@ namespace PIC {
         namespace OUTPUT {
 	  extern double TimeCurrent;
           extern double TimeCoupleNext;
-          void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+	  extern int GradientMagneticFieldOffset;
+	  extern int AbsoluteValueMagneticFieldOffset;
+	  void Init();
+	  void PrintVariableList(FILE* fout,int DataSetNumber);
+	  void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+	  void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+	  void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
         }
       }
 
