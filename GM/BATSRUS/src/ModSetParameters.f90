@@ -25,7 +25,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModBlockData, ONLY: clean_block_data
   use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
        DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
-       init_mpi, IsCartesianGrid, IsCartesian, IsRotatedCartesian, &
+       init_mpi, IsCartesianGrid, IsCartesian, &
        IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
   use ModParallel, ONLY : proc_dims
@@ -1683,15 +1683,23 @@ subroutine MH_set_parameters(TypeAction)
      case("#GAMMA")
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('Gamma',g)
-        !\
         ! Compute gamma related values.
-        !/
         gm1     = g - 1.0
         gm2     = g - 2.0
         gp1     = g + 1.0
         inv_g   = 1.0 / g
-        inv_gm1 = 1.0 /gm1
         g_half  = 0.5*g
+        if(g /= 1.0)then
+           ! General case
+           inv_gm1 = 1.0 /gm1
+        else
+           ! Isothermal case
+           UseNonConservative = .true.
+           nConservCrit = 0
+           if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
+           if(iProc==0) &
+                write(*,*) NameSub,': for gamma=1 UseNonConservative is set to TRUE'
+        endif
 
      case("#LOOKUPTABLE")
         call read_lookup_table_param
