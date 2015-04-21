@@ -15,6 +15,7 @@ PICOBJ = pic.o \
 	pic_mol.o \
 	pic_mol_parser.o \
 	pic_mover.o \
+	pic_mover_boris.o \
 	pic_parser.o \
 	pic_pbuffer.o \
 	pic_weight_time.o \

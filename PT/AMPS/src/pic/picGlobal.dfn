@@ -44,6 +44,7 @@ at the end of each time step
 //accounting for force acting upon on a particle when integrate the particle trajectory; 
 #define _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
 #define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode) _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_;
+#define _PIC_PARTICLE_MOVER__BORIS_SPLIT_ACCELERATION_(accl,rotation,spec,ptr,x,v,startNode) BorisSplitAcceleration_default(accl,rotation,spec,ptr,x,v,startNode);
 #define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode) TotalParticleAcceleration_default(accl,spec,ptr,x,v,startNode);
 #define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode) _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 #define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(ptr,LocalTimeStep,node);
