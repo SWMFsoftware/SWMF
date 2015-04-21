@@ -14,7 +14,7 @@ install: touch_install_files
 
 test:
 	rm -f */src*/*.diff
-	cd DATAREAD/srcMagnetogram; make test
+	cd DATAREAD/srcMagnetogram; make -j1 test
 	ls -l */src*/*.diff
 
 clean: touch_install_files
