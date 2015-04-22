@@ -37,9 +37,9 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& ReemissionParticleFraction,double Temp) {return 0.0;}
 //===============================================================================================
 
-static double DomainXMin[3]={8.76E8,-8.4E7,-1.3E7};
-static double DomainXMax[3]={9.40E8, 8.4E7, 1.3E7};
 static double DomainDX = 5E6;
+static double DomainXMin[3]={8.76E8,-0.5*DomainDX,-1.3E7};
+static double DomainXMax[3]={9.40E8, 0.5*DomainDX, 1.3E7};
 
 double localResolution(double *x) {
 
@@ -53,7 +53,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
   switch (spec) {
   case _H_PLUS_SPEC_:
-    CharacteristicSpeed=1.0e10;
+    CharacteristicSpeed=1.0e7;
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
@@ -70,7 +70,7 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 	return res;
 }
-
+/*
 bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   bool ExternalFaces[6];
   double ExternalNormal[3],ModelParticlesInjectionRate;
@@ -184,7 +184,7 @@ double BoundingBoxInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
 
   return ModelParticlesInjectionRate;
 }
-
+*/
 
 bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
   return false;
@@ -256,18 +256,19 @@ void amps_init(){
 	PIC::Mover::Init();
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
+	/*
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
-
+	*/
 
   //set up the time step
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
   PIC::ParticleWeightTimeStep::initTimeStep();
   
   //init particle weight
-  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,3.0E+29);
   
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
@@ -303,9 +304,10 @@ void amps_time_step () {
       nOutputFile++;
       sprintf(fname,"%s%d%s","dataARMS.t=",nOutputFile,".dat");
       PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(fname);
-      std::cout<<"Load ARMS data file "<<nOutputFile<<
-	" at global time "<< GlobalTime << "; next file will be loaded at time " << 
-	PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext <<"\n";
+      if (PIC::Mesh::mesh.ThisThread==0)
+	std::cout<<"Load ARMS data file "<<nOutputFile<< " at global time "<< 
+	  GlobalTime << "; next file will be loaded at time " << 
+	  PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext <<"\n";
     }
   PIC::TimeStep();
   GlobalTime+=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
