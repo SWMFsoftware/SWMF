@@ -12,7 +12,7 @@ end Module ModDivbCleanup
 !==========================================================================
 subroutine clean_divb
   use ModProcMH
-  use ModSize
+!  use ModSize
   use ModNumConst, ONLY: cTiny
   use ModDivbCleanup
   use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, Unused_B
@@ -26,12 +26,14 @@ subroutine clean_divb
   use BATL_lib, ONLY: message_pass_cell, CellFace_DB, CellVolume_GB
 
   implicit none
-
+  !\
+  ! Loop variables
+  !/
   integer::i,j,k,iBlock
-  logical::DoConservative=.false.
+
   real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)::DivBV_G
   real:: DivBInt(2),DivBTemp(2)
-  integer, parameter::ResDotM1DotRes_=2,ResDotOne_=1
+  integer, parameter::ResDotM1DotRes_=2, ResDotOne_=1
 
   !Conjugated gradients algorithm, see
   !http://www.netlib.org/linalg/html_templates/node20.html
@@ -47,7 +49,7 @@ subroutine clean_divb
   integer:: iError
   integer::Iteration                        
 
-  real,dimension(nI,nJ,nK)::vDotGradX_C,vDotGradY_C,vDotgradZ_C
+  real,dimension(3,nI,nJ,nK)::VDotGrad_DC
   !For convenience, what is stored in these arrays are the gradients
   !multiplied by the cell volume
   !While calculating the magnetic field, we use vInv*vDotGrad Phi
@@ -152,7 +154,9 @@ subroutine clean_divb
         if(Unused_B(iBlock))CYCLE
         call v_grad_phi(tmp2_blk,iBlock)
         DirDotDir = DirDotDir + &
-             sum( (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2) &
+             sum( (VDotGrad_DC(1,:,:,:)**2 + &
+                   VDotGrad_DC(2,:,:,:)**2 + &
+                   VDotGrad_DC(3,:,:,:)**2 ) &
              /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock) )
      end do
      if(nProc>1)then
@@ -173,22 +177,12 @@ subroutine clean_divb
      do iBlock=1,nBlock
         if (Unused_B(iBlock)) CYCLE
         call v_grad_phi(Dir_GB,iBlock)
-
-        State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock) = &
-             State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradX_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
-        State_VGB(By_,1:nI,1:nJ,1:nK,iBlock) = &
-             State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradY_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
-        State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)=&
-             State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)-&
-             vDotGradZ_C*DirDotDirInv/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
-        if(DoConservative)&
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)=& 
-             State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)+&
-             0.5*gm1*DirDotDirInv*DirDotDirInv*&
-             (vDotGradX_C**2+vDotGradY_C**2+vDotGradZ_C**2) &
-             /CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)**2
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           State_VGB(Bx_:Bz_,i,j,k,iBlock) =    &
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)-&
+             VDotGrad_DC(x_:z_,i,j,k)*DirDotDirInv/   &
+             CellVolume_GB(i,j,k,iBlock)
+        end do; end do; end do
      end do
      Iteration=Iteration+1   
      if(Iteration>nCleanDivb)EXIT    
@@ -424,10 +418,8 @@ contains
     else
        OneDotMDotOneInv = 1.0/OneDotMDotOne
     end if
-    if(iProc==0)write(*,*)' init_divb_cleanup finishes with OneDotMDotOneInv=',OneDotMDotOneInv
-    !    write(*,*)'Maxval loc and minval loc of Prec_CB=', &
-    !         maxval(Prec_CB(:,:,:,1:nBlock)), maxloc(Prec_CB(:,:,:,1:nBlock)), &
-    !         minval(Prec_CB(:,:,:,1:nBlock)), minloc(Prec_CB(:,:,:,1:nBlock)) 
+    if(iProc==0)write(*,*)&
+         ' init_divb_cleanup finishes with OneDotMDotOneInv=',OneDotMDotOneInv 
   end subroutine init_divb_cleanup
   !===========================================================================
   subroutine v_grad_phi(Phi_GB,iBlock)
@@ -436,22 +428,8 @@ contains
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK),intent(inout)::Phi_GB
     !------------------------------------------------------------------------
 
-    vDotGradX_C = 0.0;vDotGradY_C = 0.0;vDotGradZ_C = 0.0
-!!! Apply continuous solution at east and west
-    !    if (NeiLev(1,iBlock)==NOBLK)&
-    !         Phi_GB(0   ,1:nJ,1:nK,iBlock) = Phi_GB(1 ,1:nJ,1:nK,iBlock)
-    !    if (NeiLev(2,iBlock)==NOBLK)&
-    !         Phi_GB(nI+1,1:nJ,1:nK,iBlock) = Phi_GB(nI,1:nJ,1:nK,iBlock)
-!!! Apply shearing at north and south
-    !    if (NeiLev(3,iBlock)==NOBLK)&
-    !         Phi_GB(1:nI,0   ,1:nK,iBlock) = Phi_GB(0:nI-1,2 ,1:nK,iBlock)
-    !    if (NeiLev(4,iBlock)==NOBLK)&
-    !         Phi_GB(1:nI,nJ+1,1:nK,iBlock) = Phi_GB(2:nI+1,nJ-1,1:nK,iBlock)
-!!! Apply translation invariant solution at bottom and top
-    !    if (NeiLev(5,iBlock)==NOBLK)&
-    !         Phi_GB(1:nI,1:nJ,0   ,iBlock) = Phi_GB(1:nI,1:nJ,1 ,iBlock)
-    !    if (NeiLev(6,iBlock)==NOBLK)&
-    !         Phi_GB(1:nI,1:nJ,nK+1,iBlock) = Phi_GB(1:nI,1:nJ,nK,iBlock)
+    VDotGrad_DC = 0.0
+
 
     if (NeiLev(1,iBlock) == NOBLK) Phi_GB(0,1:nJ,1:nK,iBlock) = &
          -BoundaryCoef*Phi_GB(1 ,1:nJ,1:nK,iBlock)
@@ -475,30 +453,30 @@ contains
                Phi_GB(i,j-1:j+1:2,k,iBlock)=-BoundaryCoef*Phi_GB(i,j,k,iBlock)
           where(.not.true_cell(i,j,k-1:k+1:2,iBlock))&
                Phi_GB(i,j,k-1:k+1:2,iBlock)=-BoundaryCoef*Phi_GB(i,j,k,iBlock)
-          vDotGradX_C(i,j,k)=&
+          VDotGrad_DC(x_,i,j,k)=&
                0.5*CellFace_DB(x_,iBlock)*(&
                Phi_GB(i+1,j,k,iBlock)-&
                Phi_GB(i-1,j,k,iBlock))
-          vDotGradY_C(i,j,k)=&
+          VDotGrad_DC(y_,i,j,k)=&
                0.5*CellFace_DB(y_,iBlock)*(&
                Phi_GB(i,j+1,k,iBlock)-&
                Phi_GB(i,j-1,k,iBlock))
-          vDotGradZ_C(i,j,k)=&
+          VDotGrad_DC(z_,i,j,k)=&
                0.5*CellFace_DB(z_,iBlock)*(&
                Phi_GB(i,j,k+1,iBlock)-&
                Phi_GB(i,j,k-1,iBlock))
        end do;end do;end do
     else
        do k=1,nK;do j=1,nJ;do i=1,nI
-          vDotGradX_C(i,j,k)=&
+          VDotGrad_DC(x_,i,j,k)=&
                0.5*CellFace_DB(x_,iBlock)*(&
                Phi_GB(i+1,j,k,iBlock)-&
                Phi_GB(i-1,j,k,iBlock))
-          vDotGradY_C(i,j,k)=&
+          VDotGrad_DC(y_,i,j,k)=&
                0.5*CellFace_DB(y_,iBlock)*(&
                Phi_GB(i,j+1,k,iBlock)-&
                Phi_GB(i,j-1,k,iBlock))
-          vDotGradZ_C(i,j,k)=&
+          VDotGrad_DC(z_,i,j,k)=&
                0.5*CellFace_DB(z_,iBlock)*(&
                Phi_GB(i,j,k+1,iBlock)-&
                Phi_GB(i,j,k-1,iBlock))
@@ -508,7 +486,8 @@ contains
 end subroutine clean_divb
 !===================================================================
 subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)     
-  use ModSize
+  use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+       x_, y_, z_
   use ModGeometry, ONLY: body_blk, true_cell
   use ModParallel, ONLY: neilev, NOBLK
   use ModDivbCleanup, ONLY: BoundaryCoef
