@@ -82,6 +82,14 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
         PIC::ParticleBuffer::SetI(spec,ptr);
         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,ptr);
 
+        //apply the particle tracking condition
+        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+        PIC::ParticleBuffer::byte *ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+
+        PIC::ParticleTracker::InitParticleID(ParticleData);
+        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,ParticleData);
+        #endif
+
         //add the paticle to the cell's particle list
         long int FirstCellParticle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
