@@ -258,7 +258,7 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
     const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
     const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
     
-    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) && (startNode->block!=NULL)) {
       double *xNodeMin=startNode->xmin;
       double *xNodeMax=startNode->xmax;
       double x[3],T,n,p;
