@@ -166,7 +166,7 @@ module ModUser
 
   ! Gamma law per material (UQ only !)
   logical :: UseGammaLaw = .false.
-  real :: Gamma_I(0:MaxMaterial-1) = 5.0/3.0
+  real :: GammaMaterial_I(0:MaxMaterial-1) = 5.0/3.0
 
   ! Factor to suppress the A.S.S.
   real :: AssFactor = -1.0
@@ -347,7 +347,7 @@ contains
 
              do iMaterial = 0, nMaterial - 1
                 call read_var('Gamma'//NameMaterial_I(iMaterial), &
-                     Gamma_I(iMaterial))
+                     GammaMaterial_I(iMaterial))
              end do
           end if
 
@@ -416,9 +416,9 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion, UseERadInput
-    use ModPhysics,     ONLY: inv_gm1, ShockPosition, ShockSlope, &
+    use ModPhysics,     ONLY: InvGammaMinus1, ShockPosition, ShockSlope, &
          Io2No_V, No2Si_V, Si2No_V, UnitRho_, UnitP_, UnitEnergyDens_, &
-         UnitTemperature_, UnitN_, PeMin, ExtraEintMin
+         UnitTemperature_, UnitN_, PeMin, ExtraEintMin, InvGammaElectronMinus1
     use ModAdvance,     ONLY: State_VGB, UseElectronPressure
     use ModVarIndexes,  ONLY: Rho_, RhoUx_, RhoUz_, p_, ExtraEint_, &
          Pe_, Erad_, WaveFirst_, WaveLast_, Te0_, nWave
@@ -630,7 +630,7 @@ contains
   
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
+               - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
 
           if(UsePl .and. UseEqualTemperatureHyades .and. .not.UseMixedCell &
                .and. any(State_VGB(LevelPl_:LevelMax,i,j,k,iBlock) > 0.0))then
@@ -642,7 +642,7 @@ contains
                   ETotalOut=EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+               - InvGammaMinus1*State_VGB(p_,i,j,k,iBlock))
              Te = TeSi*Si2No_V(UnitTemperature_)
              Natomic = RhoSi/(cAtomicMass*MassMaterial_I(iMaterial)) &
                   *Si2No_V(UnitN_)
@@ -671,7 +671,7 @@ contains
                   EElectronOut=EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
+               - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
           end if
        else
           if(UseNLTE)call stop_mpi('No NLTE EOS with pressure input')
@@ -681,7 +681,7 @@ contains
           
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                EinternalSi*Si2No_V(UnitEnergyDens_) &
-               - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+               - InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock))
        end if
 
 
@@ -714,7 +714,7 @@ contains
           end do
           
 
-          !EInternalSI = (State_VGB(iP,i,j,k,iBlock)*inv_gm1+&
+          !EInternalSI = (State_VGB(iP,i,j,k,iBlock)*InvGammaMinus1+&
           !       State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
           !call user_material_properties(State_VGB(:,i,j,k,iBlock), &
           !     i, j, k, iBlock, EInternalIn=EInternalSI, &
@@ -727,7 +727,7 @@ contains
           
           !State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
           !     EinternalSi*Si2No_V(UnitEnergyDens_) &
-          !     - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+          !     - InvGammaMinus1*State_VGB(iP,i,j,k,iBlock))
        end if
 
     end do; end do; end do
@@ -1131,7 +1131,7 @@ contains
     allocate(Hyades2No_V(nDimHyades + nVarHyadesAll))
     Hyades2No_V = 1.0
     Hyades2No_V(iVarZone_I(iXHyades))  = 0.01*Si2No_V(UnitX_)   !cm    -> m
-    Hyades2No_V(iVarZone_I(iRhoHyades))= 1e3 *Si2No_V(UnitRho_) !g/cm3 -> kg/m3
+    Hyades2No_V(iVarZone_I(iRhoHyades))= 1e3 *Si2No_V(UnitRho_) !Gamma/cm3 -> kg/m3
     Hyades2No_V(iVarZone_I(iPHyades))  = 0.1 *Si2No_V(UnitP_)   !dyne  -> Pa
 
     Hyades2No_V(iVarMesh_I(iXHyadesMesh)) = 0.01*Si2No_V(UnitX_) ! cm    -> m
@@ -1723,7 +1723,7 @@ contains
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, UseElectronPressure
-    use ModPhysics,  ONLY: inv_gm1, Si2No_V, No2Si_V, &
+    use ModPhysics,  ONLY: InvGammaElectronMinus1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_, ExtraEintMin, UnitTemperature_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModVarIndexes, ONLY: Pe_, Te0_, nWave, WaveFirst_, WaveLast_
@@ -1775,7 +1775,7 @@ contains
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
-
+    
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -1790,14 +1790,14 @@ contains
           !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
           !   and ExtraEInt^* with pure advection.
           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
-          !   Total internal energy Eint^n+1 = p^*/(g-1) + ExtraEInt^*
+          !   Total internal energy Eint^n+1 = p^*/(Gamma-1) + ExtraEInt^*
           ! Two temperature:
           !   From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
           !   and ExtraEInt^* with pure advection.
           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
-          !   Electron internal energy Eint^n+1 = Pe^*/(g-1) + ExtraEInt^*
+          !   Electron internal energy Eint^n+1 = Pe^*/(Gamma-1) + ExtraEInt^*
           EinternalSi = No2Si_V(UnitEnergyDens_)*&
-               (inv_gm1*State_VGB(iP,i,j,k,iBlock) + &
+               (InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) + &
                State_VGB(ExtraEint_,i,j,k,iBlock))
 
           ! Single temperature: determine p^n+1 = EOS( rho^n+1, Eint^n+1)
@@ -1818,10 +1818,10 @@ contains
                i, j, k, iBlock, EinternalOut=EinternalSi)
        end if
 
-       ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
+       ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(Gamma -1)
        State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
             Si2No_V(UnitEnergyDens_)*EinternalSi &
-            - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+            - InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock))
 
     end do; end do; end do
 
@@ -1840,7 +1840,7 @@ contains
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
          IsConserv_CB, UseNonConservative, UseElectronPressure
     use BATL_lib,      ONLY: CellVolume_GB
-    use ModPhysics,    ONLY: g
+    use ModPhysics,    ONLY: Gamma
     use ModVarIndexes, ONLY: p_, Pe_
 
     integer, intent(in) :: iBlock
@@ -1882,7 +1882,7 @@ contains
                i, j, k, iBlock, GammaOut=GammaEos)
 
           Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-               -(GammaEos-g)*State_VGB(iP,i,j,k,iBlock)*DivU
+               -(GammaEos-Gamma)*State_VGB(iP,i,j,k,iBlock)*DivU
        end if
     end do; end do; end do
 
@@ -2305,7 +2305,7 @@ contains
     real, intent(in)   :: Arg1, Arg2
     real, intent(out)  :: Value_V(:)
 
-    real:: Rho, p, e, Te, Cv, Gamma, Zavg, HeatCond, TeTiRelax
+    real:: Rho, p, e, Te, Cv, GammaEOS, Zavg, HeatCond, TeTiRelax
     real:: OpacityPlanck_W(nWave), OpacityRosseland_W(nWave)
     integer:: iMaterial
     character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
@@ -2335,26 +2335,26 @@ contains
        do iMaterial = 0, nMaterial-1
           if(UseElectronPressure)then
              call eos(iMaterial, Rho, pElectronIn=p, &
-                  TeOut=Te, CvElectronOut=Cv, GammaEOut=Gamma, zAverageOut=Zavg, &
+                  TeOut=Te, CvElectronOut=Cv, GammaEOut=GammaEOS, zAverageOut=Zavg, &
                   HeatCond=HeatCond, TeTiRelax=TeTiRelax)
 
              Value_V(Te_   +iMaterial*nThermo) = Te
              Value_V(Cv_   +iMaterial*nThermo) = Cv
-             Value_V(Gamma_+iMaterial*nThermo) = Gamma
+             Value_V(Gamma_+iMaterial*nThermo) = GammaEOS
              Value_V(Zavg_ +iMaterial*nThermo) = Zavg
              Value_v(Cond_ +iMaterial*nThermo) = HeatCond
              Value_V(TeTi_ +iMaterial*nThermo) = TeTiRelax
           else
 
              call eos(iMaterial, Rho, PtotalIn=p, &
-                  TeOut=Te, CvTotalOut=Cv, GammaOut=Gamma, zAverageOut=Zavg, &
+                  TeOut=Te, CvTotalOut=Cv, GammaOut=GammaEOS, zAverageOut=Zavg, &
                   HeatCond=HeatCond)
 
              ! Note that material index starts from 0
              if(Te > 0.0)then
                 Value_V(Te_   +iMaterial*nThermo) = Te
                 Value_V(Cv_   +iMaterial*nThermo) = Cv
-                Value_V(Gamma_+iMaterial*nThermo) = Gamma
+                Value_V(Gamma_+iMaterial*nThermo) = GammaEOS
                 Value_V(Zavg_ +iMaterial*nThermo) = Zavg
                 Value_V(Cond_ +iMaterial*nThermo) = HeatCond
              else
@@ -2445,7 +2445,7 @@ contains
     use ModMain,       ONLY: nI, UseERadInput
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
-         inv_gm1, UnitEnergyDens_
+         InvGammaMinus1, UnitEnergyDens_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
@@ -2777,7 +2777,7 @@ contains
                else
                   if(UseNLTE)then
                        ! call CON_stop('NLTE energy cannot be found from pressure')
-                     EinternalOut = pSi*inv_gm1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
+                     EinternalOut = pSi*InvGammaMinus1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
                           No2Si_V(UnitP_)
                      EInternalOut = max(EInternalOut,1e-30)
                      !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
@@ -2860,7 +2860,7 @@ contains
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
                else
-                  EinternalSi = pSi*inv_gm1+&
+                  EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
                   !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
@@ -3001,7 +3001,7 @@ contains
                else
                   if(UseNLTE)then
                      !call CON_stop('NLTE energy cannot be found from pressure')
-                     EInternalOut = pSi*inv_gm1+&
+                     EInternalOut = pSi*InvGammaMinus1+&
                           State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                      EInternalOut = max(EInternalOut,1e-30)
                      !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
@@ -3093,7 +3093,7 @@ contains
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
                     TeTiRelax=TeTiRelaxOut)
                else
-                  EinternalSi = pSi*inv_gm1+&
+                  EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
                   !Indirect EOS, either ERad, or ERad/B(Te) may be used as inputs
@@ -3118,15 +3118,15 @@ contains
          end if
       end if
 
-      if(UseGammaLaw .and. Gamma_I(iMaterial) > 1.0)then
-         if(present(GammaOut)) GammaOut = Gamma_I(iMaterial)
+      if(UseGammaLaw .and. GammaMaterial_I(iMaterial) > 1.0)then
+         if(present(GammaOut)) GammaOut = GammaMaterial_I(iMaterial)
          if(present(PressureOut) .and. present(EinternalIn))then
-            pSi = EinternalIn*(Gamma_I(iMaterial) - 1)
+            pSi = EinternalIn*(GammaMaterial_I(iMaterial) - 1)
             PressureOut = pSi
          elseif(present(EinternalOut))then
-            EinternalOut = pSi/(Gamma_I(iMaterial) - 1)
+            EinternalOut = pSi/(GammaMaterial_I(iMaterial) - 1)
          end if
-         if(present(CvOut)) CvOut = pSi/TeSi/(Gamma_I(iMaterial)-1)
+         if(present(CvOut)) CvOut = pSi/TeSi/(GammaMaterial_I(iMaterial)-1)
       end if
 
     end subroutine get_electron_thermo

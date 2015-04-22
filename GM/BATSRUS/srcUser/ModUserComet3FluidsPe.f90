@@ -1805,7 +1805,7 @@ contains
        OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W, &
        EntropyOut)
 
-    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, ElectronPressureRatio, inv_gm1
+    use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, ExtraEInt_
     use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
     use ModAdvance,      ONLY: State_VGB
@@ -1860,7 +1860,7 @@ contains
        TeSI = State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio/(1.+ElectronPressureRatio)*&
             NO2SI_V(UnitP_)/(cBoltzmann*nElec)
     end if
-    if(present(CvOut)) CvOut = cBoltzmann*nElec*inv_gm1
+    if(present(CvOut)) CvOut = cBoltzmann*nElec*InvGammaElectronMinus1
     if(present(TeOut)) TeOut = TeSI
     if(present(AverageIonChargeOut).or.present(NatomicOut)) AverageIonChargeOut = nElec/sum(nIon_I(1:nIonFluid))
     if(present(NatomicOut)) NatomicOut = nElec/AverageIonChargeOut

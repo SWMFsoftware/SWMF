@@ -36,7 +36,7 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, G. Toth & H. Zhenguang, 2014'
+       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
 
   character (len=100) :: NameShapeFile
 
@@ -241,7 +241,7 @@ contains
     use ModMain, ONLY: Time_Simulation, n_step
     use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
          UnitU_, UnitTemperature_, UnitT_, &
-         UnitN_, UnitX_, gm1
+         UnitN_, UnitX_
     use ModNumConst, ONLY: cTwoPi, cDegToRad
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModConst, ONLY: cBoltzmann, cAtomicMass
@@ -3250,7 +3250,7 @@ contains
        EntropyOut)
 
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitX_, &
-         ElectronPressureRatio, inv_gm1
+         ElectronPressureRatio, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: nVar, p_
     use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
     use ModAdvance,      ONLY: State_VGB
@@ -3306,7 +3306,7 @@ contains
             NO2SI_V(UnitP_)/(cBoltzmann*nElec)
     end if
 
-    if(present(CvOut)) CvOut = cBoltzmann*nElec*inv_gm1
+    if(present(CvOut)) CvOut = cBoltzmann*nElec*InvGammaElectronMinus1
     if(present(TeOut)) TeOut = TeSI
     if(present(AverageIonChargeOut).or.present(NatomicOut)) &
          AverageIonChargeOut = nElec/sum(nIon_I(1:nIonFluid))

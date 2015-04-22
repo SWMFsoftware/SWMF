@@ -335,7 +335,7 @@ contains
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
     use ModGeometry, ONLY: Xyz_DGB,R_BLK
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
+    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
 
@@ -605,8 +605,8 @@ contains
                -  totalRLNumRhox*totalNumRho*KTe
                
 
-          SE(i,j,k) = SE(i,j,k) + (inv_gm1*temps-0.50*uu2*(totalLossRho)     ) 
-          SP(i,j,k) = SP(i,j,k) + (temps        +0.50*uu2*(totalSourceRho)*gm1)
+          SE(i,j,k) = SE(i,j,k) + (InvGammaMinus1*temps-0.50*uu2*(totalLossRho)     ) 
+          SP(i,j,k) = SP(i,j,k) + (temps        +0.50*uu2*(totalSourceRho)*GammaMinus1)
 
 !energy or pressure change due to velocity differences 
 !between plasma and neutrals, different sign and coef.
@@ -614,12 +614,12 @@ contains
                -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock) 
           SP(i,j,k) = SP(i,j,k)  &
-               +gm1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               +GammaMinus1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock) 
 !energy or pressure change due to temperature differences 
 !between plasma and neutrals, same sign but different coef.
           SE(i,j,k) = SE(i,j,k)  &
-               +nu_BLK(i,j,k,iBlock)*totalNumRho*inv_gm1&
+               +nu_BLK(i,j,k,iBlock)*totalNumRho*InvGammaMinus1&
                *(kTn-KTi)
           SP(i,j,k) = SP(i,j,k)  &
                +nu_BLK(i,j,k,iBlock)*totalNumRho &

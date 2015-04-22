@@ -24,7 +24,7 @@ module ModUser
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-       UnitP_, UnitN_, UnitX_, g, gm1      
+       UnitP_, UnitN_, UnitX_, Gamma, GammaMinus1      
 
 
   include 'user_module.h' !list of public methods
@@ -260,15 +260,15 @@ contains
     TempCometMax = TempCometMaxDim * Io2No_V(UnitTemperature_)
     TempComet75  = TempComet75Dim  * Io2No_V(UnitTemperature_)
 
-    ! From G. Toth's derivations
+    ! From Gamma. Toth's derivations
     ! uNormal = sqrt( kT / m ), so TempToUnormal = sqrt( k/ m )
     ! and also unit conversions of temperature to SI, and velocity from SI
     TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
          No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
 
-    ! From G. Toth's derivations
-    ! T' = T/g so and p = n*T' = rho*T/(g*m) so TempToPressure = 1/(g*m)
-    TempToPressure = 1/(g*MassFluid_I(1))
+    ! From Gamma. Toth's derivations
+    ! T' = T/Gamma so and p = n*T' = rho*T/(Gamma*m) so TempToPressure = 1/(Gamma*m)
+    TempToPressure = 1/(Gamma*MassFluid_I(1))
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -712,7 +712,7 @@ subroutine read_shape_file
        !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"      
     SPNeuTerm_IIC(1,H2O_,i,j,k) = -vH2O_Destr*State_VGB(P_,i,j,k,iBlock)
     
- !   SPNeuTerm_IIC(2,H2O_,i,j,k) =gm1*vH_prod*excess_energy*NnNeutral_IC(H2O_,i,j,k)* &
+ !   SPNeuTerm_IIC(2,H2O_,i,j,k) =GammaMinus1*vH_prod*excess_energy*NnNeutral_IC(H2O_,i,j,k)* &
  !                                MassNeu_I(H_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
  !                                *SI2No_V(UnitP_)/SI2No_V(UnitT_)  
      
@@ -727,18 +727,18 @@ subroutine read_shape_file
             (MassNeu_I(H_)+MassNeu_I(H2O_))*SI2No_V(UnitP_)/SI2No_V(UnitT_) 
 
   !  where(relMach_I<1e-3) relMach_I=1e-3
-  !  Trec_I = Tn_IC(H2O_,i,j,k)/gp1*(2*g+2*gm1*relMach_I**2-gm1/&
+  !  Trec_I = Tn_IC(H2O_,i,j,k)/gp1*(2*Gamma+2*GammaMinus1*relMach_I**2-GammaMinus1/&
   !         (0.5+relMach_I**2+relMach_I*cPi**(-0.5)*exp(-relMach_I**2)/erf(relMach_I)))
-  !  Ch_I = gp1/gm1*cBoltzmann/(8*cProtonMass*MassNeu_I(H2O_))/relMach_I**2*&
+  !  Ch_I = gp1/GammaMinus1*cBoltzmann/(8*cProtonMass*MassNeu_I(H2O_))/relMach_I**2*&
   !         (relMach_I*cPi**(-0.5)*exp(-relMach_I**2)+(0.5+relMach_I**2)*erf(relMach_I))
-  !  SPNeuTerm_IIC(4,H2O_,i,j,k)= gm1*4*cPi*State_VGB(Rho_,i,j,k,iBlock)* &
+  !  SPNeuTerm_IIC(4,H2O_,i,j,k)= GammaMinus1*4*cPi*State_VGB(Rho_,i,j,k,iBlock)* &
   !             sum(NnDust_IC(1:6,i,j,k)*dustradius_I**2*relMach_I*thermalU*(Tdust_I-Trec_I)*Ch_I)*&
   !             No2SI_V(UnitRho_)*SI2No_V(UnitP_)
 
 
 
 
-    SPNeuTerm_IIC(1,H_,i,j,k) = gm1*vH_prod*excess_energy* NnNeutral_IC(H2O_,i,j,k)* &
+    SPNeuTerm_IIC(1,H_,i,j,k) = GammaMinus1*vH_prod*excess_energy* NnNeutral_IC(H2O_,i,j,k)* &
                                 MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
                                  *SI2No_V(UnitP_)/SI2No_V(UnitT_)
       
@@ -1279,7 +1279,7 @@ subroutine read_shape_file
        write(*,*) 'uNormal       =', uNormal
        write(*,*) 'p             =', VarsGhostFace_V(p_)
        write(*,*) 'Mach number   =', &
-            uNormal/sqrt(g*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
+            uNormal/sqrt(Gamma*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
        DoTestHere=.false.
     end if
 

@@ -214,7 +214,7 @@ contains
        SE(i,j,k) = - 0.5*State_VGB(rho_,i,j,k,iBlock)*( &
             kin*kinNorm*Neutral_BLK(i,j,k,iBlock)*nNorm &                !! loss due to charge exchange
             + alpha *alphaNorm*ne(i,j,k)*Si2No_V(UnitN_))*uxyz(i,j,k) &     !! loss due to recombination
-            - inv_gm1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,iBlock)
+            - InvGammaMinus1*(kin*kinNorm - alpha *alphaNorm)*State_VGB(p_,i,j,k,iBlock)
     end do;  end do;  end do
 
     Source_VC(rho_   ,:,:,:) = Srho   + Source_VC(rho_   ,:,:,:)

@@ -435,7 +435,7 @@ contains
 
 
     No2Si_V(UnitX_)  = cAU                                      ! m
-    No2Si_V(UnitU_)  = sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
+    No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
     No2Si_V(UnitRho_)= cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
 
     if(DoTestMe)then
@@ -608,7 +608,7 @@ contains
        vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
        ! density and pressure
        State_VGB(SWHRho_,i,j,k,iBlock) = SWH_rho * (rBody/r)**2
-       State_VGB(SWHP_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*g) 
+       State_VGB(SWHP_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*Gamma) 
 
        ! momentum
        State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = State_VGB(SWHrho_,i,j,k,iBlock)*v_D
@@ -665,7 +665,7 @@ contains
 
        ! No production yet
        State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3_rho * (rBody/r)**2
-       State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3_p   * (rBody/r)**(2*g)
+       State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3_p   * (rBody/r)**(2*Gamma)
 
        ! as if there was production
        !  State_VGB(Pu3Rho_,i,j,k,iBlock) = SWH_rho_dim * sigma * r30**2 / (r*Io2Si_V(UnitX_)*100.0)* (State_VGB(NeuRho_,i,j,k,iBlock) + &
@@ -814,7 +814,7 @@ contains
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
     Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
     Io2Si_V(UnitB_)           = 1.0E-9                    ! nT 
-    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
+    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! Gamma/cm^2/s
     Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
     Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
     Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
@@ -867,7 +867,7 @@ contains
     PU3_p1   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
     PU3_p   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
 
-    ! The units of rho_dim are n/cc and unitUSER_rho g/cc
+    ! The units of rho_dim are n/cc and unitUSER_rho Gamma/cc
     !/
 
     RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
@@ -928,7 +928,7 @@ contains
        PlotVar_G = &
             sqrt( sum((State_VGB(SWHRhoUx_:SWHRhoUz_,:,:,:,iBlock) &
             + State_VGB(Pu3RhoUx_:Pu3RhoUz_,:,:,:,iBlock))**2, DIM=1) &
-            / (g *(State_VGB(SWHp_,:,:,:,iBlock) + State_VGB(Pu3p_,:,:,:,iBlock)) &
+            / (Gamma *(State_VGB(SWHp_,:,:,:,iBlock) + State_VGB(Pu3p_,:,:,:,iBlock)) &
             * (State_VGB(SWHRho_,:,:,:,iBlock)+State_VGB(Pu3Rho_,:,:,:,iBlock))) )
        !merav addition
        !edited to add PUI, could make more generic from first ion to last ion
@@ -1471,7 +1471,7 @@ contains
             Source_V(iRhoUz)  = - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
             Source_V(iEnergy) = - Kpx_I(iFluid) - Kpu3x_I(iFluid)
          end if
-         Source_V(iP) = (g-1)* ( Source_V(iEnergy) &
+         Source_V(iP) = (Gamma-1)* ( Source_V(iEnergy) &
               - Ux_I(iFluid)*Source_V(iRhoUx) &
               - Uy_I(iFluid)*Source_V(iRhoUy) &
               - Uz_I(iFluid)*Source_V(iRhoUz) &
@@ -1490,7 +1490,7 @@ contains
 
             !found mistake here on 7/26 and corrected, and on 10/6
             !added to pressure source term due to density source terms on 8/10
-            Source_V(SWHp_) = (g-1)* ( Source_V(SWHEnergy_) &
+            Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUx_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
                  - Uz_I(SWH_)*Source_V(SWHRhoUz_) &
@@ -1503,7 +1503,7 @@ contains
             Source_V(Pu3RhoUy_) = sum(QmpxUy_I(Neu_:Ne4_)) + sum(JxpUy_I(Neu_:Ne4_))+sum(-Jxpu3Uy_I(Neu_:Ne4_))
             Source_V(Pu3RhoUz_) = sum(QmpxUz_I(Neu_:Ne4_)) + sum(JxpUz_I(Neu_:Ne4_))+sum(-Jxpu3Uz_I(Neu_:Ne4_))
             Source_V(Pu3Energy_)= sum(Qepx_I(Neu_:Ne4_)) + sum(Kxp_I(Neu_:Ne4_) ) +sum(-Kxpu3_I(Neu_:Ne4_))
-            Source_V(Pu3p_) = (g-1)* ( Source_V(Pu3Energy_) &
+            Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                  - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
                  - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
                  - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
@@ -1518,7 +1518,7 @@ contains
             !flipped from xp and -px to px and -xp on Oct 4 2011
             Source_V(SWHEnergy_)=  sum( +Kpx_I(Neu_:Ne4_) )+ sum( -Kxp_I(Neu_:Ne4_) )
 
-            Source_V(SWHp_) = (g-1)* ( Source_V(SWHEnergy_) &
+            Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
                  - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
                  - Uz_I(SWH_)*Source_V(SWHRhoUz_) )
@@ -1528,7 +1528,7 @@ contains
             Source_V(Pu3RhoUy_) = sum(-Jxpu3Uy_I(Neu_:Ne4_))
             Source_V(Pu3RhoUz_) = sum(-Jxpu3Uz_I(Neu_:Ne4_))
             Source_V(Pu3Energy_)= sum(-Kxpu3_I(Neu_:Ne4_))
-            Source_V(Pu3p_) = (g-1)* ( Source_V(Pu3Energy_) &
+            Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                  - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
                  - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
                  - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
@@ -1545,7 +1545,7 @@ contains
          !fixed px and xp on Oct 4,2011
          Source_V(SWHEnergy_)=  sum( +Kpx_I(Neu_:Ne4_) )+ sum( -Kxp_I(Neu_:Ne4_) )
 
-         Source_V(SWHp_) = (g-1)* ( Source_V(SWHEnergy_) &
+         Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
               - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
               - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
               - Uz_I(SWH_)*Source_V(SWHRhoUz_) )
@@ -1555,7 +1555,7 @@ contains
          Source_V(Pu3RhoUy_) = sum(-Jxpu3Uy_I(Neu_:Ne4_))
          Source_V(Pu3RhoUz_) = sum(-Jxpu3Uz_I(Neu_:Ne4_))
          Source_V(Pu3Energy_)= sum(-Kxpu3_I(Neu_:Ne4_))
-         Source_V(Pu3p_) = (g-1)* ( Source_V(Pu3Energy_) &
+         Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
               - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
               - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
               - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
@@ -1644,16 +1644,16 @@ contains
 
        ! Square of Alfven Mach Number
        MachAlfven2 = U2*rho/(B2+1.E-30)
-       !MachMagneto2 = U2/((1.E-10)+(g*p*InvRho)+(B2*InvRho))
+       !MachMagneto2 = U2/((1.E-10)+(Gamma*p*InvRho)+(B2*InvRho))
 
-       MachMagneto2 = SWHU2/((1.E-10)+(g*T_ave)+(B2*InvRho)) !U2 or U2DIM?!!
+       MachMagneto2 = SWHU2/((1.E-10)+(Gamma*T_ave)+(B2*InvRho)) !U2 or U2DIM?!!
 
 
 
        !end of merav modifications
        ! Square of Mach number
-       !Mach2      = U2/(g*p*InvRho)
-       Mach2       = U2/(g*T_ave)
+       !Mach2      = U2/(Gamma*p*InvRho)
+       Mach2       = U2/(Gamma*T_ave)
 
 
        ! Temperature in Kelvins

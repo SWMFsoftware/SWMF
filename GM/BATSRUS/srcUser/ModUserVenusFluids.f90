@@ -204,7 +204,7 @@ contains
          IsPointImplSource, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
     use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
+    use ModPhysics, ONLY: InvGammaMinus1,Rbody,GammaMinus1,UnitTemperature_,Si2No_V, No2Io_V, No2Si_V, LowDensityRatio,&
          UnitT_,UnitN_,ElectronPressureRatio
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
@@ -640,28 +640,28 @@ contains
 
        Source_VC(Energy_ ,i,j,k) =  Source_VC(Energy_ ,i,j,k)&
             -0.5*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
-            nu_BLK(i,j,k,iBlock)-0.50*uu2*(totalLossRho) +inv_gm1*tmp
+            nu_BLK(i,j,k,iBlock)-0.50*uu2*(totalLossRho) +InvGammaMinus1*tmp
 
        do iFluid=1,nIonFluid
           Source_VC(Energy_ + iFluid,i,j,k) =  Source_VC(Energy_ + iFluid,i,j,k)&
                -0.5*State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)*uu2_I(iFluid)*&
                nu_BLK(i,j,k,iBlock)-0.50*uu2_I(iFluid)*(LiSpecies_I(iFluid)) &
-               +inv_gm1*tmp_I(iFluid)
+               +InvGammaMinus1*tmp_I(iFluid)
        end do
 
 
        Source_VC(P_     ,i,j,k)  = Source_VC(P_     ,i,j,k)   &
-            +0.5*gm1*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
+            +0.5*GammaMinus1*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
             nu_BLK(i,j,k,iBlock)  &
-            +0.50*(gm1)*uu2*(totalSourceRho) &
+            +0.50*(GammaMinus1)*uu2*(totalSourceRho) &
             +tmp
 
 
 
        Source_VC(iPIon_I,i,j,k)  = Source_VC(iPIon_I,i,j,k)   &
-            + 0.5*gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+            + 0.5*GammaMinus1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
             nu_BLK(i,j,k,iBlock)  &
-            + 0.5*gm1*uu2_I*SiSpecies_I &
+            + 0.5*GammaMinus1*uu2_I*SiSpecies_I &
             + tmp_I
 
     end do; end do; end do     ! end of the i,j,k loop

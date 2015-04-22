@@ -206,8 +206,9 @@ contains
          IsPointImplSource
     use ModMain,    ONLY: nI, nJ, nK, iNewGrid, iNewDecomposition, &
          PROCTEST,BLKTEST, iTest,jTest,kTest
-    use ModPhysics, ONLY: inv_gm1,Rbody,gm1,UnitTemperature_, No2Io_V, No2Si_V, Io2No_V,&
-         UnitT_,UnitN_,ElectronPressureRatio
+    use ModPhysics, ONLY: Rbody,UnitTemperature_, No2Io_V, No2Si_V, Io2No_V,&
+         UnitT_,UnitN_,ElectronPressureRatio, &
+         GammaMinus1, GammaMinus1_I, InvGammaMinus1, InvGammaMinus1_I
     use ModAdvance, ONLY: State_VGB, Source_VC,VdtFace_x,&
          VdtFace_y,VdtFace_z
     use ModGeometry,ONLY: r_BLK,Xyz_DGB,R_BLK
@@ -650,16 +651,16 @@ contains
 
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k)  &
                + NumDens*(TNu_body-KTi)*nu_BLK(i,j,k,iBlock)   &
-               +0.5*gm1*State_VGB(Rho_,i,j,k,iBlock)&
+               +0.5*GammaMinus1*State_VGB(Rho_,i,j,k,iBlock)&
                *uu2*nu_BLK(i,j,k,iBlock)                     &
                +totalSourceNumRho*TNu_body               &
                -totalLossNumRho*kTi                 &
-               +0.50*(gm1)*uu2*(totalSourceRho)     &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho)     &
                -2*col_ei*meovmi*NumDens*(kTi-kTe)/averagemass
 
 
           !Ion_neutral collisions dependent terms
-          tmp_nu_I=gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+          tmp_nu_I=GammaMinus1_I(iFluid)*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
                sum(IonNeuRate_II*ReducedMassNeutral_II,DIM= 2) +&
                2*State_VGB(iRhoIon_I,i,j,k,iBlock)*(TNu_body-Temp_I)*&
                sum(IonNeuRate_II*ReducedMassNeutral2_II,DIM= 2)
@@ -668,7 +669,7 @@ contains
                + tmp_nu_I   &             
                + SourceNumRho_I*TNu_body               &
                - LossNumRho_I*Temp_I                 &
-               + 0.50*(gm1)*uu2_I*SiSpecies_I     &
+               + 0.50*(GammaMinus1_I(iFluid))*uu2_I*SiSpecies_I     &
                - 2*col_ei_I*meovmi*NumDens*(Temp_I-kTe)/MassIon_I
 
 
@@ -729,30 +730,30 @@ contains
 
           Source_VC(Energy_ ,i,j,k) =  Source_VC(Energy_ ,i,j,k)&
                -0.5*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
-               nu_BLK(i,j,k,iBlock)-0.50*uu2*(totalLossRho) +inv_gm1*tmp
+               nu_BLK(i,j,k,iBlock)-0.50*uu2*(totalLossRho) +InvGammaMinus1*tmp
 
           do iFluid=1,nIonFluid
              Source_VC(Energy_ + iFluid,i,j,k) =  Source_VC(Energy_ + iFluid,i,j,k)&
                   -0.5*State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)*uu2_I(iFluid)*&
                   nu_BLK(i,j,k,iBlock)-0.50*uu2_I(iFluid)*(LiSpecies_I(iFluid)) &
-                  +inv_gm1*tmp_I(iFluid)
+                  +InvGammaMinus1_I(iFluid)*tmp_I(iFluid)
           end do
 
 
           Source_VC(P_     ,i,j,k)  = Source_VC(P_     ,i,j,k)   &
-               +0.5*gm1*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
+               +0.5*GammaMinus1*State_VGB(rho_ ,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock)  &
-               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho) &
                +tmp
 
 
 
           Source_VC(iPIon_I,i,j,k)  = Source_VC(iPIon_I,i,j,k)   &
-                                !+ 0.5*gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+                                !+ 0.5*GammaMinus1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
                                 !nu_BLK(i,j,k,iBlock)  &
-               +gm1*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
+               +GammaMinus1_I(iFluid)*State_VGB(iRhoIon_I,i,j,k,iBlock)*uu2_I*&
                sum(IonNeuRate_II*ReducedMassNeutral_II,DIM=2) &
-               + 0.5*gm1*uu2_I*SiSpecies_I &
+               + 0.5*GammaMinus1_I(iFluid)*uu2_I*SiSpecies_I &
                + tmp_I
        end if
 

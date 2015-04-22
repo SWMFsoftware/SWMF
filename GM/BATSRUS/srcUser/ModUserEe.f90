@@ -228,7 +228,7 @@ contains
     subroutine set_uniform_ICs(iBlock)
 
       use ModLookupTable, ONLY: interpolate_lookup_table
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, inv_gm1, &
+      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, InvGammaMinus1, &
            UnitEnergyDens_, UnitX_, No2Si_V
       use ModGeometry,    ONLY: Xyz_DGB
 
@@ -246,7 +246,7 @@ contains
          call interpolate_lookup_table(iTableEOS, InitialTemperature, &
               InitialDensitySi, Value_V, DoExtrapolate = .false.)
          p         = Value_V(1)*Si2No_V(UnitP_)
-         ExtraEint = (Value_V(2)-Value_V(1)*inv_gm1)*Si2No_V(UnitEnergyDens_)
+         ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1)*Si2No_V(UnitEnergyDens_)
       else
          p         = InitialDensitySi*InitialTemperature/rstari*Si2No_V(UnitP_)
          ExtraEint = 0.
@@ -376,7 +376,7 @@ contains
                 State_VGB(p_,i,j,k,iBlock) =                  &
                      State_VGB(p_,i,j,k,iBlock)*(1.0 +        &
                      1.e-3*RandomChange) 
-                EInternal = (inv_gm1*State_VGB(p_,i,j,k,iBlock) + &
+                EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
                      State_VGB(ExtraEint_,i,j,k,iBlock))* &
                      No2Si_V(UnitEnergyDens_)
              end do; end do
@@ -424,7 +424,7 @@ contains
   !==========================================================================
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
     use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
-    use ModPhysics,    ONLY: UnitEnergyDens_, inv_gm1, Si2No_V
+    use ModPhysics,    ONLY: UnitEnergyDens_, InvGammaMinus1, Si2No_V
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: CellSize_DB
 
@@ -469,7 +469,7 @@ contains
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   EinternalOut = EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = EinternalSi* &
-                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,k,iBlock)*inv_gm1
+                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,k,iBlock)*InvGammaMinus1
           end do; end do; end do
           IsFound = .true.
        end select
@@ -609,7 +609,7 @@ contains
     use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
-         UnitEnergyDens_, cProtonMass, inv_gm1
+         UnitEnergyDens_, cProtonMass, InvGammaMinus1
     use ModEnergy,     ONLY: calc_energy_cell
 
     integer, intent(in) :: iStage,iBlock
@@ -631,7 +631,7 @@ contains
        if(State_VGB(rho_,i,j,k,iBlock) < MassDensFloor) &
             State_VGB(rho_,i,j,k,iBlock) = MassDensFloor
        ! Total internal energy, ExtraEInt + P/(\gamma -1),
-       EInternalSi = (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+       EInternalSi = (InvGammaMinus1*State_VGB(P_,i,j,k,iBlock) + &
             State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
        if(EInternalSi < EnergyFloor) EInternalSi = EnergyFloor
        ! get pressure and extra internal energy from the EOS table
@@ -639,7 +639,7 @@ contains
             EInternalIn=EInternalSi, PressureOut=PressureSi)
        State_VGB(P_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
-            (EInternalSi - PressureSi*inv_gm1)
+            (EInternalSi - PressureSi*InvGammaMinus1)
     end do;end do; end do
 
     ! calculate the total energy
@@ -718,7 +718,7 @@ contains
        EntropyOut)
 
     use ModLookupTable,ONLY: interpolate_lookup_table
-    use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitRho_, inv_gm1
+    use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitRho_, InvGammaMinus1
     use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: nWave
     !------------------------------------------------------------------------
@@ -768,7 +768,7 @@ contains
           EinternalSi = EinternalIn
        else
           EinternalSi = &
-               (State_V(p_)*inv_gm1 + State_V(ExtraEint_))*No2Si_V(UnitP_)
+               (State_V(p_)*InvGammaMinus1 + State_V(ExtraEint_))*No2Si_V(UnitP_)
        end if
        ! Find temperature from density and internal energy
        call interpolate_lookup_table(iTableEOS, 2, EinternalSi, RhoSi, &

@@ -414,7 +414,7 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe)
 
     No2Si_V(UnitX_)  = cAU                                      ! m
-    No2Si_V(UnitU_)  = sqrt(g*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
+    No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
     No2Si_V(UnitRho_)= cProtonMass*SWH_rho_dim*1.0E+6           ! kg/m^3
 
     if(DoTestMe)then
@@ -578,7 +578,7 @@ contains
 
        ! density and pressure
        State_VGB(Rho_,i,j,k,iBlock) = SWH_rho * (rBody/r)**2
-       State_VGB(P_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*g)
+       State_VGB(P_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*Gamma)
 
        ! momentum
        State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock)*v_D
@@ -724,7 +724,7 @@ contains
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
     Io2Si_V(UnitP_)           = 1.0E-1                    ! dyne/cm^2
     Io2Si_V(UnitB_)           = 1.0E-9                    ! nT 
-    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! g/cm^2/s
+    Io2Si_V(UnitRhoU_)        = 1.0E+1                    ! Gamma/cm^2/s
     Io2Si_V(UnitEnergydens_)  = 1.0E-1                    ! erg/cm^3
     Io2Si_V(UnitJ_)           = 1.0E-6                    ! uA/m^2
     Io2Si_V(UnitDivB_)        = 1.0E-2                    ! Gauss/cm
@@ -770,7 +770,7 @@ contains
     SWfast_p = SWfast_p_dim*Io2No_V(UnitP_)
     !
     !
-    ! The units of rho_dim are n/cc and unitUSER_rho g/cc
+    ! The units of rho_dim are n/cc and unitUSER_rho Gamma/cc
     !/
     !merav june01    PNeutralsISW   = RhoNeutralsISW * 
     !TNeutralsISW_dim*Io2No_V(UnitTemperature_)
@@ -830,7 +830,7 @@ contains
     case('mach')
        PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
-            /    (g *State_VGB(p_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)) )
+            /    (Gamma *State_VGB(p_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)) )
     case default
        IsFound = .false.
     end select
@@ -1093,7 +1093,7 @@ contains
             Source_V(iRhoUz)  = - JpxUz_I(iFluid)
             Source_V(iEnergy) = - Kpx_I(iFluid)
          end if
-         Source_V(iP) = (g-1)* ( Source_V(iEnergy) &
+         Source_V(iP) = (Gamma-1)* ( Source_V(iEnergy) &
               - Ux_I(iFluid)*Source_V(iRhoUx) &
               - Uy_I(iFluid)*Source_V(iRhoUy) &
               - Uz_I(iFluid)*Source_V(iRhoUz) &
@@ -1106,7 +1106,7 @@ contains
          Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne3_) )
          Source_V(Energy_)= sum( Qepx_I(Neu_:Ne3_) )
 
-         Source_V(p_) = (g-1)* ( Source_V(Energy_) &
+         Source_V(p_) = (Gamma-1)* ( Source_V(Energy_) &
               - Ux_I(Ion_)*Source_V(RhoUx_) &
               - Uy_I(Ion_)*Source_V(RhoUy_) &
               - Uz_I(Ion_)*Source_V(RhoUz_) ) 
@@ -1185,7 +1185,7 @@ contains
        U2Dim  = U2*No2Io_V(UnitU_)**2
        
        ! Square of Mach number
-       Mach2      = U2/(g*p*InvRho)
+       Mach2      = U2/(Gamma*p*InvRho)
 
        ! Temperature in Kelvins
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)

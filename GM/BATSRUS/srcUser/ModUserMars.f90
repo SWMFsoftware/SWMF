@@ -470,7 +470,7 @@ contains
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
     use ModGeometry, ONLY:R_BLK
     use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody, inv_gm1, gm1
+    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1
 !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
@@ -743,20 +743,20 @@ contains
                -(totalLossNumx+totalRLNumRhox)*State_VGB(P_,i,j,k,iBlock)
                
 
-          SE(i,j,k) = SE(i,j,k) + (inv_gm1*temp-0.50*uu2*(totalLossRho)     ) 
-          SP(i,j,k) = SP(i,j,k) + (temp        +0.50*uu2*(totalSourceRho)*gm1)
+          SE(i,j,k) = SE(i,j,k) + (InvGammaMinus1*temp-0.50*uu2*(totalLossRho) ) 
+          SP(i,j,k) = SP(i,j,k) + (temp        +0.50*uu2*(totalSourceRho)*GammaMinus1)
 
           SE(i,j,k) = SE(i,j,k)  &
                -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock) 
 
           SP(i,j,k) = SP(i,j,k)  &
-               +gm1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               +GammaMinus1*0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock) 
 
           if(kTi > kTn)then
              SE(i,j,k) = SE(i,j,k)  &
-                  -nu_BLK(i,j,k,iBlock)*totalNumRho*inv_gm1&
+                  -nu_BLK(i,j,k,iBlock)*totalNumRho*InvGammaMinus1&
                   *(kTi-kTn)
              SP(i,j,k) = SP(i,j,k)  &
                   -nu_BLK(i,j,k,iBlock)*totalNumRho &
@@ -776,12 +776,12 @@ contains
                -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock)  &
                -0.50*uu2*(totalLossRho) &
-               +inv_gm1*temps
+               +InvGammaMinus1*temps
              
           SP(i,j,k) = SP(i,j,k)  &
-               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               +0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                nu_BLK(i,j,k,iBlock)  &
-               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho) &
                +temps
           
        end if

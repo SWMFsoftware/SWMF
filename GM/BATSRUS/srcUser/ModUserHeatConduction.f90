@@ -58,7 +58,7 @@ contains
 
     use ModIoUnit,  ONLY: UnitTmp_
     use ModMain,    ONLY: Time_Simulation
-    use ModPhysics, ONLY: g
+    use ModPhysics, ONLY: Gamma
     use ModProcMH,  ONLY: iProc
     use ModGeometry,ONLY: TypeGeometry
     use ModVarIndexes, ONLY: ExtraEint_
@@ -191,8 +191,8 @@ contains
        close(UnitTmp_)
 
        ! The reference solutions use p=rho*T/gamma
-       StateRef_VC(iTiRef,:) = StateRef_VC(iTiRef,:)/g
-       StateRef_VC(iTeRef,:) = StateRef_VC(iTeRef,:)/g
+       StateRef_VC(iTiRef,:) = StateRef_VC(iTiRef,:)/Gamma
+       StateRef_VC(iTeRef,:) = StateRef_VC(iTeRef,:)/Gamma
 
        u0 = -5.0  ! veloxity added to lowrie's solution
        x0 = 0.02  ! shift in x-direction
@@ -224,7 +224,7 @@ contains
   subroutine user_normalization
 
     use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
-    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, g
+    use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, Gamma
 
     character (len=*), parameter :: NameSub = 'user_normalization'
     !--------------------------------------------------------------------------
@@ -235,7 +235,7 @@ contains
        ! constant  with value 1.0e-4. The gamma dependence is needed since
        ! the reference solution uses p=rho*T/gamma
        No2Si_V(UnitRho_) = 1.0e+4*cRadiation*(cProtonMass/cBoltzmann)**4 &
-            *No2Si_V(UnitU_)**6/g**4
+            *No2Si_V(UnitU_)**6/Gamma**4
     end if
 
   end subroutine user_normalization
@@ -249,7 +249,7 @@ contains
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: UseSemiImplicit
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: inv_gm1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, UnitP_
     use ModVarIndexes, ONLY: Pe_, ExtraEint_
 
     integer, intent(in) :: iStage, iBlock
@@ -281,9 +281,9 @@ contains
        call update_states_MHD(iStage,iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          ! At this point Pe=(g-1)*Ee with the ideal gamma g.
+          ! At this point Pe=(Gamma-1)*Ee with the ideal gamma Gamma.
           ! Use this Pe to get electron internal energy density.
-          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+          Ee = InvGammaMinus1*State_VGB(Pe_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock)
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
 
@@ -296,7 +296,7 @@ contains
 
           ! Set ExtraEint = electron internal energy - Pe/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+               Ee - InvGammaMinus1*State_VGB(Pe_,i,j,k,iBlock)
        end do; end do; end do
 
        call calc_energy_cell(iBlock)       
@@ -311,7 +311,7 @@ contains
     use ModMain,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModPhysics,    ONLY: g
+    use ModPhysics,    ONLY: Gamma
     use ModVarIndexes, ONLY: Pe_
     use BATL_lib, ONLY: CellVolume_GB
 
@@ -332,7 +332,7 @@ contains
 
        ! Reduce gamma to 4/3 for electrons (lowrie test)
        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-            -(GammaRel-g)*State_VGB(Pe_,i,j,k,iBlock)*DivU
+            -(GammaRel-Gamma)*State_VGB(Pe_,i,j,k,iBlock)*DivU
     end do; end do; end do
 
   end subroutine user_calc_sources
@@ -395,7 +395,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, x_, y_
-    use ModPhysics,    ONLY: ShockSlope, cRadiationNo, inv_gm1
+    use ModPhysics,    ONLY: ShockSlope, cRadiationNo, InvGammaMinus1
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, p_, ExtraEint_, Pe_
 
     integer, intent(in) :: iBlock
@@ -518,7 +518,7 @@ contains
                   matmul(Rot_II,RhoU_D(x_:y_))
              State_VGB(Pe_,i,j,k,iBlock) = Pe
              State_VGB(ExtraEint_,i,j,k,iBlock) = &
-                  Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock)
+                  Ee - InvGammaMinus1*State_VGB(Pe_,i,j,k,iBlock)
              State_VGB(p_,i,j,k,iBlock) = p
           end do
 
@@ -852,7 +852,7 @@ contains
   subroutine get_state_parcond(i, j, iBlock)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: inv_gm1, ElectronTemperatureRatio
+    use ModPhysics,    ONLY: InvGammaMinus1, ElectronTemperatureRatio
     use ModVarIndexes, ONLY: Rho_, Bx_, By_, p_, Pe_, ExtraEint_
 
     integer, intent(in) :: i, j, iBlock
@@ -866,7 +866,7 @@ contains
     State_VGB(By_,i,j,:,iBlock) = By
     if(TypeProblem == 'parcondsemi')then
        State_VGB(p_,i,j,:,iBlock) = Te
-       State_VGB(ExtraEint_,i,j,:,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
+       State_VGB(ExtraEint_,i,j,:,iBlock) = (1.0/3.5)*Te**3.5 - InvGammaMinus1*Te
     else
        if(UseElectronPressure)then
           State_VGB(Pe_,i,j,:,iBlock) = Te
@@ -882,7 +882,7 @@ contains
   subroutine get_state_parcond_sph(i, j, k, iBlock)
 
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: inv_gm1, ElectronTemperatureRatio
+    use ModPhysics,    ONLY: InvGammaMinus1, ElectronTemperatureRatio
     use ModVarIndexes, ONLY: Rho_, Bx_, By_, p_, Pe_, ExtraEint_
 
     integer, intent(in) :: i, j, k, iBlock
@@ -896,7 +896,7 @@ contains
     State_VGB(By_,i,j,k,iBlock) = By
     if(TypeProblem == 'parcondsemi')then
        State_VGB(p_,i,j,k,iBlock) = Te
-       State_VGB(ExtraEint_,i,j,k,iBlock) = (1.0/3.5)*Te**3.5 - inv_gm1*Te
+       State_VGB(ExtraEint_,i,j,k,iBlock) = (1.0/3.5)*Te**3.5 - InvGammaMinus1*Te
     else
        if(UseElectronPressure)then
           State_VGB(Pe_,i,j,k,iBlock) = Te
@@ -1167,9 +1167,9 @@ contains
 
     use ModAdvance,    ONLY: nWave, UseElectronPressure
     use ModConst,      ONLY: cBoltzmann
-    use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
-         UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, g, Clight
+         UnitX_, UnitT_, UnitU_, UnitN_, cRadiationNo, Gamma, Clight
     use ModVarIndexes, ONLY: nVar, Rho_, p_, Pe_
 
     real, intent(in) :: State_V(nVar)
@@ -1216,7 +1216,7 @@ contains
           Te = sqrt(sqrt(Ee/cRadiationNo))
           pSi = (GammaRel - 1)*EinternalIn
        else
-          pSi = EinternalIn*gm1
+          pSi = EinternalIn*GammaMinus1
           Pressure = pSi*Si2No_V(UnitP_)
           Te = Pressure/Rho
        end if
@@ -1255,7 +1255,7 @@ contains
        elseif(TypeProblem == 'lowrie')then
           EinternalOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
        else
-          EinternalOut = pSi*inv_gm1
+          EinternalOut = pSi*InvGammaMinus1
        end if
     end if
 
@@ -1268,7 +1268,7 @@ contains
        elseif(TypeProblem == 'lowrie')then
           Cv = 4.0*cRadiationNo*Te**3
        else
-          Cv = inv_gm1*Rho
+          Cv = InvGammaMinus1*Rho
        end if
        CvOut = Cv*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
     end if
@@ -1279,7 +1279,7 @@ contains
           HeatCond = Te**6.5/Rho**2
        case('lowrie')
           Ti = State_V(p_)/State_V(Rho_)
-          HeatCond = 0.00175*(g*Ti)**3.5/State_V(Rho_)*4.0*cRadiationNo*Te**3
+          HeatCond = 0.00175*(Gamma*Ti)**3.5/State_V(Rho_)*4.0*cRadiationNo*Te**3
        case('parcondsemi')
           HeatCond = HeatConductionCoef*Te**2.5
        case default
@@ -1294,7 +1294,7 @@ contains
        if(TypeProblem == 'lowrie')then
           NatomicSi = State_V(Rho_)*No2Si_V(UnitN_)
           Ti = State_V(p_)/State_V(Rho_)
-          TeTiRelaxOut = 1.0E6/(0.00175*(g*Ti)**3.5/State_V(Rho_)) &
+          TeTiRelaxOut = 1.0E6/(0.00175*(Gamma*Ti)**3.5/State_V(Rho_)) &
                *cRadiationNo*(Te + Ti)*(Te**2 + Ti**2) &
                /(cBoltzmann*NatomicSi)*No2Si_V(UnitEnergyDens_) &
                /(No2Si_V(UnitTemperature_)*No2Si_V(UnitT_))

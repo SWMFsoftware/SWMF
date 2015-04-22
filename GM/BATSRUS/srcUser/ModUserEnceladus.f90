@@ -64,7 +64,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC, Energy_
     use ModProcMH,   ONLY: iProc
     use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest 
-    use ModPhysics, ONLY: Rbody, inv_gm1, gm1, &
+    use ModPhysics, ONLY: Rbody, InvGammaMinus1, GammaMinus1, &
          No2Si_V, Si2No_V, No2Io_V, Io2No_V,UnitN_, UnitT_,UnitTemperature_,&
          UnitX_, UnitRhoU_, UnitU_
     use ModProcMH,   ONLY: iProc
@@ -258,16 +258,16 @@ contains
 
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
             -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C     &
-            +inv_gm1*(RhoNumDot*kTn-RhoNumDotL*kTi) &
+            +InvGammaMinus1*(RhoNumDot*kTn-RhoNumDotL*kTi) &
             +1.5*totalNumRho*(kTn-kTi)*Nu_C&
             -0.50*uu2*RhoDotL
 
 
        Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-            +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C  &
+            +0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C  &
             +(RhoNumDot*kTn-RhoNumDotL*kTi) &
-            +0.50*(gm1)*uu2*(RhoDot) &
-            +1.5*gm1*totalNumRho*(kTn-KTi)*Nu_C 
+            +0.50*(GammaMinus1)*uu2*(RhoDot) &
+            +1.5*GammaMinus1*totalNumRho*(kTn-KTi)*Nu_C 
 
 
        !write(*,*)'RhoDotPhoto=',RhoDotPhoto   

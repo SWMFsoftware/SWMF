@@ -121,7 +121,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKEVToK
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo, inv_gm1, g, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: cRadiationNo, InvGammaMinus1, Gamma, No2Si_V, Si2No_V, &
          UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          nWave, WaveFirst_, WaveLast_
@@ -153,7 +153,7 @@ contains
        Temperature = TeInit
        Erad = 0.0
        Pressure = Rho*Temperature
-       ExtraEint = cRadiationNo*Temperature**4 - inv_gm1*Pressure
+       ExtraEint = cRadiationNo*Temperature**4 - InvGammaMinus1*Pressure
     case('planckian')
        ! initial zero radiation and infinite heat capacity and given
        ! electron temperature Te.
@@ -402,7 +402,7 @@ contains
     use ModIoUnit,     ONLY: io_unit_new
     use ModMain,       ONLY: nI, nJ, nK, Time_Simulation, n_step
     use ModPhysics,    ONLY: No2Si_V, UnitTemperature_, UnitEnergyDens_, &
-         cRadiationNo, inv_gm1, Si2No_V
+         cRadiationNo, InvGammaMinus1, Si2No_V
     use ModVarIndexes, ONLY: Rho_, p_, nWave, WaveFirst_, WaveLast_
 
     integer,          intent(in)   :: iBlock
@@ -513,7 +513,7 @@ contains
     ! The State_V vector is in normalized units
 
     use CRASH_ModMultiGroup, ONLY: get_planck_g_from_temperature
-    use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, cRadiationNo, Clight
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, WaveFirst_, WaveLast_
@@ -559,7 +559,7 @@ contains
           Pressure = Rho*Te
           pSi = Pressure*No2Si_V(UnitP_)
        case default
-          pSi = EinternalIn*gm1
+          pSi = EinternalIn*GammaMinus1
           Pressure = pSi*Si2No_V(UnitP_)
           Te = Pressure/Rho
        end select
@@ -581,7 +581,7 @@ contains
        case('infinitemedium')
           EinternalOut = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
        case default
-          EinternalOut = pSi*inv_gm1
+          EinternalOut = pSi*InvGammaMinus1
        end select
     end if
     if(present(TeOut)) TeOut = TeSi
@@ -590,7 +590,7 @@ contains
     if(present(CvOut))then
        select case(TypeProblem)
        case('lightfront','planckian')
-          CvOut = inv_gm1*Rho &
+          CvOut = InvGammaMinus1*Rho &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
        case('infinitemedium')
           CvOut = 4.0*cRadiationNo*Te**3 &

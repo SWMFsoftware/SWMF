@@ -528,7 +528,7 @@ contains
        Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
             cHalf*( (totalSourceRho-Source_H3Op+collisn)*Unsqr - &
             (totalLossRho-Loss_H3Op+collisn)*usqr - &
-            inv_gm1*State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
+            InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)/totalNumRho* &
             ((totalNumLoss-NumLoss_H3Op+collisn/mbar) + sum(AlphaN_I/MassSpecies_V* &
             State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k, iBlock))) )
 

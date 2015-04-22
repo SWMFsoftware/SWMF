@@ -551,7 +551,7 @@ contains
     use ModGeometry,       ONLY: r_BLK
     use ModMain,           ONLY: nI, nJ, nK
     use ModPhysics,        ONLY: Si2No_V, UnitEnergyDens_, UnitTemperature_, &
-         inv_gm1
+         InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB
 
     integer, intent(in) :: iBlock
@@ -572,7 +572,7 @@ contains
     if(.not.DoCalcTime)return
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       Einternal = inv_gm1 * State_VGB(P_,i,j,k,iBlock)
+       Einternal = InvGammaMinus1 * State_VGB(P_,i,j,k,iBlock)
        TimeInvRad  = abs(RadCooling_c(i,j,k)/ Einternal)
        TimeInvHeat = abs(CoronalHeating_C(i,j,k)   / Einternal)
 
@@ -614,7 +614,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
     use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_, &
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_, &
          UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
     use ModProcMH,     ONLY: nProc
@@ -637,7 +637,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock

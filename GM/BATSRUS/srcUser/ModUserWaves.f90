@@ -299,7 +299,7 @@ contains
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-         rPlanetSi, rBody, UnitT_, g
+         rPlanetSi, rBody, UnitT_, Gamma
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
@@ -357,9 +357,9 @@ contains
 
        ! rho      = Rholeft for x < 0 
        !          = Rhoright for x > 0
-       ! pressure = pLeft + integral_x1^x2 rho*g dx 
-       !          = pLeft + (x-x1)*RhoLeft*g                for x < 0
-       !          = pLeft - x1*RhoLeft*g + x*RhoRight*g     for x > 0
+       ! pressure = pLeft + integral_x1^x2 rho*Gamma dx 
+       !          = pLeft + (x-x1)*RhoLeft*Gamma                for x < 0
+       !          = pLeft - x1*RhoLeft*Gamma + x*RhoRight*Gamma     for x > 0
 
        RhoLeft  = ShockLeftState_V(Rho_)
        RhoRight = ShockRightState_V(Rho_)
@@ -613,10 +613,10 @@ contains
        if(EntropyConstant > 0.0)then
           do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
              State_VGB(p_,i,j,k,iBlock) = &
-                  EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**g
+                  EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**Gamma
           end do; end do; end do
           ! Make sure the pressure gets integrated below
-          ! This only works if the velocity is zero, so e = p/(g-1)
+          ! This only works if the velocity is zero, so e = p/(Gamma-1)
           iPower_V(p_) = 2*iPower_V(Rho_)
        end if
 

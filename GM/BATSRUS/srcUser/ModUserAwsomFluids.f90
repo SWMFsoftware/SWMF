@@ -329,7 +329,7 @@ contains
     use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
-    use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Pe_, iP_I
 
     real, intent(out) :: VarValue
@@ -354,7 +354,7 @@ contains
                   + State_VGB(Pe_,i,j,k,iBlock)
           end do; end do; end do
        end do
-       VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -400,7 +400,7 @@ contains
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModPhysics,    ONLY: inv_gm1, GBody, rBody
+    use ModPhysics,    ONLY: InvGammaMinus1, GBody, rBody
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
          Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
@@ -496,7 +496,7 @@ contains
              do i = MinI, 0
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
                 State_VGB(Ehot_,i,j,k,iBlock) = &
-                     State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma - 1) - inv_gm1)
+                     State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma - 1) - InvGammaMinus1)
              end do
           else
              State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
@@ -568,7 +568,7 @@ contains
     use ModMain,         ONLY: x_, y_, UseRotatingFrame
     use ModMultiFluid,   ONLY: iRho_I, iUx_I, iUy_I, iUz_I, iP_I, &
          iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, UseMultiIon, IsMhd
-    use ModPhysics,      ONLY: OmegaBody, inv_gm1
+    use ModPhysics,      ONLY: OmegaBody, InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, Bx_, Bz_, p_, &
          WaveFirst_, WaveLast_, Ew_, Pe_, Hyp_, Ehot_, MassFluid_I
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -639,7 +639,7 @@ contains
           call get_gamma_collisionless(FaceCoords_D, Gamma)
           iP = p_; if(UseElectronPressure) iP = Pe_
           VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - inv_gm1)
+               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - InvGammaMinus1)
        else
           VarsGhostFace_V(Ehot_) = 0.0
        end if
@@ -678,7 +678,7 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
          iRhoUyIon_I, iRhoUzIon_I, iPIon_I
-    use ModPhysics,    ONLY: gm1, inv_gm1
+    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes, ONLY: nVar, Energy_, Pe_
     use ModConst,      ONLY: cElectronMass, cProtonMass
@@ -768,7 +768,7 @@ contains
              end if
 
              Source_V(iP) = Source_V(iP) &
-                  + gm1*N_I(iIon)*ReducedMass_II(iIon,jIon) &
+                  + GammaMinus1*N_I(iIon)*ReducedMass_II(iIon,jIon) &
                   *CollisionRate*(3*(T_I(jIon) - T_I(iIon)) &
                   /Mass_I(jIon)*Psi + Du2*Phi)
           end do
@@ -783,7 +783,7 @@ contains
                = Source_V(iRhoUx:iRhoUz) + ChargeDensIon_I(iIon)/N_I(0)*Me_D
 
           U_D = (/ Ux_I(iIon), Uy_I(iIon), Uz_I(iIon) /)
-          Source_V(iEnergy) = Source_V(iEnergy) + inv_gm1*Source_V(iP) &
+          Source_V(iEnergy) = Source_V(iEnergy) + InvGammaMinus1*Source_V(iP) &
                + sum(U_D*Source_V(iRhoUx:iRhoUz))
        end do
 

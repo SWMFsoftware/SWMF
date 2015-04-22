@@ -858,11 +858,11 @@ contains
 
           SP(i,j,k) = SP(i,j,k)  &
                +totalNumRho*(kTn-KTi)*Nu_C(i,j,k)   &
-               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)&
+               +0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)&
                *uu2*Nu_C(i,j,k)                     &
                +totalSourceNumRho*kTn               &
                -totalLossNumRho*kTi                 &
-               +0.50*(gm1)*uu2*(totalSourceRho)     &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho)     &
                -col_ei*totalNumRho*(KTi-KTe)/averagemass        
 
 !          SPe(i,j,k) = SPe(i,j,k)  &
@@ -899,15 +899,15 @@ contains
        elseif(UseOldEnergy)then         
           SE(i,j,k) = SE(i,j,k)  &
                -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*Nu_C(i,j,k)& 
-               +inv_gm1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
+               +InvGammaMinus1*(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
                -0.50*uu2*(totalLossRho) &
                +1.5*totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
           
           SP(i,j,k) = SP(i,j,k)  &
-               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               +0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                Nu_C(i,j,k)  &
                +(totalSourceNumRho*kTn-totalLossNumRho*kTi) &
-               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho) &
                +totalNumRho*(kTn-KTi)*Nu_C(i,j,k)
        else
 
@@ -924,12 +924,12 @@ contains
                -0.5*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                Nu_C(i,j,k)  &
                -0.50*uu2*(totalLossRho) &
-               +inv_gm1*temps
+               +InvGammaMinus1*temps
              
           SP(i,j,k) = SP(i,j,k)  &
-               +0.5*gm1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
+               +0.5*GammaMinus1*State_VGB(rho_,i,j,k,iBlock)*uu2*&
                Nu_C(i,j,k)  &
-               +0.50*(gm1)*uu2*(totalSourceRho) &
+               +0.50*(GammaMinus1)*uu2*(totalSourceRho) &
                +temps
        end if
   
@@ -961,9 +961,9 @@ contains
             RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)
 
        write(*,*)'se=        ',SE(itest,jtest,ktest)
-       write(*,*)'inv_gm1*sp=',inv_gm1*SP(itest,jtest,ktest)
-       write(*,*)'inv_gm1*sp+u.srhoU-srho*uu2/2 =',&
-            inv_gm1*SP(itest,jtest,ktest) &
+       write(*,*)'InvGammaMinus1*sp=',InvGammaMinus1*SP(itest,jtest,ktest)
+       write(*,*)'InvGammaMinus1*sp+u.srhoU-srho*uu2/2 =',&
+            InvGammaMinus1*SP(itest,jtest,ktest) &
             +RhoUTimesSrhoU/State_VGB(rho_,itest,jtest,ktest,iBlock)&
             -Srho(itest,jtest,ktest)*uu2/2
 
@@ -1831,7 +1831,7 @@ contains
          iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
     use ModMain,    ONLY: nI, nJ, nK
-    use ModPhysics, ONLY: inv_gm1
+    use ModPhysics, ONLY: InvGammaMinus1
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModGeometry,ONLY: r_BLK
     use ModNumConst, ONLY: cZero
@@ -1890,7 +1890,7 @@ contains
     !    Uy_C = InvRho_C*State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)
     !    Uz_C = InvRho_C*State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)
 
-    !    SE = inv_gm1*SP + Ux_C*SrhoUx  + Uy_C*SrhoUy  + Uz_C*SrhoUz  &
+    !    SE = InvGammaMinus1*SP + Ux_C*SrhoUx  + Uy_C*SrhoUy  + Uz_C*SrhoUz  &
     !         - 0.5*(Ux_C**2 + Uy_C**2 + Uz_C**2)*Srho
 
     Source_VC(Energy_,:,:,:) = SE+Source_VC(Energy_,:,:,:)

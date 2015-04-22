@@ -168,7 +168,7 @@ contains
     use ModGeometry,   ONLY: Xyz_DGB
     use ModMain,       ONLY: nI, nJ, nK, x_, y_
     use ModPhysics,    ONLY: ShockSlope, &
-         inv_gm1, cRadiationNo
+         InvGammaMinus1, cRadiationNo
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUy_, RhoUz_, Erad_, &
          ExtraEint_, p_
 
@@ -232,7 +232,7 @@ contains
           State_VGB(RhoUz_,i,j,k,iBlock) = 0.0
           State_VGB(Erad_,i,j,k,iBlock) = Erad
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               (1.0/(Gamma-1.0) - inv_gm1)*p
+               (1.0/(Gamma-1.0) - InvGammaMinus1)*p
           State_VGB(p_,i,j,k,iBlock) = p
        end do
 
@@ -302,7 +302,7 @@ contains
     use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
          Source_VC, uDotArea_XI, uDotArea_YI, uDotArea_ZI
-    use ModPhysics,  ONLY: g, inv_gm1, Si2No_V, No2Si_V, &
+    use ModPhysics,  ONLY: Gamma, InvGammaMinus1, Si2No_V, No2Si_V, &
          UnitP_, UnitEnergyDens_
     use ModEnergy,  ONLY: calc_energy_cell
     use BATL_lib, ONLY: CellVolume_GB
@@ -327,7 +327,7 @@ contains
                i, j, k, iBlock, GammaOut=GammaEos)
 
           Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-               -(GammaEos-g)*State_VGB(p_,i,j,k,iBlock)*DivU
+               -(GammaEos-Gamma)*State_VGB(p_,i,j,k,iBlock)*DivU
        end do; end do; end do
     end if
 
@@ -344,10 +344,10 @@ contains
        end if
 
        if(IsConserv)then
-          ! At this point p=(g-1)(e-rhov^2/2) with the ideal gamma g.
+          ! At this point p=(Gamma-1)(e-rhov^2/2) with the ideal gamma Gamma.
           ! Use this p to get total internal energy density.
           EinternalSi = No2Si_V(UnitEnergyDens_)*&
-               (inv_gm1*State_VGB(P_,i,j,k,iBlock) + &
+               (InvGammaMinus1*State_VGB(P_,i,j,k,iBlock) + &
                State_VGB(ExtraEint_,i,j,k,iBlock))
           call user_material_properties(State_VGB(:,i,j,k,iBlock),&
                EinternalIn=EinternalSi, PressureOut=PressureSi)
@@ -362,7 +362,7 @@ contains
        ! Set ExtraEint = Total internal energy - P/(gamma -1)
        State_VGB(ExtraEint_,i,j,k,iBlock) = &
             Si2No_V(UnitEnergyDens_)*EinternalSi &
-            - inv_gm1*State_VGB(p_,i,j,k,iBlock)
+            - InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)
 
     end do; end do; end do
 

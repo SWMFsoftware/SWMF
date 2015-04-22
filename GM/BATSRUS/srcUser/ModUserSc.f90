@@ -26,7 +26,7 @@ contains
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
     use ModIO,          ONLY: write_prefix, iUnitOut
-    use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,g
+    use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,Gamma
     use ModProcMH,      ONLY: iProc
     !--------------------------------------------------------------------------
     if(iProc == 0)then
@@ -35,7 +35,7 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
-    call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),g)
+    call EEE_initialize(BodyNDim_I(1),BodyTDim_I(1),Gamma)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -52,7 +52,7 @@ contains
     use ModMain,       ONLY:x_,y_,z_, UseRotatingFrame, &
          n_step, Iteration_Number,body2_
     use ModVarIndexes, ONLY: nVar,Ew_,rho_,Ux_,Uy_,Uz_,Bx_,Bz_,P_
-    use ModPhysics,    ONLY: inv_gm1,OmegaBody,Si2No_V, &
+    use ModPhysics,    ONLY: InvGammaMinus1,OmegaBody,Si2No_V, &
          UnitB_,UnitU_,UnitRho_,UnitP_, No2Si_V, UnitX_, &
          UseBody2Orbit, xBody2, yBody2, OrbitPeriod, FaceState_VI
     use ModNumConst,   ONLY:cTwoPi, cZero
@@ -160,7 +160,7 @@ contains
          VarsTrueFace_V(P_))
     VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
          VarsGhostFace_V(Rho_)*TBase &
-         *(1.0/(GammaCell-1.0)-inv_gm1)
+         *(1.0/(GammaCell-1.0)-InvGammaMinus1)
 
     !\
     ! Apply corotation
@@ -280,7 +280,7 @@ contains
     use ModMain,      ONLY: nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
+    use ModPhysics,   ONLY: InvGammaMinus1,BodyTDim_I
     use ModGeometry
     use ModNumConst,  ONLY: cTolerance
     use BATL_lib, ONLY: IsCartesianGrid, CoordMax_D
@@ -323,7 +323,7 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
        State_VGB(Ew_,i,j,k,iBlock) = Pres_BLK &
-            *(1.0/(Gamma_BLK-1.0)-inv_gm1) 
+            *(1.0/(Gamma_BLK-1.0)-InvGammaMinus1) 
     end do; end do; end do
 
   end subroutine user_set_ics
@@ -358,7 +358,7 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModB0,      ONLY: B0_DGB
-    use ModPhysics, ONLY: inv_gm1
+    use ModPhysics, ONLY: InvGammaMinus1
     use ModGeometry,ONLY: R_BLK
     use ModEnergy,  ONLY: calc_energy_cell
     use ModExpansionFactors, ONLY: gammaSS,Rs_PFSSM
@@ -381,9 +381,9 @@ contains
             (State_VGB(Bx_:Bz_ ,i,j,k,iBlock)+B0_DGB(:,i,j,k,iBlock))**2)&
             *0.25*(R_BLK(i,j,k,iBlock)/Rs_PFSSM)**1.50))
        State_VGB(P_   ,i,j,k,iBlock)=(GammaCell-1.0)*      &
-            (inv_gm1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
+            (InvGammaMinus1*State_VGB(P_,i,j,k,iBlock) + State_VGB(Ew_,i,j,k,iBlock))
        State_VGB(Ew_,i,j,k,iBlock)= State_VGB(P_,i,j,k,iBlock) &
-            *(1.0/(GammaCell-1.0)-inv_gm1)
+            *(1.0/(GammaCell-1.0)-InvGammaMinus1)
     end do; end do; end do
 
     call calc_energy_cell(iBlock)
@@ -399,7 +399,7 @@ contains
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: inv_gm1,&
+    use ModPhysics,    ONLY: InvGammaMinus1,&
          No2Si_V,UnitEnergydens_,UnitX_,UnitRho_
 
     real, intent(out):: VarValue
@@ -440,7 +440,7 @@ contains
           if (Unused_B(iBLK)) CYCLE
           tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
        end do
-       VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBLK=1,nBLK
           if (Unused_B(iBLK)) CYCLE

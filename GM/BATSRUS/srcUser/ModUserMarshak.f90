@@ -34,8 +34,8 @@ contains
     !--------------------------------------------------------------------------
 
     TradBc = cKevToK*Si2No_V(UnitTemperature_)                ! 1 keV
-    Density = 1000.0*Si2No_V(UnitRho_)                        ! 1 g/cm^3
-    SpecificOpacity = 0.1/(Si2No_V(UnitRho_)*Si2No_V(UnitX_)) ! 1 cm^2/g
+    Density = 1000.0*Si2No_V(UnitRho_)                        ! 1 Gamma/cm^3
+    SpecificOpacity = 0.1/(Si2No_V(UnitRho_)*Si2No_V(UnitX_)) ! 1 cm^2/Gamma
     Epsilon = 1.0
 
   end subroutine user_init_session
@@ -106,7 +106,7 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKevToK
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: inv_gm1, cRadiationNo, Si2No_V, UnitTemperature_
+    use ModPhysics,    ONLY: InvGammaMinus1, cRadiationNo, Si2No_V, UnitTemperature_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Erad_, ExtraEint_, p_
 
     integer, intent(in) :: iBlock
@@ -126,7 +126,7 @@ contains
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
           State_VGB(Erad_,i,j,k,iBlock) = cRadiationNo*Temperature**4
           State_VGB(ExtraEint_,i,j,k,iBlock) = &
-               cRadiationNo*Temperature**4 - inv_gm1*Pressure
+               cRadiationNo*Temperature**4 - InvGammaMinus1*Pressure
           State_VGB(p_,i,j,k,iBlock) = Pressure
        end do; end do; end do
 
@@ -258,7 +258,7 @@ contains
     ! The State_V vector is in normalized units
 
     use ModAdvance,    ONLY: nWave
-    use ModPhysics,    ONLY: gm1, inv_gm1, No2Si_V, Si2No_V, &
+    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, No2Si_V, Si2No_V, &
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, cRadiationNo, Clight
     use ModVarIndexes, ONLY: nVar, Rho_, p_

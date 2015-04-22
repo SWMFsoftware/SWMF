@@ -18,7 +18,7 @@ module ModUser
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-       UnitP_, UnitN_, UnitX_, g, gm1
+       UnitP_, UnitN_, UnitX_, Gamma
 
   include 'user_module.h' !list of public methods
 
@@ -28,7 +28,7 @@ module ModUser
   !/
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'CG Comet, G. Toth & H. Zhenguang, 2014'
+       'CG Comet, Gamma. Toth & H. Zhenguang, 2014'
 
   character (len=100) :: NameShapeFile
 
@@ -167,15 +167,15 @@ contains
     ! where C = 0.8097 for f_rv=0, 0.8858 for f_rv=2, 0.9049 for f_rv=3 (H20)
     TempToPressure = 0.9049/MassFluid_I(1)
 
-    ! From G. Toth's derivations
+    ! From Gamma. Toth's derivations
     ! uNormal = sqrt( kT / m ), so TempToUnormal = sqrt( k/ m )
     ! and also unit conversions of temperature to SI, and velocity from SI
     !TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
     !     No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
     !
-    ! From G. Toth's derivations
-    ! T' = T/g so and p = n*T' = rho*T/(g*m) so TempToPressure = 1/(g*m)
-    !TempToPressure = 1/(g*MassFluid_I(1))
+    ! From Gamma. Toth's derivations
+    ! T' = T/Gamma so and p = n*T' = rho*T/(Gamma*m) so TempToPressure = 1/(Gamma*m)
+    !TempToPressure = 1/(Gamma*MassFluid_I(1))
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -527,7 +527,7 @@ contains
        write(*,*) 'uNormal       =', uNormal
        write(*,*) 'p             =', VarsGhostFace_V(p_)
        write(*,*) 'Mach number   =', &
-            uNormal/sqrt(g*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
+            uNormal/sqrt(Gamma*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
        DoTestHere=.false.
     end if
 

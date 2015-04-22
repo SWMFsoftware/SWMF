@@ -814,7 +814,7 @@ endif
 
     if(IsPointImplMatrixSet)then
        ! Set the non-zero dS/dU matrix elements here
-!      term3    = (5.-3.*g)*(sMasseta+Losse)
+!      term3    = (5.-3.*Gamma)*(sMasseta+Losse)
 !      term4    = 1.5*(sMasseta+Losse)	!for energy source
 !      term4    = term2		!for pressure source
 

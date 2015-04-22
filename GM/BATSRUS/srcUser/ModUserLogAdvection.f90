@@ -100,7 +100,7 @@ contains
     use ModMain,      ONLY: nI,nJ,nK
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB 
-    use ModPhysics,   ONLY: inv_gm1,BodyTDim_I
+    use ModPhysics,   ONLY: InvGammaMinus1,BodyTDim_I
     use ModGeometry
 
     integer, intent(in) :: iBlock

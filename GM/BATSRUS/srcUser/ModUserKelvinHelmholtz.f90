@@ -10,7 +10,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'KELVIN-HELMHOLTZ INSTABILITY, G. Toth'
+       'KELVIN-HELMHOLTZ INSTABILITY, Gamma. Toth'
 
   real, parameter :: &
        xWidthUy=0.05, AmplUy=0.645, &

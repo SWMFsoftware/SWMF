@@ -153,7 +153,7 @@ contains
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitB_, BodyNDim_I, BodyTDim_I, &
-         g, UnitX_, UnitT_  
+         UnitX_, UnitT_, Gamma
 
     real, parameter :: CoulombLog = 20.0
     character (len=*),parameter :: NameSub = 'user_init_session'
@@ -204,7 +204,7 @@ contains
     EtaPerpSi = sqrt(cElectronMass)*CoulombLog &
          *(cElectronCharge*cLightSpeed)**2/(3*(cTwoPi*cBoltzmann)**1.5*cEps)
 
-    if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), g)
+    if(UseCme) call EEE_initialize(BodyNDim_I(1), BodyTDim_I(1), Gamma)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -368,7 +368,7 @@ contains
     use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
-    use ModPhysics,    ONLY: inv_gm1, No2Io_V, UnitEnergydens_, UnitX_
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
 
     real, intent(out) :: VarValue
@@ -394,7 +394,7 @@ contains
              tmp1_BLK(:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)
           end if
        end do
-       VarValue = unit_energy*inv_gm1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -908,7 +908,8 @@ contains
          iteration_number
     use ModMultiFluid,   ONLY: MassIon_I
     use ModPhysics,      ONLY: OmegaBody, AverageIonCharge, UnitRho_, &
-         UnitP_, UnitB_, UnitU_, Si2No_V, inv_gm1
+         UnitP_, UnitB_, UnitU_, Si2No_V, &
+         InvGammaMinus1, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, Ux_, Uy_, Uz_, Bx_, Bz_, p_, &
          WaveFirst_, WaveLast_, Pe_, Ppar_, Hyp_, Ehot_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -918,7 +919,7 @@ contains
 
     integer :: iP
     real :: NumDensIon, NumDensElectron, FullBr, Ewave, Pressure, Temperature
-    real :: Gamma
+    real :: GammaHere, InvGammaMinus1Fluid
     real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
 
     ! Line-tied related variables
@@ -1042,10 +1043,16 @@ contains
 
     if(Ehot_ > 1)then
        if(UseHeatFluxCollisionless)then
-          call get_gamma_collisionless(FaceCoords_D, Gamma)
-          iP = p_; if(UseElectronPressure) iP = Pe_
+          call get_gamma_collisionless(FaceCoords_D, GammaHere)
+          if(UseElectronPressure) then
+             iP = Pe_
+             InvGammaMinus1Fluid = InvGammaElectronMinus1
+          else
+             iP = p_
+             InvGammaMinus1Fluid = InvGammaMinus1
+          end if
           VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - inv_gm1)
+               VarsGhostFace_V(iP)*(1.0/(GammaHere - 1) - InvGammaMinus1Fluid)
        else
           VarsGhostFace_V(Ehot_) = 0.0
        end if

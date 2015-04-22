@@ -13,7 +13,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: NameUserModule = &
-       'WAVE REFLECTION, G. Toth'
+       'WAVE REFLECTION, Gamma. Toth'
 
   logical :: IsSmooth = .false.
   real :: xLeft0 = 25.0, xRight0 = 30.0, cSoundX0 = 1.0
@@ -88,7 +88,7 @@ contains
     use ModGeometry, ONLY: Xyz_DGB, CellSize_DB
     use ModAdvance,  ONLY: State_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, P_, Bx_, By_, Bz_
-    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, g
+    use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, Gamma
     use ModNumConst, ONLY: cPi
 
     integer, intent(in) :: iBlock
@@ -136,9 +136,9 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) * &
-               g * State_VGB(P_,i,j,k,iBlock) / State_VGB(Rho_,i,j,k,iBlock)
+               Gamma * State_VGB(P_,i,j,k,iBlock) / State_VGB(Rho_,i,j,k,iBlock)
 
-          State_VGB(Rho_,i,j,k,iBlock) = g * State_VGB(P_,i,j,k,iBlock)
+          State_VGB(Rho_,i,j,k,iBlock) = Gamma * State_VGB(P_,i,j,k,iBlock)
        end do; end do; end do
     end if
 
@@ -170,7 +170,7 @@ contains
                   State_VGB(RhoUz_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock)
 
           State_VGB(Rho_,:,:,:,iBlock)=ShockRightState_V(Rho_)* &
-                  (State_VGB(P_,:,:,:,iBlock)/ShockRightState_V(p_))**(1./g)
+                  (State_VGB(P_,:,:,:,iBlock)/ShockRightState_V(p_))**(1./Gamma)
 
           State_VGB(RhoUx_,:,:,:,iBlock)= &
                State_VGB(Ux_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)
