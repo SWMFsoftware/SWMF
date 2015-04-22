@@ -16,12 +16,11 @@ subroutine clean_divb
   use ModNumConst, ONLY: cTiny
   use ModDivbCleanup
   use ModMain,ONLY: iNewGrid, iNewDecomposition, nBlock, Unused_B
-  use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_, P_,tmp1_BLK,tmp2_BLK,&
+  use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
        Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
   use ModAdvance,ONLY:tmp3_blk=>divB1_GB
   use ModGeometry, ONLY: true_blk, body_blk, true_cell
   use ModParallel, ONLY : NOBLK, neiLEV
-  use ModPhysics,ONLY:gm1
   use ModMpi
   use BATL_lib, ONLY: message_pass_cell, CellFace_DB, CellVolume_GB
 
