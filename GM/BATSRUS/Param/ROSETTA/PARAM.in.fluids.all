@@ -140,7 +140,11 @@ T			  DoAddRhoU
 1e-15
 
 #GAMMA
-1.4			gamma
+1.4			Gamma_I
+1.4			Gamma_I
+1.4			Gamma_I
+1.4			Gamma_I
+1.4			GammaElectron
 
 #PLASMA
 1.0                       IonMass SWp [amu]
