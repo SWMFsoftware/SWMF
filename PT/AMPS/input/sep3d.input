@@ -68,8 +68,8 @@ CouplerMode= file !ices !swmf !!!ices !!off, ices, swmf
   InitialSampleLength=100
   TestRunTotalIteration=-1 !set infinite number ot iterations 
 
-  BlockCells=5,5,5
-  GhostCells=2,2,2
+  BlockCells=20,3,20
+  GhostCells=2,1,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
   NastranSurfaceUserData=on !!!on, off
