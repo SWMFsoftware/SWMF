@@ -2023,11 +2023,11 @@ contains
           end do
        end do
 
-       vAdd_I = 0.
-       do iNeuFluid=1,nNeuFluid
-          vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
-               v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)
-       end do
+       !vAdd_I = 0.
+       !do iNeuFluid=1,nNeuFluid
+       !   vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
+       !        v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)
+       !end do
 
        ! lost ions through charge exchange and recombination
        SPTerm_IIC(1,1:nIonFluid,i,j,k) = &
@@ -2099,6 +2099,7 @@ contains
        SPTerm_IIC(7,1:nIonFluid,i,j,k) = 2./3.*finTot_I(1:nIonFluid) / &
             Si2No_V(UnitT_)*Si2No_V(UnitN_)*Si2No_V(UnitU_)**2
 
+       vAdd_I = 0.
        do iNeuFluid=1,nNeuFluid
           vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid) + &
                v_IIC(iNeuFluid,1:nIonFluid,i,j,k)*nNeu1_C(i,j,k)* &
