@@ -6064,11 +6064,16 @@ in the polar region.
 <command name="GAMMA" if="$_IsFirstSession">
 	<parameter name="Gamma" type="real" min="1" default="1.6666666667"/>
 #GAMMA
-1.6666666667		Gamma
+4/3			Gamma for fluid 1
+1.4			Gamma for fluid 2
+5/3			Gamma for electrons (if UseElectronPressure)
 
-The adiabatic index (ratio of the specific heats for fixed pressure
-and volume. The default value is 5.0/3.0, which is valid for
-monoatomic gas or plasma.
+The adiabatic index gamma = c_p/c_v (ratio of the specific heats for
+fixed pressure and fixed volume). The gamma values have to be given for
+each fluid and also for the electrons if there is a Pe_ variable
+in the equation module.
+
+Default is 5/3 for all the gamma-s.
 </command>
 
 <command name="PLASMA">
