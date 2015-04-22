@@ -5876,7 +5876,8 @@ if (CallsCounter==83) {
 
 
 
-      if (requredResolution<characteristicBlockSize) {
+      //the block is split if 1. the cell size exceeds the required one and 2. the root block has to be split (startNode->upNode==NULL)
+      if ((requredResolution<characteristicBlockSize)||(startNode->upNode==NULL)) {
 
 //################## DEBUG #####################
 static long int ncheckMeshConsistencyCalls=0;
