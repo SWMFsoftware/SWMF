@@ -81,6 +81,13 @@ void PIC::ParticleTracker::TrajectoryData::flush() {
     sprintf(fname,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%ld.TrajectoryData.pt",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
     fout=fopen(fname,"w");
 
+    if (fout==NULL) {
+      char message[_MAX_STRING_LENGTH_PIC_];
+      sprintf(message,"Error: cannot open file %s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%ld.TrajectoryData.pt for writting of the temporary trajectory data",PIC::OutputDataFileDirectory,PIC::ThisThread,nfile);
+
+      exit(__LINE__,__FILE__,message);
+    }
+
     fwrite(&CurrentPosition,sizeof(unsigned long int),1,fout);
     fwrite(buffer,sizeof(cTrajectoryDataRecord),CurrentPosition,fout);
     fclose(fout);
@@ -365,9 +372,8 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
                 if (TrajectoryRecord.offset%Step!=0) continue;
 
                 el=SampledTrajectoryDataOffset[GlobalTrajectoryNumber]+TrajectoryRecord.offset/Step;
+                if ((el<0.0)||(el>=TrajectoryPointBufferLength)||(TrajectoryRecord.offset/Step>=nMaxSavedSignleTrajectoryPoints)) exit(__LINE__,__FILE__,"Error: out of range");
               }
-
-              if ((el<0.0)||(el>=TrajectoryPointBufferLength)) exit(__LINE__,__FILE__,"Error: out of range");
 
               TempTrajectoryBuffer[el]=TrajectoryRecord.data;
               ++nReadSampledTrajectoryPoints[GlobalTrajectoryNumber];
