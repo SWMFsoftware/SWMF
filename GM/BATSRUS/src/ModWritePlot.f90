@@ -639,7 +639,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
 
   use ModProcMH
   use ModParallel, ONLY: proc_dims
-  use ModPhysics, ONLY : g, cLight, rBody, ThetaTilt, &
+  use ModPhysics, ONLY : Gamma, cLight, rBody, ThetaTilt, &
        No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace
   use ModNumConst, ONLY : cRadToDeg
@@ -657,7 +657,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
   do iPar=1,nEqPar
      select case(NameEqPar_I(iPar))
      case('g','gamma')
-        EqPar_I(iPar)=g
+        EqPar_I(iPar)=Gamma
      case('c','clight')
         if(plot_dimensional(plot_+iPlotFile)) then
            EqPar_I(iPar)=Clight*No2Io_V(UnitU_)

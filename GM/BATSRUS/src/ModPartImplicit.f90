@@ -2231,7 +2231,7 @@ contains
     use ModMultiFluid, ONLY: select_fluid, &
          iFluid, iRho, iRhoUx, iUx, iRhoUz, iUz, iP, &
          iRho_I, iUx_I, iUy_I, iUz_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
-    use ModPhysics, ONLY: gm1
+    use ModPhysics, ONLY: GammaMinus1_I, GammaMinus1
 
     real, intent(inout):: State_V(nVar)
     real :: InvRho, InvRho_I(nFluid)
@@ -2242,11 +2242,12 @@ contains
 
           InvRho = 1.0/State_V(iRho)
 
-          State_V(iP) = gm1*(State_V(iP) - &
+          State_V(iP) = GammaMinus1_I(iFluid)*(State_V(iP) - &
                0.5*sum(State_V(iRhoUx:iRhoUz)**2)*InvRho)
 
           if(iFluid == 1 .and. IsMhd) &
-               State_V(iP) = State_V(iP) - 0.5*gm1*sum(State_V(Bx_:Bz_)**2)
+               State_V(iP) = State_V(iP) - &
+               0.5*GammaMinus1*sum(State_V(Bx_:Bz_)**2)
 
           State_V(iUx:iUz) = InvRho*State_V(iRhoUx:iRhoUz)
        end do

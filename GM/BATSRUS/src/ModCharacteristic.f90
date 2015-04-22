@@ -1,13 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModCharacteristicMhd
 
   use ModCoordTransform, ONLY: cross_product
   use ModVarIndexes
-  use ModPhysics,ONLY:g,inv_gm1
-  use ModNumConst
+  use ModPhysics,ONLY: Gamma, GammaMinus1, InvGammaMinus1
   use ModMain, ONLY: Climit
+  use ModNumConst, ONLY: cTolerance
 
   implicit none
 
@@ -33,7 +33,7 @@ contains
     !Construct the vector along one of the coordinate axis which is 
     !farthest from the direction of Normal_D
 
-    Tangent2_D=cZero;Tangent2_D(iMinAbs(1))=cOne 
+    Tangent2_D=0.0;Tangent2_D(iMinAbs(1))=1.0 
     Tangent1_D=-cross_product(Normal_D,Tangent2_D)
     Tangent1_D=Tangent1_D/sqrt(sum(Tangent1_D**2))
     Tangent2_D=cross_product(Normal_D,Tangent1_D)
@@ -73,11 +73,11 @@ contains
     flux_from_pseudochar(RhoUx_:RhoUz_)=&
          PseudoChar_V(RhoUx_:RhoUz_)+&
          PseudoChar_V(Rho_)*U_D
-    flux_from_pseudochar(nVar+1)=PseudoChar_V(P_)*inv_gm1+&
+    flux_from_pseudochar(nVar+1)=PseudoChar_V(P_)*InvGammaMinus1+&
          sum(PseudoChar_V(RhoUx_:RhoUz_)*U_D)+&
          sum(PseudoChar_V(Bx_:Bz_)*B_D)+&
          PseudoChar_V(Rho_)*&
-         (cHalf*sum(U_D**2)+(cOne-inv_gm1)*XH)
+         (0.5*sum(U_D**2)+(1.0-InvGammaMinus1)*XH)
     flux_from_pseudochar(P_)=PseudoChar_V(P_) - XH*PseudoChar_V(Rho_)
 
   end function flux_from_pseudochar
@@ -152,12 +152,12 @@ contains
     dState_V=StateL_V-StateR_V
     ! Scalar variables
     RhoL    =  StateL_V(rho_)
-    RhoInvL =  cOne/RhoL
-    aL      =  g * StateL_V(P_ ) * RhoInvL
+    RhoInvL =  1.0/RhoL
+    aL      =  Gamma * StateL_V(P_ ) * RhoInvL
 
     RhoR    =  StateR_V(rho_)
-    RhoInvR =  cOne/RhoR
-    aR      =  g * StateR_V(P_ ) * RhoInvR
+    RhoInvR =  1.0/RhoR
+    aR      =  Gamma * StateR_V(P_ ) * RhoInvR
 
     !\
     ! Set some values that are reused over and over
@@ -172,10 +172,10 @@ contains
     !\
     ! Set some values that are reused over and over
     !/
-    RhoInvH     = cOne/RhoH
+    RhoInvH     = 1.0/RhoH
     RhoSqrtH    = sqrt(RhoH)    
 
-    WeightInv=cOne/(RhoSqrtL + RhoSqrtR)
+    WeightInv=1.0/(RhoSqrtL + RhoSqrtR)
     !Average velocity:
 
     UL_D=StateL_V(Ux_:Uz_)
@@ -197,14 +197,14 @@ contains
     !Average them with the density dependent weights and add 
     !the arithmetic average of the normal components:
     B1H_D=WeightInv * (RhoSqrtL * BR_D + RhoSqrtR * BL_D)&
-         + cHalf * (BnL+BnR) * Normal_D
+         + 0.5 * (BnL+BnR) * Normal_D
 
     XnH = 0.25*RhoInvH*(BnR-BnL)**2 
-    XH  =cHalf*WeightInv**2*sum((BL_D-BR_D)**2)
+    XH  =0.5*WeightInv**2*sum((BL_D-BR_D)**2)
 
     !Average the speed of sound
-    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) +&
-         g * XH + (g-cOne) * (XnH + cHalf * sum(dState_V(Ux_:Uz_)**2)*&
+    aH   =WeightInv * ( RhoSqrtL* aL +  RhoSqrtR* aR) + &
+         Gamma*XH + GammaMinus1*(XnH + 0.5 * sum(dState_V(Ux_:Uz_)**2)*&
          RhoH  * WeightInv**2)
 
     !Below B1H is used only in the transformation matrix for the 
@@ -221,20 +221,20 @@ contains
 
     ! The components of eigenvectors for fast- and slow- sounds depend 
     ! on sgn(BnH) and Alphas 
-    SignBnH     = sign(cOne,BnH)
+    SignBnH     = sign(1.0,BnH)
     Tmp = CfH**2 - CsH**2
     if (Tmp > cTolerance2) then
-       AlphaF = max(cZero,(aH**2  - CsH**2)/Tmp)
-       AlphaS = max(cZero,(CfH**2 - aH**2 )/Tmp)
+       AlphaF = max(0.0,(aH**2  - CsH**2)/Tmp)
+       AlphaS = max(0.0,(CfH**2 - aH**2 )/Tmp)
 
        AlphaF = sqrt(AlphaF)
        AlphaS = sqrt(AlphaS)
     else if (BnH**2 * RhoInvH <= aH**2 ) then
-       AlphaF = cOne
-       AlphaS = cZero
+       AlphaF = 1.0
+       AlphaS = 0.0
     else
-       AlphaF = cZero
-       AlphaS = cOne
+       AlphaF = 0.0
+       AlphaS = 1.0
     endif
 
     !Set the vectors of direction
@@ -259,7 +259,7 @@ contains
     dP  =dState_V(p_)+XH*dRho
 
     !Calculate wave amplitudes and eigenvectors
-    Eigenvector_VV=cZero; DeltaWave_V=cZero ; NormCoef=cHalf/(RhoH*aH*aH)
+    Eigenvector_VV=0.0; DeltaWave_V=0.0 ; NormCoef=0.5/(RhoH*aH*aH)
     !---------------------------------------------------------------------! 
     DeltaWave_V(EntropyW_)     = dRho*RhoInvH-dP*2*NormCoef
 
@@ -330,7 +330,7 @@ contains
 
        DeltaWave_V(iScalar)=dState_V(iScalar)-Tmp*dRho
 
-       Eigenvector_VV(iScalar,iScalar)  = cOne 
+       Eigenvector_VV(iScalar,iScalar)  = 1.0 
 
        !All these waves advect the density, hence, the passive scalar
 
@@ -363,13 +363,13 @@ contains
     call get_characteristic_speeds(aL,RhoInvL,RhoSqrtL,&
          BnH,BL_D,CsL,CaL,CfL)
 
-    !CaL=CaL*sign(cOne,BnL)*SignBnH
+    !CaL=CaL*sign(1.0,BnL)*SignBnH
     call set_eigenvalues(EigenvalueL_V,CsL,CaL,CfL)
 
     BnR=BnR+B0n; BR_D = BR_D+B0Tangent_D
     call get_characteristic_speeds(aR,RhoInvR,RhoSqrtR,&
          BnH,BR_D,CsR,CaR,CfR)
-    !CaR=CaR*sign(cOne,BnR)*SignBnH
+    !CaR=CaR*sign(1.0,BnR)*SignBnH
     call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
   contains
@@ -408,7 +408,7 @@ contains
       Tmp=BTang2*RhoInv
 
       Ca=abs(Bn)/RhoSqrt                                 !Alfven speed
-      Cf=cHalf*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) !Fast magnetossonic
+      Cf=0.5*(sqrt((A-Ca)**2+Tmp)+sqrt((A+Ca)**2+Tmp)) !Fast magnetossonic
       Cs=Ca * A/Cf                                       !Slow magnetosonic
 
     end subroutine get_characteristic_speeds
@@ -439,7 +439,7 @@ contains
        Eps_V(iWave)=max(EigenvalueR_V(iWave)-Lambda,&
             Lambda -EigenvalueL_V(iWave),Eps_V(iWave))
        EigenvalueFixed_V(iWave)=max(abs(Lambda),Eps_V(iWave))!+&
-       !cHalf*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),cZero)
+       !0.5*min(Lambda**2/Eps_V(iWave)-Eps_V(iWave),0.0)
     end do
 
     cMax = max(EigenvalueFixed_V(FastRW_),EigenvalueFixed_V(FastLW_))
@@ -497,7 +497,7 @@ contains
        cMax = max(cMax, EigenvalueFixed_V(DivBW_))
        if(IsBoundary)EigenvalueFixed_V = cMax
     end if
-    FluxPseudoChar_V=cZero
+    FluxPseudoChar_V=0.0
 
     do iWave=1,nVar-1
        FluxPseudoChar_V = FluxPseudoChar_V + &

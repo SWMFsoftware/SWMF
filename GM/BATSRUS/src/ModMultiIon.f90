@@ -124,9 +124,9 @@ contains
 
     ! Identify regions where only one ion fluid is present.
 
-    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
+    use ModSize,     ONLY: nI, nJ, nK, x_, y_
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, p_
-    use ModPhysics,  ONLY: g
+    use ModPhysics,  ONLY: Gamma
     use BATL_lib,    ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
@@ -151,14 +151,14 @@ contains
        RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
           
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
-            (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon**2*g*p*Rho &
+            (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon**2*Gamma*p*Rho &
             .and. sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2) > &
             -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock))
 
        if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
           write(*,*) NameSub,'Rho, p, RhoUx =',Rho, p, RhoUx
           write(*,*) NameSub,'RhoUx**2, MachNumberMultiIon*g*p*Rho=', &
-               RhoUx**2, MachNumberMultiIon*g*p*Rho
+               RhoUx**2, MachNumberMultiIon*Gamma*p*Rho
           write(*,*) NameSub,'y**2, z**2, -ParabolaWidthMultiIon*x=', &
                Xyz_DGB(x_:y_,i,j,k,iBlock)**2, &
                 -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock)
@@ -381,7 +381,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
-    use ModPhysics, ONLY: ElectronCharge, inv_gm1, &
+    use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
          InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
          
@@ -696,7 +696,7 @@ contains
           iEnergy = Energy_-2+iIon+IonFirst_
           Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                + sum(Force_D*uIon_D) &
-               + inv_gm1*Heating
+               + InvGammaMinus1_I(IonFirst_+iIon-1)*Heating
 
        end do
 

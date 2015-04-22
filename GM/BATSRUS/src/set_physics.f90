@@ -383,7 +383,8 @@ subroutine set_units
      ! rPlanet, SW sound speed, SW density in amu/cm^3
      No2Si_V(UnitX_)   = rPlanetSi
      if(NameThisComp=='OH')No2Si_V(UnitX_)=cAU
-     No2Si_V(UnitU_)   = sqrt(g*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
+     No2Si_V(UnitU_)   = &
+          sqrt(Gamma*cBoltzmann*SW_T_dim/cProtonMass/MassIon_I(1))
      No2Si_V(UnitRho_) = 1000000*cProtonMass*MassIon_I(1)*SW_n_dim
   case("NONE", "READ")
      ! Already set in set_parameters

@@ -191,7 +191,7 @@ contains
     ! USE:
     !/
     use ModFieldLineThread, ONLY: HeatCondParSi, solve_a_plus_minus
-    use ModPhysics,      ONLY: inv_gm1, No2Si_V, UnitX_,Si2No_V, &
+    use ModPhysics,      ONLY: InvGammaElectronMinus1,No2Si_V, UnitX_,Si2No_V,&
                                UnitB_, UnitTemperature_
     use ModMultiFluid,   ONLY: MassIon_I
     use ModLookupTable,  ONLY: interpolate_lookup_table
@@ -579,7 +579,7 @@ contains
          !/
          if(USiLtd>0)then
             FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             do iPoint = 1, nPoint-2
@@ -594,7 +594,7 @@ contains
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          elseif(USiLtd<0)then
             FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             do iPoint = 2, nPoint-1
@@ -695,7 +695,8 @@ contains
 
       if(DoTestMe)write(*,*)'DtLocal=', DtLocal
 
-      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
+      SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1 &
+           * (1 + AverageIonCharge)/AverageIonCharge* &
            BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
@@ -744,7 +745,7 @@ contains
          Res_I = 0.0
          if(USiLtd>0)then
             FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             !\
@@ -760,7 +761,7 @@ contains
                  FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
          elseif(USiLtd<0)then
             FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-                 *(inv_gm1 +1)*(1 + AverageIonCharge)/&
+                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             !\
@@ -877,7 +878,8 @@ contains
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
-      SpecHeat_I(1:nPoint-1) = inv_gm1*(1 + AverageIonCharge)/AverageIonCharge*&
+      SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1  &
+           * (1 + AverageIonCharge)/AverageIonCharge*  &
            BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
       do iIter = 1, 1
@@ -977,7 +979,7 @@ contains
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK    
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitU_, UnitX_, inv_gm1
+         UnitEnergyDens_, UnitU_, UnitX_, InvGammaElectronMinus1
     use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
@@ -1008,7 +1010,7 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
-    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, Gamma
+    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
     real, parameter:: GradLimiter = 0.1 
@@ -1181,9 +1183,9 @@ contains
 
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
-             call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), Gamma)
+             call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), GammaHere)
              State_VG(Ehot_,1-nGhost:0,j,k) = &
-                  State_VG(iP,1-nGhost:0,j,k)*(1.0/(Gamma - 1) - inv_gm1)
+                  State_VG(iP,1-nGhost:0,j,k)*(1.0/(GammaHere - 1) - InvGammaElectronMinus1)
           else
              State_VG(Ehot_,1-nGhost:0,j,k) = 0.0
           end if

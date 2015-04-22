@@ -314,8 +314,8 @@ contains
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: inv_gm1, Si2No_V, UnitTemperature_, &
-         UnitEnergyDens_
+    use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
+         UnitEnergyDens_, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
@@ -363,7 +363,7 @@ contains
           end do; end do; end do
        elseif(UseIdealEos)then
           iP = p_
-          if(UseElectronPressure) iP = Pe_
+          if(UseElectronPressure)  iP = Pe_
 
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
              Te_G(i,j,k) = TeFraction*State_VGB(iP,i,j,k,iBlock) &
@@ -408,11 +408,13 @@ contains
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
     if(UseMultiIon)then
-       CvL = inv_gm1*sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
-       CvR = inv_gm1*sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
+       ! Heat flux is carried by electrons, for single fluid w/o the electron
+       ! equation, InvGammaElectronMinus1 = InvGammaMinus1
+       CvL = InvGammaElectronMinus1*sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
+       CvR = InvGammaElectronMinus1*sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
     elseif(UseIdealEos)then
-       CvL = inv_gm1*StateLeft_V(Rho_)/TeFraction
-       CvR = inv_gm1*StateRight_V(Rho_)/TeFraction
+       CvL = InvGammaElectronMinus1*StateLeft_V(Rho_)/TeFraction
+       CvR = InvGammaElectronMinus1*StateRight_V(Rho_)/TeFraction
     else
        call user_material_properties(StateLeft_V, CvOut = CvSi)
        CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
@@ -535,7 +537,7 @@ contains
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos
     use ModFaceGradient, ONLY: get_face_gradient
-    use ModPhysics,      ONLY: inv_gm1
+    use ModPhysics,      ONLY: InvGammaMinus1
     use ModVarIndexes,   ONLY: nVar, Rho_, p_
 
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
@@ -582,8 +584,8 @@ contains
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
     if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
-       CvL = inv_gm1*StateLeft_V(Rho_)/TiFraction
-       CvR = inv_gm1*StateRight_V(Rho_)/TiFraction
+       CvL = InvGammaMinus1*StateLeft_V(Rho_)/TiFraction
+       CvR = InvGammaMinus1*StateRight_V(Rho_)/TiFraction
     else
        call stop_mpi(NameSub// &
             ': no ion heat conduction yet for non-ideal eos')
@@ -798,7 +800,8 @@ contains
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModNumConst,     ONLY: i_DD
     use ModPhysics,      ONLY: Si2No_V, No2Si_V, UnitTemperature_, &
-         UnitEnergyDens_, UnitN_, UnitT_, inv_gm1, AverageIonCharge
+         UnitEnergyDens_, UnitN_, UnitT_, AverageIonCharge, &
+         InvGammaElectronMinus1
     use ModRadDiffusion, ONLY: UseHeatFluxLimiter
     use ModRadiativeCooling, ONLY: get_radiative_cooling
     use BATL_lib,        ONLY: IsCartesian, IsRzGeometry, &
@@ -816,7 +819,7 @@ contains
     real, intent(inout):: DconsDsemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
-    real :: Gamma
+    real :: GammaTmp
     real :: DtLocal
     real :: NumDens, NatomicSi, Natomic, TeTiRelaxSi, TeTiCoef, Cvi, TeSi, CvSi
     real :: HeatCoef, FreeStreamFlux, GradTe_D(3), GradTe
@@ -874,10 +877,11 @@ contains
                 NumDens = State_VGB(Rho_,i,j,k,iBlock)/TeFraction
              end if
              if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-                call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = NumDens/(Gamma-1)
+                call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi)=NumDens/(GammaTmp-1)
              else
-                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = inv_gm1*NumDens
+                DconsDsemiAll_VCB(iTeImpl,i,j,k,iBlockSemi)= &
+                     InvGammaElectronMinus1*NumDens
              end if
 
              if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -888,7 +892,7 @@ contains
                 !to the electron energy density, therefore,we multiply by
                 !Ne/(\gamma -1)
                 !/
-                TeTiCoef = inv_gm1*(AverageIonCharge*Natomic)* &
+                TeTiCoef = InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
                      (cTeTiExchangeRate*Natomic/Te_G(i,j,k)**1.5)
              end if
 
@@ -912,7 +916,7 @@ contains
           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
           if(UseElectronPressure .and. .not.UseMultiIon)then
-             Cvi = inv_gm1*Natomic
+             Cvi = InvGammaElectronMinus1*Natomic
              PointCoef_CB(i,j,k,iBlock) = TeTiCoef/(1.0 + DtLocal*TeTiCoef/Cvi)
              PointImpl_VCB(1,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)/Natomic
              if(UseAnisoPressure)then
@@ -1332,7 +1336,8 @@ contains
     use ModGeometry, ONLY: true_cell
     use ModImplicit, ONLY: nVarSemiAll, iTeImpl
     use ModMain,     ONLY: nI, nJ, nK, Dt, time_accurate, Cfl
-    use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
+    use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
+         InvGammaMinus1, GammaMinus1, No2Si_V, Si2No_V, UnitEnergyDens_, &
          UnitP_, ExtraEintMin, pMin_I, PeMin
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -1347,7 +1352,7 @@ contains
 
     integer :: i, j, k, iP
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
-    real :: Gamma
+    real :: GammaTmp
     real :: DtLocal
     !--------------------------------------------------------------------------
 
@@ -1369,20 +1374,25 @@ contains
 
        if(UseIdealEos)then
           if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
-             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+             call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
 
-             State_VGB(iP,i,j,k,iBlock) = max(pMin, (Gamma - 1) &
-                  *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+             ! Heat conduction is carried by electrons
+             ! If single fluid w/o the electron equation, then
+             ! InvGammaElectronMinus1 = InvGammaMinus1
+
+             State_VGB(iP,i,j,k,iBlock) = max(pMin, (GammaTmp - 1) &
+                  *(InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
                   + State_VGB(Ehot_,i,j,k,iBlock) + DeltaEinternal))
              State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  *(1.0/(Gamma - 1) - inv_gm1)
+                  *(1.0/(GammaTmp - 1) - InvGammaElectronMinus1)
           else
              State_VGB(iP,i,j,k,iBlock) = &
-                  max(pMin, State_VGB(iP,i,j,k,iBlock) + gm1*DeltaEinternal)
+                  max(pMin, State_VGB(iP,i,j,k,iBlock) + &
+                  GammaElectronMinus1*DeltaEinternal)
           end if
        else
 
-          Einternal = inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+          Einternal = InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock) + DeltaEinternal
 
           EinternalSi = Einternal*No2Si_V(UnitEnergyDens_)
@@ -1394,26 +1404,26 @@ contains
           State_VGB(iP,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
 
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Einternal - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+               Einternal - InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock))
 
        end if
 
        ! update ion pressure for energy exchange between ions and electrons
        if(UseElectronPressure .and. .not.UseMultiIon)then
           if(.not.time_accurate) DtLocal = Cfl*time_BLK(i,j,k,iBlock)
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+          Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + DtLocal*PointCoef_CB(i,j,k,iBlock) &
                *(NewSemiAll_VC(iTeImpl,i,j,k) - PointImpl_VCB(1,i,j,k,iBlock))
 
-          State_VGB(p_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
+          State_VGB(p_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
 
           if(UseAnisoPressure)then
-             Einternal = inv_gm1*State_VGB(Ppar_,i,j,k,iBlock) &
+             Einternal = InvGammaMinus1*State_VGB(Ppar_,i,j,k,iBlock) &
                   + DtLocal*PointCoef_CB(i,j,k,iBlock) &
                   *(NewSemiAll_VC(iTeImpl,i,j,k) &
                   - PointImpl_VCB(2,i,j,k,iBlock))
 
-             State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
+             State_VGB(Ppar_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
           end if
        end if
     end do; end do; end do

@@ -101,7 +101,7 @@ contains
        do iFluid = 1, nFluid
           call select_fluid
 
-          if(UseAnisoPressure .or. UseViscosity )then
+          if(UseAnisoPressure .or. UseViscosity .and. iFluid == 1)then
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -171,7 +171,8 @@ contains
 
                    ! Source(p) = (gamma - 1)*tau:grad u
                    Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) + &
-                        gm1*ViscoCoeff*State_VGB(iRho,i,j,k,iBlock)*Visco
+                        GammaMinus1*ViscoCoeff * &
+                        State_VGB(Rho_,i,j,k,iBlock)*Visco
                 end if
              end do; end do; end do
 
@@ -191,13 +192,13 @@ contains
              if(nK > 1) DivU = DivU &
                   + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-             if(UseAnisoPressure)then
-                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                     - (State_VGB(iP,i,j,k,iBlock) &
+             if(UseAnisoPressure .and. iFluid == 1)then
+                Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
+                     - (State_VGB(p_,i,j,k,iBlock) &
                      - State_VGB(Ppar_,i,j,k,iBlock)/3.0)*DivU
              else
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
-                     - gm1*State_VGB(iP,i,j,k,iBlock)*DivU
+                     - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
              end if
           end do; end do; end do
 
@@ -294,21 +295,22 @@ contains
                   QePerQtotal)
 
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QePerQtotal
+                  + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
              Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*QPerQtotal_I*gm1
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I*GammaMinus1_I(iFluid)
              Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
                   Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
              ! Anisotropic pressure does not yet work with multi-ion
-             if(UseAnisoPressure) &
+             if(UseAnisoPressure .and. iFluid == 1) &
                   Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1*QparPerQtotal_I(IonFirst_)
+                  + CoronalHeating_C(i,j,k)*GammaMinus1           &
+                  * QparPerQtotal_I(IonFirst_)
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*gm1
+                  + CoronalHeating_C(i,j,k)*GammaMinus1
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                   + CoronalHeating_C(i,j,k)
           end if
@@ -323,10 +325,10 @@ contains
 
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
-                  + RadCooling_C(i,j,k)*gm1
+                  + RadCooling_C(i,j,k)*GammaElectronMinus1
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
-                  + RadCooling_C(i,j,k)*gm1
+                  + RadCooling_C(i,j,k)*GammaMinus1
              Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
                   + RadCooling_C(i,j,k)
           end if
@@ -346,7 +348,8 @@ contains
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
           ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - gm1*Pe*DivU
+          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - &
+               GammaElectronMinus1*Pe*DivU
 
           if(.not.UseMultiIon)then
              ! The energy equation contains the work of the electron pressure

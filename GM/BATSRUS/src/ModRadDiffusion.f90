@@ -472,7 +472,7 @@ contains
          UseSplitSemiImplicit, iTeImpl, iTrImplFirst, iTrImplLast
     use ModMain,     ONLY: x_, y_, z_, nI, nJ, nK, Dt
     use ModNumConst, ONLY: i_DD
-    use ModPhysics,  ONLY: inv_gm1, Clight, cRadiationNo, UnitN_, &
+    use ModPhysics,  ONLY: InvGammaMinus1, Clight, cRadiationNo, UnitN_, &
          Si2No_V, UnitTemperature_, UnitEnergyDens_, UnitX_, UnitU_, UnitT_, &
          No2Si_V
     use ModGeometry, ONLY: TypeGeometry
@@ -566,7 +566,7 @@ contains
 
              Natomic = NatomicSi*Si2No_V(UnitN_)
              Ti = State_VGB(p_,i,j,k,iBlock)/Natomic
-             Cvi = inv_gm1*Natomic
+             Cvi = InvGammaMinus1*Natomic
              Te = TeSi*Si2No_V(UnitTemperature_)
              Cve = CveSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
              if(.not.UseTemperature)then
@@ -1836,8 +1836,9 @@ contains
     use ModEnergy,     ONLY: calc_energy_cell
     use ModImplicit,   ONLY: nVarSemiAll, iTeImpl, iTrImplFirst, SemiImplCoeff
     use ModMain,       ONLY: nI, nJ, nK, Dt, UseRadDiffusion
-    use ModPhysics,    ONLY: inv_gm1, gm1, No2Si_V, Si2No_V, UnitEnergyDens_, &
-         UnitP_, UnitRho_, UnitTemperature_, ExtraEintMin
+    use ModPhysics,    ONLY: InvGammaMinus1, GammaMinus1, ExtraEintMin, &
+         No2Si_V, Si2No_V, UnitEnergyDens_, &
+         UnitP_, UnitRho_, UnitTemperature_, InvGammaElectronMinus1
     use ModGeometry,   ONLY: true_cell
     use ModUserInterface ! user_material_properties
 
@@ -1870,7 +1871,7 @@ contains
 
        if(UseElectronPressure)then
           ! electron pressure -> electron internal energy Ee
-          Ee = inv_gm1*State_VGB(Pe_,i,j,k,iBlock) &
+          Ee = InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock)
 
           ! electron energy update: Ee_new = Ee_old + Cv'*Delta(a*Te^4)
@@ -1878,10 +1879,10 @@ contains
                *(NewSemiAll_VC(iTeImpl,i,j,k) - OldSemiAll_VC(iTeImpl,i,j,k))
 
           ! ion pressure -> Einternal
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
+          Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)
        else
           ! ion + electron pressure -> Einternal
-          Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock) &
+          Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
                + State_VGB(ExtraEint_,i,j,k,iBlock)
 
           if(iTeImpl>0) Einternal = Einternal &
@@ -1924,7 +1925,7 @@ contains
 
        if(UseElectronPressure)then
           ! ions
-          State_VGB(p_,i,j,k,iBlock) = max(1e-30, gm1*Einternal)
+          State_VGB(p_,i,j,k,iBlock) = max(1e-30, GammaMinus1*Einternal)
 
           ! electrons
           EeSi = Ee*No2Si_V(UnitEnergyDens_)
@@ -1938,7 +1939,7 @@ contains
 
           ! Set ExtraEint = Electron internal energy - Pe/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Ee - inv_gm1*State_VGB(Pe_,i,j,k,iBlock))
+               Ee - InvGammaElectronMinus1*State_VGB(Pe_,i,j,k,iBlock))
 
        else
           ! ions + electrons
@@ -1953,7 +1954,7 @@ contains
 
           ! Set ExtraEint = Total internal energy - Ptotal/(gamma -1)
           State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
-               Einternal - inv_gm1*State_VGB(p_,i,j,k,iBlock))
+               Einternal - InvGammaMinus1*State_VGB(p_,i,j,k,iBlock))
 
        end if
 

@@ -58,7 +58,7 @@ subroutine write_runtime_values()
   use ModMain
   use ModPhysics
   use ModIO,        ONLY: iUnitOut, write_prefix
-  use ModProcMH,    ONLY: iProc, nProc, iComm
+  use ModProcMH,    ONLY: iProc, nProc
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
@@ -76,8 +76,6 @@ subroutine write_runtime_values()
   implicit none
 
   character(len=100):: String, StringFormat
-  integer           :: iError
-  real              :: DxMin, DxMax    
   !------------------------------------------------------------------------
 
   ! Find new min and max dx
@@ -125,7 +123,7 @@ subroutine write_runtime_values()
        'I/O Unit type: '//trim(TypeIoUnit)//'            '// &
        'Normalization: '//trim(TypeNormalization)
   call write_prefix; write(iUnitOut,*)
-  call write_prefix; write(iUnitOut,'(10X,a,f12.8)') 'Gamma:       ',g
+  call write_prefix; write(iUnitOut,'(10X,a,10(f12.8))') 'Gamma:       ',Gamma_I
   call write_prefix; write(iUnitOut,*)
   if(body1)then
      call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &

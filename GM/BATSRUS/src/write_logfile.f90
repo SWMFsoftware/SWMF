@@ -14,7 +14,7 @@ subroutine write_logfile(iSatIn, iFile)
   use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
        iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
   use ModMpi
-  use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
+  use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
 
@@ -269,7 +269,7 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
        UseRotatingFrame,UseB0
-  use ModPhysics,    ONLY: rCurrents, inv_gm1, OMEGABody
+  use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OMEGABody
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
   use ModB0, ONLY:  B0_DGB, get_b0
@@ -920,7 +920,7 @@ contains
     case('bz')
        LogVar_I(iVarTot) = StateSat_V(Bz_) + B0Sat_D(3)
     case('e')
-       LogVar_I(iVarTot) = inv_gm1*StateSat_V(iP) + 0.5*&
+       LogVar_I(iVarTot) = InvGammaMinus1_I(iFluid)*StateSat_V(iP) + 0.5*&
             sum(StateSat_V(iRhoUx:iRhoUz)**2)/StateSat_V(iRho)
        if(iFluid == 1 .and. IsMhd) &
             LogVar_I(iVarTot) = LogVar_I(iVarTot) &

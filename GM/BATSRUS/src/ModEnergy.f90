@@ -5,14 +5,15 @@ module ModEnergy
 
   use ModProcMH,     ONLY: iProc
   use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
-       iRho, iRhoUx, iRhoUy, iRhoUz, iP, iP_I, DoConserveNeutrals, &
+       iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModAdvance,    ONLY: State_VGB, Bx_, By_, Bz_, Pe_, IsMhd, &
-       Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
-  use ModPhysics,    ONLY: Gm1, Inv_Gm1, pMin_I, PeMin, Tmin_I, TeMin
+  use ModPhysics,    ONLY: GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
+       pMin_I, PeMin, Tmin_I, TeMin
 
   implicit none
 
@@ -86,13 +87,13 @@ contains
        call select_fluid
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
-             State_VGB(iP,i,j,k,iBlock) =                             &
-                  gm1*( Energy_GBI(i,j,k,iBlock,iFluid)               &
-                  - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+             State_VGB(iP,i,j,k,iBlock) =                                 &
+                  GammaMinus1_I(iFluid)*( Energy_GBI(i,j,k,iBlock,iFluid) &
+                  - 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)     &
                   /State_VGB(iRho,i,j,k,iBlock) )
           else
              Energy_GBI(i,j,k,iBlock,iFluid) =                        &
-                  inv_gm1*State_VGB(iP,i,j,k,iBlock)                  &
+                  InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
                   + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                   /State_VGB(iRho,i,j,k,iBlock)
           end if
@@ -103,7 +104,8 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(IsConserv_CB(i,j,k,iBlock)) then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  - gm1*0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+                  - GammaMinus1_I(iFluid)*0.5 * &
+                  sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           else
              Energy_GBI(i,j,k,iBlock,iFluid) = &
                   Energy_GBI(i,j,k,iBlock,iFluid) + &
@@ -134,8 +136,9 @@ contains
        call select_fluid
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VCB(iP, i, j, k,iBlock) = &
-               gm1*(EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5*   &
-               sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
+               GammaMinus1_I(iFluid)*                           &
+               ( EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5 *     &
+               sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /StateOld_VCB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
@@ -143,7 +146,8 @@ contains
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
-               - gm1*0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
+               - GammaMinus1_I(iFluid)*0.5* &
+               sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
     end do
 
@@ -168,8 +172,8 @@ contains
           if (StateOld_VCB(iRho,i,j,k,iBlock) <= 0.0)then
              EnergyOld_CBI(i,j,k,iBlock,iFluid) = 0.0
           else
-             EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
-                  inv_gm1*StateOld_VCB(iP,i,j,k,iBlock) &
+             EnergyOld_CBI(i,j,k,iBlock,iFluid) =                 &
+                  InvGammaMinus1_I(iFluid)*StateOld_VCB(iP,i,j,k,iBlock) &
                   + 0.5*(sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
                   StateOld_VCB(iRho,i,j,k,iBlock))
           end if
@@ -218,8 +222,9 @@ contains
        call select_fluid
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = &
-               gm1*(Energy_GBI(i,j,k,iBlock,iFluid) - 0.5*   &
-               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)  &
+               GammaMinus1_I(iFluid)*                        &
+               (Energy_GBI(i,j,k,iBlock,iFluid) - 0.5*       &
+               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
                /State_VGB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
@@ -227,7 +232,8 @@ contains
 
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-               - gm1*0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+               - GammaMinus1_I(iFluid)*0.5* &
+               sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
     end do
 
@@ -267,7 +273,7 @@ contains
              Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
           else
              Energy_GBI(i,j,k,iBlock,iFluid) = &
-                  inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
                   +0.5*(sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
                   State_VGB(iRho,i,j,k,iBlock))
           end if
@@ -323,7 +329,7 @@ contains
     integer, intent(in) :: iBlock
     logical, optional, intent(in) :: DoResChangeOnlyIn
 
-    integer :: i,j,k
+    integer :: i, j, k
     logical :: DoResChangeOnly
     !--------------------------------------------------------------------------
 
@@ -342,33 +348,30 @@ contains
 
        if(IsMhd .and. iFluid == 1) then
           ! MHD energy
-          where(State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) <= 0.0)
-             Energy_GBI(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, iBlock, iFluid) = 0.0
-          elsewhere
-             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = &
-                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &
-                  +0.5*((State_VGB(iRhoUx,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
-                  State_VGB(iRhoUy,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
-                  State_VGB(iRhoUz,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2)/&
-                  State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)) + &
-                  0.5*(State_VGB(Bx_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &           
-                  State_VGB(By_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 +&
-                  State_VGB(Bz_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 )
-          end where
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(State_VGB(Rho_,i,j,k,iBlock) <= 0.0)then
+                Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
+             else
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) &
+                     + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
+                     /State_VGB(Rho_,i,j,k,iBlock) + &
+                     0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+             end if
+          end do; end do; end do
        else
           ! HD energy
-          where(State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) <= 0.0)
-             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = 0.0
-          elsewhere
-             Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock,iFluid) = &
-                  inv_gm1*State_VGB(iP,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock) &
-                  +0.5*((State_VGB(iRhoUx,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 + &
-                  State_VGB(iRhoUy,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2 +&
-                  State_VGB(iRhoUz,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock)**2)/&
-                  State_VGB(iRho,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,iBlock))
-          end where
+          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+             if(State_VGB(iRho,i,j,k,iBlock) <= 0.0)then
+                Energy_GBI(i,j,k,iBlock,iFluid) = 0.0
+             else
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     InvGammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock) &
+                     + 0.5*sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+                     /State_VGB(iRho,i,j,k,iBlock)
+             end if
+          end do; end do; end do
        end if
-
     end do
 
   end subroutine calc_energy_ghost
@@ -404,8 +407,9 @@ contains
              p = State_VGB(iP,i,j,k,iBlock)
              if(p < pMin)then
                 State_VGB(iP,i,j,k,iBlock) = pMin
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) + inv_gm1*(pMin - p)
+                Energy_GBI(i,j,k,iBlock,iFluid) =      &
+                     Energy_GBI(i,j,k,iBlock,iFluid) + &
+                     InvGammaMinus1_I(iFluid)*(pMin - p)
              end if
           end do; end do; end do
        else
@@ -425,8 +429,9 @@ contains
              pMin = NumDens*Tmin_I(iFluid)
              if(p < pMin)then
                 State_VGB(iP,i,j,k,iBlock) = pMin
-                Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) + inv_gm1*(pMin - p)
+                Energy_GBI(i,j,k,iBlock,iFluid) =      &
+                     Energy_GBI(i,j,k,iBlock,iFluid) + &
+                     InvGammaMinus1_I(iFluid)*(pMin - p)
              end if
           end do; end do; end do
        else
@@ -467,7 +472,7 @@ contains
     use ModMain,       ONLY: nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
     use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
     use ModAdvance,    ONLY: State_VGB, Energy_GBI
-    use ModPhysics,    ONLY: gm1, inv_gm1, Pratio_hi, Pratio_lo
+    use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, Pratio_hi, Pratio_lo
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: Xyz_DGB
     implicit none
@@ -517,13 +522,13 @@ contains
        qpmin=min(qp,qpmin)
 
        ! Thermal energy
-       qth=inv_gm1*qp
+       qth=InvGammaMinus1*qp
 
        ! Deviation=extra total energy=qe-inv_gm1*qp-(rhoU**2/rho+B**2)/2
        qd=qE-qth                                                         &
             -0.5*(State_VGB(rhoUx_,i,j,k,iBlock)**2+                         &
             State_VGB(rhoUy_,i,j,k,iBlock)**2+                               &
-            State_VGB(rhoUz_,i,j,k,iBlock)**2)/State_VGB(rho_,i,j,k,iBlock)      &
+            State_VGB(rhoUz_,i,j,k,iBlock)**2)/State_VGB(rho_,i,j,k,iBlock)  &
             -0.5*(State_VGB(Bx_,i,j,k,iBlock)**2+                            &
             State_VGB(By_,i,j,k,iBlock)**2+                                  &
             State_VGB(Bz_,i,j,k,iBlock)**2)
@@ -540,7 +545,7 @@ contains
        qderelmax=max(qderelmax,qde/qe)
 
        ! Pressure is modified
-       State_VGB(P_,i,j,k,iBlock)=gm1*(qth+qd-qde)
+       State_VGB(P_,i,j,k,iBlock)=GammaMinus1*(qth+qd-qde)
 
        ! We should now have E=inv_gm1*P+(rhoU**2/rho+B**2)/2:
        !

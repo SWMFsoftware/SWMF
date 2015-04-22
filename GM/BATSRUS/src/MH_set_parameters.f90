@@ -1682,24 +1682,44 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#GAMMA")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('Gamma',g)
-        ! Compute gamma related values.
-        gm1     = g - 1.0
-        gm2     = g - 2.0
-        gp1     = g + 1.0
-        inv_g   = 1.0 / g
-        g_half  = 0.5*g
-        if(g /= 1.0)then
-           ! General case
-           inv_gm1 = 1.0 /gm1
-        else
-           ! Isothermal case
+        do iFluid = 1, nFluid
+           call read_var('Gamma_I',Gamma_I(iFluid))
+        end do
+        ! Derived values for fluids
+        GammaMinus1_I    = Gamma_I - 1.0
+        where(GammaMinus1_I /= 0.0)
+           InvGammaMinus1_I = 1.0 / GammaMinus1_I
+        elsewhere
+           ! This should not be used (isothermal case)
+           InvGammaMinus1_I = 1.5
+        end where
+
+        ! Isothermal case (for ions?)
+        if(any(Gamma_I == 1.0))then
            UseNonConservative = .true.
            nConservCrit = 0
            if(allocated(TypeConservCrit_I)) deallocate(TypeConservCrit_I)
            if(iProc==0) &
                 write(*,*) NameSub,': for gamma=1 UseNonConservative is set to TRUE'
         endif
+
+        ! Scalar values for the first fluid for simpler code
+        Gamma          = Gamma_I(1)
+        GammaMinus1    = GammaMinus1_I(1)
+        InvGammaMinus1 = InvGammaMinus1_I(1)
+
+        if(UseElectronPressure)then
+           call read_var('GammaElectron', GammaElectron)
+           ! Derived values for electron
+           GammaElectronMinus1    = GammaElectron - 1.0
+           InvGammaElectronMinus1 = 1.0 / GammaElectronMinus1
+        else
+           ! Default values for electrons are the same as first fluid
+           ! so ideal MHD works as expected
+           GammaElectron          = Gamma
+           GammaElectronMinus1    = GammaMinus1
+           InvGammaElectronMinus1 = InvGammaMinus1
+        end if
 
      case("#LOOKUPTABLE")
         call read_lookup_table_param

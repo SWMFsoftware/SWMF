@@ -14,7 +14,7 @@ module ModExpansionFactors
   !Dependecies to be removed
   use ModProcMH,   ONLY: iProc,nProc,iComm
   use ModIO, ONLY: iUnitOut, write_prefix
-  use ModPhysics, ONLY: UseStar,RadiusStar,MassStar
+  use ModPhysics, ONLY: RadiusStar, MassStar
   implicit none
   save
 
@@ -428,13 +428,8 @@ contains
     end select
 
     ! Finding the maximum surface value of gamma (related to the minimum speed)
-    if (UseStar) then
-       gammaSS=( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
-            /( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
-    else
-       gammaSS=( (0.5*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
-            /( (0.5*UMin**2+cSunGravitySI)/(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
-    endif
+    gammaSS=( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
+         /( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
   contains
     !==========================================================================
     subroutine advance_line_point(RInOut_D, Dir)
@@ -643,21 +638,12 @@ subroutine get_gamma_emp(xx,yy,zz,gammaOut)
      gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
   else
      call get_bernoulli_integral((/xx,yy,zz/), Uf)
-     if(UseStar)then
-        BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
-             (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
-             *(R1-RR)*&
-             & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
-             &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
-             &**nPowerIndex/ (R1-Ro_PFSSM))
-     else
-        BernoulliFactor=(0.5*Uf**2+cSunGravitySI)/&
-             (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
-             *(R1-RR)*&
-             & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
-             &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
-             &**nPowerIndex/ (R1-Ro_PFSSM)) 
-     endif
+     BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
+          (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
+          *(R1-RR)*&
+          & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
+          &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
+          &**nPowerIndex/ (R1-Ro_PFSSM))
      gammaOut = BernoulliFactor/(BernoulliFactor-1.0)
   end if
 
@@ -673,7 +659,7 @@ subroutine get_total_wave_energy_dens(X,Y,Z,&
 
   use ModExpansionFactors
   use ModConst
-  use ModPhysics,ONLY: g
+  use ModPhysics,ONLY: Gamma, GammaMinus1
   implicit none
 
   real, intent(in) :: X,Y,Z,VAlfvenSI !VAlfven should be in m/s
@@ -702,19 +688,11 @@ subroutine get_total_wave_energy_dens(X,Y,Z,&
   !An expansion factor
   call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
 
-  if(UseStar)then
-     WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI*MassStar/RadiusStar - g/(g - 1.0)*&
-          cBoltzmann/cProtonMass*&
-          CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
-          * RhoV/&
-          max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
-  else
-     WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI - g/(g - 1.0)*&
-          cBoltzmann/cProtonMass*&
-          CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
-          * RhoV/&
-          max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
-  endif
+  WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI*MassStar/RadiusStar - &
+       Gamma/GammaMinus1*cBoltzmann/cProtonMass*&
+       CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
+       * RhoV/&
+       max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
 
 end subroutine get_total_wave_energy_dens
 !====================================================================

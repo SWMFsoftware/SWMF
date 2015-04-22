@@ -16,7 +16,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModMain, ONLY: boris_correction
   use ModPhysics, ONLY : No2Io_V, UnitX_, &
-       ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, g
+       ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, Gamma_I
   use ModAdvance, ONLY : FluxType, iTypeAdvance_B, SkippedBlock_
   use ModIO
   use ModNodes, ONLY: nNodeAll, NodeNumberGlobal_NB, NodeUniqueGlobal_NB
@@ -785,7 +785,7 @@ contains
     write(unit_tmp,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
 
     !GAMMA
-    write(stmp,'(f14.6)')g
+    write(stmp,'(10(f14.6))')Gamma_I
     write(unit_tmp,'(a,a,a)') 'AUXDATA GAMMA="',trim(adjustl(stmp)),'"'
 
     !ITER

@@ -366,7 +366,7 @@ contains
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModPhysics,    ONLY: Gm1, Inv_Gm1
+    use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
     use ModAdvance,    ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure
@@ -385,14 +385,15 @@ contains
 
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
-          JouleHeating = gm1 * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
+          JouleHeating = GammaElectronMinus1 &
+               * Eta_GB(i,j,k,iBlock) * sum(Current_D**2)
        end if
        if(UseElectronPressure) then
           Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) + JouleHeating
           ! Remove Joule heating from ion energy equation
           if(UseResistiveFlux) &
                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               - inv_gm1*JouleHeating
+               - InvGammaElectronMinus1*JouleHeating
        else
           Source_VC(P_,i,j,k) = Source_VC(P_,i,j,k) + JouleHeating
 
@@ -402,7 +403,7 @@ contains
 
           if(.not.UseResistiveFlux) &
                Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) &
-               + Inv_Gm1*JouleHeating
+               + InvGammaElectronMinus1*JouleHeating
        end if
 
        ! rz-geometrical source terms
@@ -424,7 +425,7 @@ contains
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B
     use ModGeometry,   ONLY: true_cell
-    use ModPhysics,    ONLY: gm1, IonMassPerCharge
+    use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure
     use ModEnergy,     ONLY: calc_energy_cell
@@ -451,12 +452,12 @@ contains
           ! heat exchange term for the electron pressure 
           ! See eq. 4.124c in Schunk and Nagy.
 
-          ! Explicit heat exchange
-          HeatExchange = gm1 * Eta_GB(i,j,k,iBlock) * &
+          ! Explicit heat exchange (energy)
+          HeatExchange = Eta_GB(i,j,k,iBlock) * &
                3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
-          ! Point-implicit correction for stability: H' = H/(1+2*dt*H)
-          HeatExchange = HeatExchange / (1 + 2.0*DtLocal*HeatExchange)
+          ! Point-implicit correction for stability: H' = H/(1+3*dt*H)
+          HeatExchange = HeatExchange / (1 + 3.0*DtLocal*HeatExchange)
 
           HeatExchangePeP = HeatExchange &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
@@ -468,16 +469,16 @@ contains
                   - State_VGB(Pe_,i,j,k,iBlock))
 
              State_VGB(Ppar_,i,j,k,iBlock) = State_VGB(Ppar_,i,j,k,iBlock) &
-                  - DtLocal*HeatExchangePePpar
+                  - DtLocal*GammaMinus1*HeatExchangePePpar
           end if
 
           ! Heat exchange for the ions
           State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) &
-               - DtLocal*HeatExchangePeP
+               - DtLocal*GammaMinus1*HeatExchangePeP
 
           ! Heat exchange for the electrons
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
-               + DtLocal*HeatExchangePeP
+               + DtLocal*GammaElectronMinus1*HeatExchangePeP
        end do; end do; end do
 
        call calc_energy_cell(iBlock)

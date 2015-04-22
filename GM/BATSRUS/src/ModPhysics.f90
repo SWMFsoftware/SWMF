@@ -10,11 +10,23 @@ module ModPhysics
   implicit none
   save
 
-  ! adiabatic index (gamma) and derived values
-  real, parameter:: Gamma0 = 5./3.               ! default value
-  real:: g_half = Gamma0/2.0
-  real:: g = Gamma0, inv_g = 1.0/Gamma0, inv_gm1 = 1.0/(Gamma0 - 1.0)
-  real:: gm1 = Gamma0 - 1.0, gm2 = Gamma0 - 2.0, gp1 = Gamma0 + 1.0
+  ! default gamma value
+  real, parameter:: Gamma0 = 5./3.
+
+  ! adiabatic index (gamma) and derived values for fluids
+  real:: Gamma_I(nFluid)          = 5./3.
+  real:: GammaMinus1_I(nFluid)    = 5./3. - 1.0
+  real:: InvGammaMinus1_I(nFluid) = 1.0/(5./3. - 1.0)
+
+  ! adiabatic index (gamma) and derived values for the first/total fluid
+  real :: Gamma          = 5./3.
+  real :: GammaMinus1    = 5./3. - 1.0
+  real :: InvGammaMinus1 = 1.0/(5./3. - 1.0)
+
+  ! adiabatic index (gamma) and derived values for electrons
+  real :: GammaElectron          = 5./3.
+  real :: GammaElectronMinus1    = 5./3. - 1.0
+  real :: InvGammaElectronMinus1 = 1.0/(5./3. - 1.0)
 
   ! gamma of the waves
   real:: GammaWave = 1.5

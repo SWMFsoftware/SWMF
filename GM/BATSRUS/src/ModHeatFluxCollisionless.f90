@@ -66,13 +66,13 @@ contains
     use ModVarIndexes, ONLY: Pe_, P_, Ehot_
     use ModSize
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: inv_gm1
+    use ModPhysics,    ONLY: InvGammaElectronMinus1
     use ModEnergy,     ONLY: calc_energy_cell
 
     integer, intent(in) :: iBlock
 
     integer:: i, j, k, iP
-    real:: Gamma
+    real:: GammaHere
     !--------------------------------------------------------------------------
 
     ! We use a varying gamma for the electrons to parameterize the
@@ -82,13 +82,13 @@ contains
     if(UseElectronPressure) iP = Pe_
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
+       call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaHere)
 
-       State_VGB(iP,i,j,k,iBlock) = (Gamma - 1) &
-            *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+       State_VGB(iP,i,j,k,iBlock) = (GammaHere - 1) &
+            *(InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
             + State_VGB(Ehot_,i,j,k,iBlock))
        State_VGB(Ehot_,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-            *(1.0/(Gamma - 1) - inv_gm1)
+            *(1.0/(GammaHere - 1) - InvGammaElectronMinus1)
     end do; end do; end do
 
     call calc_energy_cell(iBlock)
@@ -97,15 +97,15 @@ contains
 
   !============================================================================
 
-  subroutine get_gamma_collisionless(x_D, Gamma)
+  subroutine get_gamma_collisionless(x_D, GammaOut)
 
     use BATL_lib,   ONLY: MaxDim
-    use ModPhysics, ONLY: g, inv_gm1
+    use ModPhysics, ONLY: GammaElectron, InvGammaElectronMinus1
     use ModAdvance, ONLY: UseElectronPressure
     use ModMain,    ONLY: UseHeatConduction
 
     real, intent(in) :: x_D(MaxDim)
-    real, intent(out) :: Gamma
+    real, intent(out) :: GammaOut
 
     real :: r
     real :: GammaCollisionless
@@ -114,22 +114,24 @@ contains
     r = sqrt(sum(x_D**2))
 
     if(UseElectronPressure)then
-       GammaCollisionless = (inv_gm1*g + 1.5*CollisionlessAlpha) &
-            /(inv_gm1 + 1.5*CollisionlessAlpha)
+       GammaCollisionless = &
+            (InvGammaElectronMinus1*GammaElectron + 1.5*CollisionlessAlpha) &
+            /(InvGammaElectronMinus1 + 1.5*CollisionlessAlpha)
     else
-       GammaCollisionless = (inv_gm1*g + 0.75*CollisionlessAlpha) &
-            /(inv_gm1 + 0.75*CollisionlessAlpha)
+       GammaCollisionless = &
+            (InvGammaElectronMinus1*GammaElectron + 0.75*CollisionlessAlpha) &
+            /(InvGammaElectronMinus1 + 0.75*CollisionlessAlpha)
     end if
 
     if(.not.UseHeatConduction)then
-       Gamma = GammaCollisionless
+       GammaOut = GammaCollisionless
     elseif(rCollisionless < 0.0)then
-       Gamma = GammaCollisionless &
-            + (g-GammaCollisionless)/((r/rCollisional)**2 + 1)
+       GammaOut = GammaCollisionless &
+            + (GammaElectron-GammaCollisionless)/((r/rCollisional)**2 + 1)
     elseif(r <= rCollisional)then
-       Gamma = g
+       GammaOut = GammaElectron
     else
-       Gamma = GammaCollisionless + (g-GammaCollisionless)* &
+       GammaOut = GammaCollisionless + (GammaElectron-GammaCollisionless)* &
             exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
     end if
 

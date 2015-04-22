@@ -1514,7 +1514,7 @@ contains
 
       ! The HLLD scheme works for single ion fluid only
 
-      use ModPhysics, ONLY: Inv_Gm1, gm1
+      use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1
       use ModNumConst, ONLY: cTiny
 
       implicit none
@@ -1659,7 +1659,7 @@ contains
          end if
 
          ! Calculate energy of outer left intermediate state
-         eL = Inv_Gm1*pL + PbL + 0.5*RhoL*(UnL**2 + Ut1L**2 + Ut2L**2)
+         eL = InvGammaMinus1*pL + PbL + 0.5*RhoL*(UnL**2 + Ut1L**2 + Ut2L**2)
          uDotB1L  = UnL*B1n + Ut1L *B1t1L  + Ut2L *B1t2L
          uDotB1L1 = Un *B1n + Ut1L1*B1t1L1 + Ut2L1*B1t2L1
          e = (DsL*eL - PtotL*UnL + Ptot12*Un + Bn*(uDotB1L - uDotB1L1))*InvSLUn
@@ -1732,7 +1732,7 @@ contains
          end if
 
          ! Calculate energy of outer right intermediate state
-         eR = Inv_Gm1*pR + PbR + 0.5*RhoR*(UnR**2 + Ut1R**2 + Ut2R**2)
+         eR = InvGammaMinus1*pR + PbR + 0.5*RhoR*(UnR**2 + Ut1R**2 + Ut2R**2)
          uDotB1R  = UnR*B1n + Ut1R*B1t1R + Ut2R*B1t2R
          uDotB1R1 = Un*B1n + Ut1R1*B1t1R1 + Ut2R1*B1t2R1
          e = (DsR*eR - PtotR*UnR + Ptot12*Un + Bn*(uDotB1R - uDotB1R1))*InvSRUn
@@ -1787,7 +1787,8 @@ contains
       RhoUn  = Rho*Un
       Bt1 = B1t1 + B0t1
       Bt2 = B1t2 + B0t2
-      p = gm1*(e - 0.5*(B1n2 + B1t1**2 + B1t2**2 + Rho*(Un**2+Ut1**2+Ut2**2)))
+      p = GammaMinus1* &
+           (e - 0.5*(B1n2 + B1t1**2 + B1t2**2 + Rho*(Un**2+Ut1**2+Ut2**2)))
 
       if(DoTestCell)write(*,*)'hlld: State,pTot12=',&
            Rho,Un,Ut1,Ut2,B1n,B1t1,B1t2,p,pTot12
@@ -1836,11 +1837,12 @@ contains
     subroutine godunov_flux
 
       ! The Godunov flux works for hydro fluid (no magnetic field)
+      ! Called for each fluid separately. Uses iFluid, iRho, ...
 
       use ModAdvance,  ONLY: UseElectronPressure
-      use ModExactRS,  ONLY: wR, wL, sample, pu_star, RhoL, RhoR, &
-           pL, pR, UnL, UnR, UnStar, pStar
-      use ModPhysics,  ONLY: inv_gm1, g
+      use ModExactRS,  ONLY: wR, wL,  RhoL, RhoR, pL, pR, UnL, UnR, &
+           UnStar, pStar, exact_rs_set_gamma, exact_rs_sample, exact_rs_pu_star
+      use ModPhysics,  ONLY: InvGammaMinus1_I, Gamma_I, InvGammaMinus1
       use ModWaves,    ONLY: UseWavePressure, GammaWave
 
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
@@ -1861,10 +1863,12 @@ contains
       UnL  = sum( StateLeft_V(iUx:iUz) *Normal_D )
       UnR  = sum( StateRight_V(iUx:iUz)*Normal_D )
 
-      if(UseWavePressure)then
+      call exact_rs_set_gamma(Gamma_I(iFluid))
+
+      if(UseWavePressure .and. iFluid==1)then
+         ! Add the radiation/wave pressure to the total pressure
+         ! This is for radiation pressure in CRASH applications.
          ! Increase maximum speed due to isotropic wave pressure
-         ! To achieve this the pressure is increased by the value of the
-         ! wave pressure
          pWaveL = (GammaWave - 1)*sum(StateLeft_V(WaveFirst_:WaveLast_))
          pWaveR = (GammaWave - 1)*sum(StateRight_V(WaveFirst_:WaveLast_))
          pL = pL + pWaveL
@@ -1874,8 +1878,10 @@ contains
          pWaveL = 0.0; pWaveR = 0.0
       end if
       if(UseElectronPressure .and. iFluid==1)then
-         ! StateLeft_V(iP) and StateRight_V(iP) are the ion pressure
          ! Add the electron pressure to the total pressure
+         ! This is for ions coupled to electrons by collisions
+         ! but there is no magnetic field (e.g. CRASH applications)
+         ! GammaElectron=Gamma (ion) is assumed by the Godunov solver.
          PeL = StateLeft_V(Pe_)
          PeR = StateRight_V(Pe_)
          pL = pL + PeL
@@ -1887,7 +1893,7 @@ contains
       end if
 
       ! Take the parameters at the Contact Discontinuity (CD)
-      call pu_star
+      call exact_rs_pu_star
 
       ! At strong shocks use the artificial wind scheme
       if((pStar > 2*pL .and. wL < 0.0).or.(pStar > 2*pR .and. wR > 0.0))then
@@ -1923,14 +1929,14 @@ contains
       end if
 
       ! Take the parameters at the face
-      call sample(0.0, Rho, Un, p)
+      call exact_rs_sample(0.0, Rho, Un, p)
 
       ! In order the Riemann problem solution to be governed by the
       ! total pressure, the wave pressure should behave 
       ! adiabatically, with the same polytropic index as that for the gas
 
       Isothermal           = Rho/RhoSide
-      Adiabatic            = Isothermal**g
+      Adiabatic            = Isothermal**Gamma_I(iFluid)
       pWaveStar            = pWaveSide*Adiabatic
       PeStar               = PeSide*Adiabatic
 
@@ -1959,16 +1965,17 @@ contains
 
       ! (4) energy flux: (e + p)*u
       ! also add the work done by the radiation and electron pressure gradient
-      e = inv_gm1*p + 0.5*sum(StateStar_V(iRhoUx:iRhoUz)**2)/Rho
+      e = InvGammaMinus1_I(iFluid)*p &
+           + 0.5*sum(StateStar_V(iRhoUx:iRhoUz)**2)/Rho
       Flux_V(iEnergyMin) = (e + pTotal)*Un
 
       Cmax                 = max(wR, -wL)
       CmaxDt               = Cmax
-      Unormal_I(iFluidMin) = Un
+      Unormal_I(iFluid)    = Un
 
-      if(iFluidMin == 1)then
+      if(iFluid == 1)then
          if(UseWavePressure)then
-            GammaRatio = inv_gm1*(GammaWave - 1)
+            GammaRatio = InvGammaMinus1*(GammaWave - 1)
             Factor = (1.0 - GammaRatio) + GammaRatio*Adiabatic/Isothermal
             do iVar = WaveFirst_, WaveLast_
                Flux_V(iVar) = Factor*StateStar_V(iVar)*Un
@@ -2027,7 +2034,7 @@ contains
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModPhysics,  ONLY: gm1
+    use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1
     use ModWaves
     use BATL_size,   ONLY: nDim  
 
@@ -2214,14 +2221,14 @@ contains
     if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(DoHeatConduction)then
        if(UseElectronPressure)then
-          Flux_V(Pe_) = Flux_V(Pe_) + gm1*HeatFlux
+          Flux_V(Pe_) = Flux_V(Pe_) + GammaElectronMinus1*HeatFlux
        else
-          Flux_V(p_) = Flux_V(p_) + gm1*HeatFlux
+          Flux_V(p_) = Flux_V(p_) + GammaMinus1*HeatFlux
           Flux_V(Energy_) = Flux_V(Energy_) + HeatFlux
        end if
     end if
     if(DoIonHeatConduction)then
-       Flux_V(p_) = Flux_V(p_) + gm1*IonHeatFlux
+       Flux_V(p_) = Flux_V(p_) + GammaMinus1*IonHeatFlux
        Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
     end if
 
@@ -2233,7 +2240,7 @@ contains
 
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: inv_gm1, Inv_C2light, InvClight
+      use ModPhysics, ONLY: InvGammaMinus1, Inv_C2light, InvClight
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
       ! Variables for conservative state and flux calculation
@@ -2261,7 +2268,7 @@ contains
       E2Half  = 0.5*(Ex**2 + Ey**2 + Ez**2)
 
       ! Calculate energy and total pressure
-      e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      e = InvGammaMinus1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
       pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
 
@@ -2338,7 +2345,7 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: inv_gm1, inv_c2LIGHT
+      use ModPhysics, ONLY: InvGammaMinus1, inv_c2LIGHT
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
       ! Variables for conservative state and flux calculation
@@ -2361,7 +2368,7 @@ contains
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Calculate energy
-      e = inv_gm1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
+      e = InvGammaMinus1*p + 0.5*(Rho*(Ux**2 + Uy**2 + Uz**2) + B2)
 
       ! Calculate some intermediate values for flux calculations
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
@@ -2574,7 +2581,7 @@ contains
     subroutine get_hd_flux
 
       use ModAdvance, ONLY: UseElectronPressure
-      use ModPhysics, ONLY: inv_gm1
+      use ModPhysics, ONLY: InvGammaMinus1_I
       use ModWaves
 
       ! Variables for conservative state and flux calculation
@@ -2588,7 +2595,7 @@ contains
       p       = State_V(iP)
 
       ! Calculate energy
-      e = inv_gm1*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
+      e = InvGammaMinus1_I(iFluid)*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
 
       pTotal = p
 
@@ -2909,7 +2916,7 @@ contains
     !========================================================================
     subroutine get_boris_speed
 
-      use ModPhysics, ONLY: g, inv_c2LIGHT
+      use ModPhysics, ONLY: Gamma, inv_c2LIGHT, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
@@ -2923,26 +2930,30 @@ contains
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
-      FullB2 = FullBx**2+FullBy**2+FullBz**2
+      FullB2 = FullBx**2 + FullBy**2 + FullBz**2
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
 
-      ! Calculate Sound2
+      ! Calculate sound speed squared
       if(UseAnisoPressure .and. FullB2 > 0)then
-         GammaPe = 0.0 
-         if(UseElectronPressure) GammaPe = g*State_V(Pe_) ! considering Pe
          Ppar  = State_V(Ppar_)
          Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
-         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
-              + GammaPe)                        ! define Sound2 in this way
-      else 
-         if(UseElectronPressure) p = p + State_V(Pe_)
-         Sound2 = g*p*InvRho
-         if(UseWavePressure)&
-              Sound2 = Sound2 + GammaWave * (GammaWave - 1)*&
-              sum(State_V(WaveFirst_:WaveLast_))*InvRho      
+         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
+      else
+         Sound2 = InvRho*Gamma*p
       end if
 
+      ! Add contribution of electron pressure
+      if(UseElectronPressure)then
+         GammaPe = GammaElectron*State_V(Pe_)
+         Sound2 = Sound2 + InvRho*GammaPe
+      else
+         GammaPe = 0.0
+      end if
+
+      ! Wave pressure = (GammaWave - 1)*WaveEnergy
+      if(UseWavePressure) Sound2 = Sound2 + InvRho*GammaWave &
+           * (GammaWave - 1)*sum(State_V(WaveFirst_:WaveLast_))
 
       Alfven2= FullB2*InvRho
       Alfven2Normal = InvRho*FullBn**2
@@ -3007,16 +3018,17 @@ contains
     subroutine get_mhd_speed
 
       use ModB0,       ONLY: UseCurlB0
-      use ModPhysics,  ONLY: g, Inv_C2Light, ElectronPressureRatio
+      use ModPhysics,  ONLY: Gamma, Inv_C2Light, ElectronPressureRatio, &
+           GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
 
-      real :: RhoU_D(3)
-      real :: Rho, p, InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
-      real :: Ppar, Pperp, BnInvB2, GammaPe, Pw
-      real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
-      real :: dB1dB1
+      real:: RhoU_D(3)
+      real:: Rho, InvRho, GammaP, GammaPe, Pw, Sound2, Ppar, Pperp
+      real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
+      real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
+      real:: dB1dB1
 
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R
@@ -3029,25 +3041,32 @@ contains
       if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
 
       Rho    = State_V(Rho_)
-      p      = State_V(p_)
+      GammaP = State_V(p_)*Gamma
       RhoU_D = Rho*State_V(Ux_:Uz_)
       if(.not. IsMhd)then
          do jFluid = 2, nIonFluid
             Rho1= State_V(iRhoIon_I(jFluid))
             Rho = Rho + Rho1
-            p   = p   + State_V(iPIon_I(jFluid))
+            GammaP = GammaP + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)
             RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))
          end do
-         if(.not.UseElectronPressure) p = p * (1 + ElectronPressureRatio)
+         ! This only works for multi-ion with no separate Pe and same gammas
+         if(.not.UseElectronPressure) &
+              GammaP = GammaP * (1 + ElectronPressureRatio)
       end if
 
-      if(UseElectronPressure) p = p + State_V(Pe_)
+      if(UseElectronPressure)then
+         GammaPe = GammaElectron*State_V(Pe_)
+         GammaP = GammaP + GammaPe
+      else
+         GammaPe = 0.0
+      end if
 
       InvRho = 1.0/Rho
       if(UseRS7)then
-         Sound2 = (g*p+(g-1)*DiffBb)*InvRho
+         Sound2 = (GammaP + GammaMinus1*DiffBb)*InvRho
       else
-         Sound2 = g*p*InvRho
+         Sound2 = GammaP*InvRho
       end if
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
@@ -3098,15 +3117,8 @@ contains
       if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
       if(UseAnisoPressure .and. FullB2 > 0)then
          Ppar  = State_V(Ppar_)
-         Pperp = (3*p - Ppar)/2.
-         GammaPe = 0.0 
-         if(UseElectronPressure)then
-            GammaPe = g*State_V(Pe_) ! considering Pe
-            Pperp = Pperp - 3*State_V(Pe_)/2. ! Pe was added to p previously
-         end if
          BnInvB2 = FullBn**2/FullB2
-         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 &
-              + GammaPe)                        ! define Sound2 in this way
+         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
          Fast2 = Sound2 + Alfven2 
          Discr = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
@@ -3124,7 +3136,7 @@ contains
          write(*,*)NameSub, &
               ' negative fast speed squared, Fast2, Discr=', Fast2, Discr
          write(*,*) NameSub, &
-              ' iFluid, rho, p(face)   =', iFluid, Rho, p
+              ' iFluid, rho, p(face)   =', iFluid, Rho, State_V(p_)
          if(UseAnisoPressure) write(*,*) NameSub, &
               ' Ppar, Perp             =', Ppar, Pperp
          if(UseElectronPressure) write(*,*) NameSub, &
@@ -3262,9 +3274,9 @@ contains
     subroutine get_hd_speed
 
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
-      use ModPhysics, ONLY: g
+      use ModPhysics, ONLY: Gamma_I, GammaElectron
 
-      real :: InvRho, Sound2, Sound, Un, p
+      real :: InvRho, Sound2, Sound, Un, GammaP
 
       character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed'
       !------------------------------------------------------------------------
@@ -3273,25 +3285,29 @@ contains
 
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
-      p = State_V(iP)
+      GammaP = Gamma_I(iFluid)*State_V(iP)
 
-      if(UseElectronPressure .and. .not.UseMultiIon) p = p + State_V(Pe_)
-      Sound2 = g*p*InvRho
+      if(UseElectronPressure .and. iFluid==1) &
+           GammaP = GammaP + GammaElectron*State_V(Pe_)
 
-      if(UseWavePressure .and. .not.UseMultiIon) &
-           Sound2 = Sound2 + GammaWave*(GammaWave-1)*InvRho &
-           *sum(State_V(WaveFirst_:WaveLast_))
+      ! Wave pressure = (GammaWave - 1)*WaveEnergy
+      if(UseWavePressure .and. iFluid==1) GammaP = GammaP &
+           + GammaWave*(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
+
+      ! Sound speed
+      Sound2 = GammaP*InvRho
 
       if(Sound2 <= 0.0)then
          write(*,*)NameSub,' negative Sound2=',Sound2
-         write(*,*)NameSub,' iFluid, rho, p(face) =', &
-              iFluid, State_V(iRho), State_V(iP)
+         write(*,*)NameSub,' iFluid, rho, gamma, p(face) =', &
+              iFluid, State_V(iRho), Gamma_I(iFluid), State_V(iP)
 
          if(UseWavePressure)write(*,*)NameSub,' GammaWave, State(Waves):',&
               GammaWave, State_V(WaveFirst_:WaveLast_)
 
-         if(UseElectronPressure)write(*,*)NameSub,' g,State_V(Pe_)=',&
-              g,State_V(Pe_)
+         if(UseElectronPressure) &
+              write(*,*)NameSub,' GammaElectron, State_V(Pe_)=',&
+              GammaElectron,State_V(Pe_)
 
          write(*,*)NameSub,' rho, p(left) =', &
               State_VGB( (/Rho_,p_/),iLeft,jLeft,kLeft,iBlockFace)
@@ -3452,7 +3468,7 @@ subroutine roe_solver(Flux_V)
 
   use ModVarIndexes, ONLY: Rho_, p_, Energy_, ScalarFirst_, ScalarLast_
 
-  use ModPhysics,  ONLY: g,gm1,inv_gm1
+  use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
   use ModNumConst
 
   implicit none
@@ -3527,14 +3543,14 @@ subroutine roe_solver(Flux_V)
   Bt1L = B0t1+B1t1L
   Bt2L = B0t2+B1t2L
   BbL  = BnL**2 + Bt1L**2 + Bt2L**2
-  aL   = g*pL*RhoInvL
+  aL   = Gamma*pL*RhoInvL
 
   RhoInvR = 1./RhoR
   BnR  = B0n+B1nR
   Bt1R = B0t1+B1t1R
   Bt2R = B0t2+B1t2R
   BbR  = BnR**2 + Bt1R**2 + Bt2R**2
-  aR   = g*pR*RhoInvR
+  aR   = Gamma*pR*RhoInvR
 
   !\
   ! Hat face
@@ -3554,7 +3570,7 @@ subroutine roe_solver(Flux_V)
   BbH  = BnH**2  + Bt1H**2  + Bt2H**2
 
   Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
-  aH   = g*pH*RhoInvH
+  aH   = Gamma*pH*RhoInvH
 
   !if(aL<0.0)then
   !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
@@ -3588,7 +3604,7 @@ subroutine roe_solver(Flux_V)
   CfH  = 0.5*(eH+CfH)
 
   UuH  = UnH**2 + Ut1H**2 + Ut2H**2
-  eH   = pH*inv_gm1 + 0.5*RhoH*UuH + 0.5*Bb1H
+  eH   = pH*InvGammaMinus1 + 0.5*RhoH*UuH + 0.5*Bb1H
 
   CsL=sqrt(CsL)
   CsR=sqrt(CsR)
@@ -3645,7 +3661,7 @@ subroutine roe_solver(Flux_V)
 
 
   SignBnH     = sign(1.,BnH)
-  Gamma1A2Inv = gm1 / aH**2
+  Gamma1A2Inv = GammaMinus1 / aH**2
 
   !\
   ! Eigenvalues
@@ -3775,51 +3791,51 @@ subroutine roe_solver(Flux_V)
 
   ! Left eigenvector for Slow magnetosonic wave +
   EigenvectorL_VV(1,4) = Tmp1* &
-       (AlphaS*(gm1*UuH/2. - UnH*CsH) - &
+       (AlphaS*(GammaMinus1*UuH/2. - UnH*CsH) - &
        AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-  EigenvectorL_VV(2,4) = Tmp1*(AlphaS*(-UnH*gm1+CsH))
-  EigenvectorL_VV(3,4) = Tmp1*(-gm1*AlphaS*Ut1H + AlphaF*CfH*BetaY*SignBnH)
-  EigenvectorL_VV(4,4) = Tmp1*(-gm1*AlphaS*Ut2H + AlphaF*CfH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,4) = Tmp1*(-gm1*B1nH*AlphaS)
-  EigenvectorL_VV(6,4) = Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-gm1*B1t1H*AlphaS)
-  EigenvectorL_VV(7,4) = Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH - gm1*B1t2H*AlphaS)
-  EigenvectorL_VV(8,4) = Tmp1*(gm1*AlphaS)
+  EigenvectorL_VV(2,4) = Tmp1*(AlphaS*(-UnH*GammaMinus1+CsH))
+  EigenvectorL_VV(3,4) = Tmp1*(-GammaMinus1*AlphaS*Ut1H+AlphaF*CfH*BetaY*SignBnH)
+  EigenvectorL_VV(4,4) = Tmp1*(-GammaMinus1*AlphaS*Ut2H+AlphaF*CfH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,4) = Tmp1*(-GammaMinus1*B1nH*AlphaS)
+  EigenvectorL_VV(6,4) = Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+  EigenvectorL_VV(7,4) = Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+  EigenvectorL_VV(8,4) = Tmp1*(GammaMinus1*AlphaS)
 
   ! Left eigenvector for Fast magnetosonic wave +
   EigenvectorL_VV(1,5) = Tmp1* &
-       (AlphaF*(gm1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
+       (AlphaF*(GammaMinus1*UuH/2. - UnH*CfH)+AlphaS*CsH*SignBnH* &
        (Ut1H*BetaY + Ut2H*BetaZ))
-  EigenvectorL_VV(2,5) = Tmp1*(AlphaF*(-UnH*gm1+CfH))
-  EigenvectorL_VV(3,5) = Tmp1*(-gm1*AlphaF*Ut1H - AlphaS*CsH*BetaY*SignBnH)
-  EigenvectorL_VV(4,5) = Tmp1*(-gm1*AlphaF*Ut2H - AlphaS*CsH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,5) = Tmp1*(-gm1*B1nH*AlphaF)
-  EigenvectorL_VV(6,5) = Tmp1*(AlphaS*BetaY*aH*RhoSqrtH - gm1*B1t1H*AlphaF)
-  EigenvectorL_VV(7,5) = Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH - gm1*B1t2H*AlphaF)
-  EigenvectorL_VV(8,5) = Tmp1*(gm1*AlphaF)
+  EigenvectorL_VV(2,5) = Tmp1*(AlphaF*(-UnH*GammaMinus1+CfH))
+  EigenvectorL_VV(3,5) = Tmp1*(-GammaMinus1*AlphaF*Ut1H-AlphaS*CsH*BetaY*SignBnH)
+  EigenvectorL_VV(4,5) = Tmp1*(-GammaMinus1*AlphaF*Ut2H-AlphaS*CsH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,5) = Tmp1*(-GammaMinus1*B1nH*AlphaF)
+  EigenvectorL_VV(6,5) = Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+  EigenvectorL_VV(7,5) = Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+  EigenvectorL_VV(8,5) = Tmp1*(GammaMinus1*AlphaF)
 
   ! Left eigenvector for Slow magnetosonic wave -
   EigenvectorL_VV(1,6) = Tmp1* &
-       (AlphaS*(gm1*UuH/2. + UnH*CsH) + &
+       (AlphaS*(GammaMinus1*UuH/2. + UnH*CsH) + &
        AlphaF*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-  EigenvectorL_VV(2,6) = Tmp1*(AlphaS*(-UnH*gm1-CsH))
-  EigenvectorL_VV(3,6) = Tmp1*(-gm1*AlphaS*Ut1H - AlphaF*CfH*BetaY*SignBnH)
-  EigenvectorL_VV(4,6) = Tmp1*(-gm1*AlphaS*Ut2H - AlphaF*CfH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,6) = Tmp1*(-gm1*B1nH*AlphaS)
-  EigenvectorL_VV(6,6) = Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-gm1*B1t1H*AlphaS)
-  EigenvectorL_VV(7,6) = Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-gm1*B1t2H*AlphaS)
-  EigenvectorL_VV(8,6) = Tmp1*(gm1*AlphaS)
+  EigenvectorL_VV(2,6) = Tmp1*(AlphaS*(-UnH*GammaMinus1-CsH))
+  EigenvectorL_VV(3,6) = Tmp1*(-GammaMinus1*AlphaS*Ut1H-AlphaF*CfH*BetaY*SignBnH)
+  EigenvectorL_VV(4,6) = Tmp1*(-GammaMinus1*AlphaS*Ut2H-AlphaF*CfH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,6) = Tmp1*(-GammaMinus1*B1nH*AlphaS)
+  EigenvectorL_VV(6,6) = Tmp1*(-AlphaF*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaS)
+  EigenvectorL_VV(7,6) = Tmp1*(-AlphaF*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaS)
+  EigenvectorL_VV(8,6) = Tmp1*(GammaMinus1*AlphaS)
 
   ! Left eigenvector for Fast magnetosonic wave -
   EigenvectorL_VV(1,7) = Tmp1* &
-       (AlphaF*(gm1*UuH/2. + UnH*CfH) - &
+       (AlphaF*(GammaMinus1*UuH/2. + UnH*CfH) - &
        AlphaS*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
-  EigenvectorL_VV(2,7) = Tmp1*(AlphaF*(-UnH*gm1-CfH))
-  EigenvectorL_VV(3,7) = Tmp1*(-gm1*AlphaF*Ut1H + AlphaS*CsH*BetaY*SignBnH)
-  EigenvectorL_VV(4,7) = Tmp1*(-gm1*AlphaF*Ut2H + AlphaS*CsH*BetaZ*SignBnH)
-  EigenvectorL_VV(5,7) = Tmp1*(-gm1*B1nH*AlphaF)
-  EigenvectorL_VV(6,7) = Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-gm1*B1t1H*AlphaF)
-  EigenvectorL_VV(7,7) = Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-gm1*B1t2H*AlphaF)
-  EigenvectorL_VV(8,7) = Tmp1*(gm1*AlphaF)
+  EigenvectorL_VV(2,7) = Tmp1*(AlphaF*(-UnH*GammaMinus1-CfH))
+  EigenvectorL_VV(3,7) = Tmp1*(-GammaMinus1*AlphaF*Ut1H+AlphaS*CsH*BetaY*SignBnH)
+  EigenvectorL_VV(4,7) = Tmp1*(-GammaMinus1*AlphaF*Ut2H+AlphaS*CsH*BetaZ*SignBnH)
+  EigenvectorL_VV(5,7) = Tmp1*(-GammaMinus1*B1nH*AlphaF)
+  EigenvectorL_VV(6,7) = Tmp1*(AlphaS*BetaY*aH*RhoSqrtH-GammaMinus1*B1t1H*AlphaF)
+  EigenvectorL_VV(7,7) = Tmp1*(AlphaS*BetaZ*aH*RhoSqrtH-GammaMinus1*B1t2H*AlphaF)
+  EigenvectorL_VV(8,7) = Tmp1*(GammaMinus1*AlphaF)
 
   ! Left eigenvector for Divergence wave
   EigenvectorL_VV(1,8) = 0.
@@ -3832,7 +3848,7 @@ subroutine roe_solver(Flux_V)
   EigenvectorL_VV(8,8) = 0.
 
   !coefficient for pressure component of the Right vector
-  Tmp1=g*max(pL,pR) 
+  Tmp1=Gamma*max(pL,pR) 
 
   !Pressure component is not linearly independent and obeys the 
   ! equation as follows:
@@ -3889,7 +3905,7 @@ subroutine roe_solver(Flux_V)
   EigenvectorR_VV(4,6) = -AlphaF*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(4,7) = -AlphaF*aH*BetaZ*RhoSqrtH
   EigenvectorR_VV(4,eMhd_) = &
-       AlphaS*(RhoH*UuH*0.5 + g*pH*inv_gm1+RhoH*UnH*CsH) &
+       AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CsH) &
        - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
        - RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorR_VV(4,pMhd_)=Tmp1*AlphaS
@@ -3903,7 +3919,7 @@ subroutine roe_solver(Flux_V)
   EigenvectorR_VV(5,6) = AlphaS*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(5,7) = AlphaS*aH*BetaZ*RhoSqrtH
   EigenvectorR_VV(5,eMhd_) = &
-       AlphaF*(RhoH*UuH*0.5 + g*pH*inv_gm1+RhoH*UnH*CfH) &
+       AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1+RhoH*UnH*CfH) &
        + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
        - RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorR_VV(5,pMhd_)=Tmp1*AlphaF
@@ -3917,7 +3933,7 @@ subroutine roe_solver(Flux_V)
   EigenvectorR_VV(6,6) = - AlphaF*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(6,7) = - AlphaF*aH*BetaZ*RhoSqrtH
   EigenvectorR_VV(6,eMhd_) = &
-       AlphaS*(RhoH*UuH*0.5 + g*pH*inv_gm1-RhoH*UnH*CsH) &
+       AlphaS*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CsH) &
        - AlphaF*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
        + RhoH*CfH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorR_VV(6,pMhd_)=Tmp1*AlphaS
@@ -3931,7 +3947,7 @@ subroutine roe_solver(Flux_V)
   EigenvectorR_VV(7,6) = AlphaS*aH*BetaY*RhoSqrtH
   EigenvectorR_VV(7,7) = AlphaS*aH*BetaZ*RhoSqrtH
   EigenvectorR_VV(7,eMhd_) = &
-       AlphaF*(RhoH*UuH*0.5 + g*pH*inv_gm1-RhoH*UnH*CfH) &
+       AlphaF*(RhoH*UuH*0.5 + Gamma*pH*InvGammaMinus1-RhoH*UnH*CfH) &
        + AlphaS*(aH*RhoSqrtH*(BetaY*B1t1H + BetaZ*B1t2H) &
        + RhoH*CsH*SignBnH*(Ut1H*BetaY + Ut2H*BetaZ))
   EigenvectorR_VV(7,pMhd_)=Tmp1*AlphaF

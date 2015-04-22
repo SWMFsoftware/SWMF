@@ -1572,8 +1572,8 @@ contains
     use ModMain, ONLY: Time_Simulation, dt, nBlock, Unused_B
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, UseElectronPressure, UseIdealEos
-    use ModPhysics,  ONLY: inv_gm1, gm1, No2Si_V, &
-         UnitP_, UnitEnergyDens_, ExtraEintMin
+    use ModPhysics,  ONLY: InvGammaElectronMinus1, GammaElectronMinus1, &
+         No2Si_V, UnitP_, UnitEnergyDens_, ExtraEintMin
     use ModVarIndexes, ONLY: Pe_
     use ModGeometry, ONLY: x1
     use ModUserInterface ! user_material_properties
@@ -1613,7 +1613,7 @@ contains
     call get_energy_source
 
     iP = p_
-    if(UseElectronPressure) iP = Pe_
+    if(UseElectronPressure)  iP = Pe_
 
     ! Why ???
     if(UseNonConservative) &
@@ -1650,7 +1650,7 @@ contains
 
           if(UseIdealEos)then
              State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
-                  + gm1*LaserHeating_CB(i,j,k,iBlock)
+                  + GammaElectronMinus1*LaserHeating_CB(i,j,k,iBlock)
           else
              ! Single temperature:
              !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
@@ -1663,7 +1663,7 @@ contains
              !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
              !   Electron internal energy Eint^n+1 = Pe^*/(g-1) + ExtraEInt^*
              EinternalSi = No2Si_V(UnitEnergyDens_) &
-                  *(inv_gm1*State_VGB(iP,i,j,k,iBlock) &
+                  *(InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock) &
                   + State_VGB(ExtraEint_,i,j,k,iBlock) &
                   + LaserHeating_CB(i,j,k,iBlock))
 
@@ -1679,7 +1679,7 @@ contains
              ! Set ExtraEint^n+1 = Eint^n+1 - p^n+1/(g -1)
              State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
                   Si2No_V(UnitEnergyDens_)*EinternalSi &
-                  - inv_gm1*State_VGB(iP,i,j,k,iBlock))
+                  - InvGammaElectronMinus1*State_VGB(iP,i,j,k,iBlock))
           end if
        end do; end do; end do
 

@@ -108,7 +108,7 @@ contains
          get_radiative_cooling, add_chromosphere_heating
     use ModChromosphere, ONLY: DoExtendTransitionRegion, extension_factor, &
          UseChromosphereHeating, get_tesi_c, TeSi_C
-    use ModPhysics, ONLY: inv_gm1
+    use ModPhysics, ONLY: InvGammaMinus1
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
@@ -222,7 +222,7 @@ contains
              ! Only limit for losses
              if(Source >= -1e-30) CYCLE
 
-             Einternal = inv_gm1*State_VGB(p_,i,j,k,iBlock)
+             Einternal = InvGammaMinus1*State_VGB(p_,i,j,k,iBlock)
 
              Dt_loss = 0.5*Einternal/abs(Source)
              ! The following prevents the pressure from becoming negative
@@ -287,7 +287,7 @@ contains
     use ModGeometry, ONLY: true_cell, true_BLK, XyzStart_BLK
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitX_, UnitU_, UnitT_, UnitB_, &
-         UnitRho_, g
+         UnitRho_, Gamma
     use ModNumConst
     use ModMpi
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB
@@ -334,7 +334,7 @@ contains
                      CellSize_DB(x_,iBlock), ', ', &
                      CellSize_DB(x_,iBlock)*No2Si_V(UnitX_),' m'
                 do k=1,nK; do j=1,nJ; do i=1,nI
-                   Cmax_C(i,j,k) = g*State_VGB(P_,i,j,k,iBlock)
+                   Cmax_C(i,j,k) = Gamma*State_VGB(P_,i,j,k,iBlock)
                    if(UseB)CMax_C(i,j,k)=CMax_C(i,j,k)+&
                         sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) 
                    if(UseB0)CMax_C(i,j,k)=CMax_C(i,j,k)+&
