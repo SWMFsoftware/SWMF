@@ -298,7 +298,8 @@ contains
                   + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
              Source_VC(iPIon_I,i,j,k) = Source_VC(iPIon_I,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*QPerQtotal_I*GammaMinus1_I(iFluid)
+                  + CoronalHeating_C(i,j,k)*QPerQtotal_I &
+                  *GammaMinus1_I(IonFirst_:IonLast_)
              Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) = &
                   Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I
