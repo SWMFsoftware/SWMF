@@ -3117,6 +3117,7 @@ contains
       if(UseAnisoPressure) FullB2 = FullBx**2 + FullBy**2 + FullBz**2
       if(UseAnisoPressure .and. FullB2 > 0)then
          Ppar  = State_V(Ppar_)
+         Pperp = (3*State_V(p_) - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
          Fast2 = Sound2 + Alfven2 
