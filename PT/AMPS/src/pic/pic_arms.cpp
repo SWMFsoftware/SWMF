@@ -15,7 +15,7 @@
 #include "pic.h"
 
 //path to the location of the data files
-char   PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
+char   PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]="./data/input/SEP/ARMS/Converted2ASCII";
 double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCurrent   =-1.0;
 double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=-1.0;
 int    PIC::CPLR::DATAFILE::ARMS::OUTPUT::GradientMagneticFieldOffset=-1;
