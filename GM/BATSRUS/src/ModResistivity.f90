@@ -362,7 +362,7 @@ contains
   !===========================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use ModMain,       ONLY: x_
+    use ModMain,       ONLY: x_, BlkTest, ProcTest, iTest, jTest, kTest
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
@@ -370,6 +370,7 @@ contains
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
     use ModAdvance,    ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure
+    use ModProcMH,     ONLY: iProc
 
     integer, intent(in):: iBlock
 
@@ -377,11 +378,40 @@ contains
     real :: Current_D(3), JouleHeating
 
     integer:: i, j, k
-    !-----------------------------------------------------------------------
+
+    logical :: DoTest, DoTestMe, DoTestCell = .false.
+    character(len=*), parameter :: NameSub = 'calc_resistivity_source'
+    !------------------------------------------------------------------------
+    if(iBlock==BLKtest .and. iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    end if
+
     JouleHeating = 0.0
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+       DoTestCell = DoTestMe .and. &
+            i == iTest .and. j == jTest .and. k == kTest
+
+       if (DoTestCell) then
+          write(*,*) NameSub, ': initial JouleHeating    =', &
+               JouleHeating
+          write(*,*) NameSub, ': initial P source        =', &
+               Source_VC(P_,i,j,k)
+          if (UseElectronPressure) &
+               write(*,*) NameSub, ': initial Pe source       =', &
+               Source_VC(Pe_,i,j,k)
+          if (UseAnisoPressure) &
+               write(*,*) NameSub, ': initial Ppar Source     =',&
+               Source_VC(Ppar_,i,j,k)
+          write(*,*) NameSub, ': initial energy source   =', &
+               Source_VC(Energy_,i,j,k)
+          write(*,*) NameSub, ': initial Bz source       =', &
+               Source_VC(Bz_,i,j,k)
+       end if
 
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
@@ -415,6 +445,23 @@ contains
           Source_VC(Bz_,i,j,k) = Source_VC(Bz_,i,j,k) &
                - Eta_GB(i,j,k,iBlock)*Current_D(x_)/Xyz_DGB(2,i,j,k,iBlock)
        end if
+
+       if (DoTestCell) then
+          write(*,*) NameSub, ': corrected JouleHeating  =', &
+               JouleHeating
+          write(*,*) NameSub, ': corrected P source      =', &
+               Source_VC(P_,i,j,k)
+          if (UseElectronPressure) &
+               write(*,*) NameSub, ': corrected Pe source     =', &
+               Source_VC(Pe_,i,j,k)
+          if (UseAnisoPressure) &
+               write(*,*) NameSub, ': corrected Ppar source     =', &
+               Source_VC(Ppar_,i,j,k)
+          write(*,*) NameSub, ': corrected energy source =', &
+               Source_VC(Energy_,i,j,k)
+          write(*,*) NameSub, ': initial Bz source       =', &
+               Source_VC(Bz_,i,j,k)
+       end if
     end do; end do; end do
 
   end subroutine calc_resistivity_source
@@ -423,17 +470,23 @@ contains
 
   subroutine calc_heat_exchange
 
-    use ModMain,       ONLY: Cfl, nBlock, Unused_B
+    use ModMain,       ONLY: Cfl, nBlock, Unused_B, &
+         BlkTest, PROCTest, iTest, jTest, kTest
     use ModGeometry,   ONLY: true_cell
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure
     use ModEnergy,     ONLY: calc_energy_cell
+    use ModProcMH,     ONLY: iProc
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
     integer:: i, j, k, iBlock
-    !--------------------------------------------------------------------------
+    logical :: DoTest, DoTestMe, DoTestCell
+    character(len=*), parameter :: NameSub = 'calc_heat_exchange'
+    !------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     HeatExchange = 0.0
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
@@ -446,6 +499,9 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
+          DoTestCell = DoTestMe .and. iBlock == BlkTest .and. &
+               i == iTest .and. j == jTest .and. k == kTest 
+
           DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
           ! For single ion fluid the ion-electron collision results in a 
@@ -456,11 +512,26 @@ contains
           HeatExchange = Eta_GB(i,j,k,iBlock) * &
                3*State_VGB(Rho_,i,j,k,iBlock)*(1./IonMassPerCharge**2)
 
-          ! Point-implicit correction for stability: H' = H/(1+3*dt*H)
-          HeatExchange = HeatExchange / (1 + 3.0*DtLocal*HeatExchange)
+          if (DoTestCell) &
+               write(*,*) NameSub, ': explicit HeatExchange    =', HeatExchange
+
+          ! Point-implicit correction for stability: H' = H/(1+4./3*dt*H)
+          HeatExchange = HeatExchange / (1 + 4.0/3.0*DtLocal*HeatExchange)
 
           HeatExchangePeP = HeatExchange &
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
+
+          if (DoTestCell) then
+             write(*,*) NameSub, ': corrected HeatExchange   =', HeatExchange
+             write(*,*) NameSub, ': heatExchangePeP          =', HeatExchangePeP
+             write(*,*) NameSub, ': initial State_VGB(P_)    =', &
+                  State_VGB(P_,i,j,k,iBlock)
+             if (UseAnisoPressure) &
+                  write(*,*) NameSub, ': initial State_VGB(Ppar_) =', &
+                  State_VGB(Ppar_,i,j,k,iBlock)
+             write(*,*) NameSub, ': initial State_VGB(Pe_)   =', &
+                  State_VGB(Pe_,i,j,k,iBlock)
+          end if
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
@@ -479,6 +550,20 @@ contains
           ! Heat exchange for the electrons
           State_VGB(Pe_,i,j,k,iBlock) = State_VGB(Pe_,i,j,k,iBlock) &
                + DtLocal*GammaElectronMinus1*HeatExchangePeP
+
+          if (DoTestCell) then
+             write(*,*) NameSub, ': corrected State_VGB(P_)  =', &
+                  State_VGB(P_,i,j,k,iBlock)
+             if (UseAnisoPressure) then
+                write(*,*) NameSub, ': heatExchangePePpAr       =', &
+                     HeatExchangePePpar
+                write(*,*) NameSub, ': corrected State_VGB(Ppar_) =', &
+                     State_VGB(Ppar_,i,j,k,iBlock)
+             end if
+             write(*,*) NameSub, ': corrected State_VGB(Pe_) =', &
+                  State_VGB(Pe_,i,j,k,iBlock)
+          end if
+
        end do; end do; end do
 
        call calc_energy_cell(iBlock)
