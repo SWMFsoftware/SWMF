@@ -429,7 +429,19 @@ void PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(int spec,double Global
   }
 }
 
+//====================================================
+//set the global particle weight with the given number density and particle number
+void PIC::ParticleWeightTimeStep::initParticleWeight_ConstantDensity(int spec,double NumberDensity,double TotalModelParticleNumber) {
+  double TotalDomainMeasure;
+  double GlobalParticleWeight;
 
+  TotalDomainMeasure=PIC::Mesh::mesh.GetTotalDomainMeasure(PIC::Mesh::mesh.rootTree);
+  GlobalParticleWeight=NumberDensity*TotalDomainMeasure/TotalModelParticleNumber;
+
+  if (PIC::ThisThread==0) printf("$PREFIX: Global Particle Weight (%s) = %e (file=%s,line=%i)\n",PIC::MolecularData::GetChemSymbol(spec),GlobalParticleWeight,__FILE__,__LINE__);
+
+  SetGlobalParticleWeight(spec,GlobalParticleWeight,PIC::Mesh::mesh.rootTree);
+}
 
 
 

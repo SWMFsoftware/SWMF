@@ -2124,6 +2124,7 @@ namespace PIC {
 
     void initParticleWeight_ConstantWeight();
     void initParticleWeight_ConstantWeight(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+    void initParticleWeight_ConstantDensity(int spec,double NumberDensity,double TotalModelParticleNumber);
 
 
     void initTimeStep(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
