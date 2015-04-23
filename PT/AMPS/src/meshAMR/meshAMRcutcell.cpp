@@ -575,8 +575,8 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
   static int ThisThread,nTotalThreads;
 
   if (initflag==false) {
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
     initflag=true;
   }
 
@@ -596,7 +596,7 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
       l+=pow(SearchDirection[idim],2);
     }
 
-    if (ParallelCheck==true) MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    if (ParallelCheck==true) MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
     for (l=sqrt(l),idim=0;idim<3;idim++) SearchDirection[idim]/=l;
     iIntersections=0;
@@ -615,9 +615,9 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
     }
 
     if (ParallelCheck==true) {
-      MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+      MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
       if (ThisThread==0) for (int thread=1;thread<nTotalThreads;thread++) if (flagbuffer[thread]==false) flag=false;
-      MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+      MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
     }
   }
   while (flag==false);
@@ -625,7 +625,7 @@ bool CutCell::CheckPointInsideDomain_default(double *x,CutCell::cTriangleFace* S
   if (ParallelCheck==true) {
     int t;
 
-    MPI_Allreduce(&iIntersections,&t,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&iIntersections,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
     iIntersections=t;
   }
 
@@ -643,12 +643,12 @@ bool CutCell::GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,doub
   static int ThisThread,nTotalThreads;
 
   if (initflag==false) {
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
     initflag=true;
   }
 
-  MPI_Bcast(lSearch,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+  MPI_Bcast(lSearch,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
   nfaceStart=ThisThread*(nSurfaceTriangulation/nTotalThreads);
   nfaceFinish=(ThisThread+1)*(nSurfaceTriangulation/nTotalThreads);
@@ -682,7 +682,7 @@ bool CutCell::GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,doub
 
   cBuffer bufferRecv[nTotalThreads];
 
-  MPI_Gather(buffer,sizeof(cBuffer),MPI_CHAR,bufferRecv,sizeof(cBuffer),MPI_CHAR,0,MPI_COMM_WORLD);
+  MPI_Gather(buffer,sizeof(cBuffer),MPI_CHAR,bufferRecv,sizeof(cBuffer),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
   memcpy(buffer,bufferRecv,nTotalThreads*sizeof(cBuffer));
 
   if (ThisThread==0) {
@@ -694,7 +694,7 @@ bool CutCell::GetClosestSurfaceIntersectionPoint(double *x0,double *lSearch,doub
 
   t1.nFaceIntersection=nFaceIntersection;
   t1.tIntersection=tIntersection;
-  MPI_Bcast(&t1,sizeof(cBuffer),MPI_CHAR,0,MPI_COMM_WORLD);
+  MPI_Bcast(&t1,sizeof(cBuffer),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (t1.nFaceIntersection!=-1) {
     FaceIntersection=SurfaceTriangulation+t1.nFaceIntersection,tIntersection=t1.tIntersection,nFaceIntersection=t1.nFaceIntersection;
