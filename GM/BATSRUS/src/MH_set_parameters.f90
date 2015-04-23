@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 subroutine MH_set_parameters(TypeAction)
 
-  ! Set input parameters for the Global Magnetosphere (GM) module
+  ! Set input parameters for BATS-R-US
 
   use ModProcMH
   use ModMain
