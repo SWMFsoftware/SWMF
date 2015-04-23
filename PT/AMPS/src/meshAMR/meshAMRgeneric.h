@@ -8242,6 +8242,55 @@ nMPIops++;
 #endif
   }
 
+  double GetTotalDomainMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
+#if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
+    int i,j,k;
+    long int nd;
+    cCenterNode *centerNode;
+    double res=0.0;
+
+    if (startNode==NULL) startNode=rootTree;
+
+    if (startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_) {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) res+=GetTotalDomainMeasure(startNode->downNode[nDownNode]);
+    }
+    else if ((startNode->block!=NULL)&&(startNode->Thread==ThisThread)) {
+#if _MESH_DIMENSION_ == 1
+      static const int iMin=0,iMax=_BLOCK_CELLS_X_;
+      static const int jMin=0,jMax=1;
+      static const int kMin=0,kMax=1;
+#elif _MESH_DIMENSION_ == 2
+       static const int iMin=0,iMax=_BLOCK_CELLS_X_;
+       static const int jMin=0,jMax=_BLOCK_CELLS_Y_;
+       static const int kMin=0,kMax=1;
+#elif _MESH_DIMENSION_ == 3
+       static const int iMin=0,iMax=_BLOCK_CELLS_X_;
+       static const int jMin=0,jMax=_BLOCK_CELLS_Y_;
+       static const int kMin=0,kMax=_BLOCK_CELLS_Z_;
+#else
+       exit(__LINE__,__FILE__,"Error: unknown option");
+#endif
+
+       for (k=kMin;k<kMax;k++) for (j=jMin;j<jMax;j++) for (i=iMin;i<iMax;i++) {
+         nd=getCenterNodeLocalNumber(i,j,k);
+
+         if ((centerNode=startNode->block->GetCenterNode(nd))!=NULL) res+=centerNode->Measure;
+       }
+    }
+#endif
+
+    //collect measure from all processors
+    if (startNode==rootTree) {
+      double TotalMeasure;
+
+      MPI_Allreduce(&res,&TotalMeasure,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      res=TotalMeasure;
+    }
+
+    return res;
+  }
+
+
   void InitCellMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
    #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
     if (startNode==NULL) startNode=rootTree;
