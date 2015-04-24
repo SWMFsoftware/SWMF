@@ -1,5 +1,6 @@
-! !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
-! !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
 !BOP
 !MODULE: SWMF interface - a set of external subroutines to drive the SWMF
 !DESCRIPTION:
@@ -168,6 +169,8 @@ subroutine SWMF_finalize(iError)
   !EOC
 end subroutine SWMF_finalize
 
+!^CMP IF IH BEGIN
+!^CMP IF GM BEGIN
 !BOP ==========================================================================
 !ROUTINE: SWMF_couple - SWMF coupling with an external code
 !INTERFACE:
@@ -225,7 +228,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
         if(nVar /= 8)then
            write(*,*)NameSub//' ERROR: '// &
                 'coupling to GM requires 8 variables, not nVar=',nVar
-           return
+           RETURN
         end if
 
         ! Broadcast information from the root processor 
@@ -236,7 +239,7 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
         if(iError /= 0)then
            write(*,*)NameSub//' ERROR: '// &
                 'MPI_bcast failed for component '//NameTo
-           return
+           RETURN
         end if
 
         ! Put data into GM. Convert to the default real used by SWMF.
@@ -245,16 +248,17 @@ subroutine SWMF_couple(NameFrom, NameTo, NameCoord, &
      case default
         write(*,*)NameSub//' ERROR: '// &
              'coupling to '//NameTo//' is not implemented'
-        return
+        RETURN
      end select
   case default
      write(*,*)NameSub//' ERROR: '// &
           'coupling from '//NameFrom//' is not implemented'
-     return
+     RETURN
   end select
 
   iError = 0
   !EOC
 
 end subroutine SWMF_couple
-
+!^CMP IF GM END
+!^CMP IF IH END
