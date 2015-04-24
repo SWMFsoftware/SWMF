@@ -566,7 +566,7 @@ contains
             ! polarwind type conditions
             if(UsePw)then
                ! Get density/ies and velocity from polarwind code
-               call read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
+               call read_pw_buffer(FaceCoords_D,nVar,FaceState_V) !^CMP IF PW
                VarsGhostFace_V = FaceState_V
 
                ! Reapply floating conditions on P and B
