@@ -337,8 +337,8 @@ dist:
 	-rm -rf */*/run_test
 	tar -cf tmp.tar  README
 	tar -rf tmp.tar  Makefile 
-	tar -rf tmp.tar  Makefile.test          #^CMP FILE TESTING
-	tar -rf tmp.tar  output                 #^CMP FILE TESTING
+	tar -rf tmp.tar  Makefile.test          #^CMP IF TESTING
+	tar -rf tmp.tar  output                 #^CMP IF TESTING
 	tar -rf tmp.tar  Copyrights
 	tar -rf tmp.tar  CVS*
 	tar -rf tmp.tar  .cvsignore
