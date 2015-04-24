@@ -34,7 +34,7 @@ module CON_couple_all
   use CON_couple_ie_pw        !^CMP IF PW
   use CON_couple_ie_rb        !^CMP IF RB
   use CON_couple_ie_ua        !^CMP IF UA
-  use CON_couple_ie_ps
+  use CON_couple_ie_ps        !^CMP IF PS
   !^CMP END IE
   !^CMP IF IH BEGIN
   use CON_couple_ih_sc        !^CMP IF SC
@@ -90,7 +90,7 @@ contains
     if(use_comp(IE_).and.use_comp(PW_))call couple_ie_pw_init  !^CMP IF PW
     if(use_comp(IE_).and.use_comp(RB_))call couple_ie_rb_init  !^CMP IF RB
     if(use_comp(IE_).and.use_comp(UA_))call couple_ie_ua_init  !^CMP IF UA
-    if(use_comp(IE_).and.use_comp(PS_))call couple_ie_ps_init
+    if(use_comp(IE_).and.use_comp(PS_))call couple_ie_ps_init  !^CMP IF PS
     !                                                     ^CMP END IE
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
@@ -228,8 +228,8 @@ contains
           call couple_ie_gm(TimeSimulation)        !^CMP IF GM
        case(IM_)                                   !^CMP IF IM
           call couple_ie_im(TimeSimulation)        !^CMP IF IM
-       case(PS_)
-          call couple_ie_ps(TimeSimulation)
+       case(PS_)                                   !^CMP IF PS
+          call couple_ie_ps(TimeSimulation)        !^CMP IF PS
        case(PW_)                                   !^CMP IF PW
           call couple_ie_pw(TimeSimulation)        !^CMP IF PW
        case(RB_)                                   !^CMP IF RB
