@@ -10,11 +10,11 @@ components are chosen to participate in or not participate in a run.
 Inclusion of components can be controlled using one of several methods:
 
 \begin{itemize}
-\item The source code can modified so that all references %^CMP IF CONFIGURE
-      to a subset of the components is removed. %^CMP IF CONFIGURE
-      This method uses the Scripts/Configure.pl script. %^CMP IF CONFIGURE
+\item The source code can modified so that all references %^CMP IF CONFIGURE BEGIN
+      to a subset of the components is removed. 
+      This method uses the Scripts/Configure.pl script.
       In a similar way, some physics components can be individually
-      configured.
+      configured.                                         %^CMP END CONFIGURE
 \item The user may select which version of a physics component,
       including the Empty version,
       should be compiled.  This is controlled using the Config.pl script.
