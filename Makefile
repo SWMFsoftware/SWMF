@@ -63,7 +63,9 @@ help:
 	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
 	@echo ' '
 	@echo '    SWMF        (bin/SWMF.exe the main executable for SWMF)'
+	@#^CMP IF ESMF BEGIN
 	@echo '    ESMF_SWMF   (bin/ESMF_SWMF.exe the ESMF compatible executable)'
+	@#^CMP END ESMF
 	@#^CMP IF IE BEGIN
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
 	@#^CMP END IE
@@ -128,7 +130,7 @@ MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 install: ENV_CHECK mkdir
 	@echo VERSION ${VERSION}
 	cd CON;			make install
-	cd ESMF/ESMF_SWMF;	make install
+	cd ESMF/ESMF_SWMF;	make install #^CMP IF ESMF
 
 	@if([ -d "GM/BATSRUS" ]); then \
 		if([ -d "EE/BATSRUS" ]); \
@@ -202,11 +204,12 @@ LIB:	ENV_CHECK
 	@cd ${CONTROLDIR}; $(MAKE) SWMFLIB
 	@echo ' '
 
-#
+#^CMP IF ESMF BEGIN
 #       ESMF driver for the SWMF and a simple ESMF component
 #
 ESMF_SWMF: LIB
 	@cd ESMF/ESMF_SWMF/src; $(MAKE) EXE
+#^CMP END ESMF
 
 # NOMPI library for execution without MPI
 
@@ -288,7 +291,7 @@ clean: ENV_CHECK
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
 		do (echo Cleaning $$i; cd $$i; make clean); done
-	-(cd ESMF/ESMF_SWMF;	make clean)
+	-(cd ESMF/ESMF_SWMF;	make clean) #^CMP IF ESMF
 	cd CON;			make clean
 	cd share;		make clean
 	cd util;		make clean
@@ -313,7 +316,7 @@ allclean: ENV_CHECK rmdir
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
 		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
-	-(cd ESMF/ESMF_SWMF;	make distclean)
+	-(cd ESMF/ESMF_SWMF;	make distclean) #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
@@ -350,7 +353,7 @@ dist:
 	tar -rf tmp.tar  util
 	tar -rf tmp.tar  gui
 	tar -rf tmp.tar  CON
-	tar -rf tmp.tar  ESMF
+	tar -rf tmp.tar  ESMF			#^CMP IF ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
 		do (echo Tarring $$i; tar -rf tmp.tar $$i); done
 	@echo ' '
