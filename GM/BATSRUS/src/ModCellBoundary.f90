@@ -709,7 +709,7 @@ contains
          do j = jMin, jMax
             y = Xyz_DGB(y_,1,j,1,iBlock)
             do i = iMin, iMax
-               call read_ih_buffer(y,z,State_VG(:,i,j,k))
+               call read_ih_buffer(y,z,State_VG(:,i,j,k))   !^CMP IF IH
                ! Subtract B0
                State_VG(Bx_:Bz_,i,j,k) = State_VG(Bx_:Bz_,i,j,k) &
                     - B0_DGB(:,i,j,k,iBlock)
