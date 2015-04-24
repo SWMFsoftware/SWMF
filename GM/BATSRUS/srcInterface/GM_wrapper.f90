@@ -5,13 +5,13 @@ module GM_wrapper
 
   ! Wrapper for BATSRUS Global Magnetosphere (GM) component
 
-  use GM_couple_pt
-  use GM_couple_ie
-  use GM_couple_im
-  use GM_couple_ih
-  use GM_couple_rb
-  use GM_couple_pw
-  use GM_couple_pc
+  use GM_couple_pt          !^CMP IF PT
+  use GM_couple_ie          !^CMP IF IE
+  use GM_couple_im          !^CMP IF IM
+  use GM_couple_ih          !^CMP IF IH
+  use GM_couple_rb          !^CMP IF RB
+  use GM_couple_pw          !^CMP IF PW
+  use GM_couple_pc          !^CMP IF PC
 
   implicit none
 
@@ -32,16 +32,18 @@ module GM_wrapper
   public:: GM_get_grid_info
   public:: GM_find_points
 
-  ! IE coupling
+  !^CMP IF IE BEGIN
   public:: GM_get_for_ie
   public:: GM_put_from_ie
-  public:: GM_put_mag_from_ie
+  public:: GM_put_mag_from_ie       
+  !^CMP END IE
 
-  ! IH coupling
+  !^CMP IF IH BEGIN
   public:: GM_put_from_ih           ! coupling toolkit based coupler
   public:: GM_put_from_ih_buffer    ! buffer grid based coupler
+  !^CMP END IH
 
-  ! IM coupling
+  !^CMP IF IM BEGIN
   public:: GM_get_for_im_trace_crcm ! for CRCM
   public:: GM_get_for_im_crcm       ! for CRCM
   public:: GM_get_sat_for_im_crcm   ! for CRCM
@@ -52,25 +54,30 @@ module GM_wrapper
   public:: GM_get_sat_for_im        ! get satellite info
   public:: GM_get_multi_for_im      ! check if multifluid is used
   public:: GM_put_from_im           ! from IM
+  !^CMP END IM
 
-  ! PT coupling
-  public:: GM_get_for_pt
-
-  ! PW coupling
-  public:: GM_get_for_pw
-  public:: GM_put_from_pw
-
-  ! RB coupling
-  public:: GM_get_for_rb_trace
-  public:: GM_get_for_rb
-  public:: GM_satinit_for_rb
-  public:: GM_get_sat_for_rb
-
-  ! PC coupling
+  !^CMP IF PC BEGIN
   public:: GM_get_for_pc_dt
   public:: GM_get_for_pc_init
   public:: GM_get_for_pc
   public:: GM_put_from_pc
+  !^CMP END PC
+
+  !^CMP IF PT BEGIN
+  public:: GM_get_for_pt
+  !^CMP END PT
+
+  !^CMP IF PW BEGIN
+  public:: GM_get_for_pw
+  public:: GM_put_from_pw
+  !^CMP END PW
+
+  !^CMP IF RB BEGIN
+  public:: GM_get_for_rb_trace
+  public:: GM_get_for_rb
+  public:: GM_satinit_for_rb
+  public:: GM_get_sat_for_rb
+  !^CMP END RB
 
 contains
   !==========================================================================

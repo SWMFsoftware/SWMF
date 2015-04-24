@@ -1,6 +1,8 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!^CMP FILE PT
+
 module GM_couple_pt
 
   implicit none
