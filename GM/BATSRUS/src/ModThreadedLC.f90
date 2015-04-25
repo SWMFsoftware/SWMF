@@ -190,7 +190,7 @@ contains
     !\
     ! USE:
     !/
-    use ModFieldLineThread, ONLY: HeatCondParSi, solve_a_plus_minus
+    use ModFieldLineThread, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaElectronMinus1,No2Si_V, UnitX_,Si2No_V,&
                                UnitB_, UnitTemperature_
     use ModMultiFluid,   ONLY: MassIon_I
@@ -972,6 +972,88 @@ contains
     end do
     !------------------------------------ DONE --------------------------------!
   end subroutine tridag
+!=============================================================================
+  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
+       Heating, APlusBC, APlusOut_I, AMinusOut_I,nIterIn)
+    integer,intent(in):: nI
+    real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
+    real,intent(in )::AMinusBC  !BC for A-
+    real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
+    real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
+    integer,optional,intent(in)::nIterIn
+    real:: DeltaXi
+    real,dimension(0:500)::APlus_I,AMinus_I
+    integer::iStep,iIter
+    integer, parameter:: nIterMax = 10
+    integer:: nIter
+    real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
+    real,parameter:: CTol=0.0010
+    !---------------------------------------------------------------------------
+    APlus_I(0:nI)  = 1.0
+    AMinus_I(0:nI) = AMinusBC
+    if(present(nIterIn))then
+       nIter=nIterIn
+    else
+       nIter=nIterMax
+    end if
+    do iIter=1,nIter
+       !Go forward, integrate APlus_I with given AMinus_I
+       ADiffMax = 0.0
+       do iStep=1, nI
+          !Predictor
+          AP = APlus_I(iStep-1); AM = AMinus_I(iStep-1)
+          Derivative = -AM*(max(0.0, AP - 2*AM) - max(0.0, AM - 2*AP) )*&
+               min(0.5*ReflCoef_I(iStep-1)/max(AM,AP),  1.0)- &
+               AP*AM
+          AOld = APlus_I(iStep)
+          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
+
+          !Corrector
+          AMMid = 0.5*(AMinus_I(iStep-1) + AMinus_I(iStep))
+          APMid = AP + 0.5*Derivative*DeltaXi
+          Derivative = -AMMid*&
+               (max(0.0, APMid -2*AMMid) -  max(0.0,AMMid - 2*APMid))*&
+               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/max(AMMid,AP),&
+               1.0) - AMMid*APMid
+          APlus_I(iStep) = AP + Derivative*DeltaXi
+          ADiffMax = max(ADiffMax, &
+               abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
+       end do
+       !Go backward, integrate APlus_I with given AMinus_I
+       !We integrate equation,
+       !\
+       ! 2da_-/d\xi=
+       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]*a_+*min(2Alpha/\xi,2max(a_,a_+))-
+       ! -2a_-a_+
+       !/
+       do iStep=nI - 1, 0, -1
+          !Predictor
+          AP = APlus_I(iStep+1); AM = AMinus_I(iStep+1)
+          Derivative = -AP*(max(0.0,AP - 2*AM) - max(0.0,AM - 2*AP)     )*&
+               min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
+               AP*AM
+          AOld = AMinus_I(iStep)
+          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep) 
+
+          !Corrector
+          APMid = 0.5*(APlus_I(iStep+1) + APlus_I(iStep))
+          AMMid = AM - 0.5*Derivative*DeltaXi
+          Derivative = -APMid*&
+               ( max(0.0,APMid -2*AMMid)- max(0.0,AMMid - 2*APMid) )*&
+               min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/&
+               max(AMMid, APMid), 1.0) + AMMid*APMid
+          AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
+          ADiffMax = max(ADiffMax,&
+               abs(AOld - AMinus_I(iStep))/max(AOld, AMinus_I(iStep)))
+       end do
+       if(ADiffMax<cTol)EXIT
+    end do
+    APlusBC = APlus_I(nI)
+    Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
+    if(present(APlusOut_I )) APlusOut_I(0:nI)  = APlus_I(0:nI)
+    if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
+
+  end subroutine solve_a_plus_minus
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
@@ -1185,7 +1267,8 @@ contains
           if(UseHeatFluxCollisionless)then
              call get_gamma_collisionless(Xyz_DGB(:,1,j,k,iBlock), GammaHere)
              State_VG(Ehot_,1-nGhost:0,j,k) = &
-                  State_VG(iP,1-nGhost:0,j,k)*(1.0/(GammaHere - 1) - InvGammaElectronMinus1)
+                  State_VG(iP,1-nGhost:0,j,k)*&
+                  (1.0/(GammaHere - 1) - InvGammaElectronMinus1)
           else
              State_VG(Ehot_,1-nGhost:0,j,k) = 0.0
           end if

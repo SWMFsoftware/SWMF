@@ -129,8 +129,7 @@ module ModFieldLineThread
   real,dimension(1:500):: &
        TeSi_I, LambdaSi_I, LPe_I, UHeat_I, dFluxXLengthOverDU_I 
 
-  public:: set_threads       !(Re)Sets threads in the inner boundary blocks 
-  public:: solve_a_plus_minus!Solves the AW amplitudes
+  public:: set_threads       !(Re)Sets threads in the inner boundary blocks
 
   !\
   ! Called prior to different invokes of set_cell_boundary, to determine
@@ -492,14 +491,14 @@ contains
        !\
        !Store the lengths
        !/
-       BoundaryThreads_B(iBlock) % LengthSi_III(&
-            1-iPoint, j, k) = Ds*Aux*No2Si_V(UnitX_)
-       BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-            1-iPoint, j, k) = Ds*Aux*0.50*(&
+       BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) = &
+            Ds*Aux*No2Si_V(UnitX_)
+       BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) = &
+            Ds*Aux*0.50*(&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
             BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-       BoundaryThreads_B(iBlock) % Xi_III(&
-            1-iPoint, j, k) = Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*Aux*(&
+       BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k)       = &
+            Ds*Aux*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*(&
             0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
             0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
        iPoint = iPoint - 1
@@ -509,17 +508,17 @@ contains
        !/
        iInterval = 1
        do while(iInterval < nIntervalTR)
-          BoundaryThreads_B(iBlock) % LengthSi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
-               -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               -iPoint, j, k) + Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
+          BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =     &
+               BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k) + &
+               Ds*No2Si_V(UnitX_)
+          BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =     &
+               BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) + &
+               Ds*0.50*(&
+               BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-          BoundaryThreads_B(iBlock) % Xi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % Xi_III(&
-               -iPoint, j, k) + Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*(&
+          BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k)       =     &
+               BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)       + &
+               Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*(&
                0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
                0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
           iPoint = iPoint - 1
@@ -532,42 +531,48 @@ contains
        !                    -iPoint-1    -iPoint
        !/
        
-       BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-            -1-iPoint, j, k) = 1/(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-            -iPoint, j, k)*PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
-       BoundaryThreads_B(iBlock) % Xi_III(&
-            -1-iPoint, j, k) = BoundaryThreads_B(iBlock) % Xi_III(&
-            -iPoint, j, k)
-       BoundaryThreads_B(iBlock) % Xi_III(&
-            -iPoint, j, k) = BoundaryThreads_B(iBlock) % Xi_III(&
-            -1-iPoint, j, k) &
+       BoundaryThreads_B(iBlock) % BDsInvSi_III(-1-iPoint, j, k) = 1/  &
+            (BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k)   &
+            *PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
+
+       BoundaryThreads_B(iBlock) % Xi_III(-1-iPoint, j, k) =           &
+            BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)
+
+       BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k) =             &
+            BoundaryThreads_B(iBlock) % Xi_III(-1-iPoint, j, k)        &
             + 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
-       BoundaryThreads_B(iBlock) % DsOverBSi_III(&
-            -iPoint, j, k) = 0.50*Ds*No2Si_V(UnitX_)/&
-            (BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
-            *PoyntingFluxPerBSi*No2Si_V(UnitB_))
+
+       BoundaryThreads_B(iBlock) % DsOverBSi_III(-iPoint, j, k) =      &
+            0.50*Ds*No2Si_V(UnitX_)/&
+            ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
+            *PoyntingFluxPerBSi*No2Si_V(UnitB_) )
+
        do while(iPoint>0)
-          BoundaryThreads_B(iBlock) % LengthSi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % LengthSi_III(&
-               -iPoint, j, k)+ Ds*No2Si_V(UnitX_)
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               -iPoint, j, k) + Ds*0.50*(&
+          BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =      &
+               BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k ) + &
+               Ds*No2Si_V(UnitX_)
+          
+          BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =      &
+               BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) +  &
+               Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-          BoundaryThreads_B(iBlock) % BDsInvSi_III(&
-               -iPoint, j, k) = 1/(PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
+
+          BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) =   1/  &
+               (PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
                No2Si_V(UnitX_)*Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) ) )
-          BoundaryThreads_B(iBlock) % Xi_III(&
-               1-iPoint, j, k) = BoundaryThreads_B(iBlock) % Xi_III(&
-               -iPoint, j, k) + Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+
+          BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k) =            &
+               BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
+               Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/               &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) 
-          BoundaryThreads_B(iBlock) % DsOverBSi_III(&
-               1-iPoint, j, k) = Ds*No2Si_V(UnitX_)/&
-               (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)&
+
+          BoundaryThreads_B(iBlock) % DsOverBSi_III(1-iPoint, j, k) =     &
+               Ds*No2Si_V(UnitX_)/                                        &
+               (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)         &
                *PoyntingFluxPerBSi*No2Si_V(UnitB_))
           iPoint = iPoint - 1
        end do
@@ -586,9 +591,9 @@ contains
        !             -1       0
        ! 
        !/
-       BoundaryThreads_B(iBlock) % Xi_III(&
-            0, j, k) = BoundaryThreads_B(iBlock) % Xi_III(&
-            0, j, k) - 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+       BoundaryThreads_B(iBlock) % Xi_III(0, j, k) =         &
+            BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
+            0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
             BoundaryThreads_B(iBlock) % B_III(0, j, k))
        !\
        !Evaluate the deravitive of temperature gradient over Te in the
@@ -597,6 +602,7 @@ contains
        Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
        BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,j,k) = &
             - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
+       
        call limit_temperature(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
 
@@ -649,8 +655,8 @@ contains
       iTable = i_lookup_table('TR')
       if(iTable<=0)call CON_stop('TR table is not set')
 
-      HeatFluxXLength = 2*PoyntingFluxPerBSi*BLength*&
-           No2Si_V(UnitX_)*No2Si_V(UnitB_)
+      HeatFluxXLength = 2*PoyntingFluxPerBSi*&
+           BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
       call interpolate_lookup_table(iTable=iTable,&
                                     iVal=HeatFluxLength_,       &
                                     ValIn=HeatFluxXLength,&
@@ -718,30 +724,6 @@ contains
        !Fill in the table
        call make_lookup_table(iTable, calc_tr_table)
     end if
-    iTable = i_lookup_table('AW_TR')
-    if(iTable>=0)RETURN
-    
-    ! Initialize the table for modeling Alfven Waves (AW) in the 
-    ! Transition Region (TR)
-    call init_lookup_table(                                      &
-         NameTable = 'AW_TR',                                    &
-         NameCommand = 'save',                                   &
-         NameVar = 'Length AMinus Heating APlus',                &
-         nIndex_I = (/501,101/),                                 &
-         IndexMin_I =(/0.0, 0.0/),                               &
-         IndexMax_I =(/5.0, 1.0/),                               &
-         NameFile = 'AW_TR.dat',                                 &
-         TypeFile = TypeFile,                                    &
-         StringDescription = &
-         'Model for Alfven Waves in the transition region')
-    
-    iTable = i_lookup_table('AW_TR')
-
-
-    ! The table is now initialized. 
-
-    !Fill in the table
-    call make_lookup_table(iTable, calc_alfven_wave_tr_table)
   end subroutine check_tr_table
   !===========================================================================
   subroutine calc_tr_table(iTableIn, Arg1, Arg2, Value_V)
@@ -823,118 +805,7 @@ contains
     Value_V(LengthPAvrSi_:DHeatFluxXOverU_) = (/ LPe_I(iTe), UHeat_I(iTe), &
          LPe_I(iTe)*UHeat_I(iTe), dFluxXLengthOverDU_I(iTe)/)
   end subroutine calc_tr_table
-  !=============================================================================
-  ! Tables for solving Alfven waves====
-  subroutine calc_alfven_wave_tr_table(iTableIn, Arg1, Arg2, Value_V)
-    integer, intent(in):: iTableIn
-    real, intent(in)   :: Arg1, Arg2
-    real, intent(out)  :: Value_V(:)
-
-    real:: DeltaXi
-    integer, parameter :: nI = 500
-    integer:: i
-    real::Heating, APlusBC, ReflCoef_I(0:nI), Xi_I(0:nI)
-    real, parameter:: AlphaInv = 5.5
-    !-------------------------------------------------------------------------
-    if(Arg1<=0.0.or.Arg2<=0)then
-       !Zero length or zero amplitude of ingoing wave
-       Value_V = 0.0 
-    else
-       Xi_I(0) = 0.0; ReflCoef_I(0) = 1.0e30
-       DeltaXi=Arg1/nI
-       do i = 1, nI
-          Xi_I(i) = Xi_I(i-1) + DeltaXi
-          ReflCoef_I(i)=1/(AlphaInv*max(1.0e-30,Xi_I(i)))
-       end do
-       call solve_a_plus_minus(&
-            nI=nI,                     &
-            ReflCoef_I=ReflCoef_I,     &
-            Xi_I=Xi_I,                 &
-            AMinusBC=Arg2,             &
-            Heating=Heating,           &
-            APlusBC=APlusBC  )
-       Value_V(AWHeating_:APlusBC_) = (/Heating, APlusBC/)
-    end if
-  end subroutine calc_alfven_wave_tr_table
-  !=============================================================================
-  subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       Heating, APlusBC, APlusOut_I, AMinusOut_I,nIterIn)
-    integer,intent(in):: nI
-    real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
-    real,intent(in )::AMinusBC  !BC for A-
-    real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
-    real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
-    integer,optional,intent(in)::nIterIn
-    real:: DeltaXi
-    real,dimension(0:500)::APlus_I,AMinus_I
-    integer::iStep,iIter
-    integer, parameter:: nIterMax = 10
-    integer:: nIter
-    real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
-    real,parameter:: CTol=0.0010
-    !---------------------------------------------------------------------------
-    APlus_I(0:nI)  = 1.0
-    AMinus_I(0:nI) = AMinusBC
-    if(present(nIterIn))then
-       nIter=nIterIn
-    else
-       nIter=nIterMax
-    end if
-    do iIter=1,nIter
-       !Go forward, integrate APlus_I with given AMinus_I
-       ADiffMax = 0.0
-       do iStep=1, nI
-          !Predictor
-          AP = APlus_I(iStep-1); AM = AMinus_I(iStep-1)
-          Derivative = -AM*(max(0.0, AP - 2*AM) - max(0.0, AM - 2*AP) )*&
-               min(0.5*ReflCoef_I(iStep-1)/max(AM,AP),  1.0)- &
-               AP*AM
-          AOld = APlus_I(iStep)
-          DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
-
-          !Corrector
-          AMMid = 0.5*(AMinus_I(iStep-1) + AMinus_I(iStep))
-          APMid = AP + 0.5*Derivative*DeltaXi
-          Derivative = -AMMid*(max(0.0, APMid -2*AMMid) -  max(0.0,AMMid - 2*APMid))*&
-               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/max(AMMid,AP), 1.0) - &
-               AMMid*APMid
-          APlus_I(iStep) = AP + Derivative*DeltaXi
-          ADiffMax = max(ADiffMax, abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
-       end do
-       !Go backward, integrate APlus_I with given AMinus_I
-       !We integrate equation,
-       !\
-       ! 2da_-/d\xi=
-       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]*a_+*min(2Alpha/\xi,2max(a_,a_+))-
-       ! -2a_-a_+
-       !/
-       do iStep=nI - 1, 0, -1
-          !Predictor
-          AP = APlus_I(iStep+1); AM = AMinus_I(iStep+1)
-          Derivative = -AP*(max(0.0,AP - 2*AM) - max(0.0,AM - 2*AP)     )*&
-               min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
-               AP*AM
-          AOld = AMinus_I(iStep)
-          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep) 
-
-          !Corrector
-          APMid = 0.5*(APlus_I(iStep+1) + APlus_I(iStep))
-          AMMid = AM - 0.5*Derivative*DeltaXi
-          Derivative = -APMid*( max(0.0,APMid -2*AMMid)- max(0.0,AMMid - 2*APMid) )*&
-               min(0.250*(ReflCoef_I(iStep+1) + ReflCoef_I(iStep))/max(AMMid, APMid),  1.0) + &
-               AMMid*APMid
-          AMinus_I(iStep) = AMinus_I(iStep+1) - Derivative*DeltaXi
-          ADiffMax = max(ADiffMax, abs(AOld - AMinus_I(iStep))/max(AOld, AMinus_I(iStep)))
-       end do
-       if(ADiffMax<cTol)EXIT
-    end do
-    APlusBC = APlus_I(nI)
-    Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
-    if(present(APlusOut_I )) APlusOut_I(0:nI)  = APlus_I(0:nI)
-    if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
-
-  end subroutine solve_a_plus_minus
-  !=====================
+  !=============================
   subroutine advance_threads(iAction,iStageIn)
     use ModMain,     ONLY: MaxBlock, Unused_B, nStage
     integer, intent(in)::iAction
