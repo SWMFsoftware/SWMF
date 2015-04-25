@@ -407,8 +407,8 @@ contains
          ! 3. Calculate dimensionless length (in terms of the dissipation length
          !/
          DXi_I(iPoint) = &
-              (BoundaryThreads_B(iBlock)% DXi_III(iPoint-nPoint,j,k) - &
-              BoundaryThreads_B(iBlock)% DXi_III(iPoint-1-nPoint,j,k))*&
+              (BoundaryThreads_B(iBlock)% Xi_III(iPoint-nPoint,j,k) - &
+              BoundaryThreads_B(iBlock)% Xi_III(iPoint-1-nPoint,j,k))*&
               sqrt(SqrtRho)
          Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint) 
 
@@ -479,11 +479,11 @@ contains
       !\
       ! The number of points to solve temperature is nPoint - 1
       !/
-      U_I(1:nPoint-1) = -BoundaryThreads_B(iBlock)% BDsInv_III(1-nPoint:-1,j,k)
+      U_I(1:nPoint-1) = -BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint:-1,j,k)
       L_I(2:nPoint-1) = U_I(1:nPoint-2)
       M_I(2:nPoint-1) = -U_I(2:nPoint-1) - L_I(2:nPoint-1)
       M_I(1) = -U_I(1) + Value_V(DHeatFluxXOverU_)*&
-           BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
+           BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
       !\
       ! Right heat fluxes
       !/
@@ -493,7 +493,7 @@ contains
       ! 4. Add left heat flux to the TR
       !/
       ResHeatCond_I(1) = ResHeatCond_I(1) - Value_V(HeatFluxLength_)*&
-           BoundaryThreads_B(iBlock)% BDsInv_III(-nPoint,j,k)
+           BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
       !\
       ! 5. Add other left heat fluxes
       !/
@@ -517,7 +517,7 @@ contains
          call interpolate_lookup_table(iTableRadCool,&
               TeSi_I(iPoint), 1.0e2, ValCooling)
          ResCooling_I(iPoint) = &
-              -BoundaryThreads_B(iBlock)%DsOverB_III(iPoint-nPoint,j,k)&
+              -BoundaryThreads_B(iBlock)%DsOverBSi_III(iPoint-nPoint,j,k)&
               *ValCooling(1)*cCoolingPerPe2*&
               (PeSi_I(iPoint)/TeSi_I(iPoint))**2
       end do
@@ -697,7 +697,7 @@ contains
 
       SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1 &
            * (1 + AverageIonCharge)/AverageIonCharge* &
-           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
@@ -880,7 +880,7 @@ contains
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1  &
            * (1 + AverageIonCharge)/AverageIonCharge*  &
-           BoundaryThreads_B(iBlock)%DsOverB_III(1-nPoint:-1,j,k)
+           BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
       do iIter = 1, 1
          call get_heat_cond
@@ -987,6 +987,7 @@ contains
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModGeometry,     ONLY: Xyz_DGB
+    use ModB0,           ONLY: B0_DGB
     use ModWaves
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
@@ -1063,8 +1064,7 @@ contains
     
     do k = 1, nK; do j = 1, nJ
        B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       BDir_D = B_D + &
-            BoundaryThreads_B(iBlock) % B0Face_DII(:, j, k)
+       BDir_D = B_D + B0_DGB(:, 1, j, k, iBlock)
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
        if(sign(1.0,sum(BDir_D*Xyz_DGB(:,1,j,k,iBlock))) < 0.0)then
           BDir_D = -BDir_D
