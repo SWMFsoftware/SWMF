@@ -118,8 +118,8 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
   static int ThisThread,nTotalThreads;
 
   if (initflag==false) {
-    MPI_Comm_rank(MPI_COMM_WORLD,&ThisThread);
-    MPI_Comm_size(MPI_COMM_WORLD,&nTotalThreads);
+    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
     initflag=true;
   }
 
@@ -139,7 +139,7 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
       l+=pow(SearchDirection[idim],2);
     }
 
-    if (ParallelCheck==true) MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    if (ParallelCheck==true) MPI_Bcast(SearchDirection,3,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
 
     for (l=sqrt(l),idim=0;idim<3;idim++) SearchDirection[idim]/=l;
     iIntersections=0;
@@ -158,9 +158,9 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
     }
 
     if (ParallelCheck==true) {
-      MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+      MPI_Gather(&flag,sizeof(bool),MPI_CHAR,flagbuffer,sizeof(bool),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
       if (ThisThread==0) for (int thread=1;thread<nTotalThreads;thread++) if (flagbuffer[thread]==false) flag=false;
-      MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_COMM_WORLD);
+      MPI_Bcast(&flag,sizeof(bool),MPI_CHAR,0,MPI_GLOBAL_COMMUNICATOR);
     }
   }
   while (flag==false);
@@ -168,7 +168,7 @@ bool PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default(double *x,PIC::
   if (ParallelCheck==true) {
     int t;
 
-    MPI_Allreduce(&iIntersections,&t,1,MPI_INT,MPI_SUM,MPI_COMM_WORLD);
+    MPI_Allreduce(&iIntersections,&t,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
     iIntersections=t;
   }
 
