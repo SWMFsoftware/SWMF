@@ -1328,7 +1328,7 @@ public:
     meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
     sprintf(MeshName,"%s",str);
-    generateMeshSignature();
+//    generateMeshSignature();
   }
 
   void getMeshName(char *str) {
