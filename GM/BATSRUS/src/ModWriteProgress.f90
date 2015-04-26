@@ -304,11 +304,11 @@ subroutine write_runtime_values()
   call write_prefix
   write(iUnitOut,'(1x,a,3i8)')    'nIJK_D:      ', nIJK_D
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'x:           ', x1, x2
+  write(iUnitOut,'(1x,a,2es16.8)') 'x:           ', x1, x2
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'y:           ', y1, y2
+  write(iUnitOut,'(1x,a,2es16.8)') 'y:           ', y1, y2
   call write_prefix
-  write(iUnitOut,'(1x,a,2f16.8)') 'z:           ', z1, z2
+  write(iUnitOut,'(1x,a,2es16.8)') 'z:           ', z1, z2
   call write_prefix; write(iUnitOut,*)
   if(UseUserEchoInput) call user_action('write progress')
 
