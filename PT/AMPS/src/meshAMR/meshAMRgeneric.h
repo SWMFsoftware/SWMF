@@ -1156,11 +1156,12 @@ public:
   //generate the mesh signeture: the signature contained the time of the mesh creeation, the user name and the computer name where the lesh is created
   void generateMeshSignature(cTreeNodeAMR<cBlockAMR> *node=NULL) {
     static CRC32 Signature;
-    static CMPI_channel pipe(1000000);
+    static CMPI_channel pipe;
 
     if (node==NULL) {
       node=rootTree;
       Signature.clear();
+      pipe.init(1000000);
 
       //add the size of the domain to the signature
       Signature.add(rootTree->xmax,3);
@@ -1189,15 +1190,9 @@ public:
 
     //scan through the tree and calculate the signature component the is due to the distribution of the cells
     //determine whether the node is at the bottom of the tree
-    bool lastBranchFlag=true;
     int i,j,k,nd;
 
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) {
-      lastBranchFlag=false;
-      break;
-    }
-
-    if (lastBranchFlag==true) {
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
       //add the local number of the allocated center nodes
 
       #if _MESH_DIMENSION_ == 3
@@ -1233,7 +1228,7 @@ public:
       }
     }
     else {
-      for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) {
         cTreeNodeAMR<cBlockAMR> *downNode=node->downNode[nDownNode];
 
         if (downNode!=NULL) {
@@ -1309,6 +1304,9 @@ public:
         MeshSignature=Signature.checksum();
       }
       else pipe.closeSend();
+
+      //de-allocate all buffers associated with the pipe
+      pipe.remove();
 
       //distribute the signature between all processors
       MPI_Bcast(&MeshSignature,1,MPI_UNSIGNED_LONG,0,MPI_GLOBAL_COMMUNICATOR);
@@ -8369,6 +8367,151 @@ nMPIops++;
 #endif
   }
 
+
+  //save/load the binary file containing the center node measures
+  void SaveCenterNodeMeasure(cTreeNodeAMR<cBlockAMR> *node=NULL) {
+    static CMPI_channel pipe;
+    static FILE *fout=NULL;
+
+    if (node==NULL) {
+      unsigned long Signature=getMeshSignature();
+
+      node=rootTree;
+      pipe.init(1000000);
+
+      if (ThisThread==0) {
+        pipe.openRecvAll();
+
+        //open the file
+        char fname[400];
+        sprintf(fname,"amr.sig=0x%lx.CenterNodeMeasure.bin",Signature);
+
+        fout=fopen(fname,"w");
+      }
+      else pipe.openSend(0);
+    }
+
+    //loop through all points
+    //create the list of the points
+    //perform the interpolation loop
+    int i,j,k,nd;
+    cCenterNode *CenterNode;
+    double Measure;
+
+
+    #if _MESH_DIMENSION_ == 3
+    const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+    const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+    const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+    #else
+    exit(__LINE__,__FILE__,"Error: not implemented");
+    #endif
+
+
+
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if ((ThisThread==0)||(node->Thread==ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+        //get cell's measure
+        if (node->Thread==ThisThread) {
+          Measure=-1.0;
+
+          //locate the cell
+          if (node->block!=NULL) {
+            nd=getCenterNodeLocalNumber(i,j,k);
+            if ((CenterNode=node->block->GetCenterNode(nd))!=NULL) Measure=CenterNode->Measure;
+          }
+
+          if (node->Thread!=0) pipe.send(Measure);
+        }
+        else {
+          pipe.recv(Measure,node->Thread);
+        }
+
+        //save cells' measure
+        if (ThisThread==0) fwrite(&Measure,sizeof(double),1,fout);
+
+      }
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) SaveCenterNodeMeasure(node->downNode[nDownNode]);
+    }
+
+    if (node==rootTree) {
+      if (ThisThread==0) {
+        pipe.closeRecvAll();
+        fclose(fout);
+      }
+      else pipe.closeSend();
+
+      pipe.remove();
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+  }
+
+  bool LoadCenterNodeMeasure(cTreeNodeAMR<cBlockAMR> *node=NULL) {
+    static FILE *fData=NULL;
+
+    if (node==NULL) {
+      node=rootTree;
+
+      //open the file
+      char fname[400];
+      sprintf(fname,"amr.sig=0x%lx.CenterNodeMeasure.bin",getMeshSignature());
+
+      fData=fopen(fname,"r");
+
+      if (fData==NULL) {
+        //the file does not exists -> the measure has to be calculated directly
+        return false;
+      }
+    }
+
+    //loop through all points
+    //create the list of the points
+    //perform the interpolation loop
+    int i,j,k,nd;
+    cCenterNode *CenterNode;
+    double Measure;
+
+
+    #if _MESH_DIMENSION_ == 3
+    const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+    const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+    const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+    #else
+    exit(__LINE__,__FILE__,"Error: not implemented");
+    #endif
+
+
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if (node->block!=NULL) {
+        for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+          fread(&Measure,sizeof(double),1,fData);
+
+          nd=getCenterNodeLocalNumber(i,j,k);
+          if ((CenterNode=node->block->GetCenterNode(nd))!=NULL) CenterNode->Measure=Measure;
+        }
+      }
+      else {
+        //skip the measure data for the block
+        fseek(fData,(iMax-iMin+1)*(jMax-jMin+1)*(kMax-kMin+1)*sizeof(double),SEEK_CUR);
+      }
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeMeasure(node->downNode[nDownNode]);
+    }
+
+    if (node==rootTree) {
+      fclose(fData);
+
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+
+    return true;
+  }
+
+
+  //evaluate the total volume of the computational domain
   double GetTotalDomainMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
 #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
     int i,j,k;
@@ -8420,7 +8563,16 @@ nMPIops++;
 
   void InitCellMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
    #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
-    if (startNode==NULL) startNode=rootTree;
+    if (startNode==NULL) {
+      //try to load the saved file with the cell measures
+      if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
+        if (LoadCenterNodeMeasure(NULL)==true) return;
+      }
+
+      startNode=rootTree;
+    }
+
+
     if (startNode==rootTree) InitCellMeasure_ResetToZero(rootTree);
 
 
@@ -8599,6 +8751,13 @@ nMPIops++;
          }
        }
 
+    }
+
+    if (startNode==rootTree) {
+      //try to save the file with the cell measures
+      if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
+        SaveCenterNodeMeasure(NULL);
+      }
     }
     #endif
   }

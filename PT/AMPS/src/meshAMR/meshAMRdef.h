@@ -130,6 +130,9 @@
 #define _AMR_CENTER_NODE_  _ON_AMR_MESH_
 #define _AMR_FACE_NODE_    _OFF_AMR_MESH_
 #define _AMR_EDGE_NODE_    _OFF_AMR_MESH_
+
+//save/read the center node measure into/from binary file
+#define _AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_  _ON_AMR_MESH_
  
 
 //definition for the default face attributes
