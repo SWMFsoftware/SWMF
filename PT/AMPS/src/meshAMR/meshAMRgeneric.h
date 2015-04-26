@@ -7465,7 +7465,7 @@ nMPIops++;
  
     //get the name of the mesh file 
     if (MeshName[0]=='\0') generateMeshName();
-    if (meshModifiedFlag==true) generateMeshSignature();   
+//    if (meshModifiedFlag==true) generateMeshSignature();   
 
     if (MeshFileName!=NULL) sprintf(fname,"%s",MeshFileName);
     else getMeshName(fname);
@@ -7478,7 +7478,7 @@ nMPIops++;
 
       //save the mesh parameters: in the beginig of the mesh file keep the name of the mesh!
       fwrite(MeshName,sizeof(char),STRING_LENGTH,fout) ;
-      fwrite(&MeshSignature,sizeof(unsigned long),1,fout);
+//      fwrite(&MeshSignature,sizeof(unsigned long),1,fout);
 
 
       //the global definition of the domain limits 
@@ -7487,7 +7487,7 @@ nMPIops++;
 
       //the global parameters of the mesh  
       fwrite(&EPS,sizeof(double),1,fout);
-      fwrite(&meshModifiedFlag,sizeof(bool),1,fout);
+//      fwrite(&meshModifiedFlag,sizeof(bool),1,fout);
 
       fwrite(&meshNodesNumber,sizeof(long int),1,fout);
       fwrite(&meshBlocksNumber,sizeof(long int),1,fout);
@@ -7549,7 +7549,7 @@ nMPIops++;
 
       //save the mesh parameters: in the beginig of the mesh file keep the name of the mesh!
       fread(MeshName,sizeof(char),STRING_LENGTH,fout) ;
-      fread(&MeshSignature,sizeof(unsigned long),1,fout);
+//      fread(&MeshSignature,sizeof(unsigned long),1,fout);
 
 
       //the global definition of the domain limits
@@ -7558,7 +7558,7 @@ nMPIops++;
 
       //the global parameters of the mesh
       fread(&EPS,sizeof(double),1,fout);
-      fread(&meshModifiedFlag,sizeof(bool),1,fout);
+//      fread(&meshModifiedFlag,sizeof(bool),1,fout);
 
       fread(&meshNodesNumber,sizeof(long int),1,fout);
       fread(&meshBlocksNumber,sizeof(long int),1,fout);
