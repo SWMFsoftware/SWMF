@@ -92,11 +92,17 @@ module ModFieldLineThread
   integer,public :: nPointThreadMax
   real           :: DsThreadMin
 
+  !\
+  ! Normalization as used in the radcool table
+  !/
   real, parameter :: RadNorm = 1.0E+22
+  !\
+  ! Correction coefficient to transform the units as used in the radcool
+  ! table to SI system.
+  !/
   real, parameter :: Cgs2SiEnergyDens = &
        1.0e-7&   !erg = 1e-7 J
        /1.0e-6    !cm3 = 1e-6 m3 
-  real, parameter:: TeGlobalMaxSi = 1.60e6
   !\
   ! To find the volumetric radiative cooling rate in J/(m^3 s)
   ! the value found from radcool table should be multiplied by
@@ -108,6 +114,9 @@ module ModFieldLineThread
   ! A constant factor to calculate the electron heat conduction
   !/
   real, public :: HeatCondParSi
+
+  real, parameter:: TeGlobalMaxSi = 1.80e6
+
 
   !\
   ! Logical from ModMain.
@@ -528,8 +537,9 @@ contains
        !/
        
        BoundaryThreads_B(iBlock) % BDsInvSi_III(-1-iPoint, j, k) = 1/  &
-            (BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k)   &
-            *PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
+            (BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k)*  &
+            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)*          &
+            No2Si_V(UnitB_)*PoyntingFluxPerBSi)
 
        !\
        ! The flux node -iPoint-1=-nPoint is placed to the same position
@@ -541,6 +551,7 @@ contains
        !\
        ! As long as the flux node is placed as discussed above, the 
        ! first computational cell is twice shorter
+       !/
        BoundaryThreads_B(iBlock) % DsOverBSi_III(-iPoint, j, k) =      &
             0.50*Ds*No2Si_V(UnitX_)/&
             ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
