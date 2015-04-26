@@ -497,10 +497,6 @@ contains
             Ds*Aux*0.50*(&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
             BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-       BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k)       = &
-            Ds*Aux*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*(&
-            0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
-            0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
        iPoint = iPoint - 1
        !\
        !     |           |
@@ -516,11 +512,6 @@ contains
                Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-          BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k)       =     &
-               BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)       + &
-               Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2)*(&
-               0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)) +&
-               0.5/sqrt( BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) )
           iPoint = iPoint - 1
           iInterval = iInterval + 1
        end do
@@ -529,47 +520,76 @@ contains
        !-iPoint-nInterval          -iPoint
        !                        x           x            Flux nodes
        !                    -iPoint-1    -iPoint
+       !Here, iPoint is the current value, equal to nPoint-1, nPoint being the
+       !stored value. Now, LengthSi = Ds*(nInterval - 1 + Aux), as long as the
+       !first interval is shorter than Ds. Then, BDsInvSi is the 
+       !dimensionless and not inverted integral of Bds over the first 
+       !intervals. 
        !/
        
        BoundaryThreads_B(iBlock) % BDsInvSi_III(-1-iPoint, j, k) = 1/  &
             (BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k)   &
             *PoyntingFluxPerBSi*No2Si_V(UnitB_)*No2Si_V(UnitX_))
 
-       BoundaryThreads_B(iBlock) % Xi_III(-1-iPoint, j, k) =           &
-            BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)
-
+       !\
+       ! The flux node -iPoint-1=-nPoint is placed to the same position
+       ! as the temperature node with the same number
+       !/ 
        BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k) =             &
-            BoundaryThreads_B(iBlock) % Xi_III(-1-iPoint, j, k)        &
-            + 0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+            0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
-
+       !\
+       ! As long as the flux node is placed as discussed above, the 
+       ! first computational cell is twice shorter
        BoundaryThreads_B(iBlock) % DsOverBSi_III(-iPoint, j, k) =      &
             0.50*Ds*No2Si_V(UnitX_)/&
             ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
             *PoyntingFluxPerBSi*No2Si_V(UnitB_) )
 
        do while(iPoint>0)
+          !\
+          ! Just the length of Thread in meters
+          !/
           BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) =      &
                BoundaryThreads_B(iBlock) % LengthSi_III(-iPoint, j, k ) + &
                Ds*No2Si_V(UnitX_)
-          
+          !\
+          ! Sum up the integral of Bds, dimensionless, to calculate TMax
+          !/
           BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =      &
                BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) +  &
                Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
-
+          !\
+          ! 1/(ds*B*Poynting-flux-over-field ratio)
+          ! calculated in the flux point, so that the averaged magnetic field
+          ! is used. Calculated in SI units. While multiplied by the difference
+          ! in the conservative variable, 2/7*kappa*\Delta T^{7/2} gives the
+          ! ratio of the heat flux to the effective Poynting flux. 
+          !/
           BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) =   1/  &
                (PoyntingFluxPerBSi*No2Si_V(UnitB_)*&
                No2Si_V(UnitX_)*Ds*0.50*(&
                BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) ) )
-
+          !\
+          ! The distance between the flux points (as well as the AW amplitude 
+          ! nodes multiplied by the coefficient to find dimensionless 
+          ! wave damping per the unit of length. Calculated in terms of
+          ! the magnetic field in the midpoint. Should be multiplied by the
+          ! dimensionless density powered 1/4. Dimensionless.
+          !/
           BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k) =            &
                BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
                Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/               &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) 
-
+          !\
+          ! Distance between the flux points (faces) divided by
+          ! the magnetic field in the temperature point (or, same,
+          ! multiplied by the crosssection of the flux tube)
+          ! and divided by the Poynting-flux-to-field ratio.
+          !/
           BoundaryThreads_B(iBlock) % DsOverBSi_III(1-iPoint, j, k) =     &
                Ds*No2Si_V(UnitX_)/                                        &
                (BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)         &
@@ -612,7 +632,9 @@ contains
             Xyz_DGB(:,1,jTest,kTest,iBlock)
        write(*,'(a,3es18.10)')'Derivative of the Grad Te over ghost Te  ',&
             BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,jTest,kTest)
-       write(*,'(a)')'x y z B RInv Length BLength Length2SqrtB'
+       write(*,'(a)')&
+            'x[R_s] y[R_S] z[R_S} B[NoDim] RInv[NoDim] LengthSi[NoDim]'&
+            //'BDsInvSi Xi[NoDim]'
        do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
           write(*,'(8es18.10)')&
                BoundaryThreads_B(iBlock) % Xyz_DIII(:,&
@@ -620,10 +642,6 @@ contains
                BoundaryThreads_B(iBlock) % B_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % RInv_III(&
-               iPoint, jTest,kTest),&
-               BoundaryThreads_B(iBlock) % TSi_III(&
-               iPoint, jTest,kTest),&
-               BoundaryThreads_B(iBlock) % PSi_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % LengthSi_III(&
                iPoint, jTest, kTest),&
