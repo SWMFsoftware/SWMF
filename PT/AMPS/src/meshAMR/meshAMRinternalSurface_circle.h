@@ -21,9 +21,10 @@ class cInternalCircleData : public cAMRexit
 , public cInternalSphericalData_UserDefined
 #endif
 {
-protected:
+public:
   double OriginPosition[3],Radius;
 
+protected:
   static long int nPolarSurfaceElements;
   static double dPolarAngle;
 

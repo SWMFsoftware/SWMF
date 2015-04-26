@@ -21,7 +21,7 @@ class cInternalSphere1DData : public cAMRexit
 , public cInternalSphericalData_UserDefined
 #endif
 {
-protected:
+public:
   double OriginPosition[3],Radius;
 
 
