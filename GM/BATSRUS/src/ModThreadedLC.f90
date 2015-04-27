@@ -362,20 +362,6 @@ contains
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'RhoNoDimOut=  ', RhoNoDimOut
     end if
-    ! RETURN !The correction accounting for gradients does not work
-    GhostCellCorr = 1/(&
-         (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
-         sqrt(&
-            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
-    PeSiOut = exp(log(PeSi_I(nPoint)) + &
-         (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
-    if(DoTestMe)then
-       write(*,*)'Corrected:'
-       write(*,*)'Pressure 1D (SI) = ',PeSiOut
-       write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
-    end if    
   contains
     !=======================
     subroutine get_res_heating(nIterIn)
