@@ -560,9 +560,6 @@ contains
 
     logical :: DoWriteOnce = .true.
 
-    integer :: iIonFluid
-    real    :: uNormalIon_I(nIonFluid)
-
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !------------------------------------------------------------------------
 
@@ -590,12 +587,13 @@ contains
 
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
     else
-       ! Floating boundary condition
        if (DoWriteOnce .and. .not. UseReflectedBC) then
 !          write(*,*) NameSub, ': floating body conditions.'
           DoWriteOnce = .false.
        end if
 
+       ! Floating boundary condition by default, which will be overwritten
+       ! below
        VarsGhostFace_V = VarsTrueFace_V
     end if
 
@@ -777,15 +775,32 @@ contains
     !----------------------------------------------------------------------
     subroutine set_ion_face_boundary
 
-      integer :: iUx, iUz
+      integer :: iUx, iUz, iIonFluid
+      real    :: uNormalIon_I(nIonFluid), nIon_I(nIonFluid)
+      real    :: uIonMean_D(3)
+      real    :: nElec, uIonMeanNormal
 
       ! Projection length of U_ on the local surface normal vector
       do iIonFluid=1,nIonFluid
-         uNormalIon_I(iIonFluid) = sum(&
-              VarsTrueFace_V(iRhoUxIon_I(iIonFluid):iRhoUzIon_I(iIonFluid))* &
-              Normal_D)
+         iUx = iRhoUxIon_I(iIonFluid)
+         iUz = iRhoUzIon_I(iIonFluid)
+         uNormalIon_I(iIonFluid) = sum(VarsTrueFace_V(iUx:iUz) * Normal_D)
       end do
 
+      nIon_I = VarsTrueFace_V(iRhoIon_I)/MassIon_I
+      nElec  = sum(nIon_I*ChargeIon_I)
+
+      uIonMean_D = 0.0
+      do iIonFluid=1,nIonFluid
+          iUx = iRhoUxIon_I(iIonFluid)
+          iUz = iRhoUzIon_I(iIonFluid)
+          uIonMean_D = uIonMean_D + &
+               VarsTrueFace_V(iUx:iUz) &
+               *nIon_I(iIonFluid)*ChargeIon_I(iIonFluid)/nElec
+       end do
+
+       uIonMeanNormal = sum(uIonMean_D*Normal_D)
+       
       ! Projection length of U_ on the local cartesian surface normal vector
       !do iIonFluid=1,nIonFluid
       !   uNormalIon_I(iIonFluid) = sum(&
@@ -825,7 +840,7 @@ contains
             if (uNormalIon_I(iIonFluid) > 0.0) then
                iUx = iRhoUxIon_I(iIonFluid)
                iUz = iRhoUzIon_I(iIonFluid)
-               !VarsGhostFace_V(iUx_I(iIonFluid):iUz_I(iIonFluid)) = 0.0
+
                VarsGhostFace_V(iUx:iUz) = 0.0
                VarsGhostFace_V(iRhoIon_I(iIonFluid)) = BodyRho_I(iIonFluid)
                VarsGhostFace_V(iPIon_I(iIonFluid))   = BodyP_I(iIonFluid)
@@ -869,11 +884,11 @@ contains
       if(UseElectronPressure) then
          VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I))
 
-         ! Assume that electron velocity is the same as cometary ion velocity
-         ! Use body pressure*electron pressure ratio for outflow,
-         ! float otherwise
-         if(uNormalIon_I(H2Op_) > 0.0) &
-              VarsGhostFace_V(Pe_) = VarsGhostFace_V(P_)*ElectronPressureRatio
+         ! Assume that electron velocity is the same as the mean ion velocity.
+         ! Use the minimum neutral temperature as the electron temperature
+         ! at the body if outflow, float otherwise
+         if(uIonMeanNormal > 0.0) &
+              VarsGhostFace_V(Pe_) = nElec*TempNeuMin
       else
          VarsGhostFace_V(P_)  = sum(VarsGhostFace_V(iPIon_I)) &
               *(1.+ElectronPressureRatio)
@@ -2931,44 +2946,44 @@ contains
 
           ! Set the minor ion profile so that in that region, the fluids
           ! behave like a single-fluid, only valid for 2 ion fluids now
-          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
-               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
-
-             ! The index for the major ion fluid, only valid for 2 ion fluids
-             iMajorIon = nIonFluid+1-iIonFluid
-
-             ! Velocity of the major ion fluid
-             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-
-             ! Temperature of the Major ion fluid
-             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
-                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
-                  MassIon_I(iMajorIon)
-
-             ! Set the mass density of the minor ion fluid 
-             ! to be Sw_Rho*LowDensityRatio
-             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
-                  Sw_Rho*LowDensityRatio
-
-             ! The velocity of the minor ion fluid is the same as the major ion
-             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
-             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
-             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
-
-             ! The temperature of the minor ion is the same as the major ion
-             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
-                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
-                  MassIon_I(iIonFluid) * Ti
-          end if ! if statement for minor ion
-
+!          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
+!               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
+!
+!             ! The index for the major ion fluid, only valid for 2 ion fluids
+!             iMajorIon = nIonFluid+1-iIonFluid
+!
+!             ! Velocity of the major ion fluid
+!             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
+!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+!             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
+!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+!             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
+!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+!
+!             ! Temperature of the Major ion fluid
+!             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
+!                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
+!                  MassIon_I(iMajorIon)
+!
+!             ! Set the mass density of the minor ion fluid 
+!             ! to be Sw_Rho*LowDensityRatio
+!             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
+!                  Sw_Rho*LowDensityRatio
+!
+!             ! The velocity of the minor ion fluid is the same as the major ion
+!             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
+!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
+!             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
+!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
+!             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
+!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
+!
+!             ! The temperature of the minor ion is the same as the major ion
+!             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
+!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
+!                  MassIon_I(iIonFluid) * Ti
+!          end if ! if statement for minor ion
+!
           ! The temperature of either ion fluid can not drop below Tmin
           State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
                State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
