@@ -36,7 +36,7 @@ namespace nucleusGravity {
     
   void setDensity(double d); 
 
-  void readMesh_longformat(char *fname);
+  void readMesh_longformat(const char *fname);
 
   void readMesh(const char *fname);
 

@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "Gravity.h"
+#include "global.h"
 
 #include "ifileopr.h"
 
@@ -29,13 +30,35 @@ void nucleusGravity::setDensity(double d) {
   density=d;
 }
 
-void nucleusGravity::readMesh_longformat(char *fname) {
+void nucleusGravity::readMesh_longformat(const char *fname) {
   CiFileOperations ifile;
   char str[MAXSTR],dat[MAXSTR],*endptr;
   long int i,j,idim;
   
   cNASTRANnode node;
   cNASTRANtetra tetra;
+
+  //check whether the binary file with the mesh is available 
+  FILE *fData=NULL;
+
+  sprintf(str,"%s.bin",fname);
+  fData=fopen(str,"r");
+ 
+  if (fData!=NULL) {
+    //the binary file exists -> use it directly
+    fread(&nnodes,sizeof(long int),1,fData); 
+    fread(&ntetras,sizeof(long int),1,fData);
+
+    nodes = new cNASTRANnode [nnodes];
+    tetras = new cNASTRANtetra [ntetras];
+
+    fread(nodes,sizeof(cNASTRANnode),nnodes,fData); 
+    fread(tetras,sizeof(cNASTRANtetra),ntetras,fData);
+
+    fclose(fData);
+    return;
+  }
+    
       
   ifile.openfile(fname);
   ifile.GetInputStr(str,sizeof(str));
@@ -197,6 +220,25 @@ void nucleusGravity::readMesh_longformat(char *fname) {
 	    }
 	}      
       for (nd=0;nd<nnodes;nd++) nodes[nd].id=nd;
+
+
+      //save the mesh binary file
+      int rank;
+
+      MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+
+      if (rank==0) {
+        sprintf(str,"%s.bin",fname);
+        fData=fopen(str,"w"); 
+
+        fwrite(&nnodes,sizeof(long int),1,fData);
+        fwrite(&ntetras,sizeof(long int),1,fData);
+
+        fwrite(nodes,sizeof(cNASTRANnode),nnodes,fData);
+        fwrite(tetras,sizeof(cNASTRANtetra),ntetras,fData);
+
+        fclose(fData);
+      }
 }
 
 void nucleusGravity::readMesh(const char *fname) {
