@@ -10,7 +10,7 @@ include ../../../Makefile.conf
 MY_LIB = ${LIBDIR}/libEMPIRICALEE.a
 
 include Makefile.DEPEND
-#include Makefile.RULES
+include Makefile.RULES
 
 OBJECTS = \
 	EEE_ModCommonVariables.o \

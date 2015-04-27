@@ -1,0 +1,3 @@
+# NAGFOR 6.0 fails compiling with debug flag
+$Compiler eq "nagfor"
+	  ${COMPILE.f90} ${Cflag4} -C EEE_ModCms.f90
