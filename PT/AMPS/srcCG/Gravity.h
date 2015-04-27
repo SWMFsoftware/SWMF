@@ -41,7 +41,7 @@ namespace nucleusGravity {
   void readMesh(const char *fname);
 
   
-  void  gravity(double * gravitypermass, double * position); 
+  double  gravity(double * gravitypermass, double * position); 
   
   void printMeshFile();
   

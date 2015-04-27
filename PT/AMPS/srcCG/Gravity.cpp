@@ -1,3 +1,5 @@
+//$Id$
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -336,7 +338,7 @@ void nucleusGravity::readMesh(const char *fname) {
 
 
   
-void  nucleusGravity::gravity(double * gravitypermass, double * position) {
+double  nucleusGravity::gravity(double * gravitypermass, double * position) {
       double center[3];
       double a[3],b[3],c[3];
       double forcepermass[3];
@@ -344,6 +346,8 @@ void  nucleusGravity::gravity(double * gravitypermass, double * position) {
       double volumetetra=0;
       double volume=0;
       int nfc,idim;
+
+      double TotalMass=0.0;
 
      for (nfc=0;nfc<ntetras;nfc++){
 	r_squared=0;
@@ -366,7 +370,11 @@ void  nucleusGravity::gravity(double * gravitypermass, double * position) {
 	  forcepermass[idim]=6.67259e-11*density*volumetetra*(center[idim]-position[idim])/pow(r,3.0);				       
 	  gravitypermass[idim]+=forcepermass[idim];
 	}
+    
+        TotalMass+=density*volumetetra;
      }
+
+     return TotalMass;
 }
   
 void nucleusGravity::printMeshFile() {
