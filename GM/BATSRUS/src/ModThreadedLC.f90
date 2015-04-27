@@ -864,10 +864,6 @@ contains
       !/
       real ::DtLocal, DtHeatCond
       integer :: iIter
-      !\
-      ! Version Easter 2015
-      !/
-      integer,parameter::iCooling2HeatCond=2
       !-----------
       if(time_accurate)then
          DtLocal = Dt*No2Si_V(UnitT_)
@@ -893,13 +889,13 @@ contains
          ! Contribution to dPe/dCons = -dCooling/dPe*dPe/dCons
          !                   = -2Cooling/Pe*Pe/(Pe*L*UHeat(T))
          !/
-         M_I(1) = M_I(1) -2*ResCooling_I(1)*iCooling2HeatCond/&
+         M_I(1) = M_I(1) -2*ResCooling_I(1)*DtLocal/&
               (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
 
          Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1)    - &
               SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + &
-              DtHeatCond*(ResHeatCond_I(1:nPoint-1)      + &
-              iCooling2HeatCond*ResCooling_I(1:nPoint-1))
+              DtHeatCond*ResHeatCond_I(1:nPoint-1)      + &
+              DtLocal*ResCooling_I(1:nPoint-1)
          !\
          ! Version Easter 2015
          !/
@@ -1013,8 +1009,8 @@ contains
           APMid = AP + 0.5*Derivative*DeltaXi
           Derivative = -AMMid*&
                (max(0.0, APMid -2*AMMid) -  max(0.0,AMMid - 2*APMid))*&
-               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/max(AMMid,AP),&
-               1.0) - AMMid*APMid
+               min(0.250*(ReflCoef_I(iStep-1)+ReflCoef_I(iStep))/&
+               max(AMMid,APMid), 1.0) - AMMid*APMid
           APlus_I(iStep) = AP + Derivative*DeltaXi
           ADiffMax = max(ADiffMax, &
                abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
@@ -1058,7 +1054,8 @@ contains
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
     use ModAdvance,      ONLY: State_VGB
-    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK    
+    use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use BATL_size,ONLY:  nJ, nK
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, InvGammaElectronMinus1
@@ -1070,7 +1067,7 @@ contains
     use ModImplicit,     ONLY: iTeImpl
     use ModGeometry,     ONLY: Xyz_DGB
     use ModB0,           ONLY: B0_DGB
-    use ModWaves
+    use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModMain, ONLY: BlkTest, ProcTest, jTest, kTest
@@ -1224,7 +1221,8 @@ contains
           CYCLE
        end if
       
-       State_VG(iP, 0, j, k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
+       State_VG(iP,0,j,k) = max(PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction,&
+            0.90*State_VG(iP,1,j,k))
        !\
        !Exponential extrapolation of pressure
        !/
@@ -1236,7 +1234,7 @@ contains
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
-       State_VG(Rho_, 0, j, k) = RhoNoDimOut
+       State_VG(Rho_, 0, j, k) = max(RhoNoDimOut, 0.90*State_VG(Rho_, 1, j, k))
        !\
        !Exponential extrapolation of density
        !/
