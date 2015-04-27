@@ -2173,7 +2173,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
 
   integer :: iR, iLon, iSide
   integer :: iProcFound, iBlockFound, iBlock, i, j, k, iError
-  real    :: r, Phi, XyzSm_D(3), Xyz_D(3), b_D(3)
+  real    :: r, Phi, XyzSm_D(3), Xyz_D(3), b_D(3), b2
 
   real, allocatable:: b_DG(:,:,:,:)
 
@@ -2246,8 +2246,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
         do k = MinK, MaxK; do j=MinJ, MaxJ; do i = MinI,MaxI
            b_DG(:,i,j,k) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
            if(UseB0) b_DG(:,i,j,k) = b_DG(:,i,j,k) + B0_DGB(:,i,j,k,iBlock)
-           b_DG(:,i,j,k) = b_DG(:,i,j,k) &
-                /sqrt(max(1e-30, sum(b_DG(:,i,j,k)**2)))
+           b2 = sum(b_DG(:,i,j,k)**2)
+           if(b2 > 0)b_DG(:,i,j,k) = b_DG(:,i,j,k)/sqrt(b2)
         end do; end do; end do
 
         do k = 0, nK+1; do j = 0, nJ+1; do i = 0, nI+1; 
@@ -2262,10 +2262,12 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
                 ( b_DG(:,i,j,k+1) - b_DG(:,i,j,k-1)) / &
                 CellSize_DB(z_,iBlock)
 
-           ! Curvature = 1/|b.grad b|
-           CurvatureB_GB(i,j,k,iBlock) = &
-                1/max(1e-30, sqrt(sum(b_D**2)))
-
+           b2 = sum(b_D**2)
+           if(b2 > 0)then
+              CurvatureB_GB(i,j,k,iBlock) = 1/sqrt(b2)
+           else
+              CurvatureB_GB(i,j,k,iBlock) = 1e30
+           end if
         end do; end do; end do
      end do
   end if
