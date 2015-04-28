@@ -312,7 +312,7 @@ contains
        ! and hydrodynamic motion through a time step (or half time step
        ! for 2-stage scheme). Store temperature and pressure
        !/
-       call advance_heating_and_hydro
+       call advance_hydro_and_heating
     case(Impl_)
        call advance_heat_cond
        !\
@@ -649,7 +649,7 @@ contains
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
     end subroutine set_initial_thread
     !==========================
-    subroutine advance_heating_and_hydro
+    subroutine advance_hydro_and_heating
       use ModMain,    ONLY: cfl, nStage, time_accurate, Dt
       use ModAdvance, ONLY: time_BLK
       use ModPhysics, ONLY: No2Si_V, UnitT_
@@ -697,7 +697,7 @@ contains
 !!!
 !!!      USiLtd = max(USiLtd, 0.0)
 !!!
-      !do iIter = 1,nIter
+      
       !\
       ! Add enthalpy correction
       !/
@@ -705,8 +705,6 @@ contains
       
       M_I(2:nPoint-1) = &
            PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-      M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-           /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
       Res_I = 0.0
       if(USiLtd>0)then
          FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
@@ -722,11 +720,39 @@ contains
          !/
          
          L_I(2:nPoint-1) =  - FluxConst
-         M_I(1:nPoint-1) =  FluxConst + M_I(1:nPoint-1)
-         Res_I(1)        =  - FluxConst*TeSi_I(1)
+         M_I(2:nPoint-1) =  FluxConst + M_I(2:nPoint-1)
          Res_I(2:nPoint-1) = &
               FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-         DCons_I(1) = Res_I(1)/M_I(1) 
+         !\
+         ! Solve the temperature and pressure on top of the 
+         ! internal TR
+         !/
+         TeSiOld = TeSi_I(1)
+         do iIter = 1, nIter
+            M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + FluxConst
+            Res_I(1)        =  - FluxConst*TeSi_I(1) + IntEnergy_I(1) -&
+                 SpecHeat_I(1)*PeSi_I(1)
+            DCons_I(1) = Res_I(1)/M_I(1)
+            TeSi_I(1) = TeSi_I(1) + DCons_I(1)
+            !\
+            ! Set pressure for updated temperature 
+            !/
+            call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+                 DoExtrapolate=.false.)
+            !\
+            ! First value is now the product of the thread length in meters times
+            ! a geometric mean pressure, so that
+            !/
+            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+                 BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+            if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
+         end do
+         if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
+            write(*,*)'TOld, TNew, DTLast=',TOld, TeSi_I(1), DCons_I(1)
+            call CON_stop('No Convergence in advance_hydro')
+         end if
+         DCons_I(1) = TeSi_I(1) - TeSiOld
          do iPoint = 2, nPoint - 1
             DCons_I(iPoint) = (Res_I(iPoint) - L_I(iPoint)*&
                  DCons_I(iPoint-1))/M_I(iPoint)
@@ -751,13 +777,41 @@ contains
             DCons_I(iPoint) = (Res_I(iPoint) - U_I(iPoint)*&
                  DCons_I(iPoint+1))/M_I(iPoint)
          end do
-         Res_I(1) =  - FluxConst*(TeSi_I(2) + DCons_I(2))
-         DCons_I(1) = Res_I(1)/M_I(1)
+         !\
+         ! Solve the temperature and pressure on the top of the
+         ! internal TR
+         !/
+         TeSiOld = TeSi_I(1)
+         do iIter = 1, nIter
+            M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+            Res_I(1) =  - FluxConst*(TeSi_I(2) + DCons_I(2))  + IntEnergy_I(1) -&
+                 SpecHeat_I(1)*PeSi_I(1)
+            DCons_I(1) = Res_I(1)/M_I(1)
+            TeSi_I(1)  = TeSi_I(1) + DCons_I(1)
+            !\
+            ! Set pressure for updated temperature 
+            !/
+            call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+                 DoExtrapolate=.false.)
+            !\
+            ! First value is now the product of the thread length in meters times
+            ! a geometric mean pressure, so that
+            !/
+            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+                 BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+          if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
+         end do
+         if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
+            write(*,*)'TOld, TNew, DTLast=',TOld, TeSi_I(1), DCons_I(1)
+            call CON_stop('No Convergence in advance_hydro')
+         end if
+         DCons_I(1) = TeSi_I(1) - TeSiOld
       end if
       
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-      TeSi_I(1:nPoint-1) = max(TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1),&
-           TeSiMin)
+      TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1),&
+           TeSiMin); TeSi_I(1) = max(TeSi_I(1), TeSiMin)
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
       
       !==========Add Gravity Source================================
@@ -847,7 +901,7 @@ contains
       end if
       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
-    end subroutine advance_heating_and_hydro
+    end subroutine advance_hydro_and_heating
     !========================
     subroutine advance_heat_cond
       use ModMain,    ONLY: cfl, Dt, time_accurate
