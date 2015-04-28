@@ -657,7 +657,7 @@ contains
       ! Time step in the physical cell from which the thread originates
       ! divided by nStage if needed
       !/
-      real ::DtLocal, DtHeatCond
+      real ::DtLocal, DtHeatCond, TeSiOld
       !\
       ! Enthalpy correction coefficient
       !/
@@ -698,88 +698,89 @@ contains
 !!!      USiLtd = max(USiLtd, 0.0)
 !!!
       !do iIter = 1,nIter
-
-         !==========Add Gravity Source================================
+      !\
+      ! Add enthalpy correction
+      !/
+      M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0; FluxConst = 0.0
+      
+      M_I(2:nPoint-1) = &
+           PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
+      M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
+           /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+      Res_I = 0.0
+      if(USiLtd>0)then
+         FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+              (TeSiIn*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
          !\
-         !cGravPot = cGravitation*mSun*cAtomicMass/&
-         !/   (cBoltzmann*rSun)
-         !\
-         !energy flux needed to raise the mass flux rho*u to the heliocentric 
-         !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-         !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-         !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+         ! Solve equation!
+         !SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})=0
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
+         !                              -FluxConst*(T^n_i-T^n_{i-1}) = &
+         !                  ResHeating  -FluxConst*(T^n_i-T^n_{i-1}) 
          !/
-         !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
-         !     0.5*GravHydroDyn*FluxConst*(&
-         !     - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
-         !     + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-         !Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
-         !        BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
-         !        + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
-         !if(DoTestMe)write(*,*)'iIter=', iIter, ' maxRes=', &
-         !     maxval(abs(Res_I(1:nPoint-1)))
-
+         
+         L_I(2:nPoint-1) =  - FluxConst
+         M_I(1:nPoint-1) =  FluxConst + M_I(1:nPoint-1)
+         Res_I(1)        =  - FluxConst*TeSi_I(1)
+         Res_I(2:nPoint-1) = &
+              FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+         DCons_I(1) = Res_I(1)/M_I(1) 
+         do iPoint = 2, nPoint - 1
+            DCons_I(iPoint) = (Res_I(iPoint) - L_I(iPoint)*&
+                 DCons_I(iPoint-1))/M_I(iPoint)
+         end do
+      elseif(USiLtd<0)then
+         FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+              (TeSiIn*PoyntingFluxPerBSi*&
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))           
+         !\
+         ! Solve equation!
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)=0
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)&
+         !                            - FluxConst*(T^n_{i+1}-T^n_i) = &
+         !                        Res - FluxConst*(T^n_{i+1}-T^n_i)
+         !/ 
+         U_I(1:nPoint-1) = FluxConst
+         M_I(2:nPoint-1) = M_I(2:nPoint-1) - FluxConst
+         Res_I(2:nPoint-1) = Res_I(2:Npoint-1)&
+              -FluxConst*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
+         do iPoint = nPoint - 1, 2, -1
+            DCons_I(iPoint) = (Res_I(iPoint) - U_I(iPoint)*&
+                 DCons_I(iPoint+1))/M_I(iPoint)
+         end do
+         Res_I(1) =  - FluxConst*(TeSi_I(2) + DCons_I(2))
+         DCons_I(1) = Res_I(1)/M_I(1)
+      end if
+      
+      PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
+      TeSi_I(1:nPoint-1) = max(TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1),&
+           TeSiMin)
+      PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
+      
+      !==========Add Gravity Source================================
+      !\
+      !cGravPot = cGravitation*mSun*cAtomicMass/&
+      !/   (cBoltzmann*rSun)
+      !\
+      !energy flux needed to raise the mass flux rho*u to the heliocentric 
+      !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+      !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+      !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+      !/
+      !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
+      !     0.5*GravHydroDyn*FluxConst*(&
+      !     - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
+      !     + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+      !Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
+      !        BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
+      !        + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
+      !if(DoTestMe)write(*,*)'iIter=', iIter, ' maxRes=', &
+      !     maxval(abs(Res_I(1:nPoint-1)))
+      
       do iIter = 1,1
-         !\
-         ! Add enthalpy correction
-         !/
-         M_I = 0.0; L_I = 0.0; U_I = 0.0; DCons_I = 0.0; FluxConst = 0.0
-
-         M_I(2:nPoint-1) = &
-              PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-         M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-         Res_I = 0.0
-         if(USiLtd>0)then
-            FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
-                 (TeSiIn*PoyntingFluxPerBSi*&
-                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-            !\
-            ! Solve equation!
-            !SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})=0
-            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
-            !                              -FluxConst*(T^n_i-T^n_{i-1}) = &
-            !                  ResHeating  -FluxConst*(T^n_i-T^n_{i-1}) 
-            !/
-       
-            L_I(2:nPoint-1) =  - FluxConst
-            M_I(1:nPoint-1) =  FluxConst + M_I(1:nPoint-1)
-            Res_I(1)        =  - FluxConst*TeSi_I(1)
-            Res_I(2:nPoint-1) = &
-                 FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-            DCons_I(1) = Res_I(1)/M_I(1) 
-            do iPoint = 2, nPoint - 1
-               DCons_I(iPoint) = (Res_I(iPoint) - L_I(iPoint)*&
-                    DCons_I(iPoint-1))/M_I(iPoint)
-            end do
-         elseif(USiLtd<0)then
-            FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
-                 (TeSiIn*PoyntingFluxPerBSi*&
-                 BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))           
-            !\
-            ! Solve equation!
-            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)=0
-            ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)&
-            !                            - FluxConst*(T^n_{i+1}-T^n_i) = &
-            !                        Res - FluxConst*(T^n_{i+1}-T^n_i)
-            !/ 
-            U_I(1:nPoint-1) = U_I(1:nPoint-1) + FluxConst
-            M_I(2:nPoint-1) = M_I(2:nPoint-1) - FluxConst
-            Res_I(1) = Res_I(1) - FluxConst*TeSi_I(2)
-            Res_I(2:nPoint-1) = Res_I(2:Npoint-1)&
-                 -FluxConst*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
-            do iPoint = nPoint - 1, 1, -1
-               DCons_I(iPoint) = (Res_I(iPoint) - U_I(iPoint)*&
-                    DCons_I(iPoint+1))/M_I(iPoint)
-            end do
-         end if
-
-         PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-         TeSi_I(1:nPoint-1) = max(TeSi_I(1:nPoint-1) + DCons_I(1:nPoint-1),&
-                 TeSiMin)
-         PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
          !\
          ! Set pressure for updated temperature 
          !/
