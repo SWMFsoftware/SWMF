@@ -1210,22 +1210,21 @@ contains
        State_VG(iP,0,j,k) = max(PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction,&
             0.90*State_VG(iP,1,j,k))
        !\
-       !Exponential extrapolation of pressure
+       !No extrapolation of pressure
        !/
-       State_VG(iP, 1-nGhost:-1, j, k) =  &
-            State_VG(iP,0,j,k)**2/State_VG(iP,1,j,k)
+       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)
 
        !\
        ! Assign ion pressure (if separate from electron one)
+       !/
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
             State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
 
        State_VG(Rho_, 0, j, k) = max(RhoNoDimOut, 0.90*State_VG(Rho_, 1, j, k))
        !\
-       !Exponential extrapolation of density
+       !No extrapolation of density
        !/
-       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2/ &
-            State_VG(Rho_, 1, j, k) 
+       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k) 
 
        !\
        ! Magnetic field and velocity vector components orthogonal to 
