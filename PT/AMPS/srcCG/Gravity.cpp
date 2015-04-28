@@ -389,31 +389,58 @@ double  nucleusGravity::gravity(double * gravitypermass, double * position) {
       double volume=0;
       int nfc,idim;
 
-      double TotalMass=0.0;
+      static double TotalMass=0.0;
+
+      //the static tables used in the gravity calcualtion
+      static double **xThetrahedronCenter=NULL;
+      static double *ThetrahedronVolume=NULL;
+
+      if (ThetrahedronVolume==NULL) {
+        //allocate the static tables
+        ThetrahedronVolume=new double [ntetras];
+        xThetrahedronCenter=new double* [ntetras];
+        xThetrahedronCenter[0]=new double [3*ntetras];
+
+        for (int n=1;n<ntetras;n++) xThetrahedronCenter[n]=xThetrahedronCenter[n-1]+3; 
+
+        //init the tables with the mass and center points of teh tetrahedrons
+        for (nfc=0;nfc<ntetras;nfc++){
+          r_squared=0;
+          for (idim=0;idim<3;idim++) {
+            xThetrahedronCenter[nfc][idim]=0;
+
+            for (int n=0;n<4;n++) xThetrahedronCenter[nfc][idim]+=0.25*nodes[tetras[nfc].node[n]].x[idim];
+          }
+
+          for (idim=0;idim<3;idim++) {
+            a[idim]=nodes[tetras[nfc].node[1]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
+            b[idim]=nodes[tetras[nfc].node[2]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
+            c[idim]=nodes[tetras[nfc].node[3]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
+          }
+
+          ThetrahedronVolume[nfc]=6.67259e-11*density*fabs(c[0]*(a[1]*b[2]-b[1]*a[2])+c[1]*(a[2]*b[0]-b[2]*a[0])+c[2]*(a[0]*b[1]-b[0]*a[1]))/6;
+          TotalMass+=density*fabs(c[0]*(a[1]*b[2]-b[1]*a[2])+c[1]*(a[2]*b[0]-b[2]*a[0])+c[2]*(a[0]*b[1]-b[0]*a[1]))/6;
+         
+        }
+      }
+  
+
+     //clean the acceleartion vector
+     for (idim=0;idim<3;idim++) gravitypermass[idim]=0.0;
 
      for (nfc=0;nfc<ntetras;nfc++){
-	r_squared=0;
+        double r_3,r2Center[3],r_squared=0.0;
+
 	for (idim=0;idim<3;idim++) {
-	  center[idim]=0;
-	  for (int n=0;n<4;n++) center[idim]+=0.25*nodes[tetras[nfc].node[n]].x[idim];
-	  r_squared+=pow(position[idim]-center[idim],2.0);
-	  r=pow(r_squared,0.5);
+	  r_squared+=pow((r2Center[idim]=position[idim]-xThetrahedronCenter[nfc][idim]),2.0);
 	}
+
+        r_3=1.0/pow(r_squared,3.0/2.0); 
+
 	for (idim=0;idim<3;idim++) {
-	  a[idim]=nodes[tetras[nfc].node[1]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
-	  b[idim]=nodes[tetras[nfc].node[2]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
-	  c[idim]=nodes[tetras[nfc].node[3]].x[idim]-nodes[tetras[nfc].node[0]].x[idim];
-	}
-	volumetetra=fabs(c[0]*(a[1]*b[2]-b[1]*a[2])+c[1]*(a[2]*b[0]-b[2]*a[0])+c[2]*(a[0]*b[1]-b[0]*a[1]))/6;
-	//volumetetra=fabs(a[0]*(b[1]*c[2]-c[1]*b[2])+a[1]*(b[2]*c[0]-c[2]*b[0])+a[2]*(b[0]*c[1]-c[0]*b[1]))/6;
-	//printf("volume=%e \n",volumetetra);
-	volume+=volumetetra;
-	for (idim=0;idim<3;idim++) {
-	  forcepermass[idim]=6.67259e-11*density*volumetetra*(center[idim]-position[idim])/pow(r,3.0);				       
-	  gravitypermass[idim]+=forcepermass[idim];
+	  gravitypermass[idim]+=ThetrahedronVolume[nfc]*r2Center[idim]*r_3;				       
 	}
     
-        TotalMass+=density*volumetetra;
      }
 
      return TotalMass;
