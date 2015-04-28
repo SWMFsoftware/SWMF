@@ -513,7 +513,7 @@ contains
       !\
       ! Enthalpy correction coefficient
       !/
-      real    :: FluxConst, EnthalpyCorrection, DEnthalpyCorrOverDU
+      real    :: EnthalpyFlux, EnthalpyCorrection, DEnthalpyCorrOverDU
       !\
       ! Loop variable
       !/
@@ -564,33 +564,33 @@ contains
          ! Add enthalpy correction
          !/
          if(USiLtd>0)then
-            FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
+            EnthalpyFlux = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             do iPoint = 1, nPoint-2
-               EnthalpyCorrection = FluxConst*TeSi_I(iPoint)
+               EnthalpyCorrection = EnthalpyFlux*TeSi_I(iPoint)
                ResEnthalpy_I(iPoint)   = &
                     ResEnthalpy_I(iPoint)   - EnthalpyCorrection
                ResEnthalpy_I(iPoint+1) = &
                     ResEnthalpy_I(iPoint+1) + EnthalpyCorrection
             end do
-            EnthalpyCorrection = FluxConst*TeSi_I(nPoint-1)
+            EnthalpyCorrection = EnthalpyFlux*TeSi_I(nPoint-1)
             ResEnthalpy_I(nPoint-1)   = &
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          elseif(USiLtd<0)then
-            FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
+            EnthalpyFlux = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             do iPoint = 2, nPoint-1
-               EnthalpyCorrection = FluxConst*TeSi_I(iPoint)
+               EnthalpyCorrection = EnthalpyFlux*TeSi_I(iPoint)
                ResEnthalpy_I(iPoint)   = &
                     ResEnthalpy_I(iPoint)   + EnthalpyCorrection
                ResEnthalpy_I(iPoint-1) = &
                     ResEnthalpy_I(iPoint-1) - EnthalpyCorrection
             end do
-            EnthalpyCorrection = FluxConst*TeSi_I(nPoint)
+            EnthalpyCorrection = EnthalpyFlux*TeSi_I(nPoint)
             ResEnthalpy_I(nPoint-1)   = &
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          end if
@@ -602,16 +602,17 @@ contains
          !\
          !cGravPot = cGravitation*mSun*cAtomicMass/&
          !/   (cBoltzmann*rSun)
+         !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
          !\
          !energy flux needed to raise the mass flux rho*u to the heliocentric 
          !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
          !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-         !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+         !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
          !/
-         !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + 0.5*GravHydroDyn*FluxConst*(&
+         !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + 0.5*GravHydroDyn*EnthalpyFlux*(&
          !     - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
          !     + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-         !Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
+         !Res_I(1) = Res_I(1) + GravHydroDyn*EnthalpyFlux*(-1 + 0.5*(&
          !       BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
          !     + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
          !\
@@ -661,7 +662,7 @@ contains
       !\
       ! Enthalpy correction coefficient
       !/
-      real    :: FluxConst
+      real    :: EnthalpyFlux, FluxConst
       !\
       ! Loop variable
       !/
@@ -707,22 +708,24 @@ contains
            PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
       Res_I = 0.0
       if(USiLtd>0)then
-         FluxConst = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+         FluxConst    = USiLtd * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+
+         EnthalpyFlux = FluxConst/AverageIonCharge& !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)
          !\
          ! Solve equation!
-         !SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})=0
-         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_i-T^{n+1}_{i-1})-
-         !                              -FluxConst*(T^n_i-T^n_{i-1}) = &
-         !                  ResHeating  -FluxConst*(T^n_i-T^n_{i-1}) 
+         !SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_i-T^{n+1}_{i-1})=0
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_i-T^{n+1}_{i-1})-
+         !                              -EnthalpyFlux*(T^n_i-T^n_{i-1}) = &
+         !                  ResHeating  -EnthalpyFlux*(T^n_i-T^n_{i-1}) 
          !/
          
-         L_I(2:nPoint-1) =  - FluxConst
-         M_I(2:nPoint-1) =  FluxConst + M_I(2:nPoint-1)
+         L_I(2:nPoint-1) =  - EnthalpyFlux
+         M_I(2:nPoint-1) =  EnthalpyFlux + M_I(2:nPoint-1)
          Res_I(2:nPoint-1) = &
-              FluxConst*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
+              EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
          !\
          ! Solve the temperature and pressure on top of the 
          ! internal TR
@@ -730,8 +733,9 @@ contains
          TeSiOld = TeSi_I(1)
          do iIter = 1, nIter
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + FluxConst
-            Res_I(1)        =  - FluxConst*TeSi_I(1) + IntEnergy_I(1) -&
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + &
+                 EnthalpyFlux
+            Res_I(1)        =  - EnthalpyFlux*TeSi_I(1) + IntEnergy_I(1) -&
                  SpecHeat_I(1)*PeSi_I(1)
             DCons_I(1) = Res_I(1)/M_I(1)
             TeSi_I(1) = TeSi_I(1) + DCons_I(1)
@@ -749,7 +753,7 @@ contains
             if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
          end do
          if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
-            write(*,*)'TOld, TNew, DTLast=',TOld, TeSi_I(1), DCons_I(1)
+            write(*,*)'TOld, TNew, DTLast=',TeSiOld, TeSi_I(1), DCons_I(1)
             call CON_stop('No Convergence in advance_hydro')
          end if
          DCons_I(1) = TeSi_I(1) - TeSiOld
@@ -758,21 +762,22 @@ contains
                  DCons_I(iPoint-1))/M_I(iPoint)
          end do
       elseif(USiLtd<0)then
-         FluxConst = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+         FluxConst    = USiLtd * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
-              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))           
+              BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)) 
+         EnthalpyFlux = FluxConst/AverageIonCharge  & !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)           
          !\
          ! Solve equation!
-         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)=0
-         ! SpecHeat*(T^{n+1}_i-T^n_i) + FluxConst*(T^{n+1}_{i+1}-T^{n+1}_i)&
-         !                            - FluxConst*(T^n_{i+1}-T^n_i) = &
-         !                        Res - FluxConst*(T^n_{i+1}-T^n_i)
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_{i+1}-T^{n+1}_i)=0
+         ! SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_{i+1}-T^{n+1}_i)&
+         !                            - EnthalpyFlux*(T^n_{i+1}-T^n_i) = &
+         !                        Res - EnthalpyFlux*(T^n_{i+1}-T^n_i)
          !/ 
-         U_I(1:nPoint-1) = FluxConst
-         M_I(2:nPoint-1) = M_I(2:nPoint-1) - FluxConst
+         U_I(1:nPoint-1) = EnthalpyFlux
+         M_I(2:nPoint-1) = M_I(2:nPoint-1) - EnthalpyFlux
          Res_I(2:nPoint-1) = Res_I(2:Npoint-1)&
-              -FluxConst*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
+              -EnthalpyFlux*(TeSi_I(3:nPoint) - TeSi_I(2:nPoint-1))
          do iPoint = nPoint - 1, 2, -1
             DCons_I(iPoint) = (Res_I(iPoint) - U_I(iPoint)*&
                  DCons_I(iPoint+1))/M_I(iPoint)
@@ -785,7 +790,7 @@ contains
          do iIter = 1, nIter
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
                  /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-            Res_I(1) =  - FluxConst*(TeSi_I(2) + DCons_I(2))  + IntEnergy_I(1) -&
+            Res_I(1) =  - EnthalpyFlux*(TeSi_I(2) + DCons_I(2))  + IntEnergy_I(1) -&
                  SpecHeat_I(1)*PeSi_I(1)
             DCons_I(1) = Res_I(1)/M_I(1)
             TeSi_I(1)  = TeSi_I(1) + DCons_I(1)
@@ -803,7 +808,7 @@ contains
           if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
          end do
          if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
-            write(*,*)'TOld, TNew, DTLast=',TOld, TeSi_I(1), DCons_I(1)
+            write(*,*)'TOld, TNew, DTLast=',TeSiOld, TeSi_I(1), DCons_I(1)
             call CON_stop('No Convergence in advance_hydro')
          end if
          DCons_I(1) = TeSi_I(1) - TeSiOld
@@ -818,12 +823,14 @@ contains
       !\
       !cGravPot = cGravitation*mSun*cAtomicMass/&
       !/   (cBoltzmann*rSun)
+      !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
       !\
       !energy flux needed to raise the mass flux rho*u to the heliocentric 
       !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
       !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-      !=P_e/T_e*cGravPot*(M_sun[amu]/Z)*u*(1/R_sun -1/r)
+      !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
       !/
+ 
       !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
       !     0.5*GravHydroDyn*FluxConst*(&
       !     - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
@@ -834,64 +841,64 @@ contains
       !if(DoTestMe)write(*,*)'iIter=', iIter, ' maxRes=', &
       !     maxval(abs(Res_I(1:nPoint-1)))
       
-      do iIter = 1,1
-         !\
-         ! Set pressure for updated temperature 
-         !/
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-              DoExtrapolate=.false.)
-         !\
-         ! First value is now the product of the thread length in meters times
-         ! a geometric mean pressure, so that
-         !/
-         PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-              BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-         !\
-         !Add heat conduction for half time step and heating 
-         !/
-         Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
-         call get_heat_cond    
-         Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +&
-                             DtHeatCond*ResHeatCond_I(1:nPoint-1)   
-         !\
-         ! Version Easter 2015
-         !/
-         U_I(1:nPoint-1) = DtHeatCond*U_I(1:nPoint-1)
-         L_I(1:nPoint-1) = DtHeatCond*L_I(1:nPoint-1)
-         M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
-              SpecHeat_I(2:nPoint-1)*PeSi_I(2:nPoint-1)/&
-              (3.50*Cons_I(2:nPoint-1))
-         !\
-         ! Near TR
-         ! Pe*L = \int_0^T{\kappa_0T^{2.5}dT/UHeat(T)}
-         ! LdPe/dT=\kappa_0T^T^{2.5}/UHeat(T)
-         ! dPe/dCons=Pe/(Pe*L*UHeat(T))
-         !/ 
-         M_I(1) = DtHeatCond*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-         DCons_I = 0.0
-         call tridag(n=nPoint-1,  &
-              L_I=L_I(1:nPoint-1),&
-              M_I=M_I(1:nPoint-1),&
-              U_I=U_I(1:nPoint-1),&
-              R_I=Res_I(1:nPoint-1),&
-              W_I=DCons_I(1:nPoint-1))
-         Cons_I(1:nPoint-1) = &
-              max(ConsMin,Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1))
-         PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-         TeSi_I(1:nPoint-1) = &
-              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
-         PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
-         
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-              DoExtrapolate=.false.)
-         !\
-         ! First value is now the product of the thread length in meters times
-         ! a geometric mean pressure, so that
-         !/
-         PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-              BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-      end do
+      
+      !\
+      ! Set pressure for updated temperature 
+      !/
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+      !\
+      ! First value is now the product of the thread length in meters times
+      ! a geometric mean pressure, so that
+      !/
+      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+           BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+      !\
+      !Add heat conduction for half time step and heating 
+      !/
+      Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
+      call get_heat_cond    
+      Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +&
+           DtHeatCond*ResHeatCond_I(1:nPoint-1)   
+      !\
+      ! Version Easter 2015
+      !/
+      U_I(1:nPoint-1) = DtHeatCond*U_I(1:nPoint-1)
+      L_I(1:nPoint-1) = DtHeatCond*L_I(1:nPoint-1)
+      M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
+           SpecHeat_I(2:nPoint-1)*PeSi_I(2:nPoint-1)/&
+           (3.50*Cons_I(2:nPoint-1))
+      !\
+      ! Near TR
+      ! Pe*L = \int_0^T{\kappa_0T^{2.5}dT/UHeat(T)}
+      ! LdPe/dT=\kappa_0T^T^{2.5}/UHeat(T)
+      ! dPe/dCons=Pe/(Pe*L*UHeat(T))
+      !/ 
+      M_I(1) = DtHeatCond*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
+           /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+      DCons_I = 0.0
+      call tridag(n=nPoint-1,  &
+           L_I=L_I(1:nPoint-1),&
+           M_I=M_I(1:nPoint-1),&
+           U_I=U_I(1:nPoint-1),&
+           R_I=Res_I(1:nPoint-1),&
+           W_I=DCons_I(1:nPoint-1))
+      Cons_I(1:nPoint-1) = &
+           max(ConsMin,Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1))
+      PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
+      TeSi_I(1:nPoint-1) = &
+           (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+      PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
+      
+      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+      !\
+      ! First value is now the product of the thread length in meters times
+      ! a geometric mean pressure, so that
+      !/
+      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+           BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+      
       !\
       ! Store pressure and temperature
       !/
