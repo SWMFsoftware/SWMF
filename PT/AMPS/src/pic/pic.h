@@ -2519,6 +2519,13 @@ namespace PIC {
         const int DataMode_XYZ=1;
         extern int DataMode;
 
+        //rotation matrix
+        extern double RotationMatrix_LocalFrame2DATAFILE[3][3];
+        extern double RotationMatrix_DATAFILE2LocalFrame[3][3];
+        void SetRotationMatrix_LocalFrame2DATAFILE(const double Matrix[3][3]);
+        void SetRotationMatrix_DATAFILE2LocalFrame(const double Matrix[3][3]);
+        void CalculateInverseRotationMatrix(double Matrix[3][3],double InverseMatrix[3][3]);
+
         class cLoadedVariableData {
         public:
           int offset;

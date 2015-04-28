@@ -20,6 +20,85 @@ int PIC::CPLR::DATAFILE::TECPLOT::DataMode=-1;
 
 PIC::CPLR::DATAFILE::TECPLOT::cLoadedVariableData PIC::CPLR::DATAFILE::TECPLOT::Velocity,PIC::CPLR::DATAFILE::TECPLOT::Pressure,PIC::CPLR::DATAFILE::TECPLOT::MagneticField,PIC::CPLR::DATAFILE::TECPLOT::Density;
 
+//rotation matrixes
+double PIC::CPLR::DATAFILE::TECPLOT::RotationMatrix_LocalFrame2DATAFILE[3][3]={{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
+double PIC::CPLR::DATAFILE::TECPLOT::RotationMatrix_DATAFILE2LocalFrame[3][3]={{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
+
+//set up the rotation matrixes
+void PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_LocalFrame2DATAFILE(const double Matrix[3][3]) {
+  int i,j;
+
+  //copy the original rotation matrix
+  for (i=0;i<3;i++) for (j=0;j<3;j++) RotationMatrix_LocalFrame2DATAFILE[i][j]=Matrix[i][j];
+
+  //determine the inverse matrix
+  CalculateInverseRotationMatrix(RotationMatrix_LocalFrame2DATAFILE,RotationMatrix_DATAFILE2LocalFrame);
+}
+
+void PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(const double Matrix[3][3]) {
+  int i,j;
+
+  //copy the original rotation matrix
+  for (i=0;i<3;i++) for (j=0;j<3;j++) RotationMatrix_DATAFILE2LocalFrame[i][j]=Matrix[i][j];
+
+  //determine the inverse matrix
+  CalculateInverseRotationMatrix(RotationMatrix_DATAFILE2LocalFrame,RotationMatrix_LocalFrame2DATAFILE);
+}
+
+void PIC::CPLR::DATAFILE::TECPLOT::CalculateInverseRotationMatrix(double Matrix[3][3],double InverseMatrix[3][3]) {
+  int i,j,nLine;
+  double A[3][6],D=0.0;
+
+  //calculate the determinant of the matrix and normalze it
+  D+=Matrix[0][0]*(Matrix[1][1]*Matrix[2][2]-Matrix[2][1]*Matrix[1][2]);
+  D-=Matrix[0][1]*(Matrix[1][0]*Matrix[2][2]-Matrix[2][0]*Matrix[1][2]);
+  D+=Matrix[0][2]*(Matrix[1][0]*Matrix[2][1]-Matrix[2][0]*Matrix[1][1]);
+
+
+
+  //copy the matrix
+  for (i=0;i<3;i++) for (j=0;j<3;j++) {
+    Matrix[i][j]/=D;
+
+    A[i][j]=Matrix[i][j];
+    A[i][j+3]=(i==j) ? 1.0 : 0.0;
+  }
+
+  //determine the inverse rotation matrix A=(Matrix,I) -> (I,Matrix^{-1})
+
+  for (j=0;j<3;j++) {
+    //determine the line with the maximum value at positino A(j,j);
+    double t,maxA;
+    int jj;
+
+    //get the line with the maximum value of A[i][i]
+    for (maxA=A[j][0],nLine=0,i=1;i<3;i++) if (fabs(A[i][j])>fabs(maxA)) maxA=A[i][j],nLine=i;
+
+
+    //copy line nLine to line j and devide it by maxA
+    for (jj=0;jj<6;jj++) {
+      t=A[j][jj];
+      A[j][jj]=A[nLine][jj];
+      A[nLine][jj]=t;
+
+      A[j][jj]/=maxA;
+    }
+
+    //substract the line nLine from all other lines of the matrix
+    for (i=0;i<3;i++) if (i!=j) {
+      t=A[i][j]/A[j][j];
+
+      for (jj=0;jj<6;jj++) A[i][jj]-=t*A[j][jj];
+    }
+  }
+
+  //copy the invrse matrix
+  for (i=0;i<3;i++) for (j=0;j<3;j++) {
+    InverseMatrix[i][j]=A[i][j+3];
+  }
+}
+
+
 //set the limits of the domain in the data file
 void PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(double *xmin,double *xmax) {
   for (int idim=0;idim<3;idim++) xDataMin[idim]=xmin[idim],xDataMax[idim]=xmax[idim];
