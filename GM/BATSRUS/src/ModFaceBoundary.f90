@@ -486,20 +486,35 @@ contains
               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
          SinPhi   = FaceCoords_D(y_)/ &
               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
+         !\
+         ! (B\cdot u)/(u \cdot u)
+         !/
          BdotU    = sum(VarsTrueFace_V(Bx_:Bz_)*VarsTrueFace_V(Ux_:Uz_)) &
               /(sum(VarsTrueFace_V(Ux_:Uz_)*VarsTrueFace_V(Ux_:Uz_)) &
               + cTolerance**2)
+         !\
+         ! u radial
+         !/
          UrTrue   = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D(x_:z_))*RInv
+         !\
+         ! u Theta
+         !/
          UtTrue   = ((VarsTrueFace_V(Ux_)*FaceCoords_D(x_)+     &
               VarsTrueFace_V(Uy_)*FaceCoords_D(y_))*    &
               FaceCoords_D(z_)-VarsTrueFace_V(Uz_)*     &
               (FaceCoords_D(x_)**2+FaceCoords_D(y_)**2))/&
               sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
               cTolerance**2)*RInv
+         !\
+         ! B Phi
+         !/
          BpTrue   =  (VarsTrueFace_V(By_)*FaceCoords_D(x_)-     &
               VarsTrueFace_V(Bx_)*FaceCoords_D(y_))/    &
               ((FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
               cTolerance**2)*RInv)*sinTheta
+         !\
+         ! Only the aligned field is accounted for
+         !/
          BrGhost  = UrTrue*BdotU; BtGhost = UtTrue*BdotU;
          BpGhost  = BpTrue
          VarsGhostFace_V(Bx_) = BrGhost*FaceCoords_D(x_)*RInv+  &
