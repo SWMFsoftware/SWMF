@@ -568,6 +568,8 @@ contains
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+            EnthalpyCorrection = EnthalpyFlux*TeSi_I(1)
+            ResEnthalpy_I(1) = EnthalpyCorrection
             do iPoint = 1, nPoint-2
                EnthalpyCorrection = EnthalpyFlux*TeSi_I(iPoint)
                ResEnthalpy_I(iPoint)   = &
@@ -583,6 +585,8 @@ contains
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
+            EnthalpyCorrection = EnthalpyFlux*TeSi_I(1)
+            ResEnthalpy_I(1) = EnthalpyCorrection
             do iPoint = 2, nPoint-1
                EnthalpyCorrection = EnthalpyFlux*TeSi_I(iPoint)
                ResEnthalpy_I(iPoint)   = &
@@ -726,37 +730,9 @@ contains
          M_I(2:nPoint-1) =  EnthalpyFlux + M_I(2:nPoint-1)
          Res_I(2:nPoint-1) = &
               EnthalpyFlux*(TeSi_I(1:nPoint-2) - TeSi_I(2:nPoint-1))
-         !\
-         ! Solve the temperature and pressure on top of the 
-         ! internal TR
-         !/
-         TeSiOld = TeSi_I(1)
-         do iIter = 1, nIter
-            M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + &
-                 EnthalpyFlux
-            Res_I(1)        =  - EnthalpyFlux*TeSi_I(1) + IntEnergy_I(1) -&
-                 SpecHeat_I(1)*PeSi_I(1)
-            DCons_I(1) = Res_I(1)/M_I(1)
-            TeSi_I(1) = TeSi_I(1) + DCons_I(1)
-            !\
-            ! Set pressure for updated temperature 
-            !/
-            call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-                 DoExtrapolate=.false.)
-            !\
-            ! First value is now the product of the thread length in meters times
-            ! a geometric mean pressure, so that
-            !/
-            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-                 BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-            if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
-         end do
-         if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
-            write(*,*)'TOld, TNew, DTLast=',TeSiOld, TeSi_I(1), DCons_I(1)
-            call CON_stop('No Convergence in advance_hydro')
-         end if
-         DCons_I(1) = TeSi_I(1) - TeSiOld
+         Res_I(1)   = 0.0
+         DCons_I(1) = 0.0
+
          do iPoint = 2, nPoint - 1
             DCons_I(iPoint) = (Res_I(iPoint) - L_I(iPoint)*&
                  DCons_I(iPoint-1))/M_I(iPoint)
@@ -789,9 +765,9 @@ contains
          TeSiOld = TeSi_I(1)
          do iIter = 1, nIter
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
-            Res_I(1) =  - EnthalpyFlux*(TeSi_I(2) + DCons_I(2))  + IntEnergy_I(1) -&
-                 SpecHeat_I(1)*PeSi_I(1)
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) - EnthalpyFlux
+            Res_I(1) =  EnthalpyFlux*TeSi_I(1) - EnthalpyFlux*(TeSi_I(2) + DCons_I(2))&
+                 + IntEnergy_I(1) - SpecHeat_I(1)*PeSi_I(1)
             DCons_I(1) = Res_I(1)/M_I(1)
             TeSi_I(1)  = TeSi_I(1) + DCons_I(1)
             !\
@@ -811,12 +787,12 @@ contains
             write(*,*)'TOld, TNew, DTLast=',TeSiOld, TeSi_I(1), DCons_I(1)
             call CON_stop('No Convergence in advance_hydro')
          end if
-         DCons_I(1) = TeSi_I(1) - TeSiOld
+         DCons_I(1) = TeSi_I(1) - TeSiOld; TeSi_I(1) = max(TeSi_I(1), TeSiMin)
       end if
       
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
       TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1),&
-           TeSiMin); TeSi_I(1) = max(TeSi_I(1), TeSiMin)
+           TeSiMin)
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
       
       !==========Add Gravity Source================================
