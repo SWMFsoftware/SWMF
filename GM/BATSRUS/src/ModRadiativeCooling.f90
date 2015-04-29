@@ -122,8 +122,8 @@ contains
                   'Negative temperature in calculating rad. cooling')
           end if
        end if
-       call interpolate_lookup_table(iTableRadCool, TeSiIn, NumberDensCgs, &
-            CoolingTableOut_I, DoExtrapolate = .false.)
+       call interpolate_lookup_table(iTableRadCool, max(TeSiIn,1.0e4),&
+            NumberDensCgs, CoolingTableOut_I, DoExtrapolate = .false.)
        CoolingFunctionCgs = CoolingTableOut_I(1) / RadNorm
        ! The presently stored cooling function assumes that it will be
        ! multiplied by Nelectron*Nhydrogen. The following turns this

@@ -926,12 +926,6 @@ contains
           end if
 
           if(DoRadCooling)then
-             if(TeSi<=TeEpsilonSi)then
-                write(*,*)'Temoerature is less than TeEpsilonSi=',&
-                     TeEpsilonSi, ' K'
-                write(*,*)'Te=',TeSi,' K at Xyz=',Xyz_DGB(:,i,j,k,iBlock)
-             end if
- 
              call get_radiative_cooling(i, j, k, iBlock, TeSi, &
                   CoolHeat_CB(i,j,k,iBlock))
              call get_radiative_cooling(i, j, k, iBlock, TeSi+TeEpsilonSi, &
