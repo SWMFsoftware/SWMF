@@ -284,7 +284,7 @@ contains
 
     call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
-    USiLtd = sign(min(abs(USiIn),0.05*Value_V(UHeat_)),USiIn)
+    USiLtd = USiIn
     !\
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
@@ -1255,10 +1255,9 @@ contains
        State_VG(iP,0,j,k) = max(PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction,&
             0.90*State_VG(iP,1,j,k))
        !\
-       !No extrapolation of pressure
+       !Extrapolation of pressure
        !/
-       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)
-
+       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)**2/State_VG(iP,1,j,k)
        !\
        ! Assign ion pressure (if separate from electron one)
        !/
@@ -1267,9 +1266,9 @@ contains
 
        State_VG(Rho_, 0, j, k) = max(RhoNoDimOut, 0.90*State_VG(Rho_, 1, j, k))
        !\
-       !No extrapolation of density
+       !Extrapolation of density
        !/
-       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k) 
+       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2/State_VG(Rho_,1,j,k) 
 
        !\
        ! Magnetic field and velocity vector components orthogonal to 
@@ -1286,7 +1285,7 @@ contains
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
                (max(-U,U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k)) &
-               *BDir_D + U_D)   !  max(-U,
+               *BDir_D + U_D)  
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
