@@ -163,14 +163,22 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
-    double x[3];
+    double xTECPLOT[3],xLOCAL[3];
     PIC::Mesh::cDataCenterNode *CenterNode;
+    int ii,jj;
 
     if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
-      x[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
-      x[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
-      x[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+      xLOCAL[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
+      xLOCAL[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
+      xLOCAL[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+
+      //transform the location vector into the frame used in the TECPLOT file
+      for (ii=0;ii<3;ii++) {
+        xTECPLOT[ii]=0.0;
+
+        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+      }
 
       //locate the cell
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -180,10 +188,10 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       bool PointWithinDomainTECPLOT=true;
 
       if (DataMode==DataMode_XYZ) {
-        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+        if ( (xDataMin[0]>xTECPLOT[0])||(xTECPLOT[0]>xDataMax[0]) || (xDataMin[1]>xTECPLOT[1])||(xTECPLOT[1]>xDataMax[1]) || (xDataMin[2]>xTECPLOT[2])||(xTECPLOT[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
       }
       else if (DataMode==DataMode_SPHERICAL) {
-        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        double r=sqrt(xTECPLOT[0]*xTECPLOT[0]+xTECPLOT[1]*xTECPLOT[1]+xTECPLOT[2]*xTECPLOT[2]);
 
         if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
       }
@@ -230,14 +238,22 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
-    double x[3];
+    double xTECPLOT[3],xLOCAL[3];
     PIC::Mesh::cDataCenterNode *CenterNode;
+    int ii,jj;
 
     if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
-      x[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
-      x[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
-      x[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+      xLOCAL[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
+      xLOCAL[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
+      xLOCAL[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+
+      //transform the location vector into the frame used in the TECPLOT file
+      for (ii=0;ii<3;ii++) {
+        xTECPLOT[ii]=0.0;
+
+        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+      }
 
       //locate the cell
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -247,10 +263,10 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       bool PointWithinDomainTECPLOT=true;
 
       if (DataMode==DataMode_XYZ) {
-        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+        if ( (xDataMin[0]>xTECPLOT[0])||(xTECPLOT[0]>xDataMax[0]) || (xDataMin[1]>xTECPLOT[1])||(xTECPLOT[1]>xDataMax[1]) || (xDataMin[2]>xTECPLOT[2])||(xTECPLOT[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
       }
       else if (DataMode==DataMode_SPHERICAL) {
-        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        double r=sqrt(xTECPLOT[0]*xTECPLOT[0]+xTECPLOT[1]*xTECPLOT[1]+xTECPLOT[2]*xTECPLOT[2]);
 
         if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
       }
@@ -295,7 +311,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
           fprintf(fScript,"%i\n",std::min(maxScriptPointNumber,nDataPointLeft));
         }
 
-        fprintf(fScript,"%e %e %e\n",x[0],x[1],x[2]);
+        fprintf(fScript,"%e %e %e\n",xTECPLOT[0],xTECPLOT[1],xTECPLOT[2]);
 
         nScriptPrintedPoints++;
         nDataPointLeft--;
@@ -349,13 +365,21 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     double *xNodeMin=startNode->xmin;
     double *xNodeMax=startNode->xmax;
-    double x[3];
+    double xTECPLOT[3],xLOCAL[3];
+    int ii,jj;
 
     if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //the interpolation location
-      x[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
-      x[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
-      x[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+      xLOCAL[0]=(xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i))/UnitLength;
+      xLOCAL[1]=(xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j))/UnitLength;
+      xLOCAL[2]=(xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k))/UnitLength;
+
+      //transform the location vector into the frame used in the TECPLOT file
+      for (ii=0;ii<3;ii++) {
+        xTECPLOT[ii]=0.0;
+
+        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+      }
 
       //locate the cell
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
@@ -366,10 +390,10 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
       bool PointWithinDomainTECPLOT=true;
 
       if (DataMode==DataMode_XYZ) {
-        if ( (xDataMin[0]>x[0])||(x[0]>xDataMax[0]) || (xDataMin[1]>x[1])||(x[1]>xDataMax[1]) || (xDataMin[2]>x[2])||(x[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
+        if ( (xDataMin[0]>xTECPLOT[0])||(xTECPLOT[0]>xDataMax[0]) || (xDataMin[1]>xTECPLOT[1])||(xTECPLOT[1]>xDataMax[1]) || (xDataMin[2]>xTECPLOT[2])||(xTECPLOT[2]>xDataMax[2]) ) PointWithinDomainTECPLOT=false;
       }
       else if (DataMode==DataMode_SPHERICAL) {
-        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        double r=sqrt(xTECPLOT[0]*xTECPLOT[0]+xTECPLOT[1]*xTECPLOT[1]+xTECPLOT[2]*xTECPLOT[2]);
 
         if ((rDataMin>r)||(r>rDataMax)) PointWithinDomainTECPLOT=false;
       }
@@ -422,6 +446,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
           //calculate the electric field
           double *E,*B,*v;
 
+          //get thet fields in the TECPLOT frame of reference
           v=(double*)(offset+PlasmaBulkVelocityOffset);
           B=(double*)(offset+MagneticFieldOffset);
           E=(double*)(offset+ElectricFieldOffset);
@@ -430,7 +455,22 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
           E[1]=+(v[0]*B[2]-B[0]*v[2]);
           E[2]=-(v[0]*B[1]-B[0]*v[1]);
 
+          //convert velocity and the fields vectors in the local frame of reference
+          double vLOCAL[3],bLOCAL[3],eLOCAL[3];
+          int ii,idim;
 
+          for (idim=0;idim<3;idim++) {
+            vLOCAL[idim]=0.0,bLOCAL[idim]=0.0,eLOCAL[idim]=0.0;
+
+            for (ii=0;ii<3;ii++) {
+              vLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*v[ii];
+              eLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*E[ii];
+              bLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*B[ii];
+            }
+          }
+
+          //copy the transform values into AMPS buffers
+          for (idim=0;idim<3;idim++) v[idim]=vLOCAL[idim],E[idim]=eLOCAL[idim],B[idim]=bLOCAL[idim];
 
           //increment the point counter
           nLoadedDataPoints++;
