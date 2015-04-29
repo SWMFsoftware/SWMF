@@ -8511,6 +8511,239 @@ nMPIops++;
   }
 
 
+  //save/load the center node associated data. nSaveVariables==-1 -> save the whole associated data vector
+  void SaveCenterNodeAssociatedData(const char *fNameBase, int *SaveVariableOffset, int nSaveVariables,cTreeNodeAMR<cBlockAMR>  *node=NULL) {
+    static CMPI_channel pipe;
+    static FILE *fout=NULL;
+
+    if (node==NULL) {
+      unsigned long Signature;
+
+      Signature=getMeshSignature();
+      node=rootTree;
+      pipe.init(1000000);
+
+      if (ThisThread==0) {
+        pipe.openRecvAll();
+
+        //open the file
+        char fname[400];
+        sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",Signature,fNameBase);
+
+        fout=fopen(fname,"w");
+
+        //save the number of the variables
+        fwrite(&nSaveVariables,sizeof(int),1,fout);
+      }
+      else pipe.openSend(0);
+    }
+
+    //loop through all points
+    //create the list of the points
+    //perform the interpolation loop
+    int i,j,k,nd;
+    cCenterNode *CenterNode;
+    char *offset;
+
+    #if _MESH_DIMENSION_ == 3
+    const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+    const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+    const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+    #else
+    exit(__LINE__,__FILE__,"Error: not implemented");
+    #endif
+
+    char SendCellFlag;
+
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if ((ThisThread==0)||(node->Thread==ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+        SendCellFlag=true;
+
+        //determine whether the cell data neede to be saved
+        if (node->Thread==ThisThread) {
+          //locate the cell
+          if (node->block==NULL) SendCellFlag=false,offset=NULL;
+
+          nd=getCenterNodeLocalNumber(i,j,k);
+
+          if (SendCellFlag==true) {
+            if ((CenterNode=node->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
+            else SendCellFlag=false,offset=NULL;
+          }
+
+          if (node->Thread!=0) pipe.send(SendCellFlag);
+        }
+        else {
+          pipe.recv(SendCellFlag,node->Thread);
+        }
+
+        //save the cell data saving flag
+        if (ThisThread==0) fwrite(&SendCellFlag,sizeof(char),1,fout);
+
+        //save the cell data
+        if (SendCellFlag==true) {
+          if (node->Thread==ThisThread) {
+            if (node->Thread==0) {
+              if (nSaveVariables==-1) fwrite(offset,sizeof(char),CenterNode->AssociatedDataLength(),fout);
+              else for (int nvar=0;nvar<nSaveVariables;nvar++) {
+                fwrite(offset+SaveVariableOffset[nvar],sizeof(double),1,fout);
+              }
+            }
+            else {
+              pipe.send(offset,CenterNode->AssociatedDataLength());
+            }
+          }
+          else {
+            char data[CenterNode->AssociatedDataLength()];
+
+            //recieve the data
+            pipe.recv(data,CenterNode->AssociatedDataLength(),node->Thread);
+
+            //save the data
+            if (nSaveVariables==-1) fwrite(data,sizeof(char),CenterNode->AssociatedDataLength(),fout);
+            else for (int nvar=0;nvar<nSaveVariables;nvar++) {
+              fwrite(data+SaveVariableOffset[nvar],sizeof(double),1,fout);
+            }
+
+          }
+        }
+      }
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) SaveCenterNodeAssociatedData(fNameBase,SaveVariableOffset,nSaveVariables,node->downNode[nDownNode]);
+    }
+
+    if (node==rootTree) {
+      if (ThisThread==0) {
+        pipe.closeRecvAll();
+        fclose(fout);
+      }
+      else pipe.closeSend();
+
+      pipe.remove();
+      MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+  }
+
+  void SaveCenterNodeAssociatedData(const char *fNameBase) {
+    SaveCenterNodeAssociatedData(fNameBase,NULL,-1,NULL);
+  }
+
+  void LoadCenterNodeAssociatedData(const char *fNameBase, int *LoadVariableOffset, int nLoadVariables,cTreeNodeAMR<cBlockAMR>  *node=NULL) {
+    static FILE *fData=NULL;
+    static int SavedDataLength;
+
+    if (node==NULL) {
+      node=rootTree;
+
+      //open the file
+      char fname[400];
+      sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+
+      fData=fopen(fname,"r");
+
+      if (fData==NULL) {
+        //the file does not exists -> the measure has to be calculated directly
+        exit(__LINE__,__FILE__,"Error: cannot open file");
+      }
+
+      //compare the number of the saved variables with 'nLoadVariables'
+      int nSaveVariables;
+
+      fread(&nSaveVariables,sizeof(int),1,fData);
+      if (nSaveVariables!=nLoadVariables) exit(__LINE__,__FILE__,"Error: the number of load varibles is different from the number of saved variables");
+
+      //determine the size of the saved data
+      cCenterNode cell;
+      SavedDataLength=(nSaveVariables!=-1) ? nSaveVariables*sizeof(double) : cell.AssociatedDataLength();
+    }
+
+
+    //loop through all points
+    //create the list of the points
+    //perform the interpolation loop
+    int i,j,k,nd;
+    cCenterNode *CenterNode;
+    char *offset;
+
+    #if _MESH_DIMENSION_ == 3
+    const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+    const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+    const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+    #else
+    exit(__LINE__,__FILE__,"Error: not implemented");
+    #endif
+
+    char savedLoadCellFlag,data[SavedDataLength];
+
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      if (node->block==NULL) {
+         //the block belongs to a other processor -> skip all data
+        for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++)  {
+          fread(&savedLoadCellFlag,sizeof(char),1,fData);
+
+          if (savedLoadCellFlag==true) {
+            //the cell data is saved -> skip it
+            fseek(fData,SavedDataLength,SEEK_CUR);
+          }
+        }
+
+      }
+      else for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+        fread(&savedLoadCellFlag,sizeof(char),1,fData);
+
+        if (savedLoadCellFlag==true) {
+          //determine whether the cell data needed to be read
+          //locate the cell
+          nd=getCenterNodeLocalNumber(i,j,k);
+
+          if ((CenterNode=node->block->GetCenterNode(nd))!=NULL) {
+            offset=CenterNode->GetAssociatedDataBufferPointer();
+
+            //read center cells' associated data
+            fread(data,sizeof(char),SavedDataLength,fData);
+
+            //copy the data
+            if (nLoadVariables==-1) memcpy(offset,data,CenterNode->AssociatedDataLength());
+            else for (int nvar=0;nvar<nLoadVariables;nvar++) {
+              memcpy(offset+LoadVariableOffset[nvar],data+nvar*sizeof(double),sizeof(double));
+            }
+
+          }
+          else fseek(fData,SavedDataLength,SEEK_CUR);
+        }
+
+      }
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeAssociatedData(fNameBase,LoadVariableOffset,nLoadVariables,node->downNode[nDownNode]);
+    }
+
+    if (node==rootTree) {
+      fclose(fData);
+    }
+  }
+
+  void LoadCenterNodeAssociatedData(const char *fNameBase) {
+    LoadCenterNodeAssociatedData(fNameBase,NULL,-1,NULL);
+  }
+
+  //check whether the associated data file exists
+  bool AssociatedDataFileExists(const char *fNameBase) {
+    FILE *fData=NULL;
+    char fname[400];
+
+    sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+    fData=fopen(fname,"r");
+
+    if (fData!=NULL) {
+      fclose(fData);
+      return true;
+    }
+
+    return false;
+  }
+
   //evaluate the total volume of the computational domain
   double GetTotalDomainMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
 #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
