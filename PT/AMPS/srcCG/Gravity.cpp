@@ -438,7 +438,7 @@ double  nucleusGravity::gravity(double * gravitypermass, double * position) {
         r_3=1.0/pow(r_squared,3.0/2.0); 
 
 	for (idim=0;idim<3;idim++) {
-	  gravitypermass[idim]+=ThetrahedronVolume[nfc]*r2Center[idim]*r_3;				       
+	  gravitypermass[idim]-=ThetrahedronVolume[nfc]*r2Center[idim]*r_3;				       
 	}
     
      }
