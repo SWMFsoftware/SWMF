@@ -16,12 +16,18 @@
 #
 # 30 0 * * * $HOME/bin/run_test_amps.pleiades.sh
 
+source /etc/csh.cshrc
+
 
 # init command to load modules
 source /usr/share/modules/init/csh
 
 # Go to your home directory
 cd $HOME
+source .cshrc
+
+setenv CVSROOT dborovik@herot.engin.umich.edu:/CVS/FRAMEWORK
+setenv CVS_RSH ssh
 
 # Create a temporary directory for the tests
 mkdir -p Tmp_AMPS_test
@@ -36,9 +42,9 @@ module load comp-intel/2015.0.090
 rm -rf AMPS
 
 # Checkout and install the latest code
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS 
+/usr/bin/cvs co -D "`date +%m/%d/%Y` 0:30" AMPS
 cd AMPS
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data 
+/usr/bin/cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data 
 
 # Install the AMPS
 ./Config.pl -install > test_amps.log
@@ -46,7 +52,7 @@ cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data
 # Run test
 make test >> test_amps.log
           
-# Create file with results' summary                                                  
+# Create file with results' summary
 ls -ltr  *diff > test_amps.res
 echo '=============================================================='\
                 >> test_amps.res
@@ -54,7 +60,7 @@ head -100 *diff >> test_amps.res
 
 # Copy test_amps.log and test_amps.res to the server
  scp test_amps.res test_amps.log \
-    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`/ 
+    dborovik@herot.engin.umich.edu:Sites/Current/pleiades_intel/ 
 #------------------------------------------------------------------------------
 # load GCC compiler
 module load mpi-openmpi/1.6.5-gcc
@@ -64,9 +70,9 @@ cd ..
 rm -rf AMPS
 
 # Checkout and install the latest code
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS 
+/usr/bin/cvs co -D "`date +%m/%d/%Y` 0:30" AMPS 
 cd AMPS
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data 
+/usr/bin/cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data 
 
 # Install the AMPS
 ./Config.pl -install > test_amps.log
@@ -82,6 +88,6 @@ head -100 *diff >> test_amps.res
 
 # Copy test_amps.log and test_amps.res to the server
 scp test_amps.res test_amps.log \
-   dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`/ 
+   dborovik@herot.engin.umich.edu:Sites/Current/pleiades_gcc/ 
 
 
