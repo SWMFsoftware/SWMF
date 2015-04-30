@@ -56,8 +56,8 @@ void PIC::MolecularData::Parser::run(CiFileOperations& ifile) {
       SpecieFound=false;
       SpecieType=_PIC_SPECIE_TYPE__GAS_;
 
-      if (strcmp("EXTERNALSPEC",str1)==0) {
-        SpecieType=_PIC_SPECIE_TYPE__EXTERNAL_;
+      if (strcmp("DUST",str1)==0) {
+        SpecieType=_PIC_SPECIE_TYPE__DUST_;
         ifile.CutInputStr(str1,str);
       }
       else if (strcmp("BACKGROUNDSPEC",str1)==0) {
@@ -83,7 +83,7 @@ void PIC::MolecularData::Parser::run(CiFileOperations& ifile) {
         SpeciesBlock(str1,LoadedSpecieCountingNumber,ifile);
         LoadedSpecieCountingNumber++;
       }
-      else if ((SpecieType==_PIC_SPECIE_TYPE__EXTERNAL_)||(SpecieType==_PIC_SPECIE_TYPE__BACKGROUND_)) {
+      else if ((SpecieType==_PIC_SPECIE_TYPE__DUST_)||(SpecieType==_PIC_SPECIE_TYPE__BACKGROUND_)) {
 //        PIC::MolecularData::SetChemSymbol(str1,LoadedSpecieCountingNumber);
 //        PIC::MolecularData::SetSpecieType(SpecieType,LoadedSpecieCountingNumber);
         LoadedSpecieCountingNumber++;
