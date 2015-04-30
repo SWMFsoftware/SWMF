@@ -76,4 +76,9 @@
 //#define _CG__RADIUS_ 1.98E3
 #define _CG__RADIUS_ 2.0E3
 
+/*-------------------------- NONE ----------------*/
+//this target is used when no astronomical body is inside the domain. the definition is needed to satisfy the compiler
+#define _NONE__MASS_   0.0
+#define _NONE__RADIUS_ 0.0
+
 #endif /* CONSTANTS_PLANETARYDATA_H_ */
