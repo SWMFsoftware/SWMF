@@ -4,6 +4,9 @@
 
 #include "ExosphereDefinitions.dfn"
 
+//define the default _TARGET_
+#define _TARGET_ _NONE_
+
 //the data structure that is used to keep the model data on the surface of teh internal body
 #define _EXOSPHERE__SURFACE_DATA_STRUCTURE_  _EXOSPHERE__SURFACE_DATA_STRUCTURE__DEFAULT_
 
