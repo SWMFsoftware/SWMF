@@ -158,7 +158,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
               double minParticleWeightCorrection_s0,minParticleWeightCorrection_s1,sumWeightCorrection_s0,sumWeightCorrection_s1;
               PIC::ParticleBuffer::byte *ParticleData;
 
-              for (s0=0;s0<PIC::nTotalSpecies;s0++) if (nParticleNumber[s0]!=0) {
+              for (s0=0;s0<PIC::nTotalSpecies;s0++) if ((PIC::MolecularData::GetSpecieType(s0)==_PIC_SPECIE_TYPE__GAS_)&&(nParticleNumber[s0]!=0)) {
                 m0=PIC::MolecularData::GetMass(s0);
                 LocalParticleWeight_s0=block->GetLocalParticleWeight(s0);
                 LocalTimeStep_s0=PIC::ParticleWeightTimeStep::LocalTimeStep(s0,node);
@@ -189,7 +189,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
                 }
 
                 //loop through the second speices
-                for (s1=s0;s1<PIC::nTotalSpecies;s1++) if (nParticleNumber[s1]!=0) {
+                for (s1=s0;s1<PIC::nTotalSpecies;s1++) if ((PIC::MolecularData::GetSpecieType(s1)==_PIC_SPECIE_TYPE__GAS_)&&(nParticleNumber[s1]!=0)) {
                   m1=PIC::MolecularData::GetMass(s1);
                   am=m0+m1;
                   LocalParticleWeight_s1=block->GetLocalParticleWeight(s1);
