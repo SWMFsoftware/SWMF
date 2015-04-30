@@ -92,7 +92,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 
 //the types of species that can be modeled
 #define _PIC_SPECIE_TYPE__GAS_        0
-#define _PIC_SPECIE_TYPE__EXTERNAL_   1
+#define _PIC_SPECIE_TYPE__DUST_       1
 #define _PIC_SPECIE_TYPE__BACKGROUND_ 2
 
 
@@ -150,9 +150,6 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_  1
 #define _GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_        2
 
-//the model of the gravity computation
-#define _PIC_MODEL__3DGRAVITY__MODE__ON_      0
-#define _PIC_MODEL__3DGRAVITY__MODE__OFF_     1
 
 //definitions of the radiative cooling modes
 #define _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_  0
