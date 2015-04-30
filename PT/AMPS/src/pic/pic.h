@@ -359,7 +359,9 @@ namespace PIC {
     static const int SpcecieTypeTable[]={-1};
 //    extern int *SpcecieTypeTable;
 //    void SetSpecieType(int SpcecieType,int spec);
-    int GetSpecieType(int spec);
+    inline int GetSpecieType(int spec) {
+      return SpcecieTypeTable[spec];
+    }
 
 
     namespace Parser {

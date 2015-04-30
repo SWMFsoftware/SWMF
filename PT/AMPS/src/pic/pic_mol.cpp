@@ -83,11 +83,11 @@ const char* PIC::MolecularData::GetChemSymbol(int spec) {
   SpcecieTypeTable[spec]=SpcecieType;
 }*/
 
-int PIC::MolecularData::GetSpecieType(int spec) {
+/*int PIC::MolecularData::GetSpecieType(int spec) {
 //  if (SpcecieTypeTable==NULL) exit(__LINE__,__FILE__,"Error: SpcecieTypeTable is not initialized");
 
   return SpcecieTypeTable[spec];
-}
+}*/
 
 
 
