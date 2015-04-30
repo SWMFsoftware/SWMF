@@ -2971,7 +2971,7 @@ contains
          proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement, &
-         UseFDFaceFluxIn=UseFDFaceFlux)
+         UseFDFaceFluxIn=UseFDFaceFlux, iVectorVar_I=iVectorVar_I)
 
     if(IsRotatedCartesian)then
        ! Fix x1, x2 .. z2 to include the full rotated domain

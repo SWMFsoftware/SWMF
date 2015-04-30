@@ -109,7 +109,8 @@ contains
   !============================================================================
   subroutine init_batl(CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
-       rGenIn_I, UseUniformAxisIn,user_amr_geometry,UseFDFaceFluxIn)
+       rGenIn_I, UseUniformAxisIn, user_amr_geometry, UseFDFaceFluxIn, &
+       iVectorVar_I)
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -142,6 +143,9 @@ contains
     ! Logical for uniform grid in the Phi direction around the axis
     logical,          optional, intent(in):: UseUniformAxisIn
     logical,          optional, intent(in):: UseFDFaceFluxIn
+
+    ! Indexes of first components of vector variables in State_VGB
+    integer,          optional, intent(in):: iVectorVar_I(:)
 
     ! Initialize the block-adaptive tree and the domain. 
     !
