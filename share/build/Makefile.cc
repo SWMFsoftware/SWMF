@@ -4,6 +4,8 @@ COMPILE.c     = cc
 COMPILE.mpicc = mpicc
 COMPILE.mpicxx= mpicxx
 
+CPPLIB = -lstdc++ -lmpi_cxx
+
 DEBUGC = 
 #DEBUGC = -g
 

@@ -4,6 +4,8 @@ COMPILE.c     = mpxlc
 COMPILE.mpicc = mpxlc
 COMPILE.mpicxx= mpxlC
 
+CPPLIB = -lstdc++ -lmpi_cxx
+
 DEBUGC = 
 #DEBUGC = -g
 
