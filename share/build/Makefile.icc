@@ -1,10 +1,11 @@
 # C language related part of Makefile.conf: Makefile.icc
+# This file is for the Pleiades system where there is no mpicc or mpicxx
 
 COMPILE.c     = icc
-COMPILE.mpicc = mpicc
-COMPILE.mpicxx= mpicxx
+COMPILE.mpicc = icc
+COMPILE.mpicxx= icpc
 
-CPPLIB = -lstdc++
+CPPLIB = -lstdc++ -lmpi_cxx
 
 DEBUGC = 
 #DEBUGC = -g
