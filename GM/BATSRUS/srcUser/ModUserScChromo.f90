@@ -575,13 +575,13 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
-         Si2No_V, rBody, GBody
+         Si2No_V, rBody, GBody, UnitU_
     use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
          time_accurate, ProcTest, BlkTest
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
-    use ModConst,      ONLY: cPi
+    use ModConst,      ONLY: cPi, cTolerance
     use ModIO,         ONLY : restart
     use ModProcMH,     ONLY: iProc
 
@@ -612,6 +612,14 @@ contains
     real    :: uCorona
 
     real    :: DiffDelta, Ur2
+    !\
+    ! Variables used in the 'heliofloat' boundary condition
+    !/
+    real,parameter     :: UEscapeSi = 4.0e5 !400 km/c
+    real,dimension(3)  :: DirR_D, DirTheta_D, DirPhi_D, Coord_D,&
+         UTrue_D, UGhost_D, BTrue_D, BGhost_D
+    real               :: CosTheta, SinTheta, CosPhi, SinPhi, rInv
+    real               :: BDotU, BPhi, UTheta 
 
     real, parameter :: Epsilon = 1.0e-6
     integer :: Itercount
@@ -619,6 +627,68 @@ contains
     logical:: DoTest, DoTestMe
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
+    if(iSide==2.and.TypeGeometry(1:9)=='spherical')then
+       if(TypeBc == 'usersemilinear')RETURN
+       if(TypeBc == 'usersemi')then
+          do k = MinK, MaxK; do j = MinJ, MaxJ
+             StateSemi_VGB(iTeImpl,nI+1,j,k,iBlock) = &
+                  StateSemi_VGB(iTeImpl,nI,j,k,iBlock)
+          end do; end do
+          RETURN
+       end if
+       !\
+       ! Start from floating boundary values
+       !/
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = nI+1, MaxI
+          State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
+       end do; end do; end do
+       !\
+       ! 'Heliofloat' boundary condition
+       !/
+       do k = 1, nK; do j=1, nJ
+          Coord_D = Xyz_DGB(:,nI,j,k,iBlock)
+          rInv     = 1.0/sqrt(sum(Coord_D**2))
+          DirR_D   = Coord_D*rInv
+          CosTheta = DirR_D(z_)
+          SinTheta = sqrt(DirR_D(x_)**2 + DirR_D(y_)**2)
+          CosPhi   = DirR_D(x_)/SinTheta
+          SinPhi   = DirR_D(y_)/SinTheta
+
+          UTrue_D  = State_VGB(RhoUx_:RhoUz_,nI,j,k,iBlock)/&
+               State_VGB(Rho_,nI,j,k,iBlock)
+          UGhost_D = UTrue_D + UEscapeSi*DirR_D*Si2No_V(UnitU_)
+          BTrue_D  = State_VGB(RhoUx_:RhoUz_,nI,j,k,iBlock)
+          !\
+          ! (B\cdot u)/(u \cdot u)
+          !/
+          BdotU    = sum(BTrue_D*UTrue_D)/(sum(UTrue_D**2) + cTolerance**2)
+          !\
+          ! u radial
+          !/
+          UR   = sum(UTrue_D*DirR_D)
+          !\
+          ! u Theta
+          !/
+          DirTheta_D = (/CosTheta*CosPhi, CosTheta*SinPhi,-SinTheta/)
+          UTheta = sum(UTrue_D*DirTheta_D)
+          !\
+          ! B Phi
+          !/
+          DirPhi_D = (/-SinPhi, CosPhi, 0.0/)
+          BPhi   =  sum(BTrue_D*DirPhi_D)
+
+          !\
+          ! Only the aligned field is accounted for
+          !/
+          BGhost_D = BPhi*DirPhi_D + BDotU*(DirR_D*UR + DirTheta_D*UTheta)
+          do i = nI +1, MaxI
+             State_VGB(Bx_:Bz_,i,j,k,iBlock)     = BGhost_D
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                  UGhost_D*State_VGB(Rho_,i,j,k,iBlock)
+          end do
+       end do; end do
+       RETURN
+    end if
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
 
