@@ -547,6 +547,7 @@ int main(int argc,char **argv) {
 
   //generate mesh or read from file
   char mesh[200]="amr.sig=0xd6078dc0f431c73c.mesh.bin";
+  bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
 
@@ -557,6 +558,8 @@ int main(int argc,char **argv) {
     PIC::Mesh::mesh.readMeshFile(mesh);
   }
   else {
+    NewMeshGeneratedFlag=true;
+
     if (PIC::Mesh::mesh.ThisThread==0) {
        PIC::Mesh::mesh.buildMesh();
        PIC::Mesh::mesh.saveMeshFile("mesh.msh");
@@ -573,22 +576,10 @@ int main(int argc,char **argv) {
 
   PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
-  //rename the mesh file
-  unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
-
-  if (PIC::Mesh::mesh.ThisThread==0) {
-    char command[300];
-
-    sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
-    system(command);
-  }
-
-  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 
   //initialize the blocks
-
   PIC::Mesh::initCellSamplingDataBuffer();
 
   PIC::Mesh::mesh.AllowBlockAllocation=true;
@@ -601,6 +592,20 @@ int main(int argc,char **argv) {
   //init the volume of the cells'
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure();
+
+  //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
+  if (NewMeshGeneratedFlag==true) {
+    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      char command[300];
+
+      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+      system(command);
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //read the background data
     if (PIC::Mesh::mesh.AssociatedDataFileExists("background")==true)  {
