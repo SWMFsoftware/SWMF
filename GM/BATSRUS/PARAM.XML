@@ -1497,13 +1497,24 @@ The default is component dependent:
 		<option name="spherical_lnr"		/>
 		<option name="spherical_genr"		/>
 	</parameter>
+	<if expr="$TypeGeometry =~ /_genr/">
+	    <parameter name="NameGridFile" type="string"/>
+	    <rule expr="-f $NameGridFile">
+	    	  Grid file $NameGridFile must exist
+	    </rule>
+        </if>
+
 #GRIDGEOMETRY
-spherical_lnr			TypeGeometry
+spherical_genr			TypeGeometry
+Param/CORONA/grid_TR.dat	NameGridFile (read if TypeGeometry is _genr)
 		
-This command determines the geometry of the grid. Possible values
-are Cartesian, rotated Cartesian, RZ geometry, cylindrical and spherical. 
-The cylindrical and spherical grids can have logarithmic (cylindrical_lnr and spherical_lnr)
-or arbitrarily stretched (spherical_genr, cylindrical_genr) radial coordinates.
+This command determines the geometry of the grid. Possible values are
+Cartesian, rotated Cartesian, RZ geometry, cylindrical and spherical.
+The cylindrical and spherical grids can have logarithmic
+(cylindrical_lnr and spherical_lnr) or arbitrarily stretched
+(spherical_genr, cylindrical_genr) radial coordinates.
+For the latter case the radial stretching is read from the 
+NameGridFile file.
 
 The "RZ" geometry is a 2D grid with axial symmetry.
 In our particular implementation the "X" axis is the axis of symmetry, 
@@ -1537,6 +1548,12 @@ The default is Cartesian geometry.
 		<option name="spherical_lnr"		/>
 		<option name="spherical_genr"		/>
 	</parameter>
+	<if expr="$TypeGeometry =~ /_genr/">
+	    <parameter name="NameGridFile" type="string"/>
+	    <rule expr="-f $NameGridFile">
+	    	  Grid file $NameGridFile must exist
+	    </rule>
+        </if>
         <parameter name="Coord1Min" type="real"                  />
         <parameter name="Coord1Max" type="real" min="$Coord1Min" />
 	<parameter name="Coord2Min" type="real"                  />
@@ -1555,7 +1572,9 @@ spherical			TypeGeometry
 The #GRIDGEOMETRYLIMIT command is similar to the #GRIDGEOMETRY command, but
 provides in addition the flexibility to change the limits of the
 generalized coordinates. This allows to construct grids such as a spherical
-or cylindrical wedge. For spherical and cylindrical grids the angles
+or cylindrical wedge. The radial limits are given in true radius
+even if the radial coordinate is logarithmic or stretched. 
+For spherical and cylindrical grids the angle limits
 are provided in degrees.
 
 Default is Cartesian grid.
@@ -3401,7 +3420,8 @@ The PlotArea string defines a 1, 2, or 3D volume for plotting:
 x=0   - full x=0 plane: average for symmetry plane
 y=0   - full y=0 plane: average for symmetry plane
 z=0   - full z=0 plane: average for symmetry plane
-cut   - 3D, 2D or 1D rectangular cut (IDL)/ a 2D rectangular cut (Tecplot)
+cut   - 3D, 2D or 1D cut along (curvilinear) coorinates (IDL) 
+        or a 2D rectangular cut (Tecplot)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
 sph   - spherical surface cut at the given radius
@@ -3417,6 +3437,8 @@ lcb   - last closed field lines
 The 1d, 2d and 3d cuts save the AMR tree information into a .tree file.
 This can be used for reconstructing the full grid and use the data
 with the READAMR library, for example. 
+
+For IDL plots the PlotArea = 'cut' can be used to create cuts
 
 The PlotVar string defines the plot variables and the equation parameters.
 It also controls whether or not the variables will be plotted in dimensional
@@ -3476,13 +3498,25 @@ from the parameter file in this order:
  NameVars		 if PlotVar  is 'var' or 'VAR'
  NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
-The six parameters xMinCut ... zMaxCut define a 3D box in Cartesian 
-coordinates: the plotting range.
-For IDL plots, if the width in one or two 
-dimensions is less than the smallest cell size within the plotarea, 
+The six parameters xMinCut ... zMaxCut define a 3D box in (curvilinear)
+coordinates: the plotting range. 
+
+For IDL plots, if the width in one or two dimensions is 
+less than the smallest cell size within the plotarea, 
 then the plot file will be 2 or 1 dimensional, respectively.
-If the range is thin but symmetric about one of the x=0, y=0, or z=0 planes, 
-data will be averaged in the postprocessing.
+This also works for non-Cartesian grids: the cut will be a 1D curve
+or a 2D surface aligned with the curvilinear coordinates. 
+For example, from a spherical grid
+one can create a 1D cut along an arbitrary radial direction or along a circle,
+a 2D cut with fixed radius, fixed longitude or fixed latitude,
+or a spherical-wedge-shaped 3D cut. Note that the limits of the first
+coordinate are always given as true radial distance 
+(even for radially stretched spherical grids),
+while the longitude and latitude limits are given in degrees.
+The output file will contain 1, 2 or 3 of the radial, the longitude and 
+latitude (in degrees) coordinates instead of the X, Y, Z coordinates. 
+If possible, the data will be averaged to the 2D cut surface during 
+the postprocessing.
 
 For Tecplot plots (PlotForm='tec') and PlotArea='dpl' or 'slc' the plot range 
 clips the cut plane.
@@ -3491,7 +3525,8 @@ but interpreted differently from IDL.
 Cuts are entire x, y, or z equal constant planes (1D or 3D cuts are not
 implemented).  For x constant, for example, the y and z ranges 
 do not matter as long as they are wider than the x range.  The slice will be 
-located at the average of xMinCut and xMaxCut.  So, for example to save a plot in
+located at the average of xMinCut and xMaxCut.  
+So, for example to save a plot in
 a x=-5 constant plane cut, the following can be used:
 \begin{verbatim}
  -5.01			xMinCut
@@ -3515,10 +3550,9 @@ edges parallel to the Z axis.
   1.0			zNormal
 \end{verbatim}
 The DxSavePlot parameter determines the grid resolution for 
-IDL files if the simulation is run on Cartesian grids
-(non-Cartesian grids are always saved as unstructured files):
+IDL files:
 \begin{verbatim}
-  positive value - uniform grid with Dx=DxSavePlot
+  positive value - uniform grid with cell size DxSavePlot in first coordinate
   0.	         - uniform grid with smallest cell in the plotting area
  -1.	         - unstructured grid with original AMR cells
 \end{verbatim}
@@ -6473,6 +6507,23 @@ The rBody and rCurrents are given in normalized units (usually
 planetary or solar radii).
 </command>
 
+<command name="STAR" if="$_IsFirstSession">>
+	<parameter name="RadiusStar" type="real" minimum="0" default="1"/>
+	<parameter name="MassStar"   type="real" minimum="0" default="1"/>
+	<parameter name="RotationPeriodStar" type="real"/>
+
+#STAR
+1.0                     RadiusStar (in solar radius)
+1.0                     MassStar   (in solar mass)
+0.0                     RotationPeriodStar (in days)
+
+Modify the parameters of the central star (when BATSRUS is running
+in heliospheric mode). Setting zero for the rotation period will
+switch off the rotation as shown by the example.
+
+By default the Sun is the central star.
+</command>
+
 <command name="GRAVITY" if="$_IsFirstSession">
 	<parameter name="UseGravity" type="logical" default="F" />
 	<parameter name="iDirGravity" type="integer" input="select"
@@ -6836,8 +6887,8 @@ Default is UseBiermannBattery false.
 	<parameter name="RhoMinDim" type="real" min="-1" default="-1"/>
 
 #MINIMUMDENSITY
-0.001		RhoMinDim [amu/cc] for fluid 1
--1.0		RhoMinDim [amu/cc] for fluid 2
+0.001		RhoMinDim for fluid 1
+-1.0		RhoMinDim for fluid 2
 
 Provide minimum density(s) for the ion/neutral fluid(s). If the minimum
 density is positive, the density is kept above this limit for that fluid.
@@ -6848,16 +6899,34 @@ A negative value indicates that no minimum density is applied for that fluid.
 By default no minimum density limit is applied.
 </command>
 
+<command name="MINIMUMPRESSURE">
+	<parameter name="pMinDim" type="real" min="-1" default="-1"/>
+
+#MINIMUMPRESSURE
+0.001		pMinDim for fluid 1
+-1.0		pMinDim for fluid 2
+0.002		PeMinDim for electron pressure (if used)
+
+Provide minimum pressure(s) for the ion/neutral fluid(s) and electrons.
+If the pMinDim is positive, the pressure is kept above this limit for 
+that fluid.
+The minimum pressure is given in the input/output units for pressure,
+which varies from application to application.
+A negative value indicates that no minimum density is applied for that fluid.
+
+By default no minimum pressure limit is applied.
+</command>
+
 <command name="MINIMUMTEMPERATURE">
-	<parameter name="TMinDim" type="real" min="-1" default="-1"/>
+	<parameter name="TminDim" type="real" min="-1" default="-1"/>
 
 #MINIMUMTEMPERATURE
-5e4		TMinDim for fluid 1
--1.0		TMinDim for fluid 2
+5e4		TminDim for fluid 1
+-1.0		TminDim for fluid 2
 2e4             TeMinDim for electron pressure (if used)
 
 Provide minimum temperature(s) for the ion/neutral fluid(s) and electrons. 
-If the minimum temperature (TMinDim)is positive, the temperature is kept above
+If the minimum temperature (TMinDim) is positive, the temperature is kept above
 this limit. The minimum temperature is given in Kelvin.
 A negative value indicates that no minimum temperature is applied for that
 fluid.
