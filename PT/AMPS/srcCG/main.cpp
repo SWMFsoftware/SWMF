@@ -290,7 +290,7 @@ int SurfaceBoundaryCondition(long int ptr,double* xInit,double* vInit,CutCell::c
 
 
 double SurfaceResolution(CutCell::cTriangleFace* t) {
-  return max(1.0,t->CharacteristicSize()*18.0); //4.5
+  return max(1.0,t->CharacteristicSize()*18.0)/1.5; //4.5
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -301,10 +301,12 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
-      return dt*3.0;
-    }else CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+      return 0.3*startNode->GetCharacteristicCellSize()/50.0;
+    } else {
+      CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    }
 #else
-    CharacteristicSpeed=3.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+    CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -489,7 +491,7 @@ int main(int argc,char **argv) {
 
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.SHAP4.bdf");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf");
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -510,7 +512,7 @@ int main(int argc,char **argv) {
 
 #if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
   //Computation of the gravity field for an irregular nucleus shape
-  nucleusGravity::readMesh_longformat("cg.RMOC-volume.nas");
+  nucleusGravity::readMesh_longformat("SHAP5_Volume.bdf");
   nucleusGravity::setDensity(430);
 #endif   
 
@@ -535,16 +537,53 @@ int main(int argc,char **argv) {
   Comet::GetNucleusNastranInfo(CG);
 
   //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
-  for (int i=0;i<3;i++) xmin[i]=-2.0e5,xmax[i]=2.0e5;
+  for (int i=0;i<3;i++) xmin[i]=-100.0e3,xmax[i]=100.0e3;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
   PIC::Mesh::mesh.init(xmin,xmax,BulletLocalResolution);
   PIC::Mesh::mesh.memoryAllocationReport();
-  PIC::Mesh::mesh.buildMesh();
+
+
+  //generate mesh or read from file
+  char mesh[200]="amr.sig=0xd6078dc0f431c73c.mesh.bin";
+
+  FILE *fmesh=NULL;
+
+  fmesh=fopen(mesh,"r");
+
+  if (fmesh!=NULL) {
+    fclose(fmesh);
+    PIC::Mesh::mesh.readMeshFile(mesh);
+  }
+  else {
+    if (PIC::Mesh::mesh.ThisThread==0) {
+       PIC::Mesh::mesh.buildMesh();
+       PIC::Mesh::mesh.saveMeshFile("mesh.msh");
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+    else {
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    }
+  }
 
   PIC::Mesh::mesh.SetParallelLoadMeasure(InitLoadMeasure);
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
+
+  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+
+  //rename the mesh file
+  unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+  if (PIC::Mesh::mesh.ThisThread==0) {
+    char command[300];
+
+    sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+    system(command);
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 
@@ -562,6 +601,36 @@ int main(int argc,char **argv) {
   //init the volume of the cells'
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
   PIC::Mesh::mesh.InitCellMeasure();
+
+  //read the background data
+    if (PIC::Mesh::mesh.AssociatedDataFileExists("background")==true)  {
+      PIC::Mesh::mesh.LoadCenterNodeAssociatedData("background");
+    }
+    else {
+      double xminTECPLOT[3]={-32,-32,-32},xmaxTECPLOT[3]={16,32,32};
+
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 0.725, 0.000, 0.689}, {0.000, 1.000, 0.000}, {-0.689, 0.000, 0.725}};
+
+    //  0.725  0.000  0.689
+    //  0.000  1.000  0.000
+    // -0.689  0.000  0.725
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=1000.0;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(0.0,500.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=11;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("/Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/data/input/CG/3d__var_4_n00230000-extracted.plt"); //data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt
+
+      PIC::Mesh::mesh.SaveCenterNodeAssociatedData("background");
+    }
 
 
   //test the shadow procedure
@@ -625,7 +694,7 @@ int main(int argc,char **argv) {
   //output the volume mesh
   char fname[_MAX_STRING_LENGTH_PIC_];
   sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
-  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
+//  PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
 #if  _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
   const int nLocations=2;
@@ -640,6 +709,10 @@ int main(int argc,char **argv) {
     //}
 #endif
   
+
+    PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.data.dat",0);
+
+
   int LastDataOutputFileNumber=-1;
 
   for (long int niter=0;niter<100000001;niter++) {

@@ -120,7 +120,16 @@ void Comet::Init_AfterParser() {
   
   //init Gravity
 #if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
-  InitGravityData();
+  const int nGravityVariables=3;
+  int GravityVariableOffsets[nGravityVariables]={GravityFieldOffset,GravityFieldOffset+sizeof(double),GravityFieldOffset+2*sizeof(double)};
+
+  if (PIC::Mesh::mesh.AssociatedDataFileExists("gravity")==true) {
+    PIC::Mesh::mesh.LoadCenterNodeAssociatedData("gravity",GravityVariableOffsets,nGravityVariables);
+  }
+  else {
+    InitGravityData();
+    PIC::Mesh::mesh.SaveCenterNodeAssociatedData("gravity",GravityVariableOffsets,nGravityVariables);
+  }
 #endif
 
   
@@ -167,6 +176,15 @@ void Comet::InitGravityData(){
   PIC::Mesh::cDataCenterNode *cell;
 
   double gravityAccl[3],*position;
+  long int ct=0;
+
+  //evaluate the total nucleus mass
+  double rTest[3]={10.0E3,0.0,0.0};
+  double TotalNucleusMass=nucleusGravity::gravity(gravityAccl,rTest);
+  double r;
+
+  const double rmin=1.5*4.0E3;
+  const double rmax=2.0*4.0E3;
 
   //get coordinated of the center points
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
@@ -175,40 +193,47 @@ void Comet::InitGravityData(){
     for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
       for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)
         for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
-	  cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-	  if (cell!=NULL) {  
-	    position=cell->GetX();
-	    nucleusGravity::gravity(gravityAccl,position);
-	    for (idim=0;idim<3;idim++) {
-	      *((double*)(cell->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)))=gravityAccl[idim];
-	      gravityAccl[idim]=0.0;
-	    }
-	  }
-	}
+          cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+
+          if (cell!=NULL) {
+            position=cell->GetX();
+            r=sqrt(position[0]*position[0]+position[1]*position[1]+position[2]*position[2]);
+
+            if (r<rmin) {
+              nucleusGravity::gravity(gravityAccl,position);
+            }
+            else if (r<rmax) {
+              nucleusGravity::gravity(gravityAccl,position);
+
+              //get the interpolation weight
+              double t,c;
+              c=1.0-(r-rmin)/(rmax-rmin);
+
+              //recalculate the gravity aceleration accounting for the exect gravity of the nucleus and gravity of a sphere
+              t=GravityConstant*TotalNucleusMass/pow(r,3);
+
+              for (idim=0;idim<3;idim++) gravityAccl[idim]=c*gravityAccl[idim]-(1.0-c)*t*position[idim];
+            }
+            else {
+              //get the gravity of a sphere
+              double t=GravityConstant*TotalNucleusMass/pow(r,3);
+
+              for (idim=0;idim<3;idim++) gravityAccl[idim]=-t*position[idim];
+            }
+
+
+            for (idim=0;idim<3;idim++) {
+              *((double*)(cell->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)))=gravityAccl[idim];
+              gravityAccl[idim]=0.0;
+            }
+          }
+	     }
     }
+
+    ct+=1;
+    printf("PIC::Mesh::mesh.ThisThread=%i ct=%li \n",PIC::Mesh::mesh.ThisThread,ct);
   }
 
-  for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) for (node=PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];node!=NULL;node=node->nextNodeThisThread) {
-      block=node->block;
-
-      for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
-	for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)
-	  for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
-	    cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-	    if (cell!=NULL) {
-	      position=cell->GetX();
-	      nucleusGravity::gravity(gravityAccl,position);
-	      for (idim=0;idim<3;idim++) {
-		*((double*)(cell->GetAssociatedDataBufferPointer()+GravityFieldOffset+idim*sizeof(double)))=gravityAccl[idim];
-		gravityAccl[idim]=0.0;
-	      }
-	    }
-	  }
-      }
-    }
-
-
-  return ;
 }
 
 void Comet::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
@@ -441,6 +466,11 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   newParticle=PIC::ParticleBuffer::GetNewParticle();
   newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
   memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+  //determine the initial charge of the dust grain
+  #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+  ElectricallyChargedDust::DustChargingProcessor_SteadyState(x_SO_OBJECT,x_SO_OBJECT,v_SO_OBJECT,spec,newParticle,newParticleData,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode);
+  #endif
 
   nInjectedParticles++;
 
