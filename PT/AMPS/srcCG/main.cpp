@@ -508,7 +508,7 @@ int main(int argc,char **argv) {
   }
       */
 
-#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
   //Computation of the gravity field for an irregular nucleus shape
   nucleusGravity::readMesh_longformat("cg.RMOC-volume.nas");
   nucleusGravity::setDensity(430);

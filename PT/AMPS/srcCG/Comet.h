@@ -83,7 +83,7 @@ namespace Comet {
       nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode);
       
       //the gravity force
-#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
       //the gravity force non spherical case
       Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
 

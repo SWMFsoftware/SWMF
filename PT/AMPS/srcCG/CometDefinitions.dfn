@@ -26,3 +26,7 @@
 
 #define _MULTISPECIES_ANALYTICAL_MODE_OFF_ 0
 #define _MULTISPECIES_ANALYTICAL_MODE_ON_ 1
+
+//the model of the gravity computation
+#define _3DGRAVITY__MODE__ON_      0
+#define _3DGRAVITY__MODE__OFF_     1

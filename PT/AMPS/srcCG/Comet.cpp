@@ -78,7 +78,7 @@ void Comet::Init_BeforeParser() {
 #endif
 
 
-#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
   //request sampling buffer and particle fields
   PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestDataBuffer);
 
@@ -119,7 +119,7 @@ void Comet::Init_AfterParser() {
 #endif
   
   //init Gravity
-#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
   InitGravityData();
 #endif
 
@@ -1549,7 +1549,7 @@ void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
     for (idim=0;idim<DIM;idim++) accl_LOCAL[idim]=0.0;
     CutCell::BoundaryTriangleFaces[nface].GetCenterPosition(x);      
 
-#if _PIC_MODEL__3DGRAVITY__MODE_ == _PIC_MODEL__3DGRAVITY__MODE__ON_
+#if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
     //the gravity force non spherical case
     startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
     nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
