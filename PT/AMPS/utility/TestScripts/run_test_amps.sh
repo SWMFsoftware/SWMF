@@ -6,13 +6,13 @@
 
 # The script can be executed by simply typing
 #
-# ./run_test_amps
+# ./run_test_amps.sh
 #
 # To run the AMPS tests perodically, you can use the crontab facility.
 # Type 'crontab -e' to add a new entry to your crontab.
 # Here is an example entry for nightly runs at 12:30 am:
 #
-# 30 00 * * * $HOME/bin/test_swmf
+# 30 0 * * * $HOME/bin/run_test_amps.sh
 
 # Go to your home directory
 cd $HOME
@@ -35,7 +35,7 @@ cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data
 # Run test
 make -j4 test  >> test_amps.log
           
-# Create file with results' summary                                                  
+# Create file with results' summary
 ls -ltr  *diff > test_amps.res
 echo '=============================================================='\
                 >> test_amps.res
@@ -43,6 +43,6 @@ head -100 *diff >> test_amps.res
 
 # Copy test_amps.log and test_amps.res to the server
  scp test_amps.res test_amps.log \
-    herot.engin.umich.edu:Sites/Current/`hostname -s`/ 
+    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`/ 
 
 
