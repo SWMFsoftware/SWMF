@@ -63,6 +63,8 @@ head -100 *diff >> test_amps.res
     dborovik@herot.engin.umich.edu:Sites/Current/pleiades_intel/ 
 #------------------------------------------------------------------------------
 # load GCC compiler
+module unload mpi-openmpi/1.6.5-intel
+module unload comp-intel/2015.0.090
 module load mpi-openmpi/1.6.5-gcc
 
 # Remove the previous srcTemp directory
@@ -78,7 +80,7 @@ cd AMPS
 ./Config.pl -install > test_amps.log
 
 # Run test
-make test >> test_amps.log
+make test COMPILE.mpicxx=mpicxx >> test_amps.log
           
 # Create file with results' summary
 ls -ltr  *diff > test_amps.res
