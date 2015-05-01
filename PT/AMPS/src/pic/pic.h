@@ -351,14 +351,20 @@ namespace PIC {
 
 
     int GetSpecieNumber(char*);
-    void SetChemSymbol(char*,int);
+
+    //get the chemical name of the species
     void GetChemSymbol(char*,int);
     const char* GetChemSymbol(int);
 
+    //dust could have multiple groups defined as difference species in format DUST:0, DUST:1.....
+    //GetChemBaseSymbol returns the species symbol till ':' - DUST
+    //GetChemSymbol returns the full species symbol - DUST:0
+    void GetChemBaseSymbol(char*,int);
+    char* GetChemBaseSymbol(int);
+
     //set and get the specie type (gas, external, background)
     static const int SpcecieTypeTable[]={-1};
-//    extern int *SpcecieTypeTable;
-//    void SetSpecieType(int SpcecieType,int spec);
+
     inline int GetSpecieType(int spec) {
       return SpcecieTypeTable[spec];
     }

@@ -25,27 +25,6 @@ void PIC::MolecularData::SetMolType(int Code) {MolModelCode=Code;}
 int PIC::MolecularData::GetMolType() {return MolModelCode;}
 
 //==========================================================
-//set and get molecular mass of the species
-/*
-double PIC::MolecularData::GetMass(int s) {return MolMass[s];}
-
-void PIC::MolecularData::SetMass(double mass,int spec) {
-  if (MolMass==NULL) {
-    MolMass=new double[PIC::nTotalSpecies];
-    for (int i=0;i<PIC::nTotalSpecies;i++) MolMass[i]=0.0;
-  }
-
-  MolMass[spec]=mass;
-}
-*/
-
-/*
-extern double *MolMass;
-void SetMass(double,int);
-double GetMass(int);
-*/
-
-//==========================================================
 //get the counting number of the specie
 int PIC::MolecularData::GetSpecieNumber(char* sname) {
   if (ChemTable==NULL) exit(__LINE__,__FILE__,"The chemical table is not defined");
@@ -55,14 +34,32 @@ int PIC::MolecularData::GetSpecieNumber(char* sname) {
 }
 
 //==========================================================
-//set and get the specie symbol
-/*void PIC::MolecularData::SetChemSymbol(char* sym,int spec) {
+//get the specie BASE symbol
+void PIC::MolecularData::GetChemBaseSymbol(char* sym,int spec) {
   if (ChemTable==NULL) exit(__LINE__,__FILE__,"ChemTable is not initialized");
 
-  sprintf(ChemTable[spec],"%s",sym);
-}*/
+  sprintf(sym,"%s",GetChemBaseSymbol(spec));
+}
 
+char* PIC::MolecularData::GetChemBaseSymbol(int spec) {
+  if (ChemTable==NULL) exit(__LINE__,__FILE__,"ChemTable is not initialized");
 
+  static char TempString[_MAX_STRING_LENGTH_PIC_];
+
+  for (int i=0;i<_MAX_STRING_LENGTH_PIC_;i++) {
+    TempString[i]=ChemTable[spec][i];
+
+    if ((TempString[i]==':')||(TempString[i]=='\n')||(TempString[i]=='\r')||(TempString[i]==0)) {
+      TempString[i]=0;
+      break;
+    }
+  }
+
+  return TempString;
+}
+
+//==========================================================
+//get the specie symbol
 void PIC::MolecularData::GetChemSymbol(char* sym,int spec) {
   if (ChemTable==NULL) exit(__LINE__,__FILE__,"ChemTable is not initialized");
 
@@ -74,22 +71,6 @@ const char* PIC::MolecularData::GetChemSymbol(int spec) {
 
   return ChemTable[spec];
 }
-
-//===========================================================
-//set and get the species type
-/*void PIC::MolecularData::SetSpecieType(int SpcecieType,int spec) {
-  if (SpcecieTypeTable==NULL) exit(__LINE__,__FILE__,"Error: SpcecieTypeTable is not initialized");
-
-  SpcecieTypeTable[spec]=SpcecieType;
-}*/
-
-/*int PIC::MolecularData::GetSpecieType(int spec) {
-//  if (SpcecieTypeTable==NULL) exit(__LINE__,__FILE__,"Error: SpcecieTypeTable is not initialized");
-
-  return SpcecieTypeTable[spec];
-}*/
-
-
 
 
 
