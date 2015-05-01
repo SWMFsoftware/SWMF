@@ -648,7 +648,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=350000; //700000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=350; //700000;
   PIC::RequiredSampleLength=10;
 
 
