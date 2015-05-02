@@ -278,6 +278,9 @@ subroutine MH_set_parameters(TypeAction)
 
      end if
 
+     ! Set number and indexes of vector variables
+     call init_vector_variables
+
      call correct_parameters
 
      ! initialize module variables
@@ -2971,7 +2974,7 @@ contains
          proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement, &
-         UseFDFaceFluxIn=UseFDFaceFlux, iVectorVar_I=iVectorVar_I)
+         UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
 
     if(IsRotatedCartesian)then
        ! Fix x1, x2 .. z2 to include the full rotated domain

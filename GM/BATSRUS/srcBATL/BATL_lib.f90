@@ -28,6 +28,8 @@ module BATL_lib
   public:: init_grid_batl
   public:: regrid_batl
 
+  integer, public, allocatable:: iVectorVar_I(:)
+
   logical, public:: IsBatlInitialized = .false.
   
   ! Inherited from BATL_size
@@ -110,7 +112,7 @@ contains
   subroutine init_batl(CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
        rGenIn_I, UseUniformAxisIn, user_amr_geometry, UseFDFaceFluxIn, &
-       iVectorVar_I)
+       iVectorVarIn_I)
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -145,7 +147,7 @@ contains
     logical,          optional, intent(in):: UseFDFaceFluxIn
 
     ! Indexes of first components of vector variables in State_VGB
-    integer,          optional, intent(in):: iVectorVar_I(:)
+    integer,          optional, intent(in):: iVectorVarIn_I(:)
 
     ! Initialize the block-adaptive tree and the domain. 
     !
@@ -186,6 +188,12 @@ contains
     call create_grid
     call init_amr
     call init_amr_criteria(user_amr_geometry=user_amr_geometry)
+
+    if(present(iVectorVarIn_I))then
+       allocate(iVectorVar_I(size(iVectorVarIn_I)))
+       iVectorVar_I = iVectorVarIn_I
+    end if
+
     IsBatlInitialized = .true.
 
   end subroutine init_batl

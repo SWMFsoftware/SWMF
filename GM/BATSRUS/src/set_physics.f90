@@ -595,7 +595,6 @@ subroutine init_mhd_variables
 
   ! Set default I/O units and unit names for the state variables 
   ! in MHD type equations
-  ! Also set number and indexes of vector variables
 
   use ModProcMH,  ONLY: iProc
   use ModVarIndexes
@@ -739,6 +738,22 @@ subroutine init_mhd_variables
      NameUnitUserIdl_V(Ehot_) = NameIdlUnit_V(UnitEnergyDens_)
   end if
 
+end subroutine init_mhd_variables
+
+!==============================================================================
+
+subroutine init_vector_variables
+
+  ! Set number and indexes of vector variables
+
+  use ModMain,    ONLY: UseB
+  use ModPhysics
+  use ModVarIndexes
+  implicit none
+
+  character (len=*), parameter :: NameSub="init_vector_variables"
+  !----------------------------------------------------------------------------
+
   if(nVectorVar == 0)then
      nVectorVar = nFluid
      if(UseB) nVectorVar = nVectorVar + 1
@@ -747,4 +762,4 @@ subroutine init_mhd_variables
      if(UseB) iVectorVar_I(nFluid+1) = Bx_
   end if
 
-end subroutine init_mhd_variables
+end subroutine init_vector_variables
