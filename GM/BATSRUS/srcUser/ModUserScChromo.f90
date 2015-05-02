@@ -628,6 +628,7 @@ contains
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     if(iSide==2.and.TypeGeometry(1:9)=='spherical')then
+       IsFound = .true.
        if(TypeBc == 'usersemilinear')RETURN
        if(TypeBc == 'usersemi')then
           do k = MinK, MaxK; do j = MinJ, MaxJ
