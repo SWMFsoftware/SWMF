@@ -362,6 +362,27 @@ contains
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'RhoNoDimOut=  ', RhoNoDimOut
     end if
+    GhostCellCorr = 1/(&
+         (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
+         sqrt(&
+            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
+    PeSiOut = exp(log(PeSi_I(nPoint)) + &
+         (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
+    !\
+    ! Easter 2015 Version
+    !/
+    !PeSiOut = min(1.20*PeSiIn, max(PeSiOut, PeSiIn))
+    !if(USiIn>0.0)then
+    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
+    !else
+    !   RhoNoDimOut = RhoNoDimCoef* PeSiIn/TeSiIn
+    !end if
+    if(DoTestMe)then
+       write(*,*)'Corrected:'
+       write(*,*)'Pressure 1D (SI) = ',PeSiOut
+       write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
+    end if    
   contains
     !=======================
     subroutine get_res_heating(nIterIn)
@@ -1284,7 +1305,7 @@ contains
        do i = 1-nGhost, 0
           State_VG(Bx_:Bz_, i, j, k) = B_D
           State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (max(-U,U*State_VG(Rho_,  1, j, k)/State_VG(Rho_,  i, j, k)) &
+               (U &
                *BDir_D + U_D)  
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
