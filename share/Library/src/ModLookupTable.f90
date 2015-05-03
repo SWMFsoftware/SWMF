@@ -1,7 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModLookupTable
 
+  ! Lookup tables define a function on a discrete grid so that the
+  ! function can be interpolated within the range of the table.
+  ! The function can have one or more arguments.
+  ! The function value can be scalar or an array of reals.
+  ! The lookup table is stored in the standard IDL format file, so it
+  ! can be easily visualized.
+  ! 
   ! Use lookup tables to calculate lookup properties, such as
   ! equation of state, opacities, ionization level etc. 
   ! For example interpolate pressure as a function of the logarithm of 
@@ -37,12 +45,13 @@ module ModLookupTable
      character(len=10) :: TypeFile         ! file type (ascii, real4, real8)
      character(len=100):: StringDescription! description of table
      character(len=500):: NameVar          ! name of indexes and values
+     integer:: nIndex                      ! number of function arguments
      integer:: nValue                      ! number of values in each element
-     integer:: nIndex_I(2)                 ! number of columns and rows
-     real   :: IndexMin_I(2)               ! minimum values for indexes
-     real   :: IndexMax_I(2)               ! maximum values for indexes
-     real   :: dIndex_I(2)                 ! increment of indexes
-     logical:: IsLogIndex_I(2)             ! true if arguments are logarithmic
+     integer, allocatable:: nIndex_I(:)    ! number of elements per dim
+     real   , allocatable:: IndexMin_I(:)  ! minimum values for indexes
+     real   , allocatable:: IndexMax_I(:)  ! maximum values for indexes
+     real   , allocatable:: dIndex_I(:)    ! increment of indexes
+     logical, allocatable:: IsLogIndex_I(:)! true if arguments are logarithmic
      real, allocatable :: Value_VII(:,:,:) ! array of actual values
      integer:: nParam                      ! number of extra parameters
      real, allocatable :: Param_I(:)       ! parameter values
@@ -54,8 +63,8 @@ module ModLookupTable
   ! private variables
 
   interface interpolate_lookup_table
-     module procedure interpolate_with_known_arg   !Both arguments are known
-     module procedure interpolate_with_known_val   !Table value is given
+     module procedure interpolate_with_known_arg  ! Both arguments are known
+     module procedure interpolate_with_known_val  ! Table value is given
   end interface
 
   ! Array for variable names
@@ -69,17 +78,34 @@ contains
     nIndex_I, IndexMin_I, IndexMax_I, &
     NameFile, TypeFile, StringDescription, nParam, Param_I)
 
+    ! Initialize a lookup table
+    !
+    ! NameTable is a unique string identifier for the table.
+    !
+    ! NameCommand can be "load", "save", "make"
+    ! For "load" the table is loaded from file NameFile.
+    ! For "make" the table is produced in memory, so its size nIndex_I
+    ! and range of indexes from IndexMin_I to IndexMax_I must be given.
+    ! The "save" command makes the table and then saves it into NameFile.
+    !
+    ! TypeFile defines the file type to "ascii" (text file) 
+    ! "real4" (single precision binary) or "real8" (double precision binary).
+    !
+    ! StringDescription should describe the content of the table and
+    ! it is saved into the first line of the file.
+    ! 
+    ! The file can contain nParam reals with values Param_I
+
     character(len=*), intent(in):: NameTable, NameCommand 
-
-    character(len=*),   optional, intent(in):: NameVar
-    integer,            optional, intent(in):: nIndex_I(2)
-    real, dimension(2), optional, intent(in):: IndexMin_I, IndexMax_I
-    character(len=*),   optional, intent(in):: &
+    character(len=*), optional, intent(in):: NameVar
+    integer,          optional, intent(in):: nIndex_I(:)
+    real,             optional, intent(in):: IndexMin_I(:), IndexMax_I(:)
+    character(len=*), optional, intent(in):: &
          NameFile, TypeFile, StringDescription
-    integer,            optional, intent(in):: nParam
-    real,               optional, intent(in):: Param_I(:)
+    integer,          optional, intent(in):: nParam
+    real,             optional, intent(in):: Param_I(:)
 
-    integer :: iTable, iIndex
+    integer :: iTable
     type(TableType), pointer:: Ptr
 
     character(len=*), parameter:: NameSub = 'init_lookup_table'
@@ -122,6 +148,19 @@ contains
        RETURN
     end if
 
+    ! Save size of table and index ranges
+    Ptr%nIndex = size(nIndex_I)
+    allocate(                          &
+         Ptr%nIndex_I(Ptr%nIndex),     &
+         Ptr%IndexMin_I(Ptr%nIndex),   &
+         Ptr%IndexMax_I(Ptr%nIndex),   &
+         Ptr%IsLogIndex_I(Ptr%nIndex), &
+         Ptr%dIndex_I(Ptr%nIndex)      )
+
+    Ptr%nIndex_I   = nIndex_I
+    Ptr%IndexMin_I = IndexMin_I
+    Ptr%IndexMax_I = IndexMax_I
+
     if(present(Param_I))then
        Ptr%nParam = size(Param_I)
        allocate(Ptr%Param_I(Ptr%nParam))
@@ -142,26 +181,19 @@ contains
          UseArraySyntaxIn=.true.)
 
     ! Do not count the names of the indexes and parameters
-    Ptr%nValue = Ptr%nValue - 2 - Ptr%nParam
-
-    ! Save size of table and index ranges
-    Ptr%nIndex_I   = nIndex_I
-    Ptr%IndexMin_I = IndexMin_I
-    Ptr%IndexMax_I = IndexMax_I
+    Ptr%nValue = Ptr%nValue - Ptr%nIndex - Ptr%nParam
     
     ! Figure out which index is logarithmic
-    Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
+    Ptr%IsLogIndex_I = index(NameVar_I(1:Ptr%nIndex), "log") == 1
   
     ! Take logarithm of the ranges if logarithmic
-    do iIndex = 1, 2
-       if(Ptr%IsLogIndex_I(iIndex)) then
-          Ptr%IndexMin_I(iIndex) = log10(Ptr%IndexMin_I(iIndex))
-          Ptr%IndexMax_I(iIndex) = log10(Ptr%IndexMax_I(iIndex))
-       end if
-    end do
+    where(Ptr%IsLogIndex_I)
+       Ptr%IndexMin_I = log10(Ptr%IndexMin_I)
+       Ptr%IndexMax_I = log10(Ptr%IndexMax_I)
+    end where
 
     ! Calculate increments
-    Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr % nIndex_I - 1)
+    Ptr%dIndex_I = (Ptr%IndexMax_I - Ptr%IndexMin_I)/(Ptr%nIndex_I - 1)
 
   end subroutine init_lookup_table
   !==========================================================================
@@ -202,7 +234,7 @@ contains
     ! Expand name
     call check_braces(NameTable, NameTable_I, nTableName)
 
-    if(nTableName /=1 .and. &
+    if(nTableName /= 1 .and. &
          NameCommand(1:4) /= "load" .and. NameCommand /= 'para') &
          call CON_stop( NameSub// &
          ': multiple table names can be used only for load and param')
@@ -300,22 +332,29 @@ contains
     
     call read_var('StringDescription', Ptr%StringDescription)
     call read_var('NameVar',           Ptr%NameVar)
+    call read_var('nIndex', Ptr%nIndex)
+    allocate(                          &
+         Ptr%nIndex_I(Ptr%nIndex),     &
+         Ptr%IndexMin_I(Ptr%nIndex),   &
+         Ptr%IndexMax_I(Ptr%nIndex),   &
+         Ptr%IsLogIndex_I(Ptr%nIndex), &
+         Ptr%dIndex_I(Ptr%nIndex)      )
     
     call split_string(Ptr%NameVar, MaxVar, NameVar_I, Ptr%nValue, &
          UseArraySyntaxIn=.true.)
 
-    ! Do not count the names of the indexes and parameters
-    Ptr%nValue = Ptr%nValue - 2
+    ! Do not count the names of the indexes
+    Ptr%nValue = Ptr%nValue - Ptr%nIndex
 
     ! Append parameter names if needed
     if(DoReadTableParam) &
          Ptr%NameVar = trim(Ptr%NameVar) // ' ' // trim(NameParam)
 
     ! Figure out which index is logarithmic
-    Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
-    
-    do iIndex = 1, 2
-       call read_var('nIndex',     Ptr%nIndex_I(iIndex))
+    Ptr%IsLogIndex_I = index(NameVar_I(1:Ptr%nIndex), "log") == 1
+
+    do iIndex = 1, Ptr%nIndex
+       call read_var('nIndex_I',   Ptr%nIndex_I(iIndex))
        call read_var('IndexMin',   Ptr%IndexMin_I(iIndex))
        call read_var('IndexMax',   Ptr%IndexMax_I(iIndex))
        
@@ -400,7 +439,8 @@ contains
     integer :: nVar
 
     ! since number of parameters is not known in advance, this array is needed
-    real, allocatable:: TableParam_I(:) 
+    real, allocatable:: TableParam_I(:)
+    integer, allocatable:: nIndex_I(:)
 
     character(len=*), parameter:: NameSub = 'load_lookup_table'
     !------------------------------------------------------------------------
@@ -409,17 +449,27 @@ contains
 
     Ptr => Table_I(iTable)
 
-    allocate(TableParam_I(1000))
+    allocate(TableParam_I(1000), nIndex_I(3))
 
     call read_plot_file( Ptr%NameFile,            &
          TypeFileIn      = Ptr%TypeFile,          &
          StringHeaderOut = Ptr%StringDescription, &
-         n1Out           = Ptr%nIndex_I(1),       &
-         n2Out           = Ptr%nIndex_I(2),       &
+         nDimOut         = Ptr%nIndex,            &
+         nOut_D          = nIndex_I,              &
          nVarOut         = Ptr%nValue,            &
          NameVarOut      = Ptr%NameVar,           &
          nParamOut       = Ptr%nParam,            &
          ParamOut_I      = TableParam_I)
+
+    allocate(                          &
+         Ptr%nIndex_I(Ptr%nIndex),     &
+         Ptr%IndexMin_I(Ptr%nIndex),   &
+         Ptr%IndexMax_I(Ptr%nIndex),   &
+         Ptr%IsLogIndex_I(Ptr%nIndex), &
+         Ptr%dIndex_I(Ptr%nIndex)      )
+
+    Ptr%nIndex_I = nIndex_I(1:Ptr%nIndex)
+    deallocate(nIndex_I)
 
     if(Ptr%nParam > 0)then
        if(allocated(Ptr%Param_I)) deallocate(Ptr%Param_I)
@@ -431,13 +481,13 @@ contains
 
     ! Figure out which index is logarithmic
     call split_string(Ptr%NameVar, MaxVar, NameVar_I, nVar)
-    Ptr%IsLogIndex_I = index(NameVar_I(1:2), "log") == 1
+    Ptr%IsLogIndex_I = index(NameVar_I(1:Ptr%nIndex), "log") == 1
 
     if(allocated(Ptr%Value_VII)) deallocate(Ptr%Value_VII)
     allocate(Ptr%Value_VII(Ptr%nValue, Ptr%nIndex_I(1), Ptr%nIndex_I(2)))
     
     call read_plot_file( Ptr%NameFile,    &
-         TypeFileIn      = Ptr%TypeFile,  &
+         TypeFileIn    = Ptr%TypeFile,    &
          CoordMinOut_D = Ptr%IndexMin_I,  &
          CoordMaxOut_D = Ptr%IndexMax_I,  &
          VarOut_VII    = Ptr%Value_VII)
@@ -668,7 +718,7 @@ contains
   end subroutine interpolate_with_known_val
   !===========================================================================
   subroutine get_lookup_table(iTable, &
-       iParamIn, Param, nParam, Param_I, nValue, nIndex_I, &
+       iParamIn, Param, nParam, Param_I, nValue, nIndex, nIndex_I, &
        IndexMin_I, IndexMax_I, IsLogIndex_I, &
        NameVar, StringDescription)
 
@@ -678,10 +728,11 @@ contains
     integer,          optional, intent(out):: nParam     ! number of parameters
     real,             optional, intent(out):: Param_I(:) ! array of parameters
     integer,          optional, intent(out):: nValue     ! number of columns
-    integer,          optional, intent(out):: nIndex_I(2)! number of indexes
-    real,             optional, intent(out):: IndexMin_I(2)   ! minimum indexes
-    real,             optional, intent(out):: IndexMax_I(2)   ! maximum indexes
-    logical,          optional, intent(out):: IsLogIndex_I(2) ! is logarithmic
+    integer,          optional, intent(out):: nIndex     ! number of indexes
+    integer,          optional, intent(out):: nIndex_I(:)! number of points
+    real,             optional, intent(out):: IndexMin_I(:)   ! minimum indexes
+    real,             optional, intent(out):: IndexMax_I(:)   ! maximum indexes
+    logical,          optional, intent(out):: IsLogIndex_I(:) ! is logarithmic
     character(len=*), optional, intent(out):: NameVar         ! variable names
     character(len=*), optional, intent(out):: StringDescription ! description
 
@@ -694,6 +745,7 @@ contains
     if(present(StringDescription)) StringDescription = Ptr%StringDescription
     if(present(NameVar))           NameVar           = Ptr%NameVar
     if(present(nValue))            nValue            = Ptr%nValue
+    if(present(nIndex))            nIndex            = Ptr%nIndex
     if(present(nIndex_I))          nIndex_I          = Ptr%nIndex_I
     if(present(IndexMin_I))        IndexMin_I        = Ptr%IndexMin_I
     if(present(IndexMax_I))        IndexMax_I        = Ptr%IndexMax_I
