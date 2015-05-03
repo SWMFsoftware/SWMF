@@ -8,6 +8,7 @@ EvMin EvMax				NameTableParam
 20000.0					TableParam [eV]
 Opacity(rho,Te) for Be			StringDescription
 logrho logT Planck(30) Ross(30)		NameVar
+2                                       nIndex
 201					nIndex1
 0.0014965				Index1Min [kg/m3]
 2993.0					Index1Max [kg/m3]

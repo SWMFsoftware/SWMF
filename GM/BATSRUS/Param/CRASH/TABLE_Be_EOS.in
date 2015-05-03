@@ -7,6 +7,7 @@ Mass				NameTableParam
 9.012182			TableParam [amu]
 EOS(Te, Na) for Be		StringDescription
 logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
+2                                       nIndex
 201	      	      	     	nIndex1
 1.0E-3				Index1Min [eV]
 4.0E+3				Index1Max [eV]
