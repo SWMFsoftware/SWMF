@@ -1114,10 +1114,9 @@ contains
     use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
-    use ModGeometry,     ONLY: Xyz_DGB 
+    use ModGeometry,     ONLY: Xyz_DGB
     use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
-    use ModGeometry,     ONLY: Xyz_DGB
     use ModB0,           ONLY: B0_DGB
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -1141,7 +1140,8 @@ contains
     
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B_D(3), SqrtRho
+    real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B1_D(3), SqrtRho
+    real :: DirR_D(3), SignBr
     real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
@@ -1194,10 +1194,13 @@ contains
     end if
     
     do k = 1, nK; do j = 1, nJ
-       B_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
-       BDir_D = B_D + B0_DGB(:, 1, j, k, iBlock)
-       BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), cTolerance)
-       if(sign(1.0,sum(BDir_D*Xyz_DGB(:,1,j,k,iBlock))) < 0.0)then
+       B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
+       BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
+            B0_DGB(:, 0, j, k, iBlock))
+       BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
+       DirR_D = Xyz_DGB(:,1,j,k,iBlock) !Normalize this below, if needed
+       SignBr = sign(1.0,sum(BDir_D*DirR_D))
+       if(SignBr <  0.0)then
           BDir_D = -BDir_D
           Major_ = WaveLast_
           Minor_ = WaveFirst_
@@ -1292,21 +1295,29 @@ contains
        State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2/State_VG(Rho_,1,j,k) 
 
        !\
-       ! Magnetic field and velocity vector components orthogonal to 
-       ! B0 filed are all reflected 
+       ! Normalize the radial unit vector 
+       DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
        !/
-       B_D = B_D - BDir_D*sum(B_D*BDir_D)
-       U_D = U_D - BDir_D*U
        !\
-       ! 
+       ! Ghost cell value of the magnetic field: cancel radial B1 field 
+       !/ 
+       !\
+       ! Direction of the Ghost cell MF:
        !/
-       U_D = -U_D; B_D = -B_D
+       !BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
+       !     B0_DGB(:, 0, j, k, iBlock))
+       !BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)*SignBr
+       !\
+       ! Ghost cell velocity
+       !/
+       !U_D = -U_D !BDir_D*U
    
        do i = 1-nGhost, 0
-          State_VG(Bx_:Bz_, i, j, k) = B_D
-          State_VG(RhoUx_:RhoUz_, i, j, k) = State_VG(Rho_,  i, j, k) * &
-               (U &
-               *BDir_D + U_D)  
+          B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
+          B1_D = B1_D - DirR_D*sum(DirR_D*B1_D)
+          State_VG(Bx_:Bz_, i, j, k) = B1_D
+          State_VG(RhoUx_:RhoUz_, i, j, k) = - State_VG(Rho_,  i, j, k) * &
+               State_VG(RhoUx_:RhoUz_, 1-i, j, k)/State_VG(Rho_, 1-i, j, k)
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
