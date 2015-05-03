@@ -6199,12 +6199,12 @@ This default is backwards compatible with previous versions of the code.
 		<parameter name="StringDescription" type="string" 
 							  length="100"/>
 		<parameter name="NameVar"   type="string" length="100"/>
-		<parameter name="nIndex1"   type="integer" min="2"/>
-		<parameter name="Index1Min" type="real"/>
-		<parameter name="Index1Max" type="real" min="$Index1Min"/>
-		<parameter name="nIndex2"   type="integer" min="2"/>
-		<parameter name="Index2Min" type="real"/>
-		<parameter name="Index2Max" type="real" min="$Index1Min"/>
+		<parameter name="nIndex"    type="integer" min="1"/>
+		<for from="1" to="$nIndex">
+			<parameter name="nIndex_I" type="integer" min="2"/>
+			<parameter name="IndexMin" type="real"/>
+			<parameter name="IndexMax" type="real" min="$IndexMin"/>
+		</for>
 	</if>
 
 #LOOKUPTABLE
@@ -6218,6 +6218,7 @@ zXe zBe nPl			NameTableParam (if NameCommand has "param")
 4.0				TableParam number of elements in plastic
 p(rho,e) for ionized plasma	Description (read this and rest unless "load")
 logrho logp pXe pBe pPl		NameVar  
+2      	    	    		nIndex
 100				nIndex1
 1e-6				Index1Min
 1e+6				Index1Max
@@ -6242,12 +6243,14 @@ are read when NameCommand contains "load", "save", or "use".
 
 The rest of the parameters are read for commands "make", "save" or "use".
 The NameVar string contains the space separated list of the names of 
-the two indexes and the one or more returned value(s). If the index name starts
+the indexes and the one or more returned value(s). If the index name starts
 with a "log", a logarithmic index is assumed (ie. the table will be uniform
-in the logarithm of the index value). The nIndex1 defines the number of 
-columns in the table, Index1Min and Index1Max the smallest and largest values
-for the first index, respectively. The nIndex2, Index2Min, Index2Max define
-the number and range of the second index.
+in the logarithm of the index value). The nIndex parameter defines the
+number of indexes (dimensionality) of the table. The nIndex1 parameter
+defines the number of discrete values the first lookup index, and
+Index1Min and Index1Max are the smallest and largest values for the first 
+index, respectively. For nIndex larger than 1, the nIndex2, Index2Min, 
+Index2Max parameters define the number and range of the second index, etc.
 
 This command can occur multiple times. By default no lookup tables are used.
 </command>
