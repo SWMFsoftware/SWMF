@@ -764,7 +764,10 @@ contains
       if(present(n1Out))           n1Out           = n1
       if(present(n2Out))           n2Out           = n2
       if(present(n3Out))           n3Out           = n3
-      if(present(nOut_D))          nOut_D(1:nDim)  = n_D(1:nDim)
+      if(present(nOut_D))then
+         nOut_D          = 1
+         nOut_D(1:nDim)  = n_D(1:nDim)
+      end if
       if(present(IsCartesianOut))  IsCartesianOut  = IsCartesian
       if(present(ParamOut_I) .and. nParam > 0) &
            ParamOut_I(1:nParam) = Param_I
