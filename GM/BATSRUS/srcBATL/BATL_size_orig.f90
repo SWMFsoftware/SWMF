@@ -98,8 +98,10 @@ module BATL_size
   ! Number of nodes per block
   integer, parameter:: nIJKNode = nINode*nJNode*nKNode
 
-  ! Array for block size
+  ! Arrays for block size
   integer, parameter:: nIJK_D(MaxDim) = (/ nI, nJ, nK /)
+  integer, parameter:: MinIJK_D(MaxDim) = (/MinI, MinJ, MinK/)
+  integer, parameter:: MaxIJK_D(MaxDim) = (/MaxI, MaxJ, MaxK/)
 
   ! Array for block size
   integer, parameter:: nIJKNode_D(MaxDim) = (/ nINode, nJNode, nKNode /)
