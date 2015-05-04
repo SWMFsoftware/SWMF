@@ -44,7 +44,7 @@ module ModThreadedLC
 
   real, parameter:: TeSiMin = 1.0e5, TeSiMax = 1.0e8  ![K]
   real           :: TeMin, ConsMin, TeMax
-
+  logical:: UseAlignedVelocity = .true.
   real :: cCoolingPerPe2, RhoNoDimCoef
   !\
   ! For transforming conservative to TeSi and back 
@@ -1292,15 +1292,13 @@ contains
        !\
        !Extrapolation of density
        !/
-       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2/State_VG(Rho_,1,j,k) 
+       State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2&
+            /State_VG(Rho_,1,j,k) 
 
        !\
        ! Normalize the radial unit vector 
        DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
        !/
-       !\
-       ! Ghost cell value of the magnetic field: cancel radial B1 field 
-       !/ 
        !\
        ! Direction of the Ghost cell MF:
        !/
@@ -1313,11 +1311,24 @@ contains
        !U_D = -U_D !BDir_D*U
    
        do i = 1-nGhost, 0
+          !\
+          ! Ghost cell value of the magnetic field: cancel radial B1 field 
+          !/ 
           B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
           B1_D = B1_D - DirR_D*sum(DirR_D*B1_D)
           State_VG(Bx_:Bz_, i, j, k) = B1_D
-          State_VG(RhoUx_:RhoUz_, i, j, k) = - State_VG(Rho_,  i, j, k) * &
-               State_VG(RhoUx_:RhoUz_, 1-i, j, k)/State_VG(Rho_, 1-i, j, k)
+          
+          U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
+          if(UseAlignedVelocity)then
+             U   = sum(U_D*BDir_D)
+          else
+             U = 0
+          end if
+          U_D = U_D - U*BDir_D
+          
+          State_VG(RhoUx_:RhoUz_, i, j, k) = - State_VG(Rho_,i,j,k)* &
+               U_D +U*BDir_D*State_VG(Rho_,1,j,k)
+              
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
