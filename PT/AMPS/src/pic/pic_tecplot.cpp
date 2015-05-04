@@ -177,7 +177,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       for (ii=0;ii<3;ii++) {
         xTECPLOT[ii]=0.0;
 
-        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+        for (jj=0;jj<3;jj++) xTECPLOT[ii]+=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
       }
 
       //locate the cell
@@ -252,7 +252,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       for (ii=0;ii<3;ii++) {
         xTECPLOT[ii]=0.0;
 
-        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+        for (jj=0;jj<3;jj++) xTECPLOT[ii]+=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
       }
 
       //locate the cell
@@ -378,7 +378,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
       for (ii=0;ii<3;ii++) {
         xTECPLOT[ii]=0.0;
 
-        for (jj=0;jj<3;jj++) xTECPLOT[jj]=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
+        for (jj=0;jj<3;jj++) xTECPLOT[ii]+=RotationMatrix_LocalFrame2DATAFILE[ii][jj]*xLOCAL[jj];
       }
 
       //locate the cell
