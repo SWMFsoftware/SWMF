@@ -87,9 +87,14 @@ contains
     !----------------------------------------------------------------------
     select case(nDim)
     case(1)
-       interpolate_scalar = linear_scalar( a_C, &
-            Min_D(1), Max_D(1), &
-            x_D(1), x_I, DoExtrapolate, iCell_D(1), Dist_D(1))
+       if(present(iCell_D))then
+          interpolate_scalar = linear_scalar( a_C, &
+            Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate, &
+            iCell_D(1), Dist_D(1))
+       else
+          interpolate_scalar = linear_scalar( a_C, &
+            Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate)
+       end if
     case(2)
        interpolate_scalar = bilinear_scalar( a_C, &
             Min_D(1), Max_D(1), Min_D(2), Max_D(2), &
@@ -127,9 +132,14 @@ contains
     !----------------------------------------------------------------------
     select case(nDim)
     case(1)
-       interpolate_vector = linear_vector( a_VC, nVar, &
-            Min_D(1), Max_D(1), &
-            x_D(1), x_I, DoExtrapolate, iCell_D(1), Dist_D(1))
+       if(present(iCell_D))then
+          interpolate_vector = linear_vector( a_VC, nVar, &
+               Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate, &
+               iCell_D(1), Dist_D(1))
+       else
+          interpolate_vector = linear_vector( a_VC, nVar, &
+               Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate)
+       end if
     case(2)
        interpolate_vector = bilinear_vector( a_VC, nVar, &
             Min_D(1), Max_D(1), Min_D(2), Max_D(2), &
