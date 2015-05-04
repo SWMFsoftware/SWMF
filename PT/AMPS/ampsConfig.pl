@@ -10,6 +10,7 @@ use Scalar::Util qw/looks_like_number/;
 
 use ampsConfigLib;
 use constant {true => 1, false =>0};
+use constant {GasSpecieType => 0, DustSpecieType => 1};
 
 my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
@@ -32,7 +33,9 @@ my $FileName;
 
 #Main Block Global Variables
 my $TotalSpeciesNumber=0;
+my $DustGroupNumber=0;
 my @SpeciesList;
+my @SpeciesType;
 
 #compile the code
 my $CompileProcessedCodeFlag=1;
@@ -379,7 +382,19 @@ sub ReadMainBlock {
       $MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION=" ";
       
       foreach (@SpeciesList) {
-        $MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION=$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION."\n#undef _".$_."_SPEC_\n#define _".$_."_SPEC_ $TotalSpeciesNumber\n";
+        if ($_ eq "DUST") {
+          if ($DustGroupNumber==0) {          
+            $MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION=$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION."\n#undef _".$_."_SPEC_\n#define _".$_."_SPEC_ $TotalSpeciesNumber\n";
+          }
+          
+          $DustGroupNumber++;
+          push(@SpeciesType,DustSpecieType);
+        }
+        else {
+          $MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION=$MARKER__SPECIES_MACRO_DEFINIETION_USED_IN_SIMULATION."\n#undef _".$_."_SPEC_\n#define _".$_."_SPEC_ $TotalSpeciesNumber\n";
+          push(@SpeciesType,GasSpecieType);
+        }
+        
         $TotalSpeciesNumber++;
       }        
     }
@@ -888,7 +903,7 @@ sub ReadGeneralBlock {
     
    elsif ($InputLine eq "RECOVERMACROSCOPICSAMPLEDDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      
+
       if ($InputLine eq "ON") {
         chomp($line);
         $line=~s/[();]/ /g;
@@ -902,10 +917,10 @@ sub ReadGeneralBlock {
         while (defined $line) {
           ($s0,$line)=split(' ',$line,2);
           $s0=uc($s0);
-                    
+
           if ($s0 eq "FILE") {
             ($s0,$line)=split(' ',$line,2); 
-                             
+
             ampsConfigLib::ChangeValueOfVariable("char PIC::Restart::SamplingDataRestartFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","pic/pic_restart.cpp");
             $line=~s/(=)/ /;
           }
@@ -2414,6 +2429,7 @@ sub ReadSpeciesBlock {
   my @MassArray=(0)x$TotalSpeciesNumber;
   my @ElectricChargeArray=(0)x$TotalSpeciesNumber;
   my @SpeciesFoundFlag=(0)x$TotalSpeciesNumber;
+  my @SpeciesTypeTable=(0)x$TotalSpeciesNumber;
   
   my $SkipSpecieFlag=0;
   
@@ -2472,9 +2488,27 @@ sub ReadSpeciesBlock {
   
   
   #check is all modeled species where found
+  my $nDustSpeciesGroup=0;
+  
   for ($nspec=0;$nspec<$TotalSpeciesNumber;$nspec++) {
-    if ($SpeciesFoundFlag[$nspec] == 0) {
-      die "Cannot find physical parameters for $SpeciesList[$nspec]\n";
+    if ($SpeciesFoundFlag[$nspec] == 1) {
+      $SpeciesTypeTable[$nspec]="_PIC_SPECIE_TYPE__GAS_";
+    }
+    else {
+      if ($SpeciesList[$nspec] eq "DUST") {
+        $SpeciesTypeTable[$nspec]="_PIC_SPECIE_TYPE__DUST_";
+        
+        #set basic physical parameters 
+        $MassArray[$nspec]="0.0";
+        $ElectricChargeArray[$nspec]="0.0";
+        
+        #add the dust group number to the species name
+        $SpeciesList[$nspec]=$SpeciesList[$nspec].":".$nDustSpeciesGroup;
+        $nDustSpeciesGroup++;
+      }
+      else {
+        die "Cannot find physical parameters for $SpeciesList[$nspec]\n";
+      }
     }
   }
 
@@ -2490,10 +2524,9 @@ sub ReadSpeciesBlock {
   ampsConfigLib::ChangeValueOfArray("static const char ChemTable\\[\\]\\[_MAX_STRING_LENGTH_PIC_\\]",\@t,"pic/pic.h");
   ampsConfigLib::ChangeValueOfArray("static const double MolMass\\[\\]",\@MassArray,"pic/pic.h");
   ampsConfigLib::ChangeValueOfArray("static const double ElectricChargeTable\\[\\]",\@ElectricChargeArray,"pic/pic.h");
+  ampsConfigLib::ChangeValueOfArray("static const int SpcecieTypeTable\\[\\]",\@SpeciesTypeTable,"pic/pic.h");
   
-  #init the array of species type descriptors
-  my @SpcecieTypeTable=("_PIC_SPECIE_TYPE__GAS_")x$TotalSpeciesNumber;
-  ampsConfigLib::ChangeValueOfArray("static const int SpcecieTypeTable\\[\\]",\@SpcecieTypeTable,"pic/pic.h");
+
 
 =comment
   #the chemical symbol table  
