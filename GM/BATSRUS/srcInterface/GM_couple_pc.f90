@@ -105,11 +105,12 @@ contains
           ParamReal_I(i) =  ParamReal_I(i) * No2Si_V(UnitX_)
        end do
 
-       ! Q/Qi , M/Mi T/Ti
+       ! Q/Qi, M/Mi, T/Ti
        do iFluid = 0, nIonFluid-1
           ParamReal_I(idx + iFluid*3)     = ChargeIon_I(iFluid+1)
           ParamReal_I(idx + iFluid*3 + 1) = MassIon_I(iFluid+1)
-          ParamReal_I(idx + iFluid*3 + 2) = (1.0 - ElectronTemperatureRatio/nIonFluid)
+          ParamReal_I(idx + iFluid*3 + 2) = &
+               (1.0 - ElectronTemperatureRatio/nIonFluid)
        end do
 
        idx = idx + nIonFluid*3
@@ -119,7 +120,7 @@ contains
     end if
 
   end subroutine GM_get_for_pc_init
-  !==============================================================================
+  !============================================================================
 
   subroutine GM_get_for_pc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
@@ -131,8 +132,9 @@ contains
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar, UseAnisoPressure
     use ModVarIndexes, ONLY: nVar, NamePrimitiveVar
     use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, find_grid_block
-    use ModInterpolate, ONLY: linear, bilinear, trilinear
+    use BATL_lib,   ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
+         find_grid_block
+    use ModInterpolate, ONLY: interpolate_vector
 
     implicit none
 
@@ -151,6 +153,9 @@ contains
 
     integer:: iPoint, iBlock, iProcFound
 
+    integer, parameter:: Min_D(3) = (/MinI, MinJ, MinK/)
+    integer, parameter:: Max_D(3) = (/MaxI, MaxJ, MaxK/)
+
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
@@ -168,17 +173,9 @@ contains
           call stop_mpi(NameSub//' could not find position on this proc')
        end if
 
-       select case(nDim)
-       case (1)
-          State_V = linear(State_VGB(:,:,MinJ,MinK,iBlock), &
-               nVar, MinI, MaxI, Xyz_D(1), iCell = iCell_D(1), Dist = Dist_D(1))
-       case (2)
-          State_V = bilinear(State_VGB(:,:,:,MinK,iBlock), &
-               nVar, MinI, MaxI, MinJ, MaxJ, Xyz_D(1:2), iCell_D = iCell_D(1:2), Dist_D = Dist_D(1:2))
-       case (3)
-          State_V = trilinear(State_VGB(:,:,:,:,iBlock), &
-               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_D, iCell_D = iCell_D, Dist_D = Dist_D)
-       end select
+       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
+            Min_D(1:nDim), Max_D(1:nDim), &
+            iCell_D=iCell_D(1:nDim), Dist_D=Dist_D(1:nDim))
 
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
@@ -190,12 +187,14 @@ contains
     end do
 
   end subroutine GM_get_for_pc
-  !==============================================================================
+  !============================================================================
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
 
-    ! This subrutine is called 3 times, first time we get the number of cell centerd 
-    ! grid points on this processor. Secound time we get the cordinates to the same time.
-    ! Thierd time we set the state variables to the same value as given by PC componets
+    ! This subrutine is called 3 times:
+    !   First time we set the number of cell centered grid points 
+    !       on this processor. 
+    !   Second time we get the cordinates to the same time.
+    !   Third time we set the state variables to the value given by PC.
 
     use CON_coupler, ONLY: i_proc, n_proc
     use BATL_lib,    ONLY: nDim, Xyz_DGB, CellSize_DB, nBlock, Unused_B, &
@@ -211,7 +210,7 @@ contains
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
-    real, intent(inout), allocatable, optional :: Pos_DI(:,:)               ! Position vectors
+    real, intent(inout), allocatable, optional :: Pos_DI(:,:)  ! Positions
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
@@ -223,7 +222,7 @@ contains
     integer :: nPicBlock
 
     real    :: XyzMin_D(nDim), XyzMax_D(nDim) ! min/max position of block
-    real    :: XyzMinRegin_D(nDim), XyzMaxRegin_D(nDim) ! min/max positon of pic region
+    real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
     real    :: Xyz_D(MaxDim)
 
     integer :: x_= 1, y_ = 1, z_ = 1 
@@ -258,10 +257,10 @@ contains
     do iRegion = 1, nRegionPic
 
        ! (nGhostPic +1) where +1 is from the IPIC3D ghost layor
-       XyzMaxRegin_D = XyzMaxPic_DI(1:nDim,iRegion) - &
+       XyzMaxRegion_D = XyzMaxPic_DI(1:nDim,iRegion) - &
             (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
-       XyzMinRegin_D = XyzPic0_DI(1:nDim,iRegion) + &
+       XyzMinRegion_D = XyzPic0_DI(1:nDim,iRegion) + &
             (nGhostPic - 0.1)*DxyzPic_DI(:,iRegion)  
 
 
@@ -272,12 +271,12 @@ contains
           XyzMax_D = Xyz_DGB(1:nDim,nI,nJ,nK,iBlock)
 
           ! blocks that have no points inside the pic region iRegion
-          if(any(XyzMax_D < XyzMinRegin_D).or. &
-               any(XyzMin_D > XyzMaxRegin_D )) CYCLE
+          if(any(XyzMax_D < XyzMinRegion_D).or. &
+               any(XyzMin_D > XyzMaxRegion_D )) CYCLE
 
           ! blocks complitly inside the pic region iRegion
-          if( all(XyzMax_D <= XyzMaxRegin_D .and. &
-               XyzMin_D >= XyzMinRegin_D )) then
+          if( all(XyzMax_D <= XyzMaxRegion_D .and. &
+               XyzMin_D >= XyzMinRegion_D )) then
 
              if(present(Data_VI)) then
                 call setStateVGB(1, nI, 1, nJ, 1, nK)
@@ -295,18 +294,24 @@ contains
              CYCLE
           end if
 
-          ! what we have left is blocks intercection the pic region iRegion
-          iL = max(ceiling((XyzMinRegin_D(x_) - XyzMin_D(x_))/CellSize_DB(x_,iBlock)), 0) + 1
-          iR = max(ceiling((XyzMaxRegin_D(x_) - XyzMin_D(x_))/CellSize_DB(x_,iBlock)), 0) 
+          ! what we have left is blocks intersecting the PIC region iRegion
+          iL = max(ceiling((XyzMinRegion_D(x_) - XyzMin_D(x_)) &
+               /CellSize_DB(x_,iBlock)), 0) + 1
+          iR = max(ceiling((XyzMaxRegion_D(x_) - XyzMin_D(x_)) &
+               /CellSize_DB(x_,iBlock)), 0) 
           if(iR > nI ) iR = nI
           if(nDim > 1) then
-             jL = max(ceiling((XyzMinRegin_D(y_) - XyzMin_D(y_))/CellSize_DB(y_,iBlock)), 0) + 1
-             jR = max(ceiling((XyzMaxRegin_D(y_) - XyzMin_D(y_))/CellSize_DB(y_,iBlock)), 0) 
+             jL = max(ceiling((XyzMinRegion_D(y_) - XyzMin_D(y_)) &
+                  /CellSize_DB(y_,iBlock)), 0) + 1
+             jR = max(ceiling((XyzMaxRegion_D(y_) - XyzMin_D(y_)) &
+                  /CellSize_DB(y_,iBlock)), 0) 
              if(jR > nJ ) jR = nJ
           end if
           if(nDim > 2) then
-             kL = max(ceiling((XyzMinRegin_D(z_) - XyzMin_D(z_))/CellSize_DB(z_,iBlock)), 0) + 1
-             kR = max(ceiling((XyzMaxRegin_D(z_) - XyzMin_D(z_))/CellSize_DB(z_,iBlock)), 0) 
+             kL = max(ceiling((XyzMinRegion_D(z_) - XyzMin_D(z_)) &
+                  /CellSize_DB(z_,iBlock)), 0) + 1
+             kR = max(ceiling((XyzMaxRegion_D(z_) - XyzMin_D(z_)) &
+                  /CellSize_DB(z_,iBlock)), 0) 
              if(kR > nK ) kR = nK
           end if
 
@@ -334,7 +339,7 @@ contains
 
   contains
 
-    !===========================================================================
+    !==========================================================================
     subroutine setStateVGB(iLx,iRx,jLy,jRy,kLz,kRz)
 
       use ModAdvance,  ONLY: Bx_, Bz_
@@ -344,7 +349,7 @@ contains
 
       integer, intent(in) :: iLx,iRx,jLy,jRy,kLz,kRz
 
-      !--------------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do i=iLx,iRx; do j=jLy,jRy; do k=kLz,kRz         
          State_VGB(1:nVar,i,j,k,iBlock) = &
               Data_VI(1:nVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V)
@@ -372,15 +377,13 @@ contains
     use BATL_lib,    ONLY: nDim
     !use ModProcMH,   ONLY: iProc
 
-    !  logical,          intent(in)   :: UseData ! true when data is transferred
-    ! false if positions are asked
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
 
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
-    real, intent(out), allocatable, optional:: Pos_DI(:,:)               ! Position vectors
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
     character(len=*), parameter :: NameSub='GM_put_from_pc'
     !--------------------------------------------------------------------------
