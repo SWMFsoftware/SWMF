@@ -264,9 +264,11 @@ contains
              ! Gradient of Pe in Cartesian/RZ case
              Force_D(x_) = Force_D(x_) &
                   - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
-             Force_D(y_) = Force_D(y_) &
+             if(nJ>1)&
+                  Force_D(y_) = Force_D(y_) &
                   - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
-             Force_D(z_) = Force_D(z_) &
+             if(nK>1)&
+                  Force_D(z_) = Force_D(z_) &
                   - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
           else
              ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
@@ -289,9 +291,11 @@ contains
              ! Gradient of Pwave in Cartesian/RZ case
              Force_D(x_) = Force_D(x_) &
                   - (Pwave_X(i+1,j,k) - Pwave_X(i,j,k))/CellSize_DB(x_,iBlock)
-             Force_D(y_) = Force_D(y_) &
+             if(nJ>1)&
+                  Force_D(y_) = Force_D(y_) &
                   - (Pwave_Y(i,j+1,k) - Pwave_Y(i,j,k))/CellSize_DB(y_,iBlock)
-             Force_D(z_) = Force_D(z_) &
+             if(nK>1)&
+                  Force_D(z_) = Force_D(z_) &
                   - (Pwave_Z(i,j,k+1) - Pwave_Z(i,j,k))/CellSize_DB(z_,iBlock)
           else
              ! grad Pwave =
