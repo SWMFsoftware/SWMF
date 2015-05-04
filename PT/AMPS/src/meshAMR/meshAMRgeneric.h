@@ -7645,6 +7645,38 @@ nMPIops++;
       fwrite("AMR-MESH-FILE-MARKER:BOUNDARY_NODES",sizeof(char),STRING_LENGTH,fout);
       countingNumber=treeNodes.GetEntryCountingNumber(DomainSurfaceBoundaryList);
       fwrite(&countingNumber,sizeof(long int),1,fout);
+
+      //save the distribution of the cut faces
+      if (CutCell::nBoundaryTriangleFaces!=0) {
+
+        struct {
+          void SaveBlock(cTreeNodeAMR<cBlockAMR> *node,FILE *fout) {
+            if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+              //the node is at the bottom of the tree -> save the list of the NASTRAN cut cells;
+              CutCell::cTriangleFaceDescriptor *t;
+              bool NextTriangleFaceExist=false;
+              std::ptrdiff_t TriangleFaceID;
+
+
+              for (t=node->FirstTriangleCutFace;t!=NULL;t=t->next) {
+                NextTriangleFaceExist=true;
+                fwrite(&NextTriangleFaceExist,sizeof(bool),1,fout);
+
+                TriangleFaceID=t->TriangleFace-CutCell::BoundaryTriangleFaces;
+                fwrite(&TriangleFaceID,sizeof(std::ptrdiff_t),1,fout);
+              }
+
+              NextTriangleFaceExist=false;
+              fwrite(&NextTriangleFaceExist,sizeof(bool),1,fout);
+
+
+            }
+            else for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) SaveBlock(node->downNode[nDownNode],fout);
+          }
+        } SaveBlockCutCellDistribution;
+
+        SaveBlockCutCellDistribution.SaveBlock(rootTree,fout);
+      }
 #endif
 
 
@@ -7719,6 +7751,41 @@ nMPIops++;
     if (strcmp("AMR-MESH-FILE-MARKER:BOUNDARY_NODES",marker)!=0) exit(__LINE__,__FILE__,"SectionMarker in the mesh file is wrong");
     fread(&countingNumber,sizeof(long int),1,fout);
     DomainSurfaceBoundaryList=treeNodes.GetEntryPointer(countingNumber);
+
+
+    //read the distribution of the cut faces
+    if (CutCell::nBoundaryTriangleFaces!=0) {
+
+      struct {
+        void LoadBlock(cTreeNodeAMR<cBlockAMR> *node,FILE *fout) {
+          if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+            //the node is at the bottom of the tree -> save the list of the NASTRAN cut cells;
+            CutCell::cTriangleFaceDescriptor *t;
+            bool NextTriangleFaceExist=false;
+            std::ptrdiff_t TriangleFaceID;
+
+            fread(&NextTriangleFaceExist,sizeof(bool),1,fout);
+
+            while (NextTriangleFaceExist==true) {
+              //set up the description of the cut face
+              CutCell::cTriangleFaceDescriptor *t=CutCell::BoundaryTriangleFaceDescriptor.newElement();
+
+              fread(&TriangleFaceID,sizeof(std::ptrdiff_t),1,fout);
+              t->TriangleFace=CutCell::BoundaryTriangleFaces+TriangleFaceID;
+
+              t->prev=NULL,t->next=node->FirstTriangleCutFace;
+              if (node->FirstTriangleCutFace!=NULL) node->FirstTriangleCutFace->prev=t;
+              node->FirstTriangleCutFace=t;
+
+              fread(&NextTriangleFaceExist,sizeof(bool),1,fout);
+            }
+          }
+          else for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) LoadBlock(node->downNode[nDownNode],fout);
+        }
+      } LoadBlockCutCellDistribution;
+
+      LoadBlockCutCellDistribution.LoadBlock(rootTree,fout);
+    }
 #endif
 
     /*
