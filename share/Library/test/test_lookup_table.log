@@ -1,3 +1,4 @@
+ testing 2D lookup table
  testing i_lookup_table
  testing get_lookup_table
  testing make_lookup_table
@@ -5,4 +6,18 @@ make_lookup_table is creating table RhoE
  testing interpolate_lookup_table
  testing load_lookup_table
  testing i_lookup_table for table 2
+ testing interpolate_lookup_table for loaded table
+ testing 1D lookup table
+ testing make_lookup_table_1d
+make_lookup_table_1d is creating table RadCool                                                                                             
+ testing interpolate_lookup_table
+ testing 1D load_lookup_table
+ testing i_lookup_table for table 4
+ testing interpolate_lookup_table for loaded table
+ testing 3D lookup table
+ testing make_lookup_table_3d
+make_lookup_table_3d is creating table B0(r,Lon,Lat)                                                                                       
+ testing interpolate_lookup_table
+ testing 3D load_lookup_table
+ testing i_lookup_table for table 6
  testing interpolate_lookup_table for loaded table
