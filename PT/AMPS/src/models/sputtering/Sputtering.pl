@@ -37,7 +37,7 @@ my $InputLine;
 my $InputComment;
 
 #parameters of the model settings
-my ($Surface,$Model);
+my ($Surface,$Model,$Mode);
 
 open (InputFile,"<","$InputFileName") || die "Cannot find file \"$InputFileName\"\n";
 
@@ -56,8 +56,20 @@ while ($line=<InputFile>) {
   $InputLine=~s/[=(),]/ /g;
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
-  
-  if ($InputLine eq "SURFACE") {
+
+  if ($InputLine eq "MODE") {
+    ($Mode,$InputComment)=split(' ',$InputComment,2);
+    if ($Mode eq "ON") {
+	ampsConfigLib::RedefineMacro("_SPUTTERING__MODE_","_PIC_MODE_ON_","models/sputtering/Sputtering.dfn");
+    }
+    elsif ($Mode eq "OFF") {
+	ampsConfigLib::RedefineMacro("_SPUTTERING__MODE_","_PIC_MODE_OFF_","models/sputtering/Sputtering.dfn");
+    }
+    else {
+	die "Option is unknown #1 ($Mode), line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
+  elsif ($InputLine eq "SURFACE") {
     ($Surface,$InputComment)=split(' ',$InputComment,2);
   }
   elsif ($InputLine eq "MODEL") {
