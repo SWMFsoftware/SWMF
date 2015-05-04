@@ -44,6 +44,8 @@ module ModInterpolate
 
   private ! except
 
+  public :: interpolate_scalar ! 2nd order interpolation in 1, 2 or 3D
+  public :: interpolate_vector ! 2nd order interpolation in 1, 2 or 3D
   public :: linear             ! 2nd order interpolation in 1D
   public :: bilinear           ! 2nd order interpolation in 2D
   public :: trilinear          ! 2nd order interpolation in 3D
@@ -68,6 +70,81 @@ module ModInterpolate
 contains
 
   !=========================================================================
+  real function interpolate_scalar(a_C, nDim, Min_D, Max_D, x_D, &
+       x_I, y_I, z_I, DoExtrapolate, iCell_D, Dist_D)
+
+    real,    intent(in):: a_C(:,:,:)
+    integer, intent(in):: nDim
+    integer, intent(in):: Min_D(nDim), Max_D(nDim)
+
+    real,    optional, intent(in):: x_D(nDim)
+    real,    optional, intent(in):: x_I(:), y_I(:), z_I(:)
+    logical, optional, intent(in):: DoExtrapolate
+    integer, optional, intent(in):: iCell_D(nDim)
+    real,    optional, intent(in):: Dist_D(nDim)
+
+    character(len=*), parameter:: NameSub = 'interpolate_scalar'
+    !----------------------------------------------------------------------
+    select case(nDim)
+    case(1)
+       interpolate_scalar = linear_scalar( a_C, &
+            Min_D(1), Max_D(1), &
+            x_D(1), x_I, DoExtrapolate, iCell_D(1), Dist_D(1))
+    case(2)
+       interpolate_scalar = bilinear_scalar( a_C, &
+            Min_D(1), Max_D(1), Min_D(2), Max_D(2), &
+            x_D, x_I, y_I, DoExtrapolate, iCell_D, Dist_D)
+    case(3)
+       interpolate_scalar = trilinear_scalar( a_C, &
+            Min_D(1), Max_D(1), Min_D(2), Max_D(2), Min_D(3), Max_D(3), &
+            x_D, x_I, y_I, z_I, DoExtrapolate, iCell_D, Dist_D)
+    case default
+       call CON_stop(NameSub//' nDim should be 1, 2 or 3')
+    end select
+
+  end function interpolate_scalar
+
+  !=========================================================================
+  function interpolate_vector( &
+       a_VC, nVar, nDim, Min_D, Max_D, x_D, &
+       x_I, y_I, z_I, DoExtrapolate, iCell_D, Dist_D)
+
+    real,    intent(in):: a_VC(:,:,:,:)
+    integer, intent(in):: nVar
+    integer, intent(in):: nDim
+    integer, intent(in):: Min_D(nDim), Max_D(nDim)
+
+    real,    optional, intent(in):: x_D(nDim)
+    real,    optional, intent(in):: x_I(:), y_I(:), z_I(:)
+    logical, optional, intent(in):: DoExtrapolate
+    integer, optional, intent(in):: iCell_D(nDim)
+    real,    optional, intent(in):: Dist_D(nDim)
+
+    ! return value
+    real:: interpolate_vector(nVar)
+
+    character(len=*), parameter:: NameSub = 'interpolate_vector'
+    !----------------------------------------------------------------------
+    select case(nDim)
+    case(1)
+       interpolate_vector = linear_vector( a_VC, nVar, &
+            Min_D(1), Max_D(1), &
+            x_D(1), x_I, DoExtrapolate, iCell_D(1), Dist_D(1))
+    case(2)
+       interpolate_vector = bilinear_vector( a_VC, nVar, &
+            Min_D(1), Max_D(1), Min_D(2), Max_D(2), &
+            x_D, x_I, y_I, DoExtrapolate, iCell_D, Dist_D)
+    case(3)
+       interpolate_vector = trilinear_vector( a_VC, nVar, &
+            Min_D(1), Max_D(1), Min_D(2), Max_D(2), Min_D(3), Max_D(3), &
+            x_D, x_I, y_I, z_I, DoExtrapolate, iCell_D, Dist_D)
+    case default
+       call CON_stop(NameSub//' nDim should be 1, 2 or 3')
+    end select
+
+  end function interpolate_vector
+
+  !=========================================================================
   real function linear_scalar(a_I, iMin, iMax, x, x_I, DoExtrapolate, &
        iCell, Dist)
 
@@ -77,8 +154,8 @@ contains
 
     integer, intent(in) :: iMin, iMax
     real, intent(in)    :: a_I(iMin:iMax)
-    real, intent(in)    :: x
 
+    real,    intent(in), optional:: x
     real,    intent(in), optional :: x_I(iMin:iMax)
     logical, intent(in), optional :: DoExtrapolate
     integer, intent(in), optional :: iCell
@@ -118,14 +195,15 @@ contains
   function linear_vector(a_VI, nVar, iMin, iMax, x, x_I, DoExtrapolate, &
        iCell, Dist)
 
-    ! Calculate linear interpolation of a_VI at position x
-    ! Assume normalized coordinates unless x_I is present.
-    ! If present x_I contains the coordinates in an increasing order.
+    ! Calculate linear interpolation of a_VI(nVar,iMin:iMax) at position x
+    ! or at the position given by iCell + Dist.
+    ! Assume normalized coordinates unless the coordinates x_I is present.
+    ! Extrapolate if DoExtrapolate is present.
 
-    integer, intent(in) :: nVar, iMin, iMax
-    real, intent(in)    :: a_VI(nVar, iMin:iMax)
-    real, intent(in)    :: x
+    integer, intent(in):: nVar, iMin, iMax
+    real,    intent(in):: a_VI(nVar,iMin:iMax)
 
+    real,    intent(in), optional :: x
     real,    intent(in), optional :: x_I(iMin:iMax)
     logical, intent(in), optional :: DoExtrapolate
     integer, intent(in), optional :: iCell
@@ -173,15 +251,15 @@ contains
     ! Assume normalized coordinates unless x_I and/or y_I are present.
     ! If present x_I and y_I contain the coordinates in an increasing order.
 
-    integer, intent(in) :: iMin, iMax, jMin, jMax
-    real, intent(in)    :: a_II(iMin:iMax,jMin:jMax)
-    real, intent(in)    :: Xy_D(2)
+    integer, intent(in):: iMin, iMax, jMin, jMax
+    real,    intent(in):: a_II(iMin:iMax,jMin:jMax)
 
-    real,    intent(in), optional :: x_I(iMin:iMax)
-    real,    intent(in), optional :: y_I(jMin:jMax)
-    logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D(2)
-    real,    intent(in), optional :: Dist_D(2)
+    real,    intent(in), optional:: Xy_D(2)
+    real,    intent(in), optional:: x_I(iMin:iMax)
+    real,    intent(in), optional:: y_I(jMin:jMax)
+    logical, intent(in), optional:: DoExtrapolate
+    integer, intent(in), optional:: iCell_D(2)
+    real,    intent(in), optional:: Dist_D(2)
 
     integer :: i1, i2, j1, j2
     real    :: Dx1, Dx2, Dy1, Dy2
@@ -236,13 +314,13 @@ contains
 
     integer, intent(in) :: nVar, iMin, iMax, jMin, jMax
     real, intent(in)    :: a_VII(nVar, iMin:iMax,jMin:jMax)
-    real, intent(in)    :: Xy_D(2)
 
-    real,    intent(in), optional :: x_I(iMin:iMax)
-    real,    intent(in), optional :: y_I(jMin:jMax)
-    logical, intent(in), optional :: DoExtrapolate
-    integer, intent(in), optional :: iCell_D(2)
-    real,    intent(in), optional :: Dist_D(2)
+    real,    intent(in), optional:: Xy_D(2)
+    real,    intent(in), optional:: x_I(iMin:iMax)
+    real,    intent(in), optional:: y_I(jMin:jMax)
+    logical, intent(in), optional:: DoExtrapolate
+    integer, intent(in), optional:: iCell_D(2)
+    real,    intent(in), optional:: Dist_D(2)
 
     ! return value
     real                :: bilinear_vector(nVar)
@@ -296,14 +374,14 @@ contains
 
     ! Calculate trilinear interpolation of a_III at position Xyz_D
 
-    integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
-    real, intent(in)    :: a_III(iMin:iMax,jMin:jMax,kMin:kMax)
-    real, intent(in)    :: Xyz_D(3)
+    integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
+    real,    intent(in):: a_III(iMin:iMax,jMin:jMax,kMin:kMax)
 
-    real,    intent(in), optional :: x_I(iMin:iMax)
-    real,    intent(in), optional :: y_I(jMin:jMax)
-    real,    intent(in), optional :: z_I(kMin:kMax)
-    logical, intent(in), optional :: DoExtrapolate
+    real,    intent(in), optional:: Xyz_D(3)
+    real,    intent(in), optional:: x_I(iMin:iMax)
+    real,    intent(in), optional:: y_I(jMin:jMax)
+    real,    intent(in), optional:: z_I(kMin:kMax)
+    logical, intent(in), optional:: DoExtrapolate
 
     integer,    intent(in), optional :: iCell_D(3)
     real,    intent(in), optional :: Dist_D(3)
@@ -371,14 +449,14 @@ contains
 
     ! Calculate trilinear interpolation of a_III at position Xyz_D
 
-    integer, intent(in) :: nVar, iMin, iMax, jMin, jMax, kMin, kMax
-    real, intent(in)    :: a_VIII(nVar, iMin:iMax, jMin:jMax, kMin:kMax)
-    real, intent(in)    :: Xyz_D(3)
+    integer, intent(in):: nVar, iMin, iMax, jMin, jMax, kMin, kMax
+    real,    intent(in):: a_VIII(nVar,iMin:iMax,jMin:jMax,kMin:kMax)
 
-    real,    intent(in), optional :: x_I(iMin:iMax)
-    real,    intent(in), optional :: y_I(jMin:jMax)
-    real,    intent(in), optional :: z_I(kMin:kMax)
-    logical, intent(in), optional :: DoExtrapolate
+    real,    intent(in), optional:: Xyz_D(3)
+    real,    intent(in), optional:: x_I(iMin:iMax)
+    real,    intent(in), optional:: y_I(jMin:jMax)
+    real,    intent(in), optional:: z_I(kMin:kMax)
+    logical, intent(in), optional:: DoExtrapolate
 
     integer,    intent(in), optional :: iCell_D(3)
     real,    intent(in), optional :: Dist_D(3)
