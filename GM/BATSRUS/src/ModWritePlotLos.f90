@@ -127,7 +127,7 @@ subroutine write_plot_los(iFile)
   integer :: iTime0_I(7),iTime_I(7)
 
   ! block and variable Indices
-  integer :: iBLK, iMirror, jMirror, kMirror, iVar
+  integer :: iBlock, iMirror, jMirror, kMirror, iVar
 
   logical :: oktest,oktest_me,DoTiming,DoTimingMe, DoCheckBlock
   logical :: UseScattering, UseRho
@@ -359,11 +359,11 @@ subroutine write_plot_los(iFile)
      call integrate_image
   else
      ! loop over blocks
-     do iBLK = 1, nBlock
+     do iBlock = 1, nBlock
 
-        if (Unused_B(iBLK)) CYCLE
+        if (Unused_B(iBlock)) CYCLE
 
-        CellSize_D = CellSize_DB(:,iBlk)
+        CellSize_D = CellSize_DB(:,iBlock)
 
         do iMirror = 1, nMirror_D(1)
            XyzBlockSign_D(1) = 3 - 2*iMirror
@@ -377,7 +377,7 @@ subroutine write_plot_los(iFile)
               end do    ! kMirror
            end do    ! jMirror
         end do    ! iMirror
-     end do       ! iBLK loop
+     end do       ! iBlock loop
   end if
 
   if(DoTiming)call timing_stop('los_block_loop')
@@ -727,7 +727,7 @@ contains
             any(CoordLos_D > CoordMaxBlock_D))then
 
           ! Find new block/node
-          call find_grid_block(XyzLos_D, iProcFound, iBlk, iNodeOut=iNode)
+          call find_grid_block(XyzLos_D, iProcFound, iBlock, iNodeOut=iNode)
 
           ! Set block coordinates and the cell size on all processors
           call get_tree_position(iNode, PositionMin_D, PositionMax_D)
@@ -737,7 +737,7 @@ contains
           CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D       !Block size
           CellSize_D      = CoordSizeBlock_D / nIjk_D               !Cell size
           if(DoTest)then
-             write(*,*)NameSub,': new iBlk=', iBlk
+             write(*,*)NameSub,': new iBlock=', iBlock
              write(*, '(A, 3E12.5))')NameSub//': CoordMin=', CoordMinBlock_D
              write(*, '(A, 3E12.5))')NameSub//': CoordMax=', CoordMaxBlock_D
           end if
@@ -810,12 +810,12 @@ contains
   subroutine add_segment(Ds, XyzLos_D)
 
     use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
-    use ModInterpolate, ONLY: bilinear, trilinear
+    use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iPIon_I
     use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
     use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
-    use BATL_lib,       ONLY: xyz_to_coord
+    use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D
     use ModUserInterface ! user_set_plot_var
 
     real, intent(in):: Ds          ! Length of line segment
@@ -909,13 +909,8 @@ contains
 
     ! Interpolate state if it is needed by any of the plot variables
     if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
-       if(nK == 1)then
-          State_V = bilinear(State_VGB(:,:,:,1,iBlk), &
-               nVar, MinI, MaxI, MinJ, MaxJ, CoordNorm_D(1:2))
-       else
-          State_V = trilinear(State_VGB(:,:,:,:,iBlk), &
-               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
-       end if
+       State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
+            nVar, nDim, MinIJK_D, MaxIJK_D, CoordNorm_D)
        Rho = State_V(Rho_)
     end if
 
@@ -1045,30 +1040,25 @@ contains
 
        case default
           ! Obtain user defined plot function for the whole block
-          if(iBlk /= iBlockLast .or. iVar > iVarLast)then
-             iBlockLast = iBlk
+          if(iBlock /= iBlockLast .or. iVar > iVarLast)then
+             iBlockLast = iBlock
              iVarLast   = iVar
              if(.not.allocated(PlotVar_GV)) &
                   allocate(PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar))
-             call user_set_plot_var(iBlk, NameVar, &
+             call user_set_plot_var(iBlock, NameVar, &
                   plot_dimensional(iFile), &
                   PlotVar_GV(:,:,:,iVar), &
                   ValueBody, UseBody, NameTecVar, NameTecUnit, NameIdlUnit,&
                   IsFound)
              if(.not. IsFound)then
                 PlotVar_GV(:,:,:,iVar)=-7777.
-                if(iProc==0.and.iBLK==1)write(*,*) &
+                if(iProc==0.and.iBlock==1)write(*,*) &
                      NameSub, ' WARNING: unknown plotvarname=', NameVar
              end if
           end if
           ! Interpolate value
-          if(nK == 1)then
-             Value = bilinear(PlotVar_GV(:,:,1,iVar), &
-                  MinI,MaxI, MinJ,MaxJ, CoordNorm_D(1:2))
-          else
-             Value = trilinear(PlotVar_GV(:,:,:,iVar), &
-                  MinI,MaxI, MinJ,MaxJ, MinK,MaxK, CoordNorm_D)
-          end if
+          Value = interpolate_scalar(PlotVar_GV(:,:,:,iVar), &
+               nDim, MinIJK_D, MaxIJK_D, CoordNorm_D) 
        end select
 
        ImagePe_VII(iVar,iPix,jPix) = ImagePe_VII(iVar,iPix,jPix) + Value*Ds
@@ -1084,20 +1074,20 @@ contains
     if(IsRzGeometry)then
        ! Exclude blocks that do not intersect the Z=0 plane 
        if(nK > 1)then
-          if(.not.(Xyz_DGB(z_,1,1,0,iBLK)<0 &
-               .and. Xyz_DGB(z_,1,1,nK,iBLK)>0)) RETURN
+          if(.not.(Xyz_DGB(z_,1,1,0,iBlock)<0 &
+               .and. Xyz_DGB(z_,1,1,nK,iBlock)>0)) RETURN
        end if
        ! Exclude blocks below the Y=0 plane
-       if(Xyz_DGB(y_,1,nJ,1,iBLK)<0) RETURN
+       if(Xyz_DGB(y_,1,nJ,1,iBlock)<0) RETURN
     end if
 
     rBlockSize = 0.5*sqrt(&
-         ((nI+1)*CellSize_DB(x_,iBLK))**2 + &
-         ((nJ+1)*CellSize_DB(y_,iBLK))**2 + &
-         ((nK+1)*CellSize_DB(z_,iBLK))**2)
+         ((nI+1)*CellSize_DB(x_,iBlock))**2 + &
+         ((nJ+1)*CellSize_DB(y_,iBlock))**2 + &
+         ((nK+1)*CellSize_DB(z_,iBlock))**2)
 
     !position of the block center
-    XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBLK)+Xyz_DGB(:,1,1,1,iBLK))
+    XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBlock)+Xyz_DGB(:,1,1,1,iBlock))
 
     if(iMirror == 2) XyzBlockCenter_D(1) = -XyzBlockCenter_D(1)
     if(jMirror == 2) XyzBlockCenter_D(2) = -XyzBlockCenter_D(2)
@@ -1118,7 +1108,7 @@ contains
 
        rInner = rBody ! reset it with every block
        if(Body1) then
-          if(IsBoundaryBlock_IB(body1_,iBLK)) rInner = rBody + &
+          if(IsBoundaryBlock_IB(body1_,iBlock)) rInner = rBody + &
                sqrt(sum(CellSize_D**2))
        end if
     end if
@@ -1156,7 +1146,7 @@ contains
     end if
 
     ! Store cell 1,1,1 coordinates
-    XyzBlockStart_D = XyzStart_BLK(:,iBlk)
+    XyzBlockStart_D = XyzStart_BLK(:,iBlock)
 
     ! Loop over pixels
     do jPix = 1, nPix
@@ -1266,22 +1256,22 @@ contains
     r2Min        = sum(XyzPix_D(2:3)**2) - DistRmin**2
 
     ! The radial distance of the outer face of the block
-    r2_S(2) = (0.5*(Xyz_DGB(y_,1,nJ,1,iBLK) + Xyz_DGB(y_,1,nJ+1,1,iBLK)))**2
+    r2_S(2) = (0.5*(Xyz_DGB(y_,1,nJ,1,iBlock) + Xyz_DGB(y_,1,nJ+1,1,iBlock)))**2
 
     ! Return if the outer radius is smaller than the closest approach
     if(r2_s(2) < r2Min) RETURN
 
     ! The radial distance of the inner face of the block
-    r2_S(1) = (0.5*(Xyz_DGB(y_,1, 0,1,iBLK) + Xyz_DGB(y_,1,   1,1,iBLK)))**2
+    r2_S(1) = (0.5*(Xyz_DGB(y_,1, 0,1,iBlock) + Xyz_DGB(y_,1,   1,1,iBlock)))**2
 
     ! The X positions of the left and right faces of the block
     if(iMirror == 1) then
-       x_S(1) = 0.5*(Xyz_DGB(x_, 0,1,1,iBLK) + Xyz_DGB(x_,   1,1,1,iBLK))
-       x_S(2) = 0.5*(Xyz_DGB(x_,nI,1,1,iBLK) + Xyz_DGB(x_,nI+1,1,1,iBLK))
+       x_S(1) = 0.5*(Xyz_DGB(x_, 0,1,1,iBlock) + Xyz_DGB(x_,   1,1,1,iBlock))
+       x_S(2) = 0.5*(Xyz_DGB(x_,nI,1,1,iBlock) + Xyz_DGB(x_,nI+1,1,1,iBlock))
     else
        ! Swap signs and order of faces for mirror images
-       x_S(1) = -0.5*(Xyz_DGB(x_,nI,1,1,iBLK) + Xyz_DGB(x_,nI+1,1,1,iBLK))
-       x_S(2) = -0.5*(Xyz_DGB(x_, 0,1,1,iBLK) + Xyz_DGB(x_,   1,1,1,iBLK))
+       x_S(1) = -0.5*(Xyz_DGB(x_,nI,1,1,iBlock) + Xyz_DGB(x_,nI+1,1,1,iBlock))
+       x_S(2) = -0.5*(Xyz_DGB(x_, 0,1,1,iBlock) + Xyz_DGB(x_,   1,1,1,iBlock))
     end if
 
     ! Initialize intersection arrays
@@ -1370,12 +1360,12 @@ contains
     !face_location(2,3) = x1, y1, z1---x2, y2, z2 
 
     !Determine the location of the block faces
-    xx1 = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBLK)+Xyz_DGB(x_,   1,   1  , 1,iBLK))
-    xx2 = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBLK)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBLK))
-    yy1 = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBLK)+Xyz_DGB(y_,   1,   1,   1,iBLK))
-    yy2 = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBLK)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBLK))
-    zz1 = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBLK)+Xyz_DGB(z_,   1,   1,   1,iBLK))
-    zz2 = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBLK)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBLK))
+    xx1 = 0.50*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
+    xx2 = 0.50*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
+    yy1 = 0.50*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
+    yy2 = 0.50*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,nI+1,nJ+1,nK+1,iBlock))
+    zz1 = 0.50*(Xyz_DGB(z_, 0, 0, 0,iBlock)+Xyz_DGB(z_,   1,   1,   1,iBlock))
+    zz2 = 0.50*(Xyz_DGB(z_,nI,nJ,nK,iBlock)+Xyz_DGB(z_,nI+1,nJ+1,nK+1,iBlock))
 
     ! Swap signs and order of faces for mirror images
     if(iMirror == 2) then
@@ -1572,7 +1562,7 @@ contains
     ! Length of a segment
     Ds = sqrt(sum((XyzEnd_D - XyzStart_D)**2)) / nSegment
 
-    CoordMinBlock_D = CoordMin_DB(:, iBlk)
+    CoordMinBlock_D = CoordMin_DB(:, iBlock)
 
     do iSegment = 1, nSegment
        XyzLos_D = XyzStart_D &
