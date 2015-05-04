@@ -36,7 +36,7 @@ contains
 
   end subroutine GM_get_for_pc_dt
 
-  !==============================================================================
+  !============================================================================
 
   subroutine GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
 
@@ -132,8 +132,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar, UseAnisoPressure
     use ModVarIndexes, ONLY: nVar, NamePrimitiveVar
     use ModB0,      ONLY: UseB0, get_b0
-    use BATL_lib,   ONLY: nDim, MaxDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         find_grid_block
+    use BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
     use ModInterpolate, ONLY: interpolate_vector
 
     implicit none
@@ -153,9 +152,6 @@ contains
 
     integer:: iPoint, iBlock, iProcFound
 
-    integer, parameter:: Min_D(3) = (/MinI, MinJ, MinK/)
-    integer, parameter:: Max_D(3) = (/MaxI, MaxJ, MaxK/)
-
     character(len=*), parameter :: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
@@ -174,8 +170,7 @@ contains
        end if
 
        State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
-            Min_D(1:nDim), Max_D(1:nDim), &
-            iCell_D=iCell_D(1:nDim), Dist_D=Dist_D(1:nDim))
+            MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
 
        if(UseB0)then
           call get_b0(Xyz_D, B0_D)
