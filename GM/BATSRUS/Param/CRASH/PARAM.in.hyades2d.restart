@@ -29,12 +29,6 @@ load                    NameCommand
 {Xe Be Pl}_eos_CRASH.dat         
 real8                   TypeFile
 
-#LOOKUPTABLE
-Opacity(rho,T)          NameTable
-load                    NameCommand
-table_opacities.out     NameFile
-ascii                   TypeFile
-
 #SCHEME
 2			nOrder
 Linde			TypeFlux
