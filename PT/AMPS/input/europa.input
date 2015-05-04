@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H2O,O2
+SpeciesList=H2O,O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -48,7 +48,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=off !ices !!!ices !!off, ices, swmf
+CouplerMode=ices !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
@@ -64,7 +64,7 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=20000 
+  ReferenceInjectionParticleNumber=200 
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -90,10 +90,10 @@ ParticleWeightCorrectionMode=on
 
   define _EUROPA_MESH_RESOLUTION_MODE_  0  !0 -> used in test13, 1 -> resolves the tail, ......
 
-   define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
+!   define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
 
-  RecoverMacroscopicSampledData=on \\ !!on, off
+  RecoverMacroscopicSampledData=off \\ !!on, off
     file=pic.SamplingDataRestart.out=1.dat 
 
 #endGeneral
@@ -145,7 +145,7 @@ ParticleWeightCorrectionMode=on
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
 
-  SputteringIonSource=Uniform !SwmfPlasmaFlow !!!AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+  SputteringIonSource=AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
 
  plume= \\ 
    SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
@@ -156,6 +156,7 @@ ParticleWeightCorrectionMode=on
 #endblock
 
 #block models/sputtering/Sputtering.pl
+  mode=on
   Surface=ice
   model=Teolis
 #endblock
@@ -207,7 +208,7 @@ ParticleWeightCorrectionMode=on
     T=0.174e6 \\
     n=60.0E6
 
-  Source:Sputtering=on\\ !on,off
+  Source:Sputtering=off\\ !on,off
     Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
     Mode=UniformUserDefinedSourceRate \\ !!!UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
     SourceRate(O2)=1.0E27 \\
