@@ -42,8 +42,8 @@ module ModThreadedLC
   !/ 
   integer :: iTableTR, iTableAW, iTableRadcool  
 
-  real, parameter:: TeSiMin = 1.0e5, TeSiMax = 1.0e8  ![K]
-  real           :: TeMin, ConsMin, TeMax
+  real, parameter:: TeSiMin = 1.0e5 ![K]
+  real           :: TeMin, ConsMin
   logical:: UseAlignedVelocity = .true.
   real :: cCoolingPerPe2, RhoNoDimCoef
   !\
@@ -149,7 +149,7 @@ contains
     if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
 
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
-    TeMax = TeSiMax*Si2No_V(UnitTemperature_)
+    
     ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
 
     !\
@@ -1141,7 +1141,7 @@ contains
     logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
     real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B1_D(3), SqrtRho
-    real :: DirR_D(3), SignBr
+    real :: DirR_D(3)
     real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
     real :: RhoNoDimOut, MinusDeltaROverBR
     logical:: DoTest, DoTestMe
@@ -1198,9 +1198,12 @@ contains
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
-       DirR_D = Xyz_DGB(:,1,j,k,iBlock) !Normalize this below, if needed
-       SignBr = sign(1.0,sum(BDir_D*DirR_D))
-       if(SignBr <  0.0)then
+       DirR_D = Xyz_DGB(:,1,j,k,iBlock) 
+       !\
+       ! Normalize the radial unit vector 
+       DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
+       !/
+       if(sum(BDir_D*DirR_D) <  0.0)then
           BDir_D = -BDir_D
           Major_ = WaveLast_
           Minor_ = WaveFirst_
@@ -1294,21 +1297,6 @@ contains
        !/
        State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2&
             /State_VG(Rho_,1,j,k) 
-
-       !\
-       ! Normalize the radial unit vector 
-       DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
-       !/
-       !\
-       ! Direction of the Ghost cell MF:
-       !/
-       !BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
-       !     B0_DGB(:, 0, j, k, iBlock))
-       !BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)*SignBr
-       !\
-       ! Ghost cell velocity
-       !/
-       !U_D = -U_D !BDir_D*U
    
        do i = 1-nGhost, 0
           !\
