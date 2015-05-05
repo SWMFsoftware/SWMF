@@ -166,7 +166,7 @@ contains
     real, intent(in)    :: a_I(iMin:iMax)
 
     real,    intent(in), optional:: x
-    real,    intent(in), optional :: x_I(iMin:iMax)
+    real,    intent(in), optional :: x_I(iMin:)
     logical, intent(in), optional :: DoExtrapolate
     integer, intent(in), optional :: iCell
     real,    intent(in), optional :: Dist
@@ -214,7 +214,7 @@ contains
     real,    intent(in):: a_VI(nVar,iMin:iMax)
 
     real,    intent(in), optional :: x
-    real,    intent(in), optional :: x_I(iMin:iMax)
+    real,    intent(in), optional :: x_I(iMin:)
     logical, intent(in), optional :: DoExtrapolate
     integer, intent(in), optional :: iCell
     real,    intent(in), optional :: Dist
@@ -265,8 +265,8 @@ contains
     real,    intent(in):: a_II(iMin:iMax,jMin:jMax)
 
     real,    intent(in), optional:: Xy_D(2)
-    real,    intent(in), optional:: x_I(iMin:iMax)
-    real,    intent(in), optional:: y_I(jMin:jMax)
+    real,    intent(in), optional:: x_I(iMin:)
+    real,    intent(in), optional:: y_I(jMin:)
     logical, intent(in), optional:: DoExtrapolate
     integer, intent(in), optional:: iCell_D(2)
     real,    intent(in), optional:: Dist_D(2)
@@ -326,8 +326,8 @@ contains
     real, intent(in)    :: a_VII(nVar, iMin:iMax,jMin:jMax)
 
     real,    intent(in), optional:: Xy_D(2)
-    real,    intent(in), optional:: x_I(iMin:iMax)
-    real,    intent(in), optional:: y_I(jMin:jMax)
+    real,    intent(in), optional:: x_I(iMin:)
+    real,    intent(in), optional:: y_I(jMin:)
     logical, intent(in), optional:: DoExtrapolate
     integer, intent(in), optional:: iCell_D(2)
     real,    intent(in), optional:: Dist_D(2)
@@ -388,9 +388,9 @@ contains
     real,    intent(in):: a_III(iMin:iMax,jMin:jMax,kMin:kMax)
 
     real,    intent(in), optional:: Xyz_D(3)
-    real,    intent(in), optional:: x_I(iMin:iMax)
-    real,    intent(in), optional:: y_I(jMin:jMax)
-    real,    intent(in), optional:: z_I(kMin:kMax)
+    real,    intent(in), optional:: x_I(iMin:)
+    real,    intent(in), optional:: y_I(jMin:)
+    real,    intent(in), optional:: z_I(kMin:)
     logical, intent(in), optional:: DoExtrapolate
 
     integer,    intent(in), optional :: iCell_D(3)
@@ -463,9 +463,9 @@ contains
     real,    intent(in):: a_VIII(nVar,iMin:iMax,jMin:jMax,kMin:kMax)
 
     real,    intent(in), optional:: Xyz_D(3)
-    real,    intent(in), optional:: x_I(iMin:iMax)
-    real,    intent(in), optional:: y_I(jMin:jMax)
-    real,    intent(in), optional:: z_I(kMin:kMax)
+    real,    intent(in), optional:: x_I(iMin:)
+    real,    intent(in), optional:: y_I(jMin:)
+    real,    intent(in), optional:: z_I(kMin:)
     logical, intent(in), optional:: DoExtrapolate
 
     integer,    intent(in), optional :: iCell_D(3)
@@ -581,7 +581,7 @@ contains
     real,    intent(in)           :: Coord
     integer, intent(out)          :: iCoord
     real,    intent(out), optional:: dCoord
-    real,    intent(in),  optional:: Coord_I(MinCoord:MaxCoord)
+    real,    intent(in),  optional:: Coord_I(MinCoord:)
     logical, intent(in),  optional:: DoExtrapolate
     character(len=*),     optional:: StringError
     logical, intent(out), optional:: IsInside
@@ -767,8 +767,8 @@ contains
     real, intent(in)           :: y_I(3)         ! values
     real, intent(out), optional:: xExtremumOut   ! coordinate of extremum
     real, intent(out), optional:: yExtremumOut   ! value of extremum
-    real, intent(out), optional:: Weight2Out_I(3)! weights for 2nd order interpolation
-    real, intent(out), optional:: Weight3Out_I(3)! weights for 3rd order interpolation
+    real, intent(out), optional:: Weight2Out_I(3)! weights for 2nd order interp
+    real, intent(out), optional:: Weight3Out_I(3)! weights for 3rd order interp
 
     real:: xE, yE          ! coordinates of extremum
     real:: x1, y1, x3, y3  ! shifted coordinates of points 1 and 3
