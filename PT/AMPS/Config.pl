@@ -13,6 +13,9 @@ my $MpiLocation;
 my $Mpirun="mpirun";
 my $TestRunProcessorNumber=4;
 
+# name for the nightly tests
+our $TestName;
+
 #create Makefile.local
 if (! -e "Makefile.local") {
   `echo " " > Makefile.local`;
@@ -66,6 +69,8 @@ foreach (@Arguments) {
      print "-cplr-data-path=PATH\t\tthe path to the data files used to import other model results by PIC::CPLR::DATAFILE.\n";
      print "-batl-path=PATH\t\t\tthe path to the BATL directory\n";
      print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
+     print "-set-test(=NAME)\t\tinstall nightly tests\n";
+     print "-rm-test\t\t\tremove nightly tests\n";
      
      exit;
    }
@@ -136,6 +141,14 @@ foreach (@Arguments) {
   if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> .ampsConfig.Settings`;     next};  
   
   if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> .ampsConfig.Settings`;     next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
+
+  # set nightly test:
+  #  -set-name=NAME - tests' name NAME cannot be empty
+  #  -set-name      - tests' name will be `hostname -s`
+  if (/^-set-test=(.*)$/i)      {$TestName=$1; if($TestName){require "./utility/TestScripts/SetNightlyTest.pl"}else{die "ERROR: test name is empty!"};     next}; 
+  if (/^-set-test$/i)      {$TestName=''; require "./utility/TestScripts/SetNightlyTest.pl";     next}; 
+
+  if (/^-rm-test$/i)      {require "./utility/TestScripts/RemoveNightlyTest.pl";     next}; 
   
   warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
