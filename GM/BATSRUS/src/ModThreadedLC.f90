@@ -131,7 +131,7 @@ contains
     if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
 
     TeMin = TeSiMin*Si2No_V(UnitTemperature_)
-    
+
     ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
 
     !\
@@ -373,7 +373,6 @@ contains
       ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
            (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
       ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
-  
       !\
       ! Solve amplitudes of the Alfven waves (arrays there have dimension)
       ! (0:nI)
@@ -1080,19 +1079,13 @@ contains
     !/
     integer:: iAction
     
-    logical:: IsNewBlock
     integer :: i, j, k, Major_, Minor_
-    real :: FaceGrad_D(3), TeSi, PeSi, BDir_D(3), U_D(3), B1_D(3), SqrtRho
-    real :: DirR_D(3)
-    real :: PeSiOut, U, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
-    real :: RhoNoDimOut, MinusDeltaROverBR
+    real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
+    real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
+    real :: RhoNoDimOut
     logical:: DoTest, DoTestMe
-    real, parameter:: GradLimiter = 0.1 
-    real :: GradTDotB
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
-
-    IsNewBlock = .true.
     if(present(iImplBlock))then
        if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
             call CON_stop('Algorithm error in '//NameSub)
@@ -1145,7 +1138,7 @@ contains
           call CON_stop('Generic EOS is not applicable with threads')
        end if
     end if
-    
+
     do k = 1, nK; do j = 1, nJ
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
@@ -1163,14 +1156,6 @@ contains
        else
           Major_ = WaveFirst_
           Minor_ = WaveLast_
-       end if
-       if(present(iImplBlock))then
-          !\
-          ! Gradient across the boundary face
-          !/
-          call get_face_gradient(1, 1, j, k, iBlock, &
-               IsNewBlock, Te_G, FaceGrad_D, &
-               UseFirstOrderBcIn=.true.)
        end if
        !\
        ! Calculate input parameters for solving the thread
@@ -1198,20 +1183,13 @@ contains
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           !\
-          ! Calculate temperature in the ghost cell by adding the difference 
-          ! between the required value DTeOverDs and the temperature gradient
-          ! calculated with the floating BC 
-          !/ 
-          !\
-          ! Trasformation coefficient -Delta R/b_R, avoid the division by zero.
+          ! Calculate temperature in the ghost cell. Once multiplied by 
+          ! BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k) the
+          ! temperature difference between physical and ghost cells should
+          ! give the radial component of dTe/ds*BDir_D
           !/
-          MinusDeltaROverBR = 1/&
-            min(sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:, j, k) &
-            * BDir_D),-GradLimiter*sqrt(&
-            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
-          GradTDotB = sum(FaceGrad_D*BDir_D)
-          Te_G(0, j, k) = Te_G(0, j, k) +(&
-               DTeOverDs - GradTDotB)*MinusDeltaROverBR
+          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs*sum(BDir_D*DirR_D)/sqrt(&
+               sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))
           !\
           ! Version Easter 2015 Limit TeGhost
           !/
