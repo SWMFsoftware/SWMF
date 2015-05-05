@@ -1,22 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!\
-! Version Easter 2015
-! 1. At the semi-Inplicit thermal heat conduction stage in BATSRUS the
-!    fixed BC for temperature in the ghost cell is used 
-! 2. In calculating _intial_thread: neglect gravity
-! 3. In Heat_ and Impl_ modes: only half step heat conduction is used
-! 4. In hydro-and-heating mode: a new scheme is applied with adding the
-!    half-step heat conduction
-! 5. BC for density: floating for the negative velocity along the TFL,
-!    the value from the TFL end point (not extrapolated with the barometric 
-!    scale otherwise.
-! 6. Global upper limit for the temperature on the top of threads, presently,
-!    1.60e+6 K
-! 7. Set_pressure is called after the first stage of hydro_and_heating advance
-!    but not after the Impl_ action (the latter does not matter though)  
-!/
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
@@ -40,7 +24,7 @@ module ModThreadedLC
   !\
   ! Table numbers needed to use lookup table
   !/ 
-  integer :: iTableTR, iTableAW, iTableRadcool  
+  integer :: iTableTR, iTableRadcool  
 
   real, parameter:: TeSiMin = 1.0e5 ![K]
   real           :: TeMin, ConsMin
@@ -143,8 +127,6 @@ contains
     call check_tr_table
     iTableTR = i_lookup_table('TR')
     if(iTableTR<=0)call CON_stop('TR table is not set')
-    iTableAW = i_lookup_table('AW_TR')
-    if(iTableAW <=0 )call CON_stop('AW_TR table is not set')
     iTableRadCool = i_lookup_table('radcool')
     if(iTableRadCool<=0)call CON_stop('Radiative cooling table is not set')
 
@@ -197,10 +179,6 @@ contains
     use ModLookupTable,  ONLY: interpolate_lookup_table
     use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
     use ModProcMH,       ONLY: iProc
-    !\
-    !The initial version: pressure is constant along the thread,
-    !reflection and dissipation of the major wave is ignored
-    !/
     !INPUT:
     !\
     !Cell and block indexes for the boundary point
@@ -212,7 +190,7 @@ contains
     ! USiIn:  Velocity progection on the magnetic field direction.
     ! It is positive if the wind blows outward the Sun.
     ! AMinorIn: for the wave propagating toward the Sun 
-    !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2 
+    !            WaveEnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2 
     !/
     real,   intent(in):: TeSiIn, PeSiIn, USiIn, AMinorIn
     !\
@@ -229,17 +207,6 @@ contains
     ! Arrays needed to use lookup table
     !/ 
     real    :: Value_V(4), AWValue_V(2), ValCooling(1)
-    !\
-    !---------Used in 0D analytical model-----------------------
-    !/
-    !\
-    !Dimmensionless length (related to the wave dissipation length)
-    !/
-    real    :: AWLength
-    !\
-    ! Total contribution from the AW heating to the TR energetics
-    !/
-    real    :: AWHeating
     !\
     !---------Used in 1D numerical model------------------------
     !/
@@ -267,6 +234,7 @@ contains
           write(*,*)'TeSiIn=       ',TeSiIn,' K '
           write(*,*)'PeSiIn = ', PeSiIn
           write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
+          write(*,*)'Dimensionless density (input)=',RhoNoDimCoef*PeSiIn/TeSiIn
           write(*,*)'AMinorIn=     ', AMinorIn
           write(*,*)'USiIn=        ',USiIn,' m/s'
           write(*,*)'Thread Length=', &
@@ -281,18 +249,6 @@ contains
        DoTest=.false.; DoTestMe=.false.
     endif
 
-    call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
-         DoExtrapolate=.false.)
-    !\
-    ! First value is now the product of the thread length in meters times
-    ! a geometric mean pressure, so that
-    !/
-    PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-         BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
-    RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
-    if(DoTestMe)then
-       write(*,*)'Dimensionless density (input)=',RhoNoDimOut
-    end if
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
        !\
@@ -351,8 +307,6 @@ contains
     !\
     ! Outputs
     !/
-    PeSiOut = PeSi_I(nPoint)
-    RhoNoDimOut = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
     AMajorOut = AWValue_V(APlusBC_)
     GhostCellCorr = 1/(&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
@@ -531,6 +485,14 @@ contains
       ! As a first approximation, recover Te from the analytical solution
       !/
       TeSi_I(nPoint) = TeSiIn
+      call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+      !\
+      ! First value is now the product of the thread length in meters times
+      ! a geometric mean pressure, so that
+      !/
+      PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+           BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
               iTable=iTableTR,           &
