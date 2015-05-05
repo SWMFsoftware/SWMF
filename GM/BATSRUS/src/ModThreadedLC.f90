@@ -252,7 +252,6 @@ contains
     !\
     ! Limited USiIn
     !/
-    real :: USiLtd
     !\
     ! Corrrect density and pressure values in the ghost cell
     !/
@@ -284,7 +283,6 @@ contains
 
     call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
          DoExtrapolate=.false.)
-    USiLtd = USiIn
     !\
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
@@ -293,7 +291,6 @@ contains
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
     RhoNoDimOut = RhoNoDimCoef*PeSiIn/TeSiIn
     if(DoTestMe)then
-       write(*,*)'Pressure 0D (SI) = ',PeSiOut
        write(*,*)'Dimensionless density (input)=',RhoNoDimOut
     end if
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
@@ -357,11 +354,6 @@ contains
     PeSiOut = PeSi_I(nPoint)
     RhoNoDimOut = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
     AMajorOut = AWValue_V(APlusBC_)
-    if(DoTestMe)then
-       write(*,*)'Pressure 1D (SI) = ',PeSiOut
-       write(*,*)'AMajorOut=    ', AMajorOut
-       write(*,*)'RhoNoDimOut=  ', RhoNoDimOut
-    end if
     GhostCellCorr = 1/(&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
@@ -369,16 +361,9 @@ contains
             sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    !\
-    ! Easter 2015 Version
-    !/
-    !PeSiOut = min(1.20*PeSiIn, max(PeSiOut, PeSiIn))
-    !if(USiIn>0.0)then
     RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
-    !else
-    !   RhoNoDimOut = RhoNoDimCoef* PeSiIn/TeSiIn
-    !end if
     if(DoTestMe)then
+       write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
@@ -584,8 +569,8 @@ contains
          !\
          ! Add enthalpy correction
          !/
-         if(USiLtd>0)then
-            EnthalpyFlux = USiLtd * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
+         if(USiIn>0)then
+            EnthalpyFlux = USiIn * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
@@ -601,8 +586,8 @@ contains
             EnthalpyCorrection = EnthalpyFlux*TeSi_I(nPoint-1)
             ResEnthalpy_I(nPoint-1)   = &
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
-         elseif(USiLtd<0)then
-            EnthalpyFlux = USiLtd * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
+         elseif(USiIn<0)then
+            EnthalpyFlux = USiIn * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
                  *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
@@ -683,7 +668,7 @@ contains
       ! Time step in the physical cell from which the thread originates
       ! divided by nStage if needed
       !/
-      real ::DtLocal, DtHeatCond, TeSiOld
+      real ::DtLocal, DtHeatCond, TeSiOld, UDt
       !\
       ! Enthalpy correction coefficient
       !/
@@ -718,12 +703,7 @@ contains
       !\
       ! Multiply the heating source term and speed by the time step
       !/
-      USiLtd = USiLtd*DtLocal
-      
-!!!
-!!!      USiLtd = max(USiLtd, 0.0)
-!!!
-      
+      UDt = USiIn*DtLocal 
       !\
       ! Add enthalpy correction
       !/
@@ -732,8 +712,8 @@ contains
       M_I(2:nPoint-1) = &
            PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
       Res_I = 0.0
-      if(USiLtd>0)then
-         FluxConst    = USiLtd * PeSi_I(nPoint)/&
+      if(UDt>0)then
+         FluxConst    = UDt * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
 
@@ -758,8 +738,8 @@ contains
             DCons_I(iPoint) = (Res_I(iPoint) - L_I(iPoint)*&
                  DCons_I(iPoint-1))/M_I(iPoint)
          end do
-      elseif(USiLtd<0)then
-         FluxConst    = USiLtd * PeSiIn/&
+      elseif(UDt<0)then
+         FluxConst    = UDt * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)) 
          EnthalpyFlux = FluxConst/AverageIonCharge  & !5/2*U*Pi
@@ -1166,7 +1146,8 @@ contains
           !/
           do k = MinK, MaxK; do j = MinJ, maxJ
              State_VG(iTeImpl,0,j,k) = 0.0
-          end do; end do  
+          end do; end do
+          RETURN
        end if
     end if
     if(iBlock==BLKtest.and.iProc==PROCtest)then
