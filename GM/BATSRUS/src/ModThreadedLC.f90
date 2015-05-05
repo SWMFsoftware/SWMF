@@ -1149,11 +1149,6 @@ contains
     real :: GradTDotB
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
-    if(iBlock==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
 
     IsNewBlock = .true.
     if(present(iImplBlock))then
@@ -1164,6 +1159,21 @@ contains
        iAction=BoundaryThreads_B(iBlock)%iAction
     end if
     if(iAction==Done_)RETURN
+    if(present(iImplBlock))then
+       if(IsLinear)then
+          !\
+          !Version Easter 2015
+          !/
+          do k = MinK, MaxK; do j = MinJ, maxJ
+             State_VG(iTeImpl,0,j,k) = 0.0
+          end do; end do  
+       end if
+    end if
+    if(iBlock==BLKtest.and.iProc==PROCtest)then
+       call set_oktest(NameSub, DoTest, DoTestMe)
+    else
+       DoTest=.false.; DoTestMe=.false.
+    endif
     !\
     ! Start from floating boundary values
     !/
@@ -1212,13 +1222,6 @@ contains
           Minor_ = WaveLast_
        end if
        if(present(iImplBlock))then
-         if(IsLinear)then
-             !\
-             !Version Easter 2015
-             !/
-             State_VG(iTeImpl,0,j,k) = 0.0  
-             CYCLE
-          end if
           !\
           ! Gradient across the boundary face
           !/
