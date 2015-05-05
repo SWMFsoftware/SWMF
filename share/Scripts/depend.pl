@@ -249,6 +249,9 @@ foreach $base (@base){
     # Get rid of leading and trailing spaces
     $depend =~ s/^ *//; $depend =~ s/ *$//;
 
+    # Add ModUtility.o: ModUtility_c.o dependency
+    $depend .= " ModUtility_c.o" if $base eq "ModUtility";
+
     # Replace space separator with continuation lines and tabs
     $depend =~ s/ +/ \\\n\t/g;
 
