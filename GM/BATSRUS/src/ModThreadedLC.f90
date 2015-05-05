@@ -26,7 +26,7 @@ module ModThreadedLC
   !/ 
   integer :: iTableTR, iTableRadcool  
 
-  real, parameter:: TeSiMin = 1.0e5 ![K]
+  real, parameter:: TeSiMin = 5.0e4 ![K]
   real           :: TeMin, ConsMin
   logical:: UseAlignedVelocity = .true.
   real :: cCoolingPerPe2, RhoNoDimCoef
@@ -287,7 +287,6 @@ contains
        RETURN
     case(Heat_)
        call advance_heat_cond
-       call set_pressure
        !\
        ! Calculate AWaves and store pressure and temperature
        !/
@@ -726,7 +725,8 @@ contains
          do iIter = 1, nIter
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
                  /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) - EnthalpyFlux
-            Res_I(1) =  EnthalpyFlux*TeSi_I(1) - EnthalpyFlux*(TeSi_I(2) + DCons_I(2))&
+            Res_I(1) =  EnthalpyFlux*TeSi_I(1) - &
+                 EnthalpyFlux*(TeSi_I(2) + DCons_I(2))&
                  + IntEnergy_I(1) - SpecHeat_I(1)*PeSi_I(1)
             DCons_I(1) = Res_I(1)/M_I(1)
             TeSi_I(1)  = TeSi_I(1) + DCons_I(1)
@@ -869,7 +869,7 @@ contains
            * (1 + AverageIonCharge)/AverageIonCharge*  &
            BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
-      do iIter = 1, 1
+      do iIter = 1, nIter
          call get_heat_cond
          call get_cooling
          !\
@@ -880,8 +880,17 @@ contains
          ! Contribution to dPe/dCons = -dCooling/dPe*dPe/dCons
          !                   = -2Cooling/Pe*Pe/(Pe*L*UHeat(T))
          !/
-         M_I(1) = M_I(1) -2*ResCooling_I(1)*DtLocal/&
-              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+         !\
+         ! Near TR
+         ! Pe*L = \int_0^T{\kappa_0T^{2.5}dT/UHeat(T)}
+         ! LdPe/dT=\kappa_0T^T^{2.5}/UHeat(T)
+         ! dPe/dCons=Pe/(Pe*L*UHeat(T))
+         !/ 
+         M_I(1) = DtHeatCond*M_I(1) -2*ResCooling_I(1)*DtLocal/&
+              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))&
+              + SpecHeat_I(1)*PeSi_I(1)&
+              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+
 
          Res_I(1:nPoint-1) = IntEnergy_I(1:nPoint-1)    - &
               SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + &
@@ -895,14 +904,6 @@ contains
          M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
               SpecHeat_I(2:nPoint-1)*PeSi_I(2:nPoint-1)/&
               (3.50*Cons_I(2:nPoint-1))
-         !\
-         ! Near TR
-         ! Pe*L = \int_0^T{\kappa_0T^{2.5}dT/UHeat(T)}
-         ! LdPe/dT=\kappa_0T^T^{2.5}/UHeat(T)
-         ! dPe/dCons=Pe/(Pe*L*UHeat(T))
-         !/ 
-         M_I(1) = DtHeatCond*M_I(1) + SpecHeat_I(1)*PeSi_I(1)&
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
          DCons_I = 0.0
          call tridag(n=nPoint-1,  &
               L_I=L_I(1:nPoint-1),&
@@ -917,6 +918,7 @@ contains
          
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
+         call set_pressure
       end do
     end subroutine advance_heat_cond
   end subroutine solve_boundary_thread
