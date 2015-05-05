@@ -129,7 +129,6 @@ module ModFieldLineThread
   !\
   ! Correspondent named indexes: meaning of the columns in the table
   !/
-  integer,public,parameter:: AWHeating_ = 1, APlusBC_ = 2
   integer,public,parameter:: LengthPAvrSi_ = 1, UHeat_ = 2
   integer,public,parameter:: HeatFluxLength_ = 3, DHeatFluxXOverU_ = 4
   !\

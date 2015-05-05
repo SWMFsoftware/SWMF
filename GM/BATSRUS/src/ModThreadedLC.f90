@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
   use ModFieldLineThread, ONLY: &
-       BoundaryThreads, BoundaryThreads_B, AWHeating_, APlusBC_, &
+       BoundaryThreads, BoundaryThreads_B, &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
        RadCool2Si, DoInit_, Done_, Enthalpy_, Heat_, iStage
 
@@ -206,7 +206,7 @@ contains
     !\
     ! Arrays needed to use lookup table
     !/ 
-    real    :: Value_V(4), AWValue_V(2), ValCooling(1)
+    real    :: Value_V(4), ValCooling(1)
     !\
     !---------Used in 1D numerical model------------------------
     !/
@@ -307,7 +307,6 @@ contains
     !\
     ! Outputs
     !/
-    AMajorOut = AWValue_V(APlusBC_)
     GhostCellCorr = 1/(&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
@@ -382,8 +381,7 @@ contains
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinusBC=AMinorIn,              &
-           Heating=AWValue_V(AWHeating_),  &
-           APlusBC=AWValue_V(APlusBC_),    &
+           APlusBC=AMajorOut,              &
            APlusOut_I=APlus_I(0:nPoint),   &
            AMinusOut_I=AMinus_I(0:nPoint), &
            nIterIn=nIterIn)
@@ -963,13 +961,17 @@ contains
   end subroutine tridag
 !=============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       Heating, APlusBC, APlusOut_I, AMinusOut_I,nIterIn)
-    integer,intent(in):: nI
-    real,   intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
-    real,intent(in )::AMinusBC  !BC for A-
-    real,intent(out)::Heating, APlusBC  !Total heating in the TR, BC for A+
-    real,optional,intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
-    integer,optional,intent(in)::nIterIn
+       APlusBC, Heating, APlusOut_I, AMinusOut_I,nIterIn)
+    !INPUT
+    integer,         intent(in):: nI
+    real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
+    real,            intent(in):: AMinusBC         !BC for A-
+    !OUTPUT
+    real,           intent(out):: APlusBC          !BC for A+
+    !OPTIONAL
+    real,optional,  intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
+    real,optional,  intent(out):: Heating          !Total heating in the TR
+    integer,optional,intent(in):: nIterIn
     real:: DeltaXi
     real,dimension(0:500)::APlus_I,AMinus_I
     integer::iStep,iIter
@@ -1012,7 +1014,8 @@ contains
        !We integrate equation,
        !\
        ! 2da_-/d\xi=
-       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]*a_+*min(2Alpha/\xi,2max(a_,a_+))-
+       !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
+       ! *min(ReflCoef,2max(a_,a_+))-
        ! -2a_-a_+
        !/
        do iStep=nI - 1, 0, -1
@@ -1038,7 +1041,8 @@ contains
        if(ADiffMax<cTol)EXIT
     end do
     APlusBC = APlus_I(nI)
-    Heating = APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
+    if(present(Heating))Heating = &
+         APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
     if(present(APlusOut_I )) APlusOut_I(0:nI)  = APlus_I(0:nI)
     if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
 
@@ -1208,7 +1212,8 @@ contains
        !\
        !Extrapolation of pressure
        !/
-       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)**2/State_VG(iP,1,j,k)
+       State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)**2/&
+            State_VG(iP,1,j,k)
        !\
        ! Assign ion pressure (if separate from electron one)
        !/
