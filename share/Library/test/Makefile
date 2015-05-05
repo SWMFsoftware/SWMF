@@ -463,6 +463,7 @@ test_plot_file:
 
 OBJ_LOOKUP_TABLE = \
 	test_lookup_table.o \
+	../src/ModNumConst.o \
 	../src/ModIoUnit.o \
 	../src/ModMpi.o \
 	../src/ModMpiInterfaces.o \
@@ -499,7 +500,7 @@ OBJ_UTILITIES = \
 	../src/ModUtility_c.o
 
 test_utilities_exe:
-	@(cd ../src; make ModUtility.o ModUtility_c.o)
+	@(cd ../src; make ModUtility.o)
 	@make test_utilities.o
 	${LINK.f90} -o test_utilities.exe ${OBJ_UTILITIES} ${Lflag1}
 
