@@ -243,10 +243,12 @@ contains
             call stop_mpi('negative electron denisty')
 
        ! Calculate Lorentz force = J x B
-       Current_D = vInv* &
-            ( bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k) &
-            + bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k) &
-            + bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+       Current_D = (bCrossArea_DX(:,i+1,j,k) - bCrossArea_DX(:,i,j,k))
+       if(nJ>1) Current_D = Current_D + &
+            (bCrossArea_DY(:,i,j+1,k) - bCrossArea_DY(:,i,j,k))
+       if(nK>1) Current_D = Current_D + &
+            (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
+       Current_D = vInv*Current_D
 
        FullB_D = State_V(Bx_:Bz_)
        if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)

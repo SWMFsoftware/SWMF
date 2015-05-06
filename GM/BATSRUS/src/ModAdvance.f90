@@ -175,11 +175,8 @@ contains
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DX))then
        allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
-       bCrossArea_DX = 0.0
        allocate(bCrossArea_DY(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
-       bCrossArea_DY = 0.0
        allocate(bCrossArea_DZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
-       bCrossArea_DZ = 0.0
     end if
 
     if(UseB .and. boris_correction .and. .not.allocated(EDotFA_X))then
