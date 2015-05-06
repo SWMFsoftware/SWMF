@@ -57,7 +57,7 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
      if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
      if(UseResistivity)  call set_resistivity
-     
+
      if(DoConserveFlux) then
         do iBlock = 1, nBlock
            if (Unused_B(iBlock)) CYCLE
@@ -201,8 +201,16 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
         if(DoTestMe)write(*,*)NameSub,' done constrain B'
      end if
 
-     if(DoCalcTimeStep) &
-          Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+     if(DoCalcTimeStep) then
+        ! Update check only works for half step 2 stages time integration.
+        ! The final Dt is determined by the second stage if Dt changed by
+        ! update_check subroutine.
+        if(UseUpdateCheck .and. iStage==1) &
+             Time_SimulationOld = Time_Simulation
+        Time_Simulation = Time_Simulation + Dt*No2Si_V(UnitT_)/nStage
+        if(UseUpdateCheck .and. iStage==nStage) &
+             Time_Simulation = Time_SimulationOld + Dt*No2Si_V(UnitT_)
+     endif
 
      if(iStage < nStage)then
         if(UseFieldLineThreads) call advance_threads(Enthalpy_,iStage)

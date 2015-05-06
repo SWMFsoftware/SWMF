@@ -227,6 +227,7 @@ module ModMain
   ! Time and timing variables
   !/
   real :: Time_Simulation = 0.0
+  real :: Time_SimulationOld = 0.0
 
   ! This is the same default value as in the SWMF
   integer, dimension(7) :: iStartTime_I = (/2000,3,21,10,45,0,0/)
