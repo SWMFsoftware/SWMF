@@ -2,7 +2,6 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFieldLineThread
-  use ModCoronalHeating, ONLY:PoyntingFluxPerBSi
   use ModMain, ONLY: UseFieldLineThreads, DoThreads_B
   use ModB0,   ONLY: get_b0
 
@@ -326,7 +325,7 @@ contains
     use ModMain,     ONLY: nDim, nJ, nK, jTest, kTest, BlkTest
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
-         LPerpTimesSqrtBSi, LPerpTimesSqrtB
+         LPerpTimesSqrtB
     integer, intent(in) :: iBlock
     !\
     ! Locals:
@@ -363,8 +362,6 @@ contains
     !Here, the magnetic field in SI units is used, therefore,
     !SI field tolerance should be used
     !/
-
-    integer, parameter:: R_ = 1
     real :: Dxyz_D(3), DirB_D(3), DirR_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
@@ -846,7 +843,7 @@ contains
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
        if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
-            call CON_stop('An attempt to advance not advanced threads')
+            call CON_stop('An attempt to readvance not advanced threads')
        BoundaryThreads_B(iBlock)%iAction = iAction
     end do
   end subroutine advance_threads

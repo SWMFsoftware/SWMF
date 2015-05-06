@@ -175,7 +175,6 @@ contains
     use ModFieldLineThread, ONLY: HeatCondParSi
     use ModPhysics,      ONLY: InvGammaElectronMinus1,No2Si_V, UnitX_,Si2No_V,&
                                UnitB_, UnitTemperature_
-    use ModMultiFluid,   ONLY: MassIon_I
     use ModLookupTable,  ONLY: interpolate_lookup_table
     use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
     use ModProcMH,       ONLY: iProc
@@ -381,8 +380,6 @@ contains
            Xi_I=Xi_I(0:nPoint),            &
            AMinusBC=AMinorIn,              &
            APlusBC=AMajorOut,              &
-           APlusOut_I=APlus_I(0:nPoint),   &
-           AMinusOut_I=AMinus_I(0:nPoint), &
            nIterIn=nIterIn)
 
       ResHeating_I = 0.0
@@ -416,7 +413,6 @@ contains
     end subroutine set_pressure
     !==========================
     subroutine get_heat_cond
-      integer:: iPoint
       !----------------
       !\
       ! The number of points to solve temperature is nPoint - 1
@@ -469,7 +465,7 @@ contains
       !\
       ! Enthalpy correction coefficient
       !/
-      real    :: EnthalpyFlux, EnthalpyCorrection, DEnthalpyCorrOverDU
+      real    :: EnthalpyFlux, EnthalpyCorrection
       !\
       ! Loop variable
       !/
@@ -635,10 +631,6 @@ contains
       ! Loop variable
       !/
       integer :: iPoint, iIter
-      !\
-      ! Specific heat, IntEnergy
-      !/
-      real    :: SpecHeat, IntEnergy
       !-------------
       if(time_accurate)then
          DtLocal = Dt
@@ -959,23 +951,18 @@ contains
     do j=n-1,1,-1
        W_I(j) = W_I(j)-Aux_I(j+1)*W_I(j+1)
     end do
-    !------------------------------------ DONE --------------------------------!
   end subroutine tridag
-!=============================================================================
+  !====================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
-       APlusBC, Heating, APlusOut_I, AMinusOut_I,nIterIn)
+       APlusBC, nIterIn)
     !INPUT
     integer,         intent(in):: nI
     real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
     real,            intent(in):: AMinusBC         !BC for A-
     !OUTPUT
     real,           intent(out):: APlusBC          !BC for A+
-    !OPTIONAL
-    real,optional,  intent(out):: APlusOut_I(0:nI), AMinusOut_I(0:nI)
-    real,optional,  intent(out):: Heating          !Total heating in the TR
     integer,optional,intent(in):: nIterIn
     real:: DeltaXi
-    real,dimension(0:500)::APlus_I,AMinus_I
     integer::iStep,iIter
     integer, parameter:: nIterMax = 10
     integer:: nIter
@@ -1043,11 +1030,6 @@ contains
        if(ADiffMax<cTol)EXIT
     end do
     APlusBC = APlus_I(nI)
-    if(present(Heating))Heating = &
-         APlus_I(0)**2 - APlus_I(nI)**2 - AMinus_I(0)**2 + AMinus_I(nI)**2
-    if(present(APlusOut_I )) APlusOut_I(0:nI)  = APlus_I(0:nI)
-    if(present(AMinusOut_I))AMinusOut_I(0:nI) = AMinus_I(0:nI)
-
   end subroutine solve_a_plus_minus
   !=========================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
@@ -1055,14 +1037,12 @@ contains
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use BATL_size,ONLY:  nJ, nK
-    use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, InvGammaElectronMinus1
     use ModMultiFluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModVarIndexes,   ONLY: Rho_, Pe_, p_, Bx_, Bz_, &
          RhoUx_, RhoUz_, EHot_
     use ModGeometry,     ONLY: Xyz_DGB
-    use ModConst,        ONLY: cTolerance
     use ModImplicit,     ONLY: iTeImpl
     use ModB0,           ONLY: B0_DGB
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
