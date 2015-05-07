@@ -342,14 +342,16 @@ contains
     ! Provide total number of points along rays 
     ! and the number of variables to pass to IM
 
-    use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: Time_Simulation, TypeCoordSystem
+    use ModProcMH,     ONLY: iProc
+    use ModMain,       ONLY: Time_Simulation, TypeCoordSystem
     use ModVarIndexes, ONLY: NamePrimitiveVar, Bx_, Bz_
+    use CON_comp_param,   ONLY: lNameVersion
+    use CON_world,        ONLY: get_comp_info
     use CON_line_extract, ONLY: line_get, line_clean
-    use CON_coupler, ONLY: Grid_C, IM_
+    use CON_coupler,      ONLY: Grid_C, IM_
     use CON_axes,         ONLY: transform_matrix
     use ModMultiFluid, ONLY: iFluid, nFluid, iUx_I, iUz_I
-    use ModRaytrace, ONLY: DoExtractBGradB1
+    use ModRaytrace,   ONLY: DoExtractBGradB1
 
     integer, intent(in)           :: nRadius, nLon
     integer, intent(out)          :: nVarLine, nPointLine
@@ -360,6 +362,7 @@ contains
     integer :: nVarExtract, iPoint, iUx5, iUz5
     real    :: SmGm_DD(3,3)
 
+    character(len=lNameVersion) :: NameVersionIm
     character(len=*), parameter :: NameSub='GM_get_for_im_trace'
     !---------------------------------------------------------------------
 
@@ -376,7 +379,13 @@ contains
     end if
 
     ! Trace field lines starting from IM equatorial grid (do message pass)
-    DoExtractBGradB1 = .true. !!! Maybe check NameVersionIm here ???
+    ! Include BGradB1 only if needed:
+    call get_comp_info(IM_, NameVersion=NameVersionIm)
+    if(NameVersionIm(1:7) == 'RAM-SCB')then
+       DoExtractBGradB1 = .false. ! RAM-SCB does not need BGradB1
+    else
+       DoExtractBGradB1 = .true.  ! Other IM models do need BGradB1
+    end if
 
     ! The variables to be passed: line index, length along line, 
     ! coordinatess and primitive variables. Total is 5 + nVar.

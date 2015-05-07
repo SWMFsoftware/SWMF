@@ -1386,7 +1386,7 @@ test_ramscb:
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,800,800 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
