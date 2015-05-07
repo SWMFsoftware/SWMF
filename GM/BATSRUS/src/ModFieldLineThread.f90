@@ -83,7 +83,7 @@ module ModFieldLineThread
      ! the starting point to be found by solving the MHD equations
      ! on the thread.
      !/
-     real, pointer :: DGradTeOverGhostTe_DII(:,:,:)
+     real, pointer :: DeltaR_II(:,:)
   end type BoundaryThreads
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
@@ -213,7 +213,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % TSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
-    nullify(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
+    nullify(BoundaryThreads_B(iBlock) % DeltaR_II)
   end subroutine nullify_thread_b
   !==============================================================================
   subroutine deallocate_thread_b(iBlock)
@@ -230,7 +230,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % TSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
-    deallocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII)
+    deallocate(BoundaryThreads_B(iBlock) % DeltaR_II)
     IsAllocatedThread_B(iBlock) = .false.
     call nullify_thread_b(iBlock)
   end subroutine deallocate_thread_b
@@ -289,8 +289,8 @@ contains
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % nPoint_II(&
                1:nJ,1:nK))
-          allocate(BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(&
-               1:nDim,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % DeltaR_II(&
+               1:nJ,1:nK))
           IsAllocatedThread_B(iBlock) = .true.
        end if
        !\
@@ -362,7 +362,7 @@ contains
     !Here, the magnetic field in SI units is used, therefore,
     !SI field tolerance should be used
     !/
-    real :: Dxyz_D(3), DirB_D(3), DirR_D(3)
+    real :: DXyz_D(3), DirB_D(3), DirR_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
     integer, parameter::nCoarseMax = 2
@@ -384,7 +384,7 @@ contains
     BoundaryThreads_B(iBlock) % TSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
-    BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII = 0.0
+    BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
     !Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
        !\
@@ -622,13 +622,10 @@ contains
             BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
             0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
             BoundaryThreads_B(iBlock) % B_III(0, j, k))
-       !\
-       !Evaluate the deravitive of temperature gradient over Te in the
-       !ghost cell
-       !/
-       Dxyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
-       BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,j,k) = &
-            - Dxyz_D(1:nDim)/sum(Dxyz_D(1:nDim)**2)
+
+       DXyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
+       BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
+            sqrt(sum(DXyz_D**2))
        
        call limit_temperature(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
@@ -637,8 +634,8 @@ contains
     if(DoTestMe.and.iBlock==BlkTest)then
        write(*,'(a,3es18.10)')'Thread starting at the point  ',&
             Xyz_DGB(:,1,jTest,kTest,iBlock)
-       write(*,'(a,3es18.10)')'Derivative of the Grad Te over ghost Te  ',&
-            BoundaryThreads_B(iBlock) % DGradTeOverGhostTe_DII(:,jTest,kTest)
+       write(*,'(a,3es18.10)')'DeltaR=  ',&
+            BoundaryThreads_B(iBlock) % DeltaR_II(jTest,kTest)
        write(*,'(a)')&
             'x[R_s] y[R_S] z[R_S} B[NoDim] RInv[NoDim] LengthSi[NoDim]'&
             //'BDsInvSi Xi[NoDim]'

@@ -305,11 +305,9 @@ contains
     !\
     ! Outputs
     !/
-    GhostCellCorr = 1/(&
+    GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )*  &
-         sqrt(&
-            sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2)))
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
     RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
@@ -1168,11 +1166,11 @@ contains
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           !\
-          ! Solve equation: (TeGhost-TeTrue)*dGradTe/dTeGhost = 
-          ! dTe/ds*(b . DirR)DirR
+          ! Solve equation: -(TeGhost-TeTrue)/DeltaR = 
+          ! dTe/ds*(b . DirR)
           !/
-          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs*sum(BDir_D*DirR_D)/sqrt(&
-               sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))
+          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs*sum(BDir_D*DirR_D)*&
+               BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           !\
           ! Version Easter 2015 Limit TeGhost
           !/
