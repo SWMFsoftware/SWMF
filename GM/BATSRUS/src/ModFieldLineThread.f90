@@ -15,10 +15,6 @@ module ModFieldLineThread
   !In the boundary blocks the physical cells near the boundary are connected 
   !to the photosphere with these threads
   type BoundaryThreads
-     !\
-     !Three coordinates for each point of each thread (enumerated by j and k) 
-     !/
-     real,pointer :: Xyz_DIII(:,:,:,:)
      !\ 
      ! The thread length, \int{ds}, from the photoshere to the given point
      ! Renamed and revised: in meters  
@@ -76,12 +72,7 @@ module ModFieldLineThread
      !/
      integer,pointer :: nPoint_II(:,:)
      !\
-     ! For a given thread, the derivative of a temperature gradient
-     ! along the thread at the starting point over the temperature
-     ! in the ghost cell. Used to derive the temperature in the ghost
-     ! cell from the temperature gradient along the thread at 
-     ! the starting point to be found by solving the MHD equations
-     ! on the thread.
+     ! Distance between the true and ghost cell centers.
      !/
      real, pointer :: DeltaR_II(:,:)
   end type BoundaryThreads
@@ -202,7 +193,6 @@ contains
   subroutine nullify_thread_b(iBlock)
     integer, intent(in) :: iBlock
     !---------------------------------------------------------------------------
-    nullify(BoundaryThreads_B(iBlock) % Xyz_DIII)
     nullify(BoundaryThreads_B(iBlock) % LengthSi_III)
     nullify(BoundaryThreads_B(iBlock) % BDsInvSi_III)
     nullify(BoundaryThreads_B(iBlock) % DsOverBSi_III) 
@@ -219,7 +209,6 @@ contains
   subroutine deallocate_thread_b(iBlock)
     integer, intent(in) :: iBlock
     !---------------------------------------------------------------------------
-    deallocate(BoundaryThreads_B(iBlock) % Xyz_DIII)
     deallocate(BoundaryThreads_B(iBlock) % LengthSi_III)
     deallocate(BoundaryThreads_B(iBlock) % BDsInvSi_III)
     deallocate(BoundaryThreads_B(iBlock) % DsOverBSi_III)
@@ -268,8 +257,6 @@ contains
        ! Allocate threads if needed
        !/
        if(.not.IsAllocatedThread_B(iBlock))then
-          allocate(BoundaryThreads_B(iBlock) % Xyz_DIII(&
-               1:nDim,-nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % LengthSi_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
@@ -356,13 +343,8 @@ contains
     !within the framework of the Runge-Kutta scheme
     real :: XyzAux_D(3), B0Aux_D(3)
     !Aux
-    real :: ROld, Aux
-    !\
-    !The magnetic field amplitude is fixed if close to zero.
-    !Here, the magnetic field in SI units is used, therefore,
-    !SI field tolerance should be used
-    !/
-    real :: DXyz_D(3), DirB_D(3), DirR_D(3)
+    real :: ROld, Aux, CoefXi
+    real :: DirB_D(3), DirR_D(3), XyzOld_D(3)
     logical :: DoTest=.false., DoTestMe=.false.
     real:: CosBRMin = 1.0
     integer, parameter::nCoarseMax = 2
@@ -373,7 +355,6 @@ contains
     ! Initialize threads
     !/
     BoundaryThreads_B(iBlock) % iAction = DoInit_
-    BoundaryThreads_B(iBlock) % Xyz_DIII = 0.0
     BoundaryThreads_B(iBlock) % LengthSi_III = 0.0
     BoundaryThreads_B(iBlock) % BDsInvSi_III = 0.0
     BoundaryThreads_B(iBlock) % DsOverBSi_III = 0.0
@@ -385,6 +366,14 @@ contains
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
     BoundaryThreads_B(iBlock) % DeltaR_II = 1.0
+    !\
+    ! sqrt(CoefXi/VAlfven[NoDim]) is dXi/ds[NoDim]
+    ! While setting thread,  we calculate only the thread-dependent
+    ! sqrt(CoefXi/B[NoDim]). In ModThreadedLC DXi will be multiplied
+    ! by RhoNoDim**0.25
+    !/
+    CoefXi = PoyntingFluxPerB/LperpTimesSqrtB**2
+    
     !Loop over the thread starting points
     do k = 1, nK; do j = 1, nJ
        !\
@@ -394,10 +383,7 @@ contains
        ! Starting points for all threads are in the centers
        ! of  physical cells near the boundary
        !/
-       XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)
-
-       BoundaryThreads_B(iBlock) % Xyz_DIII(:,0,j,k) = XyzStart_D
-      
+       XyzStart_D = Xyz_DGB(:, 1, j, k, iBlock)      
        !\
        ! Calculate a field in the starting point
        !/
@@ -458,8 +444,7 @@ contains
              !\
              ! Store a point
              !/
-             BoundaryThreads_B(iBlock) % Xyz_DIII(&
-                  :, -iPoint, j, k) = Xyz_D
+             XyzOld_D = Xyz_D
              BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/R
              call get_b0(Xyz_D, B0_D)
              B0 = sqrt( sum( B0_D**2 ) )
@@ -476,13 +461,10 @@ contains
        !with the photosphere surface
        ROld = 1/BoundaryThreads_B(iBlock) % RInv_III(1-iPoint, j, k)
        Aux = (ROld - RBody) / (ROld -R)
-       Xyz_D =(1 - Aux)* BoundaryThreads_B(iBlock) % Xyz_DIII(&
-            :, 1-iPoint, j, k) +  Aux*Xyz_D 
+       Xyz_D =(1 - Aux)*XyzOld_D +  Aux*Xyz_D 
        !\
        ! Store the last point
        !/
-       BoundaryThreads_B(iBlock) % Xyz_DIII(&
-            :, -iPoint, j, k) = Xyz_D
        BoundaryThreads_B(iBlock) % RInv_III(-iPoint, j, k) = 1/RBody
        call get_b0(Xyz_D, B0_D)
        B0 = sqrt( sum( B0_D**2 ) )
@@ -499,8 +481,8 @@ contains
        BoundaryThreads_B(iBlock) % LengthSi_III(1-iPoint, j, k) = &
             Ds*Aux*No2Si_V(UnitX_)
        BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) = &
-            Ds*Aux*0.50*(&
-            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +&
+            Ds*Aux*0.50*(                                         &
+            BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k) +    &
             BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
        iPoint = iPoint - 1
        !\
@@ -515,7 +497,7 @@ contains
           BoundaryThreads_B(iBlock) % BDsInvSi_III(1-iPoint, j, k) =     &
                BoundaryThreads_B(iBlock) % BDsInvSi_III(-iPoint, j, k) + &
                Ds*0.50*(&
-               BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +&
+               BoundaryThreads_B(iBlock) % B_III( -iPoint, j, k) +       &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k) )
           iPoint = iPoint - 1
           iInterval = iInterval + 1
@@ -542,14 +524,14 @@ contains
        ! as the temperature node with the same number
        !/ 
        BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k) =             &
-            0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+            0.50*Ds*sqrt(CoefXi/                                       &
             BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k))
        !\
        ! As long as the flux node is placed as discussed above, the 
        ! first computational cell is twice shorter
        !/
        BoundaryThreads_B(iBlock) % DsOverBSi_III(-iPoint, j, k) =      &
-            0.50*Ds*No2Si_V(UnitX_)/&
+            0.50*Ds*No2Si_V(UnitX_)/                                   &
             ( BoundaryThreads_B(iBlock) % B_III(-iPoint, j, k)&
             *PoyntingFluxPerBSi*No2Si_V(UnitB_) )
 
@@ -589,7 +571,7 @@ contains
           !/
           BoundaryThreads_B(iBlock) % Xi_III(1-iPoint, j, k) =            &
                BoundaryThreads_B(iBlock) % Xi_III(-iPoint, j, k)        + &
-               Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/               &
+               Ds*sqrt(CoefXi/               &
                BoundaryThreads_B(iBlock) % B_III(1-iPoint, j, k)) 
           !\
           ! Distance between the flux points (faces) divided by
@@ -620,12 +602,11 @@ contains
        !/
        BoundaryThreads_B(iBlock) % Xi_III(0, j, k) =         &
             BoundaryThreads_B(iBlock) % Xi_III(0, j, k) -    &
-            0.50*Ds*sqrt(PoyntingFluxPerB/LperpTimesSqrtB**2/&
+            0.50*Ds*sqrt(CoefXi/                             &
             BoundaryThreads_B(iBlock) % B_III(0, j, k))
 
-       DXyz_D = Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock)
        BoundaryThreads_B(iBlock) % DeltaR_II(j,k) = &
-            sqrt(sum(DXyz_D**2))
+            sqrt(sum((Xyz_DGB(:,1,j,k,iBlock) - Xyz_DGB(:,0,j,k,iBlock))**2))
        
        call limit_temperature(BoundaryThreads_B(iBlock) % BDsInvSi_III(&
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
@@ -637,12 +618,9 @@ contains
        write(*,'(a,3es18.10)')'DeltaR=  ',&
             BoundaryThreads_B(iBlock) % DeltaR_II(jTest,kTest)
        write(*,'(a)')&
-            'x[R_s] y[R_S] z[R_S} B[NoDim] RInv[NoDim] LengthSi[NoDim]'&
-            //'BDsInvSi Xi[NoDim]'
+            'B[NoDim] RInv[NoDim] LengthSi BDsInvSi Xi[NoDim]'
        do iPoint = 0, -BoundaryThreads_B(iBlock) % nPoint_II(jTest,kTest),-1
-          write(*,'(8es18.10)')&
-               BoundaryThreads_B(iBlock) % Xyz_DIII(:,&
-               iPoint, jTest,kTest),&
+          write(*,'(5es18.10)')&
                BoundaryThreads_B(iBlock) % B_III(&
                iPoint, jTest,kTest),&
                BoundaryThreads_B(iBlock) % RInv_III(&
