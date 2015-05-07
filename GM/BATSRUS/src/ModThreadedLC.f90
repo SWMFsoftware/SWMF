@@ -1130,11 +1130,9 @@ contains
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
-       DirR_D = Xyz_DGB(:,1,j,k,iBlock) 
-       !\
-       ! Normalize the radial unit vector 
+       DirR_D = Xyz_DGB(:,1,j,k,iBlock)  
        DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
-       !/
+     
        if(sum(BDir_D*DirR_D) <  0.0)then
           BDir_D = -BDir_D
           Major_ = WaveLast_
@@ -1154,14 +1152,15 @@ contains
             BoundaryThreads_B(iBlock) % TMax_II(j,k)))
        TeSi = Te_G(0, j, k)*No2Si_V(UnitTemperature_)
        SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
-       AMinor = min(sqrt(State_VGB(Minor_, 1, j, k, iBlock)/&
-            ( SqrtRho* PoyntingFluxPerB)  ),1.0)
+       AMinor = min(1.0,&
+            sqrt(  State_VGB(Minor_, 1, j, k, iBlock)/&
+            (SqrtRho* PoyntingFluxPerB)  ))
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
-            *Te_G(0,j,k)/Te_G(1,j,k)*No2Si_V(UnitEnergyDens_)
+            *(Te_G(0,j,k)/Te_G(1,j,k))*No2Si_V(UnitEnergyDens_)
        call solve_boundary_thread(j=j, k=k, iBlock=iBlock, iAction=iAction,    &
             TeSiIn=TeSi, PeSiIn=PeSi, USiIn=U*No2Si_V(UnitU_), AMinorIn=AMinor,&
             DTeOverDsSiOut=DTeOverDsSi, PeSiOut=PeSiOut,&
@@ -1169,10 +1168,8 @@ contains
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           !\
-          ! Calculate temperature in the ghost cell. Once multiplied by 
-          ! BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k) the
-          ! temperature difference between physical and ghost cells should
-          ! give the radial component of dTe/ds*BDir_D
+          ! Solve equation: (TeGhost-TeTrue)*dGradTe/dTeGhost = 
+          ! dTe/ds*(b . DirR)DirR
           !/
           Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs*sum(BDir_D*DirR_D)/sqrt(&
                sum(BoundaryThreads_B(iBlock)% DGradTeOverGhostTe_DII(:,j,k)**2))
@@ -1214,19 +1211,20 @@ contains
           ! Ghost cell value of the magnetic field: cancel radial B1 field 
           !/ 
           B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
-          B1_D = B1_D - DirR_D*sum(DirR_D*B1_D)
-          State_VG(Bx_:Bz_, i, j, k) = B1_D
-          
+          State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
+          !\
+          !Gnost cell value of velocity: keep the velocity projection
+          !onto the magnetic field, if UseAlignedVelocity=.true.
+          !Reflect the other components
+          !/
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
           if(UseAlignedVelocity)then
-             U   = sum(U_D*BDir_D)
+             U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
           else
              U = 0
-          end if
-          U_D = U_D - U*BDir_D
-          
-          State_VG(RhoUx_:RhoUz_, i, j, k) = - State_VG(Rho_,i,j,k)* &
-               U_D +U*BDir_D*State_VG(Rho_,1,j,k)
+          end if     
+          State_VG(RhoUx_:RhoUz_, i, j, k) = -U_D*State_VG(Rho_,i,j,k) &
+                + U*BDir_D*State_VG(Rho_,1,j,k)
               
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
