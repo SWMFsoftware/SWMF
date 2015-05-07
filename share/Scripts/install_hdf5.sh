@@ -1,5 +1,6 @@
 #!/bin/bash
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #Most of this code is a modification of code from build_visit2_5_1
 function initialize_build_libs()
@@ -35,6 +36,7 @@ if [[ "$OPSYS" == "Darwin" ]]; then
    export SO_EXT="dylib"
    VER=$(uname -r)
 # Check for Panther, because MACOSX_DEPLOYMENT_TARGET will default to 10.1
+### G. Toth commented out the lines with -fno-common. Did not work for nagfor.
    if (( ${VER%%.*} < 8 )) ; then
       export MACOSX_DEPLOYMENT_TARGET=10.3
    elif [[ ${VER%%.*} == 8 ]] ; then
@@ -49,9 +51,9 @@ if [[ "$OPSYS" == "Darwin" ]]; then
    export C_COMPILER=${C_COMPILER:-"mpicc"}
    export CXX_COMPILER=${CXX_COMPILER:-"mpic++"}
    export C_OPT_FLAGS=${C_OPT_FLAGS:-"-O2"}
-   export CFLAGS=${CFLAGS:-"-fno-common -fexceptions"}
+#   export CFLAGS=${CFLAGS:-"-fno-common -fexceptions"}
    export CXX_OPT_FLAGS=${CXX_OPT_FLAGS:-"-O2"}
-   export CXXFLAGS=${CXXFLAGS:-"-fno-common -fexceptions"}
+#   export CXXFLAGS=${CXXFLAGS:-"-fno-common -fexceptions"}
    export COMPILEF90=$(which mpif90)
    export FCFLAGS=${FCFLAGS:-$CFLAGS}
 #    export FCFLAGS=$(make echo_f90_flags)
@@ -191,6 +193,10 @@ ANY_ERRORS="no"
 
 #initialize VisIt
 # bv_visit_initialize
+
+### Added by G.Toth. Presumably SZIP is needed for IPIC3D
+### export DO_SZIP="yes" 
+###
 
 export DO_DEBUG="no"
 export ON_DEBUG="off"
@@ -524,7 +530,7 @@ export HDF5_FILE=${HDF5_FILE:-"hdf5-${HDF5_VERSION}.tar.gz"}
 export HDF5_COMPATIBILITY_VERSION=${HDF5_COMPATIBILITY_VERSION:-"1.8"}
 export HDF5_BUILD_DIR=${HDF5_BUILD_DIR:-"hdf5-${HDF5_VERSION}"}
 # Note: Versions of HDF5 1.6.5 and earlier DO NOT have last path component
-export HDF5_URL=${HDF5_URL:-"http://www.hdfgroup.org/ftp/HDF5/prev-releases/hdf5-${HDF5_VERSION}/src"}
+export HDF5_URL=${HDF5_URL:-"http://www.hdfgroup.org/ftp/HDF5/releases/hdf5-${HDF5_VERSION}/src"}
 export HDF5_MD5_CHECKSUM="d4ed6892b17e45a59f998b58ade9987d"
 export HDF5_SHA256_CHECKSUM=""
 export HDF5INSTALLDIR=${START_DIR}/hdf5-${HDF5_VERSION}
@@ -595,8 +601,8 @@ function build_hdf5
     # configure, we wrap the invokation in 'sh -c "..."' syntax
     echo "Invoking command to configure HDF5"
     # HDF5 is not supported on OSX but it works that is the reason for the --enable-unsupported flag 
-    echo "./configure CC="${C_COMPILER} " FC="${COMPILEF90} " --enable-parallel --enable-fortran --enable-unsupported --prefix="${HDF5INSTALLDIR} ${cf_szip}
-        ./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported --prefix=${HDF5INSTALLDIR} ${cf_szip}
+    echo "./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} ${cf_szip}"
+    ./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} ${cf_szip}
     if [[ $? != 0 ]] ; then
        echo "HDF5 configure failed.  Giving up"
        return 1
