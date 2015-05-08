@@ -241,7 +241,7 @@ T                       UseCoarseAxis
 
 #OUTERBOUNDARY
 fieldlinethreads	TypeBcEast   user for spherical and user_outerbcs
-user			TypeBcWest
+float			TypeBcWest
 float			TypeBcSouth
 float			TypeBcNorth
 float			TypeBcBottom
