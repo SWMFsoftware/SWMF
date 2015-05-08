@@ -334,7 +334,7 @@ contains
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    RhoNoDimOut = RhoNoDimCoef* &!PeSiOut/TeSi_I(nPoint)
+    RhoNoDimOut = RhoNoDimCoef* &
          exp( log(PeSi_I(nPoint)/TeSi_I(nPoint))*(1 + GhostCellCorr)  &
          -    log(PeSi_I(nPoint-1)/TeSi_I(nPoint-1))*GhostCellCorr )
     if(DoTestMe)then
