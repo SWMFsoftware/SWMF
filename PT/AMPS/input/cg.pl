@@ -113,10 +113,10 @@ while ($line=<InputFile>) {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
       if ($InputLine eq "ON") {
-	  ampsConfigLib::RedefineMacro("_PIC_MODEL__3DGRAVITY__MODE_","_PIC_MODEL__3DGRAVITY__MODE__ON_","pic/picGlobal.dfn");
+	  ampsConfigLib::RedefineMacro("_3DGRAVITY__MODE_","_3DGRAVITY__MODE__ON_","main/Comet.dfn");
       }
       elsif ($InputLine eq "OFF") {
-	  ampsConfigLib::RedefineMacro("_PIC_MODEL__3DGRAVITY__MODE_","_PIC_MODEL__3DGRAVITY__MODE__OFF_","pic/picGlobal.dfn");
+	  ampsConfigLib::RedefineMacro("_3DGRAVITY__MODE_","_3DGRAVITY__MODE__OFF_","main/Comet.dfn");
       }
   }
   elsif ($InputLine eq "RADIATIVECOOLINGMODE") {
