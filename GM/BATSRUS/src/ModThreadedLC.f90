@@ -14,33 +14,48 @@ module ModThreadedLC
   use ModPhysics,    ONLY: AverageIonCharge
   use ModConst,      ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   implicit none
-
-  real :: TeFraction, TiFraction, PeFraction
+  !\
+  ! To expsress Te in terms of P and rho.
+  !/
+  real    :: TeFraction, PeFraction
+  integer :: iP
+  !\
+  ! Temperature 3D array
+  !/
   real,allocatable :: Te_G(:,:,:)
+  !\
+  ! Arrays for 1D distributions
+  !/
   real,allocatable,dimension(:)::ReflCoef_I, APlus_I, AMinus_I, &
        TeSi_I, Cons_I, PeSi_I, Res_I, U_I, L_I, M_I, Xi_I, &
        VaLog_I,  DCons_I, DXi_I, ResHeating_I, ResCooling_I, ResEnthalpy_I,&
-       ResHeatCond_I, SpecHeat_I, IntEnergy_I
+       ResHeatCond_I, ResGravity_I, SpecHeat_I, IntEnergy_I
   !\
   ! Table numbers needed to use lookup table
   !/ 
   integer :: iTableTR, iTableRadcool  
-
-  real, parameter:: TeSiMin = 5.0e4 ![K]
-  real           :: TeMin, ConsMin
-  logical:: UseAlignedVelocity = .true.
-  real :: cCoolingPerPe2, RhoNoDimCoef
+  !\
+  !Control parameters: minimum temerature, the temperature, below which 
+  !the reflection turns to zero and two logicals with self-explained names
+  !/
+  real, parameter:: TeSiMin = 5.0e4, TeMinReflectionSi=4.0e4 
+  logical        :: UseAlignedVelocity = .true., UseGravity = .false.
+  !\
+  ! 1. Coef to express radiation losses in terms of pressure (rather than density)
+  ! 2. Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
+  !/
+  real           :: cCoolingPerPe2, RhoNoDimCoef, TeMin, ConsMin
   !\
   ! For transforming conservative to TeSi and back 
   !/
   real, parameter:: cTwoSevenths = 2.0/7.0
   !\
-  ! Gravitation potential
+  ! Gravitation potential in K
   !/
   real, parameter:: cGravPot = cGravitation*mSun*cAtomicMass/&
        (cBoltzmann*rSun)
   !\
-  ! The use of this constant:
+  ! The use of the latter constant:
   !/
   !\
   !   Hydrostatic equilibrium in an isothermal corona: 
@@ -59,7 +74,6 @@ module ModThreadedLC
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   !/
   real    :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
-  integer:: iP
   integer, parameter:: Impl_=3
 contains
   !=========================================================================
@@ -89,6 +103,7 @@ contains
     allocate( ResCooling_I(nPointThreadMax)); ResCooling_I = 0.0
     allocate(ResEnthalpy_I(nPointThreadMax));ResEnthalpy_I = 0.0
     allocate(ResHeatCond_I(nPointThreadMax));ResHeatCond_I = 0.0
+    allocate( ResGravity_I(nPointThreadMax)); ResGravity_I = 0.0
 
     allocate(      U_I(nPointThreadMax));        U_I = 0.0
     allocate(      L_I(nPointThreadMax));        L_I = 0.0
@@ -258,6 +273,10 @@ contains
           write(*,*)'TeSiMax=       ',&
           BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
           write(*,*)'iAction=',iAction
+          write(*,*)'0D model results'
+          write(*,*)'Pressure 0D=',PeSiOut
+          write(*,*)'DTeOverDsSiOut=', DTeOverDsSiOut
+          write(*,*)'RhoNoDimOut=', RhoNoDimOut 
        end if
     else
        DoTest=.false.; DoTestMe=.false.
@@ -317,9 +336,15 @@ contains
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )
     PeSiOut = exp(log(PeSi_I(nPoint)) + &
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
-    RhoNoDimOut = RhoNoDimCoef* PeSiOut/TeSi_I(nPoint)
+    RhoNoDimOut = RhoNoDimCoef* &!PeSiOut/TeSi_I(nPoint)
+         exp( log(PeSi_I(nPoint)/TeSi_I(nPoint))*(1 + GhostCellCorr)  &
+         -    log(PeSi_I(nPoint-1)/TeSi_I(nPoint-1))*GhostCellCorr )
     if(DoTestMe)then
        write(*,*)'AMajorOut=    ', AMajorOut
+       write(*,*)'Before correction:'
+       write(*,*)'Pressure 1D (SI) = ',PeSi_I(nPoint)
+       write(*,*)'RhoNoDimOut      = ',&
+            RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
@@ -375,6 +400,7 @@ contains
       ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
            (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
       ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
+      where(TeSi_I(1:nPoint)<TeMinReflectionSi)ReflCoef_I(1:nPoint)=0.0
       !\
       ! Solve amplitudes of the Alfven waves (arrays there have dimension)
       ! (0:nI)
@@ -658,7 +684,7 @@ contains
       
       M_I(2:nPoint-1) = &
            PeSi_I(2:nPoint-1)*SpecHeat_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-      Res_I = 0.0
+      Res_I = 0.0; FluxConst = 0.0
       if(UDt>0)then
          FluxConst    = UDt * PeSi_I(nPoint)/&
               (TeSiIn*PoyntingFluxPerBSi*&
@@ -743,30 +769,7 @@ contains
       TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1) + DCons_I(2:nPoint-1),&
            TeSiMin)
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
-      
-      !==========Add Gravity Source================================
-      !\
-      !cGravPot = cGravitation*mSun*cAtomicMass/&
-      !/   (cBoltzmann*rSun)
-      !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
-      !\
-      !energy flux needed to raise the mass flux rho*u to the heliocentric 
-      !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
-      !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
-      !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
-      !/
- 
-      !Res_I(2:nPoint-1) = Res_I(2:nPoint-1) + &
-      !     0.5*GravHydroDyn*FluxConst*(&
-      !     - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)&
-      !     + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
-      !Res_I(1) = Res_I(1) + GravHydroDyn*FluxConst*(-1 + 0.5*(&
-      !        BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)&
-      !        + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k)))
-      !if(DoTestMe)write(*,*)'iIter=', iIter, ' maxRes=', &
-      !     maxval(abs(Res_I(1:nPoint-1)))
-      
-      
+            
       !\
       ! Set pressure for updated temperature 
       !/
@@ -783,8 +786,28 @@ contains
       !/
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       call get_heat_cond    
-      Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +&
-           DtHeatCond*ResHeatCond_I(1:nPoint-1)   
+      Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +  &
+           DtHeatCond*ResHeatCond_I(1:nPoint-1)
+      !==========Add Gravity Source================================
+      !\
+      !cGravPot = cGravitation*mSun*cAtomicMass/&
+      !/   (cBoltzmann*rSun)
+      !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
+      !\
+      !energy flux needed to raise the mass flux rho*u to the heliocentric 
+      !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+      !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
+      !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
+      !/
+      if(UseGravity)then
+         ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(            &
+              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)         &
+              + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
+         ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(            &
+              - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)            &
+              + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
+         Res_I(1:nPoint-1) = Res_I(1:nPoint-1) + ResGravity_I(1:nPoint-1) 
+      end if
       !\
       ! Version Easter 2015
       !/
@@ -1142,6 +1165,11 @@ contains
        ! Calculate input parameters for solving the thread
        !/
        if(DoTestMe.and.j==jTest.and.k==kTest)then
+          write(*,*)'Direction B=', BDir_D
+          write(*,*)'Direction R=', DirR_D
+          write(*,*)'Magnetic fields: B0True =', B0_DGB(:, 1, j, k, iBlock) 
+          write(*,*)'Magnetic fields: B0Ghost=', B0_DGB(:, 0, j, k, iBlock) 
+          write(*,*)'B1_D=', B1_D
           write(*,*)NameSub//': before limiting TeGhost=',&
                Te_G(0, j, k)*No2Si_V(UnitTemperature_)
        end if
@@ -1155,6 +1183,10 @@ contains
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
+       if(DoTestMe.and.j==jTest.and.k==kTest)then
+          write(*,*)'U_D=',U_D
+          write(*,*)'Direction U', U_D/sqrt(sum(U_D**2))
+       end if
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
             *(Te_G(0,j,k)/Te_G(1,j,k))*No2Si_V(UnitEnergyDens_)
