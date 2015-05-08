@@ -22,3 +22,5 @@ $MaxImplBlock == 1
 #Special rule to compile HDF5 code
 $Hdf5 eq "yes"
 	h5pfc ${Cflag2} ModHdf5.f90
+
+	${COMPILE.f90}  ${Cflag0} ModFieldLineThread.f90
