@@ -93,7 +93,7 @@ namespace Exosphere {
  // void Init_AfterMesh();
 
   //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
-  void SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data);
+  void SWMFdataPreProcessor(double *x,PIC::CPLR::DATAFILE::ICES::cDataNodeSWMF& data);
 
 
   //make coulumn integration
