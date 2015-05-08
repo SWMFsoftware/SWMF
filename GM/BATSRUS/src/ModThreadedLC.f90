@@ -120,7 +120,6 @@ contains
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
-       TiFraction = MassIon_I(1)
        TeFraction = MassIon_I(1)/AverageIonCharge
        iP = Pe_
        PeFraction = 1.0
@@ -128,9 +127,8 @@ contains
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
-       TiFraction = MassIon_I(1) &
+       TeFraction = MassIon_I(1) &
             /(1 + AverageIonCharge)
-       TeFraction = TiFraction
        iP = p_
        PeFraction = AverageIonCharge/(1.0 + AverageIonCharge) 
     end if
