@@ -334,14 +334,18 @@ namespace Moon {
       CenterNode=startNode->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
-      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
+
+      PIC::CPLR::GetBackgroundFieldsVector(E,B,x_LOCAL,nd,startNode);
+
+
+/*      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
         memcpy(E,offset+PIC::CPLR::ICES::ElectricFieldOffset,3*sizeof(double));
         memcpy(B,offset+PIC::CPLR::ICES::MagneticFieldOffset,3*sizeof(double));
       }
       else {
         memcpy(E,swE_Typical,3*sizeof(double));
-        memcpy(B,/*Exosphere_*/swB_Typical,3*sizeof(double));
-      }
+        memcpy(B,swB_Typical,3*sizeof(double));
+      }*/
 
 
       accl_LOCAL[0]+=ElectronCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/_MASS_(_NA_);
