@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O
+SpeciesList=H2O DUST DUST
 !CO CO2
 
 DebuggerMode=off !on,off
@@ -37,7 +37,7 @@ TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, S
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=ices !!off, ices, swmf
+CouplerMode=file(tecplot) !!off, file,  swmf
 
 #endmain
 
@@ -68,8 +68,21 @@ CouplerMode=ices !!off, ices, swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
-  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+  RecoverMacroscopicSampledData=off  \\ !!on, off
+    execution=stop \\ ! continue \\ !stop \\ !stop,continue
+    file=pic.SamplingDataRestart.out=5.dat
+
+!  define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_  _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_
+
+  define _PIC__PARTICLE_COLLISION_MODEL_  _PIC__PARTICLE_COLLISION_MODEL_HS_
   define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
+
+  define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) 
+
+!  define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
+
+  define  _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclInit,spec,ptr,xInit,vInit,startNode) TotalParticleAcceleration(acclInit,spec,ptr,xInit,vInit,startNode)
   
 #endGeneral
 
@@ -109,7 +122,7 @@ CouplerMode=ices !!off, ices, swmf
 
 
 #block ../cg.pl !process settings of the moon module
-  Gravity3D=off !on,off
+  Gravity3D=on !on,off
 
   HeliocentricDistance=3.5*_AU_
   subSolarPointAzimuth=0.328671678 !! in rad 18.7961
@@ -122,7 +135,7 @@ CouplerMode=ices !!off, ices, swmf
   CometTemperatureMode=Analytical !Bjorn,Constant,Analytical
 
   SampleBackFluxMode=off
-  ComputeMaximumLiftableSizeMode=on
+  ComputeMaximumLiftableSizeMode=off
 
   !!Gas parameters
   ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
@@ -132,22 +145,22 @@ CouplerMode=ices !!off, ices, swmf
   
   !! if BjornProductionRateUserDefined=on, use following values
   BjornProductionRate(H2O)=0.0 !!2.0e25	    
-  !BjornProductionRate(CO)=0.0
-  !BjornProductionRate(CO2)=0.0
+!  BjornProductionRate(CO)=0.0
+!  BjornProductionRate(CO2)=0.0
 
   UniformProductionRate(H2O)=0.0 !!8.0e25
-  !UniformProductionRate(CO)=0.0
-  !UniformProductionRate(CO2)=0.0
+!  UniformProductionRate(CO)=0.0
+!  UniformProductionRate(CO2)=0.0
 
   JetProductionRate(H2O)=0.0 !1.0e25	    
- ! JetProductionRate(CO2)=0.0 !1.0e25	    
- ! JetProductionRate(CO)=0.0 !1.0e25	    
+!  JetProductionRate(CO2)=0.0 !1.0e25	    
+!  JetProductionRate(CO)=0.0 !1.0e25	    
   
   TrackingSurfaceElementMode=off !on,off
 
 
   !!Dust parameters
-  DustMode=off !!on,off
+  DustMode=on !!on,off
   DustTotalMassProductionRate=1.0
   PowerLawIndex=3.4	  
   dustRmin=1.0e-7
@@ -161,7 +174,7 @@ CouplerMode=ices !!off, ices, swmf
 
   SPICE=off !on, off
   
-  define _TARGET_ _EUROPA_
+  define _TARGET_ _NONE_
 
 #endblock
 
