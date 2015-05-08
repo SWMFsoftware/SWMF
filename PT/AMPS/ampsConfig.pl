@@ -769,7 +769,10 @@ sub ReadMainBlock {
   #redefine the value of the macro that determined the coupling of AMPS
   if (defined $CouplingMode) {
     ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");
-    ampsConfigLib::RedefineMacro("_PIC_COUPLER_DATAFILE_READER_MODE_",$CouplingFileReader,"pic/picGlobal.dfn");
+    
+    if (defined $CouplingFileReader) {
+      ampsConfigLib::RedefineMacro("_PIC_COUPLER_DATAFILE_READER_MODE_",$CouplingFileReader,"pic/picGlobal.dfn");
+    }
   }
 
 
