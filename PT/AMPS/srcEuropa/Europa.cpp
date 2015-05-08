@@ -132,7 +132,7 @@ void Europa::Init_BeforeParser() {
 
 
 //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
-void Europa::SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data) {
+void Europa::SWMFdataPreProcessor(double *x,PIC::CPLR::DATAFILE::ICES::cDataNodeSWMF& data) {
   int i;
 
   if (data.status!=_PIC_ICES__STATUS_OK_) {
