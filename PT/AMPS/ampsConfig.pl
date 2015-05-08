@@ -353,6 +353,7 @@ sub ReadMainBlock {
   my $SimulationParticleWeightCorrectionMode; #='_INDIVIDUAL_PARTICLE_WEIGHT_OFF_';
   
   my $CouplingMode;
+  my $CouplingFileReader;
   my $TrajectoryIntegrationCheckBlockFaceIntersection;
   
   #force the repeatable execution path
@@ -490,13 +491,27 @@ sub ReadMainBlock {
     
         
     elsif ($s0 eq "COUPLERMODE") {
+      $s1=~s/[();]/ /g;
       ($s0,$s1)=split(' ',$s1,2);
       
       if ($s0 eq "OFF") {$CouplingMode="_PIC_COUPLER_MODE__OFF_";}
-      elsif ($s0 eq "ICES") {$CouplingMode="_PIC_COUPLER_MODE__ICES_";}
       elsif ($s0 eq "SWMF") {$CouplingMode="_PIC_COUPLER_MODE__SWMF_";}
-      elsif ($s0 eq "CCMC") {$CouplingMode="_PIC_COUPLER_MODE__CCMC_";}
-      elsif ($s0 eq "FILE") {$CouplingMode="_PIC_COUPLER_MODE__DATAFILE_";}
+      elsif ($s0 eq "FILE") {
+        $CouplingMode="_PIC_COUPLER_MODE__DATAFILE_";
+        $CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_";
+        
+        #determine the file reader
+        ($s0,$s1)=split(' ',$s1,2);
+        
+        if ($s0 eq "TECPLOT") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_";}
+        elsif ($s0 eq "ARMS") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__ARMS_";}  
+        elsif ($s0 eq "ICES") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__ICES_";}
+        elsif ($s0 eq "KAMELEON") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_";}
+        elsif ($s0 eq "BATSRUS") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_";}
+        else {
+          die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }      
+      }
       else {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
@@ -754,10 +769,7 @@ sub ReadMainBlock {
   #redefine the value of the macro that determined the coupling of AMPS
   if (defined $CouplingMode) {
     ampsConfigLib::RedefineMacro("_PIC_COUPLER_MODE_",$CouplingMode,"pic/picGlobal.dfn");
-   
-    if ($CouplingMode eq "_PIC_COUPLER_MODE__ICES_") {
-       ampsConfigLib::RedefineMacro("_PIC_ICES_SWMF_MODE_","_PIC_ICES_MODE_ON_","pic/picGlobal.dfn");
-    } 
+    ampsConfigLib::RedefineMacro("_PIC_COUPLER_DATAFILE_READER_MODE_",$CouplingFileReader,"pic/picGlobal.dfn");
   }
 
 
