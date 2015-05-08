@@ -227,6 +227,21 @@ contains
 
     character(len=*), parameter :: NameSub = 'solve_boundary_thread'
     !-------------------------------------------------------------------------
+    !\
+    ! Initialize all output parameters from 0D solution
+    !/
+    call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
+           DoExtrapolate=.false.)
+    !\
+    ! First value is now the product of the thread length in meters times
+    ! a geometric mean pressure, so that
+    !/
+    PeSiOut        = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+         BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
+    DTeOverDsSiOut = PeSiOut*Value_V(UHeat_)/(HeatCondParSi*TeSiIn**2.5)
+    RhoNoDimOut    = RhoNoDimCoef*PeSiOut/TeSiIn
+    AMajorOut      = 1.0
+
     if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
        if(DoTestMe)then
@@ -268,10 +283,6 @@ contains
     case(Impl_)
        call advance_heat_cond
        !\
-       ! Initialize redundant output parameter
-       !/
-       AMajorOut = 0.0
-       !\
        ! Output for temperature gradient, all the other outputs
        ! are meaningless
        !/
@@ -298,10 +309,6 @@ contains
        write(*,*)'iAction=',iAction
        call CON_stop('Unknown action in '//NameSub)
     end select
-    !\
-    ! Initialize redundant output parameter
-    !/
-    DTeOverDsSiOut = 0.0 
     !\
     ! Outputs
     !/
@@ -475,14 +482,6 @@ contains
       ! As a first approximation, recover Te from the analytical solution
       !/
       TeSi_I(nPoint) = TeSiIn
-      call interpolate_lookup_table(iTableTR, TeSiIn, 1.0e8, Value_V, &
-           DoExtrapolate=.false.)
-      !\
-      ! First value is now the product of the thread length in meters times
-      ! a geometric mean pressure, so that
-      !/
-      PeSiOut = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-           BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
               iTable=iTableTR,           &
