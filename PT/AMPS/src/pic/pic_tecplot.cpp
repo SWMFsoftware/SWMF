@@ -18,11 +18,23 @@ int PIC::CPLR::DATAFILE::TECPLOT::maxScriptPointNumber=15000;
 int PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=0;
 int PIC::CPLR::DATAFILE::TECPLOT::DataMode=-1;
 
-PIC::CPLR::DATAFILE::TECPLOT::cLoadedVariableData PIC::CPLR::DATAFILE::TECPLOT::Velocity,PIC::CPLR::DATAFILE::TECPLOT::Pressure,PIC::CPLR::DATAFILE::TECPLOT::MagneticField,PIC::CPLR::DATAFILE::TECPLOT::Density;
+PIC::CPLR::DATAFILE::TECPLOT::cLoadedVariableData PIC::CPLR::DATAFILE::TECPLOT::Velocity,PIC::CPLR::DATAFILE::TECPLOT::IonPressure,PIC::CPLR::DATAFILE::TECPLOT::ElectronPressure,PIC::CPLR::DATAFILE::TECPLOT::MagneticField,PIC::CPLR::DATAFILE::TECPLOT::Density;
 
 //rotation matrixes
 double PIC::CPLR::DATAFILE::TECPLOT::RotationMatrix_LocalFrame2DATAFILE[3][3]={{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
 double PIC::CPLR::DATAFILE::TECPLOT::RotationMatrix_DATAFILE2LocalFrame[3][3]={{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
+
+//init the reader
+void PIC::CPLR::DATAFILE::TECPLOT::Init() {
+  //reserve the data fields
+  PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
+}
+
 
 //set up the rotation matrixes
 void PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_LocalFrame2DATAFILE(const double Matrix[3][3]) {
@@ -431,58 +443,62 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
 
           //save the data on the AMPS data buffers
           //the order of the state vector: number density, temperature
-          *((double*)(offset+PlasmaNumberDensityOffset))=data[Density.offset]*Density.ScaleFactor;
-          *((double*)(offset+PlasmaTemperatureOffset))=(data[Density.offset]>0.0) ? data[Pressure.offset]*Pressure.ScaleFactor/(Kbol*data[Density.offset]*Density.ScaleFactor) : 0.0;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=data[Density.offset]*Density.ScaleFactor;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=(data[Density.offset]>0.0) ? data[IonPressure.offset]*IonPressure.ScaleFactor/(Kbol*data[Density.offset]*Density.ScaleFactor) : 0.0;
 
           //get pressure
-          *((double*)(offset+PlasmaPressureOffset))=data[Pressure.offset]*Pressure.ScaleFactor;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=data[IonPressure.offset]*IonPressure.ScaleFactor;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.offset))=data[ElectronPressure.offset]*ElectronPressure.ScaleFactor;
 
           //bulk velocity and magnetic field
           for (idim=0;idim<3;idim++) {
-            *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=data[idim+MagneticField.offset]*MagneticField.ScaleFactor;
-            *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=data[idim+Velocity.offset]*Velocity.ScaleFactor;
+            if (PIC::CPLR::DATAFILE::Offset::MagneticField.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=data[idim+MagneticField.offset]*MagneticField.ScaleFactor;
+            if (PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=data[idim+Velocity.offset]*Velocity.ScaleFactor;
           }
 
           //calculate the electric field
-          double *E,*B,*v;
+          if ((PIC::CPLR::DATAFILE::Offset::MagneticField.active) && (PIC::CPLR::DATAFILE::Offset::ElectricField.active) && (PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.active)) {
+            double *E,*B,*v;
 
-          //get thet fields in the TECPLOT frame of reference
-          v=(double*)(offset+PlasmaBulkVelocityOffset);
-          B=(double*)(offset+MagneticFieldOffset);
-          E=(double*)(offset+ElectricFieldOffset);
+            //get thet fields in the TECPLOT frame of reference
+            v=(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset);
+            B=(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset);
+            E=(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset);
 
-          E[0]=-(v[1]*B[2]-B[1]*v[2]);
-          E[1]=+(v[0]*B[2]-B[0]*v[2]);
-          E[2]=-(v[0]*B[1]-B[0]*v[1]);
+            E[0]=-(v[1]*B[2]-B[1]*v[2]);
+            E[1]=+(v[0]*B[2]-B[0]*v[2]);
+            E[2]=-(v[0]*B[1]-B[0]*v[1]);
 
-          //convert velocity and the fields vectors in the local frame of reference
-          double vLOCAL[3],bLOCAL[3],eLOCAL[3];
-          int ii,idim;
+            //convert velocity and the fields vectors in the local frame of reference
+            double vLOCAL[3],bLOCAL[3],eLOCAL[3];
+            int ii,idim;
 
-          for (idim=0;idim<3;idim++) {
-            vLOCAL[idim]=0.0,bLOCAL[idim]=0.0,eLOCAL[idim]=0.0;
+            for (idim=0;idim<3;idim++) {
+              vLOCAL[idim]=0.0,bLOCAL[idim]=0.0,eLOCAL[idim]=0.0;
 
-            for (ii=0;ii<3;ii++) {
-              vLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*v[ii];
-              eLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*E[ii];
-              bLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*B[ii];
+              for (ii=0;ii<3;ii++) {
+                vLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*v[ii];
+                eLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*E[ii];
+                bLOCAL[idim]+=RotationMatrix_DATAFILE2LocalFrame[idim][ii]*B[ii];
+              }
             }
-          }
 
-          //copy the transform values into AMPS buffers
-          for (idim=0;idim<3;idim++) v[idim]=vLOCAL[idim],E[idim]=eLOCAL[idim],B[idim]=bLOCAL[idim];
+            //copy the transform values into AMPS buffers
+            for (idim=0;idim<3;idim++) v[idim]=vLOCAL[idim],E[idim]=eLOCAL[idim],B[idim]=bLOCAL[idim];
+          }
 
           //increment the point counter
           nLoadedDataPoints++;
         }
         else {
-          *((double*)(offset+PlasmaNumberDensityOffset))=0.0;
-          *((double*)(offset+PlasmaTemperatureOffset))=0.0;
-          *((double*)(offset+PlasmaPressureOffset))=0.0;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=0.0;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=0.0;
+          if (PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=0.0;
 
           for (idim=0;idim<3;idim++) {
-            *((double*)(offset+PlasmaBulkVelocityOffset+idim*sizeof(double)))=0.0;
-            *((double*)(offset+MagneticFieldOffset+idim*sizeof(double)))=0.0;
+            if (PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset+idim*sizeof(double)))=0.0;
+            if (PIC::CPLR::DATAFILE::Offset::MagneticField.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=0.0;
+            if (PIC::CPLR::DATAFILE::Offset::ElectricField.active) *((double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset+idim*sizeof(double)))=0.0;
           }
         }
       }
@@ -501,190 +517,6 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
 
 }
 
-
-//save and load the binary data saved in the AMPS data structure
-void PIC::CPLR::DATAFILE::SaveBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  static CMPI_channel pipe;
-  static FILE *fout=NULL;
-
-  if (startNode==PIC::Mesh::mesh.rootTree) {
-    pipe.init(1000000);
-
-    if (PIC::Mesh::mesh.ThisThread==0) {
-      pipe.openRecvAll();
-      fout=fopen(fname,"w");
-    }
-    else pipe.openSend(0);
-  }
-
-  //loop through all points
-  //create the list of the points
-  //perform the interpolation loop
-  int i,j,k,nd;
-  PIC::Mesh::cDataCenterNode *CenterNode;
-  char *offset;
-
-  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
-  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
-  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
-
-  char SendCellFlag;
-
-  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if ((PIC::ThisThread==0)||(startNode->Thread==PIC::ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-      SendCellFlag=true;
-
-      //determine whether the cell data neede to be saved
-      if (startNode->Thread==PIC::ThisThread) {
-        //locate the cell
-        if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
-
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-        if (SendCellFlag==true) {
-          if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
-          else SendCellFlag=false,offset=NULL;
-        }
-
-        if (startNode->Thread!=0) pipe.send(SendCellFlag);
-      }
-      else {
-        pipe.recv(SendCellFlag,startNode->Thread);
-      }
-
-      //save the cell data saving flag
-      if (PIC::ThisThread==0) fwrite(&SendCellFlag,sizeof(char),1,fout);
-
-      //save the cell data
-      if (SendCellFlag==true) {
-        if (startNode->Thread==PIC::ThisThread) {
-          if (startNode->Thread==0) {
-            fwrite(offset+PlasmaNumberDensityOffset,sizeof(double),1,fout);
-            fwrite(offset+PlasmaTemperatureOffset,sizeof(double),1,fout);
-            fwrite(offset+PlasmaPressureOffset,sizeof(double),1,fout);
-            fwrite(offset+MagneticFieldOffset,3*sizeof(double),1,fout);
-            fwrite(offset+ElectricFieldOffset,3*sizeof(double),1,fout);
-            fwrite(offset+PlasmaBulkVelocityOffset,3*sizeof(double),1,fout);
-          }
-          else {
-            pipe.send((double*)(offset+PlasmaNumberDensityOffset),1);
-            pipe.send((double*)(offset+PlasmaTemperatureOffset),1);
-            pipe.send((double*)(offset+PlasmaPressureOffset),1);
-            pipe.send((double*)(offset+MagneticFieldOffset),3);
-            pipe.send((double*)(offset+ElectricFieldOffset),3);
-            pipe.send((double*)(offset+PlasmaBulkVelocityOffset),3);
-          }
-        }
-        else {
-          double data[3];
-
-          pipe.recv(data,1,startNode->Thread);
-          fwrite(data,sizeof(double),1,fout);
-
-          pipe.recv(data,1,startNode->Thread);
-          fwrite(data,sizeof(double),1,fout);
-
-          pipe.recv(data,1,startNode->Thread);
-          fwrite(data,sizeof(double),1,fout);
-
-          pipe.recv(data,3,startNode->Thread);
-          fwrite(data,sizeof(double),3,fout);
-
-          pipe.recv(data,3,startNode->Thread);
-          fwrite(data,sizeof(double),3,fout);
-
-          pipe.recv(data,3,startNode->Thread);
-          fwrite(data,sizeof(double),3,fout);
-        }
-      }
-    }
-  }
-  else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) SaveBinaryFile(fname,startNode->downNode[nDownNode]);
-  }
-
-  if (startNode==PIC::Mesh::mesh.rootTree) {
-    if (PIC::Mesh::mesh.ThisThread==0) {
-      pipe.closeRecvAll();
-      fclose(fout);
-    }
-    else pipe.closeSend();
-
-    pipe.remove();
-    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-  }
-
-}
-
-
-void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  static FILE *fData=NULL;
-
-  if (startNode==PIC::Mesh::mesh.rootTree) {
-    fData=fopen(fname,"r");
-  }
-
-  //loop through all points
-  //create the list of the points
-  //perform the interpolation loop
-  int i,j,k,nd;
-  PIC::Mesh::cDataCenterNode *CenterNode;
-  char *offset;
-
-  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
-  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
-  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
-
-  char savedLoadCellFlag;
-
-  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if (startNode->block==NULL) {
-       //the block belongs to a other processor -> skip all data
-      for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++)  {
-        fread(&savedLoadCellFlag,sizeof(char),1,fData);
-
-        if (savedLoadCellFlag==true) {
-          //the cell data is saved -> skip it
-          fseek(fData,(1+1+1+3+3+3)*sizeof(double),SEEK_CUR);
-        }
-      }
-
-    }
-    else for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-      fread(&savedLoadCellFlag,sizeof(char),1,fData);
-
-      if (savedLoadCellFlag==true) {
-        //determine whether the cell data needed to be read
-        //locate the cell
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-
-        if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) {
-          offset=CenterNode->GetAssociatedDataBufferPointer();
-
-          //read the data
-          fread(offset+PlasmaNumberDensityOffset,sizeof(double),1,fData);
-          fread(offset+PlasmaTemperatureOffset,sizeof(double),1,fData);
-          fread(offset+PlasmaPressureOffset,sizeof(double),1,fData);
-          fread(offset+MagneticFieldOffset,3*sizeof(double),1,fData);
-          fread(offset+ElectricFieldOffset,3*sizeof(double),1,fData);
-          fread(offset+PlasmaBulkVelocityOffset,3*sizeof(double),1,fData);
-        }
-        else {
-          //the cell data is saved -> skip it
-          fseek(fData,(1+1+1+3+3+3)*sizeof(double),SEEK_CUR);
-        }
-      }
-
-
-    }
-  }
-  else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) LoadBinaryFile(fname,startNode->downNode[nDownNode]);
-  }
-
-  if (startNode==PIC::Mesh::mesh.rootTree) {
-    fclose(fData);
-  }
-}
 
 
 //save and loand the interpolated values from the AMPS' data buffers
@@ -857,11 +689,6 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
     if (rDataMin==rDataMax) exit(__LINE__,__FILE__,"The variable is not set");
   }
   else exit(__LINE__,__FILE__,"Error: unknown value of DataMode");
-
-  if (Velocity.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
-  if (Pressure.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
-  if (MagneticField.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
-  if (Density.offset==-1) exit(__LINE__,__FILE__,"The variable is not set");
 
   //create TECPLOT script and run TECPLOT
   int nFileOutputs; //the number of hte TECPLOT files that contain the contain the interpolated values

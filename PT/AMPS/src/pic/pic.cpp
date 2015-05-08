@@ -1483,16 +1483,10 @@ void PIC::Init_BeforeParser() {
 
 
   //init coupler 
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_ 
-  PIC::CPLR::ICES::Init();
-#elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
-  PIC::CPLR::CCMC::Init();
-#elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-  PIC::CPLR::DATAFILE::Init();
-#if _PIC_COUPLER_MODE__DATAFILE_ARMS_ == _PIC_MODE_ON_
-  PIC::CPLR::DATAFILE::ARMS::OUTPUT::Init();
-#endif
-#endif
+  if (_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__DATAFILE_) {
+    PIC::CPLR::DATAFILE::Init();
+  }
+
 
   //init the background atmosphere model
 #if _PIC_BACKGROUND_ATMOSPHERE_MODE_ == _PIC_BACKGROUND_ATMOSPHERE_MODE__ON_

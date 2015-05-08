@@ -15,93 +15,29 @@
 #include "pic.h"
 
 //path to the location of the data files
-char   PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]="./data/input/SEP/ARMS/Converted2ASCII";
-double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCurrent   =-1.0;
-double PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext=-1.0;
-int    PIC::CPLR::DATAFILE::ARMS::OUTPUT::GradientMagneticFieldOffset=-1;
-int    PIC::CPLR::DATAFILE::ARMS::OUTPUT::AbsoluteValueMagneticFieldOffset=-1;
+double PIC::CPLR::DATAFILE::ARMS::TimeCurrent   =-1.0;
+double PIC::CPLR::DATAFILE::ARMS::TimeCoupleNext=-1.0;
 
 
-
-void PIC::CPLR::DATAFILE::ARMS::OUTPUT::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"|B|\",\"d|B|/dx\",\"d|B|/dy\",\"d|B|/dz\"");
-}
-
-void PIC::CPLR::DATAFILE::ARMS::OUTPUT::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
-  double dB[3]={0.0,0.0,0.0},B=0.0;
-  int i,idim;
-  char *SamplingBuffer;
-
-  for (i=0;i<nInterpolationCoeficients;i++) {
-
-    for (idim=0,SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+GradientMagneticFieldOffset;idim<3;idim++) dB[idim]+=(*((double*)(SamplingBuffer+idim*sizeof(double))))*InterpolationCoeficients[i];
-
-    B+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+AbsoluteValueMagneticFieldOffset)))*InterpolationCoeficients[i];
-  }
-
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+GradientMagneticFieldOffset,dB,3*sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+AbsoluteValueMagneticFieldOffset,&B,sizeof(double));
-}
-
-void PIC::CPLR::DATAFILE::ARMS::OUTPUT::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
-  int idim;
-  double t;
-
-  // |B|
-  if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+AbsoluteValueMagneticFieldOffset));
-  }
-
-  if (pipe->ThisThread==0) {
-    if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
-
-    fprintf(fout,"%e ",t);
-  }
-  else pipe->send(t);
-
-  //Magnetic Field
-  for (idim=0;idim<3;idim++) {
-    if (pipe->ThisThread==CenterNodeThread) {
-      t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+GradientMagneticFieldOffset+idim*sizeof(double)));
-    }
-
-    if (pipe->ThisThread==0) {
-      if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
-
-      fprintf(fout,"%e ",t);
-    }
-    else pipe->send(t);
-  }
-}
 
 
 // initialize reading ARMS data: set additional offsets
-void PIC::CPLR::DATAFILE::ARMS::OUTPUT::Init(){
+void PIC::CPLR::DATAFILE::ARMS::Init() {
 
-  if(AbsoluteValueMagneticFieldOffset==-1){
-    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-    AbsoluteValueMagneticFieldOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=sizeof(double);
-    TotalAssociatedDataLength+=sizeof(double);
-  }
+  //reserve place for the interpolated data
+  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
 
-  if(GradientMagneticFieldOffset==-1){
-    if (AssociatedDataOffset==-1) AssociatedDataOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-    GradientMagneticFieldOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=3*sizeof(double);
-    TotalAssociatedDataLength+=3*sizeof(double);
-  }
-
-  //print out of the output file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
-  PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
-  PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
-
-
+  PIC::CPLR::DATAFILE::Offset::AbsoluteValueMagneticField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::GradientMagneticField.allocate=true;
 }
 
 //read ARM's output file
-void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 
   // size of the uniform grid
   static int nX = -1, nZ = -1;
@@ -333,22 +269,22 @@ void PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(const char *fname,cTreeNode
 	    
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
-	      *(idim+(double*)(offset+MagneticFieldOffset))        =DataInterp[b_+idim];
-	      *(idim+(double*)(offset+GradientMagneticFieldOffset))=GrdBInterp[idim];
-	      *(idim+(double*)(offset+PlasmaBulkVelocityOffset))   =DataInterp[v_+idim];
+	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))        =DataInterp[b_+idim];
+	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::GradientMagneticField.offset))=GrdBInterp[idim];
+	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))   =DataInterp[v_+idim];
 	    }
 	    // E = -VxB
-	    *(0+(double*)(offset+ElectricFieldOffset)) = 
+	    *(0+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
 	      DataInterp[b_+1]*DataInterp[v_+2] - DataInterp[b_+2]*DataInterp[v_+1];
-	    *(1+(double*)(offset+ElectricFieldOffset)) = 
+	    *(1+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
 	      DataInterp[b_+2]*DataInterp[v_+0] - DataInterp[b_+0]*DataInterp[v_+2];
-	    *(2+(double*)(offset+ElectricFieldOffset)) = 
+	    *(2+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset)) =
 	      DataInterp[b_+0]*DataInterp[v_+1] - DataInterp[b_+1]*DataInterp[v_+0];
     
-	    *((double*)(offset+PlasmaPressureOffset))            =DataInterp[p_];
-	    *((double*)(offset+PlasmaNumberDensityOffset))       =DataInterp[n_];
-	    *((double*)(offset+PlasmaTemperatureOffset))         =DataInterp[t_];
-	    *((double*)(offset+AbsoluteValueMagneticFieldOffset))=absBInterp;
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))            =DataInterp[p_];
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))       =DataInterp[n_];
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))         =DataInterp[t_];
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::AbsoluteValueMagneticField.offset))=absBInterp;
 	  }
     }
     else {

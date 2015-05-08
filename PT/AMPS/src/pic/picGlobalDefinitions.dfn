@@ -138,11 +138,17 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_INTERNAL_DEGREES_OF_FREEDOM_MODEL__QLB_  1
 
 //definitions of the coupler mode
-#define _PIC_COUPLER_MODE__OFF_       0
-#define _PIC_COUPLER_MODE__ICES_      1
-#define _PIC_COUPLER_MODE__SWMF_      2
-#define _PIC_COUPLER_MODE__CCMC_      3
-#define _PIC_COUPLER_MODE__DATAFILE_   4
+#define _PIC_COUPLER_MODE__OFF_               0
+#define _PIC_COUPLER_MODE__SWMF_              1
+#define _PIC_COUPLER_MODE__DATAFILE_          3
+
+//define the background data file reader 
+#define _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_    0
+#define _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_       1
+#define _PIC_COUPLER_DATAFILE_READER_MODE__ICES_       2
+#define _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_   3
+#define _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_    4
+
 
 
 //the generic particle transformation codes

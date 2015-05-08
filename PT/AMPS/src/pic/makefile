@@ -45,7 +45,8 @@ PICOBJ = pic.o \
 	pic_restart.o \
 	pic_arms.o \
 	pic_tecplot.o \
-	pic_initial_conditions.o
+	pic_initial_conditions.o \
+	pic_datafile.o
 	
 ifneq ($(BATL),nobatl)	
 PICOBJ+=pic_batsrus.o \

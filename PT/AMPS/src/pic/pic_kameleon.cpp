@@ -9,7 +9,21 @@
 
 #include "pic.h"
 
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
+
+//init the reader
+
+void PIC::CPLR::DATAFILE::KAMELEON::Init() {
+  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
+}
+
+
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_
 #undef Pi //Kameleon uses its own cpnstant 'Pi'; The definition of the "global" 'Pi' is remove to eliminated the naming conflict with Kameleon library
 #undef DIM
 
@@ -29,9 +43,9 @@
 #include "time.h"
 #include <vector>
 
-double PIC::CPLR::CCMC::PlasmaSpeciesAtomicMass=1.0*_AMU_;
+double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
-void PIC::CPLR::CCMC::LFM::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
+void PIC::CPLR::DATAFILE::KAMELEON::LFM::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
   ccmc::Kameleon kameleon;
 
   kameleon.open(fname);
@@ -45,7 +59,7 @@ void PIC::CPLR::CCMC::LFM::GetDomainLimits(double *xmin,double *xmax,const char 
   xmax[2]=cm2m*kameleon.getVariableAttribute("z","actual_max").getAttributeFloat();
 }
 
-void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::DATAFILE::KAMELEON::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static ccmc::LFM *lfm=NULL;
   static ccmc::LFMInterpolator *interpolator=NULL;
 
@@ -105,18 +119,18 @@ void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh
 
       //save the interpolated values
       for (idim=0;idim<3;idim++) {
-        *(idim+(double*)(offset+MagneticFieldOffset))=interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+ElectricFieldOffset))=interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+PlasmaBulkVelocityOffset))=interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::MagneticField))=interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::ElectricField))=interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::PlasmaBulkVelocity))=interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
       }
 
       p=interpolator->interpolate("p",x[0],x[1],x[2]);
       n=interpolator->interpolate("rho",x[0],x[1],x[2])/PlasmaSpeciesAtomicMass;
       T=(n>0.0) ? p/(n*Kbol) : 0.0;
 
-      *((double*)(offset+PlasmaPressureOffset))=p;
-      *((double*)(offset+PlasmaNumberDensityOffset))=n;
-      *((double*)(offset+PlasmaTemperatureOffset))=T;
+      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaIonPressure))=p;
+      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaNumberDensity))=n;
+      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaTemperature))=T;
     }
   }
   else {
@@ -133,5 +147,6 @@ void PIC::CPLR::CCMC::LFM::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh
   }
 }
 
+#endif
 #endif
 

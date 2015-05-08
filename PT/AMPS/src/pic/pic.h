@@ -2340,179 +2340,277 @@ namespace PIC {
 
     }
 
-    //coupling of AMPS through the ICES tool
-    namespace ICES {
-       extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
-       extern char ModeCaseSWMF[_MAX_STRING_LENGTH_PIC_]; //the name of the model case that will be used for interpolation with ICES
 
-       void Init();
-       void SetLocationICES(const char*);
-
-       //the total number of bytes used to store the ICES data vector; the offset of the data associated with the ICES data vector
-       extern int TotalAssociatedDataLength,AssociatedDataOffset;
-
-       //the offsets for the plasma parameters loaded with ICES
-       extern int ElectricFieldOffset,MagneticFieldOffset,PlasmaPressureOffset,PlasmaNumberDensityOffset,PlasmaTemperatureOffset,PlasmaBulkVelocityOffset,DataStatusOffsetSWMF;
-
-       //the offsets for parameters loaded from the DSMC model
-       extern int NeutralBullVelocityOffset,NeutralNumberDensityOffset,NeutralTemperatureOffset,DataStatusOffsetDSMC;
-
-       //calcualte the total number of cells in the mesh
-       long int getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
-
-       //create the trajectory file
-       void createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-
-       //evaluate the ion flux at the surface of the spehrical interval body
-       void EvaluateSurfaceIonFlux(double ShiftFactor=1.0);
-
-
-       //retrive the SWMF data file
-       #define _PIC_ICES__STATUS_OK_   0
-
-       class cDataNodeSWMF {
-       public:
-         double swNumberDensity,swTemperature,swPressure,E[3],B[3],swVel[3];
-         int status;
-
-         void flush() {
-           swNumberDensity=0.0,swTemperature=0.0,swPressure=0.0;
-           for (int i=0;i<3;i++) E[i]=0.0,B[i]=0.0,swVel[i]=0.0;
-         }
-       };
-
-       class cDataNodeDSMC {
-       public:
-         double neutralNumberDensity,neutralTemperature,neutralVel[3];
-         int status;
-
-         void flush() {
-           neutralNumberDensity=0.0,neutralTemperature=0.0;
-
-           for (int i=0;i<3;i++) neutralVel[i]=0.0;
-         }
-       };
-
-       void retriveSWMFdata(const char *DataFile=ModeCaseSWMF);
-       void retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile);
-
-
-       void readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
-       void readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-
-       //user defined pre-processor of the data that is readed by ICES
-       typedef void (*fDSMCdataPreProcessor)(double *x,cDataNodeDSMC& data);
-       typedef void (*fSWMFdataPreProcessor)(double *x,cDataNodeSWMF& data);
-
-       extern fDSMCdataPreProcessor DSMCdataPreProcessor;
-       extern fSWMFdataPreProcessor SWMFdataPreProcessor;
-
-       void PrintVariableList(FILE* fout,int DataSetNumber);
-       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
-       void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
-
-       //print the ion flux at a sphere
-       void PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius);
-
-       //calculate the values of the located parameters
-       inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         register int idim;
-         register double *offset=(double*)(ElectricFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
-
-         for (idim=0;idim<3;idim++) E[idim]=offset[idim];
-       }
-
-       inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         register int idim;
-         register double *offset=(double*)(MagneticFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
-
-         for (idim=0;idim<3;idim++) B[idim]=offset[idim];
-       }
-
-       inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         register int idim;
-         register double *offset=(double*)(PlasmaBulkVelocityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
-
-         for (idim=0;idim<3;idim++) vel[idim]=offset[idim];
-       }
-
-       inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         return *((double*)(PlasmaPressureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
-       }
-
-       inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         return *((double*)(PlasmaNumberDensityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
-       }
-
-       inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         return *((double*)(PlasmaTemperatureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
-       }
-
-       inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-         register int idim;
-         register char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
-
-         double *e=(double*)(offset+ElectricFieldOffset);
-         double *b=(double*)(offset+MagneticFieldOffset);
-
-         for (idim=0;idim<3;idim++) B[idim]=b[idim],E[idim]=e[idim];
-       }
-    }
-
-    //coupling with the CCMC's Kemeleon
-    namespace CCMC {
-      using namespace ICES;
-
-      //the mass of the dominant background plasma ion
-      extern double PlasmaSpeciesAtomicMass;
-
-      namespace LFM {
-        void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-        void GetDomainLimits(double *xmin,double *xmax,const char *fname);
-      }
-
-    }
-
-    //reading output/restart/etc files from other codes
+    //coupling thrugh a file
     namespace DATAFILE {
-      using namespace ICES;
 
       //path to the location of the datafiles
       extern char path[_MAX_STRING_LENGTH_PIC_];
 
-      //save and loand the interpolated values from the AMPS' data buffers
-      void SaveBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
-      void LoadBinaryFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      //the offset from the cell->AssociatedData()
+      extern int CenterNodeAssociatedDataOffsetBegin;
+      extern int nTotalBackgroundVariables;
 
-      //read output of ARMS (reference???)
-      namespace ARMS {
-        //read ARMS' output file
-        namespace OUTPUT {
-	  extern double TimeCurrent;
-          extern double TimeCoupleNext;
-	  extern int GradientMagneticFieldOffset;
-	  extern int AbsoluteValueMagneticFieldOffset;
-	  void Init();
-	  void PrintVariableList(FILE* fout,int DataSetNumber);
-	  void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
-	  void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
-	  void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      //Physical quantaties offsets that could be read and stored
+      struct cOffsetElement {
+        bool active;
+        bool allocate;
+
+        int nVars;
+        char VarList[_MAX_STRING_LENGTH_PIC_];
+        int offset;
+      };
+
+      namespace Offset {
+        extern bool InitFlag;
+
+        extern cOffsetElement PlasmaNumberDensity;
+        extern cOffsetElement PlasmaBulkVelocity;
+        extern cOffsetElement PlasmaTemperature;
+        extern cOffsetElement PlasmaIonPressure;
+        extern cOffsetElement PlasmaElectronPressure;
+        extern cOffsetElement MagneticField;
+        extern cOffsetElement ElectricField;
+        extern cOffsetElement GradientMagneticField;
+        extern cOffsetElement AbsoluteValueMagneticField;
+
+
+        inline void SetAllocate(bool flag,cOffsetElement* offset) {
+          if (InitFlag==false) {
+            if (flag==false) exit(__LINE__,__FILE__,"Error: the background data fields can be only added not removed");
+
+            offset->allocate=flag;
+          }
+          else exit(__LINE__,__FILE__,"Error: changing of the allocation flags is not allowed after initialization of the offsets is completed");
+        }
+
+        inline void SetActive(bool flag,cOffsetElement* offset) {
+          if ((flag==true)&&(offset->allocate==false)) exit(__LINE__,__FILE__,"Error: the offset cannot be set 'active' if it is not allocated before during the initialization");
+          offset->active=flag;
+        }
+
+        inline void SetAllocateAll(bool flag) {
+          SetAllocate(flag,&PlasmaNumberDensity);
+          SetAllocate(flag,&PlasmaBulkVelocity);
+          SetAllocate(flag,&PlasmaTemperature);
+          SetAllocate(flag,&PlasmaIonPressure);
+          SetAllocate(flag,&PlasmaElectronPressure);
+          SetAllocate(flag,&MagneticField);
+          SetAllocate(flag,&ElectricField);
+          SetAllocate(flag,&GradientMagneticField);
+          SetAllocate(flag,&AbsoluteValueMagneticField);
+        }
+
+        inline void SetActiveAll(bool flag) {
+          SetActive(flag,&PlasmaNumberDensity);
+          SetActive(flag,&PlasmaBulkVelocity);
+          SetActive(flag,&PlasmaTemperature);
+          SetActive(flag,&PlasmaIonPressure);
+          SetActive(flag,&PlasmaElectronPressure);
+          SetActive(flag,&MagneticField);
+          SetActive(flag,&ElectricField);
+          SetActive(flag,&GradientMagneticField);
+          SetActive(flag,&AbsoluteValueMagneticField);
         }
       }
 
-      //read output of BATSRUS
-      namespace BATSRUS {
-        //read BATSRUS output file
-        namespace OUTPUT {
-          extern double PlasmaSpeciesAtomicMass; //the mass of the dominant background plasma ion
-          extern double UnitLength; //the spatial units used in the BATSRUS' output file
-          extern char filename[_MAX_STRING_LENGTH_PIC_];
-          extern bool InitFlag;
+      //load the datafile
+      void ImportData(const char *fname);
 
-          void Init(const char *fname);
-          void GetDomainLimits(double *xmin,double *xmax);
-          void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      //return the interpolated value of the background data
+      inline void GetBackgroundData(double *DataVector,int DataVectorLength,int BackgroundDataOffset,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        int i;
+        double *offset=(double*)(BackgroundDataOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (i=0;i<3;i++) DataVector[i]=offset[i];
+      }
+
+      //save/read the background data binary file
+      bool BinaryFileExists(const char *fNameBase);
+      void SaveBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      void LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
+
+      //print the background variables into AMPS' output file
+      void PrintVariableList(FILE* fout,int DataSetNumber);
+      void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+
+      //initialize the data file reader
+      void Init();
+
+      //print the ion flux at a sphere
+      void PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius);
+      void EvaluateSurfaceIonFlux(double ShiftFactor);
+
+      //calculate the values of the located parameters
+      inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double *offset=(double*)(Offset::ElectricField.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int idim=0;idim<Offset::ElectricField.nVars;idim++) E[idim]=offset[idim];
+      }
+
+      inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double *offset=(double*)(Offset::MagneticField.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=offset[idim];
+      }
+
+      inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        register double *offset=(double*)(Offset::PlasmaBulkVelocity.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int idim=0;idim<Offset::PlasmaBulkVelocity.nVars;idim++) vel[idim]=offset[idim];
+      }
+
+      inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(Offset::PlasmaIonPressure.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+      inline double GetBackgroundElectronPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+
+        offset+=(Offset::PlasmaElectronPressure.offset!=-1) ? Offset::PlasmaElectronPressure.offset : Offset::PlasmaIonPressure.offset;
+
+        return *((double*)offset);
+      }
+
+      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(Offset::PlasmaNumberDensity.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+      inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(Offset::PlasmaTemperature.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        int idim;
+        char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+
+        double *e=(double*)(offset+Offset::ElectricField.offset);
+        double *b=(double*)(offset+Offset::MagneticField.offset);
+
+        for (idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=b[idim],E[idim]=e[idim];
+      }
+
+      inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double *offset=(double*)(DataOffsetBegin+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
+      }
+
+
+      //individual reading procedures
+      namespace ICES {
+        extern char locationICES[_MAX_STRING_LENGTH_PIC_]; //location of the data and the dace cases
+        extern char ModeCaseSWMF[_MAX_STRING_LENGTH_PIC_]; //the name of the model case that will be used for interpolation with ICES
+
+        void Init();
+        void SetLocationICES(const char*);
+
+        //the total number of bytes used to store the ICES data vector; the offset of the data associated with the ICES data vector
+        extern int TotalAssociatedDataLength,AssociatedDataOffset;
+
+        //the offsets for the plasma parameters loaded with ICES are stores in PIC::CPLR::DATAFILE::Offset
+        //the offsets for parameters loaded from the DSMC model
+        extern int NeutralBullVelocityOffset,NeutralNumberDensityOffset,NeutralTemperatureOffset,DataStatusOffsetDSMC;
+
+        //calcualte the total number of cells in the mesh
+        long int getTotalCellNumber(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+
+        //create the trajectory file
+        void createCellCenterCoordinateList(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
+        //evaluate the ion flux at the surface of the spehrical interval body
+        void EvaluateSurfaceIonFlux(double ShiftFactor=1.0);
+
+
+        //retrive the SWMF data file
+        #define _PIC_ICES__STATUS_OK_   0
+
+        class cDataNodeSWMF {
+        public:
+          double swNumberDensity,swTemperature,swPressure,E[3],B[3],swVel[3];
+          int status;
+
+          void flush() {
+            swNumberDensity=0.0,swTemperature=0.0,swPressure=0.0;
+            for (int i=0;i<3;i++) E[i]=0.0,B[i]=0.0,swVel[i]=0.0;
+          }
+        };
+
+        class cDataNodeDSMC {
+        public:
+          double neutralNumberDensity,neutralTemperature,neutralVel[3];
+          int status;
+
+          void flush() {
+            neutralNumberDensity=0.0,neutralTemperature=0.0;
+
+            for (int i=0;i<3;i++) neutralVel[i]=0.0;
+          }
+        };
+
+        void retriveSWMFdata(const char *DataFile=ModeCaseSWMF);
+        void retriveDSMCdata(const char *Case,const char *DataFile,const char *MeshFile);
+
+
+        void readSWMFdata(const double MeanIonMass,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree); //MeanIonMass -> the mean ion mass of the plasma flow in [amu]
+        void readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+
+        //user defined pre-processor of the data that is readed by ICES
+        typedef void (*fDSMCdataPreProcessor)(double *x,cDataNodeDSMC& data);
+        typedef void (*fSWMFdataPreProcessor)(double *x,cDataNodeSWMF& data);
+
+        extern fDSMCdataPreProcessor DSMCdataPreProcessor;
+        extern fSWMFdataPreProcessor SWMFdataPreProcessor;
+
+        void PrintVariableList(FILE* fout,int DataSetNumber);
+        void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+        void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+        //print the ion flux at a sphere
+        void PrintSphereSurfaceIonFlux(char const* fname,double SphereRadius);
+      }
+
+      namespace KAMELEON {
+        //the mass of the dominant background plasma ion
+        extern double PlasmaSpeciesAtomicMass;
+
+        //init the reader
+        void Init();
+
+        namespace LFM {
+          void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+          void GetDomainLimits(double *xmin,double *xmax,const char *fname);
         }
+
+      }
+
+      namespace ARMS {
+        extern double TimeCurrent;
+        extern double TimeCoupleNext;
+
+
+        void Init();
+        void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+      }
+
+
+      namespace BATSRUS {
+        extern double PlasmaSpeciesAtomicMass; //the mass of the dominant background plasma ion
+        extern double UnitLength; //the spatial units used in the BATSRUS' output file
+        extern char filename[_MAX_STRING_LENGTH_PIC_];
+        extern bool InitFlag;
+
+        //reserve memory for reading the backdround data
+        void Init();
+
+        //open the file and init BATL libraty
+        void Init(const char *fname);
+
+
+        void GetDomainLimits(double *xmin,double *xmax);
+        void LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
       }
 
       namespace TECPLOT {
@@ -2544,11 +2642,14 @@ namespace PIC {
           }
         };
 
-        extern cLoadedVariableData Velocity,Pressure,MagneticField,Density;
-        inline void SetLoadedDensityVariableData(int offset,double ScaleFactor) {Density.offset=offset,Density.ScaleFactor=ScaleFactor;}
-        inline void SetLoadedVelocityVariableData(int offset,double ScaleFactor) {Velocity.offset=offset,Velocity.ScaleFactor=ScaleFactor;}
-        inline void SetLoadedPressureVariableData(int offset,double ScaleFactor) {Pressure.offset=offset,Pressure.ScaleFactor=ScaleFactor;}
-        inline void SetLoadedMagneticFieldVariableData(int offset,double ScaleFactor) {MagneticField.offset=offset,MagneticField.ScaleFactor=ScaleFactor;}
+        extern cLoadedVariableData Velocity,IonPressure,ElectronPressure,MagneticField,Density;
+        inline void SetLoadedDensityVariableData(int offset,double ScaleFactor) {Density.offset=offset-1,Density.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedVelocityVariableData(int offset,double ScaleFactor) {Velocity.offset=offset-1,Velocity.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedIonPressureVariableData(int offset,double ScaleFactor) {IonPressure.offset=offset-1,IonPressure.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedElectronPressureVariableData(int offset,double ScaleFactor) {ElectronPressure.offset=offset-1,ElectronPressure.ScaleFactor=ScaleFactor;}
+        inline void SetLoadedMagneticFieldVariableData(int offset,double ScaleFactor) {MagneticField.offset=offset-1,MagneticField.ScaleFactor=ScaleFactor;}
+
+        void Init();
 
         void SetDomainLimitsXYZ(double *xmin,double *xmax);
         void SetDomainLimitsSPHERICAL(double rmin,double rmax);
@@ -2564,8 +2665,10 @@ namespace PIC {
 
         //the function call all nessesary methods of the TECPLOT namespace to export the data
         void ImportData(const char* fname);
-
       }
+
+
+
     }
 
     //save and load the center node associated data from the AMPS' data buffers
@@ -2573,26 +2676,18 @@ namespace PIC {
     void LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
     inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-      #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-      ICES::GetBackgroundElectricField(E,x,nd,node);
-      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+      #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
       SWMF::GetBackgroundElectricField(E,x,nd,node);
-      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
-      CCMC::GetBackgroundElectricField(E,x,nd,node);
       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
       DATAFILE::GetBackgroundElectricField(E,x,nd,node);
       #else
       exit(__LINE__,__FILE__,"not implemented");
       #endif
-     }
+    }
 
      inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       ICES::GetBackgroundMagneticField(B,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundMagneticField(B,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
-       CCMC::GetBackgroundMagneticField(B,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        DATAFILE::GetBackgroundMagneticField(B,x,nd,node);
        #else
@@ -2600,14 +2695,9 @@ namespace PIC {
        #endif
      }
 
-
      inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       ICES::GetBackgroundPlasmaVelocity(vel,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__CCMC_
-       CCMC::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        DATAFILE::GetBackgroundPlasmaVelocity(vel,x,nd,node);
        #else
@@ -2618,9 +2708,7 @@ namespace PIC {
      inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        double res=0.0;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       res=ICES::GetBackgroundPlasmaPressure(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaPressure(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        res=DATAFILE::GetBackgroundPlasmaPressure(x,nd,node);
@@ -2634,9 +2722,7 @@ namespace PIC {
      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        double res=0.0;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       res=ICES::GetBackgroundPlasmaNumberDensity(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaNumberDensity(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        res=DATAFILE::GetBackgroundPlasmaNumberDensity(x,nd,node);
@@ -2650,9 +2736,7 @@ namespace PIC {
      inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        double res=0.0;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       res=ICES::GetBackgroundPlasmaTemperature(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        res=SWMF::GetBackgroundPlasmaTemperature(x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        res=DATAFILE::GetBackgroundPlasmaTemperature(x,nd,node);
@@ -2664,9 +2748,7 @@ namespace PIC {
      }
 
      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__ICES_
-       ICES::GetBackgroundFieldsVector(E,B,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        SWMF::GetBackgroundFieldsVector(E,B,x,nd,node);
        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
        DATAFILE::GetBackgroundFieldsVector(E,B,x,nd,node);
