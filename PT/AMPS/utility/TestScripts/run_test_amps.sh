@@ -1,7 +1,6 @@
 #!/bin/csh
 # This script checks out the latest version of the AMPS,
-# executes the AMPS tests and sends the results to the server:
-# herot.engin.umich.edu for further processing
+# executes the AMPS tests
 # This script is meant to be used by the AMPS developers.
 
 # The script can be executed by simply typing
@@ -14,35 +13,150 @@
 #
 # 30 0 * * * $HOME/bin/run_test_amps.sh
 
+# NOTE:
+# the body of the script is divided into blocks of the format
+#  #>BlockName ##############
+#  #command_1               #
+#  # ...                    #
+#  #command_last           <#
+# certain blocks will be uncommented at the test installation,
+# e.g. if test is GNU compiled, then block #>GNU <# will be uncommented,
+#      if test is set on Pleiades, then #>Pleiades <# will be uncommented
+
+# init command to load modules      
+#>Pleiades ############################
+#source /usr/share/modules/init/csh  <#
+
+# set the working directory
+set WorkDir = $HOME  
+
+#>Pleiades ##############
+#set WorkDir =         <#
+
+#>Yellowstone ###########
+#set WorkDir =         <#
+
 # Go to your home directory
-cd $HOME
+cd $WorkDir
+
+# source shell run commands (ONLY csh AND tcsh SHELLS ARE USED FOR NOW)
+# to set CVSROOT or CVS_RSH variables
+# note: it is better to have these variables set in the beginning of rc file
+source .cshrc
 
 # Create a temporary directory for the tests
 mkdir -p Tmp_AMPS_test
 cd Tmp_AMPS_test
 
 # Remove the previous test directory if necessary
-rm -rf AMPS
+rm -rf AMPS */AMPS
 
-# Checkout and install the latest code
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS 
+# Checkout the latest code version
+cvs co -D "`date +%m/%d/%Y` 23:20" AMPS 
 cd AMPS
-cvs co -D "`date +%m/%d/%Y` 0:30" AMPS_data 
+cvs co -D "`date +%m/%d/%Y` 23:20" AMPS_data 
+cd ..
 
-# Install the AMPS
-./Config.pl -install > test_amps.log
+# create separate folders for different compilers
+#>GNUAll ############################
+#mkdir -p GNU;   cp -r AMPS GNU/;  <#
+#>IntelAll ##########################
+#mkdir -p Intel; cp -r AMPS Intel/;<#
+#>PGIAll ############################
+#mkdir -p PGI;   cp -r AMPS PGI/;  <#
+
+# copy job files to the AMPS directory on supercomputers
+#>Pleiades
+#cp AMPS/utility
+
+# install AMPS
+#>GNUAll ################################################################
+#cd $WorkDir/Tmp_AMPS_test/GNU;   ./Config.pl -install > test_amps.log <#
+#>IntelAll ##############################################################
+#cd $WorkDir/Tmp_AMPS_test/Intel; ./Config.pl -install > test_amps.log <#
+#>PGIAll ################################################################
+#cd $WorkDir/Tmp_AMPS_test/PGI;   ./Config.pl -install > test_amps.log <#
+
+# compile AMPS tests
+
+# GNU compiler
+
+#>Pleiades>Yellowstone ########################
+#module purge;                               <#
+
+#>Pleiades ####################################
+#module load mpi-openmpi/1.6.5-gcc;          <#
+
+#>GNUAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/GNU                #
+#make test_compile \                          #
+#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+
+# Intel compiler 
+
+#>Pleiades>Yellowstone ########################
+#module purge;                               <#
+
+#>Pleiades ####################################
+#module load comp-intel/2015.0.090;           #
+#module load mpi-openmpi/1.6.5-intel;        <#
+
+
+#>IntelAll ####################################
+#cd $WorkDir/Tmp_AMPS_test/Intel;             #
+#make test_compile \                          #
+#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+
+# PGI compiler
+
+#>Pleiades>Yellowstone ########################
+#module purge;                               <#
+
+#>Pleiades ####################################
+#module load comp-pgi/15.3;                   #
+#module load mpi-mvapich2/1.8/pgi12.4;       <#
+
+
+#>PGIAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/PGI                #
+#make test_compile \                          #
+#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+
 
 # Run test
-make -j4 test  >> test_amps.log
+
+# GNU compiled tests
+
+#>GNUAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS          <#
+#>GNUOther ####################################
+#make test_run >> test_amps.log              <#
+#>Pleiades ####################################
+#/usr/bin/qsub test_amps.job                 <#
+#>Yellowstone #################################
+#/usr/bin/bsub < test_amps.job               <#
+
+
+# Intel compiled tests
+
+#>IntelAll ####################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS        <#
+#>IntelOther ##################################
+#make test_run >> test_amps.log              <#
+#>Pleiades ####################################
+#/usr/bin/qsub test_amps.job                 <#
+#>Yellowstone #################################
+#/usr/bin/bsub < test_amps.job               <#
+
+
+# PGI compiled tests
+#>PGIAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS          <#
+#>PGIOther ####################################
+#make test_run >> test_amps.log              <#
+#>Pleiades ####################################
+#/usr/bin/qsub test_amps.job                 <#
+#>Yellowstone #################################
+#/usr/bin/bsub < test_amps.job               <#
           
-# Create file with results' summary
-ls -ltr  *diff > test_amps.res
-echo '=============================================================='\
-                >> test_amps.res
-head -100 *diff >> test_amps.res
-
-# Copy test_amps.log and test_amps.res to the server
- scp test_amps.res test_amps.log \
-    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`/ 
-
 
