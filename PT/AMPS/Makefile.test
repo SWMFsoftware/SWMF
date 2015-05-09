@@ -37,7 +37,7 @@ test_moon_compile:
 	./Config.pl -application=Moon
 	rm -rf srcTestMoon
 	./ampsConfig.pl -no-compile 
-	$(MAKE) amps WSD=${WSDMOON}
+	$(MAKE) amps
 
 test_moon_rundir:
 	@echo "test_moon_rundir..." >> test_moon.diff
