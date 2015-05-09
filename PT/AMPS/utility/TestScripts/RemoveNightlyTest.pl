@@ -17,29 +17,28 @@ my $home = $ENV{"HOME"};
 my $TestName;
 
 # name of the script
-my $script="";
+my $run_script="run_test_amps.sh";
+my $scp_script="scp_test_amps.sh";
 
 # remove the test from the CRONTAB file
 my $cron = `crontab -l 2> /dev/null`;
-$cron =~ s/\n(.*)run_test_amps(.*)\n/\n/g or return 1;
-
-# script name on this machine
-$script = "run_test_amps$2";
+$cron =~ s/\n(.*?)$run_script\n/\n/g or return 1;
+$cron =~ s/\n(.*?)$scp_script\n/\n/g or return 1;
 
 {
 # read the script's content
-    open(my $fin,'<',"$home/bin/$script") or die "ERROR: nightly test script is not found at $home/bin!";
+    open(my $fin,'<',"$home/bin/$scp_script") or die "ERROR: nightly test script is not found at $home/bin!";
     local $/ = undef;
     my $fcontent = <$fin>;
     close $fin;
 # extract the test's name from the content of script
-    $fcontent =~ m/Sites\/Current\/(.*)\//;
+    $fcontent =~ m/\/Current\/(.*?)\_(.*)\//;
     $TestName = $1;
     if($TestName eq '`hostname -s`'){
 	$TestName = $hostname_s;
     }
-    unless($TestName) {die "ERROR: Test name cannot be recovered from $home/bin/$script!";}
-    system("ssh $server rm -rf Sites/Current/$TestName");
+    unless($TestName) {die "ERROR: Test name cannot be recovered from $home/bin/$scp_script!";}
+    system("ssh $server rm -rf Sites/Current/$TestName\*");
 }
 
 # write the new CRONTAB content to a temporary file
