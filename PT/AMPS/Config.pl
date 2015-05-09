@@ -15,6 +15,7 @@ my $TestRunProcessorNumber=4;
 
 # name for the nightly tests
 our $TestName;
+our @Compilers;
 
 #create Makefile.local
 if (! -e "Makefile.local") {
@@ -69,8 +70,8 @@ foreach (@Arguments) {
      print "-cplr-data-path=PATH\t\tthe path to the data files used to import other model results by PIC::CPLR::DATAFILE.\n";
      print "-batl-path=PATH\t\t\tthe path to the BATL directory\n";
      print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
-     print "-set-test(=NAME)\t\tinstall nightly tests\n";
-     print "-rm-test\t\t\tremove nightly tests\n";
+     print "-set-test(=NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all)\n";
+     print "-rm-test\/comp\t\t\tremove nightly tests\n";
      
      exit;
    }
@@ -143,10 +144,22 @@ foreach (@Arguments) {
   if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> .ampsConfig.Settings`;     next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
 
   # set nightly test:
-  #  -set-name=NAME - tests' name NAME cannot be empty
-  #  -set-name      - tests' name will be `hostname -s`
-  if (/^-set-test=(.*)$/i)      {$TestName=$1; if($TestName){require "./utility/TestScripts/SetNightlyTest.pl"}else{die "ERROR: test name is empty!"};     next}; 
-  if (/^-set-test$/i)      {$TestName=''; require "./utility/TestScripts/SetNightlyTest.pl";     next}; 
+  #  -set-name=NAME/comp - tests' name NAME cannot be empty
+  #  -set-name/comp      - tests' name will be `hostname -s`
+  if (/^-set-test=(.*)$/i)      {
+      die "ERROR: test name is empty!" unless ($1);
+      my $CompilersRaw;
+      ($TestName, $CompilersRaw) = split("\/",$1,2);
+      die "ERROR: no compiler is indicated for tests!" unless ($CompilersRaw);
+      @Compilers = split (',',lc $CompilersRaw);
+      require "./utility/TestScripts/SetNightlyTest.pl";
+      next}; 
+  if (/^-set-test\/(.*)$/i)      {
+      die "ERROR: no compiler is indicated for tests!" unless ($1);
+      $TestName=''; 
+      @Compilers = split (',',lc $1);
+      require "./utility/TestScripts/SetNightlyTest.pl";     
+      next}; 
 
   if (/^-rm-test$/i)      {require "./utility/TestScripts/RemoveNightlyTest.pl";     next}; 
   
