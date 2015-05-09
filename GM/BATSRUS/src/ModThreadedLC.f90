@@ -651,7 +651,7 @@ contains
       !\
       ! Loop variable
       !/
-      integer :: iPoint, iIter
+      integer :: iPoint, iIterFirstCell
       !-------------
       if(time_accurate)then
          DtLocal = Dt
@@ -735,9 +735,10 @@ contains
          ! internal TR
          !/
          TeSiOld = TeSi_I(1)
-         do iIter = 1, nIter
+         do iIterFirstCell = 1, nIter
             M_I(1) = PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) - EnthalpyFlux
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) &
+                 - EnthalpyFlux
             Res_I(1) =  EnthalpyFlux*TeSi_I(1) - &
                  EnthalpyFlux*(TeSi_I(2) + DCons_I(2))&
                  + IntEnergy_I(1) - SpecHeat_I(1)*PeSi_I(1)
@@ -783,9 +784,8 @@ contains
       !Add heat conduction for half time step and heating 
       !/
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
-      call get_heat_cond    
-      Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal +  &
-           DtHeatCond*ResHeatCond_I(1:nPoint-1)
+      call get_heat_cond
+      ResHeating_I(1:nPoint-1) =  ResHeating_I(1:nPoint-1)*DtLocal
       !==========Add Gravity Source================================
       !\
       !cGravPot = cGravitation*mSun*cAtomicMass/&
@@ -804,11 +804,12 @@ contains
          ResGravity_I(1)          = 0.5*GravHydroDyn*FluxConst*(            &
               - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)            &
               + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
-         Res_I(1:nPoint-1) = Res_I(1:nPoint-1) + ResGravity_I(1:nPoint-1) 
+         ResHeating_I(1:nPoint-1) = ResHeating_I(1:nPoint-1) + &
+              ResGravity_I(1:nPoint-1) 
       end if
-      !\
-      ! Version Easter 2015
-      !/
+      Res_I(1:nPoint-1) = ResHeating_I(1:nPoint-1) +  &
+           DtHeatCond*ResHeatCond_I(1:nPoint-1)
+
       U_I(1:nPoint-1) = DtHeatCond*U_I(1:nPoint-1)
       L_I(1:nPoint-1) = DtHeatCond*L_I(1:nPoint-1)
       M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
@@ -829,22 +830,50 @@ contains
            U_I=U_I(1:nPoint-1),&
            R_I=Res_I(1:nPoint-1),&
            W_I=DCons_I(1:nPoint-1))
-      Cons_I(1:nPoint-1) = &
-           max(ConsMin,Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1))
+      Cons_I(2:nPoint-1) = &
+           max(ConsMin,Cons_I(2:nPoint-1) + DCons_I(2:nPoint-1))
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)/TeSi_I(2:nPoint-1)
-      TeSi_I(1:nPoint-1) = &
-           (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+      TeSi_I(2:nPoint-1) = &
+           (3.50*Cons_I(2:nPoint-1)/HeatCondParSi)**cTwoSevenths
       PeSi_I(2:nPoint-1) = PeSi_I(2:nPoint-1)*TeSi_I(2:nPoint-1)
-      
-      call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-           DoExtrapolate=.false.)
       !\
-      ! First value is now the product of the thread length in meters times
-      ! a geometric mean pressure, so that
+      ! Solve the temperature and pressure on the top of the
+      ! internal TR
       !/
-      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
-           BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-      
+      TeSiOld = TeSi_I(1)
+      IntEnergy_I(1) = SpecHeat_I(1)*PeSi_I(1)
+      do iIterFirstCell = 1, nIter
+         Cons_I(1) = max(ConsMin, Cons_I(1) + DCons_I(1))
+         TeSi_I(1) = (3.50*Cons_I(1)/HeatCondParSi)**cTwoSevenths
+         !\
+         ! Set pressure for updated temperature 
+         !/
+         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+              DoExtrapolate=.false.)
+         !\
+         ! First value is now the product of the thread length in meters times
+         ! a geometric mean pressure, so that
+         !/
+         PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+              BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+         M_I(1) = PeSi_I(1)*SpecHeat_I(1)&
+              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + DtHeatCond*(&
+              BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) + &
+              Value_V(DHeatFluxXOverU_)*&
+              BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k) )
+         Res_I(1) =  ResHeating_I(1) + DtHeatCond*(&
+              (Cons_I(2) - Cons_I(1))*&
+              BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) - &
+              Value_V(HeatFluxLength_)*&
+              BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)) + &
+              IntEnergy_I(1) - PeSi_I(1)*SpecHeat_I(1)
+         DCons_I(1) = Res_I(1)/M_I(1)
+         if(abs(DCons_I(1))<1.e-3*Cons_I(1))exit
+      end do
+      if(abs(DCons_I(1))>1.e-3*Cons_I(1))then
+         write(*,*)'TOld, TNew',TeSiOld, TeSi_I(1)
+         call CON_stop('No Convergence in advance_hydro')
+      end if
       !\
       ! Store pressure and temperature
       !/
