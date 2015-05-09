@@ -23,4 +23,5 @@ $MaxImplBlock == 1
 $Hdf5 eq "yes"
 	h5pfc ${Cflag2} ModHdf5.f90
 
+$1
 	${COMPILE.f90}  ${Cflag0} ModFieldLineThread.f90
