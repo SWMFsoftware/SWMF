@@ -3620,13 +3620,14 @@ subroutine roe_solver(Flux_V)
   CfR  = max(CfR,aR)
   CsH  = min(CsH,aH)
   CfH  = max(CfH,aH)
+
   !\
   ! Non-dimensional scaling factors
   !/
-  Tmp1 = max(1.00e-08, Bt1H**2 + Bt2H**2)
-  Tmp1=sqrt(1./Tmp1)
+  Tmp1 = Bt1H**2 + Bt2H**2
 
-  if (Tmp1 < 1.0e04) then
+  if(Tmp1 > 1e-8)then
+     Tmp1=sqrt(1./Tmp1)
      BetaY = Bt1H*Tmp1
      BetaZ = Bt2H*Tmp1
   else
@@ -3636,17 +3637,17 @@ subroutine roe_solver(Flux_V)
 
   Tmp1 = CfH**2 - CsH**2
   if (Tmp1 > 1.0e-08) then
-     AlphaF = max(0.00,(aH**2  - CsH**2)/Tmp1)
-     AlphaS = max(0.00,(CfH**2 - aH**2 )/Tmp1)
+     AlphaF = max(0.0, (aH**2  - CsH**2)/Tmp1)
+     AlphaS = max(0.0, (CfH**2 - aH**2 )/Tmp1)
 
      AlphaF = sqrt(AlphaF)
      AlphaS = sqrt(AlphaS)
   else if (BnH**2 * RhoInvH <= aH**2 ) then
-     AlphaF = 1.00
-     AlphaS = 0.00
+     AlphaF = 1.0
+     AlphaS = 0.0
   else
-     AlphaF = 0.00
-     AlphaS = 1.00
+     AlphaF = 0.0
+     AlphaS = 1.0
   endif
 
   !\
@@ -3728,7 +3729,7 @@ subroutine roe_solver(Flux_V)
           ((Eigenvalue_V(7)*Eigenvalue_V(7)/Tmp1) + Tmp1*0.25)
   end if
 
-  Tmp1 = (UnR) - (UnL)
+  Tmp1 = UnR - UnL
   Tmp1 = max(cTiny, 4.*Tmp1)
   if (abs(Eigenvalue_V(8)) < Tmp1*0.5) then
      Eigenvalue_V(8) = sign(1.,Eigenvalue_V(8))* &
