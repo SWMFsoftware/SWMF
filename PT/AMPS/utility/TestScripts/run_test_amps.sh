@@ -70,12 +70,15 @@ cd ..
 #cp AMPS/utility
 
 # install AMPS
-#>GNUAll ################################################################
-#cd $WorkDir/Tmp_AMPS_test/GNU;   ./Config.pl -install > test_amps.log <#
-#>IntelAll ##############################################################
-#cd $WorkDir/Tmp_AMPS_test/Intel; ./Config.pl -install > test_amps.log <#
-#>PGIAll ################################################################
-#cd $WorkDir/Tmp_AMPS_test/PGI;   ./Config.pl -install > test_amps.log <#
+#>GNUAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
+#./Config.pl -install > test_amps.log        <#
+#>IntelAll ####################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
+#./Config.pl -install > test_amps.log        <#
+#>PGIAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
+#./Config.pl -install > test_amps.log        <#
 
 # compile AMPS tests
 
@@ -87,10 +90,9 @@ cd ..
 #>Pleiades ####################################
 #module load mpi-openmpi/1.6.5-gcc;          <#
 
-#>GNUAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/GNU                #
-#make test_compile \                          #
-#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+#>GNUAll ###################################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                        #
+#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
 
 # Intel compiler 
 
@@ -102,10 +104,9 @@ cd ..
 #module load mpi-openmpi/1.6.5-intel;        <#
 
 
-#>IntelAll ####################################
-#cd $WorkDir/Tmp_AMPS_test/Intel;             #
-#make test_compile \                          #
-#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+#>IntelAll #################################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                      #
+#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
 
 # PGI compiler
 
@@ -117,10 +118,9 @@ cd ..
 #module load mpi-mvapich2/1.8/pgi12.4;       <#
 
 
-#>PGIAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/PGI                #
-#make test_compile \                          #
-#   COMPILE.mpicxx=mpicxx >> test_amps.log   <#
+#>PGIAll ###################################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                        #
+#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
 
 
 # Run test
