@@ -41,7 +41,7 @@ module ModThreadedLC
   real, parameter:: TeSiMin = 5.0e4, TeMinReflectionSi=4.0e4 
   logical        :: UseAlignedVelocity = .true., UseGravity = .false.
   !\
-  ! 1. Coef to express radiation losses in terms of pressure (rather than density)
+  ! 1. Coef to express radiation losses in terms of pressure (not density)
   ! 2. Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
   !/
   real           :: cCoolingPerPe2, RhoNoDimCoef, TeMin, ConsMin
@@ -75,6 +75,8 @@ module ModThreadedLC
   !/
   real    :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
   integer, parameter:: Impl_=3
+
+  real,parameter:: CTol=0.0010
 contains
   !=========================================================================
   subroutine init_threaded_lc
@@ -468,12 +470,13 @@ contains
            +( Cons_I(2:nPoint-1) - Cons_I(1:nPoint-2))*L_I(2:nPoint-1) 
     end subroutine get_heat_cond
     !===========================
-    subroutine get_cooling
+    subroutine get_cooling(nLast)
       use ModGeometry, ONLY: Xyz_DGB
+      integer,intent(in) ::nLast
       integer ::  iPoint
       !-----------------
       ResCooling_I = 0.0;
-      do iPoint = 1, nPoint-1
+      do iPoint = 1, nLast
          if(TeSi_I(iPoint)>1.0e8)then
             write(*,*)'Failure in heat condusction setting'
             write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
@@ -530,7 +533,7 @@ contains
          !Shape the source.
          !/
          call get_heat_cond
-         call get_cooling
+         call get_cooling(nLast=nPoint-1)
          !\
          ! Correct the temperature derivative near the TR
          ! due to the pressure dependence of the radiative cooling, 
@@ -755,9 +758,9 @@ contains
             !/
             PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
                  BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
-          if(abs(DCons_I(1))<1.e-3*TeSi_I(1))exit
+          if(abs(DCons_I(1))<cTol*TeSi_I(1))exit
          end do
-         if(abs(DCons_I(1))>1.e-3*TeSi_I(1))then
+         if(abs(DCons_I(1))>cTol*TeSi_I(1))then
             write(*,*)'TOld, TNew, DTLast=',TeSiOld, TeSi_I(1), DCons_I(1)
             call CON_stop('No Convergence in advance_hydro')
          end if
@@ -868,9 +871,9 @@ contains
               BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)) + &
               IntEnergy_I(1) - PeSi_I(1)*SpecHeat_I(1)
          DCons_I(1) = Res_I(1)/M_I(1)
-         if(abs(DCons_I(1))<1.e-3*Cons_I(1))exit
+         if(abs(DCons_I(1))<cTol*Cons_I(1))exit
       end do
-      if(abs(DCons_I(1))>1.e-3*Cons_I(1))then
+      if(abs(DCons_I(1))>cTol*Cons_I(1))then
          write(*,*)'TOld, TNew',TeSiOld, TeSi_I(1)
          call CON_stop('No Convergence in advance_hydro')
       end if
@@ -892,8 +895,8 @@ contains
       !\
       ! Time step in the physical cell from which the thread originates
       !/
-      real ::DtLocal, DtHeatCond
-      integer :: iIter
+      real    :: DtLocal, DtHeatCond, TeSiOld
+      integer :: iIter, iIterFirstCell
       !-----------
       if(time_accurate)then
          DtLocal = Dt*No2Si_V(UnitT_)
@@ -910,7 +913,7 @@ contains
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
       do iIter = 1, nIter
          call get_heat_cond
-         call get_cooling
+         call get_cooling(nLast=nPoint-1)
          !\
          ! Correct the temperature derivative near the TR
          ! due to the pressure dependence of the radiative cooling, 
@@ -935,9 +938,6 @@ contains
               SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) + &
               DtHeatCond*ResHeatCond_I(1:nPoint-1)      + &
               DtLocal*ResCooling_I(1:nPoint-1)
-         !\
-         ! Version Easter 2015
-         !/
          U_I(1:nPoint-1) = DtHeatCond*U_I(1:nPoint-1)
          L_I(1:nPoint-1) = DtHeatCond*L_I(1:nPoint-1)
          M_I(2:nPoint-1) = DtHeatCond*M_I(2:nPoint-1) + &
@@ -950,13 +950,43 @@ contains
               U_I=U_I(1:nPoint-1),&
               R_I=Res_I(1:nPoint-1),&
               W_I=DCons_I(1:nPoint-1))
-         Cons_I(1:nPoint-1) = &
-              max(ConsMin,Cons_I(1:nPoint-1) + DCons_I(1:nPoint-1))
-         TeSi_I(1:nPoint-1) = &
-              (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
-         
-         call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
-              DoExtrapolate=.false.)
+         Cons_I(2:nPoint-1) = &
+              max(ConsMin,Cons_I(2:nPoint-1) + DCons_I(2:nPoint-1))
+         TeSi_I(2:nPoint-1) = &
+              (3.50*Cons_I(2:nPoint-1)/HeatCondParSi)**cTwoSevenths
+         TeSiOld = TeSi_I(1)
+         do iIterFirstCell = 1, nIter
+            Cons_I(1) = max(ConsMin, Cons_I(1) + DCons_I(1))
+            TeSi_I(1) = (3.50*Cons_I(1)/HeatCondParSi)**cTwoSevenths
+            !\
+            ! Set pressure for updated temperature 
+            !/
+            call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
+                 DoExtrapolate=.false.)
+            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+                 BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
+            call get_cooling(nLast=1)
+            M_I(1) = PeSi_I(1)*SpecHeat_I(1)&
+                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + &
+                 DtHeatCond*(&
+                 BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) + &
+                 Value_V(DHeatFluxXOverU_)*&
+                 BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k) )&
+                 -2*ResCooling_I(1)*DtLocal/&
+                 (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+            Res_I(1) =  DtLocal*ResCooling_I(1) + DtHeatCond*(&
+                 (Cons_I(2) - Cons_I(1))*&
+                 BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) - &
+                 Value_V(HeatFluxLength_)*&
+                 BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)) + &
+                 IntEnergy_I(1) - PeSi_I(1)*SpecHeat_I(1)
+            DCons_I(1) = Res_I(1)/M_I(1)
+            if(abs(DCons_I(1))<cTol*Cons_I(1))exit
+         end do
+         if(abs(DCons_I(1))>cTol*Cons_I(1))then
+            write(*,*)'TOld, TNew',TeSiOld, TeSi_I(1)
+            call CON_stop('No Convergence in advance_heat')
+         end if
          call set_pressure
       end do
     end subroutine advance_heat_cond
@@ -1014,7 +1044,6 @@ contains
     integer, parameter:: nIterMax = 10
     integer:: nIter
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
-    real,parameter:: CTol=0.0010
     !---------------------------------------------------------------------------
     APlus_I(0:nI)  = 1.0
     AMinus_I(0:nI) = AMinusBC
