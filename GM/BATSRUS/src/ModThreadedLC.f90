@@ -76,7 +76,7 @@ module ModThreadedLC
   real    :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
   integer, parameter:: Impl_=3
 
-  real,parameter:: CTol=0.0010
+  real,parameter:: CTol=1.0e-6
 contains
   !=========================================================================
   subroutine init_threaded_lc
