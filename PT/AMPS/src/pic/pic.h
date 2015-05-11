@@ -2142,6 +2142,14 @@ namespace PIC {
 
   }
 
+  //in case of time-dependent model runs with glocal time stop for all specis -> count the physical time of the simulation
+  namespace SimulationTime {
+    extern double TimeCounter;
+    void SetInitialValue(double InitalTimeCounterValue);
+    double Get();
+    void Update();
+  }
+
   namespace Parallel {
 
 

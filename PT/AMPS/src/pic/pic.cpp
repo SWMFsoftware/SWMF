@@ -189,6 +189,10 @@ void PIC::TimeStep() {
   UserDefinedMPI_RoutineExecutionTime=MPI_Wtime()-UserDefinedMPI_RoutineExecutionTime;
 #endif
 
+  //update the glabal time counter if needed
+#if _PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
+  PIC::SimulationTime::Update();
+#endif
 
   struct cExchangeStatisticData {
     double TotalInterationRunTime;

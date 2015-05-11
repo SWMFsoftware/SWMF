@@ -19,6 +19,31 @@ PIC::ParticleWeightTimeStep::fExosphereModelExtraSourceRate PIC::ParticleWeightT
 //the global particle weight/time step
 double *PIC::ParticleWeightTimeStep::GlobalParticleWeight=NULL,*PIC::ParticleWeightTimeStep::GlobalTimeStep=NULL;
 
+//simulation time counter
+double PIC::SimulationTime::TimeCounter=0.0;
+
+//set initial value of the time counter
+void PIC::SimulationTime::SetInitialValue(double InitalTimeCounterValue) {
+  TimeCounter=InitalTimeCounterValue;
+}
+
+//get the time counter value
+double PIC::SimulationTime::Get() {
+  return TimeCounter;
+}
+
+//update the time counter
+void PIC::SimulationTime::Update() {
+  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  if (PIC::nTotalSpecies!=1) exit(__LINE__,__FILE__,"Error: the time simulation glocal counting cannot be applied when the species number is greated thatn one");
+  TimeCounter+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[0];
+  #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
+  exit(__LINE__,__FILE__,"Error: not implemented");
+#else
+  exit(__LINE__,__FILE__,"Error: the global time counter cannot be applied for this case");
+#endif
+
+}
 
 //====================================================
 //get the maximum Block injection rate across the computational domain

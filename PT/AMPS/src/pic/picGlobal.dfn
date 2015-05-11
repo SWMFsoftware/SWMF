@@ -181,5 +181,13 @@ at the end of each time step
 #define _PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_ _PIC_READ_PARTICLE_DATA_RESTART_FILE__MODE_OFF_
 #define _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_
 
+//by default the glabal simulation time counter is off. the time counter representes the global physical simulation time. it can be 'on' only when a global-single-species or
+//global-species-dependent (with only one species in the simulation) time stepping are used
+#define _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_OFF_
+
+
+
+ 
+
 
 
