@@ -16,7 +16,7 @@ module ModThreadedLC
   ! eefect of gravity on the hydrostatic equilibrium
   !/
   use ModFieldLineThread, ONLY:  &
-       GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+       GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
   !\
   !energy flux needed to raise the mass flux rho*u to the heliocentric 
   !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
@@ -24,13 +24,13 @@ module ModThreadedLC
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   !/
   use ModFieldLineThread, ONLY:  &
-       GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge 
+       GravHydroDyn ! = cGravPot*MassIon_I(1)/Z 
 
   use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
                               LPerpTimesSqrtBSi, LPerpTimesSqrtB
 
   use ModAdvance,    ONLY: UseElectronPressure, UseIdealEos
-  use ModPhysics,    ONLY: AverageIonCharge
+  use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModConst,      ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   implicit none
   !\
@@ -88,6 +88,7 @@ module ModThreadedLC
   ! See above for the use of the latter constant
   !/
 
+  real :: SqrtZ
   integer, parameter:: Impl_=3
 
   real,parameter:: CTol=1.0e-6
@@ -132,6 +133,7 @@ contains
     allocate(L_VVI(Te_:LogP_,Te_:LogP_,nPointThreadMax)); L_VVI = 0.0
     allocate(M_VVI(Te_:LogP_,Te_:LogP_,nPointThreadMax)); M_VVI = 0.0
 
+    SqrtZ = sqrt(Z)
 
     !\
     ! TeFraction is used for ideal EOS:
@@ -140,7 +142,7 @@ contains
        ! Pe = ne*Te (dimensionless) and n=rho/ionmass
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
-       TeFraction = MassIon_I(1)/AverageIonCharge
+       TeFraction = MassIon_I(1)/Z
        iP = Pe_
        PeFraction = 1.0
     else
@@ -148,9 +150,9 @@ contains
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
        TeFraction = MassIon_I(1) &
-            /(1 + AverageIonCharge)
+            /(1 + Z)
        iP = p_
-       PeFraction = AverageIonCharge/(1.0 + AverageIonCharge) 
+       PeFraction = Z/(1.0 + Z) 
     end if
     !\
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
@@ -172,19 +174,19 @@ contains
     !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
     ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
     !/
-    GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+    GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
     !\
     !energy flux needed to raise the mass flux rho*u to the heliocentric 
     !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
     !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
     !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
     !/
-    GravHydroDyn  = cGravPot*MassIon_I(1)/AverageIonCharge
+    GravHydroDyn  = cGravPot*MassIon_I(1)/Z
     !\
     ! With this constant, the volumetric radiative cooling rate is
     ! the table value multiplied by cCoolingPerPe2*(PeSi/TeSi)**2
     !/
-    cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*AverageIonCharge)
+    cCoolingPerPe2 = RadCool2Si/(cBoltzmann*cBoltzmann*Z)
 
     !\
     ! With this constant, the dimensionless density 
@@ -269,7 +271,7 @@ contains
     ! First value is now the product of the thread length in meters times
     ! a geometric mean pressure, so that
     !/
-    PeSiOut        = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+    PeSiOut        = Value_V(LengthPAvrSi_)*SqrtZ/&
          BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k)
     DTeOverDsSiOut = PeSiOut*Value_V(UHeat_)/(HeatCondParSi*TeSiIn**2.5)
     RhoNoDimOut    = RhoNoDimCoef*PeSiOut/TeSiIn
@@ -444,14 +446,14 @@ contains
       ! First value is now the product of the thread length in meters times
       ! a geometric mean pressure, so that
       !/
-      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+      PeSi_I(1) = Value_V(LengthPAvrSi_)*SqrtZ/&
            BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
       !\
       !   Hydrostatic equilibrium in an isothermal corona: 
       !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
       ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
       !/
-      !GravHydroStat = cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+      !GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
       do iPoint = 2, nPoint
          PeSi_I(iPoint) = PeSi_I(iPoint-1)*&
             exp( -(0.5/TeSi_I(iPoint) + 0.5/TeSi_I(iPoint-1))*&
@@ -471,8 +473,23 @@ contains
            -U_VVI(Te_,Te_,2:nPoint-1) - L_VVI(Te_,Te_,2:nPoint-1)
       M_VVI(Te_,Te_,1) = -U_VVI(Te_,Te_,1) + Value_V(DHeatFluxXOverU_)*&
            BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
-      M_VVI(LogP_,LogP_,1:nPoint) =  1.0
-      L_VVI(LogP_,LogP_,2:nPoint) = -1.0
+      M_VVI(LogP_,LogP_,1:nPoint-1) =  1.0
+      !\
+      ! We satisfy the equation, d(LogP) = d(Cons)*(dP/dCons)_{TR}/P
+      !/
+      M_VVI(LogP_,Cons_,1) = -1/&
+              (Value_V(HeatFluxLength_)*Sqrt(Z))
+
+      !\
+      ! For other points we satisfy the hydrostatic equilibrium condition
+      ! LogPe^{i-1}=LogPe^i+TGrav/Te^i
+      ! dLogPe^i - dCons^i(TGrav/(Te^i)^2)*dTe/dCons
+      !/
+      M_VVI(LogP_,Cons_,2:nPoint-1) = -&
+           BoundaryThreads_B(iBlock)% TGrav_III(2-nPoint:-1,j,k)/&
+           (TeSi_I(2:nPoint-1)*3.50*Cons_I(2:nPoint-1))
+
+      L_VVI(LogP_,LogP_,2:nPoint-1) = -1.0
       !\
       ! Right heat fluxes
       !/
@@ -531,9 +548,9 @@ contains
       TeSi_I(nPoint) = TeSiIn
       do iPoint = nPoint-1, 1, -1
          call interpolate_lookup_table(&
-              iTable=iTableTR,           &
+              iTable=iTableTR,         &
               iVal=LengthPAvrSi_,      &
-              ValIn=PeSiOut/sqrt(AverageIonCharge)*                       &
+              ValIn=PeSiOut/SqrtZ*     &
               BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
               Arg2In=1.0e8,            &
               Value_V=Value_V,         &
@@ -561,15 +578,15 @@ contains
          ! of the temperature near TR
          !/
          M_VVI(Te_,Te_,1) = M_VVI(Te_,Te_,1) -2*ResCooling_I(1)/&
-              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+              (Value_V(HeatFluxLength_)*Sqrt(Z))
 
          ResEnthalpy_I = 0.0
          !\
          ! Add enthalpy correction
          !/
          if(USiIn>0)then
-            EnthalpyFlux = USiIn * (PeSi_I(nPoint)/AverageIonCharge)& !5/2*U*Pi
-                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+            EnthalpyFlux = USiIn * (PeSi_I(nPoint)/Z)& !5/2*U*Pi
+                 *(InvGammaElectronMinus1 +1)*(1 + Z)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             EnthalpyCorrection = EnthalpyFlux*TeSi_I(1)
@@ -585,8 +602,8 @@ contains
             ResEnthalpy_I(nPoint-1)   = &
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          elseif(USiIn<0)then
-            EnthalpyFlux = USiIn * (PeSiIn/AverageIonCharge)  & !5/2*U*Pi
-                 *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)/&
+            EnthalpyFlux = USiIn * (PeSiIn/Z)  & !5/2*U*Pi
+                 *(InvGammaElectronMinus1 +1)*(1 + Z)/&
                  (TeSiIn*PoyntingFluxPerBSi*&
                  BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
             EnthalpyCorrection = EnthalpyFlux*TeSi_I(1)
@@ -606,11 +623,13 @@ contains
          Res_VI(Te_,1:nPoint-1) = &
               ResHeating_I(1:nPoint-1) +  ResCooling_I(1:nPoint-1) +&
               ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1)
+         M_VVI(Te_,LogP_,2:nPoint-1) = &
+              -2*ResCooling_I(2:nPoint-1) !=-dCooling/dLogPe
          !==========Add Gravity Source================================
          !\
          !cGravPot = cGravitation*mSun*cAtomicMass/&
          !/   (cBoltzmann*rSun)
-         !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
+         !GravHydroDyn = cGravPot*MassIon_I(1)/Z
          !\
          !energy flux needed to raise the mass flux rho*u to the heliocentric 
          !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
@@ -628,13 +647,15 @@ contains
               L_VVI=L_VVI(:,:,1:nPoint-1),&
               M_VVI=M_VVI(:,:,1:nPoint-1),&
               U_VVI=U_VVI(:,:,1:nPoint-1),&
-              R_VI=Res_VI(:,1:nPoint-1),&
+              R_VI=Res_VI(:,1:nPoint-1),  &
               W_VI=DCons_VI(:,1:nPoint-1))
          
          Cons_I(1:nPoint-1) = &
               max(ConsMin,Cons_I(1:nPoint-1) + DCons_VI(Te_,1:nPoint-1))
          TeSi_I(1:nPoint-1) = &
               (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
+         TeSi_I(2:nPoint-1) = max(TeSi_I(2:nPoint-1),&
+              BoundaryThreads_B(iBlock)%TGrav_III(2-nPoint:-1,j,k))
          
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
@@ -674,7 +695,7 @@ contains
       if(DoTestMe)write(*,*)'DtLocal=', DtLocal
 
       SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1 &
-           * (1 + AverageIonCharge)/AverageIonCharge* &
+           * (1 + Z)/Z* &
            BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1)
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
@@ -698,8 +719,8 @@ contains
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
 
-         EnthalpyFlux = FluxConst/AverageIonCharge& !5/2*U*Pi
-              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)
+         EnthalpyFlux = FluxConst/Z& !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + Z)
          !\
          ! Solve equation!
          !SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_i-T^{n+1}_{i-1})=0
@@ -723,8 +744,8 @@ contains
          FluxConst    = UDt * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_)) 
-         EnthalpyFlux = FluxConst/AverageIonCharge  & !5/2*U*Pi
-              *(InvGammaElectronMinus1 +1)*(1 + AverageIonCharge)           
+         EnthalpyFlux = FluxConst/Z  & !5/2*U*Pi
+              *(InvGammaElectronMinus1 +1)*(1 + Z)           
          !\
          ! Solve equation!
          ! SpecHeat*(T^{n+1}_i-T^n_i) + EnthalpyFlux*(T^{n+1}_{i+1}-T^{n+1}_i)=0
@@ -748,7 +769,7 @@ contains
          do iIterFirstCell = 1, nIter
             M_VVI(Te_,Te_,1) = &
                  PeSi_I(1)*SpecHeat_I(1)*HeatCondParSi*TeSi_I(1)**2.50 &
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) &
+                 /(SqrtZ*Value_V(HeatFluxLength_)) &
                  - EnthalpyFlux
             Res_VI(Te_,1) =  EnthalpyFlux*TeSi_I(1) - &
                  EnthalpyFlux*(TeSi_I(2) + DCons_VI(Te_,2))&
@@ -760,7 +781,7 @@ contains
             !/
             call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
                  DoExtrapolate=.false.)
-            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+            PeSi_I(1) = Value_V(LengthPAvrSi_)*SqrtZ/&
                  BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
           if(abs(DCons_VI(Te_,1))<cTol*TeSi_I(1))exit
          end do
@@ -786,7 +807,7 @@ contains
       ! First value is now the product of the thread length in meters times
       ! a geometric mean pressure, so that
       !/
-      PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+      PeSi_I(1) = Value_V(LengthPAvrSi_)*SqrtZ/&
            BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
       !\
       !Add heat conduction for half time step and heating 
@@ -798,7 +819,7 @@ contains
       !\
       !cGravPot = cGravitation*mSun*cAtomicMass/&
       !/   (cBoltzmann*rSun)
-      !GravHydroDyn = cGravPot*MassIon_I(1)/AverageIonCharge
+      !GravHydroDyn = cGravPot*MassIon_I(1)/Z
       !\
       !energy flux needed to raise the mass flux rho*u to the heliocentric 
       !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
@@ -830,7 +851,7 @@ contains
       ! dPe/dCons=Pe/(Pe*L*UHeat(T))
       !/ 
       M_VVI(Te_,Te_,1) = DtHeatCond*M_VVI(Te_,Te_,1) + SpecHeat_I(1)*PeSi_I(1)&
-           /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+           /(SqrtZ*Value_V(HeatFluxLength_))
       DCons_VI = 0.0
       call tridiag_2by2_block(n=nPoint-1,  &
            L_VVI=L_VVI(:,:,1:nPoint-1),&
@@ -862,10 +883,10 @@ contains
          ! First value is now the product of the thread length in meters times
          ! a geometric mean pressure, so that
          !/
-         PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+         PeSi_I(1) = Value_V(LengthPAvrSi_)*SqrtZ/&
               BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
          M_VVI(Te_,Te_,1) = PeSi_I(1)*SpecHeat_I(1)&
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + DtHeatCond*(&
+              /(SqrtZ*Value_V(HeatFluxLength_)) + DtHeatCond*(&
               BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) + &
               Value_V(DHeatFluxXOverU_)*&
               BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k) )
@@ -913,7 +934,7 @@ contains
            DoExtrapolate=.false.)
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = InvGammaElectronMinus1  &
-           * (1 + AverageIonCharge)/AverageIonCharge*  &
+           * (1 + Z)/Z*  &
            BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)
       IntEnergy_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)*PeSi_I(1:nPoint-1) 
       do iIter = 1, nIter
@@ -935,9 +956,9 @@ contains
          !/ 
          M_VVI(Te_,Te_,1) = DtHeatCond*M_VVI(Te_,Te_,1) -&
               2*ResCooling_I(1)*DtLocal/&
-              (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))&
+              (Value_V(HeatFluxLength_)*Sqrt(Z))&
               + SpecHeat_I(1)*PeSi_I(1)&
-              /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_))
+              /(SqrtZ*Value_V(HeatFluxLength_))
 
 
          Res_VI(Te_,1:nPoint-1) = IntEnergy_I(1:nPoint-1)    - &
@@ -969,17 +990,17 @@ contains
             !/
             call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
                  DoExtrapolate=.false.)
-            PeSi_I(1) = Value_V(LengthPAvrSi_)*sqrt(AverageIonCharge)/&
+            PeSi_I(1) = Value_V(LengthPAvrSi_)*SqrtZ/&
                  BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k)
             call get_cooling(nLast=1)
             M_VVI(Te_,Te_,1) = PeSi_I(1)*SpecHeat_I(1)&
-                 /(sqrt(AverageIonCharge)*Value_V(HeatFluxLength_)) + &
+                 /(SqrtZ*Value_V(HeatFluxLength_)) + &
                  DtHeatCond*(&
                  BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) + &
                  Value_V(DHeatFluxXOverU_)*&
                  BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k) )&
                  -2*ResCooling_I(1)*DtLocal/&
-                 (Value_V(HeatFluxLength_)*Sqrt(AverageIonCharge))
+                 (Value_V(HeatFluxLength_)*Sqrt(Z))
             Res_VI(Te_,1) =  DtLocal*ResCooling_I(1) + DtHeatCond*(&
                  (Cons_I(2) - Cons_I(1))*&
                  BoundaryThreads_B(iBlock)% BDsInvSi_III(1-nPoint,j,k) - &
@@ -1338,7 +1359,7 @@ contains
        ! Assign ion pressure (if separate from electron one)
        !/
        if(iP/=p_)State_VG(p_, 1-nGhost:0, j, k) = &
-            State_VG(iP, 1-nGhost:0, j, k)/AverageIonCharge
+            State_VG(iP, 1-nGhost:0, j, k)/Z
 
        State_VG(Rho_, 0, j, k) = max(RhoNoDimOut, 0.90*State_VG(Rho_, 1, j, k))
        !\
