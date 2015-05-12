@@ -2727,6 +2727,20 @@ namespace PIC {
        return res;
      }
 
+     inline double GetBackgroundElectronPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       double res=0.0;
+
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       exit(__LINE__,__FILE__,"Error: not implemented");
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       res=DATAFILE::GetBackgroundElectronPlasmaPressure(x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+
+       return res;
+     }
+
      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        double res=0.0;
 
