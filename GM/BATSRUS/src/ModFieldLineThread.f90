@@ -59,6 +59,11 @@ module ModFieldLineThread
      !/
      real,pointer :: B_III(:,:,:),RInv_III(:,:,:)
      !\
+     ! The use:
+     ! PeSi_I(iPoint) = PeSi_I(iPoint-1)*exp(-TGrav_III(iPoint)/TeSi_I(iPoint))
+     !/
+     real, pointer:: TGrav_III(:,:,:)
+     !\
      ! The type of last update for the thread solution
      !/
      integer :: iAction
@@ -152,6 +157,24 @@ module ModFieldLineThread
   ! multistage loop in explicit.f90
   !/
   integer, public   :: iStage = 0
+
+  !\
+  !   Hydrostatic equilibrium in an isothermal corona: 
+  !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
+  ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+  !/
+  !\
+  ! The plasma properties dependent coefficient needed to evaluate the 
+  ! eefect of gravity on the hydrostatic equilibrium
+  !/
+  real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+  !\
+  !energy flux needed to raise the mass flux rho*u to the heliocentric 
+  !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+  !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
+  !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
+  !/
+  real,public :: GravHydroDyn ! = cGravPot*MassIon_I(1)/AverageIonCharge
 contains
   !=============================================================================
   subroutine read_threads(iSession)
@@ -200,6 +223,7 @@ contains
     nullify(BoundaryThreads_B(iBlock) % Xi_III)
     nullify(BoundaryThreads_B(iBlock) % B_III)
     nullify(BoundaryThreads_B(iBlock) % RInv_III)
+    nullify(BoundaryThreads_B(iBlock) % TGrav_III)
     nullify(BoundaryThreads_B(iBlock) % TSi_III)
     nullify(BoundaryThreads_B(iBlock) % PSi_III)
     nullify(BoundaryThreads_B(iBlock) % nPoint_II)
@@ -216,6 +240,7 @@ contains
     deallocate(BoundaryThreads_B(iBlock) % Xi_III)
     deallocate(BoundaryThreads_B(iBlock) % B_III)
     deallocate(BoundaryThreads_B(iBlock) % RInv_III)
+    deallocate(BoundaryThreads_B(iBlock) % TGrav_III)    
     deallocate(BoundaryThreads_B(iBlock) % TSi_III)
     deallocate(BoundaryThreads_B(iBlock) % PSi_III)
     deallocate(BoundaryThreads_B(iBlock) % nPoint_II)
@@ -270,6 +295,8 @@ contains
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % RInv_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
+          allocate(BoundaryThreads_B(iBlock) % TGrav_III(&
+               -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % TSi_III(&
                -nPointThreadMax:0,1:nJ,1:nK))
           allocate(BoundaryThreads_B(iBlock) % PSi_III(&
@@ -322,7 +349,7 @@ contains
     !values at the photospheric end and the maximal 
     !value of this index is 0 for the thread point
     !at the physical cell center. 
-    integer :: j, k, iPoint, nTrial, iInterval
+    integer :: j, k, iPoint, nTrial, iInterval, nPoint
 
     !\
     ! rBody here is set to one keeping a capability to set
@@ -362,6 +389,7 @@ contains
     BoundaryThreads_B(iBlock) % Xi_III = 0.0
     BoundaryThreads_B(iBlock) % B_III = 0.0
     BoundaryThreads_B(iBlock) % RInv_III = 0.0
+    BoundaryThreads_B(iBlock) % TGrav_III = 0.0
     BoundaryThreads_B(iBlock) % TSi_III = -1.0
     BoundaryThreads_B(iBlock) % PSi_III = 0.0
     BoundaryThreads_B(iBlock) % nPoint_II = 0
@@ -474,7 +502,13 @@ contains
        !nodes such that the first one is on the top of the TR, the last 
        !one is in the center of physical cell 
        !/
-       BoundaryThreads_B(iBlock) % nPoint_II(j,k) = iPoint + 1 - nIntervalTR
+       nPoint = iPoint + 1 - nIntervalTR
+       BoundaryThreads_B(iBlock) % nPoint_II(j,k) = nPoint
+       BoundaryThreads_B(iBlock)%TGrav_III(2-nPoint:0,j,k) = &
+            GravHydroStat*&
+            (-BoundaryThreads_B(iBlock)%RInv_III(2-nPoint:0,j,k) + &
+            BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-1,j,k))
+       
        !\
        !Store the lengths
        !/
@@ -698,6 +732,7 @@ contains
     HeatCondParSi = 3.2*3.0*cTwoPi/CoulombLog &
          *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
          *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
+
 
     iTable =  i_lookup_table('TR')
     if(iTable < 0)then
