@@ -68,6 +68,15 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  TrajectoryTracing=on
+  MaxSampledTrajectoryNumber=25000
+
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Comet::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_ON_ 
+
+
   RecoverMacroscopicSampledData=off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
     file=pic.SamplingDataRestart.out=5.dat
