@@ -301,7 +301,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
-      return 0.3*startNode->GetCharacteristicCellSize()/50.0;
+      return 5.0* 0.3*startNode->GetCharacteristicCellSize()/50.0;
     } else {
       CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
     }
@@ -475,6 +475,9 @@ double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *Boundary
 
 int main(int argc,char **argv) {
 
+  //init reading of the electron pressure data from the BATSRUS TECPLOT data file
+  PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.allocate=true;
+
   //init the particle solver
   PIC::InitMPI();
   PIC::Init_BeforeParser();
@@ -546,7 +549,7 @@ int main(int argc,char **argv) {
 
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xd6078dc0f431c73c.mesh.bin";
+  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
   bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
@@ -608,8 +611,8 @@ int main(int argc,char **argv) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //read the background data
-    if (PIC::Mesh::mesh.AssociatedDataFileExists("background")==true)  {
-      PIC::Mesh::mesh.LoadCenterNodeAssociatedData("background");
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("CG-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("CG-BATSRUS");
     }
     else {
       double xminTECPLOT[3]={-32,-32,-32},xmaxTECPLOT[3]={16,32,32};
@@ -627,14 +630,15 @@ int main(int argc,char **argv) {
       PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(0.0,500.0);
 
       PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
-      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=11;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(11,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedElectronPressureVariableData(11,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=12;
       PIC::CPLR::DATAFILE::TECPLOT::ImportData("/Users/vtenishe/Debugger/eclipse-workspace/MERCURYAMPS/AMPS/data/input/CG/3d__var_4_n00230000-extracted.plt"); //data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt
 
-      PIC::Mesh::mesh.SaveCenterNodeAssociatedData("background");
+      PIC::CPLR::DATAFILE::SaveBinaryFile("CG-BATSRUS");
     }
 
 
