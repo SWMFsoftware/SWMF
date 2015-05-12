@@ -16,6 +16,7 @@
 
 # set the working directory
 set WorkDir = $HOME  
+set Server  = dborovik@herot.engin.umich.edu
 
 #>Pleiades ##############
 #set WorkDir =         <#
@@ -29,36 +30,30 @@ cd $WorkDir/Tmp_AMPS_test
 # Create file with results' summary and scp to server
 
 # GNU compiled test
-#>GNUAll ################################################################
-#cd GNU/AMPS                                                            #
-#ls -ltr  *diff > test_amps.res                                         #
-#echo '=============================================================='\ #
-#                >> test_amps.res                                       # 
-#head -100 *diff >> test_amps.res                                       #
-#scp test_amps.res test_amps.log \                                      #
-#    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`_gnu/    #
-#cd ../..                                                              <#
+#>GNUAll #####################################################################
+#cd GNU/AMPS                                                                 #
+#ls -ltr  *diff > test_amps.res                                              #
+#echo '===============================================' >> test_amps.res     # 
+#head -100 *diff >> test_amps.res                                            #
+#scp test_amps.res test_amps.log ${Server}:Sites/Current/`hostname -s`_gnu/  #
+#cd ../..                                                                   <#
 
 
 # Intel compiled test
-#>IntelAll ##############################################################
-#cd Intel/AMPS                                                          #
-#ls -ltr  *diff > test_amps.res                                         #
-#echo '=============================================================='\ #
-#                >> test_amps.res                                       #
-#head -100 *diff >> test_amps.res                                       #
-#scp test_amps.res test_amps.log \                                      #
-#    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`_intel/  #
-#cd ../..                                                              <#
+#>IntelAll ###################################################################
+#cd Intel/AMPS                                                               #
+#ls -ltr  *diff > test_amps.res                                              #
+#echo '===============================================' >> test_amps.res     # 
+#head -100 *diff >> test_amps.res                                            #
+#scp test_amps.res test_amps.log ${Server}:Sites/Current/`hostname -s`_intel/#
+#cd ../..                                                                   <#
 
 # PGI compiled test
-#>PGIAll ################################################################
-#cd PGI/AMPS                                                            #
-#ls -ltr  *diff > test_amps.res                                         #
-#echo '=============================================================='\ #
-#                >> test_amps.res                                       #
-#head -100 *diff >> test_amps.res                                       #
-#scp test_amps.res test_amps.log \                                      #
-#    dborovik@herot.engin.umich.edu:Sites/Current/`hostname -s`_pgi/    #
-#cd ../..                                                              <#
+#>PGIAll #####################################################################
+#cd PGI/AMPS                                                                 #
+#ls -ltr  *diff > test_amps.res                                              #
+#echo '===============================================' >> test_amps.res     # 
+#head -100 *diff >> test_amps.res                                            #
+#scp test_amps.res test_amps.log ${Server}:Sites/Current/`hostname -s`_pgi/  #
+#cd ../..                                                                   <#
 
