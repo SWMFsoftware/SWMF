@@ -130,7 +130,7 @@ void ElectricallyChargedDust::Init_AfterParser() {
   char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-    PIC::MolecularData::GetChemSymbol(ChemSymbol,spec);
+    PIC::MolecularData::GetChemBaseSymbol(ChemSymbol,spec);
 
     if ((DustSpeciesBegin==false)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")==0)) {
       //the first dust group

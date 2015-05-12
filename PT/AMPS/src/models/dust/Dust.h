@@ -306,9 +306,9 @@ namespace ElectricallyChargedDust {
 
 
 
-    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
+//    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
     PIC::Mesh::cDataCenterNode *CenterNode;
-    double *E,*B;
+    double E[3],B[3];
     int i,j,k;
 
     //copy to local variables
@@ -329,23 +329,25 @@ namespace ElectricallyChargedDust {
   #endif
 
     CenterNode=startNode->block->GetCenterNode(nd);
-    memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+CenterNode->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
+//    memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+CenterNode->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
 
     //Lorentz force
-    E=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::ElectricFieldOffset);
-    B=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::MagneticFieldOffset);
+//    E=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::ElectricFieldOffset);
+//    B=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::MagneticFieldOffset);
+
+    PIC::CPLR::GetBackgroundFieldsVector(E,B,x_LOCAL,nd,startNode);
 
     accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
     accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
     accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
 
-    //the gravity force
+/*    //the gravity force
     double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
     double c=GravityConstant*_MASS_(_TARGET_)/pow(r2,3.0/2.0);
 
     accl_LOCAL[0]-=c*x_LOCAL[0];
     accl_LOCAL[1]-=c*x_LOCAL[1];
-    accl_LOCAL[2]-=c*x_LOCAL[2];
+    accl_LOCAL[2]-=c*x_LOCAL[2];*/
 
     //Drag force
     /*
@@ -626,17 +628,24 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
   int i,j,k;
   long int LocalCellNumber;
 
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+  //the procesure is applied only to dust
+  if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
   cell=initNode->block->GetCenterNode(LocalCellNumber);
 
   //ICES plasma data
-  char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
-  double *swVel;
+//  char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
+  double swVel[3];
 
-  memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
+/*  memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
   plasmaTemperature=*((double*)(PIC::CPLR::ICES::PlasmaTemperatureOffset+ICES_AssociatedData));
   swVel=(double*)(PIC::CPLR::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
-  plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));
+  plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));*/
+
+  plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,initNode);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,initNode);
+  plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,initNode);
 
   if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 
@@ -959,19 +968,24 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
     int i,j,k;
     long int LocalCellNumber;
 
-    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+    //the procesure is applied only to dust
+    if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
     cell=initNode->block->GetCenterNode(LocalCellNumber);
 
     //ICES plasma data
-    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
-    double *swVel;
+//    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
+    double swVel[3];
 
+
+/*    //the access to the local plasma flow parameters has to be updated with the current coupling approach!!!!!!
     memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
     plasmaTemperature=*((double*)(PIC::CPLR::ICES::PlasmaTemperatureOffset+ICES_AssociatedData));
     swVel=(double*)(PIC::CPLR::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
     plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));
 
-    if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+    if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;*/
 
     //get the grain electric potential
     char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -985,8 +999,34 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
     //reserve space for different elecgtron and ion temepratures
     double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron;
 
+
+    plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,initNode);
+    PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,initNode);
+    plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,initNode);
+
+
+    if (plasmaNumberDensity<1.0E2) {
+      plasmaTemperature=200.0;
+      plasmaNumberDensity=1.0E2;
+      swVel[0]=100.0,swVel[1]=0.0,swVel[2]=0.0;
+    }
+
+
+
     Ti=plasmaTemperature;
     Te=plasmaTemperature;
+
+
+
+/*    //the plasma flow data
+    double vvvv[3]={100.0,0.0,0.0};
+
+    swVel=vvvv;
+    plasmaNumberDensity=20000.0/18.0*1.0E6;
+    Ti=0.1E-9/(Kbol*plasmaNumberDensity);
+    Te=0.001E-9/(Kbol*plasmaNumberDensity);*/
+
+
 
 
   //==========  DEBUG  BEGIN =================
