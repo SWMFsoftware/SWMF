@@ -66,6 +66,9 @@ namespace Comet {
 
   void GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
+  //the condition for begining of the dust trajectory tracking
+  bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData);
+
 }
     //the total acceleration acting on a particle
   //double SodiumRadiationPressureAcceleration_Combi_1997_icarus(double HeliocentricVelocity,double HeliocentricDistance);

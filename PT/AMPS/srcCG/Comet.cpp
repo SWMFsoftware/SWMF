@@ -456,6 +456,12 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
 
+  //apply condition of tracking the particle
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::InitParticleID(tempParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+  #endif
+
   ElectricallyChargedDust::SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
   ElectricallyChargedDust::SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
   ElectricallyChargedDust::SetGrainRadius(GrainRadius,(PIC::ParticleBuffer::byte*)tempParticleData);
@@ -535,6 +541,12 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
   PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+  //apply condition of tracking the particle
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::InitParticleID(tempParticleData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+  #endif
 
   PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 
@@ -1076,6 +1088,10 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
     while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
     for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
     for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+
+    if (ExternalNormal[0]*v_LOCAL_IAU_OBJECT[0]+ ExternalNormal[1]*v_LOCAL_IAU_OBJECT[1]+ ExternalNormal[2]*v_LOCAL_IAU_OBJECT[2]<0.0) {
+      exit(__LINE__,__FILE__,"Error: the initial velocity of the grains is directed inside the nucleus");
+    }
   }
   else {
     for (idim=0;idim<3;idim++) ExternalNormal[idim]=-ExternalNormal[idim];
@@ -1680,5 +1696,16 @@ unsigned int Comet::GetParticleSurfaceElement(PIC::ParticleBuffer::byte *Particl
 
 void Comet::SetParticleSurfaceElement(int SurfaceElement,PIC::ParticleBuffer::byte *ParticleDataStart) {
       *((int*) (ParticleDataStart+offsetSurfaceElement))=SurfaceElement;
+}
+
+bool Comet::TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+
+  //only those solar wind ions are traced, which trajectories are close to the surface of Mercury
+  if ((spec>=_DUST_SPEC_) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
+    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(2.7E3,2)) return false;
+  }
+  else return false;
+
+  return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
 }
 
