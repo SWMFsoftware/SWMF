@@ -36,7 +36,7 @@ double PIC::SimulationTime::Get() {
 void PIC::SimulationTime::Update() {
   #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
   if (PIC::nTotalSpecies!=1) exit(__LINE__,__FILE__,"Error: the time simulation glocal counting cannot be applied when the species number is greated thatn one");
-  TimeCounter+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[0];
+  TimeCounter+=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
   #elif _SIMULATION_TIME_STEP_MODE_ == _SINGLE_GLOBAL_TIME_STEP_
   exit(__LINE__,__FILE__,"Error: not implemented");
 #else
