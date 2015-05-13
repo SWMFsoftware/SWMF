@@ -192,6 +192,10 @@ void PIC::TimeStep() {
   //update the glabal time counter if needed
 #if _PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
   PIC::SimulationTime::Update();
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+  if(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate())
+    PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
+#endif
 #endif
 
   struct cExchangeStatisticData {
