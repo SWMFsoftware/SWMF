@@ -31,6 +31,8 @@ void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn,
   TimeCoupleNext= -1.0;
   // load the first file
   UpdateDataFile();
+  // set the global time counter value
+  PIC::SimulationTime::SetInitialValue(TimeCurrent);
 }
 
 
