@@ -247,7 +247,7 @@ void amps_init_mesh() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile("dataARMS.t=20.dat");
+	PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",20);
 }
 
 void amps_init(){
@@ -293,22 +293,6 @@ void amps_init(){
 
 void amps_time_step () {
 
-  static double GlobalTime =-1.0;
-  static int    nOutputFile = 20;
-  char fname[_MAX_STRING_LENGTH_PIC_];
-  
-  if(GlobalTime < 0) 
-    GlobalTime = PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCurrent;
-  else
-    if(GlobalTime >=PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext){
-      nOutputFile++;
-      sprintf(fname,"%s%d%s","dataARMS.t=",nOutputFile,".dat");
-      PIC::CPLR::DATAFILE::ARMS::OUTPUT::LoadDataFile(fname);
-      if (PIC::Mesh::mesh.ThisThread==0)
-	std::cout<<"Load ARMS data file "<<nOutputFile<< " at global time "<< 
-	  GlobalTime << "; next file will be loaded at time " << 
-	  PIC::CPLR::DATAFILE::ARMS::OUTPUT::TimeCoupleNext <<"\n";
-    }
   PIC::TimeStep();
-  GlobalTime+=PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
+
 }
