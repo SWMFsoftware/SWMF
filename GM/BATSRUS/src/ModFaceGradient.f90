@@ -575,7 +575,7 @@ contains
 
   subroutine set_block_jacobian_face(iBlock, UseFirstOrderBcIn)
 
-    use ModMain, ONLY: x_, y_, z_, nDim
+    use ModMain, ONLY: x_, y_, z_
     use ModNumConst, ONLY: i_DD
     use ModCoordTransform, ONLY: inverse_matrix
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB
@@ -739,7 +739,7 @@ contains
           DcoordDxyz_DDFD(y_,:,i,nJ+1,k,y_) = Dxyz_D
        end do; end do
     end if
-   if(neiLBot(iBlock)==NoBlk)then
+    if(neiLBot(iBlock)==NoBlk)then
        do j=1,nJ; do i=1,nI
           Dxyz_D = Xyz_DGB(:,i,j,1,iBlock) - Xyz_DGB(:,i,j,0,iBlock)
           Dxyz_D = Dxyz_D*(CellSize_DB(z_,iBlock)/sum(Dxyz_D**2))
@@ -767,7 +767,7 @@ contains
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
          neiLnorth, neiLtop, neiLbot
     use BATL_lib,      ONLY: IsCartesianGrid, nDim, Dim1_, Dim2_, Dim3_, &
-         CellSize_DB, DiLevelNei_IIIB, MaxDim, x_, y_, z_, &
+         CellSize_DB, DiLevelNei_IIIB, x_, y_, z_, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
     integer, intent(in) :: iDir, i, j, k, iBlock, nField
@@ -883,9 +883,9 @@ contains
                + Cy*(Var_IG(iField,i-1,jR,k) + Var_IG(iField,i,jR,k))
 
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
-                  + Az*(Var_IG(iField,i-1,j,kL) + Var_IG(iField,i,j,kL)) &
-                  + Bz*(Var_IG(iField,i-1,j,k ) + Var_IG(iField,i,j,k )) &
-                  + Cz*(Var_IG(iField,i-1,j,kR) + Var_IG(iField,i,j,kR))
+               + Az*(Var_IG(iField,i-1,j,kL) + Var_IG(iField,i,j,kL)) &
+               + Bz*(Var_IG(iField,i-1,j,k ) + Var_IG(iField,i,j,k )) &
+               + Cz*(Var_IG(iField,i-1,j,kR) + Var_IG(iField,i,j,kR))
        case(2)
           FaceGrad_DI(Dim1_,iField) = &
                + Ax*(Var_IG(iField,iL,j-1,k) + Var_IG(iField,iL,j,k)) &
@@ -896,9 +896,9 @@ contains
                InvDy*(Var_IG(iField,i,j,k) - Var_IG(iField,i,j-1,k))
 
           if(nK > 1) FaceGrad_DI(Dim3_,iField) = &
-                  + Az*(Var_IG(iField,i,j-1,kL) + Var_IG(iField,i,j,kL)) &
-                  + Bz*(Var_IG(iField,i,j-1,k ) + Var_IG(iField,i,j,k )) &
-                  + Cz*(Var_IG(iField,i,j-1,kR) + Var_IG(iField,i,j,kR))
+               + Az*(Var_IG(iField,i,j-1,kL) + Var_IG(iField,i,j,kL)) &
+               + Bz*(Var_IG(iField,i,j-1,k ) + Var_IG(iField,i,j,k )) &
+               + Cz*(Var_IG(iField,i,j-1,kR) + Var_IG(iField,i,j,kR))
        case(3)
           FaceGrad_DI(Dim1_,iField) = &
                + Ax*(Var_IG(iField,iL,j,k-1) + Var_IG(iField,iL,j,k)) &
@@ -1129,7 +1129,7 @@ contains
     ! cartesian gradient from the partial derivatives dScalar/dGencoord
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
-   end if
+    end if
   end subroutine get_face_gradient
 
   !============================================================================
@@ -1243,7 +1243,7 @@ contains
        call calc_cartesian_curl
     else
        call calc_gencoord_curl
-    end if                             
+    end if
 
   contains
 
