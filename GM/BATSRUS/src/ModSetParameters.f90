@@ -3012,7 +3012,7 @@ contains
 
     implicit none
 
-    integer :: iFile, iDim, iMin, iMax
+    integer :: iFile
     real    :: Ratio, PlotRes_D(3)
 
     real    :: CellSizeMax_D(3)
@@ -3169,24 +3169,7 @@ contains
        plot_dx(1:3, iFile) = PlotRes_D
 
        ! Make sure that plotting range is placed at an integer multiple of dx
-
-       do iDim = 1, 3
-          iMin = 2*iDim - 1; iMax = iMin+1
-
-          ! Skip ignored dimensions of 2D and 1D cuts
-          if(plot_range(iMax, iFile) - plot_range(iMin, iFile) &
-               <= 1.5*PlotRes_D(iDim)) CYCLE
-
-          ! Shift plot range slightly outward
-          plot_range(iMin,iFile) = plot_range(iMin,iFile) - SmallSize_D(iDim)
-          plot_range(iMax,iFile) = plot_range(iMax,iFile) + SmallSize_D(iDim)
-
-          ! Round plot range to multiple of plot resolution
-          plot_range(iMin:iMax, iFile) = XyzMin_D(iDim) + PlotRes_D(iDim)* &
-               nint( (plot_range(iMin:iMax,iFile) &
-               -      XyzMin_D(iDim))/PlotRes_D(iDim) )
-       end do
-
+       call adjust_plot_range(PlotRes_D(1), plot_range(:,iFile))
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' adjusted range   =',plot_range(:,ifile)
 
