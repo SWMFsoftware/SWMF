@@ -256,10 +256,7 @@ contains
     ! the last one is in the physical cell of the SC model
     !/
     integer :: nPoint 
-    integer        :: nIter = 25
-    !\
-    ! Limited USiIn
-    !/
+    integer        :: nIter = 10
     !\
     ! Corrrect density and pressure values in the ghost cell
     !/
@@ -592,7 +589,7 @@ contains
       ! no heating. Calculate the pressure distribution
       !/ 
       call set_pressure
-      call get_res_heating(nIterIn=nIter)
+      call get_res_heating(nIterIn=nIter*2)
       do iIter = 1,nIter
          TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
          !\
@@ -637,7 +634,9 @@ contains
             ResEnthalpy_I(nPoint-1)   = &
                  ResEnthalpy_I(nPoint-1)  - EnthalpyCorrection
          end if
+!!!!!!
          ResEnthalpy_I=0.0
+!!!!!!
          Res_VI(Te_,1:nPoint-1) = &
               ResHeating_I(1:nPoint-1) +  ResCooling_I(1:nPoint-1) +&
               ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1)
@@ -689,19 +688,19 @@ contains
          end if
          if(all(abs(DCons_VI(Te_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
       end do
-      if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1)))then
-         write(*,*)'TeOld Te TeMin PeSi_I'
-         do iPoint=1,nPoint
-            write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
-                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
-                 PeSi_I(iPoint)
-         end do
-         write(*,*)'Error =',maxval(&
-              abs(DCons_VI(Te_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
-              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-         call CON_stop('Algorithm failure in set_initial_thread')
-      end if
-      call get_res_heating(nIterIn=nIter)
+!      if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1)))then
+!         write(*,*)'TeOld Te TeMin PeSi_I'
+!         do iPoint=1,nPoint
+!            write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+!                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+!                 PeSi_I(iPoint)
+!         end do
+!         write(*,*)'Error =',maxval(&
+!              abs(DCons_VI(Te_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
+!              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+!         call CON_stop('Algorithm failure in set_initial_thread')
+!      end if
+      call get_res_heating(nIterIn=nIter*2)
       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
     end subroutine set_initial_thread
@@ -741,7 +740,7 @@ contains
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
       DeltaEnergy_I = 0.0
-      call get_res_heating(nIterIn=nIter)
+      call get_res_heating(nIterIn=nIter*2)
       ResHeating_I(1:nPoint-1) = ResHeating_I(1:nPoint-1)*DtLocal
       do iIter = 1,nIter
          TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
@@ -833,6 +832,7 @@ contains
          !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
          !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
          !/
+!!!!!!!!
          !if(UseGravity)then
          !   ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(            &
 !                 - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)         &
@@ -877,18 +877,18 @@ contains
          call set_pressure
          if(all(abs(DCons_VI(Te_,1:nPoint-1))<cTol*TeSi_I(1:nPoint-1)))EXIT
       end do
-      if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*TeSi_I(1:nPoint-1)))then
-         write(*,*)'TeOld Te TeMin PeSi_I'
-         do iPoint=1,nPoint
-            write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
-                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
-                 PeSi_I(iPoint)
-         end do
-         write(*,*)'Error =',maxval(&
-              abs(DCons_VI(Te_,1:nPoint-1)/TeSi_I(1:nPoint-1))),&
-              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-         call CON_stop('Algorithm failure in advance_hydro')
-      end if
+      !if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*TeSi_I(1:nPoint-1)))then
+      !   write(*,*)'TeOld Te TeMin PeSi_I'
+      !   do iPoint=1,nPoint
+      !      write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+      !           BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+      !           PeSi_I(iPoint)
+      !   end do
+      !   write(*,*)'Error =',maxval(&
+      !        abs(DCons_VI(Te_,1:nPoint-1)/TeSi_I(1:nPoint-1))),&
+      !        ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+      !   call CON_stop('Algorithm failure in advance_hydro')
+      !end if
       !\
       ! Store pressure and temperature
       !/
@@ -974,18 +974,18 @@ contains
          call set_pressure
          if(all(abs(DCons_VI(Te_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
       end do
-      if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1)))then
-         write(*,*)'TeOld Te TeMin PeSi_I'
-         do iPoint=1,nPoint
-            write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
-                 BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
-                 PeSi_I(iPoint)
-         end do
-         write(*,*)'Error =',maxval(&
-              abs(DCons_VI(Te_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
-              ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
-         call CON_stop('Algorithm failure in advance_heat_cond')
-      end if
+      !if(any(abs(DCons_VI(Te_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1)))then
+      !   write(*,*)'TeOld Te TeMin PeSi_I'
+      !   do iPoint=1,nPoint
+      !      write(*,*)iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
+      !           BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k),&
+      !           PeSi_I(iPoint)
+      !   end do
+      !   write(*,*)'Error =',maxval(&
+      !        abs(DCons_VI(Te_,1:nPoint-1)/Cons_I(1:nPoint-1))),&
+      !        ' at the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
+      !   call CON_stop('Algorithm failure in advance_heat_cond')
+      !end if
     end subroutine advance_heat_cond
   end subroutine solve_boundary_thread
   !=========================================================================  
