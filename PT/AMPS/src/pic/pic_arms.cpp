@@ -14,13 +14,6 @@
 
 #include "pic.h"
 
-//path to the location of the data files
-double PIC::CPLR::DATAFILE::ARMS::TimeCurrent   =-1.0;
-double PIC::CPLR::DATAFILE::ARMS::TimeCoupleNext=-1.0;
-
-
-
-
 // initialize reading ARMS data: set additional offsets
 void PIC::CPLR::DATAFILE::ARMS::Init() {
 
@@ -58,9 +51,10 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
     // reset parameters
     nX = -1; nZ=-1; 
-    TimeCurrent   =-1.0;
-    TimeCoupleNext=-1.0;
-    while(fin.eof()==false && (nX < 0 || nZ < 0|| TimeCurrent < 0 || TimeCoupleNext < 0) ){
+    MULTIFILE::TimeCurrent   =-1.0;
+    MULTIFILE::TimeCoupleNext=-1.0;
+    while(fin.eof()==false && (nX < 0 || nZ < 0|| 
+			       MULTIFILE::TimeCurrent < 0 || MULTIFILE::TimeCoupleNext < 0) ){
       if(fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false){
 	exit(__LINE__,__FILE__, "ERROR: the size of the grid couldn't be read.");
 	break;
@@ -69,13 +63,13 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
       
       if((strcmp("#TIME",str1)==0)){
 	fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	TimeCurrent = strtod(str1, NULL);
+	MULTIFILE::TimeCurrent = strtod(str1, NULL);
       }
       else
 	if((strcmp("#TIME_NEXT",str1)==0)){
 	  fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	  TimeCoupleNext=strtod(str1, NULL);
-	  if(TimeCoupleNext < 0)
+	  MULTIFILE::TimeCoupleNext=strtod(str1, NULL);
+	  if(MULTIFILE::TimeCoupleNext < 0)
 	    exit(__LINE__,__FILE__,"Reached the last ARMS data file; exit");
 	}
 	else

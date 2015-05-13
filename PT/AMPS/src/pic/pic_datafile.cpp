@@ -12,6 +12,37 @@
 
 #include "pic.h"
 
+//time of the currently loaded datafile                                   
+double PIC::CPLR::DATAFILE::MULTIFILE::TimeCurrent    = -1.0;
+//time to load the next datafile                                          
+double PIC::CPLR::DATAFILE::MULTIFILE::TimeCoupleNext = -1.0;
+// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"                      
+int  PIC::CPLR::DATAFILE::MULTIFILE::FileNumber = 0;
+char PIC::CPLR::DATAFILE::MULTIFILE::FileNameBase[_MAX_STRING_LENGTH_PIC_] = "";
+char PIC::CPLR::DATAFILE::MULTIFILE::FileExt[_MAX_STRING_LENGTH_PIC_] = "dat";
+
+void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn, 
+					  int         FileNumberFirst, 
+					  const char *FileExtIn){
+  sprintf(FileNameBase,"%s", FileNameBaseIn);
+  sprintf(FileExt,     "%s", FileExtIn);
+  FileNumber    = FileNumberFirst;
+  TimeCurrent   = -1.0;
+  TimeCoupleNext= -1.0;
+  // load the first file
+  UpdateDataFile();
+}
+
+
+void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
+  // compose a name for the next file to load
+  char fullname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
+  PIC::CPLR::DATAFILE::ImportData(fullname);
+  if(TimeCoupleNext < 0)
+    exit(__LINE__,__FILE__,"Reached the last data file; exit");
+  FileNumber++;
+}
 
 //path to the location of the datafiles
 char PIC::CPLR::DATAFILE::path[_MAX_STRING_LENGTH_PIC_]=".";
@@ -37,10 +68,16 @@ PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::AbsoluteValueMa
 void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
 
   //the particular  reader
-  if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
+  switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
+  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
     TECPLOT::ImportData(fname);
+    break;
+  case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
+    ARMS::LoadDataFile(fname);
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
-  else exit(__LINE__,__FILE__,"Error: the option is unknown");
 
 }
 

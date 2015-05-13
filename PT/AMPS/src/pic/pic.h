@@ -2352,8 +2352,29 @@ namespace PIC {
     //coupling thrugh a file
     namespace DATAFILE {
 
+      namespace MULTIFILE{
+	//time of the currently loaded datafile
+	extern double TimeCurrent;
+	//time to load the next datafile
+	extern double TimeCoupleNext;
+	// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
+	extern int  FileNumber;
+	extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
+	extern char FileExt[_MAX_STRING_LENGTH_PIC_];
+	//check whether it is time to load the next file
+	inline bool IsTimeToUpdate(){
+	  return TimeCoupleNext >= 0.0 && PIC::SimulationTime::Get() >= TimeCoupleNext;
+	}
+	//initialize
+	void Init(const char *FileNameBaseIn, int FileNumber = 0, const char *FileExtIn="dat");
+	//update the datafile
+	void UpdateDataFile();
+      }
+
       //path to the location of the datafiles
       extern char path[_MAX_STRING_LENGTH_PIC_];
+
+
 
       //the offset from the cell->AssociatedData()
       extern int CenterNodeAssociatedDataOffsetBegin;
@@ -2595,8 +2616,6 @@ namespace PIC {
       }
 
       namespace ARMS {
-        extern double TimeCurrent;
-        extern double TimeCoupleNext;
 
 
         void Init();
