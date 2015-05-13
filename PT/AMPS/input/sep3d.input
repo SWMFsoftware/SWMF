@@ -45,7 +45,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
 TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
-CouplerMode= file !ices !swmf !!!ices !!off, ices, swmf
+CouplerMode= file(arms) !ices !swmf !!!ices !!off, ices, swmf
 
 #endmain
 
@@ -82,6 +82,8 @@ CouplerMode= file !ices !swmf !!!ices !!off, ices, swmf
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+
+define  _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_ON_
 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) SEP3D::Physics::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 
