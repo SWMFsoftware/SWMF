@@ -1029,7 +1029,6 @@ contains
     use ModFaceGradient, ONLY: get_face_gradient, get_face_curl
     use ModPhysics,  ONLY: UnitTemperature_, UnitN_, Si2No_V
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use BATL_lib,  ONLY: Dim1_, Dim2_, Dim3_
     use ModUserInterface ! user_material_properties
 
     real,    intent(out):: Flux_V(nFlux)
@@ -1129,12 +1128,11 @@ contains
        end if
 
        ! Calculate grad(Pe)/(n_e * e)
-       GradXPeNe = GradPe_D(Dim1_)*InvElectronDens
-       GradYPeNe = GradPe_D(Dim2_)*InvElectronDens
-       GradZPeNe = GradPe_D(Dim3_)*InvElectronDens
+       GradXPeNe = GradPe_D(1)*InvElectronDens
+       GradYPeNe = GradPe_D(2)*InvElectronDens
+       GradZPeNe = GradPe_D(3)*InvElectronDens
 
     end if
-
 
     if(DoRadDiffusion)then
        call get_radiation_energy_flux(iDimFace, iFace, jFace, kFace, &
@@ -2445,6 +2443,7 @@ contains
 
       ! f_n[b_k] = u_n*(b_k + B0_k) - u_k*(b_n + B0_n)
       if(HallCoeff > 0.0)then
+         ! Note that the HallCoeff contains the ion mass/charge.
          InvRho = 1.0/Rho
          HallUx = UxPlus - HallJx*InvRho
          HallUy = UyPlus - HallJy*InvRho
