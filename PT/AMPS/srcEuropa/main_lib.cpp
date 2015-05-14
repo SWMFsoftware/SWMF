@@ -1111,20 +1111,22 @@ void amps_init() {
 #endif
 
 
-	//init ICES
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+
+
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__ICES_
+  //init ICES
 
 #ifdef _ICES_CREATE_COORDINATE_LIST_
-/*
-  const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
-  const char IcesModelCase[]="";//"Europa09";
-
-
-	PIC::CPLR::ICES::createCellCenterCoordinateList();
-	PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
-	PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
-*/
-
-
+  /*
+   *const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
+   *const char IcesModelCase[]="";//"Europa09";
+   *
+   *
+   *PIC::CPLR::ICES::createCellCenterCoordinateList();
+   *PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
+   *PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
+   */
 
   PIC::CPLR::ICES::createCellCenterCoordinateList();
   //PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/ices/ICES/Models"); //("/Users/vtenishe/CODES/ICES/Models");
@@ -1132,27 +1134,63 @@ void amps_init() {
 #endif
 
 
-//#ifdef _ICES_LOAD_DATA_
+  //#ifdef _ICES_LOAD_DATA_
+  
+  PIC::CPLR::ICES::readSWMFdata(1.0);
+  //  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
+  
 
-#if _PIC_COUPLER_MODE_ ==	_PIC_COUPLER_MODE__ICES_
-	PIC::CPLR::ICES::readSWMFdata(1.0);
-	//  PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
+  //output the solar wind ion flux at the palnet's surface
+  PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
+  PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
+  
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
+  
+  Exosphere::SourceProcesses::Init();
+  PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
+  
 
+#elif _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  //TECPLOT
+  //read the background data
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("EUROPA-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("EUROPA-BATSRUS");
+    }
+    else {
+      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
 
-	//output the solar wind ion flux at the palnet's surface
-	PIC::CPLR::ICES::PrintSphereSurfaceIonFlux("SurfaceIonFlux.dat",1.05*_RADIUS_(_TARGET_));
-	PIC::CPLR::ICES::EvaluateSurfaceIonFlux(1.05);
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+      
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+      
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+      
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_EUROPA__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(11,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=11;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("./3d__mhd_3_n00045039-extracted.plt"); 
+      
+      PIC::CPLR::DATAFILE::SaveBinaryFile("EUROPA-BATSRUS");
+    }
+
+#else
+    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
+
+#endif _PIC_COUPLER_DATAFILE_READER_MODE_
+
+#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 	
-	PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test.dat",0);
-	
-	Exosphere::SourceProcesses::Init();
-	PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
 
-
-#endif
-
-
-	//init particle weight of neutral species that primary source is sputtering
+    //init particle weight of neutral species that primary source is sputtering
 
 
 #if  _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__ON_
@@ -1228,185 +1266,162 @@ void amps_init() {
 	//time step
 
 void amps_time_step () {
-  //  cout <<'============= EUROPA PARAMS ==================' << endl;
-  // cout << Europa::xEuropa[0] << endl;
-  //  cout << Europa::xEuropa[1] << endl;
-  //  cout << Europa::xEuropa[2] << endl;
-  //  cout << Europa::vEuropa[0] << endl;
-  //  cout << Europa::vEuropa[1] << endl;
-  //  cout << Europa::vEuropa[2] << endl;
-  //  cout << Europa::OrbitalMotion::et << endl;
-  //  cout << Europa::OrbitalMotion::TAA << endl;
-  //  cout << Europa::OrbitalMotion::CoordinateFrameRotationRate << endl;
-  //  cout << Europa::OrbitalMotion::PlanetAxisToSunRotationAngle << endl;
-  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0] << endl;
-  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[1] << endl;
-  //  cout << Europa::OrbitalMotion::SunDirection_IAU_EUROPA[2] << endl;
-  //  int iTmp,jTmp;
-  //  for(iTmp=0;iTmp<6;iTmp++)
-  //    for(jTmp=0;jTmp<6;jTmp++)
-  //      cout << Europa::OrbitalMotion::GALL_EPHIOD_to_IAU_TransformationMartix[iTmp][jTmp] << endl;
-  //  for(iTmp=0;iTmp<6;iTmp++)
-  //    for(jTmp=0;jTmp<6;jTmp++)
-  //      cout << Europa::OrbitalMotion::IAU_to_GALL_EPHIOD_TransformationMartix[iTmp][jTmp] << endl;
-  //  for(iTmp=0;iTmp<6;iTmp++)
-  //    for(jTmp=0;jTmp<6;jTmp++)
-  //      cout << Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[iTmp][jTmp] << endl;
+
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   int idim;
 
-		//determine the parameters of the orbital motion of Europa
-		SpiceDouble StateBegin[6],StateEnd[6],lt;
-		double lBegin[3],rBegin,lEnd[3],rEnd,vTangentialBegin=0.0,vTangentialEnd=0.0,c0=0.0,c1=0.0;
-		//    int idim;
+  //determine the parameters of the orbital motion of Europa
+  SpiceDouble StateBegin[6],StateEnd[6],lt;
+  double lBegin[3],rBegin,lEnd[3],rEnd,vTangentialBegin=0.0,vTangentialEnd=0.0,c0=0.0,c1=0.0;
+  //    int idim;
+  
+  spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateBegin,&lt);
+  Europa::OrbitalMotion::et+=PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_];
+  spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateEnd,&lt);
+  
+  for (rBegin=0.0,rEnd=0.0,idim=0;idim<3;idim++) {
+    StateBegin[idim]*=1.0E3,StateBegin[3+idim]*=1.0E3;
+    StateEnd[idim]*=1.0E3,StateEnd[3+idim]*=1.0E3;
+    
+    rBegin+=pow(StateBegin[idim],2);
+    rEnd+=pow(StateEnd[idim],2);
+    
+    Europa::xEuropa[idim]=StateBegin[idim];
+    Europa::vEuropa[idim]=StateBegin[3+idim];
+  }
+  
+  rBegin=sqrt(rBegin);
+  rEnd=sqrt(rEnd);
+  
+  for (idim=0;idim<3;idim++) {
+    lBegin[idim]=StateBegin[idim]/rBegin;
+    lEnd[idim]=StateEnd[idim]/rEnd;
+    
+    c0+=StateBegin[3+idim]*lBegin[idim];
+    c1+=StateEnd[3+idim]*lEnd[idim];
+  }
+  
+  Europa::xEuropaRadial=rBegin;
+  Europa::vEuropaRadial=0.5*(c0+c1);
+  
+  //calculate TAA
+  {
+    double EccentricityVector[3];
+    double Speed2,a,c,absEccentricity,cosTAA;
+    
+    const double GravitationalParameter=GravityConstant*_MASS_(_SUN_);
+    
+    Speed2=Europa::vEuropa[0]*Europa::vEuropa[0]+Europa::vEuropa[1]*Europa::vEuropa[1]+Europa::vEuropa[2]*Europa::vEuropa[2];
+    c=Europa::xEuropa[0]*Europa::vEuropa[0]+Europa::xEuropa[1]*Europa::vEuropa[1]+Europa::xEuropa[2]*Europa::vEuropa[2];
+    
+    for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
+      EccentricityVector[idim]=Speed2/GravitationalParameter*Europa::xEuropa[idim] - c/GravitationalParameter*Europa::vEuropa[idim] - Europa::xEuropa[idim]/rBegin;
+      absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
+      a+=EccentricityVector[idim]*Europa::xEuropa[idim];
+    }
+    
+    absEccentricity=sqrt(absEccentricity);
+    cosTAA=a/(absEccentricity*rBegin);
+    
+    Europa::OrbitalMotion::TAA=acos(cosTAA);
+    if (c<0.0) Europa::OrbitalMotion::TAA=2.0*Pi-Europa::OrbitalMotion::TAA;
+  }
+  
+  
+  //the index varying from 0 to 1!!!!!! because the velocity must be perpendicular to z-axis, which is the axis of rotation
+  for (idim=0;idim<2;idim++) {
+    vTangentialBegin+=pow(StateBegin[3+idim]-c0*lBegin[idim],2);
+    vTangentialEnd+=pow(StateEnd[3+idim]-c1*lEnd[idim],2);
+  }
+  
+  vTangentialBegin=sqrt(vTangentialBegin);
+  vTangentialEnd=sqrt(vTangentialEnd);
+  
+  Europa::OrbitalMotion::CoordinateFrameRotationRate=0.5*(vTangentialBegin/rBegin+vTangentialEnd/rEnd);
+  
+  
+  //determine direction to the Sun and rotation angle in the coordinate frame related to Europa
+  SpiceDouble state[6],l=0.0;
+  
+  spkezr_c("SUN",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Exosphere::IAU_FRAME,"none","EUROPA",state,&lt);
 
-		spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateBegin,&lt);
-		Europa::OrbitalMotion::et+=PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_];
-		spkezr_c("Europa",Europa::OrbitalMotion::et,Exosphere::SO_FRAME,"none","Jupiter",StateEnd,&lt);
-
-		for (rBegin=0.0,rEnd=0.0,idim=0;idim<3;idim++) {
-			StateBegin[idim]*=1.0E3,StateBegin[3+idim]*=1.0E3;
-			StateEnd[idim]*=1.0E3,StateEnd[3+idim]*=1.0E3;
-
-			rBegin+=pow(StateBegin[idim],2);
-			rEnd+=pow(StateEnd[idim],2);
-
-			Europa::xEuropa[idim]=StateBegin[idim];
-			Europa::vEuropa[idim]=StateBegin[3+idim];
-		}
-
-		rBegin=sqrt(rBegin);
-		rEnd=sqrt(rEnd);
-
-		for (idim=0;idim<3;idim++) {
-			lBegin[idim]=StateBegin[idim]/rBegin;
-			lEnd[idim]=StateEnd[idim]/rEnd;
-
-			c0+=StateBegin[3+idim]*lBegin[idim];
-			c1+=StateEnd[3+idim]*lEnd[idim];
-		}
-
-		Europa::xEuropaRadial=rBegin;
-		Europa::vEuropaRadial=0.5*(c0+c1);
-
-		//calculate TAA
-		{
-			double EccentricityVector[3];
-			double Speed2,a,c,absEccentricity,cosTAA;
-
-			const double GravitationalParameter=GravityConstant*_MASS_(_SUN_);
-
-			Speed2=Europa::vEuropa[0]*Europa::vEuropa[0]+Europa::vEuropa[1]*Europa::vEuropa[1]+Europa::vEuropa[2]*Europa::vEuropa[2];
-			c=Europa::xEuropa[0]*Europa::vEuropa[0]+Europa::xEuropa[1]*Europa::vEuropa[1]+Europa::xEuropa[2]*Europa::vEuropa[2];
-
-			for (idim=0,absEccentricity=0.0,a=0.0;idim<3;idim++) {
-				EccentricityVector[idim]=Speed2/GravitationalParameter*Europa::xEuropa[idim] - c/GravitationalParameter*Europa::vEuropa[idim] - Europa::xEuropa[idim]/rBegin;
-				absEccentricity+=EccentricityVector[idim]*EccentricityVector[idim];
-				a+=EccentricityVector[idim]*Europa::xEuropa[idim];
-			}
-
-			absEccentricity=sqrt(absEccentricity);
-			cosTAA=a/(absEccentricity*rBegin);
-
-			Europa::OrbitalMotion::TAA=acos(cosTAA);
-			if (c<0.0) Europa::OrbitalMotion::TAA=2.0*Pi-Europa::OrbitalMotion::TAA;
-		}
-
-
-		//the index varying from 0 to 1!!!!!! because the velocity must be perpendicular to z-axis, which is the axis of rotation
-		for (idim=0;idim<2;idim++) {
-			vTangentialBegin+=pow(StateBegin[3+idim]-c0*lBegin[idim],2);
-			vTangentialEnd+=pow(StateEnd[3+idim]-c1*lEnd[idim],2);
-		}
-
-		vTangentialBegin=sqrt(vTangentialBegin);
-		vTangentialEnd=sqrt(vTangentialEnd);
-
-		Europa::OrbitalMotion::CoordinateFrameRotationRate=0.5*(vTangentialBegin/rBegin+vTangentialEnd/rEnd);
-
-
-		//determine direction to the Sun and rotation angle in the coordinate frame related to Europa
-		SpiceDouble state[6],l=0.0;
-
-		spkezr_c("SUN",Europa::OrbitalMotion::et-0.5*PIC::ParticleWeightTimeStep::GlobalTimeStep[_O2_SPEC_],Exosphere::IAU_FRAME,"none","EUROPA",state,&lt);
-
-		for (idim=0;idim<3;idim++) l+=pow(state[idim],2);
-
-		for (l=sqrt(l),idim=0;idim<3;idim++) {
-			Europa::OrbitalMotion::SunDirection_IAU_EUROPA[idim]=state[idim]/l;
-		}
-
-		Europa::OrbitalMotion::PlanetAxisToSunRotationAngle=acos(Europa::OrbitalMotion::SunDirection_IAU_EUROPA[1]);
-		if (Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]<0.0) Europa::OrbitalMotion::PlanetAxisToSunRotationAngle=2.0*Pi-Europa::OrbitalMotion::PlanetAxisToSunRotationAngle;
-
-
-		//Update the transformation matrixes and rotation vector
-		Europa::OrbitalMotion::UpdateTransformationMartix();
-		Europa::OrbitalMotion::UpdateRotationVector_SO_J2000();
-		Europa::OrbitalMotion::UpdateSunJupiterLocation();
-
+  for (idim=0;idim<3;idim++) l+=pow(state[idim],2);
+  
+  for (l=sqrt(l),idim=0;idim<3;idim++) {
+    Europa::OrbitalMotion::SunDirection_IAU_EUROPA[idim]=state[idim]/l;
+  }
+  
+  Europa::OrbitalMotion::PlanetAxisToSunRotationAngle=acos(Europa::OrbitalMotion::SunDirection_IAU_EUROPA[1]);
+  if (Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]<0.0) Europa::OrbitalMotion::PlanetAxisToSunRotationAngle=2.0*Pi-Europa::OrbitalMotion::PlanetAxisToSunRotationAngle;
+  
+  
+  //Update the transformation matrixes and rotation vector
+  Europa::OrbitalMotion::UpdateTransformationMartix();
+  Europa::OrbitalMotion::UpdateRotationVector_SO_J2000();
+  Europa::OrbitalMotion::UpdateSunJupiterLocation();
+  
 #else
-		double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
-		std::copy(&xEuropaTest[0], &xEuropaTest[0]+3, &Europa::xEuropa[0]);
-		
-		double vEuropaTest[3] = { 0,            77.5556,       92.079};
-		std::copy(&vEuropaTest[0], &vEuropaTest[0]+3, &Europa::vEuropa[0]);
-
-		double SunDirTest[3]  = {-0.364833, 0.931007, -0.0111228};
-		std::copy(&SunDirTest[0], &SunDirTest[0]+3, &Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]);
-		
-		Europa::OrbitalMotion::et  = -9.57527e+07;
-		Europa::OrbitalMotion::TAA =  3.14159;
-		Europa::OrbitalMotion::CoordinateFrameRotationRate = 5.5426e-10;
-		Europa::OrbitalMotion::PlanetAxisToSunRotationAngle= 5.90955;
-
-		SpiceDouble TransMatrix1[6][6] = {
-		  {-0.0307892,   0.999518,    0.00388983,  0,         0,         0}, 
-		  {-0.999503,   -0.0307619,  -0.00689729,  0,         0,         0},
-		  {-0.0067743,  -0.00410026,  0.999969,    0,         0,         0},
-		  {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
-		  { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
-		  {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
-		std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::SO_to_IAU_TransformationMartix[0][0]);
-
-		SpiceDouble TransMatrix2[6][6] = {
-		  {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
-		  { 0.999518,   -0.0307619,  -0.00410026,  0,          0,         0},
-		  { 0.00388983, -0.00689729,  0.999969,    0,          0,         0},
-		  {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
-		  {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
-		  {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
-		std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]);
-
-		SpiceDouble TransMatrix3[6][6] = {
-		  {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},
-		  {-0.931064,  -0.364856,  -2.77556e-17, 0,         0,        0},
-		  {-0.00405822, 0.0103561,  0.999938,    0,         0,        0},
-		  { 1.90558e-05,7.46742e-06,1.08988e-09,-0.364833,  0.931007,-0.0111228},
-		  {-7.46787e-06,1.9057e-05,-1.07033e-24,-0.931064, -0.364856,-2.77556e-17},
-		  { 2.12366e-07,8.2049e-08, 1.21233e-11,-0.00405822,0.0103561,0.999938}};
-		std::copy(&TransMatrix3[0][0],&TransMatrix3[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[0][0]);
-
+  double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
+  std::copy(&xEuropaTest[0], &xEuropaTest[0]+3, &Europa::xEuropa[0]);
+  
+  double vEuropaTest[3] = { 0,            77.5556,       92.079};
+  std::copy(&vEuropaTest[0], &vEuropaTest[0]+3, &Europa::vEuropa[0]);
+  
+  double SunDirTest[3]  = {-0.364833, 0.931007, -0.0111228};
+  std::copy(&SunDirTest[0], &SunDirTest[0]+3, &Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]);
+  
+  Europa::OrbitalMotion::et  = -9.57527e+07;
+  Europa::OrbitalMotion::TAA =  3.14159;
+  Europa::OrbitalMotion::CoordinateFrameRotationRate = 5.5426e-10;
+  Europa::OrbitalMotion::PlanetAxisToSunRotationAngle= 5.90955;
+  
+  SpiceDouble TransMatrix1[6][6] = {
+    {-0.0307892,   0.999518,    0.00388983,  0,         0,         0}, 
+    {-0.999503,   -0.0307619,  -0.00689729,  0,         0,         0},
+    {-0.0067743,  -0.00410026,  0.999969,    0,         0,         0},
+    {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
+    { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
+    {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
+  std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::SO_to_IAU_TransformationMartix[0][0]);
+  
+  SpiceDouble TransMatrix2[6][6] = {
+    {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
+    { 0.999518,   -0.0307619,  -0.00410026,  0,          0,         0},
+    { 0.00388983, -0.00689729,  0.999969,    0,          0,         0},
+    {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
+    {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
+    {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
+  std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]);
+  
+  SpiceDouble TransMatrix3[6][6] = {
+    {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},
+    {-0.931064,  -0.364856,  -2.77556e-17, 0,         0,        0},
+    {-0.00405822, 0.0103561,  0.999938,    0,         0,        0},
+    { 1.90558e-05,7.46742e-06,1.08988e-09,-0.364833,  0.931007,-0.0111228},
+    {-7.46787e-06,1.9057e-05,-1.07033e-24,-0.931064, -0.364856,-2.77556e-17},
+    { 2.12366e-07,8.2049e-08, 1.21233e-11,-0.00405822,0.0103561,0.999938}};
+  std::copy(&TransMatrix3[0][0],&TransMatrix3[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[0][0]);
+  
 #endif
-
-		//make the time advance
-		static int LastDataOutputFileNumber=0;
-
-
-		PIC::TimeStep();
-
-		//     cell=(node->block!=NULL) ? node->block->GetCenterNode(nd) : NULL;
-
-
-		if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-			PIC::RequiredSampleLength*=2;
-			if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
-
-
-			LastDataOutputFileNumber=PIC::DataOutputFileNumber;
-			if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
-		}
-
-
+  
+  //make the time advance
+  static int LastDataOutputFileNumber=0;
+  
+  
+  PIC::TimeStep();
+  
+  //     cell=(node->block!=NULL) ? node->block->GetCenterNode(nd) : NULL;
+  
+  
+  if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+    PIC::RequiredSampleLength*=2;
+    if (PIC::RequiredSampleLength>20000) PIC::RequiredSampleLength=20000;
+    
+    
+    LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+    if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+  }
+  
+  
 
 }
