@@ -1698,14 +1698,55 @@ void Comet::SetParticleSurfaceElement(int SurfaceElement,PIC::ParticleBuffer::by
       *((int*) (ParticleDataStart+offsetSurfaceElement))=SurfaceElement;
 }
 
-bool Comet::TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+//tracing trajectories of the individual dust grains
+cInternalSphericalData Comet::TrajectoryTracking::Sphere;
+int Comet::TrajectoryTracking::TracedParticleNumber_GLOBAL[nZenithSurfaceElements*nAzimuthalSurfaceElements];
+int Comet::TrajectoryTracking::TracedParticleNumber_LOCAL[nZenithSurfaceElements*nAzimuthalSurfaceElements];
+int Comet::TrajectoryTracking::nTracedTrajectoriesPerElement;
+
+void Comet::TrajectoryTracking::Init() {
+  //set parameters of the sphere
+  double x[3]={0.0,0.0,0.0};
+
+  Sphere.SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
+  Sphere.SetSphereGeometricalParameters(x,TracingSurfaceRadius);
+
+  //evaluate the total number of the traced trajectories and the number of the trajectories that originates in a particular surface element of the sphere
+  nTracedTrajectoriesPerElement=nTotalTracedTrajectories/(nZenithSurfaceElements*nAzimuthalSurfaceElements);
+
+  //init the counter of the traced trajectories
+  for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) TracedParticleNumber_LOCAL[i]=0,TracedParticleNumber_GLOBAL[i]=0;
+}
+
+bool Comet::TrajectoryTracking::TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+  bool res;
+  long int nZenithElement,nAzimuthalElement,el;
 
   //only those solar wind ions are traced, which trajectories are close to the surface of Mercury
   if ((spec>=_DUST_SPEC_) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
-    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(2.7E3,2)) return false;
+    if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(TracingSurfaceRadius,2)) return false;
+
+    //retrive the number of the trajectories that already has been traced from the surface element
+    Sphere.GetSurfaceElementProjectionIndex(x,nZenithElement,nAzimuthalElement);
+    el=Sphere.GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+
+    if (TracedParticleNumber_GLOBAL[el]+TracedParticleNumber_LOCAL[el]>nTracedTrajectoriesPerElement) return false;
   }
   else return false;
 
-  return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
+  res=true; //PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
+
+  if (res==true) TracedParticleNumber_LOCAL[el]++;
+  return res;
 }
 
+void Comet::TrajectoryTracking::UpdateParticleCounter() {
+  int buffer[nZenithSurfaceElements*nAzimuthalSurfaceElements],i;
+
+  MPI_Allreduce(TracedParticleNumber_LOCAL,buffer,nZenithSurfaceElements*nAzimuthalSurfaceElements,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+  for (i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) {
+    TracedParticleNumber_GLOBAL[i]+=buffer[i];
+    TracedParticleNumber_LOCAL[i]=0;
+  }
+}

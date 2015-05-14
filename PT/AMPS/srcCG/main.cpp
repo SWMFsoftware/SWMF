@@ -660,6 +660,9 @@ int main(int argc,char **argv) {
   PIC::Mover::Init();
   Comet::Init_AfterParser();
 
+  //init the dust particle tracing condition
+  Comet::TrajectoryTracking::Init();
+
   //set up the time step
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
   PIC::ParticleWeightTimeStep::initTimeStep();
@@ -726,6 +729,9 @@ int main(int argc,char **argv) {
 
   for (long int niter=0;niter<100000001;niter++) {
     PIC::TimeStep();
+
+    //update the particle tracer counter
+    Comet::TrajectoryTracking::UpdateParticleCounter();
 
     if (PIC::ThisThread==0 && niter==1) {
       //      char fname[_MAX_STRING_LENGTH_PIC_];

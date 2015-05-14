@@ -67,7 +67,19 @@ namespace Comet {
   void GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
   //the condition for begining of the dust trajectory tracking
-  bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData);
+  namespace TrajectoryTracking {
+    const int nZenithSurfaceElements=50,nAzimuthalSurfaceElements=50;
+    const int nTotalTracedTrajectories=25000;
+    const double TracingSurfaceRadius=2.7e3;
+
+    extern int nTracedTrajectoriesPerElement;
+    extern int TracedParticleNumber_GLOBAL[nZenithSurfaceElements*nAzimuthalSurfaceElements],TracedParticleNumber_LOCAL[nZenithSurfaceElements*nAzimuthalSurfaceElements];
+    extern cInternalSphericalData Sphere;
+
+    void Init();
+    bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData);
+    void UpdateParticleCounter();
+  }
 
 }
     //the total acceleration acting on a particle
