@@ -1016,6 +1016,10 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
     Ti=plasmaTemperature;
     Te=plasmaTemperature;
 
+    //derive the electron temeprature from the electron pressure
+    double pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,initNode);
+    Te=pe/(Kbol*plasmaNumberDensity);
+
 
 
 /*    //the plasma flow data
