@@ -132,6 +132,25 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   memcpy(TrajectoryRecord->data.x,x,3*sizeof(double));
   TrajectoryRecord->data.Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   TrajectoryRecord->data.spec=spec;
+
+  //save the electric charge carried by the particle
+  #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  double ParticleElectricCharge=0.0,ParticleSize=0.0;
+
+  if ((spec>=_DUST_SPEC_) && (spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) {
+    ParticleElectricCharge=ElectricallyChargedDust::GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
+    ParticleSize=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
+  }
+  else {
+    ParticleElectricCharge=PIC::MolecularData::ElectricChargeTable[spec];
+    ParticleSize=0.0;
+  }
+
+  TrajectoryRecord->data.ElectricCharge=ParticleElectricCharge;
+  TrajectoryRecord->data.ParticleSize=ParticleSize;
+  #endif
+
+  //the counting number of the point along this trajectory
   TrajectoryRecord->offset=ParticleTrajectoryRecord->nSampledTrajectoryPoints;
 
   //save the trajectory ID
@@ -268,7 +287,13 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       sprintf(str,"%s.s=%i.%s.dat",fname,spec,ChemSymbol);
 
       fout[spec]=fopen(str,"w");
-      fprintf(fout[spec],"VARIABLES=\"x\", \"y\", \"z\", \"spec\", \"Speed\"\n");
+      fprintf(fout[spec],"VARIABLES=\"x\", \"y\", \"z\", \"spec\", \"Speed\"");
+
+      #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+      fprintf(fout[spec],", \"Electric Charge\", \"Particle Size\"");
+      #endif
+
+      fprintf(fout[spec],"\n");
     }
 
     //Create the array of sampled trajectory points for all trajectories (used also as a flag to determine trajectories that was already processed)
@@ -429,7 +454,13 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
           exit(__LINE__,__FILE__,"Error: unknown option");
           #endif
 
-          fprintf(trOut,"%e  %e  %e  %i  %e\n",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->spec,TrajectoryData->Speed);
+          fprintf(trOut,"%e  %e  %e  %i  %e",TrajectoryData->x[0],TrajectoryData->x[1],TrajectoryData->x[2],TrajectoryData->spec,TrajectoryData->Speed);
+
+          #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+          fprintf(trOut," %e  %e ",TrajectoryData->ElectricCharge,TrajectoryData->ParticleSize);
+          #endif
+
+          fprintf(trOut,"\n");
         }
       }
 

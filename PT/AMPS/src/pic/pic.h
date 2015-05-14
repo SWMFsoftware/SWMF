@@ -167,6 +167,10 @@ namespace PIC {
     struct cTrajectoryPhysicalData {
       double x[3],Speed;
       int spec;
+
+      #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+      double ElectricCharge,ParticleSize;
+      #endif
     };
 
     struct cTrajectoryDataRecord {
