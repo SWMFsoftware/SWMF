@@ -72,7 +72,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   MaxSampledTrajectoryNumber=25000
 
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
-  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Comet::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Comet::TrajectoryTracking::TrajectoryTrackingCondition(x,v,spec,ParticleData)
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_ON_ 
 
