@@ -18,8 +18,8 @@
 set WorkDir = $HOME  
 set Server  = dborovik@herot.engin.umich.edu
 
-#>Pleiades ##############
-#set WorkDir =         <#
+#>Pleiades ############################
+#set WorkDir = /nobackup/`whoami`    <#
 
 #>Yellowstone ###########
 #set WorkDir =         <#
