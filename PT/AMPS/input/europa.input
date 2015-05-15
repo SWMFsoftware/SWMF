@@ -93,10 +93,31 @@ ParticleWeightCorrectionMode=on
 !   define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
 
-  RecoverMacroscopicSampledData=off \\ !!on, off
-    file=pic.SamplingDataRestart.out=1.dat 
+  RecoverMacroscopicSampledData=off  \\ !!on, off
+    execution=stop \\ ! continue \\ !stop \\ !stop,continue
+    file=pic.SamplingDataRestart.out=3.dat
+
+
+  RecoverParticleData=off  \\ !on, off
+    file=ParticleData.restart=223.restart=2
+
+
+  SaveParticleRestartFile=off \\  !on,off
+    file=ParticleData.restart=223 \\
+    SaveMode=newfile  \\ !overwrite, newfile
+    IterationInterval=20
 
 #endGeneral
+
+#ParticleCollisions
+  model = off!!! HS !!off !HS ! HS, off
+  SampleCollisionFrequency=on !!on !on, off
+
+  CollisionCrossSection=const \\ !const, function
+    const (H2O,H2O)= 3.4E-19 \\
+    const (O2,O2) = 5.2E-19 \\
+    const (O2,H2O)=4.25E-19
+#endParticleCollisions
 
 #Sampling
 
