@@ -25,6 +25,11 @@
 #>Pleiades ############################
 #source /usr/share/modules/init/csh  <#
 
+# source shell run commands (ONLY csh AND tcsh SHELLS ARE USED FOR NOW)
+# to set CVSROOT or CVS_RSH variables
+# note: it is better to have these variables set in the beginning of rc file
+source $HOME/.cshrc
+
 # set the working directory
 set WorkDir = $HOME  
 
@@ -36,11 +41,6 @@ set WorkDir = $HOME
 
 # Go to your home directory
 cd $WorkDir
-
-# source shell run commands (ONLY csh AND tcsh SHELLS ARE USED FOR NOW)
-# to set CVSROOT or CVS_RSH variables
-# note: it is better to have these variables set in the beginning of rc file
-source .cshrc
 
 # Create a temporary directory for the tests
 mkdir -p Tmp_AMPS_test
