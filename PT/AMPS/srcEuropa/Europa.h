@@ -95,6 +95,7 @@ const char SPICE_Kernels[nFurnishedSPICEkernels][_MAX_STRING_LENGTH_PIC_]={"GALI
 
 #define _EUROPA__SPUTTERING_ION_SOURCE__SWMF_PLASMA_FLOW_   0
 #define _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_  1
+#define _EUROPA__SPUTTERING_ION_SOURCE__UNIFORM_            2
 
 #define _EUROPA__SPUTTERING_ION_SOURCE_ _EUROPA__SPUTTERING_ION_SOURCE__SWMF_PLASMA_FLOW_
 
@@ -1386,6 +1387,14 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
   memcpy(v_LOCAL,v,3*sizeof(double));
 
   accl[0]=0.0,accl[1]=0.0,accl[2]=0.0;
+
+
+if (v[0]*x[0]+v[1]*x[1]+v[2]*x[2]<0) {
+  double d=1.0;
+
+  d=d+343.0;
+}
+
 //  return;
 
 
@@ -1444,15 +1453,18 @@ void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double 
       memcpy(B,swB_Typical,3*sizeof(double));
     }*/
 
-    PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
-    PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-
     double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
-    double mass=PIC::MolecularData::GetMass(spec);
 
-    accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
-    accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
-    accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
+    if (ElectricCharge!=0.0) {
+      PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+      PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
+
+      double mass=PIC::MolecularData::GetMass(spec);
+
+      accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
+      accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
+      accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
+    }
 
 //    exit(__LINE__,__FILE__,"error: not implemented");
 #endif
@@ -1548,6 +1560,8 @@ inline int GenericUnimolecularReactionProcessor(double *xInit,double *xFinal,dou
   double ParentSpeciesLifeTime;
   bool PhotolyticReactionAllowedFlag;
   int ResCode=_GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+  exit(__LINE__,__FILE__,"Error: obsolite, the chemistry is processed by other functions");
 
   if (spec!=_O2_SPEC_) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
