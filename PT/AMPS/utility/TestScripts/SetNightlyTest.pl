@@ -94,6 +94,7 @@ my %Blocks = (
 if($hostname =~ m/^pfe(.*).nas.nasa.gov/){
     # Pleiades
     $Blocks{'Pleiades'} = "1";
+    $TestName = "pleiades";
     if($1 ne $PFE){
 	print 
 	    "WARNING: nightly tests on Pleiades should be set on pfe$PFE,\n"
@@ -109,6 +110,7 @@ if($hostname =~ m/^pfe(.*).nas.nasa.gov/){
 elsif($hostname =~ m/^yslogin(.*)/){ 
     # Yellowstone
     $Blocks{"Yellowstone"} = "1";
+    $TestName = "yellowstone";
 }
 
 # set hashes for compilers (already converted to lower case)
