@@ -4,7 +4,7 @@
 #$Id$
 
 
-#$ARGV[0]="amps.TrajectoryTracking.out=4.s=2.DUST:1.dat";
+#$ARGV[0]="amps.TrajectoryTracking.out=12.s=2.DUST:1.dat";
 
 print "File name=$ARGV[0]\n";
 
@@ -24,7 +24,7 @@ my $DistanceOutOfPlane=0.1*2400.0E3;
 
 my $rMin=0.00000001*2400.0E3;
 my $rMax=3*2400.0E3;
-my $AcceptanceRate=1.0; #0.001;
+my $AcceptanceRate=0.1; #0.001;
 
 my $line;
 my @s;
@@ -35,7 +35,8 @@ my $ZoneMustBeOFF=0;
 
 my $cosAngleRange=cos($AngleRange/180.0*3.141592654);
 
-my $minCosAngle=cos(60.0/180.0*3.141592654);
+my $minCosAngle=cos(10.0/180.0*3.141592654);
+
 
 
 $line=<FILE>; 
@@ -67,8 +68,14 @@ while ($line=<FILE>) {
        $l3+=$lInit[$i]*($x1[$i]-$x0[$i]);
      }
           
-     if (($nPointsZone>4) && ($l3/sqrt($l1*$l2)<$minCosAngle)) {
-       $ZoneONFlag=1;
+     if (($nPointsZone>4) && ($lInit[0]/sqrt($l1)>cos(85.0/180.0*3.141592654)) && (-($x1[0]-$x0[0])/sqrt($l2) >0.0) ) {       #  ($l3/sqrt($l1*$l2)<$minCosAngle)) {
+       
+       if (rand()<$AcceptanceRate) {
+         $ZoneONFlag=1;
+       }
+       else {    
+         $ZoneONFlag=0;
+       }
      }
      else {
        $ZoneONFlag=0;
@@ -92,6 +99,8 @@ while ($line=<FILE>) {
      my $c;
      my $i;
 
+if (sqrt($s[0]*$s[0]+$s[1]*$s[1]+$s[2]*$s[2])>20.0E3) { 
+  
      if ($nPointsZone==0) {
        for ($i=0;$i<3;$i++) {
          $x0[$i]=$s[$i];
@@ -113,6 +122,10 @@ while ($line=<FILE>) {
        for ($i=0;$i<3;$i++) {
          $length+=($s[$i]-$x1[$i])**2;
        }
+       
+       if (sqrt($s[0]*$s[0]+$s[1]*$s[1]+$s[2]*$s[2])>1010.0E3) {
+         $ZoneMustBeOFF=1;
+       }
 
        if ($length>1.0) {
          for ($i=0;$i<3;$i++) {
@@ -124,6 +137,7 @@ while ($line=<FILE>) {
      } 
      
      $nPointsZone++;
+}
      
 
 #=comment
