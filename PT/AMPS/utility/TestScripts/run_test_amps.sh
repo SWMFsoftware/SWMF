@@ -20,8 +20,6 @@
 #  # ...                    #
 #  #command_last           <#
 # certain blocks will be uncommented at the test installation,
-# e.g. if test is GNU compiled, then block #>GNU <# will be uncommented,
-#      if test is set on Pleiades, then #>Pleiades <# will be uncommented
 
 # init command to load modules      
 #>Pleiades ############################
@@ -30,8 +28,8 @@
 # set the working directory
 set WorkDir = $HOME  
 
-#>Pleiades ##############
-#set WorkDir =         <#
+#>Pleiades ############################
+#set WorkDir = /nobackup/`whoami`    <#
 
 #>Yellowstone ###########
 #set WorkDir =         <#
@@ -66,8 +64,8 @@ cd ..
 #mkdir -p PGI;   cp -r AMPS PGI/;  <#
 
 # copy job files to the AMPS directory on supercomputers
-#>Pleiades
-#cp AMPS/utility
+#>Pleiades #############################################
+#cp AMPS/utility/TestScripts/test_amps.pleiades.job test_amps.job <#
 
 # install AMPS
 #>GNUAll ######################################
@@ -125,38 +123,31 @@ cd ..
 
 # Run test
 
-# GNU compiled tests
+# Super computers
 
-#>GNUAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS          <#
-#>GNUOther ####################################
-#make test_run >> test_amps.log              <#
 #>Pleiades ####################################
-#/usr/bin/qsub test_amps.job                 <#
+#cd $WorkDir/Tmp_AMPS_test                    #
+#/PBS/bin/qsub test_amps.job                 <#
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
 
+# Other machines
+
+# GNU compiled tests
+
+#>GNUOther ####################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
+#make test_run >> test_amps.log              <#
 
 # Intel compiled tests
 
-#>IntelAll ####################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS        <#
 #>IntelOther ##################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
 #make test_run >> test_amps.log              <#
-#>Pleiades ####################################
-#/usr/bin/qsub test_amps.job                 <#
-#>Yellowstone #################################
-#/usr/bin/bsub < test_amps.job               <#
-
 
 # PGI compiled tests
-#>PGIAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS          <#
+
 #>PGIOther ####################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
 #make test_run >> test_amps.log              <#
-#>Pleiades ####################################
-#/usr/bin/qsub test_amps.job                 <#
-#>Yellowstone #################################
-#/usr/bin/bsub < test_amps.job               <#
-          
 
