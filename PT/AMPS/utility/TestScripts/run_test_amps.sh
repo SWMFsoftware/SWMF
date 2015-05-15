@@ -70,13 +70,13 @@ cd ..
 # install AMPS
 #>GNUAll ######################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#./Config.pl -install > test_amps.log        <#
+#./Config.pl -install >& test_amps.log       <#
 #>IntelAll ####################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#./Config.pl -install > test_amps.log        <#
+#./Config.pl -install >& test_amps.log       <#
 #>PGIAll ######################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#./Config.pl -install > test_amps.log        <#
+#./Config.pl -install >& test_amps.log       <#
 
 # compile AMPS tests
 
@@ -90,7 +90,7 @@ cd ..
 
 #>GNUAll ###################################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                        #
-#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
+#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
 
 # Intel compiler 
 
@@ -104,7 +104,7 @@ cd ..
 
 #>IntelAll #################################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                      #
-#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
+#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
 
 # PGI compiler
 
@@ -118,7 +118,7 @@ cd ..
 
 #>PGIAll ###################################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                        #
-#make test_compile COMPILE.mpicxx=mpicxx >> test_amps.log <#
+#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
 
 
 # Run test
@@ -137,17 +137,17 @@ cd ..
 
 #>GNUOther ####################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#make test_run >> test_amps.log              <#
+#make test_run >>& test_amps.log             <#
 
 # Intel compiled tests
 
 #>IntelOther ##################################
 #cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#make test_run >> test_amps.log              <#
+#make test_run >>& test_amps.log             <#
 
 # PGI compiled tests
 
 #>PGIOther ####################################
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_run >> test_amps.log              <#
+#make test_run >>& test_amps.log             <#
 
