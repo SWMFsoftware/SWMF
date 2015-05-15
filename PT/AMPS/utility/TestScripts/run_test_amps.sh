@@ -113,7 +113,7 @@ cd ..
 
 #>Pleiades ####################################
 #module load comp-pgi/15.3;                   #
-#module load mpi-mvapich2/1.8/pgi12.4;       <#
+#module load mpi-sgi/mpt.2.12r16             <#
 
 
 #>PGIAll ###################################################
