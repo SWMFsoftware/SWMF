@@ -45,6 +45,11 @@ T                       UseFieldLineThreads
 45                      nPointInThreadMax
 2.0e-3                  DsThreadMin
 
+#THREADEDBC
+T	  UseAlignedVelocity
+T         DoConvergenceCheck
+limited   TypeBc
+
 #BODY
 T			UseBody
 1.00			rBody

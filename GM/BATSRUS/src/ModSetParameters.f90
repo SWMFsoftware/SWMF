@@ -102,7 +102,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModCoronalHeating,  ONLY: read_corona_heating, &
        init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
   use ModFieldLineThread, ONLY: read_threads 
-  use ModThreadedLC,      ONLY: init_threaded_lc
+  use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc
   use ModRadiativeCooling,ONLY: UseRadCooling,&
        read_modified_cooling, check_cooling_param, read_chromosphere
   use ModCoarseAxis, ONLY: read_coarse_axis_param
@@ -2041,6 +2041,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#FIELDLINETHREAD")
         call read_threads(iSession)
+
+     case("#THREADEDBC")
+        call read_threaded_bc   
 
      case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
           "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION")

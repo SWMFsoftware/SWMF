@@ -84,8 +84,8 @@ module ModFieldLineThread
   type(BoundaryThreads), public, pointer :: BoundaryThreads_B(:)
 
   !
-  integer,public :: nPointThreadMax
-  real           :: DsThreadMin
+  integer,public :: nPointThreadMax = 45
+  real           :: DsThreadMin = 0.002
 
   !\
   ! Normalization as used in the radcool table

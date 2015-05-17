@@ -66,12 +66,18 @@ module ModThreadedLC
   !/ 
   integer :: iTableTR, iTableRadcool  
   !\
-  !Control parameters: minimum temerature, the temperature, below which 
-  !the reflection turns to zero and two logicals with self-explained names
+  !Control parameters: minimum temerature  and two logicals with 
+  !self-explained names
   !/
-  real, parameter:: TeSiMin = 5.0e4, TeMinReflectionSi=4.0e4 
+  real, parameter:: TeSiMin = 5.0e4
   logical        :: UseAlignedVelocity = .true., UseGravity = .false.
   logical        :: DoConvergenceCheck = .false.
+  !\
+  ! Two parameters controling the choise of the order for density and
+  ! pressure: first order (LimMin=LimMax=0), second order (LimMin=LimMax=1)
+  ! or limited second order as a default
+  !/
+  real:: LimMin = 0.0, LimMax = 1
   !\
   ! 1. Coef to express radiation losses in terms of pressure (not density)
   ! 2. Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
@@ -208,6 +214,26 @@ contains
          TeFraction/Si2No_V(UnitTemperature_)
   end subroutine init_threaded_lc
   !================================
+  subroutine read_threaded_bc
+    use ModReadParam, ONLY: read_var
+    use ModProcMH,      ONLY: iProc
+    character(LEN=7)::TypeBc = 'limited'
+    !--------------------------------------------------------------------------
+    call read_var('UseAlignedVelocity', UseAlignedVelocity)
+    call read_var('DoConvergenceCheck', DoConvergenceCheck)
+    call read_var('TypeBc'            , TypeBc            )
+    select case(TypeBc)
+    case('first')
+       LimMin = 0; LimMax = 0
+    case('second')
+       LimMin = 1; LimMax = 1
+    case('limited')
+       LimMin = 0; LimMax = 1
+    case default
+       if(iProc==0)write(*,'(a)')&
+            'Unknown TypeBc = '//TypeBc//', reset to limited'
+    end select
+  end subroutine read_threaded_bc
   !\
   ! Main routine:
   ! solves MHD equations along thread, to link the state above the
@@ -418,7 +444,7 @@ contains
     ! eleminates the second order correction if this ratio becomes as high
     ! as the barometric factor:
     !/
-    Limiter = min(1.0, max(0.0, &
+    Limiter = min(LimMax, max(LimMin, &
          (BarometricFactor - PeSiIn/FirstOrderPe)/(BarometricFactor - 1)))
     RhoNoDimOut = (Limiter*(BarometricFactor*DeltaTeFactor - 1) + 1)*&
          FirstOrderRho
@@ -482,7 +508,6 @@ contains
       ReflCoef_I(nPoint-1) = abs(VaLog_I(nPoint) - VaLog_I(nPoint-1))/&
            (0.50*DXi_I(nPoint-1) + DXi_I(nPoint))
       ReflCoef_I(nPoint) =     ReflCoef_I(nPoint-1)
-      where(TeSi_I(1:nPoint)<TeMinReflectionSi)ReflCoef_I(1:nPoint)=0.0
       !\
       ! Solve amplitudes of the Alfven waves (arrays there have dimension)
       ! (0:nI)
