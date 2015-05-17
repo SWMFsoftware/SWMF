@@ -37,7 +37,7 @@ module ModThreadedLC
   !\
   ! To expsress Te in terms of P and rho.
   !/
-  real    :: TeFraction, PeFraction
+  real    :: TeFraction, TiFraction, PeFraction
   integer :: iP
   !\
   ! Temperature 3D array
@@ -150,14 +150,18 @@ contains
        ! so that Pe = ne/n *n*Te = (ne/n)*(rho/ionmass)*Te
        ! TeFraction is defined such that Te = Pe/rho * TeFraction
        TeFraction = MassIon_I(1)/Z
+       ! Pi = n*Te (dimensionless) and n=rho/ionmass
+       ! so that Pi = (rho/ionmass)*Ti
+       ! TiFraction is defined such that Ti = Pi/rho * TeFraction
+       TiFraction = MassIon_I(1)
        iP = Pe_
        PeFraction = 1.0
     else
        ! p = n*T + ne*Te (dimensionless) and n=rho/ionmass
        ! so that p=rho/massion *T*(1+ne/n Te/T)
        ! TeFraction is defined such that Te = p/rho * TeFraction
-       TeFraction = MassIon_I(1) &
-            /(1 + Z)
+       TeFraction = MassIon_I(1)/(1 + Z)
+       TiFraction = TeFraction
        iP = p_
        PeFraction = Z/(1.0 + Z) 
     end if
@@ -1028,26 +1032,16 @@ contains
     !\
     ! Fill in the temperature array
     !/
-    if(present(iImplBlock))then
-       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          Te_G(i, j, k) = State_VG(iTeImpl,i,j,k)
-       end do; end do; end do
+    if(UseIdealEos)then
+       do k = 1, nK; do j = 1, nJ
+          Te_G(0:1,j,k) = min(&
+               TeFraction*State_VGB(iP,1,j,k,iBlock), &
+               TiFraction*State_VGB(p_,1,j,k,iBlock)) &
+               /State_VGB(Rho_,1,j,k,iBlock)
+       end do; end do
     else
-       if(UseMultiIon)then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = State_VG(Pe_,i,j,k) &
-                  /sum(ChargeIon_I*State_VG(iRhoIon_I,i,j,k)/MassIon_I)
-          end do; end do; end do
-       elseif(UseIdealEos)then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Te_G(i,j,k) = TeFraction*State_VG(iP,i,j,k) &
-                  /State_VG(Rho_,i,j,k)
-          end do; end do; end do
-       else
-          call CON_stop('Generic EOS is not applicable with threads')
-       end if
+       call CON_stop('Generic EOS is not applicable with threads')
     end if
-
     do k = 1, nK; do j = 1, nJ
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
