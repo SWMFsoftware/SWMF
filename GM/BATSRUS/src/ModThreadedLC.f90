@@ -71,6 +71,7 @@ module ModThreadedLC
   !/
   real, parameter:: TeSiMin = 5.0e4, TeMinReflectionSi=4.0e4 
   logical        :: UseAlignedVelocity = .true., UseGravity = .false.
+  logical        :: DoConvergenceCheck = .false.
   !\
   ! 1. Coef to express radiation losses in terms of pressure (not density)
   ! 2. Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
@@ -288,7 +289,8 @@ contains
     TeSiMax        = &
           BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
     ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.50
-    if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest)then
+    if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest&
+         .and.iAction/=Enthalpy_)then
        call set_oktest(NameSub, DoTest, DoTestMe)
        if(DoTestMe)then
           write(*,*)'TeSiIn=       ',TeSiIn,' K '
@@ -330,9 +332,9 @@ contains
        ! Output for temperature gradient, all the other outputs
        ! are meaningless
        !/
-       DTeOverDsSiOut = (TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
+       DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
-            BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k))
+            BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
        if(DoTestMe)then
           write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
                ', dT/ds*Length=',DTeOverDsSiOut*&
@@ -348,35 +350,35 @@ contains
        BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
     case(DoInit_)
-      !\
-      ! As a first approximation, recover Te from the analytical solution
-      !/
-      TeSi_I(nPoint) = TeSiIn
-      do iPoint = nPoint-1, 1, -1
-         call interpolate_lookup_table(&
-              iTable=iTableTR,         &
-              iVal=LengthPAvrSi_,      &
-              ValIn=PeSiOut/SqrtZ*     &
-              BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
-              Arg2In=1.0e8,            &
-              Value_V=Value_V,         &
-              Arg1Out=TeSi_I(iPoint),  & 
-              DoExtrapolate=.false.)
-      end do
-      TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
-      !\
-      ! The analytical solution assumes constant pressure and 
-      ! no heating. Calculate the pressure distribution
-      !/ 
-      call set_pressure
-      call advance_thread(IsTimeAccurate=.false.)
-      call get_res_heating(nIterIn=nIter*2)
-      BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
-      BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
-   case default
-      write(*,*)'iAction=',iAction
-      call CON_stop('Unknown action in '//NameSub)
-   end select
+       !\
+       ! As a first approximation, recover Te from the analytical solution
+       !/
+       TeSi_I(nPoint) = TeSiIn
+       do iPoint = nPoint-1, 1, -1
+          call interpolate_lookup_table(&
+               iTable=iTableTR,         &
+               iVal=LengthPAvrSi_,      &
+               ValIn=PeSiOut/SqrtZ*     &
+               BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
+               Arg2In=1.0e8,            &
+               Value_V=Value_V,         &
+               Arg1Out=TeSi_I(iPoint),  & 
+               DoExtrapolate=.false.)
+       end do
+       TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
+       !\
+       ! The analytical solution assumes constant pressure and 
+       ! no heating. Calculate the pressure distribution
+       !/ 
+       call set_pressure
+       call advance_thread(IsTimeAccurate=.false.)
+       call get_res_heating(nIterIn=nIter*2)
+       BoundaryThreads_B(iBlock)%TSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
+       BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k) = PeSi_I(1:nPoint)
+    case default
+       write(*,*)'iAction=',iAction
+       call CON_stop('Unknown action in '//NameSub)
+    end select
     !\
     ! Outputs
     !/
@@ -401,9 +403,9 @@ contains
     ! In the ghost cell value of density in addition to the 
     ! barometric factor the temperature gradient is accounted for
     !/
-    DeltaTeFactor = 1! max(&
-    !     exp( -log(TeSi_I(nPoint  ))*GhostCellCorr  &
-    !     +     log(TeSi_I(nPoint-1))*GhostCellCorr ),1.0)
+    DeltaTeFactor = max(&
+         exp( -log(TeSi_I(nPoint  ))*GhostCellCorr  &
+         +     log(TeSi_I(nPoint-1))*GhostCellCorr ),1.0)
     !\
     ! Now, limit the difference between the first and second order
     ! solutions, depending on the ratio between the true cell value
@@ -418,9 +420,9 @@ contains
     !/
     Limiter = min(1.0, max(0.0, &
          (BarometricFactor - PeSiIn/FirstOrderPe)/(BarometricFactor - 1)))
-    RhoNoDimOut = (Limiter*(BarometricFactor - 1) + 1)*&
+    RhoNoDimOut = (Limiter*(BarometricFactor*DeltaTeFactor - 1) + 1)*&
          FirstOrderRho
-    PeSiOut     = (Limiter*(BarometricFactor/DeltaTeFactor - 1) + 1)*&
+    PeSiOut     = (Limiter*(BarometricFactor - 1) + 1)*&
          FirstOrderPe
     if(DoTestMe)then
        write(*,*)'AMajorOut=    ', AMajorOut
@@ -775,7 +777,8 @@ contains
          end if
          if(all(abs(DCons_VI(Cons_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
       end do
-      if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1)))then
+      if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
+           .and.DoConvergenceCheck)then
          write(*,'(a)')'TeOld Te TeMin PeSi_I'
          do iPoint=1,nPoint
             write(*,'(i4,4es15.6)')iPoint, TeSiOld_I(iPoint),TeSi_I(iPoint),&
