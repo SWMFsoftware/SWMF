@@ -2344,11 +2344,12 @@ ProcessPhotoChemistry:
       PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,newNode);
 
       //adjust the value of the dtLeft to match the time step for the species 'spec'
-      if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_) {
+      switch (PhotolyticReactionsReturnCode) {
+      case _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_:  
         PIC::ParticleBuffer::DeleteParticle(ptr);
         return _PARTICLE_LEFT_THE_DOMAIN_;
-      }
-      else if (PhotolyticReactionsReturnCode==_PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_) {
+
+      case _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_:  
         spec=PIC::ParticleBuffer::GetI(ParticleData);
         dtTotal*=newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalTimeStep(specInit);
 
@@ -2372,8 +2373,14 @@ ProcessPhotoChemistry:
         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
         #endif
         #endif
+ 
+        break;
+      case _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_:
+        //do nothing
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
       }
-      else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
 #elif _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
     //model the generic particle transformation
