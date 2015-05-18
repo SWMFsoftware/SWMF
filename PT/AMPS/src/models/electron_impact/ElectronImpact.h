@@ -339,6 +339,48 @@ namespace ElectronImpact {
     }
   }
 
+    //calculate the fraction of product reaction output
+  inline double GetSpeciesReactionYield(int ProductSpec, int ParentSpec,double ElectronTemeprature) {
+    double res;
+
+    switch (ParentSpec) {
+    case _H2O_SPEC_ :
+      res=H2O::GetSpeciesReactionYield(ProductSpec,ElectronTemeprature);
+      break;
+    case _O2_SPEC_:
+      res=O2::GetSpeciesReactionYield(ProductSpec,ElectronTemeprature);
+      break;
+    case _H2_SPEC_:
+      res=H2::GetSpeciesReactionYield(ProductSpec,ElectronTemeprature);
+      break;
+    case _H_SPEC_:
+      res=H::GetSpeciesReactionYield(ProductSpec,ElectronTemeprature);
+      break;
+    case _O_SPEC_:
+      res=O::GetSpeciesReactionYield(ProductSpec,ElectronTemeprature);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the species is unknown");
+    }
+
+    return res;
+  }
+
+
+  //return model for which species is available
+  inline bool ModelAvailable(int spec) {
+    bool res;
+
+    switch (spec) {
+    case _H2O_SPEC_: case _O2_SPEC_: case _H2_SPEC_: case _H_SPEC_: case _O_SPEC_:
+      res=true;
+    default:
+      res=false;
+    }
+
+    return res;
+  }
+
 }
 
 
