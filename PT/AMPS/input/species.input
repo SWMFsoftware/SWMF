@@ -20,6 +20,10 @@
   mass=2*_AMU_
   charge=0
 
+#component=H2_PLUS
+  mass=2*_AMU_
+  charge=1.0
+
 #component=CH4
   mass=16*_AMU_
   charge=0
@@ -37,6 +41,10 @@
   charge=0
 
 #component=OH
+  mass=17*_AMU_
+  charge=0
+
+#component=OH_PLUS
   mass=17*_AMU_
   charge=0
 
@@ -63,6 +71,10 @@
 #component=H2O
   mass=18*_AMU_
   charge=0	
+
+#component=H2O_PLUS
+  mass=18*_AMU_
+  charge=1.0	
 
 #component=CO2
   mass=44*_AMU_
@@ -91,5 +103,10 @@
 #component=He_2PLUS
   mass=4.0*_AMU_
   charge=2.0
+
+#component=O_PLUS
+  mass=16*_AMU_
+  charge=1.0     
+
 
 #endspecies
