@@ -332,9 +332,16 @@ contains
           end if
        case default
           IsFound=.false.
-          if(UseUserOuterBcs .or. TypeBc(1:4) == 'user')&
-               call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-
+          if(UseUserOuterBcs .or. TypeBc(1:4) == 'user')then
+             if(present(IsLinear))then
+                if(IsLinear)then
+                   ! Linear semi-implicit BC. Default is zero
+                   TypeBc = trim(TypeBc)//'linear'
+                   State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
+                end if
+             end if
+             call user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+          end if
           if(.not. IsFound) call stop_mpi(NameSub//': unknown TypeBc='//TypeBc)
        end select
 
