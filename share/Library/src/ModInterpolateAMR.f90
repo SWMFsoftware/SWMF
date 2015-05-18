@@ -2251,7 +2251,7 @@ module ModInterpolateAMR
 contains
   !=================================
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
-       nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
+       nGridOut, Weight_I, iIndexes_II, IsSecondOrder, UseGhostCell)
     use ModResolutionCorner, ONLY: resolution_corner
     use ModKind, ONLY: nByteReal
     !\
@@ -2307,6 +2307,10 @@ contains
          logical, intent(out):: IsOut !Point is out of the domain.
        end subroutine find
     end interface
+    !\
+    ! Do (if not present or true) or do not (if present and false) use ghost cells
+    !/
+    logical, optional, intent(in):: UseGhostCell
     !\
     !OUTPUT PARAMETERS
     !/
@@ -2365,6 +2369,9 @@ contains
          0, 0, 1,   1, 0, 1,   0, 1, 1,   1, 1, 1/),(/3,8/)) 
 
     integer:: iGridOutOfBlock
+    ! grid cell of a physical block to be used if UseGhostCell == .true.
+    integer:: iSubgridPhys
+    logical:: UseGhostCellLocal
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -2375,6 +2382,12 @@ contains
     !/
     iIndexes_II = 0; Weight_I    = 0
     nGridOut = -1; Xyz_D = XyzIn_D ; IsOut_I = .false.
+    iSubgridPhys = -1
+    if(present(UseGhostCell))then
+       UseGhostCellLocal = UseGhostCell
+    else
+       UseGhostCellLocal = .false.
+    end if
     if(present(IsSecondOrder))IsSecondOrder = .false.
     !\
     ! Implemented version:
@@ -2411,6 +2424,13 @@ contains
        RETURN
     end if
     call get_other_blocks(iGridOutOfBlock)
+    if(UseGhostCellLocal)then
+       !\
+       ! recalculate grid cells indexes with a reference block
+       ! being the one with subgrid iSubgridPhys
+       !/
+       call recalculate_cell_indexes
+    end if
     call interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
          XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
          iLevelSubgrid_I, IsOut_I,DxyzInv_D,                 &
@@ -2512,6 +2532,7 @@ contains
          else
             XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
             iProc_I(iGrid) = iProc_I(1)
+            if(iSubgridPhys < 0) iSubgridPhys = iGrid
          end if
       end do
     end subroutine get_main_block
@@ -2595,6 +2616,11 @@ contains
          call get_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
       case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
          call get_fine_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
+         !\
+         ! if ghost cells will be used for interpolation
+         ! then a Finer block is the reference block
+         !/
+         iSubgridPhys = iGridStored
       end select
       call get_other_blocks(iGridOutOfBlock)
     end subroutine get_other_blocks
@@ -2729,6 +2755,45 @@ contains
          end if
       end do
     end subroutine get_fine_block
+    !=====================
+    subroutine recalculate_cell_indexes
+      !\
+      ! recalculates cell indexes with a reference block being the one
+      ! that contains subgrid iSubgridPhys
+      !/
+      !
+      !\
+      !Displacement measured in grid sizes or in their halfs from the reference subgrid
+      !/ 
+      integer, dimension(nDim) :: iShift_D
+      !/
+      integer :: iGrid, iGridPhys, iSubgrid, nSubgrid
+      !------------------
+      do iSubgrid = 1, nGrid
+         if(iBlock_I(iSubgrid)==iBlock_I(iSubgridPhys)) CYCLE
+         ! the whole extended stencil in on the same processor and 
+         ! in the same block
+         iBlock_I(iSubgrid) = iBlock_I(iSubgridPhys)
+         iProc_I( iSubgrid) = iProc_I( iSubgridPhys)
+
+         ! shift should be multiplied by 2 
+         ! if reference subgrid is finer than iGrid
+         iShift_D = iShift_DI(1:nDim,iSubgrid) - iShift_DI(1:nDim,iSubgridPhys)
+         if(iLevelSubgrid_I(iSubgridPhys)==1)then
+            if(iLevelSubgrid_I(iSubgrid)==0)then
+               where(iShift_D > 0) iShift_D = 2 * iShift_D
+            else
+               iShift_D = 2 * iShift_D
+            end if
+         end if
+         ! # of cells in the subgrid depends on its level (1:Fine, 0:Coarse)
+         do iGrid = 1, 1 + (nGrid-1)*iLevelSubgrid_I(iSubgrid)
+            iCellIndexes_DII(:, iGrid, iSubgrid) = &
+                 iCellIndexes_DII(:, iGrid, iSubgridPhys) + iShift_D
+         end do
+            
+      end do
+    end subroutine recalculate_cell_indexes
   end subroutine interpolate_amr
   !============================
   subroutine interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
