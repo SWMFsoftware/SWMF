@@ -417,6 +417,7 @@ namespace PhotolyticReactions {
     switch (spec) {
     case _H2O_SPEC_: case _O2_SPEC_: case _H2_SPEC_: case _H_SPEC_: case _OH_SPEC_: case _O_SPEC_:
       res=true;
+      break;
     default:
       res=false;
     }
