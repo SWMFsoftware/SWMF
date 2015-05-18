@@ -291,8 +291,9 @@ contains
     !\
     ! Corrrect density and pressure values in the ghost 
     !/
-    real :: GhostCellCorr, BarometricFactor, DeltaTeFactor
-    real :: Limiter, FirstOrderRho, FirstOrderPe
+    real :: GhostCellCorr, BarometricFactor, DeltaTeFactor,             &
+         Limiter, DensityRatio, RhoTrueCell,                            &
+         FirstOrderRho, FirstOrderPeSi, SecondOrderRho, SecondOrderPeSi
 
     logical :: DoTest, DoTestMe
 
@@ -413,47 +414,72 @@ contains
     ! in with the solution of the threaded field line equation at the 
     ! end point.
     !/
-    FirstOrderRho = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
-    FirstOrderPe  = PeSi_I(nPoint)
+    FirstOrderRho   = RhoNoDimCoef*PeSi_I(nPoint)/TeSi_I(nPoint)
+    FirstOrderPeSi  = PeSi_I(nPoint)
+
     !\
-    ! Second order solution: the pressure is corrected for
-    ! a barometric factor. Cell corr is the negative of DeltaR of
-    ! BATSRUS / delta r of the Thread 
+    ! Second order solution consists of two contributions, the first of them
+    ! being the correction of true cell values. Calculate the true density:
     !/
+    RhoTrueCell = RhoNoDimCoef*PeSiIn/TeSiIn
+
+    ! The pressure in the ghost cell should be corrected corrected for
+    ! a barometric scale factor, as a consequence of the hydrostatic 
+    ! equiliblrium condition in the physical cell. Cell corr as calculated 
+    ! below is the negative of DeltaR of BATSRUS / delta r of the thread. Thus,
+    !/ 
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )  !< O!
     BarometricFactor = exp(&
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
+    SecondOrderPeSi  = PeSiIn*BarometricFactor
     !\
     ! In the ghost cell value of density in addition to the 
-    ! barometric factor the temperature gradient is accounted for
+    ! barometric factor the temperature gradient is accounted for,
+    ! which is cotrolled by the heat flux derived from the TFL model:
     !/
     DeltaTeFactor = max(&
          exp( -log(TeSi_I(nPoint  ))*GhostCellCorr  &
          +     log(TeSi_I(nPoint-1))*GhostCellCorr ),1.0)
     !\
+    ! Approximately TeSiGhost = TeSiIn/DeltaTeFactor, so that:
+    !/
+    SecondOrderRho = RhoTrueCell*BarometricFactor*DeltaTeFactor
+    !\
+    ! Add numerical diffusion, which forcing the density in the true cell
+    ! to approach the "first order" values predicted by the TFL model. 
+    !/
+    SecondOrderRho  = SecondOrderRho  + (FirstOrderRho - RhoTrueCell)
+    SecondOrderPeSi = SecondOrderPeSi + &
+         (FirstOrderPeSi - PeSiIn)/DeltaTeFactor
+    !\
+    ! In the latter equation the 1/DeltaTeFactor multipler is introduced
+    ! to keep the ratio of the corrected values to be equal to
+    ! TeSiGhost = TeSiIn/DeltaTeFactor
+    ! as predicted by the TFL model
+    !/
+    !\
     ! Now, limit the difference between the first and second order
     ! solutions, depending on the ratio between the true cell value
-    ! density and the first order ghost cell value of density,
-    ! which ratio equals PeSiIn/PeSi_I(nPoint) as long as these pressures
-    ! have a common factor of TeSiIn. If the Ratio is less than 
-    ! 1 , we apply the second order solution
+    ! density and the first order ghost cell value of density
+    !/
+    DensityRatio = RhoTrueCell/FirstOrderRho
     !\
-    ! If PeSiIn>PeSi_I(nPoint), then we apply limitation, which colpetely
+    ! If PeSiIn>PeSi_I(nPoint), then we apply limitation, which completely
     ! eleminates the second order correction if this ratio becomes as high
     ! as the barometric factor:
     !/
     Limiter = min(LimMax, max(LimMin, &
-         (BarometricFactor - PeSiIn/FirstOrderPe)/(BarometricFactor - 1)))
-    RhoNoDimOut = (Limiter*(BarometricFactor*DeltaTeFactor - 1) + 1)*&
+         (BarometricFactor - DensityRatio)/(BarometricFactor - 1)))
+    RhoNoDimOut = Limiter*(SecondOrderRho - FirstOrderRho) +&
          FirstOrderRho
-    PeSiOut     = (Limiter*(BarometricFactor - 1) + 1)*&
-         FirstOrderPe
+    PeSiOut     = Limiter*(SecondOrderPeSi - FirstOrderPeSi) + &
+         FirstOrderPeSi
     if(DoTestMe)then
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Before correction:'
-       write(*,*)'Pressure 1D (SI) = ',FirstOrderPe
+       write(*,*)'Pressure 1D (SI) = ',FirstOrderPeSi
        write(*,*)'RhoNoDimOut      = ',FirstOrderRho
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
@@ -789,7 +815,7 @@ contains
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
          call set_pressure
-         if(DoTestMe)then
+         if(DoTestMe.and.DoConvergenceCheck)then
             write(*,'(a,i4)')&
                  'TeOld abs(DCons) Cons abs(DCons)/Cons Res_V TNew at iIter=',&
                  iIter
@@ -1023,7 +1049,7 @@ contains
     integer :: i, j, k, Major_, Minor_
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
-    real :: RhoNoDimOut
+    real :: RhoNoDimOut, UAbsMax
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'set_thread_bc'
     !--------------------------------------------------------------------------
@@ -1100,6 +1126,7 @@ contains
        end if
        Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
             BoundaryThreads_B(iBlock) % TMax_II(j,k)))
+       UAbsMax = 0.10*sqrt(Te_G(0,j,k))
        TeSi = Te_G(0, j, k)*No2Si_V(UnitTemperature_)
        SqrtRho = sqrt(State_VGB(Rho_, 1, j, k, iBlock))
        AMinor = min(1.0,&
@@ -1108,6 +1135,7 @@ contains
        U_D = State_VGB(RhoUx_:RhoUz_, 1, j, k, iBlock)/&
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
+       U = sign(min(abs(U), UAbsMax), U)
        if(DoTestMe.and.j==jTest.and.k==kTest)then
           write(*,*)'U_D=',U_D
           write(*,*)'Direction U', U_D/sqrt(sum(U_D**2))
@@ -1172,12 +1200,13 @@ contains
           !/
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
           if(UseAlignedVelocity)then
-             U   = max(sum(U_D*BDir_D),0.0); U_D = U_D - U*BDir_D
+             U   = sum(U_D*BDir_D); U_D = U_D - U*BDir_D
+             U   = sign(min(abs(U), UAbsMax), U)
           else
              U = 0
           end if     
           State_VG(RhoUx_:RhoUz_, i, j, k) = -U_D*State_VG(Rho_,i,j,k) &
-                + U*BDir_D*min(State_VG(Rho_,1,j,k),State_VG(Rho_,i,j,k))
+                + U*BDir_D*State_VG(Rho_,i,j,k)
               
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )

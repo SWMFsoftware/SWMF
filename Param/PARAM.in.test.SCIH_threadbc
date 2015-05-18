@@ -42,7 +42,7 @@ T                       UseFieldLineThreads
 #THREADEDBC
 T	  UseAlignedVelocity
 T         DoConvergenceCheck
-limited   TypeBc
+second    TypeBc
 
 #BODY
 T			UseBody
