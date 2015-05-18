@@ -1,7 +1,8 @@
 
 #main
 
-SpeciesList=H2O,O2,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL
+SpeciesList=H2O,O2,H2,H,O,OH 
+!,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -166,7 +167,7 @@ ParticleWeightCorrectionMode=on
   !forces that determine particle'strajectories
   Forces=off ,gravity,FrameRotation,Lorentz !off, gravity, Lorentz, FrameRotation
 
-  SputteringIonSource=AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
+  SputteringIonSource=SwmfPlasmaFlow !!AmpsKineticIons !!SwmfPlasmaFlow !SwmfPlasmaFlow,AmpsKineticIons 
 
  plume= \\ 
    SourceRate(H2O)=7000.0/_H2O__MASS_ \\ 
@@ -229,7 +230,7 @@ ParticleWeightCorrectionMode=on
     T=0.174e6 \\
     n=60.0E6
 
-  Source:Sputtering=off\\ !on,off
+  Source:Sputtering=on\\ !on,off
     Yield(O2)=0.01, InjectionVelocityRange(O2)=10,10.0E3 \\ 
     Mode=UniformUserDefinedSourceRate \\ !!!UserDefinedSourceRate \\ !Yield, UserDefinedSourceRate 
     SourceRate(O2)=1.0E27 \\
