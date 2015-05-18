@@ -490,6 +490,68 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
 
 
+  {
+
+     {
+       long int nZenithElement,nAzimuthalElement,el;
+       double ParticleWeight;
+       //the particle is abserbed by the surface
+
+       Sphere=(cInternalSphericalData*)SphereDataPointer;
+       ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ptr);
+
+      Sphere->GetSurfaceElementProjectionIndex(x_SO,nZenithElement,nAzimuthalElement);
+      el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+
+      Sphere->SampleSpeciesSurfaceReturnFlux[spec][el]+=ParticleWeight;
+      Sphere->SampleReturnFluxBulkSpeed[spec][el]+=sqrt(pow(v_SO[0],2)+pow(v_SO[1],2)+pow(v_SO[2],2))*ParticleWeight;
+
+
+    }
+
+
+
+/*  double e0[3],l,e1[3],e2[3];
+  int i;
+
+      e0[0]=x_SO[0],e0[1]=x_SO[1],e0[2]=x_SO[2];
+      l=sqrt((e0[0]*e0[0])+(e0[1]*e0[1])+(e0[2]*e0[2]));
+      e0[0]/=l,e0[1]/=l,e0[2]/=l;
+
+      if (fabs(e0[0])>1.0E-5) {
+        e1[0]=e0[1], e1[1]=-e0[0],e1[2]=0.0;
+      }
+      else {
+        e1[0]=0.0,e1[1]=e0[2],e1[2]=-e0[1];
+      }
+
+      l=sqrt((e1[0]*e1[0])+(e1[1]*e1[1])+(e1[2]*e1[2]));
+      e1[0]/=l,e1[1]/=l,e1[2]/=l;
+
+      e2[0]=+(e0[1]*e1[2]-e1[1]*e0[2]);
+      e2[1]=-(e0[0]*e1[2]-e1[0]*e0[2]);
+      e2[2]=+(e0[0]*e1[1]-e1[0]*e0[1]);
+
+    double c,c1,beta=sqrt(PIC::MolecularData::GetMass(spec)/(2.0*Kbol*400.0));
+    double vnew[3];
+
+    vnew[0]=sqrt(-log(rnd()))/beta;  //radial velocity
+
+    c=sqrt(-log(rnd()))/beta;
+    c1=rnd();
+
+    vnew[1]=c*sin(2.0*Pi*c1);  //tangential velocity
+    vnew[2]=c*cos(2.0*Pi*c1);  //tangential velocity
+
+    for (i=0;i<3;i++) {
+      v_SO[i]= vnew[0]*e0[i]+vnew[1]*e1[i]+vnew[2]*e2[i];
+    }
+
+
+      return _PARTICLE_REJECTED_ON_THE_FACE_;*/
+  }
+
+
   Sphere=(cInternalSphericalData*)SphereDataPointer;
 //  startNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)NodeDataPonter;
 
@@ -566,7 +628,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_:
 
 #if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
-#if _SPUTTERING__MODE_ == _SPUTTERING__ON_
+#if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__OFF_
 
     int iTargetSpecies, nTargetSpecies;
     const int *TargetSpeciesTable;
@@ -693,25 +755,39 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
 
 //    PIC::ParticleBuffer::DeleteParticle(ptr);
     ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
-
     break;
 
-  case _O2_SPEC_: case _H2O_SPEC_:
+  case _O_SPEC_: case _H_SPEC_: case _OH_SPEC_: case _H2O_SPEC_ :
+    //the assumptions of the boundary interaction: O,H, OH, H2O <- stick to the surface; O2 and H2 do not stick to the surface
+    ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
+    break;
 
-    return _PARTICLE_DELETED_ON_THE_FACE_;
-
+  case _H2_SPEC_: case _O2_SPEC_:
+    //re-eject the particle into the exosphere
     //redistribute the particle velocity and reject it back into the domain
     //get the external normal
     e0[0]=-x_LOCAL_IAU_EUROPA[0],e0[1]=-x_LOCAL_IAU_EUROPA[1],e0[2]=-x_LOCAL_IAU_EUROPA[2];
     l=sqrt((e0[0]*e0[0])+(e0[1]*e0[1])+(e0[2]*e0[2]));
     e0[0]/=l,e0[1]/=l,e0[2]/=l;
 
+    //reflect the particle velocity
     {
-      double EmptyArray[3]={0.0,0.0,0.0};
-      double SurfaceTemp=GetSurfaceTemeprature(x_LOCAL_IAU_EUROPA);
+    double t=0.0;
 
-      PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_EUROPA,EmptyArray,SurfaceTemp,e0,spec,-1);
+    for (int i=0;i<3;i++) t+=e0[i]*v_LOCAL_IAU_EUROPA[i];
+    for (int i=0;i<3;i++) v_LOCAL_IAU_EUROPA[i]-=2.0*t*e0[i];
+
+
+
+
+    //REjeberate particle's velocity according to Maxwellian with the local temeprature
+    double vbulk[3]={0.0,0.0,0.0};
+
+
+    PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_EUROPA,vbulk,90.0,e0,spec);
     }
+
+
 
     //tranform the velocity into the "global" coordinate frame
     memcpy(xform,OrbitalMotion::IAU_to_SO_TransformationMartix,36*sizeof(double));
@@ -728,10 +804,17 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     memcpy(v_SO,v_LOCAL_SO,3*sizeof(double));
     ReturnCode=_PARTICLE_REJECTED_ON_THE_FACE_;
     break;
-
-
   default:
-    exit(__LINE__,__FILE__,"Error: the species is not recognized");
+    exit(__LINE__,__FILE__,"Error: the boundary interaction model is not specified for this species");
+  }
+
+
+  //if a particle is deleted than sample the sticking rate
+  if (ReturnCode==_PARTICLE_DELETED_ON_THE_FACE_) {
+    el=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
+
+    Sphere->SurfaceElementAdsorptionFluxDOWN[spec][el]+=ParticleWeight;
+    Exosphere::Sampling::PlanetSurfaceStickingRate[spec]+=ParticleWeight;
   }
 
   return ReturnCode;
@@ -1099,9 +1182,12 @@ long int Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection(cTreeNo
 
 //the default sticking probability function
 double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& ReemissionParticleFraction,double Temp) {
+  double res=1.0;
   ReemissionParticleFraction=0.0;
 
-  return 1.0;
+  if (spec==_O2_SPEC_) res=0.0;
+
+  return res;
 }
 
 //calcualte the true anomaly angle
@@ -1120,6 +1206,10 @@ int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
     nVariables+=1;
   }
 
+  //brightness of the exosphere
+  if (vlist!=NULL) sprintf(vlist,"%s, \"Brightness OI(130.4)\", \"Brightness OI(135.6)\"",vlist);
+  nVariables+=2;
+
   return nVariables;
 }
 
@@ -1135,6 +1225,7 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
   for (i=0;i<resLength;i++) res[i]=0.0;
 
+  //integrate density
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     //get the local density number
     NumberDensity=node->block->GetCenterNode(nd)->GetNumberDensity(spec);
@@ -1142,6 +1233,19 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 //    res[cnt++]=NumberDensity*node->block->GetCenterNode(nd)->GetMeanParticleSpeed(spec);
   }
 
+  //integrate brightness
+  if (_O_SPEC_>=0) {
+    //40.0E6 <- the characteristic value of the electron density (Hall-98-AJ); The emission rate constants are from Hall-98-AJ
+    double O_NumberDensity;
+
+    O_NumberDensity=node->block->GetCenterNode(nd)->GetNumberDensity(_O_SPEC_);
+    res[cnt++]=40.0*O_NumberDensity*1.0E-6*(5.5E-9+4.9E-10)/(4.0*Pi);
+    res[cnt++]=40.0*O_NumberDensity*1.0E-6*(6.0E-10+1.1E-9)/(4.0*Pi);  //*1.0E-6 is to transfer Oxygen number density to cm^{-3}
+  }
+  else {
+    res[cnt++]=0.0;
+    res[cnt++]=0.0;
+  }
 
   if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: the length of the vector is not coinsistent with the number of integrated variables");
 }
@@ -1154,11 +1258,11 @@ double Exosphere::SourceProcesses::GetInjectionEnergy(int spec, int SourceProces
 	static const double vmax=10.0E3;
 
 	//parameters of the O2 sputtering distribution
-  static const double U_o2=0.015*eV2J;  //the community accepted parameter of the energy distribution
+  static const double U_o2=0.015*eV2J;  //the community accepted parameter of the energy distribution      //Burger 2010-SSR
   static const double Emax_o2=_O2__MASS_*vmax*vmax/2.0; //the maximum energy of the ejected particle
 
 	//parameters of the H2O sputtring energy distribution
-	static const double U_h2o=0.033*eV2J; //the parameter of the distribution (Martin's PATM proposal)
+	static const double U_h2o=0.055*eV2J; //the parameter of the distribution (Martin's PATM proposal)     //Burger 2010-SSR
 	static const double Emax_h2o=_H2O__MASS_*vmax*vmax/2.0; //the maximum energy of the ejected particle
 
 
@@ -1166,8 +1270,16 @@ double Exosphere::SourceProcesses::GetInjectionEnergy(int spec, int SourceProces
 	case _O2_SPEC_ :
 	  switch (SourceProcessID) {
 	  case _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_ :
-	    r=rnd();
-	    res=U_o2*Emax_o2*(1.0-r)/(U_o2+r*Emax_o2);
+//	    r=rnd();
+//	    res=U_o2*Emax_o2*(1.0-r)/(U_o2+r*Emax_o2);
+
+      do {
+        r=rnd();
+        res=r*U_o2/(1.0-r);    //Burger 2010-SSR
+      }
+      while (res>Emax_o2);
+
+
 	    break;
 	  default:
 	    exit(__LINE__,__FILE__,"Error: not implemented");
@@ -1180,7 +1292,7 @@ double Exosphere::SourceProcesses::GetInjectionEnergy(int spec, int SourceProces
 
 	    do {
 	      r=rnd();
-	      res=U_h2o*(r+sqrt(r))/(1.0-r);
+	      res=U_h2o*(r+sqrt(r))/(1.0-r);    //Burger 2010-SSR
 	    }
 	    while (res>Emax_h2o);
 
@@ -1250,21 +1362,34 @@ double Europa::LossProcesses::ElectronTemeprature=0.0;
 double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   long int nd;
   int i,j,k;
-  double PlasmaBulkVelocity[3],ElectronDensity;
+  double BackgroundPlasmaNumberDensity;
+//  double PlasmaBulkVelocity[3],ElectronDensity;
 
   PhotolyticReactionRate=0.0,ElectronImpactRate=0.0;
 
+
+//DEBUG -> no chemistry at all
+  if ((spec!=_H2O_SPEC_) && (spec!=_O2_SPEC_) && (spec!=_H2_SPEC_) && (spec!=_H_SPEC_) && (spec!=_OH_SPEC_) && (spec!=_O_SPEC_)) {
+   PhotolyticReactionAllowedFlag=false;
+   return -1.0;
+  }
+
+
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
-  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
-  ElectronDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
+//  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
 
   PhotolyticReactionAllowedFlag=true;
 
-  //only sodium can be ionized
-  if ((spec!=_O2_SPEC_)&&(spec!=_H2O_SPEC_)) {
-    PhotolyticReactionAllowedFlag=false;
-    return -1.0;
-  }
+  static const double EuropaHeliocentricDistance=5.2*_AU_;
+
+  static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(EuropaHeliocentricDistance);
+  static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(EuropaHeliocentricDistance);
+  static const double PhotolyticReactionRate_H2=PhotolyticReactions::H2::GetTotalReactionRate(EuropaHeliocentricDistance);
+  static const double PhotolyticReactionRate_H=PhotolyticReactions::H::GetTotalReactionRate(EuropaHeliocentricDistance);
+  static const double PhotolyticReactionRate_OH=PhotolyticReactions::OH::GetTotalReactionRate(EuropaHeliocentricDistance);
+  static const double PhotolyticReactionRate_O=PhotolyticReactions::O::GetTotalReactionRate(EuropaHeliocentricDistance);
+
 
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
   //determine whether the particle is in a shadow of Europa;  Jupiter will be added later
@@ -1294,15 +1419,6 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
   }
 
   if (shadow==false) {
-    static const double EuropaHeliocentricDistance=5.2*_AU_;
-
-    static const double PhotolyticReactionRate_H2O=PhotolyticReactions::H2O::GetTotalReactionRate(EuropaHeliocentricDistance);
-    static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(EuropaHeliocentricDistance);
-    static const double PhotolyticReactionRate_H2=PhotolyticReactions::H2::GetTotalReactionRate(EuropaHeliocentricDistance);
-    static const double PhotolyticReactionRate_H=PhotolyticReactions::H::GetTotalReactionRate(EuropaHeliocentricDistance);
-    static const double PhotolyticReactionRate_OH=PhotolyticReactions::OH::GetTotalReactionRate(EuropaHeliocentricDistance);
-    static const double PhotolyticReactionRate_O=PhotolyticReactions::O::GetTotalReactionRate(EuropaHeliocentricDistance);
-
     switch (spec) {
     case _H2O_SPEC_:
       PhotolyticReactionRate=PhotolyticReactionRate_H2O;
@@ -1329,10 +1445,22 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
 #else
   switch (spec) {
   case _H2O_SPEC_:
-    PhotolyticReactionRate=PhotolyticReactions::H2O::GetTotalReactionRate(5.2*_AU_);
+    PhotolyticReactionRate=PhotolyticReactionRate_H2O;
     break;
   case _O2_SPEC_:
-    PhotolyticReactionRate=PhotolyticReactions::O2::GetTotalReactionRate(5.2*_AU_);
+    PhotolyticReactionRate=PhotolyticReactionRate_O2;
+    break;
+  case _H2_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactionRate_H2;
+    break;
+  case _H_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactionRate_H;
+    break;
+  case _OH_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactionRate_OH;
+    break;
+  case _O_SPEC_:
+    PhotolyticReactionRate=PhotolyticReactionRate_O;
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown specie");
@@ -1342,52 +1470,55 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
 
   //calcualte the rate due to the electron impact
   //characteristic values
-  static const double ThermalElectronTemeprature=20.0;
-  static const double HotElectronTemeprature=250.0;
+  static const double ThermalElectronDensity=Europa::ElectronModel::ThermalElectronFraction;
+  static const double HotElectronDensity=Europa::ElectronModel::HotElectronFraction;
 
-  static const double ThermalElectronDensity=0.95*40.0E6;
-  static const double HotElectronDensity=0.05*40.0E6;
+  static const double HotElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(Europa::ElectronModel::HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(Europa::ElectronModel::ThermalElectronTemeprature)*ThermalElectronDensity;
 
-  static const double HotElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
-  static const double ThermalElectronImpactRate_H2O=ElectronImpact::H2O::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+  static const double HotElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(Europa::ElectronModel::HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(Europa::ElectronModel::ThermalElectronTemeprature)*ThermalElectronDensity;
 
-  static const double HotElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
-  static const double ThermalElectronImpactRate_O2=ElectronImpact::O2::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+  static const double HotElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(Europa::ElectronModel::HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(Europa::ElectronModel::ThermalElectronTemeprature)*ThermalElectronDensity;
 
-  static const double HotElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
-  static const double ThermalElectronImpactRate_H2=ElectronImpact::H2::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+  static const double HotElectronImpactRate_H=ElectronImpact::H::RateCoefficient(Europa::ElectronModel::HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_H=ElectronImpact::H::RateCoefficient(Europa::ElectronModel::ThermalElectronTemeprature)*ThermalElectronDensity;
 
-  static const double HotElectronImpactRate_H=ElectronImpact::H::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
-  static const double ThermalElectronImpactRate_H=ElectronImpact::H::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
-
-  static const double HotElectronImpactRate_O=ElectronImpact::O::RateCoefficient(HotElectronTemeprature)*HotElectronDensity;
-  static const double ThermalElectronImpactRate_O=ElectronImpact::O::RateCoefficient(ThermalElectronTemeprature)*ThermalElectronDensity;
+  static const double HotElectronImpactRate_O=ElectronImpact::O::RateCoefficient(Europa::ElectronModel::HotElectronTemeprature)*HotElectronDensity;
+  static const double ThermalElectronImpactRate_O=ElectronImpact::O::RateCoefficient(Europa::ElectronModel::ThermalElectronTemeprature)*ThermalElectronDensity;
 
 
-  ElectronTemeprature=ThermalElectronTemeprature;
 
   switch (spec){
   case _H2O_SPEC_:
-    ElectronImpactRate=HotElectronImpactRate_H2O+ThermalElectronImpactRate_H2O;
+    ElectronImpactRate=BackgroundPlasmaNumberDensity*(HotElectronImpactRate_H2O+ThermalElectronImpactRate_H2O);
     break;
   case _O2_SPEC_:
-    ElectronImpactRate=HotElectronImpactRate_O2+ThermalElectronImpactRate_O2;
+    ElectronImpactRate=BackgroundPlasmaNumberDensity*(HotElectronImpactRate_O2+ThermalElectronImpactRate_O2);
     break;
   case _H2_SPEC_:
-    ElectronImpactRate=HotElectronImpactRate_H2+ThermalElectronImpactRate_H2;
+    ElectronImpactRate=BackgroundPlasmaNumberDensity*(HotElectronImpactRate_H2+ThermalElectronImpactRate_H2);
     break;
   case _H_SPEC_:
-    ElectronImpactRate=HotElectronImpactRate_H+ThermalElectronImpactRate_H;
+    ElectronImpactRate=BackgroundPlasmaNumberDensity*(HotElectronImpactRate_H+ThermalElectronImpactRate_H);
+    break;
+  case _OH_SPEC_:
+    ElectronImpactRate=0.0;
     break;
   case _O_SPEC_:
-    ElectronImpactRate=HotElectronImpactRate_O+ThermalElectronImpactRate_O;
+    ElectronImpactRate=BackgroundPlasmaNumberDensity*(HotElectronImpactRate_O+ThermalElectronImpactRate_O);
     break;
   default:
     exit(__LINE__,__FILE__,"Error: unknown species");
   }
 
+  if (PhotolyticReactionRate+ElectronImpactRate<=0.0) {
+    PhotolyticReactionAllowedFlag=false;
+    return -1.0;
+  }
 
-  return 1.0/(PhotolyticReactionRate+ElectronImpactRate);
+  return 1.0/((PhotolyticReactionRate+ElectronImpactRate)*NumericalLossRateIncrease);  //use the "false" reaction event to increase the number of the dauter model particles. Account for this artificial correction in the ExospherePhotoionizationReactionProcessor
 }
 
 
@@ -1397,14 +1528,39 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
   int ReactionChannel;
   bool PhotolyticReactionRoute;
 
-  PhotolyticReactionRoute=(rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) ? true : false;
 
-  if (PhotolyticReactionRoute==true) {
-    PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+  //init the reaction tables
+  static bool initflag=false;
+  static double TotalProductYeld_PhotolyticReaction[PIC::nTotalSpecies*PIC::nTotalSpecies];
+  static double TotalProductYeld_ElectronImpact[PIC::nTotalSpecies*PIC::nTotalSpecies];
+
+  double HotElectronFraction=0.05;
+  static const double ThermalElectronTemeprature=20.0;
+  static const double HotElectronTemeprature=250.0;
+
+  if (initflag==false) {
+    int iParent,iProduct;
+
+    initflag=true;
+
+    for (iParent=0;iParent<PIC::nTotalSpecies;iParent++) for (iProduct=0;iProduct<PIC::nTotalSpecies;iProduct++) {
+      TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]=0.0;
+      TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies]=0.0;
+
+      if (PhotolyticReactions::ModelAvailable(iParent)==true) {
+        TotalProductYeld_PhotolyticReaction[iProduct+iParent*PIC::nTotalSpecies]=PhotolyticReactions::GetSpeciesReactionYield(iProduct,iParent);
+      }
+
+      if (ElectronImpact::ModelAvailable(iParent)==true) {
+        TotalProductYeld_ElectronImpact[iProduct+iParent*PIC::nTotalSpecies]=
+            Europa::ElectronModel::HotElectronFraction*ElectronImpact::GetSpeciesReactionYield(iProduct,iParent,Europa::ElectronModel::HotElectronTemeprature) +
+            Europa::ElectronModel::ThermalElectronFraction*ElectronImpact::GetSpeciesReactionYield(iProduct,iParent,Europa::ElectronModel::ThermalElectronTemeprature);
+      }
+    }
   }
-  else {
-    ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-  }
+
+  //determine the type of the reaction
+  PhotolyticReactionRoute=(rnd()<PhotolyticReactionRate/(PhotolyticReactionRate+ElectronImpactRate)) ? true : false;
 
   //inject the products of the reaction
   double ParentTimeStep,ParentParticleWeight;
@@ -1434,10 +1590,10 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
   //copy the state of the initial parent particle into the new-daugher particle (just in case....)
   PIC::ParticleBuffer::CloneParticle((PIC::ParticleBuffer::byte*)tempParticleData,ParticleData);
 
-  for (int iProduct=0;iProduct<nReactionProducts;iProduct++) {
+  for (int specProduct=0;specProduct<PIC::nTotalSpecies;specProduct++) {
     double ProductTimeStep,ProductParticleWeight;
-    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0;
-    int nInjectedParticles=0,specProduct=ReactionProductsList[iProduct];
+    double ModelParticleInjectionRate,TimeCounter=0.0,TimeIncrement,ProductWeightCorrection=1.0/NumericalLossRateIncrease;
+    int iProduct;
     long int newParticle;
     PIC::ParticleBuffer::byte *newParticleData;
 
@@ -1456,59 +1612,72 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
      exit(__LINE__,__FILE__,"Error: the time step node is not defined");
 #endif
 
-     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight;
+     ModelParticleInjectionRate=ParentParticleWeight/ParentTimeStep/ProductParticleWeight*((PhotolyticReactionRoute==true) ? TotalProductYeld_PhotolyticReaction[specProduct+spec*PIC::nTotalSpecies] : TotalProductYeld_ElectronImpact[specProduct+spec*PIC::nTotalSpecies]);
 
      //inject the product particles
-     TimeIncrement+=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
+     if (ModelParticleInjectionRate>0.0) {
+       TimeIncrement=-log(rnd())/ModelParticleInjectionRate *rnd(); //<- *rnd() is to account for the injection of the first particle in the curent interaction
 
-     while (TimeCounter+TimeIncrement<ProductTimeStep) {
-       TimeCounter+=TimeIncrement;
-       TimeIncrement+=-log(rnd())/ModelParticleInjectionRate;
+       while (TimeCounter+TimeIncrement<ProductTimeStep) {
+         TimeCounter+=TimeIncrement;
+         TimeIncrement=-log(rnd())/ModelParticleInjectionRate;
 
-       //determine the velocity of the product specie
-       double ProductParticleVelocity[3];
+         //generate model particle with spec=specProduct
+         bool flag=false;
 
-       for (int idim=0;idim<3;idim++) ProductParticleVelocity[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
+         do {
+           //generate a reaction channel
+           if (PhotolyticReactionRoute==true) {
+             PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+           }
+           else {
+             if (rnd()<Europa::ElectronModel::HotElectronFraction) ElectronImpact::GenerateReactionProducts(spec,Europa::ElectronModel::HotElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+             else ElectronImpact::GenerateReactionProducts(spec,Europa::ElectronModel::ThermalElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+           }
 
-       //generate a particle
-       PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
-       PIC::ParticleBuffer::SetV(ProductParticleVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);
-       PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
-
-       #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-       PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-       #endif
-
-       //apply condition of tracking the particle
-       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-       PIC::ParticleTracker::InitParticleID(tempParticleData);
-       PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
-       #endif
-
-
-       //get and injection into the system the new model particle
-       newParticle=PIC::ParticleBuffer::GetNewParticle();
-       newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-       memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
-
-       _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ProductTimeStep-TimeCounter,node,true);
-
-       //when another particle is injected -> generate new velocity vector
-       if (TimeCounter+TimeIncrement<ProductTimeStep) {
-         if (PhotolyticReactionRoute==true) {
-           PhotolyticReactions::GenerateReactionProducts(spec,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
+           //check whether the products contain species with spec=specProduct
+           for (iProduct=0;iProduct<nReactionProducts;iProduct++) if (ReactionProductsList[iProduct]==specProduct) {
+             flag=true;
+             break;
+           }
          }
-         else {
-           ElectronImpact::GenerateReactionProducts(spec,ElectronTemeprature,ReactionChannel,nReactionProducts,ReactionProductsList,ReactionProductVelocity);
-         }
+         while (flag==false);
+
+
+         //determine the velocity of the product specie
+         double ProductParticleVelocity[3];
+
+         for (int idim=0;idim<3;idim++) ProductParticleVelocity[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
+
+         //generate a particle
+         PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetV(ProductParticleVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+         #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+         PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ProductWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+         #endif
+
+         //apply condition of tracking the particle
+         #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+         PIC::ParticleTracker::InitParticleID(tempParticleData);
+         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
+         #endif
+
+
+         //get and injection into the system the new model particle
+         newParticle=PIC::ParticleBuffer::GetNewParticle();
+         newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+         memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ProductTimeStep-TimeCounter,node,true);
        }
-
      }
 
   }
 
 
-  return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
+  return (rnd()<1.0/NumericalLossRateIncrease) ? _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_ : _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
 }
 
 
