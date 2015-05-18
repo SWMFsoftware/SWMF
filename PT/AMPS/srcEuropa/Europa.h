@@ -186,6 +186,15 @@ namespace Europa {
     }
   }
 
+  //assumption of the electron fractions and temperatures
+  namespace ElectronModel {
+    const double HotElectronFraction=0.05;
+    const double ThermalElectronFraction=0.95;
+
+    const double ThermalElectronTemeprature=20.0;
+    const double HotElectronTemeprature=250.0;
+  }
+
   namespace Sampling {
     using namespace Exosphere::Sampling;
 
@@ -1549,6 +1558,11 @@ if (v[0]*x[0]+v[1]*x[1]+v[2]*x[2]<0) {
 
   namespace LossProcesses {
    extern double PhotolyticReactionRate,ElectronImpactRate,ElectronTemeprature;
+
+   //the constant of the artificial increase of the primary species loss
+   //the modification of the rate is compensated by the appropricate particle weight of the daugher products and
+   //probabilities of the destruction of the primary species
+   const double NumericalLossRateIncrease=1000.0;
 
    double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
    int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
