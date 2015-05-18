@@ -179,7 +179,9 @@ double localSphericalSurfaceResolution(double *x) {
 	res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
 
-res/=2.1;
+//res/=2.1*4.1*4.1;
+
+	res/=2.1;
 
 	return rSphere*res;
 }
@@ -195,6 +197,9 @@ double localResolution(double *x) {
         r=sqrt(r);
 
         if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
+
+//        if (r<0.98*rSphere) return 10.0*rSphere;
+//        if (r<1.05*rSphere) return localSphericalSurfaceResolution(x);
 
         if (r>dxMinGlobal*rSphere) {
                 lnR=log(r);
@@ -265,8 +270,8 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
     CharacteristicSpeed=10.0*9.6E4;
     break;
 
-  case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:
-    CharacteristicSpeed=1.0e4;
+  case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
+    CharacteristicSpeed=5.0e4;
     break;
   case _O2_PLUS_SPEC_:
     CharacteristicSpeed=10*1.0e4;
@@ -474,6 +479,8 @@ int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &
      newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
      PIC::ParticleBuffer::CloneParticle(newParticle,ptr);
+
+exit(__LINE__,__FILE__,"ERROR: SetI(1,2) -> looks very strangle");
 
      PIC::ParticleBuffer::SetV(v,newParticleData);
      PIC::ParticleBuffer::SetX(x,newParticleData);
@@ -873,7 +880,7 @@ PIC::InitMPI();
 	//  {
 	//    VT_TRACER("name");
 
-	if (PIC::Mesh::mesh.ThisThread==0) {
+/*	if (PIC::Mesh::mesh.ThisThread==0) {
 		PIC::Mesh::mesh.buildMesh();
 		PIC::Mesh::mesh.saveMeshFile("mesh.msh");
 		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
@@ -881,7 +888,34 @@ PIC::InitMPI();
 	else {
 		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 		PIC::Mesh::mesh.readMeshFile("mesh.msh");
-	}
+	}*/
+
+  //generate mesh or read from file
+  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  bool NewMeshGeneratedFlag=false;
+
+  FILE *fmesh=NULL;
+
+  fmesh=fopen(mesh,"r");
+
+  if (fmesh!=NULL) {
+    fclose(fmesh);
+    PIC::Mesh::mesh.readMeshFile(mesh);
+  }
+  else {
+    NewMeshGeneratedFlag=true;
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+       PIC::Mesh::mesh.buildMesh();
+       PIC::Mesh::mesh.saveMeshFile("mesh.msh");
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+    else {
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    }
+  }
+
 
 	//  }
 	//  VT_USER_END("name");
@@ -890,7 +924,7 @@ PIC::InitMPI();
 
 	cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
 
-	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+//	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
 	PIC::Mesh::mesh.memoryAllocationReport();
 	PIC::Mesh::mesh.GetMeshTreeStatistics();
@@ -915,6 +949,23 @@ PIC::InitMPI();
 
 	//init the volume of the cells'
 	PIC::Mesh::mesh.InitCellMeasure();
+
+  //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
+  if (NewMeshGeneratedFlag==true) {
+    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      char command[300];
+
+      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+      system(command);
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+
+	if (PIC::ThisThread==0) cout << "AMPS' Initialization is complete" << endl;
 
 }
 
@@ -941,21 +992,21 @@ void amps_init() {
 
 	//set up the particle weight
 	PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjectionRate;
-	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_HIGH_SPEC_);
-	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_THERMAL_SPEC_);
+	if (_O_PLUS_HIGH_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_HIGH_SPEC_);
+	if (_O_PLUS_THERMAL_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_THERMAL_SPEC_);
 
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  ==  _EXOSPHERE_SOURCE__ON_
-	//copy the weight and time step from Na neutra to Na ions
-	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
-//	PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
-#else
+	//evaluate the weight from the parameters of the sputtering (in the Exosphere sputtering model)
 	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+#else
+	//copy the weight distribution from that of the thermal ions
+	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
 #endif
 
 	if (_H2O_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
 
-  PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
-  PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+  if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
+  if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
 
   //init weight of the daugter products of the photolytic and electron impact reactions
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
@@ -976,8 +1027,8 @@ void amps_init() {
 	//PIC::ChemicalReactions::PhotolyticReactions::SetSpeciesTotalPhotolyticLifeTime(sodiumPhotoionizationLifeTime,_O2_SPEC_);
 
 
-	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
-	PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
+//	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+//	PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
 
 	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 	if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
@@ -1114,10 +1165,10 @@ void amps_init() {
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 
 
-#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__ICES_
+  #if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__ICES_
   //init ICES
 
-#ifdef _ICES_CREATE_COORDINATE_LIST_
+    #ifdef _ICES_CREATE_COORDINATE_LIST_
   /*
    *const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
    *const char IcesModelCase[]="";//"Europa09";
@@ -1131,7 +1182,7 @@ void amps_init() {
   PIC::CPLR::ICES::createCellCenterCoordinateList();
   //PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/ices/ICES/Models"); //("/Users/vtenishe/CODES/ICES/Models");
   PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
-#endif
+    #endif
 
 
   //#ifdef _ICES_LOAD_DATA_
@@ -1150,7 +1201,7 @@ void amps_init() {
   PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(0)->PrintSurfaceData("Surface.test-1.dat",0);
   
 
-#elif _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  #elif _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
   //TECPLOT
   //read the background data
     if (PIC::CPLR::DATAFILE::BinaryFileExists("EUROPA-BATSRUS")==true)  {
@@ -1182,10 +1233,10 @@ void amps_init() {
       PIC::CPLR::DATAFILE::SaveBinaryFile("EUROPA-BATSRUS");
     }
 
-#else
+  #else
     exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
 
-#endif _PIC_COUPLER_DATAFILE_READER_MODE_
+  #endif //_PIC_COUPLER_DATAFILE_READER_MODE_
 
 #endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 	
@@ -1260,6 +1311,11 @@ void amps_init() {
 	 */
 
 	//  VT_TRACER("main");
+
+
+  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+
+
 
 }
 
@@ -1361,47 +1417,49 @@ void amps_time_step () {
   Europa::OrbitalMotion::UpdateSunJupiterLocation();
   
 #else
-  double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
-  std::copy(&xEuropaTest[0], &xEuropaTest[0]+3, &Europa::xEuropa[0]);
-  
-  double vEuropaTest[3] = { 0,            77.5556,       92.079};
-  std::copy(&vEuropaTest[0], &vEuropaTest[0]+3, &Europa::vEuropa[0]);
-  
-  double SunDirTest[3]  = {-0.364833, 0.931007, -0.0111228};
-  std::copy(&SunDirTest[0], &SunDirTest[0]+3, &Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]);
-  
-  Europa::OrbitalMotion::et  = -9.57527e+07;
-  Europa::OrbitalMotion::TAA =  3.14159;
-  Europa::OrbitalMotion::CoordinateFrameRotationRate = 5.5426e-10;
-  Europa::OrbitalMotion::PlanetAxisToSunRotationAngle= 5.90955;
-  
-  SpiceDouble TransMatrix1[6][6] = {
-    {-0.0307892,   0.999518,    0.00388983,  0,         0,         0}, 
-    {-0.999503,   -0.0307619,  -0.00689729,  0,         0,         0},
-    {-0.0067743,  -0.00410026,  0.999969,    0,         0,         0},
-    {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
-    { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
-    {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
-  std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::SO_to_IAU_TransformationMartix[0][0]);
-  
-  SpiceDouble TransMatrix2[6][6] = {
-    {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
-    { 0.999518,   -0.0307619,  -0.00410026,  0,          0,         0},
-    { 0.00388983, -0.00689729,  0.999969,    0,          0,         0},
-    {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
-    {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
-    {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
-  std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]);
-  
-  SpiceDouble TransMatrix3[6][6] = {
-    {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},
-    {-0.931064,  -0.364856,  -2.77556e-17, 0,         0,        0},
-    {-0.00405822, 0.0103561,  0.999938,    0,         0,        0},
-    { 1.90558e-05,7.46742e-06,1.08988e-09,-0.364833,  0.931007,-0.0111228},
-    {-7.46787e-06,1.9057e-05,-1.07033e-24,-0.931064, -0.364856,-2.77556e-17},
-    { 2.12366e-07,8.2049e-08, 1.21233e-11,-0.00405822,0.0103561,0.999938}};
-  std::copy(&TransMatrix3[0][0],&TransMatrix3[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[0][0]);
-  
+		double xEuropaTest[3] = {-7.27596e-09, - 6.76112e+08, - 2.76134e+06}; 
+		std::copy(&xEuropaTest[0], &xEuropaTest[0]+3, &Europa::xEuropa[0]);
+		
+		double vEuropaTest[3] = { 0,            77.5556,       92.079};
+		std::copy(&vEuropaTest[0], &vEuropaTest[0]+3, &Europa::vEuropa[0]);
+
+		double SunDirTest[3]  = {-0.364833, 0.931007, -0.0111228};
+		std::copy(&SunDirTest[0], &SunDirTest[0]+3, &Europa::OrbitalMotion::SunDirection_IAU_EUROPA[0]);
+		
+		Europa::OrbitalMotion::et  = -9.57527e+07;
+		Europa::OrbitalMotion::TAA =  3.14159;
+		Europa::OrbitalMotion::CoordinateFrameRotationRate = 5.5426e-10;
+		Europa::OrbitalMotion::PlanetAxisToSunRotationAngle= 5.90955;
+
+/*
+		SpiceDouble TransMatrix1[6][6] = {
+		  {-0.0307892,   0.999518,    0.00388983,  0,         0,         0}, 
+		  {-0.999503,   -0.0307619,  -0.00689729,  0,         0,         0},
+		  {-0.0067743,  -0.00410026,  0.999969,    0,         0,         0},
+		  {-3.05046e-07,-8.84681e-09,-1.41289e-07,-0.0307892, 0.999518,  0.00388983},
+		  { 9.95762e-09,-3.05672e-07,-7.9686e-08, -0.999503, -0.0307619,-0.00689729},
+		  {-8.27439e-08, 1.367e-07,  -2.56459e-14,-0.0067743,-0.00410026,0.999969}};
+		std::copy(&TransMatrix1[0][0],&TransMatrix1[0][0]+36, &Europa::OrbitalMotion::SO_to_IAU_TransformationMartix[0][0]);
+
+		SpiceDouble TransMatrix2[6][6] = {
+		  {-0.0307892,  -0.999503,   -0.0067743,   0,          0,         0},
+		  { 0.999518,   -0.0307619,  -0.00410026,  0,          0,         0},
+		  { 0.00388983, -0.00689729,  0.999969,    0,          0,         0},
+		  {-3.05046e-07, 9.95762e-09,-8.27439e-08,-0.0307892, -0.999503, -0.0067743},
+		  {-8.84681e-09,-3.05672e-07, 1.367e-07,   0.999518,  -0.0307619,-0.00410026},
+		  {-1.41289e-07,-7.9686e-08, -2.56459e-14, 0.00388983,-0.00689729,0.999969}};
+		std::copy(&TransMatrix2[0][0],&TransMatrix2[0][0]+36,&Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]);
+
+		SpiceDouble TransMatrix3[6][6] = {
+		  {-0.364833,   0.931007,  -0.0111228,   0,         0,        0},
+		  {-0.931064,  -0.364856,  -2.77556e-17, 0,         0,        0},
+		  {-0.00405822, 0.0103561,  0.999938,    0,         0,        0},
+		  { 1.90558e-05,7.46742e-06,1.08988e-09,-0.364833,  0.931007,-0.0111228},
+		  {-7.46787e-06,1.9057e-05,-1.07033e-24,-0.931064, -0.364856,-2.77556e-17},
+		  { 2.12366e-07,8.2049e-08, 1.21233e-11,-0.00405822,0.0103561,0.999938}};
+		std::copy(&TransMatrix3[0][0],&TransMatrix3[0][0]+36,&Europa::OrbitalMotion::IAU_to_GALL_ESOM_TransformationMatrix[0][0]);
+*/
+
 #endif
   
   //make the time advance
