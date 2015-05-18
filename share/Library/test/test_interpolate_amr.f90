@@ -25,6 +25,7 @@ module ModTestInterpolateAMR
   !/
   integer:: iLevelTest_I(8)
   integer,parameter:: nCell = 2
+  integer,parameter:: nG    = 2
 contains
   !==================================================================
   subroutine test_interpolate_amr(nDim,nSample)
@@ -40,8 +41,9 @@ contains
          XyzCont_D,                     &
          XyzInterpolated_D, XyzCorner_D
     real    ::VarInterpolated, VarContInterpolated
-    real, allocatable::Xyz_DCB(:,:,:,:,:)    
-    real, allocatable, dimension(:,:,:,:) :: Var_CB
+    real, allocatable::Xyz0_DGB(:,:,:,:,:)    
+    real, allocatable::Xyz_DGB(:,:,:,:,:)    
+    real, allocatable, dimension(:,:,:,:) :: Var_GB
     real    :: Weight_I(2**nDim)
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
@@ -59,22 +61,30 @@ contains
     DxyzFineBlock_D   = 0.5*nCell
     DxyzCoarse_D      = 1
     DxyzFine_D        = 0.5
-    allocate(Xyz_DCB(nDim,nCell_D(1), nCell_D(2), nCell_D(3),&
-         (2**nDim)*(2**nDim+1)))
-    Xyz_DCB = 0
-    allocate(Var_CB(nCell_D(1), nCell_D(2), nCell_D(3),&
-         (2**nDim)*(2**nDim+1)))
-    Var_CB = 0
+    allocate(Xyz0_DGB(nDim, 1-nG:nCell_D(1)+nG, &
+         1-nG:nCell_D(2)+nG, &
+         1-nG:nCell_D(3)+nG, (2**nDim)*(2**nDim+1)))
+    Xyz0_DGB = 0
+    allocate(Xyz_DGB(nDim, 1-nG:nCell_D(1)+nG, &
+         1-nG:nCell_D(2)+nG, &
+         1-nG:nCell_D(3)+nG, (2**nDim)*(2**nDim+1)))
+    Xyz_DGB = 0
+    allocate(Var_GB(1-nG:nCell_D(1)+nG, &
+         1-nG:nCell_D(2)+nG, &
+         1-nG:nCell_D(3)+nG, (2**nDim)*(2**nDim+1)))
+    Var_GB = 0
     do iGrid = 1, 2**nDim
        iBlock = iGrid
        XyzCorner_D = DxyzCoarseBlock_D*iShift_DI(1:nDim,iGrid)
-       do k = 1, nCell_D(3)
-          do j = 1, nCell_D(2)
-             do i = 1, nCell_D(1)
+       do k = 1-nG, nCell_D(3)+nG
+          do j = 1-nG, nCell_D(2)+nG
+             do i = 1-nG, nCell_D(1)+nG
                 iCellIndex_D = (/i,j,k/)
-                Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
+                Xyz_DGB(:,i,j,k,iBlock) = XyzCorner_D +&
                      DxyzCoarse_D*(iCellIndex_D(1:nDim) - 0.50)
-                Var_CB(i,j,k,iBlock) = random_real(iSeed)
+                ! fill values at physical cells first
+                if(all(iCellIndex_D >= 1).and.all(iCellIndex_D <= nCell_D))&
+                     Var_GB(i,j,k,iBlock) = random_real(iSeed)                 
              end do
           end do
        end do
@@ -82,19 +92,22 @@ contains
           iBlock = iGrid*(2**nDim)+iSubGrid
           XyzCorner_D = DxyzCoarseBlock_D*iShift_DI(1:nDim,iGrid) + &
                DxyzFineBlock_D*iShift_DI(1:nDim,iSubGrid)
-          do k = 1, nCell_D(3)
-             do j = 1, nCell_D(2)
-                do i = 1, nCell_D(1)
+          do k = 1-nG, nCell_D(3)+nG
+             do j = 1-nG, nCell_D(2)+nG
+                do i = 1-nG, nCell_D(1)+nG
                    iCellIndex_D = (/i,j,k/)
-                   Xyz_DCB(:,i,j,k,iBlock) = XyzCorner_D +&
+                   Xyz_DGB(:,i,j,k,iBlock) = XyzCorner_D +&
                         DxyzFine_D*(iCellIndex_D(1:nDim) - 0.50)
-                   Var_CB(i,j,k,iBlock) = 0.25 + 0.50 * random_real(iSeed)
+                   ! fill values at physical cells first
+                   if(all(iCellIndex_D >= 1).and.all(iCellIndex_D <= nCell_D))&
+                        Var_GB(i,j,k,iBlock) = 0.25 + 0.50 * random_real(iSeed)
                 end do
              end do
           end do
        end do
     end do
-
+    Xyz0_DGB = Xyz_DGB
+    
     nIndexes = nDim +1
     CASE:do iCase = 0, 2**(2**nDim) - 2
        iLevelTest_I = 0; iGrid = 0
@@ -105,6 +118,7 @@ contains
           iMisc = (iMisc - iLevelTest_I(iGrid))/2
        end do
        !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       call fill_ghost_cells(iLevelTest_I)
        !\
        ! We generated refinement, now sample points
        !/
@@ -124,7 +138,8 @@ contains
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
-               IsSecondOrder=IsSecondOrder)
+               IsSecondOrder=IsSecondOrder,&
+               UseGhostCell=.true.)
           !\          
           !Compare with interpolated:
           !/
@@ -135,11 +150,11 @@ contains
              iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
              iBlock = iIndexes_II(nIndexes,iGrid)
              XyzInterpolated_D = XyzInterpolated_D + Weight_I(iGrid)*&
-                  Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                  Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
              VarInterpolated = VarInterpolated + &
                   Weight_I(iGrid)*&
-                  Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
+                  Var_GB(iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
           end do
           if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
@@ -154,7 +169,7 @@ contains
                 iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
                 iBlock = iIndexes_II(nIndexes,iGrid)
                 write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
-                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                      iCellIndex_D(3), iBlock), Weight_I(iGrid)
              end do
              write(*,*)'Xyz_D=',Xyz_D
@@ -179,7 +194,8 @@ contains
                nGridOut=nGridOut,&
                Weight_I=Weight_I,&
                iIndexes_II=iIndexes_II,&
-               IsSecondOrder=IsSecondOrder)
+               IsSecondOrder=IsSecondOrder,&
+               UseGhostCell=.true.)
           !\          
           !Compare interpolated values of Var:
           !/
@@ -191,10 +207,10 @@ contains
              iBlock = iIndexes_II(nIndexes,iGrid)
              VarContInterpolated = VarContInterpolated + &
                   Weight_I(iGrid)*&
-                  Var_CB(iCellIndex_D(1), iCellIndex_D(2), &
+                  Var_GB(iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
              XyzInterpolated_D = XyzInterpolated_D + Weight_I(iGrid)*&
-                  Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                  Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
           end do
           if(any(abs(XyzCont_D - XyzInterpolated_D) > 1.0e-6).and.&
@@ -209,7 +225,7 @@ contains
                 iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
                 iBlock = iIndexes_II(nIndexes,iGrid)
                 write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
-                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                      iCellIndex_D(3), iBlock), Weight_I(iGrid)
              end do
              write(*,*)'XyzCont_D=',XyzCont_D
@@ -227,7 +243,7 @@ contains
                 iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
                 iBlock = iIndexes_II(nIndexes,iGrid)
                 write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
-                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                      iCellIndex_D(3), iBlock), Weight_I(iGrid)
              end do
              write(*,*)'Xyz_D=',Xyz_D
@@ -240,23 +256,90 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder)
+                  IsSecondOrder=IsSecondOrder,&
+                  UseGhostCell=.true.)
              write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
              do iGrid = 1, nGridOut
                 iCellIndex_D = 1
                 iCellIndex_D(1:nDim) = iIndexes_II(1:nDim,iGrid)
                 iBlock = iIndexes_II(nIndexes,iGrid)
                 write(*,*)iIndexes_II(1:nDim,iGrid), iBlock ,&
-                     Xyz_DCB(:,iCellIndex_D(1), iCellIndex_D(2), &
+                     Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                      iCellIndex_D(3), iBlock), Weight_I(iGrid)
              end do
              call CON_stop('Correct code and redo test')
           end if
        end do SAMPLE
     end do CASE
-    deallocate(Xyz_DCB, Var_CB)
+    deallocate(Xyz_DGB, Var_GB)
+  contains
+    subroutine fill_ghost_cells(iLevel_I)
+      ! values at ghost cells depend on the refinement
+      integer, intent(in):: iLevel_I(2**nDim)
 
-  end subroutine test_interpolate_amr
+      logical:: Use_B(2**(2*nDim)+2**nDim), IsOut
+      integer:: iDim, iProc, iBlock, iBlockNei, i, j ,k
+      integer:: iGrid, iSubGrid
+      integer:: iCellIndex_D(3), iCellIndexNei_D(3)
+      integer:: iMisc
+      real, dimension(nDim):: Xyz_D, XyzCorner_D, Dxyz_D
+      !-----------------------------------------------
+      Xyz_DGB = Xyz0_DGB
+      ! find blocks that are used in the current refinement
+      Use_B = .false.
+      do iGrid = 1, 2**nDim
+         if(iLevel_I(iGrid)==0)then
+            Use_B(iGrid) = .true.
+         else
+            do iSubGrid = 1, 2**nDim
+               Use_B(iGrid*(2**nDim)+iSubGrid) = .true.
+            end do
+         end if
+      end do
+      ! fill values
+      do iBlock = 1, 2**(2*nDim)+2**nDim
+         if(.not. Use_B(iBlock))CYCLE
+         do k = 1-nG, nCell_D(3)+nG 
+            do j = 1-nG, nCell_D(2)+nG 
+               do i = 1-nG, nCell_D(1)+nG
+                  iCellIndex_D = (/i,j,k/)
+                  if(all(iCellIndex_D >= 1).and.all(iCellIndex_D <= nCell_D))&
+                       CYCLE
+                  Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
+                  call find_test(nDim, Xyz_D, &
+                       iProc, iBlockNei, XyzCorner_D, Dxyz_D, IsOut)
+                  if(IsOut)CYCLE
+                  if(iLevel_I(iBlock) < iLevel_I(iBlockNei))CYCLE
+                  iMisc = 1 + iLevel_I(iBlock) - iLevel_I(iBlockNei)
+                  iCellIndexNei_D = 1
+                  iCellIndexNei_D(1:nDim) = &
+                       nint(0.3+Xyz_D(1:nDim)/Dxyz_D(1:nDim))
+!                  do iDim = 1, nDim
+!                     if(    iCellIndex_D(iDim) < 1)then
+!                        iCellIndexNei_D(iDim) = &
+!                             nCell_D(iDim) - ABS(iCellIndex_D(iDim))/iMisc
+!                     elseif(iCellIndex_D(iDim) > nCell_D(iDim))then
+!                        iCellIndexNei_D(iDim) = &
+!                             (iCellIndex_D(iDim) - nCell_D(iDim))/iMisc
+!                     else
+!                        iCellIndexNei_D(iDim)=iCellIndex_D(iDim)
+!                     end if
+!                  end do
+                  Var_GB(i,j,k,iBlock) = &
+                       Var_GB(iCellIndexNei_D(1),&
+                       iCellIndexNei_D(2),&
+                       iCellIndexNei_D(3),iBlockNei)
+                  Xyz_DGB(:,i,j,k,iBlock) = &
+                       Xyz_DGB(:,iCellIndexNei_D(1),&
+                       iCellIndexNei_D(2),&
+                       iCellIndexNei_D(3),iBlockNei)
+
+               end do
+            end do
+         end do
+      end do
+    end subroutine fill_ghost_cells
+  end Subroutine test_interpolate_amr
   !============================
   subroutine find_test(nDim, Xyz_D, &
             iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
