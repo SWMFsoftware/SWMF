@@ -419,7 +419,7 @@ double PhotolyticReactions::Huebner1992ASS::GetSpeciesReactionYield(int spec,dou
   for (ReactionChannel=0;ReactionChannel<nReactionChannels;ReactionChannel++) {
     TotalReactionRate+=ReactionRateTable[ReactionChannel];
 
-    for (i=0;i<nMaxReactionProducts;i++) if (TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts]==spec) Yield+=TotalReactionRate;
+    for (i=0;i<nMaxReactionProducts;i++) if (TotalReactionProductTable[i+ReactionChannel*nMaxReactionProducts]==spec) Yield+=ReactionRateTable[ReactionChannel];
   }
 
   return (TotalReactionRate>0.0) ? Yield/TotalReactionRate : 0.0;
