@@ -13,6 +13,7 @@ KAMELEON=nokameleon
 BOOST=noboost
 BATL=nobatl
 SWMF=noswmf
+TESTMODE=off
 
 include Makefile.def
 include Makefile.conf
@@ -21,6 +22,8 @@ include Makefile.conf
 #include the local makefile (defined the AMPS' compiling variables)  
 include Makefile.local
 
+#the default value of the compiler flags
+SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
@@ -46,6 +49,10 @@ endif
 
 ifneq ($(SPICE),nospice)
 	AMPSLINKLIB+=${SPICE}/lib/cspice.a
+endif
+
+ifeq ($(TESTMODE),on) {
+	SEARCH+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
 
 
@@ -98,17 +105,6 @@ tar:
 	cd ../pic-tower/sources/dsmc; rm -f *.o *.a
 	tar -cvf sources.tar sources
 
-#Flags=-O3 -fno-inline -ffinite-math-only  -ftrapping-math -fsignaling-nans -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
-#Flags=-O3  -fasm-blocks -use-asm  -fprefetch-loop-arrays -funroll-loops -unroll=3  -mmmx  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
-
-#Flags=-g   -use-asm   -fprefetch-loop-arrays -funroll-loops -unroll=3    -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
-export Flags
-
-#Flags=-O3 -fasm-blocks  -wd383 -wd981 -wd869 -wd1418 -LANG:std -Wall -DMPI_ON -DParticleSolver=dsmc -DCompilationTarget=0
-#-fstrict-aliasing <- does not work on pgCC :-(
-
-SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
-
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 
@@ -160,7 +156,7 @@ TESTDIR = run_test
 
 test:
 	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi); 	
-	./Config.pl -application=Moon
+	./Config.pl -application=Moon -amps-test=on 
 	rm -f *.diff
 	-@($(MAKE) test_amps)
 	#@ls -l *.diff
