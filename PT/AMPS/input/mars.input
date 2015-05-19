@@ -10,7 +10,6 @@ makefile  SOURCES=src
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
-makefile  SPICE=/Users/fougere/SPICE/cspice
 
 makefile ExternalModules=models/exosphere
 
@@ -33,7 +32,7 @@ TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, S
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=ices !!off, ices, swmf
+CouplerMode=off !!!ices !!off, ices, swmf
 
 #endmain
 
