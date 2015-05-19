@@ -3,7 +3,7 @@
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
 ;^CFG COPYRIGHT UM
 pro set_device, psfile, port=port, land=land, square=square, eps=eps, $
-                psfont=psfont, percent=percent
+                psfont=psfont, xratio=xratio, yratio=yratio
 
   ; Parameter defaults and conversions
 
@@ -16,8 +16,8 @@ pro set_device, psfile, port=port, land=land, square=square, eps=eps, $
   if keyword_set(port)   then orientation='port'
   if keyword_set(square) then orientation='square'
 
-  if not keyword_set(percent) then percent = 1.0		$
-  else if percent gt 1.0 then percent = float(percent)/100.0
+  if not keyword_set(xratio) then xratio = 1.0
+  if not keyword_set(yratio) then yratio = 1.0
 
   if n_elements(psfont) eq 0  then psfont = 28
 
@@ -27,31 +27,31 @@ pro set_device, psfile, port=port, land=land, square=square, eps=eps, $
   ; Set sizes and offsets
   case (orientation) of
      'normal': begin
-        xs   = 10.0*percent
-        ys   = 7.0 *percent
-        xoff = 11.0-(11.0-xs)/1.5
-        yoff = (8.5-ys)/2.0
+        xs   = 10*xratio
+        ys   =  7*yratio
+        xoff = 11*xratio - (11*xratio - xs)/1.5
+        yoff = (8.5*yratio - ys)/2.0
         land=0
      end
      'land': begin
-        xs   = 10.0*percent
-        ys   = 7.0 *percent
-        xoff = (8.5-ys)/2.0
-        yoff = 11.0-(11.0-xs)/1.5
+        xs   = 10*xratio
+        ys   = 7*yratio
+        xoff = (8.5*yratio-ys)/2.0
+        yoff = 11*xratio-(11*xratio-xs)/1.5
         land=1
      end
      'port': begin
-        xs = 7.5*percent
-        ys = 9.5*percent
-        xoff = (8.5-xs)/2.0
-        yoff = (11.0-ys)/2.0
+        xs = 7.5*xratio
+        ys = 9.5*yratio
+        xoff = (8.5*xratio-xs)/2.0
+        yoff = (11*yratio-ys)/2.0
         land=0
      end
      'square': begin
-        xs = 7.5*percent
-        ys = 7.5*percent
-        xoff = (8.5-xs)/2.0
-        yoff = (8.5-xs)/2.0
+        xs = 7.5*xratio
+        ys = 7.5*yratio
+        xoff = (8.5*xratio-xs)/2.0
+        yoff = (8.5*yratio-ys)/2.0
         land=0
      end
   endcase
