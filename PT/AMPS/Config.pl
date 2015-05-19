@@ -72,6 +72,7 @@ foreach (@Arguments) {
      print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
      print "-set-test(=NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all)\n";
      print "-rm-test\/comp\t\t\tremove nightly tests\n";
+     print "-amps-test=[on,off]\t\ttells the code that a nightly test is executed\n";
      
      exit;
    }
@@ -131,17 +132,27 @@ foreach (@Arguments) {
     
   if (/^-mpi=(.*)$/i)        {$MpiLocation=$1;                next}; 
   if (/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next};
-  if (/^-spice-path=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`;`echo "SPICE=$1" >> .ampsConfig.Settings`;     next}; 
-  if (/^-spice-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`;     next};
-  if (/^-ices-path=(.*)$/i)       {`echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-spice-path=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`; `echo "SPICE=$1" >> .ampsConfig.Settings`; next}; 
+  if (/^-spice-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> Makefile.local`; `echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`; next};
+  if (/^-ices-path=(.*)$/i)       {`echo "ICESLOCATION=$1" >> Makefile.local`; `echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;  next};
   
-  if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> .ampsConfig.Settings`;     next};
-  if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> .ampsConfig.Settings`;     next};
+  if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> Makefile.local`; `echo "BOOST=$1" >> .ampsConfig.Settings`; next};
+  if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> Makefile.local`; `echo "KAMELEON=$1" >> .ampsConfig.Settings`; next};
   
-  if (/^-batl-path=(.*)$/i)       {`echo "BATL=$1" >> .ampsConfig.Settings`;     next};
-  if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> .ampsConfig.Settings`;     next};  
+  if (/^-batl-path=(.*)$/i)       {`echo "BATL=$1" >> Makefile.local`; `echo "BATL=$1" >> .ampsConfig.Settings`; next};
+  if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> Makefile.local`; `echo "SWMF=$1" >> .ampsConfig.Settings`; next};  
   
-  if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> .ampsConfig.Settings`;     next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
+  if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> Makefile.local`; `echo "CPLRDATA=$1" >> .ampsConfig.Settings`; next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
+
+  #compile for the nightly test
+  if (/^-amps-test=(.*)$/i)  {
+    my $t;
+
+    $t=lc($1);
+    `echo "TESTMODE=$t" >> Makefile.local`;     
+    `echo "TESTMODE=$t" >> .ampsConfig.Settings`;
+     next
+  }; 
 
   # set nightly test:
   #  -set-name=NAME/comp - tests' name NAME cannot be empty
