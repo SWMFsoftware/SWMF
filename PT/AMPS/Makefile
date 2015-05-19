@@ -51,7 +51,7 @@ ifneq ($(SPICE),nospice)
 	AMPSLINKLIB+=${SPICE}/lib/cspice.a
 endif
 
-ifeq ($(TESTMODE),on) {
+ifeq ($(TESTMODE),on)  
 	SEARCH+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
 
