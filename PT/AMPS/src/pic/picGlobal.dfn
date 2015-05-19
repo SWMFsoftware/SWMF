@@ -185,7 +185,12 @@ at the end of each time step
 //global-species-dependent (with only one species in the simulation) time stepping are used
 #define _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_OFF_
 
-
+//_PIC_NIGHTLY_TEST_MODE_ = _PIC_MODE_ON_/_PIC_MODE_OFF_ -> determines whether the code is used in the test mode for the nightly test. if _PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_ than
+//the model run is limited by a "small" number of the iteractions, and the particle averaged data is output at the end of the run for comparing with the reference solution. 
+//by default _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_OFF_ 
+#ifndef _PIC_NIGHTLY_TEST_MODE_
+#define _PIC_NIGHTLY_TEST_MODE_ _PIC_MODE_OFF_
+#endif
 
  
 
