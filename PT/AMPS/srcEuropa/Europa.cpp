@@ -625,7 +625,13 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   long int newParticle;
 
   switch (spec) {
-  case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_:
+
+  case _OH_PLUS_SPEC_: case _H2_PLUS_SPEC_: case _H2O_PLUS_SPEC_ :
+
+    ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
+    break;
+
+  case _O_PLUS_SPEC_: case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O2_PLUS_SPEC_: case _H_PLUS_SPEC_:
 
 #if _EUROPA__SPUTTERING_ION_SOURCE_ == _EUROPA__SPUTTERING_ION_SOURCE__AMPS_KINETIC_IONS_
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_ == _EXOSPHERE_SOURCE__OFF_
@@ -635,13 +641,16 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     double *YieldTable;
     
     switch (spec) {
-    case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_:
+    case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_HIGH_SPEC_: case _O_PLUS_SPEC_:
       //Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O_),1);
       nTargetSpecies=Sputtering::GetSputteringYield(vi, _O_PLUS_THERMAL_SPEC_, TargetSpeciesTable, YieldTable);
       break;
     case _O2_PLUS_SPEC_:
       //Yield=Europa::InjectEuropaMagnetosphericEPDIons::SputteringYield(vi,_MASS_(_O2_),2);
       nTargetSpecies=Sputtering::GetSputteringYield(vi, _O2_PLUS_SPEC_, TargetSpeciesTable, YieldTable);
+      break;
+    case _H_PLUS_SPEC_:
+      nTargetSpecies=Sputtering::GetSputteringYield(vi, _H_PLUS_SPEC_, TargetSpeciesTable, YieldTable);
       break;
     default:
       exit(__LINE__,__FILE__,"Error: the specie is not recognized");

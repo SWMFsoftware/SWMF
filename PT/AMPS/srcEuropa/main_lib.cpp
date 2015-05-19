@@ -266,6 +266,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
   case _O_PLUS_HIGH_SPEC_:
     CharacteristicSpeed=10.0*1.6E6;
     break;
+
   case _O_PLUS_THERMAL_SPEC_:
     CharacteristicSpeed=10.0*9.6E4;
     break;
@@ -273,14 +274,16 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
   case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
     CharacteristicSpeed=5.0e4;
     break;
-  case _O2_PLUS_SPEC_:
-    CharacteristicSpeed=10*1.0e4;
+
+  case _O_PLUS_SPEC_:case _O2_PLUS_SPEC_:case _H_PLUS_SPEC_:case _H2_PLUS_SPEC_:case _OH_PLUS_SPEC_:case _H2O_PLUS_SPEC_:
+    CharacteristicSpeed=100*5.0e4;
     break;
+
   default:
     exit(__LINE__,__FILE__,"unknown species");
    }
 
-	return 0.3*CellSize/CharacteristicSpeed;
+  return 0.3*CellSize/CharacteristicSpeed;
 
 
 }
@@ -972,218 +975,232 @@ PIC::InitMPI();
 void amps_init() {
    int idim;
 
-	//init the PIC solver
-	PIC::Init_AfterParser ();
-	PIC::Mover::Init();
+   //init the PIC solver
+   PIC::Init_AfterParser ();
+   PIC::Mover::Init();
+   
+   //Exosphere::Init_AfterParser();
+   
+   //	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
+   
+   //	for (int s=0;s<PIC::nTotalSpecies;s++) {
+   //	  PIC::Mover::MoveParticleTimeStep[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder; ///UniformWeight_UniformTimeStep_SecondOrder;
+   //	  PIC::Mover::MoveParticleBoundaryInjection[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder;
+   //	}
+   
 
-	//Exosphere::Init_AfterParser();
-
-	//	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
-
-	//	for (int s=0;s<PIC::nTotalSpecies;s++) {
-	//	  PIC::Mover::MoveParticleTimeStep[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder; ///UniformWeight_UniformTimeStep_SecondOrder;
-	//	  PIC::Mover::MoveParticleBoundaryInjection[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder;
-	//	}
-
-
-	//set up the time step
-	PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
-	PIC::ParticleWeightTimeStep::initTimeStep();
-
-	//set up the particle weight
-	PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjectionRate;
-	if (_O_PLUS_HIGH_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_HIGH_SPEC_);
-	if (_O_PLUS_THERMAL_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_THERMAL_SPEC_);
-
+   //set up the time step
+   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
+   PIC::ParticleWeightTimeStep::initTimeStep();
+   
+   //set up the particle weight
+   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjectionRate;
+   if (_O_PLUS_HIGH_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_HIGH_SPEC_);
+   if (_O_PLUS_THERMAL_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O_PLUS_THERMAL_SPEC_);
+   
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  ==  _EXOSPHERE_SOURCE__ON_
-	//evaluate the weight from the parameters of the sputtering (in the Exosphere sputtering model)
-	PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+   //evaluate the weight from the parameters of the sputtering (in the Exosphere sputtering model)
+   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
 #else
-	//copy the weight distribution from that of the thermal ions
-	PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
+   //copy the weight distribution from that of the thermal ions
+   PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
 #endif
+   
+   if (_H2O_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+   if (_H2O_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_H2O_PLUS_SPEC_, _H2O_SPEC_, 1.0);
 
-	if (_H2O_SPEC_>=0) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+   if (_H2_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_H2_SPEC_, _H2O_SPEC_, 1.0);
+   if (_H2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_H2_PLUS_SPEC_, _H2_SPEC_, 1.0);
 
-  if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
-  if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+   if (_O_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O_SPEC_, _H2O_SPEC_, 1.0);
+   if (_O_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O_PLUS_SPEC_, _O_SPEC_, 1.0);
 
-  //init weight of the daugter products of the photolytic and electron impact reactions
-  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
-    double yield=0.0;
+   if (_OH_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O_SPEC_, _OH_SPEC_, 1.0);
+   if (_OH_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_OH_PLUS_SPEC_, _OH_SPEC_, 1.0);
 
-    yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*
-        (PhotolyticReactions::H2O::GetSpeciesReactionYield(spec)+ElectronImpact::H2O::GetSpeciesReactionYield(spec,20.0));
-
-    yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*
-        (PhotolyticReactions::O2::GetSpeciesReactionYield(spec)+ElectronImpact::O2::GetSpeciesReactionYield(spec,20.0));
-
-    yield/=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_];
-    PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(spec,_H2O_SPEC_,yield);
-  }
-
-	//set photolytic reactions
-	//PIC::ChemicalReactions::PhotolyticReactions::SetReactionProcessor(sodiumPhotoionizationReactionProcessor,_O2_SPEC_);
-	//PIC::ChemicalReactions::PhotolyticReactions::SetSpeciesTotalPhotolyticLifeTime(sodiumPhotoionizationLifeTime,_O2_SPEC_);
+   if (_H_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_H_SPEC_, _H2O_SPEC_, 1.0);
+   if (_H_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_H_PLUS_SPEC_, _H_SPEC_, 1.0);
 
 
-//	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
-//	PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
-
-	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-	if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
-
-
-
-
-	//output final data
-	//  PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
-
-	//create the list of mesh nodes where the injection boundary conditions are applied
-	PIC::BC::BlockInjectionBCindicatior=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxParticleInjectionIndicator;
-	PIC::BC::userDefinedBoundingBlockInjectionFunction=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection;
-	PIC::BC::InitBoundingBoxInjectionBlockList();
-
-
-
-
-	//init the particle buffer
-	PIC::ParticleBuffer::Init(10000000);
-	//  double TimeCounter=time(NULL);
-	int LastDataOutputFileNumber=-1;
-
-
-	//init the sampling of the particls' distribution functions
-	//const int nSamplePoints=3;
-	//double SampleLocations[nSamplePoints][DIM]={{2.0E6,0.0,0.0}, {0.0,2.0E6,0.0}, {-2.0E6,0.0,0.0}};
-
-/* THE DEFINITION OF THE SAMPLE LOCATIONS IS IN THE INPUT FILE
-	PIC::DistributionFunctionSample::vMin=-40.0E3;
-	PIC::DistributionFunctionSample::vMax=40.0E3;
-	PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
-
-	PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
-*/
-
-	//also init the sampling of the particles' pitch angle distribution functions
-	//PIC::PitchAngleDistributionSample::nSampledFunctionPoints=101;
-
-	//PIC::PitchAngleDistributionSample::Init(SampleLocations,nSamplePoints);
-	
-
-
+   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
+   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+   
+   //init weight of the daugter products of the photolytic and electron impact reactions
+   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
+       double yield=0.0;
+       
+       yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*
+	 (PhotolyticReactions::H2O::GetSpeciesReactionYield(spec)+ElectronImpact::H2O::GetSpeciesReactionYield(spec,20.0));
+       
+       yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O2_SPEC_]*
+	 (PhotolyticReactions::O2::GetSpeciesReactionYield(spec)+ElectronImpact::O2::GetSpeciesReactionYield(spec,20.0));
+       
+       yield/=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_];
+       PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(spec,_H2O_SPEC_,yield);
+     }
+   
+   //set photolytic reactions
+   //PIC::ChemicalReactions::PhotolyticReactions::SetReactionProcessor(sodiumPhotoionizationReactionProcessor,_O2_SPEC_);
+   //PIC::ChemicalReactions::PhotolyticReactions::SetSpeciesTotalPhotolyticLifeTime(sodiumPhotoionizationLifeTime,_O2_SPEC_);
+   
+   
+   //	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+   //	PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",0);
+   
+   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
+   
+   
+   
+   
+   //output final data
+   //  PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
+   
+   //create the list of mesh nodes where the injection boundary conditions are applied
+   PIC::BC::BlockInjectionBCindicatior=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxParticleInjectionIndicator;
+   PIC::BC::userDefinedBoundingBlockInjectionFunction=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection;
+   PIC::BC::InitBoundingBoxInjectionBlockList();
+   
+   
+   
+   
+   //init the particle buffer
+   PIC::ParticleBuffer::Init(10000000);
+   //  double TimeCounter=time(NULL);
+   int LastDataOutputFileNumber=-1;
+   
+   
+   //init the sampling of the particls' distribution functions
+   //const int nSamplePoints=3;
+   //double SampleLocations[nSamplePoints][DIM]={{2.0E6,0.0,0.0}, {0.0,2.0E6,0.0}, {-2.0E6,0.0,0.0}};
+   
+   /* THE DEFINITION OF THE SAMPLE LOCATIONS IS IN THE INPUT FILE
+      PIC::DistributionFunctionSample::vMin=-40.0E3;
+      PIC::DistributionFunctionSample::vMax=40.0E3;
+      PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
+      
+      PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+   */
+   
+   //also init the sampling of the particles' pitch angle distribution functions
+   //PIC::PitchAngleDistributionSample::nSampledFunctionPoints=101;
+   
+   //PIC::PitchAngleDistributionSample::Init(SampleLocations,nSamplePoints);
+   
+   
+   
 #if _GALILEO_EPD_SAMPLING_ == _EUROPA_MODE_ON_
-  //init sampling points along the s/c trajectory
-  const int nFlybySamplePasses=1;
-  const double FlybySamplingInterval=120.0*60.0,FlybySamplingIntervalStep=120.0; //in seconds
-  const int nSampleSteps=(int)(FlybySamplingInterval/FlybySamplingIntervalStep);
-
-  const char *FlybySamplePassesUTC[nFlybySamplePasses]={"1996-12-19T06:00:00"};
-
-  SpiceDouble et,lt;
-  SpiceDouble state[6];
-  int nFlybyPass,n;
-
-  /* FIPS POINTING
+   //init sampling points along the s/c trajectory
+   const int nFlybySamplePasses=1;
+   const double FlybySamplingInterval=120.0*60.0,FlybySamplingIntervalStep=120.0; //in seconds
+   const int nSampleSteps=(int)(FlybySamplingInterval/FlybySamplingIntervalStep);
+   
+   const char *FlybySamplePassesUTC[nFlybySamplePasses]={"1996-12-19T06:00:00"};
+   
+   SpiceDouble et,lt;
+   SpiceDouble state[6];
+   int nFlybyPass,n;
+   
+   /* FIPS POINTING
       INS-236720_FOV_FRAME       = 'MSGR_EPPS_FIPS'
       INS-236720_FOV_SHAPE       = 'CIRCLE'
       INS-236720_BORESIGHT       = ( 0.0, 0.0, 1.0 )
    */
-
-  SpiceDouble pointing[3],bsight[3],bsight_INIT[3]={0.0,0.0,1.0};
-  SpiceDouble rotate[3][3];
-
-  const SpiceInt lenout = 35;
-  SpiceChar utcstr[lenout+2];
-
-
-  int nFluxSamplePoint=0;
-
-  int nTotalFluxSamplePoints=nFlybySamplePasses*nSampleSteps;
-  double FluxSampleLocations[nTotalFluxSamplePoints][3];
-  double FluxSampleDirections[nTotalFluxSamplePoints][3];
-  double Dist;
-
-
-  for (nFlybyPass=0;nFlybyPass<nFlybySamplePasses;nFlybyPass++) {
-    utc2et_c(FlybySamplePassesUTC[nFlybyPass],&et);
-
-    if (PIC::ThisThread==0) {
-      cout << "S/C Flyby Sampling: Pass=" << nFlybyPass << ":" << endl;
-      //???      cout << "Flux Sample Point\tUTS\t\t\t x[km]\t\ty[km]\t\tz[km]\t\t\t lx\t\tly\t\tlz\t" << endl;
-      cout << "Flux Sample Point\tUTS\t\t\tx[km]\t\ty[km]\t\tz[km]\tr[rTarget]\t" << endl;
-    }
-
-    for (n=0;n<nSampleSteps;n++) {
-      //position of the s/c
-      spkezr_c("GALILEO ORBITER",et,Exosphere::SO_FRAME,"NONE","EUROPA",state,&lt);
-
-
-      //get the pointing vector in the 'MSO' frame
-      //memcpy(bsight,bsight_INIT,3*sizeof(double));
-
-      //???      pxform_c ("MSGR_EPPS_FIPS",Exosphere::SO_FRAME,et,rotate);
-      //???      mxv_c(rotate,bsight,pointing);
-
-      //print the pointing information
-      if (PIC::ThisThread==0) {
-        et2utc_c(et,"C",0,lenout,utcstr);
-        printf("%i\t\t\t%s\t",nFluxSamplePoint,utcstr);
-        for (idim=0;idim<3;idim++) printf("%e\t",state[idim]);
-        Dist = 0.0;
-        for (idim=0;idim<3;idim++) Dist+=pow(state[idim],2);
-        printf("%.2f\t",sqrt(Dist)/_RADIUS_(_TARGET_)*1E3);
-        cout << "\t";
-
-        //???        for (idim=0;idim<3;idim++) printf("%e\t",pointing[idim]);
-        cout << endl;
-      }
-
-      //save the sample pointing information
-      for (idim=0;idim<3;idim++) {
-        FluxSampleLocations[nFluxSamplePoint][idim]=state[idim]*1.0E3;
-        //???  FluxSampleDirections[nFluxSamplePoint][idim]=pointing[idim];
-      }
-
-      //increment the flyby time
-      et+=FlybySamplingIntervalStep;
-      ++nFluxSamplePoint;
-    }
-
-    cout << endl;
-  }
-
- // PIC::ParticleFluxDistributionSample::Init(FluxSampleLocations,FluxSampleDirections,30.0/180.0*Pi,nTotalFluxSamplePoints);
-
+   
+   SpiceDouble pointing[3],bsight[3],bsight_INIT[3]={0.0,0.0,1.0};
+   SpiceDouble rotate[3][3];
+   
+   const SpiceInt lenout = 35;
+   SpiceChar utcstr[lenout+2];
+   
+   
+   int nFluxSamplePoint=0;
+   
+   int nTotalFluxSamplePoints=nFlybySamplePasses*nSampleSteps;
+   double FluxSampleLocations[nTotalFluxSamplePoints][3];
+   double FluxSampleDirections[nTotalFluxSamplePoints][3];
+   double Dist;
+   
+   
+   for (nFlybyPass=0;nFlybyPass<nFlybySamplePasses;nFlybyPass++) {
+     utc2et_c(FlybySamplePassesUTC[nFlybyPass],&et);
+     
+     if (PIC::ThisThread==0) {
+       cout << "S/C Flyby Sampling: Pass=" << nFlybyPass << ":" << endl;
+       //???      cout << "Flux Sample Point\tUTS\t\t\t x[km]\t\ty[km]\t\tz[km]\t\t\t lx\t\tly\t\tlz\t" << endl;
+       cout << "Flux Sample Point\tUTS\t\t\tx[km]\t\ty[km]\t\tz[km]\tr[rTarget]\t" << endl;
+     }
+     
+     for (n=0;n<nSampleSteps;n++) {
+       //position of the s/c
+       spkezr_c("GALILEO ORBITER",et,Exosphere::SO_FRAME,"NONE","EUROPA",state,&lt);
+       
+       
+       //get the pointing vector in the 'MSO' frame
+       //memcpy(bsight,bsight_INIT,3*sizeof(double));
+       
+       //???      pxform_c ("MSGR_EPPS_FIPS",Exosphere::SO_FRAME,et,rotate);
+       //???      mxv_c(rotate,bsight,pointing);
+       
+       //print the pointing information
+       if (PIC::ThisThread==0) {
+	 et2utc_c(et,"C",0,lenout,utcstr);
+	 printf("%i\t\t\t%s\t",nFluxSamplePoint,utcstr);
+	 for (idim=0;idim<3;idim++) printf("%e\t",state[idim]);
+	 Dist = 0.0;
+	 for (idim=0;idim<3;idim++) Dist+=pow(state[idim],2);
+	 printf("%.2f\t",sqrt(Dist)/_RADIUS_(_TARGET_)*1E3);
+	 cout << "\t";
+	 
+	 //???        for (idim=0;idim<3;idim++) printf("%e\t",pointing[idim]);
+	 cout << endl;
+       }
+       
+       //save the sample pointing information
+       for (idim=0;idim<3;idim++) {
+	 FluxSampleLocations[nFluxSamplePoint][idim]=state[idim]*1.0E3;
+	 //???  FluxSampleDirections[nFluxSamplePoint][idim]=pointing[idim];
+       }
+       
+       //increment the flyby time
+       et+=FlybySamplingIntervalStep;
+       ++nFluxSamplePoint;
+     }
+     
+     cout << endl;
+   }
+   
+   // PIC::ParticleFluxDistributionSample::Init(FluxSampleLocations,FluxSampleDirections,30.0/180.0*Pi,nTotalFluxSamplePoints);
+   
 #elif _GALILEO_EPD_SAMPLING_ == _EUROPA_MODE_OFF_
-  printf("No Galileo EPD sampling\n");
+   printf("No Galileo EPD sampling\n");
 #else
-  exit(__LINE__,__FILE__,"Error: the option is not recognized");
+   exit(__LINE__,__FILE__,"Error: the option is not recognized");
 #endif
-
-
+   
+   
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-
-
-  #if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__ICES_
-  //init ICES
-
-    #ifdef _ICES_CREATE_COORDINATE_LIST_
-  /*
-   *const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
-   *const char IcesModelCase[]="";//"Europa09";
-   *
-   *
-   *PIC::CPLR::ICES::createCellCenterCoordinateList();
-   *PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
-   *PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
-   */
-
-  PIC::CPLR::ICES::createCellCenterCoordinateList();
-  //PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/ices/ICES/Models"); //("/Users/vtenishe/CODES/ICES/Models");
-  PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
-    #endif
-
+   
+   
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__ICES_
+   //init ICES
+   
+#ifdef _ICES_CREATE_COORDINATE_LIST_
+   /*
+    *const char IcesLocationPath[]="";//"/Users/dborovik/MyICES/ICES";
+    *const char IcesModelCase[]="";//"Europa09";
+    *
+    *
+    *PIC::CPLR::ICES::createCellCenterCoordinateList();
+    *PIC::CPLR::ICES::SetLocationICES(IcesLocationPath);
+    *PIC::CPLR::ICES::retriveSWMFdata(IcesModelCase);  ////("EUROPA_RESTART_n070001");
+    */
+   
+   PIC::CPLR::ICES::createCellCenterCoordinateList();
+   //PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/ices/ICES/Models"); //("/Users/vtenishe/CODES/ICES/Models");
+   PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+#endif
+   
 
   //#ifdef _ICES_LOAD_DATA_
   

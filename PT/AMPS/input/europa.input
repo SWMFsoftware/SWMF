@@ -1,8 +1,8 @@
 
 #main
 
-SpeciesList=H2O,O2,H2,H,O,OH 
-!,O2_PLUS,O_PLUS_HIGH,O_PLUS_THERMAL
+SpeciesList=H2O,O2,H2,H,O,OH,O_PLUS,O2_PLUS,H_PLUS,H2_PLUS,H2O_PLUS,OH_PLUS
+!,O_PLUS_HIGH,O_PLUS_THERMAL
 
 
 makefile  SPICE=/Users/vtenishe/SPICE/cspice
@@ -122,7 +122,7 @@ ParticleWeightCorrectionMode=on
 
 #Sampling
 
-  PitchAngleDistributionSampling=on \\ !on, off
+  PitchAngleDistributionSampling=off \\ !on, off
     x=(-2.0E6, 0.0,   0.0),   (-1.7E6, 1.0E6, 0.0),   (-1.0E6, 1.7E6, 0.0),  \\
       ( 0.0,   2.0E6, 0.0),   ( 1.0E6, 1.7E6, 0.0),   ( 1.7E6, 1.0E6, 0.0),  \\
       ( 2.0E6, 0.0,   0.0),   ( 1.7E6,-1.0E6, 0.0),   ( 1.0E6,-1.7E6, 0.0),  \\
