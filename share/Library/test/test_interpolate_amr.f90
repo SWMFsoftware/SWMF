@@ -309,22 +309,14 @@ contains
                   call find_test(nDim, Xyz_D, &
                        iProc, iBlockNei, XyzCorner_D, Dxyz_D, IsOut)
                   if(IsOut)CYCLE
-                  if(iLevel_I(iBlock) < iLevel_I(iBlockNei))CYCLE
+                  if(iBlock <= 2**nDim            &! iBlock    is Coarse
+                       .and. iBlockNei > 2**nDim) &! iBlockNei is Fine
+                       CYCLE
+
                   iMisc = 1 + iLevel_I(iBlock) - iLevel_I(iBlockNei)
                   iCellIndexNei_D = 1
                   iCellIndexNei_D(1:nDim) = &
                        nint(0.3+Xyz_D(1:nDim)/Dxyz_D(1:nDim))
-!                  do iDim = 1, nDim
-!                     if(    iCellIndex_D(iDim) < 1)then
-!                        iCellIndexNei_D(iDim) = &
-!                             nCell_D(iDim) - ABS(iCellIndex_D(iDim))/iMisc
-!                     elseif(iCellIndex_D(iDim) > nCell_D(iDim))then
-!                        iCellIndexNei_D(iDim) = &
-!                             (iCellIndex_D(iDim) - nCell_D(iDim))/iMisc
-!                     else
-!                        iCellIndexNei_D(iDim)=iCellIndex_D(iDim)
-!                     end if
-!                  end do
                   Var_GB(i,j,k,iBlock) = &
                        Var_GB(iCellIndexNei_D(1),&
                        iCellIndexNei_D(2),&
@@ -333,7 +325,6 @@ contains
                        Xyz_DGB(:,iCellIndexNei_D(1),&
                        iCellIndexNei_D(2),&
                        iCellIndexNei_D(3),iBlockNei)
-
                end do
             end do
          end do
