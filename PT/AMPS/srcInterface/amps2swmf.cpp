@@ -120,6 +120,8 @@ extern "C" {
 
     amps_time_step();
 
+/*
+   //GetMeanParticleMicroscopicParameters() is called ub amps_finalize_()
     if (PIC::ModelTestRun::mode==true) if (counter==PIC::ModelTestRun::nTotalIteraction) {
       char fname[400];
 
@@ -128,14 +130,19 @@ extern "C" {
 
       exit(0);
     }
+*/
 
   }
 
   void amps_finalize_() {
     char fname[_MAX_STRING_LENGTH_PIC_];
 
+    //output the test run particle data
     sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+    
+    #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_ 
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+    #endif
 
     //save particle trajectory file
     #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
