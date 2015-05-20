@@ -37,7 +37,7 @@ endif
 test_app_compile:
 ifneq ($(TESTAPP),)
 	@echo "test_$(TESTAPP)_compile..." > test_$(TESTAPP).diff
-	./Config.pl -application=$(TESTAPP) -spice-path=nospice -spice-kernels=nospice
+	./Config.pl -application=$(TESTAPP) -spice-path=nospice -spice-kernels=nospice -amps-test=on 
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
 	$(MAKE) amps
