@@ -240,7 +240,8 @@ double localResolution(double *x) {
 #endif
 
 //set up the local time step
-
+#if  _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_OFF_ 
+//use the time step distribution for real model runs
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 	double CellSize;
 
@@ -284,9 +285,55 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
    }
 
   return 0.3*CellSize/CharacteristicSpeed;
-
-
 }
+#elif _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_ 
+//use the time step distribution for the nightly tests
+double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+         double CellSize;
+ 
+ //      double CharacteristicSpeed_NA=5.0E3;
+ 
+         const double maxInjectionEnergy=1E5*1000*ElectronCharge;
+         double CharacteristicSpeed = sqrt(2*maxInjectionEnergy/_MASS_(_O_));
+ 
+ 
+         //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
+ 
+         CellSize=startNode->GetCharacteristicCellSize();
+ 
+ 
+ 
+ 
+ //      CharacteristicSpeed=1.0E6;
+ 
+ /*if (spec==_O_PLUS_HIGH_SPEC_) CharacteristicSpeed=10.0*1.6E6;
+ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
+ 
+   switch (spec) {
+   case _O_PLUS_HIGH_SPEC_:
+     CharacteristicSpeed=10.0*1.6E6;
+     break;
+   case _O_PLUS_THERMAL_SPEC_:
+     CharacteristicSpeed=10.0*9.6E4;
+     break;
+ 
+   case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:
+     CharacteristicSpeed=1.0e4;
+     break;
+   case _O2_PLUS_SPEC_:
+     CharacteristicSpeed=10*1.0e4;
+     break;
+   default:
+     exit(__LINE__,__FILE__,"unknown species");
+    }
+ 
+    return 0.3*CellSize/CharacteristicSpeed;
+ }
+
+#endif
+
+
+
 
 double localParticleInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 
@@ -1000,7 +1047,12 @@ void amps_init() {
    
 #if _EXOSPHERE_SOURCE__SOLAR_WIND_SPUTTERING_  ==  _EXOSPHERE_SOURCE__ON_
    //evaluate the weight from the parameters of the sputtering (in the Exosphere sputtering model)
-   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+   if (_O_PLUS_THERMAL_SPEC_>=0) {
+     PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
+   }
+   else {
+     PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+   }
 #else
    //copy the weight distribution from that of the thermal ions
    PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0e4);
