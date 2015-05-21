@@ -50,7 +50,7 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=ices !!off, ices, swmf
+CouplerMode=off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
