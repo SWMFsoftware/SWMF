@@ -3,6 +3,9 @@
 //========================================================================
 /*
  * $Log$
+ * Revision 1.3  2015/03/13 19:17:12  yunilee
+ * Changes for Mars code initialization
+ *
  * Revision 1.2  2014/11/25 04:52:40  vtenishe
  * few function calls are changed
  *
@@ -156,51 +159,51 @@ inline void ReadMTGCM() {
 				
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Te.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Te.h");
+		Te.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Te.h");
 		
 		Tn.PlanetRadius=_RADIUS_(_TARGET_);
 		Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Tn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Tn.h");
+		Tn.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Tn.h");
 				
 		Ti.PlanetRadius=_RADIUS_(_TARGET_);
 		Ti.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Ti.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Ti.h");
+		Ti.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Ti.h");
 		
 		O2p.PlanetRadius=_RADIUS_(_TARGET_);
 		O2p.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O2p.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O2p.h");
+		O2p.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O2p.h");
 				
 		E.PlanetRadius=_RADIUS_(_TARGET_);
 		E.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		E.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/E.h");
+		E.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/E.h");
 		
 		O.PlanetRadius=_RADIUS_(_TARGET_);
 		O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
+		O.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O.h");
 		
 		CO.PlanetRadius=_RADIUS_(_TARGET_);
 		CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO.h");
+		CO.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/CO.h");
 		
 		CO2.PlanetRadius=_RADIUS_(_TARGET_);
 		CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
+		CO2.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/CO2.h");
 	
 		Un.PlanetRadius=_RADIUS_(_TARGET_);
 		Un.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Un.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Un.h");
+		Un.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Un.h");
 		
 		Vn.PlanetRadius=_RADIUS_(_TARGET_);
 		Vn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Vn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Vn.h");
+		Vn.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Vn.h");
 		
 		Wn.PlanetRadius=_RADIUS_(_TARGET_);
 		Wn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Wn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Wn.h");
+		Wn.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/Wn.h");
 		
 		COp.PlanetRadius=_RADIUS_(_TARGET_);
 		COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		COp.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/COp.h");
+		COp.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/COp.h");
 
 		//pent=chdir("..");
 	

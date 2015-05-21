@@ -86,11 +86,11 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
 
     O.PlanetRadius=_RADIUS_(_TARGET_);
     O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
+    O.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O.h");
 
     CO2.PlanetRadius=_RADIUS_(_TARGET_);
     CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
+    CO2.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/CO2.h");
   }
 
 
