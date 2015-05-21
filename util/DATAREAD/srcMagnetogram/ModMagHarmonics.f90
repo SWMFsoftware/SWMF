@@ -67,7 +67,10 @@ module ModMagHarmonics
   real:: Sqrt_I(MaxInt)
 
   real, allocatable, dimension(:) :: ChebyshevWeightE_I, ChebyshevWeightW_I
-
+  !\
+  ! Parameters used to apply the scaling factor to the raw magnetogram
+  !/
+  real:: Scaling4SmallB0 = 1.0, B0Min = 0.0
 contains
   subroutine read_harmonics_param
 
@@ -95,6 +98,9 @@ contains
           call read_var('NameFileOut', NameFileOut)
        case("#CHEBYSHEV")
           call read_var('UseChebyshevNode', UseChebyshevNode)
+       case("#SCALINGB0")
+          call read_var('Scaling4SmallB0', Scaling4SmallB0)
+          call read_var('B0Min', B0Min)
        case default
           call CON_stop(NameSub//': unknown command='//trim(NameCommand))
        end select
@@ -195,6 +201,17 @@ contains
        end do
        close(iUnit)
     end if
+
+    !\
+    ! Apply a scaling factor to small magnetic fields, to compensate
+    ! the measurement error for the coronal hole (=very low) field.
+    !/
+    Br_II = sign(min(abs(Br_II) + B0Min, Scaling4SmallB0*abs(Br_II)), Br_II)
+    !\
+    ! For scaling factor = 3.75 and B0Min = 5 [Gs] the observed field of
+    ! 1    Gs, 2 Gs, 20 Gs  will be converted to 
+    ! 3.75 Gs, 7 Gs, 25 Gs  accordingly.
+    !/  
 
     ! Fix too large values of Br
     where (abs(Br_II) > BrMax) Br_II = sign(BrMax, Br_II)
