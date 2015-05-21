@@ -17,12 +17,14 @@ test_all:
 
 test_compile:
 	@rm -rf *.diff
-	-@$(foreach TESTAPP,$(TESTAPPS),$(MAKE) test_app_compile TESTAPP=$(TESTAPP);))
-	-@$(foreach TESTAPP,$(TESTAPPS),$(MAKE) test_app_rundir  TESTAPP=$(TESTAPP);))
+	-@$(foreach TESTAPP,$(TESTAPPS),                        \
+		    $(MAKE) test_app_compile TESTAPP=$(TESTAPP);\
+		    $(MAKE) test_app_rundir  TESTAPP=$(TESTAPP);)
 
 test_run:
-	-@$(foreach(TESTAPP,$(TESTAPPS),$(MAKE) test_app_run   TESTAPP=$(TESTAPP);))
-	-@$(foreach(TESTAPP,$(TESTAPPS),$(MAKE) test_app_check TESTAPP=$(TESTAPP);))
+	-@$(foreach TESTAPP,$(TESTAPPS),                      \
+		    $(MAKE) test_app_run   TESTAPP=$(TESTAPP);\
+		    $(MAKE) test_app_check TESTAPP=$(TESTAPP);)
 
 test_app:
 ifneq ($(TESTAPP),)
