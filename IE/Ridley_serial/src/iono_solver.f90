@@ -265,14 +265,14 @@ subroutine ionosphere_solver(iBlock, Jr, &
      ! Apply average condition at north pole
      Phi_C(1,:) = sum(Phi_C(2,1:nPsiUsed))/nPsiUsed
      cpcp_north = (PhiMax - PhiMin)/1000.0
-     call write_prefix; write(iUnitOut,*) &
+     call write_prefix; write(iUnitOut,'(a,G14.6,a)') &
           "iono_solver: Northern Cross Polar Cap Potential=",&
           cpcp_north," kV"
   else
      ! Apply average condition at south pole
      Phi_C(nTheta,:) = sum(Phi_C(nTheta-1,1:nPsiUsed))/nPsiUsed
      cpcp_south = (PhiMax - PhiMin)/1000.0
-     call write_prefix; write(iUnitOut,*) &
+     call write_prefix; write(iUnitOut,'(a,G14.6,a)') &
           "iono_solver: Southern Cross Polar Cap Potential=",&
           cpcp_south," kV"
   endif
