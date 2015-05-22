@@ -27,6 +27,7 @@
 #define _O_PLUS_HIGH_SPEC_    -21
 #define _O_PLUS_THERMAL_SPEC_ -22
 
+#define _DUST_SPEC_           -999
 
 //Species of the background atmosphere
 #define _CO_BACKGROUND_SPEC_        -1
