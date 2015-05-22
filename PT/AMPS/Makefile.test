@@ -2,7 +2,7 @@
 # for each test a separate folder run_test_<NAME> is created 
 # and executables are copied there
 
-TESTAPPS=mars moon
+TESTAPPS=titan mars moon
 TESTAPP=
 TESTAPPDIR = run_test_$(TESTAPP)
 
