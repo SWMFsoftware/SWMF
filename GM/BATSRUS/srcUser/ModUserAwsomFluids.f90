@@ -505,7 +505,8 @@ contains
        iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
        do k = MinK, MaxK; do j = MinJ, MaxJ
-          FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
+          FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+               + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
           Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
           ! Copy field-aligned velocity component. Reflect the other components
