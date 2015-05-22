@@ -32,6 +32,12 @@ double Europa::xEarth[3]={0.0,0.0,0.0},Europa::vEarth[3]={0.0,0.0,0.0};
 double Europa::vEuropaRadial=0.0,Europa::xEuropaRadial=0.0;
 
 
+// dust parameters
+double DustSizeMin=1.0e-7;
+double DustSizeMax=1.0e-2;
+double DustTotalMassProductionRate=0.0;
+int    DustSampleIntervals=10;
+double DustSizeDistribution=0.0;
 
 
 //sample velocity of the sputtered O2;
@@ -126,9 +132,20 @@ void Europa::Init_BeforeParser() {
   //init the location of the plume
   OrbitalMotion::UpdateTransformationMartix();
   Plume::SetPlumeLocation();
+
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  //init the dust model
+  ElectricallyChargedDust::minDustRadius=DustSizeMin; //0.1*_MICROMETER_;
+  ElectricallyChargedDust::maxDustRadius=DustSizeMax; //1.0e4*_MICROMETER_;
+  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(DustSampleIntervals);
+  ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
+  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=4.0;
+  ElectricallyChargedDust::TotalMassDustProductionRate=DustTotalMassProductionRate;
+  ElectricallyChargedDust::SizeDistribution::PowerIndex=DustSizeDistribution;
+  ElectricallyChargedDust::Init_BeforeParser();
+#endif
+
 }
-
-
 
 
 //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found

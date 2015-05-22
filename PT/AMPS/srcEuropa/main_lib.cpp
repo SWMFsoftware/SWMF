@@ -263,26 +263,31 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 /*if (spec==_O_PLUS_HIGH_SPEC_) CharacteristicSpeed=10.0*1.6E6;
 if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
 
-  switch (spec) {
-  case _O_PLUS_HIGH_SPEC_:
-    CharacteristicSpeed=10.0*1.6E6;
-    break;
-
-  case _O_PLUS_THERMAL_SPEC_:
-    CharacteristicSpeed=10.0*9.6E4;
-    break;
-
-  case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
-    CharacteristicSpeed=5.0e4;
-    break;
-
-  case _O_PLUS_SPEC_:case _O2_PLUS_SPEC_:case _H_PLUS_SPEC_:case _H2_PLUS_SPEC_:case _OH_PLUS_SPEC_:case _H2O_PLUS_SPEC_:
-    CharacteristicSpeed=100*5.0e4;
-    break;
-
-  default:
-    exit(__LINE__,__FILE__,"unknown species");
-   }
+   switch (spec) {
+   case _O_PLUS_HIGH_SPEC_:
+     CharacteristicSpeed=10.0*1.6E6;
+     break;
+   case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_SPEC_:
+     CharacteristicSpeed=10.0*9.6E4;
+     break;
+ 
+   case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
+     CharacteristicSpeed=1.0e5;
+     break;
+   case _O2_PLUS_SPEC_:case _H_PLUS_SPEC_:case _H2_PLUS_SPEC_:case _H2O_PLUS_SPEC_:case _OH_PLUS_SPEC_:
+     CharacteristicSpeed=1.0e7;
+     break;
+   default:
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+     if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
+       CharacteristicSpeed=1.0e4;
+       break;
+     }
+#endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+     char error_message[300];
+     sprintf(error_message,"unknown species %i", spec);
+     exit(__LINE__,__FILE__,error_message);
+    }
 
   return 0.3*CellSize/CharacteristicSpeed;
 }
@@ -313,18 +318,26 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
    case _O_PLUS_HIGH_SPEC_:
      CharacteristicSpeed=10.0*1.6E6;
      break;
-   case _O_PLUS_THERMAL_SPEC_:
+   case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_SPEC_:
      CharacteristicSpeed=10.0*9.6E4;
      break;
  
-   case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:
+   case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
      CharacteristicSpeed=1.0e4;
      break;
-   case _O2_PLUS_SPEC_:
+   case _O2_PLUS_SPEC_:case _H_PLUS_SPEC_:case _H2_PLUS_SPEC_:case _H2O_PLUS_SPEC_:case _OH_PLUS_SPEC_:
      CharacteristicSpeed=10*1.0e4;
      break;
    default:
-     exit(__LINE__,__FILE__,"unknown species");
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+     if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
+       CharacteristicSpeed=1.0e3;
+       break;
+     }
+#endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+     char error_message[300];
+     sprintf(error_message,"unknown species %i", spec);
+     exit(__LINE__,__FILE__,error_message);
     }
  
     return 0.3*CellSize/CharacteristicSpeed;
@@ -388,68 +401,68 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
 
 //injection of model particles through the faces of the bounding box
 long int  BoundingBoxInjection(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-	bool ExternalFaces[6];
-	double ParticleWeight,LocalTimeStep,TimeCounter,ExternalNormal[3],x[3],x0[3],e0[3],e1[3],c0,c1;
-	int nface,idim;
-	//  long int nInjectedParticles;
-	long int newParticle;
-	PIC::ParticleBuffer::byte *newParticleData;
-	long int nInjectedParticles=0;
-
-	if ((spec!=_O_PLUS_HIGH_SPEC_)&&(spec!=_O_PLUS_THERMAL_SPEC_)) return 0; //inject only spec=0
-
-	static double vNA[3]={0.0,000.0,000.0},nNA=5.0E6,tempNA=8.0E4;
-	double v[3];
-
-
-	double ModelParticlesInjectionRate;
-
-	if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
-		ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
-		LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
-
-
-		for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
-			startNode->GetExternalNormal(ExternalNormal,nface);
-			TimeCounter=0.0;
-
-			ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
-
-
-			if (ModelParticlesInjectionRate>0.0) {
-				ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
-
-				PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
-
-				while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
-					//generate the new particle position on the face
-					for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
-
-					//generate a particle
-					newParticle=PIC::ParticleBuffer::GetNewParticle();
-					newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-					nInjectedParticles++;
-
-					PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
-
-					PIC::ParticleBuffer::SetX(x,newParticleData);
-					PIC::ParticleBuffer::SetV(v,newParticleData);
-					PIC::ParticleBuffer::SetI(spec,newParticleData);
-
-					PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
-
-
-					//inject the particle into the system
-					//          PIC::Mover::MoveParticleTimeStep[spec](newParticle,LocalTimeStep-TimeCounter,startNode);
-
-				}
-			}
-
-
-		}
+  bool ExternalFaces[6];
+  double ParticleWeight,LocalTimeStep,TimeCounter,ExternalNormal[3],x[3],x0[3],e0[3],e1[3],c0,c1;
+  int nface,idim;
+  //  long int nInjectedParticles;
+  long int newParticle;
+  PIC::ParticleBuffer::byte *newParticleData;
+  long int nInjectedParticles=0;
+  
+  if ((spec!=_O_PLUS_HIGH_SPEC_)&&(spec!=_O_PLUS_THERMAL_SPEC_)) return 0; //inject only spec=0
+  
+  static double vNA[3]={0.0,000.0,000.0},nNA=5.0E6,tempNA=8.0E4;
+  double v[3];
+  
+  
+  double ModelParticlesInjectionRate;
+  
+  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
+    ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
+    LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
+    
+    
+    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
+	startNode->GetExternalNormal(ExternalNormal,nface);
+	TimeCounter=0.0;
+	
+	ModelParticlesInjectionRate=PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
+	
+	
+	if (ModelParticlesInjectionRate>0.0) {
+	  ModelParticlesInjectionRate*=startNode->GetBlockFaceSurfaceArea(nface)/ParticleWeight;
+	  
+	  PIC::Mesh::mesh.GetBlockFaceCoordinateFrame_3D(x0,e0,e1,nface,startNode);
+	  
+	  while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
+	    //generate the new particle position on the face
+	    for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
+	    
+	    //generate a particle
+	    newParticle=PIC::ParticleBuffer::GetNewParticle();
+	    newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+	    nInjectedParticles++;
+	    
+	    PIC::BC::CalculateInjectionRate_MaxwellianDistribution(nNA,tempNA,vNA,ExternalNormal,_O_PLUS_THERMAL_SPEC_);
+	    
+	    PIC::ParticleBuffer::SetX(x,newParticleData);
+	    PIC::ParticleBuffer::SetV(v,newParticleData);
+	    PIC::ParticleBuffer::SetI(spec,newParticleData);
+	    
+	    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+	    
+	    
+	    //inject the particle into the system
+	    //          PIC::Mover::MoveParticleTimeStep[spec](newParticle,LocalTimeStep-TimeCounter,startNode);
+	    
+	  }
 	}
-
-	return nInjectedParticles;
+	
+	
+      }
+  }
+  
+  return nInjectedParticles;
 }
 
 long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -460,9 +473,319 @@ long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 	return nInjectedParticles;
 }
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+
+double GetTotalProductionRateUniformNASTRAN(int spec){
+  return 0.0;
+}
+
+bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
+  double ExternalNormal[3]; 
+  int idim;
+  double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
+  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
+  static double positionSun[3];
+  double HeliocentricDistance=3.3*_AU_;
+  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
+  long int totalSurfaceElementsNumber,i;
+  double rSphere=1980.0;
+  double area;
+  static double productionDistributionUniformNASTRAN[200000];
+  static double cumulativeProductionDistributionUniformNASTRAN[200000];
+  static bool probabilityFunctionDefinedUniformNASTRAN;
+  if (probabilityFunctionDefinedUniformNASTRAN==false) {       
+    //    for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
+    //      TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
+    //    }
+    
+    //    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    //    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
+    //    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
+    
+    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
+    
+    total=0.0;      
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+      CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); //I had middle element on body rotation...
+      
+      productionDistributionUniformNASTRAN[i]=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+      total+=productionDistributionUniformNASTRAN[i];
+    }
+      
+    cumulativeProductionDistributionUniformNASTRAN[0]=0.0;
+    for (i=0;i<totalSurfaceElementsNumber;i++) {
+      if (i==0) {
+	cumulativeProductionDistributionUniformNASTRAN[i]+=productionDistributionUniformNASTRAN[i]/total;
+      }else{
+	cumulativeProductionDistributionUniformNASTRAN[i]=cumulativeProductionDistributionUniformNASTRAN[i-1]+productionDistributionUniformNASTRAN[i]/total;
+      }
+      
+    }
+    //    probabilityFunctionDefinedUniformNASTRAN=true;
+  }
+  
+  //Computation of the segment where the particle will be created
+  gamma=rnd();
+  i=0;
+  while (gamma>cumulativeProductionDistributionUniformNASTRAN[i]){
+    i++;
+  }
+
+    
+  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+  double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
+  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
+  //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
+
+  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
+  
+  //  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
+  //    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
+  //    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
+  //  }
+  //  cosSubSolarAngle=c/sqrt(X);
+  
+  //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
+  x_LOCAL_SO_OBJECT[0]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[0][2]*x_LOCAL_IAU_OBJECT[2]);
+  
+  x_LOCAL_SO_OBJECT[1]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[1][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[1][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[1][2]*x_LOCAL_IAU_OBJECT[2]);
+  
+  x_LOCAL_SO_OBJECT[2]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[2][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[2][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[2][2]*x_LOCAL_IAU_OBJECT[2]);
+    
+
+  //determine if the particle belongs to this processor
+  startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL_SO_OBJECT,startNode);
+  if (startNode->Thread!=PIC::Mesh::mesh.ThisThread) return false;
+  
+  //generate particle's velocity vector in the coordinate frame related to the planet 'IAU_OBJECT'
+  double SurfaceTemperature,vbulk[3]={0.0,0.0,0.0};
+  //  if(CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) cosSubSolarAngle=-1; //Get Temperature from night side if in the shadow
+  SurfaceTemperature=100;//GetSurfaceTemeprature(cosSubSolarAngle,x_LOCAL_SO_OBJECT);
+
+  double r2Tang=0.0;
+  double xFace[3];
+  double vDustInit=0.01;
+  double angleVelocityNormal=asin(rnd());
+
+  if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
+  for (idim=0;idim<3;idim++){
+        v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
+     
+    }
+    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
+    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+  }
+  else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
+  
+
+  //transform the velocity vector to the coordinate frame 'MSGR_SO'
+  v_LOCAL_SO_OBJECT[0]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][2]*x_LOCAL_IAU_OBJECT[2])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][3]*v_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][4]*v_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[3][5]*v_LOCAL_IAU_OBJECT[2]);
+  
+  v_LOCAL_SO_OBJECT[1]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][2]*x_LOCAL_IAU_OBJECT[2])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][3]*v_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][4]*v_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[4][5]*v_LOCAL_IAU_OBJECT[2]);
+  
+  v_LOCAL_SO_OBJECT[2]=
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][0]*x_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][1]*x_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][2]*x_LOCAL_IAU_OBJECT[2])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][3]*v_LOCAL_IAU_OBJECT[0])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][4]*v_LOCAL_IAU_OBJECT[1])+
+    (Europa::OrbitalMotion::IAU_to_SO_TransformationMartix[5][5]*v_LOCAL_IAU_OBJECT[2]);
+  
+  memcpy(x_SO_OBJECT,x_LOCAL_SO_OBJECT,3*sizeof(double));
+  memcpy(x_IAU_OBJECT,x_LOCAL_IAU_OBJECT,3*sizeof(double));
+  memcpy(v_SO_OBJECT,v_LOCAL_SO_OBJECT,3*sizeof(double));
+  memcpy(v_IAU_OBJECT,v_LOCAL_IAU_OBJECT,3*sizeof(double));
+  
+  return true;
+}
 
 
 
+long int DustInjection(int spec) {
+  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
+  long int newParticle,nInjectedParticles=0;
+  PIC::ParticleBuffer::byte *newParticleData;
+  double ParticleWeightCorrection=1.0;
+  bool flag=false;
+  int SourceProcessID;
+
+  // ignore non-dust species
+  if (!(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return 0;
+
+  double totalProductionRate=GetTotalProductionRateUniformNASTRAN(spec);
+
+  const int nMaxInjectedParticles=10*PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber;
+
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+#else
+  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+  exit(__LINE__,__FILE__,"Error: not implemented!");
+#else
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+  ModelParticlesInjectionRate=totalProductionRate/ParticleWeight;
+
+  if (ModelParticlesInjectionRate*LocalTimeStep>nMaxInjectedParticles) {
+    ParticleWeightCorrection=ModelParticlesInjectionRate*LocalTimeStep/nMaxInjectedParticles;
+    ModelParticlesInjectionRate/=ParticleWeightCorrection;
+  }
+
+  //definition of indexes TEMPORARY!!!!!
+  //int _EXOSPHERE__SOURCE_MAX_ID_VALUE_=2;
+  int _EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_=0;
+  int _exosphere__SOURCE_MAX_ID_VALUE_=0;
+
+
+  //calcualte probabilities of each source processes
+  double TotalFlux,FluxSourceProcess[1+_exosphere__SOURCE_MAX_ID_VALUE_]; 
+  for (int iSource=0;iSource<1+_exosphere__SOURCE_MAX_ID_VALUE_;iSource++) FluxSourceProcess[iSource]=0.0; 
+  
+  TotalFlux=totalProductionRate;
+  
+  //only Used defined source here since we only want the Bjorn model so far
+  //calculate the source rate due to user defined source functions                                                   
+  //Distribution of dust injection correlated with water
+  
+  FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_]=GetTotalProductionRateUniformNASTRAN(_H2O_SPEC_);
+
+  TotalFlux=GetTotalProductionRateUniformNASTRAN(_H2O_SPEC_);
+  
+  double CalculatedSourceRate[PIC::nTotalSpecies][1+_exosphere__SOURCE_MAX_ID_VALUE_];
+  CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_]=0.0;
+  
+  
+  static double GrainInjectedMass=0.0;
+  PIC::Mesh::cDataBlockAMR *block;
+  double GrainRadius,GrainMass,GrainWeightCorrection;
+  int GrainVelocityGroup;
+  
+  GrainInjectedMass+=ElectricallyChargedDust::TotalMassDustProductionRate*LocalTimeStep;
+  
+  while (GrainInjectedMass>0.0) {
+    startNode=NULL;
+    
+    do {
+      SourceProcessID=(int)(rnd()*(1+_exosphere__SOURCE_MAX_ID_VALUE_));
+    }
+    while (FluxSourceProcess[SourceProcessID]/TotalFlux<rnd());
+    
+    //generate a particle                                                                                             
+    char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+    PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+    if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_) {
+      flag=GenerateParticlePropertiesUniformNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+      ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
+      GrainMass=4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity*pow(GrainRadius,3);
+      GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
+      SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_;
+      if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__Uniform_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
+    }
+    else {
+      continue;
+    }
+    if (flag==false) continue;
+    if ((block=startNode->block)->GetLocalTimeStep(_DUST_SPEC_)/LocalTimeStep<rnd()) continue;
+    
+    //determine the velocity group of the injected grain;
+    //calculate additional particle weight correction because the particle will be placed in a different weight group
+    GrainVelocityGroup=ElectricallyChargedDust::GrainVelocityGroup::GetGroupNumber(v_SO_OBJECT);
+    GrainWeightCorrection*=block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/block->GetLocalTimeStep(_DUST_SPEC_);
+    
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup];
+#else
+    exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+    
+    //determine the surface element of the particle origin                                                            
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+    PIC::ParticleBuffer::SetX(x_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+    PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
+    PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
+    
+    //apply condition of tracking the particle
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+    PIC::ParticleTracker::InitParticleID(tempParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+#endif
+    
+    ElectricallyChargedDust::SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
+    ElectricallyChargedDust::SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
+    ElectricallyChargedDust::SetGrainRadius(GrainRadius,(PIC::ParticleBuffer::byte*)tempParticleData);
+    
+    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+    
+    
+    newParticle=PIC::ParticleBuffer::GetNewParticle();
+    newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+    memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+    
+    //determine the initial charge of the dust grain
+#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+    ElectricallyChargedDust::DustChargingProcessor_SteadyState(x_SO_OBJECT,x_SO_OBJECT,v_SO_OBJECT,spec,newParticle,newParticleData,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode);
+#endif
+    
+    nInjectedParticles++;
+    
+    //inject the particle into the system                                                                             
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+    if (startNode==NULL) exit(__LINE__,__FILE__,"Error: the node is not defined");
+    if ((startNode->Thread!=PIC::ThisThread)||(startNode->block==NULL)) exit(__LINE__,__FILE__,"Error: the block is n\
+ot defined");
+#endif
+    
+    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode,true);
+  }
+  
+  return nInjectedParticles;
+}
+
+long int DustInjection(){
+  int spec;
+  long int res=0;
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=DustInjection(spec);
+
+  return res;
+}
+
+
+#endif
 
 
 double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
@@ -648,6 +971,7 @@ PIC::InitMPI();
 	//PIC::RequiredSampleLength=InitialSampleLength; //0;
 
 	Europa::Init_AfterParser();
+
 
 
 
@@ -1026,6 +1350,13 @@ void amps_init() {
    PIC::Init_AfterParser ();
    PIC::Mover::Init();
    
+
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+   //init the dust model
+   ElectricallyChargedDust::Init_AfterParser();
+#endif
+
+
    //Exosphere::Init_AfterParser();
    
    //	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
@@ -1107,7 +1438,10 @@ void amps_init() {
    
    //output final data
    //  PIC::Mesh::mesh.outputMeshDataTECPLOT("final.data.dat",0);
-   
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+   //set the User Definted injection function for dust
+   PIC::BC::UserDefinedParticleInjectionFunction=DustInjection;
+#endif
    //create the list of mesh nodes where the injection boundary conditions are applied
    PIC::BC::BlockInjectionBCindicatior=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxParticleInjectionIndicator;
    PIC::BC::userDefinedBoundingBlockInjectionFunction=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection;

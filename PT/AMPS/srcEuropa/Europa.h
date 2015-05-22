@@ -38,6 +38,7 @@ using namespace std;
 #include "ElectronImpact.h"
 #include "Sputtering.h"
 
+
 /*
 //path to the SPICE Kernels directory
 const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; //"/Users/rubinmar/Codes/CSPICE/Kernels/GALILEO";
@@ -1462,13 +1463,27 @@ if (v[0]*x[0]+v[1]*x[1]+v[2]*x[2]<0) {
       memcpy(B,swB_Typical,3*sizeof(double));
     }*/
 
-    double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+    double ElectricCharge, mass;
+     
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+      char ParticleData[PIC::ParticleBuffer::ParticleDataLength];
+      memcpy((void*)ParticleData,(void*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
+      ElectricCharge=ElectricallyChargedDust::GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
+      mass          =ElectricallyChargedDust::GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
+    }
+    else {
+      ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+      mass          =PIC::MolecularData::GetMass(spec);
+    }
+#else
+    ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+    mass          =PIC::MolecularData::GetMass(spec);
+#endif //_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 
     if (ElectricCharge!=0.0) {
       PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
       PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-
-      double mass=PIC::MolecularData::GetMass(spec);
 
       accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
       accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
