@@ -15,10 +15,9 @@ module ModUser
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_get_log_var,                &
        IMPLEMENTED5 => user_set_cell_boundary,          &
-       IMPLEMENTED6 => user_set_face_boundary,          &
-       IMPLEMENTED7 => user_set_resistivity,            &
-       IMPLEMENTED8 => user_calc_sources,               &
-       IMPLEMENTED9 => user_init_point_implicit
+       IMPLEMENTED6 => user_set_resistivity,            &
+       IMPLEMENTED7 => user_calc_sources,               &
+       IMPLEMENTED8 => user_init_point_implicit
 
   include 'user_module.h' !list of public methods
 
@@ -394,7 +393,7 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
-    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_, Theta_, Phi_
+    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
@@ -405,10 +404,8 @@ contains
          Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
-    use ModNumConst,   ONLY: cTolerance
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
-    use ModCoordTransform, ONLY: xyz_to_sph
-    use ModWaves, ONLY: UseWavePressureLtd
+    use ModWaves,      ONLY: UseWavePressureLtd
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -419,9 +416,7 @@ contains
     real    :: Br1_D(3), Bt1_D(3), Runit_D(3)
     real    :: FullB_D(3), SignBr
     real    :: Gamma
-    real    :: RhoUparByB_G(0:nJ+1,0:nK+1), RhoUparByB
-    real    :: r, Phi, Theta, Br, Btheta, Bphi
-    real    :: SinPhi, CosPhi, SinTheta, CosTheta, DeltaR
+    real    :: U, U_D(3), Bdir_D(3)
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -496,7 +491,7 @@ contains
              do i = MinI, 0
                 call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), Gamma)
                 State_VGB(Ehot_,i,j,k,iBlock) = &
-                     State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma - 1) - InvGammaMinus1)
+                     State_VGB(iP,i,j,k,iBlock)*(1.0/(Gamma-1) -InvGammaMinus1)
              end do
           else
              State_VGB(Ehot_,MinI:0,j,k,iBlock) = 0.0
@@ -505,147 +500,26 @@ contains
 
     end do; end do
 
-
-    ! The boundary conditions for the momentum is based on the condition
-    ! B \cdot \nabla ( rhoUpar/B ) = 0
     do iFluid = IonFirst_, IonLast_
+       iRho = iRho_I(iFluid)
        iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
-       ! Store the needed rhoUpar/B in the physical cells in an array
-       do k = 0, nK+1; do j = 0, nJ+1
+       do k = MinK, MaxK; do j = MinJ, MaxJ
           FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
-          RhoUparByB_G(j,k) = &
-               sum(State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock)*FullB_D) &
-               /max(sum(FullB_D**2), cTolerance**2)
-       end do; end do
+          Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
-       do k = 1, nK; do j = 1, nJ
-          call xyz_to_sph(Xyz_DGB(:,1,j,k,iBlock), r, Theta, Phi)
-
-          SinPhi = sin(Phi)
-          CosPhi = cos(Phi)
-          SinTheta = sin(Theta)
-          CosTheta = cos(Theta)
-
-          FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock)
-
-          Br = FullB_D(x_)*SinTheta*CosPhi + &
-               FullB_D(y_)*SinTheta*SinPhi + &
-               FullB_D(z_)*CosTheta
-          Btheta = FullB_D(x_)*CosTheta*CosPhi + &
-               FullB_D(y_)*CosTheta*SinPhi - &
-               FullB_D(z_)*SinTheta
-          Bphi = -FullB_D(x_)*SinPhi + FullB_D(y_)*CosPhi
-
-          ! We divide by Br, so make sure it is not zero
-          if(abs(Br) < cTolerance) Br = cTolerance*sign(1.0, Br)
-
+          ! Copy field-aligned velocity component. Reflect the other components
           do i = MinI, 0
-             DeltaR = r - r_BLK(i,j,k,iBlock)
-             ! This is the rhoUpar/B in the ghost cell, based on the
-             ! B \cdot \nabla ( rhoUpar/B ) = 0 condition.
-             ! The spherical is an r-longitude-latitude grid, so that the
-             ! theta index is in reverse. 
-             RhoUparByB = RhoUparByB_G(j,k) &
-                  + Btheta/Br*0.5*DeltaR/(r*CellSize_DB(Theta_,iBlock)) &
-                  *(RhoUparByB_G(j,k-1) - RhoUparByB_G(j,k+1)) &
-                  + Bphi/Br*0.5*DeltaR/(r*SinTheta*CellSize_DB(Phi_,iBlock)) &
-                  *(RhoUparByB_G(j+1,k) - RhoUparByB_G(j-1,k))
-
-             ! multiply by B0+B1 in the ghost cell to obtain the momentum
-             FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock)
-             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = RhoUparByB*FullB_D
+             U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+                  /State_VGB(iRho,1-i,j,k,iBlock)
+             U   = sum(U_D*Bdir_D); U_D = U_D - U*Bdir_D
+             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                  (U*Bdir_D - U_D)*State_VGB(iRho,i,j,k,iBlock)
           end do
        end do; end do
     end do
 
   end subroutine user_set_cell_boundary
-  !============================================================================
-  subroutine user_set_face_boundary(VarsGhostFace_V)
-
-    use ModAdvance,      ONLY: State_VGB, UseElectronPressure
-    use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, B0Face_D
-    use ModMain,         ONLY: x_, y_, UseRotatingFrame
-    use ModMultiFluid,   ONLY: iRho_I, iUx_I, iUy_I, iUz_I, iP_I, &
-         iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, UseMultiIon, IsMhd
-    use ModPhysics,      ONLY: OmegaBody, InvGammaMinus1
-    use ModVarIndexes,   ONLY: nVar, Rho_, Bx_, Bz_, p_, &
-         WaveFirst_, WaveLast_, Ew_, Pe_, Hyp_, Ehot_, MassFluid_I
-    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
-         get_gamma_collisionless
-    use ModWaves, ONLY: UseWavePressureLtd
-
-    real, intent(out) :: VarsGhostFace_V(nVar)
-
-    integer :: iFluid, iP
-    real :: FullBr, Ewave
-    real :: Gamma
-    real,dimension(3) :: U_D, B1_D, B1t_D, B1r_D, rUnit_D
-   
-    character (len=*), parameter :: NameSub = 'user_set_face_boundary'
-    !--------------------------------------------------------------------------
-
-    rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
-
-    B1_D  = VarsTrueFace_V(Bx_:Bz_)
-    B1r_D = sum(rUnit_D*B1_D)*rUnit_D
-    B1t_D = B1_D - B1r_D
-    VarsGhostFace_V(Bx_:Bz_) = B1t_D
-
-    ! Fix density
-    do iFluid = IonFirst_, nFluid
-       VarsGhostFace_V(iRho_I(iFluid)) = Nchromo_I(iFluid)*MassFluid_I(iFluid)
-    end do
-    if(IsMhd .and. UseMultiIon) &
-         VarsGhostFace_V(Rho_) = sum(VarsGhostFace_V(iRhoIon_I))
-
-    ! zero velocity at inner boundary
-    VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
-    VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
-    VarsGhostFace_V(iUz_I) = -VarsTrueFace_V(iUz_I)
-
-    ! Apply corotation if needed
-    if(.not.UseRotatingFrame)then
-       VarsGhostFace_V(iUx_I) = VarsGhostFace_V(iUx_I) &
-            - 2*OmegaBody*FaceCoords_D(y_)
-       VarsGhostFace_V(iUy_I) = VarsGhostFace_V(iUy_I) &
-            + 2*OmegaBody*FaceCoords_D(x_)
-    end if
- 
-    FullBr = sum((B0Face_D + VarsGhostFace_V(Bx_:Bz_))*rUnit_D)
-
-    ! Ewave \propto sqrt(rho_p) for U << Valfven
-    Ewave = PoyntingFluxPerB*sqrt(VarsGhostFace_V(iRho_I(IonFirst_)))
-    if(FullBr > 0.)then
-       VarsGhostFace_V(WaveFirst_) = Ewave
-       VarsGhostFace_V(WaveLast_) = 0.0
-    else
-       VarsGhostFace_V(WaveFirst_) = 0.0
-       VarsGhostFace_V(WaveLast_) = Ewave
-    end if
-    if(UseWavePressureLtd) &
-         VarsGhostFace_V(Ew_) = sum(VarsGhostFace_V(WaveFirst_:WaveLast_))
-
-    ! Fix temperature
-    VarsGhostFace_V(iP_I(IonFirst_:nFluid))=Tchromo*Nchromo_I
-    if(IsMhd .and. UseMultiIon) &
-         VarsGhostFace_V(p_) = sum(VarsGhostFace_V(iPIon_I))
-    VarsGhostFace_V(Pe_) = sum(ChargeIon_I*VarsGhostFace_V(iPIon_I))
-
-    if(Hyp_ > 1) VarsGhostFace_V(Hyp_) = VarsTrueFace_V(Hyp_)
-
-    if(Ehot_ > 1)then
-       if(UseHeatFluxCollisionless)then
-          call get_gamma_collisionless(FaceCoords_D, Gamma)
-          iP = p_; if(UseElectronPressure) iP = Pe_
-          VarsGhostFace_V(Ehot_) = &
-               VarsGhostFace_V(iP)*(1.0/(Gamma - 1) - InvGammaMinus1)
-       else
-          VarsGhostFace_V(Ehot_) = 0.0
-       end if
-    end if
-
-  end subroutine user_set_face_boundary
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
 

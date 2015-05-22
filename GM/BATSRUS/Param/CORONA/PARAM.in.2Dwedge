@@ -31,9 +31,12 @@ T			DoSaveRestart
 
 #BODY
 T			UseBody
-1.01			rBody
+1.001			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
+
+#BODY
+F			UseBody
 
 #USECURLB0
 F			UseCurlB0
@@ -45,7 +48,7 @@ and activate the HELIODIPOLE command below
 0.0                     HelioDipoleTiltDeg
 
 #USER_FLAGS
-T			UseUserInnerBcs
+F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
 T			UseUserOuterBcs
