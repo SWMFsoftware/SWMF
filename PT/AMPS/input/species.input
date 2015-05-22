@@ -46,7 +46,7 @@
 
 #component=OH_PLUS
   mass=17*_AMU_
-  charge=0
+  charge=1.0
 
 #component=O2
   mass=32*_AMU_
