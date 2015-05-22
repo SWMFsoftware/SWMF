@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H2O,O2,H2,H,O,OH,O_PLUS,O2_PLUS,H_PLUS,H2_PLUS,H2O_PLUS,OH_PLUS
+SpeciesList=H2O,O2,H2,H,O,OH,O_PLUS,O2_PLUS,H_PLUS,H2_PLUS,H2O_PLUS,OH_PLUS!,DUST
 !,O_PLUS_HIGH,O_PLUS_THERMAL
 
 
@@ -108,7 +108,16 @@ ParticleWeightCorrectionMode=on
     SaveMode=newfile  \\ !overwrite, newfile
     IterationInterval=20
 
+
+! define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__D UST__MODE__ON_
+! define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+
+!  define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+!  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
+
 #endGeneral
+
+
 
 #ParticleCollisions
   model = off!!! HS !!off !HS ! HS, off
