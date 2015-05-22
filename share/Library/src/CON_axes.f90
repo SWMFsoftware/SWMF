@@ -258,13 +258,23 @@ contains
     if(.not.UseSetRotAxis)then
        if(UseRealRotAxis .or. UseRealMagAxis)then
           RotAxisTheta = TiltRotation
-          RotAxisPhi   = mod( &
-               cHalfPi - OmegaOrbit*(tStart - TimeEquinox % Time), cTwoPi8)
+          if(OmegaOrbit == 0.0)then
+             RotAxisPhi   = -cHalfPi
+          else
+             RotAxisPhi   = mod( &
+                  cHalfPi - OmegaOrbit*(tStart - TimeEquinox % Time), cTwoPi8)
+          end if
+          if(DoTestMe)write(*,*)NameSub, &
+               ': UseRealRotAxis, UseRealMagAxis, TiltRotation, OmegaOrbit, tStart, tEquinox=',&
+                UseRealRotAxis, UseRealMagAxis, TiltRotation*cRadToDeg, OmegaOrbit, tStart, &
+                TimeEquinox % Time
        else
           ! Rotational axis must be aligned with magnetic axis
           if(UseSetMagAxis)then
              RotAxisTheta = MagAxisTheta
              RotAxisPhi   = MagAxisPhi
+             if(DoTestMe)write(*,*)NameSub,': MagAxisTheta, MagAxisPhi=', &
+                  MagAxisTheta*cRadToDeg, MagAxisPhi*cRadToDeg
           else
              call CON_stop(NameSub// &
                   ' SWMF_ERROR both rotation and magnetic axes'//&
