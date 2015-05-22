@@ -34,7 +34,7 @@ using namespace std;
 	const int nLatitudes = 72;
 
 	
-	ifstream fin("data/input/Titan/TGITM_EXOBASE.dat");
+	ifstream fin("../data/input/Titan/TGITM_EXOBASE.dat");
 	
 	if(fin.is_open())
 	{
