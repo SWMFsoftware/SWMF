@@ -89,6 +89,9 @@ namespace PIC {
   //The currect and total number of processors used in the simulation
   extern int ThisThread,nTotalThreads;
 
+  //The path to the input data of the user-defined physical models
+  extern char UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_];
+
   //the output and prefix for the diagnostic information
   extern FILE* DiagnospticMessageStream;
   extern char DiagnospticMessageStreamName[_MAX_STRING_LENGTH_PIC_];

@@ -37,3 +37,6 @@ char PIC::InputDataFileDirectory[_MAX_STRING_LENGTH_PIC_]=".";
 bool PIC::ModelTestRun::mode=false;
 int PIC::ModelTestRun::nTotalIteraction=-1;
 
+//the path to the input data of the user model
+char PIC::UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_]=".";
+
