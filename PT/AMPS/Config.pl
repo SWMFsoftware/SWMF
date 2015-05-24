@@ -68,6 +68,7 @@ foreach (@Arguments) {
      print "-boost-path=PATH\t\tthe path to the boost library.\n";
      print "-kameleon-path=PATH\t\tthe path for the Kameleon library.\n";
      print "-cplr-data-path=PATH\t\tthe path to the data files used to import other model results by PIC::CPLR::DATAFILE.\n";
+     print "-model-data-path=PATH\t\tthe path to the user-defined input data files (the files are read directly by the user).\n";
      print "-batl-path=PATH\t\t\tthe path to the BATL directory\n";
      print "-swmf-path=PATH\t\t\tthe path to the SWMF directory\n";
      print "-set-test(=NAME)\/comp\t\tinstall nightly tests (e.g. comp=gnu,intel|pgi|all)\n";
@@ -143,6 +144,7 @@ foreach (@Arguments) {
   if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> Makefile.local`; `echo "SWMF=$1" >> .ampsConfig.Settings`; next};  
   
   if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> Makefile.local`; `echo "CPLRDATA=$1" >> .ampsConfig.Settings`; next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
+  if (/^-model-data-path=(.*)$/i)  {`echo "MODELINPUTDATA=$1" >> Makefile.local`; `echo "MODELINPUTDATA=$1" >> .ampsConfig.Settings`; next}; #the path to the data file used by the user direactly (not through the PIC::CPLR::DATAFILE readers)
 
   #compile for the nightly test
   if (/^-amps-test=(.*)$/i)  {
