@@ -83,14 +83,17 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
   //init the readers
   if (InitFlag==false) {
     InitFlag=true;
+    char fname[_MAX_STRING_LENGTH_PIC_];
 
     O.PlanetRadius=_RADIUS_(_TARGET_);
     O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    O.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O.h");
+    sprintf(fname,"%s/MTGCM_equinox_SL/O.h",PIC::UserModelInputDataPath);
+    O.ReadDataFile(fname);
 
     CO2.PlanetRadius=_RADIUS_(_TARGET_);
     CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    CO2.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/CO2.h");
+    sprintf(fname,"%s/MTGCM_equinox_SL/CO2.h",PIC::UserModelInputDataPath);
+    CO2.ReadDataFile(fname);
   }
 
 
