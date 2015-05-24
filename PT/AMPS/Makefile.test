@@ -2,7 +2,7 @@
 # for each test a separate folder run_test_<NAME> is created 
 # and executables are copied there
 
-TESTAPPS=titan mars moon
+TESTAPPS=Mars Titan Moon
 TESTAPP=
 TESTAPPDIR = run_test_$(TESTAPP)
 
@@ -39,7 +39,7 @@ endif
 test_app_compile:
 ifneq ($(TESTAPP),)
 	@echo "test_$(TESTAPP)_compile..." > test_$(TESTAPP).diff
-	./Config.pl -application=$(TESTAPP) -spice-path=nospice -spice-kernels=nospice -amps-test=on 
+	./Config.pl -application=$(TESTAPP) -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/$(TESTAPP)  -amps-test=on 
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
 	$(MAKE) amps
