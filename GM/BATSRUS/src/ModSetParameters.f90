@@ -97,7 +97,8 @@ subroutine MH_set_parameters(TypeAction)
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
   use ModMagnetogram, ONLY: set_parameters_magnetogram, &
-       read_magnetogram_file, read_potential_field
+       read_magnetogram_file, read_potential_field,     &
+       read_new_magnetogram_file, read_new_potential_field
   use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, read_wsa_coeff
   use ModCoronalHeating,  ONLY: read_corona_heating, &
        init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
@@ -220,7 +221,19 @@ subroutine MH_set_parameters(TypeAction)
            call time_real_to_int(StartTime, iStartTime_I)
         end if
      end if
-
+     if(UseEndTime)then
+        t_max = (EndTime - StartTime)
+        nIter = -1
+        if(IsStandAlone)then
+           if(.not.time_accurate)&
+                call CON_stop('#ENDTIME command cannot be used in steady-state')
+           if(.not.IsLastRead)&
+            call CON_stop(&
+            '#ENDTIME command can be only used in the last session')
+           t_max = (EndTime - StartTime)
+           nIter = -1
+        end if
+     end if
      ! Planet NONE in GM means that we do not use a body
      if (NameThisComp=='GM' .and. NamePlanet == 'NONE' .and. iSession == 1)then
         body1 = .false.
@@ -315,10 +328,18 @@ subroutine MH_set_parameters(TypeAction)
      if(UseViscosity) call viscosity_init
 
      if(UseMagnetogram)then
+        if(UseNewMagnetogram)then
+           if(i_line_command("#NEWMAGNETOGRAM") > 0)then
+              call read_new_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
+           elseif(i_line_command("#READNEWPOTENTIALFIELD") > 0)then
+              call read_new_potential_field(NamePlotDir, iProc, nProc, iComm)
+           end if
+           tMagnetogram = Time_Simulation
+        end if
         if(i_line_command("#MAGNETOGRAM") > 0)then
-           call read_magnetogram_file(NamePlotDir)
+           call read_magnetogram_file(NamePlotDir, iProc, nProc, iComm)
         elseif(i_line_command("#READPOTENTIALFIELD") > 0)then
-           call read_potential_field(NamePlotDir)
+           call read_potential_field(NamePlotDir, iProc, nProc, iComm)
         end if
      end if
 
@@ -842,7 +863,9 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('ySizeImage', Y_Size_Image(ifile))
               ! read the number of pixels
               call read_var('nPixX', n_Pix_X(ifile))            
-              call read_var('nPixY', n_Pix_Y(ifile))            
+              call read_var('nPixY', n_Pix_Y(ifile))
+           elseif(index(plot_string,'buf')>0)then
+              plot_area='buf'
            elseif(index(plot_string,'1d')>0)then
               plot_area='1d_'
            elseif(index(plot_string,'2d')>0)then
@@ -870,6 +893,7 @@ subroutine MH_set_parameters(TypeAction)
                    .and. plot_area /= 'lin' &
                    .and. plot_area /= 'eqr' &
                    .and. plot_area /= 'eqb' &
+                   .and. plot_area /= 'buf' &
                    ) call read_var('DxSavePlot',plot_dx(1,ifile))
 
               ! Extract the type of idl plot file: default is real4
@@ -1920,6 +1944,18 @@ subroutine MH_set_parameters(TypeAction)
            ! Check if things work out or not
            call time_int_to_real(iStartTime_I, StartTimeCheck)
         end if
+
+     case("#TIMEEND", "#ENDTIME")
+        UseEndTime = .true.
+        call read_var('iYear'  ,iEndTime_I(1))
+        call read_var('iMonth' ,iEndTime_I(2))
+        call read_var('iDay'   ,iEndTime_I(3))
+        call read_var('iHour'  ,iEndTime_I(4))
+        call read_var('iMinute',iEndTime_I(5))
+        call read_var('iSecond',iEndTime_I(6))
+        iEndTime_I(7) = 0
+        call time_int_to_real(iEndTime_I, EndTime)
+
 
      case("#TIMESIMULATION")
         if(.not.is_first_session())CYCLE READPARAM

@@ -25,7 +25,7 @@ module ModMagnetogram
   integer:: iHead_PFSSM=12
 
   ! Name of the input file
-  character (LEN=32):: File_PFSSM='mf.dat'
+  character (LEN=32):: File_PFSSM='mf.dat', NameNewFile = 'newmf.dat'
 
   ! Name of output directory
   character(len=32):: NameOutDir
@@ -39,7 +39,7 @@ module ModMagnetogram
 
   ! Units of the magnetic field in the file including corrections
   ! relative to the magnetic units in the SC (Gauss)
-  real, public :: UnitB=1.0
+  real, public :: UnitB=1.0, UnitBNew=1.0
 
   ! Rotation angle around z-axis, in degrees,
   ! from the coordinate system of the component
@@ -48,19 +48,23 @@ module ModMagnetogram
   ! Is set automatically to be equal to the 
   ! H(eliographic) L(ongitude) of C(entral) M(eridian)
   ! of the M(ap) minus 180 Deg, if in the input file 
-  ! Phi_Shift is negative
+  ! PhiOffset is negative
   !
-  real, public :: Phi_Shift=-1.0
+  real :: PhiOffset=-1.0, NewPhiShift = -1.0
 
 
   !Global arrays at the magnetogram grid
   integer, parameter, public :: nDim=3,R_=1,Phi_=2,Theta_=3
 
-  real,allocatable,dimension(:,:,:,:)::B_DN
+  real,allocatable,dimension(:,:,:,:)::B_DN, BNew_DN
+  !\
+  ! Time to which the field in B_DN corresponds
+  !/
+  real :: tMagnetogram = -1.0
 
   ! logical for reading the potential field B_DN
   logical :: DoSavePotentialField = .false.
-  character(len=100) :: NamePotentialFieldFile
+  character(len=100) :: NamePotentialFieldFile, NameNewPotentialField
 
   real, public :: dR=1.0,dPhi=1.0,dSinTheta=1.0,dInv_D(nDim)=1.0
   integer, public :: nThetaPerProc,nRExt=2
@@ -75,33 +79,27 @@ module ModMagnetogram
 
 
   ! public available procedures
-  public :: read_magnetogram_file
+  public :: read_magnetogram_file, read_new_magnetogram_file
   !Then, calls set_magnetogram
 
   public :: set_parameters_magnetogram
 
-  public :: set_magnetogram
-  !Reads the file of magnetic field harmonics  
-  !and recovers the spatial distribution of the 
-  !potential mganetic field at the spherical grid 
-  !nR*nPhi*nTheta
-
   public :: get_hlcmm
   ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
-  ! the M(ap) from the file header. Assign Phi_Shift=HLCMM-180
+  ! the M(ap) from the file header. Assign PhiOffset=HLCMM-180
 
   public :: get_magnetogram_field
   !Gives the interpolated values of the Cartesian components of
   !the macnetic vector in HGR system, input parameters
   !being the cartesian coordinates in the HGR system
 
-  public :: sin_latitude, r_latitude, colatitude
-  public :: correct_angles
-  public :: interpolate_field
+  public :: sin_latitude, r_latitude, colatitude,&
+       correct_angles, interpolate_field, PhiOffset
 
   ! read the potential field source surface solution
-  public :: read_potential_field
-
+  public :: read_potential_field, read_new_potential_field
+  public :: update_magnetogram
+  
 contains
   !=================================================================
   real function sin_latitude(iTheta)
@@ -126,7 +124,7 @@ contains
   !=================================================================
   ! SUBROUTINE get_hlcmm
   ! Read H(eliographic) L(ongitude) of the C(entral) M(eridian) of 
-  ! the M(ap) from the header line. Assign Phi_Shift=HLCMM-180
+  ! the M(ap) from the header line. Assign PhiOffset=HLCMM-180
   subroutine get_hlcmm(Head_PFSSM,Shift)
     character (LEN=80),intent(inout):: Head_PFSSM
     real,intent(inout)::Shift
@@ -149,7 +147,7 @@ contains
             ' is not a true WSO magnetogram')
        Shift=modulo(iHLCMM-180-dLongitudeHgrDeg, 360.0) 
        if(iProc==0)then
-          write(*,*) prefix, 'Phi_Shift=',Shift
+          write(*,*) prefix, 'PhiOffset=',Shift
        end if
        return
     end if
@@ -166,7 +164,7 @@ contains
             ' is not a true MDI magnetogram')
        Shift=modulo(HLCMM-180-dLongitudeHgrDeg, 360.0) 
        if(iProc==0)then
-          write(*,*) prefix, 'Phi_Shift=',Shift
+          write(*,*) prefix, 'PhiOffset=',Shift
        end if
     end if
   end subroutine get_hlcmm
@@ -190,7 +188,16 @@ contains
        call read_var('HeightInnerBc',       H_PFSSM)
        call read_var('NameMagnetogramFile', File_PFSSM)
        call read_var('nHeaderLine',         iHead_PFSSM)
-       call read_var('PhiShift',            Phi_Shift)
+       call read_var('PhiShift',            PhiOffset)
+       call read_var('UnitB',               UnitB)
+
+    case("#NEWMAGNETOGRAM")
+       call read_var('rMagnetogram',        Ro_PFSSM)
+       call read_var('rSourceSurface',      Rs_PFSSM)
+       call read_var('HeightInnerBc',       H_PFSSM)
+       call read_var('NameNewFile',         NameNewFile)
+       call read_var('nHeaderLine',         iHead_PFSSM)
+       call read_var('NewPhiShift',         NewPhiShift)
        call read_var('UnitB',               UnitB)
 
     case("#B0GRID")
@@ -204,6 +211,11 @@ contains
        call read_var('HeightInnerBc',          H_PFSSM)
        call read_var('UnitB',                  UnitB)
 
+   case("#READNEWPOTENTIALFIELD")
+       call read_var('NameNewPotentialField',  NameNewPotentialField)
+       call read_var('HeightInnerBc',          H_PFSSM)
+       call read_var('UnitB',                  UnitB)
+
     case default
        call CON_stop(NameSub//' invalid NameCommand='//NameCommand)
     end select
@@ -212,15 +224,13 @@ contains
 
   !============================================================================
 
-  subroutine read_magnetogram_file(NamePlotDir)
-    implicit none
-
+  subroutine read_magnetogram_file(NamePlotDir, iProcIn, nProcIn, iCommIn)
     character(len=*),intent(in) :: NamePlotDir
-    integer :: iError
+    integer,intent(in)          :: iProcIn, nProcIn, iCommIn
     !--------------------------------------------------------------------------
-    iComm = MPI_COMM_WORLD
-    call MPI_COMM_SIZE(iComm,nProc,iError)
-    call MPI_COMM_RANK(iComm,iProc,iError)
+    iComm = iCommIn
+    nProc = nProcIn
+    iProc = iProcIn
 
     if (iProc==0) then
        write(*,*) prefix, 'Norder = ',N_PFSSM
@@ -238,7 +248,33 @@ contains
     call set_magnetogram
 
   end subroutine read_magnetogram_file
+  !============================================================================
+  subroutine read_new_magnetogram_file(NamePlotDir, iProcIn, nProcIn, iCommIn)
+    character(len=*),intent(in) :: NamePlotDir
+    integer, intent(in):: iProcIn, nProcIn, iCommIn
+    character(LEN=32):: NameOldFile
+    real:: OldPhiShift
+    !--------------------------------------------------------------------------
+    NameOldFile = File_PFSSM
+    File_PFSSM = NameNewFile
+    OldPhiShift = PhiOffset
+    PhiOffset = NewPhiShift
+    call read_magnetogram_file(&
+         NamePlotDir=NamePlotDir//'New',&
+         iProcIn=iProcIn               ,&
+         nProcIn=nProcIn               ,&
+         iCommIn=iCommIn)
 
+    !Allocate the magnetic field array, at the spherical grid.
+    if(allocated(BNew_DN))deallocate(BNew_DN)
+    allocate(BNew_DN(R_:Theta_,-nRExt:nR,0:nPhi,0:nTheta))
+
+    BNew_DN = B_DN
+
+    PhiOffset = OldPhiShift
+    File_PFSSM = NameOldFile
+    DoSavePotentialField = .false.
+  end subroutine read_new_magnetogram_file
   !============================================================================
 
   subroutine read_harmonics
@@ -271,7 +307,7 @@ contains
                 N_PFSSM=nOrderIn
              end if
           end if
-          if(Phi_Shift<0.0)call get_hlcmm(Head_PFSSM,Phi_Shift)
+          if(PhiOffset<0.0)call get_hlcmm(Head_PFSSM,PhiOffset)
        enddo
     endif
     nR=max(nR,N_PFSSM)
@@ -315,6 +351,13 @@ contains
     !/
     g_nm(1,1) = 0.0
   end subroutine read_harmonics
+  !\
+  !Routine: set_magnetogram
+  !Reads the file of magnetic field harmonics  
+  !and recovers the spatial distribution of the 
+  !potential mganetic field at the spherical grid 
+  !nR*nPhi*nTheta
+  !/
   !===========================================================================
   subroutine set_magnetogram
     !
@@ -339,26 +382,18 @@ contains
     !    4. Count header lines before 1st (0,0) coefficient -this will be asked!
     !---------------------------------------------------------------------------
     ! Notes:
-    !
-    ! In the calling routine you must initialize one variable: istart=0 (it is a 
-    ! flag used to tell the subroutine to read the coefficient file the first 
-    ! time only). The first time around (DoFirst=0), the subroutine will ask for
-    ! the coefficient file name, the order of the expansion to use (N_PFSSM=40 or 
-    ! less*, but the coeff file can contain more orders than you use), and the 
-    ! number of lines in the coefficient file header. (*note computation time 
-    ! increases greatly with order used).
+
     !
     ! The source surface surface radius has been set at Rs=2.5*Ro in the 
-    ! subroutine. PFSS fields at R>Rs are radial.(br,bthet,bphi) are the resulting
-    ! components. Note the units of the B fields will differ with observatory used
-    ! for the coefficients. Here we assume use of the wso coefficients so units are
-    ! microT. The computation of the B fields is taken mainly from Altschuler, 
-    ! Levine, Stix, and Harvey, "High Resolutin Mapping of the Magnetic Field of
-    ! the Solar Corona," Solar Physics 51 (1977) pp. 345-375. It uses Schmidt
-    ! normalized Legendre polynomials and the normalization is explained in the 
-    ! paper. The field expansion in terms of the Schmidt normalized Pnm and dPnm's
-    ! is best taken from Todd Hoeksema's notes which can be downloaded from the Web
-    ! http://quake.stanford.edu/~wso/Description.ps
+    ! subroutine. PFSS fields at R>Rs are radial.(br,bthet,bphi) are the 
+    ! resulting components. Note the units of the B fields will differ with 
+    ! observatory used for the coefficients. The computation of the B fields is 
+    ! taken mainly from Altschuler, Levine, Stix, and Harvey, "High Resolutin 
+    ! Mapping of the Magnetic Field of  the Solar Corona," Solar Physics 51 (1977) 
+    ! pp. 345-375. It uses Schmidt normalized Legendre polynomials and the normalization 
+    ! is explained in the  paper. The field expansion in terms of the Schmidt normalized 
+    ! Pnm and dPnm's is best taken from Todd Hoeksema's notes which can be downloaded 
+    ! from the Web http://quake.stanford.edu/~wso/Description.ps
     ! The expansions  used to get include radial factors to make the field become
     ! purely radial at the source surface. The expans. in Altschuler et al assumed
     ! that the the coefficient g(n,m) and h(n,m) were the LOS coefficients -- but 
@@ -596,6 +631,7 @@ contains
          dp_nm(n+1,m+1) = dp_nm(n+1,m+1)*stuff1
       enddo; enddo
     end subroutine calc_Legandre_polynoms
+    !======================
     subroutine calc_radial_functions
       do iR=-nRExt,nR
          !\ 
@@ -614,11 +650,8 @@ contains
          end do
       end do
     end subroutine calc_radial_functions
-
   end subroutine set_magnetogram
-
   !=====================================================================
-
   subroutine write_Br_plot
     use ModPlotFile, ONLY: save_plot_file
 
@@ -715,22 +748,21 @@ contains
 
   !============================================================================
 
-  subroutine read_potential_field(NamePlotDir)
-
+  subroutine read_potential_field(NamePlotDir, iProcIn, nProcIn, iCommIn)
     use ModPlotFile, ONLY: read_plot_file
 
     character(len=*),intent(in) :: NamePlotDir
-
-    integer :: iError
+    integer,         intent(in) :: iProcIn, nProcIn, iCommIn
+    
     integer :: n_D(3), nParam
     real :: Param_I(2)
 
     character(len=*), parameter :: &
          NameSub = 'ModMagnetogram::read_potential_field'
     !--------------------------------------------------------------------------
-    iComm = MPI_COMM_WORLD
-    call MPI_COMM_SIZE(iComm,nProc,iError)
-    call MPI_COMM_RANK(iComm,iProc,iError)
+    iComm = iCommIn
+    nProc = nProcIn
+    iProc = iProcIn
 
     n_D = 1
     call read_plot_file(NamePotentialFieldFile, TypeFileIn='real8', &
@@ -740,7 +772,7 @@ contains
 
     Ro_PFSSM = Param_I(1)
     Rs_PFSSM = Param_I(2)
-    Phi_Shift = 0.0
+    PhiOffset = 0.0
     nRExt = 0
 
     nR = n_D(1) - 1
@@ -765,6 +797,34 @@ contains
     if(iProc==0 .and. DoSavePotentialField)call save_potential_field
 
   end subroutine read_potential_field
+  !===================
+  subroutine read_new_potential_field(NamePlotDir, iProcIn, nProcIn, iCommIn)
+
+    character(len=*),intent(in) :: NamePlotDir
+    integer,         intent(in) :: iProcIn, nProcIn, iCommIn
+    character(LEN=100):: NameOldFile
+    real:: OldPhiShift
+    !--------------------------------------------------------------------------
+    NameOldFile = NamePotentialFieldFile
+    NamePotentialFieldFile = NameNewPotentialField
+    OldPhiShift = PhiOffset
+    call read_potential_field(&
+         NamePlotDir= NamePlotDir//'New'     , &
+         iProcIn=iProcIn                     , &
+         nProcIn=nProcIn                     , &
+         iCommIn=iCommIn)
+
+    !Allocate the magnetic field array, at the spherical grid.
+    if(allocated(BNew_DN))deallocate(BNew_DN)
+    allocate(BNew_DN(R_:Theta_,-nRExt:nR,0:nPhi,0:nTheta))
+
+    BNew_DN = B_DN
+
+    PhiOffset = OldPhiShift
+    NamePotentialFieldFile = NameOldFile
+    DoSavePotentialField = .false.
+  end subroutine read_new_potential_field
+
 
   !==========================================================================
   ! This subroutine corrects the angles Phi and Theta after every 
@@ -902,7 +962,7 @@ contains
     !\
     ! Transform Phi_PFSSM from the component's frame to the magnetogram's frame
     !/
-    Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
+    Phi_PFSSM = Phi_PFSSM - PhiOffset*cDegToRad
 
     if(nRExt == 0 .and. R_PFSSM < Ro_PFSSM)then
        ! linearly extrapolate FDIPS field for locations below Ro_PFSSM
@@ -946,4 +1006,13 @@ contains
     ! Transform from Gauss to Tesla
     B0_D = B0_D*1.0E-4
   end subroutine get_magnetogram_field
+  !=============================
+  subroutine update_magnetogram(tNow, tMax, tLastUpdate)
+    real, intent(in):: tNow, tMax
+    real, intent(inout):: tLastUpdate
+    !----------
+    if(tLastUpdate>=tMax)RETURN
+    B_DN = ( (tMax - tNow     )/(tMax - tLastUpdate) )*B_DN + &
+         ( (tNow - tLastUpdate)/(tMax - tLastUpdate) )*BNew_DN
+  end subroutine update_magnetogram
 end module ModMagnetogram

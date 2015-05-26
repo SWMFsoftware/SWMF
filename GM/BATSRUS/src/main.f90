@@ -378,6 +378,14 @@ subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
        'ERROR: get_from_spher_buffer_grid is for SWMF')
 end subroutine get_from_spher_buffer_grid
 !=============================================================================
+subroutine plot_buffer(iFile)
+  implicit none
+  integer, intent(in)::iFile
+  !-----------
+  call stop_mpi( &
+       'ERROR: plot_buffer is for SWMF')
+end subroutine plot_buffer
+!=============================================================================
 subroutine read_ih_buffer(y,z,State_V)
   real :: y, z, State_V(8)
   call stop_mpi('ERROR: read_ih_buffer is for SWMF')

@@ -6,7 +6,7 @@ module ModExpansionFactors
   use ModIoUnit,   ONLY: io_unit_new
   use ModMagnetogram, ONLY: nR, nRExt, nPhi, nTheta, nThetaPerProc, &
        Sin_Latitude, Colatitude, r_latitude, &
-       h_pfssm, ro_pfssm, rs_pfssm, phi_shift, &
+       h_pfssm, ro_pfssm, rs_pfssm, PhiOffset, &
        Dr, Dphi, Dinv_D, dSinTheta, interpolate_field, correct_angles
   use ModConst, ONLY: cGravitation, mSun, rSun, cProtonMass, cBoltzmann, &
        cRadToDeg, cDegToRad, cSecondPerHour, cTiny
@@ -530,7 +530,7 @@ contains
     ! magnetogram's frame.
     !/
     
-    Phi_PFSSM = Phi_PFSSM - Phi_Shift*cDegToRad
+    Phi_PFSSM = Phi_PFSSM - PhiOffset*cDegToRad
     
     !\
     ! Take a residual for the bi-linear interpolation
@@ -748,15 +748,15 @@ subroutine write_expansion_tec
   do iTheta=0,nTheta
      rLatitude=r_latitude(iTheta)
      do iPhi=0,nPhi
-        xx=Ro_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+Phi_Shift&
+        xx=Ro_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
              &*cDegToRad)
-        yy=Ro_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+Phi_Shift&
+        yy=Ro_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
              &*cDegToRad)
         zz=Ro_PFSSM*sin(rLatitude) 
         call get_gamma_emp(xx,yy,zz,GammaR0)
-        xx=Rs_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+Phi_Shift&
+        xx=Rs_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
              &*cDegToRad)
-        yy=Rs_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+Phi_Shift&
+        yy=Rs_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
              &*cDegToRad)
         zz=Rs_PFSSM*sin(rLatitude)
         call get_gamma_emp(xx,yy,zz,GammaRS)

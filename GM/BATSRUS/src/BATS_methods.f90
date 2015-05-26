@@ -873,6 +873,11 @@ contains
           call lcb_plot(iFile)
        end if
 
+       if(index(plot_type(iFile),'buf')>0)then
+          IsFound = .true.
+          if(TypeSaveIn/='INITIAL')call plot_buffer(iFile)
+       end if
+
        if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
           ! Assign node numbers for tec plots
           if( index(plot_form(ifile),'tec')>0 .and. DoAssignNodeNumbers)then

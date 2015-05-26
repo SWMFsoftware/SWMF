@@ -259,5 +259,85 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
        0, nThetaBuff+1, NormSph_D, DoExtrapolate=.true.)
 
 end subroutine interpolate_from_global_buffer
-          
+!==============================
+subroutine plot_buffer(iFile)
+  use ModPlotFile, ONLY: save_plot_file
+  use ModNumConst,   ONLY: cDegToRad
+  use ModAdvance,    ONLY: &
+       UseElectronPressure, UseAnisoPressure
+  use ModVarIndexes, ONLY: NamePrimitiveVar, &
+       nVar,Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
+       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
+       UseMultiSpecies, SignB_, Ehot_
+  use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+  use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_
+  use ModMain, ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D, BuffR_
+  use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitP_, UnitX_,&
+       UnitEnergyDens_
+  use ModProcMH,     ONLY: iProc
+  implicit none
+  integer, intent(in)::iFile
+  integer:: iTimePlot_I(7), iR, iPhi, iTheta
+  real   :: R, Theta, Phi, CosTheta, SinTheta
+  real, allocatable,dimension(:,:,:):: State_VII, Coord_DII
+  character(LEN=30)::NameFile
+  !-----------------------
+  if(iProc/=0)RETURN !May be improved.
+  allocate(State_VII(3 + nVar, 0:nPhiBuff, 0:nThetaBuff))
+  allocate(Coord_DII(2, 0:nPhiBuff, 0:nThetaBuff))
+  call time_real_to_int(StartTime + Time_Simulation, iTimePlot_I)
+  do iR = 1,2
+     R = BufferMin_D(BuffR_)*(2 - iR) + BufferMax_D(BuffR_)*(iR - 1)
+     write(NameFile,'(a,i2.2,a,i4.4,a,5(i2.2,a))')'R=',nint(R),'Rs_',&
+          iTimePlot_I(1),'_',iTimePlot_I(2),'_',iTimePlot_I(3),'_',&
+          iTimePlot_I(4),'_',iTimePlot_I(5),'_',iTimePlot_I(6),'.out'
+     do iTheta = 0, nThetaBuff
+        Theta = -89.999 + (179.999/nThetaBuff)*iTheta
+        Coord_DII(2,:,iTheta) = Theta
+        CosTheta = cos(Theta*cDegToRad)
+        SinTheta = sin(Theta*cDegToRad)
+        do iPhi = 0, nPhiBuff
+           Phi = (360.0/nPhiBuff)*iPhi
+           Coord_DII( 1,iPhi,iTheta) = Phi
+           State_VII(x_,iPhi,iTheta) = R*CosTheta*cos(Phi*cDegToRad)
+           State_VII(y_,iPhi,iTheta) = R*CosTheta*sin(Phi*cDegToRad)
+           State_VII(z_,iPhi,iTheta) = R*SinTheta
+           call get_from_spher_buffer_grid(&
+                State_VII(x_:z_,iPhi,iTheta), nVar,&
+                State_VII(z_+1:z_+nVar,iPhi,iTheta))
+
+        end do
+     end do
+     !Convert from normalized units to SI
+     State_VII(  x_:z_,:,:) = State_VII(  x_:z_,:,:)*No2Si_V(UnitX_)
+     State_VII(z_+rho_,:,:) = State_VII(z_+rho_,:,:)*No2Si_V(UnitRho_)
+     State_VII(z_+Ux_:z_+Uz_,:,:)   = State_VII(z_+Ux_:z_+Uz_,:,:)*&
+          No2Si_V(UnitU_)
+     State_VII(z_+Bx_:z_+Bz_,:,:)   = State_VII(z_+Bx_:z_+Bz_,:,:)*&
+          No2Si_V(UnitB_)
+
+     if(WaveFirst_ > 1)State_VII(z_+WaveFirst_:z_+WaveLast_,:,:) = &
+          State_VII(z_+WaveFirst_:z_+WaveLast_,:,:)* &
+          No2Si_V(UnitEnergyDens_)
+
+     State_VII(z_+p_,:,:)  = State_VII(z_+p_,:,:)*No2Si_V(UnitP_)
+     if(UseElectronPressure)State_VII(z_+Pe_,:,:)  = &
+          State_VII(z_+Pe_,:,:)*No2Si_V(UnitP_)
+
+     if(UseAnisoPressure)State_VII(z_+Ppar_,:,:)  = &
+          State_VII(z_+Ppar_,:,:)*No2Si_V(UnitP_)
+
+     if(Ehot_>1)State_VII(z_+Ehot_,:,:) = &
+          State_VII(z_+Ehot_,:,:)*No2Si_V(UnitEnergyDens_)
+
+     call save_plot_file(NameFile,&
+          StringHeaderIn=&
+          'SC-IH interface, longitude and latitude are in deg, other in SI',&
+          NameVarIn    = &
+          'Long Lat x y z '//NamePrimitiveVar,&
+          nDimIn=2,      &
+          CoordIn_DII=Coord_DII, &
+          VarIn_VII=State_VII)
+  end do
+end subroutine plot_buffer
   
