@@ -436,7 +436,7 @@ RAW			StringLogfile
 T
 
 #SAVEPLOT
-3			nPlotFiles
+4			nPlotFiles
 x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
@@ -455,11 +455,9 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
-3d VAR tec		StringPlot
-4000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p sign
-g rbody
+buf MHD idl
+-1
+50.0
 
 #END_COMP IH ---------------------------------------------------------------
 
