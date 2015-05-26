@@ -692,12 +692,14 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
 
   //create TECPLOT script and run TECPLOT
   int nFileOutputs; //the number of hte TECPLOT files that contain the contain the interpolated values
-  char command[_MAX_STRING_LENGTH_PIC_],ScriptBaseName[_MAX_STRING_LENGTH_PIC_];
+  char command[_MAX_STRING_LENGTH_PIC_],ScriptBaseName[_MAX_STRING_LENGTH_PIC_],DataFileFullName[_MAX_STRING_LENGTH_PIC_];
 
-  sprintf(ScriptBaseName,"%s.AMPS.ImportData",fname);
-  nFileOutputs=PIC::CPLR::DATAFILE::TECPLOT::CreateScript(ScriptBaseName,fname);
+  sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
 
-  sprintf(command,"tec360 -b %s %s.thread=%i.mcr",fname,ScriptBaseName,PIC::ThisThread);
+  sprintf(ScriptBaseName,"%s.AMPS.ImportData",DataFileFullName);
+  nFileOutputs=PIC::CPLR::DATAFILE::TECPLOT::CreateScript(ScriptBaseName,DataFileFullName);
+
+  sprintf(command,"tec360 -b %s %s.thread=%i.mcr",DataFileFullName,ScriptBaseName,PIC::ThisThread);
   system(command);
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
