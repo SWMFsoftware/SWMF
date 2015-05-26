@@ -6,6 +6,9 @@
  */
 /*
  * $Log$
+ * Revision 1.6  2015/03/31 22:40:30  vtenishe
+ * the particle allocation flag is set when the new particle is generated
+ *
  * Revision 1.5  2015/03/13 19:17:12  yunilee
  * Changes for Mars code initialization
  *
@@ -533,12 +536,16 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
     //Calculate velocity (vector) for new hot O
     double velocityO1[3],velocityO2[3];
-    for (idim=0;idim<3;idim++) {velocityO1[idim]=  vparent[idim]+    speed*Randomposition[idim];}
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-           if (!isfinite(velocityO1[idim])) {
-               exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-           }
-#endif
+
+    for (idim=0;idim<3;idim++) {
+      velocityO1[idim]=vparent[idim]+speed*Randomposition[idim];
+
+      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+      if (!isfinite(velocityO1[idim])) {
+        exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+      }
+      #endif
+    }
        
    // for (idim=0;idim<3;idim++) {velocityO2[idim]=  /*vparent[idim]+*/    speed*(-Randomposition[idim]);}
 
