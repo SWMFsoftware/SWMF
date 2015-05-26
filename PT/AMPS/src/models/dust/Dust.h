@@ -1334,7 +1334,7 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 typedef bool (*fGenerateNewDustGrainInternalProperties)(double *x,double *v,double& GrainRadius, double& GrainWeightCorrection,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode);
 extern fGenerateNewDustGrainInternalProperties GenerateNewDustGrainInternalProperties;
 
-long int DustInjection__Sphere(void *SphereDataPointer);
+long int DustInjection__Sphere(int BoundaryElementType,void *SphereDataPointer);
 }
 
 

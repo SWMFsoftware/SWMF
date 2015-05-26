@@ -391,7 +391,7 @@ return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 */
 
 /*-----------------------------------------   Inject dust grains from a sphere -----------------------------------*/
-long int ElectricallyChargedDust::DustInjection__Sphere(void *SphereDataPointer) {
+long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,void *SphereDataPointer) {
   cInternalSphericalData *Sphere;
   double ParticleWeight,LocalTimeStep,x[3],v[3],*sphereX0,sphereRadius;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
