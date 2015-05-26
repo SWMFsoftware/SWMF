@@ -896,6 +896,8 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDi
   double grainElecticCharge;
 #endif
 
+  if(SampleNodes==NULL) return;
+
   for (node=SampleNodes[0],nProbe=0;nProbe<nSamplingLocations;node=SampleNodes[++nProbe]) if ((block=node->block)!=NULL) {
     //    ptr=block->GetCenterNode(SampleLocalCellNumber[nProbe])->FirstCellParticle;
     int i,j,k;
