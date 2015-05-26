@@ -49,8 +49,8 @@
 
 
 
-#define min(a,b)  (((a) < (b)) ? (a) : (b))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
+//#define min(a,b)  (((a) < (b)) ? (a) : (b))
+//#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 
 
@@ -131,24 +131,24 @@ public:
 
     //temperature
     dVal=(PlumeTemperatureMax-PlumeTemperatureMin)/pow(2.0,L);
-    maxVal=min(PlumeTemperatureMax,Temperature_bestConfiguration+dVal);
-    minVal=max(PlumeTemperatureMin,Temperature_bestConfiguration-dVal);
+    maxVal=std::min(PlumeTemperatureMax,Temperature_bestConfiguration+dVal);
+    minVal=std::max(PlumeTemperatureMin,Temperature_bestConfiguration-dVal);
     Temperature=minVal+rnd()*(maxVal-minVal);
 
     //bulk velocity
     dVal=(PlumeBulkVelocityMax-PlumeBulkVelocityMin)/pow(2.0,L);
-    maxVal=min(PlumeBulkVelocityMax,BulkVelocity_bestConfiguration+dVal);
-    minVal=max(PlumeBulkVelocityMin,BulkVelocity_bestConfiguration-dVal);
+    maxVal=std::min(PlumeBulkVelocityMax,BulkVelocity_bestConfiguration+dVal);
+    minVal=std::max(PlumeBulkVelocityMin,BulkVelocity_bestConfiguration-dVal);
     BulkVelocity=minVal+rnd()*(maxVal-minVal);
 
     //tilt angle: the cosine of the tilt angle is distributed uniformly  
-    double cosTiltAngle,cosTiltAngleMax=max(0.0,cos(1.3*refTiltAngle));
+    double cosTiltAngle,cosTiltAngleMax=std::max(0.0,cos(1.3*refTiltAngle));
   
     cosTiltAngle=cos(TiltAngle_bestConfiguration); 
     dVal=(1.0-cosTiltAngleMax)/pow(2.0,L);  
 
-    maxVal=min(1.0,cosTiltAngle+dVal);
-    minVal=max(cosTiltAngleMax,cosTiltAngle-dVal);
+    maxVal=std::min(1.0,cosTiltAngle+dVal);
+    minVal=std::max(cosTiltAngleMax,cosTiltAngle-dVal);
     cosTiltAngle=minVal+rnd()*(maxVal-minVal);
     TiltAngle=acos(cosTiltAngle);   
 

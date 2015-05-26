@@ -44,7 +44,7 @@ const double dxMinSphere=DebugRunMultiplier*2.0/100,dxMaxSphere=DebugRunMultipli
 
 //Preprocessor of the SWMF data the obtained through ICES -> rotate the vectors
 //Need to rotate: E[3],B[3],swVel[3]
-void SWMFdataPreProcessor(double *x,PIC::CPLR::ICES::cDataNodeSWMF& data) {
+void SWMFdataPreProcessor(double *x,PIC::CPLR::DATAFILE::ICES::cDataNodeSWMF& data) {
   VectorRotation::Along_Z_direction(data.B,-270.0/180.0*Pi);
   VectorRotation::Along_Z_direction(data.E,-270.0/180.0*Pi);
   VectorRotation::Along_Z_direction(data.swVel,-270.0/180.0*Pi);
@@ -499,14 +499,14 @@ int main(int argc,char **argv) {
   //Load the plasma parameters from ICES
   //init ICES
 
-  PIC::CPLR::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
+  PIC::CPLR::DATAFILE::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
 #ifdef _ICES_CREATE_COORDINATE_LIST_
-  PIC::CPLR::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::ICES::SetLocationICES("/left/ices/ICES");
-  PIC::CPLR::ICES::retriveSWMFdata("Enceladus");
+  PIC::CPLR::DATAFILE::ICES::createCellCenterCoordinateList();
+  PIC::CPLR::DATAFILE::ICES::SetLocationICES("/left/ices/ICES");
+  PIC::CPLR::DATAFILE::ICES::retriveSWMFdata("Enceladus");
 #endif
 
-  PIC::CPLR::ICES::readSWMFdata(1.0);
+  PIC::CPLR::DATAFILE::ICES::readSWMFdata(1.0);
 //  PIC::CPLR::ICES::readDSMCdata();
       cout << __FILE__<< "@" << __LINE__ << endl;
 

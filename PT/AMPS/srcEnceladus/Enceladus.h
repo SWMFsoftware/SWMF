@@ -10,6 +10,9 @@
 #ifndef ENCELADUS_H_
 #define ENCELADUS_H_
 
+#include "pic.h"
+#include "Exosphere.h"
+
 #include "plume.h"
 #include "pic.h"
 #include "pic__model__electrically_charged_dust.h"
@@ -34,7 +37,7 @@ using namespace ElectricallyChargedDust;
   extern Cplume Plume[nTotalPlumes];
 
   //the boundary conditions on the sphere
-  double sphereInjectionRate(int spec,void *SphereDataPointer);
+  double sphereInjectionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
   int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer);
 
 

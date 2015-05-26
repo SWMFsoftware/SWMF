@@ -18,7 +18,7 @@ Cplume Enceladus::Plume[nTotalPlumes];
 
 /*---------------------------------    SURFACE BOUNDARY CONDITIONS     ------------------------------------*/
 //production rate of the grains
-double Enceladus::sphereInjectionRate(int spec,void *SphereDataPointer) {
+double Enceladus::sphereInjectionRate(int spec,int BoundaryElementType, void *SphereDataPointer) {
    static bool InitFlag=false;
    static double MeanDustGrainMass=0.0;
 
