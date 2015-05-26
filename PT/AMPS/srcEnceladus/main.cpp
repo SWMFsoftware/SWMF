@@ -254,7 +254,7 @@ int main(int argc,char **argv) {
   //  char inputFile[]="enceladus.input";
 
 
-  //  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //set up the alarm
   PIC::Alarm::SetAlarm(8.0*3600.0-15*60);
@@ -347,10 +347,10 @@ int main(int argc,char **argv) {
   if (PIC::Mesh::mesh.ThisThread==0) {
     PIC::Mesh::mesh.buildMesh();
     PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-    //    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   }
   else {
-    // MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
 
@@ -441,7 +441,7 @@ int main(int argc,char **argv) {
 //  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
   PIC::Mesh::mesh.outputMeshDataTECPLOT("mesh.data.dat",_DUST_SPEC_);
 
-  //  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
 
 
@@ -502,7 +502,7 @@ int main(int argc,char **argv) {
   PIC::CPLR::DATAFILE::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
 #ifdef _ICES_CREATE_COORDINATE_LIST_
   PIC::CPLR::DATAFILE::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::DATAFILE::ICES::SetLocationICES("/left/ices/ICES");
+//  PIC::CPLR::DATAFILE::ICES::SetLocationICES("/left/ices/ICES");
   PIC::CPLR::DATAFILE::ICES::retriveSWMFdata("Enceladus");
 #endif
 
