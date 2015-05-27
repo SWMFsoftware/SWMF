@@ -20,12 +20,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-
-//  #define _ICES_CREATE_COORDINATE_LIST_
-
-//the species
-//unsigned int _DUST_SPEC_=0;
-
 //the particle class
 //#include "pic.h"
 #include "constants.h"
@@ -505,11 +499,13 @@ int main(int argc,char **argv) {
   //init ICES
 
   PIC::CPLR::DATAFILE::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
-#ifdef _ICES_CREATE_COORDINATE_LIST_
+
+  #ifdef _ICES_CREATE_COORDINATE_LIST_
+  #if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
   PIC::CPLR::DATAFILE::ICES::createCellCenterCoordinateList();
-//  PIC::CPLR::DATAFILE::ICES::SetLocationICES("/left/ices/ICES");
   PIC::CPLR::DATAFILE::ICES::retriveSWMFdata("Enceladus");
-#endif
+  #endif
+  #endif //_ICES_CREATE_COORDINATE_LIST_
 
   PIC::CPLR::DATAFILE::ICES::readSWMFdata(1.0);
 //  PIC::CPLR::ICES::readDSMCdata();
