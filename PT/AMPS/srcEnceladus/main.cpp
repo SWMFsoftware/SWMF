@@ -34,7 +34,11 @@
 
 
 //the parameters of the domain and the sphere
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_OFF_
 const double DebugRunMultiplier=3.0;
+#else
+const double DebugRunMultiplier=12.0;
+#endif
 
 const double rSphere=_RADIUS_(_TARGET_);
 const double xMaxDomain=5.0;
@@ -101,6 +105,7 @@ double localSphericalSurfaceResolution(double *x) {
   double Multiplier=0.25;
 
   if (x[2]>0.0) Multiplier=1.0;
+
 
   return Multiplier*DebugRunMultiplier*0.5*(dxMaxSphere+dxMinSphere)*rSphere;
 }
@@ -514,17 +519,20 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
 /*-------------------------  END ICES --------------------------------*/
 
+  //create the reference file with the extracted data
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  char fname[400];
+
+  sprintf(fname,"%s/test_ices.dat",PIC::OutputDataFileDirectory);
+  PIC::CPLR::DATAFILE::SaveTestReferenceData(fname);
+  #endif
+
+
   //time step
-  for (long int niter=0;niter<100000001;niter++) {
+  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 250;
 
-
-
+  for (long int niter=0;niter<nTotalIterations;niter++) {
      PIC::TimeStep();
-
-
-
-
-
 
      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
        PIC::RequiredSampleLength*=2;
@@ -534,14 +542,20 @@ int main(int argc,char **argv) {
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
      }
-
-
   }
 
+  //output the particle statistics of the test run
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+  PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  #endif
 
+
+  //finish the run
+  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return 1;
+  return EXIT_SUCCESS;
 }
 
 
