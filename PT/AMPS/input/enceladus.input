@@ -1,6 +1,6 @@
 
 #main
-SpeciesList=H2O DUST DUST 
+SpeciesList=DUST DUST 
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=off ! on,off 
