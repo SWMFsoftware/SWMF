@@ -35,7 +35,7 @@ double Europa::vEuropaRadial=0.0,Europa::xEuropaRadial=0.0;
 // dust parameters
 double DustSizeMin=1.0e-7;
 double DustSizeMax=1.0e-2;
-double DustTotalMassProductionRate=0.0;
+double DustTotalMassProductionRate=1e25;
 int    DustSampleIntervals=10;
 double DustSizeDistribution=0.0;
 
@@ -783,7 +783,7 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
     break;
 
-  case _O_SPEC_: case _H_SPEC_: case _OH_SPEC_: case _H2O_SPEC_ :
+  case _O_SPEC_: case _H_SPEC_: case _OH_SPEC_: case _H2O_SPEC_ : 
     //the assumptions of the boundary interaction: O,H, OH, H2O <- stick to the surface; O2 and H2 do not stick to the surface
     ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
     break;
@@ -831,6 +831,12 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
     ReturnCode=_PARTICLE_REJECTED_ON_THE_FACE_;
     break;
   default:
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
+      ReturnCode=_PARTICLE_DELETED_ON_THE_FACE_;
+      break;
+    }
+#endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_   
     exit(__LINE__,__FILE__,"Error: the boundary interaction model is not specified for this species");
   }
 

@@ -280,7 +280,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
    default:
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
      if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
-       CharacteristicSpeed=1.0e4;
+       CharacteristicSpeed=1.0e5;
        break;
      }
 #endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -476,7 +476,7 @@ long int BoundingBoxInjection(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 
 double GetTotalProductionRateUniformNASTRAN(int spec){
-  return 0.0;
+  return 1.0e25;
 }
 
 bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
@@ -486,65 +486,30 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
   double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
   static double positionSun[3];
   double HeliocentricDistance=3.3*_AU_;
-  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
+  int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement, nZenithElement;
   long int totalSurfaceElementsNumber,i;
   double rSphere=1980.0;
   double area;
   static double productionDistributionUniformNASTRAN[200000];
   static double cumulativeProductionDistributionUniformNASTRAN[200000];
   static bool probabilityFunctionDefinedUniformNASTRAN;
-  if (probabilityFunctionDefinedUniformNASTRAN==false) {       
-    //    for (TableTotalProductionRate=0.0,i=0;i<90;i++) {
-    //      TableTotalProductionRate+=ProductionRate[i][2+Comet::ndist];
-    //    }
-    
-    //    positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    //    positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
-    //    positionSun[2]=HeliocentricDistance*cos(subSolarPointZenith);
-    
-    totalSurfaceElementsNumber=CutCell::nBoundaryTriangleFaces;
-    
-    total=0.0;      
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      for (idim=0;idim<3;idim++) norm[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-      CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x,PIC::Mesh::mesh.EPS); //I had middle element on body rotation...
-      
-      productionDistributionUniformNASTRAN[i]=CutCell::BoundaryTriangleFaces[i].SurfaceArea;
-      total+=productionDistributionUniformNASTRAN[i];
-    }
-      
-    cumulativeProductionDistributionUniformNASTRAN[0]=0.0;
-    for (i=0;i<totalSurfaceElementsNumber;i++) {
-      if (i==0) {
-	cumulativeProductionDistributionUniformNASTRAN[i]+=productionDistributionUniformNASTRAN[i]/total;
-      }else{
-	cumulativeProductionDistributionUniformNASTRAN[i]=cumulativeProductionDistributionUniformNASTRAN[i-1]+productionDistributionUniformNASTRAN[i]/total;
-      }
-      
-    }
-    //    probabilityFunctionDefinedUniformNASTRAN=true;
-  }
-  
-  //Computation of the segment where the particle will be created
-  gamma=rnd();
-  i=0;
-  while (gamma>cumulativeProductionDistributionUniformNASTRAN[i]){
-    i++;
-  }
-
-    
-  //'x' is the position of a particle in the coordinate frame related to the planet 'IAU_OBJECT'
+  unsigned int el;
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
-  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
-  //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
 
-  for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
-  
-  //  for (c=0.0,X=0.0,idim=0;idim<3;idim++){
-  //    c+=ExternalNormal[idim]*(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim]);
-  //    X+=pow(positionSun[idim]-x_LOCAL_IAU_OBJECT[idim],2.0);
-  //  }
-  //  cosSubSolarAngle=c/sqrt(X);
+  { // get random position on Europa's surface
+    el=(int)(rnd()*Europa::Planet->nZenithSurfaceElements*Europa::Planet->nAzimuthalSurfaceElements);
+    Europa::Planet->GetSurfaceElementIndex(nZenithElement,nAzimuthalElement, el);
+    Europa::Planet->GetSurfaceElementRandomDirection(ExternalNormal,nZenithElement,nAzimuthalElement);
+    
+    x_LOCAL_IAU_OBJECT[0]=sphereX0[0]+sphereRadius*ExternalNormal[0];
+    x_LOCAL_IAU_OBJECT[1]=sphereX0[1]+sphereRadius*ExternalNormal[1];
+    x_LOCAL_IAU_OBJECT[2]=sphereX0[2]+sphereRadius*ExternalNormal[2];
+    
+    ExternalNormal[0]*=-1.0;
+    ExternalNormal[1]*=-1.0;
+    ExternalNormal[2]*=-1.0;
+  }
+
   
   //transfer the position into the coordinate frame related to the rotating coordinate frame 'MSGR_SO'
   x_LOCAL_SO_OBJECT[0]=
@@ -582,10 +547,11 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
         v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
      
     }
-    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
-    for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
-    for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+  /*CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+   *while(xFace[0]==x_LOCAL_SO_OBJECT[0] && xFace[1]==x_LOCAL_SO_OBJECT[1] && xFace[2]==x_LOCAL_SO_OBJECT[2]) CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
+   *for (idim=0;idim<3;idim++) r2Tang+=pow(x_LOCAL_SO_OBJECT[idim]-xFace[idim],2.0);
+   *for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]+=vDustInit*sin(angleVelocityNormal)*(x_LOCAL_SO_OBJECT[idim]-xFace[idim])/sqrt(r2Tang);
+   */
   }
   else for (idim=0;idim<3;idim++) PIC::Distribution::InjectMaxwellianDistribution(v_LOCAL_IAU_OBJECT,vbulk,SurfaceTemperature,ExternalNormal,spec);
   
@@ -626,7 +592,7 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
 
 
 long int DustInjection(int spec) {
-  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],*sphereX0,sphereRadius;
+  double ModelParticlesInjectionRate,ParticleWeight,LocalTimeStep,TimeCounter=0.0,x_SO_OBJECT[3],x_IAU_OBJECT[3],v_SO_OBJECT[3],v_IAU_OBJECT[3],sphereX0[3]={0.0},sphereRadius=_EUROPA__RADIUS_;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=NULL;
   long int newParticle,nInjectedParticles=0;
   PIC::ParticleBuffer::byte *newParticleData;
@@ -1407,6 +1373,8 @@ void amps_init() {
 
    if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
    if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+
+   if (_DUST_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_DUST_SPEC_,_H2O_SPEC_,1e-1);
    
    //init weight of the daugter products of the photolytic and electron impact reactions
    for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
