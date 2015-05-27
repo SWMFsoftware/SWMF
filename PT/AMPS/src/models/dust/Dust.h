@@ -997,28 +997,27 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
 
     //reserve space for different elecgtron and ion temepratures
-    double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron;
+    double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron,pe;
 
 
     plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,initNode);
     PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,initNode);
     plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,initNode);
+    pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,initNode);
 
 
     if (plasmaNumberDensity<1.0E2) {
       plasmaTemperature=200.0;
       plasmaNumberDensity=1.0E2;
       swVel[0]=100.0,swVel[1]=0.0,swVel[2]=0.0;
+      Ti=plasmaTemperature;
+      Te=plasmaTemperature;
+    }
+    else{
+      Ti=plasmaTemperature;
+      Te=pe/(Kbol*plasmaNumberDensity);
     }
 
-
-
-    Ti=plasmaTemperature;
-    Te=plasmaTemperature;
-
-    //derive the electron temeprature from the electron pressure
-    double pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,initNode);
-    Te=pe/(Kbol*plasmaNumberDensity);
 
 
 
