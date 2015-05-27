@@ -2360,22 +2360,22 @@ namespace PIC {
     namespace DATAFILE {
 
       namespace MULTIFILE{
-	//time of the currently loaded datafile
-	extern double TimeCurrent;
-	//time to load the next datafile
-	extern double TimeCoupleNext;
-	// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
-	extern int  FileNumber;
-	extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
-	extern char FileExt[_MAX_STRING_LENGTH_PIC_];
-	//check whether it is time to load the next file
-	inline bool IsTimeToUpdate(){
-	  return TimeCoupleNext >= 0.0 && PIC::SimulationTime::Get() >= TimeCoupleNext;
-	}
-	//initialize
-	void Init(const char *FileNameBaseIn, int FileNumber = 0, const char *FileExtIn="dat");
-	//update the datafile
-	void UpdateDataFile();
+        //time of the currently loaded datafile
+        extern double TimeCurrent;
+        //time to load the next datafile
+        extern double TimeCoupleNext;
+        // parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
+        extern int  FileNumber;
+        extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
+        extern char FileExt[_MAX_STRING_LENGTH_PIC_];
+        //check whether it is time to load the next file
+        inline bool IsTimeToUpdate(){
+          return TimeCoupleNext >= 0.0 && PIC::SimulationTime::Get() >= TimeCoupleNext;
+        }
+        //initialize
+        void Init(const char *FileNameBaseIn, int FileNumber = 0, const char *FileExtIn="dat");
+        //update the datafile
+        void UpdateDataFile();
       }
 
       //path to the location of the datafiles
@@ -2471,6 +2471,9 @@ namespace PIC {
       void PrintVariableList(FILE* fout,int DataSetNumber);
       void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+
+      //test the data file reader by comparing the reading results with the reference data
+      void SaveTestReferenceData(const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
       //initialize the data file reader
       void Init();

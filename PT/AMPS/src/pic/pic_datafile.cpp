@@ -585,4 +585,107 @@ void PIC::CPLR::DATAFILE::EvaluateSurfaceIonFlux(double ShiftFactor) {
   }
 }
 
+//====================================================
+//compare the extracted data with the referece data set (extracted previously)
+void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  static CMPI_channel pipe;
+  static FILE *fout=NULL;
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    char fname[400];
+    sprintf(fname,"%s",fName);
+
+    pipe.init(1000000);
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      pipe.openRecvAll();
+      fout=fopen(fname,"w");
+    }
+    else pipe.openSend(0);
+  }
+
+  //loop through all points
+  //create the list of the points
+  //perform the interpolation loop
+  int i,j,k,nd;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char *offset;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+  char SendCellFlag;
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((PIC::ThisThread==0)||(startNode->Thread==PIC::ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      SendCellFlag=true;
+
+      //determine whether the cell data neede to be saved
+      if (startNode->Thread==PIC::ThisThread) {
+        //locate the cell
+        if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
+
+        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        if (SendCellFlag==true) {
+          if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
+          else SendCellFlag=false,offset=NULL;
+        }
+
+        if (startNode->Thread!=0) pipe.send(SendCellFlag);
+      }
+      else {
+        pipe.recv(SendCellFlag,startNode->Thread);
+      }
+
+      //save the cell data
+      if (SendCellFlag==true) {
+        if (startNode->Thread==PIC::ThisThread) {
+          if (startNode->Thread==0) {
+            for (int iVar=0;iVar<nTotalBackgroundVariables;iVar++) fprintf(fout,"%e ",((double*)(offset+CenterNodeAssociatedDataOffsetBegin))[iVar]);
+            fprintf(fout,"\n");
+
+            #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+            PIC::Debugger::CatchOutLimitValue((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables,__LINE__,__FILE__);
+            #endif
+          }
+          else {
+            pipe.send((double*)(offset+CenterNodeAssociatedDataOffsetBegin),nTotalBackgroundVariables);
+          }
+        }
+        else {
+          double data[nTotalBackgroundVariables];
+
+          pipe.recv(data,nTotalBackgroundVariables,startNode->Thread);
+          for (int iVar=0;iVar<nTotalBackgroundVariables;iVar++) fprintf(fout,"%e ",data[iVar]);
+          fprintf(fout,"\n");
+
+          #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+          PIC::Debugger::CatchOutLimitValue(data,nTotalBackgroundVariables,__LINE__,__FILE__);
+          #endif
+        }
+      }
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) SaveTestReferenceData(NULL,startNode->downNode[nDownNode]);
+  }
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      pipe.closeRecvAll();
+      fclose(fout);
+    }
+    else pipe.closeSend();
+
+    pipe.remove();
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  }
+}
+
+
+
+
+
+
 
