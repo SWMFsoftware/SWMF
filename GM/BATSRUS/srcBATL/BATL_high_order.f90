@@ -63,10 +63,8 @@ contains
     real, intent(in):: CellValue_I(7)
     real, optional, intent(in):: DxIn
     real:: Dx
-    real:: FaceL, FaceR ! FaceL = F_{i-1/2}, FaceR = F_{i+1/2}
+    real:: FaceL, FaceR 
     real:: CorrectedFaceL, CorrectedFaceR
-    real, parameter:: c3over256 = 3./256, c25over256 = 25./256, &
-         c150over256 = 150./256
     integer, parameter:: i = 4
     ! ----------------------------------------------------------------------
 
@@ -437,10 +435,6 @@ contains
     real, parameter:: c11=-4./231, c12=4./7,c13=5./7, c14=-1./3, c15=5./77
     real, parameter:: c21=-9./572, c22=1./6,c23=1.05, c24=-3./11, c25=14./195
     real, parameter:: c31=-9./286, c32=5./7,c33=0.5, c34=-20./77, c35=1./13
-    real, parameter:: d11=8./15, d12=2./3, d13=-1./5
-    real, parameter:: d21=1./7, d22=1.0, d23=-1./7
-    real, parameter:: d31=9./14, d32=0.5, d33=-1./7
-    real, parameter:: c6=0.6
     real:: Ghost, Cell_I(4), Distance_I(4)
 
     !-----------------
@@ -613,7 +607,7 @@ contains
     logical:: IsAccurate_II(0:5,0:5)
     real:: Cell_I(0:5)
     integer:: i, AccurateType
-    integer, parameter:: Indexp3_=0, Indexpp_=1, Indexp_=2, Index0_=3, &
+    integer, parameter:: Indexpp_=1, Indexp_=2, Index0_=3, &
          Indexm_=4, Indexmm_=5
 
     DoLimit = .true.
@@ -1470,7 +1464,7 @@ contains
 
     use BATL_tree, ONLY: DiLevelNei_IIIB
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
-         nI, nJ, nK, nDim
+         nI, nJ, nK
     integer, intent(in):: iBlock, nVar
     real, intent(inout):: Field_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, optional,intent(in):: IsPositiveIn_V(nVar)
@@ -1478,16 +1472,9 @@ contains
     logical:: IsPositive_V(nVar)
 
     logical:: IsCorrected_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    real,parameter::  Distance_II(4,4) = reshape((/&
-         -2,-1,4,5, &
-         -3,-2,3,4, &
-         -4,-3,2,3, &
-         -5,-4,1,2 &
-         /), (/4,4/))
-    real::  Coef_II(6,4)
+
     real:: Coef1_I(4) = ([-1./6, 2./3, 2./3, -1./6])
 
-    real, parameter::  Coef_I(6) = ([1./20, -3./10, 3./4, 3./4, -3./10, 1./20])
     real, parameter::  Distance_I(4) = (/-2, -1, 1, 2/)
 
     integer:: iDir, jDir, kDir, iDir1, jDir1, kDir1, nDir1, iDir2, jDir2, kDir2
@@ -1503,28 +1490,6 @@ contains
     !----------------------------------------------------------------------
     IsPositive_V = .false. 
     if(present(IsPositiveIn_V)) IsPositive_V = IsPositiveIn_V
-
-    if(nI>7 .and. nJ>7 .and. (nDim ==2 .or. nK>7)) then
-       ! If there are enough information, use 6 points interpolation, which
-       ! is symmetric. 
-       Coef_II = reshape(([&
-            5./21, -15./14, 12./7, 3./7,  -3./7,  5./42, &
-            5./14, -10./7,  12./7, 8./7, -15./14, 2./7, &
-            2./7,  -15./14, 8./7,  12./7, -10./7, 5./14,&
-            5./42, -3./7,   3./7,  12./7, -15./14,5./21 &
-            ]),&
-            ([6,4]))
-    else
-       ! Do not have enough infomation to do symmetric interpolation. 
-       ! 5 points interpolation. 
-       Coef_II = reshape(([&
-            5./14,  -10./7,  2.0,    1./7,   -1./14,  0.0, &
-            9./14,  -16./7, 12./5,  16./35,  -3./14,  0.0, &
-            9./14,  -15./7,  2.0,    6./7,   -5./14,  0.0, &
-            5./14,  -8./7,   1.0,    8./7,   -5./14,  0.0  &
-            ]),&
-            ([6,4]))
-    endif
 
     if(nK == 1) then
        ! For example: 
