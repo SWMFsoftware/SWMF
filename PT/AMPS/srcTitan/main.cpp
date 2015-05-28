@@ -59,7 +59,7 @@ int main(int argc,char **argv) {
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
     char fname[400];
 
-    sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+    sprintf(fname,"%s/test_Titan.dat",PIC::OutputDataFileDirectory);
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
 
