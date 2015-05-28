@@ -64,6 +64,10 @@ module ModViscosity
   real:: rZeroVisco = -1.0
   real:: rFullVisco = 1e30
 
+  ! Artificial viscosity.
+  logical, public :: UseArtificialVisco = .false.
+  real, public :: alphaVisco 
+
   save 
 
 contains
@@ -85,6 +89,11 @@ contains
        call read_var('UseViscosity',      UseViscosity)
        if(UseViscosity) &
             call read_var('ViscosityCoeffSi',  ViscoCoeffSi)
+    case('#ARTIFICIALVISCOSITY')
+       call read_var('UseArtificialVisco',      UseArtificialVisco)
+       if(UseArtificialVisco) then 
+          call read_var('alphaVisco', alphaVisco)
+       endif
     case('#VISCOSITYREGION')
        call read_var('NameViscosityRegion', NameViscoRegion)
 

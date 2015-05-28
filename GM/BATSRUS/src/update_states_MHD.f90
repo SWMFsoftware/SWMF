@@ -23,7 +23,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModFaceValue, ONLY: UseFaceIntegral4
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
-
+  use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
+  
   implicit none
 
   integer, intent(in) :: iStage, iBlock
@@ -100,6 +101,8 @@ subroutine update_states_MHD(iStage,iBlock)
           /CellVolume_GB(i,j,k,iBlock) ) 
   end do; end do; end do
 
+  if(UseArtificialVisco) call add_artificial_viscosity
+  
   if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
      ! Integrate fluxes in the transverse direction (eq. 20)
      ! <F> = F + Laplace_transverse(F)/24
@@ -585,7 +588,45 @@ contains
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end subroutine update_explicit
+  !----------------------------------------------------------------------
 
+  subroutine add_artificial_viscosity
+    ! Use second deritive as artificial viscosity.
+
+    real :: c0
+    !----------------------------------------------------------------------
+    
+    do k = 1,nK; do j=1,nJ; do i=1,nI
+       DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
+
+       if(DtLocal<1e-15) then
+          c0 = 0
+       else 
+          c0 = alphaVisco 
+       endif
+
+       Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
+            -2*State_VGB(:,i,j,k,iBlock) + &
+            (State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock))&
+            )
+
+       if(nJ>1) then
+          Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
+               -2*State_VGB(:,i,j,k,iBlock) + &
+               (State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock))&
+               )          
+       endif
+
+       if(nK>1) then
+          Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
+               -2*State_VGB(:,i,j,k,iBlock) + &
+               (State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock))&
+               )          
+       endif
+    enddo; enddo; enddo
+    
+  end subroutine add_artificial_viscosity
+  
 end subroutine update_states_mhd
 
 !==============================================================================

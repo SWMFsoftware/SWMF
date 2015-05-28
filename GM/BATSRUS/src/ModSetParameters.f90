@@ -572,7 +572,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#PIC", "#PICREGION", "#PICUNIT", "#PICCOUPLE")
         call pic_read_param(NameCommand)
 
-     case("#VISCOSITY", "#VISCOSITYREGION")
+     case("#VISCOSITY", "#VISCOSITYREGION","#ARTIFICIALVISCOSITY")
         call viscosity_read_param(NameCommand)
 
      case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
