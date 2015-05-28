@@ -47,7 +47,7 @@ int main(int argc,char **argv) {
 
   char fname[400];
 
-  sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+  sprintf(fname,"%s/test_Moon.dat",PIC::OutputDataFileDirectory);
   PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
 
 //  cout << "End of the run:" << PIC::nTotalSpecies << endl;
