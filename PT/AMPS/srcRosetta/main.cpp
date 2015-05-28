@@ -63,9 +63,12 @@ double SurfaceResolution(CutCell::cTriangleFace* t) {
   else if (size<1.0) res=0.01*pow(10.0,size);
   else res=0.25;
 
+  //reduce the mesh resolution when run tests
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  if (res<0.20) res=0.20;
+  #endif
 
   return res;
-
 }
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
@@ -385,6 +388,7 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 
 int main(int argc,char **argv) {
+  char fname[_MAX_STRING_LENGTH_PIC_];
 
   //init the particle solver
   PIC::InitMPI();
@@ -399,7 +403,8 @@ int main(int argc,char **argv) {
 
 
   //load the NASTRAN mesh
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("rosetta.surface.reduced.nas"); //("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
+  sprintf(fname,"%s/rosetta.surface.reduced.nas",PIC::UserModelInputDataPath);
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat(fname); //("C-G_MOC_original.bdf"); //("rosetta.surface.reduced.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
 
@@ -407,8 +412,6 @@ int main(int argc,char **argv) {
 //  PIC::Mesh::IrregularSurface::SmoothRefine(0.5);
 
   if (PIC::ThisThread==0) {
-    char fname[_MAX_STRING_LENGTH_PIC_];
-
     sprintf(fname,"%s/SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
     PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh(fname);
   }
@@ -444,7 +447,36 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.AllowBlockAllocation=false;
   PIC::Mesh::mesh.init(xmin,xmax,BulletLocalResolution);
   PIC::Mesh::mesh.memoryAllocationReport();
-  PIC::Mesh::mesh.buildMesh();
+
+
+  //PIC::Mesh::mesh.buildMesh();
+
+  //generate mesh or read from file
+  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  bool NewMeshGeneratedFlag=false;
+
+  FILE *fmesh=NULL;
+
+  fmesh=fopen(mesh,"r");
+
+  if (fmesh!=NULL) {
+    fclose(fmesh);
+    PIC::Mesh::mesh.readMeshFile(mesh);
+  }
+  else {
+    NewMeshGeneratedFlag=true;
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+       PIC::Mesh::mesh.buildMesh();
+       PIC::Mesh::mesh.saveMeshFile("mesh.msh");
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+    else {
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    }
+  }
+
 
   PIC::Mesh::mesh.SetParallelLoadMeasure(InitLoadMeasure);
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
@@ -493,12 +525,25 @@ int main(int argc,char **argv) {
   }
 
   //output the volume mesh
-  char fname[_MAX_STRING_LENGTH_PIC_];
   sprintf(fname,"%s/VolumeMesh.dat",PIC::OutputDataFileDirectory);
   PIC::Mesh::mesh.outputMeshTECPLOT(fname);
 
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
+
+  //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
+  if (NewMeshGeneratedFlag==true) {
+    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      char command[300];
+
+      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+      system(command);
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 
 
@@ -528,10 +573,14 @@ int main(int argc,char **argv) {
   PIC::Mover::ProcessTriangleCutFaceIntersection=SurfaceBoundaryCondition;
 
 
+  //determine the total number of the iterations to perform
+  //in the test-mode run 100 iterations and than output the particle data statistics
+  int nIterations,nTotalIterations=100000001;
 
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=550;
 
-
-  for (long int niter=0;niter<100000001;niter++) {
+  //time step
+  for (long int niter=0;niter<nTotalIterations;niter++) {
     static int LastDataOutputFileNumber=-1;
 
     PIC::TimeStep();
@@ -547,7 +596,17 @@ int main(int argc,char **argv) {
 
   }
 
+  //output the particle statistics for the nightly tests
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+    char fname[400];
+
+    sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  }
+
+
+  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return 1;
+  return EXIT_SUCCESS;
 }
