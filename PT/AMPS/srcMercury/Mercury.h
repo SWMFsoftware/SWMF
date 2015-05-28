@@ -116,6 +116,9 @@ namespace Mercury {
   void inline TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
 
+    static long int nCallCounter=0;
+    nCallCounter++;
+
 /*
     memcpy(accl,accl_LOCAL,3*sizeof(double));
     return;
@@ -255,6 +258,7 @@ namespace Mercury {
 
     //copy the local value of the acceleration to the global one
     memcpy(accl,accl_LOCAL,3*sizeof(double));
+    if ((isfinite(accl[0])==false)||(isfinite(accl[1])==false)||(isfinite(accl[2])==false)) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
   }
 
 
