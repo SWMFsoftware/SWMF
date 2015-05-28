@@ -23,6 +23,12 @@ if (! -e "Makefile.local") {
 }
 
 
+# build AMPS' Makefile.test
+foreach (@Arguments) { 
+    if(/^-install/){require "utility/TestScripts/BuildTest.pl";}
+}
+
+
 # Run the shared Config.pl script
 my $config     = "share/Scripts/Config.pl";
 if(-f $config){
