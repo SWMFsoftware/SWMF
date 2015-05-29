@@ -31,20 +31,25 @@ my @FinalApps;
 my $Name;
 my $Keys;
 my $Outs;
+#additional parameter to take into account location of input file
+my $PathName;
+
 
 #process table with test description
 while(@Table){
     my $ref;
     ($ref,$Name,$Keys,$Outs) = get_next_test(@Table);
     @Table = @$ref;
+    if($Name=~ m/(.*)\/(.*)$/){$PathName=$Name;$Name=$2;}
     $Outs="test_$Name" unless($Outs);
     next unless($Name);
 
     for (my $i = 0; $i<=@Base-1; $i++){
 	# general part with all tests
-	if($Base[$i]=~m/<APP>/){
+	if($Base[$i]=~m/<APP.*?>/){
 	    $Final[$i]=$Final[$i].$Base[$i];
 	    $Final[$i]=~s/<APP>/$Name/g;
+	    $Final[$i]=~s/<APPPATH>/$PathName/g;
 	    $Final[$i]=~s/<APPKEYS>/$Keys/g;
 	    $Final[$i]=~s/<APPOUTS>/$Outs/g;
 	}
@@ -56,6 +61,7 @@ while(@Table){
     my @lines = @App;
     for (my $i = 0; $i<=@lines-1; $i++){
 	$lines[$i]=~s/<APP>/$Name/g;
+	$lines[$i]=~s/<APPPATH>/$PathName/g;
 	$lines[$i]=~s/<APPKEYS>/$Keys/g;
 	$lines[$i]=~s/<APPOUTS>/$Outs/g;
     }
