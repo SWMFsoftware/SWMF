@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 module ModMessagePass
 
@@ -22,11 +22,13 @@ contains
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: far_field_BCs_BLK        
-    use ModPhysics,  ONLY: ShockSlope
+    use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
     use ModFaceValue,ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
+    use ModCoordTransform, ONLY: rot_xyz_sph
 
-    use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG
+    use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
     use ModMpi
 
     ! Fill ghost cells at res. change only
@@ -44,6 +46,11 @@ contains
     integer :: iBlock
 
     logical :: UseHighResChangeNow
+
+    !!! TO BE GENERALIZED
+    logical, parameter:: IsPeriodicWedge = .false.
+    integer:: iVector, iVar, i, j, k
+    real   :: XyzSph_DD(3,3)
 
     logical:: DoTest, DoTestMe, DoTime, DoTimeMe
     character (len=*), parameter :: NameSub = 'exchange_messages'
@@ -87,6 +94,22 @@ contains
           if(UseProjection)call correctP(iBlock)
        end do
     end if
+
+    if(IsPeriodicWedge)then
+       do iBlock = 1, nBlock
+          if (Unused_B(iBlock)) CYCLE
+          ! Skip blocks not at the boundary !!!
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             XyzSph_DD = rot_xyz_sph(Xyz_DGB(:,i,j,k,iBlock))
+             do iVector = 1, nVectorVar
+                iVar = iVectorVar_I(iVector)
+                State_VGB(iVar:iVar+2,i,j,k,iBlock) = &
+                     matmul(State_VGB(iVar:iVar+2,i,j,k,iBlock), XyzSph_DD)
+             end do
+          end do; end do; enddo
+       end do
+    end if
+
 
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
@@ -138,6 +161,22 @@ contains
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
+
+    if(IsPeriodicWedge)then
+       do iBlock = 1, nBlock
+          if (Unused_B(iBlock)) CYCLE
+          ! Skip blocks not at the boundary !!!
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             XyzSph_DD = rot_xyz_sph(Xyz_DGB(:,i,j,k,iBlock))
+             do iVector = 1, nVectorVar
+                iVar = iVectorVar_I(iVector)
+                State_VGB(iVar:iVar+2,i,j,k,iBlock) = &
+                     matmul(XyzSph_DD, State_VGB(iVar:iVar+2,i,j,k,iBlock))
+             end do
+          end do; end do; enddo
+       end do
+    end if
+
 
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)
