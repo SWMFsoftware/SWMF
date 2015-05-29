@@ -6,7 +6,7 @@ test_<APP>:
 
 test_<APP>_compile:
 	@echo "test_<APP>_compile..." > test_<APP>.diff
-	./Config.pl -application=<APP> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
+	./Config.pl -application=<APPPATH> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
 	$(MAKE) amps
