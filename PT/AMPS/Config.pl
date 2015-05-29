@@ -112,6 +112,14 @@ foreach (@Arguments) {
     my $application = lc($1);
     
     `cp -f input/$application.* input/species.input .`;
+
+     #remove path from the name of the input file is such exists
+     my @list;
+
+     $application=~s/\// /g;
+     @list=split(' ',$application);
+     $application=$list[$#list];
+
     `echo "InputFileAMPS=$application.input" >> Makefile.local`;
       
     #copy all makefile settings from the input file into 'Makefile.local'
@@ -133,7 +141,7 @@ foreach (@Arguments) {
       
     close (INPUTFILE);   
     
-    `echo "APPLICATION=$1" >> .ampsConfig.Settings`; 
+    `echo "APPLICATION=$application" >> .ampsConfig.Settings`; 
     next
   };
     
