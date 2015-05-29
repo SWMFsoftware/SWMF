@@ -9,18 +9,18 @@ TEST<APP>OUTFILES=<APPOUTS>
 test_help:
 	@echo "    test_all\t\t(run all tests with ${MPIRUN})"
 	@echo "    test_all MPIRUN=\t(run all tests with serially)"
-	@echo "    test_<APP>\t\t(run application NAME test with ${MPIRUN})"
+	@echo "    test_<APP>\t\t(run application <APP> test with ${MPIRUN})"
 
 test_all:
 	@rm -f *.diff
-	-@$(MAKE) test_<APP>
+	$(MAKE) test_<APP>
 
 test_compile:
 	@rm -rf *.diff
-	-@$(MAKE) test_<APP>_compile; -@$(MAKE) test_<APP>_rundir
+	$(MAKE) test_<APP>_compile; $(MAKE) test_<APP>_rundir
 
 test_run:
-	-@$(MAKE) test_<APP>_run; -@$(MAKE) test_<APP>_check
+	$(MAKE) test_<APP>_run; $(MAKE) test_<APP>_check
 
 #-----------------------------------------------------------------
 # Individual applications' test targets are below.
