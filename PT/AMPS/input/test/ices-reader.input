@@ -34,7 +34,6 @@ CouplerMode=file(ices)
   define _TARGET_ _ENCELADUS_
 
   SPICE=off
-  addPhysicalModelHeader=Enceladus.h
 #endblock
 
 #end
