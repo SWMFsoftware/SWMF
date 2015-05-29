@@ -81,6 +81,7 @@ int main(int argc,char **argv) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //init the mesh
+  char TestFileName[400];
   double xmax[3]={0.0,0.0,0.0},xmin[3]={0.0,0.0,0.0};
 
   if (PIC::ThisThread==0) cout << "Init the mesh" << endl;
@@ -132,18 +133,14 @@ int main(int argc,char **argv) {
   switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__ICES_ :
     ICES::Read();
+    sprintf(TestFileName,"%s/test_ices-reader.dat",PIC::OutputDataFileDirectory);
     break;
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
 
   //create the reference file with the extracted data
-  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  char fname[400];
-
-  sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
-  PIC::CPLR::DATAFILE::SaveTestReferenceData(fname);
-  #endif
+  PIC::CPLR::DATAFILE::SaveTestReferenceData(TestFileName);
 
 
 
