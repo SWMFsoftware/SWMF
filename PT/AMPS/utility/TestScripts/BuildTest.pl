@@ -97,8 +97,8 @@ sub get_next_test{
     #error flag
     my $ErrorRead='';
     foreach my $line (@_){
-	#remove spaces
-	$line =~ s/\s//g;
+	#remove spaces at the end of $line
+	$line =~ s/\s*$//g;
 	if($line =~ m/<#$/){
 	    $IsTestBlock='0';
 	    last;
@@ -112,8 +112,8 @@ sub get_next_test{
 		    $ErrorRead='1';
 		}
 	    }
-	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1 " if($1);}
-	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1 " if($1);}
+	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1," if($1);}
+	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1," if($1);}
 	    else{$ErrorRead='1';}
 	}
 	if($line =~ m/^#>/){
@@ -125,20 +125,20 @@ sub get_next_test{
     splice(@_,0,$nRemove+1);
     
     unless($ErrorRead){
-	my @Keys = split($Keys) if($Keys);$Keys='';
-	my @Outs = split($Outs) if($Outs);$Outs='';
+	my @Keys = split(/,/,$Keys) if($Keys);$Keys='';
+	my @Outs = split(/,/,$Outs) if($Outs);$Outs='';
 	unless($ErrorRead){
 	    #process parameters for this machine
 	    $Name = process_option($Name);
 	    #process Keys
 	    foreach my $Key (@Keys){
 		$Key = process_option($Key);
-		if($Key){$Keys="$Key ";}
+		$Keys="$Keys$Key " if($Key);
 	    }
 	    #process Outs
 	    foreach my $Out (@Outs){
 		$Out = process_option($Out);
-		if($Out){$Outs="$Out ";}
+		$Outs="$Outs$Out " if($Out);
 	    }
     }
 	(\@_,$Name,$Keys,$Outs);
