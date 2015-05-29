@@ -10,7 +10,7 @@ Example file to restart a run for the SWPC code selection
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#SAVERESTART                                                     
+#SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
 60.0                    DtSaveRestart
@@ -78,9 +78,9 @@ T                       UseCpcpBc  (rest is read if true)
 28.0                    Rho0Cpcp   [amu/cc]
 0.1                     RhoPerCpcp [amu/cc / keV]
 
-#SOLARWINDFILE                                                                           
-T                       UseSolarWindFile                                                 
-IMF.dat         	NameSolarWindFile   
+#SOLARWINDFILE
+T                       UseSolarWindFile
+IMF.dat         	NameSolarWindFile
 
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
@@ -233,12 +233,12 @@ STOP
 86400.0			TimeMax
 
 #ENDTIME            
-2014			year                                            
-04              	month                                                
-10              	day                                                
+2014			year
+04              	month
+10              	day
 00			hour
-03             		minute                                            
-00              	second                                        
-0.0			FracSecond 
+03             		minute
+00              	second
+0.0			FracSecond
 
 #END ############################################################

@@ -8,13 +8,13 @@ Example file to start a run for the SWPC code selection
 F			DoTimeAccurate
 
 #STARTTIME            
-2014			year                                            
-04              	month                                                
-10              	day                                                
+2014			year
+04              	month
+10              	day
 00			hour
-00             		minute                                            
-00              	second                                        
-0.0			FracSecond 
+00             		minute
+00              	second
+0.0			FracSecond
 
 ! Allow empty processor for IM
 #STRICT
@@ -97,9 +97,9 @@ T                       UseCpcpBc  (rest is read if true)
 28.0                    Rho0Cpcp   [amu/cc]
 0.1                     RhoPerCpcp [amu/cc / keV]
 
-#SOLARWINDFILE                                                                       
-T                       UseSolarWindFile     
-IMF.dat			NameSolarWindFile 
+#SOLARWINDFILE
+T                       UseSolarWindFile
+IMF.dat			NameSolarWindFile
 
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
@@ -222,7 +222,7 @@ mc3                     TypeLimiter
 #TIMEACCURATE
 T			DoTimeAccurate
 
-#SAVERESTART                                                     
+#SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
 60.0                    DtSaveRestart
@@ -366,13 +366,13 @@ STOP
 86400.0			TimeMax
 
 #ENDTIME            
-2014			year                                            
-04              	month                                                
-10              	day                                                
+2014			year
+04              	month
+10              	day
 00			hour
-02             		minute                                            
-00              	second                                        
-0.0			FracSecond 
+02             		minute
+00              	second
+0.0			FracSecond
 
 #END ############################################################
 
