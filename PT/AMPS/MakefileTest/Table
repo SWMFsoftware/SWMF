@@ -32,7 +32,7 @@ Name=Moon
 #>
 Name=test/ices-reader(0+srbwks2014-0079+srbwks73465-01) 
 Keys=-ices-path=/Users/vtenishe/ices/ICES/Models(0+srbwks2014-0079)
-Keys=-ices-path=/Users/dborovik/MyICES(0+srbwks73465-01)
+Keys=-ices-path=/Users/dborovik/MyICES/ICES(0+srbwks73465-01)
 <#
 
 #>
