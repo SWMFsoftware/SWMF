@@ -66,8 +66,29 @@ foreach $day (@days){
 	print HTML 
 	    "</pre>\n".
 	    "<H1>Head of ${day}'s difference files for $machine</H1><pre>\n";
-        # Fix the stage for the last test                                                          
-#        $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
+        my $test;
+        my $stage;
+        while(<RESULTS>){
+            if( s{==>\ (\S+)\.diff\ <==}
+                {</pre><H2><A NAME=$1>$1 ($day: $machine)</H2><pre>}x){
+                my $newtest = $1;
+                # specify failure for previous test
+                $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
+
+                $test = $newtest;
+                $stage = "result";
+            }
+
+            # read last stage
+            $stage = $1 if /(compile|rundir|run)\.\.\.$/;
+            $stage = "run" if /could not open/;
+
+            print HTML $_;
+        }
+
+
+        # Fix the stage for the last test
+        $result{$day}{$test}{$machine} =~ s/failed/$stage/ if $stage;
 
         close RESULTS;
         close HTML;
@@ -84,13 +105,14 @@ foreach $day (@days){
 
     my $dayname = $day;
     $dayname =~ 
-	s/AMPS_TEST_RESULTS\/\d\d\d\d\//Test results and scores for 7pm /;
+	s/AMPS_TEST_RESULTS\/\d\d\d\d\//Test results and scores for midnight /;
 
     my %MaxScores;
     my %Scores;
 
     # Start table with first row containing the machine names
     $Table .=	
+	"<h3>$dayname</h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
