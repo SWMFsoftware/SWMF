@@ -3,12 +3,18 @@ Table of all nightly AMPS tests.
 Format:
 Name=<APP>       (machines) - name of the test;                       required
 Keys=<APPKEYS>   (machines) - keys specific for <APP>;                optional
-Outs=<APPOUTFILE>(machines) - output files for <APP>, coma-separated; optional
+Outs=<APPOUTFILE>(machines) - output files for <APP>, SPACE-separated;optional
 
 Machines can be defined:
  absent              - the same for all machines
  0+`hostname -s`+... - only for machines listed
   -`hostname -s`-... - except for machines listed.
+
+Within one block "Name=" can be used ONLY ONCE!
+"Keys=" and "Outs=" may be repeated, e.g.
+	Keys=-key1(0+machine1)
+	Keys=-key2(-machine1)
+thus "-key1" is used only on machine1 and "-key2" is used on all other.
 
 If Keys is absent or empty, no keys are used.
 
