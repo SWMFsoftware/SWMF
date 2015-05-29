@@ -1,15 +1,15 @@
 test_<APP>:
-	$(MAKE) test_<APP>_compile
-	$(MAKE) test_<APP>_rundir
-	$(MAKE) test_<APP>_run
-	$(MAKE) test_<APP>_check
+	-@($(MAKE) test_<APP>_compile)
+	-@($(MAKE) test_<APP>_rundir)
+	-@($(MAKE) test_<APP>_run)
+	-@($(MAKE) test_<APP>_check)
 
 test_<APP>_compile:
 	@echo "test_<APP>_compile..." > test_<APP>.diff
 	./Config.pl -application=<APPPATH> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
-	$(MAKE) amps
+	-@($(MAKE) amps)
 
 test_<APP>_rundir:
 	@echo "test_<APP>_rundir..." >> test_<APP>.diff
