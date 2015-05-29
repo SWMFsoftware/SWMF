@@ -611,14 +611,10 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
   PIC::Mesh::cDataCenterNode *CenterNode;
   char *offset;
 
-  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
-  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
-  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
-
   char SendCellFlag;
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
-    if ((PIC::ThisThread==0)||(startNode->Thread==PIC::ThisThread)) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+    if ((PIC::ThisThread==0)||(startNode->Thread==PIC::ThisThread)) for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
       SendCellFlag=true;
 
       //determine whether the cell data neede to be saved
