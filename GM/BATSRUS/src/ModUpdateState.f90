@@ -10,6 +10,8 @@ subroutine update_states_MHD(iStage,iBlock)
   use ModPhysics
   use ModGeometry, ONLY: true_cell
   use ModKind, ONLY: Real8_
+  use ModSemiImplVar, ONLY: UseStableImplicit
+  use ModVarIndexes, ONLY: pe_, p_
   use ModPointImplicit, ONLY: UsePointImplicit, UsePointImplicit_B, &
        update_point_implicit
   use ModMultiIon, ONLY: multi_ion_source_impl, multi_ion_init_point_impl, &
@@ -179,7 +181,7 @@ subroutine update_states_MHD(iStage,iBlock)
 
   ! The point implicit update and other stuff below are only done in last stage
   if(iStage < nStage) RETURN
- 
+
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBlock))then
      if(UseMultiIon .and. .not.UseSingleIonVelocity)then
@@ -205,6 +207,9 @@ subroutine update_states_MHD(iStage,iBlock)
   if(UseHyperbolicDivb .and. HypDecay > 0) &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock) = &
        State_VGB(Hyp_,1:nI,1:nJ,1:nK,iBlock)*(1 - HypDecay)
+
+
+  if(UseStableImplicit) call deduct_expl_source
 
   if(DoTestMe)write(*,*) NameSub, ' final state=', &
        State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
@@ -588,6 +593,31 @@ contains
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
   end subroutine update_explicit
+  !----------------------------------------------------------------------
+
+  subroutine deduct_expl_source()
+    integer:: iVarSemi_
+    character(len=*), parameter :: NameSub = 'deduct_expl_source'
+
+    if(UseElectronPressure) then
+       iVarSemi_  = pe_
+    else
+       iVarSemi_ = p_
+    endif
+
+
+    do k=1,nK; do j=1,nJ; do i=1,nI
+       ! DtLocal = Cfl*time_BLK(i,j,k,iBlock)
+
+       ! For the first iteration, dt = 0;  
+       ! if(DtLocal < 1e-15) CYCLE
+       Source_VCB(iVarSemi_,i,j,k,iBlock) = &
+            State_VGB(iVarSemi_,i,j,k,iBlock) - &
+            StateOld_VCB(iVarSemi_,i,j,k,iBlock)
+       State_VGB(iVarSemi_,i,j,k,iBlock) = &
+            StateOld_VCB(iVarSemi_,i,j,k,iBlock)
+    end do; end do; end do
+  end subroutine deduct_expl_source
   !----------------------------------------------------------------------
 
   subroutine add_artificial_viscosity

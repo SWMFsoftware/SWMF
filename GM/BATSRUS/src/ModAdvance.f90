@@ -5,6 +5,7 @@ module ModAdvance
 
   use ModSize
   use ModVarIndexes
+  use ModSemiImplVar, ONLY: UseStableImplicit
   use ModMultiFluid, ONLY: UseMultiIon
   use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
        boris_correction, &
@@ -96,6 +97,8 @@ module ModAdvance
   ! Local cell-centered source terms and divB.
   real :: Source_VC(nVar+nFluid, nI, nJ, nK)
 
+  real, allocatable :: Source_VCB(:,:,:,:,:)
+
   ! Extra source terms coming from other models in the SWMF
   ! It should be allocated in the coupler
   real, allocatable :: ExtraSource_ICB(:,:,:,:,:)
@@ -171,6 +174,11 @@ contains
        allocate(Ey_CB(nI,nJ,nK,MaxBlock))
        allocate(Ez_CB(nI,nJ,nK,MaxBlock))
     end if
+
+    if(UseStableImplicit) then
+       allocate(Source_VCB(nVar, nI, nJ, nK, MaxBlock))
+       Source_VCB = 0
+    endif
 
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DX))then
@@ -266,7 +274,8 @@ contains
     if(allocated(Ex_CB))           deallocate(Ex_CB)
     if(allocated(Ey_CB))           deallocate(Ey_CB)
     if(allocated(Ez_CB))           deallocate(Ez_CB)
-
+    if(allocated(Source_VCB))      deallocate(Source_VCB)
+    
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'

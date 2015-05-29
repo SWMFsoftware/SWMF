@@ -563,7 +563,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SEMIIMPL", "#SEMIIMPLICIT", &
           "#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF", &
           "#SEMIPRECOND", "#SEMIPRECONDITIONER",&
-          "#SEMIKRYLOV", "#SEMIKRYLOVSIZE")
+          "#SEMIKRYLOV", "#SEMIKRYLOVSIZE","#SEMIIMPLICITSTABLE")
         call read_semi_impl_param(NameCommand)
 
      case("#HYPRE")

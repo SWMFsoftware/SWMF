@@ -3,9 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModSemiImplVar
-
+  
   implicit none
-
+  
   ! Semi-implicit variables that cannot be in ModSemiImplicit
   ! because it would create circular dependencies
 
@@ -13,6 +13,8 @@ module ModSemiImplVar
   logical, public:: UseSplitSemiImplicit = .false.
   character(len=40), public:: TypeSemiImplicit = 'none'
 
+  logical, public:: UseStableImplicit = .false.
+  
   ! Number of all semi-implicit variables
   integer, public:: nVarSemiAll
 

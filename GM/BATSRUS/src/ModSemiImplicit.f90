@@ -31,6 +31,9 @@ module ModSemiImplicit
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
 
+  ! Store Difference of U^* (after explicit update)  and U^n. 
+  real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:) 
+
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
 
@@ -75,6 +78,10 @@ contains
                TypeSemiImplicit = TypeSemiImplicit(1:i-1)
        end if
 
+
+    case("#SEMIIMPLICITSTABLE")
+       call read_var('UseStableImplicit',UseStableImplicit)
+       
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
 
@@ -112,6 +119,11 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
+    if(UseSemiImplicit .and. UseStableImplicit .and. &
+         (TypeSemiImplicit /= 'cond' .and. TypeSemiImplicit /='parcond')) &
+         call stop_mpi(NameSub//' StableImplicit is not available for '&
+         //TypeSemiImplicit)
+    
   end subroutine read_semi_impl_param
   !============================================================================
   subroutine init_mod_semi_impl
@@ -188,6 +200,8 @@ contains
 
     allocate(JacSemi_VVCIB(nVarSemi,nVarSemi,nI,nJ,nK,nStencil,MaxBlock))
 
+    allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
+
     ! Variables for the flux correction
     if(  TypeSemiImplicit == 'parcond' .or. &
          TypeSemiImplicit == 'resistivity' .or. UseAccurateRadiation)then
@@ -218,6 +232,7 @@ contains
     if(allocated(iBlockFromSemi_B))  deallocate(iBlockFromSemi_B)
     if(allocated(SemiAll_VCB))       deallocate(SemiAll_VCB)
     if(allocated(NewSemiAll_VCB))    deallocate(NewSemiAll_VCB)
+    if(allocated(DeltaSemiAll_VCB))  deallocate(DeltaSemiAll_VCB)
     if(allocated(DconsDsemiAll_VCB)) deallocate(DconsDsemiAll_VCB)
     if(allocated(SemiState_VGB))     deallocate(SemiState_VGB)
     if(allocated(ResSemi_VCB))       deallocate(ResSemi_VCB)
@@ -281,9 +296,13 @@ contains
     DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
-       call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB)
+          call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
+               DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
+               DoCalcDeltaIn=UseStableImplicit)
     case('parcond')
-       call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB)
+       call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
+            DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
+            DoCalcDeltaIn=UseStableImplicit)
     case('resistivity')
        call get_impl_resistivity_state(SemiAll_VCB)
     case default
@@ -338,7 +357,6 @@ contains
              end if
           enddo
        enddo; enddo; enddo; enddo
-
     end do ! Splitting
 
     ! Put back semi-implicit result into the explicit code
@@ -363,6 +381,8 @@ contains
                //TypeSemiImplicit)
        end select
     end do
+
+
 
     if(DoFixAxis)call fix_axis_cells
     if(UseCoarseAxis)call coarsen_axis_cells
@@ -406,10 +426,14 @@ contains
             //TypeSemiImplicit)
     end select
 
+
+    
   end subroutine get_semi_impl_rhs_block
   !============================================================================
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
 
+    use ModAdvance,        ONLY: time_BLK
+    use ModMain,           ONLY: time_accurate, dt, Cfl
     use ModGeometry,       ONLY: far_field_BCs_BLK
     use ModSize,           ONLY: nI, nJ, nK
     use ModCellBoundary,   ONLY: set_cell_boundary
@@ -420,6 +444,10 @@ contains
     real, intent(out):: RhsSemi_VCB(nVarSemi,nI,nJ,nK,nBlockSemi)
 
     integer :: iBlockSemi, iBlock, i, j, k
+
+    integer :: iVarSemi_
+
+    real :: DtLocal
 
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
     !------------------------------------------------------------------------
@@ -488,7 +516,23 @@ contains
                *CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
-
+    
+    if(UseStableImplicit) then
+       DtLocal = dt
+       do iBlockSemi = 1, nBlockSemi
+          iBlock = iBlockFromSemi_B(iBlockSemi)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not. time_accurate) &
+                  DtLocal = max(1.0e-30,Cfl*time_BLK(i,j,k,iBlock))
+             RhsSemi_VCB(:,i,j,k,iBlockSemi) = &
+                  RhsSemi_VCB(:,i,j,k,iBlockSemi) &
+                  + DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) &
+                  *DconsDsemiAll_VCB(:,i,j,k,iBlockSemi) &
+                  *CellVolume_GB(i,j,k,iBlock)/DtLocal                  
+          end do; end do; end do
+       enddo
+    endif
+    
   end subroutine get_semi_impl_rhs
   !============================================================================
   subroutine semi_impl_matvec(x_I, y_I, MaxN)
@@ -641,6 +685,8 @@ contains
           enddo; enddo; enddo
        end if
     end do
+
+
     if (UsePDotADotP)then
        pDotADotPPe = pDotADotPPe * SemiImplCoeff
     else
@@ -889,7 +935,7 @@ contains
             JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
 
        ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU) 
-       !    symmetrized for sake of CG
+       !    symmetrized for sake of CG       
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
@@ -911,7 +957,7 @@ contains
                      Coeff*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi) &
                      + JacSemi_VVCIB(iVar,iVar,i,j,k,1,iBlockSemi) 
              end do
-          end if
+          end if          
        end do; end do; end do
 
        if(SemiParam%TypePrecond == 'HYPRE') &
