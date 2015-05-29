@@ -280,7 +280,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
    default:
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
      if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
-       CharacteristicSpeed=1.0e5;
+       CharacteristicSpeed=1.0e4;
        break;
      }
 #endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -497,6 +497,12 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
   double x_LOCAL_IAU_OBJECT[3],x_LOCAL_SO_OBJECT[3],v_LOCAL_IAU_OBJECT[3],v_LOCAL_SO_OBJECT[3];
 
   { // get random position on Europa's surface
+    /**************************************************
+     * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     * CHANGE DISTRIBUTION OF INJECION OVER SURFACE !!!
+     * ACCOUNT FOR DIFFERENT AREAS OF ELEMENTS !!!!!!!!
+     * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     **************************************************/
     el=(int)(rnd()*Europa::Planet->nZenithSurfaceElements*Europa::Planet->nAzimuthalSurfaceElements);
     Europa::Planet->GetSurfaceElementIndex(nZenithElement,nAzimuthalElement, el);
     Europa::Planet->GetSurfaceElementRandomDirection(ExternalNormal,nZenithElement,nAzimuthalElement);
@@ -505,9 +511,9 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
     x_LOCAL_IAU_OBJECT[1]=sphereX0[1]+sphereRadius*ExternalNormal[1];
     x_LOCAL_IAU_OBJECT[2]=sphereX0[2]+sphereRadius*ExternalNormal[2];
     
-    ExternalNormal[0]*=-1.0;
-    ExternalNormal[1]*=-1.0;
-    ExternalNormal[2]*=-1.0;
+    //    ExternalNormal[0]*=-1.0;
+    //    ExternalNormal[1]*=-1.0;
+    //    ExternalNormal[2]*=-1.0;
   }
 
   
@@ -539,7 +545,7 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
 
   double r2Tang=0.0;
   double xFace[3];
-  double vDustInit=0.01;
+  double vDustInit=2500;
   double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
@@ -704,6 +710,8 @@ long int DustInjection(int spec) {
     PIC::ParticleBuffer::SetV(v_SO_OBJECT,(PIC::ParticleBuffer::byte*)tempParticleData);
     PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
     
+    Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,(PIC::ParticleBuffer::byte*)tempParticleData);
+
     //apply condition of tracking the particle
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
     PIC::ParticleTracker::InitParticleID(tempParticleData);

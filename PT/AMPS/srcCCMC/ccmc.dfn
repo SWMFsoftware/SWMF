@@ -1,6 +1,0 @@
-
-//$Id$
-//definitiond for the CCMC particle tracker post-processor
-
-#define _CCMC_INTERNAL_BOUNDARY_MODE_    _PIC_MODE_OFF_
-#define _CCMC_INTERNAL_BOUNDARY_RADIUS_  0
