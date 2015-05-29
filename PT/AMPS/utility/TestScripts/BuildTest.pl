@@ -40,7 +40,8 @@ while(@Table){
     my $ref;
     ($ref,$Name,$Keys,$Outs) = get_next_test(@Table);
     @Table = @$ref;
-    if($Name=~ m/(.*)\/(.*)$/){$PathName=$Name;$Name=$2;}
+    $PathName=$Name;
+    if($Name=~ m/(.*)\/(.*)$/){$Name=$2;}
     $Outs="test_$Name" unless($Outs);
     next unless($Name);
 
