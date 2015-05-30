@@ -53,7 +53,6 @@ test:
 	-@(${MAKE} test_pw)
 	-@(${MAKE} test_rb)
 	-@(${MAKE} test_ps)
-	-@(${MAKE} test_esmf)
 	-@(${MAKE} test_ccmc_small)
 	-@(${MAKE} test1)
 	-@(${MAKE} test2)
