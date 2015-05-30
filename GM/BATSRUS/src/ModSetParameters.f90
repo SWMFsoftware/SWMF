@@ -206,20 +206,24 @@ subroutine MH_set_parameters(TypeAction)
      if(iProc==0 .and. save_restart_file) call make_dir(NameRestartOutDir)
      if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
 
-     if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0 .and. &
-          abs(StartTime + time_simulation - StartTimeCheck - tSimulationCheck)&
-          > 0.001)then
-        write(*,*)NameSub//' WARNING: '// &
-             NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
-             StartTimeCheck + tSimulationCheck, &
-             ' differs from CON::StartTime+tSimulation=', &
-             StartTime + time_simulation,' !!!'
-        if(UseStrict)then
-           call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
-        else
-           ! Fix iStartTime_I array
-           call time_real_to_int(StartTime, iStartTime_I)
+     if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
+        if(&
+             abs(StartTime + time_simulation - StartTimeCheck - tSimulationCheck)&
+             > 0.001)then
+           write(*,*)NameSub//' WARNING: '// &
+                NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
+                StartTimeCheck + tSimulationCheck, &
+                ' differs from CON::StartTime+tSimulation=', &
+                StartTime + time_simulation,' !!!'
+           if(UseStrict)then
+              call stop_mpi('Fix #STARTTIME/#SETREALTIME commands in PARAM.in')
+           else
+              ! Fix iStartTime_I array
+              call time_real_to_int(StartTime, iStartTime_I)
+           end if
         end if
+        StartTimeCheck = -1.0_Real8_
+        tSimulationCheck = -1.0
      end if
      if(UseEndTime)then
         t_max = (EndTime - StartTime)
