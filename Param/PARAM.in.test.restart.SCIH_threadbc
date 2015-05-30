@@ -7,7 +7,7 @@ T			DoEcho
 Input file for creating a steady state solar corona
 
 #TIMEACCURATE
-F                       DoTimeAccurate
+T                       DoTimeAccurate
 
 #STARTTIME
 2011			iYear
@@ -19,9 +19,9 @@ F                       DoTimeAccurate
 0.0			FracSecond
 
 #SAVERESTART
-T			DoSaveRestart
-50000			DnSaveRestart
--1			DtSaveRestart
+T                       DoSaveRestart
+-1                      DnSaveRestart
+60                      DtSaveRestart
 
 #INCLUDE
 RESTART.in
@@ -146,44 +146,13 @@ load			NameCommand
 SC/Param/TR.dat
 ascii			TypeFile
 
-#LOOKUPTABLE
-AW_TR			NameTable
-load			NameCommand
-SC/Param/AW_TR.dat
-ascii			TypeFile
 ----------------------------------------------------
-#AMRREGION
-InnerShell		NameRegion
-box_gen			TypeRegion
-1.05			Radius1
-0.0
--70.0
-1.7			Radius2
-360.0
-70.0
-
-#AMRCRITERIALEVEL
-3			nCriteria
-Level			TypeCriteria
-2			RefineTo
-2			CoarsenTo
-Level +InnerShell		TypeCriteria
-5     			RefineTo
-5			CoarsenTo
-currentsheet		TypeCriteria
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
+#AMR
+-1			DnRefine
 
 #GRIDLEVEL
 2			nLevelArea
 initial			NameArea
-
-#DOAMR
-T			DoAmr
-80			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -437,22 +406,6 @@ buf MHD idl
 
 
 #END_COMP IH ---------------------------------------------------------------
-Begin session: 2
-
-#BEGIN_COMP SC ----------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC   ----------------------------------------------------------------
-
-#TIMEACCURATE
-T
-
-#SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-60                      DtSaveRestart
 
 #COMPONENT
 IH			NameComp
@@ -467,5 +420,14 @@ IH			NameTarget
 #STOP
 -1			MaxIter
 100			TimeMax
+#RUN
+
+#COMPONENT
+SC
+F
+
+#STOP
+-1
+1000.0
 
 #END ##########################################################################
