@@ -153,8 +153,8 @@ subroutine MH_set_parameters(TypeAction)
   character (len=10) :: TimingStyle='cumu'
 
   ! Variables for checking/reading #STARTTIME command
-  real (Real8_)         :: StartTimeCheck = -1.0_Real8_
-  real:: tSimulationCheck = -1.0
+  real(Real8_)       :: StartTimeCheck   = -1.0_Real8_
+  real               :: tSimulationCheck = -1.0
 
   ! Variable for #UNIFORMAXIS
   logical:: UseUniformAxis = .true.
@@ -207,8 +207,7 @@ subroutine MH_set_parameters(TypeAction)
      if(iProc==0 .and. restart) call check_dir(NameRestartInDir)
 
      if(StartTimeCheck > 0.0 .and. tSimulationCheck > 0.0)then
-        if(&
-             abs(StartTime + time_simulation - StartTimeCheck - tSimulationCheck)&
+        if(abs(StartTime+time_simulation - StartTimeCheck-tSimulationCheck)&
              > 0.001)then
            write(*,*)NameSub//' WARNING: '// &
                 NameThisComp//'::StartTimeCheck+tSimulationCheck=', &
@@ -222,20 +221,17 @@ subroutine MH_set_parameters(TypeAction)
               call time_real_to_int(StartTime, iStartTime_I)
            end if
         end if
-        StartTimeCheck = -1.0_Real8_
+        StartTimeCheck   = -1.0
         tSimulationCheck = -1.0
      end if
      if(UseEndTime)then
-        t_max = (EndTime - StartTime)
+        t_max = EndTime - StartTime
         nIter = -1
         if(IsStandAlone)then
-           if(.not.time_accurate)&
-                call CON_stop('#ENDTIME command cannot be used in steady-state')
-           if(.not.IsLastRead)&
-            call CON_stop(&
-            '#ENDTIME command can be only used in the last session')
-           t_max = (EndTime - StartTime)
-           nIter = -1
+           if(.not.time_accurate)call CON_stop( &
+                '#ENDTIME command cannot be used in steady-state mode')
+           if(.not.IsLastRead) call CON_stop(&
+                '#ENDTIME command can be used in the last session only')
         end if
      end if
      ! Planet NONE in GM means that we do not use a body
