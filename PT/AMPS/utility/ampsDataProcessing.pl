@@ -20,7 +20,8 @@ my $ThisThread=0;
 my @childs;
 
 my $host;
-my $dir;
+my $dir=".";
+my $waite=_FALSE_;
 
 #read the argument line
 foreach (@ARGV) {
@@ -28,17 +29,19 @@ foreach (@ARGV) {
   if (/^-np=(.*)/i) {$nTotalThreads=$1; next};
   if (/^-host=(.*)/i) {$host=$1; next};
   if (/^-dir=(.*)/i) {$dir=$1; next};
+  if (/^-waite/i) {$waite=_TRUE_; next;}
   
-  if (/^-send=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_FALSE_, 'preplot'=>_FALSE_,'send'->_TRUE_});next};
-  if (/^-send-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'->_TRUE_});next};
+  if (/^-send=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_FALSE_, 'preplot'=>_FALSE_,'send'=>_TRUE_});next};
+  if (/^-send-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send' =>_TRUE_});next};
   
-  if (/^-preplot=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_TRUE_,'send'->_TRUE_});next};
+  if (/^-preplot=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_TRUE_,'send'=>_TRUE_});next};
   
-  if (/^-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'->_FALSE_});next};
+  if (/^-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'=>_FALSE_});next};
   
   if (/^-help/i) {
     print "The argument line:\n";
     print "-help             -> print the list of the arguments\n";
+    print "-waite   ->  the script will waite for the new files being generated untill it is killed by user\n";
     print "-np [number]      -> the number of threads\n\n";
 
     print "-send=[mask for file search, separated by ',']    -> files send to the remote host without preprocessing, the files are NOT removed\n";
@@ -70,7 +73,7 @@ do {
       @mask=split(',',$FileMask[$i]{'mask'});
       
       foreach (@mask) {
-        @files=grep {/$_/} readdir $dir;
+        @files=glob "$dir/$_";
         
         foreach (@files) {
           push(@FileList,{'file'=>$_},'rm'=>$FileMask[$i]{'rm'}, 'preplot'=>$FileMask[$i]{'preplot'}, 'send'=>$FileMask[$i]{'send'});
@@ -104,7 +107,7 @@ do {
   
    sleep(120);
 }
-while (1 == 1);
+while ($waite == _TRUE_);
  
 print "Done.\n";
 
