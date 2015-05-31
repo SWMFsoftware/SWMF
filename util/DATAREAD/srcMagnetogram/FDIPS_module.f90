@@ -32,6 +32,10 @@ module ModPotentialField
   real              :: BrMax = 3500.0               ! Saturation level of MDI
 
   ! output paramters
+  logical           :: DoSaveBxyz   = .true.
+  character(len=100):: NameFileBxyz = 'potentialBxyz'
+  character(len=5)  :: TypeFileBxyz = 'real8'
+
   logical           :: DoSaveField   = .true.
   character(len=100):: NameFileField = 'potentialfield'
   character(len=5)  :: TypeFileField = 'real8'
@@ -157,6 +161,13 @@ contains
        case("#OUTPUT")
           call read_var('TypeOutput', TypeOutput, IsLowerCase=.true.)
           select case(TypeOutput)
+          case('b', 'bxyz')
+             DoSaveBxyz = .true.
+             call read_var('NameFileBxyz', NameFileBxyz)
+             call read_var('TypeFileBxyz', TypeFileBxyz)
+             ! remove .out extension if present
+             i = index(NameFileBxyz,'.out')
+             if(i>0) NameFileBxyz = NameFileBxyz(1:i-1)
           case('field')
              DoSaveField = .true.
              call read_var('NameFileField', NameFileField)
@@ -463,19 +474,19 @@ contains
     if(UseCosTheta)then
        dZ = 2.0/nThetaAll
 
-       !Set Theta_I
+       ! Set Theta_I
        do iTheta = 0, nTheta+1
           z = max(-1.0, min(1.0, 1 - (iTheta + iTheta0 - 0.5)*dZ))
           Theta_I(iTheta) = acos(z)
        end do
 
-       !Set the boundary condition of Theta_I
+       ! Set the boundary condition of Theta_I
        if (iProcTheta == 0) &
             Theta_I(0) = -Theta_I(1)
        if (iProcTheta == nProcTheta-1) &
             Theta_I(nTheta+1) = cTwoPi - Theta_I(nTheta)
 
-       !Set ThetaNode_I
+       ! Set ThetaNode_I
        do iTheta = 1, nTheta + 1
           z = max(-1.0, min(1.0, 1 - (iTheta + iTheta0 -1)*dZ))
           ThetaNode_I(iTheta) = acos(z)
@@ -484,12 +495,12 @@ contains
 
        dTheta = cPi/nThetaAll
 
-       !Set Theta_I
+       ! Set Theta_I
        do iTheta = 0, nTheta+1
           Theta_I(iTheta) = (iTheta  + iTheta0 - 0.5)*dTheta
        end do
 
-       !Set ThetaNode_I
+       ! Set ThetaNode_I
        do iTheta = 1, nTheta+1
           ThetaNode_I(iTheta) = (iTheta + iTheta0 - 1)*dTheta
        end do
@@ -529,17 +540,19 @@ contains
   subroutine save_potential_field
 
     use ModIoUnit,      ONLY: UnitTmp_
-    use ModNumConst,    ONLY: cHalfPi
+    use ModNumConst,    ONLY: cHalfPi, cPi
     use ModPlotFile,    ONLY: save_plot_file
+    use ModCoordTransform, ONLY: rot_xyz_sph
 
-    integer :: iR, jR, iTheta, iPhi
-    real    :: r, CosTheta, SinTheta, CosPhi, SinPhi
-    real    :: Br, Btheta, Bphi
-    real    :: rI, rJ, rInv
-    real, allocatable :: B_DX(:,:,:,:), B_DII(:,:,:)
-    integer :: iError
-    integer :: iStatus_I(mpi_status_size)
-    integer:: nPhiOut
+    integer:: iR, jR, iTheta, iPhi, iLat, nLat
+    real   :: r, CosTheta, SinTheta, CosPhi, SinPhi
+    real   :: Br, Btheta, Bphi, XyzSph_DD(3,3)
+    real   :: rI, rJ, rInv
+    real, allocatable :: Lat_I(:), b_DX(:,:,:,:), b_DII(:,:,:)
+    real, allocatable :: Bpole_DII(:,:,:), Btotal_DII(:,:,:)
+    integer:: iError
+    integer:: iStatus_I(mpi_status_size)
+    integer:: nPhiOut, MinLat, MaxLat
     !-------------------------------------------------------------------------
 
     ! Only the last processors in the phi direction write out the ghost cell
@@ -549,18 +562,40 @@ contains
        nPhiOut = nPhi
     end if
 
-    allocate(B_DX(3,nR+1,nPhiOut,nTheta), B_DII(3,nR+1,nTheta))
+    ! Output is on an r-lon-lat grid. For sake of clarity, use iLat and nLat
+    nLat = nTheta
+
+    ! Latitude range
+    MinLat = 1
+    MaxLat = nLat
+
+    if(DoSaveBxyz)then
+       ! Add ghost cells for poles. Note that min theta is max lat.
+       if(iProcTheta == 0)              MaxLat = nLat + 1
+       if(iProcTheta == nProcTheta - 1) MinLat = 0
+
+       ! Average field for each radial index at the two poles 
+       allocate(Bpole_DII(3,nR+1,2), Btotal_DII(3,nR+1,2))
+    end if
+    allocate(Lat_I(MinLat:MaxLat), &
+         b_DX(3,nR+1,nPhiOut,MinLat:MaxLat), b_DII(3,nR+1,nTheta))
+
+    do iLat = MinLat, MaxLat
+       Lat_I(iLat) = cHalfPi - max(0.0, min(cPi, Theta_I(nTheta+1-iLat)))
+    end do
 
     ! Average the magnetic field to the R face centers
 
     ! For the radial component only the theta index changes
     do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR+1
-       B_DX(1,iR,iPhi,nTheta+1-iTheta) = B0_DF(1,iR,iTheta,iPhi)
+       b_DX(1,iR,iPhi,nTheta+1-iTheta) = B0_DF(1,iR,iTheta,iPhi)
     end do; end do; end do
 
     ! Use radius as weights to average Bphi and Btheta 
     ! Also swap phi and theta components (2,3) -> (3,2)
     do iPhi = 1, nPhi; do iTheta = 1, nTheta; do iR = 1, nR
+
+       iLat = nTheta + 1 - iTheta
 
        ! Use first order approximation at lower boundary. Reduces noise.
        jR = max(1,iR-1)
@@ -569,33 +604,33 @@ contains
        rJ   = Radius_I(jR)
        rInv = 0.25/RadiusNode_I(iR)
 
-       B_DX(2,iR,iPhi,nTheta+1-iTheta) = rInv* &
+       b_DX(2,iR,iPhi,iLat) = rInv* &
             ( rI*(B0_DF(3,iR,iTheta,iPhi) + B0_DF(3,iR,iTheta,iPhi+1)) &
             + rJ*(B0_DF(3,jR,iTheta,iPhi) + B0_DF(3,jR,iTheta,iPhi+1)) )
 
-       B_DX(3,iR,iPhi,nTheta+1-iTheta) = rInv* &
+       b_DX(3,iR,iPhi,iLat) = rInv* &
             ( rI*(B0_DF(2,iR,iTheta,iPhi) + B0_DF(2,iR,iTheta+1,iPhi)) &
             + rJ*(B0_DF(2,jR,iTheta,iPhi) + B0_DF(2,jR,iTheta+1,iPhi)) )
 
     end do; end do; end do
 
-    ! set tangential components to zero at the top
-    B_DX(2:3,nR+1,:,:) = 0.0
+    ! set tangential components to zero at rMax
+    b_DX(2:3,nR+1,:,:) = 0.0
     
     ! Apply periodicity in Phi to fill the nPhi+1 ghost cell
     if (nProcPhi > 1) then
        if (iProcPhi ==0 ) then 
-          b_DII = B_DX(:,:,1,:)
-          call mpi_send(b_DII, 3*(nR+1)*nTheta, MPI_REAL, &
+          b_DII = b_DX(:,:,1,1:nLat)
+          call mpi_send(b_DII, 3*(nR+1)*nLat, MPI_REAL, &
                iProcTheta*nProcPhi + nProcPhi-1, 21, iComm,  iError)
        end if
        if (iProcPhi == nProcPhi -1) then
-          call mpi_recv(b_DII, 3*(nR+1)*nTheta, MPI_REAL, &
+          call mpi_recv(b_DII, 3*(nR+1)*nLat, MPI_REAL, &
                iProcTheta*nProcPhi , 21, iComm, iStatus_I, iError)
-          B_DX(:,:,nPhiOut,:) = b_DII
+          b_DX(:,:,nPhiOut,1:nLat) = b_DII
        end if
     else
-       B_DX(:,:,nPhiOut,:) = B_DX(:,:,1,:)
+       b_DX(:,:,nPhiOut,1:nLat) = b_DX(:,:,1,1:nLat)
     end if
 
     if(DoSaveField)then
@@ -610,11 +645,75 @@ contains
             nameVarIn = 'Radius Longitude Latitude Br Bphi Btheta' &
             //' Ro_PFSSM Rs_PFSSM', &
             ParamIn_I = (/ rMin, rMax /), &
+            nDimIn=3, VarIn_VIII=b_DX(:,:,1:nPhiOut,1:nTheta), &
+            Coord1In_I=RadiusNode_I, &
+            Coord2In_I=Phi_I(1:nPhiOut), &
+            Coord3In_I=Lat_I(1:nLat))
+    end if
+
+    if(DoSaveBxyz)then
+       ! Convert to X,Y,Z components on the r-lon-lat grid
+       do iLat = 1, nLat; do iPhi = 1, nPhiOut
+          XyzSph_DD = rot_xyz_sph(cHalfPi-Lat_I(iLat),Phi_I(iPhi))
+          do iR = 1, nR+1
+             Br     = b_DX(1,iR,iPhi,iLat)
+             Btheta = b_DX(3,iR,iPhi,iLat)
+             Bphi   = b_DX(2,iR,iPhi,iLat)
+             b_DX(:,iR,iPhi,iLat) = matmul(XyzSph_DD, (/Br, Btheta, Bphi/))
+          end do
+       end do; end do
+
+       ! Average values in the Phi direction for the two poles. 
+       ! The average value only makes sense for Cartesian components
+
+       ! Initialize on all processors for the MPI_allreduce
+       Bpole_DII = 0.0
+
+       ! South pole, minimum latitude (maximum theta)
+       if(iProcTheta == nProcTheta - 1) &
+            Bpole_DII(:,:,1) = sum(B_DX(:,:,1:nPhi,1), DIM=3)
+
+       ! North pole, maximum latitude (minimum theta)
+       if(iProcTheta == 0) &
+            Bpole_DII(:,:,2) = sum(b_DX(:,:,1:nPhi,nLat), DIM=3)
+
+       ! Sum over processors in the phi direction
+       if(nProcPhi > 1)then
+          call MPI_allreduce(Bpole_DII, Btotal_DII, size(Bpole_DII), &
+               MPI_REAL, MPI_SUM, iComm, iError)
+          Bpole_DII = Btotal_DII
+       end if
+
+       ! Get the average
+       Bpole_DII = Bpole_DII / nPhiAll
+          
+       ! Use same value for all Phi indexes at the ghost cells at the poles
+       do iPhi = 1, nPhiOut
+          if(iProcTheta == nProcTheta - 1) &
+               B_DX(:,:,iPhi,MinLat) = Bpole_DII(:,:,1)
+          if(iProcTheta == 0)              &
+               B_DX(:,:,iPhi,MaxLat) = Bpole_DII(:,:,2)
+       end do
+
+       ! Note the fake processor index to be used by redistribute.pl
+       write(NameFile,'(a,2i2.2,a,i3.3,a)') &
+            trim(NameFileBxyz)//'_np01', nProcPhi, nProcTheta, '_', &
+            iProcPhi + (nProcTheta - 1 - iProcTheta)*nProcPhi, '.out'
+
+       call save_plot_file(NameFile, TypeFileIn=TypeFileBxyz, &
+            StringHeaderIn = &
+            'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
+            nameVarIn = 'Radius Longitude Latitude Bx By Bz rMin rMax', &
+            ParamIn_I = (/ rMin, rMax /), &
             nDimIn=3, VarIn_VIII=B_DX, &
             Coord1In_I=RadiusNode_I, &
             Coord2In_I=Phi_I(1:nPhiOut), &
-            Coord3In_I=cHalfPi-Theta_I(nTheta:1:-1))
+            Coord3In_I=Lat_I)
+
+       deallocate(Bpole_DII, Btotal_DII)
+
     end if
+
 
     if(DoSaveTecplot)then
        open(unit = UnitTmp_, file=NameFileTecplot, status='replace')
