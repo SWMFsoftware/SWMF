@@ -142,6 +142,7 @@ test_fdips:
 	@echo "test_fdips_run..." >> test_fdips.diff
 	mpirun -np 4 ./FDIPS.exe > fdips.log
 	./redistribute.pl fdips_field_np010202.out fdips.out
+	./redistribute.pl fdips_bxyz_np010202.out fdips_bxyz.out
 	@echo "test_fdips_check..." >> test_fdips.diff
 	make test_fdips_check
 
@@ -153,6 +154,10 @@ test_fdips_check:
 	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
 		fdips.out \
 		fdips_ref.out > test_fdips.diff
+	gunzip -c fdips_bxyz_ref.out.gz > fdips_bxyz_ref.out
+	-${SCRIPTDIR}/DiffNum.pl -t -r=1e-9 -a=1e-9 \
+		fdips_bxyz.out \
+		fdips_bxyz_ref.out > test_fdips.diff
 	@ls -l test_fdips_log.diff test_fdips.diff
 
 ###############################################################################
