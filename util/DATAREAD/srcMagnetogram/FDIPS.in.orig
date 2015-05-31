@@ -63,14 +63,20 @@ HYPRE
 T			UseSinglePart
 
 
-! Save up to three files containing the potential or the magnetic field.
-! The parallel field and potential output can be merged with redistribute.pl
+! Save up to four files containing the potential or the magnetic field.
+! The parallel field, bxyz, and potential output can be merged with 
+! the redistribute.pl script.
 ! The solar corona component of the SWMF can read the TypeOutput="field" file
 ! in double precision binary format TypeFileField=real8
 
 #OUTPUT
-field			TypeOutput    (field, potential, or tecplot)
+field			TypeOutput    (field, bxyz, potential, or tecplot)
 fdips_field.out		NameFileField
+real8			TypeFileField (ascii, real4 or real8)
+
+#OUTPUT
+bxyz			TypeOutput    (field, bxyz, potential, or tecplot)
+fdips_bxyz.out		NameFileField
 real8			TypeFileField (ascii, real4 or real8)
 
 ! This output file contains the potential that is used for testing the solver
