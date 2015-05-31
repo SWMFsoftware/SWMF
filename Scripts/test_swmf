@@ -73,9 +73,8 @@ cd ..
 make -j4 test MPIRUN="mpirun -np 4' >>& test_swmf.log #	Run the tests on 4 processors
 
 #
-# Send back the test results by e-mail or scp
-#
-#/bin/mail -s `hostname -s`_test_swmf $USER@umich.edu < test_swmf.res
+# Send back the test results by scp
+# NOTE: The -v-1d arguemnt for "date" may need to be modified.
 
 scp test_swmf.res test_swmf.log \
-    herot.engin.umich.edu:Sites/Current/`hostname -s`/
+    herot.engin.umich.edu:Sites/SWMF_TEST_RESULTS/`date -v-1d +%Y/%m/%d`/gfortran/
