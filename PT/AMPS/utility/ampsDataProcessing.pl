@@ -39,6 +39,8 @@ foreach (@ARGV) {
   if (/^-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send'=>_FALSE_});next};
   
   if (/^-help/i) {
+    print "Example:\n";
+    print "./ampsDataProcessing.pl -np=1 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot=\'*.sdf\' -dir=./\n"; 
     print "The argument line:\n";
     print "-help             -> print the list of the arguments\n";
     print "-wait   ->  the script will wait for the new files being generated untill it is killed by user\n";
@@ -73,7 +75,7 @@ do {
       @mask=split(',',$FileMask[$i]{'mask'});
       
       foreach (@mask) {
-        @files=glob "$dir/$_";
+        @files=glob "$dir"."/"."$_";
         
         foreach (@files) {
           push(@FileList,{'file'=>$_},'rm'=>$FileMask[$i]{'rm'}, 'preplot'=>$FileMask[$i]{'preplot'}, 'send'=>$FileMask[$i]{'send'});
@@ -118,14 +120,14 @@ sub ProcessDataFiles {
   for (my $i=0;$i<=$#FileList;$i++) {
     if ($i%$nTotalThreads==$ThisThread) {
       #process the file
-      my $fname=$FileList[$i]{'file'};
-      my $rm=$FileList[$i]{'rm'};
-      my $send=$FileList[$i]{'send'};
+      my $fname=$dir."/".$FileList[$i]{'file'};
+      my $rm=$dir."/".$FileList[$i]{'rm'};
+      my $send=$dir."/".$FileList[$i]{'send'};
       
       #preplot the data file
-      if (-e $dir/$fname) {
-        `preplot $dir/$fname`;
-        `rm -f $dir/$fname`;
+      if (-e $fname) {
+        `preplot $fname`;
+        `rm -f $fname`;
         $fname=~s/.dat$/*plt/;
         
         $rm=_TRUE_;
@@ -133,13 +135,13 @@ sub ProcessDataFiles {
       }
       
       #send the data file
-      if ((-e $dir/$fname) && ($send == _TRUE_)) {
-        `scp $dir/$fname $host`;
+      if ((-e $fname) && ($send == _TRUE_)) {
+        `scp $fname $host`;
       }
       
       #remove the data file
-      if ((-e $dir/$fname) && ($rm == _TRUE_)) {
-        `rm -f $dir/$fname`;
+      if ((-e $fname) && ($rm == _TRUE_)) {
+        `rm -f $fname`;
       }      
     }
   }
