@@ -66,6 +66,11 @@ cd BATL
 cd ..
 
 #
+# Directory on herot. The date is set when the test starts!
+#
+setenv NEWTESTDIR Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/mesh
+
+#
 # Select one of the following options:
 #
 #make -j4 test MPIRUN= >>& test_swmf.log #	        Run the tests on 1 processor
@@ -74,7 +79,6 @@ make -j4 test MPIRUN="mpirun -np 4' >>& test_swmf.log #	Run the tests on 4 proce
 
 #
 # Send back the test results by scp
-# NOTE: The -v-1d arguemnt for "date" may need to be modified.
-
-scp test_swmf.res test_swmf.log \
-    herot.engin.umich.edu:Sites/SWMF_TEST_RESULTS/`date -v-1d +%Y/%m/%d`/gfortran/
+#
+ssh herot.engin.umich.edu mkdir -p ${NEWTESTDIR}
+scp test_swmf.res test_swmf.log herot.engin.umich.edu:${NEWTESTDIR}

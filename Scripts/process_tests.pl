@@ -12,6 +12,8 @@ my %WeightMachine = (
     "nyx_ifort"    => "1.0",
     );
 
+my @machines = sort keys %WeightMachine;
+
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
 my %WeightTest = (
 
@@ -67,7 +69,6 @@ my %WeightTest = (
     );
 
 my $ERROR = "ERROR in process_tests.pl";
-my @machines;
 
 my $templatefile = "process_tests.html";
 
@@ -95,9 +96,6 @@ foreach $day (@days){
 
     next unless -d $day;
     chdir $day;
-
-    # The results for each machine are in different directories
-    @machines = grep {-d} glob('*') unless @machines;
 
     foreach $machine (@machines){
 	my $file = "$machine/$resfile";
