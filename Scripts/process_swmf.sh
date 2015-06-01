@@ -1,7 +1,11 @@
 #!/bin/csh
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 cd $HOME/Sites
+
+# Create directory for new tests
+mkdir -p SWMF_TEST_RESULTS/`date +%Y/%m/%d`
 
 # Remove code from yesterday as well as various logs
 rm -rf SWMF_yesterday code.diff manual.log manual.err
@@ -29,7 +33,7 @@ endif
 
 # Create manuals
 cd ~/Sites/SWMF
-Config.pl -install  >& ~/Sites/manual.log
+Config.pl -install -compiler=gfortran >& ~/Sites/manual.log
 make PDF           >>& ~/Sites/manual.log
 make HTML          >>& ~/Sites/manual.log
 chmod -R go+r doc/ Copyrights/
