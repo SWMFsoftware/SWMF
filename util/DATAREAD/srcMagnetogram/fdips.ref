@@ -1,4 +1,4 @@
-ModReadParam::read_file: read and broadcast nLine=  90 lines of text
+ModReadParam::read_file: read and broadcast nLine=  91 lines of text
 
 #MAGNETOGRAMFILE
 dipole11.out		NameFileIn
@@ -27,12 +27,12 @@ ILU			NamePreconditioner (ILU or NONE)
 1e-10			Tolerance
 
 #OUTPUT
-field			TypeOutput    (field, potential, or tecplot)
+field			TypeOutput    (field, bxyz, potential, or tecplot)
 fdips_field.out		NameFileField
 ascii			TypeFileField (ascii, real4 or real8)
 
 #OUTPUT
-bxyz			TypeOutput    (field, potential, or tecplot)
+bxyz			TypeOutput    (field, bxyz, potential, or tecplot)
 fdips_bxyz.out		NameFileField		NameFileBxyz
 ascii			TypeFileField (ascii, real4 or real8)		TypeFileBxyz
  nTheta0, nPhi0, LongitudeShift:  180 360   0.0000000000000000
