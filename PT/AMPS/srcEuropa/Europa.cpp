@@ -35,7 +35,7 @@ double Europa::vEuropaRadial=0.0,Europa::xEuropaRadial=0.0;
 // dust parameters
 double DustSizeMin=1.0e-7;
 double DustSizeMax=1.0e-2;
-double DustTotalMassProductionRate=1e25;
+double DustTotalMassProductionRate=1e23;
 int    DustSampleIntervals=10;
 double DustSizeDistribution=0.0;
 
