@@ -23,6 +23,8 @@ my $host;
 my $dir=".";
 my $wait=_FALSE_;
 
+my @TEST=("-np=1", "-host=/Volumes/data/EUROPA-LOCAL-RUN--TEMP", "-preplot=\'*.dat\'", "-dir=.");
+
 #read the argument line
 foreach (@ARGV) {
   
@@ -73,41 +75,52 @@ do {
       my @files;
       
       @mask=split(',',$FileMask[$i]{'mask'});
-      
       foreach (@mask) {
-        @files=glob "$dir"."/"."$_";
+        $_=~s/\'//g;
+        $dir=~s/\'//g;
+        
+        my $t=$dir."/".$_;   
+        @files=glob $t;
         
         foreach (@files) {
-          push(@FileList,{'file'=>$_},'rm'=>$FileMask[$i]{'rm'}, 'preplot'=>$FileMask[$i]{'preplot'}, 'send'=>$FileMask[$i]{'send'});
+          push(@FileList,{'file'=>$_,'rm'=>$FileMask[$i]{'rm'}, 'preplot'=>$FileMask[$i]{'preplot'}, 'send'=>$FileMask[$i]{'send'}});
         }      
       }     
     }
-	
+
     #start slave processes	
     if (@FileList) {
-      for (my $count=0;$count<$nTotalThreads;$count++) {
-        my $pid = fork();
+      if ($nTotalThreads==1) {
+        ProcessDataFiles($nTotalThreads);
+      }
+      else {
+        for (my $count=0;$count<$nTotalThreads;$count++) {
+          my $pid = fork();
+        
+          if ($pid) {
+            # parent
+            #print "pid is $pid, parent $$\n";
+            push(@childs, $pid);
+          } elsif ($pid == 0) {
+             # child
+             ProcessDataFiles($count);
+             exit 0;
+          } else {
+             die "couldnt fork: $!\n";
+          } 
+        }
+       
+        foreach (@childs) {
+          my $tmp = waitpid($_, 0);
+        }
+      }
       
-        if ($pid) {
-          # parent
-          #print "pid is $pid, parent $$\n";
-          push(@childs, $pid);
-        } elsif ($pid == 0) {
-           # child
-           ProcessDataFiles($count);
-           exit 0;
-        } else {
-           die "couldnt fork: $!\n";
-        } 
-      }
-     
-      foreach (@childs) {
-        my $tmp = waitpid($_, 0);
-      }
     }
   }
   
-   sleep(120);
+  if ($wait==_TRUE_) {
+    sleep(120);
+  }
 }
 while ($wait == _TRUE_);
  
@@ -115,32 +128,51 @@ print "Done.\n";
 
 #=============================== Process Data Files =============================
 sub ProcessDataFiles {
-  #process the data files
-  
+  my $ThisThread=$_[0];
+       
   for (my $i=0;$i<=$#FileList;$i++) {
     if ($i%$nTotalThreads==$ThisThread) {
       #process the file
-      my $fname=$dir."/".$FileList[$i]{'file'};
-      my $rm=$dir."/".$FileList[$i]{'rm'};
-      my $send=$dir."/".$FileList[$i]{'send'};
+      my $fname=$FileList[$i]{'file'};
+      my $rm=$FileList[$i]{'rm'};
+      my $send=$FileList[$i]{'send'};
+      my $preplot=$FileList[$i]{'preplot'};
       
       #preplot the data file
-      if (-e $fname) {
-        `preplot $fname`;
-        `rm -f $fname`;
-        $fname=~s/.dat$/*plt/;
+      if ((-e $fname) && ($preplot == _TRUE_)) {
+        my $t=$fname;
+        $t=~s/.dat$/.plt/;
+
         
+#         system("preplot $fname");
+        print "preplot $fname\n";
+        `preplot $fname`;
+        
+        
+        
+        if (-e $t) {
+#           system("rm -f $fname");
+          print "rm -f $fname\n";
+          `rm -f $fname`;
+          
+          $fname=$t;
+        }
+                
         $rm=_TRUE_;
         $send=_TRUE_;
       }
       
       #send the data file
       if ((-e $fname) && ($send == _TRUE_)) {
+#        system("scp $fname $host");
+        print "scp $fname $host\n";
         `scp $fname $host`;
       }
       
       #remove the data file
       if ((-e $fname) && ($rm == _TRUE_)) {
+#        system("rm -f $fname");
+        print "rm -f $fname\n";
         `rm -f $fname`;
       }      
     }
