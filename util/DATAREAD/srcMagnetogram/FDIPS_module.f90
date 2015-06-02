@@ -700,16 +700,27 @@ contains
             trim(NameFileBxyz)//'_np01', nProcPhi, nProcTheta, '_', &
             iProcPhi + (nProcTheta - 1 - iProcTheta)*nProcPhi, '.out'
 
-       call save_plot_file(NameFile, TypeFileIn=TypeFileBxyz, &
-            StringHeaderIn = &
-            'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
-            nameVarIn = 'Radius Longitude Latitude Bx By Bz rMin rMax', &
-            ParamIn_I = (/ rMin, rMax /), &
-            nDimIn=3, VarIn_VIII=B_DX, &
-            Coord1In_I=RadiusNode_I, &
-            Coord2In_I=Phi_I(1:nPhiOut), &
-            Coord3In_I=Lat_I)
-
+       if(UseLogRadius)then
+          call save_plot_file(NameFile, TypeFileIn=TypeFileBxyz, &
+               StringHeaderIn = &
+               'logRadius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
+               nameVarIn = 'logRadius Longitude Latitude Bx By Bz rMin rMax', &
+               ParamIn_I = (/ rMin, rMax /), &
+               nDimIn=3, VarIn_VIII=B_DX, &
+               Coord1In_I=log10(RadiusNode_I), &
+               Coord2In_I=Phi_I(1:nPhiOut), &
+               Coord3In_I=Lat_I)
+       else
+          call save_plot_file(NameFile, TypeFileIn=TypeFileBxyz, &
+               StringHeaderIn = &
+               'Radius [Rs] Longitude [Rad] Latitude [Rad] B [G]', &
+               nameVarIn = 'Radius Longitude Latitude Bx By Bz rMin rMax', &
+               ParamIn_I = (/ rMin, rMax /), &
+               nDimIn=3, VarIn_VIII=B_DX, &
+               Coord1In_I=RadiusNode_I, &
+               Coord2In_I=Phi_I(1:nPhiOut), &
+               Coord3In_I=Lat_I)
+       end if
        deallocate(Bpole_DII, Btotal_DII)
 
     end if
