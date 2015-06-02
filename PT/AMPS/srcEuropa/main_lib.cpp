@@ -280,7 +280,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
    default:
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
      if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
-       CharacteristicSpeed=1.0e4;
+       CharacteristicSpeed=2.0e4;
        break;
      }
 #endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -289,7 +289,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
      exit(__LINE__,__FILE__,error_message);
     }
 
-  return 0.3*CellSize/CharacteristicSpeed;
+  return 0.02* 0.3*CellSize/CharacteristicSpeed;
 }
 #elif _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_ 
 //use the time step distribution for the nightly tests
@@ -331,7 +331,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
    default:
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
      if(_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups){
-       CharacteristicSpeed=1.0e3;
+       CharacteristicSpeed=20.0e3;
        break;
      }
 #endif//_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -340,7 +340,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
      exit(__LINE__,__FILE__,error_message);
     }
  
-    return 0.3*CellSize/CharacteristicSpeed;
+    return 0.02* 0.3*CellSize/CharacteristicSpeed;
  }
 
 #endif
@@ -1327,6 +1327,10 @@ void amps_init() {
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
    //init the dust model
+   ElectricallyChargedDust::minDustRadius=1.0E-8; //DustSizeMin; //0.1*_MICROMETER_;
+   ElectricallyChargedDust::maxDustRadius=1.0E-4; //DustSizeMax; //1.0e4*_MICROMETER_;
+
+
    ElectricallyChargedDust::Init_AfterParser();
 #endif
 
@@ -1380,7 +1384,7 @@ void amps_init() {
 
 
    if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
-   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
+//   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
 
    if (_DUST_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_DUST_SPEC_,_H2O_SPEC_,1e-1);
    
