@@ -1,0 +1,51 @@
+#!/bin/sh
+#PBS -V
+#PBS -N testgfortran
+#PBS -l pmem=2000mb
+#PBS -l walltime=8:00:00
+#PBS -l nodes=1:ppn=4
+
+# showq -w acct=ridley/liemohn_flux
+
+#PBS -A ridley_fluxoe -l qos=flux -q fluxoe
+#    -A liemohn_flux -q flux  -l qos=flux
+
+echo "I run on:"
+cat $PBS_NODEFILE
+
+# Go to your home directory
+cd $HOME
+
+# select gfortran compiler and openmpi
+source bin/load_gfortran
+echo `which gfortran`
+echo `which mpif90`
+
+# Go to the GFORTRAN test directory
+cd Tmp_gfortran
+
+# Remove the previous test directory if necessary
+rm -rf SWMF
+
+# Checkout and install the latest code
+cvs co -D "`date +%m/%d/%Y` 19:00" SWMF BATL HYPRE > /dev/null 2>&1
+mv BATL SWMF/
+mv HYPRE SWMF/util
+cd SWMF
+./Config.pl -install -compiler=gfortran -hypre > test_swmf.log 2>&1
+cd BATL
+./Config.pl -install -compiler=gfortran >> ../test_swmf.log 2>&1
+cd ..
+
+# Directory on herot
+export NEWTESTDIR=Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/nyx_gfortran
+
+# Run test
+/usr/bin/make -j test MPIRUN='mpirun -np 4' KEEP=y >> test_swmf.log 2>&1
+
+# copy results to herot
+/usr/bin/ssh herot.engin.umich.edu mkdir -p ${NEWTESTDIR}
+/usr/bin/scp test_swmf.res test_swmf.log herot.engin.umich.edu:${NEWTESTDIR}
+
+# resubmit the job at 19:40 to execute the nightly test
+qsub -a 1940 /home/gtoth/bin/test_swmf_gfortran.job
