@@ -36,13 +36,15 @@ OPT2 = -O2
 OPT3 = -O3
 OPT4 = -O4
 
+# Add -xHost for better speed, possibly
+
 CFLAG = ${SEARCH} -c -w -diag-disable remark ${DEBUG}
 
 Cflag0  = ${CFLAG} ${PRECISION} ${OPT0}
 Cflag1  = ${CFLAG} ${PRECISION} ${OPT1}
 Cflag2  = ${CFLAG} ${PRECISION} ${OPT2}
 Cflag3  = ${CFLAG} ${PRECISION} ${OPT3}
-Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
+Cflag4  = ${CFLAG} ${PRECISION} ${OPT4} 
 
 # RCM compilation flags
 # To allow RCM to compile as double precision, add PRECISION flag
