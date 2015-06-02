@@ -64,6 +64,10 @@ module ModB0
   real, allocatable :: B0ResChange_DYSB(:,:,:,:,:)
   real, allocatable :: B0ResChange_DZSB(:,:,:,:,:)
 
+  ! Lookup table related variables
+  integer:: iTableB0 = -1
+  real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
+
 contains
   !===========================================================================
   subroutine read_b0_param(NameCommand)
@@ -72,7 +76,7 @@ contains
     use ModPhysics,   ONLY: MonopoleStrengthSi
 
     character(len=*), intent(in):: NameCommand
-
+    
     character(len=*), parameter:: NameSub = 'read_b0_param'
     !------------------------------------------------------------------------
 
@@ -90,6 +94,9 @@ contains
     case("#MONOPOLEB0")
        call read_var('MonopoleStrengthSi', MonopoleStrengthSi)
 
+    case("B0FACTOR")
+       call read_var('FactorB0', FactorB0)
+
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -99,6 +106,13 @@ contains
   end subroutine read_b0_param
   !===========================================================================
   subroutine init_mod_b0
+
+    use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
+    use ModNumConst, ONLY: cDegToRad
+
+    integer:: nParam
+    real:: Param_I(4)
+    !------------------------------------------------------------------------
 
     if(.not.allocated(B0_DGB))then
        allocate( &
@@ -131,6 +145,14 @@ contains
 
     if((UseCurlB0 .or. UseB0Source) .and. .not.allocated(CurlB0_DC)) &
          allocate(CurlB0_DC(3,nI,nJ,nK))
+
+    iTableB0 = i_lookup_table('B0')
+    if(iTableB0 > 0)then
+       call get_lookup_table(iTableB0, nParam=nParam, Param_I=Param_I)
+       rMinB0 = Param_I(1)
+       rMaxB0 = Param_I(2)
+       if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
+    end if
 
   end subroutine init_mod_b0
   !===========================================================================
@@ -532,14 +554,30 @@ contains
     use ModMain,          ONLY: UseBody2
     use ModMain,          ONLY: UseUserB0, UseMagnetogram
     use ModMagnetogram,   ONLY: get_magnetogram_field
+    use ModLookupTable,   ONLY: interpolate_lookup_table
+    use ModCoordTransform, ONLY: xyz_to_rlonlat
+    use ModNumConst,      ONLY: cTwoPi
 
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
 
-    real:: r
+    real:: rLonLat_D(3), r
     !-------------------------------------------------------------------------
     if(UseUserB0)then
        call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
+    elseif(iTableB0 > 0)then
+       call xyz_to_rlonlat(Xyz_D, rLonLat_D)
+       if(dLonB0 > 0.0) &
+            rLonLat_D(2) = modulo(rLonLat_D(2) - dLonB0, cTwoPi)
+       r = rLonLat_D(1)
+       ! Extrapolate for r < rMinB0
+       call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
+            DoExtrapolate=(r<rMinB0) )
+       ! Convert from Gauss to Tesla then to normalized units. 
+       ! Multiply with B0 factor
+       B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
+       ! Scale with r^2 for r > rMaxB0
+       if(r > rMaxB0) B0_D = (r/rMaxB0)**2 * B0_D
     elseif(UseMagnetogram)then
        call get_magnetogram_field(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
