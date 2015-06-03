@@ -1,0 +1,19 @@
+#the makefile for the stand along test of AMPS' reading of the .idl files with BATL
+
+test_BATL_help:
+	@echo "Testing of AMPS'/BATL coupling"
+
+test_BATL_compile:
+	@echo "test_BATL-reader_compile..." > test_BATL-reader.diff 
+
+	echo "Installing BATL....." 
+	@cvs co BATL
+	@cd BATL; ./Config.pl -install -compiler=gfortran -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
+
+	echo "Installing SWMF...."
+	cvs co SWMF
+	cd SWMF; ./Config.pl -install -compiler=gfortran; make LIB 
+
+	@echo "Install AMPS......"  
+	./Config.pl -install -compiler=gfortran -application=titan -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF  
+	make
