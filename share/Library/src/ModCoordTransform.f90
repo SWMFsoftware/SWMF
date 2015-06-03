@@ -43,9 +43,9 @@
 ! \item 2 scalars in the $\sin\alpha, \cos\alpha$ order.
 ! \end{itemize}
 !
-! As convenient utilities, the {\bf cross\_product} and {\bf inverse_matrix}
-! functions are provided. The first returns the cross product of 
-! 2 Cartesian vectors as a 3 element array.
+! As convenient utilities, the {\bf cross\_product} and {\bf inverse\_matrix}
+! functions are provided.
+! The first returns the cross product of vectors as a 3 element array.
 ! The second returns the inverse of 3 by 3 matrix.
 
 !INTERFACE:
