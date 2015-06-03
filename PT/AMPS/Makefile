@@ -22,8 +22,11 @@ include Makefile.conf
 #include the local makefile (defined the AMPS' compiling variables)  
 include Makefile.local
 
-#the default value of the compiler flags
-SEARCH=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
+#the default value of the c++ compiler flags
+SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
+
+#the additional argument string for the fortran compiler
+SEARCH_F= 
 
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
@@ -36,6 +39,7 @@ AMPSLINKER=${CC}
 ifneq ($(BATL),nobatl)	
 	AMPSLINKLIB+=${BATL}/lib/libREADAMR.a
 	AMPSLINKER=${LINK.f90}
+	SEARCH_F+= -J${BATL}/share/include 
 endif
 	
 ifneq ($(SWMF),noswmf)	
@@ -52,7 +56,7 @@ ifneq ($(SPICE),nospice)
 endif
 
 ifeq ($(TESTMODE),on)  
-	SEARCH+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
+	SEARCH_C+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
 
 
@@ -112,17 +116,17 @@ ${LIB_AMPS}:
 	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
 	make ${WSD}
 	cd ${WSD}/general;                     make SEARCH_C=
-	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH}" 
-	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH}"
-	cd ${WSD}/species;                     make SEARCH_C="${SEARCH}"
-	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH}"
-	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH}"
-	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH}"
-	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH}" 
+	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
+	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
+	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH_C}" 
 
 #compile external modules
-	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH}")) 
-	cd ${WSD}/main; make SEARCH_C="${SEARCH}"
+	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH_C}")) 
+	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
@@ -140,7 +144,7 @@ endif
 LIB: 
 	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
 	make ${LIB_AMPS} 
-	cd srcInterface; make LIB SEARCH_C="${SEARCH}"
+	cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"
 
 amps_link:
 	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
@@ -148,7 +152,7 @@ amps_link:
 
 amps: ${LIB_AMPS}
 	@rm -f amps
-	cd ${WSD}/main; make amps SEARCH_C="${SEARCH}"
+	cd ${WSD}/main; make amps SEARCH_C="${SEARCH_C}"
 	make amps_link
 
 
