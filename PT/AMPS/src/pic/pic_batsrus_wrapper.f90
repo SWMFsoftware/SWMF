@@ -94,8 +94,8 @@ subroutine batsrus2amps_get_data_point(x,res,FoundFlag)
   real(8),dimension(0:nVar),intent(out)::res
   integer,intent(out)::FoundFlag
   
-  real,dimension(0:nVar)::State
-  real,dimension(nDim)::Xyz_D
+  real(8),dimension(0:nVar)::State
+  real(8),dimension(nDim)::Xyz_D
   logical::IsFound
   
   Xyz_D(:)=x(:)
