@@ -1,0 +1,39 @@
+
+#main
+SpeciesList=H2O 
+
+makefile  SOURCES=src
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+ProjectSourceDirectory=test/srcDataReaderTest  
+
+WorkingSourceDirectory=srcTemp  
+SourceDirectory=src
+
+ErrorLog=PT/amps_error.log
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+InputDirectory=InputData 
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+CouplerMode=file(batsrus) 
+#endmain
+
+#General
+  NastranSurfaceUserData=on 
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+#endGeneral
+
+
+#include species.input
+
+#block ../exosphere.pl
+  define _TARGET_ _ENCELADUS_
+
+  SPICE=off
+#endblock
+
+#end
