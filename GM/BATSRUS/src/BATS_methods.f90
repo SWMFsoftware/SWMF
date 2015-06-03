@@ -462,12 +462,12 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseIM)call apply_im_pressure
   
-
-  if(UseHeatConduction.and.UseElectronPressure)then
-     if(.not.UseSemiImplicit)call calc_ei_heat_exchange
-  elseif(.not.UseMultiIon .and. UseResistivity .and. UseHeatExchange &
-       .and. UseElectronPressure)then
-     call calc_heat_exchange
+  if(.not.UseMultiIon)then
+     if(UseHeatConduction .and. UseElectronPressure)then
+        if(.not.UseSemiImplicit)call calc_ei_heat_exchange
+     elseif(UseResistivity .and. UseHeatExchange .and. UseElectronPressure)then
+        call calc_heat_exchange
+     end if
   end if
 
   if(UseAnisoPressure)call fix_anisotropy
