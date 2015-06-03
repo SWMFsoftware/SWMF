@@ -94,6 +94,12 @@ int main(int argc,char **argv) {
     ICES::GetDomainLimit(xmin,xmax);
     PIC::Mesh::mesh.init(xmin,xmax,ICES::localResolution);
     break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+    PIC::CPLR::DATAFILE::BATSRUS::Init("3d__mhd_1_n00000001.idl");
+    PIC::CPLR::DATAFILE::BATSRUS::GetDomainLimits(xmin,xmax);
+    break;
+
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
@@ -135,6 +141,12 @@ int main(int argc,char **argv) {
     ICES::Read();
     sprintf(TestFileName,"%s/test_ices-reader.dat",PIC::OutputDataFileDirectory);
     break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+    PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
+    sprintf(TestFileName,"%s/test_batl-reader.dat",PIC::OutputDataFileDirectory);
+    break;
+
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
