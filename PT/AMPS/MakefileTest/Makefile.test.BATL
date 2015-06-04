@@ -17,7 +17,7 @@ test_BATL_compile:
 	cd SWMF; ./Config.pl -install -compiler=gfortran; make LIB 
 
 	@echo "Install AMPS......"  
-	./Config.pl -install -compiler=gfortran -application=titan -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF -cplr-data-path=data/input/DataFileReader/BATL  
+	./Config.pl -install -compiler=gfortran -application=batl-reader -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF -cplr-data-path=data/input/DataFileReader/BATL  
 	make
 
 test_BATL_rundir:
