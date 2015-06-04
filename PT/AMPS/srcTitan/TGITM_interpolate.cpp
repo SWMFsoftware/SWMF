@@ -34,7 +34,9 @@ using namespace std;
 	const int nLatitudes = 72;
 
 	
-	ifstream fin("../data/input/Titan/TGITM_EXOBASE.dat");
+	char fname[500];
+	sprintf(fname,"%s/TGITM_EXOBASE.dat",PIC::UserModelInputDataPath);
+	ifstream fin(fname);
 	
 	if(fin.is_open())
 	{
