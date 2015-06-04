@@ -1951,6 +1951,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
   on_error,2
+  common plot_param,plot_spacex,plot_spacey
 
                                 ; Get grid dimensions and set irr=1 if it is an irregular grid
 
@@ -1984,9 +1985,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
   ; Calculate plot spacing from number of plots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
   ppp   = multix*multiy
-  space = max([float(!d.y_ch_size)/float(!d.y_size),$
-               float(!d.x_ch_size)/float(!d.x_size)])*3.0*!p.charsize
-  set_space, ppp, space, sizes, nx = multix, ny = multiy
+  spacex = float(!d.x_ch_size)/float(!d.x_size)*plot_spacex*!p.charsize
+  spacey = float(!d.y_ch_size)/float(!d.y_size)*plot_spacey*!p.charsize
+  set_space, ppp, spacex, spacey, sizes, nx = multix, ny = multiy
 
                                 ; Store x and y titles and tick names
 
@@ -3878,7 +3879,7 @@ pro plot_log, logfilenames, func, $
               smooths=smooths,                                         $
               colors=colors, linestyles=linestyles, symbols=symbols,   $
               title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit,$
-              legends=legends, legendpos=legendpos
+              legends=legends, legendpos=legendpos, noerase=noerase
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the string array logfilenames.
@@ -3897,17 +3898,19 @@ pro plot_log, logfilenames, func, $
 ; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
 
+common log_param, log_spacex, log_spacey
+
 nlog = n_elements(logfilenames)
 string_to_array,func,funcs,nfunc
 
 ; read in arrays if not present
-if   (nlog eq 1 and n_elements(wlognames0) eq 0) $
-  or (nlog eq 2 and n_elements(wlognames1) eq 0) $
-  or (nlog eq 3 and n_elements(wlognames2) eq 0) then begin
+if    (nlog eq 1 and n_elements(wlognames0) eq 0) $
+   or (nlog eq 2 and n_elements(wlognames1) eq 0) $
+   or (nlog eq 3 and n_elements(wlognames2) eq 0) then begin
 
-    if nlog ge 1 then get_log,logfilenames(0),wlog0,wlognames0,/verbose
-    if nlog ge 2 then get_log,logfilenames(1),wlog1,wlognames1,verbose='1'
-    if nlog ge 3 then get_log,logfilenames(2),wlog2,wlognames2,verbose='2'
+   if nlog ge 1 then get_log,logfilenames(0),wlog0,wlognames0,/verbose
+   if nlog ge 2 then get_log,logfilenames(1),wlog1,wlognames1,verbose='1'
+   if nlog ge 3 then get_log,logfilenames(2),wlog2,wlognames2,verbose='2'
 
 endif
 
@@ -3919,19 +3922,19 @@ if n_elements(smooths) lt nlog then smooths = intarr(nlog)
 
 ; Calculate the xrange from the data unless defined
 if n_elements(xrange) ne 2 then begin
-    DoXrange = 1
-    xrange   = [1e30, -1e30]
+   DoXrange = 1
+   xrange   = [1e30, -1e30]
 endif else $
-  DoXrange = 0
+   DoXrange = 0
 
 ; Calculate yranges from the data unless defined
 if n_elements(yranges) ne 2*nfunc then begin
-    DoYrange = 1
-    yranges = fltarr(2,nfunc)
-    yranges(0,*) =  1e30
-    yranges(1,*) = -1e30
+   DoYrange = 1
+   yranges = fltarr(2,nfunc)
+   yranges(0,*) =  1e30
+   yranges(1,*) = -1e30
 endif else $
-  DoYrange = 0
+   DoYrange = 0
 
 ; If line styles are not defined use normal lines (0)
 if n_elements(linestyles) lt nlog then linestyles = intarr(nlog)
@@ -3971,10 +3974,11 @@ if strpos(!d.name,'X') gt -1 then loadct,39 else loadct,40
 ppp   = nfunc
 ;space = 0.05
 ;if !y.charsize gt 0 then space = space*!y.charsize
-space = 5*float(!d.y_ch_size)/float(!d.y_size)
-set_space, ppp, space, sizes, ny = ppp
+spacex = log_spacex*float(!d.x_ch_size)/float(!d.x_size)
+spacey = log_spacey*float(!d.y_ch_size)/float(!d.y_size)
+set_space, ppp, spacex, spacey, sizes, ny = ppp
 
-erase
+if not keyword_set(noerase) then erase
 
 ; The first iteration is used to get the X and Y ranges from the
 ; data. This can be skipped if both ranges are given explicitly.
@@ -4229,7 +4233,7 @@ pro quit
 end
 ;==========================================
 
-pro set_space, nb, space, sizes, nx = nx, ny = ny
+pro set_space, nb, spacex, spacey, sizes, nx = nx, ny = ny
 
 ; Determines the size and multiplication factors for plotting perfect circles
 ; or squares. This routine is used to simply find the parameters, another
@@ -4240,8 +4244,8 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
 ;
 ; input parameters:
 ; nb - number of plots on a page
-; space - amount of space in between each of the plots in normalized
-;          coordinates
+; spacex - amount of horizontal space between plots in normalized coordinates
+; spacey - amount of vertical   space between plots in normalized coordinates
 ;
 ; output parameters:
 ; bs - box size (size of the plotting region)
@@ -4253,19 +4257,19 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
 ;   are in the x and y direction on Jan 2, 1998
 
   sizes = {bs:0.0, nbx:0, nby:0, xoff:0.0, yoff:0.0, xf:0.0, yf:0.0, $
-           ppp: nb, space:space}
+           ppp: nb, spacex:spacex, spacey:spacey}
 
   xsi = float(!d.x_size)
   ysi = float(!d.y_size)
 
-  xs = xsi - 5.0*space*xsi
-  ys = ysi - 5.0*space*ysi
+  xs = xsi - 5.0*spacex*xsi
+  ys = ysi - 5.0*spacey*ysi
 
   if nb eq 1 then begin
 
     sizes.nbx = 1
     sizes.nby = 1
-    sizes.bs = 1.0 - space
+    sizes.bs = 1.0 - spacex
 
     if xs gt ys then begin
 
@@ -4315,9 +4319,9 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
 
       sizes.yf = 1.0
       sizes.xf = ys/xs
-      sizes.bs = ((1.0-space*(sizes.nbx-1))/sizes.nbx )/sizes.xf
-      if sizes.nby*sizes.bs+space*(sizes.nby-1) gt 1.0 then 		$
-	sizes.bs = (1.0- space*(sizes.nby-1))/sizes.nby
+      sizes.bs = ((1.0-spacex*(sizes.nbx-1))/sizes.nbx )/sizes.xf
+      if sizes.nby*sizes.bs+spacey*(sizes.nby-1) gt 1.0 then 		$
+         sizes.bs = (1.0- spacey*(sizes.nby-1))/sizes.nby
 
     endif else begin
 
@@ -4335,16 +4339,16 @@ pro set_space, nb, space, sizes, nx = nx, ny = ny
 
       sizes.xf = 1.0
       sizes.yf = xs/ys
-      sizes.bs = ((1.0 - space*(sizes.nby-1))/sizes.nby)/sizes.yf
-      if sizes.nbx*sizes.bs+space*(sizes.nbx-1) gt 1.0 then 		$
-	sizes.bs = (1.0 - space*(sizes.nbx-1))/sizes.nbx
+      sizes.bs = ((1.0 - spacey*(sizes.nby-1))/sizes.nby)/sizes.yf
+      if sizes.nbx*sizes.bs+spacex*(sizes.nbx-1) gt 1.0 then 		$
+         sizes.bs = (1.0 - spacex*(sizes.nbx-1))/sizes.nbx
 
     endelse
 
   endelse
 
-  sizes.xoff = (1.0 - sizes.xf*(sizes.bs*sizes.nbx + space*(sizes.nbx-1)))/2.0
-  sizes.yoff = (1.0 - sizes.yf*(sizes.bs*sizes.nby + space*(sizes.nby-1)))/2.0
+  sizes.xoff = (1.0 - sizes.xf*(sizes.bs*sizes.nbx + spacex*(sizes.nbx-1)))/2.0
+  sizes.yoff = (1.0 - sizes.yf*(sizes.bs*sizes.nby + spacey*(sizes.nby-1)))/2.0
 
 end
 
@@ -4357,7 +4361,7 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
 ; plotting region, given the output parameters from set_space.
 ;
 ; Input parameters:
-; nb, space, bs, nbx, nby, xoff, yoff, xf, yf - Outputs from set_space
+; nb, spacex, spacey, bs, nbx, nby, xoff, yoff, xf, yf - Outputs from set_space
 ; pos_num - the number of the plot, ranges from 0 : bs-1
 ;
 ; Output parameters:
@@ -4367,32 +4371,33 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
 ; modified to make rectangles on Jan 2, 1998
 
   nb = sizes.ppp
-  space = sizes.space
+  spacex = sizes.spacex
+  spacey = sizes.spacey
 
   yf2 = sizes.yf
-  yf = sizes.yf*(1.0-space)
+  yf = sizes.yf*(1.0-spacex)
   xf2 = sizes.xf
-  xf = sizes.xf*(1.0-space)
+  xf = sizes.xf*(1.0-spacey)
 
   if keyword_set(rect) then begin
 
     if keyword_set(xmargin) then xmar = xmargin(0) 			$
-    else xmar = space/2.0
+    else xmar = spacex/2.0
 
     if keyword_set(ymargin) then ymar = ymargin(0) 			$
-    else ymar = space/2.0
+    else ymar = spacey/2.0
 
-    xbuffer = 3.0*float(!d.x_ch_size)/float(!d.x_size) * !p.charsize +space/4.0
-    xtotal = 1.0 - (space*float(sizes.nbx-1) + xmar + xf2*space/2.0) - xbuffer
+    xbuffer = 3.0*float(!d.x_ch_size)/float(!d.x_size) * !p.charsize +spacex/4.0
+    xtotal = 1.0 - (spacex*float(sizes.nbx-1) + xmar + xf2*spacex/2.0) - xbuffer
     xbs = xtotal/(float(sizes.nbx)*xf)
 
-    xoff = xmar - xf2*space/2.0 + xbuffer - space/4.0
+    xoff = xmar - xf2*spacex/2.0 + xbuffer - spacex/4.0
 
     ybuffer = 3.0*float(!d.y_ch_size)/float(!d.y_size) * !p.charsize
-    ytotal = 1.0 - (space*float(sizes.nby-1) + ymar + yf2*space/2.0) - ybuffer
+    ytotal = 1.0 - (spacey*float(sizes.nby-1) + ymar + yf2*spacey/2.0) - ybuffer
     ybs = ytotal/(float(sizes.nby)*yf)
 
-    yoff = space/4.0
+    yoff = spacey/4.0
 
   endif else begin
 
@@ -4403,14 +4408,14 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
 
   endelse
 
-  xpos0 = float(xipos) * (xbs+space)*xf + xoff + xf2*space/2.0
-  xpos1 = float(xipos) * (xbs+space)*xf + xoff + xf2*space/2.0 + xbs*xf
+  ;xpos0 = float(xipos) * (xbs+spacex)*xf + xoff + xf2*spacex/2.0
+  ;xpos1 = float(xipos) * (xbs+spacex)*xf + xoff + xf2*spacex/2.0 + xbs*xf
 
-  xpos0 = float(xipos) * (xbs+space)*xf + xoff + xf2*space
-  xpos1 = float(xipos) * (xbs+space)*xf + xoff + xf2*space + xbs*xf
+  xpos0 = float(xipos) * (xbs+spacex)*xf + xoff + xf2*spacex
+  xpos1 = float(xipos) * (xbs+spacex)*xf + xoff + xf2*spacex + xbs*xf
 
-  ypos0 = (1.0-yf2*space/2) - (yipos * (ybs+space)*yf + ybs*yf) - yoff
-  ypos1 = (1.0-yf2*space/2) - (yipos * (ybs+space)*yf) - yoff
+  ypos0 = (1.0-yf2*spacey/2) - (yipos * (ybs+spacey)*yf + ybs*yf) - yoff
+  ypos1 = (1.0-yf2*spacey/2) - (yipos * (ybs+spacey)*yf) - yoff
 
   pos= [xpos0,ypos0,xpos1,ypos1]
 
