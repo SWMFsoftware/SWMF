@@ -1,5 +1,7 @@
 #!/bin/csh
 
+# For allocation usage info login to the web page: https://sam.ucar.edu
+# For disk quota type: gladequota
 # Submit job:  bsub < job.yslogin
 # Monitor job: bjobs
 
