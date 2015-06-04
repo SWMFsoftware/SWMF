@@ -137,7 +137,7 @@ void PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(cInternalS
   long int offset,i,nSurfaceElement,nSurfaceElementsMax;
   double *SamplingBuffer;
 
-//  SamplingBuffer=((cSurfaceDataSphere*)Sphere->GetSurfaceDataPointer())->SamplingBuffer;
+  //flush sampling data from Sphere->SamplingBuffer
   SamplingBuffer=Sphere->SamplingBuffer;
   nSurfaceElementsMax=Sphere->GetTotalSurfaceElementsNumber();
 
@@ -146,6 +146,9 @@ void PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(cInternalS
 
     for (i=0;i<TotalSampleSetLength;i++) *(SamplingBuffer+offset+i)=0.0;
   }
+
+  //flush sampling data from cInternalSphericalData::cInternalSphericalData_UserDefined
+  Sphere->flush();
 }
 
 //====================================================
