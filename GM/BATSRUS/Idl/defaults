@@ -113,4 +113,14 @@ legendpos=0  ; position for the legends: [xmin, xmax, ymin, ymax]
 !x.tickname=strarr(60)
 !y.tickname=strarr(60)
 
+; Distance betwen plots measured in character size
+common plot_param,plot_spacex,plot_spacey
+plot_spacex=3
+plot_spacey=3
+
+; Distance betwen log plots measured in character size
+common log_param,log_spacex,log_spacey
+log_spacex=5
+log_spacey=5
+
 end
