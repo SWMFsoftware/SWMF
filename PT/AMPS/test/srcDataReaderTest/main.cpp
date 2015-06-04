@@ -153,7 +153,6 @@ int main(int argc,char **argv) {
 
   PIC::Mesh::mesh.memoryAllocationReport();
   PIC::Mesh::mesh.GetMeshTreeStatistics();
-
   PIC::Mesh::mesh.InitCellMeasure();
 
   PIC::Init_AfterParser();
@@ -177,7 +176,14 @@ int main(int argc,char **argv) {
   //create the reference file with the extracted data
   PIC::CPLR::DATAFILE::SaveTestReferenceData(TestFileName);
 
+  //output ascii file with the interpolated data
+  PIC::Mesh::cDataBlockAMR block;
 
+  block.SetLocalParticleWeight(0.0,0);
+  block.SetLocalTimeStep(0.0,0);
+
+  sprintf(TestFileName,"%s/loaded-data.dat",PIC::OutputDataFileDirectory);
+  PIC::Mesh::mesh.outputMeshDataTECPLOT(TestFileName,0);
 
   //finish the run
   MPI_Finalize();
