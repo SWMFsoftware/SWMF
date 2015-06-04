@@ -42,7 +42,7 @@ subroutine batsrus2amps_domain_limits(xmin,xmax)
   use ModReadAmr, ONLY: CoordMin_D, CoordMax_D
   
   implicit none
-  real(8),intent(out)::xmin(:),xmax(:)
+  real(8),intent(out)::xmin(3),xmax(3)
   
   xmin(:)=CoordMin_D(:)
   xmax(:)=CoordMax_D(:)
