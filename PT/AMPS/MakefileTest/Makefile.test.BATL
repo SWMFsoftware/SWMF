@@ -1,6 +1,7 @@
 #the makefile for the stand along test of AMPS' reading of the .idl files with BATL
-
+CWD=$(shell pwd)
 TEST_BATL_DIR=run_test_ices-reader
+TEST_BATL_OUTFILES=test_batl-reader  
 
 test_BATL_help:
 	@echo "Testing of AMPS'/BATL coupling"
@@ -17,7 +18,7 @@ test_BATL_compile:
 	cd SWMF; ./Config.pl -install -compiler=gfortran; make LIB 
 
 	@echo "Install AMPS......"  
-	./Config.pl -install -compiler=gfortran -application=test/batl-reader -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF -cplr-data-path=data/input/DataFileReader/BATL  
+	./Config.pl -install -compiler=gfortran -application=test/batl-reader -spice-path=nospice -batl-path=$(CWD)/BATL -swmf-path=$(CWD)/SWMF -cplr-data-path=$(CWD)/data/input/DataFileReader/BATL  
 	make
 
 test_BATL_rundir:
