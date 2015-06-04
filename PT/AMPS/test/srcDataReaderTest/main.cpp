@@ -71,6 +71,19 @@ namespace ICES {
   }
 }
 
+namespace BATL {
+  const double rSphere=_MERCURY__RADIUS_;
+  double *xmin,*xmax;
+
+  double localResolution(double *x) {
+    double l=0.0;
+
+    for (int idim=0;idim<3;idim++) l+=pow(xmax[idim]-xmin[idim],2);
+
+    return sqrt(l)/20;
+  }
+}
+
 double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {return 1.0;}
 
 int main(int argc,char **argv) {
@@ -86,9 +99,10 @@ int main(int argc,char **argv) {
 
   if (PIC::ThisThread==0) cout << "Init the mesh" << endl;
 
-  //generate only the tree
+  //Init the mesh
   PIC::Mesh::mesh.AllowBlockAllocation=false;
 
+  //init the datafile reader
   switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__ICES_ :
     ICES::GetDomainLimit(xmin,xmax);
@@ -96,14 +110,25 @@ int main(int argc,char **argv) {
     break;
 
   case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
+    PIC::Mesh::mesh.init(xmin,xmax,BATL::localResolution);
+
     PIC::CPLR::DATAFILE::BATSRUS::Init("3d__mhd_1_n00000001.idl");
     PIC::CPLR::DATAFILE::BATSRUS::GetDomainLimits(xmin,xmax);
+    PIC::CPLR::DATAFILE::BATSRUS::UnitLength=BATL::rSphere;
+
+    //convert the BATSRUS coordinate units into that of AMPS
+    for (int idim=0;idim<DIM;idim++) xmin[idim]*=BATL::rSphere,xmax[idim]*=BATL::rSphere; 
+    BATL::xmin=xmin,BATL::xmax=xmax;
+ 
+    //init the mesh object
+    PIC::Mesh::mesh.init(xmin,xmax,BATL::localResolution);
     break;
 
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
 
+  //generate AMPS' mesh
   PIC::Mesh::mesh.memoryAllocationReport();
 
   if (PIC::Mesh::mesh.ThisThread==0) {
@@ -115,8 +140,6 @@ int main(int argc,char **argv) {
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
     PIC::Mesh::mesh.readMeshFile("mesh.msh");
   }
-
-  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
   PIC::Mesh::mesh.memoryAllocationReport();
   PIC::Mesh::mesh.GetMeshTreeStatistics();
