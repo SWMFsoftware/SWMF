@@ -137,7 +137,7 @@ void PIC::BC::InternalBoundary::Circle::flushCollectingSamplingBuffer(cInternalC
   long int offset,i,nSurfaceElement,nSurfaceElementsMax;
   double *SamplingBuffer;
 
-//  SamplingBuffer=((cSurfaceDataCircle*)Circle->GetSurfaceDataPointer())->SamplingBuffer;
+  //flush sampling data from Circle->SamplingBuffer
   SamplingBuffer=Circle->SamplingBuffer;
   nSurfaceElementsMax=Circle->GetTotalSurfaceElementsNumber();
 
@@ -146,6 +146,9 @@ void PIC::BC::InternalBoundary::Circle::flushCollectingSamplingBuffer(cInternalC
 
     for (i=0;i<TotalSampleSetLength;i++) *(SamplingBuffer+offset+i)=0.0;
   }
+
+  //flush sampling data from cInternalSphericalData::cInternalSphericalData_UserDefined
+  Circle->flush();
 }
 
 //====================================================
