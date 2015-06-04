@@ -1,5 +1,7 @@
 #the makefile for the stand along test of AMPS' reading of the .idl files with BATL
 
+TEST_BATL_DIR=run_test_ices-reader
+
 test_BATL_help:
 	@echo "Testing of AMPS'/BATL coupling"
 
@@ -15,5 +17,23 @@ test_BATL_compile:
 	cd SWMF; ./Config.pl -install -compiler=gfortran; make LIB 
 
 	@echo "Install AMPS......"  
-	./Config.pl -install -compiler=gfortran -application=titan -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF  
+	./Config.pl -install -compiler=gfortran -application=titan -spice-path=nospice -batl-path=/Users/vtenishe/SWMF/AMPS/BATL -swmf-path=/Users/vtenishe/SWMF/AMPS/SWMF -cplr-data-path=data/input/DataFileReader/BATL  
 	make
+
+test_BATL_rundir:
+	echo "test_BATL-reader_rundir..." >> test_BATL-reader.diff
+	rm -rf   $(TEST_BATL_DIR) 
+	mkdir -p $(TEST_BATL_DIR)
+	mv amps  $(TEST_BATL_DIR)
+
+test_BATL_run:
+	@echo "test_BATL-reader_run..." >> test_BATL-reader.diff
+	cd $(TEST_BATL_DIR); ${MPIRUN} ./amps
+
+test_BATL_check:
+	@echo "test_BATL-reader_check..." >> test_BATL-reader.diff
+	-@$(foreach OUT,$(TEST_BATL_OUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TEST_BATL_DIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TEST_BATL_DIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_BATL-reader.diff);)
+	@ls -l test_BATL-reader.diff 
