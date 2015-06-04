@@ -126,8 +126,54 @@ public :
     fclose(fout);
   }
 
+  //the data with which the sphere was allocated
+  int nTotalSpecies,TotalSurfaceElementNumber,EXOSPHERE__SOURCE_MAX_ID_VALUE;
+
+  void flush() {
+    int s,el,i;
+
+    for (el=0;el<TotalSurfaceElementNumber;el++) {
+      for (int spec=0;spec<nTotalSpecies;spec++) {
+        SurfaceElementDesorptionFluxUP[spec][el]=0.0;
+        SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
+        SurfaceElementPopulation[spec][el]=0.0;
+      }
+
+      SolarWindSurfaceFlux[el]=-1.0;
+
+      for (s=0;s<nTotalSpecies;s++) {
+        for (i=0;i<EXOSPHERE__SOURCE_MAX_ID_VALUE+1;i++) SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
+      }
+    }
+
+    for (s=0;s<nTotalSpecies;s++) {
+      for (el=0;el<TotalSurfaceElementNumber;el++) {
+        SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
+      }
+    }
+
+    for (s=0;s<nTotalSpecies;s++) {
+      for (el=0;el<TotalSurfaceElementNumber;el++) {
+        SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
+        SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
+
+        SampleReturnFluxBulkSpeed[s][el]=0.0;
+        SampleInjectedFluxBulkSpeed[s][el]=0.0;
+      }
+    }
+
+#if _INTERNAL_SPHERE__EXTRA_DATA__0__MODE_ == _INTERNAL_SPHERE_DATA__ON_
+    for (el=0;el<TotalSurfaceElementNumber;el++) SurfaceData0[el].flush();
+#endif
+  }
+
   template <class T>
-  void Allocate(int nTotalSpecies, int TotalSurfaceElementNumber, int EXOSPHERE__SOURCE_MAX_ID_VALUE,T* Surface) {
+  void Allocate(int nTotalSpecies_IN, int TotalSurfaceElementNumber_IN, int EXOSPHERE__SOURCE_MAX_ID_VALUE_IN,T* Surface) {
+    //copy the allocation parameters into the local variables that later are used in the flush() function
+    nTotalSpecies=nTotalSpecies_IN;
+    TotalSurfaceElementNumber=TotalSurfaceElementNumber_IN;
+    EXOSPHERE__SOURCE_MAX_ID_VALUE=EXOSPHERE__SOURCE_MAX_ID_VALUE_IN;
+
     //allocate the buffers for collecting the sodium surface density
     SurfaceElementDesorptionFluxUP=new double*[nTotalSpecies];
     SurfaceElementAdsorptionFluxDOWN=new double*[nTotalSpecies];
@@ -154,7 +200,6 @@ public :
       ElementSourceRate[spec]=ElementSourceRate[spec-1]+TotalSurfaceElementNumber;
     }
 
-
     SolarWindSurfaceFlux=new double[TotalSurfaceElementNumber];
 
     //allocate the extra surface data
@@ -163,14 +208,6 @@ public :
 #endif
 
     for (int el=0;el<TotalSurfaceElementNumber;el++) {
-      for (int spec=0;spec<nTotalSpecies;spec++) {
-        SurfaceElementDesorptionFluxUP[spec][el]=0.0;
-        SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
-        SurfaceElementPopulation[spec][el]=0.0;
-      }
-
-      SolarWindSurfaceFlux[el]=-1.0;
-
       SurfaceElementArea[el]=Surface->GetSurfaceElementArea(el);
       Surface->GetSurfaceElementNormal((SurfaceElementExternalNormal+el)->norm,el);
     }
@@ -189,8 +226,6 @@ public :
       for (el=0;el<TotalSurfaceElementNumber;el++) {
         SampleSpeciesSurfaceSourceRate[s][el]=SampleSpeciesSurfaceSourceRate[0][0]+offsetElement;
         offsetElement+=EXOSPHERE__SOURCE_MAX_ID_VALUE+1;
-
-        for (i=0;i<EXOSPHERE__SOURCE_MAX_ID_VALUE+1;i++) SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
       }
     }
 
@@ -200,10 +235,6 @@ public :
     for (offsetSpecie=0,s=0;s<nTotalSpecies;s++) {
       SampleSpeciesSurfaceAreaDensity[s]=SampleSpeciesSurfaceAreaDensity[0]+offsetSpecie;
       offsetSpecie+=TotalSurfaceElementNumber;
-
-      for (el=0;el<TotalSurfaceElementNumber;el++) {
-        SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
-      }
     }
 
     SampleSpeciesSurfaceReturnFlux=new double* [nTotalSpecies];
@@ -226,16 +257,12 @@ public :
       SampleInjectedFluxBulkSpeed[s]=SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
 
       offsetSpecie+=TotalSurfaceElementNumber;
-
-      for (el=0;el<TotalSurfaceElementNumber;el++) {
-        SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
-        SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
-
-        SampleReturnFluxBulkSpeed[s][el]=0.0;
-        SampleInjectedFluxBulkSpeed[s][el]=0.0;
-      }
     }
+
+    flush();
   }
+
+
 
 };
 
