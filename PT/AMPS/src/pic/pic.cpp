@@ -978,7 +978,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
   #if _INTERNAL_BOUNDARY_MODE_ == _INTERNAL_BOUNDARY_MODE_OFF_
       //do nothing
   #elif _INTERNAL_BOUNDARY_MODE_ ==  _INTERNAL_BOUNDARY_MODE_ON_
-      long int iSphericalSurface,nTotalSphericalSurfaces=PIC::BC::InternalBoundary::Sphere::InternalSpheres.usedElements();
+/*      long int iSphericalSurface,nTotalSphericalSurfaces=PIC::BC::InternalBoundary::Sphere::InternalSpheres.usedElements();
 //      PIC::BC::InternalBoundary::Sphere::cSurfaceDataSphere* Sphere;
 
       cInternalSphericalData *Sphere;
@@ -988,8 +988,8 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
         Sphere=PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(iSphericalSurface);
 
-        PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(Sphere);
-      }
+//        PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(Sphere);
+      }*/
 
 
   #else
@@ -1118,6 +1118,16 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
           fflush(stdout);
         }
       }
+
+      //flush sampled surface data
+      if (SamplingMode==_RESTART_SAMPLING_MODE_) {
+        for (iSphericalSurface=0;iSphericalSurface<nTotalSphericalSurfaces;iSphericalSurface++) {
+          cInternalSphericalData *Sphere=PIC::BC::InternalBoundary::Sphere::InternalSpheres.GetEntryPointer(iSphericalSurface);
+          PIC::BC::InternalBoundary::Sphere::flushCollectingSamplingBuffer(Sphere);
+        }
+
+      }
+      else exit(__LINE__,__FILE__,"Error: the surface sampling is implemented only for the case of SamplingMode==_RESTART_SAMPLING_MODE_");
 
 
 #else
