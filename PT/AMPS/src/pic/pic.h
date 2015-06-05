@@ -35,6 +35,16 @@ using namespace std;
 //the global model settings
 #include "picGlobal.dfn"
 
+//if the code is compiler for the nightly tests than a) turn the debug model ON, and b) turn on the dynamic domain decomposition based on the particle number
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  #undef _PIC_DEBUGGER_MODE_
+  #define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+
+  #undef _PIC_DYNAMIC_LOAD_BALANCING_MODE_
+  #define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
+#endif
+
+
 //load the macros that defined symbolic references to the species
 #include "picSpeciesMacro.dfn"
 
