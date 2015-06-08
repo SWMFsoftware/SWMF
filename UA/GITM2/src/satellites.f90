@@ -33,7 +33,7 @@ subroutine read_satellites(iError)
   use ModRCMR, only: RCMRFlag
   use ModSatellites
   use ModGITM, only: iUp_, iEast_, iNorth_
-  use ModInputs, only: iDebugLevel
+  use ModInputs, only: iDebugLevel,iCharLen_
   use ModConstants
 
   implicit none
@@ -71,6 +71,7 @@ subroutine read_satellites(iError)
      IsStartFound = .false.
 
      do while (.not. IsStartFound)
+        cLine = ""
         read(iSatUnit, *, iostat = iError) cLine
         if (iError /= 0) IsStartFound = .true.
         if (index(cline,"#START") > 0) IsStartFound = .true.
@@ -94,6 +95,7 @@ subroutine read_satellites(iError)
         else
            read(iSatUnit,*,iostat=iError) iTime, Pos
         endif
+
 
         if (iError == 0) then
 
