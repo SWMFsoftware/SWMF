@@ -1,4 +1,3 @@
-
 //$Id$
 
 
@@ -307,6 +306,13 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     }
 #else
     CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+    if (spec==_H_SPEC_) CharacteristicSpeed*=30.0;
+    if (spec==_O_SPEC_) CharacteristicSpeed*=10.0;
+    if (spec==_H2_SPEC_) CharacteristicSpeed*=10.0;
+    if (spec==_OH_SPEC_) CharacteristicSpeed*=5.0;
+#endif
+
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
@@ -539,7 +545,6 @@ int main(int argc,char **argv) {
 
   Comet::GetNucleusNastranInfo(CG);
 
-  //  for (int i=0;i<3;i++) xmin[i]*=6.0,xmax[i]*=6.0;
   for (int i=0;i<3;i++) xmin[i]=-100.0e3,xmax[i]=100.0e3;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
@@ -640,7 +645,7 @@ int main(int argc,char **argv) {
 
       PIC::CPLR::DATAFILE::SaveBinaryFile("CG-BATSRUS");
     }
-
+  
 
   //test the shadow procedure
   double subSolarPointAzimuth=0.0;
@@ -669,14 +674,26 @@ int main(int argc,char **argv) {
 
   PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=localParticleInjectionRate;
 
-  /*  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
-  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO_SPEC_);
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-  for (int s=0;s<PIC::nTotalSpecies;s++) if (_DUST_SPEC_<=s && s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
-#endif
-  */
-
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_OFF_
   for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+#else  
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
+  PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO2_SPEC_);
+
+  //init weight of the daugter products of the photolytic and electron impact reactions 
+  for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
+      double yield=0.0;
+      
+      /*      yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*
+	      (PhotolyticReactions::H2O::GetSpeciesReactionYield(spec)+ElectronImpact::H2O::GetSpeciesReactionYield(spec,20.0));*/
+      
+      yield+=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_]*
+  	(PhotolyticReactions::H2O::GetSpeciesReactionYield(spec));
+      
+      yield/=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_H2O_SPEC_];
+      PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(spec,_H2O_SPEC_,yield);
+    }
+#endif  
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;

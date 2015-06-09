@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "PhotolyticReactions.h"
 #include "Exosphere.h"
 #include "CG-BC.h"
 #include "Gravity.h"
@@ -65,6 +66,18 @@ namespace Comet {
   void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
   void GetGravityAcceleration(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+  namespace LossProcesses {
+   extern double PhotolyticReactionRate,ElectronImpactRate,ElectronTemeprature;
+
+   //the constant of the artificial increase of the primary species loss
+   //the modification of the rate is compensated by the appropricate particle weight of the daugher products and
+   //probabilities of the destruction of the primary species
+   const double NumericalLossRateIncrease=1000.0; //1000.0
+
+   double ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+   int ExospherePhotoionizationReactionProcessor(double *xInit,double *xFinal,double *vFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+  }
 
   //the condition for begining of the dust trajectory tracking
   namespace TrajectoryTracking {
@@ -187,7 +200,8 @@ namespace Comet {
            
   //Test: no acceleration:
     memcpy(accl,accl_LOCAL,3*sizeof(double));
-    return;}
+    return;
+}
       
 #endif
 
