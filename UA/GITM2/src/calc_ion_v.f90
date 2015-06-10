@@ -14,11 +14,11 @@ subroutine calc_ion_v(iBlock)
   integer :: imax, jmax, kmax, iError, iDir
   real    :: maxi
 
-  real, dimension(1:nLons,1:nLats,1:nAlts) ::           &
+  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2) ::           &
                   B02, ForceDotB, Nie, RhoNu, IRho, &
                   VIParallel, VNParallel, gDotB, gpDotB, UDotB
 
-  real, dimension(1:nLons, 1:nLats, 1:nAlts, 3) ::           &
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) ::           &
                   LocPressGrad, Force, BLocal, & ! AGB: moved PressureGradient to ModGitm
                   ForceCrossB, ForcePerp
 
@@ -33,10 +33,11 @@ subroutine calc_ion_v(iBlock)
   if (iDebugLevel > 4) write(*,*) "=====> pressure gradient", iproc
 
   Pressure_G = IPressure(:,:,:,iBlock)+ePressure(:,:,:,iBlock)
-  call UAM_Gradient(Pressure_G, LocPressGrad, iBlock)
+  call UAM_Gradient_GC(Pressure_G, LocPressGrad, iBlock)
 
   PressureGradient(:,:,:,:,iBlock) = LocPressGrad
-  PressureGradient(:,:,nAlts,iUp_,iBlock) = PressureGradient(:,:,nAlts-1,iUp_,iBlock)
+!  PressureGradient(:,:,nAlts+1,iUp_,iBlock) = PressureGradient(:,:,nAlts,iUp_,iBlock)
+!  PressureGradient(:,:,nAlts+2,iUp_,iBlock) = PressureGradient(:,:,nAlts,iUp_,iBlock)
 
   if (Is1D) then
      PressureGradient(:,:,:,iEast_,iBlock) = 0.0
@@ -45,36 +46,36 @@ subroutine calc_ion_v(iBlock)
 
   Force = 0.0
 
-  IRho = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * &
-       MeanIonMass(1:nLons,1:nLats,1:nAlts)
+  IRho = IDensityS(:,:,:,ie_,iBlock) * &
+       MeanIonMass(:,:,:)
 
   if (UseIonPressureGradient) Force = Force - PressureGradient(:,:,:,:,iBlock)
 
   if (UseIonGravity) then
-     do iAlt = 1, nAlts
+     do iAlt = -1, nAlts+2
         Force(:,:,iAlt,iUp_) = Force(:,:,iAlt,iUp_) + &
-             IRho(:,:,iAlt) * Gravity_GB(1:nLons,1:nLats,iAlt,iBlock)
+             IRho(:,:,iAlt) * Gravity_GB(:,:,iAlt,iBlock)
      enddo
   endif
 
-  Nie = IDensityS(1:nLons,1:nLats,1:nAlts,ie_,iBlock) * Element_Charge
+  Nie = IDensityS(:,:,:,ie_,iBlock) * Element_Charge
 
-  BLocal = B0(1:nLons,1:nLats,1:nAlts,1:3,iBlock)
-  B02 = B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)**2
+  BLocal = B0(:,:,:,1:3,iBlock)
+  B02 = B0(:,:,:,iMag_,iBlock)**2
 
   if (UseExB) then
      do iDir = 1, 3
         Force(:,:,:,iDir) = Force(:,:,:,iDir) + &
-             Nie * EField(1:nLons,1:nLats,1:nAlts,iDir)
+             Nie * EField(:,:,:,iDir)
      enddo
   endif
 
-  RhoNu = IRho * Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
+  RhoNu = IRho * Collisions(:,:,:,iVIN_)
 
   if (UseNeutralDrag) then
      do iDir = 1, 3
         Force(:,:,:,iDir) = Force(:,:,:,iDir) + &
-             RhoNu * Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock)
+             RhoNu * Velocity(:,:,:,iDir,iBlock)
      enddo
   endif
 
@@ -82,8 +83,8 @@ subroutine calc_ion_v(iBlock)
 
   do iDir = 1, 3
      ForcePerp(:,:,:,iDir) = Force(:,:,:,iDir) - &
-          Force(:,:,:,iDir) * B0(1:nLons,1:nLats,1:nAlts,iDir,iBlock) / &
-          B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
+          Force(:,:,:,iDir) * B0(:,:,:,iDir,iBlock) / &
+          B0(:,:,:,iMag_,iBlock)
   enddo
 
   VIParallel = 0.0
@@ -91,57 +92,39 @@ subroutine calc_ion_v(iBlock)
 
   if (maxval(blocal) == 0) then
 
-     IVelocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) = &
-          Velocity(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) + &
-          (Gravity_GB(1:nLons, 1:nLats, 1:nAlts, iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iUp_,iBlock) / IRho) / &
-          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_))
+     IVelocity(:,:,:,iUp_,iBlock) = &
+          Velocity(:,:,:,iUp_,iBlock) + &
+          (Gravity_GB(:,:,:, iBlock) - &
+          (PressureGradient(:,:,:,iUp_,iBlock) / IRho) / &
+          Collisions(:,:,:,iVIN_))
 
-     IVelocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) = &
-          Velocity(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iEast_,iBlock) / IRho) / &
-          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
+     IVelocity(:,:,:,iEast_,iBlock) = &
+          Velocity(:,:,:,iEast_,iBlock) - &
+          (PressureGradient(:,:,:,iEast_,iBlock) / IRho) / &
+          Collisions(:,:,:,iVIN_)
 
-     IVelocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) = &
-          Velocity(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) - &
-          (PressureGradient(1:nLons,1:nLats,1:nAlts,iNorth_,iBlock) / IRho) / &
-          Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
+     IVelocity(:,:,:,iNorth_,iBlock) = &
+          Velocity(:,:,:,iNorth_,iBlock) - &
+          (PressureGradient(:,:,:,iNorth_,iBlock) / IRho) / &
+          Collisions(:,:,:,iVIN_)
          
   else
 
-  UDotB = sum(Velocity(1:nLons,1:nLats,1:nAlts,:,iBlock) * BLocal, dim=4)/ &
-       B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
-  gpDotB = sum(PressureGradient(1:nLons,1:nLats,1:nAlts,:,iBlock) * &
-       BLocal, dim=4) / B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
+  UDotB = sum(Velocity(:,:,:,:,iBlock) * BLocal, dim=4)/ &
+       B0(:,:,:,iMag_,iBlock)
+  gpDotB = sum(PressureGradient(:,:,:,:,iBlock) * &
+       BLocal, dim=4) / B0(:,:,:,iMag_,iBlock)
 
-  do iLon = 1,nLons
-     do iLat = 1,nLats
-        gDotB(iLon,iLat,:) = Gravity_GB(iLon, iLat, 1:nAlts, iBlock) &
-             * BLocal(iLon,iLat,1:nAlts,iUp_) &
-             /     B0(iLon,iLat,1:nAlts,iMag_,iBlock)
+  do iLon = -1,nLons+2
+     do iLat = -1,nLats+2
+        gDotB(iLon,iLat,:) = Gravity_GB(iLon, iLat, :, iBlock) &
+             * BLocal(iLon,iLat,:,iUp_) &
+             /     B0(iLon,iLat,:,iMag_,iBlock)
      enddo
   enddo
 
   VIParallel = UDotB + &
-       ( gDotB - gpDotB / IRho) / Collisions(1:nLons,1:nLats,1:nAlts,iVIN_)
-
-!  write(*,*) VIParallel(1,1,49)
-
-!  do iDir = 1, 3
-!
-!     VIParallel = VIParallel + &
-!          Nie**2/RhoNu * ForceDotB * BLocal(:,:,:,iDir) &
-!          / (RhoNu**2 + Nie**2 * B02)
-!
-!     write(*,*) "Force: ", iDir, ForceDotB(1,1,40), VIParallel(1,1,40),&
-!          BLocal(1,1,40,iDir)/(RhoNu(1,1,40)**2 + Nie(1,1,40)**2 * B02(1,1,40))
-!
-!     if (UseNeutralDrag) then
-!        VNParallel = VNParallel + &
-!             Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) * &
-!             BLocal(:,:,:,iDir) / B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock)
-!     endif
-!  enddo
+       ( gDotB - gpDotB / IRho) / Collisions(:,:,:,iVIN_)
 
   ! Let's limit the Parallel Flow to something reasonable...
 ! AGB: Moved MaxVParallel to an input option
@@ -168,9 +151,9 @@ subroutine calc_ion_v(iBlock)
        Force(:,:,:,iNorth_) * BLocal(:,:,:,iEast_)
 
   do iDir = 1, 3
-     IVelocity(1:nLons,1:nLats,1:nAlts,iDir, iBlock) = &
+     IVelocity(:,:,:,iDir, iBlock) = &
           VIParallel*BLocal(:,:,:,iDir)/&
-          B0(1:nLons,1:nLats,1:nAlts,iMag_,iBlock) + &
+          B0(:,:,:,iMag_,iBlock) + &
           ( RhoNu * ForcePerp(:,:,:,iDir) &
           + Nie * ForceCrossB(:,:,:,iDir) &
           ) / (RhoNu**2 + Nie**2 * B02)
