@@ -220,7 +220,8 @@ contains
     allocate(b0_cD(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocks))
     allocate(b0_Be3(-1:nLons+2,-1:nLats+2,-1:nAlts+2,nBlocks))
     allocate(cMax_GDB(0:nLons+1,0:nLats+1,0:nAlts+1,3,nBlocks))
-    allocate(PressureGradient(1:nLons, 1:nLats, 1:nAlts, 3, nBlocks))
+    !!! change PressureGradient for calc_ion_v.f90
+    allocate(PressureGradient(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocks))
     allocate(Potential(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nBlocks))
     allocate(Velocity(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocks))
     allocate(IVelocity(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3, nBlocks))
