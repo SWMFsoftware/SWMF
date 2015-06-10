@@ -19,6 +19,8 @@
 !                                                         and added comments
 !           Asad, UMichigan, Feb 2013 - Added data reading capability to allow
 !                                       data assimilation
+!           Aaron, May 2015 - fixed some error with cLine. Needed iCharLen_ to
+!                             be used from ModInputs
 !
 ! Comments: Routines to handle satellite data in GITM.
 !
@@ -33,7 +35,7 @@ subroutine read_satellites(iError)
   use ModRCMR, only: RCMRFlag
   use ModSatellites
   use ModGITM, only: iUp_, iEast_, iNorth_
-  use ModInputs, only: iDebugLevel,iCharLen_
+  use ModInputs, only: iDebugLevel, iCharLen_
   use ModConstants
 
   implicit none
@@ -59,7 +61,8 @@ subroutine read_satellites(iError)
 
   do iSat = 1, nSats
 
-     if (iDebugLevel > 2) write(*,*) "Reading Satellite File : ",cSatFileName(iSat), iSat
+     if (iDebugLevel > 2) &
+          write(*,*) "Reading Satellite File : ",cSatFileName(iSat), iSat
 
      open(unit=iSatUnit,file=cSatFileName(iSat),status="old",iostat = iError)
 
@@ -95,7 +98,6 @@ subroutine read_satellites(iError)
         else
            read(iSatUnit,*,iostat=iError) iTime, Pos
         endif
-
 
         if (iError == 0) then
 
