@@ -229,3 +229,173 @@ subroutine logfile(dir)
   endif
 
 end subroutine logfile
+
+
+
+subroutine write_code_information(dir)
+
+  use ModGITM
+  use ModInputs
+  use ModTime
+  use ModMpi
+  use ModIndices
+  use ModIndicesInterfaces
+  use ModUtilities, ONLY: flush_unit
+
+  implicit none
+
+  character (len=*), intent(in) :: dir
+
+  integer, dimension(7) :: iTime
+
+  if (iProc == 0) then
+
+     call CON_io_unit_new(iCodeInfoFileUnit_)
+
+     open(unit=iCodeInfoFileUnit_, &
+          file=dir//"/run_information.txt",status="replace")
+
+     write(iCodeInfoFileUnit_,*) "GITM2 Run Information"
+     write(iCodeInfoFileUnit_,*) "---------------------"
+     write(iCodeInfoFileUnit_,*) "Inputs from UAM.in:"
+     write(iCodeInfoFileUnit_,*) ""
+
+     call time_real_to_int(StartTime, iTime)
+     write(iCodeInfoFileUnit_,*) "#TIMESTART"
+     write(iCodeInfoFileUnit_,*) iTimeArray(1)
+     write(iCodeInfoFileUnit_,*) iTimeArray(2)
+     write(iCodeInfoFileUnit_,*) iTimeArray(3)
+     write(iCodeInfoFileUnit_,*) iTimeArray(4)
+     write(iCodeInfoFileUnit_,*) iTimeArray(5)
+     write(iCodeInfoFileUnit_,*) iTimeArray(6)
+     write(iCodeInfoFileUnit_,*) ""
+
+     call time_real_to_int(EndTime, iTime)
+     write(iCodeInfoFileUnit_,*) "#TIMEEND"
+     write(iCodeInfoFileUnit_,*) iTimeArray(1)
+     write(iCodeInfoFileUnit_,*) iTimeArray(2)
+     write(iCodeInfoFileUnit_,*) iTimeArray(3)
+     write(iCodeInfoFileUnit_,*) iTimeArray(4)
+     write(iCodeInfoFileUnit_,*) iTimeArray(5)
+     write(iCodeInfoFileUnit_,*) iTimeArray(6)
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#GRID"
+     write(iCodeInfoFileUnit_,*) nBlocksLon
+     write(iCodeInfoFileUnit_,*) nBlocksLat
+     write(iCodeInfoFileUnit_,*) LatStart
+     write(iCodeInfoFileUnit_,*) LatEnd
+     write(iCodeInfoFileUnit_,*) LonStart
+     write(iCodeInfoFileUnit_,*) LonEnd
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#DIFFUSION"
+     write(iCodeInfoFileUnit_,*) UseDiffusion
+     write(iCodeInfoFileUnit_,*) EddyDiffusionCoef
+     write(iCodeInfoFileUnit_,*) EddyDiffusionPressure0
+     write(iCodeInfoFileUnit_,*) EddyDiffusionPressure1
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#THERMALCONDUCTION"
+     write(iCodeInfoFileUnit_,*) ThermalConduction_AO2
+     write(iCodeInfoFileUnit_,*) ThermalConduction_AO
+     write(iCodeInfoFileUnit_,*) ThermalConduction_s
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#PHOTOELECTRON"
+     write(iCodeInfoFileUnit_,*) PhotoElectronHeatingEfficiency_est
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#CFL"
+     write(iCodeInfoFileUnit_,*) cfl
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#F107"
+     write(iCodeInfoFileUnit_,*) f107
+     write(iCodeInfoFileUnit_,*) f107a
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#THERMO"
+     write(iCodeInfoFileUnit_,*) UseSolarHeating
+     write(iCodeInfoFileUnit_,*) UseJouleHeating
+     write(iCodeInfoFileUnit_,*) UseAuroralHeating
+     write(iCodeInfoFileUnit_,*) UseNOCooling
+     write(iCodeInfoFileUnit_,*) UseOCooling
+     write(iCodeInfoFileUnit_,*) UseConduction
+     write(iCodeInfoFileUnit_,*) UseTurbulentCond
+     write(iCodeInfoFileUnit_,*) UseUpdatedTurbulentCond
+     write(iCodeInfoFileUnit_,*) EddyScaling
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#FORCING"
+     write(iCodeInfoFileUnit_,*) UsePressureGradient
+     write(iCodeInfoFileUnit_,*) UseIonDrag
+     write(iCodeInfoFileUnit_,*) UseNeutralFriction
+     write(iCodeInfoFileUnit_,*) UseViscosity
+     write(iCodeInfoFileUnit_,*) UseCoriolis
+     write(iCodeInfoFileUnit_,*) UseGravity
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#APEX"
+     write(iCodeInfoFileUnit_,*) UseApex
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) "#AMIEFILES"
+     write(iCodeInfoFileUnit_,*) cAMIEFileNorth
+     write(iCodeInfoFileUnit_,*) cAMIEFileSouth
+     write(iCodeInfoFileUnit_,*) ""
+
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+     write(iCodeInfoFileUnit_,*) ""
+
+
+     write(iCodeInfoFileUnit_,'(a,L2)') "# Resart=", dorestart
+     write(iCodeInfoFileUnit_,'(4(a,f9.3))') "# Eddy coef: ", EddyDiffusionCoef, &
+          " Eddy P0: ",EddyDiffusionPressure0,&
+          " Eddy P1: ",EddyDiffusionPressure1,&
+          " Eddy Scaling: ",EddyScaling
+     write(iCodeInfoFileUnit_,'(2(a,L2))') "# Statistical Models Only: ", &
+          usestatisticalmodelsonly, " Apex: ",useApex
+     if (useEUVdata) then
+        write(iCodeInfoFileUnit_,'(a,L2,a)') "# EUV Data: ", useEUVdata, "File: ", &
+             cEUVFile
+     else
+        write(iCodeInfoFileUnit_,'(a,L2)') "# EUV Data: ", useEUVdata
+     endif
+     write(iCodeInfoFileUnit_,'(a,a15)') "# AMIE: ", cAmieFileNorth, cAmieFileSouth
+     write(iCodeInfoFileUnit_,'(3(a,L2))') "# Solar Heating: ",useSolarHeating, &
+          " Joule Heating: ",useJouleHeating, &
+          " Auroral Heating: ", useAuroralHeating
+     write(iCodeInfoFileUnit_,'(2(a,L2))') "# NO Cooling: ", useNOCooling, &
+          " O Cooling: ", useOCooling
+     write(iCodeInfoFileUnit_,'(3(a,L2))') "# Conduction: ",useConduction, &
+          " Turbulent Conduction: ", useTurbulentCond, &
+          " Updated Turbulent Conduction: ",useUpdatedTurbulentCond
+     write(iCodeInfoFileUnit_,'(3(a,L2))') "# Pressure Grad: ", &
+          usePressureGradient, " Ion Drag: ", useIonDrag, &
+          " Neutral Drag: ", useNeutralDrag
+     write(iCodeInfoFileUnit_,'(3(a,L2))') "# Viscosity: ", useViscosity,&
+          " Coriolis: ", useCoriolis, " Gravity: ",useGravity 
+     write(iCodeInfoFileUnit_,'(3(a,L2))') "# Ion Chemistry: ", useIonChemistry, &
+          " Ion Advection: ", useIonAdvection, " Neutral Chemistry: ", &
+          useNeutralChemistry
+
+  endif
+
+end subroutine write_code_information
