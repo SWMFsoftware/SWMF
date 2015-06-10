@@ -19,6 +19,7 @@ module ModInputs
   integer                   :: iRestartUnit_ = UnitTmp_
 
   integer                   :: iLogFileUnit_ = 92
+  integer                   :: iCodeInfoFileUnit_ = 93
   logical                   :: IsOpenLogFile = .false.
   real                      :: DtLogFile = 60.0
 
@@ -223,6 +224,13 @@ module ModInputs
   real :: PhotoElectronHeatingEfficiency = 0.0
 
   real :: KappaTemp0 = 5.6e-4
+  real :: ThermalConduction_AO2 = 3.6e-4
+  real :: ThermalConduction_AO  = 5.6e-4
+  real :: ThermalConduction_s   = 0.75
+  !! Pawlowski says AO2 = 3.6e-4 - 5.6e-4
+  !!                AO  = 5.6e-4 - 7.6e-4
+  !!                s   = 0.69 - 0.75
+
   real :: EddyDiffusionCoef = 0.0
   real :: EddyDiffusionPressure0 = 0.0
   real :: EddyDiffusionPressure1 = 0.0

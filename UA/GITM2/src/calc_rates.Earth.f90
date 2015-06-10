@@ -62,13 +62,13 @@ subroutine calc_rates(iBlock)
           (NDensityS(1:nLons,1:nLats,iAlt,iO2_,iBlock) / &
           NDensity(1:nLons,1:nLats,iAlt,iBlock) + &
           NDensityS(1:nLons,1:nLats,iAlt,iN2_,iBlock)/ &
-          NDensity(1:nLons,1:nLats,iAlt,iBlock)) * 3.6e-4 * &
+          NDensity(1:nLons,1:nLats,iAlt,iBlock)) * ThermalConduction_AO2 * &
           (Temperature(1:nLons,1:nLats,ialt,iBlock)* &
-          TempUnit(1:nLons,1:nLats,iAlt))**0.69 + &
+          TempUnit(1:nLons,1:nLats,iAlt))**ThermalConduction_s + &
           (NDensityS(1:nLons,1:nLats,iAlt,iO_3P_,iBlock)/&
-          NDensity(1:nLons,1:nLats,iAlt,iBlock)*5.6e-4) * &
+          NDensity(1:nLons,1:nLats,iAlt,iBlock)*ThermalConduction_AO) * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock) * &
-          TempUnit(1:nLons,1:nLats,iAlt))**0.69
+          TempUnit(1:nLons,1:nLats,iAlt))**ThermalConduction_s
         
      ViscCoef(1:nLons,1:nLats,iAlt) = 4.5e-5 * &
           (Temperature(1:nLons,1:nLats,iAlt,iBlock)*&

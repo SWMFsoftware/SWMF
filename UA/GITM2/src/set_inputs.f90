@@ -690,6 +690,19 @@ subroutine set_inputs
               write(*,*) "KappaTemp0    (thermal conductivity, real)"
            endif
 
+        case ("#THERMALCONDUCTION")
+           call read_in_real(ThermalConduction_AO2, iError)
+           call read_in_real(ThermalConduction_AO,  iError)
+           call read_in_real(ThermalConduction_s,   iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #THERMALCONDUCTION:'
+              write(*,*) ''
+              write(*,*) '#THERMALCONDUCTION'
+              write(*,*) "ThermalConduction_AO2 (Conduction A(O2): 3.6e-4, real)"
+              write(*,*) "ThermalConduction_AO  (Conduction A(O): 5.6e-4, real)"
+              write(*,*) "ThermalConduction_s   (Conduction s: 0.75, real)"
+           endif
+
         case ("#VERTICALSOURCES")
            call read_in_logical(UseEddyInSolver, iError)
            call read_in_logical(UseNeutralFrictionInSolver, iError)
