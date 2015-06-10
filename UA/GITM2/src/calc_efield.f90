@@ -23,9 +23,9 @@ subroutine calc_efield(iBlock)
   maxi = 0.0
 
   !!! This is only first order accurate for stretched grids ???
-  do k=1,nAlts
-     do i=1,nLats
-        do j=1,nLons
+  do k=0,nAlts+1
+     do i=0,nLats+1
+        do j=0,nLons+1
 
            EField(j,i,k,iEast_) = &
                -(Potential(j+1,i,k,iBlock)-Potential(j-1,i,k,iBlock))/ &
