@@ -9,21 +9,30 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   use ModConstants
   use ModTime
   use ModInputs
-
+  use ModUserGITM
+  
   implicit none
 
   integer, intent(in) :: iBlock
   real(kind=8), intent(in), dimension(nLons,nLats,nAlts) :: eHeatingp, iHeatingp, eHeatingm, iHeatingm, iHeating
  
-  real, dimension(nLons,nLats,0:nAlts+1) :: tn, te, ti, etemp, itemp, nn, ni, ne, nh, nhe, no, nn2, no2, ne_floor, sinI2
+  real, dimension(nLons,nLats,0:nAlts+1) :: tn, te, ti, etemp, itemp, nn, ni, ne, nh, nhe, no, nn2, no2, ne_floor,&
+       sinI2, sinI
   real, dimension(nLons,nLats,0:nAlts+1) :: nop, no2p, nn2p, nnop, nnp
   real, dimension(nLons,nLats,0:nAlts+1) :: nq, lam_e, lam_i, lam_op, lam_o2p, lam_n2p, lam_nop, lam_np
   real(kind=8), dimension(nLons,nLats,nAlts) :: eConduction, iConduction
-  real, dimension(nLons,nLats,-1:nAlts+2) :: alts 
+
+  real(kind=8), dimension(nLons,nLats,nAlts) :: eThermo=0.0, eHeatadv=0.0, eAdiab=0.0
+
+  real, dimension(nLons,nLats,0:nAlts+1) :: alts 
   real :: tipct = 1.1
 
+! calc thermoelectric currents                                                                                                              
+  real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2) :: PartialJPara
+  real, dimension(-1:nLons+2,-1:nLats+2) :: JParaAlt
+
 !!! For Electron Heat Flux
-  real, dimension(nLons,nLats) :: eflux                        ! W/m2 
+  real, dimension(nLons,nLats) :: eflux, mlats                    ! W/m2 
 
 !!!! Electron heat flux from Yue
 
@@ -36,12 +45,17 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
 
 ! for Tridiagnal solver
   real(kind=8), dimension(nAlts) :: a, b, c, d, u, testm     !
-  real(kind=8) :: zu, zl, lamu, laml, nne, tte, nni, tti
+  real(kind=8) :: zu, zl, lamu, laml, nne, tte, nni, tti, neu, nel, uiu, uil
   real(kind=8) :: xcoef, hcoef, fcoef, ilam, m
   
+  real, dimension(nLons,nLats,0:nAlts+1) :: uiup
+
   integer :: iLon, iLat, iAlt
 
   integer :: Ao=16, Ao2=32, An2=28, Ano=30, An=14
+
+!!!! Change the electron conductivity 
+
 
   tn = Temperature(1:nLons,1:nLats,0:nAlts+1,iBlock)*TempUnit(1:nLons,1:nLats,0:nAlts+1)
   nn = NDensity(1:nLons,1:nLats,0:nAlts+1,iBlock)
@@ -63,7 +77,10 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   nnop = IDensityS(1:nLons,1:nLats,0:nAlts+1,iNOP_,iBlock)
   nnp  = IDensityS(1:nLons,1:nLats,0:nAlts+1,iNP_,iBlock)
 
-  alts = Altitude_GB(1:nLons,1:nLats,:,iBlock)  
+  uiup = IVelocity(1:nLons,1:nLats,0:nAlts+1,iUp_,iBlock)
+  
+
+  alts = Altitude_GB(1:nLons,1:nLats,0:nAlts+1,iBlock)  
 
 !!!! Upper Boundary Conditions!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!![Reference: 1. J.T. Hastings and R.G. Roble, Planet. Space Sci., Vol.25, pp.209, 1977.  Equation(31)
@@ -120,8 +137,16 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
      enddo
   enddo
 
+
+ ! eflux = 1.e-9
+ ! mlats = MLatitude(1:nLons,1:nLats,nAlts,iBlock)
+ ! where(mlats .GE. 50. .AND. mlats .LE. -50.) eflux=1.e-5
+
+
 sinI2 =  (B0(1:nLons,1:nLats,0:nAlts+1,iUp_,iBlock)/B0(1:nLons,1:nLats,0:nAlts+1,iMag_,iBlock))**2
 where(sinI2 .LE. 0.01) sinI2=0.01
+sinI = sqrt(sinI2)
+
 
 te = eTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock)
 ti = iTemperature(1:nLons,1:nLats,0:nAlts+1,iBlock) 
@@ -139,8 +164,15 @@ lam_e = 7.7e5*te**2.5/(1+3.22e4*te**2/ne*nn*1.e-16)  !Unit: eV cm-1 from Schunk 
 lam_e = lam_e *1.602e-19*100                      !Unit: J m-1
 lam_e = lam_e * sinI2
 
-! Use tri-diagnal solver to solve the equation
 
+JParaAlt = 0.0
+PartialJPara = 0.0
+
+call calc_thermoelectric_current
+UserData3D(:,:,:,2,iBlock) = 0.0
+UserData3D(1:nLons,1:nLats,nAlts,2,iBlock) = JParaAlt(1:nLons,1:nLats)
+
+! Use tri-diagnal solver to solve the equation
 do iLon = 1, nLons
    do iLat = 1, nLats 
       
@@ -152,6 +184,13 @@ do iLon = 1, nLons
          laml = lam_e(iLon,iLat,iAlt) - lam_e(iLon,iLat,iAlt-1)
          nne  = ne(iLon,iLat,iAlt) 
          tte  = te(iLon,iLat,iAlt)
+
+         neu = ne(iLon,iLat,iAlt+1) - ne(iLon,iLat,iAlt)
+         nel = ne(iLon,iLat,iAlt) - ne(iLon,iLat,iAlt-1)
+
+         uiu = uiup(iLon,iLat,iAlt+1) - uiup(iLon,iLat,iAlt)
+         uil = uiup(iLon,iLat,iAlt) - uiup(iLon,iLat,iAlt-1)
+
          ilam = lam_e(iLon,iLat,iAlt)
 
          hcoef = zu*zl*(zu+zl)  
@@ -166,6 +205,64 @@ do iLon = 1, nLons
          eConduction(iLon,iLat,iAlt) = c(iAlt)*te(iLon,iLat,iAlt+1) + &
               a(iAlt)*te(iLon,iLat,iAlt+1) + &
               (-2*ilam/hcoef*(zu+zl) + fcoef*(zu**2-zl**2))*tte
+
+
+         if (abs(MLatitude(iLon,iLat,nAlts,iBlock)) .GE. 45.) then
+
+            eThermo(iLon,iLat,iAlt) = &
+                 5./2.*Boltzmanns_Constant &
+                 /Element_Charge &
+                 *JParaAlt(iLon,iLat) &
+                 * ((te(iLon,iLat,iAlt+1)-te(iLon,iLat,iAlt))  *zl**2 &
+                 +  (te(iLon,iLat,iAlt)  -te(iLon,iLat,iAlt-1))*zu**2)/hcoef
+
+            eHeatadv(iLon,iLat,iAlt) = eThermo(iLon,iLat,iAlt)/5.*3.
+
+
+            eAdiab(iLon,iLat,iAlt) = &
+                 - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
+                 /nne/Element_Charge * tte *&
+                 (zl**2*neu+zu**2*nel)/hcoef
+
+
+!!!! use thermoelectric heating                                                
+
+            a(iAlt) = a(iAlt)-4*Boltzmanns_Constant &
+                 /Element_Charge &
+                 *JParaAlt(iLon,iLat)*zu**2/hcoef   
+            !     *sinI(iLon,iLat,iAlt)
+
+            !     +1.5*nne*Boltzmanns_Constant* &
+            !     uiup(iLon,iLat,iAlt) &
+            !     *zu**2/hcoef
+
+            b(iAlt) = b(iAlt) + 4*Boltzmanns_Constant &
+                 /Element_Charge * &
+                 JParaAlt(iLon,iLat)*(zu**2-zl**2)/hcoef & 
+            !     *sinI(iLon,iLat,iAlt) &
+
+                 - Boltzmanns_Constant * JParaAlt(iLon,iLat) &
+                 /nne/Element_Charge * &
+                 (zl**2*neu+zu**2*nel)/hcoef 
+                 
+            !     - Boltzmanns_Constant * nne * &
+            !     (zl**2*uiu+zu**2*uil)/hcoef &
+
+            !     - 1.5*nne*Boltzmanns_Constant* &
+            !     uiup(iLon,iLat,iAlt) * &
+            !     (zu**2-zl**2)/hcoef
+
+
+            c(iAlt) = c(iAlt)+4*Boltzmanns_Constant &
+                 /Element_Charge &
+                 *JParaAlt(iLon,iLat)*zl**2/hcoef 
+            !     *sinI(iLon,iLat,iAlt)
+                 
+            !     -1.5*nne*Boltzmanns_Constant* &
+            !     uiup(iLon,iLat,iAlt) &
+            !     *zl**2/hcoef
+                                   
+         endif
 
       enddo
 
@@ -256,14 +353,13 @@ do iLon = 1, nLons
          c(iAlt) = 2*ilam/hcoef*zl + fcoef*zl**2
          d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
 
-
          if (iAlt .EQ. nAlts) then
             a(iAlt) = 0.
             b(iAlt) = -xcoef - iHeatingp(iLon,iLat,iAlt)
             c(iAlt) = 0.
             d(iAlt) = -xcoef*tti - iHeatingm(iLon,iLat,iAlt)
          endif
-
+         
 
          iConduction(iLon,iLat,iAlt) = c(iAlt)*ti(iLon,iLat,iAlt+1) + &
               a(iAlt)*ti(iLon,iLat,iAlt+1) + &
@@ -330,6 +426,65 @@ contains
     
   end subroutine tridag
    
+
+!--------- calculate thermoelectric FAC currents-------                         
+
+  Subroutine calc_thermoelectric_current
+
+    real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2,3) :: iVelo, eVelo
+    real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2,3) :: JuTotal, OverB0
+    real, dimension(-1:nLons+2,-1:nLats+2,-1:nAlts+2) :: DivJPerp, JuTotalDotB
+    real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: &
+       Gradient_GC
+
+    integer :: iDir
+
+    iVelo = IVelocity(:,:,:,:,iBlock)
+    eVelo = ExB(:,:,:,:)
+    
+    JuTotal = 0.0
+
+    do iDir = 1, 3
+       JuTotal(:,:,:,iDir) = IDensityS(:,:,:,ie_,iBlock)*Element_Charge* &
+            (iVelo(:,:,:,iDir)-eVelo(:,:,:,iDir))
+
+       OverB0(:,:,:,iDir) = B0(:,:,:,iDir,iBlock)/B0(:,:,:,iMag_,iBlock)**2
+    enddo
+
+     do iAlt = -1, nAlts+2
+        do iLat = -1, nLats+2
+           do iLon = -1, nLons+2
+              JuTotalDotB(iLon, iLat, iAlt) = sum( &
+                   JuTotal(iLon,iLat,iAlt,1:3)* &
+                   B0(iLon,iLat,iAlt,1:3,iBlock))
+           enddo
+        enddo
+     enddo
+
+
+    DivJPerp = 0.0
+    do iDir = 1, 3
+       call UAM_Gradient_GC(JuTotal(:,:,:,iDir), Gradient_GC, iBlock)
+       DivJPerp(:,:,:) = DivJPerp(:,:,:) + Gradient_GC(:,:,:,iDir)
+
+       call UAM_Gradient_GC(JuTotalDotB(:,:,:), Gradient_GC, iBlock)
+       DivJPerp(:,:,:) = DivJPerp(:,:,:) - Gradient_GC(:,:,:,iDir) &
+            *B0(:,:,:,iDir,iBlock)/B0(:,:,:,iMag_,iBlock)**2
+
+       call UAM_Gradient_GC(OverB0(:,:,:,iDir), Gradient_GC, iBlock)
+       DivJPerp(:,:,:) = DivJPerp(:,:,:) - Gradient_GC(:,:,:,iDir) &
+            *JuTotalDotB(:,:,:)
+    enddo
+
+    PartialJPara = - DivJPerp
+
+    JParaAlt = 0.0
+    do iAlt=1,nAlts
+       JParaAlt(:,:) = JParaAlt(:,:) - DivJPerp(:,:,iAlt)*dAlt_GB(:,:,iAlt,iBlock)
+    enddo
+
+  end Subroutine calc_thermoelectric_current
+
 end subroutine calc_electron_temperature
 
 subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm, iHeating)
@@ -354,7 +509,7 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
        tn, te, ti, temp, te_6000, te_exc, tn_exc, &
        nop, no2p, nn2p, nnop, nhp, nhep, nnp, &
        nu_oop, nu_nnp, nu_o2o2p, nu_o2op, nu_n2op, nu_n2o2p, &
-       nu_oo2p, nu_n2n2p, tr, dv2 
+       nu_oo2p, nu_n2n2p, tr, dv2, dv2_en, dv2_ei 
   real(kind=8), dimension(nLons,nLats,nAlts) :: Qphe, Qenc, Qeic, Qiec, &
        Qinc_t, Qinc_v, Qnic_t, Qnic_v, iAdvection, Qaurora, QprecipIon, &
        Qencp, Qeicp, Qiecp, Qinc_tp, Qrotp, Qfp, Qexcp, Qvib_o2p, Qvib_n2p, &
@@ -362,7 +517,7 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
        Qrot, Qf, Qeic_v, Qenc_v, Qexc, Qvib_o2, Qvib_n2
   real(kind=8), dimension(nLons,nLats,nAlts) :: x, epsilon, logx
   real(kind=8), dimension(nLons,nLats,nAlts) :: dz_u, dz_l
-  real(kind=8), dimension(nLons,nLats,-1:nAlts+2) :: alts 
+  real(kind=8), dimension(nLons,nLats,nAlts) :: alts 
 
 ! for O2 vibration
   real(kind=8), dimension(nLons,nLats,nAlts,10) :: Q0v
@@ -426,7 +581,7 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   nhep = IDensityS(1:nLons,1:nLats,1:nAlts,iHeP_,iBlock)
   nnp  = IDensityS(1:nLons,1:nLats,1:nAlts,iNP_,iBlock)
  
-  alts = Altitude_GB(1:nLons,1:nLats,:,iBlock)
+  alts = Altitude_GB(1:nLons,1:nLats,1:nAlts,iBlock)
 
  where(ti .LE. tn) ti = tn*1.0001
  where(te .LE. tn) te = tn*1.0001
@@ -448,10 +603,13 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
    epsilon = exp(5.342 + 1.056*logx -4.392e-2*logx**2 -5.9e-2*logx**3 -9.346e-3*logx**4 &
         -5.755e-4*logx**5 - 1.249e-5*logx**6) * 1.6e-19
 
+ !!! change epsilon  
+!   where(alts .LE. 20000.) epsilon = 0.0001
+
    Qphe = epsilon * ( &
         EuvIonRateS(:,:,:,iO_4SP_,iBlock)*no  &
         + EuvIonRateS(:,:,:,iO2P_,iBlock)*no2  &
-        + EuvIonRateS(:,:,:1,iN2P_,iBlock)*nn2  &
+        + EuvIonRateS(:,:,:,iN2P_,iBlock)*nn2  &
         + EuvIonRateS(:,:,:,iNP_,iBlock)*nnr  &
         + EuvIonRateS(:,:,:,iNOP_,iBlock)*nno  &
         + EuvIonRateS(:,:,:,iO_2DP_,iBlock)*no  &
@@ -523,20 +681,38 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   Qencm = Qencp * tn
 
 
- !  dv2_en = 0.0
- !  do iDir = 1, 3
- !     dv2_en = dv2_en + (Velocity(1:nLons,1:nLats,0:nAlts+1,iDir,iBlock) &
- !             -EVelocity(1:nLons,1:nLats,0:nAlts+1,iDir))**2
- !  enddo
+   dv2_en = 0.0
+   do iDir = 1, 3
+      dv2_en = dv2_en + (Velocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) &
+              -ExB(1:nLons,1:nLats,1:nAlts,iDir))**2
+   enddo
 
 
- !  Qenc_v = ne*Mass_Electron*dv2_en*  &
- !         ( 2.33e-11 * nn2 * 1.e-6 * (1 - 1.21e-4 * te)* te * Mass(iN2_)/ (Mass_Electron + Mass(iN2_))         &
- !        + 1.82e-10 * no2 * 1.e-6 * (1 + 3.60e-2 * te**0.5) * te**0.5 * Mass(iO2_) / (Mass_Electron + Mass(iO2_))         &
- !        + 8.90e-11 * no  * 1.e-6 * (1 + 5.70e-4 * te) * te**0.5  * Mass(iO2_) / (Mass_Electron + Mass(iO_3P_))     &
+   Qenc_v = ne*Mass_Electron*dv2_en*  &
+          ( 2.33e-11 * nn2 * 1.e-6 * (1 - 1.21e-4 * te)* te * Mass(iN2_)/ (Mass_Electron + Mass(iN2_))         &
+         + 1.82e-10 * no2 * 1.e-6 * (1 + 3.60e-2 * te**0.5) * te**0.5 * Mass(iO2_) / (Mass_Electron + Mass(iO2_))         &
+         + 8.90e-11 * no  * 1.e-6 * (1 + 5.70e-4 * te) * te**0.5  * Mass(iO2_) / (Mass_Electron + Mass(iO_3P_))     &
  ! !      +  4.6e-10  * nhe * 1.e-6 * te**0.5  / (Mass_Electron + Mass(iH_)) + &
  ! !      +  4.5e-9   * nh  * 1.e-6 * (1 - 1.35e-4 * te) * te**0.5  / (Mass_Electron + Mass(iHe_))  &
- !         )
+          )
+
+
+   dv2_ei = 0.0
+   do iDir = 1, 3
+      dv2_ei = dv2_ei + (IVelocity(1:nLons,1:nLats,1:nAlts,iDir,iBlock) &
+           -ExB(1:nLons,1:nLats,1:nAlts,iDir))**2
+   enddo
+
+  Qeic_v = ne*Mass_Electron*dv2_ei* 5.45*1.e-5/(te**1.5) * (nop+no2p+nn2p+nnop+nnp)
+!        (nop/(Mass_Electron+MassI(iO_4SP_))  &
+!       + no2p/(Mass_Electron+MassI(iO2P_))   &
+!       + nn2p/(Mass_Electron+MassI(iN2P_))   &
+!       + nnop/(Mass_Electron+MassI(iNOP_))   &
+!  !    + nhp/(Mass_Electron+MassI(iHP_))   &                                                                                                                          
+!  !    + nhep/(Mass_Electron+MassI(iHeP_))   &                                                                                                                      !  
+!       + nnp/(Mass_Electron+MassI(iNP_)) &
+!       )
+
 
 
 
@@ -743,10 +919,15 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
 
   if (UseJouleHeating .and. UseIonDrag) then
 
-     JouleHeating = (Qnic_t(:,:,1:nAlts) + Qnic_v(:,:,1:nAlts))/ &
+!     JouleHeating = (Qnic_t(:,:,1:nAlts) + Qnic_v(:,:,1:nAlts))/ &
+!          TempUnit(1:nLons,1:nLats,1:nAlts) / &
+!          cp(:,:,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
+      
+     JouleHeating = (Qnic_v(:,:,1:nAlts) * 2.)/ &
           TempUnit(1:nLons,1:nLats,1:nAlts) / &
           cp(:,:,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
-  else
+    
+ else
 
      JouleHeating = 0.0
 
@@ -756,7 +937,9 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
           TempUnit(1:nLons,1:nLats,1:nAlts) / &
           cp(:,:,1:nAlts,iBlock) / Rho(1:nLons,1:nLats,1:nAlts,iBlock)
 
-  eHeatingm  = Qphe + Qencm + Qeicm + Qrotm + Qf + Qexc + Qvib_o2 + Qvib_n2 + Qaurora + QprecipIon
+!!!!!!  Qaurora = 0.0
+
+  eHeatingm  = Qphe + Qencm + Qeicm + Qrotm + Qf + Qexc + Qvib_o2 + Qvib_n2 + Qaurora + QprecipIon + Qenc_v + Qeic_v
   eHeatingp  = Qencp + Qeicp + Qrotp
   iHeatingm = Qiecm + Qinc_tm + Qinc_v
   iHeatingp = Qiecp + Qinc_tp
