@@ -10,10 +10,13 @@ subroutine init_b0
 
   implicit none
 
+  integer, external :: jday
   real :: date, GeoLat, GeoLon, GeoAlt, ALat, ALon, LShell
   real :: xmag, ymag, zmag, r3, MagPot, bmag, MagneticPoleStrength, cD
   real, dimension(3) :: d1,d2,d3,e1,e2,e3
   integer :: iLat, iLon, iBlock, iAlt
+  character(128) :: apexfile
+  apexfile = 'UA/DataIn/apex_1970_2015.dat'
 
   ! We need to fill in the Ghost Cells for the NonChanging Variables, such
   ! as the Magnetic Field:
@@ -23,6 +26,9 @@ subroutine init_b0
 
   AltMinIono=(2*RadialDistance_GB(1,1,-1,1) - &
        RadialDistance_GB(1,1,1,1) - RBody)/1000.0
+
+  date = iStartTime(1) + float(iJulianDay)/float(jday(iStartTime(1),12,31))
+  call loadapxsh(apexfile,date)
 
   do iBlock=1,nBlocks
      if (nBlocks > 1 .and. iDebugLevel > 1) write(*,*) "==> Block : ", iBlock

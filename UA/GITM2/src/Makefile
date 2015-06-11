@@ -33,7 +33,8 @@ MODULES = \
 	ModGITMImplicit.o\
 	ModHwm.o\
 	ModUser.o \
-	ModRCMR.o
+	ModRCMR.o \
+	apexsh.o
 
 OBJECTS = \
 	planet.o\
@@ -87,7 +88,7 @@ OBJECTS = \
 	read_inputs.o\
 	add_sources.o\
 	calc_sources.o\
-	apex.o\
+	apex_routines.o\
 	write_output.o\
 	gradient.o\
 	tides.o\
