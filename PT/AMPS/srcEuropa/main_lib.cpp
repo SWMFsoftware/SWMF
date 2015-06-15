@@ -289,7 +289,7 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
      exit(__LINE__,__FILE__,error_message);
     }
 
-  return 0.02* 0.3*CellSize/CharacteristicSpeed;
+  return 0.2* 0.3*CellSize/CharacteristicSpeed;
 }
 #elif _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_ 
 //use the time step distribution for the nightly tests
@@ -340,7 +340,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
      exit(__LINE__,__FILE__,error_message);
     }
  
-    return 0.02* 0.3*CellSize/CharacteristicSpeed;
+    return 0.005* 0.3*CellSize/CharacteristicSpeed;
  }
 
 #endif
@@ -939,7 +939,7 @@ PIC::InitMPI();
 //	PIC::Parser::Run(inputFile);
 
 
-	const int InitialSampleLength=100;
+	const int InitialSampleLength=600;
 
 	//PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=1600;
 	//PIC::RequiredSampleLength=InitialSampleLength; //0;
