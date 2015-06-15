@@ -311,24 +311,28 @@ contains
   subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
        StateLeft_V, StateRight_V, Normal_D, HeatCondCoefNormal, HeatFlux)
 
+    use BATL_lib,        ONLY: Xyz_DGB
     use BATL_size,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure
     use ModFaceGradient, ONLY: get_face_gradient
     use ModPhysics,      ONLY: Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, InvGammaElectronMinus1
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ehot_
     use ModMultifluid,   ONLY: UseMultiIon, MassIon_I, ChargeIon_I, iRhoIon_I
     use ModUserInterface ! user_material_properties
     use ModMain,         ONLY: UseFieldLineThreads, nDim, nIJK_D
     use ModGeometry,     ONLY: far_field_BCs_BLK
     use ModParallel,     ONLY: NOBLK, NeiLev
+    use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
+         get_gamma_collisionless
+
     integer, intent(in) :: iDir, iFace, jFace, kFace, iBlock
     real,    intent(in) :: StateLeft_V(nVar), StateRight_V(nVar), Normal_D(3)
     real,    intent(out):: HeatCondCoefNormal, HeatFlux
 
     integer :: i, j, k, iP, iFace_D(3)
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
-    real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi
+    real :: FaceGrad_D(3), TeSi, CvL, CvR, CvSi, NumDensL, NumDensR, GammaTmp
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
 
@@ -407,20 +411,31 @@ contains
 
     ! get the heat conduction coefficient normal to the face for
     ! time step restriction
-    if(UseMultiIon)then
-       ! Heat flux is carried by electrons, for single fluid w/o the electron
-       ! equation, InvGammaElectronMinus1 = InvGammaMinus1
-       CvL = InvGammaElectronMinus1*sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
-       CvR = InvGammaElectronMinus1*sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
-    elseif(UseIdealEos)then
-       CvL = InvGammaElectronMinus1*StateLeft_V(Rho_)/TeFraction
-       CvR = InvGammaElectronMinus1*StateRight_V(Rho_)/TeFraction
+    if(UseIdealEos)then
+       if(UseMultiIon)then
+          NumDensL = sum(ChargeIon_I*StateLeft_V(iRhoIon_I)/MassIon_I)
+          NumDensR = sum(ChargeIon_I*StateRight_V(iRhoIon_I)/MassIon_I)
+       else
+          NumDensL = StateLeft_V(Rho_)/TeFraction
+          NumDensR = StateRight_V(Rho_)/TeFraction
+       end if
+       if(Ehot_ > 1 .and. UseHeatFluxCollisionless)then
+          call get_gamma_collisionless(Xyz_DGB(:,i,j,k,iBlock), GammaTmp)
+          CvL = NumDensL/(GammaTmp - 1)
+          CvR = NumDensR/(GammaTmp - 1)
+       else
+          ! Heat flux is carried by electrons, for single fluid w/o the
+          ! electron equation, InvGammaElectronMinus1 = InvGammaMinus1
+          CvL = InvGammaElectronMinus1*NumDensL
+          CvR = InvGammaElectronMinus1*NumDensR
+       end if
     else
        call user_material_properties(StateLeft_V, CvOut = CvSi)
        CvL = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
        call user_material_properties(StateRight_V, CvOut = CvSi)
        CvR = CvSi*Si2No_V(UnitEnergyDens_)/Si2No_V(UnitTemperature_)
     end if
+
     if(UseLeftStateOnly)then
        HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/CvL
     elseif(UseRightStateOnly)then
