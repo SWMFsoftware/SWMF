@@ -103,9 +103,13 @@ void PIC::CPLR::DATAFILE::Init() {
     case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
       KAMELEON::Init();
       break;
+
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
     case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
       BATSRUS::Init();
       break;
+#endif //  _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_
+
     default:
       exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
