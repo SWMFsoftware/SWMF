@@ -1,6 +1,6 @@
 #the makefile for the stand along test of AMPS' reading of the .idl files with BATL
 CWD=$(shell pwd)
-TEST_BATL_DIR=run_test_ices-reader
+TEST_BATL_DIR=run_test_batl-reader
 TEST_BATL_OUTFILES=test_batl-reader  
 
 test_BATL_help:
