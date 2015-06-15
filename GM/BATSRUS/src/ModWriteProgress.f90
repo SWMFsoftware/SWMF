@@ -244,9 +244,10 @@ subroutine write_runtime_values()
   end if
 
   call write_prefix
-  if (UseImplicit) then
-     write(iUnitOut,'(10X,a)') 'Implicit time stepping'
-  elseif(UseSemiImplicit)then
+  if(.not.UseImplicit .and. .not.UseSemiImplicit) &
+       write(iUnitOut,'(10X,a)') 'Explicit time stepping'
+  if (UseImplicit) write(iUnitOut,'(10X,a)') 'Implicit time stepping'
+  if (UseSemiImplicit)then
      if(UseSplitSemiImplicit)then
         write(iUnitOut,'(10X,a)') 'Split semi-implicit time stepping for '// &
              trim(TypeSemiImplicit)
@@ -254,9 +255,7 @@ subroutine write_runtime_values()
         write(iUnitOut,'(10X,a)') 'Semi-implicit time stepping for '// &
              trim(TypeSemiImplicit)
      end if
-  else
-     write(iUnitOut,'(10X,a)') 'Explicit time stepping'
-  end if
+  endif
 
   call write_prefix; write(iUnitOut,'(10x,a,i1)')   '    nStage: ', nStage
   call write_prefix
