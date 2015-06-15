@@ -84,6 +84,19 @@ namespace BATL {
   }
 }
 
+namespace TECPLOT {
+  const double rSphere=_ENCELADUS__RADIUS_;
+  double *xmin,*xmax;
+
+  double localResolution(double *x) {
+    double l=0.0;
+
+    for (int idim=0;idim<3;idim++) l+=pow(xmax[idim]-xmin[idim],2);
+
+    return sqrt(l)/20;
+  }
+}
+
 double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {return 1.0;}
 
 int main(int argc,char **argv) {
@@ -110,8 +123,6 @@ int main(int argc,char **argv) {
     break;
 
   case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
-    PIC::Mesh::mesh.init(xmin,xmax,BATL::localResolution);
-
     PIC::CPLR::DATAFILE::BATSRUS::Init("3d__mhd_1_n00000001.idl");
     PIC::CPLR::DATAFILE::BATSRUS::GetDomainLimits(xmin,xmax);
     PIC::CPLR::DATAFILE::BATSRUS::UnitLength=BATL::rSphere;
@@ -122,6 +133,36 @@ int main(int argc,char **argv) {
  
     //init the mesh object
     PIC::Mesh::mesh.init(xmin,xmax,BATL::localResolution);
+    break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
+    {
+      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_EUROPA__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(11,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=11;
+    }
+
+
+    //init the mesh object
+    for (int idim=0;idim<3;idim++) xmin[idim]=-5.0*_EUROPA__RADIUS_,xmax[idim]=5.0*_EUROPA__RADIUS_;
+    PIC::Mesh::mesh.init(xmin,xmax,TECPLOT::localResolution);
+
     break;
 
   default:
@@ -167,6 +208,11 @@ int main(int argc,char **argv) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_:
     PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile();
     sprintf(TestFileName,"%s/test_batl-reader.dat",PIC::OutputDataFileDirectory);
+    break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
+    PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted.plt");
+    sprintf(TestFileName,"%s/test_tecplot-reader.dat",PIC::OutputDataFileDirectory);
     break;
 
   default:
