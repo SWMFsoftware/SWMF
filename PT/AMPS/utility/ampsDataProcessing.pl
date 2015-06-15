@@ -3,6 +3,7 @@
 
 use strict;
 use warnings;
+use Fcntl qw(:flock SEEK_END);
 
 #the structure of the array FileMask: [mask,rm,preplot,send]  
 my @FileMask;
@@ -137,6 +138,15 @@ sub ProcessDataFiles {
       my $rm=$FileList[$i]{'rm'};
       my $send=$FileList[$i]{'send'};
       my $preplot=$FileList[$i]{'preplot'};
+      
+      #determine whether the file is complete and can be processes
+      if (-e $fname) {
+        if (! flock($fname, LOCK_EX)) {
+          next;
+        }
+        
+        flock($fname, LOCK_UN);
+      }
       
       #preplot the data file
       if ((-e $fname) && ($preplot == _TRUE_)) {
