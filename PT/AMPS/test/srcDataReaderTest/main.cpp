@@ -158,6 +158,7 @@ int main(int argc,char **argv) {
       PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=11;
     }
 
+    TECPLOT::xmin=xmin,TECPLOT::xmax=xmax;
 
     //init the mesh object
     for (int idim=0;idim<3;idim++) xmin[idim]=-5.0*_EUROPA__RADIUS_,xmax[idim]=5.0*_EUROPA__RADIUS_;
@@ -211,7 +212,7 @@ int main(int argc,char **argv) {
     break;
 
   case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
-    PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted.plt");
+    PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted-reduced.plt");
     sprintf(TestFileName,"%s/test_tecplot-reader.dat",PIC::OutputDataFileDirectory);
     break;
 
