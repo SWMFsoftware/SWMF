@@ -373,16 +373,20 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       FILE *fTrajectoryData;
       cTrajectoryDataRecord TrajectoryRecord;
       int GlobalTrajectoryNumber,ReadTrajectoryPoints=0;
+      int TrajectoryRecordLength=sizeof(cTrajectoryDataRecord);
 
       for (thread=0;thread<PIC::nTotalThreads;thread++) {
         for (nfile=0;nfile<nTrajectoryDataFiles[thread];nfile++) {
           sprintf(str,"%s/ParticleTrackerTmp/amps.ParticleTracker.thread=%i.out=%i.TrajectoryData.pt",PIC::OutputDataFileDirectory,thread,nfile);
 
+          fTrajectoryData=NULL;
           fTrajectoryData=fopen(str,"r");
-          fread(&length,sizeof(unsigned long int),1,fTrajectoryList);
+          if (fTrajectoryData==NULL) exit(__LINE__,__FILE__,"Error: cannot open file");
+
+          if (fread(&length,sizeof(unsigned long int),1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
 
           for (i=0;i<length;i++) {
-            fread(&TrajectoryRecord,sizeof(cTrajectoryDataRecord),1,fTrajectoryData);
+            if (fread(&TrajectoryRecord,TrajectoryRecordLength,1,fTrajectoryData)!=1) exit(__LINE__,__FILE__,"Error: file reading error");
             GlobalTrajectoryNumber=TrajectoryRecord.Trajectory.id+TrajectoryCounterOffset[TrajectoryRecord.Trajectory.StartingThread];
 
             if (GlobalTrajectoryNumber>=nTotalTracedTrajectories) exit(__LINE__,__FILE__,"Error: out of range");
