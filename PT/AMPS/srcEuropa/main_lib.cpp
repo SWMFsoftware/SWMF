@@ -340,7 +340,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
      exit(__LINE__,__FILE__,error_message);
     }
  
-    return 0.005* 0.3*CellSize/CharacteristicSpeed;
+    return 0.3*CellSize/CharacteristicSpeed;
  }
 
 #endif
