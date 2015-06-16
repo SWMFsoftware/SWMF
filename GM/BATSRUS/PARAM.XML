@@ -677,6 +677,38 @@ header files and can be given in PARAM.in as a check
 and as a description.
 </command>
 
+<command name="RESTARTVARIABLES">
+	 <parameter name="NameRestartVar" type="string" length="200"/>
+#RESTARTVARIABLES
+Rho Mx My Mz Bx By Bz p           NameRestartVar
+
+The NameRestartVar string contains a space separated list of variable names 
+that are stored in a restart file. This command is saved automatically
+into the restart files. Other then useful information about the content of
+the restart file, it is also needed for the #CHANGEVARIABLES command.
+
+The default assumption is that the restart file contains the same variables
+as the equation module that the code is compiled with.
+</command>
+
+<command name="CHANGEVARIABLES">
+	 <parameter name="DoChangeRestartVariables"  type="logical" default="F"/>
+
+#CHANGEVARIABLES
+T			DoChangeRestartVariables
+
+This command allows reading restart files that were produced with different 
+equation and user modules than what the restarted code is using. 
+If DoChangeRestartVariables is set to true, the code attempts to copy the 
+corresponding variables correctly. 
+This typically works if the restart file contains all the variables
+that the restarted code is using. See subroutine match\_copy\_restart\_variables
+in ModRestartFile.f90 for more detail.
+
+The default is to use the same variables and equation modules during restart.
+</command>
+
+
 <command name="PRECISION" if="$_IsFirstSession">
 	<parameter name="nByteReal" type="integer" input="select">
 		<option name="single precision" value="4" 
@@ -7816,7 +7848,7 @@ comments in src/ModRadiativeCooling.f90). Default value for UseRadCooling is
 
 </command>
 
-<command name-"FIELDLINETHREAD">
+<command name="FIELDLINETHREAD">
 	 <parameter name="UseFieldLineThreads" type="logical" default="F"/>
 	 <parameter name="nPointThreadMax" type="integer" default="45"/>
 	 <parameter name="DsThreadMin" type="real" default="0.002"/> 
@@ -7828,7 +7860,7 @@ T	UseFieldLineThreads
 
 </command>
 
-<command name-"THREADEDBC">
+<command name="THREADEDBC">
 	 <parameter name="UseAlignedVelocity" type="logical" default="T"/>
 	 <parameter name="DoConvergenceCheck" type="logical" default="F"/>
 	 <parameter name="TypeBc" type="string" input="select">
