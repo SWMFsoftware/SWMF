@@ -145,6 +145,21 @@ contains
        if(.not.DoResChangeOnly) call fix_boundary_ghost_cells
     end if
 
+    if(IsPeriodicWedge)then
+       do iBlock = 1, nBlock
+          if (Unused_B(iBlock)) CYCLE
+          ! Skip blocks not at the boundary !!!
+          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+             XyzSph_DD = rot_xyz_sph(Xyz_DGB(:,i,j,k,iBlock))
+             do iVector = 1, nVectorVar
+                iVar = iVectorVar_I(iVector)
+                State_VGB(iVar:iVar+2,i,j,k,iBlock) = &
+                     matmul(XyzSph_DD, State_VGB(iVar:iVar+2,i,j,k,iBlock))
+             end do
+          end do; end do; enddo
+       end do
+    end if
+
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
@@ -161,22 +176,6 @@ contains
 
        call calc_energy_ghost(iBlock, DoResChangeOnlyIn=DoResChangeOnlyIn)
     end do
-
-    if(IsPeriodicWedge)then
-       do iBlock = 1, nBlock
-          if (Unused_B(iBlock)) CYCLE
-          ! Skip blocks not at the boundary !!!
-          do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-             XyzSph_DD = rot_xyz_sph(Xyz_DGB(:,i,j,k,iBlock))
-             do iVector = 1, nVectorVar
-                iVar = iVectorVar_I(iVector)
-                State_VGB(iVar:iVar+2,i,j,k,iBlock) = &
-                     matmul(XyzSph_DD, State_VGB(iVar:iVar+2,i,j,k,iBlock))
-             end do
-          end do; end do; enddo
-       end do
-    end if
-
 
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)
