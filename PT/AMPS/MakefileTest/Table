@@ -36,5 +36,10 @@ Keys=-ices-path=/Users/dborovik/MyICES/ICES(0+srbwks73465-01)
 <#
 
 #>
+Name=test/tecplot-reader  
+Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
+<#
+
+#>
 Name=Rosetta 
 <#
