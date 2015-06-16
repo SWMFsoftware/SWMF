@@ -1530,7 +1530,6 @@ subroutine MH_set_parameters(TypeAction)
              ' but '//NameThisComp//' version is ',CodeVersion,' !!!'
 
      case("#CHANGEVARIABLES")
-        call check_stand_alone
         call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
 
      case("#EQUATION")
