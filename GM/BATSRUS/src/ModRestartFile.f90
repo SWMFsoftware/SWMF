@@ -385,7 +385,7 @@ contains
     write(UnitTmp_,'(i8,a32)')nVar,'nVar'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTARTVARIABLES'
-    write(UnitTmp_,'(a,a32)')NameVarCouple,'NameVarCouple'
+    write(UnitTmp_,'(a)') trim(NameVarCouple)
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nI,'nI'
