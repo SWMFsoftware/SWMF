@@ -297,25 +297,9 @@ contains
 
              ! Calculate dS/dU matrix elements with symmetric differencing
              do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
-                if (DoTestMe) then
-                   write(*,*) NameSub,': iJVar, jVar           =', iJVar, jVar
-                   write(*,*) NameSub,': DsDu_VVC              =', &
-                        DsDu_VVC(jVar, iVar, iTest,jTest,kTest)
-                   write(*,*) NameSub,': Source_VC, Source1_VC =', &
-                        Source_VC (jVar,iTest, jTest, kTest), &
-                        Source1_VC(jVar,iTest, jTest, kTest)
-                   write(*,*) NameSub,': Source_VC-Source1_VC  =', &
-                        Source_VC (jVar,iTest, jTest, kTest) - &
-                        Source1_VC(jVar,iTest, jTest, kTest)
-                end if
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
-                if (DoTestMe) then
-                   write(*,*) NameSub,': DsDu_VVC, Epsilon_C  =', &
-                        DsDu_VVC(jVar, iVar, iTest,jTest,kTest), &
-                        Epsilon_C(iTest, jTest, kTest)
-                end if
              end do
           end if
 
@@ -367,6 +351,13 @@ contains
           Matrix_II(iIVar,iIVar) = Matrix_II(iIVar,iIVar) + 1.0
 
        end do
+
+       if (DoTestCell) then
+          write(*,*) NameSub,': Matrix_II  ='
+          do iIVar = 1, nVarPointImpl
+             write(*,'(100es15.6)') Matrix_II(:,iIvar)
+          end do
+       end if
 
        ! Solve the A.dU = RHS equation
        call linear_equation_solver(nVarPointImpl, Matrix_II, Rhs_I)
