@@ -31,15 +31,19 @@ my @FinalApps;
 my $Name;
 my $Keys;
 my $Outs;
+#non-generic targets of tests 
+my @Tars=('','','','');
 #additional parameter to take into account location of input file
 my $PathName;
 
 
 #process table with test description
 while(@Table){
-    my $ref;
-    ($ref,$Name,$Keys,$Outs) = get_next_test(@Table);
-    @Table = @$ref;
+    my $refTable;
+    my $refTars;
+    ($refTable,$Name,$Keys,$Outs,$refTars) = get_next_test(@Table);
+    @Table   = @$refTable;
+    @Tars = @$refTars;
     $PathName=$Name;
     if($Name=~ m/(.*)\/(.*)$/){$Name=$2;}
     $Outs="test_$Name" unless($Outs);
@@ -60,11 +64,25 @@ while(@Table){
     }
     # application specific blocks
     my @lines = @App;
+    #index of target blocks(1-Compile,2-Rundir,3-Run,4-Check)
+    my $iTar = '';
     for (my $i = 0; $i<=@lines-1; $i++){
+	#substitute generic names with test's parameters
 	$lines[$i]=~s/<APP>/$Name/g;
 	$lines[$i]=~s/<APPPATH>/$PathName/g;
 	$lines[$i]=~s/<APPKEYS>/$Keys/g;
 	$lines[$i]=~s/<APPOUTS>/$Outs/g;
+	#check if inside a target block
+	$iTar='' unless($lines[$i]=~m/^\t(.*)/);
+	if($lines[$i]=~m/^test\_$Name\_compile:/&& $Tars[0]){$iTar=1;next;}
+	if($lines[$i]=~m/^test\_$Name\_rundir:/ && $Tars[1]){$iTar=2;next;}
+	if($lines[$i]=~m/^test\_$Name\_run:/    && $Tars[2]){$iTar=3;next;}
+	if($lines[$i]=~m/^test\_$Name\_check:/  && $Tars[3]){$iTar=4;next;}
+	if($iTar){
+	    #substitute the whole target
+	    $lines[$i]=$Tars[$iTar-1];
+	    $Tars[$iTar-1]='';
+	}
     }
     push(@FinalApps,@lines);
 }
@@ -101,6 +119,10 @@ sub get_next_test{
     my $nRemove=0;
     #test description
     my $Name=''; my $Keys=''; my $Outs='';
+    #target block flag
+    my $iTar='';
+    #non-generic target descriptions
+    my @Tars=('','','','');
     #error flag
     my $ErrorRead='';
     foreach my $line (@_){
@@ -119,8 +141,19 @@ sub get_next_test{
 		    $ErrorRead='1';
 		}
 	    }
-	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1," if($1);}
-	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1," if($1);}
+	    elsif($line =~ m/Keys=(.*)/){$Keys="$Keys$1,," if($1);}
+	    elsif($line =~ m/Outs=(.*)/){$Outs="$Outs$1,," if($1);}
+	    #non-generic target description header
+	    elsif($line =~ m/Compile=(.*)/){
+		$iTar = 1; $Tars[0].=',,' if $Tars[0];}
+	    elsif($line =~ m/Rundir=(.*)/ ){
+		$iTar = 2; $Tars[1].=',,' if $Tars[1];}
+	    elsif($line =~ m/Run=(.*)/    ){
+		$iTar = 3; $Tars[2].=',,' if $Tars[2];}
+	    elsif($line =~ m/Check=(.*)/  ){
+		$iTar = 4; $Tars[3].=',,' if $Tars[3];}
+	    #extract target description
+	    elsif($line =~ m/^>>>(.*)/){$Tars[$iTar-1].="\t$1\n"if($1);}
 	    else{$ErrorRead='1';}
 	}
 	if($line =~ m/^#>/){
@@ -130,10 +163,14 @@ sub get_next_test{
     }
     #remove processed lines
     splice(@_,0,$nRemove+1);
-    
+
     unless($ErrorRead){
-	my @Keys = split(/,/,$Keys) if($Keys);$Keys='';
-	my @Outs = split(/,/,$Outs) if($Outs);$Outs='';
+	my @Keys    = split(/,,/,$Keys)   if($Keys);   $Keys   ='';
+	my @Outs    = split(/,,/,$Outs)   if($Outs);   $Outs   ='';
+	my @Compile = split(/,,/,$Tars[0])if($Tars[0]);$Tars[0]='';
+	my @Rundir  = split(/,,/,$Tars[1])if($Tars[1]);$Tars[1]='';
+	my @Run     = split(/,,/,$Tars[2])if($Tars[2]);$Tars[2]='';
+	my @Check   = split(/,,/,$Tars[3])if($Tars[3]);$Tars[3]='';
 	unless($ErrorRead){
 	    #process parameters for this machine
 	    $Name = process_option($Name);
@@ -147,18 +184,37 @@ sub get_next_test{
 		$Out = process_option($Out);
 		$Outs="$Outs$Out " if($Out);
 	    }
-    }
-	(\@_,$Name,$Keys,$Outs);
+	    #process targets
+	    foreach my $Tar (@Compile){
+		$Tar    = process_option($Tar);
+		$Tars[0]= "$Tar"if($Tar);
+	    }
+	    foreach my $Tar (@Rundir){
+		$Tar    = process_option($Tar);
+		$Tars[1]= "$Tar"if($Tar);
+	    }
+	    foreach my $Tar (@Run){
+		$Tar    = process_option($Tar);
+		$Tars[2]= "$Tar"if($Tar);
+	    }
+	    foreach my $Tar (@Check){
+		$Tar    = process_option($Tar);
+		$Tars[3]= "$Tar"if($Tar);
+	    }
+
+	}
+	(\@_,$Name,$Keys,$Outs,\@Tars);
     }
     else{
-	(\@_,'','','');
+	@Tars=('','','','');
+	(\@_,'','','',\@Tars);
     }
 }
 
 sub process_option{
     my $Machines;
     my $OptionName=$_[0];
-    if($OptionName =~ m/(.*)\((.*)\)/){
+    if($OptionName =~ m/(.*)\t?\((.*)\)\n?/s){
 	# check if current machine is in the list of
 	$OptionName = $1;
 	$Machines   = $2;
