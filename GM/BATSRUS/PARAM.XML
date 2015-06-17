@@ -1021,6 +1021,17 @@ is saved into the restart files. These values are used by the
 Constrained Transport scheme.
 </command>
 
+<command name="RESTARTWITHFULLB">
+	 
+#RESTARTWITHFULLB
+
+This command is written by the code into the restart header file and indicates
+that the full magnetic field (B=B0+B1) was saved. In the past only B1 was saved.
+Saving the total field allows changing B0 during restart and also allows using
+the restart files without knowledge of B0. The current default is saving total B,
+so this command is always present in the current restart header files.
+</command>
+
 <command name="OUTERBOUNDARY">
 	<foreach name="Side" values="TypeBc1,TypeBc2,TypeBc3,TypeBc4,TypeBc5,TypeBc6">
 		<parameter name="$Side" type="string" input="select">
