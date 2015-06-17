@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPointImplicit
@@ -296,11 +297,26 @@ contains
 
              ! Calculate dS/dU matrix elements with symmetric differencing
              do iJVar = 1,nVarPointImpl; jVar = iVarPointImpl_I(iJVar)
+                if (DoTestMe) then
+                   write(*,*) NameSub,': iJVar, jVar           =', iJVar, jVar
+                   write(*,*) NameSub,': DsDu_VVC              =', &
+                        DsDu_VVC(jVar, iVar, iTest,jTest,kTest)
+                   write(*,*) NameSub,': Source_VC, Source1_VC =', &
+                        Source_VC (jVar,iTest, jTest, kTest), &
+                        Source1_VC(jVar,iTest, jTest, kTest)
+                   write(*,*) NameSub,': Source_VC-Source1_VC  =', &
+                        Source_VC (jVar,iTest, jTest, kTest) - &
+                        Source1_VC(jVar,iTest, jTest, kTest)
+                end if
                 DsDu_VVC(jVar,iVar,:,:,:) = DsDu_VVC(jVar,iVar,:,:,:) + &
                      0.5*(Source1_VC(jVar,:,:,:) - Source_VC(jVar,:,:,:)) &
                      /Epsilon_C
+                if (DoTestMe) then
+                   write(*,*) NameSub,': DsDu_VVC, Epsilon_C  =', &
+                        DsDu_VVC(jVar, iVar, iTest,jTest,kTest), &
+                        Epsilon_C(iTest, jTest, kTest)
+                end if
              end do
-
           end if
 
           !Restore unperturbed state
@@ -311,9 +327,8 @@ contains
        ! Restore unperturbed source
        Source_VC(1:nVar,:,:,:) = Source0_VC
 
-    
        IsPointImplPerturbed = .false.
-       
+
     end if
 
     if(DoTestMe)then
