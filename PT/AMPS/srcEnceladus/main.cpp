@@ -500,16 +500,26 @@ int main(int argc,char **argv) {
 
   PIC::CPLR::DATAFILE::ICES::SWMFdataPreProcessor=SWMFdataPreProcessor;
 
-  #ifdef _ICES_CREATE_COORDINATE_LIST_
-  #if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
-  PIC::CPLR::DATAFILE::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::DATAFILE::ICES::retriveSWMFdata("Enceladus");
-  #endif
-  #endif //_ICES_CREATE_COORDINATE_LIST_
+  //load the background data from a binary file is exists
+  //other extract the data from ICES
+  if (PIC::CPLR::DATAFILE::BinaryFileExists("ENCELADUS-BATSRUS")==true)  {
+    PIC::CPLR::DATAFILE::LoadBinaryFile("ENCELADUS-BATSRUS");
+  }
+  else {
+    #ifdef _ICES_CREATE_COORDINATE_LIST_
+    #if _ICES_CREATE_COORDINATE_LIST_ == _PIC_MODE_ON_
+    PIC::CPLR::DATAFILE::ICES::createCellCenterCoordinateList();
+    PIC::CPLR::DATAFILE::ICES::retriveSWMFdata("Enceladus");
+    #endif
+    #endif //_ICES_CREATE_COORDINATE_LIST_
 
-  PIC::CPLR::DATAFILE::ICES::readSWMFdata(1.0);
-//  PIC::CPLR::ICES::readDSMCdata();
-      cout << __FILE__<< "@" << __LINE__ << endl;
+    PIC::CPLR::DATAFILE::ICES::readSWMFdata(1.0);
+    //  PIC::CPLR::ICES::readDSMCdata();
+    cout << __FILE__<< "@" << __LINE__ << endl;
+
+    //save the loaded background data
+    PIC::CPLR::DATAFILE::SaveBinaryFile("ENCELADUS-BATSRUS");
+  }
 
 
   PIC::Mesh::mesh.outputMeshDataTECPLOT("ices.data.dat",0);
@@ -525,7 +535,7 @@ int main(int argc,char **argv) {
 
 
   //time step
-  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 250;
+  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 150;
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
      PIC::TimeStep();
@@ -542,7 +552,7 @@ int main(int argc,char **argv) {
 
   //output the particle statistics of the test run
   #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  sprintf(fname,"%s/amps.dat",PIC::OutputDataFileDirectory);
+  sprintf(fname,"%s/test_Enceladus.dat",PIC::OutputDataFileDirectory);
   PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   #endif
 
