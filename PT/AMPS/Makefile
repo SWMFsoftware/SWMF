@@ -40,11 +40,11 @@ ifneq ($(BATL),nobatl)
 	AMPSLINKLIB+=${BATL}/lib/libREADAMR.a
 	AMPSLINKER=${LINK.f90}
 
-ifeq ($(COMPILE.mpicxx),gfortran)  
+ifeq ($(COMPILE.f90),gfortran)  
 	SEARCH_F+= -J${BATL}/share/include 
-else ifeq ($(COMPILE.mpicxx),mpif90)
+else ifeq ($(COMPILE.f90),mpif90)
 	SEARCH_F+= -I${BATL}/share/include
-else ifeq  ($(COMPILE.mpicxx),ifort)
+else ifeq  ($(COMPILE.f90),ifort)
 	SEARCH_F+= -module ${BATL}/share/include
 endif
 
