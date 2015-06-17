@@ -31,7 +31,7 @@ T			DoSaveRestart
 
 #BODY
 T			UseBody
-1.001			rBody
+1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
 
