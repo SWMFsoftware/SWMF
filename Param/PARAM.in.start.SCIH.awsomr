@@ -135,16 +135,6 @@ stochasticheating	TypeHeatPartitioning
 F			UseConstantTau
 1e5			TauGlobalSi
 
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
-
 #HEATCONDUCTION
 T			UseHeatConduction
 spitzer			TypeHeatConduction
@@ -421,7 +411,7 @@ T                       UseWaveReflection
 
 #HEATPARTITIONING
 stochasticheating	TypeHeatPartitioning
-0.17			StochasticExponent
+0.34			StochasticExponent
 0.18			StochasticAmplitude
 
 #ANISOTROPICPRESSURE
