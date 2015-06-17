@@ -84,6 +84,6 @@ Compile=
 >>>cvs co SWMF
 >>>cd SWMF; ./Config.pl -install -compiler=${COMPILE.f90}; make LIB 
 >>>@echo "Install AMPS......"  
->>>./Config.pl -install -compiler=gfortran -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
+>>>./Config.pl -install -compiler=${COMPILE.f90} -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
 >>>make
 <#
