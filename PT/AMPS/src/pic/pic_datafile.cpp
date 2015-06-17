@@ -216,7 +216,7 @@ bool PIC::CPLR::DATAFILE::BinaryFileExists(const char *fNameBase) {
   FILE *fData=NULL;
   char fname[400];
 
-  sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",PIC::Mesh::mesh.getMeshSignature(),fNameBase);
+  sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",path,PIC::Mesh::mesh.getMeshSignature(),fNameBase);
   fData=fopen(fname,"r");
 
   if (fData!=NULL) {
@@ -235,7 +235,7 @@ void PIC::CPLR::DATAFILE::SaveBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     char fname[400];
-    sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",PIC::Mesh::mesh.getMeshSignature(),fNameBase);
+    sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",path,PIC::Mesh::mesh.getMeshSignature(),fNameBase);
 
     pipe.init(1000000);
 
@@ -333,7 +333,7 @@ void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     char fname[400];
-    sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",PIC::Mesh::mesh.getMeshSignature(),fNameBase);
+    sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeBackgroundData.bin",path,PIC::Mesh::mesh.getMeshSignature(),fNameBase);
 
     fData=fopen(fname,"r");
   }
