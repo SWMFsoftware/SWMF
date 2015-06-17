@@ -65,6 +65,11 @@ Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid
 <#
 
 #>
+Name=Enceladus 
+Keys=-cplr-data-path=${MYDIR}/data/input/Enceladus 
+<#
+
+#>
 Name=Rosetta 
 <#
 
