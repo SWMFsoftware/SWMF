@@ -3201,7 +3201,13 @@ contains
       HallUnLeft  = UnLeft_I(eFluid_)
       HallUnRight = UnRight_I(eFluid_)
 
-      if(UseAlfvenWaves) then
+      if(UseAlfvenWaves.and.UseAwSpeed) then
+         !\
+         ! In this case the propagation speed for 
+         ! Alfven waves equal to the Alvfen speed
+         ! may happen to be larger that the fast wave
+         ! speed in the "hat" state
+         !/
          FullBx = StateLeft_V(Bx_) + B0x
          FullBy = StateLeft_V(By_) + B0y
          FullBz = StateLeft_V(Bz_) + B0z
