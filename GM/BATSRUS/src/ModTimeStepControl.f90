@@ -287,10 +287,11 @@ contains
     use ModGeometry, ONLY: true_cell, true_BLK, XyzStart_BLK
     use ModImplicit, ONLY: UsePartImplicit
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, UnitX_, UnitU_, UnitT_, UnitB_, &
-         UnitRho_, Gamma
+         UnitRho_, UnitP_, Gamma
     use ModNumConst
     use ModMpi
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB
+
     real, intent(in) :: TimeSimulationLimit !Simulation time not to be exceeded
 
     integer :: iBlock
@@ -298,10 +299,12 @@ contains
     real    :: DtMinPe, Cmax, Cmax_C(nI,nJ,nK)
 
     logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
 
     call set_oktest('calc_timestep',DoTest,DoTestMe)
-    if(DoTestMe)write(*,*)'Starting set_global_timestep'
+    if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
+         TimeSimulationLimit
 
     if(UseDtFixed)then
        Dt = DtFixed
@@ -321,44 +324,46 @@ contains
        ! Set Dt to minimum time step over all the PE-s
        call MPI_allreduce(DtMinPE, Dt, 1, MPI_REAL, MPI_MIN, iComm, iError)
 
-       if(DoTest .and. DtMinPE==Dt)then
+       if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             if(Dt_BLK(iBlock)==Dt)then
-                write(*,*)'Time step Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
-                     ' s  is controlled by block with PE, iBlock=', &
-                     iProc, iBlock
-                write(*,*)'The coordinates of (1,1,1) cell center are ',&
-                     XyzStart_BLK(:,iBlock)
-                write(*,*)'Cell size Dx in normalized and SI units:',&
-                     CellSize_DB(x_,iBlock), ', ', &
-                     CellSize_DB(x_,iBlock)*No2Si_V(UnitX_),' m'
-                do k=1,nK; do j=1,nJ; do i=1,nI
-                   Cmax_C(i,j,k) = Gamma*State_VGB(P_,i,j,k,iBlock)
-                   if(UseB)CMax_C(i,j,k)=CMax_C(i,j,k)+&
-                        sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) 
-                   if(UseB0)CMax_C(i,j,k)=CMax_C(i,j,k)+&
-                        sum(B0_DGB(Bx_:Bz_,i,j,k,iBlock)**2) 
-                   CMax_C(i,j,k)=CMax_C(i,j,k)/&
-                        State_VGB(rho_,i,j,k,iBlock)
-                end do; end do; end do
-                Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
-                i=Ijk_D(1); j=Ijk_D(2); k=Ijk_D(3)
-                Cmax = sqrt(Cmax_C(i,j,k))
-                write(*,*)'Maximum perturbation speed =',Cmax*No2Si_V(UnitU_),&
-                     ' m/s is reached at X,Y,Z=',&
-                     Xyz_DGB(:,i,j,k,iBlock)
-                if(UseB0)write(*,*)'State variables at this point: B0:',&
-                     B0_DGB(:,i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     ' T'
-                if(UseB)write(*,*)'State variables at this point: B1:',&
-                     State_VGB(Bx_:Bz_,i,j,k,iBlock)*No2Si_V(UnitB_),&
-                     ' T'
-                write(*,*)'State variables at this point: Density=',&
-                     State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_),&
-                     ' kg/m3'
-                EXIT
-             end if
+             if(Dt_BLK(iBlock) /= Dt) CYCLE
+             write(*,*) NameSub, ' Dt=',Dt,'=', Dt*No2Si_V(UnitT_),&
+                  ' s  is controlled by block with iProc, iBlock=', &
+                  iProc, iBlock
+             write(*,*) NameSub, 'coordinates of (1,1,1) cell center are ',&
+                  XyzStart_BLK(:,iBlock)
+             write(*,*) NameSub, ' cell size in normalized and SI units:', &
+                  CellSize_DB(:,iBlock), ', ', &
+                  CellSize_DB(:,iBlock)*No2Si_V(UnitX_),' m'
+             do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                Cmax_C(i,j,k) = Gamma*State_VGB(P_,i,j,k,iBlock)
+                if(UseB)then
+                   if(UseB0)then
+                      Cmax_C(i,j,k) = Cmax_C(i,j,k) +           &
+                           sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                           +    B0_DGB(:,i,j,k,iBlock))**2    )
+                   else
+                      Cmax_C(i,j,k) = Cmax_C(i,j,k) + &
+                           sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) 
+                   end if
+                end if
+                CMax_C(i,j,k) = Cmax_C(i,j,k)/State_VGB(rho_,i,j,k,iBlock)
+             end do; end do; end do
+             Ijk_D = maxloc(Cmax_C, MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
+             i=Ijk_D(1); j=Ijk_D(2); k=Ijk_D(3)
+             Cmax = sqrt(Cmax_C(i,j,k))
+             write(*,*) NameSub, ' Cmax=',Cmax*No2Si_V(UnitU_),&
+                  ' m/s is reached at X,Y,Z=', Xyz_DGB(:,i,j,k,iBlock)
+             if(UseB0)write(*,*) NameSub,' B0=',&
+                  B0_DGB(:,i,j,k,iBlock)*No2Si_V(UnitB_), ' T'
+             if(UseB)write(*,*) NameSub, ' B1=',&
+                  State_VGB(Bx_:Bz_,i,j,k,iBlock)*No2Si_V(UnitB_), ' T'
+             write(*,*) NameSub,' Rho=',&
+                  State_VGB(Rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), ' kg/m3'
+             write(*,*) NameSub,' p=',&
+                  State_VGB(p_,i,j,k,iBlock)*No2Si_V(UnitP_), ' Pa'
+             EXIT
           end do
        end if
 
@@ -366,7 +371,7 @@ contains
 
     ! Limit Dt such that the simulation time cannot exceed TimeSimulationLimit.
     ! If statement avoids real overflow when TimeSimulationLimit = Huge(0.0)
-    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit)&
+    if(Time_Simulation + Cfl*Dt*No2Si_V(UnitT_) > TimeSimulationLimit) &
          Dt = (TimeSimulationLimit - Time_Simulation)*Si2No_V(UnitT_)/Cfl
 
     do iBlock = 1, nBlock
@@ -374,9 +379,7 @@ contains
 
        time_BLK(:,:,:,iBlock) = Dt
 
-       !\
        ! Reset time step to zero inside body.
-       !/
        if(.not.true_BLK(iBlock))then
           where(.not.true_cell(1:nI,1:nJ,1:nK,iBlock)) &
                time_BLK(:,:,:,iBlock) = 0.0
@@ -387,7 +390,7 @@ contains
     ! Set global time step to the actual time step used
     Dt = Cfl*Dt
 
-    if(DoTestMe)write(*,*)'Finished set_global_timestep with Dt=',Dt
+    if(DoTestMe)write(*,*) NameSub, ' finished with Dt=', Dt
 
   end subroutine set_global_timestep
 
