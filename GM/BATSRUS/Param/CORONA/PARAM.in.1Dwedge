@@ -125,35 +125,35 @@ turn these off when restarting
 #GRIDGEOMETRYLIMIT
 spherical_genr
 Param/CORONA/grid_TR.dat
-1.01			Coord1Min Radius
+1.001			Coord1Min Radius
 24.0			Coord1Max
-0.0			Coord2Min Longitude
-2.0			Coord2Max
+-1.0			Coord2Min Longitude
+1.0			Coord2Max
 -1.0			Coord3Min Latitude
-+1.0			Coord3Max
+1.0			Coord3Max
 
 #GRID
 32			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
 -100.0			xMin
- 100.0			xMax
+100.0			xMax
 -100.0			yMin
- 100.0			yMax
+100.0			yMax
 -100.0			zMin
- 100.0			zMax
+100.0			zMax
 
 ----------------------------------------------------
-
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
 
 #LIMITER
 T			UseLogRhoLimiter
