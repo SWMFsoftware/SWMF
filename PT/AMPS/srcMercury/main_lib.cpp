@@ -1137,15 +1137,39 @@ void amps_init_mesh() {
 //  {
 //    VT_TRACER("name");
 
-  if (PIC::Mesh::mesh.ThisThread==0) {
-    PIC::Mesh::mesh.buildMesh();
-    PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  bool NewMeshGeneratedFlag=false;
+  char mesh[200]="amr.bin";
+
+  FILE *fmesh=fopen(mesh,"r");
+
+  if (fmesh!=NULL) {
+    fclose(fmesh);
+    PIC::Mesh::mesh.readMeshFile(mesh);
   }
   else {
-    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-    PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    NewMeshGeneratedFlag=true;
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+       PIC::Mesh::mesh.buildMesh();
+       PIC::Mesh::mesh.saveMeshFile("mesh.msh");
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+    }
+    else {
+       MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+       PIC::Mesh::mesh.readMeshFile("mesh.msh");
+    }
   }
+
+
+  //  }
+  //  VT_USER_END("name");
+  //  MPI_Finalize();
+  //  return 1;
+
+  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
+
+ if (NewMeshGeneratedFlag==true) PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+
 
 //  }
 //  VT_USER_END("name");
@@ -1177,8 +1201,31 @@ void amps_init_mesh() {
   PIC::Mesh::mesh.checkMeshConsistency(PIC::Mesh::mesh.rootTree);
 #endif
 
+  //get the mesh signature
+  unsigned long MeshSignature;
+  MeshSignature=PIC::Mesh::mesh.getMeshSignature(); 
+
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
+
+  //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
+  if (NewMeshGeneratedFlag==true) {
+    unsigned long MeshSignature=PIC::Mesh::mesh.getMeshSignature();
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      char command[300];
+
+      sprintf(command,"mv mesh.msh amr.sig=0x%lx.mesh.bin",MeshSignature);
+      system(command);
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+
+  if (PIC::ThisThread==0) cout << "AMPS' Initialization is complete" << endl;
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 }
 
 void amps_init() {
@@ -1187,55 +1234,37 @@ void amps_init() {
   PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
-  //init ICES
-#ifdef _ICES_CREATE_COORDINATE_LIST_
-//  PIC::CPLR::ICES::createCellCenterCoordinateList();
-//  PIC::CPLR::ICES::SetLocationICES("/Users/vtenishe/CODES/ICES/Models");
-//  PIC::CPLR::ICES::retriveSWMFdata("MERCURY_RESTART_n070001"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
 
-  PIC::CPLR::ICES::createCellCenterCoordinateList();
-  PIC::CPLR::ICES::retriveSWMFdata(); //"Europa09"); //("RESTART_t001.52m"); //("MERCURY_RESTART_n070100");  ////("MERCURY_RESTART_n070001");
+  //load the background plasma data
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
 
-#endif
+  if (PIC::CPLR::DATAFILE::BinaryFileExists("MERCURY-BATSRUS")==true)  {
+    PIC::CPLR::DATAFILE::LoadBinaryFile("MERCURY-BATSRUS");
+  }
+  else {
 
+    double xminTECPLOT[3]={-32,-32,-32},xmaxTECPLOT[3]={16,32,32};
 
-  //#ifdef _ICES_LOAD_DATA_
-#if _PIC_COUPLER_MODE_ ==       _PIC_COUPLER_MODE__ICES_
-  PIC::CPLR::ICES::readSWMFdata(1.0);
-#endif
+    PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_RADIUS_(_TARGET_);
+    PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+    PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.0,50.0);
 
-  double xminTECPLOT[3]={-32,-32,-32},xmaxTECPLOT[3]={16,32,32};
+    PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+    PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+    PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(14,1.0E-9);
+    PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(11,1.0E-9);
+    PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6);
+    PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
+    PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__var_7_t00000200_n0300072.plt"); //data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt
 
+    PIC::CPLR::DATAFILE::SaveBinaryFile("MERCURY-BATSRUS");
+  }
+#else
+  exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
 
-
-  PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_RADIUS_(_TARGET_);
-  PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
-  PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.0,50.0);
-
-
-  PIC::CPLR::DATAFILE::LoadBinaryFile("data/input/Mercury/040915-Jia/SavedCellData.bin");
-//  PIC::CPLR::LoadCenterNodeAssociatedData("SavedAssociatedData.bin");
-
-
-/*
-  PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(13,1.0E-9);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(10,1.0E-9);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
-  PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
-  PIC::CPLR::DATAFILE::TECPLOT::ImportData("data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt"); //data/input/Mercury/040915-Jia/3d__var_7_t00000200_n0300072.plt
-*/
-
-
-
-/*  PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(4,1.0E3);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedPressureVariableData(10,1.0E-9);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(7,1.0E-9);
-  PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(3,1.0E6);
-  PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=14;
-  PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_2_n00000001.plt");*/
+#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
+#endif //_PIC_COUPLER_MODE_
 
   Mercury::Init_AfterParser();
 
