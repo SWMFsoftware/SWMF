@@ -2417,8 +2417,9 @@ namespace PIC {
         extern cOffsetElement PlasmaElectronPressure;
         extern cOffsetElement MagneticField;
         extern cOffsetElement ElectricField;
-        extern cOffsetElement GradientMagneticField;
-        extern cOffsetElement AbsoluteValueMagneticField;
+        extern cOffsetElement MagneticFieldGradient;
+        extern cOffsetElement MagneticFieldMagnitudeGradient;
+        extern cOffsetElement MagneticFieldMagnitude;
 
 
         inline void SetAllocate(bool flag,cOffsetElement* offset) {
@@ -2443,8 +2444,9 @@ namespace PIC {
           SetAllocate(flag,&PlasmaElectronPressure);
           SetAllocate(flag,&MagneticField);
           SetAllocate(flag,&ElectricField);
-          SetAllocate(flag,&GradientMagneticField);
-          SetAllocate(flag,&AbsoluteValueMagneticField);
+          SetAllocate(flag,&MagneticFieldGradient);
+          SetAllocate(flag,&MagneticFieldMagnitude);
+          SetAllocate(flag,&MagneticFieldMagnitudeGradient);
         }
 
         inline void SetActiveAll(bool flag) {
@@ -2455,8 +2457,9 @@ namespace PIC {
           SetActive(flag,&PlasmaElectronPressure);
           SetActive(flag,&MagneticField);
           SetActive(flag,&ElectricField);
-          SetActive(flag,&GradientMagneticField);
-          SetActive(flag,&AbsoluteValueMagneticField);
+          SetActive(flag,&MagneticFieldGradient);
+          SetActive(flag,&MagneticFieldMagnitude);
+          SetActive(flag,&MagneticFieldMagnitudeGradient);
         }
       }
 
@@ -2503,6 +2506,23 @@ namespace PIC {
         double *offset=(double*)(Offset::MagneticField.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=offset[idim];
+      }
+
+      inline void GetBackgroundMagneticFieldGradient(double *gradB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double *offset=(double*)(Offset::MagneticFieldGradient.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int idim=0;idim<Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=offset[idim];
+      }
+
+      inline double GetBackgroundMagneticFieldMagnitude(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        return *((double*)(Offset::MagneticFieldMagnitude.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      }
+
+
+      inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+        double *offset=(double*)(Offset::MagneticFieldMagnitudeGradient.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+
+        for (int idim=0;idim<Offset::MagneticFieldMagnitudeGradient.nVars;idim++) gradAbsB[idim]=offset[idim];
       }
 
       inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
@@ -2741,6 +2761,27 @@ namespace PIC {
        exit(__LINE__,__FILE__,"not implemented");
        #endif
      }
+
+     inline void GetBackgroundMagneticFieldGradient(double *gradB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       exit(__LINE__,__FILE__,"not implemented");
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       DATAFILE::GetBackgroundMagneticFieldGradient(gradB,x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
+     inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       exit(__LINE__,__FILE__,"not implemented");
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       DATAFILE::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB,x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
 
      inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_

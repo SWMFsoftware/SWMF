@@ -62,8 +62,9 @@ PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::PlasmaIonPressu
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure={false,false,1,"\"Plasma electron pressure\"",-1};
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticField={false,false,3,"\"Bx\", \"By\", \"Bz\"",-1};
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::ElectricField={false,false,3,"\"Ex\", \"Ey\", \"Ez\"",-1};
-PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::GradientMagneticField={false,false,3,"\"d|B|/dx\", \"d|B|/dy\", \"d|B|/dz\"",-1};
-PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::AbsoluteValueMagneticField={false,false,1,"\"|B|\"",-1};
+PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitudeGradient={false,false,3,"\"d|B|/dx\", \"d|B|/dy\", \"d|B|/dz\"",-1};
+PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient={false,false,9,"\"dBx/dx\", \"dBx/dy\", \"dBx/dz\", \"dBy/dx\", \"dBy/dy\", \"dBy/dz\", \"dBz/dx\", \"dBz/dy\", \"dBz/dz\"",-1};
+PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude={false,false,1,"\"|B|\"",-1};
 
 //load new data file
 //IMPORTANT! The list of the data that are loaded has to be indicated before PIC::Init_BeforeParser
@@ -164,6 +165,15 @@ void PIC::CPLR::DATAFILE::Init() {
     nTotalBackgroundVariables+=Offset::PlasmaElectronPressure.nVars;
   }
 
+  if (Offset::MagneticFieldMagnitude.allocate==true) {
+    Offset::MagneticFieldMagnitude.active=true;
+    Offset::MagneticFieldMagnitude.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldMagnitude.nVars*sizeof(double);
+    nTotalBackgroundVariables+=Offset::MagneticFieldMagnitude.nVars;
+  }
+
+
   if (Offset::MagneticField.allocate==true) {
     Offset::MagneticField.active=true;
     Offset::MagneticField.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
@@ -180,22 +190,21 @@ void PIC::CPLR::DATAFILE::Init() {
     nTotalBackgroundVariables+=Offset::ElectricField.nVars;
   }
 
-  if (Offset::GradientMagneticField.allocate==true) {
-    Offset::GradientMagneticField.active=true;
-    Offset::GradientMagneticField.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  if (Offset::MagneticFieldMagnitudeGradient.allocate==true) {
+    Offset::MagneticFieldMagnitudeGradient.active=true;
+    Offset::MagneticFieldMagnitudeGradient.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
 
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::GradientMagneticField.nVars*sizeof(double);
-    nTotalBackgroundVariables+=Offset::GradientMagneticField.nVars;
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldMagnitudeGradient.nVars*sizeof(double);
+    nTotalBackgroundVariables+=Offset::MagneticFieldMagnitudeGradient.nVars;
   }
 
-  if (Offset::AbsoluteValueMagneticField.allocate==true) {
-    Offset::AbsoluteValueMagneticField.active=true;
-    Offset::AbsoluteValueMagneticField.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+  if (Offset::MagneticFieldGradient.allocate==true) {
+    Offset::MagneticFieldGradient.active=true;
+    Offset::MagneticFieldGradient.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
 
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::AbsoluteValueMagneticField.nVars*sizeof(double);
-    nTotalBackgroundVariables+=Offset::AbsoluteValueMagneticField.nVars;
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldGradient.nVars*sizeof(double);
+    nTotalBackgroundVariables+=Offset::MagneticFieldGradient.nVars;
   }
-
 
 
 
@@ -410,10 +419,11 @@ void PIC::CPLR::DATAFILE::PrintVariableList(FILE* fout,int DataSetNumber) {
   if (Offset::PlasmaTemperature.active) fprintf(fout,", %s",Offset::PlasmaTemperature.VarList);
   if (Offset::PlasmaIonPressure.active) fprintf(fout,", %s",Offset::PlasmaIonPressure.VarList);
   if (Offset::PlasmaElectronPressure.active) fprintf(fout,", %s",Offset::PlasmaElectronPressure.VarList);
+  if (Offset::MagneticFieldMagnitude.active) fprintf(fout,", %s",Offset::MagneticFieldMagnitude.VarList);
   if (Offset::MagneticField.active) fprintf(fout,", %s",Offset::MagneticField.VarList);
   if (Offset::ElectricField.active) fprintf(fout,", %s",Offset::ElectricField.VarList);
-  if (Offset::GradientMagneticField.active) fprintf(fout,", %s",Offset::GradientMagneticField.VarList);
-  if (Offset::AbsoluteValueMagneticField.active) fprintf(fout,", %s",Offset::AbsoluteValueMagneticField.VarList);
+  if (Offset::MagneticFieldMagnitudeGradient.active) fprintf(fout,", %s",Offset::MagneticFieldMagnitudeGradient.VarList);
+  if (Offset::MagneticFieldGradient.active) fprintf(fout,", %s",Offset::MagneticFieldGradient.VarList);
 }
 
 void PIC::CPLR::DATAFILE::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
