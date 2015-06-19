@@ -103,6 +103,9 @@ krylov
 T			UseSemiImplicit
 parcond			TypeSemiImplicit
 
+SEMIIMPLICITSTABLE
+T
+
 #SEMIKRYLOV
 GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
@@ -127,7 +130,7 @@ turn these off when restarting
 #GRIDGEOMETRYLIMIT
 spherical_genr
 Param/CORONA/grid_TR.dat
-1.01			Coord1Min Radius
+1.001			Coord1Min Radius
 24.0			Coord1Max
 89.0			Coord2Min Longitude
 91.0			Coord2Max
@@ -147,15 +150,15 @@ Param/CORONA/grid_TR.dat
 
 ----------------------------------------------------
 
-#TIMESTEPPING
-2			nStage
-0.8			CflExpl
-
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExpl
 
 #LIMITER
 T			UseLogRhoLimiter
