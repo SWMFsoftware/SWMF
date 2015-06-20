@@ -83,12 +83,13 @@ CouplerMode= file(arms) !ices !swmf !!!ices !!off, ices, swmf
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
-define  _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_ON_
+  define _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_ON_
+  define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__AXIAL_
 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) SEP3D::Physics::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 
 !  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node)
-  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Mover_Boris_Axisymmetric_noObject(ptr,LocalTimeStep,node) 
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node) 
 
   define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag)
 
@@ -96,7 +97,7 @@ define  _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_ON_
 
 #block ../exosphere.pl
   SPICE=off 
-  define _TARGET_ _EUROPA_
+  define _TARGET_ _TARGET_NONE_ 
 
 
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
