@@ -291,7 +291,7 @@ contains
           ! For semi-implicit scheme all variables float
           call set_float_bc(1, nVarState)
 
-       case('fixed','inflow','vary','ihbuffer')
+       case('fixed', 'inflow', 'vary', 'ihbuffer')
           if(time_accurate &
                .and.(TypeBc == 'vary'.or. TypeBc == 'inflow'))then
              call set_solar_wind_bc
@@ -301,7 +301,7 @@ contains
              call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
              if(UseB0)call fix_b0(Bx_,Bz_)
           end if
-       case('inflow_semi','vary_semi')
+       case('fixed_semi', 'inflow_semi', 'vary_semi')
           if(IsLinear)then
              State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
           else
