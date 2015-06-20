@@ -51,6 +51,9 @@
 #define _RADIUS1_(x) x##_RADIUS_
 #define _RADIUS_(x) _RADIUS1_(x)
 
+#define _TARGET_ID1_(x) x##_ID_
+#define _TARGET_ID_(x) _TARGET_ID1_(x)
+
 //get the string value of a macro
 #define _MACRO_STR_VALUE1_(arg) #arg
 #define _MACRO_STR_VALUE_(arg) _MACRO_STR_VALUE1_(arg)
