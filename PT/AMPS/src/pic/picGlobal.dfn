@@ -192,7 +192,8 @@ at the end of each time step
 #define _PIC_NIGHTLY_TEST_MODE_ _PIC_MODE_OFF_
 #endif
 
- 
+//the spatial symmetry mode
+#define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
 
 
