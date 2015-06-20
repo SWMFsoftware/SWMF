@@ -89,6 +89,8 @@ ParticleWeightCorrectionMode=on
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
 !  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
+  define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
+
   define _EUROPA_MESH_RESOLUTION_MODE_  0  !0 -> used in test13, 1 -> resolves the tail, ......
 
 !   define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
@@ -114,6 +116,14 @@ ParticleWeightCorrectionMode=on
 
   define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
   define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
+
+
+define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+
+
+!the mesh resoution close to Europa
+! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
+  define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
 #endGeneral
 
