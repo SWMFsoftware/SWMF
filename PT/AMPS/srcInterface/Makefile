@@ -22,6 +22,7 @@ OBJECTS = \
 MY_LIB    = ${LIBDIR}/libPT.a
 
 LIB:
+	rm -rf *.o
 	make ${MY_LIB}
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
