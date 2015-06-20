@@ -1899,11 +1899,12 @@ contains
 
     ! Convert the implicit block Var_VC to block iBlock of the explicit code
 
-    use ModSize,     ONLY : nI, nJ, nK
-    use ModAdvance,  ONLY : nVar, State_VGB, Energy_GBI
-    use ModEnergy,   ONLY : calc_pressure_cell, calc_energy_cell
-    use ModMultiFluid, ONLY: iFluid, nFluid, iP_I, iP
-    use ModGeometry, ONLY: true_cell
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModAdvance,    ONLY: nVar, State_VGB, Energy_GBI
+    use ModEnergy,     ONLY: calc_pressure_cell, calc_energy_cell
+    use ModMultiFluid, ONLY: iFluid, nFluid, iRho, iRho_I, iP_I, iP
+    use ModPhysics,    ONLY: RhoMin_I
+    use ModGeometry,   ONLY: true_cell
 
     real, intent(in)    :: Var_VC(nVar,nI,nJ,nK)
     integer, intent(in) :: iBlock
@@ -1915,6 +1916,15 @@ contains
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_VGB(1:nVar,i,j,k,iBlock) = Var_VC(1:nVar,i,j,k)
     end do; end do; end do
+
+    do iFluid = 1, nFluid
+       if(RhoMin_I(iFluid) < 0) CYCLE
+       iRho = iRho_I(iFluid)
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          State_VGB(iRho,i,j,k,iBlock) = max(RhoMin_I(iFluid), &
+               State_VGB(iRho,i,j,k,iBlock))
+       end do; end do; end do
+    end do
 
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
