@@ -187,11 +187,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
     vFinal[1] =-vTmpX*sinPhi + vTmpY*cosPhi;
 #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_
 
-  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
-
-  //advance the particle's position and velocity
   //interaction with the faces of the block and internal surfaces
-  
   //check whether the particle trajectory is intersected the spherical body
 #if _TARGET_ID_(_TARGET_) != _TARGET_NONE__ID_
   double rFinal2;
@@ -207,14 +203,19 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
 
     for (int idim=0;idim<DIM;idim++) xFinal[idim]*=_RADIUS_(_TARGET_)/r;
 
+    //determine the block of the particle location
+    newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+
     //apply the boundary condition
-    code=Sphere->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)startNode,InternalBoundaryDescriptor->BoundaryElement);
+    code=Sphere->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,InternalBoundaryDescriptor->BoundaryElement);
 
     if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
       PIC::ParticleBuffer::DeleteParticle(ptr);
       return _PARTICLE_LEFT_THE_DOMAIN_;
     }
   }
+#else 
+  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 #endif //_TARGET_ == _TARGET_NONE_
 
 
@@ -223,7 +224,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
     int code=_PARTICLE_DELETED_ON_THE_FACE_;
     
     //call the function that process particles that leaved the coputational domain
-    switch(code){
+    switch(code) {
     case _PARTICLE_DELETED_ON_THE_FACE_:
       PIC::ParticleBuffer::DeleteParticle(ptr);
       return _PARTICLE_LEFT_THE_DOMAIN_;
@@ -233,39 +234,26 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
     }
   }
 
+  //model of the chemical reactions
 
 
-  //adjust the value of 'startNode'
-  startNode=newNode;
-  memcpy(vInit,vFinal,3*sizeof(double));
-  memcpy(xInit,xFinal,3*sizeof(double));
-  
   //save the trajectory point
 #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::RecordTrajectoryPoint(xInit,vInit,spec,ParticleData);
-#endif
+  PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData);
   
-  
-  
-  
-#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-#if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
+  #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
-#endif
+  #endif
 #endif
   
-  
-
+  //finish the trajectory integration procedure
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
   
-
-
   PIC::Mesh::cDataBlockAMR *block=startNode->block;
   long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
-
 
   PIC::ParticleBuffer::SetNext(tempFirstCellParticle,ParticleData);
   PIC::ParticleBuffer::SetPrev(-1,ParticleData);
@@ -273,8 +261,5 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
   if (tempFirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,tempFirstCellParticle);
   block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=ptr;
 
-
   return _PARTICLE_MOTION_FINISHED_;
-
-  
 }
