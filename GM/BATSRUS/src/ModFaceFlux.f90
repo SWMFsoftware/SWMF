@@ -2032,7 +2032,8 @@ contains
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
-    use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1
+    use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
+    use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy
     use ModWaves
     use BATL_size,   ONLY: nDim  
 
@@ -2050,6 +2051,8 @@ contains
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
 
     integer:: iVar
+
+    character(len=*), parameter:: NameSub = 'get_physical_flux'
     !--------------------------------------------------------------------------
     ! Calculate conservative state
     StateCons_V(1:nVar)  = State_V
@@ -2130,7 +2133,11 @@ contains
     end do
 
     ! Set flux for electron pressure
-    if(UseElectronPressure) Flux_V(Pe_) = HallUn*State_V(Pe_)
+    if(UseElectronPressure)then
+       if(UseElectronEntropy) &
+            StateCons_V(Pe_) = State_V(Pe_)**(1/GammaElectron)
+       Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
+    end if
 
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
 
@@ -2219,6 +2226,8 @@ contains
     if(DoRadDiffusion) Flux_V(Erad_) = Flux_V(Erad_) + EradFlux
     if(DoHeatConduction)then
        if(UseElectronPressure)then
+          if(UseElectronEntropy) call stop_mpi(NameSub// &
+               ' heat conduction for electron entropy is not implemented')
           Flux_V(Pe_) = Flux_V(Pe_) + GammaElectronMinus1*HeatFlux
        else
           Flux_V(p_) = Flux_V(p_) + GammaMinus1*HeatFlux
