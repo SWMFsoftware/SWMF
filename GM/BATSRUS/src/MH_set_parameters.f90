@@ -649,6 +649,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#ELECTRONPRESSURE")
         call read_var('PeMinSi', PeMinSi)
 
+     case("#ELECTRONENTROPY")
+        call read_var('UseElectronEntropy', UseElectronEntropy)
+
      case("#ANISOTROPICPRESSURE")
         call read_var('UseConstantTau', UseConstantTau)
         if(UseConstantTau) &
