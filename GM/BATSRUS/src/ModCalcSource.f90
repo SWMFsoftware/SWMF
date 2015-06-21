@@ -336,7 +336,8 @@ contains
        end do; end do; end do
     end if
 
-    if(UseElectronPressure)then
+    if(UseElectronPressure .and. &
+         .not.(UseElectronEntropy .and. UseMultiIon))then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
@@ -349,8 +350,9 @@ contains
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
           ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
-          Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) - &
-               GammaElectronMinus1*Pe*DivU
+          ! For electron entropy equation there is no such term
+          if(.not.UseElectronEntropy) Source_VC(Pe_,i,j,k) = &
+               Source_VC(Pe_,i,j,k) - GammaElectronMinus1*Pe*DivU
 
           if(.not.UseMultiIon)then
              ! The energy equation contains the work of the electron pressure
