@@ -31,6 +31,8 @@ module ModAdvance
   logical, parameter:: UseAnisoPressure    = Ppar_ > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
 
+  logical:: UseElectronEntropy = .false.
+
   logical:: UseWavePressure = .false.
 
   logical:: DoCalcElectricField = .false.
@@ -282,7 +284,5 @@ contains
     end if
 
   end subroutine clean_mod_advance
-
-  !============================================================================
 
 end module ModAdvance
