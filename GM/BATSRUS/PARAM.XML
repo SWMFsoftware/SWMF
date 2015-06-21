@@ -6991,6 +6991,23 @@ Currently the minimum electron pressure is only used in ModRadDiffusion.
 The default value is -1, i.e. no threshold is applied.
 </command>
 
+<command name="ELECTRONENTROPY">
+	 <parameter name="UseElectronEntropy" type="logical" default="F"/>
+
+#ELECTRONENTROPY
+T			UseElectronEntropy
+
+If UseElectronEntropy is true, solve for the electron entropy Se defined as 
+Se = Pe**(1/GammaE). For discontinuous problems electron entropy should be conserved
+(if there are no source terms) if the shock is subsonic for the electrons (usually is). 
+
+Explicit electron heatconduction is not implemented for the electron entropy,
+but the semi-implicit heat conduction should work fine.
+
+The default is UseElectronEnetropy false, so the electron pressure equation is
+used.
+</command>
+
 <command name="ANISOTROPICPRESSURE">
 	 <parameter name="UseConstantTau" type="logical" default="F"/>
 	 <if expr="$UseConstantTau">
