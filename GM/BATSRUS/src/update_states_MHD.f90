@@ -371,7 +371,8 @@ contains
           end do; end do; end do
        end do
 
-       if(DoTestMe)write(*,*) NameSub, ' after min density correct densities=', &
+       if(DoTestMe)write(*,*) NameSub, &
+            ' after min density correct densities=', &
             State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
     end if
 
@@ -379,8 +380,8 @@ contains
          ((nStage==1.and..not.time_accurate) &
          .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
 
-       ! A desparate attempt to maintain positivity by adding dB^2 to the energy
-       ! This is fine for steady state, and is 2nd order accurate 
+       ! A desparate attempt to maintain positivity by adding dB^2/2 to the 
+       ! energy. This is fine for steady state, and is 2nd order accurate 
        ! for half+full step method. But it cannot be used for RK schemes!
 
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -401,7 +402,7 @@ contains
             call update_wave_group_advection(iBlock)
        if(UseWavePressureLtd)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             State_VGB(Ew_,i,j,k,iBlock)= &
+             State_VGB(Ew_,i,j,k,iBlock) = &
                   sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
           end do; end do; end do
        end if
@@ -412,6 +413,22 @@ contains
                   max(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock), 0.0)
           end do; end do; end do
        end if
+    end if
+
+!!! The electron entropy and the Boris corrections do not work for RK update!!!
+
+    if(UseElectronPressure .and. UseElectronEntropy)then
+       ! Fix update to use the electron entropy equation
+       ! Se = Pe^(1/GammaE), dSe/Pe = 1/GammaE*Se/Pe
+       ! Pe_n+1 = (Se_n+1)^GammaE = (Se_n + R(Se))^GammaE 
+       !        = (Pe_n^(1/GammaE + R(Se))^GammaE
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+          State_VGB(Pe_,i,j,k,iBlock) = &
+               (StateOld_VCB(Pe_,i,j,k,iBlock)**(1/GammaElectron) &
+               + Source_VC(Pe_,i,j,k))**GammaElectron
+       end do; end do; end do
     end if
 
     if(boris_correction) then
@@ -545,7 +562,8 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          ! State_VGB now contains an MHD update: RhoU_new = RhoU_old + DeltaRhoU
+          ! State_VGB now contains an MHD update: 
+          !      RhoU_new = RhoU_old + DeltaRhoU
 
           fullBx = B0_DC(x_,i,j,k) + StateOld_VCB(Bx_,i,j,k,iBlock)
           fullBy = B0_DC(y_,i,j,k) + StateOld_VCB(By_,i,j,k,iBlock)
