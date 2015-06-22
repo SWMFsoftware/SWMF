@@ -268,7 +268,7 @@ session, where the #ENDTIME command can be used instead of #STOP.
 
 <command name="CHECKKILL">
 	 <parameter name="NameCompCheckKill" type="string" length="2"
-	 	    default="--"/>
+	 	    default="!!"/>
 
 #CHECKKILL
 GM		NameCompCheckKill
@@ -286,11 +286,11 @@ arbitrary point of execution.
 
 If NameCompCheckKill is set to the string '??' then all processors check
 for the SWMF.KILL file. This makes sure that the run gets terminated
-essentially immediately. If NameCompCheckKill is set to the string '--'
+essentially immediately. If NameCompCheckKill is set to the string '!!'
 then no check is performed at all. Otherwise NameCompCheckKill should
 contain the component ID of a component present in the LAYOUT.in file.
 
-The default value is NameCompCheckKill='--', i.e. no check is performed.
+The default value is NameCompCheckKill='!!', i.e. no check is performed.
 </command>
 
 <command name="CHECKSTOP">
