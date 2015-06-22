@@ -230,6 +230,9 @@ T                       DoSaveRestart
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
 
+#CHECKKILL
+GM			NameCompCheckKill
+
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
