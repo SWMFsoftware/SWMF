@@ -17,7 +17,8 @@ module ModUser
        IMPLEMENTED5 => user_set_cell_boundary,          &
        IMPLEMENTED6 => user_set_resistivity,            &
        IMPLEMENTED7 => user_calc_sources,               &
-       IMPLEMENTED8 => user_init_point_implicit
+       IMPLEMENTED8 => user_init_point_implicit,        &
+       IMPLEMENTED9 => user_get_b0
 
   include 'user_module.h' !list of public methods
 
@@ -40,7 +41,24 @@ module ModUser
   real :: ReducedMass_II(0:nIonFluid,0:nIonFluid)
   real :: CollisionCoef_II(0:nIonFluid,0:nIonFluid)
 
+  ! variables for polar jet application              
+  ! Dipole under surface                                                   
+  real    :: UserDipoleDepth = 1.0, UserDipoleStrengthSi = 0.0
+  real    :: UserDipoleStrength
+  ! Rotating boundary condition                                             
+  real:: PeakFlowSpeedFixerSi = 0.0
+  real:: PeakFlowSpeedFixer = 0.0
+  real:: TbeginJet = 0.0, TendJet = 0.0
+  real:: BminJetSi = 0.0, BmaxJetSi = 0.0
+  real:: BminJet=0.0, BmaxJet = 0.0 
+  real:: KbJet = 0.0
+  integer:: iBcMax = 0            ! Index up to which BC is applied         
+  logical:: IsFrampStart = .false.
+  logical:: IsJetBC = .false.
+  character (len=8) :: TypeBcJet
+
 contains 
+
   !============================================================================
   subroutine user_read_inputs
 
@@ -76,6 +94,22 @@ contains
           call read_var('nCoronaSi', nCoronaSi)
           call read_var('tCoronaSi', tCoronaSi)
 
+       case("#POLARJETDIPOLE")
+          call read_var('UserDipoleDepth', UserDipoleDepth)
+          call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
+
+       case('#POLARJETBOUNDARY')
+          call read_var('PeakFlowSpeedFixerSi',PeakFlowSpeedFixerSi)
+          call read_var('TbeginJet', TBeginJet)
+          call read_var('TendJet',   TEndJet)
+          call read_var('BminJetSi', BminJetSi)
+          call read_var('BmaxJetSi', BmaxJetSi)
+          call read_var('KbJet',     KbJet)
+          call read_var('iBcMax',    iBcMax)
+          call read_var('IsFrampStart', IsFrampStart)
+          call read_var('TypeBcJet',TypeBcJet)
+          IsJetBC = .true.
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -108,7 +142,8 @@ contains
          cElectronMass, cProtonMass
     use ModNumConst,   ONLY: cTwoPi
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, &
+         UnitB_ ! for jet variable                                 
 
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
@@ -171,6 +206,13 @@ contains
     ! Here, we already take care of the units.
     CollisionCoef_II = CollisionCoef_II &
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
+
+    ! jet parameters convert to normalized units                  
+    UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
+    BminJet = BminJetSi*Si2No_V(UnitB_)
+    BmaxJet = BmaxJetSi*Si2No_V(UnitB_)
+    PeakFlowSpeedFixer = PeakFlowSpeedFixerSi &
+         * Si2No_V(UnitX_)**2 / Si2No_V(UnitT_)/Si2No_V(UnitB_)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -393,19 +435,30 @@ contains
     ! Fill ghost cells inside body for spherical grid - this subroutine only 
     ! modifies ghost cells in the r direction
 
-    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
+    use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_, &
+         Phi_,Theta_ ! this line is jet only                          
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
-    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
+    use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK, &
+         CoordDimMin_D ! for jet only  
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModPhysics,    ONLY: InvGammaMinus1, GBody, rBody
+    use ModPhysics,    ONLY: InvGammaMinus1, GBody, rBody, &
+         AverageIonCharge, UnitRho_, UnitB_, UnitP_, & ! from 2nd line jet only
+         Si2No_V, rBody, GBody, UnitU_
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
-         Ehot_, p_
+         Ehot_, p_, &
+         Rho_, p_, Pe_, Bx_, Bz_, RhoUx_, RhoUz_! this line is jet only     
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
          iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,      ONLY: UseWavePressureLtd
+    ! Below is for jet only            
+    use ModCoordTransform, ONLY: xyz_to_sph, sph_to_xyz, rot_xyz_sph
+    use ModWaves,      ONLY: UseWavePressureLtd
+    use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
+         time_accurate, ProcTest, BlkTest
+    use ModConst,      ONLY: cPi
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -418,6 +471,27 @@ contains
     real    :: Gamma
     real    :: U, U_D(3), Bdir_D(3)
 
+    ! Below is for jet only  
+    logical :: DoTest, DoTestMe
+    real    :: Framp
+    real    :: dBrDphi, dBrDlat, Rho, p, Ur, rCosLat, uCoeff 
+    real    :: Xyz1_D(3)
+    real    :: bFace_D(3)
+    real    :: b_D(3)
+    real    :: u_II(3,MinJ+1:MaxJ-1,MinK+1:MaxK-1)
+    real    :: Br_II(MinJ:MaxJ,MinK:MaxK)
+    real    :: p_rotated(3)
+    real    :: Uphi, Utheta
+    real    :: dr, dtheta, dphi
+    real    :: dUr_dTheta, dUr_dPhi, dUTheta_dr, dUPhi_dr, dUTheta_dPhi
+    real    :: dUPhi_dTheta
+    real    :: omega_r, omega_theta, omega_phi
+    real    :: omega_II(3,MinJ+2:MaxJ-2,MinK+2:MaxK-2)
+    real    :: omegaXr_II(3,MinJ+2:MaxJ-2,MinK+2:MaxK-2)
+    real    :: r, Br, rinv, Phi, Theta
+    real    :: XyzSph_DD(3,3), urot_D(3)
+    ! Above is for jet only                    
+
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
@@ -425,12 +499,41 @@ contains
 
     IsFound = .true.
 
-    if(TypeBc == 'usersemi')then
+    select case(TypeBc)
+    case('usersemi','user_semi')
+       IsFound = .true.
        StateSemi_VGB(iTeImpl,0,:,:,iBlock) = Tchromo
        RETURN
-    elseif(TypeBc == 'usersemilinear')then
+    case('usersemilinear','user_semilinear')
+       IsFound = .true.
+       ! Value was already set to zero in ModCellBoundary     
        RETURN
-    end if
+       ! jet BC                          
+    case('user')
+       IsFound = .true.
+    case default
+       IsFound = .false.
+       RETURN
+    end select
+
+    if(IsJetBC)then
+       ! Check if time accurate is set.              
+       if(time_accurate)then
+          if(time_simulation<TbeginJet)then
+             Framp = 0.0
+          elseif(time_simulation>TendJet)then
+             Framp = 1.0
+          else
+             Framp = 0.5 * (1 - cos(2*cPi*(time_simulation-TbeginJet) / &
+                  (TendJet-TbeginJet)))
+          endif
+       else
+          Framp = 0.0
+       endif
+
+       if(IsFrampStart) Framp = 1.0
+
+    endif
 
     do k = MinK, MaxK; do j = MinJ, MaxJ
        Runit_D = Xyz_DGB(:,1,j,k,iBlock) / r_BLK(1,j,k,iBlock)
@@ -470,7 +573,7 @@ contains
        end if
 
        do i = MinI, 0
-          ! Te = T_s and ne = sum(n_s)
+          ! Te = T_s and ne = sum(q_s n_s)
           if(UseElectronPressure) State_VGB(Pe_,i,j,k,iBlock) = &
                sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
 
@@ -485,6 +588,7 @@ contains
                = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
        end do
 
+       ! At the inner boundary this seems to be unnecessary... Ehot=0 may be sufficient?!
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
              iP = p_; if(UseElectronPressure) iP = Pe_
@@ -499,6 +603,142 @@ contains
        end if
 
     end do; end do
+
+    if(IsJetBC)then
+
+       do k = MinK, MaxK; do j = MinJ, MaxJ
+          call xyz_to_sph(Xyz_DGB(:,1,j,k,iBlock), r, Theta, Phi)
+          r = CoordDimMin_D(1)
+
+          bFace_D = 0.5*(B0_DGB(:,0,j,k,iBlock) + &
+               State_VGB(Bx_:Bz_,0,j,k,iBlock) &
+               +         B0_DGB(:,1,j,k,iBlock) + &
+               State_VGB(Bx_:Bz_,1,j,k,iBlock))
+          Br_II(j,k) = sum(Xyz_DGB(:,1,j,k,iBlock)*bFace_D)/r
+
+
+          do iFluid = IonFirst_, IonLast_
+             iRho = iRho_I(iFluid)
+             iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
+
+
+             FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+                  + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
+             Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
+
+             uRot_D = 0.0
+
+            select case(TypeBcJet)
+
+             case('reflect')
+
+                ! GradBr = (0 ,                                                                    
+                !           1/(r*cos(Theta)) * dB/(2*dPhi) ,                                       
+                !           1/r              * dB/(2*dTheta) )                                     
+                !                                                                                  
+                dBrDphi = (Br_II(j+1,k) -  Br_II(j-1,k)) / &
+                     (2*CellSize_DB(Phi_,iBlock)*r*cos(Theta))
+                dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / &
+                     (2*CellSize_DB(Theta_,iBlock)*r)
+                Br = Br_II(j,k)
+                ! u_perpendicular = 0  if Br < B1 or Br > B2                                       
+                !                 = v0 * f(t) *Kb* (B2-B1)/Br * tanh(Kb* (Br-B1)/                  
+                !                               (B2-B1)) * (r x GradB)                             
+                !                 = ( 0 , u_Phi, u_Theta)                                          
+                !                                                                                  
+                if(Br < BminJet .or. Br > BmaxJet)then
+                   Uphi = 0
+                   Utheta = 0
+                else
+                   ! Rotation initiation                                                           
+                   uCoeff = PeakFlowSpeedFixer * Framp * KbJet * &
+                        (BmaxJet-BminJet)/Br * &
+                        tanh( KbJet * (Br - BminJet)/(BmaxJet-BminJet) )
+                   ! r x GradB = (1, 0, 0) x (0, GradBPhi, GradBlat) =                             
+                   !           = (0,-GradBLat,GradBPhi )                                           
+                   Uphi   = -dBrDlat*uCoeff
+                   Utheta = -dBrDphi*uCoeff  ! = -Ulat                                             
+                endif
+
+                ! Convert to Cartesian components                                                  
+                XyzSph_DD = rot_xyz_sph(Xyz_DGB(:,1,j,k,iBlock))
+                uRot_D = matmul(XyzSph_DD, (/0.0, Utheta, Uphi/) )
+
+                do i = MinI, 0
+                   ! Calculate velocity in cell 1                                                  
+                   u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+                        /State_VGB(iRho,1-i,j,k,iBlock)
+
+                   ! u_ghost = 2*(u_par + u_rot) - u_cell                                          
+                   u_D = 2*(sum(u_D*Bdir_D))*Bdir_D + 2*uRot_D - u_D
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        u_D*State_VGB(iRho,i,j,k,iBlock)
+                end do;
+
+          case('fixed')
+             ! from here we calculate the rotation speed                                              
+
+             Xyz1_D = Xyz_DGB(:,iBcMax,j,k,iBlock)
+             ! GradBr = (0 ,                                                                    
+             !           1/(r*cos(Theta)) * dB/(2*dPhi) ,                                       
+             !           1/r              * dB/(2*dTheta) )                                     
+             !                                                                                  
+             dBrDphi = (Br_II(j+1,k) -  Br_II(j-1,k)) / &
+                  (2*CellSize_DB(Phi_,iBlock)*r*cos(Theta))
+             dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / &
+                  (2*CellSize_DB(Theta_,iBlock)*r)
+             Br = Br_II(j,k)
+             Ur = sum(Xyz1_D*State_VGB(RhoUx_:RhoUz_,iBcMax,j,k,iBlock)) / &
+                  (r*State_VGB(Rho_,iBcMax,j,k,iBlock))
+             ! u_perpendicular = 0  if Br < B1 or Br > B2                                       
+             !                 = v0 * f(t) *Kb* (B2-B1)/Br * tanh(Kb* (Br-B1)/                  
+             !                               (B2-B1)) * (r x GradB)                             
+             !                 = ( 0 , u_Phi, u_Theta)                                          
+             !                                                                                  
+             if(Br < BminJet .or. Br > BmaxJet)then
+                Uphi = 0
+                Utheta = 0
+             else
+                ! Rotation initiation                                                           
+                uCoeff = PeakFlowSpeedFixer * Framp * KbJet * &
+                     (BmaxJet-BminJet)/Br * &
+                     tanh( KbJet * (Br - BminJet)/(BmaxJet-BminJet) )
+                ! r x GradB = (1, 0, 0) x (0, GradBPhi, GradBlat) =                             
+                !           = (0,-GradBLat,GradBPhi )                                           
+                Uphi   = -dBrDlat*uCoeff
+                Utheta = -dBrDphi*uCoeff  ! = -Ulat                                             
+             endif
+
+             ! Convert to Cartesian components
+
+             XyzSph_DD = rot_xyz_sph(Xyz1_D)
+             uRot_D = matmul(XyzSph_DD, (/Ur, Utheta, Uphi/) )
+
+             FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+                  + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
+             Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
+
+             ! Calculate velocity in cell 1                                                     
+             u_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
+                  /State_VGB(iRho,1,j,k,iBlock)
+
+             ! Subtract rotational velocity                                                     
+             u_D = u_D - uRot_D
+
+             ! u_ghost = 2*u_par - u = u_par - u_perp                                           
+             u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
+
+             ! Add back rotational velocity                                                     
+             u_D = u_D + uRot_D
+
+             do i = MinI, iBcMax
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                     u_D*State_VGB(iRho,i,j,k,iBlock)
+             end do
+          end select;
+       end do;
+    end do;end do;
+ end if
 
     do iFluid = IonFirst_, IonLast_
        iRho = iRho_I(iFluid)
@@ -519,6 +759,8 @@ contains
           end do
        end do; end do
     end do
+
+
 
   end subroutine user_set_cell_boundary
   !============================================================================
@@ -708,5 +950,47 @@ contains
     IsPointImplMatrixSet = .false.
 
   end subroutine user_init_point_implicit
+
+ !===================================================================== 
+
+  subroutine user_get_b0(x, y, z, B0_D)
+
+    use ModPhysics, ONLY: MonopoleStrength
+
+    real, intent(in) :: x, y, z
+    real, intent(out):: B0_D(3)
+
+    real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
+    real :: B0_Dm(3)
+
+    character(len=*), parameter :: NameSub = 'user_get_b0'
+
+    !-------------------------------------------------------------------    
+
+    ! monopole part                                                      
+    Xyz_D = (/x, y, z/)
+    r = sqrt(sum(Xyz_D**2))
+    B0_Dm = MonopoleStrength*Xyz_D/r**3
+
+    ! dipole part                                                          
+    ! shifted Xyz_D upwards to center of the user-dipole                      
+    Xyz_D = (/x, y-1.0+UserDipoleDepth,z/)
+
+    ! Determine radial distance and powers of it                            
+    rInv  = 1.0/sqrt(sum(Xyz_D**2))
+    r2Inv = rInv**2
+    r3Inv = rInv*r2Inv
+
+    ! Compute dipole moment of the intrinsic magnetic field B0.             
+    Dipole_D = (/0.0,UserDipoleStrength,0.0/)
+    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
+
+    B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
+
+  end subroutine user_get_b0
+
+  !=====================================================================    
+
+
 
 end module ModUser
