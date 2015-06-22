@@ -214,6 +214,9 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
       return _PARTICLE_LEFT_THE_DOMAIN_;
     }
   }
+  else {
+    newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+  }
 #else 
   newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 #endif //_TARGET_ == _TARGET_NONE_
@@ -234,23 +237,99 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
     }
   }
 
-  //model of the chemical reactions
-
-
   //save the trajectory point
-#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData);
-  
-  #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
-  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
-  #endif
+ #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+   PIC::ParticleTracker::RecordTrajectoryPoint(xFinal,vFinal,spec,ParticleData);
+
+   #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_ == _PIC_MODE_ON_
+   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+   #endif
+ #endif
+
+  //model of the chemical reactions
+#if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+    //model the photolytic transformation
+    if (PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(xFinal,ptr,spec,dtTotal,newNode)==_PHOTOLYTIC_REACTION_OCCURES_) {
+      int PhotolyticReactionsReturnCode,specInit=spec;
+
+      //PhotolyticReactionsReturnCode=PIC::ChemicalReactions::PhotolyticReactions::ReactionProcessorTable[specInit](xInit,xFinal,ptr,spec,ParticleData);
+      PhotolyticReactionsReturnCode=_PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(xInit,xFinal,vFinal,ptr,spec,ParticleData,newNode);
+
+      //adjust the value of the dtLeft to match the time step for the species 'spec'
+      switch (PhotolyticReactionsReturnCode) {
+      case _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_:
+        PIC::ParticleBuffer::DeleteParticle(ptr);
+        return _PARTICLE_LEFT_THE_DOMAIN_;
+
+      case _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_:
+        spec=PIC::ParticleBuffer::GetI(ParticleData);
+
+        //check the probability for the new-species particle tostay in the system
+#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+        double Correction,Rate;
+
+        Rate=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData)*newNode->block->GetLocalParticleWeight(specInit)/newNode->block->GetLocalTimeStep(specInit);
+        Correction=Rate*newNode->block->GetLocalTimeStep(spec)/newNode->block->GetLocalParticleWeight(spec);
+
+        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(Correction,ParticleData);
+#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
+        exit(__LINE__,__FILE__,"Accounting for the possible difference in the time steps and weights have not been inplemented when the individual particle weight corraction factor is off");
+
+#else
+     exit(__LINE__,__FILE__,"The option is unknown");
 #endif
+
+        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+        #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ == _PIC_MODE_ON_
+        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+        #endif
+        #endif
+
+        break;
+      case _PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_:
+        //do nothing
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
+      }
+    }
+#endif //_PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+
+#if _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+    //model the generic particle transformation
+    int GenericParticleTransformationReturnCode,specInit=spec;
+
+    GenericParticleTransformationReturnCode=_PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtTotal,startNode);   //xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode
+
+    if (GenericParticleTransformationReturnCode==_GENERIC_PARTICLE_TRANSFORMATION_CODE__PARTICLE_REMOVED_) {
+      PIC::ParticleBuffer::DeleteParticle(ptr);
+      return _PARTICLE_LEFT_THE_DOMAIN_;
+    }
+
+    //adjust the value of the dtLeft to match the time step for the species 'spec'
+    if (spec!=specInit) {
+      #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+      #if _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_ == _PIC_MODE_ON_
+      PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xFinal,vFinal,spec,ParticleData);
+      #endif
+      #endif
+    }
+#endif //_PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ == _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
+
+
+
   
   //finish the trajectory integration procedure
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+  PIC::Mesh::cDataBlockAMR *block;
+  long int tempFirstCellParticle;
+
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,newNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+
+  if ((block=newNode->block)==NULL) {
+    exit(__LINE__,__FILE__,"Error: the block is empty. Most probably hte tiime step is too long");
+  }
   
-  PIC::Mesh::cDataBlockAMR *block=startNode->block;
-  long int tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+  tempFirstCellParticle=block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
