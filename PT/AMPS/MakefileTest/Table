@@ -76,7 +76,7 @@ Name=Rosetta
 #>
 Name=test/batl-reader
 Compile=
->>>@echo "test_BATL-reader_compile..." > test_BATL-reader.diff 
+>>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
 >>>echo "Installing BATL....." 
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${COMPILE.f90} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
