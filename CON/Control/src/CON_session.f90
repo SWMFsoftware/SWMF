@@ -268,7 +268,7 @@ contains
           end if
        end if
 
-       if(NameCompCheckKill /= '--')then
+       if(NameCompCheckKill /= '!!')then
           DoKill = NameCompCheckKill == '??'
           if(.not.DoKill) DoKill = is_proc0(NameCompCheckKill)
           if(DoKill)then

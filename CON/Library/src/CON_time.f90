@@ -79,7 +79,7 @@ module CON_time
   type(FreqType):: CheckStop = FreqType(.false., -1, -1.0, 0, 0.0)
 
   ! Name of component checking for the kill file
-  character(len=2):: NameCompCheckKill = '--'
+  character(len=2):: NameCompCheckKill = '!!'
 
   !REVISION HISTORY:
   ! 01Aug03 Aaron Ridley and G. Toth - initial implementation
