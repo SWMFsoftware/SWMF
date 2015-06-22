@@ -628,7 +628,7 @@ contains
 
              uRot_D = 0.0
 
-            select case(TypeBcJet)
+             select case(TypeBcJet)
 
              case('reflect')
 
@@ -675,70 +675,70 @@ contains
                         u_D*State_VGB(iRho,i,j,k,iBlock)
                 end do;
 
-          case('fixed')
-             ! from here we calculate the rotation speed                                              
+             case('fixed')
+                ! from here we calculate the rotation speed                                              
 
-             Xyz1_D = Xyz_DGB(:,iBcMax,j,k,iBlock)
-             ! GradBr = (0 ,                                                                    
-             !           1/(r*cos(Theta)) * dB/(2*dPhi) ,                                       
-             !           1/r              * dB/(2*dTheta) )                                     
-             !                                                                                  
-             dBrDphi = (Br_II(j+1,k) -  Br_II(j-1,k)) / &
-                  (2*CellSize_DB(Phi_,iBlock)*r*cos(Theta))
-             dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / &
-                  (2*CellSize_DB(Theta_,iBlock)*r)
-             Br = Br_II(j,k)
-             Ur = sum(Xyz1_D*State_VGB(RhoUx_:RhoUz_,iBcMax,j,k,iBlock)) / &
-                  (r*State_VGB(Rho_,iBcMax,j,k,iBlock))
-             ! u_perpendicular = 0  if Br < B1 or Br > B2                                       
-             !                 = v0 * f(t) *Kb* (B2-B1)/Br * tanh(Kb* (Br-B1)/                  
-             !                               (B2-B1)) * (r x GradB)                             
-             !                 = ( 0 , u_Phi, u_Theta)                                          
-             !                                                                                  
-             if(Br < BminJet .or. Br > BmaxJet)then
-                Uphi = 0
-                Utheta = 0
-             else
-                ! Rotation initiation                                                           
-                uCoeff = PeakFlowSpeedFixer * Framp * KbJet * &
-                     (BmaxJet-BminJet)/Br * &
-                     tanh( KbJet * (Br - BminJet)/(BmaxJet-BminJet) )
-                ! r x GradB = (1, 0, 0) x (0, GradBPhi, GradBlat) =                             
-                !           = (0,-GradBLat,GradBPhi )                                           
-                Uphi   = -dBrDlat*uCoeff
-                Utheta = -dBrDphi*uCoeff  ! = -Ulat                                             
-             endif
+                Xyz1_D = Xyz_DGB(:,iBcMax,j,k,iBlock)
+                ! GradBr = (0 ,                                                                    
+                !           1/(r*cos(Theta)) * dB/(2*dPhi) ,                                       
+                !           1/r              * dB/(2*dTheta) )                                     
+                !                                                                                  
+                dBrDphi = (Br_II(j+1,k) -  Br_II(j-1,k)) / &
+                     (2*CellSize_DB(Phi_,iBlock)*r*cos(Theta))
+                dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / &
+                     (2*CellSize_DB(Theta_,iBlock)*r)
+                Br = Br_II(j,k)
+                Ur = sum(Xyz1_D*State_VGB(RhoUx_:RhoUz_,iBcMax,j,k,iBlock)) / &
+                     (r*State_VGB(Rho_,iBcMax,j,k,iBlock))
+                ! u_perpendicular = 0  if Br < B1 or Br > B2                                       
+                !                 = v0 * f(t) *Kb* (B2-B1)/Br * tanh(Kb* (Br-B1)/                  
+                !                               (B2-B1)) * (r x GradB)                             
+                !                 = ( 0 , u_Phi, u_Theta)                                          
+                !                                                                                  
+                if(Br < BminJet .or. Br > BmaxJet)then
+                   Uphi = 0
+                   Utheta = 0
+                else
+                   ! Rotation initiation                                                           
+                   uCoeff = PeakFlowSpeedFixer * Framp * KbJet * &
+                        (BmaxJet-BminJet)/Br * &
+                        tanh( KbJet * (Br - BminJet)/(BmaxJet-BminJet) )
+                   ! r x GradB = (1, 0, 0) x (0, GradBPhi, GradBlat) =                             
+                   !           = (0,-GradBLat,GradBPhi )                                           
+                   Uphi   = -dBrDlat*uCoeff
+                   Utheta = -dBrDphi*uCoeff  ! = -Ulat                                             
+                endif
 
-             ! Convert to Cartesian components
+                ! Convert to Cartesian components
 
-             XyzSph_DD = rot_xyz_sph(Xyz1_D)
-             uRot_D = matmul(XyzSph_DD, (/Ur, Utheta, Uphi/) )
+                XyzSph_DD = rot_xyz_sph(Xyz1_D)
+                uRot_D = matmul(XyzSph_DD, (/Ur, Utheta, Uphi/) )
 
-             FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
-                  + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
-             Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
+                FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
+                     + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
+                Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
-             ! Calculate velocity in cell 1                                                     
-             u_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
-                  /State_VGB(iRho,1,j,k,iBlock)
+                ! Calculate velocity in cell 1                                                     
+                u_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
+                     /State_VGB(iRho,1,j,k,iBlock)
 
-             ! Subtract rotational velocity                                                     
-             u_D = u_D - uRot_D
+                ! Subtract rotational velocity                                                     
+                u_D = u_D - uRot_D
 
-             ! u_ghost = 2*u_par - u = u_par - u_perp                                           
-             u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
+                ! u_ghost = 2*u_par - u = u_par - u_perp                                           
+                u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
 
-             ! Add back rotational velocity                                                     
-             u_D = u_D + uRot_D
+                ! Add back rotational velocity                                                     
+                u_D = u_D + uRot_D
 
-             do i = MinI, iBcMax
-                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                     u_D*State_VGB(iRho,i,j,k,iBlock)
-             end do
-          end select;
-       end do;
-    end do;end do;
- end if
+                do i = MinI, iBcMax
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        u_D*State_VGB(iRho,i,j,k,iBlock)
+                end do
+             end select;
+          end do;
+       end do;end do;
+    end if
 
     do iFluid = IonFirst_, IonLast_
        iRho = iRho_I(iFluid)
@@ -951,7 +951,7 @@ contains
 
   end subroutine user_init_point_implicit
 
- !===================================================================== 
+  !===================================================================== 
 
   subroutine user_get_b0(x, y, z, B0_D)
 
@@ -961,7 +961,7 @@ contains
     real, intent(out):: B0_D(3)
 
     real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
-    real :: B0_Dm(3)
+    real :: B0Mono_D(3)
 
     character(len=*), parameter :: NameSub = 'user_get_b0'
 
@@ -970,7 +970,7 @@ contains
     ! monopole part                                                      
     Xyz_D = (/x, y, z/)
     r = sqrt(sum(Xyz_D**2))
-    B0_Dm = MonopoleStrength*Xyz_D/r**3
+    B0Mono_D = MonopoleStrength*Xyz_D/r**3
 
     ! dipole part                                                          
     ! shifted Xyz_D upwards to center of the user-dipole                      
@@ -985,12 +985,10 @@ contains
     Dipole_D = (/0.0,UserDipoleStrength,0.0/)
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
+    B0_D = B0Mono_D + (Dp*Xyz_D - Dipole_D)*r3Inv
 
   end subroutine user_get_b0
 
   !=====================================================================    
-
-
 
 end module ModUser
