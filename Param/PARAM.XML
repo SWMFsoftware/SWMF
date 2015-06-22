@@ -266,6 +266,33 @@ must be used in every session. The only exception is the last
 session, where the #ENDTIME command can be used instead of #STOP.
 </command>
 
+<command name="CHECKKILL">
+	 <parameter name="NameCompCheckKill" type="string" length="2"
+	 	    default="--"/>
+
+#CHECKKILL
+GM		NameCompCheckKill
+
+The SWMF can check periodically if the SWMF.KILL file exists in the run
+directory, and kill the execution if it does. This file gets removed
+at the beginning of the run so that new runs don't get killed accidentally.
+This check is done from the root processor of the
+component NameCompCheckKill in the SWMF time loop. This means that
+the component doing the check will not get interrupted at an arbitrary
+point of execution (e.g. writing output files). The other components
+sharing the same processor will also be safe. Components running on
+a separate subset of processors may get interrupted at a more-or-less
+arbitrary point of execution.
+
+If NameCompCheckKill is set to the string '??' then all processors check
+for the SWMF.KILL file. This makes sure that the run gets terminated
+essentially immediately. If NameCompCheckKill is set to the string '--'
+then no check is performed at all. Otherwise NameCompCheckKill should
+contain the component ID of a component present in the LAYOUT.in file.
+
+The default value is NameCompCheckKill='--', i.e. no check is performed.
+</command>
+
 <command name="CHECKSTOP">
 	<parameter name="DoCheckStop" type="logical" default="F" />
 	<if expr="$DoCheckStop">
