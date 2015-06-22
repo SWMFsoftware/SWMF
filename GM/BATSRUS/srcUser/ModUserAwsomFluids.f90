@@ -23,7 +23,7 @@ module ModUser
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'AWSoM model'
+       'AWSoM multi-fluid model'
 
   ! Input parameters for chromospheric inner BC's
   real    :: NchromoSi_I(IonFirst_:nFluid) = 2e17, TchromoSi = 5e4
