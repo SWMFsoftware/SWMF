@@ -967,25 +967,14 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
     PIC::Mesh::cDataCenterNode* cell;
     int i,j,k;
     long int LocalCellNumber;
+    double swVel[3];
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *finalNode=PIC::Mesh::mesh.findTreeNode(xFinal,initNode);
 
     //the procesure is applied only to dust
     if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
-    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xInit,i,j,k,initNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
-    cell=initNode->block->GetCenterNode(LocalCellNumber);
-
-    //ICES plasma data
-//    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
-    double swVel[3];
-
-
-/*    //the access to the local plasma flow parameters has to be updated with the current coupling approach!!!!!!
-    memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+cell->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
-    plasmaTemperature=*((double*)(PIC::CPLR::ICES::PlasmaTemperatureOffset+ICES_AssociatedData));
-    swVel=(double*)(PIC::CPLR::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
-    plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));
-
-    if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;*/
+    if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+    cell=finalNode->block->GetCenterNode(LocalCellNumber);
 
     //get the grain electric potential
     char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -1000,10 +989,10 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
     double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron,pe;
 
 
-    plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,initNode);
-    PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,initNode);
-    plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,initNode);
-    pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,initNode);
+    plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,finalNode);
+    PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,finalNode);
+    plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,finalNode);
+    pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,finalNode);
 
 
     if (plasmaNumberDensity<1.0E2) {
@@ -1309,7 +1298,7 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
       //move the particle into different velocity group
       double GrainWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
-      GrainWeightCorrection*=initNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/initNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
+      GrainWeightCorrection*=finalNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/finalNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
 
   #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
       GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+oldVelocityGroup]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+newVelocityGroup];
