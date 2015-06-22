@@ -104,7 +104,7 @@ contains
     IsStandAlone = .not. present(iComm)
 
     !\
-    ! Delete SWMF.SUCCESS and SWMF.STOP files if found
+    ! Delete SWMF.SUCCESS, SWMF.STOP and SWMF.KILL files if found
     !/
     if(is_proc0())then
 
@@ -117,6 +117,12 @@ contains
        inquire(file='SWMF.STOP',EXIST=IsFound)
        if (IsFound) then 
           open(UNITTMP_, file = 'SWMF.STOP')
+          close(UNITTMP_, STATUS = 'DELETE')
+       endif
+
+       inquire(file='SWMF.KILL',EXIST=IsFound)
+       if (IsFound) then 
+          open(UNITTMP_, file = 'SWMF.KILL')
           close(UNITTMP_, STATUS = 'DELETE')
        endif
 

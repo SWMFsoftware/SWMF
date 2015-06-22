@@ -12,18 +12,19 @@ module CON_session
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
        i_comp, n_comp, use_comp
-  use CON_variables, ONLY: UseStrict, DnTiming, lVerbose, iErrorSwmf
+  use CON_variables, ONLY: UseStrict, DnTiming, lVerbose
   use CON_wrapper, ONLY: set_param_comp, init_session_comp, run_comp
   use CON_couple_all, ONLY: couple_two_comp, couple_all_init
   use CON_coupler, ONLY: &
-       check_couple_symm, Couple_CC, nCouple, iCompCoupleOrder_II, &
+       Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C, IsTightCouple_CC
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
        SaveRestart, save_restart
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
-       CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax
-  use ModFreq, ONLY: is_time_to, FreqType
+       CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
+       NameCompCheckKill
+  use ModFreq, ONLY: is_time_to
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
   use CON_transfer_data, ONLY: transfer_real
 
@@ -185,13 +186,16 @@ contains
     !EOP
 
     ! Indexes for tight coupling
-    integer:: lCompSlave, iCompMaster, iCompSlave
+    integer:: iCompMaster, iCompSlave
 
     ! Time info transferred from master to slave
     real:: tMaster
 
     ! Check if a component just ran
     logical:: DoneRun_C(MaxComp)
+
+    ! Check if the run should be killed
+    logical:: DoKill
     
     character(len=*), parameter :: NameSub=NameMod//'::do_session'
     !--------------------------------------------------------------------------
@@ -261,6 +265,15 @@ contains
           if(do_stop_now())then
              IsLastSession = .true.
              EXIT TIMELOOP
+          end if
+       end if
+
+       if(NameCompCheckKill /= '--')then
+          DoKill = NameCompCheckKill == '??'
+          if(.not.DoKill) DoKill = is_proc0(NameCompCheckKill)
+          if(DoKill)then
+             inquire(file='SWMF.KILL', exist=DoKill)
+             if(DoKill) call CON_stop(NameSub//': SWMF.KILL file found')
           end if
        end if
 

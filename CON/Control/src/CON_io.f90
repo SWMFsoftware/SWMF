@@ -355,6 +355,9 @@ contains
              call read_var('DtCheckStop', CheckStop % Dt)
           end if
 
+       case("#CHECKKILL")
+          call read_var('NameCompCheckKill', NameCompCheckKill)
+
        case("#PROGRESS")
 
           call read_var('DnShowProgressShort', DnShowProgressShort)

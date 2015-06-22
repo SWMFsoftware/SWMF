@@ -78,6 +78,9 @@ module CON_time
   ! How often shall we check cpu time and stop file. Default is never.
   type(FreqType):: CheckStop = FreqType(.false., -1, -1.0, 0, 0.0)
 
+  ! Name of component checking for the kill file
+  character(len=2):: NameCompCheckKill = '--'
+
   !REVISION HISTORY:
   ! 01Aug03 Aaron Ridley and G. Toth - initial implementation
   ! 22Aug03 G. Toth - added TypeFreq and is_time_to function
@@ -86,6 +89,7 @@ module CON_time
   ! 26Mar04 G. Toth - added get_time access method
   ! 25May04 G. Toth - added DnRun_C for steady state runs and
   !                   removed TimeCurrent variable
+  ! 22Jun15 G. Toth - added NameCompCheckKill variable
   !EOP
 
   character(len=*), parameter, private :: NameMod='CON_time'
