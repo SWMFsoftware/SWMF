@@ -93,6 +93,15 @@ subroutine update_states_MHD(iStage,iBlock)
   else
      DtFactor = Cfl
   end if
+
+  ! Modify electron pressure source term to electron entropy if necessary
+  ! d(Se)/d(Pe) = Pe^(1/gammaE-1)/gammaE
+  if(UseElectronPressure .and. UseElectronEntropy)then
+     do k = 1,nK; do j = 1,nJ; do i = 1,nI
+        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k)/GammaElectron &
+             * State_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron - 1)
+     end do; end do; end do
+  end if
   do k = 1,nK; do j = 1,nJ; do i = 1,nI
      DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
      Source_VC(:,i,j,k) = &
