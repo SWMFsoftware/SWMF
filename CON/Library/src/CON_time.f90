@@ -131,13 +131,14 @@ contains
   !IROUTINE: get_time - get time related parameters
   !INTERFACE:
   subroutine get_time(&
-       DoTimeAccurateOut, tSimulationOut, TimeStartOut,&
+       DoTimeAccurateOut, tSimulationOut, TimeStartOut, TimeCurrentOut, &
        tStartOut, tCurrentOut, nStepOut)
 
     !OUTPUT ARGUMENTS:
     logical,          optional, intent(out) :: DoTimeAccurateOut
     real,             optional, intent(out) :: tSimulationOut
     type(TimeType),   optional, intent(out) :: TimeStartOut
+    type(TimeType),   optional, intent(out) :: TimeCurrentOut
     real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
@@ -150,6 +151,10 @@ contains
     if(present(tStartOut))         tStartOut         = TimeStart % Time
     if(present(nStepOut))          nStepOut          = nStep
     if(present(tCurrentOut))       tCurrentOut = TimeStart % Time + tSimulation
+    if(present(TimeCurrentOut))then
+       TimeCurrentOut % Time = TimeStart % Time + tSimulation
+       call time_real_to_int(TimeCurrentOut)
+    end if
 
   end subroutine get_time
   !BOP ========================================================================
