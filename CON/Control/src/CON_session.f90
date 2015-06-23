@@ -568,16 +568,24 @@ contains
     ! be set with the \#PROGRESS command in the input parameter file.
     !EOP
 
+    use CON_time, ONLY: get_time, TimeType
+
+    type(TimeType):: TimeCurrent
+    !-------------------------------------------------------------------------
     if(.not.is_proc0()) RETURN
 
     if(is_proc0() .and. ( &
          (DnShowProgressShort>0 .and. mod(nStep,DnShowProgressShort)==0) .or. &
          (DnShowProgressLong >0 .and.  mod(nStep,DnShowProgressLong)==0))) then
+
+       call get_time(TimeCurrentOut = TimeCurrent)
        write(*,'(a,i8,a,g14.6,a,f10.2,a)')          &
             'Progress:',                            &
             nStep,' steps,',                        &
             tSimulation,' s simulation time,',      &
-            MPI_WTIME()-CpuTimeSetup,' s CPU time'
+            MPI_WTIME()-CpuTimeSetup,' s CPU time'//&
+            ', Date: ' &
+            //TimeCurrent % String(1:8) // '_' // TimeCurrent % String(9:14)
     end if
 
     if( DnTiming > 0 .and. mod(nStep,DnTiming) == 0) then
