@@ -192,22 +192,23 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
 #if _TARGET_ID_(_TARGET_) != _TARGET_NONE__ID_
   double rFinal2;
 
+  //if the particle is inside the sphere -> apply the boundary condition procedure
   if ((rFinal2=xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2])<_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_)) {
-    //the particle is inside the sphere -> apply the boundary condition procedure
+    double r=sqrt(rFinal2);
     int code;
-    cInternalBoundaryConditionsDescriptor *InternalBoundaryDescriptor=startNode->InternalBoundaryDescriptorList;
-    cInternalSphericalData *Sphere=(cInternalSphericalData*)(InternalBoundaryDescriptor->BoundaryElement);
+
+    static cInternalSphericalData_UserDefined::fParticleSphereInteraction ParticleSphereInteraction=
+        ((cInternalSphericalData*)(PIC::Mesh::mesh.InternalBoundaryList.front().BoundaryElement))->ParticleSphereInteraction;
+    static void* BoundaryElement=PIC::Mesh::mesh.InternalBoundaryList.front().BoundaryElement;
 
     //move the particle location at the surface of the sphere
-    double r=sqrt(rFinal2);
-
     for (int idim=0;idim<DIM;idim++) xFinal[idim]*=_RADIUS_(_TARGET_)/r;
 
     //determine the block of the particle location
     newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
     //apply the boundary condition
-    code=Sphere->ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,InternalBoundaryDescriptor->BoundaryElement);
+    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,BoundaryElement);
 
     if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
       PIC::ParticleBuffer::DeleteParticle(ptr);
