@@ -48,14 +48,11 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
   double *xmin,*xmax,*xMiddle;
   double x[3],v[3],anpart;
   int npart,idim;
-  long int ptr,FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-
 
   for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     memcpy(cellList,node->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
     xmin=node->xmin,xmax=node->xmax;
-    memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
 
     for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
       nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
@@ -75,36 +72,11 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
 
         for (idim=0;idim<3;idim++) v[idim]=cos(2*Pi*rnd())*sqrt(-log(rnd())/beta)+Velocity[idim];
 
-        //init the new particle
-        ptr=PIC::ParticleBuffer::GetNewParticle();
-        PIC::ParticleBuffer::SetX(x,ptr);
-        PIC::ParticleBuffer::SetV(v,ptr);
-        PIC::ParticleBuffer::SetI(spec,ptr);
-        PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,ptr);
-
-        //apply the particle tracking condition
-        #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-        PIC::ParticleBuffer::byte *ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-
-        PIC::ParticleTracker::InitParticleID(ParticleData);
-        PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,ParticleData);
-        #endif
-
-        //add the paticle to the cell's particle list
-        long int FirstCellParticle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
-
-        PIC::ParticleBuffer::SetNext(FirstCellParticle,ptr);
-        PIC::ParticleBuffer::SetPrev(-1,ptr);
-
-        if (FirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstCellParticle);
-        FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=ptr;
+        //initiate the new particle
+        PIC::ParticleBuffer::InitiateParticle(x,v,NULL,&spec,NULL,_PIC_INIT_PARTICLE_MODE__ADD2LIST_,(void*)node);
       }
       //end of the particle injection block
-
     }
-
-    //update the particle list table
-    memcpy(node->block->FirstCellParticleTable,FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
   }
 
   MPI_Allreduce(&nLocalInjectedParticles,&nGlobalInjectedParticles,1,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);

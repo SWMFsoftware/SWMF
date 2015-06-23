@@ -384,3 +384,62 @@ void PIC::ParticleBuffer::CheckParticleList() {
 
   if (nTotalListParticles!=NAllPart) exit(__LINE__,__FILE__,"Error: the total number of particles stored in the lists is different from that stored in the particle buffer");
 }
+
+//==========================================================
+//initiate the new particle
+int PIC::ParticleBuffer::InitiateParticle(double *x,double *v,double *WeightCorrectionFactor,int *spec,PIC::ParticleBuffer::byte* ParticleData,int InitMode,void *node) {
+  int ptr,ptrSpec;
+  byte* ptrData;
+
+  ptr=PIC::ParticleBuffer::GetNewParticle();
+  ptrData=GetParticleDataPointer(ptr);
+
+  //default settings
+  SetIndividualStatWeightCorrection(1.0,ptrData);
+
+  //set up the fields of the new particle with the user-defined data
+  if (ParticleData!=NULL) {
+    memcpy((void*)ptrData,(void*)ParticleData,ParticleDataLength);
+    SetParticleAllocated(ptrData);
+  }
+
+  if (x!=NULL) SetX(x,ptrData);
+  if (v!=NULL) SetV(v,ptrData);
+  if (spec!=NULL) SetI(*spec,ptrData);
+  if (WeightCorrectionFactor!=NULL) SetIndividualStatWeightCorrection(*WeightCorrectionFactor,ptrData);
+
+  //determine the species number
+  ptrSpec=(spec!=NULL) ? *spec : GetI(ptrData);
+
+  //apply the particle tracking condition
+  #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+  PIC::ParticleTracker::InitParticleID(ptrData);
+  PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,ptrSpec,ptrData);
+  #endif
+
+  //add the paticle to the cell's particle list
+  long int FirstCellParticle;
+  int iCell,jCell,kCell;
+
+  switch (InitMode) {
+  case _PIC_INIT_PARTICLE_MODE__ADD2LIST_:
+    PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
+    FirstCellParticle=((cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node)->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
+
+    SetNext(FirstCellParticle,ptr);
+    SetPrev(-1,ptr);
+
+    if (FirstCellParticle!=-1) PIC::ParticleBuffer::SetPrev(ptr,FirstCellParticle);
+    ((cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node)->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=ptr;
+
+    break;
+  case _PIC_INIT_PARTICLE_MODE__MOVE_:
+    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,((cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node)->block->GetLocalTimeStep(ptrSpec)*rnd(),(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
+
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the opiton is not found");
+  }
+
+  return ptr;
+}

@@ -461,6 +461,13 @@ namespace PIC {
     //check the total particles number
     void CheckParticleList();
 
+    //add the new particle to the simulation
+    //argument 'node' should be type of cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*. but this make the compiler unhappy.
+    //so, in the defineition of the function 'node' is void* but in pic_buffer.cpp this argument is transformed to cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
+    #define _PIC_INIT_PARTICLE_MODE__ADD2LIST_  0
+    #define _PIC_INIT_PARTICLE_MODE__MOVE_      1
+    int InitiateParticle(double *x,double *v,double* WeightCorrectionFactor,int *spec,byte* ParticleData,int InitMode,void *node);
+
     /*
     double *GetX(long int);
     void GetX(double*,long int);
