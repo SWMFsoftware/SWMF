@@ -811,8 +811,7 @@ contains
   subroutine save_restart
 
     use CON_coupler, ONLY: NameRestartOutDirComp
-    use CON_time, ONLY: get_time
-    use ModTimeConvert, ONLY: TimeType, time_real_to_int
+    use CON_time, ONLY: get_time, TimeType
 
     !DESCRIPTION:
     ! Save restart information for all components.
@@ -840,8 +839,7 @@ contains
     if(NameRestartOutDir /= '')then
        i = index(NameRestartOutDir, 'YYYYMMDD_HHMMSS')
        if(i > 0)then
-          call get_time(tCurrentOut = TimeCurrent % Time)
-          call time_real_to_int(TimeCurrent)
+          call get_time(TimeCurrentOut = TimeCurrent)
           NameRestartOutDirNow = NameRestartOutDir(1:i-1) // &
                TimeCurrent % String(1:8) // '_' // TimeCurrent % String(9:14) &
                // NameRestartOutDir(i+15:len(NameRestartOutDir))
