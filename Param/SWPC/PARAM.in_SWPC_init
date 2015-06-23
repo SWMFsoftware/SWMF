@@ -222,6 +222,10 @@ mc3                     TypeLimiter
 #TIMEACCURATE
 T			DoTimeAccurate
 
+#PROGRESS
+1			DnProgressShort
+100			DnProgressLong
+
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart

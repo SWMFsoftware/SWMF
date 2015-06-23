@@ -10,6 +10,10 @@ Example file to restart a run for the SWPC code selection
 #TIMEACCURATE
 T			DoTimeAccurate
 
+#PROGRESS
+1			DnProgressShort
+100			DnProgressLong
+
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
