@@ -691,7 +691,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
   else exit(__LINE__,__FILE__,"Error: unknown value of DataMode");
 
   //create TECPLOT script and run TECPLOT
-  int nFileOutputs; //the number of hte TECPLOT files that contain the contain the interpolated values
+  int nFileOutputs,nExistedFiles=0;; //the number of hte TECPLOT files that contain the contain the interpolated values
   char command[_MAX_STRING_LENGTH_PIC_],ScriptBaseName[_MAX_STRING_LENGTH_PIC_],DataFileFullName[_MAX_STRING_LENGTH_PIC_];
 
   sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
@@ -699,10 +699,67 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
   sprintf(ScriptBaseName,"%s.AMPS.ImportData",DataFileFullName);
   nFileOutputs=PIC::CPLR::DATAFILE::TECPLOT::CreateScript(ScriptBaseName,DataFileFullName);
 
-  sprintf(command,"tec360 -b %s %s.thread=%i.mcr",DataFileFullName,ScriptBaseName,PIC::ThisThread);
-  system(command);
+  //extract the data with TECPLOT
+  int thread,TaskTable[PIC::nTotalThreads];
 
-  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+  for (thread=0;thread<PIC::nTotalThreads;thread++) TaskTable[thread]=thread;
+
+  do {
+    if (TaskTable[PIC::ThisThread]!=-1) {
+      sprintf(command,"tec360 -b %s %s.thread=%i.mcr",DataFileFullName,ScriptBaseName,TaskTable[PIC::ThisThread]);
+      system(command);
+    }
+
+    MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+    //check that all data files are produced
+    if (PIC::ThisThread==0) {
+      bool ExtractedFileTable[PIC::nTotalThreads];
+
+      for (nExistedFiles=0,thread=0;thread<PIC::nTotalThreads;thread++) {
+        ExtractedFileTable[thread]=false;
+
+        char fname[400];
+        FILE *file=NULL;
+
+        sprintf(fname,"%s.thread=%i.0.dat",ScriptBaseName,PIC::ThisThread);
+        file=fopen(fname,"r");
+
+        if (file!=NULL) {
+          fclose(file);
+          ExtractedFileTable[thread]=true,nExistedFiles++;
+        }
+      }
+
+      if (nExistedFiles!=PIC::nTotalThreads) {
+        cout << "Warning: " << PIC::nTotalThreads-nExistedFiles << "file are not interpolated by TECPLOT. Repeating the interpolation procedure." << endl;
+
+        if (nExistedFiles==0) exit(__LINE__,__FILE__,"Error: no TECPLOTs have been succesfuly started at all");
+
+        int SucessThread=0,FailThread=0,nDistributedTasks=0;
+        for (thread=0;thread<PIC::nTotalThreads;thread++) TaskTable[thread]=-1;
+
+        do {
+          for (;SucessThread<PIC::nTotalThreads;SucessThread++) if (ExtractedFileTable[SucessThread]==true) break;
+          for (;FailThread<PIC::nTotalThreads;FailThread++) if (ExtractedFileTable[FailThread]==false) break;
+
+          //arrage the task table
+          if (SucessThread==PIC::nTotalThreads) break;
+          if (FailThread==PIC::nTotalThreads) exit(__LINE__,__FILE__,"Error: something is wrong. FailThread must be less than PIC::nTotalThreads");
+
+          TaskTable[SucessThread]=FailThread;
+          nDistributedTasks++;
+        }
+        while (nDistributedTasks!=PIC::nTotalThreads-nExistedFiles);
+      }
+    }
+
+    //distribute the TastTable
+    MPI_Bcast(TaskTable,PIC::nTotalThreads,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+    MPI_Bcast(&nExistedFiles,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+  }
+  while (nExistedFiles!=PIC::nTotalThreads);
+
 
   //read the data file
   LoadDataFile(ScriptBaseName,nFileOutputs);
