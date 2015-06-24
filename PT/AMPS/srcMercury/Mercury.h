@@ -16,6 +16,9 @@
 #include "Exosphere.h"
 #include "constants.h"
 
+#define _MERCURY_MESH_RESOLUTION_MODE__FULL_  0
+#define _MERCURY_MESH_RESOLUTION_MODE__TEST_  1
+
 //path to the SPICE Kernels directory
 //const char SPICE_Kernels_PATH[_MAX_STRING_LENGTH_PIC_]="/Users/vtenishe/SPICE/Kernels"; 
 
