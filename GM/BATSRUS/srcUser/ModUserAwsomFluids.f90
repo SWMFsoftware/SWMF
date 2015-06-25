@@ -45,6 +45,7 @@ module ModUser
   ! Dipole under surface                                                   
   real    :: UserDipoleDepth
   real    :: UserDipoleStrength, UserDipoleStrengthSi
+  character (len=2)    :: UserDipoleAxis
 
   ! Rotating boundary condition                                             
   real    :: TbeginJet, TendJet
@@ -99,6 +100,7 @@ contains
        case("#POLARJETDIPOLE")
           call read_var('UserDipoleDepth', UserDipoleDepth)
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
+          call read_var('UserDipoleAxis',UserDipoleAxis)
 
        case("#POLARJETBC")
           call read_var('IsFixedBcJet',IsFixedBcJet)
@@ -128,12 +130,15 @@ contains
           !     LocationMaxJet = 8.658e-3 Rs = xmax
           !     UmaxJet = 25.1067 km/s = umax
           ProfileExponentJet = 5.14
-          LocationMaxJet = DistMaxJet*ProfileExponentJet**(1./(1.-ProfileExponentJet))
+          LocationMaxJet = DistMaxJet*ProfileExponentJet**&
+               (1./(1.-ProfileExponentJet))
           
           ShapeCoeffJet = UmaxJet/LocationMaxJet &
                * DistMaxJet**(ProfileExponentJet-1.) &
-               /(DistMaxJet**(ProfileExponentJet-1.) - LocationMaxJet**(ProfileExponentJet-1.))
-          ScaleCoeffJet = (ShapeCoeffJet * DistMaxJet**(1.-ProfileExponentJet))**(1./ProfileExponentJet) 
+               /(DistMaxJet**(ProfileExponentJet-1.) - LocationMaxJet**&
+               (ProfileExponentJet-1.))
+          ScaleCoeffJet = (ShapeCoeffJet * DistMaxJet**&
+               (1.-ProfileExponentJet))**(1./ProfileExponentJet) 
           
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
@@ -145,7 +150,7 @@ contains
        case default
           if(iProc == 0) then
              call write_myname; write(*,*) &
-                  'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
+                  'ERROR: Invalid user defined #COMMAND in user_read_inputs.'
              write(*,*) '--Check user_read_inputs for errors'
              write(*,*) '--Check to make sure a #USERINPUTEND command was used'
              write(*,*) '  *Unrecognized command was: '//NameCommand
@@ -236,7 +241,7 @@ contains
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! dipole (jet) parameter converted to normalized units                  
-    UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
+    if(IsJetBC)UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -498,7 +503,7 @@ contains
     real    :: Framp
     real    :: Xyz_D(3)
     real    :: Uphi, Utheta
-    real    :: XyzSph_DD(3,3), urot_D(3)
+    real    :: urot_D(3)
     real    :: Xjet, Yjet, Zjet, DistanceJet
     real    :: uCoeff = 0.0
     ! Above is for jet only                    
@@ -917,14 +922,27 @@ contains
 
     !-------------------------------------------------------------------    
 
-    ! monopole part                                                      
+    ! monopole part
     Xyz_D = (/x, y, z/)
     r = sqrt(sum(Xyz_D**2))
     B0Mono_D = MonopoleStrength*Xyz_D/r**3
 
     ! dipole part                                                          
-    ! shifted Xyz_D upwards to center of the user-dipole                      
-    Xyz_D = (/x, y-1.0+UserDipoleDepth,z/)
+    ! shifted Xyz_D upwards to center of the user-dipole
+    select case (UserDipoleAxis)
+    case('+x')
+       Xyz_D = (/x-1.0+UserDipoleDepth,y,z/)
+    case('-x')
+       Xyz_D = (/x+1.0-UserDipoleDepth,y,z/)
+    case('+y')
+       Xyz_D = (/x, y-1.0+UserDipoleDepth,z/)
+    case('-y')
+       Xyz_D = (/x, y+1.0-UserDipoleDepth,z/)
+    case('+z')
+       Xyz_D = (/x, y, z-1.0+UserDipoleDepth/)
+    case('-z')
+       Xyz_D = (/x, y, z+1.0-UserDipoleDepth/)
+    end select
 
     ! Determine radial distance and powers of it                            
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
@@ -932,7 +950,21 @@ contains
     r3Inv = rInv*r2Inv
 
     ! Compute dipole moment of the intrinsic magnetic field B0.             
-    Dipole_D = (/0.0,UserDipoleStrength,0.0/)
+    select case (UserDipoleAxis)
+    case('+x') 
+       Dipole_D = (/UserDipoleStrength,0.0,0.0/)
+    case('-x')
+       Dipole_D = (/UserDipoleStrength,0.0,0.0/)
+    case('+y')
+       Dipole_D = (/0.0,UserDipoleStrength,0.0/)
+    case('-y')
+       Dipole_D = (/0.0,UserDipoleStrength,0.0/)
+    case('+z')
+       Dipole_D = (/0.0,0.0,UserDipoleStrength/)
+    case('-z')
+       Dipole_D = (/0.0,0.0,UserDipoleStrength/)
+    end select
+
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
     B0_D = B0Mono_D + (Dp*Xyz_D - Dipole_D)*r3Inv
