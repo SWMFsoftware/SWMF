@@ -355,6 +355,8 @@ sub ReadMainBlock {
   my $CouplingMode;
   my $CouplingFileReader;
   my $TrajectoryIntegrationCheckBlockFaceIntersection;
+  my $MoverIntegratorMode;
+  my $MoverIntegrator;
   
   #force the repeatable execution path
   my $ForceRepatableExecutionPath=0;
@@ -488,7 +490,25 @@ sub ReadMainBlock {
     }
     
     
-    
+    elsif($s0 eq "MOVERINTEGRATORMODE"){
+	$s1=~s/[();]/ /g;
+	($s0,$s1)=split(' ',$s1,2);
+	if(   $s0 eq "DIRECT") {
+	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__DIRECT_';
+	    $MoverIntegrator='PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder';#(ptr,LocalTimeStep,node)';
+	}
+	elsif($s0 eq "BORIS"){
+	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+	    $MoverIntegrator='PIC::Mover::Boris';#(ptr,LocalTimeStep,node)';
+	}
+	elsif($s0 eq "GUIDINGCENTER"){
+	    $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
+	    $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';#(ptr,LocalTimeStep,node)';
+	}
+	else{
+	    die "UNRECOGNIZED/UNDEFINED integrator mode $s0!\n";
+	}
+    }
         
     elsif ($s0 eq "COUPLERMODE") {
       $s1=~s/[();]/ /g;
@@ -773,6 +793,15 @@ sub ReadMainBlock {
     if (defined $CouplingFileReader) {
       ampsConfigLib::RedefineMacro("_PIC_COUPLER_DATAFILE_READER_MODE_",$CouplingFileReader,"pic/picGlobal.dfn");
     }
+  }
+
+  if(defined $MoverIntegratorMode){
+      ampsConfigLib::RedefineMacro('_PIC_MOVER_INTEGRATOR_MODE_',$MoverIntegratorMode,'pic/picGlobal.dfn');
+      if(defined $MoverIntegrator){
+	  my $macroIntegrator='_PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_';
+	  my $IntegratorArgs='(ptr,LocalTimeStep,node)';
+	  ampsConfigLib::AddLine2File("\n#undef $macroIntegrator\n#define $macroIntegrator$IntegratorArgs $MoverIntegrator$IntegratorArgs\n","pic/picGlobal.dfn");
+      }
   }
 
 
