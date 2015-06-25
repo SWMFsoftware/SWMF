@@ -1,11 +1,11 @@
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -14,14 +14,12 @@ T			DoTimeAccurate
 1			DnShowProgressShort
 1			DnShowProgressLong
 
-
 #COUPLE2TIGHT
 GM			NameCompMaster
 PC			NameCompSlave
-T           DoCouple
+T			DoCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
-
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -30,9 +28,9 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #PLASMA
-1.0             FluidMass [amu]
-1.0             IonCharge [e]  
-0.5             ElectronTemperatureRatio
+1.0			FluidMass [amu]
+1.0             	IonCharge [e]  
+1.0             	ElectronTemperatureRatio
 
 #IOUNITS
 NONE			NameIoUnits
@@ -47,18 +45,14 @@ F                       UseUpdateCheck
 T			UseNonConservative
 
 #CHECKGRIDSIZE
-4				nI
-4				nJ
-4				nK
-100				MinBlockALL
+4			nI
+4			nJ
+4			nK
+100			MinBlockALL
 
 EQUATION
 MHD with hyperbolic cleaning        NameEquation
 9                                   nVar
-
-USERMODULE
-GEM and PIC coupling, G. Toth and L. Daldorff
-1.00
 
 #GRID
 32			nRootBlockX
@@ -75,11 +69,11 @@ GEM and PIC coupling, G. Toth and L. Daldorff
 1.0			rho
 0.0			Ux
 0.0			Uy
-0.0         Uz	 
+0.0			Uz	 
 0.0			Bx
 0.0			By
-0.015		Bz
-0.000157080	p
+0.015			Bz
+0.000157080		p
 
 HYPERBOLICDIVB
 T                       UseHyperbolicDivb
@@ -102,12 +96,11 @@ F			UseFileCoupling
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
 
-
 PICREGION
 1                       nPicRegion
 -12.8  	                xMinCut
- 12.6                    xMaxCut
--6.4                   yMinCut
+ 12.6                   xMaxCut
+-6.4			yMinCut
 +6.3                    yMaxCut
 0.2                     DxPic
 0.1                     DyPic
@@ -123,13 +116,6 @@ PICREGION
 0.2                     DxPic
 0.1                     DyPic
 0.1                     DyPic
-
-
-#PLASMA
-1.0             FluidMass [amu]
-1.0             IonCharge [e]  
-0.5             ElectronTemperatureRatio
-
 
 #USERINPUTBEGIN -----------------
 
@@ -179,10 +165,10 @@ constant		TypeResistivity
 0.01			Eta0Si
 
 #SAVELOGFILE
-T		DoSaveLogfile
-var		StringLogfile
-1		DnSaveLogfile
--1.0		DtSaveLogfile
+T			DoSaveLogfile
+var			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
 dt rho mx my mz bx by bz e Pmin Pmax byflux
 g
 
@@ -216,32 +202,32 @@ g
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #ELECTRON
--25.0                                  Charge/mass ratio (qom)
+-25.0			Charge/mass ratio (qom)
 
 #PARTICLES
-3					Particles per cell in X
-3					Particles per cell in Y
-3					Particles per cell in Z
+3			Particles per cell in X
+3			Particles per cell in Y
+3			Particles per cell in Z
 
 #SOLVER
-1.0e-4					CGtol : CG solver stopping criterium tolerance
-1.0e-4					GMREStol : GMRES solver stopping criterium tolerance
-3					NiterMover : mover predictor corrector iteration
+1.0e-4			CGtol : CG solver stopping criterium tolerance
+1.0e-4			GMREStol : GMRES solver stopping criterium tolerance
+3			NiterMover : mover predictor corrector iteration
 
 #SAVEPLOT
-PC/plots				SaveDirName
-0					FieldOutputCycle
-0					ParticlesOutputCycle
-0					DiagnosticsOutputCycle
-4					FieldOutputCycleASCII
-0					SatelliteOutputCycle
+PC/plots		SaveDirName
+0			FieldOutputCycle
+0			ParticlesOutputCycle
+0			DiagnosticsOutputCycle
+4			FieldOutputCycleASCII
+0			SatelliteOutputCycle
 
 #END_COMP PC -----------------------------------------------------------------
 
 
 #STOP
 4			MaxIteration
--5000
+-1.0			tSimulationMax
 
 
 5000.0			tSimulationMax

@@ -1,11 +1,11 @@
 #ECHO
-T
+T			DoEcho
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -22,15 +22,15 @@ T           DoCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#USERMODULE
+USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
 
 #CHECKGRIDSIZE
-       8                              nI
-       8                              nJ
-       1                              nK
-     100                     MinBlockALL
+       8                nI
+       8                nJ
+       1                nK
+     100                MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -39,14 +39,12 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #PLASMA
-1.0             FluidMass [amu]
-1.0             IonCharge [e]  
-0.5             ElectronTemperatureRatio
-
+1.0			FluidMass [amu]
+1.0             	IonCharge [e]  
+1.0             	ElectronTemperatureRatio
 
 #NONCONSERVATIVE
-T               UseNonConservative
-
+T			UseNonConservative
 
 #UNIFORMSTATE
 1.0			Rho
@@ -172,14 +170,14 @@ init_hall_resist	TestString
 F			UseB0Source
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc		TypeLimiter
-1.5		BetaLimiter
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
 
 RK
-3		nStage
-0.8		CflExpl
+3			nStage
+0.8			CflExpl
 
 #TIMESTEPPING
 2                       nStage
@@ -240,6 +238,6 @@ PC/plots				SaveDirName
 
 #STOP
 -1			MaxIter
-4.39580 	TimeMax
+4.39580 		TimeMax
 
 

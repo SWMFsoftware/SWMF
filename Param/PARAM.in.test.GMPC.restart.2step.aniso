@@ -1,5 +1,5 @@
 #ECHO
-T
+T			DoEcho
 
 ! Restart header for SWMF
 #INCLUDE
@@ -10,9 +10,7 @@ RESTART.in		NameRestartFile
 1			DnShowProgressLong
 
 #SAVERESTART
-T                       DoSaveRestart 
-2                       DnSaveRestart 
-5.12                    DtSaveRestart
+F                       DoSaveRestart 
 
 #COUPLE2TIGHT
 GM			NameCompMaster
@@ -29,12 +27,12 @@ GM/restartIN/restart.H
 T                       DoSaveIntial
 
 #PLASMA
-1.0             FluidMass [amu]
-1.0             IonCharge [e]  
-0.5             ElectronTemperatureRatio
+1.0			FluidMass [amu]
+1.0             	IonCharge [e]  
+1.0             	ElectronTemperatureRatio
 
 #NONCONSERVATIVE
-T               UseNonConservative
+T			UseNonConservative
 
 #PIC
 T                       UsePic
@@ -81,10 +79,10 @@ init_hall_resist	TestString
 F			UseB0Source
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc		TypeLimiter
-1.5		BetaLimiter
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
 
 #FIXEDTIMESTEP
 T			UseDtFixed
@@ -93,11 +91,6 @@ T			UseDtFixed
 #TIMESTEPPING
 2                       nStage
 0.8                     CflExpl
-
-#SAVERESTART
-T			DoSaveRestart
-2
--1
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -119,23 +112,23 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #RESTART
-T					DoRrestart
+T			DoRrestart
 
 #SOLVER
-1.0e-8				CGtol : CG solver stopping criterium tolerance
-1.0e-8 					GMREStol : GMRES solver stopping criterium tolerance
-3					NiterMover : mover predictor corrector iteration
+1.0e-8			CGtol : CG solver stopping criterium tolerance
+1.0e-8 			GMREStol : GMRES solver stopping criterium tolerance
+3			NiterMover : mover predictor corrector iteration
 
 #SAVEPLOT
-PC/plots				SaveDirName
-1					FieldOutputCycle
-10000					ParticlesOutputCycle
-1					DiagnosticsOutputCycle
-0					FieldOutputCycleASCII
-0					SatelliteOutputCycle
+PC/plots		SaveDirName
+1			FieldOutputCycle
+10000			ParticlesOutputCycle
+1			DiagnosticsOutputCycle
+0			FieldOutputCycleASCII
+0			SatelliteOutputCycle
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--8			MaxIter
-5.12			TimeMax
+-8			MaxIteration
+5.12			tSimulationMax
