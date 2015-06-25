@@ -1,6 +1,8 @@
 //$Id$
 //contains macros that controls compiling of the exosphere model
 
+#ifndef _EXOSPHERE_DEFINITIONS_
+#define _EXOSPHERE_DEFINITIONS_
 
 #include "ExosphereDefinitions.dfn"
 
@@ -82,3 +84,6 @@
 
 //parameters of the model for the ion injection with the parameters of the background plasma
 #define _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE_ _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_MODE__STEADY_STATE_
+
+
+#endif
