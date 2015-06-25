@@ -1,0 +1,202 @@
+#ECHO
+T			DoEcho
+
+#COMPONENT
+SC
+
+#DESCRIPTION
+Test in BATSRUS the AwsomFluids user module.
+
+#TIMEACCURATE
+F                       DoTimeAccurate
+
+#STAR
+1.0                     RadiusStar
+1.0                     MassStar
+0.0                     RotationPeriodStar
+
+#PLASMA
+1.0			IonMass H+ [amu]
+4.0			IonMass He++ [amu]
+1.0			AverageIonCharge H+ [e]
+2.0			AverageIonCharge He++ [e]
+1.0			ElectronTemperatureRatio
+
+#BODY
+T			UseBody
+1.0			rBody
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+1.5e8			BodyNDim
+1.5e6			BodyTDim
+
+#BODY
+F			UseBody
+
+#USECURLB0
+F			UseCurlB0
+
+#MONOPOLEB0
+5.6e-4			MonopoleStrengthSi
+
+#USER_FLAGS
+F			UseUserInnerBcs
+T			UseUserSource
+F			UseUserPerturbation
+T			UseUserOuterBcs
+T			UseUserICs
+F			UseUserSpecifyRefinement
+T			UseUserLogFiles
+F			UseUserWritePlot
+F			UseUserAMR
+F			UseUserEchoInput
+F			UseUserB0
+T			UseUserInitSession
+F			UseUserUpdateStates
+
+#USERINPUTBEGIN ------------------------
+
+#CHROMOBC
+2e17                    nChromoSi H+ [1/m^3]
+1e16                    nChromoSi He++ [1/m^3]
+5e4                     tChromoSi [K]
+
+#USERINPUTEND ----------------------------
+
+#POYNTINGFLUX
+0.3e6			PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade        TypeCoronalHeating
+T                       UseWaveReflection
+1.5e5                   LperpTimesSqrtBSi
+
+#HEATPARTITIONING
+stochasticheating	TypeHeatPartitioning
+0.17			StochasticExponent
+0.18			StochasticAmplitude
+
+#HEATCONDUCTION
+T			UseHeatConduction
+spitzer			TypeHeatConduction
+
+#HEATFLUXREGION
+T			UseHeatFluxRegion
+5.0			rCollisional
+-8.0			rCollisionless
+
+#HEATFLUXCOLLISIONLESS
+T			UseHeatFluxCollisionless
+1.05			CollisionlessAlpha
+
+#POINTIMPLICIT
+T                       UsePointImplicit
+1.0                     BetaPointImplicit
+F                       IsAsymmetric
+T                       DoNormalizeCell
+
+#MULTIION
+1e-6                    LowDensityRatio
+1e-6                    LowPressureRatio
+F                       DoRestrictMultiIon
+
+#MULTIIONSTATE
+F                       UseSingleIonVelocity
+F                       UseSingleIonTemperature
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+parcond			TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES			TypeKrylov
+1.0e-5			ErrorMaxKrylov
+10			MaxMatvecKrylov
+
+#RADIATIVECOOLING
+T			UseRadCooling
+
+#LOOKUPTABLE
+radcool			NameTable
+load			NameCommand
+Param/CORONA/RadCoolCorona.dat
+ascii			TypeFile
+
+#TRANSITIONREGION
+T			DoExtendTransitionRegion
+2.2e5			TeModSi
+1.0e1			DeltaTeModSi
+
+---------------------------------------------------
+#GRIDGEOMETRYLIMIT
+spherical_genr
+Param/CORONA/grid_TR.dat
+1.001			Coord1Min Radius
+24.0			Coord1Max
+-1.0			Coord2Min Longitude
+1.0			Coord2Max
+-1.0			Coord3Min Latitude
+1.0			Coord3Max
+
+#GRID
+32			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+100.0			xMax
+-100.0			yMin
+100.0			yMax
+-100.0			zMin
+100.0			zMax
+
+----------------------------------------------------
+
+#SCHEME
+2			nOrder (1 or 2)
+Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov)
+mc3			TypeLimiter
+1.2			LimiterBeta
+
+#TIMESTEPPING
+2			nStage
+0.1			CflExpl
+
+#LIMITER
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
+
+#MINIMUMDENSITY
+1e-24			RhoMinDim [amu/cc] for fluid 1
+1e-28			RhoMinDim [amu/cc] for fluid 2
+
+#MINIMUMTEMPERATURE
+5e4			TMinDim  [K] for fluid 1
+5e4			TMinDim  [K] for fluid 2
+5e4			TeMinDim [K]
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#FACEBOUNDARY
+6			MinBoundary
+-2			MaxBoundary
+
+#OUTERBOUNDARY
+user			TypeBcEast   user for spherical and user_outerbcs
+float			TypeBcWest
+reflect			TypeBcSouth
+reflect			TypeBcNorth
+reflect			TypeBcBottom
+reflect			TypeBcTop
+
+#SAVEPLOT
+1			nPlotFiles
+1d MHD idl_ascii	StringPlot
+100			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax

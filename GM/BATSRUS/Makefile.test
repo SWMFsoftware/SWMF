@@ -32,6 +32,7 @@ test:
 	-@($(MAKE) test_viscosity)
 	-@($(MAKE) test_corona)
 	-@($(MAKE) test_coronasph)
+	-@($(MAKE) test_awsomfluids		
 	-@($(MAKE) test_chromo)
 	-@($(MAKE) test_outerhelio)
 	-@($(MAKE) test_earthsph)
@@ -68,6 +69,7 @@ test_help:
 	@echo "    test KEEP=y                (run tests and keep run directories)"
 	@echo "    test MPIRUN='mpirun -np 3' (run tests with mpirun -np 3)"
 	@echo "    test MPIRUN='mprun -np 2'  (run tests with mprun -np 2)"
+	@echo "    test_awsomfluids           (run 1D corona multifluid test)"
 	@echo "    test_amr                   (run AMR test)"
 	@echo "    test_amrsph                (run spherical AMR test)"
 	@echo "    test_anisotropic           (run anisotropic pressure test)"
@@ -765,6 +767,39 @@ test_coronasph_check:
 		Param/CORONA/TestOutput/log_n000001.sph \
 		${TESTDIR}/RESULTS/SC/log_n000001.log > test_coronasph.diff)
 	ls -l test_coronasph.diff
+
+# TEST 1D CORONA WITH AWSOM-MULTIFLUID SETTING
+
+test_awsomfluids:
+	@echo "test_awsomfluids_compile..." > test_awsomfluids.diff
+	$(MAKE) test_awsomfluids_compile
+	@echo "test_awsomfluids_rundir..." >> test_awsomfluids.diff
+	$(MAKE) test_awsomfluids_rundir
+	@echo "test_awsomfluids_run..." >> test_awsomfluids.diff
+	$(MAKE) test_awsomfluids_run
+	@echo "test_awsomfluids_check..." >> test_awsomfluids.diff
+	$(MAKE) test_awsomfluids_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_awsomfluids_compile:
+	./Config.pl -f -e=AwsomFluids -u=AwsomFluids -g=6,2,2,32,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_awsomfluids_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=SC STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/CORONA/PARAM.in.AwsomFluids PARAM.in
+
+test_awsomfluids_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_awsomfluids_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t \
+		Param/CORONA/TestOutput/1d__mhd_awsomfluids.out \
+		${TESTDIR}/RESULTS/SC/1d__mhd_1_n00000100.out > test_awsomfluids.diff)
+	ls -l test_awsomfluids.diff
 
 ### STANDALONE CHROMOSPHERE SOLAR CORONA TESTS ###
 
