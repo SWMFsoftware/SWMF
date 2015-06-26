@@ -170,32 +170,10 @@ contains
     ! other PE thinks that the directory does not exist.
     !EOP
 
-    integer, parameter :: MaxDir=100, lNameDir=100
-    integer, save :: nDir=0
-
-    character(len=lNameDir), save :: NameDir_I(MaxDir)
-    integer :: iDir, iError
+    integer:: iError
 
     character(len=*), parameter :: NameSub='check_dir'
     !--------------------------------------------------------------------------
-    ! Only directory names shorter than lNameDir can be stored
-    if(len_trim(NameDir) <= lNameDir) then
-       ! Check if this directory has been checked already
-       do iDir=1,nDir
-          if(NameDir_I(iDir)==NameDir) RETURN
-       end do
-
-       ! Increase counter for different directory names
-       nDir=nDir+1
-
-       ! Store new name if possible. 
-       if(nDir <= MaxDir) NameDir_I(nDir)=NameDir
-
-       ! If not, warn once, and keep checking...
-       if(nDir == MaxDir+1) write(*,'(a)')NameSub // &
-            ' SWMF_WARNING: too many different directories!'
-    end if
-
     ! Try to open a file in this directory
     open(UNITTMP_, file=trim(NameDir)//'.test', status='unknown', &
          iostat = iError)
@@ -612,7 +590,7 @@ contains
     write(*,'(a)') 'make directory "xxx/"'
     call make_dir('xxx')
     call check_dir('xxx/')
-    write(*,'(a)') 'Making directory again (should produce "File exists" error)'
+    write(*,'(a)') 'make xxx/ directory again (should not produce an error)'
     call make_dir('xxx', iErrorOut=iError)
     write(*,*) iError
 
