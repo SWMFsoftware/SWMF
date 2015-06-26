@@ -27,18 +27,25 @@ ElectricallyChargedDust::fGrainMassDensity ElectricallyChargedDust::GrainMassDen
 
 
 //int ElectricallyChargedDust::_DUST_SPEC_=-1;
-double ElectricallyChargedDust::minDustRadius=-1.0,ElectricallyChargedDust::maxDustRadius=-1.0;
+double ElectricallyChargedDust::minDustRadius=-1.0;
+double ElectricallyChargedDust::maxDustRadius=-1.0;
+
+//density of the dust grains
+double ElectricallyChargedDust::MeanDustDensity=1.0E3;
 
 //velocity groups of the grains
-
-double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.0,ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=0.0;
+double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.0;
+double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=0.0;
 double ElectricallyChargedDust::GrainVelocityGroup::logMinGrainVelocity=0.0,ElectricallyChargedDust::GrainVelocityGroup::logMaxGrainVelocity=0.0;
 double ElectricallyChargedDust::GrainVelocityGroup::dLogGrainVelocity=0.0;
 int ElectricallyChargedDust::GrainVelocityGroup::nGroups=0;
 
+//initial speed of the dust grains (used in the dust injection procedure when GenerateNewDustGrainInternalProperties==NULL)
+double ElectricallyChargedDust::InitialGrainSpeed=0.0;
 
 //size distribution of the dust grains
-double ElectricallyChargedDust::SizeDistribution::PowerIndex=0.0,ElectricallyChargedDust::SizeDistribution::NormalizationFactor=0.0;
+double ElectricallyChargedDust::SizeDistribution::PowerIndex=0.0;
+double ElectricallyChargedDust::SizeDistribution::NormalizationFactor=0.0;
 double ElectricallyChargedDust::SizeDistribution::LogMinDustGrainRadius=0.0,ElectricallyChargedDust::SizeDistribution::LogMaxDustGrainRadius=0.0;
 double ElectricallyChargedDust::SizeDistribution::maxValue__non_normalized=0.0;
 
@@ -118,6 +125,7 @@ int ElectricallyChargedDust::Sampling::RequestSamplingData(int offset) {
 //init the data for the model
 void ElectricallyChargedDust::Init_BeforeParser() {
   PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::RequestSamplingData);
+  Sampling::SetDustSamplingIntervals(Sampling::nDustSizeSamplingIntervals);
 }
 
 
@@ -402,7 +410,7 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
   bool InjectionFlag;
   ElectricallyChargedDust::fGenerateNewDustGrainInternalProperties GenerateNewDustGrainInternalProperties_LOCAL=GenerateNewDustGrainInternalProperties;
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-  int GrainVelocityGroup;
+  int GrainVelocityGroup,spec;
 
   const int ParticleDataLength=PIC::ParticleBuffer::ParticleDataLength;
   PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
@@ -414,6 +422,8 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
 //  if (nDustGroups!=1) exit(__LINE__,__FILE__,"Error: the injection procedure doesn't work correctly for nDustGroups!=1");
 
   //============ END DEBUG =========================
+
+  if (BoundaryElementType!=_INTERNAL_BOUNDARY_TYPE_SPHERE_) exit(__LINE__,__FILE__,"Error: implemented only for BoundaryElementType==_INTERNAL_BOUNDARY_TYPE_SPHERE_");
 
   Sphere=(cInternalSphericalData*)SphereDataPointer;
   Sphere->GetSphereGeometricalParameters(sphereX0,sphereRadius);
@@ -434,14 +444,41 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
 
   GrainInjectedMass+=TotalMassDustProductionRate*LocalTimeStep;
 
-
   while (GrainInjectedMass>0.0) {
     startNode=NULL;
-    InjectionFlag=GenerateNewDustGrainInternalProperties_LOCAL(x,v,GrainRadius,GrainWeightCorrection,startNode);
+
+    if (GenerateNewDustGrainInternalProperties_LOCAL!=NULL) {
+      InjectionFlag=GenerateNewDustGrainInternalProperties_LOCAL(x,v,GrainRadius,GrainWeightCorrection,startNode);
+    }
+    else {
+      //uniform source of the dust on the sphere
+      int idim;
+      double ExternalNormal[3],r=0.0;
+
+      //generate the gain radius and weight correction
+      ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
+
+      //generate the new particle position and velocity
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]=sqrt(-2.0*log(rnd()))*cos(PiTimes2*rnd());
+        r+=pow(ExternalNormal[idim],2);
+      }
+
+      r=sqrt(r);
+
+      for (idim=0;idim<DIM;idim++) {
+        ExternalNormal[idim]/=r;
+        x[idim]=sphereRadius*ExternalNormal[idim];
+        v[idim]=InitialGrainSpeed*ExternalNormal[idim];
+      }
+
+      //determine if the particle belongs to this processor
+      startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
+      InjectionFlag=(startNode->Thread==PIC::Mesh::mesh.ThisThread) ? true : false;
+    }
 
     GrainMass=4.0/3.0*Pi*MeanDustDensity*pow(GrainRadius,3);
     GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
-
 
     if (InjectionFlag==false) continue;
     if ((block=startNode->block)->GetLocalTimeStep(_DUST_SPEC_)/LocalTimeStep<rnd()) continue;
@@ -449,33 +486,41 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
     //determine the velocity group of the injected grain;
     //calculate additional particle weight correction because the particle will be placed in a different weight group
     GrainVelocityGroup=GrainVelocityGroup::GetGroupNumber(v);
-    GrainWeightCorrection*=block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/block->GetLocalTimeStep(_DUST_SPEC_);
+    spec=_DUST_SPEC_+GrainVelocityGroup;
+
+    GrainWeightCorrection*=block->GetLocalTimeStep(spec)/block->GetLocalTimeStep(_DUST_SPEC_);
 
 #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
-    GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup];
+    GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
 #else
   exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
 #endif
 
-
     //generate a particle:init the temporary buffer with the particle's properties
     PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
     PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
-    PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
+    PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
     PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
 
     SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
     SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
     SetGrainRadius(GrainRadius,(PIC::ParticleBuffer::byte*)tempParticleData);
 
+//    SetParticleSourceID(0,(PIC::ParticleBuffer::byte*)tempParticleData);
 
     newParticle=PIC::ParticleBuffer::GetNewParticle();
     newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
 
     memcpy((void*)newParticleData,(void*)tempParticleData,ParticleDataLength);
+
+    PIC::ParticleBuffer::SetParticleAllocated(newParticleData);
+
+    //determine the initial charge of the dust grain
+    #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+    ElectricallyChargedDust::DustChargingProcessor_SteadyState(x,x,v,spec,newParticle,newParticleData,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode);
+    #endif
+
     nInjectedParticles++;
-
-
 
     //sample the injection flux
     //sample the particle data
@@ -486,14 +531,17 @@ long int ElectricallyChargedDust::DustInjection__Sphere(int BoundaryElementType,
     nSurfaceElement=Sphere->GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
     SampleData=Sphere->SamplingBuffer+PIC::BC::InternalBoundary::Sphere::collectingSpecieSamplingDataOffset(_DUST_SPEC_,nSurfaceElement);
 
+    SampleData[PIC::BC::InternalBoundary::Sphere::sampledFluxUpRelativeOffset]+=GrainMass*ParticleWeight*GrainWeightCorrection/block->GetLocalTimeStep(spec)/Sphere->GetSurfaceElementArea(nZenithElement,nAzimuthalElement);
 
-    SampleData[PIC::BC::InternalBoundary::Sphere::sampledFluxUpRelativeOffset]+=GrainMass*ParticleWeight*GrainWeightCorrection/block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/Sphere->GetSurfaceElementArea(nZenithElement,nAzimuthalElement);
-
-
+    //apply the particle tracking condition
+    #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+    PIC::ParticleTracker::InitParticleID(newParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData);
+    #endif
 
     //inject the particle into the system
-    SampledDustMassInjectionRate+=GrainMass*ParticleWeight*GrainWeightCorrection/startNode->block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup);
-    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,rnd()*startNode->block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup),startNode,true);
+    SampledDustMassInjectionRate+=GrainMass*ParticleWeight*GrainWeightCorrection/startNode->block->GetLocalTimeStep(spec);
+    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,rnd()*startNode->block->GetLocalTimeStep(spec),startNode,true);
   }
 
   return nInjectedParticles;
@@ -1068,6 +1116,364 @@ void ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDis
 
 /*----------------------------------------------- Sampling Size Distribution Function : END -------------------------------------------*/
 
+
+//dust charing model
+int ElectricallyChargedDust::DustChargingProcessor_SteadyState(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode) {
+  double plasmaTemperature,plasmaNumberDensity;
+  double GrainElectricCharge,GrainElectricCharge_NEW;
+
+  PIC::Mesh::cDataCenterNode* cell;
+  int i,j,k;
+  long int LocalCellNumber;
+  double swVel[3];
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *finalNode=PIC::Mesh::mesh.findTreeNode(xFinal,initNode);
+
+  //the procesure is applied only to dust
+  if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+  cell=finalNode->block->GetCenterNode(LocalCellNumber);
+
+  //get the grain electric potential
+  char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  double M,GrainRadius,dustPotential;
+
+  memcpy((void*)localParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+  GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)localParticleData);
+  GrainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)localParticleData);
+
+
+  //reserve space for different elecgtron and ion temepratures
+  double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron,pe;
+
+
+  plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,finalNode);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,finalNode);
+  plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,finalNode);
+  pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure(xInit,LocalCellNumber,finalNode);
+
+
+  if (plasmaNumberDensity<1.0E2) {
+    plasmaTemperature=200.0;
+    plasmaNumberDensity=1.0E2;
+    swVel[0]=100.0,swVel[1]=0.0,swVel[2]=0.0;
+    Ti=plasmaTemperature;
+    Te=plasmaTemperature;
+  }
+  else{
+    Ti=plasmaTemperature;
+    Te=pe/(Kbol*plasmaNumberDensity);
+  }
+
+
+
+
+/*    //the plasma flow data
+  double vvvv[3]={100.0,0.0,0.0};
+
+  swVel=vvvv;
+  plasmaNumberDensity=20000.0/18.0*1.0E6;
+  Ti=0.1E-9/(Kbol*plasmaNumberDensity);
+  Te=0.001E-9/(Kbol*plasmaNumberDensity);*/
+
+
+
+
+//==========  DEBUG  BEGIN =================
+  static long int nFunctionCalls=0;
+
+  nFunctionCalls++;
+
+  /*
+  if ((PIC::nTotalThreads==7)&&(nFunctionCalls==1709)) {
+    cout << __FILE__ << "@" << __LINE__ << endl;
+  }
+  */
+
+//==========   DEBUG END ===================
+
+
+  J0e=-ElectronCharge*  4.0*Pi*pow(GrainRadius,2)*plasmaNumberDensity*sqrt(Kbol*Te/(PiTimes2*ElectronMass));
+  J0i=ElectronCharge* 4.0*Pi*pow(GrainRadius,2)*plasmaNumberDensity*sqrt(Kbol*Ti/(PiTimes2*ProtonMass));
+
+  //evaluate the first interation step
+  dustPotential=GrainElectricCharge/(4.0*Pi*VacuumPermittivity*GrainRadius);
+
+  //get the electon current and the jacobian of the electron current
+  XiElectron=-ElectronCharge*dustPotential/(Kbol*Te);
+
+  if (XiElectron>=0.0) {
+    double t2 = 0.1e1 / 0.3141592654e1;
+    double t3 = 0.1e1 / VacuumPermittivity;
+    double t6 = 0.1e1 / GrainRadius;
+    double t7 = 0.1e1 / Kbol;
+    double t9 = 0.1e1 / Te;
+    double t17 = exp(ElectronCharge * GrainElectricCharge * t2 * t3 * t6 * t7 * t9 / 0.4e1);
+
+    Je=J0e*exp(-XiElectron);
+    dJe = J0e * ElectronCharge * t2 * t3 * t6 * t7 * t9 * t17 / 0.4e1;
+  }
+  else {
+    Je=J0e*(1.0-XiElectron);
+    dJe=J0e * ElectronCharge / 0.3141592654e1 / VacuumPermittivity / GrainRadius / Kbol / Te / 0.4e1;
+  }
+
+  //get the current and hacobian of the ion current
+  M=sqrt((pow(swVel[0]-v[0],2)+pow(swVel[1]-v[1],2)+pow(swVel[2]-v[2],2))/(2.0*Kbol*Ti/ProtonMass));
+
+
+  if (dustPotential<=0.0) {
+    {
+      double t1 = M * M;
+      double t15 = sqrt(0.3141592654e1);
+      double t17 = erf(M);
+      double t21 = exp(-t1);
+      Ji = J0i * ((t1 + 0.1e1 / 0.2e1 - ElectronCharge * GrainElectricCharge / 0.3141592654e1 / VacuumPermittivity / Kbol / Ti / GrainRadius / 0.4e1) * t15 * t17 / M + t21) / 0.2e1;
+    }
+
+    {
+      double t2 = sqrt(0.3141592654e1);
+      double t11 = erf(M);
+      dJi = -J0i * ElectronCharge / t2 / VacuumPermittivity / Kbol / Ti / GrainRadius * t11 / M / 0.8e1;
+    }
+  }
+  else {
+    {
+      double t1 = M * M;
+      double t2 = ElectronCharge * GrainElectricCharge;
+      double t3 = 0.1e1 / 0.3141592654e1;
+      double t5 = 0.1e1 / VacuumPermittivity;
+      double t6 = 0.1e1 / Kbol;
+      double t8 = 0.1e1 / Ti;
+      double t9 = 0.1e1 / GrainRadius;
+      double t12 = t2 * t3 * t5 * t6 * t8 * t9;
+      double t15 = sqrt(0.3141592654e1);
+      double t17 = sqrt(t12);
+      double t18 = t17 / 0.2e1;
+      double t19 = M + t18;
+      double t20 = erf(t19);
+      double t21 = M - t18;
+      double t22 = erf(t21);
+      double t24 = 0.1e1 / M;
+      double t33 = sqrt(t2 * t3 * t5 * t6 * t8 * t9 * t24);
+      double t34 = t33 / 0.2e1;
+      double t36 = t21 * t21;
+      double t37 = exp(-t36);
+      double t40 = t19 * t19;
+      double t41 = exp(-t40);
+      Ji = J0i * ((t1 + 0.1e1 / 0.2e1 - t12 / 0.4e1) * t15 * (t20 + t22) * t24 + (t34 + 0.1e1) * t37 - (t34 - 0.1e1) * t41) / 0.2e1;
+    }
+
+    {
+      double t1 = sqrt(0.3141592654e1);
+      double t4 = 0.1e1 / VacuumPermittivity;
+      double t5 = 0.1e1 / Kbol;
+      double t6 = t4 * t5;
+      double t8 = 0.1e1 / Ti;
+      double t9 = 0.1e1 / GrainRadius;
+      double t10 = t8 * t9;
+      double t11 = ElectronCharge * GrainElectricCharge;
+      double t12 = 0.1e1 / 0.3141592654e1;
+      double t14 = t6 * t10;
+      double t15 = t11 * t12 * t14;
+      double t16 = sqrt(t15);
+      double t17 = t16 / 0.2e1;
+      double t18 = M + t17;
+      double t19 = erf(t18);
+      double t20 = M - t17;
+      double t21 = erf(t20);
+      double t23 = 0.1e1 / M;
+      double t28 = M * M;
+      double t33 = 0.1e1 / t1 / 0.3141592654e1;
+      double t34 = t18 * t18;
+      double t35 = exp(-t34);
+      double t38 = 0.1e1 / t16 * ElectronCharge;
+      double t41 = t20 * t20;
+      double t42 = exp(-t41);
+      double t49 = t12 * t4;
+      double t51 = t5 * t8;
+      double t52 = t9 * t23;
+      double t55 = sqrt(t11 * t49 * t51 * t52);
+      double t58 = 0.1e1 / t55 * ElectronCharge * t49;
+      double t63 = t55 / 0.2e1;
+      double t66 = t38 * t12;
+      dJi = J0i * (-ElectronCharge / t1 * t6 * t10 * (t19 + t21) * t23 / 0.4e1 + (t28 + 0.1e1 / 0.2e1 - t15 / 0.4e1) * t1 * (t33 * t35 * t38 * t14 - t33 * t42 * t38 * t14) * t23 / 0.2e1 + t58 * t51 * t52 * t42 / 0.4e1 + (t63 + 0.1e1) * t20 * t66 * t6 * t10 * t42 / 0.2e1 - t58 * t51 * t52 * t35 / 0.4e1 + (t63 - 0.1e1) * t18 * t66 * t6 * t10 * t35 / 0.2e1) / 0.2e1;
+
+    }
+  }
+
+
+  double IterationIncrement,InitIterationIncrement=-(Ji+Je)/(dJi+dJe),IterationParameter=1.0;
+  int Counter=0;
+
+  GrainElectricCharge_NEW=GrainElectricCharge+InitIterationIncrement;
+
+
+  //do the iteration loop
+  do {
+
+    GrainElectricCharge_NEW=GrainElectricCharge+IterationParameter*InitIterationIncrement;
+
+    dustPotential=GrainElectricCharge_NEW/(4.0*Pi*VacuumPermittivity*GrainRadius);
+
+    //get the electon current and the jacobian of the electron current
+    XiElectron=-ElectronCharge*dustPotential/(Kbol*Te);
+
+    if (XiElectron>=0.0) {
+      double t2 = 0.1e1 / 0.3141592654e1;
+      double t3 = 0.1e1 / VacuumPermittivity;
+      double t6 = 0.1e1 / GrainRadius;
+      double t7 = 0.1e1 / Kbol;
+      double t9 = 0.1e1 / Te;
+      double t17 = exp(ElectronCharge * GrainElectricCharge_NEW * t2 * t3 * t6 * t7 * t9 / 0.4e1);
+
+      Je=J0e*exp(-XiElectron);
+      dJe = J0e * ElectronCharge * t2 * t3 * t6 * t7 * t9 * t17 / 0.4e1;
+    }
+    else {
+      Je=J0e*(1.0-XiElectron);
+      dJe=J0e * ElectronCharge / 0.3141592654e1 / VacuumPermittivity / GrainRadius / Kbol / Te / 0.4e1;
+    }
+
+    //get the current and hacobian of the ion current
+    M=sqrt((pow(swVel[0]-v[0],2)+pow(swVel[1]-v[1],2)+pow(swVel[2]-v[2],2))/(2.0*Kbol*Ti/ProtonMass));
+
+
+    if (dustPotential<=0.0) {
+      {
+        double t1 = M * M;
+        double t15 = sqrt(0.3141592654e1);
+        double t17 = erf(M);
+        double t21 = exp(-t1);
+        Ji = J0i * ((t1 + 0.1e1 / 0.2e1 - ElectronCharge * GrainElectricCharge_NEW / 0.3141592654e1 / VacuumPermittivity / Kbol / Ti / GrainRadius / 0.4e1) * t15 * t17 / M + t21) / 0.2e1;
+      }
+
+      {
+        double t2 = sqrt(0.3141592654e1);
+        double t11 = erf(M);
+        dJi = -J0i * ElectronCharge / t2 / VacuumPermittivity / Kbol / Ti / GrainRadius * t11 / M / 0.8e1;
+      }
+    }
+    else {
+      {
+        double t1 = M * M;
+        double t2 = ElectronCharge * GrainElectricCharge_NEW;
+        double t3 = 0.1e1 / 0.3141592654e1;
+        double t5 = 0.1e1 / VacuumPermittivity;
+        double t6 = 0.1e1 / Kbol;
+        double t8 = 0.1e1 / Ti;
+        double t9 = 0.1e1 / GrainRadius;
+        double t12 = t2 * t3 * t5 * t6 * t8 * t9;
+        double t15 = sqrt(0.3141592654e1);
+        double t17 = sqrt(t12);
+        double t18 = t17 / 0.2e1;
+        double t19 = M + t18;
+        double t20 = erf(t19);
+        double t21 = M - t18;
+        double t22 = erf(t21);
+        double t24 = 0.1e1 / M;
+        double t33 = sqrt(t2 * t3 * t5 * t6 * t8 * t9 * t24);
+        double t34 = t33 / 0.2e1;
+        double t36 = t21 * t21;
+        double t37 = exp(-t36);
+        double t40 = t19 * t19;
+        double t41 = exp(-t40);
+        Ji = J0i * ((t1 + 0.1e1 / 0.2e1 - t12 / 0.4e1) * t15 * (t20 + t22) * t24 + (t34 + 0.1e1) * t37 - (t34 - 0.1e1) * t41) / 0.2e1;
+      }
+
+      {
+        double t1 = sqrt(0.3141592654e1);
+        double t4 = 0.1e1 / VacuumPermittivity;
+        double t5 = 0.1e1 / Kbol;
+        double t6 = t4 * t5;
+        double t8 = 0.1e1 / Ti;
+        double t9 = 0.1e1 / GrainRadius;
+        double t10 = t8 * t9;
+        double t11 = ElectronCharge * GrainElectricCharge_NEW;
+        double t12 = 0.1e1 / 0.3141592654e1;
+        double t14 = t6 * t10;
+        double t15 = t11 * t12 * t14;
+        double t16 = sqrt(t15);
+        double t17 = t16 / 0.2e1;
+        double t18 = M + t17;
+        double t19 = erf(t18);
+        double t20 = M - t17;
+        double t21 = erf(t20);
+        double t23 = 0.1e1 / M;
+        double t28 = M * M;
+        double t33 = 0.1e1 / t1 / 0.3141592654e1;
+        double t34 = t18 * t18;
+        double t35 = exp(-t34);
+        double t38 = 0.1e1 / t16 * ElectronCharge;
+        double t41 = t20 * t20;
+        double t42 = exp(-t41);
+        double t49 = t12 * t4;
+        double t51 = t5 * t8;
+        double t52 = t9 * t23;
+        double t55 = sqrt(t11 * t49 * t51 * t52);
+        double t58 = 0.1e1 / t55 * ElectronCharge * t49;
+        double t63 = t55 / 0.2e1;
+        double t66 = t38 * t12;
+        dJi = J0i * (-ElectronCharge / t1 * t6 * t10 * (t19 + t21) * t23 / 0.4e1 + (t28 + 0.1e1 / 0.2e1 - t15 / 0.4e1) * t1 * (t33 * t35 * t38 * t14 - t33 * t42 * t38 * t14) * t23 / 0.2e1 + t58 * t51 * t52 * t42 / 0.4e1 + (t63 + 0.1e1) * t20 * t66 * t6 * t10 * t42 / 0.2e1 - t58 * t51 * t52 * t35 / 0.4e1 + (t63 - 0.1e1) * t18 * t66 * t6 * t10 * t35 / 0.2e1) / 0.2e1;
+      }
+    }
+
+    IterationIncrement=-(Ji+Je)/(dJi+dJe);
+
+    if (IterationIncrement*InitIterationIncrement<0.0) {
+      //the iteration resutled in overshoot of the dust charge
+      IterationParameter/=2.0;
+      continue;
+    }
+    else {
+
+      //evaluate the convergance of the iterations
+      if (fabs(GrainElectricCharge-GrainElectricCharge_NEW)<1.0E-4*fabs(GrainElectricCharge+GrainElectricCharge_NEW)) {
+        GrainElectricCharge=GrainElectricCharge_NEW;
+        break;
+      }
+
+      GrainElectricCharge=GrainElectricCharge_NEW;
+      InitIterationIncrement=IterationIncrement;
+
+      IterationParameter*=2.0;
+      if (IterationParameter>1.0) IterationParameter=1.0;
+    }
+
+  }
+  while (++Counter<10000);
+
+
+  SetGrainCharge(GrainElectricCharge,ParticleData);
+
+  //move the particle into diferent velocity group if needed
+  int oldVelocityGroup,newVelocityGroup;
+
+  oldVelocityGroup=spec-_DUST_SPEC_;
+  newVelocityGroup=GrainVelocityGroup::GetGroupNumber(v);
+
+  if (oldVelocityGroup!=newVelocityGroup) {
+    //move the particle into different velocity group
+    double GrainWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+    GrainWeightCorrection*=finalNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/finalNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+oldVelocityGroup]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+newVelocityGroup];
+#else
+    exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+
+    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,ParticleData);
+    spec=_DUST_SPEC_+newVelocityGroup;
+    PIC::ParticleBuffer::SetI(spec,ParticleData);
+  }
+
+
+
+  return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+}
 
 #endif
 

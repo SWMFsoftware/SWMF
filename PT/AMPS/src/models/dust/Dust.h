@@ -60,6 +60,9 @@ namespace ElectricallyChargedDust {
   //characteristic limits of the dust grain's velocityes
   extern double minDustVelocity,maxDustVelocty;
 
+  //initial speed of the dust grains (used in the dust injection procedure when GenerateNewDustGrainInternalProperties==NULL)
+  extern double InitialGrainSpeed;
+
   //the locariphmic incremernt in the dust grains's size for each time step groups
 //  extern double dLogGrainRadius_TimeStepGroup;
 
@@ -74,7 +77,7 @@ namespace ElectricallyChargedDust {
 
   //the mean desntiy of the dust grains
   typedef double (*fGrainMassDensity)(double GrainRadius);
-  static const double MeanDustDensity=1.0E3;
+  extern double MeanDustDensity;
   extern fGrainMassDensity GrainMassDensity_UserDefinedFunction;
 
   //the total mass production rate of the dust grains
@@ -960,7 +963,8 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
 
   /*-----------------------  Steady State Dust Charging ------------------------------- */
-  inline int DustChargingProcessor_SteadyState(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode) {
+int DustChargingProcessor_SteadyState(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode);
+/*  inline int DustChargingProcessor_SteadyState(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode) {
     double plasmaTemperature,plasmaNumberDensity;
     double GrainElectricCharge,GrainElectricCharge_NEW;
 
@@ -1010,13 +1014,13 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
 
 
-/*    //the plasma flow data
+    //the plasma flow data
     double vvvv[3]={100.0,0.0,0.0};
 
     swVel=vvvv;
     plasmaNumberDensity=20000.0/18.0*1.0E6;
     Ti=0.1E-9/(Kbol*plasmaNumberDensity);
-    Te=0.001E-9/(Kbol*plasmaNumberDensity);*/
+    Te=0.001E-9/(Kbol*plasmaNumberDensity);
 
 
 
@@ -1026,11 +1030,11 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
     nFunctionCalls++;
 
-    /*
+
     if ((PIC::nTotalThreads==7)&&(nFunctionCalls==1709)) {
       cout << __FILE__ << "@" << __LINE__ << endl;
     }
-    */
+
 
   //==========   DEBUG END ===================
 
@@ -1315,7 +1319,7 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
 
 
     return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
-  }
+  }*/
 
 
 //injection of the dust grains
