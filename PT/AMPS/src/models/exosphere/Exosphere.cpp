@@ -1233,6 +1233,37 @@ void Exosphere::ColumnIntegral::CircularMap(char *fname,double rmax,double dRmin
 
 //=====================================================================================================
 //empty sampling function
+void Exosphere::Sampling::SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
+  int id;
+
+  //sample onlt the real gas particles
+  if (PIC::MolecularData::GetSpecieType(spec)!=_PIC_SPECIE_TYPE__GAS_) return;
+
+  id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
+  if ((id<0.0)||(id>_EXOSPHERE__SOURCE_MAX_ID_VALUE_)) exit(__LINE__,__FILE__,"Error: the particle source ID is out of range");
+
+  *(spec+(double*)(SamplingBuffer+SamplingDensityOffset[id]))+=LocalParticleWeight;
+/*
+  switch (id) {
+  case _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_:
+    *((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset))+=LocalParticleWeight;
+    break;
+  case _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_:
+    *((double*)(SamplingBuffer+SamplingDensity__PhotonStimulatedDesorption_Offset))+=LocalParticleWeight;
+    break;
+  case _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_:
+    *((double*)(SamplingBuffer+SamplingDensity__ThermalDesorption_Offset))+=LocalParticleWeight;
+    break;
+  case _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_:
+    *((double*)(SamplingBuffer+SamplingDensity__SolarWindSputtering_Offset))+=LocalParticleWeight;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is not found");
+  }
+  */
+}
+
+
 void Exosphere::Sampling::SampleModelData() {
 
   //sample sodium surface content
@@ -1919,7 +1950,16 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int BoundaryElementT
   int spec;
   long int res=0;
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) res+=InjectionBoundaryModel(spec,BoundaryElementType,BoundaryElement);
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+    if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+      res+=ElectricallyChargedDust::DustInjection__Sphere(BoundaryElementType,BoundaryElement);
+      continue;
+    }
+    #endif
+
+    res+=InjectionBoundaryModel(spec,BoundaryElementType,BoundaryElement);
+  }
 
   return res;
 }

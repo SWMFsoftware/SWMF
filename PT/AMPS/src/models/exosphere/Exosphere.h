@@ -190,37 +190,7 @@ namespace Exosphere {
     inline void SetParicleOriginSurfaceElementNumber(int el,PIC::ParticleBuffer::byte *pData) {*(int*)(pData+ParticleData_OriginSurfaceElementNumber_Offset)=el;}
 
     //sample particle's data
-    void inline SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
-      int id;
-
-      //determine if the particle is a sodium atom
-//      if (spec!=_NA_SPEC_) return;
-
-      id=GetParticleSourceID((PIC::ParticleBuffer::byte*)ParticleData);
-      if ((id<0.0)||(id>_EXOSPHERE__SOURCE_MAX_ID_VALUE_)) exit(__LINE__,__FILE__,"Error: the particle source ID is out of range");
-
-      *(spec+(double*)(SamplingBuffer+SamplingDensityOffset[id]))+=LocalParticleWeight;
-/*
-      switch (id) {
-      case _EXOSPHERE_SOURCE__ID__IMPACT_VAPORIZATION_:
-        *((double*)(SamplingBuffer+SamplingDensity__ImpactVaporization_Offset))+=LocalParticleWeight;
-        break;
-      case _EXOSPHERE_SOURCE__ID__PHOTON_STIMULATED_DESPRPTION_:
-        *((double*)(SamplingBuffer+SamplingDensity__PhotonStimulatedDesorption_Offset))+=LocalParticleWeight;
-        break;
-      case _EXOSPHERE_SOURCE__ID__THERMAL_DESORPTION_:
-        *((double*)(SamplingBuffer+SamplingDensity__ThermalDesorption_Offset))+=LocalParticleWeight;
-        break;
-      case _EXOSPHERE_SOURCE__ID__SOLAR_WIND_SPUTTERING_:
-        *((double*)(SamplingBuffer+SamplingDensity__SolarWindSputtering_Offset))+=LocalParticleWeight;
-        break;
-      default:
-        exit(__LINE__,__FILE__,"Error: the option is not found");
-      }
-      */
-    }
-
-
+    void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);
     void SampleModelData();
     void OutputSampledModelData(int DataOutputFileNumber);
 
