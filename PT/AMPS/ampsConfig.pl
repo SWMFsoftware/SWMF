@@ -168,6 +168,9 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#GENERAL") {
     ReadGeneralBlock();
   }  
+  elsif ($InputLine eq "#DUST") {
+    ReadDustBlock();
+  }
   elsif ($InputLine eq "#BLOCK") {
     #call a user defined processor of a block in the input file 
     my $BlockProcessor;
@@ -1605,6 +1608,102 @@ sub ParticleCollisionModel {
     }
     
     elsif ($InputLine eq "#ENDPARTICLECOLLISIONS") {
+      last;
+    }
+    else {      
+      $line=~s/ //g;
+      chomp($line);
+   
+      if (($line ne "") && (substr($line,0,1) ne '!')) {
+        die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+      }
+    }
+    
+  }
+}
+
+#=============================== Read Dust Settings ==================
+sub ReadDustBlock {
+  my $ModelIsOnFlag=1;
+
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    $InputLine=uc($InputLine);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[=,]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+  
+    if ($InputLine eq "DUSTMODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      
+      if ($InputLine eq "ON") {
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__ON_","pic/picGlobal.dfn");
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__MODE_","_PIC_MODEL__DUST__MODE__OFF_","pic/picGlobal.dfn");
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_","_PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_","pic/picGlobal.dfn");
+      }
+      else {
+	      die "Unknown option\n";
+      }
+    }
+    elsif ($InputLine eq "DUSTRMIN") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::minDustRadius","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }
+    elsif ($InputLine eq "DUSTRMAX") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::maxDustRadius","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }
+    elsif ($InputLine eq "NDUSTRADIUSGROUPS") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("int ElectricallyChargedDust::Sampling::nDustSizeSamplingIntervals","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }
+    elsif ($InputLine eq "DUSTTOTALMASSPRODUCTIONRATE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::TotalMassDustProductionRate","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }
+    elsif ($InputLine eq "POWERLAWINDEX") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::SizeDistribution::PowerIndex","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }
+    
+    elsif ($InputLine eq "MEANDENSITY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::MeanDustDensity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }    
+    
+    elsif ($InputLine eq "INITIALGRAINSPEED") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::InitialGrainSpeed","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    } 
+    elsif ($InputLine eq "MINGRAINVELOCITY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::minGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    } 
+    elsif ($InputLine eq "MAXGRAINVELOCITY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::maxGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+    }   
+
+    elsif ($InputLine eq "#ENDDUST") {
       last;
     }
     else {      
