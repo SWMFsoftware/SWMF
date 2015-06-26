@@ -65,7 +65,7 @@ ParticleWeightCorrectionMode=on
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200 
+  ReferenceInjectionParticleNumber=10 
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -98,7 +98,7 @@ ParticleWeightCorrectionMode=on
 
   RecoverMacroscopicSampledData=off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
-    file=pic.SamplingDataRestart.out=3.dat
+    file=pic.SamplingDataRestart.out=2.dat
 
 
   RecoverParticleData=off  \\ !on, off
@@ -111,14 +111,14 @@ ParticleWeightCorrectionMode=on
     IterationInterval=20
 
 
- define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__D UST__MODE__ON_
+ define _PIC_MODEL__DUST__MODE_ _PIC_MODEL__DUST__MODE__ON_
  define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
 
   define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_ON_
   define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
 
 
-define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 
 
 !the mesh resoution close to Europa
@@ -153,6 +153,21 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC
     nSampleIntervals=200
 
 #endSampling
+
+#Dust
+  DustMode=on !!on,off
+  DustTotalMassProductionRate=1.0
+  PowerLawIndex=3.4
+  dustRmin=1.0e-7
+  dustRmax=1.0e-4
+  nDustRadiusGroups=10
+
+  MeanDensity=1.0E3
+
+  InitialGrainSpeed=600.0
+  MinGrainVelocity=0.01
+  MaxGrainVelocity=20E3
+#endDust
 
 #block ../europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
