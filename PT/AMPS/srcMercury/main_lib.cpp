@@ -346,9 +346,13 @@ double localSphericalSurfaceResolution(double *x) {
 
   res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
-
+#if _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
   res/=2.2;
-
+#elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__TEST_
+  //do nothing
+#else
+  exit(__LINE__,__FILE__,"Error: the option is unknown");
+#endif
 
   return rSphere*res;
 }
@@ -367,7 +371,14 @@ double localResolution(double *x) {
   }
   else res=dxMinGlobal;
 
-//  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
+#if _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
+  //do nothing
+#elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__TEST_
+  res*=2.2;
+#else
+  exit(__LINE__,__FILE__,"Error: the option is unknown");
+#endif
+
 
   return rSphere*res;
 }
@@ -1160,25 +1171,7 @@ void amps_init_mesh() {
     }
   }
 
-
-  //  }
-  //  VT_USER_END("name");
-  //  MPI_Finalize();
-  //  return 1;
-
-  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
-
- if (NewMeshGeneratedFlag==true) PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
-
-
-//  }
-//  VT_USER_END("name");
-//  MPI_Finalize();
-//  return 1;
-
-  cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
-
-  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+  if (NewMeshGeneratedFlag==true) PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
   PIC::Mesh::mesh.memoryAllocationReport();
   PIC::Mesh::mesh.GetMeshTreeStatistics();

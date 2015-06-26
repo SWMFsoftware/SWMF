@@ -36,31 +36,39 @@ void amps_time_step();
 
 
 int main(int argc,char **argv) {
-  //      MPI_Init(&argc,&argv);
-
-//  PIC::InitMPI();
-//  PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::Init("3d__mhd_1_n00000001.idl"); //"3d__all_3_t00000010_n0000059.idl"); //"3d__mhd_1_n00000001.idl");
-
-cout << "Start: MERCURY" << endl;
-
   amps_init_mesh();
   amps_init();
+
+
+  //create the reference file with the extracted data
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  char fname[400];
+
+  sprintf(fname,"%s/test_Mercury_background.dat",PIC::OutputDataFileDirectory);
+  PIC::CPLR::DATAFILE::SaveTestReferenceData(fname);
+  #endif
 
 
 
 
   //time step
-  for (long int niter=0;niter<100000001;niter++) {
+  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 150;
 
+  for (long int niter=0;niter<nTotalIterations;niter++) {
     amps_time_step();
-
-
-
-
   }
 
 
+  //output the particle statistics of the test run
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  sprintf(fname,"%s/test_Mercury.dat",PIC::OutputDataFileDirectory);
+  PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  #endif
+
+
+  //finish the run
+  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return 1;
+  return EXIT_SUCCESS;
 }
