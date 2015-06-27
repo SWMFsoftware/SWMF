@@ -1695,12 +1695,12 @@ sub ReadDustBlock {
     elsif ($InputLine eq "MINGRAINVELOCITY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::minGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
     } 
     elsif ($InputLine eq "MAXGRAINVELOCITY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::maxGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
     }   
 
     elsif ($InputLine eq "#ENDDUST") {
@@ -2646,7 +2646,7 @@ sub ReadSpeciesBlock {
         $ElectricChargeArray[$nspec]="0.0";
         
         #add the dust group number to the species name
-        $SpeciesList[$nspec]=$SpeciesList[$nspec].":".$nDustSpeciesGroup;
+        $SpeciesList[$nspec]=$SpeciesList[$nspec]."%".$nDustSpeciesGroup;
         $nDustSpeciesGroup++;
       }
       else {
