@@ -49,7 +49,7 @@ char* PIC::MolecularData::GetChemBaseSymbol(int spec) {
   for (int i=0;i<_MAX_STRING_LENGTH_PIC_;i++) {
     TempString[i]=ChemTable[spec][i];
 
-    if ((TempString[i]==':')||(TempString[i]=='\n')||(TempString[i]=='\r')||(TempString[i]==0)) {
+    if ((TempString[i]=='%')||(TempString[i]=='\n')||(TempString[i]=='\r')||(TempString[i]==0)) {
       TempString[i]=0;
       break;
     }
