@@ -43,15 +43,18 @@ module ModUser
 
   ! variables for polar jet application              
   ! Dipole under surface                                                   
-  real    :: UserDipoleDepth
   real    :: UserDipoleStrength, UserDipoleStrengthSi
-  character (len=2)    :: UserDipoleAxis
+  real    :: UserDipoleDepth
+  real    :: UserDipoleLatitude
+  real    :: UserDipoleLongitude
+  real    :: UserDipoleAxisLatitude
+  real    :: UserDipoleAxisLongitude
 
   ! Rotating boundary condition                                             
   real    :: TbeginJet, TendJet
   integer :: iBcMax            ! Index up to which BC is applied         
   logical :: IsRamping
-  logical :: IsJetBC
+  logical :: IsPolarDipole, IsJetBC
   logical :: IsFixedBcJet
   real    :: DistMinJet
   real    :: DistMaxJet
@@ -98,9 +101,13 @@ contains
           call read_var('tCoronaSi', tCoronaSi)
 
        case("#POLARJETDIPOLE")
-          call read_var('UserDipoleDepth', UserDipoleDepth)
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
-          call read_var('UserDipoleAxis',UserDipoleAxis)
+          call read_var('UserDipoleDepth', UserDipoleDepth)
+          call read_var('UserDipoleLatitude',UserDipoleLatitude)
+          call read_var('UserDipoleLongitude',UserDipoleLongitude)
+          call read_var('UserDipoleAxisLatitude',UserDipoleAxisLatitude)
+          call read_var('UserDipoleAxisLongitude',UserDipoleAxisLongitude)
+          IsPolarDipole = .true.
 
        case("#POLARJETBC")
           call read_var('IsFixedBcJet',IsFixedBcJet)
@@ -172,7 +179,7 @@ contains
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I
     use ModConst,      ONLY: cElectronCharge, cLightSpeed, cBoltzmann, cEps, &
          cElectronMass, cProtonMass
-    use ModNumConst,   ONLY: cTwoPi
+    use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_
     !UnitB_ is for jet only
@@ -241,7 +248,13 @@ contains
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
     ! dipole (jet) parameter converted to normalized units                  
-    if(IsJetBC)UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
+    if(IsPolarDipole)then
+       UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
+       UserDipoleLatitude = UserDipoleLatitude*cDegToRad
+       UserDipoleLongitude = UserDipoleLongitude*cDegToRad
+       UserDipoleAxisLatitude = UserDipoleAxisLatitude*cDegToRad
+       UserDipoleAxisLongitude = UserDipoleAxisLongitude*cDegToRad
+    endif
 
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
@@ -911,38 +924,37 @@ contains
   subroutine user_get_b0(x, y, z, B0_D)
 
     use ModPhysics, ONLY: MonopoleStrength
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
 
-    real, intent(in) :: x, y, z
-    real, intent(out):: B0_D(3)
+    real, intent(in)   :: x, y, z
+    real, intent(inout):: B0_D(3)
 
     real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
     real :: B0Mono_D(3)
+
+    real :: UserDipoleAxis_D(3)
 
     character(len=*), parameter :: NameSub = 'user_get_b0'
 
     !-------------------------------------------------------------------    
 
     ! monopole part
+    B0Mono_D = (/0.0,0.0,0.0/)
+
     Xyz_D = (/x, y, z/)
     r = sqrt(sum(Xyz_D**2))
     B0Mono_D = MonopoleStrength*Xyz_D/r**3
 
     ! dipole part                                                          
-    ! shifted Xyz_D upwards to center of the user-dipole
-    select case (UserDipoleAxis)
-    case('+x')
-       Xyz_D = (/x-1.0+UserDipoleDepth,y,z/)
-    case('-x')
-       Xyz_D = (/x+1.0-UserDipoleDepth,y,z/)
-    case('+y')
-       Xyz_D = (/x, y-1.0+UserDipoleDepth,z/)
-    case('-y')
-       Xyz_D = (/x, y+1.0-UserDipoleDepth,z/)
-    case('+z')
-       Xyz_D = (/x, y, z-1.0+UserDipoleDepth/)
-    case('-z')
-       Xyz_D = (/x, y, z+1.0-UserDipoleDepth/)
-    end select
+    ! shifted Xyz_D to the center of the user-dipole
+    call rlonlat_to_xyz(&
+         (/1-UserDipoleDepth, UserDipoleLongitude, UserDipoleLatitude/),&
+    Xyz_D)
+    Xyz_D = (/x, y, z/) - Xyz_D
+
+    call rlonlat_to_xyz(&
+         (/1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude/),&
+    UserDipoleAxis_D)
 
     ! Determine radial distance and powers of it                            
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
@@ -950,24 +962,11 @@ contains
     r3Inv = rInv*r2Inv
 
     ! Compute dipole moment of the intrinsic magnetic field B0.             
-    select case (UserDipoleAxis)
-    case('+x') 
-       Dipole_D = (/UserDipoleStrength,0.0,0.0/)
-    case('-x')
-       Dipole_D = (/UserDipoleStrength,0.0,0.0/)
-    case('+y')
-       Dipole_D = (/0.0,UserDipoleStrength,0.0/)
-    case('-y')
-       Dipole_D = (/0.0,UserDipoleStrength,0.0/)
-    case('+z')
-       Dipole_D = (/0.0,0.0,UserDipoleStrength/)
-    case('-z')
-       Dipole_D = (/0.0,0.0,UserDipoleStrength/)
-    end select
+    Dipole_D = UserDipoleStrength * UserDipoleAxis_D
 
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
-    B0_D = B0Mono_D + (Dp*Xyz_D - Dipole_D)*r3Inv
+    B0_D = B0_D + B0Mono_D + (Dp*Xyz_D - Dipole_D)*r3Inv
 
   end subroutine user_get_b0
 
