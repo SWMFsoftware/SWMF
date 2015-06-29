@@ -200,8 +200,8 @@ subroutine user_get_b0(x, y, z, B0_D)
   use ModUser, ONLY: user_sub => user_get_b0
   implicit none
 
-  real, intent(in) :: x, y, z
-  real, intent(out):: B0_D(3)
+  real, intent(in)   :: x, y, z
+  real, intent(inout):: B0_D(3)
   !-------------------------------------------------------------------
   call user_sub(x, y, z, B0_D)
 

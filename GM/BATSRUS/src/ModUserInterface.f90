@@ -149,8 +149,8 @@ module ModUserInterface
      subroutine user_get_b0(x, y, z, B0_D)
 
        implicit none
-       real, intent(in) :: x, y, z
-       real, intent(out):: B0_D(3)
+       real, intent(in)   :: x, y, z
+       real, intent(inout):: B0_D(3)
 
      end subroutine user_get_b0
 

@@ -563,9 +563,7 @@ contains
 
     real:: rLonLat_D(3), r
     !-------------------------------------------------------------------------
-    if(UseUserB0)then
-       call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
-    elseif(iTableB0 > 0)then
+    if(iTableB0 > 0)then
        call xyz_to_rlonlat(Xyz_D, rLonLat_D)
        if(dLonB0 > 0.0) &
             rLonLat_D(2) = modulo(rLonLat_D(2) - dLonB0, cTwoPi)
@@ -584,17 +582,19 @@ contains
     elseif(MonopoleStrength /= 0.0)then
        r = sqrt(sum(Xyz_D(1:nDim)**2))
        B0_D = MonopoleStrength*Xyz_D/r**nDim
-    elseif(IsStandAlone .and. DipoleStrengthSi==0.0)then
+    elseif(DipoleStrengthSi==0.0)then
        B0_D = 0.0
-       RETURN
     elseif(NameThisComp=='GM' .and. nDim == 3)then
        call get_planet_field(Time_Simulation, Xyz_D, TypeCoordSystem//' NORM',&
             B0_D)
        B0_D = B0_D*Si2No_V(UnitB_)
-    else 
-       call get_b0_multipole(Xyz_D, B0_D) 
+    else
+       ! quadrupole and octupole field are zero no matter what (see set_physics
+       call get_b0_multipole(Xyz_D, B0_D)
     end if
     if(UseBody2)call add_b0_body2(Xyz_D, B0_D)
+
+    if(UseUserB0)call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
 
   end subroutine get_b0
 
