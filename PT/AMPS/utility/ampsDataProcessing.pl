@@ -92,7 +92,7 @@ do {
     #start slave processes	
     if (@FileList) {
       if ($nTotalThreads==1) {
-        ProcessDataFiles($nTotalThreads);
+        ProcessDataFiles($nTotalThreads-1);
       }
       else {
         for (my $count=0;$count<$nTotalThreads;$count++) {
@@ -141,11 +141,15 @@ sub ProcessDataFiles {
       
       #determine whether the file is complete and can be processes
       if (-e $fname) {
-        if (! flock($fname, LOCK_EX)) {
+        open(MYFILE,"< $fname") || next;
+        
+        if (! flock(MYFILE, LOCK_EX)) {
+          close(MYFILE);
           next;
         }
         
-        flock($fname, LOCK_UN);
+        flock(MYFILE, LOCK_UN);
+        close(MYFILE);
       }
       
       #preplot the data file
