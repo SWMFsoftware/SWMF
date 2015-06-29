@@ -43,7 +43,8 @@ foreach (@ARGV) {
   
   if (/^-help/i) {
     print "Example:\n";
-    print "./ampsDataProcessing.pl -np=1 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot=\'*.sdf\' -dir=./\n"; 
+    print "./ampsDataProcessing.pl -np=1 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot=\'*.dat\' -dir=./\n"; 
+    print "./ampsDataProcessing.pl -wait -np=5 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot='*.dat' -dir=PT/plots\n";
     print "The argument line:\n";
     print "-help             -> print the list of the arguments\n";
     print "-wait   ->  the script will wait for the new files being generated untill it is killed by user\n";
