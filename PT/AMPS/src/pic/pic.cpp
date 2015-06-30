@@ -857,6 +857,12 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
               ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
 #endif
 
+	      //call sampling procedures of indivudual models
+
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+	      PIC::Mover::GuidingCenter::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);
+#endif //_PIC_MOVER_INTEGRATOR_MODE_ 
+
               //call user defined particle sampling procedure
 #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
               _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s);

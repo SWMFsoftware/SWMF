@@ -417,6 +417,15 @@ int PIC::ParticleBuffer::InitiateParticle(double *x,double *v,double *WeightCorr
   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,ptrSpec,ptrData);
   #endif
 
+  //check if mover guiding center motion integration is used
+#if _PIC_MOVER_INTEGRATOR_MODE_ ==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+  PIC::Mover::GuidingCenter::InitiateMagneticMoment(GetI(ptr),
+						    GetX(ptr),GetV(ptr),
+						    ptr, node);
+#endif //_PIC_MOVER_INTEGRATOR_MODE_
+  
+
+
   //add the paticle to the cell's particle list
   long int FirstCellParticle;
   int iCell,jCell,kCell;

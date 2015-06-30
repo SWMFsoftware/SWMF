@@ -14,8 +14,16 @@
 PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles=NULL;
 PIC::Mover::fProcessTriangleCutFaceIntersection PIC::Mover::ProcessTriangleCutFaceIntersection=NULL;
 
+
 //====================================================
 //init the particle mover
+void PIC::Mover::Init_BeforeParser(){
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+  GuidingCenter::Init_BeforeParser();
+#endif //_PIC_MOVER_INTEGRATOR_MODE_
+
+}
+
 void PIC::Mover::Init() {
 /*
   int s;
@@ -28,6 +36,12 @@ void PIC::Mover::Init() {
   MoveParticleBoundaryInjection=new fSpeciesDependentParticleMover_BoundaryInjection[PIC::nTotalSpecies];
   for (s=0;s<PIC::nTotalSpecies;s++) MoveParticleTimeStep[s]=NULL,MoveParticleBoundaryInjection[s]=NULL;
   */
+
+  // check if guiding center motion is used
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+  GuidingCenter::Init();
+#endif //_PIC_MOVER_INTEGRATOR_MODE_
+  
 }
 
 //====================================================

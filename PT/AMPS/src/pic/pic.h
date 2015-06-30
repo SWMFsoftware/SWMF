@@ -2093,6 +2093,55 @@ namespace PIC {
     #define _PARTICLE_LEFT_THE_DOMAIN_       2
     #define _PARTICLE_MOTION_FINISHED_       3
 
+    namespace GuidingCenter{
+
+      namespace Sampling {
+	extern int CellSamplingDataOffset;
+	extern int TotalKineticEnergyOffset;
+	int RequestSamplingData(int offset);
+	void SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec);
+      }
+
+      namespace Output{
+	void PrintVariableList(FILE* fout,int DataSetNumber);
+	void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+	void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+      }
+
+      //magnetic moment: for guiding center motion intergartion
+      extern long int MagneticMomentOffset;
+      inline double GetMagneticMoment(long int ptr){
+	return *(double*)(PIC::ParticleBuffer::GetParticleDataPointer(ptr) + 
+			  MagneticMomentOffset);
+      }
+      inline double GetMagneticMoment(PIC::ParticleBuffer::byte *ParticleDataStart){
+	return *(double*)(ParticleDataStart + MagneticMomentOffset);
+      }
+      inline void SetMagneticMoment(double MagneticMoment, long int ptr){
+	*(double*)(PIC::ParticleBuffer::GetParticleDataPointer(ptr) +
+		   MagneticMomentOffset) = MagneticMoment;
+      }
+      inline void SetMagneticMoment(double MagneticMoment, PIC::ParticleBuffer::byte* ParticleDataStart){
+	*(double*)(ParticleDataStart +
+		   MagneticMomentOffset) = MagneticMoment;
+      }
+
+      void Init_BeforeParser();
+      void Init();
+      void InitiateMagneticMoment(int spec, double *x, double *v, 
+				  long int ptr, void *node);
+
+      //mover
+      void GuidingCenterMotion_default(double *Vguide, double &ForceParal, 
+				       double &BAbsValue, double *BDirection, 
+				       double *PParal,
+				       int spec,long int ptr,
+				       double *x, double *v,
+				       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+      int Mover_SecondOrder(long int ptr,double dtTotal,
+			    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+    }
+
 //    typedef void (*fTotalParticleAcceleration)(double *accl,int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
     typedef int (*fSpeciesDependentParticleMover) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*);
     typedef int (*fSpeciesDependentParticleMover_BoundaryInjection) (long int,double,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*,bool);
@@ -2110,7 +2159,7 @@ namespace PIC {
     typedef int (*fProcessTriangleCutFaceIntersection) (long int ptr,double* xInit,double* vInit,CutCell::cTriangleFace *TriangleCutFace);
     extern fProcessTriangleCutFaceIntersection ProcessTriangleCutFaceIntersection;
 
-
+    void Init_BeforeParser();
     void Init();
     void MoveParticles();
 
@@ -2778,6 +2827,17 @@ namespace PIC {
        #endif
      }
 
+     inline void GetBackgroundMagneticFieldMagnitude(double &AbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+       exit(__LINE__,__FILE__,"not implemented");
+       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+       AbsB=DATAFILE::GetBackgroundMagneticFieldMagnitude(x,nd,node);
+       #else
+       exit(__LINE__,__FILE__,"not implemented");
+       #endif
+     }
+
+
      inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
        exit(__LINE__,__FILE__,"not implemented");
@@ -2872,8 +2932,8 @@ namespace PIC {
   namespace InitialCondition {
     //constant number density
     long int PrepopulateDomain(int spec,double NumberDensity,double *Velocity,double Temperature);
-
-
+    // put a single particle (for each thread)
+    long int PutParticle(int spec, double *x, double *v);
   }
 
   //Save and read the restart files
