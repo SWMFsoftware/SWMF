@@ -152,7 +152,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     }
   }
   // now the data has been read -----------------------------------------------
-  
+
   //convert velocity and magnetic field vectors to cartesian coordinates ------
   for(int iZ = 0; iZ < nZ; iZ++){
     for(int iX = 0; iX < nX; iX++){
@@ -170,7 +170,6 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     }
   }
   //conversion is finished ----------------------------------------------------
-
 
   //compute additional data: 
   //gradient of magnetic field, abs value of magnetic field and its gradient
@@ -308,7 +307,12 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))     =DataInterp[p_];
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))   =DataInterp[n_];
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))     =DataInterp[t_];
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude.offset))=DataInterp[Ab_];
+
+	    //for magnitude of magnetic field DON'T use an interpolated value:
+	    // compute it based on interpolated values of components
+	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude.offset))=pow(DataInterp[b_+0]*DataInterp[b_+0]+
+												DataInterp[b_+1]*DataInterp[b_+1]+
+												DataInterp[b_+2]*DataInterp[b_+2],0.5);
 	  }
     }
     else {
