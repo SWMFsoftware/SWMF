@@ -1,5 +1,9 @@
 
 #species
+#component=ELECTRON
+  mass=_ELECTRON__MASS_
+  charge=-1
+
 #component=Na
   mass=3.82E-26
   charge=0
