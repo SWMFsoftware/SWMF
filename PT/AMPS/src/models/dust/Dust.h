@@ -148,7 +148,8 @@ namespace ElectricallyChargedDust {
     void SetDustSamplingIntervals(int);
     int RequestSamplingData(int);
 
-    void inline SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
+    void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);
+    /*{
       double GrainRadius,v[3]={0.0,0.0,0.0},Speed=0.0;
       int dustSamplingInterval,idim;
 
@@ -188,7 +189,7 @@ namespace ElectricallyChargedDust {
         *(idim+(double*)(SamplingBuffer+Sampling::TotalDustElectricCurrentDensitySamplingOffset))+=v[idim];
       }
 #endif
-    }
+    }*/
 
 
     namespace SampleSizeDistributionFucntion {

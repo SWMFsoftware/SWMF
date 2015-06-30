@@ -1475,6 +1475,50 @@ int ElectricallyChargedDust::DustChargingProcessor_SteadyState(double *xInit,dou
   return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 }
 
+//==========================================================================================
+//sample particle data
+void ElectricallyChargedDust::Sampling::SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec) {
+  double GrainRadius,v[3]={0.0,0.0,0.0},Speed=0.0;
+  int dustSamplingInterval,idim;
+
+  //determine if the particle is a dust grain
+  if (!((_DUST_SPEC_<=spec)&&(spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups))) return;
+
+  GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
+  dustSamplingInterval=(int)(log(GrainRadius/minDustRadius)/dLogDustSamplingIntervals);
+  PIC::ParticleBuffer::GetV(v,(PIC::ParticleBuffer::byte*)ParticleData);
+
+  //number density
+  *(dustSamplingInterval+(double*)(SamplingBuffer+DustSizeSamplingInterval_NumberDensity_Offset))+=LocalParticleWeight;
+
+  //velocity
+  for (idim=0;idim<3;idim++) {
+    v[idim]*=LocalParticleWeight;
+    Speed+=v[idim]*v[idim];
+
+    *(idim+3*dustSamplingInterval+(double*)(SamplingBuffer+DustSizeSamplingInterval_Velocity_Offset))+=v[idim];
+  }
+
+  //Speed
+  Speed=sqrt(Speed);
+  *(dustSamplingInterval+(double*)(SamplingBuffer+DustSizeSamplingInterval_Speed_Offset))+=Speed;
+
+  //electric charge and currents
+#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+  double grainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
+
+  *(dustSamplingInterval+(double*)(SamplingBuffer+DustSizeSamplingInterval_ElectricCherge_Offset))+=grainElectricCharge*LocalParticleWeight;
+  *((double*)(SamplingBuffer+Sampling::TotalDustElectricChargeDensitySamplingOffset))+=grainElectricCharge*LocalParticleWeight;
+
+  for (idim=0;idim<3;idim++) {
+    v[idim]*=grainElectricCharge;
+
+    *(idim+3*dustSamplingInterval+(double*)(SamplingBuffer+DustSizeSamplingInterval_ElectricCurrent_Offset))+=v[idim];
+    *(idim+(double*)(SamplingBuffer+Sampling::TotalDustElectricCurrentDensitySamplingOffset))+=v[idim];
+  }
+#endif
+}
+
 #endif
 
 
