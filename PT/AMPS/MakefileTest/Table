@@ -74,6 +74,12 @@ Name=Rosetta
 <#
 
 #>
+Name=Mercury 
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+srbwks2014-0079)  
+Keys=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/home3/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0-srbwks2014-0079)   
+<#
+
+#>
 Name=test/batl-reader
 Compile=
 >>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
