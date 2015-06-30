@@ -346,13 +346,13 @@ double localSphericalSurfaceResolution(double *x) {
 
   res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
-#if _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  res*=2*2.2;
+  #elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
   res/=2.2;
-#elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__TEST_
-  //do nothing
-#else
+  #else
   exit(__LINE__,__FILE__,"Error: the option is unknown");
-#endif
+  #endif
 
   return rSphere*res;
 }
@@ -371,13 +371,14 @@ double localResolution(double *x) {
   }
   else res=dxMinGlobal;
 
-#if _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
+
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  res*=4*2.2;
+  #elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__FULL_
   //do nothing
-#elif _MERCURY_MESH_RESOLUTION_MODE_ == _MERCURY_MESH_RESOLUTION_MODE__TEST_
-  res*=2.2;
-#else
+  #else
   exit(__LINE__,__FILE__,"Error: the option is unknown");
-#endif
+  #endif
 
 
   return rSphere*res;
@@ -1126,10 +1127,18 @@ void amps_init_mesh() {
   }
   */
 
+
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+  for (idim=0;idim<DIM;idim++) {
+    xmax[idim]=-DomainCenterOffset[idim];
+    xmin[idim]=+DomainCenterOffset[idim];
+  }
+#else
   for (idim=0;idim<DIM;idim++) {
     xmax[idim]=-DomainCenterOffset[idim];
     xmin[idim]=-(DomainLength[idim]+DomainCenterOffset[idim]);
   }
+#endif //_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
 
 //  double xmin[3]={-xMaxDomain*rSphere*_BLOCK_CELLS_X_/double(maxBlockCellsnumber),-xMaxDomain*rSphere*_BLOCK_CELLS_Y_/double(maxBlockCellsnumber),-xMaxDomain*rSphere*_BLOCK_CELLS_Z_/double(maxBlockCellsnumber)};
 //  double xmax[3]={xMaxDomain*rSphere*_BLOCK_CELLS_X_/double(maxBlockCellsnumber),xMaxDomain*rSphere*_BLOCK_CELLS_Y_/double(maxBlockCellsnumber),xMaxDomain*rSphere*_BLOCK_CELLS_Z_/double(maxBlockCellsnumber)};
