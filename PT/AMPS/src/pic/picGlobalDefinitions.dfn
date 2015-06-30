@@ -194,11 +194,15 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_ON_  0
 #define _PIC_AUTOSAVE_PARTICLE_DATA_RESTART_FILE__MODE_OFF_ 1
 
-//the thpes of the symmetries that are simualted 
+//the types of the symmetries that are simualted 
 #define _PIC_SYMMETRY_MODE__NONE_       0
 #define _PIC_SYMMETRY_MODE__AXIAL_      1
 #define _PIC_SYMMETRY_MODE__SHPERICAL_  2
 
+//integrator modes
+#define _PIC_MOVER_INTEGRATOR_MODE__DIRECT_         0
+#define _PIC_MOVER_INTEGRATOR_MODE__BORIS_          1
+#define _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_ 2
 
 
 

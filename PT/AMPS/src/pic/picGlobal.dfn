@@ -45,10 +45,15 @@ at the end of each time step
 #define _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE_ _PIC_PARTICLE_MOVER__FORCE_INTEGRTAION_MODE__ON_
 #define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_INDICATOR_(xMiddle,vMiddle,spec,ptr,ParticleData,dtMin,TransformationTimeStepLimitFlag,startNode) _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_;
 #define _PIC_PARTICLE_MOVER__BORIS_SPLIT_ACCELERATION_(accl,rotation,spec,ptr,x,v,startNode) BorisSplitAcceleration_default(accl,rotation,spec,ptr,x,v,startNode);
+#define _PIC_PARTICLE_MOVER__GUIDING_CENTER_MOTION_(Vguide,ForceParal,AbsB,BDirection,PParal,spec,ptr,x,v,startNode) GuidingCenterMotion_default(Vguide,ForceParal,AbsB,BDirection,PParal,spec,ptr,x,v,startNode);
+
 #define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(accl,spec,ptr,x,v,startNode) TotalParticleAcceleration_default(accl,spec,ptr,x,v,startNode);
 #define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xinit,x,v,spec,ptr,ParticleData,dt,startNode) _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 #define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder(ptr,LocalTimeStep,node);
 #define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag);
+
+//accounting for relativistic effects
+#define _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ _PIC_MODE_OFF_
 
 
 //sampling the distribution function
@@ -195,5 +200,6 @@ at the end of each time step
 //the spatial symmetry mode
 #define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
-
+//integrator mode
+#define _PIC_MOVER_INTEGRATOR_MODE_ _PIC_MOVER_INTEGRATOR_MODE__DIRECT_
 
