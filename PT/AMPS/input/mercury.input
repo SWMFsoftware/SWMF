@@ -71,6 +71,9 @@ CouplerMode=file(tecplot) !!off, ices, swmf
 
  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Mercury::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+
+! define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__FULL_
+  define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__TEST_
 #endGeneral
 
 #ParticleCollisions 
