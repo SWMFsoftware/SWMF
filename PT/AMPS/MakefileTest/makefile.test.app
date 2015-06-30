@@ -1,8 +1,8 @@
 test_<APP>:
-	-@($(MAKE) test_<APP>_compile)
-	-@($(MAKE) test_<APP>_rundir)
-	-@($(MAKE) test_<APP>_run)
-	-@($(MAKE) test_<APP>_check)
+	@($(MAKE) test_<APP>_compile)
+	@($(MAKE) test_<APP>_rundir)
+	@($(MAKE) test_<APP>_run)
+	@($(MAKE) test_<APP>_check)
 
 test_<APP>_compile:
 	@echo "test_<APP>_compile..." > test_<APP>.diff
