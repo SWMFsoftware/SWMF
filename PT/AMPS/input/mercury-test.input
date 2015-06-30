@@ -1,0 +1,7 @@
+
+
+#include input/mercury.input
+
+#General
+  BlockCells=5,5,5
+#endGeneral
