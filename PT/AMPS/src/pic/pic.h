@@ -184,6 +184,10 @@ namespace PIC {
       #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
       double ElectricCharge,ParticleSize;
       #endif
+
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+      double KineticEnergy;
+#endif
     };
 
     struct cTrajectoryDataRecord {

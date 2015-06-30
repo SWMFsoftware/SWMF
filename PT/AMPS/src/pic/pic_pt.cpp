@@ -148,7 +148,43 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
 
   TrajectoryRecord->data.ElectricCharge=ParticleElectricCharge;
   TrajectoryRecord->data.ParticleSize=ParticleSize;
-  #endif
+#endif //_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+
+  //save total kinetic energy
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+  double KinEnergy=0.0;
+  double m0=PIC::MolecularData::GetMass(spec); 
+  // contribution of guiding center motion
+#if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+  exit(__LINE__,__FILE__,"ERROR:not implemented");
+#else
+  KinEnergy+=0.5*m0*(v[0]*v[0]+ v[1]*v[1]+ v[2]*v[2]);
+#endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+
+
+  // contribtion of gyrations
+  //magnetic moment
+  double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
+  // get the mag field magnitude at particle's location
+  double B=0;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  long int nd;
+  int i,j,k;
+  node=PIC::Mesh::mesh.findTreeNode(x);
+  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
+  // fail-safe check: if a point isn't found => exit
+  if (nd==-1) exit(__LINE__,__FILE__,"Error: the cell is not found");
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B,x,nd,node);
+#if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+  exit(__LINE__,__FILE__,"ERROR:not implemented");
+#else
+  KinEnergy+= B*mu;
+#endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+
+  //record the energy value
+  TrajectoryRecord->data.KineticEnergy=KinEnergy;
+#endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
 
   //the counting number of the point along this trajectory
   TrajectoryRecord->offset=ParticleTrajectoryRecord->nSampledTrajectoryPoints;
@@ -292,6 +328,9 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
       fprintf(fout[spec],", \"Electric Charge\", \"Particle Size\"");
       #endif
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+      fprintf(fout[spec],", \"Total kinetic energy [J]\"");
+#endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
 
       fprintf(fout[spec],"\n");
     }
@@ -463,6 +502,10 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
           #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
           fprintf(trOut," %e  %e ",TrajectoryData->ElectricCharge,TrajectoryData->ParticleSize);
           #endif
+
+#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+          fprintf(trOut," %e ",TrajectoryData->KineticEnergy);
+#endif //#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
 
           fprintf(trOut,"\n");
         }
