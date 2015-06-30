@@ -52,7 +52,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   double CharacteristicSpeed;
 
   switch (spec) {
-  case _H_PLUS_SPEC_:
+  case _H_PLUS_SPEC_: case _ELECTRON_SPEC_:
     CharacteristicSpeed=1.0e7;
     break;
   default:
@@ -197,6 +197,8 @@ void amps_init_mesh() {
 	//init the particle solver
 	PIC::Init_BeforeParser();
 
+	PIC::Mover::Init_BeforeParser();
+
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
 
@@ -268,7 +270,7 @@ void amps_init(){
   PIC::ParticleWeightTimeStep::initTimeStep();
   
   //init particle weight
-  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,3.0E+29);
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,3.0E+28);
   
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
@@ -282,7 +284,7 @@ void amps_init(){
     for (int s=0;s<PIC::nTotalSpecies;s++)
       PIC::InitialCondition::PrepopulateDomain(s,NDensity, Velocity, Temperature);
   }
-
+    
   PIC::Mesh::mesh.outputMeshDataTECPLOT("plasma-data.dat",0);
 
 }
