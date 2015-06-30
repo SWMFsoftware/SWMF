@@ -61,7 +61,7 @@ int main(int argc,char **argv) {
 
   //output the particle statistics of the test run
   #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  sprintf(fname,"%s/test_Mercury.dat",PIC::OutputDataFileDirectory);
+  sprintf(fname,"%s/test_Mercury-test.dat",PIC::OutputDataFileDirectory);
   PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   #endif
 
