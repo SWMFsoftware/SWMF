@@ -271,6 +271,13 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 
 
                   //3. Collision Limiting
+		  double CollisionLimitingFactor=1.0;
+
+                  // Computation of collision limiting factor 
+                  if (nParticleNumber[s0]*nParticleNumber[s1]<ancoll) {
+                    CollisionLimitingFactor=ancoll/nParticleNumber[s0]*nParticleNumber[s1];
+                    ancoll/=CollisionLimitingFactor;
+                  }
 
 
                   //4. simulate collisions
@@ -353,7 +360,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 #if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
                       int CollFreqOffset=CollsionFrequentcySampling::SamplingBufferOffset+sizeof(double)*CollsionFrequentcySampling::Offset(s0,s1);
 
-                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure;
+                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s0List[s0ptr].ParticleData)*LocalParticleWeight_s0/LocalTimeStep_s0/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
 #endif
                     }
 
@@ -364,7 +371,7 @@ void PIC::MolecularCollisions::ParticleCollisionModel::ntc() {
 #if _PIC__PARTICLE_COLLISION_MODEL__SAMPLE_COLLISION_FREQUENTCY_MODE__ == _PIC_MODE_ON_
                       int CollFreqOffset=CollsionFrequentcySampling::SamplingBufferOffset+sizeof(double)*CollsionFrequentcySampling::Offset(s1,s0);
 
-                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData)*LocalParticleWeight_s1/LocalTimeStep_s1/cellMeasure;
+                      *((double*)(SamplingData+CollFreqOffset))+=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(s1List[s1ptr].ParticleData)*LocalParticleWeight_s1/LocalTimeStep_s1/cellMeasure*CollisionLimitingFactor; // calculate collision frequency taking into account the collision limiting factor
 #endif
                     }
                   }
