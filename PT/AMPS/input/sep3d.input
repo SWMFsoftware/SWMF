@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H_PLUS
+SpeciesList=ELECTRON
 
 
 ErrorLog=error.log
@@ -46,6 +46,7 @@ StdoutErrorLog=off !on,off -> print out error message on the screen
 
 TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
 CouplerMode= file(arms) !ices !swmf !!!ices !!off, ices, swmf
+MoverIntegratorMode=GuidingCenter
 
 #endmain
 
@@ -89,7 +90,7 @@ CouplerMode= file(arms) !ices !swmf !!!ices !!off, ices, swmf
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) SEP3D::Physics::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
 
 !  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node)
-  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node) 
+!  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node) 
 
   define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node,FirstBoundaryFlag) SEP3D::Physics::Mover_Axisymmetric_SecondOrder(ptr,LocalTimeStep,node,FirstBoundaryFlag)
 
