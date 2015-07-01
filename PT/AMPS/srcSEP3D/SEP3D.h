@@ -21,6 +21,17 @@ namespace SEP3D {
   using namespace Exosphere;
 
   //--------------------------------------------------------------------------
+  //particle tracking condition
+  namespace ParticleTracker {
+    inline bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData) {
+      //only those particles are traced, which are close to the magnetic island
+      if (x[0]<9.0E8||x[2]>0.8E7||x[2]<-0.8E7) return false;
+
+      return PIC::ParticleTracker::TrajectoryTrackingCondition_default(x,v,spec,ParticleData);
+    }
+  }
+
+  //--------------------------------------------------------------------------
   // specific initialization procedures
   void Init_BeforeParser();
 
