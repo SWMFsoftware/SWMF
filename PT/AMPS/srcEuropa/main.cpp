@@ -55,8 +55,10 @@ PIC::RequiredSampleLength=600;
 
 
 
-	//time step
-	for (long int niter=0;niter<100000001;niter++) {
+//time step
+int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 150;
+
+	for (long int niter=0;niter<nTotalIterations;niter++) {
 
 	  amps_time_step();
 
@@ -71,7 +73,18 @@ PIC::RequiredSampleLength=600;
 	}
 
 
-	cout << "End of the run:" << PIC::nTotalSpecies << endl;
+  //output the particle statistics of the test run
+  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+	char fname[300];
 
-	return 1;
+  sprintf(fname,"%s/test_Europa.dat",PIC::OutputDataFileDirectory);
+  PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  #endif
+
+
+  //finish the run
+  MPI_Finalize();
+  cout << "End of the run:" << PIC::nTotalSpecies << endl;
+
+  return EXIT_SUCCESS;
 }
