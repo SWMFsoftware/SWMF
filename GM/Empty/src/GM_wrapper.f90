@@ -373,6 +373,20 @@ contains
 
   !==============================================================================
 
+  subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
+    
+    integer, intent(out) :: nMagOut
+    character(len=3), intent(out),optional :: NameMagsOut_I(  1)
+    real,             intent(out),optional :: CoordMags_DI(2, 1)
+
+    character(len=*), parameter :: NameSub='GM_get_info_for_ie'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_get_info_for_ie
+
+  !==============================================================================
+
   subroutine GM_put_mag_from_ie(Buffer_DII, iSize)
 
     implicit none
