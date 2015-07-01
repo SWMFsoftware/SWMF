@@ -17,11 +17,12 @@ module CON_couple_gm_ie
   use CON_coupler
 
   use GM_wrapper, ONLY: GM_get_for_ie, GM_put_from_ie, GM_put_mag_from_ie, &
-       GM_print_variables
-  use IE_wrapper, ONLY: IE_get_for_gm, IE_groundmaginit_for_gm, &
+       GM_print_variables, GM_get_info_for_ie
+  use IE_wrapper, ONLY: IE_get_for_gm, IE_put_info_from_gm, &
        IE_get_mag_for_gm, IE_put_from_gm
 
-  use CON_transfer_data, ONLY: transfer_integer, transfer_real_array
+  use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
+       transfer_string_array
 
   implicit none
 
@@ -56,6 +57,9 @@ contains
   !INTERFACE:
   subroutine couple_gm_ie_init
 
+    real,             allocatable :: CoordMags_DI(:,:)
+    character(len=3), allocatable :: NameMags_I(:)
+
     integer :: iCommWorld
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='couple_gm_ie_init'
@@ -67,12 +71,40 @@ contains
     !------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    ! Get number of shared magnetometers from IE to the GM processors
-    if(is_proc(IE_)) call IE_groundmaginit_for_gm(nShareGroundMag)
-    call transfer_integer(IE_, GM_, nShareGroundMag, UseSourceRootOnly=.false.)
+    ! Get number of shared magnetometers from GM.
+    if(is_proc(GM_)) call GM_get_info_for_ie(nShareGroundMag)
+    
+    ! Pass to all IE nodes.
+    call transfer_integer(GM_, IE_, nShareGroundMag, UseSourceRootOnly=.false.)
 
     if(DoTest) &
          write(*,'(a,i3.3)') 'nShareGroundMag=', nShareGroundMag
+
+    if (nShareGroundMag > 0) then
+       ! Allocate magnetometer info buffers:
+       if(.not.allocated(NameMags_I)) then
+          allocate(NameMags_I(     nShareGroundMag))
+          allocate(CoordMags_DI(2, nShareGroundMag))
+       endif
+
+       ! Collect station coordinate systems and positions from GM:
+       if(is_proc(GM_)) &
+            call GM_get_info_for_ie(nShareGroundMag, NameMags_I, CoordMags_DI)
+
+       ! Share info to all IE nodes.
+       call transfer_string_array(GM_, IE_, nShareGroundMag, NameMags_I, &
+            UseSourceRootOnly=.false.)
+       call transfer_real_array(GM_, IE_, 2*nShareGroundMag, CoordMags_DI, &
+            UseSourceRootOnly=.false.)
+
+       ! Tell IE to handle incoming information.
+       if(is_proc(IE_)) &
+            call IE_put_info_from_gm(nShareGroundMag, NameMags_I, CoordMags_DI)
+
+       ! Deallocate magnetometer buffer arrays.
+       if(allocated(NameMags_I))  deallocate(NameMags_I)
+       if(allocated(CoordMags_DI)) deallocate(CoordMags_DI)
+    end if
 
     if(IsInitialized) RETURN
     IsInitialized = .true.
