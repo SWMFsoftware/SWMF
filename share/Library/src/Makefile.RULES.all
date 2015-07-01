@@ -6,7 +6,7 @@ $OS eq "Darwin" and $Compiler eq "f95"
 	${COMPILE.f90} ${Cflag3} ModNumConst.f90
 
 # ModBlasLapack compiles with auto double off only
-$Compiler eq "xlf90" 
+$Compiler =~ /xlf\d+/
 	${COMPILE.f90} ${Cflag4NoP} ${SuffixMapf90} ModBlasLapack.f90
 
 $Compiler eq "lf95" or $Compiler eq "mpxlf90"
