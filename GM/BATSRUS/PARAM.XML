@@ -3071,10 +3071,6 @@ files are saved when #GEOMAGINDICES is used.  If nSizeKpWindow changes between
 restarts, however, the files will be rendered unusable because the time 
 history will no longer be valid for the calculation.
 
-#GEOMAGINDICES should be used with the IE command of the same name.
-This activates magnetometers in the IE component that are key for
-properly capturing the magnetic pertubation from all current systems.
-
 By default no indices are calculated.
 </command>
 
@@ -3096,9 +3092,8 @@ single                  TypeFileOut
 60.0			DtOutput
 
 The #MAGNETOMETER command is used for the calculation of the ground perturbations
-caused by the field aligned currents in the 'gap' region and the magnetopsheric currents
-in the GM domain. In addition, the effects of the ionospheric currents are also included
-if the same command is used in the IE section and the GM and IE components are coupled.
+caused by the field aligned currents in the 'gap' region and the magnetopsheric 
+currents in the GM domain.
 
 The NameMagInputFile parameter gives the file name that contains the
 locations on the Earth where the user is interested in calculating 
@@ -3138,6 +3133,40 @@ Hall currents and  in the ionosphere are saved,
 The units of coordinates is meters, while the magnetic perturbations are given in nT.
 
 Default is no magnetic perturbation calculation.
+</command>
+
+<command name="MAGNETOMETERGRID">
+	<parameter name="TypeGrid" type="string" length="100" default="SMG"/>
+	<parameter name="TypeFileOut" type="string" input="select"> 
+		<option name="ascii" default="T"/>
+		<option name="tec"/>
+		<option name="idl"/>
+	</parameter>
+	<parameter name="LatMax" type="real" default="80"/>
+	<parameter name="LatMax" type="real" default="0"/>
+	<parameter name="LonMax" type="real" default="180"/>
+	<parameter name="LonMax" type="real" default="0"/>
+	<parameter name="nLat" type="integer" default="3"/>
+	<parameter name="nLon" type="integer" default="3"/>
+	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
+	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
+
+#MAGNETOMETERGRID
+SMG			TypeGrid
+ascii			TypeFileOut
+80.			LatMax
+0.			LatMin
+180.			LonMax
+0.			LonMin
+3			nLat
+3			nLon
+-1			DnOutput
+5.0			DtOutput
+
+Create a grid of magnetometers spanning in latitude from LatMin to LatMax and in 
+longitude from LonMin to LonMax.  nLat and nLon specify the number of points in 
+each direction.  2D output files are saved every DnOutput or DtOutput.
+
 </command>
 
 <command name="SAVEPLOT">
