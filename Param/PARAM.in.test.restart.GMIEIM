@@ -8,7 +8,7 @@ T			DoEcho
 100			DnShowProgressLong
 
 #TEST
-write_geoind_restart read_geoind_restart
+write_geoind_restart read_geoind_restart init_mod_magperturb write_magnetometers
 
 ! Restart header for SWMF
 #INCLUDE
@@ -99,6 +99,18 @@ single			TypeFileOut
 -1			DnOutput
 5.0			DtOutput
 
+#MAGNETOMETERGRID
+SMG			TypeGrid
+ascii			TypeFileOut
+80			LatMax
+-80			LatMin
+360			LonMax
+0			LonMin
+3			nLat
+3			nLon
+-1			DnOutput
+5.0			DtOutput
+
 #GEOMAGINDICES
 15			nSizeKpWindow
 5.0			DtOutput
@@ -149,8 +161,6 @@ F			UseFakeRegion2
 5.0			StarLightPedConductance
 0.25			PolarCapPedConductance
 
-#GEOMAGINDICES
-
 #SAVEPLOT
 2			nPlotFile
 min idl                 StringPlot
@@ -159,11 +169,6 @@ min idl                 StringPlot
 max tec                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
-
-#MAGNETOMETER
-Param/magnetometer_location.dat
--1			DnOutput
-5.0			DtOutput
 
 #END_COMP IE   ----------------------------------------
 

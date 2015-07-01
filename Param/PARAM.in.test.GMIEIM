@@ -3,6 +3,9 @@ Begin session: 1
 #ECHO
 T			DoEcho
 
+#TEST
+write_magnetometers init_mod_magperturb
+
 #TIMEACCURATE
 F			DoTimeAccurate
 
@@ -144,6 +147,22 @@ single			TypeFileOut
 -1			DnOutput
 5.0			DtOutput
 
+#MAGNETOMETERGRID
+SMG			TypeGrid
+ascii			TypeFileOut
+80			LatMax
+-80			LatMin
+360			LonMax
+0			LonMin
+3			nLat
+3			nLon
+-1			DnOutput
+5.0			DtOutput
+
+#GEOMAGINDICES
+15			nSizeKpWindow
+5.0			DtOutput
+
 #END_COMP GM   ----------------------------------------
 
 #BEGIN_COMP IE ----------------------------------------
@@ -164,11 +183,6 @@ min idl                 StringPlot
 max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
-
-#MAGNETOMETER
-Param/magnetometer_location.dat
--1			DnOutput
-5.0			DtOutput
 
 #END_COMP IE   ----------------------------------------
 
@@ -224,10 +238,6 @@ F			DoCoupleOnTime
 20.0                    TauCoupleIm
 F			DoImSatTrace
 
-#GEOMAGINDICES
-15			nSizeKpWindow
-5.0			DtOutput
-
 #SAVEPLOT
 3			nPlotFile
 idl x=0 FUL		StringPlot
@@ -262,8 +272,6 @@ idl z=0 FUL		StringPlot
 #END_COMP IM   ----------------------------------------
 
 #BEGIN_COMP IE ----------------------------------------
-
-#GEOMAGINDICES
 
 #SAVEPLOT
 2			nPlotFile
