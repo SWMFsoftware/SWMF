@@ -1405,10 +1405,11 @@ void amps_init() {
    if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
 //   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
 
-//   if (_DUST_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_DUST_SPEC_,_H2O_SPEC_,1e-1);
+   #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
    for (int s=0;s<PIC::nTotalSpecies;s++)
      if (_DUST_SPEC_<=s && s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)
        PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(s,_H2O_SPEC_,1e-7);
+   #endif // _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 
 
 
