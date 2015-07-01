@@ -37,7 +37,7 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& ReemissionParticleFraction,double Temp) {return 0.0;}
 //===============================================================================================
 
-static double DomainDX = 5E6;
+static double DomainDX = 2E6;
 static double DomainXMin[3]={8.76E8,-0.5*DomainDX,-1.3E7};
 static double DomainXMax[3]={9.40E8, 0.5*DomainDX, 1.3E7};
 
@@ -270,7 +270,7 @@ void amps_init(){
   PIC::ParticleWeightTimeStep::initTimeStep();
   
   //init particle weight
-  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,3.0E+28);
+  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,3.0E+26);
   
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
