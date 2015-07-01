@@ -1,0 +1,20 @@
+# C language related part of Makefile.conf: Makefile.mpixlc
+
+COMPILE.c     = mpixlc
+COMPILE.mpicc = mpixlc
+COMPILE.mpicxx= mpixlcxx
+
+CPPLIB = -lstdc++ -lmpi_cxx
+
+DEBUGC = 
+#DEBUGC = -g
+
+.SUFFIXES: .c .cpp
+
+FLAGC = ${SEARCH_C} ${FLAGC_EXTRA} -c ${OPT5} ${DEBUGC}
+
+.c.o:
+	${COMPILE.c} ${FLAGC} $< -o $@
+
+.cpp.o:
+	${COMPILE.mpicxx} ${FLAGC} $< -o $@
