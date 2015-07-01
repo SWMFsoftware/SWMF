@@ -77,9 +77,7 @@ subroutine MH_set_parameters(TypeAction)
        read_solar_wind_file, normalize_solar_wind_data
   use ModSatelliteFile, ONLY: nSatellite, &
        read_satellite_parameters, read_satellite_input_files
-  use ModGroundMagPerturb
-  use ModGmGeoindices, ONLY: &
-       DoWriteIndices, DoCalcKp, nKpMins, dtWriteIndices, init_mod_geoindices
+  use ModGroundMagPerturb, ONLY: read_magperturb_param, init_mod_magperturb
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
        UseClimit, UsePoleDiffusion, DoBurgers
   use ModLookupTable,     ONLY: read_lookup_table_param
@@ -131,7 +129,6 @@ subroutine MH_set_parameters(TypeAction)
   !  logical :: HdfUninitialized      = .true.
   logical :: DoReadSolarwindFile  = .false.
   logical :: DoReadSatelliteFiles = .false.
-  logical :: DoReadMagnetometerFile=.false.
   logical :: IsMirrorX,  IsMirrorY,  IsMirrorZ
 
   ! The name of the command
@@ -190,11 +187,6 @@ subroutine MH_set_parameters(TypeAction)
   if(DoReadSatelliteFiles)then
      call read_satellite_input_files
      DoReadSatelliteFiles = .false.
-  end if
-
-  if(DoReadMagnetometerFile)then
-     call read_mag_input_file
-     DoReadMagnetometerFile = .false.
   end if
 
   select case(TypeAction)
@@ -306,7 +298,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseConstrainB)   call init_mod_ct
      if(UseImplicit)     call init_mod_part_impl
      if(UseSemiImplicit) call init_mod_semi_impl
-     if(DoWriteIndices)  call init_mod_geoindices
+     call init_mod_magperturb
 
      ! clean dynamic storage
      call clean_block_data
@@ -1588,23 +1580,16 @@ subroutine MH_set_parameters(TypeAction)
         call read_satellite_parameters(NameCommand)
 
      case('#GEOMAGINDICES')
-        ! See ModGmGeoindices.f90 for more information.
-        DoWriteIndices = .true. ! Activiate geoindices output file.
-        DoCalcKp = .true.       ! Kp calculated (no others available.)
-        call read_var('nKpWindow', nKpMins)
-        call read_var('DtOutput' , dtWriteIndices)
-        dt_output(indexfile_) = dtWriteIndices
-        dn_output(indexfile_) = -1  ! See ModGmGeoindices.f90.
+        call read_magperturb_param(NameCommand)
         nFile = max(nFile, indexfile_)
 
      case("#MAGNETOMETER")
-        DoReadMagnetometerFile = .true.
-        save_magnetometer_data = .true.
-        call read_var('MagInputFile', MagInputFile)
-        call read_var('TypeMagFileOut', TypeMagFileOut)
-        call read_var('DnOutput', dn_output(magfile_))
-        call read_var('DtOutput', dt_output(magfile_)) 
+        call read_magperturb_param(NameCommand)
         nFile = max(nFile, magfile_) 
+
+     case("#MAGNETOMETERGRID")
+        call read_magperturb_param(NameCommand)
+        nFile = max(nFile, maggridfile_) 
 
      case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
         if(.not.is_first_session())CYCLE READPARAM

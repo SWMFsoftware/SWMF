@@ -21,7 +21,7 @@ module ModRestartFile
        n_prev, ImplOld_VCB, dt_prev
   use ModKind,       ONLY: Real4_, Real8_
   use ModIoUnit,     ONLY: UnitTmp_
-  use ModGmGeoindices, ONLY: DoWriteIndices
+  use ModGroundMagPerturb, ONLY: DoWriteIndices
 
   use BATL_lib, ONLY: write_tree_file, iMortonNode_A, iNode_B, &
        IsCartesian, IsCartesianGrid, IsGenRadius, &
@@ -1063,9 +1063,9 @@ contains
 
   subroutine write_geoind_restart
 
-    ! Save ModGmGeoindices::MagPerturb_II to a restart file on proc 0
+    ! Save ModGroundMagPerturb::MagHistory_II to a restart file on proc 0
 
-    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII
+    use ModGroundMagPerturb, ONLY: nKpMag, iSizeKpWindow, MagHistory_DII
 
     integer            :: i, j, iDim
     character(len=100) :: NameFile
@@ -1086,10 +1086,10 @@ contains
 
        ! Size of array:
        write(UnitTmp_,*) nKpMag, iSizeKpWindow
-       ! Save MagPerturb_II
+       ! Save MagHistory_II
        do j = 1, iSizeKpWindow
           do i = 1, nKpMag
-             write(UnitTmp_, '(es20.12)' ) MagPerturb_DII(iDim, i,j)
+             write(UnitTmp_, '(es20.12)' ) MagHistory_DII(iDim, i,j)
           end do
        end do
        close(UnitTmp_)
@@ -1100,9 +1100,9 @@ contains
   !===========================================================================
   subroutine read_geoind_restart
 
-    ! Read MagPerturb_II from restart file on processor 0
+    ! Read MagHistory_II from restart file on processor 0
 
-    use ModGmGeoindices,ONLY: nKpMag, iSizeKpWindow, MagPerturb_DII, &
+    use ModGroundMagPerturb,ONLY: nKpMag, iSizeKpWindow, MagHistory_DII, &
          IsFirstCalc, Is2ndCalc
 
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
@@ -1125,7 +1125,7 @@ contains
           write(*,*) NameSub, &
                ": WARNING did not find geoindices restart file ", &
                trim(NameFile)
-          MagPerturb_DII(iDim,:,:) = 0.0
+          MagHistory_DII(iDim,:,:) = 0.0
           CYCLE
        end if
 
@@ -1148,7 +1148,7 @@ contains
 
        do j = 1, iSizeKpWindow
           do i = 1, nKpMag
-             read(UnitTmp_,*) MagPerturb_DII(iDim,i,j)
+             read(UnitTmp_,*) MagHistory_DII(iDim,i,j)
           end do
        end do
        close(UnitTmp_)

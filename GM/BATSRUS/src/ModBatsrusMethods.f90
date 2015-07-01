@@ -243,8 +243,7 @@ contains
 
   subroutine initialize_files
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
-    use ModGroundMagPerturb, ONLY: &
-         save_magnetometer_data, open_magnetometer_output_file
+
     ! Local variables
     character(len=*), parameter :: NameSubSub = NameSub//'::initialize_files'
     integer :: iSat
@@ -255,9 +254,6 @@ contains
           call set_satellite_file_status(iSat,'close')
        end do
     end if
-
-    if (save_magnetometer_data .and. iProc == 0) &
-         call open_magnetometer_output_file
 
     plot_type(restart_)='restart'
     plot_type(logfile_)='logfile'
@@ -748,7 +744,8 @@ contains
     do iFile = 1, nFile
        ! We want to use the IE magnetic perturbations that were passed 
        ! in the last coupling together with the current GM perturbations.
-       if(iFile==magfile_ .neqv. TypeSave == 'BEGINSTEP') CYCLE
+       if( (iFile==magfile_ .or. iFile==maggridfile_) &
+            .neqv. TypeSave == 'BEGINSTEP') CYCLE
 
        if(dn_output(ifile)>=0)then
           if(dn_output(ifile)==0)then
@@ -788,8 +785,9 @@ contains
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
-    use ModGroundMagPerturb, ONLY: save_magnetometer_data, write_magnetometers
-    use ModGmGeoindices, ONLY: DoWriteIndices, write_geoindices
+    use ModGroundMagPerturb, ONLY: DoSaveMags, &
+         DoSaveGridmag, write_magnetometers, DoWriteIndices, &
+         write_geoindices
     use ModMessagePass, ONLY: exchange_messages
 
     integer :: iSat
@@ -924,10 +922,19 @@ contains
 
     elseif(ifile == magfile_) then
        !Cases for magnetometer files
-       if(.not.save_magnetometer_data) RETURN
+       if(.not.DoSaveMags) RETURN
        if(time_accurate) then  
           call timing_start('save_magnetometer')
-          call write_magnetometers   
+          call write_magnetometers('stat')   
+          call timing_stop('save_magnetometer')  
+       end if
+
+    elseif(ifile == maggridfile_) then
+       !Case for grid magnetometer files
+       if(.not. DoSaveGridmag) RETURN
+       if(time_accurate) then  
+          call timing_start('save_magnetometer')
+          call write_magnetometers('grid')   
           call timing_stop('save_magnetometer')  
        end if
 
@@ -940,6 +947,7 @@ contains
 
     if(iProc==0 .and. lVerbose>0 .and. &
          ifile /= logfile_ .and. iFile /= magfile_ .and. iFile /= indexfile_ &
+         .and. iFile /= maggridfile_ &
          .and. (iFile <= satellite_ .or. iFile > satellite_ + nSatellite))then
        if(time_accurate)then
           call write_prefix; 
@@ -963,9 +971,8 @@ contains
 
   subroutine save_files_final
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
-    use ModGmGeoindices,  ONLY: DoWriteIndices, finalize_geoindices
     use ModGroundMagPerturb, ONLY: &
-         save_magnetometer_data, finalize_magnetometer
+         DoSaveMags, finalize_magnetometer, DoWriteIndices
 
     integer :: iSat
     !-----------------------------------------------------------------------
@@ -980,8 +987,8 @@ contains
        end do
     end if
 
-    if (DoWriteIndices) call finalize_geoindices
-    if (save_magnetometer_data) call finalize_magnetometer   
+    call finalize_magnetometer
+
     if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 
   end subroutine save_files_final

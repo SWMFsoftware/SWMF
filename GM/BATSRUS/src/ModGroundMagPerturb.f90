@@ -14,36 +14,303 @@ module ModGroundMagPerturb
 
   private ! except
 
-  public:: read_mag_input_file
+  public:: read_magperturb_param
+  public:: init_mod_magperturb
   public:: open_magnetometer_output_file
   public:: finalize_magnetometer
   public:: write_magnetometers
+  public:: write_geoindices
   public:: ground_mag_perturb
   public:: ground_mag_perturb_fac
 
   ! These are not always set this way in ModSize
   integer, parameter:: r_=1, phi_=2, theta_=3
 
-  logical,            public:: save_magnetometer_data = .false.
-  integer,            public:: nMagnetometer=0
+  logical,            public:: DoSaveMags = .false.
+  integer,            public:: nMagnetometer=0, nMagTotal=0
+  real, allocatable,  public:: PosMagnetometer_II(:,:)
   character(len=100), public:: MagInputFile
+  character(len=3),   public:: TypeCoordMag='MAG', TypeCoordGrid='SMG'
   character(len=7),   public:: TypeMagFileOut='single '
 
-  ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
-  real, allocatable,  public:: IeMagPerturb_DII(:,:,:) 
+  ! Variables for grid of magnetometers:
+  logical, public:: DoSaveGridmag = .false.
+  integer, public:: nGridMag = 0
 
-  !local variables
-  integer, parameter :: MaxMagnetometer = 500
-  integer            :: iUnitMag = -1
-  real               :: PosMagnetometer_II(2,MaxMagnetometer)
-  character(len=3)   :: MagName_I(MaxMagnetometer), TypeCoordMagIn='MAG'
+  character(len=7), public :: TypeGridFileOut='single'
+
+  ! Array for IE Hall & Pederson contribution (3 x 2 x nMags)
+  real, allocatable,  public:: IeMagPerturb_DII(:,:,:)
+
+  ! Local variables
+  logical:: DoReadMagnetometerFile = .false., IsInitialized = .false.
+  integer          :: iUnitMag = -1, iUnitGrid = -1 ! To be removed !!!
+  character(len=3), allocatable :: MagName_I(:)
+
+  ! Description of the magnetometer grid
+  integer:: nGridLon = 0, nGridLat = 0
+  real   :: GridLatMax, GridLatMin, GridLonMin, GridLonMax
+
+  ! Output for magnetometer grid
+  real, allocatable:: MagOut_VII(:,:,:), MagOut_VI(:,:)
+
+  ! Public geomagnetic indices variables:
+  logical, public :: DoWriteIndices = .false.
+  logical, public :: IsFirstCalc=.true., Is2ndCalc=.true.
+  integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_II
+  integer, public, parameter    :: nKpMag = 24.
+  real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
+
+  ! Private geomagnetic indices variables:
+  logical :: DoCalcKp = .false., DoCalcDst = .false. ! Which indices to calc.
+  integer :: nIndexMag = 0  ! Total number of mags required by indices.
+  integer :: iUnitIndices   ! File IO unit for indices file.
+  real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
+  real               :: k9 = 600.0             ! Scaling of standard K.
+  real, allocatable  :: LatIndex(:), LonIndex(:) ! Lat and Lon of index files
+  real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
+  real               :: Kp=0.0
+  integer            :: kIndex_I(nKpMag)
+
+  ! K-index is evaluated over a rolling time window, typically three hours.
+  ! It may be desirable to reduce this window, changing the Kp index so
+  ! that it is more indicative of dB/dt.  This requires careful rescaling
+  ! of the K-index conversion tables, however.  Units are left in minutes
+  ! because the size of the window should be large, making seconds cumbersome.
+  integer :: nKpMins = 180
+
+  ! Output frequency.  The absense of a dn-type variable stems from how
+  ! kp is calculated -- using a floating time window that is hard to define
+  ! when kp is calculated on a constant iteration cadence instead of a 
+  ! constant time cadence.
+  real :: dtWriteIndices
+
+  ! K CONVERSION TABLES
+  ! Conversion table for the standard station, Niemegk.
+  real, parameter :: &
+       Table50_I(9)=(/5.,10.,20.,40.,70.,120.,200.,330.,500./) 
+
+  ! Headers for Geoindices output file:
+  character(len=*), parameter :: NameKpVars = &
+       'Kp K_12 K_13 K_14 K_15 K_16 K_17 K_18 K_19 K_20 K_21 K_22 K_23 '//&
+       'K_00 K_01 K_02 K_03 K_04 K_05 K_06 K_07 K_08 K_09 K_10 K_11 '
 
 contains
 
   !===========================================================================
+  subroutine read_magperturb_param(NameCommand)
+    ! Handle params for all magnetometer-related commands.
+
+    use ModIO,        ONLY: magfile_,maggridfile_,indexfile_, dn_output,dt_output
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_magperturb_param'
+    !--------------------------------------------------------------------------
+
+    select case(NameCommand)
+    case("#MAGNETOMETER")
+       DoSaveMags = .true.
+       call read_var('MagInputFile', MagInputFile)
+       call read_var('TypeMagFileOut', TypeMagFileOut)
+       call read_var('DnOutput', dn_output(magfile_))
+       call read_var('DtOutput', dt_output(magfile_)) 
+       DoReadMagnetometerFile = .true.
+
+    case("#MAGNETOMETERGRID")
+       DoSaveGridmag = .true.
+       call read_var('TypeCoord',       TypeCoordGrid)
+       call read_var('TypeGridFileOut', TypeGridFileOut)
+       call read_var('LatMax',          GridLatMax)
+       call read_var('LatMin',          GridLatMin)
+       call read_var('LonMax',          GridLonMax)
+       call read_var('LonMin',          GridLonMin)
+       call read_var('nGridLat',        nGridLat)
+       call read_var('nGridLon',        nGridLon)
+       call read_var('DnOutput', dn_output(maggridfile_))
+       call read_var('DtOutput', dt_output(maggridfile_))
+
+    case('#GEOMAGINDICES')
+       DoWriteIndices = .true. ! Activiate geoindices output file.
+       DoCalcKp = .true.       ! Kp calculated (no others available.)
+       call read_var('nKpWindow', nKpMins)
+       call read_var('DtOutput' , dtWriteIndices)
+       dt_output(indexfile_) = dtWriteIndices
+       dn_output(indexfile_) = -1  ! Indices are function of physical time.
+
+    case default
+       call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)   
+    end select
+
+  end subroutine read_magperturb_param
+
+  !===========================================================================
+  subroutine init_mod_magperturb
+    ! Set up the grid of magnetometers and the respective files (if single
+    ! file format is selected).
+
+    use ModProcMH, ONLY: iProc
+
+    integer :: iLat, iLon, iMag
+    real    :: dLat, dLon
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='init_mod_magperturb'
+    !--------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Return if already called:
+    if(IsInitialized) return
+
+    ! Return if no magnetometers activated.
+    if( .not.(DoSaveMags .or. DoSaveGridmag) ) return
+
+    ! Check number of magnetometers in #MAGNETOMETER command:
+    if(DoReadMagnetometerFile) call check_mag_input_file
+
+    ! Initialize geomagnetic indices, update total magnetometer count.
+    if(DoWriteIndices) then
+       call init_geoindices
+    end if
+
+    ! Update total number of magnetometers shared between GM and IE.
+    nGridMag  = nGridLat * nGridLon
+    nMagTotal = nMagnetometer + nGridMag + nIndexMag
+
+    if(DoTest .and. iProc==0)then
+       write(*,*) NameSub//'Number of magnetometers:'
+       write(*,*) '     Stations: ', nMagnetometer
+       write(*,*) '     GridMags: ', nGridMag
+       write(*,*) '     IndexMags:', nIndexMag
+       write(*,*) '     TOTAL:    ', nMagTotal
+    end if
+
+    ! Allocate/initialize arrays:
+    allocate(MagName_I(nMagTotal))
+    allocate(PosMagnetometer_II(2,nMagTotal), IeMagPerturb_DII(3,2,nMagTotal) )
+    IeMagPerturb_DII = 0.0
+
+    ! Load magnetometer stations, names, coord systems from file:
+    if(DoReadMagnetometerFile)then
+       call read_mag_input_file
+       DoReadMagnetometerFile = .false.
+    end if
+
+    ! Calculate magnetometer grid spacing.
+    dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+    dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
+
+    ! Set up the grid.
+    iMag = nMagnetometer
+    do iLat = 1, nGridLat
+       do iLon = 1, nGridLon
+          iMag = iMag + 1
+          PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
+          PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
+          write(MagName_I(iMag), '(i3.3)')  iMag
+          if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
+               iMag, PosMagnetometer_II(:,iMag)
+       end do
+    end do
+
+    ! Add IndexMag info to share to IE:
+    if(DoCalcKp)then
+       iMag = nMagnetometer+nGridMag
+       PosMagnetometer_II(1, iMag+1:iMag+nKpMag) = KpLat
+       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex
+       MagName_I(iMag:iMag+nKpMag) = 'SMG'
+    end if
+    ! Create files:
+        if (DoSaveMags .and. iProc == 0) &
+         call open_magnetometer_output_file('stat')
+    if (DoSaveGridmag .and. iProc == 0) &
+         call open_magnetometer_output_file('grid')
+
+    IsInitialized=.true.
+
+  end subroutine init_mod_magperturb
+
+  !===========================================================================
+  subroutine init_geoindices
+
+    ! Initialize variables, arrays, and output file.
+    use ModNumConst,  ONLY: cDegToRad, cTwoPi
+    use ModUtilities, ONLY: flush_unit
+    use ModMain,      ONLY: n_step
+    use ModProcMH,    ONLY: iProc
+    use ModIoUnit,    ONLY: io_unit_new
+    use ModIO,        ONLY: NamePlotDir, IsLogName_e
+
+    integer            :: i, iTime_I(7)
+    real               :: radXY, phi
+    character(len=100) :: NameFile
+
+    character(len=*), parameter :: NameSub='init_geoindices'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Set number of shared magnetometers.
+    if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
+    !if(DoCalcDst) nIndexMag = nIndexMag+nDstMag !Not yet implemented..
+    ! ...etc.
+
+    if(DoTestMe) write(*,*)'Number of IndexMags used: ', nIndexMag
+
+    ! Allocate lat & lon arrays for index mags:
+    if(.not. allocated(LatIndex)) &
+       allocate(LatIndex(nIndexMag), LonIndex(nIndexMag))
+
+    ! Initialize Kp grid and arrays.  FaKe_p uses stations fixed in SMG coords.
+    XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
+    radXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
+    do i=1, nKpMag
+       phi = cTwoPi * (i-1)/24.0
+       XyzKp_DI(1,i) = radXY * cos(phi)
+       XyzKp_DI(2,i) = radXY * sin(phi)
+       if(iProc==0 .and. DoTestMe) &
+            write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
+       LatIndex(i) = KpLat
+       LonIndex(i) = phi
+    end do
+
+    ! Allocate array to follow time history of magnetometer readings.
+    iSizeKpWindow = int(nKpMins / (dtWriteIndices / 60.0))
+
+    ! Allocate MagPerturb_DII, open index file, write header.
+    if (iProc==0) then
+       allocate(MagHistory_DII(2, nKpMag, iSizeKpWindow))
+       MagHistory_DII = 0.0
+
+       if(IsLogName_e)then
+          ! Event date added to geoindex file name
+          call get_date_time(iTime_I)
+          write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+               trim(NamePlotDir), 'geoindex_e', iTime_I(1:6), '.log'
+       else
+          write(NameFile, '(a, a, i8.8, a)') &
+               trim(NamePlotDir), 'geoindex_n', n_step, '.log'
+       end if
+       iUnitIndices = io_unit_new()
+       open(iUnitIndices, file=NameFile, status='replace')
+
+       write(iUnitIndices, '(2a,f8.2,a,i4.4)') 'Synthetic Geomagnetic Indices', &
+            ' DtOutput=', DtWriteIndices, '   SizeKpWindow(Mins)=', &
+            iSizeKpWindow
+       write(iUnitIndices, '(a)', advance='NO') &
+            'it year mo dy hr mn sc msc '
+       if (DoCalcKp) write(iUnitIndices, '(a)', advance='NO') NameKpVars
+       write(iUnitIndices, '(a)') '' ! Close header line.
+       call flush_unit(iUnitIndices)
+    end if
+
+  end subroutine init_geoindices
+
+  !===========================================================================
   subroutine ground_mag_perturb(nMag, Xyz_DI, MagPerturb_DI)
 
-    ! This subroutine is used to calculate the 3D ground magnetic perturbations, 
+    ! This subroutine is used to calculate the 3D ground magnetic perturbations 
     ! at a given set of points (Xyz_DI) for nMag different magnetometers,
     ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
@@ -248,7 +515,7 @@ contains
                 if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
                      .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
 
-                ! Do the Biot-Savart integral JxR/|R|^3 dV for all the magnetometers
+                ! Do the Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                 temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
                      * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
 
@@ -276,6 +543,183 @@ contains
     end do
 
   end subroutine ground_mag_perturb_fac
+
+  !===========================================================================
+  subroutine calc_kp
+
+    use ModProcMH,ONLY: iProc, nProc, iComm
+    use CON_axes, ONLY: transform_matrix
+    use ModPhysics,        ONLY: No2Io_V, UnitB_
+    use ModMain,           ONLY: time_simulation,TypeCoordSystem
+    use ModMpi
+
+    integer :: i, iError, iStart, iStop
+    real, dimension(3,3)       :: SmgToGsm_DD
+    real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGsm_DI
+    real, dimension(2, nKpMag) :: MagPerbIE_DI
+    real :: deltaB(2)
+    character(len=*), parameter :: NameSub='calc_kp'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Obtain locations in correct (GSM) coordinates.
+    SmgToGsm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
+    !GsmToSmg_DD = transform_matrix(Time_simulation, TypeCoordSystem, 'SMG')
+    do i=1, nKpMag
+       XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
+    end do
+  
+    ! Obtain geomagnetic pertubation. Output is in NED Coordinates.
+    call ground_mag_perturb(    nKpMag, XyzGsm_DI, Bmag_DI)
+    call ground_mag_perturb_fac(nKpMag, XyzKp_DI,  Bfac_DI)
+
+    ! Sum contributions.
+    do i=1, nKpMag
+       Bmag_DI(:,i) = (Bmag_DI(:,i) + Bfac_DI(:,i)) * No2Io_V(UnitB_)
+    end do
+
+    ! MPI Reduce to head node.
+    if(nProc>1) then
+       call MPI_reduce(Bmag_DI, Bsum_DI, 3*nKpMag, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+    else
+       BSum_DI = BMag_DI
+    end if
+
+    ! Head node calculates K-values and shares them with all other nodes.
+    if(iProc==0)then
+       ! Extract horizontal IE results; combine Jh and Jp contributions:
+       iStart = nMagnetometer + nGridMag + 1
+       iStop  = nMagnetometer + nGridMag + nKpMag
+       if(DoTestMe)write(*,*) 'iStart, iStop = ', iStart, iStop
+       MagPerbIE_DI = IeMagPerturb_DII(1:2, 1, iStart:iStop) + &
+                      IeMagPerturb_DII(1:2, 2, iStart:iStop)
+
+       ! Shift MagHistory to make room for new measurements.
+       MagHistory_DII(:,:,1:iSizeKpWindow-1) = &
+            MagHistory_DII(:,:,2:iSizeKpWindow)
+
+       ! Add IE component of pertubation.
+       do i=1, nKpMag
+          ! Store X and Y-components; add IE component.
+          if (IsFirstCalc .or. Is2ndCalc) then
+             ! First or second calc, fill in whole array to initialize.
+             MagHistory_DII(1,i,:) = Bsum_DI(1,i) + MagPerbIE_DI(1,i)
+             MagHistory_DII(2,i,:) = Bsum_DI(2,i) + MagPerbIE_DI(2,i)
+          else
+             ! Later in simulation, merely fill in the most recent value.
+             MagHistory_DII(1,i,iSizeKpWindow) = Bsum_DI(1,i)+MagPerbIE_DI(1,i)
+             MagHistory_DII(2,i,iSizeKpWindow) = Bsum_DI(2,i)+MagPerbIE_DI(2,i)
+          end if
+
+          ! Calculate deltaB(x,y), convert to K.
+          deltaB(1) = maxval(MagHistory_DII(1,i,:)) - &
+               minval(MagHistory_DII(1,i,:))
+          deltaB(2) = maxval(MagHistory_DII(2,i,:)) - &
+               minval(MagHistory_DII(2,i,:))
+          kIndex_I(i) = k_index(maxval(DeltaB))
+       end do
+
+       ! Kp is average of Ks.
+       Kp = sum(kIndex_I)/real(nKpMag)
+
+       ! Quantize to 1/3 levels.
+       Kp = nint(3*Kp)/3.0
+
+    end if
+
+  end subroutine calc_kp
+
+  !================================================================
+  subroutine check_mag_input_file
+    ! Set number of magnetometers listed in the input file: 
+    ! set nMagnetometer
+
+    use ModProcMH, ONLY: iProc, iComm
+    use ModMain,   ONLY: lVerbose
+    use ModIoUnit, ONLY: UnitTmp_
+    use ModIO,     ONLY: iUnitOut, Write_prefix
+
+    use ModMpi
+
+    integer :: iError
+
+    ! One line of input
+    character (len=100) :: Line
+    character(len=3) :: NameMag
+    real             :: iMagmLat, iMagmLon
+
+    integer          :: nMag
+    character(len=*), parameter :: NameSub = 'check_mag_input_file'
+    logical          :: DoTest, DoTestMe
+    !---------------------------------------------------------------------
+
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Read file on the root processor
+    if (iProc == 0) then
+
+       if(lVerbose>0)then
+          call write_prefix; write(iUnitOut,*) NameSub, &
+               " reading: ",trim(MagInputFile)
+       end if
+
+       open(UnitTmp_, file=MagInputFile, status="old", iostat = iError)
+       if (iError /= 0) call stop_mpi(NameSub // &
+            ' ERROR: unable to open file ' // trim(MagInputFile))
+
+       nMag = 0
+
+       ! Read the file: read #COORD TypeCoord, #START 
+       READFILE: do
+
+          read(UnitTmp_,'(a)', iostat = iError ) Line
+
+          if (iError /= 0) EXIT READFILE
+
+          if(index(Line,'#COORD')>0) then
+             read(UnitTmp_,'(a)') TypeCoordMag
+             select case(TypeCoordMag)
+             case('MAG','GEO','SMG')
+                call write_prefix;
+                write(iUnitOut,'(a)') 'Magnetometer Coordinates='//TypeCoordMag
+             case default
+                call stop_mpi(NameSub//' invalid TypeCoordMag='//TypeCoordMag)
+             end select
+          endif
+
+          if(index(Line,'#START')>0)then
+             READPOINTS: do
+                read(UnitTmp_,*, iostat=iError) NameMag, iMagmLat, iMagmLon
+                if (iError /= 0) EXIT READFILE
+
+                !Add new points
+                nMag = nMag + 1
+
+             end do READPOINTS
+
+          end if
+
+       end do READFILE
+
+       close(UnitTmp_)
+
+       if(DoTest)write(*,*) NameSub,': nMagnetometer=', nMag
+
+       ! Number of magnetometers in the file
+       nMagnetometer = nMag
+
+    end if
+
+    ! Tell the coordinates to the other processors
+    call MPI_Bcast(TypeCoordMag, 3, MPI_CHARACTER, 0, iComm, iError)
+
+    ! Tell the number of magnetometers to the other processors
+    call MPI_Bcast(nMagnetometer, 1, MPI_INTEGER, 0, iComm, iError)
+
+  end subroutine check_mag_input_file
+
   !================================================================
   subroutine read_mag_input_file
     ! Read the magnetometer input file which governs the number of virtual
@@ -284,136 +728,92 @@ contains
 
     use ModProcMH, ONLY: iProc, iComm
     use ModMain, ONLY: lVerbose
-    use ModIO, ONLY: FileName, Unit_Tmp, iUnitOut, Write_prefix
+    use ModIO, ONLY: iUnitOut, Write_prefix
+    use ModIoUnit, ONLY: UnitTmp_
 
     use ModMpi
 
-    integer :: iError, nStat
+    integer :: iError
 
     ! One line of input
-    character (len=100) :: Line
-    character(len=3) :: iMagName
-    real             :: iMagmLat, iMagmLon
-    real, dimension(MaxMagnetometer)      :: MagmLat_I, MagmLon_I
+    character (len=100):: StringLine
+    integer            :: iMag
 
-    integer          :: iMag
     character(len=*), parameter :: NameSub = 'read_magnetometer_input_files'
     logical          :: DoTest, DoTestMe
     !---------------------------------------------------------------------
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Read file on the root processor
     if (iProc == 0) then
 
-       filename = MagInputFile    
-
        if(lVerbose>0)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               " reading: ",trim(filename)
+               " reading: ",trim(MagInputFile)
        end if
 
-       open(unit_tmp, file=filename, status="old", iostat = iError)
-       if (iError /= 0) call stop_mpi(NameSub // &
-            ' ERROR: unable to open file ' // trim(filename))
-
-       nStat = 0
-
-       ! Read the file: read #COORD TypeCoord, #START 
+       ! Read in magnetometer positions and names
+       open(UnitTmp_, file=MagInputFile, status="old")
        READFILE: do
-
-          read(unit_tmp,'(a)', iostat = iError ) Line
-
-          if (iError /= 0) EXIT READFILE
-
-          if(index(Line,'#COORD')>0) then
-             read(unit_tmp,'(a)') TypeCoordMagIn
-             select case(TypeCoordMagIn)
-             case('MAG','GEO','SMG')
-                call write_prefix;
-                write(iUnitOut,'(a)') 'Magnetometer Coordinates='//TypeCoordMagIn
-             case default
-                call stop_mpi(NameSub//' invalid TypeCoordMagIn='//TypeCoordMagIn)
-             end select
-          endif
-
-          if(index(Line,'#START')>0)then
-             READPOINTS: do
-                read(unit_tmp,*, iostat=iError) iMagName, iMagmLat, iMagmLon
-                if (iError /= 0) EXIT READFILE
-
-                if (nStat >= MaxMagnetometer) then
-                   call write_prefix;
-                   write(*,*) NameSub,' WARNING: magnetometers file: ',&
-                        trim(filename),' contains too many stations! '
-                   call write_prefix; write(*,*) NameSub, &
-                        ': max number of stations =',MaxMagnetometer
-                   EXIT READFILE
-                endif
-
-                !Add new points
-                nStat = nStat + 1
-
-                !Store the locations and name of the stations
-                MagmLat_I(nStat)    = iMagmLat
-                MagmLon_I(nStat)    = iMagmLon
-                MagName_I(nStat)    = iMagName
-
-             end do READPOINTS
-
+          read(UnitTmp_,'(a)') StringLine
+          if(index(StringLine, '#START') > 0)then
+             do iMag = 1, nMagnetometer
+                read(UnitTmp_,*) MagName_I(iMag), PosMagnetometer_II(1:2,iMag)
+             end do
+             EXIT READFILE
           end if
-
        end do READFILE
-
-       close(unit_tmp)
-
-       if(DoTest)write(*,*) NameSub,': nstat=',nStat
-
-       ! Number of magnetometers 
-       nMagnetometer = nStat
-       write(*,*) NameSub, ': Number of Magnetometers: ', nMagnetometer
-       if (nMagnetometer==0.0) call CON_stop(NameSub // &
-            ' No magnetometers found in input file!')
-
-       ! Save the positions (maglatitude, maglongitude)
-       do iMag=1, nMagnetometer
-          PosMagnetometer_II(1,iMag) = MagmLat_I(iMag)
-          PosMagnetometer_II(2,iMag) = MagmLon_I(iMag)
-       end do
-
+       close(UnitTmp_)
     end if
 
-    ! Tell the coordinates to the other processors
-    call MPI_Bcast(TypeCoordMagIn, 3, MPI_CHARACTER, 0, iComm, iError)
-    ! Tell the number of magnetometers to the other processors
-    call MPI_Bcast(nMagnetometer, 1, MPI_INTEGER, 0, iComm, iError)
     ! Tell the magnetometer name to the other processors
-    call MPI_Bcast(MagName_I, nMagnetometer*3, MPI_CHARACTER,0,iComm,iError)
+    call MPI_Bcast(MagName_I, nMagnetometer*3, MPI_CHARACTER, 0, &
+         iComm, iError)
     ! Tell the other processors the coordinates
     call MPI_Bcast(PosMagnetometer_II, 2*nMagnetometer, MPI_REAL, 0, &
          iComm, iError)
 
-    ! Allocate IE array using nMagnetometer, initialize to zero.
-    allocate(IeMagPerturb_DII(3,2,nMagnetometer))
-    IeMagPerturb_DII = 0.0
-
   end subroutine read_mag_input_file
 
   !===========================================================================
-  subroutine open_magnetometer_output_file
+  subroutine open_magnetometer_output_file(NameGroupIn)
     ! Open and initialize the magnetometer output file.  A new IO logical unit
     ! is created and saved for future writes to this file.
 
     use ModMain,   ONLY: n_step
     use ModIoUnit, ONLY: io_unit_new
     use ModIO,     ONLY: NamePlotDir, IsLogName_e
+    use ModUtilities, ONLY: flush_unit
 
-    character(len=100):: NameFile
-    integer :: iMag, iTime_I(7)
+    character(len=4), intent(in) :: NameGroupIn
+
+    character(len=6):: TypeFileOut
+    character(len=100):: NameFile, StringPrefix
+    integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
     logical :: oktest, oktest_me
     !------------------------------------------------------------------------
     ! Open the output file 
-    call set_oktest('open_magnetometer_output_files', oktest, oktest_me)
+    call CON_set_do_test('open_magnetometer_output_files', oktest, oktest_me)
+
+    ! Magnetometer grid file or regular file?
+    if(NameGroupIn == 'stat')then
+       StringPrefix = 'magnetometers'
+       TypeFileOut = TypeGridFileOut
+       iStart   = 0
+       iEnd     = nMagnetometer
+    else if(NameGroupIn == 'grid')then
+       StringPrefix = 'gridMags'
+       TypeFileOut = TypeMagFileOut
+       iStart   = nMagnetometer
+       iEnd     = nMagTotal
+    else 
+       call CON_stop('open_magnetometer_output_files: unrecognized ' // &
+            'magnetometer group: ', NameGroupIn)
+    end if
+
+    ! Total number of magnetometers written out now:
+    nMagNow = iEnd-iStart
 
     ! If writing new files every time, no initialization needed.
     if(TypeMagFileOut /= 'single')return
@@ -421,78 +821,172 @@ contains
     if(IsLogName_e)then
        ! Event date added to magnetic perturbation file name
        call get_date_time(iTime_I)
-       write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
-            trim(NamePlotDir), 'magnetometers_e', iTime_I(1:6), '.mag'
+       write(NameFile, '(3a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+            trim(NamePlotDir), trim(StringPrefix),'_e', iTime_I(1:6), '.mag'
     else
-       write(NameFile,'(a,a, i8.8, a)') &
-            trim(NamePlotDir), 'magnetometers_n', n_step, '.mag'
+       write(NameFile,'(3a, i8.8, a)') &
+            trim(NamePlotDir), trim(StringPrefix), '_n', n_step, '.mag'
     end if
     if(oktest) then
        write(*,*) 'open_magnetometer_output_files: NameFile:', NameFile
     end if
 
-    iUnitMag= io_unit_new()
-    open(iUnitMag, file=NameFile, status="replace")
+    iUnitNow= io_unit_new()
+    open(iUnitNow, file=NameFile, status="replace")
 
     ! Write the header
-    write(iUnitMag, '(i5,a)',ADVANCE="NO") nMagnetometer, ' magnetometers:'
-    do iMag=1,nMagnetometer-1 
-       write(iUnitMag, '(1X,a)', ADVANCE='NO') MagName_I(iMag)
+    write(iUnitNow, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
+    do iMag=1,nMagnow-1 
+       write(iUnitNow, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
     end do
-    write(iUnitMag, '(1X,a)') MagName_I(nMagnetometer)
-    write(iUnitMag, '(a)')  &
+    write(iUnitNow, '(1X,a)') MagName_I(iEnd)
+    write(iUnitNow, '(a)')  &
          'nstep year mo dy hr mn sc msc station X Y Z '// &
          'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
          'dBnHal dBeHal dBdHal dBnPed dBePed dBdPed'
 
+    ! Save file IO unit.
+    if(NameGroupIn == 'stat')then
+       iUnitMag=iUnitNow
+    else if(NameGroupIn == 'grid')then
+       iUnitGrid=iUnitNow
+    end if
+
+    call flush_unit(iUnitNow)
+
   end subroutine open_magnetometer_output_file
 
+  !===========================================================================
+  subroutine write_geoindices
+
+    use ModMain,  ONLY: n_step
+    use ModProcMH,ONLY: iProc
+    use ModUtilities, ONLY: flush_unit
+    use ModMpi
+
+    integer :: iTime_I(7)
+
+    character(len=*), parameter :: NameSub='write_geoindices'
+    logical :: DoTest, DoTestMe
+    !------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! Calculate indices on all nodes.
+    if(DoCalcKp) call calc_kp
+    !if(DoCalcDst) call calc_dst ...etc...
+
+    if(iProc > 0) RETURN ! Write only on head node.
+
+    ! Write date and time.
+    call get_date_time(iTime_I)
+    write(iUnitIndices, '(i7.7, i5.4, 5(i3.2), i4.3)', ADVANCE='NO') &
+         n_step, iTime_I
+
+    !if(DoCalcDst) write(..., ADVANCE='NO') dst
+
+    if(DoCalcKp)then
+       ! Write out KP with newline
+       ! Using ADVANE='NO' resulted in occasional newlines by pgf90
+       write(iUnitIndices, '(f5.2,100i2)') Kp, kIndex_I
+    else
+       ! Add newline
+       write(iUnitIndices, *)
+    end if
+ 
+    call flush_unit(iUnitIndices)
+
+    ! Ensure two initialization steps are not repeated.
+    if(.not. IsFirstCalc) Is2ndCalc=.false.
+    IsFirstCalc=.false.
+
+  end subroutine write_geoindices
+
   !=====================================================================
-  subroutine write_magnetometers
+  subroutine write_magnetometers(NameGroupIn)
     ! Write ground magnetometer field perturbations to file.  Values, IO units,
     ! and other information is gathered from module level variables.
 
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
-    use ModMain,  ONLY: n_step, time_simulation,&
-         TypeCoordSystem
+    use ModMain,  ONLY: n_step, time_simulation, TypeCoordSystem
     use ModUtilities, ONLY: flush_unit
     use ModMpi
 
-    integer           :: iMag, iError
-    !year,month,day,hour,minute,second,msecond
-    real, dimension(3):: Xyz_D
-    real, dimension(3,nMagnetometer):: MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
+    ! NameGroupIn determines which group of magnetometers will be written
+    ! to file: regular stations ('stat') or grid magnetometers ('grid').
+    character(len=4), intent(in) :: NameGroupIn
+
+    integer :: iMag, iError, iStart, iEnd, iUnitOut, nMagNow
+
+    character(len=3):: TypeCoordNow
+    character(len=6):: TypeFileNow
+
+    real:: Xyz_D(3)
+    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3)
+    real, dimension(:, :), allocatable :: &
+         MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
          MagGmXyz_DI, MagSmXyz_DI, MagVarSum_DI, MagVarFac_DI, &
          MagVarGm_DI, MagVarTotal_DI
-    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3)
 
-    character(len=*), parameter :: NameSub = 'write_magnetometers'
-    logical                     :: DoTest, DoTestMe
+    logical                    :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'write_magnetometers'
     !---------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    ! Configure output to cover specific magnetometer group:
+    if (NameGroupIn == 'stat') then
+       iStart       = 0
+       iEnd         = nMagnetometer
+       iUnitOut     = iUnitMag
+       TypeCoordNow = TypeCoordMag
+       TypeFileNow  = TypeMagFileOut
+    else if (NameGroupIn == 'grid') then
+       iStart       = nMagnetometer
+       iEnd         = nMagTotal
+       iUnitOut     = iUnitGrid
+       TypeCoordNow = TypeCoordGrid
+       TypeFileNow  = TypeGridFileOut  ! should be "2d"
+    else
+       call CON_stop(NameSub// &
+            ': Unrecognized magnetometer group: '//NameGroupIn)
+    end if
 
-    ! Matrix between two coordinates
+    ! Total number of magnetometers written out now:
+    nMagNow = iEnd - iStart
+
+    if(DoTestMe) then
+       write(*,*) 'WRITING MAGNETOMETERS!', NameGroupIn
+       write(*,*) 'iStart, iEnd, iUnitOut, TypeCoordNow = ', &
+            iStart, iEnd, iUnitOut, TypeCoordNow
+       write(*,*) 'nMagNow = ', nMagNow
+    end if
+
+    ! Allocate variables:
+    allocate(MagPerturbGmSph_DI(3,nMagNow), MagPerturbFacSph_DI(3,nMagNow),&
+         MagGmXyz_DI(3,nMagNow),  MagSmXyz_DI(3,nMagNow), &
+         MagVarSum_DI(3,nMagNow), MagVarFac_DI(3,nMagNow), &
+         MagVarGm_DI(3,nMagNow),  MagVarTotal_DI(3,nMagNow))
+
+    ! Matrix between coordinate systems
     MagtoGm_DD = transform_matrix(Time_Simulation, &
-         TypeCoordMagIn, TypeCoordSystem)
-    GmtoSm_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
+         TypeCoordNow, TypeCoordSystem)
+    GmtoSm_DD  = transform_matrix(Time_Simulation, &
+         TypeCoordSystem, 'SMG')
 
     !\
     ! Transform the Radius position into cartesian coordinates. 
     ! Transform the magnetometer position from MagInCorrd to GM/SM
     !/
 
-    do iMag=1,nMagnetometer
+    do iMag = 1, nMagNow
        ! (360,360) is for the station at the center of the planet
-       if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
-            nint(PosMagnetometer_II(2,iMag)) == 360) then 
+       if ( nint(PosMagnetometer_II(1,iMag+iStart)) == 360 .and. &
+            nint(PosMagnetometer_II(2,iMag+iStart)) == 360) then 
           Xyz_D = 0.0
        else 
           call  sph_to_xyz(1.0,                           &
-               (90-PosMagnetometer_II(1,iMag))*cDegToRad, &
-               PosMagnetometer_II(2,iMag)*cDegToRad,      &
-               Xyz_D)
+               (90-PosMagnetometer_II(1,iMag+iStart))*cDegToRad, &
+               PosMagnetometer_II(2,iMag+iStart)*cDegToRad, Xyz_D)
           Xyz_D = matmul(MagtoGm_DD, Xyz_D)
        end if
 
@@ -504,50 +998,109 @@ contains
     ! Calculate the perturbations from GM currents and FACs in the Gap Region;
     ! The results are in SM spherical coordinates.
     !------------------------------------------------------------------
-    call ground_mag_perturb(    nMagnetometer, &
-         MagGmXyz_DI, MagPerturbGmSph_DI) 
-
-    call ground_mag_perturb_fac(nMagnetometer, &
-         MagSmXyz_DI, MagPerturbFacSph_DI)
+    call ground_mag_perturb(    nMagNow, MagGmXyz_DI, MagPerturbGmSph_DI) 
+    call ground_mag_perturb_fac(nMagNow, MagSmXyz_DI, MagPerturbFacSph_DI)
 
     !\
     ! Collect the variables from all the PEs
     !/
     MagVarSum_DI = 0.0
-    if(nProc>1)then 
-       call MPI_reduce(MagPerturbGmSph_DI, MagVarSum_DI, 3*nMagnetometer, &
+    if(nProc > 1)then 
+       call MPI_reduce(MagPerturbGmSph_DI, MagVarSum_DI, 3*nMagNow, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)MagPerturbGmSph_DI = MagVarSum_DI
+       if(iProc == 0) MagPerturbGmSph_DI = MagVarSum_DI
 
-       call MPI_reduce(MagPerturbFacSph_DI, MagVarSum_DI, 3*nMagnetometer, &
+       call MPI_reduce(MagPerturbFacSph_DI, MagVarSum_DI, 3*nMagNow, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)MagPerturbFacSph_DI = MagVarSum_DI
+       if(iProc == 0) MagPerturbFacSph_DI = MagVarSum_DI
     end if
 
     ! Collect variables, send to appropriate write subroutine.
     if(iProc==0)then      
-       do iMag=1,nMagnetometer
+       do iMag = 1, nMagNow
           !normalize the variable to I/O unit:
           MagVarGm_DI( :,iMag)  = MagPerturbGMSph_DI( :,iMag) * No2Io_V(UnitB_)
           MagVarFac_DI( :,iMag) = MagPerturbFacSph_DI(:,iMag) * No2Io_V(UnitB_)
 
           ! Get total perturbation:
-          MagVarTotal_DI( :,iMag) = MagVarGm_DI( :,iMag)+MagVarFac_DI( :,iMag)+&
-               IeMagPerturb_DII(:,1,iMag) + IeMagPerturb_DII(:,2,iMag)
+          MagVarTotal_DI( :,iMag) = MagVarGm_DI(:,iMag)+MagVarFac_DI(:,iMag) &
+               + IeMagPerturb_DII(:,1,iMag+iStart) &
+               + IeMagPerturb_DII(:,2,iMag+iStart)
        end do
 
-       select case(TypeMagFileOut)
-          case('single')
-             call write_mag_single
-          case('step')
-             call write_mag_step
-          case('station')
-             call CON_stop(NameSub//': separate mag files not implemented yet.')
+       select case(TypeFileNow)
+       case('single')
+          call write_mag_single
+       case('step')
+          call write_mag_step
+       case('ascii', 'real4', 'real8', 'tec')
+          call write_mag_2d
+       case('station')
+          call CON_stop(NameSub//': separate mag files not implemented yet.')
        end select
 
     end if
 
+    ! Release memory.
+    deallocate(MagPerturbGmSph_DI, MagPerturbFacSph_DI, MagGmXyz_DI, &
+         MagSmXyz_DI, MagVarSum_DI, MagVarFac_DI, MagVarGm_DI,  MagVarTotal_DI)
+
   contains
+    !=====================================================================
+    subroutine write_mag_2d
+
+      use ModPlotFile, ONLY: save_plot_file
+      use ModIO, ONLY: NamePlotDir, IsLogName_e
+
+      integer, parameter:: nVar = 15
+      character(len=*), parameter:: NameVar = &
+           "Lon Lat dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac "// &
+           "dBnHal dBeHal dBdHal dBnPed dBePed dBdPed"
+
+      integer ::  iTime_I(7), iLon, iLat, iMag
+
+      character(len=100):: NameFile
+      !------------------------------------------------------------------
+      ! if(NameGroup == "grid")then
+
+      if(allocated(MagOut_VII))then
+         if(size(MagOut_VII) /= nGridMag*nVar) deallocate(MagOut_VII)
+      end if
+      if(.not.allocated(MagOut_VII)) &
+           allocate(MagOut_VII(nVar,nGridLon,nGridLat))
+
+      iMag = 0
+      do iLat = 1, nGridLat
+         do iLon = 1, nGridLon
+            iMag = iMag + 1
+            MagOut_VII( 1: 3,iLon,iLat) = MagVarTotal_DI(:,iMag)
+            MagOut_VII( 4: 6,iLon,iLat) = MagVarGm_DI(:,iMag)
+            MagOut_VII( 7: 9,iLon,iLat) = MagVarFac_DI(:,iMag)
+            MagOut_VII(10:12,iLon,iLat) = IeMagPerturb_DII(:,1,iMag+iStart)
+            MagOut_VII(13:15,iLon,iLat) = IeMagPerturb_DII(:,2,iMag+iStart)
+         end do
+      end do
+
+      if(IsLogName_e)then
+         ! Event date added to magnetic perturbation grid file name
+         call get_date_time(iTime_I)
+         write(NameFile, '(a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+              trim(NamePlotDir)//'mag_grid_e', iTime_I(1:6), '.out'
+      else
+         write(NameFile,'(a, i8.8, a)') &
+              trim(NamePlotDir)//'mag_grid_n', n_step, '.out'
+      end if
+
+      call save_plot_file(NameFile, TypeFileIn=TypeFileNow, &
+           StringHeaderIn = "Magnetometer grid ("//TypeCoordNow//") [deg] "// &
+           "dB (North-East-Down) [nT]", &
+           TimeIn = time_simulation, &
+           NameVarIn = NameVar, &
+           CoordMinIn_D = (/ GridLonMin, GridLatMin /), &
+           CoordMaxIn_D = (/ GridLonMax, GridLatMax /), &
+           VarIn_VII=MagOut_VII)
+
+    end subroutine write_mag_2d
     !=====================================================================
     subroutine write_mag_single
       ! For TypeMagFileOut == 'single', write a single record to the file.
@@ -558,22 +1111,22 @@ contains
       call get_date_time(iTime_I)
 
       ! Write data to file.
-      do iMag=1, nMagnetometer
+      do iMag=1, nMagNow
          ! Write time and magnetometer number to file:
-         write(iUnitMag,'(i8)',ADVANCE='NO') n_step
-         write(iUnitMag,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
-         write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
+         write(iUnitOut,'(i8)',ADVANCE='NO') n_step
+         write(iUnitOut,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
+         write(iUnitOut,'(1X,i4)', ADVANCE='NO')  iMag
 
          ! Write position of magnetometer and perturbation to file:  
-         write(iUnitMag,'(18es13.5)') &
+         write(iUnitOut,'(18es13.5)') &
               MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
               MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
-              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
-              IeMagPerturb_DII(:,2,iMag)
+              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag+iStart), &
+              IeMagPerturb_DII(:,2,iMag+iStart)
       end do
 
       ! Flush file buffer.
-      call flush_unit(iUnitMag)
+      call flush_unit(iUnitOut)
 
     end subroutine write_mag_single
 
@@ -585,34 +1138,42 @@ contains
 
       integer ::  iTime_I(7)
 
+      character(len=13) :: StringPrefix
       character(len=100):: NameFile
       !------------------------------------------------------------------------
       call get_date_time(iTime_I)
+      
+      if(NameGroupIn == 'stat') then
+         StringPrefix='magnetometers'
+      else if (NameGroupIn == 'grid') then
+         StringPrefix='gridMags'
+      endif
+
       if(IsLogName_e)then
          ! Event date added to magnetic perturbation file name
-         write(NameFile, '(a, a, i4.4, 2i2.2, "-", 3i2.2, a)') &
-              trim(NamePlotDir), 'magnetometers_e', iTime_I(1:6), '.mag'
+         write(NameFile, '(3a, i4.4, 2i2.2, "-", 3i2.2, a)') &
+              trim(NamePlotDir), trim(StringPrefix),'_e', iTime_I(1:6), '.mag'
       else
-         write(NameFile,'(a,a, i8.8, a)') &
-              trim(NamePlotDir), 'magnetometers_n', n_step, '.mag'
+         write(NameFile,'(3a, i8.8, a)') &
+              trim(NamePlotDir), trim(StringPrefix),'_n', n_step, '.mag'
       end if
 
       ! Open file for output:
       open(UnitTmp_, file=NameFile, status="replace")
 
       ! Write the header
-      write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagnetometer, ' magnetometers:'
-      do iMag=1,nMagnetometer-1 
-         write(UnitTmp_, '(1X,a)', ADVANCE='NO') MagName_I(iMag)
+      write(UnitTmp_, '(i5,a)',ADVANCE="NO") nMagNow, ' magnetometers:'
+      do iMag=1,nMagNow-1 
+         write(UnitTmp_, '(1X,a)', ADVANCE='NO') MagName_I(iMag+iStart)
       end do
-      write(UnitTmp_, '(1X,a)') MagName_I(nMagnetometer)
+      write(UnitTmp_, '(1X,a)') MagName_I(iEnd)
       write(UnitTmp_, '(a)')  &
            'nstep year mo dy hr mn sc msc station X Y Z '// &
            'dBn dBe dBd dBnMhd dBeMhd dBdMhd dBnFac dBeFac dBdFac ' // &
            'dBnHal dBeHal dBdHal dBnPed dBePed dBdPed'
 
       ! Write data to file.
-      do iMag=1, nMagnetometer
+      do iMag=1, nMagNow
          ! Write time and magnetometer number to file:
          write(UnitTmp_,'(i8)',ADVANCE='NO') n_step
          write(UnitTmp_,'(i5,5(1X,i2.2),1X,i3.3)',ADVANCE='NO') iTime_I
@@ -622,8 +1183,8 @@ contains
          write(UnitTmp_,'(18es13.5)') &
               MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
               MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
-              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag), &
-              IeMagPerturb_DII(:,2,iMag)
+              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag+iStart), &
+              IeMagPerturb_DII(:,2,iMag+iStart)
       end do
 
       ! Close file:
@@ -635,15 +1196,41 @@ contains
 
   !=====================================================================
   subroutine finalize_magnetometer
-    ! Close the magnetometer output file (flush buffer, release IO unit).
+    ! Close the magnetometer output files (flush buffer, release IO unit).
+    ! Deallocate arrays.
 
     use ModProcMH, ONLY: iProc
 
     if(iProc==0 .and. TypeMagFileOut /= 'step') close(iUnitMag)
+    if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
+    if (allocated(MagName_I)) deallocate(MagName_I)
+    if (allocated(MagHistory_DII)) deallocate(MagHistory_DII)
 
   end subroutine finalize_magnetometer
 
+  !===========================================================================
+  integer function k_index(DeltaB)
+
+    ! Convert a deltaB value (max-min over window) to a K-value using given
+    ! the standard conversion table that lists the upper limit for each K 
+    ! window.  For example, a K of 0 is given for a deltaB .le. 5, table(1) = 5.
+    ! This table is scaled by k9, or the k9 for the station where the
+    ! measurement is actually taken.
+    
+    real, intent(in) :: DeltaB
+    
+    integer :: i
+    !------------------------------------------------------------------------
+    do i = 1, 9
+       if( DeltaB - Table50_I(i)*k9/Table50_I(9) < 0) then
+          k_index = i - 1
+          RETURN
+       end if
+    end do
+    k_index = 9
+    
+  end function k_index
   !============================================================================
 
 end module ModGroundMagPerturb
