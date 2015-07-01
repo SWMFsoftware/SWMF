@@ -24,6 +24,8 @@ my %Compiler = (
                 "kraken-gsi"          => "ifortftn",
                 "yslogin"             => "ifortmpif90,iccmpicxx",
                 "h2ologin"            => "crayftn,cc",
+                "cetuslac"            => "mpixlf2008,mpixlc",
+                "miralac"             => "mpixlf2008,mpixlc",
 		);
 
 my $WARNING_='share/Scripts/Config.pl WARNING:';
