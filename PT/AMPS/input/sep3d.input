@@ -83,6 +83,7 @@ MoverIntegratorMode=GuidingCenter
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+ define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) SEP3D::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
   define _PIC_GLOBAL_TIME_COUNTER_MODE_ _PIC_MODE_ON_
   define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__AXIAL_
