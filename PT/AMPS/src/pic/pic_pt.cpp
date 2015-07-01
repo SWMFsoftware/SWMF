@@ -576,7 +576,7 @@ void PIC::ParticleTracker::StopParticleTrajectoryTracking(void *ParticleData) {
 
 //the default particle trajectory tracking condition
 bool PIC::ParticleTracker::TrajectoryTrackingCondition_default(double *x,double *v,int spec,void *ParticleData) {
-  if (maxSampledTrajectoryNumber>totalSampledTrajectoryNumber[spec]) {
+  if ((maxSampledTrajectoryNumber>totalSampledTrajectoryNumber[spec])&&(maxSampledTrajectoryNumber>threadSampledTrajectoryNumber[spec])) {
     return true;
   }
 
