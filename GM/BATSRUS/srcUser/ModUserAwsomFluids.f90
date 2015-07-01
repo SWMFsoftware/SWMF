@@ -52,10 +52,8 @@ module ModUser
 
   ! Rotating boundary condition                                             
   real    :: TbeginJet, TendJet
-  integer :: iBcMax            ! Index up to which BC is applied         
   logical :: IsRamping
   logical :: IsPolarDipole, IsJetBC
-  logical :: IsFixedBcJet
   real    :: DistMinJet
   real    :: DistMaxJet
   real    :: LocationMaxJet
@@ -110,8 +108,6 @@ contains
           IsPolarDipole = .true.
 
        case("#POLARJETBC")
-          call read_var('IsFixedBcJet',IsFixedBcJet)
-          if(IsFixedBcJet)call read_var('iBcMax',iBcMax)
           call read_var('IsRamping', IsRamping)
           if(IsRamping)then
              call read_var('TbeginJet', TBeginJet)
@@ -484,7 +480,7 @@ contains
     ! modifies ghost cells in the r direction
 
     use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
-         use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -500,6 +496,7 @@ contains
     ! Below is for jet only
     use ModMain,       ONLY: time_simulation, time_accurate
     use ModConst,      ONLY: cPi
+    use ModCoordTransform, ONLY: rlonlat_to_xyz
     ! Above is for jet only                    
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -514,11 +511,13 @@ contains
 
     ! Below is for jet only  
     real    :: Framp
-    real    :: Xyz_D(3)
+    real    :: Xyz_D(3), JetCenter_D(3)
     real    :: Uphi, Utheta
     real    :: urot_D(3)
     real    :: Xjet, Yjet, Zjet, DistanceJet
     real    :: uCoeff = 0.0
+
+    real    :: x, y, z, r, XJetCenter, YJetCenter, ZJetCenter
     ! Above is for jet only                    
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
@@ -642,17 +641,29 @@ contains
     if(IsJetBC)then
        do k = MinK, MaxK; do j = MinJ, MaxJ
 
+          ! Get total B direction at surface (assume B1(i=0)=B1(i=1)
           FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
                + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
           Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
           uRot_D = 0.0
 
-          Xyz_D=Xyz_DGB(:,1,j,k,iBlock)
+          Xyz_D = Xyz_DGB(:,1,j,k,iBlock)
+          r  = sqrt(sum(Xyz_D**2))
+
+          call rlonlat_to_xyz( &
+               (/r, UserDipoleLongitude, UserDipoleLatitude/), &
+               JetCenter_D &
+               )
+          DistanceJet = sqrt(sum((Xyz_D-JetCenter_D)**2))
+
           Xjet = Xyz_D(1) 
           Yjet = Xyz_D(2) 
           Zjet = Xyz_D(3)
-          DistanceJet = sqrt((Xjet**2+Zjet**2)/(Xjet**2+Yjet**2+Zjet**2))
+
+          XjetCenter = JetCenter_D(1)
+          YjetCenter = JetCenter_D(2)
+          ZjetCenter = JetCenter_D(3)
 
           ! Calculate the rotation speed profile and velocity vector
           if(DistanceJet < DistMinJet .or. DistanceJet > DistMaxJet)then
@@ -660,50 +671,37 @@ contains
           else
              uCoeff =  Si2No_V(UnitU_)*1e3*(ShapeCoeffJet*DistanceJet &
                   -(ScaleCoeffJet*DistanceJet)**ProfileExponentJet)
-             uRot_D = (/-Zjet,0.,Xjet/) / sqrt(Xjet**2.+Zjet**2.) * uCoeff 
+
+             uRot_D = uCoeff * (/ &
+                  YJetCenter*Zjet - ZJetCenter*Yjet, &
+                  ZJetCenter*Xjet - XJetCenter*Zjet, &
+                  XJetCenter*Yjet - YJetCenter*Xjet /) / &
+                  (sqrt(sum(Xyz_D**2)) * sqrt(sum(JetCenter_D**2)))
           endif
 
           do iFluid = IonFirst_, IonLast_
              iRho = iRho_I(iFluid)
              iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
-             ! BC with fixed velocity for all ghost cells
-             if(IsFixedBcJet)then
-                ! Calculate velocity in cell 1                             
-                u_D = State_VGB(iRhoUx:iRhoUz,1,j,k,iBlock) &
-                     /State_VGB(iRho,1,j,k,iBlock)
+             ! BC with reflected velocity for each cell 
+             ! (relative to the surface)
+             do i = MinI, 0
+                ! Calculate velocity in cell 1-i                           
+                u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
+                     /State_VGB(iRho,1-i,j,k,iBlock)
 
-                ! Subtract rotational velocity                              
                 u_D = u_D - uRot_D
 
-                ! u_ghost = u_par - u_perp = 2*u_par - u 
+                ! u_ghost = 2*u_par - u_cell                  
                 u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
 
-                ! Add back rotational velocity                             
                 u_D = u_D + uRot_D
 
-                do i = MinI, iBcMax
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                        u_D*State_VGB(iRho,i,j,k,iBlock)
-                end do
-             else
-                ! BC with reflected velocity for each cell 
-                ! (relative to the surface)
-                do i = MinI, 0
-                   ! Calculate velocity in cell 1-i                           
-                   u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
-                        /State_VGB(iRho,1-i,j,k,iBlock)
-
-                   ! u_ghost = 2*u_par + 2*u_rot - u_cell                  
-                   u_D = 2*(sum(u_D*Bdir_D))*Bdir_D + 2*uRot_D - u_D
-
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                        u_D*State_VGB(iRho,i,j,k,iBlock)
-
-                end do;
-             end if;
-          end do;
-       end do;end do;
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                     u_D*State_VGB(iRho,i,j,k,iBlock)
+             end do
+          end do
+       end do;end do
        ! END of rotating BC (jet) part
     else
        do iFluid = IonFirst_, IonLast_
@@ -923,38 +921,31 @@ contains
 
   subroutine user_get_b0(x, y, z, B0_D)
 
-    use ModPhysics, ONLY: MonopoleStrength
     use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModGeometry, ONLY: RadiusMin
 
     real, intent(in)   :: x, y, z
     real, intent(inout):: B0_D(3)
 
-    real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
-    real :: B0Mono_D(3)
-
+    real :: Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
     real :: UserDipoleAxis_D(3)
 
     character(len=*), parameter :: NameSub = 'user_get_b0'
 
     !-------------------------------------------------------------------    
 
-    ! monopole part
-    B0Mono_D = (/0.0,0.0,0.0/)
-
-    Xyz_D = (/x, y, z/)
-    r = sqrt(sum(Xyz_D**2))
-    B0Mono_D = MonopoleStrength*Xyz_D/r**3
-
-    ! dipole part                                                          
-    ! shifted Xyz_D to the center of the user-dipole
-    call rlonlat_to_xyz(&
-         (/1-UserDipoleDepth, UserDipoleLongitude, UserDipoleLatitude/),&
-    Xyz_D)
-    Xyz_D = (/x, y, z/) - Xyz_D
+    ! Center of dipole shifted by UserDipoleDepth below RadiusMin
+    call rlonlat_to_xyz( &
+         (/RadiusMin-UserDipoleDepth, &
+         UserDipoleLongitude, UserDipoleLatitude/), &
+         Xyz_D &
+         )
+    ! Normalize with depth
+    Xyz_D = ((/x, y, z/) - Xyz_D)/UserDipoleDepth
 
     call rlonlat_to_xyz(&
-         (/1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude/),&
-    UserDipoleAxis_D)
+         (/1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude/), &
+         UserDipoleAxis_D)
 
     ! Determine radial distance and powers of it                            
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
@@ -962,12 +953,11 @@ contains
     r3Inv = rInv*r2Inv
 
     ! Compute dipole moment of the intrinsic magnetic field B0.             
-    Dipole_D = UserDipoleStrength * UserDipoleAxis_D
+    Dipole_D = UserDipoleStrength * UserDipoleAxis_D 
 
-    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
+    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv 
 
-    B0_D = B0_D + B0Mono_D + (Dp*Xyz_D - Dipole_D)*r3Inv
-
+    B0_D = B0_D + (Dp*Xyz_D - Dipole_D) * r3Inv
   end subroutine user_get_b0
 
   !=====================================================================    
