@@ -33,8 +33,7 @@ MODULES = \
 	ModIE_Interface.o\
 	ModFiles.o\
 	ModConductance.o\
-	ModIonoMagPerturb.o \
-	ModIeGeoindices.o
+	ModIonoMagPerturb.o 
 #
 #	Object Lists
 #

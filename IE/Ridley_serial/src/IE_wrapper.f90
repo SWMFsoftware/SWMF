@@ -18,9 +18,9 @@ module IE_wrapper
 
   ! Coupling with GM
   public:: IE_get_for_gm
-  public:: IE_groundmaginit_for_gm
   public:: IE_get_mag_for_gm
   public:: IE_put_from_gm
+  public:: IE_put_info_from_gm
 
   ! Coupling with IM
   public:: IE_get_for_im
@@ -49,7 +49,6 @@ contains
     use IE_ModIo
     use IE_ModMain
     use ModIonoMagPerturb
-    use ModIeGeoindices, ONLY: DoCalcKp, DoCalcIndices
 
     use ModIoUnit
     use CON_comp_info
@@ -92,12 +91,6 @@ contains
     case default
        call CON_stop(NameSub//' IE_ERROR: invalid TypeAction='//TypeAction)
     end select
-
-    ! Read in magnetometer stations 
-    if(DoReadMagnetometerFile)then
-       call read_mag_input_file
-       DoReadMagnetometerFile = .false.
-    end if
 
   contains
 
@@ -301,22 +294,10 @@ contains
             end if
 
          case("#MAGNETOMETER")
-            DoReadMagnetometerFile = .true.
-            Save_magnetometer_data = .true.
-
-            call read_var('MagInputFile', MagInputFile)
-
-            if (iProc==0) call check_dir(NameIonoDir)
-
-            call read_var('dn_magoutput', dn_magoutput)
-            call read_var('dt_magoutput', dt_magoutput)
+            write(*,*)'IE_WARNING: #MAGNETOMETER COMMAND NOW GM-ONLY.'
 
          case("#GEOMAGINDICES")
-            ! As more capabilities are added, switches for
-            ! selecting which indices should be calculated 
-            ! can be added here.
-            DoCalcIndices=.true.
-            DoCalcKp     =.true.
+            write(*,*)'IE_WARNING: #GEOMAGINDICES COMMAND NOW GM-ONLY.'
 
          case default
             if(iProc==0) then
@@ -1130,7 +1111,6 @@ contains
     use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
     use IE_ModIo,      ONLY: dt_output, t_output_last, dt_magoutput, &
          t_magoutput_last
-    use ModIonoMagPerturb
     use ModProcIE
 
     !INPUT PARAMETERS:
@@ -1169,8 +1149,6 @@ contains
     if(time_accurate)then
        where(dt_output>0.) &
             t_output_last=int(time_simulation/dt_output)
-       if(save_magnetometer_data .and. t_magoutput_last > -1) &
-            t_magoutput_last = int(time_simulation/dt_magoutput)
     end if
 
   end subroutine IE_init_session
@@ -1184,7 +1162,6 @@ contains
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
     use ModKind, ONLY: Real8_
-    use ModIonoMagPerturb
 
     !INPUT PARAMETERS:
     real,     intent(in) :: tSimulation   ! seconds from start time
@@ -1205,9 +1182,6 @@ contains
        end do
     end if
 
-    if(save_magnetometer_data .and. iProc==0) then 
-       call close_iono_magperturb_file
-    end if
     if(DoSaveLogfile .and. iProc==0)then
        close(unitlog)
     end if
@@ -1254,7 +1228,7 @@ contains
 
     character(len=*), parameter :: NameSub='IE_run'
 
-    logical :: DoTest,DoTestMe
+    logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -1329,21 +1303,28 @@ contains
   end subroutine IE_get_for_ps
 
   !============================================================================
-
-  subroutine IE_groundmaginit_for_gm(nShareGroundMag)
+  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
     ! Get number of shared ground magnetometers between IE and GM and prepare
     ! this value for broadcasting to the GM module.
+    
+    use ModIonoMagPerturb, ONLY: &
+         nMagnetometer, TypeCoordMag_I, PosMagnetometer_II
+    
+    integer,          intent(in) :: nMagIn
+    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
+    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
 
-    use ModIonoMagPerturb, ONLY: nMagnetometer
-    use ModIeGeoindices,   ONLY: nIndexMag, init_geoindices
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='IE_put_info_for_gm'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    integer, intent(out) :: nShareGroundMag
+    ! Place data from buffers into module variables.
+    nMagnetometer  = nMagIn
+    TypeCoordMag_I(1:nMagnetometer)        = NameMagsIn_I
+    PosMagnetometer_II(:, 1:nMagnetometer) = CoordMagsIn_DI
 
-    call init_geoindices
-
-    nShareGroundMag = nIndexMag + nMagnetometer
-
-  end subroutine IE_groundmaginit_for_gm
+  end subroutine IE_put_info_from_gm
 
   !============================================================================
 
@@ -1356,12 +1337,10 @@ contains
     ! Buffer_DII is an array that hold all values to be passed to GM.
 
     use ModIonoMagPerturb, ONLY: nMagnetometer, get_iono_magperturb_now
-    use ModIeGeoindices,   ONLY: get_index_mags, nIndexMag
 
     integer, intent(in):: iSize
     real, intent(out)  :: Buffer_DII(3,2,iSize)
     
-    real, dimension(3,nIndexMag)     :: IndexMagJh_DI, IndexMagJp_DI
     real, dimension(3,nMagnetometer) :: VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI
     integer :: i
     character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
@@ -1369,30 +1348,17 @@ contains
     ! Initialize Buffer to zero.
     Buffer_DII = 0.0
 
-    if( (nIndexMag+nMagnetometer) /= iSize) call CON_stop( &
+    if( (nMagnetometer) /= iSize) call CON_stop( &
          NameSub//' Number of magnetometers does not match!')
 
-    if (nIndexMag>0) then
-       ! Obtain Hall and Pedersen perturbations for index magnetometers
-       call get_index_mags(IndexMagJh_DI, IndexMagJp_DI)
-
-       ! Place perturbations into the beginning of the Buffer
-       do i=1, nIndexMag 
-          Buffer_DII(:,1,i) = IndexMagJh_DI(:,i)
-          Buffer_DII(:,2,i) = IndexMagJp_DI(:,i)
-       end do
-    end if
-
-    if (nMagnetometer > 0) then
-       ! Obtain Hall and Pedersen perturbations for regular magnetometers
-       call get_iono_magperturb_now(VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI)
-
-       ! Place perturbations into end of Buffer
-       do i = nIndexMag + 1, nIndexMag + nMagnetometer
-          Buffer_DII(:,1,i) = VirtMagJh_DI(:,i-nIndexMag)
-          Buffer_DII(:,2,i) = VirtMagJp_DI(:,i-nIndexMag)
-       end do
-    end if
+    ! Obtain Hall and Pedersen perturbations for regular magnetometers
+    call get_iono_magperturb_now(VirtMagJh_DI,  VirtMagJp_DI, Xyz_DI)
+    
+    ! Place perturbations into end of Buffer
+    do i =  1, nMagnetometer
+       Buffer_DII(:,1,i) = VirtMagJh_DI(:,i)
+       Buffer_DII(:,2,i) = VirtMagJp_DI(:,i)
+    end do
 
   end subroutine IE_get_mag_for_gm
 

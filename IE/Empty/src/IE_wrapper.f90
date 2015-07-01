@@ -276,13 +276,18 @@ contains
 
   !============================================================================
 
-  subroutine IE_groundmaginit_for_gm(nShareGroundMag)
+  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
+    ! Get number of shared ground magnetometers between IE and GM and prepare
+    ! this value for broadcasting to the GM module.
 
-    integer, intent(out) :: nShareGroundMag
-    character(len=*), parameter :: NameSub='IE_groundmaginit_for_gm'
+    integer,          intent(in) :: nMagIn
+    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
+    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
+
+    character(len=*), parameter :: NameSub='IE_put_info_from_gm'
     call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
 
-  end subroutine IE_groundmaginit_for_gm
+  end subroutine IE_put_info_from_gm
 
   !============================================================================
 

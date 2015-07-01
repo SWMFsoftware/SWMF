@@ -15,7 +15,7 @@ module IE_wrapper
 
   ! Coupling with GM
   public:: IE_get_for_gm
-  public:: IE_groundmaginit_for_gm
+  public:: IE_put_info_from_gm
   public:: IE_get_mag_for_gm
   public:: IE_put_from_gm
 
@@ -1132,14 +1132,23 @@ contains
 
   !=========================================================================
 
-  subroutine IE_groundmaginit_for_gm(nShareGroundMag)
-    ! Get number of shared ground magnetometers.  Not implemented.
+  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
+    ! Get number of shared ground magnetometers between IE and GM and prepare
+    ! this value for broadcasting to the GM module.
+    
+    integer,          intent(in) :: nMagIn
+    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
+    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
 
-    integer, intent(out) :: nShareGroundMag
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='IE_put_info_from_gm'
+    !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    nShareGroundMag = 0
+    if (nMagIn > 0) &
+         call CON_stop(NameSub//' Ground magnetometer not implemented!')
 
-  end subroutine IE_groundmaginit_for_gm
+  end subroutine IE_put_info_from_gm
 
   !===========================================================================
 

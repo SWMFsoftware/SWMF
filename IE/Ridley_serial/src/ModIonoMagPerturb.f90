@@ -14,19 +14,10 @@ module ModIonoMagPerturb
 
   save
 
-  public:: read_mag_input_file
-  public:: open_iono_magperturb_file
-  public:: close_iono_magperturb_file
-  public:: write_iono_magperturb_file
-
-  logical, public    :: save_magnetometer_data = .false., &
-       Initialized_Mag_File=.false.
   integer            :: nMagnetometer = 0
-  integer            :: iUnitMag = -1
-  integer, parameter :: MaxMagnetometer = 500
+  integer, parameter :: MaxMagnetometer = 1000
   real, dimension(2,MaxMagnetometer) :: PosMagnetometer_II
-  character(len=3)   :: MagName_I(MaxMagnetometer), TypeCoordMagIn
-
+  character(len=3)   :: TypeCoordMag_I(MaxMagnetometer)
 
 contains
   !======================================================================
@@ -208,39 +199,7 @@ contains
 
   end subroutine iono_mag_perturb
 
-
   !=====================================================================
-  subroutine open_iono_magperturb_file
-    ! Open and initialize the magnetometer output file.  A new IO logical unit
-    ! is created and saved for future writes to this file.
-
-    use ModIoUnit, ONLY: io_unit_new
-    implicit none
-
-    integer :: iMag
-    !-----------------------------------------------------------------
-    ! Open the output file 
-    write(*,*) 'IE: writing magnetic perturbation output.'  
-    
-    write(NameFile,'(a,3i2.2,"_",3i2.2,a)')trim(NameIonoDir)//"IE_mag_t", &
-         mod(time_array(1),100),time_array(2:6), ".mag"
-
-    iUnitMag= io_unit_new()
-    open(iUnitMag, file=NameFile)
-
-    ! Write the header
-    write(iUnitMag, '(i5,a)', ADVANCE='NO') nMagnetometer, ' magnetometers: '
-    do iMag=1, nMagnetometer-1
-       write(iUnitMag, '(1x,a)', ADVANCE='NO') MagName_I(iMag) 
-    end do
-    write(iUnitMag, '(1x,a)')MagName_I(nMagnetometer) 
-    write(iUnitMag, '(a)')  &
-         'nsolve year mo dy hr mn sc msc station X Y Z '// &
-         'JhdBn JhdBe JhdBd JpBn JpBe JpBd'
-
-  end subroutine open_iono_magperturb_file
-
-  !======================================================================
   subroutine get_iono_magperturb_now(PerturbJh_DI, PerturbJp_DI, Xyz_DI)
     ! For all virtual magnetometers, update magnetometer coordinates in SMG 
     ! coordinates. Then, calculate the perturbation from the Hall and Pederson 
@@ -261,12 +220,12 @@ contains
 
     integer :: iMag, iError
     !--------------------------------------------------------------------------
-
-    ! Create rotation matrix.
-    MagtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordMagIn, 'SMG')
-
     ! Get current positions of magnetometers in SMG coordinates.
     do iMag = 1 , nMagnetometer
+       ! Create rotation matrix.
+       MagtoSmg_DD = transform_matrix(Time_Simulation, TypeCoordMag_I(iMag), &
+            'SMG')
+
        ! (360,360) is for the station at the center of the planet
        if ( nint(PosMagnetometer_II(1,iMag)) == 360 .and. &
             nint(PosMagnetometer_II(2,iMag)) == 360) then
@@ -300,144 +259,6 @@ contains
     end if
     
   end subroutine get_iono_magperturb_now
-  !======================================================================
-  subroutine read_mag_input_file
-    ! Read the magnetometer input file which governs the number of virtual
-    ! magnetometers to be used and their location and coordinate systems.
-    ! Input values read from file are saved in module-level variables.
-
-    use ModMpi
-
-    implicit none
-
-    integer :: iError, nStat
-
-    ! One line of input     
-    character (len=100) :: Line
-    character(len=3) :: iMagName
-    real             :: iMagmLat, iMagmLon
-    real, dimension(MaxMagnetometer):: MagmLat_I, MagmLon_I
-    integer          :: iMag
-    character(len=*), parameter :: NameSub = 'read_magnetometer_input_files'
-    logical          :: DoTest, DoTestMe
-    !---------------------------------------------------------------------  
-
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-    ! Read file on the root processor        
-    filename = MagInputFile
-
-    call write_prefix; write(*,*) NameSub, &
-         " reading: ", trim(filename)
-
-    open(unit=iunit, file=filename, status="old", iostat = iError)
-    if (iError /= 0) call CON_stop(NameSub // &
-         ' ERROR: unable to open file ' // trim(filename))
-
-    nStat = 0
-    ! Read the file: read #COORD TypeCoord, #START
-    READFILE: do
-
-       read(iunit,'(a)', iostat = iError ) Line
-
-       if (iError /= 0) EXIT READFILE
-
-       if(index(Line,'#COORD')>0) then
-          read(iunit,'(a)') TypeCoordMagIn
-          select case(TypeCoordMagIn)
-          case('MAG', 'GEO', 'SMG')
-             call write_prefix;
-             write(*,*) 'Magnetometer Coordinates='//TypeCoordMagIn
-          case default
-             call CON_stop(NameSub//' invalid TypeCoordMagIn='//TypeCoordMagIn)
-          end select
-       end if
-
-       if(index(Line,'#START')>0)then
-          READPOINTS: do
-             read(iunit,*, iostat=iError) iMagName, iMagmLat, iMagmLon
-             if (iError /= 0) EXIT READFILE
-
-             !Add new points
-             nStat = nStat + 1
-
-             !Store the locations and name of the stations
-             MagmLat_I(nStat)    = iMagmLat
-             MagmLon_I(nStat)    = iMagmLon
-             MagName_I(nStat)    = iMagName
-
-          end do READPOINTS
-
-       end if
-    end do READFILE
-
-    close(iunit)
-
-    if(DoTest)write(*,*) NameSub,': nstat=',nStat
-
-    ! Number of magnetometers                    
-    nMagnetometer = nStat
-
-    write(*,*) NameSub, ': Number of Magnetometers: ', nMagnetometer
-
-    ! Save the positions (maglatitude, maglongitude)   
-
-    do iMag=1, nMagnetometer
-       PosMagnetometer_II(1,iMag) = MagmLat_I(iMag)
-       PosMagnetometer_II(2,iMag) = MagmLon_I(iMag)
-    end do
-
-  end subroutine read_mag_input_file
-
-  !======================================================================
-  subroutine write_iono_magperturb_file
-    ! For all virtual magnetometers, calculate the pertubation from the 
-    ! Hall and Pedersen currents and write them to file.
-
-    use ModMpi
-    use ModUtilities, ONLY: flush_unit
-    
-    implicit none
-
-    real, dimension(3,nMagnetometer):: MagPerturbJh_DI, MagPerturbJp_DI, Xyz_DI
-    integer :: iMag, i
-    !---------------------------------------------------------------------
-
-    ! Calculate pertubation on all procs:
-    call get_iono_magperturb_now(MagPerturbJh_DI, MagPerturbJp_DI, Xyz_DI)
-    
-    ! Write file only on iProc=0:
-    if(iProc/=0)return
-
-    do iMag = 1, nMagnetometer
-       ! writing
-       write(iUnitMag,'(i8)',ADVANCE='NO') nSolve
-       write(iUnitMag,'(i5,5(1x,i2.2),1x,i3.3)',ADVANCE='NO') &
-            (Time_array(i),i=1,7)
-       write(iUnitMag,'(1X,i4)', ADVANCE='NO')  iMag
-       
-       ! Write position of magnetometer in SGM Coords
-       write(iUnitMag,'(3es13.5)',ADVANCE='NO') Xyz_DI(:,iMag)
-       ! Get the magnetic perturb data and Write out
-       write(iUnitMag, '(3es13.5)', ADVANCE='NO') MagPerturbJh_DI(:,iMag)
-       ! Write the Jp perturbations
-       write(iUnitMag, '(3es13.5)') MagPerturbJp_DI(:,iMag)
-       
-    end do
-    call flush_unit(iUnitMag)
-
-  end subroutine write_iono_magperturb_file
-
-  !=====================================================================
-  subroutine close_iono_magperturb_file
-    ! Close the magnetometer output file (flush buffer, release IO unit).
-
-    implicit none
-
-    close(iUnit)
-
-  end subroutine close_iono_magperturb_file
-
   !=====================================================================
 
 end module ModIonoMagPerturb
