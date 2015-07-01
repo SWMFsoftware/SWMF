@@ -46,7 +46,6 @@ OBJECTS = \
 	ModFaceValue.o \
 	ModGeometry.o \
 	ModGroundMagPerturb.o \
-	ModGmGeoindices.o \
 	ModHallResist.o \
 	ModHdf5.o \
 	ModHeatFluxCollisionless.o \
