@@ -80,9 +80,9 @@ const double yMaxDomain=5; //the minimum size of the domain in the direction per
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
 
-#if _EUROPA_MESH_RESOLUTION_MODE_ == 0
+#if _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 const double dxMinGlobal=1,dxMaxGlobal=1;
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == 1
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
 const double dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
 #endif
 
@@ -181,13 +181,24 @@ double localSphericalSurfaceResolution(double *x) {
 
 //res/=2.1*4.1*4.1;
 
-	res/=2.1;
+        res/=2.1;
+
+	if (r>0.95) switch (_EUROPA_MESH_RESOLUTION_MODE_) {
+	case _EUROPA_MESH_RESOLUTION_MODE__REDUCED_:
+	  break;
+	case _EUROPA_MESH_RESOLUTION_MODE__FULL_:
+	  res/=4.1*2.1;
+	  break;
+	default:
+	  exit(__LINE__,__FILE__,"Error: the option is unknown");
+	}
+
 
 	return rSphere*res;
 }
 
 
-#if _EUROPA_MESH_RESOLUTION_MODE_ == 0
+#if _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 double localResolution(double *x) {
         int idim;
         double lnR,res,r=0.0;
@@ -211,7 +222,7 @@ double localResolution(double *x) {
 
         return rSphere*res;
 }
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == 1
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
 double localResolution(double *x) {
 	int idim;
 	double lnR,res,r=0.0, d1,d2,d3,d=0.0;
@@ -225,9 +236,10 @@ double localResolution(double *x) {
 	d  = - rSphere*d1 + 0.2*d2*d2 + 1.6*d3*d3;
 	d  = ( (d>0.0) ? 1. : -1.) * sqrt(fabs(d));
 
-	if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
+        if (r<rSphere) return rSphere*dxMaxGlobal;
+	if (r<1.03*rSphere) return localSphericalSurfaceResolution(x);
 
-	if (r>dxMinGlobal*rSphere && d > 2.0*rSphere) {
+	if (r>dxMinGlobal*rSphere && d > 1.2*rSphere) {
 		lnR=log(r);
 		res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
 	}
@@ -268,14 +280,14 @@ if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
      CharacteristicSpeed=10.0*1.6E6;
      break;
    case _O_PLUS_THERMAL_SPEC_: case _O_PLUS_SPEC_:
-     CharacteristicSpeed=10.0*9.6E4;
+     CharacteristicSpeed=9.6E4;
      break;
  
    case _O2_SPEC_:case _H2O_SPEC_:case _H2_SPEC_:case _H_SPEC_:case _OH_SPEC_:case _O_SPEC_:
      CharacteristicSpeed=1.0e5;
      break;
    case _O2_PLUS_SPEC_:case _H_PLUS_SPEC_:case _H2_PLUS_SPEC_:case _H2O_PLUS_SPEC_:case _OH_PLUS_SPEC_:
-     CharacteristicSpeed=1.0e7;
+     CharacteristicSpeed=1.0e6;
      break;
    default:
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -488,7 +500,7 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
   double HeliocentricDistance=3.3*_AU_;
   int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement, nZenithElement;
   long int totalSurfaceElementsNumber,i;
-  double rSphere=1980.0;
+//  double rSphere=1980.0;
   double area;
   static double productionDistributionUniformNASTRAN[200000];
   static double cumulativeProductionDistributionUniformNASTRAN[200000];
@@ -545,12 +557,12 @@ bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,doub
 
   double r2Tang=0.0;
   double xFace[3];
-  double vDustInit=2500;
+//  double vDustInit=2500;
   double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
   for (idim=0;idim<3;idim++){
-        v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim]*cos(angleVelocityNormal);
+        v_LOCAL_IAU_OBJECT[idim]=ElectricallyChargedDust::InitialGrainSpeed*ExternalNormal[idim]*cos(angleVelocityNormal);
      
     }
   /*CutCell::BoundaryTriangleFaces[i].GetRandomPosition(xFace,1e-4);
@@ -711,12 +723,6 @@ long int DustInjection(int spec) {
     PIC::ParticleBuffer::SetI(_DUST_SPEC_+GrainVelocityGroup,(PIC::ParticleBuffer::byte*)tempParticleData);
     
     Europa::Sampling::SetParticleSourceID(_EXOSPHERE_SOURCE__ID__EXTERNAL_BOUNDARY_INJECTION_,(PIC::ParticleBuffer::byte*)tempParticleData);
-
-    //apply condition of tracking the particle
-#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-    PIC::ParticleTracker::InitParticleID(tempParticleData);
-    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
-#endif
     
     ElectricallyChargedDust::SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
     ElectricallyChargedDust::SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
@@ -736,6 +742,12 @@ long int DustInjection(int spec) {
     
     nInjectedParticles++;
     
+    //apply condition of tracking the particle
+#if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+    PIC::ParticleTracker::InitParticleID(newParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,newParticleData);
+#endif
+
     //inject the particle into the system                                                                             
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
     if (startNode==NULL) exit(__LINE__,__FILE__,"Error: the node is not defined");
@@ -1239,7 +1251,15 @@ PIC::InitMPI();
 	}*/
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
+	char mesh[200]="amps.mesh";
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
+  char mesh[200]="amr.sig=0x3030203cdedcf30.mesh.bin";
+#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
+  char mesh[200]="amr.sig=0x203009b6e27a9.mesh.bin";
+#endif
+
+
   bool NewMeshGeneratedFlag=false;
 
   FILE *fmesh=NULL;
@@ -1272,7 +1292,7 @@ PIC::InitMPI();
 
 	cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
 
-//	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+ if (NewMeshGeneratedFlag==true) PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
 	PIC::Mesh::mesh.memoryAllocationReport();
 	PIC::Mesh::mesh.GetMeshTreeStatistics();
@@ -1315,6 +1335,9 @@ PIC::InitMPI();
 
 	if (PIC::ThisThread==0) cout << "AMPS' Initialization is complete" << endl;
 
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+
 }
 
 void amps_init() {
@@ -1327,10 +1350,6 @@ void amps_init() {
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
    //init the dust model
-   ElectricallyChargedDust::minDustRadius=1.0E-8; //DustSizeMin; //0.1*_MICROMETER_;
-   ElectricallyChargedDust::maxDustRadius=1.0E-4; //DustSizeMax; //1.0e4*_MICROMETER_;
-
-
    ElectricallyChargedDust::Init_AfterParser();
 #endif
 
@@ -1386,7 +1405,14 @@ void amps_init() {
    if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_O2_PLUS_SPEC_,_O2_SPEC_,1.0E10*1.0E-7);
 //   if (_O2_PLUS_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalTimeStepDistribution(_O2_PLUS_SPEC_,_O_PLUS_THERMAL_SPEC_,1.0);
 
-   if (_DUST_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_DUST_SPEC_,_H2O_SPEC_,1e-1);
+//   if (_DUST_SPEC_>=0) PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(_DUST_SPEC_,_H2O_SPEC_,1e-1);
+   for (int s=0;s<PIC::nTotalSpecies;s++)
+     if (_DUST_SPEC_<=s && s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)
+       PIC::ParticleWeightTimeStep::copyLocalParticleWeightDistribution(s,_H2O_SPEC_,1e-7);
+
+
+
+     //PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
    
    //init weight of the daugter products of the photolytic and electron impact reactions
    for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
@@ -1696,7 +1722,9 @@ void amps_init() {
 	//  VT_TRACER("main");
 
 
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+  if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
+    PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+  }
 
 
 
