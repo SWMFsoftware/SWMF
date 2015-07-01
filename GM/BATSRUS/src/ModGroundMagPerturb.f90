@@ -809,7 +809,7 @@ contains
        iEnd     = nMagTotal
     else 
        call CON_stop('open_magnetometer_output_files: unrecognized ' // &
-            'magnetometer group: ', NameGroupIn)
+            'magnetometer group: '//NameGroupIn)
     end if
 
     ! Total number of magnetometers written out now:
