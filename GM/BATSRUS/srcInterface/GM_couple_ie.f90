@@ -15,6 +15,7 @@ module GM_couple_ie
   private ! except
 
   public:: GM_get_for_ie
+  public:: GM_get_info_for_ie
   public:: GM_put_from_ie
   public:: GM_put_mag_from_ie
   public:: print_iono_potential
@@ -206,8 +207,32 @@ contains
     allocate( IonoJouleHeating_II(nThetaIono, nPhiIono))
 
   end subroutine init_mod_iono_jouleheating
-  !============================================================================
 
+  !============================================================================
+  subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
+    
+    use ModGroundMagPerturb, ONLY: nMagTotal, nMagnetometer, nGridMag, &
+         TypeCoordMag, TypeCoordGrid, PosMagnetometer_II
+
+    integer, intent(out) :: nMagOut
+    character(len=3), intent(out),optional :: NameMagsOut_I(     nMagTotal)
+    real,             intent(out),optional :: CoordMagsOut_DI(2, nMagTotal)
+    !-------------------------------------------------------------------------
+    
+    ! Collect magnetometer info to share with IE.
+    nMagOut=nMagTotal
+    
+    if(nMagOut==0) return
+
+    if (present(CoordMagsOut_DI)) &
+         CoordMagsOut_DI = PosMagnetometer_II(:,1:nMagTotal)
+
+    if (present(NameMagsOut_I)) then
+       NameMagsOut_I(1:nMagnetometer)           = TypeCoordMag
+       NameMagsOut_I(nMagnetometer+1:nMagTotal) = TypeCoordGrid
+    endif
+
+  end subroutine GM_get_info_for_ie
   !============================================================================
 
   subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
@@ -382,8 +407,7 @@ contains
     ! array Buffer_DII, which has dimensions (3x2xiSize) where iSize should
     ! equal the total number of shared magnetometers.
 
-    use ModGroundMagPerturb, ONLY: nMagnetometer, IeMagPerturb_DII
-    use ModGmGeoindices,     ONLY: nIndexMag, MagPerbIE_DI
+    use ModGroundMagPerturb, ONLY: nMagTotal, IeMagPerturb_DII
 
     integer, intent(in) :: iSize
     real, intent(in)    :: Buffer_DII(3,2,iSize)
@@ -393,20 +417,11 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*)NameSub, ' nIndexMag, nMag, iSize = ', &
-         nIndexMag, nMagnetometer, iSize
+    if(DoTestMe)write(*,*)NameSub, ' nMagTotal, iSize = ',  nMagTotal, iSize
 
-    if( (nIndexMag+nMagnetometer) /= iSize)call CON_stop(NameSub// &
-         ' Number of shared magnetometers does not match!')
-    
-    ! Place geomagnetic index data into right place (combine hall+pederson):
-    if (nIndexMag>0) &
-         MagPerbIE_DI(:,:) = Buffer_DII(:,1,1:nIndexMag) &
-         + Buffer_DII(:,2,1:nIndexMag)
-
-    ! Place regular mag data into right place (keep hall/pederson separate):
-    if (nMagnetometer>0) &
-         IeMagPerturb_DII = Buffer_DII(:,:,nIndexMag+1:)
+    ! Place all mag data into right place (keep hall/pederson separate):
+    if (nMagTotal>0) &
+         IeMagPerturb_DII = Buffer_DII
 
   end subroutine GM_put_mag_from_ie
 
