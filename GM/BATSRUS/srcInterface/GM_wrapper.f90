@@ -35,7 +35,8 @@ module GM_wrapper
   !^CMP IF IE BEGIN
   public:: GM_get_for_ie
   public:: GM_put_from_ie
-  public:: GM_put_mag_from_ie       
+  public:: GM_put_mag_from_ie
+  public:: GM_get_info_for_ie
   !^CMP END IE
 
   !^CMP IF IH BEGIN
