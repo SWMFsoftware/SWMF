@@ -135,13 +135,6 @@ void Europa::Init_BeforeParser() {
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   //init the dust model
-  ElectricallyChargedDust::minDustRadius=DustSizeMin; //0.1*_MICROMETER_;
-  ElectricallyChargedDust::maxDustRadius=DustSizeMax; //1.0e4*_MICROMETER_;
-  ElectricallyChargedDust::Sampling::SetDustSamplingIntervals(DustSampleIntervals);
-  ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity=0.01;
-  ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity=4.0;
-  ElectricallyChargedDust::TotalMassDustProductionRate=DustTotalMassProductionRate;
-  ElectricallyChargedDust::SizeDistribution::PowerIndex=DustSizeDistribution;
   ElectricallyChargedDust::Init_BeforeParser();
 #endif
 
@@ -625,13 +618,15 @@ int Europa::SurfaceInteraction::ParticleSphereInteraction_SurfaceAccomodation(in
   Sphere->SampleSpeciesSurfaceReturnFlux[spec][el]+=ParticleWeight;
   Sphere->SampleReturnFluxBulkSpeed[spec][el]+=vi*ParticleWeight;
 
-  //sample returned flux on the night side of the planet
-  if (x_LOCAL_SO[0]<0.0) {
-    //the night size
-    int id;
+  //sample returned flux on the night side of the planet (only for the regular gas particles)
+  if (PIC::MolecularData::GetSpecieType(spec)==_PIC_SPECIE_TYPE__GAS_) {
+    if (x_LOCAL_SO[0]<0.0) {
+      //the night size
+      int id;
 
-    id=Sampling::GetParticleSourceID(PIC::ParticleBuffer::GetParticleDataPointer(ptr));
-    Europa::Sampling::PlanetNightSideReturnFlux[spec][id]+=ParticleWeight;
+      id=Sampling::GetParticleSourceID(PIC::ParticleBuffer::GetParticleDataPointer(ptr));
+      Europa::Sampling::PlanetNightSideReturnFlux[spec][id]+=ParticleWeight;
+    }
   }
 
 
@@ -1677,13 +1672,16 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
 
 
          //determine the velocity of the product specie
-         double ProductParticleVelocity[3];
+         double x[3],v[3],c=rnd();
 
-         for (int idim=0;idim<3;idim++) ProductParticleVelocity[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
+         for (int idim=0;idim<3;idim++) {
+           x[idim]=xInit[idim]+c*(xFinal[idim]-xInit[idim]);
+           v[idim]=vFinal[idim]+ReactionProductVelocity[idim+3*iProduct];
+         }
 
          //generate a particle
-         PIC::ParticleBuffer::SetX(xFinal,(PIC::ParticleBuffer::byte*)tempParticleData);
-         PIC::ParticleBuffer::SetV(ProductParticleVelocity,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
+         PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
          PIC::ParticleBuffer::SetI(specProduct,(PIC::ParticleBuffer::byte*)tempParticleData);
 
          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
@@ -1693,7 +1691,7 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
          //apply condition of tracking the particle
          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
          PIC::ParticleTracker::InitParticleID(tempParticleData);
-         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(xInit,xFinal,spec,tempParticleData);
+         PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,specProduct,tempParticleData);
          #endif
 
 
@@ -1702,7 +1700,8 @@ int Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(double *xIn
          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
          memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
-         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,ProductTimeStep-TimeCounter,node,true);
+         node=PIC::Mesh::mesh.findTreeNode(x,node);
+         _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(newParticle,rnd()*ProductTimeStep,node);
        }
      }
 
