@@ -649,9 +649,9 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
                     xAlt = (GeoAlt - Altitude_GB(iLon,iLat,iAlt,iBlock)) / &
                          ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
                          - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
-                    GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)*pi
+                    GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)
                     GeoLon = GeoLon + &
-                         signz*ymag/bmag * len/(RBody + GeoAlt)*pi/cos(GeoLon)
+                         signz*ymag/bmag * len/(RBody + GeoAlt)/cos(GeoLat)
 
                     if (GeoLat > pi/2.) then
                        GeoLat = pi - GeoLat
