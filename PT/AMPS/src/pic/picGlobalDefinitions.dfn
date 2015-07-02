@@ -103,6 +103,10 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_      0
 #define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_     1
 
+//build in the dust boundary injection models
+#define _PIC_MODEL__DUST__INJECTION_MODEL__MODE__OFF_          0
+#define _PIC_MODEL__DUST__INJECTION_MODEL__MODE__SPHERICAL_    1
+
 //include user defined headers of user's physical models
 #define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__ON_   0
 #define _PIC__USER_DEFINED__USER_PHYSICAL_MODEL__HEADER_LIST_MODE__OFF_  1
