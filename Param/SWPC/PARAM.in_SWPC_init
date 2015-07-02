@@ -146,17 +146,27 @@ T			IsStrictAmr
 INCLUDE
 SATELLITE.in
 
-! There has to be an identical MAGNETOMETER command+parameters in IE too.
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
 60.0			DtOutput
 
-! There has to be a GEOMAGINDICES command in IE too.
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
 60.0			DtOutput      [sec]
+
+#MAGNETOMETERGRID
+SMG                     TypeGrid
+ascii                   TypeFileOut
+80.                     LatMax
+0.                      LatMin
+180.                    LonMax
+0.                      LonMin
+3                       nLat
+3                       nLon
+-1                      DnOutput
+5.0                     DtOutput
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -172,15 +182,6 @@ F			UseFakeRegion2
 
 #BOUNDARY
 10.0			LatBoundary
-
-! Same parameters as the MAGNETOMETER command in GM
-#MAGNETOMETER
-magin_GEM.dat		NameMagInputFile
--1			DnOutput
-60.0			DtOutput
-
-! There has to be a GEOMAGINDICES command in GM too
-#GEOMAGINDICES
 
 #SAVEPLOT
 1			nPlotFile
