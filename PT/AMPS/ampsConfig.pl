@@ -1655,6 +1655,20 @@ sub ReadDustBlock {
 	      die "Unknown option\n";
       }
     }
+    elsif ($InputLine eq "INJECTIONMODEL") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      
+      if ($InputLine eq "OFF") {
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__INJECTION_MODEL__MODE_","_PIC_MODEL__DUST__INJECTION_MODEL__MODE__OFF_","pic/picGlobal.dfn");
+      }
+      elsif ($InputLine eq "SPHERICAL") {
+	      ampsConfigLib::RedefineMacro("_PIC_MODEL__DUST__INJECTION_MODEL__MODE_","_PIC_MODEL__DUST__INJECTION_MODEL__MODE__SPHERICAL_","pic/picGlobal.dfn");
+      }
+      else {
+	      die "Unknown option\n";
+      }
+    }    
     elsif ($InputLine eq "DUSTRMIN") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
