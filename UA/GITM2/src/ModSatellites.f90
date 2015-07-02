@@ -23,7 +23,7 @@ module ModSatellites
 
   integer, parameter :: nMaxSats = 20
   integer, parameter :: nMaxSatInputLines = 100000 !Asad: increased for RCAC
-  integer, parameter :: nMaxSatPos = 50
+  integer, parameter :: nMaxSatPos = 10
 
   integer :: nSats = 0
 
