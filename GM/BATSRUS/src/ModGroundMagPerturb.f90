@@ -52,7 +52,7 @@ module ModGroundMagPerturb
   real   :: GridLatMax, GridLatMin, GridLonMin, GridLonMax
 
   ! Output for magnetometer grid
-  real, allocatable:: MagOut_VII(:,:,:), MagOut_VI(:,:)
+  real, allocatable:: MagOut_VII(:,:,:)
 
   ! Public geomagnetic indices variables:
   logical, public :: DoWriteIndices = .false.
@@ -62,7 +62,7 @@ module ModGroundMagPerturb
   real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
 
   ! Private geomagnetic indices variables:
-  logical :: DoCalcKp = .false., DoCalcDst = .false. ! Which indices to calc.
+  logical :: DoCalcKp = .false.
   integer :: nIndexMag = 0  ! Total number of mags required by indices.
   integer :: iUnitIndices   ! File IO unit for indices file.
   real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
@@ -164,7 +164,7 @@ contains
     if(IsInitialized) return
 
     ! Return if no magnetometers activated.
-    if( .not.(DoSaveMags .or. DoSaveGridmag) ) return
+    if( .not.(DoSaveMags .or. DoSaveGridmag) ) RETURN
 
     ! Check number of magnetometers in #MAGNETOMETER command:
     if(DoReadMagnetometerFile) call check_mag_input_file
@@ -648,7 +648,7 @@ contains
     ! One line of input
     character (len=100) :: Line
     character(len=3) :: NameMag
-    real             :: iMagmLat, iMagmLon
+    real             :: LatMag, LonMag
 
     integer          :: nMag
     character(len=*), parameter :: NameSub = 'check_mag_input_file'
@@ -691,7 +691,7 @@ contains
 
           if(index(Line,'#START')>0)then
              READPOINTS: do
-                read(UnitTmp_,*, iostat=iError) NameMag, iMagmLat, iMagmLon
+                read(UnitTmp_,*, iostat=iError) NameMag, LatMag, LonMag
                 if (iError /= 0) EXIT READFILE
 
                 !Add new points
@@ -788,7 +788,6 @@ contains
 
     character(len=4), intent(in) :: NameGroupIn
 
-    character(len=6):: TypeFileOut
     character(len=100):: NameFile, StringPrefix
     integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
     logical :: oktest, oktest_me
@@ -799,12 +798,10 @@ contains
     ! Magnetometer grid file or regular file?
     if(NameGroupIn == 'stat')then
        StringPrefix = 'magnetometers'
-       TypeFileOut = TypeGridFileOut
        iStart   = 0
        iEnd     = nMagnetometer
     else if(NameGroupIn == 'grid')then
        StringPrefix = 'gridMags'
-       TypeFileOut = TypeMagFileOut
        iStart   = nMagnetometer
        iEnd     = nMagTotal
     else 
@@ -1201,7 +1198,7 @@ contains
 
     use ModProcMH, ONLY: iProc
 
-    if(iProc==0 .and. TypeMagFileOut /= 'step') close(iUnitMag)
+    if(iProc==0 .and. DoSaveMags .and. TypeMagFileOut /= 'step') close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
     if (allocated(MagName_I)) deallocate(MagName_I)
