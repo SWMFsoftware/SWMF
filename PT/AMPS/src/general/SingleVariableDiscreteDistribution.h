@@ -43,7 +43,7 @@ private:
 public:
   void Init(T* t) {
     double F;
-    int i,j,jStart=0,jFinish=0;
+    int i,j,jStart=0,jFinish=0,iDeltaJmax=-1,DeltaJmax=-1,DeltaJ;
 
     if (CumulativeDistributionTable==NULL) exit(__LINE__,__FILE__,"Error: the cumulative distribution buffer is not allocated");
 
@@ -61,8 +61,12 @@ public:
       jFinish=(int)(F*nCumulativeDistributionIntervals);
       if (jStart==jFinish) continue;
 
-      for (j=jStart;j<=std::min(jFinish,nCumulativeDistributionIntervals-1);j++) CumulativeDistributionTable[j]=i;
+      for (DeltaJ=0,j=jStart;j<=std::min(jFinish,nCumulativeDistributionIntervals-1);j++) {
+        CumulativeDistributionTable[j]=i;
+        DeltaJ++;
+      }
 
+      if (DeltaJmax<DeltaJ) DeltaJmax=DeltaJ,iDeltaJmax=i;
       jStart=jFinish+1;
       if (jStart>=nCumulativeDistributionIntervals) break;
     }
@@ -71,7 +75,7 @@ public:
     if (jStart<nCumulativeDistributionIntervals) {
       if (jStart==0) exit(__LINE__,__FILE__,"Error: the table is empty");
 
-      for (;jStart<nCumulativeDistributionIntervals;jStart++) CumulativeDistributionTable[jStart]=CumulativeDistributionTable[(int)(rnd()*jStart)];
+      for (;jStart<nCumulativeDistributionIntervals;jStart++) CumulativeDistributionTable[jStart]=iDeltaJmax;
     }
 
   }
