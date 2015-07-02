@@ -64,6 +64,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
   logical :: IsDone, IsFirstTime = .true., DoTestMe, Debug=.False.
 
+  logical :: IncludeCowling
+
   integer :: iLm, iLp, jLat, iI, MaxIteration, nIteration, iLonNoon
   integer :: nX
   integer :: iStart, iEnd
@@ -1076,35 +1078,39 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
    istart = (nMagLats/2) - 6
    iend = (nMagLats/2) + 7
 
-!   solver_a_mc(:,iStart:iEnd) =  &
-!        4 * deltalmc(:,iStart:iEnd)**2 *(SigmaCowlingMC(:,iStart:iEnd)) / &
-!        cos(MagLatMC(:,iStart:iEnd)*pi/180)
-!
+   IncludeCowling = .true.
+
+   if (IncludeCowling) then
+      solver_a_mc(:,iStart:iEnd) =  &
+           4 * deltalmc(:,iStart:iEnd)**2 *(SigmaCowlingMC(:,iStart:iEnd)) / &
+           cos(MagLatMC(:,iStart:iEnd)*pi/180)
+
+      solver_c_mc(:,iStart:iEnd) = &
+           deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd) * &
+           SigmaLPMC(:,iStart:iEnd)
+
+      solver_d_mc(:,iStart:iEnd) = solver_d_mc(:,iStart:iEnd) &
+           - 2.0 * deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd)**2 *  &
+           dSigmaPLdpMC(:,iStart:iEnd) 
+
+      solver_e_mc(:,iStart:iEnd) = 2.0 *  deltalmc(:,iStart:iEnd)**2 * &
+           deltapmc(:,iStart:iEnd) * ( &
+           dSigmaCowlingdpMC(:,iStart:iEnd) / &
+           cos(MagLatMC(:,iStart:iEnd)*pi/180) +  dSigmaLPdlMC(:,iStart:iEnd))
+
+      solver_s_mc(:,iStart:iEnd) =  &
+           solver_s_mc(:,iStart:iEnd) + 4 * deltalmc(:,iStart:iEnd)**2 * &
+           deltapmc(:,iStart:iEnd)**2 * (RBody) *  &
+           (-dKDlmdpMC(:,iStart:iEnd)*SigmaPLMC(:,iStart:iEnd)/ &
+           SigmaLLMC(:,iStart:iEnd) -   &
+           (KDlmMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd)**2)*  &
+           (SigmaLLMC(:,iStart:iEnd)*dSigmaPLdpMC(:,iStart:iEnd) &
+           - SigmaPLMC(:,iStart:iEnd)*dSigmaLLdpMC(:,iStart:iEnd)))
+
+   endif
+
    ! Add this to make sure solver_a never goes below 0
    where(solver_a_mc < 0.001) solver_a_mc = 0.001
-!
-!   solver_c_mc(:,iStart:iEnd) = &
-!        deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd) * &
-!        SigmaLPMC(:,iStart:iEnd)
-!   solver_d_mc(:,iStart:iEnd) = solver_d_mc(:,iStart:iEnd) &
-!        - 2.0 * deltalmc(:,iStart:iEnd) * deltapmc(:,iStart:iEnd)**2 *  &
-!        dSigmaPLdpMC(:,iStart:iEnd) 
-!
-!   solver_e_mc(:,iStart:iEnd) = 2.0 *  deltalmc(:,iStart:iEnd)**2 * &
-!        deltapmc(:,iStart:iEnd) * ( &
-!        dSigmaCowlingdpMC(:,iStart:iEnd) / &
-!        cos(MagLatMC(:,iStart:iEnd)*pi/180) +  dSigmaLPdlMC(:,iStart:iEnd))
-!
-!   solver_s_mc(:,iStart:iEnd) =  &
-!        solver_s_mc(:,iStart:iEnd) + 4 * deltalmc(:,iStart:iEnd)**2 * &
-!        deltapmc(:,iStart:iEnd)**2 * (RBody) *  &
-!        (-dKDlmdpMC(:,iStart:iEnd)*SigmaPLMC(:,iStart:iEnd)/ &
-!        SigmaLLMC(:,iStart:iEnd) -   &
-!        (KDlmMC(:,iStart:iEnd)/SigmaLLMC(:,iStart:iEnd)**2)*  &
-!        (SigmaLLMC(:,iStart:iEnd)*dSigmaPLdpMC(:,iStart:iEnd) &
-!        - SigmaPLMC(:,iStart:iEnd)*dSigmaLLdpMC(:,iStart:iEnd)))
-
-!   where (solver_s_mc > 0.0) solver_s_mc = 0.0
 
    DynamoPotentialMC = 0.0
 
