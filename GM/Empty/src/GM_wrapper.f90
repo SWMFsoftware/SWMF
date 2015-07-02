@@ -377,7 +377,7 @@ contains
     
     integer, intent(out) :: nMagOut
     character(len=3), intent(out),optional :: NameMagsOut_I(  1)
-    real,             intent(out),optional :: CoordMags_DI(2, 1)
+    real,             intent(out),optional :: CoordMagsOut_DI(2, 1)
 
     character(len=*), parameter :: NameSub='GM_get_info_for_ie'
 
