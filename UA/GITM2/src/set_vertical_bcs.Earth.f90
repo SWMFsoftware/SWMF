@@ -192,7 +192,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 !     write(*,*) dn, dn * (2.0-cos(lst/12*Pi)), -0.01*LogINS(nAlts,iSpecies), lst
      fac = ((1.5-cos(lst/12*Pi))/1.75)**2.0
      dn = dn * fac
-     if (dn > -0.01*LogINS(nAlts,iSpecies)) dn = -0.01*LogINS(nAlts,iSpecies)
+     if (dn > -0.001*LogINS(nAlts,iSpecies)) dn = -0.001*LogINS(nAlts,iSpecies)
 
 !     dn = dn*(0.2*sin(Pi/2.-SZAVertical)+1.)
 !     dn = 0.0
