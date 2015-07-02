@@ -1953,7 +1953,17 @@ long int Exosphere::SourceProcesses::InjectionBoundaryModel(int BoundaryElementT
   for (spec=0;spec<PIC::nTotalSpecies;spec++) {
     #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
-      res+=ElectricallyChargedDust::DustInjection__Sphere(BoundaryElementType,BoundaryElement);
+      switch (_PIC_MODEL__DUST__INJECTION_MODEL__MODE_) {
+      case _PIC_MODEL__DUST__INJECTION_MODEL__MODE__OFF_:
+        //do nothing
+        break;
+      case _PIC_MODEL__DUST__INJECTION_MODEL__MODE__SPHERICAL_:
+        res+=ElectricallyChargedDust::DustInjection__Sphere(BoundaryElementType,BoundaryElement);
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
+      }
+
       continue;
     }
     #endif
