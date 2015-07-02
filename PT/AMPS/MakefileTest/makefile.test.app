@@ -9,17 +9,20 @@ test_<APP>_compile:
 	./Config.pl -application=<APPPATH> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
-	-@($(MAKE) amps)
+	@($(MAKE) amps)
+	@echo "test_<APP>_compile... done" >> test_<APP>.diff	
 
 test_<APP>_rundir:
 	@echo "test_<APP>_rundir..." >> test_<APP>.diff
 	rm -rf   $(TEST<APP>DIR)
 	mkdir -p $(TEST<APP>DIR)
 	mv amps  $(TEST<APP>DIR)
+	@echo "test_<APP>_rundir... done" >> test_<APP>.diff
 
 test_<APP>_run:
 	@echo "test_<APP>_run..." >> test_<APP>.diff
 	cd $(TEST<APP>DIR); ${MPIRUN} ./amps
+	@echo "test_<APP>_run... done" >> test_<APP>.diff
 
 test_<APP>_check:
 	@echo "test_<APP>_check..." >> test_<APP>.diff

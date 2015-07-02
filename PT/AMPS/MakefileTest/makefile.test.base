@@ -17,10 +17,10 @@ test_all:
 
 test_compile:
 	@rm -rf *.diff
-	-@($(MAKE) test_<APP>_compile; $(MAKE) test_<APP>_rundir)
+	-@($(MAKE) test_<APP>_compile && $(MAKE) test_<APP>_rundir)
 
 test_run:
-	-@($(MAKE) test_<APP>_run; $(MAKE) test_<APP>_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_<APP>.diff)),$(MAKE) test_<APP>_run && $(MAKE) test_<APP>_check)
 
 #-----------------------------------------------------------------
 # Individual applications' test targets are below.
