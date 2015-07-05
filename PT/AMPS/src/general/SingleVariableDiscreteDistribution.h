@@ -49,31 +49,36 @@ public:
 
 
     //normalize the distribution function
-    double norm=0.0;
+    double norm=0.0,summ=0.0;
     for (i=xMin;i<=xMax;i++) norm+=ProbabilityDistributionFunction(i,t);
 
-    if (norm<=0.0) exit(__LINE__,__FILE__,"Error: the distribution norm must be positive");
+    if (norm<=0.0) {
+      exit(__LINE__,__FILE__,"Error: the distribution norm must be positive");
+    }
 
-    //initialize the cumulative distribution dunction
+    //initialize the cumulative distribution function
     for (F=0.0,i=xMin;i<=xMax;i++) {
-      F+=ProbabilityDistributionFunction(i,t)/norm;
-
+      summ+=ProbabilityDistributionFunction(i,t);
+      F=summ/norm; //to minimize the effect of the round error, F is calculated the same way as 'norm' to garantee that the final value of F is 1
       jFinish=(int)(F*nCumulativeDistributionIntervals);
-      if (jStart==jFinish) continue;
 
-      for (DeltaJ=0,j=jStart;j<=std::min(jFinish,nCumulativeDistributionIntervals-1);j++) {
-        CumulativeDistributionTable[j]=i;
+      for (DeltaJ=0;jStart<=std::min(jFinish,nCumulativeDistributionIntervals-1);jStart++) {
+        CumulativeDistributionTable[jStart]=i;
         DeltaJ++;
       }
 
       if (DeltaJmax<DeltaJ) DeltaJmax=DeltaJ,iDeltaJmax=i;
-      jStart=jFinish+1;
       if (jStart>=nCumulativeDistributionIntervals) break;
     }
 
     //finish the rest of the cumulative distribution table
     if (jStart<nCumulativeDistributionIntervals) {
-      if (jStart==0) exit(__LINE__,__FILE__,"Error: the table is empty");
+      if (jStart==0) {
+        exit(__LINE__,__FILE__,"Error: the table is empty");
+      }
+      else {
+        cout << "AMPS:: there is an empty element at the end of the cumulative distribution function table (file=" << __FILE__ << ", line=" << __LINE__ << ")" << endl;
+      }
 
       for (;jStart<nCumulativeDistributionIntervals;jStart++) CumulativeDistributionTable[jStart]=iDeltaJmax;
     }
