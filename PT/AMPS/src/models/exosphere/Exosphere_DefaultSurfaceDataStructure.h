@@ -133,13 +133,13 @@ public :
     int s,el,i;
 
     for (el=0;el<TotalSurfaceElementNumber;el++) {
-      for (int spec=0;spec<nTotalSpecies;spec++) {
+/*      for (int spec=0;spec<nTotalSpecies;spec++) {
         SurfaceElementDesorptionFluxUP[spec][el]=0.0;
         SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
         SurfaceElementPopulation[spec][el]=0.0;
       }
 
-      SolarWindSurfaceFlux[el]=-1.0;
+      SolarWindSurfaceFlux[el]=-1.0;*/
 
       for (s=0;s<nTotalSpecies;s++) {
         for (i=0;i<EXOSPHERE__SOURCE_MAX_ID_VALUE+1;i++) SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
@@ -257,6 +257,17 @@ public :
       SampleInjectedFluxBulkSpeed[s]=SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
 
       offsetSpecie+=TotalSurfaceElementNumber;
+    }
+
+    //set the data buffers with zero initial value
+    for (el=0;el<TotalSurfaceElementNumber;el++) {
+      for (int spec=0;spec<nTotalSpecies;spec++) {
+        SurfaceElementDesorptionFluxUP[spec][el]=0.0;
+        SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
+        SurfaceElementPopulation[spec][el]=0.0;
+      }
+
+      SolarWindSurfaceFlux[el]=-1.0;
     }
 
     flush();
