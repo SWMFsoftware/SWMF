@@ -1512,7 +1512,7 @@ test_anisotropic_run:
 test_anisotropic_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
 	    Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
-	    ${TESTDIR}/RESULT/GM/cut_*t03*.out > test_anisotropic.diff)
+	    ${TESTDIR}/RESULT/GM/1d_*t03*.out > test_anisotropic.diff)
 	ls -l test_anisotropic.diff
 
 ### TEST FOR COMET CG HD RUN ###
