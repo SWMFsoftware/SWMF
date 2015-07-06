@@ -30,7 +30,7 @@ OutputDirectory=PT/plots
 
 
 DebuggerMode=off !on,off
-ForceRepeatableSimulationPath=on ! on,off
+!ForceRepeatableSimulationPath=on ! on,off
 
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
@@ -52,7 +52,7 @@ CouplerMode=file(tecplot) !!off, ices, swmf
 
 
 #General
-  ReferenceInjectionParticleNumber=2000
+  ReferenceInjectionParticleNumber=4000
   MaxMeshRefinmentLevel=10! 2 !4
   EnforceRequestedMeshResolution=off !on,off
 
@@ -67,13 +67,16 @@ CouplerMode=file(tecplot) !!off, ices, swmf
 
 
  TrajectoryTracing=on
- MaxSampledTrajectoryNumber=10000
+ MaxSampledTrajectoryNumber=20000
+
+ define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+ define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Mercury::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
-! define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__FULL_
-  define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__TEST_
+  define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__FULL_
+!  define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__TEST_
 #endGeneral
 
 #ParticleCollisions 
