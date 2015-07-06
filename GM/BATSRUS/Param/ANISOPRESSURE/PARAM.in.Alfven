@@ -30,8 +30,8 @@ T			UseNonConservative
 -0.05			zMin
  0.05			zMax
 
-#SHOCKTUBE
-1.0			rho (left state)
+#UNIFORMSTATE
+1.0			Rho
 0.0			Ux
 0.0			Uy
 0.0			Uz
@@ -40,30 +40,6 @@ T			UseNonConservative
 0.0			Bz
 6.0			Ppar
 35.3333			p
-1.0			rho (right state)
-0.0			Ux
-0.0			Uy
-0.0			Uz
-10.0			Bx
-0.0			By
-0.0			Bz
-6.0			Ppar
-35.3333			p
-
-#USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-F                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
 
 #USERINPUTBEGIN -----------------
 
@@ -89,51 +65,45 @@ F                       UseUserUpdateStates
 #USERINPUTEND ---------------------
 
 #OUTERBOUNDARY
-periodic	xMinBc
-periodic	xMaxBc
-float		yMinBc
-float		yMaxBc
-float		zMinBc
-float		zMaxBc
+periodic		xMinBc
+periodic		xMaxBc
+float			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
 
 #TIMESTEPPING
-2		nStage
-0.8		CflExpl
+2			nStage
+0.8			CflExpl
 
 #SCHEME
-2		nOrder
-Rusanov		TypeFlux
-mc3		TypeLimiter
-1.5		LimiterBeta
+2			nOrder
+Rusanov			TypeFlux
+mc3			TypeLimiter
+1.5			LimiterBeta
 
 #SAVELOGFILE
-T		DoSaveLogfile
-raw		StringLogfile
-1		DnSaveLogfile
--1.		DtSaveLogfile
+T			DoSaveLogfile
+raw			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
 
 #SAVERESTART
-F		DoSaverestart
+F			DoSaverestart
 
 #PLOTFILENAME
-second		NameMaxTimeUnit
+second			NameMaxTimeUnit
 
 #SAVEINITIAL
-T		DoSaveInitial
+T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotfile
-cut mhd idl_ascii	PlotString
+1d mhd idl_ascii	PlotString
 -1              	DnSavePlot
 0.1             	DtSavePlot
--6.0			xMinCut
-+6.0			xMaxCut
--0.001			yMinCut
-+0.001			yMaxCut
--0.001			zMinCut
-+0.001			zMaxCut
-0.0             	DxSavePlot
+0.0			DxSavePlot
 
 #STOP
--1		MaxIteration
-3.0		tSimulationMax
+-1			MaxIteration
+3.0			tSimulationMax
