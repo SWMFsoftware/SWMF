@@ -193,7 +193,64 @@ namespace Comet {
         accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
         accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
         accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
-     }
+      }
+
+      //Radiation Pressure: beta is taken from fig3-Gombosi-2015-AA
+      static const int n_Gombosi2015AA=101;
+      static const double dR_Gombosi2015AA=0.01220*1.0E-9;
+      static const double Rmin_Gombosi2015AA=0.10000*1.0E-9;
+      static const double Rmax_Gombosi2015AA=10000.00000*1.0E-9;
+      static const double beta_Gombosi2015AA[n_Gombosi2015AA]={0.00191, 0.00191, 0.00191, 0.00387, 0.00447, 0.00584, 0.00584, 0.00721, 0.00721, 0.00858, 0.01055, 0.01261, 0.01269, 0.01474, 0.01671, 0.01671, 0.01868, 0.02064, 0.02261, 0.02603, 0.02800, 0.03167, 0.03698, 0.03894, 0.04366, 0.04913, 0.05520, 0.06204, 0.06812, 0.07556, 0.08420, 0.09506, 0.10507, 0.11585, 0.13031, 0.14280, 0.16246, 0.18180, 0.20079, 0.21995, 0.24518, 0.27101, 0.30276, 0.33637, 0.37367, 0.40754, 0.44491, 0.48520, 0.53225, 0.58169, 0.62814, 0.67348, 0.72729, 0.77827, 0.82257, 0.87236, 0.90785, 0.94814, 0.97628, 0.99528, 0.99998, 0.99339, 0.96816, 0.93565, 0.88398, 0.81264, 0.72685, 0.65542, 0.58947, 0.51343, 0.46800, 0.41677, 0.37006, 0.32601, 0.29487, 0.26305, 0.23585, 0.20942, 0.18572, 0.16323, 0.14629, 0.13201, 0.11600, 0.10394, 0.09325, 0.08513, 0.07409, 0.06537, 0.05920, 0.05245, 0.04706, 0.04107, 0.03825, 0.03354, 0.03132, 0.02713, 0.02448, 0.02106, 0.01901, 0.01695, 0.01413};
+
+      double beta;
+
+      if (GrainRadius<Rmin_Gombosi2015AA) beta=0.00191;
+      else if (GrainRadius<Rmax_Gombosi2015AA) {
+        int i;
+        double c;
+
+        c=(GrainRadius-Rmin_Gombosi2015AA)/dR_Gombosi2015AA;
+        i=(int)c;
+        c-=i;
+
+        beta=(1.0-c)*beta_Gombosi2015AA[i]+c*beta_Gombosi2015AA[i+1];
+      }
+      else beta=0.01413;
+
+      double SunDirection[3]={1.0,0.0,0.0};
+      double HeliocentricDistance=1.5*_AU_;
+      double RadiationPressure;
+
+      RadiationPressure=beta*GravityConstant*_SUN__MASS_/pow(HeliocentricDistance,2);
+
+      //the total acceleration due to Sun's radiation pressure and gravity is RadiationPressure + SunGravity - Acceleration of the frame of the refecence (Acceleration of the nucleus due to Sun's gravity
+      for (int idim=0;idim<3;idim++) accl_LOCAL[idim]-=SunDirection[idim]*RadiationPressure;
+
+
+     //Centrifugal and Centripital forces
+      double aCen[3],aCorr[3],t3,t7,t12,RotationVector_SO_FROZEN[3];
+
+      static const double RotationAxis[3]={0.0,0.0,1.0};
+      static const double RotationRate=2.0*Pi/(6.0*3600.0);
+
+      for (int idim=0;idim<3;idim++) RotationVector_SO_FROZEN[idim]=RotationRate*RotationAxis[idim];
+
+      t3 = RotationVector_SO_FROZEN[0] * x_LOCAL[1] - RotationVector_SO_FROZEN[1] * x_LOCAL[0];
+      t7 = RotationVector_SO_FROZEN[2] * x_LOCAL[0] - RotationVector_SO_FROZEN[0] * x_LOCAL[2];
+      t12 = RotationVector_SO_FROZEN[1] * x_LOCAL[2] - RotationVector_SO_FROZEN[2] * x_LOCAL[1];
+
+      aCen[0] = -RotationVector_SO_FROZEN[1] * t3 + RotationVector_SO_FROZEN[2] * t7;
+      aCen[1] = -RotationVector_SO_FROZEN[2] * t12 + RotationVector_SO_FROZEN[0] * t3;
+      aCen[2] = -RotationVector_SO_FROZEN[0] * t7 + RotationVector_SO_FROZEN[1] * t12;
+
+
+      aCorr[0] = -2.0*(RotationVector_SO_FROZEN[1] * v_LOCAL[2] - RotationVector_SO_FROZEN[2] * v_LOCAL[1]);
+      aCorr[1] = -2.0*(RotationVector_SO_FROZEN[2] * v_LOCAL[0] - RotationVector_SO_FROZEN[0] * v_LOCAL[2]);
+      aCorr[2] = -2.0*(RotationVector_SO_FROZEN[0] * v_LOCAL[1] - RotationVector_SO_FROZEN[1] * v_LOCAL[0]);
+
+      accl_LOCAL[0]+=aCen[0]+aCorr[0];
+      accl_LOCAL[1]+=aCen[1]+aCorr[1];
+      accl_LOCAL[2]+=aCen[2]+aCorr[2];
 
     }  
 #endif
