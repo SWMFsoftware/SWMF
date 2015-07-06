@@ -239,18 +239,12 @@ subroutine MH_set_parameters(TypeAction)
         end if
      end if
 
-     ! In standalone mode set and obtain GM specific parameters 
-     ! in CON_planet and CON_axes
-
+     ! Initialize axes (coordinate transformation matrices)
+     call init_axes(StartTime)
      if(NameThisComp == 'GM') then
-        ! Initialize axes
-        call init_axes(StartTime)
+        ! Set and obtain GM specific parameters from CON_planet and CON_axes
         call get_axes(Time_Simulation, MagAxisTiltGsmOut = ThetaTilt)
         call get_planet(DipoleStrengthOut = DipoleStrengthSi)
-     end if
-
-     if(NameThisComp == 'SC') then
-        call init_axes(StartTime)
      end if
 
      if(MonopoleStrengthSi /= 0.0)then
