@@ -28,7 +28,8 @@ contains
     use ModCoordTransform, ONLY: rot_xyz_sph
 
     use BATL_lib, ONLY: message_pass_cell, DiLevelNei_IIIB, nG, &
-         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB, &
+         IsSpherical, IsRLonLat, IsPeriodic_D, IsPeriodicCoord_D
     use ModMpi
 
     ! Fill ghost cells at res. change only
@@ -48,7 +49,7 @@ contains
     logical :: UseHighResChangeNow
 
     !!! TO BE GENERALIZED
-    logical, parameter:: IsPeriodicWedge = .false.
+    logical:: IsPeriodicWedge = .false.
     integer:: iVector, iVar, i, j, k
     real   :: XyzSph_DD(3,3)
 
@@ -57,6 +58,16 @@ contains
     !--------------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
     call set_oktest('time_exchange', DoTime, DoTimeMe)
+
+    ! This way of doing periodic BC for wedge is not perfect.
+    ! It does not work for AMR or semi-implicit scheme with vectors.
+    ! But it works for a number of simple but useful applications.
+    ! A periodic wedge BC is needed if there is a periodic boundary condition
+    ! for a non-periodic angular coordinate.
+    ! In this case the vector variables are convered to spherical components
+    ! during the message passing.
+    IsPeriodicWedge = (IsSpherical .or. IsRLonLat) .and. &
+         (any(IsPeriodic_D(2:3) .and. .not. IsPeriodicCoord_D(2:3)))
 
     DoResChangeOnly = .false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
