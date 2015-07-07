@@ -33,7 +33,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
   use ModPlanetConst
-  use CON_axes,         ONLY: init_axes,get_axes
+  use CON_axes,         ONLY: init_axes, get_axes, &
+       dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
   use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
        split_string, join_string
   use CON_planet,       ONLY: get_planet
@@ -1848,6 +1849,18 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
 
         call read_planet_var(NameCommand)
+
+     case("#ROTATEHGR")
+        call check_stand_alone
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('dLongitudeHgr', dLongitudeHgrDeg)
+        dLongitudeHgr = dLongitudeHgrDeg * cDegToRad
+
+     case("#ROTATEHGI")
+        call check_stand_alone
+        if(.not.is_first_session())CYCLE READPARAM
+        call read_var('dLongitudeHgi', dLongitudeHgiDeg)
+        dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
      case("#COORDSYSTEM","#COORDINATESYSTEM")
         if(.not.is_first_session())CYCLE READPARAM
