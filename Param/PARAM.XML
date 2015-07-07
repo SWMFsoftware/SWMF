@@ -1184,7 +1184,7 @@ Default value is 0, i.e. the true HGR system is used.
 -1.0			dLongitudeHgi [deg]
 
 Rotate the HGI and the related rotating HGC systems by 
-dLongitudeHgr degrees around the Z axis.
+dLongitudeHgi degrees around the Z axis.
 A negative value is interpreted as an offset angle which moves the
 planet into the -X, Z plane (so roughly towards the -X axis).
 Default value is 0, i.e. the true HGI system is used.
