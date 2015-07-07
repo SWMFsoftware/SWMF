@@ -48,6 +48,17 @@ module ModHdf5
   integer :: iplotComm,nPlotProc,iPlotProc ! one comunicator for each plot
 
 contains
+  !======================================================================
+  subroutine stop_hdf5(String)
+    character(len=*), intent(in):: String
+    integer:: iError, nError
+
+    write(*,*)'ERROR in ModHdf5: ', String
+    call MPI_abort(MPI_COMM_WORLD, nError, iError)
+    stop
+
+  end subroutine stop_hdf5
+  !======================================================================
   subroutine init_hdf5_plot(iFile, plotType, nPlotVar, &
        xMin, xMax, yMin, yMax, zMin, zMax, DxBlock, DyBlock, DzBlock,&
        isNonCartesian, NotACut)
@@ -231,13 +242,11 @@ contains
     end do
 
     ! Make a comincator for only procs which has data to save
-    call timing_start('hdf5::MPI_Comm_split')
     if(nBlock == 0) then 
        call MPI_Comm_split(iComm,MPI_UNDEFINED,iProc,iplotComm,Error) 
     else
        call MPI_Comm_split(iComm,1,iProc,iplotComm,Error) 
     endif
-    call timing_stop('hdf5::MPI_Comm_split')
 
     if(MPI_COMM_NULL == iplotComm ) RETURN
     call MPI_COMM_RANK (iplotComm, iPlotProc, Error)
@@ -854,7 +863,7 @@ contains
     call open_hdf5_file(fileid, filename, iplotComm)
     if(fileid == -1) then
        if (iPlotProc == 0) write (*,*)  "Error: unable to initialize file"
-       call stop_mpi("unable to initialize hdf5 file")
+       call stop_hdf5("unable to initialize hdf5 file")
     end if
 
     call MPI_Barrier(iPlotComm,Error)
@@ -1176,7 +1185,7 @@ contains
     call open_hdf5_file(fileid, filename, iplotComm)
     if(fileid == -1) then
        if (iPlotProc == 0) write (*,*)  "Error: unable to initialize file"
-       call stop_mpi("unable to initialize hdf5 file")
+       call stop_hdf5("unable to initialize hdf5 file")
     end if
 
     allocate(unknownNameArray(nPlotVar))
