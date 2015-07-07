@@ -1521,11 +1521,36 @@ For OH one should always use the inertial HGI system. A rotating frame
 would have extremeley fast rotational speeds.
 
 Note that the HGR and HGI systems can be rotated with a fixed angle
-using the #ROTATEHGR and #ROTATEHGI commands of the SWMF. This can be used to
+using the #ROTATEHGR and #ROTATEHGI commands. This can be used to
 align the interesting plane of the simulation with the grid.
 
 The default is component dependent: 
 "GSM" for GM, "HGR" for SC, and "HGI" for IH and OH.
+</command>
+
+<command name="ROTATEHGR"  if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="dLongitudeHgr" type="real" min="-360" max="360"
+							default="0"/>
+#ROTATEHGR
+145.6			dLongitudeHgr [deg]
+
+Rotate the HGR system by dLongitudeHgr degrees around the Z axis.
+A negative value is interpreted as an offset angle which moves the
+planet into the -X, Z plane (so roughly towards the -X axis).
+Default value is 0, i.e. the true HGR system is used.
+</command>
+
+<command name="ROTATEHGI" if="$_IsFirstSession and $_IsStandAlone">
+	<parameter name="dLongitudeHgi" type="real" min="-360" max="360"
+							default="0"/>
+#ROTATEHGI
+-1.0			dLongitudeHgi [deg]
+
+Rotate the HGI and the related rotating HGC systems by 
+dLongitudeHgi degrees around the Z axis.
+A negative value is interpreted as an offset angle which moves the
+planet into the -X, Z plane (so roughly towards the -X axis).
+Default value is 0, i.e. the true HGI system is used.
 </command>
 
 <command name="GRIDGEOMETRY" if="$_IsFirstSession">
