@@ -67,7 +67,7 @@ module BATL_lib
   public:: IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
   public:: Dim1_, Dim2_, Dim3_, x_, y_, z_, r_, Phi_, Theta_, Lon_, Lat_
   public:: IsLogRadius, IsGenRadius, nRgen, LogRgen_I
-  public:: IsPeriodic_D, IsNodeBasedGrid
+  public:: IsPeriodic_D, IsPeriodicCoord_D, IsNodeBasedGrid
   public:: xyz_to_coord, coord_to_xyz, radius_to_gen, gen_to_radius
   public:: Xi_, Eta_, Zeta_
   public:: UseHighFDGeometry, set_high_geometry
