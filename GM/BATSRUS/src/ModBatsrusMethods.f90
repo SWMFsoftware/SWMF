@@ -933,9 +933,9 @@ contains
        !Case for grid magnetometer files
        if(.not. DoSaveGridmag) RETURN
        if(time_accurate) then  
-          call timing_start('save_magnetometer')
+          call timing_start('grid_magnetometer')
           call write_magnetometers('grid')   
-          call timing_stop('save_magnetometer')  
+          call timing_stop('grid_magnetometer')  
        end if
 
     elseif(ifile == indexfile_) then
