@@ -3161,36 +3161,43 @@ Default is no magnetic perturbation calculation.
 </command>
 
 <command name="MAGNETOMETERGRID">
-	<parameter name="TypeGrid" type="string" length="100" default="SMG"/>
 	<parameter name="TypeFileOut" type="string" input="select"> 
 		<option name="ascii" default="T"/>
 		<option name="tec"/>
 		<option name="idl"/>
 	</parameter>
-	<parameter name="LatMax" type="real" default="80"/>
-	<parameter name="LatMax" type="real" default="0"/>
-	<parameter name="LonMax" type="real" default="180"/>
-	<parameter name="LonMax" type="real" default="0"/>
-	<parameter name="nLat" type="integer" default="3"/>
+	<parameter name="TypeGrid" type="string" length="100" default="SMG"/>
 	<parameter name="nLon" type="integer" default="3"/>
+	<parameter name="nLat" type="integer" default="3"/>
+	<parameter name="LonMin" type="real" default="0"/>
+	<parameter name="LonMax" type="real" default="360"/>
+	<parameter name="LatMin" type="real" default="-80"/>
+	<parameter name="LatMax" type="real" default="80"/>
 	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
 	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
 
 #MAGNETOMETERGRID
-SMG			TypeGrid
 ascii			TypeFileOut
-80.			LatMax
-0.			LatMin
-180.			LonMax
-0.			LonMin
+SMG			TypeGrid
 3			nLat
 3			nLon
+0.			LonMin
+360.			LonMax
+-80.			LatMin
+80.			LatMax
 -1			DnOutput
-5.0			DtOutput
+60.0			DtOutput
 
 Create a grid of magnetometers spanning in latitude from LatMin to LatMax and in 
-longitude from LonMin to LonMax.  nLat and nLon specify the number of points in 
-each direction.  2D output files are saved every DnOutput or DtOutput.
+longitude from LonMin to LonMax. If the Longitude spans 360 degrees, the grid's
+stations will be arranged so that specific longitudes are not repeated.  However, 
+if $\pm90$ is used for the maximum/minimum latitude, the polar stations will be
+repeated nLon times, so choose limits wisely.
+nLat and nLon specify the number of points in each direction.  
+2D output files are saved every DnOutput or DtOutput.  TypeFileOut specifies the
+file format, which can be any format available to the BATS-R-US #SAVEPLOT command.
+The coordinate system of the grid (not the output) can be set to GEO (geographic), 
+MAG (geomagnetic) or SMG (solar magnetic) coordinates.
 
 </command>
 
