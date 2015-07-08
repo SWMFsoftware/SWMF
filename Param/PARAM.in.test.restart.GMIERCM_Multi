@@ -157,11 +157,6 @@ max tec                 StringPlot
 -1			DnSavePlot
 5.0			DtSavePlot
 
-#MAGNETOMETER
-Param/magnetometer_location.dat
--1			DnOutput
-5.0			DtOutput
-
 #END_COMP IE   ----------------------------------------
 
 #STOP

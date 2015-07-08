@@ -126,12 +126,6 @@ RAW			StringLogfile
 T			UseSolarwindFile
 GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT_tilt.dat
 
-#MAGNETOMETER
-Param/magnetometer_location.dat
-single			TypeFileOut
--1			DnOutput
-5.0			DtOutput
-
 #END_COMP GM   ----------------------------------------
 
 #BEGIN_COMP IE ----------------------------------------
@@ -152,11 +146,6 @@ min idl                 StringPlot
 max tec                 StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
-
-#MAGNETOMETER
-Param/magnetometer_location.dat
--1			DnOutput
-5.0			DtOutput
 
 #END_COMP IE   ----------------------------------------
 
@@ -212,10 +201,6 @@ F			DoCoupleOnTime
 20.0                    TauCoupleIm
 F			DoImSatTrace
 
-#GEOMAGINDICES
-15			nSizeKpWindow
-5.0			DtOutput
-
 #SAVEPLOT
 3			nPlotFile
 idl x=0 FUL		StringPlot
@@ -230,6 +215,16 @@ idl z=0 FUL		StringPlot
 -1			DnSavePlot
 10.0			DtSavePlot
 -1.0			DxSavePlot
+
+#GEOMAGINDICES
+15			nSizeKpWindow
+5.0			DtOutput
+
+MAGNETOMETER
+Param/magnetometer_location.dat
+single			TypeFileOut
+-1			DnOutput
+5.0			DtOutput
 
 #END_COMP GM   ----------------------------------------
 
