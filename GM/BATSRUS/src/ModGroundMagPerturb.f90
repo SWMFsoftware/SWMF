@@ -67,7 +67,7 @@ module ModGroundMagPerturb
   integer :: iUnitIndices   ! File IO unit for indices file.
   real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
   real               :: k9 = 600.0             ! Scaling of standard K.
-  real, allocatable  :: LonIndex_I(:)          ! Longitude of index files
+  real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of index files
   real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
   real               :: Kp=0.0
   integer            :: kIndex_I(nKpMag)
@@ -120,14 +120,14 @@ contains
 
     case("#MAGNETOMETERGRID")
        DoSaveGridmag = .true.
-       call read_var('TypeCoord',       TypeCoordGrid)
        call read_var('TypeGridFileOut', TypeGridFileOut)
-       call read_var('LatMax',          GridLatMax)
-       call read_var('LatMin',          GridLatMin)
-       call read_var('LonMax',          GridLonMax)
-       call read_var('LonMin',          GridLonMin)
-       call read_var('nGridLat',        nGridLat)
+       call read_var('TypeCoord',       TypeCoordGrid)
        call read_var('nGridLon',        nGridLon)
+       call read_var('nGridLat',        nGridLat)
+       call read_var('LonMin',          GridLonMin)
+       call read_var('LonMax',          GridLonMax)
+       call read_var('LatMin',          GridLatMin)
+       call read_var('LatMax',          GridLatMax)
        call read_var('DnOutput', dn_output(maggridfile_))
        call read_var('DtOutput', dt_output(maggridfile_))
 
@@ -201,8 +201,16 @@ contains
 
     ! Calculate magnetometer grid spacing.
     if(DoSaveGridMag)then
-       dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+       if( GridLonMin+360. == GridLonMax)then
+          ! If spanning the globe, do not include both 0 and 360.
+          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+       else
+          ! If not spanning the globe, grid goes end-to-end
+          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+       endif
        dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
+       if(DoTestMe) write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
+
        ! Set up the grid.
        iMag = nMagnetometer
        do iLat = 1, nGridLat
@@ -261,7 +269,8 @@ contains
     if(DoTestMe) write(*,*)'Number of IndexMags used: ', nIndexMag
 
     ! Allocate lat & lon arrays for index mags:
-    if(.not. allocated(LonIndex_I)) allocate(LonIndex_I(nIndexMag))
+    if(.not. allocated(LatIndex_I)) &
+       allocate(LatIndex_I(nIndexMag), LonIndex_I(nIndexMag))
 
     ! Initialize Kp grid and arrays.  FaKe_p uses stations fixed in SMG coords.
     XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
@@ -271,8 +280,9 @@ contains
        XyzKp_DI(1,i) = RadXY * cos(phi)
        XyzKp_DI(2,i) = RadXY * sin(phi)
        if(iProc==0 .and. DoTestMe) &
-            write(*,'(a, 3(1x, e13.3))') 'XyzKp = ', XyzKp_DI(:,i)
-       LonIndex_I(i) = Phi
+            write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
+       LatIndex_I(i) = KpLat
+       LonIndex_I(i) = phi
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
@@ -802,7 +812,7 @@ contains
     else if(NameGroupIn == 'grid')then
        StringPrefix = 'gridMags'
        iStart   = nMagnetometer
-       iEnd     = nMagTotal
+       iEnd     = nMagnetometer+nGridMag
     else 
        call CON_stop('open_magnetometer_output_files: unrecognized ' // &
             'magnetometer group: '//NameGroupIn)
@@ -938,7 +948,7 @@ contains
        TypeFileNow  = TypeMagFileOut
     else if (NameGroupIn == 'grid') then
        iStart       = nMagnetometer
-       iEnd         = nMagTotal
+       iEnd         = nMagnetometer+nGridMag
        iUnitOut     = iUnitGrid
        TypeCoordNow = TypeCoordGrid
        TypeFileNow  = TypeGridFileOut  ! should be "2d"
@@ -951,8 +961,8 @@ contains
     nMagNow = iEnd - iStart
 
     if(DoTestMe) then
-       write(*,*) 'WRITING MAGNETOMETERS!', NameGroupIn
-       write(*,*) 'iStart, iEnd, iUnitOut, TypeCoordNow = ', &
+       write(*,*) 'WRITING MAGNETOMETERS: Type=', NameGroupIn
+       write(*,'(a, 3i4, 1x, a)') 'iStart, iEnd, iUnitOut, TypeCoordNow = ', &
             iStart, iEnd, iUnitOut, TypeCoordNow
        write(*,*) 'nMagNow = ', nMagNow
     end if
