@@ -198,21 +198,22 @@ contains
     end if
 
     ! Calculate magnetometer grid spacing.
-    dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
-    dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
-
-    ! Set up the grid.
-    iMag = nMagnetometer
-    do iLat = 1, nGridLat
-       do iLon = 1, nGridLon
-          iMag = iMag + 1
-          PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
-          PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
-          write(MagName_I(iMag), '(i3.3)')  iMag
-          if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
-               iMag, PosMagnetometer_II(:,iMag)
+    if(DoSaveGridMag)then
+       dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+       dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
+       ! Set up the grid.
+       iMag = nMagnetometer
+       do iLat = 1, nGridLat
+          do iLon = 1, nGridLon
+             iMag = iMag + 1
+             PosMagnetometer_II(1,iMag) = GridLatMin + (iLat-1)*dLat
+             PosMagnetometer_II(2,iMag) = GridLonMin + (iLon-1)*dLon
+             write(MagName_I(iMag), '(i3.3)')  iMag
+             if(DoTest) write(*,*) 'Mag Num, lat, lon: ', &
+                  iMag, PosMagnetometer_II(:,iMag)
+          end do
        end do
-    end do
+    end if
 
     ! Add IndexMag info to share to IE:
     if(DoCalcKp)then
@@ -222,9 +223,9 @@ contains
        MagName_I(iMag:iMag+nKpMag) = 'SMG'
     end if
     ! Create files:
-        if (DoSaveMags .and. iProc == 0) &
+    if (DoSaveMags .and. iProc == 0) &
          call open_magnetometer_output_file('stat')
-    if (DoSaveGridmag .and. iProc == 0) &
+    if (DoSaveGridMag .and. iProc == 0) &
          call open_magnetometer_output_file('grid')
 
     IsInitialized=.true.
