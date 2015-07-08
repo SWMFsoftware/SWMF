@@ -2421,12 +2421,19 @@ ProcessPhotoChemistry:
 
 
 
-
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+#if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+    PIC::Debugger::CatchOutLimitValue(vFinal,DIM,__LINE__,__FILE__);
+    PIC::Debugger::CatchOutLimitValue(xFinal,DIM,__LINE__,__FILE__);
+#endif
+#endif
 
     //adjust the value of 'startNode'
     startNode=newNode;
     memcpy(vInit,vFinal,3*sizeof(double));
     memcpy(xInit,xFinal,3*sizeof(double));
+
+
 
 /*
     //save the trajectory point
