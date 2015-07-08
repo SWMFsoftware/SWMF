@@ -67,7 +67,7 @@ module ModGroundMagPerturb
   integer :: iUnitIndices   ! File IO unit for indices file.
   real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
   real               :: k9 = 600.0             ! Scaling of standard K.
-  real, allocatable  :: LatIndex(:), LonIndex(:) ! Lat and Lon of index files
+  real, allocatable  :: LonIndex_I(:)          ! Longitude of index files
   real               :: XyzKp_DI(3, nKpMag)    ! Locations of kp mags, SMG.
   real               :: Kp=0.0
   integer            :: kIndex_I(nKpMag)
@@ -160,31 +160,33 @@ contains
     !--------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! Return if already called:
-    if(IsInitialized) return
+    if(.not.(DoSaveMags .or. DoSaveGridmag .or. DoWriteIndices)) RETURN
 
-    ! Return if no magnetometers activated.
-    if( .not.(DoSaveMags .or. DoSaveGridmag) ) RETURN
+    ! Return if already called 
+    ! the current implementation does not work for multiple initialization
+    if(IsInitialized) RETURN
+    IsInitialized=.true.
 
-    ! Check number of magnetometers in #MAGNETOMETER command:
+    ! Initialize geomagnetic indices
+    if(DoWriteIndices) call init_geoindices
+
+    ! Check number of magnetometers in the magnetometer file
     if(DoReadMagnetometerFile) call check_mag_input_file
 
-    ! Initialize geomagnetic indices, update total magnetometer count.
-    if(DoWriteIndices) then
-       call init_geoindices
-    end if
-
-    ! Update total number of magnetometers shared between GM and IE.
+    ! Update total number of magnetometers (shared between GM and IE)
     nGridMag  = nGridLat * nGridLon
     nMagTotal = nMagnetometer + nGridMag + nIndexMag
 
-    if(DoTest .and. iProc==0)then
+    if(DoTestMe)then
        write(*,*) NameSub//'Number of magnetometers:'
        write(*,*) '     Stations: ', nMagnetometer
        write(*,*) '     GridMags: ', nGridMag
        write(*,*) '     IndexMags:', nIndexMag
        write(*,*) '     TOTAL:    ', nMagTotal
     end if
+
+    ! This is just for safety
+    if(nMagTotal == 0) RETURN
 
     ! Allocate/initialize arrays:
     allocate(MagName_I(nMagTotal))
@@ -219,16 +221,15 @@ contains
     if(DoCalcKp)then
        iMag = nMagnetometer+nGridMag
        PosMagnetometer_II(1, iMag+1:iMag+nKpMag) = KpLat
-       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex
-       MagName_I(iMag:iMag+nKpMag) = 'SMG'
+       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex_I
+       MagName_I(iMag+1:iMag+nKpMag) = 'SMG'
     end if
-    ! Create files:
+
+    ! Open files:
     if (DoSaveMags .and. iProc == 0) &
          call open_magnetometer_output_file('stat')
     if (DoSaveGridMag .and. iProc == 0) &
          call open_magnetometer_output_file('grid')
-
-    IsInitialized=.true.
 
   end subroutine init_mod_magperturb
 
@@ -244,7 +245,7 @@ contains
     use ModIO,        ONLY: NamePlotDir, IsLogName_e
 
     integer            :: i, iTime_I(7)
-    real               :: radXY, phi
+    real               :: RadXY, Phi
     character(len=100) :: NameFile
 
     character(len=*), parameter :: NameSub='init_geoindices'
@@ -260,20 +261,18 @@ contains
     if(DoTestMe) write(*,*)'Number of IndexMags used: ', nIndexMag
 
     ! Allocate lat & lon arrays for index mags:
-    if(.not. allocated(LatIndex)) &
-       allocate(LatIndex(nIndexMag), LonIndex(nIndexMag))
+    if(.not. allocated(LonIndex_I)) allocate(LonIndex_I(nIndexMag))
 
     ! Initialize Kp grid and arrays.  FaKe_p uses stations fixed in SMG coords.
     XyzKp_DI(3,:) = sin(KpLat * cDegToRad) ! SMG Z for all stations.
-    radXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
+    RadXY         = cos(KpLat * cDegToRad) ! radial dist. from z-axis.
     do i=1, nKpMag
-       phi = cTwoPi * (i-1)/24.0
-       XyzKp_DI(1,i) = radXY * cos(phi)
-       XyzKp_DI(2,i) = radXY * sin(phi)
+       Phi = cTwoPi * (i-1)/24.0
+       XyzKp_DI(1,i) = RadXY * cos(phi)
+       XyzKp_DI(2,i) = RadXY * sin(phi)
        if(iProc==0 .and. DoTestMe) &
-            write(*,'(a, 3(1x, e13.3))') 'Coords = ', XyzKp_DI(:,i)
-       LatIndex(i) = KpLat
-       LonIndex(i) = phi
+            write(*,'(a, 3(1x, e13.3))') 'XyzKp = ', XyzKp_DI(:,i)
+       LonIndex_I(i) = Phi
     end do
 
     ! Allocate array to follow time history of magnetometer readings.
@@ -566,7 +565,6 @@ contains
 
     ! Obtain locations in correct (GSM) coordinates.
     SmgToGsm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    !GsmToSmg_DD = transform_matrix(Time_simulation, TypeCoordSystem, 'SMG')
     do i=1, nKpMag
        XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
     end do
