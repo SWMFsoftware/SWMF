@@ -100,14 +100,14 @@ single			TypeFileOut
 5.0			DtOutput
 
 #MAGNETOMETERGRID
-SMG			TypeGrid
 ascii			TypeFileOut
-80			LatMax
--80			LatMin
-360			LonMax
-0			LonMin
+SMG			TypeGrid
 3			nLat
 3			nLon
+0.			LonMin
+360.			LonMax
+-80.			LatMin
+80.			LatMax
 -1			DnOutput
 5.0			DtOutput
 

@@ -106,16 +106,16 @@ single			TypeFileOut
 60.0			DtOutput      [sec]
 
 #MAGNETOMETERGRID
-SMG                     TypeGrid
-ascii                   TypeFileOut
-80.                     LatMax
-0.                      LatMin
-180.                    LonMax
-0.                      LonMin
-3                       nLat
-3                       nLon
--1                      DnOutput
-5.0                     DtOutput
+ascii			TypeFileOut
+SMG			TypeGrid
+3			nLat
+3			nLon
+0.			LonMin
+360.			LonMax
+-80.			LatMin
+80.			LatMax
+-1			DnOutput
+60.0			DtOutput
 
 #NONCONSERVATIVE
 T                       UseNonConservative
