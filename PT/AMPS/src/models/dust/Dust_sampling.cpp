@@ -42,14 +42,14 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
 
   //calculate e0
   for (l0=0.0,idim=0;idim<3;idim++) {
-    e0[idim]=xPrimary[idim]-xLocation[idim];
+    e0[idim]=-(xPrimary[idim]-xLocation[idim]); //the minus is needed to have the particles comin from point 'xPrimary' have coordinated Lon=0, Lat=0 on the 2D map
     l0+=pow(e0[idim],2);
   }
 
   //calculate e1
   for (l0=sqrt(l0),l1=0.0,idim=0;idim<3;idim++) {
     e0[idim]/=l0;
-    e1[idim]=xSecondary[idim]-xLocation[idim];
+    e1[idim]=-(xSecondary[idim]-xLocation[idim]); //similar reason as for 'e0' but for the point 'xSecondary'
     l1+=e0[idim]*e1[idim];
   }
 
@@ -84,11 +84,11 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
   PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,node);
 
   //determine lon and lat of the secondary direction
-  int nZenithElement,nAzimuthalElement;
+  long int nZenithElement,nAzimuthalElement;
   double t[3];
 
   for (idim=0;idim<3;idim++) t[idim]=xSecondary[idim]-xLocation[idim];
-  GetSpeed(t,nZenithElement,Lat_xSecondary,nAzimuthalElement,Lon_xSecondary);
+  GetSurfaceElementProjectionIndex(t,Lat_xSecondary,nZenithElement,Lon_xSecondary,nAzimuthalElement);
 
   Lat_xSecondary=(Pi/2.0-Lat_xSecondary)*180.0/Pi;
   Lon_xSecondary*=180.0/Pi;
@@ -121,9 +121,9 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_ //execute the body of the sampling procedure only when the dust is ON
   long int ptr;
   PIC::Mesh::cDataBlockAMR *block=NULL;
-  double v[3],ParticleWeight;
+  double v[3],ParticleWeight,GrainRadius;
   PIC::ParticleBuffer::byte *ParticleData;
-  int spec;
+  int spec,SizeGroup;
 
   //data is sampled only of the currect processor
   if (node->Thread!=PIC::ThisThread) return;
@@ -142,14 +142,16 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       ParticleWeight=block->GetLocalParticleWeight(spec)*PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
       PIC::ParticleBuffer::GetV(v,ParticleData);
+      GrainRadius=GetGrainRadius(ParticleData);
 
       //determine the element for sampling of the particle
-      int nZenithElement,nAzimuthalElement,el;
+      long int nZenithElement,nAzimuthalElement,el;
       double Speed,ZenithAngle,AzimuthalAngle;
 
-      Speed=GetSpeed(v,nZenithElement,ZenithAngle,nAzimuthalElement,AzimuthalAngle);
+      SizeGroup=(int)(log(GrainRadius/ElectricallyChargedDust::minDustRadius)/ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
+      Speed=GetSpeed(v,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
       el=GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
-      SampleData_NumberDensityFlux[spec-_DUST_SPEC_][el]+=Speed*ParticleWeight;
+      SampleData_NumberDensityFlux[SizeGroup][el]+=Speed*ParticleWeight;
     }
 
     ptr=PIC::ParticleBuffer::GetNext(ParticleData);
@@ -171,18 +173,20 @@ void ElectricallyChargedDust::Sampling::FluxMap::PrintSurfaceData(int nDataSet, 
 
 void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag) {
   long int iZenith,iAzimuthal;
+  int SizeGroup;
   FILE *fout=NULL,*fout2d=NULL;
   double x[3];
 
-  //only sampled data for the dust species should be outputed
-  int nSizeGroup=nDataSet-_DUST_SPEC_;
-  if ((nSizeGroup<0)||(nSizeGroup>=nDustSizeSamplingIntervals)) return;
+  //the procedure outputs all sampled data at the first call (when nDataSet==_DUST_SPEC_);
+  if (nDataSet!=_DUST_SPEC_) return;
 
   //collect all sampling data
-  double TempBuffer[nZenithSurfaceElements*nAzimuthalSurfaceElements];
+  for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+    double TempBuffer[nZenithSurfaceElements*nAzimuthalSurfaceElements];
 
-  MPI_Reduce(SampleData_NumberDensityFlux[nSizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
-  memcpy(SampleData_NumberDensityFlux,TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements*sizeof(double));
+    MPI_Reduce(SampleData_NumberDensityFlux[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    memcpy(SampleData_NumberDensityFlux[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements*sizeof(double));
+  }
 
   //output the data file
   if (PIC::ThisThread==0) {
@@ -198,12 +202,22 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
     fprintf(fout2d,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\n",Lat_xSecondary,Lon_xSecondary);
 
     //print the variable list
-    fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\", \"Flux [s^{-1}m^{-2}]\"");
+    fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
     fprintf(fout2d,"VARIABLES=\"Lon\", \"Lat\"");
+
+    for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+      double r0,r1;
+
+      r0=ElectricallyChargedDust::minDustRadius*exp(SizeGroup*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
+      r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
+
+      fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+      fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+    }
 
     //print the number of variables and blocks
     fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
-    fprintf(fout2d,"ZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
+    fprintf(fout2d,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
 
     //interpolate and print the state vector
     long int InterpolationList[nAzimuthalSurfaceElements],InterpolationListLength=0;
@@ -218,8 +232,6 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
       fprintf(fout2d,"%e %e ",lon,lat);
 
       if (PrintStateVectorFlag==true) {
-        if (PrintDataStateVector==NULL) exit(__LINE__,__FILE__,"Error: PrintDataStateVector is not defined");
-
         //prepare the interpolation stencil
         InterpolationListLength=0;
 
@@ -243,28 +255,30 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
         }
 
         //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
-        int el,nInterpolationElement;
-        double InterpolationCoefficient,summInterpolationCoefficient=0.0;
-        double Flux=0.0;
+        for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+          int el,nInterpolationElement;
+          double InterpolationCoefficient,summInterpolationCoefficient=0.0;
+          double Flux=0.0;
 
-        for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
-          el=InterpolationList[nInterpolationElement];
-          InterpolationCoefficient=GetSurfaceElementArea(el);
-          summInterpolationCoefficient+=InterpolationCoefficient;
+          for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
+            el=InterpolationList[nInterpolationElement];
+            InterpolationCoefficient=GetSurfaceElementArea(el);
+            summInterpolationCoefficient+=InterpolationCoefficient;
 
-          //there is no need to multiply by the surface element surface because of the conversion from the flux
-          //through the surface elemet into the flux per m^{-2}
-          Flux+=SampleData_NumberDensityFlux[nSizeGroup][el];
+            //there is no need to multiply by the surface element surface because of the conversion from the flux
+            //through the surface elemet into the flux per m^{-2}
+            Flux+=SampleData_NumberDensityFlux[SizeGroup][el];
+          }
+
+          //normalize the interpolated values
+          if (PIC::LastSampleLength!=0) {
+            Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+          }
+
+          //output the interpolated values into a file
+          fprintf(fout," %e",Flux);
+          fprintf(fout2d," %e",Flux);
         }
-
-        //normalize the interpolated values
-        if (PIC::LastSampleLength!=0) {
-          Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
-        }
-
-        //output the interpolated values into a file
-        fprintf(fout," %e",Flux);
-        fprintf(fout2d," %e",Flux);
       }
 
       fprintf(fout,"\n");
@@ -293,11 +307,13 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
   }
 
   //re-init the content of teh sampling buffer
-  for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) SampleData_NumberDensityFlux[nSizeGroup][i]=0.0;
+  for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+    for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) SampleData_NumberDensityFlux[SizeGroup][i]=0.0;
+  }
 }
 
 
-double ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::GetSpeed(double *v,int &nZenithElement,double &ZenithAngle,int &nAzimuthalElement,double &AzimuthalAngle) {
+double ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement) {
   double r;
   int idim;
 
@@ -307,32 +323,14 @@ double ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::GetSpeed(dou
   for (idim=0;idim<3;idim++) Speed+=pow(v[idim],2);
   Speed=sqrt(Speed);
 
-  for (idim=0;idim<3;idim++) {
+  //convert 'v' into the reference frame related to the sa,mple location
+  for (int idim=0;idim<3;idim++) {
     l[0]+=e0[idim]*v[idim]/Speed;
     l[1]+=e1[idim]*v[idim]/Speed;
     l[2]+=e2[idim]*v[idim]/Speed;
   }
 
-  if ((r=pow(l[0],2)+pow(l[1],2))>0.0) {
-    AzimuthalAngle=acos(l[0]/sqrt(r));
-    if (l[1]<0.0) AzimuthalAngle=2.0*Pi-AzimuthalAngle;
-  }
-  else AzimuthalAngle=0.0;
-
-  ZenithAngle=acos(l[2]);
-
-  #if _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
-  nZenithElement=(long int)((1.0-l[2])/dCosZenithAngle);
-  #elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
-  nZenithElement=(long int)(ZenithAngle/dZenithAngle);
-  #else
-  exit(__LINE__,__FILE__,"Error: wrong option");
-  #endif
-
-  nAzimuthalElement=(long int)(AzimuthalAngle/dAzimuthalAngle);
-
-  if (nZenithElement==nZenithSurfaceElements) --nZenithElement;
-  if (nAzimuthalElement==nAzimuthalSurfaceElements) --nAzimuthalElement;
+  GetSurfaceElementProjectionIndex(l,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
 
   return Speed;
 }
