@@ -923,7 +923,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 #endif
 
 
-  //sample the distrivution function
+  //sample the distribution functions
 #if _SAMPLING_DISTRIBUTION_FUNCTION_MODE_ == _SAMPLING_DISTRIBUTION_FUNCTION_ON_
   if (PIC::DistributionFunctionSample::SamplingInitializedFlag==true) PIC::DistributionFunctionSample::SampleDistributionFnction();
   if (PIC::ParticleFluxDistributionSample::SamplingInitializedFlag==true) PIC::ParticleFluxDistributionSample::SampleDistributionFnction();
@@ -939,6 +939,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
   //Sample size distribution parameters of dust grains
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::SampleDistributionFnction();
+  ElectricallyChargedDust::Sampling::FluxMap::Sampling();
 #endif
 
 
@@ -1183,6 +1184,7 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
     //Sample size distribution parameters of dust grains
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     ElectricallyChargedDust::Sampling::SampleSizeDistributionFucntion::printDistributionFunction(DataOutputFileNumber);
+    ElectricallyChargedDust::Sampling::FluxMap::PrintSurfaceData(DataOutputFileNumber);
 #endif
 
 
