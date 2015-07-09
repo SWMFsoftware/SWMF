@@ -223,6 +223,51 @@ namespace ElectricallyChargedDust {
       void printDistributionFunction(int DataOutputFileNumber);
     }
 
+    //sample the number the dust density flux at the location of the spacecraft
+    //sampling parameters: the number density flux for a grain radius interval;
+    //output: 2d map (lon, lat). direction (1,0,0) is the direction to the nucleus; the direction (0,1,0) is the projection of the direction to the Sun;
+    //in case when direction to the Sun and that to the nucleus coinsides than the vertical direction is random
+    namespace FluxMap {
+      extern int nZenithSurfaceElements,nAzimuthalSurfaceElements;
+
+      class cSampleLocation : public cInternalSphericalData {
+      public:
+        double x[3];
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+        int iCell,jCell,kCell;
+        double **SampleData_NumberDensityFlux;
+        double e0[3],e1[3],e2[3]; //frame of the reference associated with the sampling location
+        double Lat_xSecondary,Lon_xSecondary; //latitude and longitude that corresponds to the secondary direction
+
+        void SetLocation(double *xLocation,double *xPrimary,double *xSecondary);
+        void Allocate();
+        void Sampling();
+        void PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag=true);
+
+        //get direction of the velocity vector
+        double GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement);
+
+        cSampleLocation() : cInternalSphericalData() {
+          node=NULL,SampleData_NumberDensityFlux=NULL;
+          iCell=-1,jCell=-1,kCell=-1;
+          Lat_xSecondary=0.0,Lon_xSecondary=0.0;
+
+          SetGeneralSurfaceMeshParameters(nZenithSurfaceElements,nAzimuthalSurfaceElements);
+        }
+      };
+
+      extern vector<cSampleLocation> SampleLocations;
+
+      void Init(int nZenithElements,int nAzimuthalElements);
+      void SetSamplingLocation(double *xLocation,double *xPrimary,double *xSecondary);
+
+      //sample and output particle data
+      void Sampling();
+      void PrintSurfaceData(int nDataSet, bool PrintStateVectorFlag=true);
+
+    }
+
+
   }
 
   //side ditribution of the dust grains: The distribution is calcualted as the LOGARIPHM!!!! of the grain radius
