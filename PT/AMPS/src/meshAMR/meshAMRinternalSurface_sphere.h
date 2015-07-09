@@ -59,7 +59,7 @@ public:
 
   void cleanDataBuffer() {
     OriginPosition[0]=0.0,OriginPosition[1]=0.0,OriginPosition[2]=0.0;
-    Radius=0.0;
+    Radius=1.0;
 
 //    ,SurfaceData=NULL;
 
@@ -233,8 +233,8 @@ public:
     x[2]=Radius*x[2]+OriginPosition[2];
   }
 
-  inline void GetSurfaceElementProjectionIndex(double *x,long int &nZenithElement,long int &nAzimuthalElement) {
-    double r,r2,AzimuthalAngle,xNormalized[3];
+  inline void GetSurfaceElementProjectionIndex(double *x,double &ZenithAngle,long int &nZenithElement,double &AzimuthalAngle,long int &nAzimuthalElement) {
+    double r,r2,xNormalized[3];
     int idim;
 
     for (r2=0.0,idim=0;idim<3;idim++) r2+=pow(x[idim]-OriginPosition[idim],2);
@@ -246,10 +246,12 @@ public:
     }
     else AzimuthalAngle=0.0;
 
+
+    ZenithAngle=acos(xNormalized[2]);
+
     #if _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_COSINE_DISTRIBUTION_
     nZenithElement=(long int)((1.0-xNormalized[2])/dCosZenithAngle);
     #elif _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_MODE_ == _INTERNAL_BOUNDARY_SPHERE_ZENITH_ANGLE_UNIFORM_DISTRIBUTION_
-    double ZenithAngle=acos(xNormalized[2]);
     nZenithElement=(long int)(ZenithAngle/dZenithAngle);
     #else
     exit(__LINE__,__FILE__,"Error: wrong option");
@@ -272,6 +274,16 @@ public:
 
     FunctionCallCounter++;
     #endif
+  }
+
+  inline void GetSurfaceElementProjectionIndex(double *x,long int &nZenithElement,long int &nAzimuthalElement) {
+    double ZenithAngle,AzimuthalAngle;
+    GetSurfaceElementProjectionIndex(x,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
+  }
+
+  inline void etSurfaceElementProjectionAngle(double *x,double &ZenithAngle,double &AzimuthalAngle) {
+    long int nZenithElement,nAzimuthalElement;
+    GetSurfaceElementProjectionIndex(x,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
   }
 
   inline void GetSurfaceNormal(double *x,double iZenithPoint,double  iAzimutalPoint) {
