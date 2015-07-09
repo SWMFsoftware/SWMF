@@ -23,7 +23,7 @@ include Makefile.conf
 include Makefile.local
 
 #the default value of the c++ compiler flags
-SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
+SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 #the additional argument string for the fortran compiler
 SEARCH_F= 
@@ -109,6 +109,7 @@ clean:
 	@(if [ -d ${WSD} ]; then cd ${WSD}/main;                       $(MAKE) clean; fi);
 	@(if [ -d srcInterface ]; then cd srcInterface;                $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/sputtering;          $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/models/dust;                $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/charge_exchange;     $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/electron_impact;     $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/photolytic_reactions;$(MAKE) clean; fi);
@@ -130,6 +131,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/dust;                 make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH_C}" 
 
@@ -138,7 +140,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 else
 	rm -rf ${WSD}/tmpSPICE
@@ -146,7 +148,7 @@ else
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
