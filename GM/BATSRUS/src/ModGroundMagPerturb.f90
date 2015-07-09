@@ -120,16 +120,16 @@ contains
 
     case("#MAGNETOMETERGRID")
        DoSaveGridmag = .true.
-       call read_var('TypeGridFileOut', TypeGridFileOut)
-       call read_var('TypeCoord',       TypeCoordGrid)
-       call read_var('nGridLon',        nGridLon)
-       call read_var('nGridLat',        nGridLat)
-       call read_var('LonMin',          GridLonMin)
-       call read_var('LonMax',          GridLonMax)
-       call read_var('LatMin',          GridLatMin)
-       call read_var('LatMax',          GridLatMax)
-       call read_var('DnOutput', dn_output(maggridfile_))
-       call read_var('DtOutput', dt_output(maggridfile_))
+       call read_var('TypeFileMagGrid', TypeGridFileOut)
+       call read_var('TypeCoordMagGrid',TypeCoordGrid)
+       call read_var('nLonMagGrid',     nGridLon)
+       call read_var('nLatMagGrid',     nGridLat)
+       call read_var('LonMinMagGrid',   GridLonMin)
+       call read_var('LonMaxMagGrid',   GridLonMax)
+       call read_var('LatMinMagGrid',   GridLatMin)
+       call read_var('LatMaxMagGrid',   GridLatMax)
+       call read_var('DnSaveMagGrid',   dn_output(maggridfile_))
+       call read_var('DtSaveMagGrid',   dt_output(maggridfile_))
 
     case('#GEOMAGINDICES')
        DoWriteIndices = .true. ! Activiate geoindices output file.

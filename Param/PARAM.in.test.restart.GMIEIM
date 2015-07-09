@@ -100,20 +100,20 @@ single			TypeFileOut
 5.0			DtOutput
 
 #MAGNETOMETERGRID
-ascii			TypeFileOut
-SMG			TypeGrid
-3			nLat
-3			nLon
-0.			LonMin
-360.			LonMax
--80.			LatMin
-80.			LatMax
--1			DnOutput
-5.0			DtOutput
+ascii			TypeFileMagGrid
+SMG			TypeCoordMagGrid
+3			nLatMagGrid
+3			nLonMagGrid
+0.			LonMinMagGrid
+360.			LonMaxMagGrid
+-80.			LatMinMagGrid
+80.			LatMaxMagGrid
+-1			DnSaveMagGrid
+5.0			DtSaveMagGrid
 
 #GEOMAGINDICES
 15			nSizeKpWindow
-5.0			DtOutput
+5.0			DtSaveKp
 
 #SAVEPLOT
 3			nPlotFile
