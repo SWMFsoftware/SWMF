@@ -805,7 +805,7 @@ contains
 
     character(len=4), intent(in) :: NameGroupIn
 
-    character(len=100):: NameFile, StringPrefix
+    character(len=100):: NameFile, StringPrefix, TypeFileNow
     integer :: iMag, iTime_I(7), iUnitNow, iEnd, iStart, nMagNow
     logical :: oktest, oktest_me
     !------------------------------------------------------------------------
@@ -815,12 +815,14 @@ contains
     ! Magnetometer grid file or regular file?
     if(NameGroupIn == 'stat')then
        StringPrefix = 'magnetometers'
-       iStart   = 0
-       iEnd     = nMagnetometer
+       iStart       = 0
+       iEnd         = nMagnetometer
+       TypeFileNow = TypeMagFileOut
     else if(NameGroupIn == 'grid')then
        StringPrefix = 'gridMags'
-       iStart   = nMagnetometer
-       iEnd     = nMagnetometer+nGridMag
+       iStart       = nMagnetometer
+       iEnd         = nMagnetometer+nGridMag
+       TypeFileNow  = TypeGridFileOut
     else 
        call CON_stop('open_magnetometer_output_files: unrecognized ' // &
             'magnetometer group: '//NameGroupIn)
@@ -830,7 +832,7 @@ contains
     nMagNow = iEnd-iStart
 
     ! If writing new files every time, no initialization needed.
-    if(TypeMagFileOut /= 'single')return
+    if(TypeFileNow /= 'single')return
 
     if(IsLogName_e)then
        ! Event date added to magnetic perturbation file name

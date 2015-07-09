@@ -469,6 +469,14 @@ test3_check:
 		${TESTDIR}/RESULTS/GM/geoindex_n00000000.log \
 		output/test3/GM_geoindex.log \
 		>> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
+                ${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
+                output/test3/GM_restart_geoindex.txt \
+                >> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
+                ${TESTDIR}/RESULTS/GM/mag_grid_n5_124.outs \
+                output/test3/GM_gridmags_ascii.outs \
+                >> test3_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test3/IE.log \
