@@ -3188,16 +3188,16 @@ SMG			TypeGrid
 -1			DnOutput
 60.0			DtOutput
 
-Create a grid of magnetometers spanning in latitude from LatMin to LatMax and in 
-longitude from LonMin to LonMax. If the Longitude spans 360 degrees, the grid's
-stations will be arranged so that specific longitudes are not repeated.  However, 
-if $\pm90$ is used for the maximum/minimum latitude, the polar stations will be
-repeated nLon times, so choose limits wisely.
-nLat and nLon specify the number of points in each direction.  
-2D output files are saved every DnOutput or DtOutput.  TypeFileOut specifies the
-file format, which can be any format available to the BATS-R-US #SAVEPLOT command.
-The coordinate system of the grid (not the output) can be set to GEO (geographic), 
-MAG (geomagnetic) or SMG (solar magnetic) coordinates.
+Create a grid of magnetometers spanning in latitude from LatMin to LatMax and 
+in longitude from LonMin to LonMax. If the Longitude spans 360 degrees, the 
+grid's stations will be arranged so that the equivalent longitudes of 0 and 360
+are not repeated.  However, if $\pm90$ is used for the maximum/minimum 
+latitude, the polar stations will be repeated nLon times, so choose limits 
+wisely.  nLat and nLon specify the number of points in each direction.  
+2D output files are saved every DnOutput or DtOutput.  TypeFileOut specifies 
+the file format, which can be any format available to the BATS-R-US #SAVEPLOT 
+command.  The coordinate system of the grid (not the output) can be set to GEO 
+(geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
 
 </command>
 

@@ -203,7 +203,7 @@ contains
     if(DoSaveGridMag)then
        if( GridLonMin+360. == GridLonMax)then
           ! If spanning the globe, do not include both 0 and 360.
-          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
+          dLon = (GridLonMax - GridLonMin)/max(1, nGridLon)
        else
           ! If not spanning the globe, grid goes end-to-end
           dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
