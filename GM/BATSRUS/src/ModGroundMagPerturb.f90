@@ -150,7 +150,8 @@ contains
     ! Set up the grid of magnetometers and the respective files (if single
     ! file format is selected).
 
-    use ModProcMH, ONLY: iProc
+    use ModNumConst, ONLY: cRadToDeg
+    use ModProcMH,   ONLY: iProc
 
     integer :: iLat, iLon, iMag
     real    :: dLat, dLon
@@ -229,8 +230,15 @@ contains
     if(DoCalcKp)then
        iMag = nMagnetometer+nGridMag
        PosMagnetometer_II(1, iMag+1:iMag+nKpMag) = KpLat
-       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex_I
-       MagName_I(iMag+1:iMag+nKpMag) = 'SMG'
+       PosMagnetometer_II(2, iMag+1:iMag+nKpMag) = LonIndex_I*cRadToDeg
+       MagName_I(iMag+1:iMag+nKpMag) = 'KP_'
+    end if
+
+    if(DoTestMe)then
+       write(*,*) NameSub//'Magnetometer positions to send to IE: '
+       do iMag=1,nMagTotal
+          write(*,*)'  iMag, Lat, Lon =', iMag, PosMagnetometer_II(:,iMag)
+       end do
     end if
 
     ! Open files:
@@ -578,7 +586,7 @@ contains
     do i=1, nKpMag
        XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
     end do
-  
+
     ! Obtain geomagnetic pertubation. Output is in NED Coordinates.
     call ground_mag_perturb(    nKpMag, XyzGsm_DI, Bmag_DI)
     call ground_mag_perturb_fac(nKpMag, XyzKp_DI,  Bfac_DI)

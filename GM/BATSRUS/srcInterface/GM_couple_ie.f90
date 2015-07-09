@@ -217,20 +217,34 @@ contains
     integer, intent(out) :: nMagOut
     character(len=3), intent(out),optional :: NameMagsOut_I(     nMagTotal)
     real,             intent(out),optional :: CoordMagsOut_DI(2, nMagTotal)
+
+    integer :: iMag
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='GM_get_info_for_ie'
     !-------------------------------------------------------------------------
-    
+    call CON_set_do_test(NameSub,DoTest, DoTestMe)
+
     ! Collect magnetometer info to share with IE.
     nMagOut=nMagTotal
     
     if(nMagOut==0) return
 
     if (present(CoordMagsOut_DI)) &
-         CoordMagsOut_DI = PosMagnetometer_II(:,1:nMagTotal)
+         CoordMagsOut_DI = PosMagnetometer_II
 
     if (present(NameMagsOut_I)) then
-       NameMagsOut_I(1:nMagnetometer)           = TypeCoordMag
-       NameMagsOut_I(nMagnetometer+1:nMagTotal) = TypeCoordGrid
+       NameMagsOut_I(1:nMagnetometer)                         = TypeCoordMag
+       NameMagsOut_I(nMagnetometer+1:nMagnetometer+nGridMag)  = TypeCoordGrid
+       NameMagsOut_I(nMagnetometer+nGridMag+1:nMagTotal)      = 'SMG'
     endif
+
+    if(DoTestMe .and. present(NameMagsOut_I))then
+       write(*,*) NameSub//' is sending the following to IE:'
+       do iMag=1, nMagTotal
+          write(*,*)'  iMag, Lat, Lon, Coord = ', &
+               iMag, CoordMagsOut_DI(:,iMag), NameMagsOut_I(iMag)
+       end do
+    end if
 
   end subroutine GM_get_info_for_ie
   !============================================================================
