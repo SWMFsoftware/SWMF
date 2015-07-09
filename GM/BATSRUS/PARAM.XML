@@ -3161,44 +3161,59 @@ Default is no magnetic perturbation calculation.
 </command>
 
 <command name="MAGNETOMETERGRID">
-	<parameter name="TypeFileOut" type="string" input="select"> 
+	<parameter name="TypeFileMagGrid" type="string" input="select"> 
 		<option name="ascii" default="T"/>
 		<option name="tec"/>
-		<option name="idl"/>
+		<option name="real4"/>
+		<option name="real8"/>
 	</parameter>
-	<parameter name="TypeGrid" type="string" length="100" default="SMG"/>
-	<parameter name="nLon" type="integer" default="3"/>
-	<parameter name="nLat" type="integer" default="3"/>
-	<parameter name="LonMin" type="real" default="0"/>
-	<parameter name="LonMax" type="real" default="360"/>
-	<parameter name="LatMin" type="real" default="-80"/>
-	<parameter name="LatMax" type="real" default="80"/>
-	<parameter name="DnOutput" type="integer" min="-1" default="-1"/>
-	<parameter name="DtOutput" type="real"    min="-1" default="-1"/>
+	<parameter name="TypeCoordMagGrid" type="string" input="select">
+		<option name="GEO" default="T"/>
+		<option name="MAG"/>
+		<option name="SMG"/>
+	</parameter>
+	<parameter name="nLonMagGrid" type="integer" default="3"/>
+	<parameter name="nLatMagGrid" type="integer" default="3"/>
+	<parameter name="LonMinMagGrid" type="real" default="0"/>
+	<parameter name="LonMaxMagGrid" type="real" default="360"/>
+	<parameter name="LatMinMagGrid" type="real" default="-80"/>
+	<parameter name="LatMaxMagGrid" type="real" default="80"/>
+	<parameter name="DnSaveMagGrid" type="integer" min="-1" default="-1"/>
+	<parameter name="DtSaveMagGrid" type="real"    min="-1" default="-1"/>
 
 #MAGNETOMETERGRID
-ascii			TypeFileOut
-SMG			TypeGrid
-3			nLat
-3			nLon
-0.			LonMin
-360.			LonMax
--80.			LatMin
-80.			LatMax
--1			DnOutput
-60.0			DtOutput
+ascii			TypeFileMagGrid (ascii, tec, real4, real8)
+SMG			TypeCoordMagGrid (GEO, MAG, SMG)
+3			nLatMagGrid
+3			nLonMagGrid
+0.			LonMinMagGrid
+360.			LonMaxMagGrid
+-80.			LatMinMagGrid
+80.			LatMaxMagGrid
+-1			DnSaveMagGrid
+60.0			DtSaveMagGrid
 
-Create a grid of magnetometers spanning in latitude from LatMin to LatMax and 
-in longitude from LonMin to LonMax. If the Longitude spans 360 degrees, the 
-grid's stations will be arranged so that the equivalent longitudes of 0 and 360
-are not repeated.  However, if $\pm90$ is used for the maximum/minimum 
-latitude, the polar stations will be repeated nLon times, so choose limits 
-wisely.  nLat and nLon specify the number of points in each direction.  
-2D output files are saved every DnOutput or DtOutput.  TypeFileOut specifies 
-the file format, which can be any format available to the BATS-R-US #SAVEPLOT 
-command.  The coordinate system of the grid (not the output) can be set to GEO 
+This command allows calculating and saving magnetic perturbations on a 
+longitude-latitude grid.
+
+TypeFileMagGrid specifies the file format, which can be 'ascii' (text file), 
+'tec' (Tecplot text file), 'real4' (single precision binary) or 
+'real8' (double precision binary).
+The coordinate system of the grid (not the output) can be set to GEO
 (geographic), MAG (geomagnetic) or SMG (solar magnetic) coordinates.
 
+The number of grid points in the longitude and latitude directions 
+is given by nLonMagGrid and nLatMagGrid, respectively.
+The longitudes span from from LonMinMagGrid to LonMaxMagGrid,
+while the latitudes span from LatMinMagGrid to LatMaxMagGrid.
+If the longitude spans 360 degrees, the stations will be arranged so that the 
+equivalent longitudes of 0 and 360 are not repeated. 
+However, if -90 or +90 degrees is used for the maximum/minimum 
+latitude, the polar stations will be repeated nLonMagGrid times, so choose limits 
+wisely. 
+The 2D output files are saved every DnSaveMagGrid steps or DtSaveMagGrid seconds.
+
+No magnetometer grid file is saved by default.
 </command>
 
 <command name="SAVEPLOT">
