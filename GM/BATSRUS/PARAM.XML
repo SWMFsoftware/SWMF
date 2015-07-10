@@ -3184,8 +3184,8 @@ Default is no magnetic perturbation calculation.
 #MAGNETOMETERGRID
 ascii			TypeFileMagGrid (ascii, tec, real4, real8)
 SMG			TypeCoordMagGrid (GEO, MAG, SMG)
-3			nLatMagGrid
 3			nLonMagGrid
+3			nLatMagGrid
 0.			LonMinMagGrid
 360.			LonMaxMagGrid
 -80.			LatMinMagGrid

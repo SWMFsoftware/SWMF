@@ -210,7 +210,11 @@ contains
           dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
        endif
        dLat = (GridLatMax - GridLatMin)/max(1, nGridLat-1)
-       if(DoTestMe) write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
+
+       if(DoTestMe) then
+          write(*,*)NameSub//' nLon and nLat = ', nGridLon, nGridLat
+          write(*,*)NameSub//' Lon and Lat spacing = ', dLon, dLat
+       end if
 
        ! Set up the grid.
        iMag = nMagnetometer
