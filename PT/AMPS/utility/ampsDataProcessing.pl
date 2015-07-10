@@ -23,6 +23,7 @@ my @childs;
 my $host;
 my $dir=".";
 my $wait=_FALSE_;
+my $dont_remove_original_files=_FALSE_; 
 
 my @TEST=("-np=1", "-host=/Volumes/data/EUROPA-LOCAL-RUN--TEMP", "-preplot=\'*.dat\'", "-dir=.");
 
@@ -33,6 +34,8 @@ foreach (@ARGV) {
   if (/^-host=(.*)/i) {$host=$1; next};
   if (/^-dir=(.*)/i) {$dir=$1; next};
   if (/^-wait/i) {$wait=_TRUE_; next;}
+  if (/^-no-rm/i) {$dont_remove_original_files=_TRUE_; next;}
+  
   
   if (/^-send=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_FALSE_, 'preplot'=>_FALSE_,'send'=>_TRUE_});next};
   if (/^-send-rm=(.*)/i) {push(@FileMask, {'mask'=>$1, 'rm'=>_TRUE_, 'preplot'=>_FALSE_,'send' =>_TRUE_});next};
@@ -45,6 +48,7 @@ foreach (@ARGV) {
     print "Example:\n";
     print "./ampsDataProcessing.pl -np=1 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot=\'*.dat\' -dir=./\n"; 
     print "./ampsDataProcessing.pl -wait -np=5 -host=tower-left.engin.umich.edu:/Volumes/data/EUROPA-LOCAL-RUN--TEMP -preplot='*.dat' -dir=PT/plots\n";
+    print "Process files that on the same computer: ./ampsDataProcessing.pl -np=8 -no-rm host=/Volumes/data/EUROPA-PLEIADES -preplot='*out=10*.dat' -dir=.\n";
     print "The argument line:\n";
     print "-help             -> print the list of the arguments\n";
     print "-wait   ->  the script will wait for the new files being generated untill it is killed by user\n";
@@ -56,6 +60,7 @@ foreach (@ARGV) {
     print "-preplot=[mask for file search, separated by ',']    -> preplot the data files and send; after the files sent ther are removed\n";
 
     print "-rm=[mask for file search, separated by ',']   -> remove the files\n";
+    print "-no-rm -> do not remove processed data files\n";
     
     print "-host   -> the name of the remote host and directory where the files will be copied\n";
     
@@ -164,16 +169,21 @@ sub ProcessDataFiles {
         `preplot $fname`;
         
         
-        
-        if (-e $t) {
-#           system("rm -f $fname");
-          print "rm -f $fname\n";
-          `rm -f $fname`;
-          
-          $fname=$t;
+        if ($dont_remove_original_files == _FALSE_) {
+          if (-e $t) {
+  #           system("rm -f $fname");
+            print "rm -f $fname\n";
+            `rm -f $fname`;
+            
+            $fname=$t;
+          }
+                  
+          $rm=_TRUE_;
         }
-                
-        $rm=_TRUE_;
+        else {
+          $rm=_FALSE_;
+        }
+      
         $send=_TRUE_;
       }
       
