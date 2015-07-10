@@ -166,19 +166,16 @@ void ElectricallyChargedDust::Sampling::FluxMap::PrintSurfaceData(int nDataSet, 
   int nSamplePoint;
 
   for (nSamplePoint=0;nSamplePoint<SampleLocations.size();nSamplePoint++) {
-    sprintf(fname,"%s/amps.dust.flux-map.group=%i.nSampleLocation=%i.out=%i.dat",PIC::OutputDataFileDirectory,nDataSet-_DUST_SPEC_,nSamplePoint,PIC::DataOutputFileNumber);
-    SampleLocations[nSamplePoint].PrintSurfaceData(fname,nDataSet,PrintStateVectorFlag);
+    sprintf(fname,"%s/amps.dust.flux-map.nSampleLocation=%i.out=%i.dat",PIC::OutputDataFileDirectory,nSamplePoint,nDataSet);
+    SampleLocations[nSamplePoint].PrintSurfaceData(fname,PrintStateVectorFlag);
   }
 }
 
-void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag) {
+void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceData(const char *fname, bool PrintStateVectorFlag) {
   long int iZenith,iAzimuthal;
   int SizeGroup;
   FILE *fout=NULL,*fout2d=NULL;
   double x[3];
-
-  //the procedure outputs all sampled data at the first call (when nDataSet==_DUST_SPEC_);
-  if (nDataSet!=_DUST_SPEC_) return;
 
   //collect all sampling data
   for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
