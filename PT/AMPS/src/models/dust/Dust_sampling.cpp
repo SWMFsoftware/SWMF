@@ -198,8 +198,8 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
     fout2d=fopen(fname2d,"w");
 
     //print the output file title
-    fprintf(fout,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\n",Lat_xSecondary,Lon_xSecondary);
-    fprintf(fout2d,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\n",Lat_xSecondary,Lon_xSecondary);
+    fprintf(fout,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\"\n",Lat_xSecondary,Lon_xSecondary);
+    fprintf(fout2d,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\"\n",Lat_xSecondary,Lon_xSecondary);
 
     //print the variable list
     fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
@@ -212,8 +212,11 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
       r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
 
       fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
-      fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+      fprintf(fout2d,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
     }
+
+    fprintf(fout,", \"Total Flux [s^{-1}m^{-2}]\"");
+    fprintf(fout2d,", \"Total Flux [s^{-1}m^{-2}]\"");
 
     //print the number of variables and blocks
     fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
@@ -255,6 +258,9 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
         }
 
         //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
+        //sampled data summed for all dust sizes
+        double TotalFlux=0.0;
+
         for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
           int el,nInterpolationElement;
           double InterpolationCoefficient,summInterpolationCoefficient=0.0;
@@ -276,9 +282,14 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
           }
 
           //output the interpolated values into a file
+          TotalFlux+=Flux;
+
           fprintf(fout," %e",Flux);
           fprintf(fout2d," %e",Flux);
         }
+
+        fprintf(fout," %e",TotalFlux);
+        fprintf(fout2d," %e",TotalFlux);
       }
 
       fprintf(fout,"\n");
