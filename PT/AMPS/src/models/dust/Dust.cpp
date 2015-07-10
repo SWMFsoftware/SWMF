@@ -10,11 +10,6 @@
 //$Id$
 
 #include "pic.h"
-
-#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
-
-
-
 #include "pic__model__electrically_charged_dust.h"
 
 
@@ -1518,8 +1513,6 @@ void ElectricallyChargedDust::Sampling::SampleParticleData(char *ParticleData,do
   }
 #endif
 }
-
-#endif
 
 
 
