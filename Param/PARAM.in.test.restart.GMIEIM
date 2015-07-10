@@ -102,8 +102,8 @@ single			TypeFileOut
 #MAGNETOMETERGRID
 ascii			TypeFileMagGrid
 SMG			TypeCoordMagGrid
-3			nLatMagGrid
 3			nLonMagGrid
+3			nLatMagGrid
 0.			LonMinMagGrid
 360.			LonMaxMagGrid
 -80.			LatMinMagGrid
