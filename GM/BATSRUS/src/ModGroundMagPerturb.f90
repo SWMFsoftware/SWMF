@@ -205,6 +205,7 @@ contains
        if( GridLonMin+360. == GridLonMax)then
           ! If spanning the globe, do not include both 0 and 360.
           dLon = (GridLonMax - GridLonMin)/max(1, nGridLon)
+          GridLonMax = GridLonMax - dLon
        else
           ! If not spanning the globe, grid goes end-to-end
           dLon = (GridLonMax - GridLonMin)/max(1, nGridLon-1)
