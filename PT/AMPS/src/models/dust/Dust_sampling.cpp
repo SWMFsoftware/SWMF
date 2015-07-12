@@ -174,7 +174,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::PrintSurfaceData(int nDataSet, 
 void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceData(const char *fname, bool PrintStateVectorFlag) {
   long int iZenith,iAzimuthal;
   int SizeGroup;
-  FILE *fout=NULL,*fout2d=NULL;
+  FILE *fout=NULL;
   double x[3];
 
   //collect all sampling data
@@ -190,17 +190,13 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
     char fname2d[300];
 
     sprintf(fname2d,"%s.2d.dat",fname);
-
     fout=fopen(fname,"w");
-    fout2d=fopen(fname2d,"w");
 
     //print the output file title
     fprintf(fout,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\"\n",Lat_xSecondary,Lon_xSecondary);
-    fprintf(fout2d,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\"\n",Lat_xSecondary,Lon_xSecondary);
 
     //print the variable list
     fprintf(fout,"VARIABLES=\"X\", \"Y\", \"Z\"");
-    fprintf(fout2d,"VARIABLES=\"Lon\", \"Lat\"");
 
     for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
       double r0,r1;
@@ -209,96 +205,89 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
       r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
 
       fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
-      fprintf(fout2d,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
     }
 
     fprintf(fout,", \"Total Flux [s^{-1}m^{-2}]\"");
-    fprintf(fout2d,", \"Total Flux [s^{-1}m^{-2}]\"");
 
     //print the number of variables and blocks
     fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
-    fprintf(fout2d,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements,nZenithSurfaceElements+1);
 
     //interpolate and print the state vector
     long int InterpolationList[nAzimuthalSurfaceElements],InterpolationListLength=0;
 
-    for (iZenith=0;iZenith<nZenithSurfaceElements+1;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
-      GetSurfaceCoordinate(x,iZenith,iAzimuthal);
+    for (iZenith=0;iZenith<nZenithSurfaceElements+1;iZenith++) {
+      for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
+        GetSurfaceCoordinate(x,iZenith,iAzimuthal);
 
-      fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
+        fprintf(fout,"%e %e %e ",x[0],x[1],x[2]);
 
-      double lon,lat;
-      GetSurfaceLonLatNormal(lon,lat,iZenith,iAzimuthal);
-      fprintf(fout2d,"%e %e ",lon,lat);
+        if (PrintStateVectorFlag==true) {
+          //prepare the interpolation stencil
+          InterpolationListLength=0;
 
-      if (PrintStateVectorFlag==true) {
-        //prepare the interpolation stencil
-        InterpolationListLength=0;
+          if (iZenith==0) {
+            InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,iAzimuthal);
+            InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
+          }
+          else if (iZenith==nZenithSurfaceElements) {
+            InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,iAzimuthal);
+            InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
+          }
+          else {
+            int iA,iZ,A[2],Z[2];
 
-        if (iZenith==0) {
-          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,iAzimuthal);
-          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
-        }
-        else if (iZenith==nZenithSurfaceElements) {
-          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,iAzimuthal);
-          InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
-        }
-        else {
-          int iA,iZ,A[2],Z[2];
+            Z[0]=iZenith-1,Z[1]=iZenith;
 
-          Z[0]=iZenith-1,Z[1]=iZenith;
+            A[0]=(iAzimuthal!=0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1;
+            A[1]=iAzimuthal;
 
-          A[0]=(iAzimuthal!=0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1;
-          A[1]=iAzimuthal;
-
-          for (iA=0;iA<2;iA++) for (iZ=0;iZ<2;iZ++) InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(Z[iZ],A[iA]);
-        }
-
-        //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
-        //sampled data summed for all dust sizes
-        double TotalFlux=0.0;
-
-        for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
-          int el,nInterpolationElement;
-          double InterpolationCoefficient,summInterpolationCoefficient=0.0;
-          double Flux=0.0;
-
-          for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
-            el=InterpolationList[nInterpolationElement];
-            InterpolationCoefficient=GetSurfaceElementArea(el);
-            summInterpolationCoefficient+=InterpolationCoefficient;
-
-            //there is no need to multiply by the surface element surface because of the conversion from the flux
-            //through the surface elemet into the flux per m^{-2}
-            Flux+=SampleData_NumberDensityFlux[SizeGroup][el];
+            for (iA=0;iA<2;iA++) for (iZ=0;iZ<2;iZ++) InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(Z[iZ],A[iA]);
           }
 
-          //normalize the interpolated values
-          if (PIC::LastSampleLength!=0) {
-            Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+          //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
+          //sampled data summed for all dust sizes
+          double TotalFlux=0.0;
+
+          for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+            int el,nInterpolationElement;
+            double InterpolationCoefficient,summInterpolationCoefficient=0.0;
+            double Flux=0.0;
+
+            for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
+              el=InterpolationList[nInterpolationElement];
+              InterpolationCoefficient=GetSurfaceElementArea(el);
+              summInterpolationCoefficient+=InterpolationCoefficient;
+
+              //there is no need to multiply by the surface element surface because of the conversion from the flux
+              //through the surface elemet into the flux per m^{-2}
+              Flux+=InterpolationCoefficient*SampleData_NumberDensityFlux[SizeGroup][el];
+            }
+
+            //normalize the interpolated values
+            if (PIC::LastSampleLength!=0) {
+              Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+            }
+
+            //output the interpolated values into a file
+            TotalFlux+=Flux;
+
+            fprintf(fout," %e",Flux);
           }
 
-          //output the interpolated values into a file
-          TotalFlux+=Flux;
-
-          fprintf(fout," %e",Flux);
-          fprintf(fout2d," %e",Flux);
+          fprintf(fout," %e",TotalFlux);
         }
 
-        fprintf(fout," %e",TotalFlux);
-        fprintf(fout2d," %e",TotalFlux);
+        fprintf(fout,"\n");
       }
-
-      fprintf(fout,"\n");
-      fprintf(fout2d,"\n");
-    }
-
+   }
 
     //print the connectivity list
     int iAzimuthalMax,iAzimuthalMin;
     int nd0,nd1,nd2,nd3;
 
+
     for (iZenith=0;iZenith<nZenithSurfaceElements;iZenith++) for (iAzimuthal=0;iAzimuthal<nAzimuthalSurfaceElements;iAzimuthal++) {
+      //connectivity list for the spherical mesh
       iAzimuthalMax=(iAzimuthal+1!=nAzimuthalSurfaceElements) ? iAzimuthal+1 : 0;
       iAzimuthalMin=iAzimuthal;
 
@@ -311,8 +300,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
     }
 
     fclose(fout);
-    fclose(fout2d);
   }
+
+  //output lon-lat map
+  Print2dMap(fname,PrintStateVectorFlag);
 
   //re-init the content of teh sampling buffer
   for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
@@ -320,6 +311,133 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
   }
 }
 
+void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(const char *fname, bool PrintStateVectorFlag) {
+  long int iZenith,iAzimuthal;
+  int SizeGroup;
+  FILE *fout2d=NULL;
+
+  //output the data file
+  if (PIC::ThisThread==0) {
+    char fname2d[300];
+
+    sprintf(fname2d,"%s.2d.dat",fname);
+    fout2d=fopen(fname2d,"w");
+
+    //print the output file title
+    fprintf(fout2d,"TITLE=\"Primary direction:Lat=0,Log=0; Secondary direction: Lat=%e,Lon=%e\"\n",Lat_xSecondary,Lon_xSecondary);
+
+    //print the variable list
+    fprintf(fout2d,"VARIABLES=\"Lon\", \"Lat\"");
+
+    for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+      double r0,r1;
+
+      r0=ElectricallyChargedDust::minDustRadius*exp(SizeGroup*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
+      r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
+
+      fprintf(fout2d,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+    }
+
+    fprintf(fout2d,", \"Total Flux [s^{-1}m^{-2}]\"");
+    fprintf(fout2d,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements+2,nZenithSurfaceElements+1);
+
+    //interpolate and print the state vector
+    long int InterpolationList[nAzimuthalSurfaceElements],InterpolationListLength=0;
+    double lon,lat;
+    int iAzimuthalBreak=-1;
+
+    do {
+      iAzimuthalBreak++;
+      GetSurfaceLonLatNormal(lon,lat,0,iAzimuthalBreak);
+    }
+    while (lon<=180.0);
+
+    for (iZenith=0;iZenith<nZenithSurfaceElements+1;iZenith++) {
+      GetSurfaceLonLatNormal(lon,lat,iZenith,0);
+
+      for (int iPass=0;iPass<2;iPass++) {
+         int iAzimuthalMin,iAzimuthalMax;
+
+         switch(iPass) {
+         case 0:
+           iAzimuthalMin=iAzimuthalBreak-1,iAzimuthalMax=nAzimuthalSurfaceElements-1;
+           break;
+         case 1:
+           iAzimuthalMin=0,iAzimuthalMax=iAzimuthalBreak;
+           break;
+         default:
+           exit(__LINE__,__FILE__,"Error: wrong option");
+         }
+
+        //first output the data for azimuthal angle -180 to 0 and than that from 0 to 180 degrees
+        for (iAzimuthal=iAzimuthalMin;iAzimuthal<=iAzimuthalMax;iAzimuthal++) {
+          lon=(iPass==1) ? iAzimuthal*dAzimuthalAngle*180.0/Pi : iAzimuthal*dAzimuthalAngle*180.0/Pi-360.0;
+          fprintf(fout2d,"%e %e ",lon,lat);
+
+          if (PrintStateVectorFlag==true) {
+            //prepare the interpolation stencil
+            InterpolationListLength=0;
+
+            if (iZenith==0) {
+              InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,iAzimuthal);
+              InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(0,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
+            }
+            else if (iZenith==nZenithSurfaceElements) {
+              InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,iAzimuthal);
+              InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(nZenithSurfaceElements-1,((iAzimuthal>0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1));
+            }
+            else {
+              int iA,iZ,A[2],Z[2];
+
+              Z[0]=iZenith-1,Z[1]=iZenith;
+
+              A[0]=(iAzimuthal!=0) ? iAzimuthal-1 : nAzimuthalSurfaceElements-1;
+              A[1]=iAzimuthal;
+
+              for (iA=0;iA<2;iA++) for (iZ=0;iZ<2;iZ++) InterpolationList[InterpolationListLength++]=GetLocalSurfaceElementNumber(Z[iZ],A[iA]);
+            }
+
+            //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
+            //sampled data summed for all dust sizes
+            double TotalFlux=0.0;
+
+            for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
+              int el,nInterpolationElement;
+              double InterpolationCoefficient,summInterpolationCoefficient=0.0;
+              double Flux=0.0;
+
+              for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
+                el=InterpolationList[nInterpolationElement];
+                InterpolationCoefficient=GetSurfaceElementArea(el);
+                summInterpolationCoefficient+=InterpolationCoefficient;
+
+                //there is no need to multiply by the surface element surface because of the conversion from the flux
+                //through the surface elemet into the flux per m^{-2}
+                Flux+=InterpolationCoefficient*SampleData_NumberDensityFlux[SizeGroup][el];
+              }
+
+              //normalize the interpolated values
+              if (PIC::LastSampleLength!=0) {
+                Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+              }
+
+              //output the interpolated values into a file
+              TotalFlux+=Flux;
+
+              fprintf(fout2d," %e",Flux);
+            }
+
+            fprintf(fout2d," %e",TotalFlux);
+          }
+
+          fprintf(fout2d,"\n");
+        }
+      }
+    }
+
+    fclose(fout2d);
+  }
+}
 
 double ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement) {
   double r;
