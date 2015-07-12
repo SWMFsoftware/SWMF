@@ -242,7 +242,8 @@ namespace ElectricallyChargedDust {
         void SetLocation(double *xLocation,double *xPrimary,double *xSecondary);
         void Allocate();
         void Sampling();
-        void PrintSurfaceData(const char *fname,int nDataSet, bool PrintStateVectorFlag=true);
+        void PrintSurfaceData(const char *fname, bool PrintStateVectorFlag=true);
+        void Print2dMap(const char *fname, bool PrintStateVectorFlag=true);
 
         //get direction of the velocity vector
         double GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement);
