@@ -90,6 +90,7 @@ namespace Exosphere {
   //init the model
   void Init_BeforeParser();
   void Init_AfterParser();
+  void Init_SPICE();
  // void Init_AfterMesh();
 
   //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found

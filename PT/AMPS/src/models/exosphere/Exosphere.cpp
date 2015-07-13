@@ -155,45 +155,8 @@ void Exosphere::Init_BeforeParser() {
 
   //furnish the SPICE kernels
 #if  _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-  char str[_MAX_STRING_LENGTH_PIC_];
-
-  for (int nKernel=0;nKernel<nFurnishedSPICEkernels;nKernel++) {
-    struct stat buf;
-
-    sprintf(str,"%s/%s",SPICE_Kernels_PATH,SPICE_Kernels[nKernel]);
-
-    if (stat(str, &buf) != 0) {
-      char f[_MAX_STRING_LENGTH_PIC_];
-
-      sprintf(f,"SPICE kernel %s is not found",str);
-      exit(__LINE__,__FILE__,f);
-    }
-
-    furnsh_c(str);
-  }
+  Init_SPICE();
 #endif
-
-  //Get the initial parameters of Mercury orbit
-  SpiceDouble state[6];
-
-  utc2et_c(SimulationStartTimeString,&OrbitalMotion::et);
-
-  //get initial parameters of Mercury's orbit
-  spkezr_c(ObjectName,OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
-
-  for (idim=0,xObjectRadial=0.0;idim<3;idim++) {
-    xObject_HCI[idim]=state[idim]*1.0E3,vObject_HCI[idim]=state[idim+3]*1.0E3;
-    xObjectRadial+=pow(xObject_HCI[idim],2);
-  }
-
-  xObjectRadial=sqrt(xObjectRadial);
-  vObjectRadial=(xObject_HCI[0]*vObject_HCI[0]+xObject_HCI[1]*vObject_HCI[1]+xObject_HCI[2]*vObject_HCI[2])/xObjectRadial;
-
-  //get initial position of Earth
-  spkezr_c("Earth",OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
-  for (idim=0;idim<3;idim++) xEarth_HCI[idim]=state[idim]*1.0E3,vEarth_HCI[idim]=state[idim+3]*1.0E3;
-
-
 
   //calcualte the total number of source processes
 #if _EXOSPHERE_SOURCE__IMPACT_VAPORIZATION_ == _EXOSPHERE_SOURCE__ON_
@@ -359,6 +322,48 @@ void Exosphere::Init_AfterParser() {
   #endif
 }*/
 
+void Exosphere::Init_SPICE() {
+  //furnish the SPICE kernels
+#if  _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
+  char str[_MAX_STRING_LENGTH_PIC_];
+  int idim;
+
+  for (int nKernel=0;nKernel<nFurnishedSPICEkernels;nKernel++) {
+    struct stat buf;
+
+    sprintf(str,"%s/%s",SPICE_Kernels_PATH,SPICE_Kernels[nKernel]);
+
+    if (stat(str, &buf) != 0) {
+      char f[_MAX_STRING_LENGTH_PIC_];
+
+      sprintf(f,"SPICE kernel %s is not found",str);
+      exit(__LINE__,__FILE__,f);
+    }
+
+    furnsh_c(str);
+  }
+
+  //Get the initial parameters of Mercury orbit
+  SpiceDouble state[6];
+
+  utc2et_c(SimulationStartTimeString,&OrbitalMotion::et);
+
+  //get initial parameters of Mercury's orbit
+  spkezr_c(ObjectName,OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
+
+  for (idim=0,xObjectRadial=0.0;idim<3;idim++) {
+    xObject_HCI[idim]=state[idim]*1.0E3,vObject_HCI[idim]=state[idim+3]*1.0E3;
+    xObjectRadial+=pow(xObject_HCI[idim],2);
+  }
+
+  xObjectRadial=sqrt(xObjectRadial);
+  vObjectRadial=(xObject_HCI[0]*vObject_HCI[0]+xObject_HCI[1]*vObject_HCI[1]+xObject_HCI[2]*vObject_HCI[2])/xObjectRadial;
+
+  //get initial position of Earth
+  spkezr_c("Earth",OrbitalMotion::et,"J2000","none","SUN",state,&OrbitalMotion::lt);
+  for (idim=0;idim<3;idim++) xEarth_HCI[idim]=state[idim]*1.0E3,vEarth_HCI[idim]=state[idim+3]*1.0E3;
+#endif
+}
 
 
 //ICES data preprocessor -> set up typical values of the solar wind in the regions where the SWMF values have not been found
