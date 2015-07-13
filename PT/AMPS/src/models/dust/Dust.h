@@ -235,7 +235,7 @@ namespace ElectricallyChargedDust {
         double x[3];
         cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
         int iCell,jCell,kCell;
-        double **SampleData_NumberDensityFlux;
+        double **SampleData_NumberDensityFlux,**SampleData_NumberDensity;
         double e0[3],e1[3],e2[3]; //frame of the reference associated with the sampling location
         double Lat_xSecondary,Lon_xSecondary; //latitude and longitude that corresponds to the secondary direction
 
@@ -249,7 +249,7 @@ namespace ElectricallyChargedDust {
         double GetSpeed(double *v,double &ZenithAngle,long int &nZenithElement, double &AzimuthalAngle,long int &nAzimuthalElement);
 
         cSampleLocation() : cInternalSphericalData() {
-          node=NULL,SampleData_NumberDensityFlux=NULL;
+          node=NULL,SampleData_NumberDensityFlux=NULL,SampleData_NumberDensity=NULL;
           iCell=-1,jCell=-1,kCell=-1;
           Lat_xSecondary=0.0,Lon_xSecondary=0.0;
 
