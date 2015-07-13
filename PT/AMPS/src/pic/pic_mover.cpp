@@ -1636,6 +1636,12 @@ int PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryIn
 
 
 
+/*  if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+    cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+   // exit(__LINE__,__FILE__,"The point is outside of the domain");
+  }*/
+
 //===================== END DEBUG ==================
 
 
@@ -2038,14 +2044,55 @@ MovingLoop:
           xFinal[1]=xInit[1]+dtMin*vInit[1];
           xFinal[2]=xInit[2]+dtMin*vInit[2];
 
+
+
           if ( ((xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2]) < PIC::Mesh::mesh.EPS) {
             dtMin*=(1.0-1.0E-3);
             ExitFlag=false;
           }
         }
         while (ExitFlag==false);
+
+
+/*        if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+          cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+         // exit(__LINE__,__FILE__,"The point is outside of the domain");
+        }*/
+
       }
       else if (r0<0.0) {
+
+        //===============================================
+        //the point is behind the face, which means that it is probably inside the body =>
+        //find the face that is closes to the point than move the point to the face and apply the boundary conditions
+        CutCell::cTriangleFaceDescriptor *t;
+        double minTimeOfFlight=-1.0,TimeOfFlight;
+        CutCell::cTriangleFace *ClosestFace=NULL;
+
+        for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
+          if (t->TriangleFace->RayIntersection(xInit,t->TriangleFace->ExternalNormal,TimeOfFlight,0.0)==true) {
+            if ((minTimeOfFlight<0.0)||(TimeOfFlight<minTimeOfFlight)) {
+              minTimeOfFlight=TimeOfFlight;
+
+              ClosestFace=t->TriangleFace;
+            }
+          }
+        }
+
+        if (ClosestFace=NULL) {
+          exit(__LINE__,__FILE__,"Error: cannot find a face to place the particle");
+        }
+
+        for (int idim=0;idim<DIM;idim++) xInit[idim]+=minTimeOfFlight*ClosestFace->ExternalNormal[idim];
+
+        IntersectionFace=ClosestFace;
+        memcpy(xFinal,xInit,3*sizeof(double));
+        dtMin=0.0;
+
+
+        //-------------------------------------------
+/*
         if (r0>-PIC::Mesh::mesh.EPS) {
           for (int idim=0;idim<DIM;idim++) xInit[idim]+=(0.0*PIC::Mesh::mesh.EPS-r0)*FaceNorm[idim];
 
@@ -2074,11 +2121,17 @@ MovingLoop:
           }
 
           if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
-             exit(__LINE__,__FILE__,"The point is outside of the domain");
+
+            cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+           // exit(__LINE__,__FILE__,"The point is outside of the domain");
           }
 
           exit(__LINE__,__FILE__,"error: the point is inside the body");
         }
+*/
+        //================================================
+
+
       }
       else {
         memcpy(xFinal,xInit,3*sizeof(double));
@@ -2094,6 +2147,8 @@ MovingLoop:
       vFinal[1]=vInit[1]+dtMin*acclInit[1];
       vFinal[2]=vInit[2]+dtMin*acclInit[2];
 
+
+
       lastIntersectedTriangleFace=IntersectionFace;
 
 #if _AMR_SYMMETRY_MODE_ == _AMR_SYMMETRY_MODE_PLANAR_SYMMETRY_
@@ -2103,7 +2158,8 @@ MovingLoop:
 #endif
 
 
-      code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace) : _PARTICLE_DELETED_ON_THE_FACE_;
+      do {
+        code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,IntersectionFace) : _PARTICLE_DELETED_ON_THE_FACE_;
 
 
 /*      double c=vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2];
@@ -2111,13 +2167,14 @@ MovingLoop:
       vFinal[1]-=2.0*c*IntersectionFace->ExternalNormal[1];
       vFinal[2]-=2.0*c*IntersectionFace->ExternalNormal[2];*/
 
-      if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
-        PIC::ParticleBuffer::DeleteParticle(ptr);
-        return _PARTICLE_LEFT_THE_DOMAIN_;
-      }
+        if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+          PIC::ParticleBuffer::DeleteParticle(ptr);
+          return _PARTICLE_LEFT_THE_DOMAIN_;
+        }
+      } while (vFinal[0]*IntersectionFace->ExternalNormal[0]+vFinal[1]*IntersectionFace->ExternalNormal[1]+vFinal[2]*IntersectionFace->ExternalNormal[2]<=0.0);
 
     }
-    else if (startNode->FirstTriangleCutFace!=NULL) {
+/*    else if (startNode->FirstTriangleCutFace!=NULL) {
     	//use the first order integration if 'startNode' contains cut-faces, but no intersection with them is determened for the 1st order scheme
 
         xFinal[0]=xInit[0]+dtMin*vInit[0];
@@ -2134,7 +2191,7 @@ MovingLoop:
       exit(__LINE__,__FILE__,"Error: the option is nor defined");
 #endif
 
-    }
+    }*/
 
 
 
@@ -2148,6 +2205,13 @@ MovingLoop:
       vFinal[0]=vInit[0]+dtMin*acclInit[0];
       vFinal[1]=vInit[1]+dtMin*acclInit[1];
       vFinal[2]=vInit[2]+dtMin*acclInit[2];
+
+
+/*      if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+        cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+       // exit(__LINE__,__FILE__,"The point is outside of the domain");
+      }*/
 
       FirstBoundaryFlag=true;
 
@@ -2193,13 +2257,32 @@ MovingLoop:
     }
     else if (ParticleIntersectionCode==_BLOCK_FACE_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
 
-      xFinal[0]=xInit[0]+dtMin*vMiddle[0];
-      xFinal[1]=xInit[1]+dtMin*vMiddle[1];
-      xFinal[2]=xInit[2]+dtMin*vMiddle[2];
+      if (startNode->FirstTriangleCutFace!=NULL) {
+        //use the first order integration if 'startNode' contains cut-faces, but no intersection with them is determened for the 1st order scheme
 
-      vFinal[0]=vInit[0]+dtMin*acclMiddle[0];
-      vFinal[1]=vInit[1]+dtMin*acclMiddle[1];
-      vFinal[2]=vInit[2]+dtMin*acclMiddle[2];
+        xFinal[0]=xInit[0]+dtMin*vInit[0];
+        xFinal[1]=xInit[1]+dtMin*vInit[1];
+        xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+        vFinal[0]=vInit[0]+dtMin*acclInit[0];
+        vFinal[1]=vInit[1]+dtMin*acclInit[1];
+        vFinal[2]=vInit[2]+dtMin*acclInit[2];
+      }
+      else {
+        xFinal[0]=xInit[0]+dtMin*vMiddle[0];
+        xFinal[1]=xInit[1]+dtMin*vMiddle[1];
+        xFinal[2]=xInit[2]+dtMin*vMiddle[2];
+
+        vFinal[0]=vInit[0]+dtMin*acclMiddle[0];
+        vFinal[1]=vInit[1]+dtMin*acclMiddle[1];
+        vFinal[2]=vInit[2]+dtMin*acclMiddle[2];
+      }
+
+/*      if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+        cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+       // exit(__LINE__,__FILE__,"The point is outside of the domain");
+      }*/
 
       FirstBoundaryFlag=false;
 
@@ -2243,13 +2326,33 @@ exit(__LINE__,__FILE__,"Error: not implemented");
 
     }
     else if (ParticleIntersectionCode==_UNDEFINED_MIN_DT_INTERSECTION_CODE_UTSNFTT_) {
-      xFinal[0]=xInit[0]+dtMin*vMiddle[0];
-      xFinal[1]=xInit[1]+dtMin*vMiddle[1];
-      xFinal[2]=xInit[2]+dtMin*vMiddle[2];
 
-      vFinal[0]=vInit[0]+dtMin*acclMiddle[0];
-      vFinal[1]=vInit[1]+dtMin*acclMiddle[1];
-      vFinal[2]=vInit[2]+dtMin*acclMiddle[2];
+      if (startNode->FirstTriangleCutFace!=NULL) {
+        //use the first order integration if 'startNode' contains cut-faces, but no intersection with them is determened for the 1st order scheme
+
+        xFinal[0]=xInit[0]+dtMin*vInit[0];
+        xFinal[1]=xInit[1]+dtMin*vInit[1];
+        xFinal[2]=xInit[2]+dtMin*vInit[2];
+
+        vFinal[0]=vInit[0]+dtMin*acclInit[0];
+        vFinal[1]=vInit[1]+dtMin*acclInit[1];
+        vFinal[2]=vInit[2]+dtMin*acclInit[2];
+      }
+      else {
+        xFinal[0]=xInit[0]+dtMin*vMiddle[0];
+        xFinal[1]=xInit[1]+dtMin*vMiddle[1];
+        xFinal[2]=xInit[2]+dtMin*vMiddle[2];
+
+        vFinal[0]=vInit[0]+dtMin*acclMiddle[0];
+        vFinal[1]=vInit[1]+dtMin*acclMiddle[1];
+        vFinal[2]=vInit[2]+dtMin*acclMiddle[2];
+      }
+
+/*      if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+        cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+       // exit(__LINE__,__FILE__,"The point is outside of the domain");
+      }*/
 
       FirstBoundaryFlag=false;
 
@@ -2428,11 +2531,75 @@ ProcessPhotoChemistry:
 #endif
 #endif
 
+
+    //check whether a partice is inside the body
+    if ((newNode->FirstTriangleCutFace!=NULL)||(startNode->FirstTriangleCutFace!=NULL)) {
+      CutCell::cTriangleFaceDescriptor *t;
+      bool flag=false;
+
+      //search for a triangle that is located between points 'xInit' and 'xFinal'
+      for (int iFace=0;(iFace<2)&&(flag==false);iFace++) for (t=((iFace==0) ? newNode : startNode)->FirstTriangleCutFace;t!=NULL;t=t->next) {
+        double x0Face[3],FaceNorm[3];
+
+        memcpy(x0Face,t->TriangleFace->x0Face,3*sizeof(double));
+        memcpy(FaceNorm,t->TriangleFace->ExternalNormal,3*sizeof(double));
+
+        double r0=(xInit[0]-x0Face[0])*FaceNorm[0] + (xInit[1]-x0Face[1])*FaceNorm[1] + (xInit[2]-x0Face[2])*FaceNorm[2];
+        double r1=(xFinal[0]-x0Face[0])*FaceNorm[0] + (xFinal[1]-x0Face[1])*FaceNorm[1] + (xFinal[2]-x0Face[2])*FaceNorm[2];
+
+        if (r0*r1<0.0) {
+          //points 'xInit' and 'xFinal' are located on different sides of the plane that containes the priangle face 't'
+          //check the triangle for the intersection
+          double xIntersection[3];
+
+          if (t->TriangleFace->IntervalIntersection(xInit,xFinal,xIntersection,0.0)==true) {
+            //the particle trajectory has intersected the surface
+            //1. move the particle to the surface
+            //2. if the particle velocity is derected inside the body than apple the boundary conditions
+
+            //move the particle outside on the surface
+            memcpy(xFinal,xIntersection,3*sizeof(double));
+            newNode=PIC::Mesh::mesh.findTreeNode(xFinal,newNode);
+
+            //check the direction of the particle velocity;
+            //the normal of the trangle is directed inside the domain
+            double c=vFinal[0]*FaceNorm[0]+vFinal[1]*FaceNorm[1]+vFinal[2]*FaceNorm[2];
+
+            if (c<=0.0) {
+              //apply boundary condition procedure
+              int code;
+
+              do {
+                code=(ProcessTriangleCutFaceIntersection!=NULL) ? ProcessTriangleCutFaceIntersection(ptr,xFinal,vFinal,t->TriangleFace) : _PARTICLE_DELETED_ON_THE_FACE_;
+
+                if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+                  PIC::ParticleBuffer::DeleteParticle(ptr);
+                  return _PARTICLE_LEFT_THE_DOMAIN_;
+                }
+
+              } while (vFinal[0]*FaceNorm[0]+vFinal[1]*FaceNorm[1]+vFinal[2]*FaceNorm[2]<=0.0);
+            }
+
+            //continue the trajectory calculation setting that the particle is ejected from the surface
+            lastIntersectedTriangleFace=t->TriangleFace;
+            flag=true;
+            break;
+          }
+
+        }
+      }
+    }
+
     //adjust the value of 'startNode'
     startNode=newNode;
     memcpy(vInit,vFinal,3*sizeof(double));
     memcpy(xInit,xFinal,3*sizeof(double));
 
+/*    if (CutCell::CheckPointInsideDomain(xInit,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+      cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+     // exit(__LINE__,__FILE__,"The point is outside of the domain");
+    }*/
 
 
 /*
@@ -2580,6 +2747,12 @@ ProcessPhotoChemistry:
 
   PIC::ParticleBuffer::SetV(vFinal,ParticleData);
   PIC::ParticleBuffer::SetX(xFinal,ParticleData);
+
+/*  if (CutCell::CheckPointInsideDomain(xFinal,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,0.0*PIC::Mesh::mesh.EPS)==false) {
+
+    cout << "AMPS:: xInit is outside of the domain (file=" << __FILE__ << ", line=" << __FILE__ << ")" << endl;
+   // exit(__LINE__,__FILE__,"The point is outside of the domain");
+  }*/
 
   //save the trajectory point
   #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
