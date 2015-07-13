@@ -177,11 +177,16 @@ T			DoExtendTransitionRegion
 2.2e5			TeModSi
 1.0e1			DeltaTeModSi
 
-#FIXAXIS
+FIXAXIS
 F			UsePoleDiffusion
 T			DoFixAxis
 24.0			rFixAxis
 0.0			r2FixAxis
+
+#COARSEAXIS
+F			UsePoleDiffusion
+T			UseCoarseAxis
+2			nCoarseLayer
 
 turn these off when restarting
 ---------------------------------------------------
@@ -263,7 +268,7 @@ T			UseAccurateResChange
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-10			DnSaveLogfile
+100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #INNERBOUNDARY
@@ -469,7 +474,7 @@ F			UseConstrainB
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-10			DnSaveLogfile
+100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT

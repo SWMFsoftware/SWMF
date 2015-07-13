@@ -93,6 +93,12 @@ harmonics.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
+To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
+and activate the HELIODIPOLE command below
+#HELIODIPOLE
+2.8e-4			HelioDipoleStrengthSi
+0.0			HelioDipoleTiltDeg
+
 #USER_FLAGS
 F			UseUserInnerBcs
 F			UseUserSource
@@ -108,18 +114,8 @@ F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
 
-#USERINPUTBEGIN ------------------------
-
-To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
-and activate the SOLARDIPOLE command below
-SOLARDIPOLE
-1.5e-4			DipoleStrengthSi
-0.0			DipoleTiltDeg
-
-#USERINPUTEND ----------------------------
-
 #POYNTINGFLUX
-0.3e6                  PoyntingFluxPerBSi [J/m^2/s/T]
+0.3e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
@@ -253,7 +249,7 @@ T			UseAccurateResChange
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-10			DnSaveLogfile
+100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #FACEBOUNDARY
@@ -461,7 +457,7 @@ F			UseConstrainB
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-10			DnSaveLogfile
+100			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
@@ -485,7 +481,7 @@ z=0 VAR idl		StringPlot
 rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
 3d VAR tec		StringPlot
-5000			DnSavePlot
+6000			DnSavePlot
 -1.			DtSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p pe ppar ehot qheat qebyq qparbyq sign
 g rbody
