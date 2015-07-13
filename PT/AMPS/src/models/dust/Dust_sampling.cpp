@@ -100,12 +100,17 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Allocate() {
   int nSizeGroup;
 
   SampleData_NumberDensityFlux=new double* [nDustSizeSamplingIntervals];
+  SampleData_NumberDensity=new double* [nDustSizeSamplingIntervals];
 
   for (nSizeGroup=0;nSizeGroup<nDustSizeSamplingIntervals;nSizeGroup++) {
     SampleData_NumberDensityFlux[nSizeGroup]=new double [nZenithSurfaceElements*nAzimuthalSurfaceElements];
+    SampleData_NumberDensity[nSizeGroup]=new double [nZenithSurfaceElements*nAzimuthalSurfaceElements];
 
     //initialize the data buffer
-    for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) SampleData_NumberDensityFlux[nSizeGroup][i]=0.0;
+    for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) {
+      SampleData_NumberDensityFlux[nSizeGroup][i]=0.0;
+      SampleData_NumberDensity[nSizeGroup][i]=0.0;
+    }
   }
 }
 
@@ -121,7 +126,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_ //execute the body of the sampling procedure only when the dust is ON
   long int ptr;
   PIC::Mesh::cDataBlockAMR *block=NULL;
-  double v[3],ParticleWeight,GrainRadius;
+  double v[3],ParticleWeight,GrainRadius,Measure;
   PIC::ParticleBuffer::byte *ParticleData;
   int spec,SizeGroup;
 
@@ -136,6 +141,8 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
   ptr=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
   if (ptr!=-1) {
+    Measure=(block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell)))->Measure;
+
     ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
     spec=PIC::ParticleBuffer::GetI(ParticleData);
 
@@ -151,7 +158,9 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Sampling() {
       SizeGroup=(int)(log(GrainRadius/ElectricallyChargedDust::minDustRadius)/ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
       Speed=GetSpeed(v,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
       el=GetLocalSurfaceElementNumber(nZenithElement,nAzimuthalElement);
-      SampleData_NumberDensityFlux[SizeGroup][el]+=Speed*ParticleWeight;
+
+      SampleData_NumberDensityFlux[SizeGroup][el]+=Speed*ParticleWeight/Measure;
+      SampleData_NumberDensity[SizeGroup][el]+=ParticleWeight/Measure;
     }
 
     ptr=PIC::ParticleBuffer::GetNext(ParticleData);
@@ -183,6 +192,9 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
 
     MPI_Reduce(SampleData_NumberDensityFlux[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
     memcpy(SampleData_NumberDensityFlux[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements*sizeof(double));
+
+    MPI_Reduce(SampleData_NumberDensity[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+    memcpy(SampleData_NumberDensity[SizeGroup],TempBuffer,nZenithSurfaceElements*nAzimuthalSurfaceElements*sizeof(double));
   }
 
   //output the data file
@@ -204,10 +216,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
       r0=ElectricallyChargedDust::minDustRadius*exp(SizeGroup*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
       r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
 
-      fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+      fprintf(fout,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\", \"Number Density [m^{-3}] (%e<a<%e)\"",r0,r1,r0,r1);
     }
 
-    fprintf(fout,", \"Total Flux [s^{-1}m^{-2}]\"");
+    fprintf(fout,", \"Total Flux [s^{-1}m^{-2}]\", \"Total number Density [m^{-3}]\"");
 
     //print the number of variables and blocks
     fprintf(fout,"\nZONE N=%ld, E=%ld, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n",(nZenithSurfaceElements+1)*nAzimuthalSurfaceElements,nZenithSurfaceElements*nAzimuthalSurfaceElements);
@@ -246,12 +258,12 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
 
           //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
           //sampled data summed for all dust sizes
-          double TotalFlux=0.0;
+          double TotalFlux=0.0,TotalNumberDensity=0.0;
 
           for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
             int el,nInterpolationElement;
             double InterpolationCoefficient,summInterpolationCoefficient=0.0;
-            double Flux=0.0;
+            double Flux=0.0,NumberDensity=0.0;
 
             for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
               el=InterpolationList[nInterpolationElement];
@@ -261,20 +273,23 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
               //there is no need to multiply by the surface element surface because of the conversion from the flux
               //through the surface elemet into the flux per m^{-2}
               Flux+=InterpolationCoefficient*SampleData_NumberDensityFlux[SizeGroup][el];
+              NumberDensity+=InterpolationCoefficient*SampleData_NumberDensity[SizeGroup][el];
             }
 
             //normalize the interpolated values
             if (PIC::LastSampleLength!=0) {
               Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+              NumberDensity/=summInterpolationCoefficient*PIC::LastSampleLength;
             }
 
             //output the interpolated values into a file
             TotalFlux+=Flux;
+            TotalNumberDensity+=NumberDensity;
 
-            fprintf(fout," %e",Flux);
+            fprintf(fout," %e %e",Flux,NumberDensity);
           }
 
-          fprintf(fout," %e",TotalFlux);
+          fprintf(fout," %e %e",TotalFlux,TotalNumberDensity);
         }
 
         fprintf(fout,"\n");
@@ -307,7 +322,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::PrintSurfaceDa
 
   //re-init the content of teh sampling buffer
   for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
-    for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) SampleData_NumberDensityFlux[SizeGroup][i]=0.0;
+    for (int i=0;i<nZenithSurfaceElements*nAzimuthalSurfaceElements;i++) {
+      SampleData_NumberDensityFlux[SizeGroup][i]=0.0;
+      SampleData_NumberDensity[SizeGroup][i]=0.0;
+    }
   }
 }
 
@@ -335,10 +353,10 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(con
       r0=ElectricallyChargedDust::minDustRadius*exp(SizeGroup*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
       r1=ElectricallyChargedDust::minDustRadius*exp((1+SizeGroup)*ElectricallyChargedDust::Sampling::dLogDustSamplingIntervals);
 
-      fprintf(fout2d,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\"",r0,r1);
+      fprintf(fout2d,", \"Flux [s^{-1}m^{-2}] (%e<a<%e)\", \"Number Density [m^{-3}] (%e<a<%e)\"",r0,r1,r0,r1);
     }
 
-    fprintf(fout2d,", \"Total Flux [s^{-1}m^{-2}]\"");
+    fprintf(fout2d,", \"Total Flux [s^{-1}m^{-2}]\", \"Total number Density [m^{-3}]\"");
     fprintf(fout2d,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthalSurfaceElements+2,nZenithSurfaceElements+1);
 
     //interpolate and print the state vector
@@ -399,12 +417,12 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(con
 
             //calculate the flux interpolated into the node of the spherical mesh and output in into the data file
             //sampled data summed for all dust sizes
-            double TotalFlux=0.0;
+            double TotalFlux=0.0,TotalNumberDensity=0.0;
 
             for (SizeGroup=0;SizeGroup<nDustSizeSamplingIntervals;SizeGroup++) {
               int el,nInterpolationElement;
               double InterpolationCoefficient,summInterpolationCoefficient=0.0;
-              double Flux=0.0;
+              double Flux=0.0,NumberDensity=0.0;
 
               for (nInterpolationElement=0;nInterpolationElement<InterpolationListLength;nInterpolationElement++) {
                 el=InterpolationList[nInterpolationElement];
@@ -414,20 +432,23 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::Print2dMap(con
                 //there is no need to multiply by the surface element surface because of the conversion from the flux
                 //through the surface elemet into the flux per m^{-2}
                 Flux+=InterpolationCoefficient*SampleData_NumberDensityFlux[SizeGroup][el];
+                NumberDensity+=InterpolationCoefficient*SampleData_NumberDensity[SizeGroup][el];
               }
 
               //normalize the interpolated values
               if (PIC::LastSampleLength!=0) {
                 Flux/=summInterpolationCoefficient*PIC::LastSampleLength;
+                NumberDensity/=summInterpolationCoefficient*PIC::LastSampleLength;
               }
 
               //output the interpolated values into a file
               TotalFlux+=Flux;
+              TotalNumberDensity+=NumberDensity;
 
-              fprintf(fout2d," %e",Flux);
+              fprintf(fout2d," %e %e",Flux,NumberDensity);
             }
 
-            fprintf(fout2d," %e",TotalFlux);
+            fprintf(fout2d," %e %e",TotalFlux,TotalNumberDensity);
           }
 
           fprintf(fout2d,"\n");
