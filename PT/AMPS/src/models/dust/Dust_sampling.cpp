@@ -88,7 +88,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
   double t[3];
 
   for (idim=0;idim<3;idim++) t[idim]=xSecondary[idim]-xLocation[idim];
-  GetSurfaceElementProjectionIndex(t,Lat_xSecondary,nZenithElement,Lon_xSecondary,nAzimuthalElement);
+  GetSpeed(t,Lat_xSecondary,nZenithElement,Lon_xSecondary,nAzimuthalElement);
 
   Lat_xSecondary=(Pi/2.0-Lat_xSecondary)*180.0/Pi;
   Lon_xSecondary*=180.0/Pi;
