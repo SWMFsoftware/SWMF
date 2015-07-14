@@ -58,9 +58,9 @@ module ModUser
   real    :: DistMaxJet
   real    :: LocationMaxJet
   real    :: UmaxJet
-  real    :: ProfileExponentJet != 5.14
-  real    :: ShapeCoeffJet != 3600.
-  real    :: ScaleCoeffJet != 164.
+  real    :: ProfileExponentJet
+  real    :: LinearCoeffJet 
+  real    :: PowerCoeffJet 
 
 contains 
   !============================================================================
@@ -118,31 +118,7 @@ contains
           call read_var('ProfileExponentJet',ProfileExponentJet)
           call read_var('UmaxJet',UmaxJet)
           IsJetBC = .true.
-          ! the rotation's velocity profile is the following:
-          ! u(z) = Ax-(Bx)^C
-          ! Shape = A = umax/xmax * rmax^(C-1)/(rmax^(C-1)-xmax^(C-1)) 
-          ! Scale = B = (umax/xmax /(rmax^(C-1)-xmax^(C-1))^(1/C) 
-          ! B = (A*rmax^(1-C))^(1/C) 
-          ! ProfileExponent = C = 5.14
-          ! A = 3600.
-          ! B = 164.
-          ! xmax = rmax*C^(1/1-C) = LocationMaxJet
-          ! for:
-          !     DistMminJet = 2.13e-3 Rs = rmin
-          !     DistMaxJet = 1.28582e-2 Rs = rmax
-          !     LocationMaxJet = 8.658e-3 Rs = xmax
-          !     UmaxJet = 25.1067 km/s = umax
-          ProfileExponentJet = 5.14
-          LocationMaxJet = DistMaxJet*ProfileExponentJet**&
-               (1./(1.-ProfileExponentJet))
-          
-          ShapeCoeffJet = UmaxJet/LocationMaxJet &
-               * DistMaxJet**(ProfileExponentJet-1.) &
-               /(DistMaxJet**(ProfileExponentJet-1.) - LocationMaxJet**&
-               (ProfileExponentJet-1.))
-          ScaleCoeffJet = (ShapeCoeffJet * DistMaxJet**&
-               (1.-ProfileExponentJet))**(1./ProfileExponentJet) 
-          
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -177,8 +153,9 @@ contains
          cElectronMass, cProtonMass
     use ModNumConst,   ONLY: cTwoPi, cDegToRad
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
-         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_
-    !UnitB_ is for jet only
+         Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_, &
+         UnitU_
+    !UnitB_ and Unit_U are for jet only
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
 
@@ -250,6 +227,37 @@ contains
        UserDipoleLongitude = UserDipoleLongitude*cDegToRad
        UserDipoleAxisLatitude = UserDipoleAxisLatitude*cDegToRad
        UserDipoleAxisLongitude = UserDipoleAxisLongitude*cDegToRad
+    endif
+
+    ! the rotation's velocity profile is the following:
+    ! u(z) = Ax-Bx^C
+    ! LinearCoeff =     A = umax/xmax * rmax^(C-1)/(rmax^(C-1)-xmax^(C-1)) 
+    ! PowerCoeff  =     B = umax/xmax             /(rmax^(C-1)-xmax^(C-1)) 
+    !                   B = A * rmax^(C-1) 
+    ! ProfileExponent = C = 5.14
+    ! A = 3600.
+    ! B = 164.^1./5.14 = 2.4226857e11
+    ! xmax = rmax*C^(1/1-C) = LocationMaxJet
+    ! for:
+    !     DistMminJet = 2.13e-3 Rs = rmin
+    !     DistMaxJet = 1.28582e-2 Rs = rmax
+    !     LocationMaxJet = 8.658e-3 Rs = xmax
+    !     UmaxJet = 25.1067 km/s = umax
+    if(IsJetBC) then
+
+       LocationMaxJet = DistMaxJet*ProfileExponentJet** &
+            (1./(1.-ProfileExponentJet))
+
+       UmaxJet = UmaxJet * Si2No_V(UnitU_) * 1e3 
+
+       LinearCoeffJet = UmaxJet/LocationMaxJet &
+            * DistMaxJet**(ProfileExponentJet-1.) &
+            /(DistMaxJet**(ProfileExponentJet-1.) &
+            - LocationMaxJet**(ProfileExponentJet-1.))
+
+       PowerCoeffJet = LinearCoeffJet* DistMaxJet** &
+            (1.-ProfileExponentJet)
+
     endif
 
     if(iProc == 0)then
@@ -413,22 +421,28 @@ contains
     use ModB0,         ONLY: B0_DGB
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
-    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Pe_, iP_I
+    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, No2Si_V, &
+         UnitEnergydens_, UnitX_, UnitRho_
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Pe_, iP_I, Ew_, &
+                             rho_, rhoUx_, rhoUy_, rhoUz_
+    use ModGeometry,   ONLY: R_BLK
 
     real, intent(out) :: VarValue
     character(len=10), intent(in) :: TypeVar 
     real, optional, intent(in) :: Radius
 
     integer :: i, j, k, iBlock
-    real :: unit_energy
+    real :: unit_energy, unit_mass
     real, external :: integrate_BLK
     !--------------------------------------------------------------------------
     unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
+    unit_mass   = 1.0e3*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3
+
     !\
     ! Define log variable to be saved::
     !/
     select case(TypeVar)
+
     case('eint')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -455,6 +469,32 @@ contains
           end if
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+
+    case('ekin')
+       do iBlock=1,nBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               (State_VGB(rhoUx_,:,:,:,iBlock)**2 +&
+               State_VGB(rhoUy_,:,:,:,iBlock)**2 +&
+               State_VGB(rhoUz_,:,:,:,iBlock)**2)/&
+               State_VGB(rho_  ,:,:,:,iBlock)
+       end do
+       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+
+    case('ew')
+       do iBlock=1,nBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(Ew_,:,:,:,iBlock)
+       end do
+       VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
+
+    case('mass')
+       do iBlock=1,nBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               State_VGB(rho_,:,:,:,iBlock)/R_BLK(:,:,:,iBlock)
+       end do
+       VarValue = unit_mass*integrate_BLK(1,tmp1_BLK)
 
     case('vol')
        do iBlock = 1, nBlock
@@ -486,7 +526,7 @@ contains
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
     use ModPhysics,    ONLY: InvGammaMinus1, GBody, rBody, &
-         Si2No_V, UnitU_ ! for jet only
+         UnitU_ ! for jet only
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
          Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
@@ -496,7 +536,7 @@ contains
     ! Below is for jet only
     use ModMain,       ONLY: time_simulation, time_accurate
     use ModConst,      ONLY: cPi
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
+    use ModCoordTransform, ONLY: rlonlat_to_xyz, cross_product
     ! Above is for jet only                    
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
@@ -512,12 +552,10 @@ contains
     ! Below is for jet only  
     real    :: Framp
     real    :: Xyz_D(3), JetCenter_D(3)
-    real    :: Uphi, Utheta
-    real    :: urot_D(3)
-    real    :: Xjet, Yjet, Zjet, DistanceJet
-    real    :: uCoeff = 0.0
-
-    real    :: x, y, z, r, XJetCenter, YJetCenter, ZJetCenter
+    real    :: CrossProduct_D(3), Urot_D(3)
+    real    :: DistanceJet
+    real    :: Ucoeff = 0.0
+    real    :: r
     ! Above is for jet only                    
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
@@ -641,42 +679,30 @@ contains
     if(IsJetBC)then
        do k = MinK, MaxK; do j = MinJ, MaxJ
 
-          ! Get total B direction at surface (assume B1(i=0)=B1(i=1)
+          ! Get total B direction at surface
           FullB_D = State_VGB(Bx_:Bz_,1,j,k,iBlock) &
                + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
           Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
-          uRot_D = 0.0
-
           Xyz_D = Xyz_DGB(:,1,j,k,iBlock)
           r  = sqrt(sum(Xyz_D**2))
 
+          ! Center is in the direction of the jet's rotation vector 
           call rlonlat_to_xyz( &
                (/r, UserDipoleLongitude, UserDipoleLatitude/), &
                JetCenter_D &
                )
           DistanceJet = sqrt(sum((Xyz_D-JetCenter_D)**2))
 
-          Xjet = Xyz_D(1) 
-          Yjet = Xyz_D(2) 
-          Zjet = Xyz_D(3)
-
-          XjetCenter = JetCenter_D(1)
-          YjetCenter = JetCenter_D(2)
-          ZjetCenter = JetCenter_D(3)
-
           ! Calculate the rotation speed profile and velocity vector
           if(DistanceJet < DistMinJet .or. DistanceJet > DistMaxJet)then
-             uRot_D = (/0.0,0.0,0.0/)
+             Urot_D = (/0.0,0.0,0.0/)
           else
-             uCoeff =  Si2No_V(UnitU_)*1e3*(ShapeCoeffJet*DistanceJet &
-                  -(ScaleCoeffJet*DistanceJet)**ProfileExponentJet)
+             Ucoeff = LinearCoeffJet*DistanceJet &
+                  - PowerCoeffJet*DistanceJet**ProfileExponentJet
 
-             uRot_D = uCoeff * (/ &
-                  YJetCenter*Zjet - ZJetCenter*Yjet, &
-                  ZJetCenter*Xjet - XJetCenter*Zjet, &
-                  XJetCenter*Yjet - YJetCenter*Xjet /) / &
-                  (sqrt(sum(Xyz_D**2)) * sqrt(sum(JetCenter_D**2)))
+             CrossProduct_D = cross_product(JetCenter_D,Xyz_D)
+             Urot_D = Ucoeff * CrossProduct_D / sqrt(sum(CrossProduct_D**2))
           endif
 
           do iFluid = IonFirst_, IonLast_
@@ -685,24 +711,24 @@ contains
 
              ! BC with reflected velocity for each cell 
              ! (relative to the surface)
-             do i = MinI, 0
+              do i = MinI, 0
+
                 ! Calculate velocity in cell 1-i                           
                 u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
                      /State_VGB(iRho,1-i,j,k,iBlock)
-
-                u_D = u_D - uRot_D
+                u_D = u_D - Urot_D
 
                 ! u_ghost = 2*u_par - u_cell                  
                 u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
-
-                u_D = u_D + uRot_D
-
+                u_D = u_D + Urot_D
+                
                 State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
                      u_D*State_VGB(iRho,i,j,k,iBlock)
              end do
           end do
        end do;end do
        ! END of rotating BC (jet) part
+
     else
        do iFluid = IonFirst_, IonLast_
           iRho = iRho_I(iFluid)
