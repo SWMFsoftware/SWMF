@@ -2073,12 +2073,20 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         logarithm=1
      endif else logarithm=0
 
-     ; check if this plot requires a special color table &ct=XXX&
+     ; check if this plot requires a special color table #ctNNN
      i = strpos(plotmod, '#ct')
      if i ge 0 then begin
         color = strmid(plotmod,i+3)
         plotmod = strmid(plotmod,0,i)
         loadct_extra, color
+     endif
+
+     ; check if this plot requires a special color #cNNN
+     i = strpos(plotmod, '#c')
+     if i ge 0 then begin
+        color = strmid(plotmod,i+2)
+        plotmod = strmid(plotmod,0,i)+strmid(plotmod,i+5)
+        !p.color = color
      endif
 
      !p.title=plottitles(ifunc)
@@ -3728,7 +3736,7 @@ pro get_log, source, wlog, wlognames, logtime, timeunit, verbose=verbose
 ; If verbose is present set show verbose information.
 ; If versbose is a string, attach it to 'wlog' in the verbose info.
 
-on_error,2
+;;on_error,2
 
 if not keyword_set(source) then begin
    print, $
@@ -3785,12 +3793,20 @@ while not eof(unit) do begin
        ; check if the line contains any character that is not a number
        isheader = 0
        for i = 0, strlen(line)-1 do begin
-          if strmatch(strmid(line,i,1), '[!	0123456789dDeE \.+-]') then begin
+          if strmatch(strmid(line,i,1), '[!	0123456789dDeE \.+-]') $
+          then begin
              isheader = 1
              break
           endif
        endfor
 
+       ; check if line contains a single number only
+       if not isheader then begin
+          n = 0
+          string_to_array,line, numbers, n
+          if n le 1 then isheader=1
+       endif
+       
        if isheader then begin
           if nheadline eq 0 then $
              headlines(0) = line $
