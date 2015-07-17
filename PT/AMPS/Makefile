@@ -54,13 +54,13 @@ endif
 
 ifneq ($(INTERFACE_SRC),nointerface)
 ifeq ($(COMPILE.f90),gfortran)  
-	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -J${SRC});)
+ $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -J${SRC});)
 else ifeq ($(COMPILE.f90),mpif90)
-	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
+ $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
 else ifeq  ($(COMPILE.f90),ifort)
-	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -module ${SRC});)
+ $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -module ${SRC});)
 else ifeq  ($(COMPILE.F90),nagfor)
-	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
+ $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
 endif
 
 endif
