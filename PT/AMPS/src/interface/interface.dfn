@@ -1,0 +1,8 @@
+//$Id$
+
+//define modes to turn a particular interface on/off
+#define _INTERFACE_MODE_ON_  0
+#define _INTERFACE_MODE_OFF_ 1
+
+//default values for individual interfaces
+#define _INTERFACE__INTERPOLATION_AMR__MODE_ _INTERFACE_MODE_OFF_
