@@ -9,4 +9,6 @@ SPICE=nospice
 
 ExternalModules=models/exosphere
 
+INTERFACE_EXTERNAL_SRC=nointerface
+
 include ${MYDIR}/Makefile.test

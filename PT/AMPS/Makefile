@@ -23,7 +23,7 @@ include Makefile.conf
 include Makefile.local
 
 #the default value of the c++ compiler flags
-SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
+SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/interface -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 #the additional argument string for the fortran compiler
 SEARCH_F= 
@@ -46,10 +46,26 @@ else ifeq ($(COMPILE.f90),mpif90)
 	SEARCH_F+= -I${BATL}/share/include
 else ifeq  ($(COMPILE.f90),ifort)
 	SEARCH_F+= -module ${BATL}/share/include
+else ifeq  ($(COMPILE.F90),nagfor)
+	SEARCH_F+= -I${BATL}/share/include
+endif
+
+endif
+
+ifneq ($(INTERFACE_SRC),nointerface)
+ifeq ($(COMPILE.f90),gfortran)  
+	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -J${SRC});)
+else ifeq ($(COMPILE.f90),mpif90)
+	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
+else ifeq  ($(COMPILE.f90),ifort)
+	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -module ${SRC});)
+else ifeq  ($(COMPILE.F90),nagfor)
+	$(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
+endif
+
 endif
 
 
-endif
 	
 ifneq ($(SWMF),noswmf)	
 	AMPSLINKLIB+=${SWMF}/lib/*
@@ -104,6 +120,7 @@ clean:
 	@(if [ -d ${WSD} ]; then cd ${WSD}/general;                    $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/meshAMR;                    $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/pic;                        $(MAKE) clean; fi);
+	@(if [ -d ${WSD} ]; then cd ${WSD}/interface;                    $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/species;                    $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/models/exosphere;           $(MAKE) clean; fi);
 	@(if [ -d ${WSD} ]; then cd ${WSD}/main;                       $(MAKE) clean; fi);
@@ -128,6 +145,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/general;                     make SEARCH_C=
 	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
+	cd ${WSD}/interface;                   make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}"
 	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
@@ -140,7 +158,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o interface/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 else
 	rm -rf ${WSD}/tmpSPICE
@@ -148,7 +166,7 @@ else
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o interface/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 

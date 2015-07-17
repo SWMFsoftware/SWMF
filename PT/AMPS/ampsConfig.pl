@@ -171,6 +171,9 @@ while ($line=<InputFile>) {
   elsif ($InputLine eq "#DUST") {
     ReadDustBlock();
   }
+  elsif ($InputLine eq "#INTERFACE"){
+    ReadInterfaceBlock();
+  }
   elsif ($InputLine eq "#BLOCK") {
     #call a user defined processor of a block in the input file 
     my $BlockProcessor;
@@ -1621,6 +1624,109 @@ sub ParticleCollisionModel {
     
   }
 }
+
+#=============================== Read Interface Settings ==================
+sub ReadInterfaceBlock {
+  my $ModelIsOnFlag=1;
+  my $INTERPOLATION_AMR_MODE=0;
+  my $INTERPOLATION_AMR_SRC='';
+  my @MakeFileContent;
+  while ($line=<InputFile>) {
+    ($InputFileLineNumber,$FileName)=split(' ',$line);
+    $line=<InputFile>;;
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    chomp($InputLine);
+    $InputLine=~s/\s+$//; #remove spaces from the end of the line
+ 
+    #substitute separators by 'spaces'
+    $InputLine=~s/[=,]/ /g;
+    ($InputLine,$InputComment)=split(' ',$InputLine,2);
+  
+    if (uc($InputLine) eq "INTERPOLATION_AMR_MODE") {
+	# turn interface for AMR interpolation on/off
+	($InputLine,$InputComment)=split(' ',$InputComment,2);
+	$InputLine=~s/ //g;
+	
+	if    (uc($InputLine) eq "ON" ) {$INTERPOLATION_AMR_MODE=1;}
+	elsif (uc($InputLine) eq "OFF") {$INTERPOLATION_AMR_MODE=0;}
+	else  {die "Unknown option\n";}
+    }
+    elsif (uc($InputLine) eq "INTERPOLATION_AMR_SRC") {
+	#set ABSOLUTE path to external source code
+	($InputLine,$InputComment)=split(' ',$InputComment,2);
+	$InputLine=~s/ //g;
+	$INTERPOLATION_AMR_SRC=$InputLine;      
+    }
+    elsif (uc($InputLine) eq "#ENDINTERFACE") {
+	# the section has been read, apply changes
+	my $SRC='';
+	my $AllSRC='';
+	my $Interfaces='';
+	#AMR interpolation ----------------------------------------------
+	if($INTERPOLATION_AMR_MODE){
+	    #switch macro for AMR interpolation mode
+	    ampsConfigLib::RedefineMacro("_INTERFACE__INTERPOLATION_AMR__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	    $SRC=$INTERPOLATION_AMR_SRC;
+	    $AllSRC="$AllSRC$SRC ";
+	    $Interfaces="$Interfaces"."interface_interpolation_amr";
+	}
+	else{
+	    ampsConfigLib::RedefineMacro("_INTERFACE__INTERPOLATION_AMR__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
+	    $SRC='';
+	}
+	# read the current content of the corresponding makefile
+	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr\n";
+	@MakeFileContent=<MAKEFILE>;
+	close(MAKEFILE);
+	# write with changes
+	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr");   
+	foreach(@MakeFileContent){
+	    $_=~s/INTERPOLATION_AMR_SRC=.*/INTERPOLATION_AMR_SRC=$SRC/;
+	    print MAKEFILE $_;
+	}
+	close (MAKEFILE);
+	#-------------------------------------------------------------
+	#change variable in makefile
+	# read the current content 
+	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile") || die "Cannot open Makefile.local\n";
+	@MakeFileContent=<MAKEFILE>;
+	close(MAKEFILE);
+
+	# write with changes
+	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile");   
+	foreach(@MakeFileContent){
+	    $_=~s/INTERFACES=.*/INTERFACES=$Interfaces/;
+	    print MAKEFILE $_;
+	}
+	close (MAKEFILE);
+
+        #change variable in Makefile.local
+	# read the current content 
+	open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
+	@MakeFileContent=<MAKEFILE>;
+	close(MAKEFILE);
+
+	# add line with redefinition of the variable
+	$AllSRC='nointerface' unless ($AllSRC);
+	push(@MakeFileContent, "INTERFACE_SRC=$AllSRC\n");
+	open (MAKEFILE,">","Makefile.local");   
+	print MAKEFILE  @MakeFileContent;  
+	close (MAKEFILE);
+	last;
+    }
+    else {      
+	$line=~s/ //g;
+	chomp($line);
+	
+	if (($line ne "") && (substr($line,0,1) ne '!')) {
+	    die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+	}
+    }
+    
+  }
+}
+
 
 #=============================== Read Dust Settings ==================
 sub ReadDustBlock {
