@@ -81,7 +81,7 @@ namespace Comet {
 
   //the condition for begining of the dust trajectory tracking
   namespace TrajectoryTracking {
-    const int nZenithSurfaceElements=50,nAzimuthalSurfaceElements=50;
+    const int nZenithSurfaceElements=300,nAzimuthalSurfaceElements=300;
     const int nTotalTracedTrajectories=25000;
     const double TracingSurfaceRadius=2.7e3;
 
@@ -200,7 +200,16 @@ namespace Comet {
       static const double dR_Gombosi2015AA=0.01220*1.0E-9;
       static const double Rmin_Gombosi2015AA=0.10000*1.0E-9;
       static const double Rmax_Gombosi2015AA=10000.00000*1.0E-9;
-      static const double beta_Gombosi2015AA[n_Gombosi2015AA]={0.00191, 0.00191, 0.00191, 0.00387, 0.00447, 0.00584, 0.00584, 0.00721, 0.00721, 0.00858, 0.01055, 0.01261, 0.01269, 0.01474, 0.01671, 0.01671, 0.01868, 0.02064, 0.02261, 0.02603, 0.02800, 0.03167, 0.03698, 0.03894, 0.04366, 0.04913, 0.05520, 0.06204, 0.06812, 0.07556, 0.08420, 0.09506, 0.10507, 0.11585, 0.13031, 0.14280, 0.16246, 0.18180, 0.20079, 0.21995, 0.24518, 0.27101, 0.30276, 0.33637, 0.37367, 0.40754, 0.44491, 0.48520, 0.53225, 0.58169, 0.62814, 0.67348, 0.72729, 0.77827, 0.82257, 0.87236, 0.90785, 0.94814, 0.97628, 0.99528, 0.99998, 0.99339, 0.96816, 0.93565, 0.88398, 0.81264, 0.72685, 0.65542, 0.58947, 0.51343, 0.46800, 0.41677, 0.37006, 0.32601, 0.29487, 0.26305, 0.23585, 0.20942, 0.18572, 0.16323, 0.14629, 0.13201, 0.11600, 0.10394, 0.09325, 0.08513, 0.07409, 0.06537, 0.05920, 0.05245, 0.04706, 0.04107, 0.03825, 0.03354, 0.03132, 0.02713, 0.02448, 0.02106, 0.01901, 0.01695, 0.01413};
+      static const double beta_Gombosi2015AA[n_Gombosi2015AA]={0.00191, 0.00191, 0.00191, 0.00387, 0.00447, 0.00584, 0.00584, 0.00721, 0.00721, 0.00858, 0.01055, 0.01261, 0.01269,
+          0.01474, 0.01671, 0.01671, 0.01868, 0.02064, 0.02261, 0.02603, 0.02800, 0.03167, 0.03698, 0.03894, 0.04366, 0.04913, 0.05520, 0.06204, 0.06812, 0.07556, 0.08420, 0.09506,
+          0.10507, 0.11585, 0.13031, 0.14280, 0.16246, 0.18180, 0.20079, 0.21995, 0.24518, 0.27101, 0.30276, 0.33637, 0.37367, 0.40754, 0.44491, 0.48520, 0.53225, 0.58169, 0.62814,
+          0.67348, 0.72729, 0.77827, 0.82257, 0.87236, 0.90785, 0.94814, 0.97628, 0.99528, 0.99998, 0.99339, 0.96816, 0.93565, 0.88398, 0.81264, 0.72685, 0.65542, 0.58947, 0.51343,
+          0.46800, 0.41677, 0.37006, 0.32601, 0.29487, 0.26305, 0.23585, 0.20942, 0.18572, 0.16323, 0.14629, 0.13201, 0.11600, 0.10394, 0.09325, 0.08513, 0.07409, 0.06537, 0.05920,
+          0.05245, 0.04706, 0.04107, 0.03825, 0.03354, 0.03132, 0.02713, 0.02448, 0.02106, 0.01901, 0.01695, 0.01413};
+
+      static const double log10Rmin_Gombosi2015AA=log10(Rmin_Gombosi2015AA);
+      static const double log10Rmax_Gombosi2015AA=log10(Rmax_Gombosi2015AA);
+      static const double dLog10R=(log10Rmax_Gombosi2015AA-log10Rmin_Gombosi2015AA)/(n_Gombosi2015AA-1);
 
       double beta;
 
@@ -209,7 +218,9 @@ namespace Comet {
         int i;
         double c;
 
-        c=(GrainRadius-Rmin_Gombosi2015AA)/dR_Gombosi2015AA;
+//        c=(GrainRadius-Rmin_Gombosi2015AA)/dR_Gombosi2015AA;
+
+        c=(log10(GrainRadius)-log10Rmin_Gombosi2015AA)/dLog10R;
         i=(int)c;
         c-=i;
 
@@ -231,7 +242,7 @@ namespace Comet {
       double aCen[3],aCorr[3],t3,t7,t12,RotationVector_SO_FROZEN[3];
 
       static const double RotationAxis[3]={0.0,0.0,1.0};
-      static const double RotationRate=2.0*Pi/(6.0*3600.0);
+      static const double RotationRate=2.0*Pi/(12.0*3600.0);
 
       for (int idim=0;idim<3;idim++) RotationVector_SO_FROZEN[idim]=RotationRate*RotationAxis[idim];
 
@@ -251,6 +262,12 @@ namespace Comet {
       accl_LOCAL[0]+=aCen[0]+aCorr[0];
       accl_LOCAL[1]+=aCen[1]+aCorr[1];
       accl_LOCAL[2]+=aCen[2]+aCorr[2];
+
+      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+      #if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
+      PIC::Debugger::CatchOutLimitValue(accl_LOCAL,DIM,__LINE__,__FILE__);
+      #endif
+      #endif
 
     }  
 #endif
