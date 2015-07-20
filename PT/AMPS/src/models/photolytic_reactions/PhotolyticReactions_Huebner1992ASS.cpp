@@ -174,8 +174,8 @@ void PhotolyticReactions::H::Huebner1992ASS::Init() {
 
 //-----------------------------------   H2 ----------------------------------------------
 int PhotolyticReactions::H2::Huebner1992ASS::ReactionProducts[nReactionChannels][nMaxReactionProducts]={
-    {_H_PLUS_SPEC_,_H_PLUS_SPEC_,-1},
-    {_H_PLUS_SPEC_,_H_PLUS_SPEC_,-1},
+    {_H_SPEC_,_H_SPEC_,-1},
+    {_H_SPEC_,_H_SPEC_,-1},
     {_H2_PLUS_SPEC_,_ELECTRON_SPEC_,-1},
     {_H_SPEC_,_H_PLUS_SPEC_,_ELECTRON_SPEC_}
 };
