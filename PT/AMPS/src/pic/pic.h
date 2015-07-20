@@ -2328,8 +2328,68 @@ namespace PIC {
   }
 
 
+  //interpolation routines
+  namespace InterpolationRoutines {
+
+    namespace CellCentered {
+      //the maximum number of the elements in the interpolation stencil
+      const int nMaxStencilLength=50;
+
+      class cStencil {
+      public:
+        int Length;
+        double Weight[nMaxStencilLength];
+        PIC::Mesh::cDataCenterNode* cell[nMaxStencilLength];
+
+        void flush() {
+          Length=0;
+          for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
+        }
+
+        void AddCell(double w,PIC::Mesh::cDataCenterNode* c) {
+          if (Length==nMaxStencilLength-1) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
+
+          Weight[Length]=w;
+          cell[Length]=c;
+          Length++;
+        }
+
+        cStencil() {flush();}
+      };
+
+      extern cStencil Stencil;
+
+      //types of the cell ceneterd interpolating rourines implemented in AMPS
+      namespace Constant {
+        PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
+      }
+
+      namespace Linear {
+        //interface to the fortran written interpolation library
+        namespace INTERFACE {
+          //list of pointers to nodes to identify them as integers
+          //less than 2*2^3 integers might be needed to get an interpolation stencils
+          const  int nBlockFoundMax=16;
+          extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* BlockFound[nBlockFoundMax];
+          //index of the current position in the list
+          extern int iBlockFoundCurrent;
+
+          //the last node where the stencil point has been found by the 'find' function
+          extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*  last;
+        }
+
+        //interpolation functions
+        PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
+      }
+
+    }
+  }
+
   //namespace CPLR contains definitions of all couplers used in AMPS
   namespace CPLR {
+
+    //Set the interpolation stencil that is used for the interpolation in the coupler
+   void InitInterpolationStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
 
     //coupling with SWMF
     namespace SWMF {
@@ -2555,64 +2615,64 @@ namespace PIC {
       void EvaluateSurfaceIonFlux(double ShiftFactor);
 
       //calculate the values of the located parameters
-      inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        double *offset=(double*)(Offset::ElectricField.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell) {
+        double *offset=(double*)(Offset::ElectricField.offset+cell->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::ElectricField.nVars;idim++) E[idim]=offset[idim];
       }
 
-      inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        double *offset=(double*)(Offset::MagneticField.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundMagneticField(double *B,PIC::Mesh::cDataCenterNode *cell) {
+        double *offset=(double*)(Offset::MagneticField.offset+cell->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=offset[idim];
       }
 
-      inline void GetBackgroundMagneticFieldGradient(double *gradB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        double *offset=(double*)(Offset::MagneticFieldGradient.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundMagneticFieldGradient(double *gradB,PIC::Mesh::cDataCenterNode *cell) {
+        double *offset=(double*)(Offset::MagneticFieldGradient.offset+cell->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=offset[idim];
       }
 
-      inline double GetBackgroundMagneticFieldMagnitude(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(Offset::MagneticFieldMagnitude.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundMagneticFieldMagnitude(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(Offset::MagneticFieldMagnitude.offset+cell->GetAssociatedDataBufferPointer()));
       }
 
 
-      inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        double *offset=(double*)(Offset::MagneticFieldMagnitudeGradient.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,PIC::Mesh::cDataCenterNode *cell) {
+        double *offset=(double*)(Offset::MagneticFieldMagnitudeGradient.offset+cell->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::MagneticFieldMagnitudeGradient.nVars;idim++) gradAbsB[idim]=offset[idim];
       }
 
-      inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        register double *offset=(double*)(Offset::PlasmaBulkVelocity.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell) {
+        register double *offset=(double*)(Offset::PlasmaBulkVelocity.offset+cell->GetAssociatedDataBufferPointer());
 
         for (int idim=0;idim<Offset::PlasmaBulkVelocity.nVars;idim++) vel[idim]=offset[idim];
       }
 
-      inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(Offset::PlasmaIonPressure.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(Offset::PlasmaIonPressure.offset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline double GetBackgroundElectronPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+      inline double GetBackgroundElectronPlasmaPressure(PIC::Mesh::cDataCenterNode *cell) {
+        char *offset=cell->GetAssociatedDataBufferPointer();
 
         offset+=(Offset::PlasmaElectronPressure.offset!=-1) ? Offset::PlasmaElectronPressure.offset : Offset::PlasmaIonPressure.offset;
 
         return *((double*)offset);
       }
 
-      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(Offset::PlasmaNumberDensity.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(Offset::PlasmaNumberDensity.offset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(Offset::PlasmaTemperature.offset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaTemperature(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(Offset::PlasmaTemperature.offset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+      inline void GetBackgroundFieldsVector(double *E,double *B,PIC::Mesh::cDataCenterNode *cell) {
         int idim;
-        char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
+        char *offset=cell->GetAssociatedDataBufferPointer();
 
         double *e=(double*)(offset+Offset::ElectricField.offset);
         double *b=(double*)(offset+Offset::MagneticField.offset);
@@ -2620,8 +2680,8 @@ namespace PIC {
         for (idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=b[idim],E[idim]=e[idim];
       }
 
-      inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        double *offset=(double*)(DataOffsetBegin+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell) {
+        double *offset=(double*)(DataOffsetBegin+cell->GetAssociatedDataBufferPointer());
 
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
       }
@@ -2801,132 +2861,207 @@ namespace PIC {
     void SaveCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
     void LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
-    inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-      #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-      SWMF::GetBackgroundElectricField(E,x,nd,node);
-      #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-      DATAFILE::GetBackgroundElectricField(E,x,nd,node);
-      #else
-      exit(__LINE__,__FILE__,"not implemented");
-      #endif
+    inline void GetBackgroundElectricField(double *E) {
+      double t[3];
+      int idim,iStencil;
+
+      for (idim=0;idim<3;idim++) E[idim]=0.0;
+
+      for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+        #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+        SWMF::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+        #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+        DATAFILE::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+        #else
+        exit(__LINE__,__FILE__,"not implemented");
+        #endif
+
+        for (idim=0;idim<3;idim++) E[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+      }
     }
 
-     inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       SWMF::GetBackgroundMagneticField(B,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       DATAFILE::GetBackgroundMagneticField(B,x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundMagneticField(double *B) {
+       double t[3];
+       int idim,iStencil;
+
+       for (idim=0;idim<3;idim++) B[idim]=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         SWMF::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         DATAFILE::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+
+         for (idim=0;idim<3;idim++) B[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+       }
      }
 
-     inline void GetBackgroundMagneticFieldGradient(double *gradB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       exit(__LINE__,__FILE__,"not implemented");
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       DATAFILE::GetBackgroundMagneticFieldGradient(gradB,x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundMagneticFieldGradient(double *gradB) {
+       double t[3];
+       int idim,iStencil;
+
+       for (idim=0;idim<3;idim++) gradB[idim]=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         exit(__LINE__,__FILE__,"not implemented");
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         DATAFILE::GetBackgroundMagneticFieldGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+
+         for (idim=0;idim<3;idim++) gradB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+       }
      }
 
-     inline void GetBackgroundMagneticFieldMagnitude(double &AbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       exit(__LINE__,__FILE__,"not implemented");
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       AbsB=DATAFILE::GetBackgroundMagneticFieldMagnitude(x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundMagneticFieldMagnitude(double &AbsB) {
+       int iStencil;
+
+       AbsB=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         exit(__LINE__,__FILE__,"not implemented");
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         AbsB+=DATAFILE::GetBackgroundMagneticFieldMagnitude(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
      }
 
 
-     inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       exit(__LINE__,__FILE__,"not implemented");
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       DATAFILE::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB,x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB) {
+       double t[3];
+       int idim,iStencil;
+
+       for (idim=0;idim<3;idim++) gradAbsB[idim]=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         exit(__LINE__,__FILE__,"not implemented");
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         DATAFILE::GetBackgroundMagneticFieldMagnitudeGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+
+         for (idim=0;idim<3;idim++) gradAbsB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+       }
      }
 
 
-     inline void GetBackgroundPlasmaVelocity(double *vel,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       DATAFILE::GetBackgroundPlasmaVelocity(vel,x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundPlasmaVelocity(double *vel) {
+       double t[3];
+       int idim,iStencil;
+
+       for (idim=0;idim<3;idim++) vel[idim]=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         DATAFILE::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+
+         for (idim=0;idim<3;idim++) vel[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+       }
      }
 
-     inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+     inline double GetBackgroundPlasmaPressure() {
        double res=0.0;
+       int iStencil;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       res=SWMF::GetBackgroundPlasmaPressure(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       res=DATAFILE::GetBackgroundPlasmaPressure(x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         res+=SWMF::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         res+=DATAFILE::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
 
        return res;
      }
 
-     inline double GetBackgroundElectronPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+     inline double GetBackgroundElectronPlasmaPressure() {
        double res=0.0;
+       int iStencil;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       exit(__LINE__,__FILE__,"Error: not implemented");
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       res=DATAFILE::GetBackgroundElectronPlasmaPressure(x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         exit(__LINE__,__FILE__,"Error: not implemented");
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         res+=DATAFILE::GetBackgroundElectronPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
 
        return res;
      }
 
-     inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+     inline double GetBackgroundPlasmaNumberDensity() {
        double res=0.0;
+       int iStencil;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       res=SWMF::GetBackgroundPlasmaNumberDensity(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       res=DATAFILE::GetBackgroundPlasmaNumberDensity(x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         res+=SWMF::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         res+=DATAFILE::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
 
        return res;
      }
 
-     inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+     inline double GetBackgroundPlasmaTemperature() {
        double res=0.0;
+       int iStencil;
 
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       res=SWMF::GetBackgroundPlasmaTemperature(x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       res=DATAFILE::GetBackgroundPlasmaTemperature(x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         res+=SWMF::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         res+=DATAFILE::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+       }
 
        return res;
      }
 
-     inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-       #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-       SWMF::GetBackgroundFieldsVector(E,B,x,nd,node);
-       #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-       DATAFILE::GetBackgroundFieldsVector(E,B,x,nd,node);
-       #else
-       exit(__LINE__,__FILE__,"not implemented");
-       #endif
+     inline void GetBackgroundFieldsVector(double *E,double *B) {
+       double tE[3],tB[3];
+       int idim,iStencil;
+
+       for (idim=0;idim<3;idim++) E[idim]=0.0,B[idim]=0.0;
+
+       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
+         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+         SWMF::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+         DATAFILE::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         #else
+         exit(__LINE__,__FILE__,"not implemented");
+         #endif
+
+         for (idim=0;idim<3;idim++) {
+           E[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*tE[idim];
+           B[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*tB[idim];
+         }
+       }
      }
 
 
@@ -3415,6 +3550,7 @@ namespace PIC {
 
 
   }
+
 
 
 }
