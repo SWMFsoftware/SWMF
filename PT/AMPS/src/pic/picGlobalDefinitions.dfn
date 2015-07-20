@@ -153,6 +153,10 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_   3
 #define _PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_    4
 
+//the interpolation scheme that is used in coupler
+#define _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_   0
+#define _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_     1
+
 
 
 //the generic particle transformation codes
