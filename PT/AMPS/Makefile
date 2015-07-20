@@ -14,6 +14,7 @@ BOOST=noboost
 BATL=nobatl
 SWMF=noswmf
 TESTMODE=off
+INTERFACE=on
 
 include Makefile.def
 include Makefile.conf
@@ -26,7 +27,7 @@ include Makefile.local
 SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/interface -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 #the additional argument string for the fortran compiler
-SEARCH_F= 
+SEARCH_F=-fdefault-real-8 
 
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
@@ -52,19 +53,11 @@ endif
 
 endif
 
-ifneq ($(INTERFACE_SRC),nointerface)
-ifeq ($(COMPILE.f90),gfortran)  
- $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -J${SRC});)
-else ifeq ($(COMPILE.f90),mpif90)
- $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
-else ifeq  ($(COMPILE.f90),ifort)
- $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -module ${SRC});)
-else ifeq  ($(COMPILE.F90),nagfor)
- $(foreach SRC, ${INTERFACE_SRC}, (SEARCH_F+= -I${SRC});)
-endif
 
-endif
-
+ifeq ($(INTERFACE),on)
+	AMPSLINKER=${LINK.f90}
+	AMPSLINKLIB+=${WSD}/interface/interface.a	
+endif 
 
 	
 ifneq ($(SWMF),noswmf)	
@@ -142,10 +135,15 @@ ${WSD}:
 ${LIB_AMPS}: 
 	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
 	make ${WSD}
+
+ifeq ($(INTERFACE),on)
+	cd ${WSD}/interface; make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
+endif
+
+
 	cd ${WSD}/general;                     make SEARCH_C=
 	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
-	cd ${WSD}/interface;                   make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}"
 	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
@@ -158,7 +156,7 @@ ${LIB_AMPS}:
 	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o interface/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 else
 	rm -rf ${WSD}/tmpSPICE
@@ -166,7 +164,7 @@ else
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o interface/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
