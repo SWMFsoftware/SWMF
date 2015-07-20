@@ -2895,10 +2895,10 @@ namespace PIC {
      }
 
      inline void GetBackgroundMagneticFieldGradient(double *gradB) {
-       double t[3];
+       double t[DATAFILE::Offset::MagneticFieldGradient.nVars];
        int idim,iStencil;
 
-       for (idim=0;idim<3;idim++) gradB[idim]=0.0;
+       for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=0.0;
 
        for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
@@ -2909,7 +2909,7 @@ namespace PIC {
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
-         for (idim=0;idim<3;idim++) gradB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
+         for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
        }
      }
 
