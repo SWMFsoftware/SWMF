@@ -498,8 +498,9 @@ void PIC::CPLR::DATAFILE::PrintSphereSurfaceIonFlux(char const* fname,double Sph
       if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
 
       if (node->Thread==PIC::ThisThread) {
-        n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
-        GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
+        PIC::CPLR::InitInterpolationStencil(x,node);
+        n=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+        PIC::CPLR::GetBackgroundPlasmaVelocity(v);
 
         flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
 
@@ -561,8 +562,9 @@ void PIC::CPLR::DATAFILE::EvaluateSurfaceIonFlux(double ShiftFactor) {
         if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find cell");
 
         if (node->Thread==PIC::ThisThread) {
-          n=GetBackgroundPlasmaNumberDensity(x,LocalCellNumber,node);
-          GetBackgroundPlasmaVelocity(v,x,LocalCellNumber,node);
+          PIC::CPLR::InitInterpolationStencil(x,node);
+          n=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+          PIC::CPLR::GetBackgroundPlasmaVelocity(v);
 
           flux=-n*(v[0]*x[0]+v[1]*x[1]+v[2]*x[2]);
 

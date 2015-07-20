@@ -385,7 +385,8 @@ namespace ElectricallyChargedDust {
 //    E=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::ElectricFieldOffset);
 //    B=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::MagneticFieldOffset);
 
-    PIC::CPLR::GetBackgroundFieldsVector(E,B,x_LOCAL,nd,startNode);
+    PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+    PIC::CPLR::GetBackgroundFieldsVector(E,B);
 
     accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
     accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
@@ -693,9 +694,10 @@ if (fabs(newGrainElectricCharge)>1.0E-3) {
   swVel=(double*)(PIC::CPLR::ICES::PlasmaBulkVelocityOffset+ICES_AssociatedData);
   plasmaNumberDensity=*((double*)(PIC::CPLR::ICES::PlasmaNumberDensityOffset+ICES_AssociatedData));*/
 
-  plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature(xInit,LocalCellNumber,initNode);
-  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel,xInit,LocalCellNumber,initNode);
-  plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(xInit,LocalCellNumber,initNode);
+  PIC::CPLR::InitInterpolationStencil(xInit,initNode);
+  plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
+  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
+  plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
 
   if (plasmaTemperature<=0.0) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
 

@@ -44,17 +44,14 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   //magnetic moment
   double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // also get the magnetic field at particle location
-  double x[3]={0};
+  double B=0,x[3]={0};
+  static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
+
   PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
-  double B=0;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  long int nd;
-  int i,j,k;
-  node=PIC::Mesh::mesh.findTreeNode(x);
-  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
-  // fail-safe check: if a point isn't found => exit
-  if (nd==-1) exit(__LINE__,__FILE__,"Error: the cell is not found");
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B,x,nd,node);
+  node=PIC::Mesh::mesh.findTreeNode(x,node);
+
+  PIC::CPLR::InitInterpolationStencil(x,node);
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B);
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"ERROR:not implemented");
 #else
@@ -152,27 +149,9 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
   exit(__LINE__,__FILE__,"not implemented");
 #else 
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode =  
-    ((cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
-  // find the cell based on particles' position x and block startNode
-  // input: x, startNode; output: nd, i,j,k
-  long int nd;  // cell's number in the block
-  int i,j,k;    // cell's coordinates in the block
-  
-  // fail-safe check: if the block doesn't exist => exit
-  if (startNode->block==NULL) 
-    exit(__LINE__,__FILE__,"Error: the block is not initialized");
-  
-  // flag: true - exit if a point is not found in the block / false: don't
-  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
-  
-  // fail-safe check: if a point isn't found => exit
-  if (nd==-1) exit(__LINE__,__FILE__,"Error: the cell is not found");
-  
-  //......................................................................
-  // finally, get fields' values at the cell
-  PIC::CPLR::GetBackgroundMagneticField(B,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB,x,nd,startNode);
+  PIC::CPLR::InitInterpolationStencil(x,(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
+  PIC::CPLR::GetBackgroundMagneticField(B);
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
 #endif//_PIC_COUPLER_MODE_
   
   // compute magnetic moment
@@ -228,37 +207,13 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   exit(__LINE__,__FILE__,"not implemented");
 #else 
   // if coupler is used -> get values from it
-  //......................................................................
-  // find the cell based on particles' position x and block startNode
-  // input: x, startNode; output: nd, i,j,k
-  long int nd;  // cell's number in the block
-  int i,j,k;    // cell's coordinates in the block
+  PIC::CPLR::InitInterpolationStencil(x,startNode);
   
-  // fail-safe check: if the block doesn't exist => exit
-  if (startNode->block==NULL) 
-    exit(__LINE__,__FILE__,"Error: the block is not initialized");
-
-  // flag: true - exit if a point is not found in the block / false: don't
-  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
-  
-  // fail-safe check: if a point isn't found, try seacrhing in other blocks
-  if (nd==-1) {
-    // try to found the block the point is in;
-    // starting point for search is block startNode
-    startNode=PIC::Mesh::mesh.findTreeNode(x,startNode);
-    nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,startNode,false);
-    // if still not found => exit
-    if (nd==-1) 
-      exit(__LINE__,__FILE__,"Error: the cell is not found");
-  }
-   
- //......................................................................
-  // finally, get fields' values at the cell
-  PIC::CPLR::GetBackgroundElectricField(E,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticField(B,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticFieldGradient(gradB,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB,x,nd,startNode);
+  PIC::CPLR::GetBackgroundElectricField(E);
+  PIC::CPLR::GetBackgroundMagneticField(B);
+  PIC::CPLR::GetBackgroundMagneticFieldGradient(gradB);
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB);
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
 #endif//_PIC_COUPLER_MODE_
   
   //......................................................................

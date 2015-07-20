@@ -118,7 +118,10 @@ void PIC::PitchAngleDistributionSample::SampleDistributionFnction() {
 
       PIC::Mesh::mesh.convertCenterNodeLocalNumber2LocalCoordinates(SampleLocalCellNumber[nProbe],i,j,k);
       ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
-      PIC::CPLR::GetBackgroundMagneticField(B, SamplingLocations[nProbe], SampleLocalCellNumber[nProbe], node);
+
+      PIC::CPLR::InitInterpolationStencil(SamplingLocations[nProbe],node);
+      PIC::CPLR::GetBackgroundMagneticField(B);
+
       Babs = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2], 0.5);
       if(Babs==0.0) continue;
       for(idim=0;idim<DIM; ++idim)

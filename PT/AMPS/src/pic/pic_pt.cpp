@@ -167,14 +167,9 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // get the mag field magnitude at particle's location
   double B=0;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  long int nd;
-  int i,j,k;
-  node=PIC::Mesh::mesh.findTreeNode(x);
-  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
-  // fail-safe check: if a point isn't found => exit
-  if (nd==-1) exit(__LINE__,__FILE__,"Error: the cell is not found");
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B,x,nd,node);
+
+  PIC::CPLR::InitInterpolationStencil(x);
+  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B);
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"ERROR:not implemented");
 #else

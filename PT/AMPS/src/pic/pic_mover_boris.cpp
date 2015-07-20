@@ -47,8 +47,9 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
   
   //......................................................................
   // finally, get fields' values at the cell
-  PIC::CPLR::GetBackgroundElectricField(E,x,nd,startNode);
-  PIC::CPLR::GetBackgroundMagneticField(B,x,nd,startNode);
+  PIC::CPLR::InitInterpolationStencil(x,startNode);
+  PIC::CPLR::GetBackgroundElectricField(E);
+  PIC::CPLR::GetBackgroundMagneticField(B);
 #endif//_PIC_COUPLER_MODE_
   
   //......................................................................

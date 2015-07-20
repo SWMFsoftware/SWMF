@@ -33,6 +33,17 @@ double PIC::CPLR::SWMF::MeanPlasmaAtomicMass=1.0*_AMU_;
 bool PIC::CPLR::SWMF::FirstCouplingOccured=false;
 list<PIC::CPLR::SWMF::fSendCenterPointData> PIC::CPLR::SWMF::SendCenterPointData;
 
+//set the interpolation stencil that is used for interpolation in the coupler
+void PIC::CPLR::InitInterpolationStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+#if _PIC_COUPLER__INTERPOLATION_MODE_ ==  _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+    PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(x,node);
+#elif _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
+    PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(x,node);
+#else
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
+#endif
+}
+
 
 int PIC::CPLR::SWMF::RequestDataBuffer(int offset) {
   MagneticFieldOffset=offset;
