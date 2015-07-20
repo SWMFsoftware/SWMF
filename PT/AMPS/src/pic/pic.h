@@ -2433,53 +2433,48 @@ namespace PIC {
 
 
       //calcualte physical parameters
-      inline void GetBackgroundMagneticField(double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        register int idim;
-        register double *offset=(double*)(MagneticFieldOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundMagneticField(double *B,PIC::Mesh::cDataCenterNode *cell) {
+        int idim;
+        double *offset=(double*)(MagneticFieldOffset+cell->GetAssociatedDataBufferPointer());
 
         for (idim=0;idim<3;idim++) B[idim]=offset[idim];
       }
 
-      inline void GetBackgroundPlasmaVelocity(double *v,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        register int idim;
-        register double *offset=(double*)(BulkVelocityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer());
+      inline void GetBackgroundPlasmaVelocity(double *v,PIC::Mesh::cDataCenterNode *cell) {
+        int idim;
+        double *offset=(double*)(BulkVelocityOffset+cell->GetAssociatedDataBufferPointer());
 
         for (idim=0;idim<3;idim++) v[idim]=offset[idim];
       }
 
 
 
-      inline double GetBackgroundPlasmaPressure(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(PlasmaPressureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(PlasmaPressureOffset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline double GetBackgroundPlasmaNumberDensity(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(PlasmaNumberDensityOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(PlasmaNumberDensityOffset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline double GetBackgroundPlasmaTemperature(double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        return *((double*)(PlasmaTemperatureOffset+node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()));
+      inline double GetBackgroundPlasmaTemperature(PIC::Mesh::cDataCenterNode *cell) {
+        return *((double*)(PlasmaTemperatureOffset+cell->GetAssociatedDataBufferPointer()));
       }
 
-      inline void GetBackgroundElectricField(double *E,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+      inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell) {
         double B[3],v[3];
 
-        GetBackgroundMagneticField(B,x,nd,node);
-        GetBackgroundPlasmaVelocity(v,x,nd,node);
+        GetBackgroundMagneticField(B,cell);
+        GetBackgroundPlasmaVelocity(v,cell);
 
         E[0]=-(v[1]*B[2]-B[1]*v[2]);
         E[1]=-(-v[0]*B[2]+B[0]*v[2]);
         E[2]=-(v[0]*B[1]-B[0]*v[1]);
       }
 
-      inline void GetBackgroundFieldsVector(double *E,double *B,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-        register int idim;
-        register char *offset=node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer();
-
-        double *b=(double*)(offset+MagneticFieldOffset);
-
-        for (idim=0;idim<3;idim++) B[idim]=b[idim];
-        GetBackgroundElectricField(E,x,nd,node);
+      inline void GetBackgroundFieldsVector(double *E,double *B,PIC::Mesh::cDataCenterNode *cell) {
+        GetBackgroundMagneticField(B,cell);
+        GetBackgroundElectricField(E,cell);
       }
 
     }
@@ -2963,7 +2958,7 @@ namespace PIC {
 
        for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         SWMF::GetBackgroundPlasmaVelocity(vel,x,nd,node);
+         SWMF::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
          #else
