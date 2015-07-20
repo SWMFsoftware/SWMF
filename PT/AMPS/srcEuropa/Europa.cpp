@@ -1387,8 +1387,6 @@ double Europa::LossProcesses::ElectronImpactRate=0.0;
 double Europa::LossProcesses::ElectronTemeprature=0.0;
 
 double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-  long int nd;
-  int i,j,k;
   double BackgroundPlasmaNumberDensity;
 //  double PlasmaBulkVelocity[3],ElectronDensity;
 
@@ -1402,9 +1400,8 @@ double Europa::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spe
   }
 
 
-  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
-//  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
-  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
+  PIC::CPLR::InitInterpolationStencil(x,node);
+  BackgroundPlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
 
   PhotolyticReactionAllowedFlag=true;
 

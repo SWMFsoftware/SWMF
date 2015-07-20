@@ -64,34 +64,9 @@ namespace SEP3D {
       memcpy(B,Exosphere::swB_Typical,3*sizeof(double));
 #else 
       // if coupler is used -> get values from it
-      //......................................................................
-      // find the cell based on particles' position x_LOCAL and block startNode
-      // input: x_LOCAL, startNode; output: nd, i,j,k
-      long int nd;  // cell's number in the block
-      int i,j,k;    // cell's coordinates in the block
-
-      // fail-safe check: if the block doesn't exist => exit
-      if (startNode->block==NULL) 
-	exit(__LINE__,__FILE__,"Error: the block is not initialized");
-
-      // flag: true - exit if a point is not found in the block / false: don't
-      nd = PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false);
-
-      // fail-safe check: if a point isn't found, try seacrhing in other blocks
-      if (nd==-1) {
-	// try to found the block the point is in;
-	// starting point for search is block startNode
-	startNode=PIC::Mesh::mesh.findTreeNode(x_LOCAL,startNode);
-	nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false);
-	// if still not found => exit
-	if (nd==-1) 
-	  exit(__LINE__,__FILE__,"Error: the cell is not found");
-      }
-
-      //......................................................................
-      // finally, get fields' values at the cell
-      PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-      PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+      PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+      PIC::CPLR::GetBackgroundElectricField(E);
+      PIC::CPLR::GetBackgroundMagneticField(B);
 #endif//_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
 
       //......................................................................

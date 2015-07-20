@@ -192,12 +192,12 @@ double Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTota
 
           for (ii=0;ii<nFaceInjectionIntervals;ii++) for (jj=0;jj<nFaceInjectionIntervals;jj++) {
             for (idim=0;idim<3;idim++) x[idim]=x0[idim]+FluxIntegrationIncrement*((ii+0.5)*e0[idim]+(jj+0.5)*e1[idim])-PIC::Mesh::mesh.EPS*ExternalNormal[idim];
-            nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
 
             //determine the bachground plasma conditions at the block's face
-            PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
-            PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
-            PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature(x,nd,node);
+            PIC::CPLR::InitInterpolationStencil(x,node);
+            PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+            PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+            PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature();
 
             if ( (isfinite(PlasmaNumberDensity)==false) || (isfinite(PlasmaTemeprature)==false) || (isfinite(PlasmaBulkVelocity[0])==false) || (isfinite(PlasmaBulkVelocity[1])==false) || (isfinite(PlasmaBulkVelocity[2])==false) ) {
              exit(__LINE__,__FILE__,"Error: a non-normalized number is found");
@@ -332,12 +332,12 @@ long int Exosphere::SourceProcesses::BackgroundPlasmaBoundaryIonInjection::Parti
         PIC::BC::ParticleProductionRate[spec]+=ParticleWeightCorrection*LocalParticleWeight/LocalTimeStep;
 
         //get macrospcopic parameters of the plasma at the point of the injection
-        nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node); //findCenterNodeIndex(x,i,j,k,node); //fingCellIndex(x,i,j,k,node);
-
         //determine the bachground plasma conditions at the block's face
-        PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
-        PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
-        PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature(x,nd,node);
+        PIC::CPLR::InitInterpolationStencil(x,node);
+
+        PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+        PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
+        PlasmaTemeprature=PIC::CPLR::GetBackgroundPlasmaTemperature();
 
         do {
           PIC::Distribution::InjectMaxwellianDistribution(v,PlasmaBulkVelocity,PlasmaTemeprature,ExternalNormal,spec);
