@@ -25,6 +25,7 @@ extern "C"{
 //determine stencil for the cell centered piecewise constant interpolation
 PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int i,j,k;
+  long int nd;
   PIC::Mesh::cDataCenterNode *cell;
 
   //flush the stencil
@@ -39,7 +40,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
   }
 
   //find cell
-  cell=node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+  nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
+  cell=node->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
 
   //add the cell to the stencil
   if (cell!=NULL) PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(1.0,cell);
@@ -73,7 +75,9 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
   // call the interpolation subroutine
 
   interface__cell_centered_linear_interpolation__init_stencil_(&nDim,XyzIn_D,&nIndexes, nCell_D, &nCellStencil, WeightStencil, iIndexes_II, &IsSecondOrder, &UseGhostCell);
-
+  //----------DEBUG-------------------
+  //exit(__LINE__,__FILE__,"ERROR: call of linear interpolation");
+  //----------DEBUG-------------------
 
   // size of the stencil and weights are known
   // need to identify cells in the stencil
