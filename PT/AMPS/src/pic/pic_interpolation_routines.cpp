@@ -16,10 +16,15 @@ int PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurr
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::nBlockFoundMax];
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::last=NULL;
 
+
+// macro switch is needed in the case some other interpolation is used
+// and interface function is not compiled
+#if _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 //definition of the interface functions that are used to access the FORTRAN written linear cell cenetered interpolation library
 extern "C"{
   void interface__cell_centered_linear_interpolation__init_stencil_(int* nDim, double* XyzIn_D, int* nIndexes, int* nCell_D,  int* nGridOut, double* Weight_I, int* iIndexes_II, int* IsSecondOrder, int* UseGhostCell);
 }
+#endif//_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 
 
 //determine stencil for the cell centered piecewise constant interpolation
@@ -51,7 +56,9 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
 //determine the stencil for the cell centered linear interpolation using interpolation library from ../share/Library/src/
 PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(double *XyzIn_D,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-
+  // macro switch is needed in the case some other interpolation is used
+  // and interface function is not compiled
+#if _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
   //re-init variables in the INTERFACE and flush the Stencil
   INTERFACE::iBlockFoundCurrent=0;
   PIC::InterpolationRoutines::CellCentered::Stencil.flush();
@@ -69,15 +76,11 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
   int iIndexes_II[(DIM+1+1)*PIC::InterpolationRoutines::CellCentered::nMaxStencilLength] = {-1};
   double WeightStencil[PIC::InterpolationRoutines::CellCentered::nMaxStencilLength];
   int IsSecondOrder;
-  int UseGhostCell=true;
+  int UseGhostCell=1;
   int nCellStencil;
 
   // call the interpolation subroutine
-
   interface__cell_centered_linear_interpolation__init_stencil_(&nDim,XyzIn_D,&nIndexes, nCell_D, &nCellStencil, WeightStencil, iIndexes_II, &IsSecondOrder, &UseGhostCell);
-  //----------DEBUG-------------------
-  //exit(__LINE__,__FILE__,"ERROR: call of linear interpolation");
-  //----------DEBUG-------------------
 
   // size of the stencil and weights are known
   // need to identify cells in the stencil
@@ -86,11 +89,16 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
     int ind[3]={0,0,0};
     PIC::Mesh::cDataBlockAMR  *block;
     PIC::Mesh::cDataCenterNode *cell;
+
     int iThread = iIndexes_II[0    +iCellStencil*(nIndexes+1)];
-
-    for(int i = 0; i < DIM; i++) ind[i]=iIndexes_II[1+i  +iCellStencil*(nIndexes+1)];
-
+    for(int i = 0; i < DIM; i++)
+      //cell indices are 1-based in FORTRAN 
+      ind[i]    = iIndexes_II[1+i  +iCellStencil*(nIndexes+1)]-1;
     int iBlock  = iIndexes_II[1+DIM+iCellStencil*(nIndexes+1)];
+
+    //check correctness
+    if(PIC::ThisThread!=iThread)
+      exit(__LINE__,__FILE__,"ERROR: interpolation must be done on a different processor, not implemented!");
 
     //retrieve the pointer to the current cell
     PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
@@ -98,4 +106,5 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
 
   return &PIC::InterpolationRoutines::CellCentered::Stencil;
+#endif//_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
 }
