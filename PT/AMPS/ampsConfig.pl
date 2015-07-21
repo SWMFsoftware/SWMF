@@ -1627,9 +1627,8 @@ sub ParticleCollisionModel {
 
 #=============================== Read Interface Settings ==================
 sub ReadInterfaceBlock {
-  my $ModelIsOnFlag=1;
-  my $INTERPOLATION_AMR_MODE=0;
-  my $INTERPOLATION_AMR_SRC='';
+  my $CELL_CENTERED_LINEAR_INTERPOLATION_MODE=0;
+  my $CELL_CENTERED_LINEAR_INTERPOLATION_SRC='';
   my @MakeFileContent;
   while ($line=<InputFile>) {
     ($InputFileLineNumber,$FileName)=split(' ',$line);
@@ -1643,46 +1642,50 @@ sub ReadInterfaceBlock {
     $InputLine=~s/[=,]/ /g;
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
   
-    if (uc($InputLine) eq "INTERPOLATION_AMR_MODE") {
+    if (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_MODE") {
 	# turn interface for AMR interpolation on/off
 	($InputLine,$InputComment)=split(' ',$InputComment,2);
 	$InputLine=~s/ //g;
 	
-	if    (uc($InputLine) eq "ON" ) {$INTERPOLATION_AMR_MODE=1;}
-	elsif (uc($InputLine) eq "OFF") {$INTERPOLATION_AMR_MODE=0;}
+	if    (uc($InputLine) eq "ON" ) {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=1;}
+	elsif (uc($InputLine) eq "OFF") {$CELL_CENTERED_LINEAR_INTERPOLATION_MODE=0;}
 	else  {die "Unknown option\n";}
     }
-    elsif (uc($InputLine) eq "INTERPOLATION_AMR_SRC") {
+    elsif (uc($InputLine) eq "CELL_CENTERED_LINEAR_INTERPOLATION_SRC") {
 	#set ABSOLUTE path to external source code
 	($InputLine,$InputComment)=split(' ',$InputComment,2);
 	$InputLine=~s/ //g;
-	$INTERPOLATION_AMR_SRC=$InputLine;      
+	$CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$InputLine;
+	if((uc($InputLine)=~m/.*DEFAULT.*/) || (uc($InputLine)=~m/.*SHAREDIR.*/)){
+	    $CELL_CENTERED_LINEAR_INTERPOLATION_SRC="\${SHAREDIR}";
+	    print $CELL_CENTERED_LINEAR_INTERPOLATION_SRC;
+	}
     }
     elsif (uc($InputLine) eq "#ENDINTERFACE") {
 	# the section has been read, apply changes
-	my $SRC='';
-	my $AllSRC='';
+	my $UseInterface='off';
 	my $Interfaces='';
 	#AMR interpolation ----------------------------------------------
-	if($INTERPOLATION_AMR_MODE){
+	if($CELL_CENTERED_LINEAR_INTERPOLATION_MODE){
+	    # check if source folder for external files has been defined
+	    die "ERROR: folder with external source code for cell centered linear interpolation has not been defned!" unless($CELL_CENTERED_LINEAR_INTERPOLATION_SRC);
 	    #switch macro for AMR interpolation mode
-	    ampsConfigLib::RedefineMacro("_INTERFACE__INTERPOLATION_AMR__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
-	    $SRC=$INTERPOLATION_AMR_SRC;
-	    $AllSRC="$AllSRC$SRC ";
-	    $Interfaces="$Interfaces"."interface_interpolation_amr";
+	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_ON_",'interface/interface.dfn');
+	    ampsConfigLib::RedefineMacro("_PIC_COUPLER__INTERPOLATION_MODE_","_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_",'pic/picGlobal.dfn');
+	    $UseInterface='on';
+	    $Interfaces="$Interfaces "."cell_centered_linear_interpolation";
 	}
 	else{
-	    ampsConfigLib::RedefineMacro("_INTERFACE__INTERPOLATION_AMR__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
-	    $SRC='';
+	    ampsConfigLib::RedefineMacro("_INTERFACE__CELL_CENTERED_LINEAR_INTERPOLATION__MODE_","_INTERFACE_MODE_OFF_",'interface/interface.dfn');
 	}
 	# read the current content of the corresponding makefile
-	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr\n";
+	open (MAKEFILE,"<","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation") || die "Cannot open $ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation\n";
 	@MakeFileContent=<MAKEFILE>;
 	close(MAKEFILE);
 	# write with changes
-	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.interpolation_amr");   
+	open (MAKEFILE,">","$ampsConfigLib::WorkingSourceDirectory/interface/makefile.cell_centered_linear_interpolation");   
 	foreach(@MakeFileContent){
-	    $_=~s/INTERPOLATION_AMR_SRC=.*/INTERPOLATION_AMR_SRC=$SRC/;
+	    $_=~s/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=.*/CELL_CENTERED_LINEAR_INTERPOLATION_SRC=$CELL_CENTERED_LINEAR_INTERPOLATION_SRC/;
 	    print MAKEFILE $_;
 	}
 	close (MAKEFILE);
@@ -1708,8 +1711,7 @@ sub ReadInterfaceBlock {
 	close(MAKEFILE);
 
 	# add line with redefinition of the variable
-	$AllSRC='nointerface' unless ($AllSRC);
-	push(@MakeFileContent, "INTERFACE_SRC=$AllSRC\n");
+	push(@MakeFileContent, "INTERFACE=$UseInterface\n");
 	open (MAKEFILE,">","Makefile.local");   
 	print MAKEFILE  @MakeFileContent;  
 	close (MAKEFILE);
