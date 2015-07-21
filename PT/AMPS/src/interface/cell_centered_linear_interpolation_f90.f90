@@ -1,22 +1,10 @@
-!Module for interfacing AMR interpolation procedure written in FORTRAN
-
-
-module ModInterfaceCellCenteredLinearInterpolation
-
-!inclduing AMR interpolation module itself
-USE ModInterpolateAMR, ONLY: interpolate_amr
-
-implicit none
-
-contains
-
-
-subroutine find(&
+!Subroutines for interfacing AMR interpolation procedure written in FORTRAN
+  subroutine find(&
        nDim, Xyz_D, iProc, iBlock, &
        XyzCorner_D, Dxyz_D, IsOut)
-
+    
     implicit none
-
+    
     !\
     ! Block AMR Grid characteristic:
     ! the search routine, which returns, for a given point,
@@ -43,24 +31,23 @@ subroutine find(&
     !/
     real,    intent(out):: XyzCorner_D(nDim), Dxyz_D(nDim)
     logical, intent(out):: IsOut !Point is out of the domain. 
+
+    integer:: iIsOut !0 -> .false., 1 -> .true. to avoid type conversion errors
     !-----------------------------------------------------------------
     ! call interface find function written in C
-!    call INTERFACE__INTERPOLATION_AMR__find(&
-!         nDim, Xyz_D, iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
+    call interface__cell_centered_linear_interpolation__find_cpp(&
+         nDim, Xyz_D, iProc, iBlock, XyzCorner_D, Dxyz_D, iIsOut)
+    IsOut = iIsOut == 1
   end subroutine find
 
   !===============================================================
 
-
-end module ModInterfaceCellCenteredLinearInterpolation
-
   subroutine interface__cell_centered_linear_interpolation__init_stencil(&
        nDim, XyzIn_D, nIndexes, nCell_D, nGridOut, Weight_I,&
-       iIndexes_II, IsSecondOrder, UseGhostCell)
+       iIndexes_II, iIsSecondOrder, iUseGhostCell)
 
-    !inclduing AMR interpolation module itself
+    !including AMR interpolation module itself
     USE ModInterpolateAMR, ONLY: interpolate_amr
-    use ModInterfaceCellCenteredLinearInterpolation
 
     implicit none
 
@@ -95,8 +82,9 @@ end module ModInterfaceCellCenteredLinearInterpolation
     !/
     !\
     ! Do or do not use ghost cells
+    !0-> .false., 1-> .true. to avoid type conversion errors
     !/
-    logical, intent(in):: UseGhostCell
+    integer, intent(in):: iUseGhostCell
     !\
     !OUTPUT PARAMETERS
     !/
@@ -117,22 +105,37 @@ end module ModInterfaceCellCenteredLinearInterpolation
     !\
     !The following is true if stencil does not employ
     !the out-of-grid points
+    !0-> .false., 1-> .true. to avoid type conversion errors
     !/
-    logical, intent(out):: IsSecondOrder  
+    integer, intent(out):: iIsSecondOrder 
+
+    logical:: UseGhostCell, IsSecondOrder
+
+    external find
     !--------------------------------------------------------------------
-    ! call the interpolation prcodure itself
+    UseGhostCell  = iUseGhostCell  == 1
 
+    ! call the interpolation procedure itself
+    call interpolate_amr(&
+         nDim=nDim, &
+         !XyzIn_D=t, & 
+         XyzIn_D=XyzIn_D, &
+         nIndexes=nDim+1,&
+         find=find, &
+         nCell_D=nCell_D(1:nDim),&
+         nGridOut=nGridOut,&
+         Weight_I=Weight_I,&
+         iIndexes_II=iIndexes_II,&
+         IsSecondOrder=IsSecondOrder,&
+         UseGhostCell=UseGhostCell)
 
-!  call interpolate_amr(&
-!       nDim=nDim, &
-!       XyzIn_D=t, & !XyzIn_D, &
-!       nIndexes=nDim+1,&
-!       find=find, &
-!       nCell_D=nCell_D(1:nDim),&
-!       nGridOut=nGridOut,&
-!       Weight_I=Weight_I,&
-!       iIndexes_II=iIndexes_II,&
-!       IsSecondOrder=IsSecondOrder,&
-!       UseGhostCell=UseGhostCell)
+    if(IsSecondOrder) then
+       iIsSecondOrder = 1
+    else
+       iIsSecondOrder = 0
+    end if
+
   end subroutine interface__cell_centered_linear_interpolation__init_stencil
-  
+
+
+
