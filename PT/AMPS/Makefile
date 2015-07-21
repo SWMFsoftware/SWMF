@@ -14,7 +14,7 @@ BOOST=noboost
 BATL=nobatl
 SWMF=noswmf
 TESTMODE=off
-INTERFACE=on
+INTERFACE=off
 
 include Makefile.def
 include Makefile.conf
@@ -27,7 +27,8 @@ include Makefile.local
 SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/interface -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
 #the additional argument string for the fortran compiler
-SEARCH_F=-fdefault-real-8 
+SEARCH_F=
+#-fdefault-real-8 
 
 # These definitions are inherited from Makefile.def and Makefile.conf
 CC=${COMPILE.mpicxx}
@@ -132,10 +133,14 @@ tar:
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 
-${LIB_AMPS}: 
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
-	make ${WSD}
+.PHONY: ${LIB_AMPS}
+${LIB_AMPS}:
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; $(MAKE) ${WSD}; fi);
+	$(MAKE) ${LIB_AMPS}_after_build
 
+.PHONY: ${LIB_AMPS}_after_build
+${LIB_AMPS}_after_build: 
+	
 ifeq ($(INTERFACE),on)
 	cd ${WSD}/interface; make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 endif
@@ -177,7 +182,13 @@ amps_link:
 	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
 		${CPPLIB} ${AMPSLINKLIB}
 
-amps: ${LIB_AMPS}
+.PHONY: amps
+amps:
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; $(MAKE) $(WSD);fi);
+	$(MAKE) amps_after_build
+
+.PHONY: amps_after_build
+amps_after_build: ${LIB_AMPS}_after_build 
 	@rm -f amps
 	cd ${WSD}/main; make amps SEARCH_C="${SEARCH_C}"
 	make amps_link
