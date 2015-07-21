@@ -44,18 +44,19 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   //magnetic moment
   double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // also get the magnetic field at particle location
-  double B=0,x[3]={0};
+  double AbsB=0,x[3]={0},B[3]={0};
   static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
 
   PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
   node=PIC::Mesh::mesh.findTreeNode(x,node);
 
   PIC::CPLR::InitInterpolationStencil(x,node);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B);
+  PIC::CPLR::GetBackgroundMagneticField(B);
+  AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"ERROR:not implemented");
 #else
-  KinEnergy+= B*mu;
+  KinEnergy+= AbsB*mu;
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
 
   *((double*)(SamplingBuffer+TotalKineticEnergyOffset))+=
@@ -151,7 +152,8 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
 #else 
   PIC::CPLR::InitInterpolationStencil(x,(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
   PIC::CPLR::GetBackgroundMagneticField(B);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
+  //  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
+  AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
 #endif//_PIC_COUPLER_MODE_
   
   // compute magnetic moment
@@ -213,7 +215,8 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   PIC::CPLR::GetBackgroundMagneticField(B);
   PIC::CPLR::GetBackgroundMagneticFieldGradient(gradB);
   PIC::CPLR::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
+  AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
+  //  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
 #endif//_PIC_COUPLER_MODE_
   
   //......................................................................
@@ -310,7 +313,6 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   double mu = PIC::Mover::GuidingCenter::GetMagneticMoment(ptr);
 
   static long int nCall=0;
-
 
   nCall++;
 

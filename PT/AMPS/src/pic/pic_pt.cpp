@@ -166,14 +166,15 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   //magnetic moment
   double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // get the mag field magnitude at particle's location
-  double B=0;
+  double AbsB=0, B[3]={0};
 
   PIC::CPLR::InitInterpolationStencil(x);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(B);
+  PIC::CPLR::GetBackgroundMagneticField(B);
+  AbsB = pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5)+1E-15;
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"ERROR:not implemented");
 #else
-  KinEnergy+= B*mu;
+  KinEnergy+= AbsB*mu;
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
 
   //record the energy value
