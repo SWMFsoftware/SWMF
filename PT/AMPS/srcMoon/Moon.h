@@ -334,8 +334,8 @@ namespace Moon {
       CenterNode=startNode->block->GetCenterNode(nd);
       offset=CenterNode->GetAssociatedDataBufferPointer();
 
-
-      PIC::CPLR::GetBackgroundFieldsVector(E,B,x_LOCAL,nd,startNode);
+      PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+      PIC::CPLR::GetBackgroundFieldsVector(E,B);
 
 
 /*      if (*((int*)(offset+PIC::CPLR::ICES::DataStatusOffsetSWMF))==_PIC_ICES__STATUS_OK_) {
