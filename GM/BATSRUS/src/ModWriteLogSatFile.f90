@@ -30,7 +30,7 @@ subroutine write_logfile(iSatIn, iFile)
   integer, parameter :: MaxLogVar=40
   integer, parameter :: MaxLogR = 10
   real :: LogVar_I(MaxLogVar), LogVarSum_I(MaxLogVar)
-  character (len=10) :: NameLogVar_I(MaxLogVar)
+  character (len=lNameLogVar) :: NameLogVar_I(MaxLogVar)
   character (len=10) :: NameLogR_I(MaxLogR)
   real :: LogR_I(MaxLogR)
   integer :: nLogVar, nLogR, nLogTot, i,j,iSat
@@ -278,17 +278,17 @@ subroutine set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSat)
   use ModRaytrace,   ONLY: ray
   use ModSatelliteFile, ONLY: get_satellite_ray
   use ModSatelliteFile, ONLY: XyzSat_DI
-  use ModIO, ONLY: write_myname
+  use ModIO, ONLY: write_myname, lNameLogVar
   use ModMultiFluid, ONLY: iRho, iRhoUx, iRhoUy, iRhoUz, iP, iFluid
 
   implicit none
 
-  integer, intent(in)            :: nLogVar, nLogR, nLogTot, iSat
-  character (LEN=10), intent(in) :: NameLogVar_I(nLogVar)
-  real, intent(in)               :: LogR_I(nLogR)
-  real, intent(out)              :: LogVar_I(nLogTot)
+  integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
+  character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
+  real, intent(in)                        :: LogR_I(nLogR)
+  real, intent(out)                       :: LogVar_I(nLogTot)
 
-  character (len=10) :: NameLogVar
+  character (len=lNameLogVar) :: NameLogVar
 
   real :: StateIntegral_V(nVar)
   real :: SatRayVar_I(5), SatRayVarSum_I(5)
@@ -392,6 +392,7 @@ contains
     use ModWaves,     ONLY: UseWavePressure
     use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
     use ModUserInterface ! user_get_log_var
+    use ModIO,        ONLY: lNameLogVar
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -399,7 +400,7 @@ contains
     real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
 
     integer :: jVar
-    character(len=10) :: NameVar, NameLogVarLower
+    character(len=lNameLogVar) :: NameVar, NameLogVarLower
 
     ! External function for ionosphere
     real, external :: logvar_ionosphere
@@ -897,9 +898,10 @@ contains
     use ModPhysics, ONLY:  AverageIonCharge, ElectronTemperatureRatio
     use ModMultiFluid, ONLY: UseMultiIon, IsMhd, iFluid, iRho, iP, iRhoIon_I, &
          MassIon_I
-
+    use ModIO, ONLY : lNameLogVar
+    
     integer :: jVar
-    character(len=10) :: NameVar, NameLogVarLower
+    character(len=lNameLogVar) :: NameVar, NameLogVarLower
 
     !-------------------------------------------------------------------------
     if (iProc/=0) RETURN
@@ -1021,14 +1023,15 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
   use ModPhysics
   use ModVarIndexes, ONLY: NameVar_V, UnitUser_V
   use ModUtilities, ONLY: lower_case
+  use ModIO, ONLY: lNameLogVar
   implicit none
 
   integer, intent(in) :: nLogVar, nLogR, nLogTot
-  character (LEN=10), intent(in) :: NameLogVar_I(nLogVar)
+  character (LEN=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
   real, intent(inout) :: LogVar_I(nLogTot)
   real, intent(in) :: LogR_I(nLogR)
 
-  character (len=10) :: NameLogVar, NameVar
+  character (len=lNameLogVar) :: NameLogVar, NameVar
   integer :: iVar, iVarTot, jVar
   !-------------------------------------------------------------------------
 
