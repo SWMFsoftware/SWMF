@@ -205,6 +205,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
 #if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
   // find electro-magnetic field
   double E[3],B[3],gradB[9], gradAbsB[3], AbsB;
+  double b[3];
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
   exit(__LINE__,__FILE__,"not implemented");
 #else 
@@ -213,9 +214,17 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   
   PIC::CPLR::GetBackgroundElectricField(E);
   PIC::CPLR::GetBackgroundMagneticField(B);
-  PIC::CPLR::GetBackgroundMagneticFieldGradient(gradB);
-  PIC::CPLR::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB);
   AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
+  b[0] = B[0]/AbsB; b[1] = B[1]/AbsB; b[2] = B[2]/AbsB;
+  PIC::CPLR::GetBackgroundMagneticFieldGradient(gradB);
+  // structure of gradB is the following
+  //   gradB[0:2] = {d/dx, d/dy, d/dz} B_x
+  //   gradB[3:5] = {d/dx, d/dy, d/dz} B_y
+  //   gradB[6:8] = {d/dx, d/dy, d/dz} B_z
+  gradAbsB[0]= b[0] * gradB[0] + b[1] * gradB[3] + b[2] * gradB[6];
+  gradAbsB[1]= b[0] * gradB[1] + b[1] * gradB[4] + b[2] * gradB[7];
+  gradAbsB[2]= b[0] * gradB[2] + b[1] * gradB[5] + b[2] * gradB[8];
+  //  PIC::CPLR::GetBackgroundMagneticFieldMagnitudeGradient(gradAbsB);
   //  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
 #endif//_PIC_COUPLER_MODE_
   
@@ -226,12 +235,14 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   double m0     = PIC::MolecularData::GetMass(  spec);
   double c2     = SpeedOfLight*SpeedOfLight;
   double mu     = PIC::Mover::GuidingCenter::GetMagneticMoment(ptr);
+
   // square of velocity of gyrations
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   exit(__LINE__,__FILE__,"Error: not implemented");
 #else
   double v_perp2= mu * 2.0 * AbsB / m0;
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_
+
   // V^2 = Vguide_paral^2 + (Vguide_perp+Vgyr)^2
   //     = Vguide_paral^2 + Vguide_perp^2 + Vgyr^2 + 2 Vguide_perp * Vgyr
   // <Vguide_perp * Vgyr> = 0
@@ -241,7 +252,6 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
 #else
   double gamma  = 1.0;
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_
-  double b[3]   = {B[0]/AbsB, B[1]/AbsB, B[2]/AbsB};
   double p_par;
   p_par = (PParal==NULL)?gamma * m0 * (v[0]*b[0]+v[1]*b[1]+v[2]*b[2]):*PParal;
 
@@ -264,10 +274,18 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   Vguide_perp_LOC[0] += msc * (b[1]*vec[2]-b[2]*vec[1]);
   Vguide_perp_LOC[1] += msc * (b[2]*vec[0]-b[0]*vec[2]);
   Vguide_perp_LOC[2] += msc * (b[0]*vec[1]-b[1]*vec[0]);
+
   //parallel force
+#if _PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+  // in this case E = - V \cross B => E_{\paral} = E*b = 0
+  ForceParal_LOC = 
+   -mu/gamma * (gradAbsB[0]*b[0]+gradAbsB[1]*b[1]+gradAbsB[2]*b[2]);
+#else
   ForceParal_LOC = 
     q * (E[0]*b[0]+E[1]*b[1]+E[2]*b[2]) - 
     mu/gamma * (gradAbsB[0]*b[0]+gradAbsB[1]*b[1]+gradAbsB[2]*b[2]);
+#endif//_PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
+
 
   BAbsoluteValue_LOC = AbsB;
   memcpy(BDirection_LOC, b, 3*sizeof(double));
