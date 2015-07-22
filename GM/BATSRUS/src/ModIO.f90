@@ -23,6 +23,7 @@ Module ModIO
   integer, parameter :: nPlotRfrFreqMax=20
   integer, parameter :: nPlotvarMax = max(30,nVar+10) ! Max number of plot vars
   integer, parameter :: MaxLine=20          ! Max number of lines/plot file
+  integer, parameter :: lNameLogVar = 20    ! Max length of NameLogVar
 
   ! Named indexes for output files
   integer, parameter :: &
