@@ -154,6 +154,8 @@ contains
 
     integer:: iSizeSend, jSizeSend, kSizeSend
 
+    integer:: jProc
+
     logical:: DoTest, DoBalanceOnly, UseHighOrderAMR, IsPositive_V(nVar)
     character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
     !-------------------------------------------------------------------------
@@ -368,20 +370,21 @@ contains
           end do LOOPNODE
        end if
 
-       !if(iProc==0)then
-       !   write(*,*)'!!! Number of tries=', iTry
-       !   write(*,*)'!!! iBlockAvailable_P=', iBlockAvailable_P
-       !   do jProc = 0, nProc-1
-       !      write(*,*)'jProc, count(Unused_BP)=', &
-       !           jProc, count(Unused_BP(:,jProc))
-       !   end do
-       !end if
-
        if(.not.DoTryAgain) EXIT LOOPTRY
 
     end do LOOPTRY
 
-    if(DoTryAgain) call CON_stop(NameSub//': could not fit blocks')
+    if(DoTryAgain)then
+       if(iProc==0)then
+          write(*,*) NameSub,': Number of tries, MaxTry=', iTry, MaxTry
+          write(*,*) NameSub,': iBlockAvailable_P=', iBlockAvailable_P
+          do jProc = 0, nProc-1
+             write(*,*)'jProc, count(Unused_BP)=', &
+                  jProc, count(Unused_BP(:,jProc))
+          end do
+       end if
+       call CON_stop(NameSub//': could not fit blocks')
+    end if
 
     if(DoBalanceOnly)then
        deallocate(Buffer_I)
