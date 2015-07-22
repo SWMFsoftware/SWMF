@@ -227,8 +227,10 @@ contains
        MaxTotalBlock = min(MaxTotalBlock, nProc*MaxBlock)
     end if
 
-    ! During AMR we may need extra nodes. So use 2/(nChild-1) instead of 1/...
-    MaxNode  = ceiling(nProc*MaxBlock*(1 + 2.0/(nChild - 1)))
+    ! During AMR we may need extra nodes, because coarsening does not
+    ! free up nodes immediately (Coarsen_ status instead of Unset_).
+    ! So we have a factor 2 in front, which is the worst case scenario.
+    MaxNode  = 2*ceiling(nProc*MaxBlock*(1 + 1.0/(nChild - 1)))
 
     IsNewDecomposition = .true.
     IsNewTree = .true.
@@ -503,7 +505,7 @@ contains
     real:: RankLimit
 
     ! Expected number of nodes minus availabla number of nodes
-    integer:: DnNode = 0
+    integer:: DnNodeUsed = 0
 
     logical, parameter :: DoTest = .false., DoTestNei = .false. 
     integer, allocatable :: iStatusNew0_A(:)
@@ -617,7 +619,7 @@ contains
              elseif(iStatusNew_A(iNode) == Coarsen_)then
                 iLevelNew = iLevel - 1
              else
-                CYCLE
+                CYCLE LOOPBLOCK
              end if
 
              ! Check neighbors around this corner of the parent block
@@ -742,15 +744,17 @@ contains
 
        ! Estimate the difference between the expected number of blocks
        ! after AMR and the number of available/allowed blocks.
-       DnNode = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) + &
-            count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
-            - min(nProc*MaxBlock, MaxTotalBlock) 
+       DnNodeUsed = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) &
+            + count(iStatusNew_A(1:nNode) == Coarsen_)/nChild &
+            + count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
+            - min(nProc*MaxBlock, MaxTotalBlock) + nProc
 
        ! If we have geometry based AMR only and we ran out of blocks,
        ! then we abort refining/coarsening
-       if(.not.allocated(iRank_A) .and. DnNode > 0) then
+       if(.not.allocated(iRank_A) .and. DnNodeUsed > 0) then
           if(iProc==0) write(*,*)'!!! WARNING in ',NameSub, &
-               ': Need ', DnNode,' more blocks in total! Skipping refinement!'
+               ': Need ', DnNodeUsed, &
+               ' more blocks in total! Skipping refinement!'
           where(iStatusNew_A(1:nNode) == Refine_ )
             iStatusNew_A(1:nNode) = Unset_
           end where
@@ -758,11 +762,20 @@ contains
        end if
 
        ! exit if we have enough space for all the new blocks
-       if(DnNode < 0) EXIT LOOPTRY
+       if(DnNodeUsed < 0) then
+          !if(iProc==0)then
+          !   write(*,*)'!!! DnNodeUsed, nNodeUsed=', DnNodeUsed, nNodeUsed
+          !   write(*,*)'!!! nCoarsen=',count(iStatusNew_A(1:nNode)==Coarsen_)
+          !   write(*,*)'!!! nRefine =',count(iStatusNew_A(1:nNode)==Refine_)
+          !   write(*,*)'!!! nProc*MaxBlock, MaxTotalBlock=', &
+          !        nProc*MaxBlock, MaxTotalBlock
+          !end if
+          EXIT LOOPTRY
+       end if
 
        ! Number of blocks we want to remove from the refinement list. 
        ! Increase with the number of iterations
-       DnNode = (iTryAmr-1)*(nChild-1) + DnNode 
+       DnNodeUsed = (iTryAmr-1)*(nChild-1) + DnNodeUsed 
 
        ! Reset iStatusNew_A to its inital value
        iStatusNew_A = iStatusNew0_A 
@@ -783,10 +796,10 @@ contains
           ! estimate of the number of blocks above the available max
           if(iStatusNew_A(iNode) == Refine_ ) then
              iStatusNew_A(iNode) = Unset_
-             DnNode = DnNode - (nChild-1)
+             DnNodeUsed = DnNodeUsed - (nChild-1)
 
              ! Check if we have reached the goal
-             if(DnNode < 0) EXIT LOOPREMOVE
+             if(DnNodeUsed < 0) EXIT LOOPREMOVE
           end if
        end do LOOPREMOVE
 
