@@ -75,9 +75,9 @@ program time_convert
   ! Create two files with the time in exact hours.
   !/
   iTimeExact_I(1:4) = iTime_I(1:4)
-  if(iTime_I(5) >= 30)iTimeExact_I(4) = iTimeExact_I(4) + 1
   iTimeExact_I(5:7) = 0
   call time_int_to_real(iTimeExact_I,TimeExact)
+  if(iTime_I(5) >= 30)TimeExact = TimeExact + 3600
   call time_real_to_int(TimeExact,iTimeExact_I)
   open(11,file='STARTTIME.in',status='replace')
   write(11,'(a)')'#STARTTIME'
