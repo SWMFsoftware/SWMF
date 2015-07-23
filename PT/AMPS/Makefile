@@ -12,7 +12,6 @@ SPICE=nospice
 KAMELEON=nokameleon
 BOOST=noboost
 BATL=nobatl
-SWMF=noswmf
 TESTMODE=off
 INTERFACE=off
 
@@ -36,7 +35,7 @@ CWD=${MYDIR}
 AMPSLINKER=${CC}
 
 
-	AMPSLINKLIB= 
+AMPSLINKLIB= 
 	
 ifneq ($(BATL),nobatl)	
 	AMPSLINKLIB+=${BATL}/lib/libREADAMR.a
@@ -60,9 +59,9 @@ ifeq ($(INTERFACE),on)
 	AMPSLINKLIB+=${WSD}/interface/interface.a	
 endif 
 
-	
-ifneq ($(SWMF),noswmf)	
-	AMPSLINKLIB+=${SWMF}/lib/*
+# This looks wrong
+ifeq ($(STANDALONE), NO)
+	AMPSLINKLIB+=${LIBDIR}/*
 	AMPSLINKER=${LINK.f90}
 endif
 
@@ -110,20 +109,8 @@ EXE=amps
 LIB_AMPS = ${WSD}/libAMPS.a
 
 clean:
-	rm -f ${LIB_AMPS}
-	@(if [ -d ${WSD} ]; then cd ${WSD}/general;                    $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/meshAMR;                    $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/pic;                        $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/interface;                    $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/species;                    $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/exosphere;           $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/main;                       $(MAKE) clean; fi);
-	@(if [ -d srcInterface ]; then cd srcInterface;                $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/sputtering;          $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/dust;                $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/charge_exchange;     $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/electron_impact;     $(MAKE) clean; fi);
-	@(if [ -d ${WSD} ]; then cd ${WSD}/models/photolytic_reactions;$(MAKE) clean; fi);
+	rm -rf ${LIB_AMPS} ${WSD}
+	@(if [ -d srcInterface ]; then cd srcInterface; $(MAKE) clean; fi);
 
 tar:
 	cd ../pic-tower/sources/general; rm -f *.o *.a
@@ -133,20 +120,17 @@ tar:
 ${WSD}:
 	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 
-.PHONY: ${LIB_AMPS}
-${LIB_AMPS}:
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
+LIB: 
+	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
 	$(MAKE) ${WSD}
-	$(MAKE) ${LIB_AMPS}_after_build
+	make LIB_after_build
+	(if [ "$(STANDALONE)" == "NO" ]; then \
+		cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"; fi)
 
-.PHONY: ${LIB_AMPS}_after_build
-${LIB_AMPS}_after_build: 
-	
+LIB_after_build: 
 ifeq ($(INTERFACE),on)
 	cd ${WSD}/interface; make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 endif
-
-
 	cd ${WSD}/general;                     make SEARCH_C=
 	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
@@ -156,7 +140,6 @@ endif
 	cd ${WSD}/models/dust;                 make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH_C}" 
-
 #compile external modules
 	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH_C}")) 
 	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
@@ -169,73 +152,25 @@ else
 	mkdir ${WSD}/tmpSPICE
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
-
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
 	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
 endif
 
-LIB: 
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
-	make ${LIB_AMPS} 
-	cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"
+.PHONY: amps
+amps:
+	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
+	$(MAKE) $(WSD)
+	$(MAKE) amps_after_build
+
+amps_after_build: LIB_after_build 
+	@rm -f amps
+	cd ${WSD}/main; make amps SEARCH_C="${SEARCH_C}"
+	make amps_link
 
 amps_link:
 	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
 		${CPPLIB} ${AMPSLINKLIB}
 
-.PHONY: amps
-amps:
-	(if [ -d ${WSD} ]; then rm -rf ${WSD};fi);
-	$(MAKE) $(WSD)
-	$(MAKE) amps_after_build
-
-.PHONY: amps_after_build
-amps_after_build: ${LIB_AMPS}_after_build 
-	@rm -f amps
-	cd ${WSD}/main; make amps SEARCH_C="${SEARCH_C}"
-	make amps_link
-
-
-TESTDIR = run_test
-
+.PHONY: test
 test:
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi); 	
-	./Config.pl -application=Moon -amps-test=on 
-	rm -f *.diff
-	-@($(MAKE) test_amps)
-	#@ls -l *.diff
-
-test_amps:
-	@echo "test_amps_compile..." > test_amps.diff
-	$(MAKE) test_amps_compile
-	@echo "test_amps_rundir..." >> test_amps.diff
-	$(MAKE) test_amps_rundir
-	@echo "test_amps_run..." >> test_amps.diff
-	$(MAKE) test_amps_run
-	@echo "test_amps_check..." >> test_amps.diff
-	$(MAKE) test_amps_check
-	#if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test_amps_compile:
-	rm -rf ${TESTDIR}
-	./ampsConfig.pl -no-compile 
-	$(MAKE) amps
-
-test_amps_rundir:
-	rm -rf ${TESTDIR}
-	mkdir -p ${TESTDIR}
-	mv amps ${TESTDIR}
-
-test_amps_run:
-	cd ${TESTDIR}; ${MPIRUN} ./amps
-
-test_amps_check:
-	-(${SCRIPTDIR}/DiffNum.pl ${TESTDIR}/PT/plots/amps.dat \
-	output/test_amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	> test_amps.diff)
-	@ls -l test_amps.diff
-
-
-
-t:
-	@(cd ${RUNDIR}; perl ${SCRIPTDIR}/DiffNum.pl amps.test.dat ../amps.test.reference.dat > amps.diff)
+	echo "Use make test_all to run the AMPS tests"
