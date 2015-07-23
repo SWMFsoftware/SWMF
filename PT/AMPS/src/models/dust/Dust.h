@@ -354,13 +354,6 @@ namespace ElectricallyChargedDust {
     GrainCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
     GrainMass=GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
 
-
-
-//    char ICES_AssociatedData[PIC::CPLR::ICES::TotalAssociatedDataLength];
-    PIC::Mesh::cDataCenterNode *CenterNode;
-    double E[3],B[3];
-    int i,j,k;
-
     //copy to local variables
     double accl_LOCAL[3]={0.0,0.0,0.0},x_LOCAL[3],v_LOCAL[3];
 
@@ -370,6 +363,7 @@ namespace ElectricallyChargedDust {
 
   #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
     long int nd;
+    int i,j,k;
 
     if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
       exit(__LINE__,__FILE__,"Error: the cell is not found");
@@ -378,46 +372,14 @@ namespace ElectricallyChargedDust {
     if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
   #endif
 
-    CenterNode=startNode->block->GetCenterNode(nd);
-//    memcpy(ICES_AssociatedData,PIC::CPLR::ICES::AssociatedDataOffset+CenterNode->GetAssociatedDataBufferPointer(),PIC::CPLR::ICES::TotalAssociatedDataLength);
-
     //Lorentz force
-//    E=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::ElectricFieldOffset);
-//    B=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::MagneticFieldOffset);
-
+    double E[3],B[3];
     PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
     PIC::CPLR::GetBackgroundFieldsVector(E,B);
 
     accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
     accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
     accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
-
-/*    //the gravity force
-    double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
-    double c=GravityConstant*_MASS_(_TARGET_)/pow(r2,3.0/2.0);
-
-    accl_LOCAL[0]-=c*x_LOCAL[0];
-    accl_LOCAL[1]-=c*x_LOCAL[1];
-    accl_LOCAL[2]-=c*x_LOCAL[2];*/
-
-    //Drag force
-    /*
-    double A,cr2,GrainRadius;
-    double *BackgroundAtmosphereBulkVelocity=(double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralBullVelocityOffset);
-    double BackgroundAtmosphereNumberDensity=*((double*)(ICES_AssociatedData+PIC::CPLR::ICES::NeutralNumberDensityOffset));
-    double GrainRadius=GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
-
-    cr2=(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])*(v_LOCAL[0]-BackgroundAtmosphereBulkVelocity[0])+
-      (v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])*(v_LOCAL[1]-BackgroundAtmosphereBulkVelocity[1])+
-      (v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2])*(v_LOCAL[2]-BackgroundAtmosphereBulkVelocity[2]);
-
-
-    A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*BackgroundAtmosphereNumberDensity*_MASS_(_H2O_);
-
-    accl_LOCAL[0]+=A*(BackgroundAtmosphereBulkVelocity[0]-v_LOCAL[0]);
-    accl_LOCAL[1]+=A*(BackgroundAtmosphereBulkVelocity[1]-v_LOCAL[1]);
-    accl_LOCAL[2]+=A*(BackgroundAtmosphereBulkVelocity[2]-v_LOCAL[2]);
-    */
 
     //copy the accaleration vector from the internal buffer
     memcpy(accl,accl_LOCAL,3*sizeof(double));
