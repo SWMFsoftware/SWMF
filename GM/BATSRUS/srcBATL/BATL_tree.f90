@@ -2078,9 +2078,9 @@ contains
     if(MaxBlock /= MaxBlockTest) &
          write(*,*)'init_tree failed, MaxBlock=',&
          MaxBlock, ' should be ',MaxBlockTest
-    if(MaxNode /= ceiling(MaxBlockTest*nProc*(1 + 2.0/(2**nDimAmr-1)))) &
+    if(MaxNode /= 2*ceiling(MaxBlockTest*nProc*(1 + 1.0/(2**nDimAmr-1)))) &
          write(*,*)'init_tree failed, MaxNode=', MaxNode, &
-         ' should be', ceiling(50*nProc*(1 + 2.0/(2**nDimAmr-1)))
+         ' should be', 2*ceiling(50*nProc*(1 + 1.0/(2**nDimAmr-1)))
 
     if(DoTestMe)write(*,*)'Testing init_geometry'
     call init_geometry('cartesian', IsPeriodicTest_D(1:nDim))
