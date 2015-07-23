@@ -747,7 +747,7 @@ contains
        DnNodeUsed = (nNodeUsed - count(iStatusNew_A(1:nNode) == Coarsen_) &
             + count(iStatusNew_A(1:nNode) == Coarsen_)/nChild &
             + count(iStatusNew_A(1:nNode) == Refine_)*(nChild-1)) &
-            - min(nProc*MaxBlock, MaxTotalBlock) + nProc
+            - min(nProc*(MaxBlock-1), MaxTotalBlock)
 
        ! If we have geometry based AMR only and we ran out of blocks,
        ! then we abort refining/coarsening
@@ -762,7 +762,7 @@ contains
        end if
 
        ! exit if we have enough space for all the new blocks
-       if(DnNodeUsed < 0) then
+       if(DnNodeUsed <= 0) then
           !if(iProc==0)then
           !   write(*,*)'!!! DnNodeUsed, nNodeUsed=', DnNodeUsed, nNodeUsed
           !   write(*,*)'!!! nCoarsen=',count(iStatusNew_A(1:nNode)==Coarsen_)
