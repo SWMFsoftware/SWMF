@@ -135,7 +135,8 @@ ${WSD}:
 
 .PHONY: ${LIB_AMPS}
 ${LIB_AMPS}:
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; $(MAKE) ${WSD}; fi);
+	(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi);
+	$(MAKE) ${WSD}
 	$(MAKE) ${LIB_AMPS}_after_build
 
 .PHONY: ${LIB_AMPS}_after_build
@@ -184,7 +185,8 @@ amps_link:
 
 .PHONY: amps
 amps:
-	(if [ -d ${WSD} ]; then rm -rf ${WSD}; $(MAKE) $(WSD);fi);
+	(if [ -d ${WSD} ]; then rm -rf ${WSD};fi);
+	$(MAKE) $(WSD)
 	$(MAKE) amps_after_build
 
 .PHONY: amps_after_build
