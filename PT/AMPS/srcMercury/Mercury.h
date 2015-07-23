@@ -168,13 +168,7 @@ namespace Mercury {
     double elCharge;
 
     if ((elCharge=PIC::MolecularData::GetElectricCharge(spec))>0.0) {
-      long int nd;
-      int i,j,k;
       double E[3],B[3];
-
-      if ((nd=PIC::Mesh::mesh.fingCellIndex(x_LOCAL,i,j,k,startNode,false))==-1) {
-        exit(__LINE__,__FILE__,"Error: the cell is not found");
-      }
 
       #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
       if (startNode->block==NULL) exit(__LINE__,__FILE__,"Error: the block is not initialized");
@@ -185,8 +179,8 @@ namespace Mercury {
       memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
       memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
 #else 
-      PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-      PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+      PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+      PIC::CPLR::GetBackgroundFieldsVector(E,B);
 #endif
 
       elCharge/=PIC::MolecularData::GetMass(spec);
