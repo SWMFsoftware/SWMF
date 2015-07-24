@@ -126,18 +126,17 @@ void OH::Output::Init() {
 
 double OH::Loss::LifeTime(double *x, int spec, long int ptr,bool &PhotolyticReactionAllowedFlag,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node){
 
-  long int nd;
-  int i,j,k;
   double PlasmaNumberDensity, PlasmaPressure, PlasmaTemperature;
   double PlasmaBulkVelocity[3];
 
   double lifetime=0.0;
 
-  nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
-  PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity(x,nd,node);
-  PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure(x,nd,node);
+  PIC::CPLR::InitInterpolationStencil(x,node);
+
+  PlasmaNumberDensity = PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+  PlasmaPressure      = PIC::CPLR::GetBackgroundPlasmaPressure();
   PlasmaTemperature   = PlasmaPressure / (Kbol * PlasmaNumberDensity);
-  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,x,nd,node);
+  PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
 
   PhotolyticReactionAllowedFlag=true;
 
@@ -204,10 +203,8 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
   // new particle comes from solar wind and has velocity ~ plasma bulk velocity
   double PlasmaBulkVelocity[3];
   {
-    long int nd;
-    int i,j,k;
-    nd=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,node);
-    PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity,xFinal,nd,node);
+    PIC::CPLR::InitInterpolationStencil(xFinal,node);
+    PIC::CPLR::GetBackgroundPlasmaVelocity(PlasmaBulkVelocity);
     
     // charge exchange process transfers momentum and energy to plasma
     PIC::Mesh::cDataCenterNode *CenterNode;
