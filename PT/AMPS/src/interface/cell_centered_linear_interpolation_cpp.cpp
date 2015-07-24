@@ -14,8 +14,10 @@ extern "C"{
       exit(__LINE__,__FILE__,"Error: inconsistent number of dimensions called by AMR interpolation procedure");
 
     // find the node containg the point
-    static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node =PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[0];
-    node=PIC::Mesh::mesh.findTreeNode(Xyz_D, node);
+    static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    if(PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurrent==0) node = NULL;
+
+    node=PIC::Mesh::mesh.findTreeNode(Xyz_D,node);
 
     // if node is not found => point is outside of the domain, break
     if(node==NULL) {
@@ -33,15 +35,16 @@ extern "C"{
     PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurrent++] = node;
 
     memcpy(XyzCorner_D, node->xmin, DIM*sizeof(double));
+
     Dxyz_D[0] = (node->xmax[0] - node->xmin[0]) / _BLOCK_CELLS_X_;
     Dxyz_D[1] = (node->xmax[1] - node->xmin[1]) / _BLOCK_CELLS_Y_;
     Dxyz_D[2] = (node->xmax[2] - node->xmin[2]) / _BLOCK_CELLS_Z_;
+
     *IsOut=0;
 
     //change coordinates of the point by subtracting the corner coordinates
     for(int iDim = 0; iDim < *nDim; iDim++)
       Xyz_D[iDim] -= XyzCorner_D[iDim];
-
   }
 }
 
