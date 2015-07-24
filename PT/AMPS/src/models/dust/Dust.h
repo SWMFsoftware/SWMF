@@ -89,6 +89,7 @@ namespace ElectricallyChargedDust {
     return *((double*)(ParticleData+_PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_));
 #else
     exit(__LINE__,__FILE__,"Error: in the model configuration no charing of the dust grains is allowed");
+    return 0.0;
 #endif
   }
 
