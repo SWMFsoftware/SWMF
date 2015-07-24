@@ -7,12 +7,6 @@ module ModParallel
   save
 
   !\
-  ! Domain Decomposition
-  !/
-  integer, dimension(3) :: proc_dims       ! Initial layout of processors
-  logical :: periodic3D(3) = .false.
-
-  !\
   ! Neighbor solution block refinement levels
   ! ( 0=neighbors at same level, 
   !  -1=neighbors at lower level,
