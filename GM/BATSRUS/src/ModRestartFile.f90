@@ -349,12 +349,12 @@ contains
     use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
-    use ModParallel, ONLY: proc_dims
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use ModPhysics
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam,ONLY: i_line_command
     use ModIO,       ONLY: NameMaxTimeUnit
+    use BATL_lib,    ONLY: nRoot_D
 
     integer :: iFluid, iDim
     logical :: IsLimitedGeometry=.false.
@@ -453,15 +453,15 @@ contains
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#GRID'
-    write(UnitTmp_,'(i8,a32)')proc_dims(1),'nRootBlockX'
-    write(UnitTmp_,'(i8,a32)')proc_dims(2),'nRootBlockY'
-    write(UnitTmp_,'(i8,a32)')proc_dims(3),'nRootBlockZ'
-    write(UnitTmp_,'(es22.15,a18)')x1,'xMin'
-    write(UnitTmp_,'(es22.15,a18)')x2,'xMax'
-    write(UnitTmp_,'(es22.15,a18)')y1,'yMin'
-    write(UnitTmp_,'(es22.15,a18)')y2,'yMax'
-    write(UnitTmp_,'(es22.15,a18)')z1,'zMin'
-    write(UnitTmp_,'(es22.15,a18)')z2,'zMax'
+    write(UnitTmp_,'(i8,a32)') nRoot_D(1), 'nRootBlockX'
+    write(UnitTmp_,'(i8,a32)') nRoot_D(2), 'nRootBlockY'
+    write(UnitTmp_,'(i8,a32)') nRoot_D(3), 'nRootBlockZ'
+    write(UnitTmp_,'(es22.15,a18)') x1, 'xMin'
+    write(UnitTmp_,'(es22.15,a18)') x2, 'xMax'
+    write(UnitTmp_,'(es22.15,a18)') y1, 'yMin'
+    write(UnitTmp_,'(es22.15,a18)') y2, 'yMax'
+    write(UnitTmp_,'(es22.15,a18)') z1, 'zMin'
+    write(UnitTmp_,'(es22.15,a18)') z2, 'zMax'
     write(UnitTmp_,*)
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then

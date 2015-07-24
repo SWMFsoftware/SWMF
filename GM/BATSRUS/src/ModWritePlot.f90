@@ -638,7 +638,6 @@ end subroutine write_plot_common
 subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
 
   use ModProcMH
-  use ModParallel, ONLY: proc_dims
   use ModPhysics, ONLY : Gamma, cLight, rBody, ThetaTilt, &
        No2Io_V, UnitU_, UnitX_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace
@@ -646,6 +645,7 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
   use ModResistivity, ONLY: Eta0Si
   use ModIO
   use ModMain, ONLY: dt
+  use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
 
   implicit none
   integer,           intent(in) :: iPlotFile,nEqPar
@@ -670,11 +670,11 @@ subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
              EqPar_I(iPar)=EqPar_I(iPar)*No2Io_V(UnitX_)
         ! BEGIN CCMC REQUESTED PARAMETERS to describe block structure
      case('p1')
-        EqPar_I(iPar)=proc_dims(1)
+        EqPar_I(iPar)=nRoot_D(1)
      case('p2')
-        EqPar_I(iPar)=proc_dims(2)
+        EqPar_I(iPar)=nRoot_D(2)
      case('p3')
-        EqPar_I(iPar)=proc_dims(3)
+        EqPar_I(iPar)=nRoot_D(3)
      case('nx')
         EqPar_I(iPar)=nI
      case('ny')

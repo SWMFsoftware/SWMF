@@ -62,7 +62,6 @@ subroutine write_runtime_values()
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModAdvance,   ONLY: FluxType
   use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
-  use ModParallel,  ONLY: proc_dims
   use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
        TypeSemiImplicit
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
@@ -71,6 +70,7 @@ subroutine write_runtime_values()
        RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
        IonosphereHeight
   use ModMpi
+  use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK
   use ModUserInterface ! user_action
 
   implicit none
@@ -283,15 +283,15 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'After initial grid setup:'
   call write_prefix; write(iUnitOut,*)'  nBlockMax = ',nBlockMax, &
-       ' nBLK = ',nBLK
+       ' MaxBlock = ', MaxBlock
   call write_prefix; write(iUnitOut,*)'  Total number of blocks used = ', &
-       nBlockALL
+       nNodeUsed
   call write_prefix; write(iUnitOut,*)'  Total number of cells = ', &
-       nBlockALL*nIJK
+       nNodeUsed*nIJK
   call write_prefix; write(iUnitOut,*)'  Total number of true cells = ', &
        nTrueCellsALL
-  call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', minDXvalue, &
-       '  Largest cell dx: ', maxDXvalue
+  call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', MinDxValue, &
+       '  Largest cell dx: ', MaxDxValue
 
   ! Constrained transport is not implemented for AMR grids anymore...
   if(UseConstrainB .and.  minDXvalue /= maxDXvalue) &
@@ -299,7 +299,7 @@ subroutine write_runtime_values()
 
   call write_prefix; write(iUnitOut,*)
   call write_prefix
-  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', proc_dims
+  write(iUnitOut,'(1x,a,3i8)')    'root blocks: ', nRoot_D
   call write_prefix
   write(iUnitOut,'(1x,a,3i8)')    'nIJK_D:      ', nIJK_D
   call write_prefix
