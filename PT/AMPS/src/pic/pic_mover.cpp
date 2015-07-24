@@ -2080,7 +2080,7 @@ MovingLoop:
           }
         }
 
-        if (ClosestFace=NULL) {
+        if (ClosestFace==NULL) {
           exit(__LINE__,__FILE__,"Error: cannot find a face to place the particle");
         }
 
@@ -2533,12 +2533,20 @@ ProcessPhotoChemistry:
 
 
     //check whether a partice is inside the body
-    if ((newNode->FirstTriangleCutFace!=NULL)||(startNode->FirstTriangleCutFace!=NULL)) {
+    bool CheckBoundaryIntersectionFlag=false;
+
+    if (startNode->FirstTriangleCutFace!=NULL) CheckBoundaryIntersectionFlag=true;
+    else {
+      if (newNode!=NULL) if (newNode->FirstTriangleCutFace!=NULL) CheckBoundaryIntersectionFlag=true;
+    }
+
+    if (CheckBoundaryIntersectionFlag==true) {
       CutCell::cTriangleFaceDescriptor *t;
       bool flag=false;
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NodeList[2]={newNode,startNode};
 
       //search for a triangle that is located between points 'xInit' and 'xFinal'
-      for (int iFace=0;(iFace<2)&&(flag==false);iFace++) for (t=((iFace==0) ? newNode : startNode)->FirstTriangleCutFace;t!=NULL;t=t->next) {
+      for (int iFace=0;(iFace<2)&&(flag==false);iFace++) if (NodeList[iFace]!=NULL) for (t=NodeList[iFace]->FirstTriangleCutFace;t!=NULL;t=t->next) {
         double x0Face[3],FaceNorm[3];
 
         memcpy(x0Face,t->TriangleFace->x0Face,3*sizeof(double));
