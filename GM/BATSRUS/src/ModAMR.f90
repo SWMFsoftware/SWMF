@@ -15,7 +15,7 @@ module ModAMR
   ! Local and global refinement/coarsening and neighbor parameters.
 
   ! Refinement criteria parameters
-  integer, public  :: nAmrCriteria, MaxTotalBlocks
+  integer, public  :: nAmrCriteria
   character(len=20), public, allocatable:: RefineCrit(:)
 
   real, allocatable:: AmrCriteria_IB(:,:)
