@@ -28,7 +28,6 @@ subroutine MH_set_parameters(TypeAction)
        init_mpi, IsCartesianGrid, IsCartesian, &
        IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
   use ModAMR
-  use ModParallel, ONLY : proc_dims
   use ModRaytrace
   use ModIO
   use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
@@ -145,7 +144,7 @@ subroutine MH_set_parameters(TypeAction)
   character (len=50) :: plot_string,log_string
   character (len=3)  :: plot_area, plot_var
   character (len=2)  :: NameCompRead="??"
-  integer :: qtotal, nIJKRead_D(3)
+  integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)
 
   integer            :: TimingDepth=-1
   character (len=10) :: TimingStyle='cumu'
@@ -1645,9 +1644,9 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#GRID")
         if(.not.is_first_session())CYCLE READPARAM
-        call read_var('nRootBlockX',proc_dims(1)) 
-        call read_var('nRootBlockY',proc_dims(2))
-        call read_var('nRootBlockZ',proc_dims(3))
+        call read_var('nRootBlockX', nRootRead_D(1)) 
+        call read_var('nRootBlockY', nRootRead_D(2))
+        call read_var('nRootBlockZ', nRootRead_D(3))
 
         call read_var('xMin',x1)
         call read_var('xMax',x2)
@@ -1676,13 +1675,13 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('nK',nIJKRead_D(3))
         if(any(nIJK_D/=nIJKRead_D).and.iProc==0)then
            write(*,*)'Code is compiled with nI,nJ,nK=',nIJK_D
-           call stop_mpi('Change nI,nJ,nK in ModSize.f90 and recompile!')
+           call stop_mpi('Change nI,nJ,nK with Config.pl -g and recompile!')
         end if
-        call read_var('MinBlockALL',qtotal)
-        if(qtotal>nBLK*nProc .and. iProc==0)then
-           write(*,*)'nBLK*nProc=',nBLK*nProc
+        call read_var('MinBlockALL',MinBlockAll)
+        if(MinBlockAll > MaxBlock*nProc .and. iProc==0)then
+           write(*,*)'MaxBlock*nProc=', MaxBlock*nProc
            call stop_mpi('Use more processors'//&
-                ' or increase nBLK in ModSize and recompile!')
+                ' or increase MaxBlock with Config.pl -g and recompile!')
         end if
 
      case("#AMRINITPHYSICS")
@@ -2235,8 +2234,6 @@ contains
     min_cell_dx =     0.
     max_cell_dx = 99999.
 
-    maxTotalBlocks = nBLK*nProc
-
     DnAmr=-1
     DoAmr=.false.
     automatic_refinement = .false.
@@ -2462,7 +2459,7 @@ contains
 
     ! Fix resolutions (this depends on domain size set above)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
-         alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (proc_dims(x_) * nI))  &
+         alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (nRootRead_D(x_) * nI))  &
          / InitialResolution) / alog(2.0) )
 
     if(UseTiming)then
@@ -2790,7 +2787,7 @@ contains
 
     !Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
     if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0)then
-       local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(proc_dims(1)*nI)
+       local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI)
        if    (max_cell_dx < -1.E-6) then
           min_block_level = -1
        elseif(max_cell_dx <  1.E-6) then
@@ -2900,7 +2897,8 @@ contains
   subroutine correct_grid_geometry
 
     use ModGeometry, ONLY: LogRGen_I
-    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D, IsRotatedCartesian
+    use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D, &
+         IsRotatedCartesian
     use ModUserInterface ! user_specify_refinement
 
     character(len=20):: TypeGeometryBatl
@@ -2912,11 +2910,12 @@ contains
          call stop_mpi(NameSub // &
          ' #GRID command must be specified in the first session!')
 
-    if(product(proc_dims) > nBLK*nProc .and. iProc==0)then
-       write(*,*)'Root blocks will not fit on all processors, check nBLK'
-       write(*,*)'product(proc_dims)   =',product(proc_dims)
-       write(*,*)'nBLK,nProc,nBLK*nProc=',nBLK,nProc,nBLK*nProc
-       call stop_mpi('product(proc_dims) > nBLK*nProc!')
+    if(product(nRootRead_D) > MaxBlock*nProc .and. iProc==0)then
+       write(*,*)'Not enough grid blocks allocated for root blocks'
+       write(*,*)'Number of root blocks=',product(nRootRead_D)
+       write(*,*)'MaxBlock, nProc, MaxBlock*nProc=', &
+            MaxBlock, nProc, MaxBlock*nProc
+       call stop_mpi(NameSub//': insufficient number of grid blocks')
     end if
 
     ! Set XyzMin_D, XyzMax_D based on 
@@ -3004,7 +3003,7 @@ contains
 
     call init_batl(XyzMin_D(1:nDim), XyzMax_D(1:nDim), MaxBlock, &
          TypeGeometryBatl, TypeBc_I(1:2*nDim-1:2) == 'periodic', &
-         proc_dims(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
+         nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
          user_amr_geometry=user_specify_refinement, &
          UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
@@ -3037,9 +3036,8 @@ contains
 
   subroutine correct_plot_range
 
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D, nIJK_D
-    use ModParallel, ONLY: proc_dims
-    use BATL_lib,    ONLY: radius_to_gen, Phi_, Theta_
+    use BATL_lib,    ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
+         CoordMin_D, CoordMax_D, nIJK_D
     use ModKind,     ONLY: nByteReal
     use ModIO
 
@@ -3057,10 +3055,11 @@ contains
 
     call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*) NameSub,' XyzMin_D, XyzMax_D=', XyzMin_D, XyzMax_D
+    if(DoTestMe)write(*,*) NameSub,' CoordMin_D, CoordMax_D=', &
+         CoordMin_D, CoordMax_D
 
     ! Largest cell size and a much smaller distance for 2D cuts
-    CellSizeMax_D = (XyzMax_D - XyzMin_D)/(nIJK_D*proc_dims)
+    CellSizeMax_D = (CoordMax_D - CoordMin_D)/(nIJK_D*nRoot_D)
 
     if(nByteReal == 8)then
        SmallSize_D   = 1e-9*CellSizeMax_D
@@ -3107,8 +3106,8 @@ contains
              if(IsGenRadius) call radius_to_gen(plot_range(1,ifile))
              plot_range(2,ifile)= plot_range(1,ifile) + 1.e-4 !so that R/=0
              do i=Phi_,Theta_
-                plot_range(2*i-1,ifile) = XyzMin_D(i)
-                plot_range(2*i,ifile)   = XyzMax_D(i)  
+                plot_range(2*i-1,ifile) = CoordMin_D(i)
+                plot_range(2*i,ifile)   = CoordMax_D(i)  
              end do
              plot_area='r=r' ! to disable the write_plot_sph routine
           else
@@ -3121,15 +3120,15 @@ contains
           CYCLE PLOTFILELOOP
 
        case('x=0')
-          plot_range(1:5:2, iFile) = XyzMin_D
-          plot_range(2:6:2, iFile) = XyzMax_D
+          plot_range(1:5:2, iFile) = CoordMin_D
+          plot_range(2:6:2, iFile) = CoordMax_D
           if( plot_form(iFile)=='tec' .or. IsCartesianGrid )then
              ! Limit plot range along x direction to be very small
              plot_range(1, iFile) = -SmallSize_D(x_)
              plot_range(2, iFile) = +SmallSize_D(x_)
              if(IsRlonLat) then
-                plot_range(1, iFile) = XyzMin_D(x_)
-                plot_range(2, iFile) = XyzMin_D(x_)+SmallSize_D(x_)
+                plot_range(1, iFile) = CoordMin_D(x_)
+                plot_range(2, iFile) = CoordMin_D(x_)+SmallSize_D(x_)
              end if
           else
              ! Limit Phi direction around cHalfPi
@@ -3138,10 +3137,10 @@ contains
           end if
 
        case('y=0')
-          plot_range(1:5:2, iFile) = XyzMin_D
-          plot_range(2:6:2, iFile) = XyzMax_D
+          plot_range(1:5:2, iFile) = CoordMin_D
+          plot_range(2:6:2, iFile) = CoordMax_D
           if(plot_form(iFile) == 'idl' .and. (IsRLonLat .or. IsCylindrical) &
-               .and. XyzMin_D(2) < cPi .and. XyzMax_D(2) > cPi) then
+               .and. CoordMin_D(2) < cPi .and. CoordMax_D(2) > cPi) then
              ! Limit plot range in Phi direction to be small around 180 degs
              plot_range(3, iFile) = cPi - SmallSize_D(y_)
              plot_range(4, iFile) = cPi + SmallSize_D(y_)
@@ -3153,21 +3152,21 @@ contains
 
        case('z=0', '2d_')
           ! Limit plot range along z direction to be very small
-          plot_range(1:5:2, iFile) = XyzMin_D
-          plot_range(2:6:2, iFile) = XyzMax_D
+          plot_range(1:5:2, iFile) = CoordMin_D
+          plot_range(2:6:2, iFile) = CoordMax_D
           plot_range(5, iFile) = -SmallSize_D(z_)
           plot_range(6, iFile) = +SmallSize_D(z_)
 
        case('1d_')
           ! Limit plot range along 2nd and 3rd directions to be very small
-          plot_range(1, iFile) = XyzMin_D(1)
-          plot_range(2, iFile) = XyzMax_D(1)
+          plot_range(1, iFile) = CoordMin_D(1)
+          plot_range(2, iFile) = CoordMax_D(1)
           plot_range(3:5:2, iFile) = -SmallSize_D(y_:z_)
           plot_range(4:6:2, iFile) = +SmallSize_D(y_:z_)
 
        case('3d_')
-          plot_range(1:5:2, iFile) = XyzMin_D
-          plot_range(2:6:2, iFile) = XyzMax_D
+          plot_range(1:5:2, iFile) = CoordMin_D
+          plot_range(2:6:2, iFile) = CoordMax_D
 
        end select
 
@@ -3180,8 +3179,8 @@ contains
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' original range   =',plot_range(:,ifile)
 
-       plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), XyzMin_D)
-       plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), XyzMax_D)
+       plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), CoordMin_D)
+       plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), CoordMax_D)
 
        if(DoTestMe)write(*,*)'For file ',ifile-plot_,&
             ' limited range   =',plot_range(:,ifile)
@@ -3253,10 +3252,11 @@ contains
 !!!
 
   end subroutine set_extra_parameters
-  !================================================================================
+  !============================================================================
   subroutine sort_smooth_indicator
-    ! The variables use the same smooth indicator should be 
-    ! calculated one by one. And the smooth indicator 
+
+    ! The variables using the same smooth indicator should be 
+    ! calculated one by one. The smooth indicator 
     ! itself is calculated first. 
     ! iVarSmoothIndex_I is the calculation order.
 
@@ -3272,8 +3272,9 @@ contains
     enddo
 
     call sort_quick(nVar,iVarSmoothReal_V,iVarSmoothIndex_I)
+
   end subroutine sort_smooth_indicator
-  !================================================================================
+  !============================================================================
 
 end subroutine MH_set_parameters
 !=======================================================================
