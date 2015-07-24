@@ -162,39 +162,35 @@ contains
   !===========================================================================
   subroutine MH_get_roots_dd(DomainDecomposition)                         
 
-    use ModSize,     ONLY: nIJK_D
-    use ModParallel, ONLY: periodic3d, proc_dims
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D
+    use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
 
     type(DomainDecompositionType),intent(inout)::DomainDecomposition  
     !-------------------------------------------------------------------------
 
     call get_root_decomposition_dd(&
-         DomainDecomposition,&!Decomposition to be constructed
-         proc_dims  ,&!As in DomainDecompositionType
-         XyzMin_D,&   !As in DomainDecompositionType
-         XyzMax_D,&   !As in DomainDecompositionType
-         nIJK_D,&     !As in DomainDecompositionType
-         IsPeriodic_D=periodic3d,&
+         DomainDecomposition,       & ! Decomposition to be constructed
+         nRoot_D,                   & ! As in DomainDecompositionType
+         CoordMin_D,                & ! As in DomainDecompositionType
+         CoordMax_D,                & ! As in DomainDecompositionType
+         nIJK_D,                    & ! As in DomainDecompositionType
+         IsPeriodic_D=IsPeriodic_D, &
          iShift_DI=iShiftMorton_DI)
 
   end subroutine MH_get_roots_dd
   !===========================================================================
   subroutine MH_get_roots_id(GridID_)                         
 
-    use ModSize,     ONLY: nIJK_D
-    use ModParallel, ONLY: periodic3d,proc_dims
-    use ModGeometry, ONLY: XyzMin_D, XyzMax_D
+    use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
 
     integer, intent(in):: GridID_  
     !-------------------------------------------------------------------------
     call get_root_decomposition_id(&
-         GridID_,   & !Decomposition to be constructed
-         proc_dims, & !As in DomainDecompositionType
-         XyzMin_D,  & !As in DomainDecompositionType
-         XyzMax_D,  & !As in DomainDecompositionType
-         nIJK_D,    & !As in DomainDecompositionType
-         IsPeriodic_D=periodic3d,&
+         GridID_,                   & ! Decomposition to be constructed
+         nRoot_D,                   & ! As in DomainDecompositionType
+         CoordMin_D,                & ! As in DomainDecompositionType
+         CoordMax_D,                & ! As in DomainDecompositionType
+         nIJK_D,                    & ! As in DomainDecompositionType
+         IsPeriodic_D=IsPeriodic_D, &
          iShift_DI=iShiftMorton_DI)
 
   end subroutine MH_get_roots_id
