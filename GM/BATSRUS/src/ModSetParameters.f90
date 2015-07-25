@@ -144,7 +144,7 @@ subroutine MH_set_parameters(TypeAction)
   character (len=50) :: plot_string,log_string
   character (len=3)  :: plot_area, plot_var
   character (len=2)  :: NameCompRead="??"
-  integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)
+  integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)=1
 
   integer            :: TimingDepth=-1
   character (len=10) :: TimingStyle='cumu'
