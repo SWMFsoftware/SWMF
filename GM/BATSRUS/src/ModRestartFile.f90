@@ -343,14 +343,26 @@ contains
 
   subroutine write_restart_header
 
-    use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem,&
-         nBlockAll, Body1, Time_Accurate, iStartTime_I, IsStandAlone
-    use ModMain,       ONLY: UseBody2
-    use ModVarIndexes, ONLY: NameEquation, nVar, nFluid
+    use ModMain,       ONLY: Dt, NameThisComp, TypeCoordSystem, nBlockAll, &
+         Body1, UseBody2, Time_Accurate, iStartTime_I, IsStandAlone
+    use ModPhysics,    ONLY: &
+         sw_n_dim, sw_t_dim, sw_ux_dim, sw_uy_dim, &
+         sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
+         TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
+         UnitX_, UnitU_, UnitRho_, &
+         rBody, rCurrents, BodyNDim_I, BodyTDim_I, &
+         rBody2, xBody2, yBody2, zBody2, rCurrentsBody2, &
+         UseBody2Orbit, OrbitPeriod, &
+         RhoDimBody2, tDimBody2, &
+         nVar, nFluid, IonFirst_
+
+    ! If nFluid or IonFirst_ is taken directly from ModVarIndexes, 
+    ! the PGF90 compiler fails.
+    use ModVarIndexes, ONLY: NameEquation
+
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use ModUser,     ONLY: NameUserModule, VersionUserModule
-    use ModPhysics
     use CON_planet,  ONLY: NamePlanet
     use ModReadParam,ONLY: i_line_command
     use ModIO,       ONLY: NameMaxTimeUnit
