@@ -8,7 +8,6 @@
 extern "C"{
 
   void interface__cell_centered_linear_interpolation__find_cpp_(int* nDim, double* Xyz_D, int* iProc, int* iBlock, double* XyzCorner_D, double* Dxyz_D, int* IsOut) {
-
     //check correctness
     if(DIM != *nDim)
       exit(__LINE__,__FILE__,"Error: inconsistent number of dimensions called by AMR interpolation procedure");
@@ -17,7 +16,8 @@ extern "C"{
     static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     if(PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurrent==0) node = NULL;
 
-    node=PIC::Mesh::mesh.findTreeNode(Xyz_D,node);
+//    node=PIC::Mesh::mesh.findTreeNode(Xyz_D,node);
+    node=PIC::Mesh::Search::FindBlock(Xyz_D);
 
     // if node is not found => point is outside of the domain, break
     if(node==NULL) {
@@ -45,6 +45,7 @@ extern "C"{
     //change coordinates of the point by subtracting the corner coordinates
     for(int iDim = 0; iDim < *nDim; iDim++)
       Xyz_D[iDim] -= XyzCorner_D[iDim];
+
   }
 }
 
