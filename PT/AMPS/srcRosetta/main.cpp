@@ -268,45 +268,45 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
       ProbabilityTable=new cProbabilityTable [ProbabilityTableLengh];
 
       //calculate the number of the face descriptors that is needed for the mesh
-      int nFaceDescriptor=0,start=0,finish=0.0;
+      int nFaceDescriptor=0,iStart=0,iFinish=0;
 
       for (nt=0,t=0.0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
-        t=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-        finish=(int)(t/ProbabilityTableIncrement);
+        t+=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
+        iFinish=(int)(t/ProbabilityTableIncrement);
 
-        nFaceDescriptor+=finish+1;
+        nFaceDescriptor+=iFinish-iStart+1;
+        iStart=iFinish;
       }
 
       FaceDescriptorTable=new cFaceDescriptor [nFaceDescriptor];
 
       //init the face descriptor table
-      double tstart=0.0,tfinish=0.0;
+      for (cnt=0,nt=0,t=0.0,iStart=0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
+        t+=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
+        iFinish=(int)(t/ProbabilityTableIncrement);
 
-      for (cnt=0,nt=0,start=0;nt<CutCell::nBoundaryTriangleFaces;nt++) {
-        tfinish=tstart+CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
-        finish=(int)(tfinish/ProbabilityTableIncrement);
+        if (iFinish>=ProbabilityTableLengh) iFinish=ProbabilityTableLengh-1;
 
-        if (finish>=CutCell::nBoundaryTriangleFaces) finish=CutCell::nBoundaryTriangleFaces-1;
-
-        for (int ii=start;ii<=finish;ii++) {
-          if (start==finish) FaceDescriptorTable[cnt].weight=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
+        for (int ii=iStart;ii<=iFinish;ii++) {
+          if (iStart==iFinish) FaceDescriptorTable[cnt].weight=CutCell::BoundaryTriangleFaces[nt].SurfaceArea;
           else {
-        	if (ii==start) FaceDescriptorTable[cnt].weight=(start+1)*ProbabilityTableIncrement-tstart;
-        	else if (ii==finish) FaceDescriptorTable[cnt].weight=tfinish-finish*ProbabilityTableIncrement;
-        	else FaceDescriptorTable[cnt].weight=ProbabilityTableIncrement;
+        	  if (ii==iStart) FaceDescriptorTable[cnt].weight=(iStart+1)*ProbabilityTableIncrement-(t-CutCell::BoundaryTriangleFaces[nt].SurfaceArea);
+        	  else if (ii==iFinish) FaceDescriptorTable[cnt].weight=t-iFinish*ProbabilityTableIncrement;
+        	  else FaceDescriptorTable[cnt].weight=ProbabilityTableIncrement;
           }
 
-          FaceDescriptorTable[cnt].nFace=nt;
-          FaceDescriptorTable[cnt].next=ProbabilityTable[ii].firstFaceDescriptor;
+          if (cnt<nFaceDescriptor) {
+            FaceDescriptorTable[cnt].nFace=nt;
+            FaceDescriptorTable[cnt].next=ProbabilityTable[ii].firstFaceDescriptor;
 
-          ProbabilityTable[ii].firstFaceDescriptor=FaceDescriptorTable+cnt;
-          ProbabilityTable[ii].nTotalFaces++;
+            ProbabilityTable[ii].firstFaceDescriptor=FaceDescriptorTable+cnt;
+            ProbabilityTable[ii].nTotalFaces++;
+          }
 
           cnt++;
         }
 
-        start=finish;
-        tstart=tfinish;
+        iStart=iFinish;
       }
 
       //normalize weights
@@ -318,12 +318,9 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
         for (face=ProbabilityTable[np].firstFaceDescriptor;face!=NULL;face=face->next) face->weight/=summ;
 
         //Convert the weight into a cumulative distribution
-        prev=ProbabilityTable[np].firstFaceDescriptor;
-        face=prev->next;
-
-        for (;face!=NULL;face=face->next) {
-          face->weight+=prev->weight;
-          prev=face;
+        for (summ=0.0,face=ProbabilityTable[np].firstFaceDescriptor;face!=NULL;face=face->next) {
+          summ+=face->weight;
+          face->weight=summ;
         }
       }
     }
@@ -338,8 +335,8 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
     nt=(int)(rnd()*ProbabilityTableLengh);
 
     for (face=ProbabilityTable[nt].firstFaceDescriptor;face!=NULL;face=face->next) if (face->weight>=weight){
-	  nface=face->nFace;
-	  break;
+  	  nface=face->nFace;
+	    break;
     }
 
     bool PositionGenerated;
@@ -347,17 +344,10 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
     do {
     	PositionGenerated=true;
 
-		CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x);
+		  CutCell::BoundaryTriangleFaces[nface].GetRandomPosition(x);
 
-		//place the point inside the domain
-		for (int idim=0;idim<3;idim++) x[idim]+=0.001*PIC::Mesh::mesh.EPS*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
-
-
-		//check if the point is inside the domain
-/*		if (CutCell::CheckPointInsideDomain(x,CutCell::BoundaryTriangleFaces,CutCell::nBoundaryTriangleFaces,false,PIC::Mesh::mesh.EPS)==false) {
-			//exit(__LINE__,__FILE__,"The point is outside of the domain");
-			PositionGenerated=false;
-		}*/
+	  	//place the point inside the domain
+		  for (int idim=0;idim<3;idim++) x[idim]+=0.001*PIC::Mesh::mesh.EPS*CutCell::BoundaryTriangleFaces[nface].ExternalNormal[idim];
     }
     while (PositionGenerated==false);
 
