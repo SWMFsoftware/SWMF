@@ -12,6 +12,7 @@ PICOBJ = pic.o \
 	pic_bc.o \
 	pic_init_const.o \
 	pic_mesh.o \
+	pic_mesh_search.o \
 	pic_mol.o \
 	pic_mol_parser.o \
 	pic_mover.o \

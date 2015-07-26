@@ -1391,6 +1391,24 @@ namespace PIC {
       bool CheckPointInsideDomain_default(double *x,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,bool ParallelCheck,double EPS);
     }
 
+    //the namespace for the block/cell search functions
+    namespace Search {
+      extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ***HashTable;
+      extern double dx[3],xMinDomain[3]; //left corner of the domain, the interval in each dimension
+
+      //the resolution level of the hash table
+      const int HashTableLevel=7;
+
+      //set up the hash table
+      void Init();
+      void ScanTree(int imin,int jmin,int kmin,int IndexInterval,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
+
+      //find cell nad block
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *FindBlock(double *x);
+      PIC::Mesh::cDataCenterNode *FindCell(double *x);
+
+    }
+
   }
 
   //volume injection of model particles
