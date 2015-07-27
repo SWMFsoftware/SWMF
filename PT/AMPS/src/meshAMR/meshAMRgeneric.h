@@ -1899,8 +1899,8 @@ Start:
     if (startNode==NULL) startNode=rootTree;
 
 Start:
-    memcpy(xmin,startNode->xmin,3*sizeof(double));
-    memcpy(xmax,startNode->xmax,3*sizeof(double));
+    memcpy(xmin,startNode->xmin,_MESH_DIMENSION_*sizeof(double));
+    memcpy(xmax,startNode->xmax,_MESH_DIMENSION_*sizeof(double));
 
     if (x[0]<xmin[0]) iState=-1;
     else if (x[0]>xmax[0]) iState=+1;
