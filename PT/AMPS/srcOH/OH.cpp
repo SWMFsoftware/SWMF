@@ -209,7 +209,8 @@ int OH::Loss::ReactionProcessor(double *xInit,double *xFinal,double *vFinal,long
     // charge exchange process transfers momentum and energy to plasma
     PIC::Mesh::cDataCenterNode *CenterNode;
     char *offset;
-    CenterNode=node->block->GetCenterNode(nd);
+
+    CenterNode=PIC::Mesh::Search::FindCell(xFinal); ///node->block->GetCenterNode(nd);
     offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset; 
     double v2 = 0.0, plasmav2 = 0.0;
     double c = ParentParticleWeight 
