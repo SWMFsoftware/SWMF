@@ -1159,6 +1159,7 @@ contains
     use ModProcIE
     use IE_ModMain, ONLY: Time_Array, time_simulation, nSolve, DoSaveLogFile
     use IE_ModIo, ONLY: nFile, unitlog
+    use ModIonoMagPerturb, ONLY: PosMagnetometer_II, TypeCoordMag_I
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
     use ModKind, ONLY: Real8_
@@ -1186,6 +1187,9 @@ contains
        close(unitlog)
     end if
 
+    if(allocated(PosMagnetometer_II)) deallocate(&
+         PosMagnetometer_II, TypeCoordMag_I)
+    
   end subroutine IE_finalize
 
   !============================================================================
@@ -1308,7 +1312,7 @@ contains
     ! this value for broadcasting to the GM module.
     
     use ModIonoMagPerturb, ONLY: &
-         nMagnetometer, TypeCoordMag_I, PosMagnetometer_II
+         iono_mag_init, nMagnetometer, TypeCoordMag_I, PosMagnetometer_II
     
     integer,          intent(in) :: nMagIn
     character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
@@ -1319,10 +1323,15 @@ contains
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    ! Place data from buffers into module variables.
+    ! Set number of shared magnetometers.
     nMagnetometer  = nMagIn
-    TypeCoordMag_I(1:nMagnetometer)        = NameMagsIn_I
-    PosMagnetometer_II(:, 1:nMagnetometer) = CoordMagsIn_DI
+    
+    ! Allocate IE magnetometer arrays.
+    call iono_mag_init
+
+    ! Place data from buffers into module variables.
+    TypeCoordMag_I     = NameMagsIn_I
+    PosMagnetometer_II = CoordMagsIn_DI
 
   end subroutine IE_put_info_from_gm
 

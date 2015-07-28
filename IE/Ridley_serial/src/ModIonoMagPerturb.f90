@@ -14,12 +14,23 @@ module ModIonoMagPerturb
 
   save
 
-  integer            :: nMagnetometer = 0
-  integer, parameter :: MaxMagnetometer = 1000
-  real, dimension(2,MaxMagnetometer) :: PosMagnetometer_II
-  character(len=3)   :: TypeCoordMag_I(MaxMagnetometer)
+  logical :: IsInitiated = .false.
+  integer :: nMagnetometer = 0
+  real,             allocatable :: PosMagnetometer_II(:,:)
+  character(len=3), allocatable :: TypeCoordMag_I(:)
 
-contains
+contains 
+  !======================================================================
+  subroutine iono_mag_init
+    ! Initialize ionospheric magnetometers by allocating arrays.
+    !--------------------------------------------------------------------
+
+    IsInitiated = .true.
+    if(.not.allocated(PosMagnetometer_II)) allocate( &
+         PosMagnetometer_II(2, nMagnetometer), TypeCoordMag_I(nMagnetometer))
+
+  end subroutine iono_mag_init
+
   !======================================================================
   subroutine iono_mag_perturb(nMag, Xyz0_DI, JhMagPerturb_DI, JpMagPerturb_DI)
     ! For a series of nMag virtual observatories at SMG coordinates Xyz0_DI, 
