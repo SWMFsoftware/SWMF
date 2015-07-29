@@ -2946,44 +2946,44 @@ contains
 
           ! Set the minor ion profile so that in that region, the fluids
           ! behave like a single-fluid, only valid for 2 ion fluids now
-!          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
-!               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
-!
-!             ! The index for the major ion fluid, only valid for 2 ion fluids
-!             iMajorIon = nIonFluid+1-iIonFluid
-!
-!             ! Velocity of the major ion fluid
-!             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
-!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-!             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
-!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-!             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
-!                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
-!
-!             ! Temperature of the Major ion fluid
-!             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
-!                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
-!                  MassIon_I(iMajorIon)
-!
-!             ! Set the mass density of the minor ion fluid 
-!             ! to be Sw_Rho*LowDensityRatio
-!             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
-!                  Sw_Rho*LowDensityRatio
-!
-!             ! The velocity of the minor ion fluid is the same as the major ion
-!             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
-!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
-!             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
-!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
-!             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
-!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
-!
-!             ! The temperature of the minor ion is the same as the major ion
-!             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
-!                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
-!                  MassIon_I(iIonFluid) * Ti
-!          end if ! if statement for minor ion
-!
+          if(State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) < &
+               State_VGB(Rho_,i,j,k,iBlock)*LowDensityRatio) then
+
+             ! The index for the major ion fluid, only valid for 2 ion fluids
+             iMajorIon = nIonFluid+1-iIonFluid
+
+             ! Velocity of the major ion fluid
+             Ux = State_VGB(iRhoUxIon_I(iMajorIon),i,j,k,iBlock) / &
+                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+             Uy = State_VGB(iRhoUyIon_I(iMajorIon),i,j,k,iBlock) / &
+                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+             Uz = State_VGB(iRhoUzIon_I(iMajorIon),i,j,k,iBlock) / &
+                  State_VGB(iRhoIon_I  (iMajorIon),i,j,k,iBlock)
+
+             ! Temperature of the Major ion fluid
+             Ti = State_VGB(iPIon_I  (iMajorIon),i,j,k,iBlock) / &
+                  State_VGB(iRhoIon_I(iMajorIon),i,j,k,iBlock) * &
+                  MassIon_I(iMajorIon)
+
+             ! Set the mass density of the minor ion fluid 
+             ! to be Sw_Rho*LowDensityRatio
+             State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) = &
+                  Sw_Rho*LowDensityRatio
+
+             ! The velocity of the minor ion fluid is the same as the major ion
+             State_VGB(iRhoUxIon_I   (iIonFluid),i,j,k,iBlock) = &
+                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Ux
+             State_VGB(iRhoUyIon_I   (iIonFluid),i,j,k,iBlock) = &
+                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uy
+             State_VGB(iRhoUzIon_I   (iIonFluid),i,j,k,iBlock) = &
+                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) * Uz
+
+             ! The temperature of the minor ion is the same as the major ion
+             State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = &
+                  State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) / &
+                  MassIon_I(iIonFluid) * Ti
+          end if ! if statement for minor ion
+
           ! The temperature of either ion fluid can not drop below Tmin
           State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
                State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
