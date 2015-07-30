@@ -128,9 +128,11 @@ contains
 
     ! Number of blocks per dimension on the tree root level
     integer,          optional, intent(in):: nRootIn_D(nDim)
+
     ! Grid geometry type (cartesian, spherical, etc.)
     character(len=*), optional, intent(in):: TypeGeometryIn
-    ! Periodicity of grid boundaries per dimention
+
+    ! Periodicity of grid boundaries per dimension
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
 
     ! Use true radius or generalized radial coordinate
@@ -176,7 +178,8 @@ contains
     if(IsBatlInitialized) RETURN
 
     call init_tree(MaxBlockIn)
-    call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I, UseFDFaceFluxIn)
+    call init_geometry(TypeGeometryIn, IsPeriodicIn_D, rGenIn_I, &
+         UseFDFaceFluxIn)
     call init_grid(CoordMinIn_D, CoordMaxIn_D, UseRadiusIn, UseDegreeIn)
     if(present(UseUniformAxisIn))then
        ! IsAnyAxis is set by init_grid.
