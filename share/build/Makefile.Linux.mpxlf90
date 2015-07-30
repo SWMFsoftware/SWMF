@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.mpxlf90
+FORTRAN_COMPILER_NAME=mpxlf90
 #
 #	Space Weather Modeling Framework (SWMF) 
 #

@@ -1,4 +1,5 @@
 # C language related part of Makefile.conf: Makefile.gcc_mpicc
+C_COMPILER_NAME=gcc_mpicc
 
 COMPILE.c     = gcc
 COMPILE.mpicc = mpicc

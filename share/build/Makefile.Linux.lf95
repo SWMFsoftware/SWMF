@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.lf95
+FORTRAN_COMPILER_NAME=lf95
 #	Space Weather Modeling Framework (SWMF) 
 #	Lahey f95 Fortran Compiler
 #

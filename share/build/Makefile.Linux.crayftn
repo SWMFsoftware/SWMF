@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.crayftn
+FORTRAN_COMPILER_NAME=crayftn
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Cray Fortran (ftn) Compiler with FTN for linking

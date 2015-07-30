@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.nagfor
+FORTRAN_COMPILER_NAME=nagfor
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	NAG Fortran Compiler (5.3 or later)

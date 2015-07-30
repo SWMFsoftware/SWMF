@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.mpiifort
+FORTRAN_COMPILER_NAME=mpiifort
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Intel Fortran compiler with mpiifort

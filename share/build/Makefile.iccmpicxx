@@ -1,4 +1,5 @@
 # C language related part of Makefile.conf: Makefile.iccmpicxx
+C_COMPILER_NAME=iccmpicxx
 # This file is for Yellowstone (and similar) system with Intel C compiler
 
 COMPILE.c     = icc

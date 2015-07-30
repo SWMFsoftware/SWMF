@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Darwin.g95
+FORTRAN_COMPILER_NAME=g95
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	GNU gfortran (g95) Fortran 90/95 Compiler

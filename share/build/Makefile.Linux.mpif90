@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.mpif90
+FORTRAN_COMPILER_NAME=mpif90
 #
 #	Use the mpif90 script as the "compiler" if the actual 
 #       Fortran compiler called by mpif90 is not known. 

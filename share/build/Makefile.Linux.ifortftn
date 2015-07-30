@@ -5,6 +5,7 @@
 SHELL=/bin/sh
 
 # Fortran language related part of Makefile.conf: Makefile.Linux.ifortftn
+FORTRAN_COMPILER_NAME=ifortftn
 #
 #	Space Weather Modeling Framework (SWMF) 
 #	Intel Fortran (ifort) Compiler with FTN for linking
