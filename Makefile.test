@@ -3,6 +3,8 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #^CMP FILE TESTING
 
+include Makefile.conf
+
 TESTDIR = ${DIR}/run_test
 
 MPIRUN = mpirun -np 2
@@ -25,6 +27,8 @@ test_help:
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
 	@echo "    test_ccmc_small            (run small version of CCMC test)"
+	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
+	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run SC-IH + IH-GM test )"
 	@echo "    test3                      (run GM-IE-IM test)"
@@ -481,7 +485,7 @@ test3_check:
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test3/IE.log \
 		> test3_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=5e-4 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/RESULTS/IE/it000321_104520_000.idl \
 		output/test3/IE_it000321_104520_000.idl \
 		>> test3_ie.diff)
@@ -496,28 +500,34 @@ test3_check:
 		> test3_im_rcm.diff)
 	ls -l test3_*.diff
 
-### Test_Swpc: GM+IE+IM ###
+### test_swpc_build and test_swpc: GM+IE+IM ###
+
+# Configure with 3 components: GM, IE, IM. Remove unused component versions.
+# Run test_swpc in the reduced SWMF build SWPC_build.
+
+BUILD=SWPC_build
+test_swpc_build:
+	rm -rf ${BUILD}
+	Scripts/Configure.pl -d=${BUILD}
+	cd ${BUILD}; rm -rf IM/HEIDI IM/CRCM IE/RIM util/HYPRE
+	cd ${BUILD}; Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
+	cd ${BUILD}; make test_swpc
 
 test_swpc:
 	@echo "test_swpc_compile..." > test_swpc_gm.diff
 	@echo "test_swpc_compile..." > test_swpc_ie.diff
-	@echo "test_swpc_compile..." > test_swpc_im_rcm.diff
 	${MAKE} test_swpc_compile
 	@echo "test_swpc_rundir..." >> test_swpc_gm.diff
 	@echo "test_swpc_rundir..." >> test_swpc_ie.diff
-	@echo "test_swpc_rundir..." >> test_swpc_im_rcm.diff
 	${MAKE} test_swpc_rundir
 	@echo "test_swpc_run..." >> test_swpc_gm.diff
 	@echo "test_swpc_run..." >> test_swpc_ie.diff
-	@echo "test_swpc_run..." >> test_swpc_im_rcm.diff
 	${MAKE} test_swpc_run
 	@echo "test_swpc_restart..." >> test_swpc_gm.diff
 	@echo "test_swpc_restart..." >> test_swpc_ie.diff
-	@echo "test_swpc_restart..." >> test_swpc_im_rcm.diff
 	${MAKE} test_swpc_restart
 	@echo "test_swpc_check..." >> test_swpc_gm.diff
 	@echo "test_swpc_check..." >> test_swpc_ie.diff
-	@echo "test_swpc_check..." >> test_swpc_im_rcm.diff
 	${MAKE} test_swpc_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
@@ -545,44 +555,34 @@ test_swpc_run:
 test_swpc_restart:
 	cd ${TESTDIR}; cp PARAM.in_SWPC_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl 
 
-#	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-#		mv runlog_restart RESULTS
 
 test_swpc_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test_swpc/GM_log_n000001.log \
+		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
+		Param/SWPC/TestOutput/log_e20140410-000200.log \
 		> test_swpc_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n00000000.mag \
-		output/test_swpc/magnetometers_n00000000.mag \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
+		>> test_swpc_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
 		>> test_swpc_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n00000005.log \
-		output/test_swpc/GM_geoindex.log \
-		>> test_swpc_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
-		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
-		output/test_swpc/GM_restart_geoindex.txt \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
 		>> test_swpc_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
-		output/test_swpc/IE.log \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
+		Param/SWPC/TestOutput/IE_t140410_000200.log \
 		> test_swpc_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=3e-5 \
-		${TESTDIR}/RESULTS/IE/IE_mag_t000321_104500.mag \
-		output/test_swpc/IE.mag \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
+		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_ie.diff)
-	gunzip -c output/test_swpc/IM_2d__max_t00000020.dat.gz \
-		> ${TESTDIR}/RESULTS/IM/t20.dat
-# Remove date stamp from tecplot files
-	cd ${TESTDIR}/RESULTS/IM; \
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/t20.txt \
-		${TESTDIR}/RESULTS/IM/t20.dat \
-		> test_swpc_im_rcm.diff)
 	ls -l test_swpc_*.diff
 
 ### Test4: GM+IE+HEIDI ###############
