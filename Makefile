@@ -29,6 +29,7 @@ ALL : SWMF PIDL PSPH EARTH_TRAJ
 #       Definition of OS, component versions and directory structure
 #
 include Makefile.def
+include Makefile.conf
 
 help:
 	@echo ' '
