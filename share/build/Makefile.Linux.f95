@@ -79,8 +79,7 @@ BLAS  = lapack.o blas.o
 .ftn.o:
 	${COMPILE.f77} ${Cflag3} -132 $<
 
-clean:	
+cleanfiles:	
 	rm -f *~ core *.o *.mod fort.* a.out *.exe *.a *.so *.protex
 
 
-# keep this line

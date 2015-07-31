@@ -158,8 +158,7 @@ BLAS  = lapack.o blas.o
 # The clean target removes all temporary files created during normal editing, compilation, running,
 # production of documentation, etc. Put here all extensions relevant for the OS and COMPILER.
 #
-clean:	
+cleanfiles:	
 	rm -f *~ core *.o *.mod fort.* a.out *.exe *.a *.so *.protex
 
 #EOC
-# keep this line

@@ -87,5 +87,5 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f77} ${Cflag3} -W132 $<
 	${MOVE_MOD}
 
-clean:	
+cleanfiles:	
 	rm -f *~ core *.o *.mod fort.* *.out *.exe *.a *.so *.protex
