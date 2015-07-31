@@ -3,7 +3,6 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #BOP
 #!ROUTINE: share/build/Makefile.Linux.pgf90 - one of the original files for Makefile.conf
-C_COMPILER_NAME=conf
 #!DESCRIPTION:
 # This Makefile is copied from share/build/ into the Makefile.conf in the 
 # main directory during installation or reinstallation. 
