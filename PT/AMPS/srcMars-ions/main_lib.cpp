@@ -176,21 +176,6 @@ void amps_init() {
    PIC::Init_AfterParser ();
    PIC::Mover::Init();
 
-
-   //set up the time step
-   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
-   PIC::ParticleWeightTimeStep::initTimeStep();
-
-   //set up the particle weight
-   for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
-     PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(spec);
-   }
-
-
-   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
-
-
    //create the list of mesh nodes where the injection boundary conditions are applied
 //   PIC::BC::BlockInjectionBCindicatior=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxParticleInjectionIndicator;
 //   PIC::BC::userDefinedBoundingBlockInjectionFunction=Europa::InjectEuropaMagnetosphericEPDIons::BoundingBoxInjection;
@@ -264,6 +249,16 @@ void amps_init() {
 #endif //_PIC_COUPLER_DATAFILE_READER_MODE_
 #endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 
+    //set up the time step
+    PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
+    PIC::ParticleWeightTimeStep::initTimeStep();
+
+    //set up the particle weight
+    PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=MarsIon::SourceProcesses::GetBlockInjectionRate;
+
+    for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+      PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(spec);
+    }
 
   PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
 }

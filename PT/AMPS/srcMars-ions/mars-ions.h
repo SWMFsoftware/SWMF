@@ -47,6 +47,11 @@ namespace MarsIon {
   //process interaction of the particles with the boundaries of the domain and the surface of the planet
   int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer);
 
+  namespace SourceProcesses {
+    double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
+    double GetBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+  }
+
 }
 
 
