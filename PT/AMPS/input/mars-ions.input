@@ -32,7 +32,7 @@ TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, S
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=off !!!ices !!off, ices, swmf
+CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
 
 #endmain
 
