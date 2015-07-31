@@ -69,5 +69,7 @@ ${MY_LIB}: ${MODULES}
 	${AR} ${MY_LIB} ${MODULES}
 
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND ModHdf5Utils.f90 ModSpice.f90

@@ -29,4 +29,6 @@ test_block_data:
 	@echo test_block_data done
 	@echo -----------------------------------------------------------------
 
+clean: cleanfiles
+
 distclean: clean

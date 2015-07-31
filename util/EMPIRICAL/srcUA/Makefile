@@ -20,5 +20,7 @@ ${MY_LIB}:  ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 

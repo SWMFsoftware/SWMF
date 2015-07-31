@@ -100,6 +100,8 @@ program_example.exe: ${OBJECTS}
 
 # The clean target is defined in Makefile.conf
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f *.dvi *.ps *.pdf *.aux *.log *.toc PROTEX.tex program_example.exe
 

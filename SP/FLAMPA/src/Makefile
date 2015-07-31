@@ -64,5 +64,7 @@ SEP_for_Darwin:
 
 
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND

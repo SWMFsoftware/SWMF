@@ -2,77 +2,359 @@
 # for each test a separate folder run_test_<NAME> is created 
 # and executables are copied there
 
-TESTAPPS=Mars Titan Moon
-TESTAPP=
-TESTAPPDIR = run_test_$(TESTAPP)
+TESTMarsDIR=run_test_Mars
+TESTTitanDIR=run_test_Titan
+TESTMoonDIR=run_test_Moon
+TESTtecplot-readerDIR=run_test_tecplot-reader
+TESTEnceladusDIR=run_test_Enceladus
+TESTRosettaDIR=run_test_Rosetta
+TESTMercury-testDIR=run_test_Mercury-test
+TESTbatl-readerDIR=run_test_batl-reader
+TESTMarsKEYS=
+TESTTitanKEYS=
+TESTMoonKEYS=
+TESTtecplot-readerKEYS=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
+TESTEnceladusKEYS=-cplr-data-path=${MYDIR}/data/input/Enceladus 
+TESTRosettaKEYS=
+TESTMercury-testKEYS=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/home3/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase 
+TESTbatl-readerKEYS=
+TESTMarsOUTFILES=test_Mars
+TESTTitanOUTFILES=test_Titan
+TESTMoonOUTFILES=test_Moon
+TESTtecplot-readerOUTFILES=test_tecplot-reader
+TESTEnceladusOUTFILES=test_Enceladus
+TESTRosettaOUTFILES=test_Rosetta
+TESTMercury-testOUTFILES=test_Mercury-test
+TESTbatl-readerOUTFILES=test_batl-reader
 
 test_help:
-	@echo "    test_all                 (run all tests with ${MPIRUN})"
-	@echo "    test_all MPIRUN=         (run all tests with serially)"
-	@echo "    test_app TESTAPP=NAME    (run application NAME test with ${MPIRUN})"
+	@echo "    test_all\t\t(run all tests with ${MPIRUN})"
+	@echo "    test_all MPIRUN=\t(run all tests with serially)"
+	@echo "    test_Mars\t\t(run application Mars test with ${MPIRUN})"
+	@echo "    test_Titan\t\t(run application Titan test with ${MPIRUN})"
+	@echo "    test_Moon\t\t(run application Moon test with ${MPIRUN})"
+	@echo "    test_tecplot-reader\t\t(run application tecplot-reader test with ${MPIRUN})"
+	@echo "    test_Enceladus\t\t(run application Enceladus test with ${MPIRUN})"
+	@echo "    test_Rosetta\t\t(run application Rosetta test with ${MPIRUN})"
+	@echo "    test_Mercury-test\t\t(run application Mercury-test test with ${MPIRUN})"
+	@echo "    test_batl-reader\t\t(run application batl-reader test with ${MPIRUN})"
 
 test_all:
 	@rm -f *.diff
-	-@$(foreach TESTAPP,$(TESTAPPS),$(MAKE) test_app TESTAPP=$(TESTAPP);)
+	-@($(MAKE) test_Mars)
+	-@($(MAKE) test_Titan)
+	-@($(MAKE) test_Moon)
+	-@($(MAKE) test_tecplot-reader)
+	-@($(MAKE) test_Enceladus)
+	-@($(MAKE) test_Rosetta)
+	-@($(MAKE) test_Mercury-test)
+	-@($(MAKE) test_batl-reader)
 
 test_compile:
 	@rm -rf *.diff
-	-@$(foreach TESTAPP,$(TESTAPPS),                        \
-		    $(MAKE) test_app_compile TESTAPP=$(TESTAPP);\
-		    $(MAKE) test_app_rundir  TESTAPP=$(TESTAPP);)
+	-@($(MAKE) test_Mars_compile && $(MAKE) test_Mars_rundir)
+	-@($(MAKE) test_Titan_compile && $(MAKE) test_Titan_rundir)
+	-@($(MAKE) test_Moon_compile && $(MAKE) test_Moon_rundir)
+	-@($(MAKE) test_tecplot-reader_compile && $(MAKE) test_tecplot-reader_rundir)
+	-@($(MAKE) test_Enceladus_compile && $(MAKE) test_Enceladus_rundir)
+	-@($(MAKE) test_Rosetta_compile && $(MAKE) test_Rosetta_rundir)
+	-@($(MAKE) test_Mercury-test_compile && $(MAKE) test_Mercury-test_rundir)
+	-@($(MAKE) test_batl-reader_compile && $(MAKE) test_batl-reader_rundir)
 
 test_run:
-	-@$(foreach TESTAPP,$(TESTAPPS),                      \
-		    $(MAKE) test_app_run   TESTAPP=$(TESTAPP);\
-		    $(MAKE) test_app_check TESTAPP=$(TESTAPP);)
+	-@$(if $(findstring rundir... done,$(shell tail test_Mars.diff)),$(MAKE) test_Mars_run && $(MAKE) test_Mars_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_Titan.diff)),$(MAKE) test_Titan_run && $(MAKE) test_Titan_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_Moon.diff)),$(MAKE) test_Moon_run && $(MAKE) test_Moon_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_tecplot-reader.diff)),$(MAKE) test_tecplot-reader_run && $(MAKE) test_tecplot-reader_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_Enceladus.diff)),$(MAKE) test_Enceladus_run && $(MAKE) test_Enceladus_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_Rosetta.diff)),$(MAKE) test_Rosetta_run && $(MAKE) test_Rosetta_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_Mercury-test.diff)),$(MAKE) test_Mercury-test_run && $(MAKE) test_Mercury-test_check)
+	-@$(if $(findstring rundir... done,$(shell tail test_batl-reader.diff)),$(MAKE) test_batl-reader_run && $(MAKE) test_batl-reader_check)
 
-test_app:
-ifneq ($(TESTAPP),)
-	$(MAKE) test_app_compile
-	$(MAKE) test_app_rundir
-	$(MAKE) test_app_run
-	$(MAKE) test_app_check
-else
-	@echo "Application name TESTAPP is empty, specify it as \n\tmake test_app TESTAPP=NAME"
-endif
+#-----------------------------------------------------------------
+# Individual applications' test targets are below.
 
-test_app_compile:
-ifneq ($(TESTAPP),)
-	@echo "test_$(TESTAPP)_compile..." > test_$(TESTAPP).diff
-	./Config.pl -application=$(TESTAPP) -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/$(TESTAPP)  -amps-test=on 
+test_Mars:
+	@($(MAKE) test_Mars_compile)
+	@($(MAKE) test_Mars_rundir)
+	@($(MAKE) test_Mars_run)
+	@($(MAKE) test_Mars_check)
+
+test_Mars_compile:
+	@echo "test_Mars_compile..." > test_Mars.diff
+	./Config.pl -application=Mars -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Mars  -amps-test=on $(TESTMarsKEYS)
 	rm -rf srcTemp
 	./ampsConfig.pl -no-compile
-	$(MAKE) amps
-else
-	@echo "Application test name TESTAPP is empty, specify it as \n\tmake test_app_compile TESTAPP=NAME"
-endif
+	@($(MAKE) amps)
+	@echo "test_Mars_compile... done" >> test_Mars.diff	
+
+test_Mars_rundir:
+	@echo "test_Mars_rundir..." >> test_Mars.diff
+	rm -rf   $(TESTMarsDIR)
+	mkdir -p $(TESTMarsDIR)
+	mv amps  $(TESTMarsDIR)
+	@echo "test_Mars_rundir... done" >> test_Mars.diff
+
+test_Mars_run:
+	@echo "test_Mars_run..." >> test_Mars.diff
+	cd $(TESTMarsDIR); ${MPIRUN} ./amps
+	@echo "test_Mars_run... done" >> test_Mars.diff
+
+test_Mars_check:
+	@echo "test_Mars_check..." >> test_Mars.diff
+	-@$(foreach OUT,$(TESTMarsOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTMarsDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTMarsDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Mars.diff);)
+	@ls -l test_Mars.diff
 
 
-test_app_rundir:
-ifneq ($(TESTAPP),)
-	@echo "test_$(TESTAPP)_rundir..." >> test_$(TESTAPP).diff
-	rm -rf   ${TESTAPPDIR}
-	mkdir -p ${TESTAPPDIR}
-	mv amps  ${TESTAPPDIR}
-else
-	@echo "Application test name TESTAPP is empty, specify it as \n\tmake test_app_rundir TESTAPP=NAME"
-endif
+test_Titan:
+	@($(MAKE) test_Titan_compile)
+	@($(MAKE) test_Titan_rundir)
+	@($(MAKE) test_Titan_run)
+	@($(MAKE) test_Titan_check)
 
-test_app_run:
-ifneq ($(TESTAPP),)
-	@echo "test_$(TESTAPP)_run..." >> test_$(TESTAPP).diff
-	cd ${TESTAPPDIR}; ${MPIRUN} ./amps
-else
-	@echo "Application test name TESTAPP is empty, specify it as \n\tmake test_app_run TESTAPP=NAME"
-endif
+test_Titan_compile:
+	@echo "test_Titan_compile..." > test_Titan.diff
+	./Config.pl -application=Titan -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Titan  -amps-test=on $(TESTTitanKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_Titan_compile... done" >> test_Titan.diff	
 
-test_app_check:
-ifneq ($(TESTAPP),)
-	@echo "test_$(TESTAPP)_check..." >> test_$(TESTAPP).diff
-	-(${SCRIPTDIR}/DiffNum.pl ${TESTAPPDIR}/PT/plots/amps.dat \
-	output/test_$(TESTAPP).ref_np`ls ${TESTAPPDIR}/PT/thread* | wc -l | tr -d ' '` \
-	> test_$(TESTAPP).diff)
-	@ls -l test_$(TESTAPP).diff
-else
-	@echo "Application test name TESTAPP is empty, specify it as \n\tmake test_app_check TESTAPP=NAME"
-endif
+test_Titan_rundir:
+	@echo "test_Titan_rundir..." >> test_Titan.diff
+	rm -rf   $(TESTTitanDIR)
+	mkdir -p $(TESTTitanDIR)
+	mv amps  $(TESTTitanDIR)
+	@echo "test_Titan_rundir... done" >> test_Titan.diff
+
+test_Titan_run:
+	@echo "test_Titan_run..." >> test_Titan.diff
+	cd $(TESTTitanDIR); ${MPIRUN} ./amps
+	@echo "test_Titan_run... done" >> test_Titan.diff
+
+test_Titan_check:
+	@echo "test_Titan_check..." >> test_Titan.diff
+	-@$(foreach OUT,$(TESTTitanOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTTitanDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTTitanDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Titan.diff);)
+	@ls -l test_Titan.diff
+
+
+test_Moon:
+	@($(MAKE) test_Moon_compile)
+	@($(MAKE) test_Moon_rundir)
+	@($(MAKE) test_Moon_run)
+	@($(MAKE) test_Moon_check)
+
+test_Moon_compile:
+	@echo "test_Moon_compile..." > test_Moon.diff
+	./Config.pl -application=Moon -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Moon  -amps-test=on $(TESTMoonKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_Moon_compile... done" >> test_Moon.diff	
+
+test_Moon_rundir:
+	@echo "test_Moon_rundir..." >> test_Moon.diff
+	rm -rf   $(TESTMoonDIR)
+	mkdir -p $(TESTMoonDIR)
+	mv amps  $(TESTMoonDIR)
+	@echo "test_Moon_rundir... done" >> test_Moon.diff
+
+test_Moon_run:
+	@echo "test_Moon_run..." >> test_Moon.diff
+	cd $(TESTMoonDIR); ${MPIRUN} ./amps
+	@echo "test_Moon_run... done" >> test_Moon.diff
+
+test_Moon_check:
+	@echo "test_Moon_check..." >> test_Moon.diff
+	-@$(foreach OUT,$(TESTMoonOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTMoonDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTMoonDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Moon.diff);)
+	@ls -l test_Moon.diff
+
+
+test_tecplot-reader:
+	@($(MAKE) test_tecplot-reader_compile)
+	@($(MAKE) test_tecplot-reader_rundir)
+	@($(MAKE) test_tecplot-reader_run)
+	@($(MAKE) test_tecplot-reader_check)
+
+test_tecplot-reader_compile:
+	@echo "test_tecplot-reader_compile..." > test_tecplot-reader.diff
+	./Config.pl -application=test/tecplot-reader -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/tecplot-reader  -amps-test=on $(TESTtecplot-readerKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_tecplot-reader_compile... done" >> test_tecplot-reader.diff	
+
+test_tecplot-reader_rundir:
+	@echo "test_tecplot-reader_rundir..." >> test_tecplot-reader.diff
+	rm -rf   $(TESTtecplot-readerDIR)
+	mkdir -p $(TESTtecplot-readerDIR)
+	mv amps  $(TESTtecplot-readerDIR)
+	@echo "test_tecplot-reader_rundir... done" >> test_tecplot-reader.diff
+
+test_tecplot-reader_run:
+	@echo "test_tecplot-reader_run..." >> test_tecplot-reader.diff
+	cd $(TESTtecplot-readerDIR); ${MPIRUN} ./amps
+	@echo "test_tecplot-reader_run... done" >> test_tecplot-reader.diff
+
+test_tecplot-reader_check:
+	@echo "test_tecplot-reader_check..." >> test_tecplot-reader.diff
+	-@$(foreach OUT,$(TESTtecplot-readerOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTtecplot-readerDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTtecplot-readerDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_tecplot-reader.diff);)
+	@ls -l test_tecplot-reader.diff
+
+
+test_Enceladus:
+	@($(MAKE) test_Enceladus_compile)
+	@($(MAKE) test_Enceladus_rundir)
+	@($(MAKE) test_Enceladus_run)
+	@($(MAKE) test_Enceladus_check)
+
+test_Enceladus_compile:
+	@echo "test_Enceladus_compile..." > test_Enceladus.diff
+	./Config.pl -application=Enceladus -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Enceladus  -amps-test=on $(TESTEnceladusKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_Enceladus_compile... done" >> test_Enceladus.diff	
+
+test_Enceladus_rundir:
+	@echo "test_Enceladus_rundir..." >> test_Enceladus.diff
+	rm -rf   $(TESTEnceladusDIR)
+	mkdir -p $(TESTEnceladusDIR)
+	mv amps  $(TESTEnceladusDIR)
+	@echo "test_Enceladus_rundir... done" >> test_Enceladus.diff
+
+test_Enceladus_run:
+	@echo "test_Enceladus_run..." >> test_Enceladus.diff
+	cd $(TESTEnceladusDIR); ${MPIRUN} ./amps
+	@echo "test_Enceladus_run... done" >> test_Enceladus.diff
+
+test_Enceladus_check:
+	@echo "test_Enceladus_check..." >> test_Enceladus.diff
+	-@$(foreach OUT,$(TESTEnceladusOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTEnceladusDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTEnceladusDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Enceladus.diff);)
+	@ls -l test_Enceladus.diff
+
+
+test_Rosetta:
+	@($(MAKE) test_Rosetta_compile)
+	@($(MAKE) test_Rosetta_rundir)
+	@($(MAKE) test_Rosetta_run)
+	@($(MAKE) test_Rosetta_check)
+
+test_Rosetta_compile:
+	@echo "test_Rosetta_compile..." > test_Rosetta.diff
+	./Config.pl -application=Rosetta -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Rosetta  -amps-test=on $(TESTRosettaKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_Rosetta_compile... done" >> test_Rosetta.diff	
+
+test_Rosetta_rundir:
+	@echo "test_Rosetta_rundir..." >> test_Rosetta.diff
+	rm -rf   $(TESTRosettaDIR)
+	mkdir -p $(TESTRosettaDIR)
+	mv amps  $(TESTRosettaDIR)
+	@echo "test_Rosetta_rundir... done" >> test_Rosetta.diff
+
+test_Rosetta_run:
+	@echo "test_Rosetta_run..." >> test_Rosetta.diff
+	cd $(TESTRosettaDIR); ${MPIRUN} ./amps
+	@echo "test_Rosetta_run... done" >> test_Rosetta.diff
+
+test_Rosetta_check:
+	@echo "test_Rosetta_check..." >> test_Rosetta.diff
+	-@$(foreach OUT,$(TESTRosettaOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTRosettaDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTRosettaDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Rosetta.diff);)
+	@ls -l test_Rosetta.diff
+
+
+test_Mercury-test:
+	@($(MAKE) test_Mercury-test_compile)
+	@($(MAKE) test_Mercury-test_rundir)
+	@($(MAKE) test_Mercury-test_run)
+	@($(MAKE) test_Mercury-test_check)
+
+test_Mercury-test_compile:
+	@echo "test_Mercury-test_compile..." > test_Mercury-test.diff
+	./Config.pl -application=Mercury-test -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/Mercury-test  -amps-test=on $(TESTMercury-testKEYS)
+	rm -rf srcTemp
+	./ampsConfig.pl -no-compile
+	@($(MAKE) amps)
+	@echo "test_Mercury-test_compile... done" >> test_Mercury-test.diff	
+
+test_Mercury-test_rundir:
+	@echo "test_Mercury-test_rundir..." >> test_Mercury-test.diff
+	rm -rf   $(TESTMercury-testDIR)
+	mkdir -p $(TESTMercury-testDIR)
+	mv amps  $(TESTMercury-testDIR)
+	@echo "test_Mercury-test_rundir... done" >> test_Mercury-test.diff
+
+test_Mercury-test_run:
+	@echo "test_Mercury-test_run..." >> test_Mercury-test.diff
+	cd $(TESTMercury-testDIR); ${MPIRUN} ./amps
+	@echo "test_Mercury-test_run... done" >> test_Mercury-test.diff
+
+test_Mercury-test_check:
+	@echo "test_Mercury-test_check..." >> test_Mercury-test.diff
+	-@$(foreach OUT,$(TESTMercury-testOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTMercury-testDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTMercury-testDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_Mercury-test.diff);)
+	@ls -l test_Mercury-test.diff
+
+
+test_batl-reader:
+	@($(MAKE) test_batl-reader_compile)
+	@($(MAKE) test_batl-reader_rundir)
+	@($(MAKE) test_batl-reader_run)
+	@($(MAKE) test_batl-reader_check)
+
+test_batl-reader_compile:
+	@echo "test_batl-reader_compile..." > test_batl-reader.diff
+	echo "Installing BATL....."
+	@cvs co BATL
+	@cd BATL; ./Config.pl -install -compiler=${COMPILE.f90} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB
+	echo "Installing SWMF...."
+	cvs co SWMF
+	cd SWMF; ./Config.pl -install -compiler=${COMPILE.f90}; make LIB
+	@echo "Install AMPS......"
+	./Config.pl -install -compiler=${COMPILE.f90} -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL
+	make
+
+test_batl-reader_rundir:
+	@echo "test_batl-reader_rundir..." >> test_batl-reader.diff
+	rm -rf   $(TESTbatl-readerDIR)
+	mkdir -p $(TESTbatl-readerDIR)
+	mv amps  $(TESTbatl-readerDIR)
+	@echo "test_batl-reader_rundir... done" >> test_batl-reader.diff
+
+test_batl-reader_run:
+	@echo "test_batl-reader_run..." >> test_batl-reader.diff
+	cd $(TESTbatl-readerDIR); ${MPIRUN} ./amps
+	@echo "test_batl-reader_run... done" >> test_batl-reader.diff
+
+test_batl-reader_check:
+	@echo "test_batl-reader_check..." >> test_batl-reader.diff
+	-@$(foreach OUT,$(TESTbatl-readerOUTFILES),                                 \
+	-(${SCRIPTDIR}/DiffNum.pl $(TESTbatl-readerDIR)/PT/plots/$(OUT).dat         \
+	output/$(OUT).ref_np`ls $(TESTbatl-readerDIR)/PT/thread* |wc -l |tr -d ' '` \
+	> test_batl-reader.diff);)
+	@ls -l test_batl-reader.diff
+
+

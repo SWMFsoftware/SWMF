@@ -73,6 +73,8 @@ ${BINDIR}/GAME.exe: game_of_life.o ${OBJECTS}
 	${LINK.f90} -o ${BINDIR}/GAME.exe game_of_life.o ${OBJECTS} \
 		-L${LIBDIR} -lTIMING -lSHARE ${Lflag1}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f BATL_size.f90 Makefile.DEPEND
 

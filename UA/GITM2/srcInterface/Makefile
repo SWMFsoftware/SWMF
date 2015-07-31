@@ -36,6 +36,8 @@ ${MY_LIB}: ${GITM_LIB} ${OBJECTS}
 	cp -f ${GITM_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 

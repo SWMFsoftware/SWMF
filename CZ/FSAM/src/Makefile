@@ -58,5 +58,7 @@ LIB: DEPEND ${MODULES}
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f ModUserSetup.f90 ModPar.f90

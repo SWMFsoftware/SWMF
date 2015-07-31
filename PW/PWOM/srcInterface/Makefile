@@ -34,6 +34,8 @@ ${MY_LIB}: ${PWOM_LIB} ${OBJECTS}
 	cp -f ${PWOM_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 

@@ -66,5 +66,6 @@ glow: 	${OBJECTS} ${MODULES}
 #ModGITM.o:	
 #	cd ../src  ;make ModGITM.f90
 
+clean: cleanfiles
 
-
+distclean: clean

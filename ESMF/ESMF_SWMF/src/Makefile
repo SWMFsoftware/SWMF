@@ -102,5 +102,7 @@ run:	${EXE}
 	${MPIRUN} -np 1 ${EXELINK}; \
 	perl -ne 'print if /error/i' PET0.ESMF_LogFile
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND

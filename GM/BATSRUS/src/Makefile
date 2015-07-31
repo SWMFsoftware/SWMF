@@ -211,6 +211,8 @@ ${CRASHEXE}: ${OBJECTS_EXE} ${LIBCRASH}
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f ModUser.f90.safe
 	mv ModUser.f90 ModUser.f90.safe

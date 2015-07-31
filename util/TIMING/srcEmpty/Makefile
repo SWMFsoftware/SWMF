@@ -30,6 +30,8 @@ ${MY_LIB}: ${OBJECTS} ${MAKEFILE_COMP_SELECT}
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean
 
 # keep this line

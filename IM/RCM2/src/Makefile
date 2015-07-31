@@ -82,6 +82,8 @@ ${MY_LIB}:	$(OBJECTS)
 .f.o:
 	${COMPILE.f77} ${CFLAGS} ${PRECISION} $<
 
+clean: cleanfiles
+
 distclean: clean
 	-@(rm -f ${LIBDIR}/libRCM.a) 
 	-@(rm -f ${BINDIR}/RCM.exe)

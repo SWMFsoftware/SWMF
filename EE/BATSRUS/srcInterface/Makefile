@@ -39,6 +39,8 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 	cp -f ${BATSRUS_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f   Makefile.DEPEND ModBuffer.f90 update_lagrangian_grid.f90 \
 	ModRadioWaveImage.f90 ModGridDescriptor.f90 \

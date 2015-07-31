@@ -49,6 +49,8 @@ test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
 
 install: 
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND 
 

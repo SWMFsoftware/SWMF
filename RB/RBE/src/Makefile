@@ -83,5 +83,7 @@ RBE_orig:
 	${COMPILE.f90} ${Lflag2} -o ${EXE} rbe_main.f90 ${OBJECTS} \
 	-L${LIBDIR} -lTIMING -lSHARE -lNOMPI
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES

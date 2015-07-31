@@ -29,5 +29,7 @@ ${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_SELECT}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND

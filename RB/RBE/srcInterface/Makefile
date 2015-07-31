@@ -34,6 +34,8 @@ ${MY_LIB}: ${RBE_LIB} ${OBJECTS}
 	cp -f ${RBE_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 

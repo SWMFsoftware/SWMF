@@ -166,7 +166,9 @@ ${MY_LIB}: ${LIBPREV} ${MF} ${MODULES} ${OBJECTS}
 	cp -f ${LIBPREV} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS} ${MODULES}
 
-distclean:
+clean: cleanfiles
+
+distclean: clean
 	rm -f 	ModSize.f90 \
 		ModGITM.f90 \
 		ModEUV.f90 \

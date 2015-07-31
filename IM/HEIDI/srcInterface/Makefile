@@ -35,6 +35,8 @@ ${MY_LIB}: ${HEIDI_LIB} ${OBJECTS}
 	cp -f ${HEIDI_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 

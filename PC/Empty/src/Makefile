@@ -42,4 +42,6 @@ PC_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean

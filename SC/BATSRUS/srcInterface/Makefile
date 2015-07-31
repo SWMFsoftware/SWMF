@@ -37,6 +37,8 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 	cp -f ${BATSRUS_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f   SC_wrapper.f90 SC_get_for_sp.f90 \
 		ModGridDescriptor.f90 update_lagrangian_grid.f90 \

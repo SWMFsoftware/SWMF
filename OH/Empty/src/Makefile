@@ -42,6 +42,8 @@ OH_wrapper.o: ${LIBRARYDIR}/CON_comp_info.o
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean
 	   rm -f OH_wrapper.f90
 

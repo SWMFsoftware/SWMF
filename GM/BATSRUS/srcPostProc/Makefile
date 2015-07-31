@@ -62,6 +62,8 @@ TIME_TOCRNO:  ${OBJECTS1} time_to_cr_no.o
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean
 
 # keep this line

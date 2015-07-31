@@ -79,5 +79,7 @@ timing_empty.exe: $(OBJ_EMPTY) ${LIBNOMPI}
 timing_empty_mpi.exe: $(OBJ_EMPTY)
 	$(LINK.f90) ${Lflag2} -o timing_empty_mpi.exe $(OBJ_EMPTY) $(MPILIB)
 
+clean: cleanfiles
+
 distclean: clean
 

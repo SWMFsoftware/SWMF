@@ -251,6 +251,8 @@ test_abs:
 	  ls -l *.diff
 	  rm -f test_re*
 
+clean: cleanfiles
+
 distclean: clean 
 	rm -f Makefile.DEPEND Makefile.RULES; \
         rm -rf Tmp_;

@@ -75,6 +75,8 @@ ${MY_LIB}:	${MF} ${MODULES} ${OBJECTS}
 
 #       Cleaning
 
+clean: cleanfiles
+
 distclean: clean
 
 

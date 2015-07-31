@@ -48,3 +48,6 @@ AB_ARRAY_module.o:  AB_ARRAY_module.f90
 
 AB_ERROR_module.o:  AB_ERROR_module.f90
 
+clean: cleanfiles
+
+distclean: clean

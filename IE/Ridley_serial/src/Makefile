@@ -85,6 +85,8 @@ IONO: ${EXE2}
 backup:	
 	tar -cf IONO.`date +%m_%d_%y_%H%M.tar` Make* *.f90 *.h *.sub *.script *.llscript.* *.in mpi* perf_mjp.a BATio BATioPP* IOcat*
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f ModSize.f90
 

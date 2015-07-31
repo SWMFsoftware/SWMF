@@ -73,5 +73,7 @@ dgcpm: DEPEND
 dgcpm.exe: ${OBJECTS} dgcpm_main.o
 	$(COMPILE.f90) $(LFLAGS) -o dgcpm.exe ${OBJECTS} dgcpm_main.o
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.RULES Makefile.DEPEND

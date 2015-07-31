@@ -42,4 +42,6 @@ amps_interface.o:
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean

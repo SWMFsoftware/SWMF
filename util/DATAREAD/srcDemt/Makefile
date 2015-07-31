@@ -19,5 +19,7 @@ ${MY_LIB}: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES} 
 
+clean: cleanfiles
+
 distclean: clean
 

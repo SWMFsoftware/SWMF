@@ -28,6 +28,8 @@ PwIDL:
 #	cleaning
 #
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f *.o
 

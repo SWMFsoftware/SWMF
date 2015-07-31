@@ -41,6 +41,8 @@ ${MY_LIB}: ${MODULES}
 
 install: 
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND 
 

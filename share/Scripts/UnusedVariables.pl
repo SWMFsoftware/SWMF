@@ -75,7 +75,7 @@ foreach $source (@ARGV){
     	if (/(\w+) (explicitly imported) into/){
 	    $var = $1;
 	    $msg = $2;
-	}elsif(/(Unused) (symbol|local variable) (\w+)/){
+	}elsif(/(Unused) (symbol|local variable|parameter) (\w+)/i){
 	    $msg = $1;
 	    $var = $3;
 	}elsif(/Local variable (\w+) is (initialised but never used)/){
@@ -87,14 +87,17 @@ foreach $source (@ARGV){
 
 	$msg  = lc($msg);
 	my $line = $lines[$nline-1];
-	$line =~ /end (module|function|subroutine) (\w+)/ or
-	    die "line=$line did not match end module/function/subroutine\n";
-	my $method = "$1 $2";
-
-	print "$source at line $nline: $var is $msg in method=$method\n";
-
+	my $method;
+	if(/Unused parameter/i){
+	    print "$source at line $nline: $var is $msg\n";
+	}else{
+	    $line =~ /end (module|function|subroutine) (\w+)/ or
+		die "line=$line did not match end module/function/subroutine\n";
+	    $method = "$1 $2";
+	    print "$source at line $nline: $var is $msg in method=$method\n";
+	}
 	my $i;
-	my $ilast;
+	my $ilast = $nline;
 	for($i = $nline-1; $i>0; $i--){
 	    $line = $lines[$i-1];
 	    last if $line =~ /$method/i; # stop at beginning of method
@@ -105,6 +108,8 @@ foreach $source (@ARGV){
 	}
 
 	$line = $lines[$ilast-1];
+
+	print "nline=$nline ilast=$ilast\n";
 
 	next if $line =~ /IMPLEMENTED/; # do not remove these in ModUser
 

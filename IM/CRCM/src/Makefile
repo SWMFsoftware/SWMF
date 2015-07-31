@@ -84,5 +84,7 @@ CRCM_orig:
 	${COMPILE.f90} ${Lflag2} -o ${EXE} main.f90 ${OBJECTS} \
 	-L${LIBDIR} -lTIMING -lSHARE -lNOMPI
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f ModPlanet.f90 ModGrid.f90

@@ -22,3 +22,7 @@ test: ModFish.o
 		${COMPILE.f90} -o test.exe t$$i.o ModFish.o; \
 		./test.exe; \
 	done
+
+clean: cleanfiles
+
+distclean: clean

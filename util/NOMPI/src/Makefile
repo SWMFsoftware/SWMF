@@ -25,6 +25,8 @@ LIB:	${SHAREDIR}/ModMpiOrig.o
 ${MY_LIB}: NOMPI.o
 	${AR} ${MY_LIB} NOMPI.o
 
+clean: cleanfiles
+
 distclean: clean
 
 # keep this line

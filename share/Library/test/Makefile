@@ -68,6 +68,8 @@ test:
 	@echo ---------------------------------------------------------
 	@ls -l *.diff
 
+clean: cleanfiles
+
 distclean: clean
 	rm -rf *.tmp *.diff test*.out test_initial_state.ref \
 		test_process_var_name.log

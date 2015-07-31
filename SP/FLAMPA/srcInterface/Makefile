@@ -29,6 +29,8 @@ ${MY_LIB}: ${FLAMPA_LIB} ${OBJECTS}
 	cp -f ${FLAMPA_LIB} ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 

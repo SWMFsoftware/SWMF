@@ -91,6 +91,8 @@ ${EXE}: ${EXEOBJECTS}
 	${LINK.f90}  -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 	rm -rf Tmp_
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND Makefile.RULES
 

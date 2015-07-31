@@ -36,6 +36,8 @@ ${MY_LIB}: ${FSAM_LIB} ${OBJECTS}
 	${AR} ${MY_LIB} ${OBJECTS} *.o
 	rm -f libfishpak.a *.o
 
+clean: cleanfiles
+
 distclean: clean
 	rm -f Makefile.DEPEND
 
