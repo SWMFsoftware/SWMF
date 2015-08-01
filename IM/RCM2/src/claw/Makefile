@@ -40,6 +40,8 @@ lib: $(OBJECTS)
 xclaw: $(OBJECTS) driver.o
 	$(FTN) $(LFLAGS) $(OBJECTS) driver.o -o xclaw
 
+clean: cleanfiles
+
 distclean: clean
 	/bin/rm -f *~ fort.* xclaw
 
