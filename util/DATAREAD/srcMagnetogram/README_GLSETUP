@@ -17,6 +17,16 @@ To calcuate the flux rope orientation based on the PIL:
 
 SWMF_GLSETUP,/USEPIL
 
+To use the 2D magnetogram as the input:
+
+SWMF_GLSETUP,/Mode2D
+
+To use the code without SSW package:
+
+SWMF_GLSETUP,/NoSSW
+
+Other options please refer to the header of the script.
+
 The recommended GL flux rope parameters will be calculated and shown.
 
 *For Mac users, the IDL "CURSOR" routine may hang and does not return output. There is an easy fix for that problem. If you are using Mac OS X 10.7 or higher, 2 steps to get the CURSOR routine work:
