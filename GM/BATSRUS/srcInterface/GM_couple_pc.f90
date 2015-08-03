@@ -108,7 +108,7 @@ contains
        ! Q/Qi, M/Mi, T/Ti
        do iFluid = 0, nIonFluid-1
           ParamReal_I(idx + iFluid*3)     = ChargeIon_I(iFluid+1)
-          ParamReal_I(idx + iFluid*3 + 1) = MassIon_I(iFluid+1)
+          ParamReal_I(idx + iFluid*3 + 1) = MassIon_I(iFluid+1)/MassIon_I(1)
           ParamReal_I(idx + iFluid*3 + 2) = 1.0 - PePerPtotal/nIonFluid
        end do
 
