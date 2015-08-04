@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -8,7 +9,8 @@ module ModVarIndexes
        Redefine3 => WaveLast_, &
        Redefine4 => Erad_, &
        Redefine5 => Pe_, &
-       Redefine6 => Ehot_
+       Redefine6 => Ehot_, &
+       Redefine7 => iPparIon_I
 
   implicit none
 
@@ -72,6 +74,8 @@ module ModVarIndexes
   integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_, He2pRhoUy_/)
   integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_, He2pRhoUz_/)
   integer, parameter :: iP_I(nFluid)     = (/p_,     He2pP_/)
+
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = 1
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

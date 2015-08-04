@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
-  use ModExtraVariables
+  use ModExtraVariables, &
+       Redefine => iPparIon_I
 
   implicit none
 
@@ -67,7 +69,7 @@ module ModVarIndexes
        CO2pEnergy_ = nVar+5,&
        HpEnergy_   = nVar+6
 
-  
+
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
@@ -78,6 +80,8 @@ module ModVarIndexes
        iRhoUy_I(nFluid)=(/RhoUy_, HpswRhoUy_, O2pRhoUy_, OpRhoUy_, CO2pRhoUy_, HpRhoUy_/),&
        iRhoUz_I(nFluid)=(/RhoUz_, HpswRhoUz_, O2pRhoUz_, OpRhoUz_, CO2pRhoUz_, HpRhoUz_/),&
        iP_I(nFluid)    =(/p_,     HpswP_,     O2pP_,     OpP_ ,    CO2pP_,     HpP_ /)
+
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = 1
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

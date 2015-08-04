@@ -1,9 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !#NOTPUBLIC  email:xzjia@umich.edu  expires:12/31/2099
 module ModVarIndexes
 
-  use ModExtraVariables, Redefine1 => Pe_
+  use ModExtraVariables, &
+       Redefine1 => Pe_, &
+       Redefine2 => iPparIon_I
 
   implicit none
 
@@ -59,7 +62,7 @@ module ModVarIndexes
        SwEnergy_   = nVar+2, &
        H2OpEnergy_ = nVar+3, &
        Neu1Energy_ = nVar+4
- 
+
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
@@ -70,6 +73,8 @@ module ModVarIndexes
        iRhoUy_I(nFluid)=(/RhoUy_, SwRhoUy_, H2OpRhoUy_, Neu1RhoUy_ /),&
        iRhoUz_I(nFluid)=(/RhoUz_, SwRhoUz_, H2OpRhoUz_, Neu1RhoUz_ /),&
        iP_I(nFluid)    =(/p_,     SwP_,     H2OpP_,     Neu1P_ /)
+
+  integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = 1
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,
@@ -103,7 +108,7 @@ module ModVarIndexes
        1.0, & ! SwEnergy_
        1.0, & ! H2OpEnergy_
        1.0/)  ! Neu1Energy_
-  
+
   ! The names of the variables used in i/o
   character(len=7) :: NameVar_V(nVar+nFluid) = (/ &
        'Rho    ', & ! Rho_
@@ -134,7 +139,7 @@ module ModVarIndexes
        'SwE    ', & ! SwEnergy_
        'H2OpE  ', & ! H2OpEnergy_
        'Neu1E  '/)  ! Neu1Energy_
-  
+
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
