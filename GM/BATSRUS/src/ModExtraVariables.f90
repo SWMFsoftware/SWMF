@@ -5,7 +5,7 @@ module ModExtraVariables
   ! Define indexes that are not used in most equation modules
 
   ! Set impossible value for indexes
-  integer, parameter :: Pe_ = 1, Ppar_ = 1
+  integer, parameter :: Pe_ = 1, Ppar_ = 1, iPparIon_I(1) = 1
   integer, parameter :: Hyp_ = 1, Erad_ = 1, ExtraEint_ = 1
   integer, parameter :: Ew_  = 1
   integer, parameter :: SignB_ = 1
