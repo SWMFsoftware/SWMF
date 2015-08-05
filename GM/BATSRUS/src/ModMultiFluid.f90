@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMultiFluid
 
@@ -46,6 +47,7 @@ module ModMultiFluid
        iRhoUx = RhoUx_, iUx = RhoUx_, &
        iRhoUy = RhoUy_, iUy = RhoUy_, &
        iRhoUz = RhoUz_, iUz = RhoUz_, &
+       iPpar  = Ppar_,                &
        iP     = P_,                   &
        iEnergy= nVar+1
 
@@ -56,12 +58,12 @@ module ModMultiFluid
   real    :: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
 
   real    :: RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
-             PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
-             UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
-             UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
-             UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
-             TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
-             mProtonMass
+       PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
+       UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
+       UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
+       UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
+       TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
+       mProtonMass
 
 contains
 
@@ -72,6 +74,10 @@ contains
     iRhoUy = iRhoUy_I(iFluid)
     iRhoUz = iRhoUz_I(iFluid)
     iP     = iP_I(iFluid)
+
+    if(UseMultiIon .and. iFluid>=IonFirst_ .and. iFluid<=IonLast_)then
+       if(iPparIon_I(iFluid) > 1) iPpar = iPparIon_I(iFluid)
+    end if
 
     iEnergy= nVar + iFluid
 
@@ -95,7 +101,7 @@ contains
     integer :: i, l
     character (len=10) :: NameFluid
     !----------------------------------------------------------
-    
+
     ! Assume fluid 1 as the default
     iFluid = 1              
 
