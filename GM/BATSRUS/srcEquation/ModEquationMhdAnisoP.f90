@@ -1,9 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables, Redefine => Ppar_
+  use ModExtraVariables, &
+       Redefine1 => Ppar_, &
+       Redefine2 => iPparIon_I
 
   implicit none
 
@@ -42,6 +45,8 @@ module ModVarIndexes
   integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)
   integer, parameter :: iRhoUz_I(nFluid) = (/RhoUz_/)
   integer, parameter :: iP_I(nFluid)     = (/p_/)
+
+  integer, parameter :: iPparIon_I(1) = Ppar_
 
   ! The default values for the state variables:
   ! Variables which are physically positive should be set to 1,

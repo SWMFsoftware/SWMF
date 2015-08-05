@@ -28,7 +28,7 @@ module ModAdvance
   ! corresponding extra variables in the equation modules.
   ! The default values of these named indices are in ModExtraVariables.
   logical, parameter:: UseElectronPressure = Pe_ > 1
-  logical, parameter:: UseAnisoPressure    = Ppar_ > 1
+  logical, parameter:: UseAnisoPressure    = iPparIon_I(IonFirst_) > 1
   logical, parameter:: UseIdealEos = ExtraEint_ == 1
 
   logical:: UseElectronEntropy = .false.

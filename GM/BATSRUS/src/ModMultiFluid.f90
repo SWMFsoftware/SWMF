@@ -42,13 +42,13 @@ module ModMultiFluid
 
   ! Variables that are set for the selected fluid
   integer :: iFluid = 1
-  integer ::                          &
-       iRho   = Rho_,                 &
-       iRhoUx = RhoUx_, iUx = RhoUx_, &
-       iRhoUy = RhoUy_, iUy = RhoUy_, &
-       iRhoUz = RhoUz_, iUz = RhoUz_, &
-       iPpar  = Ppar_,                &
-       iP     = P_,                   &
+  integer ::                           &
+       iRho   = Rho_,                  &
+       iRhoUx = RhoUx_, iUx = RhoUx_,  &
+       iRhoUy = RhoUy_, iUy = RhoUy_,  &
+       iRhoUz = RhoUz_, iUz = RhoUz_,  &
+       iPpar  = iPparIon_I(IonFirst_), &
+       iP     = P_,                    &
        iEnergy= nVar+1
 
   character (len=20) :: NameFluid = ''
@@ -75,9 +75,7 @@ contains
     iRhoUz = iRhoUz_I(iFluid)
     iP     = iP_I(iFluid)
 
-    if(UseMultiIon .and. iFluid>=IonFirst_ .and. iFluid<=IonLast_)then
-       if(iPparIon_I(iFluid) > 1) iPpar = iPparIon_I(iFluid)
-    end if
+    if(iFluid>=IonFirst_ .and. iFluid<=IonLast_) iPpar = iPparIon_I(iFluid)
 
     iEnergy= nVar + iFluid
 
