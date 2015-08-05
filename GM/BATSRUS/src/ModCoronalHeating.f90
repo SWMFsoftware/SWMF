@@ -1695,12 +1695,13 @@ contains
     use ModMain, ONLY: UseB0
     use ModPhysics, ONLY: IonMassPerCharge
     use ModAdvance, ONLY: State_VGB, UseAnisoPressure, &
-         Rho_, Bx_, Bz_, Pe_, p_, Ppar_
+         Rho_, Bx_, Bz_, Pe_
     use ModB0, ONLY: B0_DGB
     use ModChromosphere,  ONLY: DoExtendTransitionRegion, extension_factor, &
          TeSi_C
     use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, UseMultiIon, &
-         nIonFluid, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I
+         nIonFluid, IonFirst_, iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I, iPIon_I, &
+         iPparIon_I
 
     integer, intent(in) :: i, j, k, iBlock
     real, intent(in) :: CoronalHeating
@@ -1712,7 +1713,7 @@ contains
     real :: Ne, B_D(3), B, B2, InvGyroRadius, AlfvenRatio, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
     real :: Ewave, EwavePlus, EwaveMinus, EkinCascade
-    real :: DampingElectron, DampingPar_I(nIonFluid)
+    real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingTotal
 
     character(len=*), parameter :: &
@@ -1754,8 +1755,6 @@ contains
        DampingPar_I(1) = 0.08*sqrt(sqrt(TeByTp))*BetaProton**0.7 &
             *exp(-1.3/max(BetaProton, 1.0e-8))
 
-       if(UseMultiIon) DampingPar_I(2:) = 0.0
-
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
        Ewave = EwavePlus + EwaveMinus
@@ -1763,9 +1762,8 @@ contains
        do iIon = 1, nIonFluid
 
           if(UseAnisoPressure)then
-             ! Does not yet work with multi-ion
-             Pperp = 0.5*(3*State_VGB(p_,i,j,k,iBlock) &
-                  - State_VGB(Ppar_,i,j,k,iBlock))
+             Pperp = 0.5*(3*State_VGB(iPIon_I(iIon),i,j,k,iBlock) &
+                  - State_VGB(iPparIon_I(IonFirst_-1+iIon),i,j,k,iBlock))
           else
              Pperp = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
           end if

@@ -304,11 +304,10 @@ contains
                   Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
-             ! Anisotropic pressure does not yet work with multi-ion
              if(UseAnisoPressure) &
-                  Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*GammaMinus1           &
-                  * QparPerQtotal_I(IonFirst_)
+                  Source_VC(iPparIon_I,i,j,k) = Source_VC(iPparIon_I,i,j,k) &
+                  + CoronalHeating_C(i,j,k)*QparPerQtotal_I &
+                  *GammaMinus1_I(IonFirst_:IonLast_)
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*GammaMinus1
