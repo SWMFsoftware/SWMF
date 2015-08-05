@@ -101,7 +101,7 @@ openw, lun, FileIdl, /get_lun
 printf,lun,' Longitude [Deg], Latitude [Deg],',DataName
 printf,lun, 0, 0.0, 2, 1, 1
 printf,lun, nLon,' ',nLat
-printf,lun, '0.5'
+printf,lun, 180.0/nLon
 printf,lun,'Longitude Latitude Br LongitudeShift'
 
 dLon = 360.0/nLon
