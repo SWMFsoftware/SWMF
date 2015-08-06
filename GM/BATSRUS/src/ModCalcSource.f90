@@ -101,7 +101,8 @@ contains
        do iFluid = 1, nFluid
           call select_fluid
 
-          if(UseAnisoPressure .or. UseViscosity .and. iFluid == 1)then
+          if((UseAnisoPressure .and. iFluid>=IonFirst_ .and. iFluid<=IonLast_)&
+               .or. (UseViscosity .and. nFluid == 1))then
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -114,7 +115,8 @@ contains
                 ! Calculate gradient tensor of velocity
                 call calc_grad_U(GradU_DD, i, j, k, iBlock)
 
-                if(UseAnisoPressure) then
+                if(UseAnisoPressure .and. iFluid>=IonFirst_ .and. &
+                     iFluid<=IonLast_)then
                    ! Calculate bDotGradparU = b dot (b matmul GradU)
 
                    ! Calculate unit vector parallel with full B field
@@ -126,14 +128,14 @@ contains
                    bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
 
                    ! p parallel: -2*ppar*b.(b.(Grad U))
-                   Source_VC(Ppar_,i,j,k) = Source_VC(Ppar_,i,j,k) &
-                        - 2*State_VGB(Ppar_,i,j,k,iBlock)*bDotGradparU
+                   Source_VC(iPpar,i,j,k) = Source_VC(iPpar,i,j,k) &
+                        - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
                    !     = (p - ppar)*b.(b.(GradU)) 
-                   Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                        + (State_VGB(p_,i,j,k,iBlock) -  &
-                        State_VGB(Ppar_,i,j,k,iBlock))*bDotGradparU
+                   Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                        + (State_VGB(iP,i,j,k,iBlock) -  &
+                        State_VGB(iPpar,i,j,k,iBlock))*bDotGradparU
                 end if
 
                 if(UseViscosity) then
@@ -177,7 +179,7 @@ contains
              end do; end do; end do
 
              if(DoTestMe .and. UseAnisoPressure .and. &
-                  (VarTest == Ppar_ .or. VarTest == p_)) &
+                  (VarTest == iPparIon_I(IonFirst_) .or. VarTest == p_)) &
                   call write_source('After bDotGradparU')
 
           end if
@@ -192,10 +194,11 @@ contains
              if(nK > 1) DivU = DivU &
                   + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-             if(UseAnisoPressure .and. iFluid == 1)then
-                Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
-                     - (State_VGB(p_,i,j,k,iBlock) &
-                     - State_VGB(Ppar_,i,j,k,iBlock)/3.0)*DivU
+             if(UseAnisoPressure .and. iFluid>=IonFirst_ &
+                  .and. iFluid<=IonLast_)then
+                Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
+                     - (State_VGB(iP,i,j,k,iBlock) &
+                     - State_VGB(iPpar,i,j,k,iBlock)/3.0)*DivU
              else
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                      - GammaMinus1_I(iFluid)*State_VGB(iP,i,j,k,iBlock)*DivU
