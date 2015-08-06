@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
@@ -307,10 +308,14 @@ contains
                   Source_VC(Energy_-1+IonFirst_:Energy_-1+IonLast_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*QPerQtotal_I
 
-             if(UseAnisoPressure) &
-                  Source_VC(iPparIon_I,i,j,k) = Source_VC(iPparIon_I,i,j,k) &
-                  + CoronalHeating_C(i,j,k)*QparPerQtotal_I &
-                  *GammaMinus1_I(IonFirst_:IonLast_)
+             if(UseAnisoPressure)then
+                do iFluid = IonFirst_, IonLast_
+                   Source_VC(iPparIon_I(iFluid),i,j,k) = &
+                        Source_VC(iPparIon_I(iFluid),i,j,k) &
+                        + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid) &
+                        *GammaMinus1_I(iFluid)
+                end do
+             end if
           else
              Source_VC(p_,i,j,k) = Source_VC(p_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*GammaMinus1
