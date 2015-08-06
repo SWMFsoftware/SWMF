@@ -22,6 +22,9 @@ Machines can be defined:
  absent              - the same for all machines
  0+`hostname -s`+... - only for machines listed
   -`hostname -s`-... - except for machines listed.
+NOTE:
+Specifications (0+MACHINE_1) and (-MACHINE_2) don't contradict each other,
+parameters on MACHINE_1 will be affected by both
 IMPORTANT: 
 Parenthesis () are reserved for machine specification!!!
 If GNU Make variable is needed, use curly braces {}  !!!
@@ -76,7 +79,8 @@ Name=Rosetta
 #>
 Name=Mercury-test 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+srbwks2014-0079)  
-Keys=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/home3/vtenishe/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(-srbwks2014-0079)   
+Keys=-spice-path=/Users/dborovik/SPICE/cspice -spice-kernels=/Users/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+srbwks73465-01)  
+Keys=-spice-path=/home1/dborovik/SPICE/cspice -spice-kernels=/home1/dborovik/SPICE/Kernels/MESSENGER/kernels -cplr-data-path=${MYDIR}/data/input/Mercury/TestCase(0+pfe26)   
 <#
 
 #>
@@ -86,9 +90,6 @@ Compile=
 >>>echo "Installing BATL....." 
 >>>@cvs co BATL
 >>>@cd BATL; ./Config.pl -install -compiler=${COMPILE.f90} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
->>>echo "Installing SWMF...."
->>>cvs co SWMF
->>>cd SWMF; ./Config.pl -install -compiler=${COMPILE.f90}; make LIB 
 >>>@echo "Install AMPS......"  
 >>>./Config.pl -install -compiler=${COMPILE.f90} -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
 >>>make
