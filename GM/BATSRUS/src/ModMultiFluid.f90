@@ -33,6 +33,10 @@ module ModMultiFluid
   integer, parameter :: iUzIon_I(nIonFluid)    = iRhoUz_I(IonFirst_:IonLast_)
   integer, parameter :: iPIon_I(nIonFluid)     = iP_I(IonFirst_:IonLast_)
 
+  integer, private:: i_
+  logical, parameter:: IsIon_I(nFluid) = &
+       (/ (i_ >= IonFirst_ .and. i_ <=IonLast_, i_=1, nFluid) /)
+
   ! The ion masses (adjustable)
   real :: MassIon_I(nIonFluid)
   real :: ChargeIon_I(nIonFluid)=1.0
