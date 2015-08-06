@@ -1,6 +1,17 @@
 !$Id$
 !the wrapper for reading BATSRUS data files into AMPS
 
+! The substitute for the subroutine called by SWMF shared subroutines
+! in the case of an error
+subroutine CON_stop(StringError)
+  implicit none
+  character (len=*), intent(in) :: StringError
+  !----------------------------------------------------------------------------
+  write(*,'(a)')StringError
+  write(*,'(a)')'!!! AMPS_ABORT !!!'
+  stop
+end subroutine CON_stop
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !Determine the number of the variables in the state vector that are returned by the interpolation routine
 subroutine batsrus2amps_get_nvar(res)
@@ -8,7 +19,7 @@ subroutine batsrus2amps_get_nvar(res)
 
   implicit none
   integer,intent(out)::res
-  
+  !-----------------------------------------------------  
   res=nVar 
 end subroutine batsrus2amps_get_nvar    
 
@@ -20,7 +31,7 @@ subroutine batsrus2amps_get_namevardata(varlist,varlistlength)
   implicit none
   integer,intent(in)::varlistlength
   character(len=varlistlength),intent(out)::varlist
-  
+  !-----------------------------------------------------  
   varlist(1:varlistlength)=NameVarData(1:varlistlength)
 end subroutine batsrus2amps_get_namevardata  
 
@@ -30,9 +41,9 @@ subroutine batsrus2amps_get_nameunitdata(unitlist,unitlistlength)
   use ModReadAmr, ONLY:NameUnitData
   
   implicit none
-  integer,intent(in)::unitlistlength
+  integer,                      intent(in )::unitlistlength
   character(len=unitlistlength),intent(out)::unitlist
-  
+  !-----------------------------------------------------
   unitlist(1:unitlistlength)=NameUnitData(1:unitlistlength)
 end subroutine batsrus2amps_get_nameunitdata  
   
@@ -40,10 +51,11 @@ end subroutine batsrus2amps_get_nameunitdata
 !Determine the boundary of the computational domain in the normalized units
 subroutine batsrus2amps_domain_limits(xmin,xmax) 
   use ModReadAmr, ONLY: CoordMin_D, CoordMax_D
+  use ModKind,    ONLY: Real8_
   
   implicit none
-  real(8),intent(out)::xmin(3),xmax(3)
-  
+  real(Real8_),intent(out)::xmin(3),xmax(3)
+  !-----------------------------------------------------
   xmin(:)=CoordMin_D(:)
   xmax(:)=CoordMax_D(:)
 end subroutine batsrus2amps_domain_limits  
@@ -54,9 +66,9 @@ subroutine batsrus2amps_openfile(FileName,FileNameLength)
   use ModReadAmr, ONLY:readamr_read 
   
   implicit none
-  integer,intent(in)::FileNameLength
+  integer,                      intent(in):: FileNameLength
   character(len=FileNameLength),intent(in):: FileName
-
+  !-----------------------------------------------------
   call readamr_read(FileName, IsNewGridIn = .false., IsVerboseIn=.true.)
 end subroutine batsrus2amps_openfile 
 
@@ -66,7 +78,7 @@ subroutine batsrus2amps_read_file_header(FileName,FileNameLength)
   use ModReadAmr, ONLY:readamr_init
   
   implicit none
-  integer,intent(in)::FileNameLength
+  integer,                      intent(in):: FileNameLength
   character(len=FileNameLength),intent(in):: FileName
   integer::l
   
@@ -87,22 +99,27 @@ end subroutine batsrus2amps_closefile
 !Get the interpolated values in a point
 subroutine batsrus2amps_get_data_point(x,res,FoundFlag) 
   use ModReadAmr, ONLY:nVar,readamr_get
-  use BATL_lib, ONLY:nDim
+  use BATL_lib,   ONLY:nDim
+  use ModKind,    ONLY: Real8_
   
   implicit none
-  real(8),dimension(3),intent(in)::x
-  real(8),dimension(0:nVar),intent(out)::res
-  integer,intent(out)::FoundFlag
+  real(Real8_),dimension(3),     intent(in )::x
+  real(Real8_),dimension(0:nVar),intent(out)::res
+  integer,                       intent(out)::FoundFlag
   
-  real(8),dimension(0:nVar)::State
-  real(8),dimension(nDim)::Xyz_D
+  real(Real8_),dimension(0:nVar)::State
+  real(Real8_),dimension(nDim)::Xyz_D
   logical::IsFound
-  
+  !-----------------------------------------------------  
   Xyz_D(:)=x(:)
   call readamr_get(Xyz_D, State, IsFound)
   
   res(:)=State(:)
-  FoundFlag=IsFound
+  if(IsFound)then
+     FoundFlag=1
+  else
+     FoundFlag=0
+  end if
 end subroutine batsrus2amps_get_data_point
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -112,7 +129,7 @@ subroutine batsrus2amps_set_mpi_parameters(ThisThread,nTotalThreads,Communicator
   
   implicit none
   integer,intent(in)::ThisThread,nTotalThreads,Communicator
-  
+  !-----------------------------------------------------
   iProc=ThisThread
   nProc=nTotalThreads
   iComm=Communicator
