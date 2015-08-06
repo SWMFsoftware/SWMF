@@ -53,7 +53,7 @@ subroutine write_plot_los(iFile)
        time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
        Body1,body1_, StartTime
   use ModGeometry, ONLY: &
-       XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D
+       XyzStart_BLK, IsBoundaryBlock_IB, nMirror_D, RadiusMin
   use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
        UnitTemperature_
   use ModIO
@@ -160,7 +160,7 @@ subroutine write_plot_los(iFile)
   ! Set rInner and rOuter depending on component
   select case(NameThisComp)
   case('SC')
-     rInner = rBody 
+     rInner = max(rBody, RadiusMin)
      rOuter = BufferMax_D(1)
   case('IH')
      rInner = BufferMax_D(1)
@@ -796,7 +796,7 @@ contains
        if(iProc == iProcFound)then
           ! Add contribution from this segment to the image
           call add_segment(Ds, XyzLosNew_D)
-      end if
+       end if
 
        ! Move XyzLosNew to the end of the segment
        XyzLosNew_D = XyzLos_D + Ds*LosPix_D
@@ -989,7 +989,7 @@ contains
           RETURN
        endif
     end if
-    
+
 
     do iVar = 1, nPlotVar
        Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -1569,7 +1569,7 @@ contains
             + (iSegment - 0.5)/nSegment*(XyzEnd_D - XyzStart_D)
 
        call add_segment(Ds, XyzLos_D)
-       
+
     end do !line segment interation loop 
 
   end subroutine integrate_segment
@@ -1799,15 +1799,15 @@ subroutine get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, UnitForAll
           trim(NameIdlUnit_V(UnitX_))//' '//&
           trim(NameIdlUnit_V(UnitX_))
   else
-    if (UnitForAllnVars) then
+     if (UnitForAllnVars) then
         do iVar = 1, nPlotVar
            write(unitstr_IDL,'(a)') trim(unitstr_IDL)//' '//'normalized'
- 
+
         end do
         unitstr_IDL=adJustl(trim(unitstr_IDL))
-    else
-         write(unitstr_IDL,'(a)') 'normalized variables'
-    end if
+     else
+        write(unitstr_IDL,'(a)') 'normalized variables'
+     end if
 
   end if
 
