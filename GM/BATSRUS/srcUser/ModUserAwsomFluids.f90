@@ -274,7 +274,7 @@ contains
 
     ! The isothermal parker wind solution is used as initial condition
 
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,    ONLY: State_VGB, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: Xyz_DGB, r_Blk
     use ModPhysics,    ONLY: Si2No_V, UnitTemperature_, rBody, GBody, UnitN_
@@ -282,7 +282,7 @@ contains
          Ew_
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
          MassFluid_I, iRhoIon_I, iPIon_I, MassIon_I, ChargeIon_I, IonLast_, &
-         UseMultiIon, IsMhd
+         UseMultiIon, iPparIon_I, IsIon_I
     use ModWaves, ONLY: UseWavePressureLtd
 
     integer, intent(in) :: iBlock
@@ -377,12 +377,14 @@ contains
           State_VGB(iRho_I(iFluid),i,j,k,iBlock) = &
                NumDens_I(iFluid)*MassFluid_I(iFluid)
        end do
-       if(IsMhd .and. UseMultiIon) State_VGB(Rho_,i,j,k,iBlock) = &
-            sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
        State_VGB(iP_I(IonFirst_:),i,j,k,iBlock) = NumDens_I*Tcorona
-       if(IsMhd .and. UseMultiIon) State_VGB(p_,i,j,k,iBlock) = &
-            sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       if(UseAnisoPressure)then
+          do iFluid = IonFirst_, IonLast_
+             State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  State_VGB(iP_I(iFluid),i,j,k,iBlock)
+          end do
+       end if
        State_VGB(Pe_,i,j,k,iBlock) = &
             sum(ChargeIon_I*State_VGB(iPIon_I,i,j,k,iBlock))
 
@@ -520,7 +522,7 @@ contains
     ! modifies ghost cells in the r direction
 
     use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
-    use ModAdvance,    ONLY: State_VGB, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, UseElectronPressure, UseAnisoPressure
     use ModB0,         ONLY: B0_DGB
     use ModGeometry,   ONLY: TypeGeometry, Xyz_DGB, r_BLK
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
@@ -530,7 +532,8 @@ contains
     use ModVarIndexes, ONLY: Pe_, Bx_, Bz_, WaveFirst_, WaveLast_, Ew_, &
          Ehot_, p_
     use ModMultiFluid, ONLY: MassIon_I, iRhoIon_I, ChargeIon_I, IonLast_, &
-         iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, iP_I
+         iRho_I, MassFluid_I, iUx_I, iUz_I, iRhoUx_I, iRhoUz_I, iPIon_I, &
+         iP_I, iPparIon_I, IsIon_I
     use ModImplicit,   ONLY: StateSemi_VGB, iTeImpl
     use ModWaves,      ONLY: UseWavePressureLtd
     ! Below is for jet only
@@ -629,6 +632,10 @@ contains
              ! Fix ion temperature T_s
              State_VGB(iP_I(iFluid),i,j,k,iBlock) = Tchromo &
                   *State_VGB(iRho,i,j,k,iBlock)/MassFluid_I(iFluid)
+
+             if(UseAnisoPressure .and. IsIon_I(iFluid)) &
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  State_VGB(iP_I(iFluid),i,j,k,iBlock)
           end do
        end do
 
@@ -696,7 +703,7 @@ contains
 
           ! Calculate the rotation speed profile and velocity vector
           if(DistanceJet < DistMinJet .or. DistanceJet > DistMaxJet)then
-             Urot_D = (/0.0,0.0,0.0/)
+             Urot_D = 0.0
           else
              Ucoeff = LinearCoeffJet*DistanceJet &
                   - PowerCoeffJet*DistanceJet**ProfileExponentJet
