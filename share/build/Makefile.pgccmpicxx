@@ -1,0 +1,22 @@
+# C language related part of Makefile.conf: Makefile.iccmpicxx
+C_COMPILER_NAME=pgccmpicxx
+# This file is for Yellowstone (and similar) system with PGI C compiler
+
+COMPILE.c     = pgcc
+COMPILE.mpicc = mpicc
+COMPILE.mpicxx= mpicxx
+
+CPPLIB = -lstdc++ -lmpi_cxx
+
+DEBUGC = 
+#DEBUGC = -g
+
+.SUFFIXES: .c .cpp
+
+FLAGC = ${SEARCH_C} ${FLAGC_EXTRA} -c ${OPT3} ${DEBUGC}
+
+.c.o:
+	${COMPILE.c} ${FLAGC} $< -o $@
+
+.cpp.o:
+	${COMPILE.mpicxx} ${FLAGC} $< -o $@
