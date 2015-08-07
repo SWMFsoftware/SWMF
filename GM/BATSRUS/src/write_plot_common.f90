@@ -719,12 +719,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
-       Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B
+       Ex_CB, Ey_CB, Ez_CB, iTypeAdvance_B, UseElectronPressure
   use ModB0, ONLY: B0_DGB
   use ModGeometry
   use ModPhysics, ONLY : BodyRho_I, BodyP_I, OmegaBody, CellState_VI, &
-       AverageIonCharge, ElectronTemperatureRatio, &
-       RhoBody2, pBody2, rBody2
+       ElectronPressureRatio, RhoBody2, pBody2, rBody2
   use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModRayTrace, ONLY : ray,rayface
   use ModUtilities, ONLY: lower_case
@@ -923,9 +922,17 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         end if
 
         ! Calculate temperature from P = n*k*T + ne*k*Te = n*k*T*(1+ne/n*Te/T)
-        if(String /= 'n') PlotVar(:,:,:,iVar) = &
-             State_VGB(iP,:,:,:,iBLK) / PlotVar(:,:,:,iVar) &
-             /(1+AverageIonCharge*ElectronTemperatureRatio)
+        if(String /= 'n')then
+           ! t = p/n
+           PlotVar(:,:,:,iVar) = &
+                State_VGB(iP,:,:,:,iBLK) / PlotVar(:,:,:,iVar) 
+
+           ! 
+           if(nFluid==1 .and. .not.UseElectronPressure &
+                .and. ElectronPressureRatio > 0.0) &
+                PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)&
+                /(1 + ElectronPressureRatio)
+        end if
      case('ux')
         if (UseRotatingFrame) then
            do k = 1, nK; do j = 1, nJ; do i = 1, nI
