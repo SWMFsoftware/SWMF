@@ -64,19 +64,19 @@ cd ..
 #mkdir -p PGI;   cp -r AMPS PGI/;  <#
 
 # copy job files to the AMPS directory on supercomputers
-#>Pleiades #############################################
+#>Pleiades #########################################################
 #cp AMPS/utility/TestScripts/test_amps.pleiades.job test_amps.job <#
 
 # install AMPS
-#>GNUAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#./Config.pl -install >& test_amps.log       <#
-#>IntelAll ####################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#./Config.pl -install >& test_amps.log       <#
-#>PGIAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#./Config.pl -install >& test_amps.log       <#
+#>GNUAll ###################################################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
+#./Config.pl -install -compiler=gfortran,gcc_mpicc >& test_amps.log       <#
+#>IntelAll ##################################################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
+#./Config.pl -install -compiler=ifort,iccmpicxx    >& test_amps.log       <#
+#>PGIAll ###################################################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
+#./Config.pl -install -compiler=pgf90,pgccmpicxx   >& test_amps.log       <#
 
 # compile AMPS tests
 
@@ -88,9 +88,9 @@ cd ..
 #>Pleiades ####################################
 #module load mpi-openmpi/1.6.5-gcc;          <#
 
-#>GNUAll ###################################################
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                        #
-#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
+#>GNUAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
+#make test_compile >>& test_amps.log         <#
 
 # Intel compiler 
 
@@ -102,9 +102,9 @@ cd ..
 #module load mpi-openmpi/1.6.5-intel;        <#
 
 
-#>IntelAll #################################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                      #
-#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
+#>IntelAll ####################################
+#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
+#make test_compile >>& test_amps.log         <#
 
 # PGI compiler
 
@@ -116,9 +116,9 @@ cd ..
 #module load mpi-sgi/mpt.2.12r16             <#
 
 
-#>PGIAll ###################################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                        #
-#make test_compile COMPILE.mpicxx=mpicxx >>& test_amps.log<#
+#>PGIAll ######################################
+#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
+#make test_compile >>& test_amps.log         <#
 
 
 # Run test
