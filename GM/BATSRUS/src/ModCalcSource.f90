@@ -102,7 +102,7 @@ contains
        do iFluid = 1, nFluid
           call select_fluid
 
-          if((UseAnisoPressure .and. iFluid>=IonFirst_ .and. iFluid<=IonLast_)&
+          if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -116,8 +116,7 @@ contains
                 ! Calculate gradient tensor of velocity
                 call calc_grad_U(GradU_DD, i, j, k, iBlock)
 
-                if(UseAnisoPressure .and. iFluid>=IonFirst_ .and. &
-                     iFluid<=IonLast_)then
+                if(UseAnisoPressure .and. IsIon_I(iFluid))then
                    ! Calculate bDotGradparU = b dot (b matmul GradU)
 
                    ! Calculate unit vector parallel with full B field
@@ -195,8 +194,7 @@ contains
              if(nK > 1) DivU = DivU &
                   + uDotArea_ZI(i,j,k+1,iFluid) - uDotArea_ZI(i,j,k,iFluid)
              DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-             if(UseAnisoPressure .and. iFluid>=IonFirst_ &
-                  .and. iFluid<=IonLast_)then
+             if(UseAnisoPressure .and. IsIon_I(iFluid))then
                 Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                      - (State_VGB(iP,i,j,k,iBlock) &
                      - State_VGB(iPpar,i,j,k,iBlock)/3.0)*DivU

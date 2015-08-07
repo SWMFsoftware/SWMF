@@ -79,7 +79,7 @@ contains
     iRhoUz = iRhoUz_I(iFluid)
     iP     = iP_I(iFluid)
 
-    if(iFluid>=IonFirst_ .and. iFluid<=IonLast_) iPpar = iPparIon_I(iFluid)
+    if(IsIon_I(iFluid)) iPpar = iPparIon_I(iFluid)
 
     iEnergy= nVar + iFluid
 
