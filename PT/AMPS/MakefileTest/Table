@@ -89,8 +89,8 @@ Compile=
 >>>@echo "test_batl-reader_compile..." > test_batl-reader.diff 
 >>>echo "Installing BATL....." 
 >>>@cvs co BATL
->>>@cd BATL; ./Config.pl -install -compiler=${COMPILE.f90} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
+>>>@cd BATL; ./Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME} -g=4,4,4 -r=2,2,2 -ng=0; make READAMRLIB 
 >>>@echo "Install AMPS......"  
->>>./Config.pl -install -compiler=${COMPILE.f90} -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
+>>>./Config.pl -install -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
 >>>make
 <#
