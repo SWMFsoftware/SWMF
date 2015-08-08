@@ -2588,12 +2588,13 @@ contains
     !==========================================================================
     subroutine get_hd_flux
 
-      use ModAdvance, ONLY: UseElectronPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
       use ModPhysics, ONLY: InvGammaMinus1_I
       use ModWaves
 
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
+      real :: DpPerB, FullB2
       !-----------------------------------------------------------------------
       ! Extract primitive variables
       Rho     = State_V(iRho)
@@ -2613,6 +2614,11 @@ contains
          if(UseWavePressure) &
               pTotal = pTotal +(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
       end if
+
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
+      !        = p + bb/2 + (p - ppar)/2
+      if(UseAnisoPressure .and. IsIon_I(iFluid)) &
+           pTotal = pTotal + 0.5*(p - State_V(iPpar))
 
       ! Calculate conservative state
       StateCons_V(iRhoUx)  = Rho*Ux
@@ -2636,6 +2642,23 @@ contains
       Flux_V(iP)  = Un*p
 
       Flux_V(iEnergy) = Un*(pTotal + e)
+
+      if(UseAnisoPressure .and. IsIon_I(iFluid))then
+         ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
+         ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
+         FullB2 = FullBx**2 + FullBy**2 + FullBz**2
+         DpPerB = 1.5*(State_V(iPpar) - p)*FullBn/max(1e-30, FullB2)
+
+         Flux_V(iRhoUx) = Flux_V(iRhoUx) + FullBx*DpPerB
+         Flux_V(iRhoUy) = Flux_V(iRhoUy) + FullBy*DpPerB
+         Flux_V(iRhoUz) = Flux_V(iRhoUz) + FullBz*DpPerB
+
+         ! f_i[Ppar] = u_i*Ppar
+         Flux_V(iPpar)  = Un*State_V(iPpar)
+
+         Flux_V(iEnergy) = Flux_V(iEnergy) &
+              + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+      end if
 
       ! Needed for adiabatic source term for electron pressure
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
