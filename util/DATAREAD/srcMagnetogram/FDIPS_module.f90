@@ -248,9 +248,12 @@ contains
        ! Check if the theta coordinate is uniform or not
        UseCosTheta = abs(Theta0_I(3) - 2*Theta0_I(2) + Theta0_I(1)) > 1e-6
 
-       ! Br0 is defined with the opposite index order
-       Br0_II = transpose(Var_II)
-
+       ! Convert Var_II(iLon,iLat) -> Br0_II(iTheta,iPhi)
+       do iTheta = 1, nTheta0, 1
+          do iPhi = 1, nPhi0
+             Br0_II(iTheta,iPhi) = Var_II(iPhi,nTheta0+1-iTheta)
+          end do
+       end do
        deallocate(Var_II)
 
     else
