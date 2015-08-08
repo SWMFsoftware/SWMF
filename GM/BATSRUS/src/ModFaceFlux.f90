@@ -2615,8 +2615,7 @@ contains
               pTotal = pTotal +(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
       end if
 
-      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
-      !        = p + bb/2 + (p - ppar)/2
+      ! pTotal = pperp = 3/2*p - 1/2*ppar = p + (p - ppar)/2
       if(UseAnisoPressure .and. IsIon_I(iFluid)) &
            pTotal = pTotal + 0.5*(p - State_V(iPpar))
 
