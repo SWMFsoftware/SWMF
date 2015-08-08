@@ -3055,7 +3055,7 @@ contains
            UseAnisoPressure
 
       real:: RhoU_D(3)
-      real:: Rho, InvRho, GammaP, GammaPe, Pw, Sound2, Ppar, Pperp
+      real:: Rho, InvRho, GammaP, GammaPe, Pw, Sound2, Ppar, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real:: dB1dB1
@@ -3148,6 +3148,13 @@ contains
       if(UseAnisoPressure .and. FullB2 > 0)then
          Ppar  = State_V(Ppar_)
          Pperp = (3*State_V(p_) - Ppar)/2.
+         if(.not. IsMhd)then
+            do jFluid = IonFirst_+1, IonLast_
+               Ppar1 = State_V(iPparIon_I(jFluid))
+               Ppar = Ppar + Ppar1
+               Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
+            end do
+         end if
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
          Fast2 = Sound2 + Alfven2 
