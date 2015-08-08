@@ -45,6 +45,8 @@ ifeq ($(COMPILE.f90),gfortran)
 	SEARCH_F+= -J${BATL}/share/include 
 else ifeq ($(COMPILE.f90),mpif90)
 	SEARCH_F+= -I${BATL}/share/include
+else ifeq ($(COMPILE.f90),pgf90)
+	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),ifort)
 	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),nagfor)
