@@ -46,8 +46,10 @@ ifeq ($(COMPILE.f90),gfortran)
 else ifeq ($(COMPILE.f90),mpif90)
 	SEARCH_F+= -I${BATL}/share/include
 else ifeq ($(COMPILE.f90),pgf90)
+	AMPSLINKER+= -Mnomain
 	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),ifort)
+	AMPSLINKER+= -nofor-main
 	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),nagfor)
 	SEARCH_F+= -I${BATL}/share/include
