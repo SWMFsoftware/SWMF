@@ -15,6 +15,6 @@ plot_log, logfilenames, logfunc, wlog,  wlognames,         $
   smooths=smooths,                                       $
   colors=colors, symbols=symbols, linestyles=linestyles, $
   title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit, $
-  legends=legends, legendpos=legendpos, noerase=noerase
+  legends=legends, legendpos=legendpos, noerase=noerase, dofft=dofft
 
 end
