@@ -3895,7 +3895,8 @@ pro plot_log, logfilenames, func, $
               smooths=smooths,                                         $
               colors=colors, linestyles=linestyles, symbols=symbols,   $
               title=title, xtitle=xtitle, ytitles=ytitles, timeunit=timeunit,$
-              legends=legends, legendpos=legendpos, noerase=noerase
+              legends=legends, legendpos=legendpos, noerase=noerase, $
+              dofft=dofft
 
 ; Plot variables listed in the space separated func string from the
 ; files listed in the string array logfilenames.
@@ -3933,6 +3934,9 @@ endif
 ; Shift times by 0 unless defined
 if n_elements(timeshifts) lt nlog then timeshifts = fltarr(nlog)
 
+; Shall we do an FFT transform and plot power spectra?
+if n_elements(dofft) eq 0 then dofft=0
+
 ; Do not smooth data unless defined
 if n_elements(smooths) lt nlog then smooths = intarr(nlog)
 
@@ -3958,12 +3962,12 @@ if n_elements(linestyles) lt nlog then linestyles = intarr(nlog)
 ; If symbols are not defined do not use symbols (0)
 if n_elements(symbols) lt nlog then symbols = intarr(nlog)
 
-; If colors are not defined, make 3 colors with the last one white/black
+; If colors are not defined, make nlog colors defined to white/black
 if n_elements(colors) lt nlog then colors = intarr(nlog) + 255
 
 ; If none of colors, linestyles or symbols are defined, make colors different
 if max(linestyles) eq 0 and max(symbols) eq 0 and min(colors) eq 255 then $
-  colors = [255,150,250,50,100,200,25,220,125]
+  colors = [255,100,250,150,200,50,25,220,125]
 
 ; Define default title
 if n_elements(title) eq 1 and size(title,/type) eq 7 then title0=title $
@@ -3973,11 +3977,14 @@ else                                    title0=' '
 ; Define default xtitle
 if n_elements(xtitle) eq 1 and size(xtitle,/type) eq 7 then xtitle0=xtitle $
 else if timeunit eq '1' then xtitle0='Time' $
+else if dofft then xtitle0='Frequency [1/'+timeunit+']' $
 else xtitle0='Time ['+timeunit+']'
 
 ; Define default ytitles
 if n_elements(ytitles) eq nfunc and size(ytitles,/type) eq 7 then $
-  ytitles0=ytitles else ytitles0=funcs
+  ytitles0=ytitles $
+else if dofft then ytitles0 = 'Power spectrum of '+funcs $
+else ytitles0=funcs
 
 if !p.thick eq 0 then begin
    if strpos(!d.name,'X') gt -1 then thick = 1 else thick = 3
@@ -4047,6 +4054,13 @@ for iter = iter0, 2 do begin
         
         hour = log_time(wlog,wlognames,timeunit) + timeshifts(ilog)
 
+        if(dofft)then begin
+           n = n_elements(hour)
+           freqmin = 1/(hour(n-1) - hour(0))
+           xcoord = findgen(n)*freqmin
+        endif else $
+           xcoord = hour
+
         for ifunc = 0, nfunc-1 do begin
 
             field = log_func(wlog, wlognames, funcs(ifunc), error)
@@ -4056,55 +4070,58 @@ for iter = iter0, 2 do begin
                   " was not found in wlog",strtrim(string(ilog),2)
             endif else begin
 
-                if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
+               if(dofft) then field = abs(fft(field))^2
 
-                if iter eq 1 then begin
-                    if DoXrange then begin
-                        xrange[0]   = min( [ xrange[0], hour ] )
-                        xrange[1]   = max( [ xrange[1], hour ] )
-                    endif else $
-                        field = field( where(hour ge xrange[0] and $
-                                             hour le xrange[1]))
-                    if DoYrange then begin
-                        yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
-                        yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
-                    endif
-                endif else begin
-                    set_position, sizes, 0, ifunc, posm, /rect
-                    posm(0) = posm(0) + 0.05
-                    if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
-                    title1  = ''
-                    xtitle1 = ''
-                    xtickname1 = strarr(60)+' '
-                    xstyle=5
-                    ystyle=5
-                    if ilog eq 0 then begin
-                        xstyle=1
-                        ystyle=1
-                        if ifunc eq 0       then title1  = title0
-                        if ifunc eq nfunc-1 then begin
-                            xtitle1    = xtitle0
-                            xtickname1 = !x.tickname
-                        endif
-                    endif
-                    plot, hour, field, pos = posm, $
-                      xrange = xrange, $
-                      yrange = yranges(*,ifunc), $
-                      xstyle = xstyle, $
-                      ystyle = ystyle, $
-                      title  = title1, $
-                      xtitle = xtitle1, $
-                      xtickname = xtickname1, $
-                      ytitle = ytitles0(ifunc), $
-                      color = colors(ilog), $
-                      psym  = symbols(ilog), $
-                      linestyle = linestyles(ilog), $
-                      thick = thick, $
-                      /noerase
+               if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
+               
+               if iter eq 1 then begin
+                  if DoXrange then begin
+                     xrange[0]   = min( [ xrange[0], xcoord ] )
+                     xrange[1]   = max( [ xrange[1], xcoord ] )
+                  endif else $
+                     field = field( where(xcoord ge xrange[0] and $
+                                          xcoord le xrange[1]))
+                  if DoYrange then begin
+                     yranges[0,ifunc] = min( [ yranges[0,ifunc], field ] )
+                     yranges[1,ifunc] = max( [ yranges[1,ifunc], field ] )
+                  endif
+               endif else begin
+                  set_position, sizes, 0, ifunc, posm, /rect
+                  posm(0) = posm(0) + 0.05
+                  if nfunc lt 3 then posm(1) = posm(1) + 0.05/nfunc
+                  title1  = ''
+                  xtitle1 = ''
+                  xtickname1 = strarr(60)+' '
+                  xstyle=5
+                  ystyle=5
+                  if ilog eq 0 then begin
+                     xstyle=1
+                     ystyle=1
+                     if ifunc eq 0       then title1  = title0
+                     if ifunc eq nfunc-1 then begin
+                        xtitle1    = xtitle0
+                        xtickname1 = !x.tickname
+                     endif
+                  endif
+                  plot, xcoord, field, pos = posm, $
+                        xrange = xrange, $
+                        yrange = yranges(*,ifunc), $
+                        ylog = dofft, $
+                        xstyle = xstyle, $
+                        ystyle = ystyle, $
+                        title  = title1, $
+                        xtitle = xtitle1, $
+                        xtickname = xtickname1, $
+                        ytitle = ytitles0(ifunc), $
+                        color = colors(ilog), $
+                        psym  = symbols(ilog), $
+                        linestyle = linestyles(ilog), $
+                        thick = thick, $
+                        /noerase
 
-                    if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
-                
-                endelse
+                  if ilog eq nlog-1 then oplot,xrange,[0,0],linestyle=2
+                  
+               endelse
             endelse
         endfor
         if n_elements(legendpos) eq 4 then begin
