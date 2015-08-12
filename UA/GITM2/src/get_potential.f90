@@ -307,9 +307,11 @@ subroutine get_potential(iBlock)
                 MLatitude(-1:nLons+2,-1:nLats+2,iAlt,iBlock), dynamo)
            do iLon = -1,nLons+2
               do iLat = -1,nLats+2 
-                 if (abs(MLatitude(iLon, iLat, iAlt, iBlock)) < DynamoHighLatBoundary-2.0) then
-                    dis= (DynamoHighLatBoundary - 2.0 - &
-                          abs(MLatitude(iLon, iLat, iAlt, iBlock)))/10.0
+!!                 if (abs(MLatitude(iLon, iLat, iAlt, iBlock)) < DynamoHighLatBoundary) then
+!!                    TempPotential(iLon,iLat) = TempPotential(iLon,iLat) + dynamo(iLon,iLat)
+                 if (abs(MLatitude(iLon, iLat, iAlt, iBlock)) < DynamoHighLatBoundary) then
+                    dis= (DynamoHighLatBoundary - &
+                          abs(MLatitude(iLon, iLat, iAlt, iBlock)))/20.0
                     if (dis > 1.0) then
                        TempPotential(iLon,iLat) = dynamo(iLon,iLat)
                     else
