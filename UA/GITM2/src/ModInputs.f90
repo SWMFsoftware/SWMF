@@ -201,6 +201,8 @@ module ModInputs
   integer :: nItersMax              = 500
   real    :: MaxResidual            = 1.0
 
+  logical :: UseImprovedIonAdvection = .false.
+
   logical :: UseSolarHeating   = .true.
   logical :: UseJouleHeating   = .true.
   logical :: UseAuroralHeating = .true.
@@ -222,6 +224,7 @@ module ModInputs
   logical :: UseStressHeating  = .false.
 
   real :: PhotoElectronHeatingEfficiency = 0.0
+  real :: NeutralHeatingEfficiency = 0.05
 
   real :: KappaTemp0 = 5.6e-4
   real :: ThermalConduction_AO2 = 3.6e-4
