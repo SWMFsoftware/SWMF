@@ -116,8 +116,10 @@ subroutine advance_vertical_1stage( &
   real :: LogNum(-1:nAlts+2)
 
   real, dimension(1:nAlts)    :: GradLogRho, DivVel, GradTemp, GradTempKoM, &
-       DiffLogRho, DiffTemp, GradTmp, DiffTmp, DiffLogNum, GradLogNum
+       DiffLogRho, DiffTemp, GradTmp, DiffTmp, DiffLogNum, GradLogNum, &
+       DiviVel
   real, dimension(1:nAlts,3) :: GradVel_CD, DiffVel_CD
+  real, dimension(1:nAlts,3) :: GradiVel_CD, DiffiVel_CD
 
   real, dimension(1:nAlts,nSpecies)    :: GradLogNS, DiffLogNS, &
        GradVertVel, DiffVertVel, DivVertVel
@@ -167,10 +169,13 @@ subroutine advance_vertical_1stage( &
   do iDim = 1, 3
      call calc_rusanov_alts(Vel_GD(:,iDim), &
           GradVel_CD(:,iDim),DiffVel_CD(:,iDim))
+     call calc_rusanov_alts(iVel(:,iDim), &
+          GradiVel_CD(:,iDim),DiffiVel_CD(:,iDim))
   enddo
 
   ! Add geometrical correction to gradient and obtain divergence
   DivVel = GradVel_CD(:,iUp_) + 2*Vel_GD(1:nAlts,iUp_)*InvRadialDistance_C
+  DiviVel = GradiVel_CD(:,iUp_) + 2*iVel(1:nAlts,iUp_)*InvRadialDistance_C
 
   do iSpecies=1,nSpecies
 
@@ -210,9 +215,16 @@ subroutine advance_vertical_1stage( &
      enddo
 
      do iSpecies=1,nIonsAdvect
-        NewLogINS(iAlt,iSpecies) = NewLogINS(iAlt,iSpecies) - Dt * &
-             (IVel(iAlt,iUp_) * GradLogINS(iAlt,iSpecies) ) &
-             + Dt * DiffLogINS(iAlt,iSpecies)
+        if (UseImprovedIonAdvection) then
+           NewLogINS(iAlt,iSpecies) = NewLogINS(iAlt,iSpecies) - Dt * &
+                (DiviVel(iAlt) * LogINS(iAlt,iSpecies) + &
+                IVel(iAlt,iUp_) * GradLogINS(iAlt,iSpecies) ) &
+                + Dt * DiffLogINS(iAlt,iSpecies)
+        else
+           NewLogINS(iAlt,iSpecies) = NewLogINS(iAlt,iSpecies) - Dt * &
+                (IVel(iAlt,iUp_) * GradLogINS(iAlt,iSpecies) ) &
+                + Dt * DiffLogINS(iAlt,iSpecies)
+        endif
      enddo
 
 !     ! dVr/dt = -[ (V grad V)_r + grad T + T grad ln Rho - g ]

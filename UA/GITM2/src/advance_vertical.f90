@@ -6,7 +6,7 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   use ModPlanet, only: nSpecies, OmegaBody, nIonsAdvect
   use ModConstants, only: pi
   use ModSources, only: EUVHeating, KappaEddyDiffusion
-  use ModInputs, only: UseIonAdvection, iDebugLevel
+  use ModInputs, only: UseIonAdvection, iDebugLevel, UseImprovedIonAdvection
   use ModVertical, ONLY: &
        LogRho, &
        cMax1      => cMax,&
@@ -75,7 +75,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   enddo
 
   do iSpecies = 1, nIons-1 !Advect
-     LogINS(:,iSpecies)  = log(IDensityS(iLon,iLat,:,iSpecies,iBlock))
+     if (UseImprovedIonAdvection) then
+        LogINS(:,iSpecies)  = IDensityS(iLon,iLat,:,iSpecies,iBlock)
+     else
+        LogINS(:,iSpecies)  = log(IDensityS(iLon,iLat,:,iSpecies,iBlock))
+     endif
   enddo
 
   MeanMajorMass_1d = MeanMajorMass(iLon,iLat,:)
@@ -158,7 +162,11 @@ subroutine advance_vertical(iLon,iLat,iBlock)
   if (UseIonAdvection) then
 
      do iIon = 1, nIons-1 !Advect
-        IDensityS(iLon,iLat,:,iIon,iBlock) = exp(LogINS(:,iIon))
+        if (UseImprovedIonAdvection) then
+           IDensityS(iLon,iLat,:,iIon,iBlock) = LogINS(:,iIon)
+        else
+           IDensityS(iLon,iLat,:,iIon,iBlock) = exp(LogINS(:,iIon))
+        endif
      enddo
 
      !\

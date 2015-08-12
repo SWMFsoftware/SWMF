@@ -99,9 +99,15 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   IVel(-1:0,iUp_)      = 0.0
 
   do iSpecies=1,nIons-1 !Advect
-     dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
-     LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
-     LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
+     if (UseImprovedIonAdvection) then
+        dn = LogINS(1,iSpecies)/LogINS(2,iSpecies)
+        LogINS(0,iSpecies) = LogINS(1,iSpecies)*dn
+        LogINS(-1,iSpecies) = LogINS(0,iSpecies)*dn
+     else
+        dn = (LogINS(2,iSpecies) - LogINS(1,iSpecies))
+        LogINS(0,iSpecies) = LogINS(1,iSpecies) - dn
+        LogINS(-1,iSpecies) = LogINS(0,iSpecies) - dn
+     endif
   enddo
 
 !  ! Lower boundary for NO on Earth
@@ -187,12 +193,19 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   Lst = mod(UTime/3600.0+Lon/15.0,24.0)
 
   do iSpecies=1,nIons-1 !Advect
-     dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
+
+     if (UseImprovedIonAdvection) then
+        dn = LogINS(nAlts,iSpecies)/LogINS(nAlts-1,iSpecies)
+        if (dn >0.99) dn = 0.99
+        LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies)*dn*0.9
+        LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies)*dn*0.9
+     else
+        dn = (LogINS(nAlts,iSpecies) - LogINS(nAlts-1,iSpecies))
 
 !     write(*,*) dn, dn * (2.0-cos(lst/12*Pi)), -0.01*LogINS(nAlts,iSpecies), lst
-     fac = ((1.5-cos(lst/12*Pi))/1.75)**2.0
-     dn = dn * fac
-     if (dn > -0.001*LogINS(nAlts,iSpecies)) dn = -0.001*LogINS(nAlts,iSpecies)
+        fac = ((1.5-cos(lst/12*Pi))/1.75)**2.0
+        dn = dn * fac
+        if (dn > -0.001*LogINS(nAlts,iSpecies)) dn = -0.001*LogINS(nAlts,iSpecies)
 
 !     dn = dn*(0.2*sin(Pi/2.-SZAVertical)+1.)
 !     dn = 0.0
@@ -202,8 +215,9 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
 !        !write(*,*) lst,iSpecies, SZAVertical*180.0/3.14159, dn
 !     endif
 
-     LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
-     LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
+        LogINS(nAlts+1,iSpecies) = LogINS(nAlts,iSpecies) + dn
+        LogINS(nAlts+2,iSpecies) = LogINS(nAlts+1,iSpecies) + dn
+     endif
   enddo
 
   ! Hydrostatic pressure for the neutrals
