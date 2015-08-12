@@ -244,12 +244,13 @@ subroutine init_heating_efficiency
 
   use ModGITM, only: nLons, nLats, nAlts, nBlocks, Altitude_GB
   use ModEUV, only: HeatingEfficiency_CB, eHeatingEfficiency_CB
+  use ModInputs, only: NeutralHeatingEfficiency
 
   implicit none
 
   integer :: iLon, iLat, iAlt
   !------------------------------------------------------------------
-  HeatingEfficiency_CB(:,:,:,1:nBlocks) = 0.05
+  HeatingEfficiency_CB(:,:,:,1:nBlocks) = NeutralHeatingEfficiency
 !  max(0.1, &
 !       0.40 - &
 !       5.56e-5*(Altitude_GB(1:nLons,1:nLats,1:nAlts,1:nBlocks)/1000 - 165)**2)
