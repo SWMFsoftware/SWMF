@@ -101,7 +101,8 @@ contains
     call transfer_real_array(GM_, PC_, n, ParamReal_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    if(is_proc(PC_))call PC_put_from_gm_init(iParam_I, ParamReal_I, n)
+    if(is_proc(PC_))call PC_put_from_gm_init(iParam_I, ParamReal_I, n, &
+         CouplerGMtoPC%NameVar, CouplerGMtoPC%nVar)
 
     deallocate(ParamReal_I)
 
