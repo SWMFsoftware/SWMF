@@ -655,6 +655,16 @@ subroutine set_inputs
               end if
            end if
 
+        case ("#NEUTRALHEATING")
+           call read_in_real(NeutralHeatingEfficiency, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #NEUTRALHEATING:'
+              write(*,*) ''
+              write(*,*) '#NEUTRALHEATING'
+              write(*,*) "NeutralHeatingEfficiency   (real)"
+              IsDone = .true.
+           end if
+
         case ("#THERMO")
            call read_in_logical(UseSolarHeating, iError)
            call read_in_logical(UseJouleHeating, iError)
@@ -780,6 +790,15 @@ subroutine set_inputs
               write(*,*) "UseCoriolis         (logical)"
               write(*,*) "UseGravity          (logical)"
               IsDone = .true.
+           endif
+
+        case ("#USEIMPROVEDIONADVECTION")
+           call read_in_logical(UseImprovedIonAdvection, iError)
+           if (iError /= 0) then
+              write(*,*) 'Incorrect format for #DYNAMO:'
+              write(*,*) ''
+              write(*,*) '#USEIMPROVEDIONADVECTION'
+              write(*,*) "UseImprovedIonAdvection      (logical)"
            endif
 
         case ("#DYNAMO")
