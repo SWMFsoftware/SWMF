@@ -32,7 +32,7 @@ module ModRCMR
   double precision :: eta, reg_val, Dts, Measure_Dts, scatter
 
   character (len=50) :: filename
-  character (len=iCharLen_) :: RCMRInType, RCMROutType
+  character (len=iCharLen_) :: RCMRInType=" ", RCMROutType=" "
 	
   integer, dimension(1,1) :: dhat
 
