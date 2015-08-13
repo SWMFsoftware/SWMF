@@ -247,7 +247,7 @@ module ModInputs
 
   logical :: DoCheckStopFile = .true.
 
-! AGB: Setting physical limits for ionospheric dynamics
+  ! AGB: Setting physical limits for ionospheric dynamics
   real :: MaxVParallel = 100.0         
   real :: MaxEField = 0.1
 
@@ -275,42 +275,38 @@ module ModInputs
   ! Some are modified in Planet.f90 (set_planet_defaults)
   real :: DtLTERadiation = 100.0*Rotation_Period
 
-!!!!!!!!!!!!!!! DUST
-Logical :: UseDustDistribution = .False.
-! Setting the depth to which dust is mixed based on a reference dust opacity
-!This can now be read in as a horizontal distribution, or as a constant value
-!using UAM.in
-  character (len=iCharLen_) :: cDustFile
-  character (len=iCharLen_) :: cConrathFile
+  !!!!!!!!!!!!!!! DUST
+  Logical :: UseDustDistribution = .False.
+  ! Setting the depth to which dust is mixed based on a reference dust opacity
+  !This can now be read in as a horizontal distribution, or as a constant value
+  !using UAM.in
+  character (len=iCharLen_) :: cDustFile="NotSet"
+  character (len=iCharLen_) :: cConrathFile="NotSet"
   real :: CONRNU_temp = 0.03    ! Standard value  ~25km half-height
-!     real :: CONRNU = 0.003   ! ~50 km half-height
-!     real  :: CONRNU = 0.5     ! ~10 km half-height
-! Global mean dust opacity
+  !     real :: CONRNU = 0.003   ! ~50 km half-height
+  !     real  :: CONRNU = 0.5     ! ~10 km half-height
+  ! Global mean dust opacity
   real :: TAUTOT_temp  = 0.3 !do not set to 0.0 or less
-!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!
 
-!   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
+  !   RPTAU   :  Reference Pressure optical depth;  6.1 mbar for now
   real, parameter :: RPTAU  = 6.1
 
-! Top of the shortwave calculation for lower atmosphere radiation code(mbars)
+  ! Top of the shortwave calculation for lower atmosphere radiation code(mbars)
   real, parameter :: PRAD  = 1.0E-6 !mb (~115 km)
 
-! Top of the longwave calculation for lower atmosphere radiation code(PASCALS)
-! and where radcool begins
+  ! Top of the longwave calculation for lower atmosphere radiation code(PASCALS)
+  ! and where radcool begins
   real, parameter :: PLONG = 4.0E-1 ! Pa  (also 4.0  ubar)
 
-
-
-! Ls Variables
-	  real, dimension(7) :: Ls_a
-	  real, dimension(7) :: Ls_tau
-	  real, dimension(7) :: Ls_phi
+  ! Ls Variables
+  real, dimension(7) :: Ls_a
+  real, dimension(7) :: Ls_tau
+  real, dimension(7) :: Ls_phi
 	  
-	  DATA Ls_a / 0.007, 0.006, 0.004, 0.004, 0.002, 0.002, 0.002 /
-	  DATA Ls_tau / 2.2353, 2.7543, 1.1177, 15.7866, 2.1354, &
-	             2.4694, 32.8493 /
-	  DATA Ls_phi / 49.409, 168.173, 191.837, 21.736, 15.704, &
-				 95.528, 49.095 /
+  DATA Ls_a / 0.007, 0.006, 0.004, 0.004, 0.002, 0.002, 0.002 /
+  DATA Ls_tau / 2.2353, 2.7543, 1.1177, 15.7866, 2.1354, 2.4694, 32.8493 /
+  DATA Ls_phi / 49.409, 168.173, 191.837, 21.736, 15.704, 95.528, 49.095 /
 
 contains
 
