@@ -38,7 +38,7 @@ contains
 
   !============================================================================
 
-  subroutine GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
+  subroutine GM_get_for_pc_init(ParamInt_I, nParamReal, ParamReal_I)
 
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal
@@ -50,20 +50,21 @@ contains
     implicit none
 
     integer :: iFluid, iRegionPIC 
-    integer :: i, idx ! help indexes 
+    integer :: i, n ! help indexes 
 
     integer, intent(inout) :: ParamInt_I(4)
-    integer, intent(in)  :: n 
-    real, optional, intent(inout) :: ParamReal_I(n)
+    integer, intent(in)  :: nParamReal ! Size of ParamReal_I 
+    real, optional, intent(inout) :: ParamReal_I(nParamReal)
 
     character(len=*), parameter :: NameSub='GM_get_for_pc_init'
     !--------------------------------------------------------------------------
 
-    if(n .lt. 1 ) then
+    if(nParamReal < 1 ) then
        !! SEND FIRST
        ParamInt_I(1) = nIonFluid 
        ParamInt_I(2) = nRegionPic
        ParamInt_I(3) = nDim 
+       !!! REMOVE
        if(UseFileCoupling) then 
           ParamInt_I(4) = 1
        else
@@ -71,51 +72,50 @@ contains
        end if
 
     else
-       ParamReal_I(1) = XyzMinPic_DI(x_, 1)
-
-       !! First part of ParamReal is the Nregion block, then Nspecis block
-       idx = 1
-       do iRegionPIC = 1, nRegionPic
-          ParamReal_I(idx) = XyzMinPic_DI(x_, iRegionPIC)
-          ParamReal_I(idx + 1) = XyzMaxPic_DI(x_, iRegionPIC) 
-          ParamReal_I(idx + 2) = DxyzPic_DI(x_, iRegionPIC)
+       ! First part of ParamReal is the Nregion block, then Nspecis block
+       n = 1
+       do iRegionPic = 1, nRegionPic
+          ParamReal_I(n) = XyzMinPic_DI(x_,iRegionPic); n = n+1
+          ParamReal_I(n) = XyzMaxPic_DI(x_,iRegionPic); n = n+1
+          ParamReal_I(n) = DxyzPic_DI(x_,iRegionPic)  ; n = n+1
           if(nDim > 1) then
-             ParamReal_I(idx + 3) = XyzMinPic_DI(y_, iRegionPIC)
-             ParamReal_I(idx + 4) = XyzMaxPic_DI(y_, iRegionPIC)
-             ParamReal_I(idx + 5) = DxyzPic_DI(y_, iRegionPIC)
-          else         
-             ParamReal_I(idx + 3) = 0.0
-             ParamReal_I(idx + 4) = DxyzPic_DI(x_,iRegionPIC)
-             ParamReal_I(idx + 5) = DxyzPic_DI(x_, iRegionPIC)
+             ParamReal_I(n) = XyzMinPic_DI(y_,iRegionPic); n = n+1
+             ParamReal_I(n) = XyzMaxPic_DI(y_,iRegionPic); n = n+1
+             ParamReal_I(n) = DxyzPic_DI(y_,iRegionPic); n = n+1
+          else
+             ! Single cell in Y direction with dy = dx
+             ParamReal_I(n) = 0.0; n = n+1
+             ParamReal_I(n:n+1) = DxyzPic_DI(x_,iRegionPic); n = n+2
           end if
           if(nDim > 2) then
-             ParamReal_I(idx + 6) = XyzMinPic_DI(z_, iRegionPIC)
-             ParamReal_I(idx + 7) = XyzMaxPic_DI(z_, iRegionPIC)
-             ParamReal_I(idx + 8) = DxyzPic_DI(z_, iRegionPIC)
-          else         
-             ParamReal_I(idx + 6) = 0.0
-             ParamReal_I(idx + 7) = maxval(DxyzPic_DI(x_:y_, iRegionPIC))
-             ParamReal_I(idx + 8) = maxval(DxyzPic_DI(x_:y_, iRegionPIC))
+             ParamReal_I(n) = XyzMinPic_DI(z_,iRegionPic); n = n+1
+             ParamReal_I(n) = XyzMaxPic_DI(z_,iRegionPic); n = n+1
+             ParamReal_I(n) = DxyzPic_DI(z_,iRegionPic); n = n+1
+          else
+             ! Single cell in Z direction with dz = max(dx, dy)
+             ParamReal_I(n)     = 0.0; n = n+1
+             ParamReal_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegionPic)); n = n+2
           endif
-          idx = idx + 9
        end do
 
        ! convert to SI units
-       do i = 1, idx -  1
-          ParamReal_I(i) =  ParamReal_I(i) * No2Si_V(UnitX_)
+       do i = 1, n -  1
+          ParamReal_I(i) = ParamReal_I(i) * No2Si_V(UnitX_)
        end do
 
-       ! Q/Qi, M/Mi, T/Ti
+       ! Q/Qi, M/Mi
        do iFluid = 0, nIonFluid-1
-          ParamReal_I(idx + iFluid*3)     = ChargeIon_I(iFluid+1)
-          ParamReal_I(idx + iFluid*3 + 1) = MassIon_I(iFluid+1)/MassIon_I(1)
-          ParamReal_I(idx + iFluid*3 + 2) = 1.0 - PePerPtotal/nIonFluid
+          ParamReal_I(n) = ChargeIon_I(iFluid+1); n = n+1
+          ParamReal_I(n) = MassIon_I(iFluid+1)/MassIon_I(1); n = n+1
        end do
 
-       idx = idx + nIonFluid*3
-       ParamReal_I(idx)   = xUnitPicSi
-       ParamReal_I(idx+1) = uUnitPicSi
-       ParamReal_I(idx+2) = mUnitPicSi
+       ! Electron pressure ratio
+       ParamReal_I(n) = PePerPtotal; n = n+1
+
+       ! Units
+       ParamReal_I(n) = xUnitPicSi; n = n+1
+       ParamReal_I(n) = uUnitPicSi; n = n+1
+       ParamReal_I(n) = mUnitPicSi
     end if
 
   end subroutine GM_get_for_pc_init

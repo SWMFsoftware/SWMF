@@ -89,10 +89,10 @@ contains
     call transfer_integer_array(GM_, PC_, nParam, iParam_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    ! n = number of species * 3 (mass, charge, temperature ratio)
+    ! n = number of species * 2 (mass, charge ratio)
     !     + number of dimensions * 9 (xmin, xmax, dx) for y and z also
-    !     + 3 ( Lnorm, Unorm, Mnorm) 
-    n = iParam_I(1)*3 + iParam_I(2)*9 + 3
+    !     + 4 (Pe/Ptotal, Lnorm, Unorm, Mnorm) 
+    n = iParam_I(1)*2 + iParam_I(2)*9 + 4
     allocate(ParamReal_I(n))
 
     ! Transfer real parameters from GM to PC
