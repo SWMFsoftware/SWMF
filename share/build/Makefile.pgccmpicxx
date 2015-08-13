@@ -1,4 +1,4 @@
-# C language related part of Makefile.conf: Makefile.iccmpicxx
+# C language related part of Makefile.conf: Makefile.pgccmpicxx
 C_COMPILER_NAME=pgccmpicxx
 # This file is for Yellowstone (and similar) system with PGI C compiler
 
