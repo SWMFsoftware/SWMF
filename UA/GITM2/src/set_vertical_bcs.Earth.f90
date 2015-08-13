@@ -21,7 +21,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   use ModIndicesInterfaces, only: get_HPI
   use ModTides, only: TidesNorth, TidesEast, TidesTemp
 
-  use EUA_ModMsis90, ONLY: meter6
+  use EUA_ModMsis00, ONLY: meters
 
   implicit none
 
@@ -51,7 +51,7 @@ subroutine set_vertical_bcs(LogRho,LogNS,Vel_GD,Temp, LogINS, iVel, VertVel)
   if (IsEarth) UseMsisBCs = UseMsis
 
   if (IsFirstTime .and. UseMsisBCs) then
-     call meter6(.true.)
+     call meters(.true.)
      sw = 1
      IsFirstTime = .true.
   endif
