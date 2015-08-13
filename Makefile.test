@@ -1544,7 +1544,7 @@ test12_iso:
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
 	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=Mhd
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdPe
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	

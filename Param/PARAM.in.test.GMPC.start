@@ -39,7 +39,7 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #PLASMA
-1.0			FluidMass [amu]
+4.0			FluidMass [amu]
 1.0             	IonCharge [e]  
 1.0             	ElectronTemperatureRatio
 
@@ -48,12 +48,13 @@ T			UseNonConservative
 
 #UNIFORMSTATE
 1.0			Rho
-0.0			Ux
-0.0			Uy
+0.03			Ux
+0.04			Uy
 0.0			Uz
 0.2			Bx
 0.0			By
 0.0			Bz
+5.12E-4			Pe
 5.12e-4			p
 
 rho   = 1
@@ -109,6 +110,25 @@ dt    = 0.2*dtmax   = 1.066
 -1.0                    LambdaY
 -1.0                    LambdaZ
 180.0                   Phase
+
+#WAVE
+8                       Pe_
+1000.0                  Width
+1e-4                   Amplitude
+32.0                    LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+180.0                   Phase
+
+#WAVE
+9                       P_
+1000.0                  Width
+1e-4                   Amplitude
+32.0                    LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+0.0                   Phase
+
 
 #USERINPUTEND   ----------------
 
