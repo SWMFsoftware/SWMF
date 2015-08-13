@@ -145,8 +145,7 @@ contains
     ! List of variables to pass
     real, intent(in) :: tSimulation
 
-    ! The first time there is no back coupling
-    ! This is actually wrong for restarts!!!
+    ! The first time finish the initialization
     logical:: IsFirstTime = .true.
 
     logical :: DoTest, DoTestMe
@@ -155,7 +154,7 @@ contains
 
     if (IsFirstTime)  then
        IsFirstTime = .false.
-       ! Finnishing the setup of the IPIC3D solver
+       ! Finishing the setup of the IPIC3D solver
        ! after GM -> PC coupling
        call  PC_finilize_init_session
     end if
