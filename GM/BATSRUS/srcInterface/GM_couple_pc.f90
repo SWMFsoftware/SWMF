@@ -43,7 +43,7 @@ contains
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
-         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi, UseFileCoupling
+         DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
     use BATL_lib,      ONLY: x_, y_, z_, nDim
     use ModMain,       ONLY: lVerbose
 
@@ -52,7 +52,7 @@ contains
     integer :: iFluid, iRegionPIC 
     integer :: i, n ! help indexes 
 
-    integer, intent(inout) :: ParamInt_I(4)
+    integer, intent(inout) :: ParamInt_I(3)
     integer, intent(in)  :: nParamReal ! Size of ParamReal_I 
     real, optional, intent(inout) :: ParamReal_I(nParamReal)
 
@@ -64,13 +64,6 @@ contains
        ParamInt_I(1) = nIonFluid 
        ParamInt_I(2) = nRegionPic
        ParamInt_I(3) = nDim 
-       !!! REMOVE
-       if(UseFileCoupling) then 
-          ParamInt_I(4) = 1
-       else
-          ParamInt_I(4) = 0
-       end if
-
     else
        ! First part of ParamReal is the Nregion block, then Nspecis block
        n = 1

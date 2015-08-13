@@ -375,7 +375,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModB0, ONLY: DoUpdateB0, DtUpdateB0
   use ModResistivity, ONLY: UseResistivity, UseHeatExchange, calc_heat_exchange
   use ModMultiFluid, ONLY: UseMultiIon
-  use ModPic, ONLY: UsePic, pic_save_region, pic_update_states
   use ModLocalTimeStep, ONLY: advance_localstep, UseLocalTimeStep
   use ModPartImplicit, ONLY: advance_part_impl
   use ModHeatConduction, ONLY: calc_ei_heat_exchange
@@ -423,9 +422,6 @@ subroutine BATS_advance(TimeSimulationLimit)
   ! Calculate time step dt
   if (time_accurate) call set_global_timestep(TimeSimulationLimit)
 
-  ! Pass the PIC region(s) and the next timestep to the PIC code
-  if(UsePic) call pic_save_region
-
   call timing_start('advance')
 
   if(UseNonConservative .and. nConservCrit > 0)&
@@ -453,8 +449,6 @@ subroutine BATS_advance(TimeSimulationLimit)
 
      Time_Simulation = TimeSimulationLimit
   end if
-
-  if(UsePic)call pic_update_states
 
   if(UseIM)call apply_im_pressure
   

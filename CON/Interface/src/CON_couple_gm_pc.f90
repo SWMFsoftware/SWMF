@@ -55,7 +55,7 @@ contains
 
     ! iParam_I gives the information to allocate ParamReal_I
     ! needed for seting up the grid and particle constants
-    integer, parameter:: nParam = 4
+    integer, parameter:: nParam = 3
     integer :: iParam_I(nParam)
     real, allocatable :: ParamReal_I(:)
     integer :: n
