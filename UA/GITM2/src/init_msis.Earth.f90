@@ -21,7 +21,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   use ModGITM
   use ModRCMR, only: RCMRFlag, RCMROutType
 
-  use EUA_ModMsis90, only: meter6, gtd6
+  use EUA_ModMsis00, only: meters, gtd7
 
   implicit none
 
@@ -29,7 +29,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   real, intent(out) :: t, h
 
   real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
+  real, dimension(1:9) :: msis_dens
 
   real :: LonDeg, LatDeg, AltKm, LST
   real,dimension(7)    :: AP  
@@ -40,7 +40,7 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   
   ap=10.0
 
-  call meter6(.true.)
+  call meters(.true.)
 
   LonDeg = lon*180.0/pi
   LatDeg = lat*180.0/pi
@@ -64,10 +64,10 @@ subroutine get_msis_temperature(lon, lat, alt, t, h)
   endif
 
   if(RCMRFlag .and. RCMROutType == "F107") then
-     CALL GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
+     CALL GTD7(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST, &
           f107a_msis,f107_msis,AP,48,msis_dens,msis_temp)
   else
-     call GTD6(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST,&
+     call GTD7(iJulianDay,utime,AltKm,LatDeg,LonDeg,LST,&
           F107A,F107,AP,48,msis_dens,msis_temp)
   end if
 
@@ -98,14 +98,14 @@ subroutine init_msis
   use ModPlanet
   use ModTime
 
-  use EUA_ModMsis90, ONLY: meter6, gtd6, tselec
+  use EUA_ModMsis00, ONLY: meters, gtd7, tselec
 
   implicit none
 
   ! msis variables
 
   real, dimension(1:2) :: msis_temp
-  real, dimension(1:8) :: msis_dens
+  real, dimension(1:9) :: msis_dens
 
   real, dimension(25) :: sw
 
@@ -135,7 +135,7 @@ subroutine init_msis
   !        T(1) - EXOSPHERIC TEMPERATURE
   !        T(2) - TEMPERATURE AT ALT
   !
-  !      TO GET OUTPUT IN M-3 and KG/M3:   CALL METER6(.TRUE.) 
+  !      TO GET OUTPUT IN M-3 and KG/M3:   CALL METERS(.TRUE.) 
   !
   !      O, H, and N set to zero below 72.5 km
   !      Exospheric temperature set to average for altitudes below 120 km.
@@ -144,7 +144,7 @@ subroutine init_msis
 
   ! We want units of /m3 and not /cm3
 
-  call meter6(.true.)
+  call meters(.true.)
 
   if (UseMsisTides) then
      sw = 1
@@ -207,13 +207,13 @@ subroutine init_msis
               ! Call MSIS (results will be im mks units)
               !
 
-              CALL GTD6(iJulianDay,utime,geo_alt,geo_lat,geo_lon,geo_lst, &
+              CALL GTD7(iJulianDay,utime,geo_alt,geo_lat,geo_lon,geo_lst, &
                    F107A,F107,AP,48,msis_dens,msis_temp)
 
               ! Initialize densities to zero in case msis does not set it
               NDensityS(iLon,iLat,iAlt,:,iBlock) = 1.0
 
-              NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = &
+              NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = &
                    max(msis_dens(1),100.0)
               NDensityS(iLon,iLat,iAlt,iO_3P_,iBlock)       = &
                    max(msis_dens(2),100.0)
@@ -223,7 +223,7 @@ subroutine init_msis
                    max(msis_dens(4),100.0)
 !              NDensityS(iLon,iLat,iAlt,iAr_,iBlock)         = &
 !                   max(msis_dens(5),100.0)
-              NDensityS(iLon,iLat,iAlt,iHe_,iBlock)         = &
+              NDensityS(iLon,iLat,iAlt,iH_,iBlock)          = &
                    max(msis_dens(7),100.0)
               NDensityS(iLon,iLat,iAlt,iN_4S_,iBlock)       = &
                    max(msis_dens(8),100.0)
@@ -338,7 +338,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   use ModTime, only : iTimeArray
   use ModPlanet
 
-  use EUA_ModMsis90, ONLY: gtd6
+  use EUA_ModMsis00, ONLY: gtd7
 
   implicit none
 
@@ -348,7 +348,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   real, intent(out) :: LogNS(nSpecies), Temp, LogRho, v(2)
 
   real :: msis_temp(2)
-  real :: msis_dens(8)
+  real :: msis_dens(9)
   real :: AP_I(7), ffactor, no
   integer :: iyd
 
@@ -357,7 +357,7 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
 
   !----------------------------------------------------------------------------
   AP_I = AP
-  CALL GTD6(iJulianDay,uTime,Alt,Lat,Lon,LST, &
+  CALL GTD7(iJulianDay,uTime,Alt,Lat,Lon,LST, &
        F107A,F107,AP_I,48,msis_dens,msis_temp)
 
 !  write(*,*) msis_dens(2), msis_dens(3), msis_dens(4), msis_dens(8), msis_dens(6), msis_temp(2)
@@ -367,6 +367,8 @@ subroutine msis_bcs(iJulianDay,UTime,Alt,Lat,Lon,Lst, &
   LogNS(iN2_) = alog(max(msis_dens(3),1.0))
   if (nSpecies >= iN_4S_) &
        LogNS(min(nSpecies,iN_4S_)) = alog(max(msis_dens(8),1.0))
+  if (nSpecies >= iHe_) &
+       LogNS(min(nSpecies,iHe_)) = alog(max(msis_dens(1),1.0))
 
   if (nSpecies >= iNO_) then
      ffactor = 6.36*log(f107)-13.8
