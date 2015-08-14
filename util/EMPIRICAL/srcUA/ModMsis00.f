@@ -1,7 +1,6 @@
-C-----------------------------------------------------------------------
-      BLOCK DATA GTD7BK
+      BLOCK DATA EUA_GTD7BK
 C          MSISE-00 01-FEB-02   
-      COMMON/PARM7/PT1(50),PT2(50),PT3(50),PA1(50),PA2(50),PA3(50),
+      COMMON/EUA_PARM7/PT1(50),PT2(50),PT3(50),PA1(50),PA2(50),PA3(50),
      $ PB1(50),PB2(50),PB3(50),PC1(50),PC2(50),PC3(50),
      $ PD1(50),PD2(50),PD3(50),PE1(50),PE2(50),PE3(50),
      $ PF1(50),PF2(50),PF3(50),PG1(50),PG2(50),PG3(50),
@@ -12,12 +11,12 @@ C          MSISE-00 01-FEB-02
      $ PS1(50),PS2(50),PU1(50),PU2(50),PV1(50),PV2(50),
      $ PW1(50),PW2(50),PX1(50),PX2(50),PY1(50),PY2(50),
      $ PZ1(50),PZ2(50),PAA1(50),PAA2(50)
-      COMMON/LOWER7/PTM(10),PDM(10,8)
-      COMMON/MAVG7/PAVGM(10)
+      COMMON/EUA_LOWER7/PTM(10),PDM(10,8)
+      COMMON/EUA_MAVG7/PAVGM(10)
 C Small Change here : Ridley
       character*4 isdate(3),istime(2),name(2)
-      COMMON/DATIM7/ISDATE,ISTIME,NAME
-      COMMON/METSEL/IMR
+      COMMON/EUA_DATIM7/ISDATE,ISTIME,NAME
+      COMMON/EUA_METSEL/IMR
       DATA IMR/0/
       DATA ISDATE/'01-F','EB-0','2   '/,ISTIME/'15:4','9:27'/
       DATA NAME/'MSIS','E-00'/
@@ -784,8 +783,9 @@ C         MIDDLE ATMOSPHERE AVERAGES
       DATA PAVGM/
      M  2.61000E+02, 2.64000E+02, 2.29000E+02, 2.17000E+02, 2.17000E+02,
      M  2.23000E+02, 2.86760E+02,-2.93940E+00, 2.50000E+00, 0.00000E+00/
-      END BLOCK DATA GTD7BK
-      
+      END BLOCK DATA EUA_GTD7BK
+
+
       module EUA_ModMsis00
 
       contains
@@ -926,19 +926,19 @@ C        To get current values of SW: CALL TRETRV(SW)
 C
       DIMENSION D(9),T(2),AP(7),DS(9),TS(2)
       DIMENSION ZN3(5),ZN2(4),SV(25)
-      COMMON/GTS3C/TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0
+      COMMON/EUA_GTS3C/TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0
      & ,G0,RL,DD,DB14,TR12
-      COMMON/MESO7/TN1(5),TN2(4),TN3(5),TGN1(2),TGN2(2),TGN3(2)
-      COMMON/LOWER7/PTM(10),PDM(10,8)
-      COMMON/PARM7/PT(150),PD(150,9),PS(150),PDL(25,2),PTL(100,4),
+      COMMON/EUA_MESO7/TN1(5),TN2(4),TN3(5),TGN1(2),TGN2(2),TGN3(2)
+      COMMON/EUA_LOWER7/PTM(10),PDM(10,8)
+      COMMON/EUA_PARM7/PT(150),PD(150,9),PS(150),PDL(25,2),PTL(100,4),
      $ PMA(100,10),SAM(100)
-      COMMON/DATIM7/ISD(3),IST(2),NAM(2)
-      COMMON/DATIME/ISDATE(3),ISTIME(2),NAME(2)
-      COMMON/CSW/SW(25),ISW,SWC(25)
-      COMMON/MAVG7/PAVGM(10)
-      COMMON/DMIX/DM04,DM16,DM28,DM32,DM40,DM01,DM14
-      COMMON/PARMB/GSURF,RE
-      COMMON/METSEL/IMR
+      COMMON/EUA_DATIM7/ISD(3),IST(2),NAM(2)
+      COMMON/EUA_DATIME/ISDATE(3),ISTIME(2),NAME(2)
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_MAVG7/PAVGM(10)
+      COMMON/EUA_DMIX/DM04,DM16,DM28,DM32,DM40,DM01,DM14
+      COMMON/EUA_PARMB/GSURF,RE
+      COMMON/EUA_METSEL/IMR
       SAVE
       EXTERNAL GTD7BK
       DATA MN3/5/,ZN3/32.5,20.,15.,10.,0./
@@ -1070,7 +1070,7 @@ C
    90 CONTINUE
       ALAST=ALT
       RETURN
-      END
+      END SUBROUTINE GTD7
 C-----------------------------------------------------------------------
       SUBROUTINE GTD7D(IYD,SEC,ALT,GLAT,GLONG,STL,F107A,F107,AP,MASS,
      $ D,T)
@@ -1136,7 +1136,7 @@ C        T(1) - EXOSPHERIC TEMPERATURE
 C        T(2) - TEMPERATURE AT ALT
 C
       DIMENSION D(9),T(2),AP(7),DS(9),TS(2)
-      COMMON/METSEL/IMR
+      COMMON/EUA_METSEL/IMR
       CALL GTD7(IYD,SEC,ALT,GLAT,GLONG,STL,F107A,F107,AP,MASS,D,T)
 C       TOTAL MASS DENSITY
 C
@@ -1146,7 +1146,7 @@ C
          IF(IMR.EQ.1) D(6)=D(6)/1000.
          ENDIF
       RETURN
-      END
+      END SUBROUTINE GTD7D
 C-----------------------------------------------------------------------
       SUBROUTINE GHP7(IYD,SEC,ALT,GLAT,GLONG,STL,F107A,F107,AP,
      $  D,T,PRESS)
@@ -1185,8 +1185,8 @@ C        D(9) - HOT O NUMBER DENSITY(CM-3)
 C        T(1) - EXOSPHERIC TEMPERATURE
 C        T(2) - TEMPERATURE AT ALT
 C
-      COMMON/PARMB/GSURF,RE
-      COMMON/METSEL/IMR
+      COMMON/EUA_PARMB/GSURF,RE
+      COMMON/EUA_METSEL/IMR
       DIMENSION D(9),T(2),AP(7)
       SAVE
       DATA BM/1.3806E-19/,RGAS/831.4/
@@ -1238,7 +1238,7 @@ C         New altitude estimate using scale height
   100 FORMAT(1X,29HGHP7 NOT CONVERGING FOR PRESS, 1PE12.2,E12.2)
       ALT=Z
       RETURN
-      END
+      END SUBROUTINE GHP7
 C-----------------------------------------------------------------------
       SUBROUTINE GLATF(LAT,GV,REFF)
 C      CALCULATE LATITUDE VARIABLE GRAVITY (GV) AND EFFECTIVE
@@ -1250,14 +1250,14 @@ C      RADIUS (REFF)
       GV = 980.616*(1.-.0026373*C2)
       REFF = 2.*GV/(3.085462E-6 + 2.27E-9*C2)*1.E-5
       RETURN
-      END
+      END SUBROUTINE GLATF
 C-----------------------------------------------------------------------
       FUNCTION VTST7(IYD,SEC,GLAT,GLONG,STL,F107A,F107,AP,IC)
 C       Test if geophysical variables or switches changed and save
 C       Return 0 if unchanged and 1 if changed
       DIMENSION AP(7),IYDL(2),SECL(2),GLATL(2),GLL(2),STLL(2)
       DIMENSION FAL(2),FL(2),APL(7,2),SWL(25,2),SWCL(25,2)
-      COMMON/CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
       SAVE
       DATA IYDL/2*-999/,SECL/2*-999./,GLATL/2*-999./,GLL/2*-999./
       DATA STLL/2*-999./,FAL/2*-999./,FL/2*-999./,APL/14*-999./
@@ -1296,7 +1296,7 @@ C       Return 0 if unchanged and 1 if changed
    16 CONTINUE
    20 CONTINUE
       RETURN
-      END
+      END FUNCTION VTST7
 C-----------------------------------------------------------------------
       SUBROUTINE GTS7(IYD,SEC,ALT,GLAT,GLONG,STL,F107A,F107,AP,MASS,D,T)
 C
@@ -1363,17 +1363,17 @@ C        T(1) - EXOSPHERIC TEMPERATURE
 C        T(2) - TEMPERATURE AT ALT
 C
       DIMENSION ZN1(5),ALPHA(9)
-      COMMON/GTS3C/TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0
+      COMMON/EUA_GTS3C/TLB,S,DB04,DB16,DB28,DB32,DB40,DB48,DB01,ZA,T0,Z0
      & ,G0,RL,DD,DB14,TR12
-      COMMON/MESO7/TN1(5),TN2(4),TN3(5),TGN1(2),TGN2(2),TGN3(2)
+      COMMON/EUA_MESO7/TN1(5),TN2(4),TN3(5),TGN1(2),TGN2(2),TGN3(2)
       DIMENSION D(9),T(2),MT(11),AP(1),ALTL(8)
-      COMMON/LOWER7/PTM(10),PDM(10,8)
-      COMMON/PARM7/PT(150),PD(150,9),PS(150),PDL(25,2),PTL(100,4),
+      COMMON/EUA_LOWER7/PTM(10),PDM(10,8)
+      COMMON/EUA_PARM7/PT(150),PD(150,9),PS(150),PDL(25,2),PTL(100,4),
      $ PMA(100,10),SAM(100)
-      COMMON/CSW/SW(25),ISW,SWC(25)
-      COMMON/TTEST/TINFG,GB,ROUT,TT(15)
-      COMMON/DMIX/DM04,DM16,DM28,DM32,DM40,DM01,DM14
-      COMMON/METSEL/IMR
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_TTEST/TINFG,GB,ROUT,TT(15)
+      COMMON/EUA_DMIX/DM04,DM16,DM28,DM32,DM40,DM01,DM14
+      COMMON/EUA_METSEL/IMR
       SAVE
       DATA MT/48,0,4,16,28,32,40,1,49,14,17/
       DATA ALTL/200.,300.,160.,250.,240.,450.,320.,450./
@@ -1730,35 +1730,35 @@ C       ADJUST DENSITIES FROM CGS TO KGM
       ALAST=ALT
       RETURN
   100 FORMAT(1X,'MASS', I5, '  NOT VALID')
-      END
+      END SUBROUTINE GTS7
 C-----------------------------------------------------------------------
       SUBROUTINE METERS(METER)
 C      Convert outputs to Kg & Meters if METER true
       LOGICAL METER
-      COMMON/METSEL/IMR
+      COMMON/EUA_METSEL/IMR
       SAVE
       IMR=0
       IF(METER) IMR=1
-      END
+      END SUBROUTINE METERS
 C-----------------------------------------------------------------------
       FUNCTION SCALH(ALT,XM,TEMP)
 C      Calculate scale height (km)
-      COMMON/PARMB/GSURF,RE
+      COMMON/EUA_PARMB/GSURF,RE
       SAVE
       DATA RGAS/831.4/
       G=GSURF/(1.+ALT/RE)**2
       SCALH=RGAS*TEMP/(G*XM)
       RETURN
-      END
+      END FUNCTION SCALH
 C-----------------------------------------------------------------------
       FUNCTION GLOBE7(YRD,SEC,LAT,LONG,TLOC,F107A,F107,AP,P)
 C       CALCULATE G(L) FUNCTION 
 C       Upper Thermosphere Parameters
       REAL LAT, LONG
       DIMENSION P(1),SV(25),AP(1)
-      COMMON/TTEST/TINF,GB,ROUT,T(15)
-      COMMON/CSW/SW(25),ISW,SWC(25)
-      COMMON/LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
+      COMMON/EUA_TTEST/TINF,GB,ROUT,T(15)
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
      $ IYR,DAY,DF,DFA,APD,APDF,APT(4),XLONG
       SAVE
       DATA DGTR/1.74533E-2/,DR/1.72142E-2/, XL/1000./,TLL/1000./
@@ -1970,7 +1970,7 @@ C  PARMS NOT USED: 83, 90,100,140-150
    50 TINF = TINF + ABS(SW(I))*T(I)
       GLOBE7 = TINF
       RETURN
-      END
+      END FUNCTION GLOBE7
 C-----------------------------------------------------------------------
       SUBROUTINE TSELEC(SV)
 C        SET SWITCHES
@@ -1984,7 +1984,7 @@ C
 C        To get current values of SW: CALL TRETRV(SW)
 C
       DIMENSION SV(1),SAV(25),SVV(1)
-      COMMON/CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
       SAVE
       DO 100 I = 1,25
         SAV(I)=SV(I)
@@ -2001,14 +2001,14 @@ C
       DO 200 I=1,25
         SVV(I)=SAV(I)
   200 CONTINUE
-      END
+      END SUBROUTINE TSELEC
 C-----------------------------------------------------------------------
       FUNCTION GLOB7S(P)
 C      VERSION OF GLOBE FOR LOWER ATMOSPHERE 10/26/99
       REAL LONG
-      COMMON/LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
+      COMMON/EUA_LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
      $ IYR,DAY,DF,DFA,APD,APDF,APT(4),LONG
-      COMMON/CSW/SW(25),ISW,SWC(25)
+      COMMON/EUA_CSW/SW(25),ISW,SWC(25)
       DIMENSION P(1),T(14)
       SAVE
       DATA DR/1.72142E-2/,DGTR/1.74533E-2/,PSET/2./
@@ -2094,15 +2094,15 @@ C        LONGITUDINAL
    50 TT=TT+ABS(SW(I))*T(I)
       GLOB7S=TT
       RETURN
-      END
+      END FUNCTION GLOB7S
 C--------------------------------------------------------------------
       FUNCTION DENSU(ALT,DLB,TINF,TLB,XM,ALPHA,TZ,ZLB,S2,
      $  MN1,ZN1,TN1,TGN1)
 C       Calculate Temperature and Density Profiles for MSIS models
 C       New lower thermo polynomial 10/30/89
       DIMENSION ZN1(MN1),TN1(MN1),TGN1(2),XS(5),YS(5),Y2OUT(5)
-      COMMON/PARMB/GSURF,RE
-      COMMON/LSQV/MP,II,JG,LT,QPB(50),IERR,IFUN,N,J,DV(60)
+      COMMON/EUA_PARMB/GSURF,RE
+      COMMON/EUA_LSQV/MP,II,JG,LT,QPB(50),IERR,IFUN,N,J,DV(60)
       SAVE
       DATA RGAS/831.4/
       ZETA(ZZ,ZL)=(ZZ-ZL)*(RE+ZL)/(RE+ZZ)
@@ -2176,15 +2176,15 @@ C       Density at altitude
       DENSU=DENSU*(T1/TZ)**(1.+ALPHA)*EXP(-EXPL)
    50 CONTINUE
       RETURN
-      END
+      END FUNCTION DENSU
 C--------------------------------------------------------------------
       FUNCTION DENSM(ALT,D0,XM,TZ,MN3,ZN3,TN3,TGN3,MN2,ZN2,TN2,TGN2)
 C       Calculate Temperature and Density Profiles for lower atmos.
       DIMENSION ZN3(MN3),TN3(MN3),TGN3(2),XS(10),YS(10),Y2OUT(10)
       DIMENSION ZN2(MN2),TN2(MN2),TGN2(2)
-      COMMON/PARMB/GSURF,RE
-      COMMON/FIT/TAF
-      COMMON/LSQV/MP,II,JG,LT,QPB(50),IERR,IFUN,N,J,DV(60)
+      COMMON/EUA_PARMB/GSURF,RE
+      COMMON/EUA_FIT/TAF
+      COMMON/EUA_LSQV/MP,II,JG,LT,QPB(50),IERR,IFUN,N,J,DV(60)
       SAVE
       DATA RGAS/831.4/
       ZETA(ZZ,ZL)=(ZZ-ZL)*(RE+ZL)/(RE+ZZ)
@@ -2264,7 +2264,7 @@ C        Density at altitude
    50 CONTINUE
       IF(XM.EQ.0) DENSM=TZ
       RETURN
-      END
+      END FUNCTION DENSM
 C-----------------------------------------------------------------------
       SUBROUTINE SPLINE(X,Y,N,YP1,YPN,Y2)
 C        CALCULATE 2ND DERIVATIVES OF CUBIC SPLINE INTERP FUNCTION
@@ -2303,7 +2303,7 @@ C        Y2: OUTPUT ARRAY OF SECOND DERIVATIVES
         Y2(K)=Y2(K)*Y2(K+1)+U(K)
    12 CONTINUE
       RETURN
-      END
+      END SUBROUTINE SPLINE
 C-----------------------------------------------------------------------
       SUBROUTINE SPLINT(XA,YA,Y2A,N,X,Y)
 C        CALCULATE CUBIC SPLINE INTERP VALUE
@@ -2334,7 +2334,7 @@ C        Y: OUTPUT VALUE
       Y=A*YA(KLO)+B*YA(KHI)+
      $  ((A*A*A-A)*Y2A(KLO)+(B*B*B-B)*Y2A(KHI))*H*H/6.
       RETURN
-      END
+      END SUBROUTINE SPLINT
 C-----------------------------------------------------------------------
       SUBROUTINE SPLINI(XA,YA,Y2A,N,X,YI)
 C       INTEGRATE CUBIC SPLINE FUNCTION FROM XA(1) TO X
@@ -2365,7 +2365,7 @@ C        Y: OUTPUT VALUE
         GOTO 1
       ENDIF
       RETURN
-      END
+      END SUBROUTINE SPLINI
 C-----------------------------------------------------------------------
       FUNCTION DNET(DD,DM,ZHM,XMM,XM)
 C       TURBOPAUSE CORRECTION FOR MSIS MODELS
@@ -2398,7 +2398,7 @@ C          DNET - combined density
         GO TO 50
    50 CONTINUE
       RETURN
-      END
+      END FUNCTION DNET
 C-----------------------------------------------------------------------
       FUNCTION  CCOR(ALT, R,H1,ZH)
 C        CHEMISTRY/DISSOCIATION CORRECTION FOR MSIS MODELS
@@ -2420,7 +2420,7 @@ C        ZH - altitude of 1/2 R
    50 CONTINUE
       CCOR=EXP(CCOR)
        RETURN
-      END
+      END FUNCTION CCOR
 C-----------------------------------------------------------------------
       FUNCTION  CCOR2(ALT, R,H1,ZH,H2)
 C       O&O2 CHEMISTRY/DISSOCIATION CORRECTION FOR MSIS MODELS
@@ -2439,6 +2439,7 @@ C       O&O2 CHEMISTRY/DISSOCIATION CORRECTION FOR MSIS MODELS
    50 CONTINUE
       CCOR2=EXP(CCOR2)
        RETURN
-      END
+      END FUNCTION CCOR2
+C-----------------------------------------------------------------------
 
       end module EUA_ModMsis00
