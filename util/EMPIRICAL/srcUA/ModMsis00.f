@@ -1755,7 +1755,9 @@ C-----------------------------------------------------------------------
 C       CALCULATE G(L) FUNCTION 
 C       Upper Thermosphere Parameters
       REAL LAT, LONG
-      DIMENSION P(1),SV(25),AP(1)
+
+C TOTH fixed dimensions of P and AP
+      DIMENSION P(150),SV(25),AP(7)
       COMMON/EUA_TTEST/TINF,GB,ROUT,T(15)
       COMMON/EUA_CSW/SW(25),ISW,SWC(25)
       COMMON/EUA_LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
@@ -2009,7 +2011,8 @@ C      VERSION OF GLOBE FOR LOWER ATMOSPHERE 10/26/99
       COMMON/EUA_LPOLY/PLG(9,4),CTLOC,STLOC,C2TLOC,S2TLOC,C3TLOC,S3TLOC,
      $ IYR,DAY,DF,DFA,APD,APDF,APT(4),LONG
       COMMON/EUA_CSW/SW(25),ISW,SWC(25)
-      DIMENSION P(1),T(14)
+C TOTH fixed dimensions of P
+      DIMENSION P(100),T(14)
       SAVE
       DATA DR/1.72142E-2/,DGTR/1.74533E-2/,PSET/2./
       DATA DAYL/-1./,P32,P18,P14,P39/4*-1000./
