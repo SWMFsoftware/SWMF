@@ -2906,6 +2906,11 @@ contains
           else
              call get_mhd_speed
           endif
+
+          ! For multi-ion without global fluid also take
+          ! maximum with respect to the sound wave velocities
+          if(.not.IsMhd .and. UseMultiIon) call get_hd_speed
+
        elseif(DoBurgers)then
           call get_burgers_speed
        else
@@ -3317,7 +3322,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: UseElectronPressure, State_VGB
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, State_VGB
       use ModPhysics, ONLY: Gamma_I, GammaElectron
 
       real :: InvRho, Sound2, Sound, Un, GammaP
@@ -3329,13 +3334,20 @@ contains
 
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
-      GammaP = Gamma_I(iFluid)*State_V(iP)
+      if(UseAnisoPressure .and. IsIon_I(iFluid))then
+         GammaP = 3*State_V(iPpar)
+      else
+         GammaP = Gamma_I(iFluid)*State_V(iP)
+      end if
 
-      if(UseElectronPressure .and. iFluid==1) &
+      ! If no ion fluids present, then electron pressure is added to
+      ! the neutral pressure (CRASH applications)
+      if(UseElectronPressure .and. iFluid==1 .and. .not.UseB) &
            GammaP = GammaP + GammaElectron*State_V(Pe_)
 
+      ! Similarly for wave pressure
       ! Wave pressure = (GammaWave - 1)*WaveEnergy
-      if(UseWavePressure .and. iFluid==1) GammaP = GammaP &
+      if(UseWavePressure .and. iFluid==1 .and. .not.UseB) GammaP = GammaP &
            + GammaWave*(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
 
       ! Sound speed
@@ -3369,19 +3381,39 @@ contains
       Sound = sqrt(Sound2)
       Un    = sum(State_V(iUx:iUz)*Normal_D)
 
-
-      if(DoAw)then
-         Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
-         Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
-         Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
-         CmaxDt_I(iFluid) = Cmax_I(iFluid)
-      else
-         if(present(Cmax_I))then
-            Cmax_I(iFluid)   = abs(Un) + Sound
+      if(UseMultiIon .and. iFluid == 1 .and. .not. IsMhd)then
+         ! Take min and max with the full MHD speeds calculated beforehand
+         if(DoAw)then
+            Cleft_I(iFluid)  = min(Cleft_I(iFluid), &
+                 min(UnLeft, UnRight) - Sound)
+            Cright_I(iFluid) = max(Cright_I(iFluid), &
+                 max(UnLeft, UnRight) + Sound)
+            Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
             CmaxDt_I(iFluid) = Cmax_I(iFluid)
+         else
+            if(present(Cmax_I))then
+               Cmax_I(iFluid)   = max(Cmax_I(iFluid), abs(Un) + Sound)
+               CmaxDt_I(iFluid) = Cmax_I(iFluid)
+            end if
+            if(present(Cleft_I))  Cleft_I(iFluid)  = min(Cleft_I(iFluid), &
+                 Un - Sound)
+            if(present(Cright_I)) Cright_I(iFluid) = max(Cright_I(iFluid), &
+                 Un + Sound)
          end if
-         if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
-         if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
+      else
+         if(DoAw)then
+            Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
+            Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
+            Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
+            CmaxDt_I(iFluid) = Cmax_I(iFluid)
+         else
+            if(present(Cmax_I))then
+               Cmax_I(iFluid)   = abs(Un) + Sound
+               CmaxDt_I(iFluid) = Cmax_I(iFluid)
+            end if
+            if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
+            if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
+         end if
       end if
 
       if(DoTestCell)then
