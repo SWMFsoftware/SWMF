@@ -487,8 +487,8 @@ contains
 
     implicit none
 
-    integer, intent(inout) :: ParamInt_I(4)
-    integer, intent(in)  :: n 
+    integer, intent(inout) :: ParamInt_I(3)
+    integer, intent(in)  :: n
     real, optional, intent(inout) :: ParamReal_I(n)
 
     character(len=*), parameter :: NameSub='GM_get_for_pc_init'
