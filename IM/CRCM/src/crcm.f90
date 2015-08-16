@@ -219,7 +219,7 @@ subroutine crcm_run(delta_t)
   call StDiTime(dt,vel,ftv,rc,re_m,dipmom,iba)
   call timing_stop('crcm_StDiTime')
 
-  !get energy contribution from Bfield change before start of time loop
+  ! get energy contribution from Bfield change before start of time loop
   call sume(eChangeOperator_IV(:,OpBfield_))
   ! time loop
   do n=1,nstep
@@ -1361,11 +1361,15 @@ subroutine sume(xle)
      
      call calc_rbsumlocal(n)
 
-     xleChangeLocal=rbsumLocal(n)-rbsumLocal0
+     xleChangeLocal = rbsumLocal(n)-rbsumLocal0
      
-     if (nProc >1) call MPI_REDUCE (xleChangeLocal, xleChange, 1, MPI_REAL, &
-           MPI_SUM, 0, iComm, iError)
-
+     if (nProc >1) then
+        call MPI_REDUCE(xleChangeLocal, xleChange, 1, MPI_REAL, MPI_SUM, &
+             0, iComm, iError)
+     else
+        xleChange = XleChangeLocal
+     end if
+        
      if(iProc==0) then 
         xle(n)=xle(n)+xleChange
      else
