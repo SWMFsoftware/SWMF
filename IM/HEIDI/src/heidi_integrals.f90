@@ -142,7 +142,7 @@ subroutine get_IntegralI(IntegralI_III)
 
      do iPhi = 1, nT
         do iR =1, nR
-           do iPitch =1, nPa
+           do iPitch =1, lO 
               PitchAngle_I(iPitch) = acos(mu(iPitch))
               call find_mirror_points (nPoint,  PitchAngle_I(iPitch), bFieldMagnitude_III(:,iR,iPhi), &
                    bMirror_I(iPitch),iMirror_I)
