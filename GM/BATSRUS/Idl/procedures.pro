@@ -2734,7 +2734,7 @@ endif
 if direction eq 3 then begin
    ind3=indgen(n3)
    jnd3=ind3+1
-   jnd3(n2-1)=n3
+   jnd3(n3-1)=n3
    hnd3=ind3-1
    hnd3(0)=0
    dadx=(a(*,*,jnd3)-a(*,*,hnd3))/(x(*,*,jnd3)-x(*,*,hnd3))
