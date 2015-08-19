@@ -695,15 +695,14 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
              headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
              rBody,error
 
+  on_error,2
+
   if filetype eq 'IPIC3D' then begin 
-     on_error,2
      error=0
      get_pict_hdf,filename,npict,x,w,headline,it,time,$
                   gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error,1
 
   endif else begin
-
-     on_error,2
 
      error=0
 
@@ -1876,9 +1875,9 @@ if keyword_set(cut0) then begin
    if ndim gt 2 then zz=zz(cut0)
 endif
 
-!x.title=strupcase(variables(0))
-if plotdim gt 1 then !y.title=strupcase(variables(1))
-if plotdim gt 2 then !z.title=strupcase(variables(2))
+!x.title="!5"+strupcase(variables(0))
+if plotdim gt 1 then !y.title = "!5"+strupcase(variables(1))
+if plotdim gt 2 then !z.title = "!5"+strupcase(variables(2))
 
 if ndim eq 3 and plotdim eq 2 then begin
    siz=size(cut)
@@ -1907,12 +1906,12 @@ if siz(0) eq 3 then begin
    siz(1) eq 1: begin
          xx=yy
          yy=zz
-         !x.title=variables(1)
-         !y.title=variables(2)
+         !x.title="!5"+variables(1)
+         !y.title="!5"+variables(2)
    end
    siz(2) eq 1: begin
       yy=zz
-      !y.title=variables(2)
+      !y.title="!5"+variables(2)
    end
    else: print,'internal error in getaxes'
    endcase
@@ -2091,6 +2090,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
      !p.title=plottitles(ifunc)
      if !p.title eq 'default' then !p.title=funcs(ifunc)
+     !p.title="!5"+!p.title
 
      if ifunc lt nfunc-1 then begin
         if strpos(plotmodes(ifunc+1),'over') gt 0 then begin
