@@ -77,8 +77,9 @@ for ifile=0,nfile-1 do begin
 
    openfile,10,filenames(ifile),filetypes(ifile)
 
-   get_pict,10,filenames(ifile),filetypes(ifile),npict,x,w,headline,it,time,$
-          gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
+   get_pict,10,filenames(ifile),filetypes(ifile),npict<npictinfiles(ifile),$
+            x,w,headline,it,time,$
+            gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
 
    print,         'headline  =',strtrim(headline,2)
    print,FORMAT='("ndim      =",i2,", neqpar=",i2,", nw=",i2)',ndim,neqpar,nw
