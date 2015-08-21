@@ -1,6 +1,8 @@
 pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
-                  USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, SetGLRadius=SetGLRadius, $
-                  nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed, Mode2D=Mode2D, NoSSW=NoSSW
+                  USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
+                  GLRadius=GLRadius, SizeFactor=SizeFactor, $
+                  nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed, $
+                  Mode3D=Mode3D, NoSSW=NoSSW
 
 ;-----------------------------------------------------------------------
 ; NAME :
@@ -28,11 +30,12 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;   AR magnetic parameter is calculated based on the average total field
 ;   along the PIL. The corresponding empirical relationships will be
 ;   used accordingly. The Default is 1.
-;   SetGLRadius = If set, the GL flux rope raidus can be manually
-;   setup.
+;   GLRadius = Sets the GL flux rope radius. 
+;   SizeFactor = If GLRadius is not set, the flux rope size is set to
+;                the PIL length divided by SizeFactor. Default is 26.25
 ;   NoSSW = If set, the image will be plot through contour instead of
 ;   plot_image.
-;   Mode2D = If set, FDIPS generated IDL 2D data will be read.
+;   Mode3D = If set, FDIPS generated 3D data will be read (not recommended)
 ;   nSmooth = N. If N is larger than 1, apply boxcar smoothing.
 
 ; CALLS   :
@@ -75,18 +78,19 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   device,decomposed=1
   !p.font=1
 
-;Turn on/off demo mode. With the demo mode on, the pre-saved 2D data will be read instead
+;Turn on/off demo mode. With the demo mode on, 
+;the pre-saved 2D data will be read instead
 ;of reading from 3D data which is much more time consuming
   if not keyword_set(DemoMode) then DemoMode=0
 
-;set default option for 2D Mode
-  if not keyword_set(Mode2D) then Mode2D=0
+;set default option for 3D Mode
+  if not keyword_set(Mode3D) then Mode3D=0
 
 ;set default for nSmooth
   if not keyword_set(nSmooth) then nSmooth=0
 
-;default is to use plot_image in SSW
-  if not keyword_set(NoSSW) then NoSSW=0
+;default is not to use plot_image in SSW
+  if not keyword_set(NoSSW) then NoSSW=1
 
 ;set default option for ARMag
   if not keyword_set(ARMag) then ARMag=2
@@ -102,10 +106,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      read,prompt='Please Input the Observed CME Speed (km/s): ',CMESpeed
   endif
 
-;Read GL flux rope radius.
-  if keyword_set(SetGLRadius) then begin
-     read,prompt='Please Input the GL flux rope radius (Rs): ',GL_Radius
-  endif
+;If GLRadius is not given then it is set to PIL_length/SizeFactor
+  if not keyword_set(SizeFactor) then SizeFactor = 26.25
 
 ;Setup the magnetogram layer, default is at the 1.03
   if not keyword_set(PlotRadius) then  PlotRadius=1.03
@@ -117,7 +119,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   endif
 
 ;Read the SWMF input magnetic field
-  if not DemoMode and not Mode2D then begin
+  if not DemoMode and Mode3D then begin
 
      if not keyword_set(file) then begin
         file=''
@@ -224,7 +226,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      Btheta_field=congrid(Btheta_field,360,180,/INTERP)
   endif
 
-  if Mode2D then begin
+  if not Mode3D then begin
      PlotRadius=1.0
      if not keyword_set(file) then begin
         file=''
@@ -559,19 +561,16 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;Relationship between the PIL length and the GL flux rope Radius.   
 ;This factor is now based on the 2011 March 7 CME. More tests  
 ;are needed in order to get a more precise value.  
-  if not keyword_set(SetGLRadius) then begin
-     factor_RL=17.5
-     GL_Radius=PIL_Length/factor_RL   
-  endif
+  if not keyword_set(GLRadius) then GLRadius=PIL_Length/SizeFactor
 
 ;Relationship between the GL Poloidal flux and GL Bstrength.
-  GL_Bstrength=(GL_poloidal-0.073579605)/(21.457435*GL_Radius^4)
+  GL_Bstrength=(GL_poloidal-0.073579605)/(21.457435*GLRadius^4)
 
-;Calculate the CME grid refinement parameters based on the flux rope                 
+;Calculate the CME grid refinement parameters based on the flux rope
 ;location and size.                                                
   if keyword_set(CMEGrid) then begin
-     CMEbox_Start=[1.1,GL_Longitude-40.*GL_Radius,GL_Latitude-20.*GL_Radius]
-     CMEbox_End=[20.0,GL_Longitude+40.*GL_Radius,GL_Latitude+20.*GL_Radius]
+     CMEbox_Start=[1.1,GL_Longitude-40.*GLRadius,GL_Latitude-20.*GLRadius]
+     CMEbox_End=[20.0,GL_Longitude+40.*GLRadius,GL_Latitude+20.*GLRadius]
   endif
 
 ;Recommended GL flux rope parameters
@@ -584,12 +583,14 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   print,FORMAT='(A20,5X,F6.2)','Latitude: ',GL_Latitude
   print,FORMAT='(A20,5X,F6.2)','Longitude: ',GL_Longitude
   print,FORMAT='(A20,5X,F6.2)','Orientation: ',GL_Orientation
-  print,FORMAT='(A20,5X,F6.2)','Radius: ', GL_Radius
+  print,FORMAT='(A20,5X,F6.2)','Radius: ', GLRadius
   print,FORMAT='(A20,5X,F6.2)','Bstrength: ',GL_Bstrength
   print,FORMAT='(A20,5X,F6.2)','Stretch (FIXED): ',Stretch
   print,FORMAT='(A20,5X,F6.2)','Distance (FIXED): ',Distance
-  print,FORMAT='(A20,5X,F6.2)','Height [Rs]: ', GL_Radius + Distance - Stretch - 1.0
-  print,FORMAT='(A20,5X,F6.2)','Angular size [deg]: ', 2*GL_Radius/Distance/!dtor
+  print,FORMAT='(A20,5X,F6.2)','Height [Rs]: ', $
+        GLRadius + Distance - Stretch - 1.0
+  print,FORMAT='(A20,5X,F6.2)','Angular size [deg]: ', $
+        2*GLRadius/Distance/!dtor
   print,FORMAT='(A20,5X,F6.2)','Poloidal flux: ', GL_poloidal
   print,'-----------------------------------------'
 
