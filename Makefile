@@ -382,7 +382,7 @@ rundir: ENV_CHECK
 		make rundircomp COMPDIR=$${i}DIR; \
 	done
 	@touch share/JobScripts/job.TMP_${MACHINE}
-	@cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/
+	@cp share/JobScripts/job.*${MACHINE}* share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/
 	@echo "cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/"
 	@rm -rf ${RUNDIR}/job.TMP_${MACHINE} share/JobScripts/job.TMP_${MACHINE}
 	@echo
