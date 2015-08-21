@@ -162,6 +162,7 @@ rundir:
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		touch ${DIR}/share/JobScripts/job.TMP_${MACHINE}; \
 		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
+		cp ${DIR}/share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/; \
 		rm -f ${RUNDIR}/job.TMP_${MACHINE}; \
 		rm -f ${DIR}/share/JobScripts/TMP_${MACHINE}; \
 		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
