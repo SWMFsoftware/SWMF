@@ -4057,6 +4057,7 @@ for iter = iter0, 2 do begin
         if(dofft)then begin
            n = n_elements(hour)
            freqmin = 1/(hour(n-1) - hour(0))
+           print,'Frequency spacing=',freqmin
            xcoord = findgen(n)*freqmin
         endif else $
            xcoord = hour
