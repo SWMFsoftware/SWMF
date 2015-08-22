@@ -4,44 +4,53 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
                   nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed
 
 ;-----------------------------------------------------------------------
-; NAME :
+; NAME:
 ;   SWMF_GLSETUP
-; PURPOSE :
+; PURPOSE:
 ;   Determine the Gibson-Low flux rope parameters from the input
 ;   magnetogram and observed CME speed.
-
-; INPUT PARAMETERS :
+;
+; INPUT PARAMETERS:
 ;   The observed CME speed, the input magnetic field of SWMF, the
 ;   location of the CME source region(Interactive Selection).
-; OUTPUTS :
+;
+; OUTPUTS:
 ;   Recommended GL flux rope parameters.
+;
 ; KEYWORDS:
-;   DemoMode = If set, the pre-saved magnetogram data at Rs=1.03 will
-;   be loaded.
-;   PlotRadius = Set up the layer of the magnetogram. Cannot be used
-;   with DemoMode. Default it 1.03.
+;   DemoMode = If set, a pre-saved magnetogram data will be loaded.
+;
+;   PlotRadius = Set up the layer of the magnetogram for 3D input
+;   Cannot be used 2D file or with DemoMode. Default it 1.03.
+;
 ;   UsePIL = If set, the orientation of the flux rope will be
-;   caluclated according to the PIL direcion.
+;   calculated according to the PIL direction.
+;
 ;   CMEGrid = If set, the grid refinement parameters for CME will be
 ;   calculated.
+;
 ;   ARMag = 1 or 2, if 1, the AR magnetic parameter is calculated
 ;   based on the average Br around the weighted center; if 2, the
 ;   AR magnetic parameter is calculated based on the average total field
 ;   along the PIL. The corresponding empirical relationships will be
-;   used accordingly. The Default is 1.
-;   GLRadius = Sets the GL flux rope radius. 
+;   used accordingly. The default is 2.
+;
+;   GLRadius = Sets the GL flux rope radius (before shift). No default.
+;
 ;   SizeFactor = If GLRadius is not set, the flux rope size is set to
-;                the PIL length divided by SizeFactor. Default is 26.25
-;   nSmooth = N. If N is larger than 1, apply boxcar smoothing.
-
-; CALLS   :
-;   PLOT_IMAGE
+;                the PIL length divided by SizeFactor. Default is 26.25.
+;
+;   nSmooth = If nSmooth is larger than 1, apply boxcar smoothing on the 
+;             magnetic field. This can help finding the PIL.
+;
 ; RESTRICTIONS:
 ;   - PlotRadius can only be 0.015 increament from 1.0. Please use
 ;     default value (1.03) for GL setup since the empirical
 ;     relationship is derived from that layer.
-;   - For the active regions with mixed polarities, try to use higher
-;     layers of the magnetogram to reduce complexity.
+;   - For the active regions with mixed polarities, try to use 
+;     smoothing or for 3D data use higher layers of the magnetogram.
+;     to reduce complexity.
+;
 ; MODIFICATION HISTORY:
 ;   Originally coded by Meng Jin@ AOSS, University of Michigan
 ;   v0.1 06/02/2014 Demo Version.
@@ -113,10 +122,10 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      PlotRadius=1.0
      if not keyword_set(file) then begin
         file=''
-        read, prompt='Input Magnetic Field of SWMF (Format can be ASCII/Binary): ',file
+        read, prompt='Input file name (containing magnetic field data): ',file
      endif
 
-     gettype,file,filetype,npictinfile
+     gettype, file, filetype, npictinfile
      case filetype of 
         'ascii' : openr,lun,file,/get_lun
         'BINARY': openr,lun,file,/f77_unf
@@ -127,16 +136,16 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      
      if ndim eq 2 then begin
         linedata=dblarr(3)
-        nlog=nx[0]
+        nlon=nx[0]
         nlat=nx[1]
-        Br_field=dblarr(nlog,nlat)
-        Bphi_field=dblarr(nlog,nlat)
-        Btheta_field=dblarr(nlog,nlat)
-        bt_field=dblarr(nlog,nlat)
-        Longitude=dblarr(nlog,nlat)
-        Latitude=dblarr(nlog,nlat)
+        Br_field=dblarr(nlon,nlat)
+        Bphi_field=dblarr(nlon,nlat)
+        Btheta_field=dblarr(nlon,nlat)
+        bt_field=dblarr(nlon,nlat)
+        Longitude=dblarr(nlon,nlat)
+        Latitude=dblarr(nlon,nlat)
         for i=0,nlat-1 do begin
-           for j=0,nlog-1 do begin
+           for j=0,nlon-1 do begin
               readf,lun,linedata
               Longitude[j,i]=linedata[0]*3.1415926/180.
               Latitude[j,i]=linedata[1]*3.1415926/180.
@@ -154,20 +163,20 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
            print,'WARNING: Requested PlotRadius cannot be located in the data!'
            temp=min(abs(r-PlotRadius),index_layer)
            PlotRadius=r[index_layer]
-           print,'Using the closet layer instead! PlotRadius=',PlotRadius
+           print,'Using the closest layer instead! PlotRadius=', PlotRadius
         endif
        
         linedata=dblarr(6)
-        nlog=nx[1]-1
+        nlon=nx[1]-1
         nlat=nx[2]
-        Br_field=dblarr(nlog+1,nlat)
-        Bphi_field=dblarr(nlog+1,nlat)
-        Btheta_field=dblarr(nlog+1,nlat)
-        bt_field=dblarr(nlog+1,nlat)
-        Longitude=dblarr(nlog+1,nlat)
-        Latitude=dblarr(nlog+1,nlat)
+        Br_field=dblarr(nlon+1,nlat)
+        Bphi_field=dblarr(nlon+1,nlat)
+        Btheta_field=dblarr(nlon+1,nlat)
+        bt_field=dblarr(nlon+1,nlat)
+        Longitude=dblarr(nlon+1,nlat)
+        Latitude=dblarr(nlon+1,nlat)
         for i=0,nlat-1 do begin
-           for j=0,nlog do begin
+           for j=0,nlon do begin
               for k=0,nx[0]-1 do begin
                  readf,lun,linedata
                  if abs(linedata[0]-PlotRadius) lt 0.0001 then begin
@@ -180,11 +189,11 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
               endfor
            endfor
         endfor
-        Longitude=Longitude[0:nlog-1,*]
-        Latitude=Latitude[0:nlog-1,*]
-        Br_field=Br_field[0:nlog-1,*]
-        Bphi_field=Bphi_field[0:nlog-1,*]
-        Btheta_field=Btheta_field[0:nlog-1,*]
+        Longitude=Longitude[0:nlon-1,*]
+        Latitude=Latitude[0:nlon-1,*]
+        Br_field=Br_field[0:nlon-1,*]
+        Bphi_field=Bphi_field[0:nlon-1,*]
+        Btheta_field=Btheta_field[0:nlon-1,*]
 
         free_lun,lun
         
@@ -222,7 +231,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   index=where(br_field gt 20)
   br_field_show[index]=20
 
-  window,2,xs=1200,ys=1200.*float(nlat)/float(nlog)*4./3.
+  window,2,xs=1200,ys=1200.*float(nlat)/float(nlon)*4./3.
   loadct,0
   contour,br_field_show,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
           +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
@@ -345,7 +354,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   ddx=(shift(br_field,-1,0)-shift(br_field,1,0))/2.
   ddy=(shift(br_field,0,-1)-shift(br_field,0,1))/2.
   ddx[0,*]=br_field[1,*]-br_field[0,*]
-  ddx[nlog-1,*]=br_field[nlog-1,*]-br_field[nlog-2,*]
+  ddx[nlon-1,*]=br_field[nlon-1,*]-br_field[nlon-2,*]
   ddy[*,0]=br_field[*,1]-br_field[*,0]
   ddy[*,nlat-1]=br_field[*,nlat-1]-br_field[*,nlat-2]
   br_field_gradient=sqrt(ddx^2+ddy^2)
@@ -358,9 +367,9 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   flux_threshold=1.0
 
 ;Calculate the Bitmap (1/0) for determining the PIL.
-  M=nlog/cell_size
+  M=nlon/cell_size
   N=nlat/cell_size
-  bitmap=fltarr(nlog,nlat)
+  bitmap=fltarr(nlon,nlat)
   bitmap[*,*]=0.0
   for i=0,M-2 do begin
      for j=0,N-2 do begin
@@ -373,14 +382,14 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   endfor  
 
 ;Setup Bitmap for magnetic gradient
-  bitmap_gradient=fltarr(nlog,nlat)
+  bitmap_gradient=fltarr(nlon,nlat)
   bitmap_gradient[*,*]=1.0
   bitmap_gradient[where(br_field_gradient lt 0.5)]=0.0
 
 ;Distance cut-off for determining the PIL. 
   Dis_threshold=8
-  DisCenter=fltarr(nlog,nlat)
-  for i=0,nlog-1 do begin
+  DisCenter=fltarr(nlon,nlat)
+  for i=0,nlon-1 do begin
      for j=0,nlat-1 do begin
         DisCenter[i,j]=sqrt((i-xProfile[index])^2+(j-yProfile[index])^2)
      endfor
@@ -405,8 +414,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   bt_pil=0.0
   RegionSize_ARMag=8
   for i=0,NN-1 do begin
-     y_show=floor(showpoints[i]/nlog)
-     x_show=showpoints[i]-(y_show*nlog)
+     y_show=floor(showpoints[i]/nlon)
+     x_show=showpoints[i]-(y_show*nlon)
      pillines[i,*]=[x_show,y_show]
      bt_pil=bt_pil+bt_field[x_show,y_show]
   endfor
@@ -419,8 +428,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   showpoints=where(wmap gt 0)
   NN=n_elements(showpoints)
   for i=0,NN-1 do begin
-     y_show=floor(showpoints[i]/nlog)
-     x_show=showpoints[i]-(y_show*nlog)
+     y_show=floor(showpoints[i]/nlon)
+     x_show=showpoints[i]-(y_show*nlon)
      plots,x_show,y_show,psym=-1,color=200
   endfor
 
@@ -435,8 +444,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      PIL_x=fltarr(MM)
      PIL_y=fltarr(MM)
      for i=0,MM-1 do begin
-        PIL_y[i]=floor(PILpoints[i]/nlog)
-        PIL_x[i]=PILpoints[i]-(PIL_y[i]*nlog)
+        PIL_y[i]=floor(PILpoints[i]/nlon)
+        PIL_x[i]=PILpoints[i]-(PIL_y[i]*nlon)
      endfor
      
      PIL_xx=PIL_x[sort(PIL_x)]
