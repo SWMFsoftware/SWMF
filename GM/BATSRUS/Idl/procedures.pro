@@ -4064,7 +4064,7 @@ for iter = iter0, 2 do begin
 
         for ifunc = 0, nfunc-1 do begin
 
-            field = log_func(wlog, wlognames, funcs(ifunc), error)
+            field = double(log_func(wlog, wlognames, funcs(ifunc), error))
 
             if error then begin
                 if iter eq 1 then print,"function ",funcs(ifunc), $
@@ -4074,7 +4074,7 @@ for iter = iter0, 2 do begin
                if(dofft) then field = abs(fft(field))^2
 
                if(smooths(ilog) gt 1)then field = smooth(field,smooths(ilog))
-               
+
                if iter eq 1 then begin
                   if DoXrange then begin
                      xrange[0]   = min( [ xrange[0], xcoord ] )
@@ -4125,6 +4125,7 @@ for iter = iter0, 2 do begin
                endelse
             endelse
         endfor
+
         if n_elements(legendpos) eq 4 then begin
             ; get vertical position of legend
             ypos=legendpos(3) - (ilog+0.5)/nlog*(legendpos(3)-legendpos(2))
