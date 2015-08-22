@@ -381,10 +381,12 @@ rundir: ENV_CHECK
 	@for i in `ls -d [A-Z][A-Z]`; do \
 		make rundircomp COMPDIR=$${i}DIR; \
 	done
-	@touch share/JobScripts/job.TMP_${MACHINE}
-	@cp share/JobScripts/job.*${MACHINE}* share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/
+	@touch  share/JobScripts/job._TMP_${MACHINE} \
+		share/JobScripts/_TMP_.${MACHINE}.pl
+	@cp share/JobScripts/job.*${MACHINE}* \
+	    share/JobScripts/*.${MACHINE}.pl        ${RUNDIR}/
 	@echo "cp share/JobScripts/job.*${MACHINE}* ${RUNDIR}/"
-	@rm -rf ${RUNDIR}/job.TMP_${MACHINE} share/JobScripts/job.TMP_${MACHINE}
+	@rm -rf ${RUNDIR}/*_TMP_* share/JobScripts/*_TMP_*
 	@echo
 	@echo Creation of ${RUNDIR} directory succeeded
 	@echo
