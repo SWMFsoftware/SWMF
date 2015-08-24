@@ -21,7 +21,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;   DemoMode = If set, a pre-saved magnetogram data will be loaded.
 ;
 ;   PlotRadius = Set up the layer of the magnetogram for 3D input
-;   Cannot be used 2D file or with DemoMode. Default it 1.03.
+;   Cannot be used 2D file or with DemoMode. Default is 1.03.
 ;
 ;   UsePIL = If set, the orientation of the flux rope will be
 ;   calculated according to the PIL direction.
@@ -33,7 +33,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;   based on the average Br around the weighted center; if 2, the
 ;   AR magnetic parameter is calculated based on the average total field
 ;   along the PIL. The corresponding empirical relationships will be
-;   used accordingly. The default is 2.
+;   used accordingly. The default is 1.
 ;
 ;   GLRadius = Sets the GL flux rope radius (before shift). No default.
 ;
@@ -92,11 +92,11 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   if not keyword_set(nSmooth) then nSmooth=0
 
 ;set default option for ARMag
-  if not keyword_set(ARMag) then ARMag=2
+  if not keyword_set(ARMag) then ARMag=1
   if ARMag ne 1 and ARMag ne 2 then begin
      print, 'ARMag can only be 1 or 2!'
-     print, 'Use Default option: ARMag = 2'
-     ARMag=2
+     print, 'Use Default option: ARMag = 1'
+     ARMag=1
   endif
 
 ;Read Observed CME speed.
@@ -109,7 +109,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   if not keyword_set(SizeFactor) then SizeFactor = 26.25
 
 ;Setup the magnetogram layer, default is at the 1.03
-  if not keyword_set(PlotRadius) then  PlotRadius=1.03
+  if not keyword_set(PlotRadius) then  PlotRadius=1.0
 
   if keyword_set(DemoMode) and keyword_set(PlotRadius) then begin
      print,'DemoMode and PlotRadius Cannot be Used at the same time!'
@@ -119,87 +119,73 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 
 ;Read the SWMF input magnetic field
   if not DemoMode then begin
-     PlotRadius=1.0
      if not keyword_set(file) then begin
         file=''
         read, prompt='Input file name (containing magnetic field data): ',file
      endif
 
      gettype, file, filetype, npictinfile
-     case filetype of 
-        'ascii' : openr,lun,file,/get_lun
-        'BINARY': openr,lun,file,/f77_unf
-        else    : print,'Openfile: unknown filetype:',filetype 
-     endcase
-     gethead,lun,file,filetype,headline,$
-             it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+     openfile, 10, file, filetype
+     get_pict, 10, file, filetype, 1, x,var,headline,it,time,$
+               gencoord, ndim, nparam, nvar, nx, param, varnames
+     close, 10
      
-     if ndim eq 2 then begin
-        linedata=dblarr(3)
-        nlon=nx[0]
-        nlat=nx[1]
-        Br_field=dblarr(nlon,nlat)
-        Bphi_field=dblarr(nlon,nlat)
-        Btheta_field=dblarr(nlon,nlat)
-        bt_field=dblarr(nlon,nlat)
-        Longitude=dblarr(nlon,nlat)
-        Latitude=dblarr(nlon,nlat)
-        for i=0,nlat-1 do begin
-           for j=0,nlon-1 do begin
-              readf,lun,linedata
-              Longitude[j,i]=linedata[0]*3.1415926/180.
-              Latitude[j,i]=linedata[1]*3.1415926/180.
-              Br_field[j,i]=linedata[2]
-              Bphi_field[j,i]=0.
-              Btheta_field[j,i]=0.
-           endfor
-        endfor
-        free_lun,lun
-     endif else begin
-        PlotRadius=1.03
-        r=1.5/(nx[0]-1)*findgen(nx[0])+1
-        index=where(r eq PlotRadius)
-        if index eq -1 then begin
-           print,'WARNING: Requested PlotRadius cannot be located in the data!'
-           temp=min(abs(r-PlotRadius),index_layer)
-           PlotRadius=r[index_layer]
-           print,'Using the closest layer instead! PlotRadius=', PlotRadius
-        endif
-       
-        linedata=dblarr(6)
-        nlon=nx[1]-1
-        nlat=nx[2]
-        Br_field=dblarr(nlon+1,nlat)
-        Bphi_field=dblarr(nlon+1,nlat)
-        Btheta_field=dblarr(nlon+1,nlat)
-        bt_field=dblarr(nlon+1,nlat)
-        Longitude=dblarr(nlon+1,nlat)
-        Latitude=dblarr(nlon+1,nlat)
-        for i=0,nlat-1 do begin
-           for j=0,nlon do begin
-              for k=0,nx[0]-1 do begin
-                 readf,lun,linedata
-                 if abs(linedata[0]-PlotRadius) lt 0.0001 then begin
-                    Longitude[j,i]=linedata[1]
-                    Latitude[j,i]=linedata[2]
-                    Br_field[j,i]=linedata[3]
-                    Bphi_field[j,i]=linedata[4]
-                    Btheta_field[j,i]=linedata[5]
-                 endif
-              endfor
-           endfor
-        endfor
-        Longitude=Longitude[0:nlon-1,*]
-        Latitude=Latitude[0:nlon-1,*]
-        Br_field=Br_field[0:nlon-1,*]
-        Bphi_field=Bphi_field[0:nlon-1,*]
-        Btheta_field=Btheta_field[0:nlon-1,*]
+     if gencoord then begin
+        print, 'file '+file+' should contain a regular grid'
+        retall
+     endif
 
-        free_lun,lun
-        
-     endelse
+     case ndim of
+        2:begin
+           if varnames(0) ne "Longitude" or varnames(1) ne "Latitude" or $
+              varnames(2) ne 'Br' then begin
+              print, 'variables should be Longitude Latitude Br!'
+              retall
+           endif
+           longitude = x(*,*,0)*!dtor
+           latitude  = x(*,*,1)*!dtor
+           br_field = var(*,*,0)
+           bt_field = abs(br_field)
+           nlon = nx[0]
+           nlat = nx[1]
+           bphi_field = fltarr(nlon, nlat)
+           btheta_field = fltarr(nlon, nlat)
+        end
+
+        3:begin
+           PlotRadius=1.03
+           if varnames(0) ne "Radius" or varnames(1) ne "Longitude" or $
+              varnames(2) ne "Latitude" or varnames(3) ne 'Br' then begin
+              print, 'variables should be Radius Longitude Latitude Br!'
+              retall
+           endif
+           radius    = x(*,0,0,0)    
+           longitude = x(0,*,*,1)
+           latitude  = x(0,*,*,2)
+           nlon = nx[1] - 1
+           nlat = nx[2]
+                                ; find index for the cut
+           d = abs(radius - PlotRadius)
+           icut = where( d eq min(d) )
+           br_field     = var(icut,*,*,0)
+           bphi_field   = var(icut,*,*,1)
+           btheta_field = var(icut,*,*,2)
+           bt_field = sqrt(br_field^2  + bphi_field^2 + btheta_field^2)
+
+           br_field = reform(br_field[0,0:nlon-1,*])
+           bphi_field = reform(bphi_field[0,0:nlon-1,*])
+           btheta_field = reform(btheta_field[0,0:nlon-1,*])
+           bt_field = reform(bt_field[0,0:nlon-1,*])
+           longitude = reform(longitude[0,0:nlon-1,*])
+           latitude = reform(latitude[0,0:nlon-1,*])
+        end
+        else: begin
+           print, 'ndim=', ndim, ' should be 2 or 3'
+           retall
+        end
+     endcase
   endif
-
+    
 ;Restore pre-saved 2D data for the demo mode
   if DemoMode then begin
      restore,'magneticfield_1.0.sav'
@@ -212,7 +198,6 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   endif
 
   bt_field = sqrt(bphi_field^2+btheta_field^2+br_field^2)
-
 
 ;Display the magnetogram and let user interactively select the CME source region. The
 ;procedure to select is:
@@ -233,8 +218,9 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 
   window,2,xs=1200,ys=1200.*float(nlat)/float(nlon)*4./3.
   loadct,0
-  contour,br_field_show,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
-          +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
+  contour,br_field_show,min=-20,max=20,charsize=3,$
+          title='SWMF Input Magnetogram (R ='$
+          +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Pixel)',$
           ytitle='Solar Latitude (Pixel)',/fill,nlevels=10,/iso,xstyle=1,ystyle=1
   
   print,'Please Select the CME Source Region (POSITIVE) with the left button'
@@ -265,7 +251,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;Set the box size. This box size is used to search the weight center around the
 ;selected positive/negative points in the interactive selection. It maybe increased
 ;for larger active regions.
-  boxsize=16
+  boxsize = round(long(16)*nlon/360)
 
 ;Calculate the weighted center for the positive polarity.
   xPositiveWeight=0.
@@ -304,7 +290,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   device,decomposed=0
   loadct,0
   contour,br_field_show,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
-          +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
+          +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Pixel)',$
           ytitle='Solar Latitude (Pixel)',/fill,nlevels=10,/iso,xstyle=1,ystyle=1
 
   loadct,39
@@ -347,6 +333,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   GL_Longitude=Longitude[xProfile[index],yProfile[index]]
   GL_Latitude=GL_Latitude*180./3.1415926
   GL_Longitude=GL_Longitude*180./3.1415926
+  if ndim eq 2 then GL_Longitude = GL_Longitude + param 
   ar_center=[xProfile[index],yProfile[index]]
 
 
@@ -373,8 +360,10 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   bitmap[*,*]=0.0
   for i=0,M-2 do begin
      for j=0,N-2 do begin
-        index1=where(br_field[i*cell_size:(i+1)*cell_size,j*cell_size:(j+1)*cell_size] lt -flux_threshold)
-        index2=where(br_field[i*cell_size:(i+1)*cell_size,j*cell_size:(j+1)*cell_size] gt flux_threshold)
+        index1=where(br_field[i*cell_size:(i+1)*cell_size,j*cell_size:(j+1)*cell_size] $
+                     lt -flux_threshold)
+        index2=where(br_field[i*cell_size:(i+1)*cell_size,j*cell_size:(j+1)*cell_size] $
+                     gt flux_threshold)
         if index1[0] ne -1 and index2[0] ne -1 then begin
            bitmap[i*cell_size:(i+1)*cell_size,j*cell_size:(j+1)*cell_size]=1.0
         endif
@@ -387,7 +376,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   bitmap_gradient[where(br_field_gradient lt 0.5)]=0.0
 
 ;Distance cut-off for determining the PIL. 
-  Dis_threshold=8
+  Dis_threshold=round(long(8)*nlon/360)
   DisCenter=fltarr(nlon,nlat)
   for i=0,nlon-1 do begin
      for j=0,nlat-1 do begin
@@ -395,8 +384,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      endfor
   endfor
 
-  dismap=DisCenter
-  dismap[where(Discenter gt Dis_threshold)]=0
+  dismap=fltarr(nlon,nlat)
   dismap[where(Discenter le Dis_threshold)]=1
 
 ;The final weighted map showing the PIL of the CME source region.
@@ -404,7 +392,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 
 ;At this moment, the PIL length is represented by degree and does not 
 ;take into account the effect of different latitude. It will be improved later. 
-  PIL_Length=(n_elements(where(wmap lt 0))+n_elements(where(wmap gt 0)))/2.
+  PIL_Length=(n_elements(where(wmap lt 0))+n_elements(where(wmap gt 0)))/2.*360./nlon
 
 ;Calculate the AR magnetic field strength in order to determine the
 ;right poloidal flux needed.
@@ -412,7 +400,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   NN=n_elements(showpoints)
   pillines=intarr(NN,2)
   bt_pil=0.0
-  RegionSize_ARMag=8
+  RegionSize_ARMag=round(long(8)*nlon/360)
   for i=0,NN-1 do begin
      y_show=floor(showpoints[i]/nlon)
      x_show=showpoints[i]-(y_show*nlon)
@@ -521,13 +509,15 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
      print,'-----------------------------------------'
   endif
 
-;The region size is used to cover the whole area of active region in order to show a zoom-in image.
-  RegionSize=50
+;The region size is used to cover the whole area of active region in
+;order to show a zoom-in image. Shorter RegionSize for near-Limb
+;regions when needed.
+
+  RegionSize=round(long(50)*nlon/360)
 
 ;Display the zoom-in image of the active region with weighted centers and PIL.
   window,3,xs=800,ys=800
 
-  
   device,decomposed=0
   loadct,0
   contour,br_field_show[xProfile[index]-RegionSize/2:xProfile[index]+RegionSize/2,$
@@ -543,8 +533,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
         /data,psym=-2,color=50,symsize=3,thick=3
   plots,RegionSize/2,RegionSize/2,/data,psym=-2,color=150,symsize=3,thick=3
   for i=0,NN-1 do begin
-     y_show=floor(showpoints[i]/360)
-     x_show=showpoints[i]-(y_show*360)
+     y_show=floor(showpoints[i]/nlon)
+     x_show=showpoints[i]-(y_show*nlon)
      y_show=y_show-(yProfile[index]-RegionSize/2)
      x_show=x_show-(xProfile[index]-RegionSize/2)
      plots,x_show,y_show,psym=-1,color=200,symsize=3,thick=3
