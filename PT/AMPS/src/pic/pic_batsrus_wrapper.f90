@@ -12,6 +12,18 @@ subroutine CON_stop(StringError)
   stop
 end subroutine CON_stop
 
+!==============================================================================                                                   
+! The substitute for the timing subroutines called by SWMF
+subroutine timing_start(name)
+  character (LEN=*), intent(in):: name
+end subroutine timing_start
+
+subroutine timing_stop(name)
+  character (LEN=*), intent(in):: name
+end subroutine timing_stop
+
+!=============================================================================
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !Determine the number of the variables in the state vector that are returned by the interpolation routine
 subroutine batsrus2amps_get_nvar(res)
