@@ -5,23 +5,25 @@ my $script = shift(@ARGV);
 my $name   = shift(@ARGV);
 my @machine = @ARGV;
 
-if(not $script or $script =~ /\-+h/i or not $name or not @machine){
+if(not $script or $script =~ /\-+h/i or not $name){
     print "
-Usage: qsub.pfe.pl SCRIPT NAME MACHINE [MACHINE2] [MACHINE3] ...
+Usage: qsub.pfe.pl SCRIPT NAME [MACHINE1] [MACHINE2] [MACHINE3] ...
 
 Submit generic job script to multiple machine types.
 Use a unique NAME argument to identify the jobse.
 Only the first four characters of the NAME are used.
-Only the first three characters of the machine type are used.
+If no machine is specified, 4 jobs will be submitted for the 4 machine
+types (Westmere, IvyBridge, SandyBridge, Haswell). Otherwise,
+the job will be submitted for the listed machines.
+Only the first three characters of the machine types are used.
 Use watch.pl to make sure that when any of the jobs start to run, 
 the others get deleted from the queuewith qdel. Note you can
 add or delete jobs with matching NAME while watch.pl is running.
 
 Example:
 
-qsub.pfe.pl job.long Mars San Ivy Has
+qsub.pfe.pl job.long Mars
 watch.pfe.pl Mars >& watch.log &
-qsub.pfe.pl job.long Mars Wes
 ";
     exit;
 }
@@ -36,6 +38,8 @@ close SCRIPT;
 # Copy original script
 my $machine;
 my @script;
+@machine = ('Ivy', 'San', 'Has', 'Wes') if not @machine;
+
 foreach $machine (@machine){
     $machine =~ s/(...).*/$1/;
 
