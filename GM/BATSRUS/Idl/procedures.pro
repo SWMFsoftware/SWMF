@@ -1090,7 +1090,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    endif else begin
       if strmid(plotmode,0,4) eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,log,mesh,noaxis,over,white,#ct999'
+      print,'2D +options: bar,body,fill,grid,irr,label,log,map,mesh,noaxis,over,usa,white,#ct999'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1981,6 +1981,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
   endif
 
+  if !x.range[0] ne !x.range[1] then xrange=!x.range else $
+     xrange=[min(xx),max(xx)]
+  if !y.range[0] ne !y.range[1] then yrange=!y.range else $
+     yrange=[min(yy),max(yy)]
+
   ; Calculate plot spacing from number of plots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
   ppp   = multix*multiy
@@ -2045,6 +2050,18 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
         showbody=1
      endif else showbody=0
+
+     i=strpos(plotmod,'map')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        showmap=1
+     endif else showmap=0
+
+     i=strpos(plotmod,'usa')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        showusa=1
+     endif else showusa=0
 
      i=strpos(plotmod,'fill')
      if i ge 0 then begin
@@ -2148,7 +2165,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                                 ; obtain position for flat plotmodes
         set_position, sizes, plotix, multiy-1-plotiy, pos, /rect
 
-                                ; shrink in X direction for (overplotting) a colorbar
+                                ; shrink in X direction
+                                ; for (overplotting) a colorbar
         if strpos(plotmodes(ifunc),'bar') ge 0 $
            or (strpos(plotmodes(ifunc),'over') ge 0 and $
                strpos(plotmodes(ifunc-1>0),'bar') ge 0) then $
@@ -2165,19 +2183,13 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
            else if fixaspect ne 1 then $
               aspectx = abs(fixaspect) $
            else begin
-              if !x.range(1) ne !x.range(0) then    $
-                 width=abs(!x.range(1)-!x.range(0)) $
-              else if axistype eq 'coord' then      $
-                 width=  max(xx) - min(xx)          $
-              else                                  $
-                 width=  nx-1.0
-
-              if !y.range(1) ne !y.range(0) then    $
-                 height=abs(!y.range(1)-!y.range(0))$
-              else if axistype eq 'coord' then      $
-                 height= max(yy) - min(yy)          $
-              else                                  $
-                 height= ny-1.0
+              if axistype eq 'cells' then begin
+                 width  = nx-1.0
+                 height = ny-1.0
+              endif else begin
+                 width  = abs(xrange(1) - xrange(0))
+                 height = abs(yrange(1) - yrange(0))
+              endelse
 
               aspectx = width/height
            endelse
@@ -2187,8 +2199,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
            aspectratio = aspectpos/aspectx
            
-                                ;print,'aspectx,pos,ratio=',aspectx,aspectpos,aspectratio
-
            if aspectratio gt 1 then begin
               posmid=(pos(2)+pos(0))/2.
               posdif=(pos(2)-pos(0))/2.
@@ -2379,8 +2389,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                                   /NOERASE, WHITE=white
            'velovect' :velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE
            'ovelovect':velovect,f1,f2,xx(*,0),yy(0,*),/NOERASE,$
-                                XRANGE=[min(xx),max(xx)],$
-                                YRANGE=[min(yy),max(yy)]
+                                XRANGE=xrange, YRANGE=yrange
         endcase
         else:print,'Unknown axistype:',axistype
      endcase
@@ -2396,6 +2405,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
            plot,xx,yy,XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NODATA,/NOERASE
      endif
 
+     if showmap or showusa then $
+        map_set, 0.0, 180., $
+                 /cylindrical, /continent, usa=showusa, /noborder, /noerase, $
+                 limit=[yrange(0),xrange(0),yrange(1),xrange(1)]
+
      !p.title = ''
 
      if showgrid and plotdim eq 2 and plotmod ne 'surface'    $
@@ -2408,10 +2422,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         else if keyword_set(cut) then                                    $
            plot_grid,xx,yy,lines=showmesh,xstyle=5,ystyle=5               $
         else begin
-           if !x.range[0] ne !x.range[1] then xrange=!x.range else $
-              xrange=[min(xx),max(xx)]
-           if !y.range[0] ne !y.range[1] then yrange=!y.range else $
-              yrange=[min(yy),max(yy)]
            plot_grid,x,lines=showmesh,xstyle=5,ystyle=5,$
                     xrange=xrange,yrange=yrange
         endelse
