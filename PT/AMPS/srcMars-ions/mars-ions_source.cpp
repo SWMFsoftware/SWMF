@@ -14,8 +14,32 @@
 
 double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell) {
   double res=0.0;
-
-  res=1.0;
+  double *xMiddle=cell->GetX(); 
+  double altitude=0.0;
+  double rSeason=1.38758;
+  double r2Season=pow(rSeason,2); 
+  double Tnu_body = 134.0; //in K, neutral temperature
+  double BodynDenNuSp_I_O= 8.0283e15; // per m^-3
+  double BodynDenNuSp_I_Ox= 5.1736e14;
+  double BodynDenNuSp_I_Oh= 6.3119e10;
+  double BodynDenNuSp_I_Ohx= 3.9646e9;
+  double HNuSpecies_I_O=13340; //scale height in m
+  double HNuSpecies_I_Ox=50025;
+  double HNuSpecies_I_Oh=290500;
+  double HNuSpecies_I_Ohx=2436600;
+  double Rate_I_O_Op= 6.346e-7/r2Season; //units s^-1 for O_hv__Op_em_
+  double nDen_O;
+  int i;    
+  for (i=0;i<3;i++) {    
+      altitude+=pow(xMiddle[i],2);
+  }
+  altitude=sqrt(altitude)-3396000.0; // in m where R_Mars=3396000.0 m
+  nDen_O=BodynDenNuSp_I_O*exp(altitude/HNuSpecies_I_O)+\
+         BodynDenNuSp_I_Ox*exp(altitude/HNuSpecies_I_Ox)+\
+         BodynDenNuSp_I_Oh*exp(altitude/HNuSpecies_I_Oh)+\
+         BodynDenNuSp_I_Ohx*exp(altitude/HNuSpecies_I_Ohx);
+  //res=1.0;
+  res=nDen_O*Rate_I_O_Op; //source rate per m^-3
 
   return res*cell->Measure;
 }
