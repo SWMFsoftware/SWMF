@@ -35,7 +35,7 @@ TimeStepMode= SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep,
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
 
-CouplerMode=off !ices !!off, ices, swmf 
+CouplerMode=file(tecplot) !ices !!off, ices, swmf 
 
 #endmain
 
@@ -50,7 +50,7 @@ CouplerMode=off !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=500
+  InitialSampleLength=10
 
 
 ! ReferenceInjectionParticleNumber=200
