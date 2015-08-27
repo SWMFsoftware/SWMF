@@ -15,14 +15,14 @@ module ModProcessVarName
   end interface
   
 
-  integer,parameter :: nVarMax = 100   ! maximum number of state variables
-  integer,parameter :: nSubstance = 32 ! number of distinct fluids/species
+  integer, parameter:: nVarMax = 100   ! maximum number of state variables
+  integer, parameter:: nSubstance = 33 ! number of distinct fluids/species
 
-  ! Number of state variables associated with each substance to be standarized
-  integer,parameter :: nVarPerSubstance = 7
+  ! Number of state variables associated with each substance to be standardized
+  integer, parameter:: nVarPerSubstance = 7
 
   ! Number of allowed alternative names for each variable
-  integer  :: nSynonym = 3
+  integer, parameter:: nSynonym = 3
 
   ! State variables not associated with a specific fluid/ specie
   integer,parameter  :: nVarExtra = 11
@@ -40,30 +40,31 @@ module ModProcessVarName
        He2p_ = 9,  &
        OHp_  = 10, &
        N_    = 11, &
-       COp_  = 12, &
-       CO2p_ = 13, &
-       H2O_  = 14, &
-       H2Op_ = 15, &
-       H3Op_ = 16, &
-       Mp_   = 17, &
-       Lp_   = 18, &
-       MHCp_ = 19, &
-       HHCp_ = 20, &
-       HNIp_ = 21, &
-       Sw_   = 22, &
-       Iono_ = 23, &
-       Neu1_ = 24, &
-       Neu2_ = 25, &
-       Neu3_ = 26, &
-       Neu4_ = 27, &
-       Pui1_ = 28, &
-       Pui2_ = 29, &
-       Pui3_ = 30, &
-       Pui4_ = 31, &
-       Main_ = 32 ! main component, MHD/HD
+       Np_   = 12, &
+       COp_  = 13, & 
+       CO2p_ = 14, & 
+       H2O_  = 15, & 
+       H2Op_ = 16, & 
+       H3Op_ = 17, & 
+       Mp_   = 18, & 
+       Lp_   = 19, & 
+       MHCp_ = 20, & 
+       HHCp_ = 21, & 
+       HNIp_ = 22, & 
+       Sw_   = 23, & 
+       Iono_ = 24, & 
+       Neu1_ = 25, & 
+       Neu2_ = 26, & 
+       Neu3_ = 27, & 
+       Neu4_ = 28, & 
+       Pui1_ = 29, & 
+       Pui2_ = 30, & 
+       Pui3_ = 31, &
+       Pui4_ = 32, &       
+       Main_ = 33 ! main component, MHD/HD
 
   ! String array storing the standard names of all substances
-  character(len = 6) :: NameSubstance_I(nSubstance) = (/ &
+  character(len=6):: NameSubstance_I(nSubstance) = (/ &
        'H   ',  &
        'Hp  ',  &
        'HpSw',  &
@@ -75,6 +76,7 @@ module ModProcessVarName
        'He2p',  &
        'OHp ',  &
        'N   ',  &
+       'Np  ',  &
        'COp ',  &
        'CO2p',  &
        'H2O ',  &
@@ -199,15 +201,17 @@ contains
     !
     !    where:
     !    - nSubstance is the number of possible species/ fluids
-    !    - nVarPerSubstance enumarates the variables associated with each substance.
+    !    - nVarPerSubstance enumarates the variables associated 
+    !              with each substance.
     !    - nSynonym is the number of alternative names representing the same
     !              physical quantity, used by different ModEquation files.
     !
     ! 2. Look up the elements of NameVar_V and replace them with standard names
     !    The look up procedure in the dictionary is done by 
     !    call find_substance_replace_name
-    !    Once a specific NameVarIn is found to be identical to a dictionary item:
-    !    it is replaced with SubstanceStandardName_II(iSubstance,iVarPerSubstance)
+    !    Once a specific NameVarIn is found to be identical to a dictionary 
+    !    item, it is replaced with 
+    !        SubstanceStandardName_II(iSubstance,iVarPerSubstance)
     !
     ! 3. The number of fluids and species found are returned by 
     !    nDensity and nSpeed.
