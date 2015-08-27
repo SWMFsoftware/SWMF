@@ -43,6 +43,18 @@ double PIC::CPLR::DATAFILE::BATSRUS::UnitLength=1.0;
 char PIC::CPLR::DATAFILE::BATSRUS::filename[_MAX_STRING_LENGTH_PIC_]="";
 bool PIC::CPLR::DATAFILE::BATSRUS::InitFlag=false;
 
+int PIC::CPLR::DATAFILE::BATSRUS::rhoBATSRUS2AMPS=-2;
+int PIC::CPLR::DATAFILE::BATSRUS::mxBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::myBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::mzBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::uxBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::uyBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::uzBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::bxBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::byBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::bzBATSRUS2AMPS =-2;
+int PIC::CPLR::DATAFILE::BATSRUS::pBATSRUS2AMPS  =-2;
+
 //reserve memory to store the interpolated background data
 void PIC::CPLR::DATAFILE::BATSRUS::Init() {
   //reserve the data fields
@@ -84,14 +96,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
   static double *StateLocal=NULL,*State=NULL,*PhysicalVariableUnitConversionTable=NULL;
   static int nVar;
 
-  //the offsets of the physical variables in the .idl file
-  static int rhoBATSRUS2AMPS=-2;
-  static int mxBATSRUS2AMPS=-2,myBATSRUS2AMPS=-2,mzBATSRUS2AMPS=-2;
-  static int uxBATSRUS2AMPS=-2,uyBATSRUS2AMPS=-2,uzBATSRUS2AMPS=-2;
-  static int bxBATSRUS2AMPS=-2,byBATSRUS2AMPS=-2,bzBATSRUS2AMPS=-2;
-  static int pBATSRUS2AMPS=-2;
-
-  if (InitFlag==false) exit(__LINE__,__FILE__,"Error: the reader needs to be initialized first! Call PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::InitAMR before PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::LoadDataFile");
+  if (InitFlag==false) exit(__LINE__,__FILE__,"Error: the reader needs to be initialized first! Call PIC::CPLR::DATAFILE::BATSRUS::OUTPUT::InitAMR before PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile");
 
   if (startNode==PIC::Mesh::mesh.rootTree) {
     //open data file
@@ -147,12 +152,19 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
       while ((NameVar[i0]!=0)&&(NameVar[i0]==' ')) i0++;
     }
 
+    //the first element in the state vector is the "weight" -> adjust the offsets
+    rhoBATSRUS2AMPS++;
+    mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
+    uxBATSRUS2AMPS++,uyBATSRUS2AMPS++,uzBATSRUS2AMPS++;
+    bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
+    pBATSRUS2AMPS++;
+
     //check whether the state vector containes all nessesary physical quantaties
     if (rhoBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: rho is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
     if ((mxBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mx or ux is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if ((myBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: My or uy is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
-    if ((mzBATSRUS2AMPS==-1)&&(uxBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mz or uz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if ((myBATSRUS2AMPS==-1)&&(uyBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: My or uy is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
+    if ((mzBATSRUS2AMPS==-1)&&(uzBATSRUS2AMPS==-1)) exit(__LINE__,__FILE__,"Error: Mz or uz is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
 
     if (bxBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: Bx is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
     if (byBATSRUS2AMPS==-1) exit(__LINE__,__FILE__,"Error: By is not present in the BARSRUS .idl file. Please add this variable to the .idl file.");
@@ -191,13 +203,6 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
       while ((UnitVar[i0]!=0)&&(UnitVar[i0]==' ')) i0++;
     }
 
-
-    //the first element in the state vector is the "weight" -> adjust the offsets
-    rhoBATSRUS2AMPS++;
-    mxBATSRUS2AMPS++,myBATSRUS2AMPS++,mzBATSRUS2AMPS++;
-    uxBATSRUS2AMPS++,uyBATSRUS2AMPS++,uzBATSRUS2AMPS++;
-    bxBATSRUS2AMPS++,byBATSRUS2AMPS++,bzBATSRUS2AMPS++;
-    pBATSRUS2AMPS++;
 
     //check whether the unit conversion factors are defined for all physical variables
     if ((PhysicalVariableUnitConversionTable[rhoBATSRUS2AMPS]==0.0) || \
