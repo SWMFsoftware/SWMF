@@ -294,7 +294,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
           if (fScript==NULL) {
             sprintf(ScriptName,"%s.thread=%i.mcr",ScriptBaseName,PIC::ThisThread);
             fScript=fopen(ScriptName,"w");
-            fprintf(fScript,"#!MC 1400\n");
+            fprintf(fScript,"#!MC 1300\n");
 
             //read the data set
             fprintf(fScript,"$!READDATASET  '\"%s\" '\n",DataFileTECPLOT);
