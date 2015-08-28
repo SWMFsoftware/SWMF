@@ -655,7 +655,7 @@ contains
 
     ! Integrate variables from XyzStartIn_D in the direction LosPix_D
 
-    use ModGeometry,    ONLY: x1, x2, y1, y2, z2
+    use ModGeometry,    ONLY: x1, x2, y1, y2, z1, z2
     use BATL_lib,       ONLY: xyz_to_coord, find_grid_block, &
          get_tree_position, CoordMin_D, CoordMax_D, nIJK_D
 
@@ -687,7 +687,7 @@ contains
          write(*,'(2a, 3f10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
 
     CoordSize_D = CoordMax_D - CoordMin_D
-    DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - x1)
+    DsTiny = cTiny*(x2-x1 + y2 - y1 + z2 - z1)
 
     XyzStart_D = XyzStartIn_D
 
@@ -1106,7 +1106,7 @@ contains
        ! body (doesn't affect others). Also, changing it within block loop
        ! means rInner depends on block resolution (which you want).
 
-       rInner = rBody ! reset it with every block
+       rInner = max(rBody, RadiusMin)
        if(Body1) then
           if(IsBoundaryBlock_IB(body1_,iBlock)) rInner = rBody + &
                sqrt(sum(CellSize_D**2))
