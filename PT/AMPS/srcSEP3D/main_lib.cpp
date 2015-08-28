@@ -249,7 +249,10 @@ void amps_init_mesh() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",20);
+	if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",true,33);
+	else
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",true,20);
 }
 
 void amps_init(){
@@ -293,8 +296,8 @@ void amps_init(){
 
 
 
-void amps_time_step () {
+int amps_time_step () {
 
-  PIC::TimeStep();
-
+  return PIC::TimeStep();
+  
 }

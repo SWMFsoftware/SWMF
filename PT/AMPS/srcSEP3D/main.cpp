@@ -24,7 +24,7 @@
 
 void amps_init();
 void amps_init_mesh();
-void amps_time_step();
+int  amps_time_step();
 
 
 int main(int argc,char **argv) {
@@ -35,11 +35,20 @@ int main(int argc,char **argv) {
   //time step
   for (long int niter=0;niter<100000001;niter++) {
 
-    amps_time_step();
+    if(amps_time_step() == _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_) break;
 
   }
+  
+  //output the particle statistics for the nightly tests                        
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+    char fname[400];
 
+    sprintf(fname,"%s/test_SEP3D.dat",PIC::OutputDataFileDirectory);
+    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  }
+
+  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return 1;
+  return EXIT_SUCCESS;
 }
