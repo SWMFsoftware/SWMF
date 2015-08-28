@@ -6,7 +6,7 @@ COMPILE.c     = pgcc
 COMPILE.mpicc = mpicc
 COMPILE.mpicxx= mpicxx
 
-CPPLIB = -lstdc++ -lmpi_cxx
+CPPLIB = -lstdc++ -lmpi++
 
 DEBUGC = 
 #DEBUGC = -g
