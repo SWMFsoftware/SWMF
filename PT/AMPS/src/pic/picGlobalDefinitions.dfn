@@ -6,6 +6,11 @@
 #define _PIC_MODE_ON_  0
 #define _PIC_MODE_OFF_ 1
 
+//return codes for time step
+#define _PIC_TIMESTEP_RETURN_CODE__ERROR_          0
+#define _PIC_TIMESTEP_RETURN_CODE__SUCCESS_        1
+#define _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_ 2
+
 /*the mode of the output of the sampled particle trajectory:
 _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ -> print the whole particle's trajectory regardless of possible changes of the species number. 
 The whole trajectory will be saved in the file that containes trajectories of the particle spacies when the particle's trajectory is terminated
