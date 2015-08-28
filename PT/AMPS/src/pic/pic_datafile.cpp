@@ -16,19 +16,26 @@
 double PIC::CPLR::DATAFILE::MULTIFILE::TimeCurrent    = -1.0;
 //time to load the next datafile                                          
 double PIC::CPLR::DATAFILE::MULTIFILE::TimeCoupleNext = -1.0;
-// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"                      
+//variable to track whether to break simulation at the last datafile
+bool PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile  = true;
+//variable to track whether the last datafile has been reached
+bool PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile  = false;
+
+// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
 int  PIC::CPLR::DATAFILE::MULTIFILE::FileNumber = 0;
 char PIC::CPLR::DATAFILE::MULTIFILE::FileNameBase[_MAX_STRING_LENGTH_PIC_] = "";
 char PIC::CPLR::DATAFILE::MULTIFILE::FileExt[_MAX_STRING_LENGTH_PIC_] = "dat";
 
 void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn, 
+					  bool        BreakAtLastFileIn,
 					  int         FileNumberFirst, 
 					  const char *FileExtIn){
   sprintf(FileNameBase,"%s", FileNameBaseIn);
   sprintf(FileExt,     "%s", FileExtIn);
-  FileNumber    = FileNumberFirst;
-  TimeCurrent   = -1.0;
-  TimeCoupleNext= -1.0;
+  FileNumber     = FileNumberFirst;
+  TimeCurrent    = -1.0;
+  TimeCoupleNext = -1.0;
+  BreakAtLastFile= BreakAtLastFileIn;
   // load the first file
   UpdateDataFile();
   // set the global time counter value
@@ -41,9 +48,12 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
   char fullname[_MAX_STRING_LENGTH_PIC_];
   sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
   PIC::CPLR::DATAFILE::ImportData(fullname);
-  if(TimeCoupleNext < 0)
-    exit(__LINE__,__FILE__,"Reached the last data file; exit");
+  if(PIC::ThisThread==0)
+    std::cout << "Data file "<<fullname<<" has been loaded"<<std::endl;
   FileNumber++;
+  //check whehter the last file has been reached
+  if(TimeCoupleNext < 0)
+    ReachedLastFile=true;
 }
 
 //path to the location of the datafiles
@@ -62,9 +72,9 @@ PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::PlasmaIonPressu
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure={false,false,1,"\"Plasma electron pressure\"",-1};
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticField={false,false,3,"\"Bx\", \"By\", \"Bz\"",-1};
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::ElectricField={false,false,3,"\"Ex\", \"Ey\", \"Ez\"",-1};
-PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitudeGradient={false,false,3,"\"d|B|/dx\", \"d|B|/dy\", \"d|B|/dz\"",-1};
+
 PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient={false,false,9,"\"dBx/dx\", \"dBx/dy\", \"dBx/dz\", \"dBy/dx\", \"dBy/dy\", \"dBy/dz\", \"dBz/dx\", \"dBz/dy\", \"dBz/dz\"",-1};
-PIC::CPLR::DATAFILE::cOffsetElement PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude={false,false,1,"\"|B|\"",-1};
+
 
 //load new data file
 //IMPORTANT! The list of the data that are loaded has to be indicated before PIC::Init_BeforeParser
@@ -165,14 +175,6 @@ void PIC::CPLR::DATAFILE::Init() {
     nTotalBackgroundVariables+=Offset::PlasmaElectronPressure.nVars;
   }
 
-  if (Offset::MagneticFieldMagnitude.allocate==true) {
-    Offset::MagneticFieldMagnitude.active=true;
-    Offset::MagneticFieldMagnitude.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldMagnitude.nVars*sizeof(double);
-    nTotalBackgroundVariables+=Offset::MagneticFieldMagnitude.nVars;
-  }
-
 
   if (Offset::MagneticField.allocate==true) {
     Offset::MagneticField.active=true;
@@ -190,13 +192,6 @@ void PIC::CPLR::DATAFILE::Init() {
     nTotalBackgroundVariables+=Offset::ElectricField.nVars;
   }
 
-  if (Offset::MagneticFieldMagnitudeGradient.allocate==true) {
-    Offset::MagneticFieldMagnitudeGradient.active=true;
-    Offset::MagneticFieldMagnitudeGradient.offset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
-
-    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldMagnitudeGradient.nVars*sizeof(double);
-    nTotalBackgroundVariables+=Offset::MagneticFieldMagnitudeGradient.nVars;
-  }
 
   if (Offset::MagneticFieldGradient.allocate==true) {
     Offset::MagneticFieldGradient.active=true;
@@ -419,10 +414,8 @@ void PIC::CPLR::DATAFILE::PrintVariableList(FILE* fout,int DataSetNumber) {
   if (Offset::PlasmaTemperature.active) fprintf(fout,", %s",Offset::PlasmaTemperature.VarList);
   if (Offset::PlasmaIonPressure.active) fprintf(fout,", %s",Offset::PlasmaIonPressure.VarList);
   if (Offset::PlasmaElectronPressure.active) fprintf(fout,", %s",Offset::PlasmaElectronPressure.VarList);
-  if (Offset::MagneticFieldMagnitude.active) fprintf(fout,", %s",Offset::MagneticFieldMagnitude.VarList);
   if (Offset::MagneticField.active) fprintf(fout,", %s",Offset::MagneticField.VarList);
   if (Offset::ElectricField.active) fprintf(fout,", %s",Offset::ElectricField.VarList);
-  if (Offset::MagneticFieldMagnitudeGradient.active) fprintf(fout,", %s",Offset::MagneticFieldMagnitudeGradient.VarList);
   if (Offset::MagneticFieldGradient.active) fprintf(fout,", %s",Offset::MagneticFieldGradient.VarList);
 }
 

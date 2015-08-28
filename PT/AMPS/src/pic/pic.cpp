@@ -28,7 +28,7 @@ bool *PIC::Sampling::SaveOutputDataFile=NULL;
 
 //====================================================
 //perform one time step
-void PIC::TimeStep() {
+int PIC::TimeStep() {
    double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
 
@@ -193,8 +193,13 @@ void PIC::TimeStep() {
 #if _PIC_GLOBAL_TIME_COUNTER_MODE_ == _PIC_MODE_ON_
   PIC::SimulationTime::Update();
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+  //update data
   if(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate())
     PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
+  //exit if reached the last file
+  if(PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile &&
+     PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile)
+    return _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_;
 #endif
 #endif
 
@@ -445,6 +450,8 @@ void PIC::TimeStep() {
       fflush(PIC::DiagnospticMessageStream);
     }
   }
+
+  return _PIC_TIMESTEP_RETURN_CODE__SUCCESS_;
 
 }
 //====================================================

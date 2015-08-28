@@ -25,8 +25,6 @@ void PIC::CPLR::DATAFILE::ARMS::Init() {
   PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
   PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
 
-  PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude.allocate=true;
-  PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitudeGradient.allocate=true;
   PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
 }
 
@@ -40,10 +38,10 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
   //original data
   const int b_ = 0, v_ = 3, n_ = 6, t_ = 7, p_ = 8; 
   //additional data (gradients come in the END)
-  const int Ab_ = 9, Db_ = 10, DAb_ = 19; 
+  const int Db_ = 10;
   // vectors in the data
   const int nvec       = 6;
-  const int vecs[nvec] = {b_, v_, Db_, Db_+3, Db_+6, DAb_};
+  const int vecs[nvec] = {b_, v_, Db_, Db_+3, Db_+6};
   static double *Xpos, *Zpos;
   static double ***Data;
 
@@ -77,7 +75,8 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	  fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
 	  MULTIFILE::TimeCoupleNext=strtod(str1, NULL);
 	  if(MULTIFILE::TimeCoupleNext < 0)
-	    exit(__LINE__,__FILE__,"Reached the last ARMS data file; exit");
+	    return;
+	    //exit(__LINE__,__FILE__,"Reached the last ARMS data file; exit");
 	}
 	else
 	  if((strcmp("#NX",str1)==0)){
@@ -176,23 +175,16 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
   {    
     double dX = Xpos[1] - Xpos[0];
     double dZ = Zpos[1] - Zpos[0];
-    // absolute value of B
-    for(int iX = 0; iX < nX; iX++) 
-      for(int iZ = 0; iZ < nZ; iZ++)
-	Data[Ab_][iX][iZ] = pow(Data[b_  ][iX][iZ]*Data[b_  ][iX][iZ]+
-				Data[b_+1][iX][iZ]*Data[b_+1][iX][iZ]+
-				Data[b_+2][iX][iZ]*Data[b_+2][iX][iZ],0.5);
+
     //components of gradient in the y=0 slice, i.e. d(*)/dy = 0
     for(int iX = 0; iX < nX; iX++)
       for(int iZ = 0; iZ < nZ; iZ++){	
 	if(iX<nX-1){
-	  Data[DAb_  ][iX][iZ]=(Data[Ab_][iX+1][iZ]-Data[Ab_][iX][iZ])/dX;
 	  for(int i=0; i<3; i++){
 	    Data[Db_+  3*i][iX][iZ]=(Data[b_+i][iX+1][iZ]-Data[b_+i][iX][iZ])/dX;
 	  }
 	}
 	if(iZ<nZ-1){
-	  Data[DAb_+2][iX][iZ]=(Data[Ab_][iX][iZ+1]-Data[Ab_][iX][iZ])/dZ;
 	  for(int i=0; i<3; i++){
 	    Data[Db_+2+3*i][iX][iZ]=(Data[b_+i][iX][iZ+1]-Data[b_+i][iX][iZ])/dZ;
 	  }
@@ -246,7 +238,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    for(int ii=0;ii<2;ii++) 
 	      for(int jj=0;jj<2;jj++){
 		//interpolate variables stored at nodes
-		for(int ivar=0; ivar<nvar && ivar<Db_ && ivar<DAb_; ivar++)
+		for(int ivar=0; ivar<nvar && ivar<Db_; ivar++)
 		  DataInterp[ivar] += 
 		    Data[ivar][xCell+ii][zCell+jj] * 
 		    ((1-wX)*(1-ii)+wX*ii) * ((1-wZ)*(1-jj)+wZ*jj);
@@ -290,7 +282,6 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
 	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))        =DataInterp[b_+idim];
-	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitudeGradient.offset))=DataInterp[DAb_+idim];
 	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+idim];
 	      *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+3+idim];
 	      *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+6+idim];
@@ -307,12 +298,6 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))     =DataInterp[p_];
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))   =DataInterp[n_];
 	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))     =DataInterp[t_];
-
-	    //for magnitude of magnetic field DON'T use an interpolated value:
-	    // compute it based on interpolated values of components
-	    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldMagnitude.offset))=pow(DataInterp[b_+0]*DataInterp[b_+0]+
-												DataInterp[b_+1]*DataInterp[b_+1]+
-												DataInterp[b_+2]*DataInterp[b_+2],0.5);
 	  }
     }
     else {

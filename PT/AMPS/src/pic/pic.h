@@ -131,7 +131,7 @@ namespace PIC {
   void SignalHandler(int);
 
   //perform one time step
-  void TimeStep();
+  int TimeStep();
 //  void Sampling();
 
   //init the particle solver
@@ -2510,12 +2510,19 @@ namespace PIC {
         extern int  FileNumber;
         extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
         extern char FileExt[_MAX_STRING_LENGTH_PIC_];
+	//variable to track whether to break simulation at the last datafile
+	extern bool BreakAtLastFile;
+	//variable to track whether the last datafile has been reached
+	extern bool ReachedLastFile;
         //check whether it is time to load the next file
         inline bool IsTimeToUpdate(){
           return TimeCoupleNext >= 0.0 && PIC::SimulationTime::Get() >= TimeCoupleNext;
         }
         //initialize
-        void Init(const char *FileNameBaseIn, int FileNumber = 0, const char *FileExtIn="dat");
+        void Init(const char *FileNameBaseIn, 
+		  bool        BreakAtLastFileIn= true, 
+		  int         FileNumber      = 0, 
+		  const char *FileExtIn       ="dat");
         //update the datafile
         void UpdateDataFile();
       }
@@ -2550,8 +2557,6 @@ namespace PIC {
         extern cOffsetElement MagneticField;
         extern cOffsetElement ElectricField;
         extern cOffsetElement MagneticFieldGradient;
-        extern cOffsetElement MagneticFieldMagnitudeGradient;
-        extern cOffsetElement MagneticFieldMagnitude;
 
 
         inline void SetAllocate(bool flag,cOffsetElement* offset) {
@@ -2577,8 +2582,6 @@ namespace PIC {
           SetAllocate(flag,&MagneticField);
           SetAllocate(flag,&ElectricField);
           SetAllocate(flag,&MagneticFieldGradient);
-          SetAllocate(flag,&MagneticFieldMagnitude);
-          SetAllocate(flag,&MagneticFieldMagnitudeGradient);
         }
 
         inline void SetActiveAll(bool flag) {
@@ -2590,8 +2593,6 @@ namespace PIC {
           SetActive(flag,&MagneticField);
           SetActive(flag,&ElectricField);
           SetActive(flag,&MagneticFieldGradient);
-          SetActive(flag,&MagneticFieldMagnitude);
-          SetActive(flag,&MagneticFieldMagnitudeGradient);
         }
       }
 
@@ -2646,16 +2647,6 @@ namespace PIC {
         for (int idim=0;idim<Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=offset[idim];
       }
 
-      inline double GetBackgroundMagneticFieldMagnitude(PIC::Mesh::cDataCenterNode *cell) {
-        return *((double*)(Offset::MagneticFieldMagnitude.offset+cell->GetAssociatedDataBufferPointer()));
-      }
-
-
-      inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB,PIC::Mesh::cDataCenterNode *cell) {
-        double *offset=(double*)(Offset::MagneticFieldMagnitudeGradient.offset+cell->GetAssociatedDataBufferPointer());
-
-        for (int idim=0;idim<Offset::MagneticFieldMagnitudeGradient.nVars;idim++) gradAbsB[idim]=offset[idim];
-      }
 
       inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell) {
         register double *offset=(double*)(Offset::PlasmaBulkVelocity.offset+cell->GetAssociatedDataBufferPointer());
@@ -2937,43 +2928,6 @@ namespace PIC {
          for (idim=0;idim<DATAFILE::Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
        }
      }
-
-     inline void GetBackgroundMagneticFieldMagnitude(double &AbsB) {
-       int iStencil;
-
-       AbsB=0.0;
-
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
-         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         exit(__LINE__,__FILE__,"not implemented");
-         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         AbsB+=DATAFILE::GetBackgroundMagneticFieldMagnitude(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
-         #else
-         exit(__LINE__,__FILE__,"not implemented");
-         #endif
-       }
-     }
-
-
-     inline void GetBackgroundMagneticFieldMagnitudeGradient(double *gradAbsB) {
-       double t[3];
-       int idim,iStencil;
-
-       for (idim=0;idim<3;idim++) gradAbsB[idim]=0.0;
-
-       for (iStencil=0;iStencil<PIC::InterpolationRoutines::CellCentered::Stencil.Length;iStencil++) {
-         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
-         exit(__LINE__,__FILE__,"not implemented");
-         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundMagneticFieldMagnitudeGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
-         #else
-         exit(__LINE__,__FILE__,"not implemented");
-         #endif
-
-         for (idim=0;idim<3;idim++) gradAbsB[idim]+=PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil]*t[idim];
-       }
-     }
-
 
      inline void GetBackgroundPlasmaVelocity(double *vel) {
        double t[3];
