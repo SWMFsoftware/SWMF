@@ -94,3 +94,12 @@ Compile=
 >>>./Config.pl -install -application=test/batl-reader -spice-path=nospice -batl-path=${MYDIR}/BATL -swmf-path=${MYDIR}/SWMF -cplr-data-path=${MYDIR}/data/input/DataFileReader/BATL  
 >>>make
 <#
+
+#>
+Name=SEP3D
+Keys=-cplr-data-path=${MYDIR}/data/input/SEP/ARMS/Converted2ASCII
+Run=
+>>>@echo "test_SEP3D_run..." >> test_SEP3D.diff
+>>>cd ${TESTSEP3DDIR}; ${MPIRUN} -np 4 ./amps
+>>>@echo "test_SEP3D_run... done" >> test_SEP3D.diff
+<#
