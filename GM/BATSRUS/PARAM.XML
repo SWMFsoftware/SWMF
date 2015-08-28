@@ -5,6 +5,9 @@
 List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 
 <!-- Grid size array is transformed into scalars to simplify rules -->
+<set name="nI"           type="integer" value="#_GridSize[0]" />
+<set name="nJ"           type="integer" value="#_GridSize[1]" />
+<set name="nK"           type="integer" value="#_GridSize[2]" />
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
 <set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
 
@@ -189,7 +192,6 @@ of the included file or PARAM.in file is equivalent with an
 </command>
 
 </commandgroup>
-
 
 <commandgroup name="PLANET PARAMETERS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1394,16 +1396,6 @@ while for CPCP = 400 kV RhoBc = 68 amu/cc.
 
 By default the density at the inner boundary is determined by the body 
 density given in the #BODY (same as #MAGNETOSPHERE) command.
-</command>
-
-<command name="IMCOUPLINGSMOOTH">
-	<parameter name="dLatSmoothIm" type="real" min="-1" default="-1"/>
-
-#IMCOUPLINGSMOOTH
-10.0			dLatSmoothIm [deg]
-
-Smooth out the pressure nudging at the edge of the RCM boundary. 
-Default is -1.0, which means no smoothing.
 </command>
 
 </commandgroup>
@@ -5981,6 +5973,12 @@ If pratioHigh &lt; q               then P is recalculated from E
 \end{verbatim}
 The second case is a linear interpolation between the first and third cases.
 </command>
+</commandgroup>
+
+<commandgroup name="COUPLING PARAMATERS">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! COUPLING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="RAYTRACE">
 	<parameter name="UseRaytrace" type="logical" default="T"/>
@@ -6113,22 +6111,6 @@ The default value is TauCoupleIm=20.0, which corresponds to typical nudging
 and DoImSatTrace false.
 </command>
 
-<command name="MULTIFLUIDIM">
-	<parameter name ="DoMultiFluidIMCoupling" type="logical" default="F"/>
-
-#MULTIFLUIDIM
-F			DoMultiFluidIMCoupling
-
-If DoMultiFluidIMCoupling is true, the information exchanged between GM and IM 
-is in multi-fluid mode: GM gives IM four more variables (density_Hp, 
-density_Op, pressure_Hp, pressure_Op) in addition to one-fluid MHD paramters,
-and IM passes GM the same four more variables.
-
-The default value is DoMultiFluidIMCoupling = false, MHD variables are 
-exchanged between GM and IM.
-</command>
-
-
 <command name="IMCOUPLING">
 	<parameter name="TauCoupleIm" type="real" min="1"/>
 	<parameter name="DoImSatTrace" type="logical" default="F" />
@@ -6207,6 +6189,100 @@ the PolarNDim and PolarTDim parameters are read for each fluid.
 The default is to couple the IM pressure only and no fix is applied 
 in the polar region.
 
+</command>
+
+<command name="IMCOUPLINGSMOOTH">
+	<parameter name="dLatSmoothIm" type="real" min="-1" default="-1"/>
+
+#IMCOUPLINGSMOOTH
+10.0			dLatSmoothIm [deg]
+
+Smooth out the pressure and density nudging at the edge of the IM boundary. 
+The nudging is ramped up linearly within dLatSmootIm degrees along the magnetic
+latitude direction. Default is -1.0, which means no smoothing.
+</command>
+
+<command name="MULTIFLUIDIM">
+	<parameter name ="DoMultiFluidIMCoupling" type="logical" default="F"/>
+
+#MULTIFLUIDIM
+F			DoMultiFluidIMCoupling
+
+If DoMultiFluidIMCoupling is true, the information exchanged between GM and IM 
+is in multi-fluid mode: GM gives IM four more variables (density_Hp, 
+density_Op, pressure_Hp, pressure_Op) in addition to one-fluid MHD paramters,
+and IM passes GM the same four more variables.
+
+The default value is DoMultiFluidIMCoupling = false, MHD variables are 
+exchanged between GM and IM.
+</command>
+
+<command name="PICUNIT">
+	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
+	 <parameter name="uUnitPicSi" type="real" min="0" default="1"/>
+
+#PICUNIT
+1.0		xUnitPicSi [m]
+3000e3		uUnitPicSi [m/s] Speed of light for iPIC3D
+
+Define the length and velocity units for the PIC model. The length unit
+is arbitrary (can be defined to be the same as for the MHD model, or
+any other convenient length). The velocity unit, however, determines
+the speed of light for the iPIC3D model, since c=1 is defined.
+Using the true speed of light makes the convergence
+slow in the implicit solver of iPIC3D. Therefore uUnitPicSi should be 
+set to a velocity that is larger than the typical velocities 
+(including the electron thermal velocity), but not orders of magnitude
+larger. For typical magnetosphere applications a few 1000 km/s can work.
+
+Default is 1 for both parameters, which is only meaningful if the velocities
+are much smaller than 1 (e.g. in shock tube test problems).
+</command>
+
+<command name="PICREGION">
+	 <parameter name="nPicRegion" type="integer" min="1"/>
+	 <for from="1" to="$nPicRegion">
+	      <parameter name="xMinPic" type="real"/>
+	      <parameter name="xMaxPic" type="real" min="$xMinPic"/>
+	      <parameter name="yMinPic" type="real"                if="$nJ != 1" />
+	      <parameter name="yMaxPic" type="real" min="$yMinPic" if="$nJ != 1" />
+	      <parameter name="zMinPic" type="real"                if="$nK != 1" />
+	      <parameter name="zMaxPic" type="real" min="$zMinPic" if="$nK != 1" />
+	      <parameter name="DxPic"   type="real"/>
+	      <parameter name="DyPic"   type="real" if="$nJ != 1" />
+	      <parameter name="DzPic"   type="real" if="$nK != 1" />
+	 </for>
+
+#PICREGION
+2			nPicRegion
+  6.			xMinCut
+ 10.			xMaxCut
+ -5.			yMinCut (read for 2D or 3D only)
+  5.			yMaxCut (read for 2D or 3D only)
+ -5.			zMinCut (read for 3D only)
+  5.			zMaxCut (read for 3D only)
+1/32			DxPic
+1/32			DyPic   (read for 2D or 3D only)
+1/32			DzPic   (read for 3D only)
+ 10.			xMinCut
+ 40.			xMaxCut
+-10.			yMinCut (read for 2D or 3D only)
+ 10.			yMaxCut (read for 2D or 3D only)
+ -6.0			zMinCut (read for 3D only)
+  6.0			zMaxCut (read for 3D only)
+1/8			DxPic
+1/8			DyPic   (read for 2D or 3D only)
+1/8			DzPic   (read for 3D only)
+
+Define the number of PIC regions and their size and grid resolution.
+All distances are given in the BATSRUS distance units.
+When coupling with IPIC3D, the number of PIC cells in any dimension 
+should be an integer multiple of the number of subdomains in that direction
+(see Config.pl -h in IPIC3D). The grid resolution of the PIC region
+can be different from the grid resolution of BATSRUS.
+
+The default is to have no PIC regions at all, so this command is
+required for the MHD-EPIC algorithm.
 </command>
 
 </commandgroup>
