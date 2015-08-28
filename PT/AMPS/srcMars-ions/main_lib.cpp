@@ -234,12 +234,12 @@ void amps_init() {
       PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
 
       PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(11,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(39,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(26,1.0E-9);
       PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6);
-      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=38;
-      PIC::CPLR::DATAFILE::TECPLOT::ImportData("data_mhd_PERmax-SSLONG180.plt");
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(22,1.0E6/16.);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=41;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("data_mhd_PERmax-SSLONG180U.plt");
 
       PIC::CPLR::DATAFILE::SaveBinaryFile("MARS-BATSRUS");
     }
