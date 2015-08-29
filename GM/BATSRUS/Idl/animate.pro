@@ -21,6 +21,13 @@
 ;
 ;===========================================================================
 
+; Initialize storage for running maxima and averages
+common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
+   plotstore, timestore
+iplotstore = 0
+plotstore  = 0
+timestore  = 0
+
 print,'======= CURRENT ANIMATION PARAMETERS ================'
 print,'firstpict=',firstpict,', dpict=',dpict,', npictmax=',npictmax, $
       FORMAT='(a,'+string(n_elements(firstpict))+'i4,a,' $
@@ -121,6 +128,19 @@ endif else $
                 eqpar, variables, rBody, err
 
             if keyword_set(wsubtract) then w=w-wsubtract
+
+            if keyword_set(timediff) then begin
+               if npict eq 0 then begin
+                  timeprev = time
+                  wprev = w
+                  w = 0.0*w
+               endif else begin
+                  w = (w - wprev)/(time - timeprev)
+                  wprev = wprev + w*(time - timeprev)
+                  timeprev = time
+               endelse
+            endif
+
             wnames=variables(ndim:ndim+nw-1)
             error=err or error
 
@@ -225,9 +245,10 @@ endif else $
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + ipict*dpict(ifile)
 
-            get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, x, w, $
-               headline, it, time, gencoord, ndim, neqpar, nw, nx,$
-               eqpar, variables, rBody, err
+            get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, $
+                      x, w, $
+                      headline, it, time, gencoord, ndim, neqpar, nw, nx,$
+                      eqpar, variables, rBody, err
 
             error=error or err
          endif
@@ -235,6 +256,18 @@ endif else $
          if not error then begin
 
             if keyword_set(wsubtract) then w=w-wsubtract
+
+            if keyword_set(timediff) then begin
+               if ipict eq 0 then begin
+                  timeprev = time
+                  wprev = w
+                  w = 0.0*w
+               endif else begin
+                  w = (w - wprev)/(time - timeprev)
+                  wprev = wprev + w*(time - timeprev)
+                  timeprev = time
+               endelse
+            endif
 
             wnames=variables(ndim:ndim+nw-1)
 
@@ -257,6 +290,9 @@ endif else $
                plottitle = plottitles_file(ifile)
                string_to_array,plottitle,plottitles,nfunc,';'
             end
+
+            nfilestore = nfile
+            ifilestore = ifile
 
             plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               variables,wnames,axistype,plotmodes,plottitles,$
