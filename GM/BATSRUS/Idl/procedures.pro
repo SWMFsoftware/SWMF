@@ -1084,13 +1084,14 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
    askstr,'func(s) (e.g. rho p ux;uz bx+by -T) ',func,doask
    if plotdim eq 1 then begin
       print,'1D plotmode: plot/plot_io/plot_oi/plot_oo'
-      print,'1D +options: log,noaxis,over,#ct999'
+      print,'1D +options: max,mean,log,noaxis,over,#c999,#ct999'
       askstr,'plotmode(s)                ',plotmode,doask
       if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
       if strmid(plotmode,0,4) eq 'plot' then plotmode=''
       print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
-      print,'2D +options: bar,body,fill,grid,irr,label,log,map,mesh,noaxis,over,usa,white,#ct999'
+      print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log'
+      print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
       askstr,'plotmode(s)                ',plotmode,doask
    endelse
    askstr,'plottitle(s) (e.g. B [G];J)',plottitle,doask
@@ -1949,10 +1950,13 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               nfunc,multix,multiy,fixaspect,plotix,plotiy,$
               funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
-  on_error,2
-  common plot_param,plot_spacex,plot_spacey
+  ;;; on_error,2
+  common plot_param, plot_spacex, plot_spacey
+  common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
+     plotstore, timestore
 
-                                ; Get grid dimensions and set irr=1 if it is an irregular grid
+                                ; Get grid dimensions and set irr=1 
+                                ; if it is an irregular grid
 
   if keyword_set(cut) then siz = size(cut)  $
   else if usereg then      siz = size(xreg) $
@@ -2088,6 +2092,18 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
         logarithm=1
      endif else logarithm=0
+
+     i=strpos(plotmod,'max')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        usemax=1
+     endif else usemax=0
+
+     i=strpos(plotmod,'mean')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+4)
+        usemean=1
+     endif else usemean=0
 
      ; check if this plot requires a special color table #ctNNN
      i = strpos(plotmod, '#ct')
@@ -2234,8 +2250,37 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
                             x,   w,   time,eqpar,variables,cut0,rcut
 
-     f_min=fmin(ifunc)
-     f_max=fmax(ifunc)
+     ; calculate running max or mean
+     if nplotstore gt 0 then begin
+        ; allocate plotstore and timesture arrays
+        if n_elements(plotstore) ne $
+           n_elements(f)*nplotstore*nfunc*nfilestore then $
+           plotstore = fltarr(n_elements(f),nplotstore,nfunc,nfilestore)
+
+        if n_elements(timestore) ne nplotstore*nfilestore then $
+           timestore = fltarr(nplotstore,nfilestore)
+
+        ; store plot function (list of points) and simulation time
+        plotstore(*,iplotstore,ifunc,ifilestore) = f
+        timestore(iplotstore,ifilestore) = time
+
+        ; jump to next storage index (cyclic)
+        if ifunc eq nfunc-1 then iplotstore = (iplotstore + 1) mod nplotstore
+
+        ; calculate maximum over stored functions
+        if usemax then $
+           for i = 0, nplotstore-1 do f = f > plotstore(*,i,ifunc,ifilestore)
+
+        ; calculate mean of stored functions
+        if usemean then begin
+           f = 0*f
+           for i = 0, nplotstore-1 do f = f + plotstore(*,i,ifunc,ifilestore)
+           f = f/nplotstore
+        endif
+     endif
+
+     f_min = fmin(ifunc)
+     f_max = fmax(ifunc)
 
      if logarithm and f_min gt 0 and min(f) gt 0 then begin
         f     = alog10(f)
@@ -2244,9 +2289,15 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         if plottitles(ifunc) eq 'default' then !p.title = 'log '+!p.title
      endif
 
+     if usemax and plottitles(ifunc) eq 'default' then $
+        !p.title = 'max '+!p.title
+
+     if usemean and plottitles(ifunc) eq 'default' then $
+        !p.title = 'mean '+!p.title
+
      if f_max eq f_min then begin
-        f_max=f_max+1
-        f_min=f_min-1
+        f_max = f_max + 1
+        f_min = f_min - 1
      endif
 
      if strmid(plotmod,0,4) eq 'plot' then $
