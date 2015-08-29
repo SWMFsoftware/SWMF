@@ -9,12 +9,15 @@ pi=acos(-1.)
 doask=0
 ; Do not erase before new plot
 noerase=0
-; Aspect ratio: 0 - not fixed (fill screen), 1 - use coordinates, other values - set aspect ratio
+; Aspect ratio: 0 - not fixed (fill screen), 
+;               1 - use coordinates, other values - set aspect ratio
 fixaspect=1
 ; Randomize vector positions for VEL every time
 velrandom=0
 ; Array subtracted from w during animation
 wsubtract=0
+; take time derivative of w during animation if timediff=1
+timediff =0
 ; Keep original size of fits image
 noresize=0
 
@@ -114,10 +117,21 @@ legendpos=0  ; position for the legends: [xmin, xmax, ymin, ymax]
 !x.tickname=strarr(60)
 !y.tickname=strarr(60)
 
+; parameters passed to plot_func through common blocks
 ; Distance betwen plots measured in character size
 common plot_param,plot_spacex,plot_spacey
 plot_spacex=3
 plot_spacey=3
+
+; calculate running max or mean of functions during animation
+common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
+       plotstore, timestore
+nplotstore = 0
+iplotstore = 0
+nfilestore = 1
+ifilestore = 0
+plotstore  = 0
+timestore  = 0
 
 ; Distance betwen log plots measured in character size
 common log_param,log_spacex,log_spacey
