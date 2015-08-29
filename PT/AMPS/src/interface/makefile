@@ -11,5 +11,5 @@ INTERFACES=
 
 interface :
 	$(foreach INTERFACE, ${INTERFACES}, ${MAKE} ${INTERFACE})
-	${AR} -src interface.a ./*.o
+	ar -src interface.a ./*.o
 	@echo "Target 'interface' is done." 
