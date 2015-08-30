@@ -5,13 +5,14 @@ my $script = shift(@ARGV);
 my $name   = shift(@ARGV);
 my @machine = @ARGV;
 
-if(not $script or $script =~ /\-+h/i or not $name){
+if(not $script or $script =~ /\-+h/i){
     print "
-Usage: qsub.pfe.pl SCRIPT NAME [MACHINE1] [MACHINE2] [MACHINE3] ...
+Usage: qsub.pfe.pl SCRIPT [NAME [MACHINE1 [MACHINE2 [MACHINE3]]]] ...
 
 Submit generic job script to multiple machine types.
-Use a unique NAME argument to identify the jobse.
-Only the first four characters of the NAME are used.
+Use a unique NAME argument to identify the jobs.
+Only the first four characters of the NAME are used. Default NAME is the 
+last 4 characters of the directory name where the job is submitted from.
 If no machine is specified, 4 jobs will be submitted for the 4 machine
 types (Westmere, IvyBridge, SandyBridge, Haswell). Otherwise,
 the job will be submitted for the listed machines.
@@ -28,6 +29,13 @@ watch.pfe.pl Mars >& watch.log &
     exit;
 }
 
+
+# Default for job ID
+($name) = (`pwd` =~ /(....)$/) if not $name;
+
+# Default for machine types
+@machine = ('Ivy', 'San', 'Has', 'Wes') if not @machine;
+
 # Read original script into $text
 print "qsub.pfe.pl reading $script\n";
 my $text;
@@ -38,7 +46,6 @@ close SCRIPT;
 # Copy original script
 my $machine;
 my @script;
-@machine = ('Ivy', 'San', 'Has', 'Wes') if not @machine;
 
 foreach $machine (@machine){
     $machine =~ s/(...).*/$1/;
