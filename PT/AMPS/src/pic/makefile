@@ -35,7 +35,6 @@ PICOBJ = pic.o \
 	pic_lb.o \
 	pic_qlb.o \
 	pic_debugger.o \
-	pic__model__electrically_charged_dust.o \
 	pic_internal_boundary_rotation_body.o \
 	pic_internal_boundary_nastran_surface.o \
 	pic_swmf.o \

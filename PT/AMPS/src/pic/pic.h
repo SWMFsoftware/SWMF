@@ -3534,7 +3534,7 @@ namespace PIC {
 
 //include headers for individual physical models
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
-#include "pic__model__electrically_charged_dust.h"
+#include "Dust.h"
 #endif
 
 /* the headers are added by the configuration scripts (exosphere.pl) during compiling of the code

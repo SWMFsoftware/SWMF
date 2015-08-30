@@ -10,7 +10,7 @@
 //$Id$
 
 #include "pic.h"
-#include "pic__model__electrically_charged_dust.h"
+#include "Dust.h"
 
 
 //the offsets to the internal properties of the dust grains

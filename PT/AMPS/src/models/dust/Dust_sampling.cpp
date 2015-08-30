@@ -9,7 +9,7 @@
 //sampling procedures for the dust model
 
 #include "pic.h"
-#include "pic__model__electrically_charged_dust.h"
+#include "Dust.h"
 
 vector<ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation> ElectricallyChargedDust::Sampling::FluxMap::SampleLocations;
 int ElectricallyChargedDust::Sampling::FluxMap::nZenithSurfaceElements,ElectricallyChargedDust::Sampling::FluxMap::nAzimuthalSurfaceElements;

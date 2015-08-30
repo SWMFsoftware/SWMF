@@ -4,7 +4,7 @@ DEFAULT_TARGET : dust
 
 include ../../../Makefile.conf
 
-DUSTOBJ = Dust_sampling.o  
+DUSTOBJ = Dust_sampling.o Dust.o  
 
 dust : $(DUSTOBJ)
 	ar -src dust.a $(DUSTOBJ)
