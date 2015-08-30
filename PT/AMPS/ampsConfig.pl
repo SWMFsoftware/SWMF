@@ -1780,49 +1780,49 @@ sub ReadDustBlock {
     elsif ($InputLine eq "DUSTRMIN") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::minDustRadius","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::minDustRadius","$InputLine","models/dust/Dust.cpp");
     }
     elsif ($InputLine eq "DUSTRMAX") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::maxDustRadius","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::maxDustRadius","$InputLine","models/dust/Dust.cpp");
     }
     elsif ($InputLine eq "NDUSTRADIUSGROUPS") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("int ElectricallyChargedDust::Sampling::nDustSizeSamplingIntervals","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("int ElectricallyChargedDust::Sampling::nDustSizeSamplingIntervals","$InputLine","models/dust/Dust.cpp");
     }
     elsif ($InputLine eq "DUSTTOTALMASSPRODUCTIONRATE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::TotalMassDustProductionRate","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::TotalMassDustProductionRate","$InputLine","models/dust/Dust.cpp");
     }
     elsif ($InputLine eq "POWERLAWINDEX") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::SizeDistribution::PowerIndex","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::SizeDistribution::PowerIndex","$InputLine","models/dust/Dust.cpp");
     }
     
     elsif ($InputLine eq "MEANDENSITY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::MeanDustDensity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::MeanDustDensity","$InputLine","models/dust/Dust.cpp");
     }    
     
     elsif ($InputLine eq "INITIALGRAINSPEED") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::InitialGrainSpeed","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::InitialGrainSpeed","$InputLine","models/dust/Dust.cpp");
     } 
     elsif ($InputLine eq "MINGRAINVELOCITY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity","$InputLine","models/dust/Dust.cpp");
     } 
     elsif ($InputLine eq "MAXGRAINVELOCITY") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity","$InputLine","pic/pic__model__electrically_charged_dust.cpp");
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity","$InputLine","models/dust/Dust.cpp");
     }   
 
     elsif ($InputLine eq "#ENDDUST") {
