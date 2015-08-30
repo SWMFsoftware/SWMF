@@ -129,6 +129,9 @@ while ($line=<InputFile>) {
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
 
+  #default value for interface mode
+  `echo "INTERFACE=off" >> Makefile.local`;
+
   #Call subroutines that reads particular blocks of the input file
   if ($InputLine eq "#MAIN") {
     $loadedFlag_MainBlock=1;
