@@ -36,6 +36,8 @@ AMPSLINKER=${CC}
 
 
 AMPSLINKLIB= 
+
+#include BATL-related libraries for linking
 ifneq ($(BATL),nobatl)	
 	AMPSLINKLIB+=${BATL}/lib/libREADAMR.a
 	AMPSLINKLIB+=${BATL}/lib/libSHARE.a
@@ -57,7 +59,17 @@ endif
 
 endif
 
+# when linking mixed C/C++ and FORTRAN code mpif90 is used for linking
+# certain compilers (Intel, PGI) require an additional flag
+# if main() subroutine is written in C/C++
 
+ifeq ($(COMPILE.f90),pgf90)
+	AMPSLINKER+= -Mnomain
+else ifeq  ($(COMPILE.f90),ifort)
+	AMPSLINKER+= -nofor-main
+endif
+
+# include interface with external FORTRAN subroutines
 ifeq ($(INTERFACE),on)
 	AMPSLINKER=${LINK.f90}
 	AMPSLINKLIB+=${WSD}/interface/interface.a	
@@ -82,7 +94,6 @@ ifeq ($(TESTMODE),on)
 endif
 
 
-#SPICE=/Users/vtenishe/SPICE/Toolkit/cspice/include
 
 install:
 	@echo " " > Makefile.local
@@ -101,7 +112,6 @@ rundir:
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
 
 
-# /Users/vtenishe/Debugger/eclipse-workspace/pic-input-preprocess
 
 EXE=amps
 
