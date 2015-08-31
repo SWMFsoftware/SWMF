@@ -15,7 +15,7 @@
 
 #include "plume.h"
 #include "pic.h"
-#include "pic__model__electrically_charged_dust.h"
+#include "Dust.h"
 
 #define nTotalPlumes 8
 
