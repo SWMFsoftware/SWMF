@@ -119,6 +119,10 @@ open (InputFile,"<","$InputFileName.Assembled") || die "Cannot find file \"$Inpu
 #read the assembled input file
 print "Preprocessing AMPS sources\n";
 
+#default value for interface mode
+`echo "INTERFACE=off" >> Makefile.local`;
+
+
 while ($line=<InputFile>) {
   ($InputFileLineNumber,$FileName)=split(' ',$line);
   $line=<InputFile>;
@@ -128,9 +132,6 @@ while ($line=<InputFile>) {
   chomp($InputLine);
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
-
-  #default value for interface mode
-  `echo "INTERFACE=off" >> Makefile.local`;
 
   #Call subroutines that reads particular blocks of the input file
   if ($InputLine eq "#MAIN") {
