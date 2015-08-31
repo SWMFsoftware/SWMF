@@ -48,7 +48,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
 
   PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
-  node=PIC::Mesh::mesh.findTreeNode(x,node);
+  node=PIC::Mesh::Search::FindBlock(x);
 
   PIC::CPLR::InitInterpolationStencil(x,node);
   PIC::CPLR::GetBackgroundMagneticField(B);
@@ -399,7 +399,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
 
 
   // check if a particle has left the domain
-  newNode=PIC::Mesh::mesh.findTreeNode(xMiddle,startNode);
+  newNode=PIC::Mesh::Search::FindBlock(xMiddle);
   if (newNode==NULL) { 
     //the particle left the computational domain
     int code=_PARTICLE_DELETED_ON_THE_FACE_;
@@ -491,7 +491,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   
 #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_ 
 
-  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+  newNode=PIC::Mesh::Search::FindBlock(xFinal);
 
     
   //advance the particle's position and velocity
