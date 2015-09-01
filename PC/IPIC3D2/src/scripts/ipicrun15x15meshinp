@@ -1,0 +1,71 @@
+#!/bin/bash
+
+ME=${0##*/}
+function usage()
+{
+  echo "
+    $ME: prepare to run ipic3d for supplied parameters
+  
+    usage: $ME [-d <outputdir>] <XLEN> <YLEN>
+    
+      <XLEN>: number of processors in X direction
+      <YLEN>: number of processors in Y direction
+      <outputdir>: data by default
+  "
+}
+
+  DATA=data
+  while getopts ":d:" opt
+  do
+    case $opt in
+      d)
+         DATA="$OPTARG"
+         ;;
+      \?)
+         echo "Invalid option: -$OPTARG" >&2
+	 exit 1
+         ;;
+      :)
+         echo "Option -$OPTARG requires an argument." >&2
+	 exit 1
+         ;;
+    esac
+  done
+  shift $(($OPTIND - 1))
+
+if [ $# -lt 2 ]; then usage; exit 1; fi
+
+  : Parallel mode needs data to be empty ; \
+  rm -rf "$DATA"/* ; \
+  mkdir -p "$DATA"
+
+  XLEN=$1 ; \
+  YLEN=$2 ; \
+  : the third argument provides dt
+  if test ${3:-undef} == undef;
+  then
+    : calculate safe value of dt
+    if test $XLEN -gt $YLEN ; then MAX=$XLEN ; else MAX=$YLEN ; fi
+    if test $MAX -ge 4
+    then
+      dt_string=".5*4/$MAX"
+      dt=$(echo $dt_string|bc -l)
+    else
+      : longer time step than this causes problems
+      dt=.5
+    fi
+  else
+    dt=$3
+  fi
+  echo dt=$dt ; \
+  : edit GEM.inp with modified parameters ; \
+  sed " \
+    s@^dt *=.*@dt = $dt@ ; \
+    s@^XLEN *=.*@XLEN = $1@ ; \
+    s@^YLEN *=.*@YLEN = $2@ ; \
+    s@^nxc *=.*@nxc = $((15*$1))@ ; \
+    s@^nyc *=.*@nyc = $((15*$2))@ ; \
+    s@^SaveDirName *=.*@SaveDirName = $DATA@ ; \
+    s@^RestartDirName *=.*@RestartDirName = $DATA@ ; \
+    " parameters.inp > $DATA/parameters.inp
+

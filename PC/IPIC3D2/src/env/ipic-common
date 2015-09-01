@@ -1,0 +1,10 @@
+#%Module1.0
+
+proc ModulesHelp { } {
+global version
+puts stderr " ipic settings common to all environment\n"
+}
+
+module-whatis "ipic settings common to all environments"
+
+prepend-path PATH $env(IPIC_HOME)/scripts

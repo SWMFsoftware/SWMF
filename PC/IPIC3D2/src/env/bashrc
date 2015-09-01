@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# source this file in your .bashrc like this:
+#
+#   export IPIC_HOME=$HOME/ipic3d # for example
+#   export IPIC_ENV=stampede # for example
+#   . $IPIC_HOME/env/bashrc
+#   module load ipic # if desired
+#
+
+function exe()
+{
+  echo "+ $*"
+  "$@";
+}
+
+function ipic-rmcd()
+{
+  build=${1:-build}
+  exe rm -rf $build
+  exe mkdir $build
+  exe cd $build
+}
+
+# the ipic function
+function ipic()
+{
+  # process any commands that modify shell environment
+  if test "rmcd" == "$1"
+  then
+    shift
+    ipic-rmcd "$@"
+  else
+    # pass command through to ipic.py
+    $IPIC_HOME/scripts/ipic.py "$@"
+  fi
+}
+
+function_exists()
+{
+  [ `type -t $1`"" == 'function' ]
+}
+
+# access modules if module command exists
+if function_exists module
+then
+  module use $IPIC_HOME/env
+  module load ipic-common
+  if test $IPIC_ENV != ""
+  then
+    module use $IPIC_HOME/env/$IPIC_ENV
+  fi
+fi

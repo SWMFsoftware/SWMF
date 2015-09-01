@@ -1,0 +1,103 @@
+#!/bin/bash
+
+ME=${0##*/}
+PURPOSE=${PURPOSE:-"prepare parameters.inp to run ipic3d for supplied parameters"}
+function usage()
+{
+  echo "
+    $ME: $PURPOSE
+  
+    usage: $ME [-d <outputdir>] <XLEN>x<YLEN>[x<ZLEN>] [<pnxc>x<pnyc>[x<pnzc>]]
+    
+      <XLEN>: number of processes in X direction
+      <YLEN>: number of processes in Y direction
+      <ZLEN>: number of processes in Z direction (default 1)
+      <pnxc>: number of cells per process in X direction
+      <pnyc>: number of cells per process in Y direction
+      <pnzc>: number of cells per process in Z direction (default 1)
+      <outputdir>: data by default
+
+    example:
+      # use 4x6 array of processes with 16x16x8 subgrid in each process
+      $ME -d data 4x6 16x16x8
+  "
+}
+
+  DATA=data
+  while getopts ":d:" opt
+  do
+    case $opt in
+      d)
+         DATA="$OPTARG"
+         ;;
+      \?)
+         echo "Invalid option: -$OPTARG" >&2
+	 exit 1
+         ;;
+      :)
+         echo "Option -$OPTARG requires an argument." >&2
+	 exit 1
+         ;;
+    esac
+  done
+  shift $(($OPTIND - 1))
+
+if [ $# -lt 2 ]; then usage; exit 1; fi
+
+  : Parallel mode needs data to be empty ; \
+  rm -rf "$DATA"/* ; \
+  mkdir -p "$DATA"
+
+  IFS='x' read -ra PROC_DIMS <<< "$1"
+  IFS='x' read -ra CELL_DIMS <<< "$2"
+  #for i in "${ADDR[@]}"; do
+  #    # process "$i"
+  #done
+
+  XLEN=${PROC_DIMS[0]}
+  YLEN=${PROC_DIMS[1]:-1}
+  ZLEN=${PROC_DIMS[2]:-1}
+  pnxc=${CELL_DIMS[0]}
+  pnyc=${CELL_DIMS[1]}
+  pnzc=${CELL_DIMS[2]:-1}
+  ind="  "
+  echo
+  echo " Setting parameters:"
+  echo
+  echo "$ind"XLEN=$XLEN
+  echo "$ind"YLEN=$YLEN
+  echo "$ind"ZLEN=$ZLEN
+  : the third argument provides dt
+  if test ${3:-undef} == undef;
+  then
+    : calculate safe value of dt
+    if test $XLEN -gt $YLEN ; then MAX=$XLEN ; else MAX=$YLEN ; fi
+    if test $MAX -ge 4
+    then
+      dt_string=".5*4/$MAX"
+      dt=$(echo $dt_string|bc -l)
+    else
+      : longer time step than this causes problems
+      dt=.5
+    fi
+  else
+    dt=$3
+  fi
+  echo "$ind"dt=$dt
+  : edit GEM.inp with modified parameters ; \
+  sed " \
+    s@^dt *=.*@dt = $dt@ ; \
+    s@^XLEN *=.*@XLEN = $XLEN@ ; \
+    s@^YLEN *=.*@YLEN = $YLEN@ ; \
+    s@^ZLEN *=.*@ZLEN = $ZLEN@ ; \
+    s@^nxc *=.*@nxc = $(($pnxc*$XLEN))@ ; \
+    s@^nyc *=.*@nyc = $(($pnyc*$XLEN))@ ; \
+    s@^nzc *=.*@nzc = $(($pnzc*$ZLEN))@ ; \
+    s@^SaveDirName *=.*@SaveDirName = $DATA@ ; \
+    s@^RestartDirName *=.*@RestartDirName = $DATA@ ; \
+    " parameters.inp > $DATA/parameters.inp
+
+  # set useful parameters for calling script
+  NUM_PROCS=$(($XLEN*$YLEN*$ZLEN))
+  NUM_CELLS_PER_PROC=$(($pnxc*$pnyc*$pnzc))
+  NUM_BYTES_PER_PROC_PER_ARRAY=$((8*$NUM_CELLS_PER_PROC))

@@ -1,0 +1,159 @@
+#Input file for Test Particle 
+
+# DIRECTORIES
+SaveDirName = data
+RestartDirName = data
+
+# set the maximum number of particles allocated  
+NpMaxNpRatio = 2.0
+
+
+Case              = RamNew 
+PoissonCorrection = no        	  # Poisson correction
+WriteMethod       = shdf5   	  # Output method [ H5hut, phdf5, shdf5, pvtk ]
+SimulationName    = RamNew1TestParticle  # Simulation name for the output
+
+
+#  Initial Magnetic Field
+B0x = 0.00
+B0y = 0.00
+B0z = 0.00
+delta = 0.5
+
+#  %%%%%%%%%%%%%%%%%%% TIME %%%%%%%%%%%%%%%%%%
+dt = 0.26                    # dt = time step  
+ncycles = 10		     # cycles
+th = 0.5                     # th = decentering parameter
+c = 1.0                      # c = light speed 
+
+
+#  %%%%%%%%%%%%%%%%%%% SMOOTH %%%%%%%%%%%%%%%%%%
+Smooth = 1.0                  # Smoothing value (5-points stencil) 1.0means NO SMOOTHING
+
+
+# %%%%%%%%%%%%%%%%%% BOX SIZE %%%%%%%%%%%%%%%
+Lx =   1.0	                  # Lx = simulation box length - x direction   
+Ly =   51.32	                  # Ly = simulation box length - y direction
+Lz =   51.32	  	          # Lz = simulation box length - z direction   
+
+x_center =   1.                  # Lx = simulation box length - x direction in m  
+y_center =   1.                  # Ly = simulation box length - y direction in m
+z_center =   1.                  # Lz = simulation box length - z direction in m  
+L_square =   .1
+
+nxc =  1                     # nxc = number of cells - x direction        
+nyc =  512                   # nyc = number of cells - y direction
+nzc =  512                   # nzc = number of cells - z direction        
+
+
+# %%%%%%%%%%%%%% MPI TOPOLOGY %%%%%%%%%%%%%%
+# number of MPI subdomains in each direction
+XLEN = 1
+YLEN = 32
+ZLEN = 32
+# topology (1=true, 0=false): USE PERIODIC IN ALL DIRECTIONS
+PERIODICX = 1
+PERIODICY = 1
+PERIODICZ = 1
+
+
+# %%%%%%%%%%%%%% PARTICLES %%%%%%%%%%%%%%%%%
+#    ns = number of species
+#    nsTestPartSpec = number of species used as test particles,only specify after normal particles 
+#    0 = electrons
+#    1 = protons
+#    2,3,4,5,... = ions
+ns = 2 
+nsTestPart = 1
+
+# Initial density (make sure you are neutral)
+rhoINIT 	=  1.0		1.0
+# Injection density (make sure you are neutral)
+rhoINJECT =        1.0          1.0
+# TrackParticleID[species] = 1=true, 0=false, only track selected species
+TrackParticleID =  1		0          
+# uth = thermal velocity for different species - Direction X  
+uth  = 		   0.088332 	0.0	  
+# vth = thermal velocity for different species - Direction Y 
+vth  = 		   0.088332	0.0	  
+# wth = thermal velocity for different species - Direction Z 
+wth  = 		   0.044166	0.0	   
+# u0 = drift velocity   - Direction X    
+u0 = 		   0.0		0.0	   
+# v0 = drift velocity   - Direction Y    
+v0 = 		   0.0		0.0	   
+# w0 = drift velocity   - Direction Z    
+w0 = 		   0.0		0.0	   
+
+# pitch_angle_energy, only for test particles
+pitch_angle = 	   0.17453293
+energy	    = 	   0.00020
+
+# npcelx = number of particles per cell - Direction X 
+npcelx =   	   1		1          1
+# npcely = number of particles per cell - Direction Y 
+npcely =  	   40		1          1
+# npcelz = number of particles per cell - Direction Z 
+npcelz =   	   40		1          1
+# qom = charge to mass ratio for different species 
+qom =  		  -1.0		0.0005447 -1.0
+
+
+
+# &&&&&&&&&&&& boundary conditions &&&&&&&&&&&&&&&
+# PHI Electrostatic Potential     
+# 0,1 = Dirichilet boundary condition ;     
+# 2   = Neumann boundary condition
+# Caveat: if your processor topology is set to be periodic in a direction, automatically the boundary condition in that direction will be periodic
+    bcPHIfaceXright = 1
+    bcPHIfaceXleft  = 1
+    bcPHIfaceYright = 1
+    bcPHIfaceYleft  = 1
+    bcPHIfaceZright = 1
+    bcPHIfaceZleft  = 1
+    
+#    EM field boundary condition
+#    0 = perfect conductor
+#    1 = magnetic mirror
+#    Caveat: if your processor topology is set to be periodic in a direction, automatically the boundary condition in that direction will be periodic
+    bcEMfaceXright = 0
+    bcEMfaceXleft =  0
+    bcEMfaceYright = 0
+    bcEMfaceYleft =  0
+    bcEMfaceZright = 0
+    bcEMfaceZleft =  0
+    
+#    Particles Boundary condition
+#    0 = exit
+#    1 = perfect mirror
+#    2 = riemission
+#    Caveat: if your processor topology is set to be periodic in a direction, automatically the boundary condition in that direction will be periodic
+    bcPfaceXright = 1
+    bcPfaceXleft =  1
+    bcPfaceYright = 1
+    bcPfaceYleft =  1
+    bcPfaceZright = 1
+    bcPfaceZleft =  1
+
+
+#  print to video results 
+    verbose = 1
+# velocity of the injection from the wall
+    Vinj= 0.0
+
+# CG solver stopping criterium tolerance
+    CGtol = 1E-4
+# GMRES solver stopping criterium tolerance
+    GMREStol = 1E-4
+# mover predictor corrector iteration
+    NiterMover = 3
+# Output for field
+   FieldOutputCycle = 100
+# Output for particles if 1 it doesnt save particles data
+   ParticlesOutputCycle  = 0
+# Output for test particles
+   TestParticlesOutputCycle = 50
+# restart cycle
+   RestartOutputCycle = 5000
+# Output for diagnostic
+   DiagnosticsOutputCycle = 10

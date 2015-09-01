@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo $#
+
+ME=${0##*/}
+function usage()
+{
+  echo "
+    $ME: run ipic3d for supplied parameters
+  
+    usage: $ME <XLEN> <YLEN>
+    
+      <XLEN>: number of processors in X direction
+      <YLEN>: number of processors in Y direction
+  "
+}
+
+if [ $# -lt 2 ]; then usage; exit 1; fi
+
+  . ipicrun15x15meshGEMinp
+  : print the command to be executed ; \
+  echo "+ mpiexec -n $(($1*$2)) ./iPic3D $DATA/parameters.inp | tee out.${1}x${2}.txt" ; \
+  : execute the command ; \
+  $IPIC_MPIRUN -n $(($1*$2)) ./iPic3D $DATA/parameters.inp | tee out.${1}x${2}.txt

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+ME=${0##*/}
+PURPOSE="prepare to run ipic3d job for supplied parameters"
+
+  . $IPIC_HOME/scripts/ipic-setinp
+
+  NUM_PROCS=$(($XLEN*$YLEN*$ZLEN))
+  NUM_NODES=$((($NUM_PROCS-1)/$PPN+1))
+
+  : create job script from template
+  sed " \
+    s@^#PBS -l nodes.*@#PBS -l nodes=$NUM_NODES:ppn=$PPN@ ;
+    s@^#SBATCH -n .*@#SBATCH -n $NUM_PROCS@ ;
+    s@^#SBATCH -N .*@#SBATCH -N $NUM_NODES@ ;
+    s@XLEN=.*@XLEN=$XLEN@
+    s@YLEN=.*@YLEN=$YLEN@
+    s@ZLEN=.*@ZLEN=$ZLEN@
+    s@NUM_PROCS=.*@NUM_PROCS=$NUM_PROCS@
+    s@DATA=.*@DATA=$DATA@
+  " job.sh > "$DATA"/job.sh
+  chmod +x "$DATA"/job.sh

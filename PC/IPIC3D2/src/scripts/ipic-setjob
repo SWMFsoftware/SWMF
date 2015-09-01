@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ME=${0##*/}
+PURPOSE="prepare to run ipic3d job for supplied parameters"
+
+  . $IPIC_HOME/scripts/ipic-setjob-helper
+
+echo "
+ To run the job you just defined, do this:
+
+  # check that the job script and input files are correct
+  vim $DATA/job.sh $DATA/parameters.inp
+  # set the striping of the output
+  lfs setstripe -c $STRIPE_COUNT -S $STRIPE_LENGTH $DATA
+  # run the job that you just defined:
+  sbatch $DATA/job.sh
+"
