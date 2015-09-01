@@ -2566,7 +2566,7 @@ namespace PIC {
             offset->allocate=flag;
           }
           else exit(__LINE__,__FILE__,"Error: changing of the allocation flags is not allowed after initialization of the offsets is completed");
-        }
+	}
 
         inline void SetActive(bool flag,cOffsetElement* offset) {
           if ((flag==true)&&(offset->allocate==false)) exit(__LINE__,__FILE__,"Error: the offset cannot be set 'active' if it is not allocated before during the initialization");
@@ -2598,6 +2598,9 @@ namespace PIC {
 
       //load the datafile
       void ImportData(const char *fname);
+
+      //routines to generate additional data
+      void GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node);
 
       //return the interpolated value of the background data
       inline void GetBackgroundData(double *DataVector,int DataVectorLength,int BackgroundDataOffset,double *x,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {

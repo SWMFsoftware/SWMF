@@ -91,6 +91,18 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
+  
+  //may need to generate additional data
+  if(Offset::MagneticFieldGradient.allocate){
+#if _PIC_COUPLER__INTERPOLATION_MODE_==_PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+    exit(__LINE__,__FILE__,"ERROR: magnetic field gradient can't be computed with 0th order interpolation method");
+#endif
+    for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+	 node!=NULL;
+	 node=node->nextNodeThisThread) {
+    GenerateMagneticFieldGradient(node);
+    }
+  }
 
 }
 
@@ -99,6 +111,19 @@ void PIC::CPLR::DATAFILE::Init() {
 
   //set the initialization flag and call the init procedures of the particular file reader
   Offset::InitFlag=true;
+
+  //initialize common offsets
+  PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
+  PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
+
+  //offset for magnetic field gradient (if needed)
+#if _PIC_MOVER_INTEGRATOR_MODE_==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+  PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
+#endif//_PIC_MOVER_INTEGRATOR_MODE_==_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER
 
   if (_PIC_COUPLER_MODE_==_PIC_COUPLER_MODE__DATAFILE_) {
     switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
@@ -689,6 +714,72 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
 }
 
 
+
+//====================================================================
+// the function to produce additional data based on the imported parameters
+
+//generate magnetic field gradient in the given block
+void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node){
+
+  if(DIM < 3)
+    exit(__LINE__,__FILE__,"This function is tested for 3D case, may require further testing and development for lower dimensional case!");
+
+  // variables to access data storage
+  int nd;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char* offset;
+
+  //block's mesh parameters
+  double  *xNodeMin=node->xmin;
+  double  *xNodeMax=node->xmax;
+  double  dXCell[3]= {(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_,
+		      (xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_,
+		      (xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_};
+
+  //  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  //  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  //  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+  const int iMin=0,iMax=_BLOCK_CELLS_X_-1;
+  const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;
+  const int kMin=0,kMax=_BLOCK_CELLS_Z_-1;
+
+  //locations
+  double xCenter[3]={0.0}, x[3]={0.0};
+  //values of the field
+  double Bplus[3]={0.0}, Bminus[3]={0.0};
+
+  for (int k=kMin;k<=kMax;k++)for(int j=jMin;j<=jMax;j++)for (int i=iMin;i<=iMax;i++) {
+	//cell center
+	xCenter[0]=xNodeMin[0]+dXCell[0]*(0.5+i);
+	xCenter[1]=xNodeMin[1]+dXCell[1]*(0.5+j);
+	xCenter[2]=xNodeMin[2]+dXCell[2]*(0.5+k);
+
+	// compute components of the gradient
+	for(int idim=0; idim < DIM; idim++){
+	  x[0] = xCenter[0]; x[1] = xCenter[1]; x[2] = xCenter[2];
+	  // value of B on face in -idim direction
+	  x[idim] -= dXCell[idim]/2.0;
+	  PIC::CPLR::InitInterpolationStencil(x,node);
+	  PIC::CPLR::GetBackgroundMagneticField(Bminus);
+	  // value of B on face in +idim direction
+	  x[idim] += dXCell[idim];
+	  PIC::CPLR::InitInterpolationStencil(x,node);
+	  PIC::CPLR::GetBackgroundMagneticField(Bplus);
+
+	  //get data sotrage location
+	  nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+	  if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
+	  offset=CenterNode->GetAssociatedDataBufferPointer();
+
+	  //compute and write gradient's components
+	  *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[0];
+	  *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[1];
+	  *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[2];
+	}
+      }
+  
+}
 
 
 

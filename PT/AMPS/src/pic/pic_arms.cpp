@@ -18,7 +18,7 @@
 void PIC::CPLR::DATAFILE::ARMS::Init() {
 
   //reserve place for the interpolated data
-  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
+  /*  PIC::CPLR::DATAFILE::Offset::MagneticField.allocate=true;
   PIC::CPLR::DATAFILE::Offset::ElectricField.allocate=true;
   PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.allocate=true;
   PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.allocate=true;
@@ -26,6 +26,7 @@ void PIC::CPLR::DATAFILE::ARMS::Init() {
   PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
 
   PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.allocate=true;
+  */
 }
 
 //read ARM's output file
@@ -37,11 +38,9 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
   const int nvar = 22;
   //original data
   const int b_ = 0, v_ = 3, n_ = 6, t_ = 7, p_ = 8; 
-  //additional data (gradients come in the END)
-  const int Db_ = 10;
   // vectors in the data
   const int nvec       = 6;
-  const int vecs[nvec] = {b_, v_, Db_, Db_+3, Db_+6};
+  const int vecs[nvec] = {b_, v_};
   static double *Xpos, *Zpos;
   static double ***Data;
 
@@ -169,29 +168,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     }
   }
   //conversion is finished ----------------------------------------------------
-
-  //compute additional data: 
-  //gradient of magnetic field, abs value of magnetic field and its gradient
-  {    
-    double dX = Xpos[1] - Xpos[0];
-    double dZ = Zpos[1] - Zpos[0];
-
-    //components of gradient in the y=0 slice, i.e. d(*)/dy = 0
-    for(int iX = 0; iX < nX; iX++)
-      for(int iZ = 0; iZ < nZ; iZ++){	
-	if(iX<nX-1){
-	  for(int i=0; i<3; i++){
-	    Data[Db_+  3*i][iX][iZ]=(Data[b_+i][iX+1][iZ]-Data[b_+i][iX][iZ])/dX;
-	  }
-	}
-	if(iZ<nZ-1){
-	  for(int i=0; i<3; i++){
-	    Data[Db_+2+3*i][iX][iZ]=(Data[b_+i][iX][iZ+1]-Data[b_+i][iX][iZ])/dZ;
-	  }
-	}
-      }
-  }
-   
+  
   // perform the interpolation
   {
     int nd;
@@ -238,29 +215,10 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    for(int ii=0;ii<2;ii++) 
 	      for(int jj=0;jj<2;jj++){
 		//interpolate variables stored at nodes
-		for(int ivar=0; ivar<nvar && ivar<Db_; ivar++)
+		for(int ivar=0; ivar<nvar; ivar++)
 		  DataInterp[ivar] += 
 		    Data[ivar][xCell+ii][zCell+jj] * 
 		    ((1-wX)*(1-ii)+wX*ii) * ((1-wZ)*(1-jj)+wZ*jj);
-		//interpolate gradients (stored at edges)
-		// d(*)/dx
-		for(int ivar=Db_; ivar<nvar; ivar+=3)
-		  DataInterp[ivar] += (wX > wXth) 
-		    ? 
-		    Data[ivar][xCell+ii][zCell+jj] * 
-		    ((1-wX+wXth)*(1-ii)+(wX-wXth)*ii) * ((1-wZ)*(1-jj)+wZ*jj)
-		    :
-		    Data[ivar][xCell-ii][zCell+jj] * 
-		    ((1+wX-wXth)*(1-ii)+(wXth-wX)*ii) * ((1-wZ)*(1-jj)+wZ*jj);
-		// d(*)/dz
-		for(int ivar=Db_+2; ivar<nvar; ivar+=3)
-		  DataInterp[ivar] += (wZ > wZth) 
-		    ?
-		    Data[ivar][xCell+ii][zCell+jj] * 
-		    ((1-wX)*(1-ii)+wX*ii) * ((1-wZ+wZth)*(1-jj)+(wZ-wZth)*jj)
-		    :
-		    Data[ivar][xCell+ii][zCell-jj] * 
-		    ((1-wX)*(1-ii)+wX*ii) * ((1+wZ-wZth)*(1-jj)+(wZth-wZ)*jj);
 	      }
 	    {
 	      // rotate vetors to the current plane
@@ -282,9 +240,6 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
 	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))        =DataInterp[b_+idim];
-	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+idim];
-	      *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+3+idim];
-	      *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=DataInterp[Db_+6+idim];
 	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))   =DataInterp[v_+idim];
 	    }
 	    // E = -VxB
