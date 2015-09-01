@@ -48,10 +48,8 @@ ifeq ($(COMPILE.f90),gfortran)
 else ifeq ($(COMPILE.f90),mpif90)
 	SEARCH_F+= -I${BATL}/share/include
 else ifeq ($(COMPILE.f90),pgf90)
-	AMPSLINKER+= -Mnomain
 	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),ifort)
-	AMPSLINKER+= -nofor-main
 	SEARCH_F+= -module ${BATL}/share/include
 else ifeq  ($(COMPILE.f90),nagfor)
 	SEARCH_F+= -I${BATL}/share/include
@@ -59,9 +57,18 @@ endif
 
 endif
 
+# include interface with external FORTRAN subroutines
+ifeq ($(INTERFACE),on)
+	AMPSLINKER=${LINK.f90}
+	AMPSLINKLIB+=${WSD}/interface/interface.a	
+endif 
+
+
 # when linking mixed C/C++ and FORTRAN code mpif90 is used for linking
 # certain compilers (Intel, PGI) require an additional flag
 # if main() subroutine is written in C/C++
+
+ifeq (${AMPSLINKER},${LINK.f90})
 
 ifeq ($(COMPILE.f90),pgf90)
 	AMPSLINKER+= -Mnomain
@@ -69,11 +76,7 @@ else ifeq  ($(COMPILE.f90),ifort)
 	AMPSLINKER+= -nofor-main
 endif
 
-# include interface with external FORTRAN subroutines
-ifeq ($(INTERFACE),on)
-	AMPSLINKER=${LINK.f90}
-	AMPSLINKLIB+=${WSD}/interface/interface.a	
-endif 
+endif
 
 # This looks wrong
 ifeq ($(STANDALONE), NO)
