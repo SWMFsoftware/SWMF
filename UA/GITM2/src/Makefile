@@ -139,21 +139,6 @@ GITM_for_Darwin:
 POST:	PostProcess.o
 	${LINK.f90} ${Lflag2} -o PostProcess.exe PostProcess.o
 
-STATIC:
-	cp -f ModGITM_static.f90    ModGITM.f90
-	cp -f ModEUV_static.f90     ModEUV.f90
-	cp -f ModSources_static.f90 ModSources.f90
-
-S2D = ${SCRIPTDIR}/StaticToDynamic.pl
-
-DYNAMIC:	
-	${S2D} -l=nBlocksMax -d=4 ModGITM_static.f90    > ModGITM.f90
-	${S2D} -l=nBlocksMax -d=4 ModEUV_static.f90     > ModEUV.f90
-	${S2D} -l=nBlocksMax -d=4 ModSources_static.f90 > ModSources.f90
-# Replaces nBlocksMax with nBlocks to make allocation flexible
-	perl -pi -e 's/nBlocksMax/nBlocks/ if /allocate/' \
-		ModGITM.f90 ModEUV.f90 ModSources.f90
-
 MY_LIB = libGITM.a
 
 LIB:	DEPEND
@@ -170,9 +155,6 @@ clean: cleanfiles
 
 distclean: clean
 	rm -f 	ModSize.f90 \
-		ModGITM.f90 \
-		ModEUV.f90 \
-		ModSources.f90 \
 		ModPlanet.f90 \
 		ModChemistry.f90 \
 		ModRates.f90 \
