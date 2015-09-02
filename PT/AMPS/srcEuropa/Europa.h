@@ -223,11 +223,8 @@ namespace Europa {
     extern double AccumulatedPlanetRotation,TotalSimulationTime,TAA;
 
     //The locations of the Sun nad Jupiter in the frame wherethe simulation is performed (cenetered on Europa)
-    extern double xJupiter_SO[3],xSun_SO[3];
+    extern double xJupiter_SO[3]; //,xSun_SO[3];
     void UpdateSunJupiterLocation();
-
-    //SPICE ephemeris time
-    extern SpiceDouble et,lt;
 
     //direction to the Sun and the angle of the rotation between planetary axes and the direction to the Sun on the Z-plane
     extern double SunDirection_IAU_EUROPA[3],PlanetAxisToSunRotationAngle;
@@ -1521,11 +1518,11 @@ if (v[0]*x[0]+v[1]*x[1]+v[2]*x[2]<0) {
   double r3SunEuropa,rParticleSunVector[3],r3ParticleSun=0.0;
   double r3JupiterEuropa,rParticleJupiterVector[3],r3ParticleJupiter=0.0;
 
-  r3SunEuropa=pow(pow(OrbitalMotion::xSun_SO[0],2)+pow(OrbitalMotion::xSun_SO[1],2)+pow(OrbitalMotion::xSun_SO[2],2),1.5);
+  r3SunEuropa=pow(pow(xSun_SO[0],2)+pow(xSun_SO[1],2)+pow(xSun_SO[2],2),1.5);
   r3JupiterEuropa=pow(pow(OrbitalMotion::xJupiter_SO[0],2)+pow(OrbitalMotion::xJupiter_SO[1],2)+pow(OrbitalMotion::xJupiter_SO[2],2),1.5);
 
   for (idim=0;idim<3;idim++) {
-    rParticleSunVector[idim]=x_LOCAL[idim]-OrbitalMotion::xSun_SO[idim];
+    rParticleSunVector[idim]=x_LOCAL[idim]-xSun_SO[idim];
     r3ParticleSun+=pow(rParticleSunVector[idim],2);
 
     rParticleJupiterVector[idim]=x_LOCAL[idim]-OrbitalMotion::xJupiter_SO[idim];
@@ -1537,7 +1534,7 @@ if (v[0]*x[0]+v[1]*x[1]+v[2]*x[2]<0) {
 
   for (idim=0;idim<3;idim++) {
     accl_LOCAL[idim]-=GravityConstant*(
-        _MASS_(_SUN_)*(rParticleSunVector[idim]/r3ParticleSun + OrbitalMotion::xSun_SO[idim]/r3SunEuropa) +
+        _MASS_(_SUN_)*(rParticleSunVector[idim]/r3ParticleSun + xSun_SO[idim]/r3SunEuropa) +
         _MASS_(_JUPITER_)*(rParticleJupiterVector[idim]/r3ParticleJupiter + OrbitalMotion::xJupiter_SO[idim]/r3JupiterEuropa)
     );
   }
