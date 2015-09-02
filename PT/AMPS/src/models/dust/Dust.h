@@ -325,6 +325,64 @@ namespace ElectricallyChargedDust {
   }
 
 
+  //charing model
+  namespace Charging {
+
+    //calculate the potential of the dust grain
+    inline double GetDustGrainPotential(double GrainRadius, double GrainElectricCharge) {return GrainElectricCharge/(4.0*Pi*VacuumPermittivity*GrainRadius);}
+
+    //update the grain's charge
+    const int CHARGE_INTEGRATION_MODE__EQUILIBRIUM_POTENTIAL=0;
+    const int CHARGE_INTEGRATION_MODE__TIME_DEPENDENT=1;
+
+    //calcualte the currents and devivatived of the currents
+    void GetGrainCurrent(
+        double GrainRadius, double &GrainElectricCharge, double *GrainVelocity, //radius, the electric charge, and velocity of the grain
+        double HeliocentricDistance, //heliocentric distance of the grain in AU
+        double ni,double Ti, double *Vi,  //ion number density, temeprature, and velocity
+        double ne, double Te,  //electron number density and temeprature
+        double &Je, double &dJe, //the electron collection current
+        double &Ji, double &dJi, //ion collection current
+        double &Jpe, double &dJpe, //photo-electron current
+        double &Jse, double &dJse //secondary-electron current
+        );
+
+    //update the dust charge
+    int UpdateGrainCharge(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode,int CHARGE_INTEGRATION_MODE);
+
+    int UpdateGrainCharge__EQUILIBRIUM_POTENTIAL(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode);
+    int UpdateGrainCharge__TIME_DEPENDENT(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode);
+
+      //electron collection current
+      namespace ElectronColelction {
+
+      }
+
+      //ion collection current
+      namespace IonCollection {
+
+      }
+
+      //electon photoemission
+      namespace ElectonPhotoEmission {
+        const double PhotoElectronEfficiency=2.5E14; //per m^2  per sec at 1AU
+        const double PhotoElectronEfficiencyMaterialConstant=1.0;
+        const double PhotoElectronEvergy=3.0;  //eV
+
+
+      }
+
+      //secondary electron emission
+      namespace SecondaryElectronEmission {
+
+      }
+
+
+    //sampling of the charging data
+    namespace Sampling {
+
+    }
+  }
 
 
 
