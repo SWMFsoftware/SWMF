@@ -737,7 +737,7 @@ long int DustInjection(int spec) {
     
     //determine the initial charge of the dust grain
 #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
-    ElectricallyChargedDust::DustChargingProcessor_SteadyState(x_SO_OBJECT,x_SO_OBJECT,v_SO_OBJECT,spec,newParticle,newParticleData,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode);
+    _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(x_SO_OBJECT,x_SO_OBJECT,v_SO_OBJECT,spec,newParticle,newParticleData,startNode->block->GetLocalTimeStep(spec)*rnd(),startNode);
 #endif
     
     nInjectedParticles++;
