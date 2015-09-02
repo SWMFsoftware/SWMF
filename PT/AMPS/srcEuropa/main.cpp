@@ -50,6 +50,10 @@ int main(int argc,char **argv) {
   amps_init_mesh();
   amps_init();
 
+  //init the location of the Sun and Jupiter in respect to Europa
+  Europa::OrbitalMotion::UpdateSunJupiterLocation();
+
+
 PIC::RequiredSampleLength=600;
 
 
