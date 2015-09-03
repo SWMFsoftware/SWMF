@@ -40,6 +40,8 @@ contains
   subroutine GM_get_for_pc_init(ParamInt_I, nParamReal, ParamReal_I)
 
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I
+    use ModVarIndexes, ONLY: &
+         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
@@ -47,44 +49,47 @@ contains
 
     implicit none
 
-    integer :: iFluid, iRegionPIC 
-    integer :: i, n ! help indexes 
-
     integer, intent(inout) :: ParamInt_I(3)
     integer, intent(in)  :: nParamReal ! Size of ParamReal_I 
     real, optional, intent(inout) :: ParamReal_I(nParamReal)
 
+    integer :: iFluid, iSpecies, iRegion 
+    integer :: i, n
     !--------------------------------------------------------------------------
-
     if(nParamReal < 1 ) then
        !! SEND FIRST
-       ParamInt_I(1) = nIonFluid 
+       if(UseMultiSpecies)then
+          ParamInt_I(1) = SpeciesLast_ - SpeciesFirst_ + 1
+       else
+          ParamInt_I(1) = nIonFluid
+       end if
        ParamInt_I(2) = nRegionPic
        ParamInt_I(3) = nDim 
     else
-       ! First part of ParamReal is the Nregion block, then Nspecis block
+       ! First part of ParamReal defines the PIC region geometry
+       ! The second part describes the species/fluids
        n = 1
-       do iRegionPic = 1, nRegionPic
-          ParamReal_I(n) = XyzMinPic_DI(x_,iRegionPic); n = n+1
-          ParamReal_I(n) = XyzMaxPic_DI(x_,iRegionPic); n = n+1
-          ParamReal_I(n) = DxyzPic_DI(x_,iRegionPic)  ; n = n+1
+       do iRegion = 1, nRegionPic
+          ParamReal_I(n) = XyzMinPic_DI(x_,iRegion); n = n+1
+          ParamReal_I(n) = XyzMaxPic_DI(x_,iRegion); n = n+1
+          ParamReal_I(n) = DxyzPic_DI(x_,iRegion)  ; n = n+1
           if(nDim > 1) then
-             ParamReal_I(n) = XyzMinPic_DI(y_,iRegionPic); n = n+1
-             ParamReal_I(n) = XyzMaxPic_DI(y_,iRegionPic); n = n+1
-             ParamReal_I(n) = DxyzPic_DI(y_,iRegionPic); n = n+1
+             ParamReal_I(n) = XyzMinPic_DI(y_,iRegion); n = n+1
+             ParamReal_I(n) = XyzMaxPic_DI(y_,iRegion); n = n+1
+             ParamReal_I(n) = DxyzPic_DI(y_,iRegion); n = n+1
           else
              ! Single cell in Y direction with dy = dx
              ParamReal_I(n) = 0.0; n = n+1
-             ParamReal_I(n:n+1) = DxyzPic_DI(x_,iRegionPic); n = n+2
+             ParamReal_I(n:n+1) = DxyzPic_DI(x_,iRegion); n = n+2
           end if
           if(nDim > 2) then
-             ParamReal_I(n) = XyzMinPic_DI(z_,iRegionPic); n = n+1
-             ParamReal_I(n) = XyzMaxPic_DI(z_,iRegionPic); n = n+1
-             ParamReal_I(n) = DxyzPic_DI(z_,iRegionPic); n = n+1
+             ParamReal_I(n) = XyzMinPic_DI(z_,iRegion); n = n+1
+             ParamReal_I(n) = XyzMaxPic_DI(z_,iRegion); n = n+1
+             ParamReal_I(n) = DxyzPic_DI(z_,iRegion); n = n+1
           else
              ! Single cell in Z direction with dz = max(dx, dy)
              ParamReal_I(n)     = 0.0; n = n+1
-             ParamReal_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegionPic)); n = n+2
+             ParamReal_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegion)); n = n+2
           endif
        end do
 
@@ -93,11 +98,18 @@ contains
           ParamReal_I(i) = ParamReal_I(i) * No2Si_V(UnitX_)
        end do
 
-       ! Q/Qi, M/Mi
-       do iFluid = 0, nIonFluid-1
-          ParamReal_I(n) = ChargeIon_I(iFluid+1); n = n+1
-          ParamReal_I(n) = MassIon_I(iFluid+1); n = n+1
-       end do
+       ! Send charge and mass of each species/fluids
+       if(UseMultiSpecies)then
+          do iSpecies = SpeciesFirst_, SpeciesLast_
+             ParamReal_I(n) = 1.0; n = n+1                ! Charge is always 1
+             ParamReal_I(n) = MassSpecies_V(iSpecies); n = n+1
+          end do
+       else
+          do iFluid = 1, nIonFluid
+             ParamReal_I(n) = ChargeIon_I(iFluid); n = n+1
+             ParamReal_I(n) = MassIon_I(iFluid); n = n+1
+          end do
+       end if
 
        ! Electron pressure ratio
        ParamReal_I(n) = PePerPtotal; n = n+1
