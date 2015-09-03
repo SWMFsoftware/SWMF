@@ -22,7 +22,7 @@ module ModVarIndexes
   logical, parameter :: IsMhd     = .false.
   real               :: MassFluid_I(nFluid) = (/ 1.0, 16.0 /)
 
-  character (len=3), parameter :: NameFluid_I(nFluid) = (/ 'Hp', 'Op' /)
+  character (len=2), parameter :: NameFluid_I(nFluid) = (/ 'Hp', 'Op' /)
 
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
@@ -43,7 +43,7 @@ module ModVarIndexes
        OpRhoUz_   = 12, &
        OpP_       = 13, &
        Energy_    = nVar+1, &
-       OpEnergy_ = nVar+2
+       OpEnergy_  = nVar+2
 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
