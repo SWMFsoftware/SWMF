@@ -338,14 +338,12 @@ namespace ElectricallyChargedDust {
         const double PhotoElectronEfficiency=2.5E14; //per m^2  per sec at 1AU
         const double PhotoElectronEfficiencyMaterialConstant=1.0;
         const double PhotoElectronEvergy=3.0;  //eV
-
-
       }
 
-      //secondary electron emission
-      namespace SecondaryElectronEmission {
-
-      }
+    //secondary electron emission
+    const double SecondaryEmissionPeakYieldEnergy=1.0E3*eV2J;
+    const double SecondaryEmissionPeakYield=15.0;
+    const double SecondaryElectronTemeprature=3.0*eV2J/Kbol; //Chow-1993-JGR
 
 
     //sampling of the charging data
