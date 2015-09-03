@@ -30,6 +30,7 @@
 
 #include "pic.h"
 #include "Exosphere.h"
+#include "constants.h"
 
 #include "specfunc.h"
 #include "ifileopr.h"
@@ -38,6 +39,22 @@
 
 namespace MarsIon {
   using namespace Exosphere;
+
+  /* _MARS_ION_H_ */
+  // user defined global time step
+  extern double UserGlobalTimeStep;
+
+  //  injection boundary condition
+  extern double InjectionVelocity[3];
+  extern double InjectionNDensity;
+  extern double InjectionTemperature;
+
+  // computational domain size
+  extern double DomainXMin[3];
+  extern double DomainXMax[3];
+  extern double DomainDXMin;
+  extern double DomainDXMax;
+  /* _MARS_ION_H_ */
 
 
   //init the model
@@ -50,6 +67,24 @@ namespace MarsIon {
   namespace SourceProcesses {
     double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
     double GetBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+  }
+
+  namespace Output{
+
+    extern int TotalDataLength;
+    extern int oplusSourceDensityOffset;
+    extern int oplusSourceMomentumOffset;
+    extern int oplusSourceEnergyOffset;
+
+    void Init();
+
+    void PrintVariableList(FILE* fout,int DataSetNumber);
+
+    void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+    void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+
+    int RequestDataBuffer(int offset);
   }
 
 }
