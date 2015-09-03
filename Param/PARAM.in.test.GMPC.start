@@ -22,6 +22,9 @@ T           DoCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#GRIDGEOMETRY
+rotatedcartesian	NameGeometry
+
 USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
@@ -132,9 +135,11 @@ dt    = 0.2*dtmax   = 1.066
 
 #USERINPUTEND   ----------------
 
+The grid is rotated by atan(3/4), the original shocktube is by -atan(4/3)
+so now rotate by tan(atan(3/4)- atan(4/3))) = -7/24
 #SHOCKPOSITION
 0.0			ShockPosition
-4/3			ShockSlope
+-7/24			ShockSlope
 
 #GRID
 32                    	nRootBlockX
@@ -253,6 +258,7 @@ PC/plots				SaveDirName
 0					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
 0					SatelliteOutputCycle
+0					OutputFormat (HDF=0, VTK=1)
 
 #END_COMP PC -----------------------------------------------------------------
 
