@@ -34,10 +34,13 @@ double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,PIC::Mesh::cDataC
       altitude+=pow(xMiddle[i],2);
   }
   altitude=sqrt(altitude)-3396000.0; // in m where R_Mars=3396000.0 m
-  nDen_O=BodynDenNuSp_I_O*exp(altitude/HNuSpecies_I_O)+\
-         BodynDenNuSp_I_Ox*exp(altitude/HNuSpecies_I_Ox)+\
-         BodynDenNuSp_I_Oh*exp(altitude/HNuSpecies_I_Oh)+\
-         BodynDenNuSp_I_Ohx*exp(altitude/HNuSpecies_I_Ohx);
+
+  if (altitude<0.0) return 0.0;
+
+  nDen_O=BodynDenNuSp_I_O*exp(-altitude/HNuSpecies_I_O)+\
+         BodynDenNuSp_I_Ox*exp(-altitude/HNuSpecies_I_Ox)+\
+         BodynDenNuSp_I_Oh*exp(-altitude/HNuSpecies_I_Oh)+\
+         BodynDenNuSp_I_Ohx*exp(-altitude/HNuSpecies_I_Ohx);
   //res=1.0;
   res=nDen_O*Rate_I_O_Op; //source rate per m^-3
 
