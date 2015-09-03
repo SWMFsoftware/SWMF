@@ -17,7 +17,7 @@ contains
 
   subroutine GM_get_for_pc_dt(DtSi)
 
-    use ModMain,            ONLY: Dt, time_accurate, Time_Simulation
+    use ModMain,            ONLY: Dt
     use ModPhysics,         ONLY: No2Si_V, UnitT_
     use ModPIC,             ONLY: DnCouplePic
     use ModTimeStepControl, ONLY: set_global_timestep
@@ -26,7 +26,6 @@ contains
 
     real, intent(out) ::  DtSi
 
-    character(len=*), parameter :: NameSub='GM_get_for_pc_dt'
     !--------------------------------------------------------------------------
 
     ! use 1.0e12 >> dt  for limiting time 
@@ -45,7 +44,6 @@ contains
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
     use BATL_lib,      ONLY: x_, y_, z_, nDim
-    use ModMain,       ONLY: lVerbose
 
     implicit none
 
@@ -56,7 +54,6 @@ contains
     integer, intent(in)  :: nParamReal ! Size of ParamReal_I 
     real, optional, intent(inout) :: ParamReal_I(nParamReal)
 
-    character(len=*), parameter :: NameSub='GM_get_for_pc_init'
     !--------------------------------------------------------------------------
 
     if(nParamReal < 1 ) then
@@ -121,8 +118,8 @@ contains
 
     use ModProcMH,  ONLY: iProc
     use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
-    use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar, UseAnisoPressure
-    use ModVarIndexes, ONLY: nVar, NamePrimitiveVar
+    use ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
+    use ModVarIndexes, ONLY: nVar
     use ModB0,      ONLY: UseB0, get_b0
     use BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
     use ModInterpolate, ONLY: interpolate_vector
@@ -144,7 +141,7 @@ contains
 
     integer:: iPoint, iBlock, iProcFound
 
-    character(len=*), parameter :: NameSub='GM_get_for_pc'
+    character(len=*), parameter:: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
     Dist_D = -1.0
@@ -157,7 +154,7 @@ contains
             UseGhostCell = .true.)
 
        if(iProcFound /= iProc)then
-          write(*,*)NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
+          write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
           call stop_mpi(NameSub//' could not find position on this proc')
        end if
 
@@ -183,13 +180,16 @@ contains
     !   Second time we get the cordinates to the same time.
     !   Third time we set the state variables to the value given by PC.
 
-    use CON_coupler, ONLY: i_proc, n_proc
-    use BATL_lib,    ONLY: nDim, Xyz_DGB, CellSize_DB, nBlock, Unused_B, &
-         nI, nJ, nK, MaxDim, find_grid_block
-    use ModPIC,      ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
+    use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
+         nI, nJ, nK
+    use ModPIC,       ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
          nRegionPic, nGhostPic
-    use ModPhysics,  ONLY: No2Si_V, UnitX_
-    use ModEnergy,   ONLY: calc_energy_cell
+    use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
+    use ModMain,      ONLY: UseB0
+    use ModB0,        ONLY: B0_DGB
+    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_
+    use ModMultiFluid,ONLY: nIonFluid
+    use ModEnergy,    ONLY: calc_energy
     !use ModProcMH,   ONLY: iProc
 
     implicit none
@@ -202,17 +202,11 @@ contains
     real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
-    character(len=*), parameter :: NameSub='GM_get_regions'
-    logical :: havenPoint
-
-    integer :: i, j, k, iL, iR, jL, jR, kL, kR, iBlock, iPoint, iRegion
-    integer :: nPicBlock
-
-    real    :: XyzMin_D(nDim), XyzMax_D(nDim) ! min/max position of block
+    logical :: DoCountOnly
+    integer :: i, j, k, iBlock, iPoint, iRegion
     real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
-    real    :: Xyz_D(MaxDim)
 
-    integer :: x_= 1, y_ = 1, z_ = 1 
+    character(len=*), parameter :: NameSub='GM_get_regions'
     !--------------------------------------------------------------------------
 
     ! This function will be called 3 times :
@@ -225,21 +219,10 @@ contains
     !    to get then in the same order as the original position array given by 2)
 
     ! to avoid index issues when nDim < 3 
-    if(ndim > 1) y_ = 2
-    if(ndim > 2) z_ = 3
 
-    Xyz_D   = 0.0
+    DoCountOnly = nPoint < 1
+    if(DoCountOnly) nPoint = 0
 
-    havenPoint = .true.
-    ! first time we only find the number of points
-    if(nPoint < 1 ) then
-       havenPoint = .false.
-       nPicBlock = 0
-       nPoint = 0
-    end if
-
-    ! left and right index in the block 
-    iL = 1; iR = 1; jL = 1; jR = 1; kL =1; kR = 1
     iPoint = 1
     do iRegion = 1, nRegionPic
 
@@ -253,114 +236,45 @@ contains
 
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE
+          
+          do k = 1,nK; do j = 1,nJ; do i=1,nI
 
-          XyzMin_D = Xyz_DGB(1:nDim,1,1,1,iBlock)
-          XyzMax_D = Xyz_DGB(1:nDim,nI,nJ,nK,iBlock)
+             ! Intersection with body is not handled yet ???
 
-          ! blocks that have no points inside the pic region iRegion
-          if(any(XyzMax_D < XyzMinRegion_D).or. &
-               any(XyzMin_D > XyzMaxRegion_D )) CYCLE
+             ! Check if cell center is inside the PIC region
+             if(any(Xyz_DGB(1:nDim,i,j,k,iBlock) > XyzMaxRegion_D)) CYCLE
+             
+             if(any(Xyz_DGB(1:nDim,i,j,k,iBlock) < XyzMinRegion_D)) CYCLE
 
-          ! blocks complitly inside the pic region iRegion
-          if( all(XyzMax_D <= XyzMaxRegion_D .and. &
-               XyzMin_D >= XyzMinRegion_D )) then
-
-             if(present(Data_VI)) then
-                call setStateVGB(1, nI, 1, nJ, 1, nK)
-                call calc_energy_cell(iBlock)
-             else if(havenPoint) then
-                do i=1,nI; do j=1,nJ; do k=1,nK
-                   ! PC domain start from origo
-                   Pos_DI(1:nDim,iPoint) = &
-                        Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
-                   iPoint = iPoint + 1
-                end do; end do; end do
-             else
-                nPicBlock = nPicBlock + 1
+             if(DoCountOnly)then
+                nPoint = nPoint + 1
+                CYCLE
              end if
-             CYCLE
-          end if
 
-          ! what we have left is blocks intersecting the PIC region iRegion
-          iL = max(ceiling((XyzMinRegion_D(x_) - XyzMin_D(x_)) &
-               /CellSize_DB(x_,iBlock)), 0) + 1
-          iR = max(ceiling((XyzMaxRegion_D(x_) - XyzMin_D(x_)) &
-               /CellSize_DB(x_,iBlock)), 0) 
-          if(iR > nI ) iR = nI
-          if(nDim > 1) then
-             jL = max(ceiling((XyzMinRegion_D(y_) - XyzMin_D(y_)) &
-                  /CellSize_DB(y_,iBlock)), 0) + 1
-             jR = max(ceiling((XyzMaxRegion_D(y_) - XyzMin_D(y_)) &
-                  /CellSize_DB(y_,iBlock)), 0) 
-             if(jR > nJ ) jR = nJ
-          end if
-          if(nDim > 2) then
-             kL = max(ceiling((XyzMinRegion_D(z_) - XyzMin_D(z_)) &
-                  /CellSize_DB(z_,iBlock)), 0) + 1
-             kR = max(ceiling((XyzMaxRegion_D(z_) - XyzMin_D(z_)) &
-                  /CellSize_DB(z_,iBlock)), 0) 
-             if(kR > nK ) kR = nK
-          end if
-
-          if(present(Data_VI)) then
-             call setStateVGB(iL, iR, jL, jR, kL, kR)
-             call calc_energy_cell(iBlock)
-          else if(havenPoint) then
-             do i=iL,iR; do j=jL,jR; do k=kL,kR
-                ! PC domain start from origo
+             if(present(Data_VI))then
+                ! Put Data_VI obtained from PC into State_VGB
+                State_VGB(1:nVar,i,j,k,iBlock) = &
+                     Data_VI(1:nVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V)
+                if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                     State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
+                call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
+             else
+                ! Provide position to PC
                 Pos_DI(1:nDim,iPoint) = &
                      Xyz_DGB(1:nDim,i,j,k,iBlock)*No2Si_V(UnitX_)
-                iPoint = iPoint + 1
-             end do; end do; end do
-          else
-             nPoint = nPoint + (iR - iL + 1)*(jR - jL + 1)*(kR - kL + 1)
-          end if
+             end if
+             iPoint = iPoint + 1
 
-       end do ! block
+          end do; end do; end do
+       end do
 
-    end do ! region
+    end do
 
-    if(.not. havenPoint) then
-       nPoint = nPoint +  nPicBlock*nI*nJ*nK
-    end if
-
-  contains
-
-    !==========================================================================
-    subroutine setStateVGB(iLx,iRx,jLy,jRy,kLz,kRz)
-
-      use ModAdvance,  ONLY: Bx_, Bz_
-      use ModPhysics,  ONLY: Si2No_V, iUnitCons_V
-      use ModAdvance,  ONLY: State_VGB
-      use ModB0,       ONLY: B0_DGB, useB0
-
-      integer, intent(in) :: iLx,iRx,jLy,jRy,kLz,kRz
-
-      !------------------------------------------------------------------------
-      do i=iLx,iRx; do j=jLy,jRy; do k=kLz,kRz         
-         State_VGB(1:nVar,i,j,k,iBlock) = &
-              Data_VI(1:nVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V)
-         iPoint = iPoint + 1
-      end do; end do; end do
-
-      ! remove constatnt magnetic field
-      if(UseB0)then
-         do i=iLx,iRx; do j=jLy,jRy; do k=kLz,kRz
-            State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                 State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-         end do; end do; end do
-      end if
-
-    end subroutine setStateVGB
-
-  end  subroutine GM_get_regions
-
-
+  end subroutine GM_get_regions
   !===========================================================================
   subroutine GM_put_from_pc( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
 
-    use CON_coupler, ONLY: i_proc, n_proc
     use BATL_lib,    ONLY: nDim
     !use ModProcMH,   ONLY: iProc
 
