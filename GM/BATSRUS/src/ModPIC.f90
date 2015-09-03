@@ -171,7 +171,7 @@ contains
     IonMassPerChargeSi = IonMassPerCharge* &
          No2Si_V(UnitMass_)/No2Si_V(UnitCharge_)
 
-    ! if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
+    if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
 

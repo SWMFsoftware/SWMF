@@ -99,7 +99,7 @@ contains
        ! Q/Qi, M/Mi
        do iFluid = 0, nIonFluid-1
           ParamReal_I(n) = ChargeIon_I(iFluid+1); n = n+1
-          ParamReal_I(n) = MassIon_I(iFluid+1)/MassIon_I(1); n = n+1
+          ParamReal_I(n) = MassIon_I(iFluid+1); n = n+1
        end do
 
        ! Electron pressure ratio
