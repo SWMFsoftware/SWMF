@@ -35,6 +35,7 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
   double DustPotential=GetDustGrainPotential(GrainRadius,GrainElectricCharge);
 
   //ELECRON COLLECTION CURRENT
+  #if _DUST__CHARGING__ELECTRON_COLLECTION__MODE_ == _PIC_MODE_ON_
   double J0e=-ElectronCharge*  4.0*Pi*pow(GrainRadius,2)*ne*sqrt(Kbol*Te/(PiTimes2*ElectronMass));
   double XiElectron=-ElectronCharge*DustPotential/(Kbol*Te);
 
@@ -53,11 +54,14 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
     Je=J0e*(1.0-XiElectron);
     dJe=J0e * ElectronCharge / 0.3141592654e1 / VacuumPermittivity / GrainRadius / Kbol / Te / 0.4e1;
   }
+  #else  //_DUST__CHARGING__ELECTRON_COLLECTION__MODE_ == _PIC_MODE_ON_
+  Je=0.0,dJe=0.0;
+  #endif //_DUST__CHARGING__ELECTRON_COLLECTION__MODE_ == _PIC_MODE_ON_
 
   //ION COLLECTION CURRENT
+  #if _DUST__CHARGING__ION_COLLECTION__MODE_ == _PIC_MODE_ON_
   double J0i=ElectronCharge* 4.0*Pi*pow(GrainRadius,2)*ni*sqrt(Kbol*Ti/(PiTimes2*ProtonMass));
   double M=sqrt((pow(Vi[0]-GrainVelocity[0],2)+pow(Vi[1]-GrainVelocity[1],2)+pow(Vi[2]-GrainVelocity[2],2))/(2.0*Kbol*Ti/ProtonMass));
-
 
   if (DustPotential<=0.0) {
     {
@@ -138,8 +142,12 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
 
     }
   }
+  #else //_DUST__CHARGING__ION_COLLECTION__MODE_ == _PIC_MODE_ON_
+   Ji=0.0,dJi=0.0;
+  #endif //_DUST__CHARGING__ION_COLLECTION__MODE_ == _PIC_MODE_ON_
 
   //PHOTO-ELECTRON CURRENT
+  #if _DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
   double J0pe=Pi*GrainRadius*GrainRadius*ElectronCharge*ElectonPhotoEmission::PhotoElectronEfficiency*ElectonPhotoEmission::PhotoElectronEfficiencyMaterialConstant/pow(HeliocentricDistance,2);
 
   if (DustPotential<=0.0) {
@@ -160,9 +168,16 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
 
     }
   }
+  #else //_DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
+  Jpe=0.0,dJpe=0.0;
+  #endif //_DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
 
   //SECONDARY ELECTON CURRENT
+  #if _DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
+  exit(__LINE__,__FILE__,"Error: not implemented");
+  #else //_DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
   Jse=0.0,dJse=0.0;
+  #endif //_DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_ == _PIC_MODE_ON_
 }
 
 
