@@ -1,5 +1,8 @@
 //  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 //  For more information, see http://csem.engin.umich.edu/tools/swmf
+
+//$Id$
+
 /*
  * ElectricallyChargedDust.h
  *
@@ -7,22 +10,18 @@
  *      Author: vtenishe
  */
 
-//$Id$
+
+using namespace std;
+
+
+#ifndef _ELECTRICALLY_CHARGED_DUST_
+#define _ELECTRICALLY_CHARGED_DUST_
 
 //#include "pic.h"
 #include "constants.h"
 #include "Dust.dfn"
 
-using namespace std;
-
-
-#ifndef ELECTRICALLYCHARGEDDUST_H_
-
 namespace ElectricallyChargedDust {
-
-
-
-
   //the dust spece groups
   //  extern int _DUST_SPEC_;
   extern int nDustTimeStepGroups;
@@ -1372,9 +1371,6 @@ long int DustInjection__Sphere(int BoundaryElementType,void *SphereDataPointer);
 
 
 
-
-
-#define ELECTRICALLYCHARGEDDUST_H_
 
 
 #endif /* ELECTRICALLYCHARGEDDUST_H_ */

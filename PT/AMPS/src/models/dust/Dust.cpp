@@ -10,6 +10,8 @@
 //$Id$
 
 #include "pic.h"
+#include "Dust.h"
+
 
 //the offsets to the internal properties of the dust grains
 double ElectricallyChargedDust::SampledDustMassInjectionRate=0.0;

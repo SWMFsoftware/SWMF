@@ -9,6 +9,7 @@
  */
 
 #include "pic.h"
+#include "Dust.h"
 
 //update charge of the dust grain
 int ElectricallyChargedDust::Charging::UpdateGrainCharge__EQUILIBRIUM_POTENTIAL(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode) {
