@@ -1,7 +1,7 @@
 
 #main  
 
-SpeciesList=N2,CH4,H2
+SpeciesList=N2,CH4,H2,O_plus
 !settings of the directories
 !update the following variables in the makefile 
 
@@ -31,8 +31,8 @@ ForceRepeatableSimulationPath=on ! on,off
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode= SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep  
-ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
+TimeStepMode= SpeciesGlobalTimeStep !SingleGlobalTimeStep, SpeciesLocalTimeStep  
+ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight 
 ParticleWeightCorrectionMode=on !on,off
 
 CouplerMode=file(tecplot) !ices !!off, ices, swmf 
@@ -63,6 +63,11 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
 
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
+
+ TrajectoryTracing=on
+ MaxSampledTrajectoryNumber=1000
+
+ define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
 
 #endGeneral
 
@@ -120,7 +125,10 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
 
   addPhysicalModelHeader=Titan.h 
 
-
+  BackgroundIonInjection=on \\ !on,off
+    InjectionMode=SteadyState \\ ! SteadyState, TimeDependent
+    vmax=1500.0e3 \\ !the maximum velocity of the injected particles
+    IonNumberDensityFraction(O_PLUS)=1.0
 
 !---------------------------------   SOURCE RATE --------------------------------------------
  
