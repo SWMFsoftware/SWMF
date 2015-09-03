@@ -11,41 +11,12 @@
 
 //#include "pic.h"
 #include "constants.h"
-
-
-
-#ifndef ELECTRICALLYCHARGEDDUST_H_
-
-
+#include "Dust.dfn"
 
 using namespace std;
 
 
-
-/*--------------------------------  Definitions of the model ---------------------------*/
-//#define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_      0
-//#define _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__OFF_     1
-
-#define _DUST__TIME_STEP_SUBGROUPING_MODE__ON_       0
-#define _DUST__TIME_STEP_SUBGROUPING_MODE__OFF_      1
-
-//depending the velocity of the dust grains change the time step sub-group of the dust grains
-#define _DUST__TIME_STEP_SUBGROUP_MIGRATION_MODE__ON_   0
-#define _DUST__TIME_STEP_SUBGROUP_MIGRATION_MODE__OFF_  1
-
-//use a hard-wired constant or a user-provided function for calcualtion of dust grain properties
-#define _DUST__CALCULATION_GRAIN_INTERNAL_PROPERTIES_MODE__CONSTANT_VALUE_         0
-#define _DUST__CALCULATION_GRAIN_INTERNAL_PROPERTIES_MODE__USER_DEFINED_FUNCTION_  1
-
-
-/*--------------------------------  Initial parameters of the model --------------------*/
-
-
-#define _DUST__TIME_STEP_SUBGROUPING_MODE_ _DUST__TIME_STEP_SUBGROUPING_MODE__ON_
-#define _DUST__TIME_STEP_SUBGROUP_MIGRATION_MODE_ _DUST__TIME_STEP_SUBGROUP_MIGRATION_MODE__ON_
-#define _DUST__CALCULATION_GRAIN_INTERNAL_PROPERTIES_MODE_ _DUST__CALCULATION_GRAIN_INTERNAL_PROPERTIES_MODE__CONSTANT_VALUE_
-
-/*-------------------------------- The model -------------------------------------------*/
+#ifndef ELECTRICALLYCHARGEDDUST_H_
 
 namespace ElectricallyChargedDust {
 
