@@ -483,13 +483,13 @@ contains
 
   !==============================================================================
 
-  subroutine GM_get_for_pc_init(ParamInt_I, n, ParamReal_I)
+  subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
     implicit none
 
-    integer, intent(inout) :: ParamInt_I(3)
-    integer, intent(in)  :: n
-    real, optional, intent(inout) :: ParamReal_I(n)
+    integer, intent(inout) :: nParamInt, nParamReal
+    integer, optional, intent(out):: iParam_I(nParamInt)
+    real,    optional, intent(out) :: Param_I(nParamReal)
 
     character(len=*), parameter :: NameSub='GM_get_for_pc_init'
     !--------------------------------------------------------------------------
