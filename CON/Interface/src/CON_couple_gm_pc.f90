@@ -46,19 +46,18 @@ contains
   !INTERFACE:
   subroutine couple_gm_pc_init
 
-    use CON_transfer_data, ONLY: transfer_integer_array, transfer_real_array
+    use CON_transfer_data, ONLY: &
+         transfer_integer, transfer_integer_array, transfer_real_array
 
     !integer:: nDimPt
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='couple_gm_pc_init'
 
-    ! iParam_I gives the information to allocate ParamReal_I
-    ! needed for seting up the grid and particle constants
-    integer, parameter:: nParam = 3
-    integer :: iParam_I(nParam)
-    real, allocatable :: ParamReal_I(:)
-    integer :: n
+    ! GM sends PC a number of integers and reals
+    integer, allocatable :: iParam_I(:)
+    real, allocatable :: Param_I(:)
+    integer :: nParamInt, nParamReal
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
@@ -84,27 +83,27 @@ contains
 
     if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
 
-    ! Get the integer parameters. The 0 is the size of real params for now.
-    if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, 0)
-    call transfer_integer_array(GM_, PC_, nParam, iParam_I, &
+    ! Get the number of integer and real parameters to pass
+    if(is_proc(GM_))call GM_get_for_pc_init(nParamInt, nParamReal)
+    call transfer_integer(GM_, PC_, nParamInt, nParamReal, &
+         UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+    allocate(iParam_I(nParamInt), Param_I(nParamReal))
+
+    ! Transfer integer and real parameters from GM to PC
+    if(is_proc(GM_)) &
+         call GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
+
+    call transfer_integer_array(GM_, PC_, nParamInt, iParam_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    ! n = number of species * 2 (mass, charge ratio)
-    !     + number of dimensions * 9 (xmin, xmax, dx) for y and z also
-    !     + 4 (Pe/Ptotal, Lnorm, Unorm, Mnorm) 
-    n = iParam_I(1)*2 + iParam_I(2)*9 + 4
-    allocate(ParamReal_I(n))
-
-    ! Transfer real parameters from GM to PC
-    if(is_proc(GM_)) call GM_get_for_pc_init(iParam_I, n, ParamReal_I)
-
-    call transfer_real_array(GM_, PC_, n, ParamReal_I, &
+    call transfer_real_array(GM_, PC_, nParamReal, Param_I, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    if(is_proc(PC_))call PC_put_from_gm_init(iParam_I, ParamReal_I, n, &
+    if(is_proc(PC_)) &
+         call PC_put_from_gm_init(nParamInt, nParamReal, iParam_I, Param_I, &
          CouplerGMtoPC%NameVar, CouplerGMtoPC%nVar)
 
-    deallocate(ParamReal_I)
+    deallocate(iParam_I, Param_I)
 
   end subroutine couple_gm_pc_init
 
