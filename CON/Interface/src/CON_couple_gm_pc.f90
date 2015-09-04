@@ -101,7 +101,7 @@ contains
 
     if(is_proc(PC_)) &
          call PC_put_from_gm_init(nParamInt, nParamReal, iParam_I, Param_I, &
-         CouplerGMtoPC%NameVar, CouplerGMtoPC%nVar)
+         CouplerGMtoPC%NameVar)
 
     deallocate(iParam_I, Param_I)
 
