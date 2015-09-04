@@ -38,8 +38,7 @@ using namespace std;
 	sprintf(fname,"%s/TGITM_EXOBASE.dat",PIC::UserModelInputDataPath);
 	ifstream fin(fname);
 	
-	if(fin.is_open())
-	{
+	if(fin.is_open()) {
 		//initialize toatal flux values to 0
 		for(int i=0;i<nspc;i++){
 			Titan::tgitm_exobase::totalflux[i]=0.0;
@@ -72,7 +71,10 @@ using namespace std;
 	}
 	else
 	{
-		cout<<"THE FILE DID NOT OPEN"<<endl;
+    char msg[400];
+
+    sprintf(msg,"Error: cannot open file %s",fname);
+    exit(__LINE__,__FILE__,msg);;
 	}
 		cout<<"source rates"<<endl;
 		cout<<_N2_SPEC_<<'\t'<<Titan::tgitm_exobase::totalflux[0]<<endl;
