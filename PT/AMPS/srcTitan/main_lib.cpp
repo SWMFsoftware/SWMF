@@ -35,15 +35,16 @@
 //the parameters of the domain and the sphere
 
 const double DebugRunMultiplier=4.0;
-const double rSphere=4010430.7796;
+const double rSphere=4025000.0;
 
 
-const double xMaxDomain=1.5; 
-const double yMaxDomain=1.5; 
+const double xMaxDomain=3.0;
+const double yMaxDomain=3.0; 
 
 const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 //const double dxMinSphere=DebugRunMultiplier*4.0*1.0/100/2.5,dxMaxSphere=DebugRunMultiplier*2.0/10.0;
-const double dxMinSphere=0.06,dxMaxSphere=0.34; //Units of planetary radii
+const double dxMinSphere=0.025,dxMaxSphere=0.25; //Units of planetary radii
+
 
 
 
@@ -71,8 +72,8 @@ double localSphericalSurfaceResolution(double *x) {
 }
 
 double localResolution(double *x) {
-  int idim;
-  double lnR,res,r=0.0;
+ int idim;
+ double lnR,res,r=0.0;
 
   for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
 
@@ -99,12 +100,12 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
 
-  double CharacteristicSpeed_N2=2.5E3;
+  double CharacteristicSpeed_N2=5.0e3;
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
 	CellSize=startNode->GetCharacteristicCellSize();
-//  cout << "time step s" << 0.1*CellSize/CharacteristicSpeed_N2 << endl;
+	//  cout << "time step s" << 0.1*CellSize/CharacteristicSpeed_N2 << endl;
   return 0.1*CellSize/CharacteristicSpeed_N2;
 
 
@@ -737,8 +738,50 @@ void amps_init() {
  // PIC::DistributionFunctionSample::vMin=-40.0E3;
  // PIC::DistributionFunctionSample::vMax=40.0E3;
  // PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
-
  // PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
+ 
+ //
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  //TECPLOT
+  //read the background data
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("TITAN-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("TITAN-BATSRUS");
+    }
+    else {
+      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
+
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_TITAN__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,10.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(12,1.0E3);//(var num, scal_fac)
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(18,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(15,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(6,71428.5714286);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("2007GRL_3D_T9.plt");
+
+      PIC::CPLR::DATAFILE::SaveBinaryFile("TITAN-BATSRUS");
+    }
+
+#else
+    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
+#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
+#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+
+ PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+ 
+ 
 }
 
 
