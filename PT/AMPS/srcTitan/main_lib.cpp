@@ -102,6 +102,8 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
   double CharacteristicSpeed_N2=5.0e3;
 
+  if (spec==_O_PLUS_SPEC_) CharacteristicSpeed_N2=1000.0E3;
+
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
 	CellSize=startNode->GetCharacteristicCellSize();
@@ -119,6 +121,20 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
  // for (int idim=0;idim<DIM;idim++) res*=(node->xmax[idim]-node->xmin[idim]);
 
   return res;
+}
+
+bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+  bool ExternalFaces[6];
+  int nface;
+
+
+  if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
+    for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer)  {
@@ -673,6 +689,50 @@ void amps_init() {
   //init the volume of the cells'
   PIC::Mesh::mesh.InitCellMeasure();
 
+  //init the list of the boundary blocks
+  PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
+  PIC::BC::InitBoundingBoxInjectionBlockList();
+
+
+  //load the background plasma data
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  //TECPLOT
+  //read the background data
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("TITAN-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("TITAN-BATSRUS");
+    }
+    else {
+      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
+
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_TITAN__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,10.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(12,1.0E3);//(var num, scal_fac)
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(18,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(15,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(6,71428.5714286);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("2007GRL_3D_T9.plt");
+
+      PIC::CPLR::DATAFILE::SaveBinaryFile("TITAN-BATSRUS");
+    }
+
+#else
+    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
+#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
+#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+
 
 
 
@@ -740,44 +800,7 @@ void amps_init() {
  // PIC::DistributionFunctionSample::nSampledFunctionPoints=500;
  // PIC::DistributionFunctionSample::Init(SampleLocations,nSamplePoints);
  
- //
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
-  //TECPLOT
-  //read the background data
-    if (PIC::CPLR::DATAFILE::BinaryFileExists("TITAN-BATSRUS")==true)  {
-      PIC::CPLR::DATAFILE::LoadBinaryFile("TITAN-BATSRUS");
-    }
-    else {
-      double xminTECPLOT[3]={-5.1,-5.1,-5.1},xmaxTECPLOT[3]={5.1,5.1,5.1};
 
-      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
-
-      //  1  0  0
-      //  0  1  0
-      //  0  0  1
-
-      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
-
-      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_TITAN__RADIUS_;
-      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
-      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.30,10.0);
-
-      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_SPHERICAL;
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(12,1.0E3);//(var num, scal_fac)
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(18,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(15,1.0E-9);
-      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(6,71428.5714286);
-      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=21;
-      PIC::CPLR::DATAFILE::TECPLOT::ImportData("2007GRL_3D_T9.plt");
-
-      PIC::CPLR::DATAFILE::SaveBinaryFile("TITAN-BATSRUS");
-    }
-
-#else
-    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
-#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
-#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 
  PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
  
