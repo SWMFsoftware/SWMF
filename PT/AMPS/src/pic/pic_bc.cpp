@@ -54,7 +54,7 @@ void PIC::BC::InjectionBoundaryConditions() {
   double EndTime,StartTime=MPI_Wtime();
 #endif
 
-  for (nodeptr=boundingBoxInjectionBlocksList.begin(),end=boundingBoxInjectionBlocksList.end();nodeptr!=end;nodeptr++) {
+  if (userDefinedBoundingBlockInjectionFunction!=NULL) for (nodeptr=boundingBoxInjectionBlocksList.begin(),end=boundingBoxInjectionBlocksList.end();nodeptr!=end;nodeptr++) {
     node=*nodeptr;
 
     if (node->Thread==PIC::Mesh::mesh.ThisThread) {
