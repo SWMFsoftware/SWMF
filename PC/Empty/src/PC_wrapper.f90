@@ -204,13 +204,12 @@ contains
   end subroutine PC_put_from_gm_dt
   !============================================================================
   subroutine PC_put_from_gm_init(nParamInt, nParamReal, iParam_I, Param_I, &
-       NameVar, nVar)
+       NameVar)
 
     integer, intent(in)         :: nParamInt, nParamReal
     integer, intent(in)         :: iParam_I(nParamInt)
     real,    intent(in)         :: Param_I(nParamReal)
     character(len=*), intent(in):: NameVar ! List of variables
-    integer, intent(in)         :: nVar
 
     character(len=*), parameter :: NameSub = 'PC_put_from_gm_init'
     !--------------------------------------------------------------------------
