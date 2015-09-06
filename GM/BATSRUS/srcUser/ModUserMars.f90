@@ -6,7 +6,9 @@ module ModUser
   ! This is the user module for Mars 
 
   use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_
+  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, &
+       SpeciesFirst_, SpeciesLast_
+  use ModAdvance,    ONLY: nSpecies
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -38,7 +40,6 @@ module ModUser
   ! Mars stuff
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=8,  &
        MaxReactions=10
-  integer :: nSpecies=4
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
        nDenNuSpecies_CBI    !number density of neutral Species
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
@@ -535,7 +536,7 @@ contains
        totalRLNumRhox=0.0
        
           
-       totalNumRho=sum(State_VGB(rho_+1:rho_+nSpecies,i,j,k,iBlock) &
+       totalNumRho=sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
             /MassSpecies_I(1:nSpecies))
        MaxSLSpecies_CB(i,j,k,iBlock)=1.0e-3
        
