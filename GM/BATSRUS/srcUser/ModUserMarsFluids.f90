@@ -42,7 +42,6 @@ module ModUser
   !logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=nIonFluid, MaxNuSpecies=9,  &
        MaxReactions=11, nNuSpecies = 3
-  integer :: nSpecies=4
 
   real, allocatable:: nDenNuSpecies_CBI(:,:,:,:,:), &
        TempNuSpecies_CBI(:,:,:,:),  Productrate_CB(:,:,:,:),  &
@@ -555,8 +554,8 @@ contains
        if(.not.UsePointImplicit_B(iBlock) )then
           !sum of the (loss term/atom mass) due to recombination                                                  \
 
-          SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nSpecies)-&
-               LiSpecies_I(1:nSpecies) ) /&
+          SourceLossMax = 10.0*maxval(abs(SiSpecies_I(1:nIonFluid)-&
+               LiSpecies_I(1:nIonFluid) ) /&
                (State_VGB(iRhoIon_I(1:nIonFluid), i,j,k, iBlock)+1e-20))&
                *CellVolume_GB(i,j,k,iBlock)
           vdtmin=min(VdtFace_x(i,j,k),VdtFace_y(i,j,k),VdtFace_z(i,j,k))
@@ -1582,7 +1581,7 @@ contains
 
     if(oktest)then
        write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
-            BodyRhoSpecies_I(1:nSpecies)
+            BodyRhoSpecies_I(1:nIonFluid)
        write(*,*)'neutral density=', &
             BodynDenNuSpecies_I
        write(*,*)'nu0=',nu0
@@ -1611,7 +1610,7 @@ contains
     integer, intent(in) :: iBlock
 
     real ::CosSZA
-    integer :: i,j,k,q
+    integer :: i,j,k,iFluid
     real, dimension(nIonFluid)::Temp_I
     character (len=*), parameter :: NameSub = 'user_set_ics'
     logical:: DoTest, DoTestMe
@@ -1769,11 +1768,11 @@ contains
        State_VGB(rho_,i,j,k,iBlock)   =&
             sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
 
-       do q=1,nSpecies
+       do iFluid = 1, nIonFluid
           !write(*,*)'I got to the low density ratio'
-          if(State_VGB(iRhoIon_I(q),i,j,k,iBlock) < &
+          if(State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock) < &
                LowDensityRatio* State_VGB(Rho_,i,j,k,iBlock))then
-             State_VGB(iRhoIon_I(q),i,j,k,iBlock)= LowDensityRatio*&
+             State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)= LowDensityRatio*&
                   State_VGB(Rho_,i,j,k,iBlock)
           end if
        end do
