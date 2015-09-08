@@ -17,7 +17,7 @@ using namespace std;
 #ifndef _ELECTRICALLY_CHARGED_DUST_
 #define _ELECTRICALLY_CHARGED_DUST_
 
-//#include "pic.h"
+#include "Exosphere.h"
 #include "constants.h"
 #include "Dust.dfn"
 
