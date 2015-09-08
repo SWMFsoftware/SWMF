@@ -249,6 +249,9 @@ void amps_init() {
 #endif //_PIC_COUPLER_DATAFILE_READER_MODE_
 #endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
 
+    //init background data based on that loaded from TECPLOT
+    MarsIon::InitBackgroundData();
+
     //set up the time step
     PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
     PIC::ParticleWeightTimeStep::initTimeStep();

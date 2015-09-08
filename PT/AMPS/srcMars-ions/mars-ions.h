@@ -58,13 +58,14 @@ namespace MarsIon {
 
 
   //init the model
-  inline void Init_BeforeParser() {}
+  void Init_BeforeParser();
   inline void Init_AfterParser() {}
 
   //process interaction of the particles with the boundaries of the domain and the surface of the planet
   int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &dtTotal,void *NodeDataPonter,void *SphereDataPointer);
 
   namespace SourceProcesses {
+    double GetCellInjectionRate(int spec,double *xMiddle);
     double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
     double GetBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
   }
@@ -72,21 +73,25 @@ namespace MarsIon {
   namespace Output{
 
     extern int TotalDataLength;
-    extern int oplusSourceDensityOffset;
-    extern int oplusSourceMomentumOffset;
-    extern int oplusSourceEnergyOffset;
+
+    namespace OplusSource {
+      extern int RateOffset;
+      extern int BulkVelocityOffset;
+      extern int TemperatureOffset;
+    }
 
     void Init();
 
     void PrintVariableList(FILE* fout,int DataSetNumber);
-
     void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
-
     void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
 
     int RequestDataBuffer(int offset);
   }
 
+
+  //init the background data
+  void InitBackgroundData();
 }
 
 

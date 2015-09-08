@@ -25,43 +25,44 @@ double MarsIon::DomainDXMax   = 1.8E13;
 
 // OUTPUT ---------------------------------------------------------------------
 int MarsIon::Output::TotalDataLength = 0;
-int MarsIon::Output::oplusSourceDensityOffset =-1;
-int MarsIon::Output::oplusSourceMomentumOffset=-1;
-int MarsIon::Output::oplusSourceEnergyOffset  =-1;
+
+int MarsIon::Output::OplusSource::RateOffset=-1;
+int MarsIon::Output::OplusSource::BulkVelocityOffset=-1;
+int MarsIon::Output::OplusSource::TemperatureOffset=-1;
 
 
 void MarsIon::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"oplusSourceDensity\",\"oplusSourceMomentumX\",\"oplusSourceMomentumY\",\"oplusSourceMomentumZ\",\"oplusSourceEnergy\"");
+  fprintf(fout,",\"OplusSource: Rate\",\"OplusSource: Bulk Velocity[0]\",\"OplusSource: Bulk Velocity[1]\",\"OplusSource: Bulk Velocity[2]\",\"OplusSource: Temperature\"");
 }
 
 void MarsIon::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode){
 
-  double S1=0.0, S2[3]={0.0}, S3=0.0;
+  double S1=0.0, S2[3]={0.0,0.0,0.0}, S3=0.0;
   int i,idim;
   char *SamplingBuffer;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
 
-    S1+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceDensityOffset)))*InterpolationCoeficients[i];
+    S1+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OplusSource::RateOffset)))*InterpolationCoeficients[i];
 
     for(idim=0 ; idim<3; idim++)
-      S2[idim]+=(*(idim+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceMomentumOffset)))*InterpolationCoeficients[i];
+      S2[idim]+=(*(idim+(double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OplusSource::BulkVelocityOffset)))*InterpolationCoeficients[i];
 
-    S3+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceEnergyOffset)))*InterpolationCoeficients[i];
+    S3+=(*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+OplusSource::TemperatureOffset)))*InterpolationCoeficients[i];
   }
 
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceDensityOffset,&S1,sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceMomentumOffset,&S2,3*sizeof(double));
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceEnergyOffset,&S3,sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::RateOffset,&S1,sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::BulkVelocityOffset,S2,3*sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::TemperatureOffset,&S3,sizeof(double));
 
 }
 
 void MarsIon::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode){
   double t;
 
-  //SourceDensity
+  //Source Rate
   if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceDensityOffset));
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::RateOffset));
   }
 
   if (pipe->ThisThread==0) {
@@ -71,10 +72,10 @@ void MarsIon::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,
   }
   else pipe->send(t);
 
-  //SourceMomentum
+  //Source Bulk Velocity
   for(int idim=0; idim < 3; idim++){
     if (pipe->ThisThread==CenterNodeThread) {
-      t= *(idim+(double*)(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceMomentumOffset));
+      t= *(idim+(double*)(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::BulkVelocityOffset));
     }
 
     if (pipe->ThisThread==0) {
@@ -85,9 +86,9 @@ void MarsIon::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,
     else pipe->send(t);
   }
 
-  //SourceEnergy
+  //Source Temperature
   if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+MarsIon::Output::oplusSourceEnergyOffset));
+    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+OplusSource::TemperatureOffset));
   }
 
   if (pipe->ThisThread==0) {
@@ -100,30 +101,30 @@ void MarsIon::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,
 }
 
 int MarsIon::Output::RequestDataBuffer(int offset){
-  MarsIon::Output::oplusSourceDensityOffset=offset;
-  MarsIon::Output::TotalDataLength = 1;
+  OplusSource::RateOffset=offset;
+  TotalDataLength = 1;
   offset+=sizeof(double);
 
-  MarsIon::Output::oplusSourceMomentumOffset=offset;
-  MarsIon::Output::TotalDataLength+=3;
+  OplusSource::BulkVelocityOffset=offset;
+  TotalDataLength+=3;
   offset+=3*sizeof(double);
 
-  MarsIon::Output::oplusSourceEnergyOffset=offset;
-  MarsIon::Output::TotalDataLength++;
+  OplusSource::TemperatureOffset=offset;
+  TotalDataLength++;
   offset+=sizeof(double);
 
-  return MarsIon::Output::TotalDataLength*sizeof(double);
+  return TotalDataLength*sizeof(double);
 }
 
 
 void MarsIon::Output::Init() {
   //request sampling buffer and particle fields
-  PIC::IndividualModelSampling::RequestStaticCellData.push_back(MarsIon::Output::RequestDataBuffer);
+  PIC::IndividualModelSampling::RequestStaticCellData.push_back(RequestDataBuffer);
 
   //print out of the otuput file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(MarsIon::Output::PrintVariableList);
-  PIC::Mesh::PrintDataCenterNode.push_back(MarsIon::Output::PrintData);
-  PIC::Mesh::InterpolateCenterNode.push_back(MarsIon::Output::Interpolate);
+  PIC::Mesh::PrintVariableListCenterNode.push_back(PrintVariableList);
+  PIC::Mesh::PrintDataCenterNode.push_back(PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(Interpolate);
 }
 
 
@@ -131,12 +132,47 @@ void MarsIon::Output::Init() {
 
 
 
+//initialization of the model
+void MarsIon::Init_BeforeParser() {
+
+  //init the output module of the model
+  MarsIon::Output::Init();
+
+}
 
 
 
 
+//init the background data from that loaded from TECPLOT
+void MarsIon::InitBackgroundData() {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  PIC::Mesh::cDataBlockAMR *block;
+  PIC::Mesh::cDataCenterNode *cell;
+  int i,j,k,LocalCellNumber,idim;
+  char *data;
+  double *xCell;
+
+  while (node!=NULL) {
+    block=node->block;
 
 
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      cell=block->GetCenterNode(LocalCellNumber);
+
+      if (cell!=NULL) {
+        data=cell->GetAssociatedDataBufferPointer();
+        xCell=cell->GetX();
+
+        *(double*)(data+Output::OplusSource::RateOffset)=SourceProcesses::GetCellInjectionRate(_O_PLUS_SPEC_,xCell);
+        for (idim=0;idim<3;idim++) *(double*)(data+Output::OplusSource::BulkVelocityOffset+idim*sizeof(double))=0.0;
+        *(double*)(data+Output::OplusSource::TemperatureOffset)=0.0;
+      }
+    }
+
+    node=node->nextNodeThisThread;
+  }
+}
 
 
 

@@ -12,9 +12,8 @@
 
 #include "mars-ions.h"
 
-double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell) {
+double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,double *xMiddle) {
   double res=0.0;
-  double *xMiddle=cell->GetX(); 
   double altitude=0.0;
   double rSeason=1.38758;
   double r2Season=pow(rSeason,2); 
@@ -43,6 +42,15 @@ double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,PIC::Mesh::cDataC
          BodynDenNuSp_I_Ohx*exp(-altitude/HNuSpecies_I_Ohx);
   //res=1.0;
   res=nDen_O*Rate_I_O_Op; //source rate per m^-3
+
+  return res;
+}
+
+double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell) {
+  double res,*xMiddle;
+
+  xMiddle=cell->GetX();
+  res=GetCellInjectionRate(spec,xMiddle);
 
   return res*cell->Measure;
 }
