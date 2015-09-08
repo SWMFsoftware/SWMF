@@ -45,7 +45,6 @@ MODULES = \
 	ModTriangulate.o\
 	ModTriangulateSpherical.o\
 	ModUtility.o\
-	ModUtility_c.o\
 	CON_axes.o\
 	CON_geopack.o\
 	CON_line_extract.o\
@@ -64,10 +63,21 @@ LIB:	DEPEND
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
 
-${MY_LIB}: ${MODULES}
+${MY_LIB}: ${MODULES} ModUtility_c.o
+	rm -f ${MY_LIB}
+	${AR} ${MY_LIB} ${MODULES} ModUtility_c.o
+
+LIB_NO_C:DEPEND
+	perl -pi -e 's/(iError = make_dir_c)/\!$$1/' ModUtility.f90
+	${MAKE} LIB_NO_C_
+	perl -pi -e 's/.(iError = make_dir_c)/$$1/' ModUtility.f90
+	@echo
+	@echo ${MY_LIB} has been brought up to date.
+	@echo
+
+LIB_NO_C_: ${MODULES}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${MODULES}
-
 
 clean: cleanfiles
 
