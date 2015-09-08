@@ -5,7 +5,6 @@ SEARCHDIR = -I${SHAREDIR} -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR}
 
 include ../Makefile.conf
 include Makefile.DEPEND
-include Makefile.RULES
 
 OBJECTS = \
 	ModCrcm.o\
