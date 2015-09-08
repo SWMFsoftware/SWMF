@@ -1142,7 +1142,7 @@ int ElectricallyChargedDust::DustChargingProcessor_SteadyState(double *xInit,dou
   double Ti,Te,J0i,J0e,Je,dJe,Ji,dJi,XiElectron,pe;
 
 
-  PIC::CPLR::InitInterpolationStencil(xInit,finalNode);
+  PIC::CPLR::InitInterpolationStencil(xInit,initNode);
   plasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
   PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
   plasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
