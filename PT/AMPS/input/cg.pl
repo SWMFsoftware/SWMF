@@ -23,8 +23,8 @@ use ampsConfigLib;
 #print "Process the exospehre model input:\n";
 
 
-my $InputFileName="cg.input.Assembled.Block";   #$ARGV[0];
-my $SpeciesFileName="cg.input.Assembled.Species";
+my $InputFileName=$ARGV[0]; #"cg.input.Assembled.Block";   #$ARGV[0];
+my $SpeciesFileName=$InputFileName; $SpeciesFileName =~ s/\.Block$/.Species/; #"cg.input.Assembled.Species";
 my $WorkingSourceDirectory="srcTemp";  #$ARGV[1];
 
 $ampsConfigLib::WorkingSourceDirectory=$WorkingSourceDirectory;
