@@ -2934,13 +2934,13 @@ contains
 
        ! set minimum temperature for the neutral fluid, skip other
        ! moments at this time.
-       State_VGB(       Neu1P_,i,j,k,iBlock) = max( &
-            State_VGB(  Neu1P_,i,j,k,iBlock), &
-            State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)*TempNeuMin)
-
-       TempNeu1 = &
-            State_VGB(Neu1P_,  i,j,k,iBlock)*MassFluid_I(nFluid)/ &
-            State_VGB(Neu1Rho_,i,j,k,iBlock)
+!       State_VGB(       Neu1P_,i,j,k,iBlock) = max( &
+!            State_VGB(  Neu1P_,i,j,k,iBlock), &
+!            State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)*TempNeuMin)
+!
+!       TempNeu1 = &
+!            State_VGB(Neu1P_,  i,j,k,iBlock)*MassFluid_I(nFluid)/ &
+!            State_VGB(Neu1Rho_,i,j,k,iBlock)
 
        do iIonFluid=1,nIonFluid
 
@@ -2985,10 +2985,10 @@ contains
           end if ! if statement for minor ion
 
           ! The temperature of either ion fluid can not drop below Tmin
-          State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
-               State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
-               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*Tmin / &
-               MassIon_I(iIonFluid) )
+!          State_VGB(     iPIon_I  (iIonFluid),i,j,k,iBlock) = max( &
+!               State_VGB(iPIon_I  (iIonFluid),i,j,k,iBlock), &
+!               State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)*Tmin / &
+!               MassIon_I(iIonFluid) )
        end do
 
        ! Total fluid
@@ -3019,9 +3019,9 @@ contains
 
        ! if the electron pressure equation is used and the electron temperature
        ! is lower than the neutral temperature
-       if(UseElectronPressure)  &
-            State_VGB(Pe_,i,j,k,iBlock) = max(nElec*TempNeu1, &
-            State_VGB(Pe_,i,j,k,iBlock))
+!       if(UseElectronPressure)  &
+!            State_VGB(Pe_,i,j,k,iBlock) = max(nElec*TempNeu1, &
+!            State_VGB(Pe_,i,j,k,iBlock))
 
 
        !do iIonFluid=1,nIonFluid
