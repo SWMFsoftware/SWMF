@@ -139,6 +139,13 @@ T			  DoAddRhoU
 1e-15
 1e-15
 
+#MINIMUMTEMPERATURE
+-1.0
+100
+100
+100
+100
+
 #GAMMA
 5.0/3.0			Gamma_I
 5.0/3.0			Gamma_I
