@@ -10134,9 +10134,9 @@ if (TmpAllocationCounter==2437) {
 #endif
 
     {//broadcast to everyone if changes have been made
-      char send_flag, recv_flag;
+      int send_flag, recv_flag;
       send_flag = meshModifiedFlag_CountMeshElements;
-      MPI_Allreduce(&send_flag,&recv_flag,1,MPI_CHAR,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Allreduce(&send_flag,&recv_flag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
       if(recv_flag > 0) meshModifiedFlag_CountMeshElements=true;
     }
   }
