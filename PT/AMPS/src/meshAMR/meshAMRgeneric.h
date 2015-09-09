@@ -1594,6 +1594,7 @@ public:
 
 
     meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
+
     rootTree->upNode=NULL;
     rootTree->block=rootBlock;
     for (i=0;i<(1<<_MESH_DIMENSION_);i++) rootTree->downNode[i]=NULL; 
@@ -1761,6 +1762,7 @@ public:
      rootBlock=NULL;
      rootTree=NULL;
      meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
+
      AllowBlockAllocation=true;
      DeallocateUnusedBlocks=true;
 
@@ -5887,6 +5889,7 @@ if (CallsCounter==83) {
       CompareGlobalNodeNumbering(rootTree);
 
       meshModifiedFlag_CountMeshElements=false;
+
       MPI_Bcast(&meshNodesNumber,1,MPI_LONG,0,MPI_GLOBAL_COMMUNICATOR);
     }
   } 
@@ -10130,59 +10133,12 @@ if (TmpAllocationCounter==2437) {
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 #endif
 
-
-//================  DEBUG ==================================
-
-    //check the volume of local cells
-
-    /*
-    node=ParallelNodesDistributionList[ThisThread];
-    while (node!=NULL) {
-      int i,j,k,di,dj,dk,idim;
-      long int LocalCellNumber;
-      double r,rmin=0.0,rmax=0.0,rprobe[3]={0.0,0.0,0.0};
-      cCenterNode *cell;
-
-      if (node->Temp_ID==782) {
-        *DiagnospticMessageStream << __FILE__ << "@" << __LINE__ << std::endl;
-      }
-
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-            for (i=0;i<_BLOCK_CELLS_X_;i++) if (node->block!= NULL){
-              LocalCellNumber=getCenterNodeLocalNumber(i,j,k);
-              cell=node->block->GetCenterNode(LocalCellNumber);
-              rmin=-1,rmax=-1;
-
-              if (cell->Measure<=0.0) {
-                for (dk=0;dk<=((DIM==3) ? 1 : 0);dk++) for (dj=0;dj<=((DIM>1) ? 1 : 0);dj++) for (di=0;di<=1;di++) {
-                  node->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
-
-                  for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-                  r=sqrt(r);
-
-                  if ((rmin<0.0)||(rmin>r)) rmin=r;
-                  if ((rmax<0.0)||(rmax<r)) rmax=r;
-                }
-
-                if ((rmin<2439.0e3)&&(rmax>2439.0e3)) {
-                  *DiagnospticMessageStream << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << std::endl;
-                }
-
-
-                InitCellMeasure(node);
-
-              }
-
-
-            }
-         }
-      }
-
-      node=node->nextNodeThisThread;
+    {//broadcast to everyone if changes have been made
+      char send_flag, recv_flag;
+      send_flag = meshModifiedFlag_CountMeshElements;
+      MPI_Allreduce(&send_flag,&recv_flag,1,MPI_CHAR,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      if(recv_flag > 0) meshModifiedFlag_CountMeshElements=true;
     }
-    */
-//==============   END DEBUG =================================
   }
 
   void ParallelBlockDataExchange() {
