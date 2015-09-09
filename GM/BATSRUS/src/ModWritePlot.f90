@@ -218,17 +218,33 @@ subroutine write_plot_common(iFile)
         ! open the files
         unit_tmp2 = io_unit_new()
         open(unit_tmp , file=filename_n, status="replace", form=TypeForm, &
-             err=999)
+             IOSTAT=iError)
+        if(iError /= 0)then
+           write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
+           call stop_mpi(NameSub//' file open error 1')
+        endif
         open(unit_tmp2, file=filename_s, status="replace", form=TypeForm, &
-             err=999)
+             IOSTAT=iError)
+        if(iError /= 0)then
+           write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
+           call stop_mpi(NameSub//' file open error 2')
+        endif
      end if
   elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
      filename_s = trim(NameSnapshot)//"_2"//trim(NameProc)
      unit_tmp2 = io_unit_new()
-     open(unit_tmp , file=filename_n, status="replace", err=999)
-     open(unit_tmp2, file=filename_s, status="replace", err=999)
+     open(unit_tmp , file=filename_n, status="replace", IOSTAT=iError)
+     if(iError /= 0)then
+        write(*,*) 'Error opening ',trim(filename_n),' iError=',iError
+        call stop_mpi(NameSub//' file open error 3')
+     endif
+     open(unit_tmp2, file=filename_s, status="replace", IOSTAT=iError)
+     if(iError /= 0)then
+        write(*,*) 'Error opening ',trim(filename_s),' iError=',iError
+        call stop_mpi(NameSub//' file open error 4')
+     endif
   elseif(plot_form(iFile)=='hdf') then
      ! Only one plotfile will be generated, so do not include PE number
      ! in filename. ModHdf5 will handle opening the file.
@@ -236,7 +252,13 @@ subroutine write_plot_common(iFile)
   else
      ! For IDL just open one file
      filename = trim(NameSnapshot)//trim(NameProc)
-     open(unit_tmp, file=filename, status="replace", form=TypeForm, err=999)
+     open(unit_tmp, file=filename, status="replace", form=TypeForm, &
+          IOSTAT=iError)
+     if(iError /= 0)then
+        write(*,*) 'Error opening ',trim(filename),' form=', TypeForm, &
+             ' iError=', iError
+        call stop_mpi(NameSub//' file open error 5')
+     endif
   end if
 
   if (IsSphPlot) then
@@ -501,7 +523,11 @@ subroutine write_plot_common(iFile)
               nGLOBALcells = nGLOBALcellsS
            end if
         end if
-        open(unit_tmp,file=filename,status="replace",err=999)
+        open(unit_tmp,file=filename,status="replace", IOSTAT=iError)
+        if(iError /= 0)then
+           write(*,*) 'Error opening ',trim(filename),' iError=',iError
+           call stop_mpi(NameSub//' file open error 6')
+        endif
 
         write(unit_tmp,'(a)')filename
         write(unit_tmp,'(i8,a)')nProc,' nProc'
@@ -565,12 +591,6 @@ subroutine write_plot_common(iFile)
   end if
 
   if(oktest_me)write(*,*) NameSub,' finished'
-
-  return
-
-999 continue
-
-  call stop_mpi(NameSub//": error in opening or writing file")
 
 contains
   !=========================================================================
