@@ -74,5 +74,121 @@ double MarsIon::SourceProcesses::GetBlockInjectionRate(int spec,cTreeNodeAMR<PIC
   return res;
 }
 
+//inject model particles
+long int MarsIon::SourceProcesses::InjectParticles() {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
+  PIC::Mesh::cDataBlockAMR *block;
+  PIC::Mesh::cDataCenterNode *cell;
+  int i,j,k,LocalCellNumber,idim;
+  char *data;
+  double IonTemperature,*IonBulkVelocity,IonSourceRate;
+  double *xCell,TimeCounter;
+  int nInjectedParticles=0,newParticle;
 
+  double ParticleWeight,LocalTimeStep,ParticleWeightCorrection;
+  double v[3],x[3];
+
+#if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+  ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_O_PLUS_SPEC_];
+#else
+  ParticleWeight=0.0;
+  exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+#endif
+
+#if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+#elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+  LocalTimeStep=Exosphere::Planet->maxIntersectedNodeTimeStep[_O_PLUS_SPEC_];
+#else
+  LocalTimeStep=0.0;
+  exit(__LINE__,__FILE__,"Error: the time step node is not defined");
+#endif
+
+
+
+  while (node!=NULL) {
+    double xMinBlock[3],xMaxBlock[3];
+
+    block=node->block;
+    memcpy(xMinBlock,node->xmin,3*sizeof(double));
+    memcpy(xMaxBlock,node->xmax,3*sizeof(double));
+
+    double dxCell[3]={(xMaxBlock[0]-xMinBlock[0])/_BLOCK_CELLS_X_,(xMaxBlock[1]-xMinBlock[1])/_BLOCK_CELLS_Y_,(xMaxBlock[2]-xMinBlock[2])/_BLOCK_CELLS_Z_};
+
+
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      cell=block->GetCenterNode(LocalCellNumber);
+
+      if (cell!=NULL) {
+        data=cell->GetAssociatedDataBufferPointer();
+        xCell=cell->GetX();
+
+        IonSourceRate=(*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight;
+        IonBulkVelocity=(double*)(data+Output::OplusSource::BulkVelocityOffset);
+        IonTemperature=*(double*)(data+Output::OplusSource::TemperatureOffset);
+
+        //initial value of the time counter
+        TimeCounter=rnd()*log(rnd())/IonSourceRate;
+
+        //injection loop
+
+        while ((TimeCounter+=-log(rnd())/IonSourceRate)<LocalTimeStep) {
+          //get random position and velocity
+          x[0]=xMinBlock[0]+dxCell[0]*(rnd()+i);
+          x[1]=xMinBlock[1]+dxCell[1]*(rnd()+j);
+          x[2]=xMinBlock[2]+dxCell[2]*(rnd()+k);
+
+          //get random velocity vector
+          PIC::Distribution::MaxwellianVelocityDistribution(v,IonBulkVelocity,IonTemperature,_O_PLUS_SPEC_);
+
+          //generate new particle
+          //the particle buffer used to set-up the new particle data
+          PIC::ParticleBuffer::byte *newParticleData,tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+          PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+          //set the default value for the correction factor
+          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+          ParticleWeightCorrection=1.0;
+          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+          #endif
+
+          #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+          if (block->GetLocalTimeStep(_O_PLUS_SPEC_)/LocalTimeStep<rnd()) continue;
+          #endif
+
+          //generate a particle
+          PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
+          PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
+          PIC::ParticleBuffer::SetI(_O_PLUS_SPEC_,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+          #endif
+
+          //apply condition of tracking the particle
+          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+          PIC::ParticleTracker::InitParticleID(tempParticleData);
+          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+          #endif
+
+          newParticle=PIC::ParticleBuffer::GetNewParticle();
+          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+          memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+          _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,block->GetLocalTimeStep(_O_PLUS_SPEC_)*rnd(),node,true);
+
+          nInjectedParticles++;
+        }
+
+
+
+      }
+    }
+
+    node=node->nextNodeThisThread;
+  }
+
+  return nInjectedParticles;
+}
 
