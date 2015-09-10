@@ -11,6 +11,8 @@
 
 double MarsIon::UserGlobalTimeStep = -1.0;
 
+char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MARS";
+
 //  injection boundary condition
 double MarsIon::InjectionVelocity[3] = {26.3E1, 0.0, -2.3E1};
 double MarsIon::InjectionNDensity    = 0.18E-6;
@@ -138,6 +140,9 @@ void MarsIon::Init_BeforeParser() {
   //init the output module of the model
   MarsIon::Output::Init();
 
+  //set the injection function
+  PIC::BC::UserDefinedParticleInjectionFunction=SourceProcesses::InjectParticles;
+
 }
 
 
@@ -148,29 +153,33 @@ void MarsIon::InitBackgroundData() {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::Mesh::cDataBlockAMR *block;
   PIC::Mesh::cDataCenterNode *cell;
-  int i,j,k,LocalCellNumber,idim;
+  int i,j,k,LocalCellNumber,idim,thread;
   char *data;
   double *xCell;
 
-  while (node!=NULL) {
-    block=node->block;
+  for (thread=0;thread<PIC::nTotalThreads;thread++) {
+    node=(thread==PIC::ThisThread) ? PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread] : PIC::Mesh::mesh.DomainBoundaryLayerNodesList[thread];
+
+    while (node!=NULL) {
+      block=node->block;
 
 
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-      cell=block->GetCenterNode(LocalCellNumber);
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+        LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        cell=block->GetCenterNode(LocalCellNumber);
 
-      if (cell!=NULL) {
-        data=cell->GetAssociatedDataBufferPointer();
-        xCell=cell->GetX();
+        if (cell!=NULL) {
+          data=cell->GetAssociatedDataBufferPointer();
+          xCell=cell->GetX();
 
-        *(double*)(data+Output::OplusSource::RateOffset)=SourceProcesses::GetCellInjectionRate(_O_PLUS_SPEC_,xCell);
-        for (idim=0;idim<3;idim++) *(double*)(data+Output::OplusSource::BulkVelocityOffset+idim*sizeof(double))=0.0;
-        *(double*)(data+Output::OplusSource::TemperatureOffset)=0.0;
+          *(double*)(data+Output::OplusSource::RateOffset)=SourceProcesses::GetCellInjectionRate(_O_PLUS_SPEC_,xCell);
+          for (idim=0;idim<3;idim++) *(double*)(data+Output::OplusSource::BulkVelocityOffset+idim*sizeof(double))=0.0;
+          *(double*)(data+Output::OplusSource::TemperatureOffset)=100.0;
+        }
       }
-    }
 
-    node=node->nextNodeThisThread;
+      node=node->nextNodeThisThread;
+    }
   }
 }
 
