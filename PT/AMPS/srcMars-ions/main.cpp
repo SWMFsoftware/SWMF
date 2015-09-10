@@ -49,7 +49,7 @@ int main(int argc,char **argv) {
 
   //time step
   for (long int niter=0;niter<100000001;niter++) {
-//    amps_time_step();
+    PIC::TimeStep();
   }
 
 
