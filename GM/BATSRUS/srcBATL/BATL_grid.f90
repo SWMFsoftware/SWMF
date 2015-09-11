@@ -1002,6 +1002,7 @@ contains
 
   subroutine find_grid_block(XyzIn_D, &
        iProcOut, iBlockOut, iCellOut_D, DistOut_D, iNodeOut, &
+       CoordMinBlockOut_D, CoordMaxBlockOut_D, CellSizeOut_D, & 
        UseGhostCell)
 
     ! Find the processor and block containing location XyzIn_D. 
@@ -1019,9 +1020,13 @@ contains
     integer, intent(out), optional:: iCellOut_D(MaxDim) ! Closest cell indexes
     real,    intent(out), optional:: DistOut_D(MaxDim)  ! Normalized distance
     integer, intent(out), optional:: iNodeOut     ! Tree node index
+    real,    intent(out), optional:: CoordMinBlockOut_D(MaxDim)! block corner
+    real,    intent(out), optional:: CoordMaxBlockOut_D(MaxDim)! block corner 
+    real,    intent(out), optional:: CellSizeOut_D(MaxDim) ! cell size in block
     logical, intent(in),  optional:: UseGhostCell ! Use ghost cells or not
 
-    real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
+    real:: CoordTree_D(MaxDim), Coord_D(MaxDim), CoordTreeSize_D(MaxDim)
+    real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     integer:: iNode
 
     character(len=*), parameter:: NameSub = 'find_grid_block'
@@ -1061,6 +1066,22 @@ contains
     end if
 
     if(present(iNodeOut)) iNodeOut = iNode
+
+    if(  present(CoordMinBlockOut_D) .or. &
+         present(CoordMaxBlockOut_D) .or. &
+         present(CellSizeOut_D))then
+
+       call get_tree_position(iNode, PositionMin_D, PositionMax_D)
+       CoordTreeSize_D = CoordMax_D-CoordMin_D
+
+       if(present(CoordMinBlockOut_D))&
+            CoordMinBlockOut_D = CoordMin_D + PositionMin_D * CoordTreeSize_D
+       if(present(CoordMaxBlockOut_D))&
+            CoordMaxBlockOut_D = CoordMin_D + PositionMax_D * CoordTreeSize_D
+       if(present(CellSizeOut_D))&
+            CellSizeOut_D=(PositionMax_D-PositionMin_D)*CoordTreeSize_D/nIjk_D
+
+    end if
 
   end subroutine find_grid_block
 
@@ -1314,6 +1335,280 @@ contains
          ': too many cells to interpolate from')
 
   end subroutine interpolate_grid
+
+  !===========================================================================
+
+  subroutine interpolate_grid_amr(XyzIn_D, nCell, iCell_II, Weight_I)
+
+    use ModInterpolateAMR, ONLY: interpolate_amr
+
+    ! Find the grid cells surrounding the point Xyz_D.
+    ! nCell returns the number of cells found on the processor.
+    ! iCell_II returns the block+cell indexes for each cell.
+    ! Weight_I returns the interpolation weights calculated 
+    !                                 using AMR interpolateion procedure
+    real,    intent(in) :: XyzIn_D(MaxDim)
+    integer, intent(out):: nCell
+    integer, intent(out):: iCell_II(0:nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+
+    integer:: nCell_D(MaxDim) = (/nI, nJ, nK/)
+    integer:: iIndexes_II(0:nDimAmr+1,2**nDimAmr)
+    integer:: nGridOut
+    integer:: iProc_I(2**nDim)
+    integer:: iBlockNei, iProcNei
+    integer:: iCell, iDim, iDimAmr ! loop variables
+    logical:: IsSecondOrder
+    ! vector that keeps AMR directions
+    logical:: IsAmr_D(MaxDim)
+    ! vector that keeps point's coordinate in non-AMR dimensions
+    real   :: XyzNonAmr_D(MaxDim), XyzNei_D(MaxDim)
+
+    real   :: Misc
+
+    ! variables to keep track of blocks and their parameters
+    ! IMPORTANT:
+    !   routine uses order in which blocks are found as block id,
+    !   the actual id is accessed as iBlock_I(iBlockIdLocal)
+    integer:: nBlockFound
+    integer:: iBlock_I(2*2**MaxDim) ! the actual block ids are stored here
+    real   :: XyzCorner_DI(MaxDim, 2*2**MaxDim)
+    real   :: Dxyz_DI(MaxDim, 2*2**MaxDim)
+    !--------------------------------------------------------------------    
+    if(nDim /= MaxDim) &
+         call CON_stop("interpolate_grid_amr assumes that nDim = MaxDim, further development is needed")
+
+    ! the grid is simple => no need to use sophisticated AMR routine
+    if(nDimAmr==1)then
+       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       RETURN
+    end if
+
+    ! store coords in Non-AMR dimenstions
+    IsAmr_D = iRatio_D > 1
+    where(IsAmr_D)
+       XyzNonAmr_D = 0
+    elsewhere
+       XyzNonAmr_D = XyzIn_D
+    end where
+
+    ! mark the beginning of the interpolation
+    nBlockFound = 0
+
+    ! apply general interpolate_amr routine but exclude non-AMR dimensions
+    ! need to account for these dimensions separately
+    ! routine doesn't sort out blocks located on other processors
+    call interpolate_amr(&
+         nDim          = nDimAmr, &
+         XyzIn_D       = PACK(XyzIn_D, IsAmr_D), &
+         nIndexes      = nDimAmr+1, &
+         find          = find_block, &
+         nCell_D       = PACK(nCell_D, IsAmr_D), &
+         nGridOut      = nGridOut, &
+         Weight_I      = Weight_I, &
+         iIndexes_II   = iIndexes_II, &
+         IsSecondOrder = IsSecondOrder, &
+         UseGhostCell  = .false.)
+
+    if(.not. IsSecondOrder)then
+       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       RETURN
+    end if
+
+    ! copy indices
+    iProc_I(            1:nGridOut) = iIndexes_II(0,         1:nGridOut)
+    iCell_II(1:nDimAmr, 1:nGridOut) = iIndexes_II(1:nDimAmr, 1:nGridOut)
+    iCell_II(0,         1:nGridOut) = iIndexes_II(nDimAmr+1, 1:nGridOut)
+
+
+    if(.not. all(IsAmr_D)) then
+       ! restore correct shape and account for non-AMR dimensions if necessary
+       iDimAmr = nDimAmr
+       do iDim = MaxDim, 1, -1
+          if(.not. IsAmr_D(iDim)) CYCLE
+          iCell_II(iDim,:) = iCell_II(iDimAmr,:)
+          iDimAmr = iDimAmr - 1
+       end do
+
+       ! copy cell indices for the other half of points
+       iCell_II(:,nGridOut+1:2*nGridOut) = iCell_II(:,1:nGridOut)
+
+       ! find weights along non-AMR dimensions
+       do iDim = 1, MaxDim
+          if(IsAmr_D(iDim)) CYCLE
+
+          ! normalized coords with respect to block's corner
+          ! if 1 <= Misc <= nIJK_D(iDim) then point is far enough from boundary
+          ! otherwise need to find neighbors
+          Misc = 0.5 + &
+               ( XyzIn_D(iDim) - XyzCorner_DI(iDim, iCell_II(0,1)) ) / &
+               Dxyz_DI(iDim, iCell_II(0,1))
+
+          ! indices of the cell near the point
+          iCell_II(iDim, :) = floor(Misc)
+
+          ! interpolation weight along non-AMR direction
+          Misc = Misc - iCell_II(iDim,1)
+
+
+          if    ( iCell_II(iDim,1) == 0 )then
+             ! the point is close to the bottom boundary of block
+             ! correct cell indices along non-AMR dimension
+             iCell_II(iDim,         1:  nGridOut) = 1
+             iCell_II(iDim,nGridOut+1:2*nGridOut) = nIJK_D(iDim)
+
+             ! correct weights
+             Weight_I(nGridOut+1:2*nGridOut) = Weight_I(1:nGridOut)*(1. - Misc)
+             Weight_I(         1:  nGridOut) = Weight_I(1:nGridOut)*      Misc
+
+             ! cycle through already found cells inside current block
+             ! find their neighbors
+             do iCell = 1, nGridOut
+                ! location of the neighbor: current cells + displacement
+                XyzNei_D = XyzCorner_DI(:,iCell_II(0,iCell)) + ((/&
+                     iCell_II(1,iCell), iCell_II(2,iCell),iCell_II(3,iCell)&
+                     /) - 0.5) * Dxyz_DI(:,iCell_II(0,iCell))
+                XyzNei_D(iDim) = XyzNei_D(iDim)-Dxyz_DI(iDim,iCell_II(0,iCell))
+
+                call find_grid_block(XyzNei_D, iProcNei, iBlockNei)
+                ! write correct processors and blocks
+                iProc_I(    nGridOut+iCell) = iProcNei
+                nBlockFound = nBlockFound + 1
+                iBlock_I(nBlockFound) = iBlockNei
+                iCell_II(0, nGridOut+iCell) = nBlockFound
+             end do
+
+          elseif( iCell_II(iDim,1) == nIJK_D(iDim) )then
+             ! the point is close to the top boundary of block
+             ! correct cell indices along non-AMR dimension
+             iCell_II(iDim,nGridOut+1:2*nGridOut) = 1
+             ! correct weights
+             Weight_I(nGridOut+1:2*nGridOut) = Weight_I(1:nGridOut)*      Misc
+             Weight_I(         1:  nGridOut) = Weight_I(1:nGridOut)*(1. - Misc)
+
+             ! cycle through already found cells inside current block
+             ! find their neighbors
+             do iCell = 1, nGridOut
+                ! location of the neighbor: current cells + displacement
+                XyzNei_D = XyzCorner_DI(:,iCell_II(0,iCell)) + ((/&
+                     iCell_II(1,iCell), iCell_II(2,iCell),iCell_II(3,iCell)&
+                     /) - 0.5) * Dxyz_DI(:,iCell_II(0,iCell))
+                XyzNei_D(iDim) = XyzNei_D(iDim)+Dxyz_DI(iDim,iCell_II(0,iCell))
+
+                call find_grid_block(XyzNei_D, iProcNei, iBlockNei)
+                ! write correct processors and blocks
+                iProc_I(    nGridOut+iCell) = iProcNei
+                nBlockFound = nBlockFound + 1
+                iBlock_I(nBlockFound) = iBlockNei
+                iCell_II(0, nGridOut+iCell) = nBlockFound
+             end do
+
+          else
+             ! the point is far enough from boundary
+
+             ! correct cell indices along non-AMR direction
+             iCell_II(iDim,nGridOut+1:2*nGridOut) =iCell_II(iDim,1:nGridOut) +1
+             ! correct weights
+             Weight_I(nGridOut+1:2*nGridOut) = Weight_I(1:nGridOut)*      Misc
+             Weight_I(         1:  nGridOut) = Weight_I(1:nGridOut)*(1. - Misc)
+             ! write correct processors
+             iProc_I( nGridOut+1:2*nGridOut) = iProc_I(1:nGridOut) 
+             !       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+             !       RETURN
+          end if
+       end do
+    end if
+
+    ! sort out cells located on other processors
+    nCell = 0
+    do iCell = 1, 2*nGridOut
+       if(iProc_I(iCell) == iProc)then
+          nCell  = nCell + 1
+          iCell_II(       0, nCell) = iBlock_I(iCell_II(0,iCell))
+          iCell_II(1:MaxDim, nCell) = iCell_II(1:MaxDim, iCell)
+          Weight_I(nCell) = Weight_I(iCell)
+       end if
+    end do
+
+
+  contains
+    subroutine find_block(nDimIn, XyzIn_D, &
+         iProcOut, iBlockOut, XyzCornerOut_D, DxyzOut_D, IsOut)
+      integer, intent(in) :: nDimIn
+      !\
+      ! "In"- the coordinates of the point, "out" the coordinates of the
+      ! point with respect to the block corner. In the most cases
+      ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
+      ! however, is the periodic boundary, near which the jump in the
+      ! stencil coordinates might occur. To handle the latter problem,
+      ! we added the "out" intent. The coordinates for the stencil
+      ! and input point are calculated and recalculated below with
+      ! respect to the block corner.
+      !/
+      real,  intent(inout):: XyzIn_D(nDimIn)
+      integer, intent(out):: iProcOut, iBlockOut !processor and block number
+      !\
+      ! Block left corner coordinates and the grid size:
+      !
+      real,    intent(out):: XyzCornerOut_D(nDimIn), DxyzOut_D(nDimIn)
+      logical, intent(out):: IsOut !Point is out of the domain.
+
+      real   :: Xyz_D(MaxDim) ! full Cartesian coords of point
+      real   :: XyzCorner_D(MaxDim), Dxyz_D(MaxDim)! full Cartesian coords
+      integer:: iDim, iDimAmr ! loop variable
+      !--------------------------------------------------------------------
+      ! check correctness
+      if(nDimIn /= nDimAmr) &
+           call CON_stop("Number of dimensions is not correct")
+
+      ! Xyz_D will be used to find block, copy input data into it
+      ! restore non-AMR directions if necessary
+      if(all(IsAmr_D))then
+         Xyz_D(:) = XyzIn_D(:)
+      else
+         iDimAmr = nDimIn
+         do iDim = MaxDim, 1, -1
+            if(IsAmr_D(iDim))then
+               Xyz_D(iDim) = XyzIn_D(iDimAmr)
+               iDimAmr = iDimAmr - 1
+            else
+               Xyz_D(iDim) = XyzNonAmr_D(iDim)
+            end if
+         end do
+      end if
+
+      ! call internal BATL find subroutine
+      call find_grid_block(Xyz_D, iProcOut, iBlockOut,&
+           CoordMinBlockOut_D = XyzCorner_D, &
+           CellSizeOut_D      = Dxyz_D)
+
+      ! check if position has been found
+      if(iProcOut==Unset_ .OR. iBlockOut==Unset_)then
+         IsOut = .true.
+         RETURN
+      end if
+
+      !position has been found
+      IsOut = .false.
+
+      ! corner coordinates of the found block
+      XyzCornerOut_D = PACK(XyzCorner_D, IsAmr_D)
+
+      ! cell size of the found block
+      DxyzOut_D = PACK(Dxyz_D, IsAmr_D)
+
+      ! subtract coordinates of the corner from point's coordinates
+      XyzIn_D = XyzIn_D - XyzCornerOut_D
+
+      ! store parameters of the block
+      nBlockFound = nBlockFound + 1
+      XyzCorner_DI(:, nBlockFound) = XyzCorner_D
+      Dxyz_DI(     :, nBlockFound) = Dxyz_D
+      iBlock_I(       nBlockFound) = iBlockOut
+      iBlockOut                    = nBlockFound
+
+    end subroutine find_block
+  end subroutine interpolate_grid_amr
 
   !===========================================================================
 
@@ -1682,6 +1977,7 @@ contains
     end if
 
     if(DoTestMe) write(*,*)'Testing interpolate_grid'
+
     Xyz_D = 0.0
     if(.not.allocated(Point_VIII)) &
          allocate(Point_VIII(0:nVarPoint,nPointI,nPointJ,nPointK))
@@ -1760,6 +2056,87 @@ contains
           end if
 
           if(any(abs(Xyz_D(1:nDim) - Point_V) > Tolerance))then
+             write(*,*) 'ERROR: Point_V=',Point_V(1:nDim),&
+                  ' should be ',Xyz_D(1:nDim)
+             write(*,*) 'Total weight=',Weight
+             write(*,*) 'i,j,kPoint=', iPoint_D(1:nDim)
+             write(*,*) 'CoordMin,Max=',CoordMin_D(1:nDim),CoordMax_D(1:nDim)
+          end if
+       end do; end do; end do
+    end if
+
+    if(DoTestMe) write(*,*)'Testing interpolate_grid_amr'
+    Xyz_D = 0.0
+    if(.not.allocated(Point_VIII)) &
+         allocate(Point_VIII(0:nVarPoint,nPointI,nPointJ,nPointK))
+    Point_VIII = 0.0
+    do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
+       iPoint_D = (/ iPoint, jPoint, kPoint /)
+       XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
+            *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+
+       call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I)
+
+       do iCell = 1, nCell
+          Point_VIII(0,iPoint,jPoint,kPoint) = &
+               Point_VIII(0,iPoint,jPoint,kPoint) + Weight_I(iCell)
+          iBlock = iCell_II(0,iCell)
+          iCell_D = 1
+          iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
+
+          ! Interpolate the coordinates to check order of accuracy
+          ! Note: Using array syntax in combination with the indirect
+          ! iCell_D index fails with optimization for NAG v5.1
+          do iDim = 1, nDim
+             Xyz_D(iDim) = &
+                  Xyz_DGB(iDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock)
+          end do
+
+          ! Take care of periodic dimensions: shift coordinates as necessary
+          do iDim = 1, nDim
+             if(.not.IsPeriodicTest_D(iDim)) CYCLE
+             if(XyzPoint_D(iDim) < Xyz_D(iDim) - 2*CellSize_DB(iDim,iBlock)) &
+                  Xyz_D(iDim) = Xyz_D(iDim) - &
+                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+
+             if(XyzPoint_D(iDim) > Xyz_D(iDim) + 2*CellSize_DB(iDim,iBlock)) &
+                  Xyz_D(iDim) = Xyz_D(iDim) + &
+                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+          end do
+
+          Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
+               Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
+               + Weight_I(iCell)*Xyz_D(1:nDim)
+
+       end do
+    end do; end do; end do
+
+    ! Collect contributions from all processors to proc 0
+    if(nProc > 1)then
+       allocate(PointAll_VIII(0:nVarPoint,nPointI,nPointJ,nPointK))
+       call MPI_reduce(Point_VIII, PointAll_VIII, size(PointAll_VIII),&
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       Point_VIII = PointAll_VIII
+       deallocate(PointAll_VIII)
+    end if
+
+    if(iProc == 0)then
+       ! Check interpolated coordinate values against point coordinates
+       do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
+          iPoint_D = (/ iPoint, jPoint, kPoint /)
+          Xyz_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
+               *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+
+          Weight  = Point_VIII(0,iPoint,jPoint,kPoint)
+          Point_V = Point_VIII(1:nDim,iPoint,jPoint,kPoint)/Weight
+
+          if(abs(Weight - 1.0) < 1e-6)then
+             Tolerance = 1e-6
+          else
+             Tolerance = 3e-2
+          end if
+
+          if(all(abs(Xyz_D(1:nDim) - Point_V) > Tolerance))then
              write(*,*) 'ERROR: Point_V=',Point_V(1:nDim),&
                   ' should be ',Xyz_D(1:nDim)
              write(*,*) 'Total weight=',Weight
