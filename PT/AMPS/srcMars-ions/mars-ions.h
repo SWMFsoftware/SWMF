@@ -68,6 +68,8 @@ namespace MarsIon {
     double GetCellInjectionRate(int spec,double *xMiddle);
     double GetCellInjectionRate(int spec,PIC::Mesh::cDataCenterNode *cell);
     double GetBlockInjectionRate(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    long int InjectParticles();
   }
 
   namespace Output{
