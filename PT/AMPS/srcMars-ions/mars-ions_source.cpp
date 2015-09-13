@@ -32,6 +32,10 @@ double MarsIon::SourceProcesses::GetCellInjectionRate(int spec,double *xMiddle) 
   for (i=0;i<3;i++) {    
       altitude+=pow(xMiddle[i],2);
   }
+
+
+  if (sqrt(altitude)<3.5E6) return 0.0;
+
   altitude=sqrt(altitude)-3396000.0; // in m where R_Mars=3396000.0 m
 
   if (altitude<0.0) return 0.0;
@@ -85,6 +89,9 @@ long int MarsIon::SourceProcesses::InjectParticles() {
   double *xCell,TimeCounter;
   int nInjectedParticles=0,newParticle;
 
+
+  double TheoreticalSourceRate=0.0,NumericalSourceRate=0.0,testSourceRate=0.0;
+
   double ParticleWeight,LocalTimeStep,ParticleWeightCorrection;
   double v[3],x[3];
 
@@ -96,7 +103,7 @@ long int MarsIon::SourceProcesses::InjectParticles() {
 #endif
 
 #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_
-  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[spec];
+  LocalTimeStep=PIC::ParticleWeightTimeStep::GlobalTimeStep[_O_PLUS_SPEC_];
 #elif _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
   LocalTimeStep=Exosphere::Planet->maxIntersectedNodeTimeStep[_O_PLUS_SPEC_];
 #else
@@ -105,89 +112,159 @@ long int MarsIon::SourceProcesses::InjectParticles() {
 #endif
 
 
+  //count the number of the blocks and the total source rate of all blocks on the current processor
+  int nThreadBlockNumber=0,nBlock;
+  double maxBlockInjectionRate=-1.0,TotalThreadSourceRate=0.0;
 
-  while (node!=NULL) {
+  class cBlockInjectionTable {
+  public:
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    PIC::Mesh::cDataBlockAMR *block;
+    double TotalInjectionRate,MaxCellInjectionRate;
+
+    cBlockInjectionTable() {
+      block=NULL,node=NULL;
+      TotalInjectionRate=0.0,MaxCellInjectionRate=-1.0;
+    }
+  } *BlockInjectionTable=NULL;
+
+  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) nThreadBlockNumber++;
+
+
+  BlockInjectionTable=new cBlockInjectionTable[nThreadBlockNumber];
+
+  for (nBlock=0,node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread,nBlock++) {
+    BlockInjectionTable[nBlock].node=node;
+    BlockInjectionTable[nBlock].block=node->block;
+
+    if (node->block!=NULL) {
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+        double t=0.0;
+
+        LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        cell=BlockInjectionTable[nBlock].block->GetCenterNode(LocalCellNumber);
+
+        if (cell!=NULL) {
+          data=cell->GetAssociatedDataBufferPointer();
+          t=(*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight;
+
+          BlockInjectionTable[nBlock].TotalInjectionRate+=t;
+          TotalThreadSourceRate+=t;
+
+          if (t>BlockInjectionTable[nBlock].MaxCellInjectionRate) BlockInjectionTable[nBlock].MaxCellInjectionRate=t;
+
+          TheoreticalSourceRate+=t;
+        }
+      }
+
+      if (BlockInjectionTable[nBlock].TotalInjectionRate>maxBlockInjectionRate) maxBlockInjectionRate=BlockInjectionTable[nBlock].TotalInjectionRate;
+    }
+  }
+
+  //the particle injection loop
+  TimeCounter=0.0;
+
+  if (TotalThreadSourceRate>0.0) while ((TimeCounter+=-log(rnd())/TotalThreadSourceRate)<LocalTimeStep) {
+    //determine the block where a particle is injected
+    do {
+      nBlock=(int)(nThreadBlockNumber*rnd());
+    }
+    while (BlockInjectionTable[nBlock].TotalInjectionRate/maxBlockInjectionRate<rnd());
+
+    //determine the cell where a particle will be generated
     double xMinBlock[3],xMaxBlock[3];
 
-    block=node->block;
+    node=BlockInjectionTable[nBlock].node;
+    block=BlockInjectionTable[nBlock].block;
+
     memcpy(xMinBlock,node->xmin,3*sizeof(double));
     memcpy(xMaxBlock,node->xmax,3*sizeof(double));
 
     double dxCell[3]={(xMaxBlock[0]-xMinBlock[0])/_BLOCK_CELLS_X_,(xMaxBlock[1]-xMinBlock[1])/_BLOCK_CELLS_Y_,(xMaxBlock[2]-xMinBlock[2])/_BLOCK_CELLS_Z_};
 
+    do {
+      i=(int)(_BLOCK_CELLS_X_*rnd());
+      j=(int)(_BLOCK_CELLS_Y_*rnd());
+      k=(int)(_BLOCK_CELLS_Z_*rnd());
 
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
       LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
       cell=block->GetCenterNode(LocalCellNumber);
 
-      if (cell!=NULL) {
-        data=cell->GetAssociatedDataBufferPointer();
-        xCell=cell->GetX();
+      if (cell==NULL) continue;
 
-        IonSourceRate=(*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight;
-        IonBulkVelocity=(double*)(data+Output::OplusSource::BulkVelocityOffset);
-        IonTemperature=*(double*)(data+Output::OplusSource::TemperatureOffset);
-
-        //initial value of the time counter
-        TimeCounter=rnd()*log(rnd())/IonSourceRate;
-
-        //injection loop
-
-        while ((TimeCounter+=-log(rnd())/IonSourceRate)<LocalTimeStep) {
-          //get random position and velocity
-          x[0]=xMinBlock[0]+dxCell[0]*(rnd()+i);
-          x[1]=xMinBlock[1]+dxCell[1]*(rnd()+j);
-          x[2]=xMinBlock[2]+dxCell[2]*(rnd()+k);
-
-          //get random velocity vector
-          PIC::Distribution::MaxwellianVelocityDistribution(v,IonBulkVelocity,IonTemperature,_O_PLUS_SPEC_);
-
-          //generate new particle
-          //the particle buffer used to set-up the new particle data
-          PIC::ParticleBuffer::byte *newParticleData,tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-          PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
-
-          //set the default value for the correction factor
-          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-          ParticleWeightCorrection=1.0;
-          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-          #endif
-
-          #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-          if (block->GetLocalTimeStep(_O_PLUS_SPEC_)/LocalTimeStep<rnd()) continue;
-          #endif
-
-          //generate a particle
-          PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
-          PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
-          PIC::ParticleBuffer::SetI(_O_PLUS_SPEC_,(PIC::ParticleBuffer::byte*)tempParticleData);
-
-          #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-          PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
-          #endif
-
-          //apply condition of tracking the particle
-          #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
-          PIC::ParticleTracker::InitParticleID(tempParticleData);
-          PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
-          #endif
-
-          newParticle=PIC::ParticleBuffer::GetNewParticle();
-          newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-          memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
-
-          _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,block->GetLocalTimeStep(_O_PLUS_SPEC_)*rnd(),node,true);
-
-          nInjectedParticles++;
-        }
-
-
-
-      }
+      data=cell->GetAssociatedDataBufferPointer();
     }
+    while (((*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight)/BlockInjectionTable[nBlock].MaxCellInjectionRate<rnd());
 
-    node=node->nextNodeThisThread;
+    //get random position and velocity
+    x[0]=xMinBlock[0]+dxCell[0]*(rnd()+i);
+    x[1]=xMinBlock[1]+dxCell[1]*(rnd()+j);
+    x[2]=xMinBlock[2]+dxCell[2]*(rnd()+k);
+
+    //get random velocity vector
+    data=cell->GetAssociatedDataBufferPointer();
+
+    IonBulkVelocity=(double*)(data+Output::OplusSource::BulkVelocityOffset);
+    IonTemperature= *(double*)(data+Output::OplusSource::TemperatureOffset);
+
+    PIC::Distribution::MaxwellianVelocityDistribution(v,IonBulkVelocity,IonTemperature,_O_PLUS_SPEC_);
+
+    //generate new particle
+    //the particle buffer used to set-up the new particle data
+    PIC::ParticleBuffer::byte *newParticleData,tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+    PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
+
+    //set the default value for the correction factor
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+    ParticleWeightCorrection=1.0;
+    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+    #endif
+
+    #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
+    if (block->GetLocalTimeStep(_O_PLUS_SPEC_)/LocalTimeStep<rnd()) continue;
+    #endif
+
+    //generate a particle
+    PIC::ParticleBuffer::SetX(x,(PIC::ParticleBuffer::byte*)tempParticleData);
+    PIC::ParticleBuffer::SetV(v,(PIC::ParticleBuffer::byte*)tempParticleData);
+    PIC::ParticleBuffer::SetI(_O_PLUS_SPEC_,(PIC::ParticleBuffer::byte*)tempParticleData);
+
+    #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
+    PIC::ParticleBuffer::SetIndividualStatWeightCorrection(ParticleWeightCorrection,(PIC::ParticleBuffer::byte*)tempParticleData);
+    #endif
+
+    //apply condition of tracking the particle
+    #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
+    PIC::ParticleTracker::InitParticleID(tempParticleData);
+    PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
+    #endif
+
+    newParticle=PIC::ParticleBuffer::GetNewParticle();
+    newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+    memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
+
+    _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,block->GetLocalTimeStep(_O_PLUS_SPEC_)*rnd(),node,true);
+
+    NumericalSourceRate+=ParticleWeight/LocalTimeStep;
+
+    nInjectedParticles++;
   }
+
+
+  delete [] BlockInjectionTable;
+
+  //collect the injection data from all processors
+  double t;
+
+  t=TheoreticalSourceRate*ParticleWeight*LocalTimeStep;
+  MPI_Allreduce(&t,&TheoreticalSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+  t=NumericalSourceRate*LocalTimeStep;
+  MPI_Allreduce(&t,&NumericalSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+
+  t=testSourceRate*LocalTimeStep;
+  MPI_Allreduce(&t,&testSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
   return nInjectedParticles;
 }
