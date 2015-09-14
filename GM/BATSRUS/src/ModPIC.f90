@@ -22,9 +22,7 @@ module ModPIC
   ! Local variables
 
   ! Coupling parameters
-  integer, public :: nGhostPic   = 1  ! Number of ghost cells around PIC region
-  integer:: nOverlapPic = 0  ! Overlap region with linear interpolation
-  integer, public :: DnCouplePic = 1  ! Coupling frequency
+  integer, public :: nGhostPic   = 2  ! Number of ghost cells around PIC region
 
   ! Conversion to PIC units
   real, public  :: xUnitPicSi  = 1.0
@@ -54,20 +52,13 @@ contains
     character(len=*), parameter:: NameSub = 'read_pic_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
-    case("#PIC")
-       call read_var('UsePic',      UsePic)
-       call read_var('nGhostPic',   nGhostPic)
-       call read_var('nOverlapPic', nOverlapPic)
-
-    case("#PICCOUPLE")
-       call read_var('DnCouplePic', DnCouplePic)
-
     case("#PICUNIT")
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
 
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
+       UsePic = nRegionPic > 0
        if(allocated(XyzMinPic_DI)) deallocate( &
             XyzMinPic_DI, XyzMaxPic_DI, DxyzPic_DI,XyzPic0_DI)
        allocate( &
@@ -129,9 +120,6 @@ contains
     ! The PIC variable array
     real, allocatable:: StatePic_VC(:,:,:,:)
 
-    ! Time step in SI units
-    real:: DtSi
-
     ! mass per charge SI
     real:: IonMassPerChargeSi 
 
@@ -140,8 +128,6 @@ contains
 
     character(len=*), parameter:: NameSub = 'pic_init_region'
     !-------------------------------------------------------------------------
-
-    ! Save first step and then every DnCouplePic steps
 
     ! Normalizing the system so q/(mc) == 1 in IPIC3D.
     ! 
@@ -182,7 +168,6 @@ contains
        write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi
     end if
 
-    DtSi = Dt*No2Si_V(UnitT_)*DnCouplePic
     XyzPic_D = 0.0
     nPic_D = 1
 
