@@ -2774,6 +2774,9 @@ namespace PIC {
         //init the reader
         void Init();
 
+	void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
+	void GetDomainLimits(double *xmin,double *xmax,const char *fname);
+
         namespace LFM {
           void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
           void GetDomainLimits(double *xmin,double *xmax,const char *fname);

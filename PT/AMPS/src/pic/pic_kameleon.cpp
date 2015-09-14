@@ -45,6 +45,139 @@ void PIC::CPLR::DATAFILE::KAMELEON::Init() {
 
 double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
+void PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
+  ccmc::Kameleon kameleon;
+
+  long status = kameleon.open(fname);
+  if(status == ccmc::FileReader::OK){
+    //proceed and get domain limits
+    xmin[0]=cm2m*kameleon.getVariableAttribute("x","actual_min").getAttributeFloat();
+    xmin[1]=cm2m*kameleon.getVariableAttribute("y","actual_min").getAttributeFloat();
+    xmin[2]=cm2m*kameleon.getVariableAttribute("z","actual_min").getAttributeFloat();
+    
+    xmax[0]=cm2m*kameleon.getVariableAttribute("x","actual_max").getAttributeFloat();
+    xmax[1]=cm2m*kameleon.getVariableAttribute("y","actual_max").getAttributeFloat();
+    xmax[2]=cm2m*kameleon.getVariableAttribute("z","actual_max").getAttributeFloat();
+    // close file
+    kameleon.close();
+  }
+  else
+    exit(__LINE__, __FILE__, "ERROR: couldn't open Kameleon file");
+}
+
+void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+
+  static ccmc::Kameleon kameleon;
+  //  create interpolator
+  static ccmc::Interpolator *interpolator;//=kameleon.createNewInterpolator();
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+
+    //open the file
+
+    long status = kameleon.open(fname);
+    if(status != ccmc::FileReader::OK)
+      exit(__LINE__, __FILE__, "ERROR: could'nt open Kameleon file");
+    //allocate the interpolator and read the data file
+    //    lfm=new ccmc::LFM;
+    //lfm->open(fname);
+
+    // load variables
+    kameleon.loadVariable("p");
+    kameleon.loadVariable("rho");
+    kameleon.loadVariable("bx");
+    kameleon.loadVariable("by");
+    kameleon.loadVariable("bz");
+    kameleon.loadVariable("ux");
+    kameleon.loadVariable("uy");
+    kameleon.loadVariable("uz");
+
+    //  create interpolator
+    interpolator=kameleon.createNewInterpolator();
+    /*
+     * Load variables (pressure,density and e-field already loaded)
+     * It is necessary to load the variables prior to interpolating
+     */
+    //    lfm->loadVariable("bx");
+    //    lfm->loadVariable("by");
+    //    lfm->loadVariable("bz");
+    //    lfm->loadVariable("ux");
+    //    lfm->loadVariable("uy");
+    //    lfm->loadVariable("uz");
+
+    //    interpolator=new ccmc::LFMInterpolator(lfm);
+  }
+
+  //symbolic names of the interpolated variables
+  static const std::string bVariables[] = {"bx", "by", "bz"};
+  static const std::string eVariables[] = {"ex", "ey", "ez"};
+  static const std::string vVariables[] = {"ux", "uy", "uz"};
+
+  //perform the interpolation loop
+  int i,j,k,nd,idim;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  char *offset;
+
+  const int iMin=-_GHOST_CELLS_X_,iMax=_GHOST_CELLS_X_+_BLOCK_CELLS_X_-1;
+  const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
+  const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
+
+
+
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    double *xNodeMin=startNode->xmin;
+    double *xNodeMax=startNode->xmax;
+    double x[3],T,n,p;
+
+    for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
+      //the interpolation location
+      x[0]=xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i);
+      x[1]=xNodeMin[1]+(xNodeMax[1]-xNodeMin[1])/_BLOCK_CELLS_Y_*(0.5+j);
+      x[2]=xNodeMin[2]+(xNodeMax[2]-xNodeMin[2])/_BLOCK_CELLS_Z_*(0.5+k);
+
+      //transfor the coordinated into the LFM frame
+      for (idim=0;idim<3;idim++) x[idim]/=_RADIUS_(_EARTH_);
+
+      //locate the cell
+      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
+      offset=CenterNode->GetAssociatedDataBufferPointer();
+
+      //save the interpolated values
+      for (idim=0;idim<3;idim++) {
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))=interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset))=interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))=interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
+      }
+
+      p=interpolator->interpolate("p",x[0],x[1],x[2]);
+      n=interpolator->interpolate("rho",x[0],x[1],x[2])/PlasmaSpeciesAtomicMass;
+      T=(n>0.0) ? p/(n*Kbol) : 0.0;
+
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=p;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=n;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=T;
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) LoadDataFile(fname,startNode->downNode[nDownNode]);
+  }
+
+
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    //de-allocate the interpolation procedure
+    //delete lfm;
+    delete interpolator;
+
+    interpolator=NULL;
+
+    //close file
+    kameleon.close();
+    std::cout << "Kameleon file "<< fname << " was loaded successfully\n";
+  }
+}
+
+
 void PIC::CPLR::DATAFILE::KAMELEON::LFM::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
   ccmc::Kameleon kameleon;
 
@@ -119,18 +252,18 @@ void PIC::CPLR::DATAFILE::KAMELEON::LFM::LoadDataFile(const char *fname,cTreeNod
 
       //save the interpolated values
       for (idim=0;idim<3;idim++) {
-        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::MagneticField))=interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::ElectricField))=interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
-        *(idim+(double*)(offset+PIC::CPLR::DF::Offset::PlasmaBulkVelocity))=interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))=interpolator->interpolate(bVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset))=interpolator->interpolate(eVariables[idim],x[0],x[1],x[2]);
+        *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaBulkVelocity.offset))=interpolator->interpolate(vVariables[idim],x[0],x[1],x[2]);
       }
 
       p=interpolator->interpolate("p",x[0],x[1],x[2]);
       n=interpolator->interpolate("rho",x[0],x[1],x[2])/PlasmaSpeciesAtomicMass;
       T=(n>0.0) ? p/(n*Kbol) : 0.0;
 
-      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaIonPressure))=p;
-      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaNumberDensity))=n;
-      *((double*)(offset+PIC::CPLR::DF::Offset::PlasmaTemperature))=T;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaIonPressure.offset))=p;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaNumberDensity.offset))=n;
+      *((double*)(offset+PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.offset))=T;
     }
   }
   else {
