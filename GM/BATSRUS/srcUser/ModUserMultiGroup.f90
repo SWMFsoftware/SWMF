@@ -184,7 +184,8 @@ contains
 
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: StateSemi_VGB, iTrImplFirst, iTrImplLast, &
-         UseSplitSemiImplicit, iVarSemi
+         UseSplitSemiImplicit
+    use ModSemiImplicit, ONLY: iVarSemi
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: cRadiationNo
     use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_

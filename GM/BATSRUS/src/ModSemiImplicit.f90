@@ -20,7 +20,7 @@ module ModSemiImplicit
   public:: advance_semi_impl     ! Advance semi implicit operator
 
   ! The index of the variable currently being solved for
-  integer:: iVarSemi
+  integer, public:: iVarSemi
 
   ! These arrays with *Semi_* and *SemiAll_* are indexed by compact iBlockSemi
   ! and have a single ghost cell at most.
