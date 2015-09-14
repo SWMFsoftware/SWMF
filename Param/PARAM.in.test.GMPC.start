@@ -156,12 +156,6 @@ so now rotate by tan(atan(3/4)- atan(4/3))) = -7/24
 T			UseDtFixed
 145.06125/132		DtFixed
 
-#PIC
-T                       UsePic
-2                       nGhostPic
-0                       nOverlapPic
-F			UseFileCoupling
-
 #PICUNIT
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi

@@ -144,12 +144,6 @@ dt    = 0.2*dtmax   = 1.066
 T			UseDtFixed
 640/500			DtFixed
 
-#PIC
-T                       UsePic
-2                       nGhostPic
-0                       nOverlapPic
-F			UseFileCoupling
-
 #PICUNIT
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi

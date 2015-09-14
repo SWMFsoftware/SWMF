@@ -34,12 +34,6 @@ T                       DoSaveIntial
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#PIC
-T                       UsePic
-2                       nGhostPic
-0                       nOverlapPic
-F			UseFileCoupling
-
 #PICUNIT
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
