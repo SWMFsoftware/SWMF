@@ -1950,7 +1950,7 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
               nfunc,multix,multiy,fixaspect,plotix,plotiy,$
               funcs,funcs1,funcs2,fmin,fmax,f
 ;===========================================================================
-  ;;; on_error,2
+  on_error,2
   common plot_param, plot_spacex, plot_spacey
   common plot_store, nplotstore, iplotstore, nfilestore, ifilestore, $
      plotstore, timestore
@@ -1987,8 +1987,10 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
   if !x.range[0] ne !x.range[1] then xrange=!x.range else $
      xrange=[min(xx),max(xx)]
-  if !y.range[0] ne !y.range[1] then yrange=!y.range else $
-     yrange=[min(yy),max(yy)]
+  if plotdim gt 1 then begin
+     if !y.range[0] ne !y.range[1] then yrange=!y.range else $
+        yrange=[min(yy),max(yy)]
+  endif
 
   ; Calculate plot spacing from number of plots per page (ppp) and charsize
   if !p.charsize eq 0.0 then !p.charsize=1.0
