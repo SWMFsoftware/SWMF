@@ -89,6 +89,8 @@ long int MarsIon::SourceProcesses::InjectParticles() {
   double *xCell,TimeCounter;
   int nInjectedParticles=0,newParticle;
 
+  static long int LastMeshModificationCounter=-1;
+
 
   double TheoreticalSourceRate=0.0,NumericalSourceRate=0.0,testSourceRate=0.0;
 
@@ -112,9 +114,10 @@ long int MarsIon::SourceProcesses::InjectParticles() {
 #endif
 
 
+
   //count the number of the blocks and the total source rate of all blocks on the current processor
-  int nThreadBlockNumber=0,nBlock;
-  double maxBlockInjectionRate=-1.0,TotalThreadSourceRate=0.0;
+  static int nThreadBlockNumber=0,nBlock;
+  static double maxBlockInjectionRate=-1.0,TotalThreadSourceRate=0.0;
 
   class cBlockInjectionTable {
   public:
@@ -126,38 +129,53 @@ long int MarsIon::SourceProcesses::InjectParticles() {
       block=NULL,node=NULL;
       TotalInjectionRate=0.0,MaxCellInjectionRate=-1.0;
     }
-  } *BlockInjectionTable=NULL;
+  };
 
-  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) nThreadBlockNumber++;
+  static cBlockInjectionTable *BlockInjectionTable=NULL;
 
 
-  BlockInjectionTable=new cBlockInjectionTable[nThreadBlockNumber];
+  if (LastMeshModificationCounter!=PIC::Mesh::mesh.nMeshModificationCounter) {
+    nThreadBlockNumber=0,maxBlockInjectionRate=-1.0,TotalThreadSourceRate=0.0;
+    LastMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
 
-  for (nBlock=0,node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread,nBlock++) {
-    BlockInjectionTable[nBlock].node=node;
-    BlockInjectionTable[nBlock].block=node->block;
+    //deallocate the table
+    if (BlockInjectionTable!=NULL) {
+      delete [] BlockInjectionTable;
+      BlockInjectionTable=NULL;
+    }
 
-    if (node->block!=NULL) {
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
-        double t=0.0;
+    //count the thread block number and allocate the block table
+    for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) nThreadBlockNumber++;
 
-        LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-        cell=BlockInjectionTable[nBlock].block->GetCenterNode(LocalCellNumber);
+    BlockInjectionTable=new cBlockInjectionTable[nThreadBlockNumber];
 
-        if (cell!=NULL) {
-          data=cell->GetAssociatedDataBufferPointer();
-          t=(*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight;
+    //collect the injection rate information
+    for (nBlock=0,node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread,nBlock++) {
+      BlockInjectionTable[nBlock].node=node;
+      BlockInjectionTable[nBlock].block=node->block;
 
-          BlockInjectionTable[nBlock].TotalInjectionRate+=t;
-          TotalThreadSourceRate+=t;
+      if (node->block!=NULL) {
+        for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++)  for (i=0;i<_BLOCK_CELLS_X_;i++) {
+          double t=0.0;
 
-          if (t>BlockInjectionTable[nBlock].MaxCellInjectionRate) BlockInjectionTable[nBlock].MaxCellInjectionRate=t;
+          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+          cell=BlockInjectionTable[nBlock].block->GetCenterNode(LocalCellNumber);
 
-          TheoreticalSourceRate+=t;
+          if (cell!=NULL) {
+            data=cell->GetAssociatedDataBufferPointer();
+            t=(*(double*)(data+Output::OplusSource::RateOffset))*cell->Measure/ParticleWeight;
+
+            BlockInjectionTable[nBlock].TotalInjectionRate+=t;
+            TotalThreadSourceRate+=t;
+
+            if (t>BlockInjectionTable[nBlock].MaxCellInjectionRate) BlockInjectionTable[nBlock].MaxCellInjectionRate=t;
+
+            TheoreticalSourceRate+=t;
+          }
         }
-      }
 
-      if (BlockInjectionTable[nBlock].TotalInjectionRate>maxBlockInjectionRate) maxBlockInjectionRate=BlockInjectionTable[nBlock].TotalInjectionRate;
+        if (BlockInjectionTable[nBlock].TotalInjectionRate>maxBlockInjectionRate) maxBlockInjectionRate=BlockInjectionTable[nBlock].TotalInjectionRate;
+      }
     }
   }
 
@@ -249,9 +267,6 @@ long int MarsIon::SourceProcesses::InjectParticles() {
 
     nInjectedParticles++;
   }
-
-
-  delete [] BlockInjectionTable;
 
   //collect the injection data from all processors
   double t;
