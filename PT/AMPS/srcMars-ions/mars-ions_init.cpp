@@ -26,8 +26,8 @@ double localResolution(double *x) {
 
 //the local time step
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double CellSize=startNode->GetCharacteristicCellSize();;
-  double CharacteristicSpeed=1.0E3;
+  double CellSize=startNode->GetCharacteristicCellSize();
+  double CharacteristicSpeed=1.0E5;
 
   return 0.3*CellSize/CharacteristicSpeed;
 }
