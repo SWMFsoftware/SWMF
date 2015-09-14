@@ -88,12 +88,6 @@ long int MarsIon::SourceProcesses::InjectParticles() {
   double IonTemperature,*IonBulkVelocity,IonSourceRate;
   double *xCell,TimeCounter;
   int nInjectedParticles=0,newParticle;
-
-  static long int LastMeshModificationCounter=-1;
-
-
-  double TheoreticalSourceRate=0.0,NumericalSourceRate=0.0,testSourceRate=0.0;
-
   double ParticleWeight,LocalTimeStep,ParticleWeightCorrection;
   double v[3],x[3];
 
@@ -118,6 +112,7 @@ long int MarsIon::SourceProcesses::InjectParticles() {
   //count the number of the blocks and the total source rate of all blocks on the current processor
   static int nThreadBlockNumber=0,nBlock;
   static double maxBlockInjectionRate=-1.0,TotalThreadSourceRate=0.0;
+  static long int LastMeshModificationCounter=-1;
 
   class cBlockInjectionTable {
   public:
@@ -169,8 +164,6 @@ long int MarsIon::SourceProcesses::InjectParticles() {
             TotalThreadSourceRate+=t;
 
             if (t>BlockInjectionTable[nBlock].MaxCellInjectionRate) BlockInjectionTable[nBlock].MaxCellInjectionRate=t;
-
-            TheoreticalSourceRate+=t;
           }
         }
 
@@ -262,24 +255,8 @@ long int MarsIon::SourceProcesses::InjectParticles() {
     memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
     _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(newParticle,block->GetLocalTimeStep(_O_PLUS_SPEC_)*rnd(),node,true);
-
-    NumericalSourceRate+=ParticleWeight/LocalTimeStep;
-
     nInjectedParticles++;
   }
-
-  //collect the injection data from all processors
-  double t;
-
-  t=TheoreticalSourceRate*ParticleWeight*LocalTimeStep;
-  MPI_Allreduce(&t,&TheoreticalSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-
-  t=NumericalSourceRate*LocalTimeStep;
-  MPI_Allreduce(&t,&NumericalSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-
-
-  t=testSourceRate*LocalTimeStep;
-  MPI_Allreduce(&t,&testSourceRate,1,MPI_DOUBLE,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
   return nInjectedParticles;
 }
