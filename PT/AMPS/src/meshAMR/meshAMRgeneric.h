@@ -1026,6 +1026,9 @@ public:
   cAcceptBlockFunc accepltTreeNodeFunction;
   void SetAcceptBlockFunction(cAcceptBlockFunc t) {accepltTreeNodeFunction=t;}
 
+  //the counter of any mesh modifications or rebalancing 
+  unsigned long int nMeshModificationCounter; 
+
   //limit of the accuracy of calculation of the mesh parameters
   double EPS;
 
@@ -1323,7 +1326,7 @@ public:
 
   //set the mesh name
   void setMeshName(const char *str) {
-    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
+    nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
     sprintf(MeshName,"%s",str);
 //    generateMeshSignature();
@@ -1338,7 +1341,7 @@ public:
     time_t TimeValue=time(0);
     tm *ct=localtime(&TimeValue);
 
-    meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
+    nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
     sprintf(mname,"noname.%i-%i-%i.AMR.mesh",ct->tm_mon+1,ct->tm_mday,ct->tm_year+1900);
     setMeshName(mname);
@@ -1593,7 +1596,7 @@ public:
     GetAMRnodeID(rootTree->AMRnodeID,rootTree);
 
 
-    meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
+    nMeshModificationCounter++,meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
 
     rootTree->upNode=NULL;
     rootTree->block=rootBlock;
@@ -1757,6 +1760,9 @@ public:
 
      //the counter of the load re-balancing operations
      nParallelListRedistributions=0;
+
+     //the counter of any mesh modifications or rebalancing 
+     nMeshModificationCounter=0;
 
      //set up the tree and the root block
      rootBlock=NULL;
@@ -3383,7 +3389,7 @@ if (startNode->Temp_ID==77) {
 
   //the block cannot be allocated twice AND the block's allocation must be permitted
   if ((AllowBlockAllocation==false)||(startNode->block!=NULL)) return;
-  meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
+  nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
 
 
   //collect all nodes that can intersect 'startNode'
@@ -3873,7 +3879,7 @@ void DeallocateBlock(cTreeNodeAMR<cBlockAMR> *startNode) {
 
   //the block cannot be deallocated twice
   if (startNode->block==NULL) return;
-  meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
+  nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CountMeshElements=true;
 
 #if _MESH_DIMENSION_ == 3
   static const int iCornerMin=-_GHOST_CELLS_X_,iCornerMax=_BLOCK_CELLS_X_+_GHOST_CELLS_X_;
@@ -3949,7 +3955,7 @@ if (startNode->Temp_ID==1169) {
   if (upNode==NULL) return false;
 
   //reset the mesh modified flag 
-  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
+  nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
   //check if the neib nodes need to be removed first
   //1. check the face neibbours
@@ -4310,7 +4316,7 @@ if (startNode->Temp_ID==44) {
 
 
    if (startNode->RefinmentLevel>=_MAX_REFINMENT_LEVEL_) return false;
-   meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
+   nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
    //create the daugher blocks
    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //there is no daugher blocks
@@ -4583,7 +4589,7 @@ if (startNode->Temp_ID==15) {
 
 
   if ((startNode->RefinmentLevel>=_MAX_REFINMENT_LEVEL_)||(startNode->lastBranchFlag()!=_BOTTOM_BRANCH_TREE_)) return false;
-  meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
+  nMeshModificationCounter++,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true;
 
   //create the daugher blocks
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) { //there is no daugher blocks
@@ -9649,6 +9655,7 @@ if (TmpAllocationCounter==2437) {
 
     //increment the counter of the load redistributions
     nParallelListRedistributions++;
+    nMeshModificationCounter++;
 
     //calculate and normalized the load measure
     for (nLevel=0;nLevel<=_MAX_REFINMENT_LEVEL_;nLevel++) nResolutionLevelBlocks[nLevel]=0;
