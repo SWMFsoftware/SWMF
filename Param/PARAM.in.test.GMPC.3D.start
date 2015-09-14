@@ -50,10 +50,6 @@ T			UseNonConservative
 4			nK
 100			MinBlockALL
 
-EQUATION
-MHD with hyperbolic cleaning        NameEquation
-9                                   nVar
-
 #GRID
 32			nRootBlockX
 32			nRootBlockY
@@ -75,35 +71,9 @@ MHD with hyperbolic cleaning        NameEquation
 0.015			Bz
 0.000157080		p
 
-HYPERBOLICDIVB
-T                       UseHyperbolicDivb
-0.04                    SpeedHypDim
-0.1                     HypDecay
-
-#DIVB
-T                       UseDivbSource
-F                       UseDivbDiffusion
-F                       UseProjection
-F                       UseConstrainB
-
-#PIC
-T                       UsePic
-2                       nGhostPic
-0                       nOverlapPic
-F			UseFileCoupling
-
 #PICUNIT
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
-
-PICREGION
-1                       nPicRegion
--12.8  	                xMinCut
- 12.6                   xMaxCut
--6.4			yMinCut
-+6.3                    yMaxCut
-0.2                     DxPic
-0.1                     DyPic
 
 #PICREGION
 1                       nPicRegion
@@ -153,7 +123,6 @@ minmod			TypeLimiter
 2                       nStage
 0.1                     CflExpl
 
-
 HALLRESISTIVITY
 T			UseHallResist (rest of parameters read only if true)
 0.282095		HallFactor  (m/e = 1/sqrt(4*pi))
@@ -196,7 +165,6 @@ z=0 VAR idl_ascii        PlotString
 rho ux uy uz bx by bz p jx jy jz absdivb
 g
 
-
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP PC ---------------------------------------------------------------
@@ -223,7 +191,6 @@ PC/plots		SaveDirName
 0			SatelliteOutputCycle
 
 #END_COMP PC -----------------------------------------------------------------
-
 
 #STOP
 4			MaxIteration
