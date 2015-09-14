@@ -100,8 +100,10 @@ namespace CCMC {
       memcpy(E,Exosphere::swE_Typical,3*sizeof(double));
       memcpy(B,Exosphere_swB_Typical,3*sizeof(double));
 #else 
-      PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
-      PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
+      startNode=PIC::Mesh::Search::FindBlock(x_LOCAL);
+      PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+      PIC::CPLR::GetBackgroundElectricField(E);
+      PIC::CPLR::GetBackgroundMagneticField(B);
 #endif
 
       elCharge/=PIC::MolecularData::GetMass(spec);

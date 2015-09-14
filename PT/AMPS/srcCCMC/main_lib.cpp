@@ -50,7 +50,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
   case _O2_SPEC_:
     CharacteristicSpeed=1.0e4;
     break;
-  case _O2PLUS_SPEC_:
+  case _O2_PLUS_SPEC_:
     CharacteristicSpeed=1.0e6;
     break;
   default:
@@ -217,9 +217,11 @@ void TotalParticleAcceleration(double *accl,int spec,long int ptr,double *x,doub
 
     CenterNode=startNode->block->GetCenterNode(nd);
     offset=CenterNode->GetAssociatedDataBufferPointer();
-
-    PIC::CPLR::GetBackgroundMagneticField(B,x_LOCAL,nd,startNode);
-    PIC::CPLR::GetBackgroundElectricField(E,x_LOCAL,nd,startNode);
+    
+    startNode=PIC::Mesh::Search::FindBlock(x_LOCAL);
+    PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+    PIC::CPLR::GetBackgroundMagneticField(B);//,x_LOCAL,nd,startNode);
+    PIC::CPLR::GetBackgroundElectricField(E);//,x_LOCAL,nd,startNode);
 
     double ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
     double mass=PIC::MolecularData::GetMass(spec);
@@ -254,8 +256,8 @@ void amps_init() {
 	}
 
 	//read the domain size from the data file
-	PIC::CPLR::CCMC::LFM::GetDomainLimits(xmin,xmax,"/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
-
+	//	PIC::CPLR::DATAFILE::KAMELEON::LFM::GetDomainLimits(xmin,xmax,"/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
+	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
 	for (idim=0;idim<3;idim++) {
 	  double xCenter,dx;
 
@@ -308,7 +310,8 @@ void amps_init() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::CCMC::LFM::LoadDataFile("/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
+	//	PIC::CPLR::DATAFILE::KAMELEON::LFM::LoadDataFile("/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
+	PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
 
 	//init the PIC solver
 	PIC::Init_AfterParser();
