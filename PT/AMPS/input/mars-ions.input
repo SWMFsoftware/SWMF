@@ -1,6 +1,6 @@
 
 #main
-SpeciesList=C
+SpeciesList=o_plus 
 
 DebuggerMode=on !on,off
 ForceRepeatableSimulationPath=off ! on,off 
@@ -28,7 +28,7 @@ InputDirectory=InputData
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
-TimeStepMode=SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+TimeStepMode=SpeciesGlobalTimeStep !!SpeciesLocalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight !SingleGlobalParticleWeight, SpeciesGlobalParticleWeight, SingleLocalParticleWeight, SpeciesLocalParticleWeight
 ParticleWeightCorrectionMode=on !on,off
 
@@ -45,7 +45,7 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=10000
+  InitialSampleLength=800
   TestRunTotalIteration=50
 
 ! ReferenceInjectionParticleNumber=200
@@ -73,6 +73,8 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   define _PIC_COUPLER_MODE_ _PIC_COUPLER_MODE__DATAFILE_ 
   define _PIC_COUPLER_DATAFILE_READER_MODE_ _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_ 
 
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
+
   
 #endGeneral
 
@@ -85,6 +87,8 @@ CouplerMode=file(tecplot) !!!off !!!ices !!off, ices, swmf
   SPICE=off 
   addPhysicalModelHeader=mars-ions.h
 
+
+  Source:DefineSourceID=PHOTO_IONIZATION
   
 #endblock
 
