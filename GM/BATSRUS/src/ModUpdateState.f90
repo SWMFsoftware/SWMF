@@ -26,6 +26,7 @@ subroutine update_states_MHD(iStage,iBlock)
   use BATL_lib, ONLY: CellVolume_GB
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
   use ModViscosity, ONLY: UseArtificialVisco, alphaVisco
+  use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
   
   implicit none
 
@@ -189,7 +190,20 @@ subroutine update_states_MHD(iStage,iBlock)
   end if
 
   ! The point implicit update and other stuff below are only done in last stage
-  if(iStage < nStage) RETURN
+  if(iStage < nStage)then
+     if(use_buffer_grid())then
+        !\
+        ! Do not update solution in the domain covered by the buffer grid
+        !/
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
+           State_VGB(:,i,j,k,iBlock) = &
+                StateOld_VCB(:,i,j,k,iBlock)
+           Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
+        end do; end do; end do
+     end if
+     RETURN
+  end if
 
   ! Add point implicit user or multi-ion source terms
   if (UsePointImplicit .and. UsePointImplicit_B(iBlock))then
@@ -219,7 +233,14 @@ subroutine update_states_MHD(iStage,iBlock)
 
 
   if(UseStableImplicit) call deduct_expl_source
-
+  if(use_buffer_grid())then
+     do k=1,nK; do j=1,nJ; do i=1,nI
+        if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
+        State_VGB(:,i,j,k,iBlock) = &
+             StateOld_VCB(:,i,j,k,iBlock)
+        Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
+     end do; end do; end do
+  end if
   if(DoTestMe)write(*,*) NameSub, ' final state=', &
        State_VGB(VarTest,iTest,jTest,kTest,iBlock), &
        Energy_GBI(iTest,jTest,kTest,iBlock,:)
