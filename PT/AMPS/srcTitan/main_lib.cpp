@@ -99,18 +99,24 @@ double localResolution(double *x) {
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   double CellSize;
+  double CharacteristicSpeed;
 
-  double CharacteristicSpeed_N2=5.0e3;
-
-  if (spec==_O_PLUS_SPEC_) CharacteristicSpeed_N2=1000.0E3;
-
-//  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
+  switch (spec) {
+  case _N2_SPEC_: case _CH4_SPEC_:
+    CharacteristicSpeed=1.0E3;
+    break;
+  case _H2_SPEC_:
+    CharacteristicSpeed=2.0E3;
+    break;
+  case _O_PLUS_SPEC_:
+    CharacteristicSpeed=2.0E6;
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the species is unknown");
+  }
 
 	CellSize=startNode->GetCharacteristicCellSize();
-	//  cout << "time step s" << 0.1*CellSize/CharacteristicSpeed_N2 << endl;
-  return 0.1*CellSize/CharacteristicSpeed_N2;
-
-
+  return 0.5*CellSize/CharacteristicSpeed;
 }
 
 
@@ -1036,10 +1042,9 @@ t=1.0;
     sxform_c("IAU_Titan","MSGR_MSO",Titan::OrbitalMotion::et,Titan::OrbitalMotion::IAU_to_SO_TransformationMartix);
 #endif
 
-
-
     //make the time advance
      PIC::TimeStep();
+
 }
 
 
