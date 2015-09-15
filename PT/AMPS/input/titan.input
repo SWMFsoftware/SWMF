@@ -50,7 +50,7 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
-  InitialSampleLength=10
+  InitialSampleLength=100
 
 
 ! ReferenceInjectionParticleNumber=200
@@ -68,6 +68,8 @@ CouplerMode=file(tecplot) !ices !!off, ices, swmf
  MaxSampledTrajectoryNumber=1000
 
  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+ 
+ !define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 
 #endGeneral
 
