@@ -269,6 +269,23 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
       accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
     }
 
+    //the Lorentz force
+    double ElectricCharge, mass,B[3],E[3];
+
+    ElectricCharge=PIC::MolecularData::GetElectricCharge(spec);
+    mass          =PIC::MolecularData::GetMass(spec);
+
+    if (ElectricCharge!=0.0) {
+      PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+      PIC::CPLR::GetBackgroundMagneticField(B);
+      PIC::CPLR::GetBackgroundElectricField(E);
+
+      accl_LOCAL[0]+=ElectricCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/mass;
+      accl_LOCAL[1]+=ElectricCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/mass;
+      accl_LOCAL[2]+=ElectricCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/mass;
+    }
+
+
 #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
     //correct the gravity acceleration: accout for solar gravity of the particle location
     double rSun2Moon,rSun2Particle;
@@ -303,7 +320,7 @@ for (int i=0;i<3;i++)  v_LOCAL_IAU_OBJECT[i]=-ExternalNormal[i]*1.0E3;
     accl_LOCAL[0]+=aCen[0]+aCorr[0];
     accl_LOCAL[1]+=aCen[1]+aCorr[1];
     accl_LOCAL[2]+=aCen[2]+aCorr[2];
-#endif
+#endif //_EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
 
     //copy the local value of the acceleration to the global one
     memcpy(accl,accl_LOCAL,3*sizeof(double));
