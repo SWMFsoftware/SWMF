@@ -695,7 +695,7 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
              headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
              rBody,error
 
-  on_error,2
+  ;;;on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
@@ -761,6 +761,33 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
         isort = sort( x(*,*,0) + factor*x(*,*,1) )
         x(*,0,*) = x(isort,0,*)
         w(*,0,*) = w(isort,0,*)
+
+        ; average points with identical coordinates
+        i = 0
+        while i lt nx(0)-1 do begin
+           wsum = w(i,0,*)
+           j = i+1
+           while total(abs(x(j,0,*) - x(i,0,*))) eq 0 do begin
+              wsum += w(j,0,*)
+              j++
+              if j eq nx(0) then break
+           endwhile
+           if j gt i+1 then begin
+              ; Overwrite index i with average
+              w(i,0,*) = wsum/(j-i)
+              ; cut out i+1..j-1 elements
+              if j lt nx(0) then begin
+                 w = [w(0:i,0,*), w(j:*,0,*)]
+                 x = [x(0:i,0,*), x(j:*,0,*)]
+              endif else begin
+                 w = w(0:i,0,*)
+                 x = x(0:i,0,*)
+              endelse
+              nx(0) = n_elements(x(*,0,0))
+           endif
+           i++
+        endwhile
+
      endif
 
      if ndim eq 1 and gencoord then begin
@@ -768,9 +795,36 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
         isort = sort(x)
         x     = x(isort)
         w     = w(isort,*)
-     endif
 
+        ; average points with identical coordinates
+        i = 0
+        while i lt nx(0)-1 do begin
+           wsum = w(i,*)
+           j = i+1
+           while x(j) eq x(i) do begin
+              wsum += w(j,*)
+              j++
+              if j eq nx(0) then break
+           endwhile
+           if j gt i+1 then begin
+              ; Overwrite index i with average
+              w(i,*) = wsum/(j-i)
+              ; cut out i+1..j-1 elements
+              if j lt nx(0) then begin
+                 w = [w(0:i,*), w(j:*,*)]
+                 x = [x(0:i), x(j:*)]
+              endif else begin
+                 w = w(0:i,*)
+                 x = x(0:i)
+              endelse
+              nx(0) = n_elements(x)
+           endif
+           i++
+        endwhile
+
+     endif
   endelse
+
 end
 
 ;=============================================================================
