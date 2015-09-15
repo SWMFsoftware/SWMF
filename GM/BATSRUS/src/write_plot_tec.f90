@@ -43,7 +43,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   character (len=22) :: textNandT
   character (len=23) :: textDateTime0,textDateTime
   character (len=80) :: format
-  character(len=80) :: stmp
+  character(len=200) :: stmp
 
   integer :: iTime0_I(7),iTime_I(7)
 
