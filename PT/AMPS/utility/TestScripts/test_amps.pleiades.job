@@ -19,6 +19,7 @@
 # run AMPS tests compiled with GNU
 cd GNU/AMPS
 module purge
+module load gcc/4.9.2
 module load mpi-openmpi/1.6.5-gcc
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..

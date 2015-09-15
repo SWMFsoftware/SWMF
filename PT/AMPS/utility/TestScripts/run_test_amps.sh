@@ -86,6 +86,7 @@ cd ..
 #module purge;                               <#
 
 #>Pleiades ####################################
+#module load gcc/4.9.2                        #
 #module load mpi-openmpi/1.6.5-gcc;          <#
 
 #>GNUAll ######################################
