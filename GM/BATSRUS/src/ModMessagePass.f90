@@ -15,7 +15,7 @@ contains
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
     use ModProcMH
     use ModMain, ONLY : nBlock, Unused_B, &
-         TypeBc_I, time_loop, &
+         time_loop, &
          UseConstrainB, UseProjection, &
          nOrder, nOrderProlong, optimize_message_pass, &
          UseHighResChange
@@ -181,7 +181,7 @@ contains
             .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
           if (far_field_BCs_BLK(iBlock)) call set_cell_boundary( &
                nG, iBlock, nVar, State_VGB(:,:,:,:,iBlock))
-          if(time_loop.and. any(TypeBc_I=='buffergrid'))&
+          if(time_loop.and.use_buffer_grid())&
                call fill_in_from_buffer(iBlock)
        end if
 
@@ -194,12 +194,22 @@ contains
     if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine exchange_messages
-
-  !============================================================================
-  subroutine fill_in_from_buffer(iBlock)
-  
+  !===============================
+  logical function use_buffer_grid()
+    use ModMain, ONLY: TypeBc_I
+    use_buffer_grid = any(TypeBc_I=='buffergrid')
+  end function use_buffer_grid
+  !==============================
+  logical function is_buffered_point(i,j,k,iBlock)
     use ModGeometry,ONLY: R_BLK
     use ModMain,    ONLY: BufferMin_D, BufferMax_D
+    integer, intent(in):: i, j, k, iBlock
+    !------------
+    is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) .and. &
+            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
+  end function is_buffered_point
+  !============================================================================
+  subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use ModProcMH,  ONLY: iProc
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
@@ -218,8 +228,7 @@ contains
     end if
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       if(  R_BLK(i,j,k,iBlock) > BufferMax_D(1) .or. &
-            R_BLK(i,j,k,iBlock) < BufferMin_D(1))&
+       if(.not.is_buffered_point(i, j, k, iBlock))&
             CYCLE
 
        ! Get interpolated values from buffer grid:
