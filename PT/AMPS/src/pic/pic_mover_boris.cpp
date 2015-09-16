@@ -3,6 +3,8 @@
 
 #include "pic.h"
 #include "Exosphere.dfn"
+#include "Exosphere.h"
+
 
 void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
   /* function finds acceleration and splits into a simple and gyroscopic parts
