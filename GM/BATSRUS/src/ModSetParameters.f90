@@ -111,6 +111,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
   use ModConserveFlux, ONLY: DoConserveFlux
+  use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, SpeciesFirst_, &
+       SpeciesLast_
   use BATL_lib, ONLY: Dim2_, Dim3_, create_grid, set_high_geometry
   implicit none
 
@@ -163,6 +165,8 @@ subroutine MH_set_parameters(TypeAction)
   character (len=lStringLine) :: NameUserModuleRead='?'
   real                        :: VersionUserModuleRead=0.0
   integer :: iSession, iPlotFile, iVar, iDim
+
+  integer :: iSpecies
 
   character(len=10) :: NamePrimitive_V(nVar)
 
@@ -1733,19 +1737,25 @@ subroutine MH_set_parameters(TypeAction)
         call read_lookup_table_param
 
      case("#PLASMA")
-        do iFluid = IonFirst_, nFluid
-           call read_var('MassFluid', MassFluid_I(iFluid))
-        end do
-        MassIon_I = MassFluid_I(IonFirst_:IonLast_)
-        do iFluid = 1, nIonFluid
-           call read_var('ChargeIon', ChargeIon_I(iFluid))
-        end do
-
+        if(UseMultiSpecies) then
+           do iSpecies = SpeciesFirst_, SpeciesLast_
+              call read_var('MassSpecies', MassSpecies_V(iSpecies))
+           enddo           
+        else
+           do iFluid = IonFirst_, nFluid
+              call read_var('MassFluid', MassFluid_I(iFluid))
+           end do
+           MassIon_I = MassFluid_I(IonFirst_:IonLast_)
+           do iFluid = 1, nIonFluid
+              call read_var('ChargeIon', ChargeIon_I(iFluid))
+           end do
+        endif
+        
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
         ElectronPressureRatio = ElectronTemperatureRatio
 
         !averageioncharge is only useful when there is only one ion
-        if(nIonFluid==1)then  
+        if(nIonFluid==1 .and. .not. UseMultiSpecies)then  
            AverageIonCharge = ChargeIon_I(1)
            ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
         end if
