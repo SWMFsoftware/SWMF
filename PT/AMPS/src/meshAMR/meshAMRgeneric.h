@@ -8711,7 +8711,7 @@ nMPIops++;
     SaveCenterNodeAssociatedData(fNameBase,NULL,-1,NULL);
   }
 
-  void LoadCenterNodeAssociatedData(const char *fNameBase, int *LoadVariableOffset, int nLoadVariables,cTreeNodeAMR<cBlockAMR>  *node=NULL) {
+  void LoadCenterNodeAssociatedData(const char *fNameBase, const char* DataFilePath, int *LoadVariableOffset, int nLoadVariables,cTreeNodeAMR<cBlockAMR>  *node=NULL) {
     static FILE *fData=NULL;
     static int SavedDataLength;
 
@@ -8719,8 +8719,14 @@ nMPIops++;
       node=rootTree;
 
       //open the file
-      char fname[400];
-      sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+      char fname[600];
+
+      if (DataFilePath==NULL) {
+        sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+      }
+      else {
+        sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",DataFilePath,getMeshSignature(),fNameBase);
+      }
 
       fData=fopen(fname,"r");
 
@@ -8798,7 +8804,7 @@ nMPIops++;
       }
     }
     else {
-      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeAssociatedData(fNameBase,LoadVariableOffset,nLoadVariables,node->downNode[nDownNode]);
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeAssociatedData(fNameBase,DataFilePath,LoadVariableOffset,nLoadVariables,node->downNode[nDownNode]);
     }
 
     if (node==rootTree) {
@@ -8806,16 +8812,27 @@ nMPIops++;
     }
   }
 
+  void LoadCenterNodeAssociatedData(const char *fNameBase,const char* DataFilePath) {
+    LoadCenterNodeAssociatedData(fNameBase,DataFilePath,NULL,-1,NULL);
+  }
+
   void LoadCenterNodeAssociatedData(const char *fNameBase) {
-    LoadCenterNodeAssociatedData(fNameBase,NULL,-1,NULL);
+    LoadCenterNodeAssociatedData(fNameBase,NULL);
   }
 
   //check whether the associated data file exists
-  bool AssociatedDataFileExists(const char *fNameBase) {
+  bool AssociatedDataFileExists(const char *fNameBase,const char* DataFilePath) {
     FILE *fData=NULL;
     char fname[400];
 
-    sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+    if (DataFilePath==NULL) {
+      sprintf(fname,"amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",getMeshSignature(),fNameBase);
+    }
+    else {
+      sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeAssociatedData.bin",DataFilePath,getMeshSignature(),fNameBase);
+    }
+
+
     fData=fopen(fname,"r");
 
     if (fData!=NULL) {
@@ -8824,6 +8841,10 @@ nMPIops++;
     }
 
     return false;
+  }
+
+  bool AssociatedDataFileExists(const char *fNameBase) {
+    return AssociatedDataFileExists(fNameBase,NULL);
   }
 
   //evaluate the total volume of the computational domain
