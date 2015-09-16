@@ -1,8 +1,0 @@
-This is the layout for running GM and PT
-
-Name First Last Stride
-======================
-#COMPONENTMAP
-GM       0 9999    1   
-PT       1 2       1  
-#END
