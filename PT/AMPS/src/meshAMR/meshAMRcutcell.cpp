@@ -546,6 +546,15 @@ void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname) {
 
 }
 
+
+void CutCell::ReadNastranSurfaceMeshLongFormat(const char *fname,const char *path) {
+  char fullname[STRING_LENGTH];
+
+  sprintf(fullname,"%s/%s",path,fname);
+  ReadNastranSurfaceMeshLongFormat(fullname);
+}
+
+
 //calcualte the size limit of the surface mesh
 void CutCell::GetSurfaceSizeLimits(double* xmin,double *xmax) {
   int idim;
