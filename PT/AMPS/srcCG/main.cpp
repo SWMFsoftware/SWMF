@@ -500,7 +500,7 @@ int main(int argc,char **argv) {
 
 
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.RMOC.bdf");
-  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf");
+  PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("SHAP5_stefano.bdf",PIC::UserModelInputDataPath);
   //PIC::Mesh::IrregularSurface::ReadNastranSurfaceMeshLongFormat("cg.Sphere.nas");
   PIC::Mesh::IrregularSurface::GetSurfaceSizeLimits(xmin,xmax);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation.dat",PIC::OutputDataFileDirectory);
@@ -521,7 +521,7 @@ int main(int argc,char **argv) {
 
 #if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
   //Computation of the gravity field for an irregular nucleus shape
-  nucleusGravity::readMesh_longformat("SHAP5_Volume.bdf");
+  nucleusGravity::readMesh_longformat("SHAP5_Volume.bdf",PIC::UserModelInputDataPath);
   nucleusGravity::setDensity(430);
 #endif   
 
@@ -545,7 +545,14 @@ int main(int argc,char **argv) {
 
   Comet::GetNucleusNastranInfo(CG);
 
-  for (int i=0;i<3;i++) xmin[i]=-450.0e3,xmax[i]=450.0e3;
+  for (int i=0;i<3;i++) {
+    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+      xmin[i]=-100.0e3,xmax[i]=100.0e3;
+    }
+    else {
+      xmin[i]=-450.0e3,xmax[i]=450.0e3;
+    }
+  }
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -557,13 +564,16 @@ int main(int argc,char **argv) {
   char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
   bool NewMeshGeneratedFlag=false;
 
+  char fullname[STRING_LENGTH];
+  sprintf(fullname,"%s/%s",PIC::UserModelInputDataPath,mesh);
+
   FILE *fmesh=NULL;
 
-  fmesh=fopen(mesh,"r");
+  fmesh=fopen(fullname,"r");
 
   if (fmesh!=NULL) {
     fclose(fmesh);
-    PIC::Mesh::mesh.readMeshFile(mesh);
+    PIC::Mesh::mesh.readMeshFile(fullname);
   }
   else {
     NewMeshGeneratedFlag=true;
@@ -582,7 +592,7 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.SetParallelLoadMeasure(InitLoadMeasure);
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
 
-  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+//  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
 
 
