@@ -1741,6 +1741,9 @@ subroutine MH_set_parameters(TypeAction)
            do iSpecies = SpeciesFirst_, SpeciesLast_
               call read_var('MassSpecies', MassSpecies_V(iSpecies))
            enddo           
+           do iSpecies = SpeciesFirst_, SpeciesLast_
+              call read_var('ChargeSpecies', ChargeSpecies_I(iSpecies))
+           enddo           
         else
            do iFluid = IonFirst_, nFluid
               call read_var('MassFluid', MassFluid_I(iFluid))

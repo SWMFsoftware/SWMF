@@ -6,7 +6,7 @@ module ModPhysics
   use ModNumConst, ONLY: cDegToRad
   use ModConst
   use ModMain, ONLY: body2_
-  use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_
+  use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
 
@@ -40,6 +40,9 @@ module ModPhysics
   real:: ElectronPressureRatio    = 0.0
   real:: PePerPtotal              = 0.0
   real:: IonMassPerCharge         = 1.0
+
+  ! Ion charge for multi-species.
+  real:: ChargeSpecies_I(SpeciesFirst_:SpeciesLast_) = 1.0
 
   ! thermal/total energy ratio limits for correctP
   real    :: Pratio_lo=0.01, Pratio_hi=0.1
