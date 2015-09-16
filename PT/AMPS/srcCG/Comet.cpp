@@ -574,10 +574,96 @@ ot defined");
  return nInjectedParticles;
 }
 
+double sphericalHarmonic(int i,double colatitude,double longitude){                                                                                                            
+  double res;                                                                                                                                                              
+                                                                                                                                                              
+  switch (i) {                                                                                                                                                              
+  case 0:                                                                                                                                                                     
+    res=1; //Y00                                                                                                                                                              
+    break;                                                                                                                                                                     
+  case 1:                                                                                                                                                                      
+    res=sin(colatitude)*sin(longitude);//Y1-1                                                                                                                                   
+    break;                                                                                                                                                                     
+  case 2:                                                                                                                                                                       
+    res=cos(colatitude);                                                                                                                                                       
+    break;                                                                                                                                                                     
+  case 3:                                                                                                                                                                      
+    res=sin(colatitude)*cos(longitude);//Y11                                                                                                                                    
+    break;                                                                                                                                                                     
+  case 4:                                                                                                                                                                       
+    res=pow(sin(colatitude),2.0)*sin(2*longitude);//Y2-2                                                                                                                       
+    break;                                                                                                                                                                      
+  case 5:                                                                                                                                                                       
+    res=cos(colatitude)*sin(colatitude)*sin(longitude);//Y2-1                                                                                                                   
+    break;                                                                                                                                                                      
+  case 6:                                                                                                                                                                      
+    res=3*pow(cos(colatitude),2.0)-1.0;//Y20                                                                                                                                    
+    break;                                                                                                                                                                      
+  case 7:                                                                                                                                                                     
+    res=cos(colatitude)*sin(colatitude)*cos(longitude);//Y21                                                                                                                    
+    break;                                                                                                                                                                     
+  case 8:                                                                                                                                                                       
+    res=pow(sin(colatitude),2.0)*cos(2*longitude);//Y22                                                                                                                         
+    break;                                                                                                                                                                     
+  case 9:                                                                                                                                                                       
+    res=pow(sin(colatitude),3.0)*sin(3*longitude);//Y3-3                                                                                                                       
+    break;                                                                                                                                                                      
+  case 10:                                                                                                                                                                      
+    res=pow(sin(colatitude),2.0)*cos(colatitude)*sin(2*longitude);//Y3-2                                                                                                        
+    break;                                                                                                                                                                      
+  case 11:                                                                                                                                                                     
+    res=5*(pow(cos(colatitude),2.0)-1)*sin(colatitude)*sin(longitude);//Y3-1                                                                                                   
+    break;                                                                                                                                                                      
+  case 12:                                                                                                                                                                      
+    res=5*pow(cos(colatitude),3.0)-3*cos(colatitude);//Y30                                                                                                                     
+    break;                                                                                                                                                                      
+  case 13:                                                                                                                                                                      
+    res=5*(pow(cos(colatitude),2.0)-1)*sin(colatitude)*cos(longitude);//Y31                                                                                                     
+    break;                                                                                                                                                                      
+  case 14:                                                                                                                                                                      
+    res=pow(sin(colatitude),2.0)*cos(colatitude)*cos(2*longitude);//Y32                                                                                                         
+    break;
+  case 15:
+    res=pow(sin(colatitude),3.0)*cos(3*longitude);//Y33                                                                                                                         
+    break;
+  case 16:
+    res=pow(sin(colatitude),4.0)*sin(4*longitude);//Y4-4                                                                                                                        
+    break;
+  case 17:
+    res=pow(sin(colatitude),3.0)*cos(colatitude)*sin(3*longitude);//Y4-3                                                                                                        
+    break;
+  case 18:
+    res=pow(sin(colatitude),2.0)*(7*pow(cos(colatitude),2.0)-1)*sin(2*longitude);//Y4-2                                                                                         
+    break;
+  case 19:
+    res=sin(colatitude)*(7*pow(cos(colatitude),3.0)-3*cos(colatitude))*sin(longitude);//Y4-1                                                                                    
+    break;
+  case 20:
+    res=35*pow(cos(colatitude),4.0)-30*pow(cos(colatitude),2.0)+3;//Y40                                                                                                         
+    break;
+  case 21:
+    res=sin(colatitude)*(7*pow(cos(colatitude),3.0)-3*cos(colatitude))*cos(longitude);//Y41                                                                                     
+    break;
+  case 22:
+    res=pow(sin(colatitude),2.0)*(7*pow(cos(colatitude),2.0)-1)*cos(2*longitude);//Y42                                                                                          
+    break;
+  case 23:
+    res=pow(sin(colatitude),3.0)*cos(colatitude)*cos(3*longitude);//Y43                                                                                                         
+    break;
+  case 24:
+    res=pow(sin(colatitude),4.0)*cos(4*longitude);//Y44                                                                                                                         
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: order of spherical Harmonic too high, not implemented yet");
+  }
+  return res;
+}
+
+
 double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   double rSphere=1980,c=0.0,X=0.0,totalProductionRate=0.0;
-  double positionSun[3],x[3],norm[3];
-  long int totalSurfaceElementsNumber,i;
+  double positionSun[3],x[3],norm[3],xMiddle[3],lattitude,factor=1.0;
+  long int totalSurfaceElementsNumber,i,j;
   double percentageActive=0.05;
   const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
   const double DistanceFromTheSun[6]={1.3,2.0,2.7,3.0,3.25,3.5};
@@ -587,41 +673,66 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
   int angle;
   double angletemp;
 
+  int nDev=25;
+
+  //Nucleus activity                                                                                                                                                        
+  const double  Activity[3][25]={
+    {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
+    {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
+    {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
+  };
+
 #if _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ ==  _BJORN_PRODUCTION_RATE_USERDEFINED_MODE_ANALYTICAL_
 
 #if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
   if (definedFluxBjorn[spec]==false) {
     if (spec==_H2O_SPEC_) {
-      double Qmin=2.5e17,Qmax=3.5e18;
+      double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*600;
       
       for (i=0;i<90;i++) {
-	angle=(double) i;
-	fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
+        angle=(double) i;
+        fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
       }
       
-      nightSideFlux[spec]=Qmin;  
+      nightSideFlux[spec]=Qmin;
     }
-    /*    else if (spec==_CO_SPEC_) {  
-      double Qmin=1.2e17,Qmax=2.5e17;
-      
+    else if (spec==_CO2_SPEC_) {
+      double Qmin=0.1/pow(HeliocentricDistance/_AU_,2.0)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,2.0)*600;
       for (i=0;i<90;i++) {
 	angle=(double) i;
 	fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
       }
-      
-      nightSideFlux[spec]=Qmin;  
+
+      nightSideFlux[spec]=Qmin;
+    }
+    /*    else if (spec==_CO_SPEC_) {
+      double Qmin=0.1/pow(HeliocentricDistance/_AU_,2.0)*600,Qmax=1.0/pow(HeliocentricDistance/_AU_,2.0)*600;
+      for (i=0;i<90;i++) {
+	angle=(double) i;
+	fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
+	}
+
+      nightSideFlux[spec]=Qmin;
       }*/
-    else if (spec==_CO2_SPEC_) {  
-    double Qmin=8.0e16,Qmax=2.0e17;
-    
-    for (i=0;i<90;i++) {
-      angle=(double) i;
-      fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
-    }
-    
-    nightSideFlux[spec]=Qmin;  
-    }else{
+
+      /*else  if (spec==_O2_SPEC_) {
+	double Qmin=0.02/pow(HeliocentricDistance/_AU_,4.2143229)*60,Qmax=1.0/pow(HeliocentricDistance/_AU_,4.2143229)*60;
+	
+	for (i=0;i<90;i++) {
+	  angle=(double) i;
+	  fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
+	}
+	
+	nightSideFlux[spec]=Qmin;
+	}*/
+  else{
       double Qmin=0.0,Qmax=0.0;
+      for (i=0;i<90;i++) {
+	angle=(double) i;
+	fluxBjorn[spec][i]=Qmin+(Qmax-Qmin)*cos(angle*Pi/180.0);
+      }
+      
+      nightSideFlux[spec]=Qmin;  
     }
   }
 #else //ONLY ONE SPECIES
@@ -697,14 +808,47 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
 	X+=pow(positionSun[idim]-x[idim],2.0);
       }
 
+      double colatitude,longitude;
+      double xCenter[3];
+
+      double factor=0.0;
+
+
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(xCenter);
+
+      colatitude=acos(xCenter[2]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]+xCenter[2]*xCenter[2]));
+      if (xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]==0.0) {
+	longitude=0.0;
+      }else if(xCenter[1]>0.0) {
+        longitude=acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]));
+      }else{
+        longitude=-acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]));
+      }
+
+
+      if (spec==_H2O_SPEC_) {
+	for (j=0;j<nDev;j++) factor+=Activity[0][j]*sphericalHarmonic(j,colatitude,longitude);
+      }
+      else if (spec==_CO2_SPEC_) {
+        for (j=0;j<nDev;j++) factor+=Activity[1][j]*sphericalHarmonic(j,colatitude,longitude);
+      }
+      /*      else if (spec==_CO_SPEC_) {                                                                              
+        for (j=0;j<nDev;j++) factor+=Activity[2][j]*sphericalHarmonic(j,colatitude,longitude);                         
+        }*/
+      else {
+	factor=0.0;
+      }
+
+      if (factor<0.0) factor=0.0; //take care of the few cases where the constraints of positive activity is violated  
+
       if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) { //Test Shadow
-	totalProductionRate+=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+	totalProductionRate+=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
       }else{
 	double angleProd;
 	int angleProdInt;
 	angleProd=acos(c/sqrt(X))*180/Pi;
 	angleProdInt=(int) angleProd;
-	totalProductionRate+=fluxBjorn[spec][angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+	totalProductionRate+=fluxBjorn[spec][angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
       }
     }
     if (probabilityFunctionDefinedNASTRAN[spec]==false && PIC::ThisThread==0)  printf("spec=%i totalProductionRate=%e flux(0)=%e nightsideFlux=%e \n",spec,totalProductionRate,fluxBjorn[spec][0],nightSideFlux[spec]);
@@ -758,14 +902,23 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
   const double NightSideProduction[6]={5.8/100.0,7.0/100.0,9.2/100.0,10.4/100.0,11.6/100.0,12.7/100.0};
-  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3];
+  double x[3],n[3],c=0.0,X,total,xmin,xmax,*x0Sphere,norm[3],xMiddle[3],factor=1.0,lattitude;
   static double positionSun[3];
   double HeliocentricDistance=3.5*_AU_;
   int nAzimuthalSurfaceElements,nAxisSurfaceElements,nAxisElement,nAzimuthalElement;
-  long int totalSurfaceElementsNumber,i;
+  long int totalSurfaceElementsNumber,i,j;
   double rSphere=1980.0;
   double area;
   double totalProdNightSide=0.0,totalProdDaySide=0.0,scalingFactor,scalingFactorDay,totalSurfaceInShadow=0.0,totalSurfaceInDayLight=0.0;
+
+  int nDev=25;
+
+  const double  Activity[3][25]={
+    {1.88802089096550e+18,-3.32193190779201e+18,2.16030831636854e+18,1.16303584760745e+18,-3.48031365453629e+17,-3.97108996341047e+18,2.32187315012071e+18,2.62881801954068e+18,-1.64152743317681e+17,5.48474318492987e+16,-8.81665110610612e+16,-6.71346849527855e+17,8.17079244731431e+17,2.10263858732877e+17,-7.31447243364394e+17,1.87954830493877e+16,1.59517599584823e+16,2.22312552878431e+17,-4.12879355040244e+17,-1.37905625912140e+18,1.83112475092734e+17,1.21579175185910e+18,-2.43316081589516e+17,-4.24836863227363e+17,2.11834459021013e+16},
+    {1.33147318596808e+16,-5.99325576797965e+15,-1.44574576415506e+16,-1.23844936447417e+16,-1.55154864153184e+15,-6.53313342291062e+15,1.07049479617418e+16,1.24456131751260e+16,-6.54238886353421e+15,1.12926642418814e+15,3.89604594220916e+15,-531055729734858,-398604759758765,-2.61684944191026e+15,1.41771647341777e+16,2.03706829667621e+15,-351642267595628,-1.40564295976192e+15,-2.04618374895345e+15,-6.09023703216270e+15,349833485542175,3.58729877013097e+15,-4.35629505817132e+15,-2.91104899991473e+15,1.36495458239451e+15},
+    {8.24876290734347e+15,-1.15993586348543e+16,3.36505486424125e+15,-6.76013519095671e+15,-314999862632954,-1.08780416335274e+16,7.95233182311777e+15,9.16964842516085e+15,-2.81955448931900e+15,1.21059245593790e+15,-1.25443670217006e+15,-2.11455950796835e+15,1.24045282758517e+15,-1.65067535925255e+15,-5.46839069247522e+15,1.09833316361053e+15,264156854265098,1.90947201360750e+15,-892524030311892,-2.10255875207271e+15,515450866463768,3.93817676318131e+15,-2.90479115840660e+15,-5.21185256041148e+15,955141456973813}
+  };
+
 
 
   if (probabilityFunctionDefinedNASTRAN[spec]==false) {
@@ -784,15 +937,50 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
         c+=norm[idim]*(positionSun[idim]-x[idim]);
         X+=pow(positionSun[idim]-x[idim],2.0);
       }
+
+      double colatitude,longitude;
+      double xCenter[3];
+
+      double factor=0.0;
+
+
+      CutCell::BoundaryTriangleFaces[i].GetCenterPosition(xCenter);
+
+      colatitude=acos(xCenter[2]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]+xCenter[2]*xCenter[2]));
+      if (xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]==0.0) {
+        longitude=0.0;
+      }else if(xCenter[1]>0.0) {
+        longitude=acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]));
+      }else{
+        longitude=-acos(xCenter[0]/sqrt(xCenter[0]*xCenter[0]+xCenter[1]*xCenter[1]));
+      }
+
+
+      if (spec==_H2O_SPEC_) {
+        for (j=0;j<nDev;j++) factor+=Activity[0][j]*sphericalHarmonic(j,colatitude,longitude);
+      }
+      else if (spec==_CO2_SPEC_) {
+        for (j=0;j<nDev;j++) factor+=Activity[1][j]*sphericalHarmonic(j,colatitude,longitude);
+      }
+      /*      else if (spec==_CO_SPEC_) {                                                                                                                              
+	for (j=0;j<nDev;j++) factor+=Activity[2][j]*sphericalHarmonic(j,colatitude,longitude);                                                                
+	}*/
+      else {
+        factor=0.0;
+      }
+
+      if (factor<0.0) factor=0.0; //take care of the few cases where the constraints of positive activity is violated                                                  
+
+
       if(c<0 || CutCell::BoundaryTriangleFaces[i].pic__shadow_attribute==_PIC__CUT_FACE_SHADOW_ATTRIBUTE__TRUE_) {
-        productionDistributionNASTRAN[spec][i]=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+        productionDistributionNASTRAN[spec][i]=nightSideFlux[spec]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
         total+=productionDistributionNASTRAN[spec][i];
       }else{
         double angleProd;
         int angleProdInt;
         angleProd=acos(c/sqrt(X))*180/Pi;
         angleProdInt=(int) angleProd;
-        productionDistributionNASTRAN[spec][i]=fluxBjorn[spec][angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea;
+        productionDistributionNASTRAN[spec][i]=fluxBjorn[spec][angleProdInt]*CutCell::BoundaryTriangleFaces[i].SurfaceArea*factor;
         total+=productionDistributionNASTRAN[spec][i];
       }
     }
@@ -1685,12 +1873,12 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
 #if  _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
   else if ((s0==_H2O_SPEC_ && s1==_CO2_SPEC_) || (s0==_CO2_SPEC_ && s1==_H2O_SPEC_)) return 3.4E-19;
   else if (s0==_CO2_SPEC_ && s1==_CO2_SPEC_) return 3.4E-19;
-  //else if ((s0==_H2O_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_H2O_SPEC_)) return 3.2E-19;
-  //else if ((s0==_CO2_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_CO2_SPEC_)) return 3.2E-19;
-  //  else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
-  
+  /*  else if ((s0==_H2O_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_H2O_SPEC_)) return 3.2E-19;
+  else if ((s0==_CO2_SPEC_ && s1==_CO_SPEC_) || (s0==_CO_SPEC_ && s1==_CO2_SPEC_)) return 3.2E-19;
+    else if (s0==_CO_SPEC_ && s1==_CO_SPEC_) return 3.2E-19;
+  */
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  //else if (s0==_OH_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
+  /* //else if (s0==_OH_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
   //else if (s0==_H2_SPEC_ && s1==_CO_SPEC_) return 3.0E-19;
   //else if (s0==_H_SPEC_ && s1==_CO_SPEC_) return 1.5E-19;
   //else if (s0==_O_SPEC_ && s1==_CO_SPEC_) return 1.5E-19;
@@ -1709,6 +1897,16 @@ double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCr
   else if (s0==_H_SPEC_ && s1==_H_SPEC_) return 1.2E-19;
   else if ((s0==_H_SPEC_ && s1==_O_SPEC_) || (s0==_O_SPEC_ && s1==_H_SPEC_)) return 1.2E-19;
   else if (s0==_O_SPEC_ && s1==_O_SPEC_) return 1.2E-19;
+
+  else if ((s0==_H2O_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_H2O_SPEC_)) return 3.2E-19;
+  else if ((s0==_CO2_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_CO2_SPEC_)) return 3.2E-19;
+  else if (s0==_O2_SPEC_ && s1==_O2_SPEC_) return 3.2E-19;
+  else if ((s0==_OH_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_OH_SPEC_)) return 3.0E-19;
+  else if ((s0==_H2_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_H2_SPEC_)) return 3.0E-19;
+  else if ((s0==_H_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_H_SPEC_)) return 1.5E-19;
+  else if ((s0==_O_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_O_SPEC_)) return 1.5E-19;
+  //  else if ((s0==_CO_SPEC_ && s1==_O2_SPEC_) || (s0==_O2_SPEC_ && s1==_CO_SPEC_)) return 3.2E-19;
+  */
 #endif
 
 #endif
@@ -1793,8 +1991,7 @@ double Comet::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec
 
 
 //DEBUG -> no chemistry at all
-  if ((spec!=_H2O_SPEC_) && (spec!=_H2_SPEC_) && (spec!=_H_SPEC_) && (spec!=_OH_SPEC_) && (spec!=_O_SPEC_)) {
-//  if ((spec!=_H2O_SPEC_) && (spec!=_H2_SPEC_) && (spec!=_OH_SPEC_) && (spec!=_O_SPEC_)) {
+  if ((spec!=_H2O_SPEC_) && (spec!=_H2_SPEC_) && (spec!=_H_SPEC_) && (spec!=_OH_SPEC_) && (spec!=_O_SPEC_) && (spec!=_O2_SPEC_)) {
    PhotolyticReactionAllowedFlag=false;
    return -1.0;
   }
@@ -1813,6 +2010,8 @@ double Comet::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec
   static const double PhotolyticReactionRate_H=PhotolyticReactions::H::GetTotalReactionRate(HeliocentricDistance);
   static const double PhotolyticReactionRate_OH=PhotolyticReactions::OH::GetTotalReactionRate(HeliocentricDistance);
   static const double PhotolyticReactionRate_O=PhotolyticReactions::O::GetTotalReactionRate(HeliocentricDistance);
+  static const double PhotolyticReactionRate_O2=PhotolyticReactions::O2::GetTotalReactionRate(HeliocentricDistance);
+
 
   switch (spec) {
     case _H2O_SPEC_:
@@ -1829,6 +2028,9 @@ double Comet::LossProcesses::ExospherePhotoionizationLifeTime(double *x,int spec
       break;
     case _O_SPEC_:
       PhotolyticReactionRate=PhotolyticReactionRate_O;
+      break;
+    case _O2_SPEC_:
+      PhotolyticReactionRate=PhotolyticReactionRate_O2;
       break;
     default:
       exit(__LINE__,__FILE__,"Error: unknown specie");

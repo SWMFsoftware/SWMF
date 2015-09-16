@@ -545,7 +545,7 @@ int main(int argc,char **argv) {
 
   Comet::GetNucleusNastranInfo(CG);
 
-  for (int i=0;i<3;i++) xmin[i]=-100.0e3,xmax[i]=100.0e3;
+  for (int i=0;i<3;i++) xmin[i]=-450.0e3,xmax[i]=450.0e3;
 
   PIC::Mesh::mesh.CutCellSurfaceLocalResolution=SurfaceResolution;
   PIC::Mesh::mesh.AllowBlockAllocation=false;
@@ -615,7 +615,7 @@ int main(int argc,char **argv) {
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
-  //read the background data
+  /*  //read the background data
     if (PIC::CPLR::DATAFILE::BinaryFileExists("CG-BATSRUS")==true)  {
       PIC::CPLR::DATAFILE::LoadBinaryFile("CG-BATSRUS");
     }
@@ -645,7 +645,7 @@ int main(int argc,char **argv) {
 
       PIC::CPLR::DATAFILE::SaveBinaryFile("CG-BATSRUS");
     }
-  
+  */
 
   //test the shadow procedure
   double subSolarPointAzimuth=0.0;
@@ -657,7 +657,7 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=350; //700000;
+  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
   PIC::RequiredSampleLength=10;
 
 
@@ -679,6 +679,8 @@ int main(int argc,char **argv) {
 #else  
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_H2O_SPEC_);
   PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO2_SPEC_);
+  // PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_O2_SPEC_);
+  // PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(_CO_SPEC_);
 
   //init weight of the daugter products of the photolytic and electron impact reactions 
   for (int spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec]<0.0) {
@@ -701,7 +703,8 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(15000000);
+  PIC::ParticleBuffer::Init(20000000);
+ 
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const int nSamplingPoints=1;
@@ -744,7 +747,8 @@ int main(int argc,char **argv) {
 
   int LastDataOutputFileNumber=-1;
 
-  for (long int niter=0;niter<100000001;niter++) {
+  //  for (long int niter=0;niter<100000001;niter++) {
+  for (long int niter=0;niter<5400;niter++) {
     PIC::TimeStep();
 
     //update the particle tracer counter
