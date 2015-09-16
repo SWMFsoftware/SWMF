@@ -8524,15 +8524,21 @@ nMPIops++;
     }
   }
 
-  bool LoadCenterNodeMeasure(cTreeNodeAMR<cBlockAMR> *node=NULL) {
+  bool LoadCenterNodeMeasure(const char *CellMeasureFilePath, cTreeNodeAMR<cBlockAMR> *node=NULL) {
     static FILE *fData=NULL;
 
     if (node==NULL) {
       node=rootTree;
 
       //open the file
-      char fname[400];
-      sprintf(fname,"amr.sig=0x%lx.CenterNodeMeasure.bin",getMeshSignature());
+      char fname[600];
+
+      if (CellMeasureFilePath==NULL) {
+        sprintf(fname,"amr.sig=0x%lx.CenterNodeMeasure.bin",getMeshSignature());
+      }
+      else {
+        sprintf(fname,"%s/amr.sig=0x%lx.CenterNodeMeasure.bin",CellMeasureFilePath,getMeshSignature());
+      }
 
       fData=fopen(fname,"r");
 
@@ -8574,7 +8580,7 @@ nMPIops++;
       }
     }
     else {
-      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeMeasure(node->downNode[nDownNode]);
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) if (node->downNode[nDownNode]!=NULL) LoadCenterNodeMeasure(CellMeasureFilePath,node->downNode[nDownNode]);
     }
 
     if (node==rootTree) {
@@ -8870,12 +8876,12 @@ nMPIops++;
   }
 
 
-  void InitCellMeasure(cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
+  void InitCellMeasure(const char* CellMeasureFilePath,cTreeNodeAMR<cBlockAMR>* startNode=NULL) {
    #if _AMR_CENTER_NODE_ == _ON_AMR_MESH_
     if (startNode==NULL) {
       //try to load the saved file with the cell measures
       if (_AMR_READ_SAVE_CENTER_NODE_MEASURE__MODE_==_ON_AMR_MESH_) {
-        if (LoadCenterNodeMeasure(NULL)==true) return;
+        if (LoadCenterNodeMeasure(CellMeasureFilePath,NULL)==true) return;
       }
 
       startNode=rootTree;
@@ -9069,6 +9075,15 @@ nMPIops++;
       }
     }
     #endif
+  }
+
+
+  void InitCellMeasure(cTreeNodeAMR<cBlockAMR>* startNode) {
+    InitCellMeasure(NULL,startNode);
+  }
+
+  void InitCellMeasure() {
+    InitCellMeasure(NULL,NULL);
   }
 
   //Calculate ID of an AMR node,  and find an AMR node by an ID
