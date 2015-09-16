@@ -757,8 +757,13 @@ int main(int argc,char **argv) {
 
   int LastDataOutputFileNumber=-1;
 
-  //  for (long int niter=0;niter<100000001;niter++) {
-  for (long int niter=0;niter<5400;niter++) {
+  //the total number of iterations 
+  int nTotalIterations=5400;
+
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=100;
+
+
+  for (long int niter=0;niter<nTotalIterations;niter++) {
     PIC::TimeStep();
 
     //update the particle tracer counter
@@ -822,7 +827,17 @@ int main(int argc,char **argv) {
 #endif
   }
 
+  //output the particle statistics for the nightly tests
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+    char fname[400];
+
+    sprintf(fname,"%s/test_CG.dat",PIC::OutputDataFileDirectory);
+    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+  }
+
+
+  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return 1;
+  return EXIT_SUCCESS;
 }
