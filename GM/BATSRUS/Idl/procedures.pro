@@ -763,30 +763,30 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
         w(*,0,*) = w(isort,0,*)
 
         ; average points with identical coordinates
-        i = 0
-        while i lt nx(0)-1 do begin
-           wsum = w(i,0,*)
-           j = i+1
-           while total(abs(x(j,0,*) - x(i,0,*))) eq 0 do begin
-              wsum += w(j,0,*)
-              j++
-              if j eq nx(0) then break
-           endwhile
-           if j gt i+1 then begin
-              ; Overwrite index i with average
-              w(i,0,*) = wsum/(j-i)
-              ; cut out i+1..j-1 elements
-              if j lt nx(0) then begin
-                 w = [w(0:i,0,*), w(j:*,0,*)]
-                 x = [x(0:i,0,*), x(j:*,0,*)]
-              endif else begin
-                 w = w(0:i,0,*)
-                 x = x(0:i,0,*)
-              endelse
-              nx(0) = n_elements(x(*,0,0))
-           endif
-           i++
-        endwhile
+;;;        i = long(0)
+;;;        while i lt nx(0)-1 do begin
+;;;           wsum = w(i,0,*)
+;;;           j = i+1
+;;;           while total(abs(x(j,0,*) - x(i,0,*))) eq 0 do begin
+;;;              wsum += w(j,0,*)
+;;;              j++
+;;;              if j eq nx(0) then break
+;;;           endwhile
+;;;           if j gt i+1 then begin
+;;;              ; Overwrite index i with average
+;;;              w(i,0,*) = wsum/(j-i)
+;;;              ; cut out i+1..j-1 elements
+;;;              if j lt nx(0) then begin
+;;;                 w = [w(0:i,0,*), w(j:*,0,*)]
+;;;                 x = [x(0:i,0,*), x(j:*,0,*)]
+;;;              endif else begin
+;;;                 w = w(0:i,0,*)
+;;;                 x = x(0:i,0,*)
+;;;              endelse
+;;;              nx(0) = n_elements(x(*,0,0))
+;;;           endif
+;;;           i++
+;;;        endwhile
 
      endif
 
