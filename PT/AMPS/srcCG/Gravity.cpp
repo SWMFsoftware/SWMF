@@ -30,6 +30,13 @@ void nucleusGravity::setDensity(double d) {
   density=d;
 }
 
+void nucleusGravity::readMesh_longformat(const char *fname,const char *path) {
+  char fullname[500];
+
+  sprintf(fullname,"%s/%s",path,fname);
+  readMesh_longformat(fullname);
+}
+
 void nucleusGravity::readMesh_longformat(const char *fname) {
   CiFileOperations ifile;
   char str[MAXSTR],dat[MAXSTR],*endptr;
