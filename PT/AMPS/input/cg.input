@@ -219,7 +219,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   SPICE=off !on, off
   
-  define _TARGET_ _NONE_
+  define _TARGET_ _CG_
 
 #endblock
 
