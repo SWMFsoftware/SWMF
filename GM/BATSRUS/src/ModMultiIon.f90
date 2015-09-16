@@ -194,7 +194,7 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModWaves,   ONLY: UseWavePressure
     use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
-         CellSize_DB
+         CellSize_DB, nDim
 
     integer, intent(in) :: iBlock
 
@@ -275,13 +275,17 @@ contains
           else
              ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
 
-             Force_D = Force_D - vInv* &
+             Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
                   ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
                   - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
                   + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                  - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) &
-                  + Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                  - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+                  - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock))
+             if(nDim>2) then
+                Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                     ( Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                     - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+             endif
+
           end if
           if(DoTestCell)write(*,*)NameSub,': after grad Pe, Force_D=', Force_D
 
@@ -302,13 +306,16 @@ contains
           else
              ! grad Pwave =
              ! (1/Volume)*Integral Pwave dAreaVector over cell surface
-             Force_D = Force_D - vInv* &
+             Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
                   ( Pwave_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
                   - Pwave_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
                   + Pwave_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                  - Pwave_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) &
-                  + Pwave_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                  - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+                  - Pwave_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock) )
+             if(nDim > 2) then
+                Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                     ( Pwave_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                     - Pwave_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+             endif
           end if
           if(DoTestCell)write(*,*)NameSub,': after grad Pwave, Force_D=', &
                Force_D
