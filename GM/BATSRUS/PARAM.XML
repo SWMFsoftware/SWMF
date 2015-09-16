@@ -6317,8 +6317,7 @@ Default is 5/3 for all the gamma-s.
 
 For single fluid, single species MHD the FluidMass parameter determines the 
 average mass of ions (and strongly coupled neutrals) in atomic mass units (amu).
-This parameter is only used if there are no species (UseMultiSpecies=.false.
-in ModEquation). The number density is n=rho/FluidMass.
+The number density is n=rho/FluidMass.
 For a pure hydrogen plasma FluidMass=1.0, while for a mix of 90 per cent 
 hydrogen and 10 per cent helium FluidMass=1.4.
 
@@ -6327,8 +6326,9 @@ charge. For a fully ionized hydrogen plasma AverageIonCharge=1.0,
 for a fully ionized helium plasma IonCharge=2.0, while
 for a 10 per cent ionized hydrogene plasma IonCharge=0.1.
 
-For multifluid MHD/HD the command reads the mass of all fluids (ions and neutrals),
-and the charges of all ion fluids. For example for proton and double ionized helium 
+For multifluid/multispcies MHD/HD the command reads the mass of all
+fluids/species (ions and neutrals), and the charges of all ion
+fluids/species. For example for proton and double ionized helium 
 and neutral oxygen molecule fluids:
 
 #PLASMA
@@ -6349,6 +6349,11 @@ electron pressure ratio. The electron pressure is taken as
 pE = ElectronTemperatureRatio*sum(pIon_I). Note that one can also
 solve the electron pressure equation if 'Pe' is present in the 
 equation module.
+
+Multispecies MHD reads the mass and charge for all species in the same manner
+as multifluid. But the ion charge is still assumed to be 1 in the code
+and the values read in will not be used so far. ElectronTemperatureRatio
+is interpreted as the single fluid case. 
 
 In a real plasma all these values can vary in space and time,
 but in a single fluid/species MHD description using these constants is
