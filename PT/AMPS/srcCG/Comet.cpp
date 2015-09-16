@@ -102,7 +102,7 @@ void Comet::Init_BeforeParser() {
 
 }
 
-void Comet::Init_AfterParser() {
+void Comet::Init_AfterParser(const char *DataFilePath) {
 
   /*  //set up the Chamberlen model
   double ExosphereEscapeRate[PIC::nTotalSpecies],ExospehreTemsprature[PIC::nTotalSpecies];
@@ -123,8 +123,8 @@ void Comet::Init_AfterParser() {
   const int nGravityVariables=3;
   int GravityVariableOffsets[nGravityVariables]={GravityFieldOffset,GravityFieldOffset+sizeof(double),GravityFieldOffset+2*sizeof(double)};
 
-  if (PIC::Mesh::mesh.AssociatedDataFileExists("gravity")==true) {
-    PIC::Mesh::mesh.LoadCenterNodeAssociatedData("gravity",GravityVariableOffsets,nGravityVariables);
+  if (PIC::Mesh::mesh.AssociatedDataFileExists("gravity",DataFilePath)==true) {
+    PIC::Mesh::mesh.LoadCenterNodeAssociatedData("gravity",DataFilePath,GravityVariableOffsets,nGravityVariables);
   }
   else {
     InitGravityData();

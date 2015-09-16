@@ -609,7 +609,7 @@ int main(int argc,char **argv) {
 
   //init the volume of the cells'
   PIC::Mesh::IrregularSurface::CheckPointInsideDomain=PIC::Mesh::IrregularSurface::CheckPointInsideDomain_default;
-  PIC::Mesh::mesh.InitCellMeasure();
+  PIC::Mesh::mesh.InitCellMeasure(PIC::UserModelInputDataPath);
 
   //if the new mesh was generated => rename created mesh.msh into amr.sig=0x%lx.mesh.bin
   if (NewMeshGeneratedFlag==true) {
@@ -673,7 +673,7 @@ int main(int argc,char **argv) {
 
   PIC::Init_AfterParser();
   PIC::Mover::Init();
-  Comet::Init_AfterParser();
+  Comet::Init_AfterParser(PIC::UserModelInputDataPath);
 
   //init the dust particle tracing condition
   Comet::TrajectoryTracking::Init();

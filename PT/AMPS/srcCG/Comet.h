@@ -30,7 +30,7 @@ namespace Comet {
 
   //init the model
   void Init_BeforeParser();
-  void Init_AfterParser();
+  void Init_AfterParser(const char*);
   void InitGravityData();
 
   static int ndist=4;
