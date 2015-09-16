@@ -30,7 +30,9 @@ TrajectoryIntersectionWithBlockFaces=on !on, off
 ErrorLog=PT/amps_error.log
 Prefix=AMPS
 DiagnosticStream=PT
-OutputDirectory=/oasis/scratch/fougere/temp_project/plots_20150830_0719/
+
+!OutputDirectory=/oasis/scratch/fougere/temp_project/plots_20150830_0719/
+OutputDirectory=PT/plots
 
 
 StdoutErrorLog=off !on,off -> print out error message on the screen
@@ -86,7 +88,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 !  define _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_  _PIC_RECOVER_SAMPLING_DATA_RESTART_FILE__MODE_ON_
 
   define _PIC__PARTICLE_COLLISION_MODEL_   _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_ !!_PIC__PARTICLE_COLLISION_MODEL_HS_
-  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_ON_
+  define _PIC__PARTICLE_COLLISION_MODEL__MODE_ _PIC_MODE_OFF_
 
   define _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_  _PIC_GENERIC_PARTICLE_TRANSFORMATION_MODE_OFF_
   define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::DustChargingProcessor_SteadyState(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) 
@@ -234,7 +236,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   SPICE=off !on, off
   
-  define _TARGET_ _NONE_
+  define _TARGET_ _CG_
 
 #endblock
 
