@@ -26,7 +26,7 @@
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
 #include "Comet.h"
-
+#include "Exosphere.h"
 
 static double SampleFluxDown[200000];
 
@@ -669,6 +669,133 @@ int main(int argc,char **argv) {
 
   PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
   PIC::RequiredSampleLength=10;
+
+
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
+  //init the dust flux map sampling procedure
+//  double xPrimary[3]={0.0,0.0,0.0},xSecondary[3]={1.0,0.0,0.0};
+//  double xLocation0[3]={4.0E3,0.0,0.0},xLocation1[3]={0.0,4.0E3,0.0};
+
+  double xPrimary[3]={0.0,0.0,0.0},xSun[3]={1.0,0.0,0.0},xSampleLocation[3]={0.0,0.0,0.0};
+
+  //determine location of the Sun
+  SpiceDouble lt,et;
+  utc2et_c(Exosphere::SimulationStartTimeString,&et);
+  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+
+  //determine the plane where the flux will be sampled (e0,e1)
+  double e0[3]={1.0,0.0,0.0},e1[3]={0.0,0.7,0.7},l;
+
+  l=sqrt(xSun[0]*xSun[0]+xSun[1]*xSun[1]+xSun[2]*xSun[2]);
+  for (int idim=0;idim<3;idim++) e0[idim]=xSun[idim]/l;
+
+  //normalize e1 to e0
+  l=e0[0]*e1[0]+e0[1]*e1[1]+e0[2]*e1[2];
+  for (int idim=0;idim<3;idim++) e1[idim]-=l*e0[idim];
+
+  l=sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]);
+
+  if (l<0.000001) {
+    if (fabs(e0[0]>1.0E-5)) e1[0]=-e0[1],e1[1]=e0[0],e1[2]=0.0;
+    else e1[0]=0.0,e1[1]=-e0[2],e1[2]=e0[1];
+
+    l=sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]);
+    for (int idim=0;idim<3;idim++) e1[idim]/=l;
+  }
+  else for (int idim=0;idim<3;idim++) e1[idim]/=l;
+
+  //determine localtion of the sample points
+  const int nSamplePoints=10;
+  const double SampleRadius=60.0E3;
+  const int nNucleusProjectionPoints=20;
+
+
+  ElectricallyChargedDust::Sampling::FluxMap::Init(300,300);
+
+  for (int n=0;n<nSamplePoints;n++) {
+    double theta=n*2.0*Pi/((double)(nSamplePoints));
+
+    for (int idim=0;idim<3;idim++) xSampleLocation[idim]=SampleRadius*(cos(theta)*e0[idim]+sin(theta)*e1[idim]);
+
+    ElectricallyChargedDust::Sampling::FluxMap::SetSamplingLocation(xSampleLocation,xPrimary,xSun);
+
+    if (PIC::ThisThread==0) {
+      //determine projection of the nucleus
+      double r,rmin,rmax,*x,*e1,*e2,phi,t,lmax,rProjection[3],ZenithAngle,AzimuthalAngle,r1,r2;
+      double rNimb,xNimb[3];
+      long int nZenithElement,nAzimuthalElement;
+      int i,idim,np,nRmaxFacePoint;
+      FILE *fout;
+      char fname[400];
+
+      sprintf(fname,"DustFluxMap-NucleusProjection.SamplePoint=%i.dat",n);
+      fout=fopen(fname,"w");
+
+      fprintf(fout,"VARIABLES=\"Lon\", \"Lat\"\n");
+      fprintf(fout,"ZONE T=\"Nucleus\" F=POINT\n");
+
+      e1=ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[n].e1;
+      e2=ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[n].e2;
+
+      for (np=0;np<nNucleusProjectionPoints+1;np++) {
+        phi=2.0*Pi/double(nNucleusProjectionPoints)*np;
+        lmax=-1.0,rNimb=-1.0;
+
+        for (i=0;i<PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;i++) {
+          rmin=-1.0,rmax=-1.0,nRmaxFacePoint=-1;
+
+          for (idim=0;idim<3;idim++) {
+            x=CutCell::BoundaryTriangleFaces[i].node[idim]->x;
+            r1=x[0]*e1[0]+x[1]*e1[1]+x[2]*e1[2];
+            r2=x[0]*e2[0]+x[1]*e2[1]+x[2]*e2[2];
+
+            r=sqrt(r1*r1+r2*r2);
+
+            if ((rmin<0.0)||(rmin>r)) rmin=r;
+            if ((rmax<0.0)||(r<rmax)) rmax=r,nRmaxFacePoint=idim;
+          }
+
+          if (rmax>rNimb) {
+            double ll,l[3];
+
+            for (idim=0;idim<3;idim++) l[idim]=(cos(phi)*e1[idim]+sin(phi)*e2[idim])*(rmax+rmin)/2.0-xSampleLocation[idim];
+            ll=sqrt(l[0]*l[0]+l[1]*l[1]+l[2]*l[2]);
+            for (idim=0;idim<3;idim++) l[idim]/=ll;
+
+            if (CutCell::BoundaryTriangleFaces[i].RayIntersection(xSampleLocation,l,t,0.0)==true) {
+              rNimb=rmax;
+              for (idim=0;idim<3;idim++) xNimb[idim]=xSampleLocation[idim]-CutCell::BoundaryTriangleFaces[i].node[nRmaxFacePoint]->x[idim];
+            }
+          }
+        }
+
+        //get angular coortinates of the boundary point 'rProjection'
+        ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[n].GetSpeed(xNimb,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
+        ZenithAngle=90.0-ZenithAngle*180.0/Pi;
+        AzimuthalAngle*=180.0/Pi;
+        if (AzimuthalAngle>180.0) AzimuthalAngle-=360.0;
+
+        fprintf(fout,"%e %e\n",AzimuthalAngle,ZenithAngle);
+      }
+
+      //get coordunates of the location of the Sun
+      fprintf(fout,"VARIABLES=\"Lon\", \"Lat\"\n");
+      fprintf(fout,"ZONE T=\"Sun\" F=POINT\n");
+
+      for (idim=0;idim<3;idim++) rProjection[idim]=xSampleLocation[idim]-xSun[idim];
+      ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[n].GetSpeed(rProjection,ZenithAngle,nZenithElement,AzimuthalAngle,nAzimuthalElement);
+      ZenithAngle=90.0-ZenithAngle*180.0/Pi;
+      AzimuthalAngle*=180.0/Pi;
+      if (AzimuthalAngle>180.0) AzimuthalAngle-=360.0;
+
+      fprintf(fout,"%e %e\n",AzimuthalAngle,ZenithAngle);
+
+      fclose(fout);
+    }
+  }
+
+#endif
+
 
 
   PIC::Init_AfterParser();
