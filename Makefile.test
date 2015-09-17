@@ -1544,7 +1544,7 @@ test12_iso:
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D,GM/BATSRUS -hdf5
 	./Config.pl -o=PC:npx=2,npy=2,npz=1,periodicx=false,periodicy=false,periodicZ=true,ng=1,pseudrand=true,h5hut=false
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdPe
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -1560,10 +1560,10 @@ test12_iso_run:
 
 test12_iso_check:
 	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
-	        > ${TESTDIR}/RESULTS/GM/z_n5.ref
+	        > ${TESTDIR}/RESULTS/GM/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-4 \
-		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000004_n00000005.out \
-		${TESTDIR}/RESULTS/GM/z_n5.ref \
+		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
+		${TESTDIR}/RESULTS/GM/z_n4.ref \
 		> test12_gmpc_iso.diff)
 	ls -l test12_gmpc_iso.diff
 

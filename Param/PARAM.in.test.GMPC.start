@@ -42,44 +42,35 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #PLASMA
-4.0			FluidMass [amu]
-1.0             	IonCharge [e]  
+1.0			FluidMass 1 [amu]
+4.0			FluidMass 2 [amu]
+1.0             	IonCharge 1 [e]
+1.0			IonCharge 2 [e]
 1.0             	ElectronTemperatureRatio
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
 #UNIFORMSTATE
-1.0			Rho
-0.03			Ux
-0.04			Uy
-0.0			Uz
+0.5			Rho1
+0.03			Ux1
+0.04			Uy1
+0.0			Uz1
 0.2			Bx
 0.0			By
 0.0			Bz
 5.12E-4			Pe
-5.12e-4			p
-
-rho   = 1
-By    = 0.04
-cA    = By/sqrt(rho)   = 0.04
-cS    = sqrt(2*p/rho)  = 0.03
-cF    = sqrt(cA^2+cS^2)= 0.05
-lambda= 32
-t     = lambda/(cF) = 640.0
-
-p = pe = 2.25e-4
-vth   = sqrt(p/rho) = 0.015
-me = mi/25
-vthe  = 5*vth       = 0.075 
-dx = 0.4
-dtmax = dx/vthe     = 5.333
-dt    = 0.2*dtmax   = 1.066
+2.56e-4			p1
+0.5			Rho2
+0.03			Ux2
+0.04			Uy2
+0.0			Uz2
+2.56e-4			p2
 
 #USERINPUTBEGIN ----------------
 
 #WAVE
-3                       Uy_
+3                       Uy1_
 10000.0                 Width
 -0.0090663280           Amplitude  -0.01 for Alfven
 32.0                    LambdaX
@@ -88,13 +79,33 @@ dt    = 0.2*dtmax   = 1.066
 -90.0                   Phase
 
 #WAVE
-4                       Uz_
+4                       Uz1_
 1000.0                  Width
 +0.0090663280           Amplitude  +0.01 for Alfven
 32.0                    LambdaX
 -1.0                    LambdaY
 -1.0                    LambdaZ
 180.0                   Phase
+
+
+#WAVE
+12                       Uy1_
+10000.0                 Width
+-0.0090663280           Amplitude  -0.01 for Alfven
+32.0                    LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+-90.0                   Phase
+
+#WAVE
+13                       Uz1_
+1000.0                  Width
++0.0090663280           Amplitude  +0.01 for Alfven
+32.0                    LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+180.0                   Phase
+
 
 #WAVE
 6                       By_
@@ -117,20 +128,30 @@ dt    = 0.2*dtmax   = 1.066
 #WAVE
 8                       Pe_
 1000.0                  Width
-1e-4                   Amplitude
+1e-4                    Amplitude
 32.0                    LambdaX
 -1.0                    LambdaY
 -1.0                    LambdaZ
 180.0                   Phase
 
 #WAVE
-9                       P_
+9                       P1_
 1000.0                  Width
-1e-4                   Amplitude
+0.5e-4                  Amplitude
 32.0                    LambdaX
 -1.0                    LambdaY
 -1.0                    LambdaZ
-0.0                   Phase
+0.0                     Phase
+
+
+#WAVE
+14                       P2_
+1000.0                  Width
+0.5e-4                  Amplitude
+32.0                    LambdaX
+-1.0                    LambdaY
+-1.0                    LambdaZ
+0.0                     Phase
 
 
 #USERINPUTEND   ----------------
@@ -154,7 +175,8 @@ so now rotate by tan(atan(3/4)- atan(4/3))) = -7/24
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-145.06125/132		DtFixed
+0.5		DtFixed
+
 
 #PICUNIT
  1.0                    xUnitPicSi
@@ -247,7 +269,7 @@ z=0 all idl_ascii       StringPlot
 
 #SAVEPLOT
 PC/plots				SaveDirName
-0					FieldOutputCycle
+1					FieldOutputCycle
 0					ParticlesOutputCycle
 0					DiagnosticsOutputCycle
 0					FieldOutputCycleASCII
@@ -258,6 +280,6 @@ PC/plots				SaveDirName
 
 #STOP
 -1			MaxIter
-4.39580 		TimeMax
+2.0     		TimeMax
 
 
