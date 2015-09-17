@@ -52,3 +52,9 @@ testing upper_case and lower_case
 mixed case string=abCD 123:
 upper case string=ABCD 123:
 lower case string=abcd 123:
+
+testing string_to_char_array
+Legth=13 C string:it's a string
+
+testing char_array_to_string
+Fortran string:it's a string
