@@ -14,9 +14,9 @@ module BATL_mpi
   public:: clean_mpi      ! finalize MPI
   public:: barrier_mpi    ! use an MPI barrier to synchronize processors
 
-  integer, public:: iComm ! MPI communicator for the group of processors
-  integer, public:: nProc ! number of processors in this group
-  integer, public:: iProc ! processor rank from 0 to nProc-1
+  integer, public:: iComm   ! MPI communicator for the group of processors
+  integer, public:: nProc=1 ! number of processors in this group
+  integer, public:: iProc=0 ! processor rank from 0 to nProc-1
 
 contains
 
