@@ -760,7 +760,7 @@ int main(int argc,char **argv) {
   //the total number of iterations 
   int nTotalIterations=5400;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=100;
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=50;
 
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
