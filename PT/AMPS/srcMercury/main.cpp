@@ -52,7 +52,7 @@ int main(int argc,char **argv) {
 
 
   //time step
-  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 150;
+  int nTotalIterations=(_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) ? 100000001 : 100;
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
     amps_time_step();
