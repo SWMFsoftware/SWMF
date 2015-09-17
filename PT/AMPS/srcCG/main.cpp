@@ -482,7 +482,7 @@ double Comet::GetTotalProduction(int spec,int BoundaryElementType,void *Boundary
 int main(int argc,char **argv) {
 
   //init reading of the electron pressure data from the BATSRUS TECPLOT data file
-  PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.allocate=true;
+//  PIC::CPLR::DATAFILE::Offset::PlasmaElectronPressure.allocate=true;
 
   //init the particle solver
   PIC::InitMPI();
