@@ -30,6 +30,8 @@ module ModUtilities
   public:: join_string
   public:: upper_case
   public:: lower_case
+  public:: string_to_char_array
+  public:: char_array_to_string
   public:: sleep
   public:: check_allocate
   public:: test_mod_utility
@@ -525,6 +527,58 @@ contains
   end subroutine lower_case
 
   !BOP ========================================================================
+  !ROUTINE:  string_to_char_array - convert string to C-style char array
+  !INTERFACE:
+  subroutine string_to_char_array(String, String_I, l)
+
+    use iso_c_binding, ONLY: c_null_char
+
+    !DESCRIPTION:
+    ! Convert Fortran string into a C-style character array
+    ! Ignore trailing spaces.
+    ! Add null character to the end. Return length if needed.
+    !EOP
+
+    character(len=*),  intent(in) :: String
+    character,         intent(out):: String_I(:)
+    integer, optional, intent(out):: l
+
+    integer:: i, n
+    !-------------------------------------------------------------------------
+    n = len_trim(String)
+    do i = 1, n
+       String_I(i) = String(i:i)
+    end do
+    String_I(n+1) = c_null_char
+    if(present(l)) l = n
+
+  end subroutine string_to_char_array
+
+  !BOP ========================================================================
+  !ROUTINE:  char_array_to_string - convert C-style char array into a string
+  !INTERFACE:
+  subroutine char_array_to_string(String_I, String)
+
+    use iso_c_binding, only: c_null_char
+
+    !DESCRIPTION:
+    ! Convert C-style character array into a Fortran string.
+    !EOP
+
+    character,         intent(in) :: String_I(:)
+    character(len=*),  intent(out):: String
+
+    integer:: i, n
+    !-------------------------------------------------------------------------
+    String = ' '
+    do i = 1, len(String)
+       if(String_I(i) == c_null_char) EXIT
+       String(i:i) = String_I(i)
+    end do
+    
+  end subroutine char_array_to_string
+
+  !BOP ========================================================================
   !ROUTINE: sleep - sleep a given number of seconds
   !INTERFACE:
   subroutine sleep(DtCpu)
@@ -566,15 +620,18 @@ contains
   !============================================================================
   subroutine test_mod_utility
 
+    use iso_c_binding, ONLY: c_null_char
+
     ! Test split_string, read a string containing separators 
     ! then print substrings
     ! Do this multiple times with various settings
    
     character(len=500):: String
+    character:: StringC_I(501)
     integer, parameter :: MaxString = 20
     integer :: nString
-    character(len=30) :: String_I(MaxString)  
-    integer :: iString
+    character(len=30) :: String_I(MaxString)
+    integer :: iString, l
     integer:: iError
 
     character(len=*), parameter :: NameSub = 'test_mod_utility'
@@ -648,6 +705,18 @@ contains
     call lower_case(String)
     write(*,'(a)') 'lower case string='//trim(String)
 
+    write(*,'(/,a)') 'testing string_to_char_array'
+    String = "it's a string"
+    call string_to_char_array(String, StringC_I, l)
+    write(*,'(a,i2,a,100a1)')'Legth=', l,' C string:', StringC_I(1:l)
+    if(StringC_I(l+1) /= c_null_char) &
+         write(*,*)'Error: null terminator is missing'
+    
+    write(*,'(/,a)') 'testing char_array_to_string'
+    call char_array_to_string(StringC_I, String)
+    write(*,'(a,a)')'Fortran string:', trim(String)
+    if(String /= "it's a string") &
+         write(*,*)'Error: incorrect conversion to Fortran String'
 
   end subroutine test_mod_utility
 
