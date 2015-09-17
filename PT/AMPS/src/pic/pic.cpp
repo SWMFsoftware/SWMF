@@ -145,6 +145,8 @@ int PIC::TimeStep() {
 
   #if _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__HS_
   PIC::MolecularCollisions::ParticleCollisionModel::ntc();
+  #elif _PIC__PARTICLE_COLLISION_MODEL_ == _PIC__PARTICLE_COLLISION_MODEL__USER_DEFINED_
+  PIC::MolecularCollisions::ParticleCollisionModel::ntc();
   #else
   exit(__LINE__,__FILE__,"Error: the option is not implemented");
   #endif
