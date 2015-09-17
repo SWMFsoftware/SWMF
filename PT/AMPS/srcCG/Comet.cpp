@@ -10,9 +10,9 @@
 #include "pic.h"
 
 //the object name and the names of the frames
-char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Comet";
+char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="CHURYUMOV-GERASIMENKO";
 char Exosphere::IAU_FRAME[_MAX_STRING_LENGTH_PIC_]="IAU_MOON";
-char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="LSO";
+char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="67P/C-G_CK";
 
 int Comet::GravityFieldOffset=-1;
 
@@ -72,6 +72,8 @@ static bool gravityAngleInitialized=false;
 long int offsetSurfaceElement;
 
 void Comet::Init_BeforeParser() {
+  Exosphere::Init_SPICE();
+
 #if _TRACKING_SURFACE_ELEMENT_MODE_ == _TRACKING_SURFACE_ELEMENT_MODE_ON_
   // Keep track of original surface element the particle was created from
   PIC::ParticleBuffer::RequestDataStorage(offsetSurfaceElement,sizeof(int));
