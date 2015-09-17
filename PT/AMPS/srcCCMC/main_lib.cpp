@@ -34,11 +34,11 @@ char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="Europa";
 void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {}
 double Exosphere::SurfaceInteraction::StickingProbability(int spec,double& ReemissionParticleFraction,double Temp) {return 0.0;}
 
-const double DomainLength[3]={1.0E7,1.0E7,1.0E7},DomainCenterOffset[3]={0.0,0.0,0.0};
+const double DomainLength[3]={1.0E8,1.0E8,1.0E8},DomainCenterOffset[3]={0.0,0.0,0.0};
 
 double localResolution(double *x) {
 
-	return 0.025*DomainLength[0];
+	return 0.1*DomainLength[0];
 }
 
 //set up the local time step
@@ -261,7 +261,7 @@ void amps_init() {
 	for (idim=0;idim<3;idim++) {
 	  double xCenter,dx;
 
-	  xCenter=xmax[idim]+xmin[idim];
+	  xCenter=0.5*(xmax[idim]+xmin[idim]);
 	  dx=0.8*(xmax[idim]-xmin[idim]);
 
 	  xmin[idim]=xCenter-0.5*dx;
