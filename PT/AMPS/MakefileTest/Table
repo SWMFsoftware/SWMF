@@ -103,3 +103,10 @@ Run=
 >>>cd ${TESTSEP3DDIR}; ${MPIRUN} -np 4 ./amps
 >>>@echo "test_SEP3D_run... done" >> test_SEP3D.diff
 <#
+
+#>
+Name=CG(0+srbwks2014-0079)
+Keys=-model-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
+<#
+
+
