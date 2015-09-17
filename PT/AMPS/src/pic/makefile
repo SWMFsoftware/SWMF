@@ -48,7 +48,8 @@ PICOBJ = pic.o \
 	pic_tecplot.o \
 	pic_initial_conditions.o \
 	pic_datafile.o \
-	pic_interpolation_routines.o
+	pic_interpolation_routines.o \
+	pic_field_line.o
 	
 ifneq ($(BATL),nobatl)	
 PICOBJ+=pic_batsrus.o \

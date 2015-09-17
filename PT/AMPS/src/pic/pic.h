@@ -65,6 +65,7 @@ $MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION$
 #include "specfunc.h"
 #include "constants.h"
 #include "rnd.h"
+#include "stack.h"
 
 //include the appropriate mesh header
 #if DIM == 3
@@ -151,6 +152,214 @@ namespace PIC {
     void readMain(CiFileOperations&);
     void readGeneral(CiFileOperations&);
 
+  }
+
+  //field line
+  namespace FieldLine{
+
+    //constants for house-keeping--------------------------------------
+    //self-explanatory: everything                Vertex  Segment  Line
+    const int OK_        = 0;                   // yes     yes      yes
+    //isn't physically set, e.g. no coordinates    
+    const int Unset_     =-1;                   // yes     yes      yes
+    //no neighbors
+    const int Hanging_   =-2;                   // yes     yes      no  
+    //zero length
+    const int Collapsed_ =-3;                   // no      yes      no
+    //unpredicatble error
+    const int Error_     =-4;                   // no      yes      yes
+    //error in connectivity
+    const int Broken_    =-5;                   // no      no       yes
+    //-----------------------------------------------------------------
+
+    class cFieldLineVertex{
+    private:
+      //flag whether coords of vertex have been set
+      char IsSet;
+      //coordinates of the vertex
+      double x[DIM];
+      //neighboring vertices
+      cFieldLineVertex* prev;
+      cFieldLineVertex* next;
+    public:
+
+      cFieldLineVertex(){
+	IsSet = 0;
+	for(int idim=0; idim<DIM; idim++) x[idim]=0;
+	prev = (next = NULL);
+      }
+
+      //check status of vertex
+      inline int status(){
+	if(IsSet == 0)                   return Unset_;
+	if(prev == NULL && next == NULL) return Hanging_;
+	return OK_;
+      }
+
+      //status of vertex as a string
+      inline void status(const char* res){
+	if(IsSet == 0)                  {res="Unset";  return;}
+	if(prev == NULL && next == NULL){res="Hanging";return;}
+	res = "OK"; return;
+      }
+
+
+      //access to coordinates
+      inline void SetX(double* xIn){
+	IsSet = 1;
+	for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];
+      }
+      inline void GetX(double* xOut){
+	for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];
+      }
+
+      //access to neighbors
+      inline void SetPrev(cFieldLineVertex* prevIn){prev=prevIn;}
+      inline void SetNext(cFieldLineVertex* nextIn){next=nextIn;}
+      inline void GetPrev(cFieldLineVertex* prevOut){prevOut=prev;}
+      inline void GetNext(cFieldLineVertex* nextOut){nextOut=next;}
+      inline cFieldLineVertex* GetPrev(){return prev;}
+      inline cFieldLineVertex* GetNext(){return next;}
+    };
+
+    class cFieldLineSegment{
+    private:
+      //flag segment has been set (i.e. both vertices are set)
+      char IsSet;
+      //length of this segment
+      double length;
+      //neighboring segments
+      cFieldLineSegment* prev;
+      cFieldLineSegment* next;
+      //segment's vertices
+      cFieldLineVertex* begin;
+      cFieldLineVertex* end;
+    public:
+
+      cFieldLineSegment(){
+	IsSet=0, length=0.0;
+	prev  = (next = NULL);
+	begin = (end  = NULL);
+      }
+      
+      //check status of segment
+      inline int status(){
+	if(IsSet == 0)                return Unset_;
+	if(prev==NULL && next==NULL)  return Hanging_;
+	if(begin==end || length==0.0) return Collapsed_;
+	if(length < 0.0)              return Error_;	
+	return OK_;
+      }
+
+      //status of segment as string
+      inline void status(const char* res){
+	if(IsSet == 0)               {res="Unset";    return;}
+	if(prev==NULL && next==NULL) {res="Hanging";  return;}
+	if(begin==end || length==0.0){res="Collapsed";return;}
+	if(length < 0.0)             {res="Error";    return;}	
+	res="OK"; return;
+      }
+
+      //set the segment
+      inline void SetVertices(cFieldLineVertex* beginIn,
+			      cFieldLineVertex* endIn){
+#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+	if(beginIn->status() != OK_ || endIn->status() != OK_){
+	  char msg[600];
+	  char statusBegin[10],statusEnd[10];
+	  beginIn->status(statusBegin), endIn->status(statusEnd); 
+	  sprintf(msg,"ERROR:: trying to set a segment with invalid vertices, beginIn->status()=%i, endIn->status()=%i",
+		  beginIn->status(), endIn->status());
+	  exit(__LINE__,__FILE__, msg);
+	}
+#endif//_PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+	IsSet=1;
+	if(beginIn!=NULL) begin = beginIn;
+	if(endIn  !=NULL) end   = endIn;  
+	double xBegin[DIM], xEnd[DIM];
+	length = 0.0;
+	if(begin!=NULL && end!=NULL){
+	  begin->GetX(xBegin); end->GetX(xEnd);
+	  for(int idim=0; idim<DIM; idim++)
+	    length+= pow(xEnd[idim]-xBegin[idim], 2);
+	  length = pow(length, 0.5);
+	}
+	else IsSet = 0;
+      }
+      //access segment's vertices
+      inline void GetBegin(cFieldLineVertex* beginOut){beginOut = begin;}
+      inline void GetEnd(  cFieldLineVertex* endOut  ){endOut   = end;}
+      inline cFieldLineVertex* GetBegin(){return begin;}
+      inline cFieldLineVertex* GetEnd(){  return end;}
+
+      //access segment's length and coordinate at its beginning
+      inline double GetLength(){return length;}
+
+      //access segment's neighbors
+      inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
+      inline void SetNext(cFieldLineSegment* nextIn){next = nextIn;}
+      inline void GetPrev(cFieldLineSegment* prevOut){prevOut = prev;}
+      inline void GetNext(cFieldLineSegment* nextOut){nextOut = next;}
+      inline cFieldLineSegment* GetPrev(){return prev;}
+      inline cFieldLineSegment* GetNext(){return next;}
+      
+      //interpolate state vector from vertices to a point on the segment
+    };
+
+    class cFieldLine {
+    private:
+      //flag whether line has been set (1 or more valid segments)
+      char IsSet;
+      //total number of segments (for house-keeping)
+      int nSegment;
+      //total length
+      double TotalLength;
+      //1st and last segments, vertices of the field line
+      cFieldLineSegment *FirstSegment, *LastSegment;
+      cFieldLineVertex  *FirstVertex,  *LastVertex;
+      //check whether the line is broken
+      bool is_broken();
+    public:
+
+      cFieldLine(){
+	IsSet = 0, nSegment = -1, TotalLength=-1.0;
+	FirstSegment = (LastSegment = NULL);
+	FirstVertex  = (LastVertex  = NULL);
+      }
+
+      //check status of line
+      inline int status(){
+	if(IsSet == 0)                       return Unset_;
+	if(is_broken())                      return Broken_;
+	if(TotalLength < 0.0 || nSegment < 0)return Error_;	
+	return OK_;
+      }
+
+      //status of segment as string
+      inline void status(const char* res){
+	if(IsSet == 0)                       {res="Unset"; return;}
+	if(is_broken())                      {res="Broken";return;}
+	if(TotalLength < 0.0 || nSegment < 0){res="Error"; return;}
+	res = "OK"; return;
+      }
+      
+      void Add(double* xIn);
+      void Output(FILE* fout, bool GeometryOnly);
+    };
+
+    // max number of field line in the simulation
+    const int nFieldLineMax=1;
+
+    extern cFieldLine* FieldLinesAll;
+    extern cStack<cFieldLineVertex> VerticesAll;
+    extern cStack<cFieldLineSegment> SegmentsAll;
+
+    void Init();
+    
+    void Output(char* fname, bool GeometryOnly);
+
+
+    
   }
 
 
