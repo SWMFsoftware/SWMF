@@ -1,5 +1,0 @@
-// setting of charge exchange model
-
-#include "ChargeExchangeDefinitions.dfn"
-
-#define _CHARGE_EXCHANGE__MODEL_ _CHARGE_EXCHANGE__LINDSAY_STEBBINGS_
