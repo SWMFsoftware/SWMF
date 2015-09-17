@@ -529,7 +529,7 @@ contains
   !BOP ========================================================================
   !ROUTINE:  string_to_char_array - convert string to C-style char array
   !INTERFACE:
-  subroutine string_to_char_array(String, String_I, l)
+  subroutine string_to_char_array(String, String_I)
 
     use iso_c_binding, ONLY: c_null_char
 
@@ -540,8 +540,7 @@ contains
     !EOP
 
     character(len=*),  intent(in) :: String
-    character,         intent(out):: String_I(:)
-    integer, optional, intent(out):: l
+    character,         intent(out):: String_I(*)
 
     integer:: i, n
     !-------------------------------------------------------------------------
@@ -550,7 +549,6 @@ contains
        String_I(i) = String(i:i)
     end do
     String_I(n+1) = c_null_char
-    if(present(l)) l = n
 
   end subroutine string_to_char_array
 
@@ -565,7 +563,7 @@ contains
     ! Convert C-style character array into a Fortran string.
     !EOP
 
-    character,         intent(in) :: String_I(:)
+    character,         intent(in) :: String_I(*)
     character(len=*),  intent(out):: String
 
     integer:: i, n
@@ -707,14 +705,15 @@ contains
 
     write(*,'(/,a)') 'testing string_to_char_array'
     String = "it's a string"
-    call string_to_char_array(String, StringC_I, l)
-    write(*,'(a,i2,a,100a1)')'Legth=', l,' C string:', StringC_I(1:l)
+    call string_to_char_array(String, StringC_I)
+    l = len_trim(String)
+    write(*,'(a,100a1)')'C character array: ', StringC_I(1:l)
     if(StringC_I(l+1) /= c_null_char) &
          write(*,*)'Error: null terminator is missing'
     
     write(*,'(/,a)') 'testing char_array_to_string'
     call char_array_to_string(StringC_I, String)
-    write(*,'(a,a)')'Fortran string:', trim(String)
+    write(*,'(a,a)')    'Fortran string   : ', trim(String)
     if(String /= "it's a string") &
          write(*,*)'Error: incorrect conversion to Fortran String'
 
