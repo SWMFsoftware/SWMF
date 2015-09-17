@@ -625,7 +625,7 @@ int main(int argc,char **argv) {
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
-  /*  //read the background data
+  if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
     if (PIC::CPLR::DATAFILE::BinaryFileExists("CG-BATSRUS")==true)  {
       PIC::CPLR::DATAFILE::LoadBinaryFile("CG-BATSRUS");
     }
@@ -655,7 +655,7 @@ int main(int argc,char **argv) {
 
       PIC::CPLR::DATAFILE::SaveBinaryFile("CG-BATSRUS");
     }
-  */
+  }
 
   //test the shadow procedure
   double subSolarPointAzimuth=0.0;
