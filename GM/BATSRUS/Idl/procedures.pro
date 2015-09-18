@@ -549,7 +549,7 @@ pro get_pict_hdf,filename,npict,x,w,$
   MinIJK_PD = MinIJK_PD(0:nproc-1,idims)
   MaxIJK_PD = MaxIJK_PD(0:nproc-1,idims)
 
-  ;;;;;;;;;;;;;;;;; GETING TIMELINE ++  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;; GETTING TIMELINE ++ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   filename= dirname+'proc0' + regionname
   file_id = H5F_OPEN(filename)
@@ -573,11 +573,11 @@ pro get_pict_hdf,filename,npict,x,w,$
      return
   endif
 
-  ;;Find iteration and time 
+  ;; Find iteration and time 
   it= Step_I[SortIdx_I(npict-1)]
   time =  it*Param.COLLECTIVE.Dt._DATA(0)
   
-  ;;Seting up "variables"
+  ;; Setting up "variables"
   nVar = nw +ndim + neqpar
   variables = STRARR(nVAr)
   DimName = ['x','y','z']
@@ -606,12 +606,12 @@ pro get_pict_hdf,filename,npict,x,w,$
      end
 
      iw = 0
-     ;; Go thoug all fields variables
+     ; Go through all field variables
      group_id = H5G_OPEN(file_id, '/fields')
      nFields = H5G_GET_NUM_OBJS(group_id)
-     for iFields=0,nFields-1 do begin
-        get_hdf_pict,group_id,iFields,SortIdx_I(npict-1),nxyz_D,$
-                     -1,pict,varname,getdata
+     for iFields=0, nFields-1 do begin
+        get_hdf_pict,group_id,iFields, SortIdx_I(npict-1), nxyz_D,$
+                     -1, pict, varname, getdata
 
         if getdata then begin
            case ndim of
@@ -625,10 +625,11 @@ pro get_pict_hdf,filename,npict,x,w,$
      endfor
      h5G_CLOSE, group_id  
 
-     ;;Get all moment of the distrebution function
+     ;; Get all moments of the distribution function
      group_id = H5G_OPEN(file_id, '/moments')
      nSpecie = H5G_GET_NUM_OBJS(group_id)
-     ;; First species is sum of carge densities Rho
+
+     ;; First species is sum of charge densities Rho
      get_hdf_pict,group_id,0,SortIdx_I(npict-1),nxyz_D,$
                   -1,pict,varname,getdata
      if getdata then begin
@@ -640,13 +641,14 @@ pro get_pict_hdf,filename,npict,x,w,$
      end
      variables(ndim+iw) = varname
      iw = iw +1
+
      ;; LOOP over species and return density, pressure and currents
      ;; for each
      for iSpecie=1,nSpecie-1 do begin
         SpeciesName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iSpecie)
         Moment_id = H5G_OPEN(group_id, SpeciesName)
         nMoment = H5G_GET_NUM_OBJS(Moment_id)
-        for iMoment=0,nMoment-1 do begin
+        for iMoment=0, nMoment-1 do begin
            get_hdf_pict,Moment_id,iMoment,SortIdx_I(npict-1),nxyz_D,$
                         iSpecie-1,pict,varname,getdata
            if getdata then begin
@@ -665,7 +667,6 @@ pro get_pict_hdf,filename,npict,x,w,$
 
      H5F_CLOSE, file_id
   endfor
-  
 end
 
 ;=============================================================================
@@ -676,7 +677,7 @@ pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
   if iSpecies ge 0 then $
      name= GroupName +"S"+STRING(iSpecies,FORMAT='(I02)')
   moment_id = H5G_OPEN(group_id, GroupName)
-  ;;get filed data form npict time pict
+  ; get field data form npict time pict
   pictname = H5G_GET_OBJ_NAME_BY_IDX(moment_id,ipict)
   if getdata then begin
      pict_id = H5D_OPEN(moment_id,pictname)
@@ -695,7 +696,7 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
              headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
              rBody,error
 
-  ;;;on_error,2
+  on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
@@ -755,38 +756,36 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
      endcase
 
      if ndim eq 2 and nx(ndim-1) eq 1 then begin
-                                ; sort x and w according to the x + factor * y function
-                                ; where factor is a transcendent number to avoid coincidences
-        factor = exp(1.0d0)
-        isort = sort( x(*,*,0) + factor*x(*,*,1) )
+        ;; sort x and w according to the x + factor * y function
+        ;; where factor is a transcendent number to avoid coincidences
+        xy = x(*,0,0) + exp(1.0d0)*x(*,0,1)
+        isort = sort( xy )
+        xy = xy(isort)
         x(*,0,*) = x(isort,0,*)
         w(*,0,*) = w(isort,0,*)
 
-        ; average points with identical coordinates
-;;;        i = long(0)
-;;;        while i lt nx(0)-1 do begin
-;;;           wsum = w(i,0,*)
-;;;           j = i+1
-;;;           while total(abs(x(j,0,*) - x(i,0,*))) eq 0 do begin
-;;;              wsum += w(j,0,*)
-;;;              j++
-;;;              if j eq nx(0) then break
-;;;           endwhile
-;;;           if j gt i+1 then begin
-;;;              ; Overwrite index i with average
-;;;              w(i,0,*) = wsum/(j-i)
-;;;              ; cut out i+1..j-1 elements
-;;;              if j lt nx(0) then begin
-;;;                 w = [w(0:i,0,*), w(j:*,0,*)]
-;;;                 x = [x(0:i,0,*), x(j:*,0,*)]
-;;;              endif else begin
-;;;                 w = w(0:i,0,*)
-;;;                 x = x(0:i,0,*)
-;;;              endelse
-;;;              nx(0) = n_elements(x(*,0,0))
-;;;           endif
-;;;           i++
-;;;        endwhile
+        ;; check for points with identical coordinates
+        n = nx(0)
+
+        ;; index of points that are not followed by another point with same
+        ;; coordinate. The last point with index n-1 is always like that.
+        iunique = [where(xy(0:n-2) ne xy(1:n-1)), n-1]
+
+        if n_elements(iunique) lt n then begin
+           ;; points that are preceeded by another point with same
+           ;; coordinate. 
+           isecond = where(xy(0:n-2) eq xy(1:n-1)) + 1
+
+           ;; average out pairs
+           w(isecond,0,*) = 0.5*(w(isecond-1,0,*) + w(isecond,0,*))
+
+           ;; keep the unique elements only
+           w = w(iunique,0,*)
+           x = x(iunique,0,*)
+
+           ;; reduce grid size
+           nx(0) = n_elements(iunique)
+        endif
 
      endif
 
