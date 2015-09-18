@@ -115,7 +115,7 @@ module ModVarIndexes
   integer, parameter :: SpeciesLast_    = ScalarLast_
 
   ! Molecular mass of species H, O2, O, CO2 in AMU:
-  real, parameter :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = &
+  real :: MassSpecies_V(SpeciesFirst_:SpeciesLast_) = &
        (/18.0,1.0,19.0,17.0,16.0,28.0/)
 contains
 
