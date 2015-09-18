@@ -670,8 +670,8 @@ int main(int argc,char **argv) {
   PIC::RayTracing::SetCutCellShadowAttribute(xLightSource,false);
   PIC::Mesh::IrregularSurface::PrintSurfaceTriangulationMesh("SurfaceTriangulation-shadow.dat",PIC::OutputDataFileDirectory);
 
-  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
-  PIC::RequiredSampleLength=10;
+//  PIC::ParticleWeightTimeStep::maxReferenceInjectedParticleNumber=60000; //700000;
+//  PIC::RequiredSampleLength=10;
 
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -961,7 +961,13 @@ int main(int argc,char **argv) {
   if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
     char fname[400];
 
-    sprintf(fname,"%s/test_CG.dat",PIC::OutputDataFileDirectory);
+    if (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_) {
+      sprintf(fname,"%s/test_CG-dust-test.dat",PIC::OutputDataFileDirectory);
+    }
+    else {
+      sprintf(fname,"%s/test_CG.dat",PIC::OutputDataFileDirectory); 
+    }
+
     PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
 
