@@ -545,9 +545,13 @@ int main(int argc,char **argv) {
 
   Comet::GetNucleusNastranInfo(CG);
 
+  //generate mesh or read from file
+  char mesh[200]="none";  ///"amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+
   for (int i=0;i<3;i++) {
     if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
       xmin[i]=-100.0e3,xmax[i]=100.0e3;
+      sprintf(mesh,"amr.sig=0xd7058cc2a680a3a2.mesh.bin");
     }
     else {
       xmin[i]=-450.0e3,xmax[i]=450.0e3;
@@ -561,7 +565,6 @@ int main(int argc,char **argv) {
 
 
   //generate mesh or read from file
-  char mesh[200]="amr.sig=0xd7058cc2a680a3a2.mesh.bin";
   bool NewMeshGeneratedFlag=false;
 
   char fullname[STRING_LENGTH];
