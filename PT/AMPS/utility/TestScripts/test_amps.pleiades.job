@@ -21,6 +21,7 @@ cd GNU/AMPS
 module purge
 module load gcc/4.9.2
 module load mpi-openmpi/1.6.5-gcc
+module load tecplot/360_2013
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
 
@@ -29,6 +30,7 @@ cd Intel/AMPS
 module purge
 module load comp-intel/2015.0.090 
 module load mpi-openmpi/1.6.5-intel
+module load tecplot/360_2013
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
 
@@ -37,5 +39,6 @@ cd PGI/AMPS
 module purge
 module load comp-pgi/15.3
 module load mpi-sgi/mpt.2.12r16
+module load tecplot/360_2013
 make test_run MPIRUN=mpiexec >>& test_amps.log
 cd ../..
