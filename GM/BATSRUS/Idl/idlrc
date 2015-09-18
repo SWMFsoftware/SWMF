@@ -8,7 +8,8 @@
 ;or inside IDL at the IDL> prompt type
 ;  @idlrc
 
-;!p.charsize=1.5
+!p.charsize=2.0
+
 .r procedures
 .r vector
 .r funcdef
