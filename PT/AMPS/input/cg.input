@@ -53,10 +53,10 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=200
+  ReferenceInjectionParticleNumber=60000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=10000
+  InitialSampleLength=10
   TestRunTotalIteration=50
 
   NastranSurfaceUserData=on
