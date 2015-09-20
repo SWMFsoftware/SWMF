@@ -29,7 +29,7 @@ module ModInterpolateSimpleShape
   integer, parameter:: Rectangular_=1, Trapezoidal_=2
   public :: interpolate_tetrahedron
   public :: interpolate_pyramid
-  public:: interpolate_pyramids, interpolate_on_parallel_rays
+  public :: interpolate_pyramids, interpolate_on_parallel_rays
 contains
   !========================
   function cross_product(a_D, B_d)
@@ -2771,6 +2771,19 @@ contains
       !/
       integer :: iGrid, iSubgrid
       !------------------
+      if(iLevelSubgrid_I(iGridPhys)/=Fine_)then
+         !\
+         ! Stencil is uniform
+         !/
+         do iGrid = 1, nGrid
+            iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
+            iCellIndexes_DII(:, 1, iGrid) = &
+                 iCellIndexes_DII(:, 1, iGridPhys) + iShift_D
+         end do
+         iBlock_I(1:nGrid) = iBlock_I(iGridPhys)
+         iProc_I( 1:nGrid) = iProc_I( iGridPhys)
+         RETURN
+      end if
       do iGrid = 1, nGrid
          !\
          ! Nothing to do, if this part of the extended stencil consists
@@ -2784,19 +2797,20 @@ contains
 
          ! shift should be multiplied by 2 
          ! if reference subgrid is finer than iGrid
-         iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
-         if(iLevelSubgrid_I(iGridPhys)==Fine_)then
-            if(iLevelSubgrid_I(iGrid)==Coarse_)then
-               where(iShift_D > 0) iShift_D = 2 * iShift_D
-            else
-               iShift_D = 2 * iShift_D
-            end if
+         iShift_D = 2*(iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys))
+         if(iLevelSubgrid_I(iGrid)==Coarse_)then
+            !\
+            !We keep the cell index for the fine ghost cell, which is the 
+            !nearest to the stencil center
+            !/
+            iCellIndexes_DII(:, 1, iGrid) = &
+                 iCellIndexes_DII(:, nGrid+1-iGrid, iGridPhys) + iShift_D
+         else
+            do iSubgrid = 1, nGrid
+               iCellIndexes_DII(:, iSubgrid, iGrid) = &
+                    iCellIndexes_DII(:, iSubgrid, iGridPhys) + iShift_D
+            end do
          end if
-         ! # of cells in the subgrid depends on its level (1:Fine, 0:Coarse)
-         do iSubgrid = 1, 1 + (nGrid-1)*iLevelSubgrid_I(iGrid)
-            iCellIndexes_DII(:, iSubgrid, iGrid) = &
-                 iCellIndexes_DII(:, iSubgrid, iGridPhys) + iShift_D
-         end do
       end do
     end subroutine get_ghost_cell_indexes
   end subroutine interpolate_amr
