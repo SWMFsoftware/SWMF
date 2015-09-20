@@ -3,15 +3,15 @@ module BATL_interpolate_amr_wrapper
   use BATL_mpi,  ONLY: iProc
   use BATL_size
   use BATL_tree, ONLY: Unset_
-  
+
   use ModInterpolateAMR, ONLY: interpolate_amr
-  
+
 
   implicit none
 
   SAVE
   private ! except
-  
+
   public:: interpolate_amr_wrapper
 
   ! vector that keeps AMR directions
@@ -36,9 +36,9 @@ module BATL_interpolate_amr_wrapper
   !   only if they are stored in pointer kept as module variables;
   ! - these pointers are set in interpolate_amr_wrapper
   interface
-    !\
-    ! interface for find_grid_block procedure from BATL_grid module:
-    ! detailed description can be found in BATL_grid.f90
+     !\
+     ! interface for find_grid_block procedure from BATL_grid module:
+     ! detailed description can be found in BATL_grid.f90
      subroutine find_grid_block_interface(XyzIn_D, &
           iProcOut, iBlockOut, iCellOut_D, DistOut_D, iNodeOut, &
           CoordMinBlockOut_D, CoordMaxBlockOut_D, CellSizeOut_D, & 
@@ -57,20 +57,20 @@ module BATL_interpolate_amr_wrapper
        real,    intent(out), optional:: CellSizeOut_D(MaxDim)!cellsize in block
        logical, intent(in),  optional:: UseGhostCell ! Use ghost cells or not
      end subroutine find_grid_block_interface
-    !=========================================================================
-    !\
-    ! interface for interpolate_grid procedure from BATL_grid module
-    ! detailed description can be found in BATL_grid.f90
-    subroutine interpolate_grid_interface(Xyz_D, nCell, iCell_II, Weight_I)
+     !=========================================================================
+     !\
+     ! interface for interpolate_grid procedure from BATL_grid module
+     ! detailed description can be found in BATL_grid.f90
+     subroutine interpolate_grid_interface(Xyz_D, nCell, iCell_II, Weight_I)
 
-      use BATL_size
-      
-      implicit none
-      real,    intent(in) :: Xyz_D(MaxDim)
-      integer, intent(out):: nCell  
-      integer, intent(out):: iCell_II(0:nDim,2**nDim)
-      real,    intent(out):: Weight_I(2**nDim)
-    end subroutine interpolate_grid_interface
+       use BATL_size
+
+       implicit none
+       real,    intent(in) :: Xyz_D(MaxDim)
+       integer, intent(out):: nCell  
+       integer, intent(out):: iCell_II(0:nDim,2**nDim)
+       real,    intent(out):: Weight_I(2**nDim)
+     end subroutine interpolate_grid_interface
   end interface
 
   ! pointers keep routines from BATL_grid passed to interpolate_amr_wrapper
@@ -79,10 +79,10 @@ module BATL_interpolate_amr_wrapper
 
 contains
 
-    subroutine interpolate_amr_wrapper(XyzIn_D, &
-         nCell, iCell_II, Weight_I, &
-         find_grid_block, &
-         interpolate_grid)
+  subroutine interpolate_amr_wrapper(XyzIn_D, &
+       nCell, iCell_II, Weight_I, &
+       find_grid_block, &
+       interpolate_grid)
     ! Find the grid cells surrounding the point Xyz_D.
     ! nCell returns the number of cells found on the processor.
     ! iCell_II returns the block+cell indexes for each cell.
@@ -280,82 +280,82 @@ contains
   !============================================================================
 
   subroutine find_block(nDimIn, XyzIn_D, &
-         iProcOut, iBlockOut, XyzCornerOut_D, DxyzOut_D, IsOut)
-      integer, intent(in) :: nDimIn
-      !\
-      ! "In"- the coordinates of the point, "out" the coordinates of the
-      ! point with respect to the block corner. In the most cases
-      ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
-      ! however, is the periodic boundary, near which the jump in the
-      ! stencil coordinates might occur. To handle the latter problem,
-      ! we added the "out" intent. The coordinates for the stencil
-      ! and input point are calculated and recalculated below with
-      ! respect to the block corner.
-      !/
-      real,  intent(inout):: XyzIn_D(nDimIn)
-      integer, intent(out):: iProcOut, iBlockOut !processor and block number
-      !\
-      ! Block left corner coordinates and the grid size:
-      !
-      real,    intent(out):: XyzCornerOut_D(nDimIn), DxyzOut_D(nDimIn)
-      logical, intent(out):: IsOut !Point is out of the domain.
+       iProcOut, iBlockOut, XyzCornerOut_D, DxyzOut_D, IsOut)
+    integer, intent(in) :: nDimIn
+    !\
+    ! "In"- the coordinates of the point, "out" the coordinates of the
+    ! point with respect to the block corner. In the most cases
+    ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
+    ! however, is the periodic boundary, near which the jump in the
+    ! stencil coordinates might occur. To handle the latter problem,
+    ! we added the "out" intent. The coordinates for the stencil
+    ! and input point are calculated and recalculated below with
+    ! respect to the block corner.
+    !/
+    real,  intent(inout):: XyzIn_D(nDimIn)
+    integer, intent(out):: iProcOut, iBlockOut !processor and block number
+    !\
+    ! Block left corner coordinates and the grid size:
+    !
+    real,    intent(out):: XyzCornerOut_D(nDimIn), DxyzOut_D(nDimIn)
+    logical, intent(out):: IsOut !Point is out of the domain.
 
-      real   :: Xyz_D(MaxDim) ! full Cartesian coords of point
-      real   :: XyzCorner_D(MaxDim), Dxyz_D(MaxDim)! full Cartesian coords
-      integer:: iDim, iDimAmr ! loop variable
-      !--------------------------------------------------------------------
-      ! check correctness
-      if(nDimIn /= nDimAmr) &
-           call CON_stop("Number of dimensions is not correct")
+    real   :: Xyz_D(MaxDim) ! full Cartesian coords of point
+    real   :: XyzCorner_D(MaxDim), Dxyz_D(MaxDim)! full Cartesian coords
+    integer:: iDim, iDimAmr ! loop variable
+    !--------------------------------------------------------------------
+    ! check correctness
+    if(nDimIn /= nDimAmr) &
+         call CON_stop("Number of dimensions is not correct")
 
-      ! Xyz_D will be used to find block, copy input data into it
-      ! restore non-AMR directions if necessary
-      Xyz_D = 0
-      if(nDimIn == nDim)then
-         Xyz_D(1:nDim) = XyzIn_D(1:nDim)
-      else
-         iDimAmr = nDimIn
-         do iDim = nDim, 1, -1
-            if(IsAmr_D(iDim))then
-               Xyz_D(iDim) = XyzIn_D(iDimAmr)
-               iDimAmr = iDimAmr - 1
-            else
-               Xyz_D(iDim) = XyzNonAmr_D(iDim)
-            end if
-         end do
-      end if
+    ! Xyz_D will be used to find block, copy input data into it
+    ! restore non-AMR directions if necessary
+    Xyz_D = 0
+    if(nDimIn == nDim)then
+       Xyz_D(1:nDim) = XyzIn_D(1:nDim)
+    else
+       iDimAmr = nDimIn
+       do iDim = nDim, 1, -1
+          if(IsAmr_D(iDim))then
+             Xyz_D(iDim) = XyzIn_D(iDimAmr)
+             iDimAmr = iDimAmr - 1
+          else
+             Xyz_D(iDim) = XyzNonAmr_D(iDim)
+          end if
+       end do
+    end if
 
-      ! call internal BATL find subroutine
-      call find_grid_block_ptr(Xyz_D, iProcOut, iBlockOut,&
-           CoordMinBlockOut_D = XyzCorner_D, &
-           CellSizeOut_D      = Dxyz_D)
+    ! call internal BATL find subroutine
+    call find_grid_block_ptr(Xyz_D, iProcOut, iBlockOut,&
+         CoordMinBlockOut_D = XyzCorner_D, &
+         CellSizeOut_D      = Dxyz_D)
 
-      ! check if position has been found
-      if(iProcOut==Unset_ .OR. iBlockOut==Unset_)then
-         IsOut = .true.
-         RETURN
-      end if
+    ! check if position has been found
+    if(iProcOut==Unset_ .OR. iBlockOut==Unset_)then
+       IsOut = .true.
+       RETURN
+    end if
 
-      !position has been found
-      IsOut = .false.
+    !position has been found
+    IsOut = .false.
 
-      ! corner coordinates of the found block
-      XyzCornerOut_D = PACK(XyzCorner_D, IsAmr_D)
+    ! corner coordinates of the found block
+    XyzCornerOut_D = PACK(XyzCorner_D, IsAmr_D)
 
-      ! cell size of the found block
-      DxyzOut_D = PACK(Dxyz_D, IsAmr_D)
+    ! cell size of the found block
+    DxyzOut_D = PACK(Dxyz_D, IsAmr_D)
 
-      ! subtract coordinates of the corner from point's coordinates
-      XyzIn_D = XyzIn_D - XyzCornerOut_D
+    ! subtract coordinates of the corner from point's coordinates
+    XyzIn_D = XyzIn_D - XyzCornerOut_D
 
-      ! store parameters of the block
-      nBlockFound = nBlockFound + 1
-      XyzCorner_DI(:, nBlockFound) = XyzCorner_D
-      Dxyz_DI(     :, nBlockFound) = Dxyz_D
-      iBlock_I(       nBlockFound) = iBlockOut
-      iBlockOut                    = nBlockFound
+    ! store parameters of the block
+    nBlockFound = nBlockFound + 1
+    XyzCorner_DI(:, nBlockFound) = XyzCorner_D
+    Dxyz_DI(     :, nBlockFound) = Dxyz_D
+    iBlock_I(       nBlockFound) = iBlockOut
+    iBlockOut                    = nBlockFound
 
-    end subroutine find_block
+  end subroutine find_block
 
 
 end module BATL_interpolate_amr_wrapper
