@@ -1352,10 +1352,17 @@ contains
     integer, intent(out):: nCell
     integer, intent(out):: iCell_II(0:nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
+    real                :: Coord_D(MaxDim)
     !-----------------------------------
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesianGrid)then
+       Coord_D = XyzIn_D
+    else
+       call xyz_to_coord(XyzIn_D, Coord_D)
+    end if
     ! call the wrapper for the shared AMR interpolation procedure,
     ! wrapper needs BATL's find_grid_block and interpolate_grid routines
-    call interpolate_amr_wrapper(XyzIn_D, &
+    call interpolate_amr_wrapper(Coord_D, &
          nCell, iCell_II, Weight_I, &
          find_grid_block,&
          interpolate_grid)
