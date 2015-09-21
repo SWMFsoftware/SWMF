@@ -1,8 +1,8 @@
 /*
- * Mercury.cpp
+ * Comet.cpp
  *
  *  Created on: Jun 21, 2012
- *      Author: vtenishe
+ *      Author: fougere and vtenishe
  */
 
 //$Id$
@@ -39,7 +39,7 @@ static double azimuthCenter;
 static double zenithCenter;
 static cInternalRotationBodyData* Nucleus;
 
-double subSolarPointAzimuth=0.0; //53.0*Pi/180; //0.0;
+double subSolarPointAzimuth=0.0; //53.0*Pi/180;
 double subSolarPointZenith=0.0;
 
 double DustSizeMin=1.0e-7;

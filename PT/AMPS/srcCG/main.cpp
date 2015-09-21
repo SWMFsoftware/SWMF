@@ -1,3 +1,11 @@
+/*
+ * main.cpp
+ *
+ *  Created on: Jun 21, 2012
+ *      Author: fougere and vtenishe
+ */
+
+
 //$Id$
 
 
@@ -598,7 +606,9 @@ int main(int argc,char **argv) {
 //  PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
 
-
+#if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
+  PIC::IndividualModelSampling::RequestStaticCellData.push_back(Comet::CometData::RequestDataBuffer);
+#endif
 
   //initialize the blocks
   PIC::Mesh::initCellSamplingDataBuffer();
@@ -627,6 +637,40 @@ int main(int argc,char **argv) {
   }
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+#if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
+  int nNeutralsFile=0;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
+
+  FILE *fbin;
+  char fnamebin[400];
+
+
+  sprintf(fnamebin,"%s/amr.sig=0x%lx.f=%s.CenterNodeOutputData.bin",PIC::CPLR::DATAFILE::path,PIC::Mesh::mesh.getMeshSignature(),"CG-Binary-Output");
+  fbin=fopen(fnamebin,"r");
+
+  if (fbin==NULL) exit(__LINE__,__FILE__,"Error: The neutral binary file does not exist.");
+
+  //read the number of neutrals in binary file 
+  nNeutralsFile=Comet::CometData::LoadSpeciesNumberBinaryFile("CG-Binary-Output",fbin);
+  if(Comet::CometData::nNeutrals > nNeutralsFile) exit(__LINE__,__FILE__,"Error: the requested number of neutrals to read from the file is larger than the number saved in it.");
+
+  if (PIC::Mesh::mesh.ThisThread==0) printf("The user is reading %i neutral data from binary file that contains data about %i neutrals. \n",Comet::CometData::nNeutrals,nNeutralsFile);
+
+
+  for (int s=0;s<Comet::CometData::nNeutrals;s++) {
+
+    Comet::CometData::SetiSpecies(s);
+    Comet::CometData::LoadBinaryFile("CG-Binary-Output",startNode=PIC::Mesh::mesh.rootTree,fbin);
+    //print out of the output file 
+    PIC::Mesh::PrintVariableListCenterNode.push_back(Comet::CometData::PrintVariableList);
+  }
+  PIC::Mesh::PrintDataCenterNode.push_back(Comet::CometData::PrintData);
+  PIC::Mesh::InterpolateCenterNode.push_back(Comet::CometData::Interpolate);
+  fclose(fbin);
+
+  Comet::CometData::SetiSpecies(0);
+#endif
 
   if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
     if (PIC::CPLR::DATAFILE::BinaryFileExists("CG-BATSRUS")==true)  {
@@ -921,6 +965,27 @@ int main(int argc,char **argv) {
 #endif
 
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+
+#if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
+      Comet::CometData::SetiSpecies(0);
+#endif  
+
+#if  _SAVING_BINARY_OUTPUT_MODE_ == _SAVING_BINARY_OUTPUT_MODE_ON_
+      //Save density*mass and Vx, Vy, Vz for future dust simulations         
+      cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
+
+      static FILE *fbin;
+      char fnamebin[400];
+      sprintf(fnamebin,"%s/amr.sig=0x%lx.f=%s.CenterNodeOutputData.bin",PIC::CPLR::DATAFILE::path,PIC::Mesh::mesh.getMeshSignature(),"CG-Binary-Output");
+      fbin=fopen(fnamebin,"w");
+
+      if (PIC::ThisThread==0) fwrite(&PIC::nTotalSpecies,sizeof(int),1,fbin); //save number of species from file
+
+      for (int s=0;s<1;s++) Comet::CometData::WriteBinaryOutput("CG-Binary-Output",s,startNode=PIC::Mesh::mesh.rootTree,fbin);
+
+      fclose(fbin);
+#endif
+
 #if _SAMPLE_BACKFLUX_MODE_ == _SAMPLE_BACKFLUX_MODE__ON_      
       char fname2[_MAX_STRING_LENGTH_PIC_];
 

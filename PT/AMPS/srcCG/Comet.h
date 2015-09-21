@@ -1,8 +1,8 @@
 /*
- * Mercury.h
+ * Comet.h
  *
  *  Created on: Jun 21, 2012
- *      Author: vtenishe
+ *      Author: fougere and  vtenishe
  */
 
 #ifndef COMET_H_
@@ -93,6 +93,30 @@ namespace Comet {
     bool TrajectoryTrackingCondition(double *x,double *v,int spec,void *ParticleData);
     void UpdateParticleCounter();
   }
+
+  namespace CometData {
+    extern int NeutralsFromBinaryOffset;
+    extern int nNeutrals;
+    extern int iSpecies;
+
+    void WriteBinaryOutput(const char *fNameBase,int s,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,FILE *fout);
+    void LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,FILE *fout);
+    int LoadSpeciesNumberBinaryFile(const char *fNameBase,FILE *fout);
+    int RequestDataBuffer(int offset);
+    void PrintVariableList(FILE* fout,int DataSetNumber);
+    void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+    void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+
+    double GetNeutralsMassDensity(int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+    void GetNeutralsVelocity(double *x, int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+    int GetnNeutrals();
+    void SetnNeutrals(int n);
+
+    int GetiSpecies();
+    void SetiSpecies(int s);
+  }
+
 
 }
     //the total acceleration acting on a particle
