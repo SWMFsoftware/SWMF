@@ -119,6 +119,31 @@ while ($line=<InputFile>) {
 	  ampsConfigLib::RedefineMacro("_3DGRAVITY__MODE_","_3DGRAVITY__MODE__OFF_","main/Comet.dfn");
       }
   }
+  elsif ($InputLine eq "SAVEOUTPUTBINARY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_SAVING_BINARY_OUTPUT_MODE_","_SAVING_BINARY_OUTPUT_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_SAVING_BINARY_OUTPUT_MODE_","_SAVING_BINARY_OUTPUT_MODE_OFF_","main/Comet.dfn");
+      }
+  }
+  elsif ($InputLine eq "READNEUTRALSFROMBINARY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      if ($InputLine eq "ON") {
+	  ampsConfigLib::RedefineMacro("_READ_NEUTRALS_FROM_BINARY_MODE_","_READ_NEUTRALS_FROM_BINARY_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+	  ampsConfigLib::RedefineMacro("_READ_NEUTRALS_FROM_BINARY_MODE_","_READ_NEUTRALS_FROM_BINARY_MODE_OFF_","main/Comet.dfn");
+      }
+  }
+  elsif ($InputLine eq "NUMBEROFNEUTRALSTOREAD") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      $InputLine=~s/ //g;
+      ampsConfigLib::ChangeValueOfVariable("int Comet::CometData::nNeutrals","$InputLine","main/CometData.cpp");
+  }
   elsif ($InputLine eq "RADIATIVECOOLINGMODE") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;

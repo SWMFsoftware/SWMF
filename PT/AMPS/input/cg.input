@@ -220,6 +220,10 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   
   TrackingSurfaceElementMode=off !on,off
 
+  SaveOutputBinary= off !on, off
+  ReadNeutralsFromBinary= off !on, off
+  NumberOfNeutralsToRead= 2
+
 
   !!Dust parameters
   DustMode=off !!on,off
