@@ -49,6 +49,11 @@ Compile=
 <#
 
 #>
+Name=Mars-ions 
+Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/MARS-IONS/data_mhd_PERmax-SSLONG180(0+srbwks2014-0079)
+<#
+
+#>
 Name=Titan
 Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+srbwks2014-0079)
 <#
