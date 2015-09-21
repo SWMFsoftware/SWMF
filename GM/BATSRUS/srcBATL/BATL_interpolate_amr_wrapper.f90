@@ -2,7 +2,9 @@ module BATL_interpolate_amr_wrapper
 
   use BATL_mpi,  ONLY: iProc
   use BATL_size
-  use BATL_tree, ONLY: Unset_
+  use BATL_tree, ONLY: Unset_, find_tree_node, Proc_, Block_,&
+       get_tree_position, iTree_IA
+  use BATL_geometry, ONLY: CoordMin_D, CoordMax_D, IsPeriodic_D
 
   use ModInterpolateAMR, ONLY: interpolate_amr
 
@@ -29,6 +31,18 @@ module BATL_interpolate_amr_wrapper
   real   :: XyzCorner_DI(MaxDim, 2*2**MaxDim)
   real   :: Dxyz_DI(MaxDim, 2*2**MaxDim)
 
+  !\
+  ! Index for the cell which center is left to the given point
+  !/
+  integer   :: iCellFloor_D(MaxDim)     
+  !\
+  ! Normalized distance from the point 
+  ! to the cell with the index iCellsFloor_D
+  !/
+  real      :: Dist_D(MaxDim)
+
+
+
   ! this block is needed to avoid circular dependency:
   ! - interpolate_amr_wrapper, find_block use routines from module BATL_grid;
   ! - since find_block is called by shared AMR interpolation routine,
@@ -39,6 +53,7 @@ module BATL_interpolate_amr_wrapper
      !\
      ! interface for find_grid_block procedure from BATL_grid module:
      ! detailed description can be found in BATL_grid.f90
+     !/
      subroutine find_grid_block_interface(XyzIn_D, &
           iProcOut, iBlockOut, iCellOut_D, DistOut_D, iNodeOut, &
           CoordMinBlockOut_D, CoordMaxBlockOut_D, CellSizeOut_D, & 
@@ -356,6 +371,118 @@ contains
     iBlockOut                    = nBlockFound
 
   end subroutine find_block
+  !============
+  subroutine find(nDimIn, Coord_D, &
+       iProc, iBlock, CoordCorner_D, DCoord_D, IsOut)
+    integer, intent(in) :: nDimIn
+    !\
+    ! "In"- the coordinates of the point, "out" the coordinates of the
+    ! point with respect to the block corner. In the most cases
+    ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
+    ! however, is the periodic boundary, near which the jump in the
+    ! stencil coordinates might occur. To handle the latter problem,
+    ! we added the "out" intent. The coordinates for the stencil
+    ! and input point are calculated and recalculated below with
+    ! respect to the block corner.
+    !/
+    real,  intent(inout):: Coord_D(nDimIn)
+    integer, intent(out):: iProc, iBlock !processor and block number
+    !\
+    ! Block left corner coordinates and the grid size:
+    !
+    real,    intent(out):: CoordCorner_D(nDimIn), DCoord_D(nDimIn)
+    logical, intent(out):: IsOut !Point is out of the domain.
 
+    real   :: CoordFull_D(MaxDim)       ! Full Gen coords of point
+    real   :: CoordCornerFull_D(MaxDim) ! Full Gen coords of corner
+    real   :: DCoordFull_D(MaxDim)      ! Full mesh sizes in gen coords
+    real   :: CoordTree_D(MaxDim)       ! Normalized gen coords
+    integer   :: iDim, iDimAmr ! loop variable
+    integer   :: iNode         ! tree node number
+    real,dimension(MaxDim):: PositionMin_D, PositionMax_D
+    !\
+    ! Used in normalization
+    !/
+    real   :: CoordTreeSize_D(MaxDim) 
+    !--------------------------------------------------------------------
+    CoordTreeSize_D = CoordMax_D - CoordMin_D
+    ! Coord_D will be used to find block, copy input data into it
+    ! restore non-AMR directions if necessary
+    CoordFull_D = 0
+    if(nDimIn == nDim)then
+       CoordFull_D(1:nDim) = Coord_D(1:nDim)
+    else
+       iDimAmr = nDimIn
+       do iDim = nDim, 1, -1
+          if(IsAmr_D(iDim))then
+             CoordFull_D(iDim) = Coord_D(iDimAmr)
+             iDimAmr = iDimAmr - 1
+          else
+             CoordFull_D(iDim) = XyzNonAmr_D(iDim) !Should be renamed
+          end if
+       end do
+    end if
+    !\
+    ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
+    ! for tree search
+    !/
+    CoordTree_D = (Coord_D - CoordMin_D)/CoordTreeSize_D
+    !\
+    ! For periodic boundary conditions fix the input coordinate if
+    ! beyond the tree bounadaries
+    !/
+    where(IsPeriodic_D)CoordTree_D = modulo(CoordTree_D, 1.0)
+    !\
+    ! call internal BATL find subroutine
+    !/
+    call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
+  
+    !\
+    ! Check if the block is found
+    !/
+    if(iNode<=0)then
+       IsOut = .true.
+       RETURN
+    end if
+    !\
+    !position has been found
+    !/
+    IsOut = .false.
+    iBlock = iTree_IA(Block_,iNode)
+    iProc  = iTree_IA(Proc_, iNode)
+    call get_tree_position(iNode=iNode,                &
+                           PositionMin_D=PositionMin_D,&
+                           PositionMax_D=PositionMax_D )
+    CoordCornerFull_D =  CoordMin_D + PositionMin_D * CoordTreeSize_D
+    DCoordFull_D      =  (PositionMax_D-PositionMin_D)*CoordTreeSize_D/nIjk_D
+    ! corner coordinates of the found block
+    CoordCorner_D = PACK(CoordCornerFull_D, IsAmr_D)
+    ! cell size of the found block
+    DCoord_D = PACK(DCoordFull_D, IsAmr_D)
 
+    ! subtract coordinates of the corner from point's coordinates
+    Coord_D = PACK((CoordTree_D - PositionMin_D)*CoordTreeSize_D, IsAmr_D)
+
+    Dist_D = 0.5 + nIJK_D*(Coord_D - PositionMin_D)/&
+         (PositionMax_D - PositionMin_D)
+    !\
+    ! In the following two global arrays at iDimNoAmr position
+    ! there are the cell index and interpolation weight
+    !/   
+    iCellFloor_D = floor(Dist_D) 
+    Dist_D = Dist_D - iCellFloor_D
+    !\
+    ! The stuff below is only needed to handle the non-amr direction?
+    !/
+    ! store parameters of the block
+    nBlockFound = nBlockFound + 1
+    XyzCorner_DI(:, nBlockFound) = CoordCornerFull_D
+    Dxyz_DI(     :, nBlockFound) = DCoordFull_D
+    iBlock_I(       nBlockFound) = iBlock
+    iBlock                       = nBlockFound
+    !\
+    ! And how about iProc?
+    !/
+  end subroutine find
+  !============
 end module BATL_interpolate_amr_wrapper
