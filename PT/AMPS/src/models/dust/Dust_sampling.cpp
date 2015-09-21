@@ -72,6 +72,17 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
     for (idim=0;idim<3;idim++) e1[idim]/=l2;
   }
 
+  //check the scalar produce of e0 and e1
+  if (fabs(e0[0]*e1[0]+e0[1]*e1[1]+e0[2]*e1[2])>1.0E-6) {
+    //if e0 and e1 are not perpendicular because of the rounding errors -> redefine e1
+    if (fabs(e0[0])>1.0E-5) e1[0]=-e0[1],e1[1]=e0[0],e1[2]=0.0;
+    else e1[0]=0.0,e1[1]=e0[2],e1[2]=-e0[1];
+
+    l2=sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]);
+    for (idim=0;idim<3;idim++) e1[idim]/=l2;
+  }
+
+
   //calculate e2
   e2[0]=+(e0[1]*e1[2]-e1[1]*e0[2]);
   e2[1]=-(e0[0]*e1[2]-e1[0]*e0[2]);
