@@ -76,7 +76,7 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
 
   double ConversionVelocity = 1E3;
   double ConversionBField   = 1E-9;
-  double ConversionEField   = 1E-3;
+  double ConversionEField   = -1E-6;
   double ConversionDensity  = 1E6;
   double ConversionPressure = 1E-9;
 
