@@ -154,7 +154,7 @@ contains
          nDim          = nDimAmr, &
          XyzIn_D       = PACK(XyzIn_D, IsAmr_D), &
          nIndexes      = nDimAmr+1, &
-         find          = find_block, &
+         find          = find, &
          nCell_D       = PACK(nCell_D, IsAmr_D), &
          nGridOut      = nGridOut, &
          Weight_I      = Weight_I, &
@@ -426,7 +426,7 @@ contains
     ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
     ! for tree search
     !/
-    CoordTree_D = (Coord_D - CoordMin_D)/CoordTreeSize_D
+    CoordTree_D = (CoordFull_D - CoordMin_D)/CoordTreeSize_D
     !\
     ! For periodic boundary conditions fix the input coordinate if
     ! beyond the tree bounadaries
@@ -463,7 +463,7 @@ contains
     ! subtract coordinates of the corner from point's coordinates
     Coord_D = PACK((CoordTree_D - PositionMin_D)*CoordTreeSize_D, IsAmr_D)
 
-    Dist_D = 0.5 + nIJK_D*(Coord_D - PositionMin_D)/&
+    Dist_D = 0.5 + nIJK_D*(CoordFull_D - PositionMin_D)/&
          (PositionMax_D - PositionMin_D)
     !\
     ! In the following two global arrays at iDimNoAmr position
