@@ -51,7 +51,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     CharacteristicSpeed=1.0e4;
     break;
   case _O2_PLUS_SPEC_:
-    CharacteristicSpeed=1.0e6;
+    CharacteristicSpeed=5.0e7;
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
