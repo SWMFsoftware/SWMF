@@ -51,7 +51,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     CharacteristicSpeed=1.0e4;
     break;
   case _O2_PLUS_SPEC_:
-    CharacteristicSpeed=5.0e7;
+    CharacteristicSpeed=5.0e6;
     break;
   default:
     exit(__LINE__,__FILE__,"unknown species");
@@ -78,6 +78,9 @@ bool BoundingBoxParticleInjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
 
   if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
     for (nface=0;nface<2*DIM;nface++) if (ExternalFaces[nface]==true) {
+      return true;
+
+
       startNode->GetExternalNormal(ExternalNormal,nface);
       ModelParticlesInjectionRate=-(v[0]*ExternalNormal[0]+v[1]*ExternalNormal[1]+v[2]*ExternalNormal[2]);
 
@@ -241,7 +244,9 @@ void amps_init() {
 	MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 	//init the particle solver
+	CCMC::Init_BeforeParser();
 	PIC::Init_BeforeParser();
+	CCMC::Init_AfterParser();
 
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
@@ -256,7 +261,6 @@ void amps_init() {
 	}
 
 	//read the domain size from the data file
-	//	PIC::CPLR::DATAFILE::KAMELEON::LFM::GetDomainLimits(xmin,xmax,"/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
 	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
 	for (idim=0;idim<3;idim++) {
 	  double xCenter,dx;
@@ -310,7 +314,6 @@ void amps_init() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	//	PIC::CPLR::DATAFILE::KAMELEON::LFM::LoadDataFile("/Users/ccmc/Example_Runs/LFM/IMFBy.LFM.Asher_Pembroke_112513_1_mhd_2000-01-01T07-07-00Z.cdf");
 	PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
 
 	//init the PIC solver
@@ -319,9 +322,9 @@ void amps_init() {
 
   //create the list of mesh nodes where the injection boundary conditinos are applied
   PIC::BC::BlockInjectionBCindicatior=BoundingBoxParticleInjectionIndicator;
-  PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
+//  PIC::BC::userDefinedBoundingBlockInjectionFunction=BoundingBoxInjection;
   PIC::BC::InitBoundingBoxInjectionBlockList();
-  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
+//  PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=BoundingBoxInjectionRate;
 
 
 	//set up the time step
