@@ -132,7 +132,7 @@ void Exosphere::Init_BeforeParser() {
   int idim;
 
   //set the model of inhectino of the ion at the boundary of the domain due to the background plasma evnoronment
-  #if _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON
+  #if _EXOSPHERE_SOURCE__BACKGROUND_PLASMA_ION_INJECTION_ == _PIC_MODE_ON_ 
   PIC::ParticleWeightTimeStep::ExosphereModelExtraSourceRate=SourceProcesses::BackgroundPlasmaBoundaryIonInjection::GetTotalProductionRate;
   PIC::BC::ExosphereModelExtraInjectionFunction=SourceProcesses::BackgroundPlasmaBoundaryIonInjection::ParticleInjection;
   #endif
