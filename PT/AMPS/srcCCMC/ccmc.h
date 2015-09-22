@@ -48,37 +48,6 @@ namespace CCMC {
     memcpy(x_LOCAL,x,3*sizeof(double));
     memcpy(v_LOCAL,v,3*sizeof(double));
 
-    //get the radiation pressure acceleration
-    if (spec==_NA_SPEC_) {
-      if ((x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2]>_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_))||(x_LOCAL[0]>0.0)) { //calculate the radiation pressure force
-        double rHeliocentric,vHeliocentric,radiationPressureAcceleration;
-
-        //calcualte velocity of the particle in the "Frozen SO Frame"; IMPORTANT: SO rotates only around z-direction!!!!
-        double v_LOCAL_SO_FROZEN[3];
-
-        v_LOCAL_SO_FROZEN[0]=Exosphere::vObject_SO_FROZEN[0]+v_LOCAL[0]+
-            Exosphere::RotationVector_SO_FROZEN[1]*x_LOCAL[2]-Exosphere::RotationVector_SO_FROZEN[2]*x_LOCAL[1];
-
-        v_LOCAL_SO_FROZEN[1]=Exosphere::vObject_SO_FROZEN[1]+v_LOCAL[1]-
-            Exosphere::RotationVector_SO_FROZEN[0]*x_LOCAL[2]+Exosphere::RotationVector_SO_FROZEN[2]*x_LOCAL[0];
-
-        v_LOCAL_SO_FROZEN[2]=Exosphere::vObject_SO_FROZEN[2]+v_LOCAL[2]+
-            Exosphere::RotationVector_SO_FROZEN[0]*x_LOCAL[1]-Exosphere::RotationVector_SO_FROZEN[1]*x_LOCAL[0];
-
-
-        rHeliocentric=sqrt(pow(x_LOCAL[0]-Exosphere::xObjectRadial,2)+(x_LOCAL[1]*x_LOCAL[1])+(x_LOCAL[2]*x_LOCAL[2]));
-        vHeliocentric=(
-            (v_LOCAL_SO_FROZEN[0]*(x_LOCAL[0]-Exosphere::xObjectRadial))+
-            (v_LOCAL_SO_FROZEN[1]*x_LOCAL[1])+(v_LOCAL_SO_FROZEN[2]*x_LOCAL[2]))/rHeliocentric;
-
-        radiationPressureAcceleration=SodiumRadiationPressureAcceleration__Combi_1997_icarus(vHeliocentric,rHeliocentric);
-
-        accl_LOCAL[0]+=radiationPressureAcceleration*(x_LOCAL[0]-Exosphere::xObjectRadial)/rHeliocentric;
-        accl_LOCAL[1]+=radiationPressureAcceleration*x_LOCAL[1]/rHeliocentric;
-        accl_LOCAL[2]+=radiationPressureAcceleration*x_LOCAL[2]/rHeliocentric;
-      }
-    }
-
     //the Lorentz force
     double elCharge;
 
@@ -115,46 +84,10 @@ namespace CCMC {
     }
 
 
-    //the gravity force
-    double r2=x_LOCAL[0]*x_LOCAL[0]+x_LOCAL[1]*x_LOCAL[1]+x_LOCAL[2]*x_LOCAL[2];
-    double r=sqrt(r2);
-    int idim;
-
-    for (idim=0;idim<DIM;idim++) {
-      accl_LOCAL[idim]-=GravityConstant*_MASS_(_TARGET_)/r2*x_LOCAL[idim]/r;
-    }
-
-
-    //correct the gravity acceleration: accout for solar gravity of the particle location
-    double rSun2Moon,rSun2Particle;
-
-    rSun2Moon=xObjectRadial;
-    rSun2Particle=sqrt(pow(x_LOCAL[0]-xObjectRadial,2)+pow(x_LOCAL[1],2)+pow(x_LOCAL[2],2));
-
-    accl_LOCAL[0]-=GravityConstant*_MASS_(_SUN_)*((x_LOCAL[0]-xObjectRadial)/pow(rSun2Particle,3)+xObjectRadial/pow(rSun2Moon,3));
-    accl_LOCAL[1]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[1]/pow(rSun2Particle,3));
-    accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)*(x_LOCAL[2]/pow(rSun2Particle,3));
-
-
     if (isnan(accl_LOCAL[0])||isnan(accl_LOCAL[1])||isnan(accl_LOCAL[2])) exit(__LINE__,__FILE__,"Error in calculation of the acceleration");
 
 
-/*    double rSolarVector[3],r2Solar,rSolar;
-
-
-    exit(__LINE__,__FILE__,"Check the gravity correction");
-
-    rSolarVector[0]=xObjectRadial-x_LOCAL[0];
-    rSolarVector[1]=x_LOCAL[1],rSolarVector[2]=x_LOCAL[2];
-
-    r2Solar=(rSolarVector[0]*rSolarVector[0])+(rSolarVector[1]*rSolarVector[1])+(rSolarVector[2]*rSolarVector[2]);
-    rSolar=sqrt(r2Solar);
-
-    accl_LOCAL[0]+=GravityConstant*_MASS_(_SUN_)*(1.0/r2Solar*rSolarVector[0]/rSolar-1.0/pow(xObjectRadial,2)); //x-axis in solar coordinate frame and SO have opposite direction
-    accl_LOCAL[1]-=GravityConstant*_MASS_(_SUN_)/r2Solar*rSolarVector[1]/rSolar;
-    accl_LOCAL[2]-=GravityConstant*_MASS_(_SUN_)/r2Solar*rSolarVector[2]/rSolar;*/
-
-    //account for the planetary rotation around the Sun
+/*    //account for the planetary rotation around the Sun
     double aCen[3],aCorr[3],t3,t7,t12;
 
     t3 = RotationVector_SO_FROZEN[0] * x_LOCAL[1] - RotationVector_SO_FROZEN[1] * x_LOCAL[0];
@@ -172,7 +105,7 @@ namespace CCMC {
 
     accl_LOCAL[0]+=aCen[0]+aCorr[0];
     accl_LOCAL[1]+=aCen[1]+aCorr[1];
-    accl_LOCAL[2]+=aCen[2]+aCorr[2];
+    accl_LOCAL[2]+=aCen[2]+aCorr[2];*/
 
     //copy the local value of the acceleration to the global one
     memcpy(accl,accl_LOCAL,3*sizeof(double));
