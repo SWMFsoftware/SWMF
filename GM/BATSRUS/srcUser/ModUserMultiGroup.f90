@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModUser
   use ModUserEmpty,                                     &
@@ -99,6 +99,7 @@ contains
     !--------------------------------------------------------------------------
 
     select case(TypeProblem)
+    case('diffusionfront')
     case('lightfront')
     case('infinitemedium')
     case('planckian')
@@ -121,8 +122,8 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModConst,      ONLY: cKEVToK
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo, InvGammaMinus1, Gamma, No2Si_V, Si2No_V, &
-         UnitTemperature_
+    use ModPhysics,    ONLY: cRadiationNo, InvGammaMinus1, Gamma, No2Si_V, &
+         Si2No_V, UnitTemperature_, UnitRho_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          nWave, WaveFirst_, WaveLast_
 
@@ -135,6 +136,12 @@ contains
     !--------------------------------------------------------------------------
 
     select case(TypeProblem)
+    case('diffusionfront')
+       Rho = 1.0e3*Si2No_V(UnitRho_)
+       Temperature = 300.0*Si2No_V(UnitTemperature_)
+       Pressure = Rho*Temperature
+       Erad = cRadiationNo*Temperature**4
+       ExtraEint = 0.0
     case('lightfront')
        Rho = 1.0
        Temperature = 1.0e-16
@@ -187,14 +194,17 @@ contains
          UseSplitSemiImplicit
     use ModSemiImplicit, ONLY: iVarSemi
     use ModMain,       ONLY: nI, nJ, nK
-    use ModPhysics,    ONLY: cRadiationNo
-    use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_
+    use ModPhysics,    ONLY: cRadiationNo, Si2No_V, UnitTemperature_, UnitRho_
+    use ModVarIndexes, ONLY: nWave, WaveFirst_, WaveLast_, Rho_, p_
+    use ModConst,      ONLY: cEVToK
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
+
+    real :: Rho, Temperature
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
@@ -205,32 +215,52 @@ contains
     case(1)
        select case(TypeBc)
        case('user')
-          ! float, just for the sake of having filled in ghost cells
-          State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
-          State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
-          ! bin 1 starts on the left
-          State_VGB(WaveFirst_,-1:0,:,:,iBlock) = 1.0
+          select case(TypeProblem)
+          case('diffusionfront')
+             Rho = 1e3*Si2No_V(UnitRho_)
+             Temperature = 100.0*cEVToK*Si2No_V(UnitTemperature_)
+             State_VGB(:,-1:0,:,:,iBlock) = 0.0
+             State_VGB(Rho_,-1:0,:,:,iBlock) = Rho
+             State_VGB(p_,-1:0,:,:,iBlock) = Rho*Temperature
+             State_VGB(Wavefirst_,-1:0,:,:,iBlock) = &
+                  cRadiationNo*Temperature**4
+          case default
+             ! float, just for the sake of having filled in ghost cells
+             State_VGB(:,0,:,:,iBlock)  = State_VGB(:,1,:,:,iBlock)
+             State_VGB(:,-1,:,:,iBlock) = State_VGB(:,1,:,:,iBlock)
+             ! bin 1 starts on the left
+             State_VGB(WaveFirst_,-1:0,:,:,iBlock) = 1.0
+          end select
        case('usersemi')
           ! bin 1 starts on the left
-          if(nWave == 1)then
-             ! set Erad
+          select case(TypeProblem)
+          case('diffusionfront')
+             Temperature = 100.0*cEVToK*Si2No_V(UnitTemperature_)
              do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
+                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = &
+                     cRadiationNo*Temperature**4
              end do; end do
-          elseif(UseSplitSemiImplicit)then
-             if(iVarSemi == iTrImplFirst)then
-                StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = 1.0
+          case default
+             if(nWave == 1)then
+                ! set Erad
+                do k = 1, nK; do j = 1, nJ
+                   StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
+                end do; end do
+             elseif(UseSplitSemiImplicit)then
+                if(iVarSemi == iTrImplFirst)then
+                   StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = 1.0
+                else
+                   StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = &
+                        StateSemi_VGB(1,1,1:nJ,1:nK,iBlock)
+                end if
              else
-                StateSemi_VGB(1,0,1:nJ,1:nK,iBlock) = &
-                     StateSemi_VGB(1,1,1:nJ,1:nK,iBlock)
+                do k = 1, nK; do j = 1, nJ
+                   StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
+                   StateSemi_VGB(iTrImplFirst+1:iTrImplLast,0,j,k,iBlock) = &
+                        StateSemi_VGB(iTrImplFirst+1:iTrImplLast,1,j,k,iBlock)
+                end do; end do
              end if
-          else
-             do k = 1, nK; do j = 1, nJ
-                StateSemi_VGB(iTrImplFirst,0,j,k,iBlock) = 1.0
-                StateSemi_VGB(iTrImplFirst+1:iTrImplLast,0,j,k,iBlock) = &
-                     StateSemi_VGB(iTrImplFirst+1:iTrImplLast,1,j,k,iBlock)
-             end do; end do
-          end if
+          end select
        end select
     case(2)
        select case(TypeBc)
@@ -518,6 +548,7 @@ contains
          UnitRho_, UnitP_, UnitEnergyDens_, UnitTemperature_, &
          UnitX_, UnitT_, UnitU_, cRadiationNo, Clight
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, WaveFirst_, WaveLast_
+    use ModConst, ONLY: cEVToK
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
@@ -590,6 +621,8 @@ contains
 
     if(present(CvOut))then
        select case(TypeProblem)
+       case('diffusionfront')
+          CvOut = 1e9/cEVToK
        case('lightfront','planckian')
           CvOut = InvGammaMinus1*Rho &
                *No2Si_V(UnitEnergyDens_)/No2Si_V(UnitTemperature_)
@@ -603,6 +636,16 @@ contains
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
     select case(TypeProblem)
+    case('diffusionfront')
+       if(present(OpacityPlanckOut_W)) &
+            OpacityPlanckOut_W = 1e30/No2Si_V(UnitX_)
+
+       if(present(OpacityRosselandOut_W)) &
+            OpacityRosselandOut_W = 1e8
+
+       if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
+            *No2Si_V(UnitEnergyDens_)
+
     case('lightfront')
        if(present(OpacityPlanckOut_W)) OpacityPlanckOut_W = 0.0
 
