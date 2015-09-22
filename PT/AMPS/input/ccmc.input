@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=O2,O2_PLUS
+SpeciesList=O2_PLUS
 
 
 ErrorLog=error.log
@@ -76,18 +76,20 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   ControlParticleInsideNastranSurface=off !!!on,of
 
   TrajectoryTracing=on
-  MaxSampledTrajectoryNumber=300
+  MaxSampledTrajectoryNumber=30000
 
   define _PIC_SAMPLING_MODE_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
   define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) CCMC::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+  
+  define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 #endGeneral
 
 #block ../exosphere.pl
   SPICE=off 
-  define _TARGET_ _EUROPA_
+  define _TARGET_ _TARGET_NONE_
 
 ! define _ICES_CREATE_COORDINATE_LIST_
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
@@ -95,6 +97,11 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   IcesModelCase=Europa09
 
   addPhysicalModelHeader=ccmc.h
+
+  BackgroundIonInjection=on \\ !on,off
+    InjectionMode=SteadyState \\ ! SteadyState, TimeDependent
+    vmax=1500.0e3 \\ !the maximum velocity of the injected particles
+    IonNumberDensityFraction(O2_PLUS)=1.0
 
 #endblock
 
