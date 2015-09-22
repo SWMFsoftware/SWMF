@@ -50,6 +50,12 @@ COMPILE.f90     = ${CUSTOMPATH_F}pgf90
 #
 LINK.f90	= ${CUSTOMPATH_MPI}mpif90
 
+#
+# Use LINK.f90 with the following flag 
+# to link C main code with Fortran libraries
+#
+NOMAINFLAG = -Mnomain
+
 # 
 # The archive program to build lib*.a libraries
 #
