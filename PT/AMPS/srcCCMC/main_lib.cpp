@@ -314,7 +314,13 @@ void amps_init() {
 	PIC::Mesh::mesh.InitCellMeasure();
 
 	//read the data file
-	PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
+  if (PIC::CPLR::DATAFILE::BinaryFileExists("KAMELEON-TEST")==true)  {
+    PIC::CPLR::DATAFILE::LoadBinaryFile("KAMELEON-TEST");
+  }
+  else {
+	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
+	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
+  }
 
 	//init the PIC solver
 	PIC::Init_AfterParser();
