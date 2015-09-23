@@ -81,7 +81,7 @@ while ($line=<InputFile>) {
   $InputLine=uc($InputLine);
   chomp($InputLine);
  
-  $InputLine=~s/[=()]/ /g;
+  $InputLine=~s/[=():]/ /g;
   ($InputLine,$InputComment)=split(' ',$InputLine,2);
   $InputLine=~s/ //g;
   
@@ -109,6 +109,175 @@ while ($line=<InputFile>) {
     
     ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Comet.cpp");
   }
+  
+  
+  #forces that will be accounted during the simulation
+  elsif ($InputLine eq "FORCES") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+    if ($InputLine eq "GRAVITY") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__GRAVITY_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__GRAVITY_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }   
+    elsif ($InputLine eq "FRAMEROTATION") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__FRAME_ROTATION_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__FRAME_ROTATION_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    elsif ($InputLine eq "RADIATIONPRESSURE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__RADIATION_PRESSURE_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__RADIATION_PRESSURE_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    elsif ($InputLine eq "LORENTZFORCE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__LORENTZ_FORCE_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__LORENTZ_FORCE_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }       
+    elsif ($InputLine eq "DRAGFORCE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__DRAG_FORCE_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__DRAG_FORCE_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    elsif ($InputLine eq "DRAGFORCETANGENTIALCOMPONENT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__DRAG_FORCE__TANGENTIAL_COMPONENT_","_PIC_MODE_ON_","main/Comet.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_CG_DUST_FORCE_MODE__DRAG_FORCE__TANGENTIAL_COMPONENT_","_PIC_MODE_OFF_","main/Comet.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }
+  
+  #dust charging processes that will be modeled
+  elsif ($InputLine eq "DUSTCHARGING") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "ELECTRONCOLLECTIONCURRENT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if  ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__ELECTRON_COLLECTION__MODE_","_PIC_MODE_ON_","models/dust/Dust.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__ELECTRON_COLLECTION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+    }
+    elsif ($InputLine eq "IONCOLLECTIONCURRENT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if  ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__ION_COLLECTION__MODE_","_PIC_MODE_ON_","models/dust/Dust.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__ION_COLLECTION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+    }
+    elsif ($InputLine eq "PHOTOELECTRONCURRENT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if  ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_","_PIC_MODE_ON_","models/dust/Dust.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+    }
+    elsif ($InputLine eq "SECONDARYELECTRONEMISSIONCURRENT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if  ($InputLine eq "ON") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_","_PIC_MODE_ON_","models/dust/Dust.dfn");
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_","_PIC_MODE_OFF_","models/dust/Dust.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+    }
+    
+    elsif ($InputLine eq "MODE") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if  ($InputLine eq "OFF")  {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING_MODE_","_DUST__CHARGING_MODE__OFF_","models/dust/Dust.dfn");
+      }
+      elsif  ($InputLine eq "TIMEDEPENDENT") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING_MODE_","_DUST__CHARGING_MODE__TIME_DEPENDENT_","models/dust/Dust.dfn");
+      }
+      elsif ($InputLine eq "EQUILIBRIUM") {
+        ampsConfigLib::RedefineMacro("_DUST__CHARGING_MODE_","_DUST__CHARGING_MODE__EQUILIBRIUM_","models/dust/Dust.dfn");
+      } 
+      else {
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }    
+    }    
+    
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  }    
+  
+  #gravity mode  
   elsif ($InputLine eq "GRAVITY3D") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
       $InputLine=~s/ //g;
