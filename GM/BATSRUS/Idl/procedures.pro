@@ -530,8 +530,12 @@ pro get_pict_hdf,filename,npict,x,w,$
             Param.TOPOLOGY.YLEN._DATA(0),$
             Param.TOPOLOGY.ZLEN._DATA(0)]
 
-  nxyz_D = nxyz_D/Proc_D
-
+  nExtra_D     = INTARR(3)
+  iCrowd_D     = INTARR(3)
+  nxyzLocal_PD = INTARR(nproc,3)
+  nxyzLocal0_D = nxyz_D/Proc_D
+  nCrowded_D   = nxyz_D - nxyzLocal0_D*Proc_D
+  
   ;; index range
   MinIJK_PD = INTARR(nproc,3)
   MaxIJK_PD = INTARR(nproc,3)
@@ -539,8 +543,23 @@ pro get_pict_hdf,filename,npict,x,w,$
   for ip=0,Proc_D(0)-1 do begin
      for jp=0,Proc_D(1)-1 do begin
         for kp=0,Proc_D(2)-1 do begin
-           MinIJK_PD(iproc,*) = [ip,jp,kp]*nxyz_D 
-           MaxIJK_PD(iproc,*) = MinIJK_PD(iproc,*) + nxyz_D -1
+           iCrowd_D(*) = 0
+           nExtra_D = nCrowded_D
+           if ip LT nCrowded_D(0) then begin
+              iCrowd_D(0) = 1
+              nExtra_D(0) = ip
+           endif
+           if jp LT nCrowded_D(1) then begin
+              iCrowd_D(1) = 1
+              nExtra_D(1) = jp
+           endif
+           if kp LT nCrowded_D(2) then begin
+              iCrowd_D(2) = 1
+              nExtra_D(2) = kp 
+           endif
+           nxyzLocal_PD(iproc,*) = nxyzLocal0_D + iCrowd_D           
+           MinIJK_PD(iproc,*) = [ip,jp,kp]*nxyzLocal0_D + nExtra_D
+           MaxIJK_PD(iproc,*) = MinIJK_PD(iproc,*) + nxyzLocal_PD(iproc,*) - 1
            iproc=iproc+1
         endfor
      endfor
@@ -594,6 +613,7 @@ pro get_pict_hdf,filename,npict,x,w,$
      file_id = H5F_OPEN(filename)
      iMin = MinIJK_PD(iproc,0)
      iMax = MaxIJK_PD(iproc,0)
+     nxyz_D  = nxyzLocal_PD(iproc,*)
 
      if ndim gt 1 then begin 
         jMin = MinIJK_PD(iproc,1)
