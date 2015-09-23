@@ -16,6 +16,11 @@
 #define _DUST__CHARGING__PHOTO_ELECTRON_EMISSION__MODE_        _PIC_MODE_ON_
 #define _DUST__CHARGING__SECONDARY_ELECTRON_EMISSION__MODE_    _PIC_MODE_ON_
 
+//the dust charging mode 
+#define _DUST__CHARGING_MODE_  _DUST__CHARGING_MODE__OFF_
+
+
+
 
 
 #endif
