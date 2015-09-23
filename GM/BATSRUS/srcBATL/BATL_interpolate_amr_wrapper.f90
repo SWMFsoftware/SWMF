@@ -17,12 +17,19 @@ module BATL_interpolate_amr_wrapper
   public:: interpolate_amr_wrapper
 
   ! vector that keeps AMR directions
-  logical:: IsAmr_D(MaxDim)
+  logical, parameter:: IsAmr_D(MaxDim) = iRatio_D > 1
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
-  ! (must handled outside of wrapper)
-  integer:: iDimNoAmr
+  ! (must be handled outside of wrapper
+  ! MIN and MAX are added in order to keep value in range 1 to nDim
+  integer, parameter:: iDimNoAmr = & 
+       MAX(1,MIN(1*(2-iRatio) + 2*(2-jRatio) + 3*(2-kRatio), nDim))
+
+  ! order of dimensions to correctly place AMR and non-AMR directions
+  ! MIN is added in order to keep value in range 1 to nDim
+  integer, parameter:: iDimOrder_I(nDim) = &
+       UNPACK((/1,MIN(2,nDim),MIN(3,nDim)/), IsAmr_D(1:nDim), SPREAD(MIN(3,nDim),1,nDim))
 
   ! vector that keeps point's coordinate in non-AMR dimensions
   real   :: CoordNoAmr
@@ -77,10 +84,8 @@ contains
     integer:: iNode !for code readability
     integer:: iCell, iDim, iDimAmr ! loop variables
     !--------------------------------------------------------------------    
-    ! find non-AMR direction and store coords along it
-    IsAmr_D    = iRatio_D > 1
-    iDimNoAmr  = minloc(iRatio_D,1)
-    CoordNoAmr = XyzIn_D(iDimNoAmr)
+    ! coords along non-AMR direction
+    if(nDimAmr < nDim) CoordNoAmr = XyzIn_D(iDimNoAmr)
 
     ! mark the beginning of the interpolation
     nNodeFound = 0
@@ -110,37 +115,34 @@ contains
 
     ! check if there is a non-AMR direction, handle it if present
     if(nDimAmr < nDim) then
-       ! restore shape and store indexes along non-AMR direction
-       iDimAmr = nDimAmr
-       do iDim = nDim, 1, -1
-          if(iDim == iDimNoAmr)then
-             iCell_II(iDim,         1:  nGridOut) =iCellNoAmr_I(1)
-             iCell_II(iDim,nGridOut+1:2*nGridOut) =iCellNoAmr_I(2)
-          else
-             iCell_II(iDim,         1:  nGridOut) =iCell_II(iDimAmr,1:nGridOut)
-             iCell_II(iDim,nGridOut+1:2*nGridOut) =iCell_II(iDimAmr,1:nGridOut)
-             iDimAmr = iDimAmr - 1
-          end if
-       end do
+       ! local node ids & cell indexes along AMR directions
+       ! are the same for cells iCell and nGridOut+iCell
+       iCell_II(0:nDimAmr,nGridOut+1:2*nGridOut)=iCell_II(0:nDimAmr,1:nGridOut)
 
-       ! local node ids are the same for cells iCell and nGridOut+iCell
-       iCell_II(0,nGridOut+1:2*nGridOut) =iCell_II(0,1:nGridOut)
+       ! store indexes and restore shape along non-AMR direction
+       iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
+       iCell_II(  nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
+       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iDimOrder_I,1:2*nGridOut)
+
+       ! correct weights
+       Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
+       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut) * (1-WeightNoAmr)
 
        ! get correct block and processor ids
        do iCell = 1, nGridOut
           ! proper global node, block and proc ids for iCell
           iNode = iNode_II(1,iCell_II(0,iCell))
-          iCell_II(0, iCell) = iTree_IA(Block_,iNode)
-          iProc_I(    iCell) = iTree_IA(Proc_, iNode)
+          if(iNode > 0)then
+             iCell_II(0, iCell) = iTree_IA(Block_,iNode)
+             iProc_I(    iCell) = iTree_IA(Proc_, iNode)
+          end if
           ! proper global node, block and proc ids for nGridOut+iCell
           iNode = iNode_II(2,iCell_II(0,nGridOut+iCell))
-          iCell_II(0, nGridOut+iCell) = iTree_IA(Block_,iNode)
-          iProc_I(    nGridOut+iCell) = iTree_IA(Proc_, iNode)
+          if(iNode > 0)then
+             iCell_II(0, nGridOut+iCell) = iTree_IA(Block_,iNode)
+             iProc_I(    nGridOut+iCell) = iTree_IA(Proc_, iNode)
+          end if
        end do
-
-       ! correct weights
-       Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
-       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut) * (1-WeightNoAmr)
 
        ! number for cells has doubled
        nGridOut = 2*nGridOut
@@ -207,18 +209,10 @@ contains
     ! Coord_D will be used to find block, copy input data into it
     ! restore non-AMR directions if necessary
     CoordFull_D = 0
-    if(nDimIn == nDim)then
-       CoordFull_D(1:nDim) = Coord_D(1:nDim)
+    if(nDimAmr == nDim)then !NOTE: nDimIn = nDimAmr
+       CoordFull_D = Coord_D
     else
-       iDimAmr = nDimIn
-       do iDim = nDim, 1, -1
-          if(IsAmr_D(iDim))then
-             CoordFull_D(iDim) = Coord_D(iDimAmr)
-             iDimAmr = iDimAmr - 1
-          else
-             CoordFull_D(iDim) = CoordNoAmr
-          end if
-       end do
+       CoordFull_D = UNPACK(Coord_D, IsAmr_D, SPREAD(CoordNoAmr,1,MaxDim))
     end if
     !\
     ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
@@ -262,7 +256,7 @@ contains
     Coord_D = PACK((CoordTree_D - PositionMin_D)*CoordTreeSize_D, IsAmr_D)
 
     ! if there is no non-AMR direction => no need to do extra work
-    if(nDimIn == nDim) RETURN
+    if(nDimAmr == nDim) RETURN !NOTE: nDimIn = nDimAmr
 
     !\
     ! take care of the non-AMR direction:
