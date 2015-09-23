@@ -26,11 +26,6 @@ module BATL_interpolate_amr_wrapper
   integer, parameter:: iDimNoAmr = & 
        MAX(1,MIN(1*(2-iRatio) + 2*(2-jRatio) + 3*(2-kRatio), nDim))
 
-  ! order of dimensions to correctly place AMR and non-AMR directions
-  ! MIN is added in order to keep value in range 1 to nDim
-  integer, parameter:: iDimOrder_I(nDim) = &
-       UNPACK((/1,MIN(2,nDim),MIN(3,nDim)/), IsAmr_D(1:nDim), SPREAD(MIN(3,nDim),1,nDim))
-
   ! vector that keeps point's coordinate in non-AMR dimensions
   real   :: CoordNoAmr
 
@@ -83,9 +78,16 @@ contains
     integer:: iProc_I(2**nDim)
     integer:: iNode !for code readability
     integer:: iCell, iDim, iDimAmr ! loop variables
+
+    ! order of dimensions to correctly place AMR and non-AMR directions
+    integer:: iDimOrder_I(nDim)
     !--------------------------------------------------------------------    
     ! coords along non-AMR direction
-    if(nDimAmr < nDim) CoordNoAmr = XyzIn_D(iDimNoAmr)
+    if(nDimAmr < nDim) then
+       ! this case is valid only for nDim=MaxDim=3
+       CoordNoAmr = XyzIn_D(iDimNoAmr)
+       iDimOrder_I = UNPACK((/1,2,3/), IsAmr_D(1:nDim), SPREAD(3,1,nDim))
+    end if
 
     ! mark the beginning of the interpolation
     nNodeFound = 0
