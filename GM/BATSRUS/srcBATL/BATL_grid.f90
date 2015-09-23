@@ -1339,7 +1339,8 @@ contains
 
   !===========================================================================
 
-  subroutine interpolate_grid_amr(XyzIn_D, nCell, iCell_II, Weight_I)
+  subroutine interpolate_grid_amr(XyzIn_D, nCell, iCell_II, Weight_I, &
+       IsSecondOrder)
 
     use BATL_interpolate_amr_wrapper
 
@@ -1352,20 +1353,32 @@ contains
     integer, intent(out):: nCell
     integer, intent(out):: iCell_II(0:nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
-    real                :: Coord_D(MaxDim)
+
+    logical, optional, intent(out):: IsSecondOrder
+
+    real   :: Coord_D(MaxDim)
+    logical:: IsSecondOrderLocal
     !-----------------------------------
+    ! check number of AMR dimensions:
+    ! if it is 0 or 1 => call a simpler interpolation function
+    if(nDimAmr <= 1)then
+       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       RETURN
+    end if
+    
     ! Convert to generalized coordinates if necessary
     if(IsCartesianGrid)then
        Coord_D = XyzIn_D
     else
        call xyz_to_coord(XyzIn_D, Coord_D)
     end if
+
     ! call the wrapper for the shared AMR interpolation procedure,
-    ! wrapper needs BATL's find_grid_block and interpolate_grid routines
     call interpolate_amr_wrapper(Coord_D, &
-         nCell, iCell_II, Weight_I, &
-         find_grid_block,&
-         interpolate_grid)
+         nCell, iCell_II, Weight_I, IsSecondOrderLocal)
+
+    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
+
   end subroutine interpolate_grid_amr
 
   !===========================================================================
@@ -1832,7 +1845,6 @@ contains
        iPoint_D = (/ iPoint, jPoint, kPoint /)
        XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
             *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
-
        call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I)
 
        do iCell = 1, nCell
