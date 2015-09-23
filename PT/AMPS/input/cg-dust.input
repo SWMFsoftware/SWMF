@@ -138,6 +138,19 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 #block ../input/cg.pl !process settings of the moon module
   Gravity3D=on !on,off
 
+  Forces::Gravity=on
+  Forces::FrameRotation=off
+  Forces::RadiationPressure=off
+  Forces::LorentzForce=off
+  Forces::DragForce=off
+  Forces::DragForceTangentialComponent=off
+
+  DustCharging::ElectronCollectionCurrent=off
+  DustCharging::IonCollectionCurrent=off
+  DustCharging::PhotoElectronCurrent=off
+  DustCharging::SecondaryElectronEmissionCurrent=off 
+  DustCharging::Mode=TimeDependent !off,TimeDependent, Equilibrium
+
   HeliocentricDistance=3.5*_AU_
   subSolarPointAzimuth=0.328671678 !! in rad 18.7961
   subSolarPointZenith=0.809977635 !! in rad 46.41975 degrees from zaxis
