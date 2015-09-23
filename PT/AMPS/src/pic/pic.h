@@ -348,14 +348,22 @@ namespace PIC {
     };
 
     // max number of field line in the simulation
-    const int nFieldLineMax=1;
+    const long int nFieldLineMax=100;
+
+    //current number of field lines
+    extern long int nFieldLine;
 
     extern cFieldLine* FieldLinesAll;
     extern cStack<cFieldLineVertex> VerticesAll;
     extern cStack<cFieldLineSegment> SegmentsAll;
 
+    // initialize field line data structure
     void Init();
+
+    //create parker spiral starting at point xStart
+    void InitSimpleParkerSpiral(double *xStart);
     
+    // output data
     void Output(char* fname, bool GeometryOnly);
 
 
