@@ -74,11 +74,20 @@ siz=size(w)
 if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
 
 ; Define some constants for "planetary" units
-amu        = 1.6726e-24         ; [g]
-kboltzmann = 1.3807e-23         ; [SI]
-tunit      = 1e-15/kboltzmann   ; tunit*p/rho       [nPa] [amu/cc] -> [K]
-mu0        = 4*!pi*1e-7*1e9     ; p/(bb/2/mu0)      [nPa] [nT]
-mu0A       = 4*!pi*1e-7*amu*1e27; sqrt(bb/mu0A/rho) [nT] [amu/cc] -> [km/s]
+kboltzmann = 1.3807e-23    ; [SI]
+amu        = 1.6726e-24    ; [g]  amu*rho   [amu/cc] -> g/cc
+
+; temperature: tunit*p/rho           [nPa] [amu/cc] -> [K]
+tunit      = 1e-15/kboltzmann   
+
+; sound speed: sqrt(cs0*gamma*p/rho) [nPa] [amu/cc] -> [km/s]
+cs0        = 1/1.6726e-6        
+
+; Alfven speed: sqrt(bb/mu0A/rho)     [nT] [amu/cc] -> [km/s]
+mu0A       = 4*!pi*1e-7*amu*1e27
+
+; plasma beta: p/(bb/2/mu0)          [nPa] [nT]
+mu0        = 4*!pi*1e-7*1e9
 
 ; Number of equation parameters
 nEqpar = n_elements(eqpar)
