@@ -65,7 +65,7 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   ReferenceInjectionParticleNumber=200
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=100000
+  InitialSampleLength=100
   TestRunTotalIteration=-1 !set infinite number ot iterations 
 
   BlockCells=5,5,5
