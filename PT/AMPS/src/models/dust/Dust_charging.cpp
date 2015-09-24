@@ -424,60 +424,37 @@ t24*SecondaryEmissionPeakYield*t177-0.23125*t171/t31*t11*t7*ElectronCharge*t181
 
 
 
-
 //the generic procedure of the grain charge update
-int ElectricallyChargedDust::Charging::UpdateGrainCharge(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode,int CHARGE_INTEGRATION_MODE) {
-  double PlasmaTemperature,PlasmaNumberDensity;
-  double GrainElectricCharge,GrainElectricCharge_NEW,InitGrainCharge;
+int ElectricallyChargedDust::Charging::UpdateGrainCharge(
+                double  dt,
+		double* ParticleVelocity,
+		double* PlasmaVelocity,
+		double  PlasmaPressure,
+                double  PlasmaTemperature,
+		double  PlasmaNumberDensity,
+		double  GrainRadius, 
+		double& GrainElectricCharge,
+		int     CHARGE_INTEGRATION_MODE) {
 
-  PIC::Mesh::cDataCenterNode* cell;
-  int i,j,k;
-  long int LocalCellNumber;
-  double swVel[3];
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *finalNode=PIC::Mesh::mesh.findTreeNode(xFinal,initNode);
-
-  if (_DUST__CHARGING_MODE_ == _DUST__CHARGING_MODE__OFF_) {
-    //dust charing modeling is turned off
-    return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
-  }
-
-  //the procesure is applied only to dust
-  if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
-
-  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
-  cell=finalNode->block->GetCenterNode(LocalCellNumber);
-
-  //get the grain electric potential
-  char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
-  double M,GrainRadius,dustPotential;
-
-  memcpy((void*)localParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
-  GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)localParticleData);
-  GrainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)localParticleData);
+  double GrainElectricCharge_NEW,InitGrainCharge;
+  
+  //initial grain's charge
   InitGrainCharge=GrainElectricCharge;
 
 
-  //reserve space for different elecgtron and ion temepratures
+  //reserve space for different electron and ion temepratures
   double Ti,Te,Je,dJe,Ji,dJi,Jpe,dJpe,Jse,dJse,pe;
-
-
-  PIC::CPLR::InitInterpolationStencil(xInit,initNode);
-  PlasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
-  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
-  PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
-  pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure();
-
 
   if (PlasmaNumberDensity<1.0E2) {
     PlasmaTemperature=200.0;
     PlasmaNumberDensity=1.0E2;
-    swVel[0]=100.0,swVel[1]=0.0,swVel[2]=0.0;
+    PlasmaVelocity[0]=100.0,PlasmaVelocity[1]=0.0,PlasmaVelocity[2]=0.0;
     Ti=PlasmaTemperature;
     Te=PlasmaTemperature;
   }
   else{
     Ti=PlasmaTemperature;
-    Te=pe/(Kbol*PlasmaNumberDensity);
+    Te=PlasmaPressure/(Kbol*PlasmaNumberDensity);
   }
 
 
@@ -508,9 +485,9 @@ int ElectricallyChargedDust::Charging::UpdateGrainCharge(double *xInit,double *x
 
   do {
     GetGrainCurrent(
-      GrainRadius,GrainElectricCharge,v, //radius, the electric charge, and velocity of the grain
+      GrainRadius,GrainElectricCharge,ParticleVelocity, //radius, the electric charge, and velocity of the grain
       HeliocentricDistance, //heliocentric distance of the grain in AU
-      PlasmaNumberDensity,Ti,swVel,  //ion number density, temeprature, and velocity
+      PlasmaNumberDensity,Ti,PlasmaVelocity,  //ion number density, temeprature, and velocity
       PlasmaNumberDensity,Te,  //electron number density and temeprature
       Je, dJe, //the electron collection current
       Ji, dJi, //ion collection current
@@ -570,6 +547,54 @@ int ElectricallyChargedDust::Charging::UpdateGrainCharge(double *xInit,double *x
     GrainElectricCharge=GrainElectricCharge_NEW;
   }
   while (++Counter<10000);
+
+}
+
+
+
+//the generic procedure of the grain charge update
+int ElectricallyChargedDust::Charging::UpdateGrainCharge(double *xInit,double *xFinal,double *v,int& spec,long int ptr,PIC::ParticleBuffer::byte *ParticleData,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *initNode,int CHARGE_INTEGRATION_MODE) {
+  double PlasmaTemperature,PlasmaNumberDensity, pe;
+  double GrainElectricCharge,GrainElectricCharge_NEW,InitGrainCharge;
+
+  PIC::Mesh::cDataCenterNode* cell;
+  int i,j,k;
+  long int LocalCellNumber;
+  double swVel[3];
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *finalNode=PIC::Mesh::mesh.findTreeNode(xFinal,initNode);
+
+  if (_DUST__CHARGING_MODE_ == _DUST__CHARGING_MODE__OFF_) {
+    //dust charing modeling is turned off
+    return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+  }
+
+  //the procesure is applied only to dust
+  if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
+
+  if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
+  cell=finalNode->block->GetCenterNode(LocalCellNumber);
+
+  //get the grain electric potential
+  char localParticleData[PIC::ParticleBuffer::ParticleDataLength];
+  double M,GrainRadius,dustPotential;
+
+  memcpy((void*)localParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
+  GrainRadius=GetGrainRadius((PIC::ParticleBuffer::byte*)localParticleData);
+  GrainElectricCharge=GetGrainCharge((PIC::ParticleBuffer::byte*)localParticleData);
+  InitGrainCharge=GrainElectricCharge;
+
+
+  PIC::CPLR::InitInterpolationStencil(xInit,initNode);
+  PlasmaTemperature=PIC::CPLR::GetBackgroundPlasmaTemperature();
+  PIC::CPLR::GetBackgroundPlasmaVelocity(swVel);
+  PlasmaNumberDensity=PIC::CPLR::GetBackgroundPlasmaNumberDensity();
+  pe=PIC::CPLR::GetBackgroundElectronPlasmaPressure();
+
+
+  UpdateGrainCharge(dt, v, 
+		    swVel,
+		    pe, PlasmaTemperature, PlasmaNumberDensity,
+		    GrainRadius, GrainElectricCharge, CHARGE_INTEGRATION_MODE);
 
 
   SetGrainCharge(GrainElectricCharge,ParticleData);
