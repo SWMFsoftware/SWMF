@@ -17,7 +17,10 @@ module BATL_interpolate_amr_wrapper
   public:: interpolate_amr_wrapper
 
   ! vector that keeps AMR directions
-  logical, parameter:: IsAmr_D(MaxDim) = iRatio_D > 1
+  logical,parameter:: IsAmr_D(MaxDim)= (/&
+       iRatio_D(1) > 1,&
+       iRatio_D(2) > 1,&
+       iRatio_D(3) > 1/)
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
@@ -212,7 +215,7 @@ contains
     ! restore non-AMR directions if necessary
     CoordFull_D = 0
     if(nDimAmr == nDim)then !NOTE: nDimIn = nDimAmr
-       CoordFull_D = Coord_D
+       CoordFull_D(1:nDim) = Coord_D(1:nDim)
     else
        CoordFull_D = UNPACK(Coord_D, IsAmr_D, SPREAD(CoordNoAmr,1,MaxDim))
     end if
