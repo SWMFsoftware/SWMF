@@ -280,11 +280,15 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      ['T'        , 'p/rho'                                             ], $ ; temperature
      ['T_GM'     , '7.24270e+07*p/rho'                                 ], $ ; [K] 1/kB*(nPa/cm^-3)
      ['T_SC'     , '1.211E-8*p/rho'                                    ], $ ; [K] amu/kB*(dyne/cm^2)/(g/cm^3)
-     ['n_SC'     : 'rho/amu'                                           ], $ ; [cm^-3] in CGS
+     ['n_SC'     , 'rho/amu'                                           ], $ ; [cm^-3] in CGS
      ['calfvenx' , 'bx/sqrt(rho)'                                      ], $ ; Alfven velocity
      ['calfveny' , 'by/sqrt(rho)'                                      ], $
      ['calfvenz' , 'bz/sqrt(rho)'                                      ], $
      ['calfven'  , 'b /sqrt(rho)'                                      ], $
+     ['calfvenx_GM', 'bx/sqrt(rho*mu0A)'                               ], $
+     ['calfveny_GM', 'by/sqrt(rho*mu0A)'                               ], $
+     ['calfvenz_GM', 'bz/sqrt(rho*mu0A)'                               ], $
+     ['calfven_GM' , 'b /sqrt(rho*mu0A)'                               ], $
      ['Malfvenx' , 'ux/bx*sqrt(rho)'                                   ], $ ; Alfven Mach number
      ['Malfveny' , 'uy/by*sqrt(rho)'                                   ], $
      ['Malfvenz' , 'uz/bz*sqrt(rho)'                                   ], $
