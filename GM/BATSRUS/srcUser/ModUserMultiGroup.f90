@@ -99,6 +99,7 @@ contains
     !--------------------------------------------------------------------------
 
     select case(TypeProblem)
+    case('bubble')
     case('diffusionfront')
     case('lightfront')
     case('infinitemedium')
@@ -123,17 +124,48 @@ contains
     use ModConst,      ONLY: cKEVToK
     use ModMain,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: cRadiationNo, InvGammaMinus1, Gamma, No2Si_V, &
-         Si2No_V, UnitTemperature_, UnitRho_
+         Si2No_V, UnitTemperature_, UnitRho_, UnitX_
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, ExtraEint_, p_, &
          nWave, WaveFirst_, WaveLast_
+    use ModGeometry,   ONLY: Xyz_DGB
+    use ModSize,       ONLY: x_, y_
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real :: Rho, Temperature, Pressure, Erad, Trad, ExtraEint
+    real :: x, y, r, Troom, Tbubble
 
     character(len=*), parameter :: NameSub = "user_set_ics"
     !--------------------------------------------------------------------------
+
+    if(TypeProblem == 'bubble')then
+       Rho = 1.224*Si2No_V(UnitRho_)
+       Troom = 300.0*Si2No_V(UnitTemperature_)
+       Tbubble = 813.5*cKEVToK*Si2No_V(UnitTemperature_)
+
+       do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
+          State_VGB(Rho_,i,j,k,iBlock) = Rho
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+          State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+
+          x = Xyz_DGB(x_,i,j,k,iBlock)
+          y = Xyz_DGB(y_,i,j,k,iBlock)
+          r = sqrt(x**2 + y**2)
+
+          if(r < Si2No_V(UnitX_))then
+             Temperature = Tbubble
+          else
+             Temperature = Troom
+          end if
+
+          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
+               cRadiationNo*Temperature**4
+          State_VGB(p_,i,j,k,iBlock) = Rho*Temperature
+       end do; end do; end do
+
+       RETURN
+    end if
 
     select case(TypeProblem)
     case('diffusionfront')
@@ -621,6 +653,8 @@ contains
 
     if(present(CvOut))then
        select case(TypeProblem)
+       case('bubble')
+          CvOut = 1.0034e11*1.224e-3*0.1/cEVToK
        case('diffusionfront')
           CvOut = 1e9/cEVToK
        case('lightfront','planckian')
@@ -636,6 +670,16 @@ contains
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
     select case(TypeProblem)
+    case('bubble')
+       if(present(OpacityPlanckOut_W)) &
+            OpacityPlanckOut_W = 1e30/No2Si_V(UnitX_)
+
+       if(present(OpacityRosselandOut_W)) &
+            OpacityRosselandOut_W = 12.24
+
+       if(present(PlanckOut_W)) PlanckOut_W = cRadiationNo*Te**4 &
+            *No2Si_V(UnitEnergyDens_)
+
     case('diffusionfront')
        if(present(OpacityPlanckOut_W)) &
             OpacityPlanckOut_W = 1e30/No2Si_V(UnitX_)
