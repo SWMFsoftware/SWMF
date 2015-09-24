@@ -199,7 +199,8 @@ contains
     ! currentsheet,                not suported
 
     use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,TypeGeometry,&
-         IsCartesianGrid
+         IsCartesianGrid, IsLogRadius, IsGenRadius, IsRLonLat, IsSpherical,&
+         IsCylindrical
     use BATL_grid,     ONLY: Xyz_DNB
     use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
     use ModNumConst,   ONLY: cTiny, cRadToDeg
@@ -292,35 +293,22 @@ contains
 
        ! Convert angles to degrees and ln(r)/genr to r
        ! Make sure that phi=360 is not 0 but really 360
-       select case(TypeGeometry)
-       case('rlonlat')
-          Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
-          where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
-          where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
-          Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
-
-       case('rlonlat_lnr')
-          Corner_DI(r_,:)     = exp(Corner_DI(r_,:))
-          Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
-          where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
-          where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
-          Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
-
-       case('rlonlat_genr')
+       if(IsLogRadius) Corner_DI(r_,:)     = exp(Corner_DI(r_,:))
+       if(IsGenRadius) then
           do iCorner = 1, nCorner
              call gen_to_radius(Corner_DI(r_,iCorner))
           end do
-          if(DoTestBlock) write(*,*) "gen_to_radius  Corner_DI = ",Corner_DI
+       endif
+       if(IsRLonLat)then
           Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
           where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
           where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
           Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
-
-       case('cylindrical')
+       else if(IsCylindrical)then
           Corner_DI(Phi_,:) = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
           where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
           where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
-       end select
+       endif       
     end if
 
     if(DoTestBlock) write(*,*) "post Corner_DI = ",Corner_DI
