@@ -22,7 +22,7 @@ module BATL_interpolate_amr
   ! (must be handled outside of wrapper
   ! MIN and MAX are added in order to keep value in range 1 to nDim
   integer, parameter:: iDimNoAmr = & 
-       MAX(1,MIN(1*(2-iRatio) + 2*(2-jRatio) + 3*(2-kRatio), nDim))
+       MAX(1,MIN(1*(2 - iRatio) + 2*(2 - jRatio) + 3*(2 - kRatio), nDim))
   !order of indexes (Amr directions first, NoAmr direction last)
   integer, parameter :: iOrder_II(MaxDim,MaxDim) = reshape((/&
                                          2, 3, 1, & !iDimNoAmr = 1
@@ -219,7 +219,7 @@ contains
        CoordFull_D(1:nDim) = Coord_D(1:nDim)
     else
        CoordFull_D(iOrder_I(1:nDimAmr)) = Coord_D
-       CoordFull_D(MaxDim) = CoordNoAmr
+       CoordFull_D(iDimNoAmr) = CoordNoAmr
     end if
     !\
     ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
@@ -231,6 +231,8 @@ contains
     ! beyond the tree bounadaries
     !/
     where(IsPeriodic_D)CoordTree_D = modulo(CoordTree_D, 1.0)
+    IsOut = any(CoordTree_D < 0.0 .or. CoordTree_D >= 1.0)
+    if(IsOut)RETURN
     !\
     ! call internal BATL find subroutine
     !/
@@ -240,13 +242,11 @@ contains
     ! Check if the block is found
     !/
     if(iNode<=0)then
-       IsOut = .true.
-       RETURN
+       call CON_stop('Failure in BATL_interpolate_amr:find')
     end if
     !\
     !position has been found
     !/
-    IsOut = .false.
     iBlock = iTree_IA(Block_,iNode)
     iProc  = iTree_IA(Proc_, iNode)
     call get_tree_position(iNode=iNode,                &
