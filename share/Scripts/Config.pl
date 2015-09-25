@@ -533,6 +533,8 @@ sub set_debug_{
 	@ARGV = ($MakefileConf);
 	while(<>){
 	    s/^(\s*DEBUG\s*=).*/$1 $DEBUG/;
+	    s/^#(DEBUGC\s*=)/$1/ if $Debug eq "yes";
+	    s/^(DEBUGC\s*=)/#$1/ if $Debug eq "no";
 	    print;
 	}
     }
