@@ -139,11 +139,11 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   Gravity3D=on !on,off
 
   Forces::Gravity=on
-  Forces::FrameRotation=off
-  Forces::RadiationPressure=off
-  Forces::LorentzForce=off
-  Forces::DragForce=off
-  Forces::DragForceTangentialComponent=off
+  Forces::FrameRotation=on
+  Forces::RadiationPressure=on
+  Forces::LorentzForce=on
+  Forces::DragForce=on
+  Forces::DragForceTangentialComponent=on
 
   DustCharging::ElectronCollectionCurrent=off
   DustCharging::IonCollectionCurrent=off
