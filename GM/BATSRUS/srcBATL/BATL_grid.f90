@@ -1342,7 +1342,7 @@ contains
   subroutine interpolate_grid_amr(XyzIn_D, nCell, iCell_II, Weight_I, &
        IsSecondOrder)
 
-    use BATL_interpolate_amr_wrapper
+    use BATL_interpolate_amr, ONLY:interpolate_amr
 
     ! Find the grid cells surrounding the point Xyz_D.
     ! nCell returns the number of cells found on the processor.
@@ -1374,7 +1374,7 @@ contains
     end if
 
     ! call the wrapper for the shared AMR interpolation procedure,
-    call interpolate_amr_wrapper(Coord_D, &
+    call interpolate_amr(Coord_D, &
          nCell, iCell_II, Weight_I, IsSecondOrderLocal)
 
     if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal

@@ -1,12 +1,13 @@
-module BATL_interpolate_amr_wrapper
+module BATL_interpolate_amr
 
   use BATL_mpi,  ONLY: iProc
-  use BATL_size
+  use BATL_size, ONLY: nIJK_D, nDim, nDimAmr, MaxDim, &
+       iRatio, jRatio, kRatio
   use BATL_tree, ONLY: Unset_, find_tree_node, Proc_, Block_,&
        get_tree_position, iTree_IA
   use BATL_geometry, ONLY: CoordMin_D, CoordMax_D, IsPeriodic_D
 
-  use ModInterpolateAMR, ONLY: interpolate_amr
+  use ModInterpolateAMR, ONLY: interpolate_amr_shared=>interpolate_amr, cTol2
 
 
   implicit none
@@ -14,13 +15,7 @@ module BATL_interpolate_amr_wrapper
   SAVE
   private ! except
 
-  public:: interpolate_amr_wrapper
-
-  ! vector that keeps AMR directions
-  logical,parameter:: IsAmr_D(MaxDim)= (/&
-       iRatio_D(1) > 1,&
-       iRatio_D(2) > 1,&
-       iRatio_D(3) > 1/)
+  public:: interpolate_amr
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
@@ -28,8 +23,17 @@ module BATL_interpolate_amr_wrapper
   ! MIN and MAX are added in order to keep value in range 1 to nDim
   integer, parameter:: iDimNoAmr = & 
        MAX(1,MIN(1*(2-iRatio) + 2*(2-jRatio) + 3*(2-kRatio), nDim))
+  !order of indexes (Amr directions first, NoAmr direction last)
+  integer, parameter :: iOrder_II(MaxDim,MaxDim) = reshape((/&
+                                         2, 3, 1, & !iDimNoAmr = 1
+                                         1, 3, 2, & !iDimNoAmr = 2
+                                         1, 2, 3  & !iDimNoAmr = 3
+                                         /), (/3,3/))
 
-  ! vector that keeps point's coordinate in non-AMR dimensions
+  ! order of dimensions to correctly place AMR and non-AMR directions
+  ! Is calculated as iOrder_II(:,iDimNoAmr), if nDimAmr/=nDim 
+  integer:: iOrder_I(MaxDim) 
+  ! point's coordinate in non-AMR dimensions
   real   :: CoordNoAmr
 
   !\
@@ -59,7 +63,7 @@ module BATL_interpolate_amr_wrapper
 
 contains
 
-  subroutine interpolate_amr_wrapper(XyzIn_D, &
+  subroutine interpolate_amr(XyzIn_D, &
        nCell, iCell_II, Weight_I, IsSecondOrder)
     ! Find the grid cells surrounding the point Xyz_D.
     ! nCell returns the number of cells found on the processor.
@@ -73,23 +77,20 @@ contains
     real,    intent(out):: Weight_I(2**nDim)
     logical, intent(out):: IsSecondOrder
 
-    ! arguments for interpolate_amr subroutine
-    integer:: nCell_D(MaxDim) = (/nI, nJ, nK/)
     integer:: iIndexes_II(0:nDimAmr+1,2**nDimAmr)
     integer:: nGridOut
 
     integer:: iProc_I(2**nDim)
     integer:: iNode !for code readability
-    integer:: iCell, iDim, iDimAmr ! loop variables
-
-    ! order of dimensions to correctly place AMR and non-AMR directions
-    integer:: iDimOrder_I(nDim)
+    integer:: iCell ! loop variables
     !--------------------------------------------------------------------    
     ! coords along non-AMR direction
     if(nDimAmr < nDim) then
-       ! this case is valid only for nDim=MaxDim=3
+       ! this case is valid only for nDim=MaxDim=3, nDimAmr=2
        CoordNoAmr = XyzIn_D(iDimNoAmr)
-       iDimOrder_I = UNPACK((/1,2,3/), IsAmr_D(1:nDim), SPREAD(3,1,nDim))
+       iOrder_I = iOrder_II(:,iDimNoAmr)
+    else
+       iOrder_I = (/1, 2, 3/)
     end if
 
     ! mark the beginning of the interpolation
@@ -101,17 +102,18 @@ contains
     ! need to account for these dimensions separately,
     ! NOTE: routine doesn't sort out blocks located on other processors,
     !       this is done in the end of the current subroutine
-    call interpolate_amr(&
+    call interpolate_amr_shared(&
          nDim          = nDimAmr, &
-         XyzIn_D       = PACK(XyzIn_D, IsAmr_D), &
+         XyzIn_D       = XyzIn_D(iOrder_I(1:nDimAmr)), &
          nIndexes      = nDimAmr+1, &
          find          = find, &
-         nCell_D       = PACK(nCell_D, IsAmr_D), &
+         nCell_D       = nIJK_D(iOrder_I(1:nDimAmr)), &
          nGridOut      = nGridOut, &
          Weight_I      = Weight_I, &
          iIndexes_II   = iIndexes_II, &
          IsSecondOrder = IsSecondOrder, &
          UseGhostCell  = .false.)
+    if(nGridOut==0)RETURN
 
     ! copy results indices
     iProc_I(            1:nGridOut) = iIndexes_II(0,         1:nGridOut)
@@ -127,7 +129,7 @@ contains
        ! store indexes and restore shape along non-AMR direction
        iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
        iCell_II(  nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
-       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iDimOrder_I,1:2*nGridOut)
+       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iOrder_I,1:2*nGridOut)
 
        ! correct weights
        Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
@@ -153,7 +155,6 @@ contains
        nGridOut = 2*nGridOut
     end if
 
-
     ! sort out cells located on other processors
     nCell = 0
     do iCell = 1, nGridOut
@@ -164,7 +165,7 @@ contains
        end if
     end do
 
-  end subroutine interpolate_amr_wrapper
+  end subroutine interpolate_amr
 
   !============================================================================
 
@@ -204,7 +205,7 @@ contains
     ! In the case of a non-AMR direction shows, where in iNodeFound_II
     ! to store a newly found node and its neighbor
     !/
-    integer, save:: iFirst = 1, iSecond = 2
+    integer, save:: First_ = 1, Second_ = 2
     !\
     ! in the case of non-AMR direction: displacement towards neighbor
     !/
@@ -217,7 +218,8 @@ contains
     if(nDimAmr == nDim)then !NOTE: nDimIn = nDimAmr
        CoordFull_D(1:nDim) = Coord_D(1:nDim)
     else
-       CoordFull_D = UNPACK(Coord_D, IsAmr_D, SPREAD(CoordNoAmr,1,MaxDim))
+       CoordFull_D(iOrder_I(1:nDimAmr)) = Coord_D
+       CoordFull_D(MaxDim) = CoordNoAmr
     end if
     !\
     ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
@@ -250,15 +252,18 @@ contains
     call get_tree_position(iNode=iNode,                &
                            PositionMin_D=PositionMin_D,&
                            PositionMax_D=PositionMax_D )
+    ! corner coordinates for the found block
     CoordCornerFull_D =  CoordMin_D + PositionMin_D * CoordTreeSize_D
-    DCoordFull_D      =  (PositionMax_D-PositionMin_D)*CoordTreeSize_D/nIjk_D
-    ! corner coordinates of the found block
-    CoordCorner_D = PACK(CoordCornerFull_D, IsAmr_D)
-    ! cell size of the found block
-    DCoord_D = PACK(DCoordFull_D, IsAmr_D)
+    CoordCorner_D = CoordCornerFull_D(iOrder_I(1:nDimAmr))
+
+    ! cell size for the found block
+    DCoordFull_D      =  (PositionMax_D - PositionMin_D)*CoordTreeSize_D/nIjk_D
+    DCoord_D = DCoordFull_D(iOrder_I(1:nDimAmr))
 
     ! subtract coordinates of the corner from point's coordinates
-    Coord_D = PACK((CoordTree_D - PositionMin_D)*CoordTreeSize_D, IsAmr_D)
+    Coord_D = (CoordTree_D(iOrder_I(1:nDimAmr)) - &
+              PositionMin_D(iOrder_I(1:nDimAmr)))*&
+              CoordTreeSize_D(iOrder_I(1:nDimAmr))
 
     ! if there is no non-AMR direction => no need to do extra work
     if(nDimAmr == nDim) RETURN !NOTE: nDimIn = nDimAmr
@@ -276,15 +281,15 @@ contains
        WeightNoAmr     = WeightNoAmr - iCellNoAmr_I(1)      
        iCellNoAmr_I(2) = iCellNoAmr_I(1) + 1  
 
-       ! iFirst corresponds to node found above, to be stored in iNode_II(1,:),
-       ! iSecond will be searched for below, to be stored in iNode_II(2,:)
-       iFirst = 1; iSecond = 2
+       ! First_ corresponds to node found above, to be stored in iNode_II(1,:),
+       ! Second_ will be searched for below, to be stored in iNode_II(2,:)
+       First_ = 1; Second_ = 2
 
        ! take care of the cases when point is close to the boundary
        if    (iCellNoAmr_I(1) == 0)then
           iCellNoAmr_I(1) = nIJK_D(iDimNoAmr)
           ! inverse order in which nodes in iNode_II are found
-          iFirst = 2; iSecond = 1 
+          First_ = 2; Second_ = 1 
           ! displacement towards neighbor: down
           Displace = - DCoordFull_D(iDimNoAmr) / CoordTreeSize_D(iDimNoAmr)
        elseif(iCellNoAmr_I(2) == nIJK_D(iDimNoAmr)+1)then
@@ -296,7 +301,7 @@ contains
 
     ! store parameters of the node and return local node id as block id
     nNodeFound = nNodeFound + 1
-    iNode_II(iFirst,nNodeFound) = iNode
+    iNode_II(First_,nNodeFound) = iNode
     iBlock = nNodeFound
 
     ! check if point is close to the boundary of the block
@@ -307,8 +312,8 @@ contains
     end if
 
     ! store the second node
-    iNode_II(iSecond, nNodeFound) = iNode
+    iNode_II(Second_, nNodeFound) = iNode
 
   end subroutine find
   !============
-end module BATL_interpolate_amr_wrapper
+end module BATL_interpolate_amr

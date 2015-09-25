@@ -2213,6 +2213,10 @@ module ModInterpolateAMR
   ! To improve the algorithm stability against roundoff errors
   !/
   real, parameter:: cTol = 0.00000010
+  !\
+  ! To improve the algorithm stability against roundoff errors
+  !/
+  real           :: cTol2
   !============================================================================
   !Interpolation on the block AMR grid
   !\
@@ -2247,7 +2251,7 @@ module ModInterpolateAMR
   ! of  State_VGB is allocated is provided in iIndex_II(0,:) components
   ! of the index output array
   !/
-  public interpolate_amr
+  public cTol2, interpolate_amr
 contains
   !=================================
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
@@ -2357,10 +2361,6 @@ contains
     !Just 2**nDim
     integer:: nGrid
     !/
-    !\
-    ! To improve the algorithm stability against roundoff errors
-    !/
-    real           :: cTol2
     !\
     ! Shift of the iGrid point in the stencil with respect to the
     ! first one

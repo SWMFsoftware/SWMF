@@ -24,7 +24,8 @@ OBJECTS = \
         BATL_pass_face.o \
 	BATL_size.o \
 	BATL_tree.o \
-	BATL_interpolate_amr_wrapper.o
+	BATL_particles.o \
+	BATL_interpolate_amr.o
 
 ALLOBJECTS = \
 	${OBJECTS} \
