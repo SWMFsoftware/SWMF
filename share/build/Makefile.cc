@@ -7,7 +7,6 @@ COMPILE.mpicxx= mpicxx
 
 CPPLIB = -lstdc++ -lmpi_cxx
 
-DEBUGC = 
 #DEBUGC = -g
 
 .SUFFIXES: .c .cpp
