@@ -2,7 +2,6 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_particles
-  use BATL_interpolate_amr_wrapper
   implicit none
   SAVE
   logical  ::UseParticles = .false.
