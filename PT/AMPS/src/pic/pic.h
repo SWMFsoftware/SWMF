@@ -178,6 +178,13 @@ namespace PIC {
       char IsSet;
       //coordinates of the vertex
       double x[DIM];
+      //fields and plasma parameters
+      double ElectricField[DIM];
+      double MagneticField[DIM];
+      double PlasmaVelocity[DIM];
+      double PlasmaDensity;
+      double PlasmaTemperature;
+      double PlasmaPressure;
       //neighboring vertices
       cFieldLineVertex* prev;
       cFieldLineVertex* next;
@@ -207,11 +214,53 @@ namespace PIC {
       //access to coordinates
       inline void SetX(double* xIn){
 	IsSet = 1;
-	for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];
-      }
+	for(int idim=0; idim<DIM; idim++) x[idim]=xIn[idim];}
       inline void GetX(double* xOut){
-	for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];
-      }
+	for(int idim=0; idim<DIM; idim++) xOut[idim]=x[idim];}
+
+      //set individual variables
+      inline void SetElectricField(double* ElectricFieldIn){
+	memcpy(ElectricField,  ElectricFieldIn, DIM*sizeof(double));}
+      inline void SetMagneticField(double* MagneticFieldIn){
+	memcpy(MagneticField,  MagneticFieldIn, DIM*sizeof(double));}
+      inline void SetPlasmaVelocity(double* PlasmaVelocityIn){
+	memcpy(PlasmaVelocity, PlasmaVelocityIn,DIM*sizeof(double));}
+      inline void SetPlasmaDensity(double  PlasmaDensityIn){
+	PlasmaDensity     = PlasmaDensityIn;}
+      inline void SetPlasmaTemperature(double  PlasmaTemperatureIn){
+	PlasmaTemperature = PlasmaTemperatureIn;}
+      inline void SetPlasmaPressure(double  PlasmaPressureIn){
+	PlasmaPressure    = PlasmaPressureIn;}
+
+      //set whole state vector
+      void SetStateVector(double* ElectricFieldIn,
+			  double* MagneticFieldIn,
+			  double* PlasmaVelocityIn,
+			  double  PlasmaDensityIn,
+			  double  PlasmaTemperatureIn,
+			  double  PlasmaPressureIn);
+
+      //set individual variables
+      inline void GetElectricField(double* ElectricFieldOut){
+	memcpy(ElectricFieldOut,  ElectricField, DIM*sizeof(double));}
+      inline void GetMagneticField(double* MagneticFieldOut){
+	memcpy(MagneticFieldOut,  MagneticField, DIM*sizeof(double));}
+      inline void GetPlasmaVelocity(double* PlasmaVelocityOut){
+	memcpy(PlasmaVelocityOut, PlasmaVelocity,DIM*sizeof(double));}
+      inline void GetPlasmaDensity(double& PlasmaDensityOut){
+	PlasmaDensityOut     = PlasmaDensity;}
+      inline void GetPlasmaTemperature(double& PlasmaTemperatureOut){
+	PlasmaTemperatureOut = PlasmaTemperature;}
+      inline void GetPlasmaPressure(double& PlasmaPressureOut){
+	PlasmaPressureOut    = PlasmaPressure;}
+
+      //get whole state vector
+      void GetStateVector(double* ElectricFieldOut,
+				 double* MagneticFieldOut,
+				 double* PlasmaVelocityOut,
+				 double& PlasmaDensityOut,
+				 double& PlasmaTemperatureOut,
+				 double& PlasmaPressureOut);
 
       //access to neighbors
       inline void SetPrev(cFieldLineVertex* prevIn){prev=prevIn;}
@@ -228,6 +277,8 @@ namespace PIC {
       char IsSet;
       //length of this segment
       double length;
+      //direction of this segment
+      double Dir[DIM];
       //neighboring segments
       cFieldLineSegment* prev;
       cFieldLineSegment* next;
@@ -280,9 +331,12 @@ namespace PIC {
 	length = 0.0;
 	if(begin!=NULL && end!=NULL){
 	  begin->GetX(xBegin); end->GetX(xEnd);
-	  for(int idim=0; idim<DIM; idim++)
-	    length+= pow(xEnd[idim]-xBegin[idim], 2);
-	  length = pow(length, 0.5);
+	  for(int idim=0; idim<DIM; idim++){
+	    Dir[idim] = xEnd[idim]-xBegin[idim];
+	    length   += pow(Dir[idim], 2);
+	  }
+	  length = sqrt(length);
+	  Dir[0]/= length; Dir[1]/= length; Dir[2]/= length;
 	}
 	else IsSet = 0;
       }
@@ -303,7 +357,52 @@ namespace PIC {
       inline cFieldLineSegment* GetPrev(){return prev;}
       inline cFieldLineSegment* GetNext(){return next;}
       
-      //interpolate state vector from vertices to a point on the segment
+      //interpolate whole state vector from vertices to a point on the segment
+      void GetStateVector(double  S, //position 0<=s<=1 on the segment
+			  double* ElectricFieldOut,
+			  double* MagneticFieldOut,
+			  double* PlasmaVelocityOut,
+			  double& PlasmaDensityOut,
+			  double& PlasmaTemperatureOut,
+			  double& PlasmaPressureOut);
+      
+      //interpolate individual variables from vertices to point on the segment
+      inline void GetElectricField(double  S, //position 0<=s<=1 on the segment
+				   double* ElectricFieldOut){
+	double tBegin[DIM], tEnd[DIM];
+	begin->GetElectricField( tBegin), end->GetElectricField(tEnd);
+	for(int idim=0; idim<DIM; idim++){
+	  ElectricFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
+      inline void GetMagneticField(double  S, //position 0<=s<=1 on the segment
+				   double* MagneticFieldOut){
+	double tBegin[DIM], tEnd[DIM];
+	begin->GetMagneticField( tBegin), end->GetMagneticField(tEnd);
+	for(int idim=0; idim<DIM; idim++){
+	  MagneticFieldOut[idim]  = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
+      inline void GetPlasmaVelocity(double  S, //position 0<=s<=1 on segment
+				    double* PlasmaVelocityOut){
+	double tBegin[DIM], tEnd[DIM];
+	begin->GetPlasmaVelocity(tBegin), end->GetPlasmaVelocity(tEnd);
+	for(int idim=0; idim<DIM; idim++){
+	  PlasmaVelocityOut[idim] = tBegin[idim] * (1 - S) + tEnd[idim] * S;}}
+      inline void GetPlasmaDensity(double  S, //position 0<=s<=1 on the segment
+				   double& PlasmaDensityOut){
+	double tBegin, tEnd;
+	//plasma density
+	begin->GetPlasmaDensity(tBegin), end->GetPlasmaDensity(tEnd);
+	PlasmaDensityOut = tBegin * (1 - S) + tEnd * S;}
+      inline void GetPlasmaTemperature(double  S, //position 0<=s<=1 on segment
+				       double& PlasmaTemperatureOut){
+	double tBegin, tEnd;
+	//plasma temperature
+	begin->GetPlasmaTemperature(tBegin), end->GetPlasmaTemperature(tEnd);
+	PlasmaTemperatureOut = tBegin * (1 - S) + tEnd * S;}
+      inline void GetPlasmaPressure(double  S, //position 0<=s<=1 on segment
+				    double& PlasmaPressureOut){
+	double tBegin, tEnd;
+	//plasma pressure
+	begin->GetPlasmaPressure(tBegin), end->GetPlasmaPressure(tEnd);
+	PlasmaPressureOut = tBegin * (1 - S) + tEnd * S;}
     };
 
     class cFieldLine {
@@ -342,8 +441,12 @@ namespace PIC {
 	if(TotalLength < 0.0 || nSegment < 0){res="Error"; return;}
 	res = "OK"; return;
       }
-      
+
+      // add vertex with given coordinates
       void Add(double* xIn);
+      // set magnetic field at a given vertex
+      void SetMagneticField(double* BIn, int iVertex);
+      // print data stored on the field line
       void Output(FILE* fout, bool GeometryOnly);
     };
 
