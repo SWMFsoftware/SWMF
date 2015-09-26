@@ -129,11 +129,11 @@ contains
        ! store indexes and restore shape along non-AMR direction
        iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
        iCell_II(  nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
-       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iOrder_I(1:nDimAmr),1:2*nGridOut)
+       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iOrder_I(1:nDim),1:2*nGridOut)
 
        ! correct weights
        Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
-       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut) * (1-WeightNoAmr)
+       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
 
        ! get correct block and processor ids
        do iCell = 1, nGridOut
