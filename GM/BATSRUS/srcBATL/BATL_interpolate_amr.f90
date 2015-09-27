@@ -34,7 +34,7 @@ module BATL_interpolate_amr
   ! Is calculated as iOrder_II(:,iDimNoAmr), if nDimAmr/=nDim 
   integer:: iOrder_I(MaxDim) 
   ! point's coordinate in non-AMR dimensions
-  real   :: CoordNoAmr
+  real   :: CoordNoAmr, DisplacedCoordNoAmr
 
   !\
   ! variables to keep track of nodes in the case of non-AMR direction
@@ -60,6 +60,7 @@ module BATL_interpolate_amr
 
   ! interpolation weight along non-AMR direction
   real      :: WeightNoAmr
+  logical   :: IsSecondOrderNoAmr
 
 contains
 
@@ -120,50 +121,59 @@ contains
     iCell_II(1:nDimAmr, 1:nGridOut) = iIndexes_II(1:nDimAmr, 1:nGridOut)
     iCell_II(0,         1:nGridOut) = iIndexes_II(nDimAmr+1, 1:nGridOut)
 
-    ! check if there is a non-AMR direction, handle it if present
-    if(nDimAmr < nDim) then
-       ! local node ids & cell indexes along AMR directions
-       ! are the same for cells iCell and nGridOut+iCell
-       iCell_II(0:nDimAmr,nGridOut+1:2*nGridOut)=iCell_II(0:nDimAmr,1:nGridOut)
+    ! check if there is a non-AMR direction, 
+    if(nDimAmr == nDim)then
+       call sort_out_other_procs
+       RETURN
+    end if
 
-       ! store indexes and restore shape along non-AMR direction
-       iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
-       iCell_II(  nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
-       iCell_II(1:nDim,1:2*nGridOut) = iCell_II(iOrder_I(1:nDim),1:2*nGridOut)
+    !Handle the non-AMR direction
+    IsSecondOrder = IsSecondOrder .and. IsSecondOrderNoAmr
+    
+    ! store indexes and restore shape along non-AMR direction
+    iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
+    if(WeightNoAmr < cTol2)then
+       iCell_II(iOrder_I(1:nDim),1:nGridOut) = iCell_II(1:nDim,1:nGridOut)
+       call sort_out_other_procs
+       RETURN
+    end if
+    ! local node ids & cell indexes along AMR directions
+    ! are the same for cells iCell and nGridOut+iCell
+    iCell_II(0:nDimAmr,nGridOut+1:2*nGridOut) = iCell_II(0:nDimAmr,1:nGridOut)
+    iCell_II(     nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
+    iCell_II(iOrder_I(1:nDim),1:2*nGridOut)   = iCell_II(1:nDim,1:2*nGridOut)
 
-       ! correct weights
-       Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
-       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
-
+    ! correct weights
+    Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
+    Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
+    if(iCellNoAmr_I(1) > iCellNoAmr_I(2))then    
        ! get correct block and processor ids
        do iCell = 1, nGridOut
           ! proper global node, block and proc ids for iCell
           iNode = iNode_II(1,iCell_II(0,iCell))
-          if(iNode > 0)then
-             iCell_II(0, iCell) = iTree_IA(Block_,iNode)
-             iProc_I(    iCell) = iTree_IA(Proc_, iNode)
-          end if
+          iCell_II(0, iCell) = iTree_IA(Block_,iNode)
+          iProc_I(    iCell) = iTree_IA(Proc_, iNode)
           ! proper global node, block and proc ids for nGridOut+iCell
           iNode = iNode_II(2,iCell_II(0,nGridOut+iCell))
-          if(iNode > 0)then
-             iCell_II(0, nGridOut+iCell) = iTree_IA(Block_,iNode)
-             iProc_I(    nGridOut+iCell) = iTree_IA(Proc_, iNode)
-          end if
+          iCell_II(0, nGridOut+iCell) = iTree_IA(Block_,iNode)
+          iProc_I(    nGridOut+iCell) = iTree_IA(Proc_, iNode)
        end do
-
-       ! number for cells has doubled
-       nGridOut = 2*nGridOut
     end if
-
-    ! sort out cells located on other processors
-    nCell = 0
-    do iCell = 1, nGridOut
-       if(iProc_I(iCell) == iProc)then
-          nCell = nCell + 1
-          iCell_II(:, nCell) = iCell_II(:, iCell)
-          Weight_I(nCell) = Weight_I(iCell)
-       end if
-    end do
+    ! number of cells has doubled
+    nGridOut = 2*nGridOut
+    call sort_out_other_procs
+  contains
+    subroutine sort_out_other_procs
+      ! sort out cells located on other processors
+      nCell = 0
+      do iCell = 1, nGridOut
+         if(iProc_I(iCell) == iProc)then
+            nCell = nCell + 1
+            iCell_II(:, nCell) = iCell_II(:, iCell)
+            Weight_I(nCell) = Weight_I(iCell)
+         end if
+      end do
+    end subroutine sort_out_other_procs
 
   end subroutine interpolate_amr
 
@@ -284,36 +294,60 @@ contains
        ! First_ corresponds to node found above, to be stored in iNode_II(1,:),
        ! Second_ will be searched for below, to be stored in iNode_II(2,:)
        First_ = 1; Second_ = 2
-
+       IsSecondOrderNoAmr = .true.
        ! take care of the cases when point is close to the boundary
        if    (iCellNoAmr_I(1) == 0)then
+          ! displacement towards neighbor: down
+          DisplacedCoordNoAmr = CoordTree_D(iDimNoAmr) - &
+               DCoordFull_D(iDimNoAmr) / CoordTreeSize_D(iDimNoAmr)
+          if(IsPeriodic_D(iDimNoAmr))&
+               DisplacedCoordNoAmr = &
+               modulo(DisplacedCoordNoAmr, 1.0)
+          if(DisplacedCoordNoAmr < 0.0)then
+             IsSecondOrderNoAmr = .false.
+             WeightNoAmr = 0.0
+             iCellNoAmr_I(1) = iCellNoAmr_I(2)
+             RETURN
+          end if
           iCellNoAmr_I(1) = nIJK_D(iDimNoAmr)
           ! inverse order in which nodes in iNode_II are found
           First_ = 2; Second_ = 1 
-          ! displacement towards neighbor: down
-          Displace = - DCoordFull_D(iDimNoAmr) / CoordTreeSize_D(iDimNoAmr)
        elseif(iCellNoAmr_I(2) == nIJK_D(iDimNoAmr)+1)then
+        ! displacement towards neighbor: up
+          DisplacedCoordNoAmr = CoordTree_D(iDimNoAmr) + &
+               DCoordFull_D(iDimNoAmr) / CoordTreeSize_D(iDimNoAmr)
+          if(IsPeriodic_D(iDimNoAmr))&
+               DisplacedCoordNoAmr = &
+               modulo(DisplacedCoordNoAmr, 1.0)
+          if(DisplacedCoordNoAmr >= 1.0)then
+             IsSecondOrderNoAmr = .false.
+             WeightNoAmr = 0.0
+             iCellNoAmr_I(2) = iCellNoAmr_I(1)
+             RETURN
+          end if  
           iCellNoAmr_I(2) = 1
-          ! displacement towards neighbor: up
-          Displace = + DCoordFull_D(iDimNoAmr) / CoordTreeSize_D(iDimNoAmr)
        end if
     end if
 
-    ! store parameters of the node and return local node id as block id
     nNodeFound = nNodeFound + 1
-    iNode_II(First_,nNodeFound) = iNode
-    iBlock = nNodeFound
 
     ! check if point is close to the boundary of the block
     if(iCellNoAmr_I(1) > iCellNoAmr_I(2))then
+       ! store parameters of the node and return local node id as block id
+       iNode_II(First_,nNodeFound) = iNode
+       iBlock = nNodeFound
        ! need to find a neighboring node
-       CoordTree_D(iDimNoAmr) = CoordTree_D(iDimNoAmr) + Displace
-       call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)   
+       CoordTree_D(iDimNoAmr) =  DisplacedCoordNoAmr
+       call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
+       !\
+       ! Check if the block is found
+       !/
+       if(iNode<=0)then
+          call CON_stop('Failure in BATL_interpolate_amr:find')
+       end if
+       ! store the second node
+       iNode_II(Second_, nNodeFound) = iNode   
     end if
-
-    ! store the second node
-    iNode_II(Second_, nNodeFound) = iNode
-
   end subroutine find
   !============
 end module BATL_interpolate_amr
