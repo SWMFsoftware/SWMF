@@ -36,8 +36,9 @@ plottitles_file=''; array of plottitle strings per file
 timetitle=''     ; set to format string to plot time as title for time series
 timetitleunit=0  ; set to number of seconds in time unit
 timetitlestart=0 ; set to initial time to be subtracted (in above units)
-autorange='y'
-axistype='coord'
+
+autorange='y'    ; function ranges fmin and fmax set automatically or by hand
+axistype='coord' ; 'cells' or 'coord'
 
 ; multiplot=0 gives the default number of subplots depending on nfile,nfunc
 ; multiplot=[3,2,0] defines 3 by 2 subplots filled up in vertical order
@@ -52,13 +53,10 @@ bottomline=3
 ax=30
 az=30
 
-; Parameter for contour and contfill
+; Number of contour levels for contour and contfill
 contourlevel=30
 
-; Size of central body for contfillbody or tvbody
-rBody=3.0
-
-; Parameters for the VEL subroutine
+; Parameters for the vector plots and stream lines
 velvector=200
 velspeed =5
 velpos   =0
@@ -74,7 +72,7 @@ firstslice=1
 dslice=1
 nslicemax=500
 slicedir=0
-dyslicelabel=0.98
+dyslicelabel=0.98 ; position of bottom label (?)
 
 ; Parameters for saving the movie into ps/png/tiff/bmp/jpeg files
 savemovie='n'
@@ -86,16 +84,14 @@ nxreg=[0,0]
 xreglimits=0
 symmtri=0
 
-; Parameters for vector plots
-nvector=0
-vectors=0
+; Define the variables that are vectors for grid transformation
+nvector=0 ; number of vector variables
+vectors=0 ; index of first components of vector variables
 
 ; Arrays for cutting out part of the grid
-cut=0
-grid=0
-
-; Radius of cutting out inner part
-rcut=-1.0
+grid=0    ; index array for the whole grid
+cut=0     ; index array for the cut
+rcut=-1.0 ; Radius of cutting out inner part
 
 ; Parameters for plotlog
 title=0      ; set to a string with the title
@@ -137,5 +133,52 @@ timestore  = 0
 common log_param,log_spacex,log_spacey
 log_spacex=5
 log_spacey=5
+
+; Some useful constants in SI units
+common phys_const,kbSI,mpSI,mu0SI,eSI,ReSI,RsSI
+
+kbSI   = 1.3807d-23 ; Boltzmann constant
+mpSI   = 1.6726d-27 ; proton mass
+mu0SI  = 4*!pi*1d-7 ; vacuum permeability
+eSI    = 1.602d-19  ; elementary charge
+ReSI   = 6378d3     ; radius of Earth
+RsSI   = 6.96d8     ; radius of Sun
+
+; Physical unit names and values in SI units
+common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+
+fixunits   = 0             ; If 0, the units get overwritten based on each file read, otherwise fixed
+typeunit   = 'NORMALIZED'  ; 'NORMALIZED', 'CGS', 'SI', 'PLANETARY', 'SOLAR'
+xSI        = 1.0           ; distance unit in SI
+tSI        = 1.0           ; time unit in SI
+rhoSI      = 1.0           ; density unit in SI
+uSI        = 1.0           ; velocity unit in SI
+pSI        = 1.0           ; pressure unit in SI
+bSI        = sqrt(mu0SI)   ; magnetic unit in SI
+jSI        = 1/sqrt(mu0SI) ; current unit in SI
+
+; conversion factors that are useful to calculate various derived quantites
+common phys_convert,temp0,cs0,mu0A,mu0
+
+temp0      = 1.0           ; temperature  = mIon*temp0*p/rho
+cs0        = 1.0           ; sound speed  = sqrt(cs0*gamma*p/rho)
+mu0A       = 1.0           ; Alfven speed = sqrt(bb/mu0A/rho)
+mu0        = 1.0           ; plasma beta  = p/(bb/2/mu0)
+
+; information obtained from the last file header
+common file_head, $
+   headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+   rbody
+
+headline = '' ; first line often containing physcial unit names
+it       = 0  ; time step
+time     = 0. ; simulation time
+gencoord = 0  ; true for unstructured/non-Cartesian grids
+ndim     = 1  ; number of spatial dimensions
+neqpar   = 0  ; number of scalar parameters
+eqpar    = 0.0; values of scalar parameters
+nw       = 1  ; number of variables
+variables= '' ; names  of coordinates, variables, and scalar parameters
+rbody    = 2.5; radius of the inner body
 
 end
