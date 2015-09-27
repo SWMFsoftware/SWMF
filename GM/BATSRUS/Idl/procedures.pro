@@ -317,34 +317,42 @@ end
 ;=============================================================================
 pro show_head,filename
 
-on_error,2
-if n_elements(filename) eq 0 then filename='file.out'
-gettype,filename,filetype
-openfile,1,filename,filetype
-gethead,1,filename,filetype,$
-  headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
-close,1
-print,'filename  = ',filename, format="(a,a)"
-print,'filetype  = ',filetype, format="(a,a)"
-print,'headline  = ',headline, format="(a,a)"
-print,'it        = ',it,       format="(a,i8)"
-print,'time      = ',time,     format="(a,g15.8)"
-print,'gencoord  = ',gencoord, format="(a,i8)"
-print,'ndim      = ',ndim,     format="(a,i8)"
-print,'neqpar    = ',neqpar,   format="(a,i8)"
-print,'nw        = ',nw,       format="(a,i8)"
-print,'nx        = ',nx,       format="(a,3i8)"
-if neqpar gt 0 then $
-   print,'eqpar     = ',eqpar,    format="(a,100g15.8)"
-print,'coords    =',variables(0:ndim-1)
-print,'plotvars  =',variables(ndim:ndim+nw-1)
-if neqpar gt 0 then $
-   print,'eqpars    =',variables(ndim+nw:*)
+  common file_head, $
+     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+     rbody
+
+  on_error,2
+  if n_elements(filename) gt 0 then begin
+     gettype,filename,filetype
+     openfile,1,filename,filetype
+     gethead,1,filename,filetype
+     close,1
+     print,'filename  = ',filename, format="(a,a)"
+     print,'filetype  = ',filetype, format="(a,a)"
+  endif
+
+  print,   'headline   = ',strtrim(headline,2), format="(a,a)"
+  print,   'it         = ',it,       format="(a,i8)"
+  print,   'time       = ',time,     format="(a,g15.8)"
+  print,   'gencoord   = ',gencoord, format="(a,i8)"
+  print,   'ndim       = ',ndim,     format="(a,i8)"
+  print,   'neqpar     = ',neqpar,   format="(a,i8)"
+  print,   'nw         = ',nw,       format="(a,i8)"
+  print,   'nx         = ',nx,       format="(a,3i8)"
+  if neqpar gt 0 then $
+     print,'parameters = ',eqpar,    format="(a,100g15.8)"
+  print,   'coord names=',variables(0:ndim-1)
+  print,   'var   names=',variables(ndim:ndim+nw-1)
+  if neqpar gt 0 then $
+     print,'param names=',variables(ndim+nw:*)
 
 end
 ;=============================================================================
-pro gethead,unit,filename,filetype,headline,it,time,gencoord, $
-            ndim,neqpar,nw,nx,eqpar,variables,pictsize=pictsize
+pro gethead,unit,filename,filetype,pictsize=pictsize
+
+common file_head, $
+   headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+   rbody
 
 ;; on_error,2
 
@@ -371,9 +379,7 @@ case ftype of
     'ipic3d':begin
         tmppict = 0
         tmperror = 0
-        get_pict_hdf,filename,tmppict,x,w,$
-                 headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-                 rBody,tmperror,0
+        get_pict_hdf, filename, tmppict, x, w, tmperror, 0
     end
     'log': begin
         readf,unit,headline
@@ -457,12 +463,16 @@ endif else begin
     string_to_array,varname,variables,nvar,/arraysyntax
 endelse
 
+set_units
+
 end
 
 ;=============================================================================
-pro get_pict_hdf,filename,npict,x,w,$
-                 headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-                 rBody,error,getdata
+pro get_pict_hdf, filename, npict, x, w, error, getdata
+
+  common file_head, $
+     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+     rbody
 
     ;;;;;;;;;;;;;;;;; SIM PARAMETERS ;;;;;;;;;;;;;;;;;;;;;;;;;;
   
@@ -475,8 +485,9 @@ pro get_pict_hdf,filename,npict,x,w,$
   nxyz_D = [Param.COLLECTIVE.NXC._DATA(0),Param.COLLECTIVE.NYC._DATA(0),$
             Param.COLLECTIVE.NZC._DATA(0)]    
 
+  rbody    = 0.0
   gencoord = 0
-  headline = 'No headline for iPIC3D'  
+  headline = 'Normalized CGS units'
 
   idims = where(nxyz_D GT 1, ndim)
   nx = nxyz_D(idims)
@@ -712,16 +723,17 @@ pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 
 end
 ;=============================================================================
-pro get_pict,unit,filename,filetype,npict,x,w,$
-             headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables,$
-             rBody,error
+pro get_pict, unit, filename, filetype, npict, x, w, error
+
+  common file_head, $
+     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+     rbody
 
   on_error,2
 
   if filetype eq 'IPIC3D' then begin 
      error=0
-     get_pict_hdf,filename,npict,x,w,headline,it,time,$
-                  gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error,1
+     get_pict_hdf, filename, npict, x, w, error, 1
 
   endif else begin
 
@@ -752,14 +764,12 @@ pro get_pict,unit,filename,filetype,npict,x,w,$
      endif
 
                                 ; Read header information
-     gethead,unit,filename,filetype,headline,$
-             it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+     gethead, unit, filename, filetype
 
                                 ; set rBody if listed among the parameters
      for i = nDim + nW, n_elements(variables)-1 do begin
         iPar = i - nDim - nW
-        if variables(i) eq 'rbody' or variables(i) eq 'rBody' then $
-           rBody = eqpar(iPar)
+        if strlowcase(variables(i)) eq 'rbody' then rBody = eqpar(iPar)
      endfor
 
                                 ; Read data
@@ -1403,10 +1413,12 @@ pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
             fmax(ifunc)=f_max
          endif
       endif else begin
-         if usereg then getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-           xreg,wreg,time,eqpar,variables,cut,rcut $
-         else           getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
-           x,   w,   time,eqpar,variables,cut,rcut
+         if usereg then $
+            getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
+                    xreg,wreg,time,eqpar,variables,cut,rcut $
+         else $
+            getfunc,f,f1,f2,funcs1(ifunc),funcs2(ifunc),   $
+                    x,   w,   time,eqpar,variables,cut,rcut
 
          f_max=max(f)
          f_min=min(f)
@@ -1419,6 +1431,7 @@ pro getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,doask,$
          endelse
       endelse
    endfor
+
 end
 
 ;==============================================================================
@@ -1994,6 +2007,110 @@ endif
 end
 
 ;===========================================================================
+pro set_units, type, distunit=distunit
+
+  ;; Is type is given as 'SI', 'NORMALIZED', 'PLANETARY', or 'SOLAR',
+  ;; set typeunit = type otherwise try to guess from the fileheader.
+
+  ;; Based on typeunit set units for distance (xSI), time (tSI), density (rhoSI),
+  ;; pressure (pSI), magnetic field (bSI) and current density (jSI) in
+  ;; SI units.
+  ;; Distance unit (rplanet or rstar) can be set with optional distunit.
+  
+  ;; Calculate convenient constants temp0, cs0, mu0A, mu0 for typical formulas:
+  ;;
+  ;; Temperature  = Mi*temp0*p/rho
+  ;; Sound speed  = sqrt(gamma*cs0*p/rho)
+  ;; Alfven speed = = sqrt(bb/mu0A/rho)
+  ;; Plasma beta  = p/(bb/2/mu0)
+
+common file_head, headline
+common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+common phys_convert, temp0, cs0, mu0A, mu0
+common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI
+
+if keyword_set(type) then $
+   typeunit = struppercae(type) $
+else if fixunits then $
+   return $
+else if strpos(headline, 'kg/m3') ge 0 or strpos(headline,' m/s') ge 0 then $
+   typeunit = 'SI' $
+else if strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
+   typeunit = 'PLANETARY' $
+else if strpos(headline,' dyne') ge 0 or strpos(headline,' G') ge 0 then $
+   typeunit = 'SOLAR' $
+else $
+   typeunit = 'NORMALIZED'
+
+case typeunit of
+   'SI': begin
+      xSI   = 1.0             ; m
+      tSI   = 1.0             ; s
+      rhoSI = 1.0             ; kg/m^3
+      uSI   = 1.0             ; m/s
+      pSI   = 1.0             ; Pa
+      bSI   = 1.0             ; T
+      jSI   = 1.0             ; A/m^2
+   end
+   'NORMALIZED': begin
+      xSI   = 1.0             ; distance unit in SI
+      tSI   = 1.0             ; time unit in SI
+      rhoSI = 1.0             ; density unit in SI
+      uSI   = 1.0             ; velocity unit in SI
+      pSI   = 1.0             ; pressure unit in SI
+      bSI   = sqrt(mu0SI)     ; magnetic unit in SI
+      jSI   = 1/sqrt(mu0SI)   ; current unit in SI
+      temp0 = 1.0
+      cs0   = 1.0
+      mu0A  = 1.0
+      mu0   = 1.0
+   end
+   'PLANETARY': begin
+      xSI   = ReSi            ; Earth radius (default planet)
+      tSI   = 1.0             ; s
+      rhoSI = mpSI*1e6        ; mp/cm^3
+      uSI   = 1e3             ; km/s
+      pSI   = 1e-9            ; nPa
+      bSI   = 1e-9            ; nT
+      jSI   = 1e-6            ; muA/m^2
+      temp0 = 1e-15/kbSI      ; Mi*p/rho:    nPa/cm^3
+      cs0   = 1d-21/mpSI      ; sqrt(gamma*cs0*p/rho) (km/s)^-2*nPa/(mp/cm^-3)
+      mu0A  = mu0SI*mpSI*1d30 ; sqrt(bb/mu0A/rho) (km/s)^2*nT^-2*mp/cm^-3
+      mu0   = mu0SI*1e9       ; p/(bb/2/mu0) [nPA]/[nT]^2
+   end
+   'SOLAR': begin
+      xSI   = RsSI          ; radius of the Sun
+      tSI   = 1.0           ; s
+      rhoSI = 1e3           ; g/cm^3
+      uSI   = 1e3           ; km/s
+      pSI   = 1e-1          ; dyne/cm^2
+      bSI   = 1e-4          ; G
+      jSI   = 1e-6          ; muA/m^2
+   end
+   else: begin 
+      print, 'ERROR in set_units, invalid typeunit=', typeunit
+      retall
+   end
+endcase
+
+                                ; Overwrite distance unit if given as an argument
+if keyword_set(distunit) then xSI = distunit
+
+                                ; Calculate convenient conversion factors
+if typeunit eq 'NORMALIZED' then begin
+   temp0 = 1.0
+   cs0   = 1.0
+   mu0A  = 1.0
+   mu0   = 1.0
+endif else begin
+   temp0 = mpSI/kbSI*pSI/rhoSI         ; T    = Mi*temp0*p/rho
+   cs0   = uSI^(-2)*pSI/rhoSI          ; cs   = sqrt(gamma*cs0*p/rho)
+   mu0A  = uSI^2*mu0SI*rhoSI*bSI^(-2)  ; vA   = sqrt(bb/(mu0A*rho))
+   mu0   = pSI*bSI^(-2)                ; beta = p/(bb/(2*mu0))
+endelse
+
+end
+;===========================================================================
 pro getfunc,f,f1,f2,func1,func2,x,w,time,eqpar,variables,cut,rcut
 ;===========================================================================
 on_error,2
@@ -2016,7 +2133,7 @@ end
 
 ;===========================================================================
 pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-              variables,wnames,axistype,plotmodes,plottitles,$
+              variables,axistype,plotmodes,plottitles,$
               ax,az,contourlevel,linestyle,$
               velvector,velspeed,velseed,velpos,velx,vely,veltri,$
               cut,cut0,rcut,plotdim,$
