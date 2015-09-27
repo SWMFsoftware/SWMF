@@ -52,6 +52,10 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ;===========================================================================
 
+  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_convert, temp0, cs0, mu0A, mu0
+  common phys_const,kbSI,mpSI,mu0SI,eSI,ReSI,RsSI
+
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
      help,xx,w
@@ -72,29 +76,6 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
   siz=size(w)
   if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
-
-; Define some constants for "planetary" units
-  kboltzmann = 1.3807e-23       ; [SI]
-  amu        = 1.6726e-24       ; [g]  amu*rho   [amu/cc] -> g/cc
-
-; temperature: tunit*p/rho           [nPa] [amu/cc] -> [K]
-  tunit      = 1e-15/kboltzmann   
-
-; sound speed: sqrt(cs0*gamma*p/rho) [nPa] [amu/cc] -> [km/s]
-  cs0        = 1/1.6726e-6        
-
-; Alfven speed: sqrt(bb/mu0A/rho)     [nT] [amu/cc] -> [km/s]
-  mu0A       = 4*!pi*1e-7*amu*1e27
-
-; fast speed in orthogonal direction:
-; sqrt((bb/mu0A+gamma*cs0*p)/rho)
-; fast speed in X direction
-; 0.5*sqrt((bb/mu0A+gamma*cs0*p+sqrt((bb/mu0A+gamma*cs0*p)^2-4*gamma*cs0*p*bx^2/mu0A))/rho)
-; slow speed in Y direction
-; 0.5*sqrt((bb/mu0A+gamma*cs0*p-sqrt((bb/mu0A+gamma*cs0*p)^2-4*gamma*cs0*p*by^2/mu0A))/rho)
-
-; plasma beta: p/(bb/2/mu0)          [nPa] [nT]
-  mu0        = 4*!pi*1e-7*1e9
 
 ; Number of equation parameters
   nEqpar = n_elements(eqpar)
@@ -257,8 +238,8 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   ;; Calculate gamma*p+bb if needed
   if strpos(f,'fast') ge 0 or strpos(f, 'slow') ge 0 then begin
-     cc   = gamma*p     + bb
-     ccGM = gamma*cs0*p + bb/mu0A
+     c4 = 4*gamma*cs0/muA
+     cc = gamma*cs0*p + bb/mu0A
   end
 
   ;; Define various functions of the basic MHD variables
@@ -277,48 +258,34 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'                     ], $ ; energy density
      ['pbeta'    , '2*p/bb'                                            ], $ ; plasma beta
      ['s'        , 'p/rho^gamma'                                       ], $ ; entropy
-     ['T'        , 'p/rho'                                             ], $ ; temperature
-     ['T_GM'     , '7.24270e+07*p/rho'                                 ], $ ; [K] 1/kB*(nPa/cm^-3)
-     ['T_SC'     , '1.211E-8*p/rho'                                    ], $ ; [K] amu/kB*(dyne/cm^2)/(g/cm^3)
-     ['n_SC'     , 'rho/amu'                                           ], $ ; [cm^-3] in CGS
-     ['calfvenx' , 'bx/sqrt(rho)'                                      ], $ ; Alfven velocity
-     ['calfveny' , 'by/sqrt(rho)'                                      ], $
-     ['calfvenz' , 'bz/sqrt(rho)'                                      ], $
-     ['calfven'  , 'b /sqrt(rho)'                                      ], $
-     ['calfvenx_GM', 'bx/sqrt(rho*mu0A)'                               ], $
-     ['calfveny_GM', 'by/sqrt(rho*mu0A)'                               ], $
-     ['calfvenz_GM', 'bz/sqrt(rho*mu0A)'                               ], $
-     ['calfven_GM' , 'b /sqrt(rho*mu0A)'                               ], $
-     ['Malfvenx' , 'ux/bx*sqrt(rho)'                                   ], $ ; Alfven Mach number
-     ['Malfveny' , 'uy/by*sqrt(rho)'                                   ], $
-     ['Malfvenz' , 'uz/bz*sqrt(rho)'                                   ], $
-     ['Malfven'  , 'u /b *sqrt(rho)'                                   ], $
-     ['csound'   , 'sqrt(gamma*p/rho)'                                 ], $ ; sound speed
-     ['mach'     , 'u /sqrt(gamma*p/rho)'                              ], $ ; Mach number
-     ['machx'    , 'ux/sqrt(gamma*p/rho)'                              ], $
-     ['machy'    , 'uy/sqrt(gamma*p/rho)'                              ], $
-     ['machz'    , 'uz/sqrt(gamma*p/rho)'                              ], $
+     ['T'        , 'temp0*p/rho'                                       ], $ ; temperature [K]
+     ['calfvenx' , 'bx/sqrt(rho*mu0A)'                                 ], $
+     ['calfveny' , 'by/sqrt(rho*mu0A)'                                 ], $
+     ['calfvenz' , 'bz/sqrt(rho*mu0A)'                                 ], $
+     ['calfven'  , 'b /sqrt(rho*mu0A)'                                 ], $
+     ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                              ], $ ; Alfven Mach number
+     ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                              ], $
+     ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                              ], $
+     ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                              ], $
+     ['csound'   , 'sqrt(gamma*cs0*p/rho)'                             ], $ ; sound speed
+     ['mach'     , 'u /sqrt(gamma*cs0*p/rho)'                          ], $ ; Mach number
+     ['machx'    , 'ux/sqrt(gamma*cs0*p/rho)'                          ], $
+     ['machy'    , 'uy/sqrt(gamma*cs0*p/rho)'                          ], $
+     ['machz'    , 'uz/sqrt(gamma*cs0*p/rho)'                          ], $
      ['cfast'    , 'sqrt(cc/rho)'                                      ], $ ; fast speed
-     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)'        ], $
-     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)'        ], $
-     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)'        ], $
-     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)'        ], $ ; slow speed
-     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)'        ], $
-     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)'        ], $
+     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'             ], $
+     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'             ], $
+     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'             ], $
+     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'             ], $ ; slow speed
+     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'             ], $
+     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'             ], $
      ['Mfast'    , 'sqrt(rho*uu/cc)'                                   ], $ l fast Mach number
-     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-4*gamma*p*bx^2))/2/rho)'     ], $
-     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-4*gamma*p*by^2))/2/rho)'     ], $
-     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-4*gamma*p*bz^2))/2/rho)'     ], $
-     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-4*gamma*p*bx^2))/2/rho)'     ], $ ; slow Mach number
-     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-4*gamma*p*by^2))/2/rho)'     ], $
-     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-4*gamma*p*bz^2))/2/rho)'     ], $
-     ['cfast_GM' , 'sqrt(ccGM/rho)'                                         ],$ ; Definitions
-     ['cfastx_GM', 'sqrt((ccGM+sqrt(ccGM^2-4*gamma*cs0*p*bx^2/mu0A))/2/rho)'],$ ; for planetary
-     ['cfasty_GM', 'sqrt((ccGM+sqrt(ccGM^2-4*gamma*cs0*p*by^2/mu0A))/2/rho)'],$ ; units
-     ['cfastz_GM', 'sqrt((ccGM+sqrt(ccGM^2-4*gamma*cs0*p*bz^2/mu0A))/2/rho)'],$
-     ['cslowx_GM', 'sqrt((ccGM-sqrt(ccGM^2-4*gamma*cs0*p*bx^2/mu0A))/2/rho)'],$
-     ['cslowy_GM', 'sqrt((ccGM-sqrt(ccGM^2-4*gamma*cs0*p*by^2/mu0A))/2/rho)'],$
-     ['cslowz_GM', 'sqrt((ccGM-sqrt(ccGM^2-4*gamma*cs0*p*bz^2/mu0A))/2/rho)'] $
+     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'          ], $
+     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'          ], $
+     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'          ], $
+     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'          ], $ ; slow Mach number
+     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'          ], $
+     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'          ]  $
                           ]))
 
   ;; Add functions to the basic variable list
@@ -420,6 +387,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                  f = fStart + '(' + functiondef(iVar-nDim-nW-nEqpar,1) + ')' + fEnd
 
            endwhile
+
         endelse
 
         if not execute('result='+f) then begin
