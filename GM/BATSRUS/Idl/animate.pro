@@ -1,6 +1,6 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 ;    Written by G. Toth for the Versatile Advection Code.
 ;
@@ -84,8 +84,7 @@ endif else $
    anygencoord=0
    for ifile=0,nfile-1 do begin
       openfile,10,filenames(ifile),filetypes(ifile)
-      gethead,10,filenames(ifile),filetypes(ifile), $
-         headline,it,time,gencoord,ndim,neqpar,nw,nx,eqpar,variables
+      gethead,10,filenames(ifile),filetypes(ifile)
       anygencoord=anygencoord or gencoord
       print,         'headline                  =',strtrim(headline,2)
       print,FORMAT='("variables                 =",100(a," "),$)',variables
@@ -114,7 +113,7 @@ endif else $
       error=0
       while npict lt npictmax and not error do begin
 
-         for ifile=0,nfile-1 do begin
+         for ifile = 0, nfile-1 do begin
 
             if npict eq 0 then nextpict=firstpict(ifile) $
             else               nextpict=dpict(ifile)
@@ -123,9 +122,8 @@ endif else $
             if filetypes(ifile) eq 'IPIC3D' then $
                nextpict = firstpict(ifile) + npict*dpict(ifile)
 
-            get_pict,ifile+10,filenames(ifile),filetypes(ifile),nextpict,x,w,$
-                headline, it, time, gencoord, ndim, neqpar, nw, nx,$
-                eqpar, variables, rBody, err
+            get_pict, ifile+10, filenames(ifile), filetypes(ifile), nextpict,$
+                      x, w, err
 
             if keyword_set(wsubtract) then w=w-wsubtract
 
@@ -151,8 +149,8 @@ endif else $
 
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
-                 doask,x,w,xreg,wreg,usereg,time,eqpar,variables,$
-                 cut0,rcut
+                         doask,x,w,xreg,wreg,usereg,time,eqpar,$
+                         variables,headline,cut0,rcut
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'
@@ -246,9 +244,7 @@ endif else $
                nextpict = firstpict(ifile) + ipict*dpict(ifile)
 
             get_pict, ifile+10, filenames(ifile),filetypes(ifile), nextpict, $
-                      x, w, $
-                      headline, it, time, gencoord, ndim, neqpar, nw, nx,$
-                      eqpar, variables, rBody, err
+                      x, w, err
 
             error=error or err
          endif
@@ -295,12 +291,12 @@ endif else $
             ifilestore = ifile
 
             plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-              variables,wnames,axistype,plotmodes,plottitles,$
-              ax,az,contourlevel,linestyle,$
-	      velvector,velspeed,velseed,velpos,velx,vely,veltri,$
-              cut,cut0,rcut,plotdim,$
-              nfunc,multix,multiy,fixaspect,plotix,plotiy,$
-              funcs,funcs1,funcs2,fmin,fmax,f
+                      variables,axistype,plotmodes,plottitles,$
+                      ax,az,contourlevel,linestyle,$
+                      velvector,velspeed,velseed,velpos,velx,vely,veltri,$
+                      cut,cut0,rcut,plotdim,$
+                      nfunc,multix,multiy,fixaspect,plotix,plotiy,$
+                      funcs,funcs1,funcs2,fmin,fmax,f
 
             if npict1 le 1 then begin
                putbottom,multix,multiy,ifile,0,bottomline,nx,it,time
