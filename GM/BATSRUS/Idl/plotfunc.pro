@@ -1,6 +1,6 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 ;    Written by G. Toth for the Versatile Advection Code
 ;
@@ -119,7 +119,7 @@
    if !d.name eq 'X' and !d.window ge 0 then wshow
 
    plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
-     variables,wnames,axistype,plotmodes,plottitles,$
+     variables,axistype,plotmodes,plottitles,$
      ax,az,contourlevel,0,$
      velvector,0,velseed,velpos,velx,vely,veltri,$
      cut,cut0,rcut,plotdim,$
