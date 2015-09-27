@@ -1,6 +1,6 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 ;    Read the npict-th picture from an ascii or binary ini or out file 
 ;
@@ -78,16 +78,9 @@ for ifile=0,nfile-1 do begin
    openfile,10,filenames(ifile),filetypes(ifile)
 
    get_pict,10,filenames(ifile),filetypes(ifile),npict<npictinfiles(ifile),$
-            x,w,headline,it,time,$
-            gencoord,ndim,neqpar,nw,nx,eqpar,variables,rBody,error
+            x, w, error
 
-   print,         'headline  =',strtrim(headline,2)
-   print,FORMAT='("ndim      =",i2,", neqpar=",i2,", nw=",i2)',ndim,neqpar,nw
-   if gencoord eq 1 then print,'Generalized coordinates'
-   print,         'it        =',it,', time=',time
-   print,FORMAT='("nx        = ",3(i8))',nx
-   print,         'eqpar     =',eqpar
-   print,         'variables =',variables
+   show_head
 
    if nfile gt 1 then begin
      case ifile of

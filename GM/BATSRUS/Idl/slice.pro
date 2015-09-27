@@ -1,6 +1,6 @@
-;  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+;  Copyright (C) 2002 Regents of the University of Michigan, 
+;  portions used with permission 
 ;  For more information, see http://csem.engin.umich.edu/tools/swmf
-;^CFG COPYRIGHT VAC_UM
 ;===========================================================================
 ;    Written by G. Toth for the Versatile Advection Code
 ;
@@ -206,7 +206,7 @@
       else                         rBodySlice=sqrt(rBody^2 - height^2)
 
       plot_func,x2d,w2d,xreg,wreg,usereg,2,time,eqpar,rBodySlice,$
-        var2d,wnames,axistype,plotmodes,plottitles,$
+        var2d,axistype,plotmodes,plottitles,$
         ax,az,contourlevel,0,$
         velvector,0,velseed,velpos,velx,vely,veltri,$
         cut,cut0,rcut,plotdim,$
