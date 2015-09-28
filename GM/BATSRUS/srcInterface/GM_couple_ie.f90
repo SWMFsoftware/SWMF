@@ -19,15 +19,18 @@ module GM_couple_ie
   public:: GM_put_from_ie
   public:: GM_put_mag_from_ie
   public:: print_iono_potential
-  public:: clean_mod_field_aligned_current
+  public:: clean_mod_gm_couple_ie
   public:: get_ie_grid_index
-
-  ! Joule heating
-  real, public, allocatable :: IonoJouleHeating_II(:,:)
 
   ! Ionosphere potential
   real, allocatable, public :: IonoPotential_II(:,:)
   real, allocatable, public :: dIonoPotential_DII(:,:,:)
+
+  ! Joule heating
+  real, public, allocatable :: IonoJouleHeating_II(:,:)
+
+  ! Conductances
+  real, public, allocatable :: SigmaHall_II(:,:), SigmaPedersen_II(:,:)
 
   ! Ionosphere grid description
   integer, public   :: nThetaIono = -1, nPhiIono = -1
@@ -42,6 +45,29 @@ module GM_couple_ie
        bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
 
 contains
+
+  !============================================================================
+  subroutine clean_mod_gm_couple_ie
+
+    if(allocated(IonoPotential_II)) &
+         deallocate(IonoPotential_II, dIonoPotential_DII)
+
+    if(allocated(IonoJouleHeating_II)) &
+         deallocate(IonoJouleHeating_II)
+
+    if(allocated(SigmaHall_II)) &
+         deallocate(SigmaHall_II, SigmaPedersen_II)
+
+    if(allocated(FieldAlignedCurrent_II)) &
+         deallocate(FieldAlignedCurrent_II, bCurrent_VII, bCurrentLocal_VII)
+    
+    if(allocated(ThetaIono_I)) &
+         deallocate(ThetaIono_I, PhiIono_I)
+
+     nThetaIono = -1
+     nPhiIono = -1
+
+  end subroutine clean_mod_gm_couple_ie
 
   !========================================================================== 
   subroutine print_iono_potential
@@ -60,7 +86,7 @@ contains
   end subroutine print_iono_potential
 
   !==========================================================================
-  subroutine init_mod_ie_grid(iSize, jSize)
+  subroutine init_ie_grid
     ! The ionosphere works on two hemispheres with a node based grid
     ! iSize is the number of latitude nodes from the pole to the equator.
     ! jSize is the number of longitude nodes (including a periodic overlap)
@@ -69,21 +95,15 @@ contains
     use ModPhysics,  ONLY: Si2No_V, UnitX_
     use CON_coupler, ONLY: Grid_C, IE_
 
-    integer, intent(in) :: iSize, jSize
-    character(len=*), parameter :: NameSub='init_mod_ie_grid'
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='init_ie_grid'
     !-------------------------------------------------------------------------
-
     if(nThetaIono > 0) RETURN
+
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     nThetaIono = Grid_C(IE_) % nCoord_D(1)
     nPhiIono   = Grid_C(IE_) % nCoord_D(2)
-
-    if(nThetaIono /= iSize .or. nPhiIono /= jSize)then
-       write(*,*)NameSub,': Grid_C(IE_)%nCoord_D(1:2)=',&
-            Grid_C(IE_) % nCoord_D(1:2)
-       write(*,*)NameSub,': iSize,2*iSize-1,jSize=',iSize,2*iSize-1,jSize
-       call stop_mpi(NameSub//' ERROR: Inconsistent IE grid sizes')
-    endif
 
     allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono))
     ThetaIono_I = Grid_C(IE_) % Coord1_I
@@ -93,7 +113,9 @@ contains
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)
 
-  end subroutine init_mod_ie_grid
+    if(DoTestMe)write(*,*) NameSub,' set up grid sized ', nThetaIono, nPhiIono
+
+  end subroutine init_ie_grid
   !===========================================================================
   subroutine get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
     real, intent(in) :: Theta, Phi
@@ -102,45 +124,6 @@ contains
     ThetaNorm = Theta / dThetaIono
     PhiNorm   = Phi   / dPhiIono
   end subroutine get_ie_grid_index
-
-  !============================================================================
-
-  subroutine init_mod_field_aligned_current(iSize,jSize)
-    integer, intent(in) :: iSize, jSize
-
-    if(allocated(FieldAlignedCurrent_II)) RETURN
-
-    call init_mod_ie_grid(iSize, jSize)
-
-    allocate( bCurrent_VII(0:6, nThetaIono, nPhiIono), &
-         bCurrentLocal_VII(0:6, nThetaIono, nPhiIono), &
-         FieldAlignedCurrent_II(nThetaIono, nPhiIono))
-
-  end subroutine init_mod_field_aligned_current
-
-  !============================================================================
-  subroutine clean_mod_field_aligned_current
-
-    if(allocated(FieldAlignedCurrent_II)) &
-         deallocate( bCurrent_VII, bCurrentLocal_VII, FieldAlignedCurrent_II)
-  end subroutine clean_mod_field_aligned_current
-
-  !============================================================================
-
-  subroutine init_mod_iono_potential(iSize, jSize)
-
-    integer, intent(in) :: iSize, jSize
-    character(len=*), parameter :: NameSub='init_mod_iono_potential'
-    !-------------------------------------------------------------------------
-
-    if(allocated(IonoPotential_II)) RETURN
-
-    call init_mod_ie_grid(iSize, jSize)
-
-    allocate( IonoPotential_II(nThetaIono, nPhiIono), &
-         dIonoPotential_DII(2, nThetaIono, nPhiIono) )
-
-  end subroutine init_mod_iono_potential
 
   !============================================================================
 
@@ -193,22 +176,6 @@ contains
   end subroutine calc_grad_iono_potential
 
   !============================================================================
-
-  subroutine init_mod_iono_jouleheating(iSize, jSize)
-
-    integer, intent(in) :: iSize, jSize
-    character(len=*), parameter :: NameSub='init_mod_iono_jouleheating'
-    !-------------------------------------------------------------------------
-
-    if(allocated(IonoJouleHeating_II)) RETURN
-
-    call init_mod_ie_grid(iSize, jSize)
-
-    allocate( IonoJouleHeating_II(nThetaIono, nPhiIono))
-
-  end subroutine init_mod_iono_jouleheating
-
-  !============================================================================
   subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
     
     use ModGroundMagPerturb, ONLY: nMagTotal, nMagnetometer, nGridMag, &
@@ -222,7 +189,7 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='GM_get_info_for_ie'
     !-------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Collect magnetometer info to share with IE.
     nMagOut=nMagTotal
@@ -275,8 +242,12 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
-    if(.not.allocated(FieldAlignedCurrent_II)) &
-         call init_mod_field_aligned_current(iSize, jSize)
+    call init_ie_grid
+
+    if(.not.allocated(FieldAlignedCurrent_II)) allocate( &
+         bCurrent_VII(0:6, nThetaIono, nPhiIono), &
+         bCurrentLocal_VII(0:6, nThetaIono, nPhiIono), &
+         FieldAlignedCurrent_II(nThetaIono, nPhiIono))
 
     if(.not.allocated(IE_lat)) &
          allocate(IE_lat(iSize), IE_lon(jSize))
@@ -381,35 +352,47 @@ contains
   end subroutine GM_get_for_ie
 
   !============================================================================
-  subroutine GM_put_from_ie(Buffer_IIV,iSize,jSize)
+  subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
 
     use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_
     use ModProcMH
 
     character(len=*), parameter :: NameSub='GM_put_from_ie'
 
-    integer, intent(in) :: iSize,jSize
-    integer, parameter  :: nVar = 2
+    integer, intent(in) :: iSize, jSize, nVar
     real, intent(in) :: Buffer_IIV(iSize,jSize,nVar)
     !  character(len=*), intent(in) :: NameVar
 
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    !  if(DoTest)write(*,*)NameSub,': NameVar,iSize,jSize=',NameVar,iSize,jSize
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVare=', iSize, jSize, nVar
 
-    if(.not. allocated(IonoPotential_II)) &
-         call init_mod_iono_potential(iSize,jSize)
+    call init_ie_grid
+
+    if(.not. allocated(IonoPotential_II)) allocate( &
+         IonoPotential_II(nThetaIono, nPhiIono), &
+         dIonoPotential_DII(2, nThetaIono, nPhiIono) )
 
     IonoPotential_II = Buffer_IIV(:,:,1)*Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
     call calc_grad_iono_potential
 
-    if (.not. allocated(IonoJouleHeating_II)) &
-         call init_mod_iono_jouleheating(iSize,jSize)
+    if(nVar == 2 .or. nVar == 4)then
+       if (.not. allocated(IonoJouleHeating_II)) &
+            allocate(IonoJouleHeating_II(nThetaIono, nPhiIono))
 
-    ! Add the iono. jouleheating - Yiqun Sep 2008
-    IonoJouleHeating_II = Buffer_IIV(:,:,2) * Si2No_V(UnitPoynting_)
-    call map_jouleheating_to_inner_bc
+       ! Add the iono. jouleheating - Yiqun Sep 2008
+       IonoJouleHeating_II = Buffer_IIV(:,:,2) * Si2No_V(UnitPoynting_)
+       call map_jouleheating_to_inner_bc
+    end if
+
+    if(.not. allocated(SigmaHall_II)) &
+         allocate(SigmaHall_II(iSize,jSize), SigmaPedersen_II(iSize,jSize))
+
+    if(nVar > 2)then
+       SigmaHall_II     = Buffer_IIV(:,:,nVar-1) !*Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
+       SigmaPedersen_II = Buffer_IIV(:,:,nVar)
+    endif
 
     if(DoTest)write(*,*)NameSub,': done'
 
