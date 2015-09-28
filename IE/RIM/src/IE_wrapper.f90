@@ -456,8 +456,8 @@ contains
     if(nVar == 2 .or. nVar == 4) &
          Buffer_IIV(:,:,2) = JouleHeatingAll
     if(nVar > 2)then
-       Buffer_IIV(:,:,3) = SigmaHAll
-       Buffer_IIV(:,:,4) = SigmaPAll
+       Buffer_IIV(:,:,nVar-1) = SigmaHAll
+       Buffer_IIV(:,:,nVar)   = SigmaPAll
     end if
 
   end subroutine IE_get_for_gm
