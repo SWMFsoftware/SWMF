@@ -350,7 +350,7 @@ pro show_head,filename
 
 end
 ;=============================================================================
-pro gethead,unit,filename,filetype,pictsize=pictsize
+pro gethead, unit, filename, filetype, pictsize=pictsize
 
 common file_head, $
    headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
@@ -362,7 +362,7 @@ ftype = strlowcase(filetype)
 
 if ftype eq filetype then lenstr = 79 else lenstr = 500
 
-;Type definitions
+; Type definitions
 headline=''
 for i=1, lenstr do headline=headline+' '
 it=long(1)
@@ -373,10 +373,10 @@ nw=long(1)
 varname=''
 for i=1, lenstr do varname=varname+' '
 
-;Remember pointer position at beginning of header
+; Remember pointer position at beginning of header
 if ftype ne 'ipic3d' then point_lun,-unit,pointer0
 
-;Read header
+; Read header
 case ftype of
     'ipic3d':begin
         tmppict = 0
@@ -464,8 +464,6 @@ endif else begin
                                 ; Set variables 
     string_to_array,varname,variables,nvar,/arraysyntax
 endelse
-
-set_units
 
 end
 
@@ -855,6 +853,8 @@ pro get_pict, unit, filename, filetype, npict, x, w, error
 
      endif
   endelse
+
+  set_units
 
 end
 
