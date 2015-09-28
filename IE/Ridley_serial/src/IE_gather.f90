@@ -18,6 +18,8 @@ subroutine IE_gather
   IONO_Jr = -1.0e32
   IONO_Ave_E = -1.0e32
   IONO_Eflux = -1.0e32
+  IONO_SigmaP = -1.0e32
+  IONO_SigmaH = -1.0e32
 
   if (iProc == 0) then
      IONO_phi(1:IONO_nTheta,:) = IONO_NORTH_Phi
@@ -26,6 +28,8 @@ subroutine IE_gather
      IONO_Jr(1:IONO_nTheta,:) = IONO_NORTH_Jr
      IONO_Ave_E(1:IONO_nTheta,:) = IONO_NORTH_Ave_E
      IONO_Eflux(1:IONO_nTheta,:) = IONO_NORTH_EFlux
+     IONO_SigmaP(1:IONO_nTheta,:) = IONO_NORTH_SigmaP
+     IONO_SigmaH(1:IONO_nTheta,:) = IONO_NORTH_SigmaH
   endif
 
   if (iProc == nProc-1) then
@@ -35,6 +39,8 @@ subroutine IE_gather
      IONO_Jr(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_Jr
      IONO_Ave_E(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_Ave_E
      IONO_Eflux(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_EFlux
+     IONO_SigmaP(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_SigmaP
+     IONO_SigmaH(IONO_nTheta:2*IONO_nTheta-1,:) = IONO_SOUTH_SigmaH
   endif
 
   if (nProc > 1) then
@@ -42,34 +48,37 @@ subroutine IE_gather
      iSize = (2*IONO_nTheta-1) * IONO_nPsi
 
      localVar = IONO_Phi
-     iError = 0
      call MPI_REDUCE(localVar, IONO_Phi, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)
 
      localVar = IONO_IonNumFlux
-     iError = 0
      call MPI_REDUCE(localVar, IONO_IonNumFlux, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)
 
      localVar = IONO_Joule
-     iError = 0
      call MPI_REDUCE(localVar, IONO_Joule, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)
      
      localVar = IONO_Jr
-     iError = 0
      call MPI_REDUCE(localVar, IONO_Jr, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)
 
      localVar = IONO_Ave_E
-     iError = 0
      call MPI_REDUCE(localVar, IONO_Ave_E, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)
 
      localVar = IONO_Eflux
-     iError = 0
      call MPI_REDUCE(localVar, IONO_Eflux, iSize, MPI_REAL, MPI_MAX, &
           0, iComm, iError)     
+
+     localVar = IONO_SigmaP
+     call MPI_REDUCE(localVar, IONO_SigmaP, iSize, MPI_REAL, MPI_MAX, &
+          0, iComm, iError)     
+
+     localVar = IONO_SigmaH
+     call MPI_REDUCE(localVar, IONO_SigmaH, iSize, MPI_REAL, MPI_MAX, &
+          0, iComm, iError)     
+
   endif
 
 end subroutine IE_gather
