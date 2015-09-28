@@ -322,8 +322,7 @@ contains
        LatBoundary, Theta_I, Phi_I)
 
     use ModVarIndexes,     ONLY: Bx_, Bz_, nVar
-    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock, &
-         Test_String
+    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem, nBlock
     use ModPhysics,        ONLY: rCurrents, UnitB_, Si2No_V
     use CON_planet_field,  ONLY: get_planet_field, map_planet_field
     use ModProcMH,         ONLY: iProc, iComm
@@ -354,7 +353,6 @@ contains
     real, intent(in), optional:: Theta_I(nTheta)
     real, intent(in), optional:: Phi_I(nPhi)
 
-
     real, allocatable :: bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
 
     integer :: i, j, iHemisphere, iError
@@ -365,12 +363,7 @@ contains
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
     logical :: DoMap
-
-    logical :: UseWrongB = .false.
-
     !-------------------------------------------------------------------------
-    UseWrongB = index(Test_String,'FACBUG') > 0
-
     if(.not.allocated(bCurrentLocal_VII)) allocate( &
          bCurrentLocal_VII(0:6,nTheta,nPhi), &
          bCurrent_VII(0:6,nTheta,nPhi))
@@ -432,8 +425,6 @@ contains
           ! Get the B0 field at the mapped position
           call get_planet_field(Time_Simulation, Xyz_D, &
                TypeCoordSystem//' NORM', B0_D)
-
-          if(UseWrongB) B0_D = matmul(B0_D, GmSmg_DD)
 
           B0_D = B0_D*Si2No_V(UnitB_)
 
@@ -519,11 +510,7 @@ contains
              Fac_II(i,j) = Fac 
              !store the B field in SM coordinates !!
 
-             if(UseWrongB)then
-                bSm_DII(:,i,j) = b_D
-             else
-                bSm_DII(:,i,j) = matmul(bIn_D, GmSmg_DD)
-             end if
+             bSm_DII(:,i,j) = matmul(bIn_D, GmSmg_DD)
 
           end do
        end do
