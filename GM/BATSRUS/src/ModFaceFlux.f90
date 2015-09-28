@@ -2784,11 +2784,24 @@ contains
 
     real, allocatable, save:: Flux_VD(:,:)
     integer:: iFlux
+    character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
     !------------------------------------------------------------------------
 
     if(.not.allocated(FluxCenter_VGD)) allocate( &
          FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
     if(.not.allocated(Flux_VD)) allocate(Flux_VD(nFlux,nDim))
+
+    HallCoeff     = -1.0
+    if(UseHallResist) call stop_mpi(NameSub// &
+         ": Hall Resistivity has not been implemented!")
+    
+    BiermannCoeff = -1.0
+    if(UseBiermannBattery) call stop_mpi(NameSub// &
+         ": BiermannBattery has not been implemented!")
+    
+    ViscoCoeff = 0.0
+    if(UseViscosity) call stop_mpi(NameSub// &
+         ": Viscosity has not been implemented!")
 
     UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0         
     DoTestCell = .false.
@@ -2799,18 +2812,6 @@ contains
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
                 
-                HallCoeff     = -1.0
-                if(UseHallResist) call stop_mpi(&
-                     "Hall Resistivity has not been added for cell fulx!")
-
-                BiermannCoeff = -1.0
-                if(UseBiermannBattery) call stop_mpi(&
-                     "BiermannBattery has not been added for cell flux!")
-
-                ViscoCoeff = 0.0
-                if(UseViscosity) call stop_mpi(&
-                     "Viscosity has not been considered for cell flux!")
-
                 Eta       = 0.0
                 if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
 
