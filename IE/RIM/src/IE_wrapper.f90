@@ -427,7 +427,7 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,nVar,tSimulation)
 
     use ModProcIE, only:nProc
     use ModSizeRIM
@@ -435,9 +435,9 @@ contains
 
     character (len=*),parameter :: NameSub='IE_get_for_gm'
 
-    integer, intent(in)           :: iSize,jSize
-    real, intent(out)             :: Buffer_IIV(iSize,jSize,2)
-    real (Real8_),    intent(in)  :: tSimulation
+    integer, intent(in):: iSize, jSize, nVar
+    real, intent(out)  :: Buffer_IIV(iSize,jSize,nVar)
+    real, intent(in)   :: tSimulation
 
     integer :: i,j,k
     real    :: tSimulationTmp
@@ -450,9 +450,15 @@ contains
 
     ! Make sure that the most recent result is provided
     tSimulationTmp = tSimulation
-    call IE_run(tSimulationTmp,tSimulation)
+    call IE_run(tSimulationTmp, tSimulation)
+
     Buffer_IIV(:,:,1) = PotentialAll
-    Buffer_IIV(:,:,2) = JouleHeatingAll
+    if(nVar == 2 .or. nVar == 4) &
+         Buffer_IIV(:,:,2) = JouleHeatingAll
+    if(nVar > 2)then
+       Buffer_IIV(:,:,3) = SigmaHAll
+       Buffer_IIV(:,:,4) = SigmaPAll
+    end if
 
   end subroutine IE_get_for_gm
 
