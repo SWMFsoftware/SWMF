@@ -2,22 +2,25 @@
 ;
 ; Definitions and/or default values for global variables
 
-; A useful constant (same as !pi or !dpi)
-pi=acos(-1.)
-
 ; Confirmation for set parameters
 doask=0
+
 ; Do not erase before new plot
 noerase=0
+
 ; Aspect ratio: 0 - not fixed (fill screen), 
 ;               1 - use coordinates, other values - set aspect ratio
 fixaspect=1
-; Randomize vector positions for VEL every time
+
+; Randomize vector/streamline start positions
 velrandom=0
+
 ; Array subtracted from w during animation
 wsubtract=0
+
 ; take time derivative of w during animation if timediff=1
-timediff =0
+timediff=0
+
 ; Keep original size of fits image
 noresize=0
 
@@ -135,7 +138,7 @@ log_spacex=5
 log_spacey=5
 
 ; Some useful constants in SI units
-common phys_const,kbSI,mpSI,mu0SI,eSI,ReSI,RsSI
+common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
 
 kbSI   = 1.3807d-23 ; Boltzmann constant
 mpSI   = 1.6726d-27 ; proton mass
@@ -143,6 +146,7 @@ mu0SI  = 4*!pi*1d-7 ; vacuum permeability
 eSI    = 1.602d-19  ; elementary charge
 ReSI   = 6378d3     ; radius of Earth
 RsSI   = 6.96d8     ; radius of Sun
+cSI    = 2.9979d8   ; speed of light
 
 ; Physical unit names and values in SI units
 common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
@@ -158,12 +162,19 @@ bSI        = sqrt(mu0SI)   ; magnetic unit in SI
 jSI        = 1/sqrt(mu0SI) ; current unit in SI
 
 ; conversion factors that are useful to calculate various derived quantites
-common phys_convert,temp0,cs0,mu0A,mu0
+common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
 
-temp0      = 1.0           ; temperature  = mIon*temp0*p/rho
-cs0        = 1.0           ; sound speed  = sqrt(cs0*gamma*p/rho)
-mu0A       = 1.0           ; Alfven speed = sqrt(bb/mu0A/rho)
-mu0        = 1.0           ; plasma beta  = p/(bb/2/mu0)
+ti0  = 1.0 ; ion temperature = ti0*p/rho*Mion
+cs0  = 1.0 ; sound speed     = sqrt(cs0*gamma*p/rho)
+c0   = 1.0 ; speed of light  = c0
+mu0A = 1.0 ; Alfven speed    = sqrt(bb/mu0A/rho)
+mu0  = 1.0 ; plasma beta     = p/(bb/2/mu0)
+uH0  = 1.0 ; Hall velocity   = uH0*j/rho*Mion
+op0  = 1.0 ; plasma freq.    = op0*sqrt(rho)/Mion
+oc0  = 1.0 ; cyclotron freq. = oc0*b/mIon
+rg0  = 1.0 ; ion gyro radius = rg0*sqrt(p/rho)/b*sqrt(Mion)
+di0  = 1.0 ; inertial length = di0*sqrt(rho)*Mion
+ld0  = 1.0 ; Debye length    = ld0*sqrt(p)/rho*Mion
 
 ; information obtained from the last file header
 common file_head, $
