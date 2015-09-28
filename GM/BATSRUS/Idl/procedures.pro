@@ -10,7 +10,9 @@
 ; reading ascii and binary data produced by VAC, VACINI, BATSRUS etc:
 ;    openfile, gettype, gethead, get_pict, 
 ;    get_pict_asc, get_pict_bin, get_pict_log, get_log
-; saveing ascii and binary data in the same format as used for input:
+; showing / overwriting information read from last file:
+;    show_head, show_units, set_units
+; saving ascii and binary data in the same format as used for input:
 ;    save_pict, save_log
 ; reading numbers and strings from input:
 ;    asknum, askstr, string_to_array, arr2arr, readplotpar, readlimits
@@ -487,7 +489,7 @@ pro get_pict_hdf, filename, npict, x, w, error, getdata
 
   rbody    = 0.0
   gencoord = 0
-  headline = 'Normalized CGS units'
+  headline = 'PIC CGS units'
 
   idims = where(nxyz_D GT 1, ndim)
   nx = nxyz_D(idims)
@@ -2009,7 +2011,8 @@ end
 ;===========================================================================
 pro set_units, type, distunit=distunit
 
-  ;; Is type is given as 'SI', 'NORMALIZED', 'PLANETARY', or 'SOLAR',
+  ;; Is type is given as 
+  ;; 'SI', 'CGS', 'NORMALIZED', 'PIC', 'PLANETARY', or 'SOLAR',
   ;; set typeunit = type otherwise try to guess from the fileheader.
 
   ;; Based on typeunit set units for distance (xSI), time (tSI), density (rhoSI),
@@ -2017,97 +2020,166 @@ pro set_units, type, distunit=distunit
   ;; SI units.
   ;; Distance unit (rplanet or rstar) can be set with optional distunit.
   
-  ;; Calculate convenient constants temp0, cs0, mu0A, mu0 for typical formulas:
-  ;;
-  ;; Temperature  = Mi*temp0*p/rho
-  ;; Sound speed  = sqrt(gamma*cs0*p/rho)
-  ;; Alfven speed = = sqrt(bb/mu0A/rho)
-  ;; Plasma beta  = p/(bb/2/mu0)
+  ;; Also calculate convenient constants ti0, cs0 ... for typical formulas.
+  ;; See file "defaults" for definitions and usage
 
-common file_head, headline
-common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
-common phys_convert, temp0, cs0, mu0A, mu0
-common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI
+  common file_head, headline
+  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
 
-if keyword_set(type) then $
-   typeunit = struppercae(type) $
-else if fixunits then $
-   return $
-else if strpos(headline, 'kg/m3') ge 0 or strpos(headline,' m/s') ge 0 then $
-   typeunit = 'SI' $
-else if strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
-   typeunit = 'PLANETARY' $
-else if strpos(headline,' dyne') ge 0 or strpos(headline,' G') ge 0 then $
-   typeunit = 'SOLAR' $
-else $
-   typeunit = 'NORMALIZED'
+  if keyword_set(type) then $
+     typeunit = struppercae(type) $
+  else if fixunits then $
+     return $
+  else if strpos(headline, 'PIC') ge 0 then $
+     typeunit = 'PIC' $
+  else if strpos(headline, 'kg/m3') ge 0 or strpos(headline,' m/s') ge 0 then $
+     typeunit = 'SI' $
+  else if strpos(headline,' nPa ') ge 0 or strpos(headline,' nT ') ge 0 then $
+     typeunit = 'PLANETARY' $
+  else if strpos(headline,' dyne') ge 0 or strpos(headline,' G') ge 0 then $
+     typeunit = 'SOLAR' $
+  else $
+     typeunit = 'NORMALIZED'
 
-case typeunit of
-   'SI': begin
-      xSI   = 1.0             ; m
-      tSI   = 1.0             ; s
-      rhoSI = 1.0             ; kg/m^3
-      uSI   = 1.0             ; m/s
-      pSI   = 1.0             ; Pa
-      bSI   = 1.0             ; T
-      jSI   = 1.0             ; A/m^2
-   end
-   'NORMALIZED': begin
-      xSI   = 1.0             ; distance unit in SI
-      tSI   = 1.0             ; time unit in SI
-      rhoSI = 1.0             ; density unit in SI
-      uSI   = 1.0             ; velocity unit in SI
-      pSI   = 1.0             ; pressure unit in SI
-      bSI   = sqrt(mu0SI)     ; magnetic unit in SI
-      jSI   = 1/sqrt(mu0SI)   ; current unit in SI
-      temp0 = 1.0
-      cs0   = 1.0
-      mu0A  = 1.0
-      mu0   = 1.0
-   end
-   'PLANETARY': begin
-      xSI   = ReSi            ; Earth radius (default planet)
-      tSI   = 1.0             ; s
-      rhoSI = mpSI*1e6        ; mp/cm^3
-      uSI   = 1e3             ; km/s
-      pSI   = 1e-9            ; nPa
-      bSI   = 1e-9            ; nT
-      jSI   = 1e-6            ; muA/m^2
-      temp0 = 1e-15/kbSI      ; Mi*p/rho:    nPa/cm^3
-      cs0   = 1d-21/mpSI      ; sqrt(gamma*cs0*p/rho) (km/s)^-2*nPa/(mp/cm^-3)
-      mu0A  = mu0SI*mpSI*1d30 ; sqrt(bb/mu0A/rho) (km/s)^2*nT^-2*mp/cm^-3
-      mu0   = mu0SI*1e9       ; p/(bb/2/mu0) [nPA]/[nT]^2
-   end
-   'SOLAR': begin
-      xSI   = RsSI          ; radius of the Sun
-      tSI   = 1.0           ; s
-      rhoSI = 1e3           ; g/cm^3
-      uSI   = 1e3           ; km/s
-      pSI   = 1e-1          ; dyne/cm^2
-      bSI   = 1e-4          ; G
-      jSI   = 1e-6          ; muA/m^2
-   end
-   else: begin 
-      print, 'ERROR in set_units, invalid typeunit=', typeunit
-      retall
-   end
-endcase
+  case typeunit of
+     'SI': begin
+        xSI   = 1.0             ; m
+        tSI   = 1.0             ; s
+        rhoSI = 1.0             ; kg/m^3
+        uSI   = 1.0             ; m/s
+        pSI   = 1.0             ; Pa
+        bSI   = 1.0             ; T
+        jSI   = 1.0             ; A/m^2
+     end
+     'CGS': begin
+        xSI   = 0.01            ; cm
+        tSI   = 1.0             ; s
+        rhoSI = 1000.0          ; g/cm^3
+        uSI   = 0.01            ; cm/s
+        pSI   = 0.1             ; dyne/cm^2
+        bSI   = 1.0e-4          ; G
+        jSI   = 10*cSI          ; Fr/s/cm^2
+     end
+     'PIC': begin
+        ;; Normalized PIC units
+        xSI   = 1.0             ; cm
+        tSI   = 1.0             ; s
+        rhoSI = 1.0             ; g/cm^3
+        uSI   = 1.0             ; cm/s
+        pSI   = 1.0             ; dyne/cm^2
+        bSI   = 1.0             ; G
+        jSI   = 1.0             ; Fr/s/cm^2
+     end
+     'NORMALIZED': begin
+        xSI   = 1.0             ; distance unit in SI
+        tSI   = 1.0             ; time unit in SI
+        rhoSI = 1.0             ; density unit in SI
+        uSI   = 1.0             ; velocity unit in SI
+        pSI   = 1.0             ; pressure unit in SI
+        bSI   = sqrt(mu0SI)     ; magnetic unit in SI
+        jSI   = 1/sqrt(mu0SI)   ; current unit in SI
+     end
+     'PLANETARY': begin
+        xSI   = ReSi            ; Earth radius (default planet)
+        tSI   = 1.0             ; s
+        rhoSI = mpSI*1e6        ; mp/cm^3
+        uSI   = 1e3             ; km/s
+        pSI   = 1e-9            ; nPa
+        bSI   = 1e-9            ; nT
+        jSI   = 1e-6            ; muA/m^2
+     end
+     'SOLAR': begin
+        xSI   = RsSI            ; radius of the Sun
+        tSI   = 1.0             ; s
+        rhoSI = 1e3             ; g/cm^3
+        uSI   = 1e3             ; km/s
+        pSI   = 1e-1            ; dyne/cm^2
+        bSI   = 1e-4            ; G
+        jSI   = 1e-6            ; muA/m^2
+     end
+     else: begin 
+        print, 'ERROR in set_units, invalid typeunit=', typeunit
+        retall
+     end
+  endcase
 
-                                ; Overwrite distance unit if given as an argument
-if keyword_set(distunit) then xSI = distunit
+  ;; Overwrite distance unit if given as an argument
+  if keyword_set(distunit) then xSI = distunit
 
-                                ; Calculate convenient conversion factors
-if typeunit eq 'NORMALIZED' then begin
-   temp0 = 1.0
-   cs0   = 1.0
-   mu0A  = 1.0
-   mu0   = 1.0
-endif else begin
-   temp0 = mpSI/kbSI*pSI/rhoSI         ; T    = Mi*temp0*p/rho
-   cs0   = uSI^(-2)*pSI/rhoSI          ; cs   = sqrt(gamma*cs0*p/rho)
-   mu0A  = uSI^2*mu0SI*rhoSI*bSI^(-2)  ; vA   = sqrt(bb/(mu0A*rho))
-   mu0   = pSI*bSI^(-2)                ; beta = p/(bb/(2*mu0))
-endelse
+  ;; Calculate convenient conversion factors
+  if typeunit eq 'NORMALIZED' then begin
+     ti0  = 1.0                             ; T      = p/rho*Mion
+     cs0  = 1.0                             ; cs     = sqrt(gamma*p/rho)
+     c0   = 1.0                             ; speed of light (for Boris)
+     mu0A = 1.0                             ; vA     = sqrt(b/rho)
+     mu0  = 1.0                             ; beta   = p/(bb/2)
+     uH0  = 1.0                             ; uH     = j/rho*Mion
+     op0  = 1.0                             ; omegap = sqrt(rho)/Mion
+     oc0  = 1.0                             ; omegac = b/Mion
+     rg0  = 1.0                             ; rg     = sqrt(p/rho)/b*sqrt(Mion)     
+     di0  = 1.0                             ; di     = $c0/sqrt(rho)*Mion
+     ld0  = 1.0                             ; ld     = sqrt(p)/(rho*c0)*Mion
+  endif else if typeunit eq 'PIC' then begin
+     ti0  = 1.0                             ; T = p/rho*Mion
+     cs0  = 1.0                             ; cs = sqrt(gamma*p/rho)
+     c0   = 1.0                             ; always 1 for iPIC3D
+     mu0A = 4*!pi                           ; vA     = sqrt(b/(4*!pi*rho))
+     mu0  = 4*!pi                           ; beta   = p/(bb/(8*!pi))
+     uH0  = 1.0                             ; uH     = j/rho*Mion
+     op0  = sqrt(4*!pi)                     ; omegap = sqrt(4*!pi*rho)/Mion
+     oc0  = 1.0                             ; omegac = b/Mion
+     rg0  = 1.0                             ; rg     = sqrt(p/rho)/b*sqrt(Mion)     
+     di0  = 1.0/sqrt(4*!pi)                 ; di     = 1/sqrt(4*!pi*rho)*Mion
+     ld0  = 1.0/sqrt(4*!pi)                 ; ld     = sqrt(p/(4*!pi))/rho*Mion
+  endif else begin
+     ti0  = mpSI/kbSI*pSI/rhoSI             ; T[K]=p/(nk) = ti0*p/rho*Mion   
+     cs0  = pSI/rhoSI/uSI^2                 ; cs          = sqrt(gamma*cs0*p/rho)
+     c0   = cSI/uSI                         ; speed of light
+     mu0A = uSI^2*mu0SI*rhoSI*bSI^(-2)      ; vA          = sqrt(bb/(mu0A*rho))
+     mu0  = pSI*bSI^(-2)                    ; beta        = p/(bb/(2*mu0))
+     uH0  = mpSI/eSI*jSI/rhoSI/uSI          ; uH=j/(ne)   = uH0*j/rho*Mion 
+     op0  = eSI/mpSI*sqrt(rhoSI)*tSI        ; omegap      = op0*sqrt(rho)/Mion
+     oc0  = eSi/mpSI*bSI*tSI                ; omegac      = oc0*b/Mion
+     rg0  = mpSI/eSI*sqrt(pSI/rhoSI)/bSI/xSI; rg=uth*Mi/eB= rg0*sqrt(p/rho)/b*sqrt(Mion)
+     di0  = mpSI/eSI/sqrt(rhoSI)/xSI        ; di=c/omegap = di0/sqrt(rho)*Mion
+     ld0  = mpSI/eSI*sqrt(pSI)/rhoSI/xSI    ; ld          = ld0*sqrt(p)/rho*Mion
+
+  endelse
+
+end
+
+;===========================================================================
+pro show_units
+;===========================================================================
+
+  common file_head, headline
+  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
+
+  print,'headline=', strtrim(headline,2)
+  print,'fixunits=', fixunits
+  print,'typeunit=', typeunit
+  print,'xSI     =', xSI
+  print,'tSI     =', tSI
+  print,'rhoSI   =', rhoSI
+  print,'uSI     =', uSI
+  print,'pSI     =', pSI
+  print,'bSI     =', bSI
+  print,'jSI     =', jSI
+  print,'ti0     =', ti0
+  print,'cs0     =', cs0
+  print,'mu0A    =', mu0A
+  print,'mu0     =', mu0
+  print,'c0      =', c0
+  print,'uH0     =', uH0
+  print,'op0     =', op0
+  print,'oc0     =', oc0
+  print,'rg0     =', rg0
+  print,'di0     =', di0
+  print,'ld0     =', ld0
 
 end
 ;===========================================================================
