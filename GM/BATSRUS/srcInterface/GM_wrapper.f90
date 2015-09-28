@@ -380,7 +380,7 @@ contains
 
     call BATS_save_files('FINAL')
 
-    if (UseIe) call clean_mod_field_aligned_current
+    if (UseIe) call clean_mod_gm_couple_ie
 
     call BATSRUS_finalize
 
