@@ -52,9 +52,67 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;
 ;===========================================================================
 
+  ;; Define various functions of the basic MHD variables
+  ;; The functions names are evaluated in lower case
+  functiondef = strlowcase(transpose([ $
+     ['mx'       , 'rho*ux'                                        ], $ ; momenta
+     ['my'       , 'rho*uy'                                        ], $
+     ['mz'       , 'rho*uz'                                        ], $
+     ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'            ], $ ; Hall velocity = {uH}*mIon
+     ['uxH'      , 'uH0*{jx}/rho'                                  ], $ 
+     ['uyH'      , 'uH0*{jy}/rho'                                  ], $ 
+     ['uzH'      , 'uH0*{jz}/rho'                                  ], $ 
+     ['mxB'      , 'rho*ux+(bb*ux-(ux*bx+uy*by+uz*bz)*bx)/clight^2'], $ ; Boris momenta
+     ['myB'      , 'rho*uy+(bb*uy-(ux*bx+uy*by+uz*bz)*by)/clight^2'], $
+     ['mzB'      , 'rho*uz+(bb*uz-(ux*bx+uy*by+uz*bz)*bz)/clight^2'], $
+     ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'                    ], $ ; current density
+     ['divbxy'   , 'div(bx,by,x,y)'                                ], $ ; div(B) in 2D
+     ['Ex'       , 'by*uz-uy*bz'                                   ], $ ; electric field
+     ['Ey'       , 'bz*ux-uz*bx'                                   ], $
+     ['Ez'       , 'bx*uy-ux*by'                                   ], $
+     ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'                 ], $ ; energy density
+     ['pbeta'    , '2*p/bb'                                        ], $ ; plasma beta
+     ['s'        , 'p/rho^gamma'                                   ], $ ; entropy
+     ['Ti'       , 'ti0*p/rho'                                     ], $ ; ion temperature [K]={Ti}*Mion
+     ['Te'       , 'ti0*{pe}/rho'                                  ], $ ; electron temp. [K] ={Te}*Mion
+     ['calfvenx' , 'bx/sqrt(rho*mu0A)'                             ], $ ; Alfven velocity
+     ['calfveny' , 'by/sqrt(rho*mu0A)'                             ], $
+     ['calfvenz' , 'bz/sqrt(rho*mu0A)'                             ], $
+     ['calfven'  , 'b /sqrt(rho*mu0A)'                             ], $
+     ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                          ], $ ; Alfven Mach number
+     ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                          ], $
+     ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                          ], $
+     ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                          ], $
+     ['csound'   , 'sqrt(gs*p/rho)'                                ], $ ; sound speed
+     ['mach'     , 'u /sqrt(gs*p/rho)'                             ], $ ; Mach number
+     ['machx'    , 'ux/sqrt(gs*p/rho)'                             ], $
+     ['machy'    , 'uy/sqrt(gs*p/rho)'                             ], $
+     ['machz'    , 'uz/sqrt(gs*p/rho)'                             ], $
+     ['cfast'    , 'sqrt(cc/rho)'                                  ], $ ; fast magnetosonic speed
+     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'         ], $
+     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'         ], $
+     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'         ], $
+     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'         ], $ ; slow speed
+     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'         ], $
+     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'         ], $
+     ['Mfast'    , 'sqrt(rho*uu/cc)'                               ], $ ; fast Mach number
+     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'      ], $
+     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'      ], $
+     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'      ], $
+     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'      ], $ ; slow Mach number
+     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'      ], $
+     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'      ], $
+     ['uthermal' , 'sqrt(cs0*p/rho)'                               ], $ ; thermal speed   ={uthermal}/sqrt(Mion)
+     ['omegapi'  , 'op0*sqrt(rho)'                                 ], $ ; plasma frequency={omegapi}/Mion
+     ['omegaci'  , 'oc0*b'                                         ], $ ; gyro frequency  ={omegaci}/Mion
+     ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'                     ], $ ; gyro radius     ={rgyro}*sqrt(Mion)
+     ['dinertial', 'di0/sqrt(rho)'                                 ], $ ; inertial length ={dinertial}*Mion
+     ['ldebye'   , 'ld0*sqrt(p)/rho'                               ]  $ ; Debye length    ={ldebye}/c0*Mion
+                          ]))
+
   common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
-  common phys_convert, temp0, cs0, mu0A, mu0
-  common phys_const,kbSI,mpSI,mu0SI,eSI,ReSI,RsSI
+  common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
@@ -64,7 +122,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   if n_elements(rcut) eq 0 then rcut = -1
 
-; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
+  ;; In 1D xx(n1), in 2D xx(n1,n2,2), in 3D xx(n1,n2,n3,3)
   siz=size(xx)
   ndim=siz(0)-1
   if ndim eq 0 then ndim=1
@@ -72,15 +130,15 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
   if ndim gt 1 then n2=siz(2)
   if ndim gt 2 then n3=siz(3)
 
-; For 1 variable: w(n1), w(n1*n2), w(n1,n2),  w(n1,n2,n3)
-; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
+  ;; For 1 variable: w(n1), w(n1*n2), w(n1,n2),  w(n1,n2,n3)
+  ;; for more      : w(n1,nw),w(n1,n2,nw),w(n1,n2,n3,nw)
   siz=size(w)
   if siz(0) le ndim then nw=1 else nw=siz(ndim+1)
 
-; Number of equation parameters
+  ;; Number of equation parameters
   nEqpar = n_elements(eqpar)
 
-; Extract equation parameters
+  ;; Extract equation parameters
   gamma  =  5./3.
   clight =  1.0
   rbody  = -1.0
@@ -99,11 +157,14 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      endfor
   endif
 
-; Variable names
+  ;; Define gamma for the sound speed = sqrt(gs*p/rho) with units
+  gs = gs
+
+  ;; Variable names
   if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
   wnames = strlowcase(variables(ndim:ndim+nw-1))
 
-; Check for a negative sign in func
+  ;; Check for a negative sign in func
   if strmid(func,0,1) eq '-' then begin 
      f=strmid(func,1,strlen(func)-1)
      sign=-1
@@ -112,7 +173,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      sign=1
   endelse
 
-; Check if f is among the variable names listed in wnames or if it is a number
+  ;; Check if f is among the variable names listed in wnames or if it is a number
   for iw=0,nw-1 do $
      if f eq strtrim(string(iw),2) or strlowcase(f) eq wnames(iw) then $
         case ndim of
@@ -123,7 +184,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   if n_elements(result) gt 0 and rcut le 0 then return, sign*result
 
-; set radial distance (assuming cartesian coordinates)
+  ;; set radial distance (assuming cartesian coordinates)
   case ndim of
      1: r = abs(xx)
      2: r = sqrt(xx(*,*,0)^2 + xx(*,*,1)^2)
@@ -139,7 +200,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      return, sign*result
   endif
 
-; set the coordinate arrays x, y, z if they occur in the variable names
+  ;; set the coordinate arrays x, y, z if they occur in the variable names
   x = 0 & y = 0 & z = 0
   for idim = 0, ndim-1 do case ndim of
      1: case variables(idim) of
@@ -169,13 +230,13 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      end
   endcase
 
-; Extract primitive variables for calculating MHD type functions
+  ;; Extract primitive variables for calculating MHD type functions
 
-; initialize all the variables as scalars 
+  ;; initialize all the variables as scalars 
   rho=0 & ux=0 & uy=0 & uz=0 & bx=0 & by=0 & bz=0 & p=0 & e=0
 
-; set the variables from the w
-  for iw=0,nw-1 do case ndim of
+  ;; set the variables from the w
+  for iw = 0, nw-1 do case ndim of
      1: case wnames(iw) of
         'rho': rho=w(*,iw)
         'ux' : ux=w(*,iw)
@@ -234,59 +295,13 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   ;; Change energy into pressure
   if n_elements(p) le 1 and n_elements(e) gt 1 then $
-     p=(gamma-1)*(e-0.5*(rho*uu+bb))
+     p = (gamma-1)*(e - 0.5*(rho*uu + bb))
 
   ;; Calculate gamma*p+bb if needed
   if strpos(f,'fast') ge 0 or strpos(f, 'slow') ge 0 then begin
-     c4 = 4*gamma*cs0/muA
-     cc = gamma*cs0*p + bb/mu0A
+     c4 = 4*gs/muA
+     cc = gs*p + bb/mu0A
   end
-
-  ;; Define various functions of the basic MHD variables
-  ;; The functions names are evaluated in lower case
-  functiondef = strlowcase(transpose([ $
-     ['mx'       , 'rho*ux'                                            ], $ ; momenta
-     ['my'       , 'rho*uy'                                            ], $
-     ['mz'       , 'rho*uz'                                            ], $
-     ['mxB'      , 'rho*ux + (bb*ux - (ux*bx+uy*by+uz*bz)*bx)/clight^2'], $ ; Boris momenta
-     ['myB'      , 'rho*uy + (bb*uy - (ux*bx+uy*by+uz*bz)*by)/clight^2'], $
-     ['mzB'      , 'rho*uz + (bb*uz - (ux*bx+uy*by+uz*bz)*bz)/clight^2'], $
-     ['divbxy'   , 'div(bx,by,x,y)'                                    ], $ ; div(B) in 2D
-     ['Ex'       , 'by*uz-uy*bz'                                       ], $ ; electric field
-     ['Ey'       , 'bz*ux-uz*bx'                                       ], $
-     ['Ez'       , 'bx*uy-ux*by'                                       ], $
-     ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'                     ], $ ; energy density
-     ['pbeta'    , '2*p/bb'                                            ], $ ; plasma beta
-     ['s'        , 'p/rho^gamma'                                       ], $ ; entropy
-     ['T'        , 'temp0*p/rho'                                       ], $ ; temperature [K]
-     ['calfvenx' , 'bx/sqrt(rho*mu0A)'                                 ], $
-     ['calfveny' , 'by/sqrt(rho*mu0A)'                                 ], $
-     ['calfvenz' , 'bz/sqrt(rho*mu0A)'                                 ], $
-     ['calfven'  , 'b /sqrt(rho*mu0A)'                                 ], $
-     ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                              ], $ ; Alfven Mach number
-     ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                              ], $
-     ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                              ], $
-     ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                              ], $
-     ['csound'   , 'sqrt(gamma*cs0*p/rho)'                             ], $ ; sound speed
-     ['mach'     , 'u /sqrt(gamma*cs0*p/rho)'                          ], $ ; Mach number
-     ['machx'    , 'ux/sqrt(gamma*cs0*p/rho)'                          ], $
-     ['machy'    , 'uy/sqrt(gamma*cs0*p/rho)'                          ], $
-     ['machz'    , 'uz/sqrt(gamma*cs0*p/rho)'                          ], $
-     ['cfast'    , 'sqrt(cc/rho)'                                      ], $ ; fast speed
-     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'             ], $
-     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'             ], $
-     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'             ], $
-     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'             ], $ ; slow speed
-     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'             ], $
-     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'             ], $
-     ['Mfast'    , 'sqrt(rho*uu/cc)'                                   ], $ l fast Mach number
-     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'          ], $
-     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'          ], $
-     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'          ], $
-     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'          ], $ ; slow Mach number
-     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'          ], $
-     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'          ]  $
-                          ]))
 
   ;; Add functions to the basic variable list
   functions = [strlowcase(variables), functiondef(*,0)]
