@@ -58,6 +58,9 @@ contains
     real :: dv
     real :: XyzSph_DD(3,3)
     integer :: i, j, iMag
+    !======================================================================
+    call timing_start('iono_mag_perturb')
+
     !\
     ! calculate the magnetic perturbations at the location of (SMLat, SMLon)
     ! in the SM coordinates, by integrating over the Hall and Perdersen
@@ -137,6 +140,8 @@ contains
        end do
     end do
 
+    call timing_start('iono_mag_db')
+
     do iMag=1, nMag
 
        Xyz0_D = Xyz0_DI(:,iMag)
@@ -206,7 +211,8 @@ contains
        JpMagPerturb_DI(3,iMag) = -TempMagJp_D(1) * 1.0e9 ! down
 
     end do
-
+    call timing_stop('iono_mag_db')
+    call timing_stop('iono_mag_perturb')
 
   end subroutine iono_mag_perturb
 
