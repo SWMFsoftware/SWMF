@@ -2684,6 +2684,12 @@ namespace PIC {
           for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
         }
 
+        void print() {
+          printf("Length=%i, weight:",Length);
+          for (int i=0;i<Length;i++) printf (" %e[%i]",Weight[i],i);
+          printf("\n");  
+        }
+
         void AddCell(double w,PIC::Mesh::cDataCenterNode* c) {
           if (Length==nMaxStencilLength-1) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
 
@@ -2718,6 +2724,8 @@ namespace PIC {
 
         //interpolation functions
         PIC::InterpolationRoutines::CellCentered::cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
+        PIC::InterpolationRoutines::CellCentered::cStencil *GetTriliniarInterpolationStencil(double iLoc,double jLoc,double kLoc,double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
       }
 
     }
