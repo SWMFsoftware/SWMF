@@ -355,7 +355,9 @@ contains
     real, external    :: integrate_BLK
     real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
 
+    character(len=*), parameter:: NameSub = 'ground_mag_perturb'
     !--------------------------------------------------------------------
+    call timing_start(NameSub)
 
     if(.not.allocated(Temp_BLK_x))&
          allocate(Temp_BLK_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
@@ -427,10 +429,14 @@ contains
     end do
 
     deallocate(Temp_BLK_x,Temp_BLK_y,Temp_BLK_z)
+
+    call timing_stop(NameSub)
+
   end subroutine ground_mag_perturb
 
   !=====================================================================
   subroutine ground_mag_perturb_fac(nMag, Xyz_DI, MagPerturb_DI)
+
     ! For nMag magnetometers at locations Xyz_DI, calculate the 3-component
     ! pertubation of the magnetic field (returned as MagPerturb_DI) due
     ! to "gap region" field-aligned currents.  These are the FACs taken 
@@ -451,7 +457,7 @@ contains
 
 
     real, parameter       :: rIonosphere = 1.01725 ! rEarth + iono_height
-    integer, parameter    :: nTheta =181, nPhi =181,nCuts = 800
+    integer, parameter    :: nTheta =181, nPhi =181, nCuts = 30
 
     integer               :: k, iHemisphere, iError
     integer               :: iTheta,iPhi,iLine,iMag
@@ -464,6 +470,7 @@ contains
     real                  :: FacRcurrents_II(nTheta,nPhi)
     real                  :: bRcurrents_DII(3,nTheta,nPhi)
     !------------------------------------------------------------------
+    call timing_start('ground_db_fac')
 
     MagPerturb_DI= 0.0
 
@@ -475,17 +482,17 @@ contains
     call calc_field_aligned_current(nTheta,nPhi,rCurrents, &
          FacRcurrents_II, bRcurrents_DII)
 
-    if(nProc>1)then
+    if(nProc > 1)then
        call MPI_Bcast(FacRcurrents_II, nTheta*nPhi,MPI_REAL,0,iComm,iError)
        call MPI_Bcast(bRcurrents_DII, 3*nTheta*nPhi,MPI_REAL,0,iComm,iError)
     end if
 
-    ! only need those currents that are above certain threshold
+    ! only need those currents that are between certain thresholds ???
     where(abs(FacRcurrents_II) * No2Io_V(UnitJ_) < 1.0E-4 &
          .or. abs(FacRcurrents_II) * No2Io_V(UnitJ_) >  1.0e3)&
          FacRcurrents_II = 0.0
 
-    iLine=-1
+    iLine = -1
     do iTheta = 1, nTheta
        Theta = (iTheta-1) * dTheta
        if(iTheta==1 .or. iTheta == nTheta)Theta = 1.0E-4
@@ -498,10 +505,11 @@ contains
           if (FacRcurrents_II(iTheta,iPhi) ==0.0)CYCLE
 
           iLine = iLine +1
-          ! do parallel computation among the processors
-          if(mod(iLine,nProc) /= iProc)CYCLE
 
-          call sph_to_xyz(rCurrents,Theta,Phi,XyzRcurrents_D)
+          ! do parallel computation among the processors
+          if(mod(iLine, nProc) /= iProc)CYCLE
+
+          call sph_to_xyz(rCurrents, Theta, Phi, XyzRcurrents_D)
 
           ! extract the field aligned current and B field
           JrRcurrents = FacRcurrents_II(iTheta,iPhi)
@@ -509,9 +517,11 @@ contains
           bRcurrents_D= bRcurrents_DII(:,iTheta,iPhi)
           bRcurrents = sqrt(sum(bRcurrents_D**2))
 
-          do k=1,nCuts
+          do k = 1, nCuts
 
-             r_tmp = rCurrents - dR_Trace * k
+             ! Second order integration in radial direction
+             r_tmp = rCurrents - dR_Trace * (k-0.5)
+
              ! get next position along the field line
              call map_planet_field(Time_Simulation,XyzRcurrents_D,'SMG NORM', &
                   r_tmp, XyzTmp_D,iHemisphere)
@@ -523,16 +533,18 @@ contains
 
              ! get the field alinged current at this position
              Fac = b/bRcurrents * JrRcurrents
+
              ! get the (x,y,z) components of the Jr
              j_D = Fac * B_D/b
 
              ! the length of the field line between two cuts
              iLat = abs(asin(XyzTmp_D(3)/sqrt(sum(XyzTmp_D**2))))
-             dL = dR_Trace * sqrt(1+3*(sin(iLat))**2)/(2*sin(iLat))
-             ! the cross section area by conversation of magnetic flux
+             dL = dR_Trace * sqrt(1 + 3*(sin(iLat))**2)/(2*sin(iLat))
+
+             ! the cross section area by conservation of magnetic flux
              dS = bRcurrents/ b * rCurrents**2 * SinTheta * dTheta *dPhi
 
-             do iMag=1,nMag
+             do iMag = 1, nMag
                 Xyz_D = Xyz_DI(:,iMag)
 
                 if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
@@ -549,21 +561,22 @@ contains
        end do
     end do
 
-    do iMag=1, nMag
-       if (Xyz_DI(1,iMag) == 0.0 .and. Xyz_DI(2,iMag) == 0.0 &
-            .and. Xyz_DI(3,iMag) == 0.0) then 
-       else
-          ! Transform to spherical coordinates (r,theta,phi) components
-          XyzSph_DD = rot_xyz_sph(Xyz_DI(:,iMag))
-          TmpSph_D = matmul(MagPerturb_DI(:,iMag), XyzSph_DD)
+    do iMag = 1, nMag
+       ! The magnetometer at the origin is used for Dst calculation
+       if (all(Xyz_DI(:,iMag) == 0.0)) CYCLE
 
-          ! Transform to spherical coordinates (north, east, down) components
-          MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
-          MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
-          MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
-       end if
+       ! Transform to spherical coordinates (r,theta,phi) components
+       XyzSph_DD = rot_xyz_sph(Xyz_DI(:,iMag))
+       TmpSph_D = matmul(MagPerturb_DI(:,iMag), XyzSph_DD)
+
+       ! Transform to spherical coordinates (north, east, down) components
+       MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
+       MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
+       MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
 
     end do
+
+    call timing_stop('ground_db_fac')
 
   end subroutine ground_mag_perturb_fac
 
@@ -584,6 +597,7 @@ contains
     character(len=*), parameter :: NameSub='calc_kp'
     logical :: DoTest, DoTestMe
     !------------------------------------------------------------------------
+    call timing_start(NameSub)
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Obtain locations in correct (GSM) coordinates.
@@ -650,7 +664,7 @@ contains
        Kp = nint(3*Kp)/3.0
 
     end if
-
+    call timing_stop(NameSub)
   end subroutine calc_kp
 
   !================================================================
