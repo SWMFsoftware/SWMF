@@ -17,7 +17,7 @@ module IE_wrapper
   public:: IE_finalize
 
   ! Coupling with GM
-  public:: IE_get_for_gm
+  public:: IE_get_for_gm ! Also used by IM/RAM
   public:: IE_get_mag_for_gm
   public:: IE_put_from_gm
   public:: IE_put_info_from_gm
@@ -27,10 +27,10 @@ module IE_wrapper
   public:: IE_put_from_im
   public:: IE_put_from_im_complete
 
-  ! Coupline with PS
+  ! Coupling with PS
   public:: IE_get_for_ps
 
-  ! Coupline with PW
+  ! Coupling with PW
   public:: IE_get_for_pw
 
   ! Coupling with RB
@@ -53,14 +53,11 @@ contains
     use ModIoUnit
     use CON_comp_info
 
-    character (len=*), parameter :: NameSub='IE_set_param'
-
     ! Arguments
     type(CompInfoType), intent(inout) :: CompInfo   ! Information for this comp
     character (len=*), intent(in)     :: TypeAction ! What to do
-    logical :: DoReadMagnetometerFile = .false.
-
-
+ 
+    character (len=*), parameter :: NameSub='IE_set_param'
     !-------------------------------------------------------------------------
     select case(TypeAction)
     case('VERSION')
@@ -384,16 +381,16 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
 
     use ModProcIE
     use ModIonosphere
 
-    integer, intent(in) :: iSize,jSize
-    real,   intent(out) :: Buffer_IIV(iSize,jSize,2)
+    integer, intent(in) :: iSize, jSize, nVar
+    real,   intent(out) :: Buffer_IIV(iSize,jSize,nVar)
     real,    intent(in) :: tSimulation
 
-    real    :: tSimulationTmp
+    real:: tSimulationTmp
 
     character (len=*),parameter :: NameSub = 'IE_get_for_gm'
     !--------------------------------------------------------------------------
@@ -405,10 +402,15 @@ contains
 
     ! Make sure that the most recent result is provided
     tSimulationTmp = tSimulation
-    call IE_run(tSimulationTmp,tSimulation)
+    call IE_run(tSimulationTmp, tSimulation)
 
     Buffer_IIV(:,:,1) = IONO_Phi
-    Buffer_IIV(:,:,2) = IONO_Joule
+    if(nVar == 2 .or. nVar == 4) &
+         Buffer_IIV(:,:,2) = IONO_Joule
+    if(nVar > 2)then
+       Buffer_IIV(:,:,nVar-1) = IONO_SigmaH
+       Buffer_IIV(:,:,nVar)   = IONO_SigmaP
+    end if
 
   end subroutine IE_get_for_gm
   !============================================================================
@@ -1109,8 +1111,7 @@ contains
     use CON_physics,   ONLY: get_time, get_planet, get_axes
     use ModIonosphere, ONLY: IONO_Bdp
     use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
-    use IE_ModIo,      ONLY: dt_output, t_output_last, dt_magoutput, &
-         t_magoutput_last
+    use IE_ModIo,      ONLY: dt_output, t_output_last
     use ModProcIE
 
     !INPUT PARAMETERS:
