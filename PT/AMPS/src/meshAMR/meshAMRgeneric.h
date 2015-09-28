@@ -285,7 +285,7 @@ public:
 #endif
 
   double xmin[_MESH_DIMENSION_],xmax[_MESH_DIMENSION_];
-  int RefinmentLevel;
+  int RefinmentLevel,minNeibRefinmentLevel,maxNeibRefinmentLevel; //min/max values are used for calculation of the interpolation stencils
 
   struct cNodeDescriptor {
     unsigned NodeProcessingFlag : 1;
@@ -419,7 +419,7 @@ public:
   
     treeNodeDescriptor.GlobalPositionRealTreeNode=_GLOBAL_POSITION_REAL_NODE_UNKNOWN_; 
 
-    RefinmentLevel=-1;
+    RefinmentLevel=-1,minNeibRefinmentLevel=-1,maxNeibRefinmentLevel=-1;
     nextNodeThisThread=NULL,prevNodeThisThread=NULL;
 
     nodeDescriptor.NodeProcessingFlag=_AMR_FALSE_;
@@ -458,6 +458,39 @@ public:
     Thread=0,ParallelLoadMeasure=0;
     #endif
   }
+
+  //determine the minimum and maximum resolution levels of the neighbor blocks
+  void SetNeibRefinmentLevelLimits() {
+    cTreeNodeAMR* node;
+    int i;
+
+    minNeibRefinmentLevel=-1,maxNeibRefinmentLevel=-1;
+
+    #if _MESH_DIMENSION_ == 1
+    exit(__LINE__,__FILE__,"not implemented");
+    #elif _MESH_DIMENSION_ == 2
+    exit(__LINE__,__FILE__,"not implemented");
+    #elif _MESH_DIMENSION_ == 3
+    //connections through faces
+    for (i=0;i<6*4;i++) if ((node=neibNodeFace[i])!=NULL) {
+      if ((minNeibRefinmentLevel==-1)||(minNeibRefinmentLevel>node->RefinmentLevel)) minNeibRefinmentLevel=node->RefinmentLevel;
+      if (maxNeibRefinmentLevel<node->RefinmentLevel) maxNeibRefinmentLevel=node->RefinmentLevel;
+    }
+
+    //connection through corners
+    for (i=0;i<8;i++) if ((node=neibNodeCorner[i])!=NULL) {
+      if ((minNeibRefinmentLevel==-1)||(minNeibRefinmentLevel>node->RefinmentLevel)) minNeibRefinmentLevel=node->RefinmentLevel;
+      if (maxNeibRefinmentLevel<node->RefinmentLevel) maxNeibRefinmentLevel=node->RefinmentLevel;
+    }
+
+    //connection through edges
+    for (i=0;i<12*2;i++) if ((node=neibNodeEdge[i])!=NULL) {
+      if ((minNeibRefinmentLevel==-1)||(minNeibRefinmentLevel>node->RefinmentLevel)) minNeibRefinmentLevel=node->RefinmentLevel;
+      if (maxNeibRefinmentLevel<node->RefinmentLevel) maxNeibRefinmentLevel=node->RefinmentLevel;
+    }
+    #endif
+  }
+
 
   //find the neighbor of the tree node: this version of the function is used only in 1D case
   /*
@@ -6072,6 +6105,9 @@ if (ncheckMeshConsistencyCalls==38) {
 
       if (flag==false) break;
     }
+
+    //determine the resolution limits for each block
+    SetNodeNeibResolutionLevelLimit();
   }  
   
 //==============================================================
@@ -7808,6 +7844,9 @@ nMPIops++;
     fread(marker,sizeof(char),STRING_LENGTH,fout);
     if (strcmp("AMR-MESH-FILE-MARKER:END",marker)!=0) exit(__LINE__,__FILE__,"SectionMarker in the mesh file is wrong");
     fclose(fout);
+
+    //determine the range of a block neighbor's relution level
+    SetNodeNeibResolutionLevelLimit();
   }
 
   //create the memory allocation report
@@ -7822,6 +7861,15 @@ nMPIops++;
     else for (nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) countTreeNodes(startNode->downNode[nDownNode],Counter,level+1);
   }
  
+  //Determine resolution limits of the neib nodes
+  void SetNodeNeibResolutionLevelLimit(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
+    int nDownNode;
+
+    if (startNode==NULL) startNode=rootTree;
+
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) startNode->SetNeibRefinmentLevelLimits();
+    else for (nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) SetNodeNeibResolutionLevelLimit(startNode->downNode[nDownNode]);
+  }
 
   //distribute the cut-faces among the blocks
   void DistributeBoundaryCutBlocks(cTreeNodeAMR<cBlockAMR> *startNode=NULL) {
