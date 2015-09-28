@@ -107,7 +107,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
      ['omegaci'  , 'oc0*b'                                         ], $ ; gyro frequency  ={omegaci}/Mion
      ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'                     ], $ ; gyro radius     ={rgyro}*sqrt(Mion)
      ['dinertial', 'di0/sqrt(rho)'                                 ], $ ; inertial length ={dinertial}*Mion
-     ['ldebye'   , 'ld0*sqrt(p)/rho'                               ]  $ ; Debye length    ={ldebye}/c0*Mion
+     ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                            ]  $ ; Debye length    ={ldebye}*Mion
                           ]))
 
   common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
