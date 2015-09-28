@@ -358,14 +358,16 @@ contains
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
   end subroutine GM_get_for_ie
 
-  subroutine GM_put_from_ie(Buffer_II,iSize,jSize)
+  !==============================================================================
+
+  subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
 
     implicit none
 
-    character(len=*), parameter :: NameSub='GM_put_from_ie'
+    integer, intent(in):: iSize, jSize, nVar
+    real,    intent(in):: Buffer_IIV(iSize,jSize,nVar)
 
-    integer, intent(in) :: iSize,jSize
-    real, intent(in) :: Buffer_II(iSize,jSize)
+    character(len=*), parameter :: NameSub='GM_put_from_ie'
 
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 

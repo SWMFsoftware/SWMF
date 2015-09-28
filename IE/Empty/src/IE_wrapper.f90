@@ -90,10 +90,10 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
 
-    integer, intent(in) :: iSize,jSize
-    real,    intent(out):: Buffer_IIV(iSize,jSize,2)
+    integer, intent(in) :: iSize, jSize, nVar
+    real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
     real,    intent(in) :: tSimulation
 
     character (len=*),parameter :: NameSub = 'IE_get_for_gm'
