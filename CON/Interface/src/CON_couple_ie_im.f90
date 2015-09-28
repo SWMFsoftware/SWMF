@@ -213,18 +213,24 @@ contains
 
       ! Variable to pass potential on the 2D IE grid
       real, allocatable :: Buffer_IIV(:,:,:)
+
+      integer, parameter:: nVar = 1
       !------------------------------------------------------------------------
 
       ! After everything is initialized exclude PEs which are not involved
       if(DoTest)write(*,*)NameSubSub,', iProc=', i_Proc()
 
       ! Allocate buffer both on IM and IE processors. IE sends two variables.
-      allocate(Buffer_IIV(nTheta,nPhi,2))
+      allocate(Buffer_IIV(nTheta,nPhi,nVar))
       ! Need to call ALL IE processors here
-      if(is_proc(IE_))call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, tSimulation)
+      if(is_proc(IE_)) &
+           call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, nVar, tSimulation)
+
       ! IM/RAM wants only potential. The result is on IE root processor only.
-      call transfer_real_array(IE_, IM_, nTheta*nPhi, Buffer_IIV(:,:,1))
-      if(is_proc(IM_))call IM_put_from_ie_mpi(nTheta, nPhi, Buffer_IIV(:,:,1))
+      call transfer_real_array(IE_, IM_, nTheta*nPhi, Buffer_IIV)
+
+      if(is_proc(IM_)) &
+           call IM_put_from_ie_mpi(nTheta, nPhi, Buffer_IIV)
       deallocate(Buffer_IIV)
 
       if(DoTest)write(*,*)NameSubSub,' finished, iProc=',i_proc()

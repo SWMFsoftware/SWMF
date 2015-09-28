@@ -150,8 +150,9 @@ contains
     ! Buffer for magnetometer sharing (3 x 2 x nMagnetometers)
     real, dimension(:,:,:), allocatable   :: Buffer_DII
 
-    ! Number of variables to pass (potential,jouleheating)
-    integer, parameter :: nVar = 2
+    ! Number of variables to pass:
+    !   potential, Joule heating, Hall conductance, Pedersen conductance)
+    integer, parameter :: nVar = 4
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     iProcWorld = i_proc()
@@ -162,12 +163,14 @@ contains
 
     ! Transfer variables on IE grid
     allocate(Buffer_IIV(iSize,jSize,nVar))
-    if(is_proc(IE_))call IE_get_for_gm(Buffer_IIV, iSize, jSize, tSimulation)
+    if(is_proc(IE_)) &
+         call IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
 
     ! The IE grid data is available from the ROOT IE processor ONLY!
     call transfer_real_array(IE_, GM_, iSize*jSize*nVar, Buffer_IIV)
 
-    if(is_proc(GM_))call GM_put_from_ie(Buffer_IIV, iSize, jSize)
+    if(is_proc(GM_)) &
+         call GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
     deallocate(Buffer_IIV)
 
     if(nShareGroundMag > 0)then
