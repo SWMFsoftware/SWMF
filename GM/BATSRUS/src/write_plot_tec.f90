@@ -43,7 +43,7 @@ subroutine write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
   character (len=22) :: textNandT
   character (len=23) :: textDateTime0,textDateTime
   character (len=80) :: format
-  character(len=200) :: stmp
+  character(len=500) :: stmp
 
   integer :: iTime0_I(7),iTime_I(7)
 
@@ -785,7 +785,7 @@ contains
     write(unit_tmp,'(a,a,a)') 'AUXDATA FLUXTYPE="',trim(adjustl(stmp)),'"'
 
     !GAMMA
-    write(stmp,'(10(f14.6))')Gamma_I
+    write(stmp,'(100(f14.6))')Gamma_I(1)
     write(unit_tmp,'(a,a,a)') 'AUXDATA GAMMA="',trim(adjustl(stmp)),'"'
 
     !ITER
