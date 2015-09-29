@@ -2026,10 +2026,10 @@ pro set_units, type, distunit=distunit
   common file_head, headline
   common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
+  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
 
   if keyword_set(type) then $
-     typeunit = struppercae(type) $
+     typeunit = strupcase(type) $
   else if fixunits then $
      return $
   else if strpos(headline, 'PIC') ge 0 then $
@@ -2140,10 +2140,10 @@ pro set_units, type, distunit=distunit
      mu0A = uSI^2*mu0SI*rhoSI*bSI^(-2)      ; vA          = sqrt(bb/(mu0A*rho))
      mu0  = pSI*bSI^(-2)                    ; beta        = p/(bb/(2*mu0))
      uH0  = mpSI/eSI*jSI/rhoSI/uSI          ; uH=j/(ne)   = uH0*j/rho*Mion 
-     op0  = eSI/mpSI*sqrt(rhoSI)*tSI        ; omegap      = op0*sqrt(rho)/Mion
+     op0  = eSI/mpSI*sqrt(rhoSI/e0SI)*tSI   ; omegap      = op0*sqrt(rho)/Mion
      oc0  = eSi/mpSI*bSI*tSI                ; omegac      = oc0*b/Mion
      rg0  = mpSI/eSI*sqrt(pSI/rhoSI)/bSI/xSI; rg=uth*Mi/eB= rg0*sqrt(p/rho)/b*sqrt(Mion)
-     di0  = mpSI/eSI/sqrt(rhoSI)/xSI        ; di=c/omegap = di0/sqrt(rho)*Mion
+     di0  = cSI/(op0/tSI)/xSI               ; di=c/omegap = di0/sqrt(rho)*Mion
      ld0  = mpSI/eSI*sqrt(pSI)/rhoSI/xSI    ; ld          = ld0*sqrt(p)/rho*Mion
 
   endelse
@@ -2157,7 +2157,6 @@ pro show_units
   common file_head, headline
   common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
-  common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI
 
   print,'headline=', strtrim(headline,2)
   print,'fixunits=', fixunits
