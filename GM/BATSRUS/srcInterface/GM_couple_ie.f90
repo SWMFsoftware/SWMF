@@ -8,6 +8,11 @@
 module GM_couple_ie
 
   use ModProcMH
+  use ModIeCoupling, ONLY: rIonosphere, &
+       nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I, dThetaIono, dPhiIono,&
+       IonoPotential_II, IonoJouleHeating_II, &
+       SigmaHall_II, SigmaPedersen_II, &
+       calc_grad_ie_potential, map_jouleheating_to_inner_bc
 
   implicit none
   save
@@ -19,55 +24,8 @@ module GM_couple_ie
   public:: GM_put_from_ie
   public:: GM_put_mag_from_ie
   public:: print_iono_potential
-  public:: clean_mod_gm_couple_ie
-  public:: get_ie_grid_index
-
-  ! Ionosphere potential
-  real, allocatable, public :: IonoPotential_II(:,:)
-  real, allocatable, public :: dIonoPotential_DII(:,:,:)
-
-  ! Joule heating
-  real, public, allocatable :: IonoJouleHeating_II(:,:)
-
-  ! Conductances
-  real, public, allocatable :: SigmaHall_II(:,:), SigmaPedersen_II(:,:)
-
-  ! Ionosphere grid description
-  integer, public   :: nThetaIono = -1, nPhiIono = -1
-  real, public      :: rIonosphere
-
-  ! Local variables
-  real, allocatable :: ThetaIono_I(:), PhiIono_I(:)
-  real              :: dThetaIono, dPhiIono
-
-  ! Field aligned current
-  real, allocatable :: FieldAlignedCurrent_II(:,:), &
-       bCurrentLocal_VII(:,:,:), bCurrent_VII(:,:,:)
 
 contains
-
-  !============================================================================
-  subroutine clean_mod_gm_couple_ie
-
-    if(allocated(IonoPotential_II)) &
-         deallocate(IonoPotential_II, dIonoPotential_DII)
-
-    if(allocated(IonoJouleHeating_II)) &
-         deallocate(IonoJouleHeating_II)
-
-    if(allocated(SigmaHall_II)) &
-         deallocate(SigmaHall_II, SigmaPedersen_II)
-
-    if(allocated(FieldAlignedCurrent_II)) &
-         deallocate(FieldAlignedCurrent_II, bCurrent_VII, bCurrentLocal_VII)
-    
-    if(allocated(ThetaIono_I)) &
-         deallocate(ThetaIono_I, PhiIono_I)
-
-     nThetaIono = -1
-     nPhiIono = -1
-
-  end subroutine clean_mod_gm_couple_ie
 
   !========================================================================== 
   subroutine print_iono_potential
@@ -116,64 +74,6 @@ contains
     if(DoTestMe)write(*,*) NameSub,' set up grid sized ', nThetaIono, nPhiIono
 
   end subroutine init_ie_grid
-  !===========================================================================
-  subroutine get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
-    real, intent(in) :: Theta, Phi
-    real, intent(out):: ThetaNorm, PhiNorm
-
-    ThetaNorm = Theta / dThetaIono
-    PhiNorm   = Phi   / dPhiIono
-  end subroutine get_ie_grid_index
-
-  !============================================================================
-
-  subroutine calc_grad_iono_potential
-
-    integer, parameter :: Theta_=1, Phi_=2
-    integer :: i, j
-
-    !write(*,*)'calc_grad_iono_potential: overwriting potential !!!'
-    !do j = 1, nPhiIono;do i = 1, nThetaIono
-    !   IonoPotential_II(i,j) = 0.1*i**2 + 0.01*j**2
-    !end do; end do
-
-    ! Calculate the gradients for the internal points with central differences
-    do j = 1, nPhiIono; do i = 2, nThetaIono-1
-       dIonoPotential_DII(Theta_, i, j) = &
-            (IonoPotential_II(i+1, j) - IonoPotential_II(i-1, j)) &
-            / (ThetaIono_I(i+1) - ThetaIono_I(i-1))
-    end do; end do
-
-    do j = 2, nPhiIono-1; do i = 1, nThetaIono
-       dIonoPotential_DII(Phi_, i, j) = &
-            (IonoPotential_II(i, j+1) - IonoPotential_II(i, j-1)) &
-            / (PhiIono_I(j+1)-PhiIono_I(j-1))
-    end do; end do
-
-    ! Calculate the theta gradient at the poles
-    ! with one sided second order approximations
-
-    ! df/dx = (4f(x+dx)-3f(x)-f(x+2dx))/(2dx)
-    dIonoPotential_DII(Theta_, 1, :) = &
-         ( 4*IonoPotential_II(2,:) &
-         - 3*IonoPotential_II(1,:) &
-         -   IonoPotential_II(3,:) ) / (ThetaIono_I(3)-ThetaIono_I(1))
-
-    ! df/dx = (3f(x)-4f(x-dx)+f(x-2dx))/(2dx)
-    dIonoPotential_DII(Theta_, nThetaIono, :) = &
-         ( 3*IonoPotential_II(nThetaIono  ,:) &
-         - 4*IonoPotential_II(nThetaIono-1,:) &
-         +   IonoPotential_II(nThetaIono-2,:) ) / &
-         (ThetaIono_I(nThetaIono)-ThetaIono_I(nThetaIono-2))
-
-    ! Calculate the phi gradient at the edges from the periodicity
-    dIonoPotential_DII(Phi_, :, 1) = &
-         (IonoPotential_II(:, 2) - IonoPotential_II(:, nPhiIono - 1)) &
-         / (2*(PhiIono_I(2)-PhiIono_I(1)))
-
-    dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
-
-  end subroutine calc_grad_iono_potential
 
   !============================================================================
   subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
@@ -214,9 +114,14 @@ contains
     end if
 
   end subroutine GM_get_info_for_ie
-  !============================================================================
 
-  subroutine GM_get_for_ie(Buffer_IIV,iSize,jSize,nVar)
+  !============================================================================
+  subroutine GM_get_for_ie(Buffer_IIV, iSize, jSize, nVar)
+
+    ! Send the following information from GM to IE on the IE grid:
+    !  1. radial component of the field-aligned-currents (FACs)
+    !  2. latitude boundary (LatBoundary) scalar
+    !  3. field line tracing information if DoTraceIE is true
 
     use CON_axes, ONLY: transform_matrix
     use ModMain, ONLY: Time_Simulation, TypeCoordSystem
@@ -228,37 +133,26 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
 
-    character (len=*), parameter :: NameSub='GM_get_for_ie'
-
     integer, intent(in) :: iSize, jSize, nVar
-    real, intent(out), dimension(iSize, jSize, nVar) :: Buffer_IIV
+    real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
+
     integer :: i, j
     real :: Radius, Phi, Theta, LatBoundary
-    real, allocatable, dimension(:), save :: IE_lat, IE_lon
-    real, allocatable, dimension(:,:,:)   :: bSm_DII 
+    real, allocatable:: FieldAlignedCurrent_II(:,:), bSm_DII(:,:,:)
+    real, allocatable:: IE_lat(:), IE_lon(:)
     real :: XyzIono_D(3), RtpIono_D(3), Lat,Lon, dLat,dLon
     logical :: DoTest, DoTestMe
+
+    character (len=*), parameter :: NameSub='GM_get_for_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
     call init_ie_grid
 
-    if(.not.allocated(FieldAlignedCurrent_II)) allocate( &
-         bCurrent_VII(0:6, nThetaIono, nPhiIono), &
-         bCurrentLocal_VII(0:6, nThetaIono, nPhiIono), &
-         FieldAlignedCurrent_II(nThetaIono, nPhiIono))
+    allocate(FieldAlignedCurrent_II(iSize,jSize), bSm_DII(3,iSize,jSize))
 
-    if(.not.allocated(IE_lat)) &
-         allocate(IE_lat(iSize), IE_lon(jSize))
-
-    if(.not. allocated(bSm_DII))&
-         allocate(bSm_DII(3,iSize,jSize))
-
-    ! initialize all elements to zero on proc 0, others should not use it
-    if(iProc == 0) Buffer_IIV = 0.0
-
-    ! Put field aligned currents into the first "slice" of the buffer
+    ! Put field aligned currents into the first variable of the buffer
     call calc_field_aligned_current(nThetaIono, nPhiIono, rIonosphere, &
          FieldAlignedCurrent_II, bSm_DII, LatBoundary, ThetaIono_I, PhiIono_I)
 
@@ -266,6 +160,9 @@ contains
     ! The resulting FAC_r will be positive for radially outgoing current
     ! and negative for radially inward going currents.
     if(iProc==0)then
+       ! initialize all elements to zero on proc 0, others should not use it
+       Buffer_IIV = 0.0
+
        do j=1, nPhiIono
           Phi = PhiIono_I(j)
 
@@ -284,9 +181,11 @@ contains
 
     end if
 
-    deallocate(bSm_DII)
+    deallocate(FieldAlignedCurrent_II, bSm_DII)
 
     if(DoTraceIE) then
+       allocate(IE_lat(iSize), IE_lon(jSize))
+
        ! Load grid and convert to lat-lon in degrees
        IE_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
        IE_lon =        cRadToDeg * PhiIono_I
@@ -317,8 +216,8 @@ contains
           GmSm_DD = transform_matrix(time_simulation,TypeCoordSystem,'SMG')
 
           ! Loop to compute deltas
-          do i=1,iSize
-             do j=1,jSize
+          do j=1,jSize
+             do i=1,iSize
                 Lat = -IE_Lat(i)
                 Lon =  IE_Lon(j)
                 if(RayResult_VII(InvB_,i,j)>1.e-10)then
@@ -345,14 +244,21 @@ contains
              end do
           end do
        end if
-       deallocate(RayIntegral_VII, RayResult_VII)
+       deallocate(IE_lat, IE_lon, RayIntegral_VII, RayResult_VII)
     end if
 
     if(DoTest)write(*,*)NameSub,': finished'
+
   end subroutine GM_get_for_ie
 
   !============================================================================
   subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
+
+    ! Receive nVar variables from IE on the IE grid:
+    !   1. Electric potential
+    !   2. Joule heating
+    !   3. Hall conductance
+    !   4. Pedersen conductance
 
     use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_
     use ModProcMH
@@ -371,11 +277,10 @@ contains
     call init_ie_grid
 
     if(.not. allocated(IonoPotential_II)) allocate( &
-         IonoPotential_II(nThetaIono, nPhiIono), &
-         dIonoPotential_DII(2, nThetaIono, nPhiIono) )
+         IonoPotential_II(nThetaIono, nPhiIono))
 
     IonoPotential_II = Buffer_IIV(:,:,1)*Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
-    call calc_grad_iono_potential
+    call calc_grad_ie_potential
 
     if(nVar == 2 .or. nVar == 4)then
        if (.not. allocated(IonoJouleHeating_II)) &
@@ -422,221 +327,4 @@ contains
 
   end subroutine GM_put_mag_from_ie
 
-  !==========================================================================
-
-  subroutine map_jouleheating_to_inner_bc
-
-    use ModMain,    ONLY: Time_Simulation
-    use ModPhysics, ONLY: rBody
-    use CON_planet_field, ONLY: get_planet_field, map_planet_field
-    use ModCoordTransform, ONLY: sph_to_xyz
-
-    integer :: i, j, iHemisphere
-    real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
-    real    :: bIono, b
-    !-------------------------------------------------------------------------
-    do i = 1, nThetaIono; do j =1, nPhiIono
-       call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-       call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
-       bIono = sqrt(sum(bIono_D**2))
-
-       ! map out to GM (caution!, not like map down to the ionosphere, 
-       ! there is always a corresponding position.)
-       call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
-            rBody, Xyz_tmp, iHemisphere)
-
-       if (iHemisphere == 0) then 
-          ! not a mapping in the dipole, but to the equator
-          ! assume not outflow to GM inner boundary
-          IonoJouleHeating_II(i,j) = 0
-       else
-          call get_planet_field(Time_Simulation, Xyz_tmp, 'SMG NORM', B_D)
-          b = sqrt(sum(B_D**2))
-
-          ! scale the jouleheating
-          IonoJouleHeating_II(i,j) = IonoJouleHeating_II(i,j) * b/bIono
-
-       endif
-    end do; end do
-
-  end subroutine map_jouleheating_to_inner_bc
-
-  !==========================================================================
-  subroutine calc_inner_bc_velocity1(tSimulation,Xyz_D,B1_D,B0_D,u_D)
-
-    use ModMain,           ONLY: TypeCoordSystem, MaxDim
-    use CON_axes,          ONLY: transform_matrix
-    use ModCoordTransform, ONLY: xyz_to_dir, cross_product
-    use CON_planet_field,  ONLY: map_planet_field
-
-    real, intent(in)    :: tSimulation
-    real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
-    real, intent(in)    :: B1_D(MaxDim)     ! Magnetic field perturbation
-    real, intent(in)    :: B0_D(MaxDim)     ! Magnetic field of planet
-    real, intent(out)   :: u_D(MaxDim)      ! Velocity vector (output)
-
-    real, parameter :: Epsilon = 0.01 ! Perturbation of X, Y or Z
-
-    real :: XyzEpsilon_D(MaxDim)     ! Points shifted by Epsilon
-    real :: XyzIono_D(MaxDim)        ! Mapped point on the ionosphere
-    real :: Theta, Phi               ! Mapped point colatitude, longitude
-    real :: ThetaNorm, PhiNorm       ! Normalized colatitude, longitude
-    real :: Dist1, Dist2             ! Distance from ionosphere grid point
-
-    real :: Potential_DI(MaxDim, 2)  ! Potential at the shifted positions
-    real :: eField_D(MaxDim)         ! Electric field
-    real :: b_D(MaxDim)              ! Magnetic field
-    real :: B2                       ! Magnetic field squared
-
-    integer :: iDim, iSide, iTheta, iPhi, iHemisphere
-
-    character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity1'
-    logical :: DoTest, DoTestMe
-    real :: tSimulationLast=-1.0
-    real, save :: SmgGm_DD(MaxDim,MaxDim)
-    !-------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
-    if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
-
-    ! Calculate conversion matrix between GM and SMG coordinates
-    if( tSimulationLast /= tSimulation ) then
-       tSimulationLast = tSimulation
-       SmgGm_DD = transform_matrix(tSimulation, TypeCoordSystem, 'SMG')
-    end if
-
-    ! Map points to obtain potential
-    do iSide = 1, 2
-       do iDim = 1, MaxDim
-
-          ! Perturb the iDim coordinate
-          XyzEpsilon_D = Xyz_D
-          if(iSide == 1)then
-             XyzEpsilon_D(idim) = XyzEpsilon_D(idim) - Epsilon
-          else
-             XyzEpsilon_D(idim) = XyzEpsilon_D(idim) + Epsilon
-          end if
-
-          ! Transform into SMG coordinates
-          XyzEpsilon_D = matmul(SmgGm_DD, XyzEpsilon_D)
-
-          ! Map down to the ionosphere at radius rIonosphere
-          call map_planet_field(tSimulation, XyzEpsilon_D, 'SMG NORM', &
-               rIonosphere, XyzIono_D, iHemisphere)
-
-          ! Calculate angular coordinates
-          call xyz_to_dir(XyzIono_D, Theta, Phi)
-
-          ! Interpolate potential
-
-          ! Get normalized coordinates
-          call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
-
-          iTheta    = floor(ThetaNorm) + 1
-          iPhi      = floor(PhiNorm)   + 1
-
-          if(iTheta<1 .or. iTheta > nThetaIono .or. &
-               iPhi < 1 .or. iPhi > nPhiIono)then
-             write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
-             write(*,*)NameSub,' Phi, Theta=',Phi,Theta
-             write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
-             write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
-             call stop_mpi(NameSub//' index out of bounds')
-          end if
-
-          Dist1     = ThetaNorm - (iTheta - 1)
-          Dist2     = PhiNorm   - (iPhi   - 1)
-
-          Potential_DI(iDim, iSide) = &
-               (1 - Dist1)*( (1-Dist2) * IonoPotential_II(iTheta  , iPhi  )  &
-               +             Dist2     * IonoPotential_II(iTheta  , iPhi+1)) &
-               + Dist1    *( (1-Dist2) * IonoPotential_II(iTheta+1, iPhi  )  &
-               +             Dist2     * IonoPotential_II(iTheta+1, iPhi+1))
-
-          if(DoTestMe)then
-             write(*,*)NameSub,' iDim, iSide  =',iDim, iSide
-             write(*,*)NameSub,' XyzEpsilon_D =',XyzEpsilon_D
-             write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
-             write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
-             write(*,*)NameSub,' iTheta, iPhi =',iTheta,iPhi
-             write(*,*)NameSub,' Dist1, Dist2 =',Dist1,Dist2
-             write(*,*)NameSub,' Potential_DI =',Potential_DI(iDim, iSide)
-          end if
-
-       end do
-    end do
-
-    b_D = B1_D + B0_D
-    B2  = sum(b_D**2)
-
-    ! E = -grad(Potential)
-    eField_D = - (Potential_DI(:,2) - Potential_DI(:,1))/(2*Epsilon)
-
-    ! U = (E x B) / B^2
-    u_D = cross_product(eField_D, b_D) / B2
-
-    if(DoTestMe)then
-       write(*,*)NameSub,' b_D=',b_D
-       write(*,*)NameSub,' E_D=',eField_D
-       write(*,*)NameSub,' u_D=',u_D
-    endif
-
-    ! Subtract the radial component of the velocity
-    u_D = u_D - Xyz_D * sum(Xyz_D * u_D) / sum(Xyz_D**2)
-
-    if(DoTestMe)then
-       write(*,*)NameSub,' Final u_D=',u_D
-    end if
-
-  end subroutine calc_inner_bc_velocity1
-  !============================================================================
-
 end module GM_couple_ie
-
-!==========================================================================
-
-subroutine map_inner_bc_jouleheating(tSimulation, Xyz_D, JouleHeating)
-
-  use GM_couple_ie, ONLY: get_ie_grid_index, IonoJouleHeating_II
-  use ModCoordTransform, ONLY: xyz_to_dir
-  use ModMain,           ONLY: TypeCoordSystem, MaxDim
-  use CON_axes,          ONLY: transform_matrix
-
-  !INPUT ARGUMENTS:
-  real, intent(in)    :: tSimulation    ! Simulation time
-  real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
-  real, intent(out)   :: JouleHeating
-  real :: Theta, Phi           ! Mapped point colatitude, longitude
-  real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
-  integer :: iTheta, iPhi
-  character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
-  logical :: DoTest, DoTestMe
-  real :: Xyz_D_tmp(3)
-  ! -----------------------------------------------------
-
-  call set_oktest(NameSub, DoTest, DoTestMe)
-
-  ! Convert Xyz_D into SMG coordinates
-  Xyz_D_tmp = matmul(transform_matrix(tSimulation, TypeCoordSystem, 'SMG'), Xyz_D)
-
-  ! Calculate angular coordinates
-  call xyz_to_dir(Xyz_D_tmp, Theta, Phi)
-
-  ! Interpolate the spherical jouleheating
-  call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
-  iTheta    = floor(ThetaNorm) + 1
-  iPhi      = floor(PhiNorm)   + 1
-  if(iTheta<1 .or. iTheta > nThetaIono .or. &
-       iPhi < 1 .or. iPhi > nPhiIono)then
-     write(*,*)NameSub,' PhiNorm, ThetaNorm=',PhiNorm,ThetaNorm
-     write(*,*)NameSub,' Phi, Theta=',Phi,Theta
-     write(*,*)NameSub,' nPhi, nTheta=',nPhiIono,nThetaIono
-     write(*,*)NameSub,' iPhi, iTheta=',iPhi,iTheta
-     call stop_mpi(NameSub//' index out of bounds')
-  end if
-
-  JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
-
-end subroutine map_inner_bc_jouleheating
-

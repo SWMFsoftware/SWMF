@@ -12,7 +12,7 @@ include Makefile.DEPEND
 OBJ_IH = GM_couple_ih.o read_ih_buffer.o                    #^CMP IF IH
 OBJ_IM = GM_couple_im.o	 				    #^CMP IF IM
 OBJ_RB = GM_couple_rb.o                                     #^CMP IF RB
-OBJ_IE = GM_couple_ie.o calc_inner_bc_velocity.o logvar_ionosphere.o    #^CMP IF IE
+OBJ_IE = GM_couple_ie.o                                     #^CMP IF IE
 OBJ_PT = GM_couple_pt.o                                     #^CMP IF PT
 OBJ_PC = GM_couple_pc.o                                     #^CMP IF PC
 OBJ_PW = GM_couple_pw.o read_pw_buffer.o                    #^CMP IF PW

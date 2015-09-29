@@ -380,8 +380,6 @@ contains
 
     call BATS_save_files('FINAL')
 
-    if (UseIe) call clean_mod_gm_couple_ie
-
     call BATSRUS_finalize
 
   end subroutine GM_finalize
