@@ -12,7 +12,7 @@ subroutine update_states(iStage,iBlock)
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        update_heatflux_collisionless
   use ModUserInterface ! user_update_states
-
+  use ModMessagePass, ONLY: use_buffer_grid, is_buffered_point
   implicit none
 
   integer, intent(in) :: iStage,iBlock
@@ -56,9 +56,17 @@ subroutine update_states(iStage,iBlock)
      call update_states_mhd(iStage,iBlock)
   end if
 
-  if(Ehot_ > 1 .and. UseHeatFluxCollisionless) &
-       call update_heatflux_collisionless(iBlock)
-
+  if(Ehot_ > 1 .and. UseHeatFluxCollisionless) then
+     call update_heatflux_collisionless(iBlock)
+     if(use_buffer_grid())then
+        do k=1,nK; do j=1,nJ; do i=1,nI
+           if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
+           State_VGB(:,i,j,k,iBlock) = &
+                StateOld_VCB(:,i,j,k,iBlock)
+           Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
+        end do; end do; end do
+     end if
+  end if
   if(index(test_string,'fixrho ')>0) &
        State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
 
