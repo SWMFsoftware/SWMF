@@ -366,7 +366,7 @@ subroutine BATS_advance(TimeSimulationLimit)
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
   use ModSemiImplicit, ONLY: advance_semi_impl
-  use ModIonoVelocity, ONLY: apply_iono_velocity
+  use ModIeCoupling, ONLY: apply_ie_velocity
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModLaserHeating,    ONLY: add_laser_heating
   use ModVarIndexes, ONLY: Te0_
@@ -462,7 +462,7 @@ subroutine BATS_advance(TimeSimulationLimit)
 
   if(UseAnisoPressure)call fix_anisotropy
 
-  if(UseIE)call apply_iono_velocity
+  if(UseIE)call apply_ie_velocity
 
   if(UseDivBDiffusion)call clean_divb
 
@@ -965,8 +965,7 @@ contains
 
   subroutine save_files_final
     use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
-    use ModGroundMagPerturb, ONLY: &
-         DoSaveMags, finalize_magnetometer, DoWriteIndices
+    use ModGroundMagPerturb, ONLY: finalize_magnetometer
 
     integer :: iSat
     !-----------------------------------------------------------------------
@@ -992,14 +991,15 @@ end subroutine BATS_save_files
 !=============================================================================
 subroutine BATSRUS_finalize
 
-  use ModAdvance,  ONLY: clean_mod_advance
-  use ModGeometry, ONLY: clean_mod_geometry
-  use ModNodes,    ONLY: clean_mod_nodes
-  use ModCT,       ONLY: clean_mod_ct
-  use ModRaytrace, ONLY: clean_mod_raytrace
+  use ModAdvance,      ONLY: clean_mod_advance
+  use ModGeometry,     ONLY: clean_mod_geometry
+  use ModNodes,        ONLY: clean_mod_nodes
+  use ModCT,           ONLY: clean_mod_ct
+  use ModRaytrace,     ONLY: clean_mod_raytrace
   use ModPartImplicit, ONLY: clean_mod_part_impl
   use ModSemiImplicit, ONLY: clean_mod_semi_impl
-  use BATL_lib,    ONLY: clean_batl
+  use ModIeCoupling,   ONLY: clean_mod_ie_coupling
+  use BATL_lib,        ONLY: clean_batl
 
   implicit none
 
@@ -1013,6 +1013,7 @@ subroutine BATSRUS_finalize
   call clean_mod_geometry
   call clean_mod_nodes
   call clean_mod_raytrace
+  call clean_mod_ie_coupling
 
   ! call clean_mod_boundary_cells !!! to be implemented
   ! call clean_mod_resistivity !!! to be implemented

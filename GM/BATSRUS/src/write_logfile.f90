@@ -391,8 +391,9 @@ contains
     use ModCurrent,   ONLY: get_current
     use ModWaves,     ONLY: UseWavePressure
     use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
-    use ModUserInterface ! user_get_log_var
     use ModIO,        ONLY: lNameLogVar
+    use ModIeCoupling,ONLY: logvar_ionosphere
+    use ModUserInterface ! user_get_log_var
 
     ! Local variables
     real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
@@ -401,14 +402,11 @@ contains
 
     integer :: jVar
     character(len=lNameLogVar) :: NameVar, NameLogVarLower
-
-    ! External function for ionosphere
-    real, external :: logvar_ionosphere
     !------------------------------------------------------------------------
 
     select case(NameLogVar)
 
-!!$! MHD variables averaged over the computational domain
+       ! MHD variables averaged over the computational domain
     case('e')
        LogVar_I(iVarTot) = &
             integrate_BLK(1,Energy_GBI(:,:,:,:,iFluid))/DomainVolume
@@ -664,6 +662,7 @@ contains
        if(iProc == ProcTest) LogVar_I(iVarTot) = &
             State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest) / &
             State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
+
 !!$!RAYTRACE variables                                ^CFG  IF RAYTRACE BEGIN
        ! RAYTRACE variables averaged over volume
     case('theta1', 'theta2', 'phi1', 'phi2','status')

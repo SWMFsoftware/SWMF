@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 program BATSRUS
 
   use ModKind
@@ -326,34 +326,6 @@ end subroutine CON_set_do_test
 ! The subroutines and functions below are defined in srcInterface for SWMF. 
 !============================================================================
 
-subroutine calc_inner_bc_velocity
-  call stop_mpi( &
-       'ERROR: calc_inner_bc_velocity should be called in SWMF only')
-end subroutine calc_inner_bc_velocity
-
-!=============================================================================
-
-subroutine map_inner_bc_jouleheating
-  call stop_mpi( &
-       'ERROR: map_inner_bc_jouleheating should be called in SWMF only')
-end subroutine map_inner_bc_jouleheating
-
-!============================================================================
-real function logvar_ionosphere(NameLogvar)
-
-  use ModProcMH, ONLY: iProc
-  implicit none
-  character (len=*), intent(in) :: NameLogvar
-  logical :: DoWarn=.true.
-  !--------------------------------------------------------------------------
-  if(DoWarn .and. iProc==0) &
-       write(*,*)'WARNING !!! In stand alone mode log variable '//&
-       trim(NameLogvar)//' is not available, returning -777.77'
-  DoWarn = .false.
-  logvar_ionosphere = -777.77
-
-end function logvar_ionosphere
-!============================================================================
 !============ interface to BATS_methods====================
 subroutine update_lagrangian_grid(tStart,tFinal)
   implicit none

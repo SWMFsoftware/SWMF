@@ -183,19 +183,21 @@ contains
   subroutine set_face_bc(IsBodyCell_G, IsTrueCell_G)
 
     use ModMain
-    use ModProcMH, ONLY: iProc
-    use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
-    use ModAdvance, ONLY: UseAnisoPressure, &
+    use ModProcMH,     ONLY: iProc
+    use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
+    use ModAdvance,    ONLY: UseAnisoPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
-    use ModParallel, ONLY: &
+    use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
-    use ModPhysics, ONLY: PolarRho_I, PolarU_I, PolarP_I, &
+    use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
-    use ModSolarwind, ONLY: get_solar_wind_point
-    use CON_axes, ONLY: transform_matrix
-    use BATL_lib, ONLY: Xyz_DGB
+    use ModSolarwind,  ONLY: get_solar_wind_point
+    use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
+
+    use CON_axes,      ONLY: transform_matrix
+    use BATL_lib,      ONLY: Xyz_DGB
 
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
@@ -206,7 +208,6 @@ contains
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
     ! External function for ionosphere
-    real, external :: logvar_ionosphere
     real:: RhoCpcp
 
     character (len=*), parameter :: NameSub = 'set_face_bc'
@@ -681,7 +682,7 @@ contains
 
                      ! get the joule heating mapped from the ionosphere 
                      ! (already in nomalized unit)
-                     call map_inner_bc_jouleheating(TimeBc, FaceCoords_D, &
+                     call get_inner_bc_jouleheating(TimeBc, SmgFaceCoords_D, &
                           JouleHeating)
 
                      ! get the O+ flux based on Strangeway's formula, 

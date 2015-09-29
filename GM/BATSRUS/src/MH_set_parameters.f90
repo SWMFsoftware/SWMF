@@ -81,7 +81,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModFaceFlux, ONLY: face_flux_set_parameters, TypeFluxNeutral, &
        UseClimit, UsePoleDiffusion, DoBurgers
   use ModLookupTable,     ONLY: read_lookup_table_param
-  use ModIonoVelocity,    ONLY: read_iono_velocity_param
+  use ModIeCoupling,      ONLY: read_ie_velocity_param
   use ModTimeStepControl, ONLY: read_time_step_control_param
   use ModLaserHeating,    ONLY: read_laser_heating_param
   use ModLocalTimeStep,   ONLY: read_localstep_param
@@ -1455,7 +1455,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#IE")
         call read_var('DoTraceIE', DoTraceIE)
      case("#IECOUPLING")
-        call read_iono_velocity_param
+        call read_ie_velocity_param
      case("#IMCOUPLING","#IM")
         call read_var('TauCoupleIm',TauCoupleIm)
         if(TauCoupleIm < 1.0)then

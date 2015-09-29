@@ -33,7 +33,6 @@ OBJECTS = \
 	ModCurrent.o \
 	ModFaceBoundary.o \
 	ModFieldLineThread.o \
-	ModIonoVelocity.o \
 	ModImplicit.o \
 	ModImplHypre.o \
 	ModExtraVariables.o \
@@ -49,6 +48,7 @@ OBJECTS = \
 	ModHallResist.o \
 	ModHdf5.o \
 	ModHeatFluxCollisionless.o \
+	ModIeCoupling.o \
 	ModIO.o \
 	ModLaserHeating.o \
 	ModLocalTimeStep.o \
