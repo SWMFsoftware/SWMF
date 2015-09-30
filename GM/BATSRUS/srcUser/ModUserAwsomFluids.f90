@@ -791,23 +791,25 @@ contains
 
   subroutine user_calc_sources(iBlock)
 
-    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure
+    use ModAdvance,    ONLY: State_VGB, Source_VC, UseElectronPressure, &
+         UseAnisoPressure
     use ModMultiFluid, ONLY: MassIon_I, ChargeIon_I, iRhoIon_I, iRhoUxIon_I, &
-         iRhoUyIon_I, iRhoUzIon_I, iPIon_I
+         iRhoUyIon_I, iRhoUzIon_I, iPIon_I, iPparIon_I
     use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
-    use ModVarIndexes, ONLY: nVar, Energy_, Pe_
+    use ModVarIndexes, ONLY: nVar, Energy_, Pe_, Bx_, Bz_
     use ModConst,      ONLY: cElectronMass, cProtonMass
+    use ModB0,         ONLY: UseB0, B0_DGB
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst
+    integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst, iPpar
     real :: ReducedTemp, CollisionRate, Coef
     real :: Du2, Phi, Psi, RelativeDrift
-    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I
+    real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
     real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
-    real :: U_D(3), Du_D(3), Me_D(3)
+    real :: U_D(3), Du_D(3), Me_D(3), B_D(3)
     real :: State_V(nVar), Source_V(nVar+nFluid)
 
     character(len=*), parameter :: NameSub = 'user_calc_sources'
@@ -841,6 +843,8 @@ contains
           Uz_I(0) = sum(ChargeDensIon_I*Uz_I(1:))/N_I(0)
        end if
 
+       if(UseAnisoPressure) PparIon_I = State_V(iPparIon_I)
+
        Source_V = 0.0
 
        do iIon = iIonFirst, nIonFluid
@@ -851,10 +855,11 @@ contains
           else
              iRhoUx = iRhoUxIon_I(iIon); iRhoUz = iRhoUzIon_I(iIon)
              iP = iPIon_I(iIon)
+             if(UseAnisoPressure) iPpar = iPparIon_I(iIon)
           end if
 
           do jIon = iIonFirst, nIonFluid
-             if(iIon == jIon) CYCLE
+             if(iIon == jIon .and. .not.(UseAnisoPressure.and.iIon>0)) CYCLE
 
              ReducedTemp = (Mass_I(jIon)*T_I(iIon)+Mass_I(iIon)*T_I(jIon)) &
                   /(Mass_I(iIon) + Mass_I(jIon))
@@ -864,29 +869,58 @@ contains
              CollisionRate = CollisionCoef_II(iIon,jIon) &
                   *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
 
+             if(UseAnisoPressure)then
+                Source_V(iPpar) = Source_V(iPpar) &
+                     + (P_I(iIon) - PparIon_I(iIon))*CollisionRate &
+                     *Mass_I(iIon)/ReducedMass_II(iIon,jIon)
+
+                if(iIon == jIon) CYCLE
+             end if
+
              Du_D = (/ Ux_I(jIon) - Ux_I(iIon), Uy_I(jIon) - Uy_I(iIon), &
                   Uz_I(jIon) - Uz_I(iIon) /)
 
              Du2 = sum(Du_D**2)
-             RelativeDrift = &
-                  sqrt(Du2/(2.0*ReducedTemp/ReducedMass_II(iIon,jIon)))
 
-             ! Velocity dependent correction factors
-             ! The Phi correction factor is simplified (Nakada, 1970)
-             Psi = exp(-RelativeDrift**2)
-             Phi = 1.0/(1.0 + 0.74*RelativeDrift**3)
+             if(UseAnisoPressure)then
+                Psi = 1.0
+                Phi = 1.0
+             else
+                RelativeDrift = &
+                     sqrt(Du2/(2.0*ReducedTemp/ReducedMass_II(iIon,jIon)))
+
+                ! Velocity dependent correction factors
+                ! The Phi correction factor is simplified (Nakada, 1970)
+                Psi = exp(-RelativeDrift**2)
+                Phi = 1.0/(1.0 + 0.74*RelativeDrift**3)
+             end if
+
+             Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
 
              if(iIon == 0)then
                 Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D*Phi
              else
                 Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
                      + RhoIon_I(iIon)*CollisionRate*Du_D*Phi
+
+                if(UseAnisoPressure)then
+                   if(UseB0) then
+                      B_D = B0_DGB(:,i,j,k,iBlock) &
+                           + State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                   else
+                      B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+                   end if
+                   B_D = B_D/max(sqrt(sum(B_D**2)), 1e-15)
+
+                   Source_V(iPpar) = Source_V(iPpar) &
+                        + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
+                        + (1.0/3.0)*Du2 + (sum(Du_D*B_D))**2)
+                end if
              end if
 
              Source_V(iP) = Source_V(iP) &
-                  + GammaMinus1*N_I(iIon)*ReducedMass_II(iIon,jIon) &
-                  *CollisionRate*(3*(T_I(jIon) - T_I(iIon)) &
-                  /Mass_I(jIon)*Psi + Du2*Phi)
+                  + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon)*Psi &
+                  + (2.0/3.0)*Du2*Phi)
           end do
        end do
 
@@ -913,13 +947,14 @@ contains
 
   subroutine user_init_point_implicit
 
-    use ModAdvance, ONLY: UseElectronPressure
-    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I
+    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+    use ModMultiFluid, ONLY: iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, iPIon_I, &
+         iPparIon_I, IonFirst_, IonLast_
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
     use ModVarIndexes, ONLY: nVar, Pe_
 
     logical :: IsPointImpl_V(nVar)
-    integer :: iVar, iPointImplVar, nPointImplVar
+    integer :: iVar, iPointImplVar, nPointImplVar, iFluid
 
     character(len=*), parameter :: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
@@ -932,7 +967,11 @@ contains
     IsPointImpl_V(iRhoUzIon_I) = .true.
     IsPointImpl_V(iPIon_I)     = .true.
     if(UseElectronPressure) IsPointImpl_V(Pe_) = .true.
-
+    if(UseAnisoPressure)then
+       do iFluid = IonFirst_, IonLast_
+          IsPointImpl_V(iPparIon_I(iFluid)) = .true.
+       end do
+    end if
     nPointImplVar = count(IsPointImpl_V)
 
     allocate(iVarPointImpl_I(nPointImplVar))
