@@ -11,7 +11,7 @@ module GM_couple_ie
   use ModIeCoupling, ONLY: rIonosphere, &
        nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I, dThetaIono, dPhiIono,&
        IonoPotential_II, IonoJouleHeating_II, &
-       SigmaHall_II, SigmaPedersen_II, &
+       SigmaHall_II, SigmaPedersen_II, jHall_DII, jPedersen_DII, &
        calc_grad_ie_potential, map_jouleheating_to_inner_bc
 
   implicit none
@@ -255,21 +255,18 @@ contains
   subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
 
     ! Receive nVar variables from IE on the IE grid:
-    !   1. Electric potential
-    !   2. Joule heating
-    !   3. Hall conductance
-    !   4. Pedersen conductance
+    !   1. Electric potential   (always)
+    !   2. Joule heating        (if nVar = 2 or 4)
+    !   3. Hall conductance     (if nVar > 2)
+    !   4. Pedersen conductance (if nVar > 2)
 
-    use ModPhysics,       ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_
-    use ModProcMH
-
-    character(len=*), parameter :: NameSub='GM_put_from_ie'
+    use ModPhysics, ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_, UnitJ_
 
     integer, intent(in) :: iSize, jSize, nVar
-    real, intent(in) :: Buffer_IIV(iSize,jSize,nVar)
-    !  character(len=*), intent(in) :: NameVar
+    real,    intent(in) :: Buffer_IIV(iSize,jSize,nVar)
 
     logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='GM_put_from_ie'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVare=', iSize, jSize, nVar
@@ -291,12 +288,17 @@ contains
        call map_jouleheating_to_inner_bc
     end if
 
-    if(.not. allocated(SigmaHall_II)) &
-         allocate(SigmaHall_II(iSize,jSize), SigmaPedersen_II(iSize,jSize))
-
     if(nVar > 2)then
-       SigmaHall_II     = Buffer_IIV(:,:,nVar-1) !*Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
-       SigmaPedersen_II = Buffer_IIV(:,:,nVar)
+       if(.not. allocated(SigmaHall_II)) &
+            allocate(SigmaHall_II(iSize,jSize), SigmaPedersen_II(iSize,jSize))
+
+       ! The ionosphere currents will need recalculation, so deallocate them
+       if(allocated(jHall_DII)) deallocate(jHall_DII, jPedersen_DII)
+
+       SigmaHall_II     = Buffer_IIV(:,:,nVar-1) &
+            *Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
+       SigmaPedersen_II = Buffer_IIV(:,:,nVar) &
+            *Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
     endif
 
     if(DoTest)write(*,*)NameSub,': done'
