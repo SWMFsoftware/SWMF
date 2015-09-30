@@ -307,7 +307,7 @@ namespace ElectricallyChargedDust {
 
     //calcualte the currents and devivatived of the currents
     void GetGrainCurrent(
-        double GrainRadius, double &GrainElectricCharge, double *GrainVelocity, //radius, the electric charge, and velocity of the grain
+        double GrainRadius, double GrainElectricCharge, double *GrainVelocity, //radius, the electric charge, and velocity of the grain
         double HeliocentricDistance, //heliocentric distance of the grain in AU
         double ni,double Ti, double *Vi,  //ion number density, temeprature, and velocity
         double ne, double Te,  //electron number density and temeprature
@@ -348,13 +348,13 @@ namespace ElectricallyChargedDust {
       namespace ElectonPhotoEmission {
         const double PhotoElectronEfficiency=2.5E14; //per m^2  per sec at 1AU
         const double PhotoElectronEfficiencyMaterialConstant=1.0;
-        const double PhotoElectronEvergy=3.0;  //eV
+        const double PhotoElectronEnergy=3.0*eV2J;  //eV
       }
 
     //secondary electron emission
     const double SecondaryEmissionPeakYieldEnergy=1.0E3*eV2J;
     const double SecondaryEmissionPeakYield=15.0;
-    const double SecondaryElectronTemeprature=3.0*eV2J/Kbol; //Chow-1993-JGR
+    const double SecondaryElectronTemperature=3.0*eV2J/Kbol; //Chow-1993-JGR
 
 
     //sampling of the charging data
