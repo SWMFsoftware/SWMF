@@ -22,7 +22,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-
+char Exosphere::ObjectName[_MAX_STRING_LENGTH_PIC_]="";
+char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="";
 
 double Exosphere::SurfaceInteraction::StickingProbability(int spec, double& ReemissionParticleFraction,double Temp) {
   double res=0.0;
