@@ -59,7 +59,7 @@ subroutine write_plot_common(iFile)
   integer :: neqpar
 
   character (LEN=500) :: allnames
-  character (LEN=1000) :: unitstr_TEC
+  character (LEN=1500) :: unitstr_TEC
   character (LEN=500) ::unitstr_IDL
   character (len=80) :: filename_n, filename_s
   character (len=80) :: NameSnapshot, NameProc
@@ -1504,7 +1504,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   integer, intent(in)              :: nPlotVar, iFile
   character (len=10), intent(in)   :: NamePlotVar_V(nPlotVar)
-  character (len=1000), intent(out) :: StringVarTec 
+  character (len=1500), intent(out) :: StringVarTec 
 
   character (len=20) :: NameTecFluid
   character (len=10) :: String, NamePlotVar, NameVar, NameTecVar, NameUnit
