@@ -150,7 +150,7 @@ endif else $
                first= npict eq 0 and ifile eq 0
                getlimits,first,nfunc,funcs,funcs1,funcs2,autoranges,fmax,fmin,$
                          doask,x,w,xreg,wreg,usereg,time,eqpar,$
-                         variables,headline,cut0,rcut
+                         variables,cut0,rcut
 
                if ifile eq nfile-1 then begin
                   if npict eq 0 then print,FORMAT='("ipict:    ",$)'
