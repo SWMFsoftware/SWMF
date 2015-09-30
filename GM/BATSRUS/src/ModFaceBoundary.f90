@@ -415,6 +415,7 @@ contains
       use ModUtilities
       use ModBoundaryCells, ONLY: iBoundary_GB
       use ModNumConst, ONLY: cTwoPi
+      use ModIeCoupling, ONLY: get_inner_bc_jouleheating
 
       ! indexes of the true and ghost cells on the two sides of the face
       integer, intent(in):: iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
@@ -682,7 +683,7 @@ contains
 
                      ! get the joule heating mapped from the ionosphere 
                      ! (already in nomalized unit)
-                     call get_inner_bc_jouleheating(TimeBc, SmgFaceCoords_D, &
+                     call get_inner_bc_jouleheating(SmgFaceCoords_D, &
                           JouleHeating)
 
                      ! get the O+ flux based on Strangeway's formula, 
