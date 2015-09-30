@@ -350,8 +350,8 @@ contains
     real,    intent(in), dimension(3,nMag) :: Xyz_DI
     real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
     integer  :: i,j,k,iBLK,iMag
-    real     :: r3, XyzSph_DD(3,3), GmtoSmg_DD(3,3)
-    real, dimension(3):: Xyz_D, Temp_D, Current_D, MagPerturb_D, TmpSph_D
+    real     :: r3, GmtoSmg_DD(3,3)
+    real, dimension(3):: Xyz_D, Temp_D, Current_D, MagPerturb_D
     real, external    :: integrate_BLK
     real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
 
@@ -404,28 +404,13 @@ contains
           end do; end do; end do
        end do
 
-       MagPerturb_DI(x_,iMag) = Integrate_BLK(1,Temp_BLK_x)/(4*cPi) 
-       MagPerturb_DI(y_,iMag) = Integrate_BLK(1,Temp_BLK_y)/(4*cPi)
-       MagPerturb_DI(z_,iMag) = Integrate_BLK(1,Temp_BLK_z)/(4*cPi)
+       ! We should just add this up without using the integrate_blk !!!
+       MagPerturb_D(x_) = integrate_blk(1, Temp_BLK_x)/(4*cPi) 
+       MagPerturb_D(y_) = integrate_blk(1, Temp_BLK_y)/(4*cPi)
+       MagPerturb_D(z_) = integrate_blk(1, Temp_BLK_z)/(4*cPi)
 
        ! Convert to SMG coordinates
-       MagPerturb_D = matmul(GmtoSmg_DD, MagPerturb_DI(:,iMag))
-
-       ! Transform to spherical coordinates (r,theta,phi) components
-       Xyz_D = matmul(GmtoSmg_DD, Xyz_DI(:,iMag))
-
-       if (Xyz_D(1) == 0.0 .and. Xyz_D(2) == 0.0 .and. Xyz_D(3) == 0.0) then
-          MagPerturb_DI(:,iMag) = MagPerturb_D
-       else
-          XyzSph_DD = rot_xyz_sph(Xyz_D)
-          TmpSph_D = matmul(MagPerturb_D, XyzSph_DD)
-
-          ! Transform to spherical coordinates (north, east, down) components
-          MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
-          MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
-          MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
-       end if
-
+       MagPerturb_DI(:,iMag) = matmul(GmtoSmg_DD, MagPerturb_D)
     end do
 
     deallocate(Temp_BLK_x,Temp_BLK_y,Temp_BLK_z)
@@ -464,9 +449,8 @@ contains
     real                  :: dR_Trace, Theta, Phi, r_tmp
     real                  :: dL, dS, dTheta, dPhi ,iLat, SinTheta
     real                  :: b, Fac, bRcurrents,JrRcurrents
-    real, dimension(3, 3) :: XyzSph_DD
     real, dimension(3)    :: Xyz_D, b_D, bRcurrents_D, XyzRcurrents_D, &
-         XyzTmp_D, j_D, temp_D, TmpSph_D
+         XyzTmp_D, j_D, temp_D
     real                  :: FacRcurrents_II(nTheta,nPhi)
     real                  :: bRcurrents_DII(3,nTheta,nPhi)
     !------------------------------------------------------------------
@@ -550,7 +534,7 @@ contains
                 if(Xyz_D(3) > 0 .and. Theta > cHalfPi &
                      .or. Xyz_D(3) < 0 .and. Theta < cHalfPi) CYCLE
 
-                ! Do the Biot-Savart integral JxR/|R|^3 dV for all magnetometers
+                ! Do Biot-Savart integral JxR/|R|^3 dV for all magnetometers
                 temp_D = cross_product(j_D, Xyz_D-XyzTmp_D) & 
                      * dL * dS /(sqrt(sum((XyzTmp_D-Xyz_D)**2)))**3
 
@@ -559,21 +543,6 @@ contains
 
           end do
        end do
-    end do
-
-    do iMag = 1, nMag
-       ! The magnetometer at the origin is used for Dst calculation
-       if (all(Xyz_DI(:,iMag) == 0.0)) CYCLE
-
-       ! Transform to spherical coordinates (r,theta,phi) components
-       XyzSph_DD = rot_xyz_sph(Xyz_DI(:,iMag))
-       TmpSph_D = matmul(MagPerturb_DI(:,iMag), XyzSph_DD)
-
-       ! Transform to spherical coordinates (north, east, down) components
-       MagPerturb_DI(1,iMag)  = -TmpSph_D(phi_) 
-       MagPerturb_DI(2,iMag)  =  TmpSph_D(theta_) 
-       MagPerturb_DI(3,iMag)  = -TmpSph_D(r_) 
-
     end do
 
     call timing_stop('ground_db_fac')
@@ -941,6 +910,7 @@ contains
     ! Write ground magnetometer field perturbations to file.  Values, IO units,
     ! and other information is gathered from module level variables.
 
+    use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModProcMH,ONLY: iProc, nProc, iComm
     use CON_axes, ONLY: transform_matrix
     use ModMain,  ONLY: n_step, time_simulation, TypeCoordSystem
@@ -957,11 +927,11 @@ contains
     character(len=6):: TypeFileNow
 
     real:: Xyz_D(3)
-    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3)
-    real, dimension(:, :), allocatable :: &
-         MagPerturbGmSph_DI, MagPerturbFacSph_DI,&
-         MagGmXyz_DI, MagSmXyz_DI, MagVarSum_DI, MagVarFac_DI, &
-         MagVarGm_DI, MagVarTotal_DI
+    real:: MagtoGm_DD(3,3), GmtoSm_DD(3,3), XyzSph_DD(3,3), XyzNed_DD(3,3)
+
+    real, dimension(:,:), allocatable :: &
+         MagGmXyz_DI, MagSmXyz_DI, &
+         dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI
 
     logical                    :: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'write_magnetometers'
@@ -997,10 +967,11 @@ contains
     end if
 
     ! Allocate variables:
-    allocate(MagPerturbGmSph_DI(3,nMagNow), MagPerturbFacSph_DI(3,nMagNow),&
+    allocate( &
          MagGmXyz_DI(3,nMagNow),  MagSmXyz_DI(3,nMagNow), &
-         MagVarSum_DI(3,nMagNow), MagVarFac_DI(3,nMagNow), &
-         MagVarGm_DI(3,nMagNow),  MagVarTotal_DI(3,nMagNow))
+         dBMhd_DI(3,nMagNow),  dBFac_DI(3,nMagNow), &
+         dBHall_DI(3,nMagNow), dBPedersen_DI(3,nMagNow), &
+         dBTotal_DI(3,nMagNow))
 
     ! Matrix between coordinate systems
     MagtoGm_DD = transform_matrix(Time_Simulation, &
@@ -1008,10 +979,8 @@ contains
     GmtoSm_DD  = transform_matrix(Time_Simulation, &
          TypeCoordSystem, 'SMG')
 
-    !\
     ! Transform the Radius position into cartesian coordinates. 
     ! Transform the magnetometer position from MagInCorrd to GM/SM
-    !/
 
     do iMag = 1, nMagNow
        ! (360,360) is for the station at the center of the planet
@@ -1033,35 +1002,68 @@ contains
     ! Calculate the perturbations from GM currents and FACs in the Gap Region;
     ! The results are in SM spherical coordinates.
     !------------------------------------------------------------------
-    call ground_mag_perturb(    nMagNow, MagGmXyz_DI, MagPerturbGmSph_DI) 
-    call ground_mag_perturb_fac(nMagNow, MagSmXyz_DI, MagPerturbFacSph_DI)
+    call ground_mag_perturb(    nMagNow, MagGmXyz_DI, dBMhd_DI) 
+    call ground_mag_perturb_fac(nMagNow, MagSmXyz_DI, dBFac_DI)
+    call calc_ie_mag_perturb(nMagNow, MagSmXyz_DI, dBHall_DI, dBPedersen_DI)
 
-    !\
     ! Collect the variables from all the PEs
-    !/
-    MagVarSum_DI = 0.0
+    ! Use dBTotal as a temporary variable
+    dBTotal_DI = 0.0
     if(nProc > 1)then 
-       call MPI_reduce(MagPerturbGmSph_DI, MagVarSum_DI, 3*nMagNow, &
+       call MPI_reduce(dBMhd_DI, dBTotal_DI, 3*nMagNow, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) MagPerturbGmSph_DI = MagVarSum_DI
+       if(iProc == 0) dBMhd_DI = dBTotal_DI
 
-       call MPI_reduce(MagPerturbFacSph_DI, MagVarSum_DI, 3*nMagNow, &
+       call MPI_reduce(dBFac_DI, dBTotal_DI, 3*nMagNow, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc == 0) MagPerturbFacSph_DI = MagVarSum_DI
+       if(iProc == 0) dBFac_DI = dBTotal_DI
+
+       call MPI_reduce(dBHall_DI, dBTotal_DI, 3*nMagNow, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       if(iProc == 0) dBHall_DI = dBTotal_DI
+
+       call MPI_reduce(dBPedersen_DI, dBTotal_DI, 3*nMagNow, &
+            MPI_REAL, MPI_SUM, 0, iComm, iError)
+       if(iProc == 0) dBPedersen_DI = dBTotal_DI
     end if
 
-    ! Collect variables, send to appropriate write subroutine.
-    if(iProc==0)then      
+    ! convert perturbation into output format and write them out
+    if(iProc==0)then
        do iMag = 1, nMagNow
-          !normalize the variable to I/O unit:
-          MagVarGm_DI( :,iMag)  = MagPerturbGMSph_DI( :,iMag) * No2Io_V(UnitB_)
-          MagVarFac_DI( :,iMag) = MagPerturbFacSph_DI(:,iMag) * No2Io_V(UnitB_)
+          ! Convert from SMG components to North-East-Down components
+          if(any(MagSmXyz_DI(:,iMag) /= 0.0)) then
 
-          ! Get total perturbation:
-          MagVarTotal_DI( :,iMag) = MagVarGm_DI(:,iMag)+MagVarFac_DI(:,iMag) &
-               + IeMagPerturb_DII(:,1,iMag+iStart) &
-               + IeMagPerturb_DII(:,2,iMag+iStart)
+             ! Rotation matrix from Cartesian to spherical coordinates
+             XyzSph_DD = rot_xyz_sph(MagSmXyz_DI(:,iMag))
+
+             ! Rotation matrix from Cartesian to North-East-Down components
+             ! North = -Theta
+             XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+             ! East = Phi
+             XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+             ! Down = -R
+             XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+
+             dBMhd_DI(:,iMag)     = matmul(dBMhd_DI(:,iMag),  XyzNed_DD)
+             dBFac_DI(:,iMag)     = matmul(dBFac_DI(:,iMag),  XyzNed_DD)
+             dBHall_DI(:,iMag)    = matmul(dBHall_DI(:,iMag), XyzNed_DD)
+             dBPedersen_DI(:,iMag)= matmul(dBPedersen_DI(:,iMag), XyzNed_DD)
+          end if
+
        end do
+
+       ! convert the magnetic perturbations to I/O units
+       dBMhd_DI      = No2Io_V(UnitB_)*dBMhd_DI
+       dBFac_DI      = No2Io_V(UnitB_)*dBFac_DI
+       dBHall_DI     = No2Io_V(UnitB_)*dBHall_DI
+       dBPedersen_DI = No2Io_V(UnitB_)*dBPedersen_DI
+
+       !!! TEST !!!!
+       dBHall_DI     = IeMagPerturb_DII(:,1,iStart+1:iEnd)
+       dBPedersen_DI = IeMagPerturb_DII(:,2,iStart+1:iEnd)
+
+       ! Get total perturbation:
+       dBTotal_DI = dBMhd_DI + dBFac_DI + dBHall_DI + dBPedersen_DI 
 
        select case(TypeFileNow)
        case('single')
@@ -1077,8 +1079,8 @@ contains
     end if
 
     ! Release memory.
-    deallocate(MagPerturbGmSph_DI, MagPerturbFacSph_DI, MagGmXyz_DI, &
-         MagSmXyz_DI, MagVarSum_DI, MagVarFac_DI, MagVarGm_DI,  MagVarTotal_DI)
+    deallocate(MagGmXyz_DI, MagSmXyz_DI, &
+         dBMhd_DI, dBFac_DI, dBHall_DI, dBPedersen_DI, dBTotal_DI)
 
   contains
     !=====================================================================
@@ -1108,11 +1110,11 @@ contains
       do iLat = 1, nGridLat
          do iLon = 1, nGridLon
             iMag = iMag + 1
-            MagOut_VII( 1: 3,iLon,iLat) = MagVarTotal_DI(:,iMag)
-            MagOut_VII( 4: 6,iLon,iLat) = MagVarGm_DI(:,iMag)
-            MagOut_VII( 7: 9,iLon,iLat) = MagVarFac_DI(:,iMag)
-            MagOut_VII(10:12,iLon,iLat) = IeMagPerturb_DII(:,1,iMag+iStart)
-            MagOut_VII(13:15,iLon,iLat) = IeMagPerturb_DII(:,2,iMag+iStart)
+            MagOut_VII( 1: 3,iLon,iLat) = dBTotal_DI(:,iMag)
+            MagOut_VII( 4: 6,iLon,iLat) = dBMhd_DI(:,iMag)
+            MagOut_VII( 7: 9,iLon,iLat) = dBFac_DI(:,iMag)
+            MagOut_VII(10:12,iLon,iLat) = dBHall_DI(:,iMag)
+            MagOut_VII(13:15,iLon,iLat) = dBPedersen_DI(:,iMag)
          end do
       end do
 
@@ -1155,9 +1157,9 @@ contains
          ! Write position of magnetometer and perturbation to file:  
          write(iUnitOut,'(18es13.5)') &
               MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
-              MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
-              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag+iStart), &
-              IeMagPerturb_DII(:,2,iMag+iStart)
+              dBTotal_DI(:,iMag), &
+              dBMhd_DI(:,iMag), dBFac_DI(:,iMag), &
+              dBHall_DI(:,iMag), dBPedersen_DI(:,iMag)
       end do
 
       ! Flush file buffer.
@@ -1217,9 +1219,9 @@ contains
          ! Write position of magnetometer and perturbation to file:  
          write(UnitTmp_,'(18es13.5)') &
               MagSmXyz_DI(:,iMag)*rPlanet_I(Earth_), &
-              MagVarTotal_DI(:,iMag), MagVarGm_DI(:,iMag), &
-              MagVarFac_DI(:,iMag), IeMagPerturb_DII(:,1,iMag+iStart), &
-              IeMagPerturb_DII(:,2,iMag+iStart)
+              dBTotal_DI(:,iMag), &
+              dBMhd_DI(:,iMag), dBFac_DI(:,iMag), &
+              dBHall_DI(:,iMag), dBPedersen_DI(:,iMag)
       end do
 
       ! Close file:
