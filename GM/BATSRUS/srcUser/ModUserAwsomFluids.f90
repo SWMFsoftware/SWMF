@@ -869,7 +869,7 @@ contains
              CollisionRate = CollisionCoef_II(iIon,jIon) &
                   *N_I(jIon)/(ReducedTemp*sqrt(ReducedTemp))
 
-             if(UseAnisoPressure)then
+             if(UseAnisoPressure .and. iIon>0)then
                 Source_V(iPpar) = Source_V(iPpar) &
                      + (P_I(iIon) - PparIon_I(iIon))*CollisionRate &
                      *Mass_I(iIon)/ReducedMass_II(iIon,jIon)
