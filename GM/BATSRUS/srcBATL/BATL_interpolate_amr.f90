@@ -181,6 +181,8 @@ contains
 
   subroutine find(nDimIn, Coord_D, &
        iProc, iBlock, CoordCorner_D, DCoord_D, IsOut)
+    use BATL_geometry, ONLY: IsLatitudeAxis, IsSphericalAxis, &
+         IsCylindricalAxis
     integer, intent(in) :: nDimIn
     !\
     ! "In"- the coordinates of the point, "out" the coordinates of the
@@ -241,6 +243,60 @@ contains
     ! beyond the tree bounadaries
     !/
     where(IsPeriodic_D)CoordTree_D = modulo(CoordTree_D, 1.0)
+    !\
+    ! Check specific boundary conditions for particular geometries
+    !/
+    if(IsLatitudeAxis)then
+       !\
+       !spherical: r, lon, lat coordinates
+       !/
+       if(CoordTree_D(3) > 1.0)then
+          !\
+          ! reflect third coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(3) = 2.0 - CoordTree_D(3) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       elseif(CoordTree_D(3) < 0.0)then
+          !\
+          ! reflect third coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(3) = -CoordTree_D(3) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       end if
+    elseif(IsSphericalAxis)then
+       !\
+       ! spherical: r, theta, phi
+       !/
+       if(CoordTree_D(2) > 1.0)then
+          !\
+          ! reflect second coordinate, 
+          ! add half of full range to the third one.
+          !/
+          CoordTree_D(2) = 2.0 - CoordTree_D(2) 
+          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
+       elseif(CoordTree_D(2) < 0.0)then
+          !\
+          ! reflect second coordinate, 
+          ! add half of full range to the third one.
+          !/
+          CoordTree_D(2) = -CoordTree_D(2) 
+          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
+       end if
+    elseif(IsCylindricalAxis)then
+       !\
+       ! cylindrical: r, phi, z
+       !/
+       if(CoordTree_D(1) < 0.0)then
+          !\
+          ! reflect first coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(1) = -CoordTree_D(1) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       end if
+    end if
     IsOut = any(CoordTree_D < 0.0 .or. CoordTree_D >= 1.0)
     if(IsOut)RETURN
     !\
