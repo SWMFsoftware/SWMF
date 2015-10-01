@@ -284,7 +284,7 @@ contains
     real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
     real    :: bIono, b
     !-------------------------------------------------------------------------
-    do j =1, nPhiIono; do i = 1, nThetaIono
+    do j = 1, nPhiIono; do i = 1, nThetaIono
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
        call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
        bIono = sqrt(sum(bIono_D**2))
@@ -317,23 +317,31 @@ contains
     ! at the inner boundary.
 
     use ModCoordTransform, ONLY: xyz_to_dir
-    use ModMain,           ONLY: MaxDim
+    use ModMain,           ONLY: Time_Simulation
+    use CON_planet_field,  ONLY: map_planet_field
 
     !INPUT ARGUMENTS:
-    real, intent(in)    :: XyzSm_D(MaxDim) ! Position vector in SMG
+    real, intent(in)    :: XyzSm_D(3) ! Position vector in SMG
     real, intent(out)   :: JouleHeating    ! Houle heating
 
+    real :: XyzIono_D(3)         ! Location mapped to ionosphere
     real :: Theta, Phi           ! Mapped point colatitude, longitude
     real :: ThetaNorm, PhiNorm   ! Normalized colatitude, longitude
-    integer :: iTheta, iPhi
+    integer :: iTheta, iPhi      ! Indexes on the IE grid
+
+    integer:: iHemisphere
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
     !---------------------------------------------------------------------
     call set_oktest(NameSub, DoTest, DoTestMe)
 
+    ! Map down to the ionosphere at radius rIonosphere
+    call map_planet_field(Time_Simulation, XyzSm_D, 'SMG NORM', rIonosphere, &
+         XyzIono_D, iHemisphere)
+
     ! Calculate angular coordinates
-    call xyz_to_dir(XyzSm_D, Theta, Phi)
+    call xyz_to_dir(XyzIono_D, Theta, Phi)
 
     ! Interpolate the spherical jouleheating
     call get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
@@ -348,7 +356,7 @@ contains
        call stop_mpi(NameSub//' index out of bounds')
     end if
 
-    ! Note: this is a first order accurate algorithm !!!
+    ! Note: this is a first order accurate algorithm
     JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
 
   end subroutine get_inner_bc_jouleheating
