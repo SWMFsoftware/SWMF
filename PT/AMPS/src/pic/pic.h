@@ -556,6 +556,122 @@ namespace PIC {
     void SetDefaultParticleTrackingFlag(void *StartNodeVoid=NULL); //set the value of 'TrajectoryTrackingFlag' to 'false' for all particles in a current simulation; used to re-set the trajectory sampling after output of the trajectory data file
   }
 
+
+  //the interface used to use AMPS as a particle tracker in CCMC
+  namespace CCMC {
+
+  //constants
+  namespace DEF {
+    namespace SOURCE {
+      namespace TYPE {
+        const int Sphere=0;
+        const int Constant=1;
+      }
+
+      namespace SHPERE {
+        namespace TYPE {
+          const int Uniform=0;
+          const int Gaussian=1;
+        }
+      }
+    }
+
+    namespace VELOCITY_DISTRIBUTION {
+      namespace TYPE {
+        const int Maxwellian=0;
+        const int Constant=1;
+      }
+    }
+  }
+
+
+    namespace ParticleInjection {
+
+      //define the generic parameters that controls injection of the tracked particles
+      class cInjectionControl {
+      public:
+        double StartTime;
+        int nTestParticles;
+
+        cInjectionControl() {
+          StartTime=0.0;
+          nTestParticles=0;
+        }
+      };
+
+      //define the types of the particle generation for the tracking
+      class cVelocityDistributionMaxwellian {
+      public:
+        double Temeprature,BulkVelocity[3];
+      };
+
+      class cVelocityDistributionConstant {
+      public:
+        double v[3];
+      };
+
+      class cVelocityDistribution {
+      public:
+        int Type; //constant, maxwellian
+
+        cVelocityDistributionMaxwellian Maxwellian;
+        vector<cVelocityDistributionConstant> Constant;
+      };
+
+      class cInjectionRegionSpherical {
+      public:
+        double Radius,Origin[3];
+        int SpatialDistributionType;  //uniform, gaussian
+      };
+
+      class cInjectionRegionConstant {
+      public:
+        double x[3];
+      };
+
+      class cInjectionRegion {
+      public:
+        int Type; //spherical, constant
+
+        cInjectionRegionSpherical Spherical;
+        vector<cInjectionRegionConstant> Constant;
+      };
+
+      class cInjectionDescriptor : public cInjectionControl {
+      public:
+        cInjectionRegion SpatialDistribution;
+        cVelocityDistribution VelocityDistribution;
+      };
+
+      extern vector<cInjectionDescriptor> InjectionDescriptorList;
+    }
+
+    namespace Parser {
+      extern char ControlFileName[_MAX_STRING_LENGTH_PIC_];
+
+      //read the file that describes the injection of the particle for the tracking
+      void LoadControlFile();
+
+      //read different sectoins of the input file
+      namespace Read {
+         namespace SourceRegion {
+           void Sphere(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+         }
+
+         namespace VelocityDistribution {
+           void Maxwellian(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+         }
+
+      }
+    }
+
+    //trace particles
+    void LoadParticles();
+    int TraceParticles();
+  }
+
   //ray tracing and calculation of the shadow regions on the NASTRAN surfaces
   namespace RayTracing {
     extern unsigned int nCallsTestDirectAccess;
