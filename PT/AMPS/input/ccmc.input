@@ -82,7 +82,7 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_  
 ! define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) CCMC::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
-  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) CCMC::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
+! define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) CCMC::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode)
   
   define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
 #endGeneral
@@ -112,8 +112,17 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   sphere=on \\ !on, off
     radius=1.0
 
+  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly 
+  InjectionLocationFile=ccmc.InjectionLocation.dat  
+
 #endblock
 
+#interface
+
+  cell_centered_linear_interpolation_mode=on
+  cell_centered_linear_interpolation_src=default
+
+#endinterface
 
 
 
