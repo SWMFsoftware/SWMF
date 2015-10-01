@@ -55,64 +55,76 @@ int main(int argc,char **argv) {
   //in the test-mode run 100 iterations and than output the particle data statistics
   int nIterations,nTotalIterations=100000001;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=100;
+  switch (_CCMC_CALCULATION_MODE_) {
+  case _CCMC_CALCULATION_MODE__ENTIRE_FLOW_ :
+    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=100;
 
-	for (long int niter=0;niter<nTotalIterations;niter++) {
+    for (long int niter=0;niter<nTotalIterations;niter++) {
 
-    //print the iteration number
-    if (PIC::Mesh::mesh.ThisThread==0) {
-      time_t TimeValue=time(NULL);
-      tm *ct=localtime(&TimeValue);
+      //print the iteration number
+      if (PIC::Mesh::mesh.ThisThread==0) {
+        time_t TimeValue=time(NULL);
+        tm *ct=localtime(&TimeValue);
 
-      printf(": (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
-    }
-
-	  amps_time_step();
-
-
-    //check whether particle tracing if finished
-    static int LastDataOutputFileNumber=-1;
-
-    if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-     int spec,TrajectoryAccumulationFinished=true;
-
-      for (spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleTracker::maxSampledTrajectoryNumber!=0) {
-        if (PIC::ParticleTracker::totalSampledTrajectoryNumber[spec]<PIC::ParticleTracker::maxSampledTrajectoryNumber) {
-          TrajectoryAccumulationFinished=false;
-          break;
-        }
+        printf(": (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
       }
 
-      MPI_Bcast(&TrajectoryAccumulationFinished,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
-
-      if (TrajectoryAccumulationFinished==true) {
-        //the requested number of the trajectories is reached
-        //1. stop injection of new particles
+      amps_time_step();
 
 
-        //2. check whether any particle left in the system
-        int thread,flag,ParticlePresent[PIC::nTotalThreads];
+      //check whether particle tracing if finished
+      static int LastDataOutputFileNumber=-1;
 
-        flag=(PIC::ParticleBuffer::NAllPart!=0) ? true : false;
-        MPI_Allgather(&flag,1,MPI_INT,ParticlePresent,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
-        for (thread=0;thread<PIC::nTotalThreads;thread++) if (ParticlePresent[thread]==true) flag=true;
+      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+       int spec,TrajectoryAccumulationFinished=true;
 
-        if (flag==false) {
-          //there is no particles in the system any more -> the particle tracing procedure is finished
-          break;
+        for (spec=0;spec<PIC::nTotalSpecies;spec++) if (PIC::ParticleTracker::maxSampledTrajectoryNumber!=0) {
+          if (PIC::ParticleTracker::totalSampledTrajectoryNumber[spec]<PIC::ParticleTracker::maxSampledTrajectoryNumber) {
+            TrajectoryAccumulationFinished=false;
+            break;
+          }
         }
+
+        MPI_Bcast(&TrajectoryAccumulationFinished,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+
+        if (TrajectoryAccumulationFinished==true) {
+          //the requested number of the trajectories is reached
+          //1. stop injection of new particles
+
+
+          //2. check whether any particle left in the system
+          int thread,flag,ParticlePresent[PIC::nTotalThreads];
+
+          flag=(PIC::ParticleBuffer::NAllPart!=0) ? true : false;
+          MPI_Allgather(&flag,1,MPI_INT,ParticlePresent,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
+          for (thread=0;thread<PIC::nTotalThreads;thread++) if (ParticlePresent[thread]==true) flag=true;
+
+          if (flag==false) {
+            //there is no particles in the system any more -> the particle tracing procedure is finished
+            break;
+          }
+        }
+
+        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       }
-
-      LastDataOutputFileNumber=PIC::DataOutputFileNumber;
     }
-	}
 
-  //output the particle statistics for the nightly tests
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
-    char fname[400];
+    //output the particle statistics for the nightly tests
+    if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
+      char fname[400];
 
-    sprintf(fname,"%s/test_CCMC.dat",PIC::OutputDataFileDirectory);
-    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+      sprintf(fname,"%s/test_CCMC.dat",PIC::OutputDataFileDirectory);
+      PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
+    }
+
+    break;
+  case _CCMC_CALCULATION_MODE__INDIVIDUAL_PARTICLES_ONLY_:
+    PIC::CCMC::Parser::LoadControlFile();
+    PIC::CCMC::TraceParticles();
+
+    break;
+  default :
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
 
 	if (PIC::ThisThread==0) cout << "End of the run:" << PIC::nTotalSpecies << endl;
