@@ -112,8 +112,6 @@ subroutine update_states_MHD(iStage,iBlock)
           + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
           /CellVolume_GB(i,j,k,iBlock) ) 
   end do; end do; end do
-
-  if(UseArtificialVisco) call add_artificial_viscosity
   
   if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
      ! Integrate fluxes in the transverse direction (eq. 20)
@@ -653,7 +651,6 @@ contains
        iVarSemi_ = p_
     endif
 
-
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
@@ -668,43 +665,6 @@ contains
   end subroutine deduct_expl_source
   !----------------------------------------------------------------------
 
-  subroutine add_artificial_viscosity
-    ! Use second deritive as artificial viscosity.
-
-    real :: c0
-    !----------------------------------------------------------------------
-    
-    do k = 1,nK; do j=1,nJ; do i=1,nI
-       DtLocal = DtFactor*time_BLK(i,j,k,iBlock)
-
-       if(DtLocal<1e-15) then
-          c0 = 0
-       else 
-          c0 = alphaVisco 
-       endif
-
-       Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
-            -2*State_VGB(:,i,j,k,iBlock) + &
-            (State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock))&
-            )
-
-       if(nJ>1) then
-          Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
-               -2*State_VGB(:,i,j,k,iBlock) + &
-               (State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock))&
-               )          
-       endif
-
-       if(nK>1) then
-          Source_VC(1:nVar,i,j,k) = Source_VC(1:nVar,i,j,k) + c0*( &
-               -2*State_VGB(:,i,j,k,iBlock) + &
-               (State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock))&
-               )          
-       endif
-    enddo; enddo; enddo
-    
-  end subroutine add_artificial_viscosity
-  
 end subroutine update_states_mhd
 
 !==============================================================================

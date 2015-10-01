@@ -369,6 +369,7 @@ contains
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit
     use ModWaves,    ONLY: UseWavePressure
+    use ModViscosity,ONLY: UseArtificialVisco, alphaVisco
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -576,8 +577,11 @@ contains
          end if
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
-
+         
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
+         
+         if(UseArtificialVisco) call add_artificial_viscosity( &
+              Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
 
@@ -660,6 +664,9 @@ contains
 
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
+         if(UseArtificialVisco) call add_artificial_viscosity( &
+              Flux_VY(:,iFace, jFace, kFace))
+         
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
 
          if(UseFDFaceFlux) call correct_u_normal(y_)
@@ -742,6 +749,9 @@ contains
 
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
+         if(UseArtificialVisco) call add_artificial_viscosity( &
+              Flux_VZ(:,iFace, jFace, kFace))
+
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
 
          if(UseFDFaceFlux) call correct_u_normal(z_)  
@@ -775,6 +785,24 @@ contains
       end if
     end subroutine get_flux_z
     !=====================================================================
+
+    subroutine add_artificial_viscosity(Flux_V)
+      use ModAdvance,ONLY: State_VGB, Energy_GBI
+      real,     intent(inout) :: Flux_V(nFlux)
+      
+      if(all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) then
+
+         Flux_V(1:nVar) = Flux_V(1:nVar) - alphaVisco*CmaxDt* &
+              (State_VGB(1:nVar,iFace,jFace,kFace,iBlockFace) - &
+              State_VGB(1:nVar,iLeft,jLeft,kLeft,iBlockFace))* &
+              Area 
+
+         Flux_V(nVar+1:nFlux) = Flux_V(nVar+1:nFlux) - alphaVisco*CmaxDt* &
+              (Energy_GBI(iFace,jFace,kFace,iBlockFace,:) - &
+              Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,:))* &
+              Area 
+      endif
+    end subroutine add_artificial_viscosity
 
   end subroutine calc_face_flux
 
