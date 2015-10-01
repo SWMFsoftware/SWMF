@@ -1,0 +1,31 @@
+
+
+#Tracking (100) 
+  StartTime=0
+
+  #SourceRegion=Sphere
+    Center=0.0,-1.0E8,0.0
+    Radius=1.0E7 
+
+    SpatialDistribution=uniform
+  #EndSourceRegion
+
+  #VelocityDistribution=Maxwellian
+    BulkVelocity=1.0E3,0.0,0.0
+    Temperature=300
+  #EndVelocityDistribution 
+#EndTracking
+
+
+#Tracking (1)  
+  StartTime=0
+
+  #SourceRegion=Constant 
+    0.0, 1.0E8,0.0
+  #EndSourceRegion
+
+  #VelocityDistribution=Constant
+    -1.0E3, 0.0, 0.0
+  #EndVelocityDistribution
+#EndTracking
+    
