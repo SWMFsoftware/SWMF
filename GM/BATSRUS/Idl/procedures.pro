@@ -2138,7 +2138,7 @@ pro set_units, type, distunit=distunit
      cs0  = pSI/rhoSI/uSI^2                 ; cs          = sqrt(gamma*cs0*p/rho)
      c0   = cSI/uSI                         ; speed of light
      mu0A = uSI^2*mu0SI*rhoSI*bSI^(-2)      ; vA          = sqrt(bb/(mu0A*rho))
-     mu0  = pSI*bSI^(-2)                    ; beta        = p/(bb/(2*mu0))
+     mu0  = mu0SI*pSI*bSI^(-2)              ; beta        = p/(bb/(2*mu0))
      uH0  = mpSI/eSI*jSI/rhoSI/uSI          ; uH=j/(ne)   = uH0*j/rho*Mion 
      op0  = eSI/mpSI*sqrt(rhoSI/e0SI)*tSI   ; omegap      = op0*sqrt(rho)/Mion
      oc0  = eSi/mpSI*bSI*tSI                ; omegac      = oc0*b/Mion
