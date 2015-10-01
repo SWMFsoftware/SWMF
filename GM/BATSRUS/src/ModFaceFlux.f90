@@ -3336,7 +3336,7 @@ contains
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
       if(UseAnisoPressure .and. IsIon_I(iFluid))then
-         GammaP = 3*State_V(iPpar)
+         GammaP = State_V(iPpar)
       else
          GammaP = Gamma_I(iFluid)*State_V(iP)
       end if
