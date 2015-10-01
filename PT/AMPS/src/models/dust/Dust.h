@@ -352,8 +352,8 @@ namespace ElectricallyChargedDust {
       }
 
     //secondary electron emission
-    const double SecondaryEmissionPeakYieldEnergy=1.0E3*eV2J;
-    const double SecondaryEmissionPeakYield=15.0;
+    const double SecondaryEmissionPeakYieldEnergy=250*eV2J;
+    const double SecondaryEmissionPeakYield=1.0;
     const double SecondaryElectronTemperature=3.0*eV2J/Kbol; //Chow-1993-JGR
 
 

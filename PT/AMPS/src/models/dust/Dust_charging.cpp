@@ -173,7 +173,7 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
       :
       (120-5040*misc)*misc*misc;
 
-    Jse = 3.7*SecondaryEmissionPeakYield*J0e*exp(-XiElectron)*F5;
+    Jse =-3.7*SecondaryEmissionPeakYield*J0e*exp(-XiElectron)*F5;
     dJse=-Jse * dXiElectron;
   }
   else {
@@ -204,9 +204,9 @@ void ElectricallyChargedDust::Charging::GetGrainCurrent(
       (( 120+B*( 120+B*(  60+B*( 20+B*(  5+B))))) - 
        (5040+B*(5040+B*(2520+B*(840+B*(210+B*(42+B*(7+B)))))))*misc);
 
-    Jse = 3.7*SecondaryEmissionPeakYield*J0e*F5B*(1-XiS)*expDifXi;
+    Jse =-3.7*SecondaryEmissionPeakYield*J0e*F5B*(1-XiS)*expDifXi;
 
-    dJse= 3.7*SecondaryEmissionPeakYield*J0e*F5B*expDifXi*
+    dJse=-3.7*SecondaryEmissionPeakYield*J0e*F5B*expDifXi*
       (-dXiS+(1-XiS)*(dXiS-dXiElectron));
   }
 
