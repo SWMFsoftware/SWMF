@@ -559,29 +559,47 @@ contains
     use ModMpi
 
     integer :: i, iError, iStart, iStop
-    real, dimension(3,3)       :: SmgToGsm_DD
-    real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGsm_DI
+    real, dimension(3,3)       :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
+    real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGm_DI
     real, dimension(2, nKpMag) :: MagPerbIE_DI
     real :: deltaB(2)
-    character(len=*), parameter :: NameSub='calc_kp'
+
     logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='calc_kp'
     !------------------------------------------------------------------------
     call timing_start(NameSub)
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! Obtain locations in correct (GSM) coordinates.
-    SmgToGsm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
-    do i=1, nKpMag
-       XyzGsm_DI(:,i) = matmul(SmgToGsm_DD, XyzKp_DI(:,i))
-    end do
+    SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
+    XyzGm_DI = matmul(SmgToGm_DD, XyzKp_DI)
 
     ! Obtain geomagnetic pertubation. Output is in NED Coordinates.
-    call ground_mag_perturb(    nKpMag, XyzGsm_DI, Bmag_DI)
+    call ground_mag_perturb(    nKpMag, XyzGm_DI, Bmag_DI)
     call ground_mag_perturb_fac(nKpMag, XyzKp_DI,  Bfac_DI)
+
+    !!! Call IE here !!!
 
     ! Sum contributions.
     do i=1, nKpMag
+
+       ! Add up contributions and convert to IO units (nT)
        Bmag_DI(:,i) = (Bmag_DI(:,i) + Bfac_DI(:,i)) * No2Io_V(UnitB_)
+
+       ! Convert from SMG components to North-East-Down components
+
+       ! Rotation matrix from Cartesian to spherical coordinates
+       XyzSph_DD = rot_xyz_sph(XyzKp_DI(:,i))
+
+       ! Rotation matrix from Cartesian to North-East-Down components
+       ! North = -Theta
+       XyzNed_DD(:,1) = -XyzSph_DD(:,2) 
+       ! East = Phi
+       XyzNed_DD(:,2) =  XyzSph_DD(:,3)
+       ! Down = -R
+       XyzNed_DD(:,3) = -XyzSph_DD(:,1)
+
+       Bmag_DI(:,i)= matmul(Bmag_DI(:,i),  XyzNed_DD)
     end do
 
     ! MPI Reduce to head node.
