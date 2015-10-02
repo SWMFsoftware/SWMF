@@ -21,18 +21,20 @@ char PIC::CCMC::Parser::ControlFileName[_MAX_STRING_LENGTH_PIC_]="ccmc.dat";
 //read the control file
 void PIC::CCMC::Parser::LoadControlFile() {
   CiFileOperations ifile;
-  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr,fname[_MAX_STRING_LENGTH_PIC_];
   PIC::CCMC::ParticleInjection::cInjectionDescriptor InjectionBlock;
 
-  if (PIC::ThisThread==0) printf("$PREFIX:Trajectory Tracking Control File: %s\n",ControlFileName);
+  sprintf(fname,"%s/%s",PIC::UserModelInputDataPath,ControlFileName);
 
-  if (access(ControlFileName,R_OK)!=0) {
-  printf("Cannot find the input file:%s\n",ControlFileName);
+  if (PIC::ThisThread==0) printf("$PREFIX:Trajectory Tracking Control File: %s\n",fname);
+
+  if (access(fname,R_OK)!=0) {
+  printf("Cannot find the input file:%s\n",fname);
   exit(__LINE__,__FILE__);
   }
 
   //read the file
-  ifile.openfile(ControlFileName);
+  ifile.openfile(fname);
 
   while (ifile.eof()==false) {
     ifile.GetInputStr(str,sizeof(str));
@@ -299,6 +301,15 @@ int PIC::CCMC::TraceParticles() {
   //output sampled trajectories
   sprintf(fname,"%s/amps.TrajectoryTracking",OutputDataFileDirectory);
   PIC::ParticleTracker::OutputTrajectory(fname);
+
+  //combine all trajectory files into a single reference file
+  if ((_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)&&(PIC::ThisThread==0)) {
+    char cmd[_MAX_STRING_LENGTH_PIC_];
+
+    sprintf(cmd,"cat %s/amps.TrajectoryTracking.s=*.dat > %s/test_CCMC-IndividualTrajectories.dat",OutputDataFileDirectory,OutputDataFileDirectory);
+    system(cmd);
+  }
+
 
   return _PIC_TIMESTEP_RETURN_CODE__SUCCESS_;
 }
