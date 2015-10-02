@@ -1,0 +1,8 @@
+
+
+#include input/ccmc.input
+
+#block ../input/ccmc.pl
+  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly
+  InjectionLocationFile=ccmc.InjectionLocation.dat
+#endblock
