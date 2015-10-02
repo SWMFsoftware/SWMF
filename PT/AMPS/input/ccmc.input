@@ -117,13 +117,5 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
 
 #endblock
 
-#interface
-
-  cell_centered_linear_interpolation_mode=on
-  cell_centered_linear_interpolation_src=default
-
-#endinterface
 
 
-
-#end
