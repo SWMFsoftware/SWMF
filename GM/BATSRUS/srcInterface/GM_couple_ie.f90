@@ -260,7 +260,8 @@ contains
     !   3. Hall conductance     (if nVar > 2)
     !   4. Pedersen conductance (if nVar > 2)
 
-    use ModPhysics, ONLY: Si2No_V, UnitX_, UnitElectric_, UnitPoynting_, UnitJ_
+    use ModPhysics, ONLY: &
+         Si2No_V, UnitX_, UnitB_, UnitElectric_, UnitPoynting_, UnitJ_
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(in) :: Buffer_IIV(iSize,jSize,nVar)
@@ -276,6 +277,7 @@ contains
     if(.not. allocated(IonoPotential_II)) allocate( &
          IonoPotential_II(nThetaIono, nPhiIono))
 
+    ! Electric potential has units of [E]*[x] (in SI: V/m*m=V)
     IonoPotential_II = Buffer_IIV(:,:,1)*Si2No_V(UnitElectric_)*Si2No_V(UnitX_)
     call calc_grad_ie_potential
 
@@ -289,16 +291,22 @@ contains
     end if
 
     if(nVar > 2)then
+       ! Hall and Pedersen conductivities
        if(.not. allocated(SigmaHall_II)) &
             allocate(SigmaHall_II(iSize,jSize), SigmaPedersen_II(iSize,jSize))
 
        ! The ionosphere currents will need recalculation, so deallocate them
        if(allocated(jHall_DII)) deallocate(jHall_DII, jPedersen_DII)
 
+       ! Height integrated conductivty has units of [j]*[x]/[E] (in SI:A/V)
        SigmaHall_II     = Buffer_IIV(:,:,nVar-1) &
-            *Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
+            *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
        SigmaPedersen_II = Buffer_IIV(:,:,nVar) &
-            *Si2No_V(UnitJ_)/Si2No_V(UnitElectric_)
+            *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
+
+       write(*,*)NameSub,': Buffer,SigmaP=',&
+            Buffer_IIV(10,10,4),SigmaPedersen_II(10,10)
+
     endif
 
     if(DoTest)write(*,*)NameSub,': done'
