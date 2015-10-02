@@ -49,7 +49,7 @@ int main(int argc,char **argv) {
   //grain parameters
   double GrainElectricChargeInit = 0.0;
   double GrainElectricCharge, EquilibriumCharge;
-  int nSize=4;
+  const int nSize=4;
   double GrainRadii[nSize] = {1E-7, 1E-6, 1E-5, 1E-4};
   //plasma parameters
   double PlasmaVelocity[3] = {4E5,0,0};
