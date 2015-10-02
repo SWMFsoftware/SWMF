@@ -105,7 +105,7 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
 
 #endblock
 
-#block ../ccmc.pl
+#block ../input/ccmc.pl
   xmin=(-1.0,-1.0,-1.0)
   xmax=(1.0,1.0,1.0)
 
