@@ -97,6 +97,11 @@ subroutine ionosphere_currents(iBlock, Jx,Jy,Jz,                             &
         cosPhi = cos(Psi(i,j))
         sinPhi = sin(Psi(i,j))
 
+        ! The radial gradient of the potential is related to the 
+        ! theta gradient as dPhi/dr = dPhi/dTheta*dTheta/dr
+        ! where dTheta/dr = sin(theta)/(2cos(theta)) along the 
+        ! dipole field line which is an equipotential line.
+        ! This formula diverges at the equator.
         if (north .and. i == nTheta) then
            ER = 0.00
         else if (.not.north .and. i == 1) then
