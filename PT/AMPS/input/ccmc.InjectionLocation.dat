@@ -20,12 +20,27 @@
 #Tracking (1)  
   StartTime=0
 
-  #SourceRegion=Constant 
+  #SourceRegion=Table  
     0.0, 1.0E8,0.0
   #EndSourceRegion
 
-  #VelocityDistribution=Constant
+  #VelocityDistribution=Table
     -1.0E3, 0.0, 0.0
+  #EndVelocityDistribution
+#EndTracking
+
+
+#Tracking (10) 
+  StartTime=0
+
+  #SourceRegion=Quadrilateral
+    xCenter=-1.0e8,8e7,0 
+    dX0=0.0,-1.0E5,-1.0E5
+    dX1=0.0,1.0E5,-1.0E5 
+  #EndSourceRegion
+
+  #VelocityDistribution=Constant 
+    Velocity=-1.0E3,0.0,0.0
   #EndVelocityDistribution
 #EndTracking
     
