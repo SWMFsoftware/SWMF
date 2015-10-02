@@ -261,7 +261,7 @@ contains
     !   4. Pedersen conductance (if nVar > 2)
 
     use ModPhysics, ONLY: &
-         Si2No_V, UnitX_, UnitB_, UnitElectric_, UnitPoynting_, UnitJ_
+         Si2No_V, UnitX_, UnitElectric_, UnitPoynting_, UnitJ_
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(in) :: Buffer_IIV(iSize,jSize,nVar)
@@ -303,10 +303,6 @@ contains
             *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
        SigmaPedersen_II = Buffer_IIV(:,:,nVar) &
             *Si2No_V(UnitJ_)*Si2No_V(UnitX_)/Si2No_V(UnitElectric_)
-
-       write(*,*)NameSub,': Buffer,SigmaP=',&
-            Buffer_IIV(10,10,4),SigmaPedersen_II(10,10)
-
     endif
 
     if(DoTest)write(*,*)NameSub,': done'
