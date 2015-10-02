@@ -306,7 +306,7 @@ int PIC::CCMC::TraceParticles() {
   if ((_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)&&(PIC::ThisThread==0)) {
     char cmd[_MAX_STRING_LENGTH_PIC_];
 
-    sprintf(cmd,"cat %s/amps.TrajectoryTracking.s=*.dat > %s/test_CCMC-IndividualTrajectories.dat",OutputDataFileDirectory,OutputDataFileDirectory);
+    sprintf(cmd,"cat %s/amps.TrajectoryTracking.s=*.dat > %s/test_CCMC-Individual_Trajectories.dat",OutputDataFileDirectory,OutputDataFileDirectory);
     system(cmd);
   }
 
