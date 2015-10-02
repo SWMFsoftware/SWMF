@@ -96,6 +96,29 @@ while ($line=<InputFile>) {
       }
     }
   }
+  elsif ($InputLine eq "SIMULATIONMODE") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+       
+    if ($InputLine eq "ENTIREFLOW") { 
+      ampsConfigLib::RedefineMacro("_CCMC_CALCULATION_MODE_","_CCMC_CALCULATION_MODE__ENTIRE_FLOW_","main/ccmc.dfn");
+    }
+    elsif ($InputLine eq "INDIVIDUALPARTICLESONLY") {
+      ampsConfigLib::RedefineMacro("_CCMC_CALCULATION_MODE_","_CCMC_CALCULATION_MODE__INDIVIDUAL_PARTICLES_ONLY_","main/ccmc.dfn");
+    }
+    else {
+      die "Option is unknown #1 ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";
+    }
+  } 
+  elsif ($InputLine eq "INJECTIONLOCATIONFILE") {
+   ($InputLine,$InputComment)=split('!',$line,2);
+   chomp($InputLine);
+ 
+   $InputLine=~s/[=(),]/ /g;
+   ($InputLine,$InputComment)=split(' ',$InputLine,2);
+   ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    ampsConfigLib::ChangeValueOfVariable("char PIC::CCMC::Parser::ControlFileName\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","pic/pic_ccmc.cpp");
+  }
   elsif ($InputLine eq "#ENDBLOCK") {
       last;
   }
