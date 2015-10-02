@@ -565,7 +565,8 @@ namespace PIC {
     namespace SOURCE {
       namespace TYPE {
         const int Sphere=0;
-        const int Constant=1;
+        const int Table=1;
+        const int Quadrilateral=2;
       }
 
       namespace SHPERE {
@@ -579,7 +580,8 @@ namespace PIC {
     namespace VELOCITY_DISTRIBUTION {
       namespace TYPE {
         const int Maxwellian=0;
-        const int Constant=1;
+        const int Table=1;
+        const int Constant=2;
       }
     }
   }
@@ -605,6 +607,11 @@ namespace PIC {
         double Temeprature,BulkVelocity[3];
       };
 
+      class cVelocityDistributionTable {
+      public:
+        double v[3];
+      };
+
       class cVelocityDistributionConstant {
       public:
         double v[3];
@@ -612,10 +619,11 @@ namespace PIC {
 
       class cVelocityDistribution {
       public:
-        int Type; //constant, maxwellian
+        int Type; //Table, maxwellian
 
         cVelocityDistributionMaxwellian Maxwellian;
-        vector<cVelocityDistributionConstant> Constant;
+        vector<cVelocityDistributionTable> Table;
+        cVelocityDistributionConstant Constant;
       };
 
       class cInjectionRegionSpherical {
@@ -624,17 +632,23 @@ namespace PIC {
         int SpatialDistributionType;  //uniform, gaussian
       };
 
-      class cInjectionRegionConstant {
+      class cInjectionRegionTable {
       public:
         double x[3];
       };
 
+      class cInjectionRegionQuadrilateral {
+      public:
+        double xCenter[3],dX0[3],dX1[3]; //parameters of the input file: ceneter of the Quadrilateral, displacement of Quadrilateral's point 0 and 1 from the center
+      };
+
       class cInjectionRegion {
       public:
-        int Type; //spherical, constant
+        int Type; //spherical, Table
 
         cInjectionRegionSpherical Spherical;
-        vector<cInjectionRegionConstant> Constant;
+        vector<cInjectionRegionTable> Table;
+        cInjectionRegionQuadrilateral Quadrilateral;
       };
 
       class cInjectionDescriptor : public cInjectionControl {
@@ -656,11 +670,13 @@ namespace PIC {
       namespace Read {
          namespace SourceRegion {
            void Sphere(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
-           void Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Quadrilateral(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
          }
 
          namespace VelocityDistribution {
            void Maxwellian(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
+           void Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
            void Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor&,CiFileOperations&);
          }
 

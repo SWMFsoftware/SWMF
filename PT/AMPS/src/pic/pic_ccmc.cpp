@@ -57,13 +57,15 @@ void PIC::CCMC::Parser::LoadControlFile() {
       ifile.CutInputStr(str1,str);
 
       if (strcmp("SPHERE",str1)==0) Read::SourceRegion::Sphere(InjectionBlock,ifile);
-      else if (strcmp("CONSTANT",str1)==0) Read::SourceRegion::Constant(InjectionBlock,ifile);
+      else if (strcmp("TABLE",str1)==0) Read::SourceRegion::Table(InjectionBlock,ifile);
+      else if (strcmp("QUADRILATERAL",str1)==0) Read::SourceRegion::Quadrilateral(InjectionBlock,ifile);
       else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
     else if (strcmp("#VELOCITYDISTRIBUTION",str1)==0) {
       ifile.CutInputStr(str1,str);
 
       if (strcmp("MAXWELLIAN",str1)==0) Read::VelocityDistribution::Maxwellian(InjectionBlock,ifile);
+      else if (strcmp("TABLE",str1)==0) Read::VelocityDistribution::Table(InjectionBlock,ifile);
       else if (strcmp("CONSTANT",str1)==0) Read::VelocityDistribution::Constant(InjectionBlock,ifile);
       else exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
@@ -110,10 +112,10 @@ void PIC::CCMC::Parser::Read::SourceRegion::Sphere(PIC::CCMC::ParticleInjection:
   }
 }
 
-void PIC::CCMC::Parser::Read::SourceRegion::Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
+void PIC::CCMC::Parser::Read::SourceRegion::Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
   int i,idim;
-  PIC::CCMC::ParticleInjection::cInjectionRegionConstant c;
+  PIC::CCMC::ParticleInjection::cInjectionRegionTable c;
 
   for (i=0;(i<InjectionBlock.nTestParticles)&&(ifile.eof()==false);i++) {
     ifile.GetInputStr(str,sizeof(str));
@@ -123,11 +125,11 @@ void PIC::CCMC::Parser::Read::SourceRegion::Constant(PIC::CCMC::ParticleInjectio
       c.x[idim]=atof(str1);
     }
 
-    InjectionBlock.SpatialDistribution.Constant.push_back(c);
+    InjectionBlock.SpatialDistribution.Table.push_back(c);
   }
 
 
-  InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Constant;
+  InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Table;
 
   ifile.GetInputStr(str,sizeof(str));
   ifile.CutInputStr(str1,str);
@@ -135,10 +137,42 @@ void PIC::CCMC::Parser::Read::SourceRegion::Constant(PIC::CCMC::ParticleInjectio
   if (strcmp("#ENDSOURCEREGION",str1)!=0) exit(__LINE__,__FILE__,"Error: the option is not found");
 }
 
-void PIC::CCMC::Parser::Read::VelocityDistribution::Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
+void PIC::CCMC::Parser::Read::SourceRegion::Quadrilateral(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  InjectionBlock.SpatialDistribution.Type=PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral;
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("XCENTER",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.SpatialDistribution.Quadrilateral.xCenter[i]=atof(str1);
+      }
+    }
+    else if (strcmp("DX0",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.SpatialDistribution.Quadrilateral.dX0[i]=atof(str1);
+      }
+    }
+    else if (strcmp("DX1",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.SpatialDistribution.Quadrilateral.dX1[i]=atof(str1);
+      }
+    }
+    else if (strcmp("#ENDSOURCEREGION",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
+}
+
+void PIC::CCMC::Parser::Read::VelocityDistribution::Table(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
   char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
   int i,idim;
-  PIC::CCMC::ParticleInjection::cVelocityDistributionConstant c;
+  PIC::CCMC::ParticleInjection::cVelocityDistributionTable c;
 
   for (i=0;(i<InjectionBlock.nTestParticles)&&(ifile.eof()==false);i++) {
     ifile.GetInputStr(str,sizeof(str));
@@ -148,10 +182,10 @@ void PIC::CCMC::Parser::Read::VelocityDistribution::Constant(PIC::CCMC::Particle
       c.v[idim]=atof(str1);
     }
 
-    InjectionBlock.VelocityDistribution.Constant.push_back(c);
+    InjectionBlock.VelocityDistribution.Table.push_back(c);
   }
 
-  InjectionBlock.VelocityDistribution.Type=PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Constant;
+  InjectionBlock.VelocityDistribution.Type=PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Table;
 
   ifile.GetInputStr(str,sizeof(str));
   ifile.CutInputStr(str1,str);
@@ -183,13 +217,38 @@ void PIC::CCMC::Parser::Read::VelocityDistribution::Maxwellian(PIC::CCMC::Partic
   }
 }
 
+void PIC::CCMC::Parser::Read::VelocityDistribution::Constant(PIC::CCMC::ParticleInjection::cInjectionDescriptor& InjectionBlock,CiFileOperations& ifile) {
+  char str1[_MAX_STRING_LENGTH_PIC_],str[_MAX_STRING_LENGTH_PIC_],*endptr;
+
+  InjectionBlock.VelocityDistribution.Type=PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Constant;
+
+  while (ifile.eof()==false) {
+    ifile.GetInputStr(str,sizeof(str));
+    ifile.CutInputStr(str1,str);
+
+    if (strcmp("VELOCITY",str1)==0) {
+      for (int i=0;i<3;i++) {
+        ifile.CutInputStr(str1,str);
+        InjectionBlock.VelocityDistribution.Constant.v[i]=atof(str1);
+      }
+    }
+    else if (strcmp("#ENDVELOCITYDISTRIBUTION",str1)==0) return;
+    else exit(__LINE__,__FILE__,"Error: the option is not recognized");
+  }
+}
+
 
 //load particles that will be tracked in the simulation
 void PIC::CCMC::LoadParticles() {
   int np,spec,idim;
-  int iInjectionEntry;
+  int iInjectionEntry,iTriangle;
   double x[3],v[3];
   double r,phi,sinTheta,cosTheta;
+
+  //variables that are used to generate new particle locations of a Quadrilateral
+  double xLocal[2];
+  PIC::CCMC::ParticleInjection::cInjectionRegionQuadrilateral* Quadrilateral;
+  static const int e0SignTable[4]={1,-1,-1,1},e1SignTable[4]={1,1,-1,-1};
 
   PIC::ParticleBuffer::byte *newParticleData;
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
@@ -200,8 +259,8 @@ void PIC::CCMC::LoadParticles() {
 
       //generate the location
       switch (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Type) {
-      case PIC::CCMC::DEF::SOURCE::TYPE::Constant:
-        for (idim=0;idim<3;idim++) x[idim]=ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Constant[np].x[idim];
+      case PIC::CCMC::DEF::SOURCE::TYPE::Table:
+        for (idim=0;idim<3;idim++) x[idim]=ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Table[np].x[idim];
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Sphere:
@@ -215,14 +274,29 @@ void PIC::CCMC::LoadParticles() {
         x[2]=r*sinTheta+ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[2];
         break;
 
+      case PIC::CCMC::DEF::SOURCE::TYPE::Quadrilateral:
+        //determine the local coordinates of the injection point in a triangle
+        xLocal[0]=1.0-sqrt(rnd());
+        xLocal[1]=rnd()*(1.0-xLocal[0]);
+
+        //determine the triangle at which the point will be generated
+        iTriangle=(int)(4.0*rnd());
+        Quadrilateral=&ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Quadrilateral;
+
+        for (idim=0;idim<3;idim++) x[idim]=Quadrilateral->xCenter[idim]+
+            xLocal[0]*Quadrilateral->dX0[idim]*e0SignTable[iTriangle]+
+            xLocal[1]*Quadrilateral->dX1[idim]*e1SignTable[iTriangle];
+
+        break;
+
       default:
         exit(__LINE__,__FILE__,"Error: not implemented");
       }
 
       //generate the velocity vector
       switch (ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Type) {
-      case PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Constant:
-        for (idim=0;idim<3;idim++) v[idim]=ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Constant[np].v[idim];
+      case PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Table:
+        for (idim=0;idim<3;idim++) v[idim]=ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Table[np].v[idim];
         break;
 
       case PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Maxwellian:
@@ -230,6 +304,10 @@ void PIC::CCMC::LoadParticles() {
             ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Maxwellian.BulkVelocity,
             ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Maxwellian.Temeprature,
             spec);
+        break;
+
+      case PIC::CCMC::DEF::VELOCITY_DISTRIBUTION::TYPE::Constant:
+        for (idim=0;idim<3;idim++) v[idim]=ParticleInjection::InjectionDescriptorList[iInjectionEntry].VelocityDistribution.Constant.v[idim];
         break;
 
       default:
