@@ -118,7 +118,7 @@ subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
   zMin1 = zMin - cHalfMinusTiny*CellSize_DB(z_,iBlock)
   zMax1 = zMax + cHalfMinusTiny*CellSize_DB(z_,iBlock)
 
-  if(IsRLonLat .or. IsCylindrical .and. .not.DoSaveGenCoord)then
+  if((IsRLonLat .or. IsCylindrical) .and. .not.DoSaveGenCoord)then
      ! Make sure that angles around 3Pi/2 are moved to Pi/2 for x=0 cut
      ySqueezed = mod(xyzStart_BLK(Phi_,iBlock),cPi)
      ! Make sure that small angles are moved to Pi degrees for y=0 cut
