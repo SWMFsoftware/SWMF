@@ -112,10 +112,9 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   sphere=on \\ !on, off
     radius=1.0
 
-  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly 
+  SimulationMode= EntireFlow ! IndividualParticlesOnly !EntireFlow, IndividualParticleOnly 
   InjectionLocationFile=ccmc.InjectionLocation.dat  
 
 #endblock
-
 
 
