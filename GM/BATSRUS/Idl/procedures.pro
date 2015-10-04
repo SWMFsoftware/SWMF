@@ -2009,22 +2009,24 @@ endif
 end
 
 ;===========================================================================
-pro set_units, type, distunit=distunit
+pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
 
   ;; Is type is given as 
   ;; 'SI', 'CGS', 'NORMALIZED', 'PIC', 'PLANETARY', or 'SOLAR',
   ;; set typeunit = type otherwise try to guess from the fileheader.
 
-  ;; Based on typeunit set units for distance (xSI), time (tSI), density (rhoSI),
-  ;; pressure (pSI), magnetic field (bSI) and current density (jSI) in
-  ;; SI units.
-  ;; Distance unit (rplanet or rstar) can be set with optional distunit.
-  
+  ;; Based on typeunit set units for distance (xSI), time (tSI), 
+  ;; density (rhoSI), pressure (pSI), magnetic field (bSI) 
+  ;; and current density (jSI) in SI units.
+  ;; Distance unit (rplanet or rstar), ion and electron mass in amu 
+  ;; can be set with optional distunit, Mion and Melectron.
+
   ;; Also calculate convenient constants ti0, cs0 ... for typical formulas.
   ;; See file "defaults" for definitions and usage
 
   common file_head, headline
-  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_units, $
+     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
   common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
 
@@ -2108,44 +2110,48 @@ pro set_units, type, distunit=distunit
   ;; Overwrite distance unit if given as an argument
   if keyword_set(distunit) then xSI = distunit
 
+  ;; Overwrite ion and electron masses if given as an argument
+  if keyword_set(Mion)      then Mi = Mion
+  if keyword_set(Melectron) then Me = Melectron
+
   ;; Calculate convenient conversion factors
   if typeunit eq 'NORMALIZED' then begin
-     ti0  = 1.0                             ; T      = p/rho*Mion
-     cs0  = 1.0                             ; cs     = sqrt(gamma*p/rho)
-     c0   = 1.0                             ; speed of light (for Boris)
-     mu0A = 1.0                             ; vA     = sqrt(b/rho)
-     mu0  = 1.0                             ; beta   = p/(bb/2)
-     uH0  = 1.0                             ; uH     = j/rho*Mion
-     op0  = 1.0                             ; omegap = sqrt(rho)/Mion
-     oc0  = 1.0                             ; omegac = b/Mion
-     rg0  = 1.0                             ; rg     = sqrt(p/rho)/b*sqrt(Mion)     
-     di0  = 1.0                             ; di     = $c0/sqrt(rho)*Mion
-     ld0  = 1.0                             ; ld     = sqrt(p)/(rho*c0)*Mion
+     c0   = 1.0              ; speed of light (for Boris correction)
+     ti0  = 1.0/Mi           ; T      = p/rho*Mi           = ti0*p/rho
+     cs0  = 1.0              ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)
+     mu0A = 1.0              ; vA     = sqrt(b/rho)        = sqrt(bb/mu0A/rho)
+     mu0  = 1.0              ; beta   = p/(bb/2)           = p/(bb/(2*mu0))
+     uH0  = Mi               ; uH     = j/rho*Mi           = uH0*j/rho
+     op0  = 1.0/Mi           ; omegap = sqrt(rho)/Mi       = op0*sqrt(rho)
+     oc0  = 1.0/Mi           ; omegac = b/Mi               = oc0*b
+     rg0  = sqrt(Mi)         ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     di0  = c0*Mi            ; di = c0/sqrt(rho)*Mi        = di0/sqrt(rho)
+     ld0  = Mi               ; ld = sqrt(p)/(rho*c0)*Mi    = ld0*sqrt(p)/rho
   endif else if typeunit eq 'PIC' then begin
-     ti0  = 1.0                             ; T = p/rho*Mion
-     cs0  = 1.0                             ; cs = sqrt(gamma*p/rho)
-     c0   = 1.0                             ; always 1 for iPIC3D
-     mu0A = 4*!pi                           ; vA     = sqrt(b/(4*!pi*rho))
-     mu0  = 4*!pi                           ; beta   = p/(bb/(8*!pi))
-     uH0  = 1.0                             ; uH     = j/rho*Mion
-     op0  = sqrt(4*!pi)                     ; omegap = sqrt(4*!pi*rho)/Mion
-     oc0  = 1.0                             ; omegac = b/Mion
-     rg0  = 1.0                             ; rg     = sqrt(p/rho)/b*sqrt(Mion)     
-     di0  = 1.0/sqrt(4*!pi)                 ; di     = 1/sqrt(4*!pi*rho)*Mion
-     ld0  = 1.0/sqrt(4*!pi)                 ; ld     = sqrt(p/(4*!pi))/rho*Mion
+     c0   = 1.0              ; speed of light always 1 for iPIC3D
+     ti0  = 1.0/Mi           ; T      = p/rho*Mi           = ti0*p/rho        
+     cs0  = 1.0              ; cs     = sqrt(gamma*p/rho)  = sqrt(gs*p/rho)   
+     mu0A = 4*!pi            ; vA     = sqrt(b/(4*!pi*rho))= sqrt(bb/mu0A/rho)
+     mu0  = 4*!pi            ; beta   = p/(bb/(8*!pi))     = p/(bb/(2*mu0))   
+     uH0  = Mi               ; uH     = j/rho*Mi           = uH0*j/rho        
+     op0  = sqrt(4*!pi)/Mi   ; omegap = sqrt(4*!pi*rho)/Mi = op0*sqrt(rho)    
+     oc0  = 1.0/Mi           ; omegac = b/Mi               = oc0*b            
+     rg0  = sqrt(Mi)         ; rg = sqrt(p/rho)/b*sqrt(Mi) = rg0*sqrt(p/rho)/b
+     di0  = 1.0/sqrt(4*!pi)  ; di = 1/sqrt(4*!pi*rho)*Mi   = di0/sqrt(rho)
+     ld0  = 1.0/sqrt(4*!pi)  ; ld = sqrt(p/(4*!pi))/rho*Mi = ld0*sqrt(p)/rho
   endif else begin
-     ti0  = mpSI/kbSI*pSI/rhoSI             ; T[K]=p/(nk) = ti0*p/rho*Mion   
-     cs0  = pSI/rhoSI/uSI^2                 ; cs          = sqrt(gamma*cs0*p/rho)
-     c0   = cSI/uSI                         ; speed of light
+     qom  = eSI/(Mi*mpSI) & moq = 1/qom
+     c0   = cSI/uSI                         ; speed of light in velocity units
+     ti0  = mpSI/kbSI*pSI/rhoSI*Mi          ; T[K]=p/(nk) = ti0*p/rho
+     cs0  = pSI/rhoSI/uSI^2                 ; cs          = sqrt(gs*p/rho)
      mu0A = uSI^2*mu0SI*rhoSI*bSI^(-2)      ; vA          = sqrt(bb/(mu0A*rho))
      mu0  = mu0SI*pSI*bSI^(-2)              ; beta        = p/(bb/(2*mu0))
-     uH0  = mpSI/eSI*jSI/rhoSI/uSI          ; uH=j/(ne)   = uH0*j/rho*Mion 
-     op0  = eSI/mpSI*sqrt(rhoSI/e0SI)*tSI   ; omegap      = op0*sqrt(rho)/Mion
-     oc0  = eSi/mpSI*bSI*tSI                ; omegac      = oc0*b/Mion
-     rg0  = mpSI/eSI*sqrt(pSI/rhoSI)/bSI/xSI; rg=uth*Mi/eB= rg0*sqrt(p/rho)/b*sqrt(Mion)
-     di0  = cSI/(op0/tSI)/xSI               ; di=c/omegap = di0/sqrt(rho)*Mion
-     ld0  = mpSI/eSI*sqrt(pSI)/rhoSI/xSI    ; ld          = ld0*sqrt(p)/rho*Mion
-
+     uH0  = moq*jSI/rhoSI/uSI               ; uH=j/(ne)   = uH0*j/rho
+     op0  = qom*sqrt(rhoSI/e0SI)*tSI        ; omegap      = op0*sqrt(rho)
+     oc0  = qom*bSI*tSI                     ; omegac      = oc0*b
+     rg0  = moq*sqrt(pSI/rhoSI)/bSI/xSI/sqrt(Mi) ; rg     = rg0*sqrt(p/rho)/b
+     di0  = cSI/(op0/tSI)/xSI               ; di=c/omegap = di0/sqrt(rho)
+     ld0  = moq*sqrt(pSI)/rhoSI/xSI         ; ld          = ld0*sqrt(p)/rho
   endelse
 
 end
@@ -2155,7 +2161,8 @@ pro show_units
 ;===========================================================================
 
   common file_head, headline
-  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_units, $
+     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
 
   print,'headline=', strtrim(headline,2)
@@ -2168,6 +2175,8 @@ pro show_units
   print,'pSI     =', pSI
   print,'bSI     =', bSI
   print,'jSI     =', jSI
+  print,'Mi      =', Mi
+  print,'Me      =', Me
   print,'ti0     =', ti0
   print,'cs0     =', cs0
   print,'mu0A    =', mu0A
