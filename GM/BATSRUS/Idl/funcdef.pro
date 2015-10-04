@@ -55,62 +55,69 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
   ;; Define various functions of the basic MHD variables
   ;; The functions names are evaluated in lower case
   functiondef = strlowcase(transpose([ $
-     ['mx'       , 'rho*ux'                                        ], $ ; momenta
-     ['my'       , 'rho*uy'                                        ], $
-     ['mz'       , 'rho*uz'                                        ], $
-     ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'            ], $ ; Hall velocity = {uH}*mIon
-     ['uxH'      , 'uH0*{jx}/rho'                                  ], $ 
-     ['uyH'      , 'uH0*{jy}/rho'                                  ], $ 
-     ['uzH'      , 'uH0*{jz}/rho'                                  ], $ 
-     ['mxB'      , 'rho*ux+(bb*ux-(ux*bx+uy*by+uz*bz)*bx)/clight^2'], $ ; Boris momenta
-     ['myB'      , 'rho*uy+(bb*uy-(ux*bx+uy*by+uz*bz)*by)/clight^2'], $
-     ['mzB'      , 'rho*uz+(bb*uz-(ux*bx+uy*by+uz*bz)*bz)/clight^2'], $
-     ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'                    ], $ ; current density
-     ['divbxy'   , 'div(bx,by,x,y)'                                ], $ ; div(B) in 2D
-     ['Ex'       , 'by*uz-uy*bz'                                   ], $ ; electric field
-     ['Ey'       , 'bz*ux-uz*bx'                                   ], $
-     ['Ez'       , 'bx*uy-ux*by'                                   ], $
-     ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'                 ], $ ; energy density
-     ['pbeta'    , '2*p/bb'                                        ], $ ; plasma beta
-     ['s'        , 'p/rho^gamma'                                   ], $ ; entropy
-     ['Ti'       , 'ti0*p/rho'                                     ], $ ; ion temperature [K]={Ti}*Mion
-     ['Te'       , 'ti0*{pe}/rho'                                  ], $ ; electron temp. [K] ={Te}*Mion
-     ['calfvenx' , 'bx/sqrt(rho*mu0A)'                             ], $ ; Alfven velocity
-     ['calfveny' , 'by/sqrt(rho*mu0A)'                             ], $
-     ['calfvenz' , 'bz/sqrt(rho*mu0A)'                             ], $
-     ['calfven'  , 'b /sqrt(rho*mu0A)'                             ], $
-     ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                          ], $ ; Alfven Mach number
-     ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                          ], $
-     ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                          ], $
-     ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                          ], $
-     ['csound'   , 'sqrt(gs*p/rho)'                                ], $ ; sound speed
-     ['mach'     , 'u /sqrt(gs*p/rho)'                             ], $ ; Mach number
-     ['machx'    , 'ux/sqrt(gs*p/rho)'                             ], $
-     ['machy'    , 'uy/sqrt(gs*p/rho)'                             ], $
-     ['machz'    , 'uz/sqrt(gs*p/rho)'                             ], $
-     ['cfast'    , 'sqrt(cc/rho)'                                  ], $ ; fast magnetosonic speed
-     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'         ], $
-     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'         ], $
-     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'         ], $
-     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'         ], $ ; slow speed
-     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'         ], $
-     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'         ], $
-     ['Mfast'    , 'sqrt(rho*uu/cc)'                               ], $ ; fast Mach number
-     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'      ], $
-     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'      ], $
-     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'      ], $
-     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'      ], $ ; slow Mach number
-     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'      ], $
-     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'      ], $
-     ['uthermal' , 'sqrt(cs0*p/rho)'                               ], $ ; thermal speed   ={uthermal}/sqrt(Mion)
-     ['omegapi'  , 'op0*sqrt(rho)'                                 ], $ ; plasma frequency={omegapi}/Mion
-     ['omegaci'  , 'oc0*b'                                         ], $ ; gyro frequency  ={omegaci}/Mion
-     ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'                     ], $ ; gyro radius     ={rgyro}*sqrt(Mion)
-     ['dinertial', 'di0/sqrt(rho)'                                 ], $ ; inertial length ={dinertial}*Mion
-     ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                            ]  $ ; Debye length    ={ldebye}*Mion
-                          ]))
+                ['mxB'    , 'rho*ux+(bb*ux-(ux*bx+uy*by+uz*bz)*bx)/c0^2'], $ ; Boris momenta
+                ['myB'    , 'rho*uy+(bb*uy-(ux*bx+uy*by+uz*bz)*by)/c0^2'], $
+                ['mzB'    , 'rho*uz+(bb*uz-(ux*bx+uy*by+uz*bz)*bz)/c0^2'], $
+                ['mx'       , 'rho*ux'                                  ], $ ; momenta
+                ['my'       , 'rho*uy'                                  ], $
+                ['mz'       , 'rho*uz'                                  ], $
+                ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'      ], $ ; Hall velocity
+                ['uHx'      , 'uH0*{jx}/rho'                            ], $ 
+                ['uHy'      , 'uH0*{jy}/rho'                            ], $ 
+                ['uHz'      , 'uH0*{jz}/rho'                            ], $ 
+                ['uex'      , 'ux-uH0*{jx}/rho'                         ], $ ; electron velocity
+                ['uey'      , 'uy-uH0*{jy}/rho'                         ], $ 
+                ['uez'      , 'uz-uH0*{jz}/rho'                         ], $ 
+                ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'              ], $ ; current density
+                ['divbxy'   , 'div(bx,by,x,y)'                          ], $ ; div(B) in 2D
+                ['Ex'       , 'by*uz-uy*bz'                             ], $ ; electric field
+                ['Ey'       , 'bz*ux-uz*bx'                             ], $
+                ['Ez'       , 'bx*uy-ux*by'                             ], $
+                ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'           ], $ ; energy density
+                ['pbeta'    , '2*p/bb'                                  ], $ ; plasma beta
+                ['s'        , 'p/rho^gamma'                             ], $ ; entropy
+                ['Ti'       , 'ti0*p/rho'                               ], $ ; ion temperature [K]
+                ['Te'       , 'ti0*{pe}/rho'                            ], $ ; electron temp. [K]
+                ['calfvenx' , 'bx/sqrt(rho*mu0A)'                       ], $ ; Alfven velocity
+                ['calfveny' , 'by/sqrt(rho*mu0A)'                       ], $
+                ['calfvenz' , 'bz/sqrt(rho*mu0A)'                       ], $
+                ['calfven'  , 'b /sqrt(rho*mu0A)'                       ], $
+                ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                    ], $ ; Alfven Mach number
+                ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                    ], $
+                ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                    ], $
+                ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                    ], $
+                ['csound'   , 'sqrt(gs*p/rho)'                          ], $ ; sound speed
+                ['mach'     , 'u /sqrt(gs*p/rho)'                       ], $ ; Mach number
+                ['machx'    , 'ux/sqrt(gs*p/rho)'                       ], $
+                ['machy'    , 'uy/sqrt(gs*p/rho)'                       ], $
+                ['machz'    , 'uz/sqrt(gs*p/rho)'                       ], $
+                ['cfast'    , 'sqrt(cc/rho)'                            ], $ ; fast magnetosonic speed
+                ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $
+                ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
+                ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
+                ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $ ; slow speed
+                ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
+                ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
+                ['Mfast'    , 'sqrt(rho*uu/cc)'                         ], $ ; fast Mach number
+                ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'], $
+                ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'], $
+                ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
+                ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'], $ ; slow Mach number
+                ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'], $
+                ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
+                ['uthermal' , 'sqrt(cs0*p/rho)'                         ], $ ; thermal speed
+                ['omegapi'  , 'op0*sqrt(rho)'                           ], $ ; plasma frequency
+                ['omegaci'  , 'oc0*b'                                   ], $ ; gyro frequency
+                ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'               ], $ ; gyro radius  
+                ['rgSI'     , 'rg0*sqrt(p/rho)/(b>1e-30)*xSI'           ], $ ; gyro radius in SI  
+                ['dinertial', 'di0/sqrt(rho)'                           ], $ ; inertial length
+                ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $ ; inertial length in SI
+                ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
+                ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
+                                     ]))
 
-  common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+  common phys_units, $
+     fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
   common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
   common phys_const, kbSI, mpSI, mu0SI, eSI, ReSI, RsSI, cSI, e0SI
 
@@ -288,10 +295,10 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
   endcase
 
   ;; Extra variables
-  uu = ux^2 + uy^2 + uz^2 ; velocity squared, 
-  bb = bx^2 + by^2 + bz^2 ; magnetic field squared
-  u  = sqrt(uu)           ; speed
-  b  = sqrt(bb)           ; magnetic field strength
+  uu = ux^2 + uy^2 + uz^2       ; velocity squared, 
+  bb = bx^2 + by^2 + bz^2       ; magnetic field squared
+  u  = sqrt(uu)                 ; speed
+  b  = sqrt(bb)                 ; magnetic field strength
 
   ;; Change energy into pressure
   if n_elements(p) le 1 and n_elements(e) gt 1 then $
@@ -362,48 +369,45 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
         iFunc = where(functiondef(*,0) eq STRLOWCASE(f))
         iFunc = iFunc(0)
 
-        if iFunc ge 0 then f = functiondef(iFunc,1) $
-        else begin
+        if iFunc ge 0 then f = functiondef(iFunc,1)
 
-           if sign eq -1 then begin
-              f='-'+f
-              sign=1
+        if sign eq -1 then begin
+           f='-'+f
+           sign=1
+        endif
+
+        ;; Create * or *,* or *,*,* for {var} --> w(*,*,iVar) replacements
+        case nDim of
+           1: Stars = '*,'
+           2: Stars = '*,*,'
+           3: Stars = '*,*,*,'
+        endcase
+
+        ;; replace {name} with appropriate variable
+        while strpos(f,'{') ge 0 do begin
+           iStart = strpos(f,'{')
+           iEnd   = strpos(f,'}')
+           Name   = strmid(f,iStart+1,iEnd-iStart-1)
+           iVar   = where(functions eq STRLOWCASE(Name))
+           iVar   = iVar(0)
+           if iVar lt 0 then begin
+              print,'Error in funcdef: cannot find variable "{',Name, $
+                    '}" among variables'
+              print,variables
+              retall
            endif
+           fStart = strmid(f,0,iStart)
+           fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
+           if iVar lt ndim then $
+              f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
+           else if iVar lt ndim+nw then $
+              f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
+           else if iVar lt ndim+nw+neqpar then $
+              f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd $
+           else $
+              f = fStart + '(' + functiondef(iVar-nDim-nW-nEqpar,1) + ')' + fEnd
 
-           ;; Create * or *,* or *,*,* for {var} --> w(*,*,iVar) replacements
-           case nDim of
-              1: Stars = '*,'
-              2: Stars = '*,*,'
-              3: Stars = '*,*,*,'
-           endcase
-
-           ;; replace {name} with appropriate variable
-           while strpos(f,'{') ge 0 do begin
-              iStart = strpos(f,'{')
-              iEnd   = strpos(f,'}')
-              Name   = strmid(f,iStart+1,iEnd-iStart-1)
-              iVar   = where(functions eq STRLOWCASE(Name))
-              iVar   = iVar(0)
-              if iVar lt 0 then begin
-                 print,'Error in funcdef: cannot find variable "{',Name, $
-                       '}" among variables'
-                 print,variables
-                 retall
-              endif
-              fStart = strmid(f,0,iStart)
-              fEnd   = strmid(f,iEnd+1,strlen(f)-iEnd-1)
-              if iVar lt ndim then $
-                 f = fStart + 'xx(' + Stars + strtrim(iVar,2) + ')' + fEnd $
-              else if iVar lt ndim+nw then $
-                 f = fStart + 'w(' + Stars + strtrim(iVar-nDim,2) + ')' + fEnd $
-              else if iVar lt ndim+nw+neqpar then $
-                 f = fStart + 'eqpar(' + strtrim(iVar-nDim-nW,2) + ')' + fEnd $
-              else $
-                 f = fStart + '(' + functiondef(iVar-nDim-nW-nEqpar,1) + ')' + fEnd
-
-           endwhile
-
-        endelse
+        endwhile
 
         if not execute('result='+f) then begin
            print,'Error in funcdef: cannot evaluate function=',func
