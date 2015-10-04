@@ -150,10 +150,12 @@ cSI    = 2.9979d8        ; speed of light
 e0SI   = 1/(mu0SI*cSI^2) ; vacuum permettivity 
 
 ; Physical unit names and values in SI units
-common phys_units, fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI
+common phys_units, $
+       fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me
 
-fixunits   = 0             ; If 0, the units get overwritten based on each file read, otherwise fixed
-typeunit   = 'NORMALIZED'  ; 'NORMALIZED', 'CGS', 'SI', 'PLANETARY', 'SOLAR'
+fixunits   = 0             ; If 0, the units get overwritten 
+	     		   ; based on each file read, otherwise fixed
+typeunit   = 'NORMALIZED'  ; 'SI', 'NORMALIZED', 'PIC', 'PLANETARY', 'SOLAR'
 xSI        = 1.0           ; distance unit in SI
 tSI        = 1.0           ; time unit in SI
 rhoSI      = 1.0           ; density unit in SI
@@ -161,9 +163,12 @@ uSI        = 1.0           ; velocity unit in SI
 pSI        = 1.0           ; pressure unit in SI
 bSI        = sqrt(mu0SI)   ; magnetic unit in SI
 jSI        = 1/sqrt(mu0SI) ; current unit in SI
+Mi         = 1.0           ; Ion mass in amu
+Me         = 1/1836.15     ; Electron mass in amu
 
-; conversion factors that are useful to calculate various derived quantites
-common phys_convert, ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
+; conversion factors that are useful to calculate various derived quantities
+common phys_convert, $
+       ti0, cs0, mu0A, mu0, c0, uH0, op0, oc0, rg0, di0, ld0
 
 ti0  = 1.0 ; ion temperature = ti0*p/rho*Mion
 cs0  = 1.0 ; sound speed     = sqrt(cs0*gamma*p/rho)
