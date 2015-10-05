@@ -41,7 +41,7 @@ const double DebugRunMultiplier=2.0;
 
 
 const double rSphere=_RADIUS_(_TARGET_);
-const double xMaxDomain=2.0;
+const double xMaxDomain=6.0;
 const double dxMinGlobal=2.0,dxMaxGlobal=5.0;
 const double dxMinSphere=DebugRunMultiplier*2.0/100,dxMaxSphere=DebugRunMultiplier*4.0/100.0;
 
@@ -217,14 +217,14 @@ int ParticleSphereInteraction(int spec,long int ptr,double *x,double *v,double &
 
 
 void OxigenTGCM() {
-cDataSetMTGCM O,COp;
+/*cDataSetMTGCM O,COp;
 
  O.PlanetRadius=3396.0E3;
  O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
- O.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/O.h");
+ O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
     COp.PlanetRadius=3396.0E3;
     COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    COp.ReadDataFile("../data/input/Mars/MTGCM_equinox_SL/COp.h");
+    COp.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/COp.h");
 
  double t,x[3]={0.0,550.2E3+O.PlanetRadius,0.0};
 // t=O.Interpolate(x);
@@ -266,7 +266,7 @@ cDataSetMTGCM O,COp;
  fclose(fout);
 }
   //  exit(__LINE__,__FILE__,"test");
-
+*/
 }
 
 int main(int argc,char **argv) {
@@ -536,17 +536,18 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 //============================== END DEBUG ====================================
 
-  //determine the total number of the iterations to perform 
-  //in the test-mode run 100 iterations and than output the particle data statistics
-  int nIterations,nTotalIterations=100000001;
-
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=100;  
-
   //time step
-  for (long int niter=0;niter<nTotalIterations;niter++) {
+  for (long int niter=0;niter<100000001;niter++) {
+
+
+
      PIC::TimeStep();
 
-//     PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
+     PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor();
+
+
+
+
 
      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
        PIC::RequiredSampleLength*=2;
@@ -556,22 +557,14 @@ MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
      }
-  }
 
- 
-  //output the particle statistics for the nightly tests 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
-    char fname[400];
 
-    sprintf(fname,"%s/test_Mars.dat",PIC::OutputDataFileDirectory);
-    PIC::RunTimeSystemState::GetMeanParticleMicroscopicParameters(fname);
   }
 
 
-  MPI_Finalize();
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
-  return EXIT_SUCCESS;
+  return 1;
 }
 
 

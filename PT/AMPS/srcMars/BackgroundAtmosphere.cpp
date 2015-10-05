@@ -42,7 +42,7 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetCollisionScatteringAng
 
 
 double GetBackgroundMolecularMass(int BackgroundSpecieNumber) {
-  static const double BackgroundSpecieMass[3]={26.56E-27,73.05E-27,46.49E-27};
+  static const double BackgroundSpecieMass[3]={26.56E-27,73.05E-27};//,46.49E-27};
   return BackgroundSpecieMass[BackgroundSpecieNumber];
 }
 
@@ -87,13 +87,13 @@ double PIC::MolecularCollisions::BackgroundAtmosphere::GetBackgroundLocalNumberD
 
     O.PlanetRadius=_RADIUS_(_TARGET_);
     O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    sprintf(fname,"%s/MTGCM_equinox_SL/O.h",PIC::UserModelInputDataPath);
-    O.ReadDataFile(fname);
+  //  sprintf(fname,"%s/MTGCM_equinox_SL/O.h",PIC::UserModelInputDataPath);
+    O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
 
     CO2.PlanetRadius=_RADIUS_(_TARGET_);
     CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-    sprintf(fname,"%s/MTGCM_equinox_SL/CO2.h",PIC::UserModelInputDataPath);
-    CO2.ReadDataFile(fname);
+  //  sprintf(fname,"%s/MTGCM_equinox_SL/CO2.h",PIC::UserModelInputDataPath);
+    CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
   }
 
 
@@ -201,6 +201,9 @@ bool PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle(
   PIC::ParticleBuffer::GetV(v,BackgroundAtmosphereParticleData);
   PIC::ParticleBuffer::GetX(x,BackgroundAtmosphereParticleData);
 
+  //only oxigen atoms can be keeped in the system
+  if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_C_SPEC_) return false;
+  
   return (0.5*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])>GravityConstant*_MASS_(_TARGET_)/sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2])) ? true : false;
 }
 #elif _THERMALIZED_PARTICLE_REMOVE_CRITERION_ == _THERMALIZED_PARTICLE_REMOVE_CRITERION__LOCAL_BACKGROUND_THERMAL_SPEED_
@@ -221,8 +224,8 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
 
   //only oxigen atoms can be keeped in the system
   if (PIC::ParticleBuffer::GetI(BackgroundAtmosphereParticleData)!=_C_SPEC_) return false;
-
-  static const double massOxigen=26.56E-27;
+  
+  static const double massOxigen=1.993E-26;//26.56E-27;
   double x[3]={0.0,0.0,0.0},v[3]={0.0,0.0,0.0},vThermal2;
 
   PIC::ParticleBuffer::GetV(v,BackgroundAtmosphereParticleData);
@@ -245,6 +248,8 @@ bool  PIC::MolecularCollisions::BackgroundAtmosphere::KeepConditionModelParticle
 
   vThermal2=3.0*Kbol*temp/massOxigen;
 
+printf("%i\n",_C_SPEC_);
+exit(_LINE_,_FILE_,"number");
   return (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>4*vThermal2) ? true : false;
 }
 #endif
