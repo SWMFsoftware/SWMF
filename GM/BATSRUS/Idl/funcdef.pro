@@ -74,7 +74,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['Ey'       , 'bz*ux-uz*bx'                             ], $
                 ['Ez'       , 'bx*uy-ux*by'                             ], $
                 ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'           ], $ ; energy density
-                ['pbeta'    , '2*p/bb'                                  ], $ ; plasma beta
+                ['pbeta'    , '2*mu0*p/bb'                              ], $ ; plasma beta
                 ['s'        , 'p/rho^gamma'                             ], $ ; entropy
                 ['Ti'       , 'ti0*p/rho'                               ], $ ; ion temperature [K]
                 ['Te'       , 'ti0*{pe}/rho'                            ], $ ; electron temp. [K]
