@@ -34,7 +34,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 ;   Expressions formed from the 
 ;   1. standard variables:  rho, mx, my, mz, ux, uy, uz, uu, u, p, bx, by, bz, bb, b
 ;   2. standard coordinates: x, y, z, r
-;   3. standard equation parameters: gamma, rbody, clight
+;   3. standard equation parameters: gamma, rbody, c0
 ;   4. standard IDL functions and operators
 ;   5. {names of coordinates}, {names of variables}, {names of equation parameters}
 ;      Examples: {r}, {bx1}, {rbody} will be replaced with
@@ -68,6 +68,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['uex'      , 'ux-uH0*{jx}/rho'                         ], $ ; electron velocity
                 ['uey'      , 'uy-uH0*{jy}/rho'                         ], $ 
                 ['uez'      , 'uz-uH0*{jz}/rho'                         ], $ 
+                ['ue'       , 'sqrt({uex}^2+{uey}^2+{uez}^2)'           ], $
                 ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'              ], $ ; current density
                 ['divbxy'   , 'div(bx,by,x,y)'                          ], $ ; div(B) in 2D
                 ['Ex'       , 'by*uz-uy*bz'                             ], $ ; electric field
@@ -86,7 +87,8 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                    ], $
                 ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                    ], $
                 ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                    ], $
-                ['csound'   , 'sqrt(gs*p/rho)'                          ], $ ; sound speed
+                ['csound'   , 'sqrt(gs*p/rho)'                          ], $ ; ion sound speed
+                ['csounde'  , 'sqrt(gs*pe/rho*mi/me)'                   ], $ ; electron sound speed
                 ['mach'     , 'u /sqrt(gs*p/rho)'                       ], $ ; Mach number
                 ['machx'    , 'ux/sqrt(gs*p/rho)'                       ], $
                 ['machy'    , 'uy/sqrt(gs*p/rho)'                       ], $
@@ -105,13 +107,20 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
                 ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'], $ ; slow Mach number
                 ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'], $
                 ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
-                ['uthermal' , 'sqrt(cs0*p/rho)'                         ], $ ; thermal speed
-                ['omegapi'  , 'op0*sqrt(rho)'                           ], $ ; plasma frequency
-                ['omegaci'  , 'oc0*b'                                   ], $ ; gyro frequency
+                ['uth'      , 'sqrt(cs0*p/rho)'                         ], $ ; ion thermal speed
+                ['uthe'     , 'sqrt(cs0*{pe}/rho*mi/me)'                ], $ ; electron thermal speed
+                ['omegapi'  , 'op0*sqrt(rho)'                           ], $ ; ion plasma frequency
+                ['omegape'  , 'op0*sqrt(rho)*mi/me'                     ], $ ; electron plasma freq.
+                ['omegaci'  , 'oc0*b'                                   ], $ ; ion gyro frequency
+                ['omegace'  , 'oc0*b*mi/me'                             ], $ ; electron gyro freq.
                 ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'               ], $ ; gyro radius  
-                ['rgSI'     , 'rg0*sqrt(p/rho)/(b>1e-30)*xSI'           ], $ ; gyro radius in SI  
+                ['rgSI'     , 'rg0*sqrt(p/rho)/(b>1e-30)*xSI'           ], $ ; gyro radius in SI
+                ['rgyroe'   , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)'         ], $ ; electron gyro radius  
+                ['rgeSI'    , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)*xSI'     ], $ ; electron gyro radius in SI
                 ['dinertial', 'di0/sqrt(rho)'                           ], $ ; inertial length
-                ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $ ; inertial length in SI
+                ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $ ; ion inertial length in SI
+                ['skindepth',' di0/sqrt(rho)*me/mi'                     ], $ ; electron skin depth
+                ['deSI'     ,' di0/sqrt(rho)*me/mi*xSI'                 ], $ ; electron skin depth in SI
                 ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
                 ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ]  $ ; Debye length in SI
                                      ]))
@@ -147,7 +156,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   ;; Extract equation parameters
   gamma  =  5./3.
-  clight =  1.0
+  c0     =  1.0
   rbody  = -1.0
 
   if nEqpar gt 0 then begin
@@ -156,7 +165,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
         case variables(i) of
            'g'     : gamma  = eqpar(iEqpar)
            'gamma' : gamma  = eqpar(iEqpar)
-           'c'     : clight = eqpar(iEqpar)
+           'c'     : c0     = eqpar(iEqpar)
            'r'     : rbody  = eqpar(iEqpar)
            'rbody' : rbody  = eqpar(iEqpar)
            else:
