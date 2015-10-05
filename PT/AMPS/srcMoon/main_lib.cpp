@@ -412,14 +412,27 @@ double localResolution(double *x) {
 //set up the local time step
 
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-  double CellSize;
+  double CellSize,CharacteristicSpeed;
 
-  double CharacteristicSpeed_NA=2.0E3;
+  switch (spec) {
+  case _NA_SPEC_:
+    CharacteristicSpeed=2.0E3;
+    break;
+
+  case _NA_PLUS_SPEC_:
+    CharacteristicSpeed=2.0E4;
+    break;
+
+  default:
+    exit(__LINE__,__FILE__,"Error: the species is not recognized");
+  }
+
+
 
 //  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
 
   CellSize=startNode->GetCharacteristicCellSize();
-  return 0.3*CellSize/CharacteristicSpeed_NA;
+  return 0.3*CellSize/CharacteristicSpeed;
 
 
 }
@@ -1272,6 +1285,47 @@ void amps_init() {
     //init the volume of the cells'
     PIC::Mesh::mesh.InitCellMeasure();
 
+
+    //load the MHD background data
+    if (_NA_PLUS_SPEC_>=0) {
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_
+  //TECPLOT
+  //read the background data
+    if (PIC::CPLR::DATAFILE::BinaryFileExists("MOON-BATSRUS")==true)  {
+      PIC::CPLR::DATAFILE::LoadBinaryFile("MOON-BATSRUS");
+    }
+    else {
+      double xminTECPLOT[3]={-20.0,-20.0,-20.0},xmaxTECPLOT[3]={20.0,20.0,20.0};
+
+      double RotationMatrix_BATSRUS2AMPS[3][3]={ { 1., 0., 0.}, {0., 1., 0.}, {0., 0., 1.}};
+
+      //  1  0  0
+      //  0  1  0
+      //  0  0  1
+
+      PIC::CPLR::DATAFILE::TECPLOT::SetRotationMatrix_DATAFILE2LocalFrame(RotationMatrix_BATSRUS2AMPS);
+
+      PIC::CPLR::DATAFILE::TECPLOT::UnitLength=_MOON__RADIUS_;
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsXYZ(xminTECPLOT,xmaxTECPLOT);
+      PIC::CPLR::DATAFILE::TECPLOT::SetDomainLimitsSPHERICAL(1.001,10.0);
+
+      PIC::CPLR::DATAFILE::TECPLOT::DataMode=PIC::CPLR::DATAFILE::TECPLOT::DataMode_XYZ;
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedVelocityVariableData(5,1.0E3);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedIonPressureVariableData(12,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedMagneticFieldVariableData(8,1.0E-9);
+      PIC::CPLR::DATAFILE::TECPLOT::SetLoadedDensityVariableData(4,1.0E6/1.0);
+      PIC::CPLR::DATAFILE::TECPLOT::nTotalVarlablesTECPLOT=15;
+      PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_1_n00010000.plt");
+
+      PIC::CPLR::DATAFILE::SaveBinaryFile("MOON-BATSRUS");
+    }
+
+#else
+    exit(__LINE__,__FILE__,"ERROR: unrecognized datafile reader mode");
+#endif //_PIC_COUPLER_DATAFILE_READER_MODE_
+#endif //_PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
+    }
 
 
 
