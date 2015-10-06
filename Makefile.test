@@ -120,17 +120,6 @@ test_comp:
 
 ### SWMF tests ###
 
-#### ALTOR test ####
-#### At the time the code should be checked out in two stages: ####
-#### cvs co SWMF ####
-#### cvs co PC_ALTOR####
-
-test_altor:
-	./Config.pl -v=Empty,PC/ALTOR
-	cd PC/ALTOR; make test STANDALONE='YES'
-	cp -f PC/ALTOR/test.diff test_altor.diff
-	
-
 #### Convection Zone model: FSAM test ####
 
 test_cz:
