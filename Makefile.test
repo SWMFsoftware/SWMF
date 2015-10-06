@@ -56,9 +56,9 @@ test:
 	-@(${MAKE} test_rb)
 	-@(${MAKE} test_ps)
 	-@(${MAKE} test_ccmc_small)
+	-@(${MAKE} test_swpc)
 	-@(${MAKE} test1)
 	-@(${MAKE} test2)
-	-@(${MAKE} test3)
 	-@(${MAKE} test4)
 	-@(${MAKE} test5)
 	-@(${MAKE} test6)
@@ -508,7 +508,8 @@ test_swpc_build:
 	rm -rf ${BUILD}
 	Scripts/Configure.pl -d=${BUILD}
 	cd ${BUILD}; rm -rf IM/HEIDI IM/CRCM IE/RIM util/HYPRE
-	cd ${BUILD}; Config.pl -install -compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
+	cd ${BUILD}; Config.pl -install \
+	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd ${BUILD}; make test_swpc
 
 test_swpc:
