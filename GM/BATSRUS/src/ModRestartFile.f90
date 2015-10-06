@@ -1115,7 +1115,7 @@ contains
     ! Read MagHistory_II from restart file on processor 0
 
     use ModGroundMagPerturb,ONLY: nKpMag, iSizeKpWindow, MagHistory_DII, &
-         IsFirstCalc, Is2ndCalc
+         IsFirstCalc, IsSecondCalc
 
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
     logical            :: DoRestart
@@ -1167,8 +1167,8 @@ contains
 
     end do
 
-    IsFirstCalc=.false.
-    Is2ndCalc  =.false.
+    IsFirstCalc  = .false.
+    IsSecondCalc = .false.
 
   end subroutine read_geoind_restart
 
