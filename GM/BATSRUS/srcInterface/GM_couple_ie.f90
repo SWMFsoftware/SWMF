@@ -9,10 +9,10 @@ module GM_couple_ie
 
   use ModProcMH
   use ModIeCoupling, ONLY: rIonosphere, &
-       nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I, dThetaIono, dPhiIono,&
+       nThetaIono, nPhiIono, ThetaIono_I, PhiIono_I,&
        IonoPotential_II, IonoJouleHeating_II, &
        SigmaHall_II, SigmaPedersen_II, jHall_DII, jPedersen_DII, &
-       calc_grad_ie_potential, map_jouleheating_to_inner_bc
+       init_ie_grid, calc_grad_ie_potential, map_jouleheating_to_inner_bc
 
   implicit none
   save
@@ -42,38 +42,6 @@ contains
     end do
 
   end subroutine print_iono_potential
-
-  !==========================================================================
-  subroutine init_ie_grid
-    ! The ionosphere works on two hemispheres with a node based grid
-    ! iSize is the number of latitude nodes from the pole to the equator.
-    ! jSize is the number of longitude nodes (including a periodic overlap)
-
-    use ModNumConst, ONLY: cPi, cTwoPi
-    use ModPhysics,  ONLY: Si2No_V, UnitX_
-    use CON_coupler, ONLY: Grid_C, IE_
-
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='init_ie_grid'
-    !-------------------------------------------------------------------------
-    if(nThetaIono > 0) RETURN
-
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-    nThetaIono = Grid_C(IE_) % nCoord_D(1)
-    nPhiIono   = Grid_C(IE_) % nCoord_D(2)
-
-    allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono))
-    ThetaIono_I = Grid_C(IE_) % Coord1_I
-    PhiIono_I   = Grid_C(IE_) % Coord2_I
-    rIonosphere = Grid_C(IE_) % Coord3_I(1) * Si2No_V(UnitX_)
-
-    dThetaIono = cPi    / (nThetaIono - 1)
-    dPhiIono   = cTwoPi / (nPhiIono - 1)
-
-    if(DoTestMe)write(*,*) NameSub,' set up grid sized ', nThetaIono, nPhiIono
-
-  end subroutine init_ie_grid
 
   !============================================================================
   subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
@@ -132,6 +100,7 @@ contains
     use ModProcMH,         ONLY: iProc
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
     use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph
+    use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
@@ -148,7 +117,10 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': starting'
 
-    call init_ie_grid
+    if(nThetaIono < 1) call init_ie_grid( &
+         Grid_C(IE_) % Coord1_I, &
+         Grid_C(IE_) % Coord2_I, &
+         Grid_C(IE_) % Coord3_I(1))
 
     allocate(FieldAlignedCurrent_II(iSize,jSize), bSm_DII(3,iSize,jSize))
 
@@ -262,6 +234,7 @@ contains
 
     use ModPhysics, ONLY: &
          Si2No_V, UnitX_, UnitElectric_, UnitPoynting_, UnitJ_
+    use CON_coupler, ONLY: Grid_C, IE_
 
     integer, intent(in) :: iSize, jSize, nVar
     real,    intent(in) :: Buffer_IIV(iSize,jSize,nVar)
@@ -272,7 +245,10 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': iSize,jSiz,nVare=', iSize, jSize, nVar
 
-    call init_ie_grid
+    if(nThetaIono < 1) call init_ie_grid( &
+         Grid_C(IE_) % Coord1_I, &
+         Grid_C(IE_) % Coord2_I, &
+         Grid_C(IE_) % Coord3_I(1))
 
     if(.not. allocated(IonoPotential_II)) allocate( &
          IonoPotential_II(nThetaIono, nPhiIono))

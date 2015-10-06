@@ -12,6 +12,7 @@ module ModIeCoupling
 
   private ! except
 
+  public:: init_ie_grid                 ! set the ionosphere grid
   public:: clean_mod_ie_coupling       ! deallocate arrays
   public:: logvar_ionosphere           ! get cross polar cap potential
   public:: calc_grad_ie_potential      ! calculate gradient of iono. potential
@@ -26,7 +27,6 @@ module ModIeCoupling
   integer, public              :: nThetaIono = -1, nPhiIono = -1
   real,    public              :: rIonosphere
   real,    public, allocatable :: ThetaIono_I(:), PhiIono_I(:)
-  real,    public              :: dThetaIono, dPhiIono
 
   ! Ionosphere potential and its gradient
   real, allocatable, public :: IonoPotential_II(:,:)
@@ -41,6 +41,10 @@ module ModIeCoupling
   ! Hall and Pedersen currents
   real, public, allocatable :: jHall_DII(:,:,:), jPedersen_DII(:,:,:)
 
+  ! Local variables
+  real:: dThetaIono, dPhiIono
+  real, allocatable:: SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
+
   ! Velocity nudging
   logical :: UseIonoVelocity = .false.
   real    :: rCoupleUiono    = 3.5
@@ -51,7 +55,53 @@ module ModIeCoupling
   integer, parameter:: iDebug = 10, jDebug = 10
 
 contains
+  !============================================================================
+  subroutine init_ie_grid(Theta_I, Phi_I, rIono)
 
+    use ModNumConst, ONLY: cPi, cTwoPi
+    use ModPhysics, ONLY: Si2No_V, UnitX_
+
+    ! Set internal variables for the ionosphere grid
+    ! The ionosphere works on two hemispheres with a node based grid
+    ! iSize is the number of latitude nodes from the pole to the equator.
+    ! jSize is the number of longitude nodes (including a periodic overlap)
+    
+    real, intent(in):: Theta_I(:)  ! co-latitudes in radians
+    real, intent(in):: Phi_I(:)    ! longitudes in radians
+    real, intent(in):: rIono       ! Ionosphere radius in meters
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='init_ie_grid'
+    !-----------------------------------------------------------------------
+    if(nThetaIono > 1) RETURN
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    nThetaIono = size(Theta_I)
+    nPhiIono   = size(Phi_I)
+
+    allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono), &
+         SinTheta_I(nThetaIono), CosTheta_I(nThetaIono), &    
+         SinPhi_I(nPhiIono), CosPhi_I(nPhiIono))
+
+    ThetaIono_I = Theta_I
+    PhiIono_I   = Phi_I
+    rIonosphere = rIono * Si2No_V(UnitX_)
+
+    ! Save sin and cos of coordinates for sake of speed
+    SinTheta_I = sin(ThetaIono_I)
+    CosTheta_I = cos(ThetaIono_I)
+    SinPhi_I   = sin(PhiIono_I)
+    CosPhi_I   = cos(PhiIono_I)
+
+    ! This only works for the uniform ionoosphere grid
+    dThetaIono = cPi    / (nThetaIono - 1)
+    dPhiIono   = cTwoPi / (nPhiIono - 1)
+
+    if(DoTestMe)write(*,*) NameSub,': nThetaIono, nPhiIono=', &
+         nThetaIono, nPhiIono
+
+  end subroutine init_ie_grid
   !============================================================================
   subroutine clean_mod_ie_coupling
 
@@ -64,8 +114,8 @@ contains
     if(allocated(SigmaHall_II)) &
          deallocate(SigmaHall_II, SigmaPedersen_II)
 
-    if(allocated(ThetaIono_I)) &
-         deallocate(ThetaIono_I, PhiIono_I)
+    if(allocated(ThetaIono_I)) deallocate( &
+         ThetaIono_I, PhiIono_I, SinTheta_I, CosTheta_I, SinPhi_I, CosPhi_I)
 
     nThetaIono = -1
     nPhiIono = -1
@@ -375,9 +425,6 @@ contains
     ! Calculate the ionospheric Hall and Pedersen currents 
     ! from the Hall and Pedersen conductivities and the electric field.
 
-    real, allocatable, save:: &
-         SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
-
     real:: XyzIono_D(3), eTheta, ePhi, eIono_D(3), bUnit_D(3)
 
     integer:: i, j
@@ -397,20 +444,6 @@ contains
     allocate( &
          jHall_DII(3,nThetaIono,nPhiIono), &
          jPedersen_DII(3,nThetaIono,nPhiIono))
-
-    ! Save Sin and Cos of coordinates for sake of speed
-    if(.not.allocated(SinTheta_I))then
-       allocate(SinTheta_I(nThetaIono), CosTheta_I(nThetaIono), &
-            SinPhi_I(nPhiIono), CosPhi_I(nPhiIono))
-       do i = 1, nThetaIono
-          SinTheta_I(i) = sin(ThetaIono_I(i))
-          CosTheta_I(i) = cos(ThetaIono_I(i))
-       end do
-       do j = 1, nPhiIono
-          SinPhi_I(j)   = sin(PhiIono_I(j))
-          CosPhi_I(j)   = cos(PhiIono_I(j))
-       end do
-    end if
 
     do j =1, nPhiIono; do i = 2, nThetaIono-1
 
@@ -480,7 +513,7 @@ contains
 
     use ModNumConst, ONLY: cPi
     use ModCoordTransform, ONLY: cross_product, sph_to_xyz
-    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_, UnitJ_
+    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_
     use ModMain,    ONLY: Time_Simulation
 
     integer,intent(in) :: nMag
@@ -522,7 +555,7 @@ contains
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
 
        ! 1/4pi times the area of a surface element
-       Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*sin(ThetaIono_I(i))
+       Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
 
        do iMag = 1, nMag
           ! Distance vector between magnetometer position 
@@ -544,9 +577,9 @@ contains
                   XyzSm_DI(:,iMag)*No2Si_V(UnitX_), XyzIono_D*No2Si_V(UnitX_)
              write(*,*)NameSub,': rIono**2, dTheta, dPhi, sinTheta=', &
                    rIonosphere**2*No2Si_V(UnitX_)**2, &
-                   dThetaIono, dPhiIono, sin(ThetaIono_I(i))
+                   dThetaIono, dPhiIono, SinTheta_I(i)
              write(*,*)NameSub,': dArea, r3    =', &
-                  rIonosphere**2*dThetaIono*dPhiIono*sin(ThetaIono_I(i))&
+                  rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)&
                   *No2Si_V(UnitX_)**2, &
                   sqrt(sum(dXyz_D**2))**3*No2Si_V(UnitX_)**3
              write(*,*)NameSub,': dBHall,  sum =', &
