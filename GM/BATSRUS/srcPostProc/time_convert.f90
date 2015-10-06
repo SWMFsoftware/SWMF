@@ -96,26 +96,43 @@ program time_convert
   end do
   stop
 contains
- subroutine solve_time
-  call time_real_to_int(TimeL,iTimeL_I)
-  call CON_recalc(iTimeL_I(1),iTimeL_I(2),iTimeL_I(3),iTimeL_I(4),iTimeL_I(5),iTimeL_I(6))
-  LongitudeL=CarringtonLongitude
-
-  call time_real_to_int(TimeR,iTimeR_I)
-  call CON_recalc(iTimeR_I(1),iTimeR_I(2),iTimeR_I(3),iTimeR_I(4),iTimeR_I(5),iTimeR_I(6))
-  LongitudeR=CarringtonLongitude
-
-  if(LongitudeL<=cPi.and.LongitudeR>=cPi)then
-     LongitudeR=LongitudeR-cTwoPi
-     if(LongitudeIn > cPi)LongitudeIn=LongitudeIn-cTwoPi
-  end if
-  !write(*,*)iCR,TimeL,TimeR,LongitudeL,LongitudeR
-  do while( any( iTimeL_I(1:5)/=iTimeR_I(1:5)).and.TimeR-TimeL>10.0)
-     Time=0.50*(TimeL+TimeR)
-     call time_real_to_int(Time,iTime_I)
-     call CON_recalc(iTime_I(1),iTime_I(2),iTime_I(3),iTime_I(4),iTime_I(5),iTime_I(6))
-     Longitude=CarringtonLongitude
-     if(LongitudeL<=cPi.and.Longitude>=cPi)Longitude=Longitude-cTwoPi
+  subroutine solve_time 
+    call time_real_to_int(TimeL,iTimeL_I)
+    call CON_recalc(iTimeL_I(1),iTimeL_I(2),iTimeL_I(3),iTimeL_I(4),iTimeL_I(5),iTimeL_I(6))
+    LongitudeL=CarringtonLongitude
+    
+    call time_real_to_int(TimeR,iTimeR_I)
+    call CON_recalc(iTimeR_I(1),iTimeR_I(2),iTimeR_I(3),iTimeR_I(4),iTimeR_I(5),iTimeR_I(6))
+    LongitudeR=CarringtonLongitude
+    !\
+    ! We need to mantain the inequality
+    ! LongitudeL >= LongitudeIn >= LongitudeR
+    ! Under the condition, TimeL < TimeR
+    !/
+    
+    if(LongitudeL<=cPi.and.LongitudeR>=cPi)LongitudeL = LongitudeL + cTwoPi
+       !\
+       !Say, LongitudeL belongs to the end of previous CR and is small
+       !LongitudeR belongs to the beginning of the current rotation and 
+       !is large. Make LongitudeL larger
+       !/ 
+       
+       !if(LongitudeIn > cPi)LongitudeCompare = LongitudeIn-cTwoPi
+    !write(*,*)iCR,TimeL,TimeR,LongitudeL,LongitudeR
+    do while( any( iTimeL_I(1:5)/=iTimeR_I(1:5)).and.TimeR-TimeL>10.0)
+       Time=0.50*(TimeL+TimeR)
+       call time_real_to_int(Time,iTime_I)
+       call CON_recalc(iTime_I(1),iTime_I(2),iTime_I(3),iTime_I(4),iTime_I(5),iTime_I(6))
+       Longitude=CarringtonLongitude
+    
+       if(Longitude<=cPi.and.LongitudeR>=cPi)&
+            Longitude = Longitude + cTwoPi
+       !\
+       !Say, Longitude belongs to the end of previous CR and is small
+       !LongitudeR belongs to the beginning of the current rotation and 
+       !is large. Make Longitude larger
+       !/ 
+       !if(LongitudeL<=cPi.and.Longitude>=cPi)Longitude=Longitude-cTwoPi
      if(Longitude - LongitudeIn < 0.0)then
         iTimeR_I=iTime_I
         TimeR = Time
@@ -125,8 +142,8 @@ contains
         TimeL = Time
         LongitudeL = Longitude
      end if
-!     write(*,*)TimeL,Time,TimeR,LongitudeL,Longitude,LongitudeR
-!     write(*,*)iTimeL_I,iTimeR_I
+     !write(*,*)TimeL,Time,TimeR,LongitudeL,Longitude,LongitudeR
+     !write(*,*)iTimeL_I,iTimeR_I
   end do
 end subroutine solve_time
 end program time_convert
