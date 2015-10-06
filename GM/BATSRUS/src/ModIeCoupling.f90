@@ -46,7 +46,9 @@ module ModIeCoupling
   real    :: rCoupleUiono    = 3.5
   real    :: TauCoupleUiono  = 20.0
 
+  ! Debugging parameters
   logical, parameter:: DoDebug = .false.
+  integer, parameter:: iDebug = 10, jDebug = 10
 
 contains
 
@@ -208,8 +210,8 @@ contains
 
     integer :: iTheta, iPhi, iHemisphere
 
-    character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
     logical, parameter :: DoTestMe = .false.
+    character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
     !-------------------------------------------------------------------------
     ! call set_oktest(NameSub, DoTest, DoTestMe)
 
@@ -368,19 +370,21 @@ contains
     use ModCoordTransform, ONLY: cross_product, sph_to_xyz
     use ModMain,           ONLY: Time_Simulation
 
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitElectric_, UnitJ_
+
     ! Calculate the ionospheric Hall and Pedersen currents 
     ! from the Hall and Pedersen conductivities and the electric field.
 
     real, allocatable, save:: &
          SinTheta_I(:), CosTheta_I(:), SinPhi_I(:), CosPhi_I(:)
 
-    real:: XyzIono_D(3), eTheta, ePhi, eIono_D(3), bIono_D(3)
+    real:: XyzIono_D(3), eTheta, ePhi, eIono_D(3), bUnit_D(3)
 
     integer:: i, j
 
     character(len=*), parameter:: NameSub = 'calc_ie_currents'
     !------------------------------------------------------------------------
-    ! If the current arrays are allocated calculated, it means they are a
+    ! If the current arrays are allocated it means they are already calculated
     if(allocated(jHall_DII)) RETURN
 
     ! check if iono grid is defined
@@ -404,16 +408,16 @@ contains
        end do
        do j = 1, nPhiIono
           SinPhi_I(j)   = sin(PhiIono_I(j))
-          SinPhi_I(j)   = sin(PhiIono_I(j))
+          CosPhi_I(j)   = cos(PhiIono_I(j))
        end do
     end if
 
-    do j =1, nPhiIono; do i = 1, nThetaIono
+    do j =1, nPhiIono; do i = 2, nThetaIono-1
 
        ! Calculate magnetic field direction for the Hall current
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
-       call get_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', bIono_D)
-       bIono_D = bIono_D/sqrt(sum(bIono_D**2))
+       call get_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', bUnit_D)
+       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
 
        ! Calculate spherical components of the electric field from the
        ! derivatives of the potential in dIonoPotential_DII: E = -grad(Phi)
@@ -426,19 +430,39 @@ contains
        eIono_D(3) = -eTheta*SinTheta_I(i)
 
        ! Hall current for negative charge carriers: jH = -sigmaH*(E x B)
-       jHall_DII(:,i,j) = -SigmaHall_II(i,j)*cross_product(eIono_D, bIono_D)
+       jHall_DII(:,i,j) = -SigmaHall_II(i,j)*cross_product(eIono_D, bUnit_D)
 
        ! Perdersen current: jP = sigmaP*E
        jPedersen_DII(:,i,j) = SigmaPedersen_II(i,j)*eIono_D
 
-       if(DoDebug.and.iProc==0.and.i==10.and.j==10)then
-          write(*,*)'!!! calc_ie_currents'
-          write(*,*)'!!! i,j,Theta,Psi=', i,j,ThetaIono_I(i),PhiIono_I(j)
-          write(*,*)'!!! SigmaH,SigmaP=', &
-               SigmaHall_II(i,j),SigmaPedersen_II(i,j)
-          write(*,*)'!!! b_D,e_D      =', bIono_D, eIono_D
-          write(*,*)'!!! Jhall,Jpeder =', &
-               jHall_DII(:,i,j), jPedersen_DII(:,i,j)
+       if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug)then
+          write(*,*)NameSub,': i,j,Theta,Phi=', &
+               i,j,ThetaIono_I(i),PhiIono_I(j)
+          write(*,*)NameSub,': rIonosphere, dTheta, dPhi, sin(theta)=', &
+               rIonosphere*No2Si_V(UnitX_), dThetaIono, dPhiIono, SinTheta_I(i)
+          write(*,*)NameSub,': SigmaH,SigmaP=', &
+               SigmaHall_II(i,j) &
+               *No2Si_V(UnitJ_)*No2Si_V(UnitX_)/No2Si_V(UnitElectric_), &
+               SigmaPedersen_II(i,j) &
+               *No2Si_V(UnitJ_)*No2Si_V(UnitX_)/No2Si_V(UnitElectric_)
+          write(*,*)NameSub,':  IonoPotential=', &
+               IonoPotential_II(max(1,i-1):i+1,max(1,j-1):j+1) &
+               *No2Si_V(UnitElectric_)*No2Si_V(UnitX_)
+          write(*,*)NameSub,': dIonoPotential=', &
+               dIonoPotential_DII(:,i,j) &
+               *No2Si_V(UnitElectric_)/No2Si_V(UnitX_)
+          write(*,*)NameSub,': eTheta, ePhi =', &
+               eTheta*No2Si_V(UnitElectric_), &
+               ePhi*No2Si_V(UnitElectric_)
+          write(*,*)NameSub,': SinTheta,CosTheta,SinPhi,CosPhi=', &
+               SinTheta_I(i), CosTheta_I(i), SinPhi_I(j), CosPhi_I(j)
+          write(*,*)NameSub,': bUnit_D unit =', bUnit_D
+          write(*,*)NameSub,': eIono_D      =', eIono_D*No2Si_V(UnitElectric_)
+          ! These are height integrated currents in SI units of A/m
+          write(*,*)NameSub,': Jhall        =', jHall_DII(:,i,j) &
+               *No2Si_V(UnitJ_)*No2Si_V(UnitX_)
+          write(*,*)NameSub,': JPedersen    =', jPedersen_DII(:,i,j) &
+               *No2Si_V(UnitJ_)*No2Si_V(UnitX_)
        end if
 
     end do; end do
@@ -446,7 +470,7 @@ contains
   end subroutine calc_ie_currents
 
   !===========================================================================
-  
+
   subroutine calc_ie_mag_perturb(nMag, XyzSm_DI, dBHall_DI, dBPedersen_DI)
 
     ! For nMag points at locations XyzSm_DI (in SMG coordinates)
@@ -456,6 +480,8 @@ contains
 
     use ModNumConst, ONLY: cPi
     use ModCoordTransform, ONLY: cross_product, sph_to_xyz
+    use ModPhysics, ONLY: No2Si_V, UnitB_, UnitX_, UnitJ_
+    use ModMain,    ONLY: Time_Simulation
 
     integer,intent(in) :: nMag
     real,   intent(in) :: XyzSm_DI(3,nMag)
@@ -464,27 +490,34 @@ contains
     real:: XyzIono_D(3), dXyz_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
-
+    
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
     !========================================================================
     call timing_start(NameSub)
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe)write(*,*) NameSub,' starting with XyzSm(iMag=1)=', &
+         XyzSm_DI(:,1)*No2Si_V(UnitX_)
 
     ! Initialize magnetic perturbations
-    dBHall_DI = 0.0
+    dBHall_DI     = 0.0
     dBPedersen_DI = 0.0
 
     ! Check if IE has provided the necessary information
     if(.not.allocated(SigmaHall_II)) RETURN
 
-    ! Calculate teh currents
+    ! Calculate the height integrated Hall and Pedersen current densities
     call calc_ie_currents
 
-    ! distribute the work on the ionospheric grid among the processors
+    ! Loop over the ionosphere grid, but skip the poles
     iLine = 0
-    do j = 1, nPhiIono; do i = 1, nThetaIono
+    do j = 1, nPhiIono; do i = 2, nThetaIono-1
+
        iLine = iLine + 1
+       ! distribute the work among the BATSRUS processors
        if(mod(iLine, nProc) /= iProc)CYCLE
-       
+
        ! Get Cartesian coordinates for the ionospheric grid point
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
 
@@ -499,25 +532,40 @@ contains
           ! Surface element area divided by (4pi*distance cubed)
           Coef = Coef0/sqrt(sum(dXyz_D**2))**3
 
-          ! Do Biot-Savart integral: dB = jxd/(4pi|d|^3) dA  (mu0=1)
+          ! Do Biot-Savart integral: dB = j x d/(4pi|d|^3) dA  (mu0=1)
           dBHall_DI(:,iMag)     = dBHall_DI(:,iMag) + &
                Coef*cross_product(jHall_DII(:,i,j), dXyz_D)
           dBPedersen_DI(:,iMag) = dBPedersen_DI(:,iMag) + &
                Coef*cross_product(jPedersen_DII(:,i,j), dXyz_D)
 
-          if(DoDebug.and.iProc==0.and.i==10.and.j==10.and.iMag==1)then
-             write(*,*)'!!! calc_ie_mag_perturb'
-             write(*,*)'!!! XyzSm,XyzIono=',  XyzSm_DI(:,iMag), XyzIono_D
-             write(*,*)'!!! dBHall=',dBHall_DI(:,iMag)
-             write(*,*)'!!! dBPede=',dBPedersen_DI(:,iMag)
+          if(DoDebug.and.iProc==0.and.i==iDebug.and.j==jDebug.and.iMag==1)then
+             write(*,*)NameSub,': Time=', Time_Simulation
+             write(*,*)NameSub,': XyzSm,XyzIono=', &
+                  XyzSm_DI(:,iMag)*No2Si_V(UnitX_), XyzIono_D*No2Si_V(UnitX_)
+             write(*,*)NameSub,': rIono**2, dTheta, dPhi, sinTheta=', &
+                   rIonosphere**2*No2Si_V(UnitX_)**2, &
+                   dThetaIono, dPhiIono, sin(ThetaIono_I(i))
+             write(*,*)NameSub,': dArea, r3    =', &
+                  rIonosphere**2*dThetaIono*dPhiIono*sin(ThetaIono_I(i))&
+                  *No2Si_V(UnitX_)**2, &
+                  sqrt(sum(dXyz_D**2))**3*No2Si_V(UnitX_)**3
+             write(*,*)NameSub,': dBHall,  sum =', &
+                  Coef*cross_product(jHall_DII(:,i,j), dXyz_D) &
+                  *No2Si_V(UnitB_), dBHall_DI(:,iMag)*No2Si_V(UnitB_)
+             write(*,*)NameSub,': dBPeders,sum=', &
+                  Coef*cross_product(jPedersen_DII(:,i,j), dXyz_D) &
+                  *No2Si_V(UnitB_), dBPedersen_DI(:,iMag)*No2Si_V(UnitB_)
           end if
 
-       end do
+       end do; end do
     end do
- end do
- call timing_stop(NameSub)
+    call timing_stop(NameSub)
 
-end subroutine calc_ie_mag_perturb
+    if(DoTestMe)write(*,*) NameSub,': dBHall(iMag=1), dBPede(iMag=1)=', &
+         dBHall_DI(:,1)*No2Si_V(UnitB_), &
+         dBPedersen_DI(:,1)*No2Si_V(UnitB_)
+
+  end subroutine calc_ie_mag_perturb
   !===========================================================================
   subroutine read_ie_velocity_param
 
@@ -582,7 +630,7 @@ end subroutine calc_ie_mag_perturb
           Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
           b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          
+
           if(UseB0)b_D = b_D + b0_DGB(:,i,j,k,iBlock)
 
           ! Calculate E x B velocity
@@ -608,7 +656,7 @@ end subroutine calc_ie_mag_perturb
 
           ! Restore field aligned momentum component
           RhoU_D = RhoU_D + b_D*(RhoUdotB - sum(RhoU_D*b_D))/sum(b_D**2)
-          
+
           ! Store result
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = RhoU_D
 
