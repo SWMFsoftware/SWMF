@@ -3,7 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModIonoMagPerturb
 
-  use ModCoordTransform, ONLY: sph_to_xyz, xyz_to_sph, cross_product, rot_xyz_sph
+  use ModCoordTransform, ONLY: &
+       sph_to_xyz, xyz_to_sph, cross_product, rot_xyz_sph
   use ModConst, ONLY: cDegToRad, cMu
   use ModProcIE
   use ModIonosphere
@@ -49,17 +50,32 @@ contains
     integer, parameter :: nTheta = IONO_nTheta, nPsi = IONO_nPsi
 
     real, dimension(nTheta*2, nPsi, 3) :: Jh_IID, Jp_IID, Xyz_IID, eIono_IID
-    real, dimension(nTheta*2, nPsi)    :: Phi, Theta, Psi, ETh, EPs, &
+    real, dimension(nTheta*2, nPsi)    :: Theta, Psi, ETh, EPs, &
          SigmaH, SigmaP, SinTheta, SinPhi, CosTheta, CosPhi
+
+    ! Potential with ghost cells in Psi direction
+    real:: Phi_G(1:2*nTheta, 0:nPsi+1)
+
     real, dimension(3)                 :: bIono_D,  Xyz0_D, MagJh_D, MagJp_D, &
          XyzIono_D, tempJh_dB, tempJp_dB, TempMagJh_D,TempMagJp_D
 
-    real :: dTheta(nTheta*2),dPsi(nPsi)
+    real :: dTheta, dPsi
     real :: dv
     real :: XyzSph_DD(3,3)
     integer :: i, j, iMag
+
+    integer, parameter:: iDebug=10, jDebug=10
+    logical, parameter:: DoDebug = .false.
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'iono_mag_perturb'
     !======================================================================
-    call timing_start('iono_mag_perturb')
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe)write(*,*) NameSub,' starting with XyzSm(iMag=1)=', &
+         Xyz0_DI(:,1)
+
+    call timing_start(NameSub)
 
     !\
     ! calculate the magnetic perturbations at the location of (SMLat, SMLon)
@@ -69,64 +85,51 @@ contains
     JhMagPerturb_DI = 0.0
     JpMagPerturb_DI = 0.0
 
-    Phi(1:nTheta,:)   = Iono_North_PHi
-    Theta(1:nTheta,:) = Iono_North_Theta
-    Psi(1:nTheta,:)   = Iono_North_Psi
-    SigmaH(1:nTheta,:)= Iono_North_SigmaH
-    SigmaP(1:nTheta,:)= Iono_North_SigmaP
-    dTheta(1:nTheta)  = dTheta_North
-    dPsi = dPsi_North
+    Phi_G(1:nTheta,1:nPsi)            = Iono_North_PHi
+    Phi_G(nTheta+1:2*nTheta,1:nPsi)   = Iono_South_PHi
 
-    Phi(nTheta+1:nTheta*2,:)   = Iono_South_PHi
+    ! periodic in Phi with 1 and nPsi being the same!
+    Phi_G(:,0)               = Phi_G(:,nPsi-1)
+    Phi_G(:,nPsi+1)          = Phi_G(:,2)
+
+    Theta(1:nTheta,:)          = Iono_North_Theta
     Theta(nTheta+1:nTheta*2,:) = Iono_South_Theta
+
+    Psi(1:nTheta,:)            = Iono_North_Psi
     Psi(nTheta+1:nTheta*2,:)   = Iono_South_Psi
+
+    SigmaH(1:nTheta,:)         = Iono_North_SigmaH
     SigmaH(nTheta+1:nTheta*2,:)= Iono_South_SigmaH
+
+    SigmaP(1:nTheta,:)         = Iono_North_SigmaP
     SigmaP(nTheta+1:nTheta*2,:)= Iono_South_SigmaP
-    dTheta(nTheta+1:nTheta*2)  = dTheta_South
-    dPsi = dPsi_South
+
+    ! Uniform grid resolution in Psi
+    dPsi = cTwoPi/(IONO_nPsi-1)
+
+    ! Uniform grid resolution in Theta (we ignore the poles)
+    dTheta = cHalfPi/(IONO_nTheta-1)
 
     SinTheta = sin(Theta)
     SinPhi   = sin(Psi)
     CosTheta = cos(Theta)
     CosPhi   = cos(Psi)
 
-    ! dTheta at the poles is 1 degree; the rest are 2 degrees.
-    ! dPsi is 4 degrees.
-    dTheta(2:nTheta*2-1) = dTheta(2:nTheta*2-1)/2.0
-    dPsi = dPsi/2.0
-
-    do j = 1, nPsi
-       if ( j<nPsi ) then
-
-          do i = 1, nTheta*2-1
-             ETh(i,j) = -(PHI(i+1,j)-PHI(i,j))/                     &
-                  (dTheta(i)*Radius)
-             EPs(i,j) = -(PHI(i,j+1)-PHI(i,j))/                     &
-                  (dPsi(j)*Radius*SinTheta(i,j))
-          end do
-          ETh(nTheta*2,j)   = ETh(nTheta*2-1,j)
-          EPs(nTheta*2,j)   = EPs(nTheta*2-1,j)
-
-       else 
-          do i = 1, nTheta*2 -1
-             ETh(i,j) = -(PHI(i+1,j)-PHI(i,j))/                     &
-                  (dTheta(i)*Radius)
-             EPs(i,j) = -(PHI(i,1)-PHI(i,j))/                       &
-                  (dPsi(j)*Radius*SinTheta(i,j))
-          end do
-
-          ETh(nTheta*2,j)   = ETh(nTheta*2-1,j)
-          EPs(nTheta*2,j)   = EPs(nTheta*2-1,j)
-       end if
-
-    end do
+    ! Calculate electric field. Ignore the poles
+    Eth(1,:) = 0.0; Eth(2*nTheta,:) = 0.0
+    EPs(1,:) = 0.0; Eps(2*nTheta,:) = 0.0
+    do j = 1, nPsi; do i = 2, 2*nTheta-1
+       ETh(i,j) = -(Phi_G(i+1,j) - Phi_G(i-1,j))/(2*dTheta*Radius)
+       EPs(i,j) = -(Phi_G(i,j+1) - Phi_G(i,j-1)) &
+            /(2*dPsi*Radius*SinTheta(i,j)) 
+    end do; end do
 
     ! convert to xyz coords
     eIono_IID(:,:,1) =  ETh*CosTheta*CosPhi - EPs*SinPhi
     eIono_IID(:,:,2) =  ETh*CosTheta*SinPhi + EPs*CosPhi
     eIono_IID(:,:,3) = -ETh*SinTheta
 
-    do i = 1, nTheta*2
+    do i = 2, nTheta*2-1
        do j = 1, nPsi
           call sph_to_xyz(Radius, Theta(i,j), Psi(i,j), XyzIono_D)
           Xyz_IID(i,j,:) = XyzIono_D
@@ -137,8 +140,26 @@ contains
           ! get the Hall and Perdersen currents in xyz coords
           Jh_IID(i,j,:) = cross_product(bIono_D, eIono_IID(i,j,:))*SigmaH(i,j)
           Jp_IID(i,j,:) = eIono_IID(i,j,:) * SigmaP(i,j)
+
+          if(DoDebug .and. iProc==0.and.i==iDebug.and.j==jDebug)then
+             write(*,*)NameSub,': iono_mag_perturb'
+             write(*,*)NameSub,': i,j,Theta,Psi=', i,j,Theta(i,j),Psi(i,j)
+             write(*,*)NameSub,': rad, dTheta, dPsi, SinTheta=', &
+                  Radius, dTheta, dPsi, SinTheta(i,j)
+             write(*,*)NameSub,': SigmaH,SigmaP=', SigmaH(i,j),SigmaP(i,j)
+             write(*,*)NameSub,': IonoPotential=', Phi_G(i-1:i+1,j-1:j+1)
+             write(*,*)NameSub,': ETh, EPs     =', ETh(i,j), Eps(i,j)
+             write(*,*)NameSub,': SinTheta,CosTheta,SinPhi,CosPhi=', &
+                  SinTheta(i,j), CosTheta(i,j), SinPhi(i,j), CosPhi(i,j)
+             write(*,*)NameSub,': bUnit_D      =', bIono_D, eIono_IID(i,j,:)
+             write(*,*)NameSub,': eIono_D      =', eIono_IID(i,j,:)
+             write(*,*)NameSub,': Jhall        =', Jh_IID(i,j,:)
+             write(*,*)NameSub,': JPedersen    =', Jp_IID(i,j,:)
+          endif
+
        end do
     end do
+
 
     call timing_start('iono_mag_db')
 
@@ -149,10 +170,10 @@ contains
        MagJh_D = 0.0
        MagJp_D = 0.0
        ! Biot-Savart integral to calculate the magnetic perturbations
-       if (Xyz0_D(3) < 0) then           
-          ! southern hemisphere
-          if (iProc /= nProc-1)CYCLE
-          do i = nTheta+1, nTheta*2
+
+       ! southern hemisphere
+       if (iProc == nProc-1)then
+          do i = nTheta+1, 2*nTheta-1   ! SKIP i=2*nTheta south pole
              do j = 1, nPsi
 
                 tempJh_dB = &
@@ -163,18 +184,18 @@ contains
                      cross_product(Jp_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
                      / (sqrt( sum( (Xyz_IID(i,j,:)-Xyz0_D)**2 )) )**3
 
-                dv = cMu/(4*cPi) * Radius**2 * dTheta(i)*dPsi(j)*SinTheta(i,j)
+                ! dArea*mu/4pi
+                dv = cMu/(4*cPi)*Radius**2*dTheta*dPsi*SinTheta(i,j)
 
                 MagJh_D = MagJh_D + tempJh_dB * dv
                 MagJp_D = MagJp_D + tempJp_dB * dv                
 
              end do
           end do
-
-       else
-          ! northern hemisphere
-          if(iProc /= 0)CYCLE
-          do i = 1, nTheta
+       end if
+       ! northern hemisphere
+       if(iProc == 0)then
+          do i = 2, nTheta   ! SKIP i=1 north pole
              do j = 1, nPsi
 
                 tempJh_dB = &
@@ -185,15 +206,29 @@ contains
                      cross_product(Jp_IID(i,j,:), Xyz0_D-Xyz_IID(i,j,:)) &
                      / (sqrt(sum((Xyz_IID(i,j,:)-Xyz0_D)**2)))**3
 
-                dv = cMu/(4*cPi) * Radius**2 * dTheta(i)*dPsi(j)*SinTheta(i,j)
+                ! dArea*mu/4pi
+                dv = cMu/(4*cPi)*Radius**2*dTheta*dPsi*SinTheta(i,j)
 
                 MagJh_D = MagJh_D + tempJh_dB * dv
                 MagJp_D = MagJp_D + tempJp_dB * dv
 
+                if(DoDebug.and.i==iDebug.and.j==jDebug.and.iMag==1)then
+                   write(*,*)NameSub,': Time=', Time_simulation
+                   write(*,*)NameSub,': XyzSm,XyzIono=', Xyz0_D, Xyz_IID(i,j,:)
+                   write(*,*)NameSub,': Radius**2, dTheta, dPsi, SinTheta=', &
+                        Radius**2, dTheta, dPsi, SinTheta(i,j)
+                   write(*,*)NameSub,': dArea, r3    =', dv*4*cPi/cMu, &
+                        (sqrt(sum((Xyz_IID(i,j,:)-Xyz0_D)**2)))**3
+                   write(*,*)NameSub,': dBHall,sum =', tempJh_dB * dv, MagJh_D
+                   write(*,*)NameSub,': dBPede,sum =', tempJp_dB * dv, MagJp_D
+                end if
              end do
           end do
        end if
 
+       if(DoTestMe .and. iMag==1) write(*,*) &
+            NameSub,': dBHall(iMag=1), dBPede(iMag=1)=', &
+            MagJh_D, MagJp_D
 
        ! transform to spherical coords (r, theta, phi)
        XyzSph_DD = rot_xyz_sph(Xyz0_D)
@@ -212,7 +247,11 @@ contains
 
     end do
     call timing_stop('iono_mag_db')
-    call timing_stop('iono_mag_perturb')
+    call timing_stop(NameSub)
+
+    if(DoTestMe) write(*,*) &
+         NameSub,': dBHall(iMag=1), dBPede(iMag=1) in NED=', &
+         JhMagPerturb_DI(:,1), JpMagPerturb_DI(:,1)
 
   end subroutine iono_mag_perturb
 
@@ -259,9 +298,9 @@ contains
     ! calculate the magnetic perturbation caused by Hall and Perdersen currents
     call iono_mag_perturb(nMagnetometer, Xyz_DI, PerturbJh_DI, PerturbJp_DI)
 
-     !\
-     ! Collect the variables from all the PEs
-     !/
+    !\
+    ! Collect the variables from all the PEs
+    !/
     MagVarSum_Jh_DI = 0.0
     MagVarSum_Jp_DI = 0.0
     if(nProc > 1)then 
