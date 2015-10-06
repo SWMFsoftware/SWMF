@@ -23,9 +23,6 @@ module ModGroundMagPerturb
   public:: ground_mag_perturb
   public:: ground_mag_perturb_fac
 
-  ! These are not always set this way in ModSize
-  integer, parameter:: r_=1, phi_=2, theta_=3
-
   logical,            public:: DoSaveMags = .false.
   integer,            public:: nMagnetometer=0, nMagTotal=0
   real, allocatable,  public:: PosMagnetometer_II(:,:)
@@ -56,7 +53,7 @@ module ModGroundMagPerturb
 
   ! Public geomagnetic indices variables:
   logical, public :: DoWriteIndices = .false.
-  logical, public :: IsFirstCalc=.true., Is2ndCalc=.true.
+  logical, public :: IsFirstCalc=.true., IsSecondCalc=.true.
   integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_II
   integer, public, parameter    :: nKpMag = 24.
   real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
@@ -318,7 +315,8 @@ contains
        iUnitIndices = io_unit_new()
        open(iUnitIndices, file=NameFile, status='replace')
 
-       write(iUnitIndices, '(2a,f8.2,a,i4.4)') 'Synthetic Geomagnetic Indices', &
+       write(iUnitIndices, '(2a,f8.2,a,i4.4)') &
+            'Synthetic Geomagnetic Indices', &
             ' DtOutput=', DtWriteIndices, '   SizeKpWindow(Mins)=', &
             iSizeKpWindow
        write(iUnitIndices, '(a)', advance='NO') &
@@ -552,17 +550,19 @@ contains
   !===========================================================================
   subroutine calc_kp
 
-    use ModProcMH,ONLY: iProc, nProc, iComm
-    use CON_axes, ONLY: transform_matrix
-    use ModPhysics,        ONLY: No2Io_V, UnitB_
-    use ModMain,           ONLY: time_simulation,TypeCoordSystem
+    use ModProcMH,     ONLY: iProc, nProc, iComm
+    use CON_axes,      ONLY: transform_matrix
+    use ModPhysics,    ONLY: No2Io_V, UnitB_
+    use ModMain,       ONLY: time_simulation,TypeCoordSystem
+    use ModIeCoupling, ONLY: calc_ie_mag_perturb
     use ModMpi
 
-    integer :: i, iError, iStart, iStop
-    real, dimension(3,3)       :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
-    real, dimension(3, nKpMag) :: Bmag_DI, Bfac_DI, Bsum_DI=0.0, XyzGm_DI
-    real, dimension(2, nKpMag) :: MagPerbIE_DI
-    real :: deltaB(2)
+    integer :: i, iError
+    real, dimension(3,3)     :: SmgToGm_DD, XyzSph_DD, XyzNed_DD
+    real, dimension(3,nKpMag):: &
+         dBmag_DI, dBfac_DI, dBHall_DI, dBPedersen_DI, dBsum_DI, XyzGm_DI
+
+    real :: dB_I(2)
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='calc_kp'
@@ -574,19 +574,17 @@ contains
     SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
     XyzGm_DI = matmul(SmgToGm_DD, XyzKp_DI)
 
-    ! Obtain geomagnetic pertubation. Output is in NED Coordinates.
-    call ground_mag_perturb(    nKpMag, XyzGm_DI, Bmag_DI)
-    call ground_mag_perturb_fac(nKpMag, XyzKp_DI,  Bfac_DI)
+    ! Obtain geomagnetic pertubations in SMG coordinates
+    call ground_mag_perturb(    nKpMag, XyzGm_DI, dBmag_DI)
+    call ground_mag_perturb_fac(nKpMag, XyzKp_DI, dBfac_DI)
+    call calc_ie_mag_perturb(   nKpMag, XyzKp_DI, dBHall_DI, dBPedersen_DI)
 
-    !!! Call IE here !!!
+    ! Add up contributions and convert to IO units (nT)
+    dBsum_DI = (dBmag_DI + dBfac_DI + dBHall_DI + dBPedersen_DI) &
+         *No2Io_V(UnitB_)
 
-    ! Sum contributions.
+    ! Convert from SMG components to North-East-Down components
     do i=1, nKpMag
-
-       ! Add up contributions and convert to IO units (nT)
-       Bmag_DI(:,i) = (Bmag_DI(:,i) + Bfac_DI(:,i)) * No2Io_V(UnitB_)
-
-       ! Convert from SMG components to North-East-Down components
 
        ! Rotation matrix from Cartesian to spherical coordinates
        XyzSph_DD = rot_xyz_sph(XyzKp_DI(:,i))
@@ -599,49 +597,39 @@ contains
        ! Down = -R
        XyzNed_DD(:,3) = -XyzSph_DD(:,1)
 
-       Bmag_DI(:,i)= matmul(Bmag_DI(:,i),  XyzNed_DD)
+       dBsum_DI(:,i)= matmul(dBsum_DI(:,i),  XyzNed_DD)
     end do
 
     ! MPI Reduce to head node.
     if(nProc>1) then
-       call MPI_reduce(Bmag_DI, Bsum_DI, 3*nKpMag, &
+       dBmag_DI = dBsum_DI
+       call MPI_reduce(dBmag_DI, dBsum_DI, 3*nKpMag, &
             MPI_REAL, MPI_SUM, 0, iComm, iError)
-    else
-       BSum_DI = BMag_DI
     end if
 
     ! Head node calculates K-values and shares them with all other nodes.
     if(iProc==0)then
-       ! Extract horizontal IE results; combine Jh and Jp contributions:
-       iStart = nMagnetometer + nGridMag + 1
-       iStop  = nMagnetometer + nGridMag + nKpMag
-       if(DoTestMe)write(*,*) 'iStart, iStop = ', iStart, iStop
-       MagPerbIE_DI = IeMagPerturb_DII(1:2, 1, iStart:iStop) + &
-                      IeMagPerturb_DII(1:2, 2, iStart:iStop)
-
        ! Shift MagHistory to make room for new measurements.
        MagHistory_DII(:,:,1:iSizeKpWindow-1) = &
             MagHistory_DII(:,:,2:iSizeKpWindow)
 
-       ! Add IE component of pertubation.
-       do i=1, nKpMag
-          ! Store X and Y-components; add IE component.
-          if (IsFirstCalc .or. Is2ndCalc) then
+       do i = 1, nKpMag
+          ! Store North and East components
+          if (IsFirstCalc .or. IsSecondCalc) then
              ! First or second calc, fill in whole array to initialize.
-             MagHistory_DII(1,i,:) = Bsum_DI(1,i) + MagPerbIE_DI(1,i)
-             MagHistory_DII(2,i,:) = Bsum_DI(2,i) + MagPerbIE_DI(2,i)
+             MagHistory_DII(1,i,:) = dBsum_DI(1,i)
+             MagHistory_DII(2,i,:) = dBsum_DI(2,i)
           else
-             ! Later in simulation, merely fill in the most recent value.
-             MagHistory_DII(1,i,iSizeKpWindow) = Bsum_DI(1,i)+MagPerbIE_DI(1,i)
-             MagHistory_DII(2,i,iSizeKpWindow) = Bsum_DI(2,i)+MagPerbIE_DI(2,i)
+             ! Later in simulation, fill in the most recent value only
+             MagHistory_DII(:,i,iSizeKpWindow) = dBsum_DI(1:2,i)
           end if
 
-          ! Calculate deltaB(x,y), convert to K.
-          deltaB(1) = maxval(MagHistory_DII(1,i,:)) - &
+          ! Calculate dB_I(x,y), convert to K index
+          dB_I(1) = maxval(MagHistory_DII(1,i,:)) - &
                minval(MagHistory_DII(1,i,:))
-          deltaB(2) = maxval(MagHistory_DII(2,i,:)) - &
+          dB_I(2) = maxval(MagHistory_DII(2,i,:)) - &
                minval(MagHistory_DII(2,i,:))
-          kIndex_I(i) = k_index(maxval(DeltaB))
+          kIndex_I(i) = k_index(maxval(DB_I))
        end do
 
        ! Kp is average of Ks.
@@ -918,7 +906,7 @@ contains
     call flush_unit(iUnitIndices)
 
     ! Ensure two initialization steps are not repeated.
-    if(.not. IsFirstCalc) Is2ndCalc=.false.
+    if(.not. IsFirstCalc) IsSecondCalc=.false.
     IsFirstCalc=.false.
 
   end subroutine write_geoindices
@@ -1077,8 +1065,8 @@ contains
        dBPedersen_DI = No2Io_V(UnitB_)*dBPedersen_DI
 
        !!! TEST !!!!
-       dBHall_DI     = IeMagPerturb_DII(:,1,iStart+1:iEnd)
-       dBPedersen_DI = IeMagPerturb_DII(:,2,iStart+1:iEnd)
+       !dBHall_DI     = IeMagPerturb_DII(:,1,iStart+1:iEnd)
+       !dBPedersen_DI = IeMagPerturb_DII(:,2,iStart+1:iEnd)
 
        ! Get total perturbation:
        dBTotal_DI = dBMhd_DI + dBFac_DI + dBHall_DI + dBPedersen_DI 
@@ -1246,17 +1234,19 @@ contains
       close(UnitTmp_)
 
     end subroutine write_mag_step
-    !=====================================================================
+    !=========================================================================
   end subroutine write_magnetometers
 
-  !=====================================================================
+  !===========================================================================
   subroutine finalize_magnetometer
+
     ! Close the magnetometer output files (flush buffer, release IO unit).
     ! Deallocate arrays.
 
     use ModProcMH, ONLY: iProc
-
-    if(iProc==0 .and. DoSaveMags .and. TypeMagFileOut /= 'step') close(iUnitMag)
+    !-------------------------------------------------------------------------
+    if(iProc==0 .and. DoSaveMags .and. TypeMagFileOut /= 'step') &
+         close(iUnitMag)
     if(iProc==0 .and. DoWriteIndices) close(iUnitIndices)
     if (allocated(IeMagPerturb_DII)) deallocate(IeMagPerturb_DII)
     if (allocated(MagName_I)) deallocate(MagName_I)
@@ -1269,7 +1259,7 @@ contains
 
     ! Convert a deltaB value (max-min over window) to a K-value using given
     ! the standard conversion table that lists the upper limit for each K 
-    ! window.  For example, a K of 0 is given for a deltaB .le. 5, table(1) = 5.
+    ! window.  For example, a K of 0 is given for a deltaB <= 5, table(1) = 5.
     ! This table is scaled by k9, or the k9 for the station where the
     ! measurement is actually taken.
     
