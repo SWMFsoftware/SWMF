@@ -23,7 +23,6 @@ module GM_wrapper
   public:: GM_run
   public:: GM_save_restart
   public:: GM_finalize
-  public:: GM_print_variables
 
   ! Coupling toolkit
   public:: GM_synchronize_refinement
@@ -35,7 +34,6 @@ module GM_wrapper
   !^CMP IF IE BEGIN
   public:: GM_get_for_ie
   public:: GM_put_from_ie
-  public:: GM_put_mag_from_ie
   public:: GM_get_info_for_ie
   !^CMP END IE
 
@@ -266,54 +264,6 @@ contains
     end do
 
   end subroutine GM_find_points
-  !============================================================================
-  subroutine GM_print_variables(NameSource)
-
-    use ModMain, ONLY: NameThisComp
-    use ModNumConst
-    use ModImPressure
-    use ModIoUnit, ONLY: UNITTMP_
-
-    character(len=*), parameter :: NameSub='GM_print_variables'
-
-    character(len=*),intent(in) :: NameSource
-    integer            :: nFile=0
-    character(len=100) :: NameFile
-    character(len=100) :: NameVar
-    integer            :: i,j
-    !--------------------------------------------------------------------------
-
-    if(NameThisComp/='GM') RETURN
-
-    select case(NameSource)
-    case('IM')
-       NameVar='j i lon lat density pressure'
-    case('IE','IE_swmf')
-       NameVar='i j theta phi pot'
-    case default
-       write(*,*)NameSub,': incorrect NameSource=',NameSource
-       RETURN
-    end select
-
-    nFile=nFile+1
-    write(NameFile,'(a,i1,a)')'GM_from_'//NameSource//'_',nFile,'.dat'
-    open(UNITTMP_,file=NameFile)
-    write(UNITTMP_,'(a)')trim(NameVar)
-
-    select case(NameSource)
-    case('IM')
-       do i=1,iSize
-          do j=1,jSize
-             write(UNITTMP_,'(2i4,4G14.6)')j,i,IM_lon(j),IM_lat(i), &
-                  IM_dens(i,j),IM_p(i,j)
-          end do
-       end do
-    case('IE')
-       call print_iono_potential
-    end select
-    close(UNITTMP_)
-
-  end subroutine GM_print_variables
 
   !============================================================================
 
