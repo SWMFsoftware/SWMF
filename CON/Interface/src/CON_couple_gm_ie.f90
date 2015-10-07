@@ -16,10 +16,8 @@ module CON_couple_gm_ie
   !USES:
   use CON_coupler
 
-  use GM_wrapper, ONLY: GM_get_for_ie, GM_put_from_ie, GM_put_mag_from_ie, &
-       GM_print_variables, GM_get_info_for_ie
-  use IE_wrapper, ONLY: IE_get_for_gm, IE_put_info_from_gm, &
-       IE_get_mag_for_gm, IE_put_from_gm
+  use GM_wrapper, ONLY: GM_get_info_for_ie, GM_get_for_ie, GM_put_from_ie
+  use IE_wrapper, ONLY: IE_get_for_gm, IE_put_from_gm
 
   use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
        transfer_string_array
@@ -41,14 +39,12 @@ module CON_couple_gm_ie
   ! 12/01/2004 G.Toth - the GM->IE coupling is rewritten for Jr(iSize,jSize)
   !EOP
 
-  ! Communicator and logicals to simplify message passing and execution
-  logical       :: IsInitialized=.false.
-
   ! Size of the 2D spherical structured IE grid
-  integer, save :: iSize, jSize, nCells_D(2)
+  integer, save :: iSize, jSize
 
-  ! Number of shared ground-based magnetometers
-  integer, save :: nShareGroundMag
+  ! Number of variables passed from IE to GM
+  integer:: nVarIeGm = 1
+  character(len=20), allocatable :: NameVarIeGm_I(:)
 
 contains
 
@@ -57,63 +53,41 @@ contains
   !INTERFACE:
   subroutine couple_gm_ie_init
 
-    real,             allocatable :: CoordMags_DI(:,:)
-    character(len=3), allocatable :: NameMags_I(:)
-
-    integer :: iCommWorld
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_gm_ie_init'
 
     !DESCRIPTION:
-    ! This subroutine should be called from all PE-s
-    ! Store IE grid size and calculate union communicator.
+    ! This subroutine should be called from all PE-s.
+    ! Transfer initial information about GM to IE coupling.
     !EOP
-    !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    ! Get number of shared magnetometers from GM.
-    if(is_proc(GM_)) call GM_get_info_for_ie(nShareGroundMag)
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_gm_ie_init'
+    !------------------------------------------------------------------------
+    if(.not.is_proc(GM_) .and. .not.is_proc(IE_)) RETURN
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    ! This information is sent at the beginning of every session
+    ! because the variables needed by GM can change.
+
+    ! Get number of variables to be passed from GM to IE
+    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm)
     
     ! Pass to all IE nodes.
-    call transfer_integer(GM_, IE_, nShareGroundMag, UseSourceRootOnly=.false.)
+    call transfer_integer(GM_, IE_, nVarIeGm, UseSourceRootOnly=.false.)
 
-    if(DoTest) &
-         write(*,'(a,i3.3)') 'nShareGroundMag=', nShareGroundMag
+    ! Allocate the array holding the variable names.
+    if(allocated(NameVarIeGm_I)) deallocate(NameVarIeGm_I)
+    allocate(NameVarIeGm_I(nVarIeGm))
 
-    if (nShareGroundMag > 0) then
-       ! Allocate magnetometer info buffers:
-       if(.not.allocated(NameMags_I)) then
-          allocate(NameMags_I(     nShareGroundMag))
-          allocate(CoordMags_DI(2, nShareGroundMag))
-       endif
+    ! Get variables names to be passed
+    if(is_proc(GM_)) call GM_get_info_for_ie(nVarIeGm, NameVarIeGm_I)
 
-       ! Collect station coordinate systems and positions from GM:
-       if(is_proc(GM_)) &
-            call GM_get_info_for_ie(nShareGroundMag, NameMags_I, CoordMags_DI)
-
-       ! Share info to all IE nodes.
-       call transfer_string_array(GM_, IE_, nShareGroundMag, NameMags_I, &
-            UseSourceRootOnly=.false.)
-       call transfer_real_array(GM_, IE_, 2*nShareGroundMag, CoordMags_DI, &
+    ! Send info to all IE nodes
+    call transfer_string_array(GM_, IE_, nVarIeGm, NameVarIeGm_I, &
             UseSourceRootOnly=.false.)
 
-       ! Tell IE to handle incoming information.
-       if(is_proc(IE_)) &
-            call IE_put_info_from_gm(nShareGroundMag, NameMags_I, CoordMags_DI)
-
-       ! Deallocate magnetometer buffer arrays.
-       if(allocated(NameMags_I))  deallocate(NameMags_I)
-       if(allocated(CoordMags_DI)) deallocate(CoordMags_DI)
-    end if
-
-    if(IsInitialized) RETURN
-    IsInitialized = .true.
-    
-    iCommWorld=i_comm()
-
+    ! Store some information in convenient scalars
     iSize = Grid_C(IE_) % nCoord_D(1)
     jSize = Grid_C(IE_) % nCoord_D(2)
-
 
   end subroutine couple_gm_ie_init
 
@@ -130,65 +104,36 @@ contains
     !    Inner Magnetosphere (IE)  source\\
     !    Global Magnetosphere (GM) target
     !
-    ! The IE component sends the electrostatic potential to GM.
-    ! GM can use that to calculate the velocities at the inner boundaries.
+    ! The IE component sends the electrostatic potential and other
+    ! requested variables (Joule heat, conductances ...) to GM.
     !EOP
 
-    !\
-    ! General coupling variables
-    !/
+    ! Buffer for the variables on the 2D IE grid
+    real, allocatable :: Buffer_IIV(:,:,:)
+
+    logical :: DoTest, DoTestMe
 
     ! Name of this interface
     character (len=*), parameter :: NameSub='couple_ie_gm'
-
-    logical :: DoTest, DoTestMe
-    integer :: iProcWorld
-
-    ! Buffer for the potential on the 2D IE grid
-    real, dimension(:,:,:), allocatable :: Buffer_IIV
-
-    ! Buffer for magnetometer sharing (3 x 2 x nMagnetometers)
-    real, dimension(:,:,:), allocatable   :: Buffer_DII
-
-    ! Number of variables to pass:
-    !   potential, Joule heating, Hall conductance, Pedersen conductance)
-    integer, parameter :: nVar = 4
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    iProcWorld = i_proc()
 
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
-    if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, IEi_iProc0=', &
-         iProcWorld,i_proc0(GM_),i_proc0(IE_)
+    if(DoTest)write(*,*)NameSub,', starting iProc, iProc0Gm, iProc0Ie=', &
+         i_proc(), i_proc0(GM_), i_proc0(IE_)
 
     ! Transfer variables on IE grid
-    allocate(Buffer_IIV(iSize,jSize,nVar))
-    if(is_proc(IE_)) &
-         call IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
+    allocate(Buffer_IIV(iSize,jSize,nVarIeGm))
+    if(is_proc(IE_)) call IE_get_for_gm( &
+         Buffer_IIV, iSize, jSize, nVarIeGm, NameVarIeGm_I, tSimulation)
 
     ! The IE grid data is available from the ROOT IE processor ONLY!
-    call transfer_real_array(IE_, GM_, iSize*jSize*nVar, Buffer_IIV)
+    call transfer_real_array(IE_, GM_, iSize*jSize*nVarIeGm, Buffer_IIV)
 
     if(is_proc(GM_)) &
-         call GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
+         call GM_put_from_ie(Buffer_IIV, iSize, jSize, nVarIeGm, NameVarIeGm_I)
     deallocate(Buffer_IIV)
 
-    if(nShareGroundMag > 0)then
-       ! 3 directions, 2 sources (hall and pedersen) for each magnetometer
-       allocate(Buffer_DII(3,2,nShareGroundMag))
-
-       ! Collect magnetometer values if sharing ground mags.
-       if(is_proc(IE_))call IE_get_mag_for_gm(Buffer_DII, nShareGroundMag)
-
-       ! The magnetometer data is allreduced onto all the IE processors
-       call transfer_real_array(IE_, GM_, 6*nShareGroundMag, Buffer_DII, &
-            UseSourceRootOnly=.false.)
-       if(is_proc(GM_))call GM_put_mag_from_ie(Buffer_DII, nShareGroundMag)
-       deallocate(Buffer_DII)
-    end if
-
-    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
-    if(DoTest.and.is_proc0(GM_)) call GM_print_variables('IE')
+    if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_ie_gm
 
@@ -206,30 +151,23 @@ contains
     !    Ionosphere Electrodynamics (IE) target
     !
     ! Send field aligned currents from GM to IE. 
+    ! Also send some ray tracing information.
     !EOP
 
     ! Number of variables to pass
     integer, parameter :: nVar=6
 
-    ! Name of this interface
-    character (len=*), parameter :: NameSub='couple_gm_ie'
-
-    logical :: DoTest, DoTestMe
-    integer :: iProcWorld
-
     ! Buffer for the field aligned current on the 2D IE grid
     real, dimension(:,:,:), allocatable :: Buffer_IIV
+
+    logical :: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub='couple_gm_ie'
     !-------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    iProcWorld = i_proc()
-
-    if(DoTest)write(*,*)NameSub,' starting iProc=',iProcWorld
-
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',iProcWorld
-    if(DoTest)write(*,*)NameSub,', iProc, GMi_iProc0, i_proc0(IE_)=', &
-         iProcWorld,i_proc0(GM_),i_proc0(IE_)
+    if(DoTest)write(*,*)NameSub,' starting, iProc, iProc0Gm, iProc0Ie=', &
+         i_proc() ,i_proc0(GM_),i_proc0(IE_)
 
     ! Allocate buffers for the variables both in GM and IE
     allocate(Buffer_IIV(iSize, jSize, nVar))
@@ -246,7 +184,7 @@ contains
     ! Deallocate buffer to save memory
     deallocate(Buffer_IIV)
 
-    if(DoTest)write(*,*)NameSub,' finished, iProc=',iProcWorld
+    if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
 
   end subroutine couple_gm_ie
 
