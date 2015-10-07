@@ -134,20 +134,6 @@ contains
 
   !==============================================================================
 
-  subroutine GM_print_variables(NameSource)
-
-    implicit none
-
-    character(len=*), parameter :: NameSub='GM_print_variables'
-
-    character(len=*), intent(in) :: NameSource
-
-    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-  end subroutine GM_print_variables
-
-  !==============================================================================
-
   subroutine GM_synchronize_refinement(iProc0,iCommUnion)
 
     implicit none
@@ -206,6 +192,8 @@ contains
 
   end subroutine GM_get_for_im_line
 
+  !==============================================================================
+
   subroutine GM_put_from_im(Buffer_II,iSizeIn,jSizeIn,nVar,NameVar)
     implicit none
 
@@ -219,7 +207,6 @@ contains
   end subroutine GM_put_from_im
 
   !==============================================================================
-
 
   subroutine GM_satinit_for_im(nSats)
 
@@ -332,11 +319,14 @@ contains
   end subroutine GM_get_for_rb
 
   !==============================================================================
+
   subroutine GM_satinit_for_rb(nSats)
     implicit none
     integer :: nSats
   end subroutine GM_satinit_for_rb
+
   !==============================================================================
+
   subroutine GM_get_sat_for_rb(Buffer_III, Buffer_I, nSats)
     implicit none
 
@@ -356,48 +346,35 @@ contains
     character (len=*), parameter :: NameSub='GM_get_for_ie'
 
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
   end subroutine GM_get_for_ie
 
-  !==============================================================================
+  !============================================================================
+  subroutine GM_get_info_for_ie(nVar, NameVar_I)
 
-  subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar)
-
-    implicit none
-
-    integer, intent(in):: iSize, jSize, nVar
-    real,    intent(in):: Buffer_IIV(iSize,jSize,nVar)
-
-    character(len=*), parameter :: NameSub='GM_put_from_ie'
-
-    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
-
-  end subroutine GM_put_from_ie
-
-  !==============================================================================
-
-  subroutine GM_get_info_for_ie(nMagOut, NameMagsOut_I, CoordMagsOut_DI)
-    
-    integer, intent(out) :: nMagOut
-    character(len=3), intent(out),optional :: NameMagsOut_I(  1)
-    real,             intent(out),optional :: CoordMagsOut_DI(2, 1)
+    integer, intent(out) :: nVar
+    character(len=*), intent(out), optional:: NameVar_I(:)
 
     character(len=*), parameter :: NameSub='GM_get_info_for_ie'
 
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
 
   end subroutine GM_get_info_for_ie
-
   !==============================================================================
 
-  subroutine GM_put_mag_from_ie(Buffer_DII, iSize)
+  subroutine GM_put_from_ie(Buffer_IIV, iSize, jSize, nVar, NameVar_I)
 
     implicit none
-    integer, intent(in) :: iSize
-    real, intent(in)    :: Buffer_DII(3,2,iSize)
-    character(len=*), parameter :: NameSub='GM_put_mag_from_ie'
-    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
-  end subroutine GM_put_mag_from_ie
+    integer,          intent(in):: iSize, jSize, nVar
+    real,             intent(in):: Buffer_IIV(iSize,jSize,nVar)
+    character(len=*), intent(in):: NameVar_I(nVar)
+
+    character(len=*), parameter :: NameSub='GM_put_from_ie'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+
+  end subroutine GM_put_from_ie
 
   !==============================================================================
 
