@@ -223,8 +223,8 @@ contains
       ! Allocate buffer both on IM and IE processors. IE sends two variables.
       allocate(Buffer_IIV(nTheta,nPhi,nVar))
       ! Need to call ALL IE processors here
-      if(is_proc(IE_)) &
-           call IE_get_for_gm(Buffer_IIV, nTheta, nPhi, nVar, tSimulation)
+      if(is_proc(IE_)) call IE_get_for_gm( &
+           Buffer_IIV, nTheta, nPhi, nVar, (/'potential'/), tSimulation)
 
       ! IM/RAM wants only potential. The result is on IE root processor only.
       call transfer_real_array(IE_, IM_, nTheta*nPhi, Buffer_IIV)
