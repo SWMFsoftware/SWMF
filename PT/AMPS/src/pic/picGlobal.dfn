@@ -15,6 +15,7 @@
 
 //define the partile-tracking mode: if _PIC_PARTICLE_TRACKER_MODE is _PIC_MODE_ON_ than AMPS accumulates particle trajecotries and outpur them into a file; default value is _PIC_MODE_OFF_
 #define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
+#define _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ _PIC_MODE_OFF_ 
 #define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) TrajectoryTrackingCondition_default(x,v, spec,ParticleData)
 #define _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE_ _PIC_PARTICLE_TRACKER__TRAJECTORY_OUTPUT_MODE__ENTIRE_TRAJECTORY_ 
 

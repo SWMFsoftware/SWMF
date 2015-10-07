@@ -133,6 +133,11 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
   TrajectoryRecord->data.Speed=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   TrajectoryRecord->data.spec=spec;
 
+  //save the time stamp of the trajectory point
+  #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+  TrajectoryRecord->data.TimeStamp=PIC::SimulationTime::Get();
+  #endif
+
   //save the electric charge carried by the particle
   #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   double ParticleElectricCharge=0.0,ParticleSize=0.0;
@@ -324,9 +329,14 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
       #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
       fprintf(fout[spec],", \"Electric Charge\", \"Particle Size\"");
       #endif
-#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
+      #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
       fprintf(fout[spec],", \"Total kinetic energy [J]\"");
-#endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+      #endif //_PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
+      #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+      fprintf(fout[spec],", \"Time Stamp\"");
+      #endif
 
       fprintf(fout[spec],"\n");
     }
@@ -499,9 +509,13 @@ void PIC::ParticleTracker::OutputTrajectory(const char *fname) {
           fprintf(trOut," %e  %e ",TrajectoryData->ElectricCharge,TrajectoryData->ParticleSize);
           #endif
 
-#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+          #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
           fprintf(trOut," %e ",TrajectoryData->KineticEnergy);
-#endif //#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+          #endif //#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+
+          #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+          fprintf(trOut," %e ",TrajectoryData->TimeStamp);
+          #endif
 
           fprintf(trOut,"\n");
         }

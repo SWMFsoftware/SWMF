@@ -501,13 +501,17 @@ namespace PIC {
       double x[3],Speed;
       int spec;
 
+      #if _PIC_PARTICLE_TRACKER__TRAJECTORY_TIME_STAMP_MODE_ == _PIC_MODE_ON_
+      double TimeStamp;
+      #endif
+
       #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
       double ElectricCharge,ParticleSize;
       #endif
 
-#if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
+      #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
       double KineticEnergy;
-#endif
+      #endif
     };
 
     struct cTrajectoryDataRecord {

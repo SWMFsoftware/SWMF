@@ -374,6 +374,9 @@ int PIC::CCMC::TraceParticles() {
     }
 
     MPI_Allreduce(&PIC::ParticleBuffer::NAllPart,&nTotalParticles,PIC::nTotalSpecies,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+    //update the time counter
+    PIC::SimulationTime::Update();
   }
 
   //output sampled trajectories
