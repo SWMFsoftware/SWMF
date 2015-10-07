@@ -2059,11 +2059,12 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
-    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2
+    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2, UseResisPlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy
     use ModWaves
-    use BATL_size,   ONLY: nDim  
+    use BATL_size,   ONLY: nDim
+    use ModGeometry, ONLY: r_BLK
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
@@ -2147,6 +2148,14 @@ contains
           ! Calculate HD flux for individual ion and neutral fluids
           call get_hd_flux
        end if
+
+       if(UseResisPlanet .and. iFluid == 1)then
+          ! Do not evolve magnetic field inside the body
+          if(r_BLK(iLeft,jLeft,kLeft,iBlockFace)  < 1.0 .and. &
+               r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
+               Flux_V(Bx_:Bz_) = 0.0
+       end if
+       
        ! Store normal velocity (needed for source terms with div U)
        Un_I(iFluid) = Un
 

@@ -312,4 +312,8 @@ module ModMain
 
   ! Use high-order accurate refined/coarsened cells.
   logical :: UseHighOrderAMR = .false.
+
+  ! Use resistivity planetary interior. It may be set to true in the
+  ! ModUserMercury.f90.
+  logical :: UseResisPlanet = .false. 
 end module ModMain
