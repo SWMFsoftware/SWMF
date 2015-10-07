@@ -587,6 +587,40 @@ contains
 
   subroutine get_solar_wind_point(TimeSimulation, Xyz_D, SolarWind_V)
 
+    ! Calculate the solar wind data SolarWind_V expected at time
+    ! TimeSimulation and position Xyz_D.
+    ! If there is no solar wind file specified, the values given
+    ! in the #SOLARWIND command (stored in FaceState_VI) are returned.
+    ! If the solar wind file consists of a single line, return 
+    ! the values in it.
+    ! If the solar wind file consists of multiple lines, then first
+    ! find the time preceeding TimeSimulation and get the 
+    ! solar wind velocity at this time.
+    !
+    ! If the absolute time Time based on TimeSimulation is before 
+    ! the starting time of the solar wind data,
+    ! use the first value. If Time is after the last value, then
+    ! either use the last value (if DoReadAgain is false), or wait until the 
+    ! solar wind file gets more information that covers TimeSimulation.
+    ! This wait can be arbitrarily long. Touching the SWMF.KILL file in the
+    ! run directory, however, will kill the code with MPI_abort.
+    !
+    ! If the satellite position (where the solar wind is measured)
+    ! has StatelliteXyz_D(1)=0, then it is assumed to be located at the 
+    ! minimum or maximum X boundary (x1 or x2) depending on the sign
+    ! of the solar wind velocity.
+    !
+    ! Next calculate how long it takes to propagate from the satellite 
+    ! position to Xyz_D using the solar wind velocity and the orientation 
+    ! of the normal vector Normal_D that is normal to the assumed plane of the 
+    ! solar wind. TimeSimulation is shifted by the propagation time to
+    ! the "propagated time". Note that when Xyz_D is at the boundary (x1 or x2)
+    ! and the normal vector points in the +X direction, there is no time shift.
+    !
+    ! Finally the solar wind data is interpolated to the propagated time. 
+    ! If the propagated time is before the first or after the last time read
+    ! from the solar wind file, then use the first or last data values, respectively.
+
     use ModKind
     use ModMain
     use ModPhysics
@@ -603,6 +637,9 @@ contains
     real(Real8_) :: DtData1, DtData2, Time
     real         :: SatDistance_D(3), U_D(3)
 
+    ! Check if the run should be killed while waiting for solar wind file
+    logical      :: DoKill
+    
     logical, parameter:: DoTestCell = .false.
     character(len=*), parameter :: NameSub = 'get_solar_wind_point'
     !--------------------------------------------------------------------------
@@ -639,6 +676,8 @@ contains
           call read_solar_wind_file
           call normalize_solar_wind_data
           if(Time < Time_I(nData)) EXIT
+          inquire(file='SWMF.KILL', exist=DoKill)
+          if(DoKill) call stop_mpi(NameSub//': SWMF.KILL file found')
           call sleep(1.0) ! sleep for 1 second CPU time
        end do
     end if
