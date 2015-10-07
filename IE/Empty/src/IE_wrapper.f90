@@ -90,11 +90,13 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_I, &
+       tSimulation)
 
-    integer, intent(in) :: iSize, jSize, nVar
-    real,    intent(out):: Buffer_IIV(iSize,jSize,nVar)
-    real,    intent(in) :: tSimulation
+    integer,          intent(in) :: iSize, jSize, nVar
+    real,             intent(out):: Buffer_IIV(iSize,jSize,nVar)
+    character(len=*), intent(in) :: NameVar_I(nVar)
+    real,             intent(in) :: tSimulation
 
     character (len=*),parameter :: NameSub = 'IE_get_for_gm'
 
@@ -274,31 +276,6 @@ contains
 
   end subroutine IE_put_from_im_complete
 
-  !============================================================================
-
-  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
-    ! Get number of shared ground magnetometers between IE and GM and prepare
-    ! this value for broadcasting to the GM module.
-
-    integer,          intent(in) :: nMagIn
-    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
-    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
-
-    character(len=*), parameter :: NameSub='IE_put_info_from_gm'
-    call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
-
-  end subroutine IE_put_info_from_gm
-
-  !============================================================================
-
-  subroutine IE_get_mag_for_gm(Buffer_DII, iSize)
-
-    integer, intent(in):: iSize
-    real, intent(out) :: Buffer_DII(3,2,iSize)
-    character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
-    call CON_stop(NameSub//' IE_ERROR: empty version cannot be used!')
-
-  end subroutine IE_get_mag_for_gm
   !============================================================================
 
 end module IE_wrapper

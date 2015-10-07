@@ -15,8 +15,6 @@ module IE_wrapper
 
   ! Coupling with GM
   public:: IE_get_for_gm
-  public:: IE_put_info_from_gm
-  public:: IE_get_mag_for_gm
   public:: IE_put_from_gm
 
   ! Coupling with IM
@@ -102,7 +100,7 @@ contains
       logical :: DoEcho=.false., UseStrict=.true.
 
       ! Plot file parameters
-      integer :: iFile, i, iError, iDebugProc
+      integer :: iFile, iDebugProc
       character (len=50) :: plot_string
       character (len=100) :: imffilename,hpifilename
       character (len=100), dimension(100) :: cTempLines
@@ -137,7 +135,7 @@ contains
                  ' IE_ERROR number of ouput files is too large in #IE_SAVEPLOT:'&
                  //' nFile>MaxFile')
             if (nFile>0.and.iProc==0) call check_dir(NameOutputDir)
-            do iFile=1,nFile
+            do iFile = 1, nFile
 
                call read_var('StringPlot',plot_string)
                call lower_case(plot_string)
@@ -427,20 +425,23 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,nVar,tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV,iSize,jSize,nVar,NameVar_I,tSimulation)
 
-    use ModProcIE, only:nProc
+    ! Put variables listed in NameVar_I into the buffer
+
+    use ModProcIE, ONLY: nProc
     use ModSizeRIM
     use ModRIM
 
-    character (len=*),parameter :: NameSub='IE_get_for_gm'
+    integer,          intent(in) :: iSize, jSize, nVar
+    real,             intent(out):: Buffer_IIV(iSize,jSize,nVar)
+    character(len=*), intent(in) :: NameVar_I(nVar)
+    real,             intent(in) :: tSimulation
 
-    integer, intent(in):: iSize, jSize, nVar
-    real, intent(out)  :: Buffer_IIV(iSize,jSize,nVar)
-    real, intent(in)   :: tSimulation
-
-    integer :: i,j,k
+    integer :: iVar
     real    :: tSimulationTmp
+
+    character(len=*), parameter:: NameSub = 'IE_get_for_gm'
     !--------------------------------------------------------------------------
     if(iSize /= nLats+2 .or. jSize /= nLons*nProc+1)then
        write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
@@ -452,13 +453,20 @@ contains
     tSimulationTmp = tSimulation
     call IE_run(tSimulationTmp, tSimulation)
 
-    Buffer_IIV(:,:,1) = PotentialAll
-    if(nVar == 2 .or. nVar == 4) &
-         Buffer_IIV(:,:,2) = JouleHeatingAll
-    if(nVar > 2)then
-       Buffer_IIV(:,:,nVar-1) = SigmaHAll
-       Buffer_IIV(:,:,nVar)   = SigmaPAll
-    end if
+    do iVar = 1, nVar
+       select case(NameVar_I(iVar))
+       case('potential')
+          Buffer_IIV(:,:,iVar) = PotentialAll
+       case('jouleheat')
+          Buffer_IIV(:,:,iVar) = JouleHeatingAll
+       case('sigmahall')
+          Buffer_IIV(:,:,iVar) = SigmaHAll
+       case('sigmapedersen')
+          Buffer_IIV(:,:,iVar) = SigmaPAll
+       case default
+          call CON_stop(NameSub//': unknown NameVar='//NameVar_I(iVar))
+       end select
+    end do
 
   end subroutine IE_get_for_gm
 
@@ -1137,39 +1145,6 @@ contains
   end subroutine IE_run
 
   !=========================================================================
-
-  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
-    ! Get number of shared ground magnetometers between IE and GM and prepare
-    ! this value for broadcasting to the GM module.
-    
-    integer,          intent(in) :: nMagIn
-    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
-    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
-
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='IE_put_info_from_gm'
-    !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-    if (nMagIn > 0) &
-         call CON_stop(NameSub//' Ground magnetometer not implemented!')
-
-  end subroutine IE_put_info_from_gm
-
-  !===========================================================================
-
-  subroutine IE_get_mag_for_gm(Buffer_DII, iSize)
-
-    integer, intent(in):: iSize
-    real, intent(out) :: Buffer_DII(3,2,iSize)
-
-    character(len=*), parameter :: NameSub='IE_get_mag_for_gm'
-
-    call CON_stop(NameSub//'Ground magnetometer sharing not implemented!')
-
-  end subroutine IE_get_mag_for_gm
-
-  !============================================================================
 
 end module IE_wrapper
 

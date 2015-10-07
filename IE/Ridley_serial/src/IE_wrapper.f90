@@ -18,9 +18,7 @@ module IE_wrapper
 
   ! Coupling with GM
   public:: IE_get_for_gm ! Also used by IM/RAM
-  public:: IE_get_mag_for_gm
   public:: IE_put_from_gm
-  public:: IE_put_info_from_gm
 
   ! Coupling with IM
   public:: IE_get_for_im
@@ -381,18 +379,23 @@ contains
 
   !============================================================================
 
-  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, tSimulation)
+  subroutine IE_get_for_gm(Buffer_IIV, iSize, jSize, nVar, NameVar_I, &
+       tSimulation)
+
+    ! Put variables listed in NameVar_I into the buffer
 
     use ModProcIE
     use ModIonosphere
 
-    integer, intent(in) :: iSize, jSize, nVar
-    real,   intent(out) :: Buffer_IIV(iSize,jSize,nVar)
-    real,    intent(in) :: tSimulation
+    integer,          intent(in) :: iSize, jSize, nVar
+    real,             intent(out):: Buffer_IIV(iSize,jSize,nVar)
+    character(len=*), intent(in) :: NameVar_I(nVar)
+    real,             intent(in) :: tSimulation
 
     real:: tSimulationTmp
-
-    character (len=*),parameter :: NameSub = 'IE_get_for_gm'
+    integer:: iVar
+    
+    character(len=*), parameter:: NameSub = 'IE_get_for_gm'
     !--------------------------------------------------------------------------
     if(iSize /= IONO_nTheta*2-1 .or. jSize /= IONO_nPsi)then
        write(*,*)NameSub//' incorrect buffer size=',iSize,jSize,&
@@ -404,13 +407,20 @@ contains
     tSimulationTmp = tSimulation
     call IE_run(tSimulationTmp, tSimulation)
 
-    Buffer_IIV(:,:,1) = IONO_Phi
-    if(nVar == 2 .or. nVar == 4) &
-         Buffer_IIV(:,:,2) = IONO_Joule
-    if(nVar > 2)then
-       Buffer_IIV(:,:,nVar-1) = IONO_SigmaH
-       Buffer_IIV(:,:,nVar)   = IONO_SigmaP
-    end if
+    do iVar = 1, nVar
+       select case(NameVar_I(iVar))
+       case('potential')
+          Buffer_IIV(:,:,iVar) = IONO_Phi
+       case('jouleheat')
+          Buffer_IIV(:,:,iVar) = IONO_Joule
+       case('sigmahall')
+          Buffer_IIV(:,:,iVar) = IONO_SigmaH
+       case('sigmapedersen')
+          Buffer_IIV(:,:,iVar) = IONO_SigmaP
+       case default
+          call CON_stop(NameSub//': unknown NameVar='//NameVar_I(iVar))
+       end select
+    end do
 
   end subroutine IE_get_for_gm
   !============================================================================
@@ -1231,9 +1241,8 @@ contains
     real(Real8_) :: tStart
     integer      :: nStep
 
-    character(len=*), parameter :: NameSub='IE_run'
-
     logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='IE_run'
     !--------------------------------------------------------------------------
 
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -1306,35 +1315,6 @@ contains
     write(*,*) NameSub,' -- called but not yet implemented.'
 
   end subroutine IE_get_for_ps
-
-  !============================================================================
-  subroutine IE_put_info_from_gm(nMagIn, NameMagsIn_I, CoordMagsIn_DI)
-    ! Get number of shared ground magnetometers between IE and GM and prepare
-    ! this value for broadcasting to the GM module.
-    
-    use ModIonoMagPerturb, ONLY: &
-         iono_mag_init, nMagnetometer, TypeCoordMag_I, PosMagnetometer_II
-    
-    integer,          intent(in) :: nMagIn
-    character(len=3), intent(in) :: NameMagsIn_I(nMagIn)
-    real,             intent(in) :: CoordMagsIn_DI(2, nMagIn)
-
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='IE_put_info_for_gm'
-    !--------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-
-    ! Set number of shared magnetometers.
-    nMagnetometer  = nMagIn
-    
-    ! Allocate IE magnetometer arrays.
-    call iono_mag_init
-
-    ! Place data from buffers into module variables.
-    TypeCoordMag_I     = NameMagsIn_I
-    PosMagnetometer_II = CoordMagsIn_DI
-
-  end subroutine IE_put_info_from_gm
 
   !============================================================================
 
