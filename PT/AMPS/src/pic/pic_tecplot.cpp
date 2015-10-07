@@ -691,75 +691,92 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
   else exit(__LINE__,__FILE__,"Error: unknown value of DataMode");
 
   //create TECPLOT script and run TECPLOT
-  int nFileOutputs,nExistedFiles=0;; //the number of hte TECPLOT files that contain the contain the interpolated values
+  int thread,nFileOutputs,nFileOutputsTable[PIC::nTotalThreads]; //the number of hte TECPLOT files that contain the contain the interpolated values
   char command[_MAX_STRING_LENGTH_PIC_],ScriptBaseName[_MAX_STRING_LENGTH_PIC_],DataFileFullName[_MAX_STRING_LENGTH_PIC_];
 
   sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
-
   sprintf(ScriptBaseName,"%s.AMPS.ImportData",DataFileFullName);
   nFileOutputs=PIC::CPLR::DATAFILE::TECPLOT::CreateScript(ScriptBaseName,DataFileFullName);
 
+  //print the total number of the files that will be created
+  MPI_Allgather(&nFileOutputs,1,MPI_INT,nFileOutputsTable,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
+
+  if (PIC::ThisThread==0) {
+    int nTotalOutputFiles=0;
+
+    printf("TECPLOT Interpolation:\n");
+
+    for (thread=0;thread<PIC::nTotalThreads;thread++) {
+      printf("thread=%i,\tnOutputs=%i\n",thread,nFileOutputsTable[thread]);
+      nTotalOutputFiles+=nFileOutputsTable[thread];
+    }
+
+    printf("TECPLOT Interpolation: nTotal Output files: %i\n",nTotalOutputFiles);
+  }
+
+  //remove previous interpolated data if exists
+  int TecplotInterpolationFinishFlag=false;
+
+  sprintf(command,"rm -f %s.AMPS.ImportData.thread=*.dat",DataFileFullName);
+  if (PIC::ThisThread==0) system(command);
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
   //extract the data with TECPLOT
-  int thread,TaskTable[PIC::nTotalThreads];
+  const int nTestTecplotCalls=20;
 
-  for (thread=0;thread<PIC::nTotalThreads;thread++) TaskTable[thread]=thread;
-
-  do {
-    if (TaskTable[PIC::ThisThread]!=-1) {
-      sprintf(command,"tec360 -b %s %s.thread=%i.mcr",DataFileFullName,ScriptBaseName,TaskTable[PIC::ThisThread]);
+  for (int nTecplotCalls=0;nTecplotCalls<nTestTecplotCalls;nTecplotCalls++) {
+    if (TecplotInterpolationFinishFlag==false) {
+      sprintf(command,"tec360 -b %s %s.thread=%i.mcr",DataFileFullName,ScriptBaseName,PIC::ThisThread);
       system(command);
     }
 
     MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
-    //check that all data files are produced
-    if (PIC::ThisThread==0) {
-      bool ExtractedFileTable[PIC::nTotalThreads];
+    //check wether the interpolation procedure is finished
+    if ((TecplotInterpolationFinishFlag==false)||(PIC::ThisThread==0)) {
+      int nfile,FirstTestThread,LastTestThread;
+      char f[_MAX_STRING_LENGTH_PIC_];
 
-      for (nExistedFiles=0,thread=0;thread<PIC::nTotalThreads;thread++) {
-        ExtractedFileTable[thread]=false;
+      TecplotInterpolationFinishFlag=true;
 
-        char fname[400];
-        FILE *file=NULL;
-
-        sprintf(fname,"%s.thread=%i.0.dat",ScriptBaseName,PIC::ThisThread);
-        file=fopen(fname,"r");
-
-        if (file!=NULL) {
-          fclose(file);
-          ExtractedFileTable[thread]=true,nExistedFiles++;
-        }
+      if (PIC::ThisThread==0) {
+        FirstTestThread=0,LastTestThread=PIC::nTotalThreads-1;
+      }
+      else {
+        FirstTestThread=PIC::ThisThread,LastTestThread=PIC::ThisThread;
       }
 
-      if (nExistedFiles!=PIC::nTotalThreads) {
-        cout << "Warning: " << PIC::nTotalThreads-nExistedFiles << "file are not interpolated by TECPLOT. Repeating the interpolation procedure." << endl;
+      for (thread=FirstTestThread;thread<=LastTestThread;thread++) {
+        for (nfile=0;nfile<nFileOutputsTable[thread];nfile++) {
+          sprintf(f,"%s.AMPS.ImportData.thread=%i.%i.dat",DataFileFullName,thread,nfile);
 
-        if (nExistedFiles==0) exit(__LINE__,__FILE__,"Error: no TECPLOTs have been succesfuly started at all");
-
-        int SucessThread=0,FailThread=0,nDistributedTasks=0;
-        for (thread=0;thread<PIC::nTotalThreads;thread++) TaskTable[thread]=-1;
-
-        do {
-          for (;SucessThread<PIC::nTotalThreads;SucessThread++) if (ExtractedFileTable[SucessThread]==true) break;
-          for (;FailThread<PIC::nTotalThreads;FailThread++) if (ExtractedFileTable[FailThread]==false) break;
-
-          //arrage the task table
-          if (SucessThread==PIC::nTotalThreads) break;
-          if (FailThread==PIC::nTotalThreads) exit(__LINE__,__FILE__,"Error: something is wrong. FailThread must be less than PIC::nTotalThreads");
-
-          TaskTable[SucessThread]=FailThread;
-          nDistributedTasks++;
+          if (access(f,R_OK)!=0) {
+            if (PIC::ThisThread==0) printf("Error: TECPLOT interpolation is not finished: file=%s\n",f);
+            if (PIC::ThisThread==thread) TecplotInterpolationFinishFlag=false;
+          }
         }
-        while (nDistributedTasks!=PIC::nTotalThreads-nExistedFiles);
       }
     }
 
-    //distribute the TastTable
-    MPI_Bcast(TaskTable,PIC::nTotalThreads,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
-    MPI_Bcast(&nExistedFiles,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
   }
-  while (nExistedFiles!=PIC::nTotalThreads);
 
+  //check whether all data files are created
+  int AllTecplotInterpolationFinishFlags[PIC::nTotalThreads];
+
+  MPI_Gather(&TecplotInterpolationFinishFlag,PIC::nTotalThreads,MPI_INT,AllTecplotInterpolationFinishFlags,PIC::nTotalThreads,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+
+  if (PIC::ThisThread==0) {
+    char msg[5000];
+
+    sprintf(msg,"");
+
+    for (thread=0;thread<PIC::nTotalThreads;thread++) if (AllTecplotInterpolationFinishFlags[thread]==false) {
+      sprintf(msg,"%s\nTECPLOT interpolation is not finished (thread=%i)",msg,thread);
+      TecplotInterpolationFinishFlag=false;
+    }
+
+    if (TecplotInterpolationFinishFlag==false) exit(__LINE__,__FILE__,msg);
+  }
 
   //read the data file
   LoadDataFile(ScriptBaseName,nFileOutputs);
