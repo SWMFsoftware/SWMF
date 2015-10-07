@@ -21,7 +21,7 @@ module CON_couple_gm_im
   use GM_wrapper, ONLY: GM_get_for_im, GM_get_for_im_line, &
        GM_get_for_im_trace, GM_satinit_for_im, GM_get_sat_for_im, &
        GM_get_for_im_crcm, GM_get_for_im_trace_crcm, GM_get_sat_for_im_crcm, &
-       GM_put_from_im, GM_print_variables
+       GM_put_from_im
 
   use IM_wrapper, ONLY: IM_get_for_gm, IM_put_from_gm, &
        IM_put_from_gm_line, IM_put_from_gm_crcm, IM_put_sat_from_gm
@@ -414,7 +414,6 @@ contains
     deallocate(Buffer_IIV)
 
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
-    if(DoTest.and.is_proc0(GM_)) call GM_print_variables('IM')
 
   end subroutine couple_im_gm
 
