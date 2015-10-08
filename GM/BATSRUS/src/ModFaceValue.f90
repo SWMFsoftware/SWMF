@@ -7,7 +7,8 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, Weight_IVX, Weight_IVY, Weight_IVZ
+  use ModAdvance, ONLY: UseFDFaceFlux, &
+       UseLowOrder, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
 
   implicit none
 
@@ -74,8 +75,15 @@ module ModFaceValue
   real, allocatable, save:: Primitive_VG(:,:,:,:)
 
   ! Variables for "body" blocks with masked cells
-  logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
   logical:: UseTrueCell
+  logical:: IsTrueCell_I(1-nG:MaxIJK+nG)
+
+  ! Low order switch for 1D stencil
+  logical:: UseLowOrder_I(1:MaxIJK+1)
+
+  ! Region parameters for high order scheme
+  logical:: UseHighOrderRegion = .false.
+  real:: rMinHighOrder=0.0, rMaxHighOrder=1e30
 
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -157,6 +165,12 @@ contains
           call read_var('FlatDelta',     FlatDelta)
           call read_var('FlatRatioMin',  FlatRatioMin)
           call read_var('FlatRatioMax',  FlatRatioMax)
+       end if
+    case("#HIGHORDERREGION")
+       call read_var('UseHighOrderRegion', UseHighOrderRegion)
+       if(UseHighOrderRegion)then
+          call read_var('rMinHighOrder', rMinHighOrder)
+          call read_var('rMaxHighOrder', rMaxHighOrder)
        end if
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
@@ -751,6 +765,9 @@ contains
     endif
 
     UseTrueCell = body_BLK(iBlock)
+
+    ! Set variables related to low vs. high order scheme
+    if(nOrder>2) call set_low_order_face
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
@@ -1381,7 +1398,6 @@ contains
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar, iSort
-      integer:: iFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
 
@@ -1393,12 +1409,22 @@ contains
          end do; end do; end do
       else
          do k = kMin, kMax; do j = jMin, jMax
-            if(UseTrueCell)then
+            if(UseLowOrder)then
+               UseLowOrder_I(iMin:iMax) = UseLowOrder_X(iMin:iMax,j,k)
+               Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+
+               ! IsTrueCell needed by limiter_body and ppm4 limiter
                IsTrueCell_I(iMin-nG:iMax-1+nG) = &
                     true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
-               Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
-               call limiter_body(iMin, iMax, BetaLimiter)
+               ! Get 2nd order limited slopes
+               if(UseTrueCell)then
+                  call limiter_body(iMin, iMax, BetaLimiter)
+               else
+                  call limiter(iMin, iMax, BetaLimiter)
+               end if
+               ! Store 2nd order accurate face values
                do i = iMin, iMax
+                  ! if(UseLowOrder_I(i))then...
                   LeftState_VX(:,i,j,k) =Primitive_VI(:,i-1)+dVarLimL_VI(:,i-1)
                   RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
                end do
@@ -1424,8 +1450,9 @@ contains
                   Cell_I(iMin-nG:iMax-1+nG) = &
                        Primitive_VG(iVar,iMin-nG:iMax-1+nG,j,k)
 
-                  if(UseTrueCell)then
+                  if(UseLowOrder)then
                      ! Use 2nd order face values where high order is skipped
+                     ! where(UseLowOrder_I(iMin:iMax)...
                      FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
@@ -1523,7 +1550,6 @@ contains
 
       real, allocatable, save:: State_VY(:,:,:,:)
       integer:: iVar, iSort
-      integer:: jFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
 
@@ -1535,11 +1561,17 @@ contains
          end do; end do; end do
       else
          do k = kMin, kMax; do i = iMin, iMax
-            if(UseTrueCell)then
+            if(UseLowOrder)then
+               UseLowOrder_I(jMin:jMax) = UseLowOrder_Y(i,jMin:jMax,k)
+               Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
+
                IsTrueCell_I(jMin-nG:jMax-1+nG) = &
                     true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
-               Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
-               call limiter_body(jMin, jMax, BetaLimiter)
+               if(UseTrueCell)then
+                  call limiter_body(jMin, jMax, BetaLimiter)
+               else
+                  call limiter(jMin, jMax, BetaLimiter)
+               end if
                do j = jMin, jMax
                   LeftState_VY(:,i,j,k) =Primitive_VI(:,j-1)+dVarLimL_VI(:,j-1)
                   RightState_VY(:,i,j,k)=Primitive_VI(:,j)  -dVarLimR_VI(:,j)
@@ -1569,7 +1601,7 @@ contains
                   Cell_I(jMin-nG:jMax-1+nG) = &
                        Primitive_VG(iVar,i,jMin-nG:jMax-1+nG,k)
 
-                  if(UseTrueCell)then
+                  if(UseLowOrder)then
                      ! Use 2nd order face values where high order is skipped
                      FaceL_I(jMin:jMax) = LeftState_VY(iVar,i,jMin:jMax,k)
                      FaceR_I(jMin:jMax) = RightState_VY(iVar,i,jMin:jMax,k)
@@ -1666,7 +1698,6 @@ contains
 
       real, allocatable, save:: State_VZ(:,:,:,:)
       integer:: iVar, iSort
-      integer:: kFace
       logical:: IsSmoothIndictor
       !-----------------------------------------------------------------------
 
@@ -1681,11 +1712,16 @@ contains
       else
          do j = jMin, jMax; do i = iMin, iMax
 
-            if(UseTrueCell)then
+            if(UseLowOrder)then
+               UseLowOrder_I(kMin:kMax) = UseLowOrder_Z(i,j,kMin:kMax)
+               Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
                IsTrueCell_I(kMin-nG:kMax-1+nG) = &
                     true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
-               Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
-               call limiter_body(kMin, kMax, BetaLimiter)
+               if(UseTrueCell)then
+                  call limiter_body(kMin, kMax, BetaLimiter)
+               else
+                  call limiter(kMin, kMax, BetaLimiter)
+               end if
                do k = kMin, kMax
                   LeftState_VZ(:,i,j,k) =Primitive_VI(:,k-1)+dVarLimL_VI(:,k-1)
                   RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)
@@ -1712,8 +1748,8 @@ contains
                   Cell_I(kMin-nG:kMax-1+nG) = &
                        Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
 
-                  if(UseTrueCell)then
-                     ! Use 2nd order face values where high order is skipped
+                  if(UseLowOrder)then
+                     ! Use 2nd order face values where high order is skipped    
                      FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
                      FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
                   end if
@@ -2775,6 +2811,79 @@ contains
 
     end subroutine flatten
 
+    !======================================================================
+    subroutine set_low_order_face
+
+      use ModGeometry, ONLY: r_BLK, Rmin_BLK
+
+      ! Set which faces should use low (up to second) order scheme
+
+      integer:: i, j, k
+      real:: r
+
+      character(len=*), parameter:: NameSub = 'set_low_order_face'
+      !-------------------------------------------------------------------
+      UseLowOrder = UseTrueCell .or. UseHighOrderRegion
+
+!      write(*,*)'!!! iBlock, UseLowOrder=', iBlock, UseLowOrder
+
+      if(.not.UseLowOrder) RETURN
+
+      ! Optimization: check if block is fully inside high order region.
+      ! If not, set UseLowOrder = .false.; RETURN
+      
+      ! Check if block is fully outside high order region.
+      ! Then set UseLowOrderOnly = .true.; RETURN
+
+      if(.not.allocated(UseLowOrder_X)) then
+         allocate(             UseLowOrder_X(nI+1,nJ,nK))
+         if(nDim > 1) allocate(UseLowOrder_Y(nI,nJ+1,nK))
+         if(nDim > 2) allocate(UseLowOrder_Z(nI,nJ,nK+1))
+      end if
+
+      if(UseHighOrderRegion)then
+         ! Use low order scheme based on the radial distance of the face
+         do k=1, nK; do j=1, nJ; do i = 1, nI+1
+            r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i-1,j,k,iBlock))
+            UseLowOrder_X(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
+         end do; end do; end do
+         if(nDim > 1)then
+            do k=1, nK; do j=1, nJ+1; do i = 1, nI
+               r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i,j-1,k,iBlock))
+               UseLowOrder_Y(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
+            end do; end do; end do
+         end if
+         if(nDim > 2)then
+            do k=1, nK+1; do j=1, nJ; do i = 1, nI
+               r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i,j,k-1,iBlock))
+               UseLowOrder_Z(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
+            end do; end do; end do
+         end if
+      else if(UseTrueCell)then
+         ! The 5th order schemes need 3 cells on both sides of the face
+         do k=1, nK; do j=1, nJ; do i = 1, nI+1
+            UseLowOrder_X(i,j,k) = &
+                 .not.all(true_cell(i-3:i+2,j,k,iBlock))
+         end do; end do; end do
+         if(nDim > 1)then
+            do k=1, nK; do j=1, nJ+1; do i = 1, nI
+               UseLowOrder_Y(i,j,k) = &
+                    .not.all(true_cell(i,j-3:j+2,j,iBlock))
+            end do; end do; end do
+         end if
+         if(nDim > 2)then
+            do k=1, nK+1; do j=1, nJ; do i = 1, nI
+               UseLowOrder_Z(i,j,k) = &
+                    .not.all(true_cell(i,j,k-3:k+2,iBlock))
+            end do; end do; end do
+         end if
+      end if
+
+!      write(*,*)'!!! iBlock, all(UseLowOrder)=', iBlock, &
+!           all(UseLowOrder_X), all(UseLowOrder_Y)
+
+    end subroutine set_low_order_face
+
   end subroutine calc_face_value
   !===========================================================================
   subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
@@ -2824,10 +2933,10 @@ contains
     ! Limit left face first. Loop index l is for cell center, and face l+1/2
     do l = lMin-1, lMax-1
 
-       if(UseTrueCell)then
-          ! The left face uses l-2:l+2, while the right face needs l-1:l+3
-          if(.not.all(IsTrueCell_I(l-2:l+3))) CYCLE
-       end if
+       ! Skip faces using the low order scheme
+       if(UseLowOrder)then
+          if(UseLowOrder_I(l+1)) CYCLE
+       endif
 
        Cellmm = Cell_I(l-2)
        Cellm  = Cell_I(l-1)
@@ -2889,10 +2998,9 @@ contains
     ! Limit right face. Loop index l is for cell center, and face l-1/2
     do l = lMin, lMax
 
-       if(UseTrueCell)then
-          ! The right face uses l-2:l+2, while the left face needs l-3:l+1
-          if(.not.all(IsTrueCell_I(l-3:l+2))) CYCLE
-       end if
+       if(UseLowOrder)then
+          if(UseLowOrder_I(l)) CYCLE
+       endif
 
        Cellmm = Cell2_I(l-2)
        Cellm  = Cell2_I(l-1)
@@ -2985,8 +3093,6 @@ contains
     real, parameter:: c10over8 = 10./8, c15over8 = 15./8
     real, parameter:: c3over64 = 3./64, c1over16 = 1./16
     real, parameter:: c15over32 = 15./32, c9over16 = 9./16
-
-    real:: c1
 
     ! Generic cell index
     integer:: l
@@ -3105,10 +3211,8 @@ contains
     integer:: l
     !----------------------------------------------------------------------
     do l = lMin-1, lMax-1
-       if(UseTrueCell)then
-          ! The left face with index l+1 uses l-2:l+2
-          ! while the right face with index l+1 needs l-1:l+3
-          if(.not.all(IsTrueCell_I(l-2:l+3))) CYCLE
+       if(UseLowOrder)then
+          if(UseLowOrder_I(l+1)) CYCLE
        end if
 
        ! eq (34)
@@ -3116,10 +3220,8 @@ contains
     end do
 
     do l = lMin, lMax
-       if(UseTrueCell)then
-          ! The right face with index l uses l-2:l+2, 
-          ! while the left face with index l needs l-3:l+1
-          if(.not.all(IsTrueCell_I(l-3:l+2))) CYCLE
+       if(UseLowOrder)then
+          if(UseLowOrder_I(l)) CYCLE
        end if
 
        ! eq (34)
@@ -3205,7 +3307,7 @@ contains
     do l = lMin - 1, lMax
 
        if(UseTrueCell)then
-          ! The PPM limiter seems to use these cells only
+          ! The PPM limiter seems to use these cells only                       
           if(.not.all(IsTrueCell_I(l-2:l+2))) CYCLE
        end if
 
@@ -3653,7 +3755,6 @@ contains
 
   end subroutine correct_monotone_restrict
 
-  !======================================================================
   ! This commented subroutine maybe useful for debug. 
 
   ! subroutine write_block_boundary(iBlock)
