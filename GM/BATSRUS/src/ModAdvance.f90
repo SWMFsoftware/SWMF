@@ -117,6 +117,11 @@ module ModAdvance
   real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
   real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
 
+  ! Switch between low and high order schemes for a given block
+  logical:: UseLowOrder = .false.
+  logical, allocatable:: &
+       UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
+
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
@@ -131,11 +136,11 @@ module ModAdvance
   logical:: DoInterpolateFlux = .false.
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
 
-  !Variables for ECHO scheme
+  ! Variables for ECHO scheme
   logical:: UseFDFaceFlux = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
 
-  !CWENO weight used to limit flux.
+  ! CWENO weight used to limit flux.
   real, allocatable:: Weight_IVX(:,:,:,:,:), Weight_IVY(:,:,:,:,:), &
        Weight_IVZ(:,:,:,:,:)
 
@@ -280,6 +285,13 @@ contains
     if(allocated(Ey_CB))           deallocate(Ey_CB)
     if(allocated(Ez_CB))           deallocate(Ez_CB)
     if(allocated(Source_VCB))      deallocate(Source_VCB)
+    if(allocated(FluxCenter_VGD))  deallocate(FluxCenter_VGD)
+    if(allocated(Weight_IVX))      deallocate(Weight_IVX)
+    if(allocated(Weight_IVY))      deallocate(Weight_IVY)
+    if(allocated(Weight_IVZ))      deallocate(Weight_IVZ)
+    if(allocated(UseLowOrder_X))   deallocate(UseLowOrder_X)
+    if(allocated(UseLowOrder_Y))   deallocate(UseLowOrder_Y)
+    if(allocated(UseLowOrder_Z))   deallocate(UseLowOrder_Z)
     
     if(iProc==0)then
        call write_prefix
