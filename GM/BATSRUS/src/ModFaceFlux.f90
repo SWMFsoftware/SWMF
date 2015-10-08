@@ -29,10 +29,9 @@ module ModFaceFlux
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
-       UseFDFaceFlux,  &
-       Weight_IVX, Weight_IVY, Weight_IVZ, &
-       FluxCenter_VGD, &
-       UseLowOrder, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
+       UseFDFaceFlux, FluxCenter_VGD, &
+       UseLowOrderOnly, UseLowOrder, &
+       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
@@ -602,7 +601,7 @@ contains
               bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
-      if(UseFDFaceFlux) then
+      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
          ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
          ! is 6th order. 
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -688,7 +687,7 @@ contains
 
       !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       !is 6th order. 
-      if(UseFDFaceFlux) then
+      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
                if(UseLowOrder_Y(iFace,jFace,kFace)) CYCLE
@@ -769,7 +768,7 @@ contains
 
       end do; end do; end do
 
-      if(UseFDFaceFlux) then
+      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
                if(UseLowOrder_Z(iFace,jFace,kFace)) CYCLE

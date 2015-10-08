@@ -118,7 +118,8 @@ module ModAdvance
   real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
 
   ! Switch between low and high order schemes for a given block
-  logical:: UseLowOrder = .false.
+  logical:: UseLowOrderOnly = .false.  ! whole block is low order
+  logical:: UseLowOrder     = .false.  ! some faces are low order
   logical, allocatable:: &
        UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
 

@@ -7,8 +7,8 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, &
-       UseLowOrder, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
+  use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrderOnly, UseLowOrder, &
+       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
 
   implicit none
 
@@ -973,7 +973,7 @@ contains
 
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
-          if(nOrder==2)then
+          if(nOrder==2 .or. UseLowOrderOnly)then
              ! Second order scheme
              call get_faceX_second(&
                   1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -1034,7 +1034,7 @@ contains
           end if
 
        else if(DoResChangeOnly) then
-          if(nOrder==2)then
+          if(nOrder==2 .or. UseLowOrderOnly)then
              ! Second order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_second(1,1,1,nJ,1,nK)
@@ -2817,23 +2817,17 @@ contains
       use ModGeometry, ONLY: r_BLK, Rmin_BLK
 
       ! Set which faces should use low (up to second) order scheme
+      ! Set logicals for the current block
 
       integer:: i, j, k
-      real:: r
+      real:: r, rMinBlock, rMaxBlock
 
       character(len=*), parameter:: NameSub = 'set_low_order_face'
       !-------------------------------------------------------------------
+      UseLowOrderOnly = .false.
       UseLowOrder = UseTrueCell .or. UseHighOrderRegion
 
-!      write(*,*)'!!! iBlock, UseLowOrder=', iBlock, UseLowOrder
-
       if(.not.UseLowOrder) RETURN
-
-      ! Optimization: check if block is fully inside high order region.
-      ! If not, set UseLowOrder = .false.; RETURN
-      
-      ! Check if block is fully outside high order region.
-      ! Then set UseLowOrderOnly = .true.; RETURN
 
       if(.not.allocated(UseLowOrder_X)) then
          allocate(             UseLowOrder_X(nI+1,nJ,nK))
@@ -2842,6 +2836,22 @@ contains
       end if
 
       if(UseHighOrderRegion)then
+
+         rMinBlock = Rmin_BLK(iBlock)
+         rMaxBlock = maxval(r_BLK(:,:,:,iBlock))
+
+         ! Optimization: check if block is fully inside high order region.
+         if(rMinBlock > rMinHighOrder .and. rMaxBlock < rMaxHighOrder)then
+            UseLowOrder = .false.
+            RETURN
+         end if
+
+         ! Check if block is fully outside the high order region.
+         if(rMinBlock > rMaxHighOrder .or. rMaxBlock < rMinHighOrder)then
+            UseLowOrderOnly = .true.
+            RETURN
+         end if
+
          ! Use low order scheme based on the radial distance of the face
          do k=1, nK; do j=1, nJ; do i = 1, nI+1
             r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i-1,j,k,iBlock))
@@ -2878,9 +2888,6 @@ contains
             end do; end do; end do
          end if
       end if
-
-!      write(*,*)'!!! iBlock, all(UseLowOrder)=', iBlock, &
-!           all(UseLowOrder_X), all(UseLowOrder_Y)
 
     end subroutine set_low_order_face
 
