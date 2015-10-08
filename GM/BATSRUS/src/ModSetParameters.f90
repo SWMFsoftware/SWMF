@@ -1211,7 +1211,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoBurgers', DoBurgers)
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
-          '#LIMITPTOTAL', '#FLATTENING')
+          '#LIMITPTOTAL', '#FLATTENING', '#HIGHORDERREGION')
         call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")
