@@ -110,6 +110,23 @@ while ($line=<InputFile>) {
     ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Comet.cpp");
   }
   
+  #the range of the dust grain speed (used for evaluation of the local time step)
+  elsif ($InputLine eq "DUSTVELOCITYLIMIT") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($InputLine eq "MIN") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity",$InputLine,"main/Comet.cpp");   
+    }
+    elsif ($InputLine eq "MAX") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"main/Comet.cpp");   
+    }     
+    else {
+      die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+    }     
+  }
+  
   
   #forces that will be accounted during the simulation
   elsif ($InputLine eq "FORCES") {
