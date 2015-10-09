@@ -534,11 +534,12 @@ contains
     UseStrict = .true.
     if(present(UseStrictIn)) UseStrict = UseStrictIn
     NameRegion ="NULL"
-    if(NameCommand == "#AMRREGION") then
+    if(index(NameCommand, "REGION") > 0) then
+       ! Read name of region for #REGION (or #AMRREGION) command
        call read_var('NameRegion',NameRegion, IsLowerCase=.true.)
        AreaResolution = 0
     else
-       ! #GRIDLEVEL/RESOLUTION
+       ! Read grid level/resolution for #GRIDLEVEL/RESOLUTION command
        if(index(NameCommand,"RESOLUTION") > 0)then
           call read_var('AreaResolution', AreaResolution) 
        else
