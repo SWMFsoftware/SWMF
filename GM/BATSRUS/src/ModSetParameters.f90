@@ -1045,8 +1045,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVEBINARY")
         call read_var('DoSaveBinary',save_binary)
 
-     case("#GRIDRESOLUTION","#GRIDLEVEL","#AREARESOLUTION","#AREALEVEL",&
-          "#AMRREGION")
+     case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
 
         call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
              InitLevelInOut=initial_refine_levels, &
