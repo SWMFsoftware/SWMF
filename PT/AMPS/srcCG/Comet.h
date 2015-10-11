@@ -117,6 +117,20 @@ namespace Comet {
     void SetiSpecies(int s);
   }
 
+  //Sampling: sample quantaty a^2*Weight for the further integration of the brightness of the dust grains
+  namespace Sampling {
+     //sample particle data
+     extern int SamplingDataOffset;
+
+     //sample particle data
+     void SampleParticleData(char *ParticleData,double LocalParticleWeight,char  *SamplingBuffer,int spec);
+     int RequestSamplingData(int offset);
+
+     //empty model sampling function and function output of the column integrals
+     void SampleModelData();
+     void PrintBrightnessMap(double halfAngleRange,int iTestPoint,int DataOutputFileNumber);
+     void PrintBrightnessMap(int DataOutputFileNumber);
+  }
 
 }
     //the total acceleration acting on a particle

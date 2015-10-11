@@ -100,7 +100,15 @@ void Comet::Init_BeforeParser() {
   ElectricallyChargedDust::TotalMassDustProductionRate=DustTotalMassProductionRate;
   ElectricallyChargedDust::SizeDistribution::PowerIndex=DustSizeDistribution;
   ElectricallyChargedDust::Init_BeforeParser();
+
+  //request sampling data for calculation of the calculating of the dust brightness
+  PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::RequestSamplingData);
+
+  //set procedure that prints the column integrals
+  //set up the model sampling procedure
+  PIC::Sampling::ExternalSamplingLocalVariables::RegisterSamplingRoutine(Sampling::SampleModelData,Sampling::PrintBrightnessMap);
 #endif
+
 
 }
 
