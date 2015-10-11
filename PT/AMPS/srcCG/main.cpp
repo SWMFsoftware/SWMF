@@ -307,8 +307,10 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+      static const double CharacteristicSpeed=1.0E-2;
+
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
-      return 5.0* 0.3*startNode->GetCharacteristicCellSize()/50.0;
+      return 0.3*startNode->GetCharacteristicCellSize()/CharacteristicSpeed;
     } else {
       CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
     }
@@ -728,7 +730,9 @@ int main(int argc,char **argv) {
   //determine location of the Sun
   SpiceDouble lt,et;
   utc2et_c(Exosphere::SimulationStartTimeString,&et);
-  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+
+//  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+  spkpos_c("SUN",et,"67P/C-G_CSO","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
 
   //determine the plane where the flux will be sampled (e0,e1)
   double e0[3]={1.0,0.0,0.0},e1[3]={0.0,0.7,0.7},l;
@@ -934,10 +938,78 @@ int main(int argc,char **argv) {
   //the total number of iterations 
   int nTotalIterations=5400;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=50;
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=500; //50 
 
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
+
+    //update the location of the flux sampling points
+    //! simulation is performes in the C-G_CK <- the frame that rotates together with the nucleus
+    //! sampling of the dust flux: the points are fixed in the solar orbiter system C-K_CSO
+    {
+      //determine the orientation of the frame of reference:
+      //e0 -> comet-Sun direction
+      //e1 -> normal component of the comet velocity
+      double e0[3],e1[3],l;
+      double xPrimary[3]={0.0,0.0,0.0},xSampleLocation_CSO[3]={0.0,0.0,0.0},xSampleLocation_CK[3]={0.0,0.0,0.0};
+      double StateSun[6],xSun_CK[3];
+      SpiceDouble lt,et,CSO2CK[6][6];
+
+      const double SampleRadius=60.0E3;
+
+      //determine the matrix of rotation from CSO into CK frame
+      utc2et_c(Exosphere::SimulationStartTimeString,&et);
+      sxform_c("67P/C-G_CSO","67P/C-G_CK",et,CSO2CK);
+
+      //location of the Sun in the CK frame
+      spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun_CK,&lt);
+      for (int i=0;i<3;i++) xSun_CK[i]*=1.0E3;
+
+
+      //determine e0
+      spkezr_c("Sun",et,"67P/C-G_CSO","none","CHURYUMOV-GERASIMENKO",StateSun,&lt);
+
+      l=sqrt(StateSun[0]*StateSun[0]+StateSun[1]*StateSun[1]+StateSun[2]*StateSun[2]);
+      for (int idim=0;idim<3;idim++) e0[idim]=StateSun[idim]/l;
+
+      //determine e1
+      l=e0[0]*StateSun[3+0]+e0[1]*StateSun[3+1]+e0[2]*StateSun[3+2];
+      for (int idim=0;idim<3;idim++) e1[idim]=StateSun[3+idim]-l*e0[idim];
+
+      l=sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]);
+
+      if (l<0.000001) {
+        if (fabs(e0[0]>1.0E-5)) e1[0]=-e0[1],e1[1]=e0[0],e1[2]=0.0;
+        else e1[0]=0.0,e1[1]=-e0[2],e1[2]=e0[1];
+
+        l=sqrt(e1[0]*e1[0]+e1[1]*e1[1]+e1[2]*e1[2]);
+        for (int idim=0;idim<3;idim++) e1[idim]/=l;
+      }
+      else for (int idim=0;idim<3;idim++) e1[idim]/=l;
+
+
+      for (int nFluxSamplePoints=0;nFluxSamplePoints<ElectricallyChargedDust::Sampling::FluxMap::SampleLocations.size();nFluxSamplePoints++) {
+        double theta=nFluxSamplePoints*2.0*Pi/((double)(ElectricallyChargedDust::Sampling::FluxMap::SampleLocations.size()));
+
+        //the location of the observations point in the SO frame
+        for (int idim=0;idim<3;idim++) xSampleLocation_CSO[idim]=SampleRadius*(cos(theta)*e0[idim]+sin(theta)*e1[idim]);
+
+        //the location of the observations point in the rotating frame of reference used in the simulations
+        int i,j;
+
+        for (i=0;i<3;i++) {
+          xSampleLocation_CK[i]=0.0;
+
+          for (j=0;j<3;j++) xSampleLocation_CK[i]+=CSO2CK[i][j]*xSampleLocation_CSO[j];
+        }
+
+        //update the sampling direction and cell
+        ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[nFluxSamplePoints].SetLocation(xSampleLocation_CK,xPrimary,xSun_CK);
+      }
+    }
+
+
+    //perform the next time step
     PIC::TimeStep();
 
     //update the particle tracer counter
