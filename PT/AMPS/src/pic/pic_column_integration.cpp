@@ -135,11 +135,30 @@ bool PIC::ColumnIntegration::FindIntegrationLimits(double *x0,double *l,double& 
 
       t=-2.0*c/(b+sqrt_d);
       if (t>0.0) IntersectionTime.push_back(t);
+
+      break;
+    case _INTERNAL_BOUNDARY_TYPE_NASTRAN_SURFACE_:
+      //determine the time of intersaction with the cut-cells if any of them are defined
+      if (PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces!=0) {
+        double CutCellIntersectionTime=-1.0;
+
+        for (int i=0;i<PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;i++) {
+          if (CutCell::BoundaryTriangleFaces[i].RayIntersection(x0,l,t,0.0)==true) {
+            if ((CutCellIntersectionTime<0.0) || (t<CutCellIntersectionTime)) CutCellIntersectionTime=t;
+          }
+        }
+
+        if (CutCellIntersectionTime>0.0) IntersectionTime.push_back(CutCellIntersectionTime);
+      }
+
       break;
     default:
-      exit(__LINE__,__FILE__,"Error: the boundary type is not recognized");
+      {
+        char msg[300];
+        sprintf(msg,"Error: the boundary type (type=%i) is not recognized",InternalBoundaryDescriptor->BondaryType);
+        exit(__LINE__,__FILE__,msg);
+      }
     }
-
   }
 
   //check if any intersections with the boundary of the domain have found
