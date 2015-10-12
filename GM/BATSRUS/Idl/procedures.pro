@@ -213,6 +213,21 @@ function log_func, wlog, varnames, varname, error
 end
 
 ;=============================================================================
+pro black_background
+
+  !p.background =   0
+  !p.color      = 255
+  POLYFILL, [1,1,0,0,1], [1,0,0,1,1], /NORMAL, COLOR=0 ; draw black box
+
+end
+;=============================================================================
+pro white_background
+
+  !p.background = 255
+  !p.color      =   0
+
+end
+;=============================================================================
 pro openfile,unit,filename,filetype
 
    on_error,2
