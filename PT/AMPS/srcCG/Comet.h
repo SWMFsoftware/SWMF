@@ -94,6 +94,10 @@ namespace Comet {
     void UpdateParticleCounter();
   }
 
+  namespace Mesh {
+    extern char sign[_MAX_STRING_LENGTH_PIC_];
+  }
+
   namespace CometData {
     extern int NeutralsFromBinaryOffset;
     extern int nNeutrals;
