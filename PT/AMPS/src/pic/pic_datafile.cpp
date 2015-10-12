@@ -20,6 +20,9 @@ double PIC::CPLR::DATAFILE::MULTIFILE::TimeCoupleNext = -1.0;
 bool PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile  = true;
 //variable to track whether the last datafile has been reached
 bool PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile  = false;
+//offset to the current datafiles relative to beginning of data buffer
+int PIC::CPLR::DATAFILE::MULTIFILE::CurrDataFileOffset = -1;
+int PIC::CPLR::DATAFILE::MULTIFILE::NextDataFileOffset = -1;
 
 // parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
 int  PIC::CPLR::DATAFILE::MULTIFILE::FileNumber = 0;
@@ -35,9 +38,21 @@ void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn,
   FileNumber     = FileNumberFirst;
   TimeCurrent    = -1.0;
   TimeCoupleNext = -1.0;
+
+  CurrDataFileOffset = 0;
+#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  NextDataFileOffset = nTotalBackgroundVariables*sizeof(double);
+#else
+  NextDataFileOffset = 0;
+#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+
   BreakAtLastFile= BreakAtLastFileIn;
   // load the first file
   UpdateDataFile();
+#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  // load the second file
+  UpdateDataFile();
+#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   // set the global time counter value
   PIC::SimulationTime::SetInitialValue(TimeCurrent);
 }
@@ -48,10 +63,22 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
   char fullname[_MAX_STRING_LENGTH_PIC_];
   sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
   PIC::CPLR::DATAFILE::ImportData(fullname);
+#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  //swap data offsets
+  PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= 
+    NextDataFileOffset - CurrDataFileOffset;
+  if(CurrDataFileOffset == 0){
+    CurrDataFileOffset = NextDataFileOffset; NextDataFileOffset = 0;}
+  else{
+    NextDataFileOffset = CurrDataFileOffset; CurrDataFileOffset = 0;}
+#else
+  
+#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+  
   if(PIC::ThisThread==0)
     std::cout << "Data file "<<fullname<<" has been loaded"<<std::endl;
   FileNumber++;
-  //check whehter the last file has been reached
+  //check whether the last file has been reached
   if(TimeCoupleNext < 0)
     ReachedLastFile=true;
 }
@@ -224,6 +251,11 @@ void PIC::CPLR::DATAFILE::Init() {
 
     PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=Offset::MagneticFieldGradient.nVars*sizeof(double);
     nTotalBackgroundVariables+=Offset::MagneticFieldGradient.nVars;
+
+#if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+    // double the reserved memory for time inteprolation mode
+    PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nTotalBackgroundVariables*sizeof(double);
+#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   }
 
 
@@ -770,7 +802,7 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
 	  //get data sotrage location
 	  nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
 	  if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
-	  offset=CenterNode->GetAssociatedDataBufferPointer();
+	  offset=CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
 
 	  //compute and write gradient's components
 	  *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[0];

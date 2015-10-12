@@ -30,7 +30,7 @@ void PIC::CPLR::DATAFILE::ARMS::Init() {
 }
 
 //read ARM's output file
-void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode){
 
   // size of the uniform grid
   static int nX = -1, nZ = -1;
@@ -235,8 +235,8 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    //locate the cell
 	    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
 	    if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
-	    offset=CenterNode->GetAssociatedDataBufferPointer();
-	    
+	    offset = CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
+
 	    //save the interpolated values
 	    for (int idim=0;idim<3;idim++) {
 	      *(idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset))        =DataInterp[b_+idim];

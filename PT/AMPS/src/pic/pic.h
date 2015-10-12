@@ -2970,6 +2970,10 @@ namespace PIC {
         extern double TimeCurrent;
         //time to load the next datafile
         extern double TimeCoupleNext;
+	//offset to the data at next datafile RELATIVE to the current one
+	//used for time interpolation
+	extern int NextDataFileOffset;
+	extern int CurrDataFileOffset;
         // parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
         extern int  FileNumber;
         extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
@@ -3096,65 +3100,100 @@ namespace PIC {
       void EvaluateSurfaceIonFlux(double ShiftFactor);
 
       //calculate the values of the located parameters
-      inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell) {
-        double *offset=(double*)(Offset::ElectricField.offset+cell->GetAssociatedDataBufferPointer());
-
-        for (int idim=0;idim<Offset::ElectricField.nVars;idim++) E[idim]=offset[idim];
-      }
-
-      inline void GetBackgroundMagneticField(double *B,PIC::Mesh::cDataCenterNode *cell) {
-        double *offset=(double*)(Offset::MagneticField.offset+cell->GetAssociatedDataBufferPointer());
-
-        for (int idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=offset[idim];
-      }
-
-      inline void GetBackgroundMagneticFieldGradient(double *gradB,PIC::Mesh::cDataCenterNode *cell) {
-        double *offset=(double*)(Offset::MagneticFieldGradient.offset+cell->GetAssociatedDataBufferPointer());
-
-        for (int idim=0;idim<Offset::MagneticFieldGradient.nVars;idim++) gradB[idim]=offset[idim];
-      }
-
-
-      inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell) {
-        register double *offset=(double*)(Offset::PlasmaBulkVelocity.offset+cell->GetAssociatedDataBufferPointer());
-
-        for (int idim=0;idim<Offset::PlasmaBulkVelocity.nVars;idim++) vel[idim]=offset[idim];
-      }
-
-      inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell) {
-        return *((double*)(Offset::PlasmaIonPressure.offset+cell->GetAssociatedDataBufferPointer()));
-      }
-
-      inline double GetBackgroundElectronPlasmaPressure(PIC::Mesh::cDataCenterNode *cell) {
-        char *offset=cell->GetAssociatedDataBufferPointer();
-
-        offset+=(Offset::PlasmaElectronPressure.offset!=-1) ? Offset::PlasmaElectronPressure.offset : Offset::PlasmaIonPressure.offset;
-
-        return *((double*)offset);
-      }
-
-      inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell) {
-        return *((double*)(Offset::PlasmaNumberDensity.offset+cell->GetAssociatedDataBufferPointer()));
-      }
-
-      inline double GetBackgroundPlasmaTemperature(PIC::Mesh::cDataCenterNode *cell) {
-        return *((double*)(Offset::PlasmaTemperature.offset+cell->GetAssociatedDataBufferPointer()));
-      }
-
-      inline void GetBackgroundFieldsVector(double *E,double *B,PIC::Mesh::cDataCenterNode *cell) {
-        int idim;
-        char *offset=cell->GetAssociatedDataBufferPointer();
-
-        double *e=(double*)(offset+Offset::ElectricField.offset);
-        double *b=(double*)(offset+Offset::MagneticField.offset);
-
-        for (idim=0;idim<Offset::MagneticField.nVars;idim++) B[idim]=b[idim],E[idim]=e[idim];
-      }
-
-      inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell) {
-        double *offset=(double*)(DataOffsetBegin+cell->GetAssociatedDataBufferPointer());
-
+      inline void GetBackgroundValue(double *DataVector,int DataVectorLength,int DataOffsetBegin,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	
+        double *offset = (double*)(DataOffsetBegin + 
+				   MULTIFILE::CurrDataFileOffset + 
+				   cell->GetAssociatedDataBufferPointer());
         for (int i=0;i<DataVectorLength;i++) DataVector[i]=offset[i];
+
+#if     _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+	if(isnan(Time))
+	  Time = PIC::SimulationTime::Get();	
+        offset = (double*)(DataOffsetBegin + 
+				   MULTIFILE::NextDataFileOffset + 
+				   cell->GetAssociatedDataBufferPointer());
+	//interpolation weight
+	double alpha = 
+	  (MULTIFILE::TimeCoupleNext - Time) /
+	  (MULTIFILE::TimeCoupleNext - MULTIFILE::TimeCurrent);
+        for (int i=0;i<DataVectorLength;i++) 
+	  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
+#endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
+
+      }
+
+      inline void GetBackgroundElectricField(double *E,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	GetBackgroundValue(E, 
+			   Offset::ElectricField.nVars,
+			   Offset::ElectricField.offset, cell, Time);
+      }
+
+      inline void GetBackgroundMagneticField(double *B,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	GetBackgroundValue(B, 
+			   Offset::MagneticField.nVars,
+			   Offset::MagneticField.offset, cell, Time);
+      }
+
+      inline void GetBackgroundMagneticFieldGradient(double *gradB,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	GetBackgroundValue(gradB, 
+			   Offset::MagneticFieldGradient.nVars,
+			   Offset::MagneticFieldGradient.offset, cell, Time);
+      }
+
+
+      inline void GetBackgroundPlasmaVelocity(double *vel,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	GetBackgroundValue(vel, 
+			   Offset::PlasmaBulkVelocity.nVars,
+			   Offset::PlasmaBulkVelocity.offset, cell, Time);
+      }
+
+      inline double GetBackgroundPlasmaPressure(PIC::Mesh::cDataCenterNode *cell, double Time) {
+	double p;
+	GetBackgroundValue(&p, 
+			   Offset::PlasmaIonPressure.nVars,
+			   Offset::PlasmaIonPressure.offset, cell, Time);
+	return p;
+      }
+
+      inline double GetBackgroundElectronPlasmaPressure(PIC::Mesh::cDataCenterNode *cell, double Time) {
+	double p;
+	int nVars, offset;
+	if(Offset::PlasmaElectronPressure.offset!=-1){
+	  nVars  = Offset::PlasmaElectronPressure.nVars;
+	  offset = Offset::PlasmaElectronPressure.offset;}
+	else{
+	  nVars  = Offset::PlasmaIonPressure.nVars;
+	  offset = Offset::PlasmaIonPressure.offset;}
+	GetBackgroundValue(&p, 
+			   nVars,
+			   offset, cell, Time);
+	return p;
+      }
+
+      inline double GetBackgroundPlasmaNumberDensity(PIC::Mesh::cDataCenterNode *cell, double Time) {
+	double n;
+	GetBackgroundValue(&n, 
+			   Offset::PlasmaNumberDensity.nVars,
+			   Offset::PlasmaNumberDensity.offset, cell, Time);
+	return n;
+      }	
+
+      inline double GetBackgroundPlasmaTemperature(PIC::Mesh::cDataCenterNode *cell, double Time) {
+	double T;
+	GetBackgroundValue(&T, 
+			   Offset::PlasmaTemperature.nVars,
+			   Offset::PlasmaTemperature.offset, cell, Time);
+	return T;
+      }
+
+      inline void GetBackgroundFieldsVector(double *E,double *B,PIC::Mesh::cDataCenterNode *cell, double Time) {
+	GetBackgroundValue(E, 
+			   Offset::ElectricField.nVars,
+			   Offset::ElectricField.offset, cell, Time);
+	GetBackgroundValue(B, 
+			   Offset::MagneticField.nVars,
+			   Offset::MagneticField.offset, cell, Time);
       }
 
 
@@ -3342,7 +3381,7 @@ namespace PIC {
     void SaveCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
     void LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
 
-    inline void GetBackgroundElectricField(double *E) {
+    inline void GetBackgroundElectricField(double *E, double Time = NAN) {
       double t[3];
       int idim,iStencil;
 
@@ -3352,7 +3391,7 @@ namespace PIC {
         #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
         SWMF::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
         #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-        DATAFILE::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+        DATAFILE::GetBackgroundElectricField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
         #else
         exit(__LINE__,__FILE__,"not implemented");
         #endif
@@ -3361,7 +3400,7 @@ namespace PIC {
       }
     }
 
-     inline void GetBackgroundMagneticField(double *B) {
+     inline void GetBackgroundMagneticField(double *B, double Time = NAN) {
        double t[3];
        int idim,iStencil;
 
@@ -3371,7 +3410,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         DATAFILE::GetBackgroundMagneticField(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3380,7 +3419,7 @@ namespace PIC {
        }
      }
 
-     inline void GetBackgroundMagneticFieldGradient(double *gradB) {
+     inline void GetBackgroundMagneticFieldGradient(double *gradB, double Time = NAN) {
        double t[DATAFILE::Offset::MagneticFieldGradient.nVars];
        int idim,iStencil;
 
@@ -3390,7 +3429,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          exit(__LINE__,__FILE__,"not implemented");
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundMagneticFieldGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         DATAFILE::GetBackgroundMagneticFieldGradient(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3399,7 +3438,7 @@ namespace PIC {
        }
      }
 
-     inline void GetBackgroundPlasmaVelocity(double *vel) {
+     inline void GetBackgroundPlasmaVelocity(double *vel, double Time = NAN) {
        double t[3];
        int idim,iStencil;
 
@@ -3409,7 +3448,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         DATAFILE::GetBackgroundPlasmaVelocity(t,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3418,7 +3457,7 @@ namespace PIC {
        }
      }
 
-     inline double GetBackgroundPlasmaPressure() {
+     inline double GetBackgroundPlasmaPressure(double Time = NAN) {
        double res=0.0;
        int iStencil;
 
@@ -3426,7 +3465,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          res+=SWMF::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3435,7 +3474,7 @@ namespace PIC {
        return res;
      }
 
-     inline double GetBackgroundElectronPlasmaPressure() {
+     inline double GetBackgroundElectronPlasmaPressure(double Time = NAN) {
        double res=0.0;
        int iStencil;
 
@@ -3443,7 +3482,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          exit(__LINE__,__FILE__,"Error: not implemented");
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundElectronPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundElectronPlasmaPressure(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3452,7 +3491,7 @@ namespace PIC {
        return res;
      }
 
-     inline double GetBackgroundPlasmaNumberDensity() {
+     inline double GetBackgroundPlasmaNumberDensity(double Time = NAN) {
        double res=0.0;
        int iStencil;
 
@@ -3460,7 +3499,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          res+=SWMF::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaNumberDensity(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3469,7 +3508,7 @@ namespace PIC {
        return res;
      }
 
-     inline double GetBackgroundPlasmaTemperature() {
+     inline double GetBackgroundPlasmaTemperature(double Time = NAN) {
        double res=0.0;
        int iStencil;
 
@@ -3477,7 +3516,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          res+=SWMF::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         res+=DATAFILE::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil])*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
+         res+=DATAFILE::GetBackgroundPlasmaTemperature(PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time)*PIC::InterpolationRoutines::CellCentered::Stencil.Weight[iStencil];
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif
@@ -3486,7 +3525,7 @@ namespace PIC {
        return res;
      }
 
-     inline void GetBackgroundFieldsVector(double *E,double *B) {
+     inline void GetBackgroundFieldsVector(double *E,double *B, double Time = NAN) {
        double tE[3],tB[3];
        int idim,iStencil;
 
@@ -3496,7 +3535,7 @@ namespace PIC {
          #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
          SWMF::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-         DATAFILE::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil]);
+         DATAFILE::GetBackgroundFieldsVector(tE,tB,PIC::InterpolationRoutines::CellCentered::Stencil.cell[iStencil], Time);
          #else
          exit(__LINE__,__FILE__,"not implemented");
          #endif

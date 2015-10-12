@@ -210,3 +210,6 @@ at the end of each time step
 
 //ideal MHD mode
 #define _PIC__IDEAL_MHD_MODE_ _PIC_MODE_ON_
+
+//time interpolation mode
+#define _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ _PIC_MODE_OFF_
