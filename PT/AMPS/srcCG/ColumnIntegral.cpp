@@ -12,6 +12,7 @@
 
 
 #include "pic.h"
+#include "global.h"
 #include "Exosphere.h"
 
 //==============================================================================================================================
@@ -130,7 +131,7 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
     sprintf(fname,"%s/Comet.ColumnIntegrals.MapAngularRange=%e.SamplePoint=%i.out=%i.dat",PIC::OutputDataFileDirectory,halfAngleRange/Pi*180.0,iTestPoint,DataOutputFileNumber);
     fout=fopen(fname,"w");
 
-    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"H2O Column Density\", \"Dust Density * a^2 Integral\"\n");
+    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Nucleus Projection\", \"H2O Column Density\", \"Dust Density * a^2 Integral\"\n");
     fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
   }
 
@@ -158,7 +159,32 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
 
       //calculate and output of the column integral
       PIC::ColumnIntegration::GetCoulumnIntegral(StateVector,StateVectorLength,x0,l,Exosphere::ColumnIntegral::CoulumnDensityIntegrant);
-      if (PIC::ThisThread==0) fprintf(fout,"%e %e %e %e\n",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,StateVector[0],StateVector[1]);
+
+      //determine the nucleus projection
+      double t,NucleusProjectionCode=-1.0;
+      int iStartFace,iFinishFace;
+
+      iStartFace=(PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads)*PIC::ThisThread;
+      iFinishFace=(PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads)*(PIC::ThisThread+1);
+
+      if (iFinishFace>PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces) iFinishFace=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
+
+      for (int i=iStartFace;i<iFinishFace;i++) {
+        if (CutCell::BoundaryTriangleFaces[i].RayIntersection(x0,l,t,0.0)==true) {
+          NucleusProjectionCode=1.0;
+        }
+      }
+
+      //determine the minimum intersection time calculated by all processors
+      double Buffer[PIC::nTotalThreads];
+      MPI_Gather(&NucleusProjectionCode,1,MPI_DOUBLE,Buffer,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+
+      //output the column integrals value
+      if (PIC::ThisThread==0) {
+        for (int thread=0;thread<PIC::nTotalThreads;thread++) if (Buffer[thread]>0.0) NucleusProjectionCode=1.0;
+
+        fprintf(fout,"%e %e %e %e %e\n",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,NucleusProjectionCode,StateVector[0],StateVector[1]);
+      }
 
     }
   }
