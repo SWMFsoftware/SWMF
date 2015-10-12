@@ -141,11 +141,26 @@ bool PIC::ColumnIntegration::FindIntegrationLimits(double *x0,double *l,double& 
       //determine the time of intersaction with the cut-cells if any of them are defined
       if (PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces!=0) {
         double CutCellIntersectionTime=-1.0;
+        int iStartFace,iFinishFace;
 
-        for (int i=0;i<PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;i++) {
+
+        iStartFace=(PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads)*PIC::ThisThread;
+        iFinishFace=(PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces/PIC::nTotalThreads)*(PIC::ThisThread+1);
+
+        if (iFinishFace>PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces) iFinishFace=PIC::Mesh::IrregularSurface::nBoundaryTriangleFaces;
+
+        for (int i=iStartFace;i<iFinishFace;i++) {
           if (CutCell::BoundaryTriangleFaces[i].RayIntersection(x0,l,t,0.0)==true) {
             if ((CutCellIntersectionTime<0.0) || (t<CutCellIntersectionTime)) CutCellIntersectionTime=t;
           }
+        }
+
+        //detrmine the minimum intersection time calculated by all processors
+        double Buffer[PIC::nTotalThreads];
+        MPI_Allgather(&CutCellIntersectionTime,1,MPI_DOUBLE,Buffer,1,MPI_DOUBLE,MPI_GLOBAL_COMMUNICATOR);
+
+        for (int thread=0;thread<PIC::nTotalThreads;thread++) {
+          if ((CutCellIntersectionTime<0.0) || (Buffer[thread]<CutCellIntersectionTime)) CutCellIntersectionTime=Buffer[thread];
         }
 
         if (CutCellIntersectionTime>0.0) IntersectionTime.push_back(CutCellIntersectionTime);
