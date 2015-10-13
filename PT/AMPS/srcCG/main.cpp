@@ -556,7 +556,8 @@ int main(int argc,char **argv) {
   Comet::GetNucleusNastranInfo(CG);
 
   //generate mesh or read from file
-  char mesh[200]="none";  ///"amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  char mesh[_MAX_STRING_LENGTH_PIC_]="none";  ///"amr.sig=0xd7058cc2a680a3a2.mesh.bin";
+  sprintf(mesh,"amr.sig=%s.mesh.bin",Comet::Mesh::sign);
 
   for (int i=0;i<3;i++) {
     if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) {
@@ -564,7 +565,21 @@ int main(int argc,char **argv) {
       sprintf(mesh,"amr.sig=0xd7058cc2a680a3a2.mesh.bin");
     }
     else {
-      xmin[i]=-450.0e3,xmax[i]=450.0e3;
+      if (strcmp(Comet::Mesh::sign,"")==0) {
+        //do nothing
+      }
+      else if (strcmp(Comet::Mesh::sign,"0xd7058cc2a680a3a2")==0) {
+        xmin[i]=-100.0e3,xmax[i]=100.0e3;
+      }
+      else if (strcmp(Comet::Mesh::sign,"0xd6068dc10ead912f")==0) {
+        xmin[i]=-450.0e3,xmax[i]=450.0e3;
+      }
+      else if (strcmp(Comet::Mesh::sign,"0xd5058fc3e01a454f")==0) {
+        xmin[i]=-400.0e3,xmax[i]=400.0e3;
+      }
+      else {
+        exit(__LINE__,__FILE__,"Error: the mesh signature is not recognized");
+      }
     }
   }
 
@@ -674,7 +689,7 @@ int main(int argc,char **argv) {
   Comet::CometData::SetiSpecies(0);
 #endif
 
-  if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
+  if (_CG_DUST_FORCE_MODE__LORENTZ_FORCE_ == _PIC_MODE_ON_) if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
     if (PIC::CPLR::DATAFILE::BinaryFileExists("CG-BATSRUS")==true)  {
       PIC::CPLR::DATAFILE::LoadBinaryFile("CG-BATSRUS");
     }
@@ -938,7 +953,7 @@ int main(int argc,char **argv) {
   //the total number of iterations 
   int nTotalIterations=5400;
 
-  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=500; //50 
+  if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_) nTotalIterations=50; //50
 
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
