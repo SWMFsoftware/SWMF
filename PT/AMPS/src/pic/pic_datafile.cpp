@@ -136,6 +136,9 @@ void PIC::CPLR::DATAFILE::ImportData(const char *fname) {
 //initialize the data reading namespace
 void PIC::CPLR::DATAFILE::Init() {
 
+  //initialize offset to the current datafile storage
+  MULTIFILE::CurrDataFileOffset = 0;
+
   //set the initialization flag and call the init procedures of the particular file reader
   Offset::InitFlag=true;
 
