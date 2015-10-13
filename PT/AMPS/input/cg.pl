@@ -127,6 +127,32 @@ while ($line=<InputFile>) {
     }     
   }
   
+  #redefine a value of a macro 
+  elsif ($InputLine eq "DEFINE") {
+    my ($macro,$value,$s0,$s1);
+    
+    ($InputLine,$InputComment)=split('!',$line,2);
+    ($s0,$macro,$value,$s1)=split(' ',$InputLine,4);
+    
+    $s0=$macro;    
+    $s0=~s/[()=]/ /g;
+    ($s0,$s1)=split(' ',$s0,2);
+
+    if (!defined $value) {
+      $value=" ";
+    }
+
+    ampsConfigLib::AddLine2File("\n#undef $s0\n#define $macro $value\n","main/Comet.dfn");    
+  }
+  
+  #define the mesh sigrature that will be used in the simuation (for generation of the particular mesh settings and loadging particular model data files)
+  elsif ($InputLine eq "MESHSIGNATURE") {
+    $line=~s/[=():]/ /g;
+    ($InputLine,$line)=split(' ',$line,2);
+    ($InputLine,$line)=split(' ',$line,2);
+    
+    ampsConfigLib::ChangeValueOfVariable("char Comet::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Comet.cpp");
+  }
   
   #forces that will be accounted during the simulation
   elsif ($InputLine eq "FORCES") {
