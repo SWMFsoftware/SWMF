@@ -197,6 +197,9 @@ contains
     ! Check if the run should be killed
     logical:: DoKill
     
+    ! Smallest temporal frequency and a small fraction
+    real:: DtTiny = 0.0
+
     character(len=*), parameter :: NameSub=NameMod//'::do_session'
     !--------------------------------------------------------------------------
 
@@ -230,6 +233,32 @@ contains
        where(tSimulation_C < 0.0 .and. IsProc_C) tSimulation_C = tSimulation
     end if
 
+    if(DoTimeAccurate)then
+       ! Calculate the smallest temporal frequency and a tiny fraction of it
+       DtTiny = huge(1.0)
+
+       ! Restart frequency
+       if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
+            DtTiny = SaveRestart % Dt
+
+       ! Stop check frequency
+       if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
+            DtTiny = min(DtTiny, CheckStop % Dt)
+
+       ! Active coupling frequencies
+       DtTiny = min( DtTiny, &
+            minval(Couple_CC(iComp,:) % Dt, &
+            MASK  =Couple_CC(iComp,:) % DoThis), &
+            minval(Couple_CC(:,iComp) % Dt, &
+            MASK  =Couple_CC(:,iComp) % DoThis))
+
+       ! Tiny fraction
+       DtTiny = DtTiny * 1e-6
+       
+       if(DoTestMe)write(*,*)NameSub,' DtTiny=', DtTiny
+
+    end if
+    
     if(DoTestMe)write(*,*)NameSub,' tSimulation_C=',tSimulation_C(1:nComp)
 
     TIMELOOP: do
@@ -321,8 +350,9 @@ contains
              if(DoTestMe)write(*,*)NameSub,': restart tSimulationLimit=', &
                   tSimulationLimit
 
-             if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
-                  tSimulationLimit = min(tSimulationLimit, CheckStop % tNext)
+             if(CheckStop % DoThis .and. CheckStop % Dt > 0 .and. &
+                  CheckStop % tNext - DtTiny < tSimulationLimit)&
+                  tSimulationLimit = CheckStop % tNext
 
              if(DoTestMe)write(*,*)NameSub,': checkstop tSimulationLimit=', &
                   tSimulationLimit
@@ -333,6 +363,10 @@ contains
              if(DoTestMe)write(*,*)NameSub,': tmax tSimulationLimit=', &
                   tSimulationLimit
 
+             if(  tSimulationCouple > tSimulationLimit .and. &
+                  tSimulationCouple - DtTiny < tSimulationLimit) &
+                  tSimulationLimit = tSimulationCouple
+             
              ! The next wait time is the smaller of coupling and limit times
              tSimulationWait_C(iComp) = min(tSimulationCouple,tSimulationLimit)
 
