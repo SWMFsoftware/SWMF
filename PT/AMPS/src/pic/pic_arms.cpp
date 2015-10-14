@@ -38,9 +38,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
   const int nvar = 22;
   //original data
   const int b_ = 0, v_ = 3, n_ = 6, t_ = 7, p_ = 8; 
-  // vectors in the data
-  const int nvec       = 6;
-  const int vecs[nvec] = {b_, v_};
+
   static double *Xpos, *Zpos;
   static double ***Data;
 
@@ -148,27 +146,25 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    }
 	}
     }
-  }
-  // now the data has been read -----------------------------------------------
-
-  //convert velocity and magnetic field vectors to cartesian coordinates ------
-  for(int iZ = 0; iZ < nZ; iZ++){
-    for(int iX = 0; iX < nX; iX++){
-      double tmp;
-      double radius   = pow(Xpos[iX]*Xpos[iX] + Zpos[iZ]*Zpos[iZ],0.5);
-      double cosTheta = Zpos[iZ] / radius, sinTheta = Xpos[iX] / radius;
-      // transform velocity and magnetic field vectors:
-      // data is a slice of y=0 plane => need only Theta angle
-      for(int i = b_; i==b_ || i==v_; i += (v_-b_) ){
-	tmp              =Data[i][iX][iZ]*cosTheta-Data[i+1][iX][iZ]*sinTheta;
-	Data[i  ][iX][iZ]=Data[i][iX][iZ]*sinTheta+Data[i+1][iX][iZ]*cosTheta;
-	Data[i+1][iX][iZ]=Data[i+2][iX][iZ]*1;
-	Data[i+2][iX][iZ]=tmp;
+    // now the data has been read -----------------------------------------------
+    //convert velocity and magnetic field vectors to cartesian coordinates ------
+    for(int iZ = 0; iZ < nZ; iZ++){
+      for(int iX = 0; iX < nX; iX++){
+	double tmp;
+	double radius   = pow(Xpos[iX]*Xpos[iX] + Zpos[iZ]*Zpos[iZ],0.5);
+	double cosTheta = Zpos[iZ] / radius, sinTheta = Xpos[iX] / radius;
+	// transform velocity and magnetic field vectors:
+	// data is a slice of y=0 plane => need only Theta angle
+	for(int i = b_; i==b_ || i==v_; i += (v_-b_) ){
+	  tmp              =Data[i][iX][iZ]*cosTheta-Data[i+1][iX][iZ]*sinTheta;
+	  Data[i  ][iX][iZ]=Data[i][iX][iZ]*sinTheta+Data[i+1][iX][iZ]*cosTheta;
+	  Data[i+1][iX][iZ]=Data[i+2][iX][iZ]*1;
+	  Data[i+2][iX][iZ]=tmp;
+	}
       }
     }
+    //conversion is finished ----------------------------------------------------
   }
-  //conversion is finished ----------------------------------------------------
-  
   // perform the interpolation
   {
     int nd;
@@ -210,8 +206,10 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	    double wZth = 0.5;
 	    
 	    //interpolate values
-	    double DataInterp[nvar] = {0};
-	    //double GrdabsBInterp[3]= {0}, absBInterp=0, GrdBInterp[3][3]={0};
+	    double DataInterp[nvar];
+	    for(int ivar=0; ivar<nvar; ivar++)
+	      DataInterp[ivar] = 0.0;
+
 	    for(int ii=0;ii<2;ii++) 
 	      for(int jj=0;jj<2;jj++){
 		//interpolate variables stored at nodes
@@ -225,10 +223,10 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
 	      // initial data is in slice y=0
 	      double cosPhi    = x[0] / radpol, sinPhi   = x[1]   / radpol;
 	      double tmp;
-	      for(int ivec=0, i=vecs[ivec]; ivec<nvec; i=vecs[++ivec] ){
-		tmp             = DataInterp[i]*cosPhi-DataInterp[i+1]*sinPhi;
-		DataInterp[i+1] = DataInterp[i]*sinPhi+DataInterp[i+1]*cosPhi;
-		DataInterp[i  ] = tmp;
+	      for(int ii = b_; ii==b_ || ii==v_; ii += (v_-b_) ) {
+		tmp              = DataInterp[ii]*cosPhi-DataInterp[ii+1]*sinPhi;
+		DataInterp[ii+1] = DataInterp[ii]*sinPhi+DataInterp[ii+1]*cosPhi;
+		DataInterp[ii  ] = tmp;
 	      }
 	    }
   
