@@ -346,8 +346,9 @@ namespace PIC {
       inline cFieldLineVertex* GetBegin(){return begin;}
       inline cFieldLineVertex* GetEnd(){  return end;}
 
-      //access segment's length and coordinate at its beginning
+      //access segment's length and and directoon at its beginning
       inline double GetLength(){return length;}
+      inline void GetDir(double* DirOut){memcpy(DirOut,Dir,DIM*sizeof(double));}
 
       //access segment's neighbors
       inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
@@ -441,11 +442,22 @@ namespace PIC {
 	if(TotalLength < 0.0 || nSegment < 0){res="Error"; return;}
 	res = "OK"; return;
       }
+      //access first/last segment
+      cFieldLineSegment* GetFirstSegment(){return FirstSegment;}
+      cFieldLineSegment* GetLastSegment(){ return LastSegment;}
+      void GetFirstSegment(cFieldLineSegment* Out){Out=FirstSegment;}
+      void GetLastSegment( cFieldLineSegment* Out){Out=LastSegment;}
+
+      //access first/last vertex
+      cFieldLineVertex* GetFirstVertex(){return FirstVertex;}
+      cFieldLineVertex* GetLastVertex(){ return LastVertex;}
+      void GetFirstVertex(cFieldLineVertex* Out){Out=FirstVertex;}
+      void GetLastVertex( cFieldLineVertex* Out){Out=LastVertex;}
 
       // add vertex with given coordinates
       void Add(double* xIn);
-      // set magnetic field at a given vertex
-      void SetMagneticField(double* BIn, int iVertex);
+      // set magnetic field at a given vertex (last by default)
+      void SetMagneticField(double* BIn, int iVertex=-1);
       // print data stored on the field line
       void Output(FILE* fout, bool GeometryOnly);
     };
@@ -465,6 +477,9 @@ namespace PIC {
 
     //create parker spiral starting at point xStart
     void InitSimpleParkerSpiral(double *xStart);
+
+    //create a 2D field-line loop based on the background field
+    void InitLoop2D(double *xStart, double DArc=1E-2);
     
     // output data
     void Output(char* fname, bool GeometryOnly);
