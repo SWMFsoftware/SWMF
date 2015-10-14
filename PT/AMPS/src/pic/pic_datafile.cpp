@@ -808,9 +808,9 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
 	  offset=CenterNode->GetAssociatedDataBufferPointer() + MULTIFILE::CurrDataFileOffset;
 
 	  //compute and write gradient's components
-	  *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[0];
-	  *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[1];
-	  *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[2];
+	  *(0+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[0]-Bminus[0]) / dXCell[idim];
+	  *(3+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[1]-Bminus[1]) / dXCell[idim];
+	  *(6+idim+(double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticFieldGradient.offset))=(Bplus[2]-Bminus[2]) / dXCell[idim];
 	}
       }
   
