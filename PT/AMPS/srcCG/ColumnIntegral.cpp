@@ -21,10 +21,16 @@ int Comet::Sampling::SamplingDataOffset=-1;
 
 
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
+  int s,nvars=1;
 
-  if (vlist!=NULL) sprintf(vlist,", \"H2O Column Density\" , \"Dust Density*a^2\"");
+  if (vlist!=NULL) sprintf(vlist,", \"Dust Density*a^2/r2\"");
 
-  return 2;
+  for (s=0;s<Comet::CometData::nNeutrals;s++) {
+    nvars++;
+    if (vlist!=NULL) sprintf(vlist,", \"Column Density[s=%i]\"",s);
+  }
+
+  return nvars;
 }
 
 void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLength,double* x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
@@ -52,8 +58,14 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
   }
 
-  res[0]=cell->GetNumberDensity(0);
-  res[1]=DustBrightness;
+  res[0]=DustBrightness;
+
+
+  //calculate column density dust to the background species
+  for (int s=0;s<Comet::CometData::nNeutrals;s++) {
+    res[s+1]=Comet::CometData::GetNeutralsMassDensity(s,nd,node);
+  }
+
 }
 
 
@@ -123,7 +135,7 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
   const double dZenitAngle=2.0*halfAngleRange/(nZenithPoints-1);
   const double dAzimuthAngle=2.0*halfAngleRange/(nAzimuthPoints-1);
 
-  const int StateVectorLength=2;
+  const int StateVectorLength=1+Comet::CometData::nNeutrals;
   double StateVector[StateVectorLength];
 
   //open output file
@@ -131,7 +143,9 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
     sprintf(fname,"%s/Comet.ColumnIntegrals.MapAngularRange=%e.SamplePoint=%i.out=%i.dat",PIC::OutputDataFileDirectory,halfAngleRange/Pi*180.0,iTestPoint,DataOutputFileNumber);
     fout=fopen(fname,"w");
 
-    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Nucleus Projection\", \"H2O Column Density\", \"Dust Density * a^2 Integral\"\n");
+    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Nucleus Projection\", \"Dust Density * a^2 Integral\"\n");
+    for (int s=0;s<Comet::CometData::nNeutrals;s++) fprintf(fout,", \"Column Density[s=%i]\"",s);
+
     fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
   }
 
@@ -183,7 +197,13 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
       if (PIC::ThisThread==0) {
         for (int thread=0;thread<PIC::nTotalThreads;thread++) if (Buffer[thread]>0.0) NucleusProjectionCode=1.0;
 
-        fprintf(fout,"%e %e %e %e %e\n",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,NucleusProjectionCode,StateVector[0],StateVector[1]);
+        fprintf(fout,"%e %e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,NucleusProjectionCode,StateVector[0]);
+
+        //output column densities of the background neutral species
+        for (int s=0;s<Comet::CometData::nNeutrals;s++) fprintf(fout," %e",  StateVector[1+s]);
+
+        //finish the line
+        fprintf(fout," \n");
       }
 
     }
