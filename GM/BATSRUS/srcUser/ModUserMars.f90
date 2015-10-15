@@ -1022,9 +1022,9 @@ contains
           State_VGB(rhoOp_,i,j,k,iBlock)= &
                CellState_VI(rhoOp_,body1_)*cosSZA
           State_VGB(rhoO2p_,i,j,k,iBlock)= &
-               CellState_VI(rhoOp_,body1_)*sqrt(cosSZA)
+               CellState_VI(rhoO2p_,body1_)*sqrt(cosSZA)
           State_VGB(rhoCO2p_,i,j,k,iBlock)= &
-               CellState_VI(rhoOp_,body1_)*cosSZA
+               CellState_VI(rhoCO2p_,body1_)*cosSZA
           State_VGB(rho_,i,j,k,iBlock)  = &
                sum( State_VGB(rho_+1:rho_+MaxSpecies,i,j,k,iBlock))
           State_VGB(P_,i,j,k,iBlock) = &
@@ -1121,7 +1121,7 @@ contains
     use ModIO
     use ModPhysics
 
-    logical::oktest=.true., oktestme=.false.
+    logical::oktest=.false., oktestme=.false.
     !---------------------------------------------------------------
     if(oktestme)then
        write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
