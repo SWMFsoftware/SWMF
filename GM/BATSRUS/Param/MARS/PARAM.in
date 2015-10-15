@@ -109,8 +109,8 @@ T
 -99.5
 25.26
 
-#UseSolarMax
-T
+#SOLARCON
+solarmax
 
 #USERINPUTEND ---------------------------------------------------------
 

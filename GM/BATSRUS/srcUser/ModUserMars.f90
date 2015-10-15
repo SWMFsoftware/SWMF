@@ -156,7 +156,6 @@ module ModUser
   real :: rot = 1.0, thetilt = 0.0
   logical :: UseHotO = .false.
   logical :: UseTempCont=.false.
-  logical :: UseSolarMax=.false.
   logical :: UseImpactIon=.false.
   real, dimension(32,MaxSpecies)::Impact_ION_dim=0.0 
   real, dimension(32):: Temp_dim
@@ -254,9 +253,6 @@ contains
        case("#SOLARCON") !solar cycle condition
           call read_var('SolarCon',SolarCond)
 
-       case("#UseSolarMax") !solar cycle condition
-          call read_var('UseSolarMax',UseSolarMax)
-       
        case("#UseHotO")  !adding hot Oxygen or not
           call read_var('UseHotO',UseHotO)
        
