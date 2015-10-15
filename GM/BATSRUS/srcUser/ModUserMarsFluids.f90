@@ -1662,9 +1662,9 @@ contains
           State_VGB(OpRho_,i,j,k,iBlock)= &
                CellState_VI(OpRho_,body1_)*cosSZA
           State_VGB(O2pRho_,i,j,k,iBlock)= &
-               CellState_VI(OpRho_,body1_)*sqrt(cosSZA)
+               CellState_VI(O2pRho_,body1_)*sqrt(cosSZA)
           State_VGB(CO2pRho_,i,j,k,iBlock)= &
-               CellState_VI(OpRho_,body1_)*cosSZA
+               CellState_VI(CO2pRho_,body1_)*cosSZA
           State_VGB(rho_,i,j,k,iBlock)  = &
                sum( State_VGB(iRho_I(2:nFluid),i,j,k,iBlock))
 
