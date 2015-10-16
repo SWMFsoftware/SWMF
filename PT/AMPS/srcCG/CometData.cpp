@@ -249,16 +249,21 @@ void Comet::CometData::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationLis
   memcpy(CenterNode->GetAssociatedDataBufferPointer()+NeutralsFromBinaryOffset,Neutrals,4*nNeutrals*sizeof(double));
 }
 
-double Comet::CometData::GetNeutralsMassDensity(int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+double Comet::CometData::GetNeutralsMassDensity(int s,PIC::Mesh::cDataCenterNode *cell) {
   double res=0.0;
 
 #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
   if ((s<0)||(s>=nNeutrals)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
 #endif
 
-  res=*((double*)(node->block->GetCenterNode(nd)->GetAssociatedDataBufferPointer()+NeutralsFromBinaryOffset+4*s*sizeof(double)));
+  res=*((double*)(cell->GetAssociatedDataBufferPointer()+NeutralsFromBinaryOffset+4*s*sizeof(double)));
   return res;
 }
+
+double Comet::CometData::GetNeutralsMassDensity(int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  return GetNeutralsMassDensity(s,node->block->GetCenterNode(nd));
+}
+
 
 void  Comet::CometData::GetNeutralsVelocity(double *x, int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   register int idim;
@@ -283,3 +288,52 @@ void Comet::CometData::SetiSpecies(int s) {
   iSpecies=s;
 }
 
+//determine the ckecksum of the background density data
+void Comet::CometData::PrintCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  static CRC32 checksum;
+  static CMPI_channel pipe(1000000);
+  static bool FirstCallFlag=true;
+
+  PIC::Mesh::cDataCenterNode *cell;
+
+  if (FirstCallFlag==true) {
+    checksum.clear();
+
+    node=PIC::Mesh::mesh.rootTree;
+    FirstCallFlag=false;
+
+    if (PIC::Mesh::mesh.ThisThread==0) pipe.openRecvAll();
+    else pipe.openSend(0);
+  }
+
+  if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    int s,nd;
+    double t;
+    PIC::Mesh::cDataCenterNode *cell;
+
+    for (s=0;s<nNeutrals;s++) for (nd=0;nd<_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_*_TOTAL_BLOCK_CELLS_Z_;nd++) {
+      if (PIC::ThisThread==node->Thread) {
+        cell=node->block->GetCenterNode(nd);
+        t=(cell!=NULL) ? GetNeutralsMassDensity(s,cell) : -1.0;
+
+        if (PIC::ThisThread!=0) pipe.send(t);
+      }
+      else {
+        if (PIC::ThisThread==0) pipe.recv(t,node->Thread);
+      }
+
+      if (PIC::ThisThread==0) checksum.add(t);
+    }
+  }
+  else {
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (node->downNode[nDownNode]!=NULL) PrintCheckSum(node->downNode[nDownNode]);
+  }
+
+  if (node==PIC::Mesh::mesh.rootTree) {
+    if (PIC::ThisThread==0) pipe.closeRecvAll();
+    else pipe.closeSend();
+
+    checksum.PrintChecksum(__LINE__,__FILE__);
+    FirstCallFlag=true;
+  }
+}
