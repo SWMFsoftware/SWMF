@@ -405,7 +405,7 @@ contains
        call set_oktest(NameSub, DoTest, DoTestMe)
 
        if(time_accurate)then
-          ! The sun is moving anti-clockwise in the rotating frame of the comet
+          ! The sun is moving clockwise in the rotating frame of the comet
           LonSunNow = LonSun - OmegaCometSi*Time_Simulation*cRadToDeg
           if (DoTest) write(*,*) NameSub, &
                ': iProc, Time, LonSunNow=', iProc, Time_Simulation, LonSunNow
