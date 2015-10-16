@@ -184,7 +184,7 @@ public:
     return crc_accum;
   }; 
 
-  void PrintChecksum(long int nline,char* fname) {
+  void PrintChecksum(long int nline,const char* fname) {
     char message[1000];
     
     sprintf(message," line=%ld, file=%s",nline,fname);
