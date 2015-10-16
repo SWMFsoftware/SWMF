@@ -310,7 +310,8 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
       static const double CharacteristicSpeed=1.0E-2;
 
       ElectricallyChargedDust::EvaluateLocalTimeStep(spec,dt,startNode); //CharacteristicSpeed=3.0;
-      return 0.3*startNode->GetCharacteristicCellSize()/CharacteristicSpeed;
+      //return 0.3*startNode->GetCharacteristicCellSize()/CharacteristicSpeed;
+      return dt;
     } else {
       CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
     }
@@ -624,6 +625,7 @@ int main(int argc,char **argv) {
 
 
 #if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
+  Comet::CometData::nMaxLoadedSpecies=2;
   PIC::IndividualModelSampling::RequestStaticCellData.push_back(Comet::CometData::RequestDataBuffer);
 #endif
 
@@ -656,37 +658,11 @@ int main(int argc,char **argv) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
 #if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
-  int nNeutralsFile=0;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
+  Comet::CometData::LoadBinaryFile("CG-Binary-Output");
 
-  FILE *fbin;
-  char fnamebin[400];
-
-
-  sprintf(fnamebin,"%s/amr.sig=0x%lx.f=%s.CenterNodeOutputData.bin",PIC::CPLR::DATAFILE::path,PIC::Mesh::mesh.getMeshSignature(),"CG-Binary-Output");
-  fbin=fopen(fnamebin,"r");
-
-  if (fbin==NULL) exit(__LINE__,__FILE__,"Error: The neutral binary file does not exist.");
-
-  //read the number of neutrals in binary file 
-  nNeutralsFile=Comet::CometData::LoadSpeciesNumberBinaryFile("CG-Binary-Output",fbin);
-  if(Comet::CometData::nNeutrals > nNeutralsFile) exit(__LINE__,__FILE__,"Error: the requested number of neutrals to read from the file is larger than the number saved in it.");
-
-  if (PIC::Mesh::mesh.ThisThread==0) printf("The user is reading %i neutral data from binary file that contains data about %i neutrals. \n",Comet::CometData::nNeutrals,nNeutralsFile);
-
-
-  for (int s=0;s<Comet::CometData::nNeutrals;s++) {
-
-    Comet::CometData::SetiSpecies(s);
-    Comet::CometData::LoadBinaryFile("CG-Binary-Output",startNode=PIC::Mesh::mesh.rootTree,fbin);
-    //print out of the output file 
-    PIC::Mesh::PrintVariableListCenterNode.push_back(Comet::CometData::PrintVariableList);
-  }
+  PIC::Mesh::PrintVariableListCenterNode.push_back(Comet::CometData::PrintVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(Comet::CometData::PrintData);
   PIC::Mesh::InterpolateCenterNode.push_back(Comet::CometData::Interpolate);
-  fclose(fbin);
-
-  Comet::CometData::SetiSpecies(0);
 #endif
 
   if (_CG_DUST_FORCE_MODE__LORENTZ_FORCE_ == _PIC_MODE_ON_) if (_PIC_COUPLER_DATAFILE_READER_MODE_==_PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_) {
@@ -746,8 +722,10 @@ int main(int argc,char **argv) {
   SpiceDouble lt,et;
   utc2et_c(Exosphere::SimulationStartTimeString,&et);
 
-//  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
-  spkpos_c("SUN",et,"67P/C-G_CSO","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+  spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+//  spkpos_c("SUN",et,"67P/C-G_CSO","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+
+
 
   //determine the plane where the flux will be sampled (e0,e1)
   double e0[3]={1.0,0.0,0.0},e1[3]={0.0,0.7,0.7},l;
@@ -771,7 +749,9 @@ int main(int argc,char **argv) {
   else for (int idim=0;idim<3;idim++) e1[idim]/=l;
 
   //determine localtion of the sample points
-  const int nSamplePoints=10;
+  const int nSamplePoints=1;
+
+
   const double SampleRadius=60.0E3;
   const int nNucleusProjectionPoints=20;
 
@@ -781,7 +761,15 @@ int main(int argc,char **argv) {
   for (int n=0;n<nSamplePoints;n++) {
     double theta=n*2.0*Pi/((double)(nSamplePoints));
 
-    for (int idim=0;idim<3;idim++) xSampleLocation[idim]=SampleRadius*(cos(theta)*e0[idim]+sin(theta)*e1[idim]);
+    if (nSamplePoints==1) {
+      spkpos_c("ROSETTA",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSampleLocation,&lt);
+      spkpos_c("SUN",et,"67P/C-G_CK","NONE","CHURYUMOV-GERASIMENKO",xSun,&lt);
+
+      for (int idim=0;idim<3;idim++) xSampleLocation[idim]*=1.0e3,xSun[idim]*=1.0E3;
+    }
+    else {
+      for (int idim=0;idim<3;idim++) xSampleLocation[idim]=SampleRadius*(cos(theta)*e0[idim]+sin(theta)*e1[idim]);
+    }
 
     ElectricallyChargedDust::Sampling::FluxMap::SetSamplingLocation(xSampleLocation,xPrimary,xSun);
 
@@ -1019,13 +1007,19 @@ int main(int argc,char **argv) {
         }
 
         //update the sampling direction and cell
-        ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[nFluxSamplePoints].SetLocation(xSampleLocation_CK,xPrimary,xSun_CK);
+        if (_CG_DUST_FORCE_MODE__FRAME_ROTATION_ == _PIC_MODE_ON_) {
+          ElectricallyChargedDust::Sampling::FluxMap::SampleLocations[nFluxSamplePoints].SetLocation(xSampleLocation_CK,xPrimary,xSun_CK);
+        }
       }
     }
 
 
+//    Comet::CometData::PrintCheckSum();
+
     //perform the next time step
     PIC::TimeStep();
+
+//    Comet::CometData::PrintCheckSum();
 
     //update the particle tracer counter
     Comet::TrajectoryTracking::UpdateParticleCounter();
@@ -1053,10 +1047,9 @@ int main(int argc,char **argv) {
 
     if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
 
-#if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
-      Comet::CometData::SetiSpecies(0);
-#endif  
 
+
+/*
 #if  _SAVING_BINARY_OUTPUT_MODE_ == _SAVING_BINARY_OUTPUT_MODE_ON_
       //Save density*mass and Vx, Vy, Vz for future dust simulations         
       cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode;
@@ -1072,6 +1065,7 @@ int main(int argc,char **argv) {
 
       fclose(fbin);
 #endif
+*/
 
 #if _SAMPLE_BACKFLUX_MODE_ == _SAMPLE_BACKFLUX_MODE__ON_      
       char fname2[_MAX_STRING_LENGTH_PIC_];
@@ -1103,8 +1097,18 @@ int main(int argc,char **argv) {
       LastDataOutputFileNumber=PIC::DataOutputFileNumber;
       if (PIC::Mesh::mesh.ThisThread==0) cout << "The new lample length is " << PIC::RequiredSampleLength << endl;
     }
-    if (PIC::ThisThread==0)   cout << "niter:" << niter << endl;
-#if _PIC_MODEL__RADIATIVECOOLING__MODE_ == _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_
+
+
+
+    if (PIC::Mesh::mesh.ThisThread==0) {
+      time_t TimeValue=time(NULL);
+      tm *ct=localtime(&TimeValue);
+
+      printf(": (%i/%i %i:%i:%i), Iteration: %ld  (currect sample length:%ld, %ld interations to the next output)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec,niter,PIC::RequiredSampleLength,PIC::RequiredSampleLength-PIC::CollectingSampleCounter);
+    }
+
+
+    #if _PIC_MODEL__RADIATIVECOOLING__MODE_ == _PIC_MODEL__RADIATIVECOOLING__MODE__CROVISIER_
 	Comet::StepOverTime();
 #endif
   }
