@@ -16,6 +16,8 @@ char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="67P/C-G_CK";
 
 int Comet::GravityFieldOffset=-1;
 
+char Comet::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
+
 
 /*
 int Comet::Sampling::SubsolarLimbColumnIntegrals::_NA_EMISSION_5891_58A_SAMPLE_OFFSET_=-1;
