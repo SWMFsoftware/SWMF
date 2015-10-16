@@ -101,24 +101,28 @@ namespace Comet {
   namespace CometData {
     extern int NeutralsFromBinaryOffset;
     extern int nNeutrals;
-    extern int iSpecies;
+
+    //the maximum number of the species that can be loaded from a file (used for requesting of the memory in the cell's state vector)
+    extern int nMaxLoadedSpecies;
 
     void WriteBinaryOutput(const char *fNameBase,int s,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,FILE *fout);
-    void LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,FILE *fout);
-    int LoadSpeciesNumberBinaryFile(const char *fNameBase,FILE *fout);
+
+    void LoadBinaryFile(const char *fNameBase);
+    void LoadBinaryFile_Internal(int iSpecies,FILE* fData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+
     int RequestDataBuffer(int offset);
     void PrintVariableList(FILE* fout,int DataSetNumber);
     void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
     void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
 
+    double GetNeutralsMassDensity(int s,PIC::Mesh::cDataCenterNode *cell);
     double GetNeutralsMassDensity(int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
     void GetNeutralsVelocity(double *x, int s,long int nd,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
 
+    void PrintCheckSum(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
+
     int GetnNeutrals();
     void SetnNeutrals(int n);
-
-    int GetiSpecies();
-    void SetiSpecies(int s);
   }
 
   //Sampling: sample quantaty a^2*Weight for the further integration of the brightness of the dust grains
@@ -176,20 +180,33 @@ namespace Comet {
       double GrainDragCoefficient=2.0;
       double A,cr2;
       double GasBulkVelocity[3];
-      double GasNumberDensity;
+      double GasNumberDensity,GasMassDensity;
       double GrainRadius=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
       double GrainMass=ElectricallyChargedDust::GetGrainMass((PIC::ParticleBuffer::byte*)ParticleData);
      
-      if (_CG_DUST_FORCE_MODE__DRAG_FORCE_ == _PIC_MODE_ON_) for (int s=0;s<PIC::nTotalSpecies;s++) if (_DUST_SPEC_>s || s>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
-	      startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,s);
-	      GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(s);
-	  
-	      cr2=(v_LOCAL[0]-GasBulkVelocity[0])*(v_LOCAL[0]-GasBulkVelocity[0])+
-	       (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
-	       (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
-	  
-	      A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasNumberDensity*PIC::MolecularData::GetMass(s); //_MASS_(_H2O_);
-	  
+      if (_CG_DUST_FORCE_MODE__DRAG_FORCE_ == _PIC_MODE_ON_) for (int s=0;;s++) {
+        if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_OFF_) {
+          if (s>=PIC::nTotalSpecies) break;
+          if ((_DUST_SPEC_<=s) && (s<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) continue;
+
+          startNode->block->GetCenterNode(nd)->GetBulkVelocity(GasBulkVelocity,s);
+          GasNumberDensity=startNode->block->GetCenterNode(nd)->GetNumberDensity(s);
+
+          GasMassDensity=GasNumberDensity*PIC::MolecularData::GetMass(s);
+        }
+        else if (_READ_NEUTRALS_FROM_BINARY_MODE_==_READ_NEUTRALS_FROM_BINARY_MODE_ON_) {
+          if (s>=Comet::CometData::GetnNeutrals()) break;
+
+          Comet::CometData::GetNeutralsVelocity(GasBulkVelocity,s,nd,startNode);
+          GasMassDensity=Comet::CometData::GetNeutralsMassDensity(s,nd,startNode);
+        }
+
+        cr2=(v_LOCAL[0]-GasBulkVelocity[0])*(v_LOCAL[0]-GasBulkVelocity[0])+
+         (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
+         (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
+
+        A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
+
         accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);
         accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);
         accl_LOCAL[2]+=A*(GasBulkVelocity[2]-v_LOCAL[2]);
