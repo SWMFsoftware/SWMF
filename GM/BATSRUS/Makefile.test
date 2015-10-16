@@ -93,6 +93,8 @@ test_help:
 	@echo "    test_levelset              (run levelset test)"
 	@echo "    test_magnetometer          (run magnetometer test)"
 	@echo "    test_mars                  (run Mars test)"
+	@echo "    test_mars_start            (run first mars test)"
+	@echo "    test_mars_restart          (run mars restart test)"
 	@echo "    test_mercurysph            (run Mercury test)"
 	@echo "    test_marsfluids            (run marsfluids tests)"
 	@echo "    test_marsfluids_start      (run first marsfluids test)"
@@ -970,6 +972,7 @@ test_titan_restart_check:
 
 test_mars:
 	-@($(MAKE) test_mars_start)
+	-@($(MAKE) test_mars_restart)
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_mars_start:
@@ -1002,6 +1005,39 @@ test_mars_check:
 		Param/MARS/TestOutput/log_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_mars.diff)
 	ls -l test_mars.diff
+
+test_mars_restart:
+	@echo "test_mars_restart_save..." > test_mars_restart.diff
+	$(MAKE) test_mars_restart_save
+	@echo "test_mars_restart_read..." >> test_mars_restart.diff
+	$(MAKE) test_mars_restart_read
+	@echo "test_mars_restart_check..." >> test_mars_restart.diff
+	$(MAKE) test_mars_restart_check
+
+test_mars_restart_save:
+	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartsave PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS/RestartSave RESTART_mars
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartSave
+
+test_mars_restart_read:
+	cd ${TESTDIR}; cp Param/MARS/PARAM.in.restartread PARAM.in
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/RestartSave/RESTART
+	cd ${TESTDIR}; sleep 1; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS/RestartRead
+	cd ${TESTDIR}; ./PostProc.pl -M -o RESULTS/RestartRead
+
+test_mars_restart_check:
+	cd ${TESTDIR}/RESULTS; \
+		cp RestartSave/GM/log_n000001.log log_all.log; \
+		tail -25 RestartRead/GM/log_n000026.log >> log_all.log
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-15 \
+		Param/MARS/TestOutput/log_n000001.log \
+		${TESTDIR}/RESULTS/log_all.log \
+		> test_mars_restart.diff)
+	ls -l test_mars*.diff
 
 ### TESTS FOR MODELING MARSFLUIDS ###
 
