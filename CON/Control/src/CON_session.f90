@@ -247,10 +247,7 @@ contains
 
        ! Active coupling frequencies
        DtTiny = min( DtTiny, &
-            minval(Couple_CC(iComp,:) % Dt, &
-            MASK  =Couple_CC(iComp,:) % DoThis), &
-            minval(Couple_CC(:,iComp) % Dt, &
-            MASK  =Couple_CC(:,iComp) % DoThis))
+            minval(Couple_CC % Dt, MASK=Couple_CC % DoThis))
 
        ! Tiny fraction
        DtTiny = DtTiny * 1e-6
@@ -273,7 +270,7 @@ contains
        if(MaxIteration >= 0 .and. nIteration >= MaxIteration) &
             EXIT TIMELOOP
        if(DoTimeAccurate .and. tSimulationMax > 0.0 &
-            .and. tSimulation >= tSimulationMax) &
+            .and. tSimulation + DtTiny >= tSimulationMax) &
             EXIT TIMELOOP
 
        !\
@@ -289,7 +286,7 @@ contains
        !\
        ! Check periodically for stop file and cpu time
        !/
-       if(is_time_to(CheckStop, nStep, tSimulation, DoTimeAccurate))then
+       if(is_time_to(CheckStop, nStep, tSimulation+DtTiny, DoTimeAccurate))then
           if(DoTestMe)write(*,*)NameSub,' checking do_stop_now'
           if(do_stop_now())then
              IsLastSession = .true.
@@ -297,10 +294,16 @@ contains
           end if
        end if
 
+       !\
+       ! Check for kill file unless NameCompCheckKill is set to '!!'
+       !/
        if(NameCompCheckKill /= '!!')then
+          ! The NameCompCheckKill='??' means that all processors check
           DoKill = NameCompCheckKill == '??'
+          ! Otherwise only the root of the NameCompCheckKill component checks
           if(.not.DoKill) DoKill = is_proc0(NameCompCheckKill)
           if(DoKill)then
+             ! Check if SWMF.KILL file exists
              inquire(file='SWMF.KILL', exist=DoKill)
              if(DoKill) call CON_stop(NameSub//': SWMF.KILL file found')
           end if
@@ -350,9 +353,8 @@ contains
              if(DoTestMe)write(*,*)NameSub,': restart tSimulationLimit=', &
                   tSimulationLimit
 
-             if(CheckStop % DoThis .and. CheckStop % Dt > 0 .and. &
-                  CheckStop % tNext - DtTiny < tSimulationLimit)&
-                  tSimulationLimit = CheckStop % tNext
+             if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
+                  tSimulationLimit = min(tSimulationLimit, CheckStop % tNext)
 
              if(DoTestMe)write(*,*)NameSub,': checkstop tSimulationLimit=', &
                   tSimulationLimit
@@ -363,10 +365,6 @@ contains
              if(DoTestMe)write(*,*)NameSub,': tmax tSimulationLimit=', &
                   tSimulationLimit
 
-             if(  tSimulationCouple > tSimulationLimit .and. &
-                  tSimulationCouple - DtTiny < tSimulationLimit) &
-                  tSimulationLimit = tSimulationCouple
-             
              ! The next wait time is the smaller of coupling and limit times
              tSimulationWait_C(iComp) = min(tSimulationCouple,tSimulationLimit)
 
@@ -525,7 +523,7 @@ contains
           if(.not.(IsProc_C(iCompSource) .or. IsProc_C(iCompTarget))) CYCLE
 
           if(is_time_to(Couple_CC(iCompSource, iCompTarget),&
-               nStep, tSimulation, DoTimeAccurate))then
+               nStep, tSimulation+DtTiny, DoTimeAccurate))then
 
              if(DoTestMe)write(*,*)NameSub, &
                   ' coupling ',iCompSource,iCompTarget,tSimulation
@@ -538,7 +536,7 @@ contains
        !\
        ! Save restart files when scheduled
        !/
-       if( is_time_to(SaveRestart, nStep, tSimulation, DoTimeAccurate) ) &
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate))&
             call save_restart
 
     end do TIMELOOP
