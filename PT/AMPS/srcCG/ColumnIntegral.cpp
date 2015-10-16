@@ -39,6 +39,14 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   PIC::Mesh::cDataCenterNode *cell;
   char *CellData;
 
+  PIC::InterpolationRoutines::CellCentered::cStencil* Stencil;
+
+  //deterine the interpolation stencil
+  if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+    Stencil=PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(x,node);
+  }
+
+  //init the return values
   for (i=0;i<resLength;i++) res[i]=0.0;
 
   nd=PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node);
@@ -63,7 +71,12 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
 
   //calculate column density dust to the background species
   for (int s=0;s<Comet::CometData::nNeutrals;s++) {
-    res[s+1]=Comet::CometData::GetNeutralsMassDensity(s,nd,node);
+    if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+      for (int iStencil=0;iStencil<Stencil->Length;iStencil++) {
+        res[s+1]+=Stencil->Weight[iStencil]*Comet::CometData::GetNeutralsMassDensity(s,Stencil->cell[iStencil]);
+      }
+    }
+    else res[s+1]=Comet::CometData::GetNeutralsMassDensity(s,nd,node);
   }
 
 }
