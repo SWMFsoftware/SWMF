@@ -1,3 +1,5 @@
+//$Id$
+
 /* 
  * CometData.cpp
  *          
@@ -12,7 +14,7 @@
 
 int Comet::CometData::NeutralsFromBinaryOffset=-1;
 int Comet::CometData::nNeutrals=0;
-int Comet::CometData::iSpecies=0;
+int Comet::CometData::nMaxLoadedSpecies=0;
 
 void Comet::CometData::WriteBinaryOutput(const char *fNameBase,int s,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode,FILE *fout) {
   static CMPI_channel pipe;
@@ -115,7 +117,29 @@ void Comet::CometData::WriteBinaryOutput(const char *fNameBase,int s,cTreeNodeAM
 
 }
 
-void Comet::CometData::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode,FILE *fData) {
+void Comet::CometData::LoadBinaryFile(const char *fNameBase) {
+  char fname[400];
+  FILE *fData;
+
+  sprintf(fname,"%s/amr.sig=0x%lx.f=%s.CenterNodeOutputData.bin",PIC::CPLR::DATAFILE::path,PIC::Mesh::mesh.getMeshSignature(),fNameBase);
+  fData=fopen(fname,"r");
+
+  if (fData==NULL) exit(__LINE__,__FILE__,"Error: The neutral binary file does not exist.");
+
+  //read the number of the saved species
+  fread(&nNeutrals,sizeof(int),1,fData);
+
+  if (nNeutrals>nMaxLoadedSpecies) exit(__LINE__,__FILE__,"Error: nNeutrals>nMaxLoadedSpecies. Solution: increase Comet::CometData::nMaxLoadedSpecies to accomodate all speces that are loaded from a binary file");
+
+  //load the background data for each species
+  for (int iSpecies=0;iSpecies<nNeutrals;iSpecies++) LoadBinaryFile_Internal(iSpecies,fData,PIC::Mesh::mesh.rootTree);
+
+  //close the data file
+  fclose(fData);
+}
+
+
+void Comet::CometData::LoadBinaryFile_Internal(int iSpecies,FILE* fData,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
   static int CenterNodeAssociatedLength;
   
   //loop through all points                                                                                                                
@@ -188,32 +212,21 @@ void Comet::CometData::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC::Me
 	  }
   }
   else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) Comet::CometData::LoadBinaryFile(NULL,startNode->downNode[nDownNode],fData);
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) Comet::CometData::LoadBinaryFile_Internal(iSpecies,fData,startNode->downNode[nDownNode]);
   }
-
-}
-
-int Comet::CometData::LoadSpeciesNumberBinaryFile(const char *fNameBase,FILE *fData) {
-  int nspec=0;
-
-  fread(&nspec,sizeof(int),1,fData);  
-  
-  return nspec;
 }
 
 int Comet::CometData::RequestDataBuffer(int offset) {
   int TotalDataLength;
 
   NeutralsFromBinaryOffset=offset;
-  TotalDataLength=4*nNeutrals;
+  TotalDataLength=4*nMaxLoadedSpecies;
 
   return TotalDataLength*sizeof(double);
 }
 
 void Comet::CometData::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"MassDensityNeutral_%i\",\"Vneutralx_%i\",\"Vneutraly_%i\",\"Vneutralz_%i\"",iSpecies,iSpecies,iSpecies,iSpecies);
-  iSpecies+=1;
-  if (iSpecies==nNeutrals) iSpecies=0;
+  for (int iSpecies=0;iSpecies<nNeutrals;iSpecies++) fprintf(fout,",\"MassDensityNeutral_%i\",\"Vneutralx_%i\",\"Vneutraly_%i\",\"Vneutralz_%i\"",iSpecies,iSpecies,iSpecies,iSpecies);
 }
 
 void Comet::CometData::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
@@ -278,14 +291,6 @@ int Comet::CometData::GetnNeutrals() {
 
 void Comet::CometData::SetnNeutrals(int n) {
   nNeutrals=n;
-}
-
-int Comet::CometData::GetiSpecies(){
-  return iSpecies;
-}
-
-void Comet::CometData::SetiSpecies(int s) {
-  iSpecies=s;
 }
 
 //determine the ckecksum of the background density data
