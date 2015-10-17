@@ -247,7 +247,10 @@ contains
 
        ! Active coupling frequencies
        DtTiny = min( DtTiny, &
-            minval(Couple_CC % Dt, MASK=Couple_CC % DoThis))
+            minval(Couple_CC % Dt, &
+            MASK=(Couple_CC % DoThis .and. Couple_CC % Dt > 0.0)))
+
+       if(DtTiny == huge(1.0)) DtTiny = 0.0
 
        ! Tiny fraction
        DtTiny = DtTiny * 1e-6
