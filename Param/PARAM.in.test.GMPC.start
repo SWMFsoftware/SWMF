@@ -18,7 +18,7 @@ T			DoTimeAccurate
 #COUPLE2TIGHT
 GM			NameCompMaster
 PC			NameCompSlave
-T           DoCouple
+T			DoCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -69,8 +69,11 @@ T			UseNonConservative
 
 #USERINPUTBEGIN ----------------
 
+Whistler wave is cirularly polarized
+for both ion fluids.
+
 #WAVE
-3                       Uy1_
+3                       UyIon1
 10000.0                 Width
 -0.0090663280           Amplitude  -0.01 for Alfven
 32.0                    LambdaX
@@ -79,7 +82,7 @@ T			UseNonConservative
 -90.0                   Phase
 
 #WAVE
-4                       Uz1_
+4                       UzIon1
 1000.0                  Width
 +0.0090663280           Amplitude  +0.01 for Alfven
 32.0                    LambdaX
@@ -87,9 +90,8 @@ T			UseNonConservative
 -1.0                    LambdaZ
 180.0                   Phase
 
-
 #WAVE
-12                       Uy1_
+12                      UyIon2
 10000.0                 Width
 -0.0090663280           Amplitude  -0.01 for Alfven
 32.0                    LambdaX
@@ -98,14 +100,13 @@ T			UseNonConservative
 -90.0                   Phase
 
 #WAVE
-13                       Uz1_
+13                      UzIon2
 1000.0                  Width
 +0.0090663280           Amplitude  +0.01 for Alfven
 32.0                    LambdaX
 -1.0                    LambdaY
 -1.0                    LambdaZ
 180.0                   Phase
-
 
 #WAVE
 6                       By_
@@ -125,6 +126,9 @@ T			UseNonConservative
 -1.0                    LambdaZ
 180.0                   Phase
 
+Put perturbations into pressures, but keep
+total Pe+Pi1+Pi2 constant
+
 #WAVE
 8                       Pe_
 1000.0                  Width
@@ -135,7 +139,7 @@ T			UseNonConservative
 180.0                   Phase
 
 #WAVE
-9                       P1_
+9                       Pion1
 1000.0                  Width
 0.5e-4                  Amplitude
 32.0                    LambdaX
@@ -143,9 +147,8 @@ T			UseNonConservative
 -1.0                    LambdaZ
 0.0                     Phase
 
-
 #WAVE
-14                       P2_
+14                      Pion2
 1000.0                  Width
 0.5e-4                  Amplitude
 32.0                    LambdaX
@@ -229,10 +232,6 @@ F                       UsePointImplicit
 F                       UsePartImplicit
 T                       UseFullImplicit
 100.0                   ImplCFL
-
-
-#SAVERESTART
-F			DoSaveRestart
 
 #SAVELOGFILE
 T			DoSaveLogfile
