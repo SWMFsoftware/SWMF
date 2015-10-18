@@ -141,7 +141,8 @@ contains
   subroutine GM_get_for_pc(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
        Data_VI)
 
-    ! Get magnetic field data from GM to PC
+    ! Interpolate Data_VI from GM at the list of positions Xyz_DI 
+    ! required by PC
 
     use ModProcMH,  ONLY: iProc
     use ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
@@ -166,24 +167,49 @@ contains
     real:: Dist_D(MaxDim), State_V(nVar)
     integer:: iCell_D(MaxDim)
 
+    integer, allocatable, save:: iBlockCell_DI(:,:)
+    real,    allocatable, save:: Dist_DI(:,:)
+
     integer:: iPoint, iBlock, iProcFound
 
     character(len=*), parameter:: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
 
+    ! If nDim < MaxDim, make sure that all elements are initialized
     Dist_D = -1.0
     Xyz_D  =  0.0
+
+    if(IsNew)then
+       if(allocated(iBlockCell_DI)) deallocate(iBlockCell_DI, Dist_DI)
+       allocate(iBlockCell_DI(0:nDim,nPoint), Dist_DI(nDim,nPoint))
+
+       do iPoint = 1, nPoint
+
+          Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
+          call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
+               UseGhostCell = .true.)
+
+          if(iProcFound /= iProc)then
+             write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
+             call stop_mpi(NameSub//' could not find position on this proc')
+          end if
+
+          ! Store block and cell indexes and distances for interpolation
+          iBlockCell_DI(0,iPoint)      = iBlock
+          iBlockCell_DI(1:nDim,iPoint) = iCell_D(1:nDim)
+          Dist_DI(:,iPoint)            = Dist_D(1:nDim)
+
+       end do
+    end if
 
     do iPoint = 1, nPoint
 
        Xyz_D(1:nDim) = Xyz_DI(:,iPoint)*Si2No_V(UnitX_)
-       call find_grid_block(Xyz_D, iProcFound, iBlock, iCell_D, Dist_D, &
-            UseGhostCell = .true.)
 
-       if(iProcFound /= iProc)then
-          write(*,*) NameSub,' ERROR: Xyz_D, iProcFound=', Xyz_D, iProcFound
-          call stop_mpi(NameSub//' could not find position on this proc')
-       end if
+       ! Use stored block and cell indexes and distances
+       iBlock          = iBlockCell_DI(0,iPoint)
+       iCell_D(1:nDim) = iBlockCell_DI(1:nDim,iPoint)
+       Dist_D(1:nDim)  = Dist_DI(:,iPoint)
 
        State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), nVar, nDim, &
             MinIJK_D, MaxIJK_D, iCell_D=iCell_D, Dist_D=Dist_D)
