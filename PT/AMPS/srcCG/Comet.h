@@ -242,17 +242,20 @@ namespace Comet {
       }
       
       //the Lorentz force
-      double E[3],B[3];
-      double GrainCharge=ElectricallyChargedDust::GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
+      double E[3],B[3],GrainCharge;
 
-      if (_CG_DUST_FORCE_MODE__LORENTZ_FORCE_ == _PIC_MODE_ON_) if (fabs(GrainCharge)>0.0) {
-        PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
-        PIC::CPLR::GetBackgroundMagneticField(B);
-        PIC::CPLR::GetBackgroundElectricField(E);
+      if (_CG_DUST_FORCE_MODE__LORENTZ_FORCE_ == _PIC_MODE_ON_) {
+        GrainCharge=ElectricallyChargedDust::GetGrainCharge((PIC::ParticleBuffer::byte*)ParticleData);
 
-        accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
-        accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
-        accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
+        if (fabs(GrainCharge)>0.0) {
+          PIC::CPLR::InitInterpolationStencil(x_LOCAL,startNode);
+          PIC::CPLR::GetBackgroundMagneticField(B);
+          PIC::CPLR::GetBackgroundElectricField(E);
+
+          accl_LOCAL[0]+=GrainCharge*(E[0]+v_LOCAL[1]*B[2]-v_LOCAL[2]*B[1])/GrainMass;
+          accl_LOCAL[1]+=GrainCharge*(E[1]-v_LOCAL[0]*B[2]+v_LOCAL[2]*B[0])/GrainMass;
+          accl_LOCAL[2]+=GrainCharge*(E[2]+v_LOCAL[0]*B[1]-v_LOCAL[1]*B[0])/GrainMass;
+        }
       }
 
       //Radiation Pressure: beta is taken from fig3-Gombosi-2015-AA
