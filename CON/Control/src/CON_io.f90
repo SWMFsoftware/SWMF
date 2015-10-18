@@ -67,8 +67,9 @@ module CON_io
   character(len=lNameFile)    :: NameRestartOutDirNow = ''
 
   ! How often shall we save restart files?
-  ! Default: every 100000 time steps or 1e30 seconds (ie at the end of the run)
-  type(FreqType), public :: SaveRestart = FreqType(.true.,100000,1E30,-1,-1.0)
+  ! Default: every 100000 time steps huge(1) seconds (ie at the end of the run)
+  type(FreqType), public :: &
+       SaveRestart = FreqType(.true.,100000,huge(1.0),-1,-1.0)
 
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
