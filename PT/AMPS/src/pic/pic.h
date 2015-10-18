@@ -4057,7 +4057,7 @@ namespace PIC {
 #endif
 
 //include headers for individual physical models
-#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE_ON_ 
 #include "Dust.h"
 #endif
 
