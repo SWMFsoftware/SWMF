@@ -237,25 +237,33 @@ contains
        ! Calculate the smallest temporal frequency and a tiny fraction of it
        DtTiny = huge(1.0)
 
+       if(DoTestMe)write(*,*)NameSub,' initial DtTiny=', DtTiny
+
        ! Restart frequency
        if(SaveRestart % DoThis .and. SaveRestart % Dt > 0) &
             DtTiny = SaveRestart % Dt
 
+       if(DoTestMe)write(*,*)NameSub,' restart DtTiny=', DtTiny
+
        ! Stop check frequency
        if(CheckStop % DoThis .and. CheckStop % Dt > 0) &
             DtTiny = min(DtTiny, CheckStop % Dt)
+
+       if(DoTestMe)write(*,*)NameSub,' check stop DtTiny=', DtTiny
 
        ! Active coupling frequencies
        DtTiny = min( DtTiny, &
             minval(Couple_CC % Dt, &
             MASK=(Couple_CC % DoThis .and. Couple_CC % Dt > 0.0)))
 
+       if(DoTestMe)write(*,*)NameSub,' couple DtTiny=', DtTiny
+
        if(DtTiny == huge(1.0)) DtTiny = 0.0
 
        ! Tiny fraction
        DtTiny = DtTiny * 1e-6
        
-       if(DoTestMe)write(*,*)NameSub,' DtTiny=', DtTiny
+       if(DoTestMe)write(*,*)NameSub,' final DtTiny=', DtTiny
 
     end if
     
