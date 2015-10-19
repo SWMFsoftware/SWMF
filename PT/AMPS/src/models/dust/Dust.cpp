@@ -121,11 +121,8 @@ int ElectricallyChargedDust::Sampling::RequestSamplingData(int offset) {
 void ElectricallyChargedDust::Init_BeforeParser() {
   PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::RequestSamplingData);
   Sampling::SetDustSamplingIntervals(Sampling::nDustSizeSamplingIntervals);
-}
 
-
-
-void ElectricallyChargedDust::Init_AfterParser() {
+  SizeDistribution::Init();
 
   //calcualte the number of the dust time-step groups
   bool DustSpeciesBegin=false,DustSpacesEnd=false;
@@ -153,9 +150,41 @@ void ElectricallyChargedDust::Init_AfterParser() {
     }
     else if (strcmp(ChemSymbol,"DUST")==0) exit(__LINE__,__FILE__,"Error: the conditions list does not account for the occered event");
   }
+}
+
+
+
+void ElectricallyChargedDust::Init_AfterParser() {
+
+/*  //calcualte the number of the dust time-step groups
+  bool DustSpeciesBegin=false,DustSpacesEnd=false;
+  int spec;
+  char ChemSymbol[_MAX_STRING_LENGTH_PIC_];
+
+  for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    PIC::MolecularData::GetChemBaseSymbol(ChemSymbol,spec);
+
+    if ((DustSpeciesBegin==false)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")==0)) {
+      //the first dust group
+      DustSpeciesBegin=true;
+      GrainVelocityGroup::nGroups=1; //,_DUST_SPEC_=spec;
+    }
+    else if ((DustSpeciesBegin==true)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")==0)) {
+      //the list of the dust time-step groups continues
+      GrainVelocityGroup::nGroups++;
+    }
+    else if ((DustSpeciesBegin==true)&&(DustSpacesEnd==false)&&(strcmp(ChemSymbol,"DUST")!=0)) {
+      //the list of the dust groups stopped
+      DustSpacesEnd=true;
+    }
+    else if ((DustSpeciesBegin==true)&&(DustSpacesEnd==true)&&(strcmp(ChemSymbol,"DUST")==0)) {
+     exit(__LINE__,__FILE__,"Error: a discontinuous list of the DUST groups in the imput file is found");
+    }
+    else if (strcmp(ChemSymbol,"DUST")==0) exit(__LINE__,__FILE__,"Error: the conditions list does not account for the occered event");
+  }*/
 
   //init dust sub-models
-  SizeDistribution::Init();
+//  SizeDistribution::Init();
   GrainVelocityGroup::Init();
 
   //request the particle data storage
@@ -1126,6 +1155,36 @@ int ElectricallyChargedDust::DustChargingProcessor_SteadyState(double *xInit,dou
   //the procesure is applied only to dust
   if ((spec<_DUST_SPEC_) || (spec>=_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups)) return _GENERIC_PARTICLE_TRANSFORMATION_CODE__NO_TRANSFORMATION_;
 
+  //if the charging model is off than check the dust velocity group
+  if (_DUST__CHARGING_MODE_ == _DUST__CHARGING_MODE__OFF_) {
+    int oldVelocityGroup,newVelocityGroup;
+
+    oldVelocityGroup=spec-_DUST_SPEC_;
+    newVelocityGroup=GrainVelocityGroup::GetGroupNumber(v);
+
+    if (oldVelocityGroup!=newVelocityGroup) {
+      //move the particle into different velocity group
+      double GrainWeightCorrection=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+
+      GrainWeightCorrection*=finalNode->block->GetLocalTimeStep(_DUST_SPEC_+newVelocityGroup)/finalNode->block->GetLocalTimeStep(_DUST_SPEC_+oldVelocityGroup);
+
+  #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+      GrainWeightCorrection*=PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+oldVelocityGroup]/PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+newVelocityGroup];
+  #else
+      exit(__LINE__,__FILE__,"Error: the weight mode is node defined");
+  #endif
+
+      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(GrainWeightCorrection,ParticleData);
+      spec=_DUST_SPEC_+newVelocityGroup;
+      PIC::ParticleBuffer::SetI(spec,ParticleData);
+    }
+
+    return _GENERIC_PARTICLE_TRANSFORMATION_CODE__TRANSFORMATION_OCCURED_;
+  }
+
+
+
+  //recalculate the dust charge
   if ((LocalCellNumber=PIC::Mesh::mesh.fingCellIndex(xFinal,i,j,k,finalNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cell where the particle is located");
   cell=finalNode->block->GetCenterNode(LocalCellNumber);
 
