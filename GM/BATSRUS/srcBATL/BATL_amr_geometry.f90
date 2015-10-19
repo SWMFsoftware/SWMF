@@ -60,8 +60,8 @@ module BATL_amr_geometry
   ! numerical errors (calc_error_amr_criteria) based on the state variables.
 
   ! Storing All the AMR criteria
-  integer, public          :: nAmrCrit = 0
-  integer,public           :: nAmrCritUsed = 0
+  integer, public:: nAmrCrit = 0
+  integer, public:: nAmrCritUsed = 0
   real, public, allocatable:: AmrCrit_IB(:,:)
 
   real,    public, allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
@@ -69,6 +69,7 @@ module BATL_amr_geometry
   real,    public, allocatable:: ResolutionLimit_I(:)
   !type(AreaType), public, allocatable :: AreaAll_I(:)
   integer,    public, allocatable:: iAreaIdx_II(:,:)
+
   ! Storing names of areas for each criteria given by #AMRCRITERIA.....
   integer, public, allocatable :: nAreaPerCritAll_I(:)
 
@@ -91,7 +92,7 @@ contains
     logical :: DoTestMe = .false.
     !-------------------------------------------------------------------------
 
-    ! Fix resolutions (this depends on domain size set above)
+    ! Fix resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
          alog(((CoordMax_D(x_) - CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
          / InitialResolution) / alog(2.0) )
@@ -100,9 +101,9 @@ contains
        AreaResolution = AreaGeo_I(iGeo) % Resolution
 
        if(AreaResolution <= 0.0) then
-          ! Convert back to integer area
+          ! Negative value is understood as a "grid level"
           nLevelArea = ceiling(abs(AreaResolution))
-          AreaGeo_I(iGeo) % Level = sign(nLevelArea,nint(AreaResolution))
+          AreaGeo_I(iGeo) % Level = sign(nLevelArea, nint(AreaResolution))
           ! Set actual resolution
           AreaGeo_I(iGeo) % Resolution = (CoordMax_D(x_)-CoordMin_D(x_)) &
                / (nRoot_D(x_) * nI * 2.0**nLevelArea)
@@ -114,11 +115,11 @@ contains
 
     end do
 
-    iGeo =0
+    iGeo = 0
     do iGeoAll = 1, nCritGeoUsed
        iVar = 1
-       !exclude areas given by #AREAREGION
-       if( AreaGeo_I(iGeoAll) % NameRegion .ne. "NULL") CYCLE
+       ! exclude named areas
+       if( AreaGeo_I(iGeoAll) % NameRegion /= "NULL") CYCLE
        iGeo = iGeo+1
        if(AreaGeo_I(iGeoAll) % Level  < 0) then
           RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Level
@@ -152,10 +153,10 @@ contains
     ! Add geometric info for BATSRUS amr type of params
     iGeo = 1
     do iGeoAll = 1, nCritGeoUsed
-       if( AreaGeo_I(iGeoAll) % NameRegion .ne. "NULL") CYCLE
+       if( AreaGeo_I(iGeoAll) % NameRegion /= "NULL") CYCLE
        iAreaIdx_II(1,nAmrCritUsed+iGeo) = iGeoAll
        nAreaPerCritAll_I(nAmrCritUsed+iGeo) = 1
-       iGeo = iGeo+1
+       iGeo = iGeo + 1
     end do
 
 
@@ -183,7 +184,7 @@ contains
   end subroutine init_amr_geometry
 
   !============================================================================
-  subroutine apply_amr_geometry(iBlock, Area, UseBlock,DoCalcCritIn,&
+  subroutine apply_amr_geometry(iBlock, Area, UseBlock, DoCalcCritIn,&
        user_amr_geometry)
 
     !DESCRIPTION:
@@ -198,7 +199,7 @@ contains
     ! user_specify_refinement,     not suported
     ! currentsheet,                not suported
 
-    use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,TypeGeometry,&
+    use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,TypeGeometry,  &
          IsCartesianGrid, IsLogRadius, IsGenRadius, IsRLonLat, IsSpherical,&
          IsCylindrical
     use BATL_grid,     ONLY: Xyz_DNB
@@ -220,7 +221,7 @@ contains
     logical, intent(out)      :: UseBlock
     logical, intent(in), optional :: DoCalcCritIn
 
-    !LOCAL VARIABLES:
+    ! LOCAL VARIABLES:
     character(len=lNameArea) :: NameArea
 
     logical :: DoRefine, IsSpecialArea
@@ -350,9 +351,9 @@ contains
     end if
 
     ! Check if this area is intersecting with the block
-    select case( NameArea)
+    select case(NameArea)
     case('brick', 'brick_gen')
-       DoRefine = all( DistMin_D < 1.0 )
+       DoRefine = all(DistMin_D < 1.0 )
     case('sphere')
        DoRefine = sum(DistMin_D**2) < 1.0
     case('shell')
@@ -392,7 +393,7 @@ contains
     UseBlock = .true.
 
     ! Check all nodes of the block
-    do k=1,nKNode; do j=1,nJNode; do i=1,nINode
+    do k=1, nKNode; do j=1, nJNode; do i=1, nINode
 
        ! Shift to area center
        Xyz_D = Xyz_DNB(:,i,j,k,iBlock) - Area % Center_D

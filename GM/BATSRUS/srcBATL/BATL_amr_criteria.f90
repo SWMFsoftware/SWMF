@@ -25,25 +25,24 @@
 ! iMapToUiqCrit_I[nAmrCritUsed]      : Map form used criterias to unique criterias
 ! AreaAll_I[nmaxarea]                : List of all ares used by the amr criterias
 ! AmrCirt_IB[nAmrCrit,nBlock]        : Store the criteria values we compare to
-! iAreaIdx_II[nareamax,nAmrCritUsed] : Give the index in AreaAll_I for each criteras areas
+! iAreaIdx_II[nAreaMax,nAmrCritUsed] : Index of criteria in AreaAll_I
 ! nAreaOPerCrit_I[nAmrCritUsed]      : Number of areas appied for a criteria
 
 
 
 module BATL_amr_criteria
 
-
   use BATL_tree, ONLY: nDesiredRefine,nNodeRefine,nDesiredCoarsen, &
        nNodeCoarsen, DoStrictAmr, iRank_A, Rank_A, nNodeSort
 
-  use BATL_amr_geometry, ONLY: nGeoCrit,clean_amr_geometry,&
-       isNewGeoParam, UseCrit_IB, UseCrit_B,&
-       apply_amr_geometry,nAmrCrit,nAmrCritUsed,AmrCrit_IB,nGeoCrit,&
-       nCritGeoUsed,IsBatsrusAmr,iResolutionLimit_I,&
-       CoarsenCritAll_I,RefineCritAll_I,ResolutionLimit_I,iVarCritAll_I,&
-       AreaGeo_I,iAreaIdx_II,nAreaPerCritAll_I,&
-       MaxArea,lNameArea,nCritGeoBackword,nCritDxLevel
-
+  use BATL_amr_geometry, ONLY: &
+       apply_amr_geometry, clean_amr_geometry, nGeoCrit, &
+       isNewGeoParam, UseCrit_IB, UseCrit_B, &
+       nAmrCrit, nAmrCritUsed, AmrCrit_IB, nGeoCrit, &
+       nCritGeoUsed, IsBatsrusAmr, iResolutionLimit_I, &
+       CoarsenCritAll_I, RefineCritAll_I, ResolutionLimit_I, iVarCritAll_I, &
+       AreaGeo_I, iAreaIdx_II, nAreaPerCritAll_I, &
+       MaxArea, lNameArea, nCritGeoBackword, nCritDxLevel
 
   implicit none
 
@@ -51,42 +50,41 @@ module BATL_amr_criteria
 
   private ! except
 
-  public set_amr_criteria
-  public clean_amr_criteria
-  public read_amr_criteria
-  public test_amr_criteria
-  public calc_error_amr_criteria
-  public set_amr_geometry
-  public init_amr_criteria
-  public masked_amr_criteria
+  public:: set_amr_criteria
+  public:: clean_amr_criteria
+  public:: read_amr_criteria
+  public:: test_amr_criteria
+  public:: calc_error_amr_criteria
+  public:: set_amr_geometry
+  public:: init_amr_criteria
+  public:: masked_amr_criteria
 
   ! DoSortAmrCrit : true/false for generating the priority list iRank_A
+  !
   ! DoSoftAmrCrit : standard behavior (false) is that criteria has to be 
   ! refined/coarsened or we will stop the program. If true we will 
   ! refine/coarsen them as much as we can, this is the default behavior for
   ! amr by percentage.
+
   logical, public :: &
        DoSortAmrCrit = .false., &
        DoSoftAmrCrit = .false., &
        DoAutoAmr     = .false.
 
   ! Need to init if PARAM.in was read (again)
-  logical :: isNewPhysParam = .false.
-
+  logical :: IsNewPhysParam = .false.
 
   ! Used for combination of sorted and not sorted criteria
   logical :: DidUnsortedAMR = .false.
 
   ! Try to make geometric dependence for refinement/coarsening
-  logical,public :: DoCritAmr     = .false.
+  logical, public :: DoCritAmr = .false.
 
-  ! Percentage with want refined and coarsen
+  ! Percentage to refine and coarsen
   real ::  PercentRefine=0.0, PercentCoarsen=0.0
 
   ! Threshold limits for refine or unrefined the grid (length nCrit) 
-  real, allocatable, dimension(:)    :: &
-       CoarsenCritPhys_I, RefineCritPhys_I
-
+  real, allocatable:: CoarsenCritPhys_I(:), RefineCritPhys_I(:)
 
   ! Give max level (-) or resolution dependent on which index 
   ! idxMaxGeoCritPhys_I points to
@@ -94,7 +92,7 @@ module BATL_amr_criteria
   integer,allocatable :: idxMaxGeoCritPhys_I(:)
 
   ! iMapToUiqCrit_I map indexes from all indexes (nAmrCritUsed) to 
-  ! number of uniqe indexes (nAmrCrit) used by AmrCirt_IB
+  ! number of uniqe indexes (nAmrCrit) used by AmrCrit_IB
   integer, allocatable :: iMapToUiqCrit_I(:)
 
   ! Map the internal error criteria index to the state varable index
@@ -104,10 +102,10 @@ module BATL_amr_criteria
   real :: cAmrWavefilter = 1.0e-2
   real, parameter :: cEpsilon = 1.0d-8 ! avoid zero in denominator
 
-  integer :: nExtCrit = 0 ! Number of External criteria + sorting criteia from BATSRUS
+  integer :: nExtCrit = 0 ! Number of external + sorting criteia from BATSRUS
   integer :: nIntCrit = 0 ! Number of internal criteria, 2nd order err estimate
-  integer :: nPhysCritUsed = 0 ! total Number criterias read by read_amr_criteria
-  integer :: iStartCrit =0, iEndCrit=0 !start of ccriteria segement we want to work on
+  integer :: nPhysCritUsed = 0 ! total criteria read by read_amr_criteria
+  integer :: iStartCrit =0, iEndCrit=0 ! criteria segment we want to work on
 
   ! Storing names of areas for each criteria given by #AMRCRITERIA.....
   integer, public, allocatable :: nAreaPerCritPhys_I(:)
@@ -118,14 +116,15 @@ module BATL_amr_criteria
   real, parameter :: DeltaSymCrit = 1.0e-2
   real, parameter :: DeltaSymGeo  = 1.0e-6
 
-  ! The max differens in the criteia to say thay have the same value,
-  ! taking care of numerical fluctations
+  ! The max difference in the criteria to say they have the same value,
+  ! taking care of round-off errors
   real :: DeltaCritera = 1.0e-8
 
   ! Number of characters on TypeCriteria
   integer, parameter :: nChar=200
+
   ! store area type for each criteria [nArea,nCrit]
-  character(len=nChar), allocatable :: AreaNamesPhys_II(:,:)
+  character(nChar), allocatable :: AreaNamesPhys_II(:,:)
 
   ! Converting index form running block and proc number to node numbers
   integer, allocatable :: iNode_I(:)
@@ -173,7 +172,7 @@ contains
     allocate(AmrCrit_IB(nAmrCrit,MaxBlock))
     AmrCrit_IB = -1.0
 
-    ! Merging Data form Geometical and Physical refinment parameters
+    ! Merging Data from Geometrical and Physical refinement parameters
     nCrit = nAmrCritUsed + nCritGeoBackword
 
     if(allocated(RefineCritAll_I))then
@@ -205,46 +204,45 @@ contains
 
        ! fixing indexing as "physics" criteria comes first
        do iCrit=1,nAmrCritUsed
-          iResolutionLimit_I(iCrit)   = max(0,maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))) +&
+          iResolutionLimit_I(iCrit) = &
+               max(0,maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))) + &
                idxMaxGeoCritPhys_I(iCrit)
        end do
     end if
 
-    ! Copy over Geometry based criterias
+    ! Copy over geometry based criteria
     if(nCritGeoUsed > 0) call init_amr_geometry
     if(nAmrCritUsed > 0 ) then
-       do iCrit=1,nAmrCritUsed
-          BLOCKAREA: do iArea=1,nAreaPerCritAll_I(iCrit)
-             regionname = trim(adjustl(AreaNamesPhys_II(iArea,iCrit)))
+       do iCrit = 1, nAmrCritUsed
+          BLOCKAREA: do iArea = 1, nAreaPerCritAll_I(iCrit)
+             regionname = adjustl(AreaNamesPhys_II(iArea,iCrit))
 
              if(regionname(1:1) == "-") then
                 areasign = -1
-                regionname =regionname(2:LEN_TRIM(regionname))
+                regionname = regionname(2:LEN_TRIM(regionname))
              else if (regionname(1:1) == "+") then
                 areasign = +1
                 regionname = regionname(2:LEN_TRIM(regionname))
              else
                 areasign = +1
-                regionname = regionname
              end if
 
-             do iGeo=0,nCritGeoUsed
-                if(trim(adjustl(regionname)) == trim(adjustl(AreaGeo_I(iGeo)%NameRegion))) then
+             do iGeo = 0, nCritGeoUsed
+                if(adjustl(regionname) == &
+                     adjustl(AreaGeo_I(iGeo)%NameRegion)) then
                    iAreaIdx_II(iArea,iCrit) = areasign*iGeo
                    CYCLE BLOCKAREA
                 end if
              end do
 
-             if(iGeo > nCritGeoUsed ) &
-                  call CON_stop(NameSub //' Can not find area name :'//trim(adjustl(regionname)))
+             if(iGeo > nCritGeoUsed ) call CON_stop(NameSub //&
+                  ' Can not find area name='//trim(adjustl(regionname)))
           end do BLOCKAREA
        end do
     end if
-    ! Total number of refine/coursening limmits
-    nAmrCritUsed = nCrit
 
-    if(iProc == 0) then
-    end if
+    ! Total number of refine/coarsening limmits
+    nAmrCritUsed = nCrit
 
     ! Allocate Criteria mask
     if(.not. allocated(UseCrit_B)) allocate(UseCrit_B(MaxBlock))
@@ -256,18 +254,18 @@ contains
 
     do iBlock=1,nBlock
        if(Unused_B(iBlock)) CYCLE
-       call set_amr_geometry(iBlock,user_amr_geometry=user_amr_geometry)
+       call set_amr_geometry(iBlock, user_amr_geometry=user_amr_geometry)
     end do
 
     if(DoTestMe) then
        if(iProc == 0) then
-          write(*,"(A17,100(F10.3))") "RefineCritAll_I   : ", RefineCritAll_I
-          write(*,"(A17,100(F10.3))") "CoarsenCritAll_I  : ", CoarsenCritAll_I
-          write(*,"(A17,100(F10.3))") "ResolutionLimit_I : ", ResolutionLimit_I
-          write(*,"(A17,100(I10))") "iResolutionLimit_I     : ",iResolutionLimit_I
-          write(*,"(A17,100(I10))") "iVarCritAll_I       : ", iVarCritAll_I
-          write(*,"(A17,100(I10))") "nAreaPerCritAll_I   : ",nAreaPerCritAll_I
-          do iCrit=1,nAmrCritUsed
+          write(*,"(A17,100(F10.3))")"RefineCritAll_I   :", RefineCritAll_I
+          write(*,"(A17,100(F10.3))")"CoarsenCritAll_I  :", CoarsenCritAll_I
+          write(*,"(A17,100(F10.3))")"ResolutionLimit_I :", ResolutionLimit_I
+          write(*,"(A17,100(I10))")  "iResolutionLimit_I:", iResolutionLimit_I
+          write(*,"(A17,100(I10))")  "iVarCritAll_I     :", iVarCritAll_I
+          write(*,"(A17,100(I10))")  "nAreaPerCritAll_I :", nAreaPerCritAll_I
+          do iCrit = 1, nAmrCritUsed
              write(*,"(A11,I3)") "Criteria : ",iCrit
              do iArea =1,nAreaPerCritAll_I(iCrit)
                 idx = iAreaIdx_II(iArea,iCrit)
@@ -276,15 +274,16 @@ contains
                      AreaGeo_I(abs(idx))%NameRegion
              end do
           end do
-          write(*,"(A17,100(I10))") "iVarCritAll_I       : ", iVarCritAll_I
-          write(*,"(A17,100(I10))") "AmrCrit_IB          : ", shape(AmrCrit_IB) 
+          write(*,"(A17,100(I10))") "iVarCritAll_I:", iVarCritAll_I
+          write(*,"(A17,100(I10))") "AmrCrit_IB   :", shape(AmrCrit_IB) 
           write(*,*) ""
           do iCrit=1,nAmrCritUsed
              write(*,*) "iAreaIdx_II( :,iCrit) ",iAreaIdx_II( 1:nAreaPerCritAll_I(iCrit),iCrit)
           end do
           write(*,*) ""
           write(*,*) " 1 : nAmrCritUsed = ", 1," : ",nAmrCritUsed
-          write(*,*) " Geo range        = ", nPhysCritUsed +1," : ",  nAmrCritUsed
+          write(*,*) " Geo range        = ", &
+               nPhysCritUsed +1," : ", nAmrCritUsed
           write(*,*) " Phys range       = ",1," : ", nPhysCritUsed
           write(*,*) " Error Phys       = ",1," : ", nIntCrit
           write(*,*) " Ext calc range   = ",nIntCrit+1," : ",nIntCrit+nExtCrit
@@ -294,20 +293,19 @@ contains
        end if
     end if
 
-    ! All nesesary things are updated
-    isNewPhysParam = .false.
-    isNewGeoParam  = .false.
+    ! All necessary things are updated
+    IsNewPhysParam = .false.
+    IsNewGeoParam  = .false.
 
     ! cleaning arrays for read_amr_criteria
-    if(nPhysCritUsed > 0 ) &
-         deallocate(RefineCritPhys_I,&
+    if(nPhysCritUsed > 0 ) deallocate( &
+         RefineCritPhys_I,&
          CoarsenCritPhys_I,&
          MaxLevelCritPhys_I, &
          iMapToUiqCrit_I, &
          idxMaxGeoCritPhys_I,&
          nAreaPerCritPhys_I,&
-         AreaNamesPhys_II)    
-
+         AreaNamesPhys_II)
 
   end subroutine init_amr_criteria
   !============================================================================
@@ -374,7 +372,7 @@ contains
        end do
     end if
 
-    !-------- set up index Ranges and find blocks to refine/coursen -------
+    !-------- set up index Ranges and find blocks to refine/coarsen -------
     select case(TypeAmr)
     case('all')
        iStartCrit = 1
@@ -445,10 +443,13 @@ contains
     integer, allocatable :: iRank_I(:)
     real, allocatable :: Rank_I(:),nRank_I(:)
     logical, allocatable ::  AllUSeCrit_II(:,:)
+
     ! AllRank_II(Nodes given by iNode_I,2) [rank,N ranks for node]
     real, allocatable :: AllRank_II(:,:)
-    ! tranlsate sorting continous index to iNode_I index
+
+    ! translate sorting continous index to iNode_I index
     integer, allocatable :: iSortToNode_I(:)
+
     ! will have value 0: unset, 1:refine and -1:coursen to count
     ! the number of nodes to refine and/or coursen by criteria
     integer, allocatable ::nAmrTag(:)
@@ -543,8 +544,7 @@ contains
          AllCrit_II, nReciveCont_P, nRecivDisp_P, &
          MPI_REAL, iComm, iError)
 
-    ! Set up the displacement and size for collecting the data for 
-    ! iNode_I
+    ! Set up the displacement and size for collecting the data for iNode_I
     nReciveCont_P = nBlock_P
     nRecivDisp_P(1) = 0
     do iProces=2,nProc 
@@ -717,7 +717,7 @@ contains
     ! there are unused blocks. This is stored in iIdxSort_II(iSort,1)
     k = 0
     iSort = 0
-    do iProces = 1,nProc
+    do iProces = 1, nProc
        do iBlock = 1, nBlock_P(iProces)
           k = k +1
           if(Unused_BP(iBlock,iProces-1)) CYCLE
@@ -727,14 +727,14 @@ contains
           Rank_I(iSort) = iRank_I(k) + Rank_I(k)
           iIdxSort_II(iSort,1) = iNode_I(k)
           CritSort_II(iSort,1) = &
-               AllCrit_II(iResolutionLimit_I(iStartCrit),iBlock+nRecivDisp_P(iProces))
+               AllCrit_II(iResolutionLimit_I(iStartCrit), &
+               iBlock+nRecivDisp_P(iProces))
        end do
     end do
     nNodeSort = iSort
 
     ! Get the number of elements to refine by percentage
-    ! taking into account that each refinements generate nChild-1 
-    ! new blocks
+    ! taking into account that each refinements generate nChild-1 new blocks
     nDesiredRefine  = floor(PercentRefine*nNodeUsed/(100.0))
     nDesiredCoarsen = floor(PercentCoarsen*nNodeUsed/100.0)
 
@@ -766,8 +766,7 @@ contains
     end do
 
     ! making sure that the refinment and coarsning are starting from
-    ! a position with have a transition in its criteria larger then
-    ! diffRange
+    ! a position with have a transition in its criteria larger then diffRange
     if(nDesiredRefine > nNodeRefine .and.  nDesiredRefine < nNodeSort )then
        k=-1
        do iSort = nNodeSort-nDesiredRefine, nNodeSort-nNodeRefine
@@ -789,9 +788,10 @@ contains
     end if
 
     ! Give iStatusNew_A based on the iRank_A and number of blocks we want for
-    ! refinment and coarsning
+    ! refinement and coarsening
     do iSort = nNodeSort, nNodeSort-max(nDesiredRefine,nNodeRefine)+1, -1
-       if( maxval(ResolutionLimit_I(iStartCrit:iEndCrit)) >= CritSort_II(iIdxSort_II(iSort,iTotalCrit),1)) CYCLE
+       if( maxval(ResolutionLimit_I(iStartCrit:iEndCrit)) &
+            >= CritSort_II(iIdxSort_II(iSort,iTotalCrit),1)) CYCLE
        iStatusNew_A(iRank_A(iSort)) = Refine_
     end do
 
@@ -818,9 +818,7 @@ contains
     deallocate(nRank_I)
     deallocate(nAmrTag)
 
-
   end subroutine sort_amr_criteria
-
 
   !============================================================================
 
@@ -1130,10 +1128,10 @@ contains
        do iCrit = 1, nCrit
 
           IsUniqueCritName = .true.
-          !find index of the criteria from its name
+          ! find index of the criteria from its name
           call read_var('TypeCriteria', CritName, IsLowerCase=.true.)
 
-          call split_string(CritName,nMaxComponents, CritName_I, nCritArgs)
+          call split_string(CritName, nMaxComponents, CritName_I, nCritArgs)
 
           CritName = trim(adjustl(CritName_I(1)))
           select case(CritName)
@@ -1152,7 +1150,7 @@ contains
                 call lower_case(NameStatVar)
                 if(NameStatVar == trim(adjustl(CritName_I(2))) ) EXIT
              end do
-             !find if index iStatVar exsit in list before
+             ! find if index iStatVar exsit in list before
              do iIntCrit = 1, nIntCrit
                 if(iMapToStateVar_I(iIntCrit) == iStatVar) then
                    IsUniqueCritName = .false.
@@ -1173,9 +1171,9 @@ contains
                   ' ERROR: BATSRUS need flag to read more data')
              ReadExtra = .true.
 
-             ! Find out it the name has bin used before
+             ! Find out it the name has been used before
              do iCritName = 1, nCrit
-                if(trim(adjustl(CritName_I(2))) == NameCritOut_I(iCritName)) then
+                if(trim(adjustl(CritName_I(2)))==NameCritOut_I(iCritName)) then
                    iMapToUiqCrit_I(iCritPhy) = iCritName
                    IsUniqueCritName = .false.
                    EXIT
@@ -1236,8 +1234,10 @@ contains
           case('level')
              call read_var('RefineTo',RefineCritPhys_I(nCrit-nCritDxLevel))
              call read_var('CoarsenTo',CoarsenCritPhys_I(nCrit-nCritDxLevel))
-             RefineCritPhys_I(nCrit-nCritDxLevel) = -RefineCritPhys_I(nCrit-nCritDxLevel)
-             CoarsenCritPhys_I(nCrit-nCritDxLevel) = -(CoarsenCritPhys_I(nCrit-nCritDxLevel)+1)
+             RefineCritPhys_I(nCrit-nCritDxLevel) = &
+                  -RefineCritPhys_I(nCrit-nCritDxLevel)
+             CoarsenCritPhys_I(nCrit-nCritDxLevel) = &
+                  -(CoarsenCritPhys_I(nCrit-nCritDxLevel)+1)
              MaxLevelCritPhys_I(nCrit-nCritDxLevel) = -MaxLevel 
              if(IsRes) MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0 
              nCritDxLevel = nCritDxLevel+1
@@ -1248,10 +1248,12 @@ contains
              if(IsRes)  MaxLevelCritPhys_I(nCrit-nCritDxLevel) = 0.0
              nCritDxLevel = nCritDxLevel+1
           case default   
-             call read_var('CoarsenLimit',CoarsenCritPhys_I(iCritPhy))
-             call read_var('RefineLimit',RefineCritPhys_I(iCritPhy))
-             if(IsLevel .or. IsRes) call read_var('MaxResolution',MaxLevelCritPhys_I(iCritPhy))
-             if(IsLevel) MaxLevelCritPhys_I(iCritPhy) = -1.0*MaxLevelCritPhys_I(iCritPhy)
+             call read_var('CoarsenLimit', CoarsenCritPhys_I(iCritPhy))
+             call read_var('RefineLimit',  RefineCritPhys_I(iCritPhy))
+             if(IsLevel .or. IsRes) &
+                  call read_var('MaxResolution', MaxLevelCritPhys_I(iCritPhy))
+             if(IsLevel) &
+                  MaxLevelCritPhys_I(iCritPhy) = -MaxLevelCritPhys_I(iCritPhy)
           end select
        end do
 
@@ -1260,13 +1262,14 @@ contains
        if(ReadExtra) &
             call read_var('ReadExtraOut',ReadExtraOut)
 
-       DoCritAmr = .true.
-       DoAutoAmr = .true.      
-       nExtCrit     = nCritInOut
-       nIntCrit = nIntCrit-1
-       nAmrCritUsed = nCrit
+       DoCritAmr     = .true.
+       DoAutoAmr     = .true.      
+       nExtCrit      = nCritInOut
+       nIntCrit      = nIntCrit-1
+       nAmrCritUsed  = nCrit
        nPhysCritUsed = nCrit
-       ! makeing the error criteia come before the physics criteria
+
+       ! making the error criteia come before the physics criteria
        where(iMapToUiqCrit_I > 10000)
           iMapToUiqCrit_I = iMapToUiqCrit_I-10000 +nCritInOut
        end where
@@ -1278,10 +1281,10 @@ contains
        ! Extra stuff for #AMRCRITERIA
        if(.not. (IsLevel .or. IsRes))then
           if(allocated(iTree_IA)) then
-             MaxLevelCritPhys_I(1:nAmrCritUsed) = -maxval(iTree_IA(MaxLevel_,:))
+             MaxLevelCritPhys_I(1:nAmrCritUsed)= -maxval(iTree_IA(MaxLevel_,:))
           else
-             ! if the grid is not initzilised at this point, we set it to max
-             ! value and lett propper threading take care of it
+             ! if the grid is not initalized at this point, we set it to max
+             ! value and let proper nesting take care of it
              MaxLevelCritPhys_I(1:nAmrCritUsed) = -MaxLevel 
           end if
        end if
@@ -1298,7 +1301,8 @@ contains
           write(*,*) " RefineCritPhys_I    = ", RefineCritPhys_I
           write(*,*) " nCritDxLevel        = ", nCritDxLevel
           write(*,*) " nAreaPerCritPhys_I  = ", nAreaPerCritPhys_I
-          if(IsLevel .or. IsRes) write(*,*) " MaxLevelCritPhys_I  = ", MaxLevelCritPhys_I
+          if(IsLevel .or. IsRes) &
+               write(*,*) " MaxLevelCritPhys_I  = ", MaxLevelCritPhys_I
           write(*,*) " AmrWavefilter       = ",cAmrWavefilter
        end if
     case("#AMR") ! compatibilety with old system with BATSRUS amr options
@@ -1329,32 +1333,31 @@ contains
     DoStrictAmr = .not. DoSortAmrCrit 
     !=================================================================
   contains 
-    subroutine SetCritArea(iStartElmt, nElmt,Name_I,iCrit)
+    subroutine SetCritArea(iStartElmt, nElmt, Name_I, iCrit)
 
       integer, intent(in) :: iStartElmt, nElmt, iCrit
       character(len=nChar), intent(in):: Name_I(nMaxComponents)
 
-      integer i,iElmt
+      integer i, iElmt
       !---------------------------------------------------------------
-      if(iStartElmt<= nElmt) then
+      if(iStartElmt <= nElmt) then
          i=0
-         do iElmt=iStartElmt, nElmt
-            i=i+1
+         do iElmt = iStartElmt, nElmt
+            i = i + 1
             AreaNamesPhys_II(i,iCrit) = trim(adjustl(Name_I(iElmt))) 
          end do
       else
-         i=1
+         i = 1
          AreaNamesPhys_II(1,iCrit) = "ALL"
       end if
       nAreaPerCritPhys_I(iCrit) = i
-    end subroutine SetCritArea
 
+    end subroutine SetCritArea
 
   end subroutine read_amr_criteria
 
   !============================================================================
   subroutine set_amr_geometry(iBlock, user_amr_geometry)
-
 
     interface
        subroutine user_amr_geometry(iBlock, iArea, DoRefine)
@@ -1373,7 +1376,7 @@ contains
     if(nAmrCritUsed < 1) RETURN
 
     ! Find if Criteria should be used in block
-    do iCrit=1,nAmrCritUsed
+    do iCrit = 1, nAmrCritUsed
        UseCrit_IB(iCrit,iBlock) = .false.
        do iArea =1,nAreaPerCritAll_I(iCrit)
           idx = iAreaIdx_II(iArea,iCrit)
@@ -1386,6 +1389,7 @@ contains
           UseCrit_IB(iCrit,iBlock) = UseCrit_IB(iCrit,iBlock) .or. UseBlock
        end do
     end do
+
   end subroutine set_amr_geometry
   !============================================================================
   logical function masked_amr_criteria(iBlock,iCritExtIn)
@@ -1397,14 +1401,18 @@ contains
 
     if(present(iCritExtIn)) then
        masked_amr_criteria = .false.
+
        ! loop over physics criterias
-       do iCrit=nIntCrit+1,nIntCrit+nPhysCritUsed-nCritDxLevel
+       do iCrit = nIntCrit+1, nIntCrit+nPhysCritUsed-nCritDxLevel
           if(iVarCritAll_I(iCrit) == nIntCrit+iCritExtIn) &
-               masked_amr_criteria = masked_amr_criteria .or. UseCrit_IB(iCrit,iBlock)
+               masked_amr_criteria = masked_amr_criteria &
+               .or. UseCrit_IB(iCrit,iBlock)
        end do
        masked_amr_criteria = .not. masked_amr_criteria
     else
-       masked_amr_criteria = .not. any(UseCrit_IB(nIntCrit+1:nIntCrit+nPhysCritUsed-nCritDxLevel,iBlock))
+       masked_amr_criteria = .not. &
+            any(UseCrit_IB(nIntCrit+1:nIntCrit+nPhysCritUsed-nCritDxLevel,&
+            iBlock))
     end if
 
   end function masked_amr_criteria
