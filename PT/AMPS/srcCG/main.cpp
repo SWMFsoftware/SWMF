@@ -36,6 +36,8 @@
 #include "Comet.h"
 #include "Exosphere.h"
 
+#include "Dust.h"
+
 static double SampleFluxDown[200000];
 
 void FlushElementSampling(double *sample) {
@@ -946,6 +948,7 @@ int main(int argc,char **argv) {
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
 
+/*
     //update the location of the flux sampling points
     //! simulation is performes in the C-G_CK <- the frame that rotates together with the nucleus
     //! sampling of the dust flux: the points are fixed in the solar orbiter system C-K_CSO
@@ -1014,6 +1017,7 @@ int main(int argc,char **argv) {
     }
 
 
+*/
 //    Comet::CometData::PrintCheckSum();
 
     //perform the next time step

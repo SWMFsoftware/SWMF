@@ -14,6 +14,7 @@
 #include "pic.h"
 #include "global.h"
 #include "Exosphere.h"
+#include "Dust.h"
 
 //==============================================================================================================================
 //sampling data offset
