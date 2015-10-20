@@ -1,15 +1,13 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+!
 ! ModUser for flux emergence problems on Sun
 ! We calculate the thin radiative cooling, vertical damping, 
 ! and call coronal heating from PARAM.in to model the solar 
 ! atmosphere, following Abbett (2007). The implementation of
 ! tabular equation of state takes into account of the 
 ! ionization energy. 
-!
-! 2010-03-01: committed in
 !=========================================================================
 
 module ModUser
@@ -38,7 +36,7 @@ module ModUser
   !                      density and temperature
   ! InitialDensity, InitialTemperature: the initial values if
   !                      UseUniformInitialState
-  ! InitialBx, InitialBy, InitalBz: initial magnetic field, added through
+  ! InitialBx, InitialBy, InitialBz: initial magnetic field, added through
   !                      user_initial_perturbation
   ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0 
   !                      if rho> RhoThinCutoff)
@@ -246,7 +244,7 @@ contains
       real :: p, Value_V(1:3), ExtraEint, InitialDensitySi, Rho
       real :: g1, inv_g1, inv_g1m1, z0
 
-      integer :: i,j,k
+      integer :: i, j, k
       !---------------------------------------------------------------------
       ! calculate the Extra Internal Energy and Pressure (SI)
       ! from given initial conditions: InitialDensity, InitialTemperature(CGS)
@@ -255,7 +253,8 @@ contains
          call interpolate_lookup_table(iTableEOS, InitialTemperature, &
               InitialDensitySi, Value_V, DoExtrapolate = .false.)
          p         = Value_V(1)*Si2No_V(UnitP_)
-         ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1)*Si2No_V(UnitEnergyDens_)
+         ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1) &
+              *Si2No_V(UnitEnergyDens_)
       else
          p         = InitialDensitySi*InitialTemperature/rstari*Si2No_V(UnitP_)
          ExtraEint = 0.
@@ -263,15 +262,15 @@ contains
       Rho = InitialDensitySi*Si2No_V(UnitRho_)
 
       ! Set the initial condition for a uniform atmosphere
-      do k=1,nK; do j=1,nJ; do i=1,nI
-         State_VGB(rhoUx_ ,i,j,k,iBlock) = 0.
-         State_VGB(rhoUy_ ,i,j,k,iBlock) = 0.
-         State_VGB(rhoUz_ ,i,j,k,iBlock) = 0.
-         State_VGB(Bx_    ,i,j,k,iBlock) = 0.
-         State_VGB(By_    ,i,j,k,iBlock) = 0.
-         State_VGB(Bz_    ,i,j,k,iBlock) = 0.
-         State_VGB(rho_   ,i,j,k,iBlock) = Rho              
-         State_VGB(Erad_  ,i,j,k,iBlock) = 0.
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
+         State_VGB(rhoUx_,i,j,k,iBlock) = 0.
+         State_VGB(rhoUy_,i,j,k,iBlock) = 0.
+         State_VGB(rhoUz_,i,j,k,iBlock) = 0.
+         State_VGB(Bx_   ,i,j,k,iBlock) = 0.
+         State_VGB(By_   ,i,j,k,iBlock) = 0.
+         State_VGB(Bz_   ,i,j,k,iBlock) = 0.
+         State_VGB(rho_  ,i,j,k,iBlock) = Rho              
+         State_VGB(Erad_ ,i,j,k,iBlock) = 0.
          !cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
          if(UseUniformT)then
             State_VGB(P_,i,j,k,iBlock) = p
@@ -285,11 +284,11 @@ contains
                State_VGB(rho_,i,j,k,iBlock) = Rho
                State_VGB(rho_,i,j,k,iBlock) = Rho*(1 - &
                     (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(R_BLK(i,j,k,iBlock), z0) - z0)&
+                    (min(r_BLK(i,j,k,iBlock), z0) - z0)&
                     *No2Si_V(UnitX_))**inv_g1m1
                State_VGB(p_,i,j,k,iBlock) = p*(1 - &
                     (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(R_BLK(i,j,k,iBlock), z0) - z0)*No2Si_V(UnitX_))** &
+                    (min(r_BLK(i,j,k,iBlock), z0) - z0)*No2Si_V(UnitX_))** &
                     (1+inv_g1m1)
                State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
             end if
@@ -317,7 +316,7 @@ contains
          ! interpolate the tabular data of reference initial state and get
          ! a relaxed initial state
          call interpolate_lookup_table(iTableInitialState, &
-              R_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), Const, InitialState, &
+              r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), Const, InitialState, &
               DoExtrapolate = .false.)
 
          InitialRho    = InitialState(1)
@@ -331,11 +330,10 @@ contains
                  InitialRho*InitialUz*Si2No_V(UnitRho_)*Si2No_V(UnitU_) &
                  *Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
          end do; end do
-         State_VGB(Bx_:Erad_ ,i,:,:,iBlock)    = 0.
-         State_VGB(ExtraEint_,i,:,:,iBlock)    = &
+         State_VGB(Bx_:Erad_ ,i,:,:,iBlock) = 0.
+         State_VGB(ExtraEint_,i,:,:,iBlock) = &
               InitialExtraE*Si2No_V(UnitEnergyDens_)
-         State_VGB(p_,i,:,:,iBlock)            = &
-              InitialP*Si2No_V(UnitP_)
+         State_VGB(p_,i,:,:,iBlock) = InitialP*Si2No_V(UnitP_)
       end do
     end subroutine set_perturbed_ICs
 
@@ -344,27 +342,70 @@ contains
   !=========================================================================
 
   subroutine user_initial_perturbation
+
     use ModEnergy,   only: calc_energy_cell
     use ModMain,     ONLY: Unused_B, nBlockMax
     use ModGeometry, ONLY: Xyz_DGB, r_BLK
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics
     use ModVarIndexes
+    use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
 
-    integer:: iBlock, i,j,k
-    real :: dp_ratio,prof,rsq,rasq,EInternal, RandomChange
+    integer :: iBlock, i, j, k
+    real :: dp_ratio, prof, rsq, rasq, EInternal, RandomChange
+
+    ! atmosphere parameters 
+    logical, parameter :: UseAtmReset = .true.
+    real, parameter ::  mu = 0.594354
+    real :: x2c, x3c, qfac, wdth
+    real :: r, r_ph, r_ch, r_tr, r_cr, g_ch, g_tr, g_cr 
+    real :: rho_ch, p_ch, rho_tr, p_tr, rho_cr, p_cr 
+    real :: T_ch, T_tr, T_cr, H_ch, H_tr, H_cr
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-----------------------------------------------------------------------   
     rasq = ra_rope*ra_rope
+    wdth = 2.0*1.5e5*Si2No_V(UnitX_)
+
+    ! atmosphere parameters 
+    r_ph = 1.0015
+    r_ch = 1.0033
+    r_tr = 1.012 
+    r_cr = 1.120
+    T_ch = 1.5e4
+    T_tr = 1.0e5
+    T_cr = 1.0e6
+    p_ch = 2.00e-03*1.0e-1  !mks units
+    rho_ch = p_ch*(mu*cProtonMass)/(cBoltzmann*T_ch) !1.434e-14
+
+    g_ch  = cGravitation*mSun/(r_ch*rSun)**2
+    g_tr  = cGravitation*mSun/(r_tr*rSun)**2
+    g_cr  = cGravitation*mSun/(r_cr*rSun)**2
+
+    H_ch  = cBoltzmann*T_ch/(g_ch*mu*cProtonMass)*Si2No_V(UnitX_)
+    H_tr  = cBoltzmann*T_tr/(g_tr*mu*cProtonMass)*Si2No_V(UnitX_)
+    H_cr  = cBoltzmann*T_cr/(g_cr*mu*cProtonMass)*Si2No_V(UnitX_)
+
+    p_tr   =  p_ch*exp(-(r_tr - r_ch)/H_ch) 
+    rho_tr =  p_tr*(mu*cProtonMass)/(cBoltzmann*T_tr)
+
+    p_cr   =  p_tr*exp(-(r_cr - r_tr)/H_tr)
+    rho_cr =  p_cr*(mu*cProtonMass)/(cBoltzmann*1.0e8)
+
+    rho_ch = rho_ch*Si2No_V(UnitRho_)
+    rho_tr = rho_tr*Si2No_V(UnitRho_)
+    rho_cr = rho_cr*Si2No_V(UnitRho_)
+    p_ch   =   p_ch*Si2No_V(UnitP_)
+    p_tr   =   p_tr*Si2No_V(UnitP_)
+    p_cr   =   p_cr*Si2No_V(UnitP_)
 
     do iBlock = 1, nBlockMax
-       if( Unused_B(iBlock) ) CYCLE
-       do i=1,nI
+       if(Unused_B(iBlock)) CYCLE
+       do i = 1, nI
           ! Add initial magnetic field 
           if(UseCoronalField)then
-             if(R_BLK(i,4,4,iBlock) < r_photo)then
-                prof = (1 - tanh(R_BLK(i,4,4,iBlock) - r_photo))/2.
+             if(r_BLK(i,4,4,iBlock) < r_photo)then
+                prof = (1 - tanh(r_BLK(i,4,4,iBlock) - r_photo))/2.
                 !B: field needs to be rotated
                 State_VGB(Bx_,i,:,:,iBlock) = &
                      State_VGB(Bx_,i,:,:,iBlock) + &
@@ -373,23 +414,20 @@ contains
                      State_VGB(By_,i,:,:,iBlock) + &
                      InitialBy*1.e-4*Si2No_V(UnitB_)*prof
              end if
-             !            State_VGB(Bz_,i,:,:,iBlock) = &
-             !                 State_VGB(Bz_,i,:,;,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
+             State_VGB(Bz_,:,:,k,iBlock) = &
+                  State_VGB(Bz_,:,:,k,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
           end if
           ! Add random perturbation to energy and pressure values of 
           ! cells below the photosphere height                  
-          if(UseEnergyPert.and.(R_BLK(i,4,4,iBlock) < r_photo ))then
-             do k=1,nK; do j=1,nJ
+          if(UseEnergyPert.and.(r_BLK(i,4,4,iBlock) < r_photo ))then
+             do k = 1, nK; do j = 1, nJ
                 call random_number(RandomChange)
                 RandomChange = (RandomChange-0.5)*2
-                if(iTableEOS > 0)then
-                   State_VGB(ExtraEint_,i,j,k,iBlock) =          &
-                        State_VGB(ExtraEint_,i,j,k,iBlock)*(1.0 +  &
-                        1.e-3*RandomChange)
-                end if
-                State_VGB(p_,i,j,k,iBlock) =                  &
-                     State_VGB(p_,i,j,k,iBlock)*(1.0 +        &
-                     1.e-3*RandomChange) 
+                if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                     State_VGB(ExtraEint_,i,j,k,iBlock) &
+                     *(1.0 + 1.e-3*RandomChange)
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                     *(1.0 + 1.e-3*RandomChange)
                 EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
                      State_VGB(ExtraEint_,i,j,k,iBlock))* &
                      No2Si_V(UnitEnergyDens_)
@@ -400,7 +438,7 @@ contains
           ! Set negative pressure to 1.e-10
           !/
           if(UseRope)then
-             do k=1,nK ; do j=1,nJ
+             do k = 1, nK ; do j = 1, nJ
                 rsq = (Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)**2 + &
                      (Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope)**2
                 if(rsq < rasq**1.5e1)then
@@ -415,18 +453,67 @@ contains
                      State_VGB(Bx_,i,j,k,iBlock) + prof
                 State_VGB(By_,i,j,k,iBlock) = &
                      State_VGB(By_,i,j,k,iBlock) &
-                     - prof*qfac_rope*(Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope)/ra_rope
+                     - prof*qfac_rope*(Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope) &
+                     /ra_rope
                 State_VGB(Bz_,i,j,k,iBlock) = &
                      State_VGB(Bz_,i,j,k,iBlock) + &
-                     prof*qfac_rope*(Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)/ra_rope
+                     prof*qfac_rope*(Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope) &
+                     /ra_rope
                 State_VGB(P_,i,j,k,iBlock) = &
                      State_VGB(p_,i,j,k,iBlock)*(1.+dp_ratio)
-                State_VGB(rho_,i,j,k,iBlock) = &
-                     State_VGB(rho_,i,j,k,iBlock)*(1. + &
-                     exp(-(Xyz_DGB(x_,i,j,k,iBlock)/lamb_rope)**2)*&
-                     dp_ratio*buoyancy_rope)
-                if(State_VGB(p_,i,j,k,iBlock)<=0.)&
-                     State_VGB(p_,i,j,k,iBlock)=1.e-10
+                State_VGB(rho_,i,j,k,iBlock) = State_VGB(rho_,i,j,k,iBlock) &
+                     *(1. +  exp(-(Xyz_DGB(x_,i,j,k,iBlock)/lamb_rope)**2) &
+                     *dp_ratio*buoyancy_rope)
+                if(State_VGB(p_,i,j,k,iBlock) <= 0.) &
+                     State_VGB(p_,i,j,k,iBlock) = 1.e-10
+             end do; end do
+          end if
+
+          !\
+          ! If UseAtmReset, reset upper atmosphere 
+          !/
+          if(UseAtmReset)then  
+             r = r_BLK(i,4,4,iBlock)
+             do k = 1, nK; do j = 1, nJ
+                !CH
+                if( (r > r_ch) .and. (r < r_tr) )then
+                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+                   State_VGB(rho_,i,j,k,iBlock) = rho_ch*exp(-(r-r_ch)/H_ch)
+                   State_VGB(p_,i,j,k,iBlock) = p_ch*exp(-(r-r_ch)/H_ch)
+                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
+                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
+                        No2Si_V(UnitEnergyDens_)
+                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                end if
+                !TR
+                if(r > r_tr) then
+                   !if( (r > r_tr) .and. (r < r_cr) )then
+                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+                   State_VGB(rho_,i,j,k,iBlock)   =   &
+                        rho_tr*exp(-(r-r_tr)/H_tr)
+                   State_VGB(p_,i,j,k,iBlock)     =   &
+                        p_tr  *exp(-(r-r_tr)/H_tr)
+                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
+                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
+                        No2Si_V(UnitEnergyDens_)
+                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                end if
+                !CR
+                if((r > r_cr) .and. (r < r_tr))then
+                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
+                   State_VGB(rho_,i,j,k,iBlock) = rho_cr*exp(-(r-r_cr)/H_cr)
+                   State_VGB(p_,i,j,k,iBlock) = p_cr*exp(-(r-r_cr)/H_cr)
+                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
+                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
+                        No2Si_V(UnitEnergyDens_)
+                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                end if
              end do; end do
           end if
        end do
@@ -458,30 +545,34 @@ contains
     case(1)
        select case(TypeBc)
        case('fixvalue')
+
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-             State_VGB(rho_,i,j,k,iBlock) = BotDensity
+             State_VGB(rho_,i,j,k,iBlock)       = BotDensity
+             State_VGB(p_,i,j,k,iBlock)         = BotPressure
+             State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
 
              Runit_D = Xyz_DGB(:,1,j,k,iBlock)/r_BLK(1,j,k,iBlock)
 
              ! Reflect RhoUr
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                  State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
-                  -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock)) &
-                  *Runit_D
+!            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+!                State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
+!               -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock))*Runit_D
 
+             ! Reflect total vector to reduce surface strong flows at
+             ! bottom boundary
+             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                -State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) 
              ! Float Br
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
 
-             State_VGB(p_,i,j,k,iBlock) = BotPressure
-             State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
           end do; end do; end do
           IsFound = .true.
        case('forcebalance')
           ! the density at the boundary is fixed.
           ! pressure gradient at the boundary is set to balance the 
           ! gravitational force.
-          do k = MinK,0; do j = MinJ,MaxJ; do i = MinI, MaxI
+          do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
              State_VGB(rho_,i,j,k,iBlock) = BotDensity
              State_VGB(rhoUx_:rhoUy_,i,j,k,iBlock) = 0.0
 !!! suspicious !!!
@@ -494,7 +585,8 @@ contains
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   EinternalOut = EinternalSi)
              State_VGB(ExtraEint_,i,j,k,iBlock) = EinternalSi* &
-                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,k,iBlock)*InvGammaMinus1
+                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,k,iBlock) &
+                  *InvGammaMinus1
           end do; end do; end do
           IsFound = .true.
        end select
@@ -507,12 +599,13 @@ contains
              State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
 
              Runit_D = Xyz_DGB(:,nI,j,k,iBlock)/r_BLK(nI,j,k,iBlock)
+
              RhoUr = sum(Runit_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))
 
-             ! Maintain float for transverse component, but float abs(RhoUr)
              State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
                   + (-RhoUr + abs(RhoUr))*Runit_D
+
           end do; end do; end do
           IsFound = .true.
        end select
@@ -543,14 +636,14 @@ contains
 
        if(UseVerticalDamping) call get_vertical_damping( &
             State_VGB(:,i,j,k,iBlock), &
-            R_BLK(i,j,k,iBlock), Runit_D, DampingRhoUr, DampingEnergy)
+            r_BLK(i,j,k,iBlock), Runit_D, DampingRhoUr, DampingEnergy)
 
        if(UseThinRadiation)then
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                TeOut=TeSi)
           call get_radiative_cooling(&
                State_VGB(:,i,j,k,iBlock), TeSi, &
-               R_BLK(i,j,k,iBlock), RadiativeCooling)
+               r_BLK(i,j,k,iBlock), RadiativeCooling)
        end if
 
        EInternalSource = RadiativeCooling
@@ -604,7 +697,11 @@ contains
     real, intent(in) :: r
     real, intent(out):: RadiativeCooling
 
-    real, parameter :: RadiationCutoff = - 1.0e9, atrl = 1.0e3, Const = 2.5
+    real, parameter :: RadiationCutoff = - 3.0e9, atrl = 1.0e3, Const = 2.5
+    real, parameter :: mf=1.0
+    ! Fang values
+    !real, parameter :: RadiationCutoff = - 1.0e9, atrl = 1.0e3, Const = 2.5
+
     real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
          MassDensCgs, NumberDensCgs
     real :: Chianti(1:1)
@@ -618,7 +715,7 @@ contains
     !    coordinate transform 1.0 + tmp(0)/6.96E+8
     if (r > 1.0 -30.0*1.50E5/6.96e8) then
        ! Smoothing function is 1 if rho<RhoThinCutoff , 0 if not
-       Fraction = 0.5 - 0.5*tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.))
+       Fraction = mf*(0.5 - 0.5*tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.)))
        ! Calculate the cooling function culve dependent on temperature
        if (TeSi <= 8.0e+03)&
             CoolingFunctionCgs = (1.0606e-06*TeSi)**11.7
@@ -652,7 +749,7 @@ contains
 
     integer, intent(in) :: iStage,iBlock
 
-    integer:: i,j,k
+    integer:: i, j, k
     real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi
 
     character (len=*), parameter :: NameSub = 'user_update_states'
@@ -664,7 +761,7 @@ contains
 
     call update_states_MHD(iStage,iBlock)
 
-    do k = 1,nK; do j=1,nJ; do i=1,nI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! check if the density or pressure is below the minimum value
        if(State_VGB(rho_,i,j,k,iBlock) < MassDensFloor) &
             State_VGB(rho_,i,j,k,iBlock) = MassDensFloor
@@ -678,7 +775,7 @@ contains
        State_VGB(P_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        State_VGB(ExtraEInt_,i,j,k,iBlock) = Si2No_V(UnitEnergyDens_)*&
             (EInternalSi - PressureSi*InvGammaMinus1)
-    end do;end do; end do
+    end do; end do; end do
 
     ! calculate the total energy
     call calc_energy_cell(iBlock)
@@ -690,6 +787,7 @@ contains
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G,PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+
     use ModAdvance,  ONLY:State_VGB
 
     integer,          intent(in) :: iBlock
@@ -703,7 +801,7 @@ contains
     character(len=*), intent(out):: NameIdlUnit
     logical,          intent(out):: IsFound
 
-    integer :: i,j,k
+    integer :: i, j, k
 
     character (len=*), parameter :: Name='user_set_plot_var'
     !-----------------------------------------------------------------
@@ -806,7 +904,7 @@ contains
           EinternalSi = EinternalIn
        else
           EinternalSi = &
-               (State_V(p_)*InvGammaMinus1 + State_V(ExtraEint_))*No2Si_V(UnitP_)
+               (State_V(p_)*InvGammaMinus1+State_V(ExtraEint_))*No2Si_V(UnitP_)
        end if
        ! Find temperature from density and internal energy
        call interpolate_lookup_table(iTableEOS, 2, EinternalSi, RhoSi, &
