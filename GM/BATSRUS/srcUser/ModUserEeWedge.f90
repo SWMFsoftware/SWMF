@@ -501,17 +501,16 @@ contains
 
   !==========================================================================
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
-    use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
-    use ModPhysics,    ONLY: UnitEnergyDens_, InvGammaMinus1, Si2No_V
+
+    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: CellSize_DB, Xyz_DGB, r_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, r_BLK
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
-    real :: EinternalSi
     real :: Runit_D(3), RhoUr
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
@@ -523,7 +522,7 @@ contains
        case('fixvalue')
 
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-             State_VGB(rho_,i,j,k,iBlock)       = BotDensity
+             State_VGB(Rho_,i,j,k,iBlock)       = BotDensity
              State_VGB(p_,i,j,k,iBlock)         = BotPressure
              State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
 
@@ -537,27 +536,6 @@ contains
              State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                   sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
 
-          end do; end do; end do
-          IsFound = .true.
-       case('forcebalance')
-          ! the density at the boundary is fixed.
-          ! pressure gradient at the boundary is set to balance the 
-          ! gravitational force.
-          do k = MinK, 0; do j = MinJ, MaxJ; do i = MinI, MaxI
-             State_VGB(rho_,i,j,k,iBlock) = BotDensity
-             State_VGB(rhoUx_:rhoUy_,i,j,k,iBlock) = 0.0
-!!! suspicious !!!
-             State_VGB(rhoUz_,i,j,k,iBlock) = -State_VGB(rhoUz_,i,j,1,iBlock)
-             State_VGB(Bx_:By_,i,j,k,iBlock) = 0.0
-             State_VGB(Bz_,i,j,k,iBlock) = State_VGB(Bz_,i,j,1,iBlock)
-!!! gravity = 1 ???
-             State_VGB(p_,i,j,k,iBlock) =  State_VGB(p_,i,j,k+2,iBlock) + &
-                  State_VGB(rho_,i,j,k+1,iBlock)*2.0*CellSize_DB(Z_,iBlock)
-             call user_material_properties(State_VGB(:,i,j,k,iBlock), &
-                  EinternalOut = EinternalSi)
-             State_VGB(ExtraEint_,i,j,k,iBlock) = EinternalSi* &
-                  Si2No_V(UnitEnergyDens_) - State_VGB(p_,i,j,k,iBlock) &
-                  *InvGammaMinus1
           end do; end do; end do
           IsFound = .true.
        end select
