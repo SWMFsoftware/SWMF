@@ -36,7 +36,7 @@ module ModUser
   !                      density and temperature
   ! InitialDensity, InitialTemperature: the initial values if
   !                      UseUniformInitialState
-  ! InitialBx, InitialBy, InitialBz: initial magnetic field, added through
+  ! InitialBr, InitialBt: initial magnetic field, added through
   !                      user_initial_perturbation
   ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0 
   !                      if rho> RhoThinCutoff)
@@ -51,8 +51,7 @@ module ModUser
   logical :: UseUniformInitialState = .false.
   logical :: UseUniformT = .false.
   logical :: UseEnergyPert = .false.
-  real    :: InitialDensity, InitialTemperature, InitialBx, &
-       InitialBy, InitialBz
+  real    :: InitialDensity, InitialTemperature, InitialBr, InitialBt
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: r_photo, TemperatureGradient
   real    :: BotDensity, BotPressure, BotExtraE
@@ -111,9 +110,8 @@ contains
           call read_var('UseEnergyPert', UseEnergyPert)
           call read_var('InitialDensity', InitialDensity)
           call read_var('InitialTemperature',InitialTemperature)
-          call read_var('InitialBx',InitialBx)
-          call read_var('InitialBy',InitialBy)
-          call read_var('InitialBz',InitialBz)
+          call read_var('InitialBr',InitialBr)
+          call read_var('InitialBt',InitialBt) ! tangential
           call read_var('NumberDensFloor',NumberDensFloor)
        case('#ROPE')
           call read_var('UseRope',UseRope)
@@ -202,8 +200,7 @@ contains
        write(*,*)'Initializing Flux Emergence problem'
        write(*,*)'Parameters:'
        write(*,*)'iProc = ',iProc
-       write(*,*) 'InitialBx = ',InitialBx,'InitialBy = ',InitialBy, &
-            'InitialBz = ',InitialBz
+       write(*,*) 'InitialBr = ',InitialBr, 'InitialBt = ',InitialBt
        write(*,*)'InitialDensity = ',InitialDensity,'InitialTemperature = ', &
             InitialTemperature, ' in CGS units'
        call set_oktest('user_set_ICs',oktest,oktest_me)
@@ -263,14 +260,10 @@ contains
 
       ! Set the initial condition for a uniform atmosphere
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         State_VGB(rhoUx_,i,j,k,iBlock) = 0.
-         State_VGB(rhoUy_,i,j,k,iBlock) = 0.
-         State_VGB(rhoUz_,i,j,k,iBlock) = 0.
-         State_VGB(Bx_   ,i,j,k,iBlock) = 0.
-         State_VGB(By_   ,i,j,k,iBlock) = 0.
-         State_VGB(Bz_   ,i,j,k,iBlock) = 0.
-         State_VGB(rho_  ,i,j,k,iBlock) = Rho              
-         State_VGB(Erad_ ,i,j,k,iBlock) = 0.
+         State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = 0.
+         State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.
+         State_VGB(rho_,i,j,k,iBlock) = Rho              
+         if(Erad_>1) State_VGB(Erad_,i,j,k,iBlock) = 0.
          !cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
          if(UseUniformT)then
             State_VGB(P_,i,j,k,iBlock) = p
@@ -330,7 +323,8 @@ contains
                  InitialRho*InitialUz*Si2No_V(UnitRho_)*Si2No_V(UnitU_) &
                  *Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
          end do; end do
-         State_VGB(Bx_:Erad_ ,i,:,:,iBlock) = 0.
+         State_VGB(Bx_:Bz_,i,:,:,iBlock) = 0.
+         if(Erad_ > 1) State_VGB(Erad_,i,:,:,iBlock) = 0.
          State_VGB(ExtraEint_,i,:,:,iBlock) = &
               InitialExtraE*Si2No_V(UnitEnergyDens_)
          State_VGB(p_,i,:,:,iBlock) = InitialP*Si2No_V(UnitP_)
@@ -347,12 +341,13 @@ contains
     use ModMain,     ONLY: Unused_B, nBlockMax
     use ModGeometry, ONLY: Xyz_DGB, r_BLK
     use ModAdvance,  ONLY: State_VGB
-    use ModPhysics
+    use ModPhysics,  ONLY: Si2No_V, UnitB_, UnitP_, UnitRho_, UnitX_
     use ModVarIndexes
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
 
     integer :: iBlock, i, j, k
-    real :: dp_ratio, prof, rsq, rasq, EInternal, RandomChange
+    real :: dp_ratio, Prof, rsq, rasq, RandomChange
+    real :: Runit_D(3), Br_D(3), Bt_D(3)
 
     ! atmosphere parameters 
     logical, parameter :: UseAtmReset = .true.
@@ -401,42 +396,42 @@ contains
 
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock)) CYCLE
+
        do i = 1, nI
           ! Add initial magnetic field 
           if(UseCoronalField)then
-             if(r_BLK(i,4,4,iBlock) < r_photo)then
-                prof = (1 - tanh(r_BLK(i,4,4,iBlock) - r_photo))/2.
-                !B: field needs to be rotated
-                State_VGB(Bx_,i,:,:,iBlock) = &
-                     State_VGB(Bx_,i,:,:,iBlock) + &
-                     InitialBx*1.e-4*Si2No_V(UnitB_)*prof
-                State_VGB(By_,i,:,:,iBlock) = &
-                     State_VGB(By_,i,:,:,iBlock) + &
-                     InitialBy*1.e-4*Si2No_V(UnitB_)*prof
-             end if
-             State_VGB(Bz_,:,:,k,iBlock) = &
-                  State_VGB(Bz_,:,:,k,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
-          end if
-          ! Add random perturbation to energy and pressure values of 
-          ! cells below the photosphere height                  
-          if(UseEnergyPert.and.(r_BLK(i,4,4,iBlock) < r_photo ))then
              do k = 1, nK; do j = 1, nJ
-                call random_number(RandomChange)
-                RandomChange = (RandomChange-0.5)*2
-                if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = &
-                     State_VGB(ExtraEint_,i,j,k,iBlock) &
-                     *(1.0 + 1.e-3*RandomChange)
-                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
-                     *(1.0 + 1.e-3*RandomChange)
-                EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
-                     State_VGB(ExtraEint_,i,j,k,iBlock))* &
-                     No2Si_V(UnitEnergyDens_)
+                Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+                Br_D = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*Runit_D)*Runit_D
+                Bt_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br_D
+                if(r_BLK(i,j,k,iBlock) < r_photo)then
+                   Prof = 0.5*(1 - tanh(r_BLK(i,j,k,iBlock) - r_photo))
+                else
+                   Prof = 0.0
+                end if
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                     State_VGB(Bx_:Bz_,i,j,k,iBlock) &
+                     + (Bt_D*InitialBt*Prof + Br_D*InitialBr) &
+                     *1e-4*Si2No_V(UnitB_)
              end do; end do
           end if
-          !\
+
+          ! Add random perturbation to energy and pressure values of 
+          ! cells below the photosphere height                  
+          if(UseEnergyPert .and. (r_BLK(i,1,1,iBlock) < r_photo))then
+             do k = 1, nK; do j = 1, nJ
+                call random_number(RandomChange)
+                RandomChange = (RandomChange - 0.5)*2
+                if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = &
+                     State_VGB(ExtraEint_,i,j,k,iBlock) &
+                     *(1.0 + 1e-3*RandomChange)
+                State_VGB(p_,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock) &
+                     *(1.0 + 1e-3*RandomChange)
+             end do; end do
+          end if
+
           ! If UseRope, Add flux rope in
           ! Set negative pressure to 1.e-10
-          !/
           if(UseRope)then
              do k = 1, nK ; do j = 1, nJ
                 rsq = (Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)**2 + &
@@ -469,50 +464,31 @@ contains
              end do; end do
           end if
 
-          !\
           ! If UseAtmReset, reset upper atmosphere 
-          !/
           if(UseAtmReset)then  
-             r = r_BLK(i,4,4,iBlock)
+             r = r_BLK(i,1,1,iBlock)
              do k = 1, nK; do j = 1, nJ
                 !CH
                 if( (r > r_ch) .and. (r < r_tr) )then
                    if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
                    State_VGB(rho_,i,j,k,iBlock) = rho_ch*exp(-(r-r_ch)/H_ch)
                    State_VGB(p_,i,j,k,iBlock) = p_ch*exp(-(r-r_ch)/H_ch)
-                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
-                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
-                        No2Si_V(UnitEnergyDens_)
-                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
                 end if
                 !TR
                 if(r > r_tr) then
                    !if( (r > r_tr) .and. (r < r_cr) )then
                    if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
-                   State_VGB(rho_,i,j,k,iBlock)   =   &
-                        rho_tr*exp(-(r-r_tr)/H_tr)
-                   State_VGB(p_,i,j,k,iBlock)     =   &
-                        p_tr  *exp(-(r-r_tr)/H_tr)
-                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
-                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
-                        No2Si_V(UnitEnergyDens_)
-                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                   State_VGB(rho_,i,j,k,iBlock) = rho_tr*exp(-(r-r_tr)/H_tr)
+                   State_VGB(p_,i,j,k,iBlock) = p_tr*exp(-(r-r_tr)/H_tr)
+                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
                 end if
                 !CR
                 if((r > r_cr) .and. (r < r_tr))then
                    if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
                    State_VGB(rho_,i,j,k,iBlock) = rho_cr*exp(-(r-r_cr)/H_cr)
                    State_VGB(p_,i,j,k,iBlock) = p_cr*exp(-(r-r_cr)/H_cr)
-                   EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
-                        State_VGB(ExtraEint_,i,j,k,iBlock))* &
-                        No2Si_V(UnitEnergyDens_)
-                   State_VGB(RhoUx_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUy_,i,j,k,iBlock) =  0.0
-                   State_VGB(RhoUz_,i,j,k,iBlock) =  0.0
+                   State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
                 end if
              end do; end do
           end if
@@ -552,11 +528,6 @@ contains
              State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
 
              Runit_D = Xyz_DGB(:,1,j,k,iBlock)/r_BLK(1,j,k,iBlock)
-
-             ! Reflect RhoUr
-!            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-!                State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) &
-!               -2*sum(Runit_D*State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock))*Runit_D
 
              ! Reflect total vector to reduce surface strong flows at
              ! bottom boundary
