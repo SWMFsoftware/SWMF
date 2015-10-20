@@ -763,7 +763,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::ImportData(const char* fname) {
   //check whether all data files are created
   int AllTecplotInterpolationFinishFlags[PIC::nTotalThreads];
 
-  MPI_Gather(&TecplotInterpolationFinishFlag,PIC::nTotalThreads,MPI_INT,AllTecplotInterpolationFinishFlags,PIC::nTotalThreads,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Gather(&TecplotInterpolationFinishFlag,1,MPI_INT,AllTecplotInterpolationFinishFlags,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
   if (PIC::ThisThread==0) {
     char msg[5000];
