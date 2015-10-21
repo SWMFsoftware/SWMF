@@ -638,7 +638,6 @@ contains
        ! Add Coriolis forces
        if(UseRotatingFrame)then
           ! Add centrifugal and Coriolis forces
-
           select case(TypeCoordSystem)
           case('HGC','HGR','GEO')
              ! This is a special case since Omega is parallel with the Z axis
@@ -658,13 +657,10 @@ contains
                 Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                      + Omega2 * sum(State_VGB(iRhoUx:iRhoUy,i,j,k,iBlock) &
                      *                         Xyz_DGB(x_:y_,i,j,k,iBlock))
-
-               
-              
              end do; end do; end do
           case default
              call stop_mpi(NameSub // &
-                  ' Coriolis force is not implemented for'// &
+                  ' Inertial forces are not implemented for'// &
                   ' TypeCoordSystem='//TypeCoordSystem)
           end select
           if(DoTestMe.and.VarTest>=iRhoUx .and. VarTest<=iRhoUy) &
