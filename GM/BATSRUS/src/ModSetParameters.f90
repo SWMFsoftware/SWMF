@@ -1878,7 +1878,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
         select case(NameThisComp)
         case('GM')
-           if(TypeCoordSystem /= 'GSM' .and. TypeCoordSystem /= 'GSE') &
+           if (TypeCoordSystem == 'GEO') UseRotatingFrame = .true.
+           if(TypeCoordSystem /= 'GSM' .and. TypeCoordSystem /= 'GSE' &
+                .and. TypeCoordSystem /= 'GEO' ) &
                 call stop_mpi(NameSub// &
                 ' ERROR: cannot handle coordinate system '//TypeCoordSystem)
         case('IH','OH')
