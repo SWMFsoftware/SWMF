@@ -62,6 +62,7 @@ module ModCoordTransform
 
   !PUBLIC MEMBER FUNCTIONS:
 
+  public:: rot_matrix     ! 2D rotation matrix (angle)
   public:: rot_matrix_x   ! rotation matrix around X axis (angle)
   public:: rot_matrix_y   ! rotation matrix around Y axis (angle)
   public:: rot_matrix_z   ! rotation matrix around Z axis (angle)
@@ -88,6 +89,10 @@ module ModCoordTransform
   !EOP ___________________________________________________________________
 
   integer, parameter :: x_=1, y_=2, z_=3
+
+  interface rot_matrix
+     module procedure rot_matrix1, rot_matrix2
+  end interface
 
   interface rot_matrix_x
      module procedure rot_matrix_x1, rot_matrix_x2
@@ -571,6 +576,33 @@ contains
     !EOC
 
   end subroutine dir_to_xyz43
+
+  !============================================================================
+
+  function rot_matrix1(Angle) result(Rot_DD)
+
+    real, intent(in) :: Angle
+    real :: Rot_DD(2,2)
+
+    rot_DD = rot_matrix(sin(Angle), cos(Angle))
+
+  end function rot_matrix1
+
+  !============================================================================
+
+  function rot_matrix2(SinAngle, CosAngle) result(Rot_DD)
+
+    real, intent(in) :: SinAngle, CosAngle
+
+    real :: Rot_DD(2,2)
+
+    !------------------------------------------------------------------------
+    Rot_DD(1,1) =  CosAngle
+    Rot_DD(1,2) = -SinAngle
+    Rot_DD(2,1) =  SinAngle
+    Rot_DD(2,2) =  CosAngle
+
+  end function rot_matrix2
 
   !============================================================================
 
