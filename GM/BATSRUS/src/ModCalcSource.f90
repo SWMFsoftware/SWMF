@@ -640,7 +640,7 @@ contains
           ! Add centrifugal and Coriolis forces
 
           select case(TypeCoordSystem)
-          case('HGC','HGR')
+          case('HGC','HGR','GEO')
              ! This is a special case since Omega is parallel with the Z axis
              Omega2 = OmegaBody**2
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -658,6 +658,9 @@ contains
                 Source_VC(iEnergy,i,j,k) = Source_VC(iEnergy,i,j,k) &
                      + Omega2 * sum(State_VGB(iRhoUx:iRhoUy,i,j,k,iBlock) &
                      *                         Xyz_DGB(x_:y_,i,j,k,iBlock))
+
+               
+              
              end do; end do; end do
           case default
              call stop_mpi(NameSub // &
