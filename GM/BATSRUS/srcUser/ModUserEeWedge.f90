@@ -54,7 +54,6 @@ module ModUser
   real    :: InitialDensity, InitialTemperature, InitialBr, InitialBt
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: r_photo, TemperatureGradient
-  real    :: BotDensity, BotPressure, BotExtraE
   !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
   real,parameter ::  mu = 0.594354, rstari = 0.594354e-3/8.31
 
@@ -141,13 +140,9 @@ contains
   end subroutine user_read_inputs
   !==========================================================================
   subroutine user_init_session
-    use ModProcMH,      ONLY: iProc
-    use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
-    use ModPhysics,     ONLY: No2Si_V, UnitX_, Si2No_V, UnitRho_, UnitP_, &
-         UnitEnergyDens_
-    use ModGeometry,    ONLY: RadiusMin
 
-    real :: InitialState(1:4)
+    use ModProcMH,      ONLY: iProc
+    use ModLookupTable, ONLY: i_lookup_table
 
     character (len=*), parameter :: NameSub = 'user_init_session'
     !------------------------------------------------------------------------
@@ -156,28 +151,13 @@ contains
     !rstari = mu/(cBoltzmann/cProtonMass)  
 
     ! initialize the indexes for lookup tables
-    iTableInitialState = i_lookup_table('RhoUzExtraEP(R,Const)')
+    iTableInitialState = i_lookup_table('RhoUrExtraEP(R)')
     iTableEOS          = i_lookup_table('eos(T,rho)')
     iTableChianti      = i_lookup_table('prl(T,Const)')
 
     if(iProc==0) write(*,*) NameSub, &
          'iTableInitialState, EOS , Chianti = ', &
          iTableInitialState, iTableEOS, iTableChianti
-
-    !    RadiusMin = 0.95  !6.96e8 =rSun 
-    call interpolate_lookup_table(iTableInitialState, &
-         RadiusMin*No2Si_V(UnitX_), 2.5, InitialState, &
-         DoExtrapolate = .false.)
- 
-    BotDensity  = InitialState(1)*Si2No_V(UnitRho_)
-    BotExtraE   = InitialState(3)*Si2No_V(UnitEnergyDens_)
-    BotPressure = InitialState(4)*Si2No_V(UnitP_)
-
-    if(iProc==0) then
-       write(*,*)'RadiusMin = ', RadiusMin
-       write(*,*)'BotDen = ',    BotDensity
-       write(*,*)'BotPres = ',   BotPressure
-    end if
 
     if(.not.allocated(srcthin_GB)) &
          allocate(srcthin_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -299,35 +279,30 @@ contains
 
       integer, intent(in) :: iBlock
 
-      real    :: InitialState(1:4), Const, &
-           InitialRho, InitialUz, InitialExtraE, InitialP
+      real :: InitialState_V(4), InitialRho, InitialUr, InitialExtraE, InitialP
       integer :: i, j, k
       !---------------------------------------------------------------------
-      Const = 2.5
-
       do i = 1, nI
          ! interpolate the tabular data of reference initial state and get
          ! a relaxed initial state
          call interpolate_lookup_table(iTableInitialState, &
-              r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), Const, InitialState, &
+              r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
               DoExtrapolate = .false.)
 
-         InitialRho    = InitialState(1)
-         InitialUz     = InitialState(2)
-         InitialExtraE = InitialState(3)
-         InitialP      = InitialState(4)
+         InitialRho    = InitialState_V(1)*Si2No_V(UnitRho_)
+         InitialUr     = InitialState_V(2)*Si2No_V(UnitU_)
+         InitialExtraE = InitialState_V(3)*Si2No_V(UnitEnergyDens_)
+         InitialP      = InitialState_V(4)*Si2No_V(UnitP_)
 
-         State_VGB(rho_,i,:,:,iBlock) = InitialRho*Si2No_V(UnitRho_)
+         State_VGB(rho_,i,:,:,iBlock) = InitialRho
          do k = 1, nK; do j = 1, nJ
-            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = &
-                 InitialRho*InitialUz*Si2No_V(UnitRho_)*Si2No_V(UnitU_) &
+            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = InitialRho*InitialUr &
                  *Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
          end do; end do
          State_VGB(Bx_:Bz_,i,:,:,iBlock) = 0.
          if(Erad_ > 1) State_VGB(Erad_,i,:,:,iBlock) = 0.
-         State_VGB(ExtraEint_,i,:,:,iBlock) = &
-              InitialExtraE*Si2No_V(UnitEnergyDens_)
-         State_VGB(p_,i,:,:,iBlock) = InitialP*Si2No_V(UnitP_)
+         State_VGB(ExtraEint_,i,:,:,iBlock) = InitialExtraE
+         State_VGB(p_,i,:,:,iBlock) = InitialP
       end do
     end subroutine set_perturbed_ICs
 
@@ -505,13 +480,16 @@ contains
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: Xyz_DGB, r_BLK
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
+         UnitEnergyDens_, UnitX_
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
-    real :: Runit_D(3), RhoUr
+    real :: Rho, p, ExtraEint, Runit_D(3), RhoUr, InitialState_V(4)
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !------------------------------------------------------------------------
@@ -521,22 +499,33 @@ contains
        select case(TypeBc)
        case('fixvalue')
 
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, 0
-             State_VGB(Rho_,i,j,k,iBlock)       = BotDensity
-             State_VGB(p_,i,j,k,iBlock)         = BotPressure
-             State_VGB(ExtraEint_,i,j,k,iBlock) = BotExtraE
+          do i = MinI, 0
+             call interpolate_lookup_table(iTableInitialState, &
+                  r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
+                  DoExtrapolate = .false.)
 
-             Runit_D = Xyz_DGB(:,1,j,k,iBlock)/r_BLK(1,j,k,iBlock)
+             Rho = InitialState_V(1)*Si2No_V(UnitRho_)
+             p = InitialState_V(4)*Si2No_V(UnitP_)
+             ExtraEint = InitialState_V(3)*Si2No_V(UnitEnergyDens_)
 
-             ! Reflect total vector to reduce surface strong flows at
-             ! bottom boundary
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-                -State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) 
-             ! Float Br
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                  sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
+             do k = MinK, MaxK; do j = MinJ, MaxJ
 
-          end do; end do; end do
+                State_VGB(Rho_,i,j,k,iBlock) = Rho
+                State_VGB(p_,i,j,k,iBlock) = p
+                State_VGB(ExtraEint_,i,j,k,iBlock) = ExtraEint
+
+                Runit_D = Xyz_DGB(:,1,j,k,iBlock)/r_BLK(1,j,k,iBlock)
+
+                ! Reflect total vector to reduce surface strong flows at
+                ! bottom boundary
+                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+                     -State_VGB(RhoUx_:RhoUz_,1-i,j,k,iBlock) 
+                ! Float Br
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                     sum(State_VGB(Bx_:Bz_,1,j,k,iBlock)*Runit_D)*Runit_D
+
+             end do; end do
+          end do
           IsFound = .true.
        end select
     case(2)
