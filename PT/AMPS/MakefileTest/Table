@@ -129,8 +129,8 @@ Name=test/model-dust
 <#
 
 #>
-Name=CCMC-Individual_Trajectories
-Keys= -model-data-path=${MYDIR}/input(0+srbwks2014-0079)
+Name=CCMC-Individual_Trajectories(0+srbwks2014-0079) 
+Keys= -model-data-path=${MYDIR}/input  
 <#
 
 
