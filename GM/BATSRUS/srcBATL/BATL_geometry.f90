@@ -32,6 +32,7 @@ module BATL_geometry
 
   real, public:: CoordMin_D(MaxDim)             ! Min gen. coords of domain
   real, public:: CoordMax_D(MaxDim)             ! Max gen. coords of domain
+  real, public:: DomainSize_D(MaxDim)           ! CoordMax - CoordMin
 
   ! Cartesian, cylindrical or spherical coordinates
   logical, public:: IsCartesianGrid   = .true.  ! Cartesian grid (possibly RZ)
