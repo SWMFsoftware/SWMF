@@ -104,11 +104,9 @@ contains
     use BATL_tree,         ONLY: nRoot_D
 
     integer :: iGeo, iVar, iGeoAll
-    logical :: DoTest, DoTestMe
+    logical, parameter :: DoTestMe=.false.
     character(len=*), parameter:: NameSub = 'init_amr_geometry'
     !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
     ! Fix resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) initial_refine_levels = nint( &
          alog(((CoordMax_D(x_) - CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
@@ -833,7 +831,8 @@ contains
     real:: Radius, RadiusSqr, Dist1, Dist2
     real:: Radius1, Radius1Sqr, Slope1
     real:: Taper, TaperFactor_D(nDim), TaperFactor1_D(nDim)
-    real:: Slope_D(nDim), SlopePerp_D(nDim-1)
+    real:: Slope_D(nDim)
+    real, allocatable, save:: SlopePerp_D(:)
 
     character(len=*), parameter:: NameSub = 'region_value'
     !--------------------------------------------------------------------------
@@ -876,6 +875,7 @@ contains
        if(Radius1 > 0.0) &
             TaperFactor1_D = Slope_D/max(Radius1*Slope_D - 1, 1e-30)
        ! Modified tapering slope for the sides of funnel, cone and doublecone
+       if(.not.allocated(SlopePerp_D)) allocate(SlopePerp_D(nDim-1))
        if(iPar > 0) SlopePerp_D = Slope_D(iPerp_I) &
             /sqrt(1 + (Slope1*Size_D(iPerp_I)/Size_D(iPar))**2)
     endif
