@@ -27,7 +27,7 @@ module BATL_grid
   public :: test_grid
   
   ! Coordinate limits of domain inherited from BATL_geometry
-  public:: CoordMin_D, CoordMax_D
+  public:: CoordMin_D, CoordMax_D, DomainSize_D
 
   real, public, allocatable::   &
        CoordMin_DB(:,:),        &    ! Min gen. coordinates of a block domain
@@ -168,6 +168,8 @@ contains
     end if
 
     if(IsRoundCube) IsPeriodic_D = .false.
+
+    DomainSize_D = CoordMax_D - CoordMin_D
 
   end subroutine init_grid
   !===========================================================================
