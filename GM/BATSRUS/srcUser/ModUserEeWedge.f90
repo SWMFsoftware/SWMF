@@ -32,10 +32,6 @@ module ModUser
   !\
   ! UseVerticalDamping: adds damping to vertical velocity
   ! UseThinRadiation:   adds thin radiative cooling
-  ! UseUniformInitialState: initialize the domain with uniform 
-  !                      density and temperature
-  ! InitialDensity, InitialTemperature: the initial values if
-  !                      UseUniformInitialState
   ! InitialBr, InitialBt: initial magnetic field, added through
   !                      user_initial_perturbation
   ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0 
@@ -49,11 +45,9 @@ module ModUser
   logical :: UseVerticalDamping = .false.
   logical :: UseThinRadiation = .false.
   logical :: UseCoronalField = .false.
-  logical :: UseUniformInitialState = .false.
-  logical :: UseUniformT = .false.
   logical :: UseEnergyPert = .false.
   logical :: UseAtmReset = .false.
-  real    :: InitialDensity, InitialTemperature, InitialBr, InitialBt
+  real    :: InitialBr, InitialBt
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: r_photo
   !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
@@ -106,11 +100,7 @@ contains
           call read_var('TimeVerticalDamping', TimeVerticalDamping)
           call read_var('UseAtmReset', UseAtmReset)
           call read_var('DtUptateFlux',DtUpdateFlux)
-          call read_var('UseUniformInitalState', UseUniformInitialState)
-          call read_var('UseUniformT', UseUniformT)
           call read_var('UseEnergyPert', UseEnergyPert)
-          call read_var('InitialDensity', InitialDensity)
-          call read_var('InitialTemperature',InitialTemperature)
           call read_var('InitialBr',InitialBr)
           call read_var('InitialBt',InitialBt) ! tangential
           call read_var('NumberDensFloor',NumberDensFloor)
@@ -168,141 +158,37 @@ contains
   !==========================================================================
   subroutine user_set_ICs(iBlock)
 
-    use ModMain,       ONLY: ProcTest, Unused_B
-    use ModProcMH,     ONLY: iProc
-    use ModAdvance,    ONLY: State_VGB
+    use ModAdvance,     ONLY: State_VGB
+    use ModGeometry,    ONLY: r_BLK
     use ModVarIndexes
+    use ModLookupTable, ONLY: interpolate_lookup_table
+    use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitEnergyDens_, UnitP_, &
+         UnitX_, No2Si_V
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest, oktest_me
+    integer :: i
+    real :: InitialState_V(3), InitialRho, InitialExtraE, InitialP
     !------------------------------------------------------------------------
 
-    if((iProc==PROCtest) .and. (iBlock==1))then
-       write(*,*)'Initializing Flux Emergence problem'
-       write(*,*)'Parameters:'
-       write(*,*)'iProc = ',iProc
-       write(*,*) 'InitialBr = ',InitialBr, 'InitialBt = ',InitialBt
-       write(*,*)'InitialDensity = ',InitialDensity,'InitialTemperature = ', &
-            InitialTemperature, ' in CGS units'
-       call set_oktest('user_set_ICs',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    do i = 1, nI
+       ! interpolate the tabular data of reference initial state and get
+       ! a relaxed initial state
+       call interpolate_lookup_table(iTableInitialState, &
+            r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
+            DoExtrapolate = .false.)
 
-    if (Unused_B(iBlock)) RETURN
+       InitialRho    = InitialState_V(1)*Si2No_V(UnitRho_)
+       InitialExtraE = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
+       InitialP      = InitialState_V(3)*Si2No_V(UnitP_)
 
-    if(UseUniformInitialState)then
-       call set_uniform_ICs(iBlock)
-       if((iProc==0).and.(iBlock==1))then
-          write(*,*) '------------------------------------------------------'
-          write(*,*) 'Set up an uniform initial atmosphere with parameters:'
-          write(*,*) 'InitialDensity = ',InitialDensity, &
-               ', InitialTemperature = ',InitialTemperature, ' in CGS units'
-          write(*,*) '------------------------------------------------------'
-       end if
-    else
-       call set_perturbed_ICs(iBlock)
-       if((iProc==0).and.(iBlock==1))then
-          write(*,*) '------------------------------------------------------'
-          write(*,*) '            start with a relaxed atmosphere           '
-          write(*,*) '------------------------------------------------------'
-       end if
-    end if
-  contains
-    !========================================================================
-    subroutine set_uniform_ICs(iBlock)
-
-      use ModLookupTable, ONLY: interpolate_lookup_table
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitP_, InvGammaMinus1, &
-           UnitEnergyDens_, UnitX_, No2Si_V
-      use ModGeometry,    ONLY: Xyz_DGB, r_BLK
-
-      integer, intent(in) :: iBlock
-
-      real :: p, Value_V(1:3), ExtraEint, InitialDensitySi, Rho
-      real :: g1, inv_g1, inv_g1m1, z0
-
-      integer :: i, j, k
-      !---------------------------------------------------------------------
-      ! calculate the Extra Internal Energy and Pressure (SI)
-      ! from given initial conditions: InitialDensity, InitialTemperature(CGS)
-      InitialDensitySi = InitialDensity*1e3
-      if(iTableEOS>0)then
-         call interpolate_lookup_table(iTableEOS, InitialTemperature, &
-              InitialDensitySi, Value_V, DoExtrapolate = .false.)
-         p         = Value_V(1)*Si2No_V(UnitP_)
-         ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1) &
-              *Si2No_V(UnitEnergyDens_)
-      else
-         p         = InitialDensitySi*InitialTemperature/rstari*Si2No_V(UnitP_)
-         ExtraEint = 0.
-      end if
-      Rho = InitialDensitySi*Si2No_V(UnitRho_)
-
-      ! Set the initial condition for a uniform atmosphere
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI
-         State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = 0.
-         State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.
-         State_VGB(rho_,i,j,k,iBlock) = Rho              
-         if(Erad_>1) State_VGB(Erad_,i,j,k,iBlock) = 0.
-         !cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
-         if(UseUniformT)then
-            State_VGB(P_,i,j,k,iBlock) = p
-            State_VGB(ExtraEInt_,i,j,k,iBlock) = ExtraEint
-         else
-            if(iTableEOS < -2)then
-               g1       = 1.7
-               inv_g1   = 1.0/g1
-               inv_g1m1 = 1.0/(g1-1.0)
-               z0 = -20.0
-               State_VGB(rho_,i,j,k,iBlock) = Rho
-               State_VGB(rho_,i,j,k,iBlock) = Rho*(1 - &
-                    (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(r_BLK(i,j,k,iBlock), z0) - z0)&
-                    *No2Si_V(UnitX_))**inv_g1m1
-               State_VGB(p_,i,j,k,iBlock) = p*(1 - &
-                    (1-inv_g1)*2.73e2*1.67e-27/(1.38e-23*InitialTemperature)* &
-                    (min(r_BLK(i,j,k,iBlock), z0) - z0)*No2Si_V(UnitX_))** &
-                    (1+inv_g1m1)
-               State_VGB(ExtraEInt_,i,j,k,iBlock) = 0.0
-            end if
-         end if
-      end do; end do ; end do
-
-    end subroutine set_uniform_ICs
-    !========================================================================
-    subroutine set_perturbed_ICs(iBlock)
-
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitEnergyDens_, UnitP_, &
-           UnitX_, No2Si_V
-      use ModLookupTable, ONLY: interpolate_lookup_table
-      use ModGeometry,    ONLY: Xyz_DGB, r_BLK
-
-      integer, intent(in) :: iBlock
-
-      real :: InitialState_V(3), InitialRho, InitialExtraE, InitialP
-      integer :: i
-      !---------------------------------------------------------------------
-      do i = 1, nI
-         ! interpolate the tabular data of reference initial state and get
-         ! a relaxed initial state
-         call interpolate_lookup_table(iTableInitialState, &
-              r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
-              DoExtrapolate = .false.)
-
-         InitialRho    = InitialState_V(1)*Si2No_V(UnitRho_)
-         InitialExtraE = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
-         InitialP      = InitialState_V(3)*Si2No_V(UnitP_)
-
-         State_VGB(rho_,i,:,:,iBlock) = InitialRho
-         State_VGB(rhoUx_:rhoUz_,i,:,:,iBlock) = 0.0
-         State_VGB(Bx_:Bz_,i,:,:,iBlock) = 0.
-         if(Erad_ > 1) State_VGB(Erad_,i,:,:,iBlock) = 0.
-         State_VGB(ExtraEint_,i,:,:,iBlock) = InitialExtraE
-         State_VGB(p_,i,:,:,iBlock) = InitialP
-      end do
-    end subroutine set_perturbed_ICs
+       State_VGB(rho_,i,:,:,iBlock) = InitialRho
+       State_VGB(rhoUx_:rhoUz_,i,:,:,iBlock) = 0.0
+       State_VGB(Bx_:Bz_,i,:,:,iBlock) = 0.
+       if(Erad_ > 1) State_VGB(Erad_,i,:,:,iBlock) = 0.
+       State_VGB(ExtraEint_,i,:,:,iBlock) = InitialExtraE
+       State_VGB(p_,i,:,:,iBlock) = InitialP
+    end do
 
   end subroutine user_set_ICs
 
@@ -645,7 +531,6 @@ contains
 
     real :: RhoUr
     !-----------------------------------------------------------------------
-    !if(UseUniformInitialState)then
     if(r > r_photo)then
        RhoUr = sum(State_V(RhoUx_:RhoUz_)*Runit_D)
        DampingRhoUr  = -RhoUr/ &
