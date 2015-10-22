@@ -72,7 +72,7 @@ module ModUser
   !\
   ! Indexes of EOS tables, CHIANTI table, initial relaxed reference state
   !/
-  integer :: iTableEOS = -1, iTableChianti = -1, iTableInitialState = -1
+  integer :: iTableEOS = -1, iTableRadCool = -1, iTableInitialState = -1
   real, allocatable:: srcthin_GB(:,:,:,:)
 
 contains
@@ -151,13 +151,13 @@ contains
     !rstari = mu/(cBoltzmann/cProtonMass)  
 
     ! initialize the indexes for lookup tables
-    iTableInitialState = i_lookup_table('RhoUrExtraEP(R)')
+    iTableInitialState = i_lookup_table('RhoExtraEP(R)')
     iTableEOS          = i_lookup_table('eos(T,rho)')
-    iTableChianti      = i_lookup_table('prl(T,Const)')
+    iTableRadCool      = i_lookup_table('radcool')
 
     if(iProc==0) write(*,*) NameSub, &
          'iTableInitialState, EOS , Chianti = ', &
-         iTableInitialState, iTableEOS, iTableChianti
+         iTableInitialState, iTableEOS, iTableRadCool
 
     if(.not.allocated(srcthin_GB)) &
          allocate(srcthin_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -272,15 +272,15 @@ contains
     !========================================================================
     subroutine set_perturbed_ICs(iBlock)
 
-      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
-           UnitP_, UnitX_, No2Si_V
+      use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitEnergyDens_, UnitP_, &
+           UnitX_, No2Si_V
       use ModLookupTable, ONLY: interpolate_lookup_table
       use ModGeometry,    ONLY: Xyz_DGB, r_BLK
 
       integer, intent(in) :: iBlock
 
-      real :: InitialState_V(4), InitialRho, InitialUr, InitialExtraE, InitialP
-      integer :: i, j, k
+      real :: InitialState_V(3), InitialRho, InitialExtraE, InitialP
+      integer :: i
       !---------------------------------------------------------------------
       do i = 1, nI
          ! interpolate the tabular data of reference initial state and get
@@ -290,15 +290,11 @@ contains
               DoExtrapolate = .false.)
 
          InitialRho    = InitialState_V(1)*Si2No_V(UnitRho_)
-         InitialUr     = InitialState_V(2)*Si2No_V(UnitU_)
-         InitialExtraE = InitialState_V(3)*Si2No_V(UnitEnergyDens_)
-         InitialP      = InitialState_V(4)*Si2No_V(UnitP_)
+         InitialExtraE = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
+         InitialP      = InitialState_V(3)*Si2No_V(UnitP_)
 
          State_VGB(rho_,i,:,:,iBlock) = InitialRho
-         do k = 1, nK; do j = 1, nJ
-            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) = InitialRho*InitialUr &
-                 *Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
-         end do; end do
+         State_VGB(rhoUx_:rhoUz_,i,:,:,iBlock) = 0.0
          State_VGB(Bx_:Bz_,i,:,:,iBlock) = 0.
          if(Erad_ > 1) State_VGB(Erad_,i,:,:,iBlock) = 0.
          State_VGB(ExtraEint_,i,:,:,iBlock) = InitialExtraE
@@ -489,7 +485,7 @@ contains
     logical,          intent(out) :: IsFound
 
     integer :: i, j, k
-    real :: Rho, p, ExtraEint, Runit_D(3), RhoUr, InitialState_V(4)
+    real :: Rho, p, ExtraEint, Runit_D(3), RhoUr, InitialState_V(3)
 
     character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
     !------------------------------------------------------------------------
@@ -504,9 +500,9 @@ contains
                   r_BLK(i,1,1,iBlock)*No2Si_V(UnitX_), InitialState_V, &
                   DoExtrapolate = .false.)
 
-             Rho = InitialState_V(1)*Si2No_V(UnitRho_)
-             p = InitialState_V(4)*Si2No_V(UnitP_)
-             ExtraEint = InitialState_V(3)*Si2No_V(UnitEnergyDens_)
+             Rho       = InitialState_V(1)*Si2No_V(UnitRho_)
+             ExtraEint = InitialState_V(2)*Si2No_V(UnitEnergyDens_)
+             p         = InitialState_V(3)*Si2No_V(UnitP_)
 
              do k = MinK, MaxK; do j = MinJ, MaxJ
 
@@ -561,7 +557,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    real    :: RadiativeCooling = 0.0, EInternalSource =0.0, rhoUrSource =0.0,&
+    real :: RadiativeCooling = 0.0, EInternalSource = 0.0, rhoUrSource = 0.0, &
          DampingRhoUr = 0.0, DampingEnergy = 0.0, TeSi
     real :: Runit_D(3)
 
@@ -625,6 +621,7 @@ contains
   end subroutine get_vertical_damping
   !=========================================================================
   subroutine get_radiative_cooling(State_V, TeSi, r, RadiativeCooling)
+
     use ModVarIndexes, ONLY: rho_, nVar
     use ModPhysics,    ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
     use ModLookupTable,ONLY: interpolate_lookup_table
@@ -635,14 +632,13 @@ contains
     real, intent(in) :: r
     real, intent(out):: RadiativeCooling
 
-    real, parameter :: RadiationCutoff = - 3.0e9, atrl = 1.0e3, Const = 2.5
+    real, parameter :: RadiationCutoff = - 3.0e9, atrl = 1.0e3
     real, parameter :: mf=1.0
-    ! Fang values
-    !real, parameter :: RadiationCutoff = - 1.0e9, atrl = 1.0e3, Const = 2.5
 
     real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
          MassDensCgs, NumberDensCgs
-    real :: Chianti(1:1)
+    real :: CoolingTableOut_I(1)
+    real, parameter :: RadNorm = 1e22
     !------------------------------------------------------------------------
 
     MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
@@ -655,14 +651,16 @@ contains
        ! Smoothing function is 1 if rho<RhoThinCutoff , 0 if not
        Fraction = mf*(0.5 - 0.5*tanh(atrl*(MassDensCgs/RhoThinCutoff - 1.)))
        ! Calculate the cooling function culve dependent on temperature
-       if (TeSi <= 8.0e+03)&
-            CoolingFunctionCgs = (1.0606e-06*TeSi)**11.7
-       if ((TeSi <= 1.0e+04).and.(TeSi > 8.0e+03) ) &
-            CoolingFunctionCgs = (1.397e-08*TeSi)**6.15
-       if(TeSi > 1.0e+04)then
-          call interpolate_lookup_table(iTableChianti, TeSi, Const, &
-               Chianti, DoExtrapolate = .false.)
-          CoolingFunctionCgs = Chianti(1)
+       if(TeSi <= 8e3)then
+          CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
+       elseif(TeSi <= 1e4)then
+          CoolingFunctionCgs = (1.397e-8*TeSi)**6.15
+       else
+          ! Table variable should be normalized to radloss_cgs * 1e22
+          ! since we don't want to deal with such tiny numbers
+          call interpolate_lookup_table(iTableRadCool, TeSi, &
+               CoolingTableOut_I, DoExtrapolate = .false.)
+          CoolingFunctionCgs = CoolingTableOut_I(1)/RadNorm
        end if
        ! thin radiative cooling = -\CoolinFunction * n_{e}*n_{p}
        RadiativeCooling = -Fraction*NumberDensCgs**2*CoolingFunctionCgs
