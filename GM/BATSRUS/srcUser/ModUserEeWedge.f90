@@ -43,7 +43,8 @@ module ModUser
   ! NumberDensFloor: Minimum density value to prevent negative coronal density 
   ! TimeVerticalDamping: timescale over which the vertical velocity damps
   ! r_photo: height of photosphere
-  ! TemperatureGradient: gradient of temperature at the bottom of domain
+  ! UseAtmReset: reset atmosphere when it starts to collaps (this can happen
+  !              before activating the coronal heating)
   !/
   logical :: UseVerticalDamping = .false.
   logical :: UseThinRadiation = .false.
@@ -51,9 +52,10 @@ module ModUser
   logical :: UseUniformInitialState = .false.
   logical :: UseUniformT = .false.
   logical :: UseEnergyPert = .false.
+  logical :: UseAtmReset = .false.
   real    :: InitialDensity, InitialTemperature, InitialBr, InitialBt
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
-  real    :: r_photo, TemperatureGradient
+  real    :: r_photo
   !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
   real,parameter ::  mu = 0.594354, rstari = 0.594354e-3/8.31
 
@@ -102,7 +104,7 @@ contains
           call read_var('RhoThinCutoff',RhoThinCutoff)
           call read_Var('UseVerticalDamping',UseVerticalDamping)
           call read_var('TimeVerticalDamping', TimeVerticalDamping)
-          call read_var('TemperatureGradient',TemperatureGradient)
+          call read_var('UseAtmReset', UseAtmReset)
           call read_var('DtUptateFlux',DtUpdateFlux)
           call read_var('UseUniformInitalState', UseUniformInitialState)
           call read_var('UseUniformT', UseUniformT)
@@ -312,28 +314,31 @@ contains
     use ModMain,     ONLY: Unused_B, nBlockMax
     use ModGeometry, ONLY: Xyz_DGB, r_BLK
     use ModAdvance,  ONLY: State_VGB
-    use ModPhysics,  ONLY: Si2No_V, UnitB_, UnitP_, UnitRho_, UnitX_
+    use ModPhysics,  ONLY: Si2No_V, UnitB_, UnitP_, UnitRho_, UnitX_, &
+         UnitEnergyDens_, No2Si_V, InvGammaMinus1
     use ModVarIndexes
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
+    use ModLookupTable, ONLY: interpolate_lookup_table
 
     integer :: iBlock, i, j, k
     real :: dp_ratio, Prof, rsq, rasq, RandomChange
     real :: Runit_D(3), Br_D(3), Bt_D(3)
 
     ! atmosphere parameters 
-    logical, parameter :: UseAtmReset = .true.
+    real :: Value_V(3)
     real, parameter ::  mu = 0.594354
     real :: x2c, x3c, qfac, wdth
     real :: r, r_ph, r_ch, r_tr, r_cr, g_ch, g_tr, g_cr 
     real :: rho_ch, p_ch, rho_tr, p_tr, rho_cr, p_cr 
     real :: T_ch, T_tr, T_cr, H_ch, H_tr, H_cr
+    real :: p, ExtraEint
 
     character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     !-----------------------------------------------------------------------   
     rasq = ra_rope*ra_rope
     wdth = 2.0*1.5e5*Si2No_V(UnitX_)
 
-    ! atmosphere parameters 
+    ! atmosphere parameters
     r_ph = 1.0015
     r_ch = 1.0033
     r_tr = 1.012 
@@ -441,25 +446,58 @@ contains
              do k = 1, nK; do j = 1, nJ
                 !CH
                 if( (r > r_ch) .and. (r < r_tr) )then
-                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
                    State_VGB(rho_,i,j,k,iBlock) = rho_ch*exp(-(r-r_ch)/H_ch)
-                   State_VGB(p_,i,j,k,iBlock) = p_ch*exp(-(r-r_ch)/H_ch)
                    State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+                   if(iTableEOS > 0)then
+                      call interpolate_lookup_table(iTableEOS, T_ch, &
+                           State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
+                           Value_V, DoExtrapolate = .false.)
+                      p         = Value_V(1)*Si2No_V(UnitP_)
+                      ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1) &
+                           *Si2No_V(UnitEnergyDens_)
+                   else
+                      p         = p_ch*exp(-(r-r_ch)/H_ch)
+                      ExtraEint = 0.
+                   end if
+                   State_VGB(ExtraEint_,i,j,k,iBlock) = ExtraEint
+                   State_VGB(p_,i,j,k,iBlock) = p
                 end if
                 !TR
                 if(r > r_tr) then
                    !if( (r > r_tr) .and. (r < r_cr) )then
-                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
                    State_VGB(rho_,i,j,k,iBlock) = rho_tr*exp(-(r-r_tr)/H_tr)
-                   State_VGB(p_,i,j,k,iBlock) = p_tr*exp(-(r-r_tr)/H_tr)
                    State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+                   if(iTableEOS > 0)then
+                      call interpolate_lookup_table(iTableEOS, T_tr, &
+                           State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
+                           Value_V, DoExtrapolate = .false.)
+                      p         = Value_V(1)*Si2No_V(UnitP_)
+                      ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1) &
+                           *Si2No_V(UnitEnergyDens_)
+                   else
+                      p         = p_tr*exp(-(r-r_tr)/H_tr)
+                      ExtraEint = 0.
+                   end if
+                   State_VGB(ExtraEint_,i,j,k,iBlock) = ExtraEint
+                   State_VGB(p_,i,j,k,iBlock) = p
                 end if
                 !CR
                 if((r > r_cr) .and. (r < r_tr))then
-                   if(iTableEOS > 0) State_VGB(ExtraEint_,i,j,k,iBlock) = 0.0
                    State_VGB(rho_,i,j,k,iBlock) = rho_cr*exp(-(r-r_cr)/H_cr)
-                   State_VGB(p_,i,j,k,iBlock) = p_cr*exp(-(r-r_cr)/H_cr)
                    State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
+                   if(iTableEOS > 0)then
+                      call interpolate_lookup_table(iTableEOS, T_cr, &
+                           State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_), &
+                           Value_V, DoExtrapolate = .false.)
+                      p         = Value_V(1)*Si2No_V(UnitP_)
+                      ExtraEint = (Value_V(2)-Value_V(1)*InvGammaMinus1) &
+                           *Si2No_V(UnitEnergyDens_)
+                   else
+                      p         = p_cr*exp(-(r-r_cr)/H_cr)
+                      ExtraEint = 0.
+                   end if
+                   State_VGB(ExtraEint_,i,j,k,iBlock) = ExtraEint
+                   State_VGB(p_,i,j,k,iBlock) = p
                 end if
              end do; end do
           end if
