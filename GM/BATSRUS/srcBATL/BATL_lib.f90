@@ -73,7 +73,8 @@ module BATL_lib
   public:: UseHighFDGeometry, set_high_geometry
 
   ! Inherited from BATL_grid
-  public:: CoordMin_D, CoordMax_D, CoordMin_DB, CoordMax_DB, CellSize_DB
+  public:: CoordMin_D, CoordMax_D, DomainSize_D
+  public:: CoordMin_DB, CoordMax_DB, CellSize_DB
   public:: Xyz_DGB, Xyz_DNB
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
