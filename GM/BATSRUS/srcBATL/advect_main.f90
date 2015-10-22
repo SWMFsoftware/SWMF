@@ -214,8 +214,8 @@ contains
   !===========================================================================
   function exact_v(Xyz_D, Time)
 
-    use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D
-    use BATL_geometry, ONLY: IsRotatedCartesian, GridRot_DD
+    use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D, &
+         IsRotatedCartesian, GridRot_DD, DomainSize_D
     use ModNumConst, ONLY: cHalfPi
     use ModCoordTransform, ONLY: rot_matrix_z
 
@@ -230,8 +230,6 @@ contains
     real:: XyzShift_D(nDim)
 
     real :: r1, r2, Rho, Rot_DD(3,3)
-
-    real:: DomainSize_D(nDim)
     !-------------------------------------------------------------------------
     ! Move position back to initial point
     if(RadialVelocity > 0.0) then
@@ -252,9 +250,9 @@ contains
        if(IsRotatedCartesian) &
             XyzShift_D = matmul(XyzShift_D, GridRot_DD(1:nDim,1:nDim))
 
-       DomainSize_D = DomainMax_D(1:nDim) - DomainMin_D(1:nDim)
        where(IsPeriodic_D(1:nDim))
-          XyzShift_D = modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D) &
+          XyzShift_D = &
+               modulo(XyzShift_D - DomainMin_D(1:nDim), DomainSize_D(1:nDim)) &
                + DomainMin_D(1:nDim)
        end where
 
