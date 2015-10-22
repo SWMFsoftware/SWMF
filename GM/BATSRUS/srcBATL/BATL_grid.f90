@@ -24,6 +24,7 @@ module BATL_grid
   public :: find_grid_block
   public :: interpolate_grid
   public :: interpolate_grid_amr
+  public :: check_interpolate_amr_gc
   public :: test_grid
   
   ! Coordinate limits of domain inherited from BATL_geometry
