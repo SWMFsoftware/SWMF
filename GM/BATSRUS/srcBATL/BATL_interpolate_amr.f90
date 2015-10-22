@@ -15,7 +15,7 @@ module BATL_interpolate_amr
   SAVE
   private ! except
 
-  public:: interpolate_amr
+  public:: interpolate_amr, find_block_to_interpolate_gc
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
@@ -406,4 +406,11 @@ contains
     end if
   end subroutine find
   !============
+  subroutine find_block_to_interpolate_gc(Coord_D, iPeOut, iBlockOut)
+    real,    intent(in)  :: Coord_D(MaxDim)
+    integer, intent(out) :: iPeOut, iBlockOut
+    character(LEN=*),parameter:: NameSub = 'find_block_to_interpolate_gc'
+    !-------
+    call CON_stop('Subroutine '//NameSub//' is not implemented yet')
+  end subroutine find_block_to_interpolate_gc
 end module BATL_interpolate_amr

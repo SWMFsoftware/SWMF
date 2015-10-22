@@ -1380,9 +1380,171 @@ contains
     if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
 
   end subroutine interpolate_grid_amr
-
+  !==================================
+  subroutine check_interpolate_amr_gc(Xyz_D, iBlock, IsPossible, iPeOut,& 
+       iBlockOut, IsBoundary)
+    !\
+    ! Checks if a point with the Cartesian coordinates, Xyz_D,
+    ! can be interpolated using the data in the block iBlock at the
+    ! given processor, with the ghost cell values included, if needed
+    !/
+    
+    use BATL_interpolate_amr, ONLY:find_block_to_interpolate_gc
+    !\
+    ! INPUTS:
+    !/
+    real,    intent(in) :: Xyz_D(MaxDim) !Point coordinates
+    integer, intent(in) :: iBlock        !# of block
+    !\
+    ! OUTPUTS:
+    !/
+    logical, intent(out):: IsPossible    !.true. if interpolation is possible  
+    integer, intent(out):: iPeOut, iBlockOut !else, Pe and Block to be used
+    logical, intent(out):: IsBoundary    !.true. for the point out of domain
+    !\
+    !Generalized Coordinates
+    !/
+    real    :: Coord_D(MaxDim)
+    real    :: CoordTree_D(MaxDim)       ! Normalized gen coords
+    !\
+    ! Used in normalization
+    !/
+    real    :: CoordTreeSize_D(MaxDim) 
+    !\
+    !Direction along which the point goes out of the block inner part
+    !/
+    integer :: iShift_D(MaxDim) 
+    !-----------------------------------   
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesianGrid)then
+       Coord_D = Xyz_D
+    else
+       call xyz_to_coord(Xyz_D, Coord_D)
+    end if
+    !\
+    ! Figure out if the point goes out of the computational domain
+    !/
+    CoordTreeSize_D = CoordMax_D - CoordMin_D
+    !\
+    ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
+    ! for tree search
+    !/
+    CoordTree_D = (Coord_D - CoordMin_D)/CoordTreeSize_D
+    !\
+    ! For periodic boundary conditions fix the input coordinate if
+    ! beyond the tree bounadaries
+    !/
+    where(IsPeriodic_D)CoordTree_D = modulo(CoordTree_D, 1.0)
+    !\
+    ! Check specific boundary conditions for particular geometries
+    !/
+    if(IsLatitudeAxis)then
+       !\
+       !spherical: r, lon, lat coordinates
+       !/
+       if(CoordTree_D(3) > 1.0)then
+          !\
+          ! reflect third coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(3) = 2.0 - CoordTree_D(3) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       elseif(CoordTree_D(3) < 0.0)then
+          !\
+          ! reflect third coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(3) = -CoordTree_D(3) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       end if
+    elseif(IsSphericalAxis)then
+       !\
+       ! spherical: r, theta, phi
+       !/
+       if(CoordTree_D(2) > 1.0)then
+          !\
+          ! reflect second coordinate, 
+          ! add half of full range to the third one.
+          !/
+          CoordTree_D(2) = 2.0 - CoordTree_D(2) 
+          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
+       elseif(CoordTree_D(2) < 0.0)then
+          !\
+          ! reflect second coordinate, 
+          ! add half of full range to the third one.
+          !/
+          CoordTree_D(2) = -CoordTree_D(2) 
+          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
+       end if
+    elseif(IsCylindricalAxis)then
+       !\
+       ! cylindrical: r, phi, z
+       !/
+       if(CoordTree_D(1) < 0.0)then
+          !\
+          ! reflect first coordinate, 
+          ! add half of full range to the second one.
+          !/
+          CoordTree_D(1) = -CoordTree_D(1) 
+          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
+       end if
+    end if
+    IsBoundary = any(CoordTree_D < 0.0 .or. CoordTree_D >= 1.0)
+    if(IsBoundary)then
+       IsPossible = .false.
+       iPeOut = Unset_; iBlockOut = Unset_
+       RETURN
+    end if
+    Coord_D = CoordTree_D*CoordTreeSize_D + CoordMin_D 
+    !\
+    ! Check if the block is suitable to interpolate with ghost cells
+    !/
+    iShift_D(1:nDim) = (Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlock)    &
+         - 0.50*CellSize_DB(1:nDim,iBlock))/(CellSize_DB(1:nDim,iBlock) &
+         *(nIJK_D(1:nDim)-1))
+    if(all(iShift_D(1:nDim)==0))then
+       !The point falls into an inner part of block
+       IsPossible = .true.
+    elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
+                               min(0,iShift_D(2)):max(0,iShift_D(2)),&
+                               min(0,iShift_D(3)):max(0,iShift_D(3)),&
+                               iBlock)==1))then
+       !\
+       ! The information in the ghost cells is required, but missing.
+       !/ 
+       IsPossible = .false.
+    elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
+                               min(0,iShift_D(2)):max(0,iShift_D(2)),&
+                               min(0,iShift_D(3)):max(0,iShift_D(3)),&
+                               iBlock)==-1))then
+       !\
+       ! We need to interpolate using ghostcells even if the point is 
+       ! in the first layer of ghostcells
+       !/
+       IsPossible = all(&
+            Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock)    &
+            -CellSize_DB(1:nDim,iBlock) .and.&
+            Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock)    &
+            +CellSize_DB(1:nDim,iBlock))
+    else
+       !\
+       ! We interpolate using ghostcells only if the point is 
+       ! in the physical block
+       !/
+       IsPossible = all(&
+            Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock).and.&
+            Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock))
+    end if
+    if(IsPossible)then
+       iPeOut = Unset_; iBlockOut = Unset_
+       RETURN
+    end if
+    !\
+    ! call the wrapper for the shared interpolation procedure
+    !/
+    call find_block_to_interpolate_gc(Coord_D, iPeOut, iBlockOut)
+  end subroutine check_interpolate_amr_gc
   !===========================================================================
-
   subroutine calc_face_normal(iBlock)
     ! Interpolate dx3/dx1 to the face, where x3=hat(Xi,Eta,Zeta), x1=x,y,z.
     integer, intent(in):: iBlock
