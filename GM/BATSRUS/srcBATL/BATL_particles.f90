@@ -14,10 +14,6 @@ module BATL_particles
   ! Number of different sorts of particles
   !/ 
   integer, parameter:: nPType = 1
-  !\
-  ! Maximum particle number per processor per sort
-  !/
-  integer, parameter:: nParticleMax = 10000000
 
   type particles
      !\
@@ -25,7 +21,10 @@ module BATL_particles
      ! the particles
      !/
      integer:: nVar 
-     integer:: nParticle
+     !\
+     ! The current number of particles at a given processor and
+     ! the maximum allowed number of particles
+     integer:: nParticle, nParticleMax
      !\
      ! nVar*nParticleMax array. The second index numerates 'particles'.
      !First nDim components are the cartesian coordinates the other 
@@ -43,22 +42,71 @@ module BATL_particles
      integer,  pointer :: iBlock_I(:)
   end type particles
   type(particles),dimension(nPType) ::Of_I
-  
+  ! offset for particle data in the send BufferSend_I
+  ! NOTE: offest values start with 0 (ZERO)
+  integer, allocatable:: iSendOffset_I(:)  
+  integer, allocatable:: iPeSend_I(:)! proc id to which send this particle
+
+  real,    allocatable:: BufferSend_I(:)! buffer of data to be sent
+  real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
 contains
   !================
+  subroutine allocate_particles
+    integer:: iType, nVar, nParticleMax
+    !--------------
+    do iType = 1, nPType
+       nVar = Of_I(iType)%nVar
+       nParticleMax = Of_I(iType)%nParticleMax
+       nullify(Of_I(iType)%State_VI)
+       allocate(Of_I(iType)%State_VI(1:nVar,1:nParticleMax))
+       Of_I(iType)%State_VI(1:nVar,1:nParticleMax) = 0.0
+       nullify(Of_I(iType)%iBlock_I)
+       allocate(Of_I(iType)%iBlock_I(1:nParticleMax))
+       Of_I(iType)%iBlock_I(1:nParticleMax) = -1
+    end do
+  end subroutine allocate_particles
+  !===============
+  subroutine allocate_buffers
+    integer          :: iSortParticle  ! loop variable
+    ! max number of particles 
+    integer          :: nParticleMax  
+    ! max size of buffer       
+    integer          :: nBuffer    ! size of BufferSend_I,BufferRecv_I
+    !-----------------------------------------------------------------
+    ! in order to reuse the same allocatable buffers for sending
+    ! different sorts of particles, find the sort with MAX number of variables,
+    ! nParticleMax as number of particles and allocate buffers accordingly
+    nBuffer = 0; nParticleMax = 0
+    do iSortParticle = 1, nPType
+       ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
+       nBuffer = max(nBuffer, (Of_I(iSortParticle)%nVar + 1)&
+            *Of_I(iSortParticle)%nParticleMax)
+
+       nParticleMax = max(nParticleMax, Of_I(iSortParticle)%nParticleMax)
+    end do
+    ! allocate buffers for send/recving data
+    allocate(BufferSend_I(nBuffer))
+    allocate(BufferRecv_I(nBuffer))
+    allocate(iSendOffset_I(nParticleMax))
+    allocate(iPeSend_I(nParticleMax))
+    
+  end subroutine allocate_buffers
+  !===============
   subroutine set_pointer_to_particles(&
-       iSortParticle, State_VI, iBlock_I, nVar, nParticle)
+       iSortParticle, State_VI, iBlock_I, nVar, nParticle, nParticleMax)
     integer,          intent(in)    :: iSortParticle
     real,    pointer, intent(inout) :: State_VI(:,:)
     integer, pointer, intent(inout) :: iBlock_I(:)
     integer,          intent(out)   :: nVar 
-    integer,          intent(out) :: nParticle
+    integer,          intent(out)   :: nParticle
+    integer,          intent(out)   :: nParticleMax
     !------------
     nullify(State_VI); nullify(iBlock_I)
-    State_VI  => Of_I(iSortParticle)%State_VI
-    iBlock_I  => Of_I(iSortParticle)%iBlock_I
-    nVar      =  Of_I(iSortParticle)%nVar
-    nParticle =  Of_I(iSortParticle)%nParticle
+    State_VI     => Of_I(iSortParticle)%State_VI
+    iBlock_I     => Of_I(iSortParticle)%iBlock_I
+    nVar         =  Of_I(iSortParticle)%nVar
+    nParticle    =  Of_I(iSortParticle)%nParticle
+    nParticleMax =  Of_I(iSortParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !=================
   subroutine message_pass_particles
@@ -73,53 +121,22 @@ contains
     integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
     integer          :: nVar           ! # of variables including coordinates
     integer          :: nParticle      ! # of particles of this sort on proc
-
+    integer          :: nParticleMax   ! max # of particles of this sort on PE
     ! number of particles to send to other procs
-    integer:: nSend_P(nProc) 
+    integer:: nSend_P(0:nProc-1) 
     ! number of particles to recv by particle sort from other procs
-    integer:: nRecv_P(nProc)
+    integer:: nRecv_P(0:nProc-1)
     ! offset for data to be sent/recv'd by procs in the BufferSend_I
     ! NOTE: starts with 0 (ZERO)
-    integer:: iSendOffset_P(nProc)
-    integer:: iRecvOffset_P(nProc)
-
-    ! max number of variables 
-    integer:: nVarMax         
-    ! offset for particle data in the send BufferSend_I
-    ! NOTE: offest values start with 0 (ZERO)
-    integer, allocatable:: iSendOffset_I(:)  
-    integer, allocatable:: iPeSend_I(:)! proc id to which send this particle
-
-    real, allocatable:: BufferSend_I(:)! buffer of data to be sent
-    integer          :: nBufferSend    ! size of BufferSend_I
-    real, allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
-    integer          :: nBufferRecv    ! size of BufferRecv_I
-
-    !-------------------------------------------------------------------------
-    ! in order to reuse the same allocatable buffers for sending
-    ! different sorts of particles, find the sort with MAX number of variables,
-    ! nParticleMax as number of particles and allocate buffers accordingly
-    nVarMax = 0
-    do iSortParticle = 1, nPType
-       if(nVarMax < Of_I(iSortParticle)%nVar)&
-            nVarMax =  Of_I(iSortParticle)%nVar
-    end do
-    ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
-    nBufferSend = nParticleMax * (nVarMax+1)
-    nBufferRecv = nParticleMax * (nVarMax+1)
-
-    ! allocate buffers for send/recving data
-    allocate(BufferSend_I(nBufferSend))
-    allocate(BufferRecv_I(nBufferRecv))
-    allocate(iSendOffset_I(nParticleMax))
-    allocate(iPeSend_I(nParticleMax))
-
-
+    integer:: iSendOffset_P(0:nProc-1)
+    integer:: iRecvOffset_P(0:nProc-1)
+    !--------------
+    if(.not.allocated(BufferSend_I))call allocate_buffers
     ! now buffers are allocated, perform pass for all sorts
     do iSortParticle = 1, nPType
        call set_pointer_to_particles(&
             iSortParticle, State_VI, &
-            iBlock_I, nVar,nParticle)
+            iBlock_I, nVar, nParticle, nParticleMax)
        call pass_this_sort
        Of_I(iSortParticle)%nParticle = nParticle
     end do
@@ -145,7 +162,7 @@ contains
       integer:: iStatus_II(MPI_STATUS_SIZE, 2*nProc)
       !------------------------------------------------------------------------
       ! reset parameters of the message_pass for this sort of particles
-      nSend_P       = 0
+      nSend_P       = 0; nRecv_P = 0
       iSendOffset_I =-1
       iPeSend_I     =-1
 
@@ -177,7 +194,7 @@ contains
 
       ! send size of messages
       iRequest = 0
-      do iPe = 1, nProc
+      do iPe = 0, nProc - 1
          if(iPe == iProc) CYCLE ! skip this proc
          iRequest = iRequest + 1
          call MPI_Isend(&
@@ -191,16 +208,10 @@ contains
       ! finalize transfer
       call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
 
-
-      ! change total number of particles of this sort
-      nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
-      if(nParticle > nParticleMax)&
-           call CON_stop("Exceeded allowed number of particles per sort")
-
       ! get offsets for procs in BufferSend_I & BufferRecv_I
-      iSendOffset_P(1) = 0
-      iRecvOffset_P(1) = 0
-      do iPe = 2, nProc
+      iSendOffset_P(0) = 0
+      iRecvOffset_P(0) = 0
+      do iPe = 1, nProc - 1
          iSendOffset_P(iPe) = iSendOffset_P(iPe-1) + nSend_P(iPe-1) * (nVar+1)
          iRecvOffset_P(iPe) = iRecvOffset_P(iPe-1) + nRecv_P(iPe-1) * (nVar+1)
       end do
@@ -223,21 +234,31 @@ contains
 
       ! transfer data
       iRequest = 0
-      do iPe = 1, nProc
+      do iPe = 0, nProc - 1
          if(iPe == iProc) CYCLE ! skip this proc
-         iRequest = iRequest + 1
-         call MPI_Isend(&
-              BufferSend_I(iSendOffset_P(iPe)+1), nSend_P(iPe)*(nVar+1), &
-              MPI_REAL, &
-              iPe, iTag, iComm, iRequest_I(iRequest), iError)
-         iRequest = iRequest + 1
-         call MPI_Irecv(&
-              BufferRecv_I(iRecvOffset_P(iPe)+1), nRecv_P(iPe)*(nVar+1), &
-              MPI_REAL, &
-              iPe, iTag, iComm, iRequest_I(iRequest), iError)
+         if(nSend_P(iPe) > 0)then
+            iRequest = iRequest + 1
+            call MPI_Isend(&
+                 BufferSend_I(iSendOffset_P(iPe)+1), nSend_P(iPe)*(nVar+1), &
+                 MPI_REAL, &
+                 iPe, iTag, iComm, iRequest_I(iRequest), iError)
+         end if
+         if(nRecv_P(iPe) > 0)then
+            iRequest = iRequest + 1
+            call MPI_Irecv(&
+                 BufferRecv_I(iRecvOffset_P(iPe)+1), nRecv_P(iPe)*(nVar+1), &
+                 MPI_REAL, &
+                 iPe, iTag, iComm, iRequest_I(iRequest), iError)
+         end if
       end do
       ! finalize transfer
-      call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
+      call MPI_waitall(iRequest, iRequest_I(1:iRequest), &
+           iStatus_II(:,1:iRequest), iError)
+      ! change total number of particles of this sort
+      nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
+      if(nParticle > nParticleMax)&
+           call CON_stop("Exceeded allowed number of particles per sort=",&
+           iSortParticle)
 
       ! finally, put particles from buffer to storage
       iRecvOffset = 0
