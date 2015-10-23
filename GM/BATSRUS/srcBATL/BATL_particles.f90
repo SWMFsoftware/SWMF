@@ -13,7 +13,12 @@ module BATL_particles
   !\
   ! Number of different sorts of particles
   !/ 
-  integer, parameter:: nPType = 1
+  integer, parameter:: nSortParticle = 1
+
+  !\
+  ! Use the pair RSend + IRecv or ISend + IRecv
+  !/
+  logical, parameter, private:: DoRSend = .true.
 
   type particles
      !\
@@ -41,28 +46,28 @@ module BATL_particles
      ! of ghost cells) an information 
      integer,  pointer :: iBlock_I(:)
   end type particles
-  type(particles),dimension(nPType) ::Of_I
+  type(particles),dimension(nSortParticle) ::ParticlesOf_I
   ! offset for particle data in the send BufferSend_I
   ! NOTE: offest values start with 0 (ZERO)
   integer, allocatable:: iSendOffset_I(:)  
-  integer, allocatable:: iPeSend_I(:)! proc id to which send this particle
+  integer, allocatable:: iProcTo_I(:)! proc id to which send this particle
 
   real,    allocatable:: BufferSend_I(:)! buffer of data to be sent
   real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
 contains
   !================
   subroutine allocate_particles
-    integer:: iType, nVar, nParticleMax
+    integer:: iParticleSort, nVar, nParticleMax
     !--------------
-    do iType = 1, nPType
-       nVar = Of_I(iType)%nVar
-       nParticleMax = Of_I(iType)%nParticleMax
-       nullify(Of_I(iType)%State_VI)
-       allocate(Of_I(iType)%State_VI(1:nVar,1:nParticleMax))
-       Of_I(iType)%State_VI(1:nVar,1:nParticleMax) = 0.0
-       nullify(Of_I(iType)%iBlock_I)
-       allocate(Of_I(iType)%iBlock_I(1:nParticleMax))
-       Of_I(iType)%iBlock_I(1:nParticleMax) = -1
+    do iParticleSort = 1, nSortParticle
+       nVar = ParticlesOf_I(iParticleSort)%nVar
+       nParticleMax = ParticlesOf_I(iParticleSort)%nParticleMax
+       nullify(ParticlesOf_I(iParticleSort)%State_VI)
+       allocate(ParticlesOf_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax))
+       ParticlesOf_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax) = 0.0
+       nullify(ParticlesOf_I(iParticleSort)%iBlock_I)
+       allocate(ParticlesOf_I(iParticleSort)%iBlock_I(1:nParticleMax))
+       ParticlesOf_I(iParticleSort)%iBlock_I(1:nParticleMax) = -1
     end do
   end subroutine allocate_particles
   !===============
@@ -77,18 +82,18 @@ contains
     ! different sorts of particles, find the sort with MAX number of variables,
     ! nParticleMax as number of particles and allocate buffers accordingly
     nBuffer = 0; nParticleMax = 0
-    do iSortParticle = 1, nPType
+    do iSortParticle = 1, nSortParticle
        ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
-       nBuffer = max(nBuffer, (Of_I(iSortParticle)%nVar + 1)&
-            *Of_I(iSortParticle)%nParticleMax)
+       nBuffer = max(nBuffer, (ParticlesOf_I(iSortParticle)%nVar + 1)&
+            *ParticlesOf_I(iSortParticle)%nParticleMax)
 
-       nParticleMax = max(nParticleMax, Of_I(iSortParticle)%nParticleMax)
+       nParticleMax = max(nParticleMax, ParticlesOf_I(iSortParticle)%nParticleMax)
     end do
     ! allocate buffers for send/recving data
     allocate(BufferSend_I(nBuffer))
     allocate(BufferRecv_I(nBuffer))
     allocate(iSendOffset_I(nParticleMax))
-    allocate(iPeSend_I(nParticleMax))
+    allocate(iProcTo_I(nParticleMax))
     
   end subroutine allocate_buffers
   !===============
@@ -102,11 +107,11 @@ contains
     integer,          intent(out)   :: nParticleMax
     !------------
     nullify(State_VI); nullify(iBlock_I)
-    State_VI     => Of_I(iSortParticle)%State_VI
-    iBlock_I     => Of_I(iSortParticle)%iBlock_I
-    nVar         =  Of_I(iSortParticle)%nVar
-    nParticle    =  Of_I(iSortParticle)%nParticle
-    nParticleMax =  Of_I(iSortParticle)%nParticleMax
+    State_VI     => ParticlesOf_I(iSortParticle)%State_VI
+    iBlock_I     => ParticlesOf_I(iSortParticle)%iBlock_I
+    nVar         =  ParticlesOf_I(iSortParticle)%nVar
+    nParticle    =  ParticlesOf_I(iSortParticle)%nParticle
+    nParticleMax =  ParticlesOf_I(iSortParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !=================
   subroutine message_pass_particles
@@ -133,27 +138,28 @@ contains
     !--------------
     if(.not.allocated(BufferSend_I))call allocate_buffers
     ! now buffers are allocated, perform pass for all sorts
-    do iSortParticle = 1, nPType
+    do iSortParticle = 1, nSortParticle
        call set_pointer_to_particles(&
             iSortParticle, State_VI, &
             iBlock_I, nVar, nParticle, nParticleMax)
        call pass_this_sort
-       Of_I(iSortParticle)%nParticle = nParticle
+       ParticlesOf_I(iSortParticle)%nParticle = nParticle
     end do
     ! deallocate buffer
-    deallocate(BufferSend_I, iSendOffset_I, iPeSend_I, BufferRecv_I)
+    ! deallocate(BufferSend_I, iSendOffset_I, iProcTo_I, BufferRecv_I)
 
 
   contains
 
     subroutine pass_this_sort
       integer:: iParticle    ! loop variable
-      real   :: Xyz_D(MaxDim)  ! particle coordinates
+      real   :: Xyz_D(MaxDim)! particle coordinates
       logical:: IsPossible   ! can interpolate to Xyz_D on current block
       integer:: iBlock       ! current block containing the particle
       integer:: iBlockOut    ! block to be used to interpolate to Xyz_D
-      integer:: iPeOut       ! proc that has iBlockOut
-      integer:: iPe          ! loop variable
+      integer:: iProcOut     ! proc that has iBlockOut
+      integer:: iProcTo      ! loop variable
+      integer:: iProcFrom    ! loop variable
       integer:: iSendOffset  ! start position in BufferSend for particle data
       integer:: iRecvOffset  ! start position in BufferRecv for particle data
       integer:: nParticleStay! # of particles that stay on this proc
@@ -164,7 +170,7 @@ contains
       ! reset parameters of the message_pass for this sort of particles
       nSend_P       = 0; nRecv_P = 0
       iSendOffset_I =-1
-      iPeSend_I     =-1
+      iProcTo_I     =-1
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
@@ -172,7 +178,7 @@ contains
          Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
          iBlock = iBlock_I(iParticle)
          call check_interpolate(Xyz_D, iBlock, &
-              IsPossible, iPeOut, iBlockOut, IsOut)
+              IsPossible, iProcOut, iBlockOut, IsOut)
          
          if(IsPossible) CYCLE ! don't need to pass this particle
          
@@ -184,44 +190,65 @@ contains
          ! change the block 
          iBlock_I(iParticle) = iBlockOut
          
-         if(iPeOut == iProc) CYCLE ! particle stays on this proc
+         if(iProcOut == iProc) CYCLE ! particle stays on this proc
 
          ! prepare this particle to be passed
-         iPeSend_I(    iParticle) = iPeOut
-         iSendOffset_I(iParticle) = nSend_P(iPeOut) * (nVar + 1)
-         nSend_P(      iPeOut)    = nSend_P(iPeOut) + 1
+         iProcTo_I(    iParticle) = iProcOut
+         iSendOffset_I(iParticle) = nSend_P(iProcOut) * (nVar + 1)
+         nSend_P(      iProcOut)  = nSend_P(iProcOut) + 1
       end do
 
       ! send size of messages
       iRequest = 0
-      do iPe = 0, nProc - 1
-         if(iPe == iProc) CYCLE ! skip this proc
-         iRequest = iRequest + 1
-         iTag = iPe
-         call MPI_Isend(&
-              nSend_P(iPe), 1, MPI_INTEGER, iPe, iTag, iComm, &
-              iRequest_I(iRequest), iError)
+      do iProcFrom = 0, nProc - 1
+         if(iProcFrom == iProc) CYCLE ! skip this proc
          iTag = iProc
          iRequest = iRequest + 1
          call MPI_Irecv(&
-              nRecv_P(iPe), 1, MPI_INTEGER, iPe, iTag, iComm, &
+              nRecv_P(iProcFrom), 1, MPI_INTEGER, iProcFrom, iTag, iComm, &
               iRequest_I(iRequest), iError)
       end do
+
+      if(DoRSend)then
+         ! barrier: to guarantee that all recv's have been posted BEFORE Rsend
+         call MPI_Barrier(iComm, iError)
+         
+         do iProcTo = 0, nProc - 1
+            if(iProcTo == iProc) CYCLE ! skip this proc
+            iTag = iProcTo
+            call MPI_Rsend(&
+                 nSend_P(iProcTo), 1, MPI_INTEGER, &
+                 iProcTo, iTag, iComm, iError)
+         end do
+      else
+         do iProcTo = 0, nProc - 1
+            iTag = iProcTo
+            iRequest = iRequest + 1
+            call MPI_Isend(&
+                 nSend_P(iProcTo), 1, MPI_INTEGER, &
+                 iProcTo, iTag, iComm, iRequest_I(iRequest), iError)
+         end do
+      end if
+
       ! finalize transfer
       call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
 
       ! get offsets for procs in BufferSend_I & BufferRecv_I
       iSendOffset_P(0) = 0
+      do iProcTo = 1, nProc - 1
+         iSendOffset_P(iProcTo) = &
+              iSendOffset_P(iProcTo-1) + nSend_P(iProcTo-1) * (nVar+1)
+      end do
       iRecvOffset_P(0) = 0
-      do iPe = 1, nProc - 1
-         iSendOffset_P(iPe) = iSendOffset_P(iPe-1) + nSend_P(iPe-1) * (nVar+1)
-         iRecvOffset_P(iPe) = iRecvOffset_P(iPe-1) + nRecv_P(iPe-1) * (nVar+1)
+      do iProcFrom = 1, nProc - 1
+         iRecvOffset_P(iProcFrom) = &
+              iRecvOffset_P(iProcFrom-1) + nRecv_P(iProcFrom-1) * (nVar+1)
       end do
 
       ! fill the BufferSend and rearrange particle data
       nParticleStay = 0
       do iParticle = 1, nParticle
-         if(iPeSend_I(iParticle) == -1)then
+         if(iProcTo_I(iParticle) == -1)then
             ! particle stays on this proc
             nParticleStay = nParticleStay + 1
             iBlock_I(  nParticleStay) = iBlock_I(  iParticle)
@@ -229,35 +256,54 @@ contains
             CYCLE 
          end if
          iSendOffset = &
-              iSendOffset_P(iPeSend_I(iParticle)) + iSendOffset_I(iParticle)
+              iSendOffset_P(iProcTo_I(iParticle)) + iSendOffset_I(iParticle)
          BufferSend_I(iSendOffset+1:iSendOffset+nVar) = State_VI(:,iParticle)
          BufferSend_I(iSendOffset+nVar+1)             = iBlock_I(  iParticle)
       end do
 
       ! transfer data
       iRequest = 0
-      do iPe = 0, nProc - 1
-         if(iPe == iProc) CYCLE ! skip this proc
-         if(nSend_P(iPe) > 0)then
-            iRequest = iRequest + 1
-            iTag = iPe
-            call MPI_Isend(&
-                 BufferSend_I(iSendOffset_P(iPe)+1), nSend_P(iPe)*(nVar+1), &
-                 MPI_REAL, &
-                 iPe, iTag, iComm, iRequest_I(iRequest), iError)
-         end if
-         if(nRecv_P(iPe) > 0)then
+      do iProcFrom = 0, nProc - 1
+         if(iProcFrom == iProc) CYCLE ! skip this proc
+         if(nRecv_P(iProcFrom) > 0)then
             iRequest = iRequest + 1
             iTag = iProc
             call MPI_Irecv(&
-                 BufferRecv_I(iRecvOffset_P(iPe)+1), nRecv_P(iPe)*(nVar+1), &
-                 MPI_REAL, &
-                 iPe, iTag, iComm, iRequest_I(iRequest), iError)
+                 BufferRecv_I(iRecvOffset_P(iProcFrom)+1), &
+                 nRecv_P(iProcFrom)*(nVar+1), MPI_REAL, &
+                 iProcFrom, iTag, iComm, iRequest_I(iRequest), iError)
          end if
       end do
+
+      if(DoRSend)then
+         ! barrier: to guarantee that all recv's have been posted BEFORE Rsend
+         call MPI_Barrier(iComm, iError)
+         
+         do iProcTo = 0, nProc - 1
+            if(iProcTo == iProc) CYCLE ! skip this proc
+            if(nSend_P(iProcTo) > 0)then
+               iTag = iProcTo
+               call MPI_Rsend(&
+                    BufferSend_I(iSendOffset_P(iProcTo)+1), &
+                    nSend_P(iProcTo)*(nVar+1), MPI_REAL, &
+                    iProcTo, iTag, iComm, iError)
+            end if
+         end do
+      else
+         do iProcTo = 0, nProc - 1
+            if(nSend_P(iProcTo) > 0)then
+               iTag = iProcTo
+               iRequest = iRequest + 1
+               call MPI_Isend(&
+                    BufferSend_I(iSendOffset_P(iProcTo)+1), &
+                    nSend_P(iProcTo)*(nVar+1), MPI_REAL, &
+                    iProcTo, iTag, iComm, iRequest_I(iRequest), iError)
+            end if
+         end do
+      end if
       ! finalize transfer
-      call MPI_waitall(iRequest, iRequest_I, &
-           iStatus_II, iError)
+      call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
+
       ! change total number of particles of this sort
       nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
       if(nParticle > nParticleMax)&
