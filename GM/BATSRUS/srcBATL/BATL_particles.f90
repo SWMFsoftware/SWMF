@@ -197,9 +197,11 @@ contains
       do iPe = 0, nProc - 1
          if(iPe == iProc) CYCLE ! skip this proc
          iRequest = iRequest + 1
+         iTag = iPe
          call MPI_Isend(&
               nSend_P(iPe), 1, MPI_INTEGER, iPe, iTag, iComm, &
               iRequest_I(iRequest), iError)
+         iTag = iProc
          iRequest = iRequest + 1
          call MPI_Irecv(&
               nRecv_P(iPe), 1, MPI_INTEGER, iPe, iTag, iComm, &
@@ -238,6 +240,7 @@ contains
          if(iPe == iProc) CYCLE ! skip this proc
          if(nSend_P(iPe) > 0)then
             iRequest = iRequest + 1
+            iTag = iPe
             call MPI_Isend(&
                  BufferSend_I(iSendOffset_P(iPe)+1), nSend_P(iPe)*(nVar+1), &
                  MPI_REAL, &
@@ -245,6 +248,7 @@ contains
          end if
          if(nRecv_P(iPe) > 0)then
             iRequest = iRequest + 1
+            iTag = iProc
             call MPI_Irecv(&
                  BufferRecv_I(iRecvOffset_P(iPe)+1), nRecv_P(iPe)*(nVar+1), &
                  MPI_REAL, &
@@ -252,8 +256,8 @@ contains
          end if
       end do
       ! finalize transfer
-      call MPI_waitall(iRequest, iRequest_I(1:iRequest), &
-           iStatus_II(:,1:iRequest), iError)
+      call MPI_waitall(iRequest, iRequest_I, &
+           iStatus_II, iError)
       ! change total number of particles of this sort
       nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
       if(nParticle > nParticleMax)&
