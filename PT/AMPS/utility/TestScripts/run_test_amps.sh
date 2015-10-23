@@ -39,6 +39,9 @@ set WorkDir = $HOME
 #>Yellowstone ###########
 #set WorkDir =         <#
 
+#>Stampede #############
+# set WorkDir = $WORK <#
+
 # Go to your home directory
 cd $WorkDir
 
@@ -66,6 +69,8 @@ cd ..
 # copy job files to the AMPS directory on supercomputers
 #>Pleiades #########################################################
 #cp AMPS/utility/TestScripts/test_amps.pleiades.job test_amps.job <#
+#>Stampede #########################################################
+#cp AMPS/utility/TestScripts/test_amps.stampede.job test_amps.job <#
 
 # install AMPS
 #>GNUAll ###################################################################
@@ -82,12 +87,16 @@ cd ..
 
 # GNU compiler
 
-#>Pleiades>Yellowstone ########################
+#>Pleiades>Yellowstone>Stampede ###############
 #module purge;                               <#
 
 #>Pleiades ####################################
 #module load gcc/4.9.2                        #
 #module load mpi-openmpi/1.6.5-gcc;          <#
+
+#>Stampede ####################################
+#module load gcc/4.9.1                        #
+#module load mvapich2/2.1                    <#
 
 #>GNUAll ######################################
 #cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
@@ -95,12 +104,16 @@ cd ..
 
 # Intel compiler 
 
-#>Pleiades>Yellowstone ########################
+#>Pleiades>Yellowstone>Stampede ###############
 #module purge;                               <#
 
 #>Pleiades ####################################
 #module load comp-intel/2015.0.090;           #
 #module load mpi-openmpi/1.6.5-intel;        <#
+
+#>Stampede ####################################
+#module load comp-intel/2015.0.090;           #
+#module load mvapich2/2.1;                   <#
 
 
 #>IntelAll ####################################
@@ -129,6 +142,9 @@ cd ..
 #>Pleiades ####################################
 #cd $WorkDir/Tmp_AMPS_test                    #
 #/PBS/bin/qsub test_amps.job                 <#
+#>Stampede ####################################
+#cd $WorkDir/Tmp_AMPS_test                    #
+#/usr/bin/sbatch test_amps.job               <#
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
 

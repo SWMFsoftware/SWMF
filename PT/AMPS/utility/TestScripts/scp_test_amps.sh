@@ -21,6 +21,9 @@ set Server  = dborovik@herot.engin.umich.edu
 #>Pleiades ############################
 #set WorkDir = /nobackup/`whoami`    <#
 
+#>Stampede ############################
+#set WorkDir = $WORK                 <#
+
 #>Yellowstone ###########
 #set WorkDir =         <#
 

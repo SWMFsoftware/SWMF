@@ -87,7 +87,8 @@ my %Blocks = (
     "PGIAll"       => "0",
     "PGIOther"     => "0",
     "Pleiades"     => "0",
-    "Yellowstone"  => "0"
+    "Yellowstone"  => "0",
+    "Stampede"     => "0"
     );
 
 # fill the hash table %Blocks
@@ -112,12 +113,19 @@ elsif($hostname =~ m/^yslogin(.*)/){
     $Blocks{"Yellowstone"} = "1";
     $TestName = "yellowstone";
 }
+elsif($hostname =~ m/login(.).stampede.tacc.utexas.edu/){
+    # Stampede
+    $Blocks{"Stampede"} = "1";
+    $TestName = "stampede"
+}
 
 # set hashes for compilers (already converted to lower case)
 if($Compilers[0] eq "all"){
     foreach my $CompilerSupported(@CompilersSupported){
 	$Blocks{$CompilerSupported."All"  } = "1";
-	unless($Blocks{"Pleiades"} or $Blocks{"Yellowstone"}){
+	unless($Blocks{"Pleiades"} or 
+	       $Blocks{"Yellowstone"} or
+	       $Blocks{"Stampede"}){
 	    $Blocks{$CompilerSupported."Other"  } = "1";
 	}
     }
@@ -128,13 +136,15 @@ else{
 	foreach my $CompilerSupported(@CompilersSupported){
 	    if ($Compiler eq lc($CompilerSupported)){
 		$Blocks{$CompilerSupported."All"  } = "1";
-		unless($Blocks{"Pleiades"} or $Blocks{"Yellowstone"}){
+		unless($Blocks{"Pleiades"} or 
+		       $Blocks{"Yellowstone"} or
+		       $Blocks{"Stampede"}){
 		    $Blocks{$CompilerSupported."Other"  } = "1";
 		}
 		next LoopCompiler;
 	    }
-	die "ERROR: Compiler is not recognized!";
 	}
+	die "ERROR: Compiler ".$Compiler." is not recognized!";
     }
 }
 
@@ -212,6 +222,7 @@ sub prepare_script {
         }
         close($fh);
     }
-    
+    # make script file executable
+    system("chmod u+x $_[0]");
     
 }
