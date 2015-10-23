@@ -20,7 +20,7 @@ module BATL_particles
   !/
   logical, parameter, private:: DoRSend = .true.
 
-  type particles
+  type ParticleType
      !\
      ! The number of parameters which characterize the 'state' of
      ! the particles
@@ -45,32 +45,36 @@ module BATL_particles
      ! information, sufficient to interpolate (with the possible use 
      ! of ghost cells) an information 
      integer,  pointer :: iBlock_I(:)
-  end type particles
-  type(particles),dimension(nSortParticle) ::ParticlesOf_I
+  end type ParticleType
+
+  type(ParticleType):: Particle_I(nSortParticle)
+
   ! offset for particle data in the send BufferSend_I
-  ! NOTE: offest values start with 0 (ZERO)
+  ! NOTE: offest values start with 0
   integer, allocatable:: iSendOffset_I(:)  
   integer, allocatable:: iProcTo_I(:)! proc id to which send this particle
 
   real,    allocatable:: BufferSend_I(:)! buffer of data to be sent
   real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
+
 contains
-  !================
+
+  !===========================================================================
   subroutine allocate_particles
     integer:: iParticleSort, nVar, nParticleMax
-    !--------------
+    !------------------------------------------------------------------------
     do iParticleSort = 1, nSortParticle
-       nVar = ParticlesOf_I(iParticleSort)%nVar
-       nParticleMax = ParticlesOf_I(iParticleSort)%nParticleMax
-       nullify(ParticlesOf_I(iParticleSort)%State_VI)
-       allocate(ParticlesOf_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax))
-       ParticlesOf_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax) = 0.0
-       nullify(ParticlesOf_I(iParticleSort)%iBlock_I)
-       allocate(ParticlesOf_I(iParticleSort)%iBlock_I(1:nParticleMax))
-       ParticlesOf_I(iParticleSort)%iBlock_I(1:nParticleMax) = -1
+       nVar = Particle_I(iParticleSort)%nVar
+       nParticleMax = Particle_I(iParticleSort)%nParticleMax
+       nullify(Particle_I(iParticleSort)%State_VI)
+       allocate(Particle_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax))
+       Particle_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax) = 0.0
+       nullify(Particle_I(iParticleSort)%iBlock_I)
+       allocate(Particle_I(iParticleSort)%iBlock_I(1:nParticleMax))
+       Particle_I(iParticleSort)%iBlock_I(1:nParticleMax) = -1
     end do
   end subroutine allocate_particles
-  !===============
+  !===========================================================================
   subroutine allocate_buffers
     integer          :: iSortParticle  ! loop variable
     ! max number of particles 
@@ -84,10 +88,10 @@ contains
     nBuffer = 0; nParticleMax = 0
     do iSortParticle = 1, nSortParticle
        ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
-       nBuffer = max(nBuffer, (ParticlesOf_I(iSortParticle)%nVar + 1)&
-            *ParticlesOf_I(iSortParticle)%nParticleMax)
+       nBuffer = max(nBuffer, (Particle_I(iSortParticle)%nVar + 1)&
+            *Particle_I(iSortParticle)%nParticleMax)
 
-       nParticleMax = max(nParticleMax, ParticlesOf_I(iSortParticle)%nParticleMax)
+       nParticleMax = max(nParticleMax, Particle_I(iSortParticle)%nParticleMax)
     end do
     ! allocate buffers for send/recving data
     allocate(BufferSend_I(nBuffer))
@@ -96,7 +100,7 @@ contains
     allocate(iProcTo_I(nParticleMax))
     
   end subroutine allocate_buffers
-  !===============
+  !===========================================================================
   subroutine set_pointer_to_particles(&
        iSortParticle, State_VI, iBlock_I, nVar, nParticle, nParticleMax)
     integer,          intent(in)    :: iSortParticle
@@ -105,15 +109,15 @@ contains
     integer,          intent(out)   :: nVar 
     integer,          intent(out)   :: nParticle
     integer,          intent(out)   :: nParticleMax
-    !------------
+    !-----------------------------------------------------------------------
     nullify(State_VI); nullify(iBlock_I)
-    State_VI     => ParticlesOf_I(iSortParticle)%State_VI
-    iBlock_I     => ParticlesOf_I(iSortParticle)%iBlock_I
-    nVar         =  ParticlesOf_I(iSortParticle)%nVar
-    nParticle    =  ParticlesOf_I(iSortParticle)%nParticle
-    nParticleMax =  ParticlesOf_I(iSortParticle)%nParticleMax
+    State_VI     => Particle_I(iSortParticle)%State_VI
+    iBlock_I     => Particle_I(iSortParticle)%iBlock_I
+    nVar         =  Particle_I(iSortParticle)%nVar
+    nParticle    =  Particle_I(iSortParticle)%nParticle
+    nParticleMax =  Particle_I(iSortParticle)%nParticleMax
   end subroutine set_pointer_to_particles
-  !=================
+  !===========================================================================
   subroutine message_pass_particles
     use ModMpi
     use BATL_mpi, ONLY: iProc, nProc, iComm
@@ -143,14 +147,14 @@ contains
             iSortParticle, State_VI, &
             iBlock_I, nVar, nParticle, nParticleMax)
        call pass_this_sort
-       ParticlesOf_I(iSortParticle)%nParticle = nParticle
+       Particle_I(iSortParticle)%nParticle = nParticle
     end do
     ! deallocate buffer
     ! deallocate(BufferSend_I, iSendOffset_I, iProcTo_I, BufferRecv_I)
 
 
   contains
-
+    !==========================================================================
     subroutine pass_this_sort
       integer:: iParticle    ! loop variable
       real   :: Xyz_D(MaxDim)! particle coordinates
@@ -166,7 +170,7 @@ contains
       logical:: IsOut        ! particle is out of domain
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
       integer:: iStatus_II(MPI_STATUS_SIZE, 2*nProc)
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------------------
       ! reset parameters of the message_pass for this sort of particles
       nSend_P       = 0; nRecv_P = 0
       iSendOffset_I =-1
@@ -320,5 +324,7 @@ contains
          iRecvOffset = iRecvOffset + nVar + 1
       end do
     end subroutine pass_this_sort
+
   end subroutine message_pass_particles
+
 end module BATL_particles
