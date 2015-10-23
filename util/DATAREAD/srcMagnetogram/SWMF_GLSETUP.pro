@@ -1,7 +1,8 @@
 pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
                   USEPIL=USEPIL, CMEGrid=CMEGrid, ARMag=ARMag, $
                   GLRadius=GLRadius, SizeFactor=SizeFactor, $
-                  nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed
+                  nSmooth=nSmooth, FILE=FILE, CMEspeed=CMEspeed,$
+                  Help=Help
 
 ;-----------------------------------------------------------------------
 ; NAME:
@@ -42,6 +43,8 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;
 ;   nSmooth = If nSmooth is larger than 1, apply boxcar smoothing on the 
 ;             magnetic field. This can help finding the PIL.
+;   
+;   Help = If set, print all available keywords
 ;
 ; RESTRICTIONS:
 ;   - PlotRadius can only be 0.015 increament from 1.0. Please use
@@ -83,6 +86,21 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   device,decomposed=0
   !p.font=1
 
+;Setup common block for BATSRUS/Idl
+  common file_head, $
+     headline, it, time, gencoord, ndim, neqpar, nw, nx, eqpar, variables, $
+     rbody
+
+;Setup help option
+  if not keyword_set(help) then help=0
+  if help then begin
+       PRINT,'Use:  IDL> SWMF_GLSETUP, [/DemoMode, PlotRadius=PlotRadius, /usepil, $ '
+       PRINT,'                         /CMEGrid, ARMag=ARMag, GLRadius=GLRadius, $ '
+       PRINT,'                         SizeFactor=SizeFactor, nSmooth=nSmooth, $ '
+       PRINT,'                         File=File, CMEspeed=CMEspeed, /help] '
+       RETURN
+  endif
+
 ;Turn on/off demo mode. With the demo mode on, 
 ;the pre-saved 2D data will be read instead
 ;of reading from 3D data which is much more time consuming
@@ -108,9 +126,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 ;If GLRadius is not given then it is set to PIL_length/SizeFactor
   if not keyword_set(SizeFactor) then SizeFactor = 26.25
 
-;Setup the magnetogram layer, default is at the 1.03
-  if not keyword_set(PlotRadius) then  PlotRadius=1.0
-
+;Set DemoMode
   if keyword_set(DemoMode) and keyword_set(PlotRadius) then begin
      print,'DemoMode and PlotRadius Cannot be Used at the same time!'
      print,'Play DemoMode...'
@@ -126,8 +142,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 
      gettype, file, filetype, npictinfile
      openfile, 10, file, filetype
-     get_pict, 10, file, filetype, 1, x,var,headline,it,time,$
-               gencoord, ndim, nparam, nvar, nx, param, varnames
+     get_pict, 10, file, filetype, 1, x, var, error 
      close, 10
      
      if gencoord then begin
@@ -137,8 +152,9 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
 
      case ndim of
         2:begin
-           if varnames(0) ne "Longitude" or varnames(1) ne "Latitude" or $
-              varnames(2) ne 'Br' then begin
+           if not keyword_set(PlotRadius) then  PlotRadius=1.00
+           if variables(0) ne "Longitude" or variables(1) ne "Latitude" or $
+              variables(2) ne 'Br' then begin
               print, 'variables should be Longitude Latitude Br!'
               retall
            endif
@@ -153,9 +169,9 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
         end
 
         3:begin
-           PlotRadius=1.03
-           if varnames(0) ne "Radius" or varnames(1) ne "Longitude" or $
-              varnames(2) ne "Latitude" or varnames(3) ne 'Br' then begin
+           if not keyword_set(PlotRadius) then  PlotRadius=1.03
+           if variables(0) ne "Radius" or variables(1) ne "Longitude" or $
+              variables(2) ne "Latitude" or variables(3) ne 'Br' then begin
               print, 'variables should be Radius Longitude Latitude Br!'
               retall
            endif
@@ -221,7 +237,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   contour,br_field_show,min=-20,max=20,charsize=3,$
           title='SWMF Input Magnetogram (R ='$
           +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Pixel)',$
-          ytitle='Solar Latitude (Pixel)',/fill,nlevels=10,/iso,xstyle=1,ystyle=1
+          ytitle='Solar Latitude (Pixel)',/fill,nlevels=60,/iso,xstyle=1,ystyle=1
   
   print,'Please Select the CME Source Region (POSITIVE) with the left button'
   loadct,39
@@ -291,7 +307,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
   loadct,0
   contour,br_field_show,min=-20,max=20,charsize=3,title='SWMF Input Magnetogram (R ='$
           +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Pixel)',$
-          ytitle='Solar Latitude (Pixel)',/fill,nlevels=10,/iso,xstyle=1,ystyle=1
+          ytitle='Solar Latitude (Pixel)',/fill,nlevels=60,/iso,xstyle=1,ystyle=1
 
   loadct,39
   plots,xPositiveWeight,yPositiveWeight,/data,psym=-2,color=250
@@ -524,7 +540,7 @@ pro SWMF_GLSETUP, DemoMode=DemoMode, PlotRadius=PlotRadius, $
                         yProfile[index]-RegionSize/2:yProfile[index]+RegionSize/2],$
           min=-20,max=20,charsize=3,title='CME Source Region (R ='$
           +strtrim(PlotRadius,2)+' Rs)',xtitle='Solar Longitude (Degree)',$
-          ytitle='Solar Latitude (Pixel)',/fill,nlevels=10,/iso,xstyle=1,ystyle=1
+          ytitle='Solar Latitude (Pixel)',/fill,nlevels=60,/iso,xstyle=1,ystyle=1
 
   loadct,39
   plots,xPositiveWeight-(xProfile[index]-RegionSize/2),yPositiveWeight-(yProfile[index]-RegionSize/2),$
