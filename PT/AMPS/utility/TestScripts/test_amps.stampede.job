@@ -16,7 +16,7 @@
 #SBATCH -A TG-AST140002  # Allocation name to charge job against
 
 # run AMPS tests compiled with GNU
-cd Intel/AMPS
+cd GNU/AMPS
 module purge
 module load gcc/4.9.1
 module load mvapich2/2.1
