@@ -4,7 +4,7 @@
 module BATL_amr_geometry
 
   use BATL_mpi,  ONLY: iProc
-  use BATL_size, ONLY: nI, nDim
+  use BATL_size, ONLY: nI, nJ, nK, nDim, j0_, nJp1_, k0_, nKp1_
   use BATL_geometry, ONLY: Dim2_, Dim3_, IsPeriodic_D, DomainSize_D
 
   implicit none
@@ -17,6 +17,7 @@ module BATL_amr_geometry
   public:: init_amr_geometry
   public:: apply_amr_geometry
   public:: clean_amr_geometry
+  public:: block_inside_region
   public:: region_value  ! return a 0 to 1 real number
 
   ! compatible with BATSRUS way of doing AMR
@@ -104,7 +105,7 @@ contains
     use BATL_tree,         ONLY: nRoot_D
 
     integer :: iGeo, iVar, iGeoAll
-    logical, parameter :: DoTestMe=.false.
+    logical, parameter :: DoTest=.false.
     character(len=*), parameter:: NameSub = 'init_amr_geometry'
     !-------------------------------------------------------------------------
     ! Fix resolutions (this depends on domain size set in BATL_grid)
@@ -173,7 +174,7 @@ contains
        iGeo = iGeo + 1
     end do
 
-    if(DoTestMe .and. iProc == 0) then
+    if(DoTest .and. iProc == 0) then
        do iGeoAll = 0, nCritGeoUsed
           write(*,*) NameSub,' iGeoAll=', iGeoAll
           write(*,*) "Region name      :: ", AreaGeo_I(iGeoAll)%NameRegion
@@ -294,7 +295,7 @@ contains
     real, dimension(nINode,nJNode,nKNode):: x_N, y_N, z_N, R2_N
 
     character(len=*), parameter:: NameSub = 'apply_amr_geometry'
-    logical, parameter:: DoTestBlock = .false.
+    logical, parameter:: DoTest = .false.
 
     logical :: DoCalcCrit
     !--------------------------------------------------------------------------
@@ -309,7 +310,7 @@ contains
 
     NameShape = Area % NameShape
 
-    if(DoTestBlock) write(*,*) NameSub,'NameShape, Resolution=',&
+    if(DoTest) write(*,*) NameSub,'NameShape, Resolution=',&
          ' ',trim(NameShape),' ',Area % Resolution
 
     ! Treat special cases first
@@ -374,7 +375,7 @@ contains
        endif       
     end if
 
-    if(DoTestBlock) write(*,*) "post Corner_DI = ",Corner_DI
+    if(DoTest) write(*,*) "post Corner_DI = ",Corner_DI
 
     ! Shift corner coordinates to the center of area
     do iCorner = 1, nCorner
@@ -408,7 +409,7 @@ contains
     ! This occurs multiple times
     Radius1Sqr = (Area % Radius1)**2
 
-    if(DoTestBlock)then
+    if(DoTest)then
        write(*,*) NameSub,' DistMin_D=',DistMin_D
        write(*,*) NameSub,' DistMax_D=',DistMax_D
     end if
@@ -436,7 +437,7 @@ contains
 
     end select
 
-    if(DoTestBlock)write(*,*) NameSub,' DoRefine (from corners)=',DoRefine
+    if(DoTest)write(*,*) NameSub,' DoRefine (from corners)=',DoRefine
 
     if(DoRefine) UseBlock = .true.
     
@@ -495,9 +496,7 @@ contains
     ! The block is not inside
     UseBlock = .false.
 
-    if(DoTestBlock) write(*,*)NameSub,' DoRefine=false'
-
-    if(DoTestBlock) write(*,*)NameSub,' DoRefine final=',UseBlock
+    if(DoTest) write(*,*)NameSub,' DoRefine final=',UseBlock
 
 
   end subroutine apply_amr_geometry
@@ -580,7 +579,6 @@ contains
     real    :: zRotateArea   = 0.0
     logical :: DoTaperArea   = .false.
     logical :: DoStretch     = .false.
-    real    :: Radius1, Radius2
 
     character(len=lNameArea):: NameRegion
     integer :: i, iDim
@@ -809,22 +807,204 @@ contains
   end subroutine read_amr_geometry
 
   !============================================================================
+  subroutine block_inside_region(iRegion_I, iBlock, nValue, StringLocation, &
+       IsInside, IsInside_I, Value_I)
 
-  subroutine region_value(nPoint, Xyz_DI, Area, Value_I)
+    use BATL_size, ONLY: nINode, nJNode, nKNode, nIJK, MaxIJK_D, MinIJK_D
+    use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
 
-    ! For each point Xyz_DI calculate the Value_I:
-    ! 0 if the point is fully outside the Area_I(iArea)
-    ! 1 if the point is fully inside
-    ! between 0 and 1 if the point is in the taper region of the area (if any)
+    ! Check the intersection of block iBlock with one or more regions
+    ! indexed by the iRegion_I array. Positive region index means 
+    ! an "OR", while negative region index means "AND NOT".
+    ! If the first region index is negative, then it is relative to
+    ! an "all" condition.
+    !
+    ! The IsInside is present it is set to true if the block intersects 
+    ! any of the + regions and avoids all the - regions.
+    ! 
+    ! If IsInside_I is present, it is set true for each point of the block
+    ! (defined by StringLocation) that is inside the region(s).
+    !
+    ! If Value_I is present, then it is set to 1 inside the region(s), 
+    ! 0 outside the regions, and between 0 and 1 inside the tapering
+    ! for each point of the block defined by StringLocation.
+    ! 
+    ! The StringLocation argument tells which points of the block are to be 
+    ! evaluated for IsInside_I and/or Value_I. Possible values are 
+    ! "cell", "ghost", "xface", "yface", "zface", "node"
+    ! Only the first character is significant and it is case insensitive.
+
+    integer, intent(in):: iRegion_I(:)
+    integer, intent(in):: iBlock
+    integer, intent(in):: nValue
+
+    character(*), optional, intent(in) :: StringLocation
+    logical,      optional, intent(out):: IsInside
+    logical,      optional, intent(out):: IsInside_I(nValue)
+    real,         optional, intent(out):: Value_I(nValue)
+
+    integer:: iRegion, nRegion, iArea
+    integer:: nPoint
+    character:: NameLocation
+
+    logical:: DoBlock, DoMask, DoValue
+
+    logical             :: IsInsideOld
+    logical, allocatable:: IsInsideOld_I(:)
+    real,    allocatable:: ValueOld_I(:)
+
+    real, allocatable, save:: Xyz_DI(:,:)
+
+    logical, parameter:: DoTest=.false.
+
+    character(len=*), parameter:: NameSub='region_block'
+    !------------------------------------------------------------------------
+    DoBlock  = present(IsInside)
+    DoMask   = present(IsInside_I)
+    DoValue  = present(Value_I)
+
+    if(.not.(DoBlock .or. DoMask .or. DoValue)) call CON_stop(NameSub// &
+         ': no output argument is present')
+
+    nRegion = size(iRegion_I)
+    if(nRegion < 1) call CON_stop(NameSub//': empty region index array')
+
+    nPoint = nValue
+    if(DoMask  .and. nRegion > 1) allocate(IsInsideOld_I(nPoint))
+    if(DoValue .and. nRegion > 1) allocate(ValueOld_I(nPoint))
+
+    ! Default location is nodes
+    NameLocation = "n"
+    if(present(StringLocation)) NameLocation = StringLocation(1:1)
+
+    ! Check nodes of block by default (optimize for corners???)
+    if(nPoint == 0) nPoint = nINode*nJNode*nKNode
+
+    ! Allocate coordinate array
+    allocate(Xyz_DI(nDim,nPoint))
+
+    select case(NameLocation)
+    case('c', 'C')
+       if(nPoint /= nIJK) call CON_stop(NameSub// &
+            ': incorrect number of points for cell centers')
+
+       Xyz_DI = reshape(Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock), &
+            (/nDim, nPoint/))
+
+    case('g', 'G')
+       if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
+            ': incorrect number of points for cell centers including ghosts')
+
+       Xyz_DI = reshape(Xyz_DGB(:,:,:,:,iBlock), (/nDim, nPoint/))
+
+    case('x', 'X')
+       if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
+            ': incorrect number of points for X faces')
+
+       Xyz_DI = reshape( &
+            0.5*(Xyz_DGB(1:nDim,0:nI  ,1:nJ,1:nK,iBlock) &
+            +    Xyz_DGB(1:nDim,1:nI+1,1:nJ,1:nK,iBlock)), (/nDim, nPoint/))
+
+    case('y', 'Y')
+       if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
+            ': incorrect number of points for X faces')
+
+       Xyz_DI = reshape( &
+            0.5*(Xyz_DGB(1:nDim,1:nI,j0_:nJ, 1:nK,iBlock) &
+            +    Xyz_DGB(1:nDim,1:nI,1:nJp1_,1:nK,iBlock)), (/nDim, nPoint/))
+
+    case('z', 'Z')
+       if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
+            ': incorrect number of points for X faces')
+
+       Xyz_DI = reshape( &
+            0.5*(Xyz_DGB(1:nDim,1:nI,1:nJ,k0_:nK ,iBlock) &
+            +    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nKp1_,iBlock)), (/nDim, nPoint/))
+
+    case('n', 'N')
+       if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
+            ': incorrect number of points for nodes')
+
+       Xyz_DI = reshape(Xyz_DNB(1:nDim,:,:,:,iBlock), (/nDim, nPoint/))
+
+    case default
+       write(*,*) NameSub,': StringLocation=', StringLocation
+       call CON_stop(NameSub//' incorrect value for StringLocation')
+    end select
+
+    if(DoTest)write(*,*) NameSub, 'iBlock, nPoint, NameLoc, size(Xyz_DI) = ', &
+         iBlock, nPoint, NameLocation, size(Xyz_DI)
+
+    ! Evaluate all regions
+    do iRegion = 1, nRegion
+
+       ! Store results obtained from previous regions
+       if(iRegion > 0)then
+          if(DoBlock) IsInsideOld   = IsInside
+          if(DoMask)  IsInsideOld_I = IsInside_I
+          if(DoValue) ValueOld_I    = Value_I
+       end if
+
+       ! Get area index and evaluate it
+       iArea = iRegion_I(iRegion)
+       call region_value(nPoint, Xyz_DI, AreaGeo_I(abs(iArea)), &
+            IsInside, IsInside_I, Value_I)
+
+       if(DoTest)write(*,*)'maxval(Value_I)=', maxval(Value_I)
+
+       if(iRegion == 1)then
+          if(iArea < 0)then
+             if(DoBlock) IsInside   = .not. IsInside
+             if(DoMask)  IsInside_I = .not. IsInside_I
+             if(DoValue) Value_I    = 1 - Value_I
+          end if
+       else
+          ! Combine last region info with previous
+          if(iArea < 0)then
+             if(DoBlock) IsInside   = IsInsideOld   .and. .not. IsInside
+             if(DoMask)  IsInside_I = IsInsideOld_I .and. .not. IsInside_I
+             if(DoValue) Value_I    = min(ValueOld_I, 1 - Value_I)
+          else
+             if(DoBlock) IsInside   = IsInsideOld   .or. IsInside
+             if(DoMask)  IsInside_I = IsInsideOld_I .or. IsInside_I
+             if(DoValue) Value_I    = max(ValueOld_I, Value_I)
+          end if
+       end if
+    end do
+
+    deallocate(Xyz_DI)
+    if(allocated(IsInsideOld_I)) deallocate(IsInsideOld_I)
+    if(allocated(ValueOld_I))    deallocate(ValueOld_I)
+
+  end subroutine block_inside_region
+  !============================================================================
+
+  subroutine region_value(nPoint, Xyz_DI, Area, IsInside, IsInside_I, Value_I)
+
+    ! Check if the points listed in Xyz_DI are inside the Area
+
+    ! The optional logical IsInside is set to true if any of the points
+    ! are inside.
+    !
+    ! The optional logical array IsInside_I is set to true for points inside.
+    !
+    ! The optional real array Value_I is set to 
+    ! 0 if the point is fully outside the Area
+    ! 1 if the point is fully inside the Area
+    ! 0 to 1 if the point is in the taper region of the area (if any)
 
     integer,       intent(in)   :: nPoint
     real,          intent(inout):: Xyz_DI(nDim,nPoint) ! Gets normalized
     type(AreaType),intent(in)   :: Area
-    real,          intent(out)  :: Value_I(nPoint)
+    logical, optional, intent(out):: IsInside
+    logical, optional, intent(out):: IsInside_I(nPoint)
+    real,    optional, intent(out):: Value_I(nPoint)
 
     real, allocatable, save:: Norm_DI(:,:)
 
     integer  :: iPoint, iDim
+
+    logical:: DoBlock, DoMask, DoValue, DoBlockOnly
     
     logical:: DoTaper
     real:: Xyz_D(nDim), Size_D(nDim)
@@ -834,13 +1014,27 @@ contains
     real:: Slope_D(nDim)
     real, allocatable, save:: SlopePerp_D(:)
 
+    logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'region_value'
     !--------------------------------------------------------------------------
+    DoBlock  = present(IsInside)
+    DoMask   = present(IsInside_I)
+    DoValue  = present(Value_I)
+    DoBlockOnly = DoBlock .and. .not. (DoMask .or. DoValue)
+
+    if(DoTest) write(*,*) NameSub, &
+         ': nPoint, DoBlock, DoMask, DoValue, DoBlockOnly=',&
+         nPoint, DoBlock, DoMask, DoValue, DoBlockOnly
+
     NameShape = Area % NameShape
+
+    if(DoTest) write(*,*) NameSub,' NameShape=', NameShape
 
     ! Treat special cases first
     if(NameShape == 'all')then
-       Value_I = 1.0
+       if(DoBlock) IsInside   = .true.
+       if(DoMask)  IsInside_I = .true.
+       if(DoValue) Value_I    = 1.0
        RETURN
     end if
 
@@ -867,7 +1061,7 @@ contains
     ! The distance from the center will be normalized by Size_D, 
     ! so the tapering length needs to be scaled accordingly
     Taper = Area % Taper
-    DoTaper = Taper > 0.0
+    DoTaper = DoValue .and. Taper > 0.0
     if(DoTaper)then
        Slope_D = abs(Size_D) / Taper
        TaperFactor_D = Slope_D/(Slope_D + 1)
@@ -902,8 +1096,10 @@ contains
        Norm_DI(:,iPoint) = Xyz_D / Size_D
     end do
 
-    ! Initialize values to zero (outside)
-    Value_I = 0.0
+    ! Initialize values for outside
+    if(DoBlock) IsInside   = .false.
+    if(DoMask)  IsInside_I = .false.
+    if(DoValue) Value_I    = 0
 
     ! Set value for the shape
     select case(NameShape)
@@ -913,7 +1109,11 @@ contains
        Norm_DI = abs(Norm_DI)
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(maxval(Norm_DI(:,iPoint)) <= 1) Value_I(iPoint) = 1
+             if(maxval(Norm_DI(:,iPoint)) > 1) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -924,7 +1124,11 @@ contains
     case('sphere')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(sum(Norm_DI(:,iPoint)**2) <= 1) Value_I(iPoint) = 1
+             if(sum(Norm_DI(:,iPoint)**2) > 1) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -945,7 +1149,11 @@ contains
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
              Dist1 = sum(Norm_DI(:,iPoint)**2)
-             if(Dist1 <= 1 .and. Dist1 >= Radius1Sqr) Value_I(iPoint) = 1
+             if(Dist1 > 1 .or. Dist1 < Radius1Sqr)CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -972,7 +1180,11 @@ contains
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
              if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
-             if(sum(Norm_DI(iPerp_I,iPoint)**2) <= 1) Value_I(iPoint) = 1
+             if(sum(Norm_DI(iPerp_I,iPoint)**2) > 1) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -998,7 +1210,11 @@ contains
           do iPoint = 1, nPoint
              if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
-             if(Dist1 <= 1 .and. Dist1 >= Radius1Sqr) Value_I(iPoint) = 1
+             if(Dist1 > 1 .or. Dist1 < Radius1Sqr)CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -1034,7 +1250,11 @@ contains
              if(abs(Norm_DI(iPar,iPoint) - 0.5) > 0.5) CYCLE
              Radius = Radius1 + Slope1*Norm_DI(iPar,iPoint)
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
-             if(Dist1 <= Radius**2) Value_I(iPoint) = 1
+             if(Dist1 > Radius**2) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -1065,7 +1285,11 @@ contains
           do iPoint = 1, nPoint
              if(abs(Norm_DI(iPar,iPoint)-0.5) > 0.5) CYCLE
              if(sum(Norm_DI(iPerp_I,iPoint)**2) &
-                  <= Norm_DI(iPar,iPoint)) Value_I(iPoint) = 1
+                  > Norm_DI(iPar,iPoint)) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -1094,7 +1318,11 @@ contains
           do iPoint = 1, nPoint
              if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
              if(sum(Norm_DI(iPerp_I,iPoint)**2) &
-                  <= Norm_DI(iPar,iPoint)**2) Value_I(iPoint) = 1
+                  > Norm_DI(iPar,iPoint)**2) CYCLE
+             if(DoBlock) IsInside = .true.
+             if(DoBlockOnly) EXIT
+             if(DoMask)  IsInside_I(iPoint) = .true.
+             if(DoValue) Value_I(iPoint) = 1
           end do
        else
           do iPoint = 1, nPoint
@@ -1122,6 +1350,15 @@ contains
     case default
        call CON_stop(NameSub//' ERROR: unknown NameShape='//trim(NameShape))
     end select
+
+    ! Get logical information if not yet calculated
+    if(DoTaper)then
+       if(DoMask)  IsInside_I =     Value_I == 1
+       if(DoBlock) IsInside   = any(Value_I == 1)
+    end if
+
+    if(DoTest .and. DoValue) &
+         write(*,*) NameSub, ': maxval(Value_I)=', maxval(Value_I)
 
   end subroutine region_value
 
