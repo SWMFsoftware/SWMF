@@ -16,16 +16,17 @@
 #SBATCH -A TG-AST140002  # Allocation name to charge job against
 
 # run AMPS tests compiled with GNU
+cd Intel/AMPS
 module purge
 module load gcc/4.9.1
 module load mvapich2/2.1
-make test_run MPIRUN=ibrun >>& test_amps.log
+make test_run MPIRUN=ibrun 2>&1 test_amps.log
 cd ../..
 
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
 module purge
-module load comp-intel/2015.0.090 
+module load intel/15.0.2
 module load mvapich2/2.1
-make test_run MPIRUN=ibrun >>& test_amps.log
+make test_run MPIRUN=ibrun 2>&1 test_amps.log
 cd ../..
