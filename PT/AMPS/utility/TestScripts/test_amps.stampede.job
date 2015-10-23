@@ -10,15 +10,10 @@
 #SBATCH -p development # submit to the 'large' queue for jobs > 256 nodes
 #SBATCH -N 1           # Total number of nodes requested (16 cores/node)
 #SBATCH -n 8           # Total number of mpi tasks requested
-#SBATCH -t 00:20:00    # Run time (hh:mm:ss) - 1.5 hours
+#SBATCH -t 02:00:00    # Run time (hh:mm:ss) - 1.5 hours
 
 #The next line is required if the user has more than one project
 #SBATCH -A TG-AST140002  # Allocation name to charge job against
-
-
-# Launch the MPI application named "my_large.exe"
-ibrun ./amps > logtest
-
 
 # run AMPS tests compiled with GNU
 module purge
