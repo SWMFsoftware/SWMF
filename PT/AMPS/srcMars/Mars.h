@@ -3,6 +3,12 @@
 //========================================================================
 /*
  * $Log$
+ * Revision 1.5  2015/05/24 01:36:33  vtenishe
+ * full names of the model input files are determined with PIC::UserModelInputDataPath
+ *
+ * Revision 1.4  2015/05/21 04:49:53  vtenishe
+ * adapted for nightly tests
+ *
  * Revision 1.3  2015/03/13 19:17:12  yunilee
  * Changes for Mars code initialization
  *
@@ -156,54 +162,68 @@ inline void ReadMTGCM() {
 		struct dirent *pent;
 		pdir=opendir(".");
 		pent=chdir(directory);*/
+
+    char fname[_MAX_STRING_LENGTH_PIC_];
 				
 		Te.PlanetRadius=_RADIUS_(_TARGET_);
 		Te.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Te.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Te.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Te.h",PIC::UserModelInputDataPath);
+		Te.ReadDataFile(fname);
 		
 		Tn.PlanetRadius=_RADIUS_(_TARGET_);
 		Tn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Tn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Tn.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Tn.h",PIC::UserModelInputDataPath);
+		Tn.ReadDataFile(fname);
 				
 		Ti.PlanetRadius=_RADIUS_(_TARGET_);
 		Ti.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Ti.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Ti.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Ti.h",PIC::UserModelInputDataPath);
+		Ti.ReadDataFile(fname);
 		
 		O2p.PlanetRadius=_RADIUS_(_TARGET_);
 		O2p.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O2p.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O2p.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/O2p.h",PIC::UserModelInputDataPath);
+		O2p.ReadDataFile(fname);
 				
 		E.PlanetRadius=_RADIUS_(_TARGET_);
 		E.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		E.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/E.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/E.h",PIC::UserModelInputDataPath);
+		E.ReadDataFile(fname);
 		
 		O.PlanetRadius=_RADIUS_(_TARGET_);
 		O.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		O.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/O.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/O.h",PIC::UserModelInputDataPath);
+		O.ReadDataFile(fname);
 		
 		CO.PlanetRadius=_RADIUS_(_TARGET_);
 		CO.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/CO.h",PIC::UserModelInputDataPath);
+		CO.ReadDataFile(fname);
 		
 		CO2.PlanetRadius=_RADIUS_(_TARGET_);
 		CO2.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		CO2.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/CO2.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/CO2.h",PIC::UserModelInputDataPath);
+		CO2.ReadDataFile(fname);
 	
 		Un.PlanetRadius=_RADIUS_(_TARGET_);
 		Un.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Un.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Un.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Un.h",PIC::UserModelInputDataPath);
+		Un.ReadDataFile(fname);
 		
 		Vn.PlanetRadius=_RADIUS_(_TARGET_);
 		Vn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Vn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Vn.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Vn.h",PIC::UserModelInputDataPath);
+		Vn.ReadDataFile(fname);
 		
 		Wn.PlanetRadius=_RADIUS_(_TARGET_);
 		Wn.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_CONSTANT_;
-		Wn.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/Wn.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/Wn.h",PIC::UserModelInputDataPath);
+		Wn.ReadDataFile(fname);
 		
 		COp.PlanetRadius=_RADIUS_(_TARGET_);
 		COp.OutsideDomainInterpolationMode=_MTGCM_INTERPOLATION_MODE_VERTICAL_SCALE_HIGHT__FORCE_POSITIVE_;
-		COp.ReadDataFile("data/input/Mars/MTGCM_equinox_SL/COp.h");
+		sprintf(fname,"%s/MTGCM_equinox_SL/COp.h",PIC::UserModelInputDataPath);
+		COp.ReadDataFile(fname);
 
 		//pent=chdir("..");
 	
@@ -305,158 +325,140 @@ inline void ReadMTGCM() {
   }
 	
 	inline double ProductionRateCaluclation(double *x) {
-            double production_rate=0.0;
-            double t=0.0;
-            //	bool validAlt = false;
-            double z0 = 200E3;
-            //	while (validAlt == false) {
-            if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
-            /*
-             #if DR == Hodges //Hodges [2000]
-             production_rate=1.6E-7*pow(300/Te.Interpolate(x),0.55)*O2p.Interpolate(x)*E.Interpolate(x);
-             #endif
-             #if DR == Mehr //Mehr and Biondi [1969]
-             if (Te.Interpolate(x)<=1200.0) {production_rate=1.95E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);}
-             else if (Te.Interpolate(x)>1200.0) {production_rate=0.75E-7*pow(1200/Te.Interpolate(x),0.56)*O2p.Interpolate(x)*E.Interpolate(x);}
-             #endif
-             #if DR == Peverall //Peverall [2001]
-             production_rate=2.4E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);
-             #endif
-             */
-            /*	double Altitude;
-             double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-             double r=sqrt(r2);
-             //	Altitude = r-_RADIUS_(_TARGET_);
-             
-             bool validt=false;
-             while (validt==false) {
-             // Hot Carbon
-             //  double COpScaleHeight=53.8E3;//50.2E3; //Solar Min
-             double COpScaleHeight=72.6E3;//102.1E3; //Solar Max
-             //  double peak=210.0E3;//solar min
-             double peak=240.0E3;//solar max
-             
-             double vectop2[3]={0.0,0.0,0.0},vectop[3]={0.0,0.0,0.0};
-             //	double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
-             //	double r=sqrt(r2);
-             int idim;
-             //for (idim=0;idim<DIM;idim++) {Altitudevec[idim]=x[idim]*(x[idim]/r);}
-             for (idim=0;idim<DIM;idim++) {
-             vectop[idim] = (3396.0E3+z0)*(x[idim]/r);
-             vectop2[idim]= (3396.0E3+(z0-10E3))*(x[idim]/r);
-             }
-             Altitude = r-_RADIUS_(_TARGET_);
-             
-             double localH=10E3/(log(COp.Interpolate(vectop)/COp.Interpolate(vectop2)));
-             bool isnan(localH);
-             if (localH<COpScaleHeight/3) {
-             localH=COpScaleHeight/2;
-             }
-             else if (isnan(localH)==true) {
-             localH=COpScaleHeight;
-             }
-             else if (localH>COpScaleHeight) {
-             localH=COpScaleHeight;
-             }
-             
-             if (Altitude>=135.0E3 && Altitude<z0){t=COp.Interpolate(x);}
-             else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/localH);}
-             // else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/COpScaleHeight);}
-             else if (Altitude>=peak){t=(COp.Interpolate(vectop)*exp((peak-z0)/localH))*exp(-(Altitude-peak)/COpScaleHeight);}
-             
-             //	if (nz>100E3){exit(__LINE__,__FILE__,"Error");}
-             bool isnan(t);
-             bool isinf(t);
-             
-             double nz=1E3,tt=0.0;
-             while (isnan(t)==true) {
-             if (nz>=Altitude) {t=1.0;}
-             for (idim=0;idim<DIM;idim++) {vectop2[idim]= (3396.0E3+(Altitude-nz))*(x[idim]/r);}
-             t=COp.Interpolate(vectop2);
-             nz+=1E3;
-             }
-             */
-            /*	if (z0<135.0E3) {
+		double production_rate=0.0;
+		double t=0.0;
+        //	bool validAlt = false;
+		double z0 = 200E3;
+        //	while (validAlt == false) {
+		if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]<pow(O.PlanetRadius+O.minAltitude,2)) return 0.0;
+        /*
+         #if DR == Hodges //Hodges [2000]
+         production_rate=1.6E-7*pow(300/Te.Interpolate(x),0.55)*O2p.Interpolate(x)*E.Interpolate(x); 
+         #endif
+         #if DR == Mehr //Mehr and Biondi [1969]
+         if (Te.Interpolate(x)<=1200.0) {production_rate=1.95E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);}
+         else if (Te.Interpolate(x)>1200.0) {production_rate=0.75E-7*pow(1200/Te.Interpolate(x),0.56)*O2p.Interpolate(x)*E.Interpolate(x);}
+         #endif
+         #if DR == Peverall //Peverall [2001]
+         production_rate=2.4E-7*pow(300/Te.Interpolate(x),0.7)*O2p.Interpolate(x)*E.Interpolate(x);
+         #endif
+         */	
+		double Altitude;
+		double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+		double r=sqrt(r2);
+    //	Altitude = r-_RADIUS_(_TARGET_);	
+        
+/*		bool validt=false;
+		while (validt==false) {
+        // Hot Carbon
+            double COpScaleHeight=53.8E3;//50.2E3; //Solar Min
+        //	double COpScaleHeight=72.6E3;//102.1E3; //Solar Max
+            double peak=210.0E3;//solar min
+        //  double peak=240.0E3;//solar max
+            
+            double vectop2[3]={0.0,0.0,0.0},vectop[3]={0.0,0.0,0.0};
+        //	double r2 = x[0]*x[0]+x[1]*x[1]+x[2]*x[2];
+        //	double r=sqrt(r2);
+            int idim;
+            //for (idim=0;idim<DIM;idim++) {Altitudevec[idim]=x[idim]*(x[idim]/r);}
+            for (idim=0;idim<DIM;idim++) {
+                vectop[idim] = (3396.0E3+z0)*(x[idim]/r);
+                vectop2[idim]= (3396.0E3+(z0-10E3))*(x[idim]/r);
+            }
+            Altitude = r-_RADIUS_(_TARGET_);
+            
+            double localH=10E3/(log(COp.Interpolate(vectop)/COp.Interpolate(vectop2)));
+            bool isnan(localH);
+            if (localH<COpScaleHeight/3) {
+                localH=COpScaleHeight/2;
+            }
+            else if (isnan(localH)==true) {
+                localH=COpScaleHeight;
+            }
+            else if (localH>COpScaleHeight) {
+                localH=COpScaleHeight;
+            }
+            
+            if (Altitude>=135.0E3 && Altitude<z0){t=COp.Interpolate(x);}
+            else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/localH);}
+            // else if (Altitude>=z0 && Altitude<peak){t=COp.Interpolate(vectop)*exp((Altitude-z0)/COpScaleHeight);}
+            else if (Altitude>=peak){t=(COp.Interpolate(vectop)*exp((peak-z0)/localH))*exp(-(Altitude-peak)/COpScaleHeight);}
+            
+            //	if (nz>100E3){exit(__LINE__,__FILE__,"Error");} 
+            bool isnan(t);
+            bool isinf(t);
+            
+            double nz=1E3,tt=0.0;
+            while (isnan(t)==true) {
+                if (nz>=Altitude) {t=1.0;}
+                for (idim=0;idim<DIM;idim++) {vectop2[idim]= (3396.0E3+(Altitude-nz))*(x[idim]/r);}
+                t=COp.Interpolate(vectop2);
+                nz+=1E3;
+            }
+            
+  */          /*	if (z0<135.0E3) {
              validt=true;
              t=0.0;}
              else {*/
-            /*  if (Altitude>=1500E3) {
-             if (t>1E10) {z0-=1E3;}
-             else {validt=true;}
-             }
-             
-             else {
-             if (t>1E10 || t<1E-20) {z0-=1E3;}
-             else {validt=true;}
-             }
-             if (z0<135.0E3) {
-             t=1.0;
-             validt=true;}
-             }
-             
-             if (Altitude>200.0E3) {
-             #if DR == Rosen //Rosen [1998]
-             production_rate=2.75E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.55)*t*E.Interpolate(x);
-             #endif
-             #if DR == Cloutier //Cloutier and Daniell [1979]
-             production_rate=6.47E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.53)*t*E.Interpolate(x);
-             #endif
-             #if DR == Mitchell //Mitchell and Hus [1985]
-             production_rate=2.0E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.48)*t*E.Interpolate(x);
-             #endif
-             }
-             else {
-             #if DR == Rosen //Rosen [1998]
-             production_rate=2.75E-7*pow(300/Te.Interpolate(x),0.55)*t*E.Interpolate(x);
-             #endif
-             #if DR == Cloutier //Cloutier and Daniell [1979]
-             production_rate=6.47E-7*pow(300/Te.Interpolate(x),0.53)*t*E.Interpolate(x);
-             #endif
-             #if DR == Mitchell //Mitchell and Hus [1985]
-             production_rate=2.0E-7*pow(300/Te.Interpolate(x),0.48)*t*E.Interpolate(x);
-             #endif
-             }*/
+    /*        if (Altitude>=1500E3) {
+                if (t>1E10) {z0-=1E3;}
+                else {validt=true;}
+            }
             
-            //Photodissociation of CO
-            double frequency=(4.4E-7)/pow(Semimajoraxis,2); //s^-1, Solar low, Fox[89] //Huebner et al.[92]
-            //double frequency=(1.21E-6)/pow(Semimajoraxis,2); //s^-1, Solar High, Fox[89] // Huebner et al.[92]
-            
-            //determine the positon of subsolar point (tile angle = 25.19 deg)
-            double Lat,Lon,xsun[3],xunit[3],x_proj;
-            Lat=0.0*Pi/180; //Aphelion=25.19, Perihelion=-25.19, Equinox=0.0
-            Lon=180.0*Pi/180;
-            
-            //unit vector for anti-subsolar point
-            xunit[0]=-cos(Lat)*cos(Lon);
-            xunit[1]=-cos(Lat)*sin(Lon);
-            xunit[2]=-sin(Lat);
-            
-            //x_proj_to_anti-subsolar=unit_vec(unit_vec.x)
-            xsun[0]=xunit[0]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
-            xsun[1]=xunit[1]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
-            xsun[2]=xunit[2]*(xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2]);
-            
-            x_proj=sqrt(pow((x[0]-xsun[0]),2)+pow((x[1]-xsun[1]),2)+pow((x[2]-xsun[2]),2));
-            
-            if (((xunit[0]*x[0]+xunit[1]*x[1]+xunit[2]*x[2])>0.0)&&(x_proj<_RADIUS_(_TARGET_))) frequency=0.0; //No photodissociation on the nightside
-            
-            production_rate=CO.Interpolate(x)*frequency;
-            
-            
-            /*  double X=x[0];
-             double Y=x[1];
-             double Z=x[2];
-             double YY=sqrt(Y*Y+Z*Z);
-             if ((X>0.0)&&(YY<_RADIUS_(_TARGET_))) frequency=0.0; //No reaction on Nightside
-             */ 
-            
-            // if (production_rate>=1E3){z0-=1E3;}// {cout << Altitude <<"  "<< production_rate << endl;
-            //	exit(__LINE__,__FILE__);}
-            // else
-            // validAlt = true;
-            // }
-            
-            return production_rate*1.0e6;
+            else {
+                if (t>1E10 || t<1E-20) {z0-=1E3;}
+                else {validt=true;}
+            }
+            if (z0<135.0E3) {
+                t=1.0;
+                validt=true;}
+        }
+        
+		if (Altitude>200.0E3) {
+    #if DR == Rosen //Rosen [1998]
+			production_rate=2.75E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.55)*t*E.Interpolate(x);
+    #endif
+    #if DR == Cloutier //Cloutier and Daniell [1979]
+			production_rate=6.47E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.53)*t*E.Interpolate(x);
+    #endif
+    #if DR == Mitchell //Mitchell and Hus [1985]
+			production_rate=2.0E-7*pow(300/(4200-3750*exp((180-(Altitude/1000))/89.6)),0.48)*t*E.Interpolate(x);
+    #endif
+            }
+		else {*/
+t=O2p.Interpolate(x);
+    #if DR == Rosen //Rosen [1998]
+			production_rate=2.75E-7*pow(300/Te.Interpolate(x),0.55)*t*E.Interpolate(x);
+    #endif
+    #if DR == Cloutier //Cloutier and Daniell [1979]
+			production_rate=6.47E-7*pow(300/Te.Interpolate(x),0.53)*t*E.Interpolate(x);
+    #endif
+    #if DR == Mitchell //Mitchell and Hus [1985]
+			production_rate=2.0E-7*pow(300/Te.Interpolate(x),0.48)*t*E.Interpolate(x);
+    #endif
+    //        }
+        /*
+         //Photodissociation of CO
+         double frequency=(2.81E-7)/pow(Semimajoraxis,2); //s^-1, Solar low, Huebner et al.[92]	
+         double frequency=(6.60E-7)/pow(Semimajoraxis,2); //s^-1, Solar High, Huebner et al.[92]
+         double X=x[0];
+         double Y=x[1];
+         double Z=x[2];
+         double YY=sqrt(Y*Y+Z*Z);
+         if ((X>0.0)&&(YY<_RADIUS_(_TARGET_))) frequency=0.0; //No reaction on Nightside
+         production_rate=CO.Interpolate(x)*frequency;
+         */
+        
+//       cout<<Altitude<<"  "<<production_rate<<endl;
+//	exit(__LINE__,__FILE__);
+ 
+        // if (production_rate>=1E3){z0-=1E3;}// {cout << Altitude <<"  "<< production_rate << endl;
+        //	exit(__LINE__,__FILE__);}
+        // else
+        // validAlt = true;
+        // }
+        return production_rate*1.0e6;
+       // return 1*1.0e6;
 	}
     
 
@@ -593,12 +595,12 @@ namespace HotOxygen {
 		
 		//Hot Carbon DR
 		
-	/*	const float KineticEnergy1=2.90*1.60217653E-19;
+		const float KineticEnergy1=2.90*1.60217653E-19;
 		const float KineticEnergy2=1.64*1.60217653E-19;
 		const float KineticEnergy3=0.94*1.60217653E-19;
-*/
+
 		//Hot Carbon Photodissociation
-		const float KineticEnergy=2.56*1.60217652E-19; //solar low	
+	//	const float KineticEnergy=2.56*1.60217652E-19; //solar low	
 //		const float KineticEnergy=2.58*1.60217652E-19; //solar high	
 //	void HotOProduction() {
 		 long int HotOProduction(int iCellIndex,int jCellIndex,int kCellIndex,PIC::Mesh::cDataCenterNode *cell, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);

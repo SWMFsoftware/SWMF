@@ -6,6 +6,9 @@
  */
 /*
  * $Log$
+ * Revision 1.7  2015/05/26 14:56:27  vtenishe
+ * a bug in the loop limits is fixed
+ *
  * Revision 1.6  2015/03/31 22:40:30  vtenishe
  * the particle allocation flag is set when the new particle is generated
  *
@@ -471,12 +474,9 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     else                  {speed=sqrt(KineticEnergy1/massO);}
 */
     //Determine the energy for new hot C, Branch Ration for 3 channels from dissociative recombination Rosen et al. ['98]
-/*    if      (BrRatio<.761) {speed=sqrt((KineticEnergy1)/((massC*massO+massC*massC)/(2*massO)));}
+    if      (BrRatio<.761) {speed=sqrt((KineticEnergy1)/((massC*massO+massC*massC)/(2*massO)));}
     else if (BrRatio<.906) {speed=sqrt((KineticEnergy2)/((massC*massO+massC*massC)/(2*massO)));}
     else                   {speed=sqrt((KineticEnergy3)/((massC*massO+massC*massC)/(2*massO)));}
-*/
-    //Determine the energy for new hot C from photodissociation of CO, Huebner[92]
-    speed=sqrt((KineticEnergy)/((massC*massO+massC*massC)/(2*massO)));
 
 //=======================  DEBUG =============
 //test the particle injection with particular energy
@@ -489,13 +489,8 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
     double rr=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
     double Altitude=rr-_RADIUS_(_TARGET_);
 
+
 #if _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__MTGCM_
-    //PD case
-    betaO2=massCO/(2*k*Tn.Interpolate(x));
-    BGMeanFlowVelocity(bulkVelocity,x);
-           
-    //DR case
-           /*
 	if (Altitude>200.0E3 && Altitude<=300.0E3) {//Dr.Bougher provided Ti eqn, Fox93 Nitrogen paper
 	   betaO2=massCO/(2*k*(pow(10,(2.243+((Altitude/1000)-180)/95))));
 	   BGMeanFlowVelocity(bulkVelocity,x);
@@ -507,7 +502,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 	else {
 	   betaO2=massCO/(2*k*Ti.Interpolate(x));
 	   BGMeanFlowVelocity(bulkVelocity,x);
-	   }*/
+	   }
 #elif _MARS_BACKGROUND_ATMOSPHERE_MODEL_ == _MARS_BACKGROUND_ATMOSPHERE_MODEL__FOX_
     betaO2=massCO/(2*k*MARS_BACKGROUND_ATMOSPHERE_J_FOX_::GetNeutralTemeprature(x));
 #endif
@@ -544,12 +539,16 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
     //Calculate velocity (vector) for new hot O
     double velocityO1[3],velocityO2[3];
-    for (idim=0;idim<3;idim++) {velocityO1[idim]=  vparent[idim]+    speed*Randomposition[idim];}
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-           if (!isfinite(velocityO1[idim])) {
-               exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-           }
-#endif
+
+    for (idim=0;idim<3;idim++) {
+      velocityO1[idim]=vparent[idim]+speed*Randomposition[idim];
+
+      #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+      if (!isfinite(velocityO1[idim])) {
+        exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
+      }
+      #endif
+    }
        
    // for (idim=0;idim<3;idim++) {velocityO2[idim]=  /*vparent[idim]+*/    speed*(-Randomposition[idim]);}
 
@@ -636,7 +635,7 @@ ModelParticleInjectionRate=0.1/LocalTimeStep;
 
 
     //Find maximum velocity of new hot O (need for determining local time step size)
-    double Vmax=sqrt((2*KineticEnergy)/massC);
+    double Vmax=sqrt((2*KineticEnergy1)/massC);
 
     TimeStepLimitationImposed=true;
 
