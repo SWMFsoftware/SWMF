@@ -174,7 +174,7 @@ contains
       ! reset parameters of the message_pass for this sort of particles
       nSend_P       = 0; nRecv_P = 0
       iSendOffset_I =-1
-      iProcTo_I     =-1
+      iProcTo_I     = iProc
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
@@ -252,7 +252,7 @@ contains
       ! fill the BufferSend and rearrange particle data
       nParticleStay = 0
       do iParticle = 1, nParticle
-         if(iProcTo_I(iParticle) == -1)then
+         if(iProcTo_I(iParticle) == iProc)then
             ! particle stays on this proc
             nParticleStay = nParticleStay + 1
             iBlock_I(  nParticleStay) = iBlock_I(  iParticle)
@@ -320,7 +320,7 @@ contains
          State_VI(:, nParticleStay + iParticle) = &
               BufferRecv_I(iRecvOffset+1 : iRecvOffset+nVar)
          iBlock_I(   nParticleStay + iParticle) = &
-              BufferRecv_I(iRecvOffset+nVar+1)
+              nint(BufferRecv_I(iRecvOffset+nVar+1))
          iRecvOffset = iRecvOffset + nVar + 1
       end do
     end subroutine pass_this_sort
