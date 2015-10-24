@@ -1391,7 +1391,6 @@ contains
     ! can be interpolated using the data in the block iBlock at the
     ! given processor, with the ghost cell values included, if needed
     !/
-    
     use BATL_interpolate_amr, ONLY:find_block_to_interpolate_gc
     !\
     ! INPUTS:
@@ -1407,12 +1406,7 @@ contains
     !\
     !Generalized Coordinates
     !/
-    real    :: Coord_D(MaxDim)
-    real    :: CoordTree_D(MaxDim)       ! Normalized gen coords
-    !\
-    ! Used in normalization
-    !/
-    real    :: CoordTreeSize_D(MaxDim) 
+    real    :: Coord_D(MaxDim) 
     !\
     !Direction along which the point goes out of the block inner part
     !/
@@ -1424,119 +1418,70 @@ contains
     else
        call xyz_to_coord(Xyz_D, Coord_D)
     end if
-    !\
-    ! Figure out if the point goes out of the computational domain
-    !/
-    CoordTreeSize_D = CoordMax_D - CoordMin_D
-    !\
-    ! Calculate normalized per (CoordMax_D-CoordMin_D) coordinates 
-    ! for tree search
-    !/
-    CoordTree_D = (Coord_D - CoordMin_D)/CoordTreeSize_D
+   
     !\
     ! For periodic boundary conditions fix the input coordinate if
     ! beyond the tree bounadaries
     !/
-    where(IsPeriodic_D)CoordTree_D = modulo(CoordTree_D, 1.0)
+    where(IsPeriodic_D(1:nDim))Coord_D(1:nDim) = modulo(&
+         Coord_D(1:nDim)    - CoordMin_D(1:nDim),&
+         CoordMax_D(1:nDim) - CoordMin_D(1:nDim)) + CoordMin_D(1:nDim)
+         
     !\
-    ! Check specific boundary conditions for particular geometries
+    ! Figure out if the point goes out of the computational domain
     !/
-    if(IsLatitudeAxis)then
-       !\
-       !spherical: r, lon, lat coordinates
-       !/
-       if(CoordTree_D(3) > 1.0)then
-          !\
-          ! reflect third coordinate, 
-          ! add half of full range to the second one.
-          !/
-          CoordTree_D(3) = 2.0 - CoordTree_D(3) 
-          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
-       elseif(CoordTree_D(3) < 0.0)then
-          !\
-          ! reflect third coordinate, 
-          ! add half of full range to the second one.
-          !/
-          CoordTree_D(3) = -CoordTree_D(3) 
-          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
-       end if
-    elseif(IsSphericalAxis)then
-       !\
-       ! spherical: r, theta, phi
-       !/
-       if(CoordTree_D(2) > 1.0)then
-          !\
-          ! reflect second coordinate, 
-          ! add half of full range to the third one.
-          !/
-          CoordTree_D(2) = 2.0 - CoordTree_D(2) 
-          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
-       elseif(CoordTree_D(2) < 0.0)then
-          !\
-          ! reflect second coordinate, 
-          ! add half of full range to the third one.
-          !/
-          CoordTree_D(2) = -CoordTree_D(2) 
-          CoordTree_D(3) = modulo(CoordTree_D(3) + 0.50, 1.0)
-       end if
-    elseif(IsCylindricalAxis)then
-       !\
-       ! cylindrical: r, phi, z
-       !/
-       if(CoordTree_D(1) < 0.0)then
-          !\
-          ! reflect first coordinate, 
-          ! add half of full range to the second one.
-          !/
-          CoordTree_D(1) = -CoordTree_D(1) 
-          CoordTree_D(2) = modulo(CoordTree_D(2) + 0.50, 1.0)
-       end if
-    end if
-    IsBoundary = any(CoordTree_D < 0.0 .or. CoordTree_D >= 1.0)
+    IsBoundary = any(Coord_D(1:nDim) < CoordMin_D(1:nDim)&
+         .or. Coord_D(1:nDim) >= CoordMax_D(nDim))
     if(IsBoundary)then
        IsPossible = .false.
        iPeOut = Unset_; iBlockOut = Unset_
        RETURN
     end if
-    Coord_D = CoordTree_D*CoordTreeSize_D + CoordMin_D 
-    !\
-    ! Check if the block is suitable to interpolate with ghost cells
-    !/
-    iShift_D(1:nDim) = (Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlock)    &
-         - 0.50*CellSize_DB(1:nDim,iBlock))/(CellSize_DB(1:nDim,iBlock) &
-         *(nIJK_D(1:nDim)-1))
-    if(all(iShift_D(1:nDim)==0))then
-       !The point falls into an inner part of block
-       IsPossible = .true.
-    elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
-                               min(0,iShift_D(2)):max(0,iShift_D(2)),&
-                               min(0,iShift_D(3)):max(0,iShift_D(3)),&
-                               iBlock)==1))then
+    if(Unused_B(iBlock))then
        !\
-       ! The information in the ghost cells is required, but missing.
-       !/ 
+       !This may happen if the block is moved to another PE in the 
+       !course of load balancing (while particles are not moved) 
        IsPossible = .false.
-    elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
-                               min(0,iShift_D(2)):max(0,iShift_D(2)),&
-                               min(0,iShift_D(3)):max(0,iShift_D(3)),&
-                               iBlock)==-1))then
-       !\
-       ! We need to interpolate using ghostcells even if the point is 
-       ! in the first layer of ghostcells
-       !/
-       IsPossible = all(&
-            Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock)    &
-            -CellSize_DB(1:nDim,iBlock) .and.&
-            Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock)    &
-            +CellSize_DB(1:nDim,iBlock))
     else
        !\
-       ! We interpolate using ghostcells only if the point is 
-       ! in the physical block
+       ! Check if the block is suitable to interpolate with ghost cells
        !/
-       IsPossible = all(&
-            Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock).and.&
-            Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock))
+       iShift_D(1:nDim) = floor((Coord_D(1:nDim) - CoordMin_DB(1:nDim,iBlock)&
+            - 0.50*CellSize_DB(1:nDim,iBlock))/(CellSize_DB(1:nDim,iBlock) &
+            *(nIJK_D(1:nDim) - 1)))
+       if(all(iShift_D(1:nDim)==0))then
+          !The point falls into an inner part of block
+          IsPossible = .true.
+       elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
+                                  min(0,iShift_D(2)):max(0,iShift_D(2)),&
+                                  min(0,iShift_D(3)):max(0,iShift_D(3)),&
+                                  iBlock)==1))then
+          !\
+          ! The required information in the ghost cells is missing.
+          !/ 
+          IsPossible = .false.
+       elseif(any(DiLevelNei_IIIB(min(0,iShift_D(1)):max(0,iShift_D(1)),&
+                                  min(0,iShift_D(2)):max(0,iShift_D(2)),&
+                                  min(0,iShift_D(3)):max(0,iShift_D(3)),&
+                                  iBlock)==-1))then
+          !\
+          ! We need to interpolate using ghostcells even if the point is 
+          ! inside the first layer of ghostcells
+          !/
+          IsPossible = all(&
+               Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock)    &
+               -CellSize_DB(1:nDim,iBlock) .and.&
+               Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock)    &
+               +CellSize_DB(1:nDim,iBlock))
+       else
+          !\
+          ! We interpolate using ghostcells only if the point is 
+          ! inside the physical block
+          !/
+          IsPossible = all(&
+               Coord_D(1:nDim) >= CoordMin_DB(1:nDim,iBlock).and.&
+               Coord_D(1:nDim) <  CoordMax_DB(1:nDim,iBlock))
+       end if
     end if
     if(IsPossible)then
        iPeOut = Unset_; iBlockOut = Unset_
