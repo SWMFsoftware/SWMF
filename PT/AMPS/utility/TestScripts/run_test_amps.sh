@@ -112,7 +112,7 @@ cd ..
 #module load mpi-openmpi/1.6.5-intel;        <#
 
 #>Stampede ####################################
-#module load comp-intel/2015.0.090;           #
+#module load intel/15.0.2;                    #
 #module load mvapich2/2.1;                   <#
 
 
