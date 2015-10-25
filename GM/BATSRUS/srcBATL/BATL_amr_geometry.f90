@@ -681,7 +681,7 @@ contains
     Area % NameShape = NameShape
 
     ! The 'all' types does not need any parameters
-    if(NameShape == 'all') RETURN
+    if(NameShape == 'all' .or. NameShape == 'usergeo') RETURN
 
     ! Read center of area if needed
     if(DoReadAreaCenter)then
