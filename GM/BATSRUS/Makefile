@@ -91,7 +91,7 @@ BATSRUS:
 	cd ${EMPIRICALEEDIR}; $(MAKE) LIB
 	cd srcBATL; $(MAKE) LIB
 	cd src; $(MAKE) LIB
-	cd src; $(MAKE) BATSRUS
+	cd src; make BATSRUS
 
 CRASH:
 	cd ${SHAREDIR}; $(MAKE) LIB
@@ -102,14 +102,14 @@ CRASH:
 	cd ${CRASHDIR}; $(MAKE) LIB
 	cd srcBATL; $(MAKE) LIB
 	cd src; $(MAKE) LIB
-	cd src; $(MAKE) CRASH
+	cd src; make CRASH
 
 NOMPI:
 	cd util/NOMPI/src; $(MAKE) LIB
 
 PIDL:
 	cd ${SHAREDIR}; $(MAKE) LIB
-	cd srcPostProc; $(MAKE) PIDL
+	cd srcPostProc; make PIDL
 	@echo ' '
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
@@ -122,7 +122,7 @@ PSPH:
 
 SNAPSHOT:
 	cd ${SHAREDIR}; $(MAKE) LIB
-	cd srcPostProc; $(MAKE) SNAPSHOT
+	cd srcPostProc; make SNAPSHOT
 	@echo ' '
 	@echo Program SNAPSHOT has been brought up to date.
 	@echo ' '
@@ -140,14 +140,12 @@ TIME_CONV:
 	@echo ' '
 
 # The MACHINE variable holds the machine name for which scripts should
-# be copied to the run directory when it is created.  This is used mostly
-# when several different machines have the same operating system,
-# but they require different batch queue scripts.
-# If MACHINE is empty or not defined, all scripts for the current OS will
-# be copied.
-#
-# The default is the short name of the current machine
+# be copied from share/JobScripts to the run directory when it is created. 
+# The default is the short name of the current machine with the trailing
+# numbers removed (so that 'pfe23' and 'pfe20' are all converted to 'pfe')
 MACHINE = `hostname | sed -e 's/\..*//;s/[0-9]*$$//'`
+
+# Default component
 COMPONENT = GM
 
 rundir:
