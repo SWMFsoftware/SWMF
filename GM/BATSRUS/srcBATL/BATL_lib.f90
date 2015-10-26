@@ -10,9 +10,9 @@ module BATL_lib
   use BATL_tree
   use BATL_geometry
   use BATL_grid
+  use BATL_region
   use BATL_amr
   use BATL_amr_criteria
-  use BATL_amr_geometry
   use BATL_pass_cell
   use BATL_pass_face
   use BATL_pass_node
@@ -91,8 +91,8 @@ module BATL_lib
   public:: calc_error_amr_criteria, set_amr_geometry
   public:: masked_amr_criteria,init_amr_criteria
 
-  ! Inherited from BATL_amr_geometry
-  public:: read_amr_geometry
+  ! Inherited from BATL_region
+  public:: read_region_param, region_signed_indexes, block_inside_regions
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
@@ -112,16 +112,7 @@ contains
   !============================================================================
   subroutine init_batl(CoordMinIn_D, CoordMaxIn_D, MaxBlockIn, &
        TypeGeometryIn, IsPeriodicIn_D, nRootIn_D, UseRadiusIn, UseDegreeIn, &
-       rGenIn_I, UseUniformAxisIn, user_amr_geometry, UseFDFaceFluxIn, &
-       iVectorVarIn_I)
-
-    interface
-       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
-         integer, intent(in) :: iBlock, iArea
-         logical,intent(out) :: DoRefine
-       end subroutine user_amr_geometry
-    end interface
-    optional :: user_amr_geometry
+       rGenIn_I, UseUniformAxisIn, UseFDFaceFluxIn, iVectorVarIn_I)
 
     integer, intent(in):: MaxBlockIn         ! max number of blocks/processor
     real,    intent(in):: CoordMinIn_D(nDim) ! min (gen) coordinates of domain
@@ -191,7 +182,7 @@ contains
     call distribute_tree(DoMove=.true.)
     call create_grid
     call init_amr
-    call init_amr_criteria(user_amr_geometry=user_amr_geometry)
+    call init_amr_criteria
 
     if(present(iVectorVarIn_I))then
        allocate(iVectorVar_I(size(iVectorVarIn_I)))
