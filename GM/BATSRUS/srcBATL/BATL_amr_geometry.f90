@@ -1,11 +1,18 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-module BATL_amr_geometry
+module BATL_region
+
+  ! Define an array of geometric regions (areas)
+  ! that can be used for AMR and other criteria.
+  ! For AMR regions defined by the #GRIDLEVEL/RESOLUTION commands
+  ! also store the required grid resolution/level.
+  ! Also read the initial grid refinement resolution/level.
 
   use BATL_mpi,  ONLY: iProc
   use BATL_size, ONLY: nI, nJ, nK, nDim, j0_, nJp1_, k0_, nKp1_
-  use BATL_geometry, ONLY: Dim2_, Dim3_, IsPeriodic_D, DomainSize_D
+  use BATL_geometry, ONLY: &
+       Dim2_, Dim3_, IsPeriodic_D, DomainSize_D
 
   implicit none
 
@@ -13,210 +20,262 @@ module BATL_amr_geometry
 
   private ! except
 
-  public:: read_amr_geometry
-  public:: init_amr_geometry
-  public:: apply_amr_geometry
-  public:: clean_amr_geometry
-  public:: block_inside_region
-  public:: region_value  ! return a 0 to 1 real number
+  public:: read_region_param
+  public:: init_region
+  public:: clean_region
+  public:: i_signed_region
+  public:: region_signed_indexes
+  public:: block_inside_regions
+  public:: points_inside_region
 
-  ! compatible with BATSRUS way of doing AMR
-  logical, public :: IsBatsrusAmr = .true. 
+  ! Maximum number of geometric areas
+  integer, public, parameter :: MaxArea = 100
 
-  ! Masking criteria for use
-  ! This belongs more in batl_amr_criteria but also
-  ! needed here so it is declared here.
-  logical, public, allocatable :: UseCrit_IB(:,:)
-  logical, public, allocatable :: UseCrit_B(:)
-
-  ! We have only two values to decide the criteria
-  ! for geometric refinement: cell size (1) and AMR level (2)
-  integer, parameter, public :: nGeoCrit = 2
-
-  ! Number of geometrical criteria actually used
-  integer, public :: nCritGeoUsed = 0
+  ! Number of areas defined
+  integer, public :: nArea = 0
 
   ! Number of geometrical criteria from #GRIDLEVEL/RESOLUTION commands
   integer, public :: nCritGrid    = 0
 
-  ! Number of geometric criteria from #AMRCRITERIALEVEL/RESOLUTION commands
-  integer, public :: nCritDxLevel = 0
-
   ! we have read in new data from PARAM.in
   logical, public :: IsNewGeoParam =.false.
 
-  integer, public, parameter :: MaxArea = 100, lNameArea = 20
+  integer, parameter:: lNameArea = 20, lNameRegion = 30
 
   type, public :: AreaType 
-     character(lNameArea) :: NameRegion
-     character(lNameArea) :: NameShape
-     real                 :: Resolution
-     integer              :: Level
-     real                 :: Center_D(nDim)
-     real                 :: Size_D(nDim)
-     real                 :: Radius1
-     real                 :: Taper
-     logical              :: DoRotate
-     real, allocatable    :: Rotate_DD(:,:)
+     character(lNameRegion):: NameRegion
+     character(lNameArea)  :: NameShape
+     real                  :: Resolution
+     integer               :: Level
+     real                  :: Center_D(nDim)
+     real                  :: Size_D(nDim)
+     real                  :: Radius1
+     real                  :: Taper
+     logical               :: DoRotate
+     real, allocatable     :: Rotate_DD(:,:)
+     logical               :: IsSimple
   end type AreaType
 
-  ! index zero contains the 'all' area
-  type(AreaType), target, public :: AreaGeo_I(0:MaxArea)
+  ! List of all geometric regions defined
+  type(AreaType), target, public :: AreaGeo_I(1:MaxArea)
 
-  ! Choosing which blocks we want to refine is based on a list of criteria 
-  ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
-  ! can be external or calculated internally by estimating the 
-  ! numerical errors (calc_error_amr_criteria) based on the state variables.
-
-  ! Storing All the AMR criteria
-  integer, public:: nAmrCrit = 0
-  integer, public:: nAmrCritUsed = 0
-  real, public, allocatable:: AmrCrit_IB(:,:)
-
-  real,    public, allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
-  integer, public, allocatable:: iVarCritAll_I(:),iResolutionLimit_I(:)
-  real,    public, allocatable:: ResolutionLimit_I(:)
-  !type(AreaType), public, allocatable :: AreaAll_I(:)
-  integer, public, allocatable:: iAreaIdx_II(:,:)
-
-  ! Storing names of areas for each criteria given by #AMRCRITERIA.....
-  integer, public, allocatable :: nAreaPerCritAll_I(:)
+  ! the area being processed (for easier access)
+  type(AreaType), pointer, public:: Area
 
   ! Local variables
-
   real    :: InitialResolution = -1.0
-  integer :: initial_refine_levels = 0
-  real    :: AreaResolution  = 0.0
-  integer :: nLevelArea = 0
+  integer :: nInitialLevel = 0
 
-  ! Name of area being processed
-  character(len=lNameArea) :: NameShape
+  ! Name of shape being processed
+  character(lNameArea) :: NameShape
 
-  ! index for the parallel and two perpendicular directions
+  ! index for the parallel and one or two perpendicular directions
   integer:: iPar
   integer, allocatable:: iPerp_I(:)
+  real,    allocatable:: SlopePerp_D(:)
+
+  ! Allocatable storage
+  logical, allocatable:: IsInsideOld_I(:)
+  real,    allocatable:: ValueOld_I(:), Xyz_DI(:,:), Coord_DI(:,:)
+  real,    allocatable:: Norm_DI(:,:)
+  real,    allocatable:: Corner_DI(:,:), CornerNorm_DI(:,:)
 
 contains
   !============================================================================
-  subroutine init_amr_geometry
+  subroutine init_region
 
     use BATL_grid,         ONLY: CoordMin_D,CoordMax_D
-    use BATL_geometry,     ONLY: x_
+    use BATL_geometry,     ONLY: x_, Phi_, Theta_, IsCartesianGrid, &
+         IsLogRadius, IsGenRadius, radius_to_gen
     use BATL_tree,         ONLY: nRoot_D
+    use ModNumConst,       ONLY: cDegToRad
 
-    integer :: iGeo, iVar, iGeoAll
-    logical, parameter :: DoTest=.false.
-    character(len=*), parameter:: NameSub = 'init_amr_geometry'
+    integer :: iGeo, iVar, iCrit
+    real:: rMin, rMax
+    logical, parameter :: DoTest=.true.
+    character(len=*), parameter:: NameSub = 'init_region'
     !-------------------------------------------------------------------------
-    ! Fix resolutions (this depends on domain size set in BATL_grid)
-    if(InitialResolution > 0.0) initial_refine_levels = nint( &
+    ! Set initial resolutions (this depends on domain size set in BATL_grid)
+    if(InitialResolution > 0.0) nInitialLevel = nint( &
          alog(((CoordMax_D(x_) - CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
          / InitialResolution) / alog(2.0) )
 
-    do iGeo = 1, nCritGeoUsed
-       AreaResolution = AreaGeo_I(iGeo) % Resolution
+    ! Set IsSimple for all the areas
+    do iGeo = 1, nArea
+       Area => AreaGeo_I(iGeo)
+       Area%IsSimple = .false.
+       ! generalized coordinates 
+       if(Area%NameShape == "brick_gen")then
+          Area%IsSimple = .true.
+          CYCLE
+       end if
+       if(.not.IsCartesianGrid)CYCLE
+       select case(Area%NameShape(1:4))
+       case('sphe','shel','bric','cyli','ring')
+          Area%IsSimple = .not.Area%DoRotate
+       end select
+    end do
 
-       if(AreaResolution <= 0.0) then
-          ! Negative value is understood as a "grid level"
-          nLevelArea = ceiling(abs(AreaResolution))
-          AreaGeo_I(iGeo) % Level = sign(nLevelArea, nint(AreaResolution))
+    ! Fix generalized coordinates for "box_gen"/"brick_gen"
+    do iGeo = 1, nArea
+       Area => AreaGeo_I(iGeo)
+       if( Area % NameShape /= "brick_gen") CYCLE
+
+       ! Rename area to indicate that it has been processed
+       Area%NameShape = "brick_coord"
+
+       ! Recalculate area center and size in generalized coordinates
+       if(IsLogRadius .or.IsGenRadius)then
+          rMin = max(1e-30, Area % Center_D(1) - Area % Size_D(1))
+          rMax = max(1e-30, Area % Center_D(1) + Area % Size_D(1))
+          if(IsLogRadius) rMin = log(rMin)
+          if(IsLogRadius) rMax = log(rMax)
+          if(IsGenRadius) call radius_to_gen(rMin)
+          if(IsGenRadius) call radius_to_gen(rMax)
+          Area % Center_D(1) = 0.5*(rMax + rMin)
+          Area % Size_D(1)   = 0.5*(rMax - rMin)
+       endif
+
+       ! Convert degrees to radians
+       if(Phi_ > 1)   Area%Center_D(Phi_)  = Area%Center_D(Phi_)*cDegToRad
+       if(Phi_ > 1)   Area%Size_D(Phi_)    = Area%Size_D(Phi_)*cDegToRad
+       if(Theta_ > 1) Area%Center_D(Theta_)= Area%Center_D(Theta_)*cDegToRad
+       if(Theta_ > 1) Area%Size_D(Theta_)  = Area%Size_D(Theta_)*cDegToRad
+    end do
+
+    ! Loop over the areas defined by #GRIDLEVEL/RESOLUTION commands
+    ! That do not have a name
+    do iGeo = 1, nArea
+       Area => AreaGeo_I(iGeo)
+
+       ! Exclude named areas defined by #REGION / #AMRREGION commands
+       if( Area%NameRegion /= "NULL") CYCLE
+
+       ! Set level and resolution based on the read value
+       if(Area%Level < 0)then
           ! Set actual resolution
-          AreaGeo_I(iGeo) % Resolution = (CoordMax_D(x_)-CoordMin_D(x_)) &
-               / (nRoot_D(x_) * nI * 2.0**nLevelArea)
+          Area%Resolution = (CoordMax_D(x_)-CoordMin_D(x_)) &
+               / (nRoot_D(x_) * nI * 2.0**Area%Level)
        else
-          AreaGeo_I(iGeo) % Level = ceiling( &
+          Area%Level = ceiling( &
                alog(((CoordMax_D(x_)-CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
-               / AreaResolution) / alog(2.0) )
+               / Area%Resolution) / alog(2.0) )
        end if
 
-    end do
-
-    iGeo = 0
-    do iGeoAll = 1, nCritGeoUsed
-       iVar = 1
-       ! exclude named areas
-       if( AreaGeo_I(iGeoAll) % NameRegion /= "NULL") CYCLE
-       iGeo = iGeo+1
-       if(AreaGeo_I(iGeoAll) % Level  < 0) then
-          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Level
-          CoarsenCritAll_I(nAmrCritUsed+iGeo) = &
-               RefineCritAll_I(nAmrCritUsed+iGeo)-1
-          iVar = 2
-          ResolutionLimit_I(nAmrCritUsed+iGeo) = &
-               -abs(AreaGeo_I(iGeo)%Level)
-       else
-          RefineCritAll_I(nAmrCritUsed+iGeo)  = AreaGeo_I(iGeoAll)%Resolution 
-          CoarsenCritAll_I(nAmrCritUsed+iGeo) = AreaGeo_I(iGeoAll)%Resolution/2.0
-          iVar = 1
-          ResolutionLimit_I(nAmrCritUsed+iGeo) = &
-               abs(AreaGeo_I(iGeo)%Resolution)
-       end if
-
-       ! All geometrical criteia is a comparison to grid values
-       if(nAmrCritUsed  > 0) then
-          iVarCritAll_I(nAmrCritUsed+iGeo) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
-          iResolutionLimit_I(nAmrCritUsed+iGeo) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))+iVar
-       else
-          iVarCritAll_I(iGeo) = iVar   
-          iResolutionLimit_I(nAmrCritUsed+iGeo) = iVar
-       end if
-
-    end do
-
-    ! Add geometric info for BATSRUS AMR type of params
-    iGeo = 1
-    do iGeoAll = 1, nCritGeoUsed
-       if( AreaGeo_I(iGeoAll) % NameRegion /= "NULL") CYCLE
-       iAreaIdx_II(1,nAmrCritUsed+iGeo) = iGeoAll
-       nAreaPerCritAll_I(nAmrCritUsed+iGeo) = 1
-       iGeo = iGeo + 1
     end do
 
     if(DoTest .and. iProc == 0) then
-       do iGeoAll = 0, nCritGeoUsed
-          write(*,*) NameSub,' iGeoAll=', iGeoAll
-          write(*,*) "Region name      :: ", AreaGeo_I(iGeoAll)%NameRegion
-          write(*,*) "Shape name       :: ", AreaGeo_I(iGeoAll)%NameShape
-          write(*,*) "Region resolution:: ", AreaGeo_I(iGeoAll)%Resolution
-          write(*,*) "Region level     :: ", AreaGeo_I(iGeoAll)%Level
-          write(*,*) "Region Center_D  :: ", AreaGeo_I(iGeoAll)%Center_D
-          write(*,*) "Region Size_D    :: ", AreaGeo_I(iGeoAll)%Size_D
-          write(*,*) "Region Radius1   :: ", AreaGeo_I(iGeoAll)%Radius1
-          write(*,*) "Area Taper       :: ", AreaGeo_I(iGeoAll)%Taper
-          write(*,*) "Area DoRotate    :: ", AreaGeo_I(iGeoAll)%DoRotate
-          if(AreaGeo_I(iGeoAll)%DoRotate) write(*,*) &
-               "Area Rotate_DD :: ", AreaGeo_I(iGeoAll)%Rotate_DD
-          write(*,*) "--------------------"
+       do iGeo = 1, nArea
+          call show_region(iGeo, NameSub)
+          write(*,*) "-----------------------"
        end do
     end if
 
     IsNewGeoParam =.false.
 
-  end subroutine init_amr_geometry
+  end subroutine init_region
 
   !===========================================================================
-  subroutine clean_amr_geometry
+  subroutine clean_region
 
-    if(allocated(UseCrit_IB))       deallocate(UseCrit_IB)
-    if(allocated(UseCrit_B))        deallocate(UseCrit_B)
-    if(allocated(AmrCrit_IB))       deallocate(AmrCrit_IB)
-    if(allocated(CoarsenCritAll_I)) deallocate(CoarsenCritAll_I)
-    if(allocated(RefineCritAll_I))  deallocate(RefineCritAll_I)
-    if(allocated(ResolutionLimit_I))deallocate(ResolutionLimit_I)
-    if(allocated(iVarCritAll_I))    deallocate(iVarCritAll_I)
-    !if(allocated(AreaAll_I))       deallocate(AreaAll_I)
+    if(allocated(iPerp_I))        deallocate(iPerp_I)
+    if(allocated(SlopePerp_D))    deallocate(SlopePerp_D)
+    if(allocated(IsInsideOld_I))  deallocate(IsInsideOld_I)
+    if(allocated(ValueOld_I))     deallocate(ValueOld_I)
+    if(allocated(Xyz_DI))         deallocate(Xyz_DI)
+    if(allocated(Coord_DI))       deallocate(Coord_DI)
+    if(allocated(Norm_DI))        deallocate(Norm_DI)
+    if(allocated(Corner_DI))      deallocate(Corner_DI)
+    if(allocated(CornerNorm_DI))  deallocate(CornerNorm_DI)
 
-    ! nCritGeoUsed        = 0
+    nArea                 = 0
     IsNewGeoParam         = .true.
     InitialResolution     = -1.0 
-    initial_refine_levels = 0
-    AreaResolution        = 0.0
-    nAmrCrit              = 0
-    nAmrCritUsed          = 0
+    nInitialLevel         = 0
 
-  end subroutine clean_amr_geometry
+  end subroutine clean_region
+  !============================================================================
+  subroutine show_region(iRegion, String)
+
+    integer, intent(in):: iRegion
+    character(len=*), intent(in):: String
+
+    type(AreaType), pointer:: Area1
+    !------------------------------------------------------------------------
+    Area1 => AreaGeo_I(iRegion)
+    write(*,*) "show_region for ", String,' iRegion=', iRegion
+    write(*,*) "Region name      :: ", Area1%NameRegion
+    write(*,*) "Shape name       :: ", Area1%NameShape
+    write(*,*) "Region resolution:: ", Area1%Resolution
+    write(*,*) "Region level     :: ", Area1%Level
+    write(*,*) "Region Center_D  :: ", Area1%Center_D
+    write(*,*) "Region Size_D    :: ", Area1%Size_D
+    write(*,*) "Region Radius1   :: ", Area1%Radius1
+    write(*,*) "Region Taper     :: ", Area1%Taper
+    write(*,*) "Region DoRotate  :: ", Area1%DoRotate
+    if(Area1%DoRotate) write(*,*) &
+         "Region Rotate_DD :: ",       Area1%Rotate_DD
+    write(*,*) "Region IsSimple  :: ", Area1%IsSimple
+  end subroutine show_region
+  !============================================================================
+
+  integer function i_signed_region(NameRegionIn)
+
+    ! Return the index of the region matching NameRegionIn.
+    ! NameRegionIn may start with a '+' or '-' character.
+
+    character(len=*), intent(in):: NameRegionIn
+
+    character(lNameRegion):: NameRegion
+    integer:: iArea, iSign
+
+    character(len=*), parameter:: NameSub = 'i_signed_region'
+    !=========================================================================
+    if(NameRegionIn(1:1) == "-") then
+       iSign = -1
+       NameRegion = NameRegionIn(2:)
+    elseif (NameRegionIn(1:1) == "+") then
+       NameRegion = NameRegionIn(2:)
+       iSign = 1
+    else
+       NameRegion = NameRegionIn
+       iSign = 1
+    end if
+
+    do iArea = 1, nArea
+       if(NameRegion == AreaGeo_I(iArea)%NameRegion) then
+          i_signed_region = iSign*iArea
+          RETURN
+       end if
+    end do
+
+    call CON_stop(NameSub//' could not find NameRegion='//NameRegionIn)
+
+  end function i_signed_region
+  !============================================================================
+  subroutine region_signed_indexes(StringRegion, iRegion_I)
+
+    use ModUtilities, ONLY: split_string
+
+    ! Create an array of signed region indexes from the region names
+    ! listed in StringRegion. The names can have an optional "+" or "-"
+    ! sign in front of them, which will be stored as the sign of the index.
+
+    character(len=*), intent(in):: StringRegion
+    integer, allocatable, intent(inout):: iRegion_I(:)
+
+    integer, parameter:: MaxName = 100
+    integer:: nName, iName
+    character(lNameRegion):: NameRegion_I(MaxName)
+    !-------------------------------------------------------------------------
+    call split_string(StringRegion, MaxName, NameRegion_I, nName)
+    if(allocated(iRegion_I)) deallocate(iRegion_I)
+    allocate(iRegion_I(nName))
+    do iName = 1, nName
+       iRegion_I(iName) = i_signed_region(NameRegion_I(iName))
+    end do
+
+  end subroutine region_signed_indexes
   !============================================================================
   subroutine set_i_par_perp
 
@@ -245,320 +304,10 @@ contains
     if(nDim == 3) iPerp_I(2) = 6 - iPar - iPerp_I(1)
 
   end subroutine set_i_par_perp
-  !============================================================================
-  subroutine apply_amr_geometry(iBlock, Area, UseBlock, DoCalcCritIn,&
-       user_amr_geometry)
-
-    !DESCRIPTION:
-    ! Set UseBlock to .true. if block iBlock touches the region
-    ! described by Area.
-    ! if the area has a finer resolution than the block
-
-    ! Set UseCrit_IB to true  for block touching the predefined areas
-    ! if the area has a finer resolution than the block
-    ! Also return max cell size for the block in CritGeo_IB
-
-    ! WARNING
-    ! user_specify_refinement,     not suported
-    ! currentsheet,                not suported
-
-    use BATL_geometry, ONLY: gen_to_radius,r_, Phi_, Theta_,  &
-         IsCartesianGrid, IsLogRadius, IsGenRadius, IsRLonLat, &
-         IsCylindrical
-    use BATL_grid,     ONLY: Xyz_DNB
-    use BATL_size,     ONLY: nINode, nJNode, nKNode, nDim
-    use ModNumConst,   ONLY: cTiny, cRadToDeg
-    use BATL_grid,     ONLY: CoordMin_DB, CoordMax_DB
-
-    interface
-       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
-         integer, intent(in) :: iBlock, iArea
-         logical,intent(out) :: DoRefine
-       end subroutine user_amr_geometry
-    end interface
-    optional :: user_amr_geometry
-
-    integer, intent(in)       :: iBlock
-    type(AreaType),intent(in) :: Area
-    logical, intent(out)      :: UseBlock
-    logical, intent(in), optional :: DoCalcCritIn
-
-    ! LOCAL VARIABLES:
-    logical :: DoRefine
-    integer, parameter :: nCorner = 2**nDim
-    real, allocatable, save:: Corner_DI(:,:)
-    real     :: DistMin_D(nDim), DistMax_D(nDim), Radius1Sqr
-    integer  :: i, j, k, iDim, iCorner
-
-    ! These variables are needed for generalized coordinates
-    real :: Xyz_D(nDim)
-    real, dimension(nINode,nJNode,nKNode):: x_N, y_N, z_N, R2_N
-
-    character(len=*), parameter:: NameSub = 'apply_amr_geometry'
-    logical, parameter:: DoTest = .false.
-
-    logical :: DoCalcCrit
-    !--------------------------------------------------------------------------
-    !if(nCritGeoUsed <= 0) RETURN
-
-    DoCalcCrit = .true.
-    if(present(DoCalcCritIn)) DoCalcCrit =  DoCalcCritIn
-
-    if(DoCalcCrit) call calc_crit(iBlock)
-
-    UseBlock = .false.
-
-    NameShape = Area % NameShape
-
-    if(DoTest) write(*,*) NameSub,'NameShape, Resolution=',&
-         ' ',trim(NameShape),' ',Area % Resolution
-
-    ! Treat special cases first
-    select case(NameShape)
-    case('all', 'initial')
-       UseBlock = .true.
-       RETURN
-    case('usergeo')
-       if(present(user_amr_geometry)) then
-          call user_amr_geometry(iBlock, -1, UseBlock)
-          RETURN
-       else
-          call CON_stop(NameSub //' ERROR: need user_amr_geometry')
-       end if
-    end select
-
-    if(.not.allocated(Corner_DI)) allocate(Corner_DI(nDim,nCorner))
-
-    ! Blocks corner coordinates
-    Corner_DI(:,1)       = CoordMin_DB(1:nDim,iBlock)
-    Corner_DI(:,nCorner) = CoordMax_DB(1:nDim,iBlock)
-    if(nDim==2)then
-       Corner_DI(:,2) = (/ CoordMax_DB(1,iBlock), CoordMin_DB(2,iBlock) /)
-       Corner_DI(:,3) = (/ CoordMin_DB(1,iBlock), CoordMax_DB(2,iBlock) /)
-    else if(nDim == 3)then
-       Corner_DI(:,2) = (/ CoordMax_DB(1,iBlock), &
-            CoordMin_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
-       Corner_DI(:,3) = (/ CoordMin_DB(1,iBlock), &
-            CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
-       Corner_DI(:,4) = (/ CoordMax_DB(1,iBlock), &
-            CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
-       Corner_DI(:,5) = (/ CoordMin_DB(1,iBlock), &
-            CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
-       Corner_DI(:,6) = (/ CoordMax_DB(1,iBlock), &
-            CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
-       Corner_DI(:,7) = (/ CoordMin_DB(1,iBlock), &
-            CoordMax_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
-    end if
-
-    ! Check if it is a brick defined in generalized coordinates
-    if(NameShape == "brick_gen" .and. .not.IsCartesianGrid)then
-
-!!! TO BE IMPROVED !!!
-
-       ! Convert angles to degrees and ln(r)/genr to r
-       ! Make sure that phi=360 is not 0 but really 360
-       if(IsLogRadius) Corner_DI(r_,:)     = exp(Corner_DI(r_,:))
-       if(IsGenRadius) then
-          do iCorner = 1, nCorner
-             call gen_to_radius(Corner_DI(r_,iCorner))
-          end do
-       endif
-       if(IsRLonLat)then
-          Corner_DI(Phi_,:)   = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
-          where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
-          where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
-          Corner_DI(Theta_,:) = Corner_DI(Theta_,:)*cRadToDeg
-       else if(IsCylindrical)then
-          Corner_DI(Phi_,:) = modulo(Corner_DI(Phi_,:)*cRadToDeg, 360.0)
-          where(Corner_DI(Phi_,3:4) < cTiny) Corner_DI(Phi_,3:4) = 360.0
-          where(Corner_DI(Phi_,7:8) < cTiny) Corner_DI(Phi_,7:8) = 360.0
-       endif       
-    end if
-
-    if(DoTest) write(*,*) "post Corner_DI = ",Corner_DI
-
-    ! Shift corner coordinates to the center of area
-    do iCorner = 1, nCorner
-       Corner_DI(:,iCorner) = &
-            Corner_DI(:,iCorner) - Area % Center_D
-    end do
-
-    ! Rotate corners into the orientation of the area if required
-    if(Area % DoRotate) &
-         Corner_DI = matmul(Area % Rotate_DD, Corner_DI(1:nDim,:))
-
-    ! Normalize coordinates to the size of the area in all 3 directions
-    do iCorner = 1, nCorner
-       Corner_DI(:,iCorner) = Corner_DI(:,iCorner) / Area % Size_D
-    end do
-
-    ! Calculate maximum and minimum distances in all 3 directions
-    ! Avoid rounding errors if possible
-    do iDim = 1, 3
-       DistMax_D(iDim) = (1-cTiny)*maxval(abs(Corner_DI(iDim,:)))
-
-       if( maxval(Corner_DI(iDim,:))*minval(Corner_DI(iDim,:)) <= 0.0)then
-          ! The block covers the center point in this dimension
-          DistMin_D(iDim) = 0.0
-       else
-          ! Select the point that is closer in this dimension
-          DistMin_D(iDim) = (1+cTiny)*minval(abs(Corner_DI(iDim,:)))
-       end if
-    end do
-
-    ! This occurs multiple times
-    Radius1Sqr = (Area % Radius1)**2
-
-    if(DoTest)then
-       write(*,*) NameSub,' DistMin_D=',DistMin_D
-       write(*,*) NameSub,' DistMax_D=',DistMax_D
-    end if
-
-    ! Check if this area is intersecting with the block
-    call set_i_par_perp
-    select case(NameShape)
-    case('brick', 'brick_gen')
-       DoRefine = all(DistMin_D < 1)
-    case('sphere')
-       DoRefine = sum(DistMin_D**2) < 1
-    case('shell')
-       ! Check if block intersects with the enclosing sphere
-       ! but it is not fully inside the inner sphere
-       DoRefine = sum(DistMin_D**2) < 1 .and. sum(DistMax_D**2)>Radius1Sqr
-    case('cylinderx','cylindery','cylinderz')
-       DoRefine = DistMin_D(iPar) < 1 .and. sum(DistMin_D(iPerp_I)**2) < 1
-    case('ringx', 'ringy', 'ringz')
-       ! Check if block intersects with the enclosing cylinder
-       ! but it is not fully inside the inner cylinder
-       DoRefine = DistMin_D(iPar) < 1 .and. sum(DistMin_D(iPerp_I)**2) < 1 &
-            .and. sum(DistMax_D(iPerp_I)**2) > Radius1Sqr 
-    case default
-       call CON_stop(NameSub //' ERROR: Unknown NameShape = '//NameShape)
-
-    end select
-
-    if(DoTest)write(*,*) NameSub,' DoRefine (from corners)=',DoRefine
-
-    if(DoRefine) UseBlock = .true.
-    
-    if(NameShape == 'brick_gen' .or. IsCartesianGrid) RETURN
-
-    ! Non-cartesian case
-    UseBlock = .true.
-
-    ! Check all nodes of the block
-    do k=1, nKNode; do j=1, nJNode; do i=1, nINode
-
-       ! Shift to area center
-       Xyz_D = Xyz_DNB(1:nDim,i,j,k,iBlock) - Area % Center_D
-
-       ! Rotate into area coordinates
-       if(Area % DoRotate) Xyz_D = matmul(Area % Rotate_DD, Xyz_D)
-
-       ! Rescale coordinates to the size of the area in all directions
-       Xyz_D = Xyz_D / Area % Size_D
-
-       ! We only need the absolute values of the coordinates
-       x_N(i,j,k) = abs(Xyz_D(1))
-       if(nDim>1) y_N(i,j,k) = abs(Xyz_D(Dim2_))
-       if(nDim>2) z_N(i,j,k) = abs(Xyz_D(Dim3_))
-    end do; end do; end do
-    if(nDim < 2) y_N = 0.0
-    if(nDim < 3) z_N = 0.0
-
-    select case( NameShape)
-    case('brick')
-       if(any( x_N<1.0 .and. y_N<1.0 .and. z_N<1.0) ) RETURN
-    case('sphere')
-       if(any(x_N**2 + y_N**2 + z_N**2 < 1.0) ) RETURN
-    case('shell')
-       R2_N = x_N**2 + y_N**2 + z_N**2
-       if(any(R2_N < 1.0 .and. R2_N > Radius1Sqr )) RETURN
-    case('cylinderx')
-       if(any(x_N < 1.0 .and. y_N**2+z_N**2 < 1.0 ) ) RETURN
-    case('cylindery')
-       if(any(y_N < 1.0 .and. x_N**2+z_N**2 < 1.0 ) ) RETURN
-    case('cylinderz')
-       if(any(z_N < 1.0 .and. x_N**2+y_N**2 < 1.0 ) ) RETURN
-    case('ringx')
-       R2_N = y_N**2+z_N**2
-       if(any(x_N < 1.0 .and. R2_N < 1.0 .and. R2_N > Radius1Sqr)) RETURN
-    case('ringy')
-       R2_N = x_N**2+z_N**2
-       if(any(y_N < 1.0 .and. R2_N < 1.0 .and. R2_N > Radius1Sqr)) RETURN
-    case('ringz')
-       R2_N = x_N**2+y_N**2
-       if(any(z_N < 1.0 .and. R2_N < 1.0 .and. R2_N > Radius1Sqr)) RETURN
-    case default
-       call CON_stop(NameSub //' ERROR: Unknown NameShape = '//NameShape)
-    end select
-
-    ! The block is not inside
-    UseBlock = .false.
-
-    if(DoTest) write(*,*)NameSub,' DoRefine final=',UseBlock
-
-
-  end subroutine apply_amr_geometry
 
   !============================================================================
-  subroutine calc_crit(iBlock)
-
-    use BATL_grid,     ONLY: Xyz_DNB,CellSize_DB
-    use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
-    use BATL_geometry, ONLY: IsCartesian
-    use BATL_tree,     ONLY: iNode_B, iTree_IA, Level_
-
-    integer, intent(in) :: iBlock
-
-    real    :: MaxLength
-    integer :: i,j,k
-    !-------------------------------------------------------------------------
-
-    if(IsCartesian) then
-       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))
-    else
-       ! Find the longest cell edge in the block
-       MaxLength = 0.0
-
-       ! Get maximum length squared of i-edges
-       do k = 1, nKNode; do j = 1, nJNode; do i = 2, nINode
-          MaxLength = max(MaxLength,&
-               sum((Xyz_DNB(:,i  ,j,k,iBlock) &
-               -    Xyz_DNB(:,i-1,j,k,iBlock))**2))
-       end do; end do ; end do
-
-       if(nDim >1) then
-          ! Get maximum length squared of j-edges
-          do k = 1, nKNode; do j = 2, nJNode; do i = 1, nINode
-             MaxLength = max(MaxLength, &
-                  sum((Xyz_DNB(:,i,j  ,k,iBlock) &
-                  -    Xyz_DNB(:,i,j-1,k,iBlock))**2))
-          end do; end do ; end do
-       end if
-
-       if(nDim >2) then
-          ! Get maximum length squared of k-edges
-          do k = 2, nKNode; do j = 1, nJNode; do i = 1, nINode
-             MaxLength = max(MaxLength,               &
-                  sum((Xyz_DNB(:,i,j,k  ,iBlock)      &
-                  -    Xyz_DNB(:,i,j,k-1,iBlock))**2))
-          end do; end do ; end do
-       end if
-
-       ! Get maximum length
-       MaxLength = sqrt(MaxLength)
-
-    end if
-
-    AmrCrit_IB(nAmrCrit-nGeoCrit+1:nAmrCrit,iBlock) = &
-         (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
-
-  end subroutine calc_crit
-
-  !============================================================================
-  subroutine read_amr_geometry(NameCommand, UseStrictIn, &
-       InitLevelInOut, InitResInOut)
+  subroutine read_region_param(NameCommand, UseStrictIn, &
+       nInitLevelInOut, InitResInOut)
 
     use ModReadParam,      ONLY: read_var, lStringLine
     use ModNumConst,       ONLY: cDegToRad
@@ -567,8 +316,10 @@ contains
 
     character(len=*),  intent(inout) :: NameCommand
     logical, optional, intent(in)    :: UseStrictIn
-    integer, optional, intent(inout) :: InitLevelInOut 
+    integer, optional, intent(inout) :: nInitLevelInOut 
     real,    optional, intent(inout) :: InitResInOut 
+
+    logical :: UseStrict
 
     character(len=lStringLine):: StringShape = 'all'
     real    :: RadiusArea    =0.0
@@ -580,13 +331,14 @@ contains
     logical :: DoTaperArea   = .false.
     logical :: DoStretch     = .false.
 
-    character(len=lNameArea):: NameRegion
+    character(lNameRegion):: NameRegion
     integer :: i, iDim
-    logical :: UseStrict
 
-    type(AreaType), pointer:: Area
+    real    :: AreaResolution  = 0.0
+    integer :: nLevelArea = 0
 
-    character (len=17) :: NameSub='read_amr_geometry'
+    logical, parameter:: DoTest = .true.
+    character(len=*), parameter :: NameSub='read_region_param'
     !-------------------------------------------------------------------------
 
     IsNewGeoParam =.true.
@@ -594,62 +346,69 @@ contains
     UseStrict = .true.
     if(present(UseStrictIn)) UseStrict = UseStrictIn
 
-    NameRegion ="NULL"
+    ! Default values
+    NameRegion     = 'NULL'
+    AreaResolution = 0.0
+    nLevelArea     = 0
     if(index(NameCommand, "REGION") > 0) then
        ! Read name of region for #REGION (or #AMRREGION) command
-       call read_var('NameRegion',NameRegion, IsLowerCase=.true.)
-       AreaResolution = 0
+       call read_var('NameRegion', NameRegion, IsLowerCase=.true.)
+    elseif(index(NameCommand,"RESOLUTION") > 0)then
+       ! Read grid resolution for #RESOLUTION command
+       call read_var('AreaResolution', AreaResolution) 
     else
-       ! Read grid level/resolution for #GRIDLEVEL/RESOLUTION command
-       if(index(NameCommand,"RESOLUTION") > 0)then
-          call read_var('AreaResolution', AreaResolution) 
-       else
-          call read_var('nLevelArea', nLevelArea)
-          ! Store level as a negative integer resolution.
-          AreaResolution = -nLevelArea
-       end if
+       ! Read grid level for #GRIDLEVEL command
+       call read_var('nLevelArea', nLevelArea)
+       ! Requesting 0 level refinement is meaningless
+       if(nLevelArea <= 0) RETURN
     end if
     call read_var('TypeRegion', StringShape, IsLowerCase=.true.)
-    NameShape = adjustl(StringShape)
+    StringShape = adjustl(StringShape)
 
+    ! 'init' or 'initial' means that the initial resolution is set,
+    ! and no area is created. 
     if(StringShape(1:4) == 'init')then
-       ! 'init' or 'initial' means that the initial resolution is set,
-       ! and no area is created. 
        if(AreaResolution > 0)then
           InitialResolution = AreaResolution
        else
-          initial_refine_levels = nLevelArea
+          nInitialLevel = nLevelArea
        end if
-       if(present(InitLevelInOut)) InitLevelInOut = initial_refine_levels
+       if(present(nInitLevelInOut)) nInitLevelInOut = nInitialLevel
        if(present(InitResInOut)) InitResInOut = AreaResolution
        RETURN
     end if
 
-    nCritGeoUsed = nCritGeoUsed + 1
-    Area => AreaGeo_I(nCritGeoUsed)
-
-    if(NameRegion == "NULL") nCritGrid = nCritGrid + 1
-
-    if(nCritGeoUsed > MaxArea)then
+    nArea = nArea + 1
+    if(nArea > MaxArea)then
        if(UseStrict) &
             call CON_stop(NameSub//' ERROR: Too many grid areas were defined')
        if(iProc == 0)then
-          write(*,*) NameSub," nCritGeoUsed = ",nCritGeoUsed
-          write(*,*) NameSub," WARNING: Too many grid areas were defined"
-          write(*,*) NameSub," ignoring command ",NameCommand
+          write(*,*) NameSub," Too many regions! MaxArea = ", MaxArea
+          write(*,*) NameSub," ignoring command ", NameCommand, &
+               " with StringShape=", trim(StringShape)
        end if
-       nCritGeoUsed = MaxArea
+       nArea = MaxArea
+       RETURN
     end if
 
-    Area % Resolution = AreaResolution
-    Area % NameRegion = NameRegion
-    ! Set the default center to be the origin, 
-    ! size 1, smaller radius 0, no tapering, no rotation
-    Area%Center_D  = 0.0
-    Area%Size_D    = 1.0
-    Area%Radius1   = 0.0
-    Area%Taper     = 0.0
-    Area%DoRotate  = .false.
+    Area => AreaGeo_I(nArea)
+
+    ! Regions without a name are produced by #GRIDLEVEL/RESOLUTION commands
+    if(NameRegion == "NULL") nCritGrid = nCritGrid + 1
+
+    ! Store the information read above
+    Area%NameRegion = NameRegion
+    Area%Resolution = AreaResolution 
+    Area%Level      = -nLevelArea    ! Level is stored as a negative integer
+
+    ! Now process the information read into StringShape
+
+    ! Set defaults
+    Area%Center_D = 0.0
+    Area%Size_D   = 1.0
+    Area%Radius1  = 0.0
+    Area%Taper    = 0.0
+    Area%DoRotate = .false.
 
     ! Check for the word rotated in the name
     i = index(StringShape, 'rotated')
@@ -664,24 +423,23 @@ contains
     ! check for the word tapered in the name
     i = index(StringShape,'tapered')
     DoTaperArea = i > 0
+
     if(i > 0) StringShape = StringShape(:i-1)//StringShape(i+7:)
 
     ! Extract character '0' from the name
     i = index(StringShape,'0')
-    if(i>0) StringShape = StringShape(:i-1)//StringShape(i+1:)
+    if(i > 0) StringShape = StringShape(:i-1)//StringShape(i+1:)
 
     DoReadAreaCenter = (i < 1 .and. StringShape(1:3) /= 'box')
 
-    ! Store name after all the options were removed from StringShape
+    ! Set name of the shape after all options were removed from StringShape
     NameShape = StringShape
 
-    if(NameShape == 'user') NameShape = 'usergeo'
-
     ! Store NameShape
-    Area % NameShape = NameShape
+    Area%NameShape = NameShape
 
     ! The 'all' types does not need any parameters
-    if(NameShape == 'all' .or. NameShape == 'usergeo') RETURN
+    if(NameShape == 'all' .or. NameShape(1:4) == 'user') RETURN
 
     ! Read center of area if needed
     if(DoReadAreaCenter)then
@@ -690,6 +448,7 @@ contains
        end do
     endif
 
+    ! Read shape parameters
     call set_i_par_perp
     select case(NameShape)
     case("box", "box_gen")
@@ -776,16 +535,17 @@ contains
             trim(Area%NameShape) // ', ignoring command ' // &
             trim(NameCommand)
 
-       nCritGeoUsed = nCritGeoUsed - 1
+       nArea = nArea - 1
        RETURN
     end select
 
     ! Read the tapering width if required
     if(DoTaperArea) call read_var('Taper', Area % Taper)
 
-    if(Area % DoRotate)then
+    ! Read rotation angles and create rotation matrix
+    if(Area%DoRotate)then
        if(.not.allocated(Area%Rotate_DD))allocate(Area%Rotate_DD(nDim,nDim))
-       
+
        if(nDim == 2)then
           call read_var('zRotate', zRotateArea)
           Area%Rotate_DD = rot_matrix(-zRotateArea*cDegToRad)
@@ -804,14 +564,14 @@ contains
 
     end if
 
-  end subroutine read_amr_geometry
+  end subroutine read_region_param
 
   !============================================================================
-  subroutine block_inside_region(iRegion_I, iBlock, nValue, StringLocation, &
+  subroutine block_inside_regions(iRegion_I, iBlock, nValue, StringLocation, &
        IsInside, IsInside_I, Value_I)
 
-    use BATL_size, ONLY: nINode, nJNode, nKNode, nIJK, MaxIJK_D, MinIJK_D
-    use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
+    use BATL_size,     ONLY: nINode, nJNode, nKNode
+    use BATL_geometry, ONLY: IsCartesianGrid
 
     ! Check the intersection of block iBlock with one or more regions
     ! indexed by the iRegion_I array. Positive region index means 
@@ -843,25 +603,24 @@ contains
     logical,      optional, intent(out):: IsInside_I(nValue)
     real,         optional, intent(out):: Value_I(nValue)
 
-    integer:: iRegion, nRegion, iArea
+    integer:: iRegion, nRegion, iArea, iSign
     integer:: nPoint
     character:: NameLocation
 
-    logical:: DoBlock, DoMask, DoValue
+    logical:: DoBlock, DoMask, DoValue, DoBlockOnly
 
     logical             :: IsInsideOld
-    logical, allocatable:: IsInsideOld_I(:)
-    real,    allocatable:: ValueOld_I(:)
 
-    real, allocatable, save:: Xyz_DI(:,:)
+    logical:: DoSetCorner, DoSetCoord, DoSetXyz
 
     logical, parameter:: DoTest=.false.
 
-    character(len=*), parameter:: NameSub='region_block'
+    character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
     DoValue  = present(Value_I)
+    DoBlockOnly = DoBlock .and. .not.(DoMask .or. DoValue)
 
     if(.not.(DoBlock .or. DoMask .or. DoValue)) call CON_stop(NameSub// &
          ': no output argument is present')
@@ -869,9 +628,22 @@ contains
     nRegion = size(iRegion_I)
     if(nRegion < 1) call CON_stop(NameSub//': empty region index array')
 
+    ! Default number of points is the same as the number of returned values
     nPoint = nValue
-    if(DoMask  .and. nRegion > 1) allocate(IsInsideOld_I(nPoint))
-    if(DoValue .and. nRegion > 1) allocate(ValueOld_I(nPoint))
+
+    ! Allocate storage if multiple regions are used
+    if(DoMask  .and. nRegion > 1)then
+       if(allocated(IsInsideOld_I))then
+          if(size(IsInsideOld_I) /= nPoint) deallocate(IsInsideOld_I)
+       end if
+       if(.not.allocated(IsInsideOld_I)) allocate(IsInsideOld_I(nPoint))
+    end if
+    if(DoValue .and. nRegion > 1)then
+       if(allocated(ValueOld_I))then
+          if(size(ValueOld_I) /= nPoint) deallocate(ValueOld_I)
+       end if
+       if(.not.allocated(ValueOld_I)) allocate(ValueOld_I(nPoint))
+    end if
 
     ! Default location is nodes
     NameLocation = "n"
@@ -880,87 +652,59 @@ contains
     ! Check nodes of block by default (optimize for corners???)
     if(nPoint == 0) nPoint = nINode*nJNode*nKNode
 
-    ! Allocate coordinate array
-    allocate(Xyz_DI(nDim,nPoint))
-
-    select case(NameLocation)
-    case('c', 'C')
-       if(nPoint /= nIJK) call CON_stop(NameSub// &
-            ': incorrect number of points for cell centers')
-
-       Xyz_DI = reshape(Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock), &
-            (/nDim, nPoint/))
-
-    case('g', 'G')
-       if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
-            ': incorrect number of points for cell centers including ghosts')
-
-       Xyz_DI = reshape(Xyz_DGB(:,:,:,:,iBlock), (/nDim, nPoint/))
-
-    case('x', 'X')
-       if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
-            ': incorrect number of points for X faces')
-
-       Xyz_DI = reshape( &
-            0.5*(Xyz_DGB(1:nDim,0:nI  ,1:nJ,1:nK,iBlock) &
-            +    Xyz_DGB(1:nDim,1:nI+1,1:nJ,1:nK,iBlock)), (/nDim, nPoint/))
-
-    case('y', 'Y')
-       if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
-            ': incorrect number of points for X faces')
-
-       Xyz_DI = reshape( &
-            0.5*(Xyz_DGB(1:nDim,1:nI,j0_:nJ, 1:nK,iBlock) &
-            +    Xyz_DGB(1:nDim,1:nI,1:nJp1_,1:nK,iBlock)), (/nDim, nPoint/))
-
-    case('z', 'Z')
-       if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
-            ': incorrect number of points for X faces')
-
-       Xyz_DI = reshape( &
-            0.5*(Xyz_DGB(1:nDim,1:nI,1:nJ,k0_:nK ,iBlock) &
-            +    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nKp1_,iBlock)), (/nDim, nPoint/))
-
-    case('n', 'N')
-       if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
-            ': incorrect number of points for nodes')
-
-       Xyz_DI = reshape(Xyz_DNB(1:nDim,:,:,:,iBlock), (/nDim, nPoint/))
-
-    case default
-       write(*,*) NameSub,': StringLocation=', StringLocation
-       call CON_stop(NameSub//' incorrect value for StringLocation')
-    end select
-
-    if(DoTest)write(*,*) NameSub, 'iBlock, nPoint, NameLoc, size(Xyz_DI) = ', &
-         iBlock, nPoint, NameLocation, size(Xyz_DI)
+    ! New block requires setting positions once
+    DoSetCorner= .true.
+    DoSetCoord = .true.
+    DoSetXyz   = .true.
 
     ! Evaluate all regions
     do iRegion = 1, nRegion
 
+       call show_region(iRegion, NameSub//' starting loop')
+
        ! Store results obtained from previous regions
-       if(iRegion > 0)then
+       if(iRegion > 1)then
           if(DoBlock) IsInsideOld   = IsInside
           if(DoMask)  IsInsideOld_I = IsInside_I
           if(DoValue) ValueOld_I    = Value_I
        end if
 
        ! Get area index and evaluate it
-       iArea = iRegion_I(iRegion)
-       call region_value(nPoint, Xyz_DI, AreaGeo_I(abs(iArea)), &
-            IsInside, IsInside_I, Value_I)
+       iArea = abs(iRegion_I(iRegion))
+       iSign = sign(1, iRegion_I(iRegion))
+       Area => AreaGeo_I(iArea)
+       NameShape = Area%NameShape
 
-       if(DoTest)write(*,*)'maxval(Value_I)=', maxval(Value_I)
+       if(NameShape == 'all')then
+          if(DoBlock) IsInside = .true.
+          if(DoMask)  IsInside_I = .true.
+          if(DoValue) Value_I = 1.0
+       elseif(NameShape(1:4) == 'user')then
+!!! to be generalized for mask and values !!!
+          call user_specify_refinement(iBlock, iArea, IsInside)
+       elseif(DoBlockOnly .and. Area%IsSimple)then
+          call show_region(iRegion, NameSub//' calling is_block_inside')
+          IsInside = is_block_inside(iBlock, Area, DoSetCorner)
+       elseif(IsCartesianGrid .or. NameShape == 'brick_coord')then
+          if(DoSetXyz) call set_xyz
+          call points_inside_region(nPoint, Xyz_DI, Area, &
+               IsInside, IsInside_I, Value_I)
+       else
+          if(DoSetCoord) call set_coord
+          call points_inside_region(nPoint, Coord_DI, Area, &
+               IsInside, IsInside_I, Value_I)
+       end if
 
+       ! Negate results for negative sign
        if(iRegion == 1)then
-          if(iArea < 0)then
+          if(iSign < 0)then
              if(DoBlock) IsInside   = .not. IsInside
              if(DoMask)  IsInside_I = .not. IsInside_I
              if(DoValue) Value_I    = 1 - Value_I
           end if
        else
           ! Combine last region info with previous
-          if(iArea < 0)then
+          if(iSign < 0)then
              if(DoBlock) IsInside   = IsInsideOld   .and. .not. IsInside
              if(DoMask)  IsInside_I = IsInsideOld_I .and. .not. IsInside_I
              if(DoValue) Value_I    = min(ValueOld_I, 1 - Value_I)
@@ -972,14 +716,319 @@ contains
        end if
     end do
 
-    deallocate(Xyz_DI)
-    if(allocated(IsInsideOld_I)) deallocate(IsInsideOld_I)
-    if(allocated(ValueOld_I))    deallocate(ValueOld_I)
+  contains
 
-  end subroutine block_inside_region
+    !=========================================================================
+    subroutine set_coord
+
+      ! Set point positions in generalized coordinates
+
+      use BATL_size, ONLY: nI, nJ, nK, nIJK, &
+           MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MinIJK_D, MaxIJK_D
+
+      use BATL_grid, ONLY: CoordMin_DB, CellSize_DB
+
+      integer:: i, j, k, n
+      real:: Coord_D(3), CellSize_D(3), CoordMinBlock_D(3)
+      !----------------------------------------------------------------------
+
+      ! Allocate Coord array if new or size changed
+      if(allocated(Coord_DI))then
+         if(size(Coord_DI) /= nDim*nPoint) deallocate(Coord_DI)
+      end if
+      if(.not.allocated(Coord_DI)) allocate(Coord_DI(nDim,nPoint))
+
+      CellSize_D = CellSize_DB(:,iBlock)
+      CoordMinBlock_D = CoordMin_DB(:,iBlock)
+
+      n = 0
+      select case(NameLocation)
+      case('c', 'C')
+         if(nPoint /= nIJK) call CON_stop(NameSub// &
+              ': incorrect number of points for cell centers')
+         do k = 1, nK
+            Coord_D(3) = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            do j = 1, nJ
+               Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               do i = 1, nI
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+      case('g', 'G')
+         if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
+              ': incorrect number of points for cell centers with ghosts')
+
+         do k = MinK, MaxK
+            Coord_D(3) = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            do j = MinJ, MaxJ
+               Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               do i = MinI, MaxI
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+      case('x', 'X')
+         if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+         do k = 1, nK
+            Coord_D(3) = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            do j = 1, nJ
+               Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               do i = 1, nI+1
+                  Coord_D(1) = CoordMinBlock_D(1) + i*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+
+      case('y', 'Y')
+         if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+
+         do k = 1, nK
+            Coord_D(3) = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            do j = 1, nJ+1
+               Coord_D(2) = CoordMinBlock_D(2) + j*CellSize_D(2)
+               do i = 1, nI
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+
+      case('z', 'Z')
+         if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+
+         do k = 1, nK+1
+            Coord_D(3) = CoordMinBlock_D(3) + k*CellSize_D(3)
+            do j = 1, nJ
+               Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               do i = 1, nI
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+
+      case('n', 'N')
+         if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
+              ': incorrect number of points for nodes')
+
+         do k = 1, nKNode
+            Coord_D(3) = CoordMinBlock_D(3) + k*CellSize_D(3)
+            do j = 1, nJNode
+               Coord_D(2) = CoordMinBlock_D(2) + j*CellSize_D(2)
+               do i = 1, nINode
+                  Coord_D(1) = CoordMinBlock_D(1) + i*CellSize_D(1)
+                  n = n + 1
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+
+      case default
+         write(*,*) NameSub,': StringLocation=', StringLocation
+         call CON_stop(NameSub//' incorrect value for StringLocation')
+      end select
+
+      DoSetCoord = .false.
+
+    end subroutine set_coord
+    !=========================================================================
+    subroutine set_xyz
+
+      ! Set point positions in Cartesian coordinate
+
+      use BATL_size, ONLY: nI, nJ, nK, nIJK, MinIJK_D, MaxIJK_D
+      use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
+      !----------------------------------------------------------------------
+
+      ! Allocate Xyz array if new or size changed
+      if(allocated(Xyz_DI))then
+         if(size(Xyz_DI) /= nDim*nPoint) deallocate(Xyz_DI)
+      end if
+      if(.not.allocated(Xyz_DI)) allocate(Xyz_DI(nDim,nPoint))
+
+
+      select case(NameLocation)
+      case('c', 'C')
+         if(nPoint /= nIJK) call CON_stop(NameSub// &
+              ': incorrect number of points for cell centers')
+
+         Xyz_DI = reshape(Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock), &
+              (/nDim, nPoint/))
+
+      case('g', 'G')
+         if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
+              ': incorrect number of points for cell centers with ghosts')
+
+         Xyz_DI = reshape(Xyz_DGB(:,:,:,:,iBlock), (/nDim, nPoint/))
+
+      case('x', 'X')
+         if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+
+         Xyz_DI = reshape( &
+              0.5*(Xyz_DGB(1:nDim,0:nI  ,1:nJ,1:nK,iBlock) &
+              +    Xyz_DGB(1:nDim,1:nI+1,1:nJ,1:nK,iBlock)), (/nDim, nPoint/))
+
+      case('y', 'Y')
+         if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+
+         Xyz_DI = reshape( &
+              0.5*(Xyz_DGB(1:nDim,1:nI,j0_:nJ, 1:nK,iBlock) &
+              +    Xyz_DGB(1:nDim,1:nI,1:nJp1_,1:nK,iBlock)), (/nDim, nPoint/))
+
+      case('z', 'Z')
+         if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
+              ': incorrect number of points for X faces')
+
+         Xyz_DI = reshape( &
+              0.5*(Xyz_DGB(1:nDim,1:nI,1:nJ,k0_:nK ,iBlock) &
+              +    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nKp1_,iBlock)), (/nDim, nPoint/))
+
+      case('n', 'N')
+         if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
+              ': incorrect number of points for nodes')
+
+         Xyz_DI = reshape(Xyz_DNB(1:nDim,:,:,:,iBlock), (/nDim, nPoint/))
+
+      case default
+         write(*,*) NameSub,': StringLocation=', StringLocation
+         call CON_stop(NameSub//' incorrect value for StringLocation')
+      end select
+
+      DoSetXyz = .false.
+
+    end subroutine set_xyz
+
+  end subroutine block_inside_regions
   !============================================================================
+  logical function is_block_inside(iBlock, Area, DoSetCorner)
 
-  subroutine region_value(nPoint, Xyz_DI, Area, IsInside, IsInside_I, Value_I)
+    use ModNumConst, ONLY: cTiny
+    use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
+
+    ! Return true if block intersects the Area.
+    ! This algorithm based on a very fast evaluation of the block corners
+    ! for the symmetric shapes:
+    ! brick, sphere, shell, cylinder, ring when they are not rotated.
+
+    integer,        intent(in):: iBlock
+    type(AreaType), intent(in):: Area
+    logical, optional, intent(inout):: DoSetCorner
+
+    logical:: DoSet
+    integer, parameter :: nCorner = 2**nDim
+    real     :: DistMin_D(nDim), DistMax_D(nDim), Radius1Sqr
+    integer  :: i, j, k, iDim, iCorner
+
+    logical, parameter:: DoTest = .false.
+    character(len=*), parameter:: NameSub = 'is_block_inside'
+    !-------------------------------------------------------------------------
+    DoSet = .true.
+    if(present(DoSetCorner))then
+       DoSet = DoSetCorner
+       DoSetCorner = .false.
+    end if
+
+    if(DoSet)then
+       if(.not.allocated(Corner_DI)) &
+            allocate(Corner_DI(nDim,nCorner), CornerNorm_DI(nDim,nCorner))
+
+       ! Block corner coordinates
+       Corner_DI(:,1)       = CoordMin_DB(1:nDim,iBlock)
+       Corner_DI(:,nCorner) = CoordMax_DB(1:nDim,iBlock)
+       if(nDim==2)then
+          Corner_DI(:,2) = (/ CoordMax_DB(1,iBlock), CoordMin_DB(2,iBlock) /)
+          Corner_DI(:,3) = (/ CoordMin_DB(1,iBlock), CoordMax_DB(2,iBlock) /)
+       else if(nDim == 3)then
+          Corner_DI(:,2) = (/ CoordMax_DB(1,iBlock), &
+               CoordMin_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+          Corner_DI(:,3) = (/ CoordMin_DB(1,iBlock), &
+               CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+          Corner_DI(:,4) = (/ CoordMax_DB(1,iBlock), &
+               CoordMax_DB(2,iBlock), CoordMin_DB(3,iBlock) /)
+          Corner_DI(:,5) = (/ CoordMin_DB(1,iBlock), &
+               CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+          Corner_DI(:,6) = (/ CoordMax_DB(1,iBlock), &
+               CoordMin_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+          Corner_DI(:,7) = (/ CoordMin_DB(1,iBlock), &
+               CoordMax_DB(2,iBlock), CoordMax_DB(3,iBlock) /)
+       end if
+    end if
+
+    ! Shift corner coordinates to the center of area and normalize to size
+    do iCorner = 1, nCorner
+       CornerNorm_DI(:,iCorner) = &
+            (Corner_DI(:,iCorner) - Area%Center_D) / Area%Size_D
+    end do
+
+    ! Calculate maximum and minimum distances in all 3 directions
+    ! Avoid rounding errors if possible
+    do iDim = 1, nDim
+       DistMax_D(iDim) = (1 - cTiny)*maxval(abs(CornerNorm_DI(iDim,:)))
+
+       if(maxval(CornerNorm_DI(iDim,:))*minval(CornerNorm_DI(iDim,:)) <= 0)then
+          ! The block covers the center point in this dimension
+          DistMin_D(iDim) = 0
+       else
+          ! Select the point that is closer in this dimension
+          DistMin_D(iDim) = (1 + cTiny)*minval(abs(CornerNorm_DI(iDim,:)))
+       end if
+    end do
+
+    ! Set global shape name
+    NameShape = Area%NameShape
+
+    ! This occurs multiple times
+    Radius1Sqr = (Area%Radius1)**2
+
+    ! Check if this area is intersecting with the block
+    call set_i_par_perp
+    select case(NameShape)
+    case('brick', 'brick_coord')
+       is_block_inside = all(DistMin_D < 1)
+    case('sphere')
+       is_block_inside = sum(DistMin_D**2) < 1
+    case('shell')
+       ! Check if block intersects with the enclosing sphere
+       ! but it is not fully inside the inner sphere
+       is_block_inside = sum(DistMin_D**2) < 1 &
+            .and. sum(DistMax_D**2) > Radius1Sqr
+    case('cylinderx','cylindery','cylinderz')
+       is_block_inside = DistMin_D(iPar) < 1 &
+            .and. sum(DistMin_D(iPerp_I)**2) < 1
+    case('ringx', 'ringy', 'ringz')
+       ! Check if block intersects with the enclosing cylinder
+       ! but it is not fully inside the inner cylinder
+       is_block_inside = DistMin_D(iPar) < 1 &
+            .and. sum(DistMin_D(iPerp_I)**2) < 1 &
+            .and. sum(DistMax_D(iPerp_I)**2) > Radius1Sqr 
+    case default
+       call CON_stop(NameSub //' ERROR: invalid NameShape = '//NameShape)
+    end select
+
+    if(DoTest)then
+       write(*,*) NameSub,' iBlock, DistMin_D, inside=', &
+            iBlock, DistMin_D, is_block_inside
+    end if
+
+
+  end function is_block_inside
+  !============================================================================
+  subroutine points_inside_region(&
+       nPoint, Xyz_DI, Area, IsInside, IsInside_I, Value_I)
 
     ! Check if the points listed in Xyz_DI are inside the Area
 
@@ -1000,22 +1049,19 @@ contains
     logical, optional, intent(out):: IsInside_I(nPoint)
     real,    optional, intent(out):: Value_I(nPoint)
 
-    real, allocatable, save:: Norm_DI(:,:)
-
     integer  :: iPoint, iDim
 
     logical:: DoBlock, DoMask, DoValue, DoBlockOnly
-    
+
     logical:: DoTaper
     real:: Xyz_D(nDim), Size_D(nDim)
     real:: Radius, RadiusSqr, Dist1, Dist2
     real:: Radius1, Radius1Sqr, Slope1
     real:: Taper, TaperFactor_D(nDim), TaperFactor1_D(nDim)
     real:: Slope_D(nDim)
-    real, allocatable, save:: SlopePerp_D(:)
 
     logical, parameter:: DoTest = .false.
-    character(len=*), parameter:: NameSub = 'region_value'
+    character(len=*), parameter:: NameSub = 'points_inside_region'
     !--------------------------------------------------------------------------
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
@@ -1026,7 +1072,7 @@ contains
          ': nPoint, DoBlock, DoMask, DoValue, DoBlockOnly=',&
          nPoint, DoBlock, DoMask, DoValue, DoBlockOnly
 
-    NameShape = Area % NameShape
+    NameShape = Area%NameShape
 
     if(DoTest) write(*,*) NameSub,' NameShape=', NameShape
 
@@ -1042,11 +1088,11 @@ contains
     call set_i_par_perp
 
     ! Check if it is a brick defined in generalized coordinates
-!    if(NameShape == "brick_gen" .and. .not.IsCartesianGrid)then
-!
+    !    if(NameShape == "brick_gen" .and. .not.IsCartesianGrid)then
+    !
 
     if(allocated(Norm_DI))then
-       if(size(Norm_DI) < nDim*nPoint) deallocate(Norm_DI)
+       if(size(Norm_DI) /= nDim*nPoint) deallocate(Norm_DI)
     endif
     if(.not. allocated(Norm_DI)) allocate(Norm_DI(nDim,nPoint))
 
@@ -1103,9 +1149,7 @@ contains
 
     ! Set value for the shape
     select case(NameShape)
-       !case('usergeo')
-       ! call user_region(nPoint, Norm_DI, Area, Value_I)
-    case('brick')
+    case('brick', 'brick_gen')
        Norm_DI = abs(Norm_DI)
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
@@ -1346,9 +1390,15 @@ contains
              Value_I(iPoint) = Dist2/(Dist1 + Dist2) * Value_I(iPoint)
           end do
        end if
-       
+
     case default
-       call CON_stop(NameSub//' ERROR: unknown NameShape='//trim(NameShape))
+       if(NameShape(1:4) == 'user')then
+          call CON_stop(NameSub// &
+               ' ERROR: not yet implemented for NameShape='//trim(NameShape))
+          ! call user_region(....)
+       else
+          call CON_stop(NameSub//' ERROR: unknown NameShape='//trim(NameShape))
+       end if
     end select
 
     ! Get logical information if not yet calculated
@@ -1360,6 +1410,6 @@ contains
     if(DoTest .and. DoValue) &
          write(*,*) NameSub, ': maxval(Value_I)=', maxval(Value_I)
 
-  end subroutine region_value
+  end subroutine points_inside_region
 
-end module BATL_amr_geometry
+end module BATL_region
