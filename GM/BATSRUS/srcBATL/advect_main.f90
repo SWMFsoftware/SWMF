@@ -1402,15 +1402,19 @@ contains
                Flux_VXB=Flux_VXB, Flux_VYB=Flux_VYB, Flux_VZB=Flux_VZB, &
                iStageIn = iStage/2)
 
-          if(DoTest)write(*,*) NameSub,' after flux correction state, exact=', &
-               State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-               exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), Time_B(iBlockTest))
+          if(DoTest)then
+             write(*,*) NameSub,' after flux correction state, exact=', &
+                  State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+                  exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), &
+                  Time_B(iBlockTest))
 
-          do iBlock = 1, nBlock
-             if(Unused_B(iBlock)) CYCLE
-             if(is_incorrect_block(iBlock, Time_B(iBlock))) &
-                  write(*,*) NameSub,' after flux correction at iStage=', iStage
-          end do
+             do iBlock = 1, nBlock
+                if(Unused_B(iBlock)) CYCLE
+                if(is_incorrect_block(iBlock, Time_B(iBlock))) &
+                     write(*,*) NameSub,' after flux correction at iStage=',&
+                     iStage
+             end do
+          end if
        end if
 
        TimeStage = TimeStage + DtMin/2
