@@ -25,6 +25,12 @@ include Makefile.local
 #the default value of the c++ compiler flags
 SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/${WSD}/meshAMR -I${CWD}/${WSD}/interface -I${CWD}/${WSD}/general -I${CWD}/${WSD}/models/electron_impact -I${CWD}/${WSD}/models/sputtering -I${CWD}/${WSD}/models/dust -I${CWD}/${WSD}/models/charge_exchange -I${CWD}/${WSD}/models/photolytic_reactions -I${CWD}/${WSD}/species -I${CWD}/${WSD}/models/exosphere -I${SPICE}/include -I${BOOST}/include -I${KAMELEON}/src -I${CWD}
 
+#define the "compile kameleon' flag only when KAMELEON is used (to exclude including of the KAMELEON headers on machimes where KAMELEON is not installed) 
+ifneq ($(KAMELEON),nokameleon)   
+	SEARCH_C+=-D_PIC_COMPILE__KAMELEON_ 
+endif
+	
+
 #the additional argument string for the fortran compiler
 SEARCH_F=
 #-fdefault-real-8 
