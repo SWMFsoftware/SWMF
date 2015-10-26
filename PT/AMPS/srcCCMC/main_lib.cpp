@@ -252,16 +252,27 @@ void amps_init() {
 	PIC::Mesh::initCellSamplingDataBuffer();
 
 	//init the mesh
-	double xmax[3]={0.0,0.0,0.0},xmin[3]={0.0,0.0,0.0};
+	double xmax[3]={2.070575000000000e+08, 2.994370000000000e+08, 2.994370000000000e+08},xmin[3]={-1.599121000000000e+09,-2.994370000000000e+08,-2.994370000000000e+08};
 	int idim;
 
-	for (idim=0;idim<DIM;idim++) {
+/*	for (idim=0;idim<DIM;idim++) {
 		xmax[idim]=DomainCenterOffset[idim]+DomainLength[idim]/2.0;
 		xmin[idim]=DomainCenterOffset[idim]-DomainLength[idim]/2.0;
-	}
+	}*/
 
 	//read the domain size from the data file
-	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
+#ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
+  #ifndef _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+	PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
+  #endif //_CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+
+	if (PIC::ThisThread==0) {
+	  cout << "xmin=" << xmin[0] << ", " << xmin[1] << ", " << xmin[2] << endl;
+	  cout << "xmax=" << xmax[0] << ", " << xmax[1] << ", " << xmax[2] << endl;
+	}
+#endif //_CCMC_TEST__NO_KAMELEON_CALLS_
+
+
 	for (idim=0;idim<3;idim++) {
 	  double xCenter,dx;
 
@@ -318,8 +329,13 @@ void amps_init() {
     PIC::CPLR::DATAFILE::LoadBinaryFile("KAMELEON-TEST");
   }
   else {
-	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Users/ccmc/3d__var_1_e20150317-160000-000.out.cdf");
+
+    #ifndef _CCMC_TEST__NO_KAMELEON_CALLS_
+	  PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("/Volumes/data/AMPS_DATA_TEST/KAMELEON/3d__var_1_e20150317-160000-000.out.cdf");
 	  PIC::CPLR::DATAFILE::SaveBinaryFile("KAMELEON-TEST");
+   #else
+	  exit(__LINE__,__FILE__,"Error: the background data file is not found");
+   #endif //_CCMC_TEST__NO_KAMELEON_CALLS_
   }
 
 	//init the PIC solver
