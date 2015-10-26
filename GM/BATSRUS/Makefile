@@ -142,8 +142,8 @@ TIME_CONV:
 # The MACHINE variable holds the machine name for which scripts should
 # be copied from share/JobScripts to the run directory when it is created. 
 # The default is the short name of the current machine with the trailing
-# numbers removed (so that 'pfe23' and 'pfe20' are all converted to 'pfe')
-MACHINE = `hostname | sed -e 's/\..*//;s/[0-9]*$$//'`
+# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
+MACHINE = `hostname | sed -e 's/\..*//;s/[0-9]\?[0-9]$$//'`
 
 # Default component
 COMPONENT = GM
