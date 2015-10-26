@@ -75,8 +75,8 @@ contains
 
     if (.not.restart) then
        ! Create initial solution block geometry.
-       ! Set all Arrays for AMR
-       call init_amr_criteria(user_amr_geometry=user_specify_refinement)
+       ! Set all arrays for AMR
+       call init_amr_criteria
 
        ! Perform initial refinement of mesh and solution blocks.
        do nRefineLevel = 1, initial_refine_levels
@@ -86,16 +86,14 @@ contains
                   ' starting initial refinement level, nBlockAll =', &
                   nRefineLevel, nBlockAll
           end if
-          call set_amr_criteria(nVar, State_VGB,TypeAmrIn='geo',&
-               user_amr_geometry=user_specify_refinement)
+          call set_amr_criteria(nVar, State_VGB,TypeAmrIn='geo')
           call init_grid_batl
           call set_batsrus_grid
           ! need to update node information, maybe not all
           ! of load balancing
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
-             call set_amr_geometry(iBlock,&
-                  user_amr_geometry=user_specify_refinement)
+             call set_amr_geometry(iBlock)
           end do
        end do
     else
@@ -106,8 +104,8 @@ contains
        call read_tree_file(NameFile)
        call init_grid_batl
        call set_batsrus_grid
-       ! Set all Arrays for AMR
-       call init_amr_criteria(user_amr_geometry=user_specify_refinement)
+       ! Set all arrays for AMR
+       call init_amr_criteria
 
     end if
 
@@ -123,8 +121,7 @@ contains
     call load_balance(.not.restart, .false., .true.)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       call set_amr_geometry(iBlock,&
-            user_amr_geometry=user_specify_refinement)
+       call set_amr_geometry(iBlock)
     end do
 
     if (iProc == 0.and.lVerbose>0)then
@@ -343,8 +340,8 @@ subroutine BATS_init_session
   ! save initial restart series
   if (UseRestartOutSeries) call BATS_save_files('RESTART')
 
-  ! Set all Arrays for AMR
-  call init_amr_criteria(user_amr_geometry=user_specify_refinement)
+  ! Set all arrays for AMR
+  call init_amr_criteria
 
 end subroutine BATS_init_session
 

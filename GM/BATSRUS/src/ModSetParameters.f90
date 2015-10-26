@@ -23,7 +23,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModProject
   use ModCT, ONLY : init_mod_ct, DoInitConstrainB
   use ModBlockData, ONLY: clean_block_data
-  use BATL_lib, ONLY: read_amr_criteria, read_amr_geometry, &
+  use BATL_lib, ONLY: read_amr_criteria, read_region_param, &
        DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
        init_mpi, IsCartesianGrid, IsCartesian, &
        IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
@@ -1047,8 +1047,8 @@ subroutine MH_set_parameters(TypeAction)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
 
-        call read_amr_geometry(NameCommand,UseStrictIn=UseStrict, &
-             InitLevelInOut=initial_refine_levels, &
+        call read_region_param(NameCommand, UseStrictIn=UseStrict, &
+             nInitLevelInOut=initial_refine_levels, &
              InitResInOut=InitialResolution)
 
      case("#AMRLEVELS")
@@ -3019,7 +3019,6 @@ contains
          TypeGeometryBatl, TypeBc_I(1:2*nDim-1:2) == 'periodic', &
          nRootRead_D(1:nDim), UseRadiusIn=.true., UseDegreeIn=.false.,&
          RgenIn_I = exp(LogRGen_I), UseUniformAxisIn=UseUniformAxis,&
-         user_amr_geometry=user_specify_refinement, &
          UseFDFaceFluxIn=UseFDFaceFlux, iVectorVarIn_I=iVectorVar_I)
 
     if(IsRotatedCartesian)then

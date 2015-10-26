@@ -256,8 +256,7 @@ contains
        ! Update all kinds of extra block variables
        call calc_other_vars(iBlock)
        call calc_energy_ghost(iBlock)
-       call set_amr_geometry(iBlock,&
-            user_amr_geometry=user_specify_refinement)
+       call set_amr_geometry(iBlock)
     end do
 
     if(UseResistivity) call set_resistivity

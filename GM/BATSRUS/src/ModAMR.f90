@@ -78,7 +78,6 @@ contains
     use ModMessagePass,   ONLY: exchange_messages
     use ModPartSteady,    ONLY: UsePartSteady
     use ModLocalTimeStep, ONLY: UseLocalTimeStep
-    use ModUserInterface ! user_specify_refinement
     use ModVarIndexes, ONLY: DefaultState_V
 
     logical, intent(in) :: DoFullMessagePass
@@ -122,14 +121,12 @@ contains
        if(DoProfileAmr) call timing_stop('amr::amr_criteria')
        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
        call set_amr_criteria(nVar, State_VGB,&
-            nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr,&
-            user_amr_geometry=user_specify_refinement)
+            nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr)
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
 
     else
        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
-       call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr,&
-            user_amr_geometry=user_specify_refinement)
+       call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr)
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
     end if
 
