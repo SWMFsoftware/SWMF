@@ -211,6 +211,9 @@ module ModMain
   ! Verbosity level (0, 1, 10, 100)
   integer :: lVerbose = 1
 
+  ! Create call sequence in stop_mpi
+  logical:: DoWriteCallSequence = .false.
+
   ! A space separated list of words, typically names of subroutines.
   character (len=100) :: test_string=''
 

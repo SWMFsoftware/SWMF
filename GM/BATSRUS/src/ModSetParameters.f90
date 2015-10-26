@@ -454,6 +454,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#FLUSH")
         call read_var('DoFlush', DoFlush)
 
+     case("#TESTINFO")
+        call read_var('DoWriteCallSequence', DoWriteCallSequence)
+
      case("#TEST")
         call read_var('StringTest',test_string)
 

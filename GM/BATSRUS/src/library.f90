@@ -643,7 +643,8 @@ end subroutine barrier_mpi2
 subroutine stop_mpi(str)
 
   use ModProcMH
-  use ModMain, ONLY : iteration_number,NameThisComp,IsStandAlone
+  use ModMain, ONLY : iteration_number, NameThisComp, IsStandAlone, &
+       DoWriteCallSequence
   use ModMpi
   implicit none
 
@@ -658,11 +659,23 @@ subroutine stop_mpi(str)
      write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
           iteration_number,' with msg:'
      write(*,*)str
+
+     if(DoWriteCallSequence)then
+        write(*,*)'Making floating point exception to write call sequence!'
+        write(*,*) sqrt(-1.0-iteration_number)
+     end if
+
      call MPI_abort(iComm, nError, iError)
      stop
   else
      write(*,*)NameThisComp,': stopping execution! me=',iProc,&
           ' at iteration=',iteration_number
+
+     if(DoWriteCallSequence)then
+        write(*,*)'Making floating point exception to write call sequence!'
+        write(*,*) sqrt(-1.0-iteration_number)
+     end if
+
      call CON_stop(NameThisComp//':'//str)
   end if
 
