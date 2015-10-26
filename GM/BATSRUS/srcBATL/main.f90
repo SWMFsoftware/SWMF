@@ -33,14 +33,5 @@ program BATL_test
   
 end program BATL_test
 !=============================================================================
-subroutine CON_stop(String)
-  use BATL_mpi
-  implicit none
-  character (len=*), intent(in) :: String
-  integer:: iError, nError
-  !--------------------------------------------------------------------------
-  write(*,*)'CON_stop called with String='
-  write(*,*) String
-  call MPI_abort(iComm, nError, iError)
-  stop
-end subroutine CON_stop
+
+include 'external_routines.f90'

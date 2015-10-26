@@ -1498,17 +1498,4 @@ contains
 
 end program advect
 
-!=============================================================================
-subroutine CON_stop(String)
-  use BATL_lib, ONLY: iProc
-  use ModMpi, ONLY: MPI_abort, MPI_COMM_WORLD
-  implicit none
-  integer:: iError, nError
-  character (len=*), intent(in) :: String
-  !--------------------------------------------------------------------------
-  write(*,*)'CON_stop called on processor ',iProc,' with String='
-  write(*,*) String
-
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
-  stop
-end subroutine CON_stop
+include 'external_routines.f90'
