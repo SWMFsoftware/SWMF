@@ -1,7 +1,7 @@
 ! Collection of external routines called by BATL
 !=============================================================================
 subroutine CON_stop(String)
-  use BATL_lib, ONLY: iProc
+  use BATL_mpi, ONLY: iProc
   use ModMpi, ONLY: MPI_abort, MPI_COMM_WORLD
   implicit none
   integer:: iError, nError
