@@ -256,11 +256,8 @@ contains
          (1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
 
-
-    DoUserHeatConduction = .false.
-    if(TypeHeatConduction == 'user') DoUserHeatConduction = .true.
-    DoUserIonHeatConduction = .false.
-    if(TypeIonHeatConduction == 'user') DoUserIonHeatConduction = .true.
+    DoUserHeatConduction    = TypeHeatConduction == 'user'
+    DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
 
     if(DoWeakFieldConduction)then
        Bmodify = BmodifySi*Si2No_V(UnitB_)
@@ -486,8 +483,7 @@ contains
     end if
 
     ! The magnetic field should nowhere be zero. The following fix will
-    ! turn the magnitude of the field direction  to zero 
-    ! ????(may be to one?)???? I.Sokolov, 8/15/2014.
+    ! push the magnitude of Bunit_D  to zero if B_D is approaching zero.
     Bnorm = sqrt(sum(B_D**2))
     Bunit_D = B_D/max(Bnorm,cTolerance)
 
