@@ -115,14 +115,10 @@ ENV_CHECK:
 # JOB SUBMISSION SCRIPTS TO COPY TO RUN
 #
 # The MACHINE variable holds the machine name for which scripts should
-# be copied to the run directory when it is created.  This is used mostly
-# when several different machines have the same operating system,
-# but they require different batch queue scripts. 
-# If MACHINE is empty or not defined, all scripts for the current OS will
-# be copied.
-#
-# The default is the short name of the current machine
-MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
+# be copied from share/JobScripts to the run directory when it is created. 
+# The default is the short name of the current machine with the trailing
+# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
+MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]\?[0-9]$$//'`
 
 #
 # install for the 1st time
