@@ -21,9 +21,10 @@ void PIC::CPLR::DATAFILE::KAMELEON::Init() {
   PIC::CPLR::DATAFILE::Offset::PlasmaTemperature.allocate=true;
 }
 
+double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
-#if _PIC_COUPLER_DATAFILE_READER_MODE_ == _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_
+
+#ifdef _PIC_COMPILE__KAMELEON_ //complile the KAMELEON part only when _PIC_COMPILE__KAMELEON_ is defined; The macro is defined in the Makefile only when 'ifneq ($(KAMELEON),nokameleon)' 
 #undef Pi //Kameleon uses its own cpnstant 'Pi'; The definition of the "global" 'Pi' is remove to eliminated the naming conflict with Kameleon library
 #undef DIM
 
@@ -42,8 +43,6 @@ void PIC::CPLR::DATAFILE::KAMELEON::Init() {
 #include <iomanip>
 #include "time.h"
 #include <vector>
-
-double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
 void PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
   ccmc::Kameleon kameleon;
@@ -173,6 +172,5 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
   }
 }
 
-#endif
 #endif
 
