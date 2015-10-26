@@ -23,7 +23,7 @@
 ! ResolutionLimit_I[nAmrCritUsed]    : A criteria will not be applied for block with a better resolution then indicated
 ! iResolutionLimit_I[nAmrCritUsed]   : Index if ResolutionLimit_I are applied to dx or level resolution criteria
 ! iMapToUniqCrit_I[nAmrCritUsed]      : Map from used criteria to unique criteria
-! AreaAll_I[nmaxarea]                : List of all ares used by the amr criteria
+! AreaAll_I[maxarea]                : List of all ares used by the amr criteria
 ! AmrCirt_IB[nAmrCrit,nBlock]        : Store the criteria values we compare to
 ! iAreaIdx_II[nAreaMax,nAmrCritUsed] : Index of criteria in AreaAll_I
 ! nAreaPerCrit_I[nAmrCritUsed]       : Number of areas appied for a criteria
@@ -33,14 +33,10 @@ module BATL_amr_criteria
   use BATL_tree, ONLY: nDesiredRefine,nNodeRefine,nDesiredCoarsen, &
        nNodeCoarsen, DoStrictAmr, iRank_A, Rank_A, nNodeSort
 
-  use BATL_amr_geometry, ONLY: &
-       apply_amr_geometry, clean_amr_geometry, nGeoCrit, &
-       IsNewGeoParam, UseCrit_IB, UseCrit_B, &
-       nAmrCrit, nAmrCritUsed, AmrCrit_IB, nGeoCrit, &
-       nCritGeoUsed, IsBatsrusAmr, iResolutionLimit_I, &
-       CoarsenCritAll_I, RefineCritAll_I, ResolutionLimit_I, iVarCritAll_I, &
-       AreaGeo_I, iAreaIdx_II, nAreaPerCritAll_I, &
-       MaxArea, lNameArea, nCritGrid, nCritDxLevel
+  use BATL_region, ONLY: &
+       init_region, clean_region, i_signed_region, block_inside_regions, &
+       IsNewGeoParam, MaxArea, nArea, AreaGeo_I, Area, &
+       MaxArea, nCritGrid
 
   implicit none
 
@@ -78,6 +74,34 @@ module BATL_amr_criteria
   ! Try to make geometric dependence for refinement/coarsening
   logical, public :: DoCritAmr = .false.
 
+  ! We have only two values to decide the criteria
+  ! for geometric refinement: cell size (1) and AMR level (2)
+  integer, public :: nGeoCrit = 2
+
+  ! compatible with BATSRUS way of doing AMR
+  logical:: IsBatsrusAmr = .true. 
+
+  ! Storing all the AMR criteria
+  integer, public:: nAmrCrit = 0
+  integer:: nAmrCritUsed = 0
+  real, allocatable, public:: AmrCrit_IB(:,:)
+
+  ! Masking criteria for use
+  logical, allocatable :: UseCrit_IB(:,:)
+  logical, allocatable :: UseCrit_B(:)
+
+  ! Choosing which blocks we want to refine is based on a list of criteria 
+  ! and a set of upper (refine)  and lower (coarsen) limits. The criteria 
+  ! can be external or calculated internally by estimating the 
+  ! numerical errors (calc_error_amr_criteria) based on the state variables.
+  real,    allocatable:: CoarsenCritAll_I(:), RefineCritAll_I(:)
+  integer, allocatable:: iVarCritAll_I(:), iResolutionLimit_I(:)
+  real,    allocatable:: ResolutionLimit_I(:)
+  integer, allocatable:: iAreaIdx_II(:,:)
+
+  ! Storing names of areas for each criteria given by #AMRCRITERIA.....
+  integer, allocatable :: nAreaPerCritAll_I(:)
+
   ! Percentage to refine and coarsen
   real ::  PercentRefine=0.0, PercentCoarsen=0.0
 
@@ -99,6 +123,9 @@ module BATL_amr_criteria
   ! Parameters used by calc_error_amr_criteria to estimate the errors
   real :: cAmrWavefilter = 1.0e-2
   real, parameter :: cEpsilon = 1.0d-8 ! avoid zero in denominator
+
+  ! Number of geometric criteria from #AMRCRITERIALEVEL/RESOLUTION commands
+  integer :: nCritDxLevel = 0
 
   integer :: nExtCrit = 0 ! Number of external + sorting criteia from BATSRUS
   integer :: nIntCrit = 0 ! Number of internal criteria, 2nd order err estimate
@@ -124,38 +151,19 @@ module BATL_amr_criteria
 contains
   !============================================================================
 
-  subroutine init_amr_criteria(user_amr_geometry)
+  subroutine init_amr_criteria
 
     use BATL_size, ONLY: MaxBlock, nBlock, nDim
     use BATL_tree, ONLY: Unused_B
-    use BATL_amr_geometry, ONLY: init_amr_geometry
     use BATL_mpi,  ONLY: iProc
 
-    interface
-       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
-         integer, intent(in) :: iBlock, iArea
-         logical,intent(out) :: DoRefine
-       end subroutine user_amr_geometry
-    end interface
-    optional :: user_amr_geometry
-
-    integer :: iBlock,iCrit,nCrit,iGeo,iArea,AreaSign,idx
+    integer :: iBlock, iCrit, nCrit, iGeo, iArea, idx, iVar
     logical :: DoTestMe = .false.
-    character(len=lNameArea) :: regionname
 
-    character(len=18), parameter :: NameSub = 'init_amr_criteria'
+    character(len=*), parameter :: NameSub = 'init_amr_criteria'
     !-------------------------------------------------------------------------
 
     if(.not.(IsNewGeoParam .or. IsNewPhysParam)) RETURN
-
-    AreaGeo_I(0)%NameRegion = "ALL"
-    AreaGeo_I(0)%NameShape  = "all"
-    AreaGeo_I(0)%Resolution = 0.0
-    AreaGeo_I(0)%Center_D   = 0.0
-    AreaGeo_I(0)%Size_D     = 0.0
-    AreaGeo_I(0)%Taper      = 0.0
-    AreaGeo_I(0)%Radius1    = 0.0
-    AreaGeo_I(0)%DoRotate   = .false.
 
     nAmrCrit =  nIntCrit + nExtCrit + nGeoCrit
 
@@ -202,33 +210,58 @@ contains
     end if
 
     ! Copy over geometry based criteria
-    if(nCritGeoUsed > 0) call init_amr_geometry
+    if(nArea > 0) call init_region
+
+    ! Loop over the areas defined by #GRIDLEVEL/RESOLUTION commands
+    ! That do not have a name
+
+    ! Start geometric criteria index after the non-geometric criteria
+    iCrit = nAmrCritUsed
+
+    do iGeo = 1, nArea
+       Area => AreaGeo_I(iGeo)
+
+       ! Exclude named areas defined by #REGION / #AMRREGION commands
+       if( Area%NameRegion /= "NULL") CYCLE
+
+       ! Append this geometric AMR criterion to the array of all criteria
+       iCrit = iCrit + 1
+       if(Area % Level  < 0) then
+          ! Level based criteria
+          iVar = 2
+          RefineCritAll_I(iCrit)   = Area%Level
+          CoarsenCritAll_I(iCrit)  = RefineCritAll_I(iCrit) - 1
+          ResolutionLimit_I(iCrit) = Area%Level
+       else
+          ! Resolution based criteria
+          iVar = 1 
+          RefineCritAll_I(iCrit)   = Area%Resolution 
+          CoarsenCritAll_I(iCrit)  = Area%Resolution/2
+          ResolutionLimit_I(iCrit) = Area%Resolution
+       end if
+
+       ! All geometrical criteria are comparisons to resolution or level
+       if(nAmrCritUsed  > 0) then
+          iVarCritAll_I(iCrit) = &
+               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel)) + iVar
+          iResolutionLimit_I(iCrit) = &
+               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel)) + iVar
+       else
+          iVarCritAll_I(iCrit)      = iVar   
+          iResolutionLimit_I(iCrit) = iVar
+       end if
+       
+       ! These are simple criteria associated with a single area
+       iAreaIdx_II(1,iCrit) = iGeo
+       nAreaPerCritAll_I(iCrit) = 1
+    end do
+
     if(nAmrCritUsed > 0 ) then
        do iCrit = 1, nAmrCritUsed
-          BLOCKAREA: do iArea = 1, nAreaPerCritAll_I(iCrit)
-             regionname = adjustl(AreaNamesPhys_II(iArea,iCrit))
-
-             if(regionname(1:1) == "-") then
-                areasign = -1
-                regionname = regionname(2:LEN_TRIM(regionname))
-             else if (regionname(1:1) == "+") then
-                areasign = +1
-                regionname = regionname(2:LEN_TRIM(regionname))
-             else
-                areasign = +1
-             end if
-
-             do iGeo = 0, nCritGeoUsed
-                if(adjustl(regionname) == &
-                     adjustl(AreaGeo_I(iGeo)%NameRegion)) then
-                   iAreaIdx_II(iArea,iCrit) = areasign*iGeo
-                   CYCLE BLOCKAREA
-                end if
-             end do
-
-             if(iGeo > nCritGeoUsed ) call CON_stop(NameSub //&
-                  ' Can not find area name='//trim(adjustl(regionname)))
-          end do BLOCKAREA
+          do iArea = 1, nAreaPerCritAll_I(iCrit)
+             iAreaIdx_II(iArea,iCrit) = &
+                  i_signed_region(adjustl(AreaNamesPhys_II(iArea,iCrit)))
+          end do
        end do
     end if
 
@@ -243,9 +276,9 @@ contains
     UseCrit_IB = .false.
     UseCrit_B  = .false.
 
-    do iBlock=1,nBlock
+    do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       call set_amr_geometry(iBlock, user_amr_geometry=user_amr_geometry)
+       call set_amr_geometry(iBlock)
     end do
 
     if(DoTestMe) then
@@ -302,19 +335,11 @@ contains
   !============================================================================
 
   subroutine set_amr_criteria(nVar, State_VGB, nInCritExtUsed, &
-       CritExt_IB, Used_GB,TypeAmrIn,user_amr_geometry)
+       CritExt_IB, Used_GB, TypeAmrIn)
 
     use BATL_size, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,&
          MaxBlock,nBlock
     use BATL_tree, ONLY: Unused_B!,iStatusNew_A,Refine_
-
-    interface
-       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
-         integer, intent(in) :: iBlock, iArea
-         logical,intent(out) :: DoRefine
-       end subroutine user_amr_geometry
-    end interface
-    optional  :: user_amr_geometry
 
     integer,  intent(in)  :: nVar
     real,    intent(in),optional  :: & ! state variables
@@ -852,11 +877,11 @@ contains
   ! threshold evaluation and also the sum of all the factors over
   ! all variables will be evaluated for deciding the refinement.
   !
-  ! The subroutine only set iStatusNew_A array.
+  ! The subroutine only sets the iStatusNew_A array.
   !
   ! OPTIONAL:
   ! The user can sent in additional factors  used for deciding refinement
-  ! together with there refinements criteria. This will be then used
+  ! together with these refinements criteria. This will be then used
   ! in addition to the error estimate described earlier.
 
   subroutine calc_error_amr_criteria(nVar, State_VGB,Used_GB )
@@ -1338,8 +1363,8 @@ contains
             AreaNamesPhys_II(i,iCrit) = trim(adjustl(Name_I(iElmt))) 
          end do
       else
-         i = 1
-         AreaNamesPhys_II(1,iCrit) = "ALL"
+         i = 0
+         !AreaNamesPhys_II(1,iCrit) = "ALL"
       end if
       nAreaPerCritPhys_I(iCrit) = i
 
@@ -1348,37 +1373,26 @@ contains
   end subroutine read_amr_criteria
 
   !============================================================================
-  subroutine set_amr_geometry(iBlock, user_amr_geometry)
-
-    interface
-       subroutine user_amr_geometry(iBlock, iArea, DoRefine)
-         integer, intent(in) :: iBlock, iArea
-         logical,intent(out) :: DoRefine
-       end subroutine user_amr_geometry
-    end interface
-    optional  :: user_amr_geometry
+  subroutine set_amr_geometry(iBlock)
 
     integer, intent(in) :: iBlock
 
-    integer ::iCrit,iArea,idx
-    logical :: UseBlock
+    integer ::iCrit, nAreaCrit
     !--------------------------------------------------------
 
     if(nAmrCritUsed < 1) RETURN
 
     ! Find if Criteria should be used in block
+    call set_block_dx_level(iBlock)
     do iCrit = 1, nAmrCritUsed
-       UseCrit_IB(iCrit,iBlock) = .false.
-       do iArea =1,nAreaPerCritAll_I(iCrit)
-          idx = iAreaIdx_II(iArea,iCrit)
-
-          call apply_amr_geometry(iBlock, AreaGeo_I(abs(idx)),&
-               UseBlock,DoCalcCritIn= (iCrit==1 .and. iArea==1),&
-               user_amr_geometry=user_amr_geometry)
-
-          if(idx < 0) UseBlock = .not. UseBlock
-          UseCrit_IB(iCrit,iBlock) = UseCrit_IB(iCrit,iBlock) .or. UseBlock
-       end do
+       nAreaCrit = nAreaPerCritAll_I(iCrit)
+       if(nAreaCrit < 1)then
+          UseCrit_IB(iCrit,iBlock) = .true.
+       else
+          call block_inside_regions( &
+               iAreaIdx_II(1:nAreaCrit,iCrit), iBlock, 0, &
+               IsInside=UseCrit_IB(iCrit,iBlock))
+       end if
     end do
 
   end subroutine set_amr_geometry
@@ -1411,19 +1425,84 @@ contains
 
   subroutine clean_amr_criteria
 
+    if(allocated(CoarsenCritAll_I))   deallocate(CoarsenCritAll_I)
+    if(allocated(RefineCritAll_I))    deallocate(RefineCritAll_I)
+    if(allocated(ResolutionLimit_I))  deallocate(ResolutionLimit_I)
+    if(allocated(iVarCritAll_I))      deallocate(iVarCritAll_I)
+    if(allocated(UseCrit_IB))         deallocate(UseCrit_IB)
+    if(allocated(UseCrit_B))          deallocate(UseCrit_B)
+    if(allocated(AmrCrit_IB))         deallocate(AmrCrit_IB)
     if(allocated(MaxLevelCritPhys_I)) deallocate(MaxLevelCritPhys_I)
-    if(allocated(iMapToUniqCrit_I)) deallocate(iMapToUniqCrit_I)
-    if(allocated(iMapToStateVar_I)) deallocate(iMapToStateVar_I)
-    if(allocated(iNode_I)) deallocate(iNode_I)
+    if(allocated(iMapToUniqCrit_I))   deallocate(iMapToUniqCrit_I)
+    if(allocated(iMapToStateVar_I))   deallocate(iMapToStateVar_I)
+    if(allocated(iNode_I))            deallocate(iNode_I)
 
-    nExtCrit = 1
-    nIntCrit = 0
+    nAmrCrit      = 0
+    nAmrCritUsed  = 0
+    nExtCrit      = 1
+    nIntCrit      = 0
+    nCritDxLevel  = 0
     DeltaCriteria = 1.0e-8
     IsNewPhysParam = .true.
 
-    call clean_amr_geometry
+    call clean_region
 
   end subroutine clean_amr_criteria
+
+  !============================================================================
+  subroutine set_block_dx_level(iBlock)
+
+    use BATL_grid,     ONLY: Xyz_DNB,CellSize_DB
+    use BATL_size,     ONLY: nINode,nJNode,nKNode,nDim
+    use BATL_geometry, ONLY: IsCartesianGrid
+    use BATL_tree,     ONLY: iNode_B, iTree_IA, Level_
+
+    integer, intent(in) :: iBlock
+
+    real    :: MaxLength
+    integer :: i,j,k
+    !-------------------------------------------------------------------------
+
+    if(IsCartesianGrid) then
+       MaxLength = maxval(CellSize_DB(1:nDim,iBlock))
+    else
+       ! Find the longest cell edge in the block
+       MaxLength = 0.0
+
+       ! Get maximum length squared of i-edges
+       do k = 1, nKNode; do j = 1, nJNode; do i = 2, nINode
+          MaxLength = max(MaxLength,&
+               sum((Xyz_DNB(:,i  ,j,k,iBlock) &
+               -    Xyz_DNB(:,i-1,j,k,iBlock))**2))
+       end do; end do ; end do
+
+       if(nDim >1) then
+          ! Get maximum length squared of j-edges
+          do k = 1, nKNode; do j = 2, nJNode; do i = 1, nINode
+             MaxLength = max(MaxLength, &
+                  sum((Xyz_DNB(:,i,j  ,k,iBlock) &
+                  -    Xyz_DNB(:,i,j-1,k,iBlock))**2))
+          end do; end do ; end do
+       end if
+
+       if(nDim >2) then
+          ! Get maximum length squared of k-edges
+          do k = 2, nKNode; do j = 1, nJNode; do i = 1, nINode
+             MaxLength = max(MaxLength,               &
+                  sum((Xyz_DNB(:,i,j,k  ,iBlock)      &
+                  -    Xyz_DNB(:,i,j,k-1,iBlock))**2))
+          end do; end do ; end do
+       end if
+
+       ! Get maximum length
+       MaxLength = sqrt(MaxLength)
+
+    end if
+
+    AmrCrit_IB(nAmrCrit-nGeoCrit+1:nAmrCrit,iBlock) = &
+         (/ MaxLength, -real(iTree_IA(Level_,iNode_B(iBlock))) /)
+
+  end subroutine set_block_dx_level
 
   !============================================================================
   subroutine test_amr_criteria
