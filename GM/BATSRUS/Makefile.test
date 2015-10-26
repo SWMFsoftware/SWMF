@@ -16,6 +16,7 @@ test:
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
 	-@($(MAKE) test_shockramp)
+	./Config.pl -ng=2
 	-@($(MAKE) test_partsteady)
 	-@($(MAKE) test_hallmhd)
 	-@($(MAKE) test_twofluidmhd)
@@ -216,7 +217,6 @@ test_shockramp_compile:
 	./Config.pl -u=Waves -e=Hd -g=6,6,1,2000,1 -ng=3
 	$(MAKE) BATSRUS
 	make PIDL
-	./Config.pl -ng=2
 
 test_shockramp_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.shockramp PARAM.in
