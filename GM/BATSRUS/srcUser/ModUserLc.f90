@@ -30,8 +30,6 @@
 !
 !update_states: sets the logical at each used block needed for REB model
 !
-!specify refinement: refine a current sheet
-!
 !set_boundary_cells: to use the "extra" inner boundary
 !
 !set_outer_BC: set the boundary values for temperature as needed for the 
@@ -54,7 +52,6 @@ module ModUser
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED9 => user_specify_refinement,         &
        IMPLEMENTED11=> user_set_cell_boundary,               &
        IMPLEMENTED12=> user_set_plot_var
 
@@ -664,36 +661,6 @@ contains
     end select
 
   end subroutine user_get_log_var
-
-  !============================================================================
-
-  subroutine user_specify_refinement(iBlock, iArea, DoRefine)
-
-
-    integer, intent(in) :: iBlock, iArea
-    logical,intent(out) :: DoRefine
-
-    write(*,*)"#AMRCRITERIARESOLUTION"
-    write(*,*)"1                       nCriteria "
-    write(*,*)"currentsheet            TypeCriteria"
-    write(*,*)"0.5                     CoarsenLimit"
-    write(*,*)"0.5                     RefineLimit"
-    write(*,*)"0.2                     MinResolution"
-    write(*,*) ""
-    write(*,*) "or"
-    write(*,*) ""
-    write(*,*)"#AMRCRITERIALEVEL"
-    write(*,*)"1                       nCriteria"
-    write(*,*)"currentsheet            TypeCriteria"
-    write(*,*)"0.5                     CoarsenLimit"
-    write(*,*)"0.5                     RefineLimit"
-    write(*,*)"5                       MaxLevel"
-    write(*,*) ""
-    write(*,*) "and set right number of criteria and level/resolution."
-
-    call stop_mpi('ERROR::  use aboue option in PARAM.in')
-
-  end subroutine user_specify_refinement
 
   !============================================================================
 
