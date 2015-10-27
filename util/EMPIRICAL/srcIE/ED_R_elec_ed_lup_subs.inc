@@ -12,4 +12,4 @@
       PARAMETER (ALTITUDES = 88)
 
       INTEGER    SPECTRA_LEVELS    ! Number of spectra levels in
-      PARAMETER (SPECTRA_LEVELS = 50)  ! user defined spectra
+      PARAMETER (SPECTRA_LEVELS = 100)  ! user defined spectra
