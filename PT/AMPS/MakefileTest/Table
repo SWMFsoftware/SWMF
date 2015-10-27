@@ -51,17 +51,25 @@ Compile=
 #>
 Name=Mars-ions 
 Keys=-cplr-data-path=/Volumes/data/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+srbwks2014-0079)
+Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+srbwks73465-01)
+Keys=-cplr-data-path=/home1/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+pfe26)
+Keys=-cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/MARS-IONS/data_mhd_PERmax-SSLONG180(0+login2)
 <#
 
 #>
 Name=Titan
 Keys=-cplr-data-path=/Volumes/data/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+srbwks2014-0079)
+Keys=-cplr-data-path=/Users/dborovik/AMPS_DATA/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+srbwks73465-01)
 Keys=-cplr-data-path=/home1/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+pfe26)
+Keys=-cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/TITAN/YINGJUAN_MA--2007GRL_3D_T9(0+login2)
 <#
 
 #>
-Name=CCMC(0+srbwks2014-0079)
+Name=CCMC
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC(0+srbwks2014-0079)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC(0+srbwks73465-01)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/dborovik/AMPS_DATA_TEST/CCMC(0+pfe26)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/CCMC(0+login2)
 <#
 
 #>
@@ -131,9 +139,12 @@ Name=test/model-dust
 <#
 
 #>
-Name=CCMC-Individual_Trajectories(0+srbwks2014-0079) 
+Name=CCMC-Individual_Trajectories 
 Keys= -model-data-path=${MYDIR}/input  
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/CCMC(0+srbwks2014-0079)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Users/dborovik/AMPS_DATA_TEST/CCMC(0+srbwks73465-01)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/dborovik/AMPS_DATA_TEST/CCMC(0+pfe26)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/CCMC(0+login2)
 <#
 
 
