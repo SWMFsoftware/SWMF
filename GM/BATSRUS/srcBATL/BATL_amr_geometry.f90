@@ -374,6 +374,10 @@ contains
        end if
        if(present(nInitLevelInOut)) nInitLevelInOut = nInitialLevel
        if(present(InitResInOut)) InitResInOut = AreaResolution
+
+       if(DoTest)write(*,*) NameSub, &
+            ' setting InitialResolution, nInitialLevel =', &
+            InitialResolution, nInitialLevel
        RETURN
     end if
 
@@ -1182,7 +1186,7 @@ contains
        Norm_DI = abs(Norm_DI)
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(maxval(Norm_DI(:,iPoint)) > 1) CYCLE
+             if(maxval(Norm_DI(:,iPoint)) >= 1) CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1197,7 +1201,7 @@ contains
     case('sphere')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(sum(Norm_DI(:,iPoint)**2) > 1) CYCLE
+             if(sum(Norm_DI(:,iPoint)**2) >= 1) CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1206,7 +1210,7 @@ contains
        else
           do iPoint = 1, nPoint
              Dist1 = sum(Norm_DI(:,iPoint)**2)
-             if(Dist1 <= 1)then
+             if(Dist1 < 1)then
                 Value_I(iPoint) = 1.0 ! inside
                 CYCLE
              end if
@@ -1222,7 +1226,7 @@ contains
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
              Dist1 = sum(Norm_DI(:,iPoint)**2)
-             if(Dist1 > 1 .or. Dist1 < Radius1Sqr)CYCLE
+             if(Dist1 >= 1 .or. Dist1 <= Radius1Sqr)CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1231,14 +1235,14 @@ contains
        else
           do iPoint = 1, nPoint
              Dist1 = sum(Norm_DI(:,iPoint)**2)
-             if(Dist1 > 1)then
+             if(Dist1 >= 1)then
                 Dist2 = sum((TaperFactor_D*Norm_DI(:,iPoint))**2)
                 if(Dist2 >= 1) CYCLE     ! outside outer radius
                 ! Use a roughly linear function between the ellipsoids
                 Dist1 = sqrt(Dist1) - 1
                 Dist2 = 1 - sqrt(Dist2)
                 Value_I(iPoint) = Dist2/(Dist1 + Dist2)
-             elseif(Dist1 < Radius1Sqr)then
+             elseif(Dist1 <= Radius1Sqr)then
                 Dist2 = sum((TaperFactor1_D*Norm_DI(:,iPoint))**2)
                 if(Dist2 <= 1) CYCLE     ! inside inner radius
                 Dist1 = 1 - sqrt(Dist1)/Radius1
@@ -1252,8 +1256,8 @@ contains
     case('cylinderx', 'cylindery', 'cylinderz')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
-             if(sum(Norm_DI(iPerp_I,iPoint)**2) > 1) CYCLE
+             if(abs(Norm_DI(iPar,iPoint)) >= 1) CYCLE
+             if(sum(Norm_DI(iPerp_I,iPoint)**2) >= 1) CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1283,7 +1287,7 @@ contains
           do iPoint = 1, nPoint
              if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
-             if(Dist1 > 1 .or. Dist1 < Radius1Sqr)CYCLE
+             if(Dist1 >= 1 .or. Dist1 <= Radius1Sqr)CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1320,10 +1324,10 @@ contains
     case('funnelx', 'funnely', 'funnelz')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(abs(Norm_DI(iPar,iPoint) - 0.5) > 0.5) CYCLE
+             if(abs(Norm_DI(iPar,iPoint) - 0.5) >= 0.5) CYCLE
              Radius = Radius1 + Slope1*Norm_DI(iPar,iPoint)
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
-             if(Dist1 > Radius**2) CYCLE
+             if(Dist1 >= Radius**2) CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1356,9 +1360,9 @@ contains
     case('paraboloidx', 'paraboloidy', 'paraboloidz')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(abs(Norm_DI(iPar,iPoint)-0.5) > 0.5) CYCLE
-             if(sum(Norm_DI(iPerp_I,iPoint)**2) &
-                  > Norm_DI(iPar,iPoint)) CYCLE
+             if(abs(Norm_DI(iPar,iPoint)-0.5) >= 0.5) CYCLE ! outside parallel
+             if(sum(Norm_DI(iPerp_I,iPoint)**2) &           ! outside
+                  >= Norm_DI(iPar,iPoint)) CYCLE            !   perpendicular
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
@@ -1389,9 +1393,9 @@ contains
     case('doubleconex', 'doubleconey', 'doubleconez')
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
-             if(abs(Norm_DI(iPar,iPoint)) > 1) CYCLE
-             if(sum(Norm_DI(iPerp_I,iPoint)**2) &
-                  > Norm_DI(iPar,iPoint)**2) CYCLE
+             if(abs(Norm_DI(iPar,iPoint)) >= 1) CYCLE ! outside parallel
+             if(sum(Norm_DI(iPerp_I,iPoint)**2) &     ! outside perpendicular
+                  >= Norm_DI(iPar,iPoint)**2) CYCLE
              if(DoBlock) IsInside = .true.
              if(DoBlockOnly) EXIT
              if(DoMask)  IsInside_I(iPoint) = .true.
