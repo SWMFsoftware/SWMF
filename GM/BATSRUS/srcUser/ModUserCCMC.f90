@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModUser
 
@@ -28,7 +28,7 @@ module ModUser
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_specify_refinement
+       IMPLEMENTED2 => user_block_inside_region
 
   include 'user_module.h' !list of public methods
 
@@ -65,18 +65,23 @@ contains
 
   !===========================================================================
 
-  subroutine user_specify_refinement(iBlk, iArea, DoRefine)
+  subroutine user_block_inside_region(iArea, iBlk, nValue, NameLocation, &
+       DoRefine, IsInside_I, Value_I)
 
     use ModMain,     ONLY: body1, UseRotatingBc, nRefineLevel
     use ModPhysics,  ONLY: rBody, rCurrents
     use ModNumConst, ONLY: cPi, cTiny
-    use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, MinI, MaxI, MinJ, &
-         MaxJ, MinK, MaxK, CellSize_DB, CoordMin_DB, TypeGeometry,&
-         CoordMin_D, CoordMax_D
+    use BATL_lib,    ONLY: Xyz_DGB, Xyz_DNB,nI, nJ, nK, &
+         CellSize_DB, CoordMin_DB, TypeGeometry, CoordMin_D, CoordMax_D
 
-    integer, intent(in) :: iBlk, iArea
-    logical,intent(out) :: DoRefine
+    integer,   intent(in):: iArea        ! area index in BATL_region
+    integer,   intent(in):: iBlk         ! block index
+    integer,   intent(in):: nValue       ! number of output values
+    character, intent(in):: NameLocation ! c, g, x, y, z, or n
 
+    logical, optional, intent(out) :: DoRefine
+    logical, optional, intent(out) :: IsInside_I(:)
+    real,    optional, intent(out) :: Value_I(:,:)
 
     integer :: lev
     real :: xxx,yyy,zzz,RR, xxPoint,yyPoint,zzPoint
@@ -90,12 +95,14 @@ contains
 
     real,parameter::cRefinedTailCutoff=0.75*0.875
 
-    character (len=*), parameter :: NameSub = 'user_specify_refinement'
+    character (len=*), parameter :: NameSub = 'user_block_inside_region'
 
     logical :: oktest, oktest_me
     real    :: XyzStart_D(3),x1,x2
-
     !--------------------------------------------------------------------------
+    if(present(IsInside_I) .or. present(Value_I)) call stop_mpi(NameSub// &
+         ': the CCMC version does not work for array output')
+
     call set_oktest('initial_refinement',oktest,oktest_me)
 
     lev = nRefineLevel
@@ -5646,7 +5653,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
 
-  end subroutine user_specify_refinement
+  end subroutine user_block_inside_region
   !======================================================================
 
 end module ModUser
