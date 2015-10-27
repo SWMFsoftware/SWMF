@@ -2251,8 +2251,242 @@ module ModInterpolateAMR
   ! of  State_VGB is allocated is provided in iIndex_II(0,:) components
   ! of the index output array
   !/
-  public cTol2, interpolate_amr
+  public cTol2, interpolate_amr, interpolate_amr_gc
 contains
+  !=================================
+  subroutine interpolate_amr_gc(&
+       nDim, Xyz_D, XyzMin_D, DXyz_D, nCell_D, DiLevelNei_I, &
+       nCellOut, iCellOut_II, Weight_I, IsSecondOrder)
+    use ModKind, ONLY: nByteReal
+    ! Find grid cells surrounding the point Coord_D and interpolation weights.
+    ! The subroutine uses ghost cells, 
+    ! thus whole interpolation can be done ousing just one block
+    ! Xyz_D:     coordinates of the point
+    ! XyzMin_D:  coordinates of the corner of the block containing the point
+    ! DXyz_D:    cell size of this block
+    ! DiLevel_I: difference of resolution level of block neighbors
+    ! nCellOut:  the number of cells found on the processor.
+    ! iCellOut_I:the cell indexes for each cell.
+    ! Weight_I:  the interpolation weights 
+    ! IsSecondOrder: whether the result is 2nd order interpolation
+    integer, intent(in) :: nDim
+    real,    intent(in) :: Xyz_D(nDim)
+    real,    intent(in) :: XyzMin_D(nDim)
+    real,    intent(in) ::DXyz_D(nDim)
+    integer, intent(in) :: nCell_D(nDim)
+    integer, intent(in) ::DiLevelNei_I(3**nDim)
+    integer, intent(out):: nCellOut
+    integer, intent(out):: iCellOut_II(nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+    logical, intent(out):: IsSecondOrder
+
+    ! signature of which boundary of the block the point is close to (if it is)
+    integer:: iDiscr_D(3)
+    integer:: iLevel_I(2**nDim)
+    integer:: iDim, iGrid, iSubGrid
+    integer:: iNodeNei, iBlockNei, iProcNei
+    real   :: Dimless_D(nDim), XyzPass_D(nDim)
+
+    integer, parameter:: iShift_DI(3,8)=reshape( (/&
+         0,0,0, 1,0,0,&
+         0,1,0, 1,1,0,&
+         0,0,1, 1,0,1,&
+         0,1,1, 1,1,1 /),(/3, 8/))
+
+    ! pattern to find resolution level of extended stencil
+    ! 1st index: first block of the stencil (numbered in -1:1x-1:1x-1:1 box)
+    ! 2nd index: stencil indexes (1 to 8) of all blocks in stencil
+    integer, parameter:: iStencilPattern_IIII(8,-1:1,-1:1,-1:1)=reshape( (/&
+         -13,-12,-10, -9, -4, -3, -1,  0, & ! -1, -1, -1
+         -12,-12, -9, -9, -3, -3,  0,  0, & !  0, -1, -1  
+         -12,-11, -9, -8, -3, -2,  0,  1, & !  1, -1, -1            
+
+         -10, -9,-10, -9, -1,  0, -1,  0, & ! -1,  0, -1
+         -9,  -9, -9, -9,  0,  0,  0,  0, & !  0,  0, -1            
+         -9,  -8, -9,  -8, 0,  1,  0,  1, & !  1,  0, -1            
+
+         -10, -9, -7, -6, -1,  0,  2,  3, & ! -1,  1, -1  
+         -9,  -9, -6, -6,  0,  0,  3,  3, & !  0,  1, -1            
+         -9,  -8, -6, -5,  0,  1,  3,  4, & !  1,  1, -1            
+
+         -4,  -3, -1,  0, -4, -3, -1,  0, & ! -1, -1,  0
+         -3,  -3,  0,  0, -3, -3,  0,  0, & !  0, -1,  0            
+         -3,  -2,  0,  1, -3, -2,  0,  1, & !  1, -1,  0            
+
+         -1,   0, -1,  0, -1,  0, -1,  0, & ! -1,  0,  0
+          0,   0,  0,  0,  0,  0,  0,  0, & !  0,  0,  0            
+          0,   1,  0,  1,  0,  1,  0,  1, & !  1,  0,  0            
+
+         -1,   0,  2,  3, -1,  0,  2,  3, & ! -1,  1,  0  
+          0,   0,  3,  3,  0,  0,  3,  3, & !  0,  1,  0            
+          0,   1,  3,  4,  0,  1,  3,  4, & !  1,  1,  0            
+
+         -4,  -3, -1,  0,  5,  6,  8,  9, & ! -1, -1,  1
+         -3,  -3,  0,  0,  6,  6,  9,  9, & !  0, -1,  1            
+         -3,  -2,  0,  1,  6,  7,  9, 10, & !  1, -1,  1            
+
+         -1,   0, -1,  0,  8,  9,  8,  9, & ! -1,  0,  1 
+          0,   0,  0,  0,  9,  9,  9,  9, & !  0,  0,  1            
+          0,   1,  0,  1,  9, 10,  9, 10, & !  1,  0,  1            
+
+         -1,   0,  2,  3,  8,  9, 11, 12, & ! -1,  1,  1  
+          0,   0,  3,  3,  9,  9, 12, 12, & !  0,  1,  1            
+          0,   1,  3,  4,  9, 10, 12, 13  & !  1,  1,  1  
+         /), (/8,3,3,3/))
+
+    ! variables to call interpolate_extended_stencil
+    real   :: XyzGrid_DII(nDim, 0:2**nDim, 2**nDim)
+    integer:: iCellIndexes_DII(nDim, 2**nDim, 2**nDim)
+    integer:: iIndexes_II(0:nDim, 2**nDim)
+    logical:: IsOut_I(2**nDim)
+    real,    parameter:: DxyzInv_D(3) = (/0.5, 0.5, 0.5/)
+    integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
+    !--------------------------------------------------------------------    
+    cTol2 = cTol**(nByteReal/4)
+    Dimless_D = (Xyz_D - XyzMin_D) / DXyz_D
+
+    if( all(Dimless_D >= 0.5 .and. Dimless_D < nCell_D - 0.5) )then
+       !\
+       ! point is far from the block's boundaries
+       ! perform uniform interpolation and return
+       nCellOut = 2**nDim
+       ! find cell indices
+       iCellOut_II(:,1) = floor(Dimless_D + 0.5)
+       do iGrid = 2, 2**nDim
+          iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
+       end do
+       ! find interpolation weights
+       Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
+       call interpolate_uniform(nDim, Dimless_D, Weight_I)
+       IsSecondOrder = .true.
+       RETURN
+    end if
+
+    ! point is close to the block's boundary,
+    ! iDiscr_D is an indicator of these boundaries
+    iDiscr_D = 0 ! for nDim=2 3rd value must be 0
+    where(Dimless_D < 0.5)
+       iDiscr_D(1:nDim) =-1
+    elsewhere(Dimless_D >= nCell_D - 0.5)
+       iDiscr_D(1:nDim) = 1
+    end where
+
+    ! resolution levels of blocks that may contain cells 
+    ! of final interpolation stencil
+    iLevel_I = DiLevelNei_I( 1+3**nDim/2 + &
+         iStencilPattern_IIII(1:2**nDim,iDiscr_D(1), iDiscr_D(2), iDiscr_D(3)))
+    ! DiLevelNei_I may be -1 or 0; 
+    ! if < -1 => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I < -1
+
+    if( all(iLevel_I == 0 .or. IsOut_I) )then
+       !\
+       ! point is close to the block's boundaries
+       ! but all neighbors are of the same resolution level
+       ! perform uniform interpolation and return
+       nCellOut = 2**nDim
+       ! find cell indices
+       iCellOut_II(:,1) = floor(Dimless_D + 0.5)
+       do iGrid = 2, 2**nDim
+          iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
+       end do
+       ! find interpolation weights
+       Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
+       call interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
+       IsSecondOrder = .not. any(IsOut_I)
+       cTol2 = 2*cTol2
+       if(IsSecondOrder .and. all(Weight_I >= cTol2)) RETURN
+       !\ 
+       ! sort out zero weights
+       !/
+       nCellOut = 0 
+       do iGrid = 1, 2**nDim
+          if(Weight_I(iGrid) < cTol2)CYCLE
+          nCellOut = nCellOut + 1
+          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
+          Weight_I(nCellOut) = Weight_I(iGrid)
+       end do
+       RETURN
+    end if
+    
+    ! recompute iDiscr_D: certain configurations are not covered
+    where(Dimless_D < 1)
+       iDiscr_D(1:nDim) =-1
+    elsewhere(Dimless_D >= nCell_D - 1)
+       iDiscr_D(1:nDim) = 1
+    end where
+
+    ! resolution levels of blocks that may contain cells 
+    ! of final interpolation stencil
+    iLevel_I = DiLevelNei_I( 1+3**nDim/2 + &
+         iStencilPattern_IIII(1:2**nDim,iDiscr_D(1), iDiscr_D(2), iDiscr_D(3)))
+    ! DiLevelNei_I may be -1 or 0; 
+    ! if < -1 => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I < -1
+    iLevel_I = iLevel_I + 1 ! so Coarse = 0, Fine = 1
+
+    !\
+    ! prepare input parameters for interpolation procedure
+    !
+    ! set grid 
+    XyzGrid_DII = 0 
+    ! set coordinates of supergrid: coincide with cell centers for Coarse,
+    ! and is a corner between 2**nDim Fine cells
+    !  __ __ _____
+    ! |  |  |  |  |
+    ! |--X--|--X--|
+    ! |__|__|__|__|
+    ! |     |  |  |
+    ! |  X  |--X--|
+    ! |_____|__|__|
+    !   
+    ! NOTE: since reference block is a Fine one 
+    !       DXyz_D is a cell size of Finer block
+    do iGrid = 1, 2**nDim
+       ! supergrid
+       ! THIS FORMULA DOESN'T APPLY FOR ODD NUMBER OF CELLS IN THE BLOCK
+       XyzGrid_DII(:,0,iGrid) = 2*floor(0.5*(Dimless_D-1)) + 1 + &
+            2 * iShift_DI(1:nDim,iGrid)
+       
+       ! depending on resolution level of supergrid
+       ! need to set 1 or 2**nDim subgrid cell centers
+       if(iLevel_I(iGrid) == 0)then
+          ! a coarser neighbor
+          XyzGrid_DII(:,1,iGrid)  = XyzGrid_DII(:,0,iGrid) 
+          iCellIndexes_DII(:,1,iGrid) = nint(XyzGrid_DII(:,1,iGrid)) + &
+               (1 - iShift_DI(1:nDim,iGrid))
+          CYCLE
+       end if
+       do iSubGrid = 1, 2**nDim
+          ! neighbor at the same level
+          XyzGrid_DII(:,iSubGrid,iGrid) = XyzGrid_DII(:,0,iGrid) + &
+               (iShift_DI(1:nDim,iSubGrid) - 0.5)
+          iCellIndexes_DII(:,iSubGrid,iGrid) = &
+               nint(XyzGrid_DII(:,iSubGrid,iGrid) + 0.5)
+       end do
+    end do
+
+    ! call interpolation routine 
+    call interpolate_extended_stencil(&
+         nDim            = nDim, &
+         Xyz_D           = Dimless_D, &
+         nIndexes        = nDim, &
+         XyzGrid_DII     = XyzGrid_DII, &
+         iCellIndexes_DII= iCellIndexes_DII, & 
+         iBlock_I        = iBlock_I(1:2**nDim), & 
+         iProc_I         = iProc_I(1:2**nDim),  &
+         iLevelSubgrid_I = iLevel_I, & 
+         IsOut_I         = IsOut_I, & 
+         DxyzInv_D       = DxyzInv_D(1:nDim),&
+         nGridOut        = nCellOut, & 
+         Weight_I        = Weight_I, & 
+         iIndexes_II     = iIndexes_II, & 
+         IsSecondOrder   = IsSecondOrder)
+
+    ! store indices of cells in the final interpolation stencil
+    iCellOut_II(:,1:nCellOut) = iIndexes_II(1:nDim,1:nCellOut)
+  end subroutine interpolate_amr_gc
+
   !=================================
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder, UseGhostCell)
@@ -3363,6 +3597,8 @@ contains
       cTol2 = 2*cTol2
       iLoc = 0
       ALL:do iGrid = 1, nStored
+         if(Weight_I(iGrid) < 0) &
+              call CON_stop("Negative interpolation weight!")
          if(Weight_I(iGrid) < cTol2)CYCLE
          do iLoc = 1, nGridOut
             if(iOrder_I(iLoc)==iOrder_I(iGrid))then
