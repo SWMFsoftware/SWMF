@@ -10,9 +10,8 @@ module BATL_region
   ! Also read the initial grid refinement resolution/level.
 
   use BATL_mpi,  ONLY: iProc
-  use BATL_size, ONLY: nI, nJ, nK, nDim, j0_, nJp1_, k0_, nKp1_
-  use BATL_geometry, ONLY: &
-       Dim2_, Dim3_, IsPeriodic_D, DomainSize_D
+  use BATL_size, ONLY: nI, nDim, j0_, nJp1_, k0_, nKp1_
+  use BATL_geometry, ONLY: Dim2_, Dim3_
 
   implicit none
 
@@ -90,7 +89,7 @@ contains
     use BATL_tree,         ONLY: nRoot_D
     use ModNumConst,       ONLY: cDegToRad
 
-    integer :: iGeo, iVar, iCrit
+    integer :: iGeo
     real:: rMin, rMax
     logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
@@ -614,9 +613,10 @@ contains
     logical:: DoSetCorner, DoSetCoord, DoSetXyz
 
     logical, parameter:: DoTest = .false.
-
     character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
+    ! DoTest = iBlock == 2
+
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
     DoValue  = present(Value_I)
@@ -627,6 +627,10 @@ contains
 
     nRegion = size(iRegion_I)
     if(nRegion < 1) call CON_stop(NameSub//': empty region index array')
+
+    if(DoTest)write(*,*) NameSub, &
+         ' nRegion, iBlock, nValue, DoBlock, DoMask, DoValue=', &
+         nRegion, iBlock, nValue, DoBlock, DoMask, DoValue
 
     ! Default number of points is the same as the number of returned values
     nPoint = nValue
@@ -657,6 +661,8 @@ contains
     DoSetCoord = .true.
     DoSetXyz   = .true.
 
+    if(DoTest)write(*,*) NameSub,' NameLocation, nPoint=', NameLocation, nPoint
+
     ! Evaluate all regions
     do iRegion = 1, nRegion
 
@@ -673,22 +679,33 @@ contains
        Area => AreaGeo_I(iArea)
        NameShape = Area%NameShape
 
+       if(DoTest)write(*,*) NameSub,' iArea, NameShape=', iArea, NameShape
+
        if(NameShape == 'all')then
+          ! Set everything inside
+          if(DoTest)write(*,*) NameSub,' set for all'
           if(DoBlock) IsInside = .true.
           if(DoMask)  IsInside_I = .true.
           if(DoValue) Value_I = 1.0
        elseif(NameShape(1:4) == 'user')then
 !!! to be generalized for mask and values !!!
+          if(DoTest)write(*,*) NameSub,' call user_region'
           call user_specify_refinement(iBlock, iArea, IsInside)
        elseif(DoBlockOnly .and. Area%IsSimple)then
+          ! Use corners of the block to set IsInside
+          if(DoTest)write(*,*) NameSub,' call is_block_inside'
           IsInside = is_block_inside(iBlock, Area, DoSetCorner)
-       elseif(IsCartesianGrid .or. NameShape == 'brick_coord')then
-          if(DoSetXyz) call set_xyz
-          call points_inside_region(nPoint, Xyz_DI, Area, &
-               IsInside, IsInside_I, Value_I)
-       else
+       elseif(NameShape == 'brick_coord' .and. .not.IsCartesianGrid)then
+          ! Use generalized coordinates for brick_coord
+          if(DoTest)write(*,*) NameSub,' DoSetCoord=', DoSetCoord
           if(DoSetCoord) call set_coord
           call points_inside_region(nPoint, Coord_DI, Area, &
+               IsInside, IsInside_I, Value_I)
+       else
+          ! The generic case uses Cartesian point  coordinates
+          if(DoTest)write(*,*) NameSub,' DoSetXyz=', DoSetXyz
+          if(DoSetXyz) call set_xyz
+          call points_inside_region(nPoint, Xyz_DI, Area, &
                IsInside, IsInside_I, Value_I)
        end if
 
@@ -712,6 +729,13 @@ contains
           end if
        end if
     end do
+
+    if(DoTest)then
+       write(*,*) NameSub,' finished with'
+       if(DoBlock) write(*,*)' IsInside       =', IsInside
+       if(DoMask)  write(*,*)' any(IsInside_I)=', any(IsInside_I)
+       if(DoValue) write(*,*)' maxval(Value_I)=', maxval(Value_I)
+    end if
 
   contains
 
@@ -928,7 +952,7 @@ contains
     logical:: DoSet
     integer, parameter :: nCorner = 2**nDim
     real     :: DistMin_D(nDim), DistMax_D(nDim), Radius1Sqr
-    integer  :: i, j, k, iDim, iCorner
+    integer  :: iDim, iCorner
 
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'is_block_inside'
@@ -1021,11 +1045,12 @@ contains
             iBlock, DistMin_D, is_block_inside
     end if
 
-
   end function is_block_inside
   !============================================================================
   subroutine points_inside_region(&
        nPoint, Xyz_DI, Area, IsInside, IsInside_I, Value_I)
+
+    use BATL_geometry, ONLY: IsCartesianGrid, IsPeriodic_D, DomainSize_D
 
     ! Check if the points listed in Xyz_DI are inside the Area
 
@@ -1050,7 +1075,7 @@ contains
 
     logical:: DoBlock, DoMask, DoValue, DoBlockOnly
 
-    logical:: DoTaper
+    logical:: DoTaper, DoPeriodic
     real:: Xyz_D(nDim), Size_D(nDim)
     real:: Radius, RadiusSqr, Dist1, Dist2
     real:: Radius1, Radius1Sqr, Slope1
@@ -1117,20 +1142,27 @@ contains
             /sqrt(1 + (Slope1*Size_D(iPerp_I)/Size_D(iPar))**2)
     endif
 
+    ! For now periodic boundaries are checked for 
+    ! Cartesian coordinates and for box_coord.
+    DoPeriodic = any(IsPeriodic_D(1:nDim)) .and. &
+         (IsCartesianGrid .or. NameShape == 'brick_coord')
+
     ! Transform point coordinates for easy comparison
     do iPoint = 1, nPoint
 
        ! Shift to area center
        Xyz_D = Xyz_DI(:,iPoint) - Area % Center_D
 
-       do iDim = 1, nDim
-          if(IsPeriodic_D(iDim))then
-             if(Xyz_D(iDim) > 0.5*DomainSize_D(iDim)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) - DomainSize_D(iDim)
-             if(Xyz_D(iDim) < -0.5*DomainSize_D(iDim)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) + DomainSize_D(iDim)
-          end if
-       end do
+       if(DoPeriodic)then
+          do iDim = 1, nDim
+             if(IsPeriodic_D(iDim))then
+                if(Xyz_D(iDim) > 0.5*DomainSize_D(iDim)) &
+                     Xyz_D(iDim) = Xyz_D(iDim) - DomainSize_D(iDim)
+                if(Xyz_D(iDim) < -0.5*DomainSize_D(iDim)) &
+                     Xyz_D(iDim) = Xyz_D(iDim) + DomainSize_D(iDim)
+             end if
+          end do
+       end if
 
        ! Rotate into area coordinates
        if(Area % DoRotate) Xyz_D = matmul(Area % Rotate_DD, Xyz_D)
@@ -1404,8 +1436,12 @@ contains
        if(DoBlock) IsInside   = any(Value_I == 1)
     end if
 
-    if(DoTest .and. DoValue) &
-         write(*,*) NameSub, ': maxval(Value_I)=', maxval(Value_I)
+    if(DoTest)then
+       write(*,*) NameSub,' finished with'
+       if(DoBlock) write(*,*)' IsInside       =', IsInside
+       if(DoMask)  write(*,*)' any(IsInside_I)=', any(IsInside_I)
+       if(DoValue) write(*,*)' maxval(Value_I)=', maxval(Value_I)
+    end if
 
   end subroutine points_inside_region
 
