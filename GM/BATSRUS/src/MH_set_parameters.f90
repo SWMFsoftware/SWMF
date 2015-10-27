@@ -2920,7 +2920,6 @@ contains
     use ModGeometry, ONLY: LogRGen_I
     use BATL_lib, ONLY: init_batl, CoordMin_D, CoordMax_D, &
          IsRotatedCartesian
-    use ModUserInterface ! user_specify_refinement
 
     character(len=20):: TypeGeometryBatl
 
