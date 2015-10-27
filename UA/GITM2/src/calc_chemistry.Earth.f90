@@ -117,15 +117,15 @@ subroutine calc_chemistry(iBlock)
   mb = mb/mbb
 
   teffective_n2 = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
-       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iN2_)) * &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) - Mass(iN2_)) * &
        (Mass(iN2_) + mb)/(3*Boltzmanns_Constant) * u2
        
   teffective_o2 = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
-       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iO2_)) * &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) - Mass(iO2_)) * &
        (Mass(iO2_) + mb)/(3*Boltzmanns_Constant) * u2
        
   teffective_no = iTemperature(1:nLons,1:nLats,1:nAlts,iBlock) + &
-       MassI(iO_4SP_)/(MassI(iO_4SP_) + Mass(iNO_)) * &
+       MassI(iO_4SP_)/(MassI(iO_4SP_) - Mass(iNO_)) * &
        (Mass(iNO_) + mb)/(3*Boltzmanns_Constant) * u2
        
   where (teffective_n2 < 350.0)
@@ -140,12 +140,16 @@ subroutine calc_chemistry(iBlock)
      teffective_o2 = 350.0
   endwhere
 
-  where (teffective_o2 > 350.0)
-     teffective_o2 = 350.0
+  where (teffective_o2 > 6000.0)
+     teffective_o2 = 6000.0
   endwhere
 
   where (teffective_no < 320.0)
      teffective_no = 320.0
+  endwhere
+
+  where (teffective_no > 6000.0)
+     teffective_no = 6000.0
   endwhere
 
   where (teffective_n2 <= 1700.0)
@@ -444,6 +448,7 @@ subroutine calc_chemistry(iBlock)
 
               ! N2+ + O -> O+(4S) + N2 + 1.96 eV
 
+              ! Shit, is this right???
               rr = 1.4e-16 * tr3m044
 
               Reaction = &
@@ -970,7 +975,6 @@ subroutine calc_chemistry(iBlock)
               ! -----------
               ! O+(4S) + N2 -> NO+ + N(4S) + 1.10 eV
               ! -----------
-
 !!              rr = rr_opn2
                rr = k1_n2_point
 
