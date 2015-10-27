@@ -103,18 +103,25 @@ contains
 
   end subroutine user_action
   !=====================================================================
-  subroutine user_specify_refinement(iBlock, iArea, DoRefine)
+  subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+       IsInside, IsInside_I, Value_I)
 
-    integer, intent(in) :: iBlock, iArea
-    logical,intent(out) :: DoRefine
-
-    character(len=*), parameter :: NameSub = 'user_specify_refinement'
-    !-------------------------------------------------------------------
+    ! geometric criteria
     
-    ! Can ONLY depend om geometric criteias, only called when grid change
+    integer,   intent(in):: iArea        ! area index in BATL_region
+    integer,   intent(in):: iBlock       ! block index
+    integer,   intent(in):: nValue       ! number of output values
+    character, intent(in):: NameLocation ! c, g, x, y, z, or n
 
+    logical, optional, intent(out) :: IsInside
+    logical, optional, intent(out) :: IsInside_I(:)
+    real,    optional, intent(out) :: Value_I(:,:)
+
+    character(len=*), parameter :: NameSub = 'user_block_inside_region'
+    !-------------------------------------------------------------------
     call stop_user(NameSub)
-  end subroutine user_specify_refinement
+
+  end subroutine user_block_inside_region
 
   !=====================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)

@@ -88,18 +88,27 @@ subroutine user_action(NameAction)
 
 end subroutine user_action
 !=====================================================================
-subroutine user_specify_refinement(iBlock, iArea, DoRefine)
+subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+     IsInside, IsInside_I, Value_I)
 
-  use ModUser, ONLY: user_sub => user_specify_refinement
+  use ModUser, ONLY: user_sub => user_block_inside_region
   implicit none
 
-  integer, intent(in) :: iBlock, iArea
-  logical,intent(out) :: DoRefine
+  integer,   intent(in):: iArea        ! area index in BATL_region
+  integer,   intent(in):: iBlock       ! block index
+  integer,   intent(in):: nValue       ! number of output values
+  character, intent(in):: NameLocation ! c, g, x, y, z, or n
 
+  logical, optional, intent(out) :: IsInside
+  logical, optional, intent(out) :: IsInside_I(:)
+  real,    optional, intent(out) :: Value_I(:,:)
+
+  character(len=*), parameter :: NameSub = 'user_block_inside_region'
   !-------------------------------------------------------------------
-  call user_sub(iBlock, iArea, DoRefine)
+  call user_sub(iArea, iBlock, nValue, NameLocation, &
+     IsInside, IsInside_I, Value_I)
 
-end subroutine user_specify_refinement
+end subroutine user_block_inside_region
 
 !=====================================================================
 subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
@@ -294,9 +303,9 @@ subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
   real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
   !---------------------------------------------------------------------------
   call user_sub(State_V, i, j, k, iBlock, iDir, &
-     EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
-     EinternalOut, TeOut, PressureOut, &
-     CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-     OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
+       EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
+       EinternalOut, TeOut, PressureOut, &
+       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
+       OpacityPlanckOut_W, OpacityRosselandOut_W, PlanckOut_W)
 
 end subroutine user_material_properties

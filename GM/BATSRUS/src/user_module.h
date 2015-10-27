@@ -13,7 +13,7 @@
   public :: user_initial_perturbation
   public :: user_set_ics
   public :: user_init_session
-  public :: user_specify_refinement
+  public :: user_block_inside_region
   public :: user_amr_criteria
   public :: user_read_inputs
   public :: user_get_log_var
