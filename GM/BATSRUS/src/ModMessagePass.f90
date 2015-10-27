@@ -4,12 +4,27 @@
 
 module ModMessagePass
 
+  ! Message passing to fill in ghost cells.
+  !
+  ! Also methods related to the buffer grid that acts like
+  ! ghost cells in a spherical shell.
+
   implicit none
 
-  logical:: DoOneCoarserLayer = .true.
+  private ! except
+
+  public:: exchange_messages   ! fill ghost cells and (re)calculate energies
+  public:: use_buffer_grid     ! returns true if there is a buffer grid
+  public:: is_buffered_point   ! true if a cell is inside the buffer grid
+  public:: fill_in_from_buffer ! set cells of the block covered by buffer grid
+
+  ! True if it is sufficient to fill in the fine ghost cells with a single
+  ! layer of the coarse cell values.
+  ! set from MH_set_parameters
+  logical, public:: DoOneCoarserLayer = .true. 
 
 contains
-  ! moved form file exchange_messages.f90 
+  !========================================================================
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
@@ -121,7 +136,6 @@ contains
        end do
     end if
 
-
     if (UseOrder2 .or. nOrderProlong > 1) then
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
@@ -194,21 +208,21 @@ contains
     if(DoTestMe)write(*,*) NameSub,' finished'
 
   end subroutine exchange_messages
-  !===============================
+  !===========================================================================
   logical function use_buffer_grid()
     use ModMain, ONLY: TypeBc_I
     use_buffer_grid = any(TypeBc_I=='buffergrid')
   end function use_buffer_grid
-  !==============================
+  !===========================================================================
   logical function is_buffered_point(i,j,k,iBlock)
     use ModGeometry,ONLY: R_BLK
     use ModMain,    ONLY: BufferMin_D, BufferMax_D
     integer, intent(in):: i, j, k, iBlock
-    !------------
+    !------------------------------------------------------------------------
     is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) .and. &
             R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
   end function is_buffered_point
-  !============================================================================
+  !===========================================================================
   subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use ModProcMH,  ONLY: iProc
