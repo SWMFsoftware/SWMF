@@ -32,6 +32,7 @@ F			DoTimeAccurate
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
 
+! test message passing across the pole with grid resolution
 #UNIFORMAXIS
 F                       UseUniformAxis
 
@@ -53,16 +54,16 @@ T			UseBody (rest of parameters read if true)
 1
 initial
 
-!refine the magnetosphere
+! the left half of the grid (create res. change across the pole)
 #GRIDLEVEL
 2                       Resolution
 box                    NameArea
- 0.0                  xMinBox
--1.0                  yMinBox
--1.0                  zMinBox
--8.0                  xMaxBox
- 1.0                  yMaxBox
- 1.0                  zMaxBox
+-8.0                   xMinBox
+-1.0                   yMinBox
+-1.0                   zMinBox
+-0.0001                xMaxBox
+ 1.0                   yMaxBox
+ 1.0                   zMaxBox
 
 #ROTATION 
 F                       UseRotation
