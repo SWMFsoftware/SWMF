@@ -129,26 +129,11 @@ subroutine set_ics(iBlock)
 
         end do; end do; end do
 
-        if(index(test_string,'ADDROTATIONALVELOCITY') > 0)then
-           ! For testing purposes add rotational velocity
-           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-              do iFluid = 1, nFluid
-                 call select_fluid
-                 State_VGB(iRhoUx,i,j,k,iBlock) = &
-                      State_VGB(iRhoUx,i,j,k,iBlock) &
-                      + State_VGB(iRho,i,j,k,iBlock) &
-                      *OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
-                 State_VGB(iRhoUy,i,j,k,iBlock) = &
-                      State_VGB(iRhoUy,i,j,k,iBlock) &
-                      - State_VGB(iRho,i,j,k,iBlock) &
-                      *OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
-              end do
-           end do; end do; end do
-        end if
-
         if(UseConstrainB)call constrain_ics(iBlock)
 
         if(UseUserICs) call user_set_ics(iBlock)
+
+        if(iSignRotationIC /= 0) call add_rotational_velocity(iSignRotationIC, iBlock)
 
      end if ! not restart
 
