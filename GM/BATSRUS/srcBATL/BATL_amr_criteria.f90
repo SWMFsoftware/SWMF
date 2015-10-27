@@ -1438,15 +1438,10 @@ contains
        if(nAreaCrit < 1)then
           UseCrit_IB(iCrit,iBlock) = .true.
        else
-          if(iBlock==2)write(*,*) NameSub,' iCrit, iAreaIdx_II=', &
-               iCrit, iAreaIdx_II(1:nAreaCrit,iCrit)
           call block_inside_regions( &
                iAreaIdx_II(1:nAreaCrit,iCrit), iBlock, 0, &
                IsInside=UseCrit_IB(iCrit,iBlock))
        end if
-       if(iBlock==2)write(*,*) NameSub,' iCrit, nAreaCrit, UseCrit=', &
-            iCrit, nAreaCrit, UseCrit_IB(iCrit,iBlock)
-
     end do
 
   end subroutine set_amr_geometry
