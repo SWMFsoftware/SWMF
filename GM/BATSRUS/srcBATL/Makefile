@@ -13,7 +13,6 @@ install:
 OBJECTS = \
 	BATL_amr.o \
 	BATL_amr_criteria.o \
-	BATL_amr_geometry.o \
 	BATL_geometry.o \
 	BATL_grid.o \
 	BATL_high_order.o \
@@ -23,6 +22,7 @@ OBJECTS = \
 	BATL_pass_cell.o \
         BATL_pass_node.o \
         BATL_pass_face.o \
+	BATL_region.o \
 	BATL_size.o \
 	BATL_tree.o \
 	BATL_interpolate_amr.o
