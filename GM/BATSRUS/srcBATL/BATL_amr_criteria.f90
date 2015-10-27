@@ -153,7 +153,7 @@ contains
 
   subroutine init_amr_criteria
 
-    use BATL_size, ONLY: MaxBlock, nBlock, nDim
+    use BATL_size, ONLY: MaxBlock, nBlock
     use BATL_tree, ONLY: Unused_B
     use BATL_mpi,  ONLY: iProc
 
@@ -1425,10 +1425,13 @@ contains
 
     integer ::iCrit, nAreaCrit
 
+    logical, parameter:: DoTest = .true.
+    ! logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_amr_geometry'
     !--------------------------------------------------------
-
     if(nAmrCritUsed < 1) RETURN
+
+    ! DoTest = iBlock == 1
 
     ! Find if Criteria should be used in block
     call set_block_dx_level(iBlock)
@@ -1442,6 +1445,9 @@ contains
                iAreaIdx_II(1:nAreaCrit,iCrit), iBlock, 0, &
                IsInside=UseCrit_IB(iCrit,iBlock))
        end if
+
+       if(DoTest)write(*,*) NameSub,' iCrit, nAreaCrit, UseCrit_IB=', &
+            iCrit, nAreaPerCritAll_I(iCrit), UseCrit_IB(iCrit,iBlock)
     end do
 
   end subroutine set_amr_geometry
