@@ -81,8 +81,8 @@ module ModUserInterface
        character, intent(in):: NameLocation ! c, g, x, y, z, or n
        
        logical, optional, intent(out) :: IsInside
-       logical, optional, intent(out) :: IsInside_I(:)
-       real,    optional, intent(out) :: Value_I(:,:)
+       logical, optional, intent(out) :: IsInside_I(nValue)
+       real,    optional, intent(out) :: Value_I(nValue)
        
      end subroutine user_block_inside_region
 
