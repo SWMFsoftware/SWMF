@@ -44,37 +44,53 @@ subroutine calc_corotation_velocities(Xyz_D, uRot_D)
   uRot_D = cross_product(Omega_D, Xyz_D)
 
 end subroutine calc_corotation_velocities
-!=============================================================================
-subroutine transform_to_hgi
-
-  ! Transform velocities from rotating frame to the HGI frame
-  ! u' = u + Omega x R, 
-  ! where Omega is the angular velocity of the rotating frame
-  ! Since Omega = (0,0,OmegaBody)
-  ! ux = ux - OmegaBody*y
-  ! uy = uy + OmegaBody*x
+!==========================================================================
+subroutine add_rotational_velocity(iSign, iBlock)
 
   use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
   use ModMain,     ONLY: Unused_B
-  use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
+  use ModAdvance,  ONLY: State_VGB
   use ModGeometry, ONLY: true_cell
   use ModPhysics,  ONLY: OmegaBody
+  use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I
   use BATL_lib,    ONLY: Xyz_DGB
-  implicit none
-  integer :: i,j,k,iBlock
-  !---------------------------------------------------------------------------
-  
-  do iBlock=1, nBlock
-     if(Unused_B(iBlock))CYCLE
-     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-        if(.not.True_Cell(i,j,k,iBlock)) CYCLE
-        State_VGB(RhoUx_,i,j,k,iBlock) = State_VGB(RhoUx_,i,j,k,iBlock) - &
-             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
 
-        State_VGB(RhoUy_,i,j,k,iBlock) = State_VGB(RhoUy_,i,j,k,iBlock) + &
-             State_VGB(Rho_,i,j,k,iBlock)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
+  implicit none
+
+  integer, intent(in):: iSign
+  integer, intent(in):: iBlock
+
+  ! Transform velocities between inertial and rotating frames
+  ! where Omega is the angular velocity of the rotating frame
+  ! Since Omega = (0,0,OmegaBody)
+  ! ux = ux - iSign*OmegaBody*y
+  ! uy = uy + iSign*OmegaBody*x
+  ! iSign=+1: from rotating to inertial frame
+  ! iSign=-1: from inertial to rotating frame
+  !
+  ! If iBlock is 0 or negative, do all blocks in State_VGB,
+  ! otherwise do only block iBlock
+
+  integer :: i, j, k, iBlk, iBlockFirst, iBlockLast
+  !---------------------------------------------------------------------------      
+  if(iBlock > 0)then
+     iBlockFirst = 1; iBlockLast = nBlock
+  else
+     iBlockFirst = iBlock; iBlockLast = iBlock
+  end if
+
+  do iBlk = 1, nBlock
+     if(Unused_B(iBlk))CYCLE
+     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+        if(.not.true_Cell(i,j,k,iBlk)) CYCLE
+        State_VGB(iRhoUx_I,i,j,k,iBlk) = State_VGB(iRhoUx_I,i,j,k,iBlk) - &
+             iSign*State_VGB(iRho_I,i,j,k,iBlk)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlk)
+        
+        State_VGB(iRhoUy_I,i,j,k,iBlk) = State_VGB(iRhoUy_I,i,j,k,iBlk) + &
+             iSign*State_VGB(iRho_I,i,j,k,iBlk)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlk)
 
      end do; end do; end do
   end do
+  
+end subroutine add_rotational_velocity
 
-end subroutine transform_to_hgi
