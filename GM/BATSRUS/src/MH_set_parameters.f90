@@ -1874,7 +1874,7 @@ subroutine MH_set_parameters(TypeAction)
         call check_stand_alone
         if(.not.is_first_session())CYCLE READPARAM
         call read_var('dLongitudeHgi', dLongitudeHgiDeg)
-        dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
+        dLongitudeHgi = dLongitudeHgiDeg * cDegToRad        
 
      case("#COORDSYSTEM","#COORDINATESYSTEM")
         if(.not.is_first_session())CYCLE READPARAM
@@ -1889,10 +1889,11 @@ subroutine MH_set_parameters(TypeAction)
         case('IH','OH')
            select case(TypeCoordSystem)
            case('HGI')
-              ! Note: transformation from HGR to HGI does not work properly
-              !       unless HGR happens to be the same as HGC 
-              !       (ie. aligned with HGI at the initial time)
-              DoTransformToHgi = UseRotatingFrame
+              ! If rotating frame was on in the previous session then
+              ! we need to transform from HGR/HGC to HGI system.
+              ! Note: This only works if the twoo coordinate systems are aligned 
+              ! at the initial time (i.e. HGR = HGC).
+              if(UseRotatingFrame) iSignRotationIC = +1
               UseRotatingFrame = .false.
            case('HGC','HGR')
               UseRotatingFrame = .true.
@@ -1929,6 +1930,9 @@ subroutine MH_set_parameters(TypeAction)
                    //TypeCoordSystem)
            end select
         end select
+
+     case("#ROTATINGINITIALCONDITION")
+        call read_var('iSignRotationIC', iSignRotationIC)
 
      case("#NSTEP")
         if(.not.is_first_session())CYCLE READPARAM
@@ -2847,7 +2851,7 @@ contains
           write(*,*) NameSub//' setting TypeCoordSystem = HGC'
        end if
        TypeCoordSystem  = 'HGC'
-       DoTransformToHgi = .false.
+       iSignRotationIC = 0
        UseRotatingFrame = .true.
     end if
 
@@ -2860,7 +2864,7 @@ contains
           write(*,*) NameSub//' setting TypeCoordSystem = HGC'
        end if
        TypeCoordSystem  = 'HGC'
-       DoTransformToHgi = .false.
+       iSignRotationIC = 0
        UseRotatingFrame = .true.
     end if
 
