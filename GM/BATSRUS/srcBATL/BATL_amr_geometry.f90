@@ -92,7 +92,7 @@ contains
 
     integer :: iGeo, iVar, iCrit
     real:: rMin, rMax
-    logical, parameter :: DoTest=.true.
+    logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
     !-------------------------------------------------------------------------
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
@@ -337,7 +337,7 @@ contains
     real    :: AreaResolution  = 0.0
     integer :: nLevelArea = 0
 
-    logical, parameter:: DoTest = .true.
+    logical, parameter:: DoTest = .false.
     character(len=*), parameter :: NameSub='read_region_param'
     !-------------------------------------------------------------------------
 
@@ -613,7 +613,7 @@ contains
 
     logical:: DoSetCorner, DoSetCoord, DoSetXyz
 
-    logical, parameter:: DoTest=.false.
+    logical, parameter:: DoTest = .false.
 
     character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
@@ -660,8 +660,6 @@ contains
     ! Evaluate all regions
     do iRegion = 1, nRegion
 
-       call show_region(iRegion, NameSub//' starting loop')
-
        ! Store results obtained from previous regions
        if(iRegion > 1)then
           if(DoBlock) IsInsideOld   = IsInside
@@ -683,7 +681,6 @@ contains
 !!! to be generalized for mask and values !!!
           call user_specify_refinement(iBlock, iArea, IsInside)
        elseif(DoBlockOnly .and. Area%IsSimple)then
-          call show_region(iRegion, NameSub//' calling is_block_inside')
           IsInside = is_block_inside(iBlock, Area, DoSetCorner)
        elseif(IsCartesianGrid .or. NameShape == 'brick_coord')then
           if(DoSetXyz) call set_xyz
