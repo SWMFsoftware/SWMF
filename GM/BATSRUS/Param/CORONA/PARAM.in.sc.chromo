@@ -124,10 +124,10 @@ T			DoExtendTransitionRegion
 GridChromo
 
 #DOAMR
-T
-40
--1
-T
+T			DoAmr
+40			DnAmr
+-1			DtAmr
+T			IsStrictAmr
 
 AMR
 5			DnRefine 40000
