@@ -62,7 +62,6 @@ contains
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
-    use ModUserInterface ! user_specify_refinement
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -273,7 +272,7 @@ subroutine BATS_init_session
   use ModHeatConduction, ONLY: init_heat_conduction
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
-  use ModUserInterface ! user_initial_perturbation, user_specify_refinement
+  use ModUserInterface ! user_initial_perturbation
   use ModLocalTimestep, ONLY: UseLocalTimeStepNew
   use ModProcMH, ONLY: iProc
   use BATL_lib, ONLY: init_amr_criteria
