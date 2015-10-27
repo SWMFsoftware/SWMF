@@ -263,7 +263,7 @@ end subroutine BATS_setup
 
 subroutine BATS_init_session
 
-  use ModMain, ONLY: DoTransformToHgi, UseUserPerturbation, &
+  use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
        UseProjection, UseConstrainB
   use ModCT,   ONLY: DoInitConstrainB
@@ -308,9 +308,10 @@ subroutine BATS_init_session
   call select_stepping(.false.)
 
   ! Transform velocities from a rotating system to the HGI system if required
-  if(DoTransformToHgi)then
-     call transform_to_hgi
-     DoTransformToHgi = .false.
+  if(iSignRotationIC /= 0)then
+     ! add or subtract rho*(omega x r) to the momentum of all fluids for all blocks
+     call add_rotational_velocity(iSignRotationIC, 0) 
+     iSignRotationIC = 0
   end if
 
   ! Ensure zero divergence for the CT scheme
