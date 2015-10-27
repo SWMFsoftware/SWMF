@@ -21,7 +21,7 @@
 ! RefineCritAll_I[nAmrCritUsed]      : Limit for criteria to do refinment
 ! CoarsenCritAll_I[nAmrCritUsed]     : Limit for criteria for when to coursen
 ! ResolutionLimit_I[nAmrCritUsed]    : A criteria will not be applied for block with a better resolution then indicated
-! iResolutionLimit_I[nAmrCritUsed]   : Index if ResolutionLimit_I are applied to dx or level resolution criteria
+! iResolutionLimit_I[nAmrCritUsed]   : Index of ResolutionLimit_I are applied to dx or level resolution criteria
 ! iMapToUniqCrit_I[nAmrCritUsed]      : Map from used criteria to unique criteria
 ! AreaAll_I[maxarea]                : List of all ares used by the amr criteria
 ! AmrCirt_IB[nAmrCrit,nBlock]        : Store the criteria values we compare to
@@ -158,8 +158,8 @@ contains
     use BATL_mpi,  ONLY: iProc
 
     integer :: iBlock, iCrit, nCrit, iGeo, iArea, idx, iVar
-    logical :: DoTestMe = .false.
 
+    logical, parameter :: DoTest = .false.
     character(len=*), parameter :: NameSub = 'init_amr_criteria'
     !-------------------------------------------------------------------------
 
@@ -281,40 +281,39 @@ contains
        call set_amr_geometry(iBlock)
     end do
 
-    if(DoTestMe) then
-       if(iProc == 0) then
-          write(*,"(A17,100(F10.3))")"RefineCritAll_I   :", RefineCritAll_I
-          write(*,"(A17,100(F10.3))")"CoarsenCritAll_I  :", CoarsenCritAll_I
-          write(*,"(A17,100(F10.3))")"ResolutionLimit_I :", ResolutionLimit_I
-          write(*,"(A17,100(I10))")  "iResolutionLimit_I:", iResolutionLimit_I
-          write(*,"(A17,100(I10))")  "iVarCritAll_I     :", iVarCritAll_I
-          write(*,"(A17,100(I10))")  "nAreaPerCritAll_I :", nAreaPerCritAll_I
-          do iCrit = 1, nAmrCritUsed
-             write(*,"(A11,I3)") "Criteria : ",iCrit
-             do iArea =1,nAreaPerCritAll_I(iCrit)
-                idx = iAreaIdx_II(iArea,iCrit)
-                write(*,"(A14,A6,I4,A8,A10,A14,A10)") " ","Idx = ", idx, &
-                     " NameShape = ", AreaGeo_I(abs(idx))%NameShape, &
-                     " NameRegion = ", AreaGeo_I(abs(idx))%NameRegion
-             end do
+    if(DoTest .and. iProc == 0) then
+       write(*,"(A17,100(F10.3))")"RefineCritAll_I   :", RefineCritAll_I
+       write(*,"(A17,100(F10.3))")"CoarsenCritAll_I  :", CoarsenCritAll_I
+       write(*,"(A17,100(F10.3))")"ResolutionLimit_I :", ResolutionLimit_I
+       write(*,"(A17,100(I10))")  "iResolutionLimit_I:", iResolutionLimit_I
+       write(*,"(A17,100(I10))")  "iVarCritAll_I     :", iVarCritAll_I
+       write(*,"(A17,100(I10))")  "nAreaPerCritAll_I :", nAreaPerCritAll_I
+       do iCrit = 1, nAmrCritUsed
+          write(*,"(A11,I3)") "Criteria : ",iCrit
+          do iArea =1,nAreaPerCritAll_I(iCrit)
+             idx = iAreaIdx_II(iArea,iCrit)
+             write(*,"(A14,A6,I4,A8,A10,A14,A10)") " ","Idx = ", idx, &
+                  " NameShape = ", AreaGeo_I(abs(idx))%NameShape, &
+                  " NameRegion = ", AreaGeo_I(abs(idx))%NameRegion
           end do
-          write(*,"(A17,100(I10))") "iVarCritAll_I:", iVarCritAll_I
-          write(*,"(A17,100(I10))") "AmrCrit_IB   :", shape(AmrCrit_IB) 
-          write(*,*) ""
-          do iCrit=1,nAmrCritUsed
-             write(*,*) "iAreaIdx_II( :,iCrit) ",iAreaIdx_II( 1:nAreaPerCritAll_I(iCrit),iCrit)
-          end do
-          write(*,*) ""
-          write(*,*) " 1 : nAmrCritUsed = ", 1," : ",nAmrCritUsed
-          write(*,*) " Geo range        = ", &
-               nPhysCritUsed +1," : ", nAmrCritUsed
-          write(*,*) " Phys range       = ",1," : ", nPhysCritUsed
-          write(*,*) " Error Phys       = ",1," : ", nIntCrit
-          write(*,*) " Ext calc range   = ",nIntCrit+1," : ",nIntCrit+nExtCrit
-          write(*,*) " shape AmrCrit_IB = ",shape(AmrCrit_IB)
-          write(*,*) ""
-          write(*,*) ""
-       end if
+       end do
+       write(*,"(A17,100(I10))") "iVarCritAll_I:", iVarCritAll_I
+       write(*,"(A17,100(I10))") "AmrCrit_IB   :", shape(AmrCrit_IB) 
+       write(*,*) ""
+       do iCrit=1,nAmrCritUsed
+          write(*,*) "iAreaIdx_II( :,iCrit) ", &
+               iAreaIdx_II( 1:nAreaPerCritAll_I(iCrit),iCrit)
+       end do
+       write(*,*) ""
+       write(*,*) " 1 : nAmrCritUsed = ", 1," : ",nAmrCritUsed
+       write(*,*) " Geo range        = ", &
+            nPhysCritUsed +1," : ", nAmrCritUsed
+       write(*,*) " Phys range       = ",1," : ", nPhysCritUsed
+       write(*,*) " Error Phys       = ",1," : ", nIntCrit
+       write(*,*) " Ext calc range   = ",nIntCrit+1," : ",nIntCrit+nExtCrit
+       write(*,*) " shape AmrCrit_IB = ",shape(AmrCrit_IB)
+       write(*,*) ""
+       write(*,*) ""
     end if
 
     ! All necessary things are updated
@@ -349,12 +348,11 @@ contains
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     character(3), intent(in), optional:: TypeAmrIn
-
-
-
-    character(len=*), parameter :: NameSub = 'set_amr_criteria'
     character(3) :: TypeAmr
     integer :: iCrit, iBlock
+
+    logical, parameter:: DoTest = .false.
+    character(len=*), parameter :: NameSub = 'set_amr_criteria'
     !-----------------------------------------------------------------------
 
     !nExtCritUsed = 0
@@ -369,7 +367,7 @@ contains
     TypeAmr = 'all'
     if(present(TypeAmrIn)) TypeAmr = TypeAmrIn 
 
-    ! Compatible with old BATSRUS amr behavior
+    ! Compatible with old BATSRUS AMR behavior
     if(IsBatsrusAmr .and.  TypeAmr=='all') then
        if(nPhysCritUsed > 0) then
           TypeAmr = 'phy'
@@ -388,23 +386,31 @@ contains
        end do
     end if
 
+    if(DoTest)write(*,*) NameSub, &
+         ': TypeAmr, nAmrCritUsed,  nPhysCritUsed, nCritDxLevel=', &
+         TypeAmr, nAmrCritUsed,  nPhysCritUsed, nCritDxLevel
+
     !-------- set up index Ranges and find blocks to refine/coarsen -------
     select case(TypeAmr)
     case('all')
        iStartCrit = 1
        iEndCrit   = nAmrCritUsed
     case('geo')
-       iStartCrit = nPhysCritUsed-nCritDxLevel +1
+       iStartCrit = nPhysCritUsed - nCritDxLevel +1
        iEndCrit   = nAmrCritUsed
+       if(DoTest)write(*,*) NameSub, &
+            ' geo iStartCrit, iEndCrit=', iStartCrit, iEndCrit
        call apply_unsorted_criteria
        RETURN
     case('phy')
        iStartCrit = 1
-       iEndCrit  = nPhysCritUsed-nCritDxLevel
+       iEndCrit  = nPhysCritUsed - nCritDxLevel
     case default
        call CON_stop(NameSub // &
             ' ERROR: Unknown TypeAmr = '//TypeAmr)
     end select
+    if(DoTest) write(*,*) NameSub, &
+         ' iStartCrit, iEndCrit=', iStartCrit, iEndCrit
 
     ! Estimation of the numerical error
     if(nIntCrit >0) &
@@ -1011,35 +1017,74 @@ contains
     integer:: iBlock, iCrit, iVarCrit
     ! number of blocks set out for refining and coarsning
     logical :: DoCoarsen
+
+    logical, parameter:: DoTest = .false.
+    character(len=*), parameter:: NameSub = 'apply_unsorted_criteria'
     !----------------------------------------------------------------------
 
     BLOCK3:do iBlock = 1, nBlock
 
        if(Unused_B(iBlock)) CYCLE
 
+       if(DoTest) write(*,*) NameSub, ' iBlock=', iBlock
+
+       ! Block is to be refined already, no need to check
        if(iStatusNew_A(iNode_B(iBlock)) == Refine_) CYCLE
 
+       ! Assume that block can be coarsened
        DoCoarsen = .true.
 
-
+       ! Check each AMR criteria applicable
        do iCrit = iStartCrit, iEndCrit
+
+          if(DoTest) write(*,*) NameSub, ' iCrit, UseCrit=', &
+               iCrit, UseCrit_IB(iCrit,iBlock)
 
           ! Criteria used in this block 
           if(.not.UseCrit_IB(iCrit,iBlock)) CYCLE
 
+          ! Index of the criteria "variable" used (e.g. density gradient)
+          ! For geometric refinement it can also be grid level or dx.
           iVarCrit = iVarCritAll_I(iCrit)
 
+          if(DoTest) write(*,*) NameSub, &
+               ' iVarCrit, AmrCrit_IB, RefineCrit, BlockRes, ResLimit=', &
+               iVarCrit, AmrCrit_IB(iVarCrit,iBlock), &
+               AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock), &
+               ResolutionLimit_I(iCrit)
+
           if(AmrCrit_IB(iVarCrit,iBlock) > RefineCritAll_I(iCrit) .and. &
-               AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock) > ResolutionLimit_I(iCrit))then
+               AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock) &
+               > ResolutionLimit_I(iCrit))then
+
+             ! Block should be refined because the AMR criteria value 
+             ! AmrCrit_IB(iVarCrit,iBlock) exceeds the level set for 
+             ! refinement in RefineCritAll_I, and the block has a resolution 
+             ! AmrCrit_IB(iResolutionLimit_I(iCrit),iBlock)
+             ! that is larger than the limit ResolutionLimit_I(iCrit).
+             ! Note that grid level is stored with a negative sign 
+             ! so this comparison works for both cell size and level.
+
              iStatusNew_A(iNode_B(iBlock)) = Refine_
+
+             if(DoTest) write(*,*) NameSub, ' refine block'
+
              CYCLE BLOCK3
           else if(AmrCrit_IB(iVarCrit,iBlock) > CoarsenCritAll_I(iCrit))then
+
+             ! If any of the AMR criteria AmrCrit_IB(iVarCrit,iBlock) 
+             ! is above the coarsening limit, the block should not be coarsened
              DoCoarsen = .false.
+
+             if(DoTest) write(*,*) NameSub, ' do not coarsen block'
+
           end if
 
        end do
 
        if(DoCoarsen) iStatusNew_A(iNode_B(iBlock)) =  Coarsen_ 
+
+       if(DoTest .and. DoCoarsen) write(*,*) NameSub, ' coarsen block'
 
     end do BLOCK3
 
@@ -1064,8 +1109,6 @@ contains
     integer,           optional, intent(inout) :: nCritInOut
     character(len=20), optional, intent(out)   :: NameCritOut_I(:)
     logical,           optional, intent(out)   :: ReadExtraOut
-    logical :: IsUniqueCritName, UseErrorCrit, ReadExtra, DoTestMe=.false.
-
     integer,           optional, intent(in):: nStateVarIn
     character(len=*),  optional, dimension(:), intent(in):: NameStatVarIn_V
 
@@ -1081,7 +1124,10 @@ contains
     integer :: DnAmr
     real    :: DtAmr
 
-    character(len=*), parameter:: NameSub='BATL_amr_criteria::read_amr_criteria'
+    logical :: IsUniqueCritName, UseErrorCrit, ReadExtra
+
+    logical, parameter :: DoTest = .false.
+    character(len=*), parameter:: NameSub='read_amr_criteria'
     !-------------------------------------------------------------------------
     ReadExtra = .false.
     IsNewPhysParam = .true.
@@ -1305,7 +1351,7 @@ contains
           end if
        end if
 
-       if(DoTestMe .and. iProc == 0) then
+       if(DoTest .and. iProc == 0) then
           write(*,*) " nCritInOut          = ", nCritInOut
           write(*,*) " nIntCrit            = ", nIntCrit
           write(*,*) " nAmrCritUsed        = ", nAmrCritUsed
@@ -1378,6 +1424,8 @@ contains
     integer, intent(in) :: iBlock
 
     integer ::iCrit, nAreaCrit
+
+    character(len=*), parameter:: NameSub = 'set_amr_geometry'
     !--------------------------------------------------------
 
     if(nAmrCritUsed < 1) RETURN
@@ -1386,13 +1434,19 @@ contains
     call set_block_dx_level(iBlock)
     do iCrit = 1, nAmrCritUsed
        nAreaCrit = nAreaPerCritAll_I(iCrit)
+
        if(nAreaCrit < 1)then
           UseCrit_IB(iCrit,iBlock) = .true.
        else
+          if(iBlock==2)write(*,*) NameSub,' iCrit, iAreaIdx_II=', &
+               iCrit, iAreaIdx_II(1:nAreaCrit,iCrit)
           call block_inside_regions( &
                iAreaIdx_II(1:nAreaCrit,iCrit), iBlock, 0, &
                IsInside=UseCrit_IB(iCrit,iBlock))
        end if
+       if(iBlock==2)write(*,*) NameSub,' iCrit, nAreaCrit, UseCrit=', &
+            iCrit, nAreaCrit, UseCrit_IB(iCrit,iBlock)
+
     end do
 
   end subroutine set_amr_geometry
