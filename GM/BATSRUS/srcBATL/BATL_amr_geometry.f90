@@ -692,9 +692,9 @@ contains
           if(DoMask)  IsInside_I = .true.
           if(DoValue) Value_I = 1.0
        elseif(NameShape(1:4) == 'user')then
-!!! to be generalized for mask and values !!!
           if(DoTest)write(*,*) NameSub,' call user_region'
-          call user_specify_refinement(iBlock, iArea, IsInside)
+          call user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+               IsInside, IsInside_I, Value_I)
        elseif(DoBlockOnly .and. Area%IsSimple)then
           ! Use corners of the block to set IsInside
           if(DoTest)write(*,*) NameSub,' call is_block_inside'
