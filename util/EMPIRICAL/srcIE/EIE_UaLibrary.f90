@@ -237,7 +237,7 @@ subroutine UA_GetNonGridBasedPotential(PotentialOut, iError)
 
   integer :: iMLT, iLat
 
-  real    :: Potential, ETheta, EPhi, MLT, Lat, tilt, hr
+  real    :: Potential, ETheta, EPhi, MLT, Lat, tilt, hr, by
 
   iError = 0
 
@@ -350,7 +350,8 @@ subroutine UA_GetNonGridBasedPotential(PotentialOut, iError)
               else
                  tilt = iHemisphere * get_tilt (iYear,iMonth,iDay,hr)
               endif
-              call setmodel(IOr_NeedIMFBy,IOr_NeedIMFBz,tilt, &
+              by = IOr_NeedIMFBy * iHemisphere
+              call setmodel(by,IOr_NeedIMFBz,tilt, &
                    IOr_NeedSWV,IOr_NeedSWN,'epot')
               call epotval(lat,mlt,0.0,Potential)
               Potential = Potential * 1000.0
