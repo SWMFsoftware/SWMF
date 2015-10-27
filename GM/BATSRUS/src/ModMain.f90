@@ -198,8 +198,8 @@ module ModMain
   ! Rotating frame or (at least approximately) inertial frame
   logical :: UseRotatingFrame = .false. 
 
-  ! Transformation from HGC to HGI systems can be done in a simulation
-  logical :: DoTransformToHgi = .false.
+  ! Transform initial condition between rotating and inertial frames
+  integer:: iSignRotationIC = 0
 
   !\
   ! Variables for debugging. 
