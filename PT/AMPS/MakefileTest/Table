@@ -88,6 +88,11 @@ Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid
 <#
 
 #>
+Name=test/kameleon-reader(0+srbwks2014-0079)
+Keys=-boost-path=/Users/vtenishe/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/KAMELEON (0+srbwks2014-0079)
+<#
+
+#>
 Name=Enceladus 
 Keys=-cplr-data-path=${MYDIR}/data/input/Enceladus 
 <#
