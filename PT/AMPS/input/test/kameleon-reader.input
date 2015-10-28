@@ -1,0 +1,46 @@
+
+#main
+SpeciesList=H2O 
+
+makefile  SOURCES=src
+makefile  RUNDIR=run
+makefile  MPIRUN=mpirun -np 4
+
+ProjectSourceDirectory=test/srcDataReaderTest  
+
+WorkingSourceDirectory=srcTemp  
+SourceDirectory=src
+
+ErrorLog=PT/amps_error.log
+Prefix=AMPS
+DiagnosticStream=PT
+OutputDirectory=PT/plots
+InputDirectory=InputData 
+
+makefile KAMELEON=/Users/ccmc/Kameleon-plus
+makefile BOOST=/Users/vtenishe/ccmc/boost
+
+StdoutErrorLog=off !on,off -> print out error message on the screen
+
+TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
+
+#endmain
+
+#General
+  NastranSurfaceUserData=on 
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+  define _SIMULATION_TIME_STEP_MODE_ _SPECIES_DEPENDENT_GLOBAL_TIME_STEP_ 
+  define _SIMULATION_PARTICLE_WEIGHT_MODE_ _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+#endGeneral
+
+
+#include species.input
+
+#block ../exosphere.pl
+  define _TARGET_ _EARTH_
+
+  SPICE=off
+#endblock
+
+#end
