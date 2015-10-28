@@ -121,6 +121,7 @@ print "Preprocessing AMPS sources\n";
 
 #default value for interface mode
 `echo "INTERFACE=off" >> Makefile.local`;
+`echo "KAMELEON=nokameleon" >> Makefile.local`;
 
 
 while ($line=<InputFile>) {
