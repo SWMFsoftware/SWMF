@@ -22,6 +22,10 @@ if (! -e "Makefile.local") {
   `echo " " > Makefile.local`;
 }
 
+#reset to the default values variables that control using of the external libraries
+`echo "KAMELEON=nokameleon" >> .ampsConfig.Settings`;
+`echo "BATL=nobatl" >> .ampsConfig.Settings`;
+
 
 # build AMPS' Makefile.test
 foreach (@Arguments) { 
