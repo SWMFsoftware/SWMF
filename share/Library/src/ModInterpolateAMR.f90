@@ -2255,7 +2255,7 @@ module ModInterpolateAMR
 contains
   !=================================
   subroutine interpolate_amr_gc(&
-       nDim, Xyz_D, XyzMin_D, DXyz_D, nCell_D, DiLevelNei_I, &
+       nDim, Xyz_D, XyzMin_D, DXyz_D, nCell_D, DiLevelNei_III, &
        nCellOut, iCellOut_II, Weight_I, IsSecondOrder)
     use ModKind, ONLY: nByteReal
     ! Find grid cells surrounding the point Coord_D and interpolation weights.
@@ -2274,18 +2274,17 @@ contains
     real,    intent(in) :: XyzMin_D(nDim)
     real,    intent(in) ::DXyz_D(nDim)
     integer, intent(in) :: nCell_D(nDim)
-    integer, intent(in) ::DiLevelNei_I(3**nDim)
+    integer, intent(in) ::DiLevelNei_III(-1:1,-1:1,-1:1)
     integer, intent(out):: nCellOut
     integer, intent(out):: iCellOut_II(nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
-    logical, intent(out):: IsSecondOrder
+    logical, intent(out), optional:: IsSecondOrder
 
     ! signature of which boundary of the block the point is close to (if it is)
     integer:: iDiscr_D(3)
     integer:: iLevel_I(2**nDim)
-    integer:: iDim, iGrid, iSubGrid
-    integer:: iNodeNei, iBlockNei, iProcNei
-    real   :: Dimless_D(nDim), XyzPass_D(nDim)
+    integer:: iGrid, iSubGrid
+    real   :: Dimless_D(nDim)
 
     integer, parameter:: iShift_DI(3,8)=reshape( (/&
          0,0,0, 1,0,0,&
@@ -2293,52 +2292,11 @@ contains
          0,0,1, 1,0,1,&
          0,1,1, 1,1,1 /),(/3, 8/))
 
-    ! pattern to find resolution level of extended stencil
-    ! 1st index: first block of the stencil (numbered in -1:1x-1:1x-1:1 box)
-    ! 2nd index: stencil indexes (1 to 8) of all blocks in stencil
-    integer, parameter:: iStencilPattern_IIII(8,-1:1,-1:1,-1:1)=reshape( (/&
-         -13,-12,-10, -9, -4, -3, -1,  0, & ! -1, -1, -1
-         -12,-12, -9, -9, -3, -3,  0,  0, & !  0, -1, -1  
-         -12,-11, -9, -8, -3, -2,  0,  1, & !  1, -1, -1            
-
-         -10, -9,-10, -9, -1,  0, -1,  0, & ! -1,  0, -1
-         -9,  -9, -9, -9,  0,  0,  0,  0, & !  0,  0, -1            
-         -9,  -8, -9,  -8, 0,  1,  0,  1, & !  1,  0, -1            
-
-         -10, -9, -7, -6, -1,  0,  2,  3, & ! -1,  1, -1  
-         -9,  -9, -6, -6,  0,  0,  3,  3, & !  0,  1, -1            
-         -9,  -8, -6, -5,  0,  1,  3,  4, & !  1,  1, -1            
-
-         -4,  -3, -1,  0, -4, -3, -1,  0, & ! -1, -1,  0
-         -3,  -3,  0,  0, -3, -3,  0,  0, & !  0, -1,  0            
-         -3,  -2,  0,  1, -3, -2,  0,  1, & !  1, -1,  0            
-
-         -1,   0, -1,  0, -1,  0, -1,  0, & ! -1,  0,  0
-          0,   0,  0,  0,  0,  0,  0,  0, & !  0,  0,  0            
-          0,   1,  0,  1,  0,  1,  0,  1, & !  1,  0,  0            
-
-         -1,   0,  2,  3, -1,  0,  2,  3, & ! -1,  1,  0  
-          0,   0,  3,  3,  0,  0,  3,  3, & !  0,  1,  0            
-          0,   1,  3,  4,  0,  1,  3,  4, & !  1,  1,  0            
-
-         -4,  -3, -1,  0,  5,  6,  8,  9, & ! -1, -1,  1
-         -3,  -3,  0,  0,  6,  6,  9,  9, & !  0, -1,  1            
-         -3,  -2,  0,  1,  6,  7,  9, 10, & !  1, -1,  1            
-
-         -1,   0, -1,  0,  8,  9,  8,  9, & ! -1,  0,  1 
-          0,   0,  0,  0,  9,  9,  9,  9, & !  0,  0,  1            
-          0,   1,  0,  1,  9, 10,  9, 10, & !  1,  0,  1            
-
-         -1,   0,  2,  3,  8,  9, 11, 12, & ! -1,  1,  1  
-          0,   0,  3,  3,  9,  9, 12, 12, & !  0,  1,  1            
-          0,   1,  3,  4,  9, 10, 12, 13  & !  1,  1,  1  
-         /), (/8,3,3,3/))
-
     ! variables to call interpolate_extended_stencil
     real   :: XyzGrid_DII(nDim, 0:2**nDim, 2**nDim)
     integer:: iCellIndexes_DII(nDim, 2**nDim, 2**nDim)
     integer:: iIndexes_II(0:nDim, 2**nDim)
-    logical:: IsOut_I(2**nDim)
+    logical:: IsOut_I(2**nDim), IsSecondOrderLocal
     real,    parameter:: DxyzInv_D(3) = (/0.5, 0.5, 0.5/)
     integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
     !--------------------------------------------------------------------    
@@ -2349,7 +2307,7 @@ contains
        !\
        ! point is far from the block's boundaries
        ! perform uniform interpolation and return
-       nCellOut = 2**nDim
+       if(present(IsSecondOrder))IsSecondOrder = .true.
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.5)
        do iGrid = 2, 2**nDim
@@ -2358,23 +2316,38 @@ contains
        ! find interpolation weights
        Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I)
-       IsSecondOrder = .true.
+       ! check if there are zero weights
+       cTol2 = 2*cTol2
+       if(all(Weight_I >= cTol2))then
+          nCellOut = 2**nDim
+          RETURN
+       end if
+       !\ 
+       ! sort out zero weights
+       !/
+       nCellOut = 0 
+       do iGrid = 1, 2**nDim
+          if(Weight_I(iGrid) < cTol2)CYCLE
+          nCellOut = nCellOut + 1
+          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
+          Weight_I(nCellOut) = Weight_I(iGrid)
+       end do       
        RETURN
     end if
 
     ! point is close to the block's boundary,
-    ! iDiscr_D is an indicator of these boundaries
+    ! iDiscr_D is an indicator of these boundaries: -1 or 0 or 1
     iDiscr_D = 0 ! for nDim=2 3rd value must be 0
-    where(Dimless_D < 0.5)
-       iDiscr_D(1:nDim) =-1
-    elsewhere(Dimless_D >= nCell_D - 0.5)
-       iDiscr_D(1:nDim) = 1
-    end where
-
+    iDiscr_D(1:nDim) = nint(& 
+         SIGN(0.6, Dimless_D -  0.5) + &
+         SIGN(0.6, Dimless_D - (nCell_D - 0.5)) )
+   
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    iLevel_I = DiLevelNei_I( 1+3**nDim/2 + &
-         iStencilPattern_IIII(1:2**nDim,iDiscr_D(1), iDiscr_D(2), iDiscr_D(3)))
+    iLevel_I = reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/2**nDim/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2384,7 +2357,7 @@ contains
        ! point is close to the block's boundaries
        ! but all neighbors are of the same resolution level
        ! perform uniform interpolation and return
-       nCellOut = 2**nDim
+
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.5)
        do iGrid = 2, 2**nDim
@@ -2393,9 +2366,12 @@ contains
        ! find interpolation weights
        Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
-       IsSecondOrder = .not. any(IsOut_I)
+       if(present(IsSecondOrder))IsSecondOrder = .not. any(IsOut_I)
        cTol2 = 2*cTol2
-       if(IsSecondOrder .and. all(Weight_I >= cTol2)) RETURN
+       if(all(Weight_I >= cTol2))then
+          nCellOut = 2**nDim
+          RETURN
+       end if
        !\ 
        ! sort out zero weights
        !/
@@ -2409,17 +2385,25 @@ contains
        RETURN
     end if
     
-    ! recompute iDiscr_D: certain configurations are not covered
-    where(Dimless_D < 1)
-       iDiscr_D(1:nDim) =-1
-    elsewhere(Dimless_D >= nCell_D - 1)
-       iDiscr_D(1:nDim) = 1
-    end where
+    ! recompute iDiscr_D: certain configurations are not covered, e.g.
+    !  __ __ _____ _____ _____
+    ! |     |  |  |  |  |     |  for points X, Y current value of iDiscr_D
+    ! |     |--|--|--|--|     |  is (/0, -1, 0/) for both, but it has to be
+    ! |_____|_X|__|__|Y_|_____|  for X: (/-1, -1, 0/)
+    ! |     |     |     |     |  for Y: (/ 1, -1, 0/)
+    ! |     |     |     |     |
+    ! |_____|_____|_____|_____|
+    !
+    iDiscr_D(1:nDim) = nint(&
+         SIGN(0.6, Dimless_D -  1) + &
+         SIGN(0.6, Dimless_D - (nCell_D - 1)) )
 
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    iLevel_I = DiLevelNei_I( 1+3**nDim/2 + &
-         iStencilPattern_IIII(1:2**nDim,iDiscr_D(1), iDiscr_D(2), iDiscr_D(3)))
+    iLevel_I = reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/2**nDim/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2481,10 +2465,14 @@ contains
          nGridOut        = nCellOut, & 
          Weight_I        = Weight_I, & 
          iIndexes_II     = iIndexes_II, & 
-         IsSecondOrder   = IsSecondOrder)
+         IsSecondOrder   = IsSecondOrderLocal)
 
     ! store indices of cells in the final interpolation stencil
     iCellOut_II(:,1:nCellOut) = iIndexes_II(1:nDim,1:nCellOut)
+
+    ! if necessary, return value of IsSecondOrderLocal
+    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
+
   end subroutine interpolate_amr_gc
 
   !=================================
