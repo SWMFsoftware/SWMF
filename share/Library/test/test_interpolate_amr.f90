@@ -172,7 +172,7 @@ contains
                   XyzMin_D     = XyzCorner_D, &
                   DXyz_D       = DXyz_D, &
                   nCell_D      = nCell_D, &
-                  DiLevelNei_I = DiLevelNei_I, &
+                  DiLevelNei_III = DiLevelNei_IIIB(:,:,:,iBlock), &
                   nCellOut     = nGridOut, &
                   iCellOut_II  = iIndexes_II(1:nDim,:), &
                   Weight_i     = Weight_I, &
@@ -258,7 +258,7 @@ contains
                   XyzMin_D     = XyzCorner_D, &
                   DXyz_D       = DXyz_D, &
                   nCell_D      = nCell_D, &
-                  DiLevelNei_I = DiLevelNei_I, &
+                  DiLevelNei_III = DiLevelNei_IIIB(:,:,:,iBlock), &
                   nCellOut     = nGridOut, &
                   iCellOut_II  = iIndexes_II(1:nDim,:), &
                   Weight_i     = Weight_I, &
