@@ -91,6 +91,10 @@ CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
   SPICE=off 
   define _TARGET_ _TARGET_NONE_
 
+  define _CCMC_TEST__NO_KAMELEON_CALLS_
+  define _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
+
+
 ! define _ICES_CREATE_COORDINATE_LIST_
   define _FORCE_LORENTZ_MODE_  _PIC_MODE_ON_
 ! IcesLocationPath=/left/ices/ICES  !location of ICES is set using Config.pl -ices-path
