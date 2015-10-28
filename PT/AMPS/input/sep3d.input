@@ -18,8 +18,8 @@ makefile RUNDIR=run
 makefile MPIRUN=mpirun -np 4
 makefile ExternalModules=models/exosphere
 
-makefile Kameleon=/Users/ccmc/Kameleon-plus
-makefile Boost=/Users/vtenishe/ccmc/boost
+!makefile Kameleon=/Users/ccmc/Kameleon-plus
+!makefile Boost=/Users/vtenishe/ccmc/boost
 
 ProjectSourceDirectory=srcSEP3D 
 TrajectoryIntersectionWithBlockFaces=off !on, off
