@@ -579,7 +579,7 @@ contains
     ! Interface for the external user routine
     interface
        !=====================================================================
-       subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+       subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
             IsInside, IsInside_I, Value_I)
 
          implicit none
@@ -593,7 +593,7 @@ contains
          logical, optional, intent(out) :: IsInside_I(nValue)
          real,    optional, intent(out) :: Value_I(nValue)
 
-       end subroutine user_block_inside_region
+       end subroutine user_specify_region
     end interface
 
     ! Check the intersection of block iBlock with one or more regions
@@ -713,7 +713,7 @@ contains
           if(DoValue) Value_I = 1.0
        elseif(NameShape(1:4) == 'user')then
           if(DoTest)write(*,*) NameSub,' call user_region'
-          call user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+          call user_specify_region(iArea, iBlock, nValue, NameLocation, &
                IsInside, IsInside_I, Value_I)
        elseif(DoBlockOnly .and. Area%IsSimple)then
           ! Use corners of the block to set IsInside

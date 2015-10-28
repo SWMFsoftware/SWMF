@@ -88,10 +88,10 @@ subroutine user_action(NameAction)
 
 end subroutine user_action
 !=====================================================================
-subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
      IsInside, IsInside_I, Value_I)
 
-  use ModUser, ONLY: user_sub => user_block_inside_region
+  use ModUser, ONLY: user_sub => user_specify_region
   implicit none
 
   integer,   intent(in):: iArea        ! area index in BATL_region
@@ -103,12 +103,12 @@ subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
   logical, optional, intent(out) :: IsInside_I(nValue)
   real,    optional, intent(out) :: Value_I(nValue)
 
-  character(len=*), parameter :: NameSub = 'user_block_inside_region'
+  character(len=*), parameter :: NameSub = 'user_specify_region'
   !-------------------------------------------------------------------
   call user_sub(iArea, iBlock, nValue, NameLocation, &
      IsInside, IsInside_I, Value_I)
 
-end subroutine user_block_inside_region
+end subroutine user_specify_region
 
 !=====================================================================
 subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)

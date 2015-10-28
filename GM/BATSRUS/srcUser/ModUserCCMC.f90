@@ -28,7 +28,7 @@ module ModUser
 
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
-       IMPLEMENTED2 => user_block_inside_region
+       IMPLEMENTED2 => user_specify_region
 
   include 'user_module.h' !list of public methods
 
@@ -65,7 +65,7 @@ contains
 
   !===========================================================================
 
-  subroutine user_block_inside_region(iArea, iBlk, nValue, NameLocation, &
+  subroutine user_specify_region(iArea, iBlk, nValue, NameLocation, &
        DoRefine, IsInside_I, Value_I)
 
     use ModMain,     ONLY: body1, UseRotatingBc, nRefineLevel
@@ -95,7 +95,7 @@ contains
 
     real,parameter::cRefinedTailCutoff=0.75*0.875
 
-    character (len=*), parameter :: NameSub = 'user_block_inside_region'
+    character (len=*), parameter :: NameSub = 'user_specify_region'
 
     logical :: oktest, oktest_me
     real    :: XyzStart_D(3),x1,x2
@@ -5653,7 +5653,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
 
-  end subroutine user_block_inside_region
+  end subroutine user_specify_region
   !======================================================================
 
 end module ModUser

@@ -70,7 +70,7 @@ module ModUserInterface
      end subroutine user_action
 
      !=====================================================================
-     subroutine user_block_inside_region(iArea, iBlock, nValue, NameLocation, &
+     subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
           IsInside, IsInside_I, Value_I)
 
        implicit none
@@ -84,7 +84,7 @@ module ModUserInterface
        logical, optional, intent(out) :: IsInside_I(nValue)
        real,    optional, intent(out) :: Value_I(nValue)
        
-     end subroutine user_block_inside_region
+     end subroutine user_specify_region
 
      !=====================================================================
      subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
