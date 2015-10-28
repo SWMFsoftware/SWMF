@@ -14,6 +14,10 @@ module ModFaceValue
 
   private ! except
 
+  public:: read_face_value_param
+  public:: calc_face_value
+  public:: correct_monotone_restrict
+
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
   logical, public :: DoLimitMomentum      = .false.
@@ -32,9 +36,12 @@ module ModFaceValue
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
 
-  public :: read_face_value_param, calc_face_value, correct_monotone_restrict
+  ! Region parameters for low order scheme
+  character(len=200), public:: StringLowOrderRegion = 'none'
+  integer, allocatable, public:: iRegionLowOrder_I(:)
 
-  ! Local variables:
+  ! Local variables -----------------
+
   ! Parameters for the limiter applied near resolution changes
   ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
   real    :: BetaLimiterResChange  = 2.0 
@@ -80,10 +87,6 @@ module ModFaceValue
 
   ! Low order switch for 1D stencil
   logical:: UseLowOrder_I(1:MaxIJK+1)
-
-  ! Region parameters for high order scheme
-  logical:: UseHighOrderRegion = .false.
-  real:: rMinHighOrder=0.0, rMaxHighOrder=1e30
 
   ! variables used for TVD limiters
   real:: dVarLimR_VI(1:nVar,0:MaxIJK+1) ! limited slope for right state
@@ -166,12 +169,8 @@ contains
           call read_var('FlatRatioMin',  FlatRatioMin)
           call read_var('FlatRatioMax',  FlatRatioMax)
        end if
-    case("#HIGHORDERREGION")
-       call read_var('UseHighOrderRegion', UseHighOrderRegion)
-       if(UseHighOrderRegion)then
-          call read_var('rMinHighOrder', rMinHighOrder)
-          call read_var('rMaxHighOrder', rMaxHighOrder)
-       end if
+    case("#LOWORDERREGION")
+       call read_var('StringLowOrderRegion', StringLowOrderRegion)
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
     end select
@@ -2814,18 +2813,17 @@ contains
     !======================================================================
     subroutine set_low_order_face
 
+      use BATL_lib, ONLY: block_inside_regions
       use ModGeometry, ONLY: r_BLK, Rmin_BLK
 
       ! Set which faces should use low (up to second) order scheme
       ! Set logicals for the current block
 
       integer:: i, j, k
-      real:: r, rMinBlock, rMaxBlock
-
       character(len=*), parameter:: NameSub = 'set_low_order_face'
       !-------------------------------------------------------------------
       UseLowOrderOnly = .false.
-      UseLowOrder = UseTrueCell .or. UseHighOrderRegion
+      UseLowOrder = UseTrueCell .or. allocated(iRegionLowOrder_I)
 
       if(.not.UseLowOrder) RETURN
 
@@ -2835,40 +2833,24 @@ contains
          if(nDim > 2) allocate(UseLowOrder_Z(nI,nJ,nK+1))
       end if
 
-      if(UseHighOrderRegion)then
+      if(allocated(iRegionLowOrder_I)) then
 
-         rMinBlock = Rmin_BLK(iBlock)
-         rMaxBlock = maxval(r_BLK(:,:,:,iBlock))
+         call block_inside_regions(iRegionLowOrder_I, iBlock, &
+              size(UseLowOrder_X), 'xface', IsInside_I=UseLowOrder_X)
+         UseLowOrderOnly = all(UseLowOrder_X)
 
-         ! Optimization: check if block is fully inside high order region.
-         if(rMinBlock > rMinHighOrder .and. rMaxBlock < rMaxHighOrder)then
-            UseLowOrder = .false.
-            RETURN
-         end if
-
-         ! Check if block is fully outside the high order region.
-         if(rMinBlock > rMaxHighOrder .or. rMaxBlock < rMinHighOrder)then
-            UseLowOrderOnly = .true.
-            RETURN
-         end if
-
-         ! Use low order scheme based on the radial distance of the face
-         do k=1, nK; do j=1, nJ; do i = 1, nI+1
-            r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i-1,j,k,iBlock))
-            UseLowOrder_X(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
-         end do; end do; end do
          if(nDim > 1)then
-            do k=1, nK; do j=1, nJ+1; do i = 1, nI
-               r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i,j-1,k,iBlock))
-               UseLowOrder_Y(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
-            end do; end do; end do
+            call block_inside_regions(iRegionLowOrder_I, iBlock, &
+                 size(UseLowOrder_Y), 'yface', IsInside_I=UseLowOrder_Y)
+            UseLowOrderOnly = UseLowOrderOnly .and. all(UseLowOrder_Y)
          end if
+
          if(nDim > 2)then
-            do k=1, nK+1; do j=1, nJ; do i = 1, nI
-               r = 0.5*(r_BLK(i,j,k,iBlock) + r_BLK(i,j,k-1,iBlock))
-               UseLowOrder_Z(i,j,k) = r < rMinHighOrder .or. r > rMaxHighOrder
-            end do; end do; end do
+            call block_inside_regions(iRegionLowOrder_I, iBlock, &
+                 size(UseLowOrder_X), 'zface', IsInside_I=UseLowOrder_Z)
+            UseLowOrderOnly = UseLowOrderOnly .and. all(UseLowOrder_Z)
          end if
+
       else if(UseTrueCell)then
          ! The 5th order schemes need 3 cells on both sides of the face
          do k=1, nK; do j=1, nJ; do i = 1, nI+1

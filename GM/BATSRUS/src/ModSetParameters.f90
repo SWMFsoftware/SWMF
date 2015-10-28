@@ -45,7 +45,8 @@ subroutine MH_set_parameters(TypeAction)
        UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
        DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
        TypeLimiter5, UseCweno,&
-       iVarSmooth_V, iVarSmoothIndex_I
+       iVarSmooth_V, iVarSmoothIndex_I, &
+       StringLowOrderRegion, iRegionLowOrder_I
   use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
        RelativeEps_V, AbsoluteEps_V
   use ModBoundaryCells, ONLY: init_mod_boundary_cells
@@ -113,7 +114,8 @@ subroutine MH_set_parameters(TypeAction)
   use ModConserveFlux, ONLY: DoConserveFlux
   use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, SpeciesFirst_, &
        SpeciesLast_
-  use BATL_lib, ONLY: Dim2_, Dim3_, create_grid, set_high_geometry
+  use BATL_lib, ONLY: Dim2_, Dim3_, &
+       create_grid, set_high_geometry, region_signed_indexes
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -297,6 +299,8 @@ subroutine MH_set_parameters(TypeAction)
      if(UseImplicit)     call init_mod_part_impl
      if(UseSemiImplicit) call init_mod_semi_impl
      call init_mod_magperturb
+
+     call region_signed_indexes(StringLowOrderRegion, iRegionLowOrder_I)
 
      ! clean dynamic storage
      call clean_block_data
@@ -1213,7 +1217,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoBurgers', DoBurgers)
 
      case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
-          '#LIMITPTOTAL', '#FLATTENING', '#HIGHORDERREGION')
+          '#LIMITPTOTAL', '#FLATTENING', '#LOWORDERREGION')
         call read_face_value_param(NameCommand)
 
      case("#NONCONSERVATIVE")
@@ -2434,10 +2438,11 @@ contains
              kMinFace2 = kMinFace; kMaxFace2 = kMaxFace
           end if
        end if
-    else if(nOrderOld/=5 .and. nOrder==5 .and. UseFDFaceFlux) then
+    else if(nOrderOld /=5 .and. nOrder==5 .and. UseFDFaceFlux) then
        ! calculate high-order geometry coefficients
        call set_high_geometry(UseFDFaceFluxIn=UseFDFaceFlux)
-       call create_grid 
+       call create_grid
+       nOrderOld = 5
     endif ! IsFirstCheck
 
     ! Get the number of used ghost cell layers

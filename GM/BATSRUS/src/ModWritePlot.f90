@@ -764,6 +764,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCurrent, ONLY: get_current
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: Viscosity_factor, UseViscosity
+  use ModFaceValue, ONLY: iRegionLowOrder_I
+  use BATL_lib, ONLY: block_inside_regions
+
   use ModUserInterface ! user_set_plot_var
 
   implicit none
@@ -1309,7 +1312,11 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('evolve','impl')
         PlotVar(:,:,:,iVar)=iTypeAdvance_B(iBLK)
         if(UsePointImplicit_B(iBLK))&
-             PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)+0.5        
+             PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)+0.5
+     case('loworder')
+        if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
+             iRegionLowOrder_I, iBlk, size(PlotVar(:,:,:,iVar)), 'ghost', &
+             Value_I=PlotVar(MinI,MinJ,MinK,iVar))
      case('proc')
         PlotVar(:,:,:,iVar) = iProc
      case('blk','block')
