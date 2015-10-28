@@ -97,6 +97,10 @@ namespace TECPLOT {
   }
 }
 
+namespace KAMELEON {
+  using namespace TECPLOT;
+}
+
 double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {return 1.0;}
 
 int main(int argc,char **argv) {
@@ -166,6 +170,15 @@ int main(int argc,char **argv) {
 
     break;
 
+  case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
+    //get the domain limits
+    PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(xmin,xmax,"3d__var_1_e20150317-160000-000.out.cdf");
+    KAMELEON::xmin=xmin,KAMELEON::xmax=xmax;
+
+    //init the mesh
+    PIC::Mesh::mesh.init(xmin,xmax,KAMELEON::localResolution);
+    break;
+
   default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
   }
@@ -214,6 +227,11 @@ int main(int argc,char **argv) {
   case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
     PIC::CPLR::DATAFILE::TECPLOT::ImportData("3d__mhd_3_n00045039-extracted-reduced.plt");
     sprintf(TestFileName,"%s/test_tecplot-reader.dat",PIC::OutputDataFileDirectory);
+    break;
+
+  case _PIC_COUPLER_DATAFILE_READER_MODE__KAMELEON_:
+    PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile("3d__var_1_e20150317-160000-000.out.cdf");
+    sprintf(TestFileName,"%s/test_kameleon-reader.dat",PIC::OutputDataFileDirectory);
     break;
 
   default:
