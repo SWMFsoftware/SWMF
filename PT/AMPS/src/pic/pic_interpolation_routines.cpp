@@ -133,12 +133,11 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
     PIC::InterpolationRoutines::CellCentered::Stencil.AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
   }
-
-
-  return &PIC::InterpolationRoutines::CellCentered::Stencil;
 #else
   exit(__LINE__,__FILE__,"ERROR: cell centered linear interpolation is currently available only through interface, add corresponding block to the input file!");
 #endif//_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
+
+  return &PIC::InterpolationRoutines::CellCentered::Stencil;
 }
 
 //triliniar interpolation used inside blocks
