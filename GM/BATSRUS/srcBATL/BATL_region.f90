@@ -267,8 +267,10 @@ contains
     integer:: nName, iName
     character(lNameRegion):: NameRegion_I(MaxName)
     !-------------------------------------------------------------------------
-    call split_string(StringRegion, MaxName, NameRegion_I, nName)
     if(allocated(iRegion_I)) deallocate(iRegion_I)
+    if(StringRegion == 'none') RETURN
+
+    call split_string(StringRegion, MaxName, NameRegion_I, nName)
     allocate(iRegion_I(nName))
     do iName = 1, nName
        iRegion_I(iName) = i_signed_region(NameRegion_I(iName))
@@ -575,6 +577,7 @@ contains
 
     use BATL_size,     ONLY: nINode, nJNode, nKNode
     use BATL_geometry, ONLY: IsCartesianGrid
+    use ModUtilities,  ONLY: lower_case
 
     ! Interface for the external user routine
     interface
@@ -636,10 +639,11 @@ contains
 
     logical:: DoSetCorner, DoSetCoord, DoSetXyz
 
+    ! logical:: DoTest
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
-    ! DoTest = iBlock == 2
+    ! DoTest = iBlock == 1
 
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
@@ -676,6 +680,7 @@ contains
     ! Default location is nodes
     NameLocation = "n"
     if(present(StringLocation)) NameLocation = StringLocation(1:1)
+    call lower_case(NameLocation)
 
     ! Check nodes of block by default (optimize for corners???)
     if(nPoint == 0) nPoint = nINode*nJNode*nKNode
@@ -769,7 +774,7 @@ contains
       ! Set point positions in generalized coordinates
 
       use BATL_size, ONLY: nI, nJ, nK, nIJK, &
-           MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MinIJK_D, MaxIJK_D
+           MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK
 
       use BATL_grid, ONLY: CoordMin_DB, CellSize_DB
 
@@ -788,7 +793,7 @@ contains
 
       n = 0
       select case(NameLocation)
-      case('c', 'C')
+      case('c')
          if(nPoint /= nIJK) call CON_stop(NameSub// &
               ': incorrect number of points for cell centers')
          do k = 1, nK
@@ -802,8 +807,8 @@ contains
                end do
             end do
          end do
-      case('g', 'G')
-         if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
+      case('g')
+         if(nPoint /= MaxIJK) call CON_stop(NameSub// &
               ': incorrect number of points for cell centers with ghosts')
 
          do k = MinK, MaxK
@@ -817,7 +822,7 @@ contains
                end do
             end do
          end do
-      case('x', 'X')
+      case('x')
          if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
          do k = 1, nK
@@ -832,7 +837,7 @@ contains
             end do
          end do
 
-      case('y', 'Y')
+      case('y')
          if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
 
@@ -848,7 +853,7 @@ contains
             end do
          end do
 
-      case('z', 'Z')
+      case('z')
          if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
 
@@ -864,7 +869,7 @@ contains
             end do
          end do
 
-      case('n', 'N')
+      case('n')
          if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
               ': incorrect number of points for nodes')
 
@@ -893,7 +898,7 @@ contains
 
       ! Set point positions in Cartesian coordinate
 
-      use BATL_size, ONLY: nI, nJ, nK, nIJK, MinIJK_D, MaxIJK_D
+      use BATL_size, ONLY: nI, nJ, nK, nIJK, MaxIJK
       use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
       !----------------------------------------------------------------------
 
@@ -905,20 +910,20 @@ contains
 
 
       select case(NameLocation)
-      case('c', 'C')
+      case('c')
          if(nPoint /= nIJK) call CON_stop(NameSub// &
               ': incorrect number of points for cell centers')
 
          Xyz_DI = reshape(Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock), &
               (/nDim, nPoint/))
 
-      case('g', 'G')
-         if(nPoint /= product(MaxIJK_D-MinIJK_D+1)) call CON_stop(NameSub// &
+      case('g')
+         if(nPoint /= MaxIJK) call CON_stop(NameSub// &
               ': incorrect number of points for cell centers with ghosts')
 
-         Xyz_DI = reshape(Xyz_DGB(:,:,:,:,iBlock), (/nDim, nPoint/))
+         Xyz_DI = reshape(Xyz_DGB(1:nDim,:,:,:,iBlock), (/nDim, nPoint/))
 
-      case('x', 'X')
+      case('x')
          if(nPoint /= (nI+1)*nJ*nK) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
 
@@ -926,7 +931,7 @@ contains
               0.5*(Xyz_DGB(1:nDim,0:nI  ,1:nJ,1:nK,iBlock) &
               +    Xyz_DGB(1:nDim,1:nI+1,1:nJ,1:nK,iBlock)), (/nDim, nPoint/))
 
-      case('y', 'Y')
+      case('y')
          if(nPoint /= nI*(nJ+1)*nK) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
 
@@ -934,7 +939,7 @@ contains
               0.5*(Xyz_DGB(1:nDim,1:nI,j0_:nJ, 1:nK,iBlock) &
               +    Xyz_DGB(1:nDim,1:nI,1:nJp1_,1:nK,iBlock)), (/nDim, nPoint/))
 
-      case('z', 'Z')
+      case('z')
          if(nPoint /= nI*nJ*(nK+1)) call CON_stop(NameSub// &
               ': incorrect number of points for X faces')
 
@@ -942,7 +947,7 @@ contains
               0.5*(Xyz_DGB(1:nDim,1:nI,1:nJ,k0_:nK ,iBlock) &
               +    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nKp1_,iBlock)), (/nDim, nPoint/))
 
-      case('n', 'N')
+      case('n')
          if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
               ': incorrect number of points for nodes')
 
