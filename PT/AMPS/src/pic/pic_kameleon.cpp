@@ -46,8 +46,10 @@ double PIC::CPLR::DATAFILE::KAMELEON::PlasmaSpeciesAtomicMass=1.0*_AMU_;
 
 void PIC::CPLR::DATAFILE::KAMELEON::GetDomainLimits(double *xmin,double *xmax,const char *fname) {
   ccmc::Kameleon kameleon;
+  char DataFileFullName[_MAX_STRING_LENGTH_PIC_];
 
-  long status = kameleon.open(fname);
+  sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
+  long status = kameleon.open(DataFileFullName);
 
   double ConversionCoord = _RADIUS_(_EARTH_);
 
@@ -82,10 +84,12 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
   if (startNode==PIC::Mesh::mesh.rootTree) {
 
     //open the file
+    char DataFileFullName[_MAX_STRING_LENGTH_PIC_];
 
-    long status = kameleon.open(fname);
-    if(status != ccmc::FileReader::OK)
-      exit(__LINE__, __FILE__, "ERROR: could'nt open Kameleon file");
+    sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
+    long status = kameleon.open(DataFileFullName);
+
+    if (status != ccmc::FileReader::OK) exit(__LINE__, __FILE__, "ERROR: could'nt open Kameleon file");
     //allocate the interpolator and read the data file
 
     // load variables
