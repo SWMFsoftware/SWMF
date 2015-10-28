@@ -282,6 +282,7 @@ contains
     end do
 
     if(DoTest .and. iProc == 0) then
+       write(*,*) NameSub,' finished with'
        write(*,"(A17,100(F10.3))")"RefineCritAll_I   :", RefineCritAll_I
        write(*,"(A17,100(F10.3))")"CoarsenCritAll_I  :", CoarsenCritAll_I
        write(*,"(A17,100(F10.3))")"ResolutionLimit_I :", ResolutionLimit_I
@@ -1425,8 +1426,8 @@ contains
 
     integer ::iCrit, nAreaCrit
 
-    logical, parameter:: DoTest = .true.
     ! logical:: DoTest
+    logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'set_amr_geometry'
     !--------------------------------------------------------
     if(nAmrCritUsed < 1) RETURN
