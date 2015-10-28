@@ -95,6 +95,9 @@ module BATL_size
   ! Number of cells per block
   integer, parameter:: nIJK = nI*nJ*nK
 
+  ! Number of cells per block including ghost cells
+  integer, parameter:: MaxIJK = (MaxI-MinI+1)*(MaxJ-MinJ+1)*(MaxK-MinK+1)
+
   ! Number of nodes per block
   integer, parameter:: nIJKNode = nINode*nJNode*nKNode
 
