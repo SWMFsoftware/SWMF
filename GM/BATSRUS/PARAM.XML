@@ -506,6 +506,19 @@ There is no XML based parameter checking in the user section.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!  TESTING AND TIMING PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="TESTINFO">
+	<parameter name="DoWriteCallSequence" type="logical" default="F"/>
+
+#TESTINFO
+T		DoWriteCallSequence
+
+If DoWriteCallSequence is set to true, the code will attempt to produce
+a call sequence from the stop_mpi subroutine (which is called when the
+code finds an error) by making an intentional floating point exception. 
+This will work only if the compiler is able to and requested to produce a 
+call sequence. The NAGFOR compile combined with the -debug flag can do that.
+</command>
+
 <command name="TEST">
 	<parameter name="TestString" type="string" length="100"/>
 #TEST
@@ -3958,14 +3971,16 @@ Only useful if the initial condition has a non-trivial analytic form.
 			<option name="user"				/>
 		</part>
 		<part name="StretchArea" type="string" input="select"
-			required="F"
-			if="$NameArea =~ /sphere|shell|cylinder|ring/">
+			required="F" if="$NameArea !~ /box|brick/">
 			<option name="stretched" />
 		</part>
 		<part name="RotateArea" type="string" input="select" 
-			required="F" 
-			if="$NameArea =~ /box\b|brick0?\b|cylinder|ring/">
+			required="F">
 			<option name="rotated" />
+		</part>
+		<part name="TaperArea" type="string" input="select"
+			required="F">
+			<option name="tapered" />
 		</part>
 	</parameter>
 	<if expr="$NameArea !~ /box|user|0/">
@@ -3988,25 +4003,35 @@ Only useful if the initial condition has a non-trivial analytic form.
 	</if>
 	<if expr="$NameArea =~ /sphere/">
 		<parameter name="Radius"  type="real" min="0"/>
+                <parameter name="RadiusY" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
+                <parameter name="RadiusZ" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
 	</if>
 	<if expr="$NameArea =~ /shell/">
-		<parameter name="Radius1" type="real" min="0"/>
-		<parameter name="Radius2" type="real" min="0"/>
+		<parameter name="RadiusInner" type="real" min="0"/>
+		<parameter name="Radius" type="real" min="$Radius1"/>
+                <parameter name="RadiusY" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
+                <parameter name="RadiusZ" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
 	</if>
 	<if expr="$NameArea =~ /cylinder/">
 		<parameter name="LengthCylinder" type="real" min="0" />
 		<parameter name="Radius"         type="real" min="0" />
+                <parameter name="RadiusPerp" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
 	</if>
 	<if expr="$NameArea =~ /ring/">
 		<parameter name="HeightRing" type="real" min="0" />
 		<parameter name="Radius1"    type="real" min="0" />
-		<parameter name="Radius2"    type="real" min="0" />
+		<parameter name="Radius2"    type="real" min="$Radius1" />
+                <parameter name="RadiusPerp" type="real" min="0" 
+			   if="$StretchArea =~ /stretched/"/>
 	</if>
-	<if expr="$StretchArea =~ /stretched/">
-		<parameter name="xStretch" type="real" min="0" default="1"/>
-		<parameter name="yStretch" type="real" min="0" default="1"/>
-		<parameter name="zStretch" type="real" min="0" default="1"/>
-	</if>
+	<if expr="$TaperArea =~ /tapered/">
+	        <parameter name="Taper" type="real" min="0" default="0"/>
+        </if>
 	<if expr="$RotateArea =~ /rotated/">
 		<parameter name="xRotate" type="real" min="-360" max="360" 
 								default="0"/>
@@ -4051,13 +4076,14 @@ sphere			NameArea
  20.0			rSphere
 
 #REGION
-region5			NameRegion
+region5 tapered		NameRegion
 cylinderx		NameArea
 -30.0			xCenter
   0.0			yCenter
   0.0			zCenter
  60.0			LengthCylinder
  20.0			rCylinder
+  5.0			Taper      (only read if tapered)
 
 #REGION
 region6			NameRegion
@@ -4065,7 +4091,7 @@ ringz0 rotated		NameArea
   5.0			HeightRing
  20.0			Radius1
  25.0			Radius2
- 10.0			xRotate
+ 10.0			xRotate   (only read if rotated)
  10.0			yRotate
   0.0			zRotate
 
@@ -4073,9 +4099,8 @@ ringz0 rotated		NameArea
 ellipsoid		NameRegion
 sphere0 stretched	NameArea
 10.0			rSphere
-1.0			xStretch
-3.0			yStretch
-2.0			zStretch
+30.0			RadiusY  (only read if stretched)
+20.0			RadiusZ  (only read if stretched)
 
 #REGION
 myregion		NameRegion
@@ -4913,10 +4938,11 @@ The Simple solver is for testing purposes only at this point.
 No limiter is used by the 1st order scheme. The second order TVD scheme
 uses a TVD limiter everywhere. The 5th order schemes has its own
 5th order accurate limiter (see #SCHEME5 command).
-The TypeLimiter is still used where the stencil is not
+The TypeLimiter is still used inside the region specified by 
+the #LOWORDERREGION command and where the stencil is not
 large enough for the high order scheme but sufficient
 for the second order scheme, which happens near face boundaries 
-(see the #FACEBOUNDARY command).
+(see the #FACEBOUNDARY command). 
 Possible values for TypeLimiter:
 \begin{verbatim}
  'minmod'      - minmod limiter is the most robust and diffusive limiter
@@ -4935,6 +4961,21 @@ are between 1.0 and 2.0:
 \end{verbatim}
 
 The default is the second order Rusanov scheme with the minmod limiter.
+</command>
+
+<command name="LOWORDERREGION">
+	 <parameter name="StringLowOrderRegion" type="string" length="200"
+	 	    default="none"/>
+
+#LOWORDERREGION
++nearbody +faraway		StringLowOrderRegion
+
+This command is only useful if the nOrder is larger than 2 in the #SCHEME
+command. In this case the StringLowOrderRegion string can specify a region
+where the low (second) order scheme is used. The regions must be described
+with the #REGION command. 
+
+The default is to apply the high order scheme everywhere.
 </command>
 
 <command name="SCHEME4" if="$_IsFirstSession">
@@ -6980,71 +7021,20 @@ Default is UseHallResist false.
 </command>
 
 <command name="HALLREGION">
-	<parameter name="NameHallRegion" type="string" input="select">
-		<option name="all"  default="T"	/>
-		<option name="sphere0"		/>
-		<option name="box0"		/>
-		<option name="sphere"		/>
-		<option name="box"		/>
-	</parameter>
-	<if expr="$NameHallRegion ne 'all' and $NameHallRegion !~ /0/">
-		<parameter name="x0Hall" type="real" default="0"/>
-		<parameter name="y0Hall" type="real" default="0"/>
-		<parameter name="z0Hall" type="real" default="0"/>
-	</if>
-	<if expr="$NameHallRegion =~ /sphere/">
-		<parameter name="rSphereHall" type="real" min="0" default="1"/>
-		<parameter name="DrSphereHall" type="real" min="0"
-								default="0"/>
-	</if>
-	<if expr="$NameHallRegion =~ /box/">
-		<parameter name="xSizeBoxHall" type="real" min="0" 
-								default="1"/>
-		<parameter name="DxSizeBoxHall" type="real" min="0"
-								default="0"/>
-		<parameter name="ySizeBoxHall" type="real" min="0" 
-								default="1"/>
-		<parameter name="DySizeBoxHall" type="real" min="0"
-								default="0"/>
-		<parameter name="zSizeBoxHall" type="real" min="0" 
-								default="1"/>
-		<parameter name="DzSizeBoxHall" type="real" min="0"
-								default="0"/>
-	</if>
+	 <parameter name="StringHallRegion" type="string" length="200"
+	 	    default="none"/>
 
 #HALLREGION
-box			NameHallRegion
-10.0			x0Hall        (only read for region sphere or box)
-0.0			y0Hall        (only read for region sphere or box)
-0.0			z0Hall        (only read for region sphere or box)
-8.0			xSizeBoxHall  (only read for region box)
-1.0			DxSizeBoxHall (only read for region box)
-6.0			ySizeBoxHall  (only read for region box)
-1.0			DySizeBoxHall (only read for region box)
-4.0			zSizeBoxHall  (only read for region box)
-1.0			DzSizeBoxHall (only read for region box)
++magnetotail -nearbody		StringHallRegion
 
-The NameHallRegion parameter determines the region where the Hall effect
-is taken into account. Possible values are "all", "box", "sphere",
-"box0" and "sphere0".
+This command is only useful if the Hall MHD scehem is switched on with
+the #HALLRESISTIVITY command. In this case the StringHallRegion string 
+can specify the region(s) where the Hall resistivity is used.
+The regions must be described with the #REGION command. 
+Note the 'tapered' option in the shape desciption that can be used 
+to make the transition smoother.
 
-For value "all" the Hall effect is used everywhere
-in the computational domain. For "box" and "sphere" the region is inside
-a box or sphere, respectivrly, centered around the X0Hall, Y0Hall, Z0Hall.
-If NameHallRegion = "box0" or "sphere0", the region is centered around 
-the origin. 
-
-For NameHallRegion "sphere" or "sphere0" the rSphereHall
-and DrSphereHall parameters are read. The first determines the radius
-of the sphere, the second the thickness of the shell where the hall
-effect increases from 0 to its full value linearly. This smoothing
-is useful to avoid artifacts due to a sudden change in the Hall coefficient.
-
-For NameHallRegion "box" or "box0" the 3 sizes and 3 smoothing widths 
-are read as shown in the example.
-
-The default value is "all", ie. the Hall effect is applied everywhere
-if the Hall effect is switched on in the #HALLRESISTIVITY command.
+The default is to apply the Hall MHD scheme everywhere if it is switched on.
 </command>
 
 <command name="BIERMANNBATTERY">
