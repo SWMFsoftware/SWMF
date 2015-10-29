@@ -2334,7 +2334,10 @@ contains
    
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    call shape_ilevel
+    iLevel_I = reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2373,7 +2376,10 @@ contains
 
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    call shape_ilevel
+    iLevel_I = reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2460,30 +2466,7 @@ contains
           Weight_I(nCellOut) = Weight_I(iGrid)
        end do
     end subroutine sort_out
-    subroutine shape_ilevel
-      !\
-      ! loop variable
-      !/
-      integer :: i, j, k
-      !\
-      ! Convert the value of iShift and ijk to the
-      ! index of DiLevNei array
-      !/
-      integer, parameter:: iConv_II(0:1,-1:1)=reshape(&
-                                           (/-1, 0,   & !iShift =-1
-                                              0, 0,   & !iShift = 0
-                                              0, 1/), & !iShift = 1
-                                              (/2,3/))
-      !-------------
-      iGrid = 0
-      do k = 0, nDim - 2; do j = 0, 1; do i = 0, 1
-         iGrid = iGrid +1
-         iLevel_I(iGrid) = DiLevelNei_III(iConv_II(i,iDiscr_D(1)),& 
-              iConv_II(j,iDiscr_D(2)),iConv_II(k,iDiscr_D(3)))
-      end do; end do; end do
-    end subroutine shape_ilevel
   end subroutine interpolate_amr_gc
-
   !=================================
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder, UseGhostCell)
