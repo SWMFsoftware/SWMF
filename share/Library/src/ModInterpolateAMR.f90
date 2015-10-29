@@ -2272,9 +2272,9 @@ contains
     integer, intent(in) :: nDim
     real,    intent(in) :: Xyz_D(nDim)
     real,    intent(in) :: XyzMin_D(nDim)
-    real,    intent(in) ::DXyz_D(nDim)
+    real,    intent(in) :: DXyz_D(nDim)
     integer, intent(in) :: nCell_D(nDim)
-    integer, intent(in) ::DiLevelNei_III(-1:1,-1:1,-1:1)
+    integer, intent(in) :: DiLevelNei_III(-1:1,-1:1,-1:1)
     integer, intent(out):: nCellOut
     integer, intent(out):: iCellOut_II(nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
@@ -2299,9 +2299,14 @@ contains
     logical:: IsOut_I(2**nDim), IsSecondOrderLocal
     real,    parameter:: DxyzInv_D(3) = (/0.5, 0.5, 0.5/)
     integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
+    !\
+    !Number of points in a stencil
+    !/
+    integer           :: nGrid  
     !--------------------------------------------------------------------    
     cTol2 = cTol**(nByteReal/4)
     Dimless_D = (Xyz_D - XyzMin_D) / DXyz_D
+    nGrid = 2**nDim
 
     if( all(Dimless_D >= 0.5 .and. Dimless_D < nCell_D - 0.5) )then
        !\
@@ -2310,28 +2315,13 @@ contains
        if(present(IsSecondOrder))IsSecondOrder = .true.
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.5)
-       do iGrid = 2, 2**nDim
+       do iGrid = 2, nGrid
           iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
        end do
        ! find interpolation weights
        Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I)
-       ! check if there are zero weights
-       cTol2 = 2*cTol2
-       if(all(Weight_I >= cTol2))then
-          nCellOut = 2**nDim
-          RETURN
-       end if
-       !\ 
-       ! sort out zero weights
-       !/
-       nCellOut = 0 
-       do iGrid = 1, 2**nDim
-          if(Weight_I(iGrid) < cTol2)CYCLE
-          nCellOut = nCellOut + 1
-          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
-          Weight_I(nCellOut) = Weight_I(iGrid)
-       end do       
+       call sort_out      
        RETURN
     end if
 
@@ -2344,10 +2334,7 @@ contains
    
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    iLevel_I = reshape(DiLevelNei_III(&
-         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
-         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/2**nDim/))
+    call shape_ilevel
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2360,28 +2347,14 @@ contains
 
        ! find cell indices
        iCellOut_II(:,1) = floor(Dimless_D + 0.5)
-       do iGrid = 2, 2**nDim
+       do iGrid = 2, nGrid
           iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
        end do
        ! find interpolation weights
        Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
        if(present(IsSecondOrder))IsSecondOrder = .not. any(IsOut_I)
-       cTol2 = 2*cTol2
-       if(all(Weight_I >= cTol2))then
-          nCellOut = 2**nDim
-          RETURN
-       end if
-       !\ 
-       ! sort out zero weights
-       !/
-       nCellOut = 0 
-       do iGrid = 1, 2**nDim
-          if(Weight_I(iGrid) < cTol2)CYCLE
-          nCellOut = nCellOut + 1
-          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
-          Weight_I(nCellOut) = Weight_I(iGrid)
-       end do
+       call sort_out
        RETURN
     end if
     
@@ -2400,10 +2373,7 @@ contains
 
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
-    iLevel_I = reshape(DiLevelNei_III(&
-         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
-         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/2**nDim/))
+    call shape_ilevel
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
     IsOut_I  = iLevel_I < -1
@@ -2426,7 +2396,7 @@ contains
     !   
     ! NOTE: since reference block is a Fine one 
     !       DXyz_D is a cell size of Finer block
-    do iGrid = 1, 2**nDim
+    do iGrid = 1, nGrid
        ! supergrid
        ! THIS FORMULA DOESN'T APPLY FOR ODD NUMBER OF CELLS IN THE BLOCK
        XyzGrid_DII(:,0,iGrid) = 2*floor(0.5*(Dimless_D-1)) + 1 + &
@@ -2441,7 +2411,7 @@ contains
                (1 - iShift_DI(1:nDim,iGrid))
           CYCLE
        end if
-       do iSubGrid = 1, 2**nDim
+       do iSubGrid = 1, nGrid
           ! neighbor at the same level
           XyzGrid_DII(:,iSubGrid,iGrid) = XyzGrid_DII(:,0,iGrid) + &
                (iShift_DI(1:nDim,iSubGrid) - 0.5)
@@ -2457,8 +2427,8 @@ contains
          nIndexes        = nDim, &
          XyzGrid_DII     = XyzGrid_DII, &
          iCellIndexes_DII= iCellIndexes_DII, & 
-         iBlock_I        = iBlock_I(1:2**nDim), & 
-         iProc_I         = iProc_I(1:2**nDim),  &
+         iBlock_I        = iBlock_I(1:nGrid), & 
+         iProc_I         = iProc_I(1:nGrid),  &
          iLevelSubgrid_I = iLevel_I, & 
          IsOut_I         = IsOut_I, & 
          DxyzInv_D       = DxyzInv_D(1:nDim),&
@@ -2472,7 +2442,46 @@ contains
 
     ! if necessary, return value of IsSecondOrderLocal
     if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
-
+  contains
+    subroutine sort_out
+       cTol2 = 2*cTol2
+       if(all(Weight_I >= cTol2))then
+          nCellOut = nGrid
+          RETURN
+       end if
+       !\ 
+       ! sort out zero weights
+       !/
+       nCellOut = 0 
+       do iGrid = 1, nGrid
+          if(Weight_I(iGrid) < cTol2)CYCLE
+          nCellOut = nCellOut + 1
+          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
+          Weight_I(nCellOut) = Weight_I(iGrid)
+       end do
+    end subroutine sort_out
+    subroutine shape_ilevel
+      !\
+      ! loop variable
+      !/
+      integer :: i, j, k
+      !\
+      ! Convert the value of iShift and ijk to the
+      ! index of DiLevNei array
+      !/
+      integer, parameter:: iConv_II(0:1,-1:1)=reshape(&
+                                           (/-1, 0,   & !iShift =-1
+                                              0, 0,   & !iShift = 0
+                                              0, 1/), & !iShift = 1
+                                              (/2,3/))
+      !-------------
+      iGrid = 0
+      do k = 0, nDim - 2; do j = 0, 1; do i = 0, 1
+         iGrid = iGrid +1
+         iLevel_I(iGrid) = DiLevelNei_III(iConv_II(i,iDiscr_D(1)),& 
+              iConv_II(j,iDiscr_D(2)),iConv_II(k,iDiscr_D(3)))
+      end do; end do; end do
+    end subroutine shape_ilevel
   end subroutine interpolate_amr_gc
 
   !=================================
@@ -4572,4 +4581,146 @@ contains
     end subroutine interpolate_on_parallel_rays
     !===========================
   end subroutine interpolate_amr3
+  !=============================
+  !\
+  ! Interpolation on 2D cell adaptive Cartesian grid. Similar to block
+  ! adaptive grid, but all blocks are 1*1*1 cells
+  !/
+  subroutine interpolate_amr_cell_2d(Xyz_D, XyzCell_D, DXyz_D, &
+       nNeighbor, XyzNeighbor_DI, iLevel_I, Weight_I)
+    !\
+    !This routine is for two-dimensional grid 
+    !/
+    integer, parameter:: nDim = 2
+    !\
+    ! INPUTS:
+    !/
+    !\
+    !!Coordinates of the point in which to interpolate
+    !/
+    real,         intent(in) ::      Xyz_D(1:nDim)
+    !\
+    !Coordinates of the cell center, which included the point Xyz_D
+    !/   
+    real,         intent(in) ::  XyzCell_D(1:nDim)  
+    !\
+    !Cell size along each direction
+    !/
+    real,         intent(in) :: DXyz_D(1:nDim) 
+    !\
+    !Number of neighboring cells
+    !/      
+    integer,      intent(in) :: nNeighbor      
+    !\
+    ! Cell center coordinates for the neighboring cells
+    !/ 
+    real,         intent(in) :: XyzNeighbor_DI(1:nDim,1:nNeighbor)  
+    !\
+    !Refinement level of neighboring cells with respect to the cell, 
+    !which includes Xyz_D point. May be equal to 
+    ! -1, if the neighboring cell is coarser                \ than the cell,
+    !  0, if the neighboring cell is at the same resolution |-which includes
+    !  1, if the neighboring cell is finer                  / Xyz_D point
+    !  some strange negative number, which means that the neighboring
+    !  cell should not be involved into interpolation (the ghost cell,
+    !  in which the grid functions are not defined or are meaningless).
+    !/
+    integer,      intent(in) :: iLevel_I (1:nNeighbor)
+    !\
+    !OUPUTS:
+    !/     
+    !\
+    !Interpolation weights for neighboring cells ( Weight_I(1:nNeighbors) ) 
+    !and for the cell which includes Xyz_D point ( Weight_I(0)            )
+    real,        intent(out) :: Weight_I(0:nNeighbor)
+    !\
+    !Local variables
+    !/
+    !\
+    !Inverse grid size
+    !/
+    real    :: DXyzInv_D(1:nDim)
+    !\
+    !Left corner of the central cell
+    !/
+    real    :: XyzCorner_D(1:nDim)
+    !\
+    ! Loop variables
+    !/
+    integer :: iNeighbor, iDim
+    !\
+    ! Number of grid points in the stencil
+    !/ 
+    integer, parameter:: nGrid=2**nDim
+    !\
+    ! Ordered list of neighbors
+    !/
+    integer, dimension(-1:1,-1:1):: iLevel_II, nNeighbor_II
+    real   :: XyzGrid_DIII(1:nDim,nGrid/2,-1:1,-1:1)
+    integer:: iNeighbor_III(      nGrid/2,-1:1,-1:1)
+    !\
+    ! Discriminators
+    !/
+    real     ::  Discr_D(1:nDim)
+    integer  :: iDiscr_D(1:nDim)
+    character(LEN=*),parameter::NameSub = 'interpolate_amr_cell_2d'
+    !\
+    ! Test mode
+    !/
+    logical, parameter:: DoTest = .true.
+    !-----------------------
+    !\
+    !Invert DXyz_D and find XyzCorner_D
+    !/
+    DXyzInv_D = 1/DXyz_D; XyzCorner_D = XyzCell_D - 0.50*DXyz_D
+    !\
+    !Construct an ordered list of neighbors
+    !/
+    iLevel_II = 0; nNeighbor_II = 0; nNeighbor_II(0,0) = 1
+    XyzGrid_DIII = 0.0; iNeighbor_III = 0
+    XyzGrid_DIII(:,1,0,0) = XyzCell_D
+    do iNeighbor = 1, nNeighbor
+       iDiscr_D = &
+            floor((XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
+       !\
+       ! Test list of neighbors
+       !/
+       if(DoTest)then
+          if(all(iDiscr_D == 0))&
+               call CON_stop(NameSub//': neighbor is inside the central cell')
+          if(any(iDiscr_D > 1 ))&
+               call CON_stop(NameSub//': neighbor is too fine')
+          if(any(iDiscr_D > 1.or.iDiscr_D < -1).and.iLevel_I(iNeighbor)/=-1)&
+               call CON_stop(&
+               NameSub//': neighbor does not contact the central cell')
+       end if
+       !\
+       ! limit iDiscr_D for the coarser neighbor, which may be equal to +-2
+       !/
+       iDiscr_D = max(min(iDiscr_D,1),-1)
+       !\
+       ! Test list of neighbors
+       !/
+       if(DoTest)then
+          if(nNeighbor_II(iDiscr_D(1),iDiscr_D(2))>0)then
+             if(nNeighbor_II(iDiscr_D(1),iDiscr_D(2))==nGrid/2)&
+                  call CON_stop(NameSub//': too many neighbors')
+             if(iLevel_I(iNeighbor)/=1.or.&
+                  iLevel_II(iDiscr_D(1),iDiscr_D(2))/=1)&
+                  call CON_stop(NameSub//': multiple subfaces are not fine')
+          end if
+       end if
+       !\
+       ! Put the neighbor into the ordered list
+       !/
+       nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) = &
+            nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) +1
+       XyzGrid_DIII(:,nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
+            iDiscr_D(1),iDiscr_D(2)) = XyzNeighbor_DI(:,iNeighbor)
+       iLevel_II(iDiscr_D(1),iDiscr_D(2)) = iLevel_I(iNeighbor)
+       iNeighbor_III(nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
+            iDiscr_D(1),iDiscr_D(2)) = iNeighbor
+    end do           
+  end subroutine interpolate_amr_cell_2d
+       
 end module ModInterpolateAMR
