@@ -227,7 +227,7 @@ test_shockramp_run:
 
 test_shockramp_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-11 \
-		${TESTDIR}/RESULT/GM/z=0_*t00.2*.out \
+		${TESTDIR}/RESULT/GM/z=0_*t00.05*.out \
 		Param/SHOCKTUBE/TestOutput/shockramp.out \
 		> test_shockramp.diff)
 	ls -l test_shockramp.diff
