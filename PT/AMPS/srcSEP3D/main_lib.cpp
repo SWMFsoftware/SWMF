@@ -250,9 +250,9 @@ void amps_init_mesh() {
 
 	//read the data file
 	if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_)
-	  PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",true,33);
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,33);
 	else
-	  PIC::CPLR::DATAFILE::MULTIFILE::Init("dataARMS",true,20);
+	  PIC::CPLR::DATAFILE::MULTIFILE::Init(true,20);
 }
 
 void amps_init(){
