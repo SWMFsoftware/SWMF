@@ -2847,7 +2847,7 @@ contains
 
          if(nDim > 2)then
             call block_inside_regions(iRegionLowOrder_I, iBlock, &
-                 size(UseLowOrder_X), 'zface', IsInside_I=UseLowOrder_Z)
+                 size(UseLowOrder_Z), 'zface', IsInside_I=UseLowOrder_Z)
             UseLowOrderOnly = UseLowOrderOnly .and. all(UseLowOrder_Z)
          end if
 

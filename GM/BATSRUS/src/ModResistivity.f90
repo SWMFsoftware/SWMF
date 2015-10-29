@@ -616,8 +616,8 @@ contains
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: i_DD
     use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
-    use ModHallResist,   ONLY: UseHallResist, hall_factor, &
-         set_ion_mass_per_charge, IonMassPerCharge_G
+    use ModHallResist,   ONLY: UseHallResist, HallFactor_DF, &
+         set_ion_mass_per_charge, set_hall_factor_face, IonMassPerCharge_G
     use ModB0,           ONLY: B0_DGB
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
@@ -667,13 +667,16 @@ contains
           if(Unused_B(iBlock)) CYCLE
 
           call set_ion_mass_per_charge(iBlock)
+          call set_hall_factor_face(iBlock)
+
+          !!! skip here the blocks with IsHallBlock false and zero resistivity
 
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
              do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
                 ! Check if the Hall coefficient is positive for this face
-                HallCoeff = hall_factor(iDim, i, j, k, iBlock) 
+                HallCoeff = HallFactor_DF(iDim,i,j,k)
                 if(HallCoeff <= 0.0)then
                    Bne_DFDB(:,i,j,k,iDim,iBlock) = 0.0
                 else

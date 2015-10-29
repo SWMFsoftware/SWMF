@@ -1215,7 +1215,7 @@ contains
     use ModvarIndexes
     use ModAdvance, ONLY: time_BLK
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
-    use ModHallResist, ONLY: UseHallResist, hall_factor
+    use ModHallResist, ONLY: UseHallResist, HallFactor_C, set_hall_factor_cell
     use ModRadDiffusion, ONLY: add_jacobian_rad_diff
     use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity
     use ModGeometry, ONLY: true_cell
@@ -1244,8 +1244,6 @@ contains
     real :: FluxEpsLeft_VF(nVar,nI+1,nJ+1,nK+1)    ! Perturbed left flux
     real :: FluxEpsRight_VF(nVar,nI,nJ,nK)         ! Perturbed right flux
     real :: FaceArea_F(nI, nJ, nK)               ! Only the inner faces
-
-    real :: HallFactor_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
     !--------------------------------------------------------------------------
 
     if(iProc==PROCtest.and.iBlockImpl==iBlockImplTest)then
@@ -1779,13 +1777,11 @@ contains
       if(DoTestMe) write(*,*) NameSub, &
            ' HallJ_CD=',HallJ_CD(iTest,jTest,kTest,:)
 
-      do k = k0_,nKp1_; do j=j0_,nJp1_; do i=0,nI+1
-         HallFactor_G(i,j,k) = hall_factor(0,i,j,k,iBlock)
-      end do; end do; end do
+      call set_hall_factor_cell(iBlock)
 
       do k=1,nK; do j=1,nJ; do i=1,nI
          HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &
-              *HallFactor_G(i,j,k)*HallJ_CD(i,j,k,:)
+              *HallFactor_C(i,j,k)*HallJ_CD(i,j,k,:)
       end do; end do; end do
 
     end subroutine impl_init_hall

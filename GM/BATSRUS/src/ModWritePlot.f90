@@ -750,7 +750,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
-  use ModHallResist, ONLY: UseHallResist, hall_factor
+  use ModHallResist, ONLY: UseHallResist, set_hall_factor_cell, HallFactor_C
   use ModResistivity, ONLY: Eta_GB, Eta0
   use ModFaceGradient, ONLY: get_face_curl
   use ModPointImplicit, ONLY: UsePointImplicit_B
@@ -1325,9 +1325,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = iNode_B(iBLK)
      case('hall')
         if(UseHallResist)then
-           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-              PlotVar(i,j,k,iVar) = hall_factor(0,i,j,k,iBlk)
-           end do; end do; end do
+           call set_hall_factor_cell(iBLK)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
         else
            PlotVar(:,:,:,iVar) = 0.0
         end if

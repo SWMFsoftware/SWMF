@@ -7,7 +7,17 @@ module ModHallResist
 
   implicit none
 
+  SAVE
+
   private !except
+
+  ! Public methods
+  public :: init_hall_resist
+  public :: read_hall_param
+  public :: set_hall_factor_face
+  public :: set_hall_factor_cell
+  public :: set_ion_mass_per_charge
+  public :: set_ion_mass_per_charge_point
 
   ! Logical for adding the Biermann battery term
   logical, public :: UseBiermannBattery = .false.
@@ -15,10 +25,12 @@ module ModHallResist
   ! Logical for adding hall resistivity
   logical, public:: UseHallResist=.false.
   logical, public:: IsNewBlockCurrent=.true.
+
   ! Coefficient for taking whistler wave speed into account
   real, public:: HallCmaxFactor = 1.0
 
-  ! Non-diagonal part (Hall) resistivity with an arbitrary factor
+  ! Adjustable coefficient for the Hall term
+  ! (similar effect as changing the ion mass per charge)
   real, public:: HallFactorMax = 1.0
 
   ! Ion mass per charge may depend on space and time for multispecies
@@ -28,38 +40,19 @@ module ModHallResist
   ! Arrays for the implicit preconditioning
   real, public, allocatable :: HallJ_CD(:,:,:,:)
 
-  ! Name/shape of the region where Hall effect is used
-  character(len=20), public :: NameHallRegion ='all'
+  ! Hall factor on the faces and in the cell centers
+  real, public, allocatable:: HallFactor_DF(:,:,:,:), HallFactor_C(:,:,:)
 
-  ! Parameters for exclusion of pole region in spherical grids
-  real, public :: PoleAngleHall=-1.0, dPoleAngleHall=-1.0
+  ! Logical is true if call set_hall_factor* sets any non-zero hall factors
+  logical, public:: IsHallBlock
 
-  ! Parameters for exclusion of inner boundary (if present)
-  real, public :: rInnerHall=-1.0, DrInnerHall=0.0
+  ! Local variables ---------
 
-  ! Parameters for the center location of Hall region
-  real, public :: X0Hall=0.0, Y0Hall=0.0, Z0Hall=0.0
+  ! Description of the region where Hall effect is used
+  character(len=200):: StringHallRegion ='none'
 
-  ! Parameters for spherical Hall region
-  real, public :: rSphereHall=-1.0, DrSphereHall=-1.0
-
-  ! Parameters for box Hall region
-  real, public :: xSizeBoxHall=-1.0, ySizeBoxHall=-1.0, zSizeBoxHall=-1.0
-  real, public :: DxSizeBoxHall=-1.0, DySizeBoxHall=-1.0, DzSizeBoxHall=-1.0
-
-  ! Public methods
-  public :: init_hall_resist, hall_factor
-  public :: set_ion_mass_per_charge
-  public :: set_ion_mass_per_charge_point
-
-  ! Local variables for Hall regions
-  real :: TanSqr1 = -1.0, TanSqr2 = -1.0                  ! pole
-  real :: rSqrInner1 = -1.0, rSqrInner2 = -1.0            ! inner body
-  real :: rSqrSphere1 = -1.0, rSqrSphere2 = -1.0          ! spherical region
-  real :: xSizeBox1=-1.0, ySizeBox1=-1.0, zSizeBox1=-1.0  ! box region
-  real :: xSizeBox2=-1.0, ySizeBox2=-1.0, zSizeBox2=-1.0  ! box region
-
-  save
+  ! Indexes of regions defined with the #REGION commands
+  integer, allocatable:: iRegionHall_I(:)
 
 contains
   !============================================================================
@@ -67,6 +60,7 @@ contains
 
     use ModConst,   ONLY: cElectronCharge
     use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, UnitX_, UnitCharge_
+    use BATL_lib,   ONLY: get_region_indexes
 
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='init_hall_resist'
@@ -100,40 +94,37 @@ contains
     IonMassPerChargeCoef = &
          Si2No_V(UnitX_)**3 / (cElectronCharge*Si2No_V(UnitCharge_))
 
-    rSqrInner1 = -1.0
-    rSqrInner2 = -1.0
-    TanSqr1 = -1.0
-    TanSqr2 = -1.0
-
-    if(PoleAngleHall > 0.0)then
-       TanSqr1 = tan(PoleAngleHall)**2
-       TanSqr2 = tan(PoleAngleHall+dPoleAngleHall)**2
-    end if
-
-    if(rInnerHall > 0.0)then
-       rSqrInner1 = rInnerHall**2
-       rSqrInner2 = (rInnerHall + DrInnerHall)**2
-    endif
-
-    select case(NameHallRegion)
-    case('sphere')
-       rSqrSphere1 = rSphereHall**2
-       rSqrSphere2 = (rSphereHall+DrSphereHall)**2
-    case('box')
-       xSizeBox1 = xSizeBoxHall
-       ySizeBox1 = ySizeBoxHall
-       zSizeBox1 = zSizeBoxHall
-       xSizeBox2 = xSizeBoxHall + 2*DxSizeBoxHall
-       ySizeBox2 = ySizeBoxHall + 2*DySizeBoxHall
-       zSizeBox2 = zSizeBoxHall + 2*DzSizeBoxHall
-    case('all')
-       ! Do nothing
-    case default
-       call stop_mpi('ERROR in init_hall_resist: NameHallRegion=' &
-            //NameHallRegion)
-    end select
+    ! Get signed indexes for Hall region(s)
+    call get_region_indexes(StringHallRegion, iRegionHall_I)
 
   end subroutine init_hall_resist
+
+  !=========================================================================
+  subroutine read_hall_param(NameCommand)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_hall_param'
+    !---------------------------------------------------------------------
+    select case(NameCommand)
+    case("#HALLRESISTIVITY")
+       call read_var('UseHallResist',  UseHallResist)
+       call read_var('HallFactorMax',  HallFactorMax)
+       call read_var('HallCmaxFactor', HallCmaxFactor)
+
+    case("#HALLREGION")
+       call read_var('StringHallRegion', StringHallRegion)
+
+    case("#BIERMANNBATTERY")
+       call read_var("UseBiermannBattery", UseBiermannBattery)
+
+    case default
+       call stop_mpi(NameSub//' unknown command='//NameCommand)
+    end select
+
+  end subroutine read_hall_param
 
   !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
@@ -205,91 +196,56 @@ contains
   end subroutine set_ion_mass_per_charge_point
 
   !=========================================================================
+  subroutine set_hall_factor_cell(iBlock)
 
-  real function hall_factor(iDir, iFace, jFace, kFace , iBlock)
+    use BATL_lib, ONLY: block_inside_regions
 
-    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_
+    integer, intent(in):: iBlock
 
-    integer, intent(in)::iDir, iFace, jFace, kFace, iBlock 
+    ! Set the hall factor for the cell centers of block iBlock
+    ! Also set IsHallBlock if any of the cells have a non-zero factor
+    !----------------------------------------------------------------------
+    if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
-    real :: x,y,z,rSqr,TanSqr,Distance1,Distance2
-    real :: HallFactor
-
-    !--------------------------------------------------------------
-    select case(iDir)
-    case(0)  !for cell center
-       x = Xyz_DGB(x_,iFace,jFace,kFace,iBlock)
-       y = Xyz_DGB(y_,iFace,jFace,kFace,iBlock)
-       z = Xyz_DGB(z_,iFace,jFace,kFace,iBlock)       
-    case(1)
-       x = 0.5*sum(Xyz_DGB(x_,iFace-1:iFace,jFace,kFace,iBlock))
-       y = 0.5*sum(Xyz_DGB(y_,iFace-1:iFace,jFace,kFace,iBlock))
-       z = 0.5*sum(Xyz_DGB(z_,iFace-1:iFace,jFace,kFace,iBlock))
-    case(2)
-       x = 0.5*sum(Xyz_DGB(x_,iFace,jFace-1:jFace,kFace,iBlock))
-       y = 0.5*sum(Xyz_DGB(y_,iFace,jFace-1:jFace,kFace,iBlock))
-       z = 0.5*sum(Xyz_DGB(z_,iFace,jFace-1:jFace,kFace,iBlock))
-    case(3)
-       x = 0.5*sum(Xyz_DGB(x_,iFace,jFace,kFace-1:KFace,iBlock))
-       y = 0.5*sum(Xyz_DGB(y_,iFace,jFace,kFace-1:KFace,iBlock))
-       z = 0.5*sum(Xyz_DGB(z_,iFace,jFace,kFace-1:KFace,iBlock))
-    end select
-
-    HallFactor = HallFactorMax
-
-    rSqr = (x**2 + y**2 + z**2)
-    if(rSqr < rSqrInner1)then
-       hall_factor=0.0
+    if(.not.allocated(iRegionHall_I))then
+       IsHallBlock = .true.
+       HallFactor_C = HallFactorMax
        RETURN
-    else if(rSqr < rSqrInner2)then
-       HallFactor = HallFactor*(rSqr-rSqrInner1)/(rSqrInner2 - rSqrInner1)
-    endif
-
-    if(TanSqr1 > 0.0 .and. abs(z)>0.0)then
-       TanSqr = (x**2+y**2)/z**2
-       if(TanSqr < TanSqr1)then
-          hall_factor=0.0
-          RETURN
-       else if(TanSqr < TanSqr2)then
-          HallFactor = HallFactor*(TanSqr-TanSqr1)/(TanSqr2-TanSqr1)
-       end if
     end if
 
-    select case(NameHallRegion)
-    case('all')
-       ! Do nothing
-    case('user')
-       ! hall_factor= &
-       !   user_hall_factor(x, y, z, iDir, iFace, jFace, kFace, iBlock)
-    case('sphere')
-       rSqr = (x-x0Hall)**2 + (y-y0Hall)**2 + (z-z0Hall)**2
-       if(rSqr > rSqrSphere2)then
-          hall_factor=0.0
-          RETURN
-       else if(rSqr > rSqrSphere1)then
-          HallFactor = HallFactor*(rSqrSphere2-rSqr)/(rSqrSphere2-rSqrSphere1)
-       end if
-    case('box')
-       Distance2 = max( &
-            abs(x-x0Hall)/xSizeBox2, &
-            abs(y-y0Hall)/ySizeBox2, &
-            abs(z-z0Hall)/zSizeBox2 )
-       Distance1 = max( &
-            abs(x-x0Hall)/xSizeBox1, &
-            abs(y-y0Hall)/ySizeBox1, &
-            abs(z-z0Hall)/zSizeBox1 )
-       if(Distance2 > 0.5)then
-          hall_factor=0.0
-          RETURN
-       else if(Distance1 > 0.5)then
-          HallFactor = HallFactor*(0.5-Distance2)/(Distance1-Distance2)
-       end if
-    case default
-       call stop_mpi("Unknown value for NameHallRegion="//NameHallRegion)
-    end select
+    call block_inside_regions(iRegionHall_I, iBlock, &
+         size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C)
 
-    hall_factor = HallFactor
+    if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
 
-  end function hall_factor
+  end subroutine set_hall_factor_cell
+  !=========================================================================
+  subroutine set_hall_factor_face(iBlock)
+
+    use BATL_lib, ONLY: block_inside_regions, nDim, nINode, nJNode, nKNode
+
+    integer, intent(in):: iBlock
+
+    ! Set the hall factor for the cell faces of block iBlock
+    ! Also set IsHallBlock if any of the faces have a non-zero factor
+
+    logical:: IsInside
+    !----------------------------------------------------------------------
+    if(.not.allocated(HallFactor_DF)) &
+         allocate(HallFactor_DF(nDim,nINode,nJNode,nKNode))
+
+    if(.not.allocated(iRegionHall_I))then
+       IsHallBlock = .true.
+       HallFactor_DF = HallFactorMax
+       RETURN
+    end if
+
+    call block_inside_regions(iRegionHall_I, iBlock, &
+         size(HallFactor_DF), 'face', IsHallBlock, Value_I=HallFactor_DF)
+
+    if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
+
+  end subroutine set_hall_factor_face
+  !=========================================================================
 
 end module ModHallResist

@@ -55,13 +55,7 @@ subroutine MH_set_parameters(TypeAction)
        DoChangeRestartVariables, nVarRestart, UseRestartWithFullB, &
        NameRestartInDir, NameRestartOutDir
   use ModHallResist,    ONLY: &
-       UseHallResist, HallFactorMax, HallCmaxFactor, &
-       PoleAngleHall, dPoleAngleHall, rInnerHall, DrInnerHall, &
-       NameHallRegion, x0Hall, y0Hall, z0Hall, rSphereHall, DrSphereHall, &
-       xSizeBoxHall, DxSizeBoxHall, &
-       ySizeBoxHall, DySizeBoxHall, &
-       zSizeBoxHall, DzSizeBoxHall, &
-       UseBiermannBattery
+       UseHallResist, read_hall_param, UseBiermannBattery
   use ModHeatConduction, ONLY: read_heatconduction_param
   use ModHeatFluxCollisionless, ONLY: read_heatflux_param
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -115,7 +109,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, SpeciesFirst_, &
        SpeciesLast_
   use BATL_lib, ONLY: Dim2_, Dim3_, &
-       create_grid, set_high_geometry, region_signed_indexes
+       create_grid, set_high_geometry, get_region_indexes
   implicit none
 
   character (len=17) :: NameSub='MH_set_parameters'
@@ -300,7 +294,7 @@ subroutine MH_set_parameters(TypeAction)
      if(UseSemiImplicit) call init_mod_semi_impl
      call init_mod_magperturb
 
-     call region_signed_indexes(StringLowOrderRegion, iRegionLowOrder_I)
+     call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
 
      ! clean dynamic storage
      call clean_block_data
@@ -577,54 +571,8 @@ subroutine MH_set_parameters(TypeAction)
           '#MESSAGEPASSRESISTIVITY')
         call read_resistivity_param(NameCommand)
 
-     case("#HALLRESISTIVITY")
-        call read_var('UseHallResist',  UseHallResist)
-        call read_var('HallFactorMax',  HallFactorMax)
-        call read_var('HallCmaxFactor', HallCmaxFactor)
-
-     case("#HALLREGION")
-        call read_var('NameHallRegion', NameHallRegion)
-
-        i = index(NameHallRegion, '0')
-        if(i < 1 .and. NameHallRegion /= 'all')then
-           call read_var("x0Hall", x0Hall)
-           call read_var("y0Hall", y0Hall)
-           call read_var("z0Hall", z0Hall)
-        else
-           x0Hall = 0.0; y0Hall = 0.0; z0Hall = 0.0
-           if(i>1)NameHallRegion = &
-                NameHallRegion(1:i-1)//NameHallRegion(i+1:len(NameHallRegion))
-        end if
-
-        select case(NameHallRegion)
-        case("all", "user")
-        case("sphere")
-           call read_var("rSphereHall",rSphereHall)
-           call read_var("DrSphereHall",DrSphereHall)
-        case("box")
-           call read_var("xSizeBoxHall ",xSizeBoxHall)
-           call read_var("DxSizeBoxHall",DxSizeBoxHall)
-           call read_var("ySizeBoxHall ",ySizeBoxHall)
-           call read_var("DySizeBoxHall",DySizeBoxHall)
-           call read_var("zSizeBoxHall ",zSizeBoxHall)
-           call read_var("DzSizeBoxHall",DzSizeBoxHall)
-        case default
-           call stop_mpi(NameSub//': unknown NameHallRegion='&
-                //NameHallRegion)
-        end select
-
-     case("#HALLPOLEREGION")
-        call read_var("PoleAngleHall ", PoleAngleHall)
-        call read_var("dPoleAngleHall", dPoleAngleHall)
-        PoleAngleHall  =  PoleAngleHall*cDegToRad
-        dPoleAngleHall = dPoleAngleHall*cDegToRad
-
-     case("#HALLINNERREGION")
-        call read_var("rInnerHall ", rInnerHall)
-        call read_var("DrInnerHall", DrInnerHall)
-
-     case("#BIERMANNBATTERY")
-        call read_var("UseBiermannBattery", UseBiermannBattery)
+     case("#HALLRESISTIVITY", "#HALLREGION", "#BIERMANNBATTERY")
+        call read_hall_param(NameCommand)
 
      case("#MINIMUMDENSITY")
         do iFluid = 1, nFluid

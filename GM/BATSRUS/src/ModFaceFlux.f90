@@ -40,7 +40,7 @@ module ModFaceFlux
        Pwave_X, Pwave_Y, Pwave_Z ! Pwave for grad Pwave in multi-ion MHD
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
-       IsNewBlockCurrent, hall_factor, &
+       IsNewBlockCurrent, HallFactor_DF, set_hall_factor_face, &
        set_ion_mass_per_charge, UseBiermannBattery
 
   use ModRadDiffusion, ONLY: IsNewBlockRadDiffusion, get_radiation_energy_flux
@@ -428,6 +428,7 @@ contains
 
     if(UseHallResist .or. UseBiermannBattery) &
          call set_ion_mass_per_charge(iBlock)
+    if(UseHallResist) call set_hall_factor_face(iBlock)
 
     if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
@@ -986,7 +987,7 @@ contains
     BiermannCoeff = -1.0
     if(UseHallResist .or. UseBiermannBattery)then
        if(UseHallResist)then
-          HallCoeff = hall_factor(iDimFace, iFace, jFace, kFace, iBlockFace) &
+          HallCoeff = HallFactor_DF(iDimFace,iFace,jFace,kFace) &
                *0.5*( IonMassPerCharge_G(iLeft,jLeft,kLeft) &
                +      IonMassPerCharge_G(iRight,jRight,kRight) )
           BiermannCoeff = HallCoeff
