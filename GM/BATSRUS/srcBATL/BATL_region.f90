@@ -10,8 +10,9 @@ module BATL_region
   ! Also read the initial grid refinement resolution/level.
 
   use BATL_mpi,  ONLY: iProc
-  use BATL_size, ONLY: nI, nDim, j0_, nJp1_, k0_, nKp1_
-  use BATL_geometry, ONLY: Dim2_, Dim3_
+  use BATL_size, ONLY: nDim, Dim2_, Dim3_, j0_, nJp1_, k0_, nKp1_, &
+       nI, nJ, nK, nIJK, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
+       nINode, nJNode, nKNode
 
   implicit none
 
@@ -23,7 +24,7 @@ module BATL_region
   public:: init_region
   public:: clean_region
   public:: i_signed_region
-  public:: region_signed_indexes
+  public:: get_region_indexes
   public:: block_inside_regions
   public:: points_inside_region
 
@@ -252,7 +253,7 @@ contains
 
   end function i_signed_region
   !============================================================================
-  subroutine region_signed_indexes(StringRegion, iRegion_I)
+  subroutine get_region_indexes(StringRegion, iRegion_I)
 
     use ModUtilities, ONLY: split_string
 
@@ -276,7 +277,7 @@ contains
        iRegion_I(iName) = i_signed_region(NameRegion_I(iName))
     end do
 
-  end subroutine region_signed_indexes
+  end subroutine get_region_indexes
   !============================================================================
   subroutine set_i_par_perp
 
@@ -575,7 +576,6 @@ contains
   subroutine block_inside_regions(iRegion_I, iBlock, nValue, StringLocation, &
        IsInside, IsInside_I, Value_I)
 
-    use BATL_size,     ONLY: nINode, nJNode, nKNode
     use BATL_geometry, ONLY: IsCartesianGrid
     use ModUtilities,  ONLY: lower_case
 
@@ -772,14 +772,12 @@ contains
     subroutine set_coord
 
       ! Set point positions in generalized coordinates
-
-      use BATL_size, ONLY: nI, nJ, nK, nIJK, &
-           MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK
-
       use BATL_grid, ONLY: CoordMin_DB, CellSize_DB
 
       integer:: i, j, k, n
       real:: Coord_D(3), CellSize_D(3), CoordMinBlock_D(3)
+      real:: CoordFace1, CoordFace2, CoordFace3
+      real:: CoordCell1, CoordCell2, CoordCell3
       !----------------------------------------------------------------------
 
       ! Allocate Coord array if new or size changed
@@ -830,7 +828,7 @@ contains
             do j = 1, nJ
                Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
                do i = 1, nI+1
-                  Coord_D(1) = CoordMinBlock_D(1) + i*CellSize_D(1)
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-1)*CellSize_D(1)
                   n = n + 1
                   Coord_DI(:,n) = Coord_D(1:nDim)
                end do
@@ -844,7 +842,7 @@ contains
          do k = 1, nK
             Coord_D(3) = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
             do j = 1, nJ+1
-               Coord_D(2) = CoordMinBlock_D(2) + j*CellSize_D(2)
+               Coord_D(2) = CoordMinBlock_D(2) + (j-1)*CellSize_D(2)
                do i = 1, nI
                   Coord_D(1) = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
                   n = n + 1
@@ -858,7 +856,7 @@ contains
               ': incorrect number of points for X faces')
 
          do k = 1, nK+1
-            Coord_D(3) = CoordMinBlock_D(3) + k*CellSize_D(3)
+            Coord_D(3) = CoordMinBlock_D(3) + (k-1)*CellSize_D(3)
             do j = 1, nJ
                Coord_D(2) = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
                do i = 1, nI
@@ -869,16 +867,47 @@ contains
             end do
          end do
 
+      case('f')
+         if(nPoint /= nDim*nINode*nJNode*nKNode) call CON_stop(NameSub// &
+              ': incorrect number of points for faces')
+         n = 0
+         do k = 1, nKNode
+            CoordFace3 = CoordMinBlock_D(3) + (k-1)*CellSize_D(3)
+            CoordCell3 = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            do j = 1, nJNode
+               CoordFace2 = CoordMinBlock_D(2) + (j-1)*CellSize_D(2)
+               CoordCell2 = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               do i = 1, nINode
+                  CoordFace1 = CoordMinBlock_D(1) + (i-1)*CellSize_D(1)
+                  CoordCell1 = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+
+                  n = n + 1
+                  Coord_D = (/ CoordFace1, CoordCell2, CoordCell3 /)
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+
+                  if(nDim == 1) CYCLE
+                  n = n + 1
+                  Coord_D = (/ CoordCell1, CoordFace2, CoordCell3 /)
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+                  
+                  if(nDim == 2) CYCLE
+                  n = n + 1
+                  Coord_D = (/ CoordCell1, CoordCell2, CoordFace3 /)
+                  Coord_DI(:,n) = Coord_D(1:nDim)
+               end do
+            end do
+         end do
+
       case('n')
          if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
               ': incorrect number of points for nodes')
 
          do k = 1, nKNode
-            Coord_D(3) = CoordMinBlock_D(3) + k*CellSize_D(3)
+            Coord_D(3) = CoordMinBlock_D(3) + (k-1)*CellSize_D(3)
             do j = 1, nJNode
-               Coord_D(2) = CoordMinBlock_D(2) + j*CellSize_D(2)
+               Coord_D(2) = CoordMinBlock_D(2) + (j-1)*CellSize_D(2)
                do i = 1, nINode
-                  Coord_D(1) = CoordMinBlock_D(1) + i*CellSize_D(1)
+                  Coord_D(1) = CoordMinBlock_D(1) + (i-1)*CellSize_D(1)
                   n = n + 1
                   Coord_DI(:,n) = Coord_D(1:nDim)
                end do
@@ -898,8 +927,9 @@ contains
 
       ! Set point positions in Cartesian coordinate
 
-      use BATL_size, ONLY: nI, nJ, nK, nIJK, MaxIJK
       use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
+
+      integer:: i, j, k, n
       !----------------------------------------------------------------------
 
       ! Allocate Xyz array if new or size changed
@@ -946,6 +976,24 @@ contains
          Xyz_DI = reshape( &
               0.5*(Xyz_DGB(1:nDim,1:nI,1:nJ,k0_:nK ,iBlock) &
               +    Xyz_DGB(1:nDim,1:nI,1:nJ,1:nKp1_,iBlock)), (/nDim, nPoint/))
+
+      case('f')
+         if(nPoint /= nDim*nINode*nJNode*nKNode) call CON_stop(NameSub// &
+              ': incorrect number of points for faces')
+         n = 0
+         do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
+            n = n + 1
+            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i-1,j,k,iBlock) &
+                 +             Xyz_DGB(1:nDim,i  ,j,k,iBlock))
+            if(nDim == 1) CYCLE
+            n = n + 1
+            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i,j-1,k,iBlock) &
+                 +             Xyz_DGB(1:nDim,i,j  ,k,iBlock))
+            if(nDim == 2) CYCLE
+            n = n + 1
+            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i,j,k-1,iBlock) &
+                 +             Xyz_DGB(1:nDim,i,j,k  ,iBlock))
+         end do; end do; end do
 
       case('n')
          if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
