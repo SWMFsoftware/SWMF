@@ -5072,3 +5072,10 @@ pro save_log, filename, headline, varname, array, format=format
   close, unit
 
 end
+;=========================================================================================
+pro reset_axis
+
+!x.tickname=strarr(60)
+!y.tickname=strarr(60)
+
+end
