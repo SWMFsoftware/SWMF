@@ -13,7 +13,7 @@
 //#include <algorithm>
 
 //number of file to be loaded
-int PIC::CPLR::DATAFILE::MULTIFILE::nFile=-1;
+int PIC::CPLR::DATAFILE::MULTIFILE::nFile=0;
 //schedule for loading multiple data files
 vector<PIC::CPLR::DATAFILE::MULTIFILE::cScheduleItem> PIC::CPLR::DATAFILE::MULTIFILE::Schedule;
 //name of file with table defining schedule
@@ -28,7 +28,7 @@ int PIC::CPLR::DATAFILE::MULTIFILE::CurrDataFileOffset = -1;
 int PIC::CPLR::DATAFILE::MULTIFILE::NextDataFileOffset = -1;
 
 // next file to load
-int PIC::CPLR::DATAFILE::MULTIFILE::iFileLoadNext = 0;
+int PIC::CPLR::DATAFILE::MULTIFILE::iFileLoadNext = -1;
 
 //==============================================================================
 void PIC::CPLR::DATAFILE::MULTIFILE::Init(bool BreakAtLastFileIn,
@@ -111,7 +111,10 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
 
   // now read the actual table
   //---------------------------------------------------------------------------
-  bool IsSchedule; // whether times are provided in the table
+  //first, clear the schedule
+  Schedule.clear();
+  // whether times are provided in the table
+  bool IsSchedule;
   //find the beginning of the table
   while(fin.eof()==false) {
     // get a line from the file
@@ -244,6 +247,12 @@ void PIC::CPLR::DATAFILE::Init() {
 
   //initialize offset to the current datafile storage
   MULTIFILE::CurrDataFileOffset = 0;
+  // put a dummy item in the schedule
+  MULTIFILE::nFile = 1; MULTIFILE::iFileLoadNext=0;
+  MULTIFILE::cScheduleItem ItemDummy;
+  ItemDummy.Time=NAN;
+  sprintf(ItemDummy.FileName,"%s","dummy_name");
+  MULTIFILE::Schedule.push_back(ItemDummy);
 
   //set the initialization flag and call the init procedures of the particular file reader
   Offset::InitFlag=true;
