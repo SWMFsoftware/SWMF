@@ -2981,31 +2981,45 @@ namespace PIC {
     namespace DATAFILE {
 
       namespace MULTIFILE{
-        //time of the currently loaded datafile
-        extern double TimeCurrent;
-        //time to load the next datafile
-        extern double TimeCoupleNext;
-	//offset to the data at next datafile RELATIVE to the current one
+	//-----------------------------------
+	//number of file to be loaded
+	extern int nFile;
+        // number of the next data file in the schedule
+        extern int iFileLoadNext;
+	//schedule for loading multiple data files
+	struct cScheduleItem {
+	  double Time;
+	  char FileName[_MAX_STRING_LENGTH_PIC_];
+	};
+	extern vector<cScheduleItem> Schedule;
+	//comparison function for schedule items: for sorting
+	inline bool _compare(cScheduleItem Item1, cScheduleItem Item2){
+	  return Item1.Time < Item2.Time;}
+	// name of file with table defining schedule
+	extern char FileTable[_MAX_STRING_LENGTH_PIC_];
+
+	//offsets to the data at next/current datafile 
 	//used for time interpolation
 	extern int NextDataFileOffset;
 	extern int CurrDataFileOffset;
-        // parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
-        extern int  FileNumber;
-        extern char FileNameBase[_MAX_STRING_LENGTH_PIC_];
-        extern char FileExt[_MAX_STRING_LENGTH_PIC_];
+
+
+
 	//variable to track whether to break simulation at the last datafile
 	extern bool BreakAtLastFile;
 	//variable to track whether the last datafile has been reached
 	extern bool ReachedLastFile;
         //check whether it is time to load the next file
         inline bool IsTimeToUpdate(){
-          return TimeCoupleNext >= 0.0 && PIC::SimulationTime::Get() >= TimeCoupleNext;
+          return PIC::SimulationTime::Get() >= Schedule[iFileLoadNext].Time;
         }
         //initialize
-        void Init(const char *FileNameBaseIn, 
-		  bool        BreakAtLastFileIn= true, 
-		  int         FileNumber      = 0, 
-		  const char *FileExtIn       ="dat");
+        void Init(bool BreakAtLastFileIn = true, 
+		  int  FileNumber        = 0);
+	//load the schedule
+	void GetSchedule();
+	//extract time from datafile itself
+	double GetFileTime(const char* FileName);
         //update the datafile
         void UpdateDataFile();
       }
@@ -3130,8 +3144,8 @@ namespace PIC {
 				   cell->GetAssociatedDataBufferPointer());
 	//interpolation weight
 	double alpha = 
-	  (MULTIFILE::TimeCoupleNext - Time) /
-	  (MULTIFILE::TimeCoupleNext - MULTIFILE::TimeCurrent);
+	  (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - Time) /
+	  (MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-1].Time - MULTIFILE::Schedule[MULTIFILE::iFileLoadNext-2].Time);
         for (int i=0;i<DataVectorLength;i++) 
 	  DataVector[i] = DataVector[i] * alpha + offset[i] * (1-alpha);
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
@@ -3306,6 +3320,7 @@ namespace PIC {
 
 
         void Init();
+	double GetFileTime(const char *fname);
         void LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode=PIC::Mesh::mesh.rootTree);
       }
 

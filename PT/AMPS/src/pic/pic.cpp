@@ -196,12 +196,16 @@ int PIC::TimeStep() {
   PIC::SimulationTime::Update();
 #if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
   //update data
-  if(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate())
-    PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
-  //exit if reached the last file
-  if(PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile &&
-     PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile)
-    return _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_;
+  if(PIC::CPLR::DATAFILE::MULTIFILE::IsTimeToUpdate()){
+    //check if reached the last file
+    if(PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile){
+      //end simulation if needed
+      if(PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile)
+	return _PIC_TIMESTEP_RETURN_CODE__END_SIMULATION_;
+    }
+    else //load data file
+      PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile();
+  }
 #endif
 #endif
 

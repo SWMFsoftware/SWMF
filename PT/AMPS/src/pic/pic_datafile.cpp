@@ -9,13 +9,16 @@
  *      Author: vtenishe
  */
 
-
 #include "pic.h"
+//#include <algorithm>
 
-//time of the currently loaded datafile                                   
-double PIC::CPLR::DATAFILE::MULTIFILE::TimeCurrent    = -1.0;
-//time to load the next datafile                                          
-double PIC::CPLR::DATAFILE::MULTIFILE::TimeCoupleNext = -1.0;
+//number of file to be loaded
+int PIC::CPLR::DATAFILE::MULTIFILE::nFile=-1;
+//schedule for loading multiple data files
+vector<PIC::CPLR::DATAFILE::MULTIFILE::cScheduleItem> PIC::CPLR::DATAFILE::MULTIFILE::Schedule;
+//name of file with table defining schedule
+char PIC::CPLR::DATAFILE::MULTIFILE::FileTable[_MAX_STRING_LENGTH_PIC_]="Schedule";
+
 //variable to track whether to break simulation at the last datafile
 bool PIC::CPLR::DATAFILE::MULTIFILE::BreakAtLastFile  = true;
 //variable to track whether the last datafile has been reached
@@ -24,20 +27,16 @@ bool PIC::CPLR::DATAFILE::MULTIFILE::ReachedLastFile  = false;
 int PIC::CPLR::DATAFILE::MULTIFILE::CurrDataFileOffset = -1;
 int PIC::CPLR::DATAFILE::MULTIFILE::NextDataFileOffset = -1;
 
-// parts of file's name: format is "FileNameBase.t=FileNumber.FileExt"
-int  PIC::CPLR::DATAFILE::MULTIFILE::FileNumber = 0;
-char PIC::CPLR::DATAFILE::MULTIFILE::FileNameBase[_MAX_STRING_LENGTH_PIC_] = "";
-char PIC::CPLR::DATAFILE::MULTIFILE::FileExt[_MAX_STRING_LENGTH_PIC_] = "dat";
+// next file to load
+int PIC::CPLR::DATAFILE::MULTIFILE::iFileLoadNext = 0;
 
-void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn, 
-					  bool        BreakAtLastFileIn,
-					  int         FileNumberFirst, 
-					  const char *FileExtIn){
-  sprintf(FileNameBase,"%s", FileNameBaseIn);
-  sprintf(FileExt,     "%s", FileExtIn);
-  FileNumber     = FileNumberFirst;
-  TimeCurrent    = -1.0;
-  TimeCoupleNext = -1.0;
+//==============================================================================
+void PIC::CPLR::DATAFILE::MULTIFILE::Init(bool BreakAtLastFileIn,
+					  int  FileNumberFirst){
+  //-----------------------------------------
+  //load schedule from file
+  GetSchedule();
+  iFileLoadNext = FileNumberFirst;
 
   CurrDataFileOffset = 0;
 #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
@@ -47,22 +46,129 @@ void PIC::CPLR::DATAFILE::MULTIFILE::Init(const char *FileNameBaseIn,
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
 
   BreakAtLastFile= BreakAtLastFileIn;
+  // set the global time counter value
+  PIC::SimulationTime::SetInitialValue(Schedule[iFileLoadNext].Time);
   // load the first file
   UpdateDataFile();
 #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   // load the second file
   UpdateDataFile();
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
-  // set the global time counter value
-  PIC::SimulationTime::SetInitialValue(TimeCurrent);
+
 }
 
 
+//=============================================================================
+void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
+  //compose full name of the file table file with path
+  char fullname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fullname,"%s/%s", 
+	  PIC::CPLR::DATAFILE::path,
+	  PIC::CPLR::DATAFILE::MULTIFILE::FileTable);
+  //read the schedule; the format is the following:
+  //---------------------------------------------------------------------------
+  // Comment lines             | Comment lines           
+  // #NFILE                    | #NFILE                  
+  // nFile                     | nFile                   
+  // #FILELIST                OR #FILESCHEDULE               
+  // <name of the file 1>      | <time of file1> <name of the file 1>    
+  // ...                       | ...                     
+  // <name of the file nFile>  | <time of file nFile> <name of the file nFile>
+  // Ignored part of the file  | Ignored part of the file
+  //---------------------------------------------------------------------------
+  // indicating times is optional provided that reader is able to extract them
+  // from the data files themselves, otherwise using #FILESCHEDULE is mandatory
+  //---------------------------------------------------------------------------
+  // read schedule using class CiFileOperations (see src/general/ifileopr.h)
+  CiFileOperations fin;
+  // containers for a line from file's contents
+  char str[_MAX_STRING_LENGTH_PIC_], str1[_MAX_STRING_LENGTH_PIC_];
+  fin.openfile(fullname);
+
+  // read the file's contents; first find number of files
+  //---------------------------------------------------------------------------
+  while(fin.eof()==false) {
+    // get a line from the file
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    // check if found keyword "#NFILE"
+    fin.CutInputStr(str1, str);
+    if(strcmp("#NFILE",str1)==0){
+      fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+      nFile = strtol(str, NULL,10);
+      break;
+    }
+  }
+  // check if successfully found number of input files
+  if(nFile == -1)
+    exit(__LINE__,__FILE__,
+	 "Can't read number of input data files from schedule file");
+
+  // check correctness of the found value
+  if(nFile < 1)
+    exit(__LINE__,__FILE__,
+	 "Number of input data files in schedule file is invalid");
+  //---------------------------------------------------------------------------
+
+  // now read the actual table
+  //---------------------------------------------------------------------------
+  bool IsSchedule; // whether times are provided in the table
+  //find the beginning of the table
+  while(fin.eof()==false) {
+    // get a line from the file
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    // check if found keyword "#NFILE"
+    fin.CutInputStr(str1, str);
+    if(strcmp("#FILELIST",    str1)==0) {IsSchedule = false; break;}
+    if(strcmp("#FILESCHEDULE",str1)==0) {IsSchedule = true;  break;}
+    }
+  // check if successfully found the beginning of the table
+  if(fin.eof()==true)
+    exit(__LINE__,__FILE__,"Can't locate the beginning of the actual file table in the schedule file");
+  //read file names
+  cScheduleItem Item;
+  for(int iFile=0; iFile<nFile; iFile++){
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    if(IsSchedule){
+      // time is provided in the table
+      fin.CutInputStr(str1, str);
+      Item.Time     = strtod(str1, NULL);
+      sprintf(Item.FileName,"%s",str);
+    }
+    else {
+      // time has to be extracted from the file itself
+      sprintf(Item.FileName,"%s",str);
+      Item.Time     = GetFileTime(str);
+    }
+    Schedule.push_back(Item);
+  }
+  //---------------------------------------------------------------------------
+  // the rest of the file is ignored; close file
+  fin.closefile();
+
+  // as a final step, need to sort schedule by time
+  sort(Schedule.begin(), Schedule.end(), _compare);
+}
+
+//=============================================================================
+double PIC::CPLR::DATAFILE::MULTIFILE::GetFileTime(const char* FileName){
+  //the particular  reader
+  switch (_PIC_COUPLER_DATAFILE_READER_MODE_) {
+  case _PIC_COUPLER_DATAFILE_READER_MODE__TECPLOT_:
+    exit(__LINE__,__FILE__,"TECPLOT reader mode is not able to extract time from the input data file");
+    break;
+  case _PIC_COUPLER_DATAFILE_READER_MODE__ARMS_:
+    return ARMS::GetFileTime(FileName);
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknown");
+  }
+}
+
+//=============================================================================
 void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
   // compose a name for the next file to load
-  char fullname[_MAX_STRING_LENGTH_PIC_];
-  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
-  PIC::CPLR::DATAFILE::ImportData(fullname);
+  //  char fullname[_MAX_STRING_LENGTH_PIC_];
+  //  sprintf(fullname,"%s.t=%d.%s",FileNameBase,FileNumber,FileExt);
+  PIC::CPLR::DATAFILE::ImportData(Schedule[iFileLoadNext].FileName);
 #if _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   //swap data offsets
   PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+= 
@@ -76,11 +182,11 @@ void PIC::CPLR::DATAFILE::MULTIFILE::UpdateDataFile(){
 #endif//_PIC_DATAFILE__TIME_INTERPOLATION_MODE_ == _PIC_MODE_ON_
   
   if(PIC::ThisThread==0)
-    std::cout << "Data file "<<fullname<<" has been loaded"<<std::endl;
-  FileNumber++;
+    std::cout << "Data file "<<Schedule[iFileLoadNext].FileName<<
+      " has been loaded"<<std::endl;
+  iFileLoadNext++;
   //check whether the last file has been reached
-  if(TimeCoupleNext < 0)
-    ReachedLastFile=true;
+  ReachedLastFile = iFileLoadNext >= nFile;
 }
 
 //path to the location of the datafiles

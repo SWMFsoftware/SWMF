@@ -29,7 +29,35 @@ void PIC::CPLR::DATAFILE::ARMS::Init() {
   */
 }
 
-//read ARM's output file
+//extract time from ARMS datafile
+double PIC::CPLR::DATAFILE::ARMS::GetFileTime(const char *fname){
+  //result
+  double time=NAN;
+  // get time using class CiFileOperations (see src/general/ifileopr.h)
+  CiFileOperations fin;
+  char fullname[_MAX_STRING_LENGTH_PIC_];
+  sprintf(fullname,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
+  fin.openfile(fullname);
+  char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
+  while(fin.eof()==false){
+    if(fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false)
+      exit(__LINE__,__FILE__, 
+	   "ERROR: can't locate time in the ARMS datafile");
+    fin.CutInputStr(str1,str);
+    if((strcmp("#TIME",str1)==0)){
+      fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
+      time = strtod(str1, NULL);
+      break;
+    }
+  }
+  fin.closefile();
+  if(isnan(time))
+    exit(__LINE__, __FILE__, 
+	 "ERROR: failed to read valid time from ARMS datafile");
+  return time;
+}
+
+//read ARMS' output file
 void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode){
 
   // size of the uniform grid
@@ -49,42 +77,26 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
     sprintf(fullname,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
     fin.openfile(fullname);
     
-    // start reading: read essential constants time & size of the grid
+    // start reading: read size of the grid
     char str[_MAX_STRING_LENGTH_PIC_],str1[_MAX_STRING_LENGTH_PIC_];
     // reset parameters
     nX = -1; nZ=-1; 
-    MULTIFILE::TimeCurrent   =-1.0;
-    MULTIFILE::TimeCoupleNext=-1.0;
-    while(fin.eof()==false && (nX < 0 || nZ < 0|| 
-			       MULTIFILE::TimeCurrent < 0 || MULTIFILE::TimeCoupleNext < 0) ){
+    while(fin.eof()==false && (nX < 0 || nZ < 0)){
       if(fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_)==false){
 	exit(__LINE__,__FILE__, "ERROR: the size of the grid couldn't be read.");
 	break;
       }
       fin.CutInputStr(str1,str);
-      
-      if((strcmp("#TIME",str1)==0)){
+    
+      if((strcmp("#NX",str1)==0)){
 	fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	MULTIFILE::TimeCurrent = strtod(str1, NULL);
+	nX = strtol(str1, NULL, 10);
       }
       else
-	if((strcmp("#TIME_NEXT",str1)==0)){
+	if((strcmp("#NZ",str1)==0)){
 	  fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	  MULTIFILE::TimeCoupleNext=strtod(str1, NULL);
-	  if(MULTIFILE::TimeCoupleNext < 0)
-	    return;
-	    //exit(__LINE__,__FILE__,"Reached the last ARMS data file; exit");
+	  nZ = strtol(str1, NULL, 10);
 	}
-	else
-	  if((strcmp("#NX",str1)==0)){
-	    fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	    nX = strtol(str1, NULL, 10);
-	  }
-	  else
-	    if((strcmp("#NZ",str1)==0)){
-	      fin.GetInputStr(str1,_MAX_STRING_LENGTH_PIC_);
-	      nZ = strtol(str1, NULL, 10);
-	    }
     }
     // allocate container for the data and the grid
     Data = new double** [nvar];
