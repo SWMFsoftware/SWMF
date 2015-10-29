@@ -83,7 +83,7 @@ Keys=-ices-path=/Users/dborovik/MyICES/ICES(0+srbwks73465-01)
 <#
 
 #>
-Name=test/tecplot-reader  
+Name=test/tecplot-reader(0-login2)  
 Keys=-cplr-data-path=${MYDIR}/data/input/Europa/Martin-Multifluid 
 <#
 
