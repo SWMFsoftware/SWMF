@@ -32,6 +32,9 @@ module BATL_size
   ! Number of not ignored dimensions
   integer, parameter:: nDim = iDim_ + jDim_ + kDim_
 
+  ! Index names limited by nDim
+  integer, parameter:: Dim1_=1, Dim2_=min(nDim,2), Dim3_=min(nDim,3)
+
   ! Number of dimensions in which grid adaptation is done
   integer, parameter :: nDimAmr = iRatio + jRatio + kRatio - 3
 

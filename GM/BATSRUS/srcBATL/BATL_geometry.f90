@@ -60,9 +60,6 @@ module BATL_geometry
   ! Periodicity of the coordinates in physical space per dimension
   logical, public:: IsPeriodicCoord_D(MaxDim) = .false.
 
-  ! Index names for coordinates limited by nDim
-  integer, parameter, public:: Dim1_=1, Dim2_=min(nDim,2), Dim3_=min(nDim,3)
-
   ! Index names for Cartesian components (not limited by nDim)
   integer, parameter, public:: x_=1, y_=2, z_=3
 
