@@ -2274,6 +2274,7 @@ contains
     use ModB0,  ONLY: B0_DGB
     use ModGeometry, ONLY: true_cell, true_BLK
     use ModMpi
+    use ModHallResist, ONLY: UseHallResist, set_hall_factor_face
     use BATL_lib, ONLY: CellVolume_GB
 
     real, intent(out) :: DtOut
@@ -2296,6 +2297,12 @@ contains
        else
           B0_DC = 0.0
        end if
+
+       ! Since we use get_cmax_face to calculate the cell centered speed,
+       ! the Hall factor is needed on the face. 
+       ! Also note that if HallCmaxFactor is zero, then the whistler speed
+       ! gets ignored. This may or may not be intentional !!!
+       if(UseHallResist)call set_hall_factor_face(iBlock)
 
        do iDim = 1, nDim
 
