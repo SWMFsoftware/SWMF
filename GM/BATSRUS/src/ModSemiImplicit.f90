@@ -280,20 +280,27 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe) 
     if(DoTestMe) write(*,*)NameSub,' starting'
 
-    ! All used blocks are solved for with the semi-implicit scheme
-    nBlockSemi = 0
-    do iBlock = 1, nBlock
-       if(Unused_B(iBlock)) CYCLE
-       nBlockSemi = nBlockSemi + 1
-       iBlockFromSemi_B(nBlockSemi) = iBlock
+    if(TypeSemiImplicit /= 'resistivity')then
+       ! All used blocks are solved for with the semi-implicit scheme
+       ! except for (Hall) resistivity
+       nBlockSemi = 0
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          nBlockSemi = nBlockSemi + 1
+          iBlockFromSemi_B(nBlockSemi) = iBlock
 
-       ! Set the test block
-       if(iProc == ProcTest .and. iBlock == BlkTest) &
-            iBlockSemiTest = nBlockSemi
-    end do
+          ! Set the test block
+          if(iProc == ProcTest .and. iBlock == BlkTest) &
+               iBlockSemiTest = nBlockSemi
+       end do
+       DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0 
+    else
+       ! For (Hall) resistivity the number of semi-implicit blocks will be 
+       ! set in get_impl_resistivity_state, so initialize up to nBlock
+       DconsDsemiAll_VCB(:,:,:,:,1:nBlock) = 1.0
+    end if
 
     ! Get current state and dCons/dSemi derivatives
-    DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
           call get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &

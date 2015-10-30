@@ -580,29 +580,48 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModHallResist, ONLY: UseHallResist
+    use BATL_lib, ONLY: nBlock, Unused_B
 
     real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
 
-    integer:: i, j, k, iBlock, iBlockSemi
+    integer:: i, j, k, iBlock
 
-    character(len=*), parameter :: &
-         NameSub = 'ModResistivity::get_impl_resistivity_state'
+    logical:: IsSemiBlock
+
+    character(len=*), parameter :: NameSub = 'get_impl_resistivity_state'
     !--------------------------------------------------------------------------
 
-    ! Copy magnetic field into the implicit variable
-    do iBlockSemi = 1, nBlockSemi
-       iBlock = iBlockFromSemi_B(iBlockSemi)
+    ! Initialize variables for RHS and Jacobian calculation
+    ! and find the blocks that require semi-implicit solver
+    call init_impl_resistivity
+
+    ! Collect the semi-implicit blocks
+    nBlockSemi = 0
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       ! Check if the block needs to be advanced with semi-implicit scheme
+       IsSemiBlock = .false.
+       if(UseResistivity) &
+            IsSemiBlock = any(Eta_DFDB(:,:,:,:,:,iBlock) /= 0.0)
+       if(UseHallResist .and. .not.IsSemiBlock) &
+            IsSemiBlock = any(Bne_DFDB(:,:,:,:,:,iBlock) /= 0.0)
+       if(.not.IsSemiBlock) CYCLE
+
+       ! Add the semi-implicit block
+       nBlockSemi = nBlockSemi + 1
+
+       ! Store index mapping
+       iBlockFromSemi_B(nBlockSemi) = iBlock
 
        ! Store the magnetic field in SemiAll_VCB
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,iBlockSemi) = &
+          SemiAll_VCB(BxImpl_:BzImpl_,i,j,k,nBlockSemi) = &
                State_VGB(Bx_:Bz_,i,j,k,iBlock)
        end do; end do; end do
 
     end do
-
-    ! Initialize variables for RHS and Jacobian calculation
-    call init_impl_resistivity
 
   end subroutine get_impl_resistivity_state
 
@@ -617,7 +636,8 @@ contains
     use ModNumConst,     ONLY: i_DD
     use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
     use ModHallResist,   ONLY: UseHallResist, HallFactor_DF, &
-         set_ion_mass_per_charge, set_hall_factor_face, IonMassPerCharge_G
+         set_hall_factor_face, &
+         set_ion_mass_per_charge, IonMassPerCharge_G
     use ModB0,           ONLY: B0_DGB
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
@@ -668,9 +688,7 @@ contains
 
           call set_ion_mass_per_charge(iBlock)
           call set_hall_factor_face(iBlock)
-
-          !!! skip here the blocks with IsHallBlock false and zero resistivity
-
+          
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
              do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
