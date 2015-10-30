@@ -324,8 +324,9 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
         iType_I(-SteadyBoundBlock_) = 3
         iType_I(-ExplBlock_)        = 3
      elseif(UsePartImplicit)then
-        iType_I( ImplBlock_) = 2
-        iType_I(-ImplBlock_) = 2
+        iType_I(-ExplBlock_) = 2
+        iType_I( ImplBlock_) = 3
+        iType_I(-ImplBlock_) = 4
      else
         iType_I(-ExplBlock_) = 2
      endif
