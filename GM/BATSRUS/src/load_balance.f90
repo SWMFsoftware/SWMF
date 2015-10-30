@@ -214,7 +214,8 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
   use ModProcMH
   use ModMain
-  use ModImplicit, ONLY : UsePartImplicit
+  use ModImplicit, ONLY : UsePartImplicit, &
+       TypeSemiImplicit, iBlockFromSemi_B, nBlockSemi
   use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP,&
        SkippedBlock_, SteadyBoundBlock_, ExplBlock_, ImplBlock_,&
        State_VGB
@@ -289,7 +290,10 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      ! iTypeAdvance_B and _BP by changing the sign to negative 
      ! for body blocks
      if(DoMoveCoord)then
-        if(UseFieldLineThreads)then
+        if(TypeSemiImplicit == 'resistivity' .and. nBlockSemi > 0)then
+           iTypeAdvance_B(iBlockFromSemi_B(1:nBlockSemi)) = &
+                -abs(iTypeAdvance_B(iBlockFromSemi_B(1:nBlockSemi)))
+        elseif(UseFieldLineThreads)then
            !\
            !The lowest altitude boundary blocks are load balanced 
            !separately, the criterion based on true cells does not work:
