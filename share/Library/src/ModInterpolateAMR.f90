@@ -2217,41 +2217,21 @@ module ModInterpolateAMR
   ! To improve the algorithm stability against roundoff errors
   !/
   real           :: cTol2
-  !============================================================================
-  !Interpolation on the block AMR grid
   !\
-  !Calculates interpolation weights
+  ! Shift of the iGrid point in the stencil with respect to the
+  ! first one
   !/
+  integer, parameter:: iShift_DI(3,8)=reshape( (/&
+       0,0,0, 1,0,0,&
+       0,1,0, 1,1,0,&
+       0,0,1, 1,0,1,&
+       0,1,1, 1,1,1 /),(/3, 8/))
   !\
-  !Example of application for SERIAL calculation of the
-  !interpolated value of the state vector sampled in the 
-  !grid points as
-  !State_VGB(nVar,nI,nJ,nK,nBlock) array, where nI=nJ=nK=4
-  !in point Xyz_D looks as follows:
-  !
-  !call interpolate_amr(&
-  !  nDim=3,              &!number of dimensions
-  !  XyzIn_D=,Xyz_D,      &!Point in which to interpolate
-  !  nIndexes = 4,        &!Three cell indexes plus one block index
-  !  find = find_subroutine , &! Search in grid
-  !  nCell_D  = (/4,4,4/) &!
-  !  nGridOut=nGridOut,   &! Number of points in the output stencil
-  !  Weight_I=Weight_I,   &! Weight coefficients
-  !  iIndexes_II=iIndexes_II) !Cell+block indexes to be used in interpolation
-  !
-  !  if(nGridOut < 1) call CON_stop('Interpolation failed')
-  !  Value_V(1:nVar) = 0
-  !  do iGrid = 1, nGridOut
-  !     Value_V = Value_V + &
-  !       State_VGB(:,iIndexes_II(1,iGrid), iIndexes_II(2,iGrid), &
-  !             iIndexes_II(3,iGrid), iIndexes_II(4,iGrid))*&
-  !                               Weight_I(iGrid)
-  !  end do
-  ! For PARALLEL code the processor number at which the corresponding part
-  ! of  State_VGB is allocated is provided in iIndex_II(0,:) components
-  ! of the index output array
+  ! PUBLIC MEMBERS
   !/
-  public cTol2, interpolate_amr, interpolate_amr_gc
+  public:: cTol2   !Accuracy of results: weights<=2 cTol2 are actually zeroes 
+  public:: interpolate_amr !Interpolate on block-adaptive grid w/o ghost cells
+  public:: interpolate_amr_gc !Interpolate on block-adaptive grid with gc
 contains
   !=================================
   subroutine interpolate_amr_gc(&
@@ -2286,11 +2266,10 @@ contains
     integer:: iGrid, iSubGrid
     real   :: Dimless_D(nDim)
 
-    integer, parameter:: iShift_DI(3,8)=reshape( (/&
-         0,0,0, 1,0,0,&
-         0,1,0, 1,1,0,&
-         0,0,1, 1,0,1,&
-         0,1,1, 1,1,1 /),(/3, 8/))
+    !\
+    ! Cell index on coarser grid
+    !/
+    integer:: iCell2_D(nDim)
 
     ! variables to call interpolate_extended_stencil
     real   :: XyzGrid_DII(nDim, 0:2**nDim, 2**nDim)
@@ -2305,21 +2284,21 @@ contains
     integer           :: nGrid  
     !--------------------------------------------------------------------    
     cTol2 = cTol**(nByteReal/4)
-    Dimless_D = (Xyz_D - XyzMin_D) / DXyz_D
+    Dimless_D = (Xyz_D - XyzMin_D)/DXyz_D
     nGrid = 2**nDim
 
-    if( all(Dimless_D >= 0.5 .and. Dimless_D < nCell_D - 0.5) )then
+    if( all(Dimless_D >= 0.50 .and. Dimless_D < nCell_D - 0.50) )then
        !\
        ! point is far from the block's boundaries
        ! perform uniform interpolation and return
        if(present(IsSecondOrder))IsSecondOrder = .true.
        ! find cell indices
-       iCellOut_II(:,1) = floor(Dimless_D + 0.5)
+       iCellOut_II(:,1) = floor(Dimless_D + 0.50)
        do iGrid = 2, nGrid
           iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
        end do
        ! find interpolation weights
-       Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
+       Dimless_D = Dimless_D + 0.50 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I)
        call sort_out      
        RETURN
@@ -2329,8 +2308,8 @@ contains
     ! iDiscr_D is an indicator of these boundaries: -1 or 0 or 1
     iDiscr_D = 0 ! for nDim=2 3rd value must be 0
     iDiscr_D(1:nDim) = nint(& 
-         SIGN(0.6, Dimless_D -  0.5) + &
-         SIGN(0.6, Dimless_D - (nCell_D - 0.5)) )
+         SIGN(0.50, Dimless_D -  0.50) + &
+         SIGN(0.50, Dimless_D - (nCell_D - 0.50)) )
    
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
@@ -2349,12 +2328,12 @@ contains
        ! perform uniform interpolation and return
 
        ! find cell indices
-       iCellOut_II(:,1) = floor(Dimless_D + 0.5)
+       iCellOut_II(:,1) = floor(Dimless_D + 0.50)
        do iGrid = 2, nGrid
           iCellOut_II(:,iGrid) = iCellOut_II(:,1) + iShift_DI(1:nDim,iGrid)
        end do
        ! find interpolation weights
-       Dimless_D = Dimless_D + 0.5 - iCellOut_II(:,1)
+       Dimless_D = Dimless_D + 0.50 - iCellOut_II(:,1)
        call interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
        if(present(IsSecondOrder))IsSecondOrder = .not. any(IsOut_I)
        call sort_out
@@ -2371,8 +2350,8 @@ contains
     ! |_____|_____|_____|_____|
     !
     iDiscr_D(1:nDim) = nint(&
-         SIGN(0.6, Dimless_D -  1) + &
-         SIGN(0.6, Dimless_D - (nCell_D - 1)) )
+         SIGN(0.50, Dimless_D -  1) + &
+         SIGN(0.50, Dimless_D - (nCell_D - 1)) )
 
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
@@ -2382,7 +2361,7 @@ contains
          (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
     ! DiLevelNei_I may be -1 or 0; 
     ! if < -1 => consider that there is no block, i.e. boundary of the domain
-    IsOut_I  = iLevel_I < -1
+    IsOut_I  = iLevel_I < -1 
     iLevel_I = iLevel_I + 1 ! so Coarse = 0, Fine = 1
 
     !\
@@ -2402,27 +2381,33 @@ contains
     !   
     ! NOTE: since reference block is a Fine one 
     !       DXyz_D is a cell size of Finer block
+    !\
+    ! Decompose the block for coarser cells of the size of 2*DXyz.
+    ! THIS IS ONLY POSSIBLE FOR ODD NUMBER OF CELLS IN THE BLOCK
+    ! Calculate coarser cell indexes 
+    ! iCell2_D=floor((Xyz_D-XyzMin_D)/(2*DXyz_D)+0.5) 
+    !/
+    iCell2_D = floor(0.50*Dimless_D + 0.50) 
     do iGrid = 1, nGrid
        ! supergrid
-       ! THIS FORMULA DOESN'T APPLY FOR ODD NUMBER OF CELLS IN THE BLOCK
-       XyzGrid_DII(:,0,iGrid) = 2*floor(0.5*(Dimless_D-1)) + 1 + &
-            2 * iShift_DI(1:nDim,iGrid)
-       
+       ! XyzGrid are calculated with respect to the block corner
+       ! and are normalized by DXyz, in the same way as Xyz is
+  
+       XyzGrid_DII(:,0,iGrid) = 2*(iCell2_D - 0.50 + iShift_DI(1:nDim,iGrid)) 
        ! depending on resolution level of supergrid
        ! need to set 1 or 2**nDim subgrid cell centers
        if(iLevel_I(iGrid) == 0)then
           ! a coarser neighbor
           XyzGrid_DII(:,1,iGrid)  = XyzGrid_DII(:,0,iGrid) 
-          iCellIndexes_DII(:,1,iGrid) = nint(XyzGrid_DII(:,1,iGrid)) + &
-               (1 - iShift_DI(1:nDim,iGrid))
+          iCellIndexes_DII(:,1,iGrid) = 2*iCell2_D + iShift_DI(1:nDim,iGrid)
           CYCLE
        end if
        do iSubGrid = 1, nGrid
           ! neighbor at the same level
-          XyzGrid_DII(:,iSubGrid,iGrid) = XyzGrid_DII(:,0,iGrid) + &
-               (iShift_DI(1:nDim,iSubGrid) - 0.5)
+          XyzGrid_DII(:,iSubGrid,iGrid) = XyzGrid_DII(:,0,iGrid) - 0.50 &
+               + iShift_DI(1:nDim,iSubGrid)
           iCellIndexes_DII(:,iSubGrid,iGrid) = &
-               nint(XyzGrid_DII(:,iSubGrid,iGrid) + 0.5)
+               nint(XyzGrid_DII(:,iSubGrid,iGrid) + 0.50)
        end do
     end do
 
@@ -2467,7 +2452,40 @@ contains
        end do
     end subroutine sort_out
   end subroutine interpolate_amr_gc
-  !=================================
+  !============================================================================
+  !Interpolation on the block AMR grid
+  !\
+  !Calculates interpolation weights
+  !/
+  !\
+  !Example of application for SERIAL calculation of the
+  !interpolated value of the state vector sampled in the 
+  !grid points as
+  !State_VGB(nVar,nI,nJ,nK,nBlock) array, where nI=nJ=nK=4
+  !in point Xyz_D looks as follows:
+  !
+  !call interpolate_amr(&
+  !  nDim=3,              &!number of dimensions
+  !  XyzIn_D=,Xyz_D,      &!Point in which to interpolate
+  !  nIndexes = 4,        &!Three cell indexes plus one block index
+  !  find = find_subroutine , &! Search in grid
+  !  nCell_D  = (/4,4,4/) &!
+  !  nGridOut=nGridOut,   &! Number of points in the output stencil
+  !  Weight_I=Weight_I,   &! Weight coefficients
+  !  iIndexes_II=iIndexes_II) !Cell+block indexes to be used in interpolation
+  !
+  !  if(nGridOut < 1) call CON_stop('Interpolation failed')
+  !  Value_V(1:nVar) = 0
+  !  do iGrid = 1, nGridOut
+  !     Value_V = Value_V + &
+  !       State_VGB(:,iIndexes_II(1,iGrid), iIndexes_II(2,iGrid), &
+  !             iIndexes_II(3,iGrid), iIndexes_II(4,iGrid))*&
+  !                               Weight_I(iGrid)
+  !  end do
+  ! For PARALLEL code the processor number at which the corresponding part
+  ! of  State_VGB is allocated is provided in iIndex_II(0,:) components
+  ! of the index output array
+  !/
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder, UseGhostCell)
     use ModResolutionCorner, ONLY: resolution_corner
@@ -2575,13 +2593,6 @@ contains
     !Just 2**nDim
     integer:: nGrid
     !/
-    !\
-    ! Shift of the iGrid point in the stencil with respect to the
-    ! first one
-    !/
-    integer, dimension(3,8),parameter :: iShift_DI = reshape((/&
-         0, 0, 0,   1, 0, 0,   0, 1, 0,   1, 1, 0, &
-         0, 0, 1,   1, 0, 1,   0, 1, 1,   1, 1, 1/),(/3,8/)) 
 
     integer:: iGridOutOfBlock
     ! grid cell of a physical block to be used if UseGhostCell == .true.
