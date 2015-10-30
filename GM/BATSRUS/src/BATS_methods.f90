@@ -629,7 +629,7 @@ end subroutine BATS_init_constrain_b
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModImplicit, ONLY : UsePartImplicit
+  use ModImplicit, ONLY : UsePartImplicit, TypeSemiImplicit, nBlockSemi
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
@@ -638,7 +638,8 @@ subroutine BATS_select_blocks
   !--------------------------------------------------------------------------
 
   ! Select and load balance blocks for partially implicit/steady scheme
-  if(UsePartSteady .and. IsNewSteadySelect .or. UsePartImplicit)then
+  if(UsePartSteady .and. IsNewSteadySelect .or. UsePartImplicit &
+       .or. (TypeSemiImplicit=='resistivity' .and. nBlockSemi > 0))then
 
      ! Redo load balancing: move coordinates and data, there are no new blocks
      call load_balance(.true.,.true.,.false.)
