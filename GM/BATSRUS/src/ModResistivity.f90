@@ -583,7 +583,7 @@ contains
     use ModHallResist, ONLY: UseHallResist
     use BATL_lib, ONLY: nBlock, Unused_B
 
-    real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
+    real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlock)
 
     integer:: i, j, k, iBlock
 
@@ -660,6 +660,8 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
+          Eta_DFDB(:,:,:,:,:,iBlock) = 0.0
+
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
              if(IsCartesian)then
@@ -688,6 +690,8 @@ contains
 
           call set_ion_mass_per_charge(iBlock)
           call set_hall_factor_face(iBlock)
+
+          Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
           
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
@@ -695,32 +699,30 @@ contains
 
                 ! Check if the Hall coefficient is positive for this face
                 HallCoeff = HallFactor_DF(iDim,i,j,k)
-                if(HallCoeff <= 0.0)then
-                   Bne_DFDB(:,i,j,k,iDim,iBlock) = 0.0
-                else
-                   ! Cell center indexes for the cell on the left of the face
-                   i1 = i-Di; j1 = j-Dj; k1 = k - Dk
+                if(HallCoeff <= 0.0) CYCLE
 
-                   ! Average m/e, rho and B to the face
-                   HallCoeff = HallCoeff* &
-                        0.5*( IonMassPerCharge_G(i1,j1,k1) &
-                        +     IonMassPerCharge_G(i,j,k)    )
+                ! Cell center indexes for the cell on the left of the face
+                i1 = i-Di; j1 = j-Dj; k1 = k - Dk
 
-                   Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
-                        +     State_VGB(Rho_,i,j,k,iBlock)    )
+                ! Average m/e, rho and B to the face
+                HallCoeff = HallCoeff* &
+                     0.5*( IonMassPerCharge_G(i1,j1,k1) &
+                     +     IonMassPerCharge_G(i,j,k)    )
 
-                   b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
-                        +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
+                Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
+                     +     State_VGB(Rho_,i,j,k,iBlock)    )
 
-                   ! B0 on the face is actually average of cell center B0
-                   ! It is easier to use B0_DGB then then the 3 face arrays
-                   ! The res change on the coarse side will get overwritten
-                   if(UseB0) b_D = b_D + &
-                        0.5*(B0_DGB(:,i1,j1,k1,iBlock)+ B0_DGB(:,i,j,k,iBlock))
+                b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
+                     +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
+
+                ! B0 on the face is actually average of cell center B0
+                ! It is easier to use B0_DGB then then the 3 face arrays
+                ! The res change on the coarse side will get overwritten
+                if(UseB0) b_D = b_D + &
+                     0.5*(B0_DGB(:,i1,j1,k1,iBlock)+ B0_DGB(:,i,j,k,iBlock))
                 
-                   ! Calculate B/ne for the face
-                   Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
-                end if
+                ! Calculate B/ne for the face
+                Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
              end do; end do; end do
           end do
        end do
