@@ -689,9 +689,11 @@ subroutine init_mhd_variables
   end if
 
   if(UseAnisoPressure)then
-     UnitUser_V(Ppar_)        = No2Io_V(UnitP_)
-     NameUnitUserTec_V(Ppar_) = NameTecUnit_V(UnitP_)
-     NameUnitUserIdl_V(Ppar_) = NameIdlUnit_V(UnitP_)
+     do iFluid = IonFirst_, IonLast_
+        UnitUser_V(iPparIon_I(iFluid))        = No2Io_V(UnitP_)
+        NameUnitUserTec_V(iPparIon_I(iFluid)) = NameTecUnit_V(UnitP_)
+        NameUnitUserIdl_V(iPparIon_I(iFluid)) = NameIdlUnit_V(UnitP_)
+     end do
   end if
 
   if(WaveLast_ > 1)then
