@@ -873,13 +873,13 @@ contains
          n = 0
          do k = 1, nKNode
             CoordFace3 = CoordMinBlock_D(3) + (k-1)*CellSize_D(3)
-            CoordCell3 = CoordMinBlock_D(3) + (k-0.5)*CellSize_D(3)
+            CoordCell3 = CoordMinBlock_D(3) + (min(k,nK)-0.5)*CellSize_D(3)
             do j = 1, nJNode
                CoordFace2 = CoordMinBlock_D(2) + (j-1)*CellSize_D(2)
-               CoordCell2 = CoordMinBlock_D(2) + (j-0.5)*CellSize_D(2)
+               CoordCell2 = CoordMinBlock_D(2) + (min(j,nJ)-0.5)*CellSize_D(2)
                do i = 1, nINode
                   CoordFace1 = CoordMinBlock_D(1) + (i-1)*CellSize_D(1)
-                  CoordCell1 = CoordMinBlock_D(1) + (i-0.5)*CellSize_D(1)
+                  CoordCell1 = CoordMinBlock_D(1) + (min(i,nI)-0.5)*CellSize_D(1)
 
                   n = n + 1
                   Coord_D = (/ CoordFace1, CoordCell2, CoordCell3 /)
@@ -929,7 +929,7 @@ contains
 
       use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
 
-      integer:: i, j, k, n
+      integer:: i, j, k, iC, jC, kC, n
       !----------------------------------------------------------------------
 
       ! Allocate Xyz array if new or size changed
@@ -981,20 +981,26 @@ contains
          if(nPoint /= nDim*nINode*nJNode*nKNode) call CON_stop(NameSub// &
               ': incorrect number of points for faces')
          n = 0
-         do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
-            n = n + 1
-            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i-1,j,k,iBlock) &
-                 +             Xyz_DGB(1:nDim,i  ,j,k,iBlock))
-            if(nDim == 1) CYCLE
-            n = n + 1
-            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i,j-1,k,iBlock) &
-                 +             Xyz_DGB(1:nDim,i,j  ,k,iBlock))
-            if(nDim == 2) CYCLE
-            n = n + 1
-            Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i,j,k-1,iBlock) &
-                 +             Xyz_DGB(1:nDim,i,j,k  ,iBlock))
-         end do; end do; end do
-
+         do k = 1, nKNode
+            kC = min(k,nK)
+            do j = 1, nJNode
+               jC = min(j,nJ)
+               do i = 1, nINode
+                  iC = min(i,nI)
+                  n = n + 1
+                  Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,i-1,jC,kC,iBlock) &
+                       +             Xyz_DGB(1:nDim,i  ,jC,kC,iBlock))
+                  if(nDim == 1) CYCLE
+                  n = n + 1
+                  Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,iC,j-1,kC,iBlock) &
+                       +             Xyz_DGB(1:nDim,iC,j  ,kC,iBlock))
+                  if(nDim == 2) CYCLE
+                  n = n + 1
+                  Xyz_DI(:,n) = 0.5*(Xyz_DGB(1:nDim,iC,jC,k-1,iBlock) &
+                       +             Xyz_DGB(1:nDim,iC,jC,k  ,iBlock))
+               end do
+            end do
+         end do
       case('n')
          if(nPoint /= nINode*nJNode*nKNode) call CON_stop(NameSub// &
               ': incorrect number of points for nodes')
@@ -1508,9 +1514,10 @@ contains
     end select
 
     ! Get logical information if not yet calculated
+    ! The tapered area counts as "inside".
     if(DoTaper)then
-       if(DoMask)  IsInside_I =     Value_I == 1
-       if(DoBlock) IsInside   = any(Value_I == 1)
+       if(DoMask)  IsInside_I =     Value_I > 0
+       if(DoBlock) IsInside   = any(Value_I > 0)
     end if
 
     if(DoTest)then
