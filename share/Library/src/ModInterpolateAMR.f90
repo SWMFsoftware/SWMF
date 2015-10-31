@@ -2226,6 +2226,8 @@ module ModInterpolateAMR
        0,1,0, 1,1,0,&
        0,0,1, 1,0,1,&
        0,1,1, 1,1,1 /),(/3, 8/))
+
+  integer,parameter :: PowerOf2_D(3) = (/1, 2, 4/)
   !\
   ! PUBLIC MEMBERS
   !/
@@ -2310,7 +2312,7 @@ contains
     iDiscr_D(1:nDim) = nint(& 
          SIGN(0.50, Dimless_D -  0.50) + &
          SIGN(0.50, Dimless_D - (nCell_D - 0.50)) )
-   
+
     ! resolution levels of blocks that may contain cells 
     ! of final interpolation stencil
     iLevel_I = reshape(DiLevelNei_III(&
@@ -2339,7 +2341,7 @@ contains
        call sort_out
        RETURN
     end if
-    
+
     ! recompute iDiscr_D: certain configurations are not covered, e.g.
     !  __ __ _____ _____ _____
     ! |     |  |  |  |  |     |  for points X, Y current value of iDiscr_D
@@ -2392,7 +2394,7 @@ contains
        ! supergrid
        ! XyzGrid are calculated with respect to the block corner
        ! and are normalized by DXyz, in the same way as Xyz is
-  
+
        XyzGrid_DII(:,0,iGrid) = 2*(iCell2_D - 0.50 + iShift_DI(1:nDim,iGrid)) 
        ! depending on resolution level of supergrid
        ! need to set 1 or 2**nDim subgrid cell centers
@@ -2435,21 +2437,21 @@ contains
     if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
   contains
     subroutine sort_out
-       cTol2 = 2*cTol2
-       if(all(Weight_I >= cTol2))then
-          nCellOut = nGrid
-          RETURN
-       end if
-       !\ 
-       ! sort out zero weights
-       !/
-       nCellOut = 0 
-       do iGrid = 1, nGrid
-          if(Weight_I(iGrid) < cTol2)CYCLE
-          nCellOut = nCellOut + 1
-          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
-          Weight_I(nCellOut) = Weight_I(iGrid)
-       end do
+      cTol2 = 2*cTol2
+      if(all(Weight_I >= cTol2))then
+         nCellOut = nGrid
+         RETURN
+      end if
+      !\ 
+      ! sort out zero weights
+      !/
+      nCellOut = 0 
+      do iGrid = 1, nGrid
+         if(Weight_I(iGrid) < cTol2)CYCLE
+         nCellOut = nCellOut + 1
+         iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
+         Weight_I(nCellOut) = Weight_I(iGrid)
+      end do
     end subroutine sort_out
   end subroutine interpolate_amr_gc
   !============================================================================
@@ -2571,7 +2573,7 @@ contains
     !the out-of-grid points
     !/
     logical, intent(out), optional:: IsSecondOrder  
-  
+
     !\
     ! Coordinates of the input point may be recalculated within
     ! routine; inverse of (/Dx, Dy, Dz/) is reused
@@ -3209,9 +3211,9 @@ contains
   end subroutine interpolate_uniform
   !=================================
   subroutine interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
-    XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
-    iLevelSubgrid_I, IsOut_I, DxyzInv_D,               &
-    nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
+       XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
+       iLevelSubgrid_I, IsOut_I, DxyzInv_D,               &
+       nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
     use ModResolutionCorner, ONLY: resolution_corner
     !\
     !USE: The tools to fill in sort stencil array
@@ -3268,7 +3270,7 @@ contains
     ! iIndexes_II(0,:) 
     !/
     integer, intent(out):: iIndexes_II(0:nIndexes,2**nDim)
-    
+
     !\
     !The following is true if stencil does not employ 
     !the out-of-grid points
@@ -3296,9 +3298,9 @@ contains
     ! Basic stencil; refinement level in the grid points:
     !/
     integer                    :: iLevel_I(2**nDim)
-    
+
     real, dimension(nDim)      :: XyzStencil_D
-   
+
     logical:: IsNearBoundary
     !\
     ! The sort of stencil as derived from EXTENDED stencil
@@ -3395,8 +3397,8 @@ contains
     call sort_out
     iIndexes_II(:, 1:nGridOut) = iIndexes_II(:,iOrder_I(1:nGridOut))
     if(present(IsSecondOrder))IsSecondOrder = .not.IsNearBoundary
-  contains
-    !====================
+  contains   
+    !=================================
     subroutine prolong_beyond_boundary
       !\
       ! Handle points behind the boundary
@@ -3405,7 +3407,7 @@ contains
       ! Misc
       !/
       integer:: iGrid, iSubgrid, iDir, iLoc
-      !---------------- 
+      !----------------
       select case(count(IsOut_I))
       case(4)
          !\
@@ -3417,10 +3419,10 @@ contains
          iLoc = maxloc(iLevelSubGrid_I,MASK=.not.IsOut_I,DIM=1)
          do iDir = 1, nDim
             if(all(IsOut_I(iOppositeFace_IDI(:,iDir,iLoc))))then
-                  !\
-                  ! Prolong grid from the physical face to the ghost one
-                  ! accounting for the difference in resolution
-                  !/
+               !\
+               ! Prolong grid from the physical face to the ghost one
+               ! accounting for the difference in resolution
+               !/
                do iGrid = 1,4
                   call prolong(iFace_IDI(iGrid,iDir,iLoc), &
                        iOppositeFace_IDI(iGrid,iDir,iLoc))
@@ -3488,6 +3490,7 @@ contains
               XyzGrid_DII(:,0,iGridGhost) - XyzGrid_DII(:,0,iGridPhys )
       end do
     end subroutine prolong
+
     !==================
     subroutine generate_corner_stencil
       integer:: iGrid
@@ -4359,8 +4362,8 @@ contains
              Weight_I(3 + iGrid) = Weight_I(iGrid)*     AuxFine
              Weight_I(    iGrid) = Weight_I(iGrid)*(1-  AuxFine)
           else
-                Weight_I(3 + iGrid) = Weight_I(iGrid)*     AuxCoarse
-                Weight_I(    iGrid) = Weight_I(iGrid)*(1 - AuxCoarse)
+             Weight_I(3 + iGrid) = Weight_I(iGrid)*     AuxCoarse
+             Weight_I(    iGrid) = Weight_I(iGrid)*(1 - AuxCoarse)
           end if
        end do
     case(TransitionJunction_)
@@ -4601,6 +4604,7 @@ contains
     !\
     ! Length of the cell ID: nID = 1 means that ID is a single integer, 
     ! nID = 2 means that the cell ID is a pair of integers etc
+    ! We assume that nID<=nDim
     !/
     integer, intent(in)  :: nID
     !\
@@ -4650,7 +4654,6 @@ contains
     ! To find octant the point Xyz_D belongs to.
     !/
     integer :: iOctant, iDiscr_D(nDim)
-    integer,parameter :: PowerOf2_D(3) = (/1, 2, 4/)
     integer :: nGrid
     !-----------------
     nGrid=2**nDim
@@ -4665,6 +4668,12 @@ contains
     iCellIndexes_DII(1:nID,:,:) = iCellId_IIII(:,:,:,iOctant)
     iLevel_I = iLevel_II(:,iOctant)
     IsOut_I  =  IsOut_II(:,iOctant)
+    if(any(iLevel_I==-1))then
+       iLevel_I = iLevel_I +1
+       DXyzInvInput_D = 0.50*DXyzInv_D
+    else
+       DXyzInvInput_D = 0.50*DXyzInv_D
+    end if
     !\
     ! call interpolation routine
     !/ 
@@ -4678,72 +4687,79 @@ contains
          iProc_I         = iProc_I( 1:nGrid),   &
          iLevelSubgrid_I = iLevel_I,   & 
          IsOut_I         = IsOut_I,    & 
-         DxyzInv_D       = DxyzInvInput_D,&
+         DxyzInv_D       = DXyzInvInput_D,&
          nGridOut        = nGridOut,   & 
          Weight_I        = Weight_I,   & 
          iIndexes_II     = iIndexesExt_II, & 
          IsSecondOrder   = IsSecondOrder)
-    iIndexes_II(:,:) = iIndexesExt_II(1:nId,:)
+    iIndexes_II(:,1:nGridOut) = iIndexesExt_II(1:nId,1:nGridOut)
   end subroutine interpolate_amr_cell
   !=============================
   !\
-  ! Interpolation on 2D cell adaptive Cartesian grid. Similar to block
-  ! adaptive grid, but all blocks are 1*1*1 cells
+  ! Convert non-ordered connectivity list for cell-adaptive grid 
+  ! to the arrays used by interpolate_amr_cell
   !/
-  subroutine interpolate_amr_cell_2d(Xyz_D, XyzCell_D, DXyz_D, &
-       nNeighbor, XyzNeighbor_DI, DiLevelNei_I, WeightNei_I)
-    !\
-    !This routine is for two-dimensional grid 
-    !/
-    integer, parameter:: nDim = 2
+  subroutine order_connectivity_list(nDim, XyzCell_D, DXyz_D, nId, iCellId_I,&
+       nNeighbor, XyzNeighbor_DI, DiLevelNei_I, iCellId_II, IsOut_I,        &
+       DXyzInv_D, iCellId_IIII, XyzGrid_DIII, iLevel_II, IsOut_II)
     !\
     ! INPUTS:
     !/
+    integer,       intent(in):: nDim 
     !\
-    !!Coordinates of the point in which to interpolate
-    !/
-    real,         intent(in) ::      Xyz_D(1:nDim)
-    !\
-    !Coordinates of the cell center, which included the point Xyz_D
+    !Coordinates of the cell center
     !/   
-    real,         intent(in) ::  XyzCell_D(1:nDim)  
+    real,         intent(in) ::  XyzCell_D(nDim)  
     !\
     !Cell size along each direction
     !/
-    real,         intent(in) :: DXyz_D(1:nDim) 
+    real,         intent(in) ::  DXyz_D(nDim) 
     !\
-    !Number of neighboring cells
+    !Number of neighboring cells in the connectivity list
     !/      
+    !\
+    ! Length of the cell ID: nID = 1 means that ID is a single integer, 
+    ! nID = 2 means that the cell ID is a pair of integers etc
+    ! We assume that nID<=nDim
+    !/
+    integer,      intent(in) :: nID
+    integer,      intent(in) :: iCellId_I(nId)
     integer,      intent(in) :: nNeighbor      
     !\
     ! Cell center coordinates for the neighboring cells
     !/ 
-    real,         intent(in) :: XyzNeighbor_DI(1:nDim,1:nNeighbor)  
+    real,         intent(in) :: XyzNeighbor_DI(nDim,nNeighbor)  
     !\
     !Refinement level of neighboring cells with respect to the cell, 
     !which includes Xyz_D point. May be equal to 
     ! -1, if the neighboring cell is coarser                \ than the cell,
     !  0, if the neighboring cell is at the same resolution |-which includes
     !  1, if the neighboring cell is finer                  / Xyz_D point
-    !  some strange negative number, which means that the neighboring
-    !  cell should not be involved into interpolation (the ghost cell,
-    !  in which the grid functions are not defined or are meaningless).
     !/
-    integer,      intent(in) :: DiLevelNei_I (1:nNeighbor)
+    integer,      intent(in) :: DiLevelNei_I(  nNeighbor)
+    integer,      intent(in) :: iCellId_II(nId,nNeighbor)
+    logical,      intent(in) :: IsOut_I(nNeighbor)  !.true. for ghost cells 
     !\
     !OUPUTS:
     !/     
     !\
-    !Interpolation weights for neighboring cells ( Weight_I(1:nNeighbors) ) 
-    !and for the cell which includes Xyz_D point ( Weight_I(0)            )
-    real,        intent(out) :: WeightNei_I(0:nNeighbor)
+    ! Inverse of the cell size, for each direction
+    !/
+    real,    intent(out)      :: DXyzInv_D(nDim)
+    !\
+    ! The extended stencil in a structured form:
+    ! A cubic 2*2*2 grid with 2*2*2 subgrids covering fine vertexes
+    ! Here, we have assume the cell to be decomposed to 8(4) octants 
+    ! (quadrants) and have 8(4) extended stencils stored for each octants
+    ! (quadrants) into which the Xyz point may fall
+    !/
+    integer, intent(out):: iCellId_IIII(nId,2**nDim,2**nDim,2**nDim)
+    real,    intent(out):: XyzGrid_DIII(nDim,0:2**nDim,2**nDim,2**nDim)
+    integer, intent(out):: iLevel_II(2**nDim,2**nDim)
+    logical, intent(out):: IsOut_II( 2**nDim,2**nDim) 
     !\
     !Local variables
     !/
-    !\
-    !Inverse grid size
-    !/
-    real    :: DXyzInv_D(1:nDim)
     !\
     !Left corner of the central cell
     !/
@@ -4755,46 +4771,53 @@ contains
     !\
     ! Number of grid points in the stencil
     !/ 
-    integer, parameter:: nGrid=2**nDim
+    integer :: nGrid
     !\
     ! Ordered list of neighbors
     !/
-    integer, dimension(-1:1,-1:1):: iLevel_II, nNeighbor_II
-    real   :: XyzGrid_DIII(1:nDim,nGrid/2,-1:1,-1:1)
-    integer:: iNeighbor_III(      nGrid/2,-1:1,-1:1)
+    integer:: iLevel_III(-1:1,-1:1,-1:1)
+    real   :: XyzGrid_DIIII(1:nDim,0:2**nDim,-1:1,-1:1,-1:1)
+    integer:: iCellId_IIIII(nId,2**nDim,-1:1,-1:1,-1:1)
+    logical:: IsOut_III(-1:1,-1:1,-1:1)
+    !\
+    ! Coarse extended stencil
+    !/
+    logical:: UseCoarseExtStancil !.true. if any neighbor is coarse
+    integer:: iLevelCoearse_I(2**nDim)
+    real   :: XyzGridCoarse_DII(1:nDim,0:2**nDim,2**nDim)
+    integer:: iCellIdCoarse_III(nId,2**nDim,2**nDim)
+    logical:: IsOutCoarse_I(2**nDim)
     !\
     ! Discriminators
     !/
-    real     :: Dimless_D(1:nDim)
-    integer  ::  iDiscr_D(1:nDim)
+    integer  ::  iDiscr_D(3), iDiscrSubGrid_D(nDim)
     character(LEN=*),parameter::NameSub = 'interpolate_amr_cell_2d'
     !\
     ! Test mode
     !/
     logical, parameter:: DoTest = .true.
-    !\
-    ! Arrays for stencil
-    !/
-    integer  ::  iLevel_I(1:nGrid), nNeighbor_I(1:nGrid), iCell_I(1:nGrid)
-    real     ::  XyzGrid_DII(1:nDim,0:nGrid,1:nGrid), Weight_I(1:nGrid)
-    integer  ::  nIndexes_II(0:1,1:nGrid)
-    integer  ::  iCellIndexes_DII(1, 2**nDim, 2**nDim)
-    logical  ::  IsOut_I(2**nDim), IsSecondOrderLocal
-    integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
     !-----------------------
+    nGrid = 2**nDim
     !\
     !Invert DXyz_D and find XyzCorner_D
     !/
-    DXyzInv_D = 1/DXyz_D; XyzCorner_D = XyzCell_D - 0.50*DXyz_D
+    DXyzInv_D   = 1/DXyz_D 
+    XyzCorner_D = XyzCell_D - 0.50*DXyz_D
     !\
     !Construct an ordered list of neighbors
     !/
-    iLevel_II = 0; nNeighbor_II = 0; nNeighbor_II(0,0) = 1
-    XyzGrid_DIII = 0.0; iNeighbor_III = 0
-    XyzGrid_DIII(:,1,0,0) = XyzCell_D
+    iLevel_III = 0
+    XyzGrid_DIIII = 0.0
+    XyzGrid_DIIII(:,0,0,0,0) = XyzCell_D
+    XyzGrid_DIIII(:,1,0,0,0) = XyzCell_D
+    iCellId_IIIII            = -1
+    iCellId_IIIII(:,1,0,0,0) = iCellId_I
+    IsOut_III = .false.
+
     do iNeighbor = 1, nNeighbor
-       if(DiLevelNei_I(iNeighbor) /= -1)then
-          iDiscr_D = &
+       select case(DiLevelNei_I(iNeighbor))
+       case(0)
+          iDiscr_D = 0; iDiscr_D(1:nDim) = &
                floor((XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
           !\
           ! Test list of neighbors
@@ -4802,29 +4825,38 @@ contains
           if(DoTest)then
              if(all(iDiscr_D == 0))call CON_stop(&
                   NameSub//': neighbor is inside the central cell')
-             if(DiLevelNei_I(iNeighbor) > 1 )call CON_stop(&
-                  NameSub//': neighbor is too fine')
              if(any(iDiscr_D > 1.or.iDiscr_D < -1))call CON_stop(&
                   NameSub//': neighbor does not contact the central cell')
-             if(nNeighbor_II(iDiscr_D(1),iDiscr_D(2))>0)then
-                if(nNeighbor_II(iDiscr_D(1),iDiscr_D(2))==nGrid/2)&
-                     call CON_stop(NameSub//': too many neighbors')
-                if(DiLevelNei_I(iNeighbor)/=1.or.&
-                     iLevel_II(iDiscr_D(1),iDiscr_D(2))/=1)&
-                     call CON_stop(NameSub//': multiple subfaces are not fine')
-             end if
           end if
+          XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               XyzNeighbor_DI(:,iNeighbor)
+          XyzGrid_DIIII(:,1,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               XyzNeighbor_DI(:,iNeighbor)  
+          iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = 0
+          iCellId_IIIII(:,1,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               iCellId_II(:,iNeighbor)
+          IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = IsOut_I(iNeighbor)
+       case(1)
+          iDiscr_D = 0; iDiscr_D(1:nDim) = &
+               floor((XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
+          !\
+          ! Test list of neighbors
+          !/
+          if(DoTest)then
+             if(all(iDiscr_D == 0))call CON_stop(&
+                  NameSub//': neighbor is inside the central cell')
+             if(any(iDiscr_D > 1.or.iDiscr_D < -1))call CON_stop(&
+                  NameSub//': neighbor does not contact the central cell')
+          end if
+          XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               XyzGrid_DIIII(:,0,0,0,0) + DXyz_D*iDiscr_D(1:nDim)   
           !\
           ! Put the neighbor into the ordered list
           !/
-          nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) = &
-               nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) +1
-          XyzGrid_DIII(:,nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
-               iDiscr_D(1),iDiscr_D(2)) = XyzNeighbor_DI(:,iNeighbor)
-          iLevel_II(iDiscr_D(1),iDiscr_D(2)) = DiLevelNei_I(iNeighbor)
-          iNeighbor_III(nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
-               iDiscr_D(1),iDiscr_D(2)) = iNeighbor
-       else
+
+          iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = 1
+          IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = IsOut_I(iNeighbor)
+       case(-1)
           !\
           ! Coarse grid point may need to be placed to several
           ! positions in the ordered array
@@ -4846,55 +4878,42 @@ contains
              if(DoTest)then
                 if(all(iDiscr_D == 0))call CON_stop(&
                      NameSub//': neighbor is inside the central cell')
-                if(nNeighbor_II(iDiscr_D(1),iDiscr_D(2))>0)call CON_stop(&
-                     NameSub//': too many neighbors')
              end if
-             !\
-             ! Put the neighbor into the ordered list
-             !/
-             nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) = &
-                  nNeighbor_II(iDiscr_D(1),iDiscr_D(2)) +1
-             XyzGrid_DIII(:,nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
-                  iDiscr_D(1),iDiscr_D(2)) = XyzNeighbor_DI(:,iNeighbor)
-             iLevel_II(iDiscr_D(1),iDiscr_D(2)) = DiLevelNei_I(iNeighbor)
-             iNeighbor_III(nNeighbor_II(iDiscr_D(1),iDiscr_D(2)),&
-                  iDiscr_D(1),iDiscr_D(2)) = iNeighbor
+             iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = -1
           end do
-       end if
+       end select
     end do
     !\
     ! Check the ordered list completeness
     !/
     if(DoTest)then
-       if(any(nNeighbor_II == 0))call CON_stop(&
-            NameSub//': missing neighbors')
+       ! if(any(nNeighbor_II == 0))call CON_stop(&
+       !      NameSub//': missing neighbors')
     end if
     !\
     ! Calculate the point location relatively to the centeral cell center
     !/
-    iDiscr_D = nint(SIGN(1.0, Xyz_D - XyzCell_D))
-    iLevel_I = reshape(iLevel_II(&
-         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
-    if(.not.any(iLevel_I == -1))then
-       !\
-       ! The extended stencil is a part of ordered list 
-       !/
-       IsOut_I = iLevel_I < -1
-       if(all(iLevel_I == 0.or.IsOut_I))then
-          !\
-          ! Uniform stencil
-          !/
-          iCell_I = reshape(iNeighbor_III(1,&
-               (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-               (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
-          Dimless_D = DXyzInv_D*(Xyz_D - &
-               XyzGrid_DIII( :,1,MIN(0,iDiscr_D(1)),MIN(0,iDiscr_D(2)) ) )
-          call interpolate_uniform(nDim, Dimless_D, Weight_I)
-          WeightNei_I = 0; WeightNei_I(iCell_I) = Weight_I
-          RETURN
-       end if
-    end if
-  end subroutine interpolate_amr_cell_2d
-       
+    !iDiscr_D = nint(SIGN(1.0, Xyz_D - XyzCell_D))
+    !iLevel_I = reshape(iLevel_II(&
+    !     (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+    !     (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
+    !if(.not.any(iLevel_I == -1))then
+    !\
+    ! The extended stencil is a part of ordered list 
+    !/
+    !   IsOut_I = iLevel_I < -1
+    !   if(all(iLevel_I == 0.or.IsOut_I))then
+    !\
+    ! Uniform stencil
+    !/
+    !      iCell_I = reshape(iNeighbor_III(1,&
+    !           (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+    !           (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
+    !      Dimless_D = DXyzInv_D*(Xyz_D - &
+    !           XyzGrid_DIII( :,1,MIN(0,iDiscr_D(1)),MIN(0,iDiscr_D(2)) ) )
+    !      RETURN
+    !   end if
+    !end if
+  end subroutine order_connectivity_list
+
 end module ModInterpolateAMR
