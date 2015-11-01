@@ -82,6 +82,16 @@ namespace ElectricallyChargedDust {
   }
 
 
+  //scattering effientcyes of the dust grains
+  namespace ScatteringEfficientcy {
+    //Mie scattering effcientcy
+    namespace Mie {
+      //Scatering Efficientcy Extracted from Fink-2012-icarus
+      #include "Dust_MieScatteringEfficiency_Fink2012Icarus.h"
+
+    }
+  }
+
   //time step grouping of the grains
   namespace GrainVelocityGroup {
     extern double minGrainVelocity,maxGrainVelocity;
