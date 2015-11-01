@@ -1338,6 +1338,8 @@ namespace PIC {
     void UnPackParticleData(char*,long int);
 
     unsigned long GetChecksum();
+    unsigned long GetChecksum(const char *msg);
+    unsigned long GetChecksum(int nline,const char *fname);
   }
 
 

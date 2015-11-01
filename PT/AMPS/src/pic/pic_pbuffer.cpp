@@ -239,7 +239,7 @@ void PIC::ParticleBuffer::UnPackParticleData(char* buffer,long int ptr) {
 
 //==========================================================
 //get the checksum of the particle buffer
-unsigned long PIC::ParticleBuffer::GetChecksum() {
+unsigned long PIC::ParticleBuffer::GetChecksum(const char *msg) {
   CRC32 sum;
 
   //save the particle's buffer internal data
@@ -261,7 +261,12 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
   memcpy(buffer,bufferRecv,TotalThreadsNumber*sizeof(unsigned long int));
 
   if (ThisThread==0) {
-    sprintf(str,"Cdsmc::pbuffer CRC32 checksum: ");
+    if (msg==NULL) {
+      sprintf(str,"Cdsmc::pbuffer CRC32 checksum: ");
+    }
+    else {
+      sprintf(str,"Cdsmc::pbuffer CRC32 checksum (msg=%s): ",msg);
+    }
 
     for (long int thread=0;thread<TotalThreadsNumber;thread++) sprintf(str,"%s 0x%lx ",str,buffer[thread]);
 
@@ -271,6 +276,18 @@ unsigned long PIC::ParticleBuffer::GetChecksum() {
 
   delete [] buffer;
   return sum.checksum();
+}
+
+unsigned long PIC::ParticleBuffer::GetChecksum() {
+  return GetChecksum(NULL);
+}
+
+unsigned long PIC::ParticleBuffer::GetChecksum(int nline,const char *fname) {
+  char msg[_MAX_STRING_LENGTH_PIC_];
+
+  sprintf(msg,"[line=%i,file=%s]",nline,fname);
+
+  return GetChecksum(msg);
 }
 
 //==========================================================
