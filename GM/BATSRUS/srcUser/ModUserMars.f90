@@ -40,8 +40,9 @@ module ModUser
   ! Mars stuff
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=8,  &
        MaxReactions=10
-  real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
-       nDenNuSpecies_CBI    !number density of neutral Species
+  real, allocatable:: nDenNuSpecies_CBI(:,:,:,:,:)
+ ! real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
+ !      nDenNuSpecies_CBI    !number density of neutral Species
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
        TempNuSpecies_CBI    !tempature of neutral Species
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
@@ -831,6 +832,12 @@ contains
     end do
 
     UnitUser_V(rhoHp_:rhoCO2p_)   = No2Io_V(UnitRho_)/MassSpecies_V
+
+    if(.not.allocated(nDenNuSpecies_CBI))then
+       allocate(nDenNuSpecies_CBI(nI, nJ, nK, nBLK, MaxNuSpecies))
+       nDenNuSpecies_CBI = -1.0
+    end if
+ 
 
   end subroutine user_init_session
 
