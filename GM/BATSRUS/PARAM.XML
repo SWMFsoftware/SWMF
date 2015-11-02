@@ -3941,10 +3941,11 @@ Only useful if the initial condition has a non-trivial analytic form.
 <command name="REGION" alias="AMRREGION" multiple="T">
 	<set name="RotateArea" value="0"/>
 	<set name="StretchArea" value="0"/>
+	<set name="TaperArea" value="0"/>
         <parameter name="NameRegion" type="string"/>
-	<parameter name="StringArea" type="strings" min="1" max="3"
-		case="lower">
-		<part name="NameArea" type="string" input="select" 
+	<parameter name="StringShape" type="strings" case="lower"
+		min="1" max="4">
+		<part name="NameShape" type="string" input="select" 
 							required="T">
 			<option name="box"				/>
 			<option name="box_gen"				/>
@@ -3952,82 +3953,100 @@ Only useful if the initial condition has a non-trivial analytic form.
 			<option name="brick_gen"			/>
 			<option name="brick0"				/>
 			<option name="brick_gen0"			/>
-			<option name="sphere"				/>
-			<option name="sphere0"				/>
-			<option name="shell"				/>
-			<option name="shell0"				/>
+			<option name="conex"				/>
+			<option name="conex0"				/>
+			<option name="coney"				/>
+			<option name="coney0"				/>
+			<option name="conez"				/>
+			<option name="conez0"				/>
 			<option name="cylinderx"			/>
 			<option name="cylinderx0"			/>
 			<option name="cylindery"			/>
 			<option name="cylindery0"			/>
 			<option name="cylinderz"			/>
 			<option name="cylinderz0"			/>
+			<option name="doubleconex"			/>
+			<option name="doubleconex0"			/>
+			<option name="doubleconey"			/>
+			<option name="doubleconey0"			/>
+			<option name="doubleconez"			/>
+			<option name="doubleconez0"			/>
+			<option name="funnelx"				/>
+			<option name="funnelx0"				/>
+			<option name="funnely"				/>
+			<option name="funnely0"				/>
+			<option name="funnelz"				/>
+			<option name="funnelz0"				/>
+			<option name="paraboloidx"			/>
+			<option name="paraboloidx0"			/>
+			<option name="paraboloidy"			/>
+			<option name="paraboloidy0"			/>
+			<option name="paraboloidz"			/>
+			<option name="paraboloidz0"			/>
 			<option name="ringx"				/>
 			<option name="ringx0"				/>
 			<option name="ringy"				/>
 			<option name="ringy0"				/>
 			<option name="ringz"				/>
 			<option name="ringz0"				/>
+			<option name="shell"				/>
+			<option name="shell0"				/>
+			<option name="sphere"				/>
+			<option name="sphere0"				/>
 			<option name="user"				/>
 		</part>
-		<part name="StretchArea" type="string" input="select"
-			required="F" if="$NameArea !~ /box|brick/">
+		<part name="StretchArea" type="string" input="select" 
+		        required="F"
+		        if="$NameShape !~ /box|brick|user/ and $nJ!=1">
 			<option name="stretched" />
 		</part>
 		<part name="RotateArea" type="string" input="select" 
-			required="F">
+		        required="F"
+		        if="$NameShape !~ /user/ and $nJ!=1">
 			<option name="rotated" />
 		</part>
-		<part name="TaperArea" type="string" input="select"
-			required="F">
+		<part name="TaperArea" type="string" input="select" 
+		        required="F" 
+			if="$NameShape !~ /user/ and $_command =~ /REGION/">>
 			<option name="tapered" />
 		</part>
 	</parameter>
-	<if expr="$NameArea !~ /box|user|0/">
+	<if expr="$NameShape !~ /box|user|0/">
 		<parameter name="xCenter" type="real" default="0"/>
-		<parameter name="yCenter" type="real" default="0"/>
-		<parameter name="zCenter" type="real" default="0"/>
+		<parameter name="yCenter" type="real" default="0" if="$nJ!=1"/>
+		<parameter name="zCenter" type="real" default="0" if="$nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /box/">
+	<if expr="$NameShape =~ /box/">
 		<parameter name="xMinBox" type="real" />
-		<parameter name="yMinBox" type="real" />
-		<parameter name="zMinBox" type="real" />
+		<parameter name="yMinBox" type="real" if="$nJ != 1"/>
+		<parameter name="zMinBox" type="real" if="$nK != 1"/>
 		<parameter name="xMaxBox" type="real" />
-		<parameter name="yMaxBox" type="real" />
-		<parameter name="zMaxBox" type="real" />
+		<parameter name="yMaxBox" type="real" if="$nJ != 1"/>
+		<parameter name="zMaxBox" type="real" if="$nK != 1"/>
 	</if>
-	<if expr="$NameArea =~ /brick/">
+	<if expr="$NameShape =~ /brick/">
 		<parameter name="xSizeBrick" type="real" min="0" />
-		<parameter name="ySizeBrick" type="real" min="0" />
-		<parameter name="zSizeBrick" type="real" min="0" />
+		<parameter name="ySizeBrick" type="real" min="0" if="$nJ!=1"/>
+		<parameter name="zSizeBrick" type="real" min="0" if="$nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /sphere/">
-		<parameter name="Radius"  type="real" min="0"/>
+	<if expr="$NameShape =~ /sphere|shell/">
+		<parameter name="RadiusInner" type="real" min="0"
+			   if="$NameShape =~ /shell/"/>
+		<parameter name="Radius"  type="real" min="0+$RadiusInner"/>
                 <parameter name="RadiusY" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
+			   if="$StretchArea=~/stretched/ and $nJ!=1"/>
                 <parameter name="RadiusZ" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
+			   if="$StretchArea=~/stretched/ and $nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /shell/">
-		<parameter name="RadiusInner" type="real" min="0"/>
-		<parameter name="Radius" type="real" min="$Radius1"/>
-                <parameter name="RadiusY" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
-                <parameter name="RadiusZ" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
-	</if>
-	<if expr="$NameArea =~ /cylinder/">
-		<parameter name="LengthCylinder" type="real" min="0" />
-		<parameter name="Radius"         type="real" min="0" />
+	<if expr="$NameShape =~ /cone|cylinder|ring|funnel|paraboloid/">
+		<parameter name="Height"     type="real" min="0" />
+		<parameter name="RadiusInner" type="real" min="0"
+			   if="$NameShape =~ /ring/"/>
+		<parameter name="RadiusStart" type="real" min="0"
+			   if="$NameShape =~ /funnel/"/>
+		<parameter name="Radius"     type="real" min="0+$RadiusInner"/>
                 <parameter name="RadiusPerp" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
-	</if>
-	<if expr="$NameArea =~ /ring/">
-		<parameter name="HeightRing" type="real" min="0" />
-		<parameter name="Radius1"    type="real" min="0" />
-		<parameter name="Radius2"    type="real" min="$Radius1" />
-                <parameter name="RadiusPerp" type="real" min="0" 
-			   if="$StretchArea =~ /stretched/"/>
+			   if="$StretchArea=~/stretched/ and $nK!=1"/>
 	</if>
 	<if expr="$TaperArea =~ /tapered/">
 	        <parameter name="Taper" type="real" min="0" default="0"/>
@@ -4036,14 +4055,14 @@ Only useful if the initial condition has a non-trivial analytic form.
 		<parameter name="xRotate" type="real" min="-360" max="360" 
 								default="0"/>
 		<parameter name="yRotate" type="real" min="-360" max="360" 
-								default="0"/>
+				default="0" if="$nK!=1"/>
 		<parameter name="zRotate" type="real" min="-360" max="360" 
-								default="0"/>
+				default="0" if="$nK!=1"/>
 	</if>
 
 #REGION
 region1			NameRegion
-box			NameArea
+box			StringShape
 -64.0			xMinBox
 -16.0			yMinBox
 -16.0			zMinBox
@@ -4053,7 +4072,7 @@ box			NameArea
 
 #REGION
 region2			NameRegion
-brick			NameArea
+brick			StringShape
 -48.0			xCenter
   0.0			yCenter
  -8.0			zCenter
@@ -4062,61 +4081,98 @@ brick			NameArea
  16.0			zSizeBrick
 
 #REGION
+ellipsoid		NameRegion
+sphere stretched	StringShape
+-10.0			xCenterSphere
+ 10.0			yCenterSphere
+  0.0			zCenterSphere
+ 20.0			Radius
+ 30.0			RadiusY  (only read if stretched)
+ 20.0			RadiusZ  (only read if stretched)
+
+#REGION
 region3			NameRegion
-shell0			NameArea
+shell0			StringShape
 3.5			Radius1
 4.5			Radius2
 
 #REGION
-region4			NameRegion
-sphere			NameArea
--10.0			xCenterSphere
- 10.0			yCenterSphere
-  0.0			zCenterSphere
- 20.0			rSphere
-
-#REGION
-region5 tapered		NameRegion
-cylinderx		NameArea
+region5			NameRegion
+cylinderx stretched tapered
 -30.0			xCenter
   0.0			yCenter
   0.0			zCenter
- 60.0			LengthCylinder
- 20.0			rCylinder
+ 60.0			Length
+ 20.0			Radius
+ 25.0			RadiusPerp (only read if stretched)
   5.0			Taper      (only read if tapered)
 
 #REGION
 region6			NameRegion
-ringz0 rotated		NameArea
-  5.0			HeightRing
+ringz0 rotated		StringShape
+  5.0			Height
  20.0			Radius1
  25.0			Radius2
  10.0			xRotate   (only read if rotated)
- 10.0			yRotate
-  0.0			zRotate
+ 10.0			yRotate   (only read if rotated)
+  0.0			zRotate   (only read if rotated)
 
 #REGION
-ellipsoid		NameRegion
-sphere0 stretched	NameArea
-10.0			rSphere
-30.0			RadiusY  (only read if stretched)
-20.0			RadiusZ  (only read if stretched)
+region7			NameRegion
+conex stretched		StringShape
+-30.0			xTip
+  0.0			yTip
+  0.0			zTip
+  5.0			Height
+ 20.0			Radius
+ 30.0			RadiusPerp (only read if stretched)
+
+#REGION
+region8			NameRegion
+funnelx stretched	StringShape
+ 10.0			xTip
+ 20.0			yTip
+ 30.0			zTip
+ 45.0			Height
+ 10.0			RadiusStart
+ 20.0			Radius
+ 25.0			RadiusPerp (only read if stretched)
+
+#REGION
+region9			NameRegion
+doubleconez0 tapered	StringShape
+100.0			Height
+ 20.0			Radius
+  2.0			Taper
+
+#REGION
+magnetosphere		NameRegion
+paraboloidx stretched	StringShape
+ 10.0			xTip
+  0.0			yTip
+  0.0			zTip
+-100.0			Height
+  30.0			Radius
+  20.0			RadiusPerp
 
 #REGION
 myregion		NameRegion
-user			NameArea
+user			StringShape
 
-The #REGION comand allow us to make a library of areas in the simulation 
+The #REGION comand allow making a library of areas in the simulation 
 domain identified by a unique NameRegion to be used in other commands
 (e.g. #AMRCRITERIALEVEL, #AMRCRITERIARESOLUTION) to define where some
 action (e.g. grid refinement) should be performed.
 
-The NameArea parameter defines the shape of the region with the possible
-options:
-'box', 'box_gen', 'brick', 'brick_gen', 'sphere', 'shell', 'cylinderx', 
-'cylindery', 'cylinderz', 'ringx', 'ringy', 'ringz' and 'user'.
-Most of these names can be followed by the optional '0', 'stretched' and 
-'rotated' strings as discussed below.
+The StringShape parameter defines the shape of the region with the possible
+options. The basic shape names are the following:
+'box', 'box_gen', 'brick', 'brick_gen', 'conex', 'cylinderx',
+'doubleconex', 'funnelx', 'paraboloidx', 'ringx', 'shell', 'sphere', 
+and 'user'. The names that end with an 'x' indicate the orientation
+of the symmetry axis. These have alternative versions ending with 'y' and 'z',
+for example 'coney' and 'conez'.
+Most of these names can be followed by the optional '0', 'stretched', 
+'tapered' and 'rotated' strings as discussed below.
 
 The area 'box' is a box aligned with the X, Y and Z axes, 
 and it is given with the coordinates
@@ -4141,39 +4197,51 @@ Y and Z axes, respectively, and are defined analogously as 'cylinderx'.
 The area 'ringx', 'ringy' and 'ringz' are the volumes between 
 two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
 The ring area is given with the center, the height and the two radii.
+The 'conex', 'doubleconex' and 'paraboloidx' are all aligned with the X axis
+and are described by the position of the tip, the height and the radius. 
+The 'funnelx' is a cone with its tip chopped off. It is described by
+the position of the center of the starting circle, its height, the starting 
+radius and the ending radius.
 Note that all these round shapes can be made elliptical with the 
 "stretched" option (see below).
 
-If the area name contains the number '0', the center is taken to be at the 
-origin and the center coordinates are not read. Note that the areas 'box'
+If the area name contains the number '0', the center/tip is taken to be at the 
+origin and the center/tip coordinates are not read. Note that the areas 'box'
 and 'box_gen' are defined with the corners so the '0' cannot be used for these.
 
-If the word 'stretched' is added after the area name, the area can be 
-stretched in the X, Y and Z directions. This allows making
+If the word 'stretched' is added after the area name, the shape can be 
+stretched in all directions. This allows making
 an ellipsoid from a sphere, or an elliptical slab from a cylinder.
-Also useful to distort shells and rings.
+
+It the word 'tapered' is used in StringShape, the Taper parameter
+is read and the shape is surrounded by a tapering region of this
+width. This is useful when the region is used as a switch with
+a continuous transition between the inside and outside, see for example
+the #HALLREGION command.
 
 If the word 'rotated' is added after the area name, the area can be 
-rotated by 3 angles around the X, Y and Z axes in this order. 
+rotated around the Z axis in 2D simulation, and by 3 angles around 
+the X, Y and Z axes (in this order) in 3D simulations. 
 
-The 'user' area results in a call of the subroutine user_specify_refinement 
-defined in the user module. The user can define an arbitrary set of criteria 
-for refinement.  Again, stretching, rotation and centering cannot be applied 
-to the 'user' area.
+If NameShape starts with 'user', the shape is defined by the subroutine 
+user_specify_region. Any parameters for the user region should be read 
+in the user section of the PARAM.in file.
+
+By default there are no "regions" defined.
 </command>
 
 <command name="GRIDRESOLUTION" alias="GRIDLEVEL" multiple="T">
 	<set name="RotateArea" value="0"/>
-	<set name="StretchArea"  value="0"/>
+	<set name="StretchArea" value="0"/>
 	<parameter name="Resolution" type="real" min="0"
 		if="$_command =~ /RESOLUTION/" />
 	<parameter name="nLevel" type="integer" min="0" max="30"
 		if="$_command =~ /LEVEL/" />
-	<parameter name="StringArea" type="strings" min="1" max="3"
-		case="lower">
-		<part name="NameArea" type="string" input="select" 
+	<parameter name="StringShape" type="strings" case="lower"
+		min="1" max="3">
+		<part name="NameShape" type="string" input="select" 
 							required="T">
-			<option name="initial"		default="T" 	/>
+			<option name="initial"				/>
 			<option name="all"				/>
 			<option name="box"				/>
 			<option name="box_gen"				/>
@@ -4181,92 +4249,116 @@ to the 'user' area.
 			<option name="brick_gen"			/>
 			<option name="brick0"				/>
 			<option name="brick_gen0"			/>
-			<option name="sphere"				/>
-			<option name="sphere0"				/>
-			<option name="shell"				/>
-			<option name="shell0"				/>
+			<option name="conex"				/>
+			<option name="conex0"				/>
+			<option name="coney"				/>
+			<option name="coney0"				/>
+			<option name="conez"				/>
+			<option name="conez0"				/>
 			<option name="cylinderx"			/>
 			<option name="cylinderx0"			/>
 			<option name="cylindery"			/>
 			<option name="cylindery0"			/>
 			<option name="cylinderz"			/>
 			<option name="cylinderz0"			/>
+			<option name="doubleconex"			/>
+			<option name="doubleconex0"			/>
+			<option name="doubleconey"			/>
+			<option name="doubleconey0"			/>
+			<option name="doubleconez"			/>
+			<option name="doubleconez0"			/>
+			<option name="funnelx"				/>
+			<option name="funnelx0"				/>
+			<option name="funnely"				/>
+			<option name="funnely0"				/>
+			<option name="funnelz"				/>
+			<option name="funnelz0"				/>
+			<option name="paraboloidx"			/>
+			<option name="paraboloidx0"			/>
+			<option name="paraboloidy"			/>
+			<option name="paraboloidy0"			/>
+			<option name="paraboloidz"			/>
+			<option name="paraboloidz0"			/>
 			<option name="ringx"				/>
 			<option name="ringx0"				/>
 			<option name="ringy"				/>
 			<option name="ringy0"				/>
 			<option name="ringz"				/>
 			<option name="ringz0"				/>
+			<option name="shell"				/>
+			<option name="shell0"				/>
+			<option name="sphere"				/>
+			<option name="sphere0"				/>
 			<option name="user"				/>
 		</part>
-		<part name="StretchArea" type="string" input="select" required="F"
-			if="$NameArea =~ /sphere|shell|cylinder|ring/">
+		<part name="StretchArea" type="string" input="select" 
+		        required="F"
+		        if="$NameShape !~ /box|brick|user|init/ and $nJ!=1">
 			<option name="stretched" />
 		</part>
-		<part name="RotateArea" type="string" input="select" required="F" 
-			if="$NameArea =~ /box\b|brick0?\b|cylinder|ring/">
+		<part name="RotateArea" type="string" input="select" 
+		        required="F"
+		        if="$NameShape !~ /user|init/ and $nJ!=1">
 			<option name="rotated" />
 		</part>
 	</parameter>
-	<if expr="$NameArea !~ /box|all|initial|user|0/">
+	<if expr="$NameShape !~ /box|user|init|0/">
 		<parameter name="xCenter" type="real" default="0"/>
-		<parameter name="yCenter" type="real" default="0"/>
-		<parameter name="zCenter" type="real" default="0"/>
+		<parameter name="yCenter" type="real" default="0" if="$nJ!=1"/>
+		<parameter name="zCenter" type="real" default="0" if="$nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /box/">
+	<if expr="$NameShape =~ /box/">
 		<parameter name="xMinBox" type="real" />
-		<parameter name="yMinBox" type="real" />
-		<parameter name="zMinBox" type="real" />
+		<parameter name="yMinBox" type="real" if="$nJ != 1"/>
+		<parameter name="zMinBox" type="real" if="$nK != 1"/>
 		<parameter name="xMaxBox" type="real" />
-		<parameter name="yMaxBox" type="real" />
-		<parameter name="zMaxBox" type="real" />
+		<parameter name="yMaxBox" type="real" if="$nJ != 1"/>
+		<parameter name="zMaxBox" type="real" if="$nK != 1"/>
 	</if>
-	<if expr="$NameArea =~ /brick/">
+	<if expr="$NameShape =~ /brick/">
 		<parameter name="xSizeBrick" type="real" min="0" />
-		<parameter name="ySizeBrick" type="real" min="0" />
-		<parameter name="zSizeBrick" type="real" min="0" />
+		<parameter name="ySizeBrick" type="real" min="0" if="$nJ!=1"/>
+		<parameter name="zSizeBrick" type="real" min="0" if="$nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /sphere/">
+	<if expr="$NameShape =~ /sphere|shell/">
+		<parameter name="RadiusInner" type="real" min="0"
+			   if="$NameShape =~ /shell/"/>
 		<parameter name="Radius"  type="real" min="0"/>
+                <parameter name="RadiusY" type="real" min="0" 
+			   if="$StretchArea=~/stretched/ and $nJ!=1"/>
+                <parameter name="RadiusZ" type="real" min="0" 
+			   if="$StretchArea=~/stretched/ and $nK!=1"/>
 	</if>
-	<if expr="$NameArea =~ /shell/">
-		<parameter name="Radius1" type="real" min="0"/>
-		<parameter name="Radius2" type="real" min="0"/>
-	</if>
-	<if expr="$NameArea =~ /cylinder/">
-		<parameter name="LengthCylinder" type="real" min="0" />
-		<parameter name="Radius"         type="real" min="0" />
-	</if>
-	<if expr="$NameArea =~ /ring/">
-		<parameter name="HeightRing" type="real" min="0" />
-		<parameter name="Radius1"    type="real" min="0" />
-		<parameter name="Radius2"    type="real" min="0" />
-	</if>
-	<if expr="$StretchArea =~ /stretched/">
-		<parameter name="xStretch" type="real" min="0" default="1"/>
-		<parameter name="yStretch" type="real" min="0" default="1"/>
-		<parameter name="zStretch" type="real" min="0" default="1"/>
+	<if expr="$NameShape =~ /cone|cylinder|ring|funnel|paraboloid/">
+		<parameter name="Height"     type="real" min="0" />
+		<parameter name="RadiusInner" type="real" min="0"
+			   if="$NameShape =~ /ring/"/>
+		<parameter name="RadiusStart" type="real" min="0"
+			   if="$NameShape =~ /funnel/"/>
+		<parameter name="Radius"     type="real" min="0" />
+                <parameter name="RadiusPerp" type="real" min="0" 
+			   if="$StretchArea=~/stretched/ and $nK!=1"/>
 	</if>
 	<if expr="$RotateArea =~ /rotated/">
 		<parameter name="xRotate" type="real" min="-360" max="360" 
 								default="0"/>
 		<parameter name="yRotate" type="real" min="-360" max="360" 
-								default="0"/>
+				default="0" if="$nK!=1"/>
 		<parameter name="zRotate" type="real" min="-360" max="360" 
-								default="0"/>
+				default="0" if="$nK!=1"/>
 	</if>
 
 #GRIDRESOLUTION
 2.0			Resolution
-initial			NameArea
+initial			NameShape
 
 #GRIDLEVEL
 3			nLevel
-all			NameArea
+all			NameShape
 
 #GRIDLEVEL
 4			nLevel
-box			NameArea
+box			NameShape
 -64.0			xMinBox
 -16.0			yMinBox
 -16.0			zMinBox
@@ -4276,7 +4368,7 @@ box			NameArea
 
 #GRIDLEVEL
 4			nLevel
-brick			NameArea
+brick			NameShape
 -48.0			xCenter
   0.0			yCenter
  -8.0			zCenter
@@ -4286,52 +4378,58 @@ brick			NameArea
 
 #GRIDRESOLUTION
 1/8			Resolution
-shell0			NameArea
-3.5			Radius1
-4.5			Radius2
+shell0			NameShape
+3.5			RadiusInner
+4.5			Radius
 
 #GRIDRESOLUTION
 0.5			Resolution
-sphere			NameArea
+sphere			NameShape
 -10.0			xCenterSphere
  10.0			yCenterSphere
   0.0			zCenterSphere
- 20.0			rSphere
+ 20.0			Radius
 
 #GRIDRESOLUTION
 1/8			Resolution
-cylinderx		NameArea
+cylinderx		NameShape
 -30.0			xCenter
   0.0			yCenter
   0.0			zCenter
- 60.0			LengthCylinder
- 20.0			rCylinder
+ 60.0			Height
+ 20.0			Radius
 
 #GRIDRESOLUTION
 1/8			Resolution
-ringz0 rotated		NameArea
-  5.0			HeightRing
- 20.0			Radius1
- 25.0			Radius2
+ringz0 rotated		NameShape
+  5.0			Height
+ 20.0			RadiusInner
+ 25.0			Radius
  10.0			xRotate
  10.0			yRotate
   0.0			zRotate
 
 #GRIDRESOLUTION
 1/4			Resolution
-sphere0 stretched	NameArea
-10.0			rSphere
-1.0			xStretch
-3.0			yStretch
-2.0			zStretch
+paraboloidx0 stretched	NameShape
+30.0			Height
+10.0			Radius
+12.0			RadiusPerp
 
 #GRIDRESOLUTION
 1/8			Resolution
-user			NameArea
+user			NameShape
 
 The #GRIDRESOLUTION and #GRIDLEVEL commands allow to set the grid resolution
-or refinement level, respectively, in a given area. The Resolution parameter
-refers to the size of the cell in the first direction (typically Dx or Dr).
+or refinement level, respectively, in a given area. 
+
+The Resolution parameter of the #GRIRDESOLUTION command 
+usually refers to the size of the cell in the first direction (Dx or Dr),
+but for logarithmic/stretched radial coordinate (see #GRIDGEOMETRY), 
+it refers to the resolution in the Phi coordinate in degrees. 
+Note that this definition of resolution is different from that used in the
+#AMRCRITERIARESOLUTION command for non-Cartesian grids.
+
 The nLevel parameter is an integer with level 0 meaning no refinement relative
 to the root block, while level N is a refinement by 2 to the power N.
 
@@ -4340,17 +4438,24 @@ and #AMRCRITERIARESOLUTION commands allow even more flexibility in controlling
 the grid adaptation, but the initial resolution/level still has to be set
 by this command.
 
-If NameArea is set to 'initial', it determines the number of grid adaptations
+If NameShape is set to 'initial', it determines the number of grid adaptations
 used to initialize the grid. The grid adaptations are done according to the
-other GRIDLEVEL and GRIDESOLUTION commands. 
+other #GRIDLEVEL, #GRIDESOLUTION commands. 
 {\bf The default is no refinement initially,
 which means that the grid is uniform at the beginning, and it is refined during
 the run according to the #AMR or #DOAMR commands. This means that one has
 to set the initial refinement level to get a non-uniform grid from the
 beginning.}
 
-For other values of NameArea, the command specifies the shape of the area. 
-where the blocks are to be refined. If the desired grid resolution is finer
+The NameShape 'all' refers to the whole computational domain, and it can be
+used to set the overall minimum resolution. 
+
+For other values of NameShape, the command specifies the shape of the area. 
+where the blocks are to be refined. See the #REGION command for a description
+of these parameters. Note that "tapering" can only be used with the
+#REGION command.
+
+If the desired grid resolution is finer
 than the initial resolution, then initially the grid will be refined
 to the initial resolution only, but the area will be further refined 
 in subsequent pre-specified adaptive mesh refinements (AMRs) during the run 
@@ -4361,54 +4466,6 @@ determines the desired grid resolution.
 
 All computational blocks that intersect the area and have a coarser
 resolution than the resolution set for the area are selected for refinement.
-There are the following basic shapes: 
-'all', 'box', 'box_gen', 'brick', 'brick_gen', 'sphere', 'shell', 'cylinderx', 
-'cylindery', 'cylinderz', 'ringx', 'ringy' and 'ringz'.
-
-The area 'all' refers to the whole computational domain, and it can be
-used to set the overall minimum resolution. The area 'box' is a box
-aligned with the X, Y and Z axes, and it is given with the coordinates
-of two diagonally opposite corners. The area 'brick' has the same shape
-as 'box', but it is defined with the center of the brick and the 
-size of the brick. The 'box_gen' and 'brick_gen' areas can be used 
-for non-Cartesian grids to define a box in the generalized coordinates.
-For example a sphere around the origin can be described as a box in 
-generalized coordinates with radius going from 0 to R, 
-phi going from 0 to 360 degrees and latitude going from -90 to +90 degrees.
-Note that angles are given in degrees, and radius is given even if the 
-generalized coordinates use its logarithm.
-
-The area 'sphere' is a sphere around an arbitrary point,
-which is defined with the center point and the radius of the sphere.
-The area 'shell' consists of the volume between two concentric spherical
-surfaces, which is given with the center point and the two radii.
-The area 'cylinderx' is a cylinder with an axis parallel with the X axis,
-and it is given with the center, the length of the axis and the radius,
-The areas 'cylindery' and 'cylinderz' are cylinders parallel with the 
-Y and Z axes, respectively, and are defined analogously as 'cylinderx'.
-The area 'ringx', 'ringy' and 'ringz' are the volumes between 
-two cylindrical surfaces parallel with the X, Y and Z axes, respectively.
-The ring area is given with the center, the height and the two radii.
-Note that all these round shapes can be made elliptical with the 
-"stretched" option (see below).
-
-If the area name contains the number '0', the center is taken to be at the 
-origin and the center coordinates are not read. Note that the areas 'box'
-and 'box_gen' are defined with the corners so the '0' cannot be used for these.
-
-If the word 'stretched' is added after the area name, the area can be 
-stretched in the X, Y and Z directions. This allows making
-an ellipsoid from a sphere, or an elliptical slab from a cylinder.
-Also useful to distort shells and rings.
-
-If the word 'rotated' is added after the area name, the area can be 
-rotated by 3 angles around the X, Y and Z axes in this order. Only the
-areas 'box', 'brick', 'cylinder*' and 'ring*' can be rotated.
-
-The 'user' area results in a call of the subroutine user_specify_refinement 
-defined in the user module. The user can define an arbitrary set of criteria 
-for refinement.  Again, stretching, rotation and centering cannot be applied 
-to the 'user' area.
 
 The default is a uniform grid.
 </command>
@@ -4740,16 +4797,16 @@ J2 +tail -nearbody      TypeCriteria
 0.1                     CoarsenLimit
 0.75                    RefineLimit
 1                       MaxLevel
-J2 +teail -nearbody     TypeCriteria
+J2 +tail -nearbody      TypeCriteria
 1.0			CoarsenLimit
 2.0			RefineLimit
 2			MaxLevel
 Level                   TypeCriteria
 2                       RefineTo
-3                       CoursenFrom
+3                       CoarsenFrom
 dx  +nearbody           TypeCriteria
 0.5                     RefineTo
-0.25                    CoursenFrom
+0.25                    CoarsenFrom
 error Bx -nearbody	TypeCriteria
 0.025			CoarsenLimit
 0.1			RefineLimit
@@ -4770,7 +4827,10 @@ criteria to select blocks for refinement or coarsening when the #DOAMR
 command is used with DoAmr=T parameter. In one seesion you can only have one
 #AMRCRITERIALEVEL or #AMRCRITERIARESOLUTION command. 
 #AMRCRITERIARESOLUTION is equvilent with #AMRCRITERIALEVEL but works with
-cell size (dx) instead of grid levels.
+cell size. For non-Cartesian grids "cell size" is defined as the maximum 
+length of the cell edges inside a block) instead of grid levels.
+Note that this is different from the definition used in the #GRIDRESOLUTION
+command.
 
 The number of criteria is given by the nCriteria parameter.
 Up to 3 different types of criteria (given by TypeCriteria) can be used. 
@@ -7122,8 +7182,9 @@ The default value is -1, i.e. no threshold is applied.
 T			UseElectronEntropy
 
 If UseElectronEntropy is true, solve for the electron entropy Se defined as 
-Se = Pe**(1/GammaE). For discontinuous problems electron entropy should be conserved
-(if there are no source terms) if the shock is subsonic for the electrons (usually is). 
+Se = Pe**(1/GammaE). For discontinuous problems electron entropy should be 
+conserved (if there are no source terms) if the shock is subsonic for 
+the electrons (usually is). 
 
 Explicit electron heatconduction is not implemented for the electron entropy,
 but the semi-implicit heat conduction should work fine.
