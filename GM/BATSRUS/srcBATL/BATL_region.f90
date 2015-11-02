@@ -11,7 +11,7 @@ module BATL_region
 
   use BATL_mpi,  ONLY: iProc
   use BATL_size, ONLY: nDim, Dim2_, Dim3_, j0_, nJp1_, k0_, nKp1_, &
-       nI, nJ, nK, nIJK, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
+       nI, nJ, nK, nIJK, nIJK_D, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
        nINode, nJNode, nKNode
 
   implicit none
@@ -62,9 +62,14 @@ module BATL_region
   ! the area being processed (for easier access)
   type(AreaType), pointer, public:: Area
 
+  ! These are set by #GRIDLEVEL/RESOLTION ... initial command
+  ! Values are corrected and used in init_region
+  ! The number of levels is public so that BATSRUS can do the
+  ! initial refinement loop. 
+  integer, public :: nInitialAmrLevel  = 0
+
   ! Local variables
-  real    :: InitialResolution = -1.0
-  integer :: nInitialLevel = 0
+  real            :: InitialResolution = -1.0
 
   ! Name of shape being processed
   character(lNameArea) :: NameShape
@@ -84,21 +89,30 @@ contains
   !============================================================================
   subroutine init_region
 
-    use BATL_grid,         ONLY: CoordMin_D,CoordMax_D
     use BATL_geometry,     ONLY: x_, Phi_, Theta_, IsCartesianGrid, &
-         IsLogRadius, IsGenRadius, radius_to_gen
+         IsLogRadius, IsGenRadius, DomainSize_D, radius_to_gen
     use BATL_tree,         ONLY: nRoot_D
-    use ModNumConst,       ONLY: cDegToRad
+    use ModNumConst,       ONLY: cDegToRad, cRadToDeg
 
     integer :: iGeo
     real:: rMin, rMax
+
+    real:: CellSizeMax
+
     logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
     !-------------------------------------------------------------------------
+
+    ! Set maximum cell size in the first non-stretched dimension for comparison
+    if(IsLogRadius .or. IsGenRadius)then
+       CellSizeMax = cRadToDeg*DomainSize_D(Phi_)/(nRoot_D(Phi_)*nIJK_D(Phi_))
+    else
+       CellSizeMax = DomainSize_D(1)/(nRoot_D(1) * nI)
+    end if
+
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
-    if(InitialResolution > 0.0) nInitialLevel = nint( &
-         alog(((CoordMax_D(x_) - CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
-         / InitialResolution) / alog(2.0) )
+    if(InitialResolution > 0.0) &
+         nInitialAmrLevel = nint(log(CellSizeMax/InitialResolution)/log(2.0))
 
     ! Set IsSimple for all the areas
     do iGeo = 1, nArea
@@ -154,12 +168,10 @@ contains
        ! Set level and resolution based on the read value
        if(Area%Level < 0)then
           ! Set actual resolution
-          Area%Resolution = (CoordMax_D(x_)-CoordMin_D(x_)) &
-               / (nRoot_D(x_) * nI * 2.0**Area%Level)
+          Area%Resolution = CellSizeMax * 2.0**Area%Level
        else
-          Area%Level = ceiling( &
-               alog(((CoordMax_D(x_)-CoordMin_D(x_)) / (nRoot_D(x_) * nI))  &
-               / Area%Resolution) / alog(2.0) )
+          ! Set AMR level (why positive ?)
+          Area%Level = nint( log(CellSizeMax/Area%Resolution) / log(2.0) )
        end if
 
     end do
@@ -191,7 +203,7 @@ contains
     nArea                 = 0
     IsNewGeoParam         = .true.
     InitialResolution     = -1.0 
-    nInitialLevel         = 0
+    nInitialAmrLevel      = 0
 
   end subroutine clean_region
   !============================================================================
@@ -308,8 +320,7 @@ contains
   end subroutine set_i_par_perp
 
   !============================================================================
-  subroutine read_region_param(NameCommand, UseStrictIn, &
-       nInitLevelInOut, InitResInOut)
+  subroutine read_region_param(NameCommand, UseStrictIn)
 
     use ModReadParam,      ONLY: read_var, lStringLine
     use ModNumConst,       ONLY: cDegToRad
@@ -318,8 +329,6 @@ contains
 
     character(len=*),  intent(inout) :: NameCommand
     logical, optional, intent(in)    :: UseStrictIn
-    integer, optional, intent(inout) :: nInitLevelInOut 
-    real,    optional, intent(inout) :: InitResInOut 
 
     logical :: UseStrict
 
@@ -373,14 +382,12 @@ contains
        if(AreaResolution > 0)then
           InitialResolution = AreaResolution
        else
-          nInitialLevel = nLevelArea
+          nInitialAmrLevel = nLevelArea
        end if
-       if(present(nInitLevelInOut)) nInitLevelInOut = nInitialLevel
-       if(present(InitResInOut)) InitResInOut = AreaResolution
 
        if(DoTest)write(*,*) NameSub, &
-            ' setting InitialResolution, nInitialLevel =', &
-            InitialResolution, nInitialLevel
+            ' setting InitialResolution, nInitialAmrLevel =', &
+            InitialResolution, nInitialAmrLevel
        RETURN
     end if
 
