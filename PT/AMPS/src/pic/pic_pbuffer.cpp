@@ -290,6 +290,14 @@ unsigned long PIC::ParticleBuffer::GetChecksum(int nline,const char *fname) {
   return GetChecksum(msg);
 }
 
+unsigned long PIC::ParticleBuffer::GetChecksum(int code,int nline,const char *fname) {
+  char msg[_MAX_STRING_LENGTH_PIC_];
+
+  sprintf(msg,"[code=%i, line=%i,file=%s]",code,nline,fname);
+
+  return GetChecksum(msg);
+}
+
 //==========================================================
 //check particle list -> calculate the number of particles stored in the lists and compare with the total number of particles stored in the particle buffer
 void PIC::ParticleBuffer::CheckParticleList() {

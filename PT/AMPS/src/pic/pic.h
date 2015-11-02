@@ -1340,6 +1340,7 @@ namespace PIC {
     unsigned long GetChecksum();
     unsigned long GetChecksum(const char *msg);
     unsigned long GetChecksum(int nline,const char *fname);
+    unsigned long GetChecksum(int code,int nline,const char *fname);
   }
 
 
