@@ -47,6 +47,9 @@ $ampsConfigLib::WorkingSourceDirectory="src";
 #location of the code distribution
 my $SourceDirectory=" ";
 
+#location of data for coupler
+my $CPLRDATA='.';
+
 #the location of the project sprcific sources
 my $ProjectSpecificSourceDirectory="main";
 
@@ -102,7 +105,6 @@ if (!defined($InputFileName)) {
 open(FILE,">.amps.InputFileName.txt");
 print FILE "$InputFileName";
 close(FILE);
- 
 
 #output basic parameters of the code configuration 
 print "InputFile: $InputFileName\n"; 
@@ -119,10 +121,13 @@ open (InputFile,"<","$InputFileName.Assembled") || die "Cannot find file \"$Inpu
 #read the assembled input file
 print "Preprocessing AMPS sources\n";
 
-#default value for interface mode
-`echo "INTERFACE=off" >> Makefile.local`;
-`echo "KAMELEON=nokameleon" >> Makefile.local`;
-`echo "BATL=nobatl" >> Makefile.local`;
+#default values for different modes
+add_line_makefile_local("INTERFACE=off",1);
+
+#read settings from .ampsConfig
+if (-e ".amps.conf") {
+  ampsConfigSettings();
+}
 
 
 while ($line=<InputFile>) {
@@ -235,10 +240,6 @@ while ($line=<InputFile>) {
   
 }
 
-#read settings from .ampsConfig
-if (-e ".ampsConfig.Settings") {
-  ampsConfigSettings();
-}
 
 #modify the makefile for the compilation mode
 if ($CompileProcessedCodeFlag==1) {
@@ -271,6 +272,64 @@ if ($CompileProcessedCodeFlag==1) {
   else {
     system("make");
   }
+}
+
+#=============================== Add a line to Makefile.local
+# USAGE:
+# add_line_makefile_local($Newline, $Overload)
+#  $Newline has a form 'PARAMETER=value'
+#  $Overload: if true => redefine PARAMETER if present,
+#             if false=> keep old value of PARAMETER if present
+sub add_line_makefile_local{
+    # create Makefile.local if it doesn't exist
+    `touch Makefile.local` unless (-e "Makefile.local");
+    
+    # check that there are exactly 2 arguments
+    my $nArg = @_;
+    die "ERROR: add_line_makefile_local takes exactly 2 arguments" 
+	unless ($nArg==2);
+
+    # get the name of parameter being defined
+    my $Parameter = '';
+    if($_[0] =~ m/(.*?)=(.*)/){
+#	$Parameter = $_[0];
+	$Parameter = $1;
+    }
+    else{die "Try to add invalid line to Makefile.local: $_[0]\n";}
+
+    # trim the parameter name as well as newline symbol at the end
+    $Parameter =~ s/^\s+//; $Parameter =~ s/\s+\n*$//;
+
+    # read the current content
+    open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
+    my @makefilelines=<MAKEFILE>;
+    close(MAKEFILE);
+
+#    print "$Parameter\n@makefilelines\n\n\n\n";
+     
+    # check if this parameter has already been defined
+    my $IsPresent = 0;
+    foreach (@makefilelines) {
+	if ($_ =~ m/\s*$Parameter\s*=.*/){
+	    return unless $_[1];
+#	    print "==========>$_";
+	    $_ = $_[0]; chomp($_); $_ = "$_\n";
+	    $IsPresent = 1;
+	    last;
+	}
+    }
+    
+    # if the parameter hasn't been defined before, add its definition
+    unless ($IsPresent) {
+        # temporary variable for storing a line to be printed
+        my $tmp; $tmp = $_[0]; chomp($tmp); #$tmp = "$tmp\n";
+        push(@makefilelines,"$tmp\n")
+    }
+    
+    # write changed content of Makefile.local
+    open (MAKEFILE,">","Makefile.local");   
+    print MAKEFILE  @makefilelines;
+    close (MAKEFILE);
 }
 
 
@@ -426,52 +485,8 @@ sub ReadMainBlock {
       $Variable=~s/=/ /;
       ($Variable,$Argument)=split(' ',$Variable,2);
       ($Variable,$Argument)=split(' ',$Argument,2);
-      
-      if (-e "Makefile.local") {     
-        open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-        @MakeFileContent=<MAKEFILE>;
-        close(MAKEFILE);
-        
-        my $l0=" ";
-        my $l1=" ";
-        
-        foreach (@MakeFileContent) {
-          $l1=$_;
-          $l1=~s/ //g;
-          $l1=~s/=/ /;
-          
-          ($l0,$l1)=split(' ',$l1,2);
-          
-          if (!defined $l0) {
-            $l0="nothing";
-          }
-          
-          if ($l0 eq $Variable) {
-            ($l0,$l1)=split(' ',$line,2);
-            $_=$l1;
-            $FoundVariable=1;
-          }
-          #elsif ($l0 eq "CWD") {
-          #  $l1=`pwd`;
-          #  $_="CWD=$l1";
-          #}
-          
-        }
-        
-        if ($FoundVariable == 0) {
-          #the definition of the variable is not found -> add it to Makefile.local
-          push(@MakeFileContent,$Variable."=".$Argument);
-        }
-      }
-      
-      #write the updated copy of the Makefile.local 
-      open (MAKEFILE,">","Makefile.local");
 
-      foreach (@MakeFileContent) {
-        print MAKEFILE "$_";
-      }
-      
-      close (MAKEFILE);
+      add_line_makefile_local("$Variable=$Argument", 0);
     }
     
     elsif ($s0 eq "FORCEREPEATABLESIMULATIONPATH") {
@@ -542,7 +557,33 @@ sub ReadMainBlock {
         elsif ($s0 eq "BATSRUS") {$CouplingFileReader="_PIC_COUPLER_DATAFILE_READER_MODE__BATSRUS_";}
         else {
           die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
-        }      
+        }
+
+	#check if mask for input files is provided is given 
+	my $Mask='';
+	if($line =~ m/\(\s*$s0\s*=\s*(.*)\s*\)/i){$Mask = $1;}
+	if($Mask){
+	    if(-e "$CPLRDATA\/Schedule"){
+		print "WARNING: Schedule file for loading multiple data files already exists in the folder $CPLRDATA!\nA reserve copy is created.\n";
+		system("cp $CPLRDATA/Schedule $CPLRDATA/Schedule.autocopy.".`date "+%Y_%m_%d__%Hh%Mm%Ss"`);
+	    }
+	    
+	    my @FileList=`ls $CPLRDATA/$Mask | xargs -n 1 basename`;
+	    my $nFile = @FileList;
+	    my @schedulelines;
+	    push(@schedulelines,"Schedule file is automatically created using user-defined mask:\n$Mask \non ".`date`);
+	    push(@schedulelines, "\#NFILE\n$nFile\n\#FILELIST\n");
+	    foreach (@FileList){
+		#remove leading and trailing spaces
+		if($_ =~ m/^\s*(.*)\s*/){$_ = $1}
+		push(@schedulelines, "$_\n");
+	    }
+	    # write final schedule file
+	    open (SCHEDULEFILE,">","$CPLRDATA/Schedule");   
+	    print SCHEDULEFILE  @schedulelines;
+	    close (SCHEDULEFILE);
+
+	}
       }
       else {
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
@@ -721,46 +762,9 @@ sub ReadMainBlock {
   }
   
   
-  #set working directory in the makefile 
-  if (-e "Makefile.local") {
-    my @MakeFileContent;
-    my $FoundWSD=0;
-    
-    open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-    @MakeFileContent=<MAKEFILE>;
-    close(MAKEFILE);
-    
-    open (MAKEFILE,">","Makefile.local");
+  #set working directory in the makefile  
+  add_line_makefile_local("WSD=$ampsConfigLib::WorkingSourceDirectory", 1);
 
-    foreach (@MakeFileContent) {
-      if ($_=~m/WSD=/) {
-        $_="WSD=".$ampsConfigLib::WorkingSourceDirectory."\n";
-        $FoundWSD=1;
-      }
-      
-      print MAKEFILE "$_";
-    }
-      
-    close (MAKEFILE);
-    
-    #check if the WSD is found
-    if ($FoundWSD eq 0 ) {
-      open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-      @MakeFileContent=<MAKEFILE>;
-      close(MAKEFILE);
-    
-      open (MAKEFILE,">","Makefile.local");   
-      print MAKEFILE "WSD=$ampsConfigLib::WorkingSourceDirectory\n";  
-    
-      foreach (@MakeFileContent) {
-        print MAKEFILE "$_";      
-      }  
-      
-      
-      close (MAKEFILE);
-    }
-  }
-  
   
   #remove the temporary source directory and copy there a fresh copy of the code distribution
   if ( -d $ampsConfigLib::WorkingSourceDirectory ) {
@@ -1712,15 +1716,16 @@ sub ReadInterfaceBlock {
 
         #change variable in Makefile.local
 	# read the current content 
-	open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
-	@MakeFileContent=<MAKEFILE>;
-	close(MAKEFILE);
+	#open (MAKEFILE,"<","Makefile.local") || die "Cannot open Makefile.local\n";
+	#@MakeFileContent=<MAKEFILE>;
+	#close(MAKEFILE);
 
 	# add line with redefinition of the variable
-	push(@MakeFileContent, "INTERFACE=$UseInterface\n");
-	open (MAKEFILE,">","Makefile.local");   
-	print MAKEFILE  @MakeFileContent;  
-	close (MAKEFILE);
+	#push(@MakeFileContent, "INTERFACE=$UseInterface\n");
+	#open (MAKEFILE,">","Makefile.local");   
+	#print MAKEFILE  @MakeFileContent;  
+	#close (MAKEFILE);
+        add_line_makefile_local("INTERFACE=$UseInterface",1);
 	last;
     }
     else {      
@@ -2839,31 +2844,39 @@ sub ReadSpeciesBlock {
 
 #=============================== Process AMPS' settings from .ampsConfig
 sub ampsConfigSettings {
-  if (-e ".ampsConfig.Settings") {
-    my @Settings;
-  
-    open (AMPSSETTINGS,".ampsConfig.Settings") || die "Cannot open file\n";
-    @Settings=<AMPSSETTINGS>;
-    close (AMPSSETTINGS);
-  
-    
-    foreach (@Settings){
-      if (/^SPICEKERNELS=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); next};
-      if (/^SPICE=(.*)$/i) {`echo "SPICE=$1" >> Makefile.local`; next};
-      if (/^ICESLOCATION=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); next}; 
-  
-      if (/^BOOST=(.*)$/i) {`echo "BOOST=$1" >> Makefile.local`; next};
-      if (/^KAMELEON=(.*)$/i) {`echo "KAMELEON=$1" >> Makefile.local`; next};
+    if (-e ".amps.conf") {
+	my @Settings;
+	
+	open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
+	@Settings=<AMPSSETTINGS>;
+	close (AMPSSETTINGS);
+	
+	
+	foreach (@Settings){
+	    chomp($_);
+	    next unless $_;
+	    add_line_makefile_local($_,1);
+	    if (/^SPICEKERNELS=(.*)$/i) {
+		ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); 
+		next};
+	    if (/^ICESLOCATION=(.*)$/i) {
+		ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::ICES::locationICES\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_ices.cpp"); 
+		next}; 
+	    
+	    if (/^CPLRDATA=(.*)$/i) {
+		ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_datafile.cpp"); 
+		$CPLRDATA = $1;
+		next};
 
-      if (/^BATL=(.*)$/i) {`echo "BATL=$1" >> Makefile.local`; next};
-      if (/^SWMF=(.*)$/i) {`echo "SWMF=$1" >> Makefile.local`; next};
-      
-      if (/^CPLRDATA=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::CPLR::DATAFILE::path\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_datafile.cpp"); next};
-      if (/^MODELINPUTDATA=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::UserModelInputDataPath\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); next};
-      
-      if (/^OUTPUT=(.*)$/i) {ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); next;}
-    }    
-  }
+	    if (/^MODELINPUTDATA=(.*)$/i) {
+		ampsConfigLib::ChangeValueOfVariable("char PIC::UserModelInputDataPath\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
+		next};
+	    
+	    if (/^OUTPUT=(.*)$/i) {
+		ampsConfigLib::ChangeValueOfVariable("char PIC::OutputDataFileDirectory\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","pic/pic_init_const.cpp"); 
+		next}
+	}    
+    }
 }
 
 =comment

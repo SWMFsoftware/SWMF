@@ -19,13 +19,8 @@ our @Compilers;
 
 #create Makefile.local
 if (! -e "Makefile.local") {
-  `echo " " > Makefile.local`;
+  `touch Makefile.local`;
 }
-
-#reset to the default values variables that control using of the external libraries
-`echo "KAMELEON=nokameleon" >> .ampsConfig.Settings`;
-`echo "BATL=nobatl" >> .ampsConfig.Settings`;
-
 
 # build AMPS' Makefile.test
 foreach (@Arguments) { 
@@ -93,10 +88,10 @@ foreach (@Arguments) {
    if ((/^-s$/i)||(/^-show/)) { #print AMPS settings
      print "\nAMPS' Setting options:\n";
       
-     if (-e ".ampsConfig.Settings") {
+     if (-e ".amps.conf") {
        my @f;
        
-       open (FSETTINGS,"<.ampsConfig.Settings");
+       open (FSETTINGS,"<.amps.conf");
        @f=<FSETTINGS>;
        close(FSETTINGS);
        
@@ -110,6 +105,11 @@ foreach (@Arguments) {
      exit;
    } 
 }
+
+#default values
+add_line_amps_conf("TESTMODE=off");
+add_line_amps_conf("BATL=nobatl");
+add_line_amps_conf("KAMELEON=nokameleon");
 
 #process the configuration settings
 foreach (@Arguments) {
@@ -125,56 +125,56 @@ foreach (@Arguments) {
      @list=split(' ',$application);
      $application=$list[$#list];
 
-    `echo "InputFileAMPS=$application.input" >> Makefile.local`;
-      
-    #copy all makefile settings from the input file into 'Makefile.local'
-    #print "Config.pl modifies Makefile.local settings for application $1\n";
-    open (INPUTFILE,"<","$application.input") || die "Cannot open $application.input\n";
-      
-    while (my $line=<INPUTFILE>) {
-      my ($p0,$p1);
-        
-      chomp($line);
-      ($p0,$p1)=split(' ',$line,2);
-      $p0=lc($p0);
-      $p0=~s/^\s+//;
-        
-      if ($p0 =~ /^makefile/) {
-        `echo "$p1" >> Makefile.local`;
-      }
-    }
-      
-    close (INPUTFILE);   
-    
-    `echo "APPLICATION=$application" >> .ampsConfig.Settings`; 
+
+    add_line_amps_conf("InputFileAMPS=$application.input");   
+    add_line_amps_conf("APPLICATION=$application");
     next
   };
     
   if (/^-mpi=(.*)$/i)        {$MpiLocation=$1;                next}; 
   if (/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next};
-  if (/^-spice-path=(.*)$/i)      {`echo "SPICE=$1" >> Makefile.local`; `echo "SPICE=$1" >> .ampsConfig.Settings`; next}; 
-  if (/^-spice-kernels=(.*)$/i)    {`echo "SPICEKERNELS=$1" >> Makefile.local`; `echo "SPICEKERNELS=$1" >> .ampsConfig.Settings`; next};
-  if (/^-ices-path=(.*)$/i)       {`echo "ICESLOCATION=$1" >> Makefile.local`; `echo "ICESLOCATION=$1" >> .ampsConfig.Settings`;  next};
+  if (/^-spice-path=(.*)$/i)      {
+      add_line_amps_conf("SPICE=$1");
+      next}; 
+  if (/^-spice-kernels=(.*)$/i)    {
+      add_line_amps_conf("SPICEKERNELS=$1");
+      next};
+  if (/^-ices-path=(.*)$/i)       {
+      add_line_amps_conf("ICESLOCATION=$1");
+      next};
   
-  if (/^-boost-path=(.*)$/i)       {`echo "BOOST=$1" >> Makefile.local`; `echo "BOOST=$1" >> .ampsConfig.Settings`; next};
-  if (/^-kameleon-path=(.*)$/i)       {`echo "KAMELEON=$1" >> Makefile.local`; `echo "KAMELEON=$1" >> .ampsConfig.Settings`; next};
+  if (/^-boost-path=(.*)$/i)       {
+      add_line_amps_conf("BOOST=$1");
+      next};
+  if (/^-kameleon-path=(.*)$/i)       {
+      add_line_amps_conf("KAMELEON=$1");
+      next};
   
-  if (/^-batl-path=(.*)$/i)       {`echo "BATL=$1" >> Makefile.local`; `echo "BATL=$1" >> .ampsConfig.Settings`; next};
-  if (/^-swmf-path=(.*)$/i)       {`echo "SWMF=$1" >> Makefile.local`; `echo "SWMF=$1" >> .ampsConfig.Settings`; next};  
+  if (/^-batl-path=(.*)$/i)       {
+      add_line_amps_conf("BATL=$1");
+      next};
+  if (/^-swmf-path=(.*)$/i)       {
+      add_line_amps_conf("SWMF=$1");
+      next};  
   
-  if (/^-cplr-data-path=(.*)$/i)       {`echo "CPLRDATA=$1" >> Makefile.local`; `echo "CPLRDATA=$1" >> .ampsConfig.Settings`; next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
-  if (/^-model-data-path=(.*)$/i)  {`echo "MODELINPUTDATA=$1" >> Makefile.local`; `echo "MODELINPUTDATA=$1" >> .ampsConfig.Settings`; next}; #the path to the data file used by the user direactly (not through the PIC::CPLR::DATAFILE readers)
+  if (/^-cplr-data-path=(.*)$/i)       {
+      add_line_amps_conf("CPLRDATA=$1");
+      next};  #path to the data files used in the PIC::CPLR::DATAFILE file readers
+  if (/^-model-data-path=(.*)$/i)  {
+      add_line_amps_conf("MODELINPUTDATA=$1");
+      next}; #the path to the data file used by the user direactly (not through the PIC::CPLR::DATAFILE readers)
 
-  if (/^-output-path=(.*)$/i)       {`echo "OUTPUT=$1" >> .ampsConfig.Settings`; next};  #the directory where AMPS' output files will be located 
+  if (/^-output-path=(.*)$/i)       {
+      add_line_amps_conf("OUTPUT=$1");
+      next};  #the directory where AMPS' output files will be located 
 
   #compile for the nightly test
   if (/^-amps-test=(.*)$/i)  {
     my $t;
 
     $t=lc($1);
-    `echo "TESTMODE=$t" >> Makefile.local`;     
-    `echo "TESTMODE=$t" >> .ampsConfig.Settings`;
-     next
+    add_line_amps_conf("TESTMODE=$t");
+    next;
   }; 
 
   # set nightly test:
@@ -202,3 +202,58 @@ foreach (@Arguments) {
 
 
 exit 0;
+
+
+#=============================== Add a line to .amps.conf
+# USAGE:
+# add_line_amps_conf($Newline)
+#  $Newline has a form 'PARAMETER=value'
+# if PARAMETER has been defined before, it is OVERWRITTEN with the new value
+sub add_line_amps_conf{
+    # create Makefile.local if it doesn't exist
+    `touch .amps.conf` unless (-e ".amps.conf");
+    
+    # check that there are exactly 2 arguments
+    my $nArg = @_;
+    die "ERROR: add_line_amps_conf takes exactly 1 argument" 
+	unless ($nArg==1);
+
+    # get the name of parameter being defined
+    my $Parameter = '';
+    if($_[0] =~ m/(.*?)=(.*)/){
+	$Parameter = $1;
+    }
+    else{die "Trying to add invalid line to .amps.conf: $_[0]\n";}
+
+    # trim the parameter name as well as newline symbol at the end
+    $Parameter =~ s/^\s+//; $Parameter =~ s/\s+\n*$//;
+
+    # read the current content
+    open (SETTINGS,"<",".amps.conf") || 
+	die "Cannot open .amps.conf\n";
+    my @settingslines=<SETTINGS>;
+    close(SETTINGS);
+
+    # check if this parameter has already been defined
+    my $IsPresent = 0;
+    foreach (@settingslines) {
+	if ($_ =~ /$Parameter\s*=.*/){
+	    $_ = $_[0]; chomp($_); $_ = "$_\n";
+	    $IsPresent = 1;
+	    last;
+	}
+    }
+    
+    # if the parameter hasn't been defined before, add its definition
+    unless ($IsPresent) {
+	# temporary variable for storing a line to be printed
+	my $tmp; $tmp = $_[0]; chomp($tmp);# $tmp = "$tmp\n";
+	push(@settingslines,"$tmp\n") 
+    }
+
+    
+    # write changed content of .amps.conf
+    open (SETTINGS,">",".amps.conf");   
+    print SETTINGS  @settingslines;
+    close (SETTINGS);
+}
