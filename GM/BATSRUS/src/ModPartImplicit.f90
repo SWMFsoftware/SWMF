@@ -359,6 +359,7 @@ contains
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
+    use ModHallResist, ONLY: UseHallResist, HallCmaxFactor
     use ModCoarseAxis,ONLY:UseCoarseAxis, coarsen_axis_cells
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -379,7 +380,7 @@ contains
 
     logical:: IsConverged
 
-    real :: TimeSimulationOrig
+    real :: TimeSimulationOrig, HallCmaxFactorOrig
 
     logical :: DoTest, DoTestMe, DoTestKrylov, DoTestKrylovMe
 
@@ -459,7 +460,15 @@ contains
        ! advance explicit blocks, calc timestep 
        if(.not.UseDtFixed)cfl=ExplCfl
 
+       ! Make sure that full whistler speed is used in the explicit update
+       if(UseHallResist)then
+          HallCmaxFactorOrig = HallCmaxFactor
+          HallCmaxFactor = 1.0
+       endif
+
        call advance_expl(.true., -1) 
+
+       if(UseHallResist) HallCmaxFactor = HallCmaxFactorOrig
 
        if(.not.UsePartImplicit2)then
           ! update ghost cells for the implicit blocks to time level n+1
@@ -1215,7 +1224,8 @@ contains
     use ModvarIndexes
     use ModAdvance, ONLY: time_BLK
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
-    use ModHallResist, ONLY: UseHallResist, HallFactor_C, set_hall_factor_cell
+    use ModHallResist, ONLY: UseHallResist, HallFactor_C, HallJ_CD, &
+         set_hall_factor_cell
     use ModRadDiffusion, ONLY: add_jacobian_rad_diff
     use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity
     use ModGeometry, ONLY: true_cell
@@ -1682,9 +1692,6 @@ contains
 
       ! Calculate cell centered currents to be used by getflux
 
-      use ModHallResist, ONLY: HallJ_CD, IonMassPerCharge_G, &
-           set_ion_mass_per_charge
-
       use ModGeometry, ONLY: DgenDxyz_DDC, set_block_jacobian_cell 
 
       real :: DbDgen_DD(3,3)                     
@@ -1700,7 +1707,7 @@ contains
          DoTest = .false.; DoTestMe = .false.
       end if
 
-      call set_ion_mass_per_charge(iBlock)
+      call set_hall_factor_cell(iBlock, UseIonMassPerCharge=.true.)
 
       InvDx2 = 0.5/Dxyz_D(x_); InvDy2 = 0.5/Dxyz_D(y_); InvDz2 = 0.5/Dxyz_D(z_)
 
@@ -1777,11 +1784,8 @@ contains
       if(DoTestMe) write(*,*) NameSub, &
            ' HallJ_CD=',HallJ_CD(iTest,jTest,kTest,:)
 
-      call set_hall_factor_cell(iBlock)
-
       do k=1,nK; do j=1,nJ; do i=1,nI
-         HallJ_CD(i,j,k,:) = IonMassPerCharge_G(i,j,k) &
-              *HallFactor_C(i,j,k)*HallJ_CD(i,j,k,:)
+         HallJ_CD(i,j,k,:) = HallFactor_C(i,j,k)*HallJ_CD(i,j,k,:)
       end do; end do; end do
 
     end subroutine impl_init_hall
