@@ -290,7 +290,7 @@ subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
      ! iTypeAdvance_B and _BP by changing the sign to negative 
      ! for body blocks
      if(DoMoveCoord)then
-        if(TypeSemiImplicit == 'resistivity' .and. nBlockSemi > 0)then
+        if(TypeSemiImplicit == 'resistivity' .and. nBlockSemi >= 0)then
            iTypeAdvance_B(iBlockFromSemi_B(1:nBlockSemi)) = &
                 -abs(iTypeAdvance_B(iBlockFromSemi_B(1:nBlockSemi)))
         elseif(UseFieldLineThreads)then

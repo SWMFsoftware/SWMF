@@ -642,7 +642,7 @@ subroutine BATS_select_blocks
 
   ! Select and load balance blocks for partially implicit/steady scheme
   if(UsePartSteady .and. IsNewSteadySelect .or. UsePartImplicit &
-       .or. (TypeSemiImplicit=='resistivity' .and. nBlockSemi > 0))then
+       .or. (TypeSemiImplicit=='resistivity' .and. nBlockSemi >= 0))then
 
      ! Redo load balancing: move coordinates and data, there are no new blocks
      call load_balance(.true.,.true.,.false.)

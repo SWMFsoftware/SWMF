@@ -32,7 +32,7 @@ module ModSemiImplVar
   integer, public :: iTeImpl=0, iTrImplFirst=0, iTrImplLast=0, iEradImpl=0
 
   ! Number of semi-implicit grid blocks
-  integer, public:: nBlockSemi = 0
+  integer, public:: nBlockSemi = -1
 
   ! Conversion from compact block index iBlockSemi to normal index iBlock
   integer, public, allocatable:: iBlockFromSemi_B(:)
