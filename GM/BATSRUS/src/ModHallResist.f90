@@ -196,14 +196,17 @@ contains
   end subroutine set_ion_mass_per_charge_point
 
   !=========================================================================
-  subroutine set_hall_factor_cell(iBlock)
+  subroutine set_hall_factor_cell(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions
 
     integer, intent(in):: iBlock
+    logical, optional, intent(in):: UseIonMassPerCharge
 
     ! Set the hall factor for the cell centers of block iBlock
     ! Also set IsHallBlock if any of the cells have a non-zero factor
+    ! If UseIonMassPerCharge is present and true, the hall factor is
+    ! multiplied with the ion mass per charge averaged to the face
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
@@ -216,20 +219,35 @@ contains
     call block_inside_regions(iRegionHall_I, iBlock, &
          size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C)
 
+    ! Nothing to do if the block does not intersect with the Hall region
+    if(.not.IsHallBlock) RETURN
+
+    ! Multiply by HallFactorMax
     if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
+
+    if(.not.present(UseIonMassPerCharge)) RETURN
+    if(.not.UseIonMassPerCharge) RETURN
+
+    ! Multiply with ion mass per charge
+    call set_ion_mass_per_charge(iBlock)
+    HallFactor_C = HallFactor_C*IonMassPerCharge_G(1:nI,1:nJ,1:nK)
 
   end subroutine set_hall_factor_cell
   !=========================================================================
-  subroutine set_hall_factor_face(iBlock)
+  subroutine set_hall_factor_face(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions, nDim, nINode, nJNode, nKNode
 
     integer, intent(in):: iBlock
+    logical, optional, intent(in):: UseIonMassPerCharge
 
     ! Set the hall factor for the cell faces of block iBlock
     ! Also set IsHallBlock if any of the faces have a non-zero factor
+    ! If UseIonMassPerCharge is present and true, the hall factor is
+    ! multiplied with the ion mass per charge averaged to the face
 
     logical:: IsInside
+    integer:: i, j, k
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_DF)) &
          allocate(HallFactor_DF(nDim,nINode,nJNode,nKNode))
@@ -243,7 +261,35 @@ contains
     call block_inside_regions(iRegionHall_I, iBlock, &
          size(HallFactor_DF), 'face', IsHallBlock, Value_I=HallFactor_DF)
 
+    ! Nothing to do if the block does not intersect with the Hall region
+    if(.not.IsHallBlock) RETURN
+
+    ! Multiply by HallFactorMax
     if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
+
+    if(.not.present(UseIonMassPerCharge)) RETURN
+    if(.not.UseIonMassPerCharge) RETURN
+
+    ! Multiply with ion mass per charge
+    call set_ion_mass_per_charge(iBlock)
+    do k=1, nK; do j=1,nJ; do i=1, nI+1
+       HallFactor_DF(1,i,j,k) = HallFactor_DF(1,i,j,k)*&
+            0.5*sum(IonMassPerCharge_G(i-1:i,j,k))
+    end do; end do; end do
+
+    if(nDim == 1) RETURN
+
+    do k=1, nK; do j=1,nJ+1; do i=1, nI
+       HallFactor_DF(2,i,j,k) = HallFactor_DF(2,i,j,k)*&
+            0.5*sum(IonMassPerCharge_G(i,j-1:j,k))
+    end do; end do; end do
+
+    if(nDim == 2) RETURN
+
+    do k=1, nK+1; do j=1,nJ; do i=1, nI
+       HallFactor_DF(3,i,j,k) = HallFactor_DF(3,i,j,k)*&
+            0.5*sum(IonMassPerCharge_G(i,j,k-1:k))
+    end do; end do; end do
 
   end subroutine set_hall_factor_face
   !=========================================================================
