@@ -154,9 +154,6 @@ subroutine MH_set_parameters(TypeAction)
   ! Variable for #UNIFORMAXIS
   logical:: UseUniformAxis = .true.
 
-  ! Variables for the #GRIDRESOLUTION and #GRIDLEVEL commands
-  real    :: InitialResolution = -1.0
-
   ! Variables for checking the user module
   character (len=lStringLine) :: NameUserModuleRead='?'
   real                        :: VersionUserModuleRead=0.0
@@ -1001,10 +998,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoSaveBinary',save_binary)
 
      case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
-
-        call read_region_param(NameCommand, UseStrictIn=UseStrict, &
-             nInitLevelInOut=initial_refine_levels, &
-             InitResInOut=InitialResolution)
+        call read_region_param(NameCommand, UseStrictIn=UseStrict)
 
      case("#AMRLEVELS")
         call read_var('MinBlockLevel',min_block_level)
@@ -2199,7 +2193,6 @@ contains
     dt            = 0.0
     dt_BLK        = 0.0
 
-    initial_refine_levels = 0
     nRefineLevelIC        = 0
 
     min_block_level =  0
@@ -2430,11 +2423,6 @@ contains
 
     ! This depends on the grid geometry set above
     call correct_plot_range
-
-    ! Fix resolutions (this depends on domain size set above)
-    if(InitialResolution > 0.0) initial_refine_levels = nint( &
-         alog(((XyzMax_D(x_)-XyzMin_D(x_)) / (nRootRead_D(x_) * nI))  &
-         / InitialResolution) / alog(2.0) )
 
     if(UseTiming)then
        call timing_version(IsOn,Name,Version)
@@ -3168,7 +3156,7 @@ contains
 
        ! Make sure that plot resolution is a power of 2 fraction of cell size
        Ratio     = CellSizeMax_D(x_)/plot_dx(1, iFile)
-       Ratio     = 2.0**nint(alog(Ratio)/alog(2.0))
+       Ratio     = 2.0**nint(log(Ratio)/log(2.0))
        PlotRes_D = CellSizeMax_D / Ratio
        plot_dx(1:3, iFile) = PlotRes_D
 

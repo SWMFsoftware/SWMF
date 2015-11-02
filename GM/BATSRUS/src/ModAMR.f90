@@ -21,7 +21,7 @@ module ModAMR
   real, allocatable:: AmrCriteria_IB(:,:)
 
   ! Refinement parameters.
-  integer, public:: initial_refine_levels, nRefineLevelIC
+  integer, public:: nRefineLevelIC
   logical, public:: DoAmr = .false.
   integer, public:: DnAmr = -1
   real,    public:: DtAmr = -1.0

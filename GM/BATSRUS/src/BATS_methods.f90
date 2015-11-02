@@ -11,7 +11,7 @@ subroutine BATS_setup
   use ModMain
   use ModCT, ONLY : DoInitConstrainB
   use ModIO
-  use ModAMR,      ONLY: initial_refine_levels, nRefineLevelIC
+  use ModAMR,      ONLY: nRefineLevelIC
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModParallel, ONLY: init_mod_parallel
 
@@ -57,7 +57,8 @@ contains
 
     use ModMain, ONLY: iteration_number
     use BATL_lib, ONLY: init_grid_batl, read_tree_file,set_amr_criteria,&
-         set_amr_geometry, nBlock, Unused_B, init_amr_criteria
+         set_amr_geometry, nBlock, Unused_B, init_amr_criteria, &
+         nInitialAmrLevel
     use ModBatlInterface, ONLY: set_batsrus_grid
     ! Dummy variables, to avoid array size issues with State_VGB in
     ! set_amr_criteria
@@ -78,7 +79,7 @@ contains
        call init_amr_criteria
 
        ! Perform initial refinement of mesh and solution blocks.
-       do nRefineLevel = 1, initial_refine_levels
+       do nRefineLevel = 1, nInitialAmrLevel
 
           if (iProc == 0 .and. lVerbose > 0) then
              call write_prefix; write (iUnitOut,*) NameSub, &
@@ -99,10 +100,12 @@ contains
        ! Read initial solution block geometry from octree restart file.
 
        NameFile = trim(NameRestartInDir)//'octree.rst'
-       if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
+       if (UseRestartInSeries) &
+            call string_append_iter(NameFile,iteration_number)
        call read_tree_file(NameFile)
        call init_grid_batl
        call set_batsrus_grid
+
        ! Set all arrays for AMR
        call init_amr_criteria
 
@@ -127,7 +130,7 @@ contains
        call write_prefix; write (iUnitOut,*) '    total blocks = ',nBlockALL
     end if
 
-    nRefineLevel = initial_refine_levels
+    nRefineLevel = nInitialAmrLevel
 
     if(DoSetLevels) call set_levels
   end subroutine grid_setup
