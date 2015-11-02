@@ -635,9 +635,8 @@ contains
     use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: i_DD
     use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
-    use ModHallResist,   ONLY: UseHallResist, HallFactor_DF, &
-         set_hall_factor_face, &
-         set_ion_mass_per_charge, IonMassPerCharge_G
+    use ModHallResist,   ONLY: UseHallResist, set_hall_factor_face, &
+         HallFactor_DF, IsHallBlock
     use ModB0,           ONLY: B0_DGB
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
@@ -688,11 +687,11 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          call set_ion_mass_per_charge(iBlock)
-          call set_hall_factor_face(iBlock)
-
           Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
           
+          call set_hall_factor_face(iBlock, UseIonMassPerCharge=.true.)
+          if(.not.IsHallBlock) CYCLE
+
           do iDim = 1, nDim
              Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
              do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
@@ -704,11 +703,7 @@ contains
                 ! Cell center indexes for the cell on the left of the face
                 i1 = i-Di; j1 = j-Dj; k1 = k - Dk
 
-                ! Average m/e, rho and B to the face
-                HallCoeff = HallCoeff* &
-                     0.5*( IonMassPerCharge_G(i1,j1,k1) &
-                     +     IonMassPerCharge_G(i,j,k)    )
-
+                ! Average rho and B to the face
                 Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
                      +     State_VGB(Rho_,i,j,k,iBlock)    )
 
@@ -719,7 +714,7 @@ contains
                 ! It is easier to use B0_DGB then then the 3 face arrays
                 ! The res change on the coarse side will get overwritten
                 if(UseB0) b_D = b_D + &
-                     0.5*(B0_DGB(:,i1,j1,k1,iBlock)+ B0_DGB(:,i,j,k,iBlock))
+                     0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
                 
                 ! Calculate B/ne for the face
                 Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
