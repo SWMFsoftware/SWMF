@@ -94,6 +94,7 @@ module BATL_lib
 
   ! Inherited from BATL_region
   public:: read_region_param, get_region_indexes, block_inside_regions
+  public:: nInitialAmrLevel
 
   ! Inherited from BATL_pass_cell
   public:: message_pass_cell
