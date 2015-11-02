@@ -213,18 +213,16 @@ contains
     if(.not.allocated(iRegionHall_I))then
        IsHallBlock = .true.
        HallFactor_C = HallFactorMax
-       RETURN
+    else
+       call block_inside_regions(iRegionHall_I, iBlock, &
+            size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C)
+
+       ! Nothing to do if the block does not intersect with the Hall region
+       if(.not.IsHallBlock) RETURN
+
+       ! Multiply by HallFactorMax
+       if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
     end if
-
-    call block_inside_regions(iRegionHall_I, iBlock, &
-         size(HallFactor_C), 'cells', IsHallBlock, Value_I=HallFactor_C)
-
-    ! Nothing to do if the block does not intersect with the Hall region
-    if(.not.IsHallBlock) RETURN
-
-    ! Multiply by HallFactorMax
-    if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
-
     if(.not.present(UseIonMassPerCharge)) RETURN
     if(.not.UseIonMassPerCharge) RETURN
 
@@ -255,23 +253,23 @@ contains
     if(.not.allocated(iRegionHall_I))then
        IsHallBlock = .true.
        HallFactor_DF = HallFactorMax
-       RETURN
+    else
+       call block_inside_regions(iRegionHall_I, iBlock, &
+            size(HallFactor_DF), 'face', IsHallBlock, Value_I=HallFactor_DF)
+
+       ! Nothing to do if the block does not intersect with the Hall region
+       if(.not.IsHallBlock) RETURN
+
+       ! Multiply by HallFactorMax
+       if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
     end if
-
-    call block_inside_regions(iRegionHall_I, iBlock, &
-         size(HallFactor_DF), 'face', IsHallBlock, Value_I=HallFactor_DF)
-
-    ! Nothing to do if the block does not intersect with the Hall region
-    if(.not.IsHallBlock) RETURN
-
-    ! Multiply by HallFactorMax
-    if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
 
     if(.not.present(UseIonMassPerCharge)) RETURN
     if(.not.UseIonMassPerCharge) RETURN
 
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
+
     do k=1, nK; do j=1,nJ; do i=1, nI+1
        HallFactor_DF(1,i,j,k) = HallFactor_DF(1,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i-1:i,j,k))
