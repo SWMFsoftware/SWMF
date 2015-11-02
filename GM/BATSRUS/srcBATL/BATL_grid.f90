@@ -44,6 +44,7 @@ module BATL_grid
        CellMetrice_DDG(:,:,:,:,:), & ! Metrics at cell center. Like: dx/dXi.
        CellCoef_DDGB(:,:,:,:,:,:)    ! X,Y,Z to general coord transform coef
 
+  ! If true, cell faces are assumed to be flat polygons formed by the nodes
   logical, public:: IsNodeBasedGrid = .true.
 
   ! Local variables
@@ -170,6 +171,7 @@ contains
 
     if(IsRoundCube) IsPeriodic_D = .false.
 
+    ! Set size of domain
     DomainSize_D = CoordMax_D - CoordMin_D
 
   end subroutine init_grid
