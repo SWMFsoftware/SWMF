@@ -1325,7 +1325,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = iNode_B(iBLK)
      case('hall')
         if(UseHallResist)then
-           call set_hall_factor_cell(iBLK)
+           call set_hall_factor_cell(iBLK, UseIonMassPerCharge=.false.)
            PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
         else
            PlotVar(:,:,:,iVar) = 0.0

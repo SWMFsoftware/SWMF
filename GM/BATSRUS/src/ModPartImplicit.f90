@@ -1707,7 +1707,7 @@ contains
          DoTest = .false.; DoTestMe = .false.
       end if
 
-      call set_hall_factor_cell(iBlock, UseIonMassPerCharge=.true.)
+      call set_hall_factor_cell(iBlock)
 
       InvDx2 = 0.5/Dxyz_D(x_); InvDy2 = 0.5/Dxyz_D(y_); InvDz2 = 0.5/Dxyz_D(z_)
 
@@ -2306,7 +2306,7 @@ contains
        ! the Hall factor is needed on the face. 
        ! Also note that if HallCmaxFactor is zero, then the whistler speed
        ! gets ignored. This may or may not be intentional !!!
-       if(UseHallResist)call set_hall_factor_face(iBlock, .true.)
+       if(UseHallResist)call set_hall_factor_face(iBlock)
 
        do iDim = 1, nDim
 

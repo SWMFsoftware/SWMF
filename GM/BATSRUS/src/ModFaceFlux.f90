@@ -427,7 +427,7 @@ contains
          .not. index(TypeSemiImplicit,'resistivity')>0
 
     if(UseHallResist)then
-       call set_hall_factor_face(iBlock, UseIonMassPerCharge=.true.)
+       call set_hall_factor_face(iBlock)
     elseif(UseBiermannBattery)then
        call set_ion_mass_per_charge(iBlock)
     end if

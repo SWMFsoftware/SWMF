@@ -689,7 +689,7 @@ contains
 
           Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
           
-          call set_hall_factor_face(iBlock, UseIonMassPerCharge=.true.)
+          call set_hall_factor_face(iBlock)
           if(.not.IsHallBlock) CYCLE
 
           do iDim = 1, nDim

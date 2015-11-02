@@ -205,8 +205,8 @@ contains
 
     ! Set the hall factor for the cell centers of block iBlock
     ! Also set IsHallBlock if any of the cells have a non-zero factor
-    ! If UseIonMassPerCharge is present and true, the hall factor is
-    ! multiplied with the ion mass per charge averaged to the face
+    ! If UseIonMassPerCharge is present and FALSE, the hall factor is
+    ! NOT multiplied with the ion mass per charge averaged to the face
     !----------------------------------------------------------------------
     if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
@@ -223,8 +223,10 @@ contains
        ! Multiply by HallFactorMax
        if(HallFactorMax /= 1) HallFactor_C = HallFactorMax*HallFactor_C
     end if
-    if(.not.present(UseIonMassPerCharge)) RETURN
-    if(.not.UseIonMassPerCharge) RETURN
+
+    if(present(UseIonMassPerCharge))then
+       if(.not.UseIonMassPerCharge) RETURN
+    end if
 
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
@@ -241,8 +243,8 @@ contains
 
     ! Set the hall factor for the cell faces of block iBlock
     ! Also set IsHallBlock if any of the faces have a non-zero factor
-    ! If UseIonMassPerCharge is present and true, the hall factor is
-    ! multiplied with the ion mass per charge averaged to the face
+    ! If UseIonMassPerCharge is present and FALSE, the hall factor is
+    ! NOT multiplied with the ion mass per charge averaged to the face
 
     logical:: IsInside
     integer:: i, j, k
@@ -264,8 +266,9 @@ contains
        if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
     end if
 
-    if(.not.present(UseIonMassPerCharge)) RETURN
-    if(.not.UseIonMassPerCharge) RETURN
+    if(present(UseIonMassPerCharge))then
+       if(.not.UseIonMassPerCharge) RETURN
+    end if
 
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
