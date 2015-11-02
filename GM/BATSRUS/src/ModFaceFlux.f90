@@ -426,9 +426,11 @@ contains
     DoHallInduction = UseHallResist .and. &
          .not. index(TypeSemiImplicit,'resistivity')>0
 
-    if(UseHallResist .or. UseBiermannBattery) &
-         call set_ion_mass_per_charge(iBlock)
-    if(UseHallResist) call set_hall_factor_face(iBlock)
+    if(UseHallResist)then
+       call set_hall_factor_face(iBlock, UseIonMassPerCharge=.true.)
+    elseif(UseBiermannBattery)then
+       call set_ion_mass_per_charge(iBlock)
+    end if
 
     if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
@@ -987,9 +989,7 @@ contains
     BiermannCoeff = -1.0
     if(UseHallResist .or. UseBiermannBattery)then
        if(UseHallResist)then
-          HallCoeff = HallFactor_DF(iDimFace,iFace,jFace,kFace) &
-               *0.5*( IonMassPerCharge_G(iLeft,jLeft,kLeft) &
-               +      IonMassPerCharge_G(iRight,jRight,kRight) )
+          HallCoeff = HallFactor_DF(iDimFace,iFace,jFace,kFace)
           BiermannCoeff = HallCoeff
        else
           BiermannCoeff = &
