@@ -2306,7 +2306,7 @@ contains
        ! the Hall factor is needed on the face. 
        ! Also note that if HallCmaxFactor is zero, then the whistler speed
        ! gets ignored. This may or may not be intentional !!!
-       if(UseHallResist)call set_hall_factor_face(iBlock)
+       if(UseHallResist)call set_hall_factor_face(iBlock, .true.)
 
        do iDim = 1, nDim
 
