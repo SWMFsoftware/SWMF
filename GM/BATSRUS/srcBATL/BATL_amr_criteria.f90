@@ -209,8 +209,8 @@ contains
        end do
     end if
 
-    ! Copy over geometry based criteria
-    if(nArea > 0) call init_region
+    ! Initialize geometry based criteria
+    call init_region
 
     ! Loop over the areas defined by #GRIDLEVEL/RESOLUTION commands
     ! That do not have a name
