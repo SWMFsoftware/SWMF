@@ -650,7 +650,7 @@ contains
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
-    ! DoTest = iBlock == 1
+    ! DoTest = iBlock == 6
 
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
@@ -715,7 +715,8 @@ contains
        Area => AreaGeo_I(iArea)
        NameShape = Area%NameShape
 
-       if(DoTest)write(*,*) NameSub,' iArea, NameShape=', iArea, NameShape
+       if(DoTest)write(*,*) NameSub,' iArea,iSign,NameShape=', &
+            iArea, iSign, NameShape
 
        if(NameShape == 'all')then
           ! Set everything inside
@@ -745,6 +746,14 @@ contains
                IsInside, IsInside_I, Value_I)
        end if
 
+       if(DoTest.and.iRegion>1)then
+          if(DoBlock)write(*,*) NameSub,' IsInsideOld, IsInside=', &
+               IsInsideOld, IsInside
+          if(DoValue)write(*,*) NameSub,' min, maxval ValueOld =', &
+               minval(ValueOld_I), maxval(ValueOld_I)
+          if(DoValue)write(*,*) NameSub,' min, maxval Value    =', &
+               minval(Value_I), maxval(Value_I)
+       end if
        ! Negate results for negative sign
        if(iRegion == 1)then
           if(iSign < 0)then
@@ -764,13 +773,29 @@ contains
              if(DoValue) Value_I    = max(ValueOld_I, Value_I)
           end if
        end if
+
+       if(DoTest)then
+          if(DoBlock)write(*,*) NameSub,' IsInside=', IsInside
+          if(DoValue)write(*,*) NameSub,' min, max Value =', &
+               minval(Value_I), maxval(Value_I)
+       end if
     end do
+
+    ! Correct IsInside in case an array of values is returned
+    if(DoBlock)then
+       if(DoMask)then
+          IsInside = any(IsInside_I)
+       elseif(DoValue)then
+          IsInside = any(Value_I > 0)
+       end if
+    endif
 
     if(DoTest)then
        write(*,*) NameSub,' finished with'
        if(DoBlock) write(*,*)' IsInside       =', IsInside
        if(DoMask)  write(*,*)' any(IsInside_I)=', any(IsInside_I)
-       if(DoValue) write(*,*)' maxval(Value_I)=', maxval(Value_I)
+       if(DoValue) write(*,*)' min, max Value =', &
+            minval(Value_I), maxval(Value_I)
     end if
 
   contains
