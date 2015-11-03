@@ -610,21 +610,27 @@ contains
     ! indexed by the iRegion_I array. Positive region index means 
     ! an "OR", while negative region index means "AND NOT".
     ! If the first region index is negative, then it is relative to
-    ! an "all" condition.
+    ! an "all" condition. The regions are evaluated in the order
+    ! they are listed in the iRegion_I array.
     !
-    ! The IsInside is present it is set to true if the block intersects 
-    ! any of the + regions and avoids all the - regions.
+    ! If IsInside is present and neither IsInside_I/Value_I are present,
+    ! then IsInside is set to true if the block intersects 
+    ! any of the + regions and completely avoids all the - regions.
     ! 
     ! If IsInside_I is present, it is set true for each point of the block
-    ! (defined by StringLocation) that is inside the region(s).
+    ! (defined by StringLocation) that is inside any of the +region(s) 
+    ! and outside all of the -regions.
+    ! If IsInside is also present, it is set to IsInside = any(IsInside_I).
     !
-    ! If Value_I is present, then it is set to 1 inside the region(s), 
-    ! 0 outside the regions, and between 0 and 1 inside the tapering
-    ! for each point of the block defined by StringLocation.
+    ! If Value_I is present, then it is set to 1 inside any of the +region(s)
+    ! and outside all of the -regions(s). In the tapering region the
+    ! value gradually decreases to 0 and the rest is set to 0 value.
+    ! This is done for each point of the block defined by StringLocation.
+    ! If IsInside is also present, it is set to IsInside = any(Value_I > 0).
     ! 
     ! The StringLocation argument tells which points of the block are to be 
     ! evaluated for IsInside_I and/or Value_I. Possible values are 
-    ! "cell", "ghost", "xface", "yface", "zface", "node"
+    ! "cells", "ghosts", "xfaces", "yfaces", "zfaces", "faces", "nodes"
     ! Only the first character is significant and it is case insensitive.
 
     integer, intent(in):: iRegion_I(:)
@@ -781,7 +787,7 @@ contains
        end if
     end do
 
-    ! Correct IsInside in case an array of values is returned
+    ! Correct IsInside in case an array of values is also returned
     if(DoBlock)then
        if(DoMask)then
           IsInside = any(IsInside_I)
