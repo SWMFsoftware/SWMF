@@ -279,39 +279,6 @@ contains
        if(HallFactorMax /= 1) HallFactor_DF = HallFactorMax*HallFactor_DF
     end if
 
-    if(HallSpeedTinyDim > 0)then
-       ! Calculate Hall speed and compare with HallSpeedTiny
-       IsNewBlock = .true.
-       b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
-       HallSpeedTiny2 = (HallSpeedTinyDim*Io2No_V(UnitU_))**2
-
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
-          call get_face_curl(1, i, j, k, iBlock, IsNewBlock, b_DG, Current_D)
-          Rho = 0.5*sum(State_VGB(iRhoIon_I,i-1:i,j,k,iBlock))
-          HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(1,i,j,k)/Rho)**2
-          if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(1,i,j,k) = 0
-       end do; end do; end do
-
-       if(nDim > 1)then
-          do k = 1, nK; do j = 1, nJ+1; do i = 1, nI
-             call get_face_curl(2, i,j,k,iBlock, IsNewBlock, b_DG, Current_D)
-             Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j-1:j,k,iBlock))
-             HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(2,i,j,k)/Rho)**2
-             if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(2,i,j,k) = 0
-          end do; end do; end do
-       end if
-
-       if(nDim > 2)then
-          do k = 1, nK+1; do j = 1, nJ; do i = 1, nI
-             call get_face_curl(3, i,j,k,iBlock, IsNewBlock, b_DG, Current_D)
-             Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j,k-1:k,iBlock))
-             HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(3,i,j,k)/Rho)**2
-             if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(3,i,j,k) = 0
-          end do; end do; end do
-       end if
-
-    end if
-
     if(present(UseIonMassPerCharge))then
        if(.not.UseIonMassPerCharge) RETURN
     end if
@@ -319,16 +286,37 @@ contains
     ! Multiply with ion mass per charge
     call set_ion_mass_per_charge(iBlock)
 
+    ! Check for small Hall velocity
+    if(HallSpeedTinyDim > 0)then
+       ! Calculate Hall speed and compare with HallSpeedTiny
+       IsNewBlock = .true.
+       b_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+       HallSpeedTiny2 = (HallSpeedTinyDim*Io2No_V(UnitU_))**2
+    end if
+
     do k=1, nK; do j=1,nJ; do i=1, nI+1
        HallFactor_DF(1,i,j,k) = HallFactor_DF(1,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i-1:i,j,k))
+       if(HallSpeedTinyDim <= 0) CYCLE
+       call get_face_curl(1, i, j, k, iBlock, IsNewBlock, b_DG, Current_D)
+       Rho = 0.5*sum(State_VGB(iRhoIon_I,i-1:i,j,k,iBlock))
+       HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(1,i,j,k)/Rho)**2
+       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(1,i,j,k) = 0
     end do; end do; end do
+
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI+1
+       end do; end do; end do
 
     if(nDim == 1) RETURN
 
     do k=1, nK; do j=1,nJ+1; do i=1, nI
        HallFactor_DF(2,i,j,k) = HallFactor_DF(2,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j-1:j,k))
+       if(HallSpeedTinyDim <= 0) CYCLE
+       call get_face_curl(2, i,j,k,iBlock, IsNewBlock, b_DG, Current_D)
+       Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j-1:j,k,iBlock))
+       HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(2,i,j,k)/Rho)**2
+       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(2,i,j,k) = 0
     end do; end do; end do
 
     if(nDim == 2) RETURN
@@ -336,6 +324,11 @@ contains
     do k=1, nK+1; do j=1,nJ; do i=1, nI
        HallFactor_DF(3,i,j,k) = HallFactor_DF(3,i,j,k)*&
             0.5*sum(IonMassPerCharge_G(i,j,k-1:k))
+       if(HallSpeedTinyDim <= 0) CYCLE
+       call get_face_curl(3, i,j,k,iBlock, IsNewBlock, b_DG, Current_D)
+       Rho = 0.5*sum(State_VGB(iRhoIon_I,i,j,k-1:k,iBlock))
+       HallSpeed2 = sum(Current_D**2)*(HallFactor_DF(3,i,j,k)/Rho)**2
+       if(HallSpeed2 < HallSpeedTiny2) HallFactor_DF(3,i,j,k) = 0
     end do; end do; end do
 
   end subroutine set_hall_factor_face
