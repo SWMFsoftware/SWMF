@@ -978,7 +978,14 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            PlotVar(:,:,:,iVar) = &
                 State_VGB(iRhoUy,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
         end if
-     case('uz')
+     case('uxrot')
+        PlotVar(:,:,:,iVar) = &
+             State_VGB(iRhoUx,:,:,:,iBLK)/State_VGB(iRho,:,:,:,iBLK)
+
+     case('uyrot')
+        PlotVar(:,:,:,iVar) = &
+             State_VGB(iRhoUy,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
+     case('uz','uzrot')
         PlotVar(:,:,:,iVar) = &
              State_VGB(iRhoUz,:,:,:,iBLK) / State_VGB(iRho,:,:,:,iBLK)
      case('b1x')
@@ -1330,6 +1337,13 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         else
            PlotVar(:,:,:,iVar) = 0.0
         end if
+     case('hallfactor')
+        if(UseHallResist)then
+           call set_hall_factor_cell(iBLK, .false.)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
+        else
+           PlotVar(:,:,:,iVar) = 0.0
+        end if
 
      case('elaser')
         if(UseLaserHeating)then
@@ -1457,7 +1471,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
      case('eta','visco')
         PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
              (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-     case('ux','uy','uz')
+     case('ux','uy','uz','uxrot','uyrot','uzrot')
         PlotVar(:,:,:,iVar)=PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
      case('jx','jy','jz','jr',&
           'jxe','jye','jze','jxw','jyw','jzw', &
@@ -1616,14 +1630,20 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      case('t','temp')
         NameTecVar = 'T'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitTemperature_)
-     case('ux') 
+     case('ux')
         NameTecVar = 'U_x'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('uy') 
         NameTecVar = 'U_y'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
-     case('uz') 
+     case('uz', 'uzrot') 
         NameTecVar = 'U_z'//NameTecFluid
+        NameUnit   = NameTecUnit_V(UnitU_)
+     case('uxrot')
+        NameTecVar = 'U_x_rot'//NameTecFluid
+        NameUnit   = NameTecUnit_V(UnitU_)
+     case('uyrot') 
+        NameTecVar = 'U_y_rot'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('ur') 
         NameTecVar = 'U_r'//NameTecFluid
@@ -1814,7 +1834,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = NameIdlUnit_V(UnitN_)
      case('t','temp')
         NameUnit = NameIdlUnit_V(UnitTemperature_)
-     case('ux','uy','uz','ur')
+     case('ux','uy','uz','ur','uxrot','uyrot','uzrot')
         NameUnit = NameIdlUnit_V(UnitU_)
      case('jx','jy','jz','jr',&
           'jxe','jye','jze','jxw','jyw','jzw', &
