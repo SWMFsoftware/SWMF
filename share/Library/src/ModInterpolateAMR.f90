@@ -3311,7 +3311,7 @@ contains
   subroutine interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
        XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
        iLevelSubgrid_I, IsOut_I, DxyzInv_D,               &
-       nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
+       nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubgridIn_I)
     use ModResolutionCorner, ONLY: resolution_corner
     !\
     !USE: The tools to fill in sort stencil array
@@ -3373,10 +3373,15 @@ contains
     !The following is true if stencil does not employ 
     !the out-of-grid points
     !/
-    logical, intent(out), optional:: IsSecondOrder  
+    logical, intent(out), optional:: IsSecondOrder 
+    !\
+    ! Number of points in a subgrid
+    !/
+    integer,  intent(in), optional:: nSubgridIn_I(2**nDim)
     !\
     ! Local variables
     !/
+    integer                    :: nSubgrid_I(2**nDim)
     !\
     ! The output array in interpolate_amr2,3  routine
     ! This is the set of numbers of the elements of the basic stencil
@@ -3447,6 +3452,12 @@ contains
     !\
     !Start non-uniform grid
     !/
+    if(present(nSubgridIn_I))then
+       nSubgrid_I = nSubgridIn_I
+    else
+       nSubgrid_I = 1
+       where(iLevelSubgrid_I==Fine_.and..not.IsOut_I)nSubgrid_I = nGrid
+    end if
     if(IsNearBoundary)call prolong_beyond_boundary
     if(DoInit)call init_sort_stencil
     select case(nDim)
@@ -3579,13 +3590,14 @@ contains
       integer :: iSubGrid
       !--------------------
       iLevelSubgrid_I(iGridGhost) = iLevelSubgrid_I(iGridPhys) 
+      nSubgrid_I(iGridGhost)      = nSubgrid_I(iGridPhys)
       !\
       !nGrid for refined subgrid 
       !/
-      do iSubGrid = 1, (nGrid - 1)*iLevelSubgrid_I(iGridPhys) + 1 
+      do iSubGrid = 1, nSubgrid_I(iGridGhost) 
          XyzGrid_DII(:,iSubGrid,iGridGhost) = &
-              XyzGrid_DII(:,iSubGrid,iGridPhys) +&
-              XyzGrid_DII(:,0,iGridGhost) - XyzGrid_DII(:,0,iGridPhys )
+              -XyzGrid_DII(:,iSubGrid,iGridPhys) +&
+              XyzGrid_DII(:,0,iGridGhost) + XyzGrid_DII(:,0,iGridPhys )
       end do
     end subroutine prolong
 
@@ -3635,7 +3647,7 @@ contains
       IsOutSaved_I = IsOut_I
       iPoint = 0
       do iGrid = 1, nGrid
-         do iSubgrid = 1, 1 + (nGrid - 1)*iLevelSubgrid_I(iGrid)
+         do iSubgrid = 1, nSubgrid_I(iGrid)
             iPoint = iPoint + 1
             iGrid_I(iPoint) = iGrid
             iSubGrid_I(iPoint) = iSubGrid
