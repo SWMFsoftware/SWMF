@@ -1,0 +1,162 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Test BATL_region features
+
+#SAVERESTART
+F			DoSaveRestart
+
+GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+#GRID
+4			nRootBlockX
+4			nRootBlockY
+1			nRootBlockZ
+-32.                    xMin
++32.                    xMax
+-32.                    yMin
++32.                    yMax
+-1.                     zMin
++1.                     zMax
+
+#GRIDRESOLUTION
+0.5			Resolution
+initial
+
+#GRIDRESOLUTION
+0.5			Resolution
+sphere0			NameShape
+15.0			Radius
+
+#UNIFORMSTATE
+1.0			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+1.0			p
+
+#OUTERBOUNDARY
+periodic		TypeBcEast
+periodic		TypeBcWest
+periodic		TypeBcSouth
+periodic		TypeBcNorth
+periodic		TypeBcBottom
+periodic		TypeBcTop
+
+
+#HALLRESISTIVITY
+T			UseHallResistFlux
+1.0			HallFactorMax
+1.0			HallCmaxFactor
+
+#REGION
+r1
+sphere stretched tapered
+0.0			xPosition
+2.0			yPosition
+9.0			Radius
+7.0			RadiusY
+2.0			Taper
+
+#REGION
+r2
+paraboloidy tapered
+0.0	    		xPosition
+-7.0			yPosition
+-22.0			Height
+20.0			Radius
+2.0			Taper
+
+#REGION
+r3
+doubleconex
+0.0			xPosition
+-12.0			yPosition
+7.0			Height
+3.0			Radius
+
+#REGION
+r4
+brick rotated
+4.0  			xPosition
+3.0			yPosition
+4.0			SizeX
+4.0			SizeY
+45.0			zRotate
+
+#REGION
+r5
+shell stretched
+-4.0  			xPosition
+3.0			yPosition
+1.0			RadiusInner
+2.0			Radius
+3.0			RadiusPerp
+45.0			zRotate
+
+#REGION
+r6
+funnely tapered rotated
+10.0   			xPosition
+-10.0			yPosition
+15.0			Height
+3.0			RadiusStart
+6.0			Radius
+2.0			Taper
+-45			zRotate
+
+#REGION
+r7
+funnely tapered rotated
+-10.0   		xPosition
+-10.0			yPosition
+15.0			Height
+3.0			RadiusStart
+6.0			Radius
+2.0			Taper
++45			zRotate
+
+#REGION
+r8
+coney tapered
+  0.0   		xPosition
+ 22.0			yPosition
+-15.0			Height
+11.0			Radius
+2.0			Taper
+
+#REGION
+r6
+box_gen			StringShape
+15.0   			rMin
+337.5			PhiMin
+-10.0			LatMin
+25.0			rMax
+382.5			PhiMax
++10.0			LatMax
+
+#HALLREGION
++r1 +r2 -r3 -r4 -r5 +r6 +r7 +r8
+-1.0			HallSpeedTinyDim
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1                       nPlotFiles
+z=0 VAR idl_ascii       StringPlot
+1                       DnSavePlot
+-1.			DtSavePlot
+0.			DxSavePlot
+hall hallfactor dx	NamePlotVar
+g   	 		NamePlotPar
+
+#STOP
+0			MaxIteration
+-1.0			tSimulationMax
+
