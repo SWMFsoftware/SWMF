@@ -101,6 +101,10 @@ ifeq ($(TESTMODE),on)
 	SEARCH_C+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
 
+install:
+	@echo "AMPS installed"
+
+
 distclean:
 	./Config.pl -uninstall
 
@@ -110,7 +114,6 @@ allclean: clean
 rundir:
 	mkdir -p ${RUNDIR}/PT
 	cd ${RUNDIR}/PT; mkdir restartIN restartOUT plots
-
 
 
 EXE=amps
