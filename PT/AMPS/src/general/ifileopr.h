@@ -111,7 +111,7 @@ public:
     return (!feof(fd)) ? false : true;
   };
 
-  bool GetInputStr(char* str,long int n){
+  bool GetInputStr(char* str,long int n, bool ConvertToUpperCase=true){
     int i,j;
 
     str[0]='\0';
@@ -141,7 +141,8 @@ public:
 
       
       if (i<init_str_maxlength-1) init_str[i]=str[i];
-      if ((str[i]>='a')&&(str[i]<='z')) str[i]=(char)(str[i]-(char)32);
+      if ((str[i]>='a')&&(str[i]<='z')&&ConvertToUpperCase)
+	str[i]=(char)(str[i]-(char)32);
       if (str[i]=='\t') str[i]=' ';
     }
     
