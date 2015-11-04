@@ -798,7 +798,7 @@ test_awsomfluids_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test_awsomfluids_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t \
+	-@(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-7 -t \
 		Param/CORONA/TestOutput/1d__mhd_awsomfluids.out \
 		${TESTDIR}/RESULTS/SC/1d__mhd_1_n00000100.out > test_awsomfluids.diff)
 	ls -l test_awsomfluids.diff
