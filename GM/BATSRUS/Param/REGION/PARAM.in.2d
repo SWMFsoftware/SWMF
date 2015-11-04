@@ -148,13 +148,13 @@ box_gen			StringShape
 T			DoSaveInitial
 
 #SAVEPLOT
-1                       nPlotFiles
-z=0 VAR idl_ascii       StringPlot
-1                       DnSavePlot
--1.			DtSavePlot
-0.			DxSavePlot
-hall hallfactor dx	NamePlotVar
-g   	 		NamePlotPar
+1					nPlotFiles
+z=0 VAR idl_ascii			StringPlot
+1					DnSavePlot
+-1.					DtSavePlot
+0.					DxSavePlot
+hall hallfactor hallblock amrlevel	NamePlotVar
+g   	 		  		NamePlotPar
 
 #STOP
 0			MaxIteration
