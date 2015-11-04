@@ -3,7 +3,7 @@ using DataFrames
 
 function parseUserFile(keyword)
  value = ""
- iFile = open("../input/userSettings.conf")
+ iFile = open("../.userSettings.conf")
  while !eof(iFile)
    line = readline(iFile)
    if contains(line, keyword)

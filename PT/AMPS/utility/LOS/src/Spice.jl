@@ -15,7 +15,7 @@ export furnsh,
 
 function getSpiceLib()
  sharedLib = ""
- iFile = open("../input/userSettings.conf")
+ iFile = open("../.userSettings.conf")
  while !eof(iFile)
    line = readline(iFile)
    if contains(line, "spicelib:")
