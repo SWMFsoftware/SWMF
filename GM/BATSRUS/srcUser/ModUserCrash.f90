@@ -3169,7 +3169,7 @@ contains
     use ModAdvance,  ONLY: State_VGB, Rho_
     use ModMain,     ONLY: UseLaserHeating
     use ModPhysics,  ONLY: Io2No_V, UnitRho_
-    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB, MinDxValue
+    use ModGeometry, ONLY: Xyz_DGB, CellSize_DB, CellSize1Min
 
     ! Variables required by this user subroutine
     integer, intent(in)          :: iBlock
@@ -3192,7 +3192,7 @@ contains
     iNode = iNode_B(iBlock)
     nLevel = iTree_IA(Level_,iNode)
 
-    if( (CellSize_DB(x_,iBlock) - MinDxValue) > 1e-6)then
+    if( (CellSize_DB(x_,iBlock) - CellSize1Min) > 1e-6)then
        iMin = 0; iMax = nI+1; jMin = 0; jMax = nJ+1; kMin = 0; kMax = nK+1
     else
        iMin = -1; iMax = nI+2; jMin = -1; jMax = nJ+2; kMin = -1; kMax = nK+2
