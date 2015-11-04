@@ -2227,7 +2227,105 @@ module ModInterpolateAMR
        0,0,1, 1,0,1,&
        0,1,1, 1,1,1 /),(/3, 8/))
 
-  integer,parameter :: PowerOf2_D(3) = (/1, 2, 4/)
+  integer,parameter :: iPowerOf2_D(3) = (/1, 2, 4/)
+  !       ^
+  ! z-axis|
+  !       |  7----------8
+  !       | /|         /|
+  !       |/ |        / |
+  !       5----------6  |
+  !       |  |   _   |  |
+  !       |  |   /|y-axi$
+  !       |  |  /    |  |
+  !       |  | /     |  |
+  !       |  |/      |  |
+  !       |  3----------4
+  !       | /        | /
+  !       |/         |/
+  !       1----------2------> x-axis
+  !\
+  ! Number of subgrid points to be kept in the subgrid for the extended stencil 
+  ! may be calculated as follows 
+  ! where(iLevel_I==Fine_)&
+  ! nSubgrid_I = 2**(nDim - iLog2NDimOverNSubgrid_II(1:nGrid,iGridBasic))
+  ! Herewith, iGridBasic is a grid node closest to the point for which the
+  ! extended stencil is constructed and iLog2NDimOverNSubgrid_II is given below
+  !/         
+  integer, parameter :: iLog2NDimOverNSubgrid_II(8,8) = reshape((/&!iGridBasic
+       0, 1, 1, 2, 1, 2, 2, 3,                                  & !1
+       1, 0, 2, 1, 2, 1, 3, 2,                                  & !2
+       1, 2, 0, 1, 2, 3, 1, 2,                                  & !3
+       2, 1, 1, 0, 3, 2, 2, 1,                                  & !4
+       1, 2, 2, 3, 0, 1, 1, 2,                                  & !5
+       2, 1, 3, 2, 1, 0, 2, 1,                                  & !6
+       2, 3, 1, 2, 1, 2, 0, 1,                                  & !7
+       3, 2, 2, 1, 2, 1, 1, 0/),(/8,8/))                          !8
+  !   |1 |2 |3 |4 |5 |6 |7 |8 |
+  !   |        iGrid          |
+  !\
+  ! Values of iSubgrid to be kept in the extended stencil. With these
+  ! values, the do loops over the subgird points which in the most generic 
+  ! but not optimal form would look like:
+  ! do iSubgrid = 1, 2**nDim; doloop_body(iSubgrid,iGrid);end do
+  ! cab be optimally written instead as follows:
+  ! do iOrder = 1, nSubgrid_I(iGrid)
+  !    iSubgrid = iSubgridOrder_III(iOrder,iGrid,iGridBasic)
+  !    doloop_body(iSubgrid,iGrid)
+  ! end do
+  !/
+  integer, parameter :: iSubgridOrder_III(4,8,8) = reshape((/ &       !iGridBasic
+       0,0,0,0, 1,3,5,7, 1,2,5,6, 1,5,0,0, 1,2,3,4, 1,3,0,0, 1,2,0,0, 1,0,0,0,&!1
+       2,4,6,8, 0,0,0,0, 2,6,0,0, 1,2,5,6, 2,4,0,0, 1,2,3,4, 2,0,0,0, 1,2,0,0,&!2
+       3,4,7,8, 3,7,0,0, 0,0,0,0, 1,3,5,7, 3,4,0,0, 3,0,0,0, 1,2,3,4, 1,3,0,0,&!3
+       4,8,0,0, 3,4,7,8, 2,4,6,8, 0,0,0,0, 4,0,0,0, 3,4,0,0, 2,4,0,0, 1,2,3,4,&!4
+       5,6,7,8, 5,7,0,0, 5,6,0,0, 5,0,0,0, 0,0,0,0, 1,3,5,7, 1,2,5,6, 1,5,0,0,&!5
+       6,8,0,0, 5,6,7,8, 6,0,0,0, 5,6,0,0, 2,4,6,8, 0,0,0,0, 2,6,0,0, 1,2,5,6,&!6
+       7,8,0,0, 7,0,0,0, 5,6,7,8, 5,7,0,0, 3,4,7,8, 3,7,0,0, 0,0,0,0, 1,3,5,7,&!7
+       8,0,0,0, 7,8,0,0, 6,8,0,0, 5,6,7,8, 4,8,0,0, 3,4,7,8, 2,4,6,8, 0,0,0,0 &!8
+       /),(/4,8,8/) )
+  !  |    1   |    2   |    3   |    4   |    5   |    6   |    7   |    8   |
+  !                                   iGrid
+  !\
+  ! Values of iSubgrid to be kept in the extended stencil for iGrid=iGridBasic. 
+  ! With these values, the do loop over the subgird points which in the most  
+  ! generic but not optimal form would look like:
+  ! do iSubgrid = 1, 2**nDim; doloop_body(iSubgrid,iGrid);end do
+  ! cab be optimally written instead as follows:
+  ! do iOrder = 1, 2**count(iDiscr_I(1:nDim)==0)
+  !    iSubgrid = iSubgridBasic_III(iOrder,iDiscr_I(1),iDiscr_I(2),iDiscr_I(3))
+  !    doloop_body(iSubgrid,iGrid)
+  ! end do
+  ! Herewith, iDiscr_I = -1,0,+1 for each direction shows, in which
+  ! direction the point Xyz goes out of the uniform grid, the part of which
+  ! being the finer subgrid.
+  !/   
+  !       ^
+  ! z-axis|
+  !       |  7----------8
+  !       | /|         /|
+  !       |/ |        / |
+  !       5----------6  |
+  !       |  |   _   |  |
+  !       |  |   /|y-axi$
+  !       |  |  /    |  |
+  !       |  | /     |  |
+  !       |  |/      |  |
+  !       |  3----------4
+  !       | /        | /
+  !       |/         |/
+  !       1----------2------> x-axis
+  !                                                                    iDiscr_I
+  integer, parameter :: iSubgridBasic_IIII(4,-1:1,-1:1,-1:1) = reshape((/&!y_,z_
+       1,0,0,0,   1,2,0,0,    2,0,0,0,                                   &!-1,-1
+       1,3,0,0,   1,2,3,4,    2,4,0,0,                                   &! 0,-1
+       3,0,0,0,   3,4,0,0,    4,0,0,0,                                   &! 1,-1
+       1,5,0,0,   1,2,5,6,    2,6,0,0,                                   &!-1, 0
+       1,3,5,7,   0,0,0,0,    2,4,6,8,                                   &! 0, 0
+       3,7,0,0,   3,4,7,8,    4,8,0,0,                                   &! 1, 0
+       5,0,0,0,   5,6,0,0,    6,0,0,0,                                   &!-1, 1
+       5,7,0,0,   5,6,7,8,    6,8,0,0,                                   &! 0, 1
+       7,0,0,0,   7,8,0,0,    8,0,0,0/),(/4,3,3,3/))                       
+       !  -1    |    0     |     1   | iDiscr_I(x_)                  
   !\
   ! PUBLIC MEMBERS
   !/
@@ -3562,7 +3660,7 @@ contains
          !/
          iPoint = minloc(Distance_I(1:nExtendedStencil),&
               MASK = IsMask_I(1:nExtendedStencil), DIM=1)
-         XyzGrid_DI(:,iGrid) = &
+         XyzGrid_DI(:,iGrid) =  &
               XyzGrid_DII(:,iSubGrid_I(iPoint),iGrid_I(iPoint)) 
          iIndexes_II(0,iGrid) = &
               iProc_I(iGrid_I(iPoint))
@@ -4661,7 +4759,7 @@ contains
     ! Find octant to which the point Xyz_D belongs
     !/  
     iDiscr_D = nint(0.50 + SIGN(0.50,Xyz_D - XyzCell_D))
-    iOctant  = sum(iDiscr_D*PowerOf2_D(1:nDim)) + 1
+    iOctant  = sum(iDiscr_D*iPowerOf2_D(1:nDim)) + 1
 
     XyzGrid_DII = XyzGrid_DIII(:,:,:,iOctant)
     iCellIndexes_DII = -1 
@@ -4767,7 +4865,7 @@ contains
     !\
     ! Loop variables
     !/
-    integer :: iNeighbor, iDim, iSubGrid
+    integer :: iNeighbor, iDim, iGrid, iSubGrid
     !\
     ! Number of grid points in the stencil
     !/ 
@@ -4775,18 +4873,25 @@ contains
     !\
     ! Ordered list of neighbors
     !/
-    integer:: iLevel_III(-1:1,-1:1,-1:1)
-    real   :: XyzGrid_DIIII(1:nDim,0:2**nDim,-1:1,-1:1,-1:1)
-    integer:: iCellId_IIIII(nId,2**nDim,-1:1,-1:1,-1:1)
-    logical:: IsOut_III(-1:1,-1:1,-1:1)
+    integer:: iLevel_III(-1:1,-1:1,2-nDim:nDim-2)
+    real   :: XyzGrid_DIIII(1:nDim,0:2**nDim,-1:1,-1:1,2-nDim:nDim-2)
+    integer:: iCellId_IIIII(nId,2**nDim,-1:1,-1:1,2-nDim:nDim-2)
+    logical:: IsOut_III(-1:1,-1:1,2-nDim:nDim-2)
     !\
     ! Coarse extended stencil
     !/
-    logical:: UseCoarseExtStancil !.true. if any neighbor is coarse
-    integer:: iLevelCoearse_I(2**nDim)
+    logical:: UseCoarseExtStencil !.true. if any neighbor is coarse
+    integer:: iCoarseNeighbor     !the neighboring cell which is coarser
+    integer:: iGridCoarse         !The grid number  in the coarse stencil 
+    real   :: XyzCoarseCenter_D(nDim)
+    integer:: iLevelCoarse_I(2**nDim)
     real   :: XyzGridCoarse_DII(1:nDim,0:2**nDim,2**nDim)
     integer:: iCellIdCoarse_III(nId,2**nDim,2**nDim)
     logical:: IsOutCoarse_I(2**nDim)
+
+
+    logical:: DoRefineGrid_III(-1:1,-1:1,2-nDim:nDim-2) 
+    logical:: DoRefineCoarseGrid_I(1:2**nDim)
     !\
     ! Discriminators
     !/
@@ -4797,27 +4902,67 @@ contains
     !/
     logical, parameter:: DoTest = .true.
     !-----------------------
+    !\
+    !Initialize variables
+    !/
     nGrid = 2**nDim
     !\
     !Invert DXyz_D and find XyzCorner_D
     !/
     DXyzInv_D   = 1/DXyz_D 
     XyzCorner_D = XyzCell_D - 0.50*DXyz_D
+    DoRefineGrid_III = .true.
+    iDiscr_D = 0
+    !\
+    ! Check if UseCoarseExtStencil is needed, initalize it, if needed
+    UseCoarseExtStencil = any(DiLevelNei_I==-1.and..not.IsOut_I)
+    iLevelCoarse_I    = 0
+    XyzGridCoarse_DII = 0
+    iCellIdCoarse_III = -1
+    IsOutCoarse_I     = .false.
+    if(UseCoarseExtStencil)then
+       DoRefineCoarseGrid_I = .true.
+       !\
+       ! Find a coarse neighbor
+       !/
+       iCoarseNeighbor = MINLOC(DiLevelNei_I,MASK=.not.IsOut_I,DIM=1)
+       iDiscr_D(1:nDim)= nint(0.50 + SIGN(0.50,&
+            XyzNeighbor_DI(:,iCoarseNeighbor) - XyzCell_D))
+       iGridCoarse = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) +1
+       XyzCoarseCenter_D = XyzNeighbor_DI(:,iCoarseNeighbor) +&
+            DXyz_D*(1 - 2*iShift_DI(1:nDim,iGridCoarse))
+       do iGrid = 1, nGrid
+          XyzGridCoarse_DII(:,0,iGrid) =  XyzCoarseCenter_D + &
+               DXyz_D*( 2*iShift_DI(1:nDim,iGrid) - 1)
+       end do
+       !\
+       ! Store an info about the coarse cell
+       !/
+       XyzGridCoarse_DII(:,1,iGridCoarse) = XyzNeighbor_DI(:,iCoarseNeighbor)
+       iCellIdCoarse_III(:,1,iGridCoarse) = iCellId_II(:,iCoarseNeighbor)
+       iLevelCoarse_I(iGridCoarse) = -1
+    end if
     !\
     !Construct an ordered list of neighbors
     !/
-    iLevel_III = 0
+    iLevel_III = -5
     XyzGrid_DIIII = 0.0
+    iCellId_IIIII = -1
+    IsOut_III = .false.
+    !\
+    ! Store the central cell info
+    !/
+    iLevel_III(0,0,0) = 0
     XyzGrid_DIIII(:,0,0,0,0) = XyzCell_D
     XyzGrid_DIIII(:,1,0,0,0) = XyzCell_D
-    iCellId_IIIII            = -1
     iCellId_IIIII(:,1,0,0,0) = iCellId_I
-    IsOut_III = .false.
 
     do iNeighbor = 1, nNeighbor
        select case(DiLevelNei_I(iNeighbor))
        case(0)
-          iDiscr_D = 0; iDiscr_D(1:nDim) = &
+          !\
+          ! find the cell location relatively to the central cell
+          iDiscr_D(1:nDim) = &
                floor((XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
           !\
           ! Test list of neighbors
@@ -4828,6 +4973,12 @@ contains
              if(any(iDiscr_D > 1.or.iDiscr_D < -1))call CON_stop(&
                   NameSub//': neighbor does not contact the central cell')
           end if
+          !\
+          !Initialize the grid coordinates, if needed
+          !/
+          !\
+          ! Store the new cell info into the ordered list
+          !/
           XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
                XyzNeighbor_DI(:,iNeighbor)
           XyzGrid_DIIII(:,1,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
@@ -4836,8 +4987,34 @@ contains
           iCellId_IIIII(:,1,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
                iCellId_II(:,iNeighbor)
           IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = IsOut_I(iNeighbor)
+          if(UseCoarseExtStencil)then
+             !Save the info to coarse extended stencil too
+             iDiscr_D(1:nDim) = nint(0.50 + &
+                  SIGN(0.50, XyzNeighbor_DI(:,iNeighbor) - XyzCoarseCenter_D))
+             iGridCoarse = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) +1
+
+             if(DoRefineCoarseGrid_I(iGridCoarse))then
+                DoRefineCoarseGrid_I(iGridCoarse) = .false.
+                !\
+                ! Store coordinate information about refined grid
+                !/
+                iLevelCoarse_I(iGridCoarse) = 1
+                do iGrid = 1, nGrid
+                   XyzGridCoarse_DII(:,iGrid,iGridCoarse) = &
+                        XyzGridCoarse_DII(:,0,iGridCoarse) + &
+                        DXyz_D*(-0.50 + iShift_DI(1:nDim,iGrid))
+                end do
+             end if
+             iDiscrSubGrid_D = nint(0.50 + SIGN(0.50,XyzNeighbor_DI(:,iNeighbor)&
+                  - XyzGridCoarse_DII(:,0,iGridCoarse)))
+             iSubGrid = sum(iDiscrSubGrid_D*iPowerOf2_D(1:nDim)) + 1
+             iCellIdCoarse_III(:,iSubGrid,iGridCoarse) = &
+                  iCellId_II(:,iNeighbor)
+             IsOutCoarse_I(iGridCoarse) = &
+                  IsOutCoarse_I(iGridCoarse).or.IsOut_I(iNeighbor)
+          end if
        case(1)
-          iDiscr_D = 0; iDiscr_D(1:nDim) = &
+          iDiscr_D(1:nDim) = &
                floor((XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
           !\
           ! Test list of neighbors
@@ -4848,14 +5025,35 @@ contains
              if(any(iDiscr_D > 1.or.iDiscr_D < -1))call CON_stop(&
                   NameSub//': neighbor does not contact the central cell')
           end if
-          XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
-               XyzGrid_DIIII(:,0,0,0,0) + DXyz_D*iDiscr_D(1:nDim)   
+          if(DoRefineGrid_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)))then
+             DoRefineGrid_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = .false.
+             !\
+             ! Store coordinate information about refined grid
+             !/
+             XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+                  XyzGrid_DIIII(:,0,0,0,0) + DXyz_D*iDiscr_D(1:nDim) 
+             iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = 1
+             do iGrid = 1, nGrid
+                XyzGrid_DIIII(:,iGrid,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+                     XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) + &
+                     DXyz_D*0.50*(-0.50 + iShift_DI(1:nDim,iGrid))
+             end do
+          end if   
           !\
-          ! Put the neighbor into the ordered list
+          ! Put the neighbor info into the ordered list
           !/
-
-          iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = 1
-          IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = IsOut_I(iNeighbor)
+          !\
+          ! If any of finer neighbors is behind the boundary
+          ! set IsOut to .true.
+          !/
+          IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               IsOut_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)).or.&
+               IsOut_I(iNeighbor)
+          iDiscrSubGrid_D = nint(0.50 + SIGN(0.50,XyzNeighbor_DI(:,iNeighbor) &
+               - XyzGrid_DIIII(:,0,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3))))
+          iSubGrid = sum(iDiscrSubGrid_D*iPowerOf2_D(1:nDim)) + 1
+          iCellId_IIIII(:,iSubGrid,iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = &
+               iCellId_II(:,iNeighbor)
        case(-1)
           !\
           ! Coarse grid point may need to be placed to several
@@ -4866,7 +5064,7 @@ contains
              ! Decompose the coarser cell into finer cells and
              ! calculate discriminators for each subcell center
              !/
-             iDiscr_D = floor( -0.5 + iShift_DI(1:nDim,iSubGrid) + &
+             iDiscr_D(1:nDim) = floor( -0.5 + iShift_DI(1:nDim,iSubGrid) + &
                   (XyzNeighbor_DI(:,iNeighbor) - XyzCorner_D)* DXyzInv_D)
              !\
              ! Ignore subcells, which do not contact the central cell
@@ -4881,39 +5079,52 @@ contains
              end if
              iLevel_III(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3)) = -1
           end do
+          if(iNeighbor == iCoarseNeighbor)CYCLE
+          !\
+          !Store the coarse cell information in coarse extended stencil
+          !/
+          iDiscr_D(1:nDim) = nint(0.50 + &
+               SIGN(0.50, XyzNeighbor_DI(:,iNeighbor) - XyzCoarseCenter_D))
+          iGridCoarse = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) +1
+          XyzGridCoarse_DII(:,1,iGridCoarse) = XyzNeighbor_DI(:,iNeighbor)
+          iCellIdCoarse_III(:,1,iGridCoarse) = iCellId_II(:,iNeighbor)
+          iLevelCoarse_I(iGridCoarse) = -1
+          IsOutCoarse_I(iGridCoarse) = IsOut_I(iNeighbor)
        end select
     end do
     !\
-    ! Check the ordered list completeness
+    !Form output arrays
     !/
-    if(DoTest)then
-       ! if(any(nNeighbor_II == 0))call CON_stop(&
-       !      NameSub//': missing neighbors')
-    end if
-    !\
-    ! Calculate the point location relatively to the centeral cell center
-    !/
-    !iDiscr_D = nint(SIGN(1.0, Xyz_D - XyzCell_D))
-    !iLevel_I = reshape(iLevel_II(&
-    !     (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-    !     (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
-    !if(.not.any(iLevel_I == -1))then
-    !\
-    ! The extended stencil is a part of ordered list 
-    !/
-    !   IsOut_I = iLevel_I < -1
-    !   if(all(iLevel_I == 0.or.IsOut_I))then
-    !\
-    ! Uniform stencil
-    !/
-    !      iCell_I = reshape(iNeighbor_III(1,&
-    !           (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
-    !           (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/)  ), (/nGrid/))
-    !      Dimless_D = DXyzInv_D*(Xyz_D - &
-    !           XyzGrid_DIII( :,1,MIN(0,iDiscr_D(1)),MIN(0,iDiscr_D(2)) ) )
-    !      RETURN
-    !   end if
-    !end if
+    do iGrid = 1, nGrid
+       iDiscr_D(1:nDim) = 2*iShift_DI(1:nDIm,iGrid) - 1
+       iLevel_II(:,iGrid) = reshape(iLevel_III(&
+            (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+            (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+            (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
+       IsOut_II(:,iGrid) =  reshape(IsOut_III(&
+            (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+            (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+            (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ), (/nGrid/))
+       if(all(iLevel_II(:,iGrid)>=0.or.IsOut_II(:,iGrid)))then
+          
+          iCellId_IIII(:,:,:,iGrid) = reshape(iCellId_IIIII(:,:,&
+               (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+               (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+               (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ),&
+               (/nId,nGrid,nGrid/))
+          XyzGrid_DIII(:,:,:,iGrid) = reshape(XyzGrid_DIIII(:,:,&
+               (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+               (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+               (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/)  ),&
+               (/nDim,nGrid,nGrid/))
+       else
+          iLevel_II(:,iGrid) = iLevelCoarse_I
+          IsOut_II(:,iGrid) =  IsOutCoarse_I
+          
+          iCellId_IIII(:,:,:,iGrid) = iCellIdCoarse_III
+          XyzGrid_DIII(:,:,:,iGrid) = XyzGridCoarse_DII
+       end if
+    end do
   end subroutine order_connectivity_list
 
 end module ModInterpolateAMR
