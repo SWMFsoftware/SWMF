@@ -40,6 +40,7 @@ module BATL_region
   ! we have read in new data from PARAM.in
   logical, public :: IsNewGeoParam =.false.
 
+  ! Lengths of strings
   integer, parameter:: lNameArea = 20, lNameRegion = 30
 
   type, public :: AreaType 
@@ -57,7 +58,7 @@ module BATL_region
   end type AreaType
 
   ! List of all geometric regions defined
-  type(AreaType), target, public :: AreaGeo_I(1:MaxArea)
+  type(AreaType), target, public :: Area_I(1:MaxArea)
 
   ! the area being processed (for easier access)
   type(AreaType), pointer, public:: Area
@@ -67,6 +68,11 @@ module BATL_region
   ! The number of levels is public so that BATSRUS can do the
   ! initial refinement loop. 
   integer, public :: nInitialAmrLevel  = 0
+
+
+  ! Cell size of the root blocks in either the first coordinate,
+  ! or the Phi direction in degrees if IsLogRadius or IsGenRadius is true.
+  real, public:: CellSizeRoot = -1.0
 
   ! Local variables
   real            :: InitialResolution = -1.0
@@ -97,26 +103,24 @@ contains
     integer :: iGeo
     real:: rMin, rMax
 
-    real:: CellSizeMax
-
     logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
     !-------------------------------------------------------------------------
 
     ! Set maximum cell size in the first non-stretched dimension for comparison
     if(IsLogRadius .or. IsGenRadius)then
-       CellSizeMax = cRadToDeg*DomainSize_D(Phi_)/(nRoot_D(Phi_)*nIJK_D(Phi_))
+       CellSizeRoot = cRadToDeg*DomainSize_D(Phi_)/(nRoot_D(Phi_)*nIJK_D(Phi_))
     else
-       CellSizeMax = DomainSize_D(1)/(nRoot_D(1) * nI)
+       CellSizeRoot = DomainSize_D(1)/(nRoot_D(1) * nI)
     end if
 
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) &
-         nInitialAmrLevel = nint(log(CellSizeMax/InitialResolution)/log(2.0))
+         nInitialAmrLevel = nint(log(CellSizeRoot/InitialResolution)/log(2.0))
 
     ! Set IsSimple for all the areas
     do iGeo = 1, nArea
-       Area => AreaGeo_I(iGeo)
+       Area => Area_I(iGeo)
        Area%IsSimple = .false.
        ! generalized coordinates 
        if(Area%NameShape == "brick_gen")then
@@ -130,9 +134,9 @@ contains
        end select
     end do
 
-    ! Fix generalized coordinates for "box_gen"/"brick_gen"
+    ! Fix generalized coordinates for "brick_gen" and rename to "brick_coord"
     do iGeo = 1, nArea
-       Area => AreaGeo_I(iGeo)
+       Area => Area_I(iGeo)
        if( Area % NameShape /= "brick_gen") CYCLE
 
        ! Rename area to indicate that it has been processed
@@ -160,7 +164,7 @@ contains
     ! Loop over the areas defined by #GRIDLEVEL/RESOLUTION commands
     ! That do not have a name
     do iGeo = 1, nArea
-       Area => AreaGeo_I(iGeo)
+       Area => Area_I(iGeo)
 
        ! Exclude named areas defined by #REGION / #AMRREGION commands
        if( Area%NameRegion /= "NULL") CYCLE
@@ -168,10 +172,10 @@ contains
        ! Set level and resolution based on the read value
        if(Area%Level < 0)then
           ! Set actual resolution
-          Area%Resolution = CellSizeMax * 2.0**Area%Level
+          Area%Resolution = CellSizeRoot * 2.0**Area%Level
        else
           ! Set AMR level (why positive ?)
-          Area%Level = nint( log(CellSizeMax/Area%Resolution) / log(2.0) )
+          Area%Level = nint( log(CellSizeRoot/Area%Resolution) / log(2.0) )
        end if
 
     end do
@@ -214,7 +218,7 @@ contains
 
     type(AreaType), pointer:: Area1
     !------------------------------------------------------------------------
-    Area1 => AreaGeo_I(iRegion)
+    Area1 => Area_I(iRegion)
     write(*,*) "show_region for ", String,' iRegion=', iRegion
     write(*,*) "Region name      :: ", Area1%NameRegion
     write(*,*) "Shape name       :: ", Area1%NameShape
@@ -255,7 +259,7 @@ contains
     end if
 
     do iArea = 1, nArea
-       if(NameRegion == AreaGeo_I(iArea)%NameRegion) then
+       if(NameRegion == Area_I(iArea)%NameRegion) then
           i_signed_region = iSign*iArea
           RETURN
        end if
@@ -373,7 +377,7 @@ contains
        ! Requesting 0 level refinement is meaningless
        if(nLevelArea <= 0) RETURN
     end if
-    call read_var('TypeRegion', StringShape, IsLowerCase=.true.)
+    call read_var('StringShape', StringShape, IsLowerCase=.true.)
     StringShape = adjustl(StringShape)
 
     ! 'init' or 'initial' means that the initial resolution is set,
@@ -404,7 +408,7 @@ contains
        RETURN
     end if
 
-    Area => AreaGeo_I(nArea)
+    Area => Area_I(nArea)
 
     ! Regions without a name are produced by #GRIDLEVEL/RESOLUTION commands
     if(NameRegion == "NULL") nCritGrid = nCritGrid + 1
@@ -457,7 +461,7 @@ contains
     ! Read center of area if needed
     if(DoReadAreaCenter)then
        do iDim = 1, nDim
-          call read_var("Center", Area%Center_D(iDim))
+          call read_var("Position", Area%Center_D(iDim))
        end do
     endif
 
@@ -718,7 +722,7 @@ contains
        ! Get area index and evaluate it
        iArea = abs(iRegion_I(iRegion))
        iSign = sign(1, iRegion_I(iRegion))
-       Area => AreaGeo_I(iArea)
+       Area => Area_I(iArea)
        NameShape = Area%NameShape
 
        if(DoTest)write(*,*) NameSub,' iArea,iSign,NameShape=', &
@@ -1230,10 +1234,7 @@ contains
     ! Set iPar and iPerp_I indexes based on NameShape
     call set_i_par_perp
 
-    ! Check if it is a brick defined in generalized coordinates
-    !    if(NameShape == "brick_gen" .and. .not.IsCartesianGrid)then
-    !
-
+    ! Allocate normalized (to size of shape) coordinates
     if(allocated(Norm_DI))then
        if(size(Norm_DI) /= nDim*nPoint) deallocate(Norm_DI)
     endif
@@ -1264,7 +1265,7 @@ contains
     endif
 
     ! For now periodic boundaries are checked for 
-    ! Cartesian coordinates and for box_coord.
+    ! Cartesian coordinates and for brick_coord.
     DoPeriodic = any(IsPeriodic_D(1:nDim)) .and. &
          (IsCartesianGrid .or. NameShape == 'brick_coord')
 
@@ -1299,7 +1300,7 @@ contains
 
     ! Set value for the shape
     select case(NameShape)
-    case('brick', 'brick_gen')
+    case('brick', 'brick_coord')
        Norm_DI = abs(Norm_DI)
        if(.not.DoTaper)then
           do iPoint = 1, nPoint
