@@ -6,6 +6,12 @@ use strict;
 my $hostname = `hostname -s`;
 chomp($hostname);
 
+# check hostname for supercomputers
+my $hostname_full = `hostname -f`;
+if($hostname_full =~ m/stampede/){
+    $hostname = 'stampede';
+}
+
 #path to the Makefile.test source
 my $path="MakefileTest";
 
