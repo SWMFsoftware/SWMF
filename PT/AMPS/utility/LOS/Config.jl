@@ -1,17 +1,38 @@
+function get_object_files(path)
+
+  objectFiles = AbstractString[]
+  for fileName in readdir(path)
+    if split(fileName, '.')[end] == "o"
+      push!(objectFiles, fileName)
+    end
+  end
+  return objectFiles
+
+end
+
 function compileLinux(tmpdir)
   previousDir = pwd()
   cd(joinpath(tmpdir, "lib"))
   run(`ar -x cspice.a`)
   run(`ar -x csupport.a`)
-  objectFiles = AbstractString[]
-  for fileName in readdir(".")
-    if split(fileName, '.')[end] == "o"
-      push!(objectFiles, fileName)
-    end
-  end
+  objectFiles = get_object_files(".")
   run(`gcc -shared -fPIC -lm $objectFiles -o spice.so`)
   cd(previousDir)
   return objectFiles
+end
+
+function compileClibLinux(fileName)
+  previousDir = pwd()
+  cd(dirname(fileName))
+  cFile = basename(fileName)
+  run(`gcc -shared -c -fPIC $cFile`)
+  println(`gcc -shared -c -fPIC $cFile`)
+  objectFiles = get_object_files(".")
+  run(`gcc -shared -fPIC -lm $objectFiles -o clib.so`)
+  println(`gcc -shared -fPIC -lm $objectFiles -o clib.so`)
+  run(`rm $objectFiles`)
+  println(`rm $objectFiles`)
+  cd(previousDir)
 end
 
 function compileOSX(tmpdir)
@@ -19,15 +40,24 @@ function compileOSX(tmpdir)
   cd(joinpath(tmpdir, "lib"))
   run(`ar -x cspice.a`)
   run(`ar -x csupport.a`)
-  objectFiles = AbstractString[]
-  for fileName in readdir(".")
-    if split(fileName, '.')[end] == "o"
-      push!(objectFiles, fileName)
-    end
-  end
+  objectFiles = get_object_files(".")
   run(`gcc -dynamiclib -lm $objectFiles -o spice.dylib`)
   cd(previousDir)
   return objectFiles
+end
+
+function compileClibOSX(fileName)
+  previousDir = pwd()
+  cd(dirname(fileName))
+  cFile = basename(fileName)
+  run(`gcc -c -fPIC $cFile`)
+  println(`gcc -c -fPIC $cFile`)
+  objectFiles = get_object_files(".")
+  run(`gcc -dynamiclib -lm $objectFiles -o clib.dylib`)
+  println(`gcc -dynamiclib -lm $objectFiles -o clib.dylib`)
+  run(`rm $objectFiles`)
+  println(`rm $objectFiles`)
+  cd(previousDir)
 end
 
 function linux()
@@ -161,9 +191,21 @@ elseif lowercase(ARGS[1]) == "--kernelfile"
 elseif lowercase(ARGS[1]) == "--clib"
   clibFile = ARGS[2]
   tmpdir = get_tmp_dir()
+  if os == "linux"
+    ext = ".so"
+  else
+    ext = ".dylib"
+  end
+
   try
     cp(clibFile, joinpath(tmpdir, "lib/"*basename(clibFile)), remove_destination=true)
-    updateSettings("clibFile:", joinpath(tmpdir, "lib/"*basename(clibFile)))
+    sharedLibName = joinpath(tmpdir, "lib/clib" * ext )
+    updateSettings("clibFile:", sharedLibName)
+    if os == "linux"
+      compileClibLinux(joinpath(tmpdir, "lib/"*basename(clibFile)))
+    else
+      compileClibOSX(joinpath(tmpdir, "lib/"*basename(clibFile)))
+    end
   catch
     println("Did not find c library! ")
     updateSettings("clibFile:", "")
