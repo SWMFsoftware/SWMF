@@ -115,8 +115,12 @@ contains
     end if
 
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
-    if(InitialResolution > 0.0) &
-         nInitialAmrLevel = nint(log(CellSizeRoot/InitialResolution)/log(2.0))
+    if(InitialResolution > 0.0) nInitialAmrLevel &
+         = ceiling(log(CellSizeRoot/InitialResolution)/log(2.0))
+
+    if(DoTest)write(*,*) NameSub, &
+         ' CellSizeRoot, InitialResolution, nInitialAmrLevel=', &
+         CellSizeRoot, InitialResolution, nInitialAmrLevel
 
     ! Set IsSimple for all the areas
     do iGeo = 1, nArea
@@ -171,11 +175,11 @@ contains
 
        ! Set level and resolution based on the read value
        if(Area%Level < 0)then
-          ! Set actual resolution
+          ! Set resolution corresponding to this level
           Area%Resolution = CellSizeRoot * 2.0**Area%Level
        else
-          ! Set AMR level (why positive ?)
-          Area%Level = nint( log(CellSizeRoot/Area%Resolution) / log(2.0) )
+          ! Set AMR level (note that negative value is used)
+          Area%Level = -ceiling( log(CellSizeRoot/Area%Resolution) / log(2.0) )
        end if
 
     end do
@@ -660,7 +664,7 @@ contains
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub='block_inside_regions'
     !------------------------------------------------------------------------
-    ! DoTest = iBlock == 6
+    ! DoTest = iBlock == 136
 
     DoBlock  = present(IsInside)
     DoMask   = present(IsInside_I)
