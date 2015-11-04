@@ -1,6 +1,7 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
 module ModAMR
 
   implicit none
@@ -62,8 +63,8 @@ contains
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
          lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
          iNewGrid, iNewDecomposition, UseHighOrderAMR
-    use ModGeometry, ONLY : minDXvalue,maxDXvalue,true_cell
-    use ModAdvance, ONLY : DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
+    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell
+    use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
          SkippedBlock_ !!!
     use ModRaytrace, ONLY: ray
@@ -72,7 +73,8 @@ contains
     use ModMpi
 
     use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-         MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_ !!!
+         MaxNode, nNode, iTree_IA, nLevelMin, nLevelMax, &
+         IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_ !!!
 
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModMessagePass,   ONLY: exchange_messages
@@ -189,12 +191,20 @@ contains
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of blocks used = ', nBlockALL
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  Total number of cells = ', nBlockALL*nIJK
+            '|  AMR:  Total number of cells       = ', nBlockALL*nIJK
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  Total number of true cells = ', nTrueCellsALL
+            '|  AMR:  Total number of true cells  = ', nTrueCellsALL
        call write_prefix; write(iUnitOut,*) &
-            '|  Smallest cell dx: ', minDXvalue, &
-            '  Largest cell dx: ',   maxDXvalue
+            '  AMR:   Min and max AMR levels      = ', nLevelMin, nLevelMax
+       if(IsLogRadius .or. IsGenRadius)then
+          call write_prefix; write(iUnitOut,*) &
+               '  AMR:   Min and max cell size in Phi= ', &
+               CellSizeMin, CellSizeMax
+       else
+          call write_prefix; write(iUnitOut,*) &
+               '  AMR:   Min and max cell size in x/r= ', &
+               CellSizeMin, CellSizeMax
+       endif
        call write_prefix; write(iUnitOut,*) '|'
     end if
 

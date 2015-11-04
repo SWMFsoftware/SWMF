@@ -61,7 +61,7 @@ subroutine write_runtime_values()
   use ModProcMH,    ONLY: iProc, nProc
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
   use ModAdvance,   ONLY: FluxType
-  use ModGeometry,  ONLY: x1,x2,y1,y2,z1,z2,minDXvalue,maxDXvalue
+  use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax
   use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
        TypeSemiImplicit
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
@@ -70,7 +70,8 @@ subroutine write_runtime_values()
        RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
        IonosphereHeight
   use ModMpi
-  use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK
+  use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, nLevelMin, nLevelMax,&
+       IsLogRadius, IsGenRadius
   use ModUserInterface ! user_action
 
   implicit none
@@ -282,19 +283,26 @@ subroutine write_runtime_values()
   call write_prefix; write(iUnitOut,*)'Available processors: nProc = ',nProc
   call write_prefix; write(iUnitOut,*)
   call write_prefix; write(iUnitOut,*)'After initial grid setup:'
-  call write_prefix; write(iUnitOut,*)'  nBlockMax = ',nBlockMax, &
-       ' MaxBlock = ', MaxBlock
+  call write_prefix; write(iUnitOut,*)'  nBlockMax and MaxBlock      = ', &
+       nBlockMax, MaxBlock
   call write_prefix; write(iUnitOut,*)'  Total number of blocks used = ', &
        nNodeUsed
-  call write_prefix; write(iUnitOut,*)'  Total number of cells = ', &
+  call write_prefix; write(iUnitOut,*)'  Total number of cells       = ', &
        nNodeUsed*nIJK
-  call write_prefix; write(iUnitOut,*)'  Total number of true cells = ', &
+  call write_prefix; write(iUnitOut,*)'  Total number of true cells  = ', &
        nTrueCellsALL
-  call write_prefix; write(iUnitOut,*)'  Smallest cell dx: ', MinDxValue, &
-       '  Largest cell dx: ', MaxDxValue
+  call write_prefix; write(iUnitOut,*)'  Min and max AMR levels      = ', &
+       nLevelMin, nLevelMax
+  if(IsLogRadius .or. IsGenRadius)then
+     call write_prefix; write(iUnitOut,*)'  Min and max cell size in Phi= ', &
+          CellSizeMin, CellSizeMax
+  else
+     call write_prefix; write(iUnitOut,*)'  Min and max cell size in x/r= ', &
+          CellSizeMin, CellSizeMax
+  endif
 
   ! Constrained transport is not implemented for AMR grids anymore...
-  if(UseConstrainB .and.  minDXvalue /= maxDXvalue) &
+  if(UseConstrainB .and.  nLevelMin /= nLevelMax) &
        call stop_mpi('Constrained transport works on uniform grid only!')
 
   call write_prefix; write(iUnitOut,*)
