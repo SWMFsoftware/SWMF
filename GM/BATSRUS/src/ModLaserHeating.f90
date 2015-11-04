@@ -1179,7 +1179,7 @@ contains
 
   subroutine init_beam_rz2
 
-    use ModGeometry, ONLY: TypeGeometry, y2, minDXvalue
+    use ModGeometry, ONLY: TypeGeometry, y2, CellSize1Min
     use ModConst,    ONLY: cDegToRad
 
     real:: CosTheta, SinTheta,  yCrCentral, yPlane, xPlane
@@ -1233,13 +1233,13 @@ contains
           yPlane = yCrCentral + (rDistance + xStart*sinTheta/(cosTheta))
 
           !Dealing with rays starting outside the computational domain on laser-entry plane:
-          ! Substracting minDXvalue from y2 so that the rays do not start on domain boundary
+          ! Substracting CellSize1Min from y2 so that the rays do not start on domain boundary
           if((yPlane) >= y2)then
              !Do not let rays begin in target past drive surface
              if(sinTheta < 0.0 .and. &
-                  (xPlane + (abs(yPlane)-(y2-minDXvalue))*(cosTheta)/(-sinTheta) < 0.0))then
-                xPlane = xPlane + (abs(yPlane)-(y2-minDXvalue))*cosTheta/(-sinTheta)
-                yPlane = y2 - (minDXvalue)
+                  (xPlane + (abs(yPlane)-(y2-CellSize1Min))*(cosTheta)/(-sinTheta) < 0.0))then
+                xPlane = xPlane + (abs(yPlane)-(y2-CellSize1Min))*cosTheta/(-sinTheta)
+                yPlane = y2 - (CellSize1Min)
              else	
                 IsInside=.false.
              endif
@@ -1248,9 +1248,9 @@ contains
 
           if(yPlane <= 0.0)then
              !Do not let rays begin in target past drive surface
-             if(xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta) < 0.0)then
-                xPlane = xPlane + (yPlane+minDXvalue)*cosTheta/(-sinTheta)
-                yPlane = minDXvalue
+             if(xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta) < 0.0)then
+                xPlane = xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta)
+                yPlane = CellSize1Min
              else	
                 IsInside=.false.
              endif

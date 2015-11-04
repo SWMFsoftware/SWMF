@@ -11,13 +11,13 @@ contains
 
     use BATL_lib, ONLY: nBlock, Unused_B, Unused_BP, iProc, iComm, &
          IsNewDecomposition, IsNewTree, nLevelMin, nLevelMax, &
-         CoordMax_D, CoordMin_D, nRoot_D, nI
+         DomainSize_D, nRoot_D, nI, CellSizeRoot
 
     use ModMain, ONLY: nBlockMax, iNewGrid, iNewDecomposition
 
     use ModPartSteady, ONLY: UsePartSteady
 
-    use ModGeometry, ONLY: MinDxValue, MaxDxValue
+    use ModGeometry, ONLY: CellSize1Min, CellSize1Max, CellSizeMin, CellSizeMax
 
     use ModAdvance, ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_
@@ -25,7 +25,7 @@ contains
     use ModIO, ONLY: restart
 
     integer:: iBlock, iError
-    real   :: CellSizeRoot
+    real   :: CellSize1Root
     !-------------------------------------------------------------------------
 
     ! Tell if the grid and/or the tree has changed
@@ -56,12 +56,16 @@ contains
           call set_batsrus_block(iBlock)
        end do
 
-       ! Get the root cell size in the first coordinate
-       CellSizeRoot = (CoordMax_D(1) - CoordMin_D(1))/(nRoot_D(1)*nI)
-
        ! Get the smallest and largest cell sizes in the current grid
-       MinDxValue = CellSizeRoot*0.5**nLevelMax
-       MaxDxValue = CellSizeRoot*0.5**nLevelMin
+       ! First coordinate
+       CellSize1Root = DomainSize_D(1)/(nRoot_D(1)*nI)
+       CellSize1Min = CellSize1Root*0.5**nLevelMax
+       CellSize1Max = CellSize1Root*0.5**nLevelMin
+
+       ! First or Phi coordinate in degrees
+       CellSizeMin = CellSizeRoot*0.5**nLevelMax
+       CellSizeMax = CellSizeRoot*0.5**nLevelMin
+
     end if
 
   end subroutine set_batsrus_grid

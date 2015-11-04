@@ -249,7 +249,7 @@ contains
   !======================================================================
   subroutine set_local_time_step(TimeSimulationLimit)
 
-    use ModGeometry,   ONLY: true_cell, true_BLK, MinDxValue, MaxDxValue
+    use ModGeometry,   ONLY: true_cell, true_BLK, CellSize1Min, CellSize1Max
     use ModMain,       ONLY: Time_Simulation, Cfl, Dt_Blk
     use ModAdvance,    ONLY: time_BLK
     use BATL_lib,      ONLY: CellSize_DB, Unused_B
@@ -278,8 +278,8 @@ contains
     call MPI_allreduce(DtDxMinPe, DtDxMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 
     ! Smallest and largest time steps in the domain (includes Cfl number)
-    DtMinSi = Cfl*MinDxValue*DtDxMin*No2Si_V(UnitT_)
-    DtMaxSi = Cfl*MaxDxValue*DtDxMin*No2Si_V(UnitT_)
+    DtMinSi = Cfl*CellSize1Min*DtDxMin*No2Si_V(UnitT_)
+    DtMaxSi = Cfl*CellSize1Max*DtDxMin*No2Si_V(UnitT_)
 
     if(DoTestMe)write(*,*) NameSub,': original DtDxMin, DtMinSi, DtMaxSi=', &
           DtDxMin, DtMinSi, DtMaxSi

@@ -36,7 +36,11 @@ module ModGeometry
   integer:: nMirror_D(3) = 1
 
   ! Smallest and largest cell sizes in the first dimension
-  real:: minDXvalue, maxDXvalue
+  real:: CellSize1Min, CellSize1Max
+
+  ! Smallest and largest cell sizes in either the first direction
+  ! or the Phi direction in degrees if IsLogRadius or IsGenRadius is true
+  real:: CellSizeMin, CellSizeMax
 
   ! Variables describing cells inside boundaries
   !true when at least one cell in the block (including ghost cells) is not true

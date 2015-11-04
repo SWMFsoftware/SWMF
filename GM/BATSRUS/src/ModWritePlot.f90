@@ -10,7 +10,7 @@ subroutine write_plot_common(iFile)
   use ModProcMH
   use ModMain
   use ModGeometry, ONLY: &
-       XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, MinDxValue
+       XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt, cLight, UnitU_
   use ModIO
   use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
@@ -133,7 +133,7 @@ subroutine write_plot_common(iFile)
      ! Adjust plotting range with unspecified plot resolution 
      ! so that it is aligned with the current grid resolution
      if(plot_type1(1:3) == 'cut' .and. plot_dx(1,iFile) <= 0.0) &
-          call adjust_plot_range(MinDxValue, PlotRange_I)
+          call adjust_plot_range(CellSize1Min, PlotRange_I)
 
      ! Save generalized coordinates for cuts out of non-Cartesian grids
      DoSaveGenCoord = plot_type1(1:3) == 'cut' .and. .not. IsCartesianGrid
@@ -1900,11 +1900,11 @@ end subroutine reverse_field
 !==========================================================================
 subroutine adjust_plot_range(PlotRes1, PlotRange_I)
 
-  ! Adjust plot range so it conincides with the cell boundaries
+  ! Adjust plot range so it coincides with the cell boundaries
   ! of the cells of size PlotRes1 in the first dimension
 
   use ModKind,  ONLY: nByteReal
-  use BATL_lib, ONLY: nDim, CoordMax_D, CoordMin_D, nIJK_D, nRoot_D
+  use BATL_lib, ONLY: nDim, DomainSize_D, CoordMin_D, nIJK_D, nRoot_D
 
   implicit none
 
@@ -1915,8 +1915,7 @@ subroutine adjust_plot_range(PlotRes1, PlotRange_I)
   integer:: iDim, iMin, iMax
   !-----------------------------------------------------------------------
   ! Largest cell size and a much smaller distance for 2D cuts  
-  CellSizeMax_D = (CoordMax_D(1:nDim) - CoordMin_D(1:nDim)) &
-       /(nIJK_D(1:nDim)*nRoot_D(1:nDim))
+  CellSizeMax_D = DomainSize_D(1:nDim)/(nIJK_D(1:nDim)*nRoot_D(1:nDim))
 
   ! Calculate plot cell size in all directions
   PlotRes_D = PlotRes1/CellSizeMax_D(1) * CellSizeMax_D

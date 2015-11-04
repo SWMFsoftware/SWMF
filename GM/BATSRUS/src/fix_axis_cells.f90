@@ -6,7 +6,7 @@ subroutine fix_axis_cells
   use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iTest, jTest, kTest, &
        BlkTest, x_, y_
   use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
-  use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, MinDxValue, &
+  use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, CellSize1Min, &
        r_BLK, rMin_BLK, far_field_bcs_blk
   use ModEnergy, ONLY: calc_energy_point
   use BATL_lib, ONLY: CoordMin_DB, CoordMax_DB, Lat_, &
@@ -49,7 +49,7 @@ subroutine fix_axis_cells
        call stop_mpi(NameSub//': invalid geometry='//TypeGeometry)
 
   ! Maximum number of cells along the axis
-  nR = nint((XyzMax_D(1)-XyzMin_D(1))/MinDxValue)
+  nR = nint((XyzMax_D(1)-XyzMin_D(1))/CellSize1Min)
   allocate(Buffer_VIII(nVar, nR, 1:Geom_, 1:2), &
        SumBuffer_VIII(nVar, nR, 1:Geom_, 1:2))
 
@@ -80,7 +80,7 @@ subroutine fix_axis_cells
         r = r_Blk(i,1,1,iBlock)
         if(IsLogRadius) r = alog(r)
         if(IsGenRadius) call radius_to_gen(r)
-        iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
+        iR = ceiling( (r - XyzMin_D(1))/CellSize1Min + 0.1)
 
         ! Average small cells in the kMin:kMax ring(s)
         do k=kMin, kMax; 
@@ -149,7 +149,7 @@ subroutine fix_axis_cells
         r = r_Blk(i,1,1,iBlock)
         if(IsLogRadius) r = alog(r)
         if(IsGenRadius) call radius_to_gen(r)
-        iR = ceiling( (r - XyzMin_D(1))/MinDxValue + 0.1)
+        iR = ceiling( (r - XyzMin_D(1))/CellSize1Min + 0.1)
 
         InvVolume= 1.0/SumBuffer_VIII(Volume_,iR,Geom_,iHemisphere)
         SumX     = 0.5*SumBuffer_VIII(SumX_  ,iR,Geom_,iHemisphere)
@@ -201,7 +201,7 @@ subroutine fix_axis_cells_cyl
   use ModProcMH, ONLY: iComm
   use ModMain, ONLY: nJ, nK, nBlock, Unused_B, x_, y_, z_
   use ModAdvance, ONLY: nVar, State_VGB, r2FixAxis
-  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MinDxValue
+  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, CellSize1Min
   use ModEnergy, ONLY: calc_energy_point
   use ModMpi
   use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, CellVolume_GB, CoordMin_DB, r_
@@ -225,7 +225,7 @@ subroutine fix_axis_cells_cyl
   if(nK == 1)then
      nZ = 1
   else
-     MinDzValue = MinDxValue*CellSize_DB(z_,1)/CellSize_DB(x_,1)
+     MinDzValue = CellSize1Min*CellSize_DB(z_,1)/CellSize_DB(x_,1)
      nZ = nint((XyzMax_D(3)-XyzMin_D(3))/MinDzValue)
   end if
   allocate(Buffer_VII(nVar,nZ,1:Geom_), SumBuffer_VII(nVar,nZ,1:Geom_))
