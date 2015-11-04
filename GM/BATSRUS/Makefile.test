@@ -50,6 +50,7 @@ test:
 	-@($(MAKE) test_cometCGfluids)
 	-@($(MAKE) test_magnetometer)
 	-@($(MAKE) test_anisotropic)
+	-@($(MAKE) test_region2d)
 	-@($(MAKE) test_func)
 	@ls -l *.diff
 
@@ -106,6 +107,7 @@ test_help:
 	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_partsteady            (run part steady test)"
+	@echo "    test_region2d	      (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shockramp             (run shockramp test)"
@@ -1494,7 +1496,7 @@ test_2bodyplot_run:
 	cd ${TESTDIR}/GM; ./pTEC g
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
-# Sort the files by numerical values of the first two columns (coordinates)
+# Sort the files by numerical values of the first three columns (coordinates)
 SORT = sort -k1 -k2 -k3 -n
 
 test_2bodyplot_check:
@@ -1623,4 +1625,64 @@ test_cometCGfluids_check:
 		Param/ROSETTA/TestOutput/CGfluids_log_n000000.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_cometCGfluids.diff)
 	ls -l test_cometCGfluids.diff
+
+### TEST FOR 2D REGIONS ###############################################################
+
+test_region2d:
+	@echo "test_region2d_compile..." > test_region2d.diff
+	$(MAKE) test_region2d_compile
+	@echo "test_region2d_rundir..." >> test_region2d.diff
+	$(MAKE) test_region2d_rundir
+	@echo "test_region2d_run..." >> test_region2d.diff
+	$(MAKE) test_region2d_run
+	@echo "test_region2d_check..." >> test_region2d.diff
+	$(MAKE) test_region2d_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_region2d_compile:
+	./Config.pl -e=Mhd -u=Default -g=8,8,1,700,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_region2d_rundir: test_rundir
+	cd ${TESTDIR}; cp Param/REGION/PARAM.in.2d PARAM.in
+	./TestParam.pl -n=1 ${TESTDIR}/PARAM.in >>  test_region2d.diff
+
+test_region2d_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl RESULTS/2d
+	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl
+	cd ${TESTDIR}; cp Param/REGION/PARAM.in.cyl_lnr PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/cyl_lnr
+
+# Sort the files by numerical values of the first two columns (coordinates)
+## SORT = sort -k1 -k2 -n
+
+test_region2d_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
+		Param/REGION/TestOutput/ \
+		${TESTDIR}/RESULTS/GM/log_n000001.log > test_region2d.diff)
+	gunzip -c Param/REGION/TestOutput/2d.out.gz | ${SORT} \
+		> ${TESTDIR}/RESULTS/2d/GM/ref.out
+	gunzip -c Param/REGION/TestOutput/cyl.out.gz | ${SORT} \
+		> ${TESTDIR}/RESULTS/cyl/GM/ref.out
+	gunzip -c Param/REGION/TestOutput/cyl_lnr.out.gz | ${SORT} \
+		> ${TESTDIR}/RESULTS/cyl_lnr/GM/ref.out
+	${SORT} ${TESTDIR}/RESULTS/2d/GM/z*.out \
+		> ${TESTDIR}/RESULTS/2d/GM/sol.out
+	${SORT} ${TESTDIR}/RESULTS/cyl/GM/z*.out \
+		> ${TESTDIR}/RESULTS/cyl/GM/sol.out
+	${SORT} ${TESTDIR}/RESULTS/cyl_lnr/GM/z*.out \
+		> ${TESTDIR}/RESULTS/cyl_lnr/GM/sol.out
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/2d/GM/???.out > test_region2d.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/cyl/GM/???.out > test_region2d.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+		${TESTDIR}/RESULTS/cyl_lnr/GM/???.out > test_region2d.diff)
+	ls -l test_region2d.diff
+
 
