@@ -35,7 +35,7 @@ module BATL_amr_criteria
 
   use BATL_region, ONLY: &
        init_region, clean_region, i_signed_region, block_inside_regions, &
-       IsNewGeoParam, MaxArea, nArea, AreaGeo_I, Area, &
+       IsNewGeoParam, MaxArea, nArea, Area_I, Area, &
        MaxArea, nCritGrid
 
   implicit none
@@ -219,7 +219,7 @@ contains
     iCrit = nAmrCritUsed
 
     do iGeo = 1, nArea
-       Area => AreaGeo_I(iGeo)
+       Area => Area_I(iGeo)
 
        ! Exclude named areas defined by #REGION / #AMRREGION commands
        if( Area%NameRegion /= "NULL") CYCLE
@@ -294,8 +294,8 @@ contains
           do iArea =1,nAreaPerCritAll_I(iCrit)
              idx = iAreaIdx_II(iArea,iCrit)
              write(*,"(A14,A6,I4,A8,A10,A14,A10)") " ","Idx = ", idx, &
-                  " NameShape = ", AreaGeo_I(abs(idx))%NameShape, &
-                  " NameRegion = ", AreaGeo_I(abs(idx))%NameRegion
+                  " NameShape = ", Area_I(abs(idx))%NameShape, &
+                  " NameRegion = ", Area_I(abs(idx))%NameRegion
           end do
        end do
        write(*,"(A17,100(I10))") "iVarCritAll_I:", iVarCritAll_I
