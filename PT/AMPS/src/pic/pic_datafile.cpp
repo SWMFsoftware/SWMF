@@ -130,7 +130,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::GetSchedule(){
   //read file names
   cScheduleItem Item;
   for(int iFile=0; iFile<nFile; iFile++){
-    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_);
+    fin.GetInputStr(str,_MAX_STRING_LENGTH_PIC_, false);
     if(IsSchedule){
       // time is provided in the table
       fin.CutInputStr(str1, str);
