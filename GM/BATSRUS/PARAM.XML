@@ -5,9 +5,9 @@
 List of MH (GM, EE, SC, IH, and OH) commands used in the PARAM.in file
 
 <!-- Grid size array is transformed into scalars to simplify rules -->
-<set name="nI"           type="integer" value="#_GridSize[0]" />
-<set name="nJ"           type="integer" value="#_GridSize[1]" />
-<set name="nK"           type="integer" value="#_GridSize[2]" />
+<set name="nI"           type="integer" value="$_GridSize[0]" />
+<set name="nJ"           type="integer" value="$_GridSize[1]" />
+<set name="nK"           type="integer" value="$_GridSize[2]" />
 <set name="MaxBlock"     type="integer" value="$_GridSize[3]" />
 <set name="MaxImplBlock" type="integer" value="$_GridSize[4]" />
 
@@ -4012,9 +4012,11 @@ Only useful if the initial condition has a non-trivial analytic form.
 		</part>
 	</parameter>
 	<if expr="$NameShape !~ /box|user|0/">
-		<parameter name="xCenter" type="real" default="0"/>
-		<parameter name="yCenter" type="real" default="0" if="$nJ!=1"/>
-		<parameter name="zCenter" type="real" default="0" if="$nK!=1"/>
+		<parameter name="xPosition" type="real" default="0"/>
+		<parameter name="yPosition" type="real" default="0" 
+			   if="$nJ!=1"/>
+		<parameter name="zPosition" type="real" default="0" 
+			   if="$nK!=1"/>
 	</if>
 	<if expr="$NameShape =~ /box/">
 		<parameter name="xMinBox" type="real" />
@@ -4039,7 +4041,7 @@ Only useful if the initial condition has a non-trivial analytic form.
 			   if="$StretchArea=~/stretched/ and $nK!=1"/>
 	</if>
 	<if expr="$NameShape =~ /cone|cylinder|ring|funnel|paraboloid/">
-		<parameter name="Height"     type="real" min="0" />
+		<parameter name="Height"     type="real" />
 		<parameter name="RadiusInner" type="real" min="0"
 			   if="$NameShape =~ /ring/"/>
 		<parameter name="RadiusStart" type="real" min="0"
@@ -4073,9 +4075,9 @@ box			StringShape
 #REGION
 region2			NameRegion
 brick			StringShape
--48.0			xCenter
-  0.0			yCenter
- -8.0			zCenter
+-48.0			xPosition
+  0.0			yPosition
+ -8.0			zPosition
  32.0			xSizeBrick
  32.0			ySizeBrick
  16.0			zSizeBrick
@@ -4083,9 +4085,9 @@ brick			StringShape
 #REGION
 ellipsoid		NameRegion
 sphere stretched	StringShape
--10.0			xCenterSphere
- 10.0			yCenterSphere
-  0.0			zCenterSphere
+-10.0			xPosition
+ 10.0			yPosition
+  0.0			zPosition
  20.0			Radius
  30.0			RadiusY  (only read if stretched)
  20.0			RadiusZ  (only read if stretched)
@@ -4099,9 +4101,9 @@ shell0			StringShape
 #REGION
 region5			NameRegion
 cylinderx stretched tapered
--30.0			xCenter
-  0.0			yCenter
-  0.0			zCenter
+-30.0			xPosition
+  0.0			yPosition
+  0.0			zPosition
  60.0			Length
  20.0			Radius
  25.0			RadiusPerp (only read if stretched)
@@ -4114,25 +4116,25 @@ ringz0 rotated		StringShape
  20.0			Radius1
  25.0			Radius2
  10.0			xRotate   (only read if rotated)
- 10.0			yRotate   (only read if rotated)
-  0.0			zRotate   (only read if rotated)
+ 10.0			yRotate   (only read if rotated in 3D)
+  0.0			zRotate   (only read if rotated in 3D)
 
 #REGION
 region7			NameRegion
 conex stretched		StringShape
--30.0			xTip
-  0.0			yTip
-  0.0			zTip
-  5.0			Height
+-30.0			xPosition
+  0.0			yPosition
+  0.0			zPosition
+ -5.0			Height (base is at xPosition-5)
  20.0			Radius
  30.0			RadiusPerp (only read if stretched)
 
 #REGION
 region8			NameRegion
 funnelx stretched	StringShape
- 10.0			xTip
- 20.0			yTip
- 30.0			zTip
+ 10.0			xPosition
+ 20.0			yPosition
+ 30.0			zPosition
  45.0			Height
  10.0			RadiusStart
  20.0			Radius
@@ -4148,9 +4150,9 @@ doubleconez0 tapered	StringShape
 #REGION
 magnetosphere		NameRegion
 paraboloidx stretched	StringShape
- 10.0			xTip
-  0.0			yTip
-  0.0			zTip
+ 10.0			xPosition
+  0.0			yPosition
+  0.0			zPosition
 -100.0			Height
   30.0			Radius
   20.0			RadiusPerp
@@ -4201,12 +4203,13 @@ The 'conex', 'doubleconex' and 'paraboloidx' are all aligned with the X axis
 and are described by the position of the tip, the height and the radius. 
 The 'funnelx' is a cone with its tip chopped off. It is described by
 the position of the center of the starting circle, its height, the starting 
-radius and the ending radius.
+radius and the ending radius. The sign of the height specifies
+the orientation of the shape along its symmetry axis.
 Note that all these round shapes can be made elliptical with the 
 "stretched" option (see below).
 
 If the area name contains the number '0', the center/tip is taken to be at the 
-origin and the center/tip coordinates are not read. Note that the areas 'box'
+origin and the Position coordinates are not read. Note that the areas 'box'
 and 'box_gen' are defined with the corners so the '0' cannot be used for these.
 
 If the word 'stretched' is added after the area name, the shape can be 
@@ -4303,9 +4306,11 @@ By default there are no "regions" defined.
 		</part>
 	</parameter>
 	<if expr="$NameShape !~ /box|user|init|0/">
-		<parameter name="xCenter" type="real" default="0"/>
-		<parameter name="yCenter" type="real" default="0" if="$nJ!=1"/>
-		<parameter name="zCenter" type="real" default="0" if="$nK!=1"/>
+		<parameter name="xPosition" type="real" default="0"/>
+		<parameter name="yPosition" type="real" default="0" 
+			   if="$nJ!=1"/>
+		<parameter name="zPosition" type="real" default="0" 
+			   if="$nK!=1"/>
 	</if>
 	<if expr="$NameShape =~ /box/">
 		<parameter name="xMinBox" type="real" />
@@ -4369,9 +4374,9 @@ box			NameShape
 #GRIDLEVEL
 4			nLevel
 brick			NameShape
--48.0			xCenter
-  0.0			yCenter
- -8.0			zCenter
+-48.0			xPosition
+  0.0			yPosition
+ -8.0			zPosition
  32.0			xSizeBrick
  32.0			ySizeBrick
  16.0			zSizeBrick
@@ -4385,17 +4390,17 @@ shell0			NameShape
 #GRIDRESOLUTION
 0.5			Resolution
 sphere			NameShape
--10.0			xCenterSphere
- 10.0			yCenterSphere
-  0.0			zCenterSphere
+-10.0			xPosition
+ 10.0			yPosition
+  0.0			zPosition
  20.0			Radius
 
 #GRIDRESOLUTION
 1/8			Resolution
 cylinderx		NameShape
--30.0			xCenter
-  0.0			yCenter
-  0.0			zCenter
+-30.0			xPosition
+  0.0			yPosition
+  0.0			zPosition
  60.0			Height
  20.0			Radius
 
@@ -7083,16 +7088,26 @@ Default is UseHallResist false.
 <command name="HALLREGION">
 	 <parameter name="StringHallRegion" type="string" length="200"
 	 	    default="none"/>
+         <parameter name="HallSpeedTinyDim" type="real" min="-1"
+	 	    default="-1"/>
 
 #HALLREGION
 +magnetotail -nearbody		StringHallRegion
+10.0				HallSpeedTinyDim
 
 This command is only useful if the Hall MHD scehem is switched on with
-the #HALLRESISTIVITY command. In this case the StringHallRegion string 
-can specify the region(s) where the Hall resistivity is used.
-The regions must be described with the #REGION command. 
-Note the 'tapered' option in the shape desciption that can be used 
-to make the transition smoother.
+the #HALLRESISTIVITY command. 
+
+The StringHallRegion string can specify the region(s) where the Hall
+resistivity is used.  The regions must be described with the #REGION
+command.  Note the 'tapered' option in the shape desciption that can
+be used to make the transition smoother.
+
+The HallSpeedTinyDim parameter gives a cut off value for the Hall
+speed J/(n*e). If the Hall speed at a given grid cell is below
+HallSpeedTinyDim, the Hall effect is ignored. The value is given in
+I/O units. Zero or negative value means that the cut off is not
+applied.
 
 The default is to apply the Hall MHD scheme everywhere if it is switched on.
 </command>
