@@ -5,7 +5,6 @@ DEFAULT_TARGET : amps
 # These definitions may be overwritten by Makefile.def
 SOURCES=src
 WSD=srcTemp
-InputFileAMPS=moon.input
 SPICE=nospice
 
 #Compiling with the CCMC's Kameleon
@@ -29,7 +28,7 @@ SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/$
 ifneq ($(KAMELEON),nokameleon)   
 	SEARCH_C+=-D_PIC_COMPILE__KAMELEON_ 
 endif
-	
+
 
 #the additional argument string for the fortran compiler
 SEARCH_F=
@@ -102,19 +101,11 @@ ifeq ($(TESTMODE),on)
 	SEARCH_C+=-D _PIC_NIGHTLY_TEST_MODE_=_PIC_MODE_ON_
 endif
 
-
-
-install:
-	@echo " " > Makefile.local
-	@rm -f .ampsConfig.Settings
-	@./Config.pl -application=Moon
-	@echo "AMPS installed"
-
 distclean:
 	./Config.pl -uninstall
 
 allclean: clean
-	rm -rf main srcTemp *.input* amps Makefile.local .ampsConfig.Settings
+	rm -rf main srcTemp *.input* amps Makefile.local .amps.conf
 
 rundir:
 	mkdir -p ${RUNDIR}/PT
@@ -123,11 +114,6 @@ rundir:
 
 
 EXE=amps
-
-#Lib=  -lm
-
-#MPIRUN=mpirun -np 4
-#RUNDIR=run
 
 LIB_AMPS = ${WSD}/libAMPS.a
 
@@ -141,7 +127,7 @@ tar:
 	tar -cvf sources.tar sources
 
 ${WSD}:
-	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
+	./ampsConfig.pl -no-compile 
 
 LIB: 
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
@@ -158,25 +144,22 @@ endif
 	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/exosphere;            make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/dust;                 make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH_C}"
 	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH_C}" 
-#compile external modules
-	$(foreach src, $(ExternalModules), (cd ${WSD}/$(src); make SEARCH_C="${SEARCH_C}")) 
 	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
-	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/exosphere/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
 else
 	rm -rf ${WSD}/tmpSPICE
 	mkdir ${WSD}/tmpSPICE
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
-	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o 
-	$(foreach src, $(ExternalModules), (cd ${WSD}; ${AR} libAMPS.a $(src)/*.o))
+	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o modeles/exosphere/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o
 endif
 
 .PHONY: amps

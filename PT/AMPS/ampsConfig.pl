@@ -16,10 +16,10 @@ my $loadedFlag_MainBlock=0;
 my $loadedFlag_SpeciesBlock=0;
 my $loadedFlag_BackgroundSpeciesBlock=0;
 
-my $InputFileNameDefault="moon.input"; #"cg.input"; #"mercury.input-test"; #"moon.input"; #"mercury.input"; #"moon.input";
 my $InputFileName;
 
-my $InputDirectory='.'; #the directory for the input files/tables of the model runs
+#the directory for the input files/tables of the model runs
+my $InputDirectory='.'; 
 
 
 my $line;
@@ -89,46 +89,30 @@ for (my $i=0;$i<$#ARGV + 1;$i++) {
   
 }
 
-
-#if the input file is not determine in the argument line: 1. search for file .amps.InputFileName.txt that containes the inputfile name or 2. use the default input file name
-if (!defined($InputFileName)) {
-  if (-f ".amps.InputFile.txt") {
-    open(FILE,"<.amps.InputFileName.txt") || die "Cannot open .amps.InputFileName.txt\n";
-    $InputFileName=<FILE>;
-    close(FILE);
-  }
-  else {
-    $InputFileName=$InputFileNameDefault;
-  }
-}
-
-open(FILE,">.amps.InputFileName.txt");
-print FILE "$InputFileName";
-close(FILE);
-
-#output basic parameters of the code configuration 
-print "InputFile: $InputFileName\n"; 
-
-#assemble the input file 
-open (AssembledInputFile,">","$InputFileName.Assembled");
-
-AssambleInputFile($InputFileName);
-close AssembledInputFile;
-
-open (InputFile,"<","$InputFileName.Assembled") || die "Cannot find file \"$InputFileName.Assembled\"\n";
-
-
 #read the assembled input file
 print "Preprocessing AMPS sources\n";
 
 #default values for different modes
 add_line_makefile_local("INTERFACE=off",1);
 
-#read settings from .ampsConfig
+#read settings from .amps.conf
 if (-e ".amps.conf") {
   ampsConfigSettings();
 }
 
+die "ERROR: Application hasn't been set!\n" unless $InputFileName;
+
+#output basic parameters of the code configuration 
+print "InputFile: $InputFileName\n"; 
+
+
+#assemble the input file 
+open (AssembledInputFile,">","$InputFileName.Assembled");
+AssambleInputFile($InputFileName);
+close AssembledInputFile;
+
+
+open (InputFile,"<","$InputFileName.Assembled") || die "Cannot find file \"$InputFileName.Assembled\"\n";
 
 while ($line=<InputFile>) {
   ($InputFileLineNumber,$FileName)=split(' ',$line);
@@ -2856,6 +2840,10 @@ sub ampsConfigSettings {
 	    chomp($_);
 	    next unless $_;
 	    add_line_makefile_local($_,1);
+	    if(/^InputFileAMPS=(.*)$/i){
+		$InputFileName = $1;
+		next
+	    }
 	    if (/^SPICEKERNELS=(.*)$/i) {
 		ampsConfigLib::ChangeValueOfVariable("const char SPICE_Kernels_PATH\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$1."\"","models/exosphere/Exosphere.h"); 
 		next};
