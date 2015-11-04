@@ -103,7 +103,6 @@ subroutine write_plot_common(iFile)
   ! Initialize stuff
   call set_oktest(NameSub, oktest, oktest_me)
 
-  PlotVar = 0.0
   plotvar_inBody = 0.0
   plotvar_useBody = .false.
 
@@ -750,7 +749,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
        plot_dimensional, Plot_
   use ModNumConst, ONLY: cTiny
-  use ModHallResist, ONLY: UseHallResist, set_hall_factor_cell, HallFactor_C
+  use ModHallResist, ONLY: UseHallResist, &
+       set_hall_factor_cell, HallFactor_C, IsHallBlock
   use ModResistivity, ONLY: Eta_GB, Eta0
   use ModFaceGradient, ONLY: get_face_curl
   use ModPointImplicit, ONLY: UsePointImplicit_B
@@ -765,7 +765,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModCoordTransform, ONLY: cross_product
   use ModViscosity, ONLY: Viscosity_factor, UseViscosity
   use ModFaceValue, ONLY: iRegionLowOrder_I
-  use BATL_lib, ONLY: block_inside_regions
+  use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B
 
   use ModUserInterface ! user_set_plot_var
 
@@ -773,7 +773,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   integer, intent(in) :: iBLK,iPlotFile,Nplotvar
   character (LEN=10), intent(in) :: plotvarnames(Nplotvar)
-  real, intent(inout) :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
+  real, intent(out)   :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
   real, intent(out)   :: plotvar_inBody(nPlotVar)
   logical, intent(out):: plotvar_useBody(nPlotVar)
 
@@ -803,7 +803,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   character(len=*), parameter:: NameSub='set_plotvar'
   !---------------------------------------------------------------------------
-
   if(iBLK==BlkTest.and.iProc==ProcTest)then
      call set_oktest(NameSub,DoTest,DoTestMe)
   else
@@ -822,6 +821,9 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
 
   ! Recalculate magnetic field in block for face currents (if needed)
   IsNewBlockCurrent = .true.
+
+  ! Set default value to zero
+  PlotVar = 0.0
 
   do iVar = 1, nPlotVar
      NamePlotVar = plotvarnames(iVar)
@@ -928,14 +930,12 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('n','t','temp')
         ! Calculate the number density
         if(UseMultiSpecies)then
-           PlotVar(:,:,:,iVar)=0.0
            do jVar = SpeciesFirst_, SpeciesLast_
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
                    State_VGB(jVar,:,:,:,iBLK)/MassSpecies_V(jVar)
            end do
         else if(iFluid == 1 .and. UseMultiIon)then
            ! Add up ion number densities
-           PlotVar(:,:,:,iVar) = 0.0
            do iIon = 1, nIonFluid
               PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar) + &
                    State_VGB(iRhoIon_I(iIon),:,:,:,iBLK)/MassIon_I(iIon)
@@ -1182,8 +1182,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
            do k = 1, nK; do j = 1, nJ; do i =1, nI
               PlotVar(i,j,k,iVar) = Viscosity_factor(0,i,j,k,iBLK)
            end do;end do;end do
-        else
-           PlotVar(:,:,:,iVar)=0.0
         end if
      case('divb')
         if(.not.IsCartesian)call stop_mpi( &
@@ -1290,6 +1288,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('crit9')
         if(allocated(AmrCrit_IB) .and. nAmrCrit >= 9) &
              PlotVar(:,:,:,iVar) = AmrCrit_IB(9,iBlk)
+     case('amrlevel')
+        PlotVar(:,:,:,iVar) = iTree_IA(Level_,iNode_B(iBLK))
      case('dx')
         PlotVar(:,:,:,iVar) = CellSize_DB(x_,iBLK)
      case('dy')
@@ -1306,14 +1306,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         end if
      case('cons')
         if(allocated(IsConserv_CB))then
-           where(IsConserv_CB(:,:,:,iBLK))
-              PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
-           elsewhere
-              PlotVar(1:nI,1:nJ,1:nK,iVar)=0.
-           end where
-        else if(UseNonConservative)then
-           PlotVar(1:nI,1:nJ,1:nK,iVar)=0.
-        else
+           where(IsConserv_CB(:,:,:,iBLK)) PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
+        else if(.not.UseNonConservative)then
            PlotVar(1:nI,1:nJ,1:nK,iVar)=1.
         end if
      case('evolve','impl')
@@ -1334,20 +1328,19 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         if(UseHallResist)then
            call set_hall_factor_cell(iBLK)
            PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
-        else
-           PlotVar(:,:,:,iVar) = 0.0
         end if
      case('hallfactor')
         if(UseHallResist)then
            call set_hall_factor_cell(iBLK, .false.)
            PlotVar(1:nI,1:nJ,1:nK,iVar) = HallFactor_C
-        else
-           PlotVar(:,:,:,iVar) = 0.0
         end if
-
+     case('hallblock')
+        if(UseHallResist)then
+           call set_hall_factor_cell(iBLK, .false.)
+           if(IsHallBlock)PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.0
+        end if
      case('elaser')
         if(UseLaserHeating)then
-           PlotVar(:,:,:,iVar) = 0.0
            if(allocated(LaserHeating_CB)) &
                 PlotVar(1:nI,1:nJ,1:nK,iVar) = LaserHeating_CB(:,:,:,iBlk)
         end if
@@ -1358,8 +1351,6 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                  PlotVar(i,j,k,iVar) = &
                       sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBLK))
               end do; end do; end do
-           else
-              PlotVar(:,:,:,iVar) = 0.0
            end if
         else
            PlotVar(:,:,:,iVar) = State_VGB(Ew_,:,:,:,iBLK)
@@ -1385,7 +1376,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
                 NameUnitUserIdl_I(iVar), IsFound)
            if(.not. IsFound) then
               PlotVar(:,:,:,iVar)=-7777.
-              if(iProc==0.and.iBLK==1)write(*,*) &
+              if(iProc==0 .and. iBLK==1)write(*,*) &
                    'Warning in set_plotvar: unknown plotvarname=',&
                    plotvarnames(iVar),' for iPlotFile=',iPlotFile
            end if
