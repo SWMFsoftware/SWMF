@@ -19,20 +19,23 @@ module BATL_interpolate_amr
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
-  ! (must be handled outside of wrapper
+  ! (must be handled outside this module)
   ! MIN and MAX are added in order to keep value in range 1 to nDim
   integer, parameter:: iDimNoAmr = & 
        MAX(1,MIN(1*(2 - iRatio) + 2*(2 - jRatio) + 3*(2 - kRatio), nDim))
-  !order of indexes (Amr directions first, NoAmr direction last)
-  integer, parameter :: iOrder_II(MaxDim,MaxDim) = reshape((/&
-                                         2, 3, 1, & !iDimNoAmr = 1
-                                         1, 3, 2, & !iDimNoAmr = 2
-                                         1, 2, 3  & !iDimNoAmr = 3
-                                         /), (/3,3/))
 
   ! order of dimensions to correctly place AMR and non-AMR directions
-  ! Is calculated as iOrder_II(:,iDimNoAmr), if nDimAmr/=nDim 
-  integer:: iOrder_I(MaxDim) 
+  ! it depends on iDimNoAmr:
+  ! iOrder_I = (/2, 3, 1/) for iDimNoAmr = 1
+  ! iOrder_I = (/1, 3, 2/) for iDimNoAmr = 2
+  ! iOrder_I = (/1, 2, 3/) for iDimNoAmr = 3
+  ! iOrder_I = (/1, 2, 3/) for nDimAmr = nDim
+  ! MIN and MAX are added in order to keep value in range 1 to nDim
+  integer,parameter:: iOrder_I(MaxDim) = (/&
+       3 - iRatio, & 
+       MIN(6 - iRatio - jRatio, nDim),  &
+       MAX(-3 + 2*iRatio + jRatio, 1) /)
+
   ! point's coordinate in non-AMR dimensions
   real   :: CoordNoAmr, DisplacedCoordNoAmr
 
@@ -89,9 +92,6 @@ contains
     if(nDimAmr < nDim) then
        ! this case is valid only for nDim=MaxDim=3, nDimAmr=2
        CoordNoAmr = XyzIn_D(iDimNoAmr)
-       iOrder_I = iOrder_II(:,iDimNoAmr)
-    else
-       iOrder_I = (/1, 2, 3/)
     end if
 
     ! mark the beginning of the interpolation
