@@ -95,7 +95,7 @@ contains
   !============================================================================
   subroutine init_region
 
-    use BATL_geometry,     ONLY: x_, Phi_, Theta_, IsCartesianGrid, &
+    use BATL_geometry,     ONLY: Phi_, Theta_, IsCartesianGrid, &
          IsLogRadius, IsGenRadius, DomainSize_D, radius_to_gen
     use BATL_tree,         ONLY: nRoot_D
     use ModNumConst,       ONLY: cDegToRad, cRadToDeg

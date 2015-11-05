@@ -893,7 +893,6 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= .true.
     real, parameter:: DomainMin_D(MaxDim) = (/ 1.0, 10.0, 100.0 /)
     real, parameter:: DomainMax_D(MaxDim) = (/ 4.0, 40.0, 400.0 /)
-    real, parameter:: DomainSize_D(MaxDim) = DomainMax_D - DomainMin_D
 
     real, parameter:: Tolerance = 1e-6
 

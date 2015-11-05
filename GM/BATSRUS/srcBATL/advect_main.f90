@@ -705,7 +705,8 @@ contains
           write(UnitTmp_,'(i8,a)')     1,             ' neqpar'
           write(UnitTmp_,'(10es13.5)') 0.0            ! eqpar
           write(UnitTmp_,'(a)')        &
-               'coord1 coord2 coord3 rho lin rhoexact linexact volume node proc block none' 
+               'coord1 coord2 coord3 rho lin rhoexact linexact volume '// &
+               'node proc block none' 
           write(UnitTmp_,'(a)')        '1 1 1'        ! units
           write(UnitTmp_,'(l8,a)')     .true.,        ' IsBinary' 
           write(UnitTmp_,'(i8,a)')     nByteReal,     ' nByteReal'
@@ -1322,7 +1323,8 @@ contains
 
           iStageBlock = iStage_B(iBlock)
 
-          if(DoTestBlock)write(*,*) NameSub,' iStage, iStageBlock, TimeOld_B, Time_B=', &
+          if(DoTestBlock) &
+               write(*,*) NameSub,' iStage, iStageBlock, TimeOld_B, Time_B=', &
                iStage, iStageBlock, TimeOld_B(iBlock), TimeBlock
 
           if(DoTestBlock)write(*,*) NameSub,' starting stage with state=', &
@@ -1330,11 +1332,15 @@ contains
                exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), TimeBlock)
 
           if(DoTest)then
-             if(is_incorrect_block(iBlock, Time_B(iBlock), UseGhost=.true.))then
+             if(is_incorrect_block(iBlock, Time_B(iBlock), UseGhost=.true.)) &
+                  then
                 write(*,*) '!!! at start of iStage=', iStage
-                write(*,*) '!!! iLevelMin, iLevelB=', iLevelMin, iTree_IA(Level_,iNode_B(iBlock))
-                write(*,*) '!!! DiLevelNei_IIIB(:,0,0)=', DiLevelNei_IIIB(:,0,0,iBlock)
-                write(*,*) '!!! DiLevelNei_IIIB(0,:,0)=', DiLevelNei_IIIB(0,:,0,iBlock)
+                write(*,*) '!!! iLevelMin, iLevelB=', &
+                     iLevelMin, iTree_IA(Level_,iNode_B(iBlock))
+                write(*,*) '!!! DiLevelNei_IIIB(:,0,0)=', &
+                     DiLevelNei_IIIB(:,0,0,iBlock)
+                write(*,*) '!!! DiLevelNei_IIIB(0,:,0)=', &
+                     DiLevelNei_IIIB(0,:,0,iBlock)
              end if
           end if
 
@@ -1382,17 +1388,23 @@ contains
              write(*,*) NameSub,' flux x left, exact=', &
                   Flux_VFD(:,iTest,jTest,kTest,1), &
                   CellFace_DB(1,iBlock)*Velocity_D(1)* &
-                  ( exact_v(Xyz_DGB(1:nDim,iTest-1,jTest,kTest,iBlockTest),TimeBlock) &
-                  + exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),TimeBlock))/2
+                  ( exact_v(Xyz_DGB(1:nDim,iTest-1,jTest,kTest,iBlockTest),&
+                  TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),&
+                  TimeBlock))/2
              write(*,*) NameSub,' flux x right, exact=', &
-                  Flux_VFD(:,iTest+1,jTest,kTest,1), CellFace_DB(1,iBlock)*Velocity_D(1)* &
-                  ( exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),TimeBlock) &
-                  + exact_v(Xyz_DGB(1:nDim,iTest+1,jTest,kTest,iBlockTest),TimeBlock) )/2
+                  Flux_VFD(:,iTest+1,jTest,kTest,1), &
+                  CellFace_DB(1,iBlock)*Velocity_D(1)* &
+                  ( exact_v(Xyz_DGB(1:nDim,iTest  ,jTest,kTest,iBlockTest),&
+                  TimeBlock) &
+                  + exact_v(Xyz_DGB(1:nDim,iTest+1,jTest,kTest,iBlockTest),&
+                  TimeBlock) )/2
 
              ! Note new time
              write(*,*) NameSub,' after update state, exact=', &
                   State_VGB(:,iTest,jTest,kTest,iBlockTest), &
-                  exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest),Time_B(iBlock))
+                  exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest),&
+                  Time_B(iBlock))
           end if
        end do
 
