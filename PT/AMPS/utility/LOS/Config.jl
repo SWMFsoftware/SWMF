@@ -114,15 +114,35 @@ function get_tmp_dir()
   exit()
 end
 
+function config_data_file(ARGS)
+  dataFile = ARGS[2]
+  tmpdir = get_tmp_dir()
+  if contains(dataFile, ".h5")
+    cp(dataFile, joinpath(tmpdir, "input/"*basename(dataFile)), remove_destination=true)
+    updateSettings("dataFile:", joinpath(tmpdir, "input/"*basename(dataFile)))
+  else
+    print(" - selected data file is not in HDF5 format. Build new .h5 file? (y/n) ")
+    answ = parseCmdLineArg()
+    if !contains(answ, "n")
+      println(" -  generating new file, this might take a few seconds.")
+      cd("src")
+      println(`julia prepareAmpsData.jl $dataFile`)
+      run(`julia prepareAmpsData.jl $dataFile`)
+      path = dirname(dataFile)
+      baseName = basename(dataFile)
+      ext = split(baseName, ".")[end]
+      newBase = baseName[1:end-(length(ext)+1)] * ".h5"
+      newDataFile = joinpath(path, newBase)
 
-################################################################################
-# start main
-################################################################################
+      cp(newDataFile, joinpath(tmpdir, "input/"*newBase), remove_destination=true)
+      updateSettings("dataFile:", joinpath(tmpdir, "input/"*newBase))
 
-os = "operatingSystem"
-@linux?  linux() : osx()
+    end
+  end
 
-if lowercase(ARGS[1]) == "--tmpdir"
+end
+
+function config_tmpdir(ARGS)
   rundir = ""
   try
     rundir = ARGS[2]
@@ -160,9 +180,12 @@ if lowercase(ARGS[1]) == "--tmpdir"
   touch(".userSettings.conf")
   updateSettings("tmpDir:", rundir)
 
-elseif lowercase(ARGS[1]) == "--spicelib"
+end
+
+function config_spicelib(ARGS)
   sharedLibPath = ARGS[2]
   tmpdir = get_tmp_dir()
+  @show(tmpdir)
   cp(joinpath(sharedLibPath, "cspice.a"),
      joinpath(tmpdir, "lib/cspice.a"),
      remove_destination=true)
@@ -182,13 +205,14 @@ elseif lowercase(ARGS[1]) == "--spicelib"
   cd(joinpath(tmpdir, "lib"))
   run(`rm $objectFiles`)
   cd(previousDir)
+end
 
-
-elseif lowercase(ARGS[1]) == "--kernelfile"
+function config_kernelfile(ARGS)
   kernelFile = ARGS[2]
   updateSettings("kernelFile:", kernelFile)
+end
 
-elseif lowercase(ARGS[1]) == "--clib"
+function config_clib(ARGS)
   clibFile = ARGS[2]
   tmpdir = get_tmp_dir()
   if os == "linux"
@@ -210,32 +234,64 @@ elseif lowercase(ARGS[1]) == "--clib"
     println("Did not find c library! ")
     updateSettings("clibFile:", "")
   end
+end
 
-elseif lowercase(ARGS[1]) == "--noclib"
-  updateSettings("clibFile:", "")
-
-elseif lowercase(ARGS[1]) == "--meshfile"
+function config_meshfile(ARGS)
   meshFile = ARGS[2]
   tmpdir = get_tmp_dir()
   cp(meshFile, joinpath(tmpdir, "input/"*basename(meshFile)), remove_destination=true)
   updateSettings("meshFile:", joinpath(tmpdir, "input/"*basename(meshFile)))
+end
 
-elseif lowercase(ARGS[1]) == "--meshfileshadow"
+function config_meshfileshadow(ARGS)
   meshFile = ARGS[2]
   tmpdir = get_tmp_dir()
   cp(meshFile, joinpath(tmpdir, "input/"*basename(meshFile)), remove_destination=true)
   cp(meshFile, joinpath(tmpdir, "input/"*basename(meshFile)), remove_destination=true)
   updateSettings("meshFileShadow:", joinpath(tmpdir, "input/"*basename(meshFile)))
+end
 
-elseif lowercase(ARGS[1]) == "--docheckshadow"
+function config_docheckshadow(ARGS)
   doCheckShadow = ARGS[2]
   updateSettings("doCheckShadow:", doCheckShadow)
+end
+
+function parseCmdLineArg()
+  arg = strip(string(bytestring(readline(STDIN)[1:end-1])))
+end
+################################################################################
+# start main
+################################################################################
+
+os = "operatingSystem"
+@linux?  linux() : osx()
+
+if lowercase(ARGS[1]) == "--tmpdir"
+  config_tmpdir(ARGS)
+
+elseif lowercase(ARGS[1]) == "--spicelib"
+  config_spicelib(ARGS)
+
+elseif lowercase(ARGS[1]) == "--kernelfile"
+  config_kernelfile(ARGS)
+
+elseif lowercase(ARGS[1]) == "--clib"
+  config_clib(ARGS)
+
+elseif lowercase(ARGS[1]) == "--noclib"
+  updateSettings("clibFile:", "")
+
+elseif lowercase(ARGS[1]) == "--meshfile"
+  config_meshfile(ARGS)
+
+elseif lowercase(ARGS[1]) == "--meshfileshadow"
+  config_meshfileshadow(ARGS)
+
+elseif lowercase(ARGS[1]) == "--docheckshadow"
+  config_docheckshadow(ARGS)
 
 elseif lowercase(ARGS[1]) == "--datafile"
-  dataFile = ARGS[2]
-  tmpdir = get_tmp_dir()
-  cp(dataFile, joinpath(tmpdir, "input/"*basename(dataFile)), remove_destination=true)
-  updateSettings("dataFile:", joinpath(tmpdir, "input/"*basename(dataFile)))
+  config_data_file(ARGS)
 
 elseif lowercase(ARGS[1]) == "--clean"
   tmpdir = get_tmp_dir()
@@ -275,6 +331,63 @@ elseif lowercase(ARGS[1]) == "--help"
     println("--datafile        .full path to h5 AMPS output file")
     println("--clean           remove 'lib' and 'input' dirs in tmpfile")
     println("--help            show this message")
+
+  else
+    println("Too bad, better luck next time...")
   end
+elseif lowercase(ARGS[1]) == "--auto"
+  println("START auto setup:")
+  print("--tmpdir ")
+  arg = parseCmdLineArg()
+  config_tmpdir(["", arg])
+
+  print("--spicelib ")
+  arg = parseCmdLineArg()
+  config_spicelib(["", arg])
+
+  print("--kernelfile ")
+  arg = parseCmdLineArg()
+  config_kernelfile(["", arg])
+
+  print("--meshfile ")
+  arg = parseCmdLineArg()
+  config_kernelfile(["", arg])
+
+  print("--datafile ")
+  arg = parseCmdLineArg()
+  config_kernelfile(["", arg])
+
+  println()
+  println(" - Mandatory settings done, continue with optional settings? ")
+  println("   skip a parameter by hitting enter without giving an input.")
+  print(  "   continue? (y/n) ")
+  answ = readline(STDIN)
+  if !contains(answ, "n")
+    println()
+    print("--clib ")
+    arg = parseCmdLineArg()
+    if length(arg) < 1
+      println(" - ...skipped")
+    else
+      config_clib(["", arg])
+    end
+
+    print("--meshFileShadow ")
+    arg = parseCmdLineArg()
+    if length(arg) < 1
+      println(" - ...skipped")
+    else
+      config_meshfileshadow(["", arg])
+    end
+
+    print("--doCheckShadow ")
+    arg = parseCmdLineArg()
+    if length(arg) < 1
+      println(" - ...skipped")
+    else
+      config_docheckshadow(["", arg])
+    end
+  end
+
 
 end

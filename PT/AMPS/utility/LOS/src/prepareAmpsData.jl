@@ -25,6 +25,11 @@ println(" - building nodes...")
 nodes = build_nodes(nCells, nodeCoordinates, cubeIndices)
 println(" - write result to .h5")
 
+if isfile(joinpath(filePath, fileNameBase * ".h5"))
+  println(" - file already exists, replacing it.")
+  rm(joinpath(filePath, fileNameBase * ".h5"))
+end
+
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/nCells", nCells)
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/nBlocks", nBlocks)
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/nCellsPerBlock", nCellsPerBlock)

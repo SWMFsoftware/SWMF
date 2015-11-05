@@ -59,6 +59,13 @@ julia Config.jl --option
 The settings of the configuration process are saved to
 AMPS/utility/LOS/.userSettings.conf
 
+Running:
+julia Config.jl --auto
+will take you through the necessary configuration steps one by one.
+The other options below can also be used after or before the --auto run in
+order to overwrite/change settings done in --auto.
+
+
 the following options are available ( * ) are mandatory setups)
 
 --tmpdir <path to temporary directory> ( * )
@@ -118,7 +125,11 @@ the following options are available ( * ) are mandatory setups)
 --help            show this message"
 
 
-
+RUN
+===
+Before you can use the LOS tool you need to modify the AMPS data with the
+prepareAmpsData.jl script. This will create a new HDF5 (.h5) file with only
+a subset of data from the original file.
 
 
 7) Prepare AMPS data by executing:
@@ -127,8 +138,3 @@ julia prepareAmpsData.jl FileName
 
 this will create a .h5 file which is later used
 to load the data
-
-
-
-
-:
