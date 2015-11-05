@@ -116,6 +116,7 @@ end
 
 function config_data_file(ARGS)
   dataFile = ARGS[2]
+  @show(dataFile)
   tmpdir = get_tmp_dir()
   if contains(dataFile, ".h5")
     cp(dataFile, joinpath(tmpdir, "input/"*basename(dataFile)), remove_destination=true)
@@ -126,17 +127,16 @@ function config_data_file(ARGS)
     if !contains(answ, "n")
       println(" -  generating new file, this might take a few seconds.")
       cd("src")
-      println(`julia prepareAmpsData.jl $dataFile`)
       run(`julia prepareAmpsData.jl $dataFile`)
+      cd("..")
       path = dirname(dataFile)
       baseName = basename(dataFile)
       ext = split(baseName, ".")[end]
       newBase = baseName[1:end-(length(ext)+1)] * ".h5"
       newDataFile = joinpath(path, newBase)
 
-      cp(newDataFile, joinpath(tmpdir, "input/"*newBase), remove_destination=true)
+      mv(newDataFile, joinpath(tmpdir, "input/"*newBase), remove_destination=true)
       updateSettings("dataFile:", joinpath(tmpdir, "input/"*newBase))
-
     end
   end
 
@@ -185,7 +185,6 @@ end
 function config_spicelib(ARGS)
   sharedLibPath = ARGS[2]
   tmpdir = get_tmp_dir()
-  @show(tmpdir)
   cp(joinpath(sharedLibPath, "cspice.a"),
      joinpath(tmpdir, "lib/cspice.a"),
      remove_destination=true)
@@ -351,11 +350,11 @@ elseif lowercase(ARGS[1]) == "--auto"
 
   print("--meshfile ")
   arg = parseCmdLineArg()
-  config_kernelfile(["", arg])
+  config_meshfile(["", arg])
 
   print("--datafile ")
   arg = parseCmdLineArg()
-  config_kernelfile(["", arg])
+  config_data_file(["", arg])
 
   println()
   println(" - Mandatory settings done, continue with optional settings? ")
