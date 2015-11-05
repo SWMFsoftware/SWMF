@@ -7,6 +7,9 @@ include("io.jl")
 include("octree.jl")
 include("raytrace.jl")
 
+global const clib = parseUserFile("clibFile:")
+@show(clib)
+
 etStr = ARGS[1]
 metaFile = parseUserFile("kernelFile:")
 try

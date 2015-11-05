@@ -249,6 +249,11 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       end
       nTrianglesShadow, allTrianglesShadow, totalSurfaceAreaShadow = load_ply_file(meshFile)
     end
+
+    dataFileName = parseUserFile("dataFile:")
+    minDustSize = h5read(dataFileName, "oct/minDustSize")
+    maxDustSize = h5read(dataFileName, "oct/maxDustSize")
+
     nRays = size(rPointing, 2)
     columnDensity = 0.0
     distance = 0.0
@@ -310,7 +315,8 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
           for k=1:nVars
             dataOld[k] = dataNew[k]
           end
-          triLinearInterpolation!(cell, r, dataNew)
+          triLinearInterpolation!(cell, r, dataNew, minDustSize, maxDustSize,
+                                  distFromStart)
           for k=1:nVars
             data[k] += (dataOld[k] + dataNew[k]) / 2.0 * l
           end

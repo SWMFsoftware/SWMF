@@ -297,7 +297,15 @@ function findCellInBlock(block::Block, point::Array{Float64, 1})
   return round(Int, cellIndex)
 end
 
-function triLinearInterpolation!(cell::Cell, point::Array{Float64,1}, data)
+function get_factor!(minSize, maxSize, r)
+  f = Ref{Cdouble}(1.0)
+  ccall((:ColumnIntegrationFactor, clib), Void, (Cdouble, Cdouble, Cdouble,
+         Ptr{Cdouble}), minSize, maxSize, r, f)
+  return f[]
+end
+
+function triLinearInterpolation!(cell::Cell, point::Array{Float64,1}, data,
+                                 minDustSize, maxDustSize, r)
 
   xd = (point[1] - cell.nodes[1,1]) / (cell.nodes[2,1] - cell.nodes[1,1])
   yd = (point[2] - cell.nodes[1,2]) / (cell.nodes[3,2] - cell.nodes[1,2])
@@ -313,6 +321,12 @@ function triLinearInterpolation!(cell::Cell, point::Array{Float64,1}, data)
     c1 = c01*(1-zd) + c11*zd
 
     c = c0*(1-yd) + c1*yd
-    data[i] = c
+
+    if length(clib) > 1
+      f = get_factor!(minDustSize[i], maxDustSize[i], r)
+    else
+      f = 1.0
+    end
+    data[i] = c * f
   end
 end
