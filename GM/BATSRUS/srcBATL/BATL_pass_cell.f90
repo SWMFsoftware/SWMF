@@ -366,7 +366,7 @@ contains
     real, allocatable:: State_VIIIB(:,:,:,:,:)
     logical, allocatable:: IsAccurate_B(:)
 
-    logical:: Do6thCorrect = .false. 
+    logical:: DoSixthCorrect = .false. 
 
     ! For high order resolution change, a few face ghost cells need to be 
     ! calculated remotely after the corase block have got accurate 
@@ -529,7 +529,7 @@ contains
        ! For 6th order correction, which may be better because of symmetry,
        ! 8 cells are needed in each direction. If it is not satisfied, 
        ! use 5th order correction.        
-       Do6thCorrect = nI>7 .and. nJ>7 .and. (nDim==2 .or. nK>7)
+       DoSixthCorrect = nI>7 .and. nJ>7 .and. (nDim==2 .or. nK>7)
 
        ! Used for stage 2a. 
        if(.not. allocated(State_VIIIB))&
@@ -780,10 +780,12 @@ contains
   contains
     !======================================================================
 
-    logical function only_corner_fine(iNode, iDir0, jDir0, kDir0, &
+    logical function is_only_corner_fine(iNode, iDir0, jDir0, kDir0, &
          iDirCorner, jDirCorner, kDirCorner)
+
       integer, intent(in):: iNode, iDir0, jDir0, kDir0
       integer, optional, intent(inout):: iDirCorner,jDirCorner,kDirCorner
+
       integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
       integer:: iDir1, jDir1, kDir1, iDir2, jDir2, kDir2
       integer:: iDirBegin, iDirEnd, jDirBegin, jDirEnd, kDirBegin, kDirEnd
@@ -865,8 +867,8 @@ contains
             endif
          enddo; enddo; enddo
       endif
-      only_corner_fine = IsOnlyCornerFine
-    end function only_corner_fine
+      is_only_corner_fine = IsOnlyCornerFine
+    end function is_only_corner_fine
 
     !======================================================================
 
@@ -886,8 +888,8 @@ contains
          if(iDir /=0) then
             iDir1 = 0
             do jDir1 = -1, 1, 2
-               ! Some information passed here is useless. Advantage: do not need 
-               ! to change do_equal.
+               ! Some information passed here is useless. 
+               ! Advantage: do not need to change do_equal.
                if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or.&
                     DiLevelNei_IIIB(iDir, jDir1,kDir1,iBlockSend) == 1 ) then
                   iEqualSOrig_DII = iEqualS_DII
@@ -959,9 +961,9 @@ contains
 
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,iDir1,0,0,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),iDir1,0,0,iDir3,jDir3,kDir3))then
 
                         if((jDir == -jDir2 .and. kDir == -kDir2) .or. &
@@ -1007,9 +1009,9 @@ contains
 
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,0,jDir1,0,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),0,jDir1,0,iDir3,jDir3,kDir3))then
 
                         if((iDir == -iDir2 .and. kDir == -kDir2) .or. &
@@ -1053,9 +1055,9 @@ contains
 
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,0,0,kDir1,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),0,0,kDir1,iDir3,jDir3,kDir3))then
 
                         if((jDir == -jDir2 .and. iDir == -iDir2) .or. &
@@ -1105,9 +1107,9 @@ contains
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
 
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,iDir1,jDir1,kDir1,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),iDir1,jDir1,kDir1,&
                           iDir3,jDir3,kDir3))then
 
@@ -1173,9 +1175,9 @@ contains
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
 
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,iDir1,jDir1,kDir1,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),iDir1,jDir1,kDir1,&
                           iDir3,jDir3,kDir3))then
 
@@ -1241,9 +1243,9 @@ contains
                      iDir2 = -100; jDir2 = -100; kDir2 = -100
                      iDir3 = -100; jDir3 = -100; kDir3 = -100
 
-                     if(only_corner_fine(&
+                     if(is_only_corner_fine(&
                           iNodeRecv,iDir1,jDir1,kDir1,iDir2,jDir2,kDir2) .or. &
-                          only_corner_fine(&
+                          is_only_corner_fine(&
                           iNode_B(iBlockSend),iDir1,jDir1,kDir1,&
                           iDir3,jDir3,kDir3))then
 
@@ -1300,7 +1302,9 @@ contains
     !======================================================================
     subroutine calc_accurate_coarsened_block(iBlock)
 
-      use BATL_high_order, ONLY: limit_interpolation, restriction_high_order_amr
+      use BATL_high_order, ONLY: &
+           limit_interpolation, restriction_high_order_amr
+
       ! For nI*nJ*nK fine block, calculate its coarsened nI/2 * nJ/2 * nK/2
       ! overlaped block. 
 
@@ -1311,7 +1315,7 @@ contains
       integer:: iDirMin, iDirMax, jDirMin, jDirMax, kDirMin, kDirMax
       integer:: DiDir, DjDir, DkDir
       integer:: i, j, k, Di, Dj, Dk
-      integer:: i0, j0, k0, ic0, jc0, kc0
+      integer:: i0, j0, k0, iC, jC, kC
       integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd
 
       real, allocatable:: Fine_VIII(:,:,:,:)
@@ -1322,18 +1326,18 @@ contains
 
       ! Some points can be calculated in 2 or 3 symmetric ways, use their
       ! average. 
-      integer, allocatable:: CalTimes_III(:,:,:)
+      integer, allocatable:: nCalc_III(:,:,:)
       integer, allocatable:: nCorrected_III(:,:,:)
       logical:: DoResChange_D(3), IsAccurateGhost, DoSymInterp
-      real, parameter:: c1=0.05, c2=-0.3, c3=0.75, c1over10=1./10, c1over2=1./2
+      real, parameter:: c1over10=1./10, c1over2=1./2
       real:: Coef_I(6) 
       real:: Orig, Orig1, Orig2, Orig3, Res1, Res2, Res3
       integer:: nResChange, nEdge, nCorrect, iGhost, iCalTime
-      real:: weight1, weight2
+      real:: Weight1, Weight2
       character(len=*), parameter :: NameSub = 'calc_accurate_coarsened_block'
       !----------------------------------------------------------------------
 
-      if(Do6thCorrect) then
+      if(DoSixthCorrect) then
          Coef_I = (/0.05, -0.3, 0.75, 0.75, -0.3, 0.05/)
       else
          Coef_I = (/0.1, -0.5, 1.0, 0.5, -0.1, 0.0/)
@@ -1342,9 +1346,9 @@ contains
       if(.not. allocated(Fine_VIII))&
            allocate(Fine_VIII(nVar,8,6,min(6,nK)))
 
-      if(.not. allocated(CalTimes_III)) &
-           allocate(CalTimes_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))
-      CalTimes_III = 0
+      if(.not. allocated(nCalc_III)) &
+           allocate(nCalc_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))
+      nCalc_III = 0
 
       DoResChange_D = .false.
       DoSymInterp = .true.
@@ -1363,10 +1367,10 @@ contains
 
          if(iDir1 == -1) then
             ! i0 is the index of the origin block. 
-            ! ic0 is the index of the coarsened block. 
-            i0 = 1; ic0 = 1
+            ! iC is the index of the coarsened block. 
+            i0 = 1; iC = 1
          elseif(iDir1 == 1) then
-            i0 = nI; ic0 = nI/2
+            i0 = nI; iC = nI/2
          endif
 
          jBegin = 1; jEnd = max(nJ/2,1)
@@ -1409,11 +1413,11 @@ contains
                call restriction_high_order_reschange(CoarseCell, &
                     Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
                     IsPositiveIn=IsPositive_V(iVar))
-               State_VIIIB(iVar,ic0:ic0-2*iDir1:-iDir1,j,k,iBlock) = Coarse_I
+               State_VIIIB(iVar,iC:iC-2*iDir1:-iDir1,j,k,iBlock) = Coarse_I
             enddo ! iVar
 
-            CalTimes_III(ic0:ic0-2*iDir1:-iDir1,j,k) = &
-                 CalTimes_III(ic0:ic0-2*iDir1:-iDir1,j,k) + 1
+            nCalc_III(iC:iC-2*iDir1:-iDir1,j,k) = &
+                 nCalc_III(iC:iC-2*iDir1:-iDir1,j,k) + 1
          enddo; enddo
       enddo
 
@@ -1427,9 +1431,9 @@ contains
          DoSymInterp = nJ .ge. 8 .or. IsAccurateGhost
 
          if(jDir1 == -1) then
-            j0 = 1; jc0 = 1
+            j0 = 1; jC = 1
          elseif(jDir1 == 1) then
-            j0 = nJ; jc0 = nJ/2
+            j0 = nJ; jC = nJ/2
          endif
 
          iBegin = 1; iEnd = max(nI/2,1)
@@ -1478,17 +1482,17 @@ contains
                do iGhost = 1, 3 ! 3 layer ghost cells.
                   ! For ghost cells can be calculated in several symmetric
                   ! ways, use their average. 
-                  iCalTime = CalTimes_III(i,jc0-(iGhost-1)*jDir1,k)
-                  weight1 = iCalTime/(iCalTime + 1.0)
-                  weight2 = 1.0 - weight1
-                  State_VIIIB(iVar,i,jc0-(iGhost-1)*jDir1,k,iBlock) &
-                       = weight1*&
-                       State_VIIIB(iVar,i,jc0-(iGhost-1)*jDir1,k,iBlock)&
-                       + weight2*Coarse_I(iGhost)
+                  iCalTime = nCalc_III(i,jC-(iGhost-1)*jDir1,k)
+                  Weight1 = iCalTime/(iCalTime + 1.0)
+                  Weight2 = 1.0 - Weight1
+                  State_VIIIB(iVar,i,jC-(iGhost-1)*jDir1,k,iBlock) &
+                       = Weight1*&
+                       State_VIIIB(iVar,i,jC-(iGhost-1)*jDir1,k,iBlock)&
+                       + Weight2*Coarse_I(iGhost)
                enddo
             enddo ! iVar
-            CalTimes_III(i,jc0:jc0-2*jDir1:-jDir1,k) = &
-                 CalTimes_III(i,jc0:jc0-2*jDir1:-jDir1,k) + 1
+            nCalc_III(i,jC:jC-2*jDir1:-jDir1,k) = &
+                 nCalc_III(i,jC:jC-2*jDir1:-jDir1,k) + 1
          enddo; enddo
       enddo
 
@@ -1502,9 +1506,9 @@ contains
          DoSymInterp = nK .ge. 8 .or. IsAccurateGhost
 
          if(kDir1 == -1) then
-            k0 = 1; kc0 = 1
+            k0 = 1; kC = 1
          else ! kDir1 == 1
-            k0 = nK; kc0 = nK/2
+            k0 = nK; kC = nK/2
          endif
 
          iBegin = 1; iEnd = max(nI/2,1)
@@ -1542,17 +1546,17 @@ contains
 
 
                do iGhost = 1, 3 ! 3 layer ghost cells.
-                  iCalTime = CalTimes_III(i,j,kc0-(iGhost-1)*kDir1)
-                  weight1 = iCalTime/(iCalTime + 1.0)
-                  weight2 = 1.0 - weight1
-                  State_VIIIB(iVar,i,j,kc0-(iGhost-1)*kDir1,iBlock) = &
-                       weight1*&
-                       State_VIIIB(iVar,i,j,kc0-(iGhost-1)*kDir1,iBlock) &
-                       + weight2*Coarse_I(iGhost)
+                  iCalTime = nCalc_III(i,j,kC-(iGhost-1)*kDir1)
+                  Weight1 = iCalTime/(iCalTime + 1.0)
+                  Weight2 = 1.0 - Weight1
+                  State_VIIIB(iVar,i,j,kC-(iGhost-1)*kDir1,iBlock) = &
+                       Weight1*&
+                       State_VIIIB(iVar,i,j,kC-(iGhost-1)*kDir1,iBlock) &
+                       + Weight2*Coarse_I(iGhost)
                enddo
             enddo
-            CalTimes_III(i,j,kc0:kc0-2*kDir1:-kDir1) = &
-                 CalTimes_III(i,j,kc0:kc0-2*kDir1:-kDir1) + 1
+            nCalc_III(i,j,kC:kC-2*kDir1:-kDir1) = &
+                 nCalc_III(i,j,kC:kC-2*kDir1:-kDir1) + 1
          enddo; enddo
       enddo ! kDir1
 
@@ -1590,21 +1594,21 @@ contains
                if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlock) /=1) CYCLE
 
                if(iDir1 == 1) then
-                  ic0 = nI/2; i0 = nI; Di  = -1
+                  iC = nI/2; i0 = nI; Di  = -1
                else ! iDir1 = -1
-                  ic0 = 1; i0 = 1; Di = 1
+                  iC = 1; i0 = 1; Di = 1
                endif
 
                if(jDir1 == 1) then
-                  jc0 = nJ/2; j0 = nJ; Dj = -1
+                  jC = nJ/2; j0 = nJ; Dj = -1
                else ! jDir1 = -1
-                  jc0 = 1; j0 = 1; Dj = 1
+                  jC = 1; j0 = 1; Dj = 1
                endif
 
                do iVar = 1, nVar
                   k = 1
-                  do j = jc0, jc0+2*Dj, Dj; do i = ic0, ic0+2*Di, Di
-                     if(j == jc0 .and. i == ic0) CYCLE
+                  do j = jC, jC+2*Dj, Dj; do i = iC, iC+2*Di, Di
+                     if(j == jC .and. i == iC) CYCLE
                      Cell_III(:,:,k) = &
                           State_VGB(iVar,2*i-3:2*i+2,2*j-3:2*j+2,k,iBlock)
                      State_VIIIB(iVar,i,j,k,iBlock) = &
@@ -1613,7 +1617,7 @@ contains
                   enddo; enddo
 
                   ! Interpolate in diagonal direction.
-                  j = jc0; i = ic0; k = 1
+                  j = jC; i = iC; k = 1
 
                   Cell_I(1) = State_VIIIB(iVar,i+2*Di,j+2*Dj,k,iBlock)
                   Cell_I(2) = State_VIIIB(iVar,i+  Di,j+  Dj,k,iBlock)
@@ -1654,17 +1658,17 @@ contains
             ! the average.
 
             if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1) then
-               ic0 = 1; i0 = 1; Di = 1
+               iC = 1; i0 = 1; Di = 1
             elseif(DiLevelNei_IIIB(1,0,0,iBlock) == 1) then
-               ic0 = nI/2; i0 = nI; Di = -1
+               iC = nI/2; i0 = nI; Di = -1
             else
                call CON_stop(NameSub//': This case should not happen! - case1')
             endif
 
             if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) then
-               jc0 = 1; j0 = 1; Dj = 1
+               jC = 1; j0 = 1; Dj = 1
             elseif(DiLevelNei_IIIB(0,1,0,iBlock) == 1) then
-               jc0 = nJ/2; j0 = nJ; Dj = -1
+               jC = nJ/2; j0 = nJ; Dj = -1
             else
                call CON_stop(NameSub//': This case should not happen! - case2')
             endif
@@ -1674,16 +1678,16 @@ contains
                ! Use the neighbour coarsened cells to correct the corner cell.
                Cell1_I(1:3) = State_VGB(iVar,i0-3*Di:i0-Di:Di, j0, k,iBlock)
                Cell2_I(1:3) = State_VGB(iVar,i0,j0-3*Dj:j0-Dj:Dj,k,iBlock)
-               if(Do6thCorrect) then
+               if(DoSixthCorrect) then
                   Cell1_I(4:6) = &
-                       State_VIIIB(iVar,ic0+Di:ic0+3*Di:Di,jc0,k,iBlock)
+                       State_VIIIB(iVar,iC+Di:iC+3*Di:Di,jC,k,iBlock)
                   Cell2_I(4:6) = &
-                       State_VIIIB(iVar,ic0, jc0+Dj:jc0+3*Dj:Dj,k,iBlock)
+                       State_VIIIB(iVar,iC, jC+Dj:jC+3*Dj:Dj,k,iBlock)
                else
                   Cell1_I(4:5) = &
-                       State_VIIIB(iVar,ic0+Di:ic0+2*Di:Di,jc0,k,iBlock)
+                       State_VIIIB(iVar,iC+Di:iC+2*Di:Di,jC,k,iBlock)
                   Cell2_I(4:5) = &
-                       State_VIIIB(iVar,ic0, jc0+Dj:jc0+2*Dj:Dj,k,iBlock)
+                       State_VIIIB(iVar,iC, jC+Dj:jC+2*Dj:Dj,k,iBlock)
                endif
 
                Orig1 = sum(Coef_I*Cell1_I)
@@ -1694,7 +1698,7 @@ contains
                Res2 = limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
                     IsPositiveIn=IsPositive_V(iVar))
 
-               State_VIIIB(iVar,ic0,jc0,k,iBlock) = 0.5*(Res1 + Res2)
+               State_VIIIB(iVar,iC,jC,k,iBlock) = 0.5*(Res1 + Res2)
             enddo
          endif
 
@@ -1799,27 +1803,27 @@ contains
 
             if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1) then
                ! i0: index of origin block. 
-               ! ic0 & iBegin & iEnd: index of coarsened block. 
-               ic0 = 1; i0 = 1; Di = 1
+               ! iC & iBegin & iEnd: index of coarsened block. 
+               iC = 1; i0 = 1; Di = 1
                iBegin = nI/2; iEnd = 2
             elseif(DiLevelNei_IIIB(1,0,0,iBlock) == 1) then
-               ic0 = nI/2; i0 = nI; Di = -1
+               iC = nI/2; i0 = nI; Di = -1
                iBegin = 1; iEnd = nI/2 - 1
             endif
 
             if(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) then
-               jc0 = 1; j0 = 1; Dj = 1
+               jC = 1; j0 = 1; Dj = 1
                jBegin = nJ/2; jEnd = 2
             elseif(DiLevelNei_IIIB(0,1,0,iBlock) == 1) then
-               jc0 = nJ/2; j0 = nJ; Dj = -1
+               jC = nJ/2; j0 = nJ; Dj = -1
                jBegin = 1; jEnd = nJ/2 - 1
             endif
 
             if(DiLevelNei_IIIB(0,0,-1,iBlock) == 1) then
-               kc0 = 1; k0 = 1; Dk = 1
+               kC = 1; k0 = 1; Dk = 1
                kBegin = nK/2; kEnd = 2
             elseif(DiLevelNei_IIIB(0,0,1,iBlock) == 1) then
-               kc0 = nK/2; k0 = nK; Dk = -1
+               kC = nK/2; k0 = nK; Dk = -1
                kBegin = 1; kEnd = nK/2 - 1
             endif
 
@@ -1834,27 +1838,29 @@ contains
                      Cell2_I(1:3) = &
                           State_VGB(iVar,i0,j0-3*Dj:j0-Dj:Dj,2*k,iBlock)
 
-                     if(Do6thCorrect) then
+                     if(DoSixthCorrect) then
                         Cell1_I(4:6) = &
-                             State_VIIIB(iVar,ic0+Di:ic0+3*Di:Di,jc0,k,iBlock)
+                             State_VIIIB(iVar,iC+Di:iC+3*Di:Di,jC,k,iBlock)
                         Cell2_I(4:6) = &
-                             State_VIIIB(iVar,ic0, jc0+Dj:jc0+3*Dj:Dj,k,iBlock)
+                             State_VIIIB(iVar,iC, jC+Dj:jC+3*Dj:Dj,k,iBlock)
                      else
                         Cell1_I(4:5) = &
-                             State_VIIIB(iVar,ic0+Di:ic0+2*Di:Di,jc0,k,iBlock)
+                             State_VIIIB(iVar,iC+Di:iC+2*Di:Di,jC,k,iBlock)
                         Cell2_I(4:5) = &
-                             State_VIIIB(iVar,ic0, jc0+Dj:jc0+2*Dj:Dj,k,iBlock)
+                             State_VIIIB(iVar,iC, jC+Dj:jC+2*Dj:Dj,k,iBlock)
                      endif
 
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                     Res1 = &
+                          limit_interpolation(Orig1, Cell1_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                     Res2 = &
+                          limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
 
-                     State_VIIIB(iVar,ic0,jc0,k,iBlock) = 0.5*(Res1 + Res2)
+                     State_VIIIB(iVar,iC,jC,k,iBlock) = 0.5*(Res1 + Res2)
                   enddo
                enddo
             endif
@@ -1870,27 +1876,29 @@ contains
                      Cell2_I(1:3) = &
                           State_VGB(iVar,i0,2*j,k0-3*Dk:k0-Dk:Dk,iBlock)
 
-                     if(Do6thCorrect) then
+                     if(DoSixthCorrect) then
                         Cell1_I(4:6) = &
-                             State_VIIIB(iVar,ic0+Di:ic0+3*Di:Di,j,kc0,iBlock)
+                             State_VIIIB(iVar,iC+Di:iC+3*Di:Di,j,kC,iBlock)
                         Cell2_I(4:6) = &
-                             State_VIIIB(iVar,ic0,j,kc0+Dk:kc0+3*Dk:Dk,iBlock)
+                             State_VIIIB(iVar,iC,j,kC+Dk:kC+3*Dk:Dk,iBlock)
                      else
                         Cell1_I(4:5) = &
-                             State_VIIIB(iVar,ic0+Di:ic0+2*Di:Di,j,kc0,iBlock)
+                             State_VIIIB(iVar,iC+Di:iC+2*Di:Di,j,kC,iBlock)
                         Cell2_I(4:5) = &
-                             State_VIIIB(iVar,ic0,j,kc0+Dk:kc0+2*Dk:Dk,iBlock)
+                             State_VIIIB(iVar,iC,j,kC+Dk:kC+2*Dk:Dk,iBlock)
                      endif
 
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                     Res1 = &
+                          limit_interpolation(Orig1, Cell1_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                     Res2 = &
+                          limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
 
-                     State_VIIIB(iVar,ic0,j,kc0,iBlock) = 0.5*(Res1 + Res2)
+                     State_VIIIB(iVar,iC,j,kC,iBlock) = 0.5*(Res1 + Res2)
                   enddo
                enddo
             endif
@@ -1907,28 +1915,30 @@ contains
                           State_VGB(iVar,2*i,j0,k0-3*Dk:k0-Dk:Dk,iBlock)
 
 
-                     if(Do6thCorrect) then
+                     if(DoSixthCorrect) then
                         Cell1_I(4:6) = &
-                             State_VIIIB(iVar,i,jc0+Dj:jc0+3*Dj:Dj,kc0,iBlock)
+                             State_VIIIB(iVar,i,jC+Dj:jC+3*Dj:Dj,kC,iBlock)
                         Cell2_I(4:6) = &
-                             State_VIIIB(iVar,i,jc0,kc0+Dk:kc0+3*Dk:Dk,iBlock)
+                             State_VIIIB(iVar,i,jC,kC+Dk:kC+3*Dk:Dk,iBlock)
                      else
                         Cell1_I(4:5) = &
-                             State_VIIIB(iVar,i,jc0+Dj:jc0+2*Dj:Dj,kc0,iBlock)
+                             State_VIIIB(iVar,i,jC+Dj:jC+2*Dj:Dj,kC,iBlock)
                         Cell2_I(4:5) = &
-                             State_VIIIB(iVar,i,jc0,kc0+Dk:kc0+2*Dk:Dk,iBlock)
+                             State_VIIIB(iVar,i,jC,kC+Dk:kC+2*Dk:Dk,iBlock)
                      endif
 
 
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
 
-                     Res1 = limit_interpolation(Orig1, Cell1_I(2:5),Distance_I,&
+                     Res1 = &
+                          limit_interpolation(Orig1, Cell1_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
-                     Res2 = limit_interpolation(Orig2, Cell2_I(2:5),Distance_I,&
+                     Res2 = &
+                          limit_interpolation(Orig2, Cell2_I(2:5), Distance_I,&
                           IsPositiveIn=IsPositive_V(iVar))
 
-                     State_VIIIB(iVar,i,jc0,kc0,iBlock) = 0.5*(Res1 + Res2)
+                     State_VIIIB(iVar,i,jC,kC,iBlock) = 0.5*(Res1 + Res2)
                   enddo
                enddo
             endif
@@ -1942,20 +1952,20 @@ contains
                        State_VGB(iVar,i0,j0-3*Dj:j0-Dj:Dj,k0,iBlock)
                   Cell3_I(1:3) = &
                        State_VGB(iVar,i0,j0,k0-3*Dk:k0-Dk:Dk,iBlock)
-                  if(Do6thCorrect) then
+                  if(DoSixthCorrect) then
                      Cell1_I(4:6) = &
-                          State_VIIIB(iVar,ic0+Di:ic0+3*Di:Di,jc0,kc0,iBlock)
+                          State_VIIIB(iVar,iC+Di:iC+3*Di:Di,jC,kC,iBlock)
                      Cell2_I(4:6) = &
-                          State_VIIIB(iVar,ic0, jc0+Dj:jc0+3*Dj:Dj,kc0,iBlock)
+                          State_VIIIB(iVar,iC, jC+Dj:jC+3*Dj:Dj,kC,iBlock)
                      Cell3_I(4:6) = &
-                          State_VIIIB(iVar,ic0,jc0,kc0+Dk:kc0+3*Dk:Dk,iBlock)
+                          State_VIIIB(iVar,iC,jC,kC+Dk:kC+3*Dk:Dk,iBlock)
                   else
                      Cell1_I(4:5) = &
-                          State_VIIIB(iVar,ic0+Di:ic0+2*Di:Di,jc0,kc0,iBlock)
+                          State_VIIIB(iVar,iC+Di:iC+2*Di:Di,jC,kC,iBlock)
                      Cell2_I(4:5) = &
-                          State_VIIIB(iVar,ic0, jc0+Dj:jc0+2*Dj:Dj,kc0,iBlock)
+                          State_VIIIB(iVar,iC, jC+Dj:jC+2*Dj:Dj,kC,iBlock)
                      Cell3_I(4:5) = &
-                          State_VIIIB(iVar,ic0,jc0,kc0+Dk:kc0+2*Dk:Dk,iBlock)
+                          State_VIIIB(iVar,iC,jC,kC+Dk:kC+2*Dk:Dk,iBlock)
                   endif
 
 
@@ -1971,12 +1981,13 @@ contains
                   Res3 = limit_interpolation(Orig3, Cell3_I(2:5), Distance_I,&
                        IsPositiveIn=IsPositive_V(iVar))
 
-                  State_VIIIB(iVar,ic0,jc0,kc0,iBlock) = &
+                  State_VIIIB(iVar,iC,jC,kC,iBlock) = &
                        (Res1 + Res2 + Res3)/3.0
                enddo
             endif
 
          elseif(nResChange == 1) then
+
             ! Example: coarsen block 11
             ! ___________________________________________
             ! |                    |                    |                  
@@ -2086,7 +2097,7 @@ contains
                      do k = kBegin, kEnd, Dk
                         do j = jBegin, jEnd, Dj
                            do i = iBegin, iEnd, Di
-                              if(CalTimes_III(i,j,k)>0) CYCLE
+                              if(nCalc_III(i,j,k)>0) CYCLE
                               if(DoResChange_D(1) .and. &
                                    j == jBegin .and. k == kBegin) CYCLE
                               if(DoResChange_D(2) .and. &
@@ -2104,7 +2115,7 @@ contains
                                       restriction_high_order_amr(Cell_III,&
                                       IsPositiveIn=IsPositive_V(iVar))
                               enddo ! iVar
-                              CalTimes_III(i,j,k) = CalTimes_III(i,j,k)+1
+                              nCalc_III(i,j,k) = nCalc_III(i,j,k)+1
 
                            enddo ! i
                         enddo ! j
@@ -2134,7 +2145,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
+                           nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
                         enddo ! i 
                      elseif(DoResChange_D(2)) then
                         i = iBegin; k = kBegin                        
@@ -2159,7 +2170,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
+                           nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
                         enddo ! j 
 
                      elseif(DoResChange_D(3)) then
@@ -2185,7 +2196,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           CalTimes_III(i,j,k) = CalTimes_III(i,j,k)+1  
+                           nCalc_III(i,j,k) = nCalc_III(i,j,k)+1  
                         enddo ! k
                      endif
                   enddo
@@ -2297,7 +2308,7 @@ contains
                do k = kBegin, kEnd, Dk
                   do j = jBegin, jEnd, Dj
                      do i = iBegin, iEnd, Di
-                        if(CalTimes_III(i,j,k)>0) CYCLE
+                        if(nCalc_III(i,j,k)>0) CYCLE
                         if(kDir1 == 0 .and. &
                              (i==iBegin .and. j==jBegin)) CYCLE
                         if(jDir1 == 0 .and. &
@@ -2315,7 +2326,7 @@ contains
                         enddo
 
                         ! It is somewhat complicated to tell weather it is
-                        ! accurate or not. So, do not set CalTimes_III value.
+                        ! accurate or not. So, do not set nCalc_III value.
 
                      enddo ! i 
                   enddo ! j 
@@ -2384,7 +2395,7 @@ contains
                            else
                               ! Corner cell for Case 2. 
                               ! Some cells can be corrected in different 
-                              ! direction. Use the average of these correcitons.
+                              ! direction. Use the average of these correcitons
                               State_VIIIB(iVar,i,j,k,iBlock) = &
                                    (nCorrect*State_VIIIB(iVar,i,j,k,iBlock) +&
                                    limit_interpolation&
@@ -2396,7 +2407,7 @@ contains
 
                         ! If it is accurate, it will not be overwritten by 
                         ! simple restriction for the inner cell code. 
-                        CalTimes_III(i,j,k) = CalTimes_III(i,j,k) + 1
+                        nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
 
                         nCorrected_III(i,j,k) = nCorrected_III(i,j,k) + 1
                      enddo ! i 
@@ -2487,7 +2498,7 @@ contains
 
       integer, intent(in):: iBlock
       real, allocatable:: Field1_VG(:,:,:,:)
-      integer:: neiLev_I(6)
+      integer:: DiLevelNei_I(6)
       !----------------------------------------------------------------------
 
       if(.not. allocated(Field1_VG)) &
@@ -2499,16 +2510,16 @@ contains
            iBlock, nVar, Field1_VG, State_VGB(:,:,:,:,iBlock), &
            IsAccurateFace_GB(:,:,:,iBlock),IsPositiveIn_V=IsPositive_V)
 
-      neiLev_I(1) = DiLevelNei_IIIB(-1,0,0,iBlock)
-      neiLev_I(2) = DiLevelNei_IIIB(+1,0,0,iBlock)
-      neiLev_I(3) = DiLevelNei_IIIB(0,-1,0,iBlock)
-      neiLev_I(4) = DiLevelNei_IIIB(0,+1,0,iBlock)
-      neiLev_I(5) = DiLevelNei_IIIB(0,0,-1,iBlock)
-      neiLev_I(6) = DiLevelNei_IIIB(0,0,+1,iBlock)
+      DiLevelNei_I(1) = DiLevelNei_IIIB(-1,0,0,iBlock)
+      DiLevelNei_I(2) = DiLevelNei_IIIB(+1,0,0,iBlock)
+      DiLevelNei_I(3) = DiLevelNei_IIIB(0,-1,0,iBlock)
+      DiLevelNei_I(4) = DiLevelNei_IIIB(0,+1,0,iBlock)
+      DiLevelNei_I(5) = DiLevelNei_IIIB(0,0,-1,iBlock)
+      DiLevelNei_I(6) = DiLevelNei_IIIB(0,0,+1,iBlock)
 
       ! If the corner/edge block is not a coarse block, the ghost values for 
       ! fine block need to be corrected. 
-      if(.not. all(neiLev_I /=1)) call correct_face_ghost_for_fine_block(&
+      if(any(DiLevelNei_I == 1)) call correct_face_ghost_for_fine_block(&
            iBlock, nVar, State_VGB(:,:,:,:,iBlock), &
            IsPositiveIn_V=IsPositive_V)
 
@@ -2538,8 +2549,9 @@ contains
 
       do iDir = -1, 1; do jDir = -1, 1; do kDir = -1, 1
          if(abs(iDir)+abs(jDir)+abs(kDir) /= 1) CYCLE
-         IsOnlyCornerFine = only_corner_fine(iNode_B(iBlock),iDir,jDir,kDir,&
-              iDirCorner,jDirCorner,kDirCorner)
+         IsOnlyCornerFine = &
+              is_only_corner_fine(iNode_B(iBlock), iDir, jDir, kDir, &
+              iDirCorner, jDirCorner, kDirCorner)
 
          if(.not. IsOnlyCornerFine) CYCLE
 
@@ -2583,8 +2595,8 @@ contains
          endif
 
          ! Find out the not accurate face cells. 
-         IsAccurateFace_GB(iBegin:iEnd:Di,jBegin:jEnd:Dj,kBegin:kEnd:Dk,iBlock)&
-              = .false.
+         IsAccurateFace_GB(iBegin:iEnd:Di,jBegin:jEnd:Dj,kBegin:kEnd:Dk, &
+              iBlock) = .false.
       enddo; enddo; enddo ! iDir jDir kDir
 
     end subroutine is_face_accurate
@@ -2597,8 +2609,6 @@ contains
       integer:: iBufferR, i, j, k
       real :: TimeSend, WeightOld, WeightNew
       !------------------------------------------------------------------------
-
-
       jRMin = 1; jRMax = 1
       kRMin = 1; kRMax = 1
 
@@ -2823,7 +2833,7 @@ contains
 
       if(iSendStage == 3 .and. nK > 1 .and. &
            abs(iDir)+abs(jDir)+abs(kDir) == 1) then
-         DoRecvFace = only_corner_fine(iNode_B(iBlockSend),iDir,jDir,kDir)
+         DoRecvFace = is_only_corner_fine(iNode_B(iBlockSend),iDir,jDir,kDir)
          if(.not.DoRecvFace) RETURN
       endif
 
@@ -2835,7 +2845,8 @@ contains
 
       if(DoCountOnly .and. (&
            (.not. UseHighResChange .and. iSendStage == nProlongOrder) .or. &
-           (UseHighResChange .and. (iSendStage == 1 .or. iSendStage == 3))))then 
+           (UseHighResChange .and. (iSendStage == 1 .or. iSendStage == 3)))) &
+           then 
          ! For high resolution change, finer block only receives data 
          ! when iSendStage = 1. 
 
@@ -3003,7 +3014,6 @@ contains
                      enddo
                   enddo
                enddo
-
             else
                do kR = kRMin, kRMax, DkR
                   kS1 = kSMin + kRatioRestr*abs(kR-kRMin)
@@ -3016,21 +3026,21 @@ contains
                         iS2 = iS1 + iRatioRestr - 1
                         if(UseMin)then
                            do iVar = 1, nVar
-                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                   minval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = minval( &
+                                   State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
                                    iBlockSend))
                            end do
                         else if(UseMax) then
                            do iVar = 1, nVar
-                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                   maxval(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
+                              State_VGB(iVar,iR,jR,kR,iBlockRecv) = maxval( &
+                                   State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2,&
                                    iBlockSend))
                            end do
                         else
                            do iVar = 1, nVar
                               State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
-                                   InvIjkRatioRestr * &
-                                   sum(State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
+                                   InvIjkRatioRestr * sum( &
+                                   State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
                                    iBlockSend))                              
                            end do
                         end if
@@ -3055,7 +3065,7 @@ contains
                do jR = jRMin, jRMax, DjR
                   jS1 = jSMin + jRatioRestr*abs(jR-jRMin)
                   do iR = iRMin, iRMax, DiR
-                     iS1 = iSMin + iRatioRestr*abs(iR-iRMin)                        
+                     iS1 = iSMin + iRatioRestr*abs(iR-iRMin)
                      do iVar = 1, nVar
                         State_VG(iVar,iR,jR,kR) = &
                              State_VIIIB(iVar,(iS1+1)/2,(jS1+1)/2,(kS1+1)/2,&
@@ -3131,7 +3141,7 @@ contains
     subroutine do_prolong
 
       use ModCoordTransform, ONLY: cross_product
-      use BATL_grid, ONLY: Xyz_DGB, CoordMin_D, CoordMax_D
+      use BATL_grid, ONLY: Xyz_DGB, CoordMin_D, DomainSize_D
       use BATL_tree, ONLY: get_tree_position
       use BATL_geometry, ONLY: coord_to_xyz
       use BATL_size,     ONLY: nDimAmr
@@ -3151,7 +3161,7 @@ contains
       integer :: iVar
       integer:: nWidthProlongS_D(MaxDim), iDim
       real:: CoarseCell_III(5,5,5)
-      integer:: i5_,j5_,k5_, iDir1, jDir1, kDir1
+      integer:: i5,j5,k5, iDir1, jDir1, kDir1
       !------------------------------------------------------------------------
 
       UseSimpleWeights = nDim == 1 .or. nDimAmr < nDim &
@@ -3176,7 +3186,7 @@ contains
                     abs(iDir)+abs(jDir)+abs(kDir) .eq. 1 ) then 
                   ! Do_prolongation for edge/corner ghost cells and for 
                   ! some special face cells. 
-                  DoSendFace = only_corner_fine(iNodeRecv,-iDir,-jDir,-kDir)
+                  DoSendFace = is_only_corner_fine(iNodeRecv,-iDir,-jDir,-kDir)
                   if(.not. DoSendFace) CYCLE
                endif
 
@@ -3253,31 +3263,29 @@ contains
                   ! Which is first order prolongtion. Now, for high order 
                   ! prolongation, some values need to be corrected.
                   nWidthProlongS_D(1:nDim) = 1 + (nWidth-1)/iRatio_D(1:nDim)
-                  do iDim = 1, MaxDim
-                     ! This loop is used to avoid the NAG 5.1 (282) bug on nyx
-                     iProlongS_DII(iDim,0,Min_) = 1
-                     iProlongS_DII(iDim,0,Max_) = nWidthProlongS_D(iDim)
-                     iProlongS_DII(iDim,1,Min_) = 1
-                     iProlongS_DII(iDim,1,Max_) = nIjk_D(iDim)/iRatio_D(iDim)
-                     iProlongS_DII(iDim,2,Min_) = nIjk_D(iDim)/iRatio_D(iDim) + 1
-                     iProlongS_DII(iDim,2,Max_) = nIjk_D(iDim)
-                     iProlongS_DII(iDim,3,Min_) = &
-                          nIjk_D(iDim) + 1 - nWidthProlongS_D(iDim)
-                     iProlongS_DII(iDim,3,Max_) = nIjk_D(iDim)
-                  end do
+
+                  iProlongS_DII(:,0,Min_) = 1
+                  iProlongS_DII(:,0,Max_) = nWidthProlongS_D
+                  iProlongS_DII(:,1,Min_) = 1
+                  iProlongS_DII(:,1,Max_) = nIjk_D/iRatio_D
+                  iProlongS_DII(:,2,Min_) = nIjk_D/iRatio_D + 1
+                  iProlongS_DII(:,2,Max_) = nIjk_D
+                  iProlongS_DII(:,3,Min_) = nIjk_D + 1 - nWidthProlongS_D
+                  iProlongS_DII(:,3,Max_) = nIjk_D
 
                   if(DoSendCorner)then
                      ! Face + two edges + corner or edge + one corner 
                      ! are sent/recv together from fine to coarse block
                      do iDim = 1, nDim
                         if(iRatio_D(iDim) == 1)CYCLE                        
-                        ! The extension is by nWidth/2 rounded upwards independent of
+                        ! The extension is by nWidth/2 rounded upwards 
+                        ! independent of
                         ! the value of nCoarseLayers. There is no need to send 
                         ! two coarse layers into corner/edge ghost cells.
-                        iProlongS_DII(iDim,1,Max_) = iProlongS_DII(iDim,1,Max_) &
-                             + (nWidth+1)/2
-                        iProlongS_DII(iDim,2,Min_) = iProlongS_DII(iDim,2,Min_) &
-                             - (nWidth+1)/2
+                        iProlongS_DII(iDim,1,Max_) = &
+                             iProlongS_DII(iDim,1,Max_) + (nWidth+1)/2
+                        iProlongS_DII(iDim,2,Min_) = &
+                             iProlongS_DII(iDim,2,Min_) - (nWidth+1)/2
                      end do
                   end if
                endif
@@ -3290,7 +3298,9 @@ contains
                kSMin = iProlongS_DII(3,kSend,Min_)
                kSMax = iProlongS_DII(3,kSend,Max_)
 
-               iRatioRestr = iRatio; jRatioRestr = jRatio; kRatioRestr = kRatio      
+               iRatioRestr = iRatio
+               jRatioRestr = jRatio
+               kRatioRestr = kRatio      
                if(iSendStage /= 3 .and. nCoarseLayer > 1)then
                   if(iDir /= 0) iRatioRestr = 1
                   if(jDir /= 0) jRatioRestr = 1
@@ -3319,10 +3329,8 @@ contains
                   if(.not.UseSimpleWeights .and. iProcRecv /= iProc)then
                      call get_tree_position(iNodeRecv, &
                           PositionMinR_D, PositionMaxR_D)
-                     CoordMinR_D = CoordMin_D &
-                          + (CoordMax_D - CoordMin_D)*PositionMinR_D
-                     CoordMaxR_D = CoordMin_D &
-                          + (CoordMax_D - CoordMin_D)*PositionMaxR_D
+                     CoordMinR_D = CoordMin_D + DomainSize_D*PositionMinR_D
+                     CoordMaxR_D = CoordMin_D + DomainSize_D*PositionMaxR_D
                      CellSizeR_D = (CoordMaxR_D - CoordMinR_D)/nIjk_D
                   end if
 
@@ -3477,12 +3485,13 @@ contains
                   else
                      if(UseHighResChange .and. iSendStage == 3) then
                         iDir1 = 0; jDir1 = 0; kDir1 = 0
-                        i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ = max(5*Dk,1)
+                        i5 = max(5*Di,1); j5 = max(5*Dj,1); k5 = max(5*Dk,1)
                         do kR = kRMin, kRMax, DkR
                            kS = kSMin + abs((kR+9)/kRatioRestr &
                                 -           (kRMin+9)/kRatioRestr)
                            ! kDir = -1 if kR is even; kDir = 1 if kR is odd. 
-                           ! kR may be negative (1-nK), kR+2*nK will be positive.
+                           ! kR may be negative (1-nK), 
+                           ! so kR+2*nK will be always positive.
                            if(kRatioRestr == 2) kDir1 = 2*mod(kR+2*nK,2) - 1
                            do jR = jRMin, jRMax, DjR
                               jS = jSMin + abs((jR+9)/jRatioRestr &
@@ -3491,13 +3500,14 @@ contains
                               do iR = iRMin, iRMax, DiR
                                  iS = iSMin + abs((iR+9)/iRatioRestr &
                                       -           (iRMin+9)/iRatioRestr)
-                                 if(iRatioRestr == 2) iDir1 = 2*mod(iR+2*nI,2) - 1
+                                 if(iRatioRestr == 2) &
+                                      iDir1 = 2*mod(iR+2*nI,2) - 1
 
                                  if(IsAccurateFace_GB(iR,jR,kR,iBlockRecv))&
                                       CYCLE
 
                                  do iVar = 1, nVar
-                                    CoarseCell_III(1:i5_,1:j5_,1:k5_) = &
+                                    CoarseCell_III(1:i5,1:j5,1:k5) = &
                                          State_VGB(iVar,&
                                          iS-2*iDir1:iS+2*iDir1:sign(1,iDir1),&
                                          jS-2*jDir1:jS+2*jDir1:sign(1,jDir1),&
@@ -3553,7 +3563,7 @@ contains
 
                   if(UseHighResChange .and. iSendStage == 3) then
                      iDir1 = 0; jDir1 = 0; kDir1 = 0
-                     i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ =  max(5*Dk,1)
+                     i5 = max(5*Di,1); j5 = max(5*Dj,1); k5 =  max(5*Dk,1)
                      do kR = kRMin, kRMax, DkR
                         kS = kSMin + abs((kR+9)/kRatioRestr &
                              -           (kRMin+9)/kRatioRestr)
@@ -3570,7 +3580,7 @@ contains
                               if(iRatioRestr == 2) iDir1 = 2*mod(iR+2*nI,2) - 1
 
                               do iVar = 1, nVar
-                                 CoarseCell_III(1:i5_,1:j5_,1:k5_) = &
+                                 CoarseCell_III(1:i5,1:j5,1:k5) = &
                                       State_VGB(iVar,&
                                       iS-2*iDir1:iS+2*iDir1:sign(1,iDir1),&
                                       jS-2*jDir1:jS+2*jDir1:sign(1,jDir1),&
@@ -3731,7 +3741,7 @@ contains
          refine_tree_node, distribute_tree, show_tree, clean_tree, &
          Unused_B, DiLevelNei_IIIB, iNode_B
     use BATL_grid, ONLY: init_grid, create_grid, clean_grid, &
-         Xyz_DGB, CellSize_DB, CoordMin_DB
+         Xyz_DGB, CellSize_DB, CoordMin_DB, CoordMin_D, DomainSize_D
     use BATL_geometry, ONLY: init_geometry, z_, IsPeriodic_D, rot_to_cart, &
          xyz_to_coord
 
@@ -3742,7 +3752,6 @@ contains
     integer:: nRootTest_D(MaxDim) = (/3,3,3/)
     real   :: DomainMin_D(MaxDim) = (/ 1.0, 10.0, 100.0 /)
     real   :: DomainMax_D(MaxDim) = (/ 4.0, 40.0, 400.0 /)
-    real   :: DomainSize_D(MaxDim)
 
     real   :: Tolerance = 1e-6
 
@@ -3798,7 +3807,7 @@ contains
   contains
     !----------------------------------------------------------------------
     subroutine test_switches
-      DomainSize_D = DomainMax_D - DomainMin_D
+
       call init_tree(MaxBlockTest)
       call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
@@ -3816,8 +3825,8 @@ contains
 
       do nProlongOrder = 1, 2; do nCoarseLayer = 1, 2; do nWidth = 1, nG
 
-         ! Second order prolongation does not work with sending multiple coarse 
-         ! cell layers into the fine cells with their original values. 
+         ! Second order prolongation does not work with sending multiple 
+         ! coarse cell layers into the fine cells with their original values. 
          if(nProlongOrder == 2 .and. nCoarseLayer == 2) CYCLE
 
          ! Cannot send more coarse layers than the number of ghost cell layers
@@ -3842,7 +3851,8 @@ contains
             DoRestrictFace = iRestrictFace == 2
 
             ! Second order prolongation does not work with restricting face:
-            ! the first order restricted cell cannot be used in the prolongation.
+            ! the first order restricted cell cannot be used in the 
+            ! prolongation.
             if(DoRestrictFace .and. nProlongOrder == 2) CYCLE
 
             if(DoTestMe)write(*,*) 'testing message_pass_cell with', &
@@ -3903,8 +3913,8 @@ contains
                   ! the value coming from the first or second coarse cell).
 
                   if(nCoarseLayer==2 .and. DoSendCorner .and. ( &
-                       (i<0 .or. i>nI+1) .and. (jDir /= 0 .or. kDir /= 0) .or. &
-                       (j<0 .or. j>nJ+1) .and. (iDir /= 0 .or. kDir /= 0) .or. &
+                       (i<0 .or. i>nI+1) .and. (jDir /= 0 .or. kDir /= 0) .or.&
+                       (j<0 .or. j>nJ+1) .and. (iDir /= 0 .or. kDir /= 0) .or.&
                        (k<0 .or. k>nK+1) .and. (iDir /= 0 .or. jDir /= 0) &
                        )) CYCLE
 
@@ -3929,7 +3939,7 @@ contains
                   end if
 
                   ! Shift ghost cell coordinate into periodic domain
-                  Xyz_D = DomainMin_D + modulo(Xyz_D - DomainMin_D, DomainSize_D)
+                  Xyz_D = CoordMin_D + modulo(Xyz_D - CoordMin_D, DomainSize_D)
 
                   ! Calculate distance of ghost cell layer
                   Di = 0; Dj = 0; Dk = 0
@@ -4108,7 +4118,7 @@ contains
             if(iNode_B(iBlock) == iNode) then
                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = 1, MaxI
 
-                  iFG = nint(XyzCorn_DGB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1 
+                  iFG = nint(XyzCorn_DGB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1
                   jFG = nint(XyzCorn_DGB(2,i,j,k,iBlock)*FineGridStep_D(2)) + 1
                   kFG = nint(XyzCorn_DGB(3,i,j,k,iBlock)*FineGridStep_D(3)) + 1
 
@@ -4123,20 +4133,20 @@ contains
                      if(Scalar_GB(i,j,k,iBlock) /= &
                           minval(CourseGridCell_III))then
                         write (*,*) "Error for operator, iNode,  iBlock= ",&
-                             NameOperator, iNode_B(iBlock), iBlock, ", value=",&
+                             NameOperator, iNode_B(iBlock),iBlock, ", value=",&
                              minval(CourseGridCell_III),&
-                             " should be ", Scalar_GB(i,j,k,iBlock), "index : " &
-                             ,i,j,k, " ::", iFG, jFG,kFG
+                             " should be ",Scalar_GB(i,j,k,iBlock),"index : ",&
+                             i,j,k, " ::", iFG, jFG,kFG
 
                      end if
                   case("max") 
                      if(Scalar_GB(i,j,k,iBlock) /= &
                           maxval(CourseGridCell_III))then
                         write (*,*) "Error for operator, iNode,  iBlock= ",&
-                             NameOperator, iNode_B(iBlock), iBlock, ", value=",&
+                             NameOperator, iNode_B(iBlock), iBlock, ",value=",&
                              maxval(CourseGridCell_III),&
-                             " should be ", Scalar_GB(i,j,k,iBlock), "index : " &
-                             ,i,j,k, " ::", iFG, jFG,kFG
+                             " should be ",Scalar_GB(i,j,k,iBlock),"index : ",&
+                             i,j,k, " ::", iFG, jFG,kFG
                      end if
                   end select
 
@@ -4148,10 +4158,11 @@ contains
       deallocate(Scalar_GB, FineGridLocal_III, FineGridGlobal_III,XyzCorn_DGB)
       call clean_grid
       call clean_tree
-    end subroutine test_scalar
-    !----------------------------------------------------------------------
 
+    end subroutine test_scalar
+    !==========================================================================
     subroutine test_non_cartesian
+
       do iTest = 1,6
 
          ! The code is quite inaccurate for partial AMR across the pole
@@ -4214,7 +4225,8 @@ contains
 
          if(DoTestMe)then
             if(iTest <= 3)write(*,*) &
-                 'testing message_pass_cell across '//trim(NameGeometry)//' pole'
+                 'testing message_pass_cell across '//trim(NameGeometry)// &
+                 ' pole'
             if(iTest >= 4)write(*,*) &
                  'testing message_pass_cell across '//trim(NameGeometry)// &
                  ' pole with resolution change'
@@ -4310,8 +4322,9 @@ contains
       ! In previous do loop, it may cycle some loops without cleaning.
       call clean_grid
       call clean_tree
+
     end subroutine test_non_cartesian
-    !----------------------------------------------------------------------
+    !=========================================================================
 
     subroutine test_high_order_cartesian
       real    :: ExactSolution, Error, ErrorTotal
@@ -4464,13 +4477,14 @@ contains
       enddo ! iRefinement
 
     end subroutine test_high_order_cartesian
-    !----------------------------------------------------------------------
+    !=========================================================================
 
     subroutine test_high_order_non_cartesian
       real    :: ErrorTotal, ExactSolution, Error
-      real    :: xyz1_D(3), xyzGeneral_D(3)
+      real    :: Xyz1_D(3), XyzGeneral_D(3)
       integer :: nPoly
-      do iTest = 1,2
+      !-----------------------------------------------------------------------
+      do iTest = 1, 2
 
          ! The code is quite inaccurate for partial AMR across the pole
          if(nDimAmr < nDim .and. iTest > 3) EXIT
@@ -4581,9 +4595,9 @@ contains
                Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
                if(iTest == 2) then
-                  xyz1_D = rot_to_cart(Xyz_D)
+                  Xyz1_D = rot_to_cart(Xyz_D)
                else
-                  call xyz_to_coord(Xyz_D, xyz1_D)
+                  call Xyz_to_coord(Xyz_D, Xyz1_D)
                endif
 
                if(.not. (all(Xyz1_D(1:nDim) < DomainMax_D(1:nDim)) &
@@ -4603,8 +4617,8 @@ contains
                        iProc,iNode_B(iBlock),i,j,k, &
                        Xyz_D,State_VGB(1,i,j,k,iBlock), &
                        ExactSolution, Error, abs(Error)/abs(ExactSolution)
-                  call xyz_to_coord(Xyz_D, xyzGeneral_D)
-                  write(*,*) 'xyz general = ',xyzGeneral_D
+                  call Xyz_to_coord(Xyz_D, XyzGeneral_D)
+                  write(*,*) 'Xyz general = ',XyzGeneral_D
                   write(*,*) ''
                end if
 
