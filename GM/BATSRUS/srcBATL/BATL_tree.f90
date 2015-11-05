@@ -959,7 +959,7 @@ contains
 
     ! Find the node that contains a point. The point coordinates should
     ! be given in generalized coordinates normalized to the domain size:
-    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
+    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/DomainSize_D
 
     real, intent(in):: CoordIn_D(MaxDim)
     integer, intent(out):: iNode
@@ -1008,7 +1008,7 @@ contains
 
     ! Find the node that contains a point. The point coordinates should
     ! be given in generalized coordinates normalized to the domain size:
-    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/(CoordMax_D-CoordMin_D)
+    ! CoordIn_D = (CoordOrig_D - CoordMin_D)/DomainSize_D
     ! If UseGhostCell is not present or false
     !    then iCell_D returns the cell that contains the point.
     ! If UseGhostCell is present and true 

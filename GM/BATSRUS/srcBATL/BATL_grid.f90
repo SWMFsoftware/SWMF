@@ -27,7 +27,7 @@ module BATL_grid
   public :: check_interpolate_amr_gc
   public :: test_grid
   
-  ! Coordinate limits of domain inherited from BATL_geometry
+  ! Coordinate limits and size of domain inherited from BATL_geometry
   public:: CoordMin_D, CoordMax_D, DomainSize_D
 
   real, public, allocatable::   &
@@ -131,6 +131,9 @@ contains
        end if
     end if
 
+    ! Set size of domain (in generalized coordinates)
+    DomainSize_D = CoordMax_D - CoordMin_D
+
     allocate(CoordMin_DB(MaxDim,MaxBlock))
     allocate(CoordMax_DB(MaxDim,MaxBlock))
     allocate(CellSize_DB(MaxDim,MaxBlock))
@@ -159,7 +162,7 @@ contains
        ! Enforce periodicity for cylindrical and spherical grids if
        ! there is a full grid in the Phi direction. 
        ! One can also have periodicity with a segment in Phi
-       if( abs(CoordMax_D(Phi_) - CoordMin_D(Phi_) - cTwoPi) < 1e-6 )then
+       if( abs(DomainSize_D(Phi_) - cTwoPi) < 1e-6 )then
           IsPeriodic_D(Phi_) = .true.
           IsPeriodicCoord_D(Phi_) = .true.
        end if
@@ -170,9 +173,6 @@ contains
     end if
 
     if(IsRoundCube) IsPeriodic_D = .false.
-
-    ! Set size of domain
-    DomainSize_D = CoordMax_D - CoordMin_D
 
   end subroutine init_grid
   !===========================================================================
@@ -193,6 +193,7 @@ contains
 
     CoordMin_D =  0.0
     CoordMax_D = -1.0
+    DomainSize_D = -1.0
 
   end subroutine clean_grid
 
@@ -241,10 +242,8 @@ contains
     if(.not.present(DoFaceOnly))then
        call get_tree_position(iNode, PositionMin_D, PositionMax_D)
 
-       CoordMin_DB(:,iBlock) = &
-            CoordMin_D + (CoordMax_D - CoordMin_D)*PositionMin_D
-       CoordMax_DB(:,iBlock) = &
-            CoordMin_D + (CoordMax_D - CoordMin_D)*PositionMax_D
+       CoordMin_DB(:,iBlock) = CoordMin_D + (DomainSize_D)*PositionMin_D
+       CoordMax_DB(:,iBlock) = CoordMin_D + (DomainSize_D)*PositionMax_D
        CellSize_DB(:,iBlock) = &
             (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) / nIjk_D
 
@@ -1031,7 +1030,7 @@ contains
     real,    intent(out), optional:: CellSizeOut_D(MaxDim) ! cell size in block
     logical, intent(in),  optional:: UseGhostCell ! Use ghost cells or not
 
-    real:: CoordTree_D(MaxDim), Coord_D(MaxDim), CoordTreeSize_D(MaxDim)
+    real:: CoordTree_D(MaxDim), Coord_D(MaxDim)
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     integer:: iNode
 
@@ -1044,7 +1043,7 @@ contains
        call xyz_to_coord(XyzIn_D, Coord_D)
     end if
     ! Calculate normalized coordinates for tree search
-    CoordTree_D = (Coord_D - CoordMin_D)/(CoordMax_D - CoordMin_D)
+    CoordTree_D = (Coord_D - CoordMin_D)/(DomainSize_D)
 
     if(any(CoordTree_D < 0.0) .or. any(CoordTree_D > 1.0))then
        iBlockOut = Unset_
@@ -1078,14 +1077,13 @@ contains
          present(CellSizeOut_D))then
 
        call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-       CoordTreeSize_D = CoordMax_D-CoordMin_D
 
        if(present(CoordMinBlockOut_D))&
-            CoordMinBlockOut_D = CoordMin_D + PositionMin_D * CoordTreeSize_D
+            CoordMinBlockOut_D = CoordMin_D + PositionMin_D*DomainSize_D
        if(present(CoordMaxBlockOut_D))&
-            CoordMaxBlockOut_D = CoordMin_D + PositionMax_D * CoordTreeSize_D
+            CoordMaxBlockOut_D = CoordMin_D + PositionMax_D*DomainSize_D
        if(present(CellSizeOut_D))&
-            CellSizeOut_D=(PositionMax_D-PositionMin_D)*CoordTreeSize_D/nIjk_D
+            CellSizeOut_D = (PositionMax_D-PositionMin_D)*DomainSize_D/nIjk_D
 
     end if
 
@@ -1113,7 +1111,7 @@ contains
 
     logical, parameter:: DoTest = .false.
     character(len=*), parameter:: NameSub='BATL_grid::interpolate_grid'
-    !------------------------------------------------------------------------   
+    !------------------------------------------------------------------------
     ! Convert to generalized coordinates if necessary
     if(IsCartesianGrid)then
        Coord_D = Xyz_D
@@ -1199,7 +1197,7 @@ contains
           if(.not.IsPeriodic_D(iDim)) CYCLE
 
           ! Shift coordinate and try check again
-          Shift = CoordMax_D(iDim) - CoordMin_D(iDim)
+          Shift = DomainSize_D(iDim)
           if(Coord_D(iDim) < CoordMin) Coord_D(iDim) = Coord_D(iDim) + Shift
           if(Coord_D(iDim) > CoordMax) Coord_D(iDim) = Coord_D(iDim) - Shift
           if(Coord_D(iDim) < CoordMin .or. Coord_D(iDim) > CoordMax) &
@@ -1425,10 +1423,9 @@ contains
     ! For periodic boundary conditions fix the input coordinate if
     ! beyond the tree bounadaries
     !/
-    where(IsPeriodic_D(1:nDim))Coord_D(1:nDim) = modulo(&
-         Coord_D(1:nDim)    - CoordMin_D(1:nDim),&
-         CoordMax_D(1:nDim) - CoordMin_D(1:nDim)) + CoordMin_D(1:nDim)
-         
+    where(IsPeriodic_D(1:nDim)) Coord_D(1:nDim) = CoordMin_D(1:nDim) + &
+         modulo(Coord_D(1:nDim) - CoordMin_D(1:nDim), DomainSize_D(1:nDim))
+
     !\
     ! Figure out if the point goes out of the computational domain
     !/
@@ -1868,7 +1865,7 @@ contains
     do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
        iPoint_D = (/ iPoint, jPoint, kPoint /)
        XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
-            *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+            *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
 
        call interpolate_grid(XyzPoint_D, nCell, iCell_II, Weight_I)
 
@@ -1891,12 +1888,10 @@ contains
           do iDim = 1, nDim
              if(.not.IsPeriodicTest_D(iDim)) CYCLE
              if(XyzPoint_D(iDim) < Xyz_D(iDim) - 2*CellSize_DB(iDim,iBlock)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) - &
-                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+                  Xyz_D(iDim) = Xyz_D(iDim) - DomainSize_D(iDim)
 
              if(XyzPoint_D(iDim) > Xyz_D(iDim) + 2*CellSize_DB(iDim,iBlock)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) + &
-                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+                  Xyz_D(iDim) = Xyz_D(iDim) + DomainSize_D(iDim)
           end do
 
           Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
@@ -1927,7 +1922,7 @@ contains
        do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
           iPoint_D = (/ iPoint, jPoint, kPoint /)
           Xyz_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
-               *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+               *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
 
           Weight  = Point_VIII(0,iPoint,jPoint,kPoint)
           Point_V = Point_VIII(1:nDim,iPoint,jPoint,kPoint)/Weight
@@ -1956,7 +1951,7 @@ contains
     do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
        iPoint_D = (/ iPoint, jPoint, kPoint /)
        XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
-            *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+            *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
        call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I)
 
        do iCell = 1, nCell
@@ -1978,12 +1973,10 @@ contains
           do iDim = 1, nDim
              if(.not.IsPeriodicTest_D(iDim)) CYCLE
              if(XyzPoint_D(iDim) < Xyz_D(iDim) - 2*CellSize_DB(iDim,iBlock)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) - &
-                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+                  Xyz_D(iDim) = Xyz_D(iDim) - DomainSize_D(iDim)
 
              if(XyzPoint_D(iDim) > Xyz_D(iDim) + 2*CellSize_DB(iDim,iBlock)) &
-                  Xyz_D(iDim) = Xyz_D(iDim) + &
-                  (CoordMax_D(iDim) - CoordMin_D(iDim))
+                  Xyz_D(iDim) = Xyz_D(iDim) +  DomainSize_D(iDim)
           end do
 
           Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
@@ -2007,7 +2000,7 @@ contains
        do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
           iPoint_D = (/ iPoint, jPoint, kPoint /)
           Xyz_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
-               *(CoordMax_D(1:nDim) - CoordMin_D(1:nDim))/nPoint_D(1:nDim)
+               *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
 
           Weight  = Point_VIII(0,iPoint,jPoint,kPoint)
           Point_V = Point_VIII(1:nDim,iPoint,jPoint,kPoint)/Weight
