@@ -11,8 +11,9 @@ etStr = ARGS[1]
 metaFile = parseUserFile("kernelFile:")
 try
   furnsh(metaFile)
-catch
-  println("could not load spice")
+catch e
+  println("spice error")
+  println(e)
   exit()
 end
 et = str2et(etStr)
