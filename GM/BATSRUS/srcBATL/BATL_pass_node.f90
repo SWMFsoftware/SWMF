@@ -623,7 +623,6 @@ contains
 
       integer :: iS, jS, kS
       integer :: iBufferS, nSize
-      integer, parameter:: Di=iRatio-1, Dj=jRatio-1, Dk=kRatio-1
       !------------------------------------------------------------------------
 
       ! Loop through the subfaces or subedges
@@ -864,9 +863,7 @@ contains
     logical, parameter:: IsPeriodicTest_D(MaxDim)= .false.
     real, parameter:: DomainMin_D(MaxDim) = (/ 0.0, 0.0, 0.0 /)
     real, parameter:: DomainMax_D(MaxDim) = (/ 48.0, 48.0, 48.0 /)
-    real, parameter:: DomainSize_D(MaxDim) = DomainMax_D - DomainMin_D
 
-    real, parameter:: Tolerance = 1e-6
     integer, parameter:: nVar = 3!nDim
     integer :: iVar
 
