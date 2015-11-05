@@ -74,7 +74,7 @@ BLAS  = lapack.o blas.o
 	${COMPILE.f90} ${Cflag2} $<
 
 .F90.o:
-	${COMPILE.f90} -DsysLinux -Dcompifort ${Cflag3} $<
+	${COMPILE.f90} -DsysLinux -Dcompifort ${Cflag2} $<
 
 .f.o:
 	${COMPILE.f77} ${Cflag2} -132 $<
