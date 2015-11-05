@@ -104,12 +104,6 @@ CouplerMode=swmf !!off, ices, swmf
 #endBackgroundSpecies 
 
 
-#block ../moon.input.pl !process settings of the moon module
-  SodiumStickingProbability= Yakshinskiy2005SS !const(1.0)  ! const(?), TemperatureLimit(??), Yakshinskiy2005SS  
-  SodiumReemissionFraction=1.0
-
-#endblock
-
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
 
   SPICE=off !off !on, off
