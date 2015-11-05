@@ -239,6 +239,10 @@ function update_r!(r, r_hat, dr, l)
   end
 end
 
+function norm_vec(r)
+  sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+end
+
 function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
                        doCheckShadow)
     if doCheckShadow
@@ -280,7 +284,8 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       for k=1:3
         @inbounds r[k] = rStart[k]
       end
-      distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+      #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+      distance = norm_vec(r)
       get_lMax!(lMax, iTriangle, r, lIntersect, llMax)
       reset_data!(nVars, data, dataNew, dataOld)
 
@@ -307,7 +312,7 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
         distFromStart = sqrt(distFromStart)
 
         foundCell, cell = cell_containing_point(oct, r)
-        l = norm(r) / 30.0
+        l = norm_vec(r) / 30.0
         isInShadow = checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
                                     r, r_hat_sun)
 
@@ -322,7 +327,8 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
           end
         end
         update_r!(r, r_hat, dr, l)
-        distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+        #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+        distance = norm_vec(r) 
       end
       for k=1:nVars
         ccd[k, i] = data[k]

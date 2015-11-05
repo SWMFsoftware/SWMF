@@ -66,7 +66,7 @@ rPointing = ones(Float64, 3, nPixelsX * nPixelsY)
 z = 1.0
 k = 1
 for (j,y) = enumerate(linspace(-ly / 2.0, ly / 2.0, nPixelsY))
-  for (i,x) = enumerate(linspace(lx / 2.0, -lx / 2.0, nPixelsX))
+  for (i,x) = enumerate(linspace(-lx / 2.0, lx / 2.0, nPixelsX))
     norm_rPointing = sqrt(x*x + y*y + z*z)
     rPointing[1,k] = x / norm_rPointing
     rPointing[2,k] = y / norm_rPointing
@@ -92,12 +92,37 @@ assign_triangles!(oct, allTriangles)
 
 ccd = reshape(ccd, nVars, nPixelsX, nPixelsY)
 
+
+################################################################################
+# check if user set plotting options
+################################################################################
+cmap = "jet"
+if length(parseUserFile("pltColorMap:")) > 0
+  cmap = parseUserFile("pltColorMap:")
+end
+
+nLevels = 32
+if length(parseUserFile("pltLevels:")) > 0
+  nLevels = parse(Int, parseUserFile("pltLevels:"))
+end
+
+pltTitle = "I love Julia (by Valeriy T.)"
+if length(parseUserFile("pltTitle:")) > 0
+  pltTitle = parseUserFile("pltTitle:")
+end
+
+fontSize = 12
+if length(parseUserFile("pltFontSize:")) > 0
+  fontSize = parse(Int, parseUserFile("pltFontSize:"))
+end
+
+
 for i=1:nVars
   figure()
-  imshow(log10(reshape(ccd[i,:,:], nPixelsX, nPixelsY)))
-  xlabel("Pixel number")
-  ylabel("Pixel number")
-  title("I love Julia (by Valeriy T.)")
+  contourf(log10(reshape(ccd[i,:,:], nPixelsX, nPixelsY)), nLevels, cmap=cmap)
+  xlabel("Pixel number", size=fontSize)
+  ylabel("Pixel number", size=fontSize)
+  title(pltTitle, size=fontSize)
   colorbar()
 end
 show()
