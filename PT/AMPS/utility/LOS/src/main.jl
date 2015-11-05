@@ -117,14 +117,29 @@ if length(parseUserFile("pltFontSize:")) > 0
 end
 
 
+ccd_sum = zeros(nPixelsX, nPixelsY)
 for i=1:nVars
   figure()
-  contourf(log10(reshape(ccd[i,:,:], nPixelsX, nPixelsY)), nLevels, cmap=cmap)
+  ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
+  contourf(log10(ccdPlt), nLevels)
   xlabel("Pixel number", size=fontSize)
   ylabel("Pixel number", size=fontSize)
   title(pltTitle, size=fontSize)
   colorbar()
+  for ix = 1:nPixelsX
+    for iy = 1:nPixelsY
+       ccd_sum[ix, iy] += ccdPlt[ix, iy]
+     end
+   end
 end
+figure()
+contourf(log10(ccd_sum), nLevels)
+xlabel("Pixel number", size=fontSize)
+ylabel("Pixel number", size=fontSize)
+title("Sum", size=fontSize)
+colorbar()
+
+
 show()
 
 writedlm(joinpath(filePath, "ccd.dat"), ccd)
