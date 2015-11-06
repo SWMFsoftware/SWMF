@@ -11,6 +11,9 @@ my $hostname_full = `hostname -f`;
 if($hostname_full =~ m/stampede/){
     $hostname = 'stampede';
 }
+if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/){
+    $hostname = 'pleiades';
+}
 
 #path to the Makefile.test source
 my $path="MakefileTest";
