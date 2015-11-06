@@ -11,7 +11,7 @@
 ;    "getpict" will prompt you for "filename(s)" and "npict"
 ;    unless they are already set. Previous settings can be erased by 
 ;
-; .r defaults
+; .r set_defaults
 ;
 ;    or modified explicitly, e.g.:
 ;

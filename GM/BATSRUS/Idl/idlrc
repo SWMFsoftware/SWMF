@@ -13,7 +13,7 @@
 .r procedures
 .r vector
 .r funcdef
-.r defaults
+.r set_defaults
 spawn,'uname',uname
 
 ; Use the X command xdpyinfo to find what color schemes are supported
