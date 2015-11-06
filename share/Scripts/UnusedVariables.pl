@@ -76,6 +76,7 @@ foreach $source (@ARGV){
 	    $var = $1;
 	    $msg = $2;
 	}elsif(/(Unused) (symbol|local variable|parameter) (\w+)/i){
+	    next if /NAMEMOD|NAMESUB|DOTEST/; # Don't remove these
 	    $msg = $1;
 	    $var = $3;
 	}elsif(/Local variable (\w+) is (initialised but never used)/){
