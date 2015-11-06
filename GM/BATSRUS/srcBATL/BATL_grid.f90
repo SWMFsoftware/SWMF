@@ -1764,6 +1764,7 @@ contains
     real:: XyzPoint_D(MaxDim), Point_V(nVarPoint), Weight
     integer:: iPoint, jPoint, kPoint, iPoint_D(MaxDim), iCell, nCell, iError
     integer:: iCell_II(0:nDim,2**nDim)
+    logical:: IsSecondOrder
     real   :: Weight_I(2**nDim)
 
     real:: Tolerance
@@ -1952,7 +1953,8 @@ contains
        iPoint_D = (/ iPoint, jPoint, kPoint /)
        XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
             *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
-       call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I)
+       call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I,&
+            IsSecondOrder)
 
        do iCell = 1, nCell
           Point_VIII(0,iPoint,jPoint,kPoint) = &
@@ -1960,7 +1962,7 @@ contains
           iBlock = iCell_II(0,iCell)
           iCell_D = 1
           iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
-
+     
           ! Interpolate the coordinates to check order of accuracy
           ! Note: Using array syntax in combination with the indirect
           ! iCell_D index fails with optimization for NAG v5.1
@@ -2011,7 +2013,8 @@ contains
              Tolerance = 3e-2
           end if
 
-          if(all(abs(Xyz_D(1:nDim) - Point_V) > Tolerance))then
+          if(any(PACK(abs(Xyz_D(1:nDim) - Point_V) > Tolerance, &
+               MASK=IsSecondOrder .or. IsPeriodicTest_D(1:nDim))))then
              write(*,*) 'ERROR: Point_V=',Point_V(1:nDim),&
                   ' should be ',Xyz_D(1:nDim)
              write(*,*) 'Total weight=',Weight

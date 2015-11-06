@@ -36,24 +36,13 @@ module BATL_interpolate_amr
        max(-3 + 2*iRatio + jRatio, 1) /)
 
   ! point's coordinate in non-AMR dimensions
-  real   :: CoordNoAmr, DisplacedCoordNoAmr
+  real   :: CoordNoAmr, DisplacedCoordTreeNoAmr
 
   !\
   ! variables to keep track of nodes in the case of non-AMR direction
-  ! IMPORTANT:
-  !   order in which nodes are found is used as block id in interpolate_amr,
-  !   the actual id is accessed as iNode_II(:,iNodeIdLocal):
-  !   - iNode_II(1,:) are ids directly passed to interpolate_amr
-  !   - iNode_II(2,:) are needed in the case of non-AMR directions:
-  !     it stores ids of neighbors of corresponding iNode_II(1,:) if point
-  !     falls close to the blocks boundary along non-AMR direction,
-  !     otherwise it is the same as iNode_II(1,:)
   !-------------------------------------------------------------------------
   ! number of nodes found so far
   integer:: nNodeFound
-
-  ! the actual node ids are stored here
-  integer:: iNode_II(2,2**MaxDim) 
 
   ! cell indexes along non-AMR direction:
   ! iCellNoAmr_I(1) - for the cell which center is left  to the given point
@@ -66,17 +55,17 @@ module BATL_interpolate_amr
 
 contains
 
-  subroutine interpolate_amr(XyzIn_D, &
+  subroutine interpolate_amr(CoordIn_D, &
        nCell, iCell_II, Weight_I, IsSecondOrder)
 
-    ! Find the grid cells surrounding the point Xyz_D.
+    ! Find the grid cells surrounding the point Coord_D.
     ! nCell returns the number of cells found on the processor.
     ! iCell_II returns the block+cell indexes for each cell.
     ! Weight_I returns the interpolation weights calculated 
     !                                 using AMR interpolation procedure
     ! IsSecondOrder returns whether the result is 2nd order interpolation
 
-    real,    intent(in) :: XyzIn_D(MaxDim)
+    real,    intent(in) :: CoordIn_D(MaxDim)
     integer, intent(out):: nCell
     integer, intent(out):: iCell_II(0:nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
@@ -85,20 +74,22 @@ contains
     integer:: iIndexes_II(0:nDimAmr+1,2**nDimAmr)
     integer:: nGridOut
 
+    ! used in the case of non-AMR direction when point falls close to block's
+    ! boundary and shared interpolation procedure is called 2nd time
+    integer:: nGridOutAux
+
     integer:: iProc_I(2**nDim)
-    integer:: iNode !for code readability
     integer:: iCell, iDim ! loop variables
     !--------------------------------------------------------------------    
     ! coords along non-AMR direction
     if(nDimAmr < nDim) then
        ! this case is valid only for nDim=MaxDim=3, nDimAmr=2
-       CoordNoAmr = XyzIn_D(iDimNoAmr)
+       CoordNoAmr = CoordIn_D(iDimNoAmr)
     end if
 
     ! mark the beginning of the interpolation
     nNodeFound = 0
     iProc_I    = Unset_
-    iNode_II   = Unset_
 
     ! apply general interpolate_amr routine but exclude non-AMR dimensions
     ! need to account for these dimensions separately,
@@ -106,7 +97,7 @@ contains
     !       this is done in the end of the current subroutine
     call interpolate_amr_shared(&
          nDim          = nDimAmr, &
-         XyzIn_D       = XyzIn_D(iOrder_I(1:nDimAmr)), &
+         XyzIn_D       = CoordIn_D(iOrder_I(1:nDimAmr)), &
          nIndexes      = nDimAmr+1, &
          find          = find, &
          nCell_D       = nIJK_D(iOrder_I(1:nDimAmr)), &
@@ -140,31 +131,75 @@ contains
        call sort_out_other_procs
        RETURN
     end if
-    ! local node ids & cell indexes along AMR directions
-    ! are the same for cells iCell and nGridOut+iCell
-    iCell_II(0:nDimAmr,nGridOut+1:2*nGridOut) = iCell_II(0:nDimAmr,1:nGridOut)
-    iCell_II(     nDim,nGridOut+1:2*nGridOut) = iCellNoAmr_I(2)
-    do iDim = 1, nDim
-       iCell_II(iOrder_I(iDim),1:2*nGridOut)   = iCell_II(iDim,1:2*nGridOut)
-    end do
-    ! correct weights
-    Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
-    Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
-    if(iCellNoAmr_I(1) > iCellNoAmr_I(2))then    
-       ! get correct block and processor ids
-       do iCell = 1, nGridOut
-          ! proper global node, block and proc ids for iCell
-          iNode = iNode_II(1,iCell_II(0,iCell))
-          iCell_II(0, iCell) = iTree_IA(Block_,iNode)
-          iProc_I(    iCell) = iTree_IA(Proc_, iNode)
-          ! proper global node, block and proc ids for nGridOut+iCell
-          iNode = iNode_II(2,iCell_II(0,nGridOut+iCell))
-          iCell_II(0, nGridOut+iCell) = iTree_IA(Block_,iNode)
-          iProc_I(    nGridOut+iCell) = iTree_IA(Proc_, iNode)
+
+    if(DisplacedCoordTreeNoAmr < 0.0)then
+       !\
+       ! the other half of the stencil is in the same block:
+       !/
+       ! local node ids & cell indexes along AMR directions
+       ! are the same for cells iCell and nGridOut+iCell
+       iCell_II(0:nDimAmr,nGridOut+1:2*nGridOut)=iCell_II(0:nDimAmr,1:nGridOut)
+       iCell_II(     nDim,nGridOut+1:2*nGridOut)=iCellNoAmr_I(2)
+       ! copy processor indices
+       iProc_I(nGridOut+1:2*nGridOut) = iProc_I(1:nGridOut)
+       ! restore shape
+       do iDim = 1, nDim
+          iCell_II(iOrder_I(iDim),1:2*nGridOut) =iCell_II(iDim,1:2*nGridOut)
        end do
+       ! correct weights
+       Weight_I(nGridOut+1:2*nGridOut)= Weight_I(1:nGridOut) *    WeightNoAmr
+       Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
+       ! number of cells has doubled
+       nGridOut = 2*nGridOut
+    elseif(IsSecondOrder .or. IsPeriodic_D(iDimNoAmr))then
+       !\
+       ! the point is far from domain's boundary =>
+       ! the other part of the stencil exists and is in a different block(s)
+       !/
+       ! change coordinate along non-AMR direction to the displaced one:
+       ! now restored full coordinates will fall in the appropriate block(s)
+       CoordNoAmr = CoordMin_D(iDimNoAmr) + &
+            DisplacedCoordTreeNoAmr * DomainSize_D(iDimNoAmr)
+
+       ! call shared interpolation procedure 2nd time
+       call interpolate_amr_shared(&
+            nDim          = nDimAmr, &
+            XyzIn_D       = CoordIn_D(iOrder_I(1:nDimAmr)), &
+            nIndexes      = nDimAmr+1, &
+            find          = find, &
+            nCell_D       = nIJK_D(iOrder_I(1:nDimAmr)), &
+            nGridOut      = nGridOutAux, &
+            Weight_I      = Weight_I(nGridOut+1:nGridOut+2**nDimAmr), &
+            iIndexes_II   = iIndexes_II, &
+            IsSecondOrder = IsSecondOrder, &
+            UseGhostCell  = .false.)
+       if(nGridOutAux==0)&
+            call CON_stop("Failure in BATL_interpolate_amr:interpolate_amr; Part of interpolation stencil can't be found")
+
+       ! copy results indices
+       iProc_I(            nGridOut+1:nGridOut+nGridOutAux) = &
+            iIndexes_II(0,         1:nGridOutAux)
+       iCell_II(1:nDimAmr, nGridOut+1:nGridOut+nGridOutAux) = &
+            iIndexes_II(1:nDimAmr, 1:nGridOutAux)
+       iCell_II(0,         nGridOut+1:nGridOut+nGridOutAux) = &
+            iIndexes_II(nDimAmr+1, 1:nGridOutAux)
+
+       ! store indexes and restore shape along non-AMR direction
+       iCell_II(  nDim, nGridOut+1:nGridOut+nGridOutAux) = iCellNoAmr_I(2)
+       do iDim = 1, nDim
+          iCell_II(iOrder_I(iDim),1:nGridOut+nGridOutAux) = &
+               iCell_II(iDim,1:nGridOut+nGridOutAux)
+       end do
+
+       ! correct weights
+       Weight_I(         1:nGridOut) = Weight_I(1:nGridOut) * (1 - WeightNoAmr)
+       Weight_I(nGridOut+1:nGridOut+nGridOutAux) = &
+            Weight_I(nGridOut+1:nGridOut+nGridOutAux) * WeightNoAmr
+
+       ! number of cells has changed
+       nGridOut = nGridOut + nGridOutAux
     end if
-    ! number of cells has doubled
-    nGridOut = 2*nGridOut
+
     call sort_out_other_procs
 
   contains
@@ -255,7 +290,7 @@ contains
     !\
     ! "In"- the coordinates of the point, "out" the coordinates of the
     ! point with respect to the block corner. In the most cases
-    ! XyzOut_D = XyzIn_D - XyzCorner_D, the important distinction,
+    ! CoordOut_D = CoordIn_D - CoordCorner_D, the important distinction,
     ! however, is the periodic boundary, near which the jump in the
     ! stencil coordinates might occur. To handle the latter problem,
     ! we added the "out" intent. The coordinates for the stencil
@@ -276,15 +311,6 @@ contains
     real   :: CoordTree_D(MaxDim)       ! Normalized gen coords
     integer:: iNode                     ! tree node number
     real   :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-
-    !\
-    ! In the case of a non-AMR direction shows, where in iNodeFound_II
-    ! to store a newly found node and its neighbor
-    !/
-    integer, save:: iFirst = 1, iSecond = 2
-    !\
-    ! in the case of non-AMR direction: displacement towards neighbor
-    !/
     !--------------------------------------------------------------------
     ! Coord_D will be used to find block, copy input data into it
     ! restore non-AMR directions if necessary
@@ -350,35 +376,36 @@ contains
        WeightNoAmr     = WeightNoAmr - iCellNoAmr_I(1)      
        iCellNoAmr_I(2) = iCellNoAmr_I(1) + 1  
 
-       ! iFirst corresponds to node found above, to be stored in iNode_II(1,:),
-       ! iSecond will be searched for below, to be stored in iNode_II(2,:)
-       iFirst = 1; iSecond = 2
+       ! set displaced tree coordinates to -1:
+       !   if unchanged => point if far from block boundary along iDimNoAmr
+       DisplacedCoordTreeNoAmr = -1.0
        IsSecondOrderNoAmr = .true.
        ! take care of the cases when point is close to the boundary
        if    (iCellNoAmr_I(1) == 0)then
           ! displacement towards neighbor: down
-          DisplacedCoordNoAmr = CoordTree_D(iDimNoAmr) - &
+          DisplacedCoordTreeNoAmr = CoordTree_D(iDimNoAmr) - &
                dCoordFull_D(iDimNoAmr) / DomainSize_D(iDimNoAmr)
           if(IsPeriodic_D(iDimNoAmr))&
-               DisplacedCoordNoAmr = &
-               modulo(DisplacedCoordNoAmr, 1.0)
-          if(DisplacedCoordNoAmr < 0.0)then
+               DisplacedCoordTreeNoAmr = &
+               modulo(DisplacedCoordTreeNoAmr, 1.0)
+          if(DisplacedCoordTreeNoAmr < 0.0)then
              IsSecondOrderNoAmr = .false.
              WeightNoAmr = 0.0
              iCellNoAmr_I(1) = iCellNoAmr_I(2)
              RETURN
           end if
-          iCellNoAmr_I(1) = nIJK_D(iDimNoAmr)
-          ! inverse order in which nodes in iNode_II are found
-          iFirst = 2; iSecond = 1 
+          iCellNoAmr_I(2) = nIJK_D(iDimNoAmr)
+          iCellNoAmr_I(1) = 1
+          ! inverse weight along iDimNoAmr
+          WeightNoAmr = 1 - WeightNoAmr
        elseif(iCellNoAmr_I(2) == nIJK_D(iDimNoAmr)+1)then
           ! displacement towards neighbor: up
-          DisplacedCoordNoAmr = CoordTree_D(iDimNoAmr) + &
+          DisplacedCoordTreeNoAmr = CoordTree_D(iDimNoAmr) + &
                dCoordFull_D(iDimNoAmr) / DomainSize_D(iDimNoAmr)
           if(IsPeriodic_D(iDimNoAmr))&
-               DisplacedCoordNoAmr = &
-               modulo(DisplacedCoordNoAmr, 1.0)
-          if(DisplacedCoordNoAmr >= 1.0)then
+               DisplacedCoordTreeNoAmr = &
+               modulo(DisplacedCoordTreeNoAmr, 1.0)
+          if(DisplacedCoordTreeNoAmr >= 1.0)then
              IsSecondOrderNoAmr = .false.
              WeightNoAmr = 0.0
              iCellNoAmr_I(2) = iCellNoAmr_I(1)
@@ -389,24 +416,6 @@ contains
     end if
 
     nNodeFound = nNodeFound + 1
-
-    ! check if point is close to the boundary of the block
-    if(iCellNoAmr_I(1) > iCellNoAmr_I(2))then
-       ! store parameters of the node and return local node id as block id
-       iNode_II(iFirst,nNodeFound) = iNode
-       iBlock = nNodeFound
-       ! need to find a neighboring node
-       CoordTree_D(iDimNoAmr) =  DisplacedCoordNoAmr
-       call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
-       !\
-       ! Check if the block is found
-       !/
-       if(iNode<=0)then
-          call CON_stop('Failure in BATL_interpolate_amr:find')
-       end if
-       ! store the second node
-       iNode_II(iSecond, nNodeFound) = iNode   
-    end if
   end subroutine find
   !===========================================================================
   subroutine find_block_to_interpolate_gc(Coord_D, iPeOut, iBlockOut)
