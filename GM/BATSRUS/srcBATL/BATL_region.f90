@@ -116,7 +116,7 @@ contains
 
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) nInitialAmrLevel &
-         = ceiling(log(CellSizeRoot/InitialResolution)/log(2.0))
+         = ceiling(log(CellSizeRoot/InitialResolution)/log(2.0) - 0.01)
 
     if(DoTest)write(*,*) NameSub, &
          ' CellSizeRoot, InitialResolution, nInitialAmrLevel=', &
@@ -179,7 +179,8 @@ contains
           Area%Resolution = CellSizeRoot * 2.0**Area%Level
        else
           ! Set AMR level (note that negative value is used)
-          Area%Level = -ceiling( log(CellSizeRoot/Area%Resolution) / log(2.0) )
+          Area%Level = &
+               -ceiling(log(CellSizeRoot/Area%Resolution)/log(2.0) - 0.01)
        end if
 
     end do
