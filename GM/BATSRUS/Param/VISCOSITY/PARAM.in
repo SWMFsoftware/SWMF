@@ -90,7 +90,7 @@ F		DoSaverestart
 z=0 var idl_ascii	PlotString
 -1		DnSavePlot
 1.0		DtSavePlot
--1		DxSavePlot
+0.0		DxSavePlot
 Rho Mx My Mz E p visco dx
 g rbody
 
@@ -112,18 +112,21 @@ T
 #NONCONSERVATIVE
 F
 
-mask is hardcoded to be around origo
+#REGION
+sphere1			NameRegion
+sphere0 tapered		StringShape
+0.25			Radius
+0.25			Taper
+
 #VISCOSITYREGION
-mask            NameViscosityRegion
-0.25            rZeroVisco
-0.5             rFullVisco
+-sphere1		StringViscoRegion
 
 #SAVEPLOT
 1		nPlotfile
 z=0 var idl_ascii	PlotString
 -1		DnSavePlot
 0.1		DtSavePlot
--1		DxSavePlot
+0.0		DxSavePlot
 Rho Mx My Mz E p visco dx
 g rbody
 
@@ -131,51 +134,32 @@ g rbody
 -1		MaxIteration
 2.1		tSimulationMax
 
-#RUN #####################
+#RUN #####################################
+
+#REGION
+sphere2			NameRegion
+sphere0 tapered		StringShape
+0.5			Radius
+0.25			Taper
 
 #VISCOSITYREGION
-sphere          NameViscosityRegion
-0.0             x0Visco
-0.0             y0Visco
-0.0             z0Visco
-0.5             rSphereVisco
-0.25            DrSphereVisco
-
-SAVEPLOT
-1		nPlotfile
-z=0 var idl_ascii	PlotString
--1		DnSavePlot
-1.2		DtSavePlot
--1		DxSavePlot
-Rho Mx My Mz E p visco dx
-g rbody
+sphere2			StringViscoRegion
 
 #STOP
 -1		MaxIteration
 2.2		tSimulationMax
 
-#RUN #####################
+#RUN ######################################
+
+#REGION
+cube			NameRegion
+brick0 tapered		StringShape
+0.25   			xSize
+0.25			ySize
+0.5			Taper
 
 #VISCOSITYREGION
-box            NameViscosityRegion
-0.0             x0Visco
-0.0             y0Visco
-0.0             z0Visco
-0.25            xSizeBoxVisco
-0.5             DxSizeBoxVisco
-0.25            ySizeBoxVisco
-0.5             DySizeBoxVisco
-0.25            zSizeBoxVisco
-0.5             DzSizeBoxVisco
-
-SAVEPLOT
-1		nPlotfile
-z=0 var idl_ascii	PlotString
--1		DnSavePlot
-1.3		DtSavePlot
--1		DxSavePlot
-Rho Mx My Mz E p visco dx
-g rbody
+cube                    StringViscoRegion
 
 #STOP
 -1		MaxIteration
