@@ -328,10 +328,15 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
         end
         update_r!(r, r_hat, dr, l)
         #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
-        distance = norm_vec(r) 
+        distance = norm_vec(r)
       end
       for k=1:nVars
-        ccd[k, i] = data[k]
+        if iTriangle == -1
+          ccd[k,i] = data[k]
+        else
+          ccd[k,i] = 0.0
+        end
+        #ccd[k, i] = data[k]
       end
     end
     return ccd
