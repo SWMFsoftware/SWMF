@@ -46,7 +46,8 @@ contains
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_
-    use ModViscosity,     ONLY: UseViscosity, viscosity_factor
+    use ModViscosity,     ONLY: &
+         UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModUserInterface ! user_calc_sources
 
     integer, intent(in):: iBlock
@@ -104,12 +105,15 @@ contains
 
           if((UseAnisoPressure .and. IsIon_I(iFluid)) &
                .or. (UseViscosity .and. nFluid == 1))then
+
+             if(UseViscosity)call set_visco_factor_cell(iBlock)
+
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
                 if(UseViscosity) then
-                   ViscoCoeff = viscosity_factor(0,i,j,k,iBlock) 
+                   ViscoCoeff = ViscoFactor_C(i,j,k)
                    if(.not. UseAnisoPressure .and. ViscoCoeff <= 0.0 ) CYCLE
                 end if
 

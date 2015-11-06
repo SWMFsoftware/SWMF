@@ -763,7 +763,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
        Xyz_DGB, iNode_B, CellSize_DB
   use ModCurrent, ONLY: get_current
   use ModCoordTransform, ONLY: cross_product
-  use ModViscosity, ONLY: Viscosity_factor, UseViscosity
+  use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
   use ModFaceValue, ONLY: iRegionLowOrder_I
   use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B
 
@@ -1179,9 +1179,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         end do; end do; end do
      case('visco')
         if (UseViscosity) then
-           do k = 1, nK; do j = 1, nJ; do i =1, nI
-              PlotVar(i,j,k,iVar) = Viscosity_factor(0,i,j,k,iBLK)
-           end do;end do;end do
+           call set_visco_factor_cell(iBLK)
+           PlotVar(1:nI,1:nJ,1:nK,iVar) = ViscoFactor_C
         end if
      case('divb')
         if(.not.IsCartesian)call stop_mpi( &

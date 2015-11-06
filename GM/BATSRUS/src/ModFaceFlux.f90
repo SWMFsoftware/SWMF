@@ -54,7 +54,7 @@ module ModFaceFlux
   use ModNumConst
   use ModCoronalHeating, ONLY: IsNewBlockAlfven
   use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
-       get_viscosity_tensor 
+       get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
 
   implicit none
 
@@ -369,7 +369,7 @@ contains
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit
     use ModWaves,    ONLY: UseWavePressure
-    use ModViscosity,ONLY: UseArtificialVisco, alphaVisco
+    use ModViscosity,ONLY: UseArtificialVisco, AlphaVisco
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
@@ -431,6 +431,8 @@ contains
     elseif(UseBiermannBattery)then
        call set_ion_mass_per_charge(iBlock)
     end if
+
+    if(UseViscosity) call set_visco_factor_face(iBlock)
 
     if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
@@ -792,12 +794,12 @@ contains
       
       if(all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) then
 
-         Flux_V(1:nVar) = Flux_V(1:nVar) - alphaVisco*CmaxDt* &
+         Flux_V(1:nVar) = Flux_V(1:nVar) - AlphaVisco*CmaxDt* &
               (State_VGB(1:nVar,iFace,jFace,kFace,iBlockFace) - &
               State_VGB(1:nVar,iLeft,jLeft,kLeft,iBlockFace))* &
               Area 
 
-         Flux_V(nVar+1:nFlux) = Flux_V(nVar+1:nFlux) - alphaVisco*CmaxDt* &
+         Flux_V(nVar+1:nFlux) = Flux_V(nVar+1:nFlux) - AlphaVisco*CmaxDt* &
               (Energy_GBI(iFace,jFace,kFace,iBlockFace,:) - &
               Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,:))* &
               Area 
@@ -972,7 +974,6 @@ contains
 
     use ModPhysics, ONLY: Io2No_V, UnitU_
     use ModGeometry, ONLY: r_BLK
-    use ModViscosity, ONLY: viscosity_factor
     real :: r
     !--------------------------------------------------------------------
 
@@ -1004,8 +1005,7 @@ contains
     end if
 
     ViscoCoeff = 0.0
-    if(UseViscosity) ViscoCoeff = &
-         viscosity_factor(iDimFace, iFace, jFace, kFace, iBlockFace)   
+    if(UseViscosity) ViscoCoeff = ViscoFactor_DF(iDimFace,iFace,jFace,kFace)
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = BiermannCoeff > 0.0 .and. &
