@@ -1188,7 +1188,7 @@ pro readplotpar,ndim,cut,cut0,plotdim,nfunc,func,funcs,funcs1,funcs2,$
       askstr,'plotmode(s)                ',plotmode,doask
       if strmid(plotmode,0,4) ne 'plot' then plotmode='plot'
    endif else begin
-      if strmid(plotmode,0,4) eq 'plot' then plotmode=''
+      if strmid(plotmode,0,4) eq 'plot' then plotmode='contbar'
       print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
       print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log'
       print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
