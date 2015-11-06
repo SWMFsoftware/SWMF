@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #BOP
 #!ROUTINE: CheckDataName.pl
@@ -72,14 +73,14 @@ my $ValidScalarName = "($ValidComp)?$FirstPart($Part)*";
 # Valid array variable names: VariableName IE_GridSize_C State_VGB
 my $ValidArrayName = "${ValidScalarName}_[A-Z]+";
 
-# Valid named index name: Rho_ x_ AnyName_ GM_
-my $ValidNamedIndex = "$FirstPart($Part)*_|[A-Z][A-Z]_";
+# Valid named index name: Rho_ rho_ x_ AnyName_ GM_ j0_ nJp1_
+my $ValidNamedIndex = "[a-zA-Z]([a-zA-Z0-9])*_";
 
 # Valid fraction name: c1over3
 my $ValidFraction = 'c\d+over\d+';
 
 # Valid first name parts depending on variable/function type:
-my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min|Ijk)\d*',
+my %ValidPart1 = ('integer'   => '(D?[i-nI-N]|Max|Min|Ijk|Int)\d*',
 		  'logical'   => '(Is|Use|Used|Unused|Do|Done)\d*',
 		  'character' => '(Name|Type|String)\d*'
 		  );
