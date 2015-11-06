@@ -48,10 +48,19 @@ function load_AMPS_data(fileName::UTF8String)
       println("nVars in header: ", length(line_split))
       i=1
       for variable in line_split
-        if ismatch(r"Dust Number Density", variable) & !ismatch(r"Total", variable)
+        condition1 = ismatch(r"Dust Number Density", variable)
+        condition2 = !ismatch(r"Total", variable)
+        condition3 = ismatch(r"Number Density", variable)
+        condition4 = !ismatch(r"Dust", variable)
+        if (condition1 & condition2) | (condition3 & condition4)
           println(variable)
           push!(varIndexes, i)
-          lower, upper = [parse(Float64, value) for value in matchall(r"(-?\d.\d+[eE][+-]\d+)", variable) ]
+          if (condition1 & condition2) # dust case
+            lower, upper = [parse(Float64, value) for value in matchall(r"(-?\d.\d+[eE][+-]\d+)", variable) ]
+          else
+            lower = 0.0
+            upper = 0.0
+          end
           push!(minSize, lower)
           push!(maxSize, upper)
         end
