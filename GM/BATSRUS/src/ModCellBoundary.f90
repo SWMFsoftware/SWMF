@@ -250,13 +250,13 @@ contains
              call set_reflect_bc(nVectorVar, iVectorVar_I)             
           end if
        case('reflect_semi')
-          if(IsCartesianGrid .or. TypeSemiImplicit /= 'resistivity')then
+          if(IsCartesianGrid .or. TypeSemiImplicit(1:6) /= 'resist')then
              ! Scalars are symmetric
              SymmCoeff_V = 1.0
 
              ! Semi-implicit scheme is mostly applied to scalars
              ! The only exception right now is the magnetic field
-             if(TypeSemiImplicit == 'resistivity')then
+             if(TypeSemiImplicit(1:6) == 'resist')then
                 select case(iSide)
                 case(1,2)
                    SymmCoeff_V(BxImpl_) = -1.0

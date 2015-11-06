@@ -132,7 +132,8 @@ contains
     use BATL_lib, ONLY: MaxDim, nI, nJ, nK, nIJK, &
          MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes, ONLY: nWave
-    use ModResistivity, ONLY: BxImpl_
+    use ModResistivity, ONLY: BxImpl_, UseResistivity
+    use ModHallResist,  ONLY: UseHallResist
 
     character(len=*), parameter:: NameSub = 'init_mod_semi_impl'
     !------------------------------------------------------------------------
@@ -158,8 +159,10 @@ contains
     case('radcond')
        ! Radiative transfer and heat conduction: I_w and T
        nVarSemiAll = nWave + 1
-    case('resistivity')
+    case('resistivity', 'resist', 'resisthall')
        ! (Hall) resistivity: magnetic field
+       UseSemiHallResist  = UseHallResist .and.TypeSemiImplicit /= 'resist'
+       UseSemiResistivity = UseResistivity.and.TypeSemiImplicit /= 'resisthall'
        nVarSemiAll = MaxDim
        nVectorSemi = 1
        allocate(iVectorSemi_I(nVectorSemi))
@@ -203,8 +206,8 @@ contains
     allocate(DeltaSemiAll_VCB(nVarSemiAll,nI,nJ,nK,MaxBlock))
 
     ! Variables for the flux correction
-    if(  TypeSemiImplicit == 'parcond' .or. &
-         TypeSemiImplicit == 'resistivity' .or. UseAccurateRadiation)then
+    if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
+         .or. UseAccurateRadiation)then
        allocate( &
             FluxImpl_VXB(nVarSemi,nJ,nK,2,MaxBlock), &
             FluxImpl_VYB(nVarSemi,nI,nK,2,MaxBlock), &
@@ -280,7 +283,7 @@ contains
     call set_oktest(NameSub, DoTest, DoTestMe) 
     if(DoTestMe) write(*,*)NameSub,' starting'
 
-    if(TypeSemiImplicit /= 'resistivity')then
+    if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
        ! except for (Hall) resistivity
        nBlockSemi = 0
@@ -310,7 +313,7 @@ contains
        call get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
             DeltaSemiAll_VCB=DeltaSemiAll_VCB, &
             DoCalcDeltaIn=UseStableImplicit)
-    case('resistivity')
+    case('resistivity','resist','resisthall')
        call get_impl_resistivity_state(SemiAll_VCB)
     case default
        call stop_mpi(NameSub//': no get_impl_state implemented for' &
@@ -380,7 +383,7 @@ contains
                NewSemiAll_VCB(:,:,:,:,iBlockSemi), &
                SemiAll_VCB(:,:,:,:,iBlockSemi), &
                DconsDsemiAll_VCB(:,:,:,:,iBlockSemi))
-       case('resistivity')
+       case('resistivity','resist','resisthall')
           call update_impl_resistivity(iBlock, &
                NewSemiAll_VCB(:,:,:,:,iBlockSemi))
        case default
@@ -425,7 +428,7 @@ contains
     case('parcond')
        call get_heat_conduction_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
-    case('resistivity')
+    case('resistivity','resist','resisthall')
        call get_resistivity_rhs(iBlock, SemiState_VG, &
             RhsSemi_VC, IsLinear=IsLinear)
     case default
@@ -479,7 +482,7 @@ contains
                nProlongOrderIn=1, DoSendCornerIn=.false., &
                DoRestrictFaceIn=.true.)
        end if
-    case('parcond','resistivity')
+    case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
     case default
@@ -499,7 +502,7 @@ contains
             RhsSemi_VCB(:,:,:,:,iBlockSemi), IsLinear=.false.)
     end do
 
-    if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity' &
+    if( (TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
@@ -597,7 +600,7 @@ contains
                nProlongOrderIn=1, DoSendCornerIn=.false., &
                DoRestrictFaceIn=.true.)
        end if
-    case('parcond','resistivity')
+    case('parcond','resistivity','resist','resisthall')
        call message_pass_cell(nVarSemi, SemiState_VGB, nWidthIn=2, &
             nProlongOrderIn=1, nCoarseLayerIn=2, DoRestrictFaceIn = .true.)
     case default
@@ -647,7 +650,7 @@ contains
 
     end do
 
-    if(TypeSemiImplicit == 'parcond' .or. TypeSemiImplicit == 'resistivity' &
+    if((TypeSemiImplicit(1:3) /= 'rad' .and. TypeSemiImplicit /= 'cond') &
          .or. UseAccurateRadiation)then
        call message_pass_face(nVarSemi, &
             FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
@@ -859,7 +862,7 @@ contains
        JacAna_VV = JacAna_VVCI(:,:,i,j,k,iStencil)
        JacNum_VV = JacNum_VVI(:,:,iStencil)
 
-       if(IsRotatedCartesian .and. TypeSemiImplicit == 'resistivity')then
+       if(IsRotatedCartesian .and. TypeSemiImplicit(1:6) == 'resist')then
           JacAna_VV = rot_to_cart(JacAna_VV)
           JacNum_VV = rot_to_cart(JacNum_VV)
        end if
@@ -886,7 +889,8 @@ contains
     use BATL_lib,          ONLY: nI, nJ, nK
     use ModRadDiffusion,   ONLY: add_jacobian_rad_diff
     use ModHeatConduction, ONLY: add_jacobian_heat_cond
-    use ModResistivity,    ONLY: add_jacobian_resistivity
+    use ModResistivity,    ONLY: add_jacobian_resistivity, &
+         add_jacobian_hall_resist
 
     integer, intent(in) :: iBlock
     real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
@@ -901,8 +905,11 @@ contains
        call add_jacobian_rad_diff(iBlock, nVarSemi, JacSemi_VVCI)
     case('parcond')
        call add_jacobian_heat_cond(iBlock, nVarSemi, JacSemi_VVCI)
-    case('resistivity')
-       call add_jacobian_resistivity(iBlock, nVarSemi, JacSemi_VVCI)
+    case('resistivity','resist','resisthall')
+       if(UseSemiResistivity) &
+            call add_jacobian_resistivity(iBlock, nVarSemi, JacSemi_VVCI)
+       if(UseSemiHallResist) &
+            call add_jacobian_hall_resist(iBlock, nVarSemi, JacSemi_VVCI)
     case default
        call stop_mpi(NameSub//': no add_jacobian implemented for' &
             //TypeSemiImplicit)

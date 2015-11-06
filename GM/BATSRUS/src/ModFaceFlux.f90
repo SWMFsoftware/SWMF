@@ -367,7 +367,7 @@ contains
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          UseHyperbolicDivb
-    use ModImplicit, ONLY: TypeSemiImplicit
+    use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     use ModWaves,    ONLY: UseWavePressure
     use ModViscosity,ONLY: UseArtificialVisco, AlphaVisco
 
@@ -423,8 +423,7 @@ contains
     DoHeatConduction    = UseHeatConduction .and.&
          .not.  index(TypeSemiImplicit,'parcond')>0
 
-    DoHallInduction = UseHallResist .and. &
-         .not. index(TypeSemiImplicit,'resistivity')>0
+    DoHallInduction = UseHallResist .and. .not. UseSemiHallResist
 
     if(UseHallResist)then
        call set_hall_factor_face(iBlock)

@@ -13,6 +13,10 @@ module ModSemiImplVar
   logical, public:: UseSplitSemiImplicit = .false.
   character(len=40), public:: TypeSemiImplicit = 'none'
 
+  ! Do semi-implicit Hall and/or regular resistivity
+  logical:: UseSemiHallResist  = .false.
+  logical:: UseSemiResistivity = .false.
+
   logical, public:: UseStableImplicit = .false.
   
   ! Number of all semi-implicit variables

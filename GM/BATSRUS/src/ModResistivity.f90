@@ -10,6 +10,8 @@ module ModResistivity
   use BATL_size, ONLY: nDim, Maxdim, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
 
+  use ModImplicit, ONLY: UseSemiHallResist, UseSemiResistivity
+
   implicit none
   save
 
@@ -22,9 +24,11 @@ module ModResistivity
   public:: calc_resistivity_source
   public:: calc_heat_exchange
   public:: init_impl_resistivity
+  public:: init_impl_hall_resist
   public:: get_impl_resistivity_state
   public:: get_resistivity_rhs
   public:: add_jacobian_resistivity
+  public:: add_jacobian_hall_resist
   public:: update_impl_resistivity
 
   logical, public           :: UseResistivity   = .false.
@@ -151,11 +155,9 @@ contains
        Eta_GB = 0.0
     end if
 
-    if(UseSemiImplicit .and. TypeSemiImplicit == 'resistivity')then
-       ! The following will ensure that the explicit evaluation of the
-       ! resistive diffusion is switched off
-       UseResistiveFlux = .false.
-    end if
+    ! The following will ensure that the explicit evaluation of the
+    ! resistive diffusion is switched off
+    if(UseSemiResistivity) UseResistiveFlux = .false.
 
     if(DoTestMe)then
        write(*,*)NameSub, ': DoResistiveFlux  = ', DoResistiveFlux
@@ -578,9 +580,9 @@ contains
   subroutine get_impl_resistivity_state(SemiAll_VCB)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
+    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
+         TypeSemiImplicit
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use ModHallResist, ONLY: UseHallResist
     use BATL_lib, ONLY: nBlock, Unused_B
 
     real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlock)
@@ -591,10 +593,10 @@ contains
 
     character(len=*), parameter :: NameSub = 'get_impl_resistivity_state'
     !--------------------------------------------------------------------------
-
     ! Initialize variables for RHS and Jacobian calculation
     ! and find the blocks that require semi-implicit solver
-    call init_impl_resistivity
+    if(UseSemiResistivity) call init_impl_resistivity
+    if(UseSemiHallResist)  call init_impl_hall_resist
 
     ! Collect the semi-implicit blocks
     nBlockSemi = 0
@@ -603,9 +605,9 @@ contains
 
        ! Check if the block needs to be advanced with semi-implicit scheme
        IsSemiBlock = .false.
-       if(UseResistivity) &
+       if(UseSemiResistivity) &
             IsSemiBlock = any(Eta_DFDB(:,:,:,:,:,iBlock) /= 0.0)
-       if(UseHallResist .and. .not.IsSemiBlock) &
+       if(UseSemiHallResist .and. .not.IsSemiBlock) &
             IsSemiBlock = any(Bne_DFDB(:,:,:,:,:,iBlock) /= 0.0)
        if(.not.IsSemiBlock) CYCLE
 
@@ -632,98 +634,108 @@ contains
     use BATL_lib,        ONLY: IsCartesian, message_pass_cell, &
          CellFace_DB, FaceNormal_DDFB, nBlock, Unused_B
     use ModAdvance,      ONLY: State_VGB
-    use ModMain,         ONLY: UseB0
     use ModNumConst,     ONLY: i_DD
-    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
-    use ModHallResist,   ONLY: UseHallResist, set_hall_factor_face, &
-         HallFactor_DF, IsHallBlock
-    use ModB0,           ONLY: B0_DGB
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
     real:: Eta
     real:: FaceNormal_D(nDim)
 
-    real:: HallCoeff, Rho, b_D(MaxDim)
-
-    character(len=*), parameter :: &
-         NameSub = 'ModResistivity::init_impl_resistivity'
+    character(len=*), parameter:: NameSub = 'init_impl_resistivity'
     !--------------------------------------------------------------------------
-    if(UseResistivity)then
-       ! Calculate Eta*FaceNormal_D to be used for resistive flux
-       if(.not.allocated(Eta_DFDB)) &
-            allocate(Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
+    if(.not.UseResistivity) RETURN
 
-       ! Message pass resistivity to fill in ghost cells
-       call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
+    ! Calculate Eta*FaceNormal_D to be used for resistive flux
+    if(.not.allocated(Eta_DFDB)) &
+         allocate(Eta_DFDB(nDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
+    ! Message pass resistivity to fill in ghost cells
+    call message_pass_cell(Eta_GB, DoSendCornerIn=.false.)
 
-          Eta_DFDB(:,:,:,:,:,iBlock) = 0.0
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
 
-          do iDim = 1, nDim
-             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-             if(IsCartesian)then
-                FaceNormal_D = 0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
-             end if
-             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-                if(.not.IsCartesian) &
-                     FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+       Eta_DFDB(:,:,:,:,:,iBlock) = 0.0
 
-                Eta= 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          if(IsCartesian)then
+             FaceNormal_D = 0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
+          end if
+          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+             if(.not.IsCartesian) &
+                  FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
 
-                Eta_DFDB(:,i,j,k,iDim,iBlock) = Eta*FaceNormal_D
-             end do; end do; end do
-          end do
+             Eta= 0.5*(Eta_GB(i,j,k,iBlock) + Eta_GB(i-Di,j-Dj,k-Dk,iBlock))
+
+             Eta_DFDB(:,i,j,k,iDim,iBlock) = Eta*FaceNormal_D
+          end do; end do; end do
        end do
-    end if
-
-    if(UseHallResist)then
-
-       ! Calculate B/ne = m/e * B/rho on the face to be used for the Hall flux
-       if(.not.allocated(Bne_DFDB)) &
-            allocate(Bne_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
-
-       do iBlock = 1, nBlock
-          if(Unused_B(iBlock)) CYCLE
-
-          Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
-          
-          call set_hall_factor_face(iBlock)
-          if(.not.IsHallBlock) CYCLE
-
-          do iDim = 1, nDim
-             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-
-                ! Check if the Hall coefficient is positive for this face
-                HallCoeff = HallFactor_DF(iDim,i,j,k)
-                if(HallCoeff <= 0.0) CYCLE
-
-                ! Cell center indexes for the cell on the left of the face
-                i1 = i-Di; j1 = j-Dj; k1 = k - Dk
-
-                ! Average rho and B to the face
-                Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
-                     +     State_VGB(Rho_,i,j,k,iBlock)    )
-
-                b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
-                     +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
-
-                ! B0 on the face is actually average of cell center B0
-                ! It is easier to use B0_DGB then then the 3 face arrays
-                ! The res change on the coarse side will get overwritten
-                if(UseB0) b_D = b_D + &
-                     0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
-                
-                ! Calculate B/ne for the face
-                Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
-             end do; end do; end do
-          end do
-       end do
-    end if
+    end do
 
   end subroutine init_impl_resistivity
+  !===========================================================================
+  subroutine init_impl_hall_resist
+
+    use BATL_lib,        ONLY: nBlock, Unused_B
+    use ModAdvance,      ONLY: State_VGB
+    use ModMain,         ONLY: UseB0
+    use ModNumConst,     ONLY: i_DD
+    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
+    use ModB0,           ONLY: B0_DGB
+    use ModHallResist,   ONLY: UseHallResist, &
+         set_hall_factor_face, HallFactor_DF, IsHallBlock
+
+    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
+
+    real:: HallCoeff, Rho, b_D(MaxDim)
+
+    character(len=*), parameter:: NameSub = 'init_impl_resistivity'
+    !------------------------------------------------------------------------
+    if(.not.UseHallResist) RETURN
+    
+    ! Calculate B/ne = m/e * B/rho on the face to be used for the Hall flux
+    if(.not.allocated(Bne_DFDB)) &
+         allocate(Bne_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
+
+       call set_hall_factor_face(iBlock)
+       if(.not.IsHallBlock) CYCLE
+
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+
+             ! Check if the Hall coefficient is positive for this face
+             HallCoeff = HallFactor_DF(iDim,i,j,k)
+             if(HallCoeff <= 0.0) CYCLE
+
+             ! Cell center indexes for the cell on the left of the face
+             i1 = i-Di; j1 = j-Dj; k1 = k - Dk
+
+             ! Average rho and B to the face
+             Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
+                  +     State_VGB(Rho_,i,j,k,iBlock)    )
+
+             b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
+                  +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
+
+             ! B0 on the face is actually average of cell center B0
+             ! It is easier to use B0_DGB then then the 3 face arrays
+             ! The res change on the coarse side will get overwritten
+             if(UseB0) b_D = b_D + &
+                  0.5*(B0_DGB(:,i1,j1,k1,iBlock) + B0_DGB(:,i,j,k,iBlock))
+
+             ! Calculate B/ne for the face
+             Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
+          end do; end do; end do
+       end do
+    end do
+
+  end subroutine init_impl_hall_resist
 
   !============================================================================
 
@@ -737,7 +749,6 @@ contains
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
     use ModGeometry,     ONLY: true_cell, true_BLK
-    use ModHallResist,   ONLY: UseHallResist
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -766,7 +777,7 @@ contains
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
 
-       if(UseHallResist .and. IsCartesian) then
+       if(UseSemiHallResist .and. IsCartesian) then
           FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
        end if
 
@@ -779,7 +790,7 @@ contains
 
           FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = 0.0
 
-          if(UseResistivity)then
+          if(UseSemiResistivity)then
              ! Resistive flux
              ! dB/dt = -curl E 
              !       = -sum(FaceNormal x eta*J)
@@ -796,14 +807,14 @@ contains
              if(nDim == 3)FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
                   - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
-          
+
              if(nDim == 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_)
              if(nDim > 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_) &
                   - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)
           end if
-          if(UseHallResist)then
+          if(UseSemiHallResist)then
              ! Hall MHD flux
              ! dB/dt = -curl E
              !       = -div(uH B - B uH)  where uH = -J/(n e)
@@ -874,42 +885,6 @@ contains
   subroutine add_jacobian_resistivity(iBlock, nVarImpl, Jacobian_VVCI)
 
     ! Calculate the Jacobian for the preconditioning of 
-    ! collisional and Hall resistivity.
-
-    use ModHallResist, ONLY: UseHallResist
-    use ModImplicit,   ONLY: UseSemiImplicit, nStencil
-    use ModAdvance,    ONLY: B_
-
-    integer, intent(in):: iBlock
-    integer, intent(in):: nVarImpl
-    real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
-
-    integer:: iB
-
-    character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
-    !--------------------------------------------------------------------------
-    if(.not.(UseResistivity .or. UseHallResist)) RETURN
-
-    ! Set the base index value for magnetic field variables
-    if(UseSemiImplicit)then
-       iB = 0
-    else
-       iB = B_
-    end if
-
-    if(UseResistivity) &
-         call add_jacobian_eta_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
-
-    if(UseHallResist) &
-         call add_jacobian_hall_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
-
-  end subroutine add_jacobian_resistivity
-
-  !========================================================================
-
-  subroutine add_jacobian_eta_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
-
-    ! Calculate the Jacobian for the preconditioning of 
     ! collisional resistivity.
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
@@ -917,17 +892,27 @@ contains
     use ModImplicit,     ONLY: UseNoOverlap, nStencil
     use ModNumConst,     ONLY: i_DD
     use ModGeometry,     ONLY: true_cell
+    use ModImplicit,     ONLY: nStencil
+    use ModAdvance,      ONLY: B_
 
     integer, intent(in):: iBlock
-    integer, intent(in):: iB
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
+    integer :: iB
     integer :: iDim, iDir, jDir, i, j, k, Di, Dj, Dk
     integer:: iVar, jVar
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
 
+    character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
     !--------------------------------------------------------------------------
+    ! Set the base index value for magnetic field variables
+    if(UseSemiResistivity)then
+       iB = 0
+    else
+       iB = B_
+    end if
+
     InvDcoord_D = 1/CellSize_DB(1:nDim,iBlock)
 
     ! the transverse diffusion is ignored in the Jacobian
@@ -940,7 +925,7 @@ contains
 
              do iDir = 1, MaxDim
                 if(iDim == iDir) CYCLE
-                
+
                 ! Variable index in the Jacobian
                 iVar = iB + iDir
 
@@ -1032,11 +1017,11 @@ contains
        end do
     end if
 
-  end subroutine add_jacobian_eta_resist
+  end subroutine add_jacobian_resistivity
 
   !============================================================================
 
-  subroutine add_jacobian_hall_resist(iBlock, iB, nVarImpl, Jacobian_VVCI)
+  subroutine add_jacobian_hall_resist(iBlock, nVarImpl, Jacobian_VVCI)
 
     ! Preconditioner for the induction equation in Hall MHD
     ! Based on Toth et al. "Hall MHD on Block Adaptive Grids", JCP 2008
@@ -1047,12 +1032,13 @@ contains
     use ModImplicit,     ONLY: nStencil, UseNoOverlap
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
+    use ModAdvance,      ONLY: B_
 
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
-    integer, intent(in):: iB
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
 
+    integer:: iB
     integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
     integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
     integer:: iVar, jVar
@@ -1060,6 +1046,13 @@ contains
 
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
     !--------------------------------------------------------------------------
+    ! Set the base index value for magnetic field variables
+    if(UseSemiHallResist)then
+       iB = 0
+    else
+       iB = B_
+    end if
+
     ! the transverse part of curl(B) is ignored in the Jacobian
     if(IsCartesianGrid)then
        ! Is there something more to do for RZ geometry??? !!!
@@ -1168,7 +1161,7 @@ contains
                       ! Eq. 51:
                       ! dR(Bj)/dBl = +- 1/(V*ds)*(Area_i*T_ks
                       !    *(Bi/ne*jklEpsilon - Bj/ne*iklEpsilon)^S
-                      
+
                       Term = -1.0/(CellVolume_GB(i,j,k,iBlock) &
                            * CellSize_DB(iFace,iBlock))
 

@@ -359,14 +359,15 @@ contains
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
-    use ModHallResist, ONLY: UseHallResist, HallCmaxFactor
     use ModCoarseAxis,ONLY:UseCoarseAxis, coarsen_axis_cells
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModEnergy, ONLY: calc_old_pressure, calc_old_energy
     use ModMessagePass, ONLY: exchange_messages
-    use ModResistivity, ONLY: init_impl_resistivity
+    use ModResistivity, ONLY: UseResistivity, init_impl_resistivity, &
+         init_impl_hall_resist
+    use ModHallResist, ONLY: UseHallResist, HallCmaxFactor
     use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
@@ -588,7 +589,10 @@ contains
           call timing_start('impl_jacobian')
 
           ! Initialize variables for preconditioner calculation
-          if(TypeSemiImplicit /= 'resistivity') call init_impl_resistivity
+          if(UseResistivity .and. .not. UseSemiResistivity) &
+               call init_impl_resistivity
+          if(UseHallResist .and. .not. UseSemiHallResist) &
+               call init_impl_hall_resist
 
           ! Calculate approximate dR/dU matrix
           do iBlockImpl = 1, nBlockImpl
@@ -1224,10 +1228,11 @@ contains
     use ModvarIndexes
     use ModAdvance, ONLY: time_BLK
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ, set_b0_face
+    use ModRadDiffusion, ONLY: add_jacobian_rad_diff
+    use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity, &
+         add_jacobian_hall_resist
     use ModHallResist, ONLY: UseHallResist, HallFactor_C, HallJ_CD, &
          set_hall_factor_cell
-    use ModRadDiffusion, ONLY: add_jacobian_rad_diff
-    use ModResistivity, ONLY: UseResistivity, add_jacobian_resistivity
     use ModGeometry, ONLY: true_cell
     use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, &
          FaceNormal_DDFB, CellSize_DB, CellVolume_GB
@@ -1493,10 +1498,11 @@ contains
        end if
     end if
 
-    ! Add extra terms for (Hall) resistivity
-    if( (UseResistivity .or. UseHallResist) &
-         .and. TypeSemiImplicit /= 'resistivity') &
+    ! Add extra terms for regular and Hall resistivity
+    if(UseResistivity .and. .not.UseSemiResistivity) &
          call add_jacobian_resistivity(iBlock, nVar, Jac_VVCI)
+    if(UseHallResist .and. .not.UseSemiHallResist) &
+         call add_jacobian_hall_resist(iBlock, nVar, Jac_VVCI)
 
     ! Add extra terms for radiative diffusion
     if(UseRadDiffusion) &
