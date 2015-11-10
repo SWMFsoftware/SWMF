@@ -1278,22 +1278,22 @@ subroutine MH_set_parameters(TypeAction)
         if (UseProjection.and.UseDivbSource.and.iProc==0) then
            write(*,'(a)')NameSub // &
                 ' WARNING: using divbsource and projection together !!!'
-           if (UseStrict) call stop_mpi('Correct ')
+           if (UseStrict) call stop_mpi('Correct PARAM.in')
         end if
         if (UseConstrainB.and.UseDivbSource.and.iProc==0) then
            write(*,'(a)')NameSub // &
                 ' WARNING: using divbsource and constrain B together !!!'
-           if (UseStrict) call stop_mpi('Correct ')
+           if (UseStrict) call stop_mpi('Correct PARAM.in')
         end if
 
-        if (iProc==0 &
+        if (iProc==0 .and. nDim > 1 &
              .and..not.UseHyperbolicDivb &
              .and..not.UseDivbSource &
              .and..not.UseProjection &
              .and..not.UseConstrainB &
              .and..not.UseDivbDiffusion) then
-           write(*,*) NameSub // &
-                'WARNING: you should use some div B control method !!!'
+           write(*,'(a)') NameSub // &
+                ' WARNING: you should use some div B control method !!!'
            if (UseStrict) call stop_mpi('Correct PARAM.in!')
         end if
         ! Make sure that divbmax will be calculated
@@ -2697,6 +2697,16 @@ contains
     end if
 
     ! Check parameters for implicit
+    if(UseImplicit .and. UseSemiImplicit .and. nStage > 1)then
+       if(iProc==0)write(*,'(a)') NameSub//&
+            ' WARNING: Full/part implicit + semi implicit schemes with'//&
+            ' nStage=2 (BDF2) scheme is inconsistent if there is overlap!!!'
+       if(UseStrict)then
+          if(iProc == 0)write(*,*)NameSub//' setting nStage=1'
+          nStage = 1
+       endif
+    end if
+
     if(UseClimit .and. .not. UseImplicit)then
        if(iProc==0)then
           write(*,'(a)')'UseClimit=T requires (part) implicit scheme'
