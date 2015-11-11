@@ -5,6 +5,23 @@
 # Submit job:  bsub < job.yslogin
 # Monitor job: bjobs
 
+# Both moduel hdf5 and hdf5-mpi are available, and hdf5-mpi is needed 
+# to run iPIC3D. After hdf5-mpi is loaded, the fortran compiler will
+# always try to compile code with mpi library, even if it is a serial
+# code. The code compiled with mpi library will not be allowed to run
+# on login nodes. So, even if you need hdf5-mpi for iPIC, please
+# compile PostIDL WITHOUT hdf5-mpi and use this PostIDL for postpocessing, 
+# so than the output files can be postprocessed on login nodes.
+# For example:
+# 1) Unload hdf5-mpi: module unload hdf5-mpi
+# 2) Compile PostIDL in directory ~/no-hdf5-mpi/BATSRUS
+# 3) Load hdf5-mpi for iPIC3D: module load hdf5-mpi
+# 4) Compile SWMF with iPIC3D for your run.
+# 5) Link the working PostIDL.exe to your run directory. Suppose you are
+#    running code in ~/SWMF/run, then:
+#     ln -s ~/no-hdf5-mpi/BATSRUS/src/PostIDL.exe ~/SWMF/run/GM/
+ 
+
 # Job script for the Yellowstone computer
 #
 #BSUB -P P35201105            # project code
