@@ -28,7 +28,7 @@ module ModUser
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
-       'Flux Emergence, Fang 2010-03-01'
+       'Flux emergence in a wedge'
   !\
   ! UseVerticalDamping: adds damping to vertical velocity
   ! UseThinRadiation:   adds thin radiative cooling
@@ -102,7 +102,7 @@ contains
           call read_var('DtUptateFlux',DtUpdateFlux)
           call read_var('UseEnergyPert', UseEnergyPert)
           call read_var('InitialBr',InitialBr)
-          call read_var('InitialBt',InitialBt) ! tangential
+          call read_var('InitialBphi',InitialBphi)
           call read_var('NumberDensFloor',NumberDensFloor)
        case('#ROPE')
           call read_var('UseRope',UseRope)
@@ -208,7 +208,7 @@ contains
 
     integer :: iBlock, i, j, k
     real :: dp_ratio, Prof, rsq, rasq, RandomChange
-    real :: Runit_D(3), Br_D(3), Bt_D(3)
+    real :: Runit_D(3), PhiUnit_D(3)
 
     ! atmosphere parameters 
     real :: Value_V(3)
@@ -256,6 +256,8 @@ contains
     p_tr   =   p_tr*Si2No_V(UnitP_)
     p_cr   =   p_cr*Si2No_V(UnitP_)
 
+    Phiunit_D(3) =  0.0
+
     do iBlock = 1, nBlockMax
        if(Unused_B(iBlock)) CYCLE
 
@@ -264,8 +266,9 @@ contains
           if(UseCoronalField)then
              do k = 1, nK; do j = 1, nJ
                 Runit_D = Xyz_DGB(:,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
-                Br_D = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)*Runit_D)*Runit_D
-                Bt_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) - Br_D
+                Phiunit_D(1) =  Xyz_DGB(y_,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+                Phiunit_D(2) = -Xyz_DGB(x_,i,j,k,iBlock)/r_BLK(i,j,k,iBlock)
+
                 if(r_BLK(i,j,k,iBlock) < r_photo)then
                    Prof = 0.5*(1 - tanh(r_BLK(i,j,k,iBlock) - r_photo))
                 else
@@ -273,7 +276,7 @@ contains
                 end if
                 State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-                     + (Bt_D*InitialBt*Prof + Br_D*InitialBr) &
+                     + (PhiUnit_D*InitialBphi*Prof + Runit_D*InitialBr) &
                      *1e-4*Si2No_V(UnitB_)
              end do; end do
           end if
@@ -295,6 +298,7 @@ contains
           ! If UseRope, Add flux rope in
           ! Set negative pressure to 1.e-10
           if(UseRope)then
+             ! Flux rope does not yet have the toroidal curvature
              do k = 1, nK ; do j = 1, nJ
                 rsq = (Xyz_DGB(y_,i,j,k,iBlock) - x2c_rope)**2 + &
                      (Xyz_DGB(z_,i,j,k,iBlock) - x3c_rope)**2
