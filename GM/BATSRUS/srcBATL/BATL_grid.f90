@@ -24,6 +24,7 @@ module BATL_grid
   public :: find_grid_block
   public :: interpolate_grid
   public :: interpolate_grid_amr
+  public :: interpolate_grid_amr_gc
   public :: check_interpolate_amr_gc
   public :: test_grid
   
@@ -1383,7 +1384,74 @@ contains
     if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
 
   end subroutine interpolate_grid_amr
+
+  !===========================================================================
+
+  subroutine interpolate_grid_amr_gc(XyzIn_D, nCell, iCell_II, Weight_I, &
+       IsSecondOrder)
+
+    use BATL_interpolate_amr, &
+         ONLY:interpolate_amr_gc, find_block_to_interpolate_gc
+
+    ! Find the grid cells surrounding the point Xyz_D.
+    ! nCell returns the number of cells found on the processor.
+    ! iCell_II returns the block+cell indexes for each cell.
+    ! Weight_I returns the interpolation weights calculated 
+    !                                 using AMR interpolateion procedure
+    ! Interpolation is performed using cells (including ghost) of single block
+    real,    intent(in) :: XyzIn_D(MaxDim)
+    integer, intent(out):: nCell
+    integer, intent(out):: iCell_II(0:nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+
+    logical, optional, intent(out):: IsSecondOrder
+
+    real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
+    logical:: IsSecondOrderLocal
+    integer:: iBlockOut, iProcOut
+    !-----------------------------------
+    ! check number of AMR dimensions:
+    ! if it is 0 or 1 => call a simpler interpolation function
+    if(nDimAmr <= 1)then
+       call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       RETURN
+    end if
+    
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesianGrid)then
+       Coord_D = XyzIn_D
+    else
+       call xyz_to_coord(XyzIn_D, Coord_D)
+    end if
+
+    ! find a block suitable for interpolation
+    call find_block_to_interpolate_gc(Coord_D, iProcOut, iBlockOut)
+    
+    ! check if it is on the current processor
+    if (iProcOut /= iProc)then
+       !call CON_stop("Can't perform interpolation on this processor")
+       nCell = 0
+       RETURN
+    end if
+
+    ! get corner coordinates and cel size of the block
+    CoordMin_D =  CoordMin_DB(:,iBlockOut)
+    DCoord_D   = (CoordMax_DB(:,iBlockOut) - CoordMin_DB(:,iBlockOut)) / nIJK_D
+
+    ! call the wrapper for the shared AMR interpolation procedure
+    call interpolate_amr_gc(Coord_D, CoordMin_D, DCoord_D, &
+         DiLevelNei_IIIB(:, :, :, iBlockOut), &
+         nCell, iCell_II, Weight_I, IsSecondOrderLocal)
+
+    ! return block number as well
+    iCell_II(0,:) = iBlockOut
+
+    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
+
+  end subroutine interpolate_grid_amr_gc
+
   !==================================
+
   subroutine check_interpolate_amr_gc(Xyz_D, iBlock, IsPossible, iPeOut,& 
        iBlockOut, IsBoundary)
     !\
@@ -1765,6 +1833,7 @@ contains
     integer:: iPoint, jPoint, kPoint, iPoint_D(MaxDim), iCell, nCell, iError
     integer:: iCell_II(0:nDim,2**nDim)
     logical:: IsSecondOrder
+    integer:: iDiscr_D(MaxDim)
     real   :: Weight_I(2**nDim)
 
     real:: Tolerance
@@ -1953,6 +2022,7 @@ contains
        iPoint_D = (/ iPoint, jPoint, kPoint /)
        XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
             *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
+
        call interpolate_grid_amr(XyzPoint_D, nCell, iCell_II, Weight_I,&
             IsSecondOrder)
 
@@ -1962,7 +2032,7 @@ contains
           iBlock = iCell_II(0,iCell)
           iCell_D = 1
           iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
-     
+
           ! Interpolate the coordinates to check order of accuracy
           ! Note: Using array syntax in combination with the indirect
           ! iCell_D index fails with optimization for NAG v5.1
@@ -1981,11 +2051,16 @@ contains
                   Xyz_D(iDim) = Xyz_D(iDim) +  DomainSize_D(iDim)
           end do
 
+          ! if point is close to boundary => interpolation isn't of 2nd order
+          where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
+               Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
+
           Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
                Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
                + Weight_I(iCell)*Xyz_D(1:nDim)
-
+                    
        end do
+
     end do; end do; end do
 
     ! Collect contributions from all processors to proc 0
@@ -2013,8 +2088,7 @@ contains
              Tolerance = 3e-2
           end if
 
-          if(any(PACK(abs(Xyz_D(1:nDim) - Point_V) > Tolerance, &
-               MASK=IsSecondOrder .or. IsPeriodicTest_D(1:nDim))))then
+          if(any(abs(Xyz_D(1:nDim) - Point_V) > Tolerance))then
              write(*,*) 'ERROR: Point_V=',Point_V(1:nDim),&
                   ' should be ',Xyz_D(1:nDim)
              write(*,*) 'Total weight=',Weight
@@ -2024,119 +2098,216 @@ contains
        end do; end do; end do
     end if
 
-    if(nDim == 2)then
-       if(DoTestMe) write(*,*)'Testing create_grid in RZ geometry'
+    if(nDim==nDimAmr)then
+       if(DoTestMe) write(*,*)'Testing interpolate_grid_amr_gc'
+       Xyz_D = 0.0
+       if(.not.allocated(Point_VIII)) &
+            allocate(Point_VIII(0:nVarPoint,nPointI,nPointJ,nPointK))
+       Point_VIII = 0.0
+       do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
+          iPoint_D = (/ iPoint, jPoint, kPoint /)
+          XyzPoint_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
+               *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
+          call interpolate_grid_amr_gc(XyzPoint_D, nCell, iCell_II, Weight_I,&
+               IsSecondOrder)
 
-       ! Store Cartesian values for checking
-       allocate(CellVolumeCart_B(MaxBlock), CellFaceCart_DB(MaxDim,MaxBlock))
-       CellFaceCart_DB = CellFace_DB
-       CellVolumeCart_B= CellVolume_B
+          do iCell = 1, nCell
+             Point_VIII(0,iPoint,jPoint,kPoint) = &
+                  Point_VIII(0,iPoint,jPoint,kPoint) + Weight_I(iCell)
+             iBlock = iCell_II(0,iCell)
+             iCell_D = 1
+             iCell_D(1:nDim) = iCell_II(1:nDim,iCell)
 
-       ! Clean Cartesian grid
-       call clean_grid
+             ! Interpolate the coordinates to check order of accuracy
+             ! Note: Using array syntax in combination with the indirect
+             ! iCell_D index fails with optimization for NAG v5.1
+             do iDim = 1, nDim
+                Xyz_D(iDim) = &
+                     Xyz_DGB(iDim,iCell_D(1),iCell_D(2),iCell_D(3),iBlock)
+             end do
 
-       ! Initialize RZ grid
-       call init_geometry(TypeGeometryIn = 'rz')
-       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
-       call create_grid
-       if(iProc==0)call show_grid_proc
+             ! Take care of periodic dimensions: shift coordinates as necessary
+             do iDim = 1, nDim
+                if(.not.IsPeriodicTest_D(iDim)) CYCLE
+                if(XyzPoint_D(iDim) < Xyz_D(iDim) - 2*CellSize_DB(iDim,iBlock)) &
+                     Xyz_D(iDim) = Xyz_D(iDim) - DomainSize_D(iDim)
 
-       ! Check relative to Cartesian
-       Tolerance = 1e-6
-       do iBlock = 1, nBlock
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(abs( CellVolume_GB(i,j,k,iBlock) &
-                  - abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock)) &
-                  < Tolerance) CYCLE
-             write(*,*)NameSub,' ERROR: incorrect cell volume=', &
-                  CellVolume_GB(i,j,k,iBlock),' should be', &
-                  abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock), &
-                  ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
+                if(XyzPoint_D(iDim) > Xyz_D(iDim) + 2*CellSize_DB(iDim,iBlock)) &
+                     Xyz_D(iDim) = Xyz_D(iDim) +  DomainSize_D(iDim)
+             end do
+
+             ! Take care of ghost cells: shift coordinates for coarser neighbor
+             iDiscr_D = 0
+             where(iCell_D(1:nDim) < 1)
+                iDiscr_D(1:nDim) =-1
+             elsewhere(iCell_D(1:nDim) > nIJK_D(1:nDim))
+                iDiscr_D(1:nDim) = 1
+             end where
+             ! check that neighbor is coarser
+             if(DiLevelNei_IIIB(iDiscr_D(1),iDiscr_D(2),iDiscr_D(3),iBlock)==1)&
+                  Xyz_D = Xyz_D + &
+                  0.5 * (2*modulo(iCell_D, 2) - 1) * CellSize_DB(:,iBlock)
+             
+          ! if point is close to boundary => interpolation isn't of 2nd order
+          where( .not.( IsSecondOrder.or.IsPeriodicTest_D(1:nDim) ) )&
+               Xyz_D(1:nDim) = XyzPoint_D(1:nDim)
+
+             Point_VIII(1:nDim,iPoint,jPoint,kPoint) = &
+                  Point_VIII(1:nDim,iPoint,jPoint,kPoint) &
+                  + Weight_I(iCell)*Xyz_D(1:nDim)
+
+          end do
+       end do; end do; end do
+
+       ! Collect contributions from all processors to proc 0
+       if(nProc > 1)then
+          allocate(PointAll_VIII(0:nVarPoint,nPointI,nPointJ,nPointK))
+          call MPI_reduce(Point_VIII, PointAll_VIII, size(PointAll_VIII),&
+               MPI_REAL, MPI_SUM, 0, iComm, iError)
+          Point_VIII = PointAll_VIII
+          deallocate(PointAll_VIII)
+       end if
+
+       if(iProc == 0)then
+          ! Check interpolated coordinate values against point coordinates
+          do kPoint = 1, nPointK; do jPoint = 1, nPointJ; do iPoint = 1, nPointI
+             iPoint_D = (/ iPoint, jPoint, kPoint /)
+             Xyz_D(1:nDim) = CoordMin_D(1:nDim) + (iPoint_D(1:nDim)-0.5) &
+                  *DomainSize_D(1:nDim)/nPoint_D(1:nDim)
+
+             Weight  = Point_VIII(0,iPoint,jPoint,kPoint)
+             Point_V = Point_VIII(1:nDim,iPoint,jPoint,kPoint)/Weight
+
+             if(abs(Weight - 1.0) < 1e-6)then
+                Tolerance = 1e-6
+             else
+                Tolerance = 3e-2
+             end if
+
+             if(any(abs(Xyz_D(1:nDim) - Point_V) > Tolerance))then
+                write(*,*) 'ERROR: Point_V=',Point_V(1:nDim),&
+                     ' should be ',Xyz_D(1:nDim)
+                write(*,*) 'Total weight=',Weight
+                write(*,*) 'i,j,kPoint=', iPoint_D(1:nDim)
+                write(*,*) 'CoordMin,Max=',CoordMin_D(1:nDim),CoordMax_D(1:nDim)
+             end if
           end do; end do; end do
-          do iDim = 1, nDim
-             Di = i_DD(1,iDim); Dj = i_DD(2,iDim)
-             do k = 1, nK; do j = 1, nJ+Dj; do i = 1, nI+Di
-                Radius = 0.5*sum(abs(Xyz_DGB(2,i-Di:i,j-Dj:j,k,iBlock)))
-                if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - &
-                     Radius*CellFaceCart_DB(iDim,iBlock)) &
+       end if
+    end if
+
+       if(nDim == 2)then
+          if(DoTestMe) write(*,*)'Testing create_grid in RZ geometry'
+
+        ! Store Cartesian values for checking
+        allocate(CellVolumeCart_B(MaxBlock), CellFaceCart_DB(MaxDim,MaxBlock))
+        CellFaceCart_DB = CellFace_DB
+        CellVolumeCart_B= CellVolume_B
+
+          ! Clean Cartesian grid
+          call clean_grid
+
+          ! Initialize RZ grid
+          call init_geometry(TypeGeometryIn = 'rz')
+          call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
+          call create_grid
+          if(iProc==0)call show_grid_proc
+
+          ! Check relative to Cartesian
+          Tolerance = 1e-6
+          do iBlock = 1, nBlock
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                if(abs( CellVolume_GB(i,j,k,iBlock) &
+                     - abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock)) &
                      < Tolerance) CYCLE
-                write(*,*)NameSub,' ERROR: incorrect face area=', &
-                     CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
-                     Radius*CellFaceCart_DB(iDim,iBlock), &
-                     ' at iDim,i,j,k,iBlock,iProc=', &
-                     iDim, i, j, k, iBlock, iProc
-
+                write(*,*)NameSub,' ERROR: incorrect cell volume=', &
+                     CellVolume_GB(i,j,k,iBlock),' should be', &
+                     abs(Xyz_DGB(2,i,j,k,iBlock))*CellVolumeCart_B(iBlock), &
+                     ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
              end do; end do; end do
+             do iDim = 1, nDim
+                Di = i_DD(1,iDim); Dj = i_DD(2,iDim)
+                do k = 1, nK; do j = 1, nJ+Dj; do i = 1, nI+Di
+                   Radius = 0.5*sum(abs(Xyz_DGB(2,i-Di:i,j-Dj:j,k,iBlock)))
+                   if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - &
+                        Radius*CellFaceCart_DB(iDim,iBlock)) &
+                        < Tolerance) CYCLE
+                   write(*,*)NameSub,' ERROR: incorrect face area=', &
+                        CellFace_DFB(iDim,i,j,k,iBlock),' should be', &
+                        Radius*CellFaceCart_DB(iDim,iBlock), &
+                        ' at iDim,i,j,k,iBlock,iProc=', &
+                        iDim, i, j, k, iBlock, iProc
+
+                end do; end do; end do
+             end do
           end do
-       end do
-    end if
+       end if
 
-    if(nDim >= 2)then
-       if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
+       if(nDim >= 2)then
+          if(DoTestMe) write(*,*)'Testing create_grid in cylindrical geometry'
 
-       ! Clean  grid
-       call clean_grid
+          ! Clean  grid
+          call clean_grid
 
-       ! Initialize cylindrical grid
-       call init_geometry(TypeGeometryIn = 'cylindrical')
+          ! Initialize cylindrical grid
+          call init_geometry(TypeGeometryIn = 'cylindrical')
 
-       DomainMin_D = (/1., 0., -0.5/)
-       DomainMax_D = (/3., 90., 0.5/)
+          DomainMin_D = (/1., 0., -0.5/)
+          DomainMax_D = (/3., 90., 0.5/)
 
-       ! This is temporary solution to keep the test working
-       IsNodeBasedGrid = .false.
-       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
-       call create_grid
-       if(iProc==0)call show_grid_proc
+          ! This is temporary solution to keep the test working
+          IsNodeBasedGrid = .false.
+          call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
+          call create_grid
+          if(iProc==0)call show_grid_proc
 
-       ! Check relative to generalized coordinate volumes and areas
-       Tolerance = 1e-6
-       do iBlock = 1, nBlock
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2)) &
-                  *CellVolume_B(iBlock)
-             if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
-             write(*,*)NameSub,' ERROR: incorrect cell volume=', &
-                  CellVolume_GB(i,j,k,iBlock),' should be', Good, &
-                  ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
-          end do; end do; end do
-          do iDim = 1, nDim
-             Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
-             do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-                ! Calculate face center in generalized coordinates
-                Coord_D = CoordMin_DB(:,iBlock) + CellSize_DB(:,iBlock) &
-                     *(/i-0.5*(1+Di),j-0.5*(1+Dj),k-0.5*(1+Dk)/)
-
-                Good = CellFace_DB(iDim,iBlock)
-                if(iDim /= 2) Good = Good*Coord_D(1)
-                if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - Good) > Tolerance) &
-                     write(*,*)NameSub,' ERROR: incorrect face area=', &
-                     CellFace_DFB(iDim,i,j,k,iBlock),' should be', Good, &
-                     ' at iDim,i,j,k,iBlock,iProc=', &
-                     iDim, i, j, k, iBlock, iProc
-
-                Phi = Coord_D(2)
-                if(iDim == 1)then
-                   Good_D = (/ cos(Phi), sin(Phi), 0.0 /)
-                elseif(iDim == 2)then
-                   Good_D = (/ -sin(Phi), cos(Phi), 0.0 /)
-                else
-                   Good_D = (/ 0.0, 0.0, 1.0 /)
-                end if
-                ! Multiply by area (for now)
-                Good_D = Good_D*CellFace_DFB(iDim,i,j,k,iBlock)
-
-                if(any( Tolerance < abs(FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
-                     - Good_D(1:nDim)))) &
-                     write(*,*)NameSub,' ERROR: incorrect face area=', &
-                     FaceNormal_DDFB(:,iDim,i,j,k,iBlock),' should be',Good_D,&
-                     ' at iDim,i,j,k,iBlock,iProc=', &
-                     iDim, i, j, k, iBlock, iProc
-
+          ! Check relative to generalized coordinate volumes and areas
+          Tolerance = 1e-6
+          do iBlock = 1, nBlock
+             do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+                Good = sqrt(sum(Xyz_DGB(1:2,i,j,k,iBlock)**2)) &
+                     *CellVolume_B(iBlock)
+                if(abs( CellVolume_GB(i,j,k,iBlock) - Good) < Tolerance) CYCLE
+                write(*,*)NameSub,' ERROR: incorrect cell volume=', &
+                     CellVolume_GB(i,j,k,iBlock),' should be', Good, &
+                     ' at i,j,k,iBlock,iProc=', i, j, k, iBlock, iProc
              end do; end do; end do
+             do iDim = 1, nDim
+                Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+                do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
+                   ! Calculate face center in generalized coordinates
+                   Coord_D = CoordMin_DB(:,iBlock) + CellSize_DB(:,iBlock) &
+                        *(/i-0.5*(1+Di),j-0.5*(1+Dj),k-0.5*(1+Dk)/)
+
+                   Good = CellFace_DB(iDim,iBlock)
+                   if(iDim /= 2) Good = Good*Coord_D(1)
+                   if(abs(CellFace_DFB(iDim,i,j,k,iBlock) - Good) > Tolerance) &
+                        write(*,*)NameSub,' ERROR: incorrect face area=', &
+                        CellFace_DFB(iDim,i,j,k,iBlock),' should be', Good, &
+                        ' at iDim,i,j,k,iBlock,iProc=', &
+                        iDim, i, j, k, iBlock, iProc
+
+                   Phi = Coord_D(2)
+                   if(iDim == 1)then
+                      Good_D = (/ cos(Phi), sin(Phi), 0.0 /)
+                   elseif(iDim == 2)then
+                      Good_D = (/ -sin(Phi), cos(Phi), 0.0 /)
+                   else
+                      Good_D = (/ 0.0, 0.0, 1.0 /)
+                   end if
+                   ! Multiply by area (for now)
+                   Good_D = Good_D*CellFace_DFB(iDim,i,j,k,iBlock)
+
+                   if(any( Tolerance < abs(FaceNormal_DDFB(:,iDim,i,j,k,iBlock) &
+                        - Good_D(1:nDim)))) &
+                        write(*,*)NameSub,' ERROR: incorrect face area=', &
+                        FaceNormal_DDFB(:,iDim,i,j,k,iBlock),' should be',Good_D,&
+                        ' at iDim,i,j,k,iBlock,iProc=', &
+                        iDim, i, j, k, iBlock, iProc
+
+                end do; end do; end do
+             end do
           end do
-       end do
-    end if
+       end if
 
     if(nDim == 3)then
        if(DoTestMe) write(*,*)'Testing create_grid in spherical geometry'

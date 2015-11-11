@@ -7,14 +7,16 @@ module BATL_interpolate_amr
        get_tree_position, iTree_IA
   use BATL_geometry, ONLY: CoordMin_D, DomainSize_D, IsPeriodic_D
 
-  use ModInterpolateAMR, ONLY: interpolate_amr_shared=>interpolate_amr, cTol2
+  use ModInterpolateAMR, ONLY: cTol2, &
+       interpolate_amr_shared=>interpolate_amr, &
+       interpolate_extended_stencil_shared=>interpolate_extended_stencil
 
   implicit none
 
   SAVE
   private ! except
 
-  public:: interpolate_amr, find_block_to_interpolate_gc
+  public:: interpolate_amr_gc, interpolate_amr, find_block_to_interpolate_gc
 
   ! non-AMR direction: 
   ! only 1 such direction, if 2 or more => interpolate_amr is not called
@@ -37,6 +39,7 @@ module BATL_interpolate_amr
 
   ! point's coordinate in non-AMR dimensions
   real   :: CoordNoAmr, DisplacedCoordTreeNoAmr
+  logical:: IsNearBlockBoundaryNoAmr
 
   !\
   ! variables to keep track of nodes in the case of non-AMR direction
@@ -54,6 +57,242 @@ module BATL_interpolate_amr
   logical   :: IsSecondOrderNoAmr
 
 contains
+
+  subroutine interpolate_amr_gc(CoordIn_D,CoordMin_D,DCoord_D,DiLevelNei_III,&
+       nCell, iCell_II, Weight_I, IsSecondOrder)
+    ! Find the grid cells surrounding the point Coord_D.
+    ! nCell returns the number of cells found on the processor.
+    ! iCell_II returns the block+cell indexes for each cell.
+    ! Weight_I returns the interpolation weights calculated 
+    !                                 using AMR interpolation procedure
+    ! IsSecondOrder returns whether the result is 2nd order interpolation
+    ! Interpolation is performed using cells (including ghost) of single block
+    real,    intent(in) :: CoordIn_D(MaxDim)
+    real,    intent(in) :: CoordMin_D(MaxDim)
+    real,    intent(in) :: DCoord_D(MaxDim)
+    integer, intent(in) :: DiLevelNei_III(-1:1, -1:1, -1:1)
+    integer, intent(out):: nCell
+    integer, intent(out):: iCell_II(0:nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+    logical, intent(out):: IsSecondOrder
+
+    real   :: CoordGrid_DII(nDim, 0:2**nDim, 2**nDim)
+    integer:: iIndexes_II(0:nDim,2**nDim)
+    integer:: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+    integer:: nGridOut
+    integer:: iCell2_D(nDim)
+
+    integer, parameter:: iShift_DI(MaxDim, 2**MaxDim) = reshape((/&
+         0,0,0, 1,0,0,&
+         0,1,0, 1,1,0,&
+         0,0,1, 1,0,1,&
+         0,1,1, 1,1,1 /),(/MaxDim, 2**MaxDim/))
+
+    integer:: iLevel_I(2**nDim)
+    logical:: IsOut_I(2**nDim)
+    integer:: iProc_I(2**nDim) = 1
+    integer:: iBlock_I(2**nDim) = 1
+    real   :: DCoordInv_D(nDim) = 0.50
+    integer:: iNode !for code readability
+    integer:: iCell, iGrid, iSubGrid ! loop variables
+    integer:: iProcOut, iBlockOut
+    integer:: iDiscr_D(MaxDim)
+    real   :: Dimless_D(nDim)
+    !--------------------------------------------------------------------    
+    if(nDim /= nDimAmr)&
+         call CON_stop("ERROR: interpolation utilizing ghost cells is implemented only for case nDim == nDimAMR")
+    ! find dimensionaless coordinates realtive to the block corner
+    Dimless_D = (CoordIn_D(1:nDim) - CoordMin_D(1:nDim)) / DCoord_D(1:nDim)
+
+    if( all(Dimless_D >= 0.50 .and. Dimless_D < nIJK_D(1:nDim) - 0.50) )then
+       !\
+       ! point is far from the block's boundaries
+       ! perform uniform interpolation and return
+       IsSecondOrder = .true.
+       IsOut_I = .false.
+       ! find cell indices
+       iCell_II(1:nDim,1) = floor(Dimless_D + 0.50)
+       do iGrid = 2, 2**nDim
+          iCell_II(1:nDim,iGrid) = iCell_II(1:nDim,1) + iShift_DI(1:nDim,iGrid)
+       end do
+       ! find interpolation weights
+       Dimless_D = Dimless_D + 0.50 - iCell_II(1:nDim,1)
+       call interpolate_uniform
+       call sort_out_zero_weights
+       RETURN
+    end if
+
+    ! point is close to the block's boundary,
+    ! iDiscr_D is an indicator of these boundaries: -1 or 0 or 1
+    iDiscr_D = 0 ! for nDimAmr=2 3rd value must be 0
+    iDiscr_D(1:nDim) = nint(& 
+         SIGN(0.50, Dimless_D -  0.50) + &
+         SIGN(0.50, Dimless_D - (nIJK_D(1:nDim) - 0.50)) )   
+
+    ! resolution levels of blocks that may contain cells 
+    ! of final interpolation stencil
+    iLevel_I =-reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/) ), (/2**nDim/))
+    ! DiLevelNei_I may be -1 or 0; 
+    ! if < -1 => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I ==-Unset_
+
+    if( all(iLevel_I == 0 .or. IsOut_I) )then
+       !\
+       ! point is close to the block's boundaries
+       ! but all neighbors are of the same resolution level
+       ! perform uniform interpolation and return
+       IsSecondOrder = .not. any(IsOut_I)
+       ! find cell indices
+       iCell_II(1:nDim,1) = floor(Dimless_D + 0.50)
+       do iGrid = 2, 2**nDim
+          iCell_II(1:nDim,iGrid) = iCell_II(1:nDim,1) + iShift_DI(1:nDim,iGrid)
+       end do
+       ! find interpolation weights
+       Dimless_D = Dimless_D + 0.50 - iCell_II(1:nDim,1)
+       call interpolate_uniform
+       call sort_out_zero_weights
+       RETURN
+    end if
+
+    ! recompute iDiscr_D: certain configurations are not covered, e.g.
+    !  __ __ _____ _____ _____
+    ! |     |  |  |  |  |     |  for points X, Y current value of iDiscr_D
+    ! |     |--|--|--|--|     |  is (/0, -1, 0/) for both, but it has to be
+    ! |_____|_X|__|__|Y_|_____|  for X: (/-1, -1, 0/)
+    ! |     |     |     |     |  for Y: (/ 1, -1, 0/)
+    ! |     |     |     |     |
+    ! |_____|_____|_____|_____|
+    !
+    iDiscr_D(1:nDim) = nint(&
+         SIGN(0.50, Dimless_D -  1) + &
+         SIGN(0.50, Dimless_D - (nIJK_D(1:nDim) - 1)) )
+
+    ! resolution levels of blocks that may contain cells 
+    ! of final interpolation stencil
+    iLevel_I =-reshape(DiLevelNei_III(&
+         (/MIN(0, iDiscr_D(1)), MAX(0, iDiscr_D(1))/), &
+         (/MIN(0, iDiscr_D(2)), MAX(0, iDiscr_D(2))/), &
+         (/MIN(0, iDiscr_D(3)), MAX(0, iDiscr_D(3))/) ), (/2**nDim/))
+
+    ! DiLevelNei_I may be -1 or 0; 
+    ! if < -1 => consider that there is no block, i.e. boundary of the domain
+    IsOut_I  = iLevel_I ==-Unset_
+    iLevel_I = iLevel_I + 1 ! so Coarse = 0, Fine = 1
+
+    !\
+    ! prepare input parameters for interpolation procedure
+    !
+    ! set grid 
+    CoordGrid_DII = 0 
+    iCellIndexes_DII = Unset_
+    ! set coordinates of supergrid: coincide with cell centers for Coarse,
+    ! and is a corner between 2**nDim Fine cells
+    !  __ __ _____
+    ! |  |  |  |  |
+    ! |--X--|--X--|
+    ! |__|__|__|__|
+    ! |     |  |  |
+    ! |  X  |--X--|
+    ! |_____|__|__|
+    !   
+    ! NOTE: since reference block is a Fine one 
+    !       DCoord_D is a cell size of Finer block
+    !\
+    ! Decompose the block for coarser cells of the size of 2*DCoord.
+    ! THIS IS ONLY POSSIBLE FOR EVEN NUMBER OF CELLS IN THE BLOCK
+    ! Calculate coarser cell indexes 
+    ! iCell2_D=floor((Coord_D-CoordMin_D)/(2*DCoord_D)+0.5) 
+    !/
+    iCell2_D = floor(0.50*Dimless_D + 0.50) 
+    do iGrid = 1, 2**nDimAmr
+       ! supergrid
+       ! CoordGrid are calculated with respect to the block corner
+       ! and are normalized by DCoord, in the same way as Coord is  
+       CoordGrid_DII(:,0,iGrid) = &
+            2*(iCell2_D - 0.50 + iShift_DI(1:nDim,iGrid)) 
+
+       ! depending on resolution level of supergrid
+       ! need to set 1 or 2**nDim subgrid cell centers
+       if(iLevel_I(iGrid) == 0)then
+          ! a coarser neighbor
+          CoordGrid_DII(:,1,iGrid)  = CoordGrid_DII(:,0,iGrid) 
+          iCellIndexes_DII(:,1,iGrid) = &
+               2*iCell2_D + iShift_DI(1:nDim,iGrid)
+          CYCLE
+       end if
+       do iSubGrid = 1, 2**nDim
+          ! neighbor at the same level
+          CoordGrid_DII(:,iSubGrid,iGrid) = CoordGrid_DII(:,0,iGrid) - 0.50 &
+               + iShift_DI(1:nDim,iSubGrid)
+          iCellIndexes_DII(:,iSubGrid,iGrid) = &
+               nint(CoordGrid_DII(:,iSubGrid,iGrid) + 0.50)
+       end do
+    end do
+
+    !\
+    ! regular case: all directions are refinable
+    ! call interpolation routine 
+    call interpolate_extended_stencil_shared(&
+         nDim            = nDimAmr, &
+         Xyz_D           = Dimless_D,&
+         nIndexes        = nDimAmr, &
+         XyzGrid_DII     = CoordGrid_DII, &
+         iCellIndexes_DII= iCellIndexes_DII, & 
+         iBlock_I        = iBlock_I(1:2**nDimAmr), & 
+         iProc_I         = iProc_I(1:2**nDimAmr),  &
+         iLevelSubgrid_I = iLevel_I,&
+         IsOut_I         = IsOut_I,&
+         DxyzInv_D       = DCoordInv_D(1:nDimAmr),&
+         nGridOut        = nCell, & 
+         Weight_I        = Weight_I(1:2**nDimAmr), & 
+         iIndexes_II     = iIndexes_II, & 
+         IsSecondOrder   = IsSecondOrder)
+
+    ! store indices of cells in the final interpolation stencil
+    iCell_II(1:nDimAmr, 1:nCell) = iIndexes_II(1:nDimAmr, 1:nCell)
+
+  contains
+    subroutine interpolate_uniform
+      ! uniform interpolation routine
+      Weight_I(1) = (1 - Dimless_D(1))*(1 - Dimless_D(2))
+      Weight_I(2) =      Dimless_D(1) *(1 - Dimless_D(2))
+      Weight_I(3) = (1 - Dimless_D(1))*     Dimless_D(2)
+      Weight_I(4) =      Dimless_D(1) *     Dimless_D(2)
+      if(nDim==3)then
+         Weight_I(2**nDim/2+1:2**nDim)=Weight_I(1:2**nDim/2)*   Dimless_D(nDim)
+         Weight_I(1:2**nDim/2)        =Weight_I(1:2**nDim/2)*(1-Dimless_D(nDim))
+      end if
+      if(any(IsOut_I))then
+         where(IsOut_I)Weight_I = 0
+         Weight_I = Weight_I/sum(Weight_I)
+      end if
+    end subroutine interpolate_uniform
+    !===================================
+    subroutine sort_out_zero_weights
+      use ModKind, ONLY: nByteReal
+      real, parameter:: cTol2 = 2 * 0.00000010**(nByteReal/4) 
+      !----------------------
+      if(all(Weight_I >= cTol2))then
+         nCell = 2**nDim
+         RETURN
+      end if
+      !\ 
+      ! sort out zero weights
+      !/
+      nCell = 0 
+      do iGrid = 1, 2**nDim
+         if(Weight_I(iGrid) < cTol2)CYCLE
+         nCell = nCell + 1
+         iCell_II(:, nCell) = iCell_II(:,iGrid)
+         Weight_I(nCell) = Weight_I(iGrid)
+      end do
+    end subroutine sort_out_zero_weights
+  end subroutine interpolate_amr_gc
+ 
+  !============================
 
   subroutine interpolate_amr(CoordIn_D, &
        nCell, iCell_II, Weight_I, IsSecondOrder)
@@ -119,20 +358,25 @@ contains
        RETURN
     end if
 
-    !Handle the non-AMR direction
-    IsSecondOrder = IsSecondOrder .and. IsSecondOrderNoAmr
-
+    !\
+    ! Handle the non-AMR direction
+    !/
     ! store indexes and restore shape along non-AMR direction
     iCell_II(  nDim,         1:  nGridOut) = iCellNoAmr_I(1)
+
     if(WeightNoAmr < cTol2)then
+       ! this includes the case IsSecondOrderNoAmr = .false.:
+       ! in this case WeightNoAmr is set to 0
        do iDim = 1, nDim
           iCell_II(iOrder_I(iDim),1:nGridOut) = iCell_II(iDim,1:nGridOut)
        end do
        call sort_out_other_procs
+       ! return whether interpolation is of 2nd order
+       IsSecondOrder = IsSecondOrder .and. IsSecondOrderNoAmr
        RETURN
     end if
 
-    if(DisplacedCoordTreeNoAmr < 0.0)then
+    if(.not.IsNearBlockBoundaryNoAmr)then
        !\
        ! the other half of the stencil is in the same block:
        !/
@@ -151,7 +395,7 @@ contains
        Weight_I(         1:  nGridOut)= Weight_I(1:nGridOut)*(1 - WeightNoAmr)
        ! number of cells has doubled
        nGridOut = 2*nGridOut
-    elseif(IsSecondOrder .or. IsPeriodic_D(iDimNoAmr))then
+    else
        !\
        ! the point is far from domain's boundary =>
        ! the other part of the stencil exists and is in a different block(s)
@@ -380,9 +624,11 @@ contains
        !   if unchanged => point if far from block boundary along iDimNoAmr
        DisplacedCoordTreeNoAmr = -1.0
        IsSecondOrderNoAmr = .true.
+       IsNearBlockBoundaryNoAmr = .false.
        ! take care of the cases when point is close to the boundary
        if    (iCellNoAmr_I(1) == 0)then
           ! displacement towards neighbor: down
+          IsNearBlockBoundaryNoAmr = .true.
           DisplacedCoordTreeNoAmr = CoordTree_D(iDimNoAmr) - &
                dCoordFull_D(iDimNoAmr) / DomainSize_D(iDimNoAmr)
           if(IsPeriodic_D(iDimNoAmr))&
@@ -400,6 +646,7 @@ contains
           WeightNoAmr = 1 - WeightNoAmr
        elseif(iCellNoAmr_I(2) == nIJK_D(iDimNoAmr)+1)then
           ! displacement towards neighbor: up
+          IsNearBlockBoundaryNoAmr = .true.
           DisplacedCoordTreeNoAmr = CoordTree_D(iDimNoAmr) + &
                dCoordFull_D(iDimNoAmr) / DomainSize_D(iDimNoAmr)
           if(IsPeriodic_D(iDimNoAmr))&
@@ -465,7 +712,9 @@ contains
     !\
     ! Calculate normalized (to DomainSize_D) coordinates for tree search
     !/
-    CoordTree_D = (Coord_D - CoordMin_D)/DomainSize_D
+    CoordTree_D = 0
+    CoordTree_D(1:nDim) = &
+         ( Coord_D(1:nDim) - CoordMin_D(1:nDim) ) / DomainSize_D(1:nDim)
     !\
     ! call internal BATL find subroutine
     !/
@@ -526,7 +775,10 @@ contains
        ! Calculate normalized (to DomainSize_D) coordinates 
        ! for tree search
        !/
-       CoordTree_D = (Coord_D - CoordMin_D)/DomainSize_D
+       CoordTree_D(1:nDim) = &
+            ( GridCoord_DI(1:nDim, iGrid) - CoordMin_D(1:nDim) ) / &
+            DomainSize_D(1:nDim)
+
        call fix_tree_coord(CoordTree_D)
        !\
        ! Check if the grid point is out of domain
