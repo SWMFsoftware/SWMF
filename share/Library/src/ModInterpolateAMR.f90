@@ -2329,9 +2329,15 @@ module ModInterpolateAMR
   !\
   ! PUBLIC MEMBERS
   !/
-  public:: cTol2   !Accuracy of results: weights<=2 cTol2 are actually zeroes 
-  public:: interpolate_amr !Interpolate on block-adaptive grid w/o ghost cells
-  public:: interpolate_amr_gc !Interpolate on block-adaptive grid with gc
+  !Accuracy of results: weights<=2 cTol2 are actually zeroes 
+  public:: cTol2
+  !Interpolate on block-adaptive grid w/o ghost cells
+  public:: interpolate_amr
+  !Interpolate on block-adaptive grid with gc
+  public:: interpolate_amr_gc
+  !Interpolate on block-adaptive grid with predefined grid as input
+  public:: interpolate_extended_stencil
+  
 contains
   !=================================
   subroutine interpolate_amr_gc(&
