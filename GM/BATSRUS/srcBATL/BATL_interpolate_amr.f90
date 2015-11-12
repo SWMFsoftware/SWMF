@@ -2,7 +2,7 @@ module BATL_interpolate_amr
 
   use BATL_mpi,  ONLY: iProc
   use BATL_size, ONLY: nIJK_D, nDim, nDimAmr, MaxDim, &
-       iRatio, jRatio, kRatio, iRatio_D
+       iRatio, jRatio, kRatio, iRatio_D, Dim2_
   use BATL_tree, ONLY: Unset_, find_tree_node, Proc_, Block_,&
        get_tree_position, iTree_IA
   use BATL_geometry, ONLY: CoordMin_D, DomainSize_D, IsPeriodic_D
@@ -257,10 +257,10 @@ contains
   contains
     subroutine interpolate_uniform
       ! uniform interpolation routine
-      Weight_I(1) = (1 - Dimless_D(1))*(1 - Dimless_D(2))
-      Weight_I(2) =      Dimless_D(1) *(1 - Dimless_D(2))
-      Weight_I(3) = (1 - Dimless_D(1))*     Dimless_D(2)
-      Weight_I(4) =      Dimless_D(1) *     Dimless_D(2)
+      Weight_I(1) = (1 - Dimless_D(1))*(1 - Dimless_D(Dim2_))
+      Weight_I(2) =      Dimless_D(1) *(1 - Dimless_D(Dim2_))
+      Weight_I(min(3,2**nDim)) = (1 - Dimless_D(1))*     Dimless_D(Dim2_)
+      Weight_I(min(4,2**nDim)) =      Dimless_D(1) *     Dimless_D(Dim2_)
       if(nDim==3)then
          Weight_I(2**nDim/2+1:2**nDim)=Weight_I(1:2**nDim/2)*   Dimless_D(nDim)
          Weight_I(1:2**nDim/2)        =Weight_I(1:2**nDim/2)*(1-Dimless_D(nDim))
