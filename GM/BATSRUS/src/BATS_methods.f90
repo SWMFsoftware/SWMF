@@ -632,22 +632,28 @@ end subroutine BATS_init_constrain_b
 subroutine BATS_select_blocks
 
   use ModProcMH
-  use ModImplicit, ONLY : UsePartImplicit, TypeSemiImplicit, nBlockSemi
+  use ModImplicit, ONLY : UsePartImplicit, nBlockSemi, IsDynamicSemiImpl
   use ModPartSteady, ONLY: UsePartSteady, IsNewSteadySelect
   implicit none
 
   !LOCAL VARIABLES:
+  logical:: DoBalanceSemiImpl = .true.
+
   character(len=*), parameter :: NameSub = 'BATS_select_blocks'
   !--------------------------------------------------------------------------
 
   ! Select and load balance blocks for partially implicit/steady scheme
-  if(UsePartSteady .and. IsNewSteadySelect .or. UsePartImplicit &
-       .or. (TypeSemiImplicit(1:6)=='resist' .and. nBlockSemi >= 0))then
+  if( UsePartImplicit .or. UsePartSteady .and. IsNewSteadySelect .or. &
+       nBlockSemi >= 0 .and. DoBalanceSemiImpl) then
 
      ! Redo load balancing: move coordinates and data, there are no new blocks
      call load_balance(.true.,.true.,.false.)
 
      IsNewSteadySelect = .false.
+
+     ! Repeated semi implicit load balancing is only needed if the
+     ! semi-implicit condition is changing dynamically. 
+     DoBalanceSemiImpl = IsDynamicSemiImpl
   end if
 
 end subroutine BATS_select_blocks
