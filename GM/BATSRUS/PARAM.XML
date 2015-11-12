@@ -1138,7 +1138,6 @@ subsonic outflow. Default is UseOutflowPressure=.false.
 		<option name="reflectb"				/>
 		<option name="float"				/>
 		<option name="outflow"				/>
-		<option name="heliofloat"			/>
 		<option name="fixed"				/>
 		<option name="fixedb1"				/>
 		<option name="inflow"				/>
@@ -1196,7 +1195,6 @@ Possible values for TypeBcBody are:
 'reflectb'        - same as reflect, but the radial component of full B is reflected.
 'float'           - float all variables
 'outflow'	  - same as 'float' but the pressure is set to pOutflow from #OUTFLOWPRESSURE
-'heliofloat'	  - very complicated outflow boundary condition for heliosphere
 'fixed'           - use initial solar wind values. Total B is set to solar wind B.
 'fixedb1'	  - use initial solar wind values. B1 is set is to solar wind B.
 'inflow/vary'     - set the solar wind values. Total B is set to solar wind B.
