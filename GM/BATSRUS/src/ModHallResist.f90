@@ -106,6 +106,7 @@ contains
   subroutine read_hall_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
+    use ModSemiImplVar, ONLY: IsDynamicSemiImpl
 
     character(len=*), intent(in):: NameCommand
 
@@ -120,6 +121,7 @@ contains
     case("#HALLREGION")
        call read_var('StringHallRegion', StringHallRegion)
        call read_var('HallSpeedTinyDim', HallSpeedTinyDim)
+       IsDynamicSemiImpl = HallSpeedTinyDim > 0
 
     case("#BIERMANNBATTERY")
        call read_var("UseBiermannBattery", UseBiermannBattery)
