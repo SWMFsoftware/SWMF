@@ -86,7 +86,7 @@ setenv MPI_TYPE_DEPTH 20
 
 # run SWMF (the number of processors is already specified above)
 # the date/time stamp for runlog is only necessary for automated resubmission
-mpiexec SWMF.exe > runlog_`date +%y%m%d%H%M`
+mpiexec ./SWMF.exe > runlog_`date +%y%m%d%H%M`
 
 exit
 
