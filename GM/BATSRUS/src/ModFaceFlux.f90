@@ -156,13 +156,13 @@ module ModFaceFlux
   logical :: UseClimit = .false.
   real    :: ClimitDim = -1.0, rClimit = -1.0
 
-  !  One of the two possible ways to treat the MHD-like systems
-  !  (partially symmetrizable, following the Godunov definition).
-  !  If the UseRS7=.true. then the 7 waves Riemann Solver (RS) with 
-  !  continuous  normal component of the magnetic field across the face.
-  !  The number of jumps in the physical variables across the face is equal
-  !  to the number of waves, resulting in the the well-posed solution of
-  !  the Riemann problem. This approach is an alternative to the 8-wave scheme
+  ! One of the two possible ways to treat the MHD-like systems
+  ! (partially symmetrizable, following the Godunov definition).
+  ! If UseRS7=.true. then use the 7-wave Riemann Solver (RS) with 
+  ! continuous  normal component of the magnetic field across the face.
+  ! The number of jumps in the physical variables across the face is equal
+  ! to the number of waves, resulting in a well-posed Riemann problem. 
+  ! This approach is an alternative to the 8-wave scheme.
   logical:: UseRS7 = .false.
 
 
@@ -2575,7 +2575,7 @@ contains
 
       real :: ChargeDens_I(nIonFluid), InvElectronDens
       real :: UxPlus, UyPlus, UzPlus, UnPlus
-      real :: HallUx, HallUy, HallUz
+      real :: HallUx, HallUy, HallUz, InvRho
       !-----------------------------------------------------------------------
 
       ! calculate number densities
@@ -2589,9 +2589,12 @@ contains
       UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
 
       if(HallCoeff > 0.0)then
-         HallUx = UxPlus - HallJx*InvElectronDens
-         HallUy = UyPlus - HallJy*InvElectronDens
-         HallUz = UzPlus - HallJz*InvElectronDens
+         ! The ion mass per charge that is contained in HallCoef (and HallJ*) 
+         ! is normalized to be divided with the total mass density.
+         InvRho = 1/sum(State_V(iRhoIon_I))
+         HallUx = UxPlus - HallJx*InvRho
+         HallUy = UyPlus - HallJy*InvRho
+         HallUz = UzPlus - HallJz*InvRho
          HallUn = NormalX*HallUx + NormalY*HallUy + NormalZ*HallUz
       else
          HallUn = UnPlus
