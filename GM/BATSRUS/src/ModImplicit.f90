@@ -17,6 +17,11 @@ module ModSemiImplVar
   logical:: UseSemiHallResist  = .false.
   logical:: UseSemiResistivity = .false.
 
+  ! Do the semi-implicit blocks change dynamically?
+  logical, public:: IsDynamicSemiImpl = .false.
+
+  ! Make the explicit steady state a solution for the semi-impl. discretization
+  ! Only implemented for heat conduction right now.
   logical, public:: UseStableImplicit = .false.
   
   ! Number of all semi-implicit variables
