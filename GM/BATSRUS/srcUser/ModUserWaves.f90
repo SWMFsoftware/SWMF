@@ -296,10 +296,12 @@ contains
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
          UseElectronPressure, UseAnisoPressure
+    use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I, &
+         iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
     use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: ShockSlope, ShockLeftState_V, ShockRightState_V, &
          Si2No_V, Io2Si_V, Io2No_V, UnitRho_, UnitU_, UnitP_,UnitX_, UnitN_,&
-         rPlanetSi, rBody, UnitT_, Gamma
+         rPlanetSi, rBody, UnitT_, Gamma_I, nVectorVar, iVectorVar_I
     use ModNumconst, ONLY: cHalfPi, cPi, cTwoPi, cDegToRad
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK,nI,nJ,nK
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
@@ -312,7 +314,7 @@ contains
     real,dimension(nVar):: State_V, KxTemp_V, KyTemp_V
     real                :: SinSlope, CosSlope, Input2SiUnitX, OmegaSun
     real                :: x, y, z, r, r2, Lx, Ly, HalfWidth
-    integer             :: i, j, k
+    integer             :: i, j, k, iVectorVar, iVarX, iVarY
 
     real :: RhoLeft, RhoRight, pLeft
     real :: ViscoCoeff = 0.0
@@ -497,25 +499,27 @@ contains
 
           if(ShockSlope /= 0.0)then
 
-             ! Make sure that the X and Y components of the momentum and
-             ! magnetic field variables have consistent wave parameters
-             if(Width_V(RhoUx_) > 0.0 .and. Width_V(RhoUy_) == 0.0) &
-                  call copy_wave(RhoUx_, RhoUy_)
-             if(Width_V(RhoUy_) > 0.0 .and. Width_V(RhoUx_) == 0.0) &
-                  call copy_wave(RhoUy_, RhoUx_)
-             if(Width_V(Bx_)    > 0.0 .and. Width_V(By_)    == 0.0) &
-                  call copy_wave(Bx_,    By_)
-             if(Width_V(By_)    > 0.0 .and. Width_V(Bx_)    == 0.0) &
-                  call copy_wave(By_,    Bx_)
-
              CosSlope = 1.0/sqrt(1+ShockSlope**2)
              SinSlope = ShockSlope*CosSlope
 
              State_V = Ampl_V
-             Ampl_V(RhoUx_) = CosSlope*State_V(RhoUx_)-SinSlope*State_V(RhoUy_)
-             Ampl_V(RhoUy_) = SinSlope*State_V(RhoUx_)+CosSlope*State_V(RhoUy_)
-             Ampl_V(Bx_)    = CosSlope*State_V(Bx_)   - SinSlope*State_V(By_)
-             Ampl_V(By_)    = SinSlope*State_V(Bx_)   + CosSlope*State_V(By_)
+
+             do iVectorVar = 1, nVectorVar
+                iVarX = iVectorVar_I(iVectorVar)
+                iVarY = iVarX + 1
+                ! Make sure that the X and Y components of vector variables 
+                ! have consistent wave parameters
+                if(Width_V(iVarX) > 0.0 .and. Width_V(iVarY) == 0.0) &
+                     call copy_wave(iVarX, iVarY)
+                if(Width_V(iVarY) > 0.0 .and. Width_V(iVarX) == 0.0) &
+                     call copy_wave(iVarY, iVarX)
+
+                ! Rotate amplitudes with the angle of the shock slope
+                Ampl_V(iVarX) = &
+                     CosSlope*State_V(iVarX) - SinSlope*State_V(iVarY)
+                Ampl_V(iVarY) = &
+                     SinSlope*State_V(iVarX) + CosSlope*State_V(iVarY)
+             end do
 
              KxTemp_V= KxWave_V
              KyTemp_V= KyWave_V
@@ -539,9 +543,12 @@ contains
 
        ! Convert momentum to velocity
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
-               / State_VGB(Rho_,i,j,k,iBlock)
+          State_VGB(iUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iUy_I,i,j,k,iBlock) = State_VGB(iRhoUy_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iUz_I,i,j,k,iBlock) = State_VGB(iRhoUz_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
        end do; end do; end do
 
        do iVar = 1, nVar
@@ -606,18 +613,22 @@ contains
 
        ! Convert velocity to momentum
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
-               State_VGB(Rho_,i,j,k,iBlock)*State_VGB(Ux_:Uz_,i,j,k,iBlock)
+          State_VGB(iRhoUx_I,i,j,k,iBlock) = State_VGB(iUx_I,i,j,k,iBlock) &
+               *State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUy_I,i,j,k,iBlock) = State_VGB(iUy_I,i,j,k,iBlock) &
+               *State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUz_I,i,j,k,iBlock) = State_VGB(iUz_I,i,j,k,iBlock) &
+               *State_VGB(iRho_I,i,j,k,iBlock)
        end do; end do; end do
 
        if(EntropyConstant > 0.0)then
           do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
-             State_VGB(p_,i,j,k,iBlock) = &
-                  EntropyConstant*State_VGB(Rho_,i,j,k,iBlock)**Gamma
+             State_VGB(iP_I,i,j,k,iBlock) = &
+                  EntropyConstant*State_VGB(iRho_I,i,j,k,iBlock)**Gamma_I
           end do; end do; end do
           ! Make sure the pressure gets integrated below
           ! This only works if the velocity is zero, so e = p/(Gamma-1)
-          iPower_V(p_) = 2*iPower_V(Rho_)
+          iPower_V(iP_I) = 2*iPower_V(iRho_I)
        end if
 
        if(DoIntegrateWave)then
