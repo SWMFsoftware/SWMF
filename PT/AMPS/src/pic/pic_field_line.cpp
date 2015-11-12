@@ -147,6 +147,47 @@ namespace PIC{
     }
 
     //=========================================================================
+    void cFieldLine::ResetSegmentWeights(){
+      cFieldLineSegment *Segment = FirstSegment;
+      double w[PIC::nTotalSpecies];
+      //compute weights and normalize them
+	for(int spec=0; spec < PIC::nTotalSpecies; spec++)
+	  TotalWeight[spec] = 0;
+      for(int iSegment=0; iSegment<nSegment; iSegment++){
+	//compute weights
+	_FIELDLINE_SEGMENT_WEIGHT_(w, Segment);
+	//set segment's weight
+	Segment->SetWeight(w);
+	for(int spec=0; spec < PIC::nTotalSpecies; spec++)
+	  TotalWeight[spec] += w[spec];
+	//get the next one
+	Segment = Segment->GetNext();
+      }
+    }
+
+    //=========================================================================
+    void cFieldLine::GetSegmentRandom(cFieldLineSegment *SegmentOut,
+				      double& WeightCorrectionFactor,
+				      int spec){
+      // choose a random segment on field line and return pointer SegmentOut;
+      // since statistical weights may vary, compute a correction factor
+      // for a particle to be injected on this segment
+      //-----------------------------------------------------------------------
+      // choose uniformly a segment, i.e. weight_uniform = 1.0 / nSegment
+      int iSegmentChoice = (int)(nSegment * rnd());
+      // cycle through segment until get the chosen one
+      SegmentOut = FirstSegment;
+      for(int iSegment=0; iSegment < iSegmentChoice; iSegment++)
+	SegmentOut = SegmentOut->GetNext();
+
+      // SegmentOut now is a pointer to a uniformly chosen segment;
+      // find the correction factor: weight_segment / weight_uniform
+      //-----------------------------------------------------------------------
+      WeightCorrectionFactor = 
+	SegmentOut->GetWeight(spec) / TotalWeight[spec] * nSegment;
+    }
+    
+    //=========================================================================
     void cFieldLine::SetMagneticField(double *BIn, int iVertex){
       cFieldLineVertex *Vertex;
       if(iVertex == -1)
@@ -222,6 +263,12 @@ namespace PIC{
       
       fclose(fout);
       
+    }
+
+    //=========================================================================
+    void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment){
+      for(int spec=0; spec<PIC::nTotalSpecies; spec++)
+	Weight[spec] = 1.0;
     }
 
     //=========================================================================
@@ -480,7 +527,7 @@ namespace PIC{
 
 	//add vertex to the spiral
 	FieldLinesAll[nFieldLine-1].Add(x);
-	FieldLinesAll[nFieldLine-1].SetMagneticField(B,nSegment);
+	FieldLinesAll[nFieldLine-1].SetMagneticField(B,iSegment);
 
 	//magnitude of the magnetic field
 	double AbsB = sqrt(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]);

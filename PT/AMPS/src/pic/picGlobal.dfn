@@ -213,3 +213,6 @@ at the end of each time step
 
 //time interpolation mode
 #define _PIC_DATAFILE__TIME_INTERPOLATION_MODE_ _PIC_MODE_OFF_
+
+//function to set fieldline segments weights
+#define _FIELDLINE_SEGMENT_WEIGHT_(w, Segment) PIC::FieldLine::FieldLineWeight_Uniform(w, Segment)

@@ -270,6 +270,7 @@ namespace PIC {
       inline cFieldLineVertex* GetPrev(){return prev;}
       inline cFieldLineVertex* GetNext(){return next;}
     };
+    //class cFieldLineVertex --------------------------------------------------
 
     class cFieldLineSegment{
     private:
@@ -277,6 +278,9 @@ namespace PIC {
       char IsSet;
       //length of this segment
       double length;
+      // weight of the segment for each species,
+      // needed for injection of particles
+      double weight[PIC::nTotalSpecies];
       //direction of this segment
       double Dir[DIM];
       //neighboring segments
@@ -350,6 +354,14 @@ namespace PIC {
       inline double GetLength(){return length;}
       inline void GetDir(double* DirOut){memcpy(DirOut,Dir,DIM*sizeof(double));}
 
+      //access segment's statistical weight
+      inline double GetWeight(int spec){return weight[spec];}
+      inline void   SetWeight(double* weightIn){
+	memcpy(weight, weightIn, PIC::nTotalSpecies*sizeof(double));}
+      inline void   SetWeight(double weightIn, int spec){
+	weight[spec] = weightIn;}
+
+
       //access segment's neighbors
       inline void SetPrev(cFieldLineSegment* prevIn){prev = prevIn;}
       inline void SetNext(cFieldLineSegment* nextIn){next = nextIn;}
@@ -405,6 +417,7 @@ namespace PIC {
 	begin->GetPlasmaPressure(tBegin), end->GetPlasmaPressure(tEnd);
 	PlasmaPressureOut = tBegin * (1 - S) + tEnd * S;}
     };
+    //class cFieldLineSegment -------------------------------------------------
 
     class cFieldLine {
     private:
@@ -414,6 +427,8 @@ namespace PIC {
       int nSegment;
       //total length
       double TotalLength;
+      //total statistical weight
+      double TotalWeight[PIC::nTotalSpecies];
       //1st and last segments, vertices of the field line
       cFieldLineSegment *FirstSegment, *LastSegment;
       cFieldLineVertex  *FirstVertex,  *LastVertex;
@@ -442,6 +457,10 @@ namespace PIC {
 	if(TotalLength < 0.0 || nSegment < 0){res="Error"; return;}
 	res = "OK"; return;
       }
+
+      //check whether the line is a loop
+      inline bool is_loop(){return LastVertex==FirstVertex;}
+
       //access first/last segment
       cFieldLineSegment* GetFirstSegment(){return FirstSegment;}
       cFieldLineSegment* GetLastSegment(){ return LastSegment;}
@@ -456,11 +475,29 @@ namespace PIC {
 
       // add vertex with given coordinates
       void Add(double* xIn);
+      // assign statistical weights to segments and normalize them
+      void ResetSegmentWeights();
+      // get random segment
+      void GetSegmentRandom(cFieldLineSegment* SegmentOut,
+			    double& WeightCorrectionFactor,
+			    int spec);
       // set magnetic field at a given vertex (last by default)
       void SetMagneticField(double* BIn, int iVertex=-1);
       // print data stored on the field line
       void Output(FILE* fout, bool GeometryOnly);
     };
+    //class cFieldLine --------------------------------------------------------
+
+    namespace Mover {
+      
+      //      using namespace PIC::Mover::GuidingCenter;
+
+      // offsets to additional data fields needed to keep track of particles
+      extern int FieldLineIdOffset;    // field line particle is currently on
+      extern int FieldLineCoordOffest; // 1D coordinate along the field line
+      
+    }
+
 
     // max number of field line in the simulation
     const long int nFieldLineMax=100;
@@ -484,7 +521,8 @@ namespace PIC {
     // output data
     void Output(char* fname, bool GeometryOnly);
 
-
+    //functions for computing field-line segment weight
+    void FieldLineWeight_Uniform(double* Weight, cFieldLineSegment* Segment);
     
   }
 
