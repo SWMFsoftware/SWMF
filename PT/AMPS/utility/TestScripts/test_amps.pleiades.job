@@ -14,7 +14,7 @@
 #PBS -m e
 
 # Specify group if necessary
-#PBS -W group_list=s1110
+#PBS -W group_list=g26135
 
 # run AMPS tests compiled with GNU
 cd GNU/AMPS
