@@ -426,9 +426,6 @@ contains
       real:: uRot_D(MaxDim), uIono_D(MaxDim)
       real:: FaceState_V(nVar), State_V(Bx_:nVar+3)
       real:: bDotR, Brefl_D(MaxDim), Borig_D(MaxDim)
-      real:: bDotU, rInv
-      real:: CosTheta, SinTheta, CosPhi, SinPhi
-      real:: UrTrue, UtTrue, BpTrue, BrGhost, BtGhost, BpGhost
       real:: Ub_V(2), b, b1,b4,bFace_D(3), JouleHeating, FluxIono, FluxPw
       real:: bUnit_D(3), GseToGeo_D(3), XyzMap_D(3), SmgFaceCoords_D(3), &
            GeoFaceCoords_D(3)
@@ -478,53 +475,6 @@ contains
       case('outflow')
          VarsGhostFace_V = VarsTrueFace_V
          if(UseOutflowPressure) VarsGhostFace_V(p_) = pOutflow
-
-      case('heliofloat')
-         VarsGhostFace_V = VarsTrueFace_V
-         rInv     = 1.0/sqrt(sum(FaceCoords_D**2))
-         CosTheta = FaceCoords_D(z_)*rInv
-         SinTheta = sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2)*RInv
-         CosPhi   = FaceCoords_D(x_)/ &
-              sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
-         SinPhi   = FaceCoords_D(y_)/ &
-              sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+cTolerance**2)
-         !\
-         ! (B\cdot u)/(u \cdot u)
-         !/
-         BdotU    = sum(VarsTrueFace_V(Bx_:Bz_)*VarsTrueFace_V(Ux_:Uz_)) &
-              /(sum(VarsTrueFace_V(Ux_:Uz_)*VarsTrueFace_V(Ux_:Uz_)) &
-              + cTolerance**2)
-         !\
-         ! u radial
-         !/
-         UrTrue   = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D(x_:z_))*RInv
-         !\
-         ! u Theta
-         !/
-         UtTrue   = ((VarsTrueFace_V(Ux_)*FaceCoords_D(x_)+     &
-              VarsTrueFace_V(Uy_)*FaceCoords_D(y_))*    &
-              FaceCoords_D(z_)-VarsTrueFace_V(Uz_)*     &
-              (FaceCoords_D(x_)**2+FaceCoords_D(y_)**2))/&
-              sqrt(FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
-              cTolerance**2)*RInv
-         !\
-         ! B Phi
-         !/
-         BpTrue   =  (VarsTrueFace_V(By_)*FaceCoords_D(x_)-     &
-              VarsTrueFace_V(Bx_)*FaceCoords_D(y_))/    &
-              ((FaceCoords_D(x_)**2+FaceCoords_D(y_)**2+  &
-              cTolerance**2)*RInv)*sinTheta
-         !\
-         ! Only the aligned field is accounted for
-         !/
-         BrGhost  = UrTrue*BdotU; BtGhost = UtTrue*BdotU;
-         BpGhost  = BpTrue
-         VarsGhostFace_V(Bx_) = BrGhost*FaceCoords_D(x_)*RInv+  &
-              BtGhost*cosTheta*cosPhi-BpGhost*sinPhi
-         VarsGhostFace_V(By_) = BrGhost*FaceCoords_D(y_)*RInv+  &
-              BtGhost*cosTheta*sinPhi+BpGhost*cosPhi
-         VarsGhostFace_V(Bz_) = BrGhost*FaceCoords_D(z_)*RInv-  &
-              BtGhost*sinTheta
 
       case('fixedB1')
          VarsGhostFace_V = FaceState_V
