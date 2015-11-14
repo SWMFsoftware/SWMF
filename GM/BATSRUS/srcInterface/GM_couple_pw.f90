@@ -248,22 +248,11 @@ contains
     end if
 
     ! Convert to X, Y on a unit sphere (this will be used for triangulation)
-
-    where(Buffer_VI(Theta_,:) > cHalfPi)
-       CoordXyzPw2_DI(x_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-       CoordXyzPw2_DI(y_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
-       CoordXyzPw2_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:)) 
-    elsewhere
-       CoordXyzPw1_DI(x_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-       CoordXyzPw1_DI(y_,1:nFieldline) =  &
-            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
-       CoordXyzPw1_DI(z_,1:nFieldline) =  &
-            cos(Buffer_VI(Theta_,:)) 
-    end where
+    CoordXyzPw2_DI(x_,:) = sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+    CoordXyzPw2_DI(y_,:) = sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+    CoordXyzPw2_DI(z_,:) = cos(Buffer_VI(Theta_,:))
+    ! Works for both hemispheres:
+    CoordXyzPw1_DI = CoordXyzPw2_DI
 
     if(UseMultiIon)then
        do i = iRhoGmFirst, iRhoGmLast
@@ -419,20 +408,31 @@ contains
        write(*,*)NameSub,': nVarPw, nLinePw, nSpeciesPw=',&
             nVarPw, nLinePw2, nSpeciesPw
        write(*,*)NameSub,': nPoint2, nTriangle2=',nPoint2, nTriangle2
-       write(*,*)NameSub,': CoordXyzPw_DI'
+       write(*,*)NameSub,': CoordXyzPw_DI, Southern Hemi:'
        do i=nLinePw1+1,nLinePw1+nPoint2
           write(*,*) i-nLinePw1, CoordXyzPw2_DI(:,i)
        end do
+       write(*,*)NameSub,': CoordXyzPw_DI, Northern Hemi:'
        do i=1,nPoint1
           write(*,*) i, CoordXyzPw1_DI(:,i)
        end do
+
        write(*,*) NameSub,': Writing plot of triangulation'
-       open ( UnitTmp_, file = 'TestTriangulation.eps' )
+       ! Northern Hemi
+       open ( UnitTmp_, file = 'TestTriangulation_North.eps' )
        call trplot ( UnitTmp_, 7.5, 90.0, 0.0, 90.0, nPoint1, &
             CoordXyzPw1_DI(x_,1:nPoint1), &
             CoordXyzPw1_DI(y_,1:nPoint1), &
             CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
             lend1_I, 'test1 triangulation',.true., iError )
+       close(UnitTmp_)
+       ! Southern Hemi
+       open ( UnitTmp_, file = 'TestTriangulation_South.eps' )
+       call trplot ( UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
+            CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
+            CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
+            CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
+            list2_I, lptr2_I, lend2_I, 'test1 triangulation',.true., iError )
        close(UnitTmp_)
     end if
 
