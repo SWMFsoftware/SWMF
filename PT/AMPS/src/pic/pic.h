@@ -204,10 +204,10 @@ namespace PIC {
       }
 
       //status of vertex as a string
-      inline void status(const char* res){
-	if(IsSet == 0)                  {res="Unset";  return;}
-	if(prev == NULL && next == NULL){res="Hanging";return;}
-	res = "OK"; return;
+      inline void status(char* res){
+	if(IsSet == 0)                  {sprintf(res,"%s","Unset");  return;}
+	if(prev == NULL && next == NULL){sprintf(res,"%s","Hanging");return;}
+	sprintf(res,"%s","OK"); return;
       }
 
 
@@ -307,12 +307,12 @@ namespace PIC {
       }
 
       //status of segment as string
-      inline void status(const char* res){
-	if(IsSet == 0)               {res="Unset";    return;}
-	if(prev==NULL && next==NULL) {res="Hanging";  return;}
-	if(begin==end || length==0.0){res="Collapsed";return;}
-	if(length < 0.0)             {res="Error";    return;}	
-	res="OK"; return;
+      inline void status(char* res){
+	if(IsSet == 0)               {sprintf(res,"%s","Unset");    return;}
+	if(prev==NULL && next==NULL) {sprintf(res,"%s","Hanging");  return;}
+	if(begin==end || length==0.0){sprintf(res,"%s","Collapsed");return;}
+	if(length < 0.0)             {sprintf(res,"%s","Error");    return;}
+	sprintf(res,"%s","OK"); return;
       }
 
       //set the segment
@@ -323,8 +323,8 @@ namespace PIC {
 	  char msg[600];
 	  char statusBegin[10],statusEnd[10];
 	  beginIn->status(statusBegin), endIn->status(statusEnd); 
-	  sprintf(msg,"ERROR:: trying to set a segment with invalid vertices, beginIn->status()=%i, endIn->status()=%i",
-		  beginIn->status(), endIn->status());
+	  sprintf(msg,"ERROR:: trying to set a segment with invalid vertices, beginIn->status()=%s, endIn->status()=%s",
+		  statusBegin, statusEnd);
 	  exit(__LINE__,__FILE__, msg);
 	}
 #endif//_PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -451,11 +451,11 @@ namespace PIC {
       }
 
       //status of segment as string
-      inline void status(const char* res){
-	if(IsSet == 0)                       {res="Unset"; return;}
-	if(is_broken())                      {res="Broken";return;}
-	if(TotalLength < 0.0 || nSegment < 0){res="Error"; return;}
-	res = "OK"; return;
+      inline void status(char* res){
+	if(IsSet == 0)                   {sprintf(res,"%s","Unset"); return;}
+	if(is_broken())                  {sprintf(res,"%s","Broken");return;}
+	if(TotalLength<0.0 || nSegment<0){sprintf(res,"%s","Error"); return;}
+	sprintf(res,"%s","OK"); return;
       }
 
       //check whether the line is a loop
@@ -490,7 +490,10 @@ namespace PIC {
 
     namespace Mover {
       
+      // use this namespace for inheriting nethods associated with 
+      // magnetic moment, total kinetic energy etc.
       //      using namespace PIC::Mover::GuidingCenter;
+     
 
       // offsets to additional data fields needed to keep track of particles
       extern int FieldLineIdOffset;    // field line particle is currently on
@@ -909,54 +912,12 @@ namespace PIC {
 
   }
 
+  //===========================================================================
   namespace ParticleBuffer {
     typedef unsigned char byte;
-
-    //the set of parameters that determine the 'double' parameters of a particle
-    #define _PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ 0
-    #define _PIC_PARTICLE_DATA_NEXT_OFFSET_ (_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ + sizeof(unsigned char))
-    #define _PIC_PARTICLE_DATA_PREV_OFFSET_ (_PIC_PARTICLE_DATA_NEXT_OFFSET_ + sizeof(long int))
-    #define _PIC_PARTICLE_DATA_VELOCITY_OFFSET_  (_PIC_PARTICLE_DATA_PREV_OFFSET_ + sizeof(long int))
-    #define _PIC_PARTICLE_DATA_POSITION_OFFSET_  (_PIC_PARTICLE_DATA_VELOCITY_OFFSET_+ 3*sizeof(double))
-
-    #define _PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_ (_PIC_PARTICLE_DATA_POSITION_OFFSET_+DIM*sizeof(double))
-
-    //the individual particle's weight corection
-#if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_ _PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_
-    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_  sizeof(double)
-#elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
-    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_ -1
-    #define _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_  0
-#else
-   exit(__LINE__,__FILE__,"Error: unknown option");
-#endif
-
-
-    //electrically charged dust
-#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_MASS_OFFSET_    (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_)
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_RADIUS_OFFSET_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+sizeof(double))
-
-#if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+2*sizeof(double))
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_   3*sizeof(double)
-#else
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  -1
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_    2*sizeof(double)
-#endif
-
-#else
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_MASS_OFFSET_    -1
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_RADIUS_OFFSET_  -1
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN_CHARGE_OFFSET_  -1
-   #define _PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_    0
-#endif
-
-
-    //the total length of the default particle data
-    #define _PIC_PARTICLE_DATA__DEFAULT_DATA_LENGTH_  (_PIC_PARTICLE_DATA__BISIC_DATA_LENGTH_+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET__DATA_LENGTH_+_PIC_PARTICLE_DATA__DUST_GRAIN__DATA_LENGTH_)
-
+    
+    // macro definition for particle data offsets
+    #include "picParticleDataMacro.h"
 
     //the total length of a data allocated for a particle
     extern long int ParticleDataLength;
@@ -981,50 +942,11 @@ namespace PIC {
     #define _PIC_INIT_PARTICLE_MODE__MOVE_      1
     int InitiateParticle(double *x,double *v,double* WeightCorrectionFactor,int *spec,byte* ParticleData,int InitMode,void *node);
 
-    /*
-    double *GetX(long int);
-    void GetX(double*,long int);
-    void SetX(double*,long int);
-
-    double *GetX(byte*);
-    void GetX(double*,byte*);
-    void SetX(double*,byte*);
-
-    double *GetV(long int);
-    void GetV(double*,long int);
-    void SetV(double*,long int);
-
-    double *GetV(byte*);
-    void GetV(double*,byte*);
-    void SetV(double*,byte*);
-
-    unsigned int GetI(byte*);
-    void SetI(unsigned int,byte*);
-
-    unsigned int GetI(long int);
-    void SetI(unsigned int,long int);
-
-    long int GetPrev(long int);
-    long int GetNext(long int);
-    void SetPrev(long int,long int);
-    void SetNext(long int,long int);
-
-    long int GetPrev(byte*);
-    long int GetNext(byte*);
-    void SetPrev(long int,byte*);
-    void SetNext(long int,byte*);
-
-    double GetIndividualStatWeightCorrection(long int);
-    double GetIndividualStatWeightCorrection(byte*);
-    void SetIndividualStatWeightCorrection(double,long int);
-    void SetIndividualStatWeightCorrection(double,byte*);
-    */
-
     //==========================================================
     //get the idividual particle weight correction
     inline double GetIndividualStatWeightCorrection(long int ptr) {
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-      return *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+      return *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__WEIGHT_CORRECTION_OFFSET_));
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
       return 1;
     #else
@@ -1034,7 +956,7 @@ namespace PIC {
 
     inline double GetIndividualStatWeightCorrection(byte *ParticleDataStart) {
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-      return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_));
+      return *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_CORRECTION_OFFSET_));
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
       return 1;
     #else
@@ -1050,7 +972,7 @@ namespace PIC {
 #endif
 
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-      *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+      *((double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
       //do nothing
     #else
@@ -1066,7 +988,7 @@ namespace PIC {
 #endif
 
     #if _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_ON_
-      *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
+      *((double*) (ParticleDataStart+_PIC_PARTICLE_DATA__WEIGHT_CORRECTION_OFFSET_)) =WeightCorrectionFactor;
     #elif _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_
       exit(__LINE__,__FILE__,"Error: SetIndividualStatWeightCorrection cannot be used with _INDIVIDUAL_PARTICLE_WEIGHT_MODE_ == _INDIVIDUAL_PARTICLE_WEIGHT_OFF_");
     #else
@@ -1076,96 +998,41 @@ namespace PIC {
     //==========================================================
     //get the particle position
     inline double *GetX(long int ptr) {
-      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__POSITION_OFFSET_);
     }
 
     inline double *GetX(byte *ParticleDataStart) {
-      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
+      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA__POSITION_OFFSET_);
     }
 
     inline void GetX(double* x,long int ptr) {
-      /*
-      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
-      */
-
-      memcpy(x,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_,DIM*sizeof(double));
+      memcpy(x,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__POSITION_OFFSET_,DIM*sizeof(double));
     }
 
     inline void GetX(double* x,byte *ParticleDataStart) {
-      /*
-      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) x[idim]=xptr[idim];
-      */
-
-      memcpy(x,ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_,DIM*sizeof(double));
+      memcpy(x,ParticleDataStart+_PIC_PARTICLE_DATA__POSITION_OFFSET_,DIM*sizeof(double));
     }
 
     inline void SetX(double* x,long int ptr) {
-//      register double *xptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-//      register int idim;
-
-//=====================  DEBUG ================
-/*
-
-      if (x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+10<pow(2439.0e3,2)) {
-        double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-
-        cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r << __FILE__ << "@" << __LINE__ << endl;
-
-      }
-*/
-//=================   END DEBUG =============
-
-//      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
-
-      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_POSITION_OFFSET_,x,DIM*sizeof(double));
+      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__POSITION_OFFSET_,x,DIM*sizeof(double));
     }
 
     inline void SetX(double* x,byte *ParticleDataStart) {
-//      register double *xptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_);
-//      register int idim;
-
-      //=====================  DEBUG ================
-
-/*
-            if ((x[0]*x[0]+x[1]*x[1]+x[2]*x[2])+10<pow(2439.0e3,2)) {
-              double r=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
-
-              cout << pow(2439.0e3,2)- r*r << "   "  << 2439.0e3-r   << __FILE__ << "@" << __LINE__ << endl;
-
-            }
-*/
-      //=================   END DEBUG =============
-
-//      for (idim=0;idim<DIM;idim++) xptr[idim]=x[idim];
-
-      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_POSITION_OFFSET_,x,DIM*sizeof(double));
+      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA__POSITION_OFFSET_,x,DIM*sizeof(double));
     }
 
     //==========================================================
     //get the particle velocity
     inline double *GetV(long int ptr) {
-      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      return (double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_);
     }
 
     inline double *GetV(byte *ParticleDataStart) {
-      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
+      return (double*) (ParticleDataStart+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_);
     }
 
     inline void GetV(double* v,long int ptr) {
-      /*
-      register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
-      */
-
-      memcpy(v,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,3*sizeof(double));
+      memcpy(v,ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,3*sizeof(double));
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
@@ -1175,14 +1042,7 @@ namespace PIC {
     }
 
     inline void GetV(double* v,byte *ParticleDataStart) {
-      /*
-      register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) v[idim]=vptr[idim];
-      */
-
-      memcpy(v,ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,3*sizeof(double));
+      memcpy(v,ParticleDataStart+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,3*sizeof(double));
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
 #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
@@ -1192,13 +1052,6 @@ namespace PIC {
     }
 
     inline void SetV(double* v,long int ptr) {
-      /*
-      register double *vptr=(double*) (ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
-      */
-
 /*      if (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>1.0e9) {
         exit(__LINE__,__FILE__,"the velocity is too large");
       }*/
@@ -1209,17 +1062,10 @@ namespace PIC {
 #endif
 #endif
 
-      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
+      memcpy(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,v,3*sizeof(double));
     }
 
     inline void SetV(double* v,byte *ParticleDataStart) {
-      /*
-      register double *vptr=(double*) (ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_);
-      register int idim;
-
-      for (idim=0;idim<DIM;idim++) vptr[idim]=v[idim];
-      */
-
 /*      if (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]>1.0e9) {
         exit(__LINE__,__FILE__,"the velocity is too large");
       }*/
@@ -1231,7 +1077,7 @@ namespace PIC {
 #endif
 
 
-      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA_VELOCITY_OFFSET_,v,3*sizeof(double));
+      memcpy(ParticleDataStart+_PIC_PARTICLE_DATA__VELOCITY_OFFSET_,v,3*sizeof(double));
     }
 
 
@@ -1240,110 +1086,110 @@ namespace PIC {
     //the first 7 bits will be used for specie ID, the last 8th bit will be used to control wether the particle is allocated or not
 
     inline unsigned int GetI(byte* ParticleDataStart) {
-      return ((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      return ((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
     }
 
     inline unsigned int GetI(long int ptr) {
-      return ((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      return ((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
     }
 
     inline void SetI(int spec,byte* ParticleDataStart) {
       unsigned char flag,t=spec;
 
-      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
       t|=flag;
 
-      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     inline void SetI(int spec,long int ptr) {
       unsigned char flag,t=spec;
 
-      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
       t|=flag;
 
-      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     inline bool IsParticleAllocated(byte* ParticleDataStart) {
       unsigned char flag;
 
-      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      flag=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
       return (flag==0) ? false : true;
     }
 
     inline bool IsParticleAllocated(long int ptr) {
       unsigned char flag;
 
-      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x80);
+      flag=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x80);
       return (flag==0) ? false : true;
     }
 
     inline void SetParticleDeleted(byte* ParticleDataStart) {
       unsigned char t;
 
-      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
-      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     inline void SetParticleDeleted(long int ptr) {
       unsigned char t;
 
-      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
-      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     inline void SetParticleAllocated(byte* ParticleDataStart) {
       unsigned char t;
 
-      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      t=((*((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
       t|=0x80;
 
-      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      *((unsigned char*)(ParticleDataStart+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     inline void SetParticleAllocated(long int ptr) {
       unsigned char t;
 
-      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))) & 0x7f);
+      t=((*((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))) & 0x7f);
       t|=0x80;
 
-      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_))=t;
+      *((unsigned char*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__SPECIES_ID_OFFSET_))=t;
     }
 
     //==========================================================
     //get/set prev
     inline long int GetPrev(long int ptr) {
-      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_));
+      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__PREV_OFFSET_));
     }
 
     inline long int GetPrev(byte* ParticleDataStart) {
-      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_));
+      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__PREV_OFFSET_));
     }
 
     inline void SetPrev(long int prev,long int ptr) {
-      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
+      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__PREV_OFFSET_))=prev;
     }
 
     inline void SetPrev(long int prev,byte* ParticleDataStart) {
-      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_PREV_OFFSET_))=prev;
+      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__PREV_OFFSET_))=prev;
     }
 
     //get/set next
     inline long int GetNext(long int ptr) {
-      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
+      return *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__NEXT_OFFSET_));
     }
 
     inline long int GetNext(byte* ParticleDataStart) {
-      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_));
+      return *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__NEXT_OFFSET_));
     }
 
     inline void SetNext(long int next,long int ptr) {
-      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
+      *((long int*)(ParticleDataBuffer+ptr*ParticleDataLength+_PIC_PARTICLE_DATA__NEXT_OFFSET_))=next;
     }
 
     inline void SetNext(long int next,byte* ParticleDataStart) {
-      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA_NEXT_OFFSET_))=next;
+      *((long int*)(ParticleDataStart+_PIC_PARTICLE_DATA__NEXT_OFFSET_))=next;
     }
     //========================================================
 
@@ -2398,99 +2244,6 @@ namespace PIC {
     void MaxwellianVelocityDistribution(double *v,const double *BulkFlowVelocity,const double Temp,const int spec);
     double InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,const double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode=_PIC_DISTRIBUTION_WEIGHT_CORRECTION_MODE__NO_WEIGHT_CORRECTION_);
   }
-
-
-  /*
-  namespace ParticleBuffer {
-    typedef unsigned char byte;
-
-    //the set of parameters that determine the 'double' parameters of a particle
-    #define _PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ 0
-    #define _PIC_PARTICLE_DATA_NEXT_OFFSET_ (_PIC_PARTICLE_DATA_SPECIEDID_OFFSET_ + sizeof(unsigned char))
-    #define _PIC_PARTICLE_DATA_PREV_OFFSET_ (_PIC_PARTICLE_DATA_NEXT_OFFSET_ + sizeof(long int))
-    #define _PIC_PARTICLE_DATA_VELOCITY_OFFSET_  (_PIC_PARTICLE_DATA_PREV_OFFSET_ + sizeof(long int))
-    #define _PIC_PARTICLE_DATA_POSITION_OFFSET_  (_PIC_PARTICLE_DATA_VELOCITY_OFFSET_+ 3*sizeof(double))
-
-    //the offset for the variable that contains the 'particle weight correction'
-    extern int _PIC_PARTICLE_DATA_WEIGHT_CORRECTION_OFFSET_;
-
-    //the total length of a data allocated for a particle
-    extern long int ParticleDataLength;
-
-    //The particle buffer's internal data
-    extern byte *ParticleDataBuffer;
-    extern long int MaxNPart,NAllPart,FirstPBufferParticle;
-
-    //Request additional data for a particle
-    void RequestDataStorage(long int &offset,int TotalDataLength);
-
-    //the basic data access functions for a particle
-    byte *GetParticleDataPointer(long int);
-
-    double *GetX(long int);
-    void GetX(double*,long int);
-    void SetX(double*,long int);
-
-    double *GetX(byte*);
-    void GetX(double*,byte*);
-    void SetX(double*,byte*);
-
-    double *GetV(long int);
-    void GetV(double*,long int);
-    void SetV(double*,long int);
-
-    double *GetV(byte*);
-    void GetV(double*,byte*);
-    void SetV(double*,byte*);
-
-    unsigned int GetI(byte*);
-    void SetI(unsigned int,byte*);
-
-    unsigned int GetI(long int);
-    void SetI(unsigned int,long int);
-
-    long int GetPrev(long int);
-    long int GetNext(long int);
-    void SetPrev(long int,long int);
-    void SetNext(long int,long int);
-
-    long int GetPrev(byte*);
-    long int GetNext(byte*);
-    void SetPrev(long int,byte*);
-    void SetNext(long int,byte*);
-
-    double GetIndividualStatWeightCorrection(long int);
-    double GetIndividualStatWeightCorrection(byte*);
-    void SetIndividualStatWeightCorrection(double,long int);
-    void SetIndividualStatWeightCorrection(double,byte*);
-
-    //the particle buffer procedure
-    void Init(long int);
-    long int GetMaxNPart();
-    long int GetAllPartNum();
-    long int GetParticleDataLength();
-
-    long int GetNewParticle();
-    long int GetNewParticle(long int&);
-
-    void DeleteParticle(long int);
-    void DeleteParticle(long int,long int&);
-
-    void CloneParticle(long int,long int);
-
-    void ExcludeParticleFromList(long int,long int&);
-
-    void SaveImageFile(int);
-    void LoadImageFile(int);
-
-    void PackParticleData(char*,long int);
-    void UnPackParticleData(char*,long int);
-
-    unsigned long GetChecksum();
-  }
-
-*/
-
 
   //the mode of the internal degrees of freedom
   namespace IDF {

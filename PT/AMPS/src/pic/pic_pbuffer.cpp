@@ -8,7 +8,7 @@
 
 #include "pic.h"
 
-long int PIC::ParticleBuffer::ParticleDataLength=_PIC_PARTICLE_DATA__DEFAULT_DATA_LENGTH_;
+long int PIC::ParticleBuffer::ParticleDataLength=_PIC_PARTICLE_DATA__FULL_DATA_LENGTH_;
 PIC::ParticleBuffer::byte *PIC::ParticleBuffer::ParticleDataBuffer=NULL;
 long int PIC::ParticleBuffer::MaxNPart=0;
 long int PIC::ParticleBuffer::NAllPart=0;
