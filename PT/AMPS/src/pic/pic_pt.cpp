@@ -172,7 +172,7 @@ void PIC::ParticleTracker::RecordTrajectoryPoint(double *x,double *v,int spec,vo
 
   // contribtion of gyrations
   //magnetic moment
-  double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
+  double mu= PIC::ParticleBuffer::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // get the mag field magnitude at particle's location
   double AbsB=0, B[3]={0};
 

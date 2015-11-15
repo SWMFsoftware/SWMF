@@ -5,7 +5,6 @@
 
 int PIC::Mover::GuidingCenter::Sampling::CellSamplingDataOffset=-1;
 int PIC::Mover::GuidingCenter::Sampling::TotalKineticEnergyOffset=-1;
-long int PIC::Mover::GuidingCenter::MagneticMomentOffset = -1;
 
 int PIC::Mover::GuidingCenter::Sampling::RequestSamplingData(int offset){
   int SamplingLength=0;
@@ -42,7 +41,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
   //gyration energy
   //magnetic moment
-  double mu= PIC::Mover::GuidingCenter::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
+  double mu= PIC::ParticleBuffer::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
   // also get the magnetic field at particle location
   double AbsB=0,x[3]={0},B[3]={0};
   static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
@@ -64,7 +63,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   
 }
 
-/*----------------- Print Output File -------------------------------------------*/
+/*----------------- Print Output File ---------------------------------------*/
 //functions that output the data file
 void PIC::Mover::GuidingCenter::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
   fprintf(fout,", \"Total kinetic energy [J]\"");
@@ -130,9 +129,6 @@ void PIC::Mover::GuidingCenter::Init_BeforeParser(){
 
 void PIC::Mover::GuidingCenter::Init(){
 
-  // request storage for additional parameters of particles(including magnetic moment)
-  PIC::ParticleBuffer::RequestDataStorage(MagneticMomentOffset,sizeof(double));
-
 }
 
 
@@ -142,7 +138,7 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
 						       void *node){
   //magnetic moment:
   // mu       = p_{perp}^2 / (2*m0*B)
-  // p_{perp} = gamma8m0*v_{perp}
+  // p_{perp} = gamma*m0*v_{perp}
   //---------------------------------------------------------------
   
   // get the magnetic field
@@ -174,7 +170,7 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
   // change the veolcity so it is aligned with magnetic field
   // and set the magnetic moment's value
   v[0] = v_par * b[0]; v[1] = v_par * b[1]; v[2] = v_par * b[2];
-  SetMagneticMoment(mu, ptr);
+  PIC::ParticleBuffer::SetMagneticMoment(mu, ptr);
 }
 
 void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
@@ -234,7 +230,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   double q      = PIC::MolecularData::GetElectricCharge(spec);
   double m0     = PIC::MolecularData::GetMass(  spec);
   double c2     = SpeedOfLight*SpeedOfLight;
-  double mu     = PIC::Mover::GuidingCenter::GetMagneticMoment(ptr);
+  double mu     = PIC::ParticleBuffer::GetMagneticMoment(ptr);
 
   // square of velocity of gyrations
 #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
@@ -328,7 +324,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   PIC::ParticleBuffer::GetX(xInit,ParticleData);
   spec=PIC::ParticleBuffer::GetI(ParticleData);
   double m0 = PIC::MolecularData::GetMass(spec);
-  double mu = PIC::Mover::GuidingCenter::GetMagneticMoment(ptr);
+  double mu = PIC::ParticleBuffer::GetMagneticMoment(ptr);
 
   static long int nCall=0;
 
@@ -344,7 +340,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   // Integrate the equations of motion
   // use predictor-corrector scheme
   /***** Guiding center motion: ******
-   * dx/dt     = Vguide_perp + Vparal     *                   
+   * dx/dt     = Vguide_perp + Vparal*                   
    * dPparal/dt= ForceParal          *
    * Pparal    = gamma * m0 * Vparal *
    ***********************************/
