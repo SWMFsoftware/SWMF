@@ -18,7 +18,7 @@ contains
     use ModBlk
     use ModBoundary
     use ModBval,      ONLY: bvalp
-    use ModFSAM,      ONLY: ErrPSolv
+    use ModFSAM,      ONLY: ErrPSolv, iStage
     use ModMpi
     use ModUtilities, ONLY: flush_unit
 
@@ -334,7 +334,7 @@ contains
 
     !      ref error and error
     !
-    if((ErrPSolv).and.(mod(itnow,itintv)==0))then
+    if((ErrPSolv).and.(mod(itnow,itintv)==0).and.iStage==2)then
        call lapl(p,rsd)
        errorslc = 0.D0
        errorslc(1) = sum(abs(divdels(is:ie,js:je,ks:ke)))

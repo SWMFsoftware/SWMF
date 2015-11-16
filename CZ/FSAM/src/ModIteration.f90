@@ -44,13 +44,13 @@ contains
        dr2 = dx2a(j)*g2b(i)
        dr3 = dx3a(k)*g2b(i)*g32b(j)
        drmin = min(dr1, dr2, dr3)
-       q1 = max(2.d0*ovrevar(i+myid1*(in-5)), 2.d0*ovrmvar(i+myid1*(in-5)))
-       dtnewlc = min(dtnewlc, drmin/(cmax + 2.d0*q1/drmin + tiny))
+       q1 = max(2.d0*ovrevar(i+myid1*(in-5)), ovrmvar(i+myid1*(in-5)))
+       dtnewlc = min(dtnewlc, drmin/(cmax + 4.d0*q1/drmin + tiny))
     enddo; enddo; enddo
 
     call MPI_ALLREDUCE(dtnewlc, dtnew, 1, MPI_DOUBLE_PRECISION, MPI_MIN, &
          iComm, ierr)
-    dt = min(courno*dtnew, ovbvfq*1.d-2)
+    dt = min(courno*dtnew, ovbvfq*1.d-1)
 
   end subroutine nudt
 
@@ -92,6 +92,7 @@ contains
     use ModField,   ONLY: v1, v2, v3, b1, b2, b3, s, &
          v1_prev, v2_prev, v3_prev, b1_prev, b2_prev, b3_prev, s_prev
     use ModRHS,     ONLY: p_init
+    use ModFSAM,    ONLY: iStage
     implicit none
 
     integer :: i, j, k
@@ -109,9 +110,11 @@ contains
        b3_prev(i,j,k) = b3(i,j,k)
     enddo; enddo; enddo
 
+    iStage = 1
     tFactor = 0.5D0
     call update_states(tFactor)
     call p_init
+    iStage = 2 
     tFactor = 1.D0
     call update_states(tFactor)
 
@@ -172,7 +175,6 @@ contains
     enddo
 
     call p_init
-
     if (DoWriteDel) then
        write(idcpu,'(i4.4)') myid
        open(unit=17,file='emf.cpu'//idcpu//'.cond',form='unformatted', &
@@ -224,19 +226,13 @@ contains
             - emf2s(i,j,k+1)*dx2a(j)*g2a(i) &
             + emf2s(i,j,k)*dx2a(j)*g2a(i) ) &
             *g2ai(i)*g31ai(i)*g32bi(j)*dx2ai(j)*dx3ai(k)
-    enddo; enddo; enddo
-
-    !-----------------------------> Update b2 <-----------------------------
-    do k=ksm2,kep2; do j=jsm2,jep2; do i=ism2,iep2
+       !-----------------------------> Update b2 <-----------------------------             
        b2(i,j,k) = b2_prev(i,j,k) + tFactor*dt* &
             ( emf1s(i,j,k+1)*dx1a(i) - emf1s(i,j,k)*dx1a(i) &
             - emf3s(i+1,j,k)*dx3a(k)*g31a(i+1)*g32a(j) &
             + emf3s(i,j,k)*dx3a(k)*g31a(i)*g32a(j) ) &
             *g31bi(i)*g32ai(j)*dx1ai(i)*dx3ai(k)
-    enddo; enddo; enddo
-
-    !-----------------------------> Update b3 <-----------------------------
-    do k=ksm2,kep2; do j=jsm2,jep2; do i=ism2,iep2
+       !-----------------------------> Update b3 <-----------------------------             
        b3(i,j,k) = b3_prev(i,j,k) + tFactor*dt* &
             ( emf2s(i+1,j,k)*dx2a(j)*g2a(i+1) - emf2s(i,j,k)*dx2a(j)*g2a(i) &
             - emf1s(i,j+1,k)*dx1a(i) + emf1s(i,j,k)*dx1a(i) ) &

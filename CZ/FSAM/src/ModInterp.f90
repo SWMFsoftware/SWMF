@@ -7,6 +7,7 @@ module ModInterp
   public :: xtvd
   public :: xtvd_a
   public :: xint1d
+  public :: xint1d1
   public :: xzc1d
   public :: xdel
 
@@ -20,18 +21,9 @@ contains
     real, intent(in) :: x
     real, parameter :: w = 1.D-5
     !-------------------------------------------------------------------------------
-
-    if(x/w .gt. 10.D0) then
-       fq = 1.D0
-    else
-       if(x/w .lt. -10.D0) then
-          fq = -1.D0
-       else
-          fq = ( dexp(x/w) - dexp(-x/w) ) &
-               / ( dexp(x/w) + dexp(-x/w) )
-       endif
-    endif
-
+    
+    fq = tanh(x/w)
+    
   end function fq
 
   !===================================================================================
@@ -76,42 +68,46 @@ contains
 
   !===================================================================================
 
-  subroutine xtvd(iMax, ijkMax, dxa, dxbi, qint, dq, qlr)
+  subroutine xtvd(iMax, ijkMax, dxa, dxbi, qint, dq, qlr, dqint)
     implicit none
 
     integer, intent(in) :: iMax, ijkMax
     real, intent(in)    :: dxa(iMax), dxbi(iMax)
     real, intent(in)    :: qint(ijkMax)
-    real, intent(out)   :: dq(ijkMax),qlr(ijkMax)
+    real, intent(out)   :: dq(ijkMax),qlr(ijkMax), dqint(ijkMax)
 
     integer :: i, j, k
     real    :: dqi(iMax), dqim, dqip, ql, qr
     !-------------------------------------------------------------------------------
 
-    do i=2,iMax-2
-       dqim   = (qint(i  ) - qint(i-1) )*dxbi(i  )
+    dqim   = (qint(2  ) - qint(2-1) )*dxbi(2  )
+    dqip   = (qint(2+1) - qint(2  ) )*dxbi(2+1)
+    dqi(2) = sign(0.5d0, dqim)*&
+         max(0.d0, min(abs(dqim), sign(1.d0,dqim)*dqip))
+    dqim = dqip
+    do i=3,iMax-2
        dqip   = (qint(i+1) - qint(i  ) )*dxbi(i+1)
        dqi(i) = sign(0.5d0, dqim)*max(0.d0, min(abs(dqim), sign(1.d0,dqim)*dqip))
-    enddo
 
-    do i=3,iMax-2
-       ql     = qint(i-1) + dxa(i-1) * dqi(i-1)
-       qr     = qint(i  ) - dxa(i  ) * dqi(i  )
-       dq(i)  = qr - ql
-       qlr(i) = 0.5d0*(qr + ql)
+       ql = qint(i-1) + dxa(i-1)*dqi(i-1)
+       qr = qint(i)   - dxa(i)  *dqi(i)
+       dq(i) = qr - ql
+       dqint(i) = qint(i) - qint(i-1)
+       qlr(i)  = 0.5d0*(qr+ql)
+       dqim = dqip
     enddo
 
   end subroutine xtvd
 
   !==================================================================================
 
-  subroutine xtvd_a(iMax, ijkMax, dxa, dxai, qint, dq, qlr)
+  subroutine xtvd_a(iMax, ijkMax, dxa, dxai, qint, dq, qlr, dqint)
     implicit none
 
     integer, intent(in) :: iMax, ijkMax
     real, intent(in)    :: dxa(iMax), dxai(iMax)
     real, intent(in)    :: qint(ijkMax)
-    real, intent(out)   :: dq(ijkMax), qlr(ijkMax)
+    real, intent(out)   :: dq(ijkMax), qlr(ijkMax), dqint(ijkMax)
 
     integer :: i, j, k
     real    :: dqi(iMax), dqim, dqip, ql, qr
@@ -126,6 +122,7 @@ contains
     do i=2,iMax-2
        ql     = qint(i  ) + dxa(i  )*dqi(i  )
        qr     = qint(i+1) - dxa(i  )*dqi(i+1)
+       dqint(i) = qint(i+1) -  qint(i  )
        dq(i)  = qr - ql
        qlr(i) = 0.5d0*(qr + ql)
     enddo
@@ -188,16 +185,55 @@ contains
     do  i = 3, iMax-2
        q1      = b(i-1) + dxa(i-1)*dbi(i-1)
        q2      = b(i  ) - dxa(i  )*dbi(i  )
-       xi      = vfl(i)*gfact
-       bint(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xi*dxbi(i))*(q2 - q1)
+       xi      = fq(vfl(i)*gfact*dxbi(i))
+       bint(i) = 0.5d0*(q1 + q2) - 0.5d0*xi*(q2 - q1)
        q1      = v(i-1) + dxa(i-1)*dvi(i-1)
        q2      = v(i  ) - dxa(i  )*dvi(i  )
-       vint(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xi*dxbi(i))*(q2 - q1)
+       vint(i) = 0.5d0*(q1 + q2) - 0.5d0*xi*(q2 - q1)
     enddo
 
     return
 
   end subroutine xint1d
+
+   subroutine xint1d1(iMax, b, v, vfl, gfact, dxbi, dxa,  bint, vint, dbint)
+    use ModPar,    ONLY: tiny, ijkn
+    implicit none
+
+    integer, intent(in) :: iMax
+    real, intent(in),  dimension(1:ijkn) :: b, v, vfl
+    real, intent(out), dimension(1:ijkn) :: bint, vint, dbint
+    real, intent(in) :: gfact, dxbi(iMax), dxa(iMax)
+
+    integer :: i
+    real    ::  q1, q2, xi, dqm, dqp, dvi(iMax), dbi(iMax)
+    !-------------------------------------------------------------------------------                            
+
+    do  i = 2, iMax-2
+       dqm   = (b(i  ) - b(i-1))*dxbi(i  )
+       dqp   = (b(i+1) - b(i  ))*dxbi(i+1)
+       dbi(i) = max(dqm*dqp, 0.d0)*sign(1.d0, dqm + dqp)/max(abs(dqm + dqp), tiny)
+       dqm   = (v(i  ) - v(i-1))*dxbi(i  )
+       dqp   = (v(i+1) - v(i  ))*dxbi(i+1)
+       dvi(i) = max(dqm*dqp, 0.d0)*sign(1.d0, dqm + dqp)/max(abs(dqm + dqp), tiny)
+    enddo
+
+    do  i = 3, iMax-2
+       q1      = b(i-1) + dxa(i-1)*dbi(i-1)
+       q2      = b(i  ) - dxa(i  )*dbi(i  )
+       dbint(i) = q2 - q1
+       xi      = fq(vfl(i)*gfact*dxbi(i))
+       bint(i) = 0.5d0*(q1 + q2) - 0.5d0*xi*(q2 - q1)
+       q1      = v(i-1) + dxa(i-1)*dvi(i-1)
+       q2      = v(i  ) - dxa(i  )*dvi(i  )
+       vint(i) = 0.5d0*(q1 + q2) - 0.5d0*xi*(q2 - q1)
+    enddo
+
+    return
+
+  end subroutine xint1d1
+
+
 
   !================================================================================== 
 
@@ -228,14 +264,14 @@ contains
     do i = 3, iMax-2
        q1      = b(i-1) + dxa(i-1)*dbi(i-1)
        q2      = b(i  ) - dxa(i  )*dbi(i  )
-       xip     = vp(i)*gfact
-       bpch(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xip*dxbi(i))*(q2 - q1)
-       xim     = vm(i)*gfact
-       bmch(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xim*dxbi(i))*(q2 - q1)
+       xip     = fq(vp(i)*gfact*dxbi(i))
+       bpch(i) = 0.5d0*(q1 + q2) - 0.5d0*xip*(q2 - q1)
+       xim     = fq(vm(i)*gfact*dxbi(i))
+       bmch(i) = 0.5d0*(q1 + q2) - 0.5d0*xim*(q2 - q1)
        q1      = v(i-1) + dxa(i-1)*dvi(i-1)
        q2      = v(i  ) - dxa(i  )*dvi(i  )
-       vpch(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xip*dxbi(i))*(q2 - q1)
-       vmch(i) = 0.5d0*(q1 + q2) - 0.5d0*fq(xim*dxbi(i))*(q2 - q1)
+       vpch(i) = 0.5d0*(q1 + q2) - 0.5d0*xip*(q2 - q1)
+       vmch(i) = 0.5d0*(q1 + q2) - 0.5d0*xim*(q2 - q1)
     enddo
 
     if(present(DoBc))then

@@ -56,13 +56,15 @@ contains
     use ModPar
     use ModGrid
     use ModField,     ONLY: v1, v2, v3
-    use ModBoundary,  ONLY: noib
+    use ModBoundary,  ONLY: niib, noib
     implicit none
 
     integer idtop, idbot
+    integer j, k
     real, allocatable :: recvtop(:,:,:), recvbot(:,:,:)
+    real :: v3jmean(jn)
     !---------------------------------------------------------------------------
-    
+
     !------------------ i - boundary ----------------------
     idtop = myid1 + 1 + nproc1*myid2
     idbot = myid1 - 1 + nproc1*myid2
@@ -101,6 +103,33 @@ contains
        v2(ism2,js:je,ks:ke) = g2bi(isp1)/g2bi(ism2)*v2(isp1,js:je,ks:ke)
        v3(ism1,js:je,ks:ke) = g31bi(is)  /g31bi(ism1)*v3(is,  js:je,ks:ke)
        v3(ism2,js:je,ks:ke) = g31bi(isp1)/g31bi(ism2)*v3(isp1,js:je,ks:ke)
+       if(niib .eq. 6 .or. niib .eq. 9) then
+          do j=js,je
+             v3jmean(j)=0.d0
+             do k=ks,ke
+                v3jmean(j)=v3jmean(j)+v3(is,j,k)
+             enddo
+             v3jmean(j)=v3jmean(j)/dble(kn-5)
+             do k=ks,ke
+                v3(is,j,k) = v3(is,j,k)-v3jmean(j)
+                v3(ism1,j,k) = g31bi(is)  /g31bi(ism1)*v3(is,j,k)
+                v3(ism2,j,k) = g31bi(isp1)/g31bi(ism2)*v3(isp1,j,k)
+             enddo
+          enddo
+       endif
+       if(niib .eq. 7) then
+          do j=js,je
+             v3jmean(j)=0.d0
+             do k=ks,ke
+                v3jmean(j)=v3jmean(j)+v3(ism1,j,k)
+             enddo
+             v3jmean(j)=v3jmean(j)/dble(kn-5)
+             do k=ks,ke
+                v3(ism1,j,k) = v3(ism1,j,k)-v3jmean(j)
+                v3(ism2,j,k) = g31bi(ism1)/g31bi(ism2)*v3(ism1,j,k)
+             enddo
+          enddo
+       endif
     endif
     ! Outer i boundary.
     if(myid1 .eq. nproc1-1) then
@@ -203,7 +232,8 @@ contains
     implicit none
 
     integer :: idtop, idbot
-    real  :: smeanbot, smeantop
+    integer :: j, k
+    real  :: smeanbot, smeantop, sjmean(jn)
     real, allocatable :: recvtop(:,:,:), recvbot(:,:,:)
     !---------------------------------------------------------
     !------------------ i - boundary -----------------
@@ -225,9 +255,24 @@ contains
           s(ism1,js:je,ks:ke) = 2.D0*siib1(js:je,ks:ke) - s(  is,js:je,ks:ke)
           s(ism2,js:je,ks:ke) = 2.D0*siib1(js:je,ks:ke) - s(isp1,js:je,ks:ke)
        else
-          s(  is,js:je,ks:ke) = smeanbot + siib1(js:je,ks:ke)
-          s(ism1,js:je,ks:ke) = s(  is,js:je,ks:ke)
-          s(ism2,js:je,ks:ke) = s(isp1,js:je,ks:ke)
+          if((niib .eq. 6).or.(niib .eq. 8)) then
+             s(ism1,js:je,ks:ke) = s(  is,js:je,ks:ke)
+             s(ism2,js:je,ks:ke) = s(isp1,js:je,ks:ke)
+          else
+             do j=js,je
+                sjmean(j)=0.d0
+                do k=ks,ke
+                   sjmean(j)=sjmean(j)+s(is,j,k)
+                enddo
+                sjmean(j)=sjmean(j)/dble(kn-5)
+                do k=ks,ke
+!                  s(  is,j,k) = smeanbot + siib1(j,k) + s(is,j,k) - sjmean(j)
+                   s(  is,j,k) = smeanbot + siib1(j,k)
+                   s(ism1,j,k) = s(  is,j,k)
+                   s(ism2,j,k) = s(isp1,j,k)
+                enddo
+             enddo
+          endif
        endif
     endif
     ! Outer i boundary
@@ -287,7 +332,7 @@ contains
     integer :: idtop, idbot
     real, allocatable :: recvtop(:,:,:), recvbot(:,:,:)
     !---------------------------------------------------------------------------
-    
+
     !------------------ i - boundary -----------------
     idtop = myid1 + 1 + myid2*nproc1
     idbot = myid1 - 1 + myid2*nproc1
@@ -335,7 +380,7 @@ contains
     integer :: idtop, idbot
     real, allocatable :: recvtop(:,:,:), recvbot(:,:,:)
     !----------------------------------------------------------------------------
-    
+
     !------------------ i - boundary -----------------
     idtop = myid1 + 1 + myid2*nproc1
     idbot = myid1 - 1 + myid2*nproc1

@@ -121,7 +121,7 @@ program xfsam
            write(16,'(i8,13e23.14,i8)') itnow,time,dt,em,ek,eth, &
                 ek+eth+em,smeanbot,smeantop,anglm,anglmnorm, ek1,ek2,ek3,ntcond
            call flush_unit(16)
-           update_rate = itintv*inmax*jnmax*knmax/nproc/(wtnow - wtprev)
+           update_rate = itintv*(inmax-5)*(jnmax-5)*(knmax-5)/nproc/(wtnow - wtprev)
            write(6,'(a,I7,a,I9)') ' Grid cell updates per CPU sec = ', &
                 update_rate, ' at iteration = ', itnow
            wtprev = wtnow

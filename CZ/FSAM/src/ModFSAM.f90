@@ -5,5 +5,5 @@ module modfsam
   logical :: IsStandAlone = .false.
   logical :: DoRestart
   logical :: ErrPSolv = .true.
-
+  integer :: iStage 
 end module modfsam

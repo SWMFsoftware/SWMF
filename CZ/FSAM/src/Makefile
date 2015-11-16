@@ -19,6 +19,7 @@ MODULES = \
 	ModBoundary.o \
 	ModField.o \
 	ModDel.o \
+	ModWork.o \
 	ModInterp.o \
 	ModIoFSAM.o \
 	ModGetQtys.o \

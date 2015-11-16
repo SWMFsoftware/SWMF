@@ -7,6 +7,7 @@ module ModBack
   real, dimension(1:inmax) :: d0, gacc_str, hp, ovhp, gamma, temp0, s0
   real, dimension(1:inmax) :: fact, ovdxxb, ovrth, ovrevar, ovrmvar
   real, dimension(1:inmax) :: kappa, heatrad, radflux
+  real :: sr0(1:inmax)=0.D0
   real :: ovbvfq
   
   ! parameter for k quenching: bquench_k
