@@ -63,6 +63,11 @@ ParticleWeightCorrectionMode=off !on,off
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+  SaveParticleRestartFile=on \\  !on,off
+    file=ParticleData.restart=223 \\
+    SaveMode=newfile  \\ !overwrite, newfile
+    IterationInterval=20
+
 #endGeneral
 
 #ParticleCollisions 
