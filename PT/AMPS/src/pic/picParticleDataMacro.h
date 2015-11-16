@@ -39,19 +39,8 @@
 // SET OF OPTIONAL PARAMETERS CARRIED BY A PARTICLE
 //-----------------------------------------------------------------------------
 // below is the list of all parameters that can be carried by a particle;
-// all are turned off by default,
+// all are turned off by default (see picGlobal.dfn),
 // user can turn parameter on via input file by enabling corresponding mode
-//-----------------------------------------------------------------------------
-// Optional parameter: the individual particle's weight corection
-#define _USE_WEIGHT_CORRECTION_ _PIC_MODE_OFF_
-// Optional parameter: dust grain mass
-#define _USE_DUST_GRAIN_MASS_   _PIC_MODE_OFF_
-// Optional parameter: dust grain radius
-#define _USE_DUST_GRAIN_RADIUS_ _PIC_MODE_OFF_
-// Optional parameter: dust grain charge
-#define _USE_DUST_GRAIN_CHARGE_ _PIC_MODE_OFF_
-// Optional parameter: magnetic moment of a particle
-#define _USE_MAGNETIC_MOMENT_   _PIC_MODE_OFF_
 //-----------------------------------------------------------------------------
 
 // determine which optional parameter WILL be carried by particles
