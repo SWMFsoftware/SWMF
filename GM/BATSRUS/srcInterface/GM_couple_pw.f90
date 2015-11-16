@@ -98,13 +98,11 @@ contains
     use CON_planet_field,  ONLY: map_planet_field
     use ModIoUnit, ONLY: UnitTmp_
 
-    character (len=*),parameter :: NameSub='GM_put_from_pw'
-
     integer, parameter :: Theta_=1, Phi_=2
 
-    integer, intent(in)           :: nVar, nFieldLine
-    real, intent(in)              :: Buffer_VI(nVar, nFieldLine)
-    character (len=*), intent(in) :: Name_V(nVar)
+    integer,          intent(in):: nVar, nFieldLine
+    real,             intent(in):: Buffer_VI(nVar, nFieldLine)
+    character(len=*), intent(in):: Name_V(nVar)
 
     logical, save :: DoInitialize = .true.
 
@@ -113,11 +111,15 @@ contains
          SinThetaOuter1,SinThetaOuter2,CosThetaOuter1,CosThetaOuter2,&
          tmp1_array(nFieldLine)
     integer :: Tmp_array(nFieldLine)
-    logical :: DoTest, DoTestMe
     integer :: iError=0 !error counter for triangulation subroutine
-    !-------------------------------------------------------------------------
 
+    logical :: DoTest, DoTestMe
+    character (len=*),parameter :: NameSub='GM_put_from_pw'
+    !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe)write(*,*) NameSub,' starting: nVar, nFieldLine, Name_V=', &
+         nVar, nFieldLine, Name_V
 
     ! If only 2 variables are passed, they are the coordinates colatitude 
     ! and longitude needed for the GM->PW pressure coupling.
@@ -165,6 +167,13 @@ contains
 
        nLinePw2 = nLinePw - nLinePw1
        nPoint2 = nLinePw2 + nOuterPoint
+
+       if(DoTestMe)then
+          write(*,*) NameSub,' nVarPw, nLinePw, nOuterPoint, nPoint=',&
+               nVarPw, nLinePw, nOuterPoint, nPoint
+          write(*,*) NameSub,' nLinePw1, nLinePw2, nPoint1, nPoint2=',&
+               nLinePw1, nLinePw2, nPoint1, nPoint2
+       end if
 
        ! Subtract 2 coords and half of the remaining variables are velocities
        nSpeciesPw = (nVar-2)/2
@@ -221,23 +230,33 @@ contains
           iUGmLast    = 2
        end if
 
-       allocate(StateGm1_VI(1:iUGmLast, nPoint), CoordXyzPw1_DI(nCoord, nPoint), &
-            list1_I(6*(nPoint1-2)),lptr1_I(6*(nPoint1-2)), lend1_I(nPoint1))
-       allocate(StateGm2_VI(1:iUGmLast, nPoint), CoordXyzPw2_DI(nCoord, nPoint))
-       !Initialize Arrays to zero
-       StateGm1_VI(:,:) =0.0
-       StateGm2_VI(:,:) =0.0
-       CoordXyzPw1_DI(:,:)=0.0
-       CoordXyzPw2_DI(:,:)=0.0
-       list1_I(:)=0
-       !list2_I(:)=0
-       lend1_I(:)=0
-       !lend2_I(:)=0
-       lptr1_I(:)=0
-       !lptr2_I(:)=0
-       if(nLinePw2 /=0)then
-          allocate(list2_I(6*(nPoint1-2)),lptr2_I(6*(nPoint1-2)), &
-               lend2_I(nPoint1))
+       allocate( &
+            StateGm1_VI(iUGmLast,nPoint), &
+            CoordXyzPw1_DI(nCoord,nPoint), &
+            StateGm2_VI(iUGmLast,nPoint), &
+            CoordXyzPw2_DI(nCoord,nPoint), &
+            list1_I(6*(nPoint1-2)), &
+            lptr1_I(6*(nPoint1-2)), &
+            lend1_I(nPoint1))
+
+       ! Initialize arrays to zero
+       StateGm1_VI    = 0
+       CoordXyzPw1_DI = 0
+       StateGm2_VI    = 0
+       CoordXyzPw2_DI = 0
+       list1_I = 0
+       lend1_I = 0
+       lptr1_I = 0
+
+       if(nLinePw2 > 0) then
+          ! Southern hemisphere
+          allocate( &
+               list2_I(6*(nPoint2-2)), &
+               lptr2_I(6*(nPoint2-2)), &
+               lend2_I(nPoint2))
+          list2_I = 0
+          lend2_I = 0
+          lptr2_I = 0
        end if
     end if
 
@@ -248,11 +267,21 @@ contains
     end if
 
     ! Convert to X, Y on a unit sphere (this will be used for triangulation)
-    CoordXyzPw2_DI(x_,:) = sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
-    CoordXyzPw2_DI(y_,:) = sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
-    CoordXyzPw2_DI(z_,:) = cos(Buffer_VI(Theta_,:))
-    ! Works for both hemispheres:
-    CoordXyzPw1_DI = CoordXyzPw2_DI
+    where(Buffer_VI(Theta_,:) > cHalfPi)
+       CoordXyzPw2_DI(x_,1:nFieldline) =  &
+            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+       CoordXyzPw2_DI(y_,1:nFieldline) =  &
+            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+       CoordXyzPw2_DI(z_,1:nFieldline) =  &
+            cos(Buffer_VI(Theta_,:)) 
+    elsewhere
+       CoordXyzPw1_DI(x_,1:nFieldline) =  &
+            sin(Buffer_VI(Theta_,:)) * cos(Buffer_VI(Phi_,:))
+       CoordXyzPw1_DI(y_,1:nFieldline) =  &
+            sin(Buffer_VI(Theta_,:)) * sin(Buffer_VI(Phi_,:))
+       CoordXyzPw1_DI(z_,1:nFieldline) =  &
+            cos(Buffer_VI(Theta_,:)) 
+    end where
 
     if(UseMultiIon)then
        do i = iRhoGmFirst, iRhoGmLast
@@ -385,10 +414,8 @@ contains
             ' ERROR: Error in TRMESH, Duplicate nodes encountered'
        call CON_stop(NameSub,' Problem With Triangulation')
     end if
-    !
 
-
-    if(nLinePw2 /=0)then
+    if(nLinePw2 > 0)then
        call trmesh ( nPoint2, CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
             CoordXyzPW2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
@@ -426,17 +453,17 @@ contains
             CoordXyzPw1_DI(z_,1:nPoint1), list1_I, lptr1_I, &
             lend1_I, 'test1 triangulation',.true., iError )
        close(UnitTmp_)
-       ! Southern Hemi
-       open ( UnitTmp_, file = 'TestTriangulation_South.eps' )
-       call trplot ( UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
-            CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
-            CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
-            CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
-            list2_I, lptr2_I, lend2_I, 'test1 triangulation',.true., iError )
-       close(UnitTmp_)
+       if(nLinePw2 > 0)then
+          ! Southern Hemi
+          open ( UnitTmp_, file = 'TestTriangulation_South.eps' )
+          call trplot ( UnitTmp_, 7.5, -90.0, 0.0, 90.0, nPoint2, &
+               CoordXyzPw2_DI(x_,nLinePw1+1:nLinePw1+nPoint2), &
+               CoordXyzPw2_DI(y_,nLinePw1+1:nLinePw1+nPoint2), &
+               CoordXyzPw2_DI(z_,nLinePw1+1:nLinePw1+nPoint2), &
+               list2_I, lptr2_I, lend2_I, 'test1 triangulation',.true., iError )
+          close(UnitTmp_)
+       end if
     end if
-
-
 
   end subroutine GM_put_from_pw
 
