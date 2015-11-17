@@ -91,7 +91,7 @@ void ElectricallyChargedDust::Sampling::FluxMap::cSampleLocation::SetLocation(do
   //save the location and determine the node
   for (idim=0;idim<3;idim++) x[idim]=xLocation[idim];
 
-  node=PIC::Mesh::mesh.findTreeNode(x);
+  if ((node=PIC::Mesh::mesh.findTreeNode(x))==NULL) exit(__LINE__,__FILE__,"Error: the location of the sampling point is not found");
   PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,node);
 
   //determine lon and lat of the secondary direction
