@@ -87,26 +87,28 @@ contains
 
     case("#SEMIPRECONDITIONER", "#SEMIPRECOND")
        call read_var('DoPrecond',   SemiParam%DoPrecond)
-       call read_var('TypePrecond', SemiParam%TypePrecond, IsUpperCase=.true.)
-       select case(SemiParam%TypePrecond)
-       case('HYPRE')
-       case('JACOBI')
-          SemiParam%PrecondParam = Jacobi_
-       case('BLOCKJACOBI')
-          SemiParam%PrecondParam = BlockJacobi_
-       case('GS')
-          SemiParam%PrecondParam = GaussSeidel_
-       case('DILU')
-          SemiParam%PrecondParam = Dilu_
-       case('BILU')
-          SemiParam%PrecondParam = Bilu_
-       case('MBILU')
-          call read_var('GustafssonPar', SemiParam%PrecondParam)
-          SemiParam%PrecondParam = -SemiParam%PrecondParam
-       case default
-          call stop_mpi(NameSub//' invalid TypePrecond='// &
-               SemiParam%TypePrecond)
-       end select
+       if(SemiParam%DoPrecond)then
+          call read_var('TypePrecond', SemiParam%TypePrecond, IsUpperCase=.true.)
+          select case(SemiParam%TypePrecond)
+          case('HYPRE')
+          case('JACOBI')
+             SemiParam%PrecondParam = Jacobi_
+          case('BLOCKJACOBI')
+             SemiParam%PrecondParam = BlockJacobi_
+          case('GS')
+             SemiParam%PrecondParam = GaussSeidel_
+          case('DILU')
+             SemiParam%PrecondParam = Dilu_
+          case('BILU')
+             SemiParam%PrecondParam = Bilu_
+          case('MBILU')
+             call read_var('GustafssonPar', SemiParam%PrecondParam)
+             SemiParam%PrecondParam = -SemiParam%PrecondParam
+          case default
+             call stop_mpi(NameSub//' invalid TypePrecond='// &
+                  SemiParam%TypePrecond)
+          end select
+       end if
     case("#SEMIKRYLOV")
        call read_var('TypeKrylov', SemiParam%TypeKrylov, IsUpperCase=.true.)
        call read_var('ErrorMax', SemiParam%ErrorMax)
