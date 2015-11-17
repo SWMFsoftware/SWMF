@@ -999,10 +999,10 @@ if (defined $MARKER__RESERVE_CELL_SAMPLING_DATA_BUFFER) {
 }
   
 #extract and redefine the Europa's model related variables from '.ampConfig.Settings' ('.ampConfig.Settings. is created by Config.pl)
-if (-e ".ampsConfig.Settings") {
+if (-e ".amps.conf") {
   my @Settings;
 
-  open (AMPSSETTINGS,".ampsConfig.Settings") || die "Cannot open file\n";
+  open (AMPSSETTINGS,".amps.conf") || die "Cannot open file\n";
   @Settings=<AMPSSETTINGS>;
   close (AMPSSETTINGS);
 
