@@ -20,7 +20,14 @@
 #define _DUST__CHARGING_MODE_  _DUST__CHARGING_MODE__OFF_
 
 
-
+//define macros the defines which forces are applicable to the dust in the simulation
+//the macros are defined here primarely for convenience since they will be used in the used-defined functions for the 
+//dust acceleration
+#define _DUST__FORCE__GRAVITY__MODE_             _PIC_MODE_OFF_
+#define _DUST__FORCE__FRAME_ROTATION__MODE_      _PIC_MODE_OFF_
+#define _DUST__FORCE__RADIATION_PRESSURE__MODE_  _PIC_MODE_OFF_
+#define _DUST__FORCE__LORENTZ_FORCE__MODE_       _PIC_MODE_OFF_  
+#define _DUST__FORCE__DRAG_FORCE__MODE_          _PIC_MODE_OFF_  
 
 
 #endif
