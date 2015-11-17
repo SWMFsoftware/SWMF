@@ -95,10 +95,6 @@ print "Preprocessing AMPS sources\n";
 #default values for different modes
 add_line_makefile_local("INTERFACE=off",1);
 
-#read settings from .amps.conf
-if (-e ".amps.conf") {
-  ampsConfigSettings();
-}
 
 die "ERROR: Application hasn't been set!\n" unless $InputFileName;
 
@@ -128,6 +124,11 @@ while ($line=<InputFile>) {
   if ($InputLine eq "#MAIN") {
     $loadedFlag_MainBlock=1;
     ReadMainBlock();
+    
+    #read settings from .amps.conf
+    if (-e ".amps.conf") {
+      ampsConfigSettings();
+    }
   }
   elsif ($InputLine eq "#SPECIES") {
     $loadedFlag_SpeciesBlock=1;
