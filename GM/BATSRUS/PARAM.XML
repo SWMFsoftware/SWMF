@@ -2092,30 +2092,31 @@ If UseSemiImplicit is true then most of the terms are evaluated explicitly,
 but some of them are evaluated implicitly. 
 
 The TypeSemiImplicit parameter determines which terms and corresponding 
-variables are done semi-implicitly. The "radiation" option solves for the 
-gray or multigroup diffusion energy density. For gray diffusion the 
-internal energy and pressure is calculated in a point implicit manner. 
+variables are done semi-implicitly. 
+
+The "radiation" option solves for the gray or multigroup diffusion
+energy density. For gray diffusion the internal energy and pressure is
+calculated in a point implicit manner.
+To use gray diffusion configure BATSRUS with Config.pl -nWave=1.
+To use the multi-group radiation set nWave larger than one.
 
 The "radiationsplit" option solves each radiation group separately.
 The energy exchange term is calculated point-implicitly. The
 internal energy is updated in a conservative way.
 
-The "radcond" option solves implicitly the radiation diffusion
-and electron heat conduction together with
-the radiation and internal energy densities being the unknowns.
-To use gray diffusion configure BATSRUS with the default:
-Config.pl -nWave=1
-To use the multi-group radiation select nWave larger than one.
+The "radcond" option solves implicitly the radiation diffusion and
+electron heat conduction together with the radiation and internal
+energy densities being the unknowns.
 
-The "radcondsplit" option will solve each radiation group and the 
-electrons separately...
+The "radcondsplit" option solves each radiation group and the 
+electrons heat conduction separately.
 
 The "parcond" option solves for field aligned electron heat conduction only.
 
 The "cond" option solves for electron heat conduction only.
 
-The "resistivity" option solves for the magnetic field with
-dissipative and/or Hall Resistivity.
+The "resistivity" option solves for the magnetic field with dissipative 
+and/or Hall resistivity. 
 
 The default is UseSemiImplicit false.
 </command>
@@ -6997,7 +6998,7 @@ so there is no masking applied.
 #HALLRESISTIVITY
 T		UseHallResist (rest of parameters read only if true)
 1.0		HallFactorMax
-0.5		HallCmaxFactor
+0.1		HallCmaxFactor
 
 If UseHallResist is true the Hall resistivity is used.
 
@@ -7015,8 +7016,10 @@ of the one or two-stage explicit scheme
 (unless the whistler speed is very small and/or the diagonal part of 
 the resistivity tensor is dominant). 
 For 3 and 4-stage explicit schemes (see the #RK command) and also
-for the implicit time stepping the HallCmaxFactor can be reduced, 
-possibly all the way to zero to minimize the discretization errors.
+for the semi-implicit and implicit time stepping the HallCmaxFactor 
+can be reduced, possibly all the way to zero to minimize the discretization 
+errors. If the (semi-)implicit scheme does not converge well, using
+HallCmaxFactor larger than zero (for example 0.1) can help.
 
 Default is UseHallResist false.
 </command>
