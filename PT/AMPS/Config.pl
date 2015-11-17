@@ -135,6 +135,7 @@ foreach (@Arguments) {
   if (/^-np=(.*)$/i)         {$TestRunProcessorNumber=$1;     next};
   if (/^-spice-path=(.*)$/i)      {
       add_line_amps_conf("SPICE=$1");
+      `echo SPICE=$1 >> Makefile.local`;
       next}; 
   if (/^-spice-kernels=(.*)$/i)    {
       add_line_amps_conf("SPICEKERNELS=$1");
