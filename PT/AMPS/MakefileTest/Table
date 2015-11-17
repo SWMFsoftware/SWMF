@@ -77,6 +77,18 @@ Name=Moon
 <#
 
 #>
+Name=Moon-restart
+Run=
+>>>@echo "Copying restart files created by the test_Moon to the run directory of test_Moon-restart..." >> test_Moon-restart.diff
+>>>cp ${TESTMoonDIR}/ParticleData.restart* ${TESTMoon-restartDIR}
+>>>@echo "Copying restart files... done" >> test_Moon-restart.diff
+>>>@echo "test_Moon-restart_run..." >> test_Moon-restart.diff
+>>>cd ${TESTMoon-restartDIR}; ${MPIRUN} ./amps
+>>>mv ${TESTMoon-restartDIR}/PT/plots/test_Moon.dat ${TESTMoon-restartDIR}/PT/plots/test_Moon-restart.dat 
+>>>@echo "test_Moon-restart_run... done" >> test_Moon-restart.diff
+<#
+
+#>
 Name=test/ices-reader(0+srbwks2014-0079+srbwks73465-01) 
 Keys=-ices-path=/Users/vtenishe/ices/ICES/Models(0+srbwks2014-0079)
 Keys=-ices-path=/Users/dborovik/MyICES/ICES(0+srbwks73465-01)
