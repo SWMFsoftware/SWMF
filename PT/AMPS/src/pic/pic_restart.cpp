@@ -282,7 +282,7 @@ void PIC::Restart::ReadParticleDataBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*
     fread(&nTotalParticleNumber,sizeof(int),1,fRestart);
 
     if (nTotalParticleNumber!=0) {
-      if (node->block!=NULL) {
+      if (node->Thread==PIC::ThisThread) { ///(node->block!=NULL) {
         //read the data for this block
         fread(&ParticleNumberTable[0][0][0],sizeof(int),_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_,fRestart);
         memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
