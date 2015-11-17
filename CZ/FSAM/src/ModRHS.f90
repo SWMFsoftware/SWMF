@@ -195,7 +195,7 @@ contains
 
     nlf   = nlf_v
     alpha = alpha_v
-    do i=is,iep1
+    do i=ism1,iep1
        temp0m(i) = 0.5d0*(temp0(i-1+myid1*(in-5)) + temp0(i+myid1*(in-5)))
        d0m(i)    = 0.5d0*(d0(i-1+myid1*(in-5)) + d0(i+myid1*(in-5)))
     enddo
