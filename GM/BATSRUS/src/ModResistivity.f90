@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-
 module ModResistivity
 
   ! Resistivity related variables and methods
@@ -60,6 +59,9 @@ module ModResistivity
   ! B/ne vector for Hall Resistivity
   real, allocatable :: Bne_DFDB(:,:,:,:,:,:)
 
+  ! Whistler diffusion coefficients.
+  real, allocatable :: WhistlerCoeff_FDB(:,:,:,:,:)
+  
   ! Named indices for semi-implicit variables
   integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
@@ -122,7 +124,6 @@ contains
 
   subroutine init_mod_resistivity
 
-    use ModImplicit, ONLY: UseSemiImplicit, TypeSemiImplicit
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_, UnitJ_
     use ModConst,    ONLY: cLightSpeed, cElectronCharge, &
          cElectronMass, cEps, cBoltzmann, cTwoPi
@@ -473,13 +474,12 @@ contains
   subroutine calc_heat_exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, &
-         BlkTest, PROCTest, iTest, jTest, kTest
+         BlkTest, iTest, jTest, kTest
     use ModGeometry,   ONLY: true_cell
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
     use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure
     use ModEnergy,     ONLY: calc_energy_cell
-    use ModProcMH,     ONLY: iProc
 
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
@@ -580,8 +580,7 @@ contains
   subroutine get_impl_resistivity_state(SemiAll_VCB)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &
-         TypeSemiImplicit
+    use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
     use BATL_lib, ONLY: nBlock, Unused_B
 
@@ -633,10 +632,9 @@ contains
 
     use BATL_lib,        ONLY: IsCartesian, message_pass_cell, &
          CellFace_DB, FaceNormal_DDFB, nBlock, Unused_B
-    use ModAdvance,      ONLY: State_VGB
     use ModNumConst,     ONLY: i_DD
 
-    integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
+    integer:: iDim, i, j, k, Di, Dj, Dk, iBlock
     real:: Eta
     real:: FaceNormal_D(nDim)
 
@@ -676,19 +674,25 @@ contains
   !===========================================================================
   subroutine init_impl_hall_resist
 
-    use BATL_lib,        ONLY: nBlock, Unused_B
+    use BATL_lib,        ONLY: nBlock, Unused_B, IsCartesian, &
+         Xyz_DGB, CellSize_DB, CellFace_DB, FaceNormal_DDFB
     use ModAdvance,      ONLY: State_VGB
     use ModMain,         ONLY: UseB0
-    use ModNumConst,     ONLY: i_DD
-    use ModVarIndexes,   ONLY: Rho_, Bx_, Bz_
+    use ModNumConst,     ONLY: i_DD, cPi
+    use ModVarIndexes,   ONLY: Bx_, Bz_
+    use ModMultiFluid,   ONLY: iRhoIon_I
     use ModB0,           ONLY: B0_DGB
     use ModHallResist,   ONLY: UseHallResist, &
-         set_hall_factor_face, HallFactor_DF, IsHallBlock
+         set_hall_factor_face, HallFactor_DF, IsHallBlock, HallCmaxFactor
 
     integer:: iDim, i, j, k, Di, Dj, Dk, i1, j1, k1, iBlock
 
     real:: HallCoeff, Rho, b_D(MaxDim)
 
+    real:: InvDxyz
+    
+    real:: FaceNormal_D(nDim)
+    
     character(len=*), parameter:: NameSub = 'init_impl_resistivity'
     !------------------------------------------------------------------------
     if(.not.UseHallResist) RETURN
@@ -697,6 +701,10 @@ contains
     if(.not.allocated(Bne_DFDB)) &
          allocate(Bne_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
 
+    ! Whistler diffusion coefficient
+    if(HallCmaxFactor > 0 .and. .not.allocated(WhistlerCoeff_FDB)) &
+         allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
+    
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -707,6 +715,10 @@ contains
 
        do iDim = 1, nDim
           Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          if(HallCmaxFactor > 0 .and.  IsCartesian) then
+             InvDxyz = 1./CellSize_DB(iDim,iBlock)
+             FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
+          end if
           do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
 
              ! Check if the Hall coefficient is positive for this face
@@ -716,9 +728,10 @@ contains
              ! Cell center indexes for the cell on the left of the face
              i1 = i-Di; j1 = j-Dj; k1 = k - Dk
 
-             ! Average rho and B to the face
-             Rho = 0.5*(State_VGB(Rho_,i1,j1,k1,iBlock) &
-                  +     State_VGB(Rho_,i,j,k,iBlock)    )
+             ! Average rho and B to the face 
+             ! NOTE: HallCoeff is normalized to total ion mass density
+             Rho = 0.5*(sum(State_VGB(iRhoIon_I,i1,j1,k1,iBlock)) &
+                  +     sum(State_VGB(iRhoIon_I,i, j, k, iBlock)) )
 
              b_D = 0.5*(State_VGB(Bx_:Bz_,i1,j1,k1,iBlock) &
                   +     State_VGB(Bx_:Bz_,i,j,k,iBlock)    )
@@ -731,6 +744,25 @@ contains
 
              ! Calculate B/ne for the face
              Bne_DFDB(:,i,j,k,iDim,iBlock) = HallCoeff*b_D/Rho
+
+             if(HallCmaxFactor > 0) then
+                if(.not. IsCartesian) then
+                   InvDxyz = 1.0/sqrt( sum( &
+                        ( Xyz_DGB(:, i, j, k, iBlock)&
+                        - Xyz_DGB(:, i1, j1, k1, iBlock))**2) )
+                   FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
+                endif
+                ! Diffuse the linear stage by 
+                ! 0.5*HallCmaxFactor*c_whistler (like first order TVD).
+                ! The whistler speed in the face normal direction is
+                ! c_whistler = HallFactor * |B_normal| * pi/(rho*dx)
+                ! Store the coefficient for the diffusive flux 
+                ! F_i+1=D*(B_i+1 - B_i)
+                ! D = |Area*B_{norm}|*pi*HallCmaxFactor/(2*ne*dx)
+                WhistlerCoeff_FDB(i,j,k,iDim,iBlock) = HallCmaxFactor*0.5* &
+                     abs(sum(FaceNormal_D*Bne_DFDB(1:nDim,i,j,k,iDim,iBlock)))&
+                     *cPi*InvDxyz
+             end if
           end do; end do; end do
        end do
     end do
@@ -749,6 +781,7 @@ contains
     use ModNumConst,     ONLY: i_DD
     use ModSize,         ONLY: x_, y_, z_
     use ModGeometry,     ONLY: true_cell, true_BLK
+    use ModHallResist,   ONLY: HallCmaxFactor
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -835,6 +868,15 @@ contains
                   FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) &
                   - Jnormal*Bne_DFDB(:,i,j,k,iDim,iBlock) &
                   + BneNormal*Current_D
+
+             ! Add whistler diffusion in the linear phase.
+             ! The diffusive flux is F_whistler = -WhistlerCoeff*(B_i+1 - B_i)
+             if(HallCmaxFactor > 0 .and. IsLinear) &
+                  FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = &
+                  FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) + &
+                  WhistlerCoeff_FDB(i,j,k,iDim,iBlock)* &
+                  (StateImpl_VG(BxImpl_:BzImpl_,i-Di,j-Dj,k-Dk) &
+                  -StateImpl_VG(BxImpl_:BzImpl_,i,j,k) )
           end if
        end do; end do; end do
     end do
@@ -894,7 +936,7 @@ contains
     use ModGeometry,     ONLY: true_cell
     use ModImplicit,     ONLY: nStencil
     use ModAdvance,      ONLY: B_
-
+    
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
@@ -931,7 +973,7 @@ contains
 
                 DiffLeft  = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
                 DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
-
+                
                 Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                      Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
 
@@ -1033,7 +1075,8 @@ contains
     use ModNumConst,     ONLY: i_DD, iLeviCivita_III
     use ModGeometry,     ONLY: true_cell
     use ModAdvance,      ONLY: B_
-
+    use ModHallResist,   ONLY: HallCmaxFactor
+    
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
@@ -1044,6 +1087,8 @@ contains
     integer:: iVar, jVar
     real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
 
+    real:: InvVolume
+
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
     !--------------------------------------------------------------------------
     ! Set the base index value for magnetic field variables
@@ -1051,6 +1096,54 @@ contains
        iB = 0
     else
        iB = B_
+    end if
+
+    if(HallCmaxFactor > 0 .and. UseSemiHallResist) then
+       ! Jacobian = dR(B_iDir)/dB_iDir from the whistler diffusion
+       ! R_i(B) = -[D_i+1/2 * (B_i+1 - B_i) - D_i-1/2 * (B_i - B_i-1)/V_i
+       do iDim = 1, nDim
+
+          iSub = 2*iDim    ! stencil index of subdiagonal elements
+          iSup = iSub + 1  ! stencil index of superdiagonal elements
+
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+
+             ! Index of the "right" cell face
+             i2 = i + i_DD(1,iDim)
+             j2 = j + i_DD(2,iDim)
+             k2 = k + i_DD(3,iDim)
+
+             InvVolume = 1./CellVolume_GB(i,j,k,iBlock)                
+             ! dR/dB_i-1 = H_i-1/2 / V_i
+             TermSub =  InvVolume*WhistlerCoeff_FDB(i,j,k,iDim,iBlock)
+             ! dR/dB_i+1 = H_i+1/2 / V_i
+             TermSup =  InvVolume*WhistlerCoeff_FDB(i2,j2,k2,iDim,iBlock)
+
+             ! Main diagonal
+             do iVar = iB+1, iB+MaxDim
+                Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,1) - (TermSub + TermSup)
+             end do
+
+             if(UseNoOverlap)then
+                if(  iDim==1.and.i==1  .or. &
+                     iDim==2.and.j==1  .or. &
+                     iDim==3.and.k==1)        TermSub = 0.0
+                if(  iDim==1.and.i==nI .or. &
+                     iDim==2.and.j==nJ .or. &
+                     iDim==3.and.k==nK)       TermSup = 0.0
+             end if
+
+             ! Off diagonals
+             do iVar = iB+1, iB+MaxDim
+                Jacobian_VVCI(iVar,iVar,i,j,k,iSub)   = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,iSub) + TermSub
+                Jacobian_VVCI(iVar,iVar,i,j,k,iSup) = &
+                     Jacobian_VVCI(iVar,iVar,i,j,k,iSup) + TermSup
+             enddo
+          enddo; enddo; enddo
+       enddo
     end if
 
     ! the transverse part of curl(B) is ignored in the Jacobian
@@ -1130,7 +1223,7 @@ contains
        do kDim = 1,nDim; do lDir = 1,3
           if(kDim == lDir) CYCLE
 
-          ! jDri is the index for flux component in dR(B_j)/d(B_l)
+          ! jDir is the index for flux component in dR(B_j)/d(B_l)
           do jDir = 1, 3 
              jklEpsilon = iLeviCivita_III(jDir,kDim,lDir)
 
