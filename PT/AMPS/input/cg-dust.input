@@ -53,8 +53,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
  define _PIC_DEBUGGER_MODE_  _PIC_DEBUGGER_MODE_ON_
  define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_  _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_ 
 
+ !define _PIC_COUPLER__INTERPOLATION_MODE_  _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_ 
 
-  ReferenceInjectionParticleNumber=60000
+
+  ReferenceInjectionParticleNumber=600
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
   InitialSampleLength=10
@@ -97,8 +99,16 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 !  define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
   define  _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclInit,spec,ptr,xInit,vInit,startNode) TotalParticleAcceleration(acclInit,spec,ptr,xInit,vInit,startNode)
+
+  !sampling of the dust grain size^2
+  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Comet::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s)
   
 #endGeneral
+
+!#Interface
+!  cell_centered_linear_interpolation_mode=on
+!  cell_centered_linear_interpolation_src=default
+!#endInterface
 
 
 
@@ -138,22 +148,34 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 #block ../input/cg.pl !process settings of the moon module
   Gravity3D=on !on,off
 
-  Forces::Gravity=on
-  Forces::FrameRotation=on
-  Forces::RadiationPressure=on
-  Forces::LorentzForce=on
-  Forces::DragForce=on
-  Forces::DragForceTangentialComponent=on
+  define _READ_NEUTRALS_FROM_BINARY_MODE_ _READ_NEUTRALS_FROM_BINARY_MODE_ON_
+
+  !MeshSignature=0xd7058cc2a680a3a2
+  MeshSignature=0xd5058fc3e01a454f
+
+  Forces::Gravity=on 
+  Forces::FrameRotation=off
+  Forces::RadiationPressure=off
+  Forces::LorentzForce=off 
+  Forces::DragForce=on 
+  Forces::DragForceTangentialComponent=off
 
   DustCharging::ElectronCollectionCurrent=off
   DustCharging::IonCollectionCurrent=off
   DustCharging::PhotoElectronCurrent=off
   DustCharging::SecondaryElectronEmissionCurrent=off 
-  DustCharging::Mode=TimeDependent !off,TimeDependent, Equilibrium
+  DustCharging::Mode=off !TimeDependent !off,TimeDependent, Equilibrium
+ 
+  DustVelocityLimit::min=0.01
+  DustVelocityLimit::max=150.0 !40.0 
 
-  HeliocentricDistance=3.5*_AU_
-  subSolarPointAzimuth=0.328671678 !! in rad 18.7961
-  subSolarPointZenith=0.809977635 !! in rad 46.41975 degrees from zaxis
+!  HeliocentricDistance=3.5*_AU_
+!  subSolarPointAzimuth=0.328671678 !! in rad 18.7961
+!  subSolarPointZenith=0.809977635 !! in rad 46.41975 degrees from zaxis
+
+  HeliocentricDistance=1.88*_AU_
+  subSolarPointAzimuth=5.2090
+  subSolarPointZenith=1.3973
 
   RadiativeCoolingMode=Crovisier !off, Crovisier	
 
@@ -222,7 +244,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   define _TARGET_ _CG_
 !  define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
 
-  SimulationStartTime=2015-07-01T00:00:00
+  SimulationStartTime=2015-04-12T07:14:00
 
 #endblock
 
