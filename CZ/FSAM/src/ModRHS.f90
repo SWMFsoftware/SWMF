@@ -199,6 +199,7 @@ contains
        temp0m(i) = 0.5d0*(temp0(i-1+myid1*(in-5)) + temp0(i+myid1*(in-5)))
        d0m(i)    = 0.5d0*(d0(i-1+myid1*(in-5)) + d0(i+myid1*(in-5)))
     enddo
+    scratchc=0.
 
     do k=ksm1,kep1; do j=jsm1,jep1; do i=ism1,iep1
        cmaxc(i,j,k) = sqrt((0.5d0*(b1(i,j,k) + b1(i+1,j,k)))**2 + &
