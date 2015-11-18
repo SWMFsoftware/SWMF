@@ -130,7 +130,7 @@ tar:
 	tar -cvf sources.tar sources
 
 ${WSD}:
-	./ampsConfig.pl -no-compile 
+	./ampsConfig.pl -input ${InputFileAMPS} -no-compile 
 
 LIB: 
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
