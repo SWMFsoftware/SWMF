@@ -8,7 +8,6 @@ test_<APP>_compile:
 	@echo "test_<APP>_compile..." > test_<APP>.diff
 	./Config.pl -application=<APPPATH> -spice-path=nospice -spice-kernels=nospice -model-data-path=$(MYDIR)/data/input/<APP>  -amps-test=on $(TEST<APP>KEYS)
 	rm -rf srcTemp
-	./ampsConfig.pl -input ${InputFileAMPS} -no-compile
 	@($(MAKE) amps)
 	@echo "test_<APP>_compile... done" >> test_<APP>.diff	
 
