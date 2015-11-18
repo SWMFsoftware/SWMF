@@ -129,7 +129,7 @@ foreach (@Arguments) {
     add_line_amps_conf("InputFileAMPS=$application.input");   
     add_line_amps_conf("APPLICATION=$application");
 
-    `"InputFileAMPS=$application.input" >> Makefile.local`;
+    `echo "InputFileAMPS=$application.input" >> Makefile.local`;
     next
   };
     
