@@ -128,6 +128,8 @@ foreach (@Arguments) {
 
     add_line_amps_conf("InputFileAMPS=$application.input");   
     add_line_amps_conf("APPLICATION=$application");
+
+    `"InputFileAMPS=$application.input" >> Makefile.local`;
     next
   };
     
@@ -175,6 +177,7 @@ foreach (@Arguments) {
 
     $t=lc($1);
     add_line_amps_conf("TESTMODE=$t");
+    `echo TESTMODE=$t >> Makefile.local`;
     next;
   }; 
 
