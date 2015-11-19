@@ -72,6 +72,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   GhostCells=2,2,2
 ! CutCellVolumeCalculationMaxRefinmentLevel=1
 
+  UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=SurfaceDataCG.h
+
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
