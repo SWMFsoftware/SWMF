@@ -2806,9 +2806,11 @@ contains
 
     ! Calculate cell centered fluxes including ghost cells
 
+    use ModImplicit, ONLY: UseSemiHallResist
     use ModAdvance, ONLY: nVar, State_VGB,FluxCenter_VGD
     use ModMultiFluid, ONLY: nFluid, iRho, iUx, iUz, iUx_I, iUz_I
     use BATL_lib, ONLY: nDim, Xi_, Eta_, Zeta_, CellCoef_DDGB
+
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iDim, iFluid
@@ -2829,7 +2831,7 @@ contains
     if(.not.allocated(Flux_VD)) allocate(Flux_VD(nFlux,nDim))
 
     HallCoeff     = -1.0
-    if(UseHallResist) call stop_mpi(NameSub// &
+    if(UseHallResist .and. .not.UseSemiHallResist) call stop_mpi(NameSub// &
          ": Hall Resistivity has not been implemented!")
     
     BiermannCoeff = -1.0
