@@ -17,7 +17,7 @@ module ModUser
   include 'user_module.h' !list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
-  character (len=*), parameter :: NameUserModule = 'Mercury, Lars Daldorff & Xianzhe Jia'
+  character (len=*), parameter :: NameUserModule = 'Mercury, Lars Daldorff & Xianzhe Jia (V5)'
 
   real :: PlanetDensity=-1., PlanetPressure=-1., PlanetRadius=-1.
 
@@ -80,7 +80,7 @@ contains
        end do
     end if
 
-    print *," Rate eta", ResistivityRate
+    !print *," Rate eta", ResistivityRate
 
 
      if(iProc==0) then
@@ -122,6 +122,7 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case("#RESISTIVEPLANET")
+          UseResisPlanet = .true.
           call read_var('PlanetDensitySi'       , PlanetDensitySi)
           call read_var('PlanetPressureSi'      , PlanetPressureSi)
           call read_var('PlanetRadius'        , PlanetRadius)
@@ -222,7 +223,7 @@ contains
     use ModMain,       ONLY: Unused_B, nBlockMax
     use ModGeometry,   ONLY: Xyz_DGB, R_BLK, Rmin_BLK
     use ModSize,       ONLY: nI, nJ, nK, nG
-    use ModPhysics,    ONLY: Si2No_V,UnitRho_ 
+    use ModPhysics,    ONLY: Si2No_V,UnitRho_, BodyRho_I, BodyP_I
     use ModVarIndexes, ONLY: nVar, Rho_, RhoU_, RhoUx_, RhoUz_, Bx_, Bz_, p_
     use ModEnergy,     ONLY: calc_energy_cell
 
@@ -249,9 +250,9 @@ contains
 
        if(r_BLK(MaxI,1,1,iBlock) >= PlanetRadius)then
           do i = MaxI, 1, -1
-            ! Find the i index just outside the planet radius
-            if(R_BLK(i-1,1,1,iBlock) > PlanetRadius ) CYCLE
-            EXIT
+             ! Find the i index just outside the planet radius
+             if(R_BLK(i-1,1,1,iBlock) > PlanetRadius ) CYCLE
+             EXIT
           end do
           do k = MinK, MaxK; do j = MinJ, MaxJ
 
@@ -259,20 +260,45 @@ contains
              r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
              RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock), r_D)
 
-             if(RhoUr > 0.0) then
-                ! If flow is out of the planet, remove the radial component 
-                ! of the momentum so that the flow is tangential
-                dRhoUr_D = -r_D*RhoUr
+             ! Set nG cells inside the planet as a boundary condition
+             if(RhoUr < 0.0) then
+                ! If flow is into the planet, flow is absorbed
+             	do iG = i-nG, i-1
+                  State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+                  State_VGB(P_,iG,j,k,iBlock)   = State_VGB(P_,i,j,k,iBlock)
+		  State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+                end do
              else
-                ! If flow is into the planet do nothing so the flow is absorbed
-                dRhoUr_D = 0.0
+                ! If flow is out of the planet, set the density and pressure to body values
+                do iG = i-nG, i-1
+                  !State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
+                  State_VGB(Rho_,iG,j,k,iBlock) = BodyRho_I(1)
+                  !State_VGB(P_,iG,j,k,iBlock)   = State_VGB(P_,i,j,k,iBlock)   
+		  State_VGB(P_,iG,j,k,iBlock) = BodyP_I(1)
+                  State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+                       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
+                end do
              end if
+
+             ! Get radial velocity
+    !         r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
+
+    !         RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
+    !         if(RhoUr > 0.0) then
+    !            ! If flow is out of the planet, remove the radial component 
+    !            ! of the momentum so that the flow is tangential
+    !            dRhoUr_D = -r_D*RhoUr
+    !         else
+    !            ! If flow is into the planet do nothing so the flow is absorbed
+                dRhoUr_D = 0.0
+    !         end if
 
              ! Set nG cells inside the planet as a boundary condition
              do iG = i-nG, i-1
                 State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-                State_VGB(P_,iG,j,k,iBlock)   = State_VGB(P_,i,j,k,iBlock)
-		State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
+		State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
+                State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
                      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
              end do
           end do; end do
@@ -280,7 +306,7 @@ contains
        end if
 
     end if
-    
+
     call calc_energy_cell(iBlock)
 
   end subroutine user_update_states
