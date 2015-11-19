@@ -705,6 +705,7 @@ contains
 
     emf1 = 0.d0
     curl1 = 0.d0
+    emf1s = 0.d0
     ! emf1
     do i=is,ie
        ! Compute upwinded b3 and v3 in the 2-direction and use them to
@@ -833,6 +834,7 @@ contains
 
     emf2 = 0.d0
     curl2 = 0.d0
+    emf2s = 0.d0
     ! emf2
     do j=js,je
        ! Compute upwinded b1 and v1 in the 3-direction and use them to
@@ -940,6 +942,7 @@ contains
 
     emf3 = 0.d0
     curl3 = 0.d0
+    emf3s = 0.d0
     ! emf3
     do k=ks,ke
        ! Compute upwinded b2 and v2 in the 1-direction and use them to  
