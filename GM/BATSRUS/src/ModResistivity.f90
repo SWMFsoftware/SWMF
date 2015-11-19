@@ -709,6 +709,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
+       WhistlerCoeff_FDB(:,:,:,:,iBlock) = 0.0
 
        call set_hall_factor_face(iBlock)
        if(.not.IsHallBlock) CYCLE
