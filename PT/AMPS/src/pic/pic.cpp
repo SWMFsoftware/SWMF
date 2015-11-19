@@ -1035,6 +1035,11 @@ ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
 /*----------------------------------  BEGIN OUTPUT OF THE DATA FILES SECTION --------------------------------*/
 
+      #if _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ == _ON_AMR_MESH_
+      //output the data sampled on the triangulated cut-cells
+      sprintf(fname,"%s/amps.cut-cell.surface-data.out=%ld.dat",OutputDataFileDirectory,DataOutputFileNumber);
+      CutCell::PrintSurfaceData(fname);
+      #endif
 
       #if _PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_
       //print sampled particle trajectories
