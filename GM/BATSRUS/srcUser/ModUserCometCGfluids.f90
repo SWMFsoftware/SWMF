@@ -536,7 +536,7 @@ contains
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModMain, ONLY: n_step, time_simulation
-    use ModVarIndexes,   ONLY: nVar, Rho_, p_
+    use ModVarIndexes,   ONLY: nVar, Rho_, p_, Bx_, Bz_
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
@@ -870,6 +870,9 @@ contains
          end if
       end do
 
+      ! magnetic field on the comet body should be 0
+      VarsGhostFace_V(Bx_:Bz_) = 0.0
+
       VarsGhostFace_V(Rho_)   = sum(VarsGhostFace_V(iRhoIon_I))
       VarsGhostFace_V(RhoUx_) = &
            sum(VarsGhostFace_V(iRhoIon_I)*VarsGhostFace_V(iRhoUxIon_I)) / &
@@ -917,7 +920,7 @@ contains
 
     integer:: iTriangle, nIntersect, iMinRatio
 
-    integer, parameter:: MaxIntersect = 10
+    integer, parameter:: MaxIntersect = 15
     real:: Ratio, Ratio1, Ratio2, Ratio_I(MaxIntersect)
     integer:: iTriangle_I(MaxIntersect)
     real, dimension(3):: v1_D, Xyz_D, u_D, v_D, w_D
@@ -1015,8 +1018,11 @@ contains
        ! New intersection was found
        nIntersect =  nIntersect + 1
 
-       if(nIntersect > MaxIntersect) call stop_mpi(NameSub// &
+       if(nIntersect > MaxIntersect) then
+          write(*,*) 'nIntersect, MaxIntersect =', nIntersect, MaxIntersect
+          call stop_mpi(NameSub// &
             ': too many intersections, increase MaxIntersect')
+       end if
 
        ! Store the position along the segment into Ratio_I
        Ratio_I(nIntersect) = Ratio
