@@ -916,7 +916,7 @@ sub ReadGeneralBlock {
     $InputLine=~s/\s+$//; #remove spaces from the end of the line
  
     #substitute separators by 'spaces'
-    $InputLine=~s/[=,]/ /g;
+    $InputLine=~s/[=,:]/ /g;
     ($InputLine,$InputComment)=split(' ',$InputLine,2);
     
    
@@ -945,6 +945,99 @@ sub ReadGeneralBlock {
 	    ampsConfigLib::ChangeValueOfVariable("static const int FirstPrintedOutputFile",$InputLine,"pic/pic.h");
     }
     
+    
+    #read the block that defines the user data for the NASTRAN triangulated surfaces
+    elsif ($InputLine eq "USERDEFINEDSURFACETRIANGULATIONDATA") {
+      $line=~s/[=,:]/ /g;
+      chomp($line);
+      $line=~s/\s+$//;
+      
+      ($InputLine,$InputComment)=split(' ',$line,2);
+           
+      my $Mode="off";
+      my $Class;
+      my $Header;
+      
+      while (defined $InputComment) {
+        ($InputLine,$InputComment)=split(' ',$InputComment,2);
+        
+        $InputLine=uc($InputLine);
+        
+        if ($InputLine eq "MODE") {
+          ($InputLine,$InputComment)=split(' ',$InputComment,2);
+          $InputLine=uc($InputLine);
+          
+          if ($InputLine eq "ON") {
+            $Mode="on";
+          }
+          elsif ($InputLine eq "OFF") {
+            $Mode="off";
+            last;
+          }
+          else {
+            die "11: $InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
+        
+        elsif ($InputLine eq "CLASS") {
+          ($Class,$InputComment)=split(' ',$InputComment,2);
+        }
+        elsif ($InputLine eq "HEADER") {
+          ($Header,$InputComment)=split(' ',$InputComment,2);
+        }
+        else {
+          die "$InputLine: Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }  
+      }
+      
+      #insert the user data into the source code
+      if ($Mode eq "on") {
+        if (! defined $Class) {
+          die "$InputLine: Class is not defined in $InputFileName.Assembled\n";
+        }
+        
+        if (! defined $Header) {
+          die "$InputLine: Header is not defined in $InputFileName.Assembled\n";
+        }
+        
+        ampsConfigLib::RedefineMacro("_CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_","_ON_AMR_MESH_","meshAMR/meshAMRcutcell.h");
+        
+        #add the total species number into general.h
+        my @FileContent;
+        my $found=0;
+        
+        open (GENERALIN,"<$ampsConfigLib::WorkingSourceDirectory/general/global.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/general/global.h\n";
+        @FileContent=<GENERALIN>;
+        close (GENERALIN);
+        
+        open (GENERALOUT,">$ampsConfigLib::WorkingSourceDirectory/general/global.h");
+        
+        foreach (@FileContent) {
+          print GENERALOUT "$_";
+         
+          if ($_=~/_GLOBAL_VARIABLES_/) {
+            if ($found == 0) {
+              print GENERALOUT "#define _TOTAL_SPECIES_NUMBER_ $TotalSpeciesNumber\n";
+              $found=1;            }
+          }
+        }
+         
+        close(GENERALOUT); 
+                
+        #add the header information at the beginig of the file
+        open (MESHFILEIN,"<$ampsConfigLib::WorkingSourceDirectory/meshAMR/meshAMRcutcell.h") || die "Cannot open file $ampsConfigLib::WorkingSourceDirectory/meshAMR/meshAMRcutcell.h\n";  
+        @FileContent=<MESHFILEIN>;
+        close (MESHFILEIN);
+        
+        open (MESHFILEINOUT,">$ampsConfigLib::WorkingSourceDirectory/meshAMR/meshAMRcutcell.h");
+        print MESHFILEINOUT "#include \"$Header\"\n";
+        print MESHFILEINOUT "typedef $Class cTriangleFaceUserData_internal;\n";
+        print MESHFILEINOUT @FileContent;
+        close (MESHFILEIN);
+      }
+
+    
+    }
     
    elsif ($InputLine eq "RECOVERMACROSCOPICSAMPLEDDATA") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
@@ -1205,6 +1298,7 @@ sub ReadGeneralBlock {
       chomp($line);
    
       if (($line ne "") && (substr($line,0,1) ne '!')) {
+        print "Keyword $InputLine is unknown\n";
         die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
       }
     }
