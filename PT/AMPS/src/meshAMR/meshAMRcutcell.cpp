@@ -118,6 +118,126 @@ void CutCell::PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangle
   delete [] FaceNodeConnection;
 }
 
+void CutCell::PrintSurfaceData(const char *fname) {
+#if  _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ == _ON_AMR_MESH_
+  int nface,i;
+
+  int rank;
+  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&rank);
+
+  //collect the surface data from all processors
+  CMPI_channel pipe(1000000);
+
+  if (rank==0) pipe.openRecvAll();
+  else pipe.openSend(0);
+
+  for (nface=0;nface<nBoundaryTriangleFaces;nface++) BoundaryTriangleFaces[nface].UserData.Gather(&pipe);
+
+  if (rank==0) pipe.closeRecvAll();
+  else pipe.closeSend();
+
+
+  //output the data file
+  if (rank==0) {
+    FILE *fout=fopen(fname,"w");
+
+    struct cNodelInterpolationBase {
+      double TotalInterpolationWeight;
+      int StencilLength;
+      int StencilOffset;
+    };
+
+    struct cFaceInterpolationStencil {
+      double Weight;
+      cTriangleFaceUserData_internal *UserData;
+    };
+
+    //prepare the list of the faces that contains the same node
+    cNodelInterpolationBase *InterpolationBase=new cNodelInterpolationBase[nBoundaryTriangleNodes];
+    cFaceInterpolationStencil *Stencil=new cFaceInterpolationStencil[3*nBoundaryTriangleFaces];
+    int maxStencilLength=0,offset=0;
+
+    for (i=0;i<nBoundaryTriangleNodes;i++) {
+      BoundaryTriangleNodes[i].id=i;
+      InterpolationBase[i].TotalInterpolationWeight=0.0;
+      InterpolationBase[i].StencilLength=0;
+      InterpolationBase[i].StencilOffset=0;
+    }
+
+    for (nface=0;nface<nBoundaryTriangleFaces;nface++) for (i=0;i<3;i++) {
+      InterpolationBase[BoundaryTriangleFaces[nface].node[i]->id].StencilLength++;
+    }
+
+
+    for (i=0;i<nBoundaryTriangleNodes;i++) {
+      InterpolationBase[i].StencilOffset=offset;
+
+      offset+=InterpolationBase[i].StencilLength;
+      if (maxStencilLength<InterpolationBase[i].StencilLength) maxStencilLength=InterpolationBase[i].StencilLength;
+    }
+
+    //populate the interpolation base list
+    for (i=0;i<nBoundaryTriangleNodes;i++) InterpolationBase[i].StencilLength=0;
+
+    for (nface=0;nface<nBoundaryTriangleFaces;nface++) for (i=0;i<3;i++) {
+      double weight=BoundaryTriangleFaces[nface].SurfaceArea;
+      int nnode=BoundaryTriangleFaces[nface].node[i]->id;
+
+      Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].UserData=&(BoundaryTriangleFaces[nface].UserData);
+      Stencil[InterpolationBase[nnode].StencilOffset+InterpolationBase[nnode].StencilLength].Weight=weight;
+      InterpolationBase[nnode].TotalInterpolationWeight+=weight;
+
+      InterpolationBase[nnode].StencilLength++;
+    }
+
+    //normalize the interpolation weights
+    for (i=0;i<nBoundaryTriangleNodes;i++) for (nface=0;nface<InterpolationBase[i].StencilLength;nface++) {
+      Stencil[InterpolationBase[i].StencilOffset+nface].Weight/=InterpolationBase[i].TotalInterpolationWeight;
+    }
+
+    double *InterpolationWeightList=new double [maxStencilLength];
+    cTriangleFaceUserData_internal **InterpolationFaceList=new cTriangleFaceUserData_internal* [maxStencilLength];
+
+    //print the variable list
+    fprintf(fout,"VARIABLES=\"X\",\"Y\",\"Z\"");
+    BoundaryTriangleFaces[0].UserData.PrintVarableList(fout);
+    fprintf(fout,"\nZONE N=%i, E=%i, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n",nBoundaryTriangleNodes,nBoundaryTriangleFaces);
+
+    //print the list of the data points
+    for (i=0;i<nBoundaryTriangleNodes;i++) {
+      fprintf(fout,"%e %e %e ",BoundaryTriangleNodes[i].x[0],BoundaryTriangleNodes[i].x[1],BoundaryTriangleNodes[i].x[2]);
+
+      //Prepare the interpolation stencil
+      for (nface=0;nface<InterpolationBase[i].StencilLength;nface++) {
+        InterpolationWeightList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].Weight;
+        InterpolationFaceList[nface]=Stencil[InterpolationBase[i].StencilOffset+nface].UserData;
+      }
+
+      //output the user-defined surface data
+      BoundaryTriangleFaces[0].UserData.Print(fout,InterpolationWeightList,InterpolationFaceList,InterpolationBase[i].StencilLength);
+      fprintf(fout,"\n");
+    }
+
+    //print the connectovoty list
+    for (nface=0;nface<nBoundaryTriangleFaces;nface++) {
+      fprintf(fout,"%i %i %i\n",1+BoundaryTriangleFaces[nface].node[0]->id,1+BoundaryTriangleFaces[nface].node[1]->id,1+BoundaryTriangleFaces[nface].node[2]->id);
+    }
+
+    //close the file
+    fclose(fout);
+
+    //delete the temporary buffers
+    delete [] InterpolationBase;
+    delete [] Stencil;
+    delete [] InterpolationWeightList;
+    delete [] InterpolationFaceList;
+  }
+
+  //flush the sampling buffer
+  for (nface=0;nface<nBoundaryTriangleFaces;nface++) BoundaryTriangleFaces[nface].UserData.Flush();
+#endif //  _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_
+}
+
 
 void CutCell::PrintSurfaceTriangulationMesh(const char *fname,const char *path) {
   char fullname[STRING_LENGTH];

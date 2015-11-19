@@ -25,10 +25,15 @@
 
 #include "meshAMRdef.h"
 #include "specfunc.h"
+#include "mpichannel.h"
 
 
 #ifndef _CUT_CELL_MESHAMR_
 #define _CUT_CELL_MESHAMR_
+
+//add the used-defined cut-cell data buffer
+#define _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ _OFF_AMR_MESH_
+
 
 namespace CutCell {
 
@@ -192,6 +197,11 @@ namespace CutCell {
     //the variables used by AMPS to determine the surface elements that are in the shadow. The values are modified by pic__ray_tracing.cpp
     unsigned int pic__shadow_attribute,pic__RayTracing_TestDirectAccessCounterValue;
     double pic__cosine_illumination_angle;
+
+    //the user defined data structure
+    #if _CUT_CELL__TRIANGULAR_FACE__USER_DATA__MODE_ == _ON_AMR_MESH_
+    cTriangleFaceUserData_internal UserData;
+    #endif
 
     void GetCenterPosition(double *x) {
       for (int idim=0;idim<3;idim++) x[idim]=(2.0*x0Face[idim]+x1Face[idim]+x2Face[idim])/4.0;
@@ -508,6 +518,9 @@ namespace CutCell {
   void PrintSurfaceTriangulationMesh(const char *fname,cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   void PrintSurfaceTriangulationMesh(const char *fname);
   void PrintSurfaceTriangulationMesh(const char *fname,const char *path);
+
+  //output of the user-defined surface data
+  void PrintSurfaceData(const char *fname);
 
   void ReadNastranSurfaceMeshLongFormat(const char *fname,double *xSurfaceMin,double *xSurfaceMax,double EPS=0.0);
   void ReadNastranSurfaceMeshLongFormat(const char *fname);
