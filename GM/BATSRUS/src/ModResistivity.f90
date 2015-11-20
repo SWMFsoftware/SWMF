@@ -45,10 +45,10 @@ module ModResistivity
   real               :: CoulombLogarithm = 20.0
   real               :: Eta0AnomSi=0.0, Eta0Anom
   real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
-  real               :: jCritAnomSi=1.0, jCritInv
+  real               :: JcritAnomSi=1.0, JcritInv
   real, public       :: Si2NoEta
   real               :: EtaCoeff = 0.0
-  real               :: jInvbCrit = 0.0
+  real               :: JoverBCrit = 0.0
 
   real:: rZeroResist = -1.0
   real:: rFullResist = 1e30
@@ -102,10 +102,10 @@ contains
              call read_var('Eta0Si',       Eta0Si)
              call read_var('Eta0AnomSi',   Eta0AnomSi)
              call read_var('EtaMaxAnomSi', EtaMaxAnomSi)
-             call read_var('jCritAnomSi',  jCritAnomSi)
+             call read_var('JcritAnomSi',  JcritAnomSi)
           case('raeder')
              call read_var('EtaCoeff', EtaCoeff)
-             call read_var('jInvbCrit', jInvbCrit)
+             call read_var('JoverBCrit', JoverBCrit)
           case default
              call stop_mpi(NameSub//': unknown TypeResistivity='&
                   //TypeResistivity)
@@ -140,7 +140,7 @@ contains
     Eta0       = Eta0Si       * Si2NoEta
     Eta0Anom   = Eta0AnomSi   * Si2NoEta
     EtaMaxAnom = EtaMaxAnomSi * Si2NoEta
-    jCritInv   = 1.0/(jCritAnomSi  * Si2No_V(UnitJ_))
+    JcritInv   = 1.0/(JcritAnomSi  * Si2No_V(UnitJ_))
 
     ! Spitzer resistivity coefficient with Coulomb logarithm in SI units
     EtaPerpSpitzerSi = 0.5*sqrt(cElectronMass)    * &
@@ -169,7 +169,7 @@ contains
        write(*,*)NameSub, ': Si2NoJ   = ',Si2No_V(UnitJ_)
        write(*,*)NameSub, ': Eta0, Eta0Anom, EtaMaxAnom=', &
             Eta0, Eta0Anom, EtaMaxAnom
-       write(*,*)NameSub, ': jCritInv = ', jCritInv
+       write(*,*)NameSub, ': JcritInv = ', JcritInv
     end if
 
   end subroutine init_mod_resistivity
@@ -323,7 +323,7 @@ contains
 
     ! Compute resistivity based on Raeder's formula
     ! Eta = Alpha * j'^2    j' = |j|*gridspacing/(|B| + epsilon)
-    ! Eta = 0 if j' < jInvbCrit
+    ! Eta = 0 if j' < JoverBCrit
 
     use ModCurrent,  ONLY: get_current
     use ModAdvance,  ONLY: State_VGB
@@ -334,13 +334,18 @@ contains
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    real :: Current_D(3), AbsJ, AbsB, JInvB, b_D(3)
+    real :: Current_D(3), AbsJ, AbsB, JoverB, b_D(3)
     integer :: i, j, k, l, m, n
+
+    character(len=*), parameter:: NameSub = 'raeder_resistivity'
     !--------------------------------------------------------------------------
+    if(nDim /= 3) call stop_mpi(NameSub//' is implemented for 3D only')
+
     ! Compute |J| and |B|
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
        call get_current(i,j,k,iBlock,Current_D)
-       AbsJ = sqrt(sum(current_D**2))
+       AbsJ = sqrt(sum(Current_D**2))
+
        ! Calculate AbsB from the average of 26 neighboring cells and itself
        AbsB = 0.0
        do n=-1,1; do m=-1,1; do l=-1,1
@@ -349,12 +354,13 @@ contains
           AbsB = AbsB + sqrt(sum(b_D**2))
        end do; end do; end do
        AbsB = AbsB/27.0
-       ! Make J/B dimensionless by multiplying length scale 1Re
-       JInvB = min(AbsJ*1.0/(AbsB + 1e-8), 1.0) 
+
+       ! No dx here, because that causes problems at resolution changes
+       JoverB = min(AbsJ/(AbsB + 1e-8), 1.0) 
 
        ! Compute Raeder resistivity
-       if(JInvB >= jInvbCrit)then
-          Eta_G(i,j,k) = EtaCoeff*(JInvB**2) 
+       if(JoverB >= JoverBCrit)then
+          Eta_G(i,j,k) = EtaCoeff*(JoverB**2) 
        else
           Eta_G(i,j,k) = 0.0
        end if
@@ -524,14 +530,14 @@ contains
                *(State_VGB(P_,i,j,k,iBlock) - State_VGB(Pe_,i,j,k,iBlock))
 
           if (DoTestCell) then
-             write(*,*) NameSub, ': corrected HeatExchange   =', HeatExchange
-             write(*,*) NameSub, ': heatExchangePeP          =', HeatExchangePeP
-             write(*,*) NameSub, ': initial State_VGB(P_)    =', &
+             write(*,*) NameSub, ': corrected HeatExchange  =', HeatExchange
+             write(*,*) NameSub, ': heatExchangePeP         =', HeatExchangePeP
+             write(*,*) NameSub, ': initial State_VGB(P_)   =', &
                   State_VGB(P_,i,j,k,iBlock)
              if (UseAnisoPressure) &
-                  write(*,*) NameSub, ': initial State_VGB(Ppar_) =', &
+                  write(*,*) NameSub, ': initial State_VGB(Ppar_)=', &
                   State_VGB(Ppar_,i,j,k,iBlock)
-             write(*,*) NameSub, ': initial State_VGB(Pe_)   =', &
+             write(*,*) NameSub, ': initial State_VGB(Pe_)  =', &
                   State_VGB(Pe_,i,j,k,iBlock)
           end if
 
@@ -582,18 +588,22 @@ contains
     use ModAdvance,    ONLY: State_VGB
     use ModImplicit,   ONLY: nVarSemiAll, nBlockSemi, iBlockFromSemi_B
     use ModVarIndexes, ONLY: Bx_, Bz_
-    use BATL_lib, ONLY: nBlock, Unused_B
+    use BATL_lib, ONLY: nBlock, Unused_B, iProc
 
     real, intent(out):: SemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlock)
+
+    ! Initialize variables for RHS and Jacobian calculation
+    ! and find the blocks that require semi-implicit solver
 
     integer:: i, j, k, iBlock
 
     logical:: IsSemiBlock
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub = 'get_impl_resistivity_state'
     !--------------------------------------------------------------------------
-    ! Initialize variables for RHS and Jacobian calculation
-    ! and find the blocks that require semi-implicit solver
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
     if(UseSemiResistivity) call init_impl_resistivity
     if(UseSemiHallResist)  call init_impl_hall_resist
 
@@ -623,6 +633,8 @@ contains
        end do; end do; end do
 
     end do
+
+    if(DoTest) write(*,*) NameSub,' iProc, nBlockSemi=', iProc, nBlockSemi
 
   end subroutine get_impl_resistivity_state
 
@@ -709,7 +721,7 @@ contains
        if(Unused_B(iBlock)) CYCLE
 
        Bne_DFDB(:,:,:,:,:,iBlock) = 0.0
-       WhistlerCoeff_FDB(:,:,:,:,iBlock) = 0.0
+       if(HallCmaxFactor > 0) WhistlerCoeff_FDB(:,:,:,:,iBlock) = 0.0
 
        call set_hall_factor_face(iBlock)
        if(.not.IsHallBlock) CYCLE
@@ -753,16 +765,16 @@ contains
                         - Xyz_DGB(:, i1, j1, k1, iBlock))**2) )
                    FaceNormal_D = FaceNormal_DDFB(:,iDim,i,j,k,iBlock)
                 endif
-                ! Diffuse the linear stage by 
+                ! Diffuse the linear stage by
                 ! 0.5*HallCmaxFactor*c_whistler (like first order TVD).
                 ! The whistler speed in the face normal direction is
-                ! c_whistler = HallFactor * |B_normal| * pi/(rho*dx)
-                ! Store the coefficient for the diffusive flux 
-                ! F_i+1=D*(B_i+1 - B_i)
-                ! D = |Area*B_{norm}|*pi*HallCmaxFactor/(2*ne*dx)
-                WhistlerCoeff_FDB(i,j,k,iDim,iBlock) = HallCmaxFactor*0.5* &
+                ! c_whistler = |B_n| * pi/(e*n_e*dx)
+                ! Store the D coefficient for the diffusive flux 
+                ! F_i+1/2 = D_i+1/2 * (B_i+1 - B_i) where
+                ! D = HallCmaxFactor*0.5*pi*|Area*B_n|/(e*n_e*dx)
+                WhistlerCoeff_FDB(i,j,k,iDim,iBlock) = HallCmaxFactor*0.5*cPi*&
                      abs(sum(FaceNormal_D*Bne_DFDB(1:nDim,i,j,k,iDim,iBlock)))&
-                     *cPi*InvDxyz
+                     *InvDxyz
              end if
           end do; end do; end do
        end do
@@ -794,7 +806,7 @@ contains
 
     integer :: iDim, i, j, k, Di, Dj, Dk
     real    :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
-    real    :: jNormal, BneNormal
+    real    :: Jnormal, BneNormal
     logical :: IsNewBlock
     !--------------------------------------------------------------------------
 
@@ -1084,7 +1096,7 @@ contains
 
     integer:: iB
     integer:: iDim, iDir, jDir, i, j, k, i2, j2, k2, iSign
-    integer:: iSub, iSup, iFace, kDim, lDir, jklEpsilon, iklEpsilon
+    integer:: iSub, iSup, iFace, kDim, lDir, jKlEpsilon, iKlEpsilon
     integer:: iVar, jVar
     real:: Term, TermSub, TermSup, InvDcoord2_D(nDim)
 
