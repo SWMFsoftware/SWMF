@@ -27,6 +27,7 @@
 #define _O_PLUS_HIGH_SPEC_    -21
 #define _O_PLUS_THERMAL_SPEC_ -22
 #define _CH4_SPEC_            -23
+#define _CO2_SPEC_            -25
 
 #define _DUST_SPEC_           -999
 
