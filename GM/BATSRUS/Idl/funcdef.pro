@@ -315,7 +315,7 @@ function funcdef,xx,w,func,time,eqpar,variables,rcut
 
   ;; Calculate gamma*p+bb if needed
   if strpos(f,'fast') ge 0 or strpos(f, 'slow') ge 0 then begin
-     c4 = 4*gs/muA
+     c4 = 4*gs/mu0A
      cc = gs*p + bb/mu0A
   end
 
