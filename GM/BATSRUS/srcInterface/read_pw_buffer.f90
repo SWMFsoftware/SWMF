@@ -46,6 +46,7 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   if(DoInitialize)then
      DoInitialize = .false.
      ! Fill in outer points with body values coming in via State_V
+     ! For each hemisphere, outer points are after PW points.
      do iPoint=nLinePw1+1, nPoint1
         StateGm1_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
         if(UseMultiSpecies)then
@@ -58,16 +59,16 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
         end if
      end do
 
-     if (nLinePw2 /=0) then                                                                                            
-        do iPoint=nLinePw2+1, nPoint2
-           StateGm2_VI(iUGmFirst:iUGmLast, nLinePw1+iPoint) = 0.0
+     if (nLinePw2 /=0) then
+        do iPoint=nLinePw+1, nLinePw+nOuterPoint
+           StateGm2_VI(iUGmFirst:iUGmLast, iPoint) = 0.0
            if(UseMultiSpecies)then
-              StateGm2_VI(iRhoGmFirst:iRhoGmLast, nLinePw1+iPoint) = &
+              StateGm2_VI(iRhoGmFirst:iRhoGmLast, iPoint) = &
                    State_V(SpeciesFirst_:SpeciesLast_)
            elseif(UseMultiIon)then
-              StateGm2_VI(iRhoGmFirst:iRhoGmLast, nLinePw1+iPoint) = State_V(iRhoIon_I)
+              StateGm2_VI(iRhoGmFirst:iRhoGmLast, iPoint) = State_V(iRhoIon_I)
            else
-              StateGm2_VI(iRhoGmFirst, nLinePw1+iPoint) = State_V(Rho_)
+              StateGm2_VI(iRhoGmFirst, iPoint) = State_V(Rho_)
            end if
         end do
      end if
