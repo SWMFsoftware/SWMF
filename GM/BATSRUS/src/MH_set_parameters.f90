@@ -55,7 +55,7 @@ subroutine MH_set_parameters(TypeAction)
        DoChangeRestartVariables, nVarRestart, UseRestartWithFullB, &
        NameRestartInDir, NameRestartOutDir
   use ModHallResist,    ONLY: &
-       UseHallResist, read_hall_param, UseBiermannBattery
+       UseHallResist, read_hall_param
   use ModHeatConduction, ONLY: read_heatconduction_param
   use ModHeatFluxCollisionless, ONLY: read_heatflux_param
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -2693,7 +2693,18 @@ contains
           write(*,*)NameSub//' Setting boris_correction = .false.'
        end if
        boris_correction = .false.
-       boris_cLIGHT_factor = 1.00
+       boris_cLIGHT_factor = 1.0
+    end if
+
+    if(boris_correction .and. UseHallResist .and. .not. UseSemiHallResist)then
+       if(iProc==0)then
+          write(*,'(a)') NameSub//&
+               ' WARNING: Boris correction only works with semi-implicit Hall MHD!!!'
+          if (UseStrict) call stop_mpi('Correct PARAM.in!')
+          write(*,*)NameSub//' Setting boris_correction = .false.'
+       end if
+       boris_correction = .false.
+       boris_cLIGHT_factor = 1.0
     end if
 
     ! Check parameters for implicit
