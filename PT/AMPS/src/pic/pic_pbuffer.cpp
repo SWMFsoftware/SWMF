@@ -28,6 +28,13 @@ void PIC::ParticleBuffer::Init(long int BufrerLength) {
   MaxNPart=BufrerLength;
   ParticleDataBuffer=(PIC::ParticleBuffer::byte*) malloc(ParticleDataLength*MaxNPart);
 
+  if (ParticleDataBuffer==NULL) {
+    char msg[500];
+
+    sprintf(msg,"Error: cannot allocate the particle data buffer (%i byte). Decrease the total number of the reserved particles.",ParticleDataLength*MaxNPart);
+    exit(__LINE__,__FILE__,msg);
+  }  
+
   //init the list of particles in the buffer
   for (long int ptr=0;ptr<MaxNPart-1;ptr++) {
     SetNext(ptr+1,ptr);
