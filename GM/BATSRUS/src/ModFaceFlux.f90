@@ -3108,6 +3108,8 @@ contains
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R
 
+      real :: Fraction, ChargeDens_I(nIonFluid)
+
       integer:: jFluid
 
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
@@ -3186,6 +3188,14 @@ contains
 
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
       Alfven2Normal = InvRho*FullBn**2
+
+      if(UseMultiIon)then
+         ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
+         Fraction = &
+              Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
+         Alfven2 = Alfven2*Fraction
+         Alfven2Normal = Alfven2Normal*Fraction
+      end if
 
       ! Calculate fast speed for anisotropic ion pressure.
       ! Formulas refer to V. B. Baranov, 1970 and MAPLE calculation
