@@ -3132,8 +3132,15 @@ contains
               GammaP = GammaP * (1 + ElectronPressureRatio)
       end if
 
+      if(UseMultiIon)then
+         ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
+         Fraction = &
+              Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
+      end if
+
       if(UseElectronPressure)then
          GammaPe = GammaElectron*State_V(Pe_)
+         if(UseMultiIon) GammaPe = GammaPe*Fraction
          GammaP = GammaP + GammaPe
       else
          GammaPe = 0.0
@@ -3190,9 +3197,6 @@ contains
       Alfven2Normal = InvRho*FullBn**2
 
       if(UseMultiIon)then
-         ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
-         Fraction = &
-              Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
          Alfven2 = Alfven2*Fraction
          Alfven2Normal = Alfven2Normal*Fraction
       end if
