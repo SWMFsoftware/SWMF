@@ -338,8 +338,8 @@ endif else $
    print
    !p.multi=0
    !p.title=''
-   !x.title=''
-   !y.title=''
+   ;!x.title=''
+   ;!y.title=''
    !z.title=''
    if savemovie eq 'ps' then set_plot,'X'
    ; Restore velpos array

@@ -2270,6 +2270,9 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
   endif
 
+  if xtitle ne '' then !x.title=xtitle
+  if plotdim gt 1 and ytitle ne '' then !y.title=ytitle
+
   if !x.range[0] ne !x.range[1] then xrange=!x.range else $
      xrange=[min(xx),max(xx)]
   if plotdim gt 1 then begin
