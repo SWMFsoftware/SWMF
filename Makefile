@@ -348,7 +348,7 @@ dist:
 	tar -rf tmp.tar  Scripts
 	tar -rf tmp.tar  share
 	tar -rf tmp.tar  util
-	tar -rf tmp.tar  gui
+	if([ -d gui ]); then tar -rf tmp.tar  gui; fi
 	tar -rf tmp.tar  CON
 	tar -rf tmp.tar  ESMF			#^CMP IF ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
