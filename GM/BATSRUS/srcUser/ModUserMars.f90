@@ -1334,6 +1334,12 @@ contains
     real :: X2, Y2, Z2
 
     !-------------------------------------------------------------------------
+
+    if(.not. UseMarsB0) then
+       B1(:) = 0.0
+       RETURN
+    end if
+
     call timing_start('user_get_b0')
 
     if(UseMso)then  !change location from MSO to GEO
