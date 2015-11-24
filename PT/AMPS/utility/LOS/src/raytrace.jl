@@ -211,6 +211,8 @@ function reset_data!(nVars, data, dataNew, dataOld)
   end
 end
 
+
+
 function checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
                          r, r_hat_sun)
     if doCheckShadow == true
@@ -231,6 +233,7 @@ function checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
     end
     return isInShadow
 end
+
 
 function update_r!(r, r_hat, dr, l)
   for k=1:3
@@ -277,6 +280,14 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
     lMax = 0.0
     llMax = norm(oct.halfSize)*5.0
     distFromStart = 0.0
+    mask = ones(Int64, nRays)
+    userStr = lowercase(parseUserFile("pltBlankBody:"))
+    if contains(userStr, "true") || contains(userStr, "yes")
+      doBlankBody = true
+    else
+      doBlankBody = false
+    end
+
     for i=1:nRays
       updateVectors!(r, r_hat, rStart, rPointing, i)
       iTriangle, lIntersect = iTriangleIntersect(allTriangles, r, r_hat)
@@ -288,6 +299,7 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       distance = norm_vec(r)
       get_lMax!(lMax, iTriangle, r, lIntersect, llMax)
       reset_data!(nVars, data, dataNew, dataOld)
+
 
       while distance < rMax
         distFromStart = 0.0
@@ -327,17 +339,33 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
           end
         end
         update_r!(r, r_hat, dr, l)
-        #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
         distance = norm_vec(r)
       end
-      for k=1:nVars
-        if iTriangle == -1
-          ccd[k,i] = data[k]
-        else
-          ccd[k,i] = 0.0
+
+      if doBlankBody
+        if iTriangle != -1
+          mask[i] = 0
         end
-        #ccd[k, i] = data[k]
       end
+      for k=1:nVars
+        ccd[k, i] = data[k]
+      end
+
+      #=
+      if doBlankBody
+        for k=1:nVars
+          if iTriangle == -1
+            ccd[k,i] = data[k]
+          else
+            ccd[k,i] = 0.0
+          end
+        end
+      else
+        for k=1:nVars
+          ccd[k, i] = data[k]
+        end
+      end
+    =#
     end
-    return ccd
+    return ccd, mask
 end
