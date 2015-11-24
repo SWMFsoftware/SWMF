@@ -5,7 +5,7 @@ using Instrument
 
 include("io.jl")
 include("octree.jl")
-include("raytrace.jl")
+@everywhere include("raytrace.jl")
 
 global const clib = parseUserFile("clibFile:")
 @show(clib)
@@ -45,6 +45,14 @@ if contains(doCheckShadow, "y")
   doCheckShadow_bool = true
 else
   doCheckShadow_bool = false
+end
+
+doBlankBody = false
+userStr = lowercase(parseUserFile("pltBlankBody:"))
+if contains(userStr, "true") || contains(userStr, "yes")
+  doBlankBody = true
+else
+  doBlankBody = false
 end
 
 const filePath = dirname(fileName)
@@ -87,18 +95,31 @@ nTriangles, allTriangles, totalSurfaceArea = load_ply_file(meshFile)
 
 assign_triangles!(oct, allTriangles)
 
-@time ccd = doIntegration(oct, rPointing, rStart, nVars, allTriangles,
+@time ccd, mask = doIntegration(oct, rPointing, rStart, nVars, allTriangles,
                           doCheckShadow_bool)
 
 ccd = reshape(ccd, nVars, nPixelsX, nPixelsY)
-
+ccd_sum = zeros(nPixelsX, nPixelsY)
+if doBlankBody
+  mask = reshape(mask, nPixelsX, nPixelsY)
+  border_mask = get_border(mask)
+  custom_mask!(mask)
+end
 
 ################################################################################
 # check if user set plotting options
 ################################################################################
-cmap = "jet"
+cmap = ColorMap("hot")
 if length(parseUserFile("pltColorMap:")) > 0
-  cmap = parseUserFile("pltColorMap:")
+  cmapUser = parseUserFile("pltColorMap:")
+  try
+    cmap = ColorMap(cmapUser)
+  catch
+    print_with_color(:red, " - your colormap was not found. using default 'hot'\n")
+    println(" - some valid choices are: afmhot, autumn, bone, cool")
+    println(" - copper, gist_heat, gray, pink, spring, summer, winter")
+    println(" - Blues, Greens, Oranges, Reds, YlGn, BuPu, Greys, YlGnBu")
+  end
 end
 
 nLevels = 32
@@ -116,16 +137,18 @@ if length(parseUserFile("pltFontSize:")) > 0
   fontSize = parse(Int, parseUserFile("pltFontSize:"))
 end
 
-
-ccd_sum = zeros(nPixelsX, nPixelsY)
 for i=1:nVars
   figure()
   ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
-  contourf(log10(ccdPlt), nLevels)
+  contourf(log10(ccdPlt), nLevels, cmap=cmap)
+  colorbar()
+  if doBlankBody
+    contourf(mask, levels=[-0.1, 0.1], colors=("w"))
+    contourf(border_mask, levels=[0.9, 1.1], colors=("k"))
+  end
   xlabel("Pixel number", size=fontSize)
   ylabel("Pixel number", size=fontSize)
   title(pltTitle, size=fontSize)
-  colorbar()
   for ix = 1:nPixelsX
     for iy = 1:nPixelsY
        ccd_sum[ix, iy] += ccdPlt[ix, iy]
@@ -133,7 +156,7 @@ for i=1:nVars
    end
 end
 figure()
-contourf(log10(ccd_sum), nLevels)
+contourf(log10(ccd_sum), nLevels, cmap=cmap)
 xlabel("Pixel number", size=fontSize)
 ylabel("Pixel number", size=fontSize)
 title("Sum", size=fontSize)
