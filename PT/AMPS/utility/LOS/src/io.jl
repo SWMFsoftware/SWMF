@@ -1,6 +1,84 @@
 using Triangles
 using DataFrames
 
+
+function custom_mask!(mask)
+  mask_original = deepcopy(mask)
+  ixMax, iyMax = size(mask)
+  p0 = zeros(Int64, 2)
+  additionalBorderWidth = 0
+  try
+    additionalBorderWidth = parse(Int, parseUserFile("pltAdditionalBorderPx:"))
+  catch e
+    println(e)
+  end
+  aBW = additionalBorderWidth
+  for ix = 1:ixMax
+    for iy =1:iyMax
+      p0[1] = ix
+      p0[2] = iy
+      for iix = 1:ixMax
+        for iiy = 1:iyMax
+          distance = sqrt((ix-iix)^2 + (iy-iiy)^2)
+          if distance <= aBW && mask_original[iix, iiy] == 0.0
+            mask[ix, iy] = 0.0
+          end
+        end
+      end
+    end
+  end
+end
+
+function check_all_neighbors(ix, iy, mask)
+  inFound = false
+  outFound = false
+  for iix = ix-1:ix+1
+    for iiy = iy-1:iy+1
+      if mask[iix, iiy] == 0
+        inFound = true
+      else
+        outFound = true
+      end
+    end
+  end
+  return (inFound && outFound)
+end
+
+
+function get_border(mask)
+  border_mask = zeros(Int64, size(mask))
+  ixMax, iyMax = size(mask)
+  for ix = 2:ixMax-1
+    for iy = 2:iyMax-1
+      isBorder = false
+      if mask[ix, iy] == 0
+        isBorder = check_all_neighbors(ix, iy, mask)
+      end
+      if isBorder
+        border_mask[ix, iy] = 1
+      end
+    end
+  end
+  return border_mask
+end
+
+function load_user_coordinates(fileName, nVars=3)
+
+  iFile = open(fileName, "r")
+  coords = Float64[]
+  while !eof(iFile)
+    line = readline(iFile)
+    for element in split(line, ',')
+      push!(coords, parse(Float64, element))
+    end
+  end
+
+  nPoints = Int(length(coords)/nVars)
+  coords = reshape(coords, nVars, nPoints)
+  return coords
+end
+
+
 function parseUserFile(keyword)
  value = ""
  iFile = open("../.userSettings.conf")
@@ -45,17 +123,18 @@ function load_AMPS_data(fileName::UTF8String)
     line = readline(f)
     if ismatch(r"VARIABLE", line)
       line_split = split(line, ',')
-      println("nVars in header: ", length(line_split))
+      println(" - nVars in header: ", length(line_split))
       i=1
       for variable in line_split
-        condition1 = ismatch(r"Dust Number Density", variable)
-        condition2 = !ismatch(r"Total", variable)
-        condition3 = ismatch(r"Number Density", variable)
-        condition4 = !ismatch(r"Dust", variable)
-        if (condition1 & condition2) | (condition3 & condition4)
+        c1 = ismatch(r"Dust Number Density", variable)
+        c2 = !ismatch(r"Total", variable)
+        c3 = ismatch(r"Number Density", variable)
+        c4 = ismatch(r"Translational Temperature", variable)
+        c5 = !ismatch(r"Dust", variable)
+        if (c1 & c2) | ((c3 | c4) & c5)
           println(variable)
           push!(varIndexes, i)
-          if (condition1 & condition2) # dust case
+          if (c1 & c2) # dust case
             lower, upper = [parse(Float64, value) for value in matchall(r"(-?\d.\d+[eE][+-]\d+)", variable) ]
           else
             lower = 0.0
@@ -70,8 +149,8 @@ function load_AMPS_data(fileName::UTF8String)
     if ismatch(r"ZONE ", line)
       nNodes, nCells = [parse(Int64, value) for value in matchall(r"(\d+)", line)]
       nBlocks = round(Int64, nCells / nCellsPerBlock)
-      println("nNodes: ", nNodes)
-      println("nCells: ", nCells)
+      println(" - nNodes: ", nNodes)
+      println(" - nCells: ", nCells)
       break
     end
   end
