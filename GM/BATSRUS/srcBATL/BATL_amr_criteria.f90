@@ -14,16 +14,16 @@
 ! nAmrCrit                           : Total number of unique criteria used
 ! nExtCrit                           : Number of criteria coming form outside BATL, values in AmrCrit_IB
 ! nIntCrit                           : Number of criteria handled inside BATL, values in AmrCrit_IB
-! nPhysCritUsed                      : Number of criteria given by #AMRCRITERIA...... 
+! nPhysCritUsed                      : Number of criteria given by #AMRCRITERIA.....
 ! nCritDxLevel                       : Number of geometric criteria among nPhysCritUsed
 ! nCritGrid                          : Number of criteria from #GRIDLEVEL/RESOLUTION
 ! nGeoCrit                           : =2, dx(1) and level(2)
 ! RefineCritAll_I[nAmrCritUsed]      : Limit for criteria to do refinment
 ! CoarsenCritAll_I[nAmrCritUsed]     : Limit for criteria for when to coursen
 ! ResolutionLimit_I[nAmrCritUsed]    : A criteria will not be applied for block with a better resolution then indicated
-! iResolutionLimit_I[nAmrCritUsed]   : Index of ResolutionLimit_I are applied to dx or level resolution criteria
-! iMapToUniqCrit_I[nAmrCritUsed]      : Map from used criteria to unique criteria
-! AreaAll_I[maxarea]                : List of all ares used by the amr criteria
+! iResolutionLimit_I[nAmrCritUsed]   : Index of ResolutionLimit_I for dx/level crit
+! iMapToUniqCrit_I[nAmrCritUsed]     : Map from used criteria to unique criteria
+! AreaAll_I[maxarea]                 : List of all ares used by the amr criteria
 ! AmrCirt_IB[nAmrCrit,nBlock]        : Store the criteria values we compare to
 ! iAreaIdx_II[nAreaMax,nAmrCritUsed] : Index of criteria in AreaAll_I
 ! nAreaPerCrit_I[nAmrCritUsed]       : Number of areas appied for a criteria
@@ -172,7 +172,7 @@ contains
     AmrCrit_IB = -1.0
 
     ! Merging Data from Geometrical and Physical refinement parameters
-    nCrit = nAmrCritUsed + nCritGrid
+    nCrit = nPhysCritUsed + nCritGrid
 
     if(allocated(RefineCritAll_I))then
        deallocate(RefineCritAll_I,&
@@ -193,18 +193,18 @@ contains
 
     iVarCritAll_I = 0
 
-    if(nAmrCritUsed > 0 ) then
-       ! Copy physics based criteria from read_amr_criteia
-       RefineCritAll_I(1:nAmrCritUsed)   = RefineCritPhys_I(1:nAmrCritUsed)
-       CoarsenCritAll_I(1:nAmrCritUsed)  = CoarsenCritPhys_I(1:nAmrCritUsed)
-       ResolutionLimit_I(1:nAmrCritUsed) = MaxLevelCritPhys_I(1:nAmrCritUsed)
-       iVarCritAll_I(1:nAmrCritUsed)     = iMapToUniqCrit_I(1:nAmrCritUsed)
-       nAreaPerCritAll_I(1:nAmrCritUsed) = nAreaPerCritPhys_I(1:nAmrCritUsed)
+    if(nPhysCritUsed > 0 ) then
+       ! Copy physics based criteria into the list of all criteria
+       RefineCritAll_I(1:nPhysCritUsed)   = RefineCritPhys_I
+       CoarsenCritAll_I(1:nPhysCritUsed)  = CoarsenCritPhys_I
+       ResolutionLimit_I(1:nPhysCritUsed) = MaxLevelCritPhys_I
+       iVarCritAll_I(1:nPhysCritUsed)     = iMapToUniqCrit_I
+       nAreaPerCritAll_I(1:nPhysCritUsed) = nAreaPerCritPhys_I
 
        ! fixing indexing as "physics" criteria comes first
-       do iCrit=1,nAmrCritUsed
+       do iCrit=1,nPhysCritUsed
           iResolutionLimit_I(iCrit) = &
-               max(0,maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel))) + &
+               max(0,maxval(iVarCritAll_I(1:nPhysCritUsed-nCritDxLevel))) + &
                idxMaxGeoCritPhys_I(iCrit)
        end do
     end if
@@ -216,7 +216,7 @@ contains
     ! That do not have a name
 
     ! Start geometric criteria index after the non-geometric criteria
-    iCrit = nAmrCritUsed
+    iCrit = nPhysCritUsed
 
     do iGeo = 1, nArea
        Area => Area_I(iGeo)
@@ -241,11 +241,11 @@ contains
        end if
 
        ! All geometrical criteria are comparisons to resolution or level
-       if(nAmrCritUsed  > 0) then
+       if(nPhysCritUsed  > 0) then
           iVarCritAll_I(iCrit) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel)) + iVar
+               maxval(iVarCritAll_I(1:nPhysCritUsed-nCritDxLevel)) + iVar
           iResolutionLimit_I(iCrit) = &
-               maxval(iVarCritAll_I(1:nAmrCritUsed-nCritDxLevel)) + iVar
+               maxval(iVarCritAll_I(1:nPhysCritUsed-nCritDxLevel)) + iVar
        else
           iVarCritAll_I(iCrit)      = iVar   
           iResolutionLimit_I(iCrit) = iVar
@@ -256,8 +256,8 @@ contains
        nAreaPerCritAll_I(iCrit) = 1
     end do
 
-    if(nAmrCritUsed > 0 ) then
-       do iCrit = 1, nAmrCritUsed
+    if(nPhysCritUsed > 0 ) then
+       do iCrit = 1, nPhysCritUsed
           do iArea = 1, nAreaPerCritAll_I(iCrit)
              iAreaIdx_II(iArea,iCrit) = &
                   i_signed_region(adjustl(AreaNamesPhys_II(iArea,iCrit)))
@@ -421,7 +421,7 @@ contains
        ! we make an AMR priority list
        ! Only sort Physics based AMR
        ! Geomtry criteria is all or none 
-       if(TypeAmr /= 'phy') then            !!! ALL !!!!
+       if(TypeAmr /= 'phy') then            ! ALL 
           iStartCrit = nPhysCritUsed-nCritDxLevel +1
           iEndCrit   = nAmrCritUsed
           call apply_unsorted_criteria
