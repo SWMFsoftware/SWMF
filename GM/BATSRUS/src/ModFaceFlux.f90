@@ -3099,7 +3099,7 @@ contains
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
            UseAnisoPressure
 
-      real:: RhoU_D(3)
+      real:: UnMin, UnMax
       real:: Rho, InvRho, GammaP, GammaPe, Pw, Sound2, Ppar, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
@@ -3119,12 +3119,16 @@ contains
 
       Rho = State_V(iRhoIon_I(1))
       GammaP = State_V(iPIon_I(1))*Gamma_I(1)/Rho
-      RhoU_D = Rho*State_V(iUxIon_I(1):iUzIon_I(1))
+      Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
+      UnMin = Un
+      UnMax = Un
       do jFluid = 2, nIonFluid
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
          GammaP = GammaP + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1
-         RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))
+         Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
+         UnMin = min(Un, UnMin)
+         UnMax = max(Un, UnMax)
       end do
       GammaP = GammaP*Rho
       ! This only works for multi-ion with no separate Pe and same gammas
@@ -3161,8 +3165,6 @@ contains
             Sound2 = Sound2 + GammaWave*Pw*InvRho
          end if
       end if
-
-      Un     = InvRho*sum( RhoU_D*Normal_D )
 
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
@@ -3333,23 +3335,23 @@ contains
       else
          if(present(Cmax_I))then
             if(HallCoeff > 0.0)then
-               Cmax_I(1)   = max(abs(Un), abs(HallUnLeft), abs(HallUnRight))
+               Cmax_I(1)   = max(abs(UnMin), abs(UnMax), &
+                    abs(HallUnLeft), abs(HallUnRight))
                CmaxDt_I(1) = Cmax_I(1) + FastDt
                Cmax_I(1)   = Cmax_I(1) + Fast
             else
-               Cmax_I(1)   = abs(Un) + Fast
+               Cmax_I(1)   = max(abs(UnMin), abs(UnMax)) + Fast
                CmaxDt_I(1) = Cmax_I(1)
             end if
          end if
-         if(present(Cleft_I))  Cleft_I(1)  = Un - Fast
-         if(present(Cright_I)) Cright_I(1) = Un + Fast
+         if(present(Cleft_I))  Cleft_I(1)  = UnMin - Fast
+         if(present(Cright_I)) Cright_I(1) = UnMax + Fast
       end if
 
       if(DoTestCell)then
          if(.not.IsCartesian)then
             write(*,*)NameSub,' AreaX,Y,Z =',AreaX, AreaY, AreaZ
             write(*,*)NameSub,' Area,Area2=',Area, Area2
-            write(*,*)NameSub,' InvRho, RhoU_D=',InvRho, RhoU_D
          end if
          if(UseAwSpeed)then
             write(*,*)NameSub,' UnLeft=',  UnLeft
