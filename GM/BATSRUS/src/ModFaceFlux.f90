@@ -3117,20 +3117,18 @@ contains
 
       if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
 
-      Rho    = State_V(Rho_)
-      GammaP = State_V(p_)*Gamma
-      RhoU_D = Rho*State_V(Ux_:Uz_)
-      if(.not. IsMhd)then
-         do jFluid = 2, nIonFluid
-            Rho1= State_V(iRhoIon_I(jFluid))
-            Rho = Rho + Rho1
-            GammaP = GammaP + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)
-            RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))
-         end do
-         ! This only works for multi-ion with no separate Pe and same gammas
-         if(.not.UseElectronPressure) &
-              GammaP = GammaP * (1 + ElectronPressureRatio)
-      end if
+      Rho = State_V(iRhoIon_I(1))
+      GammaP = State_V(iPIon_I(1))*Gamma_I(1)/Rho
+      RhoU_D = Rho*State_V(iUxIon_I(1):iUzIon_I(1))
+      do jFluid = 2, nIonFluid
+         Rho1= State_V(iRhoIon_I(jFluid))
+         Rho = Rho + Rho1
+         GammaP = GammaP + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1
+         RhoU_D = RhoU_D + Rho1*State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))
+      end do
+      GammaP = GammaP*Rho
+      ! This only works for multi-ion with no separate Pe and same gammas
+      if(.not.UseElectronPressure) GammaP = GammaP*(1 + ElectronPressureRatio)
 
       if(UseMultiIon)then
          ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
