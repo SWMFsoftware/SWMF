@@ -314,10 +314,12 @@ elseif lowercase(ARGS[1]) == "--show"
   end
   close(iFile)
 elseif lowercase(ARGS[1]) == "--help"
-  print("say please: ")
+  print(" \U2665 say please: ")
   answ = readline(STDIN)
-  if contains(answ, "please")
-    println("Thanks! You have the following options to call Config.jl:")
+  if contains(lowercase(answ), "please")
+    println(" - Thanks! You have the following options to call Config.jl:")
+    println(" - All paths have to be absolute.")
+    println(" - option arguments are case insensitive (tmpDir == TmpDIR)")
     println("")
     println("--tmpdir          directory where files for runs are stored")
     println("--spicelib        directory to cspice.a and csupport.a")
@@ -327,12 +329,12 @@ elseif lowercase(ARGS[1]) == "--help"
     println("--meshfile        .ply file of the body surface mesh")
     println("--meshfileshadow  .ply file of the body surface mesh for shadow calc.")
     println("--docheckshadow   yes or no if shadow calculation is needed")
-    println("--datafile        .full path to h5 AMPS output file")
+    println("--datafile        Full path to .h5 or .dat AMPS output file")
     println("--clean           remove 'lib' and 'input' dirs in tmpfile")
     println("--help            show this message")
 
   else
-    println("Too bad, better luck next time...")
+    println(" \U02668 Too bad, better luck next time...")
   end
 elseif lowercase(ARGS[1]) == "--auto"
   println("START auto setup:")
