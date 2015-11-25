@@ -132,7 +132,7 @@ function load_AMPS_data(fileName::UTF8String)
         c4 = ismatch(r"Translational Temperature", variable)
         c5 = !ismatch(r"Dust", variable)
         if (c1 & c2) | ((c3 | c4) & c5)
-          println(variable)
+          println(" - variable: " * variable)
           push!(varIndexes, i)
           if (c1 & c2) # dust case
             lower, upper = [parse(Float64, value) for value in matchall(r"(-?\d.\d+[eE][+-]\d+)", variable) ]

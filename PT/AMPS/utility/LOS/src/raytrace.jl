@@ -325,8 +325,12 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
 
         foundCell, cell = cell_containing_point(oct, r)
         l = norm_vec(r) / 30.0
-        isInShadow = checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
-                                    r, r_hat_sun)
+        if doCheckShadow
+          isInShadow = checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
+                                      r, r_hat_sun)
+        else
+          isInShadow = false
+        end
 
         if !isInShadow
           for k=1:nVars
