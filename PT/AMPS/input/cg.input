@@ -72,6 +72,8 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=off !!!on,of
 
+UserDefinedSurfaceTriangulationData::mode=on,class=cSurfaceDataCG,header=SurfaceDataCG.h
+
   TrajectoryTracing=off
   MaxSampledTrajectoryNumber=25000
 
