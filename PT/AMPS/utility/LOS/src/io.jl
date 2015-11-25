@@ -122,6 +122,11 @@ function load_AMPS_data(fileName::UTF8String)
   while !eof(f)
     line = readline(f)
     if ismatch(r"VARIABLE", line)
+      if ismatch(r"Dust", line)
+        isDustCase = true
+      else
+        isDustCase = false
+      end
       line_split = split(line, ',')
       println(" - nVars in header: ", length(line_split))
       i=1
@@ -131,7 +136,8 @@ function load_AMPS_data(fileName::UTF8String)
         c3 = ismatch(r"Number Density", variable)
         c4 = ismatch(r"Translational Temperature", variable)
         c5 = !ismatch(r"Dust", variable)
-        if (c1 & c2) | ((c3 | c4) & c5)
+        c6 = !ismatch(r"dust", modelType)
+        if (c1 & c2) | ((c3 | c4) & c5 & !isDustCase)
           println(" - variable: " * variable)
           push!(varIndexes, i)
           if (c1 & c2) # dust case
