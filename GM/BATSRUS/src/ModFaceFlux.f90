@@ -2947,9 +2947,12 @@ contains
              call get_mhd_speed
           endif
 
-          ! For multi-ion without global fluid also take
-          ! maximum with respect to the sound wave velocities
-          if(.not.IsMhd .and. UseMultiIon) call get_hd_speed
+       elseif(iFluid > 1 .and. iFluid <= IonLast_)then
+          Cleft_I(iFluid)  = 0.0
+          Cright_I(iFluid) = 0.0
+          Cmax_I(iFluid)   = 0.0
+          CmaxDt_I(iFluid) = 0.0
+          CYCLE
 
        elseif(DoBurgers)then
           call get_burgers_speed
@@ -3435,39 +3438,18 @@ contains
       Sound = sqrt(Sound2)
       Un    = sum(State_V(iUx:iUz)*Normal_D)
 
-      if(UseMultiIon .and. iFluid == 1 .and. .not. IsMhd)then
-         ! Take min and max with the full MHD speeds calculated beforehand
-         if(DoAw)then
-            Cleft_I(iFluid)  = min(Cleft_I(iFluid), &
-                 min(UnLeft, UnRight) - Sound)
-            Cright_I(iFluid) = max(Cright_I(iFluid), &
-                 max(UnLeft, UnRight) + Sound)
-            Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
-            CmaxDt_I(iFluid) = Cmax_I(iFluid)
-         else
-            if(present(Cmax_I))then
-               Cmax_I(iFluid)   = max(Cmax_I(iFluid), abs(Un) + Sound)
-               CmaxDt_I(iFluid) = Cmax_I(iFluid)
-            end if
-            if(present(Cleft_I))  Cleft_I(iFluid)  = min(Cleft_I(iFluid), &
-                 Un - Sound)
-            if(present(Cright_I)) Cright_I(iFluid) = max(Cright_I(iFluid), &
-                 Un + Sound)
-         end if
+      if(DoAw)then
+         Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
+         Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
+         Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
+         CmaxDt_I(iFluid) = Cmax_I(iFluid)
       else
-         if(DoAw)then
-            Cleft_I(iFluid)  = min(UnLeft, UnRight) - Sound
-            Cright_I(iFluid) = max(UnLeft, UnRight) + Sound
-            Cmax_I(iFluid)   = max(Cright_I(iFluid), -Cleft_I(iFluid))
+         if(present(Cmax_I))then
+            Cmax_I(iFluid)   = abs(Un) + Sound
             CmaxDt_I(iFluid) = Cmax_I(iFluid)
-         else
-            if(present(Cmax_I))then
-               Cmax_I(iFluid)   = abs(Un) + Sound
-               CmaxDt_I(iFluid) = Cmax_I(iFluid)
-            end if
-            if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
-            if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
          end if
+         if(present(Cleft_I))  Cleft_I(iFluid)  = Un - Sound
+         if(present(Cright_I)) Cright_I(iFluid) = Un + Sound
       end if
 
       if(DoTestCell)then
