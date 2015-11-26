@@ -109,6 +109,12 @@ while ($line=<InputFile>) {
     
     ampsConfigLib::RedefineMacro("_EXOSPHERE_SODIUM_STICKING_PROBABILITY__REEMISSION_FRACTION_","$InputLine","main/Comet.cpp");
   }
+
+  #change the starting locations at which tracking of the partucle trajecoties begis
+  elsif ($InputLine eq "TRACINGSURFACERADIUS") { #TracingSurfaceRadius
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+     ampsConfigLib::ChangeValueOfVariable("const double TracingSurfaceRadius",$InputLine,"main/Comet.h"); 
+  }
   
   #the range of the dust grain speed (used for evaluation of the local time step)
   elsif ($InputLine eq "DUSTVELOCITYLIMIT") {
