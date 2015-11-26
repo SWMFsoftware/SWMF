@@ -10,9 +10,10 @@ print "File name=$ARGV[0]\n";
 
 open (FILE,"<$ARGV[0]") or die $!;
 open (fSCRIPT,">script.mcr") or die $!;
- 
+open (fAcceptedTrajectories,">AcceptedTrajectories.dat") or die $!; 
 
 print fSCRIPT "#!MC 1400\n"; 
+
 
 
 #constants: direction of the axis, the radii and engle range
@@ -32,6 +33,7 @@ my $ZoneCounter=1;
 my $ZoneONFlag=0;
 my $nShowZones=0;
 my $ZoneMustBeOFF=0;
+my @ZoneData;
 
 my $cosAngleRange=cos($AngleRange/180.0*3.141592654);
 
@@ -39,8 +41,10 @@ my $minCosAngle=cos(10.0/180.0*3.141592654);
 
 
 
+
 $line=<FILE>; 
 print "$line\n";
+print fAcceptedTrajectories "$line\n";
 
 $line=<FILE>;
 
@@ -68,7 +72,7 @@ while ($line=<FILE>) {
        $l3+=$lInit[$i]*($x1[$i]-$x0[$i]);
      }
           
-     if (($nPointsZone>4) && ($lInit[0]/sqrt($l1)>cos(85.0/180.0*3.141592654)) && (-($x1[0]-$x0[0])/sqrt($l2) >0.0) ) {       #  ($l3/sqrt($l1*$l2)<$minCosAngle)) {
+     if (1==1) { #$nPointsZone>4) && ($lInit[0]/sqrt($l1)>cos(85.0/180.0*3.141592654)) && (-($x1[0]-$x0[0])/sqrt($l2) >0.0) ) {       #  ($l3/sqrt($l1*$l2)<$minCosAngle)) {
        
        if (rand()<$AcceptanceRate) {
          $ZoneONFlag=1;
@@ -84,6 +88,8 @@ while ($line=<FILE>) {
      if (($ZoneONFlag == 1) && ($ZoneMustBeOFF==0) ) {
        print fSCRIPT "\$!ACTIVEFIELDMAPS += [$ZoneCounter]\n";
        $nShowZones+=1;
+       
+       print fAcceptedTrajectories "@ZoneData";
      }
      else {
        print fSCRIPT "\$!ACTIVEFIELDMAPS -= [$ZoneCounter]\n";
@@ -94,10 +100,15 @@ while ($line=<FILE>) {
      $ZoneMustBeOFF=0;
      $ZoneCounter+=1;
      $nPointsZone=0;
+     
+     undef(@ZoneData);
+     push(@ZoneData,$line);
    }
    else {
      my $c;
      my $i;
+     
+     push(@ZoneData,$line);
 
 if (sqrt($s[0]*$s[0]+$s[1]*$s[1]+$s[2]*$s[2])>20.0E3) { 
   
@@ -189,6 +200,7 @@ else {
 #close the opne files 
 close (FILE);
 close (fSCRIPT);
+close (fAcceptedTrajectories);
 
 #print statistics
 print "Total number of zones: $ZoneCounter\n";
