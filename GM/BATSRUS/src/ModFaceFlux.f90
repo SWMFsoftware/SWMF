@@ -2948,10 +2948,10 @@ contains
           endif
 
        elseif(iFluid > 1 .and. iFluid <= IonLast_)then
-          if(present(Cleft_I))  Cleft_I(iFluid)  = 0.0
-          if(present(Cright_I)) Cright_I(iFluid) = 0.0
-          if(present(Cmax_I))   Cmax_I(iFluid)   = 0.0
-          CmaxDt_I(iFluid) = 0.0
+          if(present(Cleft_I))  Cleft_I(iFluid)  = Cleft_I(1)
+          if(present(Cright_I)) Cright_I(iFluid) = Cright_I(1)
+          if(present(Cmax_I))   Cmax_I(iFluid)   = Cmax_I(1)
+          CmaxDt_I(iFluid) = CmaxDt_I(1)
           CYCLE
 
        elseif(DoBurgers)then
@@ -3379,7 +3379,7 @@ contains
     !========================================================================
     subroutine get_hd_speed
 
-      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, State_VGB
+      use ModAdvance, ONLY: UseElectronPressure, State_VGB
       use ModPhysics, ONLY: Gamma_I, GammaElectron
 
       real :: InvRho, Sound2, Sound, Un, GammaP
@@ -3391,11 +3391,7 @@ contains
 
       ! Calculate sound speed and normal speed
       InvRho = 1.0/State_V(iRho)
-      if(UseAnisoPressure .and. IsIon_I(iFluid))then
-         GammaP = State_V(iPpar)
-      else
-         GammaP = Gamma_I(iFluid)*State_V(iP)
-      end if
+      GammaP = Gamma_I(iFluid)*State_V(iP)
 
       ! If no ion fluids present, then electron pressure is added to
       ! the neutral pressure (CRASH applications)
