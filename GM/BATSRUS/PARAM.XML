@@ -1308,8 +1308,12 @@ shown above.
 T		UseExtraBoundary
 user		TypeExtraBoundary
 
-If UseExtraBoundary is true, the user can define an extra boundary
-condition in the user files. The TypeExtraBoundary parameter can be used
+If UseExtraBoundary is true, the user can define an extra face boundary
+condition in the user files. The location of this boundary is defined
+in the user_set_boundary_cells routine, while the boundary condition
+itself is implemented into the user_set_face_boundary. The extra boundary
+has index ExtraBc_=0, which is important to know for the proper settings
+in the #FACEBOUNDARY command. The TypeExtraBoundary parameter can be used
 to select from multiple boundary conditions implemented in the user module.
 </command>
 
@@ -4304,7 +4308,7 @@ By default there are no "regions" defined.
 			<option name="rotated" />
 		</part>
 	</parameter>
-	<if expr="$NameShape !~ /box|user|init|0/">
+	<if expr="$NameShape !~ /box|user|all|init|0/">
 		<parameter name="xPosition" type="real" default="0"/>
 		<parameter name="yPosition" type="real" default="0" 
 			   if="$nJ!=1"/>
