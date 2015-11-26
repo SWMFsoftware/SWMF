@@ -2948,9 +2948,9 @@ contains
           endif
 
        elseif(iFluid > 1 .and. iFluid <= IonLast_)then
-          Cleft_I(iFluid)  = 0.0
-          Cright_I(iFluid) = 0.0
-          Cmax_I(iFluid)   = 0.0
+          if(present(Cleft_I))  Cleft_I(iFluid)  = 0.0
+          if(present(Cright_I)) Cright_I(iFluid) = 0.0
+          if(present(Cmax_I))   Cmax_I(iFluid)   = 0.0
           CmaxDt_I(iFluid) = 0.0
           CYCLE
 
