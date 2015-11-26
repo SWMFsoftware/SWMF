@@ -18,13 +18,13 @@ subroutine write_plot_common(iFile)
   use ModIoUnit, ONLY: io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
-  use ModUtilities, ONLY: lower_case, split_string, join_string
+  use ModUtilities, ONLY: split_string, join_string
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
        message_pass_node, average_grid_node, find_grid_block, &
        IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
-
+  
   implicit none
 
   ! Arguments
@@ -53,10 +53,10 @@ subroutine write_plot_common(iFile)
   logical:: IsSphPlot
 
   ! Equation parameters
-  integer, parameter :: neqparmax=10
-  real :: eqpar(neqparmax)
-  character (len=10) :: eqparnames(neqparmax)
-  integer :: neqpar
+  integer, parameter :: MaxParam = 100
+  real               :: Param_I(MaxParam)
+  character (len=10) :: NameParam_I(MaxParam)
+  integer :: nParam
 
   character (LEN=500) :: allnames
   character (LEN=1500) :: unitstr_TEC
@@ -111,19 +111,15 @@ subroutine write_plot_common(iFile)
 
   plot_type1=plot_type(iFile)
   plot_vars1=plot_vars(iFile)
-  plot_pars1=plot_pars(iFile)
   PlotRange_I = plot_range(:,iFile)
-
-  call lower_case(plot_pars1)
 
   if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
        ' form = ',plot_form(iFile)
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
-  call split_string(plot_pars1, neqparmax, eqparnames, neqpar, &
-       UseArraySyntaxIn=.true.)
-  call set_eqpar(iFile-plot_,neqpar,eqparnames,eqpar)
+
+  call set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
 
   call join_string(plotvarnames(1:nplotvar), allnames)
   allnames=trim(allnames)//' '//trim(plot_pars(iFile))
@@ -554,8 +550,8 @@ subroutine write_plot_common(iFile)
                 dxGLOBALmin*CoordUnit, nGLOBALcells,&
                 ' plot_dx, dxmin, ncell'
            write(unit_tmp,'(i8,a)')nplotvar  ,' nplotvar'
-           write(unit_tmp,'(i8,a)')neqpar,' neqpar'
-           write(unit_tmp,'(10es13.5)')eqpar(1:neqpar)
+           write(unit_tmp,'(i8,a)')nParam,' neqpar'
+           write(unit_tmp,'(10es13.5)')Param_I(1:nParam)
            write(unit_tmp,'(a)')trim(allnames)
            write(unit_tmp,'(a)')trim(unitstr_IDL)
            write(unit_tmp,'(l8,a)') IsBinary,' save_binary'
@@ -654,80 +650,127 @@ contains
 end subroutine write_plot_common
 
 !==============================================================================
-subroutine set_eqpar(iPlotFile,nEqPar,NameEqPar_I,EqPar_I)
+subroutine set_scalar_param(iFile, MaxParam, nParam, NameParam_I, Param_I)
+
+  ! For file iPlotFile set the 
+  ! Extend array of scalar parameters with useful information
+  ! 
 
   use ModProcMH
   use ModPhysics, ONLY : Gamma, cLight, rBody, ThetaTilt, &
-       No2Io_V, UnitU_, UnitX_, UnitRho_
+       No2Io_V, No2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
   use ModRaytrace, ONLY : R_raytrace
   use ModNumConst, ONLY : cRadToDeg
   use ModResistivity, ONLY: Eta0Si
   use ModIO
   use ModMain, ONLY: dt
+  use ModMultiFluid, ONLY: iFluid, nFluid, MassFluid_I, IonFirst_
   use BATL_lib, ONLY: nRoot_D, nI, nJ, nK
+  use ModUtilities, ONLY: split_string, lower_case
 
   implicit none
-  integer,           intent(in) :: iPlotFile,nEqPar
-  character(len=10), intent(in) :: NameEqPar_I(nEqPar)
-  real,              intent(out):: EqPar_I(nEqPar)
+  integer,           intent(in) :: iFile
+  integer,           intent(in) :: MaxParam
+  integer,           intent(out):: nParam
+  character(len=10), intent(out):: NameParam_I(MaxParam)
+  real,              intent(out):: Param_I(MaxParam)
 
+  character(len=500):: NameParam
   integer :: iPar
+  character(len=*), parameter:: NameSub = 'set_scalar_param'
   !---------------------------------------------------------------------------
-  do iPar=1,nEqPar
-     select case(NameEqPar_I(iPar))
+  NameParam = plot_pars(iFile)
+
+!  if(rBody > 0.0) NameParam = trim(NameParam)//' rbody'
+!  if(nFluid > 1 .and. any(MassFluid_I /= 1.0))then
+!     do iFluid = 1, nFluid
+!     end do
+!  endif
+  call lower_case(NameParam)
+  call split_string(NameParam, MaxParam, NameParam_I, nParam, &
+       UseArraySyntaxIn=.true.)
+
+  do iPar = 1, nParam
+     select case(NameParam_I(iPar))
      case('g','gamma')
-        EqPar_I(iPar)=Gamma
+        Param_I(iPar)=Gamma
      case('c','clight')
-        if(plot_dimensional(plot_+iPlotFile)) then
-           EqPar_I(iPar)=Clight*No2Io_V(UnitU_)
+        if(plot_dimensional(iFile)) then
+           Param_I(iPar)=Clight*No2Io_V(UnitU_)
         else
-           EqPar_I(iPar)=Clight
+           Param_I(iPar)=Clight
         end if
      case('r','rbody')
-        EqPar_I(iPar)=rBody
-        if(plot_dimensional(plot_+iPlotFile))&
-             EqPar_I(iPar)=EqPar_I(iPar)*No2Io_V(UnitX_)
+        Param_I(iPar)=rBody
+        if(plot_dimensional(iFile))&
+             Param_I(iPar)=Param_I(iPar)*No2Io_V(UnitX_)
         ! BEGIN CCMC REQUESTED PARAMETERS to describe block structure
      case('p1')
-        EqPar_I(iPar)=nRoot_D(1)
+        Param_I(iPar)=nRoot_D(1)
      case('p2')
-        EqPar_I(iPar)=nRoot_D(2)
+        Param_I(iPar)=nRoot_D(2)
      case('p3')
-        EqPar_I(iPar)=nRoot_D(3)
+        Param_I(iPar)=nRoot_D(3)
      case('nx')
-        EqPar_I(iPar)=nI
+        Param_I(iPar)=nI
      case('ny')
-        EqPar_I(iPar)=nJ
+        Param_I(iPar)=nJ
      case('nz')
-        EqPar_I(iPar)=nK
+        Param_I(iPar)=nK
      case('th')
         ! CCMC needs the dipole tilt in radians
-        EqPar_I(iPar)=ThetaTilt
+        Param_I(iPar)=ThetaTilt
         ! END OF CCMC requested parameters
      case('tilt')
-        EqPar_I(iPar)=ThetaTilt*cRadToDeg
+        Param_I(iPar)=ThetaTilt*cRadToDeg
      case('eta')
-        EqPar_I(iPar)=Eta0Si
+        Param_I(iPar)=Eta0Si
      case('unitx')
-        EqPar_I(iPar)=No2Io_V(UnitX_)
+        Param_I(iPar)=No2Io_V(UnitX_)
      case('unitrho')
-        EqPar_I(iPar)=No2Io_V(UnitRho_)
+        Param_I(iPar)=No2Io_V(UnitRho_)
      case('unitv')
-        EqPar_I(iPar)=No2Io_V(UnitU_)
+        Param_I(iPar)=No2Io_V(UnitU_)
      case('mu')
-        EqPar_I(iPar)=mu_los
+        Param_I(iPar)=mu_los
      case('R_ray')
-        EqPar_I(iPar)=R_raytrace
+        Param_I(iPar)=R_raytrace
      case('dt')
-        EqPar_I(iPar) = dt
+        Param_I(iPar) = dt
+     case('xSI')
+        Param_I(iPar)=No2Si_V(UnitX_)
+     case('tSI')
+        Param_I(iPar)=No2Si_V(UnitT_)
+     case('uSI')
+        Param_I(iPar)=No2Si_V(UnitU_)
+     case('rhoSI')
+        Param_I(iPar)=No2Si_V(UnitRho_)
+     case('Mi','M1')
+        Param_I(iPar)=MassFluid_I(IonFirst_)
+     case('M2')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+1,nFluid))
+     case('M3')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+2,nFluid))
+     case('M4')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+3,nFluid))
+     case('M5')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+4,nFluid))
+     case('M6')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+5,nFluid))
+     case('M7')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+6,nFluid))
+     case('M8')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+7,nFluid))
+     case('M9')
+        Param_I(iPar)=MassFluid_I(min(IonFirst_+8,nFluid))
      case default
-        EqPar_I(iPar)=-7777.
-        if(iProc==0)write(*,*)'Error in set_eqpar: unknown eqparname=',&
-             NameEqPar_I(iPar),' for iPlotFile=',iPlotFile
+        Param_I(iPar)=-7777.
+        if(iProc==0)write(*,*) NameSub, ' Error: unknown parameter name=',&
+             NameParam_I(iPar),' for iFile=',iFile
      end select
   end do
 
-end subroutine set_eqpar
+end subroutine set_scalar_param
 
 !==============================================================================
 subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&

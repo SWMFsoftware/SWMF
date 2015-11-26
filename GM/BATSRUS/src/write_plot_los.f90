@@ -221,15 +221,13 @@ subroutine write_plot_los(iFile)
 
   plot_type1=plot_type(ifile)
   plot_vars1=plot_vars(ifile)
-  plot_pars1=plot_pars(ifile)
 
   if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
        ' form = ',plot_form(ifile)
 
   call lower_case(plot_vars1)
   call split_string(plot_vars1,nPlotVarLosMax,plotvarnames,nPlotVar)
-  call split_string(plot_pars1,neqparmax,eqparnames,neqpar)
-  call set_eqpar(ifile-plot_,neqpar,eqparnames,eqpar)
+  call set_scalar_param(ifile,neqparmax,neqpar,eqparnames,eqpar)
 
   ! For generalized Los Table check PlotVarNames for string 'tbl'
   UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
@@ -261,7 +259,7 @@ subroutine write_plot_los(iFile)
      if(oktest_me) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
   endif
 
-  allnames='x y '//trim(plot_vars1)//' '//plot_pars1
+  allnames='x y '//trim(plot_vars1)//' '//plot_pars(iFile)
   if(oktest_me) write(*,*) 'AllNames: ', AllNames
 
   if(oktest_me) then
