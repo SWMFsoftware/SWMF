@@ -1,6 +1,6 @@
 #main
 
-SpeciesList=H2O DUST DUST
+SpeciesList=H2O CO2 DUST DUST DUST DUST
 !CO CO2
 
 DebuggerMode=off !on,off
@@ -133,16 +133,16 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 
   RotZnum(H2O=5)
   VibTemp(H2O=2000)
-!  nRotModes(CO=2)
-!  nRotModes(CO2=2)
-!  RotZnum(CO=5)
-!  RotZnum(CO2=5)
+! nRotModes(CO=2)
+  nRotModes(CO2=2)
+! RotZnum(CO=5)
+  RotZnum(CO2=5)
 
   TemperatureIndex(H2O,H2O)=0.5
 !  TemperatureIndex(CO,CO)=0.5
-!  TemperatureIndex(CO2,CO2)=0.5
+  TemperatureIndex(CO2,CO2)=0.5
 !  TemperatureIndex(H2O,CO)=0.5
-!  TemperatureIndex(H2O,CO2)=0.5
+  TemperatureIndex(H2O,CO2)=0.5
 !  TemperatureIndex(CO,CO2)=0.5
 #endIDF
 
@@ -168,12 +168,15 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   DustCharging::SecondaryElectronEmissionCurrent=off 
   DustCharging::Mode=off !TimeDependent !off,TimeDependent, Equilibrium
  
-  DustVelocityLimit::min=0.01
-  DustVelocityLimit::max=150.0 !40.0 
+  DustVelocityLimit::min=0.1
+  DustVelocityLimit::max=50.0 !150.0 !40.0 
 
 !  HeliocentricDistance=3.5*_AU_
 !  subSolarPointAzimuth=0.328671678 !! in rad 18.7961
 !  subSolarPointZenith=0.809977635 !! in rad 46.41975 degrees from zaxis
+
+  !distance at which tracing of the particle trajectories begins 
+  TracingSurfaceRadius=0.7E3
 
   HeliocentricDistance=1.88*_AU_
   subSolarPointAzimuth=5.2090
@@ -189,10 +192,10 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   ComputeMaximumLiftableSizeMode=off
 
   !!Gas parameters
-  ndist=5 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
+  ndist=0 !!1.3AU->0, 2.0AU->1, 2.7AU->2, 3.0AU->3, 3.3AU->4, 3.5AU->5
   
   BjornProductionRateUserDefined=Analytical !on,off,Analytical
-  MultispeciesAnalyticalMode=off !on,off
+  MultispeciesAnalyticalMode=on !off !on,off
   
   !! if BjornProductionRateUserDefined=on, use following values
   BjornProductionRate(H2O)=0.0 !!2.0e25	    
