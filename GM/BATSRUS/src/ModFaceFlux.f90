@@ -3103,7 +3103,7 @@ contains
            UseAnisoPressure
 
       real:: UnMin, UnMax
-      real:: Rho, InvRho, GammaP, GammaPe, Pw, Sound2, Ppar, Ppar1, Pperp
+      real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real:: dB1dB1
@@ -3111,7 +3111,7 @@ contains
       real :: FullBt, Rho1, cDrift, cHall, HallUnLeft, HallUnRight, &
            B1B0L, B1B0R
 
-      real :: Fraction, ChargeDens_I(nIonFluid)
+      real :: MultiIonFactor, ChargeDens_I(nIonFluid)
 
       integer:: jFluid
 
@@ -3121,42 +3121,47 @@ contains
       if(DoTestCell)write(*,*) NameSub,' State_V, B0=',State_V, B0x, B0y, B0z
 
       Rho = State_V(iRhoIon_I(1))
-      GammaP = State_V(iPIon_I(1))*Gamma_I(1)/Rho
+      Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )
       UnMin = Un
       UnMax = Un
       do jFluid = 2, nIonFluid
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
-         GammaP = GammaP + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1
+         ! The (approximate) fast speed fromula for multi-ion MHD
+         ! contains the sum of ion sound speeds squared
+         Sound2 = Sound2 + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1
          Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
+         ! A reliable upper and lower estimate for wave speeds 
+         ! uses the max and min of all ion bulk velocities.
          UnMin = min(Un, UnMin)
          UnMax = max(Un, UnMax)
       end do
-      GammaP = GammaP*Rho
+
+      ! InvRho = 1/Sum(RhoIon_I)
+      InvRho = 1.0/Rho
+
       ! This only works for multi-ion with no separate Pe and same gammas
-      if(.not.UseElectronPressure) GammaP = GammaP*(1 + ElectronPressureRatio)
+      if(.not.UseElectronPressure) Sound2 = Sound2*(1 + ElectronPressureRatio)
 
       if(UseMultiIon)then
+         ! The Alfven velocity and the electron pressure are multiplied
+         ! with a Factor >= 1 in multi-ion MHD.
          ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
-         Fraction = &
+         MultiIonFactor = &
               Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
       end if
 
       if(UseElectronPressure)then
          GammaPe = GammaElectron*State_V(Pe_)
-         if(UseMultiIon) GammaPe = GammaPe*Fraction
-         GammaP = GammaP + GammaPe
+         if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
+         Sound2 = Sound2 + GammaPe*InvRho
       else
          GammaPe = 0.0
       end if
 
-      InvRho = 1.0/Rho
-      if(UseRS7)then
-         Sound2 = (GammaP + GammaMinus1*DiffBb)*InvRho
-      else
-         Sound2 = GammaP*InvRho
-      end if
+      if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
+
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
             Sound2 = Sound2 + &
@@ -3193,15 +3198,15 @@ contains
          B1B0R = StateRight_V(Bx_)*B0x &
               +  StateRight_V(By_)*B0y &
               +  StateRight_V(Bz_)*B0z
-         Alfven2 = Alfven2 +(abs(B1B0L)-B1B0L+abs(B1B0R)-B1B0R)*InvRho
+         Alfven2 = Alfven2 +(abs(B1B0L) - B1B0L + abs(B1B0R) - B1B0R)*InvRho
       end if
 
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
       Alfven2Normal = InvRho*FullBn**2
 
       if(UseMultiIon)then
-         Alfven2 = Alfven2*Fraction
-         Alfven2Normal = Alfven2Normal*Fraction
+         Alfven2 = Alfven2*MultiIonFactor
+         Alfven2Normal = Alfven2Normal*MultiIonFactor
       end if
 
       ! Calculate fast speed for anisotropic ion pressure.
@@ -3211,9 +3216,10 @@ contains
          Ppar  = State_V(Ppar_)
          Pperp = (3*State_V(p_) - Ppar)/2.
          if(.not. IsMhd)then
+!!! Most likely the parallel and perpendicular sound speeds should be added up here !!!
             do jFluid = IonFirst_+1, IonLast_
                Ppar1 = State_V(iPparIon_I(jFluid))
-               Ppar = Ppar + Ppar1
+               Ppar  = Ppar + Ppar1
                Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
             end do
          end if
