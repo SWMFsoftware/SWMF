@@ -3129,8 +3129,8 @@ contains
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
          ! The (approximate) fast speed fromula for multi-ion MHD
-         ! contains the sum of ion sound speeds squared
-         Sound2 = Sound2 + State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1
+         ! contains the maximum of ion sound speeds squared
+         Sound2 = max(Sound2, State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1)
          Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
          ! A reliable upper and lower estimate for wave speeds 
          ! uses the max and min of all ion bulk velocities.
