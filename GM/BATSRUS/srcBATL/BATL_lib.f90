@@ -17,6 +17,7 @@ module BATL_lib
   use BATL_pass_face
   use BATL_pass_node
   use BATL_high_order
+  use BATL_particles
 
   implicit none
 
@@ -80,6 +81,7 @@ module BATL_lib
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid, average_grid_node
+  public:: interpolate_grid_amr_gc, check_interpolate_amr_gc
   public:: CellMetrice_DDG, CellCoef_DDGB
   public:: create_grid
 
@@ -109,6 +111,10 @@ module BATL_lib
 
   ! Inherited from BATL_high_order
   public:: correct_face_value, calc_center_first_derivate, calc_face_value
+
+  ! Inherited from BATL_particles
+  public:: Particle_I
+  public:: message_pass_particles, remove_undefined
 
 contains
   !============================================================================

@@ -8,12 +8,19 @@ module BATL_particles
   use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc
 
   implicit none
+
+  private ! except
+
+  ! Public methods and variables of this module
+  public:: Particle_I
+  public:: message_pass_particles, remove_undefined
+
   SAVE
   logical  ::UseParticles = .false.
   !\
   ! Number of different sorts of particles
   !/ 
-  integer, parameter:: nSortParticle = 1
+  integer, parameter:: nSortParticle = 2
 
   !\
   ! Use the pair RSend + IRecv or ISend + IRecv
