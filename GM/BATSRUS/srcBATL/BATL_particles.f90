@@ -118,6 +118,33 @@ contains
     nParticleMax =  Particle_I(iSortParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !===========================================================================
+  subroutine remove_undefined(iSortParticle)
+    ! remove all particles with undefined block: iBlock_I == Unset_
+    integer, intent(in) :: iSortParticle
+    integer :: iVar ! loop variable
+    real,    pointer :: State_VI(:,:)  ! state vec for particles of this sort
+    integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
+    integer          :: nVar           ! # of variables including coordinates
+    integer          :: nParticle      ! # of particles of this sort on proc
+    integer          :: nParticleMax   ! max # of particles of this sort on PE
+    integer          :: nUnset         ! # of particles with undefined block
+    !-------------------------------------------------------------------------
+    call set_pointer_to_particles(iSortParticle, &
+         State_VI, iBlock_I, nVar, nParticle, nParticleMax)
+ 
+    nUnset = count(iBlock_I==Unset_)
+
+    do iVar = 1, nVar
+       State_VI(iVar, 1:(nParticle-nUnset)) = PACK(&
+            State_VI(iVar, 1:nParticle), &
+            iBlock_I(      1:nParticle)/=Unset_ )
+    end do
+    iBlock_I(1:(nParticle-nUnset)) = PACK(&
+         iBlock_I(1:nParticle), &
+         iBlock_I(1:nParticle)/=Unset_ )
+    Particle_I(iSortParticle)%nParticle = nParticle - nUnset
+  end subroutine remove_undefined
+  !===========================================================================
   subroutine message_pass_particles
     use ModMpi
     use BATL_mpi, ONLY: iProc, nProc, iComm
