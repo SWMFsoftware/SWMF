@@ -36,7 +36,9 @@
 #include "Comet.h"
 #include "Exosphere.h"
 
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 #include "SpiceUsr.h"
+#endif
 
 static double SampleFluxDown[200000];
 
