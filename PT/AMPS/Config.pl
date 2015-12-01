@@ -66,7 +66,6 @@ foreach (@Arguments) {
      print "\nInformation:\n";
      print "-h -help\t\t\tshow help message.\n";
      print "-s -show\t\t\tshow current settings.\n";
-     print "-append\t\t\t\tadd new settings variables into .amsp.conf instead of re-defining their values.\n";
      print "-spice-path=PATH\t\tpath to the location of the SPICE installation.\n";
      print "-spice-kernels=PATH\t\tpath to the location of the SPICE kernels.\n";
      print "-ices-path=PATH\t\t\tpath to the location of ICES\n";
@@ -107,15 +106,15 @@ foreach (@Arguments) {
    } 
 }
 
+#default values
+add_line_amps_conf("TESTMODE=off");
+add_line_amps_conf("BATL=nobatl");
+add_line_amps_conf("KAMELEON=nokameleon");
+
 #process the configuration settings
 foreach (@Arguments) {
   if (/^-application=(.*)/i) {
     my $application = lc($1);
-  
-    #default values
-    add_line_amps_conf("TESTMODE=off");
-    add_line_amps_conf("BATL=nobatl");
-    add_line_amps_conf("KAMELEON=nokameleon");
     
     `cp -f input/$application.* input/species.input .`;
 
@@ -182,12 +181,6 @@ foreach (@Arguments) {
     next;
   }; 
 
-  #set the APPEND flog to append .amps.conf instead of re-defining of AMPS' settings
-  if (/^-append$/i) { 
-    `echo APPEND >> .amps.conf`;
-    next;
-  }
-
   # set nightly test:
   #  -set-name=NAME/comp - tests' name NAME cannot be empty
   #  -set-name/comp      - tests' name will be `hostname -s`
@@ -245,27 +238,14 @@ sub add_line_amps_conf{
     my @settingslines=<SETTINGS>;
     close(SETTINGS);
 
-    #check if the APPEND keywork is present in the settings
-    my $AppendFlag=0;
-
-    foreach (@settingslines) {
-      if ($_ =~ /APPEND/){
-        $AppendFlag=1;
-        last;
-      }
-    }
-
     # check if this parameter has already been defined
     my $IsPresent = 0;
-
-    if ($AppendFlag == 0) {
-      foreach (@settingslines) {
-        if ($_ =~ /$Parameter\s*=.*/){
-          $_ = $_[0]; chomp($_); $_ = "$_\n";
-          $IsPresent = 1;
-          last;
-        }
-      }
+    foreach (@settingslines) {
+	if ($_ =~ /$Parameter\s*=.*/){
+	    $_ = $_[0]; chomp($_); $_ = "$_\n";
+	    $IsPresent = 1;
+	    last;
+	}
     }
     
     # if the parameter hasn't been defined before, add its definition

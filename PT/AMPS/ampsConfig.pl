@@ -3127,11 +3127,6 @@ sub ampsConfigSettings {
 	foreach (@Settings){
 	    chomp($_);
 	    next unless $_;
-
-            if ($_ =~/APPEND/) {
-              next;
-            }
-
 	    add_line_makefile_local($_,1);
 	    if(/^InputFileAMPS=(.*)$/i){
 		$InputFileName = $1;
