@@ -13,14 +13,14 @@ module BATL_particles
 
   ! Public methods and variables of this module
   public:: Particle_I
-  public:: message_pass_particles, remove_undefined
+  public:: message_pass_particles, remove_undefined_particles
 
   SAVE
   logical  ::UseParticles = .false.
   !\
   ! Number of different sorts of particles
   !/ 
-  integer, parameter:: nSortParticle = 2
+  integer, parameter:: nKindParticle = 2
 
   !\
   ! Use the pair RSend + IRecv or ISend + IRecv
@@ -54,7 +54,7 @@ module BATL_particles
      integer,  pointer :: iBlock_I(:)
   end type ParticleType
 
-  type(ParticleType):: Particle_I(nSortParticle)
+  type(ParticleType):: Particle_I(nKindParticle)
 
   ! offset for particle data in the send BufferSend_I
   ! NOTE: offest values start with 0
@@ -68,22 +68,22 @@ contains
 
   !===========================================================================
   subroutine allocate_particles
-    integer:: iParticleSort, nVar, nParticleMax
+    integer:: iParticleKind, nVar, nParticleMax
     !------------------------------------------------------------------------
-    do iParticleSort = 1, nSortParticle
-       nVar = Particle_I(iParticleSort)%nVar
-       nParticleMax = Particle_I(iParticleSort)%nParticleMax
-       nullify(Particle_I(iParticleSort)%State_VI)
-       allocate(Particle_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax))
-       Particle_I(iParticleSort)%State_VI(1:nVar,1:nParticleMax) = 0.0
-       nullify(Particle_I(iParticleSort)%iBlock_I)
-       allocate(Particle_I(iParticleSort)%iBlock_I(1:nParticleMax))
-       Particle_I(iParticleSort)%iBlock_I(1:nParticleMax) = -1
+    do iParticleKind = 1, nKindParticle
+       nVar = Particle_I(iParticleKind)%nVar
+       nParticleMax = Particle_I(iParticleKind)%nParticleMax
+       nullify(Particle_I(iParticleKind)%State_VI)
+       allocate(Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax))
+       Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax) = 0.0
+       nullify(Particle_I(iParticleKind)%iBlock_I)
+       allocate(Particle_I(iParticleKind)%iBlock_I(1:nParticleMax))
+       Particle_I(iParticleKind)%iBlock_I(1:nParticleMax) = -1
     end do
   end subroutine allocate_particles
   !===========================================================================
   subroutine allocate_buffers
-    integer          :: iSortParticle  ! loop variable
+    integer          :: iKindParticle  ! loop variable
     ! max number of particles 
     integer          :: nParticleMax  
     ! max size of buffer       
@@ -93,12 +93,12 @@ contains
     ! different sorts of particles, find the sort with MAX number of variables,
     ! nParticleMax as number of particles and allocate buffers accordingly
     nBuffer = 0; nParticleMax = 0
-    do iSortParticle = 1, nSortParticle
+    do iKindParticle = 1, nKindParticle
        ! size of the buffer is (nParticles)*(nVar+1) with last 1 for block id
-       nBuffer = max(nBuffer, (Particle_I(iSortParticle)%nVar + 1)&
-            *Particle_I(iSortParticle)%nParticleMax)
+       nBuffer = max(nBuffer, (Particle_I(iKindParticle)%nVar + 1)&
+            *Particle_I(iKindParticle)%nParticleMax)
 
-       nParticleMax = max(nParticleMax, Particle_I(iSortParticle)%nParticleMax)
+       nParticleMax = max(nParticleMax, Particle_I(iKindParticle)%nParticleMax)
     end do
     ! allocate buffers for send/recving data
     allocate(BufferSend_I(nBuffer))
@@ -109,8 +109,8 @@ contains
   end subroutine allocate_buffers
   !===========================================================================
   subroutine set_pointer_to_particles(&
-       iSortParticle, State_VI, iBlock_I, nVar, nParticle, nParticleMax)
-    integer,          intent(in)    :: iSortParticle
+       iKindParticle, State_VI, iBlock_I, nVar, nParticle, nParticleMax)
+    integer,          intent(in)    :: iKindParticle
     real,    pointer, intent(inout) :: State_VI(:,:)
     integer, pointer, intent(inout) :: iBlock_I(:)
     integer,          intent(out)   :: nVar 
@@ -118,16 +118,16 @@ contains
     integer,          intent(out)   :: nParticleMax
     !-----------------------------------------------------------------------
     nullify(State_VI); nullify(iBlock_I)
-    State_VI     => Particle_I(iSortParticle)%State_VI
-    iBlock_I     => Particle_I(iSortParticle)%iBlock_I
-    nVar         =  Particle_I(iSortParticle)%nVar
-    nParticle    =  Particle_I(iSortParticle)%nParticle
-    nParticleMax =  Particle_I(iSortParticle)%nParticleMax
+    State_VI     => Particle_I(iKindParticle)%State_VI
+    iBlock_I     => Particle_I(iKindParticle)%iBlock_I
+    nVar         =  Particle_I(iKindParticle)%nVar
+    nParticle    =  Particle_I(iKindParticle)%nParticle
+    nParticleMax =  Particle_I(iKindParticle)%nParticleMax
   end subroutine set_pointer_to_particles
   !===========================================================================
-  subroutine remove_undefined(iSortParticle)
+  subroutine remove_undefined_particles(iKindParticle)
     ! remove all particles with undefined block: iBlock_I == Unset_
-    integer, intent(in) :: iSortParticle
+    integer, intent(in) :: iKindParticle
     integer :: iVar ! loop variable
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this sort
     integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
@@ -136,7 +136,7 @@ contains
     integer          :: nParticleMax   ! max # of particles of this sort on PE
     integer          :: nUnset         ! # of particles with undefined block
     !-------------------------------------------------------------------------
-    call set_pointer_to_particles(iSortParticle, &
+    call set_pointer_to_particles(iKindParticle, &
          State_VI, iBlock_I, nVar, nParticle, nParticleMax)
  
     nUnset = count(iBlock_I==Unset_)
@@ -149,8 +149,8 @@ contains
     iBlock_I(1:(nParticle-nUnset)) = PACK(&
          iBlock_I(1:nParticle), &
          iBlock_I(1:nParticle)/=Unset_ )
-    Particle_I(iSortParticle)%nParticle = nParticle - nUnset
-  end subroutine remove_undefined
+    Particle_I(iKindParticle)%nParticle = nParticle - nUnset
+  end subroutine remove_undefined_particles
   !===========================================================================
   subroutine message_pass_particles
     use ModMpi
@@ -159,7 +159,7 @@ contains
     ! based on whether it is possible to interpolate background data
     ! to the current particle location
     !--------------------------------------------------------------------------
-    integer          :: iSortParticle  ! loop variable
+    integer          :: iKindParticle  ! loop variable
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this sort
     integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
     integer          :: nVar           ! # of variables including coordinates
@@ -176,12 +176,12 @@ contains
     !--------------
     if(.not.allocated(BufferSend_I))call allocate_buffers
     ! now buffers are allocated, perform pass for all sorts
-    do iSortParticle = 1, nSortParticle
+    do iKindParticle = 1, nKindParticle
        call set_pointer_to_particles(&
-            iSortParticle, State_VI, &
+            iKindParticle, State_VI, &
             iBlock_I, nVar, nParticle, nParticleMax)
        call pass_this_sort
-       Particle_I(iSortParticle)%nParticle = nParticle
+       Particle_I(iKindParticle)%nParticle = nParticle
     end do
     ! deallocate buffer
     ! deallocate(BufferSend_I, iSendOffset_I, iProcTo_I, BufferRecv_I)
@@ -346,7 +346,7 @@ contains
       nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
       if(nParticle > nParticleMax)&
            call CON_stop("Exceeded allowed number of particles per sort=",&
-           iSortParticle)
+           iKindParticle)
 
       ! finally, put particles from buffer to storage
       iRecvOffset = 0
