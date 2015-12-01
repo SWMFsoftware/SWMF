@@ -3141,23 +3141,22 @@ contains
       ! InvRho = 1/Sum(RhoIon_I)
       InvRho = 1.0/Rho
 
-      ! This only works for multi-ion with no separate Pe and same gammas
-      if(.not.UseElectronPressure) Sound2 = Sound2*(1 + ElectronPressureRatio)
-
       if(UseMultiIon)then
          ! The Alfven velocity and the electron pressure are multiplied
          ! with a Factor >= 1 in multi-ion MHD.
          ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
          MultiIonFactor = &
               Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
+
+         ! Add contribution of electron pressure=fraction of ion pressure
+         if(.not.UseElectronPressure) Sound2 = Sound2 + MultiIonFactor &
+              *GammaElectron*sum(State_V(iPIon_I))*ElectronPressureRatio*InvRho
       end if
 
       if(UseElectronPressure)then
          GammaPe = GammaElectron*State_V(Pe_)
          if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
          Sound2 = Sound2 + GammaPe*InvRho
-      else
-         GammaPe = 0.0
       end if
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
