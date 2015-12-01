@@ -43,6 +43,7 @@ OBJECTS = \
 	ModFaceFlux.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
+	ModFieldLineParticles.o \
 	ModGeometry.o \
 	ModGroundMagPerturb.o \
 	ModHallResist.o \
