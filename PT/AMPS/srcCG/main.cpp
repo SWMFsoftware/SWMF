@@ -36,7 +36,7 @@
 #include "Comet.h"
 #include "Exosphere.h"
 
-#include "Dust.h"
+#include "SpiceUsr.h"
 
 static double SampleFluxDown[200000];
 
@@ -627,7 +627,7 @@ int main(int argc,char **argv) {
 
 
 #if _READ_NEUTRALS_FROM_BINARY_MODE_ == _READ_NEUTRALS_FROM_BINARY_MODE_ON_
-  Comet::CometData::nMaxLoadedSpecies=2;
+  Comet::CometData::nMaxLoadedSpecies=3;
   PIC::IndividualModelSampling::RequestStaticCellData.push_back(Comet::CometData::RequestDataBuffer);
 #endif
 
@@ -896,7 +896,7 @@ int main(int argc,char **argv) {
   PIC::BC::InitBoundingBoxInjectionBlockList();
 
   //init the particle buffer
-  PIC::ParticleBuffer::Init(20000000);
+  PIC::ParticleBuffer::Init(2000000);
  
 
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
@@ -948,11 +948,10 @@ int main(int argc,char **argv) {
 
   for (long int niter=0;niter<nTotalIterations;niter++) {
 
-
+#if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     //update the location of the flux sampling points
     //! simulation is performes in the C-G_CK <- the frame that rotates together with the nucleus
     //! sampling of the dust flux: the points are fixed in the solar orbiter system C-K_CSO
-    #if _EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_  
     {
       //determine the orientation of the frame of reference:
       //e0 -> comet-Sun direction
@@ -1016,8 +1015,7 @@ int main(int argc,char **argv) {
         }
       }
     }
-    #endif //_EXOSPHERE__ORBIT_CALCUALTION__MODE_ == _PIC_MODE_ON_
-
+#endif //_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
 
 
 //    Comet::CometData::PrintCheckSum();
