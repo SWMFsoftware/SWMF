@@ -11,6 +11,7 @@
 
 #include "Gravity.h"
 #include "global.h"
+#include "specfunc.h"
 
 #include "ifileopr.h"
 
@@ -218,15 +219,29 @@ void nucleusGravity::readMesh_longformat(const char *fname) {
       register long int nd,nfc,id;
       
       //renumerate nodes
+      //determine the maximum valus of node->id and allocate the map for relating node->id with the node number
+      int idMax=0;
+      int *idMap=NULL;
+
+      for (nd=0;nd<nnodes;nd++) {
+        if (nodes[nd].id>idMax) idMax=nodes[nd].id;
+
+        if (nodes[nd].id<0) exit(__LINE__,__FILE__,"Error: The procedure works only when nodes[nd].id>=0; Solution: need to implement processing of nodes[nd].id<0");
+      }
+
+
+      idMap=new int[idMax+1];
+      for (nd=0;nd<nnodes;nd++) idMap[nodes[nd].id]=nd;
+
+
       for (nfc=0;nfc<ntetras;nfc++) for (idim=0;idim<4;idim++) {
-	  id=tetras[nfc].node[idim];
-	  
-	  for (nd=0;nd<nnodes;nd++) if (nodes[nd].id==id) {
-	      tetras[nfc].node[idim]=nd;
-	      break;
+	      id=tetras[nfc].node[idim];
+	      tetras[nfc].node[idim]=idMap[id];
 	    }
-	}      
+
       for (nd=0;nd<nnodes;nd++) nodes[nd].id=nd;
+
+      delete [] idMap;
 
 
       //save the mesh binary file
