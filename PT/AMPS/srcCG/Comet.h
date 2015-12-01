@@ -46,13 +46,13 @@ namespace Comet {
   void PrintSurfaceTriangulationMesh(const char *fname,CutCell::cTriangleFace* SurfaceTriangulation,int nSurfaceTriangulation,double EPS);
   
   double GetTotalProductionRateBjornNASTRAN(int spec);
-  bool GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData);
+  bool GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
 
   double GetTotalProductionRateUniformNASTRAN(int spec);
-  bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData);
+  bool GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
 
   double GetTotalProductionRateJetNASTRAN(int spec);
-  bool GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData);
+  bool GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN);
 
   long int InjectionBoundaryModel_Limited();
   long int InjectionBoundaryModel_Limited(int spec);
@@ -83,7 +83,7 @@ namespace Comet {
   namespace TrajectoryTracking {
     const int nZenithSurfaceElements=300,nAzimuthalSurfaceElements=300;
     const int nTotalTracedTrajectories=25000;
-    const double TracingSurfaceRadius=2.7e3;
+    const double TracingSurfaceRadius=0.7e3;
 
     extern int nTracedTrajectoriesPerElement;
     extern int TracedParticleNumber_GLOBAL[nZenithSurfaceElements*nAzimuthalSurfaceElements],TracedParticleNumber_LOCAL[nZenithSurfaceElements*nAzimuthalSurfaceElements];
@@ -147,6 +147,10 @@ namespace Comet {
     double x_LOCAL[3],v_LOCAL[3],accl_LOCAL[3]={0.0,0.0,0.0};
     int idim;
 
+//for (idim=0;idim<3;idim++) accl[idim]=0.0;
+//return; 
+
+
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
     if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
       int nd,i,j,k;
@@ -161,6 +165,8 @@ namespace Comet {
         #if _3DGRAVITY__MODE_ == _3DGRAVITY__MODE__ON_
         //the gravity force non spherical case
         Comet::GetGravityAcceleration(accl_LOCAL,nd,startNode);
+
+//for (idim=0;idim<3;idim++) accl_LOCAL[idim]*=20.0;
 
         #else
         //the gravity force spherical case
@@ -205,7 +211,7 @@ namespace Comet {
          (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
          (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
 
-        A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
+        A=60.0* Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
 
         accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);
         accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);
