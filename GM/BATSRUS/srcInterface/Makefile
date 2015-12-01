@@ -25,7 +25,6 @@ OBJECTS = \
 	ModDensityAndGradient.o\
 	ModRadioWaveImage.o\
 	ModRadioWaveRaytracing.o\
-	ModFieldLine.o\
 	$(OBJ_IH) $(OBJ_IM) $(OBJ_RB) $(OBJ_IE) $(OBJ_PT) $(OBJ_PW) $(OBJ_PC)
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
