@@ -3157,7 +3157,9 @@ contains
          GammaPe = GammaElectron*State_V(Pe_)
          if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
          Sound2 = Sound2 + GammaPe*InvRho
-      end if
+      else
+         GammaPe = 0.0 ! possibly needed for aniso pressure
+      endif
 
       if(UseRS7) Sound2 = Sound2 + GammaMinus1*DiffBb*InvRho
 
