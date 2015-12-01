@@ -331,7 +331,7 @@ long int Comet::InjectionBoundaryModel_Limited(int spec) {
   PIC::ParticleBuffer::byte *newParticleData;
   double ParticleWeightCorrection=1.0;
   bool flag=false;
-  int SourceProcessID;
+  int SourceProcessID,iInjectionFaceNASTRAN;
 
   double totalProductionRate=Comet::GetTotalProductionRateBjornNASTRAN(spec)+Comet::GetTotalProductionRateUniformNASTRAN(spec)+Comet::GetTotalProductionRateJetNASTRAN(spec);
 
@@ -421,7 +421,7 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
      PIC::ParticleBuffer::SetI(spec,(PIC::ParticleBuffer::byte*)tempParticleData);
 
      if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_) {
-       flag=Comet::GenerateParticlePropertiesBjornNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+       flag=Comet::GenerateParticlePropertiesBjornNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
        ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
        GrainMass=4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity*pow(GrainRadius,3);
        GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
@@ -429,7 +429,7 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
        if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
      }
      else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_) {
-       flag=Comet::GenerateParticlePropertiesUniformNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+       flag=Comet::GenerateParticlePropertiesUniformNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
        ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
        GrainMass=4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity*pow(GrainRadius,3);
        GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
@@ -437,7 +437,7 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
        if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
      }
      else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_) {
-       flag=Comet::GenerateParticlePropertiesJetNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+       flag=Comet::GenerateParticlePropertiesJetNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
        ElectricallyChargedDust::SizeDistribution::GenerateGrainRandomRadius(GrainRadius,GrainWeightCorrection);
        GrainMass=4.0/3.0*Pi*ElectricallyChargedDust::MeanDustDensity*pow(GrainRadius,3);
        GrainInjectedMass-=GrainMass*ParticleWeight*GrainWeightCorrection;
@@ -474,7 +474,10 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x_SO_OBJECT,v_SO_OBJECT,spec,tempParticleData);
   #endif
 
+  #if _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE_ == _PIC_MODEL__DUST__ELECTRIC_CHARGE_MODE__ON_
   ElectricallyChargedDust::SetGrainCharge(0.0,(PIC::ParticleBuffer::byte*)tempParticleData);
+  #endif
+
   ElectricallyChargedDust::SetGrainMass(GrainMass,(PIC::ParticleBuffer::byte*)tempParticleData);
   ElectricallyChargedDust::SetGrainRadius(GrainRadius,(PIC::ParticleBuffer::byte*)tempParticleData);
 
@@ -491,6 +494,12 @@ FluxSourceProcess[_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]=Comet::GetTotalPr
   #endif
 
   nInjectedParticles++;
+
+  //sample the injection rate
+  CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].UserData.InjectionFlux[spec]+=
+      GrainWeightCorrection*PIC::ParticleWeightTimeStep::GlobalParticleWeight[_DUST_SPEC_+GrainVelocityGroup]/
+      startNode->block->GetLocalTimeStep(_DUST_SPEC_+GrainVelocityGroup)/CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].SurfaceArea;
+
 
   //inject the particle into the system                                                                             
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -520,19 +529,19 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
 
   //Add the user defined particle gineration                                                                        
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_) {
-    flag=Comet::GenerateParticlePropertiesBjornNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+    flag=Comet::GenerateParticlePropertiesBjornNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_;
     if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__0_Bjorn_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }
 
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_) {
-    flag=Comet::GenerateParticlePropertiesUniformNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+    flag=Comet::GenerateParticlePropertiesUniformNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_;
     if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__1_Uniform_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }  
 
   else if (SourceProcessID==_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_) {
-    flag=Comet::GenerateParticlePropertiesJetNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData);
+    flag=Comet::GenerateParticlePropertiesJetNASTRAN(spec,x_SO_OBJECT,x_IAU_OBJECT,v_SO_OBJECT,v_IAU_OBJECT,sphereX0,sphereRadius,startNode,tempParticleData,iInjectionFaceNASTRAN);
     SourceProcessID=_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_;
     if (flag==true) CalculatedSourceRate[spec][_EXOSPHERE_SOURCE__ID__USER_DEFINED__2_Jet_]+=ParticleWeightCorrection*ParticleWeight/LocalTimeStep;
   }  
@@ -568,6 +577,12 @@ while ((TimeCounter+=-log(rnd())/ModelParticlesInjectionRate)<LocalTimeStep) {
   memcpy((void*)newParticleData,(void*)tempParticleData,PIC::ParticleBuffer::ParticleDataLength);
 
   nInjectedParticles++;
+
+  //sample the injection rate
+  CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].UserData.InjectionFlux[spec]+=
+      ParticleWeightCorrection*ParticleWeightCorrection/
+      startNode->block->GetLocalTimeStep(spec)/CutCell::BoundaryTriangleFaces[iInjectionFaceNASTRAN].SurfaceArea;
+
 
   //inject the particle into the system                                                                             
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
@@ -909,7 +924,7 @@ double Comet::GetTotalProductionRateBjornNASTRAN(int spec){
 
 #if _MULTISPECIES_ANALYTICAL_MODE_ == _MULTISPECIES_ANALYTICAL_MODE_ON_
 
-bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
+bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -934,6 +949,9 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 
 
   if (probabilityFunctionDefinedNASTRAN[spec]==false) {
+
+    if (spec>=13) exit(__LINE__,__FILE__,"Error: the max number of the species of 13 is hardwired into the comet model. Fix it!");
+    if (CutCell::nBoundaryTriangleFaces>=200000) exit(__LINE__,__FILE__,"Error: the max number of the surface elements of 200000 is hardwired into the comet model. Fix it!");
 
     positionSun[0]=HeliocentricDistance*cos(subSolarPointAzimuth)*sin(subSolarPointZenith);
     positionSun[1]=HeliocentricDistance*sin(subSolarPointAzimuth)*sin(subSolarPointZenith);
@@ -1000,12 +1018,24 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
     cumulativeProductionDistributionNASTRAN[spec][0]=0.0;
     for (i=0;i<totalSurfaceElementsNumber;i++) {
       if (i==0) {
-	cumulativeProductionDistributionNASTRAN[spec][i]+=productionDistributionNASTRAN[spec][i]/total;
+	      cumulativeProductionDistributionNASTRAN[spec][i]+=productionDistributionNASTRAN[spec][i]/total;
       }else{
-	cumulativeProductionDistributionNASTRAN[spec][i]=cumulativeProductionDistributionNASTRAN[spec][i-1]+productionDistributionNASTRAN[spec][i]/total;
+	      cumulativeProductionDistributionNASTRAN[spec][i]=cumulativeProductionDistributionNASTRAN[spec][i-1]+productionDistributionNASTRAN[spec][i]/total;
       }
-      
     }
+
+    //the cumulative distributino of dust has to be the same as of water
+    if (_PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_) {
+      if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+        //water must be defined before dust
+        if (probabilityFunctionDefinedNASTRAN[_H2O_SPEC_]==false) exit(__LINE__,__FILE__,"Error: water cumulative distribution has to be defined before that of the dust");
+
+        //copy water cumulative distribution into that of the dust
+        for (i=0;i<totalSurfaceElementsNumber;i++) cumulativeProductionDistributionNASTRAN[spec][i]=cumulativeProductionDistributionNASTRAN[_H2O_SPEC_][i];
+      }
+
+    }
+
     /*
     FILE *out;
     out = fopen("GasFlux.dat","w");
@@ -1045,6 +1075,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
   //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0); //1e-4
 
+  iInjectionFaceNASTRAN=i; //output the triangulation surface element number
+
   for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
@@ -1081,7 +1113,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   double r2Tang=0.0;;
   double xFace[3];
-  double vDustInit=0.01;
+  double vDustInit=0.0001;
   double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
@@ -1149,7 +1181,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 
 
 #else
-bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
+bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData, int &iInjectionFaceNASTRAN) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -1241,6 +1273,8 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
   //  CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0); //1e-4
 
+  iInjectionFaceNASTRAN=i; //output the surface element of the particle generation
+
   for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
@@ -1277,7 +1311,7 @@ bool Comet::GenerateParticlePropertiesBjornNASTRAN(int spec, double *x_SO_OBJECT
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   double r2Tang=0.0;;
   double xFace[3];
-  double vDustInit=0.01;
+  double vDustInit=0.0001;
   double angleVelocityNormal=asin(rnd());
 
 
@@ -1357,7 +1391,7 @@ double Comet::GetTotalProductionRateUniformNASTRAN(int spec){
   return Comet::Uniform_SourceRate[spec];
 }
 
-bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData) {
+bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN) {
   double ExternalNormal[3]; 
   int idim;
   double rate,TableTotalProductionRate,totalSurface,gamma,cosSubSolarAngle,ProjectedAngle,elementSubSolarAngle[180],r;
@@ -1417,6 +1451,8 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
   CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,PIC::Mesh::mesh.EPS);
   //    CutCell::BoundaryTriangleFaces[i].GetRandomPosition(x_LOCAL_IAU_OBJECT,ExternalNormal,1.0);
 
+  iInjectionFaceNASTRAN=i; //output the triangulation surface element number
+
   for (idim=0;idim<3;idim++) ExternalNormal[idim]=CutCell::BoundaryTriangleFaces[i].ExternalNormal[idim];
   
   for (c=0.0,X=0.0,idim=0;idim<3;idim++){
@@ -1453,7 +1489,7 @@ bool Comet::GenerateParticlePropertiesUniformNASTRAN(int spec, double *x_SO_OBJE
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   double r2Tang=0.0;
   double xFace[3];
-  double vDustInit=0.01;
+  double vDustInit=0.0001;
   double angleVelocityNormal=asin(rnd());
 
   if (spec>=_DUST_SPEC_ && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) { //for (idim=0;idim<3;idim++) v_LOCAL_IAU_OBJECT[idim]=vDustInit*ExternalNormal[idim];
@@ -1617,7 +1653,7 @@ double Comet::GetTotalProductionRateJetNASTRAN(int spec){
 
 
 
-bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData){
+bool Comet::GenerateParticlePropertiesJetNASTRAN(int spec, double *x_SO_OBJECT,double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0, double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,char* tempParticleData,int &iInjectionFaceNASTRAN){
 return false;
 }
 
@@ -1778,6 +1814,7 @@ void Comet::GetNucleusNastranInfo(cInternalNastranSurfaceData *CG) {
 
 
 void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
+/*
 #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
   const double minTemp[6]={172.0,163.0,150.0,145.0,139.0,133.0};
   long int nface,nnode,pnode;
@@ -1876,6 +1913,7 @@ void Comet::PrintMaxLiftableSizeSurfaceTriangulationMesh(const char *fname) {
   fclose(fout);
   delete [] TempNodeData;
 #endif
+*/
 }
 
 double PIC::MolecularCollisions::ParticleCollisionModel::UserDefined::GetTotalCrossSection(double *v0,double *v1,int s0,int s1,PIC::Mesh::cDataBlockAMR *block,PIC::Mesh::cDataCenterNode *cell) {
