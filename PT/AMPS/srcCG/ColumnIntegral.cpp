@@ -22,13 +22,27 @@ int Comet::Sampling::SamplingDataOffset=-1;
 
 
 int Exosphere::ColumnIntegral::GetVariableList(char *vlist) {
-  int s,nvars=1;
+  int s,nvars=0;
 
-  if (vlist!=NULL) sprintf(vlist,", \"Dust Density*a^2/r2\"");
+  if (vlist!=NULL) sprintf(vlist,"");
 
+
+  for (int iCase=0;iCase<ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases;iCase++) {
+    nvars++;
+    if (vlist!=NULL) sprintf(vlist,"%s, \"Dust Density*a^2*Qmie(%i)/r2\"",vlist,iCase);
+  }
+
+
+  //column density of the loaded neutral profile
   for (s=0;s<Comet::CometData::nNeutrals;s++) {
     nvars++;
-    if (vlist!=NULL) sprintf(vlist,", \"Column Density[s=%i]\"",s);
+    if (vlist!=NULL) sprintf(vlist,"%s, \"Column Density[s=%i]\"",vlist,s);
+  }
+
+  //column density of the modeled species
+  for (s=0;s<PIC::nTotalSpecies;s++) {
+    nvars++;
+    if (vlist!=NULL) sprintf(vlist,"%s, \"Modeled Column Density[s=%i]\"",vlist,s);
   }
 
   return nvars;
@@ -56,29 +70,51 @@ void Exosphere::ColumnIntegral::CoulumnDensityIntegrant(double *res,int resLengt
   if ((cell=node->block->GetCenterNode(nd))==NULL) return;
   CellData=cell->GetAssociatedDataBufferPointer();
 
-  for (spec=0;spec<PIC::nTotalSpecies;spec++) if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
-    wtot=cell->GetCompleteSampleCellParticleWeight(spec);
+  for (int iCase=0;iCase<ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases;iCase++) {
+    DustBrightness=0.0;
 
-    if (wtot>0.0) {
-      DustBrightness+=
-          ((double*)(Comet::Sampling::SamplingDataOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CellData))[spec-_DUST_SPEC_]/wtot*
-          cell->GetNumberDensity(spec);
+    for (spec=0;spec<PIC::nTotalSpecies;spec++) if (_DUST_SPEC_<=spec && spec<_DUST_SPEC_+ElectricallyChargedDust::GrainVelocityGroup::nGroups) {
+      wtot=cell->GetCompleteSampleCellParticleWeight(spec);
+
+      if (wtot>0.0) {
+        DustBrightness+=
+            ((double*)(Comet::Sampling::SamplingDataOffset+PIC::Mesh::completedCellSampleDataPointerOffset+CellData))
+            [iCase+(spec-_DUST_SPEC_)*ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases]/
+            wtot*cell->GetNumberDensity(spec);
+      }
+
     }
 
+    res[cnt++]=DustBrightness;
   }
-
-  res[0]=DustBrightness;
 
 
   //calculate column density dust to the background species
   for (int s=0;s<Comet::CometData::nNeutrals;s++) {
     if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
       for (int iStencil=0;iStencil<Stencil->Length;iStencil++) {
-        res[s+1]+=Stencil->Weight[iStencil]*Comet::CometData::GetNeutralsMassDensity(s,Stencil->cell[iStencil]);
+        res[cnt]+=Stencil->Weight[iStencil]*Comet::CometData::GetNeutralsMassDensity(s,Stencil->cell[iStencil]);
       }
     }
-    else res[s+1]=Comet::CometData::GetNeutralsMassDensity(s,nd,node);
+    else res[cnt]=Comet::CometData::GetNeutralsMassDensity(s,nd,node);
+
+    ++cnt;
   }
+
+  //calculate the column density of the modeled species
+  for (int s=0;s<PIC::nTotalSpecies;s++) {
+    if (_PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_) {
+      for (int iStencil=0;iStencil<Stencil->Length;iStencil++) {
+        res[cnt]+=Stencil->Weight[iStencil]*Stencil->cell[iStencil]->GetNumberDensity(s);
+      }
+    }
+    else res[cnt]=node->block->GetCenterNode(nd)->GetNumberDensity(s);
+
+    ++cnt;
+  }
+
+
+  if (cnt!=resLength) exit(__LINE__,__FILE__,"Error: something is wrong with the variable counting (cnt!=resLength)");
 
 }
 
@@ -98,7 +134,10 @@ void Comet::Sampling::SampleParticleData(char *ParticleData,double LocalParticle
     iRadiusGroup=spec-_DUST_SPEC_;
     GrainRadius=ElectricallyChargedDust::GetGrainRadius((PIC::ParticleBuffer::byte*)ParticleData);
 
-    ((double*)(SamplingDataOffset+SamplingBuffer))[iRadiusGroup]+=pow(GrainRadius,2)*LocalParticleWeight;
+    for (int iCase=0;iCase<ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases;iCase++) {
+      ((double*)(SamplingDataOffset+SamplingBuffer))[iCase+iRadiusGroup*ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases]+=
+          Pi*pow(GrainRadius,2)*ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::Get(GrainRadius,1.095E-6,iCase)*LocalParticleWeight;
+    }
   }
 }
 
@@ -106,7 +145,7 @@ void Comet::Sampling::SampleParticleData(char *ParticleData,double LocalParticle
 int Comet::Sampling::RequestSamplingData(int offset) {
   SamplingDataOffset=offset;
 
-  return ElectricallyChargedDust::GrainVelocityGroup::nGroups*sizeof(double);
+  return ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases*ElectricallyChargedDust::GrainVelocityGroup::nGroups*sizeof(double);
 }
 
 //==============================================================================================================================
@@ -149,7 +188,7 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
   const double dZenitAngle=2.0*halfAngleRange/(nZenithPoints-1);
   const double dAzimuthAngle=2.0*halfAngleRange/(nAzimuthPoints-1);
 
-  const int StateVectorLength=1+Comet::CometData::nNeutrals;
+  const int StateVectorLength=ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases+Comet::CometData::nNeutrals+PIC::nTotalSpecies;
   double StateVector[StateVectorLength];
 
   //open output file
@@ -157,8 +196,15 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
     sprintf(fname,"%s/Comet.ColumnIntegrals.MapAngularRange=%e.SamplePoint=%i.out=%i.dat",PIC::OutputDataFileDirectory,halfAngleRange/Pi*180.0,iTestPoint,DataOutputFileNumber);
     fout=fopen(fname,"w");
 
-    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Nucleus Projection\", \"Dust Density * a^2 Integral\"\n");
+    fprintf(fout,"VARIABLES=\"Lon\", \"Lat\", \"Nucleus Projection\" ");
+
+    for (int iCase=0;iCase<ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases;iCase++)
+      fprintf(fout,", \"Dust Density * a^2 *Qmie(a)[case=%i] Integral\"",iCase);
+
     for (int s=0;s<Comet::CometData::nNeutrals;s++) fprintf(fout,", \"Column Density[s=%i]\"",s);
+
+    for (int s=0;s<PIC::nTotalSpecies;s++) fprintf(fout,", \"Modeled Column Density[s=%i]\"",s);
+
 
     fprintf(fout,"\nZONE I=%ld, J=%ld, DATAPACKING=POINT\n",nAzimuthPoints,nZenithPoints);
   }
@@ -209,12 +255,20 @@ void Comet::Sampling::PrintBrightnessMap(double halfAngleRange,int iTestPoint,in
 
       //output the column integrals value
       if (PIC::ThisThread==0) {
+        int cnt=0;
+
         for (int thread=0;thread<PIC::nTotalThreads;thread++) if (Buffer[thread]>0.0) NucleusProjectionCode=1.0;
 
-        fprintf(fout,"%e %e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,NucleusProjectionCode,StateVector[0]);
+        fprintf(fout,"%e %e %e ",ZenithAngle*180.0/Pi,AzimuthAngle*180.0/Pi,NucleusProjectionCode);
+
+        //output the dust brightness
+        for (int iCase=0;iCase<ElectricallyChargedDust::ScatteringEfficientcy::Mie::Fink2012Icarus::nCases;iCase++) fprintf(fout," %e",  StateVector[cnt++]);
 
         //output column densities of the background neutral species
-        for (int s=0;s<Comet::CometData::nNeutrals;s++) fprintf(fout," %e",  StateVector[1+s]);
+        for (int s=0;s<Comet::CometData::nNeutrals;s++) fprintf(fout," %e",  StateVector[cnt++]);
+
+        //column densities ofthe modeled species
+        for (int s=0;s<PIC::nTotalSpecies;s++) fprintf(fout," %e",  StateVector[cnt++]);
 
         //finish the line
         fprintf(fout," \n");
