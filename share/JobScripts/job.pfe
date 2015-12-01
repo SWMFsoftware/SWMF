@@ -7,7 +7,8 @@
 #   cd run
 #   qsub job.pfe
 #
-# An alternative is to use the qsub.pfe.pl and watch.pfe.pl scripts (use -h for help).
+# An alternative is to use the qsub.pfe.pl and watch.pfe.pl scripts 
+# for the normal/long queues. Use -h for help on usage.
 # 
 # Note that the run directory should be moved to the /nobackup filesystem,
 # otherwise the quota on the home directory will fill up before the run ends.
@@ -33,9 +34,15 @@
 #
 # acct_ytd
 #
-# To see the number of CPU-s being using per type use
+# For detailed information for a period of time, project and user(s):
+#
+# acct_query -b 10/31/15 -p s1359 -u all
+#
+# To see the number of free nodes per machine type and queue use
 #
 # node_stats.sh
+#
+# This is very useful before submitting a job to the devel queue.
 
 #PBS -S /bin/csh
 #PBS -N SWMF
