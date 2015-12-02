@@ -775,6 +775,9 @@ int main(int argc,char **argv) {
       for (int idim=0;idim<3;idim++) xSampleLocation[idim]=SampleRadius*(cos(theta)*e0[idim]+sin(theta)*e1[idim]);
     }
 
+
+    if (PIC::Mesh::mesh.findTreeNode(xSampleLocation)==NULL) continue;
+
     ElectricallyChargedDust::Sampling::FluxMap::SetSamplingLocation(xSampleLocation,xPrimary,xSun);
 
     if (PIC::ThisThread==0) {
