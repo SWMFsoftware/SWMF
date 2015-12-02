@@ -155,7 +155,7 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   !MeshSignature=0xd7058cc2a680a3a2
   MeshSignature=0xd5058fc3e01a454f
 
-  Forces::Gravity=off  
+  Forces::Gravity=on 
   Forces::FrameRotation=off
   Forces::RadiationPressure=off
   Forces::LorentzForce=off 
@@ -167,6 +167,9 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   DustCharging::PhotoElectronCurrent=off
   DustCharging::SecondaryElectronEmissionCurrent=off 
   DustCharging::Mode=off !TimeDependent !off,TimeDependent, Equilibrium
+
+  DustMeanDensity=0.05*1.0E3 
+  DustDragCoefficient=2.5*2.0 
  
   DustVelocityLimit::min=0.1
   DustVelocityLimit::max=50.0 !150.0 !40.0 
@@ -174,6 +177,9 @@ CouplerMode=file(tecplot) !!off, file,  swmf
 !  HeliocentricDistance=3.5*_AU_
 !  subSolarPointAzimuth=0.328671678 !! in rad 18.7961
 !  subSolarPointZenith=0.809977635 !! in rad 46.41975 degrees from zaxis
+
+  !distance at which tracing of the particle trajectories begins 
+  TracingSurfaceRadius=0.7E3
 
   HeliocentricDistance=1.88*_AU_
   subSolarPointAzimuth=5.2090

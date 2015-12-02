@@ -166,6 +166,14 @@ while ($line=<InputFile>) {
 
     ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::MeanDustDensity",$InputLine,"models/dust/Dust.cpp");
   } 
+
+  #set the drag coefficient (GrainDragCoefficient)
+  elsif ($InputLine eq "DUSTDRAGCOEFFICIENT") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+    ampsConfigLib::ChangeValueOfVariable("double GrainDragCoefficient",$InputLine,"main/Comet.h");
+  } 
+
   
   #forces that will be accounted during the simulation
   elsif ($InputLine eq "FORCES") {
