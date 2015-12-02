@@ -211,7 +211,7 @@ namespace Comet {
          (v_LOCAL[1]-GasBulkVelocity[1])*(v_LOCAL[1]-GasBulkVelocity[1])+
          (v_LOCAL[2]-GasBulkVelocity[2])*(v_LOCAL[2]-GasBulkVelocity[2]);
 
-        A=60.0* Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
+        A=Pi*pow(GrainRadius,2)/2.0*GrainDragCoefficient*sqrt(cr2)/GrainMass*GasMassDensity;
 
         accl_LOCAL[0]+=A*(GasBulkVelocity[0]-v_LOCAL[0]);
         accl_LOCAL[1]+=A*(GasBulkVelocity[1]-v_LOCAL[1]);
