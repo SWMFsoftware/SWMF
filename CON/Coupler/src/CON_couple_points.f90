@@ -210,11 +210,19 @@ contains
 
     logical:: DoTest, DoTestMe
 
+    character(len=4):: NameSourceTarget
+
     character(len=*), parameter:: NameSub = 'couple_points'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(DoTest)write(*,*)NameSub,' starting, iProc=',Coupler%iProcWorld
+    if(DoTest)then
+       NameSourceTarget = NameComp_I(Coupler%iCompSource) &
+            //            NameComp_I(Coupler%iCompTarget)
+       if(DoTestMe) write(*,*) NameSub,' doing ',NameSourceTarget
+
+       call timing_start('pnt_cpl_'//NameSourceTarget)
+    end if    
 
     ! Allocate arrays for router
     if(.not.allocated(Coupler%nPointSource_P) .and. Coupler%IsSameLayout) then
@@ -253,6 +261,8 @@ contains
     Coupler%iDecompLastTarget = iDecompTarget
 
     if(IsNewRoute)then
+       if(DoTest)call timing_start('pnt_route_'//NameSourceTarget)
+
        Coupler%nPointTarget = 0
        Coupler%nPointSource = 0
        Coupler%nData        = 0
@@ -446,18 +456,29 @@ contains
           deallocate(PosSortTarget_DI)
 
        end if ! IsSameLayout
+
+       if(DoTest)call timing_stop('pnt_route_'//NameSourceTarget)
+
     end if    ! IsNewRoute
 
     ! Transfer data from Source to Target
 
     ! Get the data from source
+    if(DoTest)call timing_start('pnt_alloc_'//NameSourceTarget)
     allocate(Coupler%DataSource_VI(Coupler%nVar,Coupler%nPointSource))
+    if(DoTest)call timing_stop('pnt_alloc_'//NameSourceTarget)
+    if(DoTest)call timing_start('pnt_get_'//NameSourceTarget)
     if(is_proc(Coupler%iCompSource)) call source_get( IsNewRoute, &
          Coupler%NameVar, Coupler%nVar, Coupler%nDim, Coupler%nPointSource, &
          Coupler%PosSource_DI, Coupler%DataSource_VI)
+    if(DoTest)call timing_stop('pnt_get_'//NameSourceTarget)
 
     ! Transfer data to the target processor
+    if(DoTest)call timing_start('pnt_alloc_'//NameSourceTarget)
     allocate(Coupler%DataTarget_VI(Coupler%nVar, Coupler%nData))
+    if(DoTest)call timing_stop('pnt_alloc_'//NameSourceTarget)
+
+    if(DoTest)call timing_start('pnt_transfer_'//NameSourceTarget)
     if(Coupler%IsSameLayout)then
        call transfer_buffer(Coupler%iCommUnion, &
             Coupler%nProcUnion, Coupler%iProcUnion, &
@@ -473,14 +494,19 @@ contains
             Coupler%nVar, Coupler%nPointSource, Coupler%DataSource_VI, &
             Coupler%nData, Coupler%DataTarget_VI)
     end if
+    if(DoTest)call timing_stop('pnt_transfer_'//NameSourceTarget)
     deallocate(Coupler%DataSource_VI)
 
     ! Give the data to target
+    if(DoTest)call timing_start('pnt_put_'//NameSourceTarget)
     if(is_proc(Coupler%iCompTarget)) call target_put( &
          Coupler%NameVar, Coupler%nVar, Coupler%nPointTarget, &
          Coupler%DataTarget_VI, Coupler%iPointTarget_I)
+    if(DoTest)call timing_stop('pnt_put_'//NameSourceTarget)
 
     deallocate(Coupler%DataTarget_VI)
+
+    if(DoTest) call timing_stop('pnt_cpl_'//NameSourceTarget)
 
   end subroutine couple_points
 
