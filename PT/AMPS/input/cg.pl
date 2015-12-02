@@ -122,11 +122,11 @@ while ($line=<InputFile>) {
     
     if ($InputLine eq "MIN") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity",$InputLine,"main/Comet.cpp");   
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity",$InputLine,"main/Comet.cpp");   
     }
     elsif ($InputLine eq "MAX") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"main/Comet.cpp");   
+      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"main/Comet.cpp");   
     }     
     else {
       die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
@@ -159,6 +159,13 @@ while ($line=<InputFile>) {
     
     ampsConfigLib::ChangeValueOfVariable("char Comet::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Comet.cpp");
   }
+  
+  #mean density of the dust grains (DustMeanDensity)
+  elsif ($InputLine eq "DUSTMEANDENSITY") {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2); 
+
+    ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::MeanDustDensity",$InputLine,"models/dust/Dust.cpp");
+  } 
   
   #forces that will be accounted during the simulation
   elsif ($InputLine eq "FORCES") {
