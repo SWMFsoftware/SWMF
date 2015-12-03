@@ -1,2 +1,8 @@
 
 #include input/europa.input
+
+#General
+  !the mesh resoution close to Europa
+  define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
+
+#endGeneral
