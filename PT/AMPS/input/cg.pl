@@ -122,11 +122,11 @@ while ($line=<InputFile>) {
     
     if ($InputLine eq "MIN") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity",$InputLine,"main/Comet.cpp");   
+      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::minGrainVelocity",$InputLine,"main/Comet.cpp");   
     }
     elsif ($InputLine eq "MAX") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
-      ampsConfigLib::ChangeValueOfVariable("double ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"main/Comet.cpp");   
+      ampsConfigLib::ChangeValueOfVariable("ElectricallyChargedDust::GrainVelocityGroup::maxGrainVelocity",$InputLine,"main/Comet.cpp");   
     }     
     else {
       die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
