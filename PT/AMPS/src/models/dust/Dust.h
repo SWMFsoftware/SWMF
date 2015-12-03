@@ -269,6 +269,16 @@ namespace ElectricallyChargedDust {
       if (PIC::ThisThread==0) {
         char fname[_MAX_STRING_LENGTH_PIC_];
 
+        //create the output directory in case its not exists
+        char cmd[_MAX_STRING_LENGTH_PIC_];
+
+        sprintf(cmd,"mkdir -p %s",PIC::DiagnospticMessageStreamName);
+        system(cmd);
+
+        sprintf(cmd,"mkdir -p %s",PIC::OutputDataFileDirectory);
+        system(cmd);
+
+        //create and save the file
         sprintf(fname,"%s/DustGrainSizeDistribution.dat",PIC::OutputDataFileDirectory);
         fout=fopen(fname,"w");
         fprintf(fout,"VARIABLE=\"Grain Radius\", \"Normalized Distribution Function\" \n");
