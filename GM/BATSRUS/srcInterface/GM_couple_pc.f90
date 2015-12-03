@@ -21,10 +21,7 @@ contains
     use ModPhysics,         ONLY: No2Si_V, UnitT_
     use ModTimeStepControl, ONLY: set_global_timestep
 
-    implicit none
-
     real, intent(out) ::  DtSi
-
     !--------------------------------------------------------------------------
 
     ! use 1.0e12 >> dt  for limiting time 
@@ -47,8 +44,6 @@ contains
     use ModPIC,        ONLY: XyzMinPic_DI, XyzMaxPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi
     use BATL_lib,      ONLY: x_, y_, z_, nDim
-
-    implicit none
 
     integer, intent(inout) :: nParamInt, nParamReal
 
@@ -151,8 +146,7 @@ contains
     use ModB0,      ONLY: UseB0, get_b0
     use BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
     use ModInterpolate, ONLY: interpolate_vector
-
-    implicit none
+    use ModIO, ONLY: iUnitOut
 
     logical,          intent(in):: IsNew   ! true for new point array
     character(len=*), intent(in):: NameVar ! List of variables
@@ -172,14 +166,18 @@ contains
 
     integer:: iPoint, iBlock, iProcFound
 
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub='GM_get_for_pc'
     !--------------------------------------------------------------------------
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     ! If nDim < MaxDim, make sure that all elements are initialized
     Dist_D = -1.0
     Xyz_D  =  0.0
 
     if(IsNew)then
+       if(DoTest)write(iUnitOut,*) NameSub,': iProc, nPoint=', iProc, nPoint
+
        if(allocated(iBlockCell_DI)) deallocate(iBlockCell_DI, Dist_DI)
        allocate(iBlockCell_DI(0:nDim,nPoint), Dist_DI(nDim,nPoint))
 
@@ -245,8 +243,6 @@ contains
     use ModEnergy,    ONLY: calc_energy
     !use ModProcMH,   ONLY: iProc
 
-    implicit none
-
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
@@ -264,12 +260,13 @@ contains
 
     ! This function will be called 3 times :
     !
-    ! 1) We count the number of points in all the different regions and return the value
+    ! 1) Count points inside all the PIC regions and return the value in nPoint
     !
-    ! 2) We received the position array where we will store the position of each point
+    ! 2) Return the Xyz_DGB coordinates of grid cells (points) for PC in Pos_DI
     !
-    ! 3) we revive the state variables associated with the position and a indexing array
-    !    to get then in the same order as the original position array given by 2)
+    ! 3) Recieve Data_VI from PC for each point and put them into State_VGB.
+    !    The indexing array iPoint_I is needed to maintain the same order as
+    !    the original position array Pos_DI was given in 2)
 
     ! to avoid index issues when nDim < 3 
 
