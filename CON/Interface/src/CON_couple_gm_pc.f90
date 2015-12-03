@@ -128,12 +128,12 @@ contains
 
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
-    call couple_points(CouplerGMtoPC, GM_get_grid_info, GM_find_points, &
-         GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
-
     if(is_proc(GM_)) call GM_get_for_pc_dt(DtSi)
     call transfer_real(GM_,PC_,DtSi)
     if(is_proc(PC_)) call PC_put_from_gm_dt(DtSi)
+
+    call couple_points(CouplerGMtoPC, GM_get_grid_info, GM_find_points, &
+         GM_get_for_pc, PC_get_grid_info, PC_put_from_gm)
 
     if(DoTest) write(*,*) NameSub,' finished, iProc=', i_proc()
 
@@ -144,20 +144,9 @@ contains
     ! List of variables to pass
     real, intent(in) :: tSimulation
 
-    ! The first time finish the initialization
-    logical:: IsFirstTime = .true.
-
     logical :: DoTest, DoTestMe
     character (len=*), parameter :: NameSub='couple_pc_gm'
     !-------------------------------------------------------------------------
-
-    if (IsFirstTime)  then
-       IsFirstTime = .false.
-       ! Finishing the setup of the IPIC3D solver
-       ! after GM -> PC coupling
-       call  PC_finilize_init_session
-    end if
-
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,' starting iProc=',CouplerPCtoGM%iProcWorld
