@@ -12,7 +12,6 @@ module PC_wrapper
 
   public:: PC_set_param
   public:: PC_init_session
-  public:: PC_finilize_init_session
   public:: PC_run
   public:: PC_save_restart
   public:: PC_finalize
@@ -47,18 +46,6 @@ contains
     end select
 
   end subroutine PC_set_param
-
-  !============================================================================
-
-  subroutine PC_finilize_init_session
-
-
-    character(len=*), parameter :: NameSub='PC_finilize_init_session'
-    !--------------------------------------------------------------------------
-
-    call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
-
-  end subroutine PC_finilize_init_session
 
   !============================================================================
 
