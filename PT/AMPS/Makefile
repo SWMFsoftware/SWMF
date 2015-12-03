@@ -26,7 +26,7 @@ SEARCH_C=-DMPI_ON -LANG:std -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main  -I${CWD}/$
 
 #define the "compile kameleon' flag only when KAMELEON is used (to exclude including of the KAMELEON headers on machimes where KAMELEON is not installed) 
 ifneq ($(KAMELEON),nokameleon)   
-	SEARCH_C+=-D_PIC_COMPILE__KAMELEON_ 
+	SEARCH_C+=-D _PIC_COMPILE__KAMELEON_ 
 endif
 
 
