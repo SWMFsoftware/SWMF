@@ -58,7 +58,7 @@ my $method = "$part(_$part)*";
 my $ValidMethodName = "($ValidComp)?$method";
 
 # Valid module name: CON_main IE_ModMain ModSize
-my $ValidModuleName = "(CON_$method|BATL_$method|($ValidComp)?Mod($Part)+)";
+my $ValidModuleName = "([A-Z]+_$method|($ValidComp)?Mod($Part)+)";
 
 # Valid non-module file names: CON_main.f90 IE_set_param.F90 set_b0.f90
 my $ValidMethodFileName = "$ValidMethodName\.[fF]90";
