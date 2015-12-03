@@ -164,7 +164,15 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/d
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/CCMC(0+stampede)
 <#
 
-
+#>
+Name=Europa-test1
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA(0+srbwks2014-0079) 
+Check=
+>>>@echo "test_Europa-test1_check..." >> test_Europa-test1.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTEuropa-test1DIR}/PT/plots/test_Europa.dat         \
+>>>output/test_Europa-test1.ref_np`ls ${TESTEuropa-test1DIR}/PT/thread* |wc -l |tr -d ' '` > test_Europa-test1.diff   
+>>>@ls -l test_Europa-test1.diff
+<#
 
 
 
