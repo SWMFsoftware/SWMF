@@ -825,6 +825,7 @@ contains
 
        if(.not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &
+            index(plot_type(iFile),'pnt')==1 .or. &
             index(plot_type(iFile),'eqr')==1 .or. &
             index(plot_type(iFile),'eqb')==1 .or. &
             index(plot_type(iFile),'ieb')==1 .or. &
@@ -844,6 +845,11 @@ contains
        if(index(plot_type(iFile),'los')>0) then
           IsFound = .true.
           call write_plot_los(iFile)
+       end if
+
+       if(index(plot_type(iFile),'pnt')>0) then
+          IsFound = .true.
+          call write_plot_particle(iFile)
        end if
 
        if(index(plot_type(iFile),'rfr')>0) then

@@ -43,7 +43,7 @@ OBJECTS = \
 	ModFaceFlux.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
-	ModFieldLineParticles.o \
+	ModParticleFieldLine.o \
 	ModGeometry.o \
 	ModGroundMagPerturb.o \
 	ModHallResist.o \
@@ -112,6 +112,7 @@ OBJECTS = \
 	write_plot_tec.o \
 	write_plot_los.o \
 	write_plot_sph.o \
+	write_plot_particle.o \
 	write_plot_radiowave.o \
 	write_progress.o
 
