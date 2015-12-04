@@ -13,7 +13,9 @@ module BATL_particles
 
   ! Public methods and variables of this module
   public:: Particle_I
-  public:: message_pass_particles, remove_undefined_particles
+  public:: allocate_particles
+  public:: message_pass_particles
+  public:: remove_undefined_particles
 
   SAVE
   logical  ::UseParticles = .false.
