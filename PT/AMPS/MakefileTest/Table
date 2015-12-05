@@ -168,6 +168,7 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/02695/
 Name=Europa-test1
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/EUROPA(0+srbwks2014-0079) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/home1/02695/dborovik/AMPS_DATA_TEST/EUROPA(0+stampede) 
+Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/EUROPA(0+pleiades) 
 Check=
 >>>@echo "test_Europa-test1_check..." >> test_Europa-test1.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTEuropa-test1DIR}/PT/plots/test_Europa.dat         \
