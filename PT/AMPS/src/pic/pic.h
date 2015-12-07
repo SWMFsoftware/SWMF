@@ -1261,273 +1261,380 @@ namespace PIC {
   namespace Mesh {
     class cDataCenterNode;
 
-	  //the limiting size of the domain and the function controlling the local mesh resolution
-	  extern double xmin[3],xmax[3];
+    //-------------------------------------------------------------------------
+    const int Unset_    = 0;
+    const int Timed_    = 1;
+    const int Weighted_ = 2;
+    const int Derived_  = 3;
+    class cDatumSampled{
+      // class with information about data being sampled/printed:
+      // - offset in the node's buffer
+      // - length of the datum in units sizeof(double)
+      // - name of the physical parameter
+      // - type of datum (sampled with given averaging or derived)
+      // - flag whether to print to the output file
+      // also contains generic methods:
+      // - activation of datum
+      // - printing name to a file
+    public:
+      long int offset;
+      int length;
+      char name[_MAX_STRING_LENGTH_PIC_];
+      int type;
+      bool doPrint;
+     
+      // activation procedures:
+      // appart from the offset in the data buffer,
+      // a storage for data info to keep track of data being sampled
+      // at nodes of different type
+      //......................................................................
+      inline bool is_active(){return offset >= 0;}
+      inline void activate(long int& offsetInOut, 
+			   vector<cDatumSampled*>* DatumVector=NULL){
+	if(is_active()) 
+	  exit(__LINE__,__FILE__,
+	       "ERROR: trying to activate datum a second time");
+	// set offset to the variable
+	offset       = offsetInOut;
+	// return info about length of the variable
+	offsetInOut += length*sizeof(double)*PIC::nTotalSpecies;
+	// add this datum to the provided cDatumSampled vector
+	if(DatumVector!=NULL) DatumVector->push_back(this);
+      }
 
-	  typedef double (*fLocalMeshResolution) (double*);
-	  extern fLocalMeshResolution LocalMeshResolution;
+      // print variables' name to file
+      //......................................................................
+      inline void PrintName(FILE* fout){fprintf(fout, ", %s", name);}
 
-	  //the offset of the sampled infomation that is stored in 'center nodes'
+      // constructor
+      //......................................................................
+      cDatumSampled(int lengthIn, const char* nameIn, bool doPrintIn = true){
+	// nameIn must be in the format acceptable for printing output:
+	//   "\"var_1\", \"var_2\""
+	length = lengthIn;
+	sprintf(name, "%s", nameIn);
+	// mark as inactive by default
+	offset = -1;
+	type   = Unset_; 
+	doPrint= doPrintIn;
+      }
+    };
+    // class cDatumSampled ----------------------------------------------------
+
+    // the following 2 classes have no additional methods or members
+    // however they are treated differently at the sampling:
+    // - cDatumTimed    is averaged over time
+    // - cDatumWeighted is averaged over particle weight on this node
+    //-------------------------------------------------------------------------
+    class cDatumTimed : public cDatumSampled {
+    public:
+      // constructor is inherited as well
+    cDatumTimed(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Timed_;}
+    };
+    class cDatumWeighted : public cDatumSampled {
+    public:
+      // constructor is inherited as well
+    cDatumWeighted(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatumSampled(lengthIn, nameIn, doPrintIn){type = Weighted_;}
+    };
+    //-------------------------------------------------------------------------
+
+    // the following class isn't sampled directly
+    // values are derived from sampled variables
+    //-------------------------------------------------------------------------
+    class cDatumDerived : public cDatumSampled{
+    public:
+      // function to find a value derived from other variables;
+      // CURRENTLY WORKS ONLY FOR CELL-CENTERED DATA
+      void (cDataCenterNode::*GetValue)(double*, int);
+      //.......................................................................
+      inline bool is_active(){return GetValue != NULL;}
+      inline void activate(void (cDataCenterNode::*GetValueIn)(double*, int), 
+			   vector<cDatumDerived*>* DatumVector=NULL){
+	if(is_active()) 
+	  exit(__LINE__,__FILE__,
+	       "ERROR: trying to activate datum a second time");
+	GetValue = GetValueIn;
+	// add this datum to the provided cDatumSampled vector
+	if(DatumVector!=NULL) DatumVector->push_back(this);
+      }
+      // constructor is inherited as well
+      //.......................................................................
+    cDatumDerived(int lengthIn, const char* nameIn, bool doPrintIn = true) 
+      : cDatumSampled(lengthIn, nameIn, doPrintIn){
+	type = Derived_; GetValue=NULL;
+      }
+    };
+    // class cDatumDerived ----------------------------------------------------
+
+    //vector of active sampling data
+    extern vector<cDatumSampled*> DataSampledCenterNodeActive;
+    //vector of active derived data
+    extern vector<cDatumDerived*> DataDerivedCenterNodeActive;
+    
+    //basic macroscopic parameters sampled in the simulation
+    extern cDatumTimed    DatumParticleWeight;
+    extern cDatumTimed    DatumParticleNumber;
+    extern cDatumTimed    DatumNumberDensity;
+    extern cDatumWeighted DatumParticleVelocity;
+    extern cDatumWeighted DatumParticleVelocity2;
+    extern cDatumWeighted DatumParticleSpeed;
+    extern cDatumWeighted DatumParticleParallelVelocity;
+    extern cDatumWeighted DatumParticleParallelVelocity2;
+    extern cDatumDerived  DatumTranslationalTemperature;
+    extern cDatumDerived  DatumParallelTranslationalTemperature;
+    extern cDatumDerived  DatumTangentialTranslationalTemperature;
+
+    //the limiting size of the domain 
+    extern double xmin[3],xmax[3];
+    
+    //the function controlling the local mesh resolution
+    typedef double (*fLocalMeshResolution) (double*);
+    extern fLocalMeshResolution LocalMeshResolution;
+
+    //the offset of the sampled infomation that is stored in 'center nodes'
     extern int completedCellSampleDataPointerOffset,collectingCellSampleDataPointerOffset;
-
-	  //the data and order that the data are saved in the associated data buffer of 'center nodes'
+    
+    //the data and order that the data are saved in the associated data buffer of 'center nodes'
     //3. The offset of the data buffer for 'completed sample'
-	  //4. The offset of the data buffer for 'collecting sample'
-
-	  //sampling data each specie
-	  //a. for each specie
-	    //1. particle weight
-	    //2. particle number
-	    //3. particle velocity[3]
-	    //4. particle pow(velocity[3],2)
-	  //b. sampling data requested for involved physical models and external species
+    //4. The offset of the data buffer for 'collecting sample'
+    
+    //sampling data each specie
+    //a. for each specie
+    //1. particle weight
+    //2. particle number
+    //3. particle velocity[3]
+    //4. particle pow(velocity[3],2)
+    //b. sampling data requested for involved physical models and external species
     extern int sampledParticleWeghtRelativeOffset,sampledParticleNumberRelativeOffset,sampledParticleNumberDensityRelativeOffset;
     extern int sampledParticleVelocityRelativeOffset,sampledParticleVelocity2RelativeOffset,sampledParticleSpeedRelativeOffset;
     extern int sampledParticleNormalParallelVelocityRelativeOffset,sampledParticleNormalParallelVelocity2RelativeOffset;
     extern int sampledExternalDataRelativeOffset;
     extern int sampleSetDataLength;
-
-
-
+    
+    
+    
     //user defiend functions for printing the 'center node' data into an output file
     typedef void (*fPrintVariableListCenterNode)(FILE* fout,int DataSetNumber);
     typedef void (*fPrintDataCenterNode)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,cDataCenterNode *CenterNode);
     typedef void (*fInterpolateCenterNode)(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,cDataCenterNode *CenterNode);
-
+    
     extern vector<fPrintVariableListCenterNode> PrintVariableListCenterNode;
     extern vector<fPrintDataCenterNode> PrintDataCenterNode;
     extern vector<fInterpolateCenterNode> InterpolateCenterNode;
-
+    
     //the class defining the 'central node' that contains the sampling data
     class cDataCenterNode : public cBasicCenterNode {
     public:
-	    //parameters that defines the parameters of the associated data used for sampling and code running
+      //parameters that defines the parameters of the associated data used for sampling and code running
       static int totalAssociatedDataLength,LocalParticleVolumeInjectionRateOffset;
-
-//      long int FirstCellParticle,tempParticleMovingList;
-
-	    char *associatedDataPointer;
-
-	    inline int AssociatedDataLength() {
-              return totalAssociatedDataLength;
-            }
-
-	    void SetAssociatedDataBufferPointer(char* ptr) {
-              associatedDataPointer=ptr;
-            }
-
-	    inline char* GetAssociatedDataBufferPointer() {
-              return associatedDataPointer;
-            }
-
-	    //clean the sampling buffers
-	    void cleanDataBuffer() {
-	      cBasicCenterNode::cleanDataBuffer();
-
-//	      FirstCellParticle=-1,tempParticleMovingList=-1;
-
-	      int i,length=totalAssociatedDataLength/sizeof(double);
-	      double *ptr;
-	      for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
-
-	      if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
- 	    }
-
-	    //init the buffers
-	    cDataCenterNode() : cBasicCenterNode() {
-	      associatedDataPointer=NULL;
-	    }
-
-	    //get the sampled macroscopic parameter of the flow
-	    double GetParticleNumber(int s) {
-	      double res=0.0;
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
-        #endif
-
-        if (PIC::LastSampleLength!=0) {
-          res=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberRelativeOffset)))/PIC::LastSampleLength;
-        }
-
-        return res;
-	    }
-
-      double GetRealParticleNumber(int s) {
-        double res=0.0;
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
-        #endif
-
-        if (PIC::LastSampleLength!=0) {
-          res=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)))/PIC::LastSampleLength;
-        }
-
-        return res;
+      
+      //      long int FirstCellParticle,tempParticleMovingList;
+      
+      char *associatedDataPointer;
+      
+      inline int AssociatedDataLength() {
+	return totalAssociatedDataLength;
+      }
+      
+      void SetAssociatedDataBufferPointer(char* ptr) {
+	associatedDataPointer=ptr;
+      }
+      
+      inline char* GetAssociatedDataBufferPointer() {
+	return associatedDataPointer;
+      }
+          
+      //clean the sampling buffers
+      void cleanDataBuffer() {
+	cBasicCenterNode::cleanDataBuffer();
+	
+	int i,length=totalAssociatedDataLength/sizeof(double);
+	double *ptr;
+	for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
+	
+	if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
+      }
+      
+      //init the buffers
+    cDataCenterNode() : cBasicCenterNode() {
+	associatedDataPointer=NULL;
+      }
+        
+      // access sampled macroscopic parameters;
+      // some function have 2 different interfaces:
+      // - for array
+      // - for scalars
+      //-----------------------------------------------------------------------
+      inline void SampleDatum(cDatumSampled Datum, double* In, int spec, 
+			      double weight=1.0){
+	for(int i=0; i<Datum.length; i++)
+	  *(i + Datum.length * spec + 
+	    (double*)(associatedDataPointer + 
+		      collectingCellSampleDataPointerOffset+
+		      Datum.offset))+= In[i] * weight;
+      }
+      inline void SampleDatum(cDatumSampled Datum, double In, int spec, 
+			      double weight=1.0){
+	*(spec + 
+	  (double*)(associatedDataPointer + 
+		    collectingCellSampleDataPointerOffset+
+		    Datum.offset))+= In * weight;
+      }
+      //.......................................................................
+      inline void SetDatum(cDatumSampled Datum, double* In, int spec){
+	for(int i=0; i<Datum.length; i++)
+	  *(i + Datum.length * spec + 
+	    (double*)(associatedDataPointer + 
+		      completedCellSampleDataPointerOffset+
+		      Datum.offset)) = In[i];
       }
 
-      double GetNumberDensity(int s) {
-        double res=0.0;
+      //get accumulated data
+      //.......................................................................
+      inline void GetDatumCumulative(cDatumSampled Datum, 
+				     double* Out, int spec){
+	for(int i=0; i<Datum.length; i++)
+	  Out[i] = *(i + Datum.length * spec + 
+		     (double*)(associatedDataPointer + 
+			       completedCellSampleDataPointerOffset+
+			       Datum.offset));
+      }
+      inline double GetDatumCumulative(cDatumSampled Datum, int spec){
+	return *(spec + 
+		 (double*)(associatedDataPointer + 
+			   completedCellSampleDataPointerOffset+
+			   Datum.offset));
+      }
 
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
+      //get data averaged over time
+      //.......................................................................
+      inline void GetDatumAverage(cDatumTimed Datum, double* Out, int spec){
+	if(PIC::LastSampleLength > 0)
+	  for(int i=0; i<Datum.length; i++)
+	    Out[i] = *(i + Datum.length * spec + 
+		       (double*)(associatedDataPointer + 
+				 completedCellSampleDataPointerOffset+
+				 Datum.offset)) / PIC::LastSampleLength;
+	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      }
+      inline double GetDatumAverage(cDatumTimed Datum, int spec){
+	if(PIC::LastSampleLength > 0)
+	  return *(spec + 
+		   (double*)(associatedDataPointer + 
+			     completedCellSampleDataPointerOffset+
+			     Datum.offset)) / PIC::LastSampleLength;
+	else return 0.0;
+      }
+      //get data averaged over sampled weight
+      //.......................................................................
+      inline void GetDatumAverage(cDatumWeighted Datum, double* Out, int spec){
+	double TotalWeight=0.0;
+	GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
+	if(TotalWeight > 0)
+	  for(int i=0; i<Datum.length; i++)
+	    Out[i] = *(i + Datum.length * spec +
+		       (double*)(associatedDataPointer + 
+				 completedCellSampleDataPointerOffset+
+				 Datum.offset)) / TotalWeight;
+	else for(int i=0; i<Datum.length; i++) Out[i] = 0.0;
+      }
+      inline double GetDatumAverage(cDatumWeighted Datum, int spec){
+	double TotalWeight=0.0;
+	GetDatumCumulative(DatumParticleWeight, &TotalWeight, spec);
+	if(TotalWeight > 0)
+	  return *(spec +
+		   (double*)(associatedDataPointer + 
+			     completedCellSampleDataPointerOffset+
+			     Datum.offset)) / TotalWeight;
+	else return 0.0;
+      }
+      //-----------------------------------------------------------------------
+
+      //backward compatible access
+      //-----------------------------------------------------------------------
+      inline double GetNumberDensity(int spec){
+	return GetDatumAverage(DatumNumberDensity, spec);
+      }
+      inline void GetBulkVelocity(double* vOut, int spec){
+	GetDatumAverage(DatumParticleVelocity, vOut, spec);
+      }
+      inline double GetMeanParticleSpeed(int spec){
+	return GetDatumAverage(DatumParticleSpeed, spec);
+      }
+      //-----------------------------------------------------------------------
+
+      // data interpolation
+      //-----------------------------------------------------------------------
+      inline void InterpolateDatum(cDatumSampled Datum, 
+				   cDataCenterNode** InterpolationList,
+				   double *InterpolationCoefficients,
+				   int nInterpolationCoefficients, 
+				   int spec){
+	// container for the interpolated value; set it to be zero
+	double value[Datum.length], interpolated[Datum.length]; 
+	for(int i=0; i<Datum.length; i++) {
+	  value[i]=0.0; interpolated[i]=0.0;}
+	// interpolation loop
+	for(int i=0; i<nInterpolationCoefficients; i++){
+	  InterpolationList[i]->GetDatumCumulative(Datum, value, spec);
+	  for(int j=0; j<Datum.length; j++)
+	    interpolated[j] += InterpolationCoefficients[i] * value[j];
+	}
+	SetDatum(Datum, interpolated, spec);
+        #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+        #if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
+	for(int i=0; i<Datum.length; i++)
+	  if(isfinite(interpolated[i])==false)
+	    exit(__LINE__,__FILE__,"Error: Floating Point Exception");
         #endif
-
-        if (PIC::LastSampleLength!=0) {
-          res=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberDensityRelativeOffset)))/PIC::LastSampleLength;
-        }
-
-        return res;
-      }
-
-      double GetCompleteSampleCellParticleWeight(int s) {
-        return *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset));
-      }
-
-      void GetBulkVelocity(double *v,int s) {
-        int idim;
-        double TotalWeight,*SampledData;
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) {
-          exit(__LINE__,__FILE__,"Error: 's' is out of the range");
-        }
         #endif
-
-        if (PIC::LastSampleLength!=0) {
-          TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
-          SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset);
-
-          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v[idim]=SampledData[idim]/TotalWeight; /// /PIC::LastSampleLength;
-          else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
-        }
-        else for (idim=0;idim<DIM;idim++) v[idim]=0.0;
       }
-
-      void GetBulkVelocitySquared(double *v2,int s) {
-        int idim;
-        double TotalWeight,*SampledData;
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
-        #endif
-
-        if (PIC::LastSampleLength!=0) {
-          TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
-          SampledData=3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset);
-
-          if (TotalWeight>0.0) for (idim=0;idim<DIM;idim++) v2[idim]=SampledData[idim]/TotalWeight; // /PIC::LastSampleLength;
-          else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
-        }
-        else for (idim=0;idim<DIM;idim++) v2[idim]=0.0;
-      }
-
-      double GetMeanParticleSpeed(int s) {
-        double TotalWeight,*SampledData,res=0.0;
-
-
-
-//==============================  DEBUGGER ===============
-//        return Measure;
-
-//============================== END DEBUGGER ============
-
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if ((s<0)||(s>=PIC::nTotalSpecies)) exit(__LINE__,__FILE__,"Error: 's' is out of the range");
-        #endif
-
-        if (PIC::LastSampleLength!=0) {
-          TotalWeight=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
-          SampledData=s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset);
-
-          if (TotalWeight>0.0) res=(*SampledData)/TotalWeight; // /PIC::LastSampleLength;
-        }
-
-        return res;
-      }
-
-      double GetTranslationalTemperature(int s) {
+      //-----------------------------------------------------------------------
+    
+      //get the sampled macroscopic parameter of the flow (for derived data)
+      //-----------------------------------------------------------------------
+      void GetTranslationalTemperature(double* T, int s) {
         int idim;
         double res=0.0,v[3]={0.0,0.0,0.0},v2[3]={0.0,0.0,0.0};
 
-        GetBulkVelocity(v,s);
-        GetBulkVelocitySquared(v2,s);
+        GetDatumAverage(DatumParticleVelocity, v, s);
+        GetDatumAverage(DatumParticleVelocity2,v2,s);
 
         for (idim=0;idim<3;idim++) res+=v2[idim]-v[idim]*v[idim];
 
-        return PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
+        //return 
+	T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
       }
 
-      double GetParallelTranslationalTemperature(int s) {
+      void GetParallelTranslationalTemperature(double* T, int s) {
 #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-        return GetTranslationalTemperature(s);
+        //return 
+	GetTranslationalTemperature(T, s);
 #else
         double v=0.0,v2=0.0,w=0.0,res=0.0;
-
-        w=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset)));
-
-        v=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset)));
-        v2=(*(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset)));
-
-        if (w>0.0) {
-          v/=w,v2/=w;
-          res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
-        }
-
-        return res;
+	v = GetDatumAverage(DatumParticleParallelVelocity, s);
+	v2 = GetDatumAverage(DatumParticleParallelVelocity2, s);
+	res=PIC::MolecularData::GetMass(s)*(v2-v*v)/Kbol;
+	T[0]=res;
 #endif
       }
 
-      double GetTangentialTranslationalTemperature(int s) {
+      void GetTangentialTranslationalTemperature(double* T, int s) {
 #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-        return GetTranslationalTemperature(s);
+	GetTranslationalTemperature(T,s);
 #else
-      return 0.5*(3.0*GetTranslationalTemperature(s)-GetParallelTranslationalTemperature(s));
+	double t,tp;
+	GetTranslationalTemperature(&t,s);
+	GetParallelTranslationalTemperature(&tp,s);
+	T[0]=0.5*(3.0*t-tp);
 #endif
       }
+      //-----------------------------------------------------------------------
 
-	    //print the sampled data into a file
+      //print the sampled data into a file
       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread);
-      /*
-      void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
-        int idim;
-
-        struct cOutputData {
-          double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
-        } OutputData;
-
-        if (pipe->ThisThread==CenterNodeThread) {
-          OutputData.NumberDesnity=GetNumberDensity(DataSetNumber);
-          OutputData.ParticleNumber=GetParticleNumber(DataSetNumber);
-          GetBulkVelocity(OutputData.v,DataSetNumber);
-          OutputData.MeanParticleSpeed=GetMeanParticleSpeed(DataSetNumber);
-          OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
-        }
-
-
-        if (pipe->ThisThread==0) {
-          if (CenterNodeThread!=0) pipe->recv((char*)&OutputData,sizeof(OutputData),CenterNodeThread);
-
-          fprintf(fout,"%e  %e ",OutputData.NumberDesnity,OutputData.ParticleNumber);
-          for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",OutputData.v[idim]);
-          fprintf(fout,"%e %e ",OutputData.MeanParticleSpeed,OutputData.TranslationalTemeprature);
-        }
-        else pipe->send((char*)&OutputData,sizeof(OutputData));
-
-        //print the user defind 'center node' data
-        list<fPrintDataCenterNode>::iterator fptr;
-
-        for (fptr=PrintDataCenterNode.begin();fptr!=PrintDataCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CenterNodeThread,this);
-
-        //print data sampled by the user defined sampling functions
-        if (PIC::IndividualModelSampling::PrintSampledData.size()!=0) {
-          for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintSampledData.size();i++) PIC::IndividualModelSampling::PrintSampledData[i](fout,DataSetNumber,pipe,CenterNodeThread,this);
-        }
-
-      }
-      */
 
       void PrintFileDescriptior(FILE* fout,int DataSetNumber) {
         char sym[_MAX_STRING_LENGTH_PIC_];
@@ -1538,103 +1645,17 @@ namespace PIC {
 
 
       void PrintVariableList(FILE* fout,int DataSetNumber);
-      /*
-      void PrintVariableList(FILE* fout,int DataSetNumber) {
-       fprintf(fout,", \"Number Density\", \"Particle Number\"");
-       for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
-       fprintf(fout,", \"Speed\", \"Translational Temperature\"");
-
-       //print the user defind 'center node' data
-       list<fPrintVariableListCenterNode>::iterator fptr;
-       for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
-
-       //print varialbes sampled by the user defined sampling procedures
-       if (PIC::IndividualModelSampling::PrintVariableList.size()!=0) {
-         for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
-       }
-
-      }
-      */
 
       void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients);
-      /*
-      void Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
-        int i,s,idim;
-        double c;
 
-
-
-        //==============================  DEBUGGER ===============
-                 if (nInterpolationCoeficients!=0) Measure=InterpolationList[0]->Measure;
-
-        //============================== END DEBUGGER ============
-
-
-        #if _PIC_DEBUGGER_MODE_ ==  _PIC_DEBUGGER_MODE_ON_
-        if (associatedDataPointer==NULL) exit(__LINE__,__FILE__,"Error: The associated data buffer is not initialized");
-        #endif
-
-        double InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedBulkVelocity[3]={0.0,0.0,0.0},InterpolatedBulk2Velocity[3]={0.0,0.0,0.0};
-        double InterpolatedParticleSpeed=0.0;
-        double pWeight;
-
-        for (s=0;s<PIC::nTotalSpecies;s++) {
-          InterpolatedParticleWeight=0.0,InterpolatedParticleNumber=0.0,InterpolatedParticleNumberDeinsity=0.0,InterpolatedParticleSpeed=0.0;
-          for (idim=0;idim<3;idim++) InterpolatedBulkVelocity[idim]=0.0,InterpolatedBulk2Velocity[idim]=0.0;
-
-          //interpolate the sampled data
-          for (i=0;i<nInterpolationCoeficients;i++) {
-            pWeight=InterpolationList[i]->GetRealParticleNumber(s);
-            c=PIC::LastSampleLength*InterpolationCoeficients[i];
-
-            InterpolatedParticleWeight+=c*pWeight;
-            InterpolatedParticleNumber+=c*InterpolationList[i]->GetParticleNumber(s);
-            InterpolatedParticleNumberDeinsity+=c*InterpolationList[i]->GetNumberDensity(s);
-
-
-            for (idim=0;idim<3;idim++) {
-              InterpolatedBulkVelocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset)));
-              InterpolatedBulk2Velocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset)));
-            }
-
-            InterpolatedParticleSpeed+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset)));
-          }
-
-          //stored the interpolated data in the associated data buffer
-          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberRelativeOffset))=InterpolatedParticleNumber;
-          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset))=InterpolatedParticleWeight;
-          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))=InterpolatedParticleNumberDeinsity;
-          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
-
-          for (i=0;i<3;i++) {
-            *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset))=InterpolatedBulkVelocity[i];
-            *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset))=InterpolatedBulk2Velocity[i];
-          }
-
-          *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
-
-        }
-
-        //print the user defind 'center node' data
-        list<fInterpolateCenterNode>::iterator fptr;
-
-        for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
-
-        //interpolate data sampled by user defiend sampling procedures
-        if (PIC::IndividualModelSampling::InterpolateCenterNodeData.size()!=0) {
-          for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::InterpolateCenterNodeData[i](fout,DataSetNumber);
-        }
-      }
-
-      */
     };
 
-
+  
     //the class that contains the run information for the cell's corners
     class cDataCornerNode : public cBasicCornerNode {
     public:
     };
-
+  
     //the data stored in a block
     //1. Local Time Step [NS]: depending on the model mode there will be a 'global' time step for the simulation, 'global' time step for the cell or individual time step for each simulated species
     //2. Local particle weight [NS]: depending on the model mode there will be a 'global' weight for the simulation, 'global' weight for the cell or individual weigh for each simulated species
@@ -1664,7 +1685,7 @@ namespace PIC {
         associatedDataPointer=NULL;
       }
 
-
+    
       //exchenge of the data between processors
       void sendBoundaryLayerBlockData(CMPI_channel *pipe);
       void recvBoundaryLayerBlockData(CMPI_channel *pipe,int From);
@@ -1727,7 +1748,7 @@ namespace PIC {
 
     };
 
-
+  
     //init the sampling buffers of the cell's data
     void initCellSamplingDataBuffer();
     void SetCellSamplingDataRequest();
@@ -1750,7 +1771,7 @@ namespace PIC {
 
 
 
-
+  
 
 
     //the computational mesh
@@ -1779,6 +1800,7 @@ namespace PIC {
     }
 
     //the namespace for the block/cell search functions
+    //-------------------------------------------------------------------------
     namespace Search {
       extern cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ***HashTable;
       extern double dx[3],xMinDomain[3]; //left corner of the domain, the interval in each dimension
@@ -1795,8 +1817,10 @@ namespace PIC {
       PIC::Mesh::cDataCenterNode *FindCell(double *x);
 
     }
+    //namespace Search --------------------------------------------------------
 
-  }
+  } 
+  // namespace Mesh ===========================================================
 
   //volume injection of model particles
 #if _PIC_VOLUME_PARTICLE_INJECTION_MODE_ == _PIC_VOLUME_PARTICLE_INJECTION_MODE__ON_
@@ -2130,6 +2154,8 @@ namespace PIC {
     typedef void (*fPrintVariableList)(FILE* fout,int nDataSet);
     extern vector<fPrintVariableList> PrintVariableList;
 
+    extern vector<PIC::Mesh::cDatumSampled*> DataSampledList;
+
     //interpolate center node data
     typedef void (*fInterpolateCenterNodeData)(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode* cell);
     extern vector<fInterpolateCenterNodeData> InterpolateCenterNodeData;
@@ -2412,16 +2438,8 @@ namespace PIC {
     namespace GuidingCenter{
 
       namespace Sampling {
-	extern int CellSamplingDataOffset;
-	extern int TotalKineticEnergyOffset;
-	int RequestSamplingData(int offset);
+	extern PIC::Mesh::cDatumWeighted DatumTotalKineticEnergy;
 	void SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec);
-      }
-
-      namespace Output{
-	void PrintVariableList(FILE* fout,int DataSetNumber);
-	void Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
-	void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
       }
 
       void Init_BeforeParser();

@@ -6,13 +6,39 @@
 //the function for particle's data sampling
 
 #include "pic.h"
+namespace PIC{
+  namespace Mesh{
+    //basic macroscopic parameters sampled in the simulation
+    cDatumTimed    DatumParticleWeight(1,"\"Particle Weight\"",      false);
+    cDatumTimed    DatumParticleNumber(1,"\"Particle Number\"",       true);
+    cDatumTimed    DatumNumberDensity( 1,"\"Number Density[1/m^3]\"", true);
+
+    cDatumWeighted DatumParticleVelocity(3, "\"Vx [m/s]\", \"Vy [m/s]\", \"Vz [m/s]\"", true);
+    cDatumWeighted DatumParticleVelocity2(3,"\"Vx^2 [(m/s)^2]\", \"Vy^2 [(m/s)^2]\", \"Vz^2 [(m/s)^2]\"", false);
+
+    cDatumWeighted DatumParticleSpeed(1,            "\"|V| [m/s]\"",     true);
+    cDatumWeighted DatumParticleParallelVelocity(1, "\"Vpar [m/s]\"",   false);
+    cDatumWeighted DatumParticleParallelVelocity2(1,"\"Vpar^2 [(m/s)^2]\"",false);
+
+    //-------------------------------------------------------------------------
+    // IMPORTANT: some data may be oncluded only for certain species!!!!
+    //if(GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_)
+    //-------------------------------------------------------------------------
+    cDatumDerived DatumTranslationalTemperature(1, "\"Translational Temperature [K]\"", true);
+    cDatumDerived DatumParallelTranslationalTemperature(1, "\"Parallel Translational Temperature [K]\"", true);
+    cDatumDerived DatumTangentialTranslationalTemperature(1, "\"Tangential Translational Temperature [K]\"", true);
+
+    // vector of active sampling data
+    vector<cDatumSampled*> DataSampledCenterNodeActive;
+    // vector of active derived data
+    vector<cDatumDerived*> DataDerivedCenterNodeActive;
+  }
+}
 
 //init the block's global data
 int PIC::Mesh::cDataBlockAMR::LocalTimeStepOffset=0;
 int PIC::Mesh::cDataBlockAMR::LocalParticleWeightOffset=0;
 int PIC::Mesh::cDataBlockAMR::totalAssociatedDataLength=0;
-
-
 
 //init the cells' global data
 int PIC::Mesh::cDataCenterNode::totalAssociatedDataLength=0;
@@ -51,30 +77,26 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
 }
 
 void PIC::Mesh::cDataCenterNode::PrintVariableList(FILE* fout,int DataSetNumber) {
- fprintf(fout,", \"Number Density\", \"Particle Number\"");
- for (int idim=0;idim<DIM;idim++) fprintf(fout,", \"V%i\"",idim);
- fprintf(fout,", \"Speed\"");
-
- //the following will be printed only for the gas species
- if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
-   fprintf(fout,", \"Translational Temperature\"");
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-   //do nothing
-#else
-   fprintf(fout,", \"Translational Parallel Temperature\", \"Translational Tangential Temperature\" ");
-#endif
- }
-
- //print the user defind 'center node' data
- vector<fPrintVariableListCenterNode>::iterator fptr;
- for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
-
- //print varialbes sampled by the user defined sampling procedures
- if (PIC::IndividualModelSampling::PrintVariableList.size()!=0) {
-   for (unsigned int i=0;i<PIC::IndividualModelSampling::PrintVariableList.size();i++) PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
- }
-
+  // printe sampled data names
+  vector<cDatumSampled*>::iterator ptrDatumSampled;
+  for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
+      ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
+    if((*ptrDatumSampled)->doPrint) (*ptrDatumSampled)->PrintName(fout);
+  // print derived data names
+  vector<cDatumDerived*>::iterator ptrDatumDerived;
+  for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
+      ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
+    if((*ptrDatumDerived)->doPrint) (*ptrDatumDerived)->PrintName(fout);
+  
+  //print the user defind 'center node' data
+  vector<fPrintVariableListCenterNode>::iterator fptr;
+  for (fptr=PrintVariableListCenterNode.begin();fptr!=PrintVariableListCenterNode.end();fptr++) (*fptr)(fout,DataSetNumber);
+  
+  //print varialbes sampled by the user defined sampling procedures
+  if (PIC::IndividualModelSampling::PrintVariableList.size()!=0)
+    for (unsigned int i=0;
+	 i<PIC::IndividualModelSampling::PrintVariableList.size();i++) 
+      PIC::IndividualModelSampling::PrintVariableList[i](fout,DataSetNumber);
 }
 
 void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
@@ -82,70 +104,69 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
 #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
   static unsigned long int nCallCounter=0;
-
   ++nCallCounter;
-
-
-  if ((nCallCounter==589369)&&(PIC::ThisThread==0)) {
-    double s=12;
-
-    s=s+23;
-  }
 #endif
 
-  struct cOutputData {
-    double NumberDesnity,ParticleNumber,v[3],MeanParticleSpeed,TranslationalTemeprature;
-    double TranslationalParallelTemperature,TranslationalTangentialTemperature;
-  } OutputData;
+  static int  nOutput=0;
+  static bool IsFirstCall=true;
+  static double* OutputData;
 
+  // find size of message at the first call
+  if(IsFirstCall){
+    // include sampled data
+    vector<cDatumSampled*>::iterator ptrDatumSampled;
+    for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
+	ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
+      if((*ptrDatumSampled)->doPrint) nOutput+=(*ptrDatumSampled)->length;
+    // include derived data
+    vector<cDatumDerived*>::iterator ptrDatumDerived;
+    for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
+	ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
+      if((*ptrDatumDerived)->doPrint) nOutput+=(*ptrDatumDerived)->length;
+    OutputData = new double[nOutput];
+    IsFirstCall=false;
+  }
+  
   if (pipe->ThisThread==CenterNodeThread) {
-    OutputData.NumberDesnity=GetNumberDensity(DataSetNumber);
-    OutputData.ParticleNumber=GetParticleNumber(DataSetNumber);
-    GetBulkVelocity(OutputData.v,DataSetNumber);
-    OutputData.MeanParticleSpeed=GetMeanParticleSpeed(DataSetNumber);
-
-    if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
-      OutputData.TranslationalTemeprature=GetTranslationalTemperature(DataSetNumber);
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-      OutputData.TranslationalParallelTemperature=GetParallelTranslationalTemperature(DataSetNumber);
-      OutputData.TranslationalTangentialTemperature=GetTangentialTranslationalTemperature(DataSetNumber);
-#endif
-    }
+    // compose a message
+    int iOutput=0;
+    cDatumTimed* pDatumTimed;
+    cDatumWeighted* pDatumWeighted;
+    // sampled data values
+    vector<cDatumSampled*>::iterator ptrDatumSampled;
+    for(ptrDatumSampled = DataSampledCenterNodeActive.begin();
+	ptrDatumSampled!= DataSampledCenterNodeActive.end(); ptrDatumSampled++)
+      if((*ptrDatumSampled)->doPrint) {
+	// cDatumSampled has 2 derived types: cDatumTimed & cDatumWeighted:
+	// each is averaged differently => need to downcast them first
+	if((*ptrDatumSampled)->type == PIC::Mesh::Timed_){
+	  pDatumTimed = static_cast<cDatumTimed*> ((*ptrDatumSampled));
+	  GetDatumAverage(*pDatumTimed,&OutputData[iOutput], DataSetNumber);
+	}
+	else{
+	  pDatumWeighted = static_cast<cDatumWeighted*> ((*ptrDatumSampled));
+	  GetDatumAverage(*pDatumWeighted,&OutputData[iOutput], DataSetNumber);
+	}
+	iOutput += (*ptrDatumSampled)->length;
+      }
+    //derived data values
+    vector<cDatumDerived*>::iterator ptrDatumDerived;
+    for(ptrDatumDerived = DataDerivedCenterNodeActive.begin();
+	ptrDatumDerived!= DataDerivedCenterNodeActive.end(); ptrDatumDerived++)
+      if((*ptrDatumDerived)->doPrint) {
+	(this->*(*ptrDatumDerived)->GetValue)(&OutputData[iOutput],DataSetNumber);
+	iOutput += (*ptrDatumDerived)->length;
+      }
   }
 
-
+  
   if (pipe->ThisThread==0) {
-    if (CenterNodeThread!=0) pipe->recv((char*)&OutputData,sizeof(OutputData),CenterNodeThread);
-
-    fprintf(fout,"%e  %e ",OutputData.NumberDesnity,OutputData.ParticleNumber);
-    for (idim=0;idim<DIM;idim++) fprintf(fout,"%e ",OutputData.v[idim]);
-    fprintf(fout,"%e ",OutputData.MeanParticleSpeed);
-
-    if (PIC::MolecularData::GetSpecieType(DataSetNumber)==_PIC_SPECIE_TYPE__GAS_) {
-      fprintf(fout,"%e ",OutputData.TranslationalTemeprature);
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-      fprintf(fout,"%e %e ",OutputData.TranslationalParallelTemperature,OutputData.TranslationalTangentialTemperature);
-#endif
-    }
-
-    //check that all values are finite
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
-    if ((isfinite(OutputData.NumberDesnity)==false) || (isfinite(OutputData.ParticleNumber)==false) ||
-      (isfinite(OutputData.MeanParticleSpeed)==false))
-      exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-
-    for (idim=0;idim<3;idim++) {
-      if (isfinite(OutputData.v[idim])==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-    }
-#endif
-#endif
+    //print values to the output file
+    if (CenterNodeThread!=0)pipe->recv((char*)OutputData,nOutput*sizeof(double),CenterNodeThread);
+    for(int iOutput=0; iOutput<nOutput; iOutput++)
+      fprintf(fout, "%e ", OutputData[iOutput]);
   }
-  else pipe->send((char*)&OutputData,sizeof(OutputData));
+  else pipe->send((char*)OutputData,nOutput*sizeof(double));
 
   //print the user defind 'center node' data
   vector<fPrintDataCenterNode>::iterator fptr;
@@ -159,23 +180,16 @@ void PIC::Mesh::cDataCenterNode::PrintData(FILE* fout,int DataSetNumber,CMPI_cha
 
 }
 
-void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients) {
+void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList,double *InterpolationCoefficients,int nInterpolationCoefficients) {
   int i,s,idim;
   double c;
 
 
 
   //==============================  DEBUGGER ===============
-           if (nInterpolationCoeficients!=0) Measure=InterpolationList[0]->Measure;
+           if (nInterpolationCoefficients!=0) Measure=InterpolationList[0]->Measure;
 
            static long int nCallCounter=0;
-
-           /*
-           if (nCallCounter==1838530) {
-             cout << __FILE__ << "@" << __LINE__ << endl;
-           }
-           */
-
            nCallCounter++;
 
   //============================== END DEBUGGER ============
@@ -203,88 +217,24 @@ void PIC::Mesh::cDataCenterNode::Interpolate(cDataCenterNode** InterpolationList
     InterpolatedBulkParallelVelocity=0.0,InterpolatedBulk2ParallelVelocity=0.0;
 #endif
 
-    //interpolate the sampled data
-    for (i=0;i<nInterpolationCoeficients;i++) {
-      pWeight=InterpolationList[i]->GetRealParticleNumber(s);
-      c=InterpolationCoeficients[i];
-
-      InterpolatedParticleWeight+=PIC::LastSampleLength*c*pWeight;
-      InterpolatedParticleNumber+=PIC::LastSampleLength*c*InterpolationList[i]->GetParticleNumber(s);
-      InterpolatedParticleNumberDeinsity+=PIC::LastSampleLength*c*InterpolationList[i]->GetNumberDensity(s);
-
-
-      for (idim=0;idim<3;idim++) {
-        InterpolatedBulkVelocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset)));
-        InterpolatedBulk2Velocity[idim]+=c*(*(idim+3*s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset)));
-      }
-
-      InterpolatedParticleSpeed+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset)));
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-      InterpolatedBulkParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset)));
-      InterpolatedBulk2ParallelVelocity+=c*(*(s+(double*)(InterpolationList[i]->associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset)));
-#endif
-
-
-      //check if the numbers are real
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
-#if _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ == _PIC_DEBUGGER_MODE_ON_
-      if ((isfinite(InterpolatedParticleWeight)==false) || (isfinite(InterpolatedParticleNumber)==false) ||
-         (isfinite(InterpolatedParticleNumberDeinsity)==false) || (isfinite(InterpolatedParticleSpeed)==false))
-         exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-
-
-      for (idim=0;idim<3;idim++) {
-        if ((isfinite(InterpolatedBulkVelocity[idim])==false) || (isfinite(InterpolatedBulk2Velocity[idim])==false)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-      }
-
-      #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-      #else
-      if ((isfinite(InterpolatedBulkParallelVelocity)==false) || (isfinite(InterpolatedBulk2ParallelVelocity)==false)) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-      #endif
-
-      //check is the resulting speed is a finita number
-      double v;
-
-      if (InterpolatedParticleWeight>0.0) {
-        v=InterpolatedParticleSpeed/InterpolatedParticleWeight;
-        if (isfinite(v)==false) exit(__LINE__,__FILE__,"Error: Floating Point Exeption");
-      }
-#endif
-#endif
-
-    }
-
-    //stored the interpolated data in the associated data buffer
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberRelativeOffset))=InterpolatedParticleNumber;
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleWeghtRelativeOffset))=InterpolatedParticleWeight;
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNumberDensityRelativeOffset))=InterpolatedParticleNumberDeinsity;
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
-
-    for (i=0;i<3;i++) {
-      *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocityRelativeOffset))=InterpolatedBulkVelocity[i];
-      *(i+3*s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleVelocity2RelativeOffset))=InterpolatedBulk2Velocity[i];
-    }
-
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleSpeedRelativeOffset))=InterpolatedParticleSpeed;
-
-#if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
-#else
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocityRelativeOffset))=InterpolatedBulkParallelVelocity;
-    *(s+(double*)(associatedDataPointer+PIC::Mesh::completedCellSampleDataPointerOffset+PIC::Mesh::sampledParticleNormalParallelVelocity2RelativeOffset))=InterpolatedBulk2ParallelVelocity;
-#endif
-
+    // interpolate all sampled data
+    vector<cDatumSampled*>::iterator ptrDatum;
+    for(ptrDatum = DataSampledCenterNodeActive.begin();
+    	ptrDatum!= DataSampledCenterNodeActive.end(); ptrDatum++)
+      InterpolateDatum(**ptrDatum,
+    		       InterpolationList,
+    		       InterpolationCoefficients,
+    		       nInterpolationCoefficients, s);
   }
 
   //print the user defind 'center node' data
   vector<fInterpolateCenterNode>::iterator fptr;
 
-  for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
+  for (fptr=InterpolateCenterNode.begin();fptr!=InterpolateCenterNode.end();fptr++) (*fptr)(InterpolationList,InterpolationCoefficients,nInterpolationCoefficients,this);
 
   //interpolate data sampled by user defiend sampling procedures
   if (PIC::IndividualModelSampling::InterpolateCenterNodeData.size()!=0) {
-    for (unsigned int ifunc=0;ifunc<PIC::IndividualModelSampling::PrintVariableList.size();ifunc++) PIC::IndividualModelSampling::InterpolateCenterNodeData[ifunc](InterpolationList,InterpolationCoeficients,nInterpolationCoeficients,this);
+    for (unsigned int ifunc=0;ifunc<PIC::IndividualModelSampling::PrintVariableList.size();ifunc++) PIC::IndividualModelSampling::InterpolateCenterNodeData[ifunc](InterpolationList,InterpolationCoefficients,nInterpolationCoefficients,this);
   }
 }
 
@@ -318,44 +268,32 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
   exit(__LINE__,__FILE__,"not implemented");
   #endif
 
-
-
-
   //set up the offsets for 'center node' sampled data
   long int offset=0;
-
-  sampledParticleWeghtRelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleNumberRelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleNumberDensityRelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleVelocityRelativeOffset=offset;
-  offset+=3*sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleVelocity2RelativeOffset=offset;
-  offset+=3*sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleSpeedRelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
+  DatumParticleWeight.activate(offset, &DataSampledCenterNodeActive);
+  DatumNumberDensity.activate(offset, &DataSampledCenterNodeActive);
+  DatumParticleNumber.activate(offset, &DataSampledCenterNodeActive);
+  DatumParticleVelocity.activate(offset, &DataSampledCenterNodeActive);
+  DatumParticleVelocity2.activate(offset, &DataSampledCenterNodeActive);
+  DatumParticleSpeed.activate(offset, &DataSampledCenterNodeActive);
+  DatumTranslationalTemperature.activate(&cDataCenterNode::GetTranslationalTemperature, &DataDerivedCenterNodeActive);
 
   //sampling the 'parallel' and 'tangential' kinetic temperatures
 #if _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE_ == _PIC_SAMPLE__PARALLEL_TANGENTIAL_TEMPERATURE__MODE__OFF_
   //do nothing
 #else
-  sampledParticleNormalParallelVelocityRelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
-
-  sampledParticleNormalParallelVelocity2RelativeOffset=offset;
-  offset+=sizeof(double)*PIC::nTotalSpecies;
+  DatumParticleParallelVelocity.activate(offset, &DataSampledCenterNodeActive);
+  DatumParticleParallelVelocity2.activate(offset,&DataSampledCenterNodeActive);
+  DatumParallelTranslationalTemperature.activate(&cDataCenterNode::GetParallelTranslationalTemperature, &DataDerivedCenterNodeActive);
+  DatumTangentialTranslationalTemperature.activate(&cDataCenterNode::GetTangentialTranslationalTemperature, &DataDerivedCenterNodeActive);
 #endif
-
 
   //check if user defined sampling data is requested
   sampledExternalDataRelativeOffset=offset;
+
+  if (PIC::IndividualModelSampling::DataSampledList.size()!=0) {
+    for (unsigned int i=0;i<PIC::IndividualModelSampling::DataSampledList.size();i++) PIC::IndividualModelSampling::DataSampledList[i]->activate(offset, &DataSampledCenterNodeActive);
+  }
 
   if (PIC::IndividualModelSampling::RequestSamplingData.size()!=0) {
     for (unsigned int i=0;i<PIC::IndividualModelSampling::RequestSamplingData.size();i++) offset+=PIC::IndividualModelSampling::RequestSamplingData[i](offset);
@@ -386,50 +324,6 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 }
 
 
-//==============================================================
-//get and set the local time step and particle weight
-/*
-double PIC::Mesh::GetLocalTimeStep(int spec,cDataBlockAMR* block) {
-  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  register double* ptr;
-  ptr=(double*)(block->GetAssociatedDataBufferPointer()+cDataBlockAMR::LocalTimeStepOffset+spec*sizeof(double));
-  return *ptr;
-  #else
-  exit(__LINE__,__FILE__,"not implemented");
-  #endif
-}
-
-void PIC::Mesh::SetLocalTimeStep(double dt,int spec,cDataBlockAMR* block) {
-  #if _SIMULATION_TIME_STEP_MODE_ == _SPECIES_DEPENDENT_LOCAL_TIME_STEP_
-  register double* ptr;
-  ptr=(double*)(block->GetAssociatedDataBufferPointer()+cDataBlockAMR::LocalTimeStepOffset+spec*sizeof(double));
-  *ptr=dt;
-  #else
-  exit(__LINE__,__FILE__,"not implemented");
-  #endif
-}
-
-double PIC::Mesh::GetLocalParticleWeight(int spec,cDataBlockAMR* block) {
-  #if _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_
-  register double* ptr;
-  ptr=(double*)(block->GetAssociatedDataBufferPointer()+cDataBlockAMR::LocalParticleWeightOffset+spec*sizeof(double));
-  return *ptr;
-  #else
-  exit(__LINE__,__FILE__,"not implemented");
-  #endif
-}
-
-void PIC::Mesh::SetLocalParticleWeight(double weight,int spec,cDataBlockAMR* block) {
-  #if _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_LOCAL_PARTICLE_WEIGHT_
-  register double* ptr;
-  ptr=(double*)(block->GetAssociatedDataBufferPointer()+cDataBlockAMR::LocalParticleWeightOffset+spec*sizeof(double));
-  *ptr=weight;
-  #else
-  exit(__LINE__,__FILE__,"not implemented");
-  #endif
-}
-*/
-//==============================================================
 //flush and switch the sampling buffers in 'center' nodes
 void PIC::Mesh::flushCompletedSamplingBuffer(cDataCenterNode* node) {
   register int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);

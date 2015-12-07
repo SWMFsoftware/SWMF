@@ -16,6 +16,7 @@ vector<PIC::IndividualModelSampling::fPrintVariableList> PIC::IndividualModelSam
 vector<PIC::IndividualModelSampling::fInterpolateCenterNodeData> PIC::IndividualModelSampling::InterpolateCenterNodeData;
 vector<PIC::IndividualModelSampling::fPrintSampledData> PIC::IndividualModelSampling::PrintSampledData;
 vector<PIC::IndividualModelSampling::fRequestStaticCellData> PIC::IndividualModelSampling::RequestStaticCellData;
+vector<PIC::Mesh::cDatumSampled*>PIC::IndividualModelSampling::DataSampledList;
 
 //generic particle transformation
 //PIC::ChemicalReactions::GenericParticleTranformation::fTransformationIndicator *PIC::ChemicalReactions::GenericParticleTranformation::TransformationIndicator=NULL;
@@ -38,5 +39,5 @@ bool PIC::ModelTestRun::mode=false;
 int PIC::ModelTestRun::nTotalIteraction=-1;
 
 //the path to the input data of the user model
-char PIC::UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_]=".";
+char PIC::UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_]="/Users/dborovik/AMPS_dev/new_sampling_generic/AMPS/data/input/SEP3D";
 

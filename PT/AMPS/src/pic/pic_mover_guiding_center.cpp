@@ -3,21 +3,7 @@
 
 #include "pic.h"
 
-int PIC::Mover::GuidingCenter::Sampling::CellSamplingDataOffset=-1;
-int PIC::Mover::GuidingCenter::Sampling::TotalKineticEnergyOffset=-1;
-
-int PIC::Mover::GuidingCenter::Sampling::RequestSamplingData(int offset){
-  int SamplingLength=0;
-
-  if (CellSamplingDataOffset!=-1) 
-    exit(__LINE__,__FILE__,"Error: second request for the sampling data");
-
-  CellSamplingDataOffset=offset;
-  TotalKineticEnergyOffset=CellSamplingDataOffset+SamplingLength;
-  SamplingLength+=sizeof(double);
-
-  return SamplingLength; 
-}
+PIC::Mesh::cDatumWeighted PIC::Mover::GuidingCenter::Sampling::DatumTotalKineticEnergy(1,"\"Total kinetic energy [J]\"", true);
 
 void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec){
 
@@ -58,72 +44,14 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   KinEnergy+= AbsB*mu;
 #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
 
-  *((double*)(SamplingBuffer+TotalKineticEnergyOffset))+=
+  *((double*)(SamplingBuffer+DatumTotalKineticEnergy.offset))+=
+	      //TotalKineticEnergyOffset))+=
     LocalParticleWeight*KinEnergy;
   
 }
-
-/*----------------- Print Output File ---------------------------------------*/
-//functions that output the data file
-void PIC::Mover::GuidingCenter::Output::PrintVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,", \"Total kinetic energy [J]\"");
-}
-
-
-void PIC::Mover::GuidingCenter::Output::Interpolate(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode) {
-  int i,idim;
-  double KineticEnergy=0.0;
-  char *SamplingBuffer,*CellNodeSamplingBuffer;
-
-  for (i=0;i<nInterpolationCoeficients;i++) {
-
-    KineticEnergy+=
-      (*((double*)(InterpolationList[i]->GetAssociatedDataBufferPointer()+
-		   PIC::Mesh::completedCellSampleDataPointerOffset+
-		   PIC::Mover::GuidingCenter::Sampling::TotalKineticEnergyOffset)))*InterpolationCoeficients[i];
-  }
-
-  double TotalWeight=0.0;
-  for(int spec=0; spec<PIC::nTotalSpecies; spec++)
-    TotalWeight+=CenterNode->GetCompleteSampleCellParticleWeight(spec);
-
-  if(TotalWeight>0)
-    KineticEnergy/=TotalWeight;
-
-  *((double*)(CenterNode->GetAssociatedDataBufferPointer()+
-	      PIC::Mesh::completedCellSampleDataPointerOffset+
-	      PIC::Mover::GuidingCenter::Sampling::TotalKineticEnergyOffset))=KineticEnergy;
-
-}
-
-
-void PIC::Mover::GuidingCenter::Output::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode) {
-  double t;
-
-  if (pipe->ThisThread==CenterNodeThread) {
-    t= *((double*)(CenterNode->GetAssociatedDataBufferPointer()+
-		   PIC::Mesh::completedCellSampleDataPointerOffset+
-		   PIC::Mover::GuidingCenter::Sampling::TotalKineticEnergyOffset));
-  }
-
-  if (pipe->ThisThread==0) {
-    if (CenterNodeThread!=0) pipe->recv(t,CenterNodeThread);
-
-    fprintf(fout,"%e ",t);
-  }
-  else pipe->send(t);
-}
-
 void PIC::Mover::GuidingCenter::Init_BeforeParser(){
-
-  // request storage for additional sampling parameters(including total kinetic energy)
-  PIC::IndividualModelSampling::RequestSamplingData.push_back(Sampling::RequestSamplingData);
-
-  //print out the output file
-  PIC::Mesh::PrintVariableListCenterNode.push_back(Output::PrintVariableList);
-  PIC::Mesh::PrintDataCenterNode.push_back(Output::PrintData);
-  PIC::Mesh::InterpolateCenterNode.push_back(Output::Interpolate);
-
+  // add TotalKineticEnergy to the list of sampled data
+  PIC::IndividualModelSampling::DataSampledList.push_back(&Sampling::DatumTotalKineticEnergy);
 }
 
 
