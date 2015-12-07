@@ -189,7 +189,7 @@ contains
          UseB0, UseBoris => boris_correction, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
-    use ModB0,      ONLY: B0_DGB
+    use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
     use ModWaves,   ONLY: UseWavePressure
@@ -215,7 +215,7 @@ contains
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
     logical :: DoTest, DoTestMe, DoTestCell
     !----------------------------------------------------------------------
-    
+
     if(iProc == ProcTest .and. iBlock==BLkTest)then
        call set_oktest(NameSub, DoTest, DoTestMe)
     else
@@ -227,18 +227,18 @@ contains
        write(*,*)NameSub,':         State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
     end if
 
-    do k=1,nK; do j=1,nJ; do i=1,nI
-        if(.not.true_cell(i,j,k,iBlock)) CYCLE
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
        DoTestCell = DoTestMe .and. iTest==i .and. jTest==j .and. kTest==k 
-       
+
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
        ChargeDens_I = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
        InvElectronDens = 1.0/sum(ChargeDens_I)
-       
+
        if(InvElectronDens < 0.0) &
             call stop_mpi('negative electron denisty')
 
@@ -250,12 +250,14 @@ contains
             (bCrossArea_DZ(:,i,j,k+1) - bCrossArea_DZ(:,i,j,k))
        Current_D = vInv*Current_D
 
+       if(UseCurlB0) Current_D = Current_D + CurlB0_DC(:,i,j,k)
+
        FullB_D = State_V(Bx_:Bz_)
        if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
 
        ! Lorentz force: J x B
        Force_D = cross_product(Current_D, FullB_D)
-       
+
        if(DoTestCell)write(*,*)NameSub,':Force_D=', Force_D
 
        ! Subtract electron pressure gradient force

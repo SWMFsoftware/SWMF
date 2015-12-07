@@ -1,7 +1,6 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModCalcSource
 
@@ -84,6 +83,11 @@ contains
     real :: QPerQtotal_I(IonFirst_:IonLast_)
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
+
+    ! Variables for multi-ion MHD
+    real :: InvElectronDens, uPlus_D(3)
+    real, dimension(nIonFluid) :: &
+         NumDens_I, ChargeDens_I, Rho_I, InvRho_I, Ux_I, Uy_I, Uz_I
 
     logical :: DoTest, DoTestMe
 
@@ -498,10 +502,27 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          RhoInv = 1.0/State_VGB(rho_,i,j,k,iBlock)
-          Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
-               -DivB1_GB(i,j,k,iBlock)* &
-               State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*RhoInv
+          if(UseMultiIon)then
+             ChargeDens_I = ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock) &
+                  /MassIon_I
+             InvElectronDens = 1.0/sum(ChargeDens_I)
+             Rho_I    = State_VGB(iRhoIon_I,i,j,k,iBlock)
+             InvRho_I = 1.0/Rho_I
+             Ux_I = InvRho_I*State_VGB(iUxIon_I,i,j,k,iBlock)
+             Uy_I = InvRho_I*State_VGB(iUyIon_I,i,j,k,iBlock)
+             Uz_I = InvRho_I*State_VGB(iUzIon_I,i,j,k,iBlock)
+             uPlus_D(x_) = InvElectronDens*sum(ChargeDens_I*Ux_I)
+             uPlus_D(y_) = InvElectronDens*sum(ChargeDens_I*Uy_I)
+             uPlus_D(z_) = InvElectronDens*sum(ChargeDens_I*Uz_I)
+
+             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
+                  -DivB1_GB(i,j,k,iBlock)*uPlus_D
+          else
+             RhoInv = 1.0/State_VGB(rho_,i,j,k,iBlock)
+             Source_VC(Bx_:Bz_,i,j,k) = Source_VC(Bx_:Bz_,i,j,k) &
+                  -DivB1_GB(i,j,k,iBlock)* &
+                  State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*RhoInv
+          end if
 
           if(.not. IsMhd) CYCLE
 
@@ -517,7 +538,7 @@ contains
 
        if(DoTestMe)call write_source('After divb source')
 
-       if (UseB0Source) then
+       if(UseB0Source .and. IsMhd)then
 
           !   -B1 div(B0)     - div(B0) source
           ! -curl(B0) x B1    - remove this term (in case curl B0 should be 0) 
@@ -541,7 +562,7 @@ contains
        if(UseB)call calc_divb(iBlock)
     end if
 
-    if(UseB .and. UseCurlB0)then
+    if(UseB .and. UseCurlB0 .and. IsMhd)then
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
