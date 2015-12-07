@@ -3942,33 +3942,23 @@ contains
                   State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbed
 
              ! Solar wind, assuming that ratioPerturbedSw is small enough
-             ratioPerturbedSw = ratioPerturbed*LowDensityRatio
-
-             State_VGB(SwRho_,i,j,k,iBlock) = &
-                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw
-             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw
-             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw
-             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw
-             State_VGB(SwP_,i,j,k,iBlock)= &
-                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw
-
-             ! Magnetic field
-             State_VGB(Bx_,i,j,k,iBlock) = 0
-             State_VGB(By_,i,j,k,iBlock) = 0
-             State_VGB(Bz_,i,j,k,iBlock) = 0
-
-             ! Total fluid
-             State_VGB(Rho_,i,j,k,iBlock)       = &
-                  sum(State_VGB(iRhoIon_I,i,j,k,iBlock))
-             State_VGB(RhoUx_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUxIon_I,i,j,k,iBlock))
-             State_VGB(RhoUy_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUyIon_I,i,j,k,iBlock))
-             State_VGB(RhoUz_,i,j,k,iBlock)     = &
-                  sum(State_VGB(iRhoUzIon_I,i,j,k,iBlock))
+!             ratioPerturbedSw = ratioPerturbed*LowDensityRatio
+!
+!             State_VGB(SwRho_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw
+!             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw
+!             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw
+!             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw
+!             State_VGB(SwP_,i,j,k,iBlock)= &
+!                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw
+!
+!             ! Magnetic field
+!             State_VGB(Bx_,i,j,k,iBlock) = 0
+!             State_VGB(By_,i,j,k,iBlock) = 0
+!             State_VGB(Bz_,i,j,k,iBlock) = 0
 
           else if (r_BLK(i,j,k,iBlock) <= R1Perturbed) then
              alpha = (r_BLK(i,j,k,iBlock)-R0Perturbed) / &
@@ -3995,26 +3985,26 @@ contains
                   SW_p*LowDensityRatio*alpha
 
              ! Solar wind
-             State_VGB(SwRho_,i,j,k,iBlock) = &
-                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
-                  RhoSw*alpha
-             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-                  RhoSw*SW_Ux*alpha
-             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-                  RhoSw*SW_Uy*alpha
-             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
-                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
-                  RhoSw*SW_Uz*alpha
-             State_VGB(SwP_,i,j,k,iBlock)= &
-                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
-                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))*alpha
-
-
-             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx*alpha
-             State_VGB(By_,i,j,k,iBlock) = SW_By*alpha
-             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz*alpha
+!             State_VGB(SwRho_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1Rho_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
+!                  RhoSw*alpha
+!             State_VGB(SwRhoUx_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUx_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
+!                  RhoSw*SW_Ux*alpha
+!             State_VGB(SwRhoUy_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUy_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
+!                  RhoSw*SW_Uy*alpha
+!             State_VGB(SwRhoUz_,i,j,k,iBlock) = &
+!                  State_VGB(Neu1RhoUz_,i,j,k,iBlock)*ratioPerturbedSw*beta +&
+!                  RhoSw*SW_Uz*alpha
+!             State_VGB(SwP_,i,j,k,iBlock)= &
+!                  State_VGB(Neu1P_,i,j,k,iBlock)*ratioPerturbedSw*beta + &
+!                  SW_p*(1.0-LowDensityRatio*(IonLast_-IonFirst_))*alpha
+!
+!
+!             State_VGB(Bx_,i,j,k,iBlock) = SW_Bx*alpha
+!             State_VGB(By_,i,j,k,iBlock) = SW_By*alpha
+!             State_VGB(Bz_,i,j,k,iBlock) = SW_Bz*alpha
 
 
           else
