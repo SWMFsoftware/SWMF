@@ -143,12 +143,12 @@ Run=
 
 #>
 Name=CG(0+srbwks2014-0079)
-Keys=-model-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
+Keys=-model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
 <#
 
 #>
 Name=CG-dust-test(0+srbwks2014-0079)
-Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
 <#
 
 #>
