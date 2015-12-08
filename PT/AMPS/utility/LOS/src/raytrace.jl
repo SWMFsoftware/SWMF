@@ -192,7 +192,7 @@ function updateVectors!(r, r_hat, rStart, rPointing, i)
   end
 end
 
-function get_lMax!(lMax, iTriangle, r, lIntersect, llMax)
+function get_lMax(lMax, iTriangle, r, lIntersect, llMax)
   if iTriangle != -1
     for jj = 1:3
       @inbounds lMax += (r[jj] - lIntersect[jj]) * (r[jj] - lIntersect[jj])
@@ -201,6 +201,7 @@ function get_lMax!(lMax, iTriangle, r, lIntersect, llMax)
   else
     lMax = llMax
   end
+  return lMax
 end
 
 function reset_data!(nVars, data, dataNew, dataOld)
@@ -264,7 +265,6 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
     nRays = size(rPointing, 2)
     columnDensity = 0.0
     distance = 0.0
-    rMax = minimum(oct.halfSize)*0.99
 
     l = 0.0
     dr = Array(Float64, 3)
@@ -278,7 +278,7 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
     r_hat_sun = zeros(Float64, 3)
     rSun = zeros(Float64, 3)
     lMax = 0.0
-    llMax = norm(oct.halfSize)*5.0
+    llMax = norm(oct.halfSize)*2.0
     distFromStart = 0.0
     mask = ones(Int64, nRays)
     userStr = lowercase(parseUserFile("pltBlankBody:"))
@@ -297,13 +297,13 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       end
       #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
       distance = norm_vec(r)
-      get_lMax!(lMax, iTriangle, r, lIntersect, llMax)
+      lMax = get_lMax(lMax, iTriangle, r, lIntersect, llMax)
       reset_data!(nVars, data, dataNew, dataOld)
 
 
-      while distance < rMax
-        distFromStart = 0.0
-        norm_rhat_sun = 0.0
+      distFromStart = 0.0
+      norm_rhat_sun = 0.0
+      while (!is_out_of_bounds(oct, r) && (distFromStart <= lMax))
         if doCheckShadow
           spkpos!("SUN", et, "67P/C-G_CK", "NONE", "CHURYUMOV-GERASIMENKO", rSun)
         end
@@ -314,6 +314,7 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
             @inbounds norm_rhat_sun += r_hat_sun[k] * r_hat_sun[k]
           end
         end
+        distFromStart = sqrt(distFromStart)
 
         if doCheckShadow
           norm_rhat_sun = sqrt(norm_rhat_sun)
@@ -321,7 +322,6 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
             @inbounds r_hat_sun[k] = r_hat_sun[k] / norm_rhat_sun
           end
         end
-        distFromStart = sqrt(distFromStart)
 
         foundCell, cell = cell_containing_point(oct, r)
         l = norm_vec(r) / 30.0
@@ -339,7 +339,7 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
           triLinearInterpolation!(cell, r, dataNew, minDustSize, maxDustSize,
                                   distFromStart)
           for k=1:nVars
-            data[k] += (dataOld[k] + dataNew[k]) / 2.0 * l
+            data[k] += ((dataOld[k] + dataNew[k]) / 2.0 * l)
           end
         end
         update_r!(r, r_hat, dr, l)
@@ -354,22 +354,123 @@ function doIntegration(oct::Block, rPointing, rStart, nVars, allTriangles,
       for k=1:nVars
         ccd[k, i] = data[k]
       end
-
-      #=
-      if doBlankBody
-        for k=1:nVars
-          if iTriangle == -1
-            ccd[k,i] = data[k]
-          else
-            ccd[k,i] = 0.0
-          end
-        end
-      else
-        for k=1:nVars
-          ccd[k, i] = data[k]
-        end
-      end
-    =#
     end
     return ccd, mask
 end
+
+function doIntegrationParallel(oct::Block, rPointing, rStart, nVars, allTriangles,
+                       doCheckShadow,iRays, et)
+    if doCheckShadow
+      meshFile = parseUserFile("meshFileShadow:")
+      if length(meshFile) < 1
+        println(" - shadow mesh file not defined, using regular mesh file")
+        meshFile = parseUserFile("meshFile:")
+      end
+      nTrianglesShadow, allTrianglesShadow, totalSurfaceAreaShadow = load_ply_file(meshFile)
+    end
+
+    dataFileName = parseUserFile("dataFile:")
+    minDustSize = h5read(dataFileName, "oct/minDustSize")
+    maxDustSize = h5read(dataFileName, "oct/maxDustSize")
+
+    nRays = size(rPointing, 2)
+    columnDensity = 0.0
+    distance = 0.0
+
+    l = 0.0
+    dr = Array(Float64, 3)
+    r = Array(Float64, 3)
+    r_hat = Array(Float64, 3)
+    dr = zeros(Float64, 3)
+    data = zeros(Float64, nVars)
+    dataNew = zeros(Float64, nVars)
+    dataOld = zeros(Float64, nVars)
+    ccd = zeros(nVars, nRays)
+    r_hat_sun = zeros(Float64, 3)
+    rSun = zeros(Float64, 3)
+    lMax = 0.0
+    llMax = norm(oct.halfSize)*2.0
+    distFromStart = 0.0
+    mask = ones(Int64, nRays)
+    userStr = lowercase(parseUserFile("pltBlankBody:"))
+    if contains(userStr, "true") || contains(userStr, "yes")
+      doBlankBody = true
+    else
+      doBlankBody = false
+    end
+
+    for i in iRays
+      updateVectors!(r, r_hat, rStart, rPointing, i)
+      iTriangle, lIntersect = iTriangleIntersect(allTriangles, r, r_hat)
+
+      for k=1:3
+        @inbounds r[k] = rStart[k]
+      end
+      #distance = sqrt(r[1]*r[1] + r[2]*r[2] + r[3]*r[3])
+      distance = norm_vec(r)
+      lMax = get_lMax(lMax, iTriangle, r, lIntersect, llMax)
+      reset_data!(nVars, data, dataNew, dataOld)
+
+
+      distFromStart = 0.0
+      norm_rhat_sun = 0.0
+      while (!is_out_of_bounds(oct, r) && (distFromStart <= lMax))
+        if doCheckShadow
+          spkpos!("SUN", et, "67P/C-G_CK", "NONE", "CHURYUMOV-GERASIMENKO", rSun)
+        end
+        for k=1:3
+          @inbounds distFromStart += ((rStart[k] - r[k]) * (rStart[k] - r[k]))
+          if doCheckShadow
+            @inbounds r_hat_sun[k] = rSun[k] * 1000.0 - r[k]
+            @inbounds norm_rhat_sun += r_hat_sun[k] * r_hat_sun[k]
+          end
+        end
+        distFromStart = sqrt(distFromStart)
+
+        if doCheckShadow
+          norm_rhat_sun = sqrt(norm_rhat_sun)
+          for k=1:3
+            @inbounds r_hat_sun[k] = r_hat_sun[k] / norm_rhat_sun
+          end
+        end
+
+        foundCell, cell = cell_containing_point(oct, r)
+        l = norm_vec(r) / 30.0
+        if doCheckShadow
+          isInShadow = checkIfInShadow(doCheckShadow, cell, allTrianglesShadow,
+                                      r, r_hat_sun)
+        else
+          isInShadow = false
+        end
+
+        if !isInShadow
+          for k=1:nVars
+            dataOld[k] = dataNew[k]
+          end
+          triLinearInterpolation!(cell, r, dataNew, minDustSize, maxDustSize,
+                                  distFromStart)
+          for k=1:nVars
+            data[k] += ((dataOld[k] + dataNew[k]) / 2.0 * l)
+          end
+        end
+        update_r!(r, r_hat, dr, l)
+        distance = norm_vec(r)
+      end
+
+      if doBlankBody
+        if iTriangle != -1
+          mask[i] = 0
+        end
+      end
+      for k=1:nVars
+        ccd[k, i] = data[k]
+      end
+    end
+    return ccd, mask
+end
+
+function dodo(iRays)
+
+  doIntegrationParallel(oct, rPointing, rStart, nVars, allTriangles,
+                         doCheckShadow_bool,iRays, et)
+  end
