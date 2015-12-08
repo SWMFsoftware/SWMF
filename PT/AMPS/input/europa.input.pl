@@ -94,6 +94,15 @@ while ($line=<InputFile>) {
       die "The option is not recognized, line=$InputFileLineNumber ($InputFileName)\n";
     }
   }
+
+  #define the mesh sigrature that will be used in the simuation (for generation of the particular mesh settings and loadging particular model data files)
+  elsif ($InputLine eq "MESHSIGNATURE") {
+    $line=~s/[=():]/ /g;
+    ($InputLine,$line)=split(' ',$line,2);
+    ($InputLine,$line)=split(' ',$line,2);
+
+    ampsConfigLib::ChangeValueOfVariable("char Europa::Mesh::sign\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$InputLine."\"","main/Europa.cpp");
+  }
   
   elsif ($InputLine eq "EPD_FLUX") {  #the injection flux of the high energy ions
     ($InputLine,$InputComment)=split('!',$line,2);
