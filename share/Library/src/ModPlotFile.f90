@@ -428,9 +428,8 @@ contains
        select case(nDim)
        case(1)
           do i = 1, n1
-             n = i
              write(UNITTMP_,'(i8,100es18.10)') &
-                  i, Coord_ID(n,:), Var_IV(n,:)
+                  i, Coord_ID(i,:), Var_IV(i,:)
           end do
        case(2)
           do j = 1, n2; do i = 1, n1
