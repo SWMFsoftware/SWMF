@@ -1,3 +1,4 @@
+//$Id$
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,19 +19,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-//$Id$
 
-
-//#include <saturn.h>
-
-//#define _MAIN_PROFILE_
-
-
-
-//#include "vt_user.h"
-//#include <VT.h>
-
-//the particle class
 #include "pic.h"
 #include "constants.h"
 #include "Europa.h"
@@ -39,17 +28,7 @@
 //the modeling case
 #define _EUROPA_MODEL_MODE__NEAR_PLANET_    0
 #define _EUROPA_MODEL_MODE__TAIL_MODEL_     1
-
 #define _EUROPA_MODEL_MODE_ _EUROPA_MODEL_MODE__TAIL_MODEL_
-
-//Check the mesh consistency
-//#define _CHECK_MESH_CONSISTENCY_
-
-//create the nre list of points for ICES
-//#define _ICES_CREATE_COORDINATE_LIST_  _PIC_MODE_ON_
-
-
-#define _ICES_LOAD_DATA_
 
 
 //defiend the modes for included models
@@ -64,9 +43,7 @@
 #define _GALILEO_EPD_SAMPLING_  _EUROPA_MODE_ON_
 
 
-
 //the parameters of the domain and the sphere
-
 const double DebugRunMultiplier=4.0;
 
 
@@ -79,56 +56,7 @@ const double yMaxDomain=5; //the minimum size of the domain in the direction per
 
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
-
-/*
-#if _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
-const double dxMinGlobal=1,dxMaxGlobal=1;
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
-const double dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
-#endif
-*/
-
 double dxMinGlobal=1,dxMaxGlobal=1;
-
-//the species
-//int NA=0;
-//int NAPLUS=1;
-
-
-//the total acceleration of the particles
-#include "Na.h"
-
-//photoionization lifetime of sodium
-/*
-double sodiumPhotoionizationLifeTime(double *x,int spec,long int ptr,bool &PhotolyticReactionAllowedFlag) {
-
-
-
-  return 1.0E7;
-
-	static const double LifeTime=3600.0*5.8;
-
-	double res,r2=x[1]*x[1]+x[2]*x[2];
-
-	if ((r2>rSphere*rSphere)||(x[0]<0.0)) {
-		res=LifeTime,PhotolyticReactionAllowedFlag=true;
-	}
-	else {
-		res=-1.0,PhotolyticReactionAllowedFlag=false;
-	}
-
-	return res;
-}
-
-int sodiumPhotoionizationReactionProcessor(double *xInit,double *xFinal,long int ptr,int &spec,PIC::ParticleBuffer::byte *ParticleData) {
-	spec=_O2_PLUS_SPEC_;
-
-	PIC::ParticleBuffer::SetI(spec,ParticleData);
-	  return _PHOTOLYTIC_REACTIONS_PARTICLE_SPECIE_CHANGED_;
-
-	//return _PHOTOLYTIC_REACTIONS_PARTICLE_REMOVED_;
-}
-*/
 
 
 //the codes for the soruces processes
@@ -172,41 +100,24 @@ double localSphericalSurfaceResolution(double *x) {
 	double SubsolarAngle;
 
 	for (r=0.0,idim=0;idim<3;idim++) r+=pow(x[idim],2);
-	if (r > 0.8 * rSphere)
-	  for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
+	if (r > 0.8 * rSphere) for (r=sqrt(r),idim=0;idim<3;idim++) l[idim]=x[idim]/r;
 
 	SubsolarAngle=acos(l[0]);
 
-
 	SubsolarAngle=0.0;
-
 	res=dxMinSphere+(dxMaxSphere-dxMinSphere)/Pi*SubsolarAngle;
 
+  res/=2.1;
 
-//res/=2.1*4.1*4.1;
-
-        res/=2.1;
-
-        if (r>0.95) {
-          if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
-            //do nothing
-          }
-          else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
-            res/=4.1*2.1;
-          }
-          else exit(__LINE__,__FILE__,"Error: the option is unknown");
-        }
-
-/*	if (r>0.95) switch (_EUROPA_MESH_RESOLUTION_MODE_) {
-	case _EUROPA_MESH_RESOLUTION_MODE__REDUCED_:
-	  break;
-	case _EUROPA_MESH_RESOLUTION_MODE__FULL_:
-	  res/=4.1*2.1;
-	  break;
-	default:
-	  exit(__LINE__,__FILE__,"Error: the option is unknown");
-	}*/
-
+  if (r>0.95) {
+    if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
+      //do nothing
+    }
+    else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
+      res/=4.1*2.1;
+    }
+    else exit(__LINE__,__FILE__,"Error: the option is unknown");
+  }
 
 	return rSphere*res;
 }
@@ -265,23 +176,10 @@ double localResolution(double *x) {
 double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 	double CellSize;
 
-//	double CharacteristicSpeed_NA=5.0E3;
-
 	const double maxInjectionEnergy=1E5*1000*ElectronCharge;
 	double CharacteristicSpeed = sqrt(2*maxInjectionEnergy/_MASS_(_O_));
 
-
-	//  CharacteristicSpeed*=sqrt(PIC::MolecularData::GetMass(NA)/PIC::MolecularData::GetMass(spec));
-
 	CellSize=startNode->GetCharacteristicCellSize();
-
-
-
-
-//	CharacteristicSpeed=1.0E6;
-
-/*if (spec==_O_PLUS_HIGH_SPEC_) CharacteristicSpeed=10.0*1.6E6;
-if (spec==_O_PLUS_THERMAL_SPEC_) CharacteristicSpeed=10.0*9.6E4;*/
 
    switch (spec) {
    case _O_PLUS_HIGH_SPEC_:
@@ -1052,134 +950,7 @@ PIC::InitMPI();
 		Europa::Planet=Sphere;
 
 		Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
-
-/*
-    Sphere->SurfaceElementDesorptionFluxUP=new double*[PIC::nTotalSpecies];
-    Sphere->SurfaceElementAdsorptionFluxDOWN=new double*[PIC::nTotalSpecies];
-    Sphere->SurfaceElementPopulation=new double*[PIC::nTotalSpecies];
-
-    Sphere->SurfaceElementDesorptionFluxUP[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementAdsorptionFluxDOWN[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementPopulation[0]=new double[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int spec=1;spec<PIC::nTotalSpecies;spec++) {
-      Sphere->SurfaceElementDesorptionFluxUP[spec]=Sphere->SurfaceElementDesorptionFluxUP[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-      Sphere->SurfaceElementAdsorptionFluxDOWN[spec]=Sphere->SurfaceElementAdsorptionFluxDOWN[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-      Sphere->SurfaceElementPopulation[spec]=Sphere->SurfaceElementPopulation[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-    }
-
-    Sphere->SurfaceElementExternalNormal=new cInternalSphericalData_UserDefined::cSurfaceElementExternalNormal[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SurfaceElementArea=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-
-    Sphere->ElementSourceRate=new cInternalSphericalData_UserDefined::cElementSourceRate*[PIC::nTotalSpecies];
-    Sphere->ElementSourceRate[0]=new cInternalSphericalData_UserDefined::cElementSourceRate[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int spec=1;spec<PIC::nTotalSpecies;spec++) {
-      Sphere->ElementSourceRate[spec]=Sphere->ElementSourceRate[spec-1]+PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-    }
-
-
-    Sphere->SolarWindSurfaceFlux=new double[PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (int el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
-        Sphere->SurfaceElementDesorptionFluxUP[spec][el]=0.0;
-        Sphere->SurfaceElementAdsorptionFluxDOWN[spec][el]=0.0;
-        Sphere->SurfaceElementPopulation[spec][el]=0.0;
-      }
-
-      Sphere->SolarWindSurfaceFlux[el]=-1.0;
-
-      Sphere->SurfaceElementArea[el]=Sphere->GetSurfaceElementArea(el);
-      Sphere->GetSurfaceElementNormal((Sphere->SurfaceElementExternalNormal+el)->norm,el);
-    }
-
-    //allocate buffers for sampling surface sodium source rates and sodikum surface content
-    int offsetSpecie,offsetElement,s,el,i;
-
-    Sphere->SampleSpeciesSurfaceSourceRate=new double** [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceSourceRate[0]=new double *[PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-    Sphere->SampleSpeciesSurfaceSourceRate[0][0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber*(_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1)];
-
-
-    for (offsetSpecie=0,s=0,offsetElement=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceSourceRate[s]=Sphere->SampleSpeciesSurfaceSourceRate[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceSourceRate[s][el]=Sphere->SampleSpeciesSurfaceSourceRate[0][0]+offsetElement;
-        offsetElement+=_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;
-
-        for (i=0;i<_EXOSPHERE__SOURCE_MAX_ID_VALUE_+1;i++) Sphere->SampleSpeciesSurfaceSourceRate[s][el][i]=0.0;
-      }
-    }
-
-//    exit(__LINE__,__FILE__,"the above lines is commented");
-
-
-    Sphere->SampleSpeciesSurfaceAreaDensity=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceAreaDensity[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceAreaDensity[s]=Sphere->SampleSpeciesSurfaceAreaDensity[0]+offsetSpecie;
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceAreaDensity[s][el]=0.0;
-      }
-    }
-
-    Sphere->SampleSpeciesSurfaceReturnFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceReturnFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleSpeciesSurfaceInjectionFlux=new double* [PIC::nTotalSpecies];
-    Sphere->SampleSpeciesSurfaceInjectionFlux[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleReturnFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleReturnFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    Sphere->SampleInjectedFluxBulkSpeed=new double* [PIC::nTotalSpecies];
-    Sphere->SampleInjectedFluxBulkSpeed[0]=new double [PIC::nTotalSpecies*PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber];
-
-    for (offsetSpecie=0,s=0;s<PIC::nTotalSpecies;s++) {
-      Sphere->SampleSpeciesSurfaceReturnFlux[s]=Sphere->SampleSpeciesSurfaceReturnFlux[0]+offsetSpecie;
-      Sphere->SampleSpeciesSurfaceInjectionFlux[s]=Sphere->SampleSpeciesSurfaceInjectionFlux[0]+offsetSpecie;
-
-      Sphere->SampleReturnFluxBulkSpeed[s]=Sphere->SampleReturnFluxBulkSpeed[0]+offsetSpecie;
-      Sphere->SampleInjectedFluxBulkSpeed[s]=Sphere->SampleInjectedFluxBulkSpeed[0]+offsetSpecie;
-
-      offsetSpecie+=PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;
-
-      for (el=0;el<PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber;el++) {
-        Sphere->SampleSpeciesSurfaceReturnFlux[s][el]=0.0;
-        Sphere->SampleSpeciesSurfaceInjectionFlux[s][el]=0.0;
-
-        Sphere->SampleReturnFluxBulkSpeed[s][el]=0.0;
-        Sphere->SampleInjectedFluxBulkSpeed[s][el]=0.0;
-      }
-    }
-*/
-
 	}
-
-	//=============   DEBUG ==============
-
-	/*
-  double xProbeMin[3]={-2172234,-1.236913E-10,2000742};
-  double dx=-2172234-(-2229398),v=1.0,t;
-  double xProbeMax[3];
-  int IntersectionStatus;
-
-  for (int i=0;i<3;i++) {
-    xProbeMax[i]=xProbeMin[i]+dx;
-    v*=dx;
-  }
-
-  t=Sphere->GetRemainedBlockVolume(xProbeMin,xProbeMax,0.0,&IntersectionStatus);
-	 */
-
-	//============= END DEBUG =============
 
 	//init the solver
 	PIC::Mesh::initCellSamplingDataBuffer();
@@ -1228,20 +999,10 @@ PIC::InitMPI();
 		DomainCenterOffset[2]=-DomainLength[2]/2.0;
 	}
 
-	/*
-  for (idim=0;idim<DIM;idim++) {
-    xmin[idim]=DomainCenterOffset[idim];
-    xmax[idim]=DomainLength[idim]+DomainCenterOffset[idim];
-  }
-	 */
-
 	for (idim=0;idim<DIM;idim++) {
 		xmax[idim]=-DomainCenterOffset[idim];
 		xmin[idim]=-(DomainLength[idim]+DomainCenterOffset[idim]);
 	}
-
-	//  double xmin[3]={-xMaxDomain*rSphere*_BLOCK_CELLS_X_/double(maxBlockCellsnumber),-xMaxDomain*rSphere*_BLOCK_CELLS_Y_/double(maxBlockCellsnumber),-xMaxDomain*rSphere*_BLOCK_CELLS_Z_/double(maxBlockCellsnumber)};
-	//  double xmax[3]={xMaxDomain*rSphere*_BLOCK_CELLS_X_/double(maxBlockCellsnumber),xMaxDomain*rSphere*_BLOCK_CELLS_Y_/double(maxBlockCellsnumber),xMaxDomain*rSphere*_BLOCK_CELLS_Z_/double(maxBlockCellsnumber)};
 
 
 	//generate only the tree
@@ -1249,34 +1010,6 @@ PIC::InitMPI();
 	PIC::Mesh::mesh.init(xmin,xmax,localResolution);
 	PIC::Mesh::mesh.memoryAllocationReport();
 
-
-	//  VT_ON();
-	//  VT_USER_START("name");
-	//  VT_ON();
-
-	//  {
-	//    VT_TRACER("name");
-
-/*	if (PIC::Mesh::mesh.ThisThread==0) {
-		PIC::Mesh::mesh.buildMesh();
-		PIC::Mesh::mesh.saveMeshFile("mesh.msh");
-		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-	}
-	else {
-		MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-		PIC::Mesh::mesh.readMeshFile("mesh.msh");
-	}*/
-
-  //generate mesh or read from file
-/*
-#if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-	char mesh[200]="amps.mesh";
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
-  char mesh[200]="amr.sig=0x3030203cdedcf30.mesh.bin";
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
-  char mesh[200]="amr.sig=0x203009b6e27a9.mesh.bin";
-#endif
-*/
 
 	char mesh[200]="";
   bool NewMeshGeneratedFlag=false;
@@ -1303,11 +1036,6 @@ PIC::InitMPI();
     }
   }
 
-
-	//  }
-	//  VT_USER_END("name");
-	//  MPI_Finalize();
-	//  return 1;
 
 	cout << __LINE__ << " rnd=" << rnd() << " " << PIC::Mesh::mesh.ThisThread << endl;
 
@@ -1371,17 +1099,6 @@ void amps_init() {
    //init the dust model
    ElectricallyChargedDust::Init_AfterParser();
 #endif
-
-
-   //Exosphere::Init_AfterParser();
-   
-   //	PIC::Mover::TotalParticleAcceleration=TotalParticleAcceleration;
-   
-   //	for (int s=0;s<PIC::nTotalSpecies;s++) {
-   //	  PIC::Mover::MoveParticleTimeStep[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_SecondOrder; ///UniformWeight_UniformTimeStep_SecondOrder;
-   //	  PIC::Mover::MoveParticleBoundaryInjection[s]=PIC::Mover::UniformWeight_UniformTimeStep_noForce_TraceTrajectory_BoundaryInjection_SecondOrder;
-   //	}
-   
 
    //set up the time step
    PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
@@ -1686,60 +1403,6 @@ void amps_init() {
 	Sputtering::Init();
 #endif
 
-
-	//prepopulate the solar wind protons
-	//  prePopulateSWprotons(PIC::Mesh::mesh.rootTree);
-
-
-	/*
-  //check the volume of local cells
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-  while (node!=NULL) {
-    int i,j,k,di,dj,dk,idim;
-    long int LocalCellNumber;
-    double r,rmin=0.0,rmax=0.0,rprobe[3]={0.0,0.0,0.0};
-    PIC::Mesh::cDataCenterNode *cell;
-
-    if (node->Temp_ID==1862) {
-      cout << __FILE__ << "@" << __LINE__ << endl;
-    }
-
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-          for (i=0;i<_BLOCK_CELLS_X_;i++) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-            cell=node->block->GetCenterNode(LocalCellNumber);
-            rmin=-1,rmax=-1;
-
-            if (cell->Measure<=0.0) {
-              for (dk=0;dk<=((DIM==3) ? 1 : 0);dk++) for (dj=0;dj<=((DIM>1) ? 1 : 0);dj++) for (di=0;di<=1;di++) {
-                node->GetCornerNodePosition(rprobe,i+di,j+dj,k+dk);
-
-                for (idim=0,r=0.0;idim<DIM;idim++) r+=pow(rprobe[idim],2);
-                r=sqrt(r);
-
-                if ((rmin<0.0)||(rmin>r)) rmin=r;
-                if ((rmax<0.0)||(rmax<r)) rmax=r;
-              }
-
-              if ((rmin<rSphere)&&(rmax>rSphere)) {
-                cout << "Node ("<< i+di << "," << j+dj << "," << k+dk << "): r=" << rprobe[0] << "," << rprobe[1] << "," << rprobe[2] << ", |r|=" << r << endl;
-              }
-
-              PIC::Mesh::mesh.InitCellMeasure(node);
-
-            }
-
-
-          }
-       }
-    }
-
-    node=node->nextNodeThisThread;
-  }
-	 */
-
-	//  VT_TRACER("main");
 
 
   if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
