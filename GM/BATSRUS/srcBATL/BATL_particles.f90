@@ -20,7 +20,7 @@ module BATL_particles
   SAVE
   logical  ::UseParticles = .false.
   !\
-  ! Number of different sorts of particles
+  ! Number of different kinds of particles
   !/ 
   integer, parameter:: nKindParticle = 2
 
@@ -92,7 +92,7 @@ contains
     integer          :: nBuffer    ! size of BufferSend_I,BufferRecv_I
     !-----------------------------------------------------------------
     ! in order to reuse the same allocatable buffers for sending
-    ! different sorts of particles, find the sort with MAX number of variables,
+    ! different kinds of particles, find the kind with MAX number of variables,
     ! nParticleMax as number of particles and allocate buffers accordingly
     nBuffer = 0; nParticleMax = 0
     do iKindParticle = 1, nKindParticle
@@ -131,11 +131,11 @@ contains
     ! remove all particles with undefined block: iBlock_I == Unset_
     integer, intent(in) :: iKindParticle
     integer :: iVar ! loop variable
-    real,    pointer :: State_VI(:,:)  ! state vec for particles of this sort
-    integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
+    real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
+    integer, pointer :: iBlock_I(:)    ! blocks having particles of this kind 
     integer          :: nVar           ! # of variables including coordinates
-    integer          :: nParticle      ! # of particles of this sort on proc
-    integer          :: nParticleMax   ! max # of particles of this sort on PE
+    integer          :: nParticle      ! # of particles of this kind on proc
+    integer          :: nParticleMax   ! max # of particles of this kind on PE
     integer          :: nUnset         ! # of particles with undefined block
     !-------------------------------------------------------------------------
     call set_pointer_to_particles(iKindParticle, &
@@ -154,22 +154,25 @@ contains
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
-  subroutine message_pass_particles
+  subroutine message_pass_particles(iKindParticleIn)
     use ModMpi
     use BATL_mpi, ONLY: iProc, nProc, iComm
     ! this subroutine passes particles between processors
     ! based on whether it is possible to interpolate background data
     ! to the current particle location
     !--------------------------------------------------------------------------
+    ! if present => pass only this kind
+    integer, optional, intent(in):: iKindParticleIn
+
     integer          :: iKindParticle  ! loop variable
-    real,    pointer :: State_VI(:,:)  ! state vec for particles of this sort
-    integer, pointer :: iBlock_I(:)    ! blocks having particles of this sort 
+    real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
+    integer, pointer :: iBlock_I(:)    ! blocks having particles of this kind 
     integer          :: nVar           ! # of variables including coordinates
-    integer          :: nParticle      ! # of particles of this sort on proc
-    integer          :: nParticleMax   ! max # of particles of this sort on PE
+    integer          :: nParticle      ! # of particles of this kind on proc
+    integer          :: nParticleMax   ! max # of particles of this kind on PE
     ! number of particles to send to other procs
     integer:: nSend_P(0:nProc-1) 
-    ! number of particles to recv by particle sort from other procs
+    ! number of particles to recv by particle kind from other procs
     integer:: nRecv_P(0:nProc-1)
     ! offset for data to be sent/recv'd by procs in the BufferSend_I
     ! NOTE: starts with 0 (ZERO)
@@ -177,12 +180,16 @@ contains
     integer:: iRecvOffset_P(0:nProc-1)
     !--------------
     if(.not.allocated(BufferSend_I))call allocate_buffers
-    ! now buffers are allocated, perform pass for all sorts
+    ! now buffers are allocated, perform pass for all kinds
     do iKindParticle = 1, nKindParticle
+       if(present(iKindParticleIn))then
+          ! if kind is indicated => skip others
+          if(iKindParticle /= iKindParticleIn) CYCLE
+       end if
        call set_pointer_to_particles(&
             iKindParticle, State_VI, &
             iBlock_I, nVar, nParticle, nParticleMax)
-       call pass_this_sort
+       call pass_this_kind
        Particle_I(iKindParticle)%nParticle = nParticle
     end do
     ! deallocate buffer
@@ -191,7 +198,7 @@ contains
 
   contains
     !==========================================================================
-    subroutine pass_this_sort
+    subroutine pass_this_kind
       integer:: iParticle    ! loop variable
       real   :: Xyz_D(MaxDim)! particle coordinates
       logical:: IsPossible   ! can interpolate to Xyz_D on current block
@@ -207,7 +214,7 @@ contains
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
       integer:: iStatus_II(MPI_STATUS_SIZE, 2*nProc)
       !-----------------------------------------------------------------------
-      ! reset parameters of the message_pass for this sort of particles
+      ! reset parameters of the message_pass for this kind of particles
       nSend_P       = 0; nRecv_P = 0
       iSendOffset_I =-1
       iProcTo_I     = iProc
@@ -344,10 +351,10 @@ contains
       ! finalize transfer
       call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
 
-      ! change total number of particles of this sort
+      ! change total number of particles of this kind
       nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
       if(nParticle > nParticleMax)&
-           call CON_stop("Exceeded allowed number of particles per sort=",&
+           call CON_stop("Exceeded allowed number of particles per kind=",&
            iKindParticle)
 
       ! finally, put particles from buffer to storage
@@ -359,7 +366,7 @@ contains
               nint(BufferRecv_I(iRecvOffset+nVar+1))
          iRecvOffset = iRecvOffset + nVar + 1
       end do
-    end subroutine pass_this_sort
+    end subroutine pass_this_kind
 
   end subroutine message_pass_particles
 

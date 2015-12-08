@@ -158,7 +158,7 @@ contains
           !\
           ! Message pass: some particles may have moved to different procs
           !/
-          call message_pass_particles
+          call message_pass_particles(KindEnd_)
 
           !\
           ! remove particles that went outside of the domain
@@ -184,7 +184,7 @@ contains
           !\
           ! Message pass: some particles may have moved to different procs
           !/
-          call message_pass_particles
+          call message_pass_particles(KindEnd_)
 
           !\
           ! remove particles that went outside of the domain
