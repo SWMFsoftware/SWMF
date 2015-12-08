@@ -1563,6 +1563,9 @@ namespace PIC {
       inline double GetMeanParticleSpeed(int spec){
 	return GetDatumAverage(DatumParticleSpeed, spec);
       }
+      inline double GetCompleteSampleCellParticleWeight(int spec){
+	return GetDatumAverage(DatumParticleWeight, spec);
+      }
       //-----------------------------------------------------------------------
 
       // data interpolation
@@ -1606,6 +1609,11 @@ namespace PIC {
 
         //return 
 	T[0]=PIC::MolecularData::GetMass(s)*res/(3.0*Kbol);
+      }
+      inline double GetTranslationalTemperature(int s) {
+        double res=0.0;
+	GetTranslationalTemperature(&res, s);
+	return res;
       }
 
       void GetParallelTranslationalTemperature(double* T, int s) {
