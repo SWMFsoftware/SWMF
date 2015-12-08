@@ -11,7 +11,8 @@ function build_octree(filePath, fileNameBase)
   nodes = h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/nodes")
   nodeCoordinates = h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/nodeCoordinates")
   cubeIndices = h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/cubeIndices")
-  numberDensity= h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/numberDensity")
+  numberDensity = h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/numberDensity")
+  varNames = h5read(joinpath(filePath, fileNameBase * ".h5"), "oct/varNames")
 
   xMax = maximum(nodes[:,:,1])
   yMax = maximum(nodes[:,:,2])
@@ -23,12 +24,14 @@ function build_octree(filePath, fileNameBase)
   cellList = build_cells(nodes, cubeIndices, numberDensity, nCells)
   blocks = build_blocks(nBlocks, cellList, nodes, nCellsPerBlock)
   octree = Block(root, halfSize,1, initChildren, initCells, 5, 5, 5)
-  println(" - populating octree")
+  if myid() == 1
+    println(" - populating octree")
+  end
   populate_octree(octree, blocks, nBlocks)
 
   nVars = size(numberDensity,1)
 
-  return octree, nVars
+  return octree, nVars, varNames[4:end]
 end
 
 
@@ -297,14 +300,22 @@ function findCellInBlock(block::Block, point::Array{Float64, 1})
   return round(Int, cellIndex)
 end
 
-function get_factor!(minSize, maxSize, r)
+function get_factor(minSize, maxSize, r)
   f = Ref{Cdouble}(1.0)
   ccall((:ColumnIntegrationFactor, clib), Void, (Cdouble, Cdouble, Cdouble,
          Ptr{Cdouble}), minSize, maxSize, r, f)
   return f[]
 end
 
-function triLinearInterpolation!(cell::Cell, point::Array{Float64,1}, data,
+function get_factor(coords)
+  C = 1000.0
+  radius_CG = 2000.0
+  dist = sqrt(coords[1]*coords[1] + coords[2]*coords[2] + coords[3]*coords[3])
+  eDensity = 1/(dist-radius_CG) * C
+  return eDensity
+end
+
+function triLinearInterpolation!(cell::Cell, point, data,
                                  minDustSize, maxDustSize, r)
 
   xd = (point[1] - cell.nodes[1,1]) / (cell.nodes[2,1] - cell.nodes[1,1])
@@ -323,7 +334,8 @@ function triLinearInterpolation!(cell::Cell, point::Array{Float64,1}, data,
     c = c0*(1-yd) + c1*yd
 
     if length(clib) > 1
-      f = get_factor!(minDustSize[i], maxDustSize[i], r)
+      #f = get_factor(minDustSize[i], maxDustSize[i], r)
+      f = get_factor(point)
     else
       f = 1.0
     end
