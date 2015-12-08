@@ -89,7 +89,9 @@ for k=1:nPixelsX*nPixelsY
 end
 
 
-oct, nVars = build_octree(filePath, fileNameBase)
+oct, nVars, varNames = build_octree(filePath, fileNameBase)
+nVars = 1
+varNames = ["NumberDensity"]
 println(" - nVars : ", nVars)
 nTriangles, allTriangles, totalSurfaceArea = load_ply_file(meshFile)
 
@@ -140,7 +142,11 @@ end
 for i=1:nVars
   figure()
   ccdPlt = reshape(ccd[i,:,:], nPixelsX, nPixelsY)
-  contourf(log10(ccdPlt), nLevels, cmap=cmap)
+  if minimum(ccdPlt) > 0.0
+    contourf(log10(ccdPlt), nLevels, cmap=cmap)
+  else
+    contourf(ccdPlt, nLevels, cmap=cmap)
+  end
   colorbar()
   if doBlankBody
     contourf(mask, levels=[-0.1, 0.1], colors=("w"))
@@ -148,12 +154,15 @@ for i=1:nVars
   end
   xlabel("Pixel number", size=fontSize)
   ylabel("Pixel number", size=fontSize)
-  title(pltTitle, size=fontSize)
+  #title(pltTitle, size=fontSize)
+  title(varNames[i], size=fontSize)
   for ix = 1:nPixelsX
     for iy = 1:nPixelsY
        ccd_sum[ix, iy] += ccdPlt[ix, iy]
      end
    end
+
+  writedlm(joinpath(filePath, "ccd_" * varNames[i] * ".dat"), ccdPlt)
 end
 figure()
 contourf(log10(ccd_sum), nLevels, cmap=cmap)
@@ -161,8 +170,6 @@ xlabel("Pixel number", size=fontSize)
 ylabel("Pixel number", size=fontSize)
 title("Sum", size=fontSize)
 colorbar()
-
-
 show()
 
 writedlm(joinpath(filePath, "ccd.dat"), ccd)
