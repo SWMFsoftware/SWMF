@@ -80,11 +80,15 @@ const double yMaxDomain=5; //the minimum size of the domain in the direction per
 //const double dxMinGlobal=DebugRunMultiplier*2.0,dxMaxGlobal=DebugRunMultiplier*10.0;
 const double dxMinSphere=DebugRunMultiplier*10.0/100,dxMaxSphere=DebugRunMultiplier*1.0/10.0;
 
+/*
 #if _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 const double dxMinGlobal=1,dxMaxGlobal=1;
 #elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
 const double dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
 #endif
+*/
+
+double dxMinGlobal=1,dxMaxGlobal=1;
 
 //the species
 //int NA=0;
@@ -183,7 +187,17 @@ double localSphericalSurfaceResolution(double *x) {
 
         res/=2.1;
 
-	if (r>0.95) switch (_EUROPA_MESH_RESOLUTION_MODE_) {
+        if (r>0.95) {
+          if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
+            //do nothing
+          }
+          else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
+            res/=4.1*2.1;
+          }
+          else exit(__LINE__,__FILE__,"Error: the option is unknown");
+        }
+
+/*	if (r>0.95) switch (_EUROPA_MESH_RESOLUTION_MODE_) {
 	case _EUROPA_MESH_RESOLUTION_MODE__REDUCED_:
 	  break;
 	case _EUROPA_MESH_RESOLUTION_MODE__FULL_:
@@ -191,7 +205,7 @@ double localSphericalSurfaceResolution(double *x) {
 	  break;
 	default:
 	  exit(__LINE__,__FILE__,"Error: the option is unknown");
-	}
+	}*/
 
 
 	return rSphere*res;
@@ -900,6 +914,15 @@ double sphereInjectionRate(int spec,void *SphereDataPointer) {
 
 void amps_init_mesh() {
 //	MPI_Init(&argc,&argv);
+
+  //set up the resolution levels of the mesh
+  if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
+   dxMinGlobal=1,dxMaxGlobal=1;
+  }
+  else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
+    dxMinGlobal=0.4/2.1,dxMaxGlobal=1;
+  }
+  else exit(__LINE__,__FILE__,"Error: unknown option");
 
 
 PIC::InitMPI();

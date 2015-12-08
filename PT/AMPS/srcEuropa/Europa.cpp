@@ -24,6 +24,8 @@ char Exosphere::SO_FRAME[_MAX_STRING_LENGTH_PIC_]="GALL_EOJ";  //Europa-centric 
 //defined in galileo.tf
 
 
+char Europa::Mesh::sign[_MAX_STRING_LENGTH_PIC_]="";
+
 double Europa::TotalInjectionRate=0.0;
 
 //double Europa::swE_Typical[3]={0.0,0.0,0.0};
