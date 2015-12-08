@@ -41,8 +41,9 @@ my @SpeciesType;
 my $CompileProcessedCodeFlag=1;
 
 #Location of the local working vertion of the code that will be compiled 
-$ampsConfigLib::WorkingSourceDirectory="src";
-
+system('rm -rf srcTemp');
+system('cp -r src srcTemp');
+$ampsConfigLib::WorkingSourceDirectory="srcTemp";
 
 #location of the code distribution
 my $SourceDirectory=" ";
@@ -579,8 +580,9 @@ sub ReadMainBlock {
       ($InputLine,$InputComment)=split('!',$line,2);
       $InputLine=~s/ //g;
       $InputLine=~s/=/ /;
-      
+      my $oldWSD = $ampsConfigLib::WorkingSourceDirectory;
       ($InputLine,$ampsConfigLib::WorkingSourceDirectory)=split(' ',$InputLine,2);
+      system("mv $oldWSD $ampsConfigLib::WorkingSourceDirectory");
     }
     elsif ($s0 eq "SOURCEDIRECTORY") {
       chomp($line);
@@ -751,11 +753,11 @@ sub ReadMainBlock {
 
   
   #remove the temporary source directory and copy there a fresh copy of the code distribution
-  if ( -d $ampsConfigLib::WorkingSourceDirectory ) {
-    `rm -f -r $ampsConfigLib::WorkingSourceDirectory`;
-  }
+#  if ( -d $ampsConfigLib::WorkingSourceDirectory ) {
+#    `rm -f -r $ampsConfigLib::WorkingSourceDirectory`;
+#  }
   
-  `cp -r $SourceDirectory $ampsConfigLib::WorkingSourceDirectory`;
+#  `cp -r $SourceDirectory $ampsConfigLib::WorkingSourceDirectory`;
  
   if ( -d $ProjectSpecificSourceDirectory ) {
     `cp -r $ProjectSpecificSourceDirectory $ampsConfigLib::WorkingSourceDirectory/main`;
