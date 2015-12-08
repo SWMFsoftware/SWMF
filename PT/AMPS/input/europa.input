@@ -123,7 +123,7 @@ ParticleWeightCorrectionMode=on
 
 !the mesh resoution close to Europa
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
-  define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
+! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
 #endGeneral
 
@@ -173,15 +173,15 @@ ParticleWeightCorrectionMode=on
   Forces::Gravity=on
   Forces::FrameRotation=off
   Forces::RadiationPressure=off
-  Forces::LorentzForce=off
+  Forces::LorentzForce=on
   Forces::DragForce=on
   Forces::UserDefined::DragForceTangentialComponent=off 
 
-  DustCharging::ElectronCollectionCurrent=off
-  DustCharging::IonCollectionCurrent=off
+  DustCharging::ElectronCollectionCurrent=on
+  DustCharging::IonCollectionCurrent=on
   DustCharging::PhotoElectronCurrent=off
   DustCharging::SecondaryElectronEmissionCurrent=off
-  DustCharging::Mode=off !TimeDependent !off,TimeDependent, Equilibrium
+  DustCharging::Mode=Equilibrium  !TimeDependent !off,TimeDependent, Equilibrium
 
   DustVelocityLimit::min=0.01
   DustVelocityLimit::max=150.0 !40.0
@@ -190,6 +190,11 @@ ParticleWeightCorrectionMode=on
 
 #block ../input/europa.input.pl !process the settings of the Europa's model
   SphereInsideDomain=on !on, off -> place Europa inside the computational domain
+
+  !the signature of the mesh that is used in the simulation
+  MeshSignature=0x203009b6e27a9 !the full resolution mesh (used for the JPL proposal)
+  MeshSignature=0x3030203cdedcf30 !the reduced resolution mesh (used for the JPL proposal and nightly tests)
+
   
   !the location of the SPICE kernels 
   SpiceKernelPath=/Users/vtenishe/SPICE/Kernels
@@ -214,7 +219,7 @@ ParticleWeightCorrectionMode=on
   IonSputteringMode=on !on, off 
   
   !photoionization of sputtered O2
-  UnimolecularReaction=GenericTransformation \\   !off, GenericTransformation, Photoionization
+  UnimolecularReaction=off \\   !off, GenericTransformation, Photoionization
     func=Europa::GenericUnimolecularReactionProcessor
   
   !forces that determine particle'strajectories
