@@ -20,7 +20,7 @@ filePath = dirname(ARGS[1])
 fileNameBase = basename(ARGS[1])[1:end-(length(fileNameExtension)+1)]
 
 
-nCells, nCellsPerBlock, nBlocks, nodeCoordinates, cubeIndices, numberDensity, minSize, maxSize = load_AMPS_data(fileName)
+nCells, nCellsPerBlock, nBlocks, nodeCoordinates, cubeIndices, numberDensity, minSize, maxSize, varNames = load_AMPS_data(fileName)
 println(" - building nodes...")
 nodes = build_nodes(nCells, nodeCoordinates, cubeIndices)
 println(" - write result to .h5")
@@ -39,3 +39,4 @@ h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/cubeIndices", cubeIndices
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/numberDensity", numberDensity)
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/minDustSize", minSize)
 h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/maxDustSize", maxSize)
+h5write(joinpath(filePath, fileNameBase * ".h5"), "oct/varNames", varNames)
