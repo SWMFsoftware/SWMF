@@ -212,58 +212,52 @@ double localSphericalSurfaceResolution(double *x) {
 }
 
 
-#if _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 double localResolution(double *x) {
-        int idim;
-        double lnR,res,r=0.0;
+  double res;
 
-        for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
+  if (strcmp(Europa::Mesh::sign,"0x3030203cdedcf30")==0) { //reduced mesh
+    int idim;
+    double lnR,r=0.0;
 
-        r=sqrt(r);
+    for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
 
-        if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
+    r=sqrt(r);
 
-//        if (r<0.98*rSphere) return 10.0*rSphere;
-//        if (r<1.05*rSphere) return localSphericalSurfaceResolution(x);
+    if (r<2.0*rSphere) return localSphericalSurfaceResolution(x);
 
-        if (r>dxMinGlobal*rSphere) {
-                lnR=log(r);
-                res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
-        }
-        else res=dxMinGlobal;
+    if (r>dxMinGlobal*rSphere) {
+      lnR=log(r);
+      res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
+    }
+    else res=dxMinGlobal;
+  }
+  else if (strcmp(Europa::Mesh::sign,"0x203009b6e27a9")==0) { //full mesh
+    int idim;
+    double lnR,r=0.0, d1,d2,d3,d=0.0;
 
-        //  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
+    for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
+    r=sqrt(r);
+    // accomodation for the O2Plus tail's shape
+    d1 = x[0];
+    d2 = 0.5*(           x[1] + sqrt(3.0)*x[2]);
+    d3 = 0.5*(-sqrt(3.0)*x[1] +           x[2]);
+    d  = - rSphere*d1 + 0.2*d2*d2 + 1.6*d3*d3;
+    d  = ( (d>0.0) ? 1. : -1.) * sqrt(fabs(d));
 
-        return rSphere*res;
+    if (r<rSphere) return rSphere*dxMaxGlobal;
+    if (r<1.03*rSphere) return localSphericalSurfaceResolution(x);
+
+    if (r>dxMinGlobal*rSphere && d > 1.2*rSphere) {
+      lnR=log(r);
+      res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
+    }
+    else res=dxMinGlobal;
+  }
+  else exit(__LINE__,__FILE__,"Error: unknown option");
+
+  return rSphere*res;
 }
-#elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
-double localResolution(double *x) {
-	int idim;
-	double lnR,res,r=0.0, d1,d2,d3,d=0.0;
 
-	for (idim=0;idim<DIM;idim++) r+=pow(x[idim],2);
-	r=sqrt(r);
-	// accomodation for the O2Plus tail's shape
-	d1 = x[0];
-	d2 = 0.5*(           x[1] + sqrt(3.0)*x[2]);
-	d3 = 0.5*(-sqrt(3.0)*x[1] +           x[2]);
-	d  = - rSphere*d1 + 0.2*d2*d2 + 1.6*d3*d3;
-	d  = ( (d>0.0) ? 1. : -1.) * sqrt(fabs(d));
-
-        if (r<rSphere) return rSphere*dxMaxGlobal;
-	if (r<1.03*rSphere) return localSphericalSurfaceResolution(x);
-
-	if (r>dxMinGlobal*rSphere && d > 1.2*rSphere) {
-		lnR=log(r);
-		res=dxMinGlobal+(dxMaxGlobal-dxMinGlobal)/log(xMaxDomain*rSphere)*lnR;
-	}
-	else res=dxMinGlobal;
-
-	//  if ((x[0]>0.0)&&(sqrt(x[1]*x[1]+x[2]*x[2])<3.0*rSphere)) res=(res<0.4) ? res : 0.4;  ///min(res,0.4);
-
-	return rSphere*res;
-}
-#endif
 
 //set up the local time step
 #if  _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_OFF_ 
