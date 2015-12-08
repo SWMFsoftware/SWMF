@@ -1268,6 +1268,7 @@ PIC::InitMPI();
 	}*/
 
   //generate mesh or read from file
+/*
 #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
 	char mesh[200]="amps.mesh";
 #elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
@@ -1275,12 +1276,13 @@ PIC::InitMPI();
 #elif _EUROPA_MESH_RESOLUTION_MODE_ == _EUROPA_MESH_RESOLUTION_MODE__FULL_
   char mesh[200]="amr.sig=0x203009b6e27a9.mesh.bin";
 #endif
+*/
 
-
+	char mesh[200]="";
   bool NewMeshGeneratedFlag=false;
-
   FILE *fmesh=NULL;
 
+  sprintf(mesh,"amr.sig=%s.mesh.bin",Europa::Mesh::sign);
   fmesh=fopen(mesh,"r");
 
   if (fmesh!=NULL) {
