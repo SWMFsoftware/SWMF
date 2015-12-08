@@ -430,6 +430,12 @@ contains
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )  !< O!
+    !\
+    ! 
+    !      ghost cell | phys.cell
+    !           *<-delta R->*
+    !      PGhost=exp(-dLogP/dR*DeltaR)*PPhys
+    !/
     BarometricFactor = exp(&
          (log(PeSi_I(nPoint)) - log(PeSi_I(nPoint-1)))*GhostCellCorr )
     SecondOrderPeSi  = PeSiIn*BarometricFactor
@@ -438,15 +444,27 @@ contains
     ! barometric factor the temperature gradient is accounted for,
     ! which is cotrolled by the heat flux derived from the TFL model:
     !/
+    !\
+    ! Solve equation: -(TeGhost-TeTrue)/DeltaR = 
+    ! dTe/ds*(b . DirR)
+    !/
+    !TeGhost = TeSiIn - DTeOverDsSi*sum(BDir_D*DirR_D)*&
+    !     BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
+    !\
+    ! Version Easter 2015 Limit TeGhost
+    !/
+    !Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
+    !     BoundaryThreads_B(iBlock) % TMax_II(j,k)))
+    !No2Si_V(UnitTemperature_)
+ 
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)*              &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
          1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )                       &  
          /(Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))**2
 
-    DeltaTeFactor = max(&
-         exp( -log(TeSi_I(nPoint  ))*GhostCellCorr  &
-         +     log(TeSi_I(nPoint-1))*GhostCellCorr ),1.0)
+    DeltaTeFactor = TeSi_I(nPoint)/max(TeSiMin, TeSi_I(nPoint) + &
+         max(TeSi_I(nPoint  ) - TeSi_I(nPoint-1),0.0)*GhostCellCorr)
     !\
     ! Approximately TeSiGhost = TeSiIn/DeltaTeFactor, so that:
     !/
@@ -481,6 +499,14 @@ contains
          FirstOrderRho
     PeSiOut     = Limiter*(SecondOrderPeSi - FirstOrderPeSi) + &
          FirstOrderPeSi
+    if(RhoNoDimOut>1e8.or.RhoNoDimOut<1e-8)then
+       write(*,*)'Xyz_DGB(:,1,j,k)',Xyz_DGB(:,1,j,k,iBlock)
+       write(*,*)'RhoNoDimOut=', RhoNoDimOut,' PeSiOut=',PeSiOut
+       write(*,*)'USiIn=', USiIn
+       write(*,*)'PeSiIn=',PeSiIn
+       write(*,*)'TeSiIn=',TeSiIn
+       call CON_stop('Failure')
+    end if
     if(DoTestMe)then
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Before correction:'
@@ -1176,14 +1202,7 @@ contains
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           CYCLE
        end if
-       if(RhoNoDimOut>1e8.or.RhoNoDimOut<1e-8)then
-          write(*,*)'Xyz_DGB(:,1,j,k)',Xyz_DGB(:,1,j,k,iBlock)
-          write(*,*)'RhoNoDimOut=', RhoNoDimOut,' PeSiOut=',PeSiOut
-          write(*,*)'USiIn=', U*No2Si_V(UnitU_)
-          write(*,*)'PeSiIn=',PeSi
-          write(*,*)'TeSiIn=',TeSi
-          call CON_stop('Failure')
-       end if
+ 
        State_VG(iP,0,j,k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        !\
        !Extrapolation of pressure
