@@ -26,13 +26,14 @@ module ModParticleFieldLine
 
   private !except
 
+  public:: read_particle_line_param
   public:: init_particle_line
   public:: extract_particle_line
   public:: sort_particle_line
   public:: get_particle_data
 
 
-  ! sorts of particles used to generate a magnetic field line
+  ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
        KindEnd_ = 1, &
        KindReg_ = 2
@@ -50,6 +51,12 @@ module ModParticleFieldLine
        ! index of the particle along this field line
        Index_ = 9
 
+  ! mode of spatial step at the field line extraction
+  logical:: FixSpaceStep = .false.
+  real   :: SpaceStep    = 0.0
+  real   :: SpaceStepMin = 0.0
+  real   :: SpaceStepMax = HUGE(SpaceStep)
+
   ! number of variables in the state vector
   integer, parameter:: nVarParticle = 9
 
@@ -63,32 +70,114 @@ module ModParticleFieldLine
   integer :: nParticleFieldLine_I(nFieldLineMax) = 0
   integer :: iParticleFieldLineOffset_I(nFieldLineMax) = 0
 
+  !\
+  ! initialization related info
+  !/
+  integer:: nLineInit
+  real, allocatable:: XyzLineInit_DI(:,:)
+
 contains
+
+  subroutine read_particle_line_param(NameCommand)
+
+    use ModMain,      ONLY: UseParticles
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in) :: NameCommand
+
+    character(len=*), parameter :: &
+         NameSub = 'ModParticleFieldLine::read_particle_line_param'
+
+    character(len=100) :: StringInitMode
+    character(len=100) :: StringSpaceStepMode
+    integer:: iLine, iDim ! loop variables
+    !------------------------------------------------------------------------
+    
+    select case(NameCommand)
+    case("#PARTICLELINE")
+       call read_var('UseParticles', UseParticles)
+       if(UseParticles)then
+          call read_var('SpaceStepMode', StringSpaceStepMode)
+          ! space step may be:
+          ! - chosen automatically(based on grid resolution)
+          ! - fixed and set from PARAM.in file
+          ! - restricted by min or max value or both
+          if(&
+               index(StringSpaceStepMode, 'fixed') > 0 .or.&
+               index(StringSpaceStepMode, 'FIXED') > 0 )then
+             FixSpaceStep = .true.
+             call read_var('SpaceStep', SpaceStep)
+          elseif(&
+               index(StringSpaceStepMode, 'fixedmin') > 0 .or.&
+               index(StringSpaceStepMode, 'FIXEDMIN') > 0 )then
+             call read_var('SpaceStepMin', SpaceStepMin)
+          elseif(&
+               index(StringSpaceStepMode, 'fixedmax') > 0 .or.&
+               index(StringSpaceStepMode, 'FIXEDMAX') > 0 )then
+             call read_var('SpaceStepMax', SpaceStepMax)
+          elseif(&
+               index(StringSpaceStepMode, 'fixedminmax') > 0 .or.&
+               index(StringSpaceStepMode, 'FIXEDMINMAX') > 0 )then
+             call read_var('SpaceStepMin', SpaceStepMin)
+             call read_var('SpaceStepMin', SpaceStepMax)
+          elseif(&
+               index(StringSpaceStepMode, 'auto') > 0 .or.&
+               index(StringSpaceStepMode, 'AUTO') > 0 )then
+             !do nothing
+          else
+             call stop_mpi(NameSub //": unknown space step mode")
+          end if
+          call read_var('InitMode', StringInitMode)
+          ! Initialization modes:
+          ! - preset: starting points are set from PARAM.in file
+          if(&
+               index(StringInitMode, 'preset') > 0 .or.&
+               index(StringInitMode, 'PRESET') > 0 )then
+             call read_var('nLineInit', nLineInit)
+             if(nLineInit <= 0)&
+                  call stop_mpi(NameSub // &
+                  ": invalid number of initialized particle lines")
+             allocate(XyzLineInit_DI(MaxDim, nLineInit))
+             do iLine = 1, nLineInit; do iDim = 1, MaxDim
+                call read_var('XyzLineInit_DI', XyzLineInit_DI(iDim, iLine))
+             end do; end do
+          else
+             call stop_mpi(NameSub //": unknown initialization mode")
+          end if
+       end if
+    end select
+
+  end subroutine read_particle_line_param
+
+  !==========================================================================
 
   subroutine init_particle_line
     ! allocate containers for particles
+    integer:: iLine ! loop variable
     !------------------------------------------------------------------------
-    Particle_I(KindReg_)%nParticleMax = 1000
-    Particle_I(KindEnd_)%nParticleMax = 10
+    Particle_I(KindReg_)%nParticleMax = 10000 * nLineInit
+    Particle_I(KindEnd_)%nParticleMax = nLineInit
     Particle_I(KindReg_)%nVar = nVarParticle
     Particle_I(KindEnd_)%nVar = nVarParticle
     call allocate_particles
+    ! extract initial field lines
+    call extract_particle_line(nLineInit, XyzLineInit_DI)
   end subroutine init_particle_line
 
   !==========================================================================
 
-  subroutine extract_particle_line(nFieldLineIn, XyzInit_DI)
-    ! extract nFieldLineIn magnetic field lines starting at XyzInit_DI;
+  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI)
+    ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain
     !------------------------------------------------------------------------
     integer, intent(in):: nFieldLineIn
-    real,    intent(in):: XyzInit_DI(MaxDim, nFieldLineIn)
+    real,    intent(in):: XyzStart_DI(MaxDim, nFieldLineIn)
 
-    integer :: nFieldLineNew ! number of new field lines initialized
+    integer :: nLineThisProc ! number of new field lines initialized
     integer :: iFieldLine ! loop variable
     integer :: iBlock
-    integer :: nParticleRegOld ! number of already existing regular particles
+    integer :: nParticleOld ! number of already existing regular particles
     integer :: iParticle ! loop variable
     logical :: IsCompleted_I(nFieldLineIn)
 
@@ -105,14 +194,7 @@ contains
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iBlockReg_I(:)
-
-    ! TEMPORARY: STORE WHETHER PARTICLES HAVE BEEN INITIALIZED
-    logical, save:: IsInitialized = .false.
     !------------------------------------------------------------------------
-    if(.not. IsInitialized)then
-       call init_particle_line
-       IsInitialized = .true.
-    end if
     ! set a pointers to parameters of end particles
     nullify(StateEnd_VI); nullify(iBlockEnd_I)
     StateEnd_VI => Particle_I(KindEnd_)%State_VI
@@ -129,10 +211,11 @@ contains
     !/
     ! initialize field lines
     Particle_I(KindEnd_)%nParticle = 0
-    nFieldLineNew = 0
-    nParticleRegOld = Particle_I(KindReg_)%nParticle
+    nLineThisProc = 0
+    nParticleOld  = Particle_I(KindReg_)%nParticle
+    nFieldLine    = nFieldLine + nFieldLineIn
     do iFieldLine = 1, nFieldLineIn
-       call start_line(XyzInit_DI(:, iFieldLine))
+       call start_line(XyzStart_DI(:, iFieldLine), iFieldLine)
     end do
     call copy_end_to_regular
 
@@ -148,9 +231,17 @@ contains
           do iParticle = 1, Particle_I(KindEnd_)%nParticle
              ! get the direction of the magnetic field at original location
              call get_b_dir(StateEnd_VI(x_:z_, iParticle), Dir_D)
-             ! find the step size 
-             StateEnd_VI(Aux_, iParticle) = &
-                  0.1*SQRT(sum(CellSize_DB(1:nDim,iBlockEnd_I(iParticle))**2))
+             ! find the step size
+             if(FixSpaceStep)then
+                StateEnd_VI(Aux_, iParticle) = SpaceStep
+             else
+                StateEnd_VI(Aux_, iParticle) = &
+                     MIN(SpaceStepMax, MAX(SpaceStepMin,&
+                     0.1*SQRT(&
+                     sum(CellSize_DB(1:nDim,iBlockEnd_I(iParticle))**2)&
+                     )))
+             end if
+
              ! get middle location
              StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                   0.5 * iDirTrace * StateEnd_VI(Aux_, iParticle) * Dir_D
@@ -208,7 +299,7 @@ contains
        ! if just finished backward tracing => return to initial particles
        if(iDirTrace < 0)then
           ! first fix indices of particles along field lines
-          do iParticle = nParticleRegOld+1, Particle_I(KindReg_)%nParticle
+          do iParticle = nParticleOld+1, Particle_I(KindReg_)%nParticle
              iFieldLine = nint(StateReg_VI(fl_, iParticle))
              StateReg_VI(Index_, iParticle) = &
                   StateReg_VI(Index_, iParticle) + &
@@ -218,12 +309,12 @@ contains
           ! now copy initial points to KindEnd_:
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
-          ! i.e. occupy positions from (nParticleRegOld+1)
-          StateEnd_VI(:, 1:nFieldLineNew) = &
-               StateReg_VI(:, nParticleRegOld+1:nParticleRegOld+nFieldLineNew)
-          iBlockEnd_I(   1:nFieldLineNew) = &
-               iBlockReg_I(   nParticleRegOld+1:nParticleRegOld+nFieldLineNew)
-          Particle_I(KindEnd_)%nParticle = nFieldLineNew
+          ! i.e. occupy positions from (nParticleOld+1)
+          StateEnd_VI(:, 1:nLineThisProc) = &
+               StateReg_VI(:, nParticleOld+1:nParticleOld+nLineThisProc)
+          iBlockEnd_I(   1:nLineThisProc) = &
+               iBlockReg_I(   nParticleOld+1:nParticleOld+nLineThisProc)
+          Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
 
@@ -232,8 +323,9 @@ contains
 
   contains
 
-    subroutine start_line(XyzStart_D)
+    subroutine start_line(XyzStart_D, iFieldLineIndex)
       real,    intent(in) :: XyzStart_D(MaxDim)
+      integer, intent(in) :: iFieldLineIndex
 
       real   :: Coord_D(MaxDim) ! generalized coordinates
       integer:: iProcOut, iBlockOut
@@ -255,11 +347,10 @@ contains
 
       Particle_I(KindEnd_)%nParticle = &
            Particle_I(KindEnd_)%nParticle + 1         
-      nFieldLineNew = nFieldLineNew + 1
-      nFieldLine    = nFieldLine    + 1
+      nLineThisProc = nLineThisProc + 1
 
       StateEnd_VI(x_:z_, Particle_I(KindEnd_)%nParticle) = XyzStart_D
-      StateEnd_VI(fl_,   Particle_I(KindEnd_)%nParticle) = nFieldLine
+      StateEnd_VI(fl_,   Particle_I(KindEnd_)%nParticle) = iFieldLineIndex
 
       ! set index for initial particle to be 0 for now, it's fixed later
       StateEnd_VI(Index_,Particle_I(KindEnd_)%nParticle) = 0

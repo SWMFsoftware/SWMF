@@ -56,6 +56,7 @@ subroutine MH_set_parameters(TypeAction)
        NameRestartInDir, NameRestartOutDir
   use ModHallResist,    ONLY: &
        UseHallResist, read_hall_param
+  use ModParticleFieldLine, ONLY: read_particle_line_param
   use ModHeatConduction, ONLY: read_heatconduction_param
   use ModHeatFluxCollisionless, ONLY: read_heatflux_param
   use ModRadDiffusion,   ONLY: read_rad_diffusion_param
@@ -612,6 +613,9 @@ subroutine MH_set_parameters(TypeAction)
      case("#HEATFLUXREGION", "#HEATFLUXCOLLISIONLESS")
         call read_heatflux_param(NameCommand)
 
+     case("#PARTICLELINE")
+        call read_particle_line_param(NameCommand)
+
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
@@ -721,24 +725,6 @@ subroutine MH_set_parameters(TypeAction)
               call read_var('zPoint',plot_point(3,ifile))
            elseif (index(plot_string,'pnt')>0) then
               plot_area='pnt'
-              !=================================
-              ! BELOW IS COPY-PASTE FROM 'lin'
-              !=================================
-              iPlotFile = iFile - Plot_
-              call read_var('nLine',nLine_I(iPlotFile))
-              if(nLine_I(iPlotFile) > MaxLine)then
-                 if(iProc==0)then
-                    write(*,*)NameSub,' WARNING: nLine=',nLine_I(iPlotFile),&
-                         ' exceeds MaxLine=',MaxLine
-                    write(*,*)NameSub,' WARNING reducing nLine to MaxLine'
-                 end if
-                 nLine_I(iPlotFile) = MaxLine
-              end if
-              do i = 1, nLine_I(iPlotFile)
-                 call read_var('xStartLine',XyzStartLine_DII(1,i,iPlotFile))
-                 call read_var('yStartLine',XyzStartLine_DII(2,i,iPlotFile))
-                 call read_var('zStartLine',XyzStartLine_DII(3,i,iPlotFile))
-              end do
            elseif(index(plot_string,'lin')>0)then
               iPlotFile = iFile - Plot_
               plot_area='lin'

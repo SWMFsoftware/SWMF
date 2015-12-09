@@ -33,8 +33,8 @@ subroutine write_plot_particle(iFile)
 
   iPlotFile = iFile - Plot_
 
-  call extract_particle_line(nLine_I(iPlotFile), &
-       XyzStartLine_DII(:,:,iPlotFile))
+!  call extract_particle_line(nLine_I(iPlotFile), &
+!       XyzStartLine_DII(:,:,iPlotFile))
   
   ! Set the name of the variables based on plot form
   select case(plot_form(iFile))

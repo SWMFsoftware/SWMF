@@ -267,12 +267,13 @@ subroutine BATS_init_session
 
   use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
-       UseProjection, UseConstrainB
+       UseProjection, UseConstrainB, UseParticles
   use ModCT,   ONLY: DoInitConstrainB
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
   use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
   use ModRadDiffusion, ONLY: init_rad_diffusion
   use ModHeatConduction, ONLY: init_heat_conduction
+  use ModParticleFieldLine, ONLY: init_particle_line
   use ModRestartFile, ONLY: UseRestartOutSeries
   use ModMessagePass, ONLY: exchange_messages
   use ModUserInterface ! user_initial_perturbation
@@ -324,6 +325,10 @@ subroutine BATS_init_session
 
   if(UseHeatConduction .or. UseIonHeatConduction) &
        call init_heat_conduction
+
+  if(UseParticles) &
+       call init_particle_line
+
   if(UseSemiImplicit)then
      select case(TypeSemiImplicit)
      case('radiation', 'radcond', 'cond')
