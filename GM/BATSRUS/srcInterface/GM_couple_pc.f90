@@ -236,9 +236,9 @@ contains
     use ModPIC,       ONLY: XyzMaxPic_DI, XyzPic0_DI, DxyzPic_DI, & 
          nRegionPic, nGhostPic
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
-    use ModMain,      ONLY: UseB0
+    use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
-    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_
+    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_
     use ModMultiFluid,ONLY: nIonFluid
     use ModEnergy,    ONLY: calc_energy
     !use ModProcMH,   ONLY: iProc
@@ -252,7 +252,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
     logical :: DoCountOnly
-    integer :: i, j, k, iBlock, iPoint, iRegion
+    integer :: i, j, k, iBlock, iPoint, iRegion, iVar
     real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
 
     character(len=*), parameter :: NameSub='GM_get_regions'
@@ -303,8 +303,11 @@ contains
 
              if(present(Data_VI))then
                 ! Put Data_VI obtained from PC into State_VGB
-                State_VGB(1:nVar,i,j,k,iBlock) = &
-                     Data_VI(1:nVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V)
+                do iVar = 1, nVar
+                   if(UseHyperbolicDivB .and. iVar==Hyp_) CYCLE
+                   State_VGB(iVar,i,j,k,iBlock) = &
+                        Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
+                end do
                 if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
                 call calc_energy(i,i,j,j,k,k,iBlock,1,nIonFluid)
