@@ -69,6 +69,7 @@ T			UseNonConservative
 0.0			Bx
 0.0			By
 0.015			Bz
+0.0			Hyp
 0.000157080		p
 
 #PICUNIT
@@ -118,6 +119,11 @@ float			zMaxBc
 Rusanov			TypeFlux
 minmod			TypeLimiter
 1.5			LimiterBeta
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+0.02			SpeedHypDim
+0.1			HypDecay
 
 #TIMESTEPPING
 2                       nStage
