@@ -124,7 +124,7 @@ contains
     real:: IonMassPerChargeSi 
 
     ! Region check
-    integer :: nNode
+    integer :: nCell
 
     character(len=*), parameter:: NameSub = 'pic_init_region'
     !-------------------------------------------------------------------------
@@ -172,19 +172,16 @@ contains
     nPic_D = 1
 
     do iRegion = 1, nRegionPic
-       ! checking and corecting that the  domain size and Dx 
-       ! match what IPIC3D needs ( odd number of cells)
+       ! extending the region sizes with 1 ghost cell
        do i=1, nDim
-          nNode = 1 + nint( &
+          ! Number of nodes (not cells!)
+          nCell = nint( &
                (XyzMaxPic_DI(i,iRegion) - XyzMinPic_DI(i,iRegion)) &
                /DxyzPic_DI(i,iRegion) )
 
-          ! Make sure there is an odd number of nodes
-          if(mod(nNode, 2) == 0) nNode = nNode + 1
-
-          ! Adding ghost cell layars (1 at Min, 1 or 2 at max)
+          ! Adding 1 ghost cell layer at max and 1 at min
           XyzMaxPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
-               + nNode*DxyzPic_DI(i,iRegion)
+               + (nCell + 1)*DxyzPic_DI(i,iRegion)
           XyzMinPic_DI(i,iRegion) = XyzPic0_DI(i,iRegion) &
                - DxyzPic_DI(i,iRegion)
        end do
