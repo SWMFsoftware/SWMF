@@ -13,6 +13,7 @@ program PostIDL
   use ModNumConst,       ONLY: cTwoPi, cRadToDeg
   use ModCoordTransform, ONLY: rot_matrix_z
   use ModUtilities,      ONLY: lower_case, split_string, join_string
+  use ModSort,     ONLY: sort_quick
 
   implicit none
 
@@ -27,12 +28,11 @@ program PostIDL
   integer, parameter :: unit_tmp=99
   character(len=20) :: TypeFile='real4',TypeFileRead
   !TypeFile = 'ascii', 'real8', 'real4'
-  real, parameter :: halfeps=0.6
 
   integer :: nxyz(3), icell, countcell, ncell, nw, neqpar, numprocs, it
   real :: t
   real, allocatable :: Coord_DC(:,:,:,:), State_VC(:,:,:,:)
-  real, allocatable :: w1(:), eqpar(:), dxdoubled(:)
+  real, allocatable :: w1(:), eqpar(:)
   real, allocatable :: Param_I(:)
 
   real(Real4_)              :: DxCell4, Xyz4_D(3)
@@ -42,7 +42,7 @@ program PostIDL
 
   ! Coordinates, sizes, indices
   real, dimension(3) :: Xyz_D, xyzmin, xyzmax
-  real, dimension(3) :: CellSizePlot_D, dxyz, dxyzmin, dxyzcell
+  real, dimension(3) :: CellSizePlot_D, dxyz, dxyzmin
   real, dimension(3) :: XyzGen_D
   real ::    x, y, z, xmin, ymin, zmin
   real ::    dx, dy, dz, dyperdx, dzperdx, dxcell, dycell, dzcell
@@ -50,22 +50,27 @@ program PostIDL
   real(selected_real_kind(12))  :: total, volume
   integer :: i, j, k, imin, imax, jmin, jmax, kmin, kmax, nx, ny, nz, iw
 
-  integer :: idim, icutdim(3), ndim, nspecialpar
+  ! Variables related to sorting and averaging unstructured data
+  integer:: nSum, nXnew
+  integer, allocatable :: iSort_I(:)
+  real, allocatable :: Sort_I(:)
+  real, allocatable :: StateSum_V(:)
+
+  integer :: idim, icutdim(3), nDim, nspecialpar
   real    :: specialpar(3)
   character(len=5):: NameCoord_D(3) = (/'x    ','y    ','z    '/)
   character(len=5):: NameCoordPlot_D(3)
 
-  logical :: structured, read_binary=.false., UseLookup=.false.
+  logical :: structured, read_binary=.false.
   character (len=100) :: filename, filenamehead, coordnames
   character (len=500) :: varnames, unitnames
   integer :: l, me
 
   ! Variables for the 2D lookup table
-  integer :: ix1,ix2,ixmin1,ixmax1,ixmin2,ixmax2,nx1,nx2,idim1,idim2,jcell=0
+  integer :: idim1,idim2
   integer :: idim0 ! the ignored dimension
   integer :: iError
-  real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2, dx1cell=0.0, dx2cell=0.0
-  integer, allocatable :: lookup(:,:)
+  real    :: xmin1, xmax1, xmin2, xmax2
 
   ! Variables for checking binary compatibility
   integer            :: nByteRealRead
@@ -156,7 +161,7 @@ program PostIDL
   end if
 
   ! Set coordinate names different from default x, y, z
-  if(filenamehead(1:3) == 'sph')then
+  if(filenamehead(1:2) == 'sp')then
      NameCoord_D    = (/'r    ','theta','phi  '/)
   elseif(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
      TypeGeometry = 'cartesian'
@@ -204,13 +209,13 @@ program PostIDL
   write(*,*)'plot area size=', nxyz
 
   ! Calculate dimensionality of the cut and add specialparameters if needed
-  ndim=0
+  nDim=0
   nspecialpar=0
   icutdim=0
   do i = 1, 3
      if(nxyz(i)>1)then
-        ndim=ndim+1
-        icutdim(ndim)=i
+        nDim=nDim+1
+        icutdim(nDim)=i
      else
         icutdim(3)=i
         nspecialpar = nspecialpar + 1
@@ -218,9 +223,9 @@ program PostIDL
         varnames=trim(varnames)//' cut'//trim(NameCoord_D(i))
      end if
   end do
-
-  if(ndim==2)then
-     !Make a lookup table to check coinciding cells
+  
+  if(nDim==2)then
+     ! Figure out the size of the 2D (cut) grid
      idim1=icutdim(1)
      idim2=icutdim(2)
      idim0=icutdim(3)
@@ -228,20 +233,16 @@ program PostIDL
      xmin2=xyzmin(idim2)
      xmax1=xyzmax(idim1)
      xmax2=xyzmax(idim2)
-     dx1=dxyzmin(idim1)  ! Note that we use smallest cell size
-     dx2=dxyzmin(idim2)
-     nx1=nint((xmax1-xmin1)/dx1)
-     nx2=nint((xmax2-xmin2)/dx2)
 
-     ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
+     ! Sph/cyl. X=0 and Y=0 cuts are doubled (+/- r)
      if(idim0==2)then
         if(TypeGeometry(1:9)=='spherical' .and. xmax2 > cHalfPi) then
            ! Use LatMin < Lat' < 2*LatMax-LatMin as generalized coordinate
-           UseDoubleCut = .true.; nx2 = 2*nx2; 
+           UseDoubleCut = .true.
            ! nxyz(3) = 2*nxyz(3)
         elseif(TypeGeometry=='cylindrical' .and. xmax2 > cHalfPi)then
            ! Use rMin < r' < 2*rMax - rMin as generalized coordinate
-           UseDoubleCut = .true.; nx1 = 2*nx1; 
+           UseDoubleCut = .true.
            ! nxyz(1) = 2*nxyz(1)
         end if
 
@@ -252,29 +253,6 @@ program PostIDL
         end if
      end if
 
-     if(.not.structured)then
-        if(real(nx1)*real(nx2) > 1e8)then
-           write(*,*)'PostIDL WARNING: very fine grid, no averaging is done!'
-        elseif(CellSizePlot_D(2) > 0.0)then
-           write(*,*)'PostIDL WARNING: not AMR in all dimensions, ', &
-                'no averaging is done!'
-        else
-           allocate(lookup(nx1,nx2),stat=iError)
-
-           if(iError/=0 .or. size(lookup) < real(nx1)*real(nx2)-0.9 )then
-              write(*,*)'Allocating lookup table was not successful!'
-              write(*,*)'iError,size(lookup)=',iError,size(lookup)
-              write(*,*)'No averaging is done!'
-           else
-              UseLookup=.true.
-              lookup=0
-              ! Cell sizes have to be stored for unstructured 2D grid
-              allocate(dxdoubled(ncell))
-           end if
-           write(*,*)'allocate done with nx1, nx2, UseDoubleCut=', &
-                nx1, nx2, UseDoubleCut
-        end if
-     end if
   endif
 
   ! For unstructured grid make the Coord_DC and State_VC arrays linear
@@ -292,13 +270,13 @@ program PostIDL
   dyperdx=dxyzmin(2)/dxyzmin(1); dzperdx=dxyzmin(3)/dxyzmin(1)
 
   ! Allocate State_VC and Coord_DC, the arrays of variables and coordinates
-  allocate(w1(nw),State_VC(nw,nx,ny,nz),Coord_DC(ndim,nx,ny,nz),STAT=iError)
+  allocate(w1(nw),State_VC(nw,nx,ny,nz),Coord_DC(nDim,nx,ny,nz),STAT=iError)
   if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate arrays'
 
   if(read_binary.and.nByteRealRead==4) allocate(State4_V(nw))
   if(read_binary.and.nByteRealRead==8) allocate(State8_V(nw))
 
-
+  
   !Initialize State_VC 
   State_VC = 0.0
   Coord_DC = 0.0
@@ -348,7 +326,7 @@ program PostIDL
            read(unit_tmp,*,ERR=999,END=999) DxCell, Xyz_D, w1
         end if
 
-        countcell=countcell+1
+        countcell = countcell + 1
         dycell=dxcell*dyperdx; dzcell=dxcell*dzperdx
 
         if(TypeGeometry == 'cartesian' .or. filenamehead(1:3) == 'cut')then
@@ -359,22 +337,18 @@ program PostIDL
 
         if(.not.structured)then
 
-           if(.not.UseLookup)then
-              ! In unstructured 3D grid or a very fine 2D grid
-              ! no averaging is possible
-              icell=icell+1
-              call weighted_average(1.,0.,-1,icell)
-              CYCLE
-           endif
+           ! Simply put data into array. 
+           ! Sorting and averaging will be done at the end.
 
-           ! Calculate indices for lookup table
-           ix1 = nint((XyzGen_D(idim1) - xmin1)/dx1 + halfeps)
-           ix2 = nint((XyzGen_D(idim2) - xmin2)/dx2 + halfeps)
-
-           call unstructured_2D
+           iCell = iCell + 1
+           State_VC(:,iCell,1,1) = w1
+           do iDim = 1, nDim
+              Coord_DC(iDim,iCell,1,1) = Xyz_D(icutdim(iDim))
+           end do
 
            ! We are finished with unstructured
            CYCLE
+
         endif
 
         x = XyzGen_D(1); y = XyzGen_D(2); z = XyzGen_D(3)
@@ -430,7 +404,7 @@ program PostIDL
 
      close(unit_tmp)
   end do ! me
-
+  
   if(countcell/=ncell)&
        write(*,*)'!!! Discrepancy: countcell=',countcell,' ncell=',ncell,' !!!'
 
@@ -449,22 +423,8 @@ program PostIDL
              'filled total=',total,' volume=',volume,' !!!'
      end if
   else
-     if(UseLookup)then
-        volume = (xmax1-xmin1)*(xmax2-xmin2)
-        ! For axysimmetric cut planes with phi being the negligible coordinate
-        ! we plot both phi=cut and phi=cut+pi, so the volume is doubled
-        if(UseDoubleCut) volume = 2*volume
-
-        if(abs(total/volume-1.0)<0.0001)then
-           write(*,*)'Averaged 2D unstructured file'
-        else
-           write(*,*)'!!! Discrepancy in averaging 2D unstructured file:',&
-                'filled total=',total,' volume=',volume,' !!!'
-        end if
-     else
-        if(ndim/=2.and.icell /= ncell) &
-             write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
-     end if
+     if(icell /= ncell) &
+          write(*,*)'!!! Error: ncell=',ncell,' /= icell=',icell,' !!!'
 
      nx=icell
      nxyz(1)=icell
@@ -504,6 +464,57 @@ program PostIDL
   do i = 1, nSpecialPar
      Param_I(i+nEqPar) = SpecialPar(i)
   end do
+  
+  if(.not.structured)then
+     ! Sort points based on coordinates
+
+     allocate(Sort_I(nx), iSort_I(nx), STAT=iError)
+     if(iError /= 0) stop 'PostIDL.exe ERROR: could not allocate sort arrays'
+
+     ! Form sorting function
+     Sort_I = Coord_DC(1,:,1,1)
+     if(nDim > 1) Sort_I = Sort_I + exp(1.0)*Coord_DC(2,:,1,1)
+     if(nDim > 2) Sort_I = Sort_I + exp(2.0)*Coord_DC(3,:,1,1)
+
+     ! Sort points according to the sorting function
+     call sort_quick(nx, Sort_I, iSort_I)
+     Coord_DC(:,:,1,1) = Coord_DC(:,iSort_I,1,1)
+     State_VC(:,:,1,1) = State_VC(:,iSort_I,1,1)
+
+     deallocate(Sort_I, iSort_I)
+
+     ! Average out coinciding points
+     if(nDim < 3) then
+
+        i = 1
+        allocate(StateSum_V(nw))
+        do while(i < nx)
+           StateSum_V = State_VC(:,i,ny,nz)
+           nSum       = 1
+           j = i + 1
+           do while( all(Coord_DC(:,j,1,1)==Coord_DC(:,i,1,1)) )
+              StateSum_V = StateSum_V + State_VC(:,j,ny,nz)
+              nSum = nSum + 1
+              j = j + 1
+              if(j > nx) EXIT
+           end do
+           if(j > i+1) then
+              ! Put average value into i-th element
+              State_VC(:,i,1,1) = StateSum_V/nSum
+
+              ! Remove i+1..j elements
+              nxNew = nx - nSum + 1
+              if (j < nx) then
+                 State_VC(:,i+1:nXnew,1,1) = State_VC(:,j:nx,1,1)
+                 Coord_DC(:,i+1:nXnew,1,1) = Coord_DC(:,j:nx,1,1)
+              end if
+              nx = nXnew
+           end if
+           i = i + 1
+        end do
+        deallocate(StateSum_V)
+     end if
+  end if
 
   ! the sizes of Coord_DC and State_VC may be modified by cell averaging 
   ! in unstructured grids. Only the first dimension (1:nx) needs to be set
@@ -514,7 +525,7 @@ program PostIDL
        ParamIn_I = Param_I, &
        NameVarIn = varnames, &
        IsCartesianIn = TypeGeometry=='cartesian' .and. structured,&
-       nDimIn = ndim,&
+       nDimIn = nDim,&
        CoordIn_DIII = Coord_DC(:,1:nx,:,:), & 
        VarIn_VIII = State_VC(:,1:nx,:,:))
 
@@ -522,178 +533,10 @@ program PostIDL
   deallocate(w1, eqpar)
   if(read_binary.and.nByteRealRead==4) deallocate(State4_V)
   if(read_binary.and.nByteRealRead==8) deallocate(State8_V)
-  if(UseLookup) deallocate(lookup, dxdoubled)
 
   write(*,'(a)')'PostIDL finished'
 
 contains
-  !===========================================================================
-
-  subroutine unstructured_2D
-
-    ! Cell size
-    dxyzcell(1)=dxcell; dxyzcell(2)=dycell; dxyzcell(3)=dzcell
-    dx1cell=dxyzcell(idim1); dx2cell=dxyzcell(idim2)
-
-    if(dx1cell > 1.9*dx1)then
-       ! Lookup indices of possible finer pairs
-       ixmin1=nint((XyzGen_D(idim1)-0.25*dx1cell-xmin1)/dx1+halfeps)
-       ixmax1=nint((XyzGen_D(idim1)+0.25*dx1cell-xmin1)/dx1+halfeps)
-       ixmin2=nint((XyzGen_D(idim2)-0.25*dx2cell-xmin2)/dx2+halfeps)
-       ixmax2=nint((XyzGen_D(idim2)+0.25*dx2cell-xmin2)/dx2+halfeps)
-
-    endif
-
-    if(ix1 < 1 .or. ix1 > nx1 .or. ix2 < 1 .or. ix2 > nx2)then
-       write(*,*)'!!! Error: ix1, nx1, ix2, nx2=', ix1, nx1, ix2, nx2
-       write(*,*)'!!! idim1, idim2=', idim1, idim2
-       write(*,*)'!!! Xyz_D   =', Xyz_D
-       write(*,*)'!!! XyzGen_D=', XyzGen_D
-    end if
-
-    jcell=lookup(ix1,ix2)
-    if(jcell>0)then
-       ! A cell has already been found for this projected location
-
-       ! Check relative size of current cell with respect to the pair
-       select case(nint(dxdoubled(jcell)/dxcell))
-       case(1)
-          ! Finer neighbor, check the four corners
-          call check_corners
-       case(2)
-          ! Same size pair, use simple average
-          call weighted_average(0.5,0.5,jcell,jcell)
-
-          ! Negate lookup for safety check 
-          lookup(ix1,ix2)=-lookup(ix1,ix2)
-       case(4,8,16)
-          ! Coarse pair but this is NOT the last fine neighbor yet
-          ! Create new cell with weighted average
-          icell=icell+1
-          call weighted_average(2./3.,1./3.,jcell,icell)
-
-          ! Increase dxdoubled by another factor of 2 to count fine neighbors
-          dxdoubled(jcell)=dxdoubled(jcell)*2
-
-          ! Negate lookup for safety check
-          lookup(ix1,ix2)=-lookup(ix1,ix2)
-       case(32)
-          ! Coarse pair and this is the LAST fine neighbor
-          ! Use weighted average and overwrite jcell
-          call weighted_average(2./3.,1./3.,jcell,jcell)
-
-          total = total - 3*dx1cell*dx2cell
-
-          ! Negate lookup for safety check
-          lookup(ix1,ix2)=-lookup(ix1,ix2)
-       case default
-          write(*,*)''!!! Error: Impossible dx ratio !!!'
-          write(*,*)'ix1,ix2,icell,dxcell,xyz=',ix1,ix2,icell,dxcell,XyzGen_D
-          write(*,*)'jcell,dxdoubled,Coord_DC=',jcell,dxdoubled(jcell),&
-               Coord_DC(:,jcell,1,1)
-          stop
-       end select
-
-    elseif(jcell==0)then
-       ! No same size pair found yet
-       ! Check the corners for finer neighbors
-
-       call check_corners
-    else
-       ! Negative lookup value means an error
-       write(*,*)'!!! Error: 3rd data for same projected position in ',filename
-       write(*,*)'ix1,ix2,icell,jcell,dx,xyz=', &
-            ix1,ix2,icell,jcell,dxcell,XyzGen_D
-       stop
-    end if
-
-  end subroutine unstructured_2D
-
-  !===========================================================================
-
-  subroutine check_corners
-
-    integer :: i1,i2,count
-
-    ! Check four corners for finer neighbors
-    count=0
-    if(dx1cell>1.9*dx1)then
-       do i1=ixmin1,ixmax1,ixmax1-ixmin1
-          do i2=ixmin2,ixmax2,ixmax2-ixmin2
-             jcell=lookup(i1,i2)
-             if(jcell==0)then
-                ! Mark lookup table for possible fine neighbor
-                lookup(i1,i2)=icell+1
-                CYCLE
-             endif
-
-             if(jcell<0)then
-                write(*,*) '!!! Error: negative jcell when looking for finer'
-                write(*,*)'ix1,ix2,icell,jcell,dx,xyz=',&
-                     ix1,ix2,icell,jcell,dxcell,XyzGen_D
-                stop
-             endif
-
-             count=count+1
-             if(nint(dxdoubled(jcell)/dxcell)/=1)then
-                write(*,*) '!!! Error: incorrect finer cell size !!!'
-                write(*,*)'ix1,ix2,icell,xyz=',ix1,ix2,icell,XyzGen_D
-                write(*,*)'i1,i2,jcell,Coord_DC(j)=',i1,i2,jcell, &
-                     Coord_DC(:,jcell,1,1)
-                write(*,*)'dxdoubled, dxcell=',dxdoubled(jcell),dxcell
-                stop
-             end if
-
-             ! Average current data with finer neighbor
-             call weighted_average(1./3.,2./3.,jcell,jcell)
-
-             ! Negate lookup for safety check
-             lookup(i1,i2)=-lookup(i1,i2)
-          end do
-       end do
-    endif
-    if(count<4)then
-       ! Not all (if any) fine neighbors were found
-       ! Store data in new cell
-
-       icell=icell+1
-       call weighted_average(1.,0.,-1,icell)
-
-       ! Save cell size and index in lookup position(s)
-       dxdoubled(icell)=2**(count+1)*dxcell
-       lookup(ix1,ix2)=icell
-    endif
-
-  end subroutine check_corners
-
-  !===========================================================================
-
-  subroutine weighted_average(new_weight,from_weight,from_cell,to_cell)
-
-    ! Average current cell coordinates and cell values with 
-    ! an already stored twice bigger cell indexed by from_cell
-    ! and put the result into cell to_cell
-
-    real,    intent(in) :: new_weight, from_weight
-    integer, intent(in) :: from_cell,to_cell
-    !---------------------------------------------------------------
-    if(from_cell<0)then
-       State_VC(:,to_cell,1,1) = w1
-       do idim=1,ndim
-          Coord_DC(idim,to_cell,1,1) = Xyz_D(icutdim(idim))
-       end do
-    else
-       State_VC(:,to_cell,1,1) = &
-            new_weight*w1 + from_weight*State_VC(:,from_cell,1,1)
-
-       do idim=1,ndim
-          Coord_DC(idim,to_cell,1,1)=new_weight*Xyz_D(icutdim(idim)) + &
-               from_weight*Coord_DC(idim,from_cell,1,1)
-       enddo
-    end if
-    if(to_cell/=from_cell)total = total + dx1cell*dx2cell
-
-  end subroutine weighted_average
 
   !===========================================================================
 
@@ -821,7 +664,7 @@ contains
        XyzGen_D(1) = rCyl
        XyzGen_D(3) = Xyz_D(3)
 
-       if(ndim==2)then
+       if(nDim==2)then
           ! Set the 'X-Y' coordinates for plotting a 2D cut
           select case(idim0)
           case(1)
@@ -840,7 +683,7 @@ contains
     case('spherical', 'spherical_lnr', 'spherical_genr')
        XyzGen_D(1) = sqrt(rCyl**2 + Xyz_D(3)**2)
 
-       if(ndim==2)then
+       if(nDim==2)then
           ! Set the 'X-Y' coordinates for plotting a 2D cut
           select case(idim0)
           case(1)
@@ -866,7 +709,7 @@ contains
     case('axial_torus')
 
        !This is x=0 or y=0 plane
-       if(ndim==2 .and. idim0==2) Xyz_D(1) = rCyl
+       if(nDim==2 .and. idim0==2) Xyz_D(1) = rCyl
 
        r = rCyl - rTorusLarge
        z = Xyz_D(3)
