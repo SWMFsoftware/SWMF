@@ -2261,10 +2261,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
   endif
 
   ; Save global values that will be overwritten
-  xtitle = !x.title
-  ytitle = !y.title
-  xtickname = !x.tickname
-  ytickname = !y.tickname
+  xtitleorig = !x.title
+  ytitleorig = !y.title
 
   if axistype eq 'coord' then begin
      if usereg then $
@@ -2273,8 +2271,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
         getaxes,ndim,x   ,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
   endif
 
-  if xtitle ne '' then !x.title=xtitle
-  if plotdim gt 1 and ytitle ne '' then !y.title=ytitle
+  if xtitleorig ne '' then !x.title=xtitleorig
+  if plotdim gt 1 and ytitleorig ne '' then !y.title=ytitleorig
 
   if !x.range[0] ne !x.range[1] then xrange=!x.range else $
      xrange=[min(xx),max(xx)]
@@ -2292,7 +2290,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
 
                                 ; Store x and y titles and tick names
 
-  newytitle = ytitle ne !y.title
+  newytitle  = ytitleorig ne !y.title
+  xtitle     = !x.title
+  ytitle     = !y.title
+  xtickname  = !x.tickname
+  ytickname  = !y.tickname
 
   for ifunc=0,nfunc-1 do begin
 
@@ -2521,7 +2523,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
            !x.tickname = strarr(60)+' '
            !x.title = ' '
         endif
-
                                 ; Omit Y axis if unneeded
         if plotix gt 0 and not newytitle $
            and strmid(plotmod,0,4) ne 'plot' then begin
@@ -2782,6 +2783,8 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
   endfor
 
   !p.position = 0
+  !x.title    = xtitleorig
+  !y.title    = ytitleorig
 
 end
 ;===========================================================================
