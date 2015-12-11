@@ -2260,8 +2260,11 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
      axistype='coord'
   endif
 
+  ; Save global values that will be overwritten
   xtitle = !x.title
   ytitle = !y.title
+  xtickname = !x.tickname
+  ytickname = !y.tickname
 
   if axistype eq 'coord' then begin
      if usereg then $
@@ -2290,11 +2293,6 @@ pro plot_func,x,w,xreg,wreg,usereg,ndim,time,eqpar,rBody,$
                                 ; Store x and y titles and tick names
 
   newytitle = ytitle ne !y.title
-
-  xtitle    = !x.title
-  ytitle    = !y.title
-  xtickname = !x.tickname
-  ytickname = !y.tickname
 
   for ifunc=0,nfunc-1 do begin
 
