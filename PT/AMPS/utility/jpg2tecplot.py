@@ -1,12 +1,14 @@
 import numpy as np
 from PIL import Image
-im = Image.open("map1.jpg") #Can be many different formats.
+im = Image.open("europa2_out.jpg") #Can be many different formats.
 pix = im.load()
 print im.size #Get the width and hight of the image for iterating over
 fo = open("jpgmapdata.dat","w+")
 foo = open("jpgmapdata_Xyz.dat","w+")
-R=3396 #km
+R=1560E3 #m
 #fo.write("longitude latitude     R     G     B"+"\n")
+
+Step=5
 
 fo.write('TITLE = "JPG data "'+'\n')
 fo.write('VARIABLES = "Longtitude (degree) "'+'\n')
@@ -32,29 +34,49 @@ for j in range(im.size[1]):
         #pix[x,y] = value # Set the RGBA Value of the image (tuple)
 
 foo.write('TITLE = "JPG data "'+'\n')
-foo.write('VARIABLES = "X [R] "'+'\n')
-foo.write('"Y [R] "'+'\n')
-foo.write('"Z [R] "'+'\n')
+foo.write('VARIABLES = "X"'+'\n')
+foo.write('"Y"'+'\n')
+foo.write('"Z"'+'\n')
 foo.write('"R "'+'\n')
 foo.write('"G "'+'\n')
 foo.write('"B "'+'\n')
 foo.write('ZONE T="map with cloud"'+'\n')
 foo.write('STRANDID=0, SOLUTIONTIME=0'+'\n')
-foo.write('I=%04d'%im.size[0]+', '+'J=%03d'%im.size[1]+', '+'K=1, ZONETYPE=Ordered'+'\n')
+#foo.write('I=%04d'%im.size[0]+', '+'J=%03d'%im.size[1]+', '+'K=1, ZONETYPE=Ordered'+'\n')
+
+iNewPoints=1+int((im.size[0]-1)/Step)
+jNewPoints=1+int((im.size[1]-1)/Step)
+
+foo.write('N=%04d'%(iNewPoints*jNewPoints)+', E=%04d'%((iNewPoints-1)*(jNewPoints-1))+', ZONETYPE=FEQUADRILATERAL\n')
 foo.write('DATAPACKING=POINT'+'\n')
 foo.write('DT=(SINGLE SINGLE SINGLE SINGLE SINGLE SINGLE )'+'\n')
 
-for j in range(im.size[1]):
-    for i in range(im.size[0]):
-        phi=-180.+360./im.size[0]*i
+for j in range(jNewPoints):
+    for i in range(iNewPoints):
+        phi=-180.+360./(iNewPoints-1)*i
         phi=phi*np.pi/180.
-        theta=180./im.size[1]*j
+        theta=180./(jNewPoints-1)*j
         theta=theta*np.pi/180.
+
         #print phi, theta
-        x = np.sin(theta)*np.cos(phi)
-        y = np.sin(theta)*np.sin(phi)
-        z = np.cos(theta)
-        foo.write("%6.2f"%x+'  '+"%6.2f"%y+'  '+"%6.2f"%z+\
+        x = R*np.sin(theta)*np.cos(phi)
+        y = R*np.sin(theta)*np.sin(phi)
+        z = R*np.cos(theta)
+
+        foo.write("%f"%x+'  '+"%f"%y+'  '+"%f"%z+\
         #'  '+"%6.2f"%theta+'  '+"%6.2f"%phi+'  '+\
-                "%7d%7d%7d\n" % pix[i,j])
+                "%7d%7d%7d\n" % pix[Step*i,Step*j])
+
+#print the connectivity list
+for iZenith in range(jNewPoints-1):
+    for iAzimuthal in range(iNewPoints-1):
+      nd0=1+iAzimuthal+iZenith*iNewPoints  
+      nd1=2+iAzimuthal+iZenith*iNewPoints  
+      nd2=2+iAzimuthal+(iZenith+1)*iNewPoints  
+      nd3=1+iAzimuthal+(iZenith+1)*iNewPoints  
+                  
+      foo.write('%04d'%nd0+' '+'%04d'%nd1+' '+'%04d'%nd2+' '+'%04d'%nd3+'\n')
+
+
+
 print theta, np.cos(theta)
