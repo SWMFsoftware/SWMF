@@ -76,6 +76,10 @@ stochasticheating	TypeHeatPartitioning
 0.17			StochasticExponent
 0.18			StochasticAmplitude
 
+#ANISOTROPICPRESSURE
+F			UseConstantTau
+1e5			TauGlobalSi
+
 #HEATCONDUCTION
 T			UseHeatConduction
 spitzer			TypeHeatConduction

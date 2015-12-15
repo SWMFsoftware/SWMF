@@ -786,7 +786,7 @@ test_awsomfluids:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_awsomfluids_compile:
-	./Config.pl -f -e=AwsomFluids -u=AwsomFluids -g=6,2,2,32,1
+	./Config.pl -f -e=AwsomFluidsAnisoPi -u=AwsomFluids -g=6,2,2,32,1
 	$(MAKE) BATSRUS
 	make PIDL
 
