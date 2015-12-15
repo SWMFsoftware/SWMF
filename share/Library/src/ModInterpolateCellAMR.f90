@@ -91,7 +91,7 @@ contains
     real               :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
     integer            :: iLevel_I(2**nDim)
     logical            :: IsOut_I(2**nDim)    
-    real               :: DXyzInvInput_D(nDim), XyzInput_D
+    real               :: DXyzInvInput_D(nDim)
     integer            :: iIndexesExt_II(0:nDim,2**nDim)
     integer, parameter :: iBlock_I(8) = -1, iProc_I(8) = 0!Unused
     !\
@@ -211,7 +211,7 @@ contains
     !\
     ! Loop variables
     !/
-    integer :: iNeighbor, iDim, iGrid, iSubGrid
+    integer :: iNeighbor, iGrid, iSubGrid
     !\
     ! Number of grid points in the stencil
     !/ 

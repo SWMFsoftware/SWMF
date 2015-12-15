@@ -1223,7 +1223,6 @@ contains
     integer:: iCase, iGrid, iLoc, iDir, iMisc
     integer:: iLevel_I(8)
     integer :: nDim = 3, nGrid = 8
-    integer, parameter:: x_ = 1, y_ = 2, z_ = 3
     !------------------------
     nDim = 3; nGrid = 8;  iSortStencil3_II = 0
     DoInit = .false. !Do this only once
@@ -2592,7 +2591,6 @@ contains
   !/
   subroutine interpolate_amr(nDim, XyzIn_D, nIndexes, find, nCell_D,  &
        nGridOut, Weight_I, iIndexes_II, IsSecondOrder, UseGhostCell)
-    use ModResolutionCorner, ONLY: resolution_corner
     use ModKind, ONLY: nByteReal
     !\
     ! INPUT PARAMETERS
@@ -2680,7 +2678,7 @@ contains
     ! Coordinates of the input point may be recalculated within
     ! routine; inverse of (/Dx, Dy, Dz/) is reused
     !/
-    real, dimension(nDim)      :: Xyz_D, DxyzInv_D, XyzStencil_D
+    real, dimension(nDim)      :: Xyz_D, DxyzInv_D
     !\
     ! The extended stencil in a structured form:
     ! A cubic 2*2*2 grid with 2*2*2 subgrids covering each vertex
