@@ -318,8 +318,7 @@ contains
                 do iFluid = IonFirst_, IonLast_
                    Source_VC(iPparIon_I(iFluid),i,j,k) = &
                         Source_VC(iPparIon_I(iFluid),i,j,k) &
-                        + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid) &
-                        *GammaMinus1_I(iFluid)
+                        + CoronalHeating_C(i,j,k)*QparPerQtotal_I(iFluid)*2.0
                 end do
              end if
           else
