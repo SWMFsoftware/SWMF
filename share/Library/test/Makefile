@@ -258,6 +258,28 @@ test_interpolate_amr:
 	-@(./test_interpolate_amr.exe > test_interpolate_amr.diff)
 	@ls -l test_interpolate_amr.diff
 #######################################################################
+test_interpolate_cell_amr.o: test_interpolate_cell_amr.f90
+	${COMPILE.f90} ${Cflag0} test_interpolate_cell_amr.f90
+
+OBJ_INTERPOLATE_CELL_AMR = \
+	../src/ModKind.o \
+	../src/ModRandomNumber.o \
+	../src/ModInterpolateAMR.o \
+	../src/ModInterpolateCellAMR.o \
+	test_interpolate_cell_amr.o
+
+test_interpolate_cell_amr_exe:
+	@(cd ../src; make ModKind.o; make ModRandomNumber.o; make ModInterpolateAMR.o; make ModInterpolateCellAMR.o)
+	@make test_interpolate_cell_amr.o
+	${LINK.f90} -o test_interpolate_cell_amr.exe ${OBJ_INTERPOLATE_CELL_AMR} ${Lflag2}
+
+test_interpolate_cell_amr:
+	@echo test_interpolate_cell_amr starting > test_interpolate_cell_amr.diff
+	@make test_interpolate_cell_amr_exe >> test_interpolate_cell_amr.diff
+	@echo ./test_interpolate_cell_amr.exe  >> test_interpolate_cell_amr.diff
+	-@(./test_interpolate_cell_amr.exe > test_interpolate_cell_amr.diff)
+	@ls -l test_interpolate_cell_amr.diff
+#######################################################################
 OBJ_INITIAL_STATE = \
 	test_initial_state.o \
 	../src/ModIoUnit.o \
