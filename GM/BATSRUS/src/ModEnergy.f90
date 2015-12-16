@@ -391,6 +391,9 @@ contains
     ! Keep pressure(s) in State_VGB above pMin_I limit
     ! If DoUpdateEnergy is present, also modify energy to remain consistent
 
+    use ModAdvance, ONLY: UseAnisoPressure
+    use ModMultiFluid, ONLY: IsIon_I, iPparIon_I
+
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     logical, intent(in), optional:: DoUpdateEnergy ! if present should be true
@@ -411,10 +414,16 @@ contains
                      Energy_GBI(i,j,k,iBlock,iFluid) + &
                      InvGammaMinus1_I(iFluid)*(pMin - p)
              end if
+             if(UseAnisoPressure .and. IsIon_I(iFluid)) &
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
           end do; end do; end do
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+             if(UseAnisoPressure .and. IsIon_I(iFluid))&
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
           end do; end do; end do
        end if
     end do
@@ -433,12 +442,18 @@ contains
                      Energy_GBI(i,j,k,iBlock,iFluid) + &
                      InvGammaMinus1_I(iFluid)*(pMin - p)
              end if
+             if(UseAnisoPressure .and. IsIon_I(iFluid))&
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
           end do; end do; end do
        else
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              NumDens=State_VGB(iRho_I(iFluid),i,j,k,iBlock)/MassFluid_I(iFluid)
              pMin = NumDens*Tmin_I(iFluid)
              State_VGB(iP,i,j,k,iBlock) = max(pMin, State_VGB(iP,i,j,k,iBlock))
+             if(UseAnisoPressure .and. IsIon_I(iFluid))&
+                  State_VGB(iPparIon_I(iFluid),i,j,k,iBlock) = &
+                  max(pMin, State_VGB(iPparIon_I(iFluid),i,j,k,iBlock))
           end do; end do; end do
        end if
     end do
