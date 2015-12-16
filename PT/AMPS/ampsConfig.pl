@@ -582,7 +582,10 @@ sub ReadMainBlock {
       $InputLine=~s/=/ /;
       my $oldWSD = $ampsConfigLib::WorkingSourceDirectory;
       ($InputLine,$ampsConfigLib::WorkingSourceDirectory)=split(' ',$InputLine,2);
-      system("mv $oldWSD $ampsConfigLib::WorkingSourceDirectory");
+
+      if ($oldWSD ne $ampsConfigLib::WorkingSourceDirectory) {
+        system("mv $oldWSD $ampsConfigLib::WorkingSourceDirectory");
+      }
     }
     elsif ($s0 eq "SOURCEDIRECTORY") {
       chomp($line);
