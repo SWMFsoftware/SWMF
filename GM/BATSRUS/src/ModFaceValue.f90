@@ -785,6 +785,7 @@ contains
                 UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
              end do
           end if
+          if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
        end if
     end if
 
