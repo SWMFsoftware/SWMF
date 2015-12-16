@@ -1,19 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInterpolateCellAMR
-  use ModInterpolateAMR, ONLY: interpolate_extended_stencil
+  use ModInterpolateAMR, ONLY: interpolate_extended_stencil,&
+                               iPowerOf2_D, iShift_DI
   implicit none
   integer,parameter:: Coarse_=0, Fine_=1
-  integer,parameter :: iPowerOf2_D(3) = (/1, 2, 4/)
-  !\
-  ! Shift of the iGrid point in the stencil with respect to the
-  ! first one
-  !/
-  integer, parameter:: iShift_DI(3,8)=reshape( (/&
-       0,0,0, 1,0,0,&
-       0,1,0, 1,1,0,&
-       0,0,1, 1,0,1,&
-       0,1,1, 1,1,1 /),(/3, 8/))
   !\
   !Interface for tools and methods in ModInterpolateAMR to be used with
   !CELL - adaptive grids, rather than for block-adaptive ones as used in
