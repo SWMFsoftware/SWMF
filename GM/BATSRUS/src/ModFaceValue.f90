@@ -708,7 +708,7 @@ contains
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VX, Flux_VY, Flux_VZ, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronPressure, UseWavePressure, &
+         UseElectronPressure, UseWavePressure, UseAnisoPressure, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
          LeftState_VY,      &  ! Face Left  Y
@@ -780,6 +780,11 @@ contains
           do iFluid = 1, nFluid
              UseLogLimiter_V(iP_I(iFluid))   = .true.
           end do
+          if(UseAnisoPressure)then
+             do iFluid = IonFirst_, IonLast_
+                UseLogLimiter_V(iPparIon_I(iFluid)) = .true.
+             end do
+          end if
        end if
     end if
 
