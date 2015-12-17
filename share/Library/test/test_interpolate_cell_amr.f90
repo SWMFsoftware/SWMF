@@ -49,7 +49,7 @@ contains
 end module ModTestInterpolateAMR
 
 program test_interpolate_cell_amr
-
+  use ModRandomNumber, ONLY: random_real
   use ModTestInterpolateAMR, ONLY: interpolate_cell_amr
   implicit none
   !Test grid
@@ -78,20 +78,27 @@ program test_interpolate_cell_amr
   real:: Xyz_D(2), XyzInterpolated_D(2), WeightOut_I(0:9)
   logical :: IsSecondOrder
   logical,parameter:: IsOut_I(9) = .false.
-  integer:: iPoint
+  integer:: iPoint, iSeed = 1, iCount, iDir
   !-----------------
-  Xyz_D =(/0.70, 0.30 /)
-  call interpolate_cell_amr(2, Xyz_D, XyzCell_D, DXyz_D,   &
-       9, XyzNeighbor_DI, DiLevelNei_I, IsOut_I,&
-       WeightOut_I, IsSecondOrder)
-  XyzInterpolated_D = XyzCell_D*WeightOut_I(0)
-  do iPoint = 1, 9
-     XyzInterpolated_D = XyzInterpolated_D + &
-          XyzNeighbor_DI(:, iPoint)*WeightOut_I(iPoint)
+  do iCount = 1, 10000
+     do iDir = 1, 2
+        Xyz_D(iDir) = 0.01 +0.98*random_real(iSeed)
+     end do
+     call interpolate_cell_amr(2, Xyz_D, XyzCell_D, DXyz_D,   &
+          9, XyzNeighbor_DI, DiLevelNei_I, IsOut_I,&
+          WeightOut_I, IsSecondOrder)
+     XyzInterpolated_D = XyzCell_D*WeightOut_I(0)
+     do iPoint = 1, 9
+        XyzInterpolated_D = XyzInterpolated_D + &
+             XyzNeighbor_DI(:, iPoint)*WeightOut_I(iPoint)
+     end do
+     if(any(abs(Xyz_D-XyzInterpolated_D)>1e-5*Xyz_D))then
+        write(*,*)'Xyz_D=',Xyz_D
+        write(*,*)'WeightOut_I=',WeightOut_I
+        write(*,*)'XyzInterpolated_D=',XyzInterpolated_D
+        call CON_stop('Approximation test failed')
+     end if
   end do
-  write(*,*)'Xyz_D=',Xyz_D
-  write(*,*)'WeightOut_I=',WeightOut_I
-  write(*,*)'XyzInterpolated_D=',XyzInterpolated_D
 end program test_interpolate_cell_amr
 
 subroutine CON_stop(StringError)

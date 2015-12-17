@@ -107,7 +107,7 @@ contains
        iLevel_I = iLevel_I +1
        DXyzInvInput_D = 0.50*DXyzInv_D
     else
-       DXyzInvInput_D = 0.50*DXyzInv_D
+       DXyzInvInput_D = DXyzInv_D
     end if
     !\
     ! call interpolation routine
@@ -278,6 +278,30 @@ contains
        XyzGridCoarse_DII(:,1,iGridCoarse) = XyzNeighbor_DI(:,iCoarseNeighbor)
        iCellIdCoarse_III(:,1,iGridCoarse) = iCellId_II(:,iCoarseNeighbor)
        iLevelCoarse_I(iGridCoarse) = -1
+       !\
+       ! Store the information about central cell into the coarse stencil
+       !/
+       iDiscr_D(1:nDim) = nint(0.50 + &
+            SIGN(0.50, XyzCell_D - XyzCoarseCenter_D))
+       iGridCoarse = sum(iDiscr_D(1:nDim)*iPowerOf2_D(1:nDim)) +1
+
+       DoRefineCoarseGrid_I(iGridCoarse) = .false.
+       !\
+       ! Store coordinate information about refined grid
+       !/
+       iLevelCoarse_I(iGridCoarse) = 0
+       do iGrid = 1, nGrid
+          XyzGridCoarse_DII(:,iGrid,iGridCoarse) = &
+               XyzGridCoarse_DII(:,0,iGridCoarse) + &
+               DXyz_D*(-0.50 + iShift_DI(1:nDim,iGrid))
+       end do
+       
+       iDiscrSubGrid_D = nint(0.50 + SIGN(0.50,XyzCell_D &
+                  - XyzGridCoarse_DII(:,0,iGridCoarse)))
+       iSubGrid = sum(iDiscrSubGrid_D*iPowerOf2_D(1:nDim)) + 1
+       iCellIdCoarse_III(:,iSubGrid,iGridCoarse) = &
+            iCellId_I
+             IsOutCoarse_I(iGridCoarse) = .false.
     end if
     !\
     !Construct an ordered list of neighbors
@@ -335,7 +359,7 @@ contains
                 !\
                 ! Store coordinate information about refined grid
                 !/
-                iLevelCoarse_I(iGridCoarse) = 1
+                iLevelCoarse_I(iGridCoarse) = 0
                 do iGrid = 1, nGrid
                    XyzGridCoarse_DII(:,iGrid,iGridCoarse) = &
                         XyzGridCoarse_DII(:,0,iGridCoarse) + &
