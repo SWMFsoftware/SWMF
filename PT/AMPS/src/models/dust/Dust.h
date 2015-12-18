@@ -272,9 +272,6 @@ namespace ElectricallyChargedDust {
         //create the output directory in case its not exists
         char cmd[_MAX_STRING_LENGTH_PIC_];
 
-        sprintf(cmd,"mkdir -p %s",PIC::DiagnospticMessageStreamName);
-        system(cmd);
-
         sprintf(cmd,"mkdir -p %s",PIC::OutputDataFileDirectory);
         system(cmd);
 
@@ -303,7 +300,7 @@ namespace ElectricallyChargedDust {
 
       if (PIC::ThisThread==0) {
         cout << "$PREFIX:Dust Grains Distribution:" << endl;
-        cout << "$PREFIX:minDustRadius=" << minDustRadius << endl << "$PREFIX:maxDustRadius=" << maxDustRadius << endl << "$PREFIX:PowerIndex=" << PowerIndex << endl << "$PREFIX:NormalizationFactor=" << NormalizationFactor << endl << endl;
+        cout << "$PREFIX:minDustRadius=" << minDustRadius << endl << "$PREFIX:maxDustRadius=" << maxDustRadius << endl << "$PREFIX:PowerIndex=" << PowerIndex << endl << "$PREFIX:NormalizationFactor=" << NormalizationFactor << endl;
       }
 
       PrintDistributionFucntion();
