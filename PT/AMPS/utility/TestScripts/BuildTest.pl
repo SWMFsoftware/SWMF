@@ -23,6 +23,16 @@ my $fTable="$path/Table";
 #content of the table
 my @Table=read_content($fTable);
 
+my @Table_NoSpaces;
+
+foreach (@Table) {
+  if ($_ ne "\n") {
+    push(@Table_NoSpaces,$_);
+  }
+}
+
+@Table=@Table_NoSpaces;
+
 #base for the Makefile.test
 my $fBase="$path/makefile.test.base";
 my @Base=read_content($fBase);
