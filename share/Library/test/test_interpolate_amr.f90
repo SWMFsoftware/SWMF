@@ -147,8 +147,7 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder,&
-                  UseGhostCell=.true.)
+                  IsSecondOrder=IsSecondOrder)
           else
              call find_test(nDim, Xyz_D, &
                   iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
@@ -234,8 +233,7 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder,&
-                  UseGhostCell=.true.)
+                  IsSecondOrder=IsSecondOrder)
           else
              call find_test(nDim, XyzCont_D, &
                   iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
@@ -325,8 +323,7 @@ contains
                   nGridOut=nGridOut,&
                   Weight_I=Weight_I,&
                   iIndexes_II=iIndexes_II,&
-                  IsSecondOrder=IsSecondOrder,&
-                  UseGhostCell=.true.)
+                  IsSecondOrder=IsSecondOrder)
              write(*,*)'Cell_D  iBlock XyzGrid_D Weight_I(iGrid)'
              do iGrid = 1, nGridOut
                 iCellIndex_D = 1
