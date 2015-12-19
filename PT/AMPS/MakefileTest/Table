@@ -154,6 +154,30 @@ Name=CG-dust-test(0+srbwks2014-0079+pleiades+stampede)
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/data/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 (0+srbwks2014-0079)
 Keys=-spice-path=/nobackupp8/dborovik/SPICE/cspice -spice-kernels=/nobackupp8/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+pleiades)
 Keys=-spice-path=/work/02695/dborovik/SPICE/cspice -spice-kernels=/work/02695/dborovik/SPICE/Kernels/ROSETTA/kernels -model-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2 -cplr-data-path=/work/02695/dborovik/AMPS_DATA_TEST/ROSETTA/amr.sig=0xd7058cc2a680a3a2(0+stampede)
+
+Check=
+>>>@echo "test_CG-dust-test_check..." >> test_CG-dust-test.diff
+
+>>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat 1000
+>>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.H2O.s=0.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat   
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.dat         \
+>>>output/test_CG-dust-test--pic.H2O.s=0.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--H2O.diff 
+>>>@ls -l test_CG-dust-test--H2O.diff
+
+>>>@${TESTCG-dust-testDIR}/../utility/ReduceFile.pl ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat 1000
+>>>@mv ${TESTCG-dust-testDIR}/PT/plots/pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000 ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.dat         \
+>>>output/test_CG-dust-test--pic.DUST%0.s=2.out=0.dat.Reduced.Step=1000.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test--DUST.diff 
+>>>@ls -l test_CG-dust-test--DUST.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTCG-dust-testDIR}/PT/plots/test_CG-dust-test.dat         \
+>>>output/test_CG-dust-test.ref_np`ls ${TESTCG-dust-testDIR}/PT/thread* |wc -l |tr -d ' '` > test_CG-dust-test.diff
+>>>@ls -l test_CG-dust-test.diff
+
+>>>@cat test_CG-dust-test--H2O.diff test_CG-dust-test--DUST.diff >> test_CG-dust-test.diff
+
 <#
 
 #>
