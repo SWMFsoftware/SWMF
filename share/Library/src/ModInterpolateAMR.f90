@@ -2705,6 +2705,10 @@ contains
     !/
     integer:: iGridBasic, iProcBasic, iBlockBasic
     !\
+    ! Stored iProc and iBlock number
+    !/
+    integer:: iProcStored, iBlockStored
+    !\
     !Reduced nSubgrid_I
     !/
     integer:: nSubgrid_I(2**nDim)
@@ -2922,7 +2926,7 @@ contains
       ! Find neighboring block
       !/
       call find(nDim, XyzMisc_D, &
-           iProc_I(iGridStored), iBlock_I(iGridStored), &
+           iProcStored, iBlockStored, &
            XyzCorner_D, Dxyz_D, IsOut)
       if(IsOut)then
          iProc_I(iGridStored) = 0 !For not processing this point again
@@ -2940,6 +2944,8 @@ contains
          end do
          RETURN
       end if
+      iProc_I(iGridStored)  = iProcStored
+      iBlock_I(iGridStored) = iBlockStored
       iLevelSubgrid_I(iGridStored) = 1 - &
            floor(Dxyz_D(1)*DXyzInv_D(1)+ cTol)
       !\                     ^
@@ -3031,8 +3037,8 @@ contains
          iCellIndexes_DII(:,1,iGrid) = &
               iCellIndexes_DII(:,1,iGridStored) +&
               iShift_DI(1:nDim,iGrid) - iShift_D 
-         iProc_I( iGrid) = iProc_I( iGridStored)
-         iBlock_I(iGrid) = iBlock_I(iGridStored)
+         iProc_I( iGrid) = iProcStored
+         iBlock_I(iGrid) = iBlockStored
          XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
          iLevelSubGrid_I(iGrid) = Coarse_
          nSubgrid_I(iGrid) = 1
@@ -3059,9 +3065,9 @@ contains
       ! New variables to work with reduced nSubgrid_I
       !/
       !\
-      !Loop variable
+      !Loop variables
       !/
-      integer:: iOrder
+      integer:: iOrder, iOrder1
       !\
       !Discriminators
       !/
@@ -3091,15 +3097,17 @@ contains
       !\
       ! All points in the 2*2*2 finer subgrid are involved
       !/
-      nSubgrid_I(iGridStored) = nGrid
-      do iSubGrid = 1, nGrid
+      nSubgrid_I(iGridStored) = iPowerOf2_D(1+nDim - &
+           iLog2NDimOverNSubgrid_II(iGridStored,iGridBasic))
+      do iOrder = 1, nSubgrid_I(iGridStored)
+         iSubGrid = iSubgridOrder_III(iOrder,iGridStored,iGridBasic)
          iShift_D = iShift_DI(1:nDim,iSubGrid)
          !\
          ! Fine subgrid is displaced by half of finer subgrid size
          !/
-         XyzGrid_DII(:,iSubGrid,iGridStored) = &
+         XyzGrid_DII(:,iOrder,iGridStored) = &
               XyzGrid_DII(:,0,iGridStored) + DxyzFine_D*(iShift_D - 0.50)
-         iCellIndexes_DII(:,iSubGrid,iGridStored) = &
+         iCellIndexes_DII(:,iOrder,iGridStored) = &
               iCellIndexesStored_D + iShift_D
       end do
       !\
@@ -3124,15 +3132,17 @@ contains
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
          iCellIndexes_D = iCellIndexesStored_D + 2*(&
               iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridStored))
-         iProc_I(iGrid ) = iProc_I( iGridStored)
-         iBlock_I(iGrid) = iBlock_I(iGridStored)
+         iProc_I(iGrid ) = iProcStored
+         iBlock_I(iGrid) = iBlockStored
          iLevelSubGrid_I(iGrid) = Fine_
-         nSubGrid_I(iGrid) = nGrid
-         do iSubGrid = 1, nGrid
+         nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
+              iLog2NDimOverNSubgrid_II(iGrid,iGridBasic))
+         do iOrder1 = 1, nSubgrid_I(iGrid)
+            iSubGrid = iSubgridOrder_III(iOrder,iGrid,iGridBasic)
             iShift_D = iShift_DI(1:nDim,iSubGrid)
-            XyzGrid_DII(:,iSubGrid,iGrid) = &
+            XyzGrid_DII(:,iOrder,iGrid) = &
                  XyzGrid_DII(:,0,iGrid) + DxyzFine_D*(iShift_D -0.50)
-            iCellIndexes_DII(:,iSubGrid,iGrid) = iCellIndexes_D + iShift_D
+            iCellIndexes_DII(:,iOrder,iGrid) = iCellIndexes_D + iShift_D
          end do
       end do
       iGridOutOfBlock = -1
@@ -3158,7 +3168,7 @@ contains
       !\
       !Discriminators
       !/
-      integer:: iDiscr_D(3), iDiscr1_D(3)
+      integer:: iDiscr_D(3), iDiscr1_D(3), iGridSeenFrom
       integer:: iCellIndexesStored_D(nDim), iCellIndexes_D(nDim)
       !\
       !Displacement measured in grid sizes or in their halfs
@@ -3174,8 +3184,6 @@ contains
       integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
       !------------------
       iGridStored = iGridOutOfBlock
-      iBlockStored = iBlock_I(iGridStored)
-      iProcStored = iProc_I(iGridStored)
       !\
       !Process later the iGridStored'th grid point 
       !/
@@ -3261,15 +3269,31 @@ contains
             ! All points in the 2*2*2 finer subgrid are involved
             !/
             iLevelSubGrid_I(iGrid) = Fine_
-            nSubgrid_I(iGrid) = nGrid
-            do iSubGrid = 1, nGrid
+            if(iGrid==iGridBasic)then
+               !\
+               ! Determine, where Xyz point is located with respect to
+               ! the subgrid at basic grid node
+               !/
+               XyzMisc_D = (Xyz_D - XyzGrid_DII(:,0,iGridBasic))*DXyzInv_D
+               iDiscr1_D = 0
+               iDiscr1_D(1:nDim) = nint(sign(0.50, XyzMisc_D + 0.250) + &
+                    SIGN(0.50, XyzMisc_D - 0.250))
+               iGridSeenFrom = &
+                    sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + iGridBasic
+            else
+               iGridSeenFrom = iGridBasic
+            end if
+            nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
+                 iLog2NDimOverNSubgrid_II(iGrid,iGridSeenFrom))
+            do iOrder = 1, nSubgrid_I(iGrid)
+               iSubGrid = iSubgridOrder_III(iOrder,iGrid,iGridSeenFrom)
                iShift_D = iShift_DI(1:nDim,iSubGrid)
                !\
                ! Fine subgrid is displaced by half of finer subgrid size
                !/
-               XyzGrid_DII(:,iSubGrid,iGrid) = &
+               XyzGrid_DII(:,iOrder,iGrid) = &
                     XyzGrid_DII(:,0,iGrid) + Dxyz_D*(iShift_D - 0.50)
-               iCellIndexes_DII(:,iSubGrid,iGrid) = &
+               iCellIndexes_DII(:,iOrder,iGrid) = &
                     iCellIndexes_D + iShift_D
             end do
          end if
@@ -3555,6 +3579,7 @@ contains
        where(iLevelSubgrid_I==Fine_.and..not.IsOut_I)nSubgrid_I = nGrid
     end if
     if(IsNearBoundary)call prolong_beyond_boundary
+
     if(DoInit)call init_sort_stencil
     select case(nDim)
     case(2)
@@ -3684,17 +3709,31 @@ contains
       integer, intent(in) :: iGridPhys, iGridGhost
       !Loop variable
       integer :: iSubGrid
+      real:: DeltaXyzRef_D(nDim), NormalToFace_D(nDim)
       !--------------------
       iLevelSubgrid_I(iGridGhost) = iLevelSubgrid_I(iGridPhys) 
       nSubgrid_I(iGridGhost)      = nSubgrid_I(iGridPhys)
       !\
       !nGrid for refined subgrid 
       !/
-      do iSubGrid = 1, nSubgrid_I(iGridGhost) 
-         XyzGrid_DII(:,iSubGrid,iGridGhost) = &
-              -XyzGrid_DII(:,iSubGrid,iGridPhys) +&
-              XyzGrid_DII(:,0,iGridGhost) + XyzGrid_DII(:,0,iGridPhys )
-      end do
+      if(iLevelSubgrid_I(iGridGhost)==Coarse_)then
+         XyzGrid_DII(:,1,iGridGhost) = &
+              XyzGrid_DII(:,0,iGridGhost)
+      else
+         do iSubGrid = 1, nSubgrid_I(iGridGhost) 
+            DeltaXyzRef_D = XyzGrid_DII(:,iSubGrid,iGridPhys) - &
+                 XyzGrid_DII(:,0,iGridPhys )
+            !\
+            ! Reflect the normal to the face coordinate
+            !/
+            NormalToFace_D = XyzGrid_DII(:,0,iGridPhys ) - &
+                 XyzGrid_DII(:,0,iGridGhost)
+            XyzGrid_DII(:,iSubGrid,iGridGhost) = DeltaXyzRef_D +  &
+                 XyzGrid_DII(:,0,iGridGhost) - 2*NormalToFace_D * &
+                 sum(NormalToFace_D*DeltaXyzRef_D)/&
+                 sum(NormalToFace_D**2)
+         end do
+      end if
     end subroutine prolong
 
     !==================
@@ -3709,9 +3748,19 @@ contains
             XyzGrid_DI(:,iGrid) = XyzGrid_DII(:,1,iGrid)
             iIndexes_II(1:nDim,iGrid) = iCellIndexes_DII(:,1,iGrid)
          else
-            XyzGrid_DI(:,iGrid) = XyzGrid_DII(:,9 - iGrid,iGrid)
-            iIndexes_II(1:nDim,iGrid) = &
-                 iCellIndexes_DII(:,9 - iGrid, iGrid)
+            if(present(nSubgridIn_I))then
+               !\
+               ! Add a capability to reduce the size of extended stencil
+               !/
+               XyzGrid_DI(:,iGrid) = &
+                    XyzGrid_DII(:,nSubGrid_I(iGrid),iGrid)
+               iIndexes_II(1:nDim,iGrid) = &
+                    iCellIndexes_DII(:,nSubGrid_I(iGrid), iGrid)
+            else
+               XyzGrid_DI(:,iGrid) = XyzGrid_DII(:,9 - iGrid,iGrid)
+               iIndexes_II(1:nDim,iGrid) = &
+                    iCellIndexes_DII(:,9 - iGrid, iGrid)
+            end if
          end if
       end do
     end subroutine generate_corner_stencil
