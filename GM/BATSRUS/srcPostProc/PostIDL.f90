@@ -51,7 +51,7 @@ program PostIDL
   integer :: i, j, k, imin, imax, jmin, jmax, kmin, kmax, nx, ny, nz, iw
 
   ! Variables related to sorting and averaging unstructured data
-  integer:: nSum, nXnew
+  integer:: nSum
   integer, allocatable :: iSort_I(:)
   real, allocatable :: Sort_I(:)
   real, allocatable :: StateSum_V(:)
@@ -67,10 +67,10 @@ program PostIDL
   integer :: l, me
 
   ! Variables for the 2D lookup table
-  integer :: idim1,idim2
+  integer :: nx1,nx2,idim1,idim2
   integer :: idim0 ! the ignored dimension
   integer :: iError
-  real    :: xmin1, xmax1, xmin2, xmax2
+  real    :: xmin1, xmax1, xmin2, xmax2, dx1, dx2
 
   ! Variables for checking binary compatibility
   integer            :: nByteRealRead
@@ -161,7 +161,7 @@ program PostIDL
   end if
 
   ! Set coordinate names different from default x, y, z
-  if(filenamehead(1:2) == 'sp')then
+  if(filenamehead(1:3) == 'sph')then
      NameCoord_D    = (/'r    ','theta','phi  '/)
   elseif(TypeGeometry == 'rz' .or. TypeGeometry == 'xr')then
      TypeGeometry = 'cartesian'
@@ -225,7 +225,7 @@ program PostIDL
   end do
   
   if(nDim==2)then
-     ! Figure out the size of the 2D (cut) grid
+     ! Make a lookup table to check coinciding cells
      idim1=icutdim(1)
      idim2=icutdim(2)
      idim0=icutdim(3)
@@ -233,16 +233,20 @@ program PostIDL
      xmin2=xyzmin(idim2)
      xmax1=xyzmax(idim1)
      xmax2=xyzmax(idim2)
+     dx1=dxyzmin(idim1)  ! Note that we use smallest cell size
+     dx2=dxyzmin(idim2)
+     nx1=nint((xmax1-xmin1)/dx1)
+     nx2=nint((xmax2-xmin2)/dx2)
 
-     ! Sph/cyl. X=0 and Y=0 cuts are doubled (+/- r)
+     ! Sph/cyl. X=0 and Y=0 cuts require doubled lookup table (+/- r)
      if(idim0==2)then
         if(TypeGeometry(1:9)=='spherical' .and. xmax2 > cHalfPi) then
            ! Use LatMin < Lat' < 2*LatMax-LatMin as generalized coordinate
-           UseDoubleCut = .true.
+           UseDoubleCut = .true.; nx2 = 2*nx2; 
            ! nxyz(3) = 2*nxyz(3)
         elseif(TypeGeometry=='cylindrical' .and. xmax2 > cHalfPi)then
            ! Use rMin < r' < 2*rMax - rMin as generalized coordinate
-           UseDoubleCut = .true.
+           UseDoubleCut = .true.; nx1 = 2*nx1; 
            ! nxyz(1) = 2*nxyz(1)
         end if
 
@@ -481,39 +485,47 @@ program PostIDL
      Coord_DC(:,:,1,1) = Coord_DC(:,iSort_I,1,1)
      State_VC(:,:,1,1) = State_VC(:,iSort_I,1,1)
 
-     deallocate(Sort_I, iSort_I)
-
      ! Average out coinciding points
      if(nDim < 3) then
-
         i = 1
+        k = 1
         allocate(StateSum_V(nw))
         do while(i < nx)
-           StateSum_V = State_VC(:,i,ny,nz)
+           StateSum_V = State_VC(:,i,1,1)
            nSum       = 1
            j = i + 1
            do while( all(Coord_DC(:,j,1,1)==Coord_DC(:,i,1,1)) )
-              StateSum_V = StateSum_V + State_VC(:,j,ny,nz)
+              StateSum_V = StateSum_V + State_VC(:,j,1,1)
               nSum = nSum + 1
               j = j + 1
               if(j > nx) EXIT
            end do
            if(j > i+1) then
               ! Put average value into i-th element
-              State_VC(:,i,1,1) = StateSum_V/nSum
-
-              ! Remove i+1..j elements
-              nxNew = nx - nSum + 1
-              if (j < nx) then
-                 State_VC(:,i+1:nXnew,1,1) = State_VC(:,j:nx,1,1)
-                 Coord_DC(:,i+1:nXnew,1,1) = Coord_DC(:,j:nx,1,1)
-              end if
-              nx = nXnew
+              State_VC(:,i,1,1) = StateSum_V/nSum              
            end if
-           i = i + 1
+           ! Save the index for the unique coordinates 
+           iSort_I(k) = i
+           k = k + 1
+           i = j 
         end do
         deallocate(StateSum_V)
+
+        ! Special Judgement for the last point
+        if(j == nx) then
+           iSort_I(k) = j
+           nx = k
+        else
+           nx = k - 1
+        end if
+        
+        ! move the elements after finding out all the coinciding ones 
+        Coord_DC(:,1:nx,1,1) = Coord_DC(:,iSort_I(1:nx),1,1)
+        State_VC(:,1:nx,1,1) = State_VC(:,iSort_I(1:nx),1,1)
+     
      end if
+  
+     deallocate(Sort_I, iSort_I)
   end if
 
   ! the sizes of Coord_DC and State_VC may be modified by cell averaging 
