@@ -2716,6 +2716,10 @@ contains
     ! Logical for Using ghost cells in interpolation
     !/
     logical:: UseGhostCellLocal
+    !\
+    ! Misc
+    !/
+    integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -2851,6 +2855,14 @@ contains
          RETURN  !All interpolation is done, ready to exit
       end if
       XyzGrid_DII(:,0,1) = DxyzBasicBlock_D*(iCellIndexes_DII(:,1,1) - 0.50)
+      do iGrid = 2, nGrid
+         iShift_D = iShift_DI(1:nDim,iGrid)
+         XyzGrid_DII(:,0,iGrid) = &
+              XyzGrid_DII(:,0,1) + iShift_D*DxyzBasicBlock_D
+         !\
+         !This grid point is out of block, mark it
+         !/ 
+      end do
       !\ 
       ! now XyzMisc_D = (Xyz_D-XyzGrid_DII(:,0,1))/Dxyz satisfies 
       ! inequalities: XyzMisc_D >= 0 and XyzMisc_D < 1. Strengthen 
@@ -2858,12 +2870,15 @@ contains
       !/
       XyzMisc_D = min(1 - cTol2,max(XyzMisc_D, cTol2 ))
       Xyz_D = XyzGrid_DII(:,0,1) + XyzMisc_D*DxyzBasicBlock_D
+      iProcStored = iProcBasic; iBlockStored = iBlockBasic
+      iGridOutOfBlock = 1
       !\
       ! The value of iGrid for the cell which includes the point Xyz_D:
       !/
       iDiscr1_D = 0
       iDiscr1_D(1:nDim) = nint(0.50 + SIGN(0.50, XyzMisc_D - 0.50))
       iGridBasic = sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + 1
+      iGridPhys = iGridBasic
       !\
       !Calculate other grid points, check if all points belong to 
       !the found block
@@ -2874,25 +2889,15 @@ contains
          nSubgrid_I(iGrid) = 1
          iLevelSubgrid_I(iGrid) = Coarse_
          iShift_D = iShift_DI(1:nDim,iGrid)
-         XyzGrid_DII(:,1,iGrid) = &
-              XyzGrid_DII(:,0,1) + iShift_D*DxyzBasicBlock_D
+         XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
          iCellIndexes_DII(:,1,iGrid) = &
               iCellIndexes_DII(:,1,1) + iShift_D
          iBlock_I(iGrid) = iBlockBasic
          iProc_I(iGrid)  = iProcBasic
       end do
-      iGridPhys = iGridBasic
-      iGridOutOfBlock = -1
-      do iGrid = nGrid, 2, -1
-         iShift_D = iShift_DI(1:nDim,iGrid)
-         XyzGrid_DII(:,0,iGrid) = &
-              XyzGrid_DII(:,0,1) + iShift_D*DxyzBasicBlock_D
-         if(iProc_I(iGrid) < 0)&
-              iGridOutOfBlock = max(iGridOutOfBlock,iGrid)
-         !\
-         !This grid point is out of block, mark it
-         !/ 
-      end do
+      
+      iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
+   
     end subroutine get_main_block
     !=====================
     recursive subroutine get_other_blocks(iGridOutOfBlock)
@@ -2944,8 +2949,6 @@ contains
          end do
          RETURN
       end if
-      iProc_I(iGridStored)  = iProcStored
-      iBlock_I(iGridStored) = iBlockStored
       iLevelSubgrid_I(iGridStored) = 1 - &
            floor(Dxyz_D(1)*DXyzInv_D(1)+ cTol)
       !\                     ^
@@ -2960,6 +2963,8 @@ contains
       case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
          call get_block(iGridOutOfBlock, XyzMisc_D)
       case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
+         iProc_I(iGridStored)  = iProcStored
+         iBlock_I(iGridStored) = iBlockStored
          call get_fine_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
          !\
          ! if ghost cells will be used for interpolation
@@ -2982,7 +2987,7 @@ contains
       !\
       ! Misc
       !/
-      integer:: iGrid, iGridStored
+      integer:: iGrid, iGridStored, iCellIndexes_D(nDim)
       !\
       ! New variables to work with reduced nSubgrid_I
       !/
@@ -3002,17 +3007,14 @@ contains
       ! Misc
       !/
       real  :: XyzMisc_D(nDim)
-      integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
       !---------------------
       iGridStored = iGridOutOfBlock
-      XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
       !\
       ! Calculate cell indexes as we did before. Use nint
       ! instead of int as long as XyzMisc_D is very close to 
       ! the grid point 
       !/
-      iCellIndexes_DII(:,1,iGridStored) = nint(XyzGridStored_D*DxyzInv_D + 0.50)
-      nSubgrid_I(iGridStored) = 1
+      iCellIndexes_D = nint(XyzGridStored_D*DxyzInv_D + 0.50)
       !\
       ! Calculate discriminator
       !/
@@ -3031,11 +3033,10 @@ contains
       ! newly found block
       !/
       iShift_D = iShift_DI(1:nDim,iGridStored)
-      do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0)) -1
+      do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))
          iGrid = iSubgridBasic_IIII(&
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
-         iCellIndexes_DII(:,1,iGrid) = &
-              iCellIndexes_DII(:,1,iGridStored) +&
+         iCellIndexes_DII(:,1,iGrid) = iCellIndexes_D +&
               iShift_DI(1:nDim,iGrid) - iShift_D 
          iProc_I( iGrid) = iProcStored
          iBlock_I(iGrid) = iBlockStored
@@ -3083,7 +3084,6 @@ contains
       ! Misc
       !/
       real  :: XyzMisc_D(nDim)
-      integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
       !------------------
       iGridStored = iGridOutOfBlock
  
@@ -3181,13 +3181,9 @@ contains
 
       integer:: iCellOrigin_D(nDim), iProcStored, iBlockStored
       real   :: XyzGridOrigin_D(nDim), XyzGridOriginShift_D(nDim)
-      integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
+      !integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
       !------------------
       iGridStored = iGridOutOfBlock
-      !\
-      !Process later the iGridStored'th grid point 
-      !/
-      iProc_I(iGridStored) = -1
       !\
       ! The neighboring block is coarser, the whole stencil 
       ! needs to be recalculated.
@@ -3309,36 +3305,7 @@ contains
       iShift_D = iShift_DI(1:nDim,iGridStored)
       XyzGridStored_D = XyzGridStoredIn_D + XyzGridOriginShift_D + &
            0.50*DXyz_D*iShift_D
-
-      XyzMisc_D = (Xyz_D + XyzGridStored_D - XyzGrid_DII(:,0,iGridStored))&
-           *DxyzInv_D
-      iDiscr_D = 0
-      iDiscr_D(1:nDim) = nint(SIGN(0.50, XyzMisc_D - 0.50) +&
-           SIGN(0.50, XyzMisc_D + 0.5 - nCell_D))
-      !\
-      ! Calculate cell indexes as we did before. Use nint
-      ! instead of int as long as XyzMisc_D is very close to 
-      ! the grid point 
-      !/
-      iCellIndexesStored_D = nint(XyzGridStored_D*DxyzInv_D + 0.50)
-      !\
-      ! Check if there are more grid points belonging to the
-      ! newly found block
-      !/
-      do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))
-         iGrid = iSubgridBasic_IIII(&
-              iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
-         iCellIndexes_DII(:,1,iGrid) = iCellIndexesStored_D +&
-              iShift_DI(1:nDim,iGrid) - iShift_D 
-         iProc_I( iGrid) = iProcStored
-         iBlock_I(iGrid) = iBlockStored
-         XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
-         iLevelSubGrid_I(iGrid) = Coarse_
-         nSubgrid_I(iGrid) = 1
-      end do
-      iGridOutOfBlock = -1
-      if (any(iProc_I==-1))&
-           iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
+      call get_block(iGridOutOfBlock,XyzGridStored_D)
     end subroutine get_coarse_block
     !=====================
     subroutine get_ghost_cell_indexes
