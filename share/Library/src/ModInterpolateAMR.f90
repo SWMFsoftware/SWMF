@@ -3318,6 +3318,8 @@ module ModInterpolateAMR
   public:: interpolate_amr
   !Interpolate on block-adaptive grid with gc
   public:: interpolate_amr_gc
+  !Interpolate on a uniform grid
+  public:: interpolate_uniform
   !Interpolate on block-adaptive grid with predefined grid as input
   public:: interpolate_extended_stencil
 contains
@@ -3756,22 +3758,16 @@ contains
        RETURN
     end if
     call get_other_blocks(iGridOutOfBlock)
-    if(UseGhostCellLocal)then
-       !\
-       ! recalculate grid cells indexes with a reference block
-       ! being the one with subgrid iGridPhys
-       !/
-       call get_ghost_cell_indexes
-       call interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
+    !\
+    ! recalculate grid cells indexes with a reference block
+    ! being the one with subgrid iGridPhys
+    !/
+    if(UseGhostCellLocal)call get_ghost_cell_indexes
+ 
+    call interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
          XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
          iLevelSubgrid_I, IsOut_I, DxyzInv_D,                &
-         nGridOut, Weight_I, iIndexes_II, IsSecondOrder)
-    else
-       call interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
-            XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
-            iLevelSubgrid_I, IsOut_I, DxyzInv_D,                &
-            nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubGrid_I)
-    end if
+         nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubGrid_I)
   contains
     subroutine get_main_block(iGridOutOfBlock)
       integer, intent(out):: iGridOutOfBlock
@@ -4284,7 +4280,7 @@ contains
       !/ 
       integer, dimension(nDim) :: iShift_D
       !/
-      integer :: iGrid, iSubgrid
+      integer :: iGrid, iOrder
       !------------------
       if(iLevelSubgrid_I(iGridPhys)/=Fine_)then
          !\
@@ -4310,20 +4306,25 @@ contains
          iBlock_I(iGrid) = iBlock_I(iGridPhys)
          iProc_I( iGrid) = iProc_I( iGridPhys)
 
-         ! shift should be multiplied by 2 
-         ! if reference subgrid is finer than iGrid
-         iShift_D = 2*(iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys))
+         iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
+         !\
+         ! Below we benefit from the observation that although the
+         ! shift in indexes between iGrid and iGridPhys is twice iShift_D
+         ! nevertheless the shift between the subgrid points nearest to the
+         ! stencil center is just iShift_D (for which iOrder=nSubgrid_I(iGrid)
          if(iLevelSubgrid_I(iGrid)==Coarse_)then
             !\
             !We keep the cell index for the fine ghost cell, which is the 
             !nearest to the stencil center
             !/
-            iCellIndexes_DII(:, 1, iGrid) = &
-                 iCellIndexes_DII(:, nGrid+1-iGrid, iGridPhys) + iShift_D
+            iCellIndexes_DII(:, 1, iGrid) = iShift_D +&
+                 iCellIndexes_DII(:, nSubgrid_I(iGridPhys), iGridPhys)
          else
-            do iSubgrid = 1, nGrid
-               iCellIndexes_DII(:, iSubgrid, iGrid) = &
-                    iCellIndexes_DII(:, iSubgrid, iGridPhys) + iShift_D
+            do iOrder = 1, nSubgrid_I(iGrid)
+               iCellIndexes_DII(:, iOrder, iGrid) = iShift_D +             &
+                    iCellIndexes_DII(:, nSubgrid_I(iGridPhys), iGridPhys) +&
+                    iCellIndexes_DII(:, iOrder, iGrid) -                   &
+                    iCellIndexes_DII(:, nSubgrid_I(iGrid), iGrid)
             end do
          end if
       end do
